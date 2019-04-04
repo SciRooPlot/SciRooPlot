@@ -1015,12 +1015,8 @@ int main(int argc, char *argv[]) {
       myPlot.AddHisto("momentUnfolded1dNchDeta", "PbPb_5TeV", "PbPb", kOpenCross, kRed+1);
 
 //      myPlot.CropHisto("momentUnfolded1", "pp_5TeV_2017", "X", 0, 40)
-//    myPlot.CompressAxis();
-//      myPlot.SetAxisRange("X", 0, 100);
       myPlot.SetAxisRange("Y", 0.45, 0.92);
-
       myPlot.AddLegendBox(0.55, 0.3, "");
-
       myPlot.AddTextBox(0.5, 0.92, lablePublication);
     //  myPlot3.SetDrawingProperties("thick");
       plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
@@ -1031,75 +1027,5 @@ int main(int argc, char *argv[]) {
 
   }
 
-
-  /*
-  { // -------------------------------------------------------------------------
-    Plot myPlot("moment1");
-    myPlot.SetFigureGroup("combinedPlots");
-    myPlot.AddHisto("momentUnfolded1", dataSetPP, "abc", 0, kBlue);
-    myPlot.AddHisto("momentUnfolded1_Syst", dataSetPP, "pp", 0, kBlue, "boxes");
-    myPlot.AddHisto("momentUnfolded1", dataSetPPb, "p-Pb", 0, kRed);
-    myPlot.AddHisto("momentUnfolded1_Syst", dataSetPPb, "", 0, kRed, "boxes");
-    myPlot.SetAxisRange("X", 0, 60);
-    myPlot.SetAxisRange("Y", 0.45, 0.85);
-
-    myPlot.AddLegendBox(0.6, 0.4, "");
-
-    myPlot.AddTextBox(0.15, 0.9, lable5TeV);
-  //  myPlot3.SetDrawingProperties("thick");
-    plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
-    plotEnv.SavePlot("moment1", "combinedPlots");
-  } // -------------------------------------------------------------------------
-
-  { // -------------------------------------------------------------------------
-    Plot myPlot("moment2");
-    myPlot.SetFigureGroup("combinedPlots");
-    myPlot.AddHisto("momentUnfolded2", dataSetPP, "PYTIA8.23", 0, kBlue);
-    myPlot.AddHisto("momentUnfolded2_Syst", dataSetPP, "pp", 0, kBlue, "boxes");
-    myPlot.AddHisto("momentUnfolded2", dataSetPPb, "p-Pb", 0, kRed);
-    myPlot.AddHisto("momentUnfolded2_Syst", dataSetPPb, "ssss", 0, kRed, "boxes");
-    myPlot.SetAxisRange("X", 0, 60);
-//    myPlot.SetAxisRange("Y", 0.45, 0.85);
-
-    myPlot.AddLegendBox(0.6, 0.4, "", kSolid, 5, kBlue);
-
-    myPlot.AddTextBox(0.15, 0.9, lable5TeV);
-  //  myPlot3.SetDrawingProperties("thick");
-    plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
-    plotEnv.SavePlot("moment2", "combinedPlots");
-  } // -------------------------------------------------------------------------
-
-  { // -------------------------------------------------------------------------
-    Plot myPlot("moment3");
-    myPlot.SetFigureGroup("combinedPlots");
-    myPlot.AddHisto("momentUnfolded3", dataSetPP, "", 0, kBlue);
-    myPlot.AddHisto("momentUnfolded3_Syst", dataSetPP, "pp", 0, kBlue, "boxes");
-    myPlot.AddHisto("momentUnfolded3", dataSetPPb, "p-Pb", 0, kRed);
-    myPlot.AddHisto("momentUnfolded3_Syst", dataSetPPb, "", 0, kRed, "boxes");
-    myPlot.SetAxisRange("X", 0, 60);
-//    myPlot.SetAxisRange("Y", 0.45, 0.85);
-    myPlot.AddLegendBox(0.6, 0.4, "");
-    myPlot.AddTextBox(0.15, 0.9, lable5TeV);
-  //  myPlot3.SetDrawingProperties("thick");
-    plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
-    plotEnv.SavePlot("moment3", "combinedPlots");
-  } // -------------------------------------------------------------------------
-
-  { // -------------------------------------------------------------------------
-    Plot myPlot("multDist");
-    myPlot.SetFigureGroup("combinedPlots");
-    myPlot.AddHisto("multDistUnfolded", dataSetPP, "pp", 0, kBlue);
-    myPlot.AddHisto("multDistUnfolded", dataSetPPb, "p-Pb", 0, kRed);
-    myPlot.SetDrawingProperties("logY normalize");
-
-    myPlot.SetAxisRange("X", 0, 60);
-    myPlot.SetAxisRange("Y", 1e-5, 2);
-    myPlot.AddLegendBox(0.15, 0.4, "");
-    myPlot.AddTextBox(0.15, 0.9, "a // ab // abcdefghasdfasAAAAAsadf", kDotted, 5, kBlue);
-    plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
-    plotEnv.SavePlot("multDist", "combinedPlots");
-  } // -------------------------------------------------------------------------
-
-*/
 
 }
