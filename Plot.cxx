@@ -14,30 +14,37 @@ Plot::Plot()
   fYaxisRatio.fTitle = "";
 }
 
-void Plot::AddHisto(string histName, string identifier, string lable, Int_t marker, Int_t color, string errorStyle)
+void Plot::AddGraph(string histName, string identifier, string lable, Int_t marker, Int_t color, string errorStyle, Double_t cutoff, Double_t cutoffLow)
 {
   if(identifier == "") identifier = fFigureGroup; // default identifier to figuregroup id
   string internalName = histName + "_@_" + identifier;
-  fHistos.push_back({internalName, lable, marker, color, errorStyle});
+  fGraphs.push_back({internalName, lable, marker, color, errorStyle, cutoff, cutoffLow});
 }
 
-void Plot::AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier, string lable)
+void Plot::AddHisto(string histName, string identifier, string lable, Int_t marker, Int_t color, string errorStyle, Double_t cutoff, Double_t cutoffLow)
+{
+  if(identifier == "") identifier = fFigureGroup; // default identifier to figuregroup id
+  string internalName = histName + "_@_" + identifier;
+  fHistos.push_back({internalName, lable, marker, color, errorStyle, cutoff, cutoffLow});
+}
+
+void Plot::AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier, string lable, Int_t marker, Int_t color, string errorStyle, Double_t cutoff, Double_t cutoffLow)
 {
   if(numerHistIdentifier == "") numerHistIdentifier = fFigureGroup;
   if(denomHistIdentifier == "") denomHistIdentifier = fFigureGroup;
   string ratioName = numerHist  + "_@_" + numerHistIdentifier + " / " + denomHist + "_@_" + denomHistIdentifier;
-  fRatios.push_back({ratioName, lable, 0, 0});
+  fRatios.push_back({ratioName, lable,marker, color, errorStyle, cutoff, cutoffLow});
 }
 
 
-void Plot::AddTextBox(Double_t xPos, Double_t yPos, string text, Int_t borderStyle, Int_t borderSize, Int_t borderColor)
+void Plot::AddTextBox(Double_t xPos, Double_t yPos, string text, Bool_t userCoord, Int_t borderStyle, Int_t borderSize, Int_t borderColor)
 {
-  fTexts.push_back({xPos, yPos, text, borderStyle, borderSize, borderColor});
+  fTexts.push_back({xPos, yPos, text, borderStyle, borderSize, borderColor, userCoord});
 }
 
-void Plot::AddLegendBox(Double_t xPos, Double_t yPos, string title, Int_t borderStyle, Int_t borderSize, Int_t borderColor)
+void Plot::AddLegendBox(Double_t xPos, Double_t yPos, string title, Int_t nColumns, Int_t borderStyle, Int_t borderSize, Int_t borderColor)
 {
-  fLegends.push_back({xPos, yPos, title, borderStyle, borderSize, borderColor});
+  fLegends.push_back({xPos, yPos, title, borderStyle, borderSize, borderColor, kFALSE, nColumns});
 }
 
 Plot::Axis& Plot::GetAxis(string axis)

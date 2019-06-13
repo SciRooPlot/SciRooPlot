@@ -27,6 +27,8 @@ public:
     Int_t fBorderStyle;
     Int_t fBorderSize;
     Int_t fBorderColor;
+    Int_t fUserCoordinates;
+    Int_t fNColumns;
   } TextBox;
 
   typedef struct Axis {
@@ -39,7 +41,9 @@ public:
     string fLable;
     Int_t fMarker;
     Int_t fColor;
-    string fErrorStyle; // normal, boxes, noerr
+    string fErrorStyle; // normal, boxes, hist
+    Double_t fCutoff; // todo multi-dimensional
+    Double_t fCutoffLow; // todo multi-dimensional
     Int_t fLableBoxID;
   };
 
@@ -57,11 +61,12 @@ public:
 
   void Print();
 
-  void AddHisto(string histName, string identifier = "", string lable = "", Int_t marker = 0, Int_t color = 0, string errorStyle = "");
-  void AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier = "", string lable = "");
+  void AddGraph(string histName, string identifier = "", string lable = "", Int_t marker = 0, Int_t color = 0, string errorStyle = "", Double_t cutoff = -999, Double_t cutoffLow = -999);
+  void AddHisto(string histName, string identifier = "", string lable = "", Int_t marker = 0, Int_t color = 0, string errorStyle = "", Double_t cutoff = -999, Double_t cutoffLow = -999);
+  void AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier = "", string lable = "", Int_t marker = 0, Int_t color = 0, string errorStyle = "", Double_t cutoff = -999, Double_t cutoffLow = -999);
 
-  void AddTextBox(Double_t xPos, Double_t yPos, string text = "", Int_t borderStyle = kSolid, Int_t borderSize = 0, Int_t borderColor = kBlack);
-  void AddLegendBox(Double_t xPos, Double_t yPos, string title = "", Int_t borderStyle = kSolid, Int_t borderSize = 0, Int_t borderColor = kBlack);
+  void AddTextBox(Double_t xPos, Double_t yPos, string text = "", Bool_t userCoord = kFALSE, Int_t borderStyle = kSolid, Int_t borderSize = 0, Int_t borderColor = kBlack);
+  void AddLegendBox(Double_t xPos, Double_t yPos, string title = "", Int_t nColums = 1, Int_t borderStyle = kSolid, Int_t borderSize = 0, Int_t borderColor = kBlack);
 
   void SetAxisTitle(string axis, string axisTitle);
 
@@ -90,6 +95,10 @@ public:
   vector<TextBox>& GetLegends() {return fLegends;}
   vector<TextBox>& GetTextBoxes() {return fTexts;}
 
+  vector<Histogram> fGraphs; // dirty hack for legend errorstyles....
+  vector<Histogram> fHistos; // dirty hack for legend errorstyles....
+  vector<Histogram> fRatios;
+
 private:
   Axis& GetAxis(string axis);
 
@@ -104,8 +113,6 @@ private:
 
   vector<TextBox> fTexts;
   vector<TextBox> fLegends;
-  vector<Histogram> fHistos;
-  vector<Histogram> fRatios;
 };
 
 #endif

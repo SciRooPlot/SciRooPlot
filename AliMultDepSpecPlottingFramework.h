@@ -23,7 +23,10 @@
 #include "TLegend.h"
 #include "TText.h"
 #include "TLatex.h"
-
+#include "TError.h"
+#include "TSpline.h"
+#include "TGraph.h"
+#include "TGraphErrors.h"
 
 #include "TPaletteAxis.h"
 
@@ -55,7 +58,6 @@ class AliMultDepSpecPlottingFramework
      vector<Int_t> fDefaultMarkers;
      vector<Int_t> fDefaultMarkersFull;
      vector<Int_t> fDefaultMarkersOpen;
-
      vector<Int_t> fDefaultColors;
      Bool_t fUseCMYK;
      Int_t fPalette;
@@ -95,12 +97,15 @@ class AliMultDepSpecPlottingFramework
   TPaveText* MakeText(Plot::TextBox& textBoxTemplate);
   TLegend* MakeLegend(TPad* pad, Plot::TextBox& legendBoxTemplate, vector<Plot::Histogram>& histos);
 
+  Int_t GetDefaultColor(Int_t colorIndex);
+  Int_t GetDefaultMarker(Int_t markerIndex);
+
   void SetPalette(Int_t palette);
   void AddHistosFromInputFile(string datasetIdentifier, string inputFileName);
   void CreateDatasetPlots(string datasetIdentifier);
   void CreateTemporaryPlots(string datasetIdentifier){}
   void SetOutputDirectory(string path);
-  void SavePlot(string plotName, string figureGroup);
+  void SavePlot(string plotName, string figureGroup, string subFolder = "");
   void WritePlotsToFile(string outputFileName); //todo: also file structure
   void ListPlots(){fPlotLedger->ls();}
   void ListHistos(){fHistoLedger->ls();}
@@ -116,6 +121,7 @@ class AliMultDepSpecPlottingFramework
 
   void AdjustLableOffsets();
 
+  TGraphErrors* GetGraphClone(string graphName);
   TH1* GetHistClone(string histName);
   TH1* GetRatio(string ratioName);
 
@@ -130,6 +136,7 @@ class AliMultDepSpecPlottingFramework
   void SetDrawTimestamps(Bool_t drawTimestamps = kTRUE) {fStyle.fDrawTimestamps = drawTimestamps;}
 
   Bool_t ContainsDatasets(std::initializer_list<string> requiredDatasets);
+  void CutHistogram(TH1* hist, Double_t cutoff, Double_t cutoffLow);
 
  private:
    GlobalStyle fStyle;
@@ -160,7 +167,7 @@ class AliMultDepSpecPlottingFramework
     void DrawPlotInCanvas(Plot &plot, TCanvas* canvas);
    // Helper functions
 //   string GetDatasetSuffix(TH1* hist, string datasetIdentifier);
-
+    TH1* DivideWithTSpline(TH1* numerator, TH1* denominator);
     void ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, Int_t defaultValueIndex, string controlString);
 
    AliMultDepSpecPlottingFramework(const AliMultDepSpecPlottingFramework&) = default;

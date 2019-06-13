@@ -51,6 +51,7 @@ AliMultDepSpecPlottingFramework::AliMultDepSpecPlottingFramework()
 
   DefineDefaultPlottingStyle();
   SetGlobalStyle();
+  gErrorIgnoreLevel = kWarning;
 }
 
 
@@ -148,10 +149,10 @@ void AliMultDepSpecPlottingFramework::SetOutputDirectory(string path)
 ///
 /// @param dummy      dummy
 
-void AliMultDepSpecPlottingFramework::SavePlot(string plotName, string figureGroup)
+void AliMultDepSpecPlottingFramework::SavePlot(string plotName, string figureGroup, string subFolder)
 {
   string folderName = fOutputDirectory + "/" + figureGroup;
-
+  if(subFolder != "") folderName += "/" + subFolder;
 
   gSystem->Exec((string("mkdir -p ") + folderName).c_str());
 
@@ -213,10 +214,10 @@ void AliMultDepSpecPlottingFramework::ApplyStyleSettings(CanvasStyle& canvasStyl
       TH2* temp = ((TH2*)canvas->GetPad(1)->GetListOfPrimitives()->At(0));
       temp->GetXaxis()->SetTitleOffset(1.1); //1.1
       temp->GetYaxis()->SetTitleOffset(1.1); //1.3
-      temp->GetZaxis()->SetTitleOffset(1.4); //1.6
+      temp->GetZaxis()->SetTitleOffset(1.6); //1.6
       canvas->GetPad(1)->Update();
       TPaletteAxis* palette = (TPaletteAxis*)temp->GetListOfFunctions()->FindObject("palette");
-      palette->SetX2NDC(0.88); //0.88
+      palette->SetX2NDC(0.865); //0.88
       palette->SetTitleOffset();
       canvas->GetPad(1)->Update();
   }
@@ -296,7 +297,7 @@ TCanvas* AliMultDepSpecPlottingFramework::MakeCanvas(string name, CanvasStyle& c
 void AliMultDepSpecPlottingFramework::CreateNewPlot(Plot& plot, string canvasStyleName, Bool_t saveToConfig)
 {
   if(!IsPlotPossible(plot)){
-    cout << "ERROR: Not all histograms for plot " << plot.GetName() << " are available." << endl;
+    cout << "----> " << plot.GetName() << " <----" << endl;
     return;
   }
   if(plot.GetFigureGroup() == ""){
@@ -323,6 +324,23 @@ void AliMultDepSpecPlottingFramework::CreateNewPlot(Plot& plot, string canvasSty
   ApplyStyleSettings(canvasStyle, canvas, controlString);
 
   fPlotLedger->Add(canvas);
+}
+
+void AliMultDepSpecPlottingFramework::CutHistogram(TH1* hist, Double_t cutoff, Double_t cutoffLow)
+{
+  if(cutoff < -997) return;
+  Int_t cutoffBin = hist->GetXaxis()->FindBin(cutoff);
+  for(Int_t i = cutoffBin; i <= hist->GetNbinsX(); i++){
+    hist->SetBinContent(i, 0);
+    hist->SetBinError(i, 0);
+  }
+  if(cutoffLow < -997) return;
+  Int_t cutoffBinLow = hist->GetXaxis()->FindBin(cutoffLow);
+  for(Int_t i = 1; i <= cutoffBinLow; i++){
+    hist->SetBinContent(i, 0);
+    hist->SetBinError(i, 0);
+  }
+
 }
 
 Bool_t AliMultDepSpecPlottingFramework::IsPlotPossible(Plot &plot)
@@ -407,11 +425,11 @@ void AliMultDepSpecPlottingFramework::DrawPlotInCanvas(Plot &plot, TCanvas* canv
         dummyHist->SetLineColor(0); // make plot invisible
         TF1* line = new TF1("line", "1", dummyHist->GetXaxis()->GetXmin(), dummyHist->GetXaxis()->GetXmax());
         dummyHist->Draw();
-        line->SetLineColor(fStyle.fDefaultColors[defaultValueIndex]);
+        line->SetLineColor(GetDefaultColor(defaultValueIndex));
         line->SetLineWidth(2);
 //        line->SetLineStyle(9);
         line->Draw("SAME");
-        drawingOptions = "SAME";
+        drawingOptions += " SAME";
       }
 
       ratio->Draw(drawingOptions.c_str());
@@ -438,15 +456,29 @@ void AliMultDepSpecPlottingFramework::DrawPlotInCanvas(Plot &plot, TCanvas* canv
     Int_t defaultValueIndex = 0; // for markers and colors
     for(auto& histoTemplate : plot.GetHistoTemplates()){
       TH1* histo = GetHistClone(histoTemplate.fName);
+      CutHistogram(histo, histoTemplate.fCutoff, histoTemplate.fCutoffLow);
       histo->UseCurrentStyle();
       if(!histo) cout << "ERROR: " << endl;
-      if(plot.GetControlString().find("normalize") != string::npos) histo->Scale(1/histo->Integral(), "width");
+      if(plot.GetControlString().find("normalize") != string::npos) {std::cout << histo->GetName() << ", norm " << histo->Integral() << std::endl; histo->Scale(1/histo->Integral(), "");} // width??
+      if(histoTemplate.fColor < 0) {defaultValueIndex += histoTemplate.fColor; histoTemplate.fMarker = 0;  histoTemplate.fColor = 0;}
       ApplyHistoSettings(histo, histoTemplate, drawingOptions, defaultValueIndex, plot.GetControlString());
       histo->Draw(drawingOptions.c_str());
       drawingOptions = "SAME";
       defaultValueIndex++;
     }
+    for(auto& graphTemplate : plot.fGraphs){
+      TGraph* graph = GetGraphClone(graphTemplate.fName);
+      graph->UseCurrentStyle();
+      graph->SetLineWidth(4);
+      graph->SetLineColor(kBlack);
+      graph->Draw(drawingOptions.c_str());
+      drawingOptions = "SAME";
+      defaultValueIndex++;
+    }
+
     SetAxes(mainPad, plot);
+
+
   }
 
 
@@ -474,17 +506,13 @@ void AliMultDepSpecPlottingFramework::DrawPlotInCanvas(Plot &plot, TCanvas* canv
     }
     tempText->Draw("SAME");
   }
-
-
-
-
-
 }
 
 TLegend* AliMultDepSpecPlottingFramework::MakeLegend(TPad* pad, Plot::TextBox& legendBoxTemplate, vector<Plot::Histogram>& histos){
 
   Int_t nLetters = 0;
   TObjArray legendEntries(1);
+  vector<string> errorStyles;
   vector<string> lables;
   for(auto& histo : histos)
   {
@@ -494,28 +522,31 @@ TLegend* AliMultDepSpecPlottingFramework::MakeLegend(TPad* pad, Plot::TextBox& l
     legendEntries.Add(pointer);
     lables.push_back(histo.fLable);
     if(histo.fLable.length() > nLetters) nLetters = histo.fLable.length();
-
+    errorStyles.push_back(histo.fErrorStyle);
   }
+
+  Int_t nColums = legendBoxTemplate.fNColumns;
 
   Int_t nEntries = legendEntries.GetEntries();
   Double_t textSizeNDC = fStyle.fTextSize / pad->YtoPixel(pad->GetY1());
   Double_t textSizeNDCx = 0.6*fStyle.fTextSize / pad->XtoPixel(pad->GetX2());
   Double_t markerSpace = 2.5*textSizeNDCx;
-  Double_t yWidth = (1.0*nEntries + 0.5*(nEntries-1))* textSizeNDC;
-  Double_t xWidth = markerSpace + nLetters * textSizeNDCx;
+  Double_t yWidth = (1.0*nEntries + 0.5*(nEntries-1))* textSizeNDC / nColums;
+  Double_t xWidth = (markerSpace + nLetters * textSizeNDCx) * nColums;
+
 
 
   TLegend* legend = new TLegend(legendBoxTemplate.fX, legendBoxTemplate.fY - yWidth, legendBoxTemplate.fX + xWidth, legendBoxTemplate.fY, legendBoxTemplate.fText.c_str(), "NDC");
 
   // TODO fix header not shown!!
-  // TODO ->SetNColumns(5);
+  legend->SetNColumns(nColums);
 
   Int_t i = 0;
   for(auto pointer : legendEntries)
   {
     string drawStyle = "ep";
 
-    if((pointer->InheritsFrom("TF1")))// || noErrBars)
+    if((pointer->InheritsFrom("TF1")) || errorStyles[i] == "hist")// || noErrBars)
     {
       drawStyle = "l";
     }
@@ -527,7 +558,7 @@ TLegend* AliMultDepSpecPlottingFramework::MakeLegend(TPad* pad, Plot::TextBox& l
   legend->SetLineStyle(legendBoxTemplate.fBorderStyle);
   legend->SetLineColor(legendBoxTemplate.fBorderColor);
   legend->SetLineWidth(legendBoxTemplate.fBorderSize);
-  legend->SetMargin(markerSpace/xWidth);
+  legend->SetMargin(markerSpace*nColums/xWidth);
   legend->SetTextAlign(12);
   legend->SetTextFont(fStyle.fTextFont);
   legend->SetTextSize(fStyle.fTextSize);
@@ -565,7 +596,10 @@ TPaveText* AliMultDepSpecPlottingFramework::MakeText(Plot::TextBox& textBoxTempl
   Double_t yWidth = (1.0*nLines + 0.5*(nLines-1))* textSizeNDC;
   Double_t xWidth = nLetters * textSizeNDCx;
 
-  TPaveText* tPaveText = new TPaveText(textBoxTemplate.fX, textBoxTemplate.fY - yWidth, textBoxTemplate.fX + xWidth, textBoxTemplate.fY, "NDC");
+  string option = "NDC"; // use pad coordinates by default
+  if(textBoxTemplate.fUserCoordinates) option = "";
+
+  TPaveText* tPaveText = new TPaveText(textBoxTemplate.fX, textBoxTemplate.fY - yWidth, textBoxTemplate.fX + xWidth, textBoxTemplate.fY, option.c_str());
 
   Double_t boxExtent = 0;
   for(auto &line : lines)
@@ -677,11 +711,10 @@ void AliMultDepSpecPlottingFramework::ApplyHistoSettings(TH1* histo, Plot::Histo
     drawingOptions += " COLZ";
     return;
   }
-
-  Int_t markerStyle = (histoTemplate.fMarker) ? histoTemplate.fMarker : fStyle.fDefaultMarkers[defaultValueIndex];
+  Int_t markerStyle = (histoTemplate.fMarker) ? histoTemplate.fMarker : GetDefaultMarker(defaultValueIndex);
   histo->SetMarkerStyle(markerStyle);
 
-  Int_t color = (histoTemplate.fColor) ? histoTemplate.fColor : fStyle.fDefaultColors[defaultValueIndex];
+  Int_t color = (histoTemplate.fColor) ? histoTemplate.fColor : GetDefaultColor(defaultValueIndex);
   histo->SetMarkerColor(color);
   histo->SetLineColor(color);
 
@@ -696,7 +729,7 @@ void AliMultDepSpecPlottingFramework::ApplyHistoSettings(TH1* histo, Plot::Histo
   }
   else if(errorStyle == "band")
   {
-    drawingOptions += " E4";
+    drawingOptions += " E5";
 
     histo->SetMarkerSize(0.);
     histo->SetFillColor(color);
@@ -719,6 +752,19 @@ void AliMultDepSpecPlottingFramework::ApplyHistoSettings(TH1* histo, Plot::Histo
 
 }
 
+TGraphErrors* AliMultDepSpecPlottingFramework::GetGraphClone(string graphName)
+{
+  TGraphErrors* graph = nullptr;
+  TObject* obj = fHistoLedger->FindObject(graphName.c_str());
+  if(obj)
+  {
+    graph = (TGraphErrors*)obj->Clone();
+    //graph->SetDirectory(0);
+  }else{
+    cout << "ERROR: Could not find " << graphName << "." << endl;
+  }
+  return graph;
+}
 
 
 TH1* AliMultDepSpecPlottingFramework::GetHistClone(string histName)
@@ -744,8 +790,40 @@ TH1* AliMultDepSpecPlottingFramework::GetRatio(string ratioName)
 
   TH1* ratio = GetHistClone(numerator.c_str());
   TH1* temp = GetHistClone(denominator.c_str());
-  ratio->Divide(temp);
+
+  if(kTRUE)//ratio->GetNbinsX() == temp->GetNbinsX())
+  {
+    ratio->Divide(temp);
+  }
+  else
+  {
+    // if binning not the same
+    TH1* ratioOld = ratio;
+    ratio = DivideWithTSpline(ratioOld, temp);
+    delete ratioOld;
+  }
+
   delete temp;
+  ratio->GetYaxis()->SetTitle("ratio");
+  return ratio;
+}
+
+TH1* AliMultDepSpecPlottingFramework::DivideWithTSpline(TH1* numerator, TH1* denominator)
+{
+  TGraph denominatorGraph(denominator);
+  TSpline3 denominatorSpline(denominator);
+
+  TH1* ratio = (TH1*)numerator->Clone("dummyRatio");
+  ratio->Reset();
+
+  for(Int_t i = 1; i <= numerator->GetNbinsX(); i++)
+  {
+    Double_t numeratorValue = numerator->GetBinContent(i);
+    Double_t x = numerator->GetBinCenter(i);
+    Double_t denomValue = denominatorGraph.Eval(x, &denominatorSpline);
+    //cout << "i: " << i << " x: " << x << " denomValue: " << denomValue << endl;
+    if(denomValue) ratio->SetBinContent(i, numeratorValue/denomValue);
+  }
   return ratio;
 }
 
@@ -813,6 +891,14 @@ void AliMultDepSpecPlottingFramework::SetGlobalStyle()
 
 }
 
+Int_t AliMultDepSpecPlottingFramework::GetDefaultColor(Int_t colorIndex)
+{
+  return fStyle.fDefaultColors[colorIndex%fStyle.fDefaultColors.size()];
+}
+Int_t AliMultDepSpecPlottingFramework::GetDefaultMarker(Int_t markerIndex)
+{
+  return fStyle.fDefaultMarkers[markerIndex%fStyle.fDefaultMarkers.size()];
+}
 
 void AliMultDepSpecPlottingFramework::DefineDefaultPlottingStyle()
 {
@@ -838,7 +924,8 @@ void AliMultDepSpecPlottingFramework::DefineDefaultPlottingStyle()
   fStyle.fDefaultMarkers = {kFullSquare, kFullCircle, kFullCross, kFullDiamond, kFullStar, kOpenCircle, kOpenSquare, kOpenCross, kOpenDiamond, kOpenStar};
   fStyle.fDefaultMarkersFull = {kFullSquare, kFullCircle, kFullCross, kFullDiamond, kFullStar, kFullCircle, kFullCircle, kFullCircle, kFullCircle, kFullCircle, kFullCircle};
   fStyle.fDefaultMarkersOpen = {kOpenSquare, kOpenCircle, kOpenCross, kOpenDiamond, kOpenStar, kOpenCircle, kOpenCircle, kOpenCircle, kOpenCircle, kOpenCircle, kOpenCircle};
-  fStyle.fDefaultColors = {kBlack, kBlue, kRed+2, kGreen+2, kTeal-7, kCyan+2, kMagenta+2, kGreen+3, kBlack, kBlack, kBlack, kBlack, kBlack, kBlack};
+  fStyle.fDefaultColors = {kBlack, kBlue+1, kRed+2, kGreen+2, kTeal-7, kCyan+2, kMagenta-4, kGreen+3, kOrange+1, kViolet-3, kPink+3, kOrange+2, kYellow+3, kGray+2};
+
 
 
 
@@ -861,7 +948,7 @@ void AliMultDepSpecPlottingFramework::DefineDefaultPlottingStyle()
     pad1.fMargin.push_back(0.12-0.05);
     // titleOffset: x, y, z
     pad1.fTitleOffset.push_back(1.1);
-    pad1.fTitleOffset.push_back(1.3);
+    pad1.fTitleOffset.push_back(1.4);//1.3
     pad1.fTitleOffset.push_back(1.0);
 
     canvas.fPads.push_back(pad1);

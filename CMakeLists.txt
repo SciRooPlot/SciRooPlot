@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
 project(MultDepSpectraPlottingProject CXX)
 set(CMAKE_BUILD_TYPE Debug)
 
-set(ROOTSYS /usr/local/Cellar/root/6.14.06/)
+#set(ROOTSYS /usr/local/Cellar/root/6.14.06/)
+set(ROOTSYS /usr/local/Cellar/root/6.16.00/)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
 set(ROOTCOMPONENTS Core RIO Hist Matrix)
 
