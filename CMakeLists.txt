@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
-project(MultDepSpectraPlottingProject CXX)
+project(PlottingProject CXX)
 set(CMAKE_BUILD_TYPE Debug)
 
 #set(ROOTSYS /usr/local/Cellar/root/6.14.06/)
@@ -7,12 +7,12 @@ set(ROOTSYS /usr/local/Cellar/root/6.16.00/)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
 set(ROOTCOMPONENTS Core RIO Hist Matrix)
 
-set(MODULE AliMultDepSpecPlottingFramework)
+set(MODULE PlottingFramework)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # add source files of classes
 set(SRCS
-  AliMultDepSpecPlottingFramework.cxx
+  PlottingFramework.cxx
   Plot.cxx
 )
 string(REPLACE ".cxx" ".h" HDRS "${SRCS}")
@@ -37,5 +37,5 @@ target_link_libraries(${MODULE} Boost::boost)
 
 
 # create executable
-add_executable(plot DoPlots.cxx)
-target_link_libraries(plot AliMultDepSpecPlottingFramework)
+add_executable(plot CreatePlots.cxx)
+target_link_libraries(plot PlottingFramework)

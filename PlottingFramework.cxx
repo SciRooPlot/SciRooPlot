@@ -1,4 +1,4 @@
-#include "AliMultDepSpecPlottingFramework.h"
+#include "PlottingFramework.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
@@ -7,7 +7,7 @@ using boost::property_tree::write_xml;
 using boost::property_tree::read_xml;
 
 /// \cond CLASSIMP
-ClassImp(AliMultDepSpecPlottingFramework);
+ClassImp(PlottingFramework);
 /// \endcond
 
 
@@ -23,7 +23,7 @@ ClassImp(AliMultDepSpecPlottingFramework);
 ///
 /// @param name     Name of analysis
 
-AliMultDepSpecPlottingFramework::AliMultDepSpecPlottingFramework()
+PlottingFramework::PlottingFramework()
 {
 /*
   ptree config;
@@ -59,7 +59,7 @@ AliMultDepSpecPlottingFramework::AliMultDepSpecPlottingFramework()
 /// Destructor for OfflineAnalysis.
 /// Deletes ledger and the contained histograms from the heap.
 
-AliMultDepSpecPlottingFramework::~AliMultDepSpecPlottingFramework()
+PlottingFramework::~PlottingFramework()
 {
   fHistoLedger->Delete();
   fPlotLedger->Delete();
@@ -73,9 +73,8 @@ AliMultDepSpecPlottingFramework::~AliMultDepSpecPlottingFramework()
 /// @param datasetIdentifier          Unique identifier for current dataset (is added as suffix to histogram name)
 /// @param inputFileName              Path to file containing the data measurement
 
-void AliMultDepSpecPlottingFramework::AddHistosFromInputFile(string datasetIdentifier, string inputFileName)
+void PlottingFramework::AddHistosFromInputFile(string datasetIdentifier, string inputFileName)
 {
-
   TFile inputFile(inputFileName.c_str(), "READ");
   if (inputFile.IsZombie()) {
     cout << "ERROR: Could not open " << inputFileName << "." << endl;
@@ -96,8 +95,7 @@ void AliMultDepSpecPlottingFramework::AddHistosFromInputFile(string datasetIdent
 /// Check if datasets are loaded in plotting framework.
 ///
 
-Bool_t AliMultDepSpecPlottingFramework::ContainsDatasets(std::initializer_list<string> requiredDatasets) {
-
+bool PlottingFramework::ContainsDatasets(std::initializer_list<string> requiredDatasets){
   for(string requiredDataset : requiredDatasets){
     if (std::find(fDatasetIdentifiers.begin(), fDatasetIdentifiers.end(), requiredDataset) == fDatasetIdentifiers.end())
     {
@@ -115,7 +113,7 @@ Bool_t AliMultDepSpecPlottingFramework::ContainsDatasets(std::initializer_list<s
 /// @param folder                     Current folder to search for histograms
 /// @param datasetIdentifier          Unique identifier for current dataset (is added as suffix to histogram name)
 
-void AliMultDepSpecPlottingFramework::BookHistos(TDirectoryFile& folder, string datasetIdentifier)
+void PlottingFramework::BookHistos(TDirectoryFile& folder, string datasetIdentifier)
 {
   TIter nextKey(folder.GetListOfKeys());
   TKey* key;
@@ -138,7 +136,7 @@ void AliMultDepSpecPlottingFramework::BookHistos(TDirectoryFile& folder, string 
 ///
 /// @param outputFileName      Path to the output file
 
-void AliMultDepSpecPlottingFramework::SetOutputDirectory(string path)
+void PlottingFramework::SetOutputDirectory(string path)
 {
   fOutputDirectory = path;
 }
@@ -149,7 +147,7 @@ void AliMultDepSpecPlottingFramework::SetOutputDirectory(string path)
 ///
 /// @param dummy      dummy
 
-void AliMultDepSpecPlottingFramework::SavePlot(string plotName, string figureGroup, string subFolder)
+void PlottingFramework::SavePlot(string plotName, string figureGroup, string subFolder)
 {
   string folderName = fOutputDirectory + "/" + figureGroup;
   if(subFolder != "") folderName += "/" + subFolder;
@@ -172,7 +170,7 @@ void AliMultDepSpecPlottingFramework::SavePlot(string plotName, string figureGro
 ///
 /// @param outputFileName      Name of output file (including .root extension)
 
-void AliMultDepSpecPlottingFramework::WritePlotsToFile(string outputFileName)
+void PlottingFramework::WritePlotsToFile(string outputFileName)
 {
   TFile outputFile((fOutputDirectory + "/" + outputFileName).c_str(), "RECREATE");
   outputFile.cd();
@@ -185,15 +183,15 @@ void AliMultDepSpecPlottingFramework::WritePlotsToFile(string outputFileName)
 ///
 /// @param dummy      dummy
 
-void AliMultDepSpecPlottingFramework::CreateDatasetPlots(string datasetIdentifier)
+void PlottingFramework::CreateDatasetPlots(string datasetIdentifier)
 {
 }
 
-void AliMultDepSpecPlottingFramework::ApplyStyleSettings(CanvasStyle& canvasStyle, TCanvas* canvas, string controlString)
+void PlottingFramework::ApplyStyleSettings(CanvasStyle& canvasStyle, TCanvas* canvas, string controlString)
 {
 
   // apply title offsets
-  Int_t padID = 1;
+  int padID = 1;
   for(auto& padStyle : canvasStyle.fPads)
   {
     TPad* pad = (TPad*)canvas->GetPad(padID);
@@ -261,14 +259,14 @@ void AliMultDepSpecPlottingFramework::ApplyStyleSettings(CanvasStyle& canvasStyl
 
 }
 
-TCanvas* AliMultDepSpecPlottingFramework::MakeCanvas(string name, CanvasStyle& canvasStyle)
+TCanvas* PlottingFramework::MakeCanvas(string name, CanvasStyle& canvasStyle)
 {
   // create canvas
   TCanvas* canvas = new TCanvas(name.c_str(), name.c_str(), canvasStyle.fCanvasWidth, canvasStyle.fCanvasHeight);
   canvas->SetFillStyle(fStyle.fFillStyleCanvas);
 
   // create pads defined by style
-  Int_t padID = 1;
+  int padID = 1;
   for(auto& padStyle : canvasStyle.fPads)
   {
     canvas->cd();
@@ -294,7 +292,7 @@ TCanvas* AliMultDepSpecPlottingFramework::MakeCanvas(string name, CanvasStyle& c
 ///
 /// @param dummy      dummy
 
-void AliMultDepSpecPlottingFramework::CreateNewPlot(Plot& plot, string canvasStyleName, Bool_t saveToConfig)
+void PlottingFramework::CreateNewPlot(Plot& plot, string canvasStyleName, bool saveToConfig)
 {
   if(!IsPlotPossible(plot)){
     cout << "----> " << plot.GetName() << " <----" << endl;
@@ -326,24 +324,24 @@ void AliMultDepSpecPlottingFramework::CreateNewPlot(Plot& plot, string canvasSty
   fPlotLedger->Add(canvas);
 }
 
-void AliMultDepSpecPlottingFramework::CutHistogram(TH1* hist, Double_t cutoff, Double_t cutoffLow)
+void PlottingFramework::CutHistogram(TH1* hist, double cutoff, double cutoffLow)
 {
   if(cutoff < -997) return;
-  Int_t cutoffBin = hist->GetXaxis()->FindBin(cutoff);
-  for(Int_t i = cutoffBin; i <= hist->GetNbinsX(); i++){
+  int cutoffBin = hist->GetXaxis()->FindBin(cutoff);
+  for(int i = cutoffBin; i <= hist->GetNbinsX(); i++){
     hist->SetBinContent(i, 0);
     hist->SetBinError(i, 0);
   }
   if(cutoffLow < -997) return;
-  Int_t cutoffBinLow = hist->GetXaxis()->FindBin(cutoffLow);
-  for(Int_t i = 1; i <= cutoffBinLow; i++){
+  int cutoffBinLow = hist->GetXaxis()->FindBin(cutoffLow);
+  for(int i = 1; i <= cutoffBinLow; i++){
     hist->SetBinContent(i, 0);
     hist->SetBinError(i, 0);
   }
 
 }
 
-Bool_t AliMultDepSpecPlottingFramework::IsPlotPossible(Plot &plot)
+bool PlottingFramework::IsPlotPossible(Plot &plot)
 {
   for(auto& histoTemplate : plot.GetHistoTemplates())
   {
@@ -378,7 +376,7 @@ Bool_t AliMultDepSpecPlottingFramework::IsPlotPossible(Plot &plot)
   return kTRUE;
 }
 
-void AliMultDepSpecPlottingFramework::DrawPlotInCanvas(Plot &plot, TCanvas* canvas)
+void PlottingFramework::DrawPlotInCanvas(Plot &plot, TCanvas* canvas)
 {
   canvas->cd();
 
@@ -390,7 +388,7 @@ void AliMultDepSpecPlottingFramework::DrawPlotInCanvas(Plot &plot, TCanvas* canv
     mainPad->cd();
 
     string drawingOptions = "";
-    Int_t defaultValueIndex = 0; // for markers and colors
+    int defaultValueIndex = 0; // for markers and colors
     for(auto& histoTemplate : plot.GetHistoTemplates()){
       TH1* histo = GetHistClone(histoTemplate.fName);
       histo->UseCurrentStyle();
@@ -453,7 +451,7 @@ void AliMultDepSpecPlottingFramework::DrawPlotInCanvas(Plot &plot, TCanvas* canv
     TPad* mainPad = (TPad*)canvas->GetListOfPrimitives()->At(0);
     mainPad->cd();
     string drawingOptions = "";
-    Int_t defaultValueIndex = 0; // for markers and colors
+    int defaultValueIndex = 0; // for markers and colors
     for(auto& histoTemplate : plot.GetHistoTemplates()){
       TH1* histo = GetHistClone(histoTemplate.fName);
       CutHistogram(histo, histoTemplate.fCutoff, histoTemplate.fCutoffLow);
@@ -508,9 +506,9 @@ void AliMultDepSpecPlottingFramework::DrawPlotInCanvas(Plot &plot, TCanvas* canv
   }
 }
 
-TLegend* AliMultDepSpecPlottingFramework::MakeLegend(TPad* pad, Plot::TextBox& legendBoxTemplate, vector<Plot::Histogram>& histos){
+TLegend* PlottingFramework::MakeLegend(TPad* pad, Plot::TextBox& legendBoxTemplate, vector<Plot::Histogram>& histos){
 
-  Int_t nLetters = 0;
+  int nLetters = 0;
   TObjArray legendEntries(1);
   vector<string> errorStyles;
   vector<string> lables;
@@ -525,14 +523,14 @@ TLegend* AliMultDepSpecPlottingFramework::MakeLegend(TPad* pad, Plot::TextBox& l
     errorStyles.push_back(histo.fErrorStyle);
   }
 
-  Int_t nColums = legendBoxTemplate.fNColumns;
+  int nColums = legendBoxTemplate.fNColumns;
 
-  Int_t nEntries = legendEntries.GetEntries();
-  Double_t textSizeNDC = fStyle.fTextSize / pad->YtoPixel(pad->GetY1());
-  Double_t textSizeNDCx = 0.6*fStyle.fTextSize / pad->XtoPixel(pad->GetX2());
-  Double_t markerSpace = 2.5*textSizeNDCx;
-  Double_t yWidth = (1.0*nEntries + 0.5*(nEntries-1))* textSizeNDC / nColums;
-  Double_t xWidth = (markerSpace + nLetters * textSizeNDCx) * nColums;
+  int nEntries = legendEntries.GetEntries();
+  double textSizeNDC = fStyle.fTextSize / pad->YtoPixel(pad->GetY1());
+  double textSizeNDCx = 0.6*fStyle.fTextSize / pad->XtoPixel(pad->GetX2());
+  double markerSpace = 2.5*textSizeNDCx;
+  double yWidth = (1.0*nEntries + 0.5*(nEntries-1))* textSizeNDC / nColums;
+  double xWidth = (markerSpace + nLetters * textSizeNDCx) * nColums;
 
 
 
@@ -541,7 +539,7 @@ TLegend* AliMultDepSpecPlottingFramework::MakeLegend(TPad* pad, Plot::TextBox& l
   // TODO fix header not shown!!
   legend->SetNColumns(nColums);
 
-  Int_t i = 0;
+  int i = 0;
   for(auto pointer : legendEntries)
   {
     string drawStyle = "ep";
@@ -568,12 +566,12 @@ TLegend* AliMultDepSpecPlottingFramework::MakeLegend(TPad* pad, Plot::TextBox& l
 }
 
 
-TPaveText* AliMultDepSpecPlottingFramework::MakeText(Plot::TextBox& textBoxTemplate){
+TPaveText* PlottingFramework::MakeText(Plot::TextBox& textBoxTemplate){
 
   string delimiter = " // ";
   string text = textBoxTemplate.fText;
 
-  Int_t nLetters = 0;
+  int nLetters = 0;
   vector<string> lines;
 
   size_t pos = string::npos;
@@ -588,26 +586,26 @@ TPaveText* AliMultDepSpecPlottingFramework::MakeText(Plot::TextBox& textBoxTempl
   } while (pos != string::npos);
 
 
-  Int_t nLines = lines.size();
-  Double_t textSizeNDC = fStyle.fTextSize / gPad->YtoPixel(gPad->GetY1());
-  Double_t textSizeNDCx = 0.6*fStyle.fTextSize / gPad->XtoPixel(gPad->GetX2());
+  int nLines = lines.size();
+  double textSizeNDC = fStyle.fTextSize / gPad->YtoPixel(gPad->GetY1());
+  double textSizeNDCx = 0.6*fStyle.fTextSize / gPad->XtoPixel(gPad->GetX2());
 
-  Double_t margin = 0.5*fStyle.fTextSize;
-  Double_t yWidth = (1.0*nLines + 0.5*(nLines-1))* textSizeNDC;
-  Double_t xWidth = nLetters * textSizeNDCx;
+  double margin = 0.5*fStyle.fTextSize;
+  double yWidth = (1.0*nLines + 0.5*(nLines-1))* textSizeNDC;
+  double xWidth = nLetters * textSizeNDCx;
 
   string option = "NDC"; // use pad coordinates by default
   if(textBoxTemplate.fUserCoordinates) option = "";
 
   TPaveText* tPaveText = new TPaveText(textBoxTemplate.fX, textBoxTemplate.fY - yWidth, textBoxTemplate.fX + xWidth, textBoxTemplate.fY, option.c_str());
 
-  Double_t boxExtent = 0;
+  double boxExtent = 0;
   for(auto &line : lines)
   {
     TText* text = tPaveText->AddText(line.c_str());
     text->SetTextFont(fStyle.fTextFont);
     text->SetTextSize(fStyle.fTextSize);
-    Double_t width = text->GetBBox().fWidth;
+    double width = text->GetBBox().fWidth;
     if(width > boxExtent) boxExtent = width;
   }
   tPaveText->SetBBoxX2(tPaveText->GetBBox().fX + boxExtent +2*margin);
@@ -624,12 +622,12 @@ TPaveText* AliMultDepSpecPlottingFramework::MakeText(Plot::TextBox& textBoxTempl
 }
 
 
-void AliMultDepSpecPlottingFramework::SetAxes(TPad* pad, Plot &plot)
+void PlottingFramework::SetAxes(TPad* pad, Plot &plot)
 {
-  vector<Double_t>& xRange = plot.GetAxisRange("X");
-  vector<Double_t>& yRangeDist = plot.GetAxisRange("Y");
-  vector<Double_t>& yRangeRatio = plot.GetAxisRange("ratio");
-  vector<Double_t>& zRange = plot.GetAxisRange("Z");
+  vector<double>& xRange = plot.GetAxisRange("X");
+  vector<double>& yRangeDist = plot.GetAxisRange("Y");
+  vector<double>& yRangeRatio = plot.GetAxisRange("ratio");
+  vector<double>& zRange = plot.GetAxisRange("Z");
 
   string xTitle = plot.GetAxisTitle("X");
   string yTitleDist = plot.GetAxisTitle("Y");
@@ -637,7 +635,7 @@ void AliMultDepSpecPlottingFramework::SetAxes(TPad* pad, Plot &plot)
   string zTitle = plot.GetAxisTitle("Z");
 
 
-  vector<Double_t> yRange;
+  vector<double> yRange;
   string yTitle;
 
   // ask if it is ratio plot and if this pad is the ratio pad
@@ -703,7 +701,7 @@ void AliMultDepSpecPlottingFramework::SetAxes(TPad* pad, Plot &plot)
 }
 
 
-void AliMultDepSpecPlottingFramework::ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, Int_t defaultValueIndex, string controlString)
+void PlottingFramework::ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, int defaultValueIndex, string controlString)
 {
   histo->SetTitle("");
 
@@ -711,10 +709,10 @@ void AliMultDepSpecPlottingFramework::ApplyHistoSettings(TH1* histo, Plot::Histo
     drawingOptions += " COLZ";
     return;
   }
-  Int_t markerStyle = (histoTemplate.fMarker) ? histoTemplate.fMarker : GetDefaultMarker(defaultValueIndex);
+  int markerStyle = (histoTemplate.fMarker) ? histoTemplate.fMarker : GetDefaultMarker(defaultValueIndex);
   histo->SetMarkerStyle(markerStyle);
 
-  Int_t color = (histoTemplate.fColor) ? histoTemplate.fColor : GetDefaultColor(defaultValueIndex);
+  int color = (histoTemplate.fColor) ? histoTemplate.fColor : GetDefaultColor(defaultValueIndex);
   histo->SetMarkerColor(color);
   histo->SetLineColor(color);
 
@@ -752,7 +750,7 @@ void AliMultDepSpecPlottingFramework::ApplyHistoSettings(TH1* histo, Plot::Histo
 
 }
 
-TGraphErrors* AliMultDepSpecPlottingFramework::GetGraphClone(string graphName)
+TGraphErrors* PlottingFramework::GetGraphClone(string graphName)
 {
   TGraphErrors* graph = nullptr;
   TObject* obj = fHistoLedger->FindObject(graphName.c_str());
@@ -767,7 +765,7 @@ TGraphErrors* AliMultDepSpecPlottingFramework::GetGraphClone(string graphName)
 }
 
 
-TH1* AliMultDepSpecPlottingFramework::GetHistClone(string histName)
+TH1* PlottingFramework::GetHistClone(string histName)
 {
   TH1* histo = nullptr;
   TObject* obj = fHistoLedger->FindObject(histName.c_str());
@@ -782,7 +780,7 @@ TH1* AliMultDepSpecPlottingFramework::GetHistClone(string histName)
 }
 
 
-TH1* AliMultDepSpecPlottingFramework::GetRatio(string ratioName)
+TH1* PlottingFramework::GetRatio(string ratioName)
 {
   string delimiter = " / ";
   string numerator = ratioName.substr(0, ratioName.find(delimiter));
@@ -808,7 +806,7 @@ TH1* AliMultDepSpecPlottingFramework::GetRatio(string ratioName)
   return ratio;
 }
 
-TH1* AliMultDepSpecPlottingFramework::DivideWithTSpline(TH1* numerator, TH1* denominator)
+TH1* PlottingFramework::DivideWithTSpline(TH1* numerator, TH1* denominator)
 {
   TGraph denominatorGraph(denominator);
   TSpline3 denominatorSpline(denominator);
@@ -816,11 +814,11 @@ TH1* AliMultDepSpecPlottingFramework::DivideWithTSpline(TH1* numerator, TH1* den
   TH1* ratio = (TH1*)numerator->Clone("dummyRatio");
   ratio->Reset();
 
-  for(Int_t i = 1; i <= numerator->GetNbinsX(); i++)
+  for(int i = 1; i <= numerator->GetNbinsX(); i++)
   {
-    Double_t numeratorValue = numerator->GetBinContent(i);
-    Double_t x = numerator->GetBinCenter(i);
-    Double_t denomValue = denominatorGraph.Eval(x, &denominatorSpline);
+    double numeratorValue = numerator->GetBinContent(i);
+    double x = numerator->GetBinCenter(i);
+    double denomValue = denominatorGraph.Eval(x, &denominatorSpline);
     //cout << "i: " << i << " x: " << x << " denomValue: " << denomValue << endl;
     if(denomValue) ratio->SetBinContent(i, numeratorValue/denomValue);
   }
@@ -845,7 +843,7 @@ TH1* AliMultDepSpecPlottingFramework::DivideWithTSpline(TH1* numerator, TH1* den
 /// - Intense: kGreenPink, kOcean, kDarkBodyRadiator, kInvertedDarkBodyRadiator, kSunset, kVisibleSpectrum
 
 
-void AliMultDepSpecPlottingFramework::SetPalette(Int_t palette)
+void PlottingFramework::SetPalette(int palette)
 {
   fStyle.fPalette = palette;
   gStyle->SetPalette(fStyle.fPalette);
@@ -853,7 +851,7 @@ void AliMultDepSpecPlottingFramework::SetPalette(Int_t palette)
 
 
 // call once
-void AliMultDepSpecPlottingFramework::SetGlobalStyle()
+void PlottingFramework::SetGlobalStyle()
 {
   // General settings
   TGaxis::SetMaxDigits(3);
@@ -891,16 +889,16 @@ void AliMultDepSpecPlottingFramework::SetGlobalStyle()
 
 }
 
-Int_t AliMultDepSpecPlottingFramework::GetDefaultColor(Int_t colorIndex)
+int PlottingFramework::GetDefaultColor(int colorIndex)
 {
   return fStyle.fDefaultColors[colorIndex%fStyle.fDefaultColors.size()];
 }
-Int_t AliMultDepSpecPlottingFramework::GetDefaultMarker(Int_t markerIndex)
+int PlottingFramework::GetDefaultMarker(int markerIndex)
 {
   return fStyle.fDefaultMarkers[markerIndex%fStyle.fDefaultMarkers.size()];
 }
 
-void AliMultDepSpecPlottingFramework::DefineDefaultPlottingStyle()
+void PlottingFramework::DefineDefaultPlottingStyle()
 {
   // Define global style standards
   fStyle.fTextFont = 43;
@@ -961,7 +959,7 @@ void AliMultDepSpecPlottingFramework::DefineDefaultPlottingStyle()
     canvas.fStyleName = "default ratio";
     canvas.fCanvasWidth = fStyle.fPixelBaseLength;
     canvas.fCanvasHeight = fStyle.fPixelBaseLength;
-    Double_t ratioPadSize = 0.28; //relative size of ratio
+    double ratioPadSize = 0.28; //relative size of ratio
     // upper pad
     PadStyle pad1;
     // position: xlow, ylow, xup, yup
@@ -1050,7 +1048,7 @@ void AliMultDepSpecPlottingFramework::DefineDefaultPlottingStyle()
 
 }
 
-AliMultDepSpecPlottingFramework::CanvasStyle* AliMultDepSpecPlottingFramework::GetCanvasStyle(string styleName)
+PlottingFramework::CanvasStyle* PlottingFramework::GetCanvasStyle(string styleName)
 {
   for(auto& canvasStyle : fCanvStyles)
   {
@@ -1061,13 +1059,13 @@ AliMultDepSpecPlottingFramework::CanvasStyle* AliMultDepSpecPlottingFramework::G
 }
 
 
-void AliMultDepSpecPlottingFramework::SetTransparentCanvas(Bool_t transparent)
+void PlottingFramework::SetTransparentCanvas(bool transparent)
 {
     if(transparent) fStyle.fFillStyleCanvas = 4000;
     else fStyle.fFillStyleCanvas = 4100;
 }
 
-  void AliMultDepSpecPlottingFramework::ListAvailableCanvasStyles()
+  void PlottingFramework::ListAvailableCanvasStyles()
   {
     for(auto& canvasStyle : fCanvStyles)
     {
@@ -1075,8 +1073,8 @@ void AliMultDepSpecPlottingFramework::SetTransparentCanvas(Bool_t transparent)
       cout << "  >> Width  : " << canvasStyle.fCanvasWidth << endl;
       cout << "  >> Height : " << canvasStyle.fCanvasHeight << endl;
       cout << "  >> nPads  : " << canvasStyle.fPads.size() << endl;
-        Int_t padID = 1;
-        string lines = string((Int_t)((canvasStyle.fStyleName.length()+17 - 7) / 2) , '-');
+        int padID = 1;
+        string lines = string((int)((canvasStyle.fStyleName.length()+17 - 7) / 2) , '-');
         for(auto& padStyle : canvasStyle.fPads)
         {
           cout << "  " << lines << " Pad " << padID << " " << lines << endl;
@@ -1086,7 +1084,7 @@ void AliMultDepSpecPlottingFramework::SetTransparentCanvas(Bool_t transparent)
 
           padID++;
         }
-        cout << "========" << string((Int_t)canvasStyle.fStyleName.length() +2, '=') << "========" << endl << endl;
+        cout << "========" << string((int)canvasStyle.fStyleName.length() +2, '=') << "========" << endl << endl;
 
     }
   }

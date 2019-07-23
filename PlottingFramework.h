@@ -1,5 +1,5 @@
-#ifndef AliMultDepSpecPlottingFramework_h
-#define AliMultDepSpecPlottingFramework_h
+#ifndef PlottingFramework_h
+#define PlottingFramework_h
 
 #include "TFile.h"
 #include "TStyle.h"
@@ -40,15 +40,14 @@ using std::vector;
 
 #include "Plot.h"
 
-/** \class AliMultDepSpecPlottingFramework
+/** \class PlottingFramework
     This class provides the functionality for performing
     the plotting for spectra vs. multipliciyty
 */
 // TODO: add scaling feature!!
 // todo: setndivisions from outside
 // TODO: auto-change Ranges are not cut
-// TODO: possibility to add same hist twice in plot?
-class AliMultDepSpecPlottingFramework
+class PlottingFramework
 {
  public:
    struct GlobalStyle{
@@ -91,8 +90,8 @@ class AliMultDepSpecPlottingFramework
      vector<PadStyle> fPads;
    } CanvasStyle;
 
-  AliMultDepSpecPlottingFramework();
-  virtual ~AliMultDepSpecPlottingFramework();
+  PlottingFramework();
+  virtual ~PlottingFramework();
 
   TPaveText* MakeText(Plot::TextBox& textBoxTemplate);
   TLegend* MakeLegend(TPad* pad, Plot::TextBox& legendBoxTemplate, vector<Plot::Histogram>& histos);
@@ -170,8 +169,8 @@ class AliMultDepSpecPlottingFramework
     TH1* DivideWithTSpline(TH1* numerator, TH1* denominator);
     void ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, Int_t defaultValueIndex, string controlString);
 
-   AliMultDepSpecPlottingFramework(const AliMultDepSpecPlottingFramework&) = default;
-   AliMultDepSpecPlottingFramework& operator=(const AliMultDepSpecPlottingFramework&) = default;
+   PlottingFramework(const PlottingFramework&) = default;
+   PlottingFramework& operator=(const PlottingFramework&) = default;
 };
 
 #endif
