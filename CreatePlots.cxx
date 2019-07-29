@@ -1,22 +1,31 @@
-
 #include "PlottingFramework.h"
 #include "Plot.h"
 #include <sstream>
+
+using PlottingProject::PlottingFramework;
+using PlottingProject::Plot;
+using std::cout;
+using std::endl;
+using std::flush;
+using std::string;
+using std::vector;
+
 string GetPtString(int pTbin);
 // TODO: add feature to also add external histogram in plots
-/// This is the Plotting user anchorpoint
+// TODO: extend so multipad plots are possible
+
 int main(int argc, char *argv[]) {
 
   cout << "Hello World" << endl;
   return;
   string outputPath = "../../../../TempPlots";
   string outputFileName = "myPlots.root";
-  bool createBinWiseClosureTests = kTRUE;
-  bool skipDatasetPlots = kTRUE;
+  bool createBinWiseClosureTests = true;
+  bool skipDatasetPlots = true;
 
 
   vector<string> dataSets;
-  if(argc > 1) {dataSets.push_back(argv[1]); skipDatasetPlots = kFALSE;}
+  if(argc > 1) {dataSets.push_back(argv[1]); skipDatasetPlots = false;}
   else
   { // define datasets to include in analysis
     dataSets.push_back("Publications");
@@ -46,7 +55,7 @@ int main(int argc, char *argv[]) {
   // create plotting environment
   PlottingFramework plotEnv;
   plotEnv.SetOutputDirectory(outputPath);
-  //plotEnv.SetDrawTimestamps(kTRUE);
+  //plotEnv.SetDrawTimestamps(true);
   //plotEnv.SetPalette(kRainBow);//kBlueGreenYellow, kDarkRainBow
 
   for(string dataSet : dataSets){
@@ -121,7 +130,7 @@ int main(int argc, char *argv[]) {
   myPlot.AddTextBox(0.4, 0.91, datasetLable);
 //  myPlot.SetAxisRange("Z", -1e6, 1e6);
 //  myPlot.SetAxisRange("Y", 0.1, 1e6);
-  plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
 
@@ -135,7 +144,7 @@ int main(int argc, char *argv[]) {
 //  myPlot.AddTextBox(0.4, 0.91, datasetLable);
 //  myPlot.SetAxisRange("Z", -1e6, 1e6);
 //  myPlot.SetAxisRange("Y", 0.1, 1e6);
-  plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
 
@@ -149,7 +158,7 @@ int main(int argc, char *argv[]) {
 //  myPlot.AddTextBox(0.4, 0.91, datasetLable);
 //  myPlot.SetAxisRange("Z", -1e6, 1e6);
 //  myPlot.SetAxisRange("Y", 0.1, 1e6);
-  plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
 
@@ -165,7 +174,7 @@ int main(int argc, char *argv[]) {
   myPlot.SetAxisTitle("Y", "contamination");
   myPlot.AddLegendBox(0.3, 0.5);
   myPlot.AddTextBox(0.41, 0.3, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
 
@@ -179,7 +188,7 @@ int main(int argc, char *argv[]) {
   myPlot.SetAxisTitle("Y", "contamination");
   myPlot.AddLegendBox(0.3, 0.5);
   myPlot.AddTextBox(0.41, 0.3, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
 
@@ -196,7 +205,7 @@ int main(int argc, char *argv[]) {
   myPlot.SetAxisTitle("Y", "efficiency");
   myPlot.AddLegendBox(0.3, 0.5);
   myPlot.AddTextBox(0.41, 0.3, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
 
@@ -212,7 +221,7 @@ int main(int argc, char *argv[]) {
   myPlot.AddTextBox(0.4, 0.91, datasetLable);
 //  myPlot.SetAxisRange("X", 0, 20);
   myPlot.SetAxisRange("Y", 0.1, 1e6);
-  plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
 
@@ -231,7 +240,7 @@ int main(int argc, char *argv[]) {
   myPlot.AddLegendBox(0.5, 0.78);
   myPlot.AddTextBox(0.3, 0.92, datasetLable);
 //  myPlot.SetAxisRange("X", 0, 20);
-  plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
 
@@ -250,7 +259,7 @@ int main(int argc, char *argv[]) {
   myPlot.AddLegendBox(0.6, 0.7);
   myPlot.AddTextBox(0.4, 0.91, datasetLable);
 //  myPlot.SetAxisRange("X", 0, 20);
-  plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
 
@@ -271,7 +280,7 @@ int main(int argc, char *argv[]) {
   myPlot.SetAxisTitle("Y", "integrated / true #it{N}_{ch}");
   myPlot.AddTextBox(0.6, 0.5, "particles per event in // measured spectra // over respective #it{N}_{ch}");
   myPlot.AddTextBox(0.15, 0.91, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
 
@@ -290,7 +299,7 @@ int main(int argc, char *argv[]) {
   myPlot.AddLegendBox(0.6, 0.6);
   myPlot.AddTextBox(0.15, 0.91, datasetLable);
   myPlot.AddTextBox(0.5, 0.4, "particles per event in // measured spectra // over respective #it{N}_{ch}");
-  plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default ratio", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
 
@@ -307,7 +316,7 @@ int main(int argc, char *argv[]) {
   myPlot.AddLegendBox(0.2, 0.4);
   myPlot.SetAxisRange("Y", 1e-8, 1e-3);
   myPlot.AddTextBox(0.4, 0.91, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet);
 } // -----------------------------------------------------------------------
 
@@ -320,7 +329,7 @@ int main(int argc, char *argv[]) {
   myPlot.AddLegendBox(0.2, 0.4);
   myPlot.SetAxisRange("Y", 1e-8, 1e-3);
   myPlot.AddTextBox(0.4, 0.91, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet);
 } // -----------------------------------------------------------------------
 
@@ -337,7 +346,7 @@ int multBin = 18;
   myPlot.SetAxisRange("Y", 1e-12, 2);
   myPlot.SetAxisTitle("X", "#it{p}^{ meas}_{T}");
   myPlot.AddTextBox(0.16, 0.3, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+  plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet);
 } // -----------------------------------------------------------------------
 
@@ -361,7 +370,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.2, 0.4);
       myPlot.SetAxisRange("X", 0, 130);
       myPlot.AddTextBox(0.4, 0.91, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
 
@@ -376,7 +385,7 @@ int multBin = 18;
       //myPlot.SetAxisRange("X", 0, multRange);
       myPlot.AddLegendBox(0.2, 0.4);
       myPlot.AddTextBox(0.4, 0.91, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -390,7 +399,7 @@ int multBin = 18;
       //myPlot.SetAxisRange("X", 0, multRange);
       myPlot.AddLegendBox(0.2, 0.4);
       myPlot.AddTextBox(0.4, 0.91, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -407,7 +416,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "norm. yield");
       //myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{acc}) (GeV/#it{c})^{-2}");
       myPlot.AddTextBox(0.15, 0.8, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -425,7 +434,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "raw yield");
       //myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{acc}) (GeV/#it{c})^{-2}");
       myPlot.AddTextBox(0.15, 0.8, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -446,7 +455,7 @@ int multBin = 18;
       //myPlot.SetAxisTitle("Z", "norm. yield");
       myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{ch}) [(GeV/#it{c})^{-2}]");
       myPlot.AddTextBox(0.15, 0.8, datasetLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -463,7 +472,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "norm. yield");
       //myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{acc}) (GeV/#it{c})^{-2}");
       myPlot.AddTextBox(0.15, 0.8, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -481,7 +490,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "raw yield");
       //myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{acc}) (GeV/#it{c})^{-2}");
       myPlot.AddTextBox(0.15, 0.8, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -498,7 +507,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "norm. yield");
       //myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{ch}) (GeV/#it{c})^{-2}");
       myPlot.AddTextBox(0.15, 0.8, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -515,7 +524,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "norm. yield");
       //myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{ch}) (GeV/#it{c})^{-2}");
       myPlot.AddTextBox(0.15, 0.8, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -529,7 +538,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.5, 0.3);
       myPlot.AddTextBox(0.16, 0.92, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -543,7 +552,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0., 0.9);
       myPlot.AddLegendBox(0.2, 0.6);
       myPlot.AddTextBox(0.16, 0.92, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
 
@@ -560,7 +569,7 @@ int multBin = 18;
       myPlot.SetAxisRange("X", 0, 10);
       myPlot.SetAxisRange("Y", 0, 10);
       myPlot.AddTextBox(0.3, 0.3, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -572,7 +581,7 @@ int multBin = 18;
       //myPlot.SetAxisRange("X", 0, multRange);
       //myPlot.SetAxisRange("Y", 0, multRange);
       myPlot.AddTextBox(0.3, 0.3, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -589,7 +598,7 @@ int multBin = 18;
       //myPlot.SetAxisTitle("Z", "#it{P}(#it{N}_{acc} | #it{N}_{ch})");
       //myPlot.SetAxisTitle("Z", "#it{P}(#it{N}^{ meas}_{ch} | #it{N}^{ true}_{ch})");
       myPlot.SetAxisTitle("Z", "#it{S}(#it{N}_{acc} | #it{N}_{ch})");
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -606,7 +615,7 @@ int multBin = 18;
       //myPlot.SetAxisTitle("Z", "#it{P}(#it{N}_{acc} | #it{N}_{ch})");
       //myPlot.SetAxisTitle("Z", "#it{P}(#it{N}^{ meas}_{ch} | #it{N}^{ true}_{ch})");
       myPlot.SetAxisTitle("Z", "#it{S}(#it{N}_{acc} | #it{N}_{ch})");
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -622,7 +631,7 @@ int multBin = 18;
       myPlot.AddHisto(plotName);
       myPlot.SetAxisTitle("Z", "#it{S}(#it{p}^{ meas}_{T} | #it{p}^{ true}_{T})");
       //myPlot.SetAxisTitle("Z", "#it{P}(#it{p}^{ meas}_{T} | #it{p}^{ true}_{T})");
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -635,7 +644,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "# Tracks");
       myPlot.AddTextBox(0.3, 0.9, datasetLable);
       myPlot.AddHisto(plotName);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -647,7 +656,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "# Tracks");
       myPlot.AddTextBox(0.3, 0.9, datasetLable);
       myPlot.AddHisto(plotName);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
 
@@ -665,7 +674,7 @@ int multBin = 18;
       myPlot.SetAxisRange("X", 0, 10);
       myPlot.SetAxisTitle("Y", "efficiency");
       myPlot.AddTextBox(0.41, 0.3, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -676,7 +685,7 @@ int multBin = 18;
       myPlot.SetAxisRange("X", 0, 10);
       myPlot.AddTextBox(0.41, 0.92, datasetLable);
       myPlot.SetAxisTitle("Y", "contamination");
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -691,7 +700,7 @@ int multBin = 18;
       myPlot.AddTextBox(0.15, 0.9, datasetLable);
       myPlot.SetAxisTitle("X", "#it{p}^{ true}_{T}");
       myPlot.SetAxisTitle("Y", "efficiency x acceptance");
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
 
@@ -705,7 +714,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("X", "#it{p}^{ true}_{T}");
       myPlot.AddTextBox(0.4, 0.9, datasetLable);
       myPlot.SetAxisTitle("Y", "secondary contamination");
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -718,7 +727,7 @@ int multBin = 18;
       //myPlot.SetAxisTitle("X", "#it{p}^{ true}_{T}");
       myPlot.AddTextBox(0.4, 0.9, datasetLable);
       myPlot.SetAxisTitle("Y", "secondary contamination");
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -738,7 +747,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.16, 0.52);
       //myPlot.AddTextBox(0.41, 0.3, datasetLable);
       myPlot.SetAxisTitle("Y", "acceptance x efficiency");
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -758,7 +767,7 @@ int multBin = 18;
       myPlot.AddTextBox(0.41, 0.3, datasetLable);
       myPlot.SetAxisRange("Y", 0.2, 0.9);
       myPlot.SetAxisTitle("Y", "acceptance x efficiency");
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -776,7 +785,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.16, 0.92, "");
       myPlot.SetAxisRange("X", 0., multRange);
       myPlot.SetAxisRange("Y", 0, 0.12);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -794,7 +803,7 @@ int multBin = 18;
       myPlot.SetDrawingProperties("logX");
       myPlot.AddLegendBox(0.7, 0.3);
       myPlot.SetAxisRange("Y", 0, 0.15);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -811,7 +820,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("ratio", "data / MC");
       myPlot.AddLegendBox(0.4, 0.5, "");
       myPlot.AddTextBox(0.3, 0.9, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     // ---------------------- Closure tests ------------------------------------
@@ -830,7 +839,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.6, 0.9);
       myPlot.AddTextBox(0.16, 0.2, datasetLable);
       myPlot.SetAxisRange("ratio", 0.95, 1.05);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -849,7 +858,7 @@ int multBin = 18;
       myPlot.SetAxisRange("ratio", 0.95, 1.05);
       myPlot.AddLegendBox(0.7, 0.8);
       myPlot.AddTextBox(0.16, 0.2, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -870,7 +879,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("ratio", "ratio");
       myPlot.AddLegendBox(0.7, 0.85);
       myPlot.AddTextBox(0.16, 0.2, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -885,7 +894,7 @@ int multBin = 18;
       myPlot.SetAxisRange("ratio", 0.95, 1.05);
       myPlot.AddLegendBox(0.7, 0.7);
       myPlot.AddTextBox(0.16, 0.2, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -903,7 +912,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("ratio", "ratio");
       myPlot.AddLegendBox(0.6, 0.4);
       myPlot.AddTextBox(0.16, 0.92, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -921,7 +930,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("ratio", "ratio");
       myPlot.AddLegendBox(0.6, 0.4);
       myPlot.AddTextBox(0.16, 0.92, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -939,7 +948,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("ratio", "ratio");
       myPlot.AddLegendBox(0.7, 0.3);
       myPlot.AddTextBox(0.16, 0.92, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -959,7 +968,7 @@ int multBin = 18;
         myPlot.AddTextBox(0.6, 0.65, GetPtString(ptBin));
         myPlot.AddLegendBox(0.7, 0.5);
         myPlot.AddTextBox(0.42, 0.92, datasetLable);
-        plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+        plotEnv.CreateNewPlot(myPlot, "default ratio", false);
         plotEnv.SavePlot(plotName, dataSet, qaFolder + "/closureTestPtBins");
       }
     } // -----------------------------------------------------------------------
@@ -980,7 +989,7 @@ int multBin = 18;
         myPlot.AddTextBox(0.72, 0.9, "#it{N}_{ch} = " + std::to_string(multBin-1));
         myPlot.AddLegendBox(0.7, 0.7);
         myPlot.AddTextBox(0.16, 0.2, datasetLable);
-        plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+        plotEnv.CreateNewPlot(myPlot, "default ratio", false);
         plotEnv.SavePlot(plotName, dataSet, qaFolder + "/closureTestMultBins");
       }
     } // -----------------------------------------------------------------------
@@ -1017,7 +1026,7 @@ int multBin = 18;
         myPlot.AddLegendBox(0.15, 0.8, "", 2);
         myPlot.SetAxisRange("X", 0, multRange);
         //myPlot.SetAxisRange("Y", 0, 0.06);
-        plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+        plotEnv.CreateNewPlot(myPlot, "default", false);
         plotEnv.SavePlot(plotName, dataSet, systematicsFolder);
       }
     } // -----------------------------------------------------------------------
@@ -1031,8 +1040,8 @@ int multBin = 18;
     vector<string> centrality = {"0-5%","5-10%","10-20%","20-30%","30-40%","40-50%","50-60%","60-70%","70-80%"};
     vector<double> nchCent = {2869.49, 2342.32, 1740.05, 1156.23, 750.512, 463.796, 265.249, 138.504, 64.0346};
     vector<double> nchCentErrors = {82.7027, 70.8452, 45.7133, 29.4205, 21.9877, 17.5017, 11.5956, 8.3419, 4.84894};
-    //bool drawcent = kFALSE;
-    bool drawcent = kFALSE;
+    //bool drawcent = false;
+    bool drawcent = false;
 
     { // -----------------------------------------------------------------------
       string plotName = "meanPtFullRange";
@@ -1060,12 +1069,12 @@ int multBin = 18;
         {
           for(int j = 0; j < 6; j++)
           {
-            //myPlot.AddTextBox(nchCent[i], 0.705 + 0.01*j, "#bf{|}", kTRUE);
+            //myPlot.AddTextBox(nchCent[i], 0.705 + 0.01*j, "#bf{|}", true);
           }
-          myPlot.AddTextBox(nchCent[i], 0.69 - 0.02*i, (string("#bf{") + centrality[i] + string("}")).c_str(), kTRUE);
+          myPlot.AddTextBox(nchCent[i], 0.69 - 0.02*i, (string("#bf{") + centrality[i] + string("}")).c_str(), true);
         }
       }
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1094,12 +1103,12 @@ int multBin = 18;
         {
           for(int j = 0; j < 6; j++)
           {
-            myPlot.AddTextBox(nchCent[i], 0.36 + 0.01*j, "#bf{|}", kTRUE);
+            myPlot.AddTextBox(nchCent[i], 0.36 + 0.01*j, "#bf{|}", true);
           }
-          myPlot.AddTextBox(nchCent[i], 0.46 + 0.025*i, (string("#bf{") + centrality[i] + string("}")).c_str(), kTRUE);
+          myPlot.AddTextBox(nchCent[i], 0.46 + 0.025*i, (string("#bf{") + centrality[i] + string("}")).c_str(), true);
         }
       }
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1117,7 +1126,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.4, 0.85);
       myPlot.AddLegendBox(0.6, 0.8);
       myPlot.AddTextBox(0.4, 0.29, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1139,15 +1148,15 @@ int multBin = 18;
       {
         for(int j = 0; j < 6; j++)
         {
-          myPlot.AddTextBox(nchCent[i], 1e-4 - 0.00001*j, "#bf{|}", kTRUE);
+          myPlot.AddTextBox(nchCent[i], 1e-4 - 0.00001*j, "#bf{|}", true);
         }
-//        myPlot.AddTextBox(nchCent[i], 1e-3 + 0.001*i, (string("#bf{") + centrality[i] + string("}")).c_str(), kTRUE);
+//        myPlot.AddTextBox(nchCent[i], 1e-3 + 0.001*i, (string("#bf{") + centrality[i] + string("}")).c_str(), true);
       }
       myPlot.SetAxisRange("X", 0.1, 3000);
       myPlot.SetAxisRange("Y", 0.00001, 0.15);
       myPlot.AddLegendBox(0.2, 0.5);
       myPlot.AddTextBox(0.42, 0.92, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1157,7 +1166,7 @@ int multBin = 18;
       myPlot.SetFigureGroup(plotGroup);
       myPlot.AddHisto("momentUnfolded1dNchDeta", "pp_5TeV", "pp", 0, kBlue+1);
       myPlot.SetAxisRange("Y", 0.45, 0.85);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1174,7 +1183,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.05, 0.8);
       myPlot.AddLegendBox(0.15, 0.6);
       myPlot.AddTextBox(0.14, 0.92, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1196,7 +1205,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.SetAxisTitle("X", "#it{N}_{ch}");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1217,7 +1226,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.SetAxisTitle("X", "#it{N}_{ch}");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1235,7 +1244,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.SetAxisTitle("X", "#it{N}_{ch}");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1249,7 +1258,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.05, 0.8);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1268,7 +1277,7 @@ int multBin = 18;
       myPlot.SetAxisRange("ratio", 0.9, 1.1);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1287,7 +1296,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.2, 1.5);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1304,7 +1313,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.2, 5);
       myPlot.AddLegendBox(0.6, 0.4, "");
       myPlot.AddTextBox(0.15, 0.9, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1318,7 +1327,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.6, 0.4, "");
       myPlot.AddTextBox(0.15, 0.9, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1332,7 +1341,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.15, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
       myPlot.SetAxisRange("Y", 0.45, 0.85);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
   } //==========================================================================
@@ -1359,7 +1368,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.3, 1.0);
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
       myPlot.AddTextBox(0.4, 0.3, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1379,7 +1388,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
       //myPlot.AddTextBox(0.4, 0.3, energyLable);
       myPlot.AddTextBox(0.4, 0.3, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -1398,7 +1407,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
       //myPlot.AddTextBox(0.4, 0.3, energyLable);
       myPlot.AddTextBox(0.4, 0.3, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1414,7 +1423,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", -0.4, 0.8);
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
       myPlot.AddTextBox(0.4, 0.3, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1432,7 +1441,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
       //myPlot.AddTextBox(0.4, 0.3, energyLable);
       myPlot.AddTextBox(0.4, 0.3, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1450,7 +1459,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
       //myPlot.AddTextBox(0.4, 0.3, energyLable);
       myPlot.AddTextBox(0.4, 0.3, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1478,7 +1487,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, energyLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1504,7 +1513,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.05, 0.75);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, energyLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1540,7 +1549,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, energyLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1584,7 +1593,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.05, 0.9);
       myPlot.AddLegendBox(0.13, 0.9, "",4);
       myPlot.AddTextBox(0.4, 0.3, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1627,7 +1636,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.35, 0.3, "",4);
       myPlot.AddTextBox(0.4, 0.5, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -1641,7 +1650,7 @@ int multBin = 18;
 //      myPlot.SetAxisRange("Y", 0., 0.9);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1657,7 +1666,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.6, 0.5, "");
       myPlot.AddTextBox(0.15, 0.92, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1677,7 +1686,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.2, 1.5);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1697,7 +1706,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.1, 7.0);
       myPlot.AddLegendBox(0.6, 0.4, "");
       myPlot.AddTextBox(0.15, 0.92, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1728,7 +1737,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 1e-4, 3e-1);
       myPlot.AddLegendBox(0.18, 0.45);
       myPlot.AddTextBox(0.4, 0.9, energyLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
@@ -1754,7 +1763,7 @@ int multBin = 18;
 
       myPlot.AddLegendBox(0.7, 0.9);
       myPlot.AddTextBox(0.15, 0.3, energyLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1775,7 +1784,7 @@ int multBin = 18;
       myPlot.SetAxisRange("X", 0, 7);
       myPlot.AddLegendBox(0.7, 0.8);
       myPlot.AddTextBox(0.15, 0.3, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1804,7 +1813,7 @@ int multBin = 18;
 //      myPlot.AddTextBox(0.3, 0.3, publicationLable);
       myPlot.AddLegendBox(0.15, 0.7, "");
       myPlot.AddTextBox(0.15, 0.92, publicationLable);
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1829,7 +1838,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.55, 0.3, "");
       myPlot.AddTextBox(0.5, 0.92, publicationLable);
     //  myPlot3.SetDrawingProperties("thick");
-      plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1851,7 +1860,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.2, 0.25);
       string energyLable = alice + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
       myPlot.AddTextBox(0.42, 0.92, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
       plotEnv.SavePlot(plotName, plotGroup);
     } // -----------------------------------------------------------------------
 
@@ -1871,7 +1880,7 @@ int multBin = 18;
     myPlot.AddLegendBox(0.3, 0.9);
     myPlot.SetAxisRange("X", 0, 60);
   //  myPlot.SetAxisRange("Y", 0.1, 1e6);
-    plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
 
@@ -1886,7 +1895,7 @@ int multBin = 18;
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0, 60);
     myPlot.AddLegendBox(0.2, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
 
@@ -1902,7 +1911,7 @@ int multBin = 18;
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0, 60);
     myPlot.AddLegendBox(0.2, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -1919,7 +1928,7 @@ int multBin = 18;
     myPlot.AddTextBox(0.2, 0.25, "data unfolded");
     myPlot.SetAxisRange("ratio", 0.8, 1.2);
     myPlot.AddLegendBox(0.4, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
 
@@ -1937,7 +1946,7 @@ int multBin = 18;
     myPlot.AddTextBox(0.2, 0.25, "data unfolded");
     myPlot.SetAxisRange("ratio", 0.8, 1.2);
     myPlot.AddLegendBox(0.4, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
 
@@ -1955,7 +1964,7 @@ int multBin = 18;
     myPlot.AddTextBox(0.2, 0.25, "data unfolded");
     myPlot.SetAxisRange("ratio", 0.8, 1.2);
     myPlot.AddLegendBox(0.4, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
 
@@ -1972,7 +1981,7 @@ int multBin = 18;
     myPlot.AddTextBox(0.2, 0.25, "MC measured");
     myPlot.SetAxisRange("ratio", 0.8, 1.2);
     myPlot.AddLegendBox(0.4, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
 
@@ -1989,7 +1998,7 @@ int multBin = 18;
 //    myPlot.SetAxisRange("ratio", 0.8, 1.2);
     myPlot.AddTextBox(0.2, 0.25, "MC truth");
     myPlot.AddLegendBox(0.4, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
 
@@ -2000,7 +2009,7 @@ int multBin = 18;
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddHisto("multCorrelationMatrix", "pp_13TeV");
     myPlot.AddTextBox(0.4, 0.25, "no data-driven corrections");
-    plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -2010,7 +2019,7 @@ int multBin = 18;
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddHisto("multCorrelationMatrix", "pp_13TeV_withDDC");
     myPlot.AddTextBox(0.4, 0.25, "with data-driven corrections");
-    plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
 
@@ -2026,7 +2035,7 @@ int multBin = 18;
     myPlot.SetAxisRange("ratio", 0.95, 1.05);
     myPlot.AddRatio("mean", "pp_13TeV", "mean", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1);
     myPlot.AddLegendBox(0.2, 0.9);
-    plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
 
@@ -2042,7 +2051,7 @@ int multBin = 18;
     myPlot.SetAxisRange("ratio", 0.5, 1.5);
     myPlot.AddRatio("sigma", "pp_13TeV", "sigma", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1);
     myPlot.AddLegendBox(0.2, 0.9);
-    plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
 
@@ -2053,7 +2062,7 @@ int multBin = 18;
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddHisto("responseMatrix", "pp_13TeV");
     myPlot.AddTextBox(0.4, 0.25, "no data-driven corrections");
-    plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -2063,7 +2072,7 @@ int multBin = 18;
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddHisto("responseMatrix", "pp_13TeV_withDDC");
     myPlot.AddTextBox(0.4, 0.25, "with data-driven corrections");
-    plotEnv.CreateNewPlot(myPlot, "default", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
 
@@ -2080,7 +2089,7 @@ int multBin = 18;
     myPlot.SetAxisRange("Y", 0.45, 0.85);
     myPlot.SetAxisRange("ratio", 0.99, 1.01);
     myPlot.AddLegendBox(0.2, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -2096,7 +2105,7 @@ int multBin = 18;
     myPlot.SetAxisRange("Y", 0.05, 0.9);
     myPlot.SetAxisRange("ratio", 0.95, 1.05);
     myPlot.AddLegendBox(0.2, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", kFALSE);
+    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
     plotEnv.SavePlot(plotName, "QA");
   } // -----------------------------------------------------------------------
 
