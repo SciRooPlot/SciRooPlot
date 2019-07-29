@@ -20,17 +20,21 @@ string GetPtString(int pTbin);
 int main(int argc, char *argv[]) {
 
   cout << "Hello World" << endl;
-  return;
-  string outputPath = "../../../../TempPlots";
+ // return;
+  string outputPath = "../../../../../TempPlots";
   string outputFileName = "myPlots.root";
   bool createBinWiseClosureTests = true;
-  bool skipDatasetPlots = true;
+  bool skipDatasetPlots = false;
 
 
   vector<string> dataSets;
   if(argc > 1) {dataSets.push_back(argv[1]); skipDatasetPlots = false;}
   else
   { // define datasets to include in analysis
+    dataSets.push_back("pp_5TeV");
+
+    /* --- Unused Datasets ---
+
     dataSets.push_back("Publications");
     dataSets.push_back("pPb_5TeV");
     dataSets.push_back("PbPb_5TeV");
@@ -38,7 +42,6 @@ int main(int argc, char *argv[]) {
     dataSets.push_back("pp_7TeV");
     dataSets.push_back("Simulations");
     dataSets.push_back("Energyscan");
-    dataSets.push_back("pp_5TeV");
     dataSets.push_back("pp_2TeV");
     dataSets.push_back("pp_13TeV");
 
@@ -48,7 +51,6 @@ int main(int argc, char *argv[]) {
     dataSets.push_back("PbPb_5TeV_noZDC");
 
 
-  /* --- Unused Datasets ---
     dataSets.push_back("pp_5TeV_10GeV_CENT");
     dataSets.push_back("pp_5TeV_10GeV_CENTwoSDD");
     dataSets.push_back("pp_5TeV_10GeV_FAST");
@@ -62,7 +64,7 @@ int main(int argc, char *argv[]) {
   //plotEnv.SetPalette(kRainBow);//kBlueGreenYellow, kDarkRainBow
 
   for(string dataSet : dataSets){
-    string folder = "../../../Datasets/" + dataSet + "/";
+    string folder = "../../../../Datasets/" + dataSet + "/";
     string inputFile = folder + dataSet + "_Results.root";
     string inputFileSyst = folder + dataSet + "_Syst.root";
 
@@ -1035,7 +1037,7 @@ int multBin = 18;
     } // -----------------------------------------------------------------------
   } //==========================================================================
 
-//  if(plotEnv.ContainsDatasets({"pp_5TeV", "pPb_5TeV", "PbPb_5TeV"}))
+  if(plotEnv.ContainsDatasets({"pp_5TeV", "pPb_5TeV", "PbPb_5TeV"}))
   { //==========================================================================
     string plotGroup = "system_comparison";
     string systemSizeLable = alice + newLine + chargedParticles + ", " + erg5TeV_NN + newLine + eta08 + ", " + ptRange;
@@ -2113,6 +2115,8 @@ int multBin = 18;
   } // -----------------------------------------------------------------------
 
 
+  
+  plotEnv.PrintErrors();
 }
 
 

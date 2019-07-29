@@ -75,7 +75,8 @@ namespace PlottingProject {
   {
     TFile inputFile(inputFileName.c_str(), "READ");
     if (inputFile.IsZombie()) {
-      cout << "ERROR: Could not open " << inputFileName << "." << endl;
+      mListOfMissingFiles.push_back(inputFileName);
+      //cout << "ERROR: Could not open " << inputFileName << "." << endl;
       return;
     }
     if (std::find(mDatasetIdentifiers.begin(), mDatasetIdentifiers.end(), datasetIdentifier) != mDatasetIdentifiers.end())
@@ -156,7 +157,7 @@ namespace PlottingProject {
     TH1* plot = (TH1*)mPlotLedger->FindObject(name.c_str());
     if (!plot)
     {
-      cout << "ERROR: Plot " << name << " was not booked." << endl;
+      //cout << "ERROR: Plot " << name << " was not booked." << endl;
     }else{
       plot->SaveAs((folderName + "/" + name + ".pdf").c_str());
     }
@@ -293,7 +294,7 @@ namespace PlottingProject {
   void PlottingFramework::CreateNewPlot(Plot& plot, string canvasStyleName, bool saveToConfig)
   {
     if(!IsPlotPossible(plot)){
-      cout << "----> " << plot.GetName() << " <----" << endl;
+      mListOfMissingPlots.push_back(plot.GetName());
       return;
     }
     if(plot.GetFigureGroup() == ""){
@@ -347,7 +348,7 @@ namespace PlottingProject {
       TObject* obj = mHistoLedger->FindObject(histName.c_str());
       if(!obj)
       {
-        cout << "ERROR: Histogram " << histName << " not found!" << endl;
+        mListOfMissingHistograms.push_back(histName);
         return false;
       }
     }
@@ -1086,4 +1087,31 @@ namespace PlottingProject {
       
     }
   }
+
+
+
+  void PlottingFramework::PrintErrors(bool printMissingPlots){
+    if(!mListOfMissingPlots.empty()){
+      if(!mListOfMissingFiles.empty()){
+        cout << endl << "The following input files could not be loaded: " << endl;
+        for(auto& name : mListOfMissingFiles){
+          cout << " - " << name << endl;
+        }
+      }
+      if(!mListOfMissingHistograms.empty()){
+        cout << endl << "The following histograms were not found: " << endl;
+        for(auto& name : mListOfMissingHistograms){
+          cout << " - " << name << endl;
+        }
+      }
+      if(printMissingPlots)
+      {
+        cout << endl << "Therefore the following plots could not be created: " << endl;
+        for(auto& name : mListOfMissingPlots){
+          cout << " - " << name << endl;
+        }
+      }
+    }
+  }
+ 
 }

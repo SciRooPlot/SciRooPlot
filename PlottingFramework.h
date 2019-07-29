@@ -132,6 +132,8 @@ namespace PlottingProject {
     bool ContainsDatasets(std::initializer_list<string> requiredDatasets);
     void CutHistogram(TH1* hist, double cutoff, double cutoffLow);
     
+    void PrintErrors(bool printMissingPlots = false);
+
   private:
     GlobalStyle mStyle;
     void DefineDefaultPlottingStyle();
@@ -149,6 +151,10 @@ namespace PlottingProject {
     // actually vector<Plot>
     
     vector<string> mDatasetIdentifiers;
+    
+    vector<string> mListOfMissingFiles;
+    vector<string> mListOfMissingPlots;
+    vector<string> mListOfMissingHistograms;
     
     // Bookkeeping functions
     void BookHistos(TDirectoryFile& folder, string datasetIdentifier); // recursively walking through input file
