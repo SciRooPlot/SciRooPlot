@@ -13,6 +13,9 @@ using std::vector;
 string GetPtString(int pTbin);
 // TODO: add feature to also add external histogram in plots
 // TODO: extend so multipad plots are possible
+// TODO: add scaling feature!!
+// TODO: setndivisions from outside
+// TODO: auto-change Ranges are not cut
 
 int main(int argc, char *argv[]) {
 

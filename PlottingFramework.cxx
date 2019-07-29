@@ -41,11 +41,11 @@ namespace PlottingProject {
     cout << "Doing plotting ..." << endl;
     cout << endl;
     
-    fHistoLedger = new TObjArray(1);
-    fHistoLedger->SetOwner();
+    mHistoLedger = new TObjArray(1);
+    mHistoLedger->SetOwner();
     
-    fPlotLedger = new TObjArray(1);
-    fPlotLedger->SetOwner();
+    mPlotLedger = new TObjArray(1);
+    mPlotLedger->SetOwner();
     
     DefineDefaultPlottingStyle();
     SetGlobalStyle();
@@ -59,8 +59,8 @@ namespace PlottingProject {
   
   PlottingFramework::~PlottingFramework()
   {
-    fHistoLedger->Delete();
-    fPlotLedger->Delete();
+    mHistoLedger->Delete();
+    mPlotLedger->Delete();
     //  fOutputFile->Close();
   }
   
@@ -78,7 +78,7 @@ namespace PlottingProject {
       cout << "ERROR: Could not open " << inputFileName << "." << endl;
       return;
     }
-    if (std::find(fDatasetIdentifiers.begin(), fDatasetIdentifiers.end(), datasetIdentifier) != fDatasetIdentifiers.end())
+    if (std::find(mDatasetIdentifiers.begin(), mDatasetIdentifiers.end(), datasetIdentifier) != mDatasetIdentifiers.end())
     {
       if(inputFileName.find("_Syst") == string::npos){
         cout << "ERROR: Dataset "  << datasetIdentifier <<  " was already booked!" << endl;
@@ -86,7 +86,7 @@ namespace PlottingProject {
       }
     }
     BookHistos(inputFile, datasetIdentifier);
-    fDatasetIdentifiers.push_back(datasetIdentifier);
+    mDatasetIdentifiers.push_back(datasetIdentifier);
   }
   
   ////////////////////////////////////////////////////////////////////////////////
@@ -95,7 +95,7 @@ namespace PlottingProject {
   
   bool PlottingFramework::ContainsDatasets(std::initializer_list<string> requiredDatasets){
     for(string requiredDataset : requiredDatasets){
-      if (std::find(fDatasetIdentifiers.begin(), fDatasetIdentifiers.end(), requiredDataset) == fDatasetIdentifiers.end())
+      if (std::find(mDatasetIdentifiers.begin(), mDatasetIdentifiers.end(), requiredDataset) == mDatasetIdentifiers.end())
       {
         cout << "Dataset " << requiredDataset << " was not loaded in framework." << endl;
         return false;
@@ -123,7 +123,7 @@ namespace PlottingProject {
         string newName = string(obj->GetName()) + "_@_" + datasetIdentifier;
         TH1* hist = (TH1*)obj->Clone(newName.c_str());
         hist->SetDirectory(0);
-        fHistoLedger->Add(hist);
+        mHistoLedger->Add(hist);
       }
     }
   }
@@ -136,7 +136,7 @@ namespace PlottingProject {
   
   void PlottingFramework::SetOutputDirectory(string path)
   {
-    fOutputDirectory = path;
+    mOutputDirectory = path;
   }
   
   
@@ -147,13 +147,13 @@ namespace PlottingProject {
   
   void PlottingFramework::SavePlot(string plotName, string figureGroup, string subFolder)
   {
-    string folderName = fOutputDirectory + "/" + figureGroup;
+    string folderName = mOutputDirectory + "/" + figureGroup;
     if(subFolder != "") folderName += "/" + subFolder;
     
     gSystem->Exec((string("mkdir -p ") + folderName).c_str());
     
     string name = plotName + "_@_" + figureGroup;
-    TH1* plot = (TH1*)fPlotLedger->FindObject(name.c_str());
+    TH1* plot = (TH1*)mPlotLedger->FindObject(name.c_str());
     if (!plot)
     {
       cout << "ERROR: Plot " << name << " was not booked." << endl;
@@ -170,9 +170,9 @@ namespace PlottingProject {
   
   void PlottingFramework::WritePlotsToFile(string outputFileName)
   {
-    TFile outputFile((fOutputDirectory + "/" + outputFileName).c_str(), "RECREATE");
+    TFile outputFile((mOutputDirectory + "/" + outputFileName).c_str(), "RECREATE");
     outputFile.cd();
-    fPlotLedger->Write();
+    mPlotLedger->Write();
   }
   
   
@@ -190,14 +190,14 @@ namespace PlottingProject {
     
     // apply title offsets
     int padID = 1;
-    for(auto& padStyle : canvasStyle.fPads)
+    for(auto& padStyle : canvasStyle.pads)
     {
       TPad* pad = (TPad*)canvas->GetPad(padID);
       TH1* hist = (TH1*)pad->GetListOfPrimitives()->At(0);
       if(!hist) cout << "Error:: no histo found!" << endl;
-      hist->GetXaxis()->SetTitleOffset(padStyle.fTitleOffset[0]);
-      hist->GetYaxis()->SetTitleOffset(padStyle.fTitleOffset[1]);
-      hist->GetZaxis()->SetTitleOffset(padStyle.fTitleOffset[2]);
+      hist->GetXaxis()->SetTitleOffset(padStyle.titleOffset[0]);
+      hist->GetYaxis()->SetTitleOffset(padStyle.titleOffset[1]);
+      hist->GetZaxis()->SetTitleOffset(padStyle.titleOffset[2]);
       //    hist->LabelsOption("v");
       padID++;
     }
@@ -241,7 +241,7 @@ namespace PlottingProject {
     }
     
     canvas->cd();
-    if(fStyle.fDrawTimestamps){
+    if(mStyle.drawTimestamps){
       TTimeStamp time;
       TString stTime;
       stTime=Form("#color[16]{%i}",time.GetDate());
@@ -250,7 +250,7 @@ namespace PlottingProject {
       timeStamp->SetTextAlign(22);
       timeStamp->SetTextFont(63);
       timeStamp->SetTextSizePixels(10);
-      timeStamp->DrawLatex(fStyle.fTimestampPosition[0], fStyle.fTimestampPosition[1], stTime);
+      timeStamp->DrawLatex(mStyle.timestampPosition[0], mStyle.timestampPosition[1], stTime);
     }
     
     
@@ -260,22 +260,22 @@ namespace PlottingProject {
   TCanvas* PlottingFramework::MakeCanvas(string name, CanvasStyle& canvasStyle)
   {
     // create canvas
-    TCanvas* canvas = new TCanvas(name.c_str(), name.c_str(), canvasStyle.fCanvasWidth, canvasStyle.fCanvasHeight);
-    canvas->SetFillStyle(fStyle.fFillStyleCanvas);
+    TCanvas* canvas = new TCanvas(name.c_str(), name.c_str(), canvasStyle.canvasWidth, canvasStyle.canvasHeight);
+    canvas->SetFillStyle(mStyle.fillStyleCanvas);
     
     // create pads defined by style
     int padID = 1;
-    for(auto& padStyle : canvasStyle.fPads)
+    for(auto& padStyle : canvasStyle.pads)
     {
       canvas->cd();
       string padName = "Pad_" + std::to_string(padID);
-      TPad* pad = new TPad(padName.c_str(),"", padStyle.fPosition[0], padStyle.fPosition[1], padStyle.fPosition[2], padStyle.fPosition[3]);
+      TPad* pad = new TPad(padName.c_str(),"", padStyle.position[0], padStyle.position[1], padStyle.position[2], padStyle.position[3]);
       // apply pad settings
-      pad->SetFillStyle(fStyle.fFillStyleCanvas);
-      pad->SetTopMargin(padStyle.fMargin[0]);
-      pad->SetBottomMargin(padStyle.fMargin[1]);
-      pad->SetLeftMargin(padStyle.fMargin[2]);
-      pad->SetRightMargin(padStyle.fMargin[3]);
+      pad->SetFillStyle(mStyle.fillStyleCanvas);
+      pad->SetTopMargin(padStyle.margin[0]);
+      pad->SetBottomMargin(padStyle.margin[1]);
+      pad->SetLeftMargin(padStyle.margin[2]);
+      pad->SetRightMargin(padStyle.margin[3]);
       pad->SetNumber(padID);
       
       pad->Draw();
@@ -310,7 +310,7 @@ namespace PlottingProject {
       return;
     }
     CanvasStyle& canvasStyle = *tempPtr;
-    if(canvasStyle.fPads.size() != plot.GetNumSubPlots())
+    if(canvasStyle.pads.size() != plot.GetNumSubPlots())
     {
       cout << "ERROR: Number of pads in style '"  << canvasStyleName << "' does not match the number of subplots needed for plotting '" << plot.GetName() << "'." << endl;
       return;
@@ -319,7 +319,7 @@ namespace PlottingProject {
     DrawPlotInCanvas(plot, canvas);
     ApplyStyleSettings(canvasStyle, canvas, controlString);
     
-    fPlotLedger->Add(canvas);
+    mPlotLedger->Add(canvas);
   }
   
   void PlottingFramework::CutHistogram(TH1* hist, double cutoff, double cutoffLow)
@@ -343,8 +343,8 @@ namespace PlottingProject {
   {
     for(auto& histoTemplate : plot.GetHistoTemplates())
     {
-      string histName = histoTemplate.fName;
-      TObject* obj = fHistoLedger->FindObject(histName.c_str());
+      string histName = histoTemplate.name;
+      TObject* obj = mHistoLedger->FindObject(histName.c_str());
       if(!obj)
       {
         cout << "ERROR: Histogram " << histName << " not found!" << endl;
@@ -353,13 +353,13 @@ namespace PlottingProject {
     }
     for(auto& ratioTemplate : plot.GetRatioTemplates())
     {
-      string ratioName = ratioTemplate.fName;
+      string ratioName = ratioTemplate.name;
       string delimiter = " / ";
       string numerator = ratioName.substr(0, ratioName.find(delimiter));
       string denominator = ratioName.substr(ratioName.find(delimiter)+ delimiter.length());
       
-      TObject* obj1 = fHistoLedger->FindObject(numerator.c_str());
-      TObject* obj2 = fHistoLedger->FindObject(denominator.c_str());
+      TObject* obj1 = mHistoLedger->FindObject(numerator.c_str());
+      TObject* obj2 = mHistoLedger->FindObject(denominator.c_str());
       if(!obj1)
       {
         cout << "ERROR: Histogram " << numerator << " not found!" << endl;
@@ -388,7 +388,7 @@ namespace PlottingProject {
       string drawingOptions = "";
       int defaultValueIndex = 0; // for markers and colors
       for(auto& histoTemplate : plot.GetHistoTemplates()){
-        TH1* histo = GetHistClone(histoTemplate.fName);
+        TH1* histo = GetHistClone(histoTemplate.name);
         histo->UseCurrentStyle();
         if(!histo) cout << "ERROR: " << endl;
         ApplyHistoSettings(histo, histoTemplate, drawingOptions, defaultValueIndex, plot.GetControlString());
@@ -398,7 +398,7 @@ namespace PlottingProject {
       }
       // patch truncated lowest lable
       // TODO: add possibility to swich that off
-      TPad* patch = new TPad("patch", "patch", mainPad->GetLeftMargin()/2 ,0, mainPad->GetLeftMargin()-0.004, fStyle.fTextSize / mainPad->YtoPixel(mainPad->GetY1()));
+      TPad* patch = new TPad("patch", "patch", mainPad->GetLeftMargin()/2 ,0, mainPad->GetLeftMargin()-0.004, mStyle.textSize / mainPad->YtoPixel(mainPad->GetY1()));
       patch->Draw("SAME");
       patch->SetFillColor(mainPad->GetFillColor());
       patch->SetBorderMode(0);
@@ -407,7 +407,7 @@ namespace PlottingProject {
       drawingOptions = "";
       defaultValueIndex = 0; // for markers and colors
       for(auto& ratioTemplate : plot.GetRatioTemplates()){
-        TH1* ratio = GetRatio(ratioTemplate.fName);
+        TH1* ratio = GetRatio(ratioTemplate.name);
         if(!ratio) cout << "ERROR: " << endl;
         ratio->UseCurrentStyle();
         ratio->GetYaxis()->CenterTitle(1);
@@ -437,7 +437,7 @@ namespace PlottingProject {
       
       // patch truncated uppest lable
       // TODO: add possibility to swich that off
-      TPad* patchRatio = new TPad("patchRatio", "patchRatio", ratioPad->GetLeftMargin()/2 , 1, ratioPad->GetLeftMargin()-0.004, 1- (fStyle.fTextSize / ratioPad->YtoPixel(ratioPad->GetY1())), ratioPad->GetLeftMargin()-0.004);
+      TPad* patchRatio = new TPad("patchRatio", "patchRatio", ratioPad->GetLeftMargin()/2 , 1, ratioPad->GetLeftMargin()-0.004, 1- (mStyle.textSize / ratioPad->YtoPixel(ratioPad->GetY1())), ratioPad->GetLeftMargin()-0.004);
       patchRatio->Draw("SAME");
       patchRatio->SetFillColor(ratioPad->GetFillColor());
       patchRatio->SetBorderMode(0);
@@ -451,19 +451,19 @@ namespace PlottingProject {
       string drawingOptions = "";
       int defaultValueIndex = 0; // for markers and colors
       for(auto& histoTemplate : plot.GetHistoTemplates()){
-        TH1* histo = GetHistClone(histoTemplate.fName);
-        CutHistogram(histo, histoTemplate.fCutoff, histoTemplate.fCutoffLow);
+        TH1* histo = GetHistClone(histoTemplate.name);
+        CutHistogram(histo, histoTemplate.cutoff, histoTemplate.cutoffLow);
         histo->UseCurrentStyle();
         if(!histo) cout << "ERROR: " << endl;
         if(plot.GetControlString().find("normalize") != string::npos) {std::cout << histo->GetName() << ", norm " << histo->Integral() << std::endl; histo->Scale(1/histo->Integral(), "");} // width??
-        if(histoTemplate.fColor < 0) {defaultValueIndex += histoTemplate.fColor; histoTemplate.fMarker = 0;  histoTemplate.fColor = 0;}
+        if(histoTemplate.color < 0) {defaultValueIndex += histoTemplate.color; histoTemplate.marker = 0;  histoTemplate.color = 0;}
         ApplyHistoSettings(histo, histoTemplate, drawingOptions, defaultValueIndex, plot.GetControlString());
         histo->Draw(drawingOptions.c_str());
         drawingOptions = "SAME";
         defaultValueIndex++;
       }
-      for(auto& graphTemplate : plot.fGraphs){
-        TGraph* graph = GetGraphClone(graphTemplate.fName);
+      for(auto& graphTemplate : plot.mGraphs){
+        TGraph* graph = GetGraphClone(graphTemplate.name);
         graph->UseCurrentStyle();
         graph->SetLineWidth(4);
         graph->SetLineColor(kBlack);
@@ -512,27 +512,27 @@ namespace PlottingProject {
     vector<string> lables;
     for(auto& histo : histos)
     {
-      if(histo.fLable.empty()) continue;
-      TObject* pointer = pad->GetListOfPrimitives()->FindObject(histo.fName.c_str());
-      if(!pointer) cout << "ERROR: could not find " << histo.fName << " in pad." << endl;
+      if(histo.lable.empty()) continue;
+      TObject* pointer = pad->GetListOfPrimitives()->FindObject(histo.name.c_str());
+      if(!pointer) cout << "ERROR: could not find " << histo.name << " in pad." << endl;
       legendEntries.Add(pointer);
-      lables.push_back(histo.fLable);
-      if(histo.fLable.length() > nLetters) nLetters = histo.fLable.length();
-      errorStyles.push_back(histo.fErrorStyle);
+      lables.push_back(histo.lable);
+      if(histo.lable.length() > nLetters) nLetters = histo.lable.length();
+      errorStyles.push_back(histo.errorStyle);
     }
     
-    int nColums = legendBoxTemplate.fNColumns;
+    int nColums = legendBoxTemplate.nColumns;
     
     int nEntries = legendEntries.GetEntries();
-    double textSizeNDC = fStyle.fTextSize / pad->YtoPixel(pad->GetY1());
-    double textSizeNDCx = 0.6*fStyle.fTextSize / pad->XtoPixel(pad->GetX2());
+    double textSizeNDC = mStyle.textSize / pad->YtoPixel(pad->GetY1());
+    double textSizeNDCx = 0.6*mStyle.textSize / pad->XtoPixel(pad->GetX2());
     double markerSpace = 2.5*textSizeNDCx;
     double yWidth = (1.0*nEntries + 0.5*(nEntries-1))* textSizeNDC / nColums;
     double xWidth = (markerSpace + nLetters * textSizeNDCx) * nColums;
     
     
     
-    TLegend* legend = new TLegend(legendBoxTemplate.fX, legendBoxTemplate.fY - yWidth, legendBoxTemplate.fX + xWidth, legendBoxTemplate.fY, legendBoxTemplate.fText.c_str(), "NDC");
+    TLegend* legend = new TLegend(legendBoxTemplate.x, legendBoxTemplate.y - yWidth, legendBoxTemplate.x + xWidth, legendBoxTemplate.y, legendBoxTemplate.text.c_str(), "NDC");
     
     // TODO fix header not shown!!
     legend->SetNColumns(nColums);
@@ -551,14 +551,14 @@ namespace PlottingProject {
       i++;
     }
     
-    legend->SetLineStyle(legendBoxTemplate.fBorderStyle);
-    legend->SetLineColor(legendBoxTemplate.fBorderColor);
-    legend->SetLineWidth(legendBoxTemplate.fBorderSize);
+    legend->SetLineStyle(legendBoxTemplate.borderStyle);
+    legend->SetLineColor(legendBoxTemplate.borderColor);
+    legend->SetLineWidth(legendBoxTemplate.borderSize);
     legend->SetMargin(markerSpace*nColums/xWidth);
     legend->SetTextAlign(12);
-    legend->SetTextFont(fStyle.fTextFont);
-    legend->SetTextSize(fStyle.fTextSize);
-    legend->SetFillStyle(fStyle.fFillStyleCanvas);
+    legend->SetTextFont(mStyle.textFont);
+    legend->SetTextSize(mStyle.textSize);
+    legend->SetFillStyle(mStyle.fillStyleCanvas);
     
     return legend;
   }
@@ -567,7 +567,7 @@ namespace PlottingProject {
   TPaveText* PlottingFramework::MakeText(Plot::TextBox& textBoxTemplate){
     
     string delimiter = " // ";
-    string text = textBoxTemplate.fText;
+    string text = textBoxTemplate.text;
     
     int nLetters = 0;
     vector<string> lines;
@@ -585,37 +585,37 @@ namespace PlottingProject {
     
     
     int nLines = lines.size();
-    double textSizeNDC = fStyle.fTextSize / gPad->YtoPixel(gPad->GetY1());
-    double textSizeNDCx = 0.6*fStyle.fTextSize / gPad->XtoPixel(gPad->GetX2());
+    double textSizeNDC = mStyle.textSize / gPad->YtoPixel(gPad->GetY1());
+    double textSizeNDCx = 0.6*mStyle.textSize / gPad->XtoPixel(gPad->GetX2());
     
-    double margin = 0.5*fStyle.fTextSize;
+    double margin = 0.5*mStyle.textSize;
     double yWidth = (1.0*nLines + 0.5*(nLines-1))* textSizeNDC;
     double xWidth = nLetters * textSizeNDCx;
     
     string option = "NDC"; // use pad coordinates by default
-    if(textBoxTemplate.fUserCoordinates) option = "";
+    if(textBoxTemplate.userCoordinates) option = "";
     
-    TPaveText* tPaveText = new TPaveText(textBoxTemplate.fX, textBoxTemplate.fY - yWidth, textBoxTemplate.fX + xWidth, textBoxTemplate.fY, option.c_str());
+    TPaveText* tPaveText = new TPaveText(textBoxTemplate.x, textBoxTemplate.y - yWidth, textBoxTemplate.x + xWidth, textBoxTemplate.y, option.c_str());
     
     double boxExtent = 0;
     for(auto &line : lines)
     {
       TText* text = tPaveText->AddText(line.c_str());
-      text->SetTextFont(fStyle.fTextFont);
-      text->SetTextSize(fStyle.fTextSize);
+      text->SetTextFont(mStyle.textFont);
+      text->SetTextSize(mStyle.textSize);
       double width = text->GetBBox().fWidth;
       if(width > boxExtent) boxExtent = width;
     }
     tPaveText->SetBBoxX2(tPaveText->GetBBox().fX + boxExtent +2*margin);
     tPaveText->SetBorderSize(1);
-    tPaveText->SetLineStyle(textBoxTemplate.fBorderStyle);
-    tPaveText->SetLineColor(textBoxTemplate.fBorderColor);
-    tPaveText->SetLineWidth(textBoxTemplate.fBorderSize);
+    tPaveText->SetLineStyle(textBoxTemplate.borderStyle);
+    tPaveText->SetLineColor(textBoxTemplate.borderColor);
+    tPaveText->SetLineWidth(textBoxTemplate.borderSize);
     tPaveText->SetMargin(margin/(tPaveText->GetBBox().fX + boxExtent +2*margin));
     tPaveText->SetTextAlign(12);
-    tPaveText->SetTextFont(fStyle.fTextFont);
-    tPaveText->SetTextSize(fStyle.fTextSize);
-    tPaveText->SetFillStyle(fStyle.fFillStyleCanvas);
+    tPaveText->SetTextFont(mStyle.textFont);
+    tPaveText->SetTextSize(mStyle.textSize);
+    tPaveText->SetFillStyle(mStyle.fillStyleCanvas);
     return tPaveText;
   }
   
@@ -707,14 +707,14 @@ namespace PlottingProject {
       drawingOptions += " COLZ";
       return;
     }
-    int markerStyle = (histoTemplate.fMarker) ? histoTemplate.fMarker : GetDefaultMarker(defaultValueIndex);
+    int markerStyle = (histoTemplate.marker) ? histoTemplate.marker : GetDefaultMarker(defaultValueIndex);
     histo->SetMarkerStyle(markerStyle);
     
-    int color = (histoTemplate.fColor) ? histoTemplate.fColor : GetDefaultColor(defaultValueIndex);
+    int color = (histoTemplate.color) ? histoTemplate.color : GetDefaultColor(defaultValueIndex);
     histo->SetMarkerColor(color);
     histo->SetLineColor(color);
     
-    string errorStyle = histoTemplate.fErrorStyle;
+    string errorStyle = histoTemplate.errorStyle;
     if(errorStyle == "none")
     {
       histo->SetLineWidth(0);
@@ -742,8 +742,8 @@ namespace PlottingProject {
     }
     
     if(controlString.find("thick") != string::npos){
-      histo->SetLineWidth(fStyle.fLineWidthThick);
-      histo->SetMarkerSize(fStyle.fMarkerSizeThick);
+      histo->SetLineWidth(mStyle.lineWidthThick);
+      histo->SetMarkerSize(mStyle.markerSizeThick);
     }
     
   }
@@ -751,7 +751,7 @@ namespace PlottingProject {
   TGraphErrors* PlottingFramework::GetGraphClone(string graphName)
   {
     TGraphErrors* graph = nullptr;
-    TObject* obj = fHistoLedger->FindObject(graphName.c_str());
+    TObject* obj = mHistoLedger->FindObject(graphName.c_str());
     if(obj)
     {
       graph = (TGraphErrors*)obj->Clone();
@@ -766,7 +766,7 @@ namespace PlottingProject {
   TH1* PlottingFramework::GetHistClone(string histName)
   {
     TH1* histo = nullptr;
-    TObject* obj = fHistoLedger->FindObject(histName.c_str());
+    TObject* obj = mHistoLedger->FindObject(histName.c_str());
     if(obj)
     {
       histo = (TH1*)obj->Clone();
@@ -843,8 +843,8 @@ namespace PlottingProject {
   
   void PlottingFramework::SetPalette(int palette)
   {
-    fStyle.fPalette = palette;
-    gStyle->SetPalette(fStyle.fPalette);
+    mStyle.palette = palette;
+    gStyle->SetPalette(mStyle.palette);
   }
   
   
@@ -854,73 +854,73 @@ namespace PlottingProject {
     // General settings
     TGaxis::SetMaxDigits(3);
     gStyle->SetOptStat(0);  // switch of stat boxes
-    if (fStyle.fUseCMYK) gStyle->SetColorModelPS(1);
-    gStyle->SetPalette(fStyle.fPalette);
+    if (mStyle.useCMYK) gStyle->SetColorModelPS(1);
+    gStyle->SetPalette(mStyle.palette);
     
     // Set Fonts
-    gStyle->SetTextFont(fStyle.fTextFont);
+    gStyle->SetTextFont(mStyle.textFont);
     
-    gStyle->SetLabelFont(fStyle.fLableFont, "X");
-    gStyle->SetLabelFont(fStyle.fLableFont, "Y");
-    gStyle->SetLabelFont(fStyle.fLableFont, "Z");
+    gStyle->SetLabelFont(mStyle.lableFont, "X");
+    gStyle->SetLabelFont(mStyle.lableFont, "Y");
+    gStyle->SetLabelFont(mStyle.lableFont, "Z");
     
-    gStyle->SetTitleFont(fStyle.fTitleFont, "X");
-    gStyle->SetTitleFont(fStyle.fTitleFont, "Y");
-    gStyle->SetTitleFont(fStyle.fTitleFont, "Z");
+    gStyle->SetTitleFont(mStyle.titleFont, "X");
+    gStyle->SetTitleFont(mStyle.titleFont, "Y");
+    gStyle->SetTitleFont(mStyle.titleFont, "Z");
     
     // multpt plots:
     //  if(control.Contains("2D")){titleOffsetY= 1.0; titleOffsetX= 1.1;}
     
-    //  gStyle->SetTitleOffset(fStyle.fTitleOffsetX, "X");
-    //  gStyle->SetTitleOffset(fStyle.fTitleOffsetY, "Y");
-    //  gStyle->SetTitleOffset(fStyle.fTitleOffsetZ, "Z");
+    //  gStyle->SetTitleOffset(mStyle.fTitleOffsetX, "X");
+    //  gStyle->SetTitleOffset(mStyle.fTitleOffsetY, "Y");
+    //  gStyle->SetTitleOffset(mStyle.fTitleOffsetZ, "Z");
     
-    gStyle->SetMarkerSize(fStyle.fMarkerSize);
+    gStyle->SetMarkerSize(mStyle.markerSize);
     
-    gStyle->SetLabelSize(fStyle.fLableSizeScaling * fStyle.fTextSize, "X");
-    gStyle->SetLabelSize(fStyle.fLableSizeScaling * fStyle.fTextSize, "Y");
-    gStyle->SetLabelSize(fStyle.fLableSizeScaling * fStyle.fTextSize, "Z");
+    gStyle->SetLabelSize(mStyle.lableSizeScaling * mStyle.textSize, "X");
+    gStyle->SetLabelSize(mStyle.lableSizeScaling * mStyle.textSize, "Y");
+    gStyle->SetLabelSize(mStyle.lableSizeScaling * mStyle.textSize, "Z");
     
-    gStyle->SetTitleSize(fStyle.fTitleSizeScaling * fStyle.fTextSize, "X");
-    gStyle->SetTitleSize(fStyle.fTitleSizeScaling * fStyle.fTextSize, "Y");
-    gStyle->SetTitleSize(fStyle.fTitleSizeScaling * fStyle.fTextSize, "Z");
+    gStyle->SetTitleSize(mStyle.titleSizeScaling * mStyle.textSize, "X");
+    gStyle->SetTitleSize(mStyle.titleSizeScaling * mStyle.textSize, "Y");
+    gStyle->SetTitleSize(mStyle.titleSizeScaling * mStyle.textSize, "Z");
     
   }
   
   int PlottingFramework::GetDefaultColor(int colorIndex)
   {
-    return fStyle.fDefaultColors[colorIndex%fStyle.fDefaultColors.size()];
+    return mStyle.defaultColors[colorIndex % mStyle.defaultColors.size()];
   }
   int PlottingFramework::GetDefaultMarker(int markerIndex)
   {
-    return fStyle.fDefaultMarkers[markerIndex%fStyle.fDefaultMarkers.size()];
+    return mStyle.defaultMarkers[markerIndex % mStyle.defaultMarkers.size()];
   }
   
   void PlottingFramework::DefineDefaultPlottingStyle()
   {
     // Define global style standards
-    fStyle.fTextFont = 43;
-    fStyle.fLableFont = 43;
-    fStyle.fTitleFont = 43;
-    fStyle.fPixelBaseLength = 710;
-    fStyle.fAspectRatio = 1.41428571429; // corresponding to DIN A4
-    fStyle.fFillStyleCanvas = 4000; // 4000 transparent, 4100 opaqe
-    fStyle.fDrawTimestamps = false;
-    fStyle.fTimestampPosition.push_back(0.05);
-    fStyle.fTimestampPosition.push_back(0.02);
-    fStyle.fTextSize = 17000 / fStyle.fPixelBaseLength;
-    fStyle.fLableSizeScaling       = 1.00;   // Factor the label will be larger than the textsize
-    fStyle.fTitleSizeScaling       = 1.20;   // Factor the title will be larger than the textsize
-    fStyle.fMarkerSize = 1.2;
-    fStyle.fMarkerSizeThick = 2.2;
-    fStyle.fLineWidth = 1.0;
-    fStyle.fLineWidthThick = 2.0;
+    mStyle.textFont = 43;
+    mStyle.lableFont = 43;
+    mStyle.titleFont = 43;
+    mStyle.pixelBaseLength = 710;
+    mStyle.aspectRatio = 1.41428571429; // corresponding to DIN A4
+    mStyle.fillStyleCanvas = 4000; // 4000 transparent, 4100 opaqe
+    mStyle.drawTimestamps = false;
+    mStyle.timestampPosition.push_back(0.05);
+    mStyle.timestampPosition.push_back(0.02);
+    mStyle.textSize = 17000 / mStyle.pixelBaseLength;
+    mStyle.lableSizeScaling       = 1.00;   // Factor the label will be larger than the textsize
+    mStyle.titleSizeScaling       = 1.20;   // Factor the title will be larger than the textsize
+    mStyle.markerSize = 1.2;
+    mStyle.markerSizeThick = 2.2;
+    mStyle.lineWidth = 1.0;
+    mStyle.lineWidthThick = 2.0;
     
-    fStyle.fPalette = kBird;
-    fStyle.fDefaultMarkers = {kFullSquare, kFullCircle, kFullCross, kFullDiamond, kFullStar, kOpenCircle, kOpenSquare, kOpenCross, kOpenDiamond, kOpenStar};
-    fStyle.fDefaultMarkersFull = {kFullSquare, kFullCircle, kFullCross, kFullDiamond, kFullStar, kFullCircle, kFullCircle, kFullCircle, kFullCircle, kFullCircle, kFullCircle};
-    fStyle.fDefaultMarkersOpen = {kOpenSquare, kOpenCircle, kOpenCross, kOpenDiamond, kOpenStar, kOpenCircle, kOpenCircle, kOpenCircle, kOpenCircle, kOpenCircle, kOpenCircle};
-    fStyle.fDefaultColors = {kBlack, kBlue+1, kRed+2, kGreen+2, kTeal-7, kCyan+2, kMagenta-4, kGreen+3, kOrange+1, kViolet-3, kPink+3, kOrange+2, kYellow+3, kGray+2};
+    mStyle.palette = kBird;
+    mStyle.defaultMarkers = {kFullSquare, kFullCircle, kFullCross, kFullDiamond, kFullStar, kOpenCircle, kOpenSquare, kOpenCross, kOpenDiamond, kOpenStar};
+    mStyle.defaultMarkersFull = {kFullSquare, kFullCircle, kFullCross, kFullDiamond, kFullStar, kFullCircle, kFullCircle, kFullCircle, kFullCircle, kFullCircle, kFullCircle};
+    mStyle.defaultMarkersOpen = {kOpenSquare, kOpenCircle, kOpenCross, kOpenDiamond, kOpenStar, kOpenCircle, kOpenCircle, kOpenCircle, kOpenCircle, kOpenCircle, kOpenCircle};
+    mStyle.defaultColors = {kBlack, kBlue+1, kRed+2, kGreen+2, kTeal-7, kCyan+2, kMagenta-4, kGreen+3, kOrange+1, kViolet-3, kPink+3, kOrange+2, kYellow+3, kGray+2};
     
     
     
@@ -928,95 +928,95 @@ namespace PlottingProject {
     // Define specific canvas styles:
     { //--------------------------------------------------------------
       CanvasStyle canvas;
-      canvas.fStyleName = "default";
-      canvas.fCanvasWidth = fStyle.fPixelBaseLength;
-      canvas.fCanvasHeight = fStyle.fPixelBaseLength;
+      canvas.styleName = "default";
+      canvas.canvasWidth = mStyle.pixelBaseLength;
+      canvas.canvasHeight = mStyle.pixelBaseLength;
       PadStyle pad1;
       // position: xlow, ylow, xup, yup
-      pad1.fPosition.push_back(0);
-      pad1.fPosition.push_back(0.);
-      pad1.fPosition.push_back(1.);
-      pad1.fPosition.push_back(1.);
+      pad1.position.push_back(0);
+      pad1.position.push_back(0.);
+      pad1.position.push_back(1.);
+      pad1.position.push_back(1.);
       // margin: top, bottom, left, right
-      pad1.fMargin.push_back(0.12-0.05);
-      pad1.fMargin.push_back(0.12+0.02);
-      pad1.fMargin.push_back(0.12);
-      pad1.fMargin.push_back(0.12-0.05);
+      pad1.margin.push_back(0.12-0.05);
+      pad1.margin.push_back(0.12+0.02);
+      pad1.margin.push_back(0.12);
+      pad1.margin.push_back(0.12-0.05);
       // titleOffset: x, y, z
-      pad1.fTitleOffset.push_back(1.1);
-      pad1.fTitleOffset.push_back(1.4);//1.3
-      pad1.fTitleOffset.push_back(1.0);
+      pad1.titleOffset.push_back(1.1);
+      pad1.titleOffset.push_back(1.4);//1.3
+      pad1.titleOffset.push_back(1.0);
       
-      canvas.fPads.push_back(pad1);
+      canvas.pads.push_back(pad1);
       
-      fCanvStyles.push_back(canvas);
+      mCanvStyles.push_back(canvas);
     } //--------------------------------------------------------------
     
     { //--------------------------------------------------------------
       CanvasStyle canvas;
-      canvas.fStyleName = "default ratio";
-      canvas.fCanvasWidth = fStyle.fPixelBaseLength;
-      canvas.fCanvasHeight = fStyle.fPixelBaseLength;
+      canvas.styleName = "default ratio";
+      canvas.canvasWidth = mStyle.pixelBaseLength;
+      canvas.canvasHeight = mStyle.pixelBaseLength;
       double ratioPadSize = 0.28; //relative size of ratio
       // upper pad
       PadStyle pad1;
       // position: xlow, ylow, xup, yup
-      pad1.fPosition.push_back(0.0);
-      pad1.fPosition.push_back(ratioPadSize);
-      pad1.fPosition.push_back(1.0);
-      pad1.fPosition.push_back(1.0);
+      pad1.position.push_back(0.0);
+      pad1.position.push_back(ratioPadSize);
+      pad1.position.push_back(1.0);
+      pad1.position.push_back(1.0);
       // margin: top, bottom, left, right
-      pad1.fMargin.push_back(0.05); //0.03
-      pad1.fMargin.push_back(0.0);
-      pad1.fMargin.push_back(0.14);
-      pad1.fMargin.push_back(0.05);
+      pad1.margin.push_back(0.05); //0.03
+      pad1.margin.push_back(0.0);
+      pad1.margin.push_back(0.14);
+      pad1.margin.push_back(0.05);
       // titleOffset: x, y, z
-      pad1.fTitleOffset.push_back(3.1);
-      pad1.fTitleOffset.push_back(1.5);
-      pad1.fTitleOffset.push_back(1.0);
-      canvas.fPads.push_back(pad1);
+      pad1.titleOffset.push_back(3.1);
+      pad1.titleOffset.push_back(1.5);
+      pad1.titleOffset.push_back(1.0);
+      canvas.pads.push_back(pad1);
       // ratio pad
       PadStyle pad2;
       // position: xlow, ylow, xup, yup
-      pad2.fPosition.push_back(0.);
-      pad2.fPosition.push_back(0.);
-      pad2.fPosition.push_back(1.);
-      pad2.fPosition.push_back(ratioPadSize);
+      pad2.position.push_back(0.);
+      pad2.position.push_back(0.);
+      pad2.position.push_back(1.);
+      pad2.position.push_back(ratioPadSize);
       // margin: top, bottom, left, right
-      pad2.fMargin.push_back(0.015);
-      pad2.fMargin.push_back(0.4); //0.35
-      pad2.fMargin.push_back(0.14); // 0.12
-      pad2.fMargin.push_back(0.05);
+      pad2.margin.push_back(0.015);
+      pad2.margin.push_back(0.4); //0.35
+      pad2.margin.push_back(0.14); // 0.12
+      pad2.margin.push_back(0.05);
       // titleOffset: x, y, z
-      pad2.fTitleOffset.push_back(4.1);
-      pad2.fTitleOffset.push_back(1.5); //1.3
-      pad2.fTitleOffset.push_back(1.0);
-      canvas.fPads.push_back(pad2);
+      pad2.titleOffset.push_back(4.1);
+      pad2.titleOffset.push_back(1.5); //1.3
+      pad2.titleOffset.push_back(1.0);
+      canvas.pads.push_back(pad2);
       
-      fCanvStyles.push_back(canvas);
+      mCanvStyles.push_back(canvas);
     } //--------------------------------------------------------------
     
     /*
      //"horizontal"
-     canvas->SetLeftMargin(fStyle.fMargin*fStyle.fAspectRatio);
-     canvas->SetRightMargin(fStyle.fMargin*fStyle.fAspectRatio);
-     canvas->SetTopMargin(fStyle.fMargin - 0.03);
-     canvas->SetBottomMargin(fStyle.fMargin + 0.03);
+     canvas->SetLeftMargin(mStyle.fMargin*mStyle.fAspectRatio);
+     canvas->SetRightMargin(mStyle.fMargin*mStyle.fAspectRatio);
+     canvas->SetTopMargin(mStyle.fMargin - 0.03);
+     canvas->SetBottomMargin(mStyle.fMargin + 0.03);
      //"vertical"
-     canvas->SetLeftMargin(fStyle.fMargin);
-     canvas->SetRightMargin(fStyle.fMargin);
-     canvas->SetTopMargin(fStyle.fMargin*fStyle.fAspectRatio - 0.05);
-     canvas->SetBottomMargin(fStyle.fMargin*fStyle.fAspectRatio + 0.05);
+     canvas->SetLeftMargin(mStyle.fMargin);
+     canvas->SetRightMargin(mStyle.fMargin);
+     canvas->SetTopMargin(mStyle.fMargin*mStyle.fAspectRatio - 0.05);
+     canvas->SetBottomMargin(mStyle.fMargin*mStyle.fAspectRatio + 0.05);
      // else
-     canvas->SetLeftMargin(fStyle.fMargin);
-     canvas->SetRightMargin(fStyle.fMargin);
-     canvas->SetTopMargin(fStyle.fMargin-0.1);
-     canvas->SetBottomMargin(fStyle.fMargin+0.1);
+     canvas->SetLeftMargin(mStyle.fMargin);
+     canvas->SetRightMargin(mStyle.fMargin);
+     canvas->SetTopMargin(mStyle.fMargin-0.1);
+     canvas->SetBottomMargin(mStyle.fMargin+0.1);
      
      
      // Horizontal canvas style
-     fHorizontalCanvStyle.fCanvasWidth = fStyle.fPixelBaseLength * fStyle.fAspectRatio;
-     fHorizontalCanvStyle.fCanvasHeight = fStyle.fPixelBaseLength;
+     fHorizontalCanvStyle.fCanvasWidth = mStyle.fPixelBaseLength * mStyle.fAspectRatio;
+     fHorizontalCanvStyle.fCanvasHeight = mStyle.fPixelBaseLength;
      
      fHorizontalCanvStyle.fMarginTop = 0.03;
      fHorizontalCanvStyle.fMarginBottom = 0.0;
@@ -1029,8 +1029,8 @@ namespace PlottingProject {
      fHorizontalCanvStyle.fMarginRight = 0.05;
      
      // Vertical canvas style
-     fVerticalCanvStyle.fCanvasWidth = fStyle.fPixelBaseLength;
-     fVerticalCanvStyle.fCanvasHeight = fStyle.fPixelBaseLength * fStyle.fAspectRatio;
+     fVerticalCanvStyle.fCanvasWidth = mStyle.fPixelBaseLength;
+     fVerticalCanvStyle.fCanvasHeight = mStyle.fPixelBaseLength * mStyle.fAspectRatio;
      
      fVerticalCanvStyle.fMarginTop = 0.03;
      fVerticalCanvStyle.fMarginBottom = 0.0;
@@ -1048,9 +1048,9 @@ namespace PlottingProject {
   
   PlottingFramework::CanvasStyle* PlottingFramework::GetCanvasStyle(string styleName)
   {
-    for(auto& canvasStyle : fCanvStyles)
+    for(auto& canvasStyle : mCanvStyles)
     {
-      if(canvasStyle.fStyleName == styleName) return &canvasStyle;
+      if(canvasStyle.styleName == styleName) return &canvasStyle;
     }
     cout << "ERROR: nullptr returned." << endl;
     return nullptr;
@@ -1059,30 +1059,30 @@ namespace PlottingProject {
   
   void PlottingFramework::SetTransparentCanvas(bool transparent)
   {
-    if(transparent) fStyle.fFillStyleCanvas = 4000;
-    else fStyle.fFillStyleCanvas = 4100;
+    if(transparent) mStyle.fillStyleCanvas = 4000;
+    else mStyle.fillStyleCanvas = 4100;
   }
   
   void PlottingFramework::ListAvailableCanvasStyles()
   {
-    for(auto& canvasStyle : fCanvStyles)
+    for(auto& canvasStyle : mCanvStyles)
     {
-      cout << "======== " << canvasStyle.fStyleName << " ========" << endl;
-      cout << "  >> Width  : " << canvasStyle.fCanvasWidth << endl;
-      cout << "  >> Height : " << canvasStyle.fCanvasHeight << endl;
-      cout << "  >> nPads  : " << canvasStyle.fPads.size() << endl;
+      cout << "======== " << canvasStyle.styleName << " ========" << endl;
+      cout << "  >> Width  : " << canvasStyle.canvasWidth << endl;
+      cout << "  >> Height : " << canvasStyle.canvasHeight << endl;
+      cout << "  >> nPads  : " << canvasStyle.pads.size() << endl;
       int padID = 1;
-      string lines = string((int)((canvasStyle.fStyleName.length()+17 - 7) / 2) , '-');
-      for(auto& padStyle : canvasStyle.fPads)
+      string lines = string((int)((canvasStyle.styleName.length()+17 - 7) / 2) , '-');
+      for(auto& padStyle : canvasStyle.pads)
       {
         cout << "  " << lines << " Pad " << padID << " " << lines << endl;
-        cout << "    << Position (xlow, ylow, xup, yup)   : (" << padStyle.fPosition[0] << ", " << padStyle.fPosition[1] << ", " << padStyle.fPosition[2] << ", " << padStyle.fPosition[3] << ")" << endl;
-        cout << "    << Margin (top, bottom, left, right) : (" << padStyle.fMargin[0] << ", " << padStyle.fMargin[1] << ", " << padStyle.fMargin[2] << ", " << padStyle.fMargin[3] << ")" << endl;
-        cout << "    << Title offset (x, y, z)            : (" << padStyle.fTitleOffset[0] << ", " << padStyle.fTitleOffset[1] << ", " << padStyle.fTitleOffset[2] << ")" << endl;
+        cout << "    << Position (xlow, ylow, xup, yup)   : (" << padStyle.position[0] << ", " << padStyle.position[1] << ", " << padStyle.position[2] << ", " << padStyle.position[3] << ")" << endl;
+        cout << "    << Margin (top, bottom, left, right) : (" << padStyle.margin[0] << ", " << padStyle.margin[1] << ", " << padStyle.margin[2] << ", " << padStyle.margin[3] << ")" << endl;
+        cout << "    << Title offset (x, y, z)            : (" << padStyle.titleOffset[0] << ", " << padStyle.titleOffset[1] << ", " << padStyle.titleOffset[2] << ")" << endl;
         
         padID++;
       }
-      cout << "========" << string((int)canvasStyle.fStyleName.length() +2, '=') << "========" << endl << endl;
+      cout << "========" << string((int)canvasStyle.styleName.length() +2, '=') << "========" << endl << endl;
       
     }
   }

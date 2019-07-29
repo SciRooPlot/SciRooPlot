@@ -1,111 +1,115 @@
 #ifndef Plot_h
 #define Plot_h
 
-
 #include "Plot.h"
 #include "TObjArray.h"
 #include "TCanvas.h"
 #include <iostream>
 
 namespace PlottingProject {
-  
+  using std::cout;
+  using std::endl;
+  using std::flush;
+  using std::string;
+  using std::vector;
+
   class Plot
   {
   public:
     
     typedef struct TextBox {
-      double fX;
-      double fY;
-      std::string fText;
-      int fBorderStyle;
-      int fBorderSize;
-      int fBorderColor;
-      int fUserCoordinates;
-      int fNColumns;
+      double x;
+      double y;
+      string text;
+      int borderStyle;
+      int borderSize;
+      int borderColor;
+      int userCoordinates;
+      int nColumns;
     } TextBox;
     
     typedef struct Axis {
-      std::vector<double> fRange;
-      std::string fTitle;
+      vector<double> range;
+      string title;
     } Axis;
     
     struct Histogram {
-      std::string fName;
-      std::string fLable;
-      int fMarker;
-      int fColor;
-      std::string fErrorStyle; // normal, boxes, hist
-      double fCutoff; // todo multi-dimensional
-      double fCutoffLow; // todo multi-dimensional
-      int fLableBoxID;
+      string name;
+      string lable;
+      int marker;
+      int color;
+      string errorStyle; // normal, boxes, hist
+      double cutoff; // todo multi-dimensional
+      double cutoffLow; // todo multi-dimensional
+      int lableBoxID;
     };
     
     struct Function {
-      std::string fName;
-      std::string fLable;
-      std::string fFunction;
-      std::string fFitHist;
-      int fColor;
-      int fMarker;
+      string name;
+      string lable;
+      string function;
+      string fitHist;
+      int color;
+      int marker;
     };
     
     Plot();
-    Plot(std::string name) : Plot() {fName = name;}
+    Plot(string name) : Plot() {mName = name;}
     
     void Print();
     
-    void AddGraph(std::string histName, std::string identifier = "", std::string lable = "", int marker = 0, int color = 0, std::string errorStyle = "", double cutoff = -999, double cutoffLow = -999);
-    void AddHisto(std::string histName, std::string identifier = "", std::string lable = "", int marker = 0, int color = 0, std::string errorStyle = "", double cutoff = -999, double cutoffLow = -999);
-    void AddRatio(std::string numerHist, std::string numerHistIdentifier, std::string denomHist, std::string denomHistIdentifier = "", std::string lable = "", int marker = 0, int color = 0, std::string errorStyle = "", double cutoff = -999, double cutoffLow = -999);
+    void AddGraph(string histName, string identifier = "", string lable = "", int marker = 0, int color = 0, string errorStyle = "", double cutoff = -999, double cutoffLow = -999);
+    void AddHisto(string histName, string identifier = "", string lable = "", int marker = 0, int color = 0, string errorStyle = "", double cutoff = -999, double cutoffLow = -999);
+    void AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier = "", string lable = "", int marker = 0, int color = 0, string errorStyle = "", double cutoff = -999, double cutoffLow = -999);
     
-    void AddTextBox(double xPos, double yPos, std::string text = "", bool userCoord = false, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
-    void AddLegendBox(double xPos, double yPos, std::string title = "", int nColums = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
+    void AddTextBox(double xPos, double yPos, string text = "", bool userCoord = false, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
+    void AddLegendBox(double xPos, double yPos, string title = "", int nColums = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
     
-    void SetAxisTitle(std::string axis, std::string axisTitle);
+    void SetAxisTitle(string axis, string axisTitle);
     
-    void SetAxisRange(std::string axis, double low, double high);
+    void SetAxisRange(string axis, double low, double high);
     void SetRatioRange(double yLow, double yHigh){}
     
-    std::vector<double>& GetAxisRange(std::string axis);
+    vector<double>& GetAxisRange(string axis);
     
-    bool IsRatioPlot() const {return !fRatios.empty();}
+    bool IsRatioPlot() const {return !mRatios.empty();}
     
     void ClearCutoffBin(){}
-    std::string GetName(){return fName;}
-    std::string GetControlString(){return fControlString;}
-    std::string GetFigureGroup(){return fFigureGroup;}
+    string GetName(){return mName;}
+    string GetControlString(){return mControlString;}
+    string GetFigureGroup(){return mFigureGroup;}
     
-    void SetDrawingProperties(std::string controlString){fControlString = controlString;}
-    void SetFigureGroup(std::string figureGroupName){fFigureGroup = figureGroupName;}
-    void SetPlotStyle(std::string plotStyle){fPlotStyle = plotStyle;}
-    std::string GetPlotStyle(){return fPlotStyle;}
+    void SetDrawingProperties(string controlString){mControlString = controlString;}
+    void SetFigureGroup(string figureGroupName){mFigureGroup = figureGroupName;}
+    void SetPlotStyle(string plotStyle){mPlotStyle = plotStyle;}
+    string GetPlotStyle(){return mPlotStyle;}
     
-    std::vector<Histogram>& GetHistoTemplates() {return fHistos;}
-    std::vector<Histogram>& GetRatioTemplates() {return fRatios;}
-    std::string& GetAxisTitle(std::string axis);
+    vector<Histogram>& GetHistoTemplates() {return mHistos;}
+    vector<Histogram>& GetRatioTemplates() {return mRatios;}
+    string& GetAxisTitle(string axis);
     int GetNumSubPlots() {if(IsRatioPlot()) return 2; else return 1;}
     
-    std::vector<TextBox>& GetLegends() {return fLegends;}
-    std::vector<TextBox>& GetTextBoxes() {return fTexts;}
+    vector<TextBox>& GetLegends() {return mLegends;}
+    vector<TextBox>& GetTextBoxes() {return mTexts;}
     
-    std::vector<Histogram> fGraphs; // dirty hack for legend errorstyles....
-    std::vector<Histogram> fHistos; // dirty hack for legend errorstyles....
-    std::vector<Histogram> fRatios;
+    vector<Histogram> mGraphs; // dirty hack for legend errorstyles....
+    vector<Histogram> mHistos; // dirty hack for legend errorstyles....
+    vector<Histogram> mRatios;
     
   private:
-    Axis& GetAxis(std::string axis);
+    Axis& GetAxis(string axis);
     
-    std::string fName;
-    std::string fPlotStyle;
-    std::string fFigureGroup;
+    string mName;
+    string mPlotStyle;
+    string mFigureGroup;
     
-    Axis fXaxis, fYaxis, fZaxis, fYaxisRatio;
+    Axis mXaxis, mYaxis, mZaxis, mYaxisRatio;
     
-    std::string fControlString;
-    bool fClearCutoffBin;
+    string mControlString;
+    bool mClearCutoffBin;
     
-    std::vector<TextBox> fTexts;
-    std::vector<TextBox> fLegends;
+    vector<TextBox> mTexts;
+    vector<TextBox> mLegends;
   };
 }
 #endif

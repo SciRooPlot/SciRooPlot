@@ -1,80 +1,74 @@
 #include "Plot.h"
 
 namespace PlottingProject {
-  
-  using std::cout;
-  using std::endl;
-  using std::flush;
-  using std::string;
-  using std::vector;
-  
+
   Plot::Plot()
   {
-    fName = "dummyName";
-    fPlotStyle = "default";
-    fControlString = "";
-    fClearCutoffBin = false;
-    fFigureGroup = "";
+    mName = "dummyName";
+    mPlotStyle = "default";
+    mControlString = "";
+    mClearCutoffBin = false;
+    mFigureGroup = "";
     
-    fXaxis.fTitle = "";
-    fYaxis.fTitle = "";
-    fZaxis.fTitle = "";
-    fYaxisRatio.fTitle = "";
+    mXaxis.title = "";
+    mYaxis.title = "";
+    mZaxis.title = "";
+    mYaxisRatio.title = "";
   }
   
   void Plot::AddGraph(string histName, string identifier, string lable, int marker, int color, string errorStyle, double cutoff, double cutoffLow)
   {
-    if(identifier == "") identifier = fFigureGroup; // default identifier to figuregroup id
+    if(identifier == "") identifier = mFigureGroup; // default identifier to figuregroup id
     string internalName = histName + "_@_" + identifier;
-    fGraphs.push_back({internalName, lable, marker, color, errorStyle, cutoff, cutoffLow});
+    mGraphs.push_back({internalName, lable, marker, color, errorStyle, cutoff, cutoffLow});
   }
   
   void Plot::AddHisto(string histName, string identifier, string lable, int marker, int color, string errorStyle, double cutoff, double cutoffLow)
   {
-    if(identifier == "") identifier = fFigureGroup; // default identifier to figuregroup id
+    if(identifier == "") identifier = mFigureGroup; // default identifier to figuregroup id
     string internalName = histName + "_@_" + identifier;
-    fHistos.push_back({internalName, lable, marker, color, errorStyle, cutoff, cutoffLow});
+    mHistos.push_back({internalName, lable, marker, color, errorStyle, cutoff, cutoffLow});
   }
   
   void Plot::AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier, string lable, int marker, int color, string errorStyle, double cutoff, double cutoffLow)
   {
-    if(numerHistIdentifier == "") numerHistIdentifier = fFigureGroup;
-    if(denomHistIdentifier == "") denomHistIdentifier = fFigureGroup;
+    if(numerHistIdentifier == "") numerHistIdentifier = mFigureGroup;
+    if(denomHistIdentifier == "") denomHistIdentifier = mFigureGroup;
     string ratioName = numerHist  + "_@_" + numerHistIdentifier + " / " + denomHist + "_@_" + denomHistIdentifier;
-    fRatios.push_back({ratioName, lable,marker, color, errorStyle, cutoff, cutoffLow});
+    mRatios.push_back({ratioName, lable,marker, color, errorStyle, cutoff, cutoffLow});
   }
   
   
   void Plot::AddTextBox(double xPos, double yPos, string text, bool userCoord, int borderStyle, int borderSize, int borderColor)
   {
-    fTexts.push_back({xPos, yPos, text, borderStyle, borderSize, borderColor, userCoord});
+    mTexts.push_back({xPos, yPos, text, borderStyle, borderSize, borderColor, userCoord});
   }
   
   void Plot::AddLegendBox(double xPos, double yPos, string title, int nColumns, int borderStyle, int borderSize, int borderColor)
   {
-    fLegends.push_back({xPos, yPos, title, borderStyle, borderSize, borderColor, false, nColumns});
+    mLegends.push_back({xPos, yPos, title, borderStyle, borderSize, borderColor, false, nColumns});
   }
   
   Plot::Axis& Plot::GetAxis(string axis)
   {
-    if(axis == "X") return fXaxis;
-    else if(axis == "Y") return fYaxis;
-    else if(axis == "Z") return fZaxis;
-    else if(axis == "ratio") return fYaxisRatio;
+    if(axis == "X") return mXaxis;
+    else if(axis == "Y") return mYaxis;
+    else if(axis == "Z") return mZaxis;
+    else if(axis == "ratio") return mYaxisRatio;
     else {
       cout << "ERROR: " << axis << "-Axis does not exist!" << endl;
-      return fXaxis; // default return xaxis
+      return mXaxis; // default return xaxis
     }
   }
   
   vector<double>& Plot::GetAxisRange(string axis)
   {
-    return GetAxis(axis).fRange;
+    return GetAxis(axis).range;
   }
   
   string& Plot::GetAxisTitle(string axis)
   {
-    return GetAxis(axis).fTitle;
+    return GetAxis(axis).title;
   }
   
   void Plot::SetAxisRange(string axis, double low, double high)
@@ -88,22 +82,22 @@ namespace PlottingProject {
   
   void Plot::SetAxisTitle(string axis, string axisTitle)
   {
-    GetAxis(axis).fTitle = axisTitle;
+    GetAxis(axis).title = axisTitle;
   }
   
   
   void Plot::Print()
   {
-    cout << " ----------" << string(fName.length(), '-')  << "----------" << endl;
-    cout << " <-------- " << fName << " -------->" << endl;
-    cout << " ----------" << string(fName.length(), '-')  << "----------" << endl;
-    if(!fControlString.empty())cout << "  Control string: '" << fControlString << "'" << endl;
+    cout << " ----------" << string(mName.length(), '-')  << "----------" << endl;
+    cout << " <-------- " << mName << " -------->" << endl;
+    cout << " ----------" << string(mName.length(), '-')  << "----------" << endl;
+    if(!mControlString.empty())cout << "  Control string: '" << mControlString << "'" << endl;
     cout << "  Histograms:" << endl;
-    for(auto &histo : fHistos) cout << "   - " << histo.fName << endl;
+    for(auto &histo : mHistos) cout << "   - " << histo.name << endl;
     
-    if(!fRatios.empty()){
+    if(!mRatios.empty()){
       cout << "  Ratios:" << endl;
-      for(auto &ratio : fRatios) cout << "   - " << ratio.fName << endl;
+      for(auto &ratio : mRatios) cout << "   - " << ratio.name << endl;
     }
     cout << endl;
     
