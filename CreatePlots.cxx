@@ -2,15 +2,17 @@
 #include "PlottingFramework.h"
 #include "Plot.h"
 #include <sstream>
-string GetPtString(Int_t pTbin);
+string GetPtString(int pTbin);
 // TODO: add feature to also add external histogram in plots
 /// This is the Plotting user anchorpoint
 int main(int argc, char *argv[]) {
 
+  cout << "Hello World" << endl;
+  return;
   string outputPath = "../../../../TempPlots";
   string outputFileName = "myPlots.root";
-  Bool_t createBinWiseClosureTests = kTRUE;
-  Bool_t skipDatasetPlots = kTRUE;
+  bool createBinWiseClosureTests = kTRUE;
+  bool skipDatasetPlots = kTRUE;
 
 
   vector<string> dataSets;
@@ -88,7 +90,7 @@ int main(int argc, char *argv[]) {
     if(skipDatasetPlots) break;
     string erg = "0 TeV";
     string colSys = "x-x";
-    Double_t multRange = 60;
+    double multRange = 60;
 
     if(dataSet.find("pp") != string::npos) colSys = pp;
     if(dataSet.find("pPb") != string::npos) {colSys = pPb; multRange = 150;}
@@ -219,9 +221,9 @@ int main(int argc, char *argv[]) {
   Plot myPlot(plotName);
   myPlot.SetFigureGroup(dataSet);
   myPlot.SetDrawingProperties("logY");
-  vector<Int_t> ptBins = {2, 3, 5, 7, 11, 13, 15, 17, 20, 30, 40, 50, 51};
-  Int_t i = 0;
-  for(Int_t ptBin : ptBins)
+  vector<int> ptBins = {2, 3, 5, 7, 11, 13, 15, 17, 20, 30, 40, 50, 51};
+  int i = 0;
+  for(int ptBin : ptBins)
   {
     myPlot.AddHisto(plotName + "_" + std::to_string(ptBin), dataSet, GetPtString(ptBin), 0, 0, "hist");
     i++;
@@ -238,9 +240,9 @@ int main(int argc, char *argv[]) {
   Plot myPlot(plotName);
   myPlot.SetFigureGroup(dataSet);
   myPlot.SetDrawingProperties("logY");
-  vector<Int_t> multBins = {2, 6, 9, 11, 16, 21, 31, 41, 51, 61};
-  Int_t i = 0;
-  for(Int_t multBin : multBins)
+  vector<int> multBins = {2, 6, 9, 11, 16, 21, 31, 41, 51, 61};
+  int i = 0;
+  for(int multBin : multBins)
   {
     myPlot.AddHisto(plotName + "_" + std::to_string(multBin), dataSet, "Nch = " + std::to_string(multBin-1), 0, 0, "hist");
     i++;
@@ -294,7 +296,7 @@ int main(int argc, char *argv[]) {
 
 {
 
-  Int_t ptBin = 28;
+  int ptBin = 28;
 
 { // -----------------------------------------------------------------------
   string plotName = "presentation_PtBin_measuredRawMC";
@@ -322,7 +324,7 @@ int main(int argc, char *argv[]) {
   plotEnv.SavePlot(plotName, dataSet);
 } // -----------------------------------------------------------------------
 
-Int_t multBin = 18;
+int multBin = 18;
 
 { // -----------------------------------------------------------------------
   string plotName = "presentation_MultBin_unfoldedRawMC";
@@ -723,9 +725,9 @@ Int_t multBin = 18;
       string plotName = "efficiencyMultPtRaw_MultDep";
       Plot myPlot(plotName);
       myPlot.SetFigureGroup(dataSet);
-      vector<Int_t> ptBins = {3, 5, 7, 11, 13, 15, 17};
-      Int_t i = 0;
-      for(Int_t ptBin : ptBins)
+      vector<int> ptBins = {3, 5, 7, 11, 13, 15, 17};
+      int i = 0;
+      for(int ptBin : ptBins)
       {
         string name = "efficiencyMultPtRaw_PtBin_" + std::to_string(ptBin);
         myPlot.AddHisto(name, dataSet, GetPtString(ptBin));
@@ -744,8 +746,8 @@ Int_t multBin = 18;
       Plot myPlot(plotName);
       myPlot.SetFigureGroup(dataSet);
       myPlot.AddHisto("primTrackEff", dataSet, "integrated");
-      vector<Int_t> multBins = {2, 3, 5, 7, 9, 11};
-      for(Int_t multBin : multBins)
+      vector<int> multBins = {2, 3, 5, 7, 9, 11};
+      for(int multBin : multBins)
       {
         string multLable = "#it{N}_{ch} = " + std::to_string(multBin-1);
         string name = "efficiencyMultPtRaw_MultBin_" + std::to_string(multBin);
@@ -763,9 +765,9 @@ Int_t multBin = 18;
       string plotName = "secContamMultPtRaw_MultDep";
       Plot myPlot(plotName);
       myPlot.SetFigureGroup(dataSet);
-      vector<Int_t> ptBins = {3, 5, 7, 11, 13, 15, 17};
-      Int_t i = 0;
-      for(Int_t ptBin : ptBins)
+      vector<int> ptBins = {3, 5, 7, 11, 13, 15, 17};
+      int i = 0;
+      for(int ptBin : ptBins)
       {
         string name = "secContamMultPtRaw_PtBin_" + std::to_string(ptBin);
         myPlot.AddHisto(name, dataSet, GetPtString(ptBin));
@@ -783,8 +785,8 @@ Int_t multBin = 18;
       myPlot.SetFigureGroup(dataSet);
       myPlot.AddHisto("secContamMC", dataSet, "MC truth");
       myPlot.AddHisto("secContamMultPtRaw_full", dataSet, "inclusive");
-      vector<Int_t> multBins = {2, 3, 5, 7, 9, 11};
-      for(Int_t multBin : multBins)
+      vector<int> multBins = {2, 3, 5, 7, 9, 11};
+      for(int multBin : multBins)
       {
         string name = "secContamMultPtRaw_MultBin_" + std::to_string(multBin);
         myPlot.AddHisto(name, dataSet, std::to_string(multBin));
@@ -941,7 +943,7 @@ Int_t multBin = 18;
       plotEnv.SavePlot(plotName, dataSet, qaFolder);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
-      for(Int_t ptBin = 2; ptBin < 50; ptBin++){
+      for(int ptBin = 2; ptBin < 50; ptBin++){
         if(!createBinWiseClosureTests) break;
         string plotName = "closureTestPtBin_" + std::to_string(ptBin);
         Plot myPlot(plotName);
@@ -962,7 +964,7 @@ Int_t multBin = 18;
       }
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
-      for(Int_t multBin = 2; multBin < 101; multBin++){
+      for(int multBin = 2; multBin < 101; multBin++){
         if(!createBinWiseClosureTests) break;
         string plotName = "closureTestMultBin_" + std::to_string(multBin);
         Plot myPlot(plotName);
@@ -1027,10 +1029,10 @@ Int_t multBin = 18;
     string systemSizeLable = alice + newLine + chargedParticles + ", " + erg5TeV_NN + newLine + eta08 + ", " + ptRange;
     string systemSizeLablePrel = alicePrel + newLine + chargedParticles + ", " + erg5TeV_NN + newLine + eta08 + ", " + ptRange;
     vector<string> centrality = {"0-5%","5-10%","10-20%","20-30%","30-40%","40-50%","50-60%","60-70%","70-80%"};
-    vector<Double_t> nchCent = {2869.49, 2342.32, 1740.05, 1156.23, 750.512, 463.796, 265.249, 138.504, 64.0346};
-    vector<Double_t> nchCentErrors = {82.7027, 70.8452, 45.7133, 29.4205, 21.9877, 17.5017, 11.5956, 8.3419, 4.84894};
-    //Bool_t drawcent = kFALSE;
-    Bool_t drawcent = kFALSE;
+    vector<double> nchCent = {2869.49, 2342.32, 1740.05, 1156.23, 750.512, 463.796, 265.249, 138.504, 64.0346};
+    vector<double> nchCentErrors = {82.7027, 70.8452, 45.7133, 29.4205, 21.9877, 17.5017, 11.5956, 8.3419, 4.84894};
+    //bool drawcent = kFALSE;
+    bool drawcent = kFALSE;
 
     { // -----------------------------------------------------------------------
       string plotName = "meanPtFullRange";
@@ -1054,9 +1056,9 @@ Int_t multBin = 18;
       myPlot.AddTextBox(0.4, 0.3, systemSizeLablePrel);
 
       if(drawcent){
-        for(Int_t i = 0; i < 9; i++)
+        for(int i = 0; i < 9; i++)
         {
-          for(Int_t j = 0; j < 6; j++)
+          for(int j = 0; j < 6; j++)
           {
             //myPlot.AddTextBox(nchCent[i], 0.705 + 0.01*j, "#bf{|}", kTRUE);
           }
@@ -1088,9 +1090,9 @@ Int_t multBin = 18;
 //      myPlot.AddTextBox(0.14, 0.92, systemSizeLablePrel);
 
       if(drawcent){
-        for(Int_t i = 0; i < 9; i++)
+        for(int i = 0; i < 9; i++)
         {
-          for(Int_t j = 0; j < 6; j++)
+          for(int j = 0; j < 6; j++)
           {
             myPlot.AddTextBox(nchCent[i], 0.36 + 0.01*j, "#bf{|}", kTRUE);
           }
@@ -1133,9 +1135,9 @@ Int_t multBin = 18;
       myPlot.AddHisto("multDensityUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
       myPlot.AddHisto("multDensityUnfolded_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes", 3000);
 
-      for(Int_t i = 0; i < 9; i++)
+      for(int i = 0; i < 9; i++)
       {
-        for(Int_t j = 0; j < 6; j++)
+        for(int j = 0; j < 6; j++)
         {
           myPlot.AddTextBox(nchCent[i], 1e-4 - 0.00001*j, "#bf{|}", kTRUE);
         }
@@ -1349,7 +1351,7 @@ Int_t multBin = 18;
       string plotName = "energyScanMean";
       Plot myPlot(plotName);
       myPlot.SetFigureGroup(plotGroup);
-      vector<Int_t> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
+      vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
       for(auto& multBin : multBins)
       {
         myPlot.AddHisto((string("meanPt_") + std::to_string(multBin)).c_str(), "Energyscan", (string("Nch = ") + std::to_string(multBin-1)).c_str(), 0, 0, "boxes");
@@ -1366,7 +1368,7 @@ Int_t multBin = 18;
       Plot myPlot(plotName);
       myPlot.SetFigureGroup(plotGroup);
 //      myPlot.SetDrawingProperties("graphs");
-      vector<Int_t> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
+      vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
       for(auto& multBin : multBins)
       {
         myPlot.AddHisto((string("meanPtMC_") + std::to_string(multBin)).c_str(), "Energyscan", "", 0, 0, "band");
@@ -1385,7 +1387,7 @@ Int_t multBin = 18;
       Plot myPlot(plotName);
       myPlot.SetFigureGroup(plotGroup);
 //      myPlot.SetDrawingProperties("graphs");
-      vector<Int_t> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
+      vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
       for(auto& multBin : multBins)
       {
         myPlot.AddHisto((string("meanPtMC_Log_") + std::to_string(multBin)).c_str(), "Energyscan", "", 0, 0, "band");
@@ -1404,7 +1406,7 @@ Int_t multBin = 18;
       string plotName = "energyScanVariance";
       Plot myPlot(plotName);
       myPlot.SetFigureGroup(plotGroup);
-      vector<Int_t> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
+      vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
       for(auto& multBin : multBins)
       {
         myPlot.AddHisto((string("variance_") + std::to_string(multBin)).c_str(), "Energyscan", (string("Nch = ") + std::to_string(multBin-1)).c_str(), 0, 0, "boxes");
@@ -1420,7 +1422,7 @@ Int_t multBin = 18;
       string plotName = "energyScanVarianceMC";
       Plot myPlot(plotName);
       myPlot.SetFigureGroup(plotGroup);
-      vector<Int_t> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
+      vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
       for(auto& multBin : multBins)
       {
         myPlot.AddHisto((string("varianceMC_") + std::to_string(multBin)).c_str(), "Energyscan", "", 0, 0, "band");
@@ -1438,7 +1440,7 @@ Int_t multBin = 18;
       string plotName = "energyScanVarianceMCLog";
       Plot myPlot(plotName);
       myPlot.SetFigureGroup(plotGroup);
-      vector<Int_t> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
+      vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
       for(auto& multBin : multBins)
       {
         myPlot.AddHisto((string("varianceMC_Log_") + std::to_string(multBin)).c_str(), "Energyscan", "", 0, 0, "band");
@@ -2103,12 +2105,12 @@ Int_t multBin = 18;
 
 
 // helper functions
-string GetPtString(Int_t pTbin)
+string GetPtString(int pTbin)
 {
-  Double_t binsPtDefault[53] = {0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.2,2.4,2.6,2.8,3.0,3.2,3.4,3.6,3.8,4.0,4.5,5.0,5.5,6.0,6.5,7.0,8.0,9.0,10.0,20.0,30.0,40.0,50.0,60.0};
+  double binsPtDefault[53] = {0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.2,2.4,2.6,2.8,3.0,3.2,3.4,3.6,3.8,4.0,4.5,5.0,5.5,6.0,6.5,7.0,8.0,9.0,10.0,20.0,30.0,40.0,50.0,60.0};
 
-  Double_t pTlow = binsPtDefault[pTbin-1];
-  Double_t pThigh = binsPtDefault[pTbin];
+  double pTlow = binsPtDefault[pTbin-1];
+  double pThigh = binsPtDefault[pTbin];
 
   std::ostringstream out;
   out.precision(2);

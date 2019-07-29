@@ -51,42 +51,42 @@ class PlottingFramework
 {
  public:
    struct GlobalStyle{
-     Int_t fPixelBaseLength;
-     Int_t fFillStyleCanvas;
-     Double_t fAspectRatio; //for asymmetric plots
-     vector<Int_t> fDefaultMarkers;
-     vector<Int_t> fDefaultMarkersFull;
-     vector<Int_t> fDefaultMarkersOpen;
-     vector<Int_t> fDefaultColors;
-     Bool_t fUseCMYK;
-     Int_t fPalette;
-     Bool_t fDrawTimestamps;
-     vector<Double_t> fTimestampPosition;
-     Int_t fTextFont;
-     Int_t fLableFont;
-     Int_t fTitleFont;
+     int fPixelBaseLength;
+     int fFillStyleCanvas;
+     double fAspectRatio; //for asymmetric plots
+     vector<int> fDefaultMarkers;
+     vector<int> fDefaultMarkersFull;
+     vector<int> fDefaultMarkersOpen;
+     vector<int> fDefaultColors;
+     bool fUseCMYK;
+     int fPalette;
+     bool fDrawTimestamps;
+     vector<double> fTimestampPosition;
+     int fTextFont;
+     int fLableFont;
+     int fTitleFont;
 
-     Double_t fMarkerSize;
-     Double_t fMarkerSizeThick;
+     double fMarkerSize;
+     double fMarkerSizeThick;
 
-     Double_t fLineWidth;
-     Double_t fLineWidthThick;
+     double fLineWidth;
+     double fLineWidthThick;
 
-     Double_t fTextSize;
-     Double_t fLableSizeScaling;
-     Double_t fTitleSizeScaling;
+     double fTextSize;
+     double fLableSizeScaling;
+     double fTitleSizeScaling;
    };
 
    typedef struct PadStyle{
-     vector<Double_t> fPosition;  //xlow, ylow, xup, yup (relative to canvas)
-     vector<Double_t> fMargin; // top, bottom, left, right
-     vector<Double_t> fTitleOffset; // x, y, z
+     vector<double> fPosition;  //xlow, ylow, xup, yup (relative to canvas)
+     vector<double> fMargin; // top, bottom, left, right
+     vector<double> fTitleOffset; // x, y, z
    } PadStyle;
 
    typedef struct CanvasStyle{
      string fStyleName;
-     Double_t fCanvasWidth;
-     Double_t fCanvasHeight;
+     double fCanvasWidth;
+     double fCanvasHeight;
      vector<PadStyle> fPads;
    } CanvasStyle;
 
@@ -96,10 +96,10 @@ class PlottingFramework
   TPaveText* MakeText(Plot::TextBox& textBoxTemplate);
   TLegend* MakeLegend(TPad* pad, Plot::TextBox& legendBoxTemplate, vector<Plot::Histogram>& histos);
 
-  Int_t GetDefaultColor(Int_t colorIndex);
-  Int_t GetDefaultMarker(Int_t markerIndex);
+  int GetDefaultColor(int colorIndex);
+  int GetDefaultMarker(int markerIndex);
 
-  void SetPalette(Int_t palette);
+  void SetPalette(int palette);
   void AddHistosFromInputFile(string datasetIdentifier, string inputFileName);
   void CreateDatasetPlots(string datasetIdentifier);
   void CreateTemporaryPlots(string datasetIdentifier){}
@@ -112,9 +112,9 @@ class PlottingFramework
   // load all or one specific plot defined in conf file
   void LoadAvailablePlots(string configFileName){}
   // TODO gibts schon...
-  void SavePlotTemplate(string plotName, string configFileName, Bool_t replace = kFALSE){}
+  void SavePlotTemplate(string plotName, string configFileName, bool replace = kFALSE){}
   void LoadPlotTemplate(string plotName, string configFileName){}
-  void CreateNewPlot(Plot &plot, string canvasStyleName, Bool_t saveToConfig = kFALSE);
+  void CreateNewPlot(Plot &plot, string canvasStyleName, bool saveToConfig = kFALSE);
   void AddPlotToConfig(Plot &myPlot){}
   void RemovePlotFromConfig(string plotName){}
 
@@ -124,18 +124,18 @@ class PlottingFramework
   TH1* GetHistClone(string histName);
   TH1* GetRatio(string ratioName);
 
-  void SetTextSize(Int_t size){}
-  void SetPixelBase(Int_t size = 710){fStyle.fPixelBaseLength = size;}
+  void SetTextSize(int size){}
+  void SetPixelBase(int size = 710){fStyle.fPixelBaseLength = size;}
 
   void SetAxes(TPad* pad, Plot &plot);
-  void SetTransparentCanvas(Bool_t transparent = kTRUE);
+  void SetTransparentCanvas(bool transparent = kTRUE);
 
   void ListAvailableCanvasStyles();
 
-  void SetDrawTimestamps(Bool_t drawTimestamps = kTRUE) {fStyle.fDrawTimestamps = drawTimestamps;}
+  void SetDrawTimestamps(bool drawTimestamps = kTRUE) {fStyle.fDrawTimestamps = drawTimestamps;}
 
-  Bool_t ContainsDatasets(std::initializer_list<string> requiredDatasets);
-  void CutHistogram(TH1* hist, Double_t cutoff, Double_t cutoffLow);
+  bool ContainsDatasets(std::initializer_list<string> requiredDatasets);
+  void CutHistogram(TH1* hist, double cutoff, double cutoffLow);
 
  private:
    GlobalStyle fStyle;
@@ -159,7 +159,7 @@ class PlottingFramework
    void BookHistos(TDirectoryFile& folder, string datasetIdentifier); //recursively walking through input file
 //   void RemoveHisto(string histName);
 
-    Bool_t IsPlotPossible(Plot &plot);
+    bool IsPlotPossible(Plot &plot);
 
     void CreatePlot(string name, string datasetIdentifier);
     void SetGlobalStyle();
@@ -167,7 +167,7 @@ class PlottingFramework
    // Helper functions
 //   string GetDatasetSuffix(TH1* hist, string datasetIdentifier);
     TH1* DivideWithTSpline(TH1* numerator, TH1* denominator);
-    void ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, Int_t defaultValueIndex, string controlString);
+    void ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, int defaultValueIndex, string controlString);
 
    PlottingFramework(const PlottingFramework&) = default;
    PlottingFramework& operator=(const PlottingFramework&) = default;
