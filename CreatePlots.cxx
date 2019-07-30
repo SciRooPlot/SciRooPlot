@@ -1,9 +1,9 @@
-#include "PlottingFramework.h"
+#include "PlotManager.h"
 #include "Plot.h"
 #include <sstream>
 
-using PlottingProject::PlottingFramework;
-using PlottingProject::Plot;
+using PlottingFramework::PlotManager;
+using PlottingFramework::Plot;
 using std::cout;
 using std::endl;
 using std::flush;
@@ -14,11 +14,13 @@ string GetPtString(int pTbin);
 /*
  Features to add:
  - possibility add external histogram in plots
- - write code more generic so multipad plots are possible
+ - write code more generic so multipad plots are possible (PadCD())
  - write code more generic so histograms, graphs and functions can be used in same manner
  - possibility to scale histograms by factor
  - option to set n divisions of axes
  - improve patch hiding truncated zero
+ - rename: Plot->PlotTemplate, PlotManager->PlotManager, PlottingFramework->PlotManager
+            CanvasTemplates?
  */
 
 int main(int argc, char *argv[]) {
@@ -62,7 +64,7 @@ int main(int argc, char *argv[]) {
   }
 
   // create plotting environment
-  PlottingFramework plotEnv;
+  PlotManager plotEnv;
   plotEnv.SetOutputDirectory(outputPath);
   //plotEnv.SetDrawTimestamps(true);
   //plotEnv.SetPalette(kRainBow);//kBlueGreenYellow, kDarkRainBow

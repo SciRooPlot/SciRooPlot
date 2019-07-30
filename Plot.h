@@ -6,7 +6,8 @@
 #include "TCanvas.h"
 #include <iostream>
 
-namespace PlottingProject {
+namespace PlottingFramework {
+  
   using std::cout;
   using std::endl;
   using std::flush;
@@ -92,8 +93,8 @@ namespace PlottingProject {
     vector<TextBox>& GetLegends() {return mLegends;}
     vector<TextBox>& GetTextBoxes() {return mTexts;}
     
-    vector<Histogram> mGraphs; // dirty hack for legend errorstyles....
-    vector<Histogram> mHistos; // dirty hack for legend errorstyles....
+    vector<Histogram> mGraphs;
+    vector<Histogram> mHistos;
     vector<Histogram> mRatios;
     
   private:

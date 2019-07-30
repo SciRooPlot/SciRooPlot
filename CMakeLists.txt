@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
-project(PlottingProject CXX)
+project(PlottingFramework CXX)
 set(CMAKE_BUILD_TYPE Debug)
 
 #set(ROOTSYS /usr/local/Cellar/root/6.14.06/)
@@ -12,7 +12,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # add source files of classes
 set(SRCS
-  PlottingFramework.cxx
+  PlotManager.cxx
   Plot.cxx
 )
 string(REPLACE ".cxx" ".h" HDRS "${SRCS}")

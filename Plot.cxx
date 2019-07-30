@@ -1,6 +1,6 @@
 #include "Plot.h"
 
-namespace PlottingProject {
+namespace PlottingFramework {
 
   Plot::Plot()
   {

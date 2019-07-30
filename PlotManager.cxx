@@ -1,8 +1,8 @@
-#include "PlottingFramework.h"
+#include "PlotManager.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-namespace PlottingProject {
+namespace PlottingFramework {
   
   using boost::property_tree::ptree;
   using boost::property_tree::write_xml;
@@ -13,7 +13,7 @@ namespace PlottingProject {
    * Constructor for Plotting Framework.
    */
   //****************************************************************************************
-  PlottingFramework::PlottingFramework()
+  PlotManager::PlotManager()
   {
     /*
      ptree config;
@@ -50,7 +50,7 @@ namespace PlottingProject {
    * Deletes ledger and the contained histograms from the heap.
    */
   //****************************************************************************************
-  PlottingFramework::~PlottingFramework()
+  PlotManager::~PlotManager()
   {
     mHistoLedger->Delete();
     mPlotLedger->Delete();
@@ -65,7 +65,7 @@ namespace PlottingProject {
    * @param inputFileName: Path to file containing the data measurement
    */
   //****************************************************************************************
-  void PlottingFramework::AddHistosFromInputFile(string datasetIdentifier, string inputFileName)
+  void PlotManager::AddHistosFromInputFile(string datasetIdentifier, string inputFileName)
   {
     TFile inputFile(inputFileName.c_str(), "READ");
     if (inputFile.IsZombie()) {
@@ -90,7 +90,7 @@ namespace PlottingProject {
    * Check if datasets are loaded in plotting framework.
    */
   //****************************************************************************************
-  bool PlottingFramework::ContainsDatasets(std::initializer_list<string> requiredDatasets){
+  bool PlotManager::ContainsDatasets(std::initializer_list<string> requiredDatasets){
     for(string requiredDataset : requiredDatasets){
       if (std::find(mDatasetIdentifiers.begin(), mDatasetIdentifiers.end(), requiredDataset) == mDatasetIdentifiers.end())
       {
@@ -112,7 +112,7 @@ namespace PlottingProject {
    * (is added as suffix to histogram name)
    */
   //****************************************************************************************
-  void PlottingFramework::BookHistos(TDirectoryFile& folder, string datasetIdentifier)
+  void PlotManager::BookHistos(TDirectoryFile& folder, string datasetIdentifier)
   {
     TIter nextKey(folder.GetListOfKeys());
     TKey* key;
@@ -136,7 +136,7 @@ namespace PlottingProject {
    * @param outputFileName: Path to the output directory
    */
   //****************************************************************************************
-  void PlottingFramework::SetOutputDirectory(string path)
+  void PlotManager::SetOutputDirectory(string path)
   {
     mOutputDirectory = path;
   }
@@ -154,7 +154,7 @@ namespace PlottingProject {
    * @param deletePlot: Delete plot from framework after saving to file
    */
   //****************************************************************************************
-  void PlottingFramework::SavePlot(string plotName, string figureGroup, string subFolder, bool deletePlot)
+  void PlotManager::SavePlot(string plotName, string figureGroup, string subFolder, bool deletePlot)
   {
     string folderName = mOutputDirectory + "/" + figureGroup;
     if(subFolder != "") folderName += "/" + subFolder;
@@ -180,7 +180,7 @@ namespace PlottingProject {
    * @param outputFileName: Name of the root file
    */
   //****************************************************************************************
-  void PlottingFramework::WritePlotsToFile(string outputFileName)
+  void PlotManager::WritePlotsToFile(string outputFileName)
   {
     TFile outputFile((mOutputDirectory + "/" + outputFileName).c_str(), "RECREATE");
     outputFile.cd();
@@ -194,7 +194,7 @@ namespace PlottingProject {
    * @todo implement this function
    */
   //****************************************************************************************
-  void PlottingFramework::CreateDatasetPlots(string datasetIdentifier)
+  void PlotManager::CreateDatasetPlots(string datasetIdentifier)
   {
   }
   
@@ -203,7 +203,7 @@ namespace PlottingProject {
    * Applies style of plot to canvas.
    */
   //****************************************************************************************
-  void PlottingFramework::ApplyStyleSettings(CanvasStyle& canvasStyle, TCanvas* canvas, string controlString)
+  void PlotManager::ApplyStyleSettings(CanvasStyle& canvasStyle, TCanvas* canvas, string controlString)
   {
     
     // apply title offsets
@@ -281,7 +281,7 @@ namespace PlottingProject {
    * Creates canvas based on style of plot.
    */
   //****************************************************************************************
-  TCanvas* PlottingFramework::MakeCanvas(string name, CanvasStyle& canvasStyle)
+  TCanvas* PlotManager::MakeCanvas(string name, CanvasStyle& canvasStyle)
   {
     // create canvas
     TCanvas* canvas = new TCanvas(name.c_str(), name.c_str(), canvasStyle.canvasWidth, canvasStyle.canvasHeight);
@@ -314,10 +314,10 @@ namespace PlottingProject {
    * Creates plot based on externally defined plot template.
    * @param plot: reference to plot blueprint
    * @param canvasStyleName: name of predefined canvas style
-   * for available styles see: GetCanvasStyle()
+   * to find available canvas styles use: ListAvailableCanvasStyles()
    */
   //****************************************************************************************
-  void PlottingFramework::CreateNewPlot(Plot& plot, string canvasStyleName, bool saveToConfig)
+  void PlotManager::CreateNewPlot(Plot& plot, string canvasStyleName, bool saveToConfig)
   {
     if(!IsPlotPossible(plot)){
       mListOfMissingPlots.push_back(plot.GetName());
@@ -349,7 +349,16 @@ namespace PlottingProject {
     mPlotLedger->Add(canvas);
   }
   
-  void PlottingFramework::CutHistogram(TH1* hist, double cutoff, double cutoffLow)
+
+  //****************************************************************************************
+  /**
+   * Deletes data points of histogram beyond cutoff value (and below lower cutoff value).
+   * @param hist: histogram to cut
+   * @param cutoff: user axis value after which data is set to zero
+   * @param cutoffLow: user axis value before which data is set to zero
+   */
+  //****************************************************************************************
+  void PlotManager::CutHistogram(TH1* hist, double cutoff, double cutoffLow)
   {
     if(cutoff < -997) return;
     int cutoffBin = hist->GetXaxis()->FindBin(cutoff);
@@ -366,7 +375,14 @@ namespace PlottingProject {
     
   }
   
-  bool PlottingFramework::IsPlotPossible(Plot &plot)
+
+  //****************************************************************************************
+  /**
+   * Internal function to check if all input histograms are available to create the plot.
+   * @param plot: reference to plot template
+   */
+  //****************************************************************************************
+  bool PlotManager::IsPlotPossible(Plot &plot)
   {
     for(auto& histoTemplate : plot.GetHistoTemplates())
     {
@@ -401,7 +417,7 @@ namespace PlottingProject {
     return true;
   }
   
-  void PlottingFramework::DrawPlotInCanvas(Plot &plot, TCanvas* canvas)
+  void PlotManager::DrawPlotInCanvas(Plot &plot, TCanvas* canvas)
   {
     canvas->cd();
     
@@ -531,7 +547,7 @@ namespace PlottingProject {
     }
   }
   
-  TLegend* PlottingFramework::MakeLegend(TPad* pad, Plot::TextBox& legendBoxTemplate, vector<Plot::Histogram>& histos){
+  TLegend* PlotManager::MakeLegend(TPad* pad, Plot::TextBox& legendBoxTemplate, vector<Plot::Histogram>& histos){
     
     int nLetters = 0;
     TObjArray legendEntries(1);
@@ -591,7 +607,7 @@ namespace PlottingProject {
   }
   
   
-  TPaveText* PlottingFramework::MakeText(Plot::TextBox& textBoxTemplate){
+  TPaveText* PlotManager::MakeText(Plot::TextBox& textBoxTemplate){
     
     string delimiter = " // ";
     string text = textBoxTemplate.text;
@@ -647,7 +663,7 @@ namespace PlottingProject {
   }
   
   
-  void PlottingFramework::SetAxes(TPad* pad, Plot &plot)
+  void PlotManager::SetAxes(TPad* pad, Plot &plot)
   {
     vector<double>& xRange = plot.GetAxisRange("X");
     vector<double>& yRangeDist = plot.GetAxisRange("Y");
@@ -726,7 +742,7 @@ namespace PlottingProject {
   }
   
   
-  void PlottingFramework::ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, int defaultValueIndex, string controlString)
+  void PlotManager::ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, int defaultValueIndex, string controlString)
   {
     histo->SetTitle("");
     
@@ -775,7 +791,7 @@ namespace PlottingProject {
     
   }
   
-  TGraphErrors* PlottingFramework::GetGraphClone(string graphName)
+  TGraphErrors* PlotManager::GetGraphClone(string graphName)
   {
     TGraphErrors* graph = nullptr;
     TObject* obj = mHistoLedger->FindObject(graphName.c_str());
@@ -790,7 +806,7 @@ namespace PlottingProject {
   }
   
   
-  TH1* PlottingFramework::GetHistClone(string histName)
+  TH1* PlotManager::GetHistClone(string histName)
   {
     TH1* histo = nullptr;
     TObject* obj = mHistoLedger->FindObject(histName.c_str());
@@ -805,7 +821,7 @@ namespace PlottingProject {
   }
   
   
-  TH1* PlottingFramework::GetRatio(string ratioName)
+  TH1* PlotManager::GetRatio(string ratioName)
   {
     string delimiter = " / ";
     string numerator = ratioName.substr(0, ratioName.find(delimiter));
@@ -831,7 +847,7 @@ namespace PlottingProject {
     return ratio;
   }
   
-  TH1* PlottingFramework::DivideWithTSpline(TH1* numerator, TH1* denominator)
+  TH1* PlotManager::DivideWithTSpline(TH1* numerator, TH1* denominator)
   {
     TGraph denominatorGraph(denominator);
     TSpline3 denominatorSpline(denominator);
@@ -868,7 +884,7 @@ namespace PlottingProject {
   /// - Intense: kGreenPink, kOcean, kDarkBodyRadiator, kInvertedDarkBodyRadiator, kSunset, kVisibleSpectrum
   
   
-  void PlottingFramework::SetPalette(int palette)
+  void PlotManager::SetPalette(int palette)
   {
     mStyle.palette = palette;
     gStyle->SetPalette(mStyle.palette);
@@ -876,7 +892,7 @@ namespace PlottingProject {
   
   
   // call once
-  void PlottingFramework::SetGlobalStyle()
+  void PlotManager::SetGlobalStyle()
   {
     // General settings
     TGaxis::SetMaxDigits(3);
@@ -914,16 +930,16 @@ namespace PlottingProject {
     
   }
   
-  int PlottingFramework::GetDefaultColor(int colorIndex)
+  int PlotManager::GetDefaultColor(int colorIndex)
   {
     return mStyle.defaultColors[colorIndex % mStyle.defaultColors.size()];
   }
-  int PlottingFramework::GetDefaultMarker(int markerIndex)
+  int PlotManager::GetDefaultMarker(int markerIndex)
   {
     return mStyle.defaultMarkers[markerIndex % mStyle.defaultMarkers.size()];
   }
   
-  void PlottingFramework::DefineDefaultPlottingStyle()
+  void PlotManager::DefineDefaultPlottingStyle()
   {
     // Define global style standards
     mStyle.textFont = 43;
@@ -1073,7 +1089,7 @@ namespace PlottingProject {
     
   }
   
-  PlottingFramework::CanvasStyle* PlottingFramework::GetCanvasStyle(string styleName)
+  PlotManager::CanvasStyle* PlotManager::GetCanvasStyle(string styleName)
   {
     for(auto& canvasStyle : mCanvStyles)
     {
@@ -1084,13 +1100,13 @@ namespace PlottingProject {
   }
   
   
-  void PlottingFramework::SetTransparentCanvas(bool transparent)
+  void PlotManager::SetTransparentCanvas(bool transparent)
   {
     if(transparent) mStyle.fillStyleCanvas = 4000;
     else mStyle.fillStyleCanvas = 4100;
   }
   
-  void PlottingFramework::ListAvailableCanvasStyles()
+  void PlotManager::ListAvailableCanvasStyles()
   {
     for(auto& canvasStyle : mCanvStyles)
     {
@@ -1116,7 +1132,7 @@ namespace PlottingProject {
   
   
   
-  void PlottingFramework::PrintErrors(bool printMissingPlots){
+  void PlotManager::PrintErrors(bool printMissingPlots){
     if(!mListOfMissingPlots.empty()){
       if(!mListOfMissingFiles.empty()){
         cout << endl << "The following input files could not be loaded: " << endl;

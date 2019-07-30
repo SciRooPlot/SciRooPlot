@@ -1,5 +1,5 @@
-#ifndef PlottingFramework_h
-#define PlottingFramework_h
+#ifndef PlotManager_h
+#define PlotManager_h
 
 #include "TFile.h"
 #include "TStyle.h"
@@ -31,7 +31,7 @@
 #include <iostream>
 #include "Plot.h"
 
-namespace PlottingProject {
+namespace PlottingFramework {
   using std::cout;
   using std::endl;
   using std::flush;
@@ -39,12 +39,13 @@ namespace PlottingProject {
   using std::vector;
   
   
-  /** \class PlottingFramework
+  /** \class PlotManager
    This is a generic plotting framework for managing your histograms and plotting from different sources using ROOT functionality.
    */
-  class PlottingFramework
+  class PlotManager
   {
   public:
+    
     struct GlobalStyle{
       int pixelBaseLength;
       int fillStyleCanvas;
@@ -60,13 +61,10 @@ namespace PlottingProject {
       int textFont;
       int lableFont;
       int titleFont;
-      
       double markerSize;
       double markerSizeThick;
-      
       double lineWidth;
       double lineWidthThick;
-      
       double textSize;
       double lableSizeScaling;
       double titleSizeScaling;
@@ -85,8 +83,8 @@ namespace PlottingProject {
       vector<PadStyle> pads;
     } CanvasStyle;
     
-    PlottingFramework();
-    virtual ~PlottingFramework();
+    PlotManager();
+    virtual ~PlotManager();
     
     TPaveText* MakeText(Plot::TextBox& textBoxTemplate);
     TLegend* MakeLegend(TPad* pad, Plot::TextBox& legendBoxTemplate, vector<Plot::Histogram>& histos);
@@ -157,7 +155,7 @@ namespace PlottingProject {
     vector<string> mListOfMissingHistograms;
     
     // Bookkeeping functions
-    void BookHistos(TDirectoryFile& folder, string datasetIdentifier); // recursively walking through input file
+    void BookHistos(TDirectoryFile& folder, string datasetIdentifier);
     //   void RemoveHisto(string histName);
     
     bool IsPlotPossible(Plot &plot);
@@ -171,8 +169,8 @@ namespace PlottingProject {
     TH1* DivideWithTSpline(TH1* numerator, TH1* denominator);
     void ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, int defaultValueIndex, string controlString);
     
-    PlottingFramework(const PlottingFramework&) = default;
-    PlottingFramework& operator=(const PlottingFramework&) = default;
+    PlotManager(const PlotManager&) = default;
+    PlotManager& operator=(const PlotManager&) = default;
   };
 }
 #endif
