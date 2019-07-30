@@ -99,7 +99,7 @@ namespace PlottingProject {
     void CreateDatasetPlots(string datasetIdentifier);
     void CreateTemporaryPlots(string datasetIdentifier){}
     void SetOutputDirectory(string path);
-    void SavePlot(string plotName, string figureGroup, string subFolder = "");
+    void SavePlot(string plotName, string figureGroup, string subFolder = "", bool deletePlot = true);
     void WritePlotsToFile(string outputFileName); //todo: also file structure
     void ListPlots(){mPlotLedger->ls();}
     void ListHistos(){mHistoLedger->ls();}

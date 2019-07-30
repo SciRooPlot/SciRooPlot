@@ -11,11 +11,15 @@ using std::string;
 using std::vector;
 
 string GetPtString(int pTbin);
-// TODO: add feature to also add external histogram in plots
-// TODO: extend so multipad plots are possible
-// TODO: add scaling feature!!
-// TODO: setndivisions from outside
-// TODO: auto-change Ranges are not cut
+/*
+ Features to add:
+ - possibility add external histogram in plots
+ - write code more generic so multipad plots are possible
+ - write code more generic so histograms, graphs and functions can be used in same manner
+ - possibility to scale histograms by factor
+ - option to set n divisions of axes
+ - improve patch hiding truncated zero
+ */
 
 int main(int argc, char *argv[]) {
 

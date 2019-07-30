@@ -8,19 +8,11 @@ namespace PlottingProject {
   using boost::property_tree::write_xml;
   using boost::property_tree::read_xml;
   
-  
-  // -----------------------------------------------------------------------------
-  // -----------------------------------------------------------------------------
-  // --------------------------- Interface functions -----------------------------
-  // -----------------------------------------------------------------------------
-  // -----------------------------------------------------------------------------
-  
-  
-  ////////////////////////////////////////////////////////////////////////////////
-  /// Constructor for PlottingFramework.
-  ///
-  /// @param name     Name of analysis
-  
+  //****************************************************************************************
+  /**
+   * Constructor for Plotting Framework.
+   */
+  //****************************************************************************************
   PlottingFramework::PlottingFramework()
   {
     /*
@@ -52,11 +44,12 @@ namespace PlottingProject {
     gErrorIgnoreLevel = kWarning;
   }
   
-  
-  ////////////////////////////////////////////////////////////////////////////////
-  /// Destructor for OfflineAnalysis.
-  /// Deletes ledger and the contained histograms from the heap.
-  
+  //****************************************************************************************
+  /**
+   * Destructor for Plotting Framework.
+   * Deletes ledger and the contained histograms from the heap.
+   */
+  //****************************************************************************************
   PlottingFramework::~PlottingFramework()
   {
     mHistoLedger->Delete();
@@ -64,13 +57,14 @@ namespace PlottingProject {
     //  fOutputFile->Close();
   }
   
-  
-  ////////////////////////////////////////////////////////////////////////////////
-  /// Adds input histograms from file to internal histogram ledger.
-  ///
-  /// @param datasetIdentifier          Unique identifier for current dataset (is added as suffix to histogram name)
-  /// @param inputFileName              Path to file containing the data measurement
-  
+  //****************************************************************************************
+  /**
+   * Adds input histograms from file to internal histogram ledger.
+   * @param datasetIdentifier: Unique identifier for current dataset
+   * (is added as suffix to histogram name)
+   * @param inputFileName: Path to file containing the data measurement
+   */
+  //****************************************************************************************
   void PlottingFramework::AddHistosFromInputFile(string datasetIdentifier, string inputFileName)
   {
     TFile inputFile(inputFileName.c_str(), "READ");
@@ -90,15 +84,17 @@ namespace PlottingProject {
     mDatasetIdentifiers.push_back(datasetIdentifier);
   }
   
-  ////////////////////////////////////////////////////////////////////////////////
-  /// Check if datasets are loaded in plotting framework.
-  ///
-  
+
+  //****************************************************************************************
+  /**
+   * Check if datasets are loaded in plotting framework.
+   */
+  //****************************************************************************************
   bool PlottingFramework::ContainsDatasets(std::initializer_list<string> requiredDatasets){
     for(string requiredDataset : requiredDatasets){
       if (std::find(mDatasetIdentifiers.begin(), mDatasetIdentifiers.end(), requiredDataset) == mDatasetIdentifiers.end())
       {
-        cout << "Dataset " << requiredDataset << " was not loaded in framework." << endl;
+        //cout << "Dataset " << requiredDataset << " was not loaded in framework." << endl;
         return false;
       }
     }
@@ -106,12 +102,16 @@ namespace PlottingProject {
   }
   
   
-  ////////////////////////////////////////////////////////////////////////////////
-  /// Function that recursively traverses file structure of input file and adds histograms to internal ledger
-  ///
-  /// @param folder                     Current folder to search for histograms
-  /// @param datasetIdentifier          Unique identifier for current dataset (is added as suffix to histogram name)
-  
+  //****************************************************************************************
+  /**
+   * Recursively traverses folder structure of input file and
+   * adds histograms to internal ledger
+   * @todo add option for other internal structures like TLists
+   * @param folder: Current folder to search for histograms
+   * @param datasetIdentifier: Unique identifier for current dataset
+   * (is added as suffix to histogram name)
+   */
+  //****************************************************************************************
   void PlottingFramework::BookHistos(TDirectoryFile& folder, string datasetIdentifier)
   {
     TIter nextKey(folder.GetListOfKeys());
@@ -130,23 +130,31 @@ namespace PlottingProject {
   }
   
   
-  ////////////////////////////////////////////////////////////////////////////////
-  /// Opens the output file.
-  ///
-  /// @param outputFileName      Path to the output file
-  
+  //****************************************************************************************
+  /**
+   * Sets path for output files.
+   * @param outputFileName: Path to the output directory
+   */
+  //****************************************************************************************
   void PlottingFramework::SetOutputDirectory(string path)
   {
     mOutputDirectory = path;
   }
   
   
-  ////////////////////////////////////////////////////////////////////////////////
-  /// Dummy
-  ///
-  /// @param dummy      dummy
-  
-  void PlottingFramework::SavePlot(string plotName, string figureGroup, string subFolder)
+  //****************************************************************************************
+  /**
+   * Saves specified plot from certain figure group into sub directory of output folder.
+   * By default the plot is then removed from the plot ledger and heap memory is freed.
+   * @todo add option for output formats other than pdf
+   * @todo steer plot deletion globally
+   * @param plotName: Name of the plot to save
+   * @param figureGroup: Figure group in which the plot was created
+   * @param subFolder: Sub directory in output folder set via SetOutputDirectory()
+   * @param deletePlot: Delete plot from framework after saving to file
+   */
+  //****************************************************************************************
+  void PlottingFramework::SavePlot(string plotName, string figureGroup, string subFolder, bool deletePlot)
   {
     string folderName = mOutputDirectory + "/" + figureGroup;
     if(subFolder != "") folderName += "/" + subFolder;
@@ -154,21 +162,24 @@ namespace PlottingProject {
     gSystem->Exec((string("mkdir -p ") + folderName).c_str());
     
     string name = plotName + "_@_" + figureGroup;
-    TH1* plot = (TH1*)mPlotLedger->FindObject(name.c_str());
+    TCanvas* plot = (TCanvas*)mPlotLedger->FindObject(name.c_str());
     if (!plot)
     {
       //cout << "ERROR: Plot " << name << " was not booked." << endl;
     }else{
       plot->SaveAs((folderName + "/" + name + ".pdf").c_str());
+      if(deletePlot) { mPlotLedger->Remove(plot); delete plot; }
     }
   }
   
-  
-  ////////////////////////////////////////////////////////////////////////////////
-  /// Function to write all plots to root file.
-  ///
-  /// @param outputFileName      Name of output file (including .root extension)
-  
+
+  //****************************************************************************************
+  /**
+   * Writes all plots stored in the plot ledger into a root file.
+   * Output directory can be specified via SetOutputDirectory()
+   * @param outputFileName: Name of the root file
+   */
+  //****************************************************************************************
   void PlottingFramework::WritePlotsToFile(string outputFileName)
   {
     TFile outputFile((mOutputDirectory + "/" + outputFileName).c_str(), "RECREATE");
@@ -177,15 +188,21 @@ namespace PlottingProject {
   }
   
   
-  ////////////////////////////////////////////////////////////////////////////////
-  /// Dummy
-  ///
-  /// @param dummy      dummy
-  
+  //****************************************************************************************
+  /**
+   * Intended to created all plots corresponding to specified dataset stored in config file.
+   * @todo implement this function
+   */
+  //****************************************************************************************
   void PlottingFramework::CreateDatasetPlots(string datasetIdentifier)
   {
   }
   
+  //****************************************************************************************
+  /**
+   * Applies style of plot to canvas.
+   */
+  //****************************************************************************************
   void PlottingFramework::ApplyStyleSettings(CanvasStyle& canvasStyle, TCanvas* canvas, string controlString)
   {
     
@@ -258,6 +275,12 @@ namespace PlottingProject {
     
   }
   
+  
+  //****************************************************************************************
+  /**
+   * Creates canvas based on style of plot.
+   */
+  //****************************************************************************************
   TCanvas* PlottingFramework::MakeCanvas(string name, CanvasStyle& canvasStyle)
   {
     // create canvas
@@ -286,11 +309,14 @@ namespace PlottingProject {
   }
   
   
-  ////////////////////////////////////////////////////////////////////////////////
-  /// Dummy
-  ///
-  /// @param dummy      dummy
-  
+  //****************************************************************************************
+  /**
+   * Creates plot based on externally defined plot template.
+   * @param plot: reference to plot blueprint
+   * @param canvasStyleName: name of predefined canvas style
+   * for available styles see: GetCanvasStyle()
+   */
+  //****************************************************************************************
   void PlottingFramework::CreateNewPlot(Plot& plot, string canvasStyleName, bool saveToConfig)
   {
     if(!IsPlotPossible(plot)){
@@ -1087,9 +1113,9 @@ namespace PlottingProject {
       
     }
   }
-
-
-
+  
+  
+  
   void PlottingFramework::PrintErrors(bool printMissingPlots){
     if(!mListOfMissingPlots.empty()){
       if(!mListOfMissingFiles.empty()){
@@ -1113,5 +1139,5 @@ namespace PlottingProject {
       }
     }
   }
- 
+  
 }
