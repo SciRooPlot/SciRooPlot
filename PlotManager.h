@@ -32,16 +32,75 @@
 #include "Plot.h"
 
 namespace PlottingFramework {
+  
   using std::cout;
   using std::endl;
   using std::flush;
   using std::string;
   using std::vector;
   
+
   
   /** \class PlotManager
    This is a generic plotting framework for managing your histograms and plotting from different sources using ROOT functionality.
    */
+  class PlotStyle
+  {
+  public:
+    
+    struct GlobalStyle{
+      int pixelBaseLength;
+      int fillStyleCanvas;
+      double aspectRatio; // for asymmetric plots
+      vector<int> defaultMarkers;
+      vector<int> defaultMarkersFull;
+      vector<int> defaultMarkersOpen;
+      vector<int> defaultColors;
+      bool useCMYK;
+      int palette;
+      bool drawTimestamps;
+      vector<double> timestampPosition;
+      int textFont;
+      int lableFont;
+      int titleFont;
+      double markerSize;
+      double markerSizeThick;
+      double lineWidth;
+      double lineWidthThick;
+      double textSize;
+      double lableSizeScaling;
+      double titleSizeScaling;
+    };
+    
+    typedef struct PadStyle{
+      vector<double> position;  // xlow, ylow, xup, yup (relative to canvas)
+      vector<double> margin; // top, bottom, left, right
+      vector<double> titleOffset; // x, y, z
+    } PadStyle;
+
+    static GlobalStyle mGlobalStyle;
+
+    vector<PadStyle>& GetPads() {};
+    
+    private:
+      string mStyleName;
+      double mWidth;
+      double mHeight;
+      vector<PadStyle> pads;
+
+  };
+  
+  // instanciate canvas from template and plot specifications
+  // collection of functionality, only used to encapsulate
+  // returns canvas
+  class PlotCreator
+  {
+    public:
+      void CreatePlot() {};
+    private:
+      void MakeTextBox(){};
+  };
+  
   class PlotManager
   {
   public:
@@ -95,7 +154,6 @@ namespace PlottingFramework {
     void SetPalette(int palette);
     void AddHistosFromInputFile(string datasetIdentifier, string inputFileName);
     void CreateDatasetPlots(string datasetIdentifier);
-    void CreateTemporaryPlots(string datasetIdentifier){}
     void SetOutputDirectory(string path);
     void SavePlot(string plotName, string figureGroup, string subFolder = "", bool deletePlot = true);
     void WritePlotsToFile(string outputFileName); //todo: also file structure
@@ -105,7 +163,6 @@ namespace PlottingFramework {
     // load all or one specific plot defined in conf file
     void LoadAvailablePlots(string configFileName){}
     // TODO gibts schon...
-    void SavePlotTemplate(string plotName, string configFileName, bool replace = false){}
     void LoadPlotTemplate(string plotName, string configFileName){}
     void CreateNewPlot(Plot &plot, string canvasStyleName, bool saveToConfig = false);
     void AddPlotToConfig(Plot &myPlot){}
@@ -117,6 +174,7 @@ namespace PlottingFramework {
     TH1* GetHistClone(string histName);
     TH1* GetRatio(string ratioName);
     
+    // setters to change global style
     void SetTextSize(int size){}
     void SetPixelBase(int size = 710){mStyle.pixelBaseLength = size;}
     
@@ -153,6 +211,8 @@ namespace PlottingFramework {
     vector<string> mListOfMissingFiles;
     vector<string> mListOfMissingPlots;
     vector<string> mListOfMissingHistograms;
+    
+    ptree mPlotTemplates;
     
     // Bookkeeping functions
     void BookHistos(TDirectoryFile& folder, string datasetIdentifier);

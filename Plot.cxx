@@ -103,4 +103,85 @@ namespace PlottingFramework {
     
   }
   
+  
+  
+  ptree Plot::GetProperties()
+  {
+    // convert properties of plot to ptree
+    ptree plotTree;
+    string plotName = this->GetName();
+    for(auto& histo : mHistos){
+      string histName = "HIST." + histo.name;
+      plotTree.put(histName + ".lable", histo.lable);
+      plotTree.put(histName + ".marker", histo.marker);
+    }
+    for(auto& histo : mRatios){
+      string histName = "RATIO." + histo.name;
+      plotTree.put(histName + ".lable", histo.lable);
+      plotTree.put(histName + ".marker", histo.marker);
+    }
+    vector<Axis> axes = {mXaxis, mYaxis, mZaxis, mYaxisRatio};
+    int iAxis = 1;
+    for(auto& axis : axes){
+      string axisName = "AXES." + std::to_string(iAxis);
+      if(axis.title != "") plotTree.put(axisName + ".title", axis.title);
+      int i = 0; // todo axis name
+      for(auto& limit : axis.range){
+        plotTree.put(axisName + ".range[" + std::to_string(i) + "]", limit);
+      }
+      iAxis++;
+    }
+
+    int iLegends = 1;
+    for(auto& legend : mLegends){
+      string legendName = "LEGENDS." + std::to_string(iLegends);
+      plotTree.put(legendName + ".x", legend.x);
+      plotTree.put(legendName + ".y", legend.y);
+    }
+
+    
+    /*
+    // traverse plot tree and set properties
+    for(auto& plot : plotTree)
+    {
+      ptree& myPlot = plot.second;
+      cout << plot.first << " named " << myPlot.get<string>("name") << endl;
+
+      for(auto& plotProperties : myPlot)
+      {
+        if(plotProperties.first.find("histo") != string::npos)
+        {
+          ptree myHist = myPlot.get_child(plotProperties.first);
+          try{
+            cout << "name: " << myHist.get<string>("name") << endl;
+            cout << "lable: " << myHist.get<string>("lable") << endl;
+            cout << "marker: " << myHist.get<int>("marker") << endl;
+          }
+          catch(...){
+            cout << "ERROR: could not extract all plot properties from ptree." << endl;
+            cout << typeid(std::current_exception()).name() << endl;
+          }
+        }
+      }
+    }
+    */
+    return plotTree;
+  }
+
+//  void Plot::SetProperties(ptree& plotBlueprint)
+  //{
+    // use ptree to fill plot
+    //resultTree.add_child("plot1", plotTree);
+    //write_json(configFileName + ".JSON", resultTree);
+    //write_json(cout, resultTree.get_child("plot2"));
+    
+    /* read in file
+     
+     ptree configIn;
+     read_json(configFileName + ".JSON", configIn);
+     float v = configIn.get<float>("irgendwas.ptee");
+     cout << v << endl;
+     */
+  //}
+
 }

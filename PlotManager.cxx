@@ -1,35 +1,14 @@
 #include "PlotManager.h"
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
 namespace PlottingFramework {
-  
-  using boost::property_tree::ptree;
-  using boost::property_tree::write_xml;
-  using boost::property_tree::read_xml;
-  
+
   //****************************************************************************************
   /**
    * Constructor for Plotting Framework.
    */
   //****************************************************************************************
   PlotManager::PlotManager()
-  {
-    /*
-     ptree config;
-     config.put("irgendwas.ptee", 30);
-     config.put("irgendwas.mee", "Sebastian");
-     write_xml("myXML.xml", config);
-     
-     
-     ptree configIn;
-     read_xml("myXML.xml", configIn);
-     float  = configIn.get<float>("main.float");
-     cout << v << endl;
-     write_xml("myXML.xml", configIn);
-     
-     //ptree_bad_path exception. If value could not be translated, it will be ptree_bad_data. Both of them derive from ptree_error
-     */
+  {    
     cout << "Doing plotting ..." << endl;
     cout << endl;
     
@@ -52,6 +31,7 @@ namespace PlottingFramework {
   //****************************************************************************************
   PlotManager::~PlotManager()
   {
+    write_json("myPlot.JSON", mPlotTemplates);
     mHistoLedger->Delete();
     mPlotLedger->Delete();
     //  fOutputFile->Close();
@@ -347,6 +327,11 @@ namespace PlottingFramework {
     ApplyStyleSettings(canvasStyle, canvas, controlString);
     
     mPlotLedger->Add(canvas);
+    
+    if(saveToConfig){
+//      mPlotTemplates.add_child(plot.GetFigureGroup(), plot.GetProperties());
+      mPlotTemplates.put_child((plot.GetFigureGroup() + "." + plot.GetName()), plot.GetProperties());
+    }
   }
   
 

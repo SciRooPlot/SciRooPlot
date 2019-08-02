@@ -1,18 +1,21 @@
 #ifndef Plot_h
 #define Plot_h
-
 #include "Plot.h"
 #include "TObjArray.h"
 #include "TCanvas.h"
 #include <iostream>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 namespace PlottingFramework {
-  
   using std::cout;
   using std::endl;
   using std::flush;
   using std::string;
   using std::vector;
+  using boost::property_tree::ptree;
+  using boost::property_tree::write_json;
+  using boost::property_tree::read_json;
 
   class Plot
   {
@@ -33,6 +36,7 @@ namespace PlottingFramework {
       vector<double> range;
       string title;
     } Axis;
+    
     
     struct Histogram {
       string name;
@@ -55,7 +59,7 @@ namespace PlottingFramework {
     };
     
     Plot();
-    Plot(string name) : Plot() {mName = name;}
+    Plot(string name, string figureGroup) : Plot() {mName = name; mFigureGroup = figureGroup;}
     
     void Print();
     
@@ -81,7 +85,6 @@ namespace PlottingFramework {
     string GetFigureGroup(){return mFigureGroup;}
     
     void SetDrawingProperties(string controlString){mControlString = controlString;}
-    void SetFigureGroup(string figureGroupName){mFigureGroup = figureGroupName;}
     void SetPlotStyle(string plotStyle){mPlotStyle = plotStyle;}
     string GetPlotStyle(){return mPlotStyle;}
     
@@ -96,6 +99,9 @@ namespace PlottingFramework {
     vector<Histogram> mGraphs;
     vector<Histogram> mHistos;
     vector<Histogram> mRatios;
+    
+    ptree GetProperties();
+
     
   private:
     Axis& GetAxis(string axis);
