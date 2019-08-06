@@ -9,24 +9,37 @@ using std::endl;
 using std::flush;
 using std::string;
 using std::vector;
+using std::map;
 
 string GetPtString(int pTbin);
 /*
  Features to add:
- - possibility add external histogram in plots
+ - do i want to store actual plots? otherwise remove mPlotLedger, resp use it for Plot templates, re-think create plot logic
+ - change histo, graph and function to generic base type and inherited classes
+ - change from loading all histos to loading only the ones needed for the plots
+ - (but keep possibility to load all as well)
+ - possibility to use FileAnd list substructure as part of internal names
+ - disentangle layout and manager
  - write code more generic so multipad plots are possible (PadCD())
  - write code more generic so histograms, graphs and functions can be used in same manner
+ - how to handle case of multiple plots if one of them misses?
+ - option to request ./plot myPlot@figureGroup and it is automatically searched for in plot templates, files are loaded and plot is created
+ - possibility to generate list of available plots (considering templates + opened input files)
+ - possibility to load file with plot templates -> loads necessary files automatically
  - possibility to scale histograms by factor
+ - functions and fitting!
  - option to set n divisions of axes
  - improve patch hiding truncated zero
  - move operator for plots?
- - disentangle layout and manager
+ - possibility add external histogram in plots
+ - automatic placement of legend (use root functions)
  */
 
 int main(int argc, char *argv[]) {
 
-  cout << "Hello World" << endl;
+  bool updateInputFiles = false;
   string outputPath = "../../../../../TempPlots";
+ 
   string outputFileName = "myPlots.root";
   bool createBinWiseClosureTests = true;
   bool skipDatasetPlots = false;
@@ -37,6 +50,7 @@ int main(int argc, char *argv[]) {
   else
   { // define datasets to include in analysis
     dataSets.push_back("pp_5TeV");
+    dataSets.push_back("pp_7TeV");
 
     /* --- Unused Datasets ---
 
@@ -55,35 +69,99 @@ int main(int argc, char *argv[]) {
     dataSets.push_back("pp_13TeV_withDDC");
     dataSets.push_back("PbPb_5TeV_noZDC");
 
-
     dataSets.push_back("pp_5TeV_10GeV_CENT");
     dataSets.push_back("pp_5TeV_10GeV_CENTwoSDD");
     dataSets.push_back("pp_5TeV_10GeV_FAST");
-  */
+*/
   }
 
   // create plotting environment
   PlotManager plotEnv;
   plotEnv.SetOutputDirectory(outputPath);
+
+  /*
+   manager functions:
+  
+   plotEnv.LoadPlots("myPlots.JSON"); // loads plots from JSON file and stores them in manager
+
+   plotEnv.GetPlot("myPlotName") // possibility to modify and save again
+
+   plot functions:
+   
+   myPlot.SetOutputFileName("betterThanDefaultName", "somewhere else"); // path is optional
+   myPlot.SetOutputFromat()
+   
+   all to root file??
+
+   */
+
+  
   //plotEnv.SetDrawTimestamps(true);
   //plotEnv.SetPalette(kRainBow);//kBlueGreenYellow, kDarkRainBow
 
-  for(string dataSet : dataSets){
-    string folder = "../../../../Datasets/" + dataSet + "/";
-    string inputFile = folder + dataSet + "_Results.root";
-    string inputFileSyst = folder + dataSet + "_Syst.root";
+  string inputFileConfig = "inputFiles";
+  if(updateInputFiles)
+  {
+    for(string dataSet : dataSets){
+      string folder = "../../../../Datasets/" + dataSet + "/";
+      string inputFile = folder + dataSet + "_Results.root";
+      string inputFileSyst = folder + dataSet + "_Syst.root";
 
-    plotEnv.AddHistosFromInputFile(dataSet, inputFile);
-    plotEnv.AddHistosFromInputFile(dataSet, inputFileSyst);
+      if(dataSet == "Publications" || dataSet == "Simulations" || dataSet == "Energyscan"){
+        plotEnv.AddInputFilePaths(dataSet, {inputFile});
+      }else{
+        plotEnv.AddInputFilePaths(dataSet, {inputFile, inputFileSyst});
+      }
+    }
+    plotEnv.DumpInputFiles(inputFileConfig);
+    return -1;
   }
+  else{
+    plotEnv.LoadInputFiles(inputFileConfig);
+  }
+  
 
+  
+  //plotEnv.ListHistos();
+  { // -----------------------------------------------------------------------
+    string plotName = "responseMatrix";
+    Plot myPlot(plotName, "TEST");
+    myPlot.SetDrawingProperties("logZ");
+    myPlot.AddHisto("momentUnfolded1", "pp_5TeV");
+//    myPlot.SwitchActivePad(2);
+    // set range etc must also affect only this pad (or associated pads)
+//    myPlot.AddRatio();
+//    myPlot.AddFunction();
+    myPlot.AddTextBox(0.3, 0.3, "some new text");
+    plotEnv.AddPlot(myPlot); // check if all properties are properly moved!!
+    cout << myPlot.GetName()<<endl;
+ //   plotEnv.SavePlot(plotName, "TEST");
+  } // -----------------------------------------------------------------------
+  { // -----------------------------------------------------------------------
+    string plotName = "momentUnfolded1";
+    Plot myPlot(plotName, "TEST");
+    myPlot.AddHisto(plotName, "pp_5TeV");
+    myPlot.AddLegendBox(0.6, 0.7);
+    myPlot.AddTextBox(0.4, 0.91, "myLable");
+    plotEnv.AddPlot(myPlot); // check if all properties are properly moved!!
+  } // -----------------------------------------------------------------------
+//  plotEnv.ListPlots();
+//  plotEnv.CreatePlot("momentUnfolded1", "TEST");
+  plotEnv.CreatePlots("TEST");
+  
+  plotEnv.ListPlots();
+  plotEnv.DumpPlots("myPlots.JSON"); // saves all stored plots to JSON file
+  //!!! (and deletes them from manager)
+  plotEnv.PrintErrors();
+
+  return -1;
 
 //  plotEnv.ListHistos();
 //  plotEnv.LoadPlotsFromConfigFile(plotConfigFile); // loads all available plots for the loaded datasets
 //  plotEnv.LoadPlot("myImportantPlot", plotConfigFile);
 //  plotEnv.WritePlotsToFile(outputFileName);
 //  plotEnv.ListAvailableCanvasStyles();
-
+  /* BEGIN COMMENT:
   //---- Lable definitions -----------------------------------------------------
   string newLine = " // ";
   string alice = "#bf{ALICE work in progress}";
@@ -133,13 +211,9 @@ int main(int argc, char *argv[]) {
 { // -----------------------------------------------------------------------
   string plotName = "covMat_multDistUnfolded";
   Plot myPlot(plotName, dataSet);
-  
-//  myPlot.SetDrawingProperties("logZ");
-  myPlot.AddHisto(plotName.c_str(), "", "");
+  myPlot.AddHisto(plotName, "", "");
   myPlot.AddLegendBox(0.6, 0.7);
   myPlot.AddTextBox(0.4, 0.91, datasetLable);
-//  myPlot.SetAxisRange("Z", -1e6, 1e6);
-//  myPlot.SetAxisRange("Y", 0.1, 1e6);
   plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
@@ -147,13 +221,8 @@ int main(int argc, char *argv[]) {
 { // -----------------------------------------------------------------------
   string plotName = "sign_covMat_multDistUnfolded";
   Plot myPlot(plotName, dataSet);
-  
-//  myPlot.SetDrawingProperties("logZ");
-  myPlot.AddHisto(plotName.c_str(), "", "");
+  myPlot.AddHisto(plotName, "", "");
   myPlot.AddLegendBox(0.6, 0.7);
-//  myPlot.AddTextBox(0.4, 0.91, datasetLable);
-//  myPlot.SetAxisRange("Z", -1e6, 1e6);
-//  myPlot.SetAxisRange("Y", 0.1, 1e6);
   plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
@@ -161,13 +230,9 @@ int main(int argc, char *argv[]) {
 { // -----------------------------------------------------------------------
   string plotName = "abs_covMat_multDistUnfolded";
   Plot myPlot(plotName, dataSet);
-  
   myPlot.SetDrawingProperties("logZ");
-  myPlot.AddHisto(plotName.c_str(), "", "");
+  myPlot.AddHisto(plotName, "", "");
   myPlot.AddLegendBox(0.6, 0.7);
-//  myPlot.AddTextBox(0.4, 0.91, datasetLable);
-//  myPlot.SetAxisRange("Z", -1e6, 1e6);
-//  myPlot.SetAxisRange("Y", 0.1, 1e6);
   plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
@@ -176,10 +241,8 @@ int main(int argc, char *argv[]) {
 { // -----------------------------------------------------------------------
   string plotName = "edgeContamPt";
   Plot myPlot(plotName, dataSet);
-  
   myPlot.SetDrawingProperties("logX");
-  myPlot.AddHisto(plotName.c_str(), "", "");
-  //myPlot.SetAxisRange("Y", 0.4, 1.01);
+  myPlot.AddHisto(plotName, "", "");
   myPlot.SetAxisRange("X", 0, 20);
   myPlot.SetAxisTitle("Y", "contamination");
   myPlot.AddLegendBox(0.3, 0.5);
@@ -191,9 +254,7 @@ int main(int argc, char *argv[]) {
 { // -----------------------------------------------------------------------
   string plotName = "edgeContamMult";
   Plot myPlot(plotName, dataSet);
-  
-  myPlot.AddHisto(plotName.c_str(), "", "");
-  //myPlot.SetAxisRange("Y", 0.4, 1.01);
+  myPlot.AddHisto(plotName, "", "");
   myPlot.SetAxisRange("X", 0, 20);
   myPlot.SetAxisTitle("Y", "contamination");
   myPlot.SetAxisTitle("X", "test");
@@ -207,9 +268,8 @@ int main(int argc, char *argv[]) {
 { // -----------------------------------------------------------------------
   string plotName = "triggerEff";
   Plot myPlot(plotName, dataSet);
-  
   myPlot.AddHisto("eventEfficiency", "", "efficiency of selected event to be measured");
-  myPlot.AddHisto(plotName.c_str(), "", "efficiency including event selection");
+  myPlot.AddHisto(plotName, "", "efficiency including event selection");
   myPlot.AddHisto("eventLossEff", "", "remaining");
   myPlot.SetAxisRange("Y", 0.4, 1.01);
   myPlot.SetAxisRange("X", 0, 10);
@@ -223,14 +283,12 @@ int main(int argc, char *argv[]) {
 { // -----------------------------------------------------------------------
   string plotName = "chi2_multDistUnfolded";
   Plot myPlot(plotName, dataSet);
-  
   myPlot.SetDrawingProperties("logY");
   myPlot.AddHisto("chi2_multDistUnfolded", dataSet, "data", kFullCross, kRed+3);
   myPlot.AddHisto("chi2_multDistUnfoldedMC", dataSet, "mc", kFullCross, kBlue+3);
   myPlot.AddHisto("chi2_multDistUnfoldedClosureTestFlat", dataSet, "mc flat prior", kFullCross, kGreen+3);
   myPlot.AddLegendBox(0.6, 0.7);
   myPlot.AddTextBox(0.4, 0.91, datasetLable);
-//  myPlot.SetAxisRange("X", 0, 20);
   myPlot.SetAxisRange("Y", 0.1, 1e6);
   plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
@@ -250,7 +308,6 @@ int main(int argc, char *argv[]) {
   }
   myPlot.AddLegendBox(0.5, 0.78);
   myPlot.AddTextBox(0.3, 0.92, datasetLable);
-//  myPlot.SetAxisRange("X", 0, 20);
   plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
@@ -258,7 +315,6 @@ int main(int argc, char *argv[]) {
 { // -----------------------------------------------------------------------
   string plotName = "chi2_multPtUnfoldedRaw_MultBin";
   Plot myPlot(plotName, dataSet);
-  
   myPlot.SetDrawingProperties("logY");
   vector<int> multBins = {2, 6, 9, 11, 16, 21, 31, 41, 51, 61};
   int i = 0;
@@ -269,7 +325,6 @@ int main(int argc, char *argv[]) {
   }
   myPlot.AddLegendBox(0.6, 0.7);
   myPlot.AddTextBox(0.4, 0.91, datasetLable);
-//  myPlot.SetAxisRange("X", 0, 20);
   plotEnv.CreateNewPlot(myPlot, "default", false);
   plotEnv.SavePlot(plotName, dataSet, qaFolder);
 } // -----------------------------------------------------------------------
@@ -277,14 +332,9 @@ int main(int argc, char *argv[]) {
 { // -----------------------------------------------------------------------
   string plotName = "particleClosure";
   Plot myPlot(plotName, dataSet);
-  
-//  myPlot.AddHisto(plotName + "MCmeasVsNch", "", "sanityCheck MC meas vs Nch", kOpenCross, kBlue+1);
-//  myPlot.AddHisto(plotName + "MCprimaries", "", "sanityCheck MC meas prim vs Nch", kOpenCross, kBlack+1);
-//  myPlot.AddHisto(plotName + "MCmeas", "", "sanityCheck MC meas", kOpenCross, kMagenta+1);
   myPlot.AddHisto(plotName + "MCtruth", "", "MC truth", kOpenSquare, kGreen+2);
   myPlot.AddHisto(plotName + "MC", "", "MC unfolded", kOpenCircle, kRed+1);
   myPlot.AddHisto(plotName, "", "data unfolded", kFullCross, kBlue+3);
-//  myPlot.AddHisto();
   myPlot.AddLegendBox(0.5, 0.7);
   myPlot.SetAxisRange("Y", 0.9, 1.6);
   myPlot.SetAxisRange("X", 0, multRange);
@@ -298,7 +348,6 @@ int main(int argc, char *argv[]) {
 { // -----------------------------------------------------------------------
   string plotName = "particeContaminationVsNch";
   Plot myPlot(plotName, dataSet);
-  
   myPlot.AddHisto("particleClosureMCmeasVsNch", "", "prim and sec", kOpenCross, kBlue+1);
   myPlot.AddHisto("particleClosureMCprimaries", "", "only prim", kFullCross, kBlack+1);
   myPlot.AddRatio("particleClosureMCmeasVsNch", "", "particleClosureMCprimaries", "", "sec contam");
@@ -321,7 +370,6 @@ int main(int argc, char *argv[]) {
 { // -----------------------------------------------------------------------
   string plotName = "presentation_PtBin_measuredRawMC";
   Plot myPlot(plotName, dataSet);
-  
   myPlot.SetDrawingProperties("logY");
   myPlot.AddHisto(string("multPtMeasuredMC_PtBin_") + std::to_string(ptBin), "", "measured", kFullCross, kGreen+3);
   myPlot.AddLegendBox(0.2, 0.4);
@@ -334,7 +382,6 @@ int main(int argc, char *argv[]) {
 { // -----------------------------------------------------------------------
   string plotName = "presentation_PtBin_unfoldedRawMC";
   Plot myPlot(plotName, dataSet);
-  
   myPlot.SetDrawingProperties("logY");
   myPlot.AddHisto(string("multPtUnfoldedMC_PtBin_") + std::to_string(ptBin), "", "un-smeared", kFullCircle, kBlue+1);
   myPlot.AddLegendBox(0.2, 0.4);
@@ -349,7 +396,6 @@ int multBin = 18;
 { // -----------------------------------------------------------------------
   string plotName = "presentation_MultBin_unfoldedRawMC";
   Plot myPlot(plotName, dataSet);
-  
   myPlot.SetDrawingProperties("logY logX");
   //myPlot.AddHisto(string("multPtUnfoldedMC_MultBin_") + std::to_string(multBin), "", "unfolded", kFullCircle, kBlue+1);
   myPlot.AddHisto(string("multPtUnfoldedMC_MultBin_") + std::to_string(multBin), "", "un-smeared", kFullCircle, kBlue+1);
@@ -372,7 +418,6 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "multDensity";
       Plot myPlot(plotName, dataSet);
-      
       myPlot.SetDrawingProperties("logY");
       myPlot.AddHisto("multDensityUnfolded", dataSet, "", kFullCircle, kBlue+1);
       myPlot.AddHisto("multDensityUnfolded_Syst", dataSet, "data", kFullCircle, kBlue+1, "boxes");
@@ -388,7 +433,6 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "multDists";
       Plot myPlot(plotName, dataSet);
-      
       myPlot.SetDrawingProperties("logY");
       myPlot.AddHisto("multDistMeasured", dataSet, "measured");
       myPlot.AddHisto("multDistUnfolded", dataSet, "", kFullCircle, kBlue+1);
@@ -402,7 +446,6 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "multDistsMC";
       Plot myPlot(plotName, dataSet);
-      
       myPlot.SetDrawingProperties("logY");
       myPlot.AddHisto("multDistMeasuredMC", dataSet, "measured");
       myPlot.AddHisto("multDistUnfoldedMC", dataSet, "unfolded");
@@ -416,7 +459,6 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "multPtMeasured";
       Plot myPlot(plotName, dataSet);
-      
       myPlot.SetDrawingProperties("logZ logY");
       myPlot.AddHisto(plotName);
       //myPlot.SetAxisRange("X", 0, multRange);
@@ -433,7 +475,6 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "multPtMeasuredRaw";
       Plot myPlot(plotName, dataSet);
-      
       myPlot.SetDrawingProperties("logZ logY");
       myPlot.AddHisto(plotName);
       //myPlot.SetAxisRange("X", 0, multRange);
@@ -451,7 +492,6 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "multPtUnfolded";
       Plot myPlot(plotName, dataSet);
-      
       myPlot.SetDrawingProperties("logZ logY");
       myPlot.AddHisto(plotName);
       myPlot.SetAxisRange("X", 0, multRange);
@@ -574,7 +614,6 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "multCorrelationMatrix";
       Plot myPlot(plotName, dataSet);
-      
       myPlot.SetDrawingProperties("logZ");
       myPlot.AddHisto(plotName);
       myPlot.SetAxisRange("X", 0, 10);
@@ -679,8 +718,7 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "eventEfficiency";
       Plot myPlot(plotName, dataSet);
-      
-      myPlot.AddHisto(plotName.c_str());
+      myPlot.AddHisto(plotName);
       myPlot.SetAxisRange("Y", 0.5, 1.01);
       myPlot.SetAxisRange("X", 0, 10);
       myPlot.SetAxisTitle("Y", "efficiency");
@@ -692,7 +730,7 @@ int multBin = 18;
       string plotName = "fakeEventContam";
       Plot myPlot(plotName, dataSet);
       
-      myPlot.AddHisto(plotName.c_str());
+      myPlot.AddHisto(plotName);
       myPlot.SetAxisRange("X", 0, 10);
       myPlot.AddTextBox(0.41, 0.92, datasetLable);
       myPlot.SetAxisTitle("Y", "contamination");
@@ -702,7 +740,6 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "efficiencyMC";
       Plot myPlot(plotName, dataSet);
-      
       myPlot.AddHisto("primTrackEff", dataSet, "", 0, kBlue);
       myPlot.SetDrawingProperties("logX");
       myPlot.SetAxisRange("X", 0.15, 50);
@@ -875,7 +912,6 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "closureTestProjectionPt";
       Plot myPlot(plotName, dataSet);
-      
       myPlot.SetDrawingProperties("logX logY");
       myPlot.SetAxisRange("X", 0.15, 50);
       myPlot.AddHisto("trueParticlesPt", "", "true");
@@ -896,7 +932,6 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "closureTestProjectionMult";
       Plot myPlot(plotName, dataSet);
-      
       myPlot.AddHisto("trueParticlesMult", "", "true");
       myPlot.AddHisto("unfoParticlesMult", "", "unfolded");
       myPlot.AddRatio("unfoParticlesMult", "", "trueParticlesMult");
@@ -1081,7 +1116,7 @@ int multBin = 18;
           {
             //myPlot.AddTextBox(nchCent[i], 0.705 + 0.01*j, "#bf{|}", true);
           }
-          myPlot.AddTextBox(nchCent[i], 0.69 - 0.02*i, (string("#bf{") + centrality[i] + string("}")).c_str(), true);
+          myPlot.AddTextBox(nchCent[i], 0.69 - 0.02*i, string("#bf{") + centrality[i] + string("}"), true);
         }
       }
       plotEnv.CreateNewPlot(myPlot, "default", false);
@@ -1115,7 +1150,7 @@ int multBin = 18;
           {
             myPlot.AddTextBox(nchCent[i], 0.36 + 0.01*j, "#bf{|}", true);
           }
-          myPlot.AddTextBox(nchCent[i], 0.46 + 0.025*i, (string("#bf{") + centrality[i] + string("}")).c_str(), true);
+          myPlot.AddTextBox(nchCent[i], 0.46 + 0.025*i, string("#bf{") + centrality[i] + string("}"), true);
         }
       }
       plotEnv.CreateNewPlot(myPlot, "default", false);
@@ -1160,7 +1195,7 @@ int multBin = 18;
         {
           myPlot.AddTextBox(nchCent[i], 1e-4 - 0.00001*j, "#bf{|}", true);
         }
-//        myPlot.AddTextBox(nchCent[i], 1e-3 + 0.001*i, (string("#bf{") + centrality[i] + string("}")).c_str(), true);
+//        myPlot.AddTextBox(nchCent[i], 1e-3 + 0.001*i, string("#bf{") + centrality[i] + string("}"), true);
       }
       myPlot.SetAxisRange("X", 0.1, 3000);
       myPlot.SetAxisRange("Y", 0.00001, 0.15);
@@ -1372,7 +1407,7 @@ int multBin = 18;
       vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
       for(auto& multBin : multBins)
       {
-        myPlot.AddHisto((string("meanPt_") + std::to_string(multBin)).c_str(), "Energyscan", (string("Nch = ") + std::to_string(multBin-1)).c_str(), 0, 0, "boxes");
+        myPlot.AddHisto(string("meanPt_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
       }
       myPlot.SetAxisRange("Y", 0.3, 1.0);
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
@@ -1389,9 +1424,9 @@ int multBin = 18;
       vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
       for(auto& multBin : multBins)
       {
-        myPlot.AddHisto((string("meanPtMC_") + std::to_string(multBin)).c_str(), "Energyscan", "", 0, 0, "band");
-//        myPlot.AddHisto((string("meanPtMC_") + std::to_string(multBin)).c_str(), "Energyscan", (string("Nch = ") + std::to_string(multBin-1)).c_str(), 0, 0, "boxes");
-        myPlot.AddHisto((string("meanPt_") + std::to_string(multBin)).c_str(), "Energyscan", (string("Nch = ") + std::to_string(multBin-1)).c_str(), 0, -1, "boxes");
+        myPlot.AddHisto(string("meanPtMC_") + std::to_string(multBin), "Energyscan", "", 0, 0, "band");
+//        myPlot.AddHisto(string("meanPtMC_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
+        myPlot.AddHisto(string("meanPt_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, -1, "boxes");
       }
       myPlot.SetAxisRange("Y", 0.3, 1.0);
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
@@ -1408,9 +1443,9 @@ int multBin = 18;
       vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
       for(auto& multBin : multBins)
       {
-        myPlot.AddHisto((string("meanPtMC_Log_") + std::to_string(multBin)).c_str(), "Energyscan", "", 0, 0, "band");
-//        myPlot.AddHisto((string("meanPtMC_") + std::to_string(multBin)).c_str(), "Energyscan", (string("Nch = ") + std::to_string(multBin-1)).c_str(), 0, 0, "boxes");
-        myPlot.AddHisto((string("meanPt_Log_") + std::to_string(multBin)).c_str(), "Energyscan", (string("Nch = ") + std::to_string(multBin-1)).c_str(), 0, -1, "boxes");
+        myPlot.AddHisto(string("meanPtMC_Log_") + std::to_string(multBin), "Energyscan", "", 0, 0, "band");
+//        myPlot.AddHisto(string("meanPtMC_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
+        myPlot.AddHisto(string("meanPt_Log_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, -1, "boxes");
       }
       myPlot.SetAxisRange("Y", 0.3, 1.0);
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
@@ -1427,7 +1462,7 @@ int multBin = 18;
       vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
       for(auto& multBin : multBins)
       {
-        myPlot.AddHisto((string("variance_") + std::to_string(multBin)).c_str(), "Energyscan", (string("Nch = ") + std::to_string(multBin-1)).c_str(), 0, 0, "boxes");
+        myPlot.AddHisto(string("variance_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
       }
       myPlot.SetAxisRange("Y", -0.4, 0.8);
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
@@ -1443,8 +1478,8 @@ int multBin = 18;
       vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
       for(auto& multBin : multBins)
       {
-        myPlot.AddHisto((string("varianceMC_") + std::to_string(multBin)).c_str(), "Energyscan", "", 0, 0, "band");
-        myPlot.AddHisto((string("variance_") + std::to_string(multBin)).c_str(), "Energyscan", (string("Nch = ") + std::to_string(multBin-1)).c_str(), 0, -1, "boxes");
+        myPlot.AddHisto(string("varianceMC_") + std::to_string(multBin), "Energyscan", "", 0, 0, "band");
+        myPlot.AddHisto(string("variance_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, -1, "boxes");
       }
       myPlot.SetAxisRange("Y", -0.4, 0.8);
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
@@ -1461,8 +1496,8 @@ int multBin = 18;
       vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
       for(auto& multBin : multBins)
       {
-        myPlot.AddHisto((string("varianceMC_Log_") + std::to_string(multBin)).c_str(), "Energyscan", "", 0, 0, "band");
-        myPlot.AddHisto((string("variance_Log_") + std::to_string(multBin)).c_str(), "Energyscan", (string("Nch = ") + std::to_string(multBin-1)).c_str(), 0, -1, "boxes");
+        myPlot.AddHisto(string("varianceMC_Log_") + std::to_string(multBin), "Energyscan", "", 0, 0, "band");
+        myPlot.AddHisto(string("variance_Log_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, -1, "boxes");
       }
       myPlot.SetAxisRange("Y", -0.4, 1.4);
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
@@ -2121,7 +2156,7 @@ int multBin = 18;
   }
 
   
-  plotEnv.PrintErrors();
+   */
 }
 
 

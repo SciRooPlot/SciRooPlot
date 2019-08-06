@@ -38,7 +38,11 @@ namespace PlottingFramework {
   using std::flush;
   using std::string;
   using std::vector;
-  
+  using std::tuple;
+  using std::pair;
+  using std::map;
+  using std::set;
+
 
   
   /** \class PlotManager
@@ -152,8 +156,7 @@ namespace PlottingFramework {
     int GetDefaultMarker(int markerIndex);
     
     void SetPalette(int palette);
-    void AddHistosFromInputFile(string datasetIdentifier, string inputFileName);
-    void CreateDatasetPlots(string datasetIdentifier);
+    void AddHistosFromInputFile(string inputIdentifier, string inputFileName);
     void SetOutputDirectory(string path);
     void SavePlot(string plotName, string figureGroup, string subFolder = "", bool deletePlot = true);
     void WritePlotsToFile(string outputFileName); //todo: also file structure
@@ -164,10 +167,14 @@ namespace PlottingFramework {
     void LoadAvailablePlots(string configFileName){}
     // TODO gibts schon...
     void LoadPlotTemplate(string plotName, string configFileName){}
-    void CreateNewPlot(Plot &plot, string canvasStyleName, bool saveToConfig = false);
+
+    void CreatePlot(Plot &plot, string canvasStyleName = "");
+    void CreatePlot(string name, string figureGroup, string canvasStyleName = "");
+    void CreatePlots(string figureGroup = "");
+    
     void AddPlotToConfig(Plot &myPlot){}
     void RemovePlotFromConfig(string plotName){}
-    
+    void DumpPlots(string fileName);
     void AdjustLableOffsets();
     
     TGraphErrors* GetGraphClone(string graphName);
@@ -190,7 +197,37 @@ namespace PlottingFramework {
     
     void PrintErrors(bool printMissingPlots = false);
 
+    void AddInputFilePaths(string inputIdentifier, vector<string> inputFilePathList);
+    void DumpInputFiles(string configFileName);
+    void LoadInputFiles(string configFileName);
+
+    void AddPlot(Plot& plot) {
+      mSavedPlots.push_back(std::move(plot));
+      for(auto& hist : plot.GetHistoTemplates()){
+        mRequiredInput[hist.inputIdentifier].insert(hist.name);
+      }
+        
+      for(auto& reqInput : mRequiredInput){
+        cout << "InputID: " << reqInput.first << endl;
+        cout << "Content:" << endl;
+        for(auto& setContent : reqInput.second){
+          cout << "   - " << setContent << endl;
+        }
+      }
+      
+    }
+
   private:
+
+    void OpenInputFiles(string inputIdentifier);
+    void OpenRequiredFiles(Plot& plot);
+    map<string, vector<string>> mInputFiles; // inputFileIdentifier, inputFilePaths
+    map<string, set<string>> mRequiredInput;
+    map<string, set<string>> mLoadeddInput;
+
+    
+    vector<Plot> mSavedPlots;
+
     GlobalStyle mStyle;
     void DefineDefaultPlottingStyle();
     void SetStyle(TCanvas* canvas);
@@ -211,21 +248,18 @@ namespace PlottingFramework {
     vector<string> mListOfMissingFiles;
     vector<string> mListOfMissingPlots;
     vector<string> mListOfMissingHistograms;
-    
-    ptree mPlotTemplates;
-    
+        
     // Bookkeeping functions
-    void BookHistos(TDirectoryFile& folder, string datasetIdentifier);
+    void BookHistos(TDirectoryFile& folder, string inputIdentifier);
     //   void RemoveHisto(string histName);
     
     bool IsPlotPossible(Plot &plot);
     
-    void CreatePlot(string name, string datasetIdentifier);
     void SetGlobalStyle();
     void DrawPlotInCanvas(Plot &plot, TCanvas* canvas);
     
     // Helper functions
-    // string GetDatasetSuffix(TH1* hist, string datasetIdentifier);
+    // string GetDatasetSuffix(TH1* hist, string inputIdentifier);
     TH1* DivideWithTSpline(TH1* numerator, TH1* denominator);
     void ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, int defaultValueIndex, string controlString);
     

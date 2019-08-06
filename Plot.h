@@ -13,6 +13,9 @@ namespace PlottingFramework {
   using std::flush;
   using std::string;
   using std::vector;
+  using std::map;
+  using std::set;
+
   using boost::property_tree::ptree;
   using boost::property_tree::write_json;
   using boost::property_tree::read_json;
@@ -40,6 +43,7 @@ namespace PlottingFramework {
     
     struct Histogram {
       string name;
+      string inputIdentifier;
       string lable;
       int marker;
       int color;
@@ -47,6 +51,7 @@ namespace PlottingFramework {
       double cutoff; // todo multi-dimensional
       double cutoffLow; // todo multi-dimensional
       int lableBoxID;
+      string GetUniqueName(){return name + "_@_" + inputIdentifier;};
     };
     
     struct Function {
@@ -59,7 +64,7 @@ namespace PlottingFramework {
     };
     
     Plot();
-    Plot(string name, string figureGroup) : Plot() {mName = name; mFigureGroup = figureGroup;}
+    Plot(string name, string figureGroup, string plotStyle = "default") : Plot() {mName = name; mFigureGroup = figureGroup; mPlotStyle = plotStyle;}
     
     void Print();
     
@@ -101,15 +106,17 @@ namespace PlottingFramework {
     vector<Histogram> mRatios;
     
     ptree GetProperties();
+    string& GetOutputFileName(){return mOutputFileName;}
 
-    
+//    void MoveToManager(PlottingFramework::PlotManager plotEnv){plotEnv.AddPlot(*this)}
   private:
     Axis& GetAxis(string axis);
     
     string mName;
     string mPlotStyle;
     string mFigureGroup;
-    
+    string mOutputFileName;
+
     Axis mXaxis, mYaxis, mZaxis, mYaxisRatio;
     
     string mControlString;

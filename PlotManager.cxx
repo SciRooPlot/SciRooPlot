@@ -9,9 +9,6 @@ namespace PlottingFramework {
   //****************************************************************************************
   PlotManager::PlotManager()
   {    
-    cout << "Doing plotting ..." << endl;
-    cout << endl;
-    
     mHistoLedger = new TObjArray(1);
     mHistoLedger->SetOwner();
     
@@ -31,21 +28,64 @@ namespace PlottingFramework {
   //****************************************************************************************
   PlotManager::~PlotManager()
   {
-    write_json("myPlot.JSON", mPlotTemplates);
     mHistoLedger->Delete();
     mPlotLedger->Delete();
     //  fOutputFile->Close();
   }
   
+  void PlotManager::AddInputFilePaths(string inputIdentifier, vector<string> inputFilePathList)
+  {
+    if(mInputFiles.find(inputIdentifier) != mInputFiles.end() ){
+      cout << "WARNING: replacing input identifier " << inputIdentifier << "." << endl;
+    }
+    mInputFiles[inputIdentifier] = inputFilePathList;
+  }
+  
+  
+  void PlotManager::DumpInputFiles(string configFileName){
+    ptree inputFileTree;
+    for(auto& inFileTuple : mInputFiles){
+      ptree filesOfIdentifier;
+      int fileID = 1;
+      for(auto& fileName : inFileTuple.second){
+        filesOfIdentifier.put("FILE_" + std::to_string(fileID), fileName);
+        fileID++;
+      }
+      inputFileTree.put_child(inFileTuple.first, filesOfIdentifier);
+    }
+    write_json(configFileName + ".JSON", inputFileTree);
+  }
+  
+  
+  void PlotManager::LoadInputFiles(string configFileName)
+  {
+    ptree inputFileTree;
+    try{
+      read_json(configFileName + ".JSON", inputFileTree);
+    }catch(...){
+      cout << "ERROR: Cannot load file " << configFileName << ".JSON" << endl;
+      return;
+    }
+    for(auto& inputPair : inputFileTree){
+      string inputIdentifier = inputPair.first;
+      vector<string> allFileNames;
+      for(auto& file : inputPair.second){
+        string fileName = inputFileTree.get<string>(inputIdentifier + "." + file.first);
+        allFileNames.push_back(fileName);
+      }
+      AddInputFilePaths(inputIdentifier, allFileNames);
+    }
+  }
+  
   //****************************************************************************************
   /**
    * Adds input histograms from file to internal histogram ledger.
-   * @param datasetIdentifier: Unique identifier for current dataset
+   * @param inputIdentifier: Unique identifier for current dataset
    * (is added as suffix to histogram name)
    * @param inputFileName: Path to file containing the data measurement
    */
   //****************************************************************************************
-  void PlotManager::AddHistosFromInputFile(string datasetIdentifier, string inputFileName)
+  void PlotManager::AddHistosFromInputFile(string inputIdentifier, string inputFileName)
   {
     TFile inputFile(inputFileName.c_str(), "READ");
     if (inputFile.IsZombie()) {
@@ -53,17 +93,45 @@ namespace PlottingFramework {
       //cout << "ERROR: Could not open " << inputFileName << "." << endl;
       return;
     }
-    if (std::find(mDatasetIdentifiers.begin(), mDatasetIdentifiers.end(), datasetIdentifier) != mDatasetIdentifiers.end())
+    if (std::find(mDatasetIdentifiers.begin(), mDatasetIdentifiers.end(), inputIdentifier) != mDatasetIdentifiers.end())
     {
       if(inputFileName.find("_Syst") == string::npos){
-        cout << "ERROR: Dataset "  << datasetIdentifier <<  " was already booked!" << endl;
+        cout << "ERROR: Dataset "  << inputIdentifier <<  " was already booked!" << endl;
         return;
       }
     }
-    BookHistos(inputFile, datasetIdentifier);
-    mDatasetIdentifiers.push_back(datasetIdentifier);
+    BookHistos(inputFile, inputIdentifier);
+    mDatasetIdentifiers.push_back(inputIdentifier);
   }
   
+  //****************************************************************************************
+  /**
+   * Adds input histograms from file to internal histogram ledger.
+   * @param inputIdentifier: Unique identifier for current dataset
+   * (is added as suffix to histogram name)
+   * @param inputFileName: Path to file containing the data measurement
+   */
+  //****************************************************************************************
+  void PlotManager::OpenInputFiles(string inputIdentifier)
+  {
+    if(std::find(mDatasetIdentifiers.begin(), mDatasetIdentifiers.end(), inputIdentifier) != mDatasetIdentifiers.end()) return;
+    // todo also override datasetidentifiers when addpath is called?
+    for(auto& inputTuple : mInputFiles){
+      if(inputTuple.first == inputIdentifier){
+        for(auto& fileName : inputTuple.second){
+          //cout << "loading " << inputIdentifier << ": " << fileName << endl;
+          AddHistosFromInputFile(inputIdentifier, fileName);
+        }
+      }
+    }
+  }
+  void PlotManager::OpenRequiredFiles(Plot& plot)
+  {
+    for(auto& histo : plot.GetHistoTemplates()){
+      OpenInputFiles(histo.inputIdentifier);
+    }
+  }
+
 
   //****************************************************************************************
   /**
@@ -88,21 +156,21 @@ namespace PlottingFramework {
    * adds histograms to internal ledger
    * @todo add option for other internal structures like TLists
    * @param folder: Current folder to search for histograms
-   * @param datasetIdentifier: Unique identifier for current dataset
+   * @param inputIdentifier: Unique identifier for current dataset
    * (is added as suffix to histogram name)
    */
   //****************************************************************************************
-  void PlotManager::BookHistos(TDirectoryFile& folder, string datasetIdentifier)
+  void PlotManager::BookHistos(TDirectoryFile& folder, string inputIdentifier)
   {
     TIter nextKey(folder.GetListOfKeys());
     TKey* key;
     while ((key = (TKey*)nextKey())) {
       TNamed* obj = (TNamed*) key->ReadObj();
       if(obj->IsA() == TDirectoryFile::Class()) {
-        BookHistos(*((TDirectoryFile*)obj), datasetIdentifier);
+        BookHistos(*((TDirectoryFile*)obj), inputIdentifier);
       }else{
-        string newName = string(obj->GetName()) + "_@_" + datasetIdentifier;
-        TH1* hist = (TH1*)obj->Clone(newName.c_str());
+        string uniqueName = string(obj->GetName()) + "_@_" + inputIdentifier;
+        TH1* hist = (TH1*)obj->Clone(uniqueName.c_str());
         hist->SetDirectory(0);
         mHistoLedger->Add(hist);
       }
@@ -134,6 +202,7 @@ namespace PlottingFramework {
    * @param deletePlot: Delete plot from framework after saving to file
    */
   //****************************************************************************************
+  
   void PlotManager::SavePlot(string plotName, string figureGroup, string subFolder, bool deletePlot)
   {
     string folderName = mOutputDirectory + "/" + figureGroup;
@@ -141,17 +210,17 @@ namespace PlottingFramework {
     
     gSystem->Exec((string("mkdir -p ") + folderName).c_str());
     
-    string name = plotName + "_@_" + figureGroup;
-    TCanvas* plot = (TCanvas*)mPlotLedger->FindObject(name.c_str());
+    string internalName = plotName + "_@_" + figureGroup;
+    TCanvas* plot = (TCanvas*)mPlotLedger->FindObject(internalName.c_str());
     if (!plot)
     {
       //cout << "ERROR: Plot " << name << " was not booked." << endl;
     }else{
+      string name = internalName; // TODO override with optional name specified in plot
       plot->SaveAs((folderName + "/" + name + ".pdf").c_str());
       if(deletePlot) { mPlotLedger->Remove(plot); delete plot; }
     }
   }
-  
 
   //****************************************************************************************
   /**
@@ -167,17 +236,7 @@ namespace PlottingFramework {
     mPlotLedger->Write();
   }
   
-  
-  //****************************************************************************************
-  /**
-   * Intended to created all plots corresponding to specified dataset stored in config file.
-   * @todo implement this function
-   */
-  //****************************************************************************************
-  void PlotManager::CreateDatasetPlots(string datasetIdentifier)
-  {
-  }
-  
+    
   //****************************************************************************************
   /**
    * Applies style of plot to canvas.
@@ -297,8 +356,10 @@ namespace PlottingFramework {
    * to find available canvas styles use: ListAvailableCanvasStyles()
    */
   //****************************************************************************************
-  void PlotManager::CreateNewPlot(Plot& plot, string canvasStyleName, bool saveToConfig)
+  void PlotManager::CreatePlot(Plot& plot, string canvasStyleName)
   {
+    if(canvasStyleName == "") canvasStyleName = plot.GetPlotStyle();
+    OpenRequiredFiles(plot);
     if(!IsPlotPossible(plot)){
       mListOfMissingPlots.push_back(plot.GetName());
       return;
@@ -326,15 +387,43 @@ namespace PlottingFramework {
     DrawPlotInCanvas(plot, canvas);
     ApplyStyleSettings(canvasStyle, canvas, controlString);
     
+    // todo maybe get rid of ledger and save function....
     mPlotLedger->Add(canvas);
-    
-    if(saveToConfig){
-//      mPlotTemplates.add_child(plot.GetFigureGroup(), plot.GetProperties());
-      mPlotTemplates.put_child((plot.GetFigureGroup() + "." + plot.GetName()), plot.GetProperties());
+    SavePlot(plot.GetName(), plot.GetFigureGroup());
+  }
+  
+  void PlotManager::CreatePlot(string plotName, string figureGroup, string canvasStyleName)
+  {
+    for(auto& plot : mSavedPlots)
+    {
+      cout << plot.GetName() << "  " << plotName << endl;
+      if(plot.GetName() == plotName)
+      {
+        cout << "creating plot " << plotName << endl;
+        CreatePlot(plot, canvasStyleName);
+      }
     }
   }
   
-
+   void PlotManager::CreatePlots(string figureGroup)
+  {
+    bool saveAll = (figureGroup == "");
+    for(auto& plot : mSavedPlots)
+    {
+      if(!saveAll && !(plot.GetFigureGroup() == figureGroup))
+        continue;
+      CreatePlot(plot);
+    }
+  }
+  
+  
+  void PlotManager::DumpPlots(string fileName){
+    ptree plotTree;
+    for(auto& plot : mSavedPlots){
+      plotTree.put_child((plot.GetFigureGroup() + "." + plot.GetName()), plot.GetProperties());
+    }
+    write_json(fileName, plotTree);
+  }
   //****************************************************************************************
   /**
    * Deletes data points of histogram beyond cutoff value (and below lower cutoff value).
@@ -371,7 +460,8 @@ namespace PlottingFramework {
   {
     for(auto& histoTemplate : plot.GetHistoTemplates())
     {
-      string histName = histoTemplate.name;
+      string histName = histoTemplate.GetUniqueName();
+      cout << "searching for " << histName << endl;
       TObject* obj = mHistoLedger->FindObject(histName.c_str());
       if(!obj)
       {
@@ -416,7 +506,7 @@ namespace PlottingFramework {
       string drawingOptions = "";
       int defaultValueIndex = 0; // for markers and colors
       for(auto& histoTemplate : plot.GetHistoTemplates()){
-        TH1* histo = GetHistClone(histoTemplate.name);
+        TH1* histo = GetHistClone(histoTemplate.GetUniqueName());
         histo->UseCurrentStyle();
         if(!histo) cout << "ERROR: " << endl;
         ApplyHistoSettings(histo, histoTemplate, drawingOptions, defaultValueIndex, plot.GetControlString());
@@ -479,7 +569,7 @@ namespace PlottingFramework {
       string drawingOptions = "";
       int defaultValueIndex = 0; // for markers and colors
       for(auto& histoTemplate : plot.GetHistoTemplates()){
-        TH1* histo = GetHistClone(histoTemplate.name);
+        TH1* histo = GetHistClone(histoTemplate.GetUniqueName());
         CutHistogram(histo, histoTemplate.cutoff, histoTemplate.cutoffLow);
         histo->UseCurrentStyle();
         if(!histo) cout << "ERROR: " << endl;
@@ -541,7 +631,7 @@ namespace PlottingFramework {
     for(auto& histo : histos)
     {
       if(histo.lable.empty()) continue;
-      TObject* pointer = pad->GetListOfPrimitives()->FindObject(histo.name.c_str());
+      TObject* pointer = pad->GetListOfPrimitives()->FindObject(histo.GetUniqueName().c_str());
       if(!pointer) cout << "ERROR: could not find " << histo.name << " in pad." << endl;
       legendEntries.Add(pointer);
       lables.push_back(histo.lable);

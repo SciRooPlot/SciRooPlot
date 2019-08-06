@@ -19,15 +19,15 @@ namespace PlottingFramework {
   void Plot::AddGraph(string histName, string identifier, string lable, int marker, int color, string errorStyle, double cutoff, double cutoffLow)
   {
     if(identifier == "") identifier = mFigureGroup; // default identifier to figuregroup id
-    string internalName = histName + "_@_" + identifier;
-    mGraphs.push_back({internalName, lable, marker, color, errorStyle, cutoff, cutoffLow});
+    //string internalName = histName + "_@_" + identifier;
+    mGraphs.push_back({histName, identifier, lable, marker, color, errorStyle, cutoff, cutoffLow});
   }
   
   void Plot::AddHisto(string histName, string identifier, string lable, int marker, int color, string errorStyle, double cutoff, double cutoffLow)
   {
     if(identifier == "") identifier = mFigureGroup; // default identifier to figuregroup id
-    string internalName = histName + "_@_" + identifier;
-    mHistos.push_back({internalName, lable, marker, color, errorStyle, cutoff, cutoffLow});
+    //string internalName = histName + "_@_" + identifier;
+    mHistos.push_back({histName, identifier, lable, marker, color, errorStyle, cutoff, cutoffLow});
   }
   
   void Plot::AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier, string lable, int marker, int color, string errorStyle, double cutoff, double cutoffLow)
@@ -35,7 +35,7 @@ namespace PlottingFramework {
     if(numerHistIdentifier == "") numerHistIdentifier = mFigureGroup;
     if(denomHistIdentifier == "") denomHistIdentifier = mFigureGroup;
     string ratioName = numerHist  + "_@_" + numerHistIdentifier + " / " + denomHist + "_@_" + denomHistIdentifier;
-    mRatios.push_back({ratioName, lable,marker, color, errorStyle, cutoff, cutoffLow});
+    //mRatios.push_back({ratioName, lable,marker, color, errorStyle, cutoff, cutoffLow});
   }
   
   
@@ -107,16 +107,22 @@ namespace PlottingFramework {
   
   ptree Plot::GetProperties()
   {
+    // TODO this does not keep order of histograms...
+    // TODO FigureGroup.PlotName.PadID.HistID
     // convert properties of plot to ptree
     ptree plotTree;
     string plotName = this->GetName();
+    int iHisto = 1;
     for(auto& histo : mHistos){
-      string histName = "HIST." + histo.name;
+      string histName = "HIST." + std::to_string(iHisto) + "." + histo.name;
+      plotTree.put(histName + ".inputID", histo.inputIdentifier);
+      plotTree.put(histName + ".type", "hist");
       plotTree.put(histName + ".lable", histo.lable);
       plotTree.put(histName + ".marker", histo.marker);
+      iHisto++;
     }
     for(auto& histo : mRatios){
-      string histName = "RATIO." + histo.name;
+      string histName = "RATIO." + histo.inputIdentifier + "." + histo.name;
       plotTree.put(histName + ".lable", histo.lable);
       plotTree.put(histName + ".marker", histo.marker);
     }
