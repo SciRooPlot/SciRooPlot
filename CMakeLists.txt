@@ -9,6 +9,8 @@ set(MODULE PlottingFramework)
 # add source files of classes
 set(SRCS
   PlotManager.cxx
+  PlotGenerator.cxx
+  PlotStyle.cxx
   Plot.cxx
 )
 string(REPLACE ".cxx" ".h" HDRS "${SRCS}")
@@ -26,7 +28,7 @@ target_link_libraries(${MODULE} ${ROOT_LIBRARIES})
 find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED)
 target_link_libraries(${MODULE} Boost::boost)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${ROOT_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/boost)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${ROOT_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/boost/property_tree)
 
 # create executable
 add_executable(plot CreatePlots.cxx)

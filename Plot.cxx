@@ -1,88 +1,78 @@
 #include "Plot.h"
 
+using namespace PlottingFramework;
 namespace PlottingFramework {
 
   Plot::Plot()
   {
     mName = "dummyName";
     mPlotStyle = "default";
-    mControlString = "";
+    mControlString.clear();
     mClearCutoffBin = false;
     mFigureGroup = "";
+    mCurrPad = 1;
+  }
+
+  void Plot::AddGraph(string graphName, string inputIdentifier, string lable, int marker, int color, string drawingOptions)
+  {
+    if(inputIdentifier == "") inputIdentifier = mFigureGroup; // default identifier to figuregroup id
+    mData[mCurrPad].push_back(std::make_shared<Graph>(graphName, inputIdentifier, lable, color, marker, 0, drawingOptions));
+  }
+  
+  void Plot::AddHisto(string histName, string inputIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
+  {
+    if(inputIdentifier == "") inputIdentifier = mFigureGroup; // default identifier to figuregroup id
+    mData[mCurrPad].push_back(std::make_shared<Histogram>(histName, inputIdentifier, lable, color, marker, 0, drawingOptions, 1, std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
     
-    mXaxis.title = "";
-    mYaxis.title = "";
-    mZaxis.title = "";
-    mYaxisRatio.title = "";
   }
   
-  void Plot::AddGraph(string histName, string identifier, string lable, int marker, int color, string errorStyle, double cutoff, double cutoffLow)
-  {
-    if(identifier == "") identifier = mFigureGroup; // default identifier to figuregroup id
-    //string internalName = histName + "_@_" + identifier;
-    mGraphs.push_back({histName, identifier, lable, marker, color, errorStyle, cutoff, cutoffLow});
-  }
-  
-  void Plot::AddHisto(string histName, string identifier, string lable, int marker, int color, string errorStyle, double cutoff, double cutoffLow)
-  {
-    if(identifier == "") identifier = mFigureGroup; // default identifier to figuregroup id
-    //string internalName = histName + "_@_" + identifier;
-    mHistos.push_back({histName, identifier, lable, marker, color, errorStyle, cutoff, cutoffLow});
-  }
-  
-  void Plot::AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier, string lable, int marker, int color, string errorStyle, double cutoff, double cutoffLow)
+  void Plot::AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
   {
     if(numerHistIdentifier == "") numerHistIdentifier = mFigureGroup;
     if(denomHistIdentifier == "") denomHistIdentifier = mFigureGroup;
-    string ratioName = numerHist  + "_@_" + numerHistIdentifier + " / " + denomHist + "_@_" + denomHistIdentifier;
-    //mRatios.push_back({ratioName, lable,marker, color, errorStyle, cutoff, cutoffLow});
+    mData[mCurrPad].push_back(std::make_shared<Ratio>(numerHist, numerHistIdentifier, denomHist, denomHistIdentifier, lable, color, marker, 0, drawingOptions, "", 1, std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
   }
   
   
-  void Plot::AddTextBox(double xPos, double yPos, string text, bool userCoord, int borderStyle, int borderSize, int borderColor)
+  void Plot::AddTextBox(double xPos, double yPos, string text, bool userCoordinates, int borderStyle, int borderSize, int borderColor)
   {
-    mTexts.push_back({xPos, yPos, text, borderStyle, borderSize, borderColor, userCoord});
+    mBoxes[mCurrPad].push_back(std::make_shared<TextBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, text));
   }
-  
-  void Plot::AddLegendBox(double xPos, double yPos, string title, int nColumns, int borderStyle, int borderSize, int borderColor)
+  // todo user coord should be possible in both cases
+  void Plot::AddLegendBox(double xPos, double yPos, string title, bool userCoordinates, int nColumns, int borderStyle, int borderSize, int borderColor)
   {
-    mLegends.push_back({xPos, yPos, title, borderStyle, borderSize, borderColor, false, nColumns});
+    // TODO: add userCoordinates to arguments
+    mBoxes[mCurrPad].push_back(std::make_shared<LegendBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, title, nColumns));
   }
-  
-  Plot::Axis& Plot::GetAxis(string axis)
+  void Plot::AddLegendBox(string title, int nColumns, int borderStyle, int borderSize, int borderColor)
   {
-    if(axis == "X") return mXaxis;
-    else if(axis == "Y") return mYaxis;
-    else if(axis == "Z") return mZaxis;
-    else if(axis == "ratio") return mYaxisRatio;
-    else {
-      cout << "ERROR: " << axis << "-Axis does not exist!" << endl;
-      return mXaxis; // default return xaxis
-    }
+    // TODO: add userCoordinates to arguments
+    mBoxes[mCurrPad].push_back(std::make_shared<LegendBox>(false, true, 0, 0, borderStyle, borderSize, borderColor, title, nColumns));
   }
-  
-  vector<double>& Plot::GetAxisRange(string axis)
-  {
-    return GetAxis(axis).range;
-  }
-  
-  string& Plot::GetAxisTitle(string axis)
-  {
-    return GetAxis(axis).title;
-  }
-  
+
   void Plot::SetAxisRange(string axis, double low, double high)
   {
-    vector<double>& range = GetAxisRange(axis);
-    range.clear();
-    range.push_back(low);
-    range.push_back(high);
+    if(mAxes[mCurrPad].find(axis) != mAxes[mCurrPad].end())
+    {
+      mAxes[mCurrPad][axis]->SetAxisRange(low, high);
+    }
+    else
+    {
+      mAxes[mCurrPad][axis] = std::make_shared<Axis>(axis, std::make_pair(low, high));
+    }
   }
   
   
   void Plot::SetAxisTitle(string axis, string axisTitle)
   {
-    GetAxis(axis).title = axisTitle;
+    if(mAxes[mCurrPad].find(axis) != mAxes[mCurrPad].end())
+    {
+      mAxes[mCurrPad][axis]->SetAxisTitle(axisTitle);
+    }
+    else
+    {
+      mAxes[mCurrPad][axis] = std::make_shared<Axis>(axis, axisTitle);
+    }
   }
   
   
@@ -91,26 +81,29 @@ namespace PlottingFramework {
     cout << " ----------" << string(mName.length(), '-')  << "----------" << endl;
     cout << " <-------- " << mName << " -------->" << endl;
     cout << " ----------" << string(mName.length(), '-')  << "----------" << endl;
-    if(!mControlString.empty())cout << "  Control string: '" << mControlString << "'" << endl;
-    cout << "  Histograms:" << endl;
-    for(auto &histo : mHistos) cout << "   - " << histo.name << endl;
-    
-    if(!mRatios.empty()){
-      cout << "  Ratios:" << endl;
-      for(auto &ratio : mRatios) cout << "   - " << ratio.name << endl;
-    }
     cout << endl;
-    
   }
   
   
   
-  ptree Plot::GetProperties()
+  ptree Plot::GetPropetyTree()
   {
-    // TODO this does not keep order of histograms...
-    // TODO FigureGroup.PlotName.PadID.HistID
+    // FigureGroup.PlotName.PadID.DATA.HistID
     // convert properties of plot to ptree
     ptree plotTree;
+    GetFigureGroup();
+
+//    int padID = 0;
+  //  for(auto& data : mData)
+    //{
+      //std::to_string(padID) + ".";
+      //padID++;
+    //}
+
+
+
+
+/*
     string plotName = this->GetName();
     int iHisto = 1;
     for(auto& histo : mHistos){
@@ -144,50 +137,8 @@ namespace PlottingFramework {
       plotTree.put(legendName + ".x", legend.x);
       plotTree.put(legendName + ".y", legend.y);
     }
-
-    
-    /*
-    // traverse plot tree and set properties
-    for(auto& plot : plotTree)
-    {
-      ptree& myPlot = plot.second;
-      cout << plot.first << " named " << myPlot.get<string>("name") << endl;
-
-      for(auto& plotProperties : myPlot)
-      {
-        if(plotProperties.first.find("histo") != string::npos)
-        {
-          ptree myHist = myPlot.get_child(plotProperties.first);
-          try{
-            cout << "name: " << myHist.get<string>("name") << endl;
-            cout << "lable: " << myHist.get<string>("lable") << endl;
-            cout << "marker: " << myHist.get<int>("marker") << endl;
-          }
-          catch(...){
-            cout << "ERROR: could not extract all plot properties from ptree." << endl;
-            cout << typeid(std::current_exception()).name() << endl;
-          }
-        }
-      }
-    }
-    */
+*/
     return plotTree;
   }
-
-//  void Plot::SetProperties(ptree& plotBlueprint)
-  //{
-    // use ptree to fill plot
-    //resultTree.add_child("plot1", plotTree);
-    //write_json(configFileName + ".JSON", resultTree);
-    //write_json(cout, resultTree.get_child("plot2"));
-    
-    /* read in file
-     
-     ptree configIn;
-     read_json(configFileName + ".JSON", configIn);
-     float v = configIn.get<float>("irgendwas.ptee");
-     cout << v << endl;
-     */
-  //}
 
 }

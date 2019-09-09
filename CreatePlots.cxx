@@ -1,49 +1,83 @@
+#include "PlottingFramework.h"
 #include "PlotManager.h"
 #include "Plot.h"
 #include <sstream>
 
 using PlottingFramework::PlotManager;
 using PlottingFramework::Plot;
-using std::cout;
-using std::endl;
-using std::flush;
-using std::string;
-using std::vector;
-using std::map;
 
 string GetPtString(int pTbin);
 /*
- Features to add:
- - do i want to store actual plots? otherwise remove mPlotLedger, resp use it for Plot templates, re-think create plot logic
- - change histo, graph and function to generic base type and inherited classes
- - change from loading all histos to loading only the ones needed for the plots
- - (but keep possibility to load all as well)
- - possibility to use FileAnd list substructure as part of internal names
- - disentangle layout and manager
- - write code more generic so multipad plots are possible (PadCD())
- - write code more generic so histograms, graphs and functions can be used in same manner
- - how to handle case of multiple plots if one of them misses?
- - option to request ./plot myPlot@figureGroup and it is automatically searched for in plot templates, files are loaded and plot is created
- - possibility to generate list of available plots (considering templates + opened input files)
- - possibility to load file with plot templates -> loads necessary files automatically
+ In progress:
+ - pipe box line fill properties to drawing
+ - add possibility to make canvas intransparent (and colored)
+ - use drawing option AXIS for histograms that should not be drawn (which are only for ranges) or find better way to define which histo should auto-define ranges
+ - how to handle multi-plots if not all of them are available?
  - possibility to scale histograms by factor
- - functions and fitting!
+ - also add use last color feature -1
+ - change only color not marker options?
+ - add line in ratio plots? in plot style? value of const line flexible?
+ - backward compatibility with "ratio" keyword in axis range and title?
+
+ Important:
+ - possibility to set alias for axis e.g. "ratio"?
+ - generalize legend function to handle text boxes in a similar manner
+ - option to connect 2 axes!! eg x axis in ratio plots! but flexible so same could be done with y axes (glueAxes, stickyAxes)
+ - text size and style settings should by default be inherited by each object with text but there should be a possiblity to override
+ - pads must inherit plot properties (text size et al unless specified otherwise)
+ - fix loading of input: get set of required data from plot and only load this, merge sets to keep track of overall missing histos (but keep possibility to load all as well)
+ - load only allowed datatypes
+ - possibility to use file and list substructure as part of internal names
+ - check if 2d hist is part of plot, then change style...
+ - do i want to store actual plots? otherwise remove mPlotLedger, resp use it for Plot templates, re-think create plot logic
+
+ Not so important:
+ - check if padID starts with 1 is a problem (vectors maybe)
+ - think about more placeholders for legends and texts and how to format them
  - option to set n divisions of axes
- - improve patch hiding truncated zero
- - move operator for plots?
+ - add option in padstyle that identifies the pad as ratio plot
+ - fix overlap between axis title and tick marks if they have too many digits
+ - increase number of color steps in 2d plots
+ - possibility to load and plot thstack and multigraphs
+ - add stack drawing option (thstack)
+ - add option to change grid styles
+ - add possibility for grey tilted overlayed text like "draft"
+ - write case-insensitive "contained in string" function for control string! as lambda function
+ - text align, angle features!
+ - possibility for user to grep and change plotstyle or add some setter functions to pipe through manager??
+ - put in some feasible defaults for colors, markers etc
+ - add shape objects, disentangle data input and created objects (shapes, arrows, functions)
+ - functions and fitting!
+ - save and load functions for plot properties and plot style
+ - manager should only read in required plot styles
+ - make sure PlotStyle names are unique
+ - for loading and saving styles: possibility for default values as fallback?
+ - possibility to specify use of only full or open markers in AddHisto
+ - implement check that ensures only valid drawing options are used for each data type (separate 1d 2d info)
+ - add help function for usage!
+ - also define default line styles
+ - final goal: start program with argument ./plot myPlot@figureGroup and it is automatically searched for in saved plot, files are loaded and plot is created
+ - load file with plot templates -> loads and opens necessary files automatically
+ - generate list of available plots defined in JSON (considering plotStyles + opened input files)
+ - generalized version of white patch hiding the truncated zero
  - possibility add external histogram in plots
- - automatic placement of legend (use root functions)
+ - possibility to split the legend?
+
+ Code Quality:
+ - change arguments referring to internal variables to const ref if possible to be more memory efficient, use lambdas
+ - add (copy-, move-) constructors and destructors; make sure all variables are initialized properly
+
  */
 
 int main(int argc, char *argv[]) {
 
   bool updateInputFiles = false;
-  string outputPath = "../../../../../TempPlots";
- 
+//  string outputPath = "~/Desktop/TempPlots";
+  string outputPath = "~/Desktop/testPlots";
+
   string outputFileName = "myPlots.root";
   bool createBinWiseClosureTests = true;
   bool skipDatasetPlots = false;
-
 
   vector<string> dataSets;
   if(argc > 1) {dataSets.push_back(argv[1]); skipDatasetPlots = false;}
@@ -51,10 +85,10 @@ int main(int argc, char *argv[]) {
   { // define datasets to include in analysis
     dataSets.push_back("pp_5TeV");
     dataSets.push_back("pp_7TeV");
+    dataSets.push_back("Publications");
 
     /* --- Unused Datasets ---
 
-    dataSets.push_back("Publications");
     dataSets.push_back("pPb_5TeV");
     dataSets.push_back("PbPb_5TeV");
     dataSets.push_back("pp_5TeV");
@@ -91,7 +125,6 @@ int main(int argc, char *argv[]) {
    myPlot.SetOutputFileName("betterThanDefaultName", "somewhere else"); // path is optional
    myPlot.SetOutputFromat()
    
-   all to root file??
 
    */
 
@@ -103,7 +136,7 @@ int main(int argc, char *argv[]) {
   if(updateInputFiles)
   {
     for(string dataSet : dataSets){
-      string folder = "../../../../Datasets/" + dataSet + "/";
+      string folder = "~/Desktop/AliMultDepSpec/Datasets/" + dataSet + "/";
       string inputFile = folder + dataSet + "_Results.root";
       string inputFileSyst = folder + dataSet + "_Syst.root";
 
@@ -120,15 +153,24 @@ int main(int argc, char *argv[]) {
     plotEnv.LoadInputFiles(inputFileConfig);
   }
   
-
-  
   //plotEnv.ListHistos();
   { // -----------------------------------------------------------------------
     string plotName = "responseMatrix";
     Plot myPlot(plotName, "TEST");
     myPlot.SetDrawingProperties("logZ");
-    myPlot.AddHisto("momentUnfolded1", "pp_5TeV");
-//    myPlot.SwitchActivePad(2);
+    myPlot.AddRatio("multDistUnfoldedClosureTest", "pp_7TeV", "multDistGeneratedClosureTest", "pp_7TeV", "");
+
+    myPlot.AddHisto("mean", "pp_7TeV", "my name is <name> blablabla");
+//    myPlot.AddHisto("responseMatrix", "pp_5TeV", "i have <entries> entries");
+    myPlot.SetAxisRange("X", 2, 100);
+//    myPlot.SetAxisRange("Y", 0, 100);
+    myPlot.AddLegendBox();
+
+    myPlot.ChangePad(2);
+    myPlot.SetDrawingProperties("logY logX");
+    myPlot.AddHisto("multPtUnfoldedMC_MultBin_10", "pp_7TeV", "Olaf abc the max of this spectrum is <maximum> ");
+
+    myPlot.AddLegendBox();
     // set range etc must also affect only this pad (or associated pads)
 //    myPlot.AddRatio();
 //    myPlot.AddFunction();
@@ -140,17 +182,32 @@ int main(int argc, char *argv[]) {
   { // -----------------------------------------------------------------------
     string plotName = "momentUnfolded1";
     Plot myPlot(plotName, "TEST");
-    myPlot.AddHisto(plotName, "pp_5TeV");
-    myPlot.AddLegendBox(0.6, 0.7);
-    myPlot.AddTextBox(0.4, 0.91, "myLable");
+//    myPlot.SetDrawingProperties("gridY gridX");
+    myPlot.SetAxisTitle("X", "my x-axis");
+    myPlot.AddHisto(plotName, "pp_5TeV", "");
+    myPlot.AddHisto(plotName, "pp_7TeV", "o0O");
+    myPlot.AddHisto(plotName, "pp_7TeV", "");
+    myPlot.SetAxisRange("Y", 0.45, 0.5);
+    myPlot.SetAxisRange("X", 0, 60);
+    myPlot.AddLegendBox();
+    myPlot.ChangePad(2);
+    myPlot.SetAxisTitle("Y", "contamination");
+    myPlot.AddHisto(plotName, "pp_7TeV", "AAA <integral> bbb");
+    myPlot.AddHisto(plotName, "pPb_5TeV", "wAit for it");
+    myPlot.AddHisto(plotName, "pp_7TeV", "BBB");
+    myPlot.AddHisto(plotName, "pp_7TeV", "FFF");
+    myPlot.SetAxisRange("X", 1, 5);
+    myPlot.SetAxisRange("Y", 0.49, 0.54);
+    myPlot.AddLegendBox("", 1, kDotted, 2, kRed);
+    myPlot.AddLegendBox();
+    myPlot.AddTextBox(0.5, 0.91, "myLable");
     plotEnv.AddPlot(myPlot); // check if all properties are properly moved!!
   } // -----------------------------------------------------------------------
 //  plotEnv.ListPlots();
 //  plotEnv.CreatePlot("momentUnfolded1", "TEST");
   plotEnv.CreatePlots("TEST");
   
-  plotEnv.ListPlots();
-  plotEnv.DumpPlots("myPlots.JSON"); // saves all stored plots to JSON file
+  //plotEnv.DumpPlots("myPlots.JSON"); // saves all stored plots to JSON file
   //!!! (and deletes them from manager)
   plotEnv.PrintErrors();
 

@@ -1,5 +1,6 @@
 #include "PlotManager.h"
 
+using namespace PlottingFramework;
 namespace PlottingFramework {
 
   //****************************************************************************************
@@ -15,8 +16,7 @@ namespace PlottingFramework {
     mPlotLedger = new TObjArray(1);
     mPlotLedger->SetOwner();
     
-    DefineDefaultPlottingStyle();
-    SetGlobalStyle();
+    DefineDefaultPlottingStyles();
     gErrorIgnoreLevel = kWarning;
   }
   
@@ -30,7 +30,6 @@ namespace PlottingFramework {
   {
     mHistoLedger->Delete();
     mPlotLedger->Delete();
-    //  fOutputFile->Close();
   }
   
   void PlotManager::AddInputFilePaths(string inputIdentifier, vector<string> inputFilePathList)
@@ -127,8 +126,10 @@ namespace PlottingFramework {
   }
   void PlotManager::OpenRequiredFiles(Plot& plot)
   {
-    for(auto& histo : plot.GetHistoTemplates()){
-      OpenInputFiles(histo.inputIdentifier);
+    for(auto& pad : plot.mData){
+      for(auto& data : pad.second){
+        OpenInputFiles(data->GetInputIdentifier());
+      }
     }
   }
 
@@ -156,7 +157,7 @@ namespace PlottingFramework {
    * adds histograms to internal ledger
    * @todo add option for other internal structures like TLists
    * @param folder: Current folder to search for histograms
-   * @param inputIdentifier: Unique identifier for current dataset
+   * @param inputIdentifier: Unique identifier for current input file
    * (is added as suffix to histogram name)
    */
   //****************************************************************************************
@@ -207,7 +208,7 @@ namespace PlottingFramework {
   {
     string folderName = mOutputDirectory + "/" + figureGroup;
     if(subFolder != "") folderName += "/" + subFolder;
-    
+
     gSystem->Exec((string("mkdir -p ") + folderName).c_str());
     
     string internalName = plotName + "_@_" + figureGroup;
@@ -221,133 +222,8 @@ namespace PlottingFramework {
       if(deletePlot) { mPlotLedger->Remove(plot); delete plot; }
     }
   }
-
-  //****************************************************************************************
-  /**
-   * Writes all plots stored in the plot ledger into a root file.
-   * Output directory can be specified via SetOutputDirectory()
-   * @param outputFileName: Name of the root file
-   */
-  //****************************************************************************************
-  void PlotManager::WritePlotsToFile(string outputFileName)
-  {
-    TFile outputFile((mOutputDirectory + "/" + outputFileName).c_str(), "RECREATE");
-    outputFile.cd();
-    mPlotLedger->Write();
-  }
-  
     
-  //****************************************************************************************
-  /**
-   * Applies style of plot to canvas.
-   */
-  //****************************************************************************************
-  void PlotManager::ApplyStyleSettings(CanvasStyle& canvasStyle, TCanvas* canvas, string controlString)
-  {
-    
-    // apply title offsets
-    int padID = 1;
-    for(auto& padStyle : canvasStyle.pads)
-    {
-      TPad* pad = (TPad*)canvas->GetPad(padID);
-      TH1* hist = (TH1*)pad->GetListOfPrimitives()->At(0);
-      if(!hist) cout << "Error:: no histo found!" << endl;
-      hist->GetXaxis()->SetTitleOffset(padStyle.titleOffset[0]);
-      hist->GetYaxis()->SetTitleOffset(padStyle.titleOffset[1]);
-      hist->GetZaxis()->SetTitleOffset(padStyle.titleOffset[2]);
-      //    hist->LabelsOption("v");
-      padID++;
-    }
-    
-    // special palette settings and temporary hacks
-    if(canvas->GetPad(1)->GetListOfPrimitives()->At(0)->InheritsFrom("TH2")){
-      canvas->GetPad(1)->SetRightMargin(0.12+0.06);
-      canvas->GetPad(1)->SetTopMargin(0.12-0.05);
-      canvas->GetPad(1)->SetBottomMargin(0.12+0.02);
-      TH2* temp = ((TH2*)canvas->GetPad(1)->GetListOfPrimitives()->At(0));
-      temp->GetXaxis()->SetTitleOffset(1.1); //1.1
-      temp->GetYaxis()->SetTitleOffset(1.1); //1.3
-      temp->GetZaxis()->SetTitleOffset(1.6); //1.6
-      canvas->GetPad(1)->Update();
-      TPaletteAxis* palette = (TPaletteAxis*)temp->GetListOfFunctions()->FindObject("palette");
-      palette->SetX2NDC(0.865); //0.88
-      palette->SetTitleOffset();
-      canvas->GetPad(1)->Update();
-    }
-    // Control string
-    if(controlString.find("logX") != string::npos)
-    {
-      canvas->GetPad(1)->SetLogx(1);
-      if(canvas->GetPad(2)) canvas->GetPad(2)->SetLogx(1);
-    }
-    if(controlString.find("logY") != string::npos)
-    {
-      canvas->GetPad(1)->SetLogy(1);
-    }
-    if(controlString.find("logZ") != string::npos)
-    {
-      canvas->GetPad(1)->SetLogz(1);
-    }
-    if(controlString.find("gridY") != string::npos)
-    {
-      canvas->GetPad(1)->SetGridy(1);
-    }
-    if(controlString.find("ratioGridY") != string::npos)
-    {
-      if(canvas->GetPad(2)) canvas->GetPad(2)->SetGridy(1);
-    }
-    
-    canvas->cd();
-    if(mStyle.drawTimestamps){
-      TTimeStamp time;
-      TString stTime;
-      stTime=Form("#color[16]{%i}",time.GetDate());
-      TLatex *timeStamp = new TLatex();
-      timeStamp->SetNDC();
-      timeStamp->SetTextAlign(22);
-      timeStamp->SetTextFont(63);
-      timeStamp->SetTextSizePixels(10);
-      timeStamp->DrawLatex(mStyle.timestampPosition[0], mStyle.timestampPosition[1], stTime);
-    }
-    
-    
-    
-  }
-  
-  
-  //****************************************************************************************
-  /**
-   * Creates canvas based on style of plot.
-   */
-  //****************************************************************************************
-  TCanvas* PlotManager::MakeCanvas(string name, CanvasStyle& canvasStyle)
-  {
-    // create canvas
-    TCanvas* canvas = new TCanvas(name.c_str(), name.c_str(), canvasStyle.canvasWidth, canvasStyle.canvasHeight);
-    canvas->SetFillStyle(mStyle.fillStyleCanvas);
-    
-    // create pads defined by style
-    int padID = 1;
-    for(auto& padStyle : canvasStyle.pads)
-    {
-      canvas->cd();
-      string padName = "Pad_" + std::to_string(padID);
-      TPad* pad = new TPad(padName.c_str(),"", padStyle.position[0], padStyle.position[1], padStyle.position[2], padStyle.position[3]);
-      // apply pad settings
-      pad->SetFillStyle(mStyle.fillStyleCanvas);
-      pad->SetTopMargin(padStyle.margin[0]);
-      pad->SetBottomMargin(padStyle.margin[1]);
-      pad->SetLeftMargin(padStyle.margin[2]);
-      pad->SetRightMargin(padStyle.margin[3]);
-      pad->SetNumber(padID);
-      
-      pad->Draw();
-      padID++;
-    }
-    return canvas;
-  }
-  
-  
+ 
   //****************************************************************************************
   /**
    * Creates plot based on externally defined plot template.
@@ -356,9 +232,9 @@ namespace PlottingFramework {
    * to find available canvas styles use: ListAvailableCanvasStyles()
    */
   //****************************************************************************************
-  void PlotManager::CreatePlot(Plot& plot, string canvasStyleName)
+  void PlotManager::CreatePlot(Plot& plot, string plotStyleName)
   {
-    if(canvasStyleName == "") canvasStyleName = plot.GetPlotStyle();
+    if(plotStyleName == "") plotStyleName = plot.GetPlotStyle();
     OpenRequiredFiles(plot);
     if(!IsPlotPossible(plot)){
       mListOfMissingPlots.push_back(plot.GetName());
@@ -369,30 +245,18 @@ namespace PlottingFramework {
       return;
     }
     string name = plot.GetName() + "_@_" + plot.GetFigureGroup();
-    string controlString = plot.GetControlString();
-    
-    CanvasStyle* tempPtr = GetCanvasStyle(canvasStyleName);
-    if(!tempPtr)
-    {
-      cout << "ERROR: Canvas style '"  << canvasStyleName << "' is not defined." << endl;
-      return;
-    }
-    CanvasStyle& canvasStyle = *tempPtr;
-    if(canvasStyle.pads.size() != plot.GetNumSubPlots())
-    {
-      cout << "ERROR: Number of pads in style '"  << canvasStyleName << "' does not match the number of subplots needed for plotting '" << plot.GetName() << "'." << endl;
-      return;
-    }
-    TCanvas* canvas = MakeCanvas(name, canvasStyle);
-    DrawPlotInCanvas(plot, canvas);
-    ApplyStyleSettings(canvasStyle, canvas, controlString);
+//    string& controlString = plot.GetControlString();
+
+    PlotStyle& plotStyle = GetPlotStyle(plotStyleName);
+    TCanvas* canvas = PlotGenerator::GeneratePlot(plot, plotStyle, mHistoLedger);
+    if(!canvas) return;
     
     // todo maybe get rid of ledger and save function....
     mPlotLedger->Add(canvas);
     SavePlot(plot.GetName(), plot.GetFigureGroup());
   }
   
-  void PlotManager::CreatePlot(string plotName, string figureGroup, string canvasStyleName)
+  void PlotManager::CreatePlot(string plotName, string figureGroup, string plotStyleName)
   {
     for(auto& plot : mSavedPlots)
     {
@@ -400,7 +264,7 @@ namespace PlottingFramework {
       if(plot.GetName() == plotName)
       {
         cout << "creating plot " << plotName << endl;
-        CreatePlot(plot, canvasStyleName);
+        CreatePlot(plot, plotStyleName);
       }
     }
   }
@@ -412,18 +276,44 @@ namespace PlottingFramework {
     {
       if(!saveAll && !(plot.GetFigureGroup() == figureGroup))
         continue;
+
       CreatePlot(plot);
     }
   }
   
   
-  void PlotManager::DumpPlots(string fileName){
+  void PlotManager::DumpPlots(string plotFileName){
     ptree plotTree;
     for(auto& plot : mSavedPlots){
-      plotTree.put_child((plot.GetFigureGroup() + "." + plot.GetName()), plot.GetProperties());
+      plotTree.put_child((plot.GetFigureGroup() + "." + plot.GetName()), plot.GetPropetyTree());
     }
-    write_json(fileName, plotTree);
+    write_json(plotFileName, plotTree);
   }
+  
+  void PlotManager::ListPlotStyles()
+  {
+    for(auto& plotStyle : mPlotStyles)
+    {
+      cout << "======== " << plotStyle.GetName() << " ========" << endl;
+      cout << "  >> Width  : " << plotStyle.GetWidth() << endl;
+      cout << "  >> Height : " << plotStyle.GetHeight() << endl;
+      cout << "  >> nPads  : " << plotStyle.GetNPads() << endl;
+      int padID = 1;
+      string lines = string((int)((plotStyle.GetName().length()+17 - 7) / 2) , '-');
+      for(auto& padStyle : plotStyle.GetPadStyles())
+      {
+        cout << "  " << lines << " Pad " << padID << " " << lines << endl;
+        cout << "    << Position (xlow, ylow, xup, yup)   : (" << padStyle.GetXLow() << ", " << padStyle.GetYLow() << ", " << padStyle.GetXUp() << ", " << padStyle.GetYUp() << ")" << endl;
+        cout << "    << Margin (top, bottom, left, right) : (" << padStyle.GetTopMargin() << ", " << padStyle.GetBottomMargin() << ", " << padStyle.GetLeftMargin() << ", " << padStyle.GetRightMargin() << ")" << endl;
+        cout << "    << Title offset (x, y, z)            : (" << padStyle.GetTitleOffsetX() << ", " << padStyle.GetTitleOffsetY() << ", " << padStyle.GetTitleOffsetZ() << ")" << endl;
+        
+        padID++;
+      }
+      cout << "========" << string((int)plotStyle.GetName().length() +2, '=') << "========" << endl << endl;
+      
+    }
+  }
+  
   //****************************************************************************************
   /**
    * Deletes data points of histogram beyond cutoff value (and below lower cutoff value).
@@ -458,617 +348,101 @@ namespace PlottingFramework {
   //****************************************************************************************
   bool PlotManager::IsPlotPossible(Plot &plot)
   {
-    for(auto& histoTemplate : plot.GetHistoTemplates())
-    {
-      string histName = histoTemplate.GetUniqueName();
-      cout << "searching for " << histName << endl;
-      TObject* obj = mHistoLedger->FindObject(histName.c_str());
-      if(!obj)
+    for(auto& padData : plot.GetData())
+      for(auto data : padData.second)
       {
-        mListOfMissingHistograms.push_back(histName);
-        return false;
+        vector<string> dataNames;
+        dataNames.push_back(data->GetUniqueName());
+        if(data->GetType() == "ratio") dataNames.push_back(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetUniqueNameDenom());
+
+        for(auto& dataName : dataNames)
+        {
+          TObject* obj = mHistoLedger->FindObject(dataName.c_str());
+          if(!obj)
+          {
+            mListOfMissingHistograms.push_back(dataName);
+            return false;
+          }
+        }
       }
-    }
-    for(auto& ratioTemplate : plot.GetRatioTemplates())
-    {
-      string ratioName = ratioTemplate.name;
-      string delimiter = " / ";
-      string numerator = ratioName.substr(0, ratioName.find(delimiter));
-      string denominator = ratioName.substr(ratioName.find(delimiter)+ delimiter.length());
-      
-      TObject* obj1 = mHistoLedger->FindObject(numerator.c_str());
-      TObject* obj2 = mHistoLedger->FindObject(denominator.c_str());
-      if(!obj1)
-      {
-        cout << "ERROR: Histogram " << numerator << " not found!" << endl;
-        return false;
-      }
-      if(!obj2)
-      {
-        cout << "Histogram " << denominator << " not found!" << endl;
-        return false;
-      }
-    }
     return true;
   }
   
-  void PlotManager::DrawPlotInCanvas(Plot &plot, TCanvas* canvas)
+    
+  void PlotManager::DefineDefaultPlottingStyles()
   {
-    canvas->cd();
+    vector<int> goodColors =
+    { kBlack, kBlue+1, kRed+2, kGreen+2, kTeal-7, kCyan+2,
+      kMagenta-4, kGreen+3, kOrange+1, kViolet-3, kPink+3,
+      kOrange+2, kYellow+3, kGray+2
+    };
+    vector<int> goodMarkers =
+    { kFullSquare, kFullCircle, kFullCross, kFullDiamond,
+      kFullStar, kOpenCircle, kOpenSquare, kOpenCross,
+      kOpenDiamond, kOpenStar
+    };
+    vector<int> goodMarkersFull =
+    { kFullSquare, kFullCircle, kFullCross, kFullDiamond,
+      kFullStar, kFullCircle, kFullCircle, kFullCircle,
+      kFullCircle, kFullCircle, kFullCircle
+    };
+    vector<int> goodMarkersOpen =
+    { kOpenSquare, kOpenCircle, kOpenCross, kOpenDiamond,
+      kOpenStar, kOpenCircle, kOpenCircle, kOpenCircle,
+      kOpenCircle, kOpenCircle, kOpenCircle
+    };
     
-    if(plot.IsRatioPlot())
-    {
-      TPad* mainPad = (TPad*)canvas->GetListOfPrimitives()->At(0);
-      TPad* ratioPad = (TPad*)canvas->GetListOfPrimitives()->At(1);
-      if(!mainPad || !ratioPad) cout << "ERROR: Pads not found!" << endl;
-      mainPad->cd();
+    {// Definition of "default" style
+      PlotStyle myStyle("default");
       
-      string drawingOptions = "";
-      int defaultValueIndex = 0; // for markers and colors
-      for(auto& histoTemplate : plot.GetHistoTemplates()){
-        TH1* histo = GetHistClone(histoTemplate.GetUniqueName());
-        histo->UseCurrentStyle();
-        if(!histo) cout << "ERROR: " << endl;
-        ApplyHistoSettings(histo, histoTemplate, drawingOptions, defaultValueIndex, plot.GetControlString());
-        histo->Draw(drawingOptions.c_str());
-        drawingOptions = "SAME";
-        defaultValueIndex++;
-      }
-      // patch truncated lowest lable
-      // TODO: add possibility to swich that off
-      TPad* patch = new TPad("patch", "patch", mainPad->GetLeftMargin()/2 ,0, mainPad->GetLeftMargin()-0.004, mStyle.textSize / mainPad->YtoPixel(mainPad->GetY1()));
-      patch->Draw("SAME");
-      patch->SetFillColor(mainPad->GetFillColor());
-      patch->SetBorderMode(0);
+      myStyle.LinkAxes("Y", {1,2});
+      myStyle.SetFromat(710, 2);
+      myStyle.SetTransparent();
+
+      myStyle.SetTextFont(4); // allowed font values: 1-15
+      myStyle.SetLableFont(4);
+      myStyle.SetTitleFont(4);
+      myStyle.SetTextSize(24); // in pixels
+      myStyle.SetLableSizeScaling(1.0); // make this axis and pad dependent??
+      myStyle.SetTitleSizeScaling(1.2);
+
+      myStyle.SetMarkerSize(1.2);
+      myStyle.SetMarkerSizeThick(2.2);
+      myStyle.SetLineWidth(1.0);
+      myStyle.SetLineWidthThick(2.0);
+      myStyle.SetPalette(kBird);
+      myStyle.SetTimestampPosition(0.05, 0.02);
+      myStyle.SetDrawTimestamps(true);
+
+      myStyle.SetDefaultColors(goodColors);
+      myStyle.SetDefaultMarkers(goodMarkers);
+      myStyle.SetDefaultMarkersFull(goodMarkersFull);
+      myStyle.SetDefaultMarkersOpen(goodMarkersOpen);
       
-      ratioPad->cd();
-      drawingOptions = "";
-      defaultValueIndex = 0; // for markers and colors
-      for(auto& ratioTemplate : plot.GetRatioTemplates()){
-        TH1* ratio = GetRatio(ratioTemplate.name);
-        if(!ratio) cout << "ERROR: " << endl;
-        ratio->UseCurrentStyle();
-        ratio->GetYaxis()->CenterTitle(1);
-        ratio->GetXaxis()->SetTickLength(0.06);
-        ratio->GetYaxis()->SetNdivisions(305); //506
-        ApplyHistoSettings(ratio, ratioTemplate, drawingOptions, defaultValueIndex+1, plot.GetControlString());
-        
-        if(defaultValueIndex == 0)
-        {
-          TH1* dummyHist = (TH1*)ratio->Clone("dummy");
-          dummyHist->SetLineColor(0); // make plot invisible
-          TF1* line = new TF1("line", "1", dummyHist->GetXaxis()->GetXmin(), dummyHist->GetXaxis()->GetXmax());
-          dummyHist->Draw();
-          line->SetLineColor(GetDefaultColor(defaultValueIndex));
-          line->SetLineWidth(2);
-          //        line->SetLineStyle(9);
-          line->Draw("SAME");
-          drawingOptions += " SAME";
-        }
-        
-        ratio->Draw(drawingOptions.c_str());
-        drawingOptions = "SAME";
-        defaultValueIndex++;
-      }
-      SetAxes(mainPad, plot);
-      SetAxes(ratioPad, plot);
-      
-      // patch truncated uppest lable
-      // TODO: add possibility to swich that off
-      TPad* patchRatio = new TPad("patchRatio", "patchRatio", ratioPad->GetLeftMargin()/2 , 1, ratioPad->GetLeftMargin()-0.004, 1- (mStyle.textSize / ratioPad->YtoPixel(ratioPad->GetY1())), ratioPad->GetLeftMargin()-0.004);
-      patchRatio->Draw("SAME");
-      patchRatio->SetFillColor(ratioPad->GetFillColor());
-      patchRatio->SetBorderMode(0);
-      
-      
+      vector<PlotStyle::PadStyle> pads;
+      pads.push_back(PlotStyle::PadStyle("first pad"));
+//      pads[0].SetCorners({0,0}, {1,1});
+//      pads[0].SetMargins({0.07, 0.14, 0.12, 0.07});
+//      pads[0].SetTitleOffsets({1.1, 1.4, 1.0});
+
+      pads[0].SetCorners({0,0}, {0.5,1});
+      pads[0].SetMargins({0.07, 0.14, 0.12, 0.07});
+      pads[0].SetTitleOffsets({1.1, 1.4, 1.0});
+      pads.push_back(PlotStyle::PadStyle("second pad"));
+      pads[1].SetCorners({0.5,0}, {1,1});
+      pads[1].SetMargins({0.07, 0.14, 0.12, 0.07});
+      pads[1].SetTitleOffsets({1.1, 1.4, 1.0});
+
+
+      myStyle.AddPadStyles(pads);
+      mPlotStyles.push_back(std::move(myStyle)); // maybe AddPlotStyle(PlotStyle&)
     }
-    else
-    {
-      TPad* mainPad = (TPad*)canvas->GetListOfPrimitives()->At(0);
-      mainPad->cd();
-      string drawingOptions = "";
-      int defaultValueIndex = 0; // for markers and colors
-      for(auto& histoTemplate : plot.GetHistoTemplates()){
-        TH1* histo = GetHistClone(histoTemplate.GetUniqueName());
-        CutHistogram(histo, histoTemplate.cutoff, histoTemplate.cutoffLow);
-        histo->UseCurrentStyle();
-        if(!histo) cout << "ERROR: " << endl;
-        if(plot.GetControlString().find("normalize") != string::npos) {std::cout << histo->GetName() << ", norm " << histo->Integral() << std::endl; histo->Scale(1/histo->Integral(), "");} // width??
-        if(histoTemplate.color < 0) {defaultValueIndex += histoTemplate.color; histoTemplate.marker = 0;  histoTemplate.color = 0;}
-        ApplyHistoSettings(histo, histoTemplate, drawingOptions, defaultValueIndex, plot.GetControlString());
-        histo->Draw(drawingOptions.c_str());
-        drawingOptions = "SAME";
-        defaultValueIndex++;
-      }
-      for(auto& graphTemplate : plot.mGraphs){
-        TGraph* graph = GetGraphClone(graphTemplate.name);
-        graph->UseCurrentStyle();
-        graph->SetLineWidth(4);
-        graph->SetLineColor(kBlack);
-        graph->Draw(drawingOptions.c_str());
-        drawingOptions = "SAME";
-        defaultValueIndex++;
-      }
-      
-      SetAxes(mainPad, plot);
-      
+    {// Definition of "default" style
+      //PlotStyle myStyle = GetCopyOfStyle("default", "newDefault");
       
     }
-    
-    
-    
-    //  ((TPad*)canvas->GetListOfPrimitives()->At(0))->cd();
-    //  cout << "gpad " << gPad->GetName() <<endl;
-    for(auto& legendBoxTemplate : plot.GetLegends())
-    {
-      ((TPad*)canvas->GetListOfPrimitives()->At(0))->cd();
-      TLegend* tempLegend = MakeLegend((TPad*)canvas->GetListOfPrimitives()->At(0), legendBoxTemplate, plot.GetHistoTemplates());
-      if(!tempLegend){
-        cout << "ERROR: could not add legend box." << endl;
-        continue;
-      }
-      tempLegend->Draw("SAME");
-    }
-    
-    for(auto& textBoxTemplate : plot.GetTextBoxes())
-    {
-      ((TPad*)canvas->GetListOfPrimitives()->At(0))->cd();
-      TPaveText* tempText = MakeText(textBoxTemplate);
-      if(!tempText){
-        cout << "ERROR: could not add text box." << endl;
-        continue;
-      }
-      tempText->Draw("SAME");
-    }
-  }
-  
-  TLegend* PlotManager::MakeLegend(TPad* pad, Plot::TextBox& legendBoxTemplate, vector<Plot::Histogram>& histos){
-    
-    int nLetters = 0;
-    TObjArray legendEntries(1);
-    vector<string> errorStyles;
-    vector<string> lables;
-    for(auto& histo : histos)
-    {
-      if(histo.lable.empty()) continue;
-      TObject* pointer = pad->GetListOfPrimitives()->FindObject(histo.GetUniqueName().c_str());
-      if(!pointer) cout << "ERROR: could not find " << histo.name << " in pad." << endl;
-      legendEntries.Add(pointer);
-      lables.push_back(histo.lable);
-      if(histo.lable.length() > nLetters) nLetters = histo.lable.length();
-      errorStyles.push_back(histo.errorStyle);
-    }
-    
-    int nColums = legendBoxTemplate.nColumns;
-    
-    int nEntries = legendEntries.GetEntries();
-    double textSizeNDC = mStyle.textSize / pad->YtoPixel(pad->GetY1());
-    double textSizeNDCx = 0.6*mStyle.textSize / pad->XtoPixel(pad->GetX2());
-    double markerSpace = 2.5*textSizeNDCx;
-    double yWidth = (1.0*nEntries + 0.5*(nEntries-1))* textSizeNDC / nColums;
-    double xWidth = (markerSpace + nLetters * textSizeNDCx) * nColums;
-    
-    
-    
-    TLegend* legend = new TLegend(legendBoxTemplate.x, legendBoxTemplate.y - yWidth, legendBoxTemplate.x + xWidth, legendBoxTemplate.y, legendBoxTemplate.text.c_str(), "NDC");
-    
-    // TODO fix header not shown!!
-    legend->SetNColumns(nColums);
-    
-    int i = 0;
-    for(auto pointer : legendEntries)
-    {
-      string drawStyle = "ep";
-      
-      if((pointer->InheritsFrom("TF1")) || errorStyles[i] == "hist")// || noErrBars)
-      {
-        drawStyle = "l";
-      }
-      
-      legend->AddEntry((TH1*)pointer, lables[i].c_str(), drawStyle.c_str());
-      i++;
-    }
-    
-    legend->SetLineStyle(legendBoxTemplate.borderStyle);
-    legend->SetLineColor(legendBoxTemplate.borderColor);
-    legend->SetLineWidth(legendBoxTemplate.borderSize);
-    legend->SetMargin(markerSpace*nColums/xWidth);
-    legend->SetTextAlign(12);
-    legend->SetTextFont(mStyle.textFont);
-    legend->SetTextSize(mStyle.textSize);
-    legend->SetFillStyle(mStyle.fillStyleCanvas);
-    
-    return legend;
-  }
-  
-  
-  TPaveText* PlotManager::MakeText(Plot::TextBox& textBoxTemplate){
-    
-    string delimiter = " // ";
-    string text = textBoxTemplate.text;
-    
-    int nLetters = 0;
-    vector<string> lines;
-    
-    size_t pos = string::npos;
-    do{
-      pos = text.find(delimiter);
-      string token = text.substr(0, pos);
-      if(token.length() > nLetters) nLetters = token.length();
-      lines.push_back(token);
-      size_t newStart = pos;
-      if (pos != string::npos) newStart += delimiter.length();
-      text.erase(0, newStart);
-    } while (pos != string::npos);
-    
-    
-    int nLines = lines.size();
-    double textSizeNDC = mStyle.textSize / gPad->YtoPixel(gPad->GetY1());
-    double textSizeNDCx = 0.6*mStyle.textSize / gPad->XtoPixel(gPad->GetX2());
-    
-    double margin = 0.5*mStyle.textSize;
-    double yWidth = (1.0*nLines + 0.5*(nLines-1))* textSizeNDC;
-    double xWidth = nLetters * textSizeNDCx;
-    
-    string option = "NDC"; // use pad coordinates by default
-    if(textBoxTemplate.userCoordinates) option = "";
-    
-    TPaveText* tPaveText = new TPaveText(textBoxTemplate.x, textBoxTemplate.y - yWidth, textBoxTemplate.x + xWidth, textBoxTemplate.y, option.c_str());
-    
-    double boxExtent = 0;
-    for(auto &line : lines)
-    {
-      TText* text = tPaveText->AddText(line.c_str());
-      text->SetTextFont(mStyle.textFont);
-      text->SetTextSize(mStyle.textSize);
-      double width = text->GetBBox().fWidth;
-      if(width > boxExtent) boxExtent = width;
-    }
-    tPaveText->SetBBoxX2(tPaveText->GetBBox().fX + boxExtent +2*margin);
-    tPaveText->SetBorderSize(1);
-    tPaveText->SetLineStyle(textBoxTemplate.borderStyle);
-    tPaveText->SetLineColor(textBoxTemplate.borderColor);
-    tPaveText->SetLineWidth(textBoxTemplate.borderSize);
-    tPaveText->SetMargin(margin/(tPaveText->GetBBox().fX + boxExtent +2*margin));
-    tPaveText->SetTextAlign(12);
-    tPaveText->SetTextFont(mStyle.textFont);
-    tPaveText->SetTextSize(mStyle.textSize);
-    tPaveText->SetFillStyle(mStyle.fillStyleCanvas);
-    return tPaveText;
-  }
-  
-  
-  void PlotManager::SetAxes(TPad* pad, Plot &plot)
-  {
-    vector<double>& xRange = plot.GetAxisRange("X");
-    vector<double>& yRangeDist = plot.GetAxisRange("Y");
-    vector<double>& yRangeRatio = plot.GetAxisRange("ratio");
-    vector<double>& zRange = plot.GetAxisRange("Z");
-    
-    string xTitle = plot.GetAxisTitle("X");
-    string yTitleDist = plot.GetAxisTitle("Y");
-    string yTitleRatio = plot.GetAxisTitle("ratio");
-    string zTitle = plot.GetAxisTitle("Z");
-    
-    
-    vector<double> yRange;
-    string yTitle;
-    
-    // ask if it is ratio plot and if this pad is the ratio pad
-    // TODO fix this dirty hack...
-    if(plot.IsRatioPlot() && string(pad->GetName()) == "Pad_2")
-    {
-      yRange = yRangeRatio;
-      yTitle = yTitleRatio;
-    }
-    else{
-      yRange = yRangeDist;
-      yTitle = yTitleDist;
-    }
-    
-    TObject* obj = pad->GetListOfPrimitives()->At(0);
-    
-    if(obj->InheritsFrom("TH1"))
-    {
-      if(!xRange.empty())
-      {
-        ((TH1*)obj)->GetXaxis()->SetRangeUser(xRange[0], xRange[1]);
-      }
-      if(!yRange.empty())
-      {
-        ((TH1*)obj)->GetYaxis()->SetRangeUser(yRange[0], yRange[1]);
-      }
-      if(!zRange.empty())
-      {
-        ((TH1*)obj)->GetZaxis()->SetRangeUser(zRange[0], zRange[1]);
-      }
-      if(!xTitle.empty()) ((TH1*)obj)->GetXaxis()->SetTitle(xTitle.c_str());
-      if(!yTitle.empty()) ((TH1*)obj)->GetYaxis()->SetTitle(yTitle.c_str());
-      if(!zTitle.empty()) ((TH1*)obj)->GetZaxis()->SetTitle(zTitle.c_str());
-      
-    }
-    if(obj->InheritsFrom("TGraph"))
-    {
-      if(!xRange.empty())
-      {
-        ((TGraph*)obj)->GetXaxis()->SetRangeUser(xRange[0], xRange[1]);
-      }
-      if(!yRange.empty())
-      {
-        ((TGraph*)obj)->GetYaxis()->SetRangeUser(yRange[0], yRange[1]);
-      }
-      if(!xTitle.empty()) ((TGraph*)obj)->GetXaxis()->SetTitle(xTitle.c_str());
-      if(!yTitle.empty()) ((TGraph*)obj)->GetYaxis()->SetTitle(yTitle.c_str());
-      
-    }
-    if(obj->InheritsFrom("TF1"))
-    {
-      if(!xRange.empty())
-      {
-        ((TF1*)obj)->GetXaxis()->SetRangeUser(xRange[0], xRange[1]);
-      }
-      if(!yRange.empty())
-      {
-        ((TF1*)obj)->GetYaxis()->SetRangeUser(yRange[0], yRange[1]);
-      }
-      if(!xTitle.empty()) ((TF1*)obj)->GetXaxis()->SetTitle(xTitle.c_str());
-      if(!yTitle.empty()) ((TF1*)obj)->GetYaxis()->SetTitle(yTitle.c_str());
-    }
-  }
-  
-  
-  void PlotManager::ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, int defaultValueIndex, string controlString)
-  {
-    histo->SetTitle("");
-    
-    if(histo->InheritsFrom("TH2")){
-      drawingOptions += " COLZ";
-      return;
-    }
-    int markerStyle = (histoTemplate.marker) ? histoTemplate.marker : GetDefaultMarker(defaultValueIndex);
-    histo->SetMarkerStyle(markerStyle);
-    
-    int color = (histoTemplate.color) ? histoTemplate.color : GetDefaultColor(defaultValueIndex);
-    histo->SetMarkerColor(color);
-    histo->SetLineColor(color);
-    
-    string errorStyle = histoTemplate.errorStyle;
-    if(errorStyle == "none")
-    {
-      histo->SetLineWidth(0);
-    }
-    if(errorStyle == "hist")
-    {
-      drawingOptions += " HIST";
-    }
-    else if(errorStyle == "band")
-    {
-      drawingOptions += " E5";
-      
-      histo->SetMarkerSize(0.);
-      histo->SetFillColor(color);
-      histo->SetFillStyle(1);
-    }
-    else if(errorStyle == "boxes")
-    {
-      TExec errorBoxesOn("errorBoxesOn","gStyle->SetErrorX(0.48)");
-      errorBoxesOn.Draw();
-      histo->SetFillStyle(0);
-      drawingOptions += " E2";
-      TExec errorBoxesOff("errorBoxesOff","gStyle->SetErrorX(0)");
-      errorBoxesOff.Draw();
-    }
-    
-    if(controlString.find("thick") != string::npos){
-      histo->SetLineWidth(mStyle.lineWidthThick);
-      histo->SetMarkerSize(mStyle.markerSizeThick);
-    }
-    
-  }
-  
-  TGraphErrors* PlotManager::GetGraphClone(string graphName)
-  {
-    TGraphErrors* graph = nullptr;
-    TObject* obj = mHistoLedger->FindObject(graphName.c_str());
-    if(obj)
-    {
-      graph = (TGraphErrors*)obj->Clone();
-      //graph->SetDirectory(0);
-    }else{
-      cout << "ERROR: Could not find " << graphName << "." << endl;
-    }
-    return graph;
-  }
-  
-  
-  TH1* PlotManager::GetHistClone(string histName)
-  {
-    TH1* histo = nullptr;
-    TObject* obj = mHistoLedger->FindObject(histName.c_str());
-    if(obj)
-    {
-      histo = (TH1*)obj->Clone();
-      histo->SetDirectory(0);
-    }else{
-      cout << "ERROR: Could not find " << histName << "." << endl;
-    }
-    return histo;
-  }
-  
-  
-  TH1* PlotManager::GetRatio(string ratioName)
-  {
-    string delimiter = " / ";
-    string numerator = ratioName.substr(0, ratioName.find(delimiter));
-    string denominator = ratioName.substr(ratioName.find(delimiter)+ delimiter.length());
-    
-    TH1* ratio = GetHistClone(numerator.c_str());
-    TH1* temp = GetHistClone(denominator.c_str());
-    
-    if(true)//ratio->GetNbinsX() == temp->GetNbinsX())
-    {
-      ratio->Divide(temp);
-    }
-    else
-    {
-      // if binning not the same
-      TH1* ratioOld = ratio;
-      ratio = DivideWithTSpline(ratioOld, temp);
-      delete ratioOld;
-    }
-    
-    delete temp;
-    ratio->GetYaxis()->SetTitle("ratio");
-    return ratio;
-  }
-  
-  TH1* PlotManager::DivideWithTSpline(TH1* numerator, TH1* denominator)
-  {
-    TGraph denominatorGraph(denominator);
-    TSpline3 denominatorSpline(denominator);
-    
-    TH1* ratio = (TH1*)numerator->Clone("dummyRatio");
-    ratio->Reset();
-    
-    for(int i = 1; i <= numerator->GetNbinsX(); i++)
-    {
-      double numeratorValue = numerator->GetBinContent(i);
-      double x = numerator->GetBinCenter(i);
-      double denomValue = denominatorGraph.Eval(x, &denominatorSpline);
-      //cout << "i: " << i << " x: " << x << " denomValue: " << denomValue << endl;
-      if(denomValue) ratio->SetBinContent(i, numeratorValue/denomValue);
-    }
-    return ratio;
-  }
-  
-  ////////////////////////////////////////////////////////////////////////////////
-  /// Set color palette for 2D plots.
-  ///
-  /// @param palette      Integer representing ROOT internal color palette
-  ///
-  /// This is a selection of available palettes:
-  /// - Standard: kBird, 1 (ROOT5 default), kDarkRainBow, kTemperatureMap, kLightTemperature, kRainBow
-  /// - Gray: kGreyScale, kGreyYellow, kPearl, kPigeon
-  /// - Green: kAvocado, kBlueGreenYellow, kAlpine, kGistEarth, kViridis
-  /// - RedBlue: kThermometer, kCandy, kBlackBody, kCherry, kRedBlue
-  /// - RedGreen: kRose, kWaterMelon
-  /// - Blue: kLake, kAtlantic
-  /// - BlueYellow: kBlueYellow, kStarryNight
-  /// - Brown: kCoffee, kFall, kSandyTerrain, kCopper
-  /// - Purple: kFuchsia
-  /// - Intense: kGreenPink, kOcean, kDarkBodyRadiator, kInvertedDarkBodyRadiator, kSunset, kVisibleSpectrum
-  
-  
-  void PlotManager::SetPalette(int palette)
-  {
-    mStyle.palette = palette;
-    gStyle->SetPalette(mStyle.palette);
-  }
-  
-  
-  // call once
-  void PlotManager::SetGlobalStyle()
-  {
-    // General settings
-    TGaxis::SetMaxDigits(3);
-    gStyle->SetOptStat(0);  // switch of stat boxes
-    if (mStyle.useCMYK) gStyle->SetColorModelPS(1);
-    gStyle->SetPalette(mStyle.palette);
-    
-    // Set Fonts
-    gStyle->SetTextFont(mStyle.textFont);
-    
-    gStyle->SetLabelFont(mStyle.lableFont, "X");
-    gStyle->SetLabelFont(mStyle.lableFont, "Y");
-    gStyle->SetLabelFont(mStyle.lableFont, "Z");
-    
-    gStyle->SetTitleFont(mStyle.titleFont, "X");
-    gStyle->SetTitleFont(mStyle.titleFont, "Y");
-    gStyle->SetTitleFont(mStyle.titleFont, "Z");
-    
-    // multpt plots:
-    //  if(control.Contains("2D")){titleOffsetY= 1.0; titleOffsetX= 1.1;}
-    
-    //  gStyle->SetTitleOffset(mStyle.fTitleOffsetX, "X");
-    //  gStyle->SetTitleOffset(mStyle.fTitleOffsetY, "Y");
-    //  gStyle->SetTitleOffset(mStyle.fTitleOffsetZ, "Z");
-    
-    gStyle->SetMarkerSize(mStyle.markerSize);
-    
-    gStyle->SetLabelSize(mStyle.lableSizeScaling * mStyle.textSize, "X");
-    gStyle->SetLabelSize(mStyle.lableSizeScaling * mStyle.textSize, "Y");
-    gStyle->SetLabelSize(mStyle.lableSizeScaling * mStyle.textSize, "Z");
-    
-    gStyle->SetTitleSize(mStyle.titleSizeScaling * mStyle.textSize, "X");
-    gStyle->SetTitleSize(mStyle.titleSizeScaling * mStyle.textSize, "Y");
-    gStyle->SetTitleSize(mStyle.titleSizeScaling * mStyle.textSize, "Z");
-    
-  }
-  
-  int PlotManager::GetDefaultColor(int colorIndex)
-  {
-    return mStyle.defaultColors[colorIndex % mStyle.defaultColors.size()];
-  }
-  int PlotManager::GetDefaultMarker(int markerIndex)
-  {
-    return mStyle.defaultMarkers[markerIndex % mStyle.defaultMarkers.size()];
-  }
-  
-  void PlotManager::DefineDefaultPlottingStyle()
-  {
-    // Define global style standards
-    mStyle.textFont = 43;
-    mStyle.lableFont = 43;
-    mStyle.titleFont = 43;
-    mStyle.pixelBaseLength = 710;
-    mStyle.aspectRatio = 1.41428571429; // corresponding to DIN A4
-    mStyle.fillStyleCanvas = 4000; // 4000 transparent, 4100 opaqe
-    mStyle.drawTimestamps = false;
-    mStyle.timestampPosition.push_back(0.05);
-    mStyle.timestampPosition.push_back(0.02);
-    mStyle.textSize = 17000 / mStyle.pixelBaseLength;
-    mStyle.lableSizeScaling       = 1.00;   // Factor the label will be larger than the textsize
-    mStyle.titleSizeScaling       = 1.20;   // Factor the title will be larger than the textsize
-    mStyle.markerSize = 1.2;
-    mStyle.markerSizeThick = 2.2;
-    mStyle.lineWidth = 1.0;
-    mStyle.lineWidthThick = 2.0;
-    
-    mStyle.palette = kBird;
-    mStyle.defaultMarkers = {kFullSquare, kFullCircle, kFullCross, kFullDiamond, kFullStar, kOpenCircle, kOpenSquare, kOpenCross, kOpenDiamond, kOpenStar};
-    mStyle.defaultMarkersFull = {kFullSquare, kFullCircle, kFullCross, kFullDiamond, kFullStar, kFullCircle, kFullCircle, kFullCircle, kFullCircle, kFullCircle, kFullCircle};
-    mStyle.defaultMarkersOpen = {kOpenSquare, kOpenCircle, kOpenCross, kOpenDiamond, kOpenStar, kOpenCircle, kOpenCircle, kOpenCircle, kOpenCircle, kOpenCircle, kOpenCircle};
-    mStyle.defaultColors = {kBlack, kBlue+1, kRed+2, kGreen+2, kTeal-7, kCyan+2, kMagenta-4, kGreen+3, kOrange+1, kViolet-3, kPink+3, kOrange+2, kYellow+3, kGray+2};
-    
-    
-    
-    
-    // Define specific canvas styles:
-    { //--------------------------------------------------------------
-      CanvasStyle canvas;
-      canvas.styleName = "default";
-      canvas.canvasWidth = mStyle.pixelBaseLength;
-      canvas.canvasHeight = mStyle.pixelBaseLength;
-      PadStyle pad1;
-      // position: xlow, ylow, xup, yup
-      pad1.position.push_back(0);
-      pad1.position.push_back(0.);
-      pad1.position.push_back(1.);
-      pad1.position.push_back(1.);
-      // margin: top, bottom, left, right
-      pad1.margin.push_back(0.12-0.05);
-      pad1.margin.push_back(0.12+0.02);
-      pad1.margin.push_back(0.12);
-      pad1.margin.push_back(0.12-0.05);
-      // titleOffset: x, y, z
-      pad1.titleOffset.push_back(1.1);
-      pad1.titleOffset.push_back(1.4);//1.3
-      pad1.titleOffset.push_back(1.0);
-      
-      canvas.pads.push_back(pad1);
-      
-      mCanvStyles.push_back(canvas);
-    } //--------------------------------------------------------------
+    /*
+    // BEGIN TODO
     
     { //--------------------------------------------------------------
       CanvasStyle canvas;
@@ -1113,6 +487,9 @@ namespace PlottingFramework {
       
       mCanvStyles.push_back(canvas);
     } //--------------------------------------------------------------
+    
+    */
+    // END TODO
     
     /*
      //"horizontal"
@@ -1164,48 +541,15 @@ namespace PlottingFramework {
     
   }
   
-  PlotManager::CanvasStyle* PlotManager::GetCanvasStyle(string styleName)
+  PlotStyle& PlotManager::GetPlotStyle(string plotStyleName)
   {
-    for(auto& canvasStyle : mCanvStyles)
+    for(auto& plotStyle : mPlotStyles)
     {
-      if(canvasStyle.styleName == styleName) return &canvasStyle;
+      if(plotStyle.GetName() == plotStyleName) return plotStyle;
     }
-    cout << "ERROR: nullptr returned." << endl;
-    return nullptr;
+    cout << "ERROR: plot style named " << plotStyleName << " not found." << endl;
+    return GetPlotStyle("default"); // if style not found return default style
   }
-  
-  
-  void PlotManager::SetTransparentCanvas(bool transparent)
-  {
-    if(transparent) mStyle.fillStyleCanvas = 4000;
-    else mStyle.fillStyleCanvas = 4100;
-  }
-  
-  void PlotManager::ListAvailableCanvasStyles()
-  {
-    for(auto& canvasStyle : mCanvStyles)
-    {
-      cout << "======== " << canvasStyle.styleName << " ========" << endl;
-      cout << "  >> Width  : " << canvasStyle.canvasWidth << endl;
-      cout << "  >> Height : " << canvasStyle.canvasHeight << endl;
-      cout << "  >> nPads  : " << canvasStyle.pads.size() << endl;
-      int padID = 1;
-      string lines = string((int)((canvasStyle.styleName.length()+17 - 7) / 2) , '-');
-      for(auto& padStyle : canvasStyle.pads)
-      {
-        cout << "  " << lines << " Pad " << padID << " " << lines << endl;
-        cout << "    << Position (xlow, ylow, xup, yup)   : (" << padStyle.position[0] << ", " << padStyle.position[1] << ", " << padStyle.position[2] << ", " << padStyle.position[3] << ")" << endl;
-        cout << "    << Margin (top, bottom, left, right) : (" << padStyle.margin[0] << ", " << padStyle.margin[1] << ", " << padStyle.margin[2] << ", " << padStyle.margin[3] << ")" << endl;
-        cout << "    << Title offset (x, y, z)            : (" << padStyle.titleOffset[0] << ", " << padStyle.titleOffset[1] << ", " << padStyle.titleOffset[2] << ")" << endl;
-        
-        padID++;
-      }
-      cout << "========" << string((int)canvasStyle.styleName.length() +2, '=') << "========" << endl << endl;
-      
-    }
-  }
-  
-  
   
   void PlotManager::PrintErrors(bool printMissingPlots){
     if(!mListOfMissingPlots.empty()){
