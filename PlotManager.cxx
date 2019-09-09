@@ -395,7 +395,7 @@ namespace PlottingFramework {
     {// Definition of "default" style
       PlotStyle myStyle("default");
       
-      myStyle.LinkAxes("Y", {1,2});
+      //myStyle.LinkAxes("X", {1,2});
       myStyle.SetFromat(710, 2);
       myStyle.SetTransparent();
 

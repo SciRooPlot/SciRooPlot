@@ -62,7 +62,8 @@ string GetPtString(int pTbin);
  - generalized version of white patch hiding the truncated zero
  - possibility add external histogram in plots
  - possibility to split the legend?
-
+ - maybe linking axes should also be possible for different axes (x in pad1 to y in pad2)
+ 
  Code Quality:
  - change arguments referring to internal variables to const ref if possible to be more memory efficient, use lambdas
  - add (copy-, move-) constructors and destructors; make sure all variables are initialized properly
@@ -188,7 +189,7 @@ int main(int argc, char *argv[]) {
     myPlot.AddHisto(plotName, "pp_7TeV", "o0O");
     myPlot.AddHisto(plotName, "pp_7TeV", "");
     myPlot.SetAxisRange("Y", 0.45, 0.5);
-    myPlot.SetAxisRange("X", 0, 60);
+//    myPlot.SetAxisRange("X", 0, 60);
     myPlot.AddLegendBox();
     myPlot.ChangePad(2);
     myPlot.SetAxisTitle("Y", "contamination");
@@ -196,7 +197,7 @@ int main(int argc, char *argv[]) {
     myPlot.AddHisto(plotName, "pPb_5TeV", "wAit for it");
     myPlot.AddHisto(plotName, "pp_7TeV", "BBB");
     myPlot.AddHisto(plotName, "pp_7TeV", "FFF");
-    myPlot.SetAxisRange("X", 1, 5);
+    myPlot.SetAxisRange("X", 10, 50);
     myPlot.SetAxisRange("Y", 0.49, 0.54);
     myPlot.AddLegendBox("", 1, kDotted, 2, kRed);
     myPlot.AddLegendBox();

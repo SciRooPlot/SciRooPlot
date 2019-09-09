@@ -196,32 +196,26 @@ namespace PlottingFramework {
       axisHist->SetTitle(padStyle.GetTitle().c_str());
 
 
-      // todo write axis wrapper
+      // todo write axis wrapper, avoid multiple calls of setting axis range, how to handle more than one axis change?
       // change axis range
-      
-      // hole linked pads zu der axe
-      // checke ob aktuelle padID drinne ist
-      // wenn ja gehe durch padIDs und hole von denen die Info
-      
-      for(auto& padID : plotStyle.GetLinkedAxes("X", padID)){
+      for(auto& padID : plotStyle.GetLinkedPads("X", padID)){
         if(plot.IsAxisDefined(padID, "X") && plot.GetAxis(padID, "X")->IsRangeSet())
         {
           axisHist->GetXaxis()->SetRangeUser(plot.GetAxis(padID, "X")->GetAxisRange().first, plot.GetAxis(padID, "X")->GetAxisRange().second);
         }
       }
-
-      
-
-
-      if(plot.IsAxisDefined(padID, "Y") && plot.GetAxis(padID, "Y")->IsRangeSet())
-      {
-        axisHist->GetYaxis()->SetRangeUser(plot.GetAxis(padID, "Y")->GetAxisRange().first, plot.GetAxis(padID, "Y")->GetAxisRange().second);
+      for(auto& padID : plotStyle.GetLinkedPads("Y", padID)){
+        if(plot.IsAxisDefined(padID, "Y") && plot.GetAxis(padID, "Y")->IsRangeSet())
+        {
+          axisHist->GetYaxis()->SetRangeUser(plot.GetAxis(padID, "Y")->GetAxisRange().first, plot.GetAxis(padID, "Y")->GetAxisRange().second);
+        }
       }
-      if(plot.IsAxisDefined(padID, "Z") && plot.GetAxis(padID, "Z")->IsRangeSet())
-      {
-        axisHist->GetZaxis()->SetRangeUser(plot.GetAxis(padID, "Z")->GetAxisRange().first, plot.GetAxis(padID, "Z")->GetAxisRange().second);
+      for(auto& padID : plotStyle.GetLinkedPads("Z", padID)){
+        if(plot.IsAxisDefined(padID, "Z") && plot.GetAxis(padID, "Z")->IsRangeSet())
+        {
+          axisHist->GetZaxis()->SetRangeUser(plot.GetAxis(padID, "Z")->GetAxisRange().first, plot.GetAxis(padID, "Z")->GetAxisRange().second);
+        }
       }
-      
       // change axis title
       if(plot.IsAxisDefined(padID, "X") && plot.GetAxis(padID, "X")->IsTitleSet())
       {

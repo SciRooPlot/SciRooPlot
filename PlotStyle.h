@@ -74,11 +74,16 @@ namespace PlottingFramework {
 
     void LinkAxes(string axis, vector<int> padIDs)
     {
-      if(axis == "X") mLinkedAxesX.push_back(padIDs);
-      if(axis == "Y") mLinkedAxesX.push_back(padIDs);
+      mLinkedAxes[axis].push_back(padIDs);
     }
     
-    vector<int> GetLinkedAxes(string axis, int padID){
+    vector<int> GetLinkedPads(string axis, int padID){
+      set<int> linkedPads = {padID};
+      for(auto& pads : mLinkedAxes[axis]){
+        if(std::find(pads.begin(), pads.end(), padID) != pads.end()) std::copy(pads.begin(), pads.end(), std::inserter(linkedPads, linkedPads.end()));
+      }
+      vector<int> target(linkedPads.begin(), linkedPads.end());
+      return target;
     }
 
     int GetTextSize(){return mTextSize;}
@@ -97,8 +102,7 @@ namespace PlottingFramework {
     double mHeight;
     vector<PadStyle> mPadStyles;
     vector<int> mRatioPads;
-    vector<vector<int>> mLinkedAxesX;
-    vector<vector<int>> mLinkedAxesY;
+    map<string, vector<vector<int>>> mLinkedAxes;
     // ratio corresponding to padID plots
     
     bool mDrawTimestamps;
