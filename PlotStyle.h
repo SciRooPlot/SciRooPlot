@@ -94,7 +94,9 @@ namespace PlottingFramework {
     int GetLableFont(){return mLableFont;}
     int GetTitleFont(){return mTitleFont;}
     int GetMarkerSize(){return mMarkerSize;}
-    
+    int GetMarkerSizeThick(){return mMarkerSizeThick;}
+    int GetLineWidthThick(){return mLineWidthThick;}
+
 
   private:
     string mName;

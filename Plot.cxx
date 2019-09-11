@@ -30,7 +30,8 @@ namespace PlottingFramework {
   {
     if(numerHistIdentifier == "") numerHistIdentifier = mFigureGroup;
     if(denomHistIdentifier == "") denomHistIdentifier = mFigureGroup;
-    mData[mCurrPad].push_back(std::make_shared<Ratio>(numerHist, numerHistIdentifier, denomHist, denomHistIdentifier, lable, color, marker, 0, drawingOptions, "", 1, std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
+    int padID = 2; //mCurrPad TODO:: remove this stupid hack
+    mData[padID].push_back(std::make_shared<Ratio>(numerHist, numerHistIdentifier, denomHist, denomHistIdentifier, lable, color, marker, 0, drawingOptions, "", 1, std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
   }
   
   
@@ -52,6 +53,8 @@ namespace PlottingFramework {
 
   void Plot::SetAxisRange(string axis, double low, double high)
   {
+    int tempPadID = mCurrPad;
+    if(axis == "ratio") {axis = "Y"; mCurrPad = 2;} // todo:: fix this stupid hack
     if(mAxes[mCurrPad].find(axis) != mAxes[mCurrPad].end())
     {
       mAxes[mCurrPad][axis]->SetAxisRange(low, high);
@@ -60,11 +63,14 @@ namespace PlottingFramework {
     {
       mAxes[mCurrPad][axis] = std::make_shared<Axis>(axis, std::make_pair(low, high));
     }
+    mCurrPad = tempPadID;
   }
   
   
   void Plot::SetAxisTitle(string axis, string axisTitle)
   {
+    int tempPadID = mCurrPad;
+    if(axis == "ratio") {axis = "Y"; mCurrPad = 2;} // todo:: fix this stupid hack
     if(mAxes[mCurrPad].find(axis) != mAxes[mCurrPad].end())
     {
       mAxes[mCurrPad][axis]->SetAxisTitle(axisTitle);
@@ -73,6 +79,7 @@ namespace PlottingFramework {
     {
       mAxes[mCurrPad][axis] = std::make_shared<Axis>(axis, axisTitle);
     }
+    mCurrPad = tempPadID;
   }
   
   

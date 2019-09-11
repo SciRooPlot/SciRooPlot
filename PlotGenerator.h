@@ -26,6 +26,9 @@ namespace PlottingFramework {
     template<typename T>
     static T* GetDataClone(string dataName, TObjArray* availableData);
     static TLegend* MakeLegend(shared_ptr<Plot::LegendBox> legendBox, TPad* pad, TObjArray& legendEntries, vector<string> legendTitles, vector<string>& errorStyles);
+    static TPaveText* MakeText(shared_ptr<Plot::TextBox> textBox);
+    static void CutHistogram(TH1* hist, double cutoff, double cutoffLow);
+
     //void MakeTextBox(){};
     
     //TPaveText* MakeText(Plot::TextBox& textBoxTemplate);

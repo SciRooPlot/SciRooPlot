@@ -322,7 +322,7 @@ namespace PlottingFramework {
       SetType("text");
       // constructor code
     }
-    const string& GetText();
+    string GetText(){return mText;}
     void SetText(string text);
     //void SetDelimiter(string delimiter){mDelimiter = delimiter;}
   private:

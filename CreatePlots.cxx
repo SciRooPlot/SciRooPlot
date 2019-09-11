@@ -31,6 +31,9 @@ string GetPtString(int pTbin);
  - do i want to store actual plots? otherwise remove mPlotLedger, resp use it for Plot templates, re-think create plot logic
 
  Not so important:
+ - fix dirty 2d hacks
+ - fix dirty hacks for backward compatibility regarding ratio plots
+ - if lables are 1, 2,3 height is not calculated correctly?
  - check if padID starts with 1 is a problem (vectors maybe)
  - think about more placeholders for legends and texts and how to format them
  - option to set n divisions of axes
@@ -83,20 +86,19 @@ int main(int argc, char *argv[]) {
   if(argc > 1) {dataSets.push_back(argv[1]); skipDatasetPlots = false;}
   else
   { // define datasets to include in analysis
+    dataSets.push_back("pp_2TeV");
     dataSets.push_back("pp_5TeV");
     dataSets.push_back("pp_7TeV");
-    dataSets.push_back("Publications");
-
-    /* --- Unused Datasets ---
+    dataSets.push_back("pp_13TeV");
 
     dataSets.push_back("pPb_5TeV");
     dataSets.push_back("PbPb_5TeV");
-    dataSets.push_back("pp_5TeV");
-    dataSets.push_back("pp_7TeV");
+    
     dataSets.push_back("Simulations");
     dataSets.push_back("Energyscan");
-    dataSets.push_back("pp_2TeV");
-    dataSets.push_back("pp_13TeV");
+
+    /* --- Unused Datasets ---
+
 
     dataSets.push_back("pp_13TeV_old");
 
@@ -158,62 +160,46 @@ int main(int argc, char *argv[]) {
     string plotName = "responseMatrix";
     Plot myPlot(plotName, "TEST");
     myPlot.SetDrawingProperties("logZ");
-    myPlot.AddRatio("multDistUnfoldedClosureTest", "pp_7TeV", "multDistGeneratedClosureTest", "pp_7TeV", "");
-
-    myPlot.AddHisto("mean", "pp_7TeV", "my name is <name> blablabla");
-//    myPlot.AddHisto("responseMatrix", "pp_5TeV", "i have <entries> entries");
+    myPlot.AddHisto(plotName, "pp_5TeV", "abc1");
     myPlot.SetAxisRange("X", 2, 100);
-//    myPlot.SetAxisRange("Y", 0, 100);
-    myPlot.AddLegendBox();
-
-    myPlot.ChangePad(2);
-    myPlot.SetDrawingProperties("logY logX");
-    myPlot.AddHisto("multPtUnfoldedMC_MultBin_10", "pp_7TeV", "Olaf abc the max of this spectrum is <maximum> ");
-
-    myPlot.AddLegendBox();
-    // set range etc must also affect only this pad (or associated pads)
-//    myPlot.AddRatio();
-//    myPlot.AddFunction();
     myPlot.AddTextBox(0.3, 0.3, "some new text");
+    myPlot.SetAxisTitle("Z", "my funny axis tilte");
     plotEnv.AddPlot(myPlot); // check if all properties are properly moved!!
-    cout << myPlot.GetName()<<endl;
- //   plotEnv.SavePlot(plotName, "TEST");
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "momentUnfolded1";
     Plot myPlot(plotName, "TEST", "default ratio");
 //    myPlot.SetDrawingProperties("gridY gridX");
-    myPlot.SetAxisTitle("X", "my x-axis");
     myPlot.AddHisto(plotName, "pp_5TeV", "");
-    myPlot.AddHisto(plotName, "pp_7TeV", "o0O");
-    myPlot.AddHisto(plotName, "pp_7TeV", "");
-    myPlot.SetAxisRange("Y", 0.45, 0.5);
+    myPlot.AddHisto(plotName, "pp_5TeV", "abc1");
+    myPlot.AddHisto(plotName, "pp_7TeV", "def2");
+    myPlot.AddHisto(plotName, "pp_7TeV", "ghi3");
+//    myPlot.SetAxisRange("Y", 0.45, 0.5);
 //    myPlot.SetAxisRange("X", 0, 60);
+    myPlot.AddTextBox(0.4, 0.91, "alice preliminary // something else // some more text");
     myPlot.AddLegendBox();
-    myPlot.ChangePad(2);
-    myPlot.SetAxisTitle("Y", "contamination");
+    myPlot.SetAxisTitle("ratio", "ratio");
 //    myPlot.AddHisto(plotName, "pp_5TeV", "");
     myPlot.AddRatio("momentUnfolded1", "pp_7TeV", "momentUnfolded1", "pp_5TeV");
+    myPlot.SetAxisRange("ratio", 0.985, 1.015);
+
     myPlot.SetAxisRange("X", 10, 50);
     plotEnv.AddPlot(myPlot); // check if all properties are properly moved!!
   } // -----------------------------------------------------------------------
 
 //  plotEnv.ListPlots();
 //  plotEnv.CreatePlot("momentUnfolded1", "TEST");
-  plotEnv.CreatePlots("TEST");
   
   //plotEnv.DumpPlots("myPlots.JSON"); // saves all stored plots to JSON file
   //!!! (and deletes them from manager)
-  plotEnv.PrintErrors();
-
-  return -1;
+  //plotEnv.PrintErrors();
 
 //  plotEnv.ListHistos();
 //  plotEnv.LoadPlotsFromConfigFile(plotConfigFile); // loads all available plots for the loaded datasets
 //  plotEnv.LoadPlot("myImportantPlot", plotConfigFile);
 //  plotEnv.WritePlotsToFile(outputFileName);
 //  plotEnv.ListAvailableCanvasStyles();
-  /* BEGIN COMMENT:
+
   //---- Lable definitions -----------------------------------------------------
   string newLine = " // ";
   string alice = "#bf{ALICE work in progress}";
@@ -266,8 +252,7 @@ int main(int argc, char *argv[]) {
   myPlot.AddHisto(plotName, "", "");
   myPlot.AddLegendBox(0.6, 0.7);
   myPlot.AddTextBox(0.4, 0.91, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", false);
-  plotEnv.SavePlot(plotName, dataSet, qaFolder);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
 
 { // -----------------------------------------------------------------------
@@ -275,8 +260,7 @@ int main(int argc, char *argv[]) {
   Plot myPlot(plotName, dataSet);
   myPlot.AddHisto(plotName, "", "");
   myPlot.AddLegendBox(0.6, 0.7);
-  plotEnv.CreateNewPlot(myPlot, "default", false);
-  plotEnv.SavePlot(plotName, dataSet, qaFolder);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
 
 { // -----------------------------------------------------------------------
@@ -285,10 +269,8 @@ int main(int argc, char *argv[]) {
   myPlot.SetDrawingProperties("logZ");
   myPlot.AddHisto(plotName, "", "");
   myPlot.AddLegendBox(0.6, 0.7);
-  plotEnv.CreateNewPlot(myPlot, "default", false);
-  plotEnv.SavePlot(plotName, dataSet, qaFolder);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
-
 
 { // -----------------------------------------------------------------------
   string plotName = "edgeContamPt";
@@ -299,8 +281,7 @@ int main(int argc, char *argv[]) {
   myPlot.SetAxisTitle("Y", "contamination");
   myPlot.AddLegendBox(0.3, 0.5);
   myPlot.AddTextBox(0.41, 0.3, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", false);
-  plotEnv.SavePlot(plotName, dataSet, qaFolder);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
 
 { // -----------------------------------------------------------------------
@@ -312,8 +293,7 @@ int main(int argc, char *argv[]) {
   myPlot.SetAxisTitle("X", "test");
   myPlot.AddLegendBox(0.3, 0.5);
   myPlot.AddTextBox(0.41, 0.3, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", true);
-  plotEnv.SavePlot(plotName, dataSet, qaFolder);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
 
 
@@ -328,8 +308,7 @@ int main(int argc, char *argv[]) {
   myPlot.SetAxisTitle("Y", "efficiency");
   myPlot.AddLegendBox(0.3, 0.5);
   myPlot.AddTextBox(0.41, 0.3, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", false);
-  plotEnv.SavePlot(plotName, dataSet, qaFolder);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
 
 { // -----------------------------------------------------------------------
@@ -342,8 +321,7 @@ int main(int argc, char *argv[]) {
   myPlot.AddLegendBox(0.6, 0.7);
   myPlot.AddTextBox(0.4, 0.91, datasetLable);
   myPlot.SetAxisRange("Y", 0.1, 1e6);
-  plotEnv.CreateNewPlot(myPlot, "default", false);
-  plotEnv.SavePlot(plotName, dataSet, qaFolder);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
 
 { // -----------------------------------------------------------------------
@@ -360,8 +338,7 @@ int main(int argc, char *argv[]) {
   }
   myPlot.AddLegendBox(0.5, 0.78);
   myPlot.AddTextBox(0.3, 0.92, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", false);
-  plotEnv.SavePlot(plotName, dataSet, qaFolder);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
 
 { // -----------------------------------------------------------------------
@@ -377,8 +354,7 @@ int main(int argc, char *argv[]) {
   }
   myPlot.AddLegendBox(0.6, 0.7);
   myPlot.AddTextBox(0.4, 0.91, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", false);
-  plotEnv.SavePlot(plotName, dataSet, qaFolder);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
 
 { // -----------------------------------------------------------------------
@@ -393,13 +369,12 @@ int main(int argc, char *argv[]) {
   myPlot.SetAxisTitle("Y", "integrated / true #it{N}_{ch}");
   myPlot.AddTextBox(0.6, 0.5, "particles per event in // measured spectra // over respective #it{N}_{ch}");
   myPlot.AddTextBox(0.15, 0.91, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", false);
-  plotEnv.SavePlot(plotName, dataSet, qaFolder);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
 
 { // -----------------------------------------------------------------------
   string plotName = "particeContaminationVsNch";
-  Plot myPlot(plotName, dataSet);
+  Plot myPlot(plotName, dataSet, "default ratio");
   myPlot.AddHisto("particleClosureMCmeasVsNch", "", "prim and sec", kOpenCross, kBlue+1);
   myPlot.AddHisto("particleClosureMCprimaries", "", "only prim", kFullCross, kBlack+1);
   myPlot.AddRatio("particleClosureMCmeasVsNch", "", "particleClosureMCprimaries", "", "sec contam");
@@ -411,8 +386,7 @@ int main(int argc, char *argv[]) {
   myPlot.AddLegendBox(0.6, 0.6);
   myPlot.AddTextBox(0.15, 0.91, datasetLable);
   myPlot.AddTextBox(0.5, 0.4, "particles per event in // measured spectra // over respective #it{N}_{ch}");
-  plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-  plotEnv.SavePlot(plotName, dataSet, qaFolder);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
 
 {
@@ -427,8 +401,7 @@ int main(int argc, char *argv[]) {
   myPlot.AddLegendBox(0.2, 0.4);
   myPlot.SetAxisRange("Y", 1e-8, 1e-3);
   myPlot.AddTextBox(0.4, 0.91, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", false);
-  plotEnv.SavePlot(plotName, dataSet);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
 
 { // -----------------------------------------------------------------------
@@ -439,8 +412,7 @@ int main(int argc, char *argv[]) {
   myPlot.AddLegendBox(0.2, 0.4);
   myPlot.SetAxisRange("Y", 1e-8, 1e-3);
   myPlot.AddTextBox(0.4, 0.91, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", false);
-  plotEnv.SavePlot(plotName, dataSet);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
 
 int multBin = 18;
@@ -455,8 +427,7 @@ int multBin = 18;
   myPlot.SetAxisRange("Y", 1e-12, 2);
   myPlot.SetAxisTitle("X", "#it{p}^{ meas}_{T}");
   myPlot.AddTextBox(0.16, 0.3, datasetLable);
-  plotEnv.CreateNewPlot(myPlot, "default", false);
-  plotEnv.SavePlot(plotName, dataSet);
+  plotEnv.AddPlot(myPlot);
 } // -----------------------------------------------------------------------
 
 
@@ -469,7 +440,7 @@ int multBin = 18;
     //--------------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "multDensity";
-      Plot myPlot(plotName, dataSet);
+      Plot myPlot(plotName, dataSet, "default ratio");
       myPlot.SetDrawingProperties("logY");
       myPlot.AddHisto("multDensityUnfolded", dataSet, "", kFullCircle, kBlue+1);
       myPlot.AddHisto("multDensityUnfolded_Syst", dataSet, "data", kFullCircle, kBlue+1, "boxes");
@@ -478,8 +449,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.2, 0.4);
       myPlot.SetAxisRange("X", 0, 130);
       myPlot.AddTextBox(0.4, 0.91, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", true);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
@@ -492,8 +462,7 @@ int multBin = 18;
       //myPlot.SetAxisRange("X", 0, multRange);
       myPlot.AddLegendBox(0.2, 0.4);
       myPlot.AddTextBox(0.4, 0.91, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", true);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "multDistsMC";
@@ -505,8 +474,7 @@ int multBin = 18;
       //myPlot.SetAxisRange("X", 0, multRange);
       myPlot.AddLegendBox(0.2, 0.4);
       myPlot.AddTextBox(0.4, 0.91, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", true);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "multPtMeasured";
@@ -521,8 +489,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "norm. yield");
       //myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{acc}) (GeV/#it{c})^{-2}");
       myPlot.AddTextBox(0.15, 0.8, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "multPtMeasuredRaw";
@@ -538,8 +505,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "raw yield");
       //myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{acc}) (GeV/#it{c})^{-2}");
       myPlot.AddTextBox(0.15, 0.8, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "multPtUnfolded";
@@ -558,8 +524,7 @@ int multBin = 18;
       //myPlot.SetAxisTitle("Z", "norm. yield");
       myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{ch}) [(GeV/#it{c})^{-2}]");
       myPlot.AddTextBox(0.15, 0.8, datasetLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "multPtMeasuredMC";
@@ -575,8 +540,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "norm. yield");
       //myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{acc}) (GeV/#it{c})^{-2}");
       myPlot.AddTextBox(0.15, 0.8, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "multPtMeasuredRawMC";
@@ -593,8 +557,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "raw yield");
       //myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{acc}) (GeV/#it{c})^{-2}");
       myPlot.AddTextBox(0.15, 0.8, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "multPtUnfoldedMC";
@@ -610,8 +573,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "norm. yield");
       //myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{ch}) (GeV/#it{c})^{-2}");
       myPlot.AddTextBox(0.15, 0.8, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "multPtGeneratedMC";
@@ -627,8 +589,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "norm. yield");
       //myPlot.SetAxisTitle("Z", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{3}#it{N})/(d#it{p}_{T}d#it{#eta}d#it{N}_{ch}) (GeV/#it{c})^{-2}");
       myPlot.AddTextBox(0.15, 0.8, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "meanPt";
@@ -641,8 +602,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.5, 0.3);
       myPlot.AddTextBox(0.16, 0.92, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "variance";
@@ -655,8 +615,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0., 0.9);
       myPlot.AddLegendBox(0.2, 0.6);
       myPlot.AddTextBox(0.16, 0.92, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     //--------------------------------------------------------------------------
@@ -671,8 +630,7 @@ int multBin = 18;
       myPlot.SetAxisRange("X", 0, 10);
       myPlot.SetAxisRange("Y", 0, 10);
       myPlot.AddTextBox(0.3, 0.3, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "responseMatrixOrig";
@@ -683,8 +641,7 @@ int multBin = 18;
       //myPlot.SetAxisRange("X", 0, multRange);
       //myPlot.SetAxisRange("Y", 0, multRange);
       myPlot.AddTextBox(0.3, 0.3, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "unfoldingMatrix";
@@ -700,8 +657,7 @@ int multBin = 18;
       //myPlot.SetAxisTitle("Z", "#it{P}(#it{N}_{acc} | #it{N}_{ch})");
       //myPlot.SetAxisTitle("Z", "#it{P}(#it{N}^{ meas}_{ch} | #it{N}^{ true}_{ch})");
       myPlot.SetAxisTitle("Z", "#it{S}(#it{N}_{acc} | #it{N}_{ch})");
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "responseMatrix";
@@ -717,8 +673,7 @@ int multBin = 18;
       //myPlot.SetAxisTitle("Z", "#it{P}(#it{N}_{acc} | #it{N}_{ch})");
       //myPlot.SetAxisTitle("Z", "#it{P}(#it{N}^{ meas}_{ch} | #it{N}^{ true}_{ch})");
       myPlot.SetAxisTitle("Z", "#it{S}(#it{N}_{acc} | #it{N}_{ch})");
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "ptResolutionMatrix";
@@ -733,8 +688,7 @@ int multBin = 18;
       myPlot.AddHisto(plotName);
       myPlot.SetAxisTitle("Z", "#it{S}(#it{p}^{ meas}_{T} | #it{p}^{ true}_{T})");
       //myPlot.SetAxisTitle("Z", "#it{P}(#it{p}^{ meas}_{T} | #it{p}^{ true}_{T})");
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "relPtResoFromCovData";
@@ -746,8 +700,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "# Tracks");
       myPlot.AddTextBox(0.3, 0.9, datasetLable);
       myPlot.AddHisto(plotName);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "relPtResoFromCovMC";
@@ -758,8 +711,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("Z", "# Tracks");
       myPlot.AddTextBox(0.3, 0.9, datasetLable);
       myPlot.AddHisto(plotName);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     //--------------------------------------------------------------------------
@@ -775,8 +727,7 @@ int multBin = 18;
       myPlot.SetAxisRange("X", 0, 10);
       myPlot.SetAxisTitle("Y", "efficiency");
       myPlot.AddTextBox(0.41, 0.3, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "fakeEventContam";
@@ -786,8 +737,7 @@ int multBin = 18;
       myPlot.SetAxisRange("X", 0, 10);
       myPlot.AddTextBox(0.41, 0.92, datasetLable);
       myPlot.SetAxisTitle("Y", "contamination");
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "efficiencyMC";
@@ -800,8 +750,7 @@ int multBin = 18;
       myPlot.AddTextBox(0.15, 0.9, datasetLable);
       myPlot.SetAxisTitle("X", "#it{p}^{ true}_{T}");
       myPlot.SetAxisTitle("Y", "efficiency x acceptance");
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
@@ -814,8 +763,7 @@ int multBin = 18;
       myPlot.SetAxisTitle("X", "#it{p}^{ true}_{T}");
       myPlot.AddTextBox(0.4, 0.9, datasetLable);
       myPlot.SetAxisTitle("Y", "secondary contamination");
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "secContamMC_mult";
@@ -827,8 +775,7 @@ int multBin = 18;
       //myPlot.SetAxisTitle("X", "#it{p}^{ true}_{T}");
       myPlot.AddTextBox(0.4, 0.9, datasetLable);
       myPlot.SetAxisTitle("Y", "secondary contamination");
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "efficiencyMultPtRaw_MultDep";
@@ -847,8 +794,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.16, 0.52);
       //myPlot.AddTextBox(0.41, 0.3, datasetLable);
       myPlot.SetAxisTitle("Y", "acceptance x efficiency");
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "efficiencyMultPtRaw_PtDep";
@@ -867,8 +813,7 @@ int multBin = 18;
       myPlot.AddTextBox(0.41, 0.3, datasetLable);
       myPlot.SetAxisRange("Y", 0.2, 0.9);
       myPlot.SetAxisTitle("Y", "acceptance x efficiency");
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "secContamMultPtRaw_MultDep";
@@ -885,13 +830,11 @@ int multBin = 18;
       myPlot.AddLegendBox(0.16, 0.92, "");
       myPlot.SetAxisRange("X", 0., multRange);
       myPlot.SetAxisRange("Y", 0, 0.12);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "secondariesMultPtRaw_PtDep";
       Plot myPlot(plotName, dataSet);
-      
       myPlot.AddHisto("secContamMC", dataSet, "MC truth");
       myPlot.AddHisto("secContamMultPtRaw_full", dataSet, "inclusive");
       vector<int> multBins = {2, 3, 5, 7, 9, 11};
@@ -903,13 +846,11 @@ int multBin = 18;
       myPlot.SetDrawingProperties("logX");
       myPlot.AddLegendBox(0.7, 0.3);
       myPlot.SetAxisRange("Y", 0, 0.15);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "meanRelPtReso_DataVsMC";
-      Plot myPlot(plotName, dataSet);
-      
+      Plot myPlot(plotName, dataSet, "default ratio");
       myPlot.SetDrawingProperties("logX");
       myPlot.SetAxisTitle("Y", "< #sigma(#it{p}_{T}) / #it{p}_{T} >");
       myPlot.SetAxisRange("X", 0.15, 50);
@@ -920,14 +861,12 @@ int multBin = 18;
       myPlot.SetAxisTitle("ratio", "data / MC");
       myPlot.AddLegendBox(0.4, 0.5, "");
       myPlot.AddTextBox(0.3, 0.9, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     // ---------------------- Closure tests ------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "closureTestMultDist";
-      Plot myPlot(plotName, dataSet);
-      
+      Plot myPlot(plotName, dataSet, "default ratio");
       myPlot.AddHisto("multDistGeneratedClosureTest", "", "generated (prior)", kFullSquare, kGray+1);
       myPlot.AddHisto("multDistUnfoldedClosureTest", "", "unfolded", kOpenCircle);
       myPlot.AddHisto("multDistMeasuredClosureTest", "", "measured");
@@ -939,12 +878,11 @@ int multBin = 18;
       myPlot.AddLegendBox(0.6, 0.9);
       myPlot.AddTextBox(0.16, 0.2, datasetLable);
       myPlot.SetAxisRange("ratio", 0.95, 1.05);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "closureTestMultDistFlat";
-      Plot myPlot(plotName, dataSet);
+      Plot myPlot(plotName, dataSet, "default ratio");
       
       myPlot.AddHisto("multDistGeneratedClosureTest", "", "generated", kFullSquare, kGray+1);
       myPlot.AddHisto("multDistUnfoldedClosureTestFlat", "", "unfolded", kOpenCircle);
@@ -958,12 +896,11 @@ int multBin = 18;
       myPlot.SetAxisRange("ratio", 0.95, 1.05);
       myPlot.AddLegendBox(0.7, 0.8);
       myPlot.AddTextBox(0.16, 0.2, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "closureTestProjectionPt";
-      Plot myPlot(plotName, dataSet);
+      Plot myPlot(plotName, dataSet, "default ratio");
       myPlot.SetDrawingProperties("logX logY");
       myPlot.SetAxisRange("X", 0.15, 50);
       myPlot.AddHisto("trueParticlesPt", "", "true");
@@ -978,12 +915,11 @@ int multBin = 18;
       myPlot.SetAxisTitle("ratio", "ratio");
       myPlot.AddLegendBox(0.7, 0.85);
       myPlot.AddTextBox(0.16, 0.2, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "closureTestProjectionMult";
-      Plot myPlot(plotName, dataSet);
+      Plot myPlot(plotName, dataSet, "default ratio");
       myPlot.AddHisto("trueParticlesMult", "", "true");
       myPlot.AddHisto("unfoParticlesMult", "", "unfolded");
       myPlot.AddRatio("unfoParticlesMult", "", "trueParticlesMult");
@@ -992,13 +928,11 @@ int multBin = 18;
       myPlot.SetAxisRange("ratio", 0.95, 1.05);
       myPlot.AddLegendBox(0.7, 0.7);
       myPlot.AddTextBox(0.16, 0.2, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "closureTestMoment1";
-      Plot myPlot(plotName, dataSet);
-      
+      Plot myPlot(plotName, dataSet, "default ratio");
       myPlot.AddHisto("momentGeneratedMC1", "", "generated");
       myPlot.AddHisto("momentUnfoldedMC1", "", "unfolded");
       myPlot.AddHisto("momentReweightedMC1", "", "re-weighted");
@@ -1010,13 +944,11 @@ int multBin = 18;
       myPlot.SetAxisTitle("ratio", "ratio");
       myPlot.AddLegendBox(0.6, 0.4);
       myPlot.AddTextBox(0.16, 0.92, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "closureTestMoment2";
-      Plot myPlot(plotName, dataSet);
-      
+      Plot myPlot(plotName, dataSet, "default ratio");
       myPlot.AddHisto("momentGeneratedMC2", "", "generated");
       myPlot.AddHisto("momentUnfoldedMC2", "", "unfolded");
       //myPlot.AddHisto("momentReweightedMC2", "", "re-weighted");
@@ -1028,13 +960,11 @@ int multBin = 18;
       myPlot.SetAxisTitle("ratio", "ratio");
       myPlot.AddLegendBox(0.6, 0.4);
       myPlot.AddTextBox(0.16, 0.92, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "closureTestMoment3";
-      Plot myPlot(plotName, dataSet);
-      
+      Plot myPlot(plotName, dataSet, "default ratio");
       myPlot.AddHisto("momentGeneratedMC3", "", "generated");
       myPlot.AddHisto("momentUnfoldedMC3", "", "unfolded");
       //myPlot.AddHisto("momentReweightedMC3", "", "re-weighted");
@@ -1046,15 +976,13 @@ int multBin = 18;
       myPlot.SetAxisTitle("ratio", "ratio");
       myPlot.AddLegendBox(0.7, 0.3);
       myPlot.AddTextBox(0.16, 0.92, datasetLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-      plotEnv.SavePlot(plotName, dataSet, qaFolder);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       for(int ptBin = 2; ptBin < 50; ptBin++){
         if(!createBinWiseClosureTests) break;
         string plotName = "closureTestPtBin_" + std::to_string(ptBin);
-        Plot myPlot(plotName, dataSet);
-        
+        Plot myPlot(plotName, dataSet, "default ratio");
         myPlot.AddHisto(string("multPtGeneratedMC_PtBin_") + std::to_string(ptBin), "", "", kFullSquare, kBlack);
         myPlot.AddHisto(string("multPtMeasuredMC_PtBin_") + std::to_string(ptBin), "", "measured", kFullCross, kGreen+3);
         myPlot.AddHisto(string("multPtGeneratedMC_PtBin_") + std::to_string(ptBin), "", "generated", kFullSquare, kBlack);
@@ -1066,17 +994,15 @@ int multBin = 18;
         myPlot.AddTextBox(0.6, 0.65, GetPtString(ptBin));
         myPlot.AddLegendBox(0.7, 0.5);
         myPlot.AddTextBox(0.42, 0.92, datasetLable);
-        plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-        plotEnv.SavePlot(plotName, dataSet, qaFolder + "/closureTestPtBins");
+        plotEnv.AddPlot(myPlot);
       }
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       for(int multBin = 2; multBin < 101; multBin++){
         if(!createBinWiseClosureTests) break;
         string plotName = "closureTestMultBin_" + std::to_string(multBin);
-        Plot myPlot(plotName, dataSet);
+        Plot myPlot(plotName, dataSet, "default ratio");
         myPlot.SetDrawingProperties("logX logY");
-        
         myPlot.AddHisto(string("multPtGeneratedMC_MultBin_") + std::to_string(multBin), "", "", kFullSquare, kBlack);
         myPlot.AddHisto(string("multPtMeasuredMC_MultBin_") + std::to_string(multBin), "", "measured", kFullCross, kGreen+3);
         myPlot.AddHisto(string("multPtGeneratedMC_MultBin_") + std::to_string(multBin), "", "generated", kFullSquare, kBlack);
@@ -1087,8 +1013,7 @@ int multBin = 18;
         myPlot.AddTextBox(0.72, 0.9, "#it{N}_{ch} = " + std::to_string(multBin-1));
         myPlot.AddLegendBox(0.7, 0.7);
         myPlot.AddTextBox(0.16, 0.2, datasetLable);
-        plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-        plotEnv.SavePlot(plotName, dataSet, qaFolder + "/closureTestMultBins");
+        plotEnv.AddPlot(myPlot);
       }
     } // -----------------------------------------------------------------------
 
@@ -1103,8 +1028,7 @@ int multBin = 18;
       for(string& histName : histNames)
       {
         string plotName = histName + "_SystContrib";
-        Plot myPlot(plotName, dataSet);
-        
+        Plot myPlot(plotName, dataSet, "default ratio");
         myPlot.SetDrawingProperties("thick");
         myPlot.AddHisto(histName + "_RelSyst_total", "", "", 0, kWhite, "hist");
         myPlot.AddHisto(histName + "_RelSyst_DCAtoVertexZ", "", " 1", 0, colorsSyst[0], "hist");
@@ -1124,13 +1048,12 @@ int multBin = 18;
         myPlot.AddLegendBox(0.15, 0.8, "", 2);
         myPlot.SetAxisRange("X", 0, multRange);
         //myPlot.SetAxisRange("Y", 0, 0.06);
-        plotEnv.CreateNewPlot(myPlot, "default", false);
-        plotEnv.SavePlot(plotName, dataSet, systematicsFolder);
+        plotEnv.AddPlot(myPlot);
       }
     } // -----------------------------------------------------------------------
   } //==========================================================================
 
-  if(plotEnv.ContainsDatasets({"pp_5TeV", "pPb_5TeV", "PbPb_5TeV"}))
+  //if(plotEnv.ContainsDatasets({"pp_5TeV", "pPb_5TeV", "PbPb_5TeV"}))
   { //==========================================================================
     string plotGroup = "system_comparison";
     string systemSizeLable = alice + newLine + chargedParticles + ", " + erg5TeV_NN + newLine + eta08 + ", " + ptRange;
@@ -1171,8 +1094,7 @@ int multBin = 18;
           myPlot.AddTextBox(nchCent[i], 0.69 - 0.02*i, string("#bf{") + centrality[i] + string("}"), true);
         }
       }
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
@@ -1205,8 +1127,7 @@ int multBin = 18;
           myPlot.AddTextBox(nchCent[i], 0.46 + 0.025*i, string("#bf{") + centrality[i] + string("}"), true);
         }
       }
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
 
@@ -1223,8 +1144,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.4, 0.85);
       myPlot.AddLegendBox(0.6, 0.8);
       myPlot.AddTextBox(0.4, 0.29, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
@@ -1253,24 +1173,20 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.00001, 0.15);
       myPlot.AddLegendBox(0.2, 0.5);
       myPlot.AddTextBox(0.42, 0.92, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
       string plotName = "moment1dNchdeta";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.AddHisto("momentUnfolded1dNchDeta", "pp_5TeV", "pp", 0, kBlue+1);
       myPlot.SetAxisRange("Y", 0.45, 0.85);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
       string plotName = "varianceFullRangeMC";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.SetDrawingProperties("logX");
       myPlot.AddHisto("varianceGeneratedMC", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
       myPlot.AddHisto("varianceGeneratedMC", "pp_5TeV", "pp (Pythia8)", kFullSquare, kBlue+1, "", 50);
@@ -1280,15 +1196,13 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.05, 0.8);
       myPlot.AddLegendBox(0.15, 0.6);
       myPlot.AddTextBox(0.14, 0.92, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
 
     { // -----------------------------------------------------------------------
       string plotName = "meanPt";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
       myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
       myPlot.AddHisto("meanPt_5.02TeV", "Simulations", "", kOpenSquare, kBlue+1, "band", 60);
@@ -1302,8 +1216,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.SetAxisTitle("X", "#it{N}_{ch}");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
@@ -1323,8 +1236,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.SetAxisTitle("X", "#it{N}_{ch}");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
@@ -1341,8 +1253,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.SetAxisTitle("X", "#it{N}_{ch}");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
@@ -1354,15 +1265,13 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.05, 0.8);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
-      
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
 
     { // -----------------------------------------------------------------------
       string plotName = "moment1UnfoldedVsReWeighted";
-      Plot myPlot(plotName, plotGroup);
+      Plot myPlot(plotName, plotGroup, "default ratio");
       myPlot.AddHisto("momentReweighted1", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
       myPlot.AddHisto("momentReweighted1_Syst", "pp_5TeV", "re-weighted", kFullSquare, kBlue+1, "boxes", 60);
       myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullCross, kRed+1, "", 60);
@@ -1373,15 +1282,13 @@ int multBin = 18;
       myPlot.SetAxisRange("ratio", 0.9, 1.1);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
 
     { // -----------------------------------------------------------------------
       string plotName = "moment2";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.AddHisto("momentUnfolded2", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
       myPlot.AddHisto("momentUnfolded2_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
       myPlot.AddHisto("momentUnfolded2", "pPb_5TeV", "", kFullCircle, kMagenta+1);
@@ -1392,14 +1299,12 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.2, 1.5);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
       string plotName = "moment3";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.AddHisto("momentUnfolded3", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
       myPlot.AddHisto("momentUnfolded3_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
       myPlot.AddHisto("momentUnfolded3", "pPb_5TeV", "", kFullCircle, kMagenta+1);
@@ -1409,42 +1314,35 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.2, 5);
       myPlot.AddLegendBox(0.6, 0.4, "");
       myPlot.AddTextBox(0.15, 0.9, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
       string plotName = "moment1MC";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.AddHisto("momentUnfoldedMC1", "pp_5TeV", "pp", 0, kBlue+1);
       myPlot.AddHisto("momentUnfoldedMC1", "pPb_5TeV", "p-Pb", 0, kMagenta+1);
       myPlot.AddHisto("momentUnfoldedMC1", "PbPb_5TeV", "Pb-Pb", 0, kRed+1);
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.6, 0.4, "");
       myPlot.AddTextBox(0.15, 0.9, systemSizeLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
       string plotName = "moment1MCtruth";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.AddHisto("momentGeneratedMC1", "pp_5TeV", "pp (Pythia8)", 0, kBlue+1, "", 60);
       myPlot.AddHisto("momentGeneratedMC1", "pPb_5TeV", "p-Pb (DPMJET)", 0, kMagenta+1, "", 100);
       myPlot.AddHisto("momentGeneratedMC1", "PbPb_5TeV", "Pb-Pb (HIJING)", 0, kRed+1, "", 100);
       myPlot.AddLegendBox(0.15, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
       myPlot.SetAxisRange("Y", 0.45, 0.85);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
   } //==========================================================================
 
-
-
-  if(plotEnv.ContainsDatasets({"pp_5TeV", "pp_7TeV", "pp_13TeV"}))
+  //if(plotEnv.ContainsDatasets({"pp_5TeV", "pp_7TeV", "pp_13TeV"}))
   { //==========================================================================
     string plotGroup = "energy_comparison";
     string energyLable = alice + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
@@ -1464,8 +1362,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.3, 1.0);
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
       myPlot.AddTextBox(0.4, 0.3, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
@@ -1484,8 +1381,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
       //myPlot.AddTextBox(0.4, 0.3, energyLable);
       myPlot.AddTextBox(0.4, 0.3, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "energyScanMeanMCLog";
@@ -1503,8 +1399,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
       //myPlot.AddTextBox(0.4, 0.3, energyLable);
       myPlot.AddTextBox(0.4, 0.3, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
@@ -1519,8 +1414,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", -0.4, 0.8);
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
       myPlot.AddTextBox(0.4, 0.3, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
@@ -1537,8 +1431,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
       //myPlot.AddTextBox(0.4, 0.3, energyLable);
       myPlot.AddTextBox(0.4, 0.3, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
@@ -1555,8 +1448,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.24, 0.91, "", 3);
       //myPlot.AddTextBox(0.4, 0.3, energyLable);
       myPlot.AddTextBox(0.4, 0.3, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
 
@@ -1583,8 +1475,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, energyLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
@@ -1609,8 +1500,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.05, 0.75);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, energyLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
 
@@ -1645,8 +1535,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, energyLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
 
@@ -1679,8 +1568,6 @@ int multBin = 18;
       myPlot.AddHisto("variance_13TeV", "Simulations", "13 TeV", 0, 0, "band");
       myPlot.AddHisto("variance_13.5TeV", "Simulations", "13.5 TeV", 0, 0, "band");
       myPlot.AddHisto("variance_14TeV", "Simulations", "14 TeV", 0, 0, "band");
-
-
       //myPlot.AddHisto("variance_2.76TeV", "Simulations", "2.76 TeV", kFullSquare, kGreen+3, "", 40);
       //myPlot.AddHisto("varianceGeneratedMC", "pp_5TeV", "5.02 TeV", kFullSquare, kBlue+1);
       //myPlot.AddHisto("variance_7TeV", "Simulations", "7 TeV", kFullCircle, kMagenta+1);
@@ -1689,8 +1576,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.05, 0.9);
       myPlot.AddLegendBox(0.13, 0.9, "",4);
       myPlot.AddTextBox(0.4, 0.3, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
@@ -1732,8 +1618,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.35, 0.3, "",4);
       myPlot.AddTextBox(0.4, 0.5, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "mbMult";
@@ -1746,14 +1631,12 @@ int multBin = 18;
 //      myPlot.SetAxisRange("Y", 0., 0.9);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, energyLableMC);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
       string plotName = "moment1MCGenerated";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.AddHisto("momentGeneratedMC1", "pp_2TeV", "2.76 TeV", kFullSquare, kGreen+3, "", 40);
       myPlot.AddHisto("momentGeneratedMC1", "pp_5TeV", "5.02 TeV", kFullSquare, kBlue+1, "");
       myPlot.AddHisto("momentGeneratedMC1", "pp_7TeV", "7 TeV", kFullCircle, kMagenta+1, "");
@@ -1762,14 +1645,12 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.6, 0.5, "");
       myPlot.AddTextBox(0.15, 0.92, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
       string plotName = "moment2";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.AddHisto("momentUnfolded2", "pp_2TeV", "", kFullSquare, kGreen+3, "", 40);
       myPlot.AddHisto("momentUnfolded2_Syst", "pp_2TeV", "2.76 TeV", kFullSquare, kGreen+3, "boxes", 40);
       myPlot.AddHisto("momentUnfolded2", "pp_5TeV", "", kFullSquare, kBlue+1);
@@ -1782,14 +1663,12 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.2, 1.5);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.AddTextBox(0.4, 0.3, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
       string plotName = "moment3";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.AddHisto("momentUnfolded3", "pp_2TeV", "", kFullSquare, kGreen+3, "", 40);
       myPlot.AddHisto("momentUnfolded3_Syst", "pp_2TeV", "2.76 TeV", kFullSquare, kGreen+3, "boxes", 40);
       myPlot.AddHisto("momentUnfolded3", "pp_5TeV", "", kFullSquare, kBlue+1);
@@ -1802,14 +1681,12 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.1, 7.0);
       myPlot.AddLegendBox(0.6, 0.4, "");
       myPlot.AddTextBox(0.15, 0.92, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
       string plotName = "multDensity";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.SetDrawingProperties("logY");
       myPlot.AddHisto("multDensityUnfolded", "pp_2TeV", "", kFullDiamond, kGreen+3, "", 42);
       myPlot.AddHisto("multDensityUnfolded", "pp_13TeV", "", kFullSquare, kRed+1);
@@ -1824,22 +1701,17 @@ int multBin = 18;
       myPlot.AddHisto("multDensityUnfolded_Syst", "pp_2TeV", "2.76 TeV", kFullDiamond, kGreen+3, "boxes", 42);
       myPlot.AddHisto("multDist_pp_0.9TeV_Stat", "Publications", "", kFullStar, kBlack, "", 33);
       myPlot.AddHisto("multDist_pp_0.9TeV_Syst", "Publications", "0.9 TeV", kFullStar, kBlack, "boxes", 33);
-
       myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-
-
       myPlot.SetAxisTitle("Y", "#it{P}(#it{N}_{ch})");
       myPlot.SetAxisRange("X", 0, 60);
       myPlot.SetAxisRange("Y", 1e-4, 3e-1);
       myPlot.AddLegendBox(0.18, 0.45);
       myPlot.AddTextBox(0.4, 0.9, energyLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
     { // -----------------------------------------------------------------------
       string plotName = "multDistKNO";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.SetDrawingProperties("logY");
       myPlot.AddHisto("multDistUnfoldedKNO", "pp_5TeV", "", kOpenCross, kBlue+1);
       myPlot.AddHisto("multDistUnfoldedKNO", "pp_13TeV", "", kOpenSquare, kRed+1);
@@ -1856,17 +1728,14 @@ int multBin = 18;
       myPlot.AddHisto("multDist_pp_0.9TeVKNO_Syst", "Publications", "0.9 TeV", kOpenStar, kBlack, "boxes");
       myPlot.SetAxisRange("X", 0, 5);
       //myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-
       myPlot.AddLegendBox(0.7, 0.9);
       myPlot.AddTextBox(0.15, 0.3, energyLablePrel);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
       string plotName = "multDistKNORatio";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.SetDrawingProperties("logY");
       myPlot.AddHisto("multDistUnfoldedKNO", "pp_5TeV", "5.02 TeV", 0, kBlue+1);
       myPlot.AddHisto("multDistUnfoldedKNO", "pp_2TeV", "2.76 TeV", 0, kGreen+3);
@@ -1880,21 +1749,19 @@ int multBin = 18;
       myPlot.SetAxisRange("X", 0, 7);
       myPlot.AddLegendBox(0.7, 0.8);
       myPlot.AddTextBox(0.15, 0.3, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
   } //==========================================================================
 
 
-  if(plotEnv.ContainsDatasets({"Publications"}))
+  //if(plotEnv.ContainsDatasets({"Publications"}))
   { //==========================================================================
     string publicationLable = alice + ", " + chargedParticles +  newLine + eta03 + ", " + ptRange10GeV + newLine + "#it{N}_{ch} cut: #it{p}_{T} > 0 GeV/#it{c}";
     string plotGroup = "system_comparison";
     { // -----------------------------------------------------------------------
       string plotName = "publication";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.SetDrawingProperties("logX");
       myPlot.AddHisto("meanPt_PbPb_2.76TeV_Stat", "Publications", "", kFullCross, kWhite);
       myPlot.AddHisto("meanPt_pp_7TeV_Stat", "Publications", "", kFullSquare, kBlue+1);
@@ -1909,14 +1776,12 @@ int multBin = 18;
 //      myPlot.AddTextBox(0.3, 0.3, publicationLable);
       myPlot.AddLegendBox(0.15, 0.7, "");
       myPlot.AddTextBox(0.15, 0.92, publicationLable);
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
       string plotName = "publicationdNchdEta";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.AddHisto("meanPt_PbPb_2.76TeV_dNchdEta_Stat", "Publications", "", kFullCross, kWhite);
       myPlot.AddHisto("meanPt_pp_7TeV_dNchdEta_Stat", "Publications", "", kFullSquare, kBlue+1);
       myPlot.AddHisto("meanPt_pp_7TeV_dNchdEta_Syst", "Publications", "pp #sqrt{s} = 7 TeV", kFullSquare, kBlue+1, "boxes");
@@ -1924,24 +1789,20 @@ int multBin = 18;
       myPlot.AddHisto("meanPt_pPb_5.02TeV_dNchdEta_Syst", "Publications", "p-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV", kFullCircle, kMagenta+1, "boxes");
       myPlot.AddHisto("meanPt_PbPb_2.76TeV_dNchdEta_Stat", "Publications", "", kFullCross, kRed+1);
       myPlot.AddHisto("meanPt_PbPb_2.76TeV_dNchdEta_Syst", "Publications", "Pb-Pb #sqrt{#it{s}_{NN}} = 2.76 TeV", kFullCross, kRed+1, "boxes");
-
       myPlot.AddHisto("momentUnfolded1dNchDeta", "pp_5TeV", "pp", kOpenSquare, kBlue+1);
       myPlot.AddHisto("momentUnfolded1dNchDeta", "pPb_5TeV", "pPb", kOpenCircle, kMagenta+1);
       myPlot.AddHisto("momentUnfolded1dNchDeta", "PbPb_5TeV", "PbPb", kOpenCross, kRed+1);
-
 //      myPlot.CropHisto("momentUnfolded1", "pp_5TeV", "X", 0, 40)
       myPlot.SetAxisRange("Y", 0.45, 0.92);
       myPlot.AddLegendBox(0.55, 0.3, "");
       myPlot.AddTextBox(0.5, 0.92, publicationLable);
     //  myPlot3.SetDrawingProperties("thick");
-      plotEnv.CreateNewPlot(myPlot, "default", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
     { // -----------------------------------------------------------------------
       string plotName = "multDistsComparisonPub";
       Plot myPlot(plotName, plotGroup);
-      
       myPlot.SetDrawingProperties("logY");
       myPlot.AddHisto("multDist_pp_7TeV_Stat", "Publications", "", kFullSquare, kMagenta+1);
       myPlot.AddHisto("multDist_pp_7TeV_Syst", "Publications", "preliminary (ALICE-PUBLIC-2013-001)", kFullSquare, kMagenta+1, "boxes");
@@ -1956,8 +1817,7 @@ int multBin = 18;
       myPlot.AddLegendBox(0.2, 0.25);
       string energyLable = alice + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
       myPlot.AddTextBox(0.42, 0.92, energyLable);
-      plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-      plotEnv.SavePlot(plotName, plotGroup);
+      plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
 
@@ -1970,21 +1830,19 @@ int multBin = 18;
 
     myPlot.SetDrawingProperties("logY");
   //  myPlot.SetDrawingProperties("logZ");
-  myPlot.AddHisto("multDistMeasured", "pp_13TeV_old", "event selection before", kFullSquare, kRed+1);
-  myPlot.AddHisto("multDistMeasuredMC", "pp_13TeV_old", "", kOpenSquare, kRed+1);
-  myPlot.AddHisto("multDistMeasured", "pp_13TeV", "AilEventCuts and PhysSel plieup rejection", kFullCircle, kBlue+1);
-  myPlot.AddHisto("multDistMeasuredMC", "pp_13TeV", "", kOpenCircle, kBlue+1);
+    myPlot.AddHisto("multDistMeasured", "pp_13TeV_old", "event selection before", kFullSquare, kRed+1);
+    myPlot.AddHisto("multDistMeasuredMC", "pp_13TeV_old", "", kOpenSquare, kRed+1);
+    myPlot.AddHisto("multDistMeasured", "pp_13TeV", "AilEventCuts and PhysSel plieup rejection", kFullCircle, kBlue+1);
+    myPlot.AddHisto("multDistMeasuredMC", "pp_13TeV", "", kOpenCircle, kBlue+1);
     myPlot.AddLegendBox(0.3, 0.9);
     myPlot.SetAxisRange("X", 0, 60);
   //  myPlot.SetAxisRange("Y", 0.1, 1e6);
-    plotEnv.CreateNewPlot(myPlot, "default", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
     string plotName = "scaleEffectDDCMeas";
     Plot myPlot(plotName, plotGroup);
-
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddHisto("scaleEffectMultMeas", "pp_13TeV_withDDC", "");
     myPlot.SetAxisTitle("Y", "#it{N}^{MC}_{acc}");
@@ -1992,29 +1850,24 @@ int multBin = 18;
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0, 60);
     myPlot.AddLegendBox(0.2, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
     string plotName = "scaleEffectDDCTrue";
     Plot myPlot(plotName, plotGroup);
-
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddHisto("scaleEffectMultTrue", "pp_13TeV_withDDC", "");
     myPlot.SetAxisTitle("Y", "#it{N}^{MC}_{ch}");
     myPlot.SetAxisTitle("X", "#it{N}^{scaled}_{ch}");
-
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0, 60);
     myPlot.AddLegendBox(0.2, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "multDist_withDDC";
-    Plot myPlot(plotName, plotGroup);
-
+    Plot myPlot(plotName, plotGroup, "default ratio");
     myPlot.SetDrawingProperties("logY");
     myPlot.AddHisto("multDistUnfolded_Syst", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1, "boxes", 60);
     myPlot.AddHisto("multDistUnfolded", "pp_13TeV", "", kFullSquare, kBlue+1, "", 60);
@@ -2025,14 +1878,12 @@ int multBin = 18;
     myPlot.AddTextBox(0.2, 0.25, "data unfolded");
     myPlot.SetAxisRange("ratio", 0.8, 1.2);
     myPlot.AddLegendBox(0.4, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
     string plotName = "multDistKNO_withDDC";
-    Plot myPlot(plotName, plotGroup);
-
+    Plot myPlot(plotName, plotGroup, "default ratio");
     myPlot.SetDrawingProperties("logY");
     myPlot.AddHisto("multDistUnfoldedKNO_Syst", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1, "boxes", 60);
     myPlot.AddHisto("multDistUnfoldedKNO", "pp_13TeV", "", kFullSquare, kBlue+1, "", 60);
@@ -2043,14 +1894,12 @@ int multBin = 18;
     myPlot.AddTextBox(0.2, 0.25, "data unfolded");
     myPlot.SetAxisRange("ratio", 0.8, 1.2);
     myPlot.AddLegendBox(0.4, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
     string plotName = "multDensity_withDDC";
-    Plot myPlot(plotName, plotGroup);
-
+    Plot myPlot(plotName, plotGroup, "default ratio");
     myPlot.SetDrawingProperties("logY");
     myPlot.AddHisto("multDensityUnfolded_Syst", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1, "boxes", 60);
     myPlot.AddHisto("multDensityUnfolded", "pp_13TeV", "", kFullSquare, kBlue+1, "", 60);
@@ -2061,14 +1910,12 @@ int multBin = 18;
     myPlot.AddTextBox(0.2, 0.25, "data unfolded");
     myPlot.SetAxisRange("ratio", 0.8, 1.2);
     myPlot.AddLegendBox(0.4, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
     string plotName = "multDistMeasuredMC_withDDC";
-    Plot myPlot(plotName, plotGroup);
-
+    Plot myPlot(plotName, plotGroup, "default ratio");
     myPlot.SetDrawingProperties("logY");
     myPlot.AddHisto("multDistMeasuredMC", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1, "", 60);
     myPlot.AddHisto("multDistMeasuredMC", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1, "", 60);
@@ -2078,14 +1925,12 @@ int multBin = 18;
     myPlot.AddTextBox(0.2, 0.25, "MC measured");
     myPlot.SetAxisRange("ratio", 0.8, 1.2);
     myPlot.AddLegendBox(0.4, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
     string plotName = "multDistGeneratedMC_withDDC";
-    Plot myPlot(plotName, plotGroup);
-
+    Plot myPlot(plotName, plotGroup, "default ratio");
     myPlot.SetDrawingProperties("logY");
     myPlot.AddHisto("multDistGeneratedMC", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1, "", 60);
     myPlot.AddHisto("multDistGeneratedMC", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1, "", 60);
@@ -2095,35 +1940,29 @@ int multBin = 18;
 //    myPlot.SetAxisRange("ratio", 0.8, 1.2);
     myPlot.AddTextBox(0.2, 0.25, "MC truth");
     myPlot.AddLegendBox(0.4, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
     string plotName = "multCorrelationMatrix_noDDC";
     Plot myPlot(plotName, plotGroup);
-
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddHisto("multCorrelationMatrix", "pp_13TeV");
     myPlot.AddTextBox(0.4, 0.25, "no data-driven corrections");
-    plotEnv.CreateNewPlot(myPlot, "default", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "multCorrelationMatrix_withDDC";
     Plot myPlot(plotName, plotGroup);
-
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddHisto("multCorrelationMatrix", "pp_13TeV_withDDC");
     myPlot.AddTextBox(0.4, 0.25, "with data-driven corrections");
-    plotEnv.CreateNewPlot(myPlot, "default", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
     string plotName = "responseMatrix_Mean";
-    Plot myPlot(plotName, plotGroup);
-
+    Plot myPlot(plotName, plotGroup, "default ratio");
     myPlot.AddHisto("mean", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1);
     myPlot.AddHisto("mean", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1);
     myPlot.SetAxisTitle("Y", "<#it{N}_{acc}>");
@@ -2132,14 +1971,12 @@ int multBin = 18;
     myPlot.SetAxisRange("ratio", 0.95, 1.05);
     myPlot.AddRatio("mean", "pp_13TeV", "mean", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1);
     myPlot.AddLegendBox(0.2, 0.9);
-    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
     string plotName = "responseMatrix_Sigma";
-    Plot myPlot(plotName, plotGroup);
-
+    Plot myPlot(plotName, plotGroup, "default ratio");
     myPlot.AddHisto("sigma", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1);
     myPlot.AddHisto("sigma", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1);
     myPlot.SetAxisTitle("Y", "#sigma(#it{N}_{acc})");
@@ -2148,67 +1985,55 @@ int multBin = 18;
     myPlot.SetAxisRange("ratio", 0.5, 1.5);
     myPlot.AddRatio("sigma", "pp_13TeV", "sigma", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1);
     myPlot.AddLegendBox(0.2, 0.9);
-    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
     string plotName = "responseMatrix_noDDC";
     Plot myPlot(plotName, plotGroup);
-
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddHisto("responseMatrix", "pp_13TeV");
     myPlot.AddTextBox(0.4, 0.25, "no data-driven corrections");
-    plotEnv.CreateNewPlot(myPlot, "default", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "responseMatrix_withDDC";
     Plot myPlot(plotName, plotGroup);
-
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddHisto("responseMatrix", "pp_13TeV_withDDC");
     myPlot.AddTextBox(0.4, 0.25, "with data-driven corrections");
-    plotEnv.CreateNewPlot(myPlot, "default", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
     string plotName = "moment1_withDDC";
-    Plot myPlot(plotName, plotGroup);
-
+    Plot myPlot(plotName, plotGroup, "default ratio");
     myPlot.AddHisto("momentUnfolded1", "pp_13TeV", "", kFullSquare, kBlue+1, "", 60);
     myPlot.AddHisto("momentUnfolded1_Syst", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1, "boxes", 60);
     myPlot.AddHisto("momentUnfolded1", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1, "", 60);
     myPlot.AddRatio("momentUnfolded1_Syst", "pp_13TeV", "momentUnfolded1", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1, "boxes", 60);
-
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0.45, 0.85);
     myPlot.SetAxisRange("ratio", 0.99, 1.01);
     myPlot.AddLegendBox(0.2, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "variance_withDDC";
-    Plot myPlot(plotName, plotGroup);
-
+    Plot myPlot(plotName, plotGroup, "default ratio");
     myPlot.AddHisto("varianceUnfolded", "pp_13TeV", "", kFullSquare, kBlue+1, "", 60);
     myPlot.AddHisto("varianceUnfolded_Syst", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1, "boxes", 60);
     myPlot.AddHisto("varianceUnfolded", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1, "", 60);
     myPlot.AddRatio("varianceUnfolded_Syst", "pp_13TeV", "varianceUnfolded", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1, "boxes", 60);
-
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0.05, 0.9);
     myPlot.SetAxisRange("ratio", 0.95, 1.05);
     myPlot.AddLegendBox(0.2, 0.9, "");
-    plotEnv.CreateNewPlot(myPlot, "default ratio", false);
-    plotEnv.SavePlot(plotName, "QA");
+    plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   }
 
-  
-   */
+  plotEnv.CreatePlots();
 }
 
 

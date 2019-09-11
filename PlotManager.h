@@ -37,7 +37,6 @@ namespace PlottingFramework {
     
     
     bool ContainsDatasets(std::initializer_list<string> requiredDatasets);
-    void CutHistogram(TH1* hist, double cutoff, double cutoffLow);
     
     void PrintErrors(bool printMissingPlots = false);
     

@@ -139,6 +139,7 @@ namespace PlottingFramework {
    * Check if datasets are loaded in plotting framework.
    */
   //****************************************************************************************
+  // TODO at the moment this is obsolete since vector is only filled when plots are created
   bool PlotManager::ContainsDatasets(std::initializer_list<string> requiredDatasets){
     for(string requiredDataset : requiredDatasets){
       if (std::find(mDatasetIdentifiers.begin(), mDatasetIdentifiers.end(), requiredDataset) == mDatasetIdentifiers.end())
@@ -316,32 +317,6 @@ namespace PlottingFramework {
   
   //****************************************************************************************
   /**
-   * Deletes data points of histogram beyond cutoff value (and below lower cutoff value).
-   * @param hist: histogram to cut
-   * @param cutoff: user axis value after which data is set to zero
-   * @param cutoffLow: user axis value before which data is set to zero
-   */
-  //****************************************************************************************
-  void PlotManager::CutHistogram(TH1* hist, double cutoff, double cutoffLow)
-  {
-    if(cutoff < -997) return;
-    int cutoffBin = hist->GetXaxis()->FindBin(cutoff);
-    for(int i = cutoffBin; i <= hist->GetNbinsX(); i++){
-      hist->SetBinContent(i, 0);
-      hist->SetBinError(i, 0);
-    }
-    if(cutoffLow < -997) return;
-    int cutoffBinLow = hist->GetXaxis()->FindBin(cutoffLow);
-    for(int i = 1; i <= cutoffBinLow; i++){
-      hist->SetBinContent(i, 0);
-      hist->SetBinError(i, 0);
-    }
-    
-  }
-  
-
-  //****************************************************************************************
-  /**
    * Internal function to check if all input histograms are available to create the plot.
    * @param plot: reference to plot template
    */
@@ -396,7 +371,7 @@ namespace PlottingFramework {
       PlotStyle myStyle("default");
       
       //myStyle.LinkAxes("X", {1,2});
-      myStyle.SetFromat(710, 2);
+      myStyle.SetFromat(710, 1);
       myStyle.SetTransparent();
 
       myStyle.SetTextFont(4); // allowed font values: 1-15
@@ -412,7 +387,7 @@ namespace PlottingFramework {
       myStyle.SetLineWidthThick(2.0);
       myStyle.SetPalette(kBird);
       myStyle.SetTimestampPosition(0.05, 0.02);
-      myStyle.SetDrawTimestamps(true);
+      myStyle.SetDrawTimestamps(false);
 
       myStyle.SetDefaultColors(goodColors);
       myStyle.SetDefaultMarkers(goodMarkers);
@@ -420,7 +395,7 @@ namespace PlottingFramework {
       myStyle.SetDefaultMarkersOpen(goodMarkersOpen);
       
       vector<PlotStyle::PadStyle> pads;
-      pads.push_back(PlotStyle::PadStyle("first pad"));
+      pads.push_back(PlotStyle::PadStyle(""));
       pads[0].SetCorners({0,0}, {1.0,1.0});
       pads[0].SetMargins({0.07, 0.14, 0.12, 0.07});
       pads[0].SetTitleOffsets({1.1, 1.4, 1.0});
@@ -447,7 +422,7 @@ namespace PlottingFramework {
       myStyle.SetLineWidthThick(2.0);
       myStyle.SetPalette(kBird);
       myStyle.SetTimestampPosition(0.05, 0.02);
-      myStyle.SetDrawTimestamps(true);
+      myStyle.SetDrawTimestamps(false);
       
       myStyle.SetDefaultColors(goodColors);
       myStyle.SetDefaultMarkers(goodMarkers);
@@ -456,11 +431,11 @@ namespace PlottingFramework {
       
       vector<PlotStyle::PadStyle> pads;
       pads.push_back(PlotStyle::PadStyle(""));
-      pads[0].SetCorners({0.0,0.3}, {1.0,1.0});
+      pads[0].SetCorners({0.0,0.28}, {1.0,1.0});
       pads[0].SetMargins({0.05, 0.0, 0.14, 0.05});
       pads[0].SetTitleOffsets({3.1, 1.5, 1.0});
       pads.push_back(PlotStyle::PadStyle(""));
-      pads[1].SetCorners({0.0,0.0}, {1.0,0.3});
+      pads[1].SetCorners({0.0,0.0}, {1.0,0.28});
       pads[1].SetMargins({0.015, 0.4, 0.14, 0.05});
       pads[1].SetTitleOffsets({4.1, 1.5, 1.0});
       

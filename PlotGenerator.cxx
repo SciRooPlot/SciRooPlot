@@ -9,7 +9,7 @@ namespace PlottingFramework {
     if(plotStyle.GetNPads() < plot.GetNumRequiredPads())
     {
       cout << "ERROR: Number of pads in style '"  << plotStyle.GetName() << "' ("
-      << plotStyle.GetNPads() << ") does not match the number of subplots needed for plotting '"
+      << plotStyle.GetNPads() << ") does not match the number of pads needed for plotting '"
       << plot.GetUniqueName() << "' (" << plot.GetNumRequiredPads() << ")." << endl;
       // TODO: also catch if pad indices are available!
       return nullptr;
@@ -24,6 +24,8 @@ namespace PlottingFramework {
     int padID = 1;
     for(auto& padStyle : plotStyle.GetPadStyles())
     {
+      string controlString = plot.GetControlString(padID);
+
       vector<string> errorStyles;
       vector<string> lables;
       TObjArray legendEntries(1);
@@ -57,14 +59,14 @@ namespace PlottingFramework {
       gStyle->SetTitleSize(plotStyle.GetTitleSize(), "XY");
       gStyle->SetTitleSize(plotStyle.GetTitleSize(), "Z");
       
-      gStyle->SetPadColor(kGray); // todo this should be steerable from outside
+      //gStyle->SetPadColor(kGray); // todo this should be steerable from outside
       gStyle->SetTitleFont(plotStyle.GetTextFont());
       gStyle->SetTitleW((pad->GetX2() - pad->GetRightMargin()) - (pad->GetX1() + pad->GetLeftMargin()));
       gStyle->SetTitleH(pad->GetTopMargin()*0.8);
       gStyle->SetTitleAlign(kHAlignCenter + kVAlignTop);
       //gStyle->SetTitleBorderSize(1);
       gStyle->SetMarkerSize(plotStyle.GetMarkerSize());
-      
+      gStyle->SetNumberContours(256); // TODO make this flexible
 
       string drawingOptions = "";
       int dataIndex = 0;
@@ -80,46 +82,52 @@ namespace PlottingFramework {
           if(!histo) continue; // avoid crashes if something goes wrong
           
           // do modifications to histogram
-          // cut, normalize
+          CutHistogram(histo, std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutHigh(), std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutLow());
+          if(controlString.find("normalize") != string::npos) histo->Scale(1/histo->Integral(), "width");
           
-          
-          
-          if(histo->InheritsFrom("TH2")) drawingOptions += " COLZ";
-
-          /*
-           // 2d hacks
-           if(canvas->GetPad(1)->GetListOfPrimitives()->At(0)->InheritsFrom("TH2")){
-           canvas->GetPad(1)->SetRightMargin(0.12+0.06);
-           canvas->GetPad(1)->SetTopMargin(0.12-0.05);
-           canvas->GetPad(1)->SetBottomMargin(0.12+0.02);
-           TH2* temp = ((TH2*)canvas->GetPad(1)->GetListOfPrimitives()->At(0));
-           temp->GetXaxis()->SetTitleOffset(1.1); //1.1
-           temp->GetYaxis()->SetTitleOffset(1.1); //1.3
-           temp->GetZaxis()->SetTitleOffset(1.6); //1.6
-           canvas->GetPad(1)->Update();
-           TPaletteAxis* palette = (TPaletteAxis*)temp->GetListOfFunctions()->FindObject("palette");
-           palette->SetX2NDC(0.865); //0.88
-           palette->SetTitleOffset();
-           canvas->GetPad(1)->Update();
-           
-           
-           if(controlString.find("thick") != string::npos){
-            histo->SetLineWidth(plotStyle.Getsi);
-            histo->SetMarkerSize(mStyle.markerSizeThick);
-           }
-
-           */
-          
-          
+          if(controlString.find("thick") != string::npos){
+            histo->SetLineWidth(plotStyle.GetLineWidthThick());
+            histo->SetMarkerSize(plotStyle.GetMarkerSizeThick());
+          }
           
           histo->UseCurrentStyle();
           histo->SetMarkerStyle(style);
           histo->SetMarkerColor(color);
           histo->SetLineColor(color);
-
           
+          if(histo->InheritsFrom("TH2"))
+          {
+            drawingOptions += " COLZ";
+          }
+          
+          if(drawingOptions.find("none") != string::npos)
+          {
+            histo->SetLineWidth(0);
+          }
+          if(drawingOptions.find("hist") != string::npos)
+          {
+            drawingOptions += " HIST";
+          }
+          else if(drawingOptions.find("band") != string::npos)
+          {
+            drawingOptions += " E5";
+            
+            histo->SetMarkerSize(0.);
+            histo->SetFillColor(color);
+            histo->SetFillStyle(1);
+          }
+          else if(drawingOptions.find("boxes") != string::npos)
+          {
+            TExec errorBoxesOn("errorBoxesOn","gStyle->SetErrorX(0.48)");
+            errorBoxesOn.Draw();
+            histo->SetFillStyle(0);
+            drawingOptions += " E2";
+            TExec errorBoxesOff("errorBoxesOff","gStyle->SetErrorX(0)");
+            errorBoxesOff.Draw("");
+          }
           
           histo->Draw(drawingOptions.c_str());
+          
         }
         else if(data->GetType() == "ratio")
         {
@@ -129,10 +137,34 @@ namespace PlottingFramework {
           ratio->Divide(temp); // todo add here alternative divide functions and options
           delete temp;
           
-          
-          //ratio->SetTitle("");
-
+          ratio->SetTitle("");
+          ratio->GetYaxis()->CenterTitle(1);
+          ratio->GetXaxis()->SetTickLength(0.06);
+          ratio->GetYaxis()->SetNdivisions(305); //506
           ratio->UseCurrentStyle();
+
+          
+          if(dataIndex == 0)
+          {
+            // todo:: this should be way more flexible!!
+            TH1* dummyHist = (TH1*)ratio->Clone("dummy");
+            dummyHist->GetXaxis()->SetTickLength(0.06); // todo:: this should automatically be the same as for the main plot!!
+            dummyHist->GetYaxis()->SetNdivisions(305); //506
+            dummyHist->SetLineColor(0); // make plot invisible
+            TF1* line = new TF1("line", "1", dummyHist->GetXaxis()->GetXmin(), dummyHist->GetXaxis()->GetXmax());
+            dummyHist->Draw("AXIS");
+            line->SetLineColor(color);
+            line->SetLineWidth(2);
+            // line->SetLineStyle(9);
+            line->Draw("SAME");
+            drawingOptions += " SAME";
+            dataIndex++;
+            color = (data->GetColor()) ? data->GetColor() : plotStyle.GetDefaultColor(dataIndex);
+            style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex);
+          }
+          ratio->SetMarkerStyle(style);
+          ratio->SetMarkerColor(color);
+          ratio->SetLineColor(color);
           ratio->Draw(drawingOptions.c_str());
         }
         else if(data->GetType() == "graph")
@@ -142,28 +174,6 @@ namespace PlottingFramework {
           //graph->SetTitle("");
           
           graph->UseCurrentStyle();
-          
-          /*
-           
-           ratio->GetYaxis()->CenterTitle(1);
-           ratio->GetXaxis()->SetTickLength(0.06);
-           ratio->GetYaxis()->SetNdivisions(305); //506
-
-           
-          if(defaultValueIndex == 0)
-          {
-            TH1* dummyHist = (TH1*)ratio->Clone("dummy");
-            dummyHist->SetLineColor(0); // make plot invisible
-            TF1* line = new TF1("line", "1", dummyHist->GetXaxis()->GetXmin(), dummyHist->GetXaxis()->GetXmax());
-            dummyHist->Draw();
-            line->SetLineColor(GetDefaultColor(defaultValueIndex));
-            line->SetLineWidth(2);
-            //        line->SetLineStyle(9);
-            line->Draw("SAME");
-            drawingOptions += " SAME";
-          }
-           */
-
           graph->Draw(drawingOptions.c_str());
         }
         else{
@@ -231,11 +241,28 @@ namespace PlottingFramework {
         axisHist->GetZaxis()->SetTitle(plot.GetAxis(padID, "Z")->GetTitle().c_str());
       }
 
+      if(axisHist->InheritsFrom("TH2"))
+      {
+        pad->SetRightMargin(0.12+0.06);
+        pad->SetTopMargin(0.12-0.05);
+        pad->SetBottomMargin(0.12+0.02);
+        
+        axisHist->GetXaxis()->SetTitleOffset(1.1); //1.1
+        axisHist->GetYaxis()->SetTitleOffset(1.1); //1.3
+        axisHist->GetZaxis()->SetTitleOffset(1.6); //1.6
+        // 2d hacks, re-adjust palette
+        pad->Update(); // this adds something to list of primitives!! do not call here
+        TPaletteAxis* palette = (TPaletteAxis*)axisHist->GetListOfFunctions()->FindObject("palette");
+        if(!palette) cout << "ERROR: could not find palette!" << endl;
+        palette->SetX2NDC(0.865); //0.88
+        palette->SetTitleOffset();
+        pad->Update(); // this adds something to list of primitives!! do not call here
+      }
+
 
       // TODO: set range and log scale properties must affect all linked pad-axes
       // also add safety in case log and range are not compatible (zero in range)
 
-      string controlString = plot.GetControlString(padID);
       if(controlString.find("logX") != string::npos)
       {
         pad->SetLogx();
@@ -269,7 +296,8 @@ namespace PlottingFramework {
         }
         else if(box->GetType() == "text")
         {
-          cout << "text boxes are not supported yet..." << endl;
+          TPaveText* text = MakeText(std::static_pointer_cast<Plot::TextBox>(box));
+          text->Draw();
         }
       }
       
@@ -545,14 +573,14 @@ namespace PlottingFramework {
   }
   
   
-
-
-  /*
-  
-  TPaveText* PlotManager::MakeText(Plot::TextBox& textBoxTemplate){
+  TPaveText* PlotGenerator::MakeText(shared_ptr<Plot::TextBox> textBox){
     
+    // todo this has to be included in text box...
+    double textSizePixel = 24;  //textBox->GetTextSize;
+    int textFont = 43; //textBox->GetTextFont;
+
     string delimiter = " // ";
-    string text = textBoxTemplate.text;
+    string text = textBox->GetText();
     
     int nLetters = 0;
     vector<string> lines;
@@ -568,43 +596,68 @@ namespace PlottingFramework {
       text.erase(0, newStart);
     } while (pos != string::npos);
     
-    
+
     int nLines = lines.size();
-    double textSizeNDC = mStyle.textSize / gPad->YtoPixel(gPad->GetY1());
-    double textSizeNDCx = 0.6*mStyle.textSize / gPad->XtoPixel(gPad->GetX2());
+    double textSizeNDC = textSizePixel / gPad->YtoPixel(gPad->GetY1());
+    double textSizeNDCx = 0.6*textSizePixel / gPad->XtoPixel(gPad->GetX2());
     
-    double margin = 0.5*mStyle.textSize;
+    double margin = 0.5*textSizePixel;
     double yWidth = (1.0*nLines + 0.5*(nLines-1))* textSizeNDC;
     double xWidth = nLetters * textSizeNDCx;
     
     string option = "NDC"; // use pad coordinates by default
-    if(textBoxTemplate.userCoordinates) option = "";
+    if(textBox->IsUserCoordinates()) option = "";
     
-    TPaveText* tPaveText = new TPaveText(textBoxTemplate.x, textBoxTemplate.y - yWidth, textBoxTemplate.x + xWidth, textBoxTemplate.y, option.c_str());
+    TPaveText* tPaveText = new TPaveText(textBox->GetXPosition(), textBox->GetYPosition() - yWidth, textBox->GetXPosition() + xWidth, textBox->GetYPosition(), option.c_str());
     
     double boxExtent = 0;
     for(auto &line : lines)
     {
       TText* text = tPaveText->AddText(line.c_str());
-      text->SetTextFont(mStyle.textFont);
-      text->SetTextSize(mStyle.textSize);
+      text->SetTextFont(textFont);
+      text->SetTextSize(textSizePixel);
       double width = text->GetBBox().fWidth;
       if(width > boxExtent) boxExtent = width;
     }
     tPaveText->SetBBoxX2(tPaveText->GetBBox().fX + boxExtent +2*margin);
     tPaveText->SetBorderSize(1);
-    tPaveText->SetLineStyle(textBoxTemplate.borderStyle);
-    tPaveText->SetLineColor(textBoxTemplate.borderColor);
-    tPaveText->SetLineWidth(textBoxTemplate.borderSize);
+    tPaveText->SetLineStyle(textBox->GetBorderStyle());
+    tPaveText->SetLineColor(textBox->GetBorderColor());
+    tPaveText->SetLineWidth(textBox->GetBorderSize());
     tPaveText->SetMargin(margin/(tPaveText->GetBBox().fX + boxExtent +2*margin));
     tPaveText->SetTextAlign(12);
-    tPaveText->SetTextFont(mStyle.textFont);
-    tPaveText->SetTextSize(mStyle.textSize);
-    tPaveText->SetFillStyle(mStyle.fillStyleCanvas);
+    tPaveText->SetTextFont(textFont);
+    tPaveText->SetTextSize(textSizePixel);
+    tPaveText->SetFillStyle(4000); //todo fix this hard coded value
     return tPaveText;
   }
   
   
+  //****************************************************************************************
+  /**
+   * Deletes data points of histogram beyond cutoff value (and below lower cutoff value).
+   * @param hist: histogram to cut
+   * @param cutoff: user axis value after which data is set to zero
+   * @param cutoffLow: user axis value before which data is set to zero
+   */
+  //****************************************************************************************
+  void PlotGenerator::CutHistogram(TH1* hist, double cutoff, double cutoffLow)
+  {
+    if(cutoff < -997) return;
+    int cutoffBin = hist->GetXaxis()->FindBin(cutoff);
+    for(int i = cutoffBin; i <= hist->GetNbinsX(); i++){
+      hist->SetBinContent(i, 0);
+      hist->SetBinError(i, 0);
+    }
+    if(cutoffLow < -997) return;
+    int cutoffBinLow = hist->GetXaxis()->FindBin(cutoffLow);
+    for(int i = 1; i <= cutoffBinLow; i++){
+      hist->SetBinContent(i, 0);
+      hist->SetBinError(i, 0);
+    }
+    
+  }
+  /*
   
   void PlotManager::ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, int defaultValueIndex, string controlString)
   {
