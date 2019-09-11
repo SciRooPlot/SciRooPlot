@@ -132,6 +132,7 @@ namespace PlottingFramework {
           
           //ratio->SetTitle("");
 
+          ratio->UseCurrentStyle();
           ratio->Draw(drawingOptions.c_str());
         }
         else if(data->GetType() == "graph")
@@ -262,6 +263,7 @@ namespace PlottingFramework {
       {
         if(box->GetType() == "legend")
         {
+          if(lables.empty()) break;
           TLegend* legend = MakeLegend(std::static_pointer_cast<Plot::LegendBox>(box), pad, legendEntries, lables, errorStyles);
           legend->Draw();
         }

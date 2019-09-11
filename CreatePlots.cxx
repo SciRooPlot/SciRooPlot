@@ -22,7 +22,6 @@ string GetPtString(int pTbin);
  Important:
  - possibility to set alias for axis e.g. "ratio"?
  - generalize legend function to handle text boxes in a similar manner
- - option to connect 2 axes!! eg x axis in ratio plots! but flexible so same could be done with y axes (glueAxes, stickyAxes)
  - text size and style settings should by default be inherited by each object with text but there should be a possiblity to override
  - pads must inherit plot properties (text size et al unless specified otherwise)
  - fix loading of input: get set of required data from plot and only load this, merge sets to keep track of overall missing histos (but keep possibility to load all as well)
@@ -182,7 +181,7 @@ int main(int argc, char *argv[]) {
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "momentUnfolded1";
-    Plot myPlot(plotName, "TEST");
+    Plot myPlot(plotName, "TEST", "default ratio");
 //    myPlot.SetDrawingProperties("gridY gridX");
     myPlot.SetAxisTitle("X", "my x-axis");
     myPlot.AddHisto(plotName, "pp_5TeV", "");
@@ -193,17 +192,12 @@ int main(int argc, char *argv[]) {
     myPlot.AddLegendBox();
     myPlot.ChangePad(2);
     myPlot.SetAxisTitle("Y", "contamination");
-    myPlot.AddHisto(plotName, "pp_7TeV", "AAA <integral> bbb");
-    myPlot.AddHisto(plotName, "pPb_5TeV", "wAit for it");
-    myPlot.AddHisto(plotName, "pp_7TeV", "BBB");
-    myPlot.AddHisto(plotName, "pp_7TeV", "FFF");
+//    myPlot.AddHisto(plotName, "pp_5TeV", "");
+    myPlot.AddRatio("momentUnfolded1", "pp_7TeV", "momentUnfolded1", "pp_5TeV");
     myPlot.SetAxisRange("X", 10, 50);
-    myPlot.SetAxisRange("Y", 0.49, 0.54);
-    myPlot.AddLegendBox("", 1, kDotted, 2, kRed);
-    myPlot.AddLegendBox();
-    myPlot.AddTextBox(0.5, 0.91, "myLable");
     plotEnv.AddPlot(myPlot); // check if all properties are properly moved!!
   } // -----------------------------------------------------------------------
+
 //  plotEnv.ListPlots();
 //  plotEnv.CreatePlot("momentUnfolded1", "TEST");
   plotEnv.CreatePlots("TEST");

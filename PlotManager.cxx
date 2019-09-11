@@ -421,27 +421,53 @@ namespace PlottingFramework {
       
       vector<PlotStyle::PadStyle> pads;
       pads.push_back(PlotStyle::PadStyle("first pad"));
-//      pads[0].SetCorners({0,0}, {1,1});
-//      pads[0].SetMargins({0.07, 0.14, 0.12, 0.07});
-//      pads[0].SetTitleOffsets({1.1, 1.4, 1.0});
-
-      pads[0].SetCorners({0,0}, {0.5,1});
+      pads[0].SetCorners({0,0}, {1.0,1.0});
       pads[0].SetMargins({0.07, 0.14, 0.12, 0.07});
       pads[0].SetTitleOffsets({1.1, 1.4, 1.0});
-      pads.push_back(PlotStyle::PadStyle("second pad"));
-      pads[1].SetCorners({0.5,0}, {1,1});
-      pads[1].SetMargins({0.07, 0.14, 0.12, 0.07});
-      pads[1].SetTitleOffsets({1.1, 1.4, 1.0});
-
-
       myStyle.AddPadStyles(pads);
       mPlotStyles.push_back(std::move(myStyle)); // maybe AddPlotStyle(PlotStyle&)
     }
     {// Definition of "default" style
-      //PlotStyle myStyle = GetCopyOfStyle("default", "newDefault");
+      PlotStyle myStyle("default ratio");
       
-    }
-    /*
+      myStyle.LinkAxes("X", {1,2}); // scale x axis in data and ratio in same way automatically
+      myStyle.SetFromat(710, 1.0);
+      myStyle.SetTransparent();
+      
+      myStyle.SetTextFont(4); // allowed font values: 1-15
+      myStyle.SetLableFont(4);
+      myStyle.SetTitleFont(4);
+      myStyle.SetTextSize(24); // in pixels
+      myStyle.SetLableSizeScaling(1.0); // make this axis and pad dependent??
+      myStyle.SetTitleSizeScaling(1.2);
+      
+      myStyle.SetMarkerSize(1.2);
+      myStyle.SetMarkerSizeThick(2.2);
+      myStyle.SetLineWidth(1.0);
+      myStyle.SetLineWidthThick(2.0);
+      myStyle.SetPalette(kBird);
+      myStyle.SetTimestampPosition(0.05, 0.02);
+      myStyle.SetDrawTimestamps(true);
+      
+      myStyle.SetDefaultColors(goodColors);
+      myStyle.SetDefaultMarkers(goodMarkers);
+      myStyle.SetDefaultMarkersFull(goodMarkersFull);
+      myStyle.SetDefaultMarkersOpen(goodMarkersOpen);
+      
+      vector<PlotStyle::PadStyle> pads;
+      pads.push_back(PlotStyle::PadStyle(""));
+      pads[0].SetCorners({0.0,0.3}, {1.0,1.0});
+      pads[0].SetMargins({0.05, 0.0, 0.14, 0.05});
+      pads[0].SetTitleOffsets({3.1, 1.5, 1.0});
+      pads.push_back(PlotStyle::PadStyle(""));
+      pads[1].SetCorners({0.0,0.0}, {1.0,0.3});
+      pads[1].SetMargins({0.015, 0.4, 0.14, 0.05});
+      pads[1].SetTitleOffsets({4.1, 1.5, 1.0});
+      
+      
+      myStyle.AddPadStyles(pads);
+      mPlotStyles.push_back(std::move(myStyle)); // maybe AddPlotStyle(PlotStyle&)
+    }    /*
     // BEGIN TODO
     
     { //--------------------------------------------------------------
