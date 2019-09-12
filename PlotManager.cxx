@@ -129,6 +129,7 @@ namespace PlottingFramework {
     for(auto& pad : plot.mData){
       for(auto& data : pad.second){
         OpenInputFiles(data->GetInputIdentifier());
+        if(data->GetType() == "ratio") OpenInputFiles(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomIdentifier());
       }
     }
   }

@@ -138,30 +138,37 @@ namespace PlottingFramework {
           delete temp;
           
           ratio->SetTitle("");
-          ratio->GetYaxis()->CenterTitle(1);
-          ratio->GetXaxis()->SetTickLength(0.06);
-          ratio->GetYaxis()->SetNdivisions(305); //506
           ratio->UseCurrentStyle();
 
-          
-          if(dataIndex == 0)
+          if(ratio->InheritsFrom("TH2"))
           {
-            // todo:: this should be way more flexible!!
-            TH1* dummyHist = (TH1*)ratio->Clone("dummy");
-            dummyHist->GetXaxis()->SetTickLength(0.06); // todo:: this should automatically be the same as for the main plot!!
-            dummyHist->GetYaxis()->SetNdivisions(305); //506
-            dummyHist->SetLineColor(0); // make plot invisible
-            TF1* line = new TF1("line", "1", dummyHist->GetXaxis()->GetXmin(), dummyHist->GetXaxis()->GetXmax());
-            dummyHist->Draw("AXIS");
-            line->SetLineColor(color);
-            line->SetLineWidth(2);
-            // line->SetLineStyle(9);
-            line->Draw("SAME");
-            drawingOptions += " SAME";
-            dataIndex++;
-            color = (data->GetColor()) ? data->GetColor() : plotStyle.GetDefaultColor(dataIndex);
-            style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex);
+            drawingOptions += " COLZ";
           }
+          else{
+            ratio->GetYaxis()->CenterTitle(1);
+            ratio->GetXaxis()->SetTickLength(0.06);
+            ratio->GetYaxis()->SetNdivisions(305); //506
+            if(dataIndex == 0)
+            {
+              // todo:: this should be way more flexible!!
+              TH1* dummyHist = (TH1*)ratio->Clone("dummy");
+              dummyHist->GetXaxis()->SetTickLength(0.06); // todo:: this should automatically be the same as for the main plot!!
+              dummyHist->GetYaxis()->SetNdivisions(305); //506
+              dummyHist->SetLineColor(0); // make plot invisible
+              TF1* line = new TF1("line", "1", dummyHist->GetXaxis()->GetXmin(), dummyHist->GetXaxis()->GetXmax());
+              dummyHist->Draw("AXIS");
+              //line->SetLineColor(color);
+              line->SetLineColor(kBlack);
+              line->SetLineWidth(2);
+              // line->SetLineStyle(9);
+              line->Draw("SAME");
+              drawingOptions += " SAME";
+              dataIndex++;
+              color = (data->GetColor()) ? data->GetColor() : plotStyle.GetDefaultColor(dataIndex);
+              style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex);
+            }
+          }
+
           ratio->SetMarkerStyle(style);
           ratio->SetMarkerColor(color);
           ratio->SetLineColor(color);
@@ -190,11 +197,33 @@ namespace PlottingFramework {
           errorStyles.push_back(data->GetDrawingOptions());
         }
       }
-      //legendEntries.ls();
+      
+      // now place legends, textboxes and shapes
+      for(auto box : plot.GetBoxes(padID))
+      {
+        if(box->GetType() == "legend")
+        {
+          if(lables.empty()) break;
+          TLegend* legend = MakeLegend(std::static_pointer_cast<Plot::LegendBox>(box), pad, legendEntries, lables, errorStyles);
+          legend->Draw("SAME");
+        }
+        else if(box->GetType() == "text")
+        {
+          TPaveText* text = MakeText(std::static_pointer_cast<Plot::TextBox>(box));
+          text->Draw("SAME");
+        }
+      }
+
       // after data is drawn to pad axis porperties can be set
       if(!pad->GetListOfPrimitives() || !pad->GetListOfPrimitives()->At(0)) continue; // if pad is empty
       
-      TObject* axisObject = pad->GetListOfPrimitives()->At(0);
+      TObject* axisObject = nullptr;
+      // skip all non drawable objects stored in list of primitives
+      // todo merge this with the code below...
+      for(auto pointer : *pad->GetListOfPrimitives())
+      {
+        if(pointer->InheritsFrom(TH1::Class()) || pointer->InheritsFrom(TGraph::Class()) || pointer->InheritsFrom(TF1::Class())) {axisObject = pointer; break;}
+      }
       TH1* axisHist = nullptr;
       if(axisObject->InheritsFrom(TH1::Class())) axisHist = (TH1*)axisObject;
       else if(axisObject->InheritsFrom(TGraph::Class())) axisHist = (TH1*)((TGraph*)axisObject)->GetHistogram();
@@ -253,9 +282,11 @@ namespace PlottingFramework {
         // 2d hacks, re-adjust palette
         pad->Update(); // this adds something to list of primitives!! do not call here
         TPaletteAxis* palette = (TPaletteAxis*)axisHist->GetListOfFunctions()->FindObject("palette");
-        if(!palette) cout << "ERROR: could not find palette!" << endl;
-        palette->SetX2NDC(0.865); //0.88
-        palette->SetTitleOffset();
+        if(!palette) {cout << "ERROR: could not find palette!" << endl;  continue;}
+        else{
+          palette->SetX2NDC(0.865); //0.88
+          palette->SetTitleOffset();
+        }
         pad->Update(); // this adds something to list of primitives!! do not call here
       }
 
@@ -282,23 +313,6 @@ namespace PlottingFramework {
       if(controlString.find("gridY") != string::npos)
       {
         pad->SetGridy();
-      }
-
-      
-      // now place legends, textboxes and shapes
-      for(auto box : plot.GetBoxes(padID))
-      {
-        if(box->GetType() == "legend")
-        {
-          if(lables.empty()) break;
-          TLegend* legend = MakeLegend(std::static_pointer_cast<Plot::LegendBox>(box), pad, legendEntries, lables, errorStyles);
-          legend->Draw();
-        }
-        else if(box->GetType() == "text")
-        {
-          TPaveText* text = MakeText(std::static_pointer_cast<Plot::TextBox>(box));
-          text->Draw();
-        }
       }
       
       pad->Modified();
@@ -370,8 +384,8 @@ namespace PlottingFramework {
     int nEntries = legendEntries.GetEntries();
     if(!legendBox->GetTitle().empty()) nEntries++;
 
-    int padWidthPixel = pad->YtoPixel(pad->GetY1());
-    int padHeightPixel = pad->XtoPixel(pad->GetX2());
+    int padWidthPixel = pad->XtoPixel(pad->GetX2()); // todo this is probably incorrect
+    int padHeightPixel = pad->YtoPixel(pad->GetY1());
 
 
     // determine max width and height of legend entries
@@ -574,14 +588,13 @@ namespace PlottingFramework {
   
   
   TPaveText* PlotGenerator::MakeText(shared_ptr<Plot::TextBox> textBox){
-    
     // todo this has to be included in text box...
     double textSizePixel = 24;  //textBox->GetTextSize;
     int textFont = 43; //textBox->GetTextFont;
 
     string delimiter = " // ";
     string text = textBox->GetText();
-    
+
     int nLetters = 0;
     vector<string> lines;
     
@@ -629,6 +642,7 @@ namespace PlottingFramework {
     tPaveText->SetTextFont(textFont);
     tPaveText->SetTextSize(textSizePixel);
     tPaveText->SetFillStyle(4000); //todo fix this hard coded value
+//    tPaveText->SetTextColor(kRed);
     return tPaveText;
   }
   

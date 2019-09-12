@@ -185,6 +185,7 @@ namespace PlottingFramework {
     {
       SetType("ratio");
     }
+    string GetDenomIdentifier(){return mDenomInputIdentifier;}
     string GetUniqueNameDenom(){return mDenomName + "_@_" + mDenomInputIdentifier;}
     virtual ptree GetPropertyTree(){} // {Histogram::GetPropertyTree();}
     

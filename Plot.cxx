@@ -30,7 +30,7 @@ namespace PlottingFramework {
   {
     if(numerHistIdentifier == "") numerHistIdentifier = mFigureGroup;
     if(denomHistIdentifier == "") denomHistIdentifier = mFigureGroup;
-    int padID = 2; //mCurrPad TODO:: remove this stupid hack
+    int padID = (mData[mCurrPad].empty()) ? mCurrPad : 2; //mCurrPad TODO:: remove this stupid hack
     mData[padID].push_back(std::make_shared<Ratio>(numerHist, numerHistIdentifier, denomHist, denomHistIdentifier, lable, color, marker, 0, drawingOptions, "", 1, std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
   }
   
