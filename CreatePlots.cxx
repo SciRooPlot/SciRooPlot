@@ -1305,6 +1305,60 @@ int multBin = 18;
     string energyLableMC = "#bf{Pythia8 Monash13}" + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
 
     { // -----------------------------------------------------------------------
+      string plotName = "momentUnfolded1SelfNormalized";
+      Plot myPlot(plotName, plotGroup, "default");
+      myPlot.SetDrawingProperties("logX logY");
+      myPlot.AddHisto(plotName, "pp_13TeV", "13 TeV");
+      myPlot.AddHisto(plotName, "pp_7TeV", "7 TeV");
+      myPlot.AddHisto(plotName, "pp_5TeV", "5.02 TeV");
+      myPlot.AddHisto(plotName, "pp_2TeV", "2.76 TeV");
+      myPlot.SetAxisRange("X", 0, 9);
+      myPlot.SetAxisRange("Y", 0.7, 1.6);
+//      myPlot.AddLegendBox(0.4, 0.4);
+      myPlot.AddTextBox(0.15, 0.91, energyLable);
+      plotEnv.AddPlot(myPlot);
+    } // -----------------------------------------------------------------------
+    { // -----------------------------------------------------------------------
+      string plotName = "momentGeneratedMC1SelfNormalized";
+      Plot myPlot(plotName, plotGroup, "default");
+      myPlot.SetDrawingProperties("logX logY");
+
+      myPlot.AddHisto(plotName, "pp_13TeV", "13 TeV");
+      myPlot.AddHisto(plotName, "pp_7TeV", "7 TeV (Pythia6)");
+      myPlot.AddHisto(plotName, "pp_5TeV", "5.02 TeV");
+      myPlot.AddHisto(plotName, "pp_2TeV", "2.76 TeV");
+      myPlot.SetAxisRange("X", 0, 9);
+      myPlot.SetAxisRange("Y", 0.7, 1.6);
+//      myPlot.AddLegendBox(0.4, 0.4);
+      myPlot.AddTextBox(0.15, 0.91, energyLableMC);
+      plotEnv.AddPlot(myPlot);
+    } // -----------------------------------------------------------------------
+
+    
+    { // -----------------------------------------------------------------------
+      string plotName = "inclusiveSpectrum";
+      Plot myPlot(plotName, plotGroup, "default ratio");
+      myPlot.SetDrawingProperties("logY logX");
+      myPlot.AddHisto(plotName, "pp_13TeV", "13 TeV");
+      myPlot.AddHisto(plotName, "pp_7TeV", "7 TeV");
+      myPlot.AddHisto(plotName, "pp_5TeV", "5.02 TeV");
+      myPlot.AddHisto(plotName, "pp_2TeV", "2.76 TeV");
+      myPlot.AddLegendBox(0.4, 0.4);
+      myPlot.AddTextBox(0.2, 0.2, "inclusive spectra");
+      myPlot.AddRatio(plotName, "pp_7TeV", plotName, "pp_13TeV");
+      myPlot.AddRatio(plotName, "pp_5TeV", plotName, "pp_13TeV");
+      myPlot.AddRatio(plotName, "pp_2TeV", plotName, "pp_13TeV");
+      myPlot.ChangePad(2);
+      myPlot.SetDrawingProperties("logX");
+      myPlot.SetAxisTitle("ratio", "ratio to 13");
+
+  //    myPlot.SetAxisRange("X", 0, 60);
+//      myPlot.SetAxisRange("Y", 0.15, 20.0);
+      myPlot.SetAxisTitle("X", "#it{p}_{T} (GeV/#it{c})");
+      plotEnv.AddPlot(myPlot);
+    } // -----------------------------------------------------------------------
+
+    { // -----------------------------------------------------------------------
       string plotName = "multPtRatioToPythia_2.76TeV";
       Plot myPlot(plotName, plotGroup);
       myPlot.SetDrawingProperties("logY");
