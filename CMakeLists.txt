@@ -20,7 +20,7 @@ set(ROOTCOMPONENTS Core RIO Hist Matrix)
 find_package(ROOT ${REQUIRED_ROOT_VERSION} REQUIRED COMPONENTS ${ROOTCOMPONENTS})
 include(${ROOT_USE_FILE})
 ROOT_GENERATE_DICTIONARY(G__${MODULE} ${HDR} LINKDEF ${CMAKE_CURRENT_SOURCE_DIR}/LinkDef.h)
-add_library(${MODULE} SHARED ${SRCS} G__${MODULE}.cxx)
+add_library(${MODULE} SHARED ${SRCS} ${HDRS} G__${MODULE}.cxx)
 #SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath -Wl,${ROOTSYS}/lib")
 #target_include_directories(${MODULE} PUBLIC ${ROOT_INCLUDE_DIRS})
 target_link_libraries(${MODULE} ${ROOT_LIBRARIES})
@@ -31,7 +31,7 @@ target_link_libraries(${MODULE} Boost::boost)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${ROOT_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/boost/property_tree)
 
 # create executable
-add_executable(plot CreatePlots.cxx)
+add_executable(plot CreatePlots.cxx ${SRCS} ${HDRS})
 target_link_libraries(plot ${MODULE})
 
 #link_directories(${CMAKE_SOURCE_DIR}/)
