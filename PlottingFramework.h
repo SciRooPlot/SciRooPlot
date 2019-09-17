@@ -11,8 +11,8 @@
 #include <boost/property_tree/json_parser.hpp>
 
 // root headers
-#include "TLegendEntry.h"
 #include "TCanvas.h"
+#include "TLegendEntry.h"
 #include "TFile.h"
 #include "TIterator.h"
 #include "TKey.h"

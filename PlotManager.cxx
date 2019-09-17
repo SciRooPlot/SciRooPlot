@@ -124,6 +124,7 @@ namespace PlottingFramework {
       }
     }
   }
+  
   void PlotManager::OpenRequiredFiles(Plot& plot)
   {
     for(auto& pad : plot.mData){
@@ -133,7 +134,6 @@ namespace PlottingFramework {
       }
     }
   }
-
 
   //****************************************************************************************
   /**
@@ -374,6 +374,7 @@ namespace PlottingFramework {
       //myStyle.LinkAxes("X", {1,2});
       myStyle.SetFromat(710, 1);
       myStyle.SetTransparent();
+      myStyle.SetDefault2DStyle("SURF2");
 
       myStyle.SetTextFont(4); // allowed font values: 1-15
       myStyle.SetLableFont(4);

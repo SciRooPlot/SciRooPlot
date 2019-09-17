@@ -66,13 +66,14 @@ namespace PlottingFramework {
       gStyle->SetTitleAlign(kHAlignCenter + kVAlignTop);
       //gStyle->SetTitleBorderSize(1);
       gStyle->SetMarkerSize(plotStyle.GetMarkerSize());
-      gStyle->SetNumberContours(256); // TODO make this flexible
 
       string drawingOptions = "";
       int dataIndex = 0;
       for(auto data : plot.GetData(padID)){
         int color = (data->GetColor()) ? data->GetColor() : plotStyle.GetDefaultColor(dataIndex); // TODO 0 is white!!
         int style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex); // only gets marker not line style
+        
+        if(color < 0) {dataIndex += color; color = plotStyle.GetDefaultColor(dataIndex);} // todo how to implement this feature better?
  
         drawingOptions += data->GetDrawingOptions(); // errorStyle etc
         // setdefaultstyles only once per pad (textsize, etc)!!
@@ -97,7 +98,8 @@ namespace PlottingFramework {
           
           if(histo->InheritsFrom("TH2"))
           {
-            drawingOptions += " COLZ";
+            drawingOptions += string(" ") + plotStyle.GetDefault2DStyle();
+            if(plotStyle.GetDefault2DStyle() == "COLZ") gStyle->SetNumberContours(256); // TODO make this flexible
           }
           
           if(drawingOptions.find("none") != string::npos)
@@ -137,12 +139,17 @@ namespace PlottingFramework {
           ratio->Divide(temp); // todo add here alternative divide functions and options
           delete temp;
           
+          // do modifications to histogram
+          CutHistogram(ratio, std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutHigh(), std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutLow());
+
           ratio->SetTitle("");
           ratio->UseCurrentStyle();
 
           if(ratio->InheritsFrom("TH2"))
           {
-            drawingOptions += " COLZ";
+            drawingOptions += string(" ") + plotStyle.GetDefault2DStyle();
+            pad->SetTheta(30);
+            pad->SetPhi(0);
           }
           else{
             ratio->GetYaxis()->CenterTitle(1);
@@ -235,6 +242,8 @@ namespace PlottingFramework {
       axisHist->GetZaxis()->SetTitleOffset(padStyle.GetTitleOffsetZ());
       axisHist->SetTitle(padStyle.GetTitle().c_str());
 
+      //axisHist->GetYaxis()->SetTitleOffset(1.5);
+
 
       // todo write axis wrapper, avoid multiple calls of setting axis range, how to handle more than one axis change?
       // change axis range
@@ -282,8 +291,8 @@ namespace PlottingFramework {
         // 2d hacks, re-adjust palette
         pad->Update(); // this adds something to list of primitives!! do not call here
         TPaletteAxis* palette = (TPaletteAxis*)axisHist->GetListOfFunctions()->FindObject("palette");
-        if(!palette) {cout << "ERROR: could not find palette!" << endl;  continue;}
-        else{
+        if(palette)
+        {
           palette->SetX2NDC(0.865); //0.88
           palette->SetTitleOffset();
         }
@@ -345,6 +354,10 @@ namespace PlottingFramework {
     //DrawPlotInCanvas(plot, canvas);
     //ApplyStyleSettings(canvasStyle, canvas, controlString);
     gStyle->SetOptStat(0);  // switch of stat boxes, secretly adds stats to list of primitives!!
+    
+//    canvas->SetTheta(20);
+//    canvas->SetPhi(45);
+
     return canvas;
   }
   

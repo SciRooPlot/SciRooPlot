@@ -33,6 +33,7 @@ namespace PlottingFramework {
     int GetDefaultMarkerFull(int markerIndex) {return mDefaultMarkersFull[markerIndex % mDefaultMarkersFull.size()];}
     int GetDefaultMarkerOpen(int markerIndex) {return mDefaultMarkersOpen[markerIndex % mDefaultMarkersOpen.size()];}
     int GetDefaultLineStyle(int lineIndex) {return mDefaultLineStyles[lineIndex % mDefaultLineStyles.size()];}
+    string GetDefault2DStyle(){return m2dStyle;}
 
     void SetPalette(int palette){mPalette = palette;} // maybe in pad, accessor through plot gStyle->SetPalette(palette);
     void SetTextSize(double size){mTextSize = size;}
@@ -53,6 +54,7 @@ namespace PlottingFramework {
     void SetDefaultMarkersFull(vector<int> markers){mDefaultMarkersFull = markers;}
     void SetDefaultMarkersOpen(vector<int> markers){mDefaultMarkersOpen = markers;}
     void SetDefaultLineStyles(vector<int> lineStyles){mDefaultLineStyles = lineStyles;}
+    void SetDefault2DStyle(string style = "COLZ"){m2dStyle = style;}
 
     
     void SetWidth(int width = 710){mWidth = width;}
@@ -135,6 +137,7 @@ namespace PlottingFramework {
     vector<int> mDefaultMarkersFull;
     vector<int> mDefaultMarkersOpen;
     vector<int> mDefaultLineStyles;
+    string m2dStyle;
   };
   
   
