@@ -242,8 +242,6 @@ namespace PlottingFramework {
       axisHist->GetZaxis()->SetTitleOffset(padStyle.GetTitleOffsetZ());
       axisHist->SetTitle(padStyle.GetTitle().c_str());
 
-      //axisHist->GetYaxis()->SetTitleOffset(1.5);
-
 
       // todo write axis wrapper, avoid multiple calls of setting axis range, how to handle more than one axis change?
       // change axis range

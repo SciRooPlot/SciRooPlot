@@ -16,6 +16,8 @@ string GetPtString(int pTbin);
  - zeroes in histograms should not be drawn if they have no error?
 
  Important:
+ - automatically calculate from lable offset and lable size an appropriate title offset? in particular take into account if view is rotated in surface plot
+ - what unit is title offset? understand better and find clever way to autmatically calculate useful offsets...
  - add constructor to plotStyle that already gives useful default markers, colors, 2dstyle, etc
  - possibility to set alias for axis e.g. "ratio"?
  - generalize legend function to handle text boxes in a similar manner
@@ -28,7 +30,6 @@ string GetPtString(int pTbin);
  - do i want to store actual plots? otherwise remove mPlotLedger, resp use it for Plot templates, re-think create plot logic
 
  Not so important:
- - automatically calculate from lable offset and lable size an appropriate title offset? in particular take into account if view is rotated in surface plot
  - is it possible to set the order in multi column tlegends? left-right vs top-bottom
  - pipe box line fill properties to drawing
  - add possibility to make canvas intransparent (and colored)
@@ -104,7 +105,9 @@ int main(int argc, char *argv[]) {
 
     dataSets.push_back("pPb_5TeV");
     dataSets.push_back("PbPb_5TeV");
-    
+    dataSets.push_back("XeXe_5TeV");
+
+    dataSets.push_back("Fits");
     dataSets.push_back("Simulations");
     dataSets.push_back("Energyscan");
 
@@ -153,7 +156,7 @@ int main(int argc, char *argv[]) {
       string inputFile = folder + dataSet + "_Results.root";
       string inputFileSyst = folder + dataSet + "_Syst.root";
 
-      if(dataSet == "Publications" || dataSet == "Simulations" || dataSet == "Energyscan"){
+      if(dataSet == "Publications" || dataSet == "Simulations" || dataSet == "Energyscan" || dataSet == "Fits"){
         plotEnv.AddInputFilePaths(dataSet, {inputFile});
       }else{
         plotEnv.AddInputFilePaths(dataSet, {inputFile, inputFileSyst});
@@ -203,7 +206,7 @@ int main(int argc, char *argv[]) {
     if(dataSet.find("pp_5TeV") != string::npos) erg = erg5TeV;
     if(dataSet.find("pPb_5TeV") != string::npos) erg = erg5TeV_NN;
     if(dataSet.find("PbPb_5TeV") != string::npos) erg = erg5TeV_NN;
-    if(dataSet == "Publications" || dataSet == "Simulations"|| dataSet == "Energyscan") continue;
+    if(dataSet == "Publications" || dataSet == "Simulations"|| dataSet == "Energyscan" || dataSet == "Fits") continue;
 
     string datasetLable = alice + newLine + chargedParticles + ", " + colSys + ", " + erg + newLine + eta08 + ", " + ptRange;
     string datasetLablePrel = alicePrel + newLine + chargedParticles + ", " + colSys + ", " + erg + newLine + eta08 + ", " + ptRange;
@@ -1041,6 +1044,9 @@ int multBin = 18;
       myPlot.AddHisto("momentUnfolded1_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 110);
       myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
       myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes", 3000);
+      myPlot.AddHisto("momentUnfolded1", "XeXe_5TeV", "", kFullStar, kGreen+2, "", 2000);
+      myPlot.AddHisto("momentUnfolded1_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes", 2000);
+
       //myPlot.AddGraph("meanPtPbPb_5TeV", "Publications", "Pb-Pb published", kFullCross, kGreen+2);
       myPlot.SetAxisRange("X", 0.1, 4000);
       myPlot.SetAxisRange("Y", 0.4, 0.85);
@@ -1075,6 +1081,9 @@ int multBin = 18;
       myPlot.AddHisto("varianceUnfolded_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 100);
       myPlot.AddHisto("varianceUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
       myPlot.AddHisto("varianceUnfolded_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes", 3000);
+      myPlot.AddHisto("varianceUnfolded", "XeXe_5TeV", "", kFullStar, kGreen+2, "", 2000);
+      myPlot.AddHisto("varianceUnfolded_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes", 2000);
+
       myPlot.SetAxisRange("X", 0.1, 4000);
       myPlot.SetAxisRange("Y", 0.001, 0.75);
       myPlot.SetAxisTitle("X", "#it{N}_{ch}");
@@ -1170,13 +1179,16 @@ int multBin = 18;
       Plot myPlot(plotName, plotGroup);
       myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
       myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
-      myPlot.AddHisto("meanPt_5.02TeV", "Simulations", "", kOpenSquare, kBlue+1, "band", 60);
+      //myPlot.AddHisto("meanPt_5.02TeV", "Simulations", "", kOpenSquare, kBlue+1, "band", 60);
       myPlot.AddHisto("momentUnfolded1", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 100);
       myPlot.AddHisto("momentUnfolded1_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 100);
-      myPlot.AddHisto("meanPt_pPb_5.02TeV", "Simulations", "", kOpenCircle, kMagenta+1, "band", 100);
+      //myPlot.AddHisto("meanPt_pPb_5.02TeV", "Simulations", "", kOpenCircle, kMagenta+1, "band", 100);
       myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV", "", kFullCross, kRed+1, "", 100);
       myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes", 100);
-      myPlot.AddHisto("meanPt_PbPb_5.02TeV", "Simulations", "", kOpenCross, kRed+1, "band", 100);
+      //myPlot.AddHisto("meanPt_PbPb_5.02TeV", "Simulations", "", kOpenCross, kRed+1, "band", 100);
+      myPlot.AddHisto("momentUnfolded1", "XeXe_5TeV", "", kFullStar, kGreen+2, "", 100);
+      myPlot.AddHisto("momentUnfolded1_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes", 100);
+
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.SetAxisTitle("X", "#it{N}_{ch}");
@@ -1214,6 +1226,8 @@ int multBin = 18;
       myPlot.AddHisto("varianceUnfolded_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 100);
       myPlot.AddHisto("varianceUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "", 100);
       myPlot.AddHisto("varianceUnfolded_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes", 100);
+      myPlot.AddHisto("varianceUnfolded", "XeXe_5TeV", "", kFullStar, kGreen+2, "", 100);
+      myPlot.AddHisto("varianceUnfolded_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes", 100);
       myPlot.SetAxisRange("Y", 0.05, 0.8);
       myPlot.AddLegendBox(0.2, 0.9, "");
       myPlot.SetAxisTitle("X", "#it{N}_{ch}");
@@ -1324,6 +1338,9 @@ int multBin = 18;
       myPlot.AddHisto(plotName + "_pp_7TeV", "Fits", "7 TeV");
       myPlot.AddHisto(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
       myPlot.AddHisto(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
+      myPlot.AddHisto(plotName + "_pPb_5TeV", "Fits", "p-Pb 5.02 TeV");
+      myPlot.AddHisto(plotName + "_PbPb_5TeV", "Fits", "Pb-Pb 5.02 TeV");
+      myPlot.AddHisto(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
       myPlot.SetAxisRange("Y", 4, 11);
       myPlot.AddLegendBox(0.7, 0.9, "");
       plotEnv.AddPlot(myPlot);
@@ -1337,6 +1354,9 @@ int multBin = 18;
       myPlot.AddHisto(plotName + "_pp_7TeV", "Fits", "7 TeV");
       myPlot.AddHisto(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
       myPlot.AddHisto(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
+      myPlot.AddHisto(plotName + "_pPb_5TeV", "Fits", "p-Pb 5.02 TeV");
+      myPlot.AddHisto(plotName + "_PbPb_5TeV", "Fits", "Pb-Pb 5.02 TeV");
+      myPlot.AddHisto(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
 //      myPlot.SetAxisRange("Y", 4, 11);
       myPlot.AddLegendBox(0.3, 0.9, "");
       plotEnv.AddPlot(myPlot);
@@ -2030,6 +2050,7 @@ int multBin = 18;
 
 
   } //==========================================================================
+  if(false)
   {
     string plotGroup = "QA";
   { // -----------------------------------------------------------------------
