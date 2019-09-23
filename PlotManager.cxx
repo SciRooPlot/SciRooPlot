@@ -374,7 +374,9 @@ namespace PlottingFramework {
       //myStyle.LinkAxes("X", {1,2});
       myStyle.SetFromat(710, 1);
       myStyle.SetTransparent();
-      myStyle.SetDefault2DStyle("SURF2");
+//      myStyle.SetDefault2DStyle("SURF3");
+//      myStyle.SetDefault2DStyle("COLZ CONT3");
+      myStyle.SetDefault2DStyle("COLZ");
 
       myStyle.SetTextFont(4); // allowed font values: 1-15
       myStyle.SetLableFont(4);

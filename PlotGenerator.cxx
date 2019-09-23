@@ -148,8 +148,11 @@ namespace PlottingFramework {
           if(ratio->InheritsFrom("TH2"))
           {
             drawingOptions += string(" ") + plotStyle.GetDefault2DStyle();
-            pad->SetTheta(30);
-            pad->SetPhi(0);
+            
+            TView* view = TView::CreateView(1);
+            view->SetRange(-0.5,-1,-3.610432,100.5,1.778151,0.1470754);
+            pad->SetTheta(49.5);
+            pad->SetPhi(230);
           }
           else{
             ratio->GetYaxis()->CenterTitle(1);
@@ -175,7 +178,15 @@ namespace PlottingFramework {
               style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex);
             }
           }
-
+          if(drawingOptions.find("boxes") != string::npos)
+          {
+            TExec errorBoxesOn("errorBoxesOn","gStyle->SetErrorX(0.48)");
+            errorBoxesOn.Draw();
+            ratio->SetFillStyle(0);
+            drawingOptions += " E2";
+            TExec errorBoxesOff("errorBoxesOff","gStyle->SetErrorX(0)");
+            errorBoxesOff.Draw("");
+          }
           ratio->SetMarkerStyle(style);
           ratio->SetMarkerColor(color);
           ratio->SetLineColor(color);
@@ -188,6 +199,16 @@ namespace PlottingFramework {
           //graph->SetTitle("");
           
           graph->UseCurrentStyle();
+          graph->SetMarkerStyle(style);
+          graph->SetMarkerColor(color);
+          graph->SetLineColor(color);
+          
+          if(padID ==2){
+            graph->GetYaxis()->CenterTitle(1);
+            graph->GetXaxis()->SetTickLength(0.06);
+            graph->GetYaxis()->SetNdivisions(305); //506
+          }
+          
           graph->Draw(drawingOptions.c_str());
         }
         else{
@@ -196,7 +217,7 @@ namespace PlottingFramework {
         }
 
         dataIndex++;
-        drawingOptions = "SAME"; // next data should be drawn to same pad
+        drawingOptions = "EP SAME"; // next data should be drawn to same pad
         
         if (!data->GetLable().empty()) {
           lables.push_back(data->GetLable());
@@ -204,7 +225,6 @@ namespace PlottingFramework {
           errorStyles.push_back(data->GetDrawingOptions());
         }
       }
-      
       // now place legends, textboxes and shapes
       for(auto box : plot.GetBoxes(padID))
       {
@@ -622,6 +642,7 @@ namespace PlottingFramework {
     
 
     int nLines = lines.size();
+    
     double textSizeNDC = textSizePixel / gPad->YtoPixel(gPad->GetY1());
     double textSizeNDCx = 0.6*textSizePixel / gPad->XtoPixel(gPad->GetX2());
     
@@ -629,10 +650,19 @@ namespace PlottingFramework {
     double yWidth = (1.0*nLines + 0.5*(nLines-1))* textSizeNDC;
     double xWidth = nLetters * textSizeNDCx;
     
-    string option = "NDC"; // use pad coordinates by default
-    if(textBox->IsUserCoordinates()) option = "";
-    
-    TPaveText* tPaveText = new TPaveText(textBox->GetXPosition(), textBox->GetYPosition() - yWidth, textBox->GetXPosition() + xWidth, textBox->GetYPosition(), option.c_str());
+    double upperLeftX = textBox->GetXPosition();
+    double upperLeftY = textBox->GetYPosition();
+
+    if(textBox->IsUserCoordinates())
+    {
+      gPad->Update();
+//      upperLeftX = (upperLeftX - gPad->GetX1())/(gPad->GetX2()-gPad->GetX1());
+//      upperLeftY = (upperLeftY - gPad->GetY1())/(gPad->GetY2()-gPad->GetY1());
+      upperLeftX = (upperLeftX - gPad->GetX1())/(gPad->GetX2()-gPad->GetX1());
+      upperLeftY = (upperLeftY - gPad->GetY1())/(gPad->GetY2()-gPad->GetY1());
+    }
+    TPaveText* tPaveText = new TPaveText(upperLeftX, upperLeftY
+                                         - yWidth, upperLeftX + xWidth, upperLeftY, "NDC");
     
     double boxExtent = 0;
     for(auto &line : lines)
@@ -682,6 +712,28 @@ namespace PlottingFramework {
     }
     
   }
+  
+  TGraph* PlotGenerator::DivideTSpline(TGraph* numerator, TGraph* denominator){
+
+    TGraph* result = (TGraph*)numerator->Clone("ratio");
+    TSpline3* denSpline = new TSpline3("denSpline", denominator);
+    
+    int nPoints = result->GetN();
+    
+    double *x = result->GetX();
+    
+    double *y = result->GetY();
+    double *ey = result->GetEY();
+        
+    for(int i = 0; i < nPoints; i++) {
+      double deonomValiue = denominator->Eval(x[i], denSpline);
+      y[i] = y[i] / deonomValiue;
+      ey[i] = ey[i] * deonomValiue;
+    }
+    delete denSpline;
+    return result;
+  }
+  
   /*
   
   void PlotManager::ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, int defaultValueIndex, string controlString)
@@ -732,6 +784,8 @@ namespace PlottingFramework {
     }
     
   }
+   
+   
   
   TH1* PlotManager::DivideWithTSpline(TH1* numerator, TH1* denominator)
   {

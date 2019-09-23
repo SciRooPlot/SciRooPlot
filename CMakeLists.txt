@@ -31,7 +31,7 @@ target_link_libraries(${MODULE} Boost::boost)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${ROOT_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/boost/property_tree)
 
 # create executable
-add_executable(plot CreatePlots.cxx ${SRCS} ${HDRS})
+add_executable(plot CreatePlots.cxx ${SRCS} ${HDRS} PlottingFramework.h)
 target_link_libraries(plot ${MODULE})
 
 #link_directories(${CMAKE_SOURCE_DIR}/)

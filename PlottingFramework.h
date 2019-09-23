@@ -41,7 +41,7 @@
 #include "TGraph.h"
 #include "TGraphErrors.h"
 #include "TPaletteAxis.h"
-
+#include "TView.h"
 
 // aliases
 namespace PlottingFramework {

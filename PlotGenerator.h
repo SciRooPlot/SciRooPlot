@@ -28,7 +28,7 @@ namespace PlottingFramework {
     static TLegend* MakeLegend(shared_ptr<Plot::LegendBox> legendBox, TPad* pad, TObjArray& legendEntries, vector<string> legendTitles, vector<string>& errorStyles);
     static TPaveText* MakeText(shared_ptr<Plot::TextBox> textBox);
     static void CutHistogram(TH1* hist, double cutoff, double cutoffLow);
-
+    static TGraph* DivideTSpline(TGraph* numerator, TGraph* denominator);
     //void MakeTextBox(){};
     
     //TPaveText* MakeText(Plot::TextBox& textBoxTemplate);
