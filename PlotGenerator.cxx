@@ -74,7 +74,8 @@ namespace PlottingFramework {
         int style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex); // only gets marker not line style
         
         if(color < 0) {dataIndex += color; color = plotStyle.GetDefaultColor(dataIndex);} // todo how to implement this feature better?
- 
+        if(style < 0) {style = plotStyle.GetDefaultMarker(dataIndex);} // todo how to implement this feature better?
+
         drawingOptions += data->GetDrawingOptions(); // errorStyle etc
         // setdefaultstyles only once per pad (textsize, etc)!!
         if(data->GetType() == "hist")
@@ -208,7 +209,18 @@ namespace PlottingFramework {
             graph->GetXaxis()->SetTickLength(0.06);
             graph->GetYaxis()->SetNdivisions(305); //506
           }
+          if(drawingOptions.find("boxes") != string::npos)
+          {
+            TExec errorBoxesOn("errorBoxesOn","gStyle->SetErrorX(0.48)");
+            errorBoxesOn.Draw();
+            graph->SetFillStyle(0);
+            drawingOptions = "E2 SAME"; // bug
+            TExec errorBoxesOff("errorBoxesOff","gStyle->SetErrorX(0)");
+            errorBoxesOff.Draw("");
+          }
+
           
+          if(dataIndex == 0) drawingOptions += " AP";
           graph->Draw(drawingOptions.c_str());
         }
         else{

@@ -183,6 +183,7 @@ int main(int argc, char *argv[]) {
   string erg2TeV = "#sqrt{#it{s}} = 2.76 TeV";
   string erg5TeV = "#sqrt{#it{s}} = 5.02 TeV";
   string erg7TeV = "#sqrt{#it{s}} = 7 TeV";
+  string erg8TeV_NN = "#sqrt{#it{s}_{NN}} = 8 TeV";
   string erg13TeV = "#sqrt{#it{s}} = 13 TeV";
   string eta03 = "|#it{#eta}| < 0.3";
   string eta08 = "|#it{#eta}| < 0.8";
@@ -1064,6 +1065,30 @@ int multBin = 18;
 
     
     { // -----------------------------------------------------------------------
+      string plotName = "meanPtGeometricScaling";
+      Plot myPlot(plotName, plotGroup);
+      myPlot.AddGraph("meanPtScaled_pp_2TeV", "GeometricScaling", "", 0);
+      myPlot.AddGraph("meanPtScaled_pp_2TeV_Syst", "GeometricScaling", "pp, 2.76 TeV", -1, -1, "boxes");
+      myPlot.AddGraph("meanPtScaled_pp_5TeV", "GeometricScaling", "", 0);
+      myPlot.AddGraph("meanPtScaled_pp_5TeV_Syst", "GeometricScaling", "pp, 5.02 TeV", -1, -1, "boxes");
+      myPlot.AddGraph("meanPtScaled_pp_7TeV", "GeometricScaling", "", 0);
+      myPlot.AddGraph("meanPtScaled_pp_7TeV_Syst", "GeometricScaling", "pp, 7 TeV", -1, -1, "boxes");
+      myPlot.AddGraph("meanPtScaled_pp_13TeV", "GeometricScaling", "", 0);
+      myPlot.AddGraph("meanPtScaled_pp_13TeV_Syst", "GeometricScaling", "pp, 13 TeV", -1, -1, "boxes");
+      myPlot.AddGraph("meanPtScaled_pPb_5TeV", "GeometricScaling", "", 0);
+      myPlot.AddGraph("meanPtScaled_pPb_5TeV_Syst", "GeometricScaling", "p-Pb, 5.02 TeV", -1, -1, "boxes");
+      myPlot.AddGraph("meanPtScaled_pPb_8TeV", "GeometricScaling", "", 0);
+      myPlot.AddGraph("meanPtScaled_pPb_8TeV_Syst", "GeometricScaling", "p-Pb, 8 TeV", -1, -1, "boxes");
+      myPlot.AddLegendBox(0.15, 0.9);
+      myPlot.SetAxisRange("X", 0.7, 3.7);
+      myPlot.SetAxisRange("Y", 0.48, 1.0);
+
+      plotEnv.AddPlot(myPlot);
+    } // -----------------------------------------------------------------------
+
+    
+    
+    { // -----------------------------------------------------------------------
       string plotName = "multPtRatio_pPbOverpp";
       Plot myPlot(plotName, plotGroup);
       myPlot.SetDrawingProperties("logY");
@@ -1146,6 +1171,47 @@ int multBin = 18;
       myPlot.SetDrawingProperties("logX");
       plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
+    
+    
+    
+    { // -----------------------------------------------------------------------
+      string plotName = "studyExtremeMultPP";
+      Plot myPlot(plotName, plotGroup, "default ratio");
+      myPlot.SetDrawingProperties("logX logY");
+      myPlot.AddHisto("inclusiveSpectrum", "pp_5TeV", "", 0, kBlack);
+      myPlot.AddHisto("spectraExtreme_pp", "Fits", "#it{N}_{ch} > 40", 0, kBlue+2);
+      myPlot.AddHisto("inclusiveSpectrum", "pp_5TeV", "all #it{N}_{ch}", 0, kBlack);
+      myPlot.AddRatio("spectraExtreme_pp", "Fits", "inclusiveSpectrum", "pp_5TeV", "", 0, kBlue+2);
+      myPlot.AddLegendBox(0.6, 0.9);
+      myPlot.AddTextBox(0.4, 0.5, "#bf{pp}");
+      myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
+      myPlot.SetAxisTitle("ratio", "extreme/MB");
+//      myPlot.SetAxisRange("ratio", 1.3, 3.3);
+
+      myPlot.ChangePad(2);
+      myPlot.SetDrawingProperties("logX");
+      plotEnv.AddPlot(myPlot);
+    } // -----------------------------------------------------------------------
+
+    { // -----------------------------------------------------------------------
+      string plotName = "studyExtremeMultPPbp";
+      Plot myPlot(plotName, plotGroup, "default ratio");
+      myPlot.SetDrawingProperties("logX logY");
+      myPlot.AddHisto("inclusiveSpectrum", "pPb_5TeV", "", 0, kBlack);
+      myPlot.AddHisto("spectraExtreme_pp", "Fits", "#it{N}_{ch} > 100", 0, kBlue+2);
+      myPlot.AddHisto("inclusiveSpectrum", "pPb_5TeV", "all #it{N}_{ch}", 0, kBlack);
+      myPlot.AddRatio("spectraExtreme_pp", "Fits", "inclusiveSpectrum", "pPb_5TeV", "", 0, kBlue+2);
+      myPlot.AddLegendBox(0.6, 0.9);
+      myPlot.AddTextBox(0.4, 0.5, "#bf{p-Pb}");
+      myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
+      myPlot.SetAxisTitle("ratio", "extreme/MB");
+//      myPlot.SetAxisRange("ratio", 1.3, 3.3);
+
+      myPlot.ChangePad(2);
+      myPlot.SetDrawingProperties("logX");
+      plotEnv.AddPlot(myPlot);
+    } // -----------------------------------------------------------------------
+
     { // -----------------------------------------------------------------------
       string plotName = "studyLowMult";
       Plot myPlot(plotName, plotGroup, "default ratio");
@@ -1396,33 +1462,161 @@ int multBin = 18;
       string plotName = "meanPt";
       Plot myPlot(plotName, plotGroup);
       myPlot.AddHisto("momentUnfolded1", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 130);
+
+      // pp
       myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
       myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
-      //myPlot.AddHisto("meanPt_5.02TeV", "Simulations", "", kOpenSquare, kBlue+1, "band", 60);
+      myPlot.AddHisto("meanPt_pp_EPOS-LHC_5.02TeV", "Simulations", "", kOpenSquare, kBlue+1, "", 60);
+
+      // pPb
       myPlot.AddHisto("momentUnfolded1", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 130);
       myPlot.AddHisto("momentUnfolded1_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 130);
-      //myPlot.AddHisto("meanPt_pPb_5.02TeV", "Simulations", "", kOpenCircle, kMagenta+1, "band", 100);
-      myPlot.AddHisto("meanPt_pPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCircle, kMagenta+1, "band");
+      myPlot.AddHisto("meanPt_pPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCircle, kMagenta+1, "", 130);
+
+      // PbPb
       myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV", "", kFullCross, kRed+1, "");
       myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes");
-      //myPlot.AddHisto("meanPt_PbPb_5.02TeV", "Simulations", "", kOpenCross, kRed+1, "band", 100);
+      myPlot.AddHisto("meanPt_PbPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCross, kRed+1, "");
+
+      // XeXe
       myPlot.AddHisto("momentUnfolded1", "XeXe_5TeV", "", kFullStar, kGreen+2, "");
       myPlot.AddHisto("momentUnfolded1_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes");
 
-      myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV_LowIR", "", kFullCross, kOrange+1, "");
-      myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV_LowIR", "PbPb low IR", kFullCross, kOrange+1, "boxes");
+      // additional stuff
+      //myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV_LowIR", "", kFullCross, kOrange+1, "");
+      //myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV_LowIR", "PbPb low IR", kFullCross, kOrange+1, "boxes");
+      
       myPlot.AddHisto("momentUnfolded1", "pPb_8TeV", "", kFullCircle, kYellow+1, "", 100);
       myPlot.AddHisto("momentUnfolded1_Syst", "pPb_8TeV", "pPb, 8 TeV", kFullCircle, kYellow+1, "boxes", 100);
 
+      myPlot.AddHisto("momentUnfolded1", "Pbp_8TeV", "", kFullCircle, kYellow+2, "", 100);
+      myPlot.AddHisto("momentUnfolded1_Syst", "Pbp_8TeV", "Pbp, 8 TeV", kFullCircle, kYellow+2, "boxes", 100);
+
+      //myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV_2018", "", kFullCross, kBlack, "");
+      //myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV_2018", "PbPb 2018", kFullCross, kBlack, "boxes");
+
       myPlot.SetAxisRange("X", -0.5, 300);
 
-      myPlot.SetAxisRange("Y", 0.45, 0.85);
+      myPlot.SetAxisRange("Y", 0.45, 0.95);
       myPlot.AddLegendBox(0.67, 0.92, "");
       myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-      myPlot.AddTextBox(0.35, 0.3, systemSizeLable);
+      myPlot.AddTextBox(0.35, 0.35, systemSizeLable + " // Open symbols: EPOS-LHC");
       plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
+    { // -----------------------------------------------------------------------
+      string plotName = "meanPtpPb8Over5";
+      Plot myPlot(plotName, plotGroup, "default ratio");
+      myPlot.AddHisto("momentUnfolded1", "pPb_5TeV", "", kFullCross, kRed+1, "");
+      myPlot.AddHisto("momentUnfolded1_Syst", "pPb_5TeV", "p-Pb, 5.02 TeV", kFullCross, kRed+1, "boxes");
+      myPlot.AddHisto("momentUnfolded1", "pPb_8TeV", "", kFullStar, kBlue+1, "");
+      myPlot.AddHisto("momentUnfolded1_Syst", "pPb_8TeV", "p-Pb, 8 TeV", kFullStar, kBlue+1, "boxes");
+      myPlot.AddRatio("momentUnfolded1_Syst", "pPb_8TeV", "momentUnfolded1_Syst", "pPb_5TeV", "", kFullStar, kBlue+1, "boxes");
+
+      myPlot.AddHisto("meanPt_pPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCross, kRed+1, "", 130);
+      myPlot.AddHisto("momentGeneratedMC1", "pPb_8TeV", "", kOpenStar, kBlue+1, "boxes");
+      myPlot.AddRatio("momentGeneratedMC1", "pPb_8TeV", "meanPt_pPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenStar, kBlue+1, "boxes");
+
+      myPlot.SetAxisRange("ratio", 0.9, 1.1);
+      myPlot.SetAxisTitle("ratio", "8/5 TeV");
+      myPlot.SetAxisRange("X", 0, 150);
+      myPlot.SetAxisRange("Y", 0.45, 0.95);
+      myPlot.AddLegendBox(0.4, 0.4, "");
+//          myPlot.AddTextBox(0.4, 0.2, "p-Pb");
+
+      plotEnv.AddPlot(myPlot);
+    } // -----------------------------------------------------------------------
+
+    { // -----------------------------------------------------------------------
+      string plotName = "meanPtpPbOverPbp";
+      Plot myPlot(plotName, plotGroup, "default ratio");
+      myPlot.AddHisto("momentUnfolded1", "pPb_8TeV", "", kFullStar, kBlue+1, "");
+      myPlot.AddHisto("momentUnfolded1_Syst", "pPb_8TeV", "p-Pb, 8 TeV", kFullStar, kBlue+1, "boxes");
+      myPlot.AddHisto("momentUnfolded1", "Pbp_8TeV", "", kFullStar, kGreen+1, "");
+      myPlot.AddHisto("momentUnfolded1_Syst", "Pbp_8TeV", "Pb-p, 8 TeV", kFullStar, kGreen+1, "boxes");
+
+      myPlot.AddRatio("momentUnfolded1_Syst", "Pbp_8TeV", "momentUnfolded1_Syst", "pPb_8TeV", "", kFullStar, kGreen+1, "boxes");
+
+      myPlot.SetAxisRange("ratio", 0.98, 1.02);
+      myPlot.SetAxisTitle("ratio", "Pbp/pPb");
+      myPlot.SetAxisRange("X", 0, 150);
+      myPlot.SetAxisRange("Y", 0.45, 0.95);
+      myPlot.AddLegendBox(0.4, 0.4, "");
+      plotEnv.AddPlot(myPlot);
+    } // -----------------------------------------------------------------------
+
+    
+    
+    { // -----------------------------------------------------------------------
+      string plotName = "meanPtPbOverPb";
+      Plot myPlot(plotName, plotGroup, "default ratio");
+//      myPlot.SetDrawingProperties("logX");
+      myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3500);
+      myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV", "2015", kFullCross, kRed+1, "boxes", 3500);
+      myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV_2018", "", kFullStar, kGreen+2, "", 3500);
+      myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV_2018", "2018", kFullStar, kGreen+2, "boxes", 3500);
+      myPlot.AddRatio("momentUnfolded1_Syst", "PbPb_5TeV_2018", "momentUnfolded1_Syst", "PbPb_5TeV", "", kFullStar, kGreen+2, "boxes", 3500);
+      myPlot.SetAxisRange("ratio", 0.95, 1.05);
+      myPlot.SetAxisTitle("ratio", "2018/2015");
+      myPlot.SetAxisRange("X", 0, 3400);
+      myPlot.SetAxisRange("Y", 0.45, 0.85);
+      myPlot.AddLegendBox(0.2, 0.9, "");
+      myPlot.AddTextBox(0.4, 0.2, systemSizeLable);
+      myPlot.ChangePad(2);
+      myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+ //     myPlot.SetDrawingProperties("logX");
+
+      plotEnv.AddPlot(myPlot);
+    } // -----------------------------------------------------------------------
+
+        
+    { // -----------------------------------------------------------------------
+      string plotName = "multDensityPbOverPb";
+      Plot myPlot(plotName, plotGroup, "default ratio");
+      myPlot.SetDrawingProperties("logY");
+      myPlot.AddHisto("multDensityUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3500);
+      myPlot.AddHisto("multDensityUnfolded_Syst", "PbPb_5TeV", "2015", kFullCross, kRed+1, "boxes", 3500);
+      myPlot.AddHisto("multDensityUnfolded", "PbPb_5TeV_2018", "", kFullStar, kGreen+2, "", 3500);
+      myPlot.AddHisto("multDensityUnfolded_Syst", "PbPb_5TeV_2018", "2018", kFullStar, kGreen+2, "boxes", 3500);
+      myPlot.AddRatio("multDensityUnfolded_Syst", "PbPb_5TeV_2018", "multDensityUnfolded_Syst", "PbPb_5TeV", "", kFullStar, kGreen+2, "boxes", 3500);
+      myPlot.SetAxisRange("ratio", 0.95, 1.05);
+      myPlot.SetAxisTitle("ratio", "2018/2015");
+      myPlot.SetAxisRange("X", 0, 3400);
+      myPlot.SetAxisRange("ratio", 0.9, 1.1);
+//          myPlot.SetAxisRange("Y", 0.45, 0.85);
+      myPlot.AddLegendBox(0.2, 0.9, "");
+      myPlot.AddTextBox(0.4, 0.2, systemSizeLable);
+      myPlot.ChangePad(2);
+      myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+ //     myPlot.SetDrawingProperties("logX");
+
+      plotEnv.AddPlot(myPlot);
+    } // -----------------------------------------------------------------------
+
+    { // -----------------------------------------------------------------------
+      string plotName = "multDensityPbpOverpPb";
+      Plot myPlot(plotName, plotGroup, "default ratio");
+      myPlot.SetDrawingProperties("logY");
+      myPlot.AddHisto("multDensityUnfolded", "pPb_8TeV", "", kFullCross, kRed+1, "", 3500);
+      myPlot.AddHisto("multDensityUnfolded_Syst", "pPb_8TeV", "p-Pb", kFullCross, kRed+1, "boxes", 3500);
+      myPlot.AddHisto("multDensityUnfolded", "Pbp_8TeV", "", kFullStar, kGreen+2, "", 3500);
+      myPlot.AddHisto("multDensityUnfolded_Syst", "Pbp_8TeV", "Pb-p", kFullStar, kGreen+2, "boxes", 3500);
+      myPlot.AddRatio("multDensityUnfolded_Syst", "Pbp_8TeV", "multDensityUnfolded_Syst", "pPb_8TeV", "", kFullStar, kGreen+2, "boxes", 3500);
+      myPlot.SetAxisRange("ratio", 0.95, 1.05);
+      myPlot.SetAxisTitle("ratio", "Pbp/pPb");
+      myPlot.SetAxisRange("X", 0, 120);
+      myPlot.SetAxisRange("ratio", 0.9, 1.1);
+//          myPlot.SetAxisRange("Y", 0.45, 0.85);
+      myPlot.AddLegendBox(0.7, 0.9, "");
+      myPlot.AddTextBox(0.4, 0.2, erg8TeV_NN);
+      myPlot.ChangePad(2);
+      myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+ //     myPlot.SetDrawingProperties("logX");
+
+      plotEnv.AddPlot(myPlot);
+    } // -----------------------------------------------------------------------
+
+    
     { // -----------------------------------------------------------------------
       string plotName = "meanPtXeOverPb";
       Plot myPlot(plotName, plotGroup, "default ratio");
@@ -1604,7 +1798,7 @@ int multBin = 18;
       myPlot.AddHisto(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
       myPlot.AddHisto(plotName + "_pPb_5TeV", "Fits", "p-Pb 5.02 TeV");
       myPlot.AddHisto(plotName + "_PbPb_5TeV", "Fits", "Pb-Pb 5.02 TeV");
-      myPlot.AddHisto(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
+//      myPlot.AddHisto(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
       myPlot.SetAxisRange("Y", 4, 11);
       myPlot.AddLegendBox(0.7, 0.9, "");
       plotEnv.AddPlot(myPlot);
@@ -1620,9 +1814,9 @@ int multBin = 18;
       myPlot.AddHisto(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
       myPlot.AddHisto(plotName + "_pPb_5TeV", "Fits", "p-Pb 5.02 TeV");
       myPlot.AddHisto(plotName + "_PbPb_5TeV", "Fits", "Pb-Pb 5.02 TeV");
-      myPlot.AddHisto(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
+//      myPlot.AddHisto(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
 //      myPlot.SetAxisRange("Y", 4, 11);
-      myPlot.AddLegendBox(0.3, 0.9, "");
+      myPlot.AddLegendBox(0.13, 0.9, "");
       plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
