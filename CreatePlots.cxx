@@ -1065,20 +1065,20 @@ int multBin = 18;
 
     
     { // -----------------------------------------------------------------------
-      string plotName = "meanPtGeometricScaling";
+      string plotName = "meanPtGeometricalScaling";
       Plot myPlot(plotName, plotGroup);
-      myPlot.AddGraph("meanPtScaled_pp_2TeV", "GeometricScaling", "", 0);
-      myPlot.AddGraph("meanPtScaled_pp_2TeV_Syst", "GeometricScaling", "pp, 2.76 TeV", -1, -1, "boxes");
-      myPlot.AddGraph("meanPtScaled_pp_5TeV", "GeometricScaling", "", 0);
-      myPlot.AddGraph("meanPtScaled_pp_5TeV_Syst", "GeometricScaling", "pp, 5.02 TeV", -1, -1, "boxes");
-      myPlot.AddGraph("meanPtScaled_pp_7TeV", "GeometricScaling", "", 0);
-      myPlot.AddGraph("meanPtScaled_pp_7TeV_Syst", "GeometricScaling", "pp, 7 TeV", -1, -1, "boxes");
-      myPlot.AddGraph("meanPtScaled_pp_13TeV", "GeometricScaling", "", 0);
-      myPlot.AddGraph("meanPtScaled_pp_13TeV_Syst", "GeometricScaling", "pp, 13 TeV", -1, -1, "boxes");
-      myPlot.AddGraph("meanPtScaled_pPb_5TeV", "GeometricScaling", "", 0);
-      myPlot.AddGraph("meanPtScaled_pPb_5TeV_Syst", "GeometricScaling", "p-Pb, 5.02 TeV", -1, -1, "boxes");
-      myPlot.AddGraph("meanPtScaled_pPb_8TeV", "GeometricScaling", "", 0);
-      myPlot.AddGraph("meanPtScaled_pPb_8TeV_Syst", "GeometricScaling", "p-Pb, 8 TeV", -1, -1, "boxes");
+      myPlot.AddGraph("meanPtScaled_pp_2TeV", "GeometricalScaling", "", 0);
+      myPlot.AddGraph("meanPtScaled_pp_2TeV_Syst", "GeometricalScaling", "pp, 2.76 TeV", -1, -1, "boxes");
+      myPlot.AddGraph("meanPtScaled_pp_5TeV", "GeometricalScaling", "", 0);
+      myPlot.AddGraph("meanPtScaled_pp_5TeV_Syst", "GeometricalScaling", "pp, 5.02 TeV", -1, -1, "boxes");
+      myPlot.AddGraph("meanPtScaled_pp_7TeV", "GeometricalScaling", "", 0);
+      myPlot.AddGraph("meanPtScaled_pp_7TeV_Syst", "GeometricalScaling", "pp, 7 TeV", -1, -1, "boxes");
+      myPlot.AddGraph("meanPtScaled_pp_13TeV", "GeometricalScaling", "", 0);
+      myPlot.AddGraph("meanPtScaled_pp_13TeV_Syst", "GeometricalScaling", "pp, 13 TeV", -1, -1, "boxes");
+      myPlot.AddGraph("meanPtScaled_pPb_5TeV", "GeometricalScaling", "", 0);
+      myPlot.AddGraph("meanPtScaled_pPb_5TeV_Syst", "GeometricalScaling", "p-Pb, 5.02 TeV", -1, -1, "boxes");
+      myPlot.AddGraph("meanPtScaled_pPb_8TeV", "GeometricalScaling", "", 0);
+      myPlot.AddGraph("meanPtScaled_pPb_8TeV_Syst", "GeometricalScaling", "p-Pb, 8 TeV", -1, -1, "boxes");
       myPlot.AddLegendBox(0.15, 0.9);
       myPlot.SetAxisRange("X", 0.7, 3.7);
       myPlot.SetAxisRange("Y", 0.48, 1.0);
@@ -1258,12 +1258,16 @@ int multBin = 18;
       myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
       myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
       myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
+      myPlot.AddHisto("meanPt_pp_EPOS-LHC_5.02TeV", "Simulations", "", kOpenSquare, kBlue+1, "", 60);
       myPlot.AddHisto("momentUnfolded1", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 110);
       myPlot.AddHisto("momentUnfolded1_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 110);
+      myPlot.AddHisto("meanPt_pPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCircle, kMagenta+1, "", 110);
       myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
       myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes", 3000);
-      myPlot.AddHisto("momentUnfolded1", "XeXe_5TeV", "", kFullStar, kGreen+2, "", 2000);
-      myPlot.AddHisto("momentUnfolded1_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes", 2000);
+      myPlot.AddHisto("meanPt_PbPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCross, kRed+1, "");
+//      myPlot.AddHisto("momentUnfolded1", "XeXe_5TeV", "", kFullStar, kGreen+2, "", 2000);
+//      myPlot.AddHisto("momentUnfolded1_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes", 2000);
+
 
       //myPlot.AddGraph("meanPtPbPb_5TeV", "Publications", "Pb-Pb published", kFullCross, kGreen+2);
       myPlot.SetAxisRange("X", 0.1, 4000);
@@ -1272,7 +1276,7 @@ int multBin = 18;
 
 //      myPlot.AddLegendBox(0.2, 0.8);
       myPlot.AddLegendBox(0.2, 0.8);
-      myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
+      myPlot.AddTextBox(0.36, 0.35, systemSizeLable + " // Open symbols: EPOS-LHC");
 
       if(drawcent){
         for(int i = 0; i < 9; i++)
@@ -1412,9 +1416,9 @@ int multBin = 18;
       myPlot.AddHisto("multDensityUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
       myPlot.AddHisto("multDensityUnfolded", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
       myPlot.AddHisto("multDensityUnfolded_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
-      myPlot.AddHisto("multDensityUnfolded", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 110);
-      myPlot.AddHisto("multDensityUnfolded_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 110);
-      myPlot.AddHisto("multDensityGeneratedMC", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 110);
+      myPlot.AddHisto("multDensityUnfolded", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 120);
+      myPlot.AddHisto("multDensityUnfolded_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 120);
+      myPlot.AddHisto("multDensityGeneratedMC", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 120);
       myPlot.AddHisto("multDensityUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
       myPlot.AddHisto("multDensityUnfolded_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes", 3000);
       myPlot.AddHisto("multDensityUnfolded", "XeXe_5TeV", "", kFullStar, kGreen+2, "", 2000);
@@ -1461,7 +1465,7 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "meanPt";
       Plot myPlot(plotName, plotGroup);
-      myPlot.AddHisto("momentUnfolded1", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 130);
+      myPlot.AddHisto("momentUnfolded1", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 120);
 
       // pp
       myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
@@ -1469,9 +1473,9 @@ int multBin = 18;
       myPlot.AddHisto("meanPt_pp_EPOS-LHC_5.02TeV", "Simulations", "", kOpenSquare, kBlue+1, "", 60);
 
       // pPb
-      myPlot.AddHisto("momentUnfolded1", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 130);
-      myPlot.AddHisto("momentUnfolded1_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 130);
-      myPlot.AddHisto("meanPt_pPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCircle, kMagenta+1, "", 130);
+      myPlot.AddHisto("momentUnfolded1", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 120);
+      myPlot.AddHisto("momentUnfolded1_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 120);
+      myPlot.AddHisto("meanPt_pPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCircle, kMagenta+1, "", 120);
 
       // PbPb
       myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV", "", kFullCross, kRed+1, "");
@@ -1479,18 +1483,18 @@ int multBin = 18;
       myPlot.AddHisto("meanPt_PbPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCross, kRed+1, "");
 
       // XeXe
-      myPlot.AddHisto("momentUnfolded1", "XeXe_5TeV", "", kFullStar, kGreen+2, "");
-      myPlot.AddHisto("momentUnfolded1_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes");
+      //myPlot.AddHisto("momentUnfolded1", "XeXe_5TeV", "", kFullStar, kGreen+2, "");
+      //myPlot.AddHisto("momentUnfolded1_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes");
 
       // additional stuff
       //myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV_LowIR", "", kFullCross, kOrange+1, "");
       //myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV_LowIR", "PbPb low IR", kFullCross, kOrange+1, "boxes");
       
-      myPlot.AddHisto("momentUnfolded1", "pPb_8TeV", "", kFullCircle, kYellow+1, "", 100);
-      myPlot.AddHisto("momentUnfolded1_Syst", "pPb_8TeV", "pPb, 8 TeV", kFullCircle, kYellow+1, "boxes", 100);
+      //myPlot.AddHisto("momentUnfolded1", "pPb_8TeV", "", kFullCircle, kYellow+1, "", 100);
+      //myPlot.AddHisto("momentUnfolded1_Syst", "pPb_8TeV", "pPb, 8 TeV", kFullCircle, kYellow+1, "boxes", 100);
 
-      myPlot.AddHisto("momentUnfolded1", "Pbp_8TeV", "", kFullCircle, kYellow+2, "", 100);
-      myPlot.AddHisto("momentUnfolded1_Syst", "Pbp_8TeV", "Pbp, 8 TeV", kFullCircle, kYellow+2, "boxes", 100);
+      //myPlot.AddHisto("momentUnfolded1", "Pbp_8TeV", "", kFullCircle, kYellow+2, "", 100);
+      //myPlot.AddHisto("momentUnfolded1_Syst", "Pbp_8TeV", "Pbp, 8 TeV", kFullCircle, kYellow+2, "boxes", 100);
 
       //myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV_2018", "", kFullCross, kBlack, "");
       //myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV_2018", "PbPb 2018", kFullCross, kBlack, "boxes");
