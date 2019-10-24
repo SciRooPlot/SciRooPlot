@@ -199,6 +199,10 @@ namespace PlottingFramework {
           if(!graph) continue; // avoid crashes if something goes wrong
           //graph->SetTitle("");
           
+          // do modifications to graph
+          CutGraph(graph, std::dynamic_pointer_cast<Plot::Graph>(data)->GetGraphCutHigh(), std::dynamic_pointer_cast<Plot::Graph>(data)->GetGraphCutLow());
+
+      
           graph->UseCurrentStyle();
           graph->SetMarkerStyle(style);
           graph->SetMarkerColor(color);
@@ -724,7 +728,50 @@ namespace PlottingFramework {
     }
     
   }
+
+//****************************************************************************************
+/**
+ * Deletes data points of graph beyond cutoff value (and below lower cutoff value).
+ * @param graph: graph to cut
+ * @param cutoff: x value after which data is set to zero
+ * @param cutoffLow: x axis value before which data is set to zero
+ */
+//****************************************************************************************
+void PlotGenerator::CutGraph(TGraph* graph, double cutoff, double cutoffLow)
+{
+  bool cutLow = true;
+  bool cutHigh = true;
+
+  if(cutoff < -997) cutHigh = false;
+  if(cutoffLow < -997) cutLow = false; // TODO this is obviously a dangerous way to implement this.... Will lead to wrong results at some point
+
+  int pointsToRemoveHigh = 0;
+  int pointsToRemoveLow = 0;
   
+  for(int i = 0; i < graph->GetN(); i++){
+    if(cutLow && graph->GetX()[i] < cutoffLow)
+    {
+      pointsToRemoveLow++;
+    }
+    if(cutHigh && graph->GetX()[i] > cutoff)
+    {
+      pointsToRemoveHigh++;
+    }
+  }
+  
+  for(auto i = 0; i < pointsToRemoveHigh; i++)
+  {
+    graph->RemovePoint(graph->GetN()-1);
+  }
+  for(auto i = 0; i < pointsToRemoveLow; i++)
+  {
+    graph->RemovePoint(0);
+  }
+
+  
+}
+
+
   TGraph* PlotGenerator::DivideTSpline(TGraph* numerator, TGraph* denominator){
 
     TGraph* result = (TGraph*)numerator->Clone("ratio");

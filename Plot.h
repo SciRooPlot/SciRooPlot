@@ -55,7 +55,7 @@ namespace PlottingFramework {
     // User accessors:
     void AddHisto(string histName, string inputIdentifier = "", string lable = "", int marker = 0, int color = 0, string drawingOptions = "", double cutoff = -999, double cutoffLow = -999);
     void AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier = "", string lable = "", int marker = 0, int color = 0, string errorStyle = "", double cutoff = -999, double cutoffLow = -999);
-    void AddGraph(string graphName, string inputIdentifier = "", string lable = "", int marker = 0, int color = 0, string drawingOptions = "");
+    void AddGraph(string graphName, string inputIdentifier = "", string lable = "", int marker = 0, int color = 0, string drawingOptions = "", double cutoff = -999, double cutoffLow = -999);
     void AddTextBox(double xPos, double yPos, string text = "", bool userCoord = false, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
     void AddLegendBox(double xPos, double yPos, string title = "", bool userCoordinates = false, int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
     void AddLegendBox(string title = "", int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
@@ -204,16 +204,20 @@ namespace PlottingFramework {
   class Plot::Graph : public Plot::Data
   {
   public:
-    Graph(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions)
-    : Data(name, inputIdentifier, lable, color, style, size, drawingOptions)
+    Graph(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions, pair<double, double> graphRangeX)
+    : Data(name, inputIdentifier, lable, color, style, size, drawingOptions), mGraphRangeX(graphRangeX)
     {
       SetType("graph");
     }
-    
+    const double& GetGraphCutLow(){return mGraphRangeX.first;}
+    const double& GetGraphCutHigh(){return mGraphRangeX.second;}
+
     virtual ptree GetPropertyTree(){} //{Data::GetPropertyTree();} // call  move return value
     
   private:
     // specifics for graph...
+    pair<double, double> mGraphRangeX;
+
   };
   
 
