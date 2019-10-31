@@ -13,6 +13,74 @@ namespace PlottingFramework {
     mCurrPad = 1;
   }
 
+  Plot::Plot(ptree &plotTree)
+  {
+    try{
+      mName = plotTree.get<string>("name");
+      mFigureGroup = plotTree.get<string>("figureGroup");
+      mPlotStyle = plotTree.get<string>("plotStyle");
+      mOutputFileName = plotTree.get<string>("outputFileName");
+      
+      // loop over pads defined in property tree
+      int padID = 1;
+      for(auto& pad : plotTree)
+      {
+        if(pad.first.find("PAD") != string::npos)
+        {
+          mControlString[padID] = pad.second.get<string>("controlString");
+          for(auto& content : pad.second)
+          {
+            // add data
+            if(content.first.find("DATA") != string::npos)
+            {
+              string type = content.second.get<string>("type");
+              if(type == "graph")
+              {
+                mData[padID].push_back(std::make_shared<Graph>(content.second));
+              }
+              if(type == "hist")
+              {
+                mData[padID].push_back(std::make_shared<Histogram>(content.second));
+              }
+              if(type == "ratio")
+              {
+                mData[padID].push_back(std::make_shared<Ratio>(content.second));
+              }
+            }
+            
+            // add boxes
+            if(content.first.find("BOX") != string::npos)
+            {
+              string type = content.second.get<string>("type");
+              if(type == "legend")
+              {
+                mBoxes[padID].push_back(std::make_shared<LegendBox>(content.second));
+              }
+              if(type == "text")
+              {
+                mBoxes[padID].push_back(std::make_shared<TextBox>(content.second));
+              }
+            }
+            
+            // add axes
+            if(content.first.find("AXIS") != string::npos)
+            {
+              string axis = content.second.get<string>("name");
+              mAxes[padID][axis] = std::make_shared<Axis>(content.second);
+            }
+          }
+          padID++;
+        }
+      }
+      
+      
+    }catch(...){
+      cout << "ERROR: could not construct data from ptree." << endl;
+    }
+    mClearCutoffBin = false;
+    mCurrPad = 1;
+  }
+
   void Plot::AddGraph(string graphName, string inputIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
   {
     if(inputIdentifier == "") inputIdentifier = mFigureGroup; // default identifier to figuregroup id
@@ -85,67 +153,51 @@ namespace PlottingFramework {
   
   void Plot::Print()
   {
-    cout << " ----------" << string(mName.length(), '-')  << "----------" << endl;
-    cout << " <-------- " << mName << " -------->" << endl;
-    cout << " ----------" << string(mName.length(), '-')  << "----------" << endl;
-    cout << endl;
   }
-  
-  
+    
   
   ptree Plot::GetPropetyTree()
   {
-    // FigureGroup.PlotName.PadID.DATA.HistID
     // convert properties of plot to ptree
     ptree plotTree;
-    GetFigureGroup();
+    plotTree.put("name", mName);
+    plotTree.put("figureGroup", mFigureGroup);
+    plotTree.put("plotStyle", mPlotStyle);
+    plotTree.put("outputFileName", mOutputFileName);
 
-//    int padID = 0;
-  //  for(auto& data : mData)
-    //{
-      //std::to_string(padID) + ".";
-      //padID++;
-    //}
+    
+    for(auto& padData : mData)
+    {
+      int padID = padData.first;
+      ptree padTree;
+      padTree.put("controlString", mControlString[padID]);
 
-
-
-
-/*
-    string plotName = this->GetName();
-    int iHisto = 1;
-    for(auto& histo : mHistos){
-      string histName = "HIST." + std::to_string(iHisto) + "." + histo.name;
-      plotTree.put(histName + ".inputID", histo.inputIdentifier);
-      plotTree.put(histName + ".type", "hist");
-      plotTree.put(histName + ".lable", histo.lable);
-      plotTree.put(histName + ".marker", histo.marker);
-      iHisto++;
-    }
-    for(auto& histo : mRatios){
-      string histName = "RATIO." + histo.inputIdentifier + "." + histo.name;
-      plotTree.put(histName + ".lable", histo.lable);
-      plotTree.put(histName + ".marker", histo.marker);
-    }
-    vector<Axis> axes = {mXaxis, mYaxis, mZaxis, mYaxisRatio};
-    int iAxis = 1;
-    for(auto& axis : axes){
-      string axisName = "AXES." + std::to_string(iAxis);
-      if(axis.title != "") plotTree.put(axisName + ".title", axis.title);
-      int i = 0; // todo axis name
-      for(auto& limit : axis.range){
-        plotTree.put(axisName + ".range[" + std::to_string(i) + "]", limit);
+      // add data of pad
+      int dataID = 1;
+      for(auto& data : padData.second){
+        padTree.put_child("DATA_" + std::to_string(dataID), data->GetPropertyTree());
+        dataID++;
       }
-      iAxis++;
-    }
 
-    int iLegends = 1;
-    for(auto& legend : mLegends){
-      string legendName = "LEGENDS." + std::to_string(iLegends);
-      plotTree.put(legendName + ".x", legend.x);
-      plotTree.put(legendName + ".y", legend.y);
+      // add boxes of pad
+      int boxID = 1;
+      for(auto& box : mBoxes[padID])
+      {
+        padTree.put_child("BOX_" + std::to_string(boxID), box->GetPropertyTree());
+        boxID++;
+      }
+      
+      // add axes of pad
+      vector<string> axisTitles = {"X", "Y", "Z"};
+      for(auto& axisTitle : axisTitles)
+      {
+        if(IsAxisDefined(padID, axisTitle))
+        {
+          padTree.put_child("AXIS_" + axisTitle, GetAxis(padID, axisTitle)->GetPropertyTree());
+        }
+      }
+      plotTree.put_child("PAD_" + std::to_string(padID), padTree);
     }
-*/
     return plotTree;
   }
-
 }

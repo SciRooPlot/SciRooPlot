@@ -9,6 +9,7 @@
 // boost headers
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 // root headers
 #include "TCanvas.h"
@@ -61,6 +62,8 @@ namespace PlottingFramework {
   using boost::property_tree::ptree;
   using boost::property_tree::write_json;
   using boost::property_tree::read_json;
+  using boost::property_tree::write_xml;
+  using boost::property_tree::read_xml;
 }
 
 #endif /* PlottingFramework_h */

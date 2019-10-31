@@ -31,6 +31,7 @@ namespace PlottingFramework {
     
     
     Plot();
+    Plot(ptree &plotTree);
     Plot(string name, string figureGroup, string plotStyle = "default")
     : Plot()
     {
@@ -39,6 +40,7 @@ namespace PlottingFramework {
     Plot(const Plot& otherPlot){
       cout << "FATAL ERROR: copy constructor of Plot class not yet implemented!!" << endl;
       // be careful to deep copy heap objects (data)
+      // if no raw pointers are used, here the default ctor should work as well??
     }
     Plot(Plot&& otherPlot) = default; // moving pointers to heap objects is ok
     
@@ -64,7 +66,6 @@ namespace PlottingFramework {
     inline void SetDrawingProperties(string controlString){mControlString[mCurrPad] = controlString;}
     inline void SetPlotStyle(string plotStyle){mPlotStyle = plotStyle;}
     inline void ChangePad(int padID) {mCurrPad = padID;}
-
 
     // functions to modify
     const string& GetPlotStyle(){return mPlotStyle;}
@@ -118,7 +119,35 @@ namespace PlottingFramework {
 
     //virtual bool isValidDrawingOption() = 0;
     string GetUniqueName(){return mName + "_@_" + mInputIdentifier;}
-    virtual ptree GetPropertyTree(){} // returns property tree with base prperties, move return value
+    virtual ptree GetPropertyTree(){
+      ptree dataTree;
+      dataTree.put("type", mType);
+      dataTree.put("name", mName);
+      dataTree.put("inputIdentifier", mInputIdentifier);
+      dataTree.put("lable", mLable);
+      dataTree.put("color", mColor);
+      dataTree.put("style", mStyle);
+      dataTree.put("size", mSize);
+      dataTree.put("drawingOptions", mDrawingOptions);
+      return dataTree;
+    }
+    
+    // constructor to define entry from file
+    Data(ptree &dataTree){
+      try{
+        mType = dataTree.get<string>("type");
+        mName = dataTree.get<string>("name");
+        mInputIdentifier = dataTree.get<string>("inputIdentifier");
+        mLable = dataTree.get<string>("lable");
+        mColor = dataTree.get<int>("color");
+        mStyle = dataTree.get<int>("style");
+        mSize = dataTree.get<int>("size");
+        mDrawingOptions = dataTree.get<string>("drawingOptions");
+      }catch(...){
+        cout << "ERROR: could not construct data from ptree." << endl;
+      }
+    }
+
     
   protected:
     Data(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions)
@@ -127,7 +156,7 @@ namespace PlottingFramework {
       // constructor code
     }
     void SetType(string type){mType = type;}
-    
+     
   private:
     string mType; // for introspection: "hist", "ratio", "graph", ...
     string mName;
@@ -164,7 +193,27 @@ namespace PlottingFramework {
     const double& GetHistCutHigh(){return mHistoRangeX.second;}
     const double& GetHistCutLow(){return mHistoRangeX.first;}
 
-    virtual ptree GetPropertyTree(){} //{Data::GetPropertyTree();} // call  move return value
+    ptree GetPropertyTree(){
+      ptree dataTree = Data::GetPropertyTree();
+      dataTree.put("scale", mScale);
+      dataTree.put("rangeX_low", mHistoRangeX.first);
+      dataTree.put("rangeX_high", mHistoRangeX.second);
+      dataTree.put("rangeY_low", mHistoRangeY.first);
+      dataTree.put("rangeY_high", mHistoRangeY.second);
+      return dataTree;
+    }
+    
+    // constructor to define entry from file
+    Histogram(ptree &dataTree) : Data(dataTree){
+      try{
+        mHistoRangeX.first = dataTree.get<double>("rangeX_low");
+        mHistoRangeX.second = dataTree.get<double>("rangeX_high");
+        mHistoRangeY.first = dataTree.get<double>("rangeX_low");
+        mHistoRangeY.second = dataTree.get<double>("rangeX_high");
+      }catch(...){
+        cout << "ERROR: could not construct histogram from ptree." << endl;
+      }
+    }
     
   private:
     double mScale;
@@ -187,7 +236,25 @@ namespace PlottingFramework {
     }
     string GetDenomIdentifier(){return mDenomInputIdentifier;}
     string GetUniqueNameDenom(){return mDenomName + "_@_" + mDenomInputIdentifier;}
-    virtual ptree GetPropertyTree(){} // {Histogram::GetPropertyTree();}
+    ptree GetPropertyTree(){
+      ptree dataTree = Histogram::GetPropertyTree();
+      dataTree.put("denomName", mDenomName);
+      dataTree.put("denomInputID", mDenomInputIdentifier);
+      dataTree.put("divideMethod", mDivideMethod);
+      return dataTree;
+    }
+    
+    // constructor to define entry from file
+    Ratio(ptree &dataTree) : Histogram(dataTree){
+      try{
+        mDenomName = dataTree.get<string>("denomName");
+        mDenomInputIdentifier = dataTree.get<string>("denomInputID");
+        mDivideMethod = "";
+        //mDivideMethod = dataTree.get<double>("divideMethod"); // TODO:: it should not crash if xml entry is empty!!
+      }catch(...){
+        cout << "ERROR: could not construct ratio from ptree." << endl;
+      }
+    }
     
   private:
     string mDenomName;
@@ -212,7 +279,22 @@ namespace PlottingFramework {
     const double& GetGraphCutLow(){return mGraphRangeX.first;}
     const double& GetGraphCutHigh(){return mGraphRangeX.second;}
 
-    virtual ptree GetPropertyTree(){} //{Data::GetPropertyTree();} // call  move return value
+    ptree GetPropertyTree(){
+      ptree dataTree = Data::GetPropertyTree();
+      dataTree.put("rangeX_low", mGraphRangeX.first);
+      dataTree.put("rangeX_high", mGraphRangeX.second);
+      return dataTree;
+    }
+    
+    // constructor to define entry from file
+    Graph(ptree &dataTree) : Data(dataTree){
+      try{
+        mGraphRangeX.first = dataTree.get<double>("rangeX_low");
+        mGraphRangeX.second = dataTree.get<double>("rangeX_high");
+      }catch(...){
+        cout << "ERROR: could not construct graph from ptree." << endl;
+      }
+    }
     
   private:
     // specifics for graph...
@@ -240,7 +322,22 @@ namespace PlottingFramework {
       SetType("userFunc");
       // CAREFUL this has to be handled different by manager!!
     }
-    virtual ptree GetPropertyTree();
+    
+    ptree GetPropertyTree(){
+      ptree dataTree = Data::GetPropertyTree();
+      dataTree.put("fromula", mFormula);
+      return dataTree;
+    }
+    
+    // constructor to define entry from file
+    Function(ptree &dataTree) : Data(dataTree){
+      try{
+        mFormula = dataTree.get<string>("formula");
+      }catch(...){
+        cout << "ERROR: could not construct function from ptree." << endl;
+      }
+    }
+
   private:
     string mFormula;
     // TODO: option to fit to loaded data? what about ratios, that exist only in manager?
@@ -255,11 +352,11 @@ namespace PlottingFramework {
   class Plot::Axis {
   public:
     Axis(): mName("dummy"), mTitle(""), mRange(std::make_pair(0,0)){}
-    Axis(string axisName, string title) : mName(axisName), mTitle(title), mRange(std::make_pair(0,0))
+    Axis(string axisName, string title) : mName(axisName), mTitle(title), mRange(std::make_pair(0,0)), mNumTicks(0)
     {
       
     }
-    Axis(string axisName, pair<double, double> range) : mName(axisName), mTitle(""), mRange(range)
+    Axis(string axisName, pair<double, double> range) : mName(axisName), mTitle(""), mRange(range), mNumTicks(0)
     {
       
     }
@@ -270,6 +367,29 @@ namespace PlottingFramework {
     
     bool IsRangeSet(){return !((mRange.first == 0) && (mRange.second == 0));}
     bool IsTitleSet(){return (!mTitle.empty());}
+
+    ptree GetPropertyTree(){
+      ptree axisTree;
+      axisTree.put("name", mName);
+      axisTree.put("title", mTitle);
+      axisTree.put("range_low", mRange.first);
+      axisTree.put("range_high", mRange.second);
+      axisTree.put("numTicks", mNumTicks);
+      return axisTree;
+    }
+    
+    // constructor to define entry from file
+    Axis(ptree &axisTree){
+      try{
+        mName = axisTree.get<string>("name");
+        mTitle = axisTree.get<string>("title");
+        mRange.first = axisTree.get<double>("range_low");
+        mRange.second = axisTree.get<double>("range_high");
+        mNumTicks = axisTree.get<int>("numTicks");
+      }catch(...){
+        cout << "ERROR: could not construct axis from ptree." << endl;
+      }
+    }
 
   private:
     string mName;
@@ -300,6 +420,38 @@ namespace PlottingFramework {
     bool IsAutoPlacement(){return mAutoPlacement;}
 
     const string& GetType(){return mType;}
+    
+    virtual ptree GetPropertyTree(){
+      ptree boxTree;
+      boxTree.put("type", mType);
+      boxTree.put("userCoordinates", mUserCoordinates);
+      boxTree.put("autoPlacement", mAutoPlacement);
+      boxTree.put("x", mX);
+      boxTree.put("y", mY);
+      boxTree.put("borderStyle", mBorderStyle);
+      boxTree.put("borderSize", mBorderSize);
+      boxTree.put("borderColor", mBorderColor);
+      return boxTree;
+    };
+    
+    // constructor to define entry from file
+    Box(ptree &boxTree){
+      try{
+        mType = boxTree.get<string>("type");
+        mUserCoordinates = boxTree.get<bool>("userCoordinates");
+        mAutoPlacement = boxTree.get<bool>("autoPlacement");
+        mX = boxTree.get<double>("x");
+        mY = boxTree.get<double>("y");
+        mBorderStyle = boxTree.get<int>("borderStyle");
+        mBorderSize = boxTree.get<int>("borderSize");
+        mBorderColor = boxTree.get<int>("borderColor");
+      }catch(...){
+        cout << "ERROR: could not construct box from ptree." << endl;
+      }
+      
+    }
+
+    
   protected:
     void SetType(string type){mType = type;}
   private:
@@ -330,6 +482,23 @@ namespace PlottingFramework {
     string GetText(){return mText;}
     void SetText(string text);
     //void SetDelimiter(string delimiter){mDelimiter = delimiter;}
+    
+    ptree GetPropertyTree(){
+      ptree boxTree = Box::GetPropertyTree();
+      boxTree.put("text", mText);
+      return boxTree;
+    };
+    
+    // constructor to define entry from file
+    TextBox(ptree &boxTree) : Box(boxTree)
+    {
+      try{
+        mText = boxTree.get<string>("text");
+      }catch(...){
+        cout << "ERROR: could not construct textbox from ptree." << endl;
+      }
+    }
+
   private:
     int GetNumLines();
     //string mDelimiter;
@@ -352,6 +521,25 @@ namespace PlottingFramework {
     }
     string& GetTitle(){return mTitle;}
     int GetNumColumns(){return mNumColumns;}
+    
+    ptree GetPropertyTree(){
+      ptree boxTree = Box::GetPropertyTree();
+      boxTree.put("title", mTitle);
+      boxTree.put("numColumns", mNumColumns);
+      return boxTree;
+    };
+
+    // constructor to define entry from file
+    LegendBox(ptree &boxTree) : Box(boxTree)
+    {
+      try{
+        mTitle = boxTree.get<string>("title");
+        mNumColumns = boxTree.get<int>("numColumns");
+      }catch(...){
+        cout << "ERROR: could not construct legendbox from ptree." << endl;
+      }
+    }
+
   private:
     int GetNumEntries();
     string mTitle;

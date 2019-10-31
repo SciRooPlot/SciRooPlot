@@ -19,12 +19,10 @@ namespace PlottingFramework {
     void AddHistosFromInputFile(string inputIdentifier, string inputFileName);
     void SetOutputDirectory(string path);
 
-    void ListPlots(bool verbose = false){} // list all plots available in the manager
+    void ListPlots(bool verbose = false){for(auto& plot : mSavedPlots) {cout << plot.GetName() << endl;}} // list all plots available in the manager
     void ListData(){} // list all input data (histos, graphs, etc) available in the manager
     void ListPlotStyles(); // list all available plot styles
 
-    void LoadPlots(string plotFileName){} // load all plots from JSON
-    void LoadPlot(string plotName, string ploFileName){} // load specific plot from JSON
     
     void CreatePlot(Plot& plot, string plotStyleName = "");
     void CreatePlot(string name, string figureGroup, string plotStyleName = "");
@@ -32,7 +30,8 @@ namespace PlottingFramework {
     void SavePlot(string plotName, string figureGroup, string subFolder = "", bool deletePlot = true); // make private?
 
     void DumpPlots(string plotFileName);
-    
+    void LoadPlots(string plotFileName, string figureGroup = "", vector<string> plots = {});
+    void LoadPlot(string plotName, string ploFileName){} // load specific plot from file
     //TH1* GetDataClone(string dataName);
     
     
@@ -41,18 +40,29 @@ namespace PlottingFramework {
     void PrintErrors(bool printMissingPlots = false);
     
     void AddInputFilePaths(string inputIdentifier, vector<string> inputFilePathList);
+
     void DumpInputFiles(string configFileName);
     void LoadInputFiles(string configFileName);
+
+    void AddPlot(ptree plotTree){
+      try{
+        string plotName = plotTree.get<string>("name") + "_@_" + plotTree.get<string>("figureGroup");
+        Plot plot(plotTree);
+        AddPlot(plot);
+      }catch(...)
+      {
+        cout << "ERROR: could not store tree." << endl;
+      }
+    }
     
     void AddPlot(Plot& plot) {
-      mSavedPlots.push_back(std::move(plot));
-
+      if(IsPlotAlreadyBooked(plot.GetUniqueName())) {cout << plot.GetUniqueName() << " booked already" << endl; return;}
       for(auto& padData : plot.GetData()){
         for(auto data : padData.second){
           mRequiredInput[data->GetInputIdentifier()].insert(data->GetName());
         }
       }
-      
+      /*
       for(auto& reqInput : mRequiredInput){
         cout << "InputID: " << reqInput.first << endl;
         cout << "Content:" << endl;
@@ -60,7 +70,8 @@ namespace PlottingFramework {
           cout << "   - " << setContent << endl;
         }
       }
-      
+       */
+      mSavedPlots.push_back(std::move(plot));
     }
     
     PlotStyle GetCopyOfStyle(string plotStyleName)
@@ -103,7 +114,8 @@ namespace PlottingFramework {
     //   void RemoveHisto(string histName);
     
     bool IsPlotPossible(Plot &plot);
-    
+    bool IsPlotAlreadyBooked(string plotName){for(auto& plot : mSavedPlots){if(plot.GetUniqueName() == plotName) return true;} return false;};
+
     PlotManager(const PlotManager&) = default;
     PlotManager& operator=(const PlotManager&) = default;
   };

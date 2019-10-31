@@ -52,7 +52,8 @@ namespace PlottingFramework {
       }
       inputFileTree.put_child(inFileTuple.first, filesOfIdentifier);
     }
-    write_json(configFileName + ".JSON", inputFileTree);
+    boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
+    write_xml(configFileName + ".XML", inputFileTree, std::locale(), settings);
   }
   
   
@@ -60,9 +61,9 @@ namespace PlottingFramework {
   {
     ptree inputFileTree;
     try{
-      read_json(configFileName + ".JSON", inputFileTree);
+      read_xml(configFileName + ".XML", inputFileTree);
     }catch(...){
-      cout << "ERROR: Cannot load file " << configFileName << ".JSON" << endl;
+      cout << "ERROR: Cannot load file " << configFileName << ".XML" << endl;
       return;
     }
     for(auto& inputPair : inputFileTree){
@@ -278,7 +279,6 @@ namespace PlottingFramework {
     {
       if(!saveAll && !(plot.GetFigureGroup() == figureGroup))
         continue;
-
       CreatePlot(plot);
     }
   }
@@ -287,11 +287,37 @@ namespace PlottingFramework {
   void PlotManager::DumpPlots(string plotFileName){
     ptree plotTree;
     for(auto& plot : mSavedPlots){
-      plotTree.put_child((plot.GetFigureGroup() + "." + plot.GetName()), plot.GetPropetyTree());
+      string displayedName = plot.GetName();
+      std::replace(displayedName.begin(),displayedName.end(), '.', '_');
+      plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName + "_@_" + plot.GetFigureGroup()), plot.GetPropetyTree());
     }
-    write_json(plotFileName, plotTree);
+    boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
+    write_xml(plotFileName + ".XML", plotTree, std::locale(), settings);
   }
-  
+
+void PlotManager::LoadPlots(string plotFileName, string figureGroup, vector<string> plotNames){
+  ptree inputTree; // structure: plotGroup.plot.pad.{DATA,BOXES,AXES}.specificTree
+  read_xml(plotFileName + ".XML", inputTree);
+
+  for(auto& plotGroupTree : inputTree){
+    if(figureGroup != "" && plotGroupTree.first != "GROUP::"+figureGroup) continue;
+    for(auto& plotTree : plotGroupTree.second){
+      bool found = false;
+      if(plotNames.empty()){
+        found = true;
+      }else{
+        for(auto& plotName : plotNames){
+          string entryName = "PLOT::" + plotName + "_@_" + figureGroup;
+          if(entryName.find(plotTree.first) != string::npos) found = true;
+        }
+      }
+      if(!found) continue;
+      AddPlot(plotTree.second);
+    }
+  }
+}
+
+
   void PlotManager::ListPlotStyles()
   {
     for(auto& plotStyle : mPlotStyles)
