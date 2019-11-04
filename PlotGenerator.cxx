@@ -3,7 +3,7 @@
 
 using namespace PlottingFramework;
 namespace PlottingFramework {
-  TCanvas* PlotGenerator::GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* availableData){
+ shared_ptr<TCanvas> PlotGenerator::GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* availableData){
 
     // this should be in crator
     if(plotStyle.GetNPads() < plot.GetNumRequiredPads())
@@ -20,7 +20,7 @@ namespace PlottingFramework {
     TCanvas* canvas = new TCanvas(canvasName.c_str(), canvasName.c_str(), plotStyle.GetWidth()+4, plotStyle.GetHeight()+28); // undo hard-coded offsets in TCanvas.cxx line 580
     canvas->SetMargin(0., 0., 0., 0.); // todo make this editable?
     canvas->SetFillStyle(plotStyle.GetFillStyle());
-
+    //canvas->SetFixedAspectRatio();
     int padID = 1;
     for(auto& padStyle : plotStyle.GetPadStyles())
     {
@@ -392,7 +392,7 @@ namespace PlottingFramework {
 //    canvas->SetTheta(20);
 //    canvas->SetPhi(45);
 
-    return canvas;
+    return shared_ptr<TCanvas>(canvas);
   }
   
   
@@ -448,7 +448,7 @@ namespace PlottingFramework {
       if(legendTitle.find("<name>") != string::npos)
       {
         string name = ((TNamed*)legendEntries[iLegend-1])->GetName();
-        name = name.substr(0, name.find("_@_"));
+        name = name.substr(0, name.find(gNameGroupSeparator));
         
         legendTitle.replace(legendTitle.find("<name>"), string("<name>").size(), name);
       }
@@ -628,8 +628,9 @@ namespace PlottingFramework {
     legend->SetLineStyle(legendBox->GetBorderStyle());
     legend->SetLineColor(legendBox->GetBorderColor());
     legend->SetLineWidth(legendBox->GetBorderSize());
+    legend->SetFillStyle(0);
     //legend->SetFillStyle(legendBox->GetFillStyle());
-    //legend->SetFillStyle(legendBox->GetFillColor());
+    //legend->SetFillColor(legendBox->GetFillColor());
     return legend;
   }
   
@@ -698,7 +699,7 @@ namespace PlottingFramework {
     tPaveText->SetTextAlign(12);
     tPaveText->SetTextFont(textFont);
     tPaveText->SetTextSize(textSizePixel);
-    tPaveText->SetFillStyle(4000); //todo fix this hard coded value
+    tPaveText->SetFillStyle(0); //todo fix this hard coded value, 4000 only works for pads!
 //    tPaveText->SetTextColor(kRed);
     return tPaveText;
   }

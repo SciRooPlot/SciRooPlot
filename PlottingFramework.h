@@ -5,6 +5,7 @@
 #include <iostream>
 #include <map>
 #include <set>
+#include <algorithm>
 
 // boost headers
 #include <boost/property_tree/ptree.hpp>
@@ -43,10 +44,12 @@
 #include "TGraphErrors.h"
 #include "TPaletteAxis.h"
 #include "TView.h"
+#include "TApplication.h"
 
-// aliases
 namespace PlottingFramework {
-  
+
+
+  // aliases
   using std::cout;
   using std::endl;
   using std::flush;
@@ -64,6 +67,20 @@ namespace PlottingFramework {
   using boost::property_tree::read_json;
   using boost::property_tree::write_xml;
   using boost::property_tree::read_xml;
+
+
+  const string gNameGroupSeparator = "_IN_";
+
+  // functions wrapping the ugly std functionality for basic operations
+
+  // simple unity of two sets
+  // simple intersection of two sets.
+
+  // simple case insensitive contains method for strings
+  // todo: some variant like template to specify which options are allwoed for specific variable
+
+
+
 }
 
 #endif /* PlottingFramework_h */

@@ -10,6 +10,7 @@ namespace PlottingFramework {
     mControlString.clear();
     mClearCutoffBin = false;
     mFigureGroup = "";
+    mFigureCategory = "";
     mCurrPad = 1;
   }
 
@@ -18,6 +19,7 @@ namespace PlottingFramework {
     try{
       mName = plotTree.get<string>("name");
       mFigureGroup = plotTree.get<string>("figureGroup");
+      mFigureCategory = plotTree.get<string>("figureCategory");
       mPlotStyle = plotTree.get<string>("plotStyle");
       mOutputFileName = plotTree.get<string>("outputFileName");
       
@@ -154,7 +156,23 @@ namespace PlottingFramework {
   void Plot::Print()
   {
   }
-    
+  
+  map<string, set<string>> Plot::GetRequiredInputData()
+  {
+    map<string, set<string>> requiredDataPlot;
+    for(auto& padData : mData)
+    {
+      for(auto& data : padData.second)
+      {
+        requiredDataPlot[data->GetInputIdentifier()].insert(data->GetName());
+        if(data->GetType() == "ratio")
+        {          requiredDataPlot[std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomIdentifier()].insert(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomName());
+        }
+      }
+    }
+    return requiredDataPlot;
+  }
+
   
   ptree Plot::GetPropetyTree()
   {
@@ -162,6 +180,7 @@ namespace PlottingFramework {
     ptree plotTree;
     plotTree.put("name", mName);
     plotTree.put("figureGroup", mFigureGroup);
+    plotTree.put("figureCategory", mFigureCategory);
     plotTree.put("plotStyle", mPlotStyle);
     plotTree.put("outputFileName", mOutputFileName);
 

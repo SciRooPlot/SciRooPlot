@@ -48,9 +48,14 @@ namespace PlottingFramework {
     string& GetName(){return mName;}
     string& GetControlString(int padID){return mControlString[padID];}
     string& GetFigureGroup(){return mFigureGroup;}
+    string& GetFigureCategory(){return mFigureCategory;}
     map<unsigned int, vector<shared_ptr<Data>>>& GetData(){return mData;}
     vector<shared_ptr<Data>>& GetData(int padID){return mData[padID];}
     vector<shared_ptr<Box>>& GetBoxes(int padID){return mBoxes[padID];}
+    map<string, set<string>> GetRequiredInputData();
+    
+    void SetFigureGroup(string figureGroup){mFigureGroup = figureGroup;}
+    void SetFigureCategory(string figureCategory){mFigureCategory = figureCategory;}
 
     void Print();
     
@@ -71,7 +76,7 @@ namespace PlottingFramework {
     const string& GetPlotStyle(){return mPlotStyle;}
     const string& GetOutputFileName(){return mOutputFileName;}
     // maybe also getlegends gettexts
-    string GetUniqueName(){return mName + "_@_" + mFigureGroup;}
+    string GetUniqueName(){return mName + gNameGroupSeparator + mFigureGroup;}
 
     int GetNumRequiredPads(){return mData.size();}
     ptree GetPropetyTree();
@@ -86,6 +91,7 @@ namespace PlottingFramework {
     friend class PlotManager; // allow PlotManager access to private and protected members
     string mName;
     string mFigureGroup;
+    string mFigureCategory;
     string mPlotStyle;
     string mOutputFileName;
 
@@ -118,7 +124,7 @@ namespace PlottingFramework {
     const string& GetDrawingOptions(){return mDrawingOptions;}
 
     //virtual bool isValidDrawingOption() = 0;
-    string GetUniqueName(){return mName + "_@_" + mInputIdentifier;}
+    string GetUniqueName(){return mName + gNameGroupSeparator + mInputIdentifier;}
     virtual ptree GetPropertyTree(){
       ptree dataTree;
       dataTree.put("type", mType);
@@ -235,7 +241,8 @@ namespace PlottingFramework {
       SetType("ratio");
     }
     string GetDenomIdentifier(){return mDenomInputIdentifier;}
-    string GetUniqueNameDenom(){return mDenomName + "_@_" + mDenomInputIdentifier;}
+    string GetDenomName(){return mDenomName;}
+    string GetUniqueNameDenom(){return mDenomName + gNameGroupSeparator + mDenomInputIdentifier;}
     ptree GetPropertyTree(){
       ptree dataTree = Histogram::GetPropertyTree();
       dataTree.put("denomName", mDenomName);

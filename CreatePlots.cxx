@@ -8,6 +8,11 @@ using PlottingFramework::Plot;
 
 string GetPtString(int pTbin);
 /*
+ - possibility to save only one specific plot or plots also as .C
+ - possibility to dump original root files used for plots together with their template representations via internal file structure for inputID?
+ - make flexible such that csv files could be read as well
+ - write interface to gnerate graphs/histos from raw hepmc output
+ 
  Bugs:
  - make sure figure groups cannot contain '.'
  - exponents on x axis are not in the proper position
@@ -154,7 +159,7 @@ int main(int argc, char *argv[]) {
   // create plotting environment
   PlotManager plotEnv;
   plotEnv.SetOutputDirectory(outputPath);
-
+  plotEnv.SetUseUniquePlotNames(false);
   /*
    plotEnv.GetPlot("myPlotName") // possibility to modify and save again
    myPlot.SetOutputFileName("betterThanDefaultName", "somewhere else"); // path is optional
@@ -174,22 +179,36 @@ int main(int argc, char *argv[]) {
       string inputFileSyst = folder + dataSet + "_Syst.root";
 
       if(dataSet == "Publications" || dataSet == "Simulations" || dataSet == "Energyscan" || dataSet == "Fits"){
-        plotEnv.AddInputFilePaths(dataSet, {inputFile});
+        plotEnv.AddInputDataFiles(dataSet, {inputFile});
       }else{
-        plotEnv.AddInputFilePaths(dataSet, {inputFile, inputFileSyst});
+        plotEnv.AddInputDataFiles(dataSet, {inputFile, inputFileSyst});
       }
     }
-    plotEnv.DumpInputFiles(inputFileConfig);
+    plotEnv.DumpInputDataFiles(inputFileConfig);
     return -1;
   }
   else{
-    plotEnv.LoadInputFiles(inputFileConfig);
+    plotEnv.LoadInputDataFiles(inputFileConfig);
   }
   
   if(usePlotsFromFile){
-    plotEnv.LoadPlots("plotDefinitions", "system_comparison", {"meanPtFullRange"});
-    plotEnv.CreatePlots();
-    plotEnv.PrintErrors();
+//    plotEnv.LoadPlots("plotDefinitions", "system_comparison", {"meanPtFullRange", "meanPt"});
+    //    plotEnv.CreatePlots("system_comparison");
+    plotEnv.LoadPlots("plotDefinitions", "energy_comparison", {"inverseSlope", "meanPt"});
+    plotEnv.CreatePlots("energy_comparison", {"inverseSlope", "meanPt"}, "macro");
+    plotEnv.CreatePlots("energy_comparison", {"inverseSlope", "meanPt"});
+
+    // possibility to open interactively a plot, play around (and save afterwards what was changed?)
+    // useful to have a quick glimpse and optimize how plot looks without creating pdfs
+    // how to open windows from standalone program? can I fix aspect ratio of canvas?
+    //plotEnv.OpenPlotInteractive("inverseSlope", "energy_comparison", "C");
+
+    plotEnv.PrintStatus();
+    //plotEnv.CreatePlots("system_comparison");
+    //    plotEnv.ClearLoadedData();
+ //   plotEnv.LoadPlots("plotDefinitions", "system_comparison", {"varianceFullRange", "meanPt"});
+  //  plotEnv.CreatePlots();
+  //  plotEnv.ListData();
     return 1;
   }
   
@@ -1106,7 +1125,6 @@ int multBin = 18;
 
       plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
-
     
     
     { // -----------------------------------------------------------------------
@@ -1300,6 +1318,7 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "meanPtFullRange";
       Plot myPlot(plotName, plotGroup);
+      myPlot.SetFigureCategory("mostImportantPlots");
       myPlot.SetDrawingProperties("logX");
       myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
 
@@ -2745,7 +2764,6 @@ int multBin = 18;
   }
 
   plotEnv.CreatePlots();
-  plotEnv.PrintErrors();
   plotEnv.DumpPlots("plotDefinitions");
   
 }

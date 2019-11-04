@@ -19,7 +19,7 @@ namespace PlottingFramework {
   public:
     //static TCanvas* GeneratePlot(Plot& plot, PlotStyle& plotStyle) {return new TCanvas(plot.GetUniqueName().c_str(), "b");}
 
-    static TCanvas* GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* availableData);
+    static shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* availableData);
 
   private:
 
