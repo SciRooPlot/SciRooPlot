@@ -8,8 +8,10 @@ namespace PlottingFramework{// BEGIN namespace PlottingFramework
  * Constructor for PlotManager
  */
 //****************************************************************************************
-PlotManager::PlotManager()
+PlotManager::PlotManager() : mApp("MainApp", 0, 0)
 {
+  TQObject::Connect("TGMainFrame", "CloseWindow()", "TApplication", gApplication, "Terminate()");
+
   mDataLedger = new TObjArray(1);
   mDataLedger->SetOwner();
   
@@ -194,7 +196,7 @@ void PlotManager::LoadPlot(string plotFileName, string figureGroup, string plotN
  * Generates plot based on plot template.
  */
 //****************************************************************************************
-void PlotManager::GeneratePlot(Plot& plot, string ouputFileType)
+void PlotManager::GeneratePlot(Plot& plot, string outputMode)
 {
   bool isPlotStyleBooked = false;
   for(auto& plotStyle : mPlotStyles)
@@ -210,20 +212,23 @@ void PlotManager::GeneratePlot(Plot& plot, string ouputFileType)
     cout << "ERROR: Please specify a figure group!" << endl;
     return;
   }
-  
+
   PlotStyle& plotStyle = GetPlotStyle(plot.GetPlotStyle());
   shared_ptr<TCanvas> canvas = PlotGenerator::GeneratePlot(plot, plotStyle, mDataLedger);
   if(!canvas) return;
   
-  // todo: this stuff should be user definable and stored in plot object
-  // default values would be this:
+  // if interactive mode is specified, open window instead of saving the plot
+  if(outputMode.find("interactive") != string::npos){
+    gStyle->SetOptStat(0);
+    canvas->WaitPrimitive();
+    return;
+  }
   string subFolder = plot.GetFigureCategory();
-  
   string fileEnding = ".pdf";
-  cout << "output file type " << ouputFileType << endl;
-  if(ouputFileType.find("C") != string::npos || ouputFileType.find("c") != string::npos || ouputFileType.find("macro") != string::npos){
+  if(outputMode.find("macro") != string::npos){
     fileEnding = ".C";
   }
+  
   string fileName = plot.GetUniqueName();
   if(!mUseUniquePlotNames) fileName = plot.GetName();
   
@@ -232,16 +237,6 @@ void PlotManager::GeneratePlot(Plot& plot, string ouputFileType)
   if(subFolder != "") folderName += "/" + subFolder;
   gSystem->Exec((string("mkdir -p ") + folderName).c_str());
   canvas->SaveAs((folderName + "/" + fileName + fileEnding).c_str());
-
-  /*
-  Int_t argc = 0;
-  char **argv = nullptr;
-  TApplication theApp("App", &argc, argv);
-  // your code
-  // here you can Draw() things
-  canvas->Draw();
-  theApp.Run();
-   */
 }
 
 //****************************************************************************************
@@ -249,7 +244,7 @@ void PlotManager::GeneratePlot(Plot& plot, string ouputFileType)
  * Creates plots.
  */
 //****************************************************************************************
-void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, string ouputFileType)
+void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, string outputMode)
 {
   map<string, set<string>> requiredData;
   bool saveAll = (figureGroup == "");
@@ -281,7 +276,7 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
   bool isAllPlotsCreated = true;
   for(auto plot : selectedPlots){
     if(IsPlotPossible(*plot))
-      GeneratePlot(*plot, ouputFileType);
+      GeneratePlot(*plot, outputMode);
     else
     {
       isAllPlotsCreated = false;
@@ -310,9 +305,9 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
   cout << endl << "--------------------------------------" << endl << endl;
 
 }
-void PlotManager::CreatePlot(string plotName, string figureGroup, string ouputFileType)
+void PlotManager::CreatePlot(string plotName, string figureGroup, string outputMode)
 {
-  CreatePlots(figureGroup, {plotName}, ouputFileType);
+  CreatePlots(figureGroup, {plotName}, outputMode);
 }
 
 //****************************************************************************************

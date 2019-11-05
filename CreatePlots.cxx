@@ -115,6 +115,7 @@ string GetPtString(int pTbin);
 
 int main(int argc, char *argv[]) {
 
+
   bool usePlotsFromFile = true;
 
   bool updateInputFiles = false;
@@ -195,8 +196,8 @@ int main(int argc, char *argv[]) {
 //    plotEnv.LoadPlots("plotDefinitions", "system_comparison", {"meanPtFullRange", "meanPt"});
     //    plotEnv.CreatePlots("system_comparison");
     plotEnv.LoadPlots("plotDefinitions", "energy_comparison", {"inverseSlope", "meanPt"});
-    plotEnv.CreatePlots("energy_comparison", {"inverseSlope", "meanPt"}, "macro");
-    plotEnv.CreatePlots("energy_comparison", {"inverseSlope", "meanPt"});
+    plotEnv.CreatePlots("energy_comparison", {"inverseSlope", "meanPt"}, "interactive");
+//    plotEnv.CreatePlots("energy_comparison", {"inverseSlope", "meanPt"});
 
     // possibility to open interactively a plot, play around (and save afterwards what was changed?)
     // useful to have a quick glimpse and optimize how plot looks without creating pdfs

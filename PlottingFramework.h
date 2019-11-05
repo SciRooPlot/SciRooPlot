@@ -45,6 +45,7 @@
 #include "TPaletteAxis.h"
 #include "TView.h"
 #include "TApplication.h"
+#include "TGWindow.h"
 
 namespace PlottingFramework {
 

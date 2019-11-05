@@ -35,8 +35,8 @@ namespace PlottingFramework
     void DumpPlot(string plotFileName, string figureGroup, string plotName);
     void LoadPlots(string plotFileName, string figureGroup = "", vector<string> plotNames = {});
     void LoadPlot(string plotFileName, string figureGroup, string plotName);
-    void CreatePlots(string figureGroup = "", vector<string> plotNames = {}, string ouputFileType = "pdf");
-    void CreatePlot(string name, string figureGroup, string ouputFileType = "pdf");
+    void CreatePlots(string figureGroup = "", vector<string> plotNames = {}, string outputMode = "pdf");
+    void CreatePlot(string name, string figureGroup, string outputMode = "pdf");
     
     // --- status accessors --
     void PrintStatus();
@@ -46,7 +46,7 @@ namespace PlottingFramework
     
 
   private:
-
+    TApplication mApp;
     // IO management related
     string mOutputDirectory;    /// directory to store output
     bool mUseUniquePlotNames; // wether to use plot names or unique plot names for output files
@@ -58,7 +58,7 @@ namespace PlottingFramework
     TObject* FindSubDirectory(TObject* folder, vector<string> subDirs);
     // content related members
     vector<Plot> mPlotLedger;   /// internal representation of of plots known to the manager
-    void GeneratePlot(Plot& plot, string ouputFileType = "pdf");
+    void GeneratePlot(Plot& plot, string outputMode = "pdf");
     bool IsPlotPossible(Plot &plot);
     bool IsPlotAlreadyBooked(string plotName){for(auto& plot : mPlotLedger){if(plot.GetUniqueName() == plotName) return true;} return false;};
 
