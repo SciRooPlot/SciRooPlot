@@ -37,13 +37,9 @@ namespace PlottingFramework {
     {
       mName = name; mFigureGroup = figureGroup; mPlotStyle = plotStyle;
     }
-    Plot(const Plot& otherPlot){
-      cout << "FATAL ERROR: copy constructor of Plot class not yet implemented!!" << endl;
-      // be careful to deep copy heap objects (data)
-      // if no raw pointers are used, here the default ctor should work as well??
-    }
-    Plot(Plot&& otherPlot) = default; // moving pointers to heap objects is ok
-    
+    Plot(const Plot& otherPlot) = default;
+    Plot(Plot& otherPlot) = default;
+
     // accessors for internal use by manager
     string& GetName(){return mName;}
     string& GetControlString(int padID){return mControlString[padID];}
@@ -74,7 +70,6 @@ namespace PlottingFramework {
 
     // functions to modify
     const string& GetPlotStyle(){return mPlotStyle;}
-    const string& GetOutputFileName(){return mOutputFileName;}
     // maybe also getlegends gettexts
     string GetUniqueName(){return mName + gNameGroupSeparator + mFigureGroup;}
 
@@ -93,7 +88,6 @@ namespace PlottingFramework {
     string mFigureGroup;
     string mFigureCategory;
     string mPlotStyle;
-    string mOutputFileName;
 
     unsigned int mCurrPad; // current pad to assign histograms to
     map<unsigned int, vector<shared_ptr<Data>>> mData; // mData[padID][dataID]
@@ -114,6 +108,9 @@ namespace PlottingFramework {
   class Plot::Data
   {
   public:
+    Data(const Data& otherPlot) = default;
+    Data(Data& otherPlot) = default;
+
     const string& GetType(){return mType;}
     const string& GetName() {return mName;}
     const string& GetInputIdentifier(){return mInputIdentifier;}
@@ -188,6 +185,9 @@ namespace PlottingFramework {
   class Plot::Histogram : public Plot::Data
   {
   public:
+    Histogram(const Histogram& otherHistogram) = default;
+    Histogram(Histogram& otherHistogram) = default;
+
     Histogram(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions, int scale, pair<double, double> histoRangeX, pair<double, double> histoRangeY)
     : Data(name, inputIdentifier, lable, color, style, size, drawingOptions), mScale(scale), mHistoRangeX(histoRangeX), mHistoRangeY(histoRangeY)
     {
@@ -235,6 +235,9 @@ namespace PlottingFramework {
   class Plot::Ratio : public Plot::Histogram
   {
   public:
+    Ratio(const Ratio& otherRatio) = default;
+    Ratio(Ratio& otherRatio) = default;
+
     Ratio(string name, string inputIdentifier, string denomName, string denomInputIdentifier, string lable, int color, int style, int size, string drawingOptions, string divideMethod, int scale, pair<double, double> histoRangeX, pair<double, double> histoRangeY)
     : Histogram(name, inputIdentifier, lable, color, style, size, drawingOptions, scale, histoRangeX, histoRangeY), mDenomName(denomName), mDenomInputIdentifier(denomInputIdentifier), mDivideMethod(divideMethod)
     {
@@ -278,6 +281,9 @@ namespace PlottingFramework {
   class Plot::Graph : public Plot::Data
   {
   public:
+    Graph(const Graph& otherGraph) = default;
+    Graph(Graph& otherGraph) = default;
+
     Graph(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions, pair<double, double> graphRangeX)
     : Data(name, inputIdentifier, lable, color, style, size, drawingOptions), mGraphRangeX(graphRangeX)
     {
@@ -318,6 +324,9 @@ namespace PlottingFramework {
   class Plot::Function : public Plot::Data
   {
   public:
+    Function(const Function& otherFunction) = default;
+    Function(Function& otherFunction) = default;
+
     Function(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions)
     : Data(name, inputIdentifier, lable, color, style, size, drawingOptions), mFormula("")
     {
@@ -358,6 +367,9 @@ namespace PlottingFramework {
   //****************************************************************************************
   class Plot::Axis {
   public:
+    Axis(const Axis& otherAxis) = default;
+    Axis(Axis& otherAxis) = default;
+
     Axis(): mName("dummy"), mTitle(""), mRange(std::make_pair(0,0)){}
     Axis(string axisName, string title) : mName(axisName), mTitle(title), mRange(std::make_pair(0,0)), mNumTicks(0)
     {
@@ -413,6 +425,9 @@ namespace PlottingFramework {
   //****************************************************************************************
   class Plot::Box {
   public:
+    Box(const Box& otherBox) = default;
+    Box(Box& otherBox) = default;
+
     Box(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor)
     : mType("none"), mUserCoordinates(userCoordinates), mAutoPlacement(autoPlacement), mX(x), mY(y), mBorderStyle(borderStyle), mBorderSize(borderSize), mBorderColor(borderColor)
     {
@@ -480,6 +495,9 @@ namespace PlottingFramework {
   //****************************************************************************************
   class Plot::TextBox : public Plot::Box {
   public:
+    TextBox(const TextBox& otherTextBox) = default;
+    TextBox(TextBox& otherTextBox) = default;
+
     TextBox(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor, string text)
     : Box(userCoordinates, autoPlacement, x, y, borderStyle, borderSize, borderColor), mText(text)
     {
@@ -520,6 +538,9 @@ namespace PlottingFramework {
   //****************************************************************************************
   class Plot::LegendBox : public Plot::Box {
   public:
+    LegendBox(const LegendBox& otherLegendBox) = default;
+    LegendBox(LegendBox& otherLegendBox) = default;
+
     LegendBox(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor, string title, int nColumns)
     : Box(userCoordinates, autoPlacement, x, y, borderStyle, borderSize, borderColor), mTitle(title), mNumColumns(nColumns)
     {

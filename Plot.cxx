@@ -21,7 +21,6 @@ namespace PlottingFramework {
       mFigureGroup = plotTree.get<string>("figureGroup");
       mFigureCategory = plotTree.get<string>("figureCategory");
       mPlotStyle = plotTree.get<string>("plotStyle");
-      mOutputFileName = plotTree.get<string>("outputFileName");
       
       // loop over pads defined in property tree
       int padID = 1;
@@ -157,6 +156,7 @@ namespace PlottingFramework {
   {
   }
   
+// DELETE this inefficient nonsense
   map<string, set<string>> Plot::GetRequiredInputData()
   {
     map<string, set<string>> requiredDataPlot;
@@ -182,9 +182,7 @@ namespace PlottingFramework {
     plotTree.put("figureGroup", mFigureGroup);
     plotTree.put("figureCategory", mFigureCategory);
     plotTree.put("plotStyle", mPlotStyle);
-    plotTree.put("outputFileName", mOutputFileName);
 
-    
     for(auto& padData : mData)
     {
       int padID = padData.first;

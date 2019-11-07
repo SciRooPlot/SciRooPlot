@@ -38,31 +38,45 @@ namespace PlottingFramework
     void CreatePlots(string figureGroup = "", vector<string> plotNames = {}, string outputMode = "pdf");
     void CreatePlot(string name, string figureGroup, string outputMode = "pdf");
     
+    void CreatePlotsFromFile(string plotFileName, string figureGroup = "", vector<string> plotNames = {}, string outputMode = "pdf");
+    void CreatePlotFromFile(string plotFileName, string figureGroup, string plotName , string outputMode = "pdf");
+
+    
     // --- status accessors --
     void PrintStatus();
-    void ListPlots(bool verbose = false){for(auto& plot : mPlotLedger) {cout << plot.GetName() << endl;}} // list all plots available in the manager
+    void ListPlots(bool verbose = false){for(auto& plot : mPlots) {cout << plot.GetName() << endl;}} // list all plots available in the manager
     void ListData(); // list all input data (histos, graphs, etc) available in the manager
     void ListPlotStyles(); // list all available plot styles
     
+    void SetOutputFileName(string fileName = "ResultPlots.root") {mOutputFileName = fileName;}
 
   private:
+
+    map<string, int> mNameRegister; // bi-directional mapping between name and unique id
+    inline int GetNameRegisterID(const string& name);
+    inline const string& GetNameRegisterName(int nameID);
+    map<int, set<int>> mLoadedData;
+    void LoadData(map<int, set<int>>& requiredData);
+
+    
     TApplication mApp;
     // IO management related
+    string mOutputFileName;
+    map<string, shared_ptr<TCanvas>> mPlotLedger;
+    
     string mOutputDirectory;    /// directory to store output
     bool mUseUniquePlotNames; // wether to use plot names or unique plot names for output files
     map<string, vector<string>> mInputFiles; // inputFileIdentifier, inputFilePaths
-    map<string, set<string>> mLoadedData;
-    void LoadData(map<string, set<string>>& requiredData);
     TObjArray* mDataLedger;     /// all external data representations currently loaded by the manager
     TObject* GetDataClone(TObject* folder, string dataName);
     TObject* FindSubDirectory(TObject* folder, vector<string> subDirs);
     // content related members
-    vector<Plot> mPlotLedger;   /// internal representation of of plots known to the manager
     void GeneratePlot(Plot& plot, string outputMode = "pdf");
     bool IsPlotPossible(Plot &plot);
-    bool IsPlotAlreadyBooked(string plotName){for(auto& plot : mPlotLedger){if(plot.GetUniqueName() == plotName) return true;} return false;};
+    bool IsPlotAlreadyBooked(string plotName){for(auto& plot : mPlots){if(plot.GetUniqueName() == plotName) return true;} return false;};
 
     // style related members
+    vector<Plot> mPlots;   /// internal representation of of plots known to the manager
     vector<PlotStyle> mPlotStyles;
     void DefineDefaultPlottingStyles();
     PlotStyle& GetPlotStyle(string plotStyleName);

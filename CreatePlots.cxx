@@ -8,11 +8,20 @@ using PlottingFramework::Plot;
 
 string GetPtString(int pTbin);
 /*
- - possibility to save only one specific plot or plots also as .C
- - possibility to dump original root files used for plots together with their template representations via internal file structure for inputID?
- - make flexible such that csv files could be read as well
- - write interface to gnerate graphs/histos from raw hepmc output
  
+ - avoid copying of strings: only one copy in manager, then work with pointers
+ - possibility to load all data from input
+ - load only allowed datatypes
+ - add instanciate plot function and change steering of main program such that plots are easily created
+ - option in main program to list loaded plots
+ - possibility to dump and load plot styles (manager should only read in required plot styles)
+ - make sure PlotStyle names are unique
+ - add graph division feature with tspline3
+ - add constructor to plotStyle that already gives useful default markers, colors, 2dstyle, etc
+ - use drawing option AXIS and lagrest axis range for ranges or find better way to define which histo should auto-define ranges
+ (set limits? is this by definition limited to original or can it be changed?)
+
+
  Bugs:
  - make sure figure groups cannot contain '.'
  - exponents on x axis are not in the proper position
@@ -22,37 +31,27 @@ string GetPtString(int pTbin);
  - boxes are not transparent by default
  - sometimes text boxes are randomly not drawn?
  - zeroes in histograms should not be drawn if they have no error?
+ - if lables are 1, 2,3 height is not calculated correctly?
+
 
  Important:
- - be clear about coordinate systems (fix relative positioning, maybe)
- - possibility to write program that gives inputFiels + plotDefinitions and can then plot any defined plot
- - add possibility to save plot as .C file for portability and to freeze how the plot looks
- - add option to create specific plot!
- - find a general way to determine optimal axis offsets (in particular for 2d and 3d views)
- - it should be possible to conveniently pipe all root plotting functionality (drawing properties) to the plot
- - maybe externalizing style properties would be useful and make code more readable (css like or JSON)
- - add TView for 3d
- - add graph division feature with tspline3
- - get rid of tautological stuff for ratio, histo, graph in main loop over data
- - automatically calculate from lable offset and lable size an appropriate title offset? in particular take into account if view is rotated in surface plot
- - what unit is title offset? understand better and find clever way to autmatically calculate useful offsets...
- - add constructor to plotStyle that already gives useful default markers, colors, 2dstyle, etc
  - possibility to set alias for axis e.g. "ratio"?
+ - be clear about coordinate systems (fix relative positioning, maybe)
+ - find a general way to automatically determine optimal axis offsets (in particular for 2d and 3d views) (what unit is title offset?)
+ - it should be possible to conveniently pipe all root plotting functionality (drawing properties) to the plot
+ - add TView for 3d representations of th2
+ - get rid of tautological stuff for ratio, histo, graph in main loop over data
  - generalize legend function to handle text boxes in a similar manner
- - text size and style settings should by default be inherited by each object with text but there should be a possiblity to override
  - pads must inherit plot properties (text size et al unless specified otherwise)
- - fix loading of input: get set of required data from plot and only load this, merge sets to keep track of overall missing histos (but keep possibility to load all as well)
- - load only allowed datatypes
- - possibility to use file and list substructure as part of internal names
+ - text size and style settings should by default be inherited by each object with text but there should be a possiblity to override
  - check if 2d hist is part of plot, then change style...
- - do i want to store actual plots? otherwise remove mPlotLedger, resp use it for Plot templates, re-think create plot logic
 
  Not so important:
+ - setter for csv format string and delimiter
  - would it be possible to define 'top left' 'bottom right' etc default positons for boxes in general manner? maybe with flexible minimal distance to ticks
  - is it possible to set the order in multi column tlegends? left-right vs top-bottom
  - pipe box line fill properties to drawing
  - add possibility to make canvas intransparent (and colored)
- - use drawing option AXIS for histograms that should not be drawn (which are only for ranges) or find better way to define which histo should auto-define ranges
  - how to handle multi-plots if not all of them are available?
  - possibility to scale histograms by factor
  - also add use last color feature -1
@@ -61,7 +60,6 @@ string GetPtString(int pTbin);
  - backward compatibility with "ratio" keyword in axis range and title?
  - fix dirty 2d hacks
  - fix dirty hacks for backward compatibility regarding ratio plots
- - if lables are 1, 2,3 height is not calculated correctly?
  - check if padID starts with 1 is a problem (vectors maybe)
  - think about more placeholders for legends and texts and how to format them
  - option to set n divisions of axes
@@ -74,31 +72,28 @@ string GetPtString(int pTbin);
  - add possibility for grey tilted overlayed text like "draft"
  - write case-insensitive "contained in string" function for control string! as lambda function
  - text align, angle features!
- - possibility for user to grep and change plotstyle or add some setter functions to pipe through manager??
+ - possibility for user to grep and change specific plotstyle or plot that was already loaded in manager
  - put in some feasible defaults for colors, markers etc
- - add shape objects, disentangle data input and created objects (shapes, arrows, functions)
- - functions and fitting!
- - save and load functions for plot properties and plot style
- - manager should only read in required plot styles
- - make sure PlotStyle names are unique
  - for loading and saving styles: possibility for default values as fallback?
  - possibility to specify use of only full or open markers in AddHisto
  - implement check that ensures only valid drawing options are used for each data type (separate 1d 2d info)
- - add help function for usage!
  - also define default line styles
- - final goal: start program with argument ./plot myPlot@figureGroup and it is automatically searched for in saved plot, files are loaded and plot is created
- - load file with plot templates -> loads and opens necessary files automatically
- - generate list of available plots defined in JSON (considering plotStyles + opened input files)
  - generalized version of white patch hiding the truncated zero
- - possibility add external histogram in plots
  - possibility to split the legend?
  - maybe linking axes should also be possible for different axes (x in pad1 to y in pad2)
- - would be nice if framework could also read in data from other plotting file formats (e.g. csv or YODA)
  
  Code Quality:
  - change arguments referring to internal variables to const ref if possible to be more memory efficient, use lambdas
  - add (copy-, move-) constructors and destructors; make sure all variables are initialized properly
 
+ Long term goals:
+  - add support for .yoda and hepmc file formats
+  - add shape objects
+  - add functions, fitting
+  - add data input and stand-alone definable objects (shapes, arrows, functions)
+  - add help function for usage!
+
+ 
  General:
   - cleanup code
   - imporove documentation
@@ -109,27 +104,71 @@ string GetPtString(int pTbin);
  
  TODOS for analysis plots:
   - clean up file names and make useful sub-folders
-  - do not always update all plots.. (currWork dir)
+
  
  */
 
 int main(int argc, char *argv[]) {
 
-
-  bool usePlotsFromFile = true;
-
   bool updateInputFiles = false;
-//  string outputPath = "~/Desktop/TempPlots";
-  string outputPath = "~/Desktop/testPlots";
 
+  string outputPath = "~/Desktop/testPlots";
+  string inputFileConfig = "inputFiles";
+  string plotConfig = "plotDefinitions";
+  
   string outputFileName = "myPlots.root";
   bool createBinWiseClosureTests = true;
-  bool skipDatasetPlots = true;
 
+  // create plotting environment
+  PlotManager plotEnv;
+  plotEnv.SetOutputDirectory(outputPath);
+  plotEnv.SetUseUniquePlotNames(false);
+
+  
   vector<string> dataSets;
-  if(argc > 1) {dataSets.push_back(argv[1]); skipDatasetPlots = false;}
+  if(argc > 1 && (string(argv[1]) == "help" || string(argv[1]) == "--h")){
+    cout << "Usage:" << endl;
+    cout << "./plot inputID plot1,plot2" << endl;
+    return 0;
+
+  }
+  else if(argc > 2){
+    // plot only specific plots stored in the plotConfig file
+
+    plotEnv.LoadInputDataFiles(inputFileConfig);
+
+    string inputIdentifierString = argv[1];
+    std::istringstream inputIdentifierStringStream(inputIdentifierString);
+    vector<string> inputIdentifiers;
+    string tempName;
+    while(std::getline(inputIdentifierStringStream, tempName, ',')) {
+        inputIdentifiers.push_back(tempName);
+    }
+
+    string fileNameString = argv[2];
+    std::istringstream fileNameStringStream(fileNameString);
+    vector<string> fileNames;
+    while(std::getline(fileNameStringStream, tempName, ',')) {
+        fileNames.push_back(tempName);
+    }
+    if(fileNameString == "all") fileNames = {};
+
+    string outputMode = "interactive";
+    if(argc > 3 && argv[3]) outputMode = argv[3];
+    
+    for(auto& inputIdentifier : inputIdentifiers){
+      plotEnv.CreatePlotsFromFile(plotConfig, inputIdentifier, fileNames, outputMode);
+    }
+    return 0;
+  }
+  else if(argc > 1){
+    // update plots defined in file for specific dataset
+    plotEnv.LoadPlots(plotConfig);
+    if(!(string(argv[1]) == "none")) dataSets.push_back(argv[1]); // none loads no dataset and therefore only overrides the combined plots
+  }
   else
-  { // define datasets to include in analysis
+  {
+    // override all plots defined in file
     dataSets.push_back("pp_2TeV");
     dataSets.push_back("pp_5TeV");
     dataSets.push_back("pp_7TeV");
@@ -142,36 +181,13 @@ int main(int argc, char *argv[]) {
     dataSets.push_back("Fits");
     dataSets.push_back("Simulations");
     dataSets.push_back("Energyscan");
-
-    /* --- Unused Datasets ---
-
-
-    dataSets.push_back("pp_13TeV_old");
-
-    dataSets.push_back("pp_13TeV_withDDC");
-    dataSets.push_back("PbPb_5TeV_noZDC");
-
-    dataSets.push_back("pp_5TeV_10GeV_CENT");
-    dataSets.push_back("pp_5TeV_10GeV_CENTwoSDD");
-    dataSets.push_back("pp_5TeV_10GeV_FAST");
-*/
   }
 
-  // create plotting environment
-  PlotManager plotEnv;
-  plotEnv.SetOutputDirectory(outputPath);
-  plotEnv.SetUseUniquePlotNames(false);
-  /*
-   plotEnv.GetPlot("myPlotName") // possibility to modify and save again
-   myPlot.SetOutputFileName("betterThanDefaultName", "somewhere else"); // path is optional
-   myPlot.SetOutputFromat()
-   */
 
   
   //plotEnv.SetDrawTimestamps(true);
   //plotEnv.SetPalette(kRainBow);//kBlueGreenYellow, kDarkRainBow
 
-  string inputFileConfig = "inputFiles";
   if(updateInputFiles)
   {
     for(string dataSet : dataSets){
@@ -186,32 +202,13 @@ int main(int argc, char *argv[]) {
       }
     }
     plotEnv.DumpInputDataFiles(inputFileConfig);
+    cout << "Updated input files: '" << inputFileConfig << "'." << endl;
     return -1;
   }
   else{
     plotEnv.LoadInputDataFiles(inputFileConfig);
   }
   
-  if(usePlotsFromFile){
-//    plotEnv.LoadPlots("plotDefinitions", "system_comparison", {"meanPtFullRange", "meanPt"});
-    //    plotEnv.CreatePlots("system_comparison");
-    plotEnv.LoadPlots("plotDefinitions", "energy_comparison", {"inverseSlope", "meanPt"});
-    plotEnv.CreatePlots("energy_comparison", {"inverseSlope", "meanPt"}, "interactive");
-//    plotEnv.CreatePlots("energy_comparison", {"inverseSlope", "meanPt"});
-
-    // possibility to open interactively a plot, play around (and save afterwards what was changed?)
-    // useful to have a quick glimpse and optimize how plot looks without creating pdfs
-    // how to open windows from standalone program? can I fix aspect ratio of canvas?
-    //plotEnv.OpenPlotInteractive("inverseSlope", "energy_comparison", "C");
-
-    plotEnv.PrintStatus();
-    //plotEnv.CreatePlots("system_comparison");
-    //    plotEnv.ClearLoadedData();
- //   plotEnv.LoadPlots("plotDefinitions", "system_comparison", {"varianceFullRange", "meanPt"});
-  //  plotEnv.CreatePlots();
-  //  plotEnv.ListData();
-    return 1;
-  }
   
   //---- Lable definitions -----------------------------------------------------
   string newLine = " // ";
@@ -236,10 +233,16 @@ int main(int argc, char *argv[]) {
   string ptRange10GeV = "0.15 < #it{p}_{T} < 10 GeV/#it{c}";
   //---------------------------------------------------------------------------
 
+  { // -----------------------------------------------------------------------
+    string plotName = "dummyPlot";
+    Plot myPlot(plotName, "testGroup");
+    myPlot.AddGraph("dummy", "CSVTest", "");
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+
 
   for(string dataSet : dataSets)
   { //==========================================================================
-    if(skipDatasetPlots) break;
     string erg = "0 TeV";
     string colSys = "x-x";
     double multRange = 60;
@@ -2764,9 +2767,9 @@ int multBin = 18;
   } // -----------------------------------------------------------------------
   }
 
-  plotEnv.CreatePlots();
-  plotEnv.DumpPlots("plotDefinitions");
-  
+  plotEnv.DumpPlots(plotConfig);
+  //plotEnv.CreatePlots();
+
 }
 
 

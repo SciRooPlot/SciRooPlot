@@ -15,6 +15,8 @@ PlotManager::PlotManager() : mApp("MainApp", 0, 0)
   mDataLedger = new TObjArray(1);
   mDataLedger->SetOwner();
   
+  mOutputFileName = "ResultPlots.root";
+  
   mUseUniquePlotNames = true;
   DefineDefaultPlottingStyles();
   gErrorIgnoreLevel = kWarning;
@@ -28,6 +30,36 @@ PlotManager::PlotManager() : mApp("MainApp", 0, 0)
 PlotManager::~PlotManager()
 {
   mDataLedger->Delete();
+  if(!mPlotLedger.empty()){
+    
+    
+    cout << "Saving plots to file " << mOutputFileName << endl;
+    
+    TFile outputFile(mOutputFileName.c_str(), "RECREATE");
+    if (outputFile.IsZombie()){
+      return;
+    }
+    outputFile.cd();
+    
+    
+    for(auto& plotTuple : mPlotLedger){
+    
+      auto canvas = plotTuple.second;
+      string uniqueName = plotTuple.first;
+      size_t delimiterPos = uniqueName.find(gNameGroupSeparator.c_str());
+      string plotName = uniqueName.substr(0, delimiterPos);
+      string inputIdentifier = uniqueName.substr(delimiterPos + gNameGroupSeparator.size());
+      
+      if(!outputFile.GetDirectory(inputIdentifier.c_str(), kFALSE, "cd"))
+      {
+        outputFile.mkdir(inputIdentifier.c_str());
+      }
+      outputFile.cd(inputIdentifier.c_str());
+      canvas->Write(plotName.c_str());
+    }
+    outputFile.Close();
+    mPlotLedger.clear();
+  }
 }
 
 // ---------------------------------------------------------------------------------------
@@ -117,8 +149,8 @@ void PlotManager::LoadInputDataFiles(string configFileName)
  */
 //****************************************************************************************
 void PlotManager::AddPlot(Plot& plot) {
-  if(IsPlotAlreadyBooked(plot.GetUniqueName())) {cout << plot.GetUniqueName() << " booked already" << endl; return;}
-  mPlotLedger.push_back(std::move(plot));
+  mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(), [plot](Plot& curPlot) mutable { return curPlot.GetUniqueName() == plot.GetUniqueName(); } ), mPlots.end());
+  mPlots.push_back(std::move(plot));
 }
 
 //****************************************************************************************
@@ -129,7 +161,7 @@ void PlotManager::AddPlot(Plot& plot) {
 void PlotManager::DumpPlots(string plotFileName, string figureGroup, vector<string> plotNames)
 {
   ptree plotTree;
-  for(auto& plot : mPlotLedger){
+  for(auto& plot : mPlots){
     if(figureGroup != "")
     {
       if(plot.GetFigureGroup() != figureGroup) continue;
@@ -212,6 +244,11 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
     cout << "ERROR: Please specify a figure group!" << endl;
     return;
   }
+  
+  // in case plot should be savet to file, make sure to delete the old one first
+  if(outputMode.find("file") != string::npos && mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()){
+    mPlotLedger.erase(plot.GetUniqueName());
+  }
 
   PlotStyle& plotStyle = GetPlotStyle(plot.GetPlotStyle());
   shared_ptr<TCanvas> canvas = PlotGenerator::GeneratePlot(plot, plotStyle, mDataLedger);
@@ -230,14 +267,20 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
   }
   
   string fileName = plot.GetUniqueName();
-  if(!mUseUniquePlotNames) fileName = plot.GetName();
   
+  if(outputMode.find("file") != string::npos){
+    mPlotLedger[plot.GetUniqueName()] = canvas;
+    return;
+  }
+  
+  if(!mUseUniquePlotNames) fileName = plot.GetName();
   // create output folders and files
   string folderName = mOutputDirectory + "/" + plot.GetFigureGroup();
   if(subFolder != "") folderName += "/" + subFolder;
   gSystem->Exec((string("mkdir -p ") + folderName).c_str());
   canvas->SaveAs((folderName + "/" + fileName + fileEnding).c_str());
 }
+
 
 //****************************************************************************************
 /**
@@ -246,25 +289,38 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
 //****************************************************************************************
 void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, string outputMode)
 {
-  map<string, set<string>> requiredData;
+  map<int, set<int>> requiredData;
   bool saveAll = (figureGroup == "");
+  bool saveSpecificPlots = !saveAll && !plotNames.empty();
   vector<Plot*> selectedPlots;
-  for(auto& plot : mPlotLedger)
+
+  for(auto& plot : mPlots)
   {
     if(!saveAll && !(plot.GetFigureGroup() == figureGroup)) continue;
-    if(!plotNames.empty() && std::find(plotNames.begin(), plotNames.end(), plot.GetName()) == plotNames.end()) continue;
+    if(saveSpecificPlots && std::find(plotNames.begin(), plotNames.end(), plot.GetName()) == plotNames.end()) continue;
     plotNames.erase(std::remove(plotNames.begin(), plotNames.end(), plot.GetName()), plotNames.end());
     selectedPlots.push_back(&plot);
-    for(auto& inputIDTuple : plot.GetRequiredInputData())
+    
+    // check which input data are needed for plot creation and accumulate in requiredData map
+    for(auto& padData : plot.GetData())
     {
-      requiredData[inputIDTuple.first].insert(inputIDTuple.second.begin(), inputIDTuple.second.end());
-      
-      // data that is already available in the manager does not need to be loaded again
-      for(auto& loadedData : mLoadedData[inputIDTuple.first]){
-        requiredData[inputIDTuple.first].erase(loadedData);
+      for(auto& data : padData.second)
+      {
+        // if this data entry is not loaded already, add it to required data
+        if(mLoadedData[GetNameRegisterID(data->GetInputIdentifier())].find(GetNameRegisterID(data->GetName())) == mLoadedData[GetNameRegisterID(data->GetInputIdentifier())].end())
+        {
+          requiredData[GetNameRegisterID(data->GetInputIdentifier())].insert(GetNameRegisterID(data->GetName()));
+        }
+        // for ratios also do the same for denominator
+        if(data->GetType() == "ratio" && mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomIdentifier())].find(GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomName())) == mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomIdentifier())].end())
+        {
+        requiredData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomIdentifier())].insert(GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomName()));
+        }
       }
     }
   }
+
+  // were definitions for all requeseted plots available?
   if(!plotNames.empty()){
     cout << "The following plots are not defined:" << endl;
     for(auto& plotName : plotNames)
@@ -272,7 +328,9 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
       cout << " - " << plotName << endl;
     }
   }
+  // now load all required data that was not yet available from input files
   LoadData(requiredData);
+  // generate plots and check if data for the plots was available in the files
   bool isAllPlotsCreated = true;
   for(auto plot : selectedPlots){
     if(IsPlotPossible(*plot))
@@ -286,6 +344,7 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
 
   if(isAllPlotsCreated) return;
   
+  /*
   // in case some plots could not be created give feedback to user
   cout << endl << "--------------------------------------" << endl;
   cout << "The following data was not available: " << endl;
@@ -303,12 +362,42 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
     }
   }
   cout << endl << "--------------------------------------" << endl << endl;
+   */
 
 }
+
 void PlotManager::CreatePlot(string plotName, string figureGroup, string outputMode)
 {
   CreatePlots(figureGroup, {plotName}, outputMode);
 }
+
+void PlotManager::CreatePlotsFromFile(string plotFileName, string figureGroup, vector<string> plotNames, string outputMode){
+  LoadPlots(plotFileName, figureGroup, plotNames);
+  CreatePlots(figureGroup, plotNames, outputMode);
+}
+
+void PlotManager::CreatePlotFromFile(string plotFileName, string figureGroup, string plotName, string outputMode){
+  LoadPlots(plotFileName, figureGroup, {plotName});
+  CreatePlots(figureGroup, {plotName}, outputMode);
+}
+
+
+int PlotManager::GetNameRegisterID(const string& name)
+{
+  if( mNameRegister.find(name) == mNameRegister.end())
+  {
+    mNameRegister[name] = mNameRegister.size();
+  }
+  return mNameRegister[name];
+}
+
+const string& PlotManager::GetNameRegisterName(int nameID)
+{
+  for(auto& registerTuple : mNameRegister){
+    if(registerTuple.second == nameID) return registerTuple.first;
+  }
+}
+
 
 //****************************************************************************************
 /**
@@ -406,13 +495,111 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
  * Load required data to the manager.
  */
 //****************************************************************************************
-void PlotManager::LoadData(map<string, set<string>>& requiredData)
+void PlotManager::LoadData(map<int, set<int>>& requiredData)
+{
+  for(auto& inputIdData : requiredData)
+  {
+    const string& inputIdentifier = GetNameRegisterName(inputIdData.first);
+    for(auto& inputFileName : mInputFiles[inputIdentifier])
+    {
+      
+      if(inputFileName.find(".csv") != string::npos){
+        
+        // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
+        string graphName = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
+        string delimiter = "\t"; // todo: this must somehow be user definable
+        string pattern = "%lg %lg %lg %lg";
+        TGraphErrors* graph = new TGraphErrors(inputFileName.c_str(), pattern.c_str(), delimiter.c_str());
+        string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
+        ((TNamed*)graph)->SetName(uniqueName.c_str());
+        mDataLedger->Add(graph);
+        mLoadedData[GetNameRegisterID(inputIdentifier)].insert(GetNameRegisterID(graphName));
+        continue;
+      }
+      else if(inputFileName.find(".root") == string::npos)
+      {
+        cout << "ERROR: File format of '" << inputFileName << "' not supported." << endl;
+        return;
+      }
+
+      // first split input file and sub-folders
+      std::istringstream ss(inputFileName);
+      vector<string> tokens;
+      string token;
+      while(std::getline(ss, token, ':')) {
+          tokens.push_back(token);
+      }
+      string fileName = tokens[0];
+      
+      TFile inputFile(fileName.c_str(), "READ");
+      if (inputFile.IsZombie()) {
+        return;
+      }
+      TObject* folder = &inputFile;
+      
+      if(tokens.size() > 1)
+      {
+        std::istringstream path(tokens[1]);
+        vector<string> subDirs;
+        string directory;
+        while(std::getline(path, directory, '/')) {
+           subDirs.push_back(directory);
+        }
+        folder = FindSubDirectory(folder, subDirs);
+        if(!folder){
+          cout << "ERROR: subdirectory '" << tokens[1] << "'' not found in '" << fileName << "'."<< endl;
+          return;
+        }
+      }
+      for(auto& dataNameID : inputIdData.second)
+      {
+        TObject* data = GetDataClone(folder, GetNameRegisterName(dataNameID));
+        if(data)
+        {
+          string uniqueName = GetNameRegisterName(dataNameID) + gNameGroupSeparator + inputIdentifier;
+          ((TNamed*)data)->SetName(uniqueName.c_str());
+//          cout << "   Loaded " << uniqueName << endl;
+          mDataLedger->Add(data);
+          mLoadedData[inputIdData.first].insert(dataNameID);
+        }
+      }
+    }
+  }
+}
+
+//****************************************************************************************
+/**
+ * Load required data to the manager.
+ */
+//****************************************************************************************
+/*
+void PlotManager::LoadDataOld(map<string, set<string>>& requiredData)
 {
   for(auto& inputIdData : requiredData)
   {
     string inputIdentifier = inputIdData.first;
     for(auto& inputFileName : mInputFiles[inputIdentifier])
     {
+      
+      if(inputFileName.find(".csv") != string::npos){
+        
+        // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
+        string graphName = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
+        string delimiter = "\t"; // todo: this mus somehow be user definable
+        string pattern = "%lg %lg %lg %lg";
+        TGraphErrors* graph = new TGraphErrors(inputFileName.c_str(), pattern.c_str(), delimiter.c_str());
+        string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
+        ((TNamed*)graph)->SetName(uniqueName.c_str());
+        mDataLedger->Add(graph);
+        mLoadedData[inputIdentifier].insert(graphName);
+        continue;
+      }
+      else if(inputFileName.find(".root") == string::npos)
+      {
+        cout << "ERROR: File format of '" << inputFileName << "' not supported." << endl;
+        return;
+      }
+
       // first split input file and sub-folders
       std::istringstream ss(inputFileName);
       vector<string> tokens;
@@ -458,13 +645,15 @@ void PlotManager::LoadData(map<string, set<string>>& requiredData)
     }
   }
 }
+ */
+
 
 void PlotManager::PrintStatus()
 {
   cout << "=================== Manager Status ===========================" << endl;
   cout << "Input identifiers: " << mInputFiles.size() << endl;
   cout << "Plot styles: " << mPlotStyles.size() << endl;
-  cout << "Plot definitions: " << mPlotLedger.size() << endl;
+  cout << "Plot definitions: " << mPlots.size() << endl;
   cout << "Loaded data inputs: " << mDataLedger->GetEntries() << endl;
   cout << "==============================================================" << endl;
 
