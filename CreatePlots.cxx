@@ -1,3 +1,21 @@
+// Plotting Framework
+//
+// Copyright (C) 2019  Mario Krüger
+// Contact: mario.kruger@cern.ch
+// For a full list of contributors please see docs/Credits
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
 #include "PlottingFramework.h"
 #include "PlotManager.h"
 #include "Plot.h"
@@ -8,11 +26,10 @@ using PlottingFramework::Plot;
 
 string GetPtString(int pTbin);
 /*
- 
- - avoid copying of strings: only one copy in manager, then work with pointers
- - possibility to load all data from input
- - load only allowed datatypes
- - add instanciate plot function and change steering of main program such that plots are easily created
+ - categorize plots
+ - add data specific colors and markers
+ - move derived plots creation to separate class
+
  - option in main program to list loaded plots
  - possibility to dump and load plot styles (manager should only read in required plot styles)
  - make sure PlotStyle names are unique
@@ -47,6 +64,8 @@ string GetPtString(int pTbin);
  - check if 2d hist is part of plot, then change style...
 
  Not so important:
+ - possibility to load all data from input files
+ - load only allowed datatypes
  - setter for csv format string and delimiter
  - would it be possible to define 'top left' 'bottom right' etc default positons for boxes in general manner? maybe with flexible minimal distance to ticks
  - is it possible to set the order in multi column tlegends? left-right vs top-bottom
@@ -97,7 +116,6 @@ string GetPtString(int pTbin);
  General:
   - cleanup code
   - imporove documentation
-  - add author info
   - port to gitlab
   - add minimal example code
   - add user friendly itroduction int framework (doxygen comment for namespace?)
@@ -208,8 +226,7 @@ int main(int argc, char *argv[]) {
   else{
     plotEnv.LoadInputDataFiles(inputFileConfig);
   }
-  
-  
+    
   //---- Lable definitions -----------------------------------------------------
   string newLine = " // ";
   string alice = "";
@@ -262,8 +279,10 @@ int main(int argc, char *argv[]) {
 
     string datasetLable = alice + newLine + chargedParticles + ", " + colSys + ", " + erg + newLine + eta08 + ", " + ptRange;
     string datasetLablePrel = alicePrel + newLine + chargedParticles + ", " + colSys + ", " + erg + newLine + eta08 + ", " + ptRange;
-    string qaFolder = "ConsistencyChecks";
-    string systematicsFolder = "SystematicUncertainties";
+    string categoryTest = "Test";
+    string categoryQA = "QA-Plots";
+    string categoryClosure = categoryQA + "/MC_Closure_Tests";
+    string categorySystematics = "Systematic_Uncertainties";
 
 // Start layground
 
@@ -909,6 +928,7 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "closureTestMultDist";
       Plot myPlot(plotName, dataSet, "default ratio");
+      myPlot.SetFigureCategory(categoryClosure);
       myPlot.AddHisto("multDistGeneratedClosureTest", "", "generated (prior)", kFullSquare, kGray+1);
       myPlot.AddHisto("multDistUnfoldedClosureTest", "", "unfolded", kOpenCircle);
       myPlot.AddHisto("multDistMeasuredClosureTest", "", "measured");
@@ -925,7 +945,7 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "closureTestMultDistFlat";
       Plot myPlot(plotName, dataSet, "default ratio");
-      
+      myPlot.SetFigureCategory(categoryClosure);
       myPlot.AddHisto("multDistGeneratedClosureTest", "", "generated", kFullSquare, kGray+1);
       myPlot.AddHisto("multDistUnfoldedClosureTestFlat", "", "unfolded", kOpenCircle);
       myPlot.AddHisto("multDistMeasuredClosureTest", "", "measured");
@@ -943,6 +963,7 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "closureTestProjectionPt";
       Plot myPlot(plotName, dataSet, "default ratio");
+      myPlot.SetFigureCategory(categoryClosure);
       myPlot.SetDrawingProperties("logX logY");
       myPlot.SetAxisRange("X", 0.15, 50);
       myPlot.AddHisto("trueParticlesPt", "", "true");
@@ -962,6 +983,7 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "closureTestProjectionMult";
       Plot myPlot(plotName, dataSet, "default ratio");
+      myPlot.SetFigureCategory(categoryClosure);
       myPlot.AddHisto("trueParticlesMult", "", "true");
       myPlot.AddHisto("unfoParticlesMult", "", "unfolded");
       myPlot.AddRatio("unfoParticlesMult", "", "trueParticlesMult");
@@ -975,6 +997,7 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "closureTestMoment1";
       Plot myPlot(plotName, dataSet, "default ratio");
+      myPlot.SetFigureCategory(categoryClosure);
       myPlot.AddHisto("momentGeneratedMC1", "", "generated");
       myPlot.AddHisto("momentUnfoldedMC1", "", "unfolded");
       myPlot.AddHisto("momentReweightedMC1", "", "re-weighted");
@@ -991,6 +1014,7 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "closureTestMoment2";
       Plot myPlot(plotName, dataSet, "default ratio");
+      myPlot.SetFigureCategory(categoryClosure);
       myPlot.AddHisto("momentGeneratedMC2", "", "generated");
       myPlot.AddHisto("momentUnfoldedMC2", "", "unfolded");
       //myPlot.AddHisto("momentReweightedMC2", "", "re-weighted");
@@ -1007,6 +1031,7 @@ int multBin = 18;
     { // -----------------------------------------------------------------------
       string plotName = "closureTestMoment3";
       Plot myPlot(plotName, dataSet, "default ratio");
+      myPlot.SetFigureCategory(categoryClosure);
       myPlot.AddHisto("momentGeneratedMC3", "", "generated");
       myPlot.AddHisto("momentUnfoldedMC3", "", "unfolded");
       //myPlot.AddHisto("momentReweightedMC3", "", "re-weighted");
@@ -1025,6 +1050,7 @@ int multBin = 18;
         if(!createBinWiseClosureTests) break;
         string plotName = "closureTestPtBin_" + std::to_string(ptBin);
         Plot myPlot(plotName, dataSet, "default ratio");
+        myPlot.SetFigureCategory(categoryClosure + "/pT-Bins");
         myPlot.AddHisto(string("multPtGeneratedMC_PtBin_") + std::to_string(ptBin), "", "", kFullSquare, kBlack);
         myPlot.AddHisto(string("multPtMeasuredMC_PtBin_") + std::to_string(ptBin), "", "measured", kFullCross, kGreen+3);
         myPlot.AddHisto(string("multPtGeneratedMC_PtBin_") + std::to_string(ptBin), "", "generated", kFullSquare, kBlack);
@@ -1044,6 +1070,7 @@ int multBin = 18;
         if(!createBinWiseClosureTests) break;
         string plotName = "closureTestMultBin_" + std::to_string(multBin);
         Plot myPlot(plotName, dataSet, "default ratio");
+        myPlot.SetFigureCategory(categoryClosure + "/Nch-Bins");
         myPlot.SetDrawingProperties("logX logY");
         myPlot.AddHisto(string("multPtGeneratedMC_MultBin_") + std::to_string(multBin), "", "", kFullSquare, kBlack);
         myPlot.AddHisto(string("multPtMeasuredMC_MultBin_") + std::to_string(multBin), "", "measured", kFullCross, kGreen+3);
@@ -1070,7 +1097,7 @@ int multBin = 18;
       for(string& histName : histNames)
       {
         string plotName = histName + "_SystContrib";
-        Plot myPlot(plotName, dataSet, "default ratio");
+        Plot myPlot(plotName, dataSet, "default");
         myPlot.SetDrawingProperties("thick");
         myPlot.AddHisto(histName + "_RelSyst_total", "", "", 0, kWhite, "hist");
         myPlot.AddHisto(histName + "_RelSyst_DCAtoVertexZ", "", " 1", 0, colorsSyst[0], "hist");

@@ -1,3 +1,20 @@
+// Plotting Framework
+//
+// Copyright (C) 2019  Mario Krüger
+// Contact: mario.kruger@cern.ch
+// For a full list of contributors please see docs/Credits
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #include "PlotManager.h"
 
 using namespace PlottingFramework;
@@ -245,7 +262,7 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
     return;
   }
   
-  // in case plot should be savet to file, make sure to delete the old one first
+  // in case plot should be saved to file, make sure to delete the old one first
   if(outputMode.find("file") != string::npos && mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()){
     mPlotLedger.erase(plot.GetUniqueName());
   }
@@ -298,7 +315,7 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
   {
     if(!saveAll && !(plot.GetFigureGroup() == figureGroup)) continue;
     if(saveSpecificPlots && std::find(plotNames.begin(), plotNames.end(), plot.GetName()) == plotNames.end()) continue;
-    plotNames.erase(std::remove(plotNames.begin(), plotNames.end(), plot.GetName()), plotNames.end());
+    if(!plotNames.empty()) plotNames.erase(std::remove(plotNames.begin(), plotNames.end(), plot.GetName()), plotNames.end());
     selectedPlots.push_back(&plot);
     
     // check which input data are needed for plot creation and accumulate in requiredData map
@@ -328,8 +345,9 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
       cout << " - " << plotName << endl;
     }
   }
-  // now load all required data that was not yet available from input files
+  // now load all required data that was not yet available from input files, loaded files will be erased from requiredData
   LoadData(requiredData);
+
   // generate plots and check if data for the plots was available in the files
   bool isAllPlotsCreated = true;
   for(auto plot : selectedPlots){
@@ -338,31 +356,26 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
     else
     {
       isAllPlotsCreated = false;
-      cout << "ERROR: Plot '" << plot->GetName() << "' in figure group '" << plot->GetFigureGroup() << "' could not be created." << endl;
+      //cout << "ERROR: Plot '" << plot->GetName() << "' in figure group '" << plot->GetFigureGroup() << "' could not be created." << endl;
     }
   }
 
   if(isAllPlotsCreated) return;
   
-  /*
   // in case some plots could not be created give feedback to user
   cout << endl << "--------------------------------------" << endl;
   cout << "The following data was not available: " << endl;
   for(auto& inputIDTuple : requiredData)
   {
-    for(auto& loadedData : mLoadedData[inputIDTuple.first]){
-      requiredData[inputIDTuple.first].erase(loadedData);
-    }
     if(!inputIDTuple.second.empty())
     {
-      cout << endl << "  For input identifier '" << inputIDTuple.first << "':" << endl;
+      cout << endl << "  For input identifier '" << GetNameRegisterName(inputIDTuple.first) << "':" << endl;
       for(auto& inputDataName : inputIDTuple.second){
-        cout << "   - " << inputDataName << endl;
+        cout << "   - " << GetNameRegisterName(inputDataName) << endl;
       }
     }
   }
   cout << endl << "--------------------------------------" << endl << endl;
-   */
 
 }
 
@@ -422,7 +435,7 @@ TObject* PlotManager::GetDataClone(TObject* folder, string dataName)
 {
   TList* itemList = nullptr;
 
-  if(folder->InheritsFrom("TDirectoryFile")){
+  if(folder->InheritsFrom("TDirectory")){
     itemList = ((TDirectoryFile*)folder)->GetListOfKeys();
   }
   else if(folder->InheritsFrom("TList"))
@@ -435,24 +448,28 @@ TObject* PlotManager::GetDataClone(TObject* folder, string dataName)
   }
 
   TIter next(itemList);
-  TObject* obj = nullptr;   // object found in the file
-  TObject* data = nullptr;  // copy of this object that will then be used by manager
+  TObject* obj = nullptr;
   while((obj = next())){
     if(obj->IsA() == TKey::Class()) obj = ((TKey*)obj)->ReadObj();
     if(obj->IsA() == TDirectoryFile::Class()) {
-      data = GetDataClone(obj, dataName);
+      obj = GetDataClone(obj, dataName);
     }else if(obj->IsA() == TList::Class()) {
-      data = GetDataClone(obj, dataName);
+      obj = GetDataClone(obj, dataName);
     }else{
-      if(((TNamed*)obj)->GetName() != dataName) continue;
-      // todo: select here that only known root input types are beeing processed
-      data = obj->Clone("dummyDataName");
-      if(data->InheritsFrom("TH1"))
-        ((TH1*)data)->SetDirectory(0); // demand ownership for histogram
+      if(((TNamed*)obj)->GetName() == dataName){
+        // TODO: select here that only known root input types are beeing processed
+        if(obj->InheritsFrom("TH1"))
+          ((TH1*)obj)->SetDirectory(0); // demand ownership for histogram
+        //cout << "found " << dataName << endl;
+      } else{
+        delete obj;
+        obj = nullptr;
+        continue;
+      }
     }
-    if(data) break;
+    if(obj) break;
   }
-  return data;
+  return obj;
 }
 
 //****************************************************************************************
@@ -502,7 +519,6 @@ void PlotManager::LoadData(map<int, set<int>>& requiredData)
     const string& inputIdentifier = GetNameRegisterName(inputIdData.first);
     for(auto& inputFileName : mInputFiles[inputIdentifier])
     {
-      
       if(inputFileName.find(".csv") != string::npos){
         
         // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
@@ -551,17 +567,20 @@ void PlotManager::LoadData(map<int, set<int>>& requiredData)
           return;
         }
       }
-      for(auto& dataNameID : inputIdData.second)
-      {
-        TObject* data = GetDataClone(folder, GetNameRegisterName(dataNameID));
+      
+      for (auto it = begin(inputIdData.second); it != end(inputIdData.second);) {
+        TObject* data = GetDataClone(folder, GetNameRegisterName(*it));
         if(data)
         {
-          string uniqueName = GetNameRegisterName(dataNameID) + gNameGroupSeparator + inputIdentifier;
+          string uniqueName = GetNameRegisterName(*it) + gNameGroupSeparator + inputIdentifier;
           ((TNamed*)data)->SetName(uniqueName.c_str());
-//          cout << "   Loaded " << uniqueName << endl;
+          //cout << "   Loaded " << uniqueName << endl;
           mDataLedger->Add(data);
-          mLoadedData[inputIdData.first].insert(dataNameID);
+          mLoadedData[inputIdData.first].insert(*it);
+          it = inputIdData.second.erase(it);
         }
+        else
+          ++it;
       }
     }
   }
