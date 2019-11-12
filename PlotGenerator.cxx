@@ -33,6 +33,7 @@ namespace PlottingFramework {
     }
     
     // Create empty plot
+    gStyle->SetOptStat(0); // this needs to be done before creating the canvas! at later stage it would add to list of primitives in pad...
     string canvasName = plot.GetUniqueName();
     TCanvas* canvas = new TCanvas(canvasName.c_str(), canvasName.c_str(), plotStyle.GetWidth()+4, plotStyle.GetHeight()+28); // undo hard-coded offsets in TCanvas.cxx line 580
     canvas->SetMargin(0., 0., 0., 0.); // todo make this editable?
@@ -400,11 +401,6 @@ namespace PlottingFramework {
     //patch->Draw("SAME");
     //patch->SetFillColor(mainPad->GetFillColor());
     //patch->SetBorderMode(0);
-
-    
-    //DrawPlotInCanvas(plot, canvas);
-    //ApplyStyleSettings(canvasStyle, canvas, controlString);
-    gStyle->SetOptStat(0);  // switch of stat boxes, secretly adds stats to list of primitives!!
     
 //    canvas->SetTheta(20);
 //    canvas->SetPhi(45);

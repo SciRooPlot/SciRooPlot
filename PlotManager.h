@@ -33,6 +33,11 @@ namespace PlottingFramework
     PlotManager();
     virtual ~PlotManager();
     
+    
+    void ReadDataFromFiles(TObjArray& outputDataArray, vector<string> fileNames, vector<string> dataNames, vector<string> newDataNames = {});
+    void ReadData(TObject* folder, TObjArray& outputDataArray, vector<string>& dataNames, vector<string>& newDataNames);
+    
+    
     // -> files
     void SetUseUniquePlotNames(bool useUniquePlotNames = true){mUseUniquePlotNames = useUniquePlotNames;}
     void SetOutputDirectory(string path);
@@ -85,7 +90,6 @@ namespace PlottingFramework
     bool mUseUniquePlotNames; // wether to use plot names or unique plot names for output files
     map<string, vector<string>> mInputFiles; // inputFileIdentifier, inputFilePaths
     TObjArray* mDataLedger;     /// all external data representations currently loaded by the manager
-    TObject* GetDataClone(TObject* folder, string dataName);
     TObject* FindSubDirectory(TObject* folder, vector<string> subDirs);
     // content related members
     void GeneratePlot(Plot& plot, string outputMode = "pdf");

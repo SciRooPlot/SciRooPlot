@@ -211,7 +211,6 @@ void PlotManager::DumpPlot(string plotFileName, string figureGroup, string plotN
 void PlotManager::LoadPlots(string plotFileName, string figureGroup, vector<string> plotNames){
   ptree inputTree;
   read_xml(plotFileName + ".XML", inputTree);
-  
   for(auto& plotGroupTree : inputTree){
     if(figureGroup != "" && plotGroupTree.first != "GROUP::"+figureGroup) continue;
     for(auto& plotTree : plotGroupTree.second){
@@ -273,7 +272,6 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
   
   // if interactive mode is specified, open window instead of saving the plot
   if(outputMode.find("interactive") != string::npos){
-    gStyle->SetOptStat(0);
     canvas->WaitPrimitive();
     return;
   }
@@ -311,6 +309,7 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
   bool saveSpecificPlots = !saveAll && !plotNames.empty();
   vector<Plot*> selectedPlots;
 
+  // first determine which data needs to be loaded
   for(auto& plot : mPlots)
   {
     if(!saveAll && !(plot.GetFigureGroup() == figureGroup)) continue;
@@ -345,38 +344,50 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
       cout << " - " << plotName << endl;
     }
   }
-  // now load all required data that was not yet available from input files, loaded files will be erased from requiredData
-  LoadData(requiredData);
+  
+  // now read the data
+  for(auto& inputIDTuple : requiredData){
+    vector<string> dataNames;
+    vector<string> uniqueDataNames;
+    for(auto& dataNameID : inputIDTuple.second)
+    {
+      dataNames.push_back(GetNameRegisterName(dataNameID));
+      uniqueDataNames.push_back(GetNameRegisterName(dataNameID) + gNameGroupSeparator + GetNameRegisterName(inputIDTuple.first));
+    }
+    ReadDataFromFiles(*mDataLedger, mInputFiles[GetNameRegisterName(inputIDTuple.first)], dataNames, uniqueDataNames);
 
-  // generate plots and check if data for the plots was available in the files
-  bool isAllPlotsCreated = true;
+    /* csv functionality...
+    if(inputFileName.find(".csv") != string::npos){
+      
+      // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
+      string graphName = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
+      string delimiter = "\t"; // todo: this must somehow be user definable
+      string pattern = "%lg %lg %lg %lg";
+      TGraphErrors* graph = new TGraphErrors(inputFileName.c_str(), pattern.c_str(), delimiter.c_str());
+      string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
+      ((TNamed*)graph)->SetName(uniqueName.c_str());
+      mDataLedger->Add(graph);
+      mLoadedData[GetNameRegisterID(inputIdentifier)].insert(GetNameRegisterID(graphName));
+      continue;
+    }
+    else if(inputFileName.find(".root") == string::npos)
+    {
+      cout << "ERROR: File format of '" << inputFileName << "' not supported." << endl;
+      return;
+    }
+     */
+  }
+  
+  
+  // generate plots
   for(auto plot : selectedPlots){
     if(IsPlotPossible(*plot))
       GeneratePlot(*plot, outputMode);
     else
     {
-      isAllPlotsCreated = false;
-      //cout << "ERROR: Plot '" << plot->GetName() << "' in figure group '" << plot->GetFigureGroup() << "' could not be created." << endl;
+      cout << "ERROR: Plot '" << plot->GetName() << "' in figure group '" << plot->GetFigureGroup() << "' could not be created." << endl;
     }
   }
-
-  if(isAllPlotsCreated) return;
-  
-  // in case some plots could not be created give feedback to user
-  cout << endl << "--------------------------------------" << endl;
-  cout << "The following data was not available: " << endl;
-  for(auto& inputIDTuple : requiredData)
-  {
-    if(!inputIDTuple.second.empty())
-    {
-      cout << endl << "  For input identifier '" << GetNameRegisterName(inputIDTuple.first) << "':" << endl;
-      for(auto& inputDataName : inputIDTuple.second){
-        cout << "   - " << GetNameRegisterName(inputDataName) << endl;
-      }
-    }
-  }
-  cout << endl << "--------------------------------------" << endl << endl;
-
 }
 
 void PlotManager::CreatePlot(string plotName, string figureGroup, string outputMode)
@@ -428,48 +439,58 @@ void PlotManager::ListData()
 
 //****************************************************************************************
 /**
- * Recursively search for data in file/folder/list  and return copy thereof.
+ * Recursively read data from root file.
  */
 //****************************************************************************************
-TObject* PlotManager::GetDataClone(TObject* folder, string dataName)
-{
-  TList* itemList = nullptr;
+void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> fileNames, vector<string> dataNames, vector<string> newDataNames){
 
-  if(folder->InheritsFrom("TDirectory")){
-    itemList = ((TDirectoryFile*)folder)->GetListOfKeys();
-  }
-  else if(folder->InheritsFrom("TList"))
+  for(auto& inputFileName : fileNames)
   {
-    itemList = (TList*)folder;
-  }
-  else{
-    cout << "ERROR: Dataformat not supported." << endl;
-    return nullptr;
-  }
-
-  TIter next(itemList);
-  TObject* obj = nullptr;
-  while((obj = next())){
-    if(obj->IsA() == TKey::Class()) obj = ((TKey*)obj)->ReadObj();
-    if(obj->IsA() == TDirectoryFile::Class()) {
-      obj = GetDataClone(obj, dataName);
-    }else if(obj->IsA() == TList::Class()) {
-      obj = GetDataClone(obj, dataName);
-    }else{
-      if(((TNamed*)obj)->GetName() == dataName){
-        // TODO: select here that only known root input types are beeing processed
-        if(obj->InheritsFrom("TH1"))
-          ((TH1*)obj)->SetDirectory(0); // demand ownership for histogram
-        //cout << "found " << dataName << endl;
-      } else{
-        delete obj;
-        obj = nullptr;
-        continue;
+    // first check if sub-structure is defined
+    std::istringstream ss(inputFileName);
+    vector<string> tokens;
+    string token;
+    while(std::getline(ss, token, ':')) {
+        tokens.push_back(token);
+    }
+    string fileName = tokens[0];
+    
+    TFile inputFile(fileName.c_str(), "READ");
+    if (inputFile.IsZombie()) {
+      cout << "ERROR: input file " << fileName << " not found." << endl;
+      break;
+    }
+    
+    TObject* folder = &inputFile;
+    
+    if(tokens.size() > 1)
+    {
+      std::istringstream path(tokens[1]);
+      vector<string> subDirs;
+      string directory;
+      while(std::getline(path, directory, '/')) {
+         subDirs.push_back(directory);
+      }
+      folder = FindSubDirectory(folder, subDirs);
+      if(!folder){
+        cout << "ERROR: subdirectory '" << tokens[1] << "'' not found in '" << fileName << "'."<< endl;
+        return;
       }
     }
-    if(obj) break;
+    // recursively traverse the file and look for input files
+    ReadData(folder, outputDataArray, dataNames, newDataNames);
+    if(folder != &inputFile) {delete folder; folder = nullptr;}
   }
-  return obj;
+  
+  if(!dataNames.empty()){
+    cout << endl << "----------------------------" << endl;
+    cout << " Data" << endl;
+    for(auto& dataName : dataNames) cout  << "  - " << dataName << endl;
+    cout << " not found in" << endl;
+    for(auto& inputFileName : fileNames) cout << "  - " << inputFileName << endl;
+    cout << "----------------------------" << endl << endl;
+  }
+  
 }
 
 //****************************************************************************************
@@ -480,8 +501,11 @@ TObject* PlotManager::GetDataClone(TObject* folder, string dataName)
 TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
 {
   if(!folder) return nullptr;
+  bool deleteFolder = true;
+  if(folder->InheritsFrom("TFile")) deleteFolder = false;
+
   if(subDirs.size() == 0){
-    if(folder->InheritsFrom("TDirectory") || folder->InheritsFrom("TList")){
+    if(folder->InheritsFrom("TDirectory") || folder->InheritsFrom("TCollection")){
       return folder;
     }
     else{
@@ -498,175 +522,119 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
     else{
       subFolder = ((TDirectory*)folder)->FindObject(subDirs[0].c_str());
     }
+    deleteFolder = false;
   }
-  if(folder->InheritsFrom("TList"))
+  else if(folder->InheritsFrom("TCollection"))
   {
-    subFolder = ((TList*)folder)->FindObject(subDirs[0].c_str());
+    subFolder = ((TCollection*)folder)->FindObject(subDirs[0].c_str());
+    if(subFolder){
+      ((TCollection*)subFolder)->SetOwner();
+      // if subfolder is part of list, remove it first to avoid double deletion
+      ((TCollection*)folder)->Remove(subFolder);
+    }
   }
+  if(deleteFolder) {
+    delete folder;
+  }
+  if(!subFolder) return nullptr;
   subDirs.erase(subDirs.begin());
   return FindSubDirectory(subFolder, subDirs);
 }
 
 //****************************************************************************************
 /**
- * Load required data to the manager.
+ * Recursively reads data from folder / list and adds it to output data array. found dataNames are remeoved from the vectors
  */
 //****************************************************************************************
-void PlotManager::LoadData(map<int, set<int>>& requiredData)
+void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<string>& dataNames, vector<string>& newDataNames)
 {
-  for(auto& inputIdData : requiredData)
+  // consistency check for name vectors
+  if(!newDataNames.empty() && newDataNames.size() != dataNames.size()){
+    cout << "ERROR: newDataNames vector has the wrong size" << endl;
+    return;
+  }
+
+  TCollection* itemList = nullptr;
+  if(folder->InheritsFrom("TDirectory")){
+    itemList = ((TDirectoryFile*)folder)->GetListOfKeys();
+  }
+  else if(folder->InheritsFrom("TCollection"))
   {
-    const string& inputIdentifier = GetNameRegisterName(inputIdData.first);
-    for(auto& inputFileName : mInputFiles[inputIdentifier])
-    {
-      if(inputFileName.find(".csv") != string::npos){
-        
-        // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
-        string graphName = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
-        string delimiter = "\t"; // todo: this must somehow be user definable
-        string pattern = "%lg %lg %lg %lg";
-        TGraphErrors* graph = new TGraphErrors(inputFileName.c_str(), pattern.c_str(), delimiter.c_str());
-        string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
-        ((TNamed*)graph)->SetName(uniqueName.c_str());
-        mDataLedger->Add(graph);
-        mLoadedData[GetNameRegisterID(inputIdentifier)].insert(GetNameRegisterID(graphName));
+    itemList = (TCollection*)folder;
+  }
+  else{
+    cout << "ERROR: Dataformat not supported." << endl;
+    return;
+  }
+  itemList->SetOwner();
+
+  TIter iterator = itemList->begin();
+  TObject* obj = *iterator;
+  bool deleteObject;
+  bool removeFromList;
+  
+  while(iterator != itemList->end()){
+    obj = *iterator;
+    deleteObject = true;
+    removeFromList = true;
+    
+    // read actual object to memory when traversing a directory
+    if(obj->IsA() == TKey::Class()){
+      string className = ((TKey*)obj)->GetClassName();
+      string keyName = ((TKey*)obj)->GetName();
+      bool isTraversable = className.find("TDirectory") != string::npos || className.find("TList") != string::npos || className.find("TObjArray") != string::npos;
+      if(isTraversable || std::find(dataNames.begin(), dataNames.end(), keyName) != dataNames.end())
+      {
+        obj = ((TKey*)obj)->ReadObj();
+        removeFromList = false;
+      }else{
+        ++iterator;
         continue;
       }
-      else if(inputFileName.find(".root") == string::npos)
-      {
-        cout << "ERROR: File format of '" << inputFileName << "' not supported." << endl;
-        return;
-      }
+    }
+    
+    // in case this object is directory or list, repeat the same for this substructure
+    if(obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TCollection")) {
+      ReadData(obj, outputDataArray, dataNames, newDataNames);
+    }else{
+      auto it = std::find(dataNames.begin(), dataNames.end(), ((TNamed*)obj)->GetName());
+      if(it != dataNames.end()){
+        // TODO: select here that only known root input types are beeing processed
+        if(obj->InheritsFrom("TH1"))
+          ((TH1*)obj)->SetDirectory(0); // demand ownership for histogram
 
-      // first split input file and sub-folders
-      std::istringstream ss(inputFileName);
-      vector<string> tokens;
-      string token;
-      while(std::getline(ss, token, ':')) {
-          tokens.push_back(token);
-      }
-      string fileName = tokens[0];
-      
-      TFile inputFile(fileName.c_str(), "READ");
-      if (inputFile.IsZombie()) {
-        return;
-      }
-      TObject* folder = &inputFile;
-      
-      if(tokens.size() > 1)
-      {
-        std::istringstream path(tokens[1]);
-        vector<string> subDirs;
-        string directory;
-        while(std::getline(path, directory, '/')) {
-           subDirs.push_back(directory);
+        // re-name data
+        if(!newDataNames.empty()){
+          auto vectorIndex = it - dataNames.begin();
+          ((TNamed*)obj)->SetName((newDataNames[vectorIndex]).c_str());
+          newDataNames.erase(std::find(newDataNames.begin(), newDataNames.end(), newDataNames[vectorIndex]));
         }
-        folder = FindSubDirectory(folder, subDirs);
-        if(!folder){
-          cout << "ERROR: subdirectory '" << tokens[1] << "'' not found in '" << fileName << "'."<< endl;
-          return;
-        }
-      }
-      
-      for (auto it = begin(inputIdData.second); it != end(inputIdData.second);) {
-        TObject* data = GetDataClone(folder, GetNameRegisterName(*it));
-        if(data)
-        {
-          string uniqueName = GetNameRegisterName(*it) + gNameGroupSeparator + inputIdentifier;
-          ((TNamed*)data)->SetName(uniqueName.c_str());
-          //cout << "   Loaded " << uniqueName << endl;
-          mDataLedger->Add(data);
-          mLoadedData[inputIdData.first].insert(*it);
-          it = inputIdData.second.erase(it);
-        }
-        else
-          ++it;
+        dataNames.erase(it);
+        outputDataArray.Add(obj);
+        deleteObject = false;
       }
     }
+
+    // increase iterator before removing objects from collection
+    ++iterator;
+    if(removeFromList) {
+      if(itemList->Remove(obj) == nullptr)
+      {
+        cout << "ERROR: could not remove item " << ((TNamed*)obj)->GetName() << "(" << obj << ") from collection " << itemList->GetName() << endl;
+      }
+    }
+    if(deleteObject){
+      delete obj;
+    }
+    if(dataNames.empty()) break;
   }
 }
 
 //****************************************************************************************
 /**
- * Load required data to the manager.
+ * Print manager status.
  */
 //****************************************************************************************
-/*
-void PlotManager::LoadDataOld(map<string, set<string>>& requiredData)
-{
-  for(auto& inputIdData : requiredData)
-  {
-    string inputIdentifier = inputIdData.first;
-    for(auto& inputFileName : mInputFiles[inputIdentifier])
-    {
-      
-      if(inputFileName.find(".csv") != string::npos){
-        
-        // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
-        string graphName = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
-        string delimiter = "\t"; // todo: this mus somehow be user definable
-        string pattern = "%lg %lg %lg %lg";
-        TGraphErrors* graph = new TGraphErrors(inputFileName.c_str(), pattern.c_str(), delimiter.c_str());
-        string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
-        ((TNamed*)graph)->SetName(uniqueName.c_str());
-        mDataLedger->Add(graph);
-        mLoadedData[inputIdentifier].insert(graphName);
-        continue;
-      }
-      else if(inputFileName.find(".root") == string::npos)
-      {
-        cout << "ERROR: File format of '" << inputFileName << "' not supported." << endl;
-        return;
-      }
-
-      // first split input file and sub-folders
-      std::istringstream ss(inputFileName);
-      vector<string> tokens;
-      string token;
-      while(std::getline(ss, token, ':')) {
-          tokens.push_back(token);
-      }
-      string fileName = tokens[0];
-      
-      TFile inputFile(fileName.c_str(), "READ");
-      if (inputFile.IsZombie()) {
-        return;
-      }
-      TObject* folder = &inputFile;
-      
-      if(tokens.size() > 1)
-      {
-        std::istringstream path(tokens[1]);
-        vector<string> subDirs;
-        string directory;
-        while(std::getline(path, directory, '/')) {
-           subDirs.push_back(directory);
-        }
-        folder = FindSubDirectory(folder, subDirs);
-        if(!folder){
-          cout << "ERROR: subdirectory '" << tokens[1] << "'' not found in '" << fileName << "'."<< endl;
-          return;
-        }
-      }
-      
-      for(auto& dataName : inputIdData.second)
-      {
-        TObject* data = GetDataClone(folder, dataName);
-        if(data)
-        {
-          string uniqueName = dataName + gNameGroupSeparator + inputIdentifier;
-          ((TNamed*)data)->SetName(uniqueName.c_str());
-          //cout << "Loaded " << uniqueName << endl;
-          mDataLedger->Add(data);
-          mLoadedData[inputIdentifier].insert(dataName);
-        }
-      }
-    }
-  }
-}
- */
-
-
 void PlotManager::PrintStatus()
 {
   cout << "=================== Manager Status ===========================" << endl;
@@ -679,6 +647,11 @@ void PlotManager::PrintStatus()
 }
 
 
+//****************************************************************************************
+/**
+ * Print available plot styles.
+ */
+//****************************************************************************************
 void PlotManager::ListPlotStyles()
 {
   for(auto& plotStyle : mPlotStyles)

@@ -40,6 +40,7 @@ string GetPtString(int pTbin);
 
 
  Bugs:
+ - when saving to macro or pdf, the boxes are slightly misplaced (some global setting missing?)
  - make sure figure groups cannot contain '.'
  - exponents on x axis are not in the proper position
  - text boxes width and height is calculated wrong
@@ -257,6 +258,14 @@ int main(int argc, char *argv[]) {
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
+  
+  { // -----------------------------------------------------------------------
+    string plotName = "readFile";
+    Plot myPlot(plotName, "fileTest");
+    myPlot.AddHisto("myHist15", "", "");
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+
 
   for(string dataSet : dataSets)
   { //==========================================================================
@@ -286,6 +295,8 @@ int main(int argc, char *argv[]) {
 
 // Start layground
 
+    
+    
 { // -----------------------------------------------------------------------
   string plotName = "covMat_multDistUnfolded";
   Plot myPlot(plotName, dataSet);
