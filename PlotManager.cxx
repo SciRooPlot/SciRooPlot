@@ -32,6 +32,7 @@ PlotManager::PlotManager() : mApp("MainApp", 0, 0)
   mDataLedger = new TObjArray(1);
   mDataLedger->SetOwner();
   
+  mSaveToRootFile = false;
   mOutputFileName = "ResultPlots.root";
   
   mUseUniquePlotNames = true;
@@ -48,8 +49,7 @@ PlotManager::~PlotManager()
 {
   mDataLedger->Delete();
   if(!mPlotLedger.empty()){
-    
-    
+    if(mSaveToRootFile == true){
     cout << "Saving plots to file " << mOutputFileName << endl;
     
     TFile outputFile(mOutputFileName.c_str(), "RECREATE");
@@ -58,9 +58,7 @@ PlotManager::~PlotManager()
     }
     outputFile.cd();
     
-    
     for(auto& plotTuple : mPlotLedger){
-    
       auto canvas = plotTuple.second;
       string uniqueName = plotTuple.first;
       size_t delimiterPos = uniqueName.find(gNameGroupSeparator.c_str());
@@ -75,6 +73,7 @@ PlotManager::~PlotManager()
       canvas->Write(plotName.c_str());
     }
     outputFile.Close();
+    }
     mPlotLedger.clear();
   }
 }
@@ -205,12 +204,27 @@ void PlotManager::DumpPlot(string plotFileName, string figureGroup, string plotN
 
 //****************************************************************************************
 /**
+ * Read and cache plots defined in xml file.
+ */
+//****************************************************************************************
+ptree& PlotManager::ReadPlotTemplatesFromFile(string& plotFileName){
+  if (mPlotTemplateCache.find(plotFileName) == mPlotTemplateCache.end())
+  {
+    cout << "Reading plot definitions from " << plotFileName + ".XML" << endl;
+    ptree tempTree;
+    read_xml(plotFileName + ".XML", tempTree);
+    mPlotTemplateCache[plotFileName] = std::move(tempTree);
+  }
+  return mPlotTemplateCache[plotFileName];
+}
+
+//****************************************************************************************
+/**
  * Load plots from xml file.
  */
 //****************************************************************************************
 void PlotManager::LoadPlots(string plotFileName, string figureGroup, vector<string> plotNames){
-  ptree inputTree;
-  read_xml(plotFileName + ".XML", inputTree);
+  ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
   for(auto& plotGroupTree : inputTree){
     if(figureGroup != "" && plotGroupTree.first != "GROUP::"+figureGroup) continue;
     for(auto& plotTree : plotGroupTree.second){
@@ -261,20 +275,59 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
     return;
   }
   
-  // in case plot should be saved to file, make sure to delete the old one first
-  if(outputMode.find("file") != string::npos && mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()){
-    mPlotLedger.erase(plot.GetUniqueName());
+  if(outputMode.find("file") != string::npos){
+    mSaveToRootFile = true;
+    // delete the old plot before adding a new one with the same name
+    if( mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()){
+     mPlotLedger.erase(plot.GetUniqueName());
+   }
   }
 
   PlotStyle& plotStyle = GetPlotStyle(plot.GetPlotStyle());
   shared_ptr<TCanvas> canvas = PlotGenerator::GeneratePlot(plot, plotStyle, mDataLedger);
   if(!canvas) return;
-  
+
   // if interactive mode is specified, open window instead of saving the plot
   if(outputMode.find("interactive") != string::npos){
-    canvas->WaitPrimitive();
+
+    mPlotLedger[plot.GetUniqueName()] = canvas;
+    mPlotViewHistory.push_back(plot.GetUniqueName());
+    int currPlotIndex = mPlotViewHistory.size()-1;
+
+    // move new canvas to position of previous window
+    int curXpos;
+    int curYpos;
+    const int windowOffsetY = 22; // might depend on os, probably comes from move operation called via TVirtualX interface
+    if(currPlotIndex > 0){
+      curXpos = mPlotLedger[mPlotViewHistory[currPlotIndex-1]]->GetWindowTopX();
+      curYpos = mPlotLedger[mPlotViewHistory[currPlotIndex-1]]->GetWindowTopY();
+      canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
+    }
+    
+    while(gROOT->GetSelectedPad() && !gSystem->ProcessEvents()) {
+      if(canvas->GetEvent() == kButton1Double){
+        curXpos = canvas->GetWindowTopX();
+        curYpos = canvas->GetWindowTopY();
+        TRootCanvas* canvasWindow = ((TRootCanvas*)canvas->GetCanvasImp());
+        canvasWindow->UnmapWindow();
+        bool forward = ((double)canvas->GetEventX()/(double)canvas->GetWw() > 0.5);
+        if(forward){
+          if(currPlotIndex == mPlotViewHistory.size()-1) break;
+          currPlotIndex++;
+        }
+        else{
+          if(currPlotIndex == 0) break;
+          currPlotIndex--;
+        }
+        canvas = mPlotLedger[mPlotViewHistory[currPlotIndex]];
+        canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
+        ((TRootCanvas*)canvas->GetCanvasImp())->MapRaised();
+      }
+      gSystem->Sleep(20);
+    }
     return;
-  }
+    }
+
   string subFolder = plot.GetFigureCategory();
   string fileEnding = ".pdf";
   if(outputMode.find("macro") != string::npos){
@@ -354,28 +407,9 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
       dataNames.push_back(GetNameRegisterName(dataNameID));
       uniqueDataNames.push_back(GetNameRegisterName(dataNameID) + gNameGroupSeparator + GetNameRegisterName(inputIDTuple.first));
     }
+    ReadDataFromCSVFiles(*mDataLedger, mInputFiles[GetNameRegisterName(inputIDTuple.first)], GetNameRegisterName(inputIDTuple.first));
     ReadDataFromFiles(*mDataLedger, mInputFiles[GetNameRegisterName(inputIDTuple.first)], dataNames, uniqueDataNames);
-
-    /* csv functionality...
-    if(inputFileName.find(".csv") != string::npos){
-      
-      // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
-      string graphName = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
-      string delimiter = "\t"; // todo: this must somehow be user definable
-      string pattern = "%lg %lg %lg %lg";
-      TGraphErrors* graph = new TGraphErrors(inputFileName.c_str(), pattern.c_str(), delimiter.c_str());
-      string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
-      ((TNamed*)graph)->SetName(uniqueName.c_str());
-      mDataLedger->Add(graph);
-      mLoadedData[GetNameRegisterID(inputIdentifier)].insert(GetNameRegisterID(graphName));
-      continue;
-    }
-    else if(inputFileName.find(".root") == string::npos)
-    {
-      cout << "ERROR: File format of '" << inputFileName << "' not supported." << endl;
-      return;
-    }
-     */
+    // TODO Loaded data has to be updated!!
   }
   
   
@@ -439,6 +473,27 @@ void PlotManager::ListData()
 
 //****************************************************************************************
 /**
+ * Read data from csv file.
+ */
+//****************************************************************************************
+void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, vector<string> fileNames, string inputIdentifier){
+
+  for(auto& inputFileName : fileNames)
+  {
+    if(inputFileName.find(".csv") == string::npos) continue;
+    // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
+    string graphName = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
+    string delimiter = "\t"; // todo: this must somehow be user definable
+    string pattern = "%lg %lg %lg %lg";
+    TGraphErrors* graph = new TGraphErrors(inputFileName.c_str(), pattern.c_str(), delimiter.c_str());
+    string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
+    ((TNamed*)graph)->SetName(uniqueName.c_str());
+    outputDataArray.Add(graph);
+  }
+}
+
+//****************************************************************************************
+/**
  * Recursively read data from root file.
  */
 //****************************************************************************************
@@ -446,6 +501,7 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
 
   for(auto& inputFileName : fileNames)
   {
+    if(inputFileName.find(".root") == string::npos) continue;
     // first check if sub-structure is defined
     std::istringstream ss(inputFileName);
     vector<string> tokens;

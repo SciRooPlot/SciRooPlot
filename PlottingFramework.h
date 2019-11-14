@@ -63,6 +63,7 @@
 #include "TView.h"
 #include "TApplication.h"
 #include "TGWindow.h"
+#include "TRootCanvas.h"
 
 namespace PlottingFramework {
 

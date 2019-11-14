@@ -33,7 +33,7 @@ namespace PlottingFramework
     PlotManager();
     virtual ~PlotManager();
     
-    
+    void ReadDataFromCSVFiles(TObjArray& outputDataArray, vector<string> fileNames, string inputIdentifier);
     void ReadDataFromFiles(TObjArray& outputDataArray, vector<string> fileNames, vector<string> dataNames, vector<string> newDataNames = {});
     void ReadData(TObject* folder, TObjArray& outputDataArray, vector<string>& dataNames, vector<string>& newDataNames);
     
@@ -80,9 +80,11 @@ namespace PlottingFramework
     map<int, set<int>> mLoadedData;
     void LoadData(map<int, set<int>>& requiredData);
 
+    vector<string> mPlotViewHistory;
     
     TApplication mApp;
     // IO management related
+    bool mSaveToRootFile;
     string mOutputFileName;
     map<string, shared_ptr<TCanvas>> mPlotLedger;
     
@@ -102,6 +104,10 @@ namespace PlottingFramework
     void DefineDefaultPlottingStyles();
     PlotStyle& GetPlotStyle(string plotStyleName);
     //    bool IsPlotStyleAvailable(string "plot");
+    
+    map<string, ptree> mPlotTemplateCache;
+    ptree& ReadPlotTemplatesFromFile(string& plotFileName);
+
 
     PlotManager(const PlotManager&) = default;
     PlotManager& operator=(const PlotManager&) = default;

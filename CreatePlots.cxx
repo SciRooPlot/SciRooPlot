@@ -26,6 +26,9 @@ using PlottingFramework::Plot;
 
 string GetPtString(int pTbin);
 /*
+ - option for plotting projectins? is this reasonable?
+ - normalizing should be part of histogram drawing options
+ - add some more formatting features for legend (floating point precision, exponent..)
  - categorize plots
  - add data specific colors and markers
  - move derived plots creation to separate class
@@ -40,6 +43,10 @@ string GetPtString(int pTbin);
 
 
  Bugs:
+ - when hist with "band" option is plotted first, the axes are not drawn...
+ - what goes wrong with e.g. energyScanVariance plot or 2d plots where text box disappears after moving it?
+ - why is there strange behaviour when moving text boxes in ratio plots and plots with log scale (jumping...)
+ - all self-defined drawing options need to be excluded from the control string before using it with root to make sure no pre-defined letter combinations are contained that are then wrongly interpreted
  - when saving to macro or pdf, the boxes are slightly misplaced (some global setting missing?)
  - make sure figure groups cannot contain '.'
  - exponents on x axis are not in the proper position
@@ -123,6 +130,7 @@ string GetPtString(int pTbin);
  
  TODOS for analysis plots:
   - clean up file names and make useful sub-folders
+  - add more qua plots for unfolding
 
  
  */
@@ -192,8 +200,8 @@ int main(int argc, char *argv[]) {
     dataSets.push_back("pp_5TeV");
     dataSets.push_back("pp_7TeV");
     dataSets.push_back("pp_13TeV");
-
     dataSets.push_back("pPb_5TeV");
+    dataSets.push_back("pPb_8TeV");
     dataSets.push_back("PbPb_5TeV");
     dataSets.push_back("XeXe_5TeV");
 
@@ -266,6 +274,81 @@ int main(int argc, char *argv[]) {
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
+  { // -----------------------------------------------------------------------
+    string plotName = "multPtScaled_pp_2TeV";
+    Plot myPlot(plotName, "test");
+    myPlot.SetDrawingProperties("logY");
+    myPlot.SetAxisRange("Y", 0.15, 50);
+    myPlot.AddHisto(plotName, "Fits");
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+  { // -----------------------------------------------------------------------
+    string plotName = "multPtScaled_pp_5TeV";
+    Plot myPlot(plotName, "test");
+    myPlot.SetDrawingProperties("logY");
+    myPlot.SetAxisRange("Y", 0.15, 50);
+    myPlot.AddHisto(plotName, "Fits");
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+  { // -----------------------------------------------------------------------
+    string plotName = "multPtScaled_pp_7TeV";
+    Plot myPlot(plotName, "test");
+    myPlot.SetDrawingProperties("logY");
+    myPlot.SetAxisRange("Y", 0.15, 50);
+    myPlot.AddHisto(plotName, "Fits");
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+  { // -----------------------------------------------------------------------
+    string plotName = "multPtScaled_pp_13TeV";
+    Plot myPlot(plotName, "test");
+    myPlot.SetDrawingProperties("logY");
+    myPlot.SetAxisRange("Y", 0.15, 50);
+    myPlot.AddHisto(plotName, "Fits");
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+
+  { // -----------------------------------------------------------------------
+    string plotName = "multPtScaled_pPb_5TeV";
+    Plot myPlot(plotName, "test");
+    myPlot.SetDrawingProperties("logY");
+    myPlot.SetAxisRange("Y", 0.15, 50);
+    myPlot.AddHisto(plotName, "Fits");
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+  { // -----------------------------------------------------------------------
+    string plotName = "multPtScaled_PbPb_5TeV";
+    Plot myPlot(plotName, "test");
+    myPlot.SetDrawingProperties("logY");
+    myPlot.SetAxisRange("Y", 0.15, 50);
+    myPlot.AddHisto(plotName, "Fits");
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+
+  { // -----------------------------------------------------------------------
+    string plotName = "selfNormalizedHighPtYield";
+    Plot myPlot(plotName, "test");
+    myPlot.AddHisto(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
+    myPlot.AddHisto(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
+    myPlot.AddHisto(plotName + "_pp_7TeV", "Fits", "7 TeV");
+    myPlot.AddHisto(plotName + "_pp_13TeV", "Fits", "13 TeV");
+    myPlot.AddLegendBox();
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+
+  { // -----------------------------------------------------------------------
+    string plotName = "selfNormalizedHighPtYieldNormalizedNch";
+    Plot myPlot(plotName, "test");
+    myPlot.SetDrawingProperties("normalize logY");
+    myPlot.AddHisto(plotName + "_pp_2TeV", "Fits", "2.76 TeV (<mean>)");
+    myPlot.AddHisto(plotName + "_pp_5TeV", "Fits", "5.02 TeV (<mean>)");
+    myPlot.AddHisto(plotName + "_pp_7TeV", "Fits", "7 TeV (<mean>)");
+    myPlot.AddHisto(plotName + "_pp_13TeV", "Fits", "13 TeV (<mean>)");
+    myPlot.AddTextBox(0.5, 0.9, "6 GeV/#it{c} < #it{p}_{T} < 50 GeV/#it{c}");
+    myPlot.AddLegendBox();
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+
+  
 
   for(string dataSet : dataSets)
   { //==========================================================================
