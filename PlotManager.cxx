@@ -472,12 +472,12 @@ void PlotManager::ListPlotsDefinedInFile(string plotFileName, string plotNameReg
   ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
   for(auto& plotGroupTree : inputTree){
     string inputIdentifier = plotGroupTree.first.substr(string("GROUP::").size());
-    if(inputIdentifierRegexp == "" || inputIdentifier.find(inputIdentifierRegexp) == string::npos) continue;
+    if(inputIdentifierRegexp != "" && inputIdentifier.find(inputIdentifierRegexp) == string::npos) continue;
     for(auto& plotTree : plotGroupTree.second){
       string plotName = plotTree.second.get<string>("name");
       string figureGroup = plotTree.second.get<string>("figureGroup");
-      if(plotNameRegexp != "" && plotName.find(plotNameRegexp) != string::npos)
-        cout << plotName << " found in " << figureGroup << endl;
+      if(plotNameRegexp != "" && plotName.find(plotNameRegexp) == string::npos) continue;
+      cout << plotName << " found in " << figureGroup << endl;
     }
   }
 }
@@ -880,107 +880,9 @@ void PlotManager::DefineDefaultPlottingStyles()
     pads[1].SetMargins({0.015, 0.4, 0.14, 0.05});
     pads[1].SetTitleOffsets({4.1, 1.5, 1.0});
     
-    
     myStyle.AddPadStyles(pads);
     mPlotStyles.push_back(std::move(myStyle)); // maybe AddPlotStyle(PlotStyle&)
-  }    /*
-        // BEGIN TODO
-        
-        { //--------------------------------------------------------------
-        CanvasStyle canvas;
-        canvas.styleName = "default ratio";
-        canvas.canvasWidth = mStyle.pixelBaseLength;
-        canvas.canvasHeight = mStyle.pixelBaseLength;
-        double ratioPadSize = 0.28; //relative size of ratio
-        // upper pad
-        PadStyle pad1;
-        // position: xlow, ylow, xup, yup
-        pad1.position.push_back(0.0);
-        pad1.position.push_back(ratioPadSize);
-        pad1.position.push_back(1.0);
-        pad1.position.push_back(1.0);
-        // margin: top, bottom, left, right
-        pad1.margin.push_back(0.05); //0.03
-        pad1.margin.push_back(0.0);
-        pad1.margin.push_back(0.14);
-        pad1.margin.push_back(0.05);
-        // titleOffset: x, y, z
-        pad1.titleOffset.push_back(3.1);
-        pad1.titleOffset.push_back(1.5);
-        pad1.titleOffset.push_back(1.0);
-        canvas.pads.push_back(pad1);
-        // ratio pad
-        PadStyle pad2;
-        // position: xlow, ylow, xup, yup
-        pad2.position.push_back(0.);
-        pad2.position.push_back(0.);
-        pad2.position.push_back(1.);
-        pad2.position.push_back(ratioPadSize);
-        // margin: top, bottom, left, right
-        pad2.margin.push_back(0.015);
-        pad2.margin.push_back(0.4); //0.35
-        pad2.margin.push_back(0.14); // 0.12
-        pad2.margin.push_back(0.05);
-        // titleOffset: x, y, z
-        pad2.titleOffset.push_back(4.1);
-        pad2.titleOffset.push_back(1.5); //1.3
-        pad2.titleOffset.push_back(1.0);
-        canvas.pads.push_back(pad2);
-        
-        mCanvStyles.push_back(canvas);
-        } //--------------------------------------------------------------
-        
-        */
-  // END TODO
-  
-  /*
-   //"horizontal"
-   canvas->SetLeftMargin(mStyle.fMargin*mStyle.fAspectRatio);
-   canvas->SetRightMargin(mStyle.fMargin*mStyle.fAspectRatio);
-   canvas->SetTopMargin(mStyle.fMargin - 0.03);
-   canvas->SetBottomMargin(mStyle.fMargin + 0.03);
-   //"vertical"
-   canvas->SetLeftMargin(mStyle.fMargin);
-   canvas->SetRightMargin(mStyle.fMargin);
-   canvas->SetTopMargin(mStyle.fMargin*mStyle.fAspectRatio - 0.05);
-   canvas->SetBottomMargin(mStyle.fMargin*mStyle.fAspectRatio + 0.05);
-   // else
-   canvas->SetLeftMargin(mStyle.fMargin);
-   canvas->SetRightMargin(mStyle.fMargin);
-   canvas->SetTopMargin(mStyle.fMargin-0.1);
-   canvas->SetBottomMargin(mStyle.fMargin+0.1);
-   
-   
-   // Horizontal canvas style
-   fHorizontalCanvStyle.fCanvasWidth = mStyle.fPixelBaseLength * mStyle.fAspectRatio;
-   fHorizontalCanvStyle.fCanvasHeight = mStyle.fPixelBaseLength;
-   
-   fHorizontalCanvStyle.fMarginTop = 0.03;
-   fHorizontalCanvStyle.fMarginBottom = 0.0;
-   fHorizontalCanvStyle.fMarginLeft = 0.12;
-   fHorizontalCanvStyle.fMarginRight = 0.05;
-   
-   fHorizontalCanvStyle.fMarginTop = 0.0;
-   fHorizontalCanvStyle.fMarginBottom = 0.35; //0.3
-   fHorizontalCanvStyle.fMarginLeft = 0.12;
-   fHorizontalCanvStyle.fMarginRight = 0.05;
-   
-   // Vertical canvas style
-   fVerticalCanvStyle.fCanvasWidth = mStyle.fPixelBaseLength;
-   fVerticalCanvStyle.fCanvasHeight = mStyle.fPixelBaseLength * mStyle.fAspectRatio;
-   
-   fVerticalCanvStyle.fMarginTop = 0.03;
-   fVerticalCanvStyle.fMarginBottom = 0.0;
-   fVerticalCanvStyle.fMarginLeft = 0.12;
-   fVerticalCanvStyle.fMarginRight = 0.05;
-   
-   fVerticalCanvStyle.fMarginTop = 0.0;
-   fVerticalCanvStyle.fMarginBottom = 0.35; //0.3
-   fVerticalCanvStyle.fMarginLeft = 0.12;
-   fVerticalCanvStyle.fMarginRight = 0.05;
-   
-   */
-  
+  }
 }
 
 PlotStyle& PlotManager::GetPlotStyle(string plotStyleName)

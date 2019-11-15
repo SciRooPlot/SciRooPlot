@@ -781,7 +781,6 @@ void PlotGenerator::CutGraph(TGraph* graph, double cutoff, double cutoffLow)
     graph->RemovePoint(0);
   }
 
-  
 }
 
 //****************************************************************************************
@@ -798,7 +797,6 @@ TGraph* PlotGenerator::DivideTSpline(TGraph* numerator, TGraph* denominator){
   int nPoints = result->GetN();
   
   double *x = result->GetX();
-  
   double *y = result->GetY();
   double *ey = result->GetEY();
       

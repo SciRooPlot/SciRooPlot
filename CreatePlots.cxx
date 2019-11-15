@@ -154,9 +154,16 @@ int main(int argc, char *argv[]) {
   
   vector<string> dataSets;
   if(argc > 1 && (string(argv[1]) == "help" || string(argv[1]) == "--h")){
-    cout << "Usage:" << endl;
-    cout << "./plot inputID1,inputID2 plot1,plot2 [interactive | pdf | eps | file]" << endl;
-    cout << "./plot find [plotNameRegexp] [inputIdentifierRegexp]" << endl;
+    cout << endl;
+    cout << "Update plotDefinitions with output from current main program:" << endl << endl;
+    cout << "  ./plot" << endl << endl;
+    cout << "Update plotDefinitions with output for specific dataset from current main program:" << endl << endl;
+    cout << "  ./plot dataset" << endl << endl;
+    cout << "Create plots:" << endl << endl;
+    cout << "  ./plot [figureGroup,figureGroup2 | all] [plotName,plotName2 | all] [interactive | pdf | eps | bitmap | file]" << endl << endl;
+    cout << "Find plots defined in plotDefinitions file:" << endl << endl;
+    cout << "  ./plot find [plotNameRegexp] [inputIdentifierRegexp]" << endl << endl;
+    cout << endl;
     return 0;
   }
   if(argc > 1 && (string(argv[1]) == "find")){

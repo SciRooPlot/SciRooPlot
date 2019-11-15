@@ -41,11 +41,6 @@ namespace PlottingFramework {
     static TGraph* DivideTSpline(TGraph* numerator, TGraph* denominator);
     static TH1* DivideTSpline(TH1* numerator, TH1* denominator);
   };
-
-  
-  
-  
-  
 }
 
 #endif /* PlotGenerator_h */
