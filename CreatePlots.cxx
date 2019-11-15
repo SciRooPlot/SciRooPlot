@@ -124,7 +124,7 @@ string GetPtString(int pTbin);
  General:
   - cleanup code
   - imporove documentation
-  - port to gitlab
+  - port separate gitlab repo
   - add minimal example code
   - add user friendly itroduction int framework (doxygen comment for namespace?)
  
@@ -155,13 +155,16 @@ int main(int argc, char *argv[]) {
   vector<string> dataSets;
   if(argc > 1 && (string(argv[1]) == "help" || string(argv[1]) == "--h")){
     cout << "Usage:" << endl;
-    cout << "./plot inputID plot1,plot2" << endl;
+    cout << "./plot inputID1,inputID2 plot1,plot2 [interactive | pdf | eps | file]" << endl;
+    cout << "./plot find [plotNameRegexp] [inputIdentifierRegexp]" << endl;
     return 0;
   }
   if(argc > 1 && (string(argv[1]) == "find")){
-    string regex = "";
-    if(argc > 2) regex = argv[2];
-    plotEnv.ListPlotsDefinedInFile(plotConfig, regex);
+    string plotNameRegex = "";
+    string inputIdentifierRegexp = "";
+    if(argc > 2) plotNameRegex = argv[2];
+    if(argc > 3) inputIdentifierRegexp = argv[3];
+    plotEnv.ListPlotsDefinedInFile(plotConfig, plotNameRegex, inputIdentifierRegexp);
     return 0;
   }
   else if(argc > 2){

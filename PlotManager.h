@@ -71,7 +71,7 @@ namespace PlottingFramework
     void ListPlotStyles(); // list all available plot styles
     
     void SetOutputFileName(string fileName = "ResultPlots.root") {mOutputFileName = fileName;}
-    void ListPlotsDefinedInFile(string plotFileName, string regexp = "");
+    void ListPlotsDefinedInFile(string plotFileName, string plotNameRegexp = "", string inputIdentifierRegexp = "");
     
   private:
 

@@ -467,15 +467,16 @@ const string& PlotManager::GetNameRegisterName(int nameID)
  * List Plots defined in file containing expression.
  */
 //****************************************************************************************
-void PlotManager::ListPlotsDefinedInFile(string plotFileName, string regexp)
+void PlotManager::ListPlotsDefinedInFile(string plotFileName, string plotNameRegexp, string inputIdentifierRegexp)
 {
   ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
   for(auto& plotGroupTree : inputTree){
+    string inputIdentifier = plotGroupTree.first.substr(string("GROUP::").size());
+    if(inputIdentifierRegexp == "" || inputIdentifier.find(inputIdentifierRegexp) == string::npos) continue;
     for(auto& plotTree : plotGroupTree.second){
-      //string entryName = "PLOT::" + plotName + gNameGroupSeparator + figureGroup;
       string plotName = plotTree.second.get<string>("name");
       string figureGroup = plotTree.second.get<string>("figureGroup");
-      if(regexp != "" && plotName.find(regexp) != string::npos)
+      if(plotNameRegexp != "" && plotName.find(plotNameRegexp) != string::npos)
         cout << plotName << " found in " << figureGroup << endl;
     }
   }
