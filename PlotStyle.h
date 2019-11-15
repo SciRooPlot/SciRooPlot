@@ -52,7 +52,7 @@ namespace PlottingFramework {
     int GetDefaultLineStyle(int lineIndex) {return mDefaultLineStyles[lineIndex % mDefaultLineStyles.size()];}
     string GetDefault2DStyle(){return m2dStyle;}
 
-    void SetPalette(int palette){mPalette = palette;} // maybe in pad, accessor through plot gStyle->SetPalette(palette);
+    void SetPalette(int palette){mPalette = palette;} // TODO: per pad, accessor through plot gStyle->SetPalette(palette);
     void SetTextSize(double size){mTextSize = size;}
     void SetLableSizeScaling(double scaleFactor){mLableSizeScaling = scaleFactor;}
     void SetTitleSizeScaling(double scaleFactor){mTitleSizeScaling = scaleFactor;}

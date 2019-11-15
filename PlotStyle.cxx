@@ -21,6 +21,26 @@ using namespace PlottingFramework;
 namespace PlottingFramework {
 
   
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+/// Set color palette for 2D plots.
+///
+/// @param palette      Integer representing ROOT internal color palette
+///
+/// This is a selection of available palettes:
+/// - Standard: kBird, 1 (ROOT5 default), kDarkRainBow, kTemperatureMap, kLightTemperature, kRainBow
+/// - Gray: kGreyScale, kGreyYellow, kPearl, kPigeon
+/// - Green: kAvocado, kBlueGreenYellow, kAlpine, kGistEarth, kViridis
+/// - RedBlue: kThermometer, kCandy, kBlackBody, kCherry, kRedBlue
+/// - RedGreen: kRose, kWaterMelon
+/// - Blue: kLake, kAtlantic
+/// - BlueYellow: kBlueYellow, kStarryNight
+/// - Brown: kCoffee, kFall, kSandyTerrain, kCopper
+/// - Purple: kFuchsia
+/// - Intense: kGreenPink, kOcean, kDarkBodyRadiator, kInvertedDarkBodyRadiator, kSunset, kVisibleSpectrum
+
   
 
   

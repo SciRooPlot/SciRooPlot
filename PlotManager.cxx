@@ -332,7 +332,13 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
   if(outputMode.find("macro") != string::npos){
     fileEnding = ".C";
   }
-  
+  if(outputMode.find("bitmap") != string::npos){
+    fileEnding = ".png";
+  }
+  if(outputMode.find("eps") != string::npos){
+    fileEnding = ".eps";
+  }
+
   string fileName = plot.GetUniqueName();
   
   if(outputMode.find("file") != string::npos){
@@ -455,6 +461,25 @@ const string& PlotManager::GetNameRegisterName(int nameID)
   }
 }
 
+
+//****************************************************************************************
+/**
+ * List Plots defined in file containing expression.
+ */
+//****************************************************************************************
+void PlotManager::ListPlotsDefinedInFile(string plotFileName, string regexp)
+{
+  ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
+  for(auto& plotGroupTree : inputTree){
+    for(auto& plotTree : plotGroupTree.second){
+      //string entryName = "PLOT::" + plotName + gNameGroupSeparator + figureGroup;
+      string plotName = plotTree.second.get<string>("name");
+      string figureGroup = plotTree.second.get<string>("figureGroup");
+      if(regexp != "" && plotName.find(regexp) != string::npos)
+        cout << plotName << " found in " << figureGroup << endl;
+    }
+  }
+}
 
 //****************************************************************************************
 /**

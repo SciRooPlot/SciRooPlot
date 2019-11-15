@@ -23,6 +23,7 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include <sstream>
 
 // boost headers
 #include <boost/property_tree/ptree.hpp>
@@ -65,6 +66,7 @@
 #include "TGWindow.h"
 #include "TRootCanvas.h"
 
+
 namespace PlottingFramework {
 
 
@@ -89,16 +91,6 @@ namespace PlottingFramework {
 
 
   const string gNameGroupSeparator = "_IN_";
-
-  // functions wrapping the ugly std functionality for basic operations
-
-  // simple unity of two sets
-  // simple intersection of two sets.
-
-  // simple case insensitive contains method for strings
-  // todo: some variant like template to specify which options are allwoed for specific variable
-
-
 
 }
 

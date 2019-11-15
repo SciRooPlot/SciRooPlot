@@ -351,7 +351,6 @@ namespace PlottingFramework {
         pad->Update(); // this adds something to list of primitives!! do not call here
       }
 
-
       // TODO: set range and log scale properties must affect all linked pad-axes
       // also add safety in case log and range are not compatible (zero in range)
 
@@ -785,124 +784,56 @@ void PlotGenerator::CutGraph(TGraph* graph, double cutoff, double cutoffLow)
   
 }
 
+//****************************************************************************************
+/**
+ * Helper-function dividing two TGraphs
+ */
+//****************************************************************************************
 
-  TGraph* PlotGenerator::DivideTSpline(TGraph* numerator, TGraph* denominator){
+TGraph* PlotGenerator::DivideTSpline(TGraph* numerator, TGraph* denominator){
 
-    TGraph* result = (TGraph*)numerator->Clone("ratio");
-    TSpline3* denSpline = new TSpline3("denSpline", denominator);
-    
-    int nPoints = result->GetN();
-    
-    double *x = result->GetX();
-    
-    double *y = result->GetY();
-    double *ey = result->GetEY();
-        
-    for(int i = 0; i < nPoints; i++) {
-      double deonomValiue = denominator->Eval(x[i], denSpline);
-      y[i] = y[i] / deonomValiue;
-      ey[i] = ey[i] * deonomValiue;
-    }
-    delete denSpline;
-    return result;
-  }
+  TGraph* result = (TGraph*)numerator->Clone("ratio");
+  TSpline3* denSpline = new TSpline3("denSpline", denominator);
   
-  /*
+  int nPoints = result->GetN();
   
-  void PlotManager::ApplyHistoSettings(TH1* histo, Plot::Histogram &histoTemplate, string &drawingOptions, int defaultValueIndex, string controlString)
-  {
-    histo->SetTitle("");
-    
-    if(histo->InheritsFrom("TH2")){
-      drawingOptions += " COLZ";
-      return;
-    }
-    int markerStyle = (histoTemplate.marker) ? histoTemplate.marker : GetDefaultMarker(defaultValueIndex);
-    histo->SetMarkerStyle(markerStyle);
-    
-    int color = (histoTemplate.color) ? histoTemplate.color : GetDefaultColor(defaultValueIndex);
-    histo->SetMarkerColor(color);
-    histo->SetLineColor(color);
-    
-    string errorStyle = histoTemplate.errorStyle;
-    if(errorStyle == "none")
-    {
-      histo->SetLineWidth(0);
-    }
-    if(errorStyle == "hist")
-    {
-      drawingOptions += " HIST";
-    }
-    else if(errorStyle == "band")
-    {
-      drawingOptions += " E5";
+  double *x = result->GetX();
+  
+  double *y = result->GetY();
+  double *ey = result->GetEY();
       
-      histo->SetMarkerSize(0.);
-      histo->SetFillColor(color);
-      histo->SetFillStyle(1);
-    }
-    else if(errorStyle == "boxes")
-    {
-      TExec errorBoxesOn("errorBoxesOn","gStyle->SetErrorX(0.48)");
-      errorBoxesOn.Draw();
-      histo->SetFillStyle(0);
-      drawingOptions += " E2";
-      TExec errorBoxesOff("errorBoxesOff","gStyle->SetErrorX(0)");
-      errorBoxesOff.Draw();
-    }
-    
-    if(controlString.find("thick") != string::npos){
-      histo->SetLineWidth(mStyle.lineWidthThick);
-      histo->SetMarkerSize(mStyle.markerSizeThick);
-    }
-    
+  for(int i = 0; i < nPoints; i++) {
+    double deonomValiue = denominator->Eval(x[i], denSpline);
+    y[i] = y[i] / deonomValiue;
+    ey[i] = ey[i] * deonomValiue;
   }
-   
-   
+  delete denSpline;
+  return result;
+}
+
+//****************************************************************************************
+/**
+ * Helper-function dividing two histograms with different binning.
+ */
+//****************************************************************************************
+
+TH1* PlotGenerator::DivideTSpline(TH1* numerator, TH1* denominator)
+{
+  TGraph denominatorGraph(denominator);
+  TSpline3 denominatorSpline(denominator);
   
-  TH1* PlotManager::DivideWithTSpline(TH1* numerator, TH1* denominator)
+  TH1* ratio = (TH1*)numerator->Clone("dummyRatio");
+  ratio->Reset();
+  
+  for(int i = 1; i <= numerator->GetNbinsX(); i++)
   {
-    TGraph denominatorGraph(denominator);
-    TSpline3 denominatorSpline(denominator);
-    
-    TH1* ratio = (TH1*)numerator->Clone("dummyRatio");
-    ratio->Reset();
-    
-    for(int i = 1; i <= numerator->GetNbinsX(); i++)
-    {
-      double numeratorValue = numerator->GetBinContent(i);
-      double x = numerator->GetBinCenter(i);
-      double denomValue = denominatorGraph.Eval(x, &denominatorSpline);
-      //cout << "i: " << i << " x: " << x << " denomValue: " << denomValue << endl;
-      if(denomValue) ratio->SetBinContent(i, numeratorValue/denomValue);
-    }
-    return ratio;
+    double numeratorValue = numerator->GetBinContent(i);
+    double x = numerator->GetBinCenter(i);
+    double denomValue = denominatorGraph.Eval(x, &denominatorSpline);
+    if(denomValue) ratio->SetBinContent(i, numeratorValue/denomValue);
   }
-  
-  ////////////////////////////////////////////////////////////////////////////////
-  /// Set color palette for 2D plots.
-  ///
-  /// @param palette      Integer representing ROOT internal color palette
-  ///
-  /// This is a selection of available palettes:
-  /// - Standard: kBird, 1 (ROOT5 default), kDarkRainBow, kTemperatureMap, kLightTemperature, kRainBow
-  /// - Gray: kGreyScale, kGreyYellow, kPearl, kPigeon
-  /// - Green: kAvocado, kBlueGreenYellow, kAlpine, kGistEarth, kViridis
-  /// - RedBlue: kThermometer, kCandy, kBlackBody, kCherry, kRedBlue
-  /// - RedGreen: kRose, kWaterMelon
-  /// - Blue: kLake, kAtlantic
-  /// - BlueYellow: kBlueYellow, kStarryNight
-  /// - Brown: kCoffee, kFall, kSandyTerrain, kCopper
-  /// - Purple: kFuchsia
-  /// - Intense: kGreenPink, kOcean, kDarkBodyRadiator, kInvertedDarkBodyRadiator, kSunset, kVisibleSpectrum
-  
-  
-  void PlotManager::SetPalette(int palette)
-  {
-    mStyle.palette = palette;
-    gStyle->SetPalette(mStyle.palette);
-  }
-  
-    */
+  return ratio;
+}
+
   
 }

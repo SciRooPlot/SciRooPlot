@@ -19,7 +19,6 @@
 #include "PlottingFramework.h"
 #include "PlotManager.h"
 #include "Plot.h"
-#include <sstream>
 
 using PlottingFramework::PlotManager;
 using PlottingFramework::Plot;
@@ -72,6 +71,7 @@ string GetPtString(int pTbin);
  - check if 2d hist is part of plot, then change style...
 
  Not so important:
+ - replace PlotGenerator class with namespace
  - possibility to load all data from input files
  - load only allowed datatypes
  - setter for csv format string and delimiter
@@ -157,11 +157,15 @@ int main(int argc, char *argv[]) {
     cout << "Usage:" << endl;
     cout << "./plot inputID plot1,plot2" << endl;
     return 0;
-
+  }
+  if(argc > 1 && (string(argv[1]) == "find")){
+    string regex = "";
+    if(argc > 2) regex = argv[2];
+    plotEnv.ListPlotsDefinedInFile(plotConfig, regex);
+    return 0;
   }
   else if(argc > 2){
     // plot only specific plots stored in the plotConfig file
-
     plotEnv.LoadInputDataFiles(inputFileConfig);
 
     string inputIdentifierString = argv[1];
