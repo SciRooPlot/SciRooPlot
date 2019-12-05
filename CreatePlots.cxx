@@ -25,6 +25,7 @@ using PlottingFramework::Plot;
 
 string GetPtString(int pTbin);
 /*
+ - use TPad function void Range(float x1,float y1,float x2,float y2) to set user coordinate system independent of first histo, graph, etc
  - option for plotting projectins? is this reasonable?
  - normalizing should be part of histogram drawing options
  - add some more formatting features for legend (floating point precision, exponent..)
@@ -42,15 +43,13 @@ string GetPtString(int pTbin);
 
 
  Bugs:
- - when hist with "band" option is plotted first, the axes are not drawn...
- - what goes wrong with e.g. energyScanVariance plot or 2d plots where text box disappears after moving it?
- - why is there strange behaviour when moving text boxes in ratio plots and plots with log scale (jumping...)
- - all self-defined drawing options need to be excluded from the control string before using it with root to make sure no pre-defined letter combinations are contained that are then wrongly interpreted
+ - width calculation wrong for text boxes
+ - using user coordinates in legend box breaks something for text box?
+ - interactively moving text boxes in log scale plots has a bug (maybe already in root)
  - when saving to macro or pdf, the boxes are slightly misplaced (some global setting missing?)
  - make sure figure groups cannot contain '.'
  - exponents on x axis are not in the proper position
  - text boxes width and height is calculated wrong
- - if first histogram has drawing option "band", axes are not drawn properly
  - height of boxes is not calculated correctly (ndc vs relative pad coordinates?)
  - boxes are not transparent by default
  - sometimes text boxes are randomly not drawn?
@@ -71,7 +70,7 @@ string GetPtString(int pTbin);
  - check if 2d hist is part of plot, then change style...
 
  Not so important:
- - replace PlotGenerator class with namespace
+ - replace PlotGenerator class with namespace?
  - possibility to load all data from input files
  - load only allowed datatypes
  - setter for csv format string and delimiter
@@ -377,7 +376,7 @@ int main(int argc, char *argv[]) {
 
     if(dataSet.find("pp_2TeV") != string::npos) {erg = erg2TeV; multRange = 40;}
     if(dataSet.find("pp_7TeV") != string::npos) erg = erg7TeV;
-    if(dataSet.find("pp_13TeV") != string::npos) erg = erg13TeV;
+    if(dataSet.find("pp_13TeV") != string::npos) {erg = erg13TeV; multRange = 100;}
     if(dataSet.find("pp_5TeV") != string::npos) erg = erg5TeV;
     if(dataSet.find("pPb_5TeV") != string::npos) erg = erg5TeV_NN;
     if(dataSet.find("PbPb_5TeV") != string::npos) erg = erg5TeV_NN;
@@ -2281,7 +2280,7 @@ int multBin = 18;
         myPlot.AddHisto(string("meanPt_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
       }
       myPlot.SetAxisRange("Y", 0.3, 1.0);
-      myPlot.AddLegendBox(0.24, 0.91, "", 3);
+      myPlot.AddLegendBox(0.24, 0.91, "", false, 3);
       myPlot.AddTextBox(0.4, 0.3, energyLable);
       plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
@@ -2297,7 +2296,7 @@ int multBin = 18;
 //        myPlot.AddHisto(string("meanPtMC_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
       }
       myPlot.SetAxisRange("Y", 0.3, 0.9);
-      myPlot.AddLegendBox(0.15, 0.92, "", false, 2);
+      myPlot.AddLegendBox(0.15, 0.92, "", true, 2);
       myPlot.AddTextBox(0.15, 0.35, energyLable + " // MC: Pythia8 Monash13");
       plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
@@ -2328,7 +2327,7 @@ int multBin = 18;
         myPlot.AddHisto(string("variance_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
       }
       myPlot.SetAxisRange("Y", -0.4, 0.8);
-      myPlot.AddLegendBox(0.24, 0.91, "", 3);
+      myPlot.AddLegendBox(0.24, 0.91);
       myPlot.AddTextBox(0.4, 0.3, energyLable);
       plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
@@ -2360,7 +2359,7 @@ int multBin = 18;
         myPlot.AddHisto(string("variance_Log_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, -1, "boxes");
       }
       myPlot.SetAxisRange("Y", -0.4, 1.4);
-      myPlot.AddLegendBox(0.24, 0.91, "", 3);
+      myPlot.AddLegendBox(0.24, 0.91);
       //myPlot.AddTextBox(0.4, 0.3, energyLable);
       myPlot.AddTextBox(0.4, 0.3, energyLableMC);
       plotEnv.AddPlot(myPlot);
@@ -2465,6 +2464,7 @@ int multBin = 18;
       Plot myPlot(plotName, plotGroup);
       
       myPlot.AddHisto("meanPt_2TeV", "Simulations", "2 TeV", 0, 0, "band");
+
       myPlot.AddHisto("meanPt_2.5TeV", "Simulations", "", 0, 0, "band");
       myPlot.AddHisto("meanPt_3TeV", "Simulations", "", 0, 0, "band");
       myPlot.AddHisto("meanPt_3.5TeV", "Simulations", "", 0, 0, "band");
@@ -2499,6 +2499,7 @@ int multBin = 18;
       myPlot.SetAxisRange("Y", 0.45, 0.85);
       myPlot.AddLegendBox(0.35, 0.3, "",4);
       myPlot.AddTextBox(0.4, 0.5, energyLableMC);
+       
       plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 

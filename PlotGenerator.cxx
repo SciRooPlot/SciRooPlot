@@ -123,6 +123,7 @@ namespace PlottingFramework {
           
           if(drawingOptions.find("none") != string::npos)
           {
+            drawingOptions.erase(drawingOptions.find("none"), string("none").length());
             histo->SetLineWidth(0);
           }
           if(drawingOptions.find("hist") != string::npos)
@@ -131,6 +132,7 @@ namespace PlottingFramework {
           }
           else if(drawingOptions.find("band") != string::npos)
           {
+            drawingOptions.erase(drawingOptions.find("band"), string("band").length());
             drawingOptions += " E5";
             
             histo->SetMarkerSize(0.);
@@ -139,6 +141,8 @@ namespace PlottingFramework {
           }
           else if(drawingOptions.find("boxes") != string::npos)
           {
+            drawingOptions.erase(drawingOptions.find("boxes"), string("boxes").length());
+
             TExec errorBoxesOn("errorBoxesOn","gStyle->SetErrorX(0.48)");
             errorBoxesOn.Draw();
             histo->SetFillStyle(0);
@@ -146,7 +150,6 @@ namespace PlottingFramework {
             TExec errorBoxesOff("errorBoxesOff","gStyle->SetErrorX(0)");
             errorBoxesOff.Draw("");
           }
-          
           histo->Draw(drawingOptions.c_str());
           
         }
@@ -199,6 +202,7 @@ namespace PlottingFramework {
           }
           if(drawingOptions.find("boxes") != string::npos)
           {
+            drawingOptions.erase(drawingOptions.find("boxes"), string("boxes").length());
             TExec errorBoxesOn("errorBoxesOn","gStyle->SetErrorX(0.48)");
             errorBoxesOn.Draw();
             ratio->SetFillStyle(0);
@@ -233,6 +237,7 @@ namespace PlottingFramework {
           }
           if(drawingOptions.find("boxes") != string::npos)
           {
+            drawingOptions.erase(drawingOptions.find("boxes"), string("boxes").length());
             TExec errorBoxesOn("errorBoxesOn","gStyle->SetErrorX(0.48)");
             errorBoxesOn.Draw();
             graph->SetFillStyle(0);
@@ -259,19 +264,68 @@ namespace PlottingFramework {
           errorStyles.push_back(data->GetDrawingOptions());
         }
       }
+
+      // TODO: set range and log scale properties must affect all linked pad-axes
+      // also add safety in case log and range are not compatible (zero in range)
+      if(controlString.find("logX") != string::npos)
+      {
+        pad->SetLogx();
+      }
+      if(controlString.find("logY") != string::npos)
+      {
+        pad->SetLogy();
+      }
+      if(controlString.find("logZ") != string::npos)
+      {
+        pad->SetLogz();
+      }
+      if(controlString.find("gridX") != string::npos)
+      {
+        pad->SetGridx();
+      }
+      if(controlString.find("gridY") != string::npos)
+      {
+        pad->SetGridy();
+      }
+      // todo this is to figure out bug in log scale tpave moving
+      //pad->Modified();
+      //pad->Update();
+      //pad->ResizePad();
+
+      int legendIndex = 1;
+      int textIndex = 1;
       // now place legends, textboxes and shapes
       for(auto box : plot.GetBoxes(padID))
       {
         if(box->GetType() == "legend")
         {
+          string legendName = "LegendBox_" + std::to_string(legendIndex);
           if(lables.empty()) break;
           TLegend* legend = MakeLegend(std::static_pointer_cast<Plot::LegendBox>(box), pad, legendEntries, lables, errorStyles);
+          legend->SetName(legendName.c_str());
           legend->Draw("SAME");
+          // todo this is to figure out bug in log scale tpave moving
+          //legend->ConvertNDCtoPad();
+          //legend->SetBorderSize(2);
+          //legend->SetLineWidth(2);
+          //legend->SetLineColor(kRed);
+          legendIndex++;
         }
         else if(box->GetType() == "text")
         {
+          string textName = "TextBox_" + std::to_string(textIndex);
           TPaveText* text = MakeText(std::static_pointer_cast<Plot::TextBox>(box));
+          text->SetName(textName.c_str());
           text->Draw("SAME");
+          
+          // todo this is to figure out bug in log scale tpave moving
+          //text->ConvertNDCtoPad();
+          //text->SetBorderSize(2);
+          //text->SetLineWidth(2);
+          //text->SetLineColor(kRed);
+          
+          textIndex++;
+
         }
       }
 
@@ -351,30 +405,7 @@ namespace PlottingFramework {
         pad->Update(); // this adds something to list of primitives!! do not call here
       }
 
-      // TODO: set range and log scale properties must affect all linked pad-axes
-      // also add safety in case log and range are not compatible (zero in range)
 
-      if(controlString.find("logX") != string::npos)
-      {
-        pad->SetLogx();
-      }
-      if(controlString.find("logY") != string::npos)
-      {
-        pad->SetLogy();
-      }
-      if(controlString.find("logZ") != string::npos)
-      {
-        pad->SetLogz();
-      }
-      if(controlString.find("gridX") != string::npos)
-      {
-        pad->SetGridx();
-      }
-      if(controlString.find("gridY") != string::npos)
-      {
-        pad->SetGridy();
-      }
-      
       pad->Modified();
       pad->Update();
       padID++;
@@ -690,9 +721,9 @@ namespace PlottingFramework {
       upperLeftX = (upperLeftX - gPad->GetX1())/(gPad->GetX2()-gPad->GetX1());
       upperLeftY = (upperLeftY - gPad->GetY1())/(gPad->GetY2()-gPad->GetY1());
     }
-    TPaveText* tPaveText = new TPaveText(upperLeftX, upperLeftY
-                                         - yWidth, upperLeftX + xWidth, upperLeftY, "NDC");
-    
+
+    TPaveText* tPaveText = new TPaveText(upperLeftX, upperLeftY - yWidth, upperLeftX + xWidth, upperLeftY, "NDC");
+
     double boxExtent = 0;
     for(auto &line : lines)
     {
