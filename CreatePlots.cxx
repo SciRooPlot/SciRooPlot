@@ -351,7 +351,7 @@ int main(int argc, char *argv[]) {
   { // -----------------------------------------------------------------------
     string plotName = "selfNormalizedHighPtYieldNormalizedNch";
     Plot myPlot(plotName, "test");
-    myPlot.SetDrawingProperties("normalize logY");
+    myPlot.SetDrawingProperties("normalize");
     myPlot.AddHisto(plotName + "_pp_2TeV", "Fits", "2.76 TeV (<mean>)");
     myPlot.AddHisto(plotName + "_pp_5TeV", "Fits", "5.02 TeV (<mean>)");
     myPlot.AddHisto(plotName + "_pp_7TeV", "Fits", "7 TeV (<mean>)");
@@ -2392,6 +2392,85 @@ int multBin = 18;
       plotEnv.AddPlot(myPlot);
     } // -----------------------------------------------------------------------
 
+    { // -----------------------------------------------------------------------
+      string plotName = "meanPt_pp_VS_PYTHIA";
+      Plot myPlot(plotName, plotGroup, "default ratio");
+      
+      myPlot.AddHisto("momentUnfolded1", "pp_13TeV", "", kFullSquare, kRed+1, "", 60);
+      myPlot.AddHisto("momentUnfolded1_Syst", "pp_13TeV", "13 TeV", kFullSquare, kRed+1, "boxes", 60);
+
+      myPlot.AddHisto("meanPt_13TeV", "Simulations", "", kOpenSquare, kRed+1, "", 60);
+
+      myPlot.AddHisto("momentUnfolded1", "pp_7TeV", "", kFullCircle, kMagenta+1, "", 60);
+      myPlot.AddHisto("momentUnfolded1_Syst", "pp_7TeV", "7 TeV", kFullCircle, kMagenta+1, "boxes", 60);
+
+      myPlot.AddHisto("meanPt_7TeV", "Simulations", "", kOpenCircle, kMagenta+1, "", 60);
+
+      myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullCross, kBlue+1, "", 60);
+      myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "5.02 TeV", kFullCross, kBlue+1, "boxes", 60);
+
+      myPlot.AddHisto("meanPt_5.02TeV", "Simulations", "", kOpenCross, kBlue+1, "", 60);
+
+      myPlot.AddHisto("momentUnfolded1", "pp_2TeV", "", kFullDiamond, kGreen+3, "", 40);
+      myPlot.AddHisto("momentUnfolded1_Syst", "pp_2TeV", "2.76 TeV", kFullDiamond, kGreen+3, "boxes", 40);
+
+      myPlot.AddHisto("meanPt_2.76TeV", "Simulations", "", kOpenDiamond, kGreen+3, "", 40);
+
+      myPlot.AddRatio("meanPt_13TeV", "Simulations", "momentUnfolded1_Syst", "pp_13TeV", "", kOpenSquare, kRed+1, "", 60);
+      myPlot.AddRatio("meanPt_7TeV", "Simulations", "momentUnfolded1_Syst", "pp_7TeV", "", kOpenCircle, kMagenta+1, "", 60);
+      myPlot.AddRatio("meanPt_5.02TeV", "Simulations", "momentUnfolded1_Syst", "pp_5TeV", "", kOpenCross, kBlue+1, "", 60);
+      myPlot.AddRatio("meanPt_2.76TeV", "Simulations", "momentUnfolded1_Syst", "pp_2TeV", "", kOpenDiamond, kGreen+3, "", 40);
+
+      myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+      myPlot.SetAxisTitle("ratio", "MC / data");
+      myPlot.SetAxisRange("ratio", 0.94, 1.06);
+      myPlot.SetAxisRange("X", 0, 60);
+      myPlot.SetAxisRange("Y", 0.46, 0.85);
+      myPlot.AddLegendBox(0.2, 0.9, "");
+      myPlot.AddTextBox(0.4, 0.3, energyLable + " // MC: PYTHIA 8 Monash13");
+      plotEnv.AddPlot(myPlot);
+    } // -----------------------------------------------------------------------
+
+    { // -----------------------------------------------------------------------
+      string plotName = "meanPt_pp_VS_EPOS";
+      Plot myPlot(plotName, plotGroup, "default ratio");
+      
+      myPlot.AddHisto("momentUnfolded1", "pp_13TeV", "", kFullSquare, kRed+1, "", 60);
+      myPlot.AddHisto("momentUnfolded1_Syst", "pp_13TeV", "13 TeV", kFullSquare, kRed+1, "boxes", 60);
+
+      myPlot.AddHisto("meanPt_pp_EPOS-LHC_13TeV", "Simulations", "", kOpenSquare, kRed+1, "", 60);
+
+      myPlot.AddHisto("momentUnfolded1", "pp_7TeV", "", kFullCircle, kMagenta+1, "", 60);
+      myPlot.AddHisto("momentUnfolded1_Syst", "pp_7TeV", "7 TeV", kFullCircle, kMagenta+1, "boxes", 60);
+
+      myPlot.AddHisto("meanPt_pp_EPOS-LHC_7TeV", "Simulations", "", kOpenCircle, kMagenta+1, "", 60);
+
+      myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullCross, kBlue+1, "", 60);
+      myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "5.02 TeV", kFullCross, kBlue+1, "boxes", 60);
+
+      myPlot.AddHisto("meanPt_pp_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCross, kBlue+1, "", 60);
+
+      myPlot.AddHisto("momentUnfolded1", "pp_2TeV", "", kFullDiamond, kGreen+3, "", 40);
+      myPlot.AddHisto("momentUnfolded1_Syst", "pp_2TeV", "2.76 TeV", kFullDiamond, kGreen+3, "boxes", 40);
+
+      myPlot.AddHisto("meanPt_pp_EPOS-LHC_2.76TeV", "Simulations", "", kOpenDiamond, kGreen+3, "", 40);
+
+      myPlot.AddRatio("meanPt_pp_EPOS-LHC_13TeV", "Simulations", "momentUnfolded1_Syst", "pp_13TeV", "", kOpenSquare, kRed+1, "", 60);
+      myPlot.AddRatio("meanPt_pp_EPOS-LHC_7TeV", "Simulations", "momentUnfolded1_Syst", "pp_7TeV", "", kOpenCircle, kMagenta+1, "", 60);
+      myPlot.AddRatio("meanPt_pp_EPOS-LHC_5.02TeV", "Simulations", "momentUnfolded1_Syst", "pp_5TeV", "", kOpenCross, kBlue+1, "", 60);
+      myPlot.AddRatio("meanPt_pp_EPOS-LHC_2.76TeV", "Simulations", "momentUnfolded1_Syst", "pp_2TeV", "", kOpenDiamond, kGreen+3, "", 40);
+
+      myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+      myPlot.SetAxisRange("X", 0, 60);
+      myPlot.SetAxisRange("Y", 0.46, 0.85);
+      myPlot.SetAxisTitle("ratio", "MC / data");
+      myPlot.SetAxisRange("ratio", 0.94, 1.06);
+      myPlot.AddLegendBox(0.2, 0.9, "");
+      myPlot.AddTextBox(0.4, 0.3, energyLable + " // MC: EPOS-LHC");
+      plotEnv.AddPlot(myPlot);
+    } // -----------------------------------------------------------------------
+
+    
     { // -----------------------------------------------------------------------
       string plotName = "variance";
       Plot myPlot(plotName, plotGroup);
