@@ -129,7 +129,7 @@ string GetPtString(int pTbin);
  
  TODOS for analysis plots:
   - clean up file names and make useful sub-folders
-  - add more qua plots for unfolding
+  - add more qa plots for unfolding
 
  
  */
