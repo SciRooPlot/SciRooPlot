@@ -13,6 +13,8 @@ cd build
 
 cmake ../
 
+make
+
 The user entry point is the CreatePlots.cxx file.
 You can also define your own MyPlotting.cxx and adjust the add_executable() function in CMakeLists.txt accordingly
 
