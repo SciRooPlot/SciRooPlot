@@ -16,9 +16,9 @@ cmake ../
 make
 
 The user entry point is the CreatePlots.cxx file.
-You can also define your own MyPlotting.cxx and adjust the add_executable() function in CMakeLists.txt accordingly
+You can also define your own MyPlotting.cxx and adjust the add_executable() function in CMakeLists.txt accordingly.
 
-To generate the documenation run
+To generate the documenation run:
 
 cd PlottingFramework/doxygen
 
@@ -44,14 +44,15 @@ File paths can be added via AddInputDataFiles(). Once loaded you can also dump t
 Once input and output is defined in the manager, you can start adding plot definitions to the manager:
 The best way is to create a scope via {} and create there a Plot object.
 You can change this plot object with a bunch of self explanatory accessors.
-Then you need to add this plot to the manager via AddPlot()
+Then you need to add this plot to the manager via AddPlot().
 This adding will move the settings of your plot to the manager and you will be left with an empty plot.
 After adding your plots to the manager you can eigher generate your plots via CreatePlots()
-Or you can dump the plot definitions to an external config file that can also be modified outside of the program via DumpPlots()
+Or you can dump the plot definitions to an external config file that can also be modified outside of the program via DumpPlots().
 These definitions you can read into the manager again via LoadPlots().
 Alternatively you can also load and generate only specific plots defined in the config file via CreatePlotsFromFile()
 By default plots are created as pdf in your output folder, but you can also choose "bitmap" for pngs "macro" to create root macros or "interactive" if you only want to look at the plot and not create a file.
 
 
-The framework is still contains some unfinished or not very general pragmatic implementations, so please regard this as a very early beta version.. 
+The framework is still contains some unfinished or not very general pragmatic implementations, so please regard this as a very early beta version..
+ 
 Any suggestions, bug reports and user feedback is very welcome.
