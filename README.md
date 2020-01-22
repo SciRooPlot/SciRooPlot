@@ -6,8 +6,11 @@ DEPENDENCIES
 USE FRAMEWORK
 -------------
 cd PlottingFramework
+
 mkdir build
+
 cd build
+
 cmake ../
 
 The user entry point is the CreatePlots.cxx file.
