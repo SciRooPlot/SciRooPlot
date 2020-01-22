@@ -1,0 +1,7 @@
+build/*
+BUILD/*
+doxygen/html/*
+doxygen/latex/*
+
+.DS_Store
+doxyge/.DS_Store
