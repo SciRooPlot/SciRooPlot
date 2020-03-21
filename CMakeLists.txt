@@ -6,41 +6,38 @@ set(REQUIRED_ROOT_VERSION 6.16)
 set(REQUIRED_BOOST_VERSION 1.68)
 
 set(MODULE PlottingFramework)
-# add source files of classes
+
+# add source files of classes here
 set(SRCS
-  PlotManager.cxx
-  PlotGenerator.cxx
-  PlotStyle.cxx
-  Plot.cxx
+  src/PlotManager.cxx
+  src/PlotGenerator.cxx
+  src/PlotStyle.cxx
+  src/Plot.cxx
 )
 string(REPLACE ".cxx" ".h" HDRS "${SRCS}")
+string(REPLACE "src" "include" HDRS "${HDRS}")
 
-# do ROOT magic
+# find ROOT
 set(ROOTCOMPONENTS Core RIO Hist Matrix)
 find_package(ROOT ${REQUIRED_ROOT_VERSION} REQUIRED COMPONENTS ${ROOTCOMPONENTS})
 include(${ROOT_USE_FILE})
 ROOT_GENERATE_DICTIONARY(G__${MODULE} ${HDR} LINKDEF ${CMAKE_CURRENT_SOURCE_DIR}/LinkDef.h)
-add_library(${MODULE} SHARED ${SRCS} ${HDRS} G__${MODULE}.cxx)
-#SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath -Wl,${ROOTSYS}/lib")
-#target_include_directories(${MODULE} PUBLIC ${ROOT_INCLUDE_DIRS})
-target_link_libraries(${MODULE} ${ROOT_LIBRARIES})
-
+# find BOOST
 find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED)
-target_link_libraries(${MODULE} Boost::boost)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${ROOT_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/boost/property_tree)
+add_library(${MODULE} SHARED ${SRCS} ${HDRS} G__${MODULE}.cxx)
+target_link_libraries(${MODULE} ${ROOT_LIBRARIES} Boost::boost)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${ROOT_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/boost/property_tree)
 
-# create executable
-add_executable(plot CreatePlots.cxx ${SRCS} ${HDRS} PlottingFramework.h)
+# create executables
+add_executable(plot src/PlottingApp.cxx ${SRCS} ${HDRS} include/PlottingFramework.h)
 target_link_libraries(plot ${MODULE})
 
+add_executable(create src/CreatePlots.cxx ${SRCS} ${HDRS} include/PlottingFramework.h)
+target_link_libraries(create ${MODULE})
 
-#link_directories(${CMAKE_SOURCE_DIR}/)
-#install(TARGETS plot ${MODULE}
-#  CONFIGURATIONS Debug Release RelWithDebInfo MinSizeRel
-#  LIBRARY DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/BUILD/
-#  RUNTIME DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/BUILD/
-#)
-#install(FILES lib${MODULE}_rdict.pcm lib${MODULE}.rootmap
-#  DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/BUILD/
-#)
+# install ROOT pre-compiled headers and rootmap
+ROOT_GET_LIBRARY_OUTPUT_DIR(library_output_dir)
+ROOT_GET_INSTALL_DIR(shared_lib_install_dir)
+install(FILES ${library_output_dir}/lib${MODULE}_rdict.pcm ${library_output_dir}/lib${MODULE}.rootmap
+        DESTINATION ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})

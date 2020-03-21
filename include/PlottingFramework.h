@@ -1,6 +1,6 @@
 // Plotting Framework
 //
-// Copyright (C) 2019  Mario Krüger
+// Copyright (C) 2019-2020  Mario Krüger
 // Contact: mario.kruger@cern.ch
 // For a full list of contributors please see docs/Credits
 //
