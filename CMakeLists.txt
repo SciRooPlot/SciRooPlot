@@ -5,9 +5,22 @@ set(CMAKE_BUILD_TYPE Debug)
 set(REQUIRED_ROOT_VERSION 6.16)
 set(REQUIRED_BOOST_VERSION 1.68)
 
-set(MODULE PlottingFramework)
+# add user applications that should be linked to the framework here
+# name of the executable:
+set(APPLICATIONS
+  plot
+  create
+)
+# corresponding source file:
+set(APPLICATIONS_SRC
+  apps/PlottingApp.cxx
+  apps/CreatePlots.cxx
+)
 
-# add source files of classes here
+set(MODULE PlottingFramework)
+set(MODULE_HDR include/${MODULE}.h)
+
+# this variable contains the framework source code
 set(SRCS
   src/PlotManager.cxx
   src/PlotGenerator.cxx
@@ -25,16 +38,22 @@ ROOT_GENERATE_DICTIONARY(G__${MODULE} ${HDR} LINKDEF ${CMAKE_CURRENT_SOURCE_DIR}
 # find BOOST
 find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED)
 
-add_library(${MODULE} SHARED ${SRCS} ${HDRS} G__${MODULE}.cxx)
+#add_library(${MODULE} SHARED ${SRCS} ${HDRS} G__${MODULE}.cxx ${MODULE_HDR})
+add_library(${MODULE} SHARED ${SRCS} ${HDRS} ${MODULE_HDR})
 target_link_libraries(${MODULE} ${ROOT_LIBRARIES} Boost::boost)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${ROOT_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/boost/property_tree)
 
 # create executables
-add_executable(plot src/PlottingApp.cxx ${SRCS} ${HDRS} include/PlottingFramework.h)
-target_link_libraries(plot ${MODULE})
+list(LENGTH APPLICATIONS NUMBER_OF_APPS)
+math(EXPR NUMBER_OF_APPS "${NUMBER_OF_APPS} - 1")
 
-add_executable(create src/CreatePlots.cxx ${SRCS} ${HDRS} include/PlottingFramework.h)
-target_link_libraries(create ${MODULE})
+foreach(INDEX RANGE ${NUMBER_OF_APPS})
+  list(GET APPLICATIONS ${INDEX} APP_NAME)
+  list(GET APPLICATIONS_SRC ${INDEX} APP_CODE)
+  message(STATUS "Creating executable ${APP_NAME} from file ${APP_CODE}")
+  add_executable(${APP_NAME} ${APP_CODE})
+  target_link_libraries(${APP_NAME} ${MODULE})
+endforeach()
 
 # install ROOT pre-compiled headers and rootmap
 ROOT_GET_LIBRARY_OUTPUT_DIR(library_output_dir)

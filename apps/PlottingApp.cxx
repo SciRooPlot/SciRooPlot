@@ -26,7 +26,7 @@ using PlottingFramework::Plot;
 
 // plotting app
 int main(int argc, char *argv[]) {
-
+  
   // generate
   
   // workflow:
@@ -120,8 +120,7 @@ int main(int argc, char *argv[]) {
   }
   else
   {
-    // compiled my plots library
-    cout << "bla"<<endl;
+    ERROR("This program requires arguments.");
   }
 
 }

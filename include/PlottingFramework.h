@@ -66,6 +66,14 @@
 #include "TGWindow.h"
 #include "TRootCanvas.h"
 
+// some preprocessor macros for logging and debugging
+#define LOG(s) cout << s << endl;
+#define LOGF(s, ...) printf(s, __VA_ARGS__); cout << endl;
+#define ERROR(s) cout << "ERROR: " << s << endl;
+#define ERRORF(s, ...)  cout << "ERROR: "; printf(s, __VA_ARGS__); cout << endl;
+#define HERE cout << "This is line " << __LINE__ << \
+" in function " << __FUNCTION__ << " (" << __FILE__ << ")" << endl;
+
 
 namespace PlottingFramework {
 
