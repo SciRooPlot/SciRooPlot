@@ -138,91 +138,33 @@ int main(int argc, char *argv[]) {
 
   bool updateInputFiles = false;
 
-  string outputPath = "~/Desktop/testPlots";
-  string inputFilesConfig = "/Users/mkrueger/Desktop/PlottingFramework/config/inputFiles.XML";
-  string plotDefConfig = "/Users/mkrueger/Desktop/PlottingFramework/config/plotDefinitions.XML";
+  string configDir = "~/Desktop/PlottingFramework/config";
+  string inputFilesConfig = configDir + "/inputFiles.XML";
+  string plotDefConfig = configDir + "/plotDefinitions.XML";
+  string outputFilesBasePath = "~/Desktop/testPlots";
 
   string outputFileName = "myPlots.root";
   bool createBinWiseClosureTests = true;
 
   // create plotting environment
   PlotManager plotEnv;
-  plotEnv.SetOutputDirectory(outputPath);
+  plotEnv.SetOutputDirectory(outputFilesBasePath);
   plotEnv.SetUseUniquePlotNames(false);
 
 
   vector<string> dataSets;
-  if(argc > 1 && (string(argv[1]) == "help" || string(argv[1]) == "--h")){
-    cout << endl;
-    cout << "Update plotDefinitions with output from current main program:" << endl << endl;
-    cout << "  ./plot" << endl << endl;
-    cout << "Update plotDefinitions with output for specific dataset from current main program:" << endl << endl;
-    cout << "  ./plot dataset" << endl << endl;
-    cout << "Create plots:" << endl << endl;
-    cout << "  ./plot [figureGroup,figureGroup2 | all] [plotName,plotName2 | all] [interactive | pdf | eps | bitmap | file]" << endl << endl;
-    cout << "Find plots defined in plotDefinitions file:" << endl << endl;
-    cout << "  ./plot find [plotNameRegexp] [inputIdentifierRegexp]" << endl << endl;
-    cout << endl;
-    return 0;
-  }
-  if(argc > 1 && (string(argv[1]) == "find")){
-    string plotNameRegex = "";
-    string inputIdentifierRegexp = "";
-    if(argc > 2) plotNameRegex = argv[2];
-    if(argc > 3) inputIdentifierRegexp = argv[3];
-    plotEnv.ListPlotsDefinedInFile(plotDefConfig, plotNameRegex, inputIdentifierRegexp);
-    return 0;
-  }
-  else if(argc > 2){
-    // plot only specific plots stored in the plotDefConfig file
-    plotEnv.LoadInputDataFiles(inputFilesConfig);
+  dataSets.push_back("pp_2TeV");
+  dataSets.push_back("pp_5TeV");
+  dataSets.push_back("pp_7TeV");
+  dataSets.push_back("pp_13TeV");
+  dataSets.push_back("pPb_5TeV");
+  dataSets.push_back("pPb_8TeV");
+  dataSets.push_back("PbPb_5TeV");
+  dataSets.push_back("XeXe_5TeV");
 
-    string inputIdentifierString = argv[1];
-    std::istringstream inputIdentifierStringStream(inputIdentifierString);
-    vector<string> inputIdentifiers;
-    string tempName;
-    while(std::getline(inputIdentifierStringStream, tempName, ',')) {
-        inputIdentifiers.push_back(tempName);
-    }
-
-    string fileNameString = argv[2];
-    std::istringstream fileNameStringStream(fileNameString);
-    vector<string> fileNames;
-    while(std::getline(fileNameStringStream, tempName, ',')) {
-        fileNames.push_back(tempName);
-    }
-    if(fileNameString == "all") fileNames = {};
-
-    string outputMode = "interactive";
-    if(argc > 3 && argv[3]) outputMode = argv[3];
-
-    for(auto& inputIdentifier : inputIdentifiers){
-      plotEnv.CreatePlotsFromFile(plotDefConfig, inputIdentifier, fileNames, outputMode);
-    }
-    return 0;
-  }
-  else if(argc > 1){
-    // update plots defined in file for specific dataset
-    plotEnv.LoadPlots(plotDefConfig);
-    if(!(string(argv[1]) == "none")) dataSets.push_back(argv[1]); // none loads no dataset and therefore only overrides the combined plots
-  }
-  else
-  {
-    // override all plots defined in file
-    dataSets.push_back("pp_2TeV");
-    dataSets.push_back("pp_5TeV");
-    dataSets.push_back("pp_7TeV");
-    dataSets.push_back("pp_13TeV");
-    dataSets.push_back("pPb_5TeV");
-    dataSets.push_back("pPb_8TeV");
-    dataSets.push_back("PbPb_5TeV");
-    dataSets.push_back("XeXe_5TeV");
-
-    dataSets.push_back("Fits");
-    dataSets.push_back("Simulations");
-    dataSets.push_back("Energyscan");
-  }
-
+  dataSets.push_back("Fits");
+  dataSets.push_back("Simulations");
+  dataSets.push_back("Energyscan");
 
 
   //plotEnv.SetDrawTimestamps(true);

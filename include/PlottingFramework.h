@@ -71,12 +71,12 @@
 #include "TRootCanvas.h"
 
 // some preprocessor macros for logging and debugging
-#define LOG(s) cout << s << endl;
-#define LOGF(s, ...) printf(s, __VA_ARGS__); cout << endl;
-#define ERROR(s) cout << "ERROR: " << s << endl;
-#define ERRORF(s, ...)  cout << "ERROR: "; printf(s, __VA_ARGS__); cout << endl;
-#define HERE cout << "This is line " << __LINE__ << \
-" in function " << __FUNCTION__ << " (" << __FILE__ << ")" << endl;
+#define LOG(s) std::cout << s << std::endl;
+#define LOGF(s, ...) printf(s, __VA_ARGS__); std::cout << std::endl;
+#define ERROR(s) std::cerr << "ERROR: " << s << std::endl;
+#define ERRORF(s, ...)  std::cerr << "ERROR: "; fprintf(stderr, s, __VA_ARGS__); std::cerr << std::endl;
+#define HERE std::cout << "This is line " << __LINE__ << \
+" in function " << __FUNCTION__ << " (" << __FILE__ << ")" << std::endl;
 
 
 namespace PlottingFramework {

@@ -130,7 +130,7 @@ void PlotManager::DumpInputDataFiles(string configFileName){
     inputFileTree.put_child(inFileTuple.first, filesOfIdentifier);
   }
   boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
-  write_xml(configFileName, inputFileTree, std::locale(), settings);
+  write_xml(gSystem->ExpandPathName(configFileName.c_str()), inputFileTree, std::locale(), settings);
 }
 
 //****************************************************************************************
@@ -142,7 +142,7 @@ void PlotManager::LoadInputDataFiles(string configFileName)
 {
   ptree inputFileTree;
   try{
-    read_xml(configFileName, inputFileTree);
+    read_xml(gSystem->ExpandPathName(configFileName.c_str()), inputFileTree);
   }catch(...){
     cout << "ERROR: Cannot load file " << configFileName << endl;
     return;
@@ -195,7 +195,7 @@ void PlotManager::DumpPlots(string plotFileName, string figureGroup, vector<stri
     plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName + gNameGroupSeparator + plot.GetFigureGroup()), plot.GetPropetyTree());
   }
   boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
-  write_xml(plotFileName, plotTree, std::locale(), settings);
+  write_xml(gSystem->ExpandPathName(plotFileName.c_str()), plotTree, std::locale(), settings);
 }
 void PlotManager::DumpPlot(string plotFileName, string figureGroup, string plotName)
 {
@@ -210,9 +210,8 @@ void PlotManager::DumpPlot(string plotFileName, string figureGroup, string plotN
 ptree& PlotManager::ReadPlotTemplatesFromFile(string& plotFileName){
   if (mPlotTemplateCache.find(plotFileName) == mPlotTemplateCache.end())
   {
-    cout << "Reading plot definitions from " << plotFileName << endl;
     ptree tempTree;
-    read_xml(plotFileName, tempTree);
+    read_xml(gSystem->ExpandPathName(plotFileName.c_str()), tempTree);
     mPlotTemplateCache[plotFileName] = std::move(tempTree);
   }
   return mPlotTemplateCache[plotFileName];
@@ -478,7 +477,7 @@ void PlotManager::ListPlotsDefinedInFile(string plotFileName, string plotNameReg
       string plotName = plotTree.second.get<string>("name");
       string figureGroup = plotTree.second.get<string>("figureGroup");
       if(plotNameRegexp != "" && plotName.find(plotNameRegexp) == string::npos) continue;
-      cout << plotName << " found in " << figureGroup << endl;
+      cout << "-- found plot \"" << plotName << "\" in group \"" << figureGroup << "\""<< endl;
     }
   }
 }

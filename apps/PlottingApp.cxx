@@ -19,6 +19,7 @@
 #include "PlottingFramework.h"
 #include "PlotManager.h"
 #include "Plot.h"
+#include <sys/stat.h>
 
 using PlottingFramework::PlotManager;
 using PlottingFramework::Plot;
@@ -35,27 +36,36 @@ vector<string> splitArguments(string argString, char deliminator = ',')
   }
   return arguments;
 }
+inline bool fileExists(const std::string& name) {
+  struct stat buffer;
+  return (stat (name.c_str(), &buffer) == 0);
+}
 
 
 // This program is intended to generate plots from plotDefinitions saved in xml files
 int main(int argc, char *argv[])
 {
+  string configDir = "~/Desktop/PlottingFramework/config";
   // FIXME: put this stuff in config file
-  string outputPath = "~/Desktop/testPlots";
-  string inputFilesConfig = "/Users/mkrueger/Desktop/PlottingFramework/config/inputFiles.XML";
-  string plotDefConfig = "/Users/mkrueger/Desktop/PlottingFramework/config/plotDefinitions.XML";
-  string outputFileName = "myPlots.root";
+  string inputFilesConfig = configDir + "/inputFiles.XML";
+  string plotDefConfig = configDir + "/plotDefinitions.XML";
+  string outputFilesBasePath = "~/Desktop/testPlots";
 
   string mode;
   string figureGroups;
   string plotNames;
   
-  try {
+  
+  // handle user inputs
+  try
+  {
     po::options_description options("Configuration options");
     options.add_options()
     ("help", "Show this help message.")
     ("inputFilesConfig", po::value<string>(), "Location of config file containing the input file paths.")
-    ("plotDefConfig", po::value<string>(), "Location of config file containing the plot definitions.");
+    ("plotDefConfig", po::value<string>(), "Location of config file containing the plot definitions.")
+    ("outputFilesBasePath", po::value<string>(), "Folder where output files should be saved.")
+    ;
     
     po::options_description arguments("Positional arguments");
     arguments.add_options()
@@ -84,7 +94,6 @@ int main(int argc, char *argv[])
       cout << "Generate plots defined in plotDefinitions file:" << endl << endl;
       cout << "  ./plot <interactive|pdf|eps|bitmap|file> <figureGroup,figureGroup2|all> <plotName,plotName2|all>" << endl << endl;
       cout << options << "\n";
-
       return 0;
     }
     if (vm.count("inputFilesConfig")) {
@@ -92,6 +101,9 @@ int main(int argc, char *argv[])
     }
     if (vm.count("plotDefConfig")) {
         plotDefConfig = vm["plotDefConfig"].as<string>();
+    }
+    if (vm.count("outputFilesBasePath")) {
+        outputFilesBasePath = vm["outputFilesBasePath"].as<string>();
     }
     if (vm.count("mode")) {
         mode = vm["mode"].as<string>();
@@ -109,25 +121,40 @@ int main(int argc, char *argv[])
         cout << "   " << argument << endl;
       }
     }
-    }
-    catch(std::exception& e) {
-      std::cerr << "error: " << e.what() << "\n";
-        return 1;
-    }
-    catch(...) {
-      std::cerr << "Exception of unknown type!\n";
+  }
+  catch(std::exception& e)
+  {
+    ERRORF("Exception \"%s\"! Exiting.", e.what());
+    return 1;
+  }
+  catch(...)
+  {
+    ERROR("Exception of unknown type! Exiting.");
+    return 1;
+  }
+
+  // check if specified input files exist
+  if(!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str())))
+  {
+    ERRORF("File \"%s\" does not exists! Exiting.", inputFilesConfig.c_str());
+    return 1;
+  }
+  if(!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str())))
+  {
+    ERRORF("File \"%s\" does not exists! Exiting.", plotDefConfig.c_str());
     return 1;
   }
 
 
   // create plotting environment
   PlotManager plotEnv;
-  plotEnv.SetOutputDirectory(outputPath);
+  plotEnv.SetOutputDirectory(outputFilesBasePath);
   plotEnv.SetUseUniquePlotNames(false);
 
   if(mode == "find"){
     // TODO: make this find multiple things as well
     // TODO: put exact match on top of search results
+    cout << endl;
     plotEnv.ListPlotsDefinedInFile(plotDefConfig, plotNames, figureGroups);
     cout << endl;
     return 0;
