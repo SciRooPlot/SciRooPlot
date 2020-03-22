@@ -20,119 +20,11 @@
 #include "PlotManager.h"
 #include "Plot.h"
 
+// put it in a namespace
+#include "CreatePlots.h"
+
 using PlottingFramework::PlotManager;
 using PlottingFramework::Plot;
-
-string GetPtString(int pTbin);
-/*
- - create main terminal app and separate it cleverly from user code
-
- - professional logging!
- - use TPad function void Range(float x1,float y1,float x2,float y2) to set user coordinate system independent of first histo, graph, etc
- - option for plotting projectins? is this reasonable?
- - normalizing should be part of histogram drawing options
- - add some more formatting features for legend (floating point precision, exponent..)
- - categorize plots
- - add data specific colors and markers
- - move derived plots creation to separate class
-
- - option in main program to list loaded plots
- - possibility to dump and load plot styles (manager should only read in required plot styles)
- - make sure PlotStyle names are unique
- - add graph division feature with tspline3
- - add constructor to plotStyle that already gives useful default markers, colors, 2dstyle, etc
- - use drawing option AXIS and lagrest axis range for ranges or find better way to define which histo should auto-define ranges
- (set limits? is this by definition limited to original or can it be changed?)
-
-
- Bugs:
- - width and height calculation wrong for text boxes (ndc vs relative pad coordinates?)
- - using user coordinates in legend box breaks something for text box?
- - interactively moving text boxes in log scale plots has a bug (maybe already in root)
- - when saving to macro or pdf, the boxes are slightly misplaced (some global setting missing?)
- - make sure figure groups cannot contain '.'
- - exponents on x axis are not in the proper position
- - boxes are not transparent by default
- - sometimes text boxes are randomly not drawn?
- - zeroes in histograms should not be drawn if they have no error?
- - if lables are 1, 2,3 height is not calculated correctly?
-
-
- Important:
- - possibility to set alias for axis e.g. "ratio"?
- - be clear about coordinate systems (fix relative positioning, maybe)
- - find a general way to automatically determine optimal axis offsets (in particular for 2d and 3d views) (what unit is title offset?)
- - it should be possible to conveniently pipe all root plotting functionality (drawing properties) to the plot
- - add TView for 3d representations of th2
- - get rid of tautological stuff for ratio, histo, graph in main loop over data
- - generalize legend function to handle text boxes in a similar manner
- - pads must inherit plot properties (text size et al unless specified otherwise)
- - text size and style settings should by default be inherited by each object with text but there should be a possiblity to override
- - check if 2d hist is part of plot, then change style...
-
- Not so important:
- - replace PlotGenerator class with namespace?
- - possibility to load all data from input files
- - load only allowed datatypes
- - setter for csv format string and delimiter
- - would it be possible to define 'top left' 'bottom right' etc default positons for boxes in general manner? maybe with flexible minimal distance to ticks
- - is it possible to set the order in multi column tlegends? left-right vs top-bottom
- - pipe box line fill properties to drawing
- - add possibility to make canvas intransparent (and colored)
- - how to handle multi-plots if not all of them are available?
- - possibility to scale histograms by factor
- - also add use last color feature -1
- - change only color not marker options?
- - add line in ratio plots? in plot style? value of const line flexible?
- - backward compatibility with "ratio" keyword in axis range and title?
- - fix dirty 2d hacks
- - fix dirty hacks for backward compatibility regarding ratio plots
- - check if padID starts with 1 is a problem (vectors maybe)
- - think about more placeholders for legends and texts and how to format them
- - option to set n divisions of axes
- - add option in padstyle that identifies the pad as ratio plot
- - fix overlap between axis title and tick marks if they have too many digits
- - increase number of color steps in 2d plots resp make flexible
- - possibility to load and plot thstack and multigraphs
- - add stack drawing option (thstack)
- - add option to change grid styles
- - add possibility for grey tilted overlayed text like "draft"
- - write case-insensitive "contained in string" function for control string! as lambda function
- - text align, angle features!
- - possibility for user to grep and change specific plotstyle or plot that was already loaded in manager
- - put in some feasible defaults for colors, markers etc
- - for loading and saving styles: possibility for default values as fallback?
- - possibility to specify use of only full or open markers in AddHisto
- - implement check that ensures only valid drawing options are used for each data type (separate 1d 2d info)
- - also define default line styles
- - generalized version of white patch hiding the truncated zero
- - possibility to split the legend?
- - maybe linking axes should also be possible for different axes (x in pad1 to y in pad2)
-
- Code Quality:
- - change arguments referring to internal variables to const ref if possible to be more memory efficient, use lambdas
- - add (copy-, move-) constructors and destructors; make sure all variables are initialized properly
-
- Long term goals:
-  - add support for .yoda file format
-  - add shape objects
-  - add functions, fitting
-  - add data input and stand-alone definable objects (shapes, arrows, functions)
-  - add help function for usage!
-
- General:
-  - cleanup code
-  - imporove documentation
-  - port separate gitlab repo
-  - add minimal example code
-  - add user friendly itroduction int framework (doxygen comment for namespace?)
-
- TODOS for analysis plots:
-  - clean up file names and make useful sub-folders
-  - add more qa plots for unfolding
-
-
- */
 
 int main(int argc, char *argv[]) {
 
@@ -161,7 +53,6 @@ int main(int argc, char *argv[]) {
   dataSets.push_back("pPb_8TeV");
   dataSets.push_back("PbPb_5TeV");
   dataSets.push_back("XeXe_5TeV");
-
   dataSets.push_back("Fits");
   dataSets.push_back("Simulations");
   dataSets.push_back("Energyscan");
@@ -190,29 +81,6 @@ int main(int argc, char *argv[]) {
   else{
     plotEnv.LoadInputDataFiles(inputFilesConfig);
   }
-
-  //---- Lable definitions -----------------------------------------------------
-  string newLine = " // ";
-  string alice = "";
-  string aliceWIP = "#bf{ALICE work in progress}";
-  string alicePrel = "#bf{ALICE Preliminary}";
-  string chargedParticles = "charged particles";
-  string erg5TeV_NN = "#sqrt{#it{s}_{NN}} = 5.02 TeV";
-  string erg544TeV_NN = "#sqrt{#it{s}_{NN}} = 5.44 TeV";
-  string erg2TeV = "#sqrt{#it{s}} = 2.76 TeV";
-  string erg5TeV = "#sqrt{#it{s}} = 5.02 TeV";
-  string erg7TeV = "#sqrt{#it{s}} = 7 TeV";
-  string erg8TeV_NN = "#sqrt{#it{s}_{NN}} = 8 TeV";
-  string erg13TeV = "#sqrt{#it{s}} = 13 TeV";
-  string eta03 = "|#it{#eta}| < 0.3";
-  string eta08 = "|#it{#eta}| < 0.8";
-  string pp = "pp";
-  string pPb = "p-Pb";
-  string PbPb = "Pb-Pb";
-  string XeXe = "Xe-Xe";
-  string ptRange = "0.15 GeV/#it{c} < #it{p}_{T} < 50 GeV/#it{c}";
-  string ptRange10GeV = "0.15 < #it{p}_{T} < 10 GeV/#it{c}";
-  //---------------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
     string plotName = "dummyPlot";
@@ -2935,18 +2803,12 @@ int multBin = 18;
 }
 
 
-// helper functions
-string GetPtString(int pTbin)
+
+
+/*
+
+void DefineDatasetHistos( PlotManager& plotEnv)
 {
-  double binsPtDefault[53] = {0.1,0.15,0.2,0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.2,2.4,2.6,2.8,3.0,3.2,3.4,3.6,3.8,4.0,4.5,5.0,5.5,6.0,6.5,7.0,8.0,9.0,10.0,20.0,30.0,40.0,50.0,60.0};
-
-  double pTlow = binsPtDefault[pTbin-1];
-  double pThigh = binsPtDefault[pTbin];
-
-  std::ostringstream out;
-  out.precision(2);
-  out << std::fixed << pTlow << " GeV/c - " << pThigh << " GeV/c";
-
-
-  return out.str();
+  
 }
+*/

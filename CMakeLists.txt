@@ -17,9 +17,16 @@ set(APPLICATIONS_SRC
   apps/PlottingApp.cxx
   apps/CreatePlots.cxx
 )
+# files that you want to associate to your app -- put "" if not required
+set(APPLICATIONS_ADDITIONAL_FILES
+""
+"apps/CreatePlots.h"
+)
+
 
 set(MODULE PlottingFramework)
 set(MODULE_HDR include/${MODULE}.h)
+set(ADDITIONAL_FILES README.md TODO.md)
 
 # this variable contains the framework source code
 set(SRCS
@@ -42,7 +49,7 @@ set(BOOSTCOMPONENTS program_options)
 find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED COMPONENTS ${BOOSTCOMPONENTS})
 #find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED)
 
-add_library(${MODULE} SHARED ${SRCS} ${HDRS} ${MODULE_HDR})
+add_library(${MODULE} SHARED ${SRCS} ${HDRS} ${MODULE_HDR} ${ADDITIONAL_FILES})
 target_link_libraries(${MODULE} ${ROOT_LIBRARIES} ${Boost_LIBRARIES} Boost::boost)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${ROOT_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/boost/property_tree ${Boost_INCLUDE_DIRS}/boost/program_options)
 
@@ -53,8 +60,10 @@ math(EXPR NUMBER_OF_APPS "${NUMBER_OF_APPS} - 1")
 foreach(INDEX RANGE ${NUMBER_OF_APPS})
   list(GET APPLICATIONS ${INDEX} APP_NAME)
   list(GET APPLICATIONS_SRC ${INDEX} APP_CODE)
-  message(STATUS "Creating executable ${APP_NAME} from file ${APP_CODE}")
-  add_executable(${APP_NAME} ${APP_CODE})
+  list(GET APPLICATIONS_ADDITIONAL_FILES ${INDEX} APP_ADD_FILE)
+  string(REPLACE " " ";" APP_ADD_FILE "${APP_ADD_FILE}") 
+  message(STATUS "Creating executable ${APP_NAME} from file ${APP_CODE} including ${APP_ADD_FILE}")
+  add_executable(${APP_NAME} ${APP_CODE} ${APP_ADD_FILE})
   target_link_libraries(${APP_NAME} ${MODULE})
 endforeach()
 

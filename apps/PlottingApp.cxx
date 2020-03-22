@@ -36,6 +36,7 @@ vector<string> splitArguments(string argString, char deliminator = ',')
   }
   return arguments;
 }
+// Helper function to check if specified file is available on the system
 inline bool fileExists(const std::string& name) {
   struct stat buffer;
   return (stat (name.c_str(), &buffer) == 0);
@@ -144,7 +145,6 @@ int main(int argc, char *argv[])
     ERRORF("File \"%s\" does not exists! Exiting.", plotDefConfig.c_str());
     return 1;
   }
-
 
   // create plotting environment
   PlotManager plotEnv;

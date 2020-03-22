@@ -81,7 +81,6 @@
 
 namespace PlottingFramework {
 
-
   // aliases
   using std::cout;
   using std::endl;
