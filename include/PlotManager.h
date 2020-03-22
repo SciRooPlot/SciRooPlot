@@ -109,9 +109,6 @@ namespace PlottingFramework
     map<string, ptree> mPlotTemplateCache;
     ptree& ReadPlotTemplatesFromFile(string& plotFileName);
 
-
-    PlotManager(const PlotManager&) = default;
-    PlotManager& operator=(const PlotManager&) = default;
   };
   }
 #endif

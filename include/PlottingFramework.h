@@ -30,6 +30,10 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
+#include <exception>
+#include <boost/program_options.hpp>
+
+
 // root headers
 #include "TCanvas.h"
 #include "TLegendEntry.h"
@@ -96,7 +100,6 @@ namespace PlottingFramework {
   using boost::property_tree::read_json;
   using boost::property_tree::write_xml;
   using boost::property_tree::read_xml;
-
 
   const string gNameGroupSeparator = "_IN_";
 

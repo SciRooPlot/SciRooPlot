@@ -22,105 +22,127 @@
 
 using PlottingFramework::PlotManager;
 using PlottingFramework::Plot;
+namespace po = boost::program_options;
+
+// Helper function to split comma separated argument strings
+vector<string> splitArguments(string argString, char deliminator = ',')
+{
+  vector<string> arguments;
+  string currArg;
+  std::istringstream argStream(argString);
+  while(std::getline(argStream, currArg, deliminator)) {
+      arguments.push_back(currArg);
+  }
+  return arguments;
+}
 
 
-// plotting app
-int main(int argc, char *argv[]) {
-  
-  // generate
-  
-  // workflow:
-  // use your own program to generate plot templates and dump them to files
-  
-  // read in (selected) plot definitions from file and generate plots
-  //
-  
-  
-  // usage:
-  // if you have it in files already
-  // ./plot {help, find, interactive, pdf, } [figureGroups] [plotNames]
-  // keyword: all, any
-  // --file=myPlots.xml
-  // or put plotDefinitions.xml and filePath.xml in config file?
-
-  // whatever needs to be created
-  // ./plot generate myPlots.cxx dump?
-  // --file=myPlots.cxx
-  // path to executable?
-  
-  // dump input files
-  // dump plots
-  // sessions
-
+// This program is intended to generate plots from plotDefinitions saved in xml files
+int main(int argc, char *argv[])
+{
+  // FIXME: put this stuff in config file
   string outputPath = "~/Desktop/testPlots";
-  string inputFileConfig = "/Users/mkrueger/Desktop/PlottingFramework/config/inputFiles";
-  string plotConfig = "/Users/mkrueger/Desktop/PlottingFramework/config/plotDefinitions";
+  string inputFilesConfig = "/Users/mkrueger/Desktop/PlottingFramework/config/inputFiles.XML";
+  string plotDefConfig = "/Users/mkrueger/Desktop/PlottingFramework/config/plotDefinitions.XML";
   string outputFileName = "myPlots.root";
+
+  string mode;
+  string figureGroups;
+  string plotNames;
+  
+  try {
+    po::options_description options("Configuration options");
+    options.add_options()
+    ("help", "Show this help message.")
+    ("inputFilesConfig", po::value<string>(), "Location of config file containing the input file paths.")
+    ("plotDefConfig", po::value<string>(), "Location of config file containing the plot definitions.");
+    
+    po::options_description arguments("Positional arguments");
+    arguments.add_options()
+    ("mode", po::value<string>(), "mode")
+    ("figureGroups", po::value<string>(), "figure group")
+    ("plotNames", po::value<string>(), "plot name")
+    ("arguments", po::value< vector<string> >(), "arguments");
+
+    po::positional_options_description pos; // this needs to be synchronous with the arguments options_description
+    pos.add("mode", 1);
+    pos.add("figureGroups", 1);
+    pos.add("plotNames", 1);
+    pos.add("arguments", -1);
+
+    po::variables_map vm;
+    po::options_description cmdline_options;
+    cmdline_options.add(options).add(arguments);
+    po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(pos).run(), vm);
+    po::notify(vm);
+    
+    
+    if (vm.count("help")) {
+      cout << endl;
+      cout << "Find plots defined in plotDefinitions file:" << endl << endl;
+      cout << "  ./plot find  <plotNameRegexp> <figureGroupRegexp>" << endl << endl;
+      cout << "Generate plots defined in plotDefinitions file:" << endl << endl;
+      cout << "  ./plot <interactive|pdf|eps|bitmap|file> <figureGroup,figureGroup2|all> <plotName,plotName2|all>" << endl << endl;
+      cout << options << "\n";
+
+      return 0;
+    }
+    if (vm.count("inputFilesConfig")) {
+        inputFilesConfig = vm["inputFilesConfig"].as<string>();
+    }
+    if (vm.count("plotDefConfig")) {
+        plotDefConfig = vm["plotDefConfig"].as<string>();
+    }
+    if (vm.count("mode")) {
+        mode = vm["mode"].as<string>();
+    }
+    if (vm.count("figureGroups")) {
+        figureGroups = vm["figureGroups"].as<string>();
+    }
+    if (vm.count("plotNames")) {
+        plotNames = vm["plotNames"].as<string>();
+    }
+    if (vm.count("arguments")) {
+        cout << "Found additional arguments:" << endl;
+      for(auto& argument : vm["arguments"].as< vector<string> >())
+      {
+        cout << "   " << argument << endl;
+      }
+    }
+    }
+    catch(std::exception& e) {
+      std::cerr << "error: " << e.what() << "\n";
+        return 1;
+    }
+    catch(...) {
+      std::cerr << "Exception of unknown type!\n";
+    return 1;
+  }
+
 
   // create plotting environment
   PlotManager plotEnv;
   plotEnv.SetOutputDirectory(outputPath);
   plotEnv.SetUseUniquePlotNames(false);
 
-  
-  vector<string> dataSets;
-  if(argc > 1 && (string(argv[1]) == "help" || string(argv[1]) == "--h")){
-    cout << endl;
-    cout << "Update plotDefinitions with output from current main program:" << endl << endl;
-    cout << "  ./plot" << endl << endl;
-    cout << "Update plotDefinitions with output for specific dataset from current main program:" << endl << endl;
-    cout << "  ./plot dataset" << endl << endl;
-    cout << "Create plots:" << endl << endl;
-    cout << "  ./plot [figureGroup,figureGroup2 | all] [plotName,plotName2 | all] [interactive | pdf | eps | bitmap | file]" << endl << endl;
-    cout << "Find plots defined in plotDefinitions file:" << endl << endl;
-    cout << "  ./plot find [plotNameRegexp] [inputIdentifierRegexp]" << endl << endl;
+  if(mode == "find"){
+    // TODO: make this find multiple things as well
+    // TODO: put exact match on top of search results
+    plotEnv.ListPlotsDefinedInFile(plotDefConfig, plotNames, figureGroups);
     cout << endl;
     return 0;
   }
-  if(argc > 1 && (string(argv[1]) == "find")){
-    string plotNameRegex = "";
-    string inputIdentifierRegexp = "";
-    if(argc > 2) plotNameRegex = argv[2];
-    if(argc > 3) inputIdentifierRegexp = argv[3];
-    plotEnv.ListPlotsDefinedInFile(plotConfig, plotNameRegex, inputIdentifierRegexp);
-    return 0;
-  }
-  else if(argc > 2){
+  else{
     // plot only specific plots stored in the plotConfig file
-    plotEnv.LoadInputDataFiles(inputFileConfig);
+    plotEnv.LoadInputDataFiles(inputFilesConfig);
+    vector<string> figureGroupsVector = splitArguments(figureGroups);
+    vector<string> plotNamesVector  = splitArguments(plotNames);
+    if(plotNames == "all") plotNamesVector = {};
+    //if(figureGroups == "all") figureGroupsVector = {}; //TODO: add this feature
 
-    string inputIdentifierString = argv[1];
-    std::istringstream inputIdentifierStringStream(inputIdentifierString);
-    vector<string> inputIdentifiers;
-    string tempName;
-    while(std::getline(inputIdentifierStringStream, tempName, ',')) {
-        inputIdentifiers.push_back(tempName);
-    }
-
-    string fileNameString = argv[2];
-    std::istringstream fileNameStringStream(fileNameString);
-    vector<string> fileNames;
-    while(std::getline(fileNameStringStream, tempName, ',')) {
-        fileNames.push_back(tempName);
-    }
-    if(fileNameString == "all") fileNames = {};
-
-    string outputMode = "interactive";
-    if(argc > 3 && argv[3]) outputMode = argv[3];
-    
-    for(auto& inputIdentifier : inputIdentifiers){
-      plotEnv.CreatePlotsFromFile(plotConfig, inputIdentifier, fileNames, outputMode);
+    for(auto& inputIdentifier : figureGroupsVector){
+      plotEnv.CreatePlotsFromFile(plotDefConfig, inputIdentifier, plotNamesVector, mode);
     }
     return 0;
   }
-  else if(argc > 1){
-    // update plots defined in file for specific dataset
-    plotEnv.LoadPlots(plotConfig);
-    if(!(string(argv[1]) == "none")) dataSets.push_back(argv[1]); // none loads no dataset and therefore only overrides the combined plots
-  }
-  else
-  {
-    ERROR("This program requires arguments.");
-  }
-
 }

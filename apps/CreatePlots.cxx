@@ -139,8 +139,8 @@ int main(int argc, char *argv[]) {
   bool updateInputFiles = false;
 
   string outputPath = "~/Desktop/testPlots";
-  string inputFileConfig = "/Users/mkrueger/Desktop/PlottingFramework/config/inputFiles";
-  string plotConfig = "/Users/mkrueger/Desktop/PlottingFramework/config/plotDefinitions";
+  string inputFilesConfig = "/Users/mkrueger/Desktop/PlottingFramework/config/inputFiles.XML";
+  string plotDefConfig = "/Users/mkrueger/Desktop/PlottingFramework/config/plotDefinitions.XML";
 
   string outputFileName = "myPlots.root";
   bool createBinWiseClosureTests = true;
@@ -170,12 +170,12 @@ int main(int argc, char *argv[]) {
     string inputIdentifierRegexp = "";
     if(argc > 2) plotNameRegex = argv[2];
     if(argc > 3) inputIdentifierRegexp = argv[3];
-    plotEnv.ListPlotsDefinedInFile(plotConfig, plotNameRegex, inputIdentifierRegexp);
+    plotEnv.ListPlotsDefinedInFile(plotDefConfig, plotNameRegex, inputIdentifierRegexp);
     return 0;
   }
   else if(argc > 2){
-    // plot only specific plots stored in the plotConfig file
-    plotEnv.LoadInputDataFiles(inputFileConfig);
+    // plot only specific plots stored in the plotDefConfig file
+    plotEnv.LoadInputDataFiles(inputFilesConfig);
 
     string inputIdentifierString = argv[1];
     std::istringstream inputIdentifierStringStream(inputIdentifierString);
@@ -197,13 +197,13 @@ int main(int argc, char *argv[]) {
     if(argc > 3 && argv[3]) outputMode = argv[3];
 
     for(auto& inputIdentifier : inputIdentifiers){
-      plotEnv.CreatePlotsFromFile(plotConfig, inputIdentifier, fileNames, outputMode);
+      plotEnv.CreatePlotsFromFile(plotDefConfig, inputIdentifier, fileNames, outputMode);
     }
     return 0;
   }
   else if(argc > 1){
     // update plots defined in file for specific dataset
-    plotEnv.LoadPlots(plotConfig);
+    plotEnv.LoadPlots(plotDefConfig);
     if(!(string(argv[1]) == "none")) dataSets.push_back(argv[1]); // none loads no dataset and therefore only overrides the combined plots
   }
   else
@@ -241,12 +241,12 @@ int main(int argc, char *argv[]) {
         plotEnv.AddInputDataFiles(dataSet, {inputFile, inputFileSyst});
       }
     }
-    plotEnv.DumpInputDataFiles(inputFileConfig);
-    cout << "Updated input files: '" << inputFileConfig << "'." << endl;
+    plotEnv.DumpInputDataFiles(inputFilesConfig);
+    cout << "Updated input files: '" << inputFilesConfig << "'." << endl;
     return -1;
   }
   else{
-    plotEnv.LoadInputDataFiles(inputFileConfig);
+    plotEnv.LoadInputDataFiles(inputFilesConfig);
   }
 
   //---- Lable definitions -----------------------------------------------------
@@ -2987,7 +2987,7 @@ int multBin = 18;
   } // -----------------------------------------------------------------------
   }
 
-  plotEnv.DumpPlots(plotConfig);
+  plotEnv.DumpPlots(plotDefConfig);
   //plotEnv.CreatePlots();
 
 }

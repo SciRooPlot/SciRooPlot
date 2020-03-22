@@ -130,7 +130,7 @@ void PlotManager::DumpInputDataFiles(string configFileName){
     inputFileTree.put_child(inFileTuple.first, filesOfIdentifier);
   }
   boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
-  write_xml(configFileName + ".XML", inputFileTree, std::locale(), settings);
+  write_xml(configFileName, inputFileTree, std::locale(), settings);
 }
 
 //****************************************************************************************
@@ -142,9 +142,9 @@ void PlotManager::LoadInputDataFiles(string configFileName)
 {
   ptree inputFileTree;
   try{
-    read_xml(configFileName + ".XML", inputFileTree);
+    read_xml(configFileName, inputFileTree);
   }catch(...){
-    cout << "ERROR: Cannot load file " << configFileName << ".XML" << endl;
+    cout << "ERROR: Cannot load file " << configFileName << endl;
     return;
   }
   for(auto& inputPair : inputFileTree){
@@ -195,7 +195,7 @@ void PlotManager::DumpPlots(string plotFileName, string figureGroup, vector<stri
     plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName + gNameGroupSeparator + plot.GetFigureGroup()), plot.GetPropetyTree());
   }
   boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
-  write_xml(plotFileName + ".XML", plotTree, std::locale(), settings);
+  write_xml(plotFileName, plotTree, std::locale(), settings);
 }
 void PlotManager::DumpPlot(string plotFileName, string figureGroup, string plotName)
 {
@@ -210,9 +210,9 @@ void PlotManager::DumpPlot(string plotFileName, string figureGroup, string plotN
 ptree& PlotManager::ReadPlotTemplatesFromFile(string& plotFileName){
   if (mPlotTemplateCache.find(plotFileName) == mPlotTemplateCache.end())
   {
-    cout << "Reading plot definitions from " << plotFileName + ".XML" << endl;
+    cout << "Reading plot definitions from " << plotFileName << endl;
     ptree tempTree;
-    read_xml(plotFileName + ".XML", tempTree);
+    read_xml(plotFileName, tempTree);
     mPlotTemplateCache[plotFileName] = std::move(tempTree);
   }
   return mPlotTemplateCache[plotFileName];
@@ -459,6 +459,7 @@ const string& PlotManager::GetNameRegisterName(int nameID)
   for(auto& registerTuple : mNameRegister){
     if(registerTuple.second == nameID) return registerTuple.first;
   }
+  return mOutputDirectory; //FIXME: this nonsense-fix is just to get rid of the warning! Re-think returning ref to member..
 }
 
 

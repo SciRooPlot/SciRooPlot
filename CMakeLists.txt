@@ -4,6 +4,7 @@ set(CMAKE_BUILD_TYPE Debug)
 
 set(REQUIRED_ROOT_VERSION 6.16)
 set(REQUIRED_BOOST_VERSION 1.68)
+set(Boost_USE_MULTITHREADED TRUE)
 
 # add user applications that should be linked to the framework here
 # name of the executable:
@@ -36,12 +37,14 @@ find_package(ROOT ${REQUIRED_ROOT_VERSION} REQUIRED COMPONENTS ${ROOTCOMPONENTS}
 include(${ROOT_USE_FILE})
 ROOT_GENERATE_DICTIONARY(G__${MODULE} ${HDR} LINKDEF ${CMAKE_CURRENT_SOURCE_DIR}/LinkDef.h)
 # find BOOST
-find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED)
+set(Boost_USE_MULTITHREADED TRUE) # this required for some reason
+set(BOOSTCOMPONENTS program_options)
+find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED COMPONENTS ${BOOSTCOMPONENTS})
+#find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED)
 
-#add_library(${MODULE} SHARED ${SRCS} ${HDRS} G__${MODULE}.cxx ${MODULE_HDR})
 add_library(${MODULE} SHARED ${SRCS} ${HDRS} ${MODULE_HDR})
-target_link_libraries(${MODULE} ${ROOT_LIBRARIES} Boost::boost)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${ROOT_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/boost/property_tree)
+target_link_libraries(${MODULE} ${ROOT_LIBRARIES} ${Boost_LIBRARIES} Boost::boost)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${ROOT_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/boost/property_tree ${Boost_INCLUDE_DIRS}/boost/program_options)
 
 # create executables
 list(LENGTH APPLICATIONS NUMBER_OF_APPS)
