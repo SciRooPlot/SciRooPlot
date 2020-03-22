@@ -36,7 +36,7 @@ The PlotManager is the pivot point of the plotting framework.
 There you define which input files should be loaded and where the output plots should be stored.
 The basic idea is that there are plot designs that can be specified and then have a unique name inside the framework.
 Currently the designs "default" and "default ratio" are implemented. This can be extended or changed in PlotManager code.
-In the final version this will be more flexible and more user frienldy to change via confirue files.
+In the final version this will be more flexible and more user frienldy to change via configure files.
 
 First you need to define via SetOutputDirectory() the output folder where any output plots will be saved.
 

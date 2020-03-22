@@ -1,6 +1,7 @@
 build/*
 BUILD/*
 config/*
+misc/*
 XCode/*
 doxygen/html/*
 doxygen/latex/*

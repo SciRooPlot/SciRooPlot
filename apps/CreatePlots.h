@@ -46,18 +46,67 @@ string ptRange10GeV = "0.15 < #it{p}_{T} < 10 GeV/#it{c}";
 
 //---- Colors and Markers ---------------------------------------------------
 
-// approach: color specifies dataset, marker data/mc1/mc2?
+// EPOS, EPOS-LHC, PYTHIA, PYTHIA Angantyr, HERWIG, HIJING++
+// data vs mc?
+struct marker{
+  enum : int {
+    // dataset specifics
+    pp_2 = kFullDiamond,
+    pp_5 = kFullCross,
+    pp_7 = kFullCircle,
+    pp_13 = kFullSquare,
+    pPb_5 = kOpenSquare,
+    pPb_8 = kOpenSquare,
+    PbPb_2 = kOpenSquare,
+    PbPb_5 = kOpenSquare,
+    XeXe_5 = kOpenSquare,
+    // generic markers
+    circle = kFullCircle,
+    square = kFullSquare,
+    star = kFullStar,
+    circle_open = kOpenCircle,
+    square_open = kOpenSquare,
+    star_open = kOpenStar
+  };
+};
 
-// pp@5
-// pp@7
-// pp@13
+struct color{
+  enum : int {
+    // dataset specifics
+    pp_2 = kGreen+3,
+    pp_5 = kBlue+1,
+    pp_7 = kMagenta+1,
+    pp_13 = kRed+1,
+    pPb_5 = kRed,
+    pPb_8 = kRed,
+    PbPb_2 = kRed,
+    PbPb_5 = kRed,
+    XeXe_5 = kRed,
+    // generic colors
+    red = kRed+1,
+    blue = kBlue+1,
+    green = kOpenSquare,
+    yellow = kOpenSquare,
+    magenta = kMagenta+1
+  };
+};
+
+struct range{
+  enum : int {
+    pp_2 = 40,
+    pp_5 = 60,
+    pp_7 = 60,
+    pp_13 = 60,
+    pPb_5 = 120,
+    pPb_8 = 120,
+    PbPb_2 = 3700,
+    PbPb_5 = 3700,
+    XeXe_5 = 2300
+   };
+};
 
 
 //---------------------------------------------------------------------------
-
-
-
-
 
 
 

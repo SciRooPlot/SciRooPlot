@@ -1,5 +1,6 @@
 ANALYSIS:
 ---------
+- straighten up Fit, Simulation, Publication input names
 - categorize plots, group them in functions
 - add data specific colors and markers
 - clean up file names and make useful sub-folders
@@ -7,7 +8,6 @@ ANALYSIS:
 
 FRAMEWORK:
 ----------
-
 Major Features:
 - possibility to dump and load plot styles (manager should only read in required plot styles)
 - make sure PlotStyle names are unique
@@ -78,8 +78,7 @@ Bugs:
 - boxes are not transparent by default
 - sometimes text boxes are randomly not drawn?
 - zeroes in histograms should not be drawn if they have no error?
-- if lables are 1, 2,3 height is not calculated correctly?
-
+- if lables are 1, 2, 3 height is not calculated correctly?
 
 Structural changes:
 - replace couts with LOG macro expressions

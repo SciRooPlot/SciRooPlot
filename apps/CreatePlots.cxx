@@ -177,16 +177,16 @@ int main(int argc, char *argv[]) {
   { //==========================================================================
     string erg = "0 TeV";
     string colSys = "x-x";
-    double multRange = 60;
+    int multRange = 60;
 
     if(dataSet.find("pp") != string::npos) colSys = pp;
-    if(dataSet.find("pPb") != string::npos) {colSys = pPb; multRange = 140;}
-    if(dataSet.find("PbPb") != string::npos) {colSys = PbPb; multRange = 3700;}
-    if(dataSet.find("XeXe") != string::npos) {colSys = XeXe; multRange = 2300; erg = erg544TeV_NN;}
+    if(dataSet.find("pPb") != string::npos) {colSys = pPb; multRange = range::pPb_5;}
+    if(dataSet.find("PbPb") != string::npos) {colSys = PbPb; multRange = range::PbPb_5;}
+    if(dataSet.find("XeXe") != string::npos) {colSys = XeXe; multRange = range::XeXe_5; erg = erg544TeV_NN;}
 
-    if(dataSet.find("pp_2TeV") != string::npos) {erg = erg2TeV; multRange = 40;}
+    if(dataSet.find("pp_2TeV") != string::npos) {erg = erg2TeV; multRange = range::pp_2;}
     if(dataSet.find("pp_7TeV") != string::npos) erg = erg7TeV;
-    if(dataSet.find("pp_13TeV") != string::npos) {erg = erg13TeV; multRange = 100;}
+    if(dataSet.find("pp_13TeV") != string::npos) {erg = erg13TeV; multRange = range::pp_13;}
     if(dataSet.find("pp_5TeV") != string::npos) erg = erg5TeV;
     if(dataSet.find("pPb_5TeV") != string::npos) erg = erg5TeV_NN;
     if(dataSet.find("PbPb_5TeV") != string::npos) erg = erg5TeV_NN;
@@ -2186,17 +2186,17 @@ int multBin = 18;
       string plotName = "meanPt";
       Plot myPlot(plotName, plotGroup);
 
-      myPlot.AddHisto("momentUnfolded1", "pp_13TeV", "", kFullSquare, kRed+1, "", 60);
-      myPlot.AddHisto("momentUnfolded1_Syst", "pp_13TeV", "13 TeV", kFullSquare, kRed+1, "boxes", 60);
+      myPlot.AddHisto("momentUnfolded1", "pp_13TeV", "", marker::pp_13, color::pp_13, "", range::pp_13);
+      myPlot.AddHisto("momentUnfolded1_Syst", "pp_13TeV", "13 TeV", marker::pp_13, color::pp_13, "boxes", 60);
       //myPlot.AddHisto("mbMeanPtMeanNchUnfolded", "pp_13TeV", "", kStar, kRed+1, "");
-      myPlot.AddHisto("momentUnfolded1", "pp_7TeV", "", kFullCircle, kMagenta+1, "", 60);
-      myPlot.AddHisto("momentUnfolded1_Syst", "pp_7TeV", "7 TeV", kFullCircle, kMagenta+1, "boxes", 60);
+      myPlot.AddHisto("momentUnfolded1", "pp_7TeV", "", marker::pp_7, color::pp_7, "", 60);
+      myPlot.AddHisto("momentUnfolded1_Syst", "pp_7TeV", "7 TeV", marker::pp_7, color::pp_7, "boxes", 60);
       //myPlot.AddHisto("mbMeanPtMeanNchUnfolded", "pp_7TeV", "", kStar, kMagenta+1, "");
-      myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullCross, kBlue+1, "", 60);
-      myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "5.02 TeV", kFullCross, kBlue+1, "boxes", 60);
+      myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", marker::pp_5, color::pp_5, "", 60);
+      myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "5.02 TeV", marker::pp_5, color::pp_5, "boxes", 60);
       //myPlot.AddHisto("mbMeanPtMeanNchUnfolded", "pp_5TeV", "", kStar, kBlue+1, "");
-      myPlot.AddHisto("momentUnfolded1", "pp_2TeV", "", kFullDiamond, kGreen+3, "", 40);
-      myPlot.AddHisto("momentUnfolded1_Syst", "pp_2TeV", "2.76 TeV", kFullDiamond, kGreen+3, "boxes", 40);
+      myPlot.AddHisto("momentUnfolded1", "pp_2TeV", "", marker::pp_2, color::pp_2, "", 40);
+      myPlot.AddHisto("momentUnfolded1_Syst", "pp_2TeV", "2.76 TeV", marker::pp_2, color::pp_2, "boxes", 40);
       //myPlot.AddHisto("mbMeanPtMeanNchUnfolded", "pp_2TeV", "", kStar, kGreen+3, "");
 
       myPlot.SetAxisTitle("X", "#it{N}_{ch}");

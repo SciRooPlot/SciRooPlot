@@ -46,8 +46,8 @@ inline bool fileExists(const std::string& name) {
 // This program is intended to generate plots from plotDefinitions saved in xml files
 int main(int argc, char *argv[])
 {
-  string configDir = "~/Desktop/PlottingFramework/config";
   // FIXME: put this stuff in config file
+  string configDir = "~/Desktop/PlottingFramework/config";
   string inputFilesConfig = configDir + "/inputFiles.XML";
   string plotDefConfig = configDir + "/plotDefinitions.XML";
   string outputFilesBasePath = "~/Desktop/testPlots";
