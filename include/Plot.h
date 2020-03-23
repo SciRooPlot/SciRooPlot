@@ -204,6 +204,7 @@ namespace PlottingFramework {
   public:
     Histogram(const Histogram& otherHistogram) = default;
     Histogram(Histogram& otherHistogram) = default;
+    virtual ~Histogram() = default;
 
     Histogram(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions, int scale, pair<double, double> histoRangeX, pair<double, double> histoRangeY)
     : Data(name, inputIdentifier, lable, color, style, size, drawingOptions), mScale(scale), mHistoRangeX(histoRangeX), mHistoRangeY(histoRangeY)
@@ -254,6 +255,7 @@ namespace PlottingFramework {
   public:
     Ratio(const Ratio& otherRatio) = default;
     Ratio(Ratio& otherRatio) = default;
+    virtual ~Ratio() = default;
 
     Ratio(string name, string inputIdentifier, string denomName, string denomInputIdentifier, string lable, int color, int style, int size, string drawingOptions, string divideMethod, int scale, pair<double, double> histoRangeX, pair<double, double> histoRangeY)
     : Histogram(name, inputIdentifier, lable, color, style, size, drawingOptions, scale, histoRangeX, histoRangeY), mDenomName(denomName), mDenomInputIdentifier(denomInputIdentifier), mDivideMethod(divideMethod)
@@ -300,6 +302,7 @@ namespace PlottingFramework {
   public:
     Graph(const Graph& otherGraph) = default;
     Graph(Graph& otherGraph) = default;
+    virtual ~Graph() = default;
 
     Graph(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions, pair<double, double> graphRangeX)
     : Data(name, inputIdentifier, lable, color, style, size, drawingOptions), mGraphRangeX(graphRangeX)
@@ -325,7 +328,6 @@ namespace PlottingFramework {
         cout << "ERROR: could not construct graph from ptree." << endl;
       }
     }
-    
   private:
     // specifics for graph...
     pair<double, double> mGraphRangeX;
@@ -514,6 +516,7 @@ namespace PlottingFramework {
   public:
     TextBox(const TextBox& otherTextBox) = default;
     TextBox(TextBox& otherTextBox) = default;
+    virtual ~TextBox() = default;
 
     TextBox(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor, string text)
     : Box(userCoordinates, autoPlacement, x, y, borderStyle, borderSize, borderColor), mText(text)
@@ -557,6 +560,7 @@ namespace PlottingFramework {
   public:
     LegendBox(const LegendBox& otherLegendBox) = default;
     LegendBox(LegendBox& otherLegendBox) = default;
+    virtual ~LegendBox() = default;
 
     LegendBox(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor, string title, int nColumns)
     : Box(userCoordinates, autoPlacement, x, y, borderStyle, borderSize, borderColor), mTitle(title), mNumColumns(nColumns)

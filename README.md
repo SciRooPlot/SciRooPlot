@@ -15,7 +15,7 @@ cmake ../
 
 make
 
-The user needs to write an application that defines and saves the required plots (similar to apps/CreatePlots.cxx).
+The user needs to write an application that defines and saves the required plots (for inspiration see to apps/MultDepSpec/).
 This app can be added in the CMakeList.txt file (similar to the apps "plot" and "create" already specified there).
 The framework ships with a simple command-line program that lets you easily generate plots from the files created by the user app.
 For usage details and available options see ./plot --help.
