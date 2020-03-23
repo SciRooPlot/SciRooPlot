@@ -1,5 +1,6 @@
 DEPENDENCIES
 ------------
+- cmake >= 3.15
 - boost >= 1.72
 - ROOT  >= 6.16
 
