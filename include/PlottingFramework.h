@@ -24,15 +24,13 @@
 #include <set>
 #include <algorithm>
 #include <sstream>
+#include <exception>
 
 // boost headers
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
-
-#include <exception>
 #include <boost/program_options.hpp>
-
 
 // root headers
 #include "TCanvas.h"
@@ -78,30 +76,29 @@
 #define HERE std::cout << "This is line " << __LINE__ << \
 " in function " << __FUNCTION__ << " (" << __FILE__ << ")" << std::endl;
 
+namespace PlottingFramework
+{
 
-namespace PlottingFramework {
+// aliases
+using std::cout;
+using std::endl;
+using std::flush;
+using std::string;
+using std::vector;
+using std::tuple;
+using std::pair;
+using std::map;
+using std::set;
+using std::array;
+using std::shared_ptr;
 
-  // aliases
-  using std::cout;
-  using std::endl;
-  using std::flush;
-  using std::string;
-  using std::vector;
-  using std::tuple;
-  using std::pair;
-  using std::map;
-  using std::set;
-  using std::array;
-  using std::shared_ptr;
-  
-  using boost::property_tree::ptree;
-  using boost::property_tree::write_json;
-  using boost::property_tree::read_json;
-  using boost::property_tree::write_xml;
-  using boost::property_tree::read_xml;
+using boost::property_tree::ptree;
+using boost::property_tree::write_json;
+using boost::property_tree::read_json;
+using boost::property_tree::write_xml;
+using boost::property_tree::read_xml;
 
-  const string gNameGroupSeparator = "_IN_";
+const string gNameGroupSeparator = "_IN_";
 
-}
-
+} // end namespace PlottingFramework
 #endif /* PlottingFramework_h */

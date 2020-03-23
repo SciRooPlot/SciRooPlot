@@ -6,9 +6,9 @@ project(PlottingFramework CXX)
 set(REQUIRED_ROOT_VERSION 6.16)
 set(REQUIRED_BOOST_VERSION 1.68)
 set(Boost_USE_MULTITHREADED TRUE)
-if (APPLE)
+if(APPLE)
   set(CMAKE_MACOSX_RPATH ON)
-endif (APPLE)
+endif(APPLE)
 
 # add user applications that should be linked to the framework here
 # name of the executable:
@@ -21,10 +21,10 @@ set(APPLICATIONS_SRC
   "apps/PlottingApp.cxx"
   "apps/MultDepSpec/CreatePlots.cxx apps/MultDepSpec/Datasets.cxx apps/MultDepSpec/Energies.cxx apps/MultDepSpec/Systems.cxx apps/MultDepSpec/Publications.cxx apps/MultDepSpec/Test.cxx apps/MultDepSpec/Publications.cxx apps/MultDepSpec/Helpers.cxx"
 )
-# files that you want to associate to your app -- put "" if not required
+# files that you want to associate to your app put "" if not required
 set(APPLICATIONS_ADDITIONAL_FILES
-""
-"apps/multDepSpec/MultDepSpec.h"
+  ""
+  "apps/multDepSpec/MultDepSpec.h"
 )
 
 set(MODULE PlottingFramework)
@@ -60,15 +60,13 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${ROOT_INCLUDE_DIRS} ${B
 # create executables
 list(LENGTH APPLICATIONS NUMBER_OF_APPS)
 math(EXPR NUMBER_OF_APPS "${NUMBER_OF_APPS} - 1")
-
 foreach(INDEX RANGE ${NUMBER_OF_APPS})
   list(GET APPLICATIONS ${INDEX} APP_NAME)
   list(GET APPLICATIONS_SRC ${INDEX} APP_CODE)
   list(GET APPLICATIONS_ADDITIONAL_FILES ${INDEX} APP_ADD_FILE)
+  message(STATUS "Creating executable ${APP_NAME} from file(s) ${APP_CODE} including ${APP_ADD_FILE}")
   string(REPLACE " " ";" APP_ADD_FILE "${APP_ADD_FILE}") 
   string(REPLACE " " ";" APP_CODE "${APP_CODE}")
-  message(STATUS "Creating executable ${APP_NAME} from file(s) ${APP_CODE} including ${APP_ADD_FILE}")
-
   add_executable(${APP_NAME} ${APP_CODE} ${APP_ADD_FILE})
   target_link_libraries(${APP_NAME} ${MODULE})
 endforeach()

@@ -18,9 +18,6 @@
 
 #include "MultDepSpec.h"
 
-using PlottingFramework::PlotManager;
-using PlottingFramework::Plot;
-
 void MultDepSpec::DefinePublicationPlots(PlotManager& plotEnv)
 {
   string publicationLable = alice + ", " + chargedParticles +  newLine + eta03 + ", " + ptRange10GeV + newLine + "#it{N}_{ch} cut: #it{p}_{T} > 0 GeV/#it{c}";
@@ -44,7 +41,6 @@ void MultDepSpec::DefinePublicationPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.15, 0.92, publicationLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "publicationdNchdEta";
     Plot myPlot(plotName, plotGroup);
@@ -65,7 +61,6 @@ void MultDepSpec::DefinePublicationPlots(PlotManager& plotEnv)
     //  myPlot3.SetDrawingProperties("thick");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "multDistsComparisonPub";
     Plot myPlot(plotName, plotGroup, "default ratio");

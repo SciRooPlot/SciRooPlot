@@ -20,10 +20,6 @@
 using namespace PlottingFramework;
 namespace PlottingFramework {
 
-  
-
-
-
 ////////////////////////////////////////////////////////////////////////////////
 /// Set color palette for 2D plots.
 ///
@@ -41,7 +37,4 @@ namespace PlottingFramework {
 /// - Purple: kFuchsia
 /// - Intense: kGreenPink, kOcean, kDarkBodyRadiator, kInvertedDarkBodyRadiator, kSunset, kVisibleSpectrum
 
-  
-
-  
-}
+} // end namespace PlottingFramework

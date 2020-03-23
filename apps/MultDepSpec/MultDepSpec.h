@@ -103,12 +103,9 @@ struct range{
     PbPb_2 = 3700,
     PbPb_5 = 3700,
     XeXe_5 = 2300
-   };
+  };
 };
 
-
-} // end namespace MultDepSpecPlots
-
-
-#endif
+} // end namespace MultDepSpec
+#endif /* MultDepSpec_h */
 

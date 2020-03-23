@@ -28,7 +28,7 @@ namespace PlottingFramework{// BEGIN namespace PlottingFramework
 PlotManager::PlotManager() : mApp("MainApp", 0, 0)
 {
   TQObject::Connect("TGMainFrame", "CloseWindow()", "TApplication", gApplication, "Terminate()");
-
+  
   mDataLedger = new TObjArray(1);
   mDataLedger->SetOwner();
   
@@ -50,29 +50,29 @@ PlotManager::~PlotManager()
   mDataLedger->Delete();
   if(!mPlotLedger.empty()){
     if(mSaveToRootFile == true){
-    cout << "Saving plots to file " << mOutputFileName << endl;
-    
-    TFile outputFile(mOutputFileName.c_str(), "RECREATE");
-    if (outputFile.IsZombie()){
-      return;
-    }
-    outputFile.cd();
-    
-    for(auto& plotTuple : mPlotLedger){
-      auto canvas = plotTuple.second;
-      string uniqueName = plotTuple.first;
-      size_t delimiterPos = uniqueName.find(gNameGroupSeparator.c_str());
-      string plotName = uniqueName.substr(0, delimiterPos);
-      string inputIdentifier = uniqueName.substr(delimiterPos + gNameGroupSeparator.size());
+      cout << "Saving plots to file " << mOutputFileName << endl;
       
-      if(!outputFile.GetDirectory(inputIdentifier.c_str(), kFALSE, "cd"))
-      {
-        outputFile.mkdir(inputIdentifier.c_str());
+      TFile outputFile(mOutputFileName.c_str(), "RECREATE");
+      if (outputFile.IsZombie()){
+        return;
       }
-      outputFile.cd(inputIdentifier.c_str());
-      canvas->Write(plotName.c_str());
-    }
-    outputFile.Close();
+      outputFile.cd();
+      
+      for(auto& plotTuple : mPlotLedger){
+        auto canvas = plotTuple.second;
+        string uniqueName = plotTuple.first;
+        size_t delimiterPos = uniqueName.find(gNameGroupSeparator.c_str());
+        string plotName = uniqueName.substr(0, delimiterPos);
+        string inputIdentifier = uniqueName.substr(delimiterPos + gNameGroupSeparator.size());
+        
+        if(!outputFile.GetDirectory(inputIdentifier.c_str(), kFALSE, "cd"))
+        {
+          outputFile.mkdir(inputIdentifier.c_str());
+        }
+        outputFile.cd(inputIdentifier.c_str());
+        canvas->Write(plotName.c_str());
+      }
+      outputFile.Close();
     }
     mPlotLedger.clear();
   }
@@ -278,21 +278,21 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
     mSaveToRootFile = true;
     // delete the old plot before adding a new one with the same name
     if( mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()){
-     mPlotLedger.erase(plot.GetUniqueName());
-   }
+      mPlotLedger.erase(plot.GetUniqueName());
+    }
   }
-
+  
   PlotStyle& plotStyle = GetPlotStyle(plot.GetPlotStyle());
   shared_ptr<TCanvas> canvas = PlotGenerator::GeneratePlot(plot, plotStyle, mDataLedger);
   if(!canvas) return;
-
+  
   // if interactive mode is specified, open window instead of saving the plot
   if(outputMode.find("interactive") != string::npos){
-
+    
     mPlotLedger[plot.GetUniqueName()] = canvas;
     mPlotViewHistory.push_back(plot.GetUniqueName());
     int currPlotIndex = mPlotViewHistory.size()-1;
-
+    
     // move new canvas to position of previous window
     int curXpos;
     int curYpos;
@@ -324,8 +324,8 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
       gSystem->Sleep(20);
     }
     return;
-    }
-
+  }
+  
   string subFolder = plot.GetFigureCategory();
   string fileEnding = ".pdf";
   if(outputMode.find("macro") != string::npos){
@@ -337,7 +337,7 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
   if(outputMode.find("eps") != string::npos){
     fileEnding = ".eps";
   }
-
+  
   string fileName = plot.GetUniqueName();
   
   if(outputMode.find("file") != string::npos){
@@ -365,7 +365,7 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
   bool saveAll = (figureGroup == "");
   bool saveSpecificPlots = !saveAll && !plotNames.empty();
   vector<Plot*> selectedPlots;
-
+  
   // first determine which data needs to be loaded
   for(auto& plot : mPlots)
   {
@@ -387,12 +387,12 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
         // for ratios also do the same for denominator
         if(data->GetType() == "ratio" && mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomIdentifier())].find(GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomName())) == mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomIdentifier())].end())
         {
-        requiredData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomIdentifier())].insert(GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomName()));
+          requiredData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomIdentifier())].insert(GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomName()));
         }
       }
     }
   }
-
+  
   // were definitions for all requeseted plots available?
   if(!plotNames.empty()){
     cout << "The following plots are not defined:" << endl;
@@ -502,7 +502,7 @@ void PlotManager::ListData()
  */
 //****************************************************************************************
 void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, vector<string> fileNames, string inputIdentifier){
-
+  
   for(auto& inputFileName : fileNames)
   {
     if(inputFileName.find(".csv") == string::npos) continue;
@@ -523,7 +523,7 @@ void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, vector<string
  */
 //****************************************************************************************
 void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> fileNames, vector<string> dataNames, vector<string> newDataNames){
-
+  
   for(auto& inputFileName : fileNames)
   {
     if(inputFileName.find(".root") == string::npos) continue;
@@ -532,7 +532,7 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
     vector<string> tokens;
     string token;
     while(std::getline(ss, token, ':')) {
-        tokens.push_back(token);
+      tokens.push_back(token);
     }
     string fileName = tokens[0];
     
@@ -550,7 +550,7 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
       vector<string> subDirs;
       string directory;
       while(std::getline(path, directory, '/')) {
-         subDirs.push_back(directory);
+        subDirs.push_back(directory);
       }
       folder = FindSubDirectory(folder, subDirs);
       if(!folder){
@@ -584,7 +584,7 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
   if(!folder) return nullptr;
   bool deleteFolder = true;
   if(folder->InheritsFrom("TFile")) deleteFolder = false;
-
+  
   if(subDirs.size() == 0){
     if(folder->InheritsFrom("TDirectory") || folder->InheritsFrom("TCollection")){
       return folder;
@@ -634,7 +634,7 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
     cout << "ERROR: newDataNames vector has the wrong size" << endl;
     return;
   }
-
+  
   TCollection* itemList = nullptr;
   if(folder->InheritsFrom("TDirectory")){
     itemList = ((TDirectoryFile*)folder)->GetListOfKeys();
@@ -648,7 +648,7 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
     return;
   }
   itemList->SetOwner();
-
+  
   TIter iterator = itemList->begin();
   TObject* obj = *iterator;
   bool deleteObject;
@@ -683,7 +683,7 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
         // TODO: select here that only known root input types are beeing processed
         if(obj->InheritsFrom("TH1"))
           ((TH1*)obj)->SetDirectory(0); // demand ownership for histogram
-
+        
         // re-name data
         if(!newDataNames.empty()){
           auto vectorIndex = it - dataNames.begin();
@@ -695,7 +695,7 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
         deleteObject = false;
       }
     }
-
+    
     // increase iterator before removing objects from collection
     ++iterator;
     if(removeFromList) {
@@ -724,7 +724,7 @@ void PlotManager::PrintStatus()
   cout << "Plot definitions: " << mPlots.size() << endl;
   cout << "Loaded data inputs: " << mDataLedger->GetEntries() << endl;
   cout << "==============================================================" << endl;
-
+  
 }
 
 
@@ -895,5 +895,4 @@ PlotStyle& PlotManager::GetPlotStyle(string plotStyleName)
   return GetPlotStyle("default"); // if style not found return default style
 }
 
-
-} // END namespace PlottingFramework
+} // end namespace PlottingFramework

@@ -18,9 +18,6 @@
 
 #include "MultDepSpec.h"
 
-using PlottingFramework::PlotManager;
-using PlottingFramework::Plot;
-
 void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
 {
   string plotGroup = "system_comparison";
@@ -29,7 +26,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
   vector<string> centrality = {"0-5%","5-10%","10-20%","20-30%","30-40%","40-50%","50-60%","60-70%","70-80%"};
   vector<double> nchCent = {2869.49, 2342.32, 1740.05, 1156.23, 750.512, 463.796, 265.249, 138.504, 64.0346};
   vector<double> nchCentErrors = {82.7027, 70.8452, 45.7133, 29.4205, 21.9877, 17.5017, 11.5956, 8.3419, 4.84894};
-  //bool drawcent = false;
+  
   bool drawcent = false;
   
   
@@ -51,11 +48,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddLegendBox(0.15, 0.9);
     myPlot.SetAxisRange("X", 0.7, 3.7);
     myPlot.SetAxisRange("Y", 0.48, 1.0);
-    
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatio_pPbOverpp";
     Plot myPlot(plotName, plotGroup);
@@ -70,7 +64,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.2, 0.9, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatio_PbPbOverpp";
     Plot myPlot(plotName, plotGroup);
@@ -85,7 +78,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.2, 0.9, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "studyExtremeMultPbPbXeXe";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -97,13 +89,11 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.3, 0.5, "1200 < #it{N}_{ch} < 2300");
     myPlot.SetAxisRange("ratio", 0.6, 1.1);
     myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
-    
     myPlot.SetAxisTitle("ratio", "extreme / nearby");
     myPlot.ChangePad(2);
     myPlot.SetDrawingProperties("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "studyExtremeMultPbPb";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -115,13 +105,11 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.5, "#bf{Pb-Pb}");
     myPlot.SetAxisRange("ratio", 1.3, 3.3);
     myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
-    
     myPlot.SetAxisTitle("ratio", "extreme / nearby");
     myPlot.ChangePad(2);
     myPlot.SetDrawingProperties("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "studyExtremeMultXeXe";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -134,14 +122,10 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "extreme / nearby");
     myPlot.SetAxisRange("ratio", 1.3, 3.3);
-    
     myPlot.ChangePad(2);
     myPlot.SetDrawingProperties("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "studyExtremeMultPP";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -154,13 +138,10 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.5, "#bf{pp}");
     myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "extreme/MB");
-    //      myPlot.SetAxisRange("ratio", 1.3, 3.3);
-    
     myPlot.ChangePad(2);
     myPlot.SetDrawingProperties("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "energyDepHighNchSpectra";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -169,23 +150,18 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddHisto("spectraHighNch_pp_2TeV", "Fits", "", 0, 0);
     myPlot.AddHisto("spectraHighNch_pp_5TeV", "Fits", "", 0, 0);
     myPlot.AddHisto("spectraHighNch_pp_7TeV", "Fits", "", 0, 0);
-    //      myPlot.AddRatio("spectraHighNch_pp_2TeV", "Fits", "spectraHighNch_pp_13TeV", "Fits", "", 0);
+    //myPlot.AddRatio("spectraHighNch_pp_2TeV", "Fits", "spectraHighNch_pp_13TeV", "Fits", "", 0);
     myPlot.AddRatio("spectraHighNch_pp_5TeV", "Fits", "spectraHighNch_pp_13TeV", "Fits", "", 0);
     myPlot.AddRatio("spectraHighNch_pp_7TeV", "Fits", "spectraHighNch_pp_13TeV", "Fits", "", 0);
     myPlot.AddLegendBox(0.6, 0.9);
     myPlot.AddTextBox(0.4, 0.5, "#bf{pp}");
     myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "ratio to 13");
-    //      myPlot.SetAxisRange("ratio", 1.3, 3.3);
-    
     myPlot.ChangePad(2);
     myPlot.SetDrawingProperties("logX");
     myPlot.SetAxisTitle("X", "#it{p}_{T}");
-    
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "studyExtremeMultPPb";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -199,12 +175,10 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "extreme/MB");
     //      myPlot.SetAxisRange("ratio", 1.3, 3.3);
-    
     myPlot.ChangePad(2);
     myPlot.SetDrawingProperties("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "studyLowMult";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -213,13 +187,10 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddHisto("spectraNch2_XeXe", "Fits", "Xe-Xe, #it{N}_{ch} = 2", kFullCircle, kGreen+2);
     myPlot.AddHisto("spectraNch1_PbPb", "Fits", "Pb-Pb, #it{N}_{ch} = 1", kFullSquare, kBlue+2);
     myPlot.AddHisto("spectraNch1_XeXe", "Fits", "Xe-Xe, #it{N}_{ch} = 1", kFullCircle, kBlue+2);
-    
     myPlot.AddRatio("spectraNch1_PbPb", "Fits", "spectraNch1_XeXe", "Fits", "", kFullSquare, kBlue+2);
     myPlot.AddRatio("spectraNch2_PbPb", "Fits", "spectraNch2_XeXe", "Fits", "", kFullSquare, kGreen+2);
-    
     myPlot.SetAxisRange("X", 0.15, 10);
     myPlot.SetAxisRange("ratio", 0.5, 1.5);
-    
     myPlot.AddLegendBox(0.2, 0.4);
     //myPlot.AddTextBox(0.4, 0.3, "#bf{Xe-Xe}");
     myPlot.SetAxisTitle("ratio", "Pb / Xe");
@@ -227,7 +198,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetDrawingProperties("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "meanPtFullRangeLin";
     Plot myPlot(plotName, plotGroup);
@@ -236,14 +206,11 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddHisto("momentUnfolded1", "XeXe_5TeV", "", kFullStar, kGreen+2, "");
     myPlot.AddHisto("momentUnfolded1_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-    
     //myPlot.AddLegendBox(0.2, 0.8);
     myPlot.SetAxisRange("Y", 0.69, 0.74);
     myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "meanPtFullRange";
     Plot myPlot(plotName, plotGroup);
@@ -304,7 +271,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     }
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "varianceFullRange";
     Plot myPlot(plotName, plotGroup);
@@ -349,8 +315,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     }
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "moment1FullRangeMC";
     Plot myPlot(plotName, plotGroup);
@@ -379,7 +343,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("Y", 1e-4, 3e-2);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "multDensityComparisonPerNuclPair";
     Plot myPlot(plotName, plotGroup);
@@ -401,7 +364,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddLegendBox(0.7, 0.4);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "meanPtPerNuclPairRatio";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -414,27 +376,20 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     {
       //myPlot.AddTextBox(nchCent[i]/(2*208), 1, "#bf{|}", true);
     }
-    
-    
     myPlot.ChangePad(2);
     for(int i = 0; i < 9; i++)
     {
       //myPlot.AddTextBox(nchCent[i]/(2*208), 1, "#bf{|}", true);
     }
-    
     myPlot.AddGraph("ratioMeanPtVsParticlesPerNucleon", "Fits", "Xe / Pb", kFullCircle, kGreen+2, "");
     myPlot.SetAxisRange("Y", 0.99, 1.01);
     myPlot.SetAxisTitle("Y", "Xe / Pb");
     myPlot.SetAxisRange("X", 0, 10);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "multDensityFullRange";
     Plot myPlot(plotName, plotGroup);
-    
     myPlot.SetDrawingProperties("logY logX");
     myPlot.AddHisto("multDensityUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
     myPlot.AddHisto("multDensityUnfolded", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
@@ -461,7 +416,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.35, 0.3, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "moment1dNchdeta";
     Plot myPlot(plotName, plotGroup);
@@ -469,7 +423,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("Y", 0.45, 0.85);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "varianceFullRangeMC";
     Plot myPlot(plotName, plotGroup);
@@ -484,7 +437,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.14, 0.92, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "meanPt";
     Plot myPlot(plotName, plotGroup);
@@ -530,7 +482,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     //myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV_2018", "PbPb 2018", kFullCross, kBlack, "boxes");
     
     myPlot.SetAxisRange("X", -0.5, 300);
-    
     myPlot.SetAxisRange("Y", 0.4, 0.95);
     myPlot.AddLegendBox(0.63, 0.92, "");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
@@ -538,7 +489,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     //myPlot.AddTextBox(0.35, 0.4, systemSizeLable + " // Open symbols: EPOS-LHC // Stars: Pythia Angantyr");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "meanPtpPb8Over5";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -565,7 +515,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "meanPtpPbOverPbp";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -573,9 +522,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddHisto("momentUnfolded1_Syst", "pPb_8TeV", "p-Pb, 8 TeV", kFullStar, kBlue+1, "boxes");
     myPlot.AddHisto("momentUnfolded1", "Pbp_8TeV", "", kFullStar, kGreen+1, "");
     myPlot.AddHisto("momentUnfolded1_Syst", "Pbp_8TeV", "Pb-p, 8 TeV", kFullStar, kGreen+1, "boxes");
-    
     myPlot.AddRatio("momentUnfolded1_Syst", "Pbp_8TeV", "momentUnfolded1_Syst", "pPb_8TeV", "", kFullStar, kGreen+1, "boxes");
-    
     myPlot.SetAxisRange("ratio", 0.98, 1.02);
     myPlot.SetAxisTitle("ratio", "Pbp/pPb");
     myPlot.SetAxisRange("X", 0, 150);
@@ -583,9 +530,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddLegendBox(0.4, 0.4, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "meanPtPbOverPb";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -604,11 +548,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.ChangePad(2);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     //     myPlot.SetDrawingProperties("logX");
-    
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "multDensityPbOverPb";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -628,10 +569,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.ChangePad(2);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     //     myPlot.SetDrawingProperties("logX");
-    
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "multDensityPbpOverpPb";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -651,11 +590,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.ChangePad(2);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     //     myPlot.SetDrawingProperties("logX");
-    
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "meanPtXeOverPb";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -673,7 +609,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "meanPtXeOverPbFullRange";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -691,12 +626,9 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "moment1WithMC";
     Plot myPlot(plotName, plotGroup);
-    
     myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
     myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
     myPlot.AddHisto("momentGeneratedMC1", "pp_5TeV", "", 0, kBlue+1, "band", 60);
@@ -712,11 +644,9 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "variance";
     Plot myPlot(plotName, plotGroup);
-    
     myPlot.AddHisto("varianceUnfolded", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 100);
     myPlot.AddHisto("varianceUnfolded", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
     myPlot.AddHisto("varianceUnfolded_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
@@ -728,13 +658,10 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddHisto("varianceUnfolded_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes", 200);
     //myPlot.AddHisto("variance_PbPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCircle, kRed+1, "", 200);
     //myPlot.AddHisto("variance_PbPb_Angantyr_5.02TeV", "Simulations", "", kFullStar, kRed+1, "", 200);
-    
     myPlot.AddHisto("varianceUnfolded", "pPb_8TeV", "", kFullCircle, kYellow+1, "", 90);
     myPlot.AddHisto("varianceUnfolded_Syst", "pPb_8TeV", "p-Pb, 8.16 TeV", kFullCircle, kYellow+1, "boxes", 90);
-    
     myPlot.AddHisto("varianceUnfolded", "XeXe_5TeV", "", kFullStar, kGreen+2, "", 200);
     myPlot.AddHisto("varianceUnfolded_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes", 200);
-    
     myPlot.SetAxisRange("Y", 0.05, 0.8);
     myPlot.AddLegendBox(0.6, 0.9, "");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
@@ -742,7 +669,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     //myPlot.AddTextBox(0.53, 0.72, "Open symbols: EPOS-LHC // Stars Pythia Angantyr");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "varianceMC";
     Plot myPlot(plotName, plotGroup);
@@ -754,8 +680,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "moment1UnfoldedVsReWeighted";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -771,8 +695,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "moment2";
     Plot myPlot(plotName, plotGroup);
@@ -788,7 +710,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "moment3";
     Plot myPlot(plotName, plotGroup);
@@ -803,7 +724,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.15, 0.9, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "moment1MC";
     Plot myPlot(plotName, plotGroup);
@@ -815,7 +735,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.15, 0.9, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "moment1MCtruth";
     Plot myPlot(plotName, plotGroup);

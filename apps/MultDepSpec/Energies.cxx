@@ -25,8 +25,6 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   string energyLablePrel = alicePrel + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
   string energyLableMC = "#bf{Pythia8 Monash13}" + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
   
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "inverseSlope";
     Plot myPlot(plotName, plotGroup);
@@ -43,37 +41,33 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddLegendBox(0.7, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "yieldFractions";
     Plot myPlot(plotName, plotGroup);
-    //      myPlot.SetDrawingProperties("logX logY");
+    //myPlot.SetDrawingProperties("logX logY");
     myPlot.AddHisto(plotName + "_pp_13TeV", "Fits", "13 TeV");
     myPlot.AddHisto(plotName + "_pp_7TeV", "Fits", "7 TeV");
     myPlot.AddHisto(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
     myPlot.AddHisto(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
     myPlot.AddHisto(plotName + "_pPb_5TeV", "Fits", "p-Pb 5.02 TeV");
     myPlot.AddHisto(plotName + "_PbPb_5TeV", "Fits", "Pb-Pb 5.02 TeV");
-    //      myPlot.AddHisto(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
-    //      myPlot.SetAxisRange("Y", 4, 11);
+    //myPlot.AddHisto(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
+    //myPlot.SetAxisRange("Y", 4, 11);
     myPlot.AddLegendBox(0.13, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "yieldFractionsSelfNormalized";
     Plot myPlot(plotName, plotGroup);
-    //      myPlot.SetDrawingProperties("logX logY");
+    //myPlot.SetDrawingProperties("logX logY");
     myPlot.AddHisto(plotName + "_pp_13TeV", "Fits", "13 TeV");
     myPlot.AddHisto(plotName + "_pp_7TeV", "Fits", "7 TeV");
     myPlot.AddHisto(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
     myPlot.AddHisto(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
-    //      myPlot.SetAxisRange("Y", 4, 11);
+    //myPlot.SetAxisRange("Y", 4, 11);
     myPlot.AddLegendBox(0.3, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "multPtUnfoldedNormalized";
     Plot myPlot(plotName, plotGroup, "default");
@@ -82,10 +76,6 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("X", 0, 60);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "momentUnfolded1SelfNormalized";
     Plot myPlot(plotName, plotGroup, "default");
@@ -96,11 +86,10 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddHisto(plotName, "pp_2TeV", "2.76 TeV");
     myPlot.SetAxisRange("X", 0, 9);
     myPlot.SetAxisRange("Y", 0.7, 1.6);
-    //      myPlot.AddLegendBox(0.4, 0.4);
+    //myPlot.AddLegendBox(0.4, 0.4);
     myPlot.AddTextBox(0.15, 0.91, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "momentUnfolded1SelfNormalizedWithPythia";
     Plot myPlot(plotName, plotGroup, "default");
@@ -115,16 +104,12 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddHisto(mcName, "pp_5TeV", "", 0, -1, "band", 7);
     myPlot.AddHisto(dataName, "pp_2TeV", "2.76 TeV", 0, 0, "", 7);
     myPlot.AddHisto(mcName, "pp_2TeV", "", 0, -1, "band", 7);
-    
-    
     myPlot.SetAxisRange("X", 0, 9);
     myPlot.SetAxisRange("Y", 0.7, 1.6);
     myPlot.AddLegendBox(0.4, 0.4);
     myPlot.AddTextBox(0.15, 0.91, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "momentGeneratedMC1SelfNormalized";
     Plot myPlot(plotName, plotGroup, "default");
@@ -139,8 +124,6 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.15, 0.91, energyLableMC);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "inclusiveSpectrum";
     Plot myPlot(plotName, plotGroup, "default ratio");
@@ -162,39 +145,35 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("X", "#it{p}_{T} (GeV/#it{c})");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatio_5Over13";
     Plot myPlot(plotName, plotGroup);
     myPlot.SetDrawingProperties("logY");
     myPlot.AddRatio("multPtUnfoldedNormalized", "pp_5TeV", "multPtUnfoldedNormalized", "pp_13TeV");
-    //      myPlot.AddRatio("multPtUnfolded", "pp_5TeV", "multPtUnfolded", "pp_13TeV");
+    //myPlot.AddRatio("multPtUnfolded", "pp_5TeV", "multPtUnfolded", "pp_13TeV");
     myPlot.SetAxisRange("Z", 0, 1.5);
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0.15, 20.0);
     myPlot.SetAxisTitle("Y", "#it{p}_{T} (GeV/#it{c})");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisTitle("Z", "5 TeV / 13 TeV");
-    //      myPlot.AddTextBox(0.3, 0.6, "5 TeV / 13 TeV");
+    //myPlot.AddTextBox(0.3, 0.6, "5 TeV / 13 TeV");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatio_PbPbOverpPb";
     Plot myPlot(plotName, plotGroup);
     myPlot.SetDrawingProperties("logY logZ");
     myPlot.AddRatio("multPtUnfolded", "PbPb_5TeV", "multPtUnfolded", "pPb_5TeV");
-    //      myPlot.SetAxisRange("Z", 1e-4, 5e-1);
+    //myPlot.SetAxisRange("Z", 1e-4, 5e-1);
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0.15, 20.0);
     myPlot.SetAxisTitle("Y", "#it{p}_{T} (GeV/#it{c})");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisTitle("Z", "Pb-Pb / p-Pb");
-    //      myPlot.AddTextBox(0.3, 0.6, "5 TeV / 13 TeV");
+    //myPlot.AddTextBox(0.3, 0.6, "5 TeV / 13 TeV");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatioToPythia_2.76TeV";
     Plot myPlot(plotName, plotGroup);
@@ -209,7 +188,6 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.4, "pp 2.76 TeV");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatioToPythia_5TeV";
     Plot myPlot(plotName, plotGroup);
@@ -252,12 +230,9 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.4, "pp 13 TeV");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "energyScanMean";
     Plot myPlot(plotName, plotGroup);
-    
     vector<int> multBins = {2, 9, 16, 26, 36};
     //vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
     for(auto& multBin : multBins)
@@ -269,7 +244,6 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "energyScanMeanMC";
     Plot myPlot(plotName, plotGroup);
@@ -301,11 +275,9 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, energyLableMC);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "energyScanVariance";
     Plot myPlot(plotName, plotGroup);
-    
     vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
     for(auto& multBin : multBins)
     {
@@ -316,7 +288,6 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "energyScanVarianceMC";
     Plot myPlot(plotName, plotGroup);
@@ -332,11 +303,9 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.15, 0.35, energyLable + " // MC: Pythia8 Monash13");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "energyScanVarianceMCLog";
     Plot myPlot(plotName, plotGroup);
-    
     vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
     for(auto& multBin : multBins)
     {
@@ -349,13 +318,9 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, energyLableMC);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "meanPt";
     Plot myPlot(plotName, plotGroup);
-    
     myPlot.AddHisto("momentUnfolded1", "pp_13TeV", "", marker::pp_13, color::pp_13, "", range::pp_13);
     myPlot.AddHisto("momentUnfolded1_Syst", "pp_13TeV", "13 TeV", marker::pp_13, color::pp_13, "boxes", 60);
     //myPlot.AddHisto("mbMeanPtMeanNchUnfolded", "pp_13TeV", "", kStar, kRed+1, "");
@@ -376,36 +341,25 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "meanPt_pp_VS_PYTHIA";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    
     myPlot.AddHisto("momentUnfolded1", "pp_13TeV", "", kFullSquare, kRed+1, "", 60);
     myPlot.AddHisto("momentUnfolded1_Syst", "pp_13TeV", "13 TeV", kFullSquare, kRed+1, "boxes", 60);
-    
     myPlot.AddHisto("meanPt_13TeV", "Simulations", "", kOpenSquare, kRed+1, "", 60);
-    
     myPlot.AddHisto("momentUnfolded1", "pp_7TeV", "", kFullCircle, kMagenta+1, "", 60);
     myPlot.AddHisto("momentUnfolded1_Syst", "pp_7TeV", "7 TeV", kFullCircle, kMagenta+1, "boxes", 60);
-    
     myPlot.AddHisto("meanPt_7TeV", "Simulations", "", kOpenCircle, kMagenta+1, "", 60);
-    
     myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullCross, kBlue+1, "", 60);
     myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "5.02 TeV", kFullCross, kBlue+1, "boxes", 60);
-    
     myPlot.AddHisto("meanPt_5.02TeV", "Simulations", "", kOpenCross, kBlue+1, "", 60);
-    
     myPlot.AddHisto("momentUnfolded1", "pp_2TeV", "", kFullDiamond, kGreen+3, "", 40);
     myPlot.AddHisto("momentUnfolded1_Syst", "pp_2TeV", "2.76 TeV", kFullDiamond, kGreen+3, "boxes", 40);
-    
     myPlot.AddHisto("meanPt_2.76TeV", "Simulations", "", kOpenDiamond, kGreen+3, "", 40);
-    
     myPlot.AddRatio("meanPt_13TeV", "Simulations", "momentUnfolded1_Syst", "pp_13TeV", "", kOpenSquare, kRed+1, "", 60);
     myPlot.AddRatio("meanPt_7TeV", "Simulations", "momentUnfolded1_Syst", "pp_7TeV", "", kOpenCircle, kMagenta+1, "", 60);
     myPlot.AddRatio("meanPt_5.02TeV", "Simulations", "momentUnfolded1_Syst", "pp_5TeV", "", kOpenCross, kBlue+1, "", 60);
     myPlot.AddRatio("meanPt_2.76TeV", "Simulations", "momentUnfolded1_Syst", "pp_2TeV", "", kOpenDiamond, kGreen+3, "", 40);
-    
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisTitle("ratio", "MC / data");
     myPlot.SetAxisRange("ratio", 0.94, 1.06);
@@ -415,36 +369,25 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, energyLable + " // MC: PYTHIA 8 Monash13");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "meanPt_pp_VS_EPOS";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    
     myPlot.AddHisto("momentUnfolded1", "pp_13TeV", "", kFullSquare, kRed+1, "", 60);
     myPlot.AddHisto("momentUnfolded1_Syst", "pp_13TeV", "13 TeV", kFullSquare, kRed+1, "boxes", 60);
-    
     myPlot.AddHisto("meanPt_pp_EPOS-LHC_13TeV", "Simulations", "", kOpenSquare, kRed+1, "", 60);
-    
     myPlot.AddHisto("momentUnfolded1", "pp_7TeV", "", kFullCircle, kMagenta+1, "", 60);
     myPlot.AddHisto("momentUnfolded1_Syst", "pp_7TeV", "7 TeV", kFullCircle, kMagenta+1, "boxes", 60);
-    
     myPlot.AddHisto("meanPt_pp_EPOS-LHC_7TeV", "Simulations", "", kOpenCircle, kMagenta+1, "", 60);
-    
     myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullCross, kBlue+1, "", 60);
     myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "5.02 TeV", kFullCross, kBlue+1, "boxes", 60);
-    
     myPlot.AddHisto("meanPt_pp_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCross, kBlue+1, "", 60);
-    
     myPlot.AddHisto("momentUnfolded1", "pp_2TeV", "", kFullDiamond, kGreen+3, "", 40);
     myPlot.AddHisto("momentUnfolded1_Syst", "pp_2TeV", "2.76 TeV", kFullDiamond, kGreen+3, "boxes", 40);
-    
     myPlot.AddHisto("meanPt_pp_EPOS-LHC_2.76TeV", "Simulations", "", kOpenDiamond, kGreen+3, "", 40);
-    
     myPlot.AddRatio("meanPt_pp_EPOS-LHC_13TeV", "Simulations", "momentUnfolded1_Syst", "pp_13TeV", "", kOpenSquare, kRed+1, "", 60);
     myPlot.AddRatio("meanPt_pp_EPOS-LHC_7TeV", "Simulations", "momentUnfolded1_Syst", "pp_7TeV", "", kOpenCircle, kMagenta+1, "", 60);
     myPlot.AddRatio("meanPt_pp_EPOS-LHC_5.02TeV", "Simulations", "momentUnfolded1_Syst", "pp_5TeV", "", kOpenCross, kBlue+1, "", 60);
     myPlot.AddRatio("meanPt_pp_EPOS-LHC_2.76TeV", "Simulations", "momentUnfolded1_Syst", "pp_2TeV", "", kOpenDiamond, kGreen+3, "", 40);
-    
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0.46, 0.85);
@@ -454,12 +397,9 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, energyLable + " // MC: EPOS-LHC");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "variance";
     Plot myPlot(plotName, plotGroup);
-    
     myPlot.AddHisto("varianceUnfolded", "pp_13TeV", "", kFullSquare, kRed+1, "", 60);
     myPlot.AddHisto("varianceUnfolded_Syst", "pp_13TeV", "13 TeV", kFullSquare, kRed+1, "boxes", 60);
     //myPlot.AddHisto("mbVarianceMeanNchUnfolded", "pp_13TeV_old", "", kStar, kRed+1, "");
@@ -472,7 +412,6 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddHisto("varianceUnfolded", "pp_2TeV", "", kFullDiamond, kGreen+3, "", 40);
     myPlot.AddHisto("varianceUnfolded_Syst", "pp_2TeV", "2.76 TeV", kFullDiamond, kGreen+3, "boxes", 40);
     //myPlot.AddHisto("mbVarianceMeanNchUnfolded", "pp_2TeV", "", kStar, kGreen+3, "");
-    
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0.05, 0.75);
@@ -480,13 +419,9 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "varianceMC";
     Plot myPlot(plotName, plotGroup);
-    
     myPlot.AddHisto("variance_2TeV", "Simulations", "2 TeV", 0, 0, "band");
     myPlot.AddHisto("variance_2.5TeV", "Simulations", "2.5 TeV", 0, 0, "band");
     myPlot.AddHisto("variance_3TeV", "Simulations", "3 TeV", 0, 0, "band");
@@ -522,13 +457,10 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, energyLableMC);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "moment1MC";
     Plot myPlot(plotName, plotGroup);
-    
     myPlot.AddHisto("meanPt_2TeV", "Simulations", "2 TeV", 0, 0, "band");
-    
     myPlot.AddHisto("meanPt_2.5TeV", "Simulations", "", 0, 0, "band");
     myPlot.AddHisto("meanPt_3TeV", "Simulations", "", 0, 0, "band");
     myPlot.AddHisto("meanPt_3.5TeV", "Simulations", "", 0, 0, "band");
@@ -553,8 +485,6 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddHisto("meanPt_13TeV", "Simulations", "", 0, 0, "band");
     myPlot.AddHisto("meanPt_13.5TeV", "Simulations", "", 0, 0, "band");
     myPlot.AddHisto("meanPt_14TeV", "Simulations", "14 TeV", 0, 0, "band");
-    
-    
     //myPlot.AddHisto("meanPt_2.76TeV", "Simulations", "2.76 TeV", kFullSquare, kGreen+3, "", 40);
     //myPlot.AddHisto("momentGeneratedMC1", "pp_5TeV", "5.02 TeV", kFullSquare, kBlue+1);
     //myPlot.AddHisto("meanPt_7TeV", "Simulations", "7 TeV", kFullCircle, kMagenta+1);
@@ -563,10 +493,8 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("Y", 0.45, 0.85);
     myPlot.AddLegendBox(0.35, 0.3, "",4);
     myPlot.AddTextBox(0.4, 0.5, energyLableMC);
-    
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "moment1MCGenerated";
     Plot myPlot(plotName, plotGroup);
@@ -580,7 +508,6 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.15, 0.92, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "moment2";
     Plot myPlot(plotName, plotGroup);
@@ -598,7 +525,6 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.4, 0.3, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "moment3";
     Plot myPlot(plotName, plotGroup);
@@ -616,7 +542,6 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.15, 0.92, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "multDensity";
     Plot myPlot(plotName, plotGroup);
@@ -665,7 +590,6 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddTextBox(0.15, 0.3, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
-  
   { // -----------------------------------------------------------------------
     string plotName = "multDistKNORatio";
     Plot myPlot(plotName, plotGroup, "default ratio");

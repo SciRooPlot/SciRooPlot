@@ -20,18 +20,15 @@
 
 int main(int argc, char *argv[])
 {
-  
   string configDir = "~/Desktop/PlottingFramework/config";
   string inputFilesConfig = configDir + "/inputFiles.XML";
   string plotDefConfig = configDir + "/plotDefinitions.XML";
   string outputFilesBasePath = "~/Desktop/testPlots";
   
-  
   // create plotting environment
   PlotManager plotEnv;
   plotEnv.SetOutputDirectory(outputFilesBasePath);
   plotEnv.SetUseUniquePlotNames(false);
-  
   
   vector<string> dataSets;
   dataSets.push_back("pp_2TeV");
@@ -67,7 +64,7 @@ int main(int argc, char *argv[])
   else{
     plotEnv.LoadInputDataFiles(inputFilesConfig);
   }
-
+  
   // create dataset specific plots:
   for(string dataSet : dataSets)
   {

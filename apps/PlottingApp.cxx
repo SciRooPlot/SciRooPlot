@@ -32,7 +32,7 @@ vector<string> splitArguments(string argString, char deliminator = ',')
   string currArg;
   std::istringstream argStream(argString);
   while(std::getline(argStream, currArg, deliminator)) {
-      arguments.push_back(currArg);
+    arguments.push_back(currArg);
   }
   return arguments;
 }
@@ -51,11 +51,10 @@ int main(int argc, char *argv[])
   string inputFilesConfig = configDir + "/inputFiles.XML";
   string plotDefConfig = configDir + "/plotDefinitions.XML";
   string outputFilesBasePath = "~/Desktop/testPlots";
-
+  
   string mode;
   string figureGroups;
   string plotNames;
-  
   
   // handle user inputs
   try
@@ -74,19 +73,18 @@ int main(int argc, char *argv[])
     ("figureGroups", po::value<string>(), "figure group")
     ("plotNames", po::value<string>(), "plot name")
     ("arguments", po::value< vector<string> >(), "arguments");
-
+    
     po::positional_options_description pos; // this needs to be synchronous with the arguments options_description
     pos.add("mode", 1);
     pos.add("figureGroups", 1);
     pos.add("plotNames", 1);
     pos.add("arguments", -1);
-
+    
     po::variables_map vm;
     po::options_description cmdline_options;
     cmdline_options.add(options).add(arguments);
     po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(pos).run(), vm);
     po::notify(vm);
-    
     
     if (vm.count("help")) {
       cout << endl;
@@ -98,25 +96,25 @@ int main(int argc, char *argv[])
       return 0;
     }
     if (vm.count("inputFilesConfig")) {
-        inputFilesConfig = vm["inputFilesConfig"].as<string>();
+      inputFilesConfig = vm["inputFilesConfig"].as<string>();
     }
     if (vm.count("plotDefConfig")) {
-        plotDefConfig = vm["plotDefConfig"].as<string>();
+      plotDefConfig = vm["plotDefConfig"].as<string>();
     }
     if (vm.count("outputFilesBasePath")) {
-        outputFilesBasePath = vm["outputFilesBasePath"].as<string>();
+      outputFilesBasePath = vm["outputFilesBasePath"].as<string>();
     }
     if (vm.count("mode")) {
-        mode = vm["mode"].as<string>();
+      mode = vm["mode"].as<string>();
     }
     if (vm.count("figureGroups")) {
-        figureGroups = vm["figureGroups"].as<string>();
+      figureGroups = vm["figureGroups"].as<string>();
     }
     if (vm.count("plotNames")) {
-        plotNames = vm["plotNames"].as<string>();
+      plotNames = vm["plotNames"].as<string>();
     }
     if (vm.count("arguments")) {
-        cout << "Found additional arguments:" << endl;
+      cout << "Found additional arguments:" << endl;
       for(auto& argument : vm["arguments"].as< vector<string> >())
       {
         cout << "   " << argument << endl;
@@ -133,7 +131,7 @@ int main(int argc, char *argv[])
     ERROR("Exception of unknown type! Exiting.");
     return 1;
   }
-
+  
   // check if specified input files exist
   if(!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str())))
   {
@@ -145,12 +143,12 @@ int main(int argc, char *argv[])
     ERRORF("File \"%s\" does not exists! Exiting.", plotDefConfig.c_str());
     return 1;
   }
-
+  
   // create plotting environment
   PlotManager plotEnv;
   plotEnv.SetOutputDirectory(outputFilesBasePath);
   plotEnv.SetUseUniquePlotNames(false);
-
+  
   if(mode == "find"){
     // TODO: make this find multiple things as well
     // TODO: put exact match on top of search results
@@ -166,7 +164,7 @@ int main(int argc, char *argv[])
     vector<string> plotNamesVector  = splitArguments(plotNames);
     if(plotNames == "all") plotNamesVector = {};
     //if(figureGroups == "all") figureGroupsVector = {}; //TODO: add this feature
-
+    
     for(auto& inputIdentifier : figureGroupsVector){
       plotEnv.CreatePlotsFromFile(plotDefConfig, inputIdentifier, plotNamesVector, mode);
     }
