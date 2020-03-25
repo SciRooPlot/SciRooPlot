@@ -49,11 +49,7 @@ public:
   
   Plot();
   Plot(ptree &plotTree);
-  Plot(string name, string figureGroup, string plotStyle = "default")
-  : Plot()
-  {
-    mName = name; mFigureGroup = figureGroup; mPlotStyle = plotStyle;
-  }
+  Plot(string name, string figureGroup, string plotStyle = "default");
   Plot(const Plot& otherPlot) = default;
   Plot(Plot& otherPlot) = default;
   
@@ -67,7 +63,6 @@ public:
   vector<shared_ptr<Box>>& GetBoxes(int padID){return mBoxes[padID];}
   map<string, set<string>> GetRequiredInputData();
   
-  void SetFigureGroup(string figureGroup){mFigureGroup = figureGroup;}
   void SetFigureCategory(string figureCategory){mFigureCategory = figureCategory;}
   
   void Print();
@@ -173,7 +168,14 @@ protected:
   Data(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions)
   : mType("none"), mName(name), mInputIdentifier(inputIdentifier), mLable(lable), mColor(color), mStyle(style), mSize(size), mDrawingOptions(drawingOptions)
   {
-    // constructor code
+    // if input was specified further via inputIdentifier:some/path/in/file
+    auto subPathPos = inputIdentifier.find(":");
+    if(subPathPos != string::npos)
+    {
+      // prepend path to plot name
+      mName = inputIdentifier.substr(subPathPos+1) + "/" + name;
+      mInputIdentifier = inputIdentifier.substr(0, subPathPos);
+    }
   }
   void SetType(string type){mType = type;}
   

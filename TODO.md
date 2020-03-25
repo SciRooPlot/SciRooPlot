@@ -5,6 +5,8 @@ ANALYSIS:
 - add data specific colors and markers
 - clean up file names and make useful sub-folders
 - add more qa plots for unfolding
+- finally fix the naming of the output -> unfoldedMeanPt, etc or use subfolders: generated/meanPt, unfolded/meanPt, generatedMC/meanPt?
+- fix naming in simulations, 5.02 TeV? -> make consistent, split in multiple files!
 
 FRAMEWORK:
 ----------
@@ -29,6 +31,7 @@ Major Features:
 - check if 2d hist is part of plot, then change style
 
 Minor Features:
+- change from int to short wherever possible (colors, markers, etc)
 - option in main program to list loaded plots
 - replace PlotGenerator class with namespace
 - possibility to load all data from input files
@@ -69,6 +72,7 @@ Minor Features:
 - maybe linking axes should also be possible for different axes (x in pad1 to y in pad2)
 
 Bugs:
+- a warning should appear when input identifier was not defined for a plot
 - width and height calculation wrong for text boxes (ndc vs relative pad coordinates?)
 - using user coordinates in legend box breaks something for text box?
 - interactively moving text boxes in log scale plots has a bug (maybe already in root)

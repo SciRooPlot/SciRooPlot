@@ -120,7 +120,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddHisto(plotName, "pp_2TeV", "2.76 TeV");
     myPlot.SetAxisRange("X", 0, 9);
     myPlot.SetAxisRange("Y", 0.7, 1.6);
-    //      myPlot.AddLegendBox(0.4, 0.4);
+    //myPlot.AddLegendBox(0.4, 0.4);
     myPlot.AddTextBox(0.15, 0.91, energyLableMC);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
@@ -321,17 +321,20 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "meanPt";
     Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto("momentUnfolded1", "pp_13TeV", "", marker::pp_13, color::pp_13, "", range::pp_13);
-    myPlot.AddHisto("momentUnfolded1_Syst", "pp_13TeV", "13 TeV", marker::pp_13, color::pp_13, "boxes", 60);
+    myPlot.AddHisto("momentUnfolded1", "pp_13TeV", "", kRed, kRed, "", 60);
+    myPlot.AddHisto("momentUnfolded1_Syst", "pp_13TeV", "13 TeV", kRed, kRed, "boxes", 60);
     //myPlot.AddHisto("mbMeanPtMeanNchUnfolded", "pp_13TeV", "", kStar, kRed+1, "");
-    myPlot.AddHisto("momentUnfolded1", "pp_7TeV", "", marker::pp_7, color::pp_7, "", 60);
-    myPlot.AddHisto("momentUnfolded1_Syst", "pp_7TeV", "7 TeV", marker::pp_7, color::pp_7, "boxes", 60);
+    myPlot.AddHisto("momentUnfolded1", "pp_7TeV", "", kRed, kRed, "", 60);
+    myPlot.AddHisto("momentUnfolded1_Syst", "pp_7TeV", "7 TeV", kRed, kRed, "boxes", 60);
     //myPlot.AddHisto("mbMeanPtMeanNchUnfolded", "pp_7TeV", "", kStar, kMagenta+1, "");
-    myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", marker::pp_5, color::pp_5, "", 60);
-    myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "5.02 TeV", marker::pp_5, color::pp_5, "boxes", 60);
+    
+    myPlot.AddHisto("momentUnfolded1", pp_5TeV::input::analysis, "", pp_5TeV::marker::data, pp_5TeV::color::data, "", 60);
+    myPlot.AddHisto("momentUnfoldedMC1", pp_5TeV::input::analysis, "", pp_5TeV::marker::data, pp_5TeV::color::data, "", 60);
+    
+    myPlot.AddHisto("momentUnfolded1_Syst", pp_5TeV::input::analysis, "5.02 TeV", pp_5TeV::marker::data, pp_5TeV::color::data, "boxes", 60);
     //myPlot.AddHisto("mbMeanPtMeanNchUnfolded", "pp_5TeV", "", kStar, kBlue+1, "");
-    myPlot.AddHisto("momentUnfolded1", "pp_2TeV", "", marker::pp_2, color::pp_2, "", 40);
-    myPlot.AddHisto("momentUnfolded1_Syst", "pp_2TeV", "2.76 TeV", marker::pp_2, color::pp_2, "boxes", 40);
+    myPlot.AddHisto("momentUnfolded1", "pp_2TeV", "", kRed, kRed, "", 40);
+    myPlot.AddHisto("momentUnfolded1_Syst", "pp_2TeV", "2.76 TeV", kRed, kRed, "boxes", 40);
     //myPlot.AddHisto("mbMeanPtMeanNchUnfolded", "pp_2TeV", "", kStar, kGreen+3, "");
     
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");

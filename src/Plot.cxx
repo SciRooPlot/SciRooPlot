@@ -20,6 +20,7 @@
 using namespace PlottingFramework;
 namespace PlottingFramework {
 
+
 Plot::Plot()
 {
   mName = "dummyName";
@@ -30,6 +31,14 @@ Plot::Plot()
   mFigureCategory = "";
   mCurrPad = 1;
 }
+  
+  
+Plot::Plot(string name, string figureGroup, string plotStyle)
+: Plot()
+{
+  mName = name; mFigureGroup = figureGroup; mPlotStyle = plotStyle;
+}
+
 
 Plot::Plot(ptree &plotTree)
 {
@@ -109,7 +118,6 @@ void Plot::AddHisto(string histName, string inputIdentifier, string lable, int m
 {
   if(inputIdentifier == "") inputIdentifier = mFigureGroup; // default identifier to figuregroup id
   mData[mCurrPad].push_back(std::make_shared<Histogram>(histName, inputIdentifier, lable, color, marker, 0, drawingOptions, 1, std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
-  
 }
 
 void Plot::AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)

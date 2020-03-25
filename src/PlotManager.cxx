@@ -413,7 +413,7 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
     }
     ReadDataFromCSVFiles(*mDataLedger, mInputFiles[GetNameRegisterName(inputIDTuple.first)], GetNameRegisterName(inputIDTuple.first));
     ReadDataFromFiles(*mDataLedger, mInputFiles[GetNameRegisterName(inputIDTuple.first)], dataNames, uniqueDataNames);
-    // TODO Loaded data has to be updated!!
+    // TODO: Loaded data has to be updated!!
   }
   
   
@@ -524,8 +524,23 @@ void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, vector<string
 //****************************************************************************************
 void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> fileNames, vector<string> dataNames, vector<string> newDataNames){
   
+  // first determine if which sub-folders are required by the user
+  set<string> dataSubSpecs;
+  for(auto& dataName : dataNames)
+  {
+    auto pathPos = dataName.find_last_of("/");
+    string subSpec;
+    if(pathPos != string::npos){
+      subSpec = dataName.substr(0, pathPos);
+    }
+    dataSubSpecs.insert(subSpec);
+  }
+  
+  
+
   for(auto& inputFileName : fileNames)
   {
+    if(dataNames.empty()) break;
     if(inputFileName.find(".root") == string::npos) continue;
     // first check if sub-structure is defined
     std::istringstream ss(inputFileName);
@@ -535,7 +550,7 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
       tokens.push_back(token);
     }
     string fileName = tokens[0];
-    
+            
     TFile inputFile(fileName.c_str(), "READ");
     if (inputFile.IsZombie()) {
       cout << "ERROR: input file " << fileName << " not found." << endl;
@@ -544,6 +559,7 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
     
     TObject* folder = &inputFile;
     
+    // find top level entry point for this input file
     if(tokens.size() > 1)
     {
       std::istringstream path(tokens[1]);
@@ -552,17 +568,67 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
       while(std::getline(path, directory, '/')) {
         subDirs.push_back(directory);
       }
+      // append subspecification from input name
       folder = FindSubDirectory(folder, subDirs);
       if(!folder){
         cout << "ERROR: subdirectory '" << tokens[1] << "'' not found in '" << fileName << "'."<< endl;
         return;
       }
     }
-    // recursively traverse the file and look for input files
-    ReadData(folder, outputDataArray, dataNames, newDataNames);
-    if(folder != &inputFile) {delete folder; folder = nullptr;}
+    
+    // there might be subfolders explicitly specified by the user
+    vector<string> remainingDataNames;
+    vector<string> remainingNewDataNames;
+    for(auto& dataSubSpec : dataSubSpecs)
+    {
+      vector<string> curDataNames;
+      vector<string> curNewDataNames;
+      
+      for(int i = 0; i < dataNames.size(); i++)
+      {
+        if(dataNames[i] == "") continue;
+        auto pathPos = dataNames[i].find_last_of("/");
+        string tempSubSpec;
+        if(pathPos != string::npos){
+          tempSubSpec = dataNames[i].substr(0, pathPos);
+        }
+        if(tempSubSpec == dataSubSpec)
+        {
+          curDataNames.push_back(std::move(dataNames[i]));
+          curNewDataNames.push_back(std::move(newDataNames[i]));
+        }
+      }
+      if(curDataNames.empty()) continue;
+      // now find subdirectory belonging to subspec
+      std::istringstream path(dataSubSpec);
+      vector<string> subDirs;
+      string directory;
+      while(std::getline(path, directory, '/')) {
+        subDirs.push_back(directory);
+      }
+      // append subspecification from input name
+      TObject* subfolder = FindSubDirectory(folder, subDirs);
+      if(!subfolder) continue;
+
+      // recursively traverse the file and look for input files
+      ReadData(subfolder, outputDataArray, curDataNames, curNewDataNames);
+      if(subfolder != &inputFile) {delete subfolder; subfolder = nullptr;}
+      
+      std::move(std::begin(curDataNames), std::end(curDataNames), std::back_inserter(remainingDataNames));
+      std::move(std::begin(curNewDataNames), std::end(curNewDataNames), std::back_inserter(remainingNewDataNames));
+      }
+    
+    // get rid of empty strings left after moving
+    dataNames.erase(std::remove(dataNames.begin(), dataNames.end(), ""), dataNames.end());
+    newDataNames.erase(std::remove(newDataNames.begin(), newDataNames.end(), ""), newDataNames.end());
+    
+    // now move unfound dataNames back to the original vector, so they can be searched in next file
+    std::move(std::begin(remainingDataNames), std::end(remainingDataNames), std::back_inserter(dataNames));
+    std::move(std::begin(remainingNewDataNames), std::end(remainingNewDataNames), std::back_inserter(newDataNames));
   }
   
+  
+  // FIXME: move this stuff from here and mention also input identifier in error
   if(!dataNames.empty()){
     cout << endl << "----------------------------" << endl;
     cout << " Data" << endl;
@@ -571,7 +637,6 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
     for(auto& inputFileName : fileNames) cout << "  - " << inputFileName << endl;
     cout << "----------------------------" << endl << endl;
   }
-  
 }
 
 //****************************************************************************************
@@ -629,11 +694,22 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
 //****************************************************************************************
 void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<string>& dataNames, vector<string>& newDataNames)
 {
+  if(dataNames.empty()) return; // nothing to do...
+
   // consistency check for name vectors
   if(!newDataNames.empty() && newDataNames.size() != dataNames.size()){
     cout << "ERROR: newDataNames vector has the wrong size" << endl;
     return;
   }
+
+  // first determine what is the required subspecification (path) that needs to be prepended
+  auto pathPos = dataNames[0].find_last_of("/");
+  string subSpec;
+  if(pathPos != string::npos){
+    subSpec = dataNames[0].substr(0, pathPos);
+  }
+  if(subSpec != "") subSpec = subSpec + "/";
+
   
   TCollection* itemList = nullptr;
   if(folder->InheritsFrom("TDirectory")){
@@ -663,8 +739,9 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
     if(obj->IsA() == TKey::Class()){
       string className = ((TKey*)obj)->GetClassName();
       string keyName = ((TKey*)obj)->GetName();
+
       bool isTraversable = className.find("TDirectory") != string::npos || className.find("TList") != string::npos || className.find("TObjArray") != string::npos;
-      if(isTraversable || std::find(dataNames.begin(), dataNames.end(), keyName) != dataNames.end())
+      if(isTraversable || std::find(dataNames.begin(), dataNames.end(), subSpec+keyName) != dataNames.end())
       {
         obj = ((TKey*)obj)->ReadObj();
         removeFromList = false;
@@ -678,7 +755,7 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
     if(obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TCollection")) {
       ReadData(obj, outputDataArray, dataNames, newDataNames);
     }else{
-      auto it = std::find(dataNames.begin(), dataNames.end(), ((TNamed*)obj)->GetName());
+      auto it = std::find(dataNames.begin(), dataNames.end(), subSpec+((TNamed*)obj)->GetName());
       if(it != dataNames.end()){
         // TODO: select here that only known root input types are beeing processed
         if(obj->InheritsFrom("TH1"))

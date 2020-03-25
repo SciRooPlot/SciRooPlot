@@ -17,6 +17,19 @@
 
 
 #include "MultDepSpec.h"
+namespace MultDepSpec{
+
+const double range::minPt = 0.5;
+const double range::maxPt = 50.;
+const int range::minMult = 0;
+const int range::maxMult = 100;
+
+const string pp_5TeV::input::analysis = "pp_5TeV";
+const string pp_5TeV::input::pythia = "Simulations:5TeV";
+const string pp_5TeV::input::epos_lhc = "Simulations";
+
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -39,9 +52,9 @@ int main(int argc, char *argv[])
   dataSets.push_back("pPb_8TeV");
   dataSets.push_back("PbPb_5TeV");
   dataSets.push_back("XeXe_5TeV");
-  dataSets.push_back("Fits");
-  dataSets.push_back("Simulations");
-  dataSets.push_back("Energyscan");
+  //dataSets.push_back("Fits");
+  //dataSets.push_back("Simulations");
+  //dataSets.push_back("Energyscan");
   
   // generate config file containing locations of the input files or load it
   if(argc > 1 && string(argv[1]) == "updateInputFiles")
@@ -64,17 +77,35 @@ int main(int argc, char *argv[])
   else{
     plotEnv.LoadInputDataFiles(inputFilesConfig);
   }
+
+  bool createTestPlots = true;
+  bool createEnergyPlots = true;
+  bool createSystemPlots = true;
   
+  if(argc > 1){
+    createTestPlots = false;
+    createEnergyPlots = false;
+    createSystemPlots = false;
+    dataSets.clear();
+    for(auto argID = 1; argID < argc; argID++)
+    {
+      string argument = argv[argID];
+      if(argument == "test") createTestPlots = true;
+      else if(argument == "energy") createEnergyPlots = true;
+      else if(argument == "system") createSystemPlots = true;
+      else dataSets.push_back(argv[argID]);
+    }
+  }
+
   // create dataset specific plots:
   for(string dataSet : dataSets)
   {
-    if(dataSet == "Publications" || dataSet == "Simulations"|| dataSet == "Energyscan" || dataSet == "Fits") continue;
     MultDepSpec::DefineDatasetPlots(dataSet, plotEnv);
   }
   
-  MultDepSpec::DefineTestPlots(plotEnv);
-  MultDepSpec::DefineSystemPlots(plotEnv);
-  MultDepSpec::DefineEnergyPlots(plotEnv);
+  if(createTestPlots) MultDepSpec::DefineTestPlots(plotEnv);
+  if(createEnergyPlots) MultDepSpec::DefineEnergyPlots(plotEnv);
+  if(createSystemPlots) MultDepSpec::DefineSystemPlots(plotEnv);
   //MultDepSpec::DefinePublicationPlots(plotEnv);
   
   plotEnv.DumpPlots(plotDefConfig);

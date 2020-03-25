@@ -26,23 +26,24 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   int multRange = 60;
   
   if(dataSet.find("pp") != string::npos) colSys = pp;
-  if(dataSet.find("pPb") != string::npos) {colSys = pPb; multRange = range::pPb_5;}
-  if(dataSet.find("PbPb") != string::npos) {colSys = PbPb; multRange = range::PbPb_5;}
-  if(dataSet.find("XeXe") != string::npos) {colSys = XeXe; multRange = range::XeXe_5; erg = erg544TeV_NN;}
+  if(dataSet.find("pPb") != string::npos) {colSys = pPb;}// multRange = range::pPb_5;}
+  if(dataSet.find("PbPb") != string::npos) {colSys = PbPb;}// multRange = range::PbPb_5;}
+  if(dataSet.find("XeXe") != string::npos) {colSys = XeXe; erg = erg544TeV_NN;}// multRange = range::XeXe_5;}
   
-  if(dataSet.find("pp_2TeV") != string::npos) {erg = erg2TeV; multRange = range::pp_2;}
+  if(dataSet.find("pp_2TeV") != string::npos) {erg = erg2TeV;}// multRange = range::pp_2;}
   if(dataSet.find("pp_7TeV") != string::npos) erg = erg7TeV;
-  if(dataSet.find("pp_13TeV") != string::npos) {erg = erg13TeV; multRange = range::pp_13;}
+  if(dataSet.find("pp_13TeV") != string::npos) {erg = erg13TeV;}// multRange = range::pp_13;}
   if(dataSet.find("pp_5TeV") != string::npos) erg = erg5TeV;
   if(dataSet.find("pPb_5TeV") != string::npos) erg = erg5TeV_NN;
   if(dataSet.find("PbPb_5TeV") != string::npos) erg = erg5TeV_NN;
   
-  string datasetLable = alice + newLine + chargedParticles + ", " + colSys + ", " + erg + newLine + eta08 + ", " + ptRange;
-  string datasetLablePrel = alicePrel + newLine + chargedParticles + ", " + colSys + ", " + erg + newLine + eta08 + ", " + ptRange;
-  string categoryTest = "Test";
-  string categoryQA = "QA-Plots";
-  string categoryClosure = categoryQA + "/MC_Closure_Tests";
-  string categorySystematics = "Systematic_Uncertainties";
+  const string datasetLable = alice + newLine + chargedParticles + ", " + colSys + ", " + erg + newLine + eta08 + ", " + ptRange;
+  const string datasetLablePrel = alicePrel + newLine + chargedParticles + ", " + colSys + ", " + erg + newLine + eta08 + ", " + ptRange;
+  
+  const string categoryTest = "Test";
+  const string categoryQA = "QA-Plots";
+  const string categoryClosure = categoryQA + "/MC_Closure_Tests";
+  const string categorySystematics = "Systematic_Uncertainties";
   
   { // -----------------------------------------------------------------------
     string plotName = "covMat_multDistUnfolded";
@@ -812,7 +813,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   
   { // -----------------------------------------------------------------------
     vector<string> histNames = {"multDistUnfolded", "momentUnfolded1", "varianceUnfolded"};//, "momentUnfolded2", "momentUnfolded3", "momentReweighted1", "momentReweighted2", "momentReweighted3"};
-    Short_t colorsSyst[14]={kPink+8, kGreen+2, 28, kOrange+2 ,8 , kCyan-6, kMagenta+3, kRed, kBlue ,15, kGreen+4, kMagenta, 17, 12};
+    Short_t colorsSyst[14] = {kPink+8, kGreen+2, 28, kOrange+2 ,8 , kCyan-6, kMagenta+3, kRed, kBlue ,15, kGreen+4, kMagenta, 17, 12};
     for(string& histName : histNames)
     {
       string plotName = histName + "_SystContrib";

@@ -18,9 +18,27 @@
 
 #include "MultDepSpec.h"
 
+
 void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
 {
   string plotGroup = "test";
+  
+  // implement new feature inputIdentifier:subfolder
+  { // -----------------------------------------------------------------------
+    string plotName = "meanPt";
+    Plot myPlot(plotName, plotGroup);
+    myPlot.AddGraph("meanPt_pPb_EPOS_5.02TeV", "Simulations", "", kOpenCross, kBlue+1, "", 60);
+    myPlot.AddHisto("meanPt", pp_5TeV::input::pythia, "", pp_5TeV::marker::pythia, pp_5TeV::color::pythia, "", 60);
+    myPlot.AddHisto("meanPt", pp_5TeV::input::epos_lhc, "", kOpenCross, kRed+1, "", 60);
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+
+  
+  
+  
+  
+  
+  
   
   { // -----------------------------------------------------------------------
     string plotName = "multPtScaled_pp_2TeV";
