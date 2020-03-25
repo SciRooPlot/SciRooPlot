@@ -25,8 +25,9 @@ const int range::minMult = 0;
 const int range::maxMult = 100;
 
 const string pp_5TeV::input::analysis = "pp_5TeV";
-const string pp_5TeV::input::pythia = "Simulations:5TeV";
-const string pp_5TeV::input::epos_lhc = "Simulations";
+const string pp_5TeV::input::pythia = "Simulations:pythia/pp_5TeV";
+const string pp_5TeV::input::epos_lhc = "Simulations:epos_lhc/pp_5TeV";
+const string pp_5TeV::input::epos = "Simulations:epos/pp_5TeV"; // not yet available
 
 }
 

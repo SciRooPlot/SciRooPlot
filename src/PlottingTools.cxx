@@ -15,12 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "PlotGenerator.h"
+#include "PlottingTools.h"
 #include "PlotManager.h"
 
 using namespace PlottingFramework;
 namespace PlottingFramework {
-shared_ptr<TCanvas> PlotGenerator::GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* availableData){
+namespace PlottingTools{
+shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* availableData){
   
   // this should be in crator
   if(plotStyle.GetNPads() < plot.GetNumRequiredPads())
@@ -440,7 +441,7 @@ shared_ptr<TCanvas> PlotGenerator::GeneratePlot(Plot& plot, PlotStyle& plotStyle
 
 
 template<typename T>
-T* PlotGenerator::GetDataClone(string dataName, TObjArray* availableData)
+T* GetDataClone(string dataName, TObjArray* availableData)
 {
   T* data = nullptr;
   TObject* obj = availableData->FindObject(dataName.c_str());
@@ -462,7 +463,7 @@ T* PlotGenerator::GetDataClone(string dataName, TObjArray* availableData)
 }
 
 
-TLegend* PlotGenerator::MakeLegend(shared_ptr<Plot::LegendBox> legendBox, TPad* pad, TObjArray& legendEntries, vector<string> legendTitles, vector<string>& errorStyles){
+TLegend* MakeLegend(shared_ptr<Plot::LegendBox> legendBox, TPad* pad, TObjArray& legendEntries, vector<string> legendTitles, vector<string>& errorStyles){
   
   // todo this has to be included in legend box...
   double textSizePixel = 24;  //legendBox->GetTextSize;
@@ -678,7 +679,7 @@ TLegend* PlotGenerator::MakeLegend(shared_ptr<Plot::LegendBox> legendBox, TPad* 
 }
 
 
-TPaveText* PlotGenerator::MakeText(shared_ptr<Plot::TextBox> textBox){
+TPaveText* MakeText(shared_ptr<Plot::TextBox> textBox){
   // todo this has to be included in text box...
   double textSizePixel = 24;  //textBox->GetTextSize;
   int textFont = 43; //textBox->GetTextFont;
@@ -756,7 +757,7 @@ TPaveText* PlotGenerator::MakeText(shared_ptr<Plot::TextBox> textBox){
  * @param cutoffLow: user axis value before which data is set to zero
  */
 //****************************************************************************************
-void PlotGenerator::CutHistogram(TH1* hist, double cutoff, double cutoffLow)
+void CutHistogram(TH1* hist, double cutoff, double cutoffLow)
 {
   if(cutoff < -997) return;
   int cutoffBin = hist->GetXaxis()->FindBin(cutoff);
@@ -781,7 +782,7 @@ void PlotGenerator::CutHistogram(TH1* hist, double cutoff, double cutoffLow)
  * @param cutoffLow: x axis value before which data is set to zero
  */
 //****************************************************************************************
-void PlotGenerator::CutGraph(TGraph* graph, double cutoff, double cutoffLow)
+void CutGraph(TGraph* graph, double cutoff, double cutoffLow)
 {
   bool cutLow = true;
   bool cutHigh = true;
@@ -820,7 +821,7 @@ void PlotGenerator::CutGraph(TGraph* graph, double cutoff, double cutoffLow)
  */
 //****************************************************************************************
 
-TGraph* PlotGenerator::DivideTSpline(TGraph* numerator, TGraph* denominator){
+TGraph* DivideTSpline(TGraph* numerator, TGraph* denominator){
   
   TGraph* result = (TGraph*)numerator->Clone("ratio");
   TSpline3* denSpline = new TSpline3("denSpline", denominator);
@@ -846,7 +847,7 @@ TGraph* PlotGenerator::DivideTSpline(TGraph* numerator, TGraph* denominator){
  */
 //****************************************************************************************
 
-TH1* PlotGenerator::DivideTSpline(TH1* numerator, TH1* denominator)
+TH1* DivideTSpline(TH1* numerator, TH1* denominator)
 {
   TGraph denominatorGraph(denominator);
   TSpline3 denominatorSpline(denominator);
@@ -864,4 +865,5 @@ TH1* PlotGenerator::DivideTSpline(TH1* numerator, TH1* denominator)
   return ratio;
 }
 
+} // end namespace PlottingTools
 } // end namespace PlottingFramework

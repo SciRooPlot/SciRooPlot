@@ -37,7 +37,7 @@ set(ADDITIONAL_FILES README.md TODO.md)
 # this variable contains the framework source code
 set(SRCS
   src/PlotManager.cxx
-  src/PlotGenerator.cxx
+  src/PlottingTools.cxx
   src/PlotStyle.cxx
   src/Plot.cxx
 )

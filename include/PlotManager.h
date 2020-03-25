@@ -19,7 +19,7 @@
 #define PlotManager_h
 
 #include "PlottingFramework.h"
-#include "PlotGenerator.h"
+#include "PlottingTools.h"
 #include "PlotStyle.h"
 #include "Plot.h"
 

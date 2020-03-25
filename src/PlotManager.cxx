@@ -283,7 +283,7 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
   }
   
   PlotStyle& plotStyle = GetPlotStyle(plot.GetPlotStyle());
-  shared_ptr<TCanvas> canvas = PlotGenerator::GeneratePlot(plot, plotStyle, mDataLedger);
+  shared_ptr<TCanvas> canvas = PlottingTools::GeneratePlot(plot, plotStyle, mDataLedger);
   if(!canvas) return;
   
   // if interactive mode is specified, open window instead of saving the plot
@@ -537,6 +537,7 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
   }
   
   
+  
 
   for(auto& inputFileName : fileNames)
   {
@@ -608,12 +609,11 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
       }
       // append subspecification from input name
       TObject* subfolder = FindSubDirectory(folder, subDirs);
-      if(!subfolder) continue;
-
-      // recursively traverse the file and look for input files
-      ReadData(subfolder, outputDataArray, curDataNames, curNewDataNames);
-      if(subfolder != &inputFile) {delete subfolder; subfolder = nullptr;}
-      
+      if(subfolder){
+        // recursively traverse the file and look for input files
+        ReadData(subfolder, outputDataArray, curDataNames, curNewDataNames);
+        if(subfolder != &inputFile) {delete subfolder; subfolder = nullptr;}
+      }
       std::move(std::begin(curDataNames), std::end(curDataNames), std::back_inserter(remainingDataNames));
       std::move(std::begin(curNewDataNames), std::end(curNewDataNames), std::back_inserter(remainingNewDataNames));
       }
@@ -626,14 +626,13 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
     std::move(std::begin(remainingDataNames), std::end(remainingDataNames), std::back_inserter(dataNames));
     std::move(std::begin(remainingNewDataNames), std::end(remainingNewDataNames), std::back_inserter(newDataNames));
   }
-  
-  
+
   // FIXME: move this stuff from here and mention also input identifier in error
   if(!dataNames.empty()){
     cout << endl << "----------------------------" << endl;
-    cout << " Data" << endl;
+    cout << " Data:" << endl;
     for(auto& dataName : dataNames) cout  << "  - " << dataName << endl;
-    cout << " not found in" << endl;
+    cout << " not found in any of the following files:" << endl;
     for(auto& inputFileName : fileNames) cout << "  - " << inputFileName << endl;
     cout << "----------------------------" << endl << endl;
   }

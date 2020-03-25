@@ -33,7 +33,6 @@ Major Features:
 Minor Features:
 - change from int to short wherever possible (colors, markers, etc)
 - option in main program to list loaded plots
-- replace PlotGenerator class with namespace
 - possibility to load all data from input files
 - load only allowed datatypes
 - setter for csv format string and delimiter
@@ -85,6 +84,7 @@ Bugs:
 - if lables are 1, 2, 3 height is not calculated correctly?
 
 Structural changes:
+- use for (auto& [key, value]: myMap) {} loops
 - replace couts with LOG macro expressions
 - think about how things can be implemented in a more general way as templates
 - change arguments referring to internal variables to const ref if possible to be more memory efficient, use lambdas

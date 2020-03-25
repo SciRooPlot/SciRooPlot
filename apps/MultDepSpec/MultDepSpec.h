@@ -52,6 +52,7 @@ struct pp_5TeV{
     static const string analysis;
     static const string pythia;
     static const string epos_lhc;
+    static const string epos;
   };
   struct marker{
     enum : int {
