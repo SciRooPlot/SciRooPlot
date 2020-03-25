@@ -83,7 +83,7 @@ public:
   // functions to modify
   const string& GetPlotStyle(){return mPlotStyle;}
   // maybe also getlegends gettexts
-  string GetUniqueName(){return mName + gNameGroupSeparator + mFigureGroup;}
+  string GetUniqueName(){return mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");}
   
   int GetNumRequiredPads(){return mData.size();}
   ptree GetPropetyTree();

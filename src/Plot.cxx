@@ -36,7 +36,17 @@ Plot::Plot()
 Plot::Plot(string name, string figureGroup, string plotStyle)
 : Plot()
 {
-  mName = name; mFigureGroup = figureGroup; mPlotStyle = plotStyle;
+  mName = name;
+  mFigureGroup = figureGroup;
+  mPlotStyle = plotStyle;
+  
+  // in case category was specified via figureGroup:my/category/tree
+  auto subPathPos = figureGroup.find(":");
+  if(subPathPos != string::npos)
+  {
+    mFigureGroup = figureGroup.substr(0, subPathPos);
+    mFigureCategory = figureGroup.substr(subPathPos+1);
+  }
 }
 
 

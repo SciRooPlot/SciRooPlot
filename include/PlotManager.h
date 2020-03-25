@@ -59,13 +59,13 @@ public:
   void AddPlot(Plot& plot);
   void DumpPlots(string plotFileName, string figureGroup = "", vector<string> plotNames = {});
   void DumpPlot(string plotFileName, string figureGroup, string plotName);
-  void LoadPlots(string plotFileName, string figureGroup = "", vector<string> plotNames = {});
-  void LoadPlot(string plotFileName, string figureGroup, string plotName);
-  void CreatePlots(string figureGroup = "", vector<string> plotNames = {}, string outputMode = "pdf");
-  void CreatePlot(string name, string figureGroup, string outputMode = "pdf");
+  void LoadPlots(string plotFileName, string figureGroup = "", string figureCategory = "", vector<string> plotNames = {});
+  void LoadPlot(string plotFileName, string figureGroup, string figureCategory, string plotName);
+  void CreatePlots(string figureGroup = "", string figureCategory = "", vector<string> plotNames = {}, string outputMode = "pdf");
+  void CreatePlot(string name, string figureGroup, string figureCategory = "", string outputMode = "pdf");
   
-  void CreatePlotsFromFile(string plotFileName, string figureGroup = "", vector<string> plotNames = {}, string outputMode = "pdf");
-  void CreatePlotFromFile(string plotFileName, string figureGroup, string plotName , string outputMode = "pdf");
+  void CreatePlotsFromFile(string plotFileName, string figureGroup = "", string figureCategory = "", vector<string> plotNames = {}, string outputMode = "pdf");
+  void CreatePlotFromFile(string plotFileName, string figureGroup, string figureCategory, string plotName , string outputMode = "pdf");
   
   
   // --- status accessors --

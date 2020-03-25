@@ -21,6 +21,7 @@
 using namespace PlottingFramework;
 namespace PlottingFramework {
 namespace PlottingTools{
+
 shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* availableData){
   
   // this should be in crator
@@ -435,7 +436,6 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
   
   //    canvas->SetTheta(20);
   //    canvas->SetPhi(45);
-  
   return shared_ptr<TCanvas>(canvas);
 }
 

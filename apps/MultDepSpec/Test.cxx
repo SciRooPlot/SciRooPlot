@@ -26,7 +26,34 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   // implement new feature inputIdentifier:subfolder
   { // -----------------------------------------------------------------------
     string plotName = "meanPt";
-    Plot myPlot(plotName, plotGroup);
+    Plot myPlot(plotName, plotGroup + ":QC/AC");
+    myPlot.AddHisto("momentUnfolded1", pp_5TeV::input::analysis, "", pp_5TeV::marker::data, pp_5TeV::color::data, "", 60);
+    myPlot.AddHisto("meanPt", pp_5TeV::input::pythia, "", pp_5TeV::marker::pythia, pp_5TeV::color::pythia, "", 60);
+    myPlot.AddHisto("meanPt", pp_5TeV::input::epos_lhc, "", kOpenCross, kRed+1, "", 60);
+    myPlot.AddGraph("meanPt", "Simulations:epos/pPb_5TeV");
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+  { // -----------------------------------------------------------------------
+    string plotName = "meanPt2";
+    Plot myPlot(plotName, plotGroup + ":QC/AC");
+    myPlot.AddHisto("momentUnfolded1", pp_5TeV::input::analysis, "", pp_5TeV::marker::data, pp_5TeV::color::data, "", 60);
+    myPlot.AddHisto("meanPt", pp_5TeV::input::pythia, "", pp_5TeV::marker::pythia, pp_5TeV::color::pythia, "", 60);
+    myPlot.AddHisto("meanPt", pp_5TeV::input::epos_lhc, "", kOpenCross, kGreen+1, "", 60);
+    myPlot.AddGraph("meanPt", "Simulations:epos/pPb_5TeV");
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+  { // -----------------------------------------------------------------------
+    string plotName = "meanPt";
+    Plot myPlot(plotName, plotGroup + ":QC/DC");
+    myPlot.AddHisto("momentUnfolded1", pp_5TeV::input::analysis, "", pp_5TeV::marker::data, pp_5TeV::color::data, "", 60);
+    myPlot.AddHisto("meanPt", pp_5TeV::input::pythia, "", pp_5TeV::marker::pythia, pp_5TeV::color::pythia, "", 60);
+    myPlot.AddHisto("meanPt", pp_5TeV::input::epos_lhc, "", kOpenCross, kBlue+1, "", 60);
+    myPlot.AddGraph("meanPt", "Simulations:epos/pPb_5TeV");
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+  { // -----------------------------------------------------------------------
+    string plotName = "meanPt";
+    Plot myPlot(plotName, plotGroup + ":QC");
     myPlot.AddHisto("momentUnfolded1", pp_5TeV::input::analysis, "", pp_5TeV::marker::data, pp_5TeV::color::data, "", 60);
     myPlot.AddHisto("meanPt", pp_5TeV::input::pythia, "", pp_5TeV::marker::pythia, pp_5TeV::color::pythia, "", 60);
     myPlot.AddHisto("meanPt", pp_5TeV::input::epos_lhc, "", kOpenCross, kRed+1, "", 60);

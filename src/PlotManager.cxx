@@ -18,7 +18,7 @@
 #include "PlotManager.h"
 
 using namespace PlottingFramework;
-namespace PlottingFramework{// BEGIN namespace PlottingFramework
+namespace PlottingFramework{
 
 //****************************************************************************************
 /**
@@ -35,7 +35,7 @@ PlotManager::PlotManager() : mApp("MainApp", 0, 0)
   mSaveToRootFile = false;
   mOutputFileName = "ResultPlots.root";
   
-  mUseUniquePlotNames = true;
+  mUseUniquePlotNames = false;
   DefineDefaultPlottingStyles();
   gErrorIgnoreLevel = kWarning;
 }
@@ -190,9 +190,10 @@ void PlotManager::DumpPlots(string plotFileName, string figureGroup, vector<stri
         if(!found) continue;
       }
     }
-    string displayedName = plot.GetName();
+    string displayedName = plot.GetUniqueName();
     std::replace(displayedName.begin(),displayedName.end(), '.', '_');
-    plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName + gNameGroupSeparator + plot.GetFigureGroup()), plot.GetPropetyTree());
+    std::replace(displayedName.begin(),displayedName.end(), '/', '|');
+    plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName), plot.GetPropetyTree());
   }
   boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
   write_xml(gSystem->ExpandPathName(plotFileName.c_str()), plotTree, std::locale(), settings);
@@ -222,18 +223,27 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(string& plotFileName){
  * Load plots from xml file.
  */
 //****************************************************************************************
-void PlotManager::LoadPlots(string plotFileName, string figureGroup, vector<string> plotNames){
+void PlotManager::LoadPlots(string plotFileName, string figureGroup, string figureCategory, vector<string> plotNames){
+
+  // in case category was specified via figureGroup:my/category/tree
+  string figureCategorySuffix = "";
+  if(figureCategory != "")
+  {
+    figureCategorySuffix = ":" + figureCategory;
+    std::replace(figureCategorySuffix.begin(),figureCategorySuffix.end(), '/', '|');
+  }
+  
   ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
   for(auto& plotGroupTree : inputTree){
-    if(figureGroup != "" && plotGroupTree.first != "GROUP::"+figureGroup) continue;
+    if(figureGroup != "" && plotGroupTree.first != "GROUP::" + figureGroup) continue;
     for(auto& plotTree : plotGroupTree.second){
       bool found = false;
       if(plotNames.empty()){
         found = true;
       }else{
         for(auto& plotName : plotNames){
-          string entryName = "PLOT::" + plotName + gNameGroupSeparator + figureGroup;
-          if(entryName.find(plotTree.first) != string::npos) found = true;
+          string entryName = "PLOT::" + plotName + gNameGroupSeparator + figureGroup + figureCategorySuffix;
+          if(entryName == plotTree.first) found = true;
         }
       }
       if(!found) continue;
@@ -247,7 +257,7 @@ void PlotManager::LoadPlots(string plotFileName, string figureGroup, vector<stri
     }
   }
 }
-void PlotManager::LoadPlot(string plotFileName, string figureGroup, string plotName)
+void PlotManager::LoadPlot(string plotFileName, string figureGroup, string figureCategory, string plotName)
 {
   LoadPlots(plotFileName, figureGroup, {plotName});
 }
@@ -259,6 +269,13 @@ void PlotManager::LoadPlot(string plotFileName, string figureGroup, string plotN
 //****************************************************************************************
 void PlotManager::GeneratePlot(Plot& plot, string outputMode)
 {
+  // if plot already exists, delete the old one first
+  if( mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end())
+  {
+    ERRORF("Plot %s was already created. Replacing it.", plot.GetUniqueName().c_str());
+    mPlotLedger.erase(plot.GetUniqueName());
+  }
+  
   bool isPlotStyleBooked = false;
   for(auto& plotStyle : mPlotStyles)
   {
@@ -276,10 +293,6 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
   
   if(outputMode.find("file") != string::npos){
     mSaveToRootFile = true;
-    // delete the old plot before adding a new one with the same name
-    if( mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()){
-      mPlotLedger.erase(plot.GetUniqueName());
-    }
   }
   
   PlotStyle& plotStyle = GetPlotStyle(plot.GetPlotStyle());
@@ -346,6 +359,9 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
   }
   
   if(!mUseUniquePlotNames) fileName = plot.GetName();
+  std::replace(fileName.begin(),fileName.end(), '/', '_');
+  std::replace(fileName.begin(),fileName.end(), ':', '_');
+
   // create output folders and files
   string folderName = mOutputDirectory + "/" + plot.GetFigureGroup();
   if(subFolder != "") folderName += "/" + subFolder;
@@ -359,7 +375,7 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
  * Creates plots.
  */
 //****************************************************************************************
-void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, string outputMode)
+void PlotManager::CreatePlots(string figureGroup, string figureCategory, vector<string> plotNames, string outputMode)
 {
   map<int, set<int>> requiredData;
   bool saveAll = (figureGroup == "");
@@ -369,7 +385,7 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
   // first determine which data needs to be loaded
   for(auto& plot : mPlots)
   {
-    if(!saveAll && !(plot.GetFigureGroup() == figureGroup)) continue;
+    if(!saveAll && !(plot.GetFigureGroup() == figureGroup && plot.GetFigureCategory() == figureCategory)) continue;
     if(saveSpecificPlots && std::find(plotNames.begin(), plotNames.end(), plot.GetName()) == plotNames.end()) continue;
     if(!plotNames.empty()) plotNames.erase(std::remove(plotNames.begin(), plotNames.end(), plot.GetName()), plotNames.end());
     selectedPlots.push_back(&plot);
@@ -395,10 +411,9 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
   
   // were definitions for all requeseted plots available?
   if(!plotNames.empty()){
-    cout << "The following plots are not defined:" << endl;
     for(auto& plotName : plotNames)
     {
-      cout << " - " << plotName << endl;
+      ERRORF("Could not find plot %s in %s:%s", plotName.c_str(), figureGroup.c_str(), figureCategory.c_str());
     }
   }
   
@@ -423,24 +438,24 @@ void PlotManager::CreatePlots(string figureGroup, vector<string> plotNames, stri
       GeneratePlot(*plot, outputMode);
     else
     {
-      cout << "ERROR: Plot '" << plot->GetName() << "' in figure group '" << plot->GetFigureGroup() << "' could not be created." << endl;
+      ERRORF("Plot '%s' in figure group '%s' could not be created.", plot->GetName().c_str(), plot->GetFigureGroup().c_str());
     }
   }
 }
 
-void PlotManager::CreatePlot(string plotName, string figureGroup, string outputMode)
+void PlotManager::CreatePlot(string plotName, string figureGroup, string figureCategory, string outputMode)
 {
-  CreatePlots(figureGroup, {plotName}, outputMode);
+  CreatePlots(figureGroup, figureCategory, {plotName}, outputMode);
 }
 
-void PlotManager::CreatePlotsFromFile(string plotFileName, string figureGroup, vector<string> plotNames, string outputMode){
-  LoadPlots(plotFileName, figureGroup, plotNames);
-  CreatePlots(figureGroup, plotNames, outputMode);
+void PlotManager::CreatePlotsFromFile(string plotFileName, string figureGroup, string figureCategory, vector<string> plotNames, string outputMode){
+  LoadPlots(plotFileName, figureGroup, figureCategory, plotNames);
+  CreatePlots(figureGroup, figureCategory, plotNames, outputMode);
 }
 
-void PlotManager::CreatePlotFromFile(string plotFileName, string figureGroup, string plotName, string outputMode){
-  LoadPlots(plotFileName, figureGroup, {plotName});
-  CreatePlots(figureGroup, {plotName}, outputMode);
+void PlotManager::CreatePlotFromFile(string plotFileName, string figureGroup, string figureCategory, string plotName, string outputMode){
+  LoadPlots(plotFileName, figureGroup, figureCategory, {plotName});
+  CreatePlots(figureGroup, figureCategory, {plotName}, outputMode);
 }
 
 
@@ -476,8 +491,9 @@ void PlotManager::ListPlotsDefinedInFile(string plotFileName, string plotNameReg
     for(auto& plotTree : plotGroupTree.second){
       string plotName = plotTree.second.get<string>("name");
       string figureGroup = plotTree.second.get<string>("figureGroup");
+      string figureCategory = plotTree.second.get<string>("figureCategory");
       if(plotNameRegexp != "" && plotName.find(plotNameRegexp) == string::npos) continue;
-      cout << "-- found plot \"" << plotName << "\" in group \"" << figureGroup << "\""<< endl;
+      cout << "-- found plot \"" << plotName << "\" in group \"" << figureGroup << ((figureCategory != "") ? ":" + figureCategory : "") << "\"" << endl;
     }
   }
 }

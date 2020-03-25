@@ -147,7 +147,6 @@ int main(int argc, char *argv[])
   // create plotting environment
   PlotManager plotEnv;
   plotEnv.SetOutputDirectory(outputFilesBasePath);
-  plotEnv.SetUseUniquePlotNames(false);
   
   if(mode == "find"){
     // TODO: make this find multiple things as well
@@ -165,8 +164,16 @@ int main(int argc, char *argv[])
     if(plotNames == "all") plotNamesVector = {};
     //if(figureGroups == "all") figureGroupsVector = {}; //TODO: add this feature
     
-    for(auto& inputIdentifier : figureGroupsVector){
-      plotEnv.CreatePlotsFromFile(plotDefConfig, inputIdentifier, plotNamesVector, mode);
+    for(auto& figureGroup : figureGroupsVector){
+      string figureCategory = "";
+      // in case category was specified via figureGroup:my/category/tree
+      auto subPathPos = figureGroup.find(":");
+      if(subPathPos != string::npos)
+      {
+        figureCategory = figureGroup.substr(subPathPos+1);
+        figureGroup = figureGroup.substr(0, subPathPos);
+      }
+      plotEnv.CreatePlotsFromFile(plotDefConfig, figureGroup, figureCategory, plotNamesVector, mode);
     }
     return 0;
   }

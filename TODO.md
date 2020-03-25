@@ -1,12 +1,12 @@
 ANALYSIS:
 ---------
 - straighten up Fit, Simulation, Publication input names
-- categorize plots, group them in functions
+- categorize plots
 - add data specific colors and markers
 - clean up file names and make useful sub-folders
 - add more qa plots for unfolding
 - finally fix the naming of the output -> unfoldedMeanPt, etc or use subfolders: generated/meanPt, unfolded/meanPt, generatedMC/meanPt?
-- fix naming in simulations, 5.02 TeV? -> make consistent, split in multiple files!
+
 
 FRAMEWORK:
 ----------
