@@ -27,10 +27,8 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
   // this should be in crator
   if(plotStyle.GetNPads() < plot.GetNumRequiredPads())
   {
-    cout << "ERROR: Number of pads in style '"  << plotStyle.GetName() << "' ("
-    << plotStyle.GetNPads() << ") does not match the number of pads needed for plotting '"
-    << plot.GetUniqueName() << "' (" << plot.GetNumRequiredPads() << ")." << endl;
-    // TODO: also catch if pad indices are available!
+    ERROR("The number of pads in style \"{}\" ({}) does not match the number of pads needed to generate \"{}\" ({}).", plotStyle.GetName(), plotStyle.GetNPads(), plot.GetUniqueName(), plot.GetNumRequiredPads());
+    // FIXME: also catch if pad indices are available!
     return nullptr;
   }
   
@@ -54,7 +52,8 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     canvas->cd();
     string padName = "Pad_" + std::to_string(padID);
     TPad* pad = new TPad(padName.c_str(),"", padStyle.GetXLow(), padStyle.GetYLow(), padStyle.GetXUp(), padStyle.GetYUp());
-    //cout << "PAD dimensons: " <<  padStyle.GetXLow() << "," << padStyle.GetYLow() << "," << padStyle.GetXUp() << "," << padStyle.GetYUp() << endl;
+    
+    //DEBUG("PAD dimensons: {}, {}, {}, {}.", padStyle.GetXLow(), padStyle.GetYLow(), padStyle.GetXUp(), padStyle.GetYUp());
     pad->SetFillStyle(plotStyle.GetFillStyle()); // todo make this pad dependent
     //pad->SetFillColor(plotStyle.GetFillColor());
     pad->SetTopMargin(padStyle.GetTopMargin());
@@ -253,7 +252,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
         graph->Draw(drawingOptions.c_str());
       }
       else{
-        cout << "ERROR: no matching representation found for " << data->GetName() << endl;
+        ERROR("No matching representation found for {}.", data->GetName());
         continue;
       }
       
@@ -345,8 +344,8 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     if(axisObject->InheritsFrom(TH1::Class())) axisHist = (TH1*)axisObject;
     else if(axisObject->InheritsFrom(TGraph::Class())) axisHist = (TH1*)((TGraph*)axisObject)->GetHistogram();
     else if(axisObject->InheritsFrom(TF1::Class())) axisHist = (TH1*)((TF1*)axisObject)->GetHistogram();
-    else cout << "ERROR: Cannot handle type " << typeid(axisObject).name() << endl;
-    if(!axisHist){cout << "ERROR: unable to access axes!!" << endl; continue;}
+    else ERROR("Cannot handle type {}.", typeid(axisObject).name());
+    if(!axisHist){ERROR("Unable to access axes."); continue;}
     axisHist->GetXaxis()->SetTitleOffset(padStyle.GetTitleOffsetX());
     axisHist->GetYaxis()->SetTitleOffset(padStyle.GetTitleOffsetY());
     axisHist->GetZaxis()->SetTitleOffset(padStyle.GetTitleOffsetZ());
@@ -449,7 +448,7 @@ T* GetDataClone(string dataName, TObjArray* availableData)
   {
     if(!obj->InheritsFrom(T::Class()))
     {
-      cout << "ERROR: " << dataName << " is of type " << obj->ClassName() << " instead of " << string(typeid(T).name()).substr(1) << "." << endl;
+      ERROR("Input data \"{}\" is of type {} instead of {}.", dataName, obj->ClassName(), string(typeid(T).name()).substr(1));
     }
     else
     {
@@ -457,7 +456,7 @@ T* GetDataClone(string dataName, TObjArray* availableData)
       //data->SetDirectory(0); // does not work for tgraphs because they are not attached to current file
     }
   }else{
-    cout << "ERROR: " << dataName << " was not loaded." << endl;
+    ERROR("Input data \"{}\" was not loaded.", dataName);
   }
   return data;
 }
@@ -605,7 +604,7 @@ TLegend* MakeLegend(shared_ptr<Plot::LegendBox> legendBox, TPad* pad, TObjArray&
       upperLeftY = lowerLeftY + totalHeightNDC + 2*marginY;
     }
     else{
-      cout << "Warning: Could not find enough space to place legend properly." << endl;
+      WARNING("Could not find enough space to place the legend properly.");
       // just place legend within axis ranges of pad
       upperLeftX = (pad->GetUxmin() - pad->GetX1())/(pad->GetX2()-pad->GetX1()) + (1+1/fractionOfTickLenght)*marginX;
       upperLeftY = (pad->GetUymax() - pad->GetY1())/(pad->GetY2()-pad->GetY1()) - (1+1/fractionOfTickLenght)*marginY;
@@ -617,7 +616,7 @@ TLegend* MakeLegend(shared_ptr<Plot::LegendBox> legendBox, TPad* pad, TObjArray&
        TObject* dummyObject = pad->GetListOfPrimitives()->At(1);
        if(dummyObject && dummyObject->InheritsFrom(TH1::Class())){
        TH1* hist = (TH1*)dummyObject;
-       cout << "hello " << hist->GetYaxis()->GetXmin() << "  " << totalHeightNDC / pad->GetWh()  << endl;
+       DEBUG("MinX: {}, some ratio: {}.", hist->GetYaxis()->GetXmin(), totalHeightNDC / pad->GetWh());
        hist->GetYaxis()->SetRangeUser(pad->GetUymin(), pad->GetUymax());
        pad->Update();
        }

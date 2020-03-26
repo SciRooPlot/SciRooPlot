@@ -159,7 +159,7 @@ public:
       mSize = dataTree.get<int>("size");
       mDrawingOptions = dataTree.get<string>("drawingOptions");
     }catch(...){
-      cout << "ERROR: could not construct data from ptree." << endl;
+      ERROR("Could not construct data from ptree.");
     }
   }
   
@@ -237,7 +237,7 @@ public:
       mHistoRangeY.first = dataTree.get<double>("rangeX_low");
       mHistoRangeY.second = dataTree.get<double>("rangeX_high");
     }catch(...){
-      cout << "ERROR: could not construct histogram from ptree." << endl;
+      ERROR("Could not construct histogram from ptree.");
     }
   }
   
@@ -283,7 +283,7 @@ public:
       mDivideMethod = "";
       //mDivideMethod = dataTree.get<double>("divideMethod"); // TODO:: it should not crash if xml entry is empty!!
     }catch(...){
-      cout << "ERROR: could not construct ratio from ptree." << endl;
+      ERROR("Could not construct ratio from ptree.");
     }
   }
   
@@ -327,7 +327,7 @@ public:
       mGraphRangeX.first = dataTree.get<double>("rangeX_low");
       mGraphRangeX.second = dataTree.get<double>("rangeX_high");
     }catch(...){
-      cout << "ERROR: could not construct graph from ptree." << endl;
+      ERROR("Could not construct graph from ptree.");
     }
   }
 private:
@@ -371,7 +371,7 @@ public:
     try{
       mFormula = dataTree.get<string>("formula");
     }catch(...){
-      cout << "ERROR: could not construct function from ptree." << endl;
+      ERROR("Could not construct function from ptree.");
     }
   }
   
@@ -427,7 +427,7 @@ public:
       mRange.second = axisTree.get<double>("range_high");
       mNumTicks = axisTree.get<int>("numTicks");
     }catch(...){
-      cout << "ERROR: could not construct axis from ptree." << endl;
+      ERROR("Could not construct axis from ptree.");
     }
   }
   
@@ -489,7 +489,7 @@ public:
       mBorderSize = boxTree.get<int>("borderSize");
       mBorderColor = boxTree.get<int>("borderColor");
     }catch(...){
-      cout << "ERROR: could not construct box from ptree." << endl;
+      ERROR("Could not construct box from ptree.");
     }
     
   }
@@ -542,7 +542,7 @@ public:
     try{
       mText = boxTree.get<string>("text");
     }catch(...){
-      cout << "ERROR: could not construct textbox from ptree." << endl;
+      ERROR("Could not construct textbox from ptree.");
     }
   }
   
@@ -587,7 +587,7 @@ public:
       mTitle = boxTree.get<string>("title");
       mNumColumns = boxTree.get<int>("numColumns");
     }catch(...){
-      cout << "ERROR: could not construct legendbox from ptree." << endl;
+      ERROR("Could not construct legendbox from ptree.");
     }
   }
   

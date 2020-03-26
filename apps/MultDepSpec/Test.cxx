@@ -30,7 +30,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.AddHisto("momentUnfolded1", pp_5TeV::input::analysis, "", pp_5TeV::marker::data, pp_5TeV::color::data, "", 60);
     myPlot.AddHisto("meanPt", pp_5TeV::input::pythia, "", pp_5TeV::marker::pythia, pp_5TeV::color::pythia, "", 60);
     myPlot.AddHisto("meanPt", pp_5TeV::input::epos_lhc, "", kOpenCross, kRed+1, "", 60);
-    myPlot.AddGraph("meanPt", "Simulations:epos/pPb_5TeV");
+    myPlot.AddGraph("meanPt23", "Simulations:epos/pPb_5TeV");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------

@@ -77,16 +77,17 @@
 
 
 // some preprocessor macros for logging, printing and debugging
-#define DEBUG(s, ...) fmt::print(stderr, "\033[1;36m[ DEBUG   ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");
-#define WARNING(s, ...) fmt::print(stderr, "\033[1;33m[ WARNING ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");
-#define ERROR(s, ...) fmt::print(stderr, "\033[1;31m[ ERROR   ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");
+#define DEBUG(s, ...) {fmt::print(stderr, "\033[1;36m[ DEBUG   ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");}
+#define WARNING(s, ...) {fmt::print(stderr, "\033[1;33m[ WARNING ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");}
+#define ERROR(s, ...) {fmt::print(stderr, "\033[1;31m[ ERROR   ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");}
 
-#define LOG(s, ...) fmt::print("\033[1;32m[ LOG     ]\033[0m "); fmt::print(s, ##__VA_ARGS__); fmt::print("\n");
-#define INFO(s, ...) fmt::print("\033[1;37m[ INFO    ]\033[0m "); fmt::print(s, ##__VA_ARGS__); fmt::print("\n");
+#define LOG(s, ...) {fmt::print("\033[1;32m[ LOG     ]\033[0m "); fmt::print(s, ##__VA_ARGS__); fmt::print("\n");}
+#define INFO(s, ...) {fmt::print("\033[1;37m[ INFO    ]\033[0m "); fmt::print(s, ##__VA_ARGS__); fmt::print("\n");}
 
-#define PRINT(s, ...) fmt::print(s, ##__VA_ARGS__); fmt::print("\n");
-#define PRINT_INLINE(s, ...) fmt::print(s, ##__VA_ARGS__);
-#define HERE fmt::print("\033[1;33m[  HERE   ]\033[0m Line {} in function {} ({})", __LINE__, __FUNCTION__, __FILE__); fmt::print("\n");
+#define PRINT(s, ...) {fmt::print(s, ##__VA_ARGS__); fmt::print("\n");}
+#define PRINT_INLINE(s, ...) {fmt::print(s, ##__VA_ARGS__);}
+#define PRINT_SEPARATOR {PRINT(fmt::format("{:-<{}}", "-", 100));}
+#define HERE {fmt::print("\033[1;33m[  HERE   ]\033[0m Line {} in function {} ({})", __LINE__, __FUNCTION__, __FILE__); fmt::print("\n");}
 
 // Debug suppression levels
 #if DEBUG_LVL < 2

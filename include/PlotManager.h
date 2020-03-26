@@ -70,7 +70,7 @@ public:
   
   // --- status accessors --
   void PrintStatus();
-  void ListPlots(bool verbose = false){for(auto& plot : mPlots) {cout << plot.GetName() << endl;}} // list all plots available in the manager
+  void ListPlots(bool verbose = false){for(auto& plot : mPlots) {PRINT("{}", plot.GetName());}} // list all plots available in the manager
   void ListData(); // list all input data (histos, graphs, etc) available in the manager
   void ListPlotStyles(); // list all available plot styles
   

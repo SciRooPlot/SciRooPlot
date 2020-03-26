@@ -91,13 +91,13 @@ int main(int argc, char *argv[])
     po::notify(vm);
     
     if (vm.count("help")) {
-      cout << endl;
-      cout << "Find plots defined in plotDefinitions file:" << endl << endl;
-      cout << "  ./plot find  <plotNameRegexp> <figureGroupRegexp>" << endl << endl;
-      cout << "Generate plots defined in plotDefinitions file:" << endl << endl;
-      cout << "  ./plot <interactive|pdf|eps|bitmap|file> <figureGroup,figureGroup2|all> <plotName,plotName2|all>" << endl << endl;
-      cout << "Input config and ouput plot paths can also be steered via env variables PLOTTING_CONFIG_FOLDER and PLOTTING_OUTPUT_FOLDER." << endl << endl;
-      cout << options << "\n";
+      PRINT("");
+      PRINT("Find plots defined in plotDefinitions file:");
+      PRINT("  ./plot find  <plotNameRegexp> <figureGroupRegexp>\n");
+      PRINT("Generate plots defined in plotDefinitions file:\n");
+      PRINT("  ./plot <interactive|pdf|eps|bitmap|file> <figureGroup,figureGroup2|all> <plotName,plotName2|all>\n");
+      PRINT("Input config and ouput plot paths can also be steered via env variables PLOTTING_CONFIG_FOLDER and PLOTTING_OUTPUT_FOLDER.\n");
+      //PRINT("{}", options)
       return 0;
     }
     if (vm.count("inputFilesConfig")) {
@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
   // create plotting environment
   PlotManager plotEnv;
   plotEnv.SetOutputDirectory(outputFolder);
-  INFO("reading plot definitions from {}", plotDefConfig);
+  INFO("Reading plot definitions from {}.", plotDefConfig);
 
   if(mode == "find"){
     // TODO: make this find multiple things as well
@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
     return 0;
   }
   else{
-    INFO("-- reading input files from {}", inputFilesConfig);
+    INFO("Reading input files from {}.", inputFilesConfig);
 
     // plot only specific plots stored in the plotConfig file
     plotEnv.LoadInputDataFiles(inputFilesConfig);

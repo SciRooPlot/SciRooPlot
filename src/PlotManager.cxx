@@ -50,7 +50,7 @@ PlotManager::~PlotManager()
   mDataLedger->Delete();
   if(!mPlotLedger.empty()){
     if(mSaveToRootFile == true){
-      cout << "Saving plots to file " << mOutputFileName << endl;
+      INFO("Saving plots to file {}.", mOutputFileName);
       
       TFile outputFile(mOutputFileName.c_str(), "RECREATE");
       if (outputFile.IsZombie()){
@@ -103,7 +103,7 @@ void PlotManager::SetOutputDirectory(string path)
 void PlotManager::AddInputDataFiles(string inputIdentifier, vector<string> inputFilePathList)
 {
   if(mInputFiles.find(inputIdentifier) != mInputFiles.end() ){
-    cout << "WARNING: replacing input identifier " << inputIdentifier << "." << endl;
+    WARNING("Replacing input identifier {}.", inputIdentifier);
   }
   mInputFiles[inputIdentifier] = inputFilePathList;
 }
@@ -144,7 +144,7 @@ void PlotManager::LoadInputDataFiles(string configFileName)
   try{
     read_xml(gSystem->ExpandPathName(configFileName.c_str()), inputFileTree);
   }catch(...){
-    cout << "ERROR: Cannot load file " << configFileName << endl;
+    ERROR("Cannot load file {}.", configFileName);
     return;
   }
   for(auto& inputPair : inputFileTree){
@@ -252,7 +252,7 @@ void PlotManager::LoadPlots(string plotFileName, string figureGroup, string figu
         AddPlot(plot);
       }catch(...)
       {
-        cout << "ERROR: could not generate plot " << plotTree.first << " from xml file." << endl;
+        ERROR("Could not generate plot {} from XML file.", plotTree.first);
       }
     }
   }
@@ -283,11 +283,11 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
   }
   if(!isPlotStyleBooked)
   {
-    cout << "ERROR: PlotStyle " << plot.GetPlotStyle() << " is not booked. Cannot create plot " << plot.GetUniqueName() << "." << endl;
+    ERROR("PlotStyle {} is not booked. Cannot create plot {}.", plot.GetPlotStyle(), plot.GetUniqueName());
     return;
   }
   if(plot.GetFigureGroup() == ""){
-    cout << "ERROR: Please specify a figure group!" << endl;
+    ERROR("No figure gropu was specified.");
     return;
   }
   
@@ -413,7 +413,7 @@ void PlotManager::CreatePlots(string figureGroup, string figureCategory, vector<
   if(!plotNames.empty()){
     for(auto& plotName : plotNames)
     {
-      ERROR("Could not find plot {} in {}:{}", plotName, figureGroup, figureCategory);
+      WARNING("Could not find plot \"{}\" in group \"{}\"", plotName, figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
     }
   }
   
@@ -493,7 +493,7 @@ void PlotManager::ListPlotsDefinedInFile(string plotFileName, string plotNameReg
       string figureGroup = plotTree.second.get<string>("figureGroup");
       string figureCategory = plotTree.second.get<string>("figureCategory");
       if(plotNameRegexp != "" && plotName.find(plotNameRegexp) == string::npos) continue;
-      cout << "-- found plot \"" << plotName << "\" in group \"" << figureGroup << ((figureCategory != "") ? ":" + figureCategory : "") << "\"" << endl;
+      PRINT("-- found plot \"{}\" in group \"{}\"", plotName, figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
     }
   }
 }
@@ -505,10 +505,10 @@ void PlotManager::ListPlotsDefinedInFile(string plotFileName, string plotNameReg
 //****************************************************************************************
 void PlotManager::ListData()
 {
-  cout << "Loaded input data:" << endl;
+  PRINT("Loaded input data:");
   for(const auto& data : *mDataLedger)
   {
-    cout << " - " << ((TNamed*)data)->GetName() << endl;
+    PRINT(" - ", ((TNamed*)data)->GetName());
   }
 }
 
@@ -570,7 +570,7 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
             
     TFile inputFile(fileName.c_str(), "READ");
     if (inputFile.IsZombie()) {
-      cout << "ERROR: input file " << fileName << " not found." << endl;
+      ERROR("Input file {} not found.", fileName);
       break;
     }
     
@@ -588,7 +588,7 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
       // append subspecification from input name
       folder = FindSubDirectory(folder, subDirs);
       if(!folder){
-        cout << "ERROR: subdirectory '" << tokens[1] << "'' not found in '" << fileName << "'."<< endl;
+        ERROR("Subdirectory \"{}\" not found in \"{}\".", tokens[1], fileName);
         return;
       }
     }
@@ -643,14 +643,14 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
     std::move(std::begin(remainingNewDataNames), std::end(remainingNewDataNames), std::back_inserter(newDataNames));
   }
 
-  // FIXME: move this stuff from here and mention also input identifier in error
   if(!dataNames.empty()){
-    cout << endl << "----------------------------" << endl;
-    cout << " Data:" << endl;
-    for(auto& dataName : dataNames) cout  << "  - " << dataName << endl;
-    cout << " not found in any of the following files:" << endl;
-    for(auto& inputFileName : fileNames) cout << "  - " << inputFileName << endl;
-    cout << "----------------------------" << endl << endl;
+    WARNING("Not all required inputs could be found.");
+    PRINT_SEPARATOR;
+    PRINT(" Data:");
+    for(auto& dataName : dataNames) PRINT("  - {}", dataName);
+    PRINT(" not found in any of the following files:");
+    for(auto& inputFileName : fileNames) PRINT("  - {}", inputFileName);
+    PRINT_SEPARATOR;
   }
 }
 
@@ -713,7 +713,7 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
 
   // consistency check for name vectors
   if(!newDataNames.empty() && newDataNames.size() != dataNames.size()){
-    cout << "ERROR: newDataNames vector has the wrong size" << endl;
+    ERROR("newDataNames vector has the wrong size");
     return;
   }
 
@@ -735,7 +735,7 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
     itemList = (TCollection*)folder;
   }
   else{
-    cout << "ERROR: Dataformat not supported." << endl;
+    ERROR("Dataformat not supported.");
     return;
   }
   itemList->SetOwner();
@@ -793,7 +793,7 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
     if(removeFromList) {
       if(itemList->Remove(obj) == nullptr)
       {
-        cout << "ERROR: could not remove item " << ((TNamed*)obj)->GetName() << "(" << obj << ") from collection " << itemList->GetName() << endl;
+        ERROR("Could not remove item {} ({}) from collection {}.", ((TNamed*)obj)->GetName(), (void*)obj, itemList->GetName());
       }
     }
     if(deleteObject){
@@ -810,13 +810,7 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
 //****************************************************************************************
 void PlotManager::PrintStatus()
 {
-  cout << "=================== Manager Status ===========================" << endl;
-  cout << "Input identifiers: " << mInputFiles.size() << endl;
-  cout << "Plot styles: " << mPlotStyles.size() << endl;
-  cout << "Plot definitions: " << mPlots.size() << endl;
-  cout << "Loaded data inputs: " << mDataLedger->GetEntries() << endl;
-  cout << "==============================================================" << endl;
-  
+  INFO("Printing manager status is not implemented yet.");
 }
 
 
@@ -827,26 +821,7 @@ void PlotManager::PrintStatus()
 //****************************************************************************************
 void PlotManager::ListPlotStyles()
 {
-  for(auto& plotStyle : mPlotStyles)
-  {
-    cout << "======== " << plotStyle.GetName() << " ========" << endl;
-    cout << "  >> Width  : " << plotStyle.GetWidth() << endl;
-    cout << "  >> Height : " << plotStyle.GetHeight() << endl;
-    cout << "  >> nPads  : " << plotStyle.GetNPads() << endl;
-    int padID = 1;
-    string lines = string((int)((plotStyle.GetName().length()+17 - 7) / 2) , '-');
-    for(auto& padStyle : plotStyle.GetPadStyles())
-    {
-      cout << "  " << lines << " Pad " << padID << " " << lines << endl;
-      cout << "    << Position (xlow, ylow, xup, yup)   : (" << padStyle.GetXLow() << ", " << padStyle.GetYLow() << ", " << padStyle.GetXUp() << ", " << padStyle.GetYUp() << ")" << endl;
-      cout << "    << Margin (top, bottom, left, right) : (" << padStyle.GetTopMargin() << ", " << padStyle.GetBottomMargin() << ", " << padStyle.GetLeftMargin() << ", " << padStyle.GetRightMargin() << ")" << endl;
-      cout << "    << Title offset (x, y, z)            : (" << padStyle.GetTitleOffsetX() << ", " << padStyle.GetTitleOffsetY() << ", " << padStyle.GetTitleOffsetZ() << ")" << endl;
-      
-      padID++;
-    }
-    cout << "========" << string((int)plotStyle.GetName().length() +2, '=') << "========" << endl << endl;
-    
-  }
+  INFO("Listing PlotStyles is not implemented yet.");
 }
 
 //****************************************************************************************
@@ -983,7 +958,7 @@ PlotStyle& PlotManager::GetPlotStyle(string plotStyleName)
   {
     if(plotStyle.GetName() == plotStyleName) return plotStyle;
   }
-  cout << "ERROR: plot style named " << plotStyleName << " not found." << endl;
+  ERROR("PlotStyle named {} not found.", plotStyleName);
   return GetPlotStyle("default"); // if style not found return default style
 }
 

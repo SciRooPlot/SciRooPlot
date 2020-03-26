@@ -112,7 +112,7 @@ Plot::Plot(ptree &plotTree)
     
     
   }catch(...){
-    cout << "ERROR: could not construct data from ptree." << endl;
+    ERROR("Could not construct data from ptree.");
   }
   mClearCutoffBin = false;
   mCurrPad = 1;
