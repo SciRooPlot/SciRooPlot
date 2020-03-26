@@ -8,6 +8,11 @@
 
 namespace MultDepSpec{
 
+const string gConfigFolder = "~/Desktop/PlottingFramework/apps/MultDepSpec/config/";
+const string gInputFilesConfig = gConfigFolder + "inputFiles.XML";
+const string gPlotDefConfig = gConfigFolder + "plotDefinitions.XML";
+const string gDatasetFolder = "~/Desktop/AliMultDepSpec/Datasets/";
+
 using PlottingFramework::PlotManager;
 using PlottingFramework::Plot;
 

@@ -46,12 +46,16 @@ inline bool fileExists(const std::string& name) {
 // This program is intended to generate plots from plotDefinitions saved in xml files
 int main(int argc, char *argv[])
 {
-  // FIXME: put this stuff in config file
-  string configDir = "~/Desktop/PlottingFramework/config";
-  string inputFilesConfig = configDir + "/inputFiles.XML";
-  string plotDefConfig = configDir + "/plotDefinitions.XML";
-  string outputFilesBasePath = "~/Desktop/testPlots";
+  // set default values
+  string configFolder = (gSystem->Getenv("PLOTTING_CONFIG_FOLDER")) ?
+  gSystem->ExpandPathName("${PLOTTING_CONFIG_FOLDER}/") : "plotting_config/";
   
+  string outputFolder = (gSystem->Getenv("PLOTTING_OUTPUT_FOLDER")) ?
+  gSystem->ExpandPathName("${PLOTTING_OUTPUT_FOLDER}/") : "plotting_output/";
+
+  string inputFilesConfig = configFolder + "inputFiles.XML";
+  string plotDefConfig = configFolder + "plotDefinitions.XML";
+
   string mode;
   string figureGroups;
   string plotNames;
@@ -64,7 +68,7 @@ int main(int argc, char *argv[])
     ("help", "Show this help message.")
     ("inputFilesConfig", po::value<string>(), "Location of config file containing the input file paths.")
     ("plotDefConfig", po::value<string>(), "Location of config file containing the plot definitions.")
-    ("outputFilesBasePath", po::value<string>(), "Folder where output files should be saved.")
+    ("outputFolder", po::value<string>(), "Folder where output files should be saved.")
     ;
     
     po::options_description arguments("Positional arguments");
@@ -92,6 +96,7 @@ int main(int argc, char *argv[])
       cout << "  ./plot find  <plotNameRegexp> <figureGroupRegexp>" << endl << endl;
       cout << "Generate plots defined in plotDefinitions file:" << endl << endl;
       cout << "  ./plot <interactive|pdf|eps|bitmap|file> <figureGroup,figureGroup2|all> <plotName,plotName2|all>" << endl << endl;
+      cout << "Input config and ouput plot paths can also be steered via env variables PLOTTING_CONFIG_FOLDER and PLOTTING_OUTPUT_FOLDER." << endl;
       cout << options << "\n";
       return 0;
     }
@@ -101,8 +106,8 @@ int main(int argc, char *argv[])
     if (vm.count("plotDefConfig")) {
       plotDefConfig = vm["plotDefConfig"].as<string>();
     }
-    if (vm.count("outputFilesBasePath")) {
-      outputFilesBasePath = vm["outputFilesBasePath"].as<string>();
+    if (vm.count("outputFolder")) {
+      outputFolder = vm["outputFolder"].as<string>();
     }
     if (vm.count("mode")) {
       mode = vm["mode"].as<string>();
@@ -146,8 +151,9 @@ int main(int argc, char *argv[])
   
   // create plotting environment
   PlotManager plotEnv;
-  plotEnv.SetOutputDirectory(outputFilesBasePath);
-  
+  plotEnv.SetOutputDirectory(outputFolder);
+  LOGF("-- reading plot definitions from %s", plotDefConfig.c_str());
+
   if(mode == "find"){
     // TODO: make this find multiple things as well
     // TODO: put exact match on top of search results
@@ -157,6 +163,8 @@ int main(int argc, char *argv[])
     return 0;
   }
   else{
+    LOGF("-- reading input files from %s", inputFilesConfig.c_str());
+
     // plot only specific plots stored in the plotConfig file
     plotEnv.LoadInputDataFiles(inputFilesConfig);
     vector<string> figureGroupsVector = splitArguments(figureGroups);

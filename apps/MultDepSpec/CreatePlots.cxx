@@ -31,19 +31,13 @@ const string pp_5TeV::input::epos = "Simulations:epos/pp_5TeV"; // not yet avail
 
 }
 
-
 int main(int argc, char *argv[])
 {
-  string configDir = "~/Desktop/PlottingFramework/config";
-  string inputFilesConfig = configDir + "/inputFiles.XML";
-  string plotDefConfig = configDir + "/plotDefinitions.XML";
-  string outputFilesBasePath = "~/Desktop/testPlots";
-  
   // create plotting environment
   PlotManager plotEnv;
-  plotEnv.SetOutputDirectory(outputFilesBasePath);
-  plotEnv.SetUseUniquePlotNames(false);
-  
+  plotEnv.LoadInputDataFiles(MultDepSpec::gInputFilesConfig);
+
+  // by default create plots for all available datasets
   vector<string> dataSets;
   dataSets.push_back("pp_2TeV");
   dataSets.push_back("pp_5TeV");
@@ -53,36 +47,13 @@ int main(int argc, char *argv[])
   dataSets.push_back("pPb_8TeV");
   dataSets.push_back("PbPb_5TeV");
   dataSets.push_back("XeXe_5TeV");
-  //dataSets.push_back("Fits");
-  //dataSets.push_back("Simulations");
-  //dataSets.push_back("Energyscan");
-  
-  // generate config file containing locations of the input files or load it
-  if(argc > 1 && string(argv[1]) == "updateInputFiles")
-  {
-    for(string dataSet : dataSets){
-      string folder = "~/Desktop/AliMultDepSpec/Datasets/" + dataSet + "/";
-      string inputFile = folder + dataSet + "_Results.root";
-      string inputFileSyst = folder + dataSet + "_Syst.root";
-      
-      if(dataSet == "Publications" || dataSet == "Simulations" || dataSet == "Energyscan" || dataSet == "Fits"){
-        plotEnv.AddInputDataFiles(dataSet, {inputFile});
-      }else{
-        plotEnv.AddInputDataFiles(dataSet, {inputFile, inputFileSyst});
-      }
-    }
-    plotEnv.DumpInputDataFiles(inputFilesConfig);
-    cout << "Updated input files: '" << inputFilesConfig << "'." << endl;
-    return 0;
-  }
-  else{
-    plotEnv.LoadInputDataFiles(inputFilesConfig);
-  }
 
+  // ... and all additional plots
   bool createTestPlots = true;
   bool createEnergyPlots = true;
   bool createSystemPlots = true;
   
+  // user can override
   if(argc > 1){
     createTestPlots = false;
     createEnergyPlots = false;
@@ -109,6 +80,7 @@ int main(int argc, char *argv[])
   if(createSystemPlots) MultDepSpec::DefineSystemPlots(plotEnv);
   //MultDepSpec::DefinePublicationPlots(plotEnv);
   
-  plotEnv.DumpPlots(plotDefConfig);
+  plotEnv.DumpPlots(MultDepSpec::gPlotDefConfig);
+  LOGF("-- wrote plot definitions to %s", MultDepSpec::gPlotDefConfig.c_str());
   return 0;
 }

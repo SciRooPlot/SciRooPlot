@@ -5,6 +5,7 @@ misc/*
 XCode/*
 doxygen/html/*
 doxygen/latex/*
+apps/MultDepSpec/config/*
 
 .DS_Store
 doxyge/.DS_Store

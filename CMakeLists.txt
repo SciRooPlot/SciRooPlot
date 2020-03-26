@@ -13,14 +13,14 @@ endif(APPLE)
 # add user applications that should be linked to the framework here
 # name of the executable:
 set(APPLICATIONS
-  config
   plot
+  config
   create
 )
 # corresponding source file:
 set(APPLICATIONS_SRC
-  "apps/Configure.cxx"
   "apps/PlottingApp.cxx"
+  "apps/MultDepSpec/ConfigInput.cxx"
   "apps/MultDepSpec/CreatePlots.cxx apps/MultDepSpec/Datasets.cxx apps/MultDepSpec/Energies.cxx apps/MultDepSpec/Systems.cxx apps/MultDepSpec/Publications.cxx apps/MultDepSpec/Test.cxx apps/MultDepSpec/Publications.cxx apps/MultDepSpec/Helpers.cxx"
 )
 # files that you want to associate to your app put "" if not required
