@@ -18,6 +18,9 @@
 #ifndef PlottingFramework_h
 #define PlottingFramework_h
 
+#define DEBUG_LVL 2   // < 2: no debug, < 1: no warnings, < 0 no errors
+#define COUT_LVL 2    // < 2: no log,   < 1: no info,     < 0 no print
+
 // std headers
 #include <iostream>
 #include <map>
@@ -31,6 +34,9 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/program_options.hpp>
+
+// fmt headers
+#include <fmt/core.h>
 
 // root headers
 #include "TCanvas.h"
@@ -68,13 +74,49 @@
 #include "TGWindow.h"
 #include "TRootCanvas.h"
 
-// some preprocessor macros for logging and debugging
-#define LOG(s) std::cout << s << std::endl;
-#define LOGF(s, ...) printf(s, __VA_ARGS__); std::cout << std::endl;
-#define ERROR(s) std::cerr << "ERROR: " << s << std::endl;
-#define ERRORF(s, ...)  std::cerr << "ERROR: "; fprintf(stderr, s, __VA_ARGS__); std::cerr << std::endl;
-#define HERE std::cout << "This is line " << __LINE__ << \
-" in function " << __FUNCTION__ << " (" << __FILE__ << ")" << std::endl;
+
+
+// some preprocessor macros for logging, printing and debugging
+#define DEBUG(s, ...) fmt::print(stderr, "\033[1;36m[ DEBUG   ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");
+#define WARNING(s, ...) fmt::print(stderr, "\033[1;33m[ WARNING ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");
+#define ERROR(s, ...) fmt::print(stderr, "\033[1;31m[ ERROR   ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");
+
+#define LOG(s, ...) fmt::print("\033[1;32m[ LOG     ]\033[0m "); fmt::print(s, ##__VA_ARGS__); fmt::print("\n");
+#define INFO(s, ...) fmt::print("\033[1;37m[ INFO    ]\033[0m "); fmt::print(s, ##__VA_ARGS__); fmt::print("\n");
+
+#define PRINT(s, ...) fmt::print(s, ##__VA_ARGS__); fmt::print("\n");
+#define PRINT_INLINE(s, ...) fmt::print(s, ##__VA_ARGS__);
+#define HERE fmt::print("\033[1;33m[  HERE   ]\033[0m Line {} in function {} ({})", __LINE__, __FUNCTION__, __FILE__); fmt::print("\n");
+
+// Debug suppression levels
+#if DEBUG_LVL < 2
+  #undef DEBUG
+  #define DEBUG(s, ...) ;
+#endif
+#if DEBUG_LVL < 1
+  #undef WARNING
+  #define WARNING(s, ...) ;
+#endif
+#if DEBUG_LVL < 0
+  #undef ERROR
+  #define ERROR(s, ...) ;
+#endif
+
+// Output stream suppression levels
+#if COUT_LVL < 2
+  #undef LOG
+  #define LOG(s, ...) ;
+#endif
+#if COUT_LVL < 1
+  #undef INFO
+  #define INFO(s, ...) ;
+#endif
+#if COUT_LVL < 0
+  #undef PRINT
+  #define PRINT(s, ...) ;
+  #undef PRINT_INLINE
+  #define PRINT_INLINE(s, ...) ;
+#endif
 
 namespace PlottingFramework
 {

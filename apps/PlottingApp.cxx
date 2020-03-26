@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
       cout << "  ./plot find  <plotNameRegexp> <figureGroupRegexp>" << endl << endl;
       cout << "Generate plots defined in plotDefinitions file:" << endl << endl;
       cout << "  ./plot <interactive|pdf|eps|bitmap|file> <figureGroup,figureGroup2|all> <plotName,plotName2|all>" << endl << endl;
-      cout << "Input config and ouput plot paths can also be steered via env variables PLOTTING_CONFIG_FOLDER and PLOTTING_OUTPUT_FOLDER." << endl;
+      cout << "Input config and ouput plot paths can also be steered via env variables PLOTTING_CONFIG_FOLDER and PLOTTING_OUTPUT_FOLDER." << endl << endl;
       cout << options << "\n";
       return 0;
     }
@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
   }
   catch(std::exception& e)
   {
-    ERRORF("Exception \"%s\"! Exiting.", e.what());
+    ERROR("Exception \"{}\"! Exiting.", e.what());
     return 1;
   }
   catch(...)
@@ -140,19 +140,19 @@ int main(int argc, char *argv[])
   // check if specified input files exist
   if(!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str())))
   {
-    ERRORF("File \"%s\" does not exists! Exiting.", inputFilesConfig.c_str());
+    ERROR("File \"{}\" does not exists! Exiting.", inputFilesConfig);
     return 1;
   }
   if(!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str())))
   {
-    ERRORF("File \"%s\" does not exists! Exiting.", plotDefConfig.c_str());
+    ERROR("File \"{}\" does not exists! Exiting.", plotDefConfig);
     return 1;
   }
   
   // create plotting environment
   PlotManager plotEnv;
   plotEnv.SetOutputDirectory(outputFolder);
-  LOGF("-- reading plot definitions from %s", plotDefConfig.c_str());
+  INFO("reading plot definitions from {}", plotDefConfig);
 
   if(mode == "find"){
     // TODO: make this find multiple things as well
@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
     return 0;
   }
   else{
-    LOGF("-- reading input files from %s", inputFilesConfig.c_str());
+    INFO("-- reading input files from {}", inputFilesConfig);
 
     // plot only specific plots stored in the plotConfig file
     plotEnv.LoadInputDataFiles(inputFilesConfig);

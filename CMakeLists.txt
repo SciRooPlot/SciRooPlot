@@ -5,6 +5,7 @@ set(CMAKE_BUILD_TYPE Debug)
 project(PlottingFramework CXX)
 set(REQUIRED_ROOT_VERSION 6.16)
 set(REQUIRED_BOOST_VERSION 1.68)
+set(REQUIRED_FMT_VERSION 6.1.2)
 set(Boost_USE_MULTITHREADED TRUE)
 if(APPLE)
   set(CMAKE_MACOSX_RPATH ON)
@@ -53,10 +54,12 @@ ROOT_GENERATE_DICTIONARY(G__${MODULE} ${HDR} LINKDEF ${CMAKE_CURRENT_SOURCE_DIR}
 set(Boost_USE_MULTITHREADED TRUE) # this required for some reason
 set(BOOSTCOMPONENTS program_options)
 find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED COMPONENTS ${BOOSTCOMPONENTS})
-#find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED)
+# find fmt
+find_package(fmt)
+find_package(fmt ${REQUIRED_FMT_VERSION} REQUIRED)
 
 add_library(${MODULE} SHARED ${SRCS} ${HDRS} ${MODULE_HDR} ${ADDITIONAL_FILES})
-target_link_libraries(${MODULE} ${ROOT_LIBRARIES} ${Boost_LIBRARIES} Boost::boost)
+target_link_libraries(${MODULE} ${ROOT_LIBRARIES} ${Boost_LIBRARIES} Boost::boost fmt::fmt)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${ROOT_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS}/boost/property_tree ${Boost_INCLUDE_DIRS}/boost/program_options)
 
 

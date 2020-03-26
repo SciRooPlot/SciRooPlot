@@ -1,6 +1,6 @@
 ANALYSIS:
 ---------
-- straighten up Fit, Simulation, Publication input names
+- straighten up Fit, Publication input names
 - categorize plots
 - add data specific colors and markers
 - clean up file names and make useful sub-folders
@@ -71,7 +71,6 @@ Minor Features:
 - maybe linking axes should also be possible for different axes (x in pad1 to y in pad2)
 
 Bugs:
-- a warning should appear when input identifier was not defined for a plot
 - width and height calculation wrong for text boxes (ndc vs relative pad coordinates?)
 - using user coordinates in legend box breaks something for text box?
 - interactively moving text boxes in log scale plots has a bug (maybe already in root)
@@ -84,8 +83,8 @@ Bugs:
 - if lables are 1, 2, 3 height is not calculated correctly?
 
 Structural changes:
+- replace all couts preprocessor expressions
 - use for (auto& [key, value]: myMap) {} loops
-- replace couts with LOG macro expressions
 - think about how things can be implemented in a more general way as templates
 - change arguments referring to internal variables to const ref if possible to be more memory efficient, use lambdas
 - add (copy-, move-) constructors and destructors; make sure all variables are initialized properly

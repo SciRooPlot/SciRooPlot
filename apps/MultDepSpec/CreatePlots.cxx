@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
   // create plotting environment
   PlotManager plotEnv;
   plotEnv.LoadInputDataFiles(MultDepSpec::gInputFilesConfig);
-
+  
   // by default create plots for all available datasets
   vector<string> dataSets;
   dataSets.push_back("pp_2TeV");
@@ -81,6 +81,6 @@ int main(int argc, char *argv[])
   //MultDepSpec::DefinePublicationPlots(plotEnv);
   
   plotEnv.DumpPlots(MultDepSpec::gPlotDefConfig);
-  LOGF("-- wrote plot definitions to %s", MultDepSpec::gPlotDefConfig.c_str());
+  INFO("Wrote plot definitions to {}", MultDepSpec::gPlotDefConfig);
   return 0;
 }

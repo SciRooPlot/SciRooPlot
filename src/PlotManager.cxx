@@ -272,7 +272,7 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
   // if plot already exists, delete the old one first
   if( mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end())
   {
-    ERRORF("Plot %s was already created. Replacing it.", plot.GetUniqueName().c_str());
+    ERROR("Plot {} was already created. Replacing it.", plot.GetUniqueName());
     mPlotLedger.erase(plot.GetUniqueName());
   }
   
@@ -413,7 +413,7 @@ void PlotManager::CreatePlots(string figureGroup, string figureCategory, vector<
   if(!plotNames.empty()){
     for(auto& plotName : plotNames)
     {
-      ERRORF("Could not find plot %s in %s:%s", plotName.c_str(), figureGroup.c_str(), figureCategory.c_str());
+      ERROR("Could not find plot {} in {}:{}", plotName, figureGroup, figureCategory);
     }
   }
   
@@ -438,7 +438,7 @@ void PlotManager::CreatePlots(string figureGroup, string figureCategory, vector<
       GeneratePlot(*plot, outputMode);
     else
     {
-      ERRORF("Plot '%s' in figure group '%s' could not be created.", plot->GetName().c_str(), plot->GetFigureGroup().c_str());
+      ERROR("Plot '{}' in figure group '{}' could not be created.", plot->GetName(), plot->GetFigureGroup());
     }
   }
 }
