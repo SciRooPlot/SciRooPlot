@@ -40,7 +40,9 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   const string datasetLable = alice + newLine + chargedParticles + ", " + colSys + ", " + erg + newLine + eta08 + ", " + ptRange;
   const string datasetLablePrel = alicePrel + newLine + chargedParticles + ", " + colSys + ", " + erg + newLine + eta08 + ", " + ptRange;
   
-  const string categoryTest = "Test";
+  
+  
+  
   const string categoryQA = "QA-Plots";
   const string categoryClosure = categoryQA + "/MC_Closure_Tests";
   const string categorySystematics = "Systematic_Uncertainties";

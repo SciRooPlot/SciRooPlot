@@ -83,7 +83,6 @@ Bugs:
 - if lables are 1, 2, 3 height is not calculated correctly?
 
 Structural changes:
-- replace all couts preprocessor expressions
 - use for (auto& [key, value]: myMap) {} loops
 - think about how things can be implemented in a more general way as templates
 - change arguments referring to internal variables to const ref if possible to be more memory efficient, use lambdas

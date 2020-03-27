@@ -26,7 +26,7 @@ using PlottingFramework::Plot;
 namespace po = boost::program_options;
 
 // Helper function to split comma separated argument strings
-vector<string> splitArguments(string argString, char deliminator = ',')
+vector<string> splitArguments(string argString, char deliminator = ' ')
 {
   vector<string> arguments;
   string currArg;
@@ -92,12 +92,19 @@ int main(int argc, char *argv[])
     
     if (vm.count("help")) {
       PRINT("");
-      PRINT("Find plots defined in plotDefinitions file:");
-      PRINT("  ./plot find  <plotNameRegexp> <figureGroupRegexp>\n");
-      PRINT("Generate plots defined in plotDefinitions file:\n");
-      PRINT("  ./plot <interactive|pdf|eps|bitmap|file> <figureGroup,figureGroup2|all> <plotName,plotName2|all>\n");
-      PRINT("Input config and ouput plot paths can also be steered via env variables PLOTTING_CONFIG_FOLDER and PLOTTING_OUTPUT_FOLDER.\n");
-      //PRINT("{}", options)
+      PRINT("Usage:");
+      PRINT("  ./plot <find|interactive|pdf|eps|bitmap|file> '<figureGroupRegex[:figureCategoryRegex]>'  '<plotNameRegex>'\n");
+      PRINT("You can use any standard regular expressions like 'begin.*end' or 'begin[a,b,c]end'.");
+      PRINT("An exhaustive list of such expressions can be found here:");
+      PRINT("-> http://www.cplusplus.com/reference/regex/ECMAScript/");
+      PRINT("Multiple figureGroups and plotNames can be specified separated by blank space: 'plotA plotB'.");
+      PRINT("When using regular expressions or multiple entries, it is required to embrace this in quotes.");
+      PRINT("The use of blank spaces and colons in the regular expressions is not supported.");
+      PRINT("Locations of the configuration file containing the input file paths and the output directory");
+      PRINT("can be steered via the env variables PLOTTING_CONFIG_FOLDER and PLOTTING_OUTPUT_FOLDER.")
+      PRINT("Alternatively the following command line options can be used:");
+      PRINT("");
+      cout << options << endl;
       return 0;
     }
     if (vm.count("inputFilesConfig")) {
@@ -148,41 +155,26 @@ int main(int argc, char *argv[])
     ERROR("File \"{}\" does not exists! Exiting.", plotDefConfig);
     return 1;
   }
+
+  
   
   // create plotting environment
   PlotManager plotEnv;
   plotEnv.SetOutputDirectory(outputFolder);
   INFO("Reading plot definitions from {}.", plotDefConfig);
 
+  vector<string> figureGroupsVector = splitArguments(figureGroups);
+  vector<string> plotNamesVector  = splitArguments(plotNames);
   if(mode == "find"){
-    // TODO: make this find multiple things as well
-    // TODO: put exact match on top of search results
-    cout << endl;
-    plotEnv.ListPlotsDefinedInFile(plotDefConfig, plotNames, figureGroups);
-    cout << endl;
+    PRINT_SEPARATOR;
+    plotEnv.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
+    PRINT_SEPARATOR;
     return 0;
   }
   else{
     INFO("Reading input files from {}.", inputFilesConfig);
-
-    // plot only specific plots stored in the plotConfig file
     plotEnv.LoadInputDataFiles(inputFilesConfig);
-    vector<string> figureGroupsVector = splitArguments(figureGroups);
-    vector<string> plotNamesVector  = splitArguments(plotNames);
-    if(plotNames == "all") plotNamesVector = {};
-    //if(figureGroups == "all") figureGroupsVector = {}; //TODO: add this feature
-    
-    for(auto& figureGroup : figureGroupsVector){
-      string figureCategory = "";
-      // in case category was specified via figureGroup:my/category/tree
-      auto subPathPos = figureGroup.find(":");
-      if(subPathPos != string::npos)
-      {
-        figureCategory = figureGroup.substr(subPathPos+1);
-        figureGroup = figureGroup.substr(0, subPathPos);
-      }
-      plotEnv.CreatePlotsFromFile(plotDefConfig, figureGroup, figureCategory, plotNamesVector, mode);
-    }
+    plotEnv.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
     return 0;
   }
 }

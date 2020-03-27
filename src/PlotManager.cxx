@@ -220,50 +220,6 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(string& plotFileName){
 
 //****************************************************************************************
 /**
- * Load plots from xml file.
- */
-//****************************************************************************************
-void PlotManager::LoadPlots(string plotFileName, string figureGroup, string figureCategory, vector<string> plotNames){
-
-  // in case category was specified via figureGroup:my/category/tree
-  string figureCategorySuffix = "";
-  if(figureCategory != "")
-  {
-    figureCategorySuffix = ":" + figureCategory;
-    std::replace(figureCategorySuffix.begin(),figureCategorySuffix.end(), '/', '|');
-  }
-  
-  ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
-  for(auto& plotGroupTree : inputTree){
-    if(figureGroup != "" && plotGroupTree.first != "GROUP::" + figureGroup) continue;
-    for(auto& plotTree : plotGroupTree.second){
-      bool found = false;
-      if(plotNames.empty()){
-        found = true;
-      }else{
-        for(auto& plotName : plotNames){
-          string entryName = "PLOT::" + plotName + gNameGroupSeparator + figureGroup + figureCategorySuffix;
-          if(entryName == plotTree.first) found = true;
-        }
-      }
-      if(!found) continue;
-      try{
-        Plot plot(plotTree.second);
-        AddPlot(plot);
-      }catch(...)
-      {
-        ERROR("Could not generate plot {} from XML file.", plotTree.first);
-      }
-    }
-  }
-}
-void PlotManager::LoadPlot(string plotFileName, string figureGroup, string figureCategory, string plotName)
-{
-  LoadPlots(plotFileName, figureGroup, {plotName});
-}
-
-//****************************************************************************************
-/**
  * Generates plot based on plot template.
  */
 //****************************************************************************************
@@ -298,6 +254,7 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
   PlotStyle& plotStyle = GetPlotStyle(plot.GetPlotStyle());
   shared_ptr<TCanvas> canvas = PlottingTools::GeneratePlot(plot, plotStyle, mDataLedger);
   if(!canvas) return;
+  LOG("Created plot \"{}\".", canvas->GetName());
   
   // if interactive mode is specified, open window instead of saving the plot
   if(outputMode.find("interactive") != string::npos){
@@ -438,26 +395,10 @@ void PlotManager::CreatePlots(string figureGroup, string figureCategory, vector<
       GeneratePlot(*plot, outputMode);
     else
     {
-      ERROR("Plot '{}' in figure group '{}' could not be created.", plot->GetName(), plot->GetFigureGroup());
+      ERROR("Plot \"{}\" in figure group \"{}\" could not be created.", plot->GetName(), plot->GetFigureGroup()  + ((plot->GetFigureCategory() != "") ? ":" + plot->GetFigureCategory() : ""));
     }
   }
 }
-
-void PlotManager::CreatePlot(string plotName, string figureGroup, string figureCategory, string outputMode)
-{
-  CreatePlots(figureGroup, figureCategory, {plotName}, outputMode);
-}
-
-void PlotManager::CreatePlotsFromFile(string plotFileName, string figureGroup, string figureCategory, vector<string> plotNames, string outputMode){
-  LoadPlots(plotFileName, figureGroup, figureCategory, plotNames);
-  CreatePlots(figureGroup, figureCategory, plotNames, outputMode);
-}
-
-void PlotManager::CreatePlotFromFile(string plotFileName, string figureGroup, string figureCategory, string plotName, string outputMode){
-  LoadPlots(plotFileName, figureGroup, figureCategory, {plotName});
-  CreatePlots(figureGroup, figureCategory, {plotName}, outputMode);
-}
-
 
 int PlotManager::GetNameRegisterID(const string& name)
 {
@@ -476,27 +417,98 @@ const string& PlotManager::GetNameRegisterName(int nameID)
   return mOutputDirectory; //FIXME: this nonsense-fix is just to get rid of the warning! Re-think returning ref to member..
 }
 
-
 //****************************************************************************************
 /**
- * List Plots defined in file containing expression.
+ * Function to find plots in file via regexp match of user inputs
  */
 //****************************************************************************************
-void PlotManager::ListPlotsDefinedInFile(string plotFileName, string plotNameRegexp, string inputIdentifierRegexp)
+void PlotManager::ExtractPlotsFromFile(string plotFileName, vector<string> figureGroupsWithCategoryUser, vector<string> plotNamesUser, string mode)
 {
+  bool isSearchRequest = (mode == "find") ? true : false;
+  vector< std::pair<std::regex, std::regex> > groupCategoryRegex;
+  for(auto& figureGroupWithCategoryUser : figureGroupsWithCategoryUser)
+  {
+    // by default select all groups and all categories
+    string group = ".*";
+    string category = ".*";
+    vector<string> groupCat = splitString(figureGroupWithCategoryUser, ':');
+    if(groupCat.size() > 0 && !groupCat[0].empty()) group = groupCat[0];
+    if(groupCat.size() > 1 && !groupCat[1].empty()) category = groupCat[1];
+    if(groupCat.size() > 2)
+    {
+      ERROR("Do not put \":\" in your regular expressions! Colons should be used solely to separate figureGroup and figureCategory");
+      return;
+    }
+    std::regex groupRegex(group);
+    std::regex categoryRegex(category);
+    groupCategoryRegex.push_back(std::make_pair(groupRegex, categoryRegex));
+  }
+
+  vector< std::regex > plotNamesRegex;
+  for(auto& plotNameUser : plotNamesUser)
+  {
+    std::regex plotNameRegex(plotNameUser);
+    plotNamesRegex.push_back(plotNameRegex);
+  }
+  
   ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
   for(auto& plotGroupTree : inputTree){
-    string inputIdentifier = plotGroupTree.first.substr(string("GROUP::").size());
-    if(inputIdentifierRegexp != "" && inputIdentifier.find(inputIdentifierRegexp) == string::npos) continue;
+    // first filter by group
+    string groupIdentifier = plotGroupTree.first.substr(string("GROUP::").size());
+    if(std::find_if(groupCategoryRegex.begin(), groupCategoryRegex.end(), [groupIdentifier](std::pair<std::regex, std::regex>& curGroupCatRegex){return std::regex_match(groupIdentifier, curGroupCatRegex.first);}) == groupCategoryRegex.end())
+    {
+      continue;
+    }
+
     for(auto& plotTree : plotGroupTree.second){
       string plotName = plotTree.second.get<string>("name");
       string figureGroup = plotTree.second.get<string>("figureGroup");
       string figureCategory = plotTree.second.get<string>("figureCategory");
-      if(plotNameRegexp != "" && plotName.find(plotNameRegexp) == string::npos) continue;
-      PRINT("-- found plot \"{}\" in group \"{}\"", plotName, figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
+      
+      if(std::find_if(groupCategoryRegex.begin(), groupCategoryRegex.end(), [figureGroup, figureCategory](std::pair<std::regex, std::regex>& curGroupCatRegex){return std::regex_match(figureGroup, curGroupCatRegex.first) && std::regex_match(figureCategory, curGroupCatRegex.second);}) == groupCategoryRegex.end())
+      {
+        continue;
+      }
+
+      if(std::find_if(plotNamesRegex.begin(), plotNamesRegex.end(), [plotName](std::regex& curPlotNameRegex){return std::regex_match(plotName, curPlotNameRegex);}) == plotNamesRegex.end())
+      {
+        continue;
+      }
+      
+      if(isSearchRequest)
+      {
+        PRINT("-- found plot \033[1;32m{}\033[0m in group \033[1;33m{}\033[0m", plotName, figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
+      }
+      else{
+        try{
+          Plot plot(plotTree.second);
+          AddPlot(plot);
+        }catch(...)
+        {
+          ERROR("Could not generate plot {} from XML file.", plotTree.first);
+        }
+      }
     }
   }
+  if(!isSearchRequest && mode != "load")
+  {
+     // now produce the loaded plots
+      CreatePlots("", "", {}, mode);
+  }
 }
+
+// Helper function to split a string
+vector<string> PlotManager::splitString(string argString, char deliminator)
+{
+  vector<string> arguments;
+  string currArg;
+  std::istringstream argStream(argString);
+  while(std::getline(argStream, currArg, deliminator)) {
+    arguments.push_back(currArg);
+  }
+  return arguments;
+}
+
 
 //****************************************************************************************
 /**

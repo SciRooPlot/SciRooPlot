@@ -59,25 +59,20 @@ public:
   void AddPlot(Plot& plot);
   void DumpPlots(string plotFileName, string figureGroup = "", vector<string> plotNames = {});
   void DumpPlot(string plotFileName, string figureGroup, string plotName);
-  void LoadPlots(string plotFileName, string figureGroup = "", string figureCategory = "", vector<string> plotNames = {});
-  void LoadPlot(string plotFileName, string figureGroup, string figureCategory, string plotName);
   void CreatePlots(string figureGroup = "", string figureCategory = "", vector<string> plotNames = {}, string outputMode = "pdf");
   void CreatePlot(string name, string figureGroup, string figureCategory = "", string outputMode = "pdf");
-  
-  void CreatePlotsFromFile(string plotFileName, string figureGroup = "", string figureCategory = "", vector<string> plotNames = {}, string outputMode = "pdf");
-  void CreatePlotFromFile(string plotFileName, string figureGroup, string figureCategory, string plotName , string outputMode = "pdf");
-  
-  
+    
   // --- status accessors --
   void PrintStatus();
   void ListPlots(bool verbose = false){for(auto& plot : mPlots) {PRINT("{}", plot.GetName());}} // list all plots available in the manager
   void ListData(); // list all input data (histos, graphs, etc) available in the manager
   void ListPlotStyles(); // list all available plot styles
   
-  void SetOutputFileName(string fileName = "ResultPlots.root") {mOutputFileName = fileName;}
-  void ListPlotsDefinedInFile(string plotFileName, string plotNameRegexp = "", string inputIdentifierRegexp = "");
-  
+  void SetOutputFileName(string fileName = "ResultPlots.root") {mOutputFileName = fileName;}  
+  void ExtractPlotsFromFile(string plotFileName, vector<string> figureGroupsWithCategoryUser, vector<string> plotNamesUser, string mode = "load");
+
 private:
+  vector<string> splitString(string argString, char deliminator = ':');
   
   map<string, int> mNameRegister; // bi-directional mapping between name and unique id
   inline int GetNameRegisterID(const string& name);
