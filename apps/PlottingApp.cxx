@@ -126,10 +126,10 @@ int main(int argc, char *argv[])
       plotNames = vm["plotNames"].as<string>();
     }
     if (vm.count("arguments")) {
-      cout << "Found additional arguments:" << endl;
+      PRINT("Found additional arguments:");
       for(auto& argument : vm["arguments"].as< vector<string> >())
       {
-        cout << "   " << argument << endl;
+        PRINT("   {}", argument);
       }
     }
   }
@@ -155,8 +155,6 @@ int main(int argc, char *argv[])
     ERROR("File \"{}\" does not exists! Exiting.", plotDefConfig);
     return 1;
   }
-
-  
   
   // create plotting environment
   PlotManager plotEnv;

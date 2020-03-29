@@ -11,6 +11,7 @@ ANALYSIS:
 FRAMEWORK:
 ----------
 Major Features:
+- operator overloading for plots
 - possibility to dump and load plot styles (manager should only read in required plot styles)
 - make sure PlotStyle names are unique
 - use TPad function void Range(float x1,float y1,float x2,float y2) to set user coordinate system independent of first histo, graph, etc

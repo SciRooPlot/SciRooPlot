@@ -35,6 +35,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   if(dataSet.find("pp_13TeV") != string::npos) {erg = erg13TeV;}// multRange = range::pp_13;}
   if(dataSet.find("pp_5TeV") != string::npos) erg = erg5TeV;
   if(dataSet.find("pPb_5TeV") != string::npos) erg = erg5TeV_NN;
+  if(dataSet.find("pPb_8TeV") != string::npos) erg = erg8TeV_NN;
   if(dataSet.find("PbPb_5TeV") != string::npos) erg = erg5TeV_NN;
   
   const string datasetLable = alice + newLine + chargedParticles + ", " + colSys + ", " + erg + newLine + eta08 + ", " + ptRange;

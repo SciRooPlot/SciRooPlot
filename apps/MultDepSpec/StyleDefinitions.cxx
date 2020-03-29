@@ -1,0 +1,107 @@
+// Plotting Framework
+//
+// Copyright (C) 2019-2020  Mario Krüger
+// Contact: mario.kruger@cern.ch
+// For a full list of contributors please see docs/Credits
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+#include "MultDepSpec.h"
+
+namespace MultDepSpec{
+
+const double range::minPt = 0.5;
+const double range::maxPt = 50.;
+const int range::minMult = 0;
+const int range::maxMult = 100;
+
+dataStyle pp_2TeV
+{
+  {
+  {data, {"pp_2TeV", colors::green, markers::circle, 35}},
+  {mc, {"pp_2TeV", colors::green, markers::circle_open, 35}},
+  {pythia6, {"pp_2TeV", colors::green, markers::circle_open, 35}},
+  {pythia, {"Simulations:pythia/pp_2TeV", colors::green, markers::circle_open, 35}},
+  }
+};
+dataStyle pp_5TeV
+{
+  {
+  {data, {"pp_5TeV", colors::blue, markers::circle, 60}},
+  {mc, {"pp_5TeV", colors::blue, markers::circle_open, 60}},
+  {pythia, {"Simulations:pythia/pp_5TeV", colors::blue, markers::circle_open, 60}},
+  {epos_lhc, {"Simulations:epos_lhc/pp_5TeV", colors::blue, markers::circle_open, 60}},
+  }
+};
+dataStyle pp_7TeV
+{
+  {
+  {data, {"pp_7TeV", colors::magenta, markers::circle, 60}},
+  {mc, {"pp_7TeV", colors::magenta, markers::circle_open, 60}},
+  {pythia, {"Simulations:pythia/pp_7TeV", colors::magenta, markers::circle_open, 60}},
+  }
+};
+dataStyle pp_13TeV
+{
+  {
+  {data, {"pp_13TeV", colors::red, markers::circle, 75}},
+  {mc, {"pp_13TeV", colors::red, markers::circle_open, 75}},
+  {pythia, {"Simulations:pythia/pp_13TeV", colors::red, markers::circle_open, 75}},
+  }
+};
+dataStyle pPb_5TeV
+{
+  {
+  {data, {"pPb_5TeV", colors::magenta, markers::circle, 120}},
+  {mc, {"pPb_5TeV", colors::magenta, markers::circle_open, 120}},
+  {dpmjet, {"pPb_5TeV", colors::magenta, markers::circle_open, 120}},
+  {angantyr, {"Simulations:pythia_angantyr/pPb_5TeV", colors::magenta, markers::circle_open, 120}},
+  {epos_lhc, {"Simulations:epos_lhc/pPb_5TeV", colors::magenta, markers::circle_open, 120}},
+  {epos, {"Simulations:epos/pPb_5TeV", colors::magenta, markers::circle_open, 120}}
+  }
+};
+dataStyle pPb_8TeV
+{
+  {
+  {data, {"pPb_8TeV", colors::yellow, markers::circle, 90}},
+  {mc, {"pPb_8TeV", colors::yellow, markers::circle_open, 90}},
+  {epos_lhc, {"pPb_8TeV", colors::yellow, markers::circle_open, 90}}
+  }
+};
+dataStyle PbPb_2TeV
+{
+  {
+  }
+};
+dataStyle PbPb_5TeV
+{
+  {
+  {data, {"PbPb_5TeV", colors::red, markers::circle, 3200}},
+  {mc, {"PbPb_5TeV", colors::red, markers::circle_open, 3200}},
+  {hijing, {"PbPb_5TeV", colors::red, markers::circle_open, 3200}},
+  {epos_lhc, {"Simulations:epos_lhc/PbPb_5TeV", colors::red, markers::circle_open, 3200}},
+  {epos, {"Simulations:epos/PbPb_5TeV", colors::red, markers::circle_open, 3200}}
+  }
+};
+dataStyle XeXe_5TeV
+{
+  {
+  {data, {"XeXe_5TeV", colors::green, markers::circle, 2000}},
+  {mc, {"XeXe_5TeV", colors::green, markers::circle_open, 2000}},
+  {hijing, {"XeXe_5TeV", colors::green, markers::circle_open, 2000}}
+  }
+};
+
+
+
+} // end namespace MultDepSpec

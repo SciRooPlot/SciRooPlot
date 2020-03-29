@@ -50,29 +50,29 @@ PlotManager::~PlotManager()
   mDataLedger->Delete();
   if(!mPlotLedger.empty()){
     if(mSaveToRootFile == true){
-      INFO("Saving plots to file {}.", mOutputFileName);
-      
       TFile outputFile(mOutputFileName.c_str(), "RECREATE");
       if (outputFile.IsZombie()){
         return;
       }
       outputFile.cd();
-      
+      int nPlots{0};
       for(auto& plotTuple : mPlotLedger){
         auto canvas = plotTuple.second;
         string uniqueName = plotTuple.first;
         size_t delimiterPos = uniqueName.find(gNameGroupSeparator.c_str());
         string plotName = uniqueName.substr(0, delimiterPos);
-        string inputIdentifier = uniqueName.substr(delimiterPos + gNameGroupSeparator.size());
-        
-        if(!outputFile.GetDirectory(inputIdentifier.c_str(), kFALSE, "cd"))
+        string subfolder = uniqueName.substr(delimiterPos + gNameGroupSeparator.size());
+        std::replace(subfolder.begin(),subfolder.end(), ':', '/');
+        if(!outputFile.GetDirectory(subfolder.c_str(), kFALSE, "cd"))
         {
-          outputFile.mkdir(inputIdentifier.c_str());
+          outputFile.mkdir(subfolder.c_str());
         }
-        outputFile.cd(inputIdentifier.c_str());
+        outputFile.cd(subfolder.c_str());
         canvas->Write(plotName.c_str());
+        nPlots++;
       }
       outputFile.Close();
+      INFO("Saved {} plots to file \"{}\".", nPlots, mOutputFileName);
     }
     mPlotLedger.clear();
   }
@@ -424,6 +424,7 @@ const string& PlotManager::GetNameRegisterName(int nameID)
 //****************************************************************************************
 void PlotManager::ExtractPlotsFromFile(string plotFileName, vector<string> figureGroupsWithCategoryUser, vector<string> plotNamesUser, string mode)
 {
+  int nFoundPlots = 0;
   bool isSearchRequest = (mode == "find") ? true : false;
   vector< std::pair<std::regex, std::regex> > groupCategoryRegex;
   for(auto& figureGroupWithCategoryUser : figureGroupsWithCategoryUser)
@@ -474,7 +475,7 @@ void PlotManager::ExtractPlotsFromFile(string plotFileName, vector<string> figur
       {
         continue;
       }
-      
+      nFoundPlots++;
       if(isSearchRequest)
       {
         PRINT("-- found plot \033[1;32m{}\033[0m in group \033[1;33m{}\033[0m", plotName, figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
@@ -489,6 +490,11 @@ void PlotManager::ExtractPlotsFromFile(string plotFileName, vector<string> figur
         }
       }
     }
+  }
+  if(nFoundPlots == 0){
+    ERROR("Requested plots are not defined.");
+  }else{
+    INFO("Found {} plots matching the request.", nFoundPlots);
   }
   if(!isSearchRequest && mode != "load")
   {

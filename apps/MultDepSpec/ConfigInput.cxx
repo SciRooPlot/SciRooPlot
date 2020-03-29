@@ -61,9 +61,8 @@ int main(int argc, char *argv[])
 
   string geomScalingIdentifier = "GeometricalScaling";
   plotEnv.AddInputDataFiles(geomScalingIdentifier, {dataSetFolder + geomScalingIdentifier + "/" + geomScalingIdentifier + ".root"});
-
   
-  cout << "Saving input file paths in: '" << MultDepSpec::gInputFilesConfig << "'." << endl;
+  INFO("Saving input file paths in: '{}'.", MultDepSpec::gInputFilesConfig);
   gSystem->Exec((string("mkdir -p ") + MultDepSpec::gConfigFolder).c_str());
   plotEnv.DumpInputDataFiles(MultDepSpec::gInputFilesConfig);
   return 0;
