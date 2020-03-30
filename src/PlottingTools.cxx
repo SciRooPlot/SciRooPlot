@@ -85,7 +85,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     gStyle->SetTitleAlign(kHAlignCenter + kVAlignTop);
     //gStyle->SetTitleBorderSize(1);
     gStyle->SetMarkerSize(plotStyle.GetMarkerSize());
-    
+
     string drawingOptions = "";
     int dataIndex = 0;
     for(auto data : plot.GetData(padID)){

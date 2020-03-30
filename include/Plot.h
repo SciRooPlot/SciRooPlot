@@ -68,6 +68,7 @@ public:
   void Print();
   
   // User accessors:
+  void AddFrame(string histName, string inputIdentifier);
   void AddHisto(string histName, string inputIdentifier = "", string lable = "", int marker = 0, int color = 0, string drawingOptions = "", double cutoff = -999, double cutoffLow = -999);
   void AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier = "", string lable = "", int marker = 0, int color = 0, string errorStyle = "", double cutoff = -999, double cutoffLow = -999);
   void AddGraph(string graphName, string inputIdentifier = "", string lable = "", int marker = 0, int color = 0, string drawingOptions = "", double cutoff = -999, double cutoffLow = -999);

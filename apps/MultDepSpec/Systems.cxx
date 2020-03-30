@@ -97,9 +97,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     // compare meanPt in all systems, data only
     string plotName = "meanPt_all";
     Plot myPlot(plotName, plotGroup);
-    
-    // FIXME: ranges should be determined automatically such that the largest histogram can be displayed!
-    myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
+    myPlot.AddFrame("momentUnfolded1", PbPb_5TeV[data].input);
     
     //p-p
     myPlot.AddHisto("momentUnfolded1", pp_2TeV[data].input, "",
@@ -137,7 +135,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
                     XeXe_5TeV[data].marker, XeXe_5TeV[data].color, "", XeXe_5TeV[data].mult);
     myPlot.AddHisto("momentUnfolded1_Syst", XeXe_5TeV[data].input, "Xe-Xe, 5.44 TeV",
                     XeXe_5TeV[data].marker, XeXe_5TeV[data].color, "", XeXe_5TeV[data].mult);
-    
+
     myPlot.SetDrawingProperties("logX");
     myPlot.SetAxisRange("X", 0.1, 4000);
     myPlot.SetAxisRange("Y", 0.45, 0.9);
@@ -148,8 +146,108 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   
+  { // -----------------------------------------------------------------------
+    // compare variance in all systems, data only
+    string plotName = "variance_all";
+    Plot myPlot(plotName, plotGroup);
+    myPlot.AddFrame("varianceUnfolded", PbPb_5TeV[data].input);
+    
+    //p-p
+    myPlot.AddHisto("varianceUnfolded", pp_2TeV[data].input, "",
+                    pp_2TeV[data].marker, pp_2TeV[data].color, "", pp_2TeV[data].mult);
+    myPlot.AddHisto("varianceUnfolded_Syst", pp_2TeV[data].input, "pp, 2.76 TeV",
+                    pp_2TeV[data].marker, pp_2TeV[data].color, "boxes", pp_2TeV[data].mult);
+    myPlot.AddHisto("varianceUnfolded", pp_5TeV[data].input, "",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "", pp_5TeV[data].mult);
+    myPlot.AddHisto("varianceUnfolded_Syst", pp_5TeV[data].input, "pp, 5.02 TeV",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "boxes", pp_5TeV[data].mult);
+    myPlot.AddHisto("varianceUnfolded", pp_7TeV[data].input, "",
+                    pp_7TeV[data].marker, pp_7TeV[data].color, "", pp_7TeV[data].mult);
+    myPlot.AddHisto("varianceUnfolded_Syst", pp_7TeV[data].input, "pp, 7 TeV",
+                    pp_7TeV[data].marker, pp_7TeV[data].color, "boxes", pp_7TeV[data].mult);
+    myPlot.AddHisto("varianceUnfolded", pp_13TeV[data].input, "",
+                    pp_13TeV[data].marker, pp_13TeV[data].color, "", pp_13TeV[data].mult);
+    myPlot.AddHisto("varianceUnfolded_Syst", pp_13TeV[data].input, "pp, 13 TeV",
+                    pp_13TeV[data].marker, pp_13TeV[data].color, "boxes", pp_13TeV[data].mult);
+    //p-Pb
+    myPlot.AddHisto("varianceUnfolded", pPb_5TeV[data].input, "",
+                    pPb_5TeV[data].marker, pPb_5TeV[data].color, "", pPb_5TeV[data].mult);
+    myPlot.AddHisto("varianceUnfolded_Syst", pPb_5TeV[data].input, "p-Pb, 5.02 TeV",
+                    pPb_5TeV[data].marker, pPb_5TeV[data].color, "boxes", pPb_5TeV[data].mult);
+    myPlot.AddHisto("varianceUnfolded", pPb_8TeV[data].input, "",
+                    pPb_8TeV[data].marker, pPb_8TeV[data].color, "", pPb_8TeV[data].mult);
+    myPlot.AddHisto("varianceUnfolded_Syst", pPb_8TeV[data].input, "p-Pb, 8.16 TeV",
+                    pPb_8TeV[data].marker, pPb_8TeV[data].color, "boxes", pPb_8TeV[data].mult);
+    //Pb-Pb
+    myPlot.AddHisto("varianceUnfolded", PbPb_5TeV[data].input, "",
+                    PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "", PbPb_5TeV[data].mult);
+    myPlot.AddHisto("varianceUnfolded_Syst", PbPb_5TeV[data].input, "Pb-Pb, 5.02 TeV",
+                    PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "boxes", PbPb_5TeV[data].mult);
+    //Xe-Xe
+    myPlot.AddHisto("varianceUnfolded", XeXe_5TeV[data].input, "",
+                    XeXe_5TeV[data].marker, XeXe_5TeV[data].color, "", XeXe_5TeV[data].mult);
+    myPlot.AddHisto("varianceUnfolded_Syst", XeXe_5TeV[data].input, "Xe-Xe, 5.44 TeV",
+                    XeXe_5TeV[data].marker, XeXe_5TeV[data].color, "", XeXe_5TeV[data].mult);
+    
+    myPlot.SetDrawingProperties("logX");
+    myPlot.SetAxisRange("X", 0.1, 4000);
+    myPlot.SetAxisRange("Y", 0.05, 0.95);
+    myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+    
+    myPlot.AddLegendBox(0.14, 0.92);
+    myPlot.AddTextBox(0.36, 0.3, system_energy_lable);
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
   
-  
+  { // -----------------------------------------------------------------------
+    string plotName = "multiplicity_all";
+    Plot myPlot(plotName, plotGroup);
+    myPlot.AddFrame("multDensityUnfolded", PbPb_5TeV[data].input);
+
+    myPlot.AddHisto("multDensityUnfolded", pp_2TeV[data].input, "",
+                    pp_2TeV[data].marker, pp_2TeV[data].color, "", pp_2TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded_Syst", pp_2TeV[data].input, "pp, 2.76 TeV",
+                    pp_2TeV[data].marker, pp_2TeV[data].color, "boxes", pp_2TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded", pp_5TeV[data].input, "",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "", pp_5TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded_Syst", pp_5TeV[data].input, "pp, 5.02 TeV",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "boxes", pp_5TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded", pp_7TeV[data].input, "",
+                    pp_7TeV[data].marker, pp_7TeV[data].color, "", pp_7TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded_Syst", pp_7TeV[data].input, "pp, 7 TeV",
+                    pp_7TeV[data].marker, pp_7TeV[data].color, "boxes", pp_7TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded", pp_13TeV[data].input, "",
+                    pp_13TeV[data].marker, pp_13TeV[data].color, "", pp_13TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded_Syst", pp_7TeV[data].input, "pp, 13 TeV",
+                    pp_13TeV[data].marker, pp_13TeV[data].color, "boxes", pp_13TeV[data].mult);
+    //p-Pb
+    myPlot.AddHisto("multDensityUnfolded", pPb_5TeV[data].input, "",
+                    pPb_5TeV[data].marker, pPb_5TeV[data].color, "", pPb_5TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded_Syst", pPb_5TeV[data].input, "p-Pb, 5.02 TeV",
+                    pPb_5TeV[data].marker, pPb_5TeV[data].color, "boxes", pPb_5TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded", pPb_8TeV[data].input, "",
+                    pPb_8TeV[data].marker, pPb_8TeV[data].color, "", pPb_8TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded_Syst", pPb_8TeV[data].input, "p-Pb, 8.16 TeV",
+                    pPb_8TeV[data].marker, pPb_8TeV[data].color, "boxes", pPb_8TeV[data].mult);
+    //Pb-Pb
+    myPlot.AddHisto("multDensityUnfolded", PbPb_5TeV[data].input, "",
+                    PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "", PbPb_5TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded_Syst", PbPb_5TeV[data].input, "Pb-Pb, 5.02 TeV",
+                    PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "boxes", PbPb_5TeV[data].mult);
+    //Xe-Xe
+    myPlot.AddHisto("multDensityUnfolded", XeXe_5TeV[data].input, "",
+                    XeXe_5TeV[data].marker, XeXe_5TeV[data].color, "", XeXe_5TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded_Syst", XeXe_5TeV[data].input, "Xe-Xe, 5.44 TeV",
+                    XeXe_5TeV[data].marker, XeXe_5TeV[data].color, "", XeXe_5TeV[data].mult);
+    
+    myPlot.SetDrawingProperties("logY logX");
+    myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+    myPlot.AddTextBox(0.12, 0.3, systemSizeLable);
+    myPlot.AddLegendBox(0.6, 0.92);
+    myPlot.SetAxisRange("Y", 1e-5, 1);
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+
   
   
   
@@ -336,82 +434,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
-    string plotName = "meanPtFullRangeLin";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV", "", kFullCross, kRed+1, "");
-    myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes");
-    myPlot.AddHisto("momentUnfolded1", "XeXe_5TeV", "", kFullStar, kGreen+2, "");
-    myPlot.AddHisto("momentUnfolded1_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes");
-    myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-    //myPlot.AddLegendBox(0.2, 0.8);
-    myPlot.SetAxisRange("Y", 0.69, 0.74);
-    myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-
-  { // -----------------------------------------------------------------------
-    string plotName = "varianceFullRange";
-    Plot myPlot(plotName, plotGroup);
-    
-    myPlot.SetDrawingProperties("logX");
-    myPlot.AddHisto("varianceUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
-    myPlot.AddHisto("varianceUnfolded", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
-    myPlot.AddHisto("varianceUnfolded_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
-    //myPlot.AddHisto("variance_pp_EPOS-LHC_5.02TeV", "Simulations", "", kOpenSquare, kBlue+1, "", 60);
-    myPlot.AddHisto("varianceUnfolded", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 100);
-    myPlot.AddHisto("varianceUnfolded_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 100);
-    //myPlot.AddHisto("variance_pPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCircle, kMagenta+1, "", 100);
-    //myPlot.AddHisto("variance_pPb_Angantyr_5.02TeV", "Simulations", "", kFullStar, kMagenta+1, "", 100);
-    myPlot.AddHisto("varianceUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
-    myPlot.AddHisto("varianceUnfolded_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes", 3000);
-    //myPlot.AddHisto("variance_PbPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCircle, kRed+1, "", 3000);
-    //myPlot.AddHisto("variance_PbPb_Angantyr_5.02TeV", "Simulations", "", kFullStar, kRed+1, "", 3000);
-    
-    myPlot.AddHisto("varianceUnfolded", "pPb_8TeV", "", kFullCircle, kYellow+1, "", 90);
-    myPlot.AddHisto("varianceUnfolded_Syst", "pPb_8TeV", "p-Pb, 8.16 TeV", kFullCircle, kYellow+1, "boxes", 90);
-    
-    myPlot.AddHisto("varianceUnfolded", "XeXe_5TeV", "", kFullStar, kGreen+2, "", 1100);
-    myPlot.AddHisto("varianceUnfolded_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes", 1100);
-    
-    myPlot.SetAxisRange("X", 0.1, 4000);
-    myPlot.SetAxisRange("Y", 0.001, 0.8);
-    myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-    
-    myPlot.AddLegendBox(0.15, 0.9);
-    //myPlot.AddTextBox(0.15, 0.9, "Open symbols: EPOS-LHC // Stars Pythia Angantyr");
-    myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
-    
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
-    string plotName = "moment1FullRangeMC";
-    Plot myPlot(plotName, plotGroup);
-    
-    myPlot.SetDrawingProperties("logX");
-    myPlot.AddHisto("momentGeneratedMC1", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
-    myPlot.AddHisto("momentGeneratedMC1", "pp_5TeV", "pp (Pythia8)", kFullSquare, kBlue+1, "", 60);
-    myPlot.AddHisto("momentGeneratedMC1", "pPb_5TeV", "p-Pb (DPMJET)", kFullCircle, kMagenta+1, "", 110);
-    myPlot.AddHisto("momentGeneratedMC1", "PbPb_5TeV", "Pb-Pb (HIJING)", kFullCross, kRed+1, "", 3000);
-    myPlot.SetAxisRange("X", 0.1, 4000);
-    myPlot.SetAxisRange("Y", 0.4, 0.85);
-    myPlot.AddLegendBox(0.6, 0.8);
-    myPlot.AddTextBox(0.4, 0.29, systemSizeLable);
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
-    string plotName = "multDensityComparison";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY logX");
-    myPlot.AddHisto("multDensityUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "");
-    myPlot.AddHisto("multDensityUnfolded_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes");
-    myPlot.AddHisto("multDensityUnfolded", "XeXe_5TeV", "", kFullStar, kGreen+2, "");
-    myPlot.AddHisto("multDensityUnfolded_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes");
-    myPlot.AddTextBox(0.2, 0.3, systemSizeLable);
-    myPlot.AddLegendBox(0.7, 0.8);
-    myPlot.SetAxisRange("Y", 1e-4, 3e-2);
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
     string plotName = "multDensityComparisonPerNuclPair";
     Plot myPlot(plotName, plotGroup);
     myPlot.SetDrawingProperties("logY logX");
@@ -456,35 +478,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
-    string plotName = "multDensityFullRange";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY logX");
-    myPlot.AddHisto("multDensityUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
-    myPlot.AddHisto("multDensityUnfolded", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
-    myPlot.AddHisto("multDensityUnfolded_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
-    myPlot.AddHisto("multDensityUnfolded", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 120);
-    myPlot.AddHisto("multDensityUnfolded_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 120);
-    myPlot.AddHisto("multDensityGeneratedMC", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 120);
-    myPlot.AddHisto("multDensityUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
-    myPlot.AddHisto("multDensityUnfolded_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes", 3000);
-    myPlot.AddHisto("multDensityUnfolded", "XeXe_5TeV", "", kFullStar, kGreen+2, "", 2000);
-    myPlot.AddHisto("multDensityUnfolded_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes", 2000);
-    
-    for(int i = 0; i < 9; i++)
-    {
-      for(int j = 0; j < 6; j++)
-      {
-        myPlot.AddTextBox(nchCent[i], 1e-4 - 0.00001*j, "#bf{|}", true);
-      }
-      //        myPlot.AddTextBox(nchCent[i], 1e-3 + 0.001*i, string("#bf{") + centrality[i] + string("}"), true);
-    }
-    myPlot.SetAxisRange("X", 0.1, 3000);
-    myPlot.SetAxisRange("Y", 0.00001, 0.15);
-    myPlot.AddLegendBox(0.2, 0.5);
-    myPlot.AddTextBox(0.35, 0.3, systemSizeLable);
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
     string plotName = "moment1dNchdeta";
     Plot myPlot(plotName, plotGroup);
     myPlot.AddHisto("momentUnfolded1dNchDeta", "pp_5TeV", "pp", 0, kBlue+1);
@@ -503,58 +496,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("Y", 0.05, 0.8);
     myPlot.AddLegendBox(0.15, 0.6);
     myPlot.AddTextBox(0.14, 0.92, systemSizeLable);
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
-    string plotName = "meanPt";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto("momentUnfolded1", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 120);
-    
-    // pp
-    //myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
-    //myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
-    //myPlot.AddHisto("meanPt_pp_EPOS-LHC_5.02TeV", "Simulations", "", kOpenSquare, kBlue+1, "", 60);
-    
-    // pPb
-    myPlot.AddHisto("momentUnfolded1", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 150);
-    myPlot.AddHisto("momentUnfolded1_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 150);
-    //myPlot.AddHisto("momentGeneratedMC1", "pPb_5TeV", "DPMJET", kOpenCircle, kMagenta+1, "", 120);
-    myPlot.AddHisto("meanPt_pPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCircle, kMagenta+1, "", 150);
-    myPlot.AddGraph("meanPt_pPb_EPOS_5.02TeV", "Simulations", "", kOpenSquare, kMagenta+1, "", 150);
-    //myPlot.AddHisto("meanPt_pPb_Angantyr_5.02TeV", "Simulations", "", kFullStar, kMagenta+1, "", 120);
-    
-    // PbPb
-    myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV", "", kFullCross, kRed+1, "");
-    myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes");
-    //myPlot.AddHisto("momentGeneratedMC1", "PbPb_5TeV", "HIJING", kFullCross, kRed+1, "");
-    myPlot.AddHisto("meanPt_PbPb_EPOS-LHC_5.02TeV", "Simulations", "", kFullCross, kRed+1, "");
-    myPlot.AddGraph("meanPt_PbPb_EPOS_5.02TeV", "Simulations", "", kOpenSquare, kRed+1, "");
-    //myPlot.AddHisto("meanPt_PbPb_Angantyr_5.02TeV", "Simulations", "", kFullStar, kRed+1, "");
-    
-    // XeXe
-    //myPlot.AddHisto("momentUnfolded1", "XeXe_5TeV", "", kFullStar, kGreen+2, "");
-    //myPlot.AddHisto("momentUnfolded1_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes");
-    //myPlot.AddHisto("momentGeneratedMC1", "XeXe_5TeV", "HIJING", kFullStar, kGreen+1, "");
-    
-    // additional stuff
-    //myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV_LowIR", "", kFullCross, kOrange+1, "");
-    //myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV_LowIR", "PbPb low IR", kFullCross, kOrange+1, "boxes");
-    
-    //myPlot.AddHisto("momentUnfolded1", "pPb_8TeV", "", kFullCircle, kYellow+1, "", 100);
-    //myPlot.AddHisto("momentUnfolded1_Syst", "pPb_8TeV", "pPb, 8.16 TeV", kFullCircle, kYellow+1, "boxes", 100);
-    
-    //myPlot.AddHisto("momentUnfolded1", "Pbp_8TeV", "", kFullCircle, kYellow+2, "", 100);
-    //myPlot.AddHisto("momentUnfolded1_Syst", "Pbp_8TeV", "Pbp, 8 TeV", kFullCircle, kYellow+2, "boxes", 100);
-    
-    //myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV_2018", "", kFullCross, kBlack, "");
-    //myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV_2018", "PbPb 2018", kFullCross, kBlack, "boxes");
-    
-    myPlot.SetAxisRange("X", -0.5, 300);
-    myPlot.SetAxisRange("Y", 0.4, 0.95);
-    myPlot.AddLegendBox(0.63, 0.92, "");
-    myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-    myPlot.AddTextBox(0.35, 0.4, systemSizeLable);
-    //myPlot.AddTextBox(0.35, 0.4, systemSizeLable + " // Open symbols: EPOS-LHC // Stars: Pythia Angantyr");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -695,60 +636,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
-    string plotName = "moment1WithMC";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto("momentUnfolded1", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
-    myPlot.AddHisto("momentUnfolded1_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
-    myPlot.AddHisto("momentGeneratedMC1", "pp_5TeV", "", 0, kBlue+1, "band", 60);
-    myPlot.AddHisto("momentUnfolded1", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 100);
-    myPlot.AddHisto("momentUnfolded1_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 100);
-    myPlot.AddHisto("momentGeneratedMC1", "pPb_5TeV", "", 0, kMagenta+1, "band");
-    myPlot.AddHisto("momentUnfolded1", "PbPb_5TeV", "", kFullCross, kRed+1, "", 100);
-    myPlot.AddHisto("momentUnfolded1_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes", 100);
-    myPlot.AddHisto("momentGeneratedMC1", "PbPb_5TeV", "", 0, kRed+1, "band");
-    myPlot.SetAxisRange("Y", 0.45, 0.85);
-    myPlot.AddLegendBox(0.2, 0.9, "");
-    myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-    myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
-    string plotName = "variance";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto("varianceUnfolded", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 100);
-    myPlot.AddHisto("varianceUnfolded", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
-    myPlot.AddHisto("varianceUnfolded_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
-    myPlot.AddHisto("varianceUnfolded", "pPb_5TeV", "", kFullCircle, kMagenta+1, "", 100);
-    myPlot.AddHisto("varianceUnfolded_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes", 100);
-    //myPlot.AddHisto("variance_pPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCircle, kMagenta+1, "", 100);
-    //myPlot.AddHisto("variance_pPb_Angantyr_5.02TeV", "Simulations", "", kFullStar, kMagenta+1, "", 100);
-    myPlot.AddHisto("varianceUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "", 200);
-    myPlot.AddHisto("varianceUnfolded_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes", 200);
-    //myPlot.AddHisto("variance_PbPb_EPOS-LHC_5.02TeV", "Simulations", "", kOpenCircle, kRed+1, "", 200);
-    //myPlot.AddHisto("variance_PbPb_Angantyr_5.02TeV", "Simulations", "", kFullStar, kRed+1, "", 200);
-    myPlot.AddHisto("varianceUnfolded", "pPb_8TeV", "", kFullCircle, kYellow+1, "", 90);
-    myPlot.AddHisto("varianceUnfolded_Syst", "pPb_8TeV", "p-Pb, 8.16 TeV", kFullCircle, kYellow+1, "boxes", 90);
-    myPlot.AddHisto("varianceUnfolded", "XeXe_5TeV", "", kFullStar, kGreen+2, "", 200);
-    myPlot.AddHisto("varianceUnfolded_Syst", "XeXe_5TeV", "Xe-Xe", kFullStar, kGreen+2, "boxes", 200);
-    myPlot.SetAxisRange("Y", 0.05, 0.8);
-    myPlot.AddLegendBox(0.6, 0.9, "");
-    myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-    myPlot.AddTextBox(0.35, 0.3, systemSizeLable);
-    //myPlot.AddTextBox(0.53, 0.72, "Open symbols: EPOS-LHC // Stars Pythia Angantyr");
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
-    string plotName = "varianceMC";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto("varianceGeneratedMC", "pp_5TeV", "pp (Pythia8)", kFullSquare, kBlue+1, "", 60);
-    myPlot.AddHisto("varianceGeneratedMC", "pPb_5TeV", "p-Pb (DPMJET)", kFullCircle, kMagenta+1, "", 100);
-    myPlot.AddHisto("varianceGeneratedMC", "PbPb_5TeV", "Pb-Pb (HIJING)", kFullCross, kRed+1, "", 100);
-    myPlot.SetAxisRange("Y", 0.05, 0.8);
-    myPlot.AddLegendBox(0.2, 0.9, "");
-    myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
     string plotName = "moment1UnfoldedVsReWeighted";
     Plot myPlot(plotName, plotGroup, "default ratio");
     myPlot.AddHisto("momentReweighted1", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
@@ -761,57 +648,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("ratio", 0.9, 1.1);
     myPlot.AddLegendBox(0.2, 0.9, "");
     myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
-    string plotName = "moment2";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto("momentUnfolded2", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
-    myPlot.AddHisto("momentUnfolded2_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
-    myPlot.AddHisto("momentUnfolded2", "pPb_5TeV", "", kFullCircle, kMagenta+1);
-    myPlot.AddHisto("momentUnfolded2_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes");
-    myPlot.AddHisto("momentUnfolded2", "PbPb_5TeV", "", kFullCross, kRed+1);
-    myPlot.AddHisto("momentUnfolded2_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes");
-    myPlot.AddHisto("momentUnfolded2_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes");
-    myPlot.SetAxisRange("Y", 0.2, 1.5);
-    myPlot.AddLegendBox(0.2, 0.9, "");
-    myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
-    string plotName = "moment3";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto("momentUnfolded3", "pp_5TeV", "", kFullSquare, kBlue+1, "", 60);
-    myPlot.AddHisto("momentUnfolded3_Syst", "pp_5TeV", "pp", kFullSquare, kBlue+1, "boxes", 60);
-    myPlot.AddHisto("momentUnfolded3", "pPb_5TeV", "", kFullCircle, kMagenta+1);
-    myPlot.AddHisto("momentUnfolded3_Syst", "pPb_5TeV", "p-Pb", kFullCircle, kMagenta+1, "boxes");
-    myPlot.AddHisto("momentUnfolded3", "PbPb_5TeV", "", kFullCross, kRed+1);
-    myPlot.AddHisto("momentUnfolded3_Syst", "PbPb_5TeV", "Pb-Pb", kFullCross, kRed+1, "boxes");
-    myPlot.SetAxisRange("Y", 0.2, 5);
-    myPlot.AddLegendBox(0.6, 0.4, "");
-    myPlot.AddTextBox(0.15, 0.9, systemSizeLable);
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
-    string plotName = "moment1MC";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto("momentUnfoldedMC1", "pp_5TeV", "pp", 0, kBlue+1);
-    myPlot.AddHisto("momentUnfoldedMC1", "pPb_5TeV", "p-Pb", 0, kMagenta+1);
-    myPlot.AddHisto("momentUnfoldedMC1", "PbPb_5TeV", "Pb-Pb", 0, kRed+1);
-    myPlot.SetAxisRange("Y", 0.45, 0.85);
-    myPlot.AddLegendBox(0.6, 0.4, "");
-    myPlot.AddTextBox(0.15, 0.9, systemSizeLable);
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
-    string plotName = "moment1MCtruth";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto("momentGeneratedMC1", "pp_5TeV", "pp (Pythia8)", 0, kBlue+1, "", 60);
-    myPlot.AddHisto("momentGeneratedMC1", "pPb_5TeV", "p-Pb (DPMJET)", 0, kMagenta+1, "", 100);
-    myPlot.AddHisto("momentGeneratedMC1", "PbPb_5TeV", "Pb-Pb (HIJING)", 0, kRed+1, "", 100);
-    myPlot.AddLegendBox(0.15, 0.9, "");
-    myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
-    myPlot.SetAxisRange("Y", 0.45, 0.85);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 }

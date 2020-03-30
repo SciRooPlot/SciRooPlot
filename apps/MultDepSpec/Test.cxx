@@ -22,30 +22,6 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
 {
   string plotGroup = "test";
   
-  
-  cout << "Input: " << pp_5TeV[data].input << ", color: " << pp_5TeV[data].color << ", marker: " << pp_5TeV[data].marker << endl;
-  
-
-
-  
-  
-  int color = kMagenta;
-  
-  // implement new feature inputIdentifier:subfolder
-  { // -----------------------------------------------------------------------
-    string plotName = "meanPt";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto("momentUnfolded1", pp_5TeV[data].input, "", pp_5TeV[data].marker, pp_5TeV[data].color, "", 60);
-    plotEnv.AddPlot(myPlot);
-  } // -----------------------------------------------------------------------
-
-  
-  
-  
-  
-  
-  
-  
   { // -----------------------------------------------------------------------
     string plotName = "multPtScaled_pp_2TeV";
     Plot myPlot(plotName, plotGroup);

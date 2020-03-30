@@ -124,6 +124,11 @@ void Plot::AddGraph(string graphName, string inputIdentifier, string lable, int 
   mData[mCurrPad].push_back(std::make_shared<Graph>(graphName, inputIdentifier, lable, color, marker, 0, drawingOptions, std::make_pair(cutoffLow, cutoff)));
 }
 
+void Plot::AddFrame(string histName, string inputIdentifier)
+{
+  AddHisto(histName, inputIdentifier, "", 0, 0, "AXIS");
+}
+
 void Plot::AddHisto(string histName, string inputIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
 {
   if(inputIdentifier == "") inputIdentifier = mFigureGroup; // default identifier to figuregroup id
