@@ -44,10 +44,11 @@ int main(int argc, char *argv[])
   }
 
   // Define simulation inputs
-  string simIdentifier = "Simulations";
+  string simIdentifier = "Models";
   vector<string> simFiles;
   simFiles.push_back(dataSetFolder + simIdentifier + "/PYTHIA_ANGANTYR_EPOS-LHC.root");
   simFiles.push_back(dataSetFolder + simIdentifier + "/EPOS.root");
+  simFiles.push_back(dataSetFolder + simIdentifier + "/GeometricalScaling.root");
   plotEnv.AddInputDataFiles(simIdentifier, simFiles);
 
   string energyDependenceIdentifer = "Energyscan";
@@ -58,9 +59,6 @@ int main(int argc, char *argv[])
 
   string fitsIdentifer = "Fits";
   plotEnv.AddInputDataFiles(fitsIdentifer, {dataSetFolder + fitsIdentifer + "/" + fitsIdentifer + ".root"});
-
-  string geomScalingIdentifier = "GeometricalScaling";
-  plotEnv.AddInputDataFiles(geomScalingIdentifier, {dataSetFolder + geomScalingIdentifier + "/" + geomScalingIdentifier + ".root"});
   
   INFO("Saving input file paths in: '{}'.", MultDepSpec::gInputFilesConfig);
   gSystem->Exec((string("mkdir -p ") + MultDepSpec::gConfigFolder).c_str());

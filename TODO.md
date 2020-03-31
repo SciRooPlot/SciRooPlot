@@ -11,6 +11,7 @@ ANALYSIS:
 FRAMEWORK:
 ----------
 Major Features:
+- fast dummy plots directly from input?
 - operator overloading for plots
 - possibility to dump and load plot styles (manager should only read in required plot styles)
 - make sure PlotStyle names are unique

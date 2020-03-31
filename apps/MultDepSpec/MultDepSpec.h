@@ -109,6 +109,7 @@ enum inputStyleID: int {
   dpmjet,
   hijing,
   pythia6,
+  geom_scaling,
 };
 
 

@@ -31,7 +31,8 @@ dataStyle pp_2TeV
   {data, {"pp_2TeV", colors::green, markers::circle, 35}},
   {mc, {"pp_2TeV", colors::green, markers::circle_open, 35}},
   {pythia6, {"pp_2TeV", colors::green, markers::circle_open, 35}},
-  {pythia, {"Simulations:pythia/pp_2TeV", colors::green, markers::circle_open, 35}},
+  {pythia, {"Models:pythia/pp_2TeV", colors::green, markers::circle_open, 35}},
+  {geom_scaling, {"Models:geom_scaling/pp_2TeV", colors::green, markers::circle_open, 35}},
   }
 };
 dataStyle pp_5TeV
@@ -39,8 +40,9 @@ dataStyle pp_5TeV
   {
   {data, {"pp_5TeV", colors::blue, markers::circle, 60}},
   {mc, {"pp_5TeV", colors::blue, markers::circle_open, 60}},
-  {pythia, {"Simulations:pythia/pp_5TeV", colors::blue, markers::circle_open, 60}},
-  {epos_lhc, {"Simulations:epos_lhc/pp_5TeV", colors::blue, markers::circle_open, 60}},
+  {pythia, {"Models:pythia/pp_5TeV", colors::blue, markers::circle_open, 60}},
+  {epos_lhc, {"Models:epos_lhc/pp_5TeV", colors::blue, markers::circle_open, 60}},
+  {geom_scaling, {"Models:geom_scaling/pp_5TeV", colors::blue, markers::circle_open, 60}},
   }
 };
 dataStyle pp_7TeV
@@ -48,7 +50,8 @@ dataStyle pp_7TeV
   {
   {data, {"pp_7TeV", colors::magenta, markers::circle, 60}},
   {mc, {"pp_7TeV", colors::magenta, markers::circle_open, 60}},
-  {pythia, {"Simulations:pythia/pp_7TeV", colors::magenta, markers::circle_open, 60}},
+  {pythia, {"Models:pythia/pp_7TeV", colors::magenta, markers::circle_open, 60}},
+  {geom_scaling, {"Models:geom_scaling/pp_7TeV", colors::magenta, markers::circle_open, 60}},
   }
 };
 dataStyle pp_13TeV
@@ -56,7 +59,8 @@ dataStyle pp_13TeV
   {
   {data, {"pp_13TeV", colors::red, markers::circle, 75}},
   {mc, {"pp_13TeV", colors::red, markers::circle_open, 75}},
-  {pythia, {"Simulations:pythia/pp_13TeV", colors::red, markers::circle_open, 75}},
+  {pythia, {"Models:pythia/pp_13TeV", colors::red, markers::circle_open, 75}},
+  {geom_scaling, {"Models:geom_scaling/pp_13TeV", colors::red, markers::circle_open, 75}},
   }
 };
 dataStyle pPb_5TeV
@@ -65,9 +69,10 @@ dataStyle pPb_5TeV
   {data, {"pPb_5TeV", colors::magenta, markers::circle, 120}},
   {mc, {"pPb_5TeV", colors::magenta, markers::circle_open, 120}},
   {dpmjet, {"pPb_5TeV", colors::magenta, markers::circle_open, 120}},
-  {angantyr, {"Simulations:pythia_angantyr/pPb_5TeV", colors::magenta, markers::circle_open, 120}},
-  {epos_lhc, {"Simulations:epos_lhc/pPb_5TeV", colors::magenta, markers::circle_open, 120}},
-  {epos, {"Simulations:epos/pPb_5TeV", colors::magenta, markers::circle_open, 120}}
+  {angantyr, {"Models:pythia_angantyr/pPb_5TeV", colors::magenta, markers::circle_open, 120}},
+  {epos_lhc, {"Models:epos_lhc/pPb_5TeV", colors::magenta, markers::circle_open, 120}},
+  {epos, {"Models:epos/pPb_5TeV", colors::magenta, markers::circle_open, 120}},
+  {geom_scaling, {"Models:geom_scaling/pPb_5TeV", colors::magenta, markers::circle_open, 120}},
   }
 };
 dataStyle pPb_8TeV
@@ -75,7 +80,8 @@ dataStyle pPb_8TeV
   {
   {data, {"pPb_8TeV", colors::yellow, markers::circle, 90}},
   {mc, {"pPb_8TeV", colors::yellow, markers::circle_open, 90}},
-  {epos_lhc, {"pPb_8TeV", colors::yellow, markers::circle_open, 90}}
+  {epos_lhc, {"pPb_8TeV", colors::yellow, markers::circle_open, 90}},
+  {geom_scaling, {"Models:geom_scaling/pPb_8TeV", colors::yellow, markers::circle_open, 90}},
   }
 };
 dataStyle PbPb_2TeV
@@ -89,8 +95,8 @@ dataStyle PbPb_5TeV
   {data, {"PbPb_5TeV", colors::red, markers::circle, 3200}},
   {mc, {"PbPb_5TeV", colors::red, markers::circle_open, 3200}},
   {hijing, {"PbPb_5TeV", colors::red, markers::circle_open, 3200}},
-  {epos_lhc, {"Simulations:epos_lhc/PbPb_5TeV", colors::red, markers::circle_open, 3200}},
-  {epos, {"Simulations:epos/PbPb_5TeV", colors::red, markers::circle_open, 3200}}
+  {epos_lhc, {"Models:epos_lhc/PbPb_5TeV", colors::red, markers::circle_open, 3200}},
+  {epos, {"Models:epos/PbPb_5TeV", colors::red, markers::circle_open, 3200}},
   }
 };
 dataStyle XeXe_5TeV
@@ -98,7 +104,7 @@ dataStyle XeXe_5TeV
   {
   {data, {"XeXe_5TeV", colors::green, markers::circle, 2000}},
   {mc, {"XeXe_5TeV", colors::green, markers::circle_open, 2000}},
-  {hijing, {"XeXe_5TeV", colors::green, markers::circle_open, 2000}}
+  {hijing, {"XeXe_5TeV", colors::green, markers::circle_open, 2000}},
   }
 };
 

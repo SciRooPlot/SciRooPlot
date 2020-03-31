@@ -24,6 +24,11 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
   string systemSizeLable = alice + newLine + chargedParticles + ", " + erg5TeV_NN + newLine + eta08 + ", " + ptRange;
   string systemSizeLablePrel = alicePrel + newLine + chargedParticles + ", " + erg5TeV_NN + newLine + eta08 + ", " + ptRange;
   
+  string energyLable = alice + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
+  string energyLablePrel = alicePrel + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
+  string energyLableMC = "#bf{Pythia8 Monash13}" + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
+
+  
   // FIXME: put nch cent stuff in a separate graph
   vector<string> centrality = {"0-5%","5-10%","10-20%","20-30%","30-40%","40-50%","50-60%","60-70%","70-80%"};
   vector<double> nchCent = {2869.49, 2342.32, 1740.05, 1156.23, 750.512, 463.796, 265.249, 138.504, 64.0346};
@@ -147,6 +152,37 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
   } // -----------------------------------------------------------------------
   
   { // -----------------------------------------------------------------------
+    // compare meanPt in pp, data only
+    string plotName = "meanPt_pp";
+    Plot myPlot(plotName, plotGroup);
+    //p-p
+    myPlot.AddHisto("momentUnfolded1", pp_2TeV[data].input, "",
+                    pp_2TeV[data].marker, pp_2TeV[data].color, "", pp_2TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1_Syst", pp_2TeV[data].input, "pp, 2.76 TeV",
+                    pp_2TeV[data].marker, pp_2TeV[data].color, "boxes", pp_2TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1", pp_5TeV[data].input, "",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "", pp_5TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1_Syst", pp_5TeV[data].input, "pp, 5.02 TeV",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "boxes", pp_5TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1", pp_7TeV[data].input, "",
+                    pp_7TeV[data].marker, pp_7TeV[data].color, "", pp_7TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1_Syst", pp_7TeV[data].input, "pp, 7 TeV",
+                    pp_7TeV[data].marker, pp_7TeV[data].color, "boxes", pp_7TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1", pp_13TeV[data].input, "",
+                    pp_13TeV[data].marker, pp_13TeV[data].color, "", pp_13TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1_Syst", pp_13TeV[data].input, "pp, 13 TeV",
+                    pp_13TeV[data].marker, pp_13TeV[data].color, "boxes", pp_13TeV[data].mult);
+
+    myPlot.SetAxisRange("X", 0.1, 70);
+    myPlot.SetAxisRange("Y", 0.45, 0.9);
+    myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+    
+    myPlot.AddLegendBox(0.14, 0.92);
+    myPlot.AddTextBox(0.36, 0.3, energyLable);
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+  
+  { // -----------------------------------------------------------------------
     // compare variance in all systems, data only
     string plotName = "variance_all";
     Plot myPlot(plotName, plotGroup);
@@ -249,42 +285,129 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
   } // -----------------------------------------------------------------------
 
   
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   { // -----------------------------------------------------------------------
-    string plotName = "meanPtGeometricalScaling";
+    string plotName = "multiplicity_pp";
     Plot myPlot(plotName, plotGroup);
-    myPlot.AddGraph("meanPtScaled_pp_2TeV", "GeometricalScaling", "", 0, 0, "", 2.14);
-    myPlot.AddGraph("meanPtScaled_pp_2TeV_Syst", "GeometricalScaling", "pp, 2.76 TeV", -1, -1, "boxes", 2.14);
-    myPlot.AddGraph("meanPtScaled_pp_5TeV", "GeometricalScaling", "", 0, 0, "", 2.8);
-    myPlot.AddGraph("meanPtScaled_pp_5TeV_Syst", "GeometricalScaling", "pp, 5.02 TeV", -1, -1, "boxes", 2.8);
-    myPlot.AddGraph("meanPtScaled_pp_7TeV", "GeometricalScaling", "", 0, 0, "", 2.8);
-    myPlot.AddGraph("meanPtScaled_pp_7TeV_Syst", "GeometricalScaling", "pp, 7 TeV", -1, -1, "boxes", 2.8);
-    myPlot.AddGraph("meanPtScaled_pp_13TeV", "GeometricalScaling", "", 0, 0, "", 3.3);
-    myPlot.AddGraph("meanPtScaled_pp_13TeV_Syst", "GeometricalScaling", "pp, 13 TeV", -1, -1, "boxes", 3.3);
-    myPlot.AddGraph("meanPtScaled_pPb_5TeV", "GeometricalScaling", "", 0, 0, "", 2.5);
-    myPlot.AddGraph("meanPtScaled_pPb_5TeV_Syst", "GeometricalScaling", "p-Pb, 5.02 TeV", -1, -1, "boxes", 2.5);
-    myPlot.AddGraph("meanPtScaled_pPb_8TeV", "GeometricalScaling", "", 0, 0, "", 2.6);
-    myPlot.AddGraph("meanPtScaled_pPb_8TeV_Syst", "GeometricalScaling", "p-Pb, 8 TeV", -1, -1, "boxes", 2.6);
+    myPlot.SetDrawingProperties("logY");
+    
+    myPlot.AddHisto("multDensityUnfolded", pp_2TeV[data].input, "",
+                    pp_2TeV[data].marker, pp_2TeV[data].color, "", pp_2TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded_Syst", pp_2TeV[data].input, "pp, 2.76 TeV",
+                    pp_2TeV[data].marker, pp_2TeV[data].color, "boxes", pp_2TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded", pp_5TeV[data].input, "",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "", pp_5TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded_Syst", pp_5TeV[data].input, "pp, 5.02 TeV",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "boxes", pp_5TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded", pp_7TeV[data].input, "",
+                    pp_7TeV[data].marker, pp_7TeV[data].color, "", pp_7TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded_Syst", pp_7TeV[data].input, "pp, 7 TeV",
+                    pp_7TeV[data].marker, pp_7TeV[data].color, "boxes", pp_7TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded", pp_13TeV[data].input, "",
+                    pp_13TeV[data].marker, pp_13TeV[data].color, "", pp_13TeV[data].mult);
+    myPlot.AddHisto("multDensityUnfolded_Syst", pp_7TeV[data].input, "pp, 13 TeV",
+                    pp_13TeV[data].marker, pp_13TeV[data].color, "boxes", pp_13TeV[data].mult);
+
+    myPlot.AddHisto("multDist_pp_7TeV_Stat", "Publications", "", kFullCircle, kMagenta+1, "", 52);
+    myPlot.AddHisto("multDist_pp_7TeV_Syst", "Publications", "7 TeV", kFullCircle, kMagenta+1, "boxes", 52);
+    myPlot.AddHisto("multDist_pp_0.9TeV_Stat", "Publications", "", kFullStar, kBlack, "", 33);
+    myPlot.AddHisto("multDist_pp_0.9TeV_Syst", "Publications", "0.9 TeV", kFullStar, kBlack, "boxes", 33);
+
+    myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+    myPlot.SetAxisTitle("Y", "#it{P}(#it{N}_{ch})");
+    myPlot.SetAxisRange("X", 0, 60);
+    myPlot.SetAxisRange("Y", 1e-4, 3e-1);
+    myPlot.AddLegendBox(0.18, 0.45);
+    myPlot.AddTextBox(0.4, 0.9, energyLable);
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+  { // -----------------------------------------------------------------------
+    string plotName = "multiplicity_KNO_pp";
+    Plot myPlot(plotName, plotGroup);
+    myPlot.SetDrawingProperties("logY");
+    
+    myPlot.AddHisto("multDistUnfoldedKNO", pp_2TeV[data].input, "",
+                    pp_2TeV[data].marker, pp_2TeV[data].color, "", pp_2TeV[data].mult);
+    myPlot.AddHisto("multDistUnfoldedKNO_Syst", pp_2TeV[data].input, "pp, 2.76 TeV",
+                    pp_2TeV[data].marker, pp_2TeV[data].color, "boxes", pp_2TeV[data].mult);
+    myPlot.AddHisto("multDistUnfoldedKNO", pp_5TeV[data].input, "",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "", pp_5TeV[data].mult);
+    myPlot.AddHisto("multDistUnfoldedKNO_Syst", pp_5TeV[data].input, "pp, 5.02 TeV",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "boxes", pp_5TeV[data].mult);
+    myPlot.AddHisto("multDistUnfoldedKNO", pp_7TeV[data].input, "",
+                    pp_7TeV[data].marker, pp_7TeV[data].color, "", pp_7TeV[data].mult);
+    myPlot.AddHisto("multDistUnfoldedKNO_Syst", pp_7TeV[data].input, "pp, 7 TeV",
+                    pp_7TeV[data].marker, pp_7TeV[data].color, "boxes", pp_7TeV[data].mult);
+    myPlot.AddHisto("multDistUnfoldedKNO", pp_13TeV[data].input, "",
+                    pp_13TeV[data].marker, pp_13TeV[data].color, "", pp_13TeV[data].mult);
+    myPlot.AddHisto("multDistUnfoldedKNO_Syst", pp_7TeV[data].input, "pp, 13 TeV",
+                    pp_13TeV[data].marker, pp_13TeV[data].color, "boxes", pp_13TeV[data].mult);
+
+    myPlot.AddHisto("multDist_pp_7TeVKNO_Stat", "Publications", "", kOpenCircle, kMagenta+1, "");
+    myPlot.AddHisto("multDist_pp_7TeVKNO_Syst", "Publications", "7 TeV", kOpenCircle, kMagenta+1, "boxes");
+    myPlot.AddHisto("multDist_pp_0.9TeVKNO_Stat", "Publications", "", kOpenStar, kBlack, "");
+    myPlot.AddHisto("multDist_pp_0.9TeVKNO_Syst", "Publications", "0.9 TeV", kOpenStar, kBlack, "boxes");
+    myPlot.SetAxisRange("X", 0, 5);
+    //myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+    myPlot.AddLegendBox(0.7, 0.9);
+    myPlot.AddTextBox(0.15, 0.3, energyLable);
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+
+  
+   
+  { // -----------------------------------------------------------------------
+    string plotName = "meanPt_geom_scaling";
+    Plot myPlot(plotName, plotGroup);
+    myPlot.AddGraph("meanPtScaled", pp_2TeV[geom_scaling].input, "",
+                    pp_2TeV[geom_scaling].marker, pp_2TeV[geom_scaling].color, "", 2.14);
+    myPlot.AddGraph("meanPtScaled_Syst", pp_2TeV[geom_scaling].input, "pp, 2.76 TeV",
+                    pp_2TeV[geom_scaling].marker, pp_2TeV[geom_scaling].color, "boxes", 2.14);
+    myPlot.AddGraph("meanPtScaled", pp_5TeV[geom_scaling].input, "",
+                    pp_5TeV[geom_scaling].marker, pp_5TeV[geom_scaling].color, "", 2.8);
+    myPlot.AddGraph("meanPtScaled_Syst", pp_5TeV[geom_scaling].input, "pp, 5.02 TeV",
+                    pp_5TeV[geom_scaling].marker, pp_5TeV[geom_scaling].color, "boxes", 2.8);
+    myPlot.AddGraph("meanPtScaled", pp_7TeV[geom_scaling].input, "",
+                    pp_7TeV[geom_scaling].marker, pp_7TeV[geom_scaling].color, "", 2.8);
+    myPlot.AddGraph("meanPtScaled_Syst", pp_7TeV[geom_scaling].input, "pp, 7 TeV",
+                    pp_7TeV[geom_scaling].marker, pp_7TeV[geom_scaling].color, "boxes", 2.8);
+
+    myPlot.AddGraph("meanPtScaled", pp_13TeV[geom_scaling].input, "",
+                    pp_13TeV[geom_scaling].marker, pp_13TeV[geom_scaling].color, "", 3.3);
+    myPlot.AddGraph("meanPtScaled_Syst", pp_13TeV[geom_scaling].input, "pp, 13 TeV",
+                    pp_13TeV[geom_scaling].marker, pp_13TeV[geom_scaling].color, "boxes", 3.3);
+
+    myPlot.AddGraph("meanPtScaled", pPb_5TeV[geom_scaling].input, "",
+                    pPb_5TeV[geom_scaling].marker, pPb_5TeV[geom_scaling].color, "", 2.5);
+    myPlot.AddGraph("meanPtScaled_Syst", pPb_5TeV[geom_scaling].input, "p-Pb, 5.02 TeV",
+                    pPb_5TeV[geom_scaling].marker, pPb_5TeV[geom_scaling].color, "boxes", 2.5);
+    myPlot.AddGraph("meanPtScaled", pPb_8TeV[geom_scaling].input, "",
+                    pPb_8TeV[geom_scaling].marker, pPb_8TeV[geom_scaling].color, "", 2.6);
+    myPlot.AddGraph("meanPtScaled_Syst", pPb_8TeV[geom_scaling].input, "p-Pb, 8.16 TeV",
+                    pPb_8TeV[geom_scaling].marker, pPb_8TeV[geom_scaling].color, "boxes", 2.6);
     myPlot.AddLegendBox(0.15, 0.9);
     myPlot.SetAxisRange("X", 0.7, 3.7);
     myPlot.SetAxisRange("Y", 0.48, 1.0);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatio_pPbOverpp";
     Plot myPlot(plotName, plotGroup);
