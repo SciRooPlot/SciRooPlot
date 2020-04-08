@@ -153,33 +153,41 @@ void Plot::AddLegendBox(string title, int nColumns, int borderStyle, int borderS
 
 void Plot::SetAxisRange(string axis, double low, double high)
 {
-  int tempPadID = mCurrPad;
-  if(axis == "ratio") {axis = "Y"; mCurrPad = 2;} // todo:: fix this stupid hack
-  if(mAxes[mCurrPad].find(axis) != mAxes[mCurrPad].end())
+  int seletedPad = mCurrPad;
+  vector<string> allowedAxes = {"X", "Y", "Z"};
+  if(std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end())
   {
-    mAxes[mCurrPad][axis]->SetAxisRange(low, high);
+    // an axis alias was specified, which refers to specific padID-axis combination
+    seletedPad = -1;
+  }
+  if(mAxes[seletedPad].find(axis) != mAxes[seletedPad].end())
+  {
+    mAxes[seletedPad][axis]->SetAxisRange(low, high);
   }
   else
   {
-    mAxes[mCurrPad][axis] = std::make_shared<Axis>(axis, std::make_pair(low, high));
+    mAxes[seletedPad][axis] = std::make_shared<Axis>(axis, std::make_pair(low, high));
   }
-  mCurrPad = tempPadID;
 }
 
 
 void Plot::SetAxisTitle(string axis, string axisTitle)
 {
-  int tempPadID = mCurrPad;
-  if(axis == "ratio") {axis = "Y"; mCurrPad = 2;} // todo:: fix this stupid hack
-  if(mAxes[mCurrPad].find(axis) != mAxes[mCurrPad].end())
+  int seletedPad = mCurrPad;
+  vector<string> allowedAxes = {"X", "Y", "Z"};
+  if(std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end())
   {
-    mAxes[mCurrPad][axis]->SetAxisTitle(axisTitle);
+    // an axis alias was specified, which refers to specific padID-axis combination
+    seletedPad = -1;
+  }
+  if(mAxes[seletedPad].find(axis) != mAxes[seletedPad].end())
+  {
+    mAxes[seletedPad][axis]->SetAxisTitle(axisTitle);
   }
   else
   {
-    mAxes[mCurrPad][axis] = std::make_shared<Axis>(axis, axisTitle);
+    mAxes[seletedPad][axis] = std::make_shared<Axis>(axis, axisTitle);
   }
-  mCurrPad = tempPadID;
 }
 
 

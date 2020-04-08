@@ -934,6 +934,9 @@ void PlotManager::DefineDefaultPlottingStyles()
   {// Definition of "default" style
     PlotStyle myStyle("default ratio");
 
+    myStyle.SetAxisAlias("ratio", 2, "Y");
+    myStyle.LinkAxes("X", {1,2}); // scale x axis in data and ratio in same way automatically
+
     myStyle.SetFromat(710, 1.0);
     myStyle.SetFixedAspectRatio(true);
     myStyle.SetTransparent();

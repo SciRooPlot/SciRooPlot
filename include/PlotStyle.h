@@ -117,8 +117,12 @@ public:
   int GetMarkerSize(){return mMarkerSize;}
   int GetMarkerSizeThick(){return mMarkerSizeThick;}
   int GetLineWidthThick(){return mLineWidthThick;}
+
   void SetFixedAspectRatio(bool isFixedAspectRatio = true){mIsFixedAspectRatio = isFixedAspectRatio;}
   bool IsFixedAspectRatio(){return mIsFixedAspectRatio;}
+
+  // FIXME: here some sanity checks of user input would be useful (is it valid pad and valid axis (XYZ)
+  void SetAxisAlias(string alias, int padID, string axis){mAxisAliases[alias] = {padID, axis};}
 
 private:
   string mName;
@@ -159,6 +163,7 @@ private:
   vector<int> mDefaultLineStyles;
   string m2dStyle;
   bool mIsFixedAspectRatio;
+  map<string, pair<int, string>> mAxisAliases; // unique alias that refers to padID -> axis
 };
 
 
@@ -181,7 +186,7 @@ public:
   void SetRightMargin(double margin) {mMargins[3] = margin;}
 
   void SetDrawingOptions(string drawingOptions) {mDrawingOptions = drawingOptions;}
-
+    
   void SetTitleOffsets(array<double, 3> offsets) {mTitleOffsets = offsets;}
   void SetTitleOffsetX(double offset) {mTitleOffsets[0] = offset;}
   void SetTitleOffsetY(double offset) {mTitleOffsets[1] = offset;}
