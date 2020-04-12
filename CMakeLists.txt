@@ -4,6 +4,7 @@ set(CMAKE_BUILD_TYPE Debug)
 
 # The following two lines can be used to force using one specific root installation (comment out if not needed)
 set(ROOTSYS ~/alice/sw/osx_x86-64/ROOT/latest)
+#set(ROOTSYS ~/root/mybuild)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
 
 project(PlottingFramework CXX)
@@ -52,10 +53,12 @@ string(REPLACE "src" "include" HDRS "${HDRS}")
 # find dependencies
 find_package(ROOT ${REQUIRED_ROOT_VERSION} CONFIG REQUIRED)
 include(${ROOT_USE_FILE})
-message(STATUS "Root Version: ${ROOT_VERSION}")
+message(STATUS "root  version: ${ROOT_VERSION}")
 find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED COMPONENTS program_options)
+message(STATUS "boost version: ${Boost_VERSION}")
 find_package(fmt)
 find_package(fmt ${REQUIRED_FMT_VERSION} REQUIRED)
+message(STATUS "fmt   version: ${fmt_VERSION}")
 
 # create PlottingFramework library
 add_library(${MODULE} SHARED ${SRCS} ${HDRS} ${MODULE_HDR} ${ADDITIONAL_FILES})

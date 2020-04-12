@@ -152,6 +152,86 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
   } // -----------------------------------------------------------------------
   
   { // -----------------------------------------------------------------------
+    // compare meanPt in all systems, data only
+    string plotName = "meanPt_epos";
+    Plot myPlot(plotName, plotGroup);
+    myPlot.AddFrame("momentUnfolded1", PbPb_5TeV[data].input);
+    
+    //p-p
+    myPlot.AddHisto("momentUnfolded1", pp_5TeV[data].input, "",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "", pp_5TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1_Syst", pp_5TeV[data].input, "pp",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "boxes", pp_5TeV[data].mult);
+    myPlot.AddGraph("meanPt", pp_5TeV[epos].input, "",
+                    pp_5TeV[epos].marker, pp_5TeV[epos].color);
+    //p-Pb
+    myPlot.AddHisto("momentUnfolded1", pPb_5TeV[data].input, "",
+                    pPb_5TeV[data].marker, pPb_5TeV[data].color, "", pPb_5TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1_Syst", pPb_5TeV[data].input, "p-Pb",
+                    pPb_5TeV[data].marker, pPb_5TeV[data].color, "boxes", pPb_5TeV[data].mult);
+    myPlot.AddGraph("meanPt", pPb_5TeV[epos].input, "",
+                    pPb_5TeV[epos].marker, pPb_5TeV[epos].color, "", pPb_5TeV[epos].mult);
+    //Pb-Pb
+    myPlot.AddHisto("momentUnfolded1", PbPb_5TeV[data].input, "",
+                    PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "", PbPb_5TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1_Syst", PbPb_5TeV[data].input, "Pb-Pb",
+                    PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "boxes", PbPb_5TeV[data].mult);
+    myPlot.AddGraph("meanPt", PbPb_5TeV[epos].input, "",
+                    PbPb_5TeV[epos].marker, PbPb_5TeV[epos].color);
+
+    myPlot.SetDrawingProperties("logX");
+    myPlot.SetAxisRange("X", 0.1, 4000);
+    //myPlot.SetAxisRange("X", 0.1, 120);
+    myPlot.SetAxisRange("Y", 0.45, 0.9);
+    myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+    
+    myPlot.AddLegendBox(0.14, 0.92);
+    myPlot.AddTextBox(0.36, 0.3, systemSizeLable);
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+
+   { // -----------------------------------------------------------------------
+     // compare meanPt in all systems, data only
+     string plotName = "meanPt_epos_lhc";
+     Plot myPlot(plotName, plotGroup);
+     myPlot.AddFrame("momentUnfolded1", PbPb_5TeV[data].input);
+     
+     //p-p
+     myPlot.AddHisto("momentUnfolded1", pp_5TeV[data].input, "",
+                     pp_5TeV[data].marker, pp_5TeV[data].color, "", pp_5TeV[data].mult);
+     myPlot.AddHisto("momentUnfolded1_Syst", pp_5TeV[data].input, "pp",
+                     pp_5TeV[data].marker, pp_5TeV[data].color, "boxes", pp_5TeV[data].mult);
+     myPlot.AddHisto("meanPt", pp_5TeV[epos_lhc].input, "",
+                     pp_5TeV[epos_lhc].marker, pp_5TeV[epos_lhc].color);
+     //p-Pb
+     myPlot.AddHisto("momentUnfolded1", pPb_5TeV[data].input, "",
+                     pPb_5TeV[data].marker, pPb_5TeV[data].color, "", pPb_5TeV[data].mult);
+     myPlot.AddHisto("momentUnfolded1_Syst", pPb_5TeV[data].input, "p-Pb",
+                     pPb_5TeV[data].marker, pPb_5TeV[data].color, "boxes", pPb_5TeV[data].mult);
+     myPlot.AddHisto("meanPt", pPb_5TeV[epos_lhc].input, "",
+                     pPb_5TeV[epos_lhc].marker, pPb_5TeV[epos_lhc].color, "", pPb_5TeV[epos].mult);
+     //Pb-Pb
+     myPlot.AddHisto("momentUnfolded1", PbPb_5TeV[data].input, "",
+                     PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "", PbPb_5TeV[data].mult);
+     myPlot.AddHisto("momentUnfolded1_Syst", PbPb_5TeV[data].input, "Pb-Pb",
+                     PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "boxes", PbPb_5TeV[data].mult);
+     myPlot.AddHisto("meanPt", PbPb_5TeV[epos_lhc].input, "",
+                     PbPb_5TeV[epos_lhc].marker, PbPb_5TeV[epos_lhc].color);
+
+     myPlot.SetDrawingProperties("logX");
+     myPlot.SetAxisRange("X", 0.1, 4000);
+     //myPlot.SetAxisRange("X", 0.1, 120);
+
+     myPlot.SetAxisRange("Y", 0.45, 0.9);
+     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+     
+     myPlot.AddLegendBox(0.14, 0.92);
+     myPlot.AddTextBox(0.36, 0.3, systemSizeLable);
+     plotEnv.AddPlot(myPlot);
+   } // -----------------------------------------------------------------------
+  
+  
+  { // -----------------------------------------------------------------------
     // compare meanPt in pp, data only
     string plotName = "meanPt_pp";
     Plot myPlot(plotName, plotGroup);
@@ -370,12 +450,10 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
                     pp_7TeV[geom_scaling].marker, pp_7TeV[geom_scaling].color, "", 2.8);
     myPlot.AddGraph("meanPtScaled_Syst", pp_7TeV[geom_scaling].input, "pp, 7 TeV",
                     pp_7TeV[geom_scaling].marker, pp_7TeV[geom_scaling].color, "boxes", 2.8);
-
     myPlot.AddGraph("meanPtScaled", pp_13TeV[geom_scaling].input, "",
                     pp_13TeV[geom_scaling].marker, pp_13TeV[geom_scaling].color, "", 3.3);
     myPlot.AddGraph("meanPtScaled_Syst", pp_13TeV[geom_scaling].input, "pp, 13 TeV",
                     pp_13TeV[geom_scaling].marker, pp_13TeV[geom_scaling].color, "boxes", 3.3);
-
     myPlot.AddGraph("meanPtScaled", pPb_5TeV[geom_scaling].input, "",
                     pPb_5TeV[geom_scaling].marker, pPb_5TeV[geom_scaling].color, "", 2.5);
     myPlot.AddGraph("meanPtScaled_Syst", pPb_5TeV[geom_scaling].input, "p-Pb, 5.02 TeV",

@@ -11,7 +11,7 @@ ANALYSIS:
 FRAMEWORK:
 ----------
 Major Features:
-- fast dummy plots directly from input?
+- graph and hist should work seamlessly, user should not need to specify this
 - operator overloading for plots
 - possibility to dump and load plot styles (manager should only read in required plot styles)
 - make sure PlotStyle names are unique
@@ -33,6 +33,7 @@ Major Features:
 - check if 2d hist is part of plot, then change style
 
 Minor Features:
+- think about if order of objects is plotted correctly (why is frame on top?)
 - change from int to short wherever possible (colors, markers, etc)
 - option in main program to list loaded plots
 - possibility to load all data from input files
@@ -75,7 +76,7 @@ Minor Features:
 Bugs:
 - width and height calculation wrong for text boxes (ndc vs relative pad coordinates?)
 - using user coordinates in legend box breaks something for text box?
-- interactively moving text boxes in log scale plots has a bug (maybe already in root)
+- moving text boxes in log scale plots has a bug in interactive mode
 - when saving to macro or pdf, the boxes are slightly misplaced (some global setting missing?)
 - make sure figure groups cannot contain '.'
 - exponents on x axis are not in the proper position

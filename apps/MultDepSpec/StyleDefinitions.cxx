@@ -42,6 +42,7 @@ dataStyle pp_5TeV
   {mc, {"pp_5TeV", colors::blue, markers::circle_open, 60}},
   {pythia, {"Models:pythia/pp_5TeV", colors::blue, markers::circle_open, 60}},
   {epos_lhc, {"Models:epos_lhc/pp_5TeV", colors::blue, markers::circle_open, 60}},
+  {epos, {"Models:epos/pp_5TeV", colors::blue, markers::circle_open, 60}},
   {geom_scaling, {"Models:geom_scaling/pp_5TeV", colors::blue, markers::circle_open, 60}},
   }
 };
@@ -107,7 +108,4 @@ dataStyle XeXe_5TeV
   {hijing, {"XeXe_5TeV", colors::green, markers::circle_open, 2000}},
   }
 };
-
-
-
 } // end namespace MultDepSpec

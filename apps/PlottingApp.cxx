@@ -169,6 +169,21 @@ int main(int argc, char *argv[])
     PRINT_SEPARATOR;
     return 0;
   }
+  else if(mode == "inspect"){ // directly plot histograms from input identifier or file
+    string inputIdentifier = figureGroupsVector[0];
+    if(inputIdentifier.find(".root") == string::npos){
+      plotEnv.LoadInputDataFiles(inputFilesConfig);
+    } else {
+      plotEnv.AddInputDataFiles("inspect_file", {inputIdentifier});
+      inputIdentifier = "inspect_file";
+    }
+    Plot myPlot("plot", inputIdentifier);
+    for(auto& histName : plotNamesVector)
+      myPlot.AddHisto(histName, inputIdentifier, "<name>"); // FIXME: should also work for graphs
+    myPlot.AddLegendBox();
+    plotEnv.AddPlot(myPlot);
+    plotEnv.CreatePlots(inputIdentifier, "", {}, "interactive");
+  }
   else{
     INFO("Reading input files from {}.", inputFilesConfig);
     plotEnv.LoadInputDataFiles(inputFilesConfig);

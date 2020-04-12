@@ -272,7 +272,7 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
       curYpos = mPlotLedger[mPlotViewHistory[currPlotIndex-1]]->GetWindowTopY();
       canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
     }
-    while(gROOT->GetSelectedPad() && !gSystem->ProcessEvents()) {
+    while(!gSystem->ProcessEvents() && gROOT->GetSelectedPad()) {
       if(canvas->GetEvent() == kButton1Double){
         curXpos = canvas->GetWindowTopX();
         curYpos = canvas->GetWindowTopY();
