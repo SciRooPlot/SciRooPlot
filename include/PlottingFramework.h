@@ -69,6 +69,8 @@
 #include "TSpline.h"
 #include "TGraph.h"
 #include "TGraphErrors.h"
+#include "TGraph2D.h"
+#include "TGraph2DErrors.h"
 #include "TPaletteAxis.h"
 #include "TView.h"
 #include "TApplication.h"
@@ -135,6 +137,8 @@ using std::map;
 using std::set;
 using std::array;
 using std::shared_ptr;
+using std::variant;
+using data_ptr_t = variant<std::nullptr_t, TH1*, TGraph*, TH2*, TGraph2D*>;
 
 using boost::property_tree::ptree;
 using boost::property_tree::write_json;
