@@ -138,7 +138,12 @@ using std::set;
 using std::array;
 using std::shared_ptr;
 using std::variant;
-using data_ptr_t = variant<std::nullptr_t, TH1*, TGraph*, TH2*, TGraph2D*>;
+using std::optional;
+
+using data_1d_ptr_t = variant<TH1*, TGraph*>;
+using data_2d_ptr_t = variant<TH2*, TGraph2D*>;
+
+using data_ptr_t = variant<TH1*, TGraph*, TH2*, TGraph2D*>;
 
 using boost::property_tree::ptree;
 using boost::property_tree::write_json;

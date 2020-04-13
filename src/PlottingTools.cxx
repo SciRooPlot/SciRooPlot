@@ -22,6 +22,7 @@ using namespace PlottingFramework;
 namespace PlottingFramework {
 namespace PlottingTools{
 
+
 shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* availableData){
   
   // this should be in crator
@@ -98,23 +99,56 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
       drawingOptions += data->GetDrawingOptions(); // errorStyle etc
       // setdefaultstyles only once per pad (textsize, etc)!!
       
-      // Data1d_t myData = GetDataClone<Data1d_t>(data->GetUniqueName(), availableData);
-      // std::get<TH1>(myData);
-      // std::holds_alternative<TH1>(myData);
-      using data_1d_ptr_t = variant<TH1*, TGraph*>;
-      using data_2d_ptr_t = variant<TH2*, TGraph2D*>;
-      //using data_ptr_t = variant<data_1d_ptr_t, data_2d_ptr_t>;
 
-      
+      if(optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData))
+      {
+        std::visit([](auto&& data_ptr)
+        {
+          DEBUG("Looking at data {}.", data_ptr->GetName());
+          // put general settings here
+          
+
+          if(std::is_convertible_v<decltype(data_ptr), data_1d_ptr_t>)
+          {
+            DEBUG("I am a 1d data type.");
+
+
+
+            if(std::is_convertible_v<decltype(data_ptr), TH1*>)
+            {
+              DEBUG("I am a histogram.");
+            }
+            if(std::is_convertible_v<decltype(data_ptr), TGraph*>)
+            {
+              DEBUG("I am a graph.");
+            }
+          }
+          
+          if(std::is_convertible_v<decltype(data_ptr), data_2d_ptr_t>)
+          {
+            DEBUG("I am a 2d data type.");
+            
+            
+            
+            
+            
+            if(std::is_convertible_v<decltype(data_ptr), TH2*>)
+            {
+              DEBUG("I am a histogram.");
+            }
+            if(std::is_convertible_v<decltype(data_ptr), TGraph2D*>)
+            {
+              DEBUG("I am a graph.");
+            }
+          }
+        }, *rawData);
+      }
+
+
+
+
       if(data->GetType() == "hist")
       {
-        
-        data_ptr_t test = GetDataCloneNew(data->GetUniqueName(), availableData);
-        if(std::holds_alternative<TH1*>(test)) DEBUG("I am a TH1");
-        //if(std::holds_alternative<data_1d_ptr_t>(test)) DEBUG("I am a 1 dimensional!");
-
-        
-        
         
         TH1* histo = GetDataClone<TH1>(data->GetUniqueName(), availableData);
         if(!histo) continue; // avoid crashes if something goes wrong
@@ -480,38 +514,39 @@ T* GetDataClone(string dataName, TObjArray* availableData)
 
 // helper template functions to cast input to correct type
 template <typename T>
-data_ptr_t CastCorrectType(TObject* obj)
+optional<data_ptr_t> CastCorrectType(TObject* obj)
 {
   if(obj->InheritsFrom(T::Class()))
   {
     return (T*)obj->Clone();
   }
-  return nullptr;
+  return std::nullopt;
 }
-template <typename T, typename First, typename... Rest>
-data_ptr_t CastCorrectType(TObject* obj)
+template <typename T, typename Next, typename... Rest>
+optional<data_ptr_t> CastCorrectType(TObject* obj)
 {
-  data_ptr_t returnPointer = CastCorrectType<T>(obj);
-  try {
-    std::get<std::nullptr_t>(returnPointer);
-  }
-  catch (std::bad_variant_access&){
+  if(auto returnPointer = CastCorrectType<T>(obj))
     return returnPointer;
-  }
-  return CastCorrectType<First, Rest...>(obj);
+  return CastCorrectType<Next, Rest...>(obj);
 }
 
-data_ptr_t GetDataCloneNew(string dataName, TObjArray* availableData)
+optional<data_ptr_t> GetDataClone(string dataName, TObjArray* availableData)
 {
   TObject* obj = availableData->FindObject(dataName.c_str());
   if(obj)
   {
-    return CastCorrectType<TH2, TH1, TGraph2D,TGraph>(obj);
+    if(auto returnPointer = CastCorrectType<TH2, TH1, TGraph2D, TGraph>(obj))
+    {
+      return returnPointer;
+    }
+    else
+    {
+      ERROR("Input data \"{}\" is of unsupported type {}.", dataName, obj->ClassName());
+    }
   }else{
     ERROR("Input data \"{}\" was not loaded.", dataName);
   }
-  return nullptr;
-  //FIXME: clone!!
+  return std::nullopt;
 }
 
 TLegend* MakeLegend(shared_ptr<Plot::LegendBox> legendBox, TPad* pad, TObjArray& legendEntries, vector<string> legendTitles, vector<string>& errorStyles){
