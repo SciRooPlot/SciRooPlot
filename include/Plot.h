@@ -235,8 +235,8 @@ public:
     try{
       mHistoRangeX.first = dataTree.get<double>("rangeX_low");
       mHistoRangeX.second = dataTree.get<double>("rangeX_high");
-      mHistoRangeY.first = dataTree.get<double>("rangeX_low");
-      mHistoRangeY.second = dataTree.get<double>("rangeX_high");
+      mHistoRangeY.first = dataTree.get<double>("rangeY_low");
+      mHistoRangeY.second = dataTree.get<double>("rangeY_high");
     }catch(...){
       ERROR("Could not construct histogram from ptree.");
     }

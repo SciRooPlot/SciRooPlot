@@ -1,5 +1,6 @@
 DEPENDENCIES
 ------------
+- c++   >= 17
 - cmake >= 3.15
 - fmt   >= 6.1.2
 - boost >= 1.72

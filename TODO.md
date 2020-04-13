@@ -11,8 +11,15 @@ ANALYSIS:
 FRAMEWORK:
 ----------
 Major Features:
-- graph and hist should work seamlessly, user should not need to specify this
-- operator overloading for plots
+- graphs and hists should work seamlessly, user should not need to specify this
+  - data agnostic of type graph or hist or func
+  - TH1, TH2, TF1, ratio, (TProfile?)
+  - TGraph, TGraph2D, TF2, ratio, (TProfile2D)
+  - 3d? Nd?? THn, THnSparse
+  - check what are the common functions for all
+  - THStack, TMultiGraph
+- operator overloading for plots (+, <<, *)?
+- time axis opitons?
 - possibility to dump and load plot styles (manager should only read in required plot styles)
 - make sure PlotStyle names are unique
 - use TPad function void Range(float x1,float y1,float x2,float y2) to set user coordinate system independent of first histo, graph, etc
@@ -57,7 +64,6 @@ Minor Features:
 - add option in padstyle that identifies the pad as ratio plot
 - fix overlap between axis title and tick marks if they have too many digits
 - increase number of color steps in 2d plots resp make flexible
-- possibility to load and plot thstack and multigraphs
 - add stack drawing option (thstack)
 - add option to change grid styles
 - add possibility for grey tilted overlayed text like "draft"
