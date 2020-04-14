@@ -99,13 +99,77 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
       drawingOptions += data->GetDrawingOptions(); // errorStyle etc
       // setdefaultstyles only once per pad (textsize, etc)!!
       
-
+      
       if(optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData))
       {
-        std::visit([](auto&& data_ptr)
+        std::visit([&](auto&& data_ptr)
         {
           DEBUG("Looking at data {}.", data_ptr->GetName());
-          // put general settings here
+          
+          // template cut histogram function
+          // template normalize function
+          
+          if(controlString.find("thick") != string::npos){
+            data_ptr->SetLineWidth(plotStyle.GetLineWidthThick());
+            data_ptr->SetMarkerSize(plotStyle.GetMarkerSizeThick());
+          }
+          
+          data_ptr->UseCurrentStyle();
+          data_ptr->SetMarkerStyle(style);
+          data_ptr->SetMarkerColor(color);
+          data_ptr->SetLineColor(color);
+
+          // 2d colz
+          
+          if(drawingOptions.find("none") != string::npos)
+          {
+            drawingOptions.erase(drawingOptions.find("none"), string("none").length());
+            data_ptr->SetLineWidth(0);
+          }
+          if(drawingOptions.find("hist") != string::npos)
+          {
+            drawingOptions += " HIST";
+          }
+          else if(drawingOptions.find("band") != string::npos)
+          {
+            drawingOptions.erase(drawingOptions.find("band"), string("band").length());
+            drawingOptions += " E5";
+            
+            data_ptr->SetMarkerSize(0.);
+            data_ptr->SetFillColor(color);
+            data_ptr->SetFillStyle(1);
+          }
+          else if(drawingOptions.find("boxes") != string::npos)
+          {
+            drawingOptions.erase(drawingOptions.find("boxes"), string("boxes").length());
+            
+            TExec errorBoxesOn("errorBoxesOn","gStyle->SetErrorX(0.48)");
+            errorBoxesOn.Draw();
+            data_ptr->SetFillStyle(0);
+            drawingOptions += " E2";
+            TExec errorBoxesOff("errorBoxesOff","gStyle->SetErrorX(0)");
+            errorBoxesOff.Draw("");
+          }
+          data_ptr->Draw(drawingOptions.c_str());
+
+          if(data->GetType() == "ratio")
+          {
+            if(optional<data_ptr_t> rawDenomData = GetDataClone(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetUniqueNameDenom(), availableData))
+            {
+              data_ptr_t data_ratio_ptr = *rawDenomData;
+              std::visit([&](auto&& data_ratio_ptr)
+              {
+
+                if(std::is_convertible_v<decltype(data_ratio_ptr), data_1d_ptr_t>)
+                {
+                  DEBUG("I am a 1d ratio data type.");
+                  LOG("{}", data_ratio_ptr->GetName());
+
+                }
+               }, *rawDenomData);
+            }
+          }
+
           
 
           if(std::is_convertible_v<decltype(data_ptr), data_1d_ptr_t>)
@@ -116,6 +180,8 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
 
             if(std::is_convertible_v<decltype(data_ptr), TH1*>)
             {
+              if(controlString.find("normalize") != string::npos) ((TH1*)data_ptr)->Scale(1/((TH1*)data_ptr)->Integral(), "width");
+
               DEBUG("I am a histogram.");
             }
             if(std::is_convertible_v<decltype(data_ptr), TGraph*>)
@@ -153,57 +219,13 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
         TH1* histo = GetDataClone<TH1>(data->GetUniqueName(), availableData);
         if(!histo) continue; // avoid crashes if something goes wrong
         
-        // do modifications to histogram
-        CutHistogram(histo, std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutHigh(), std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutLow());
-        if(controlString.find("normalize") != string::npos) histo->Scale(1/histo->Integral(), "width");
-        
-        if(controlString.find("thick") != string::npos){
-          histo->SetLineWidth(plotStyle.GetLineWidthThick());
-          histo->SetMarkerSize(plotStyle.GetMarkerSizeThick());
-        }
-        
-        histo->UseCurrentStyle();
-        histo->SetMarkerStyle(style);
-        histo->SetMarkerColor(color);
-        histo->SetLineColor(color);
         
         if(histo->InheritsFrom("TH2"))
         {
           drawingOptions += string(" ") + plotStyle.GetDefault2DStyle();
           if(plotStyle.GetDefault2DStyle() == "COLZ") gStyle->SetNumberContours(256); // TODO make this flexible
         }
-        
-        if(drawingOptions.find("none") != string::npos)
-        {
-          drawingOptions.erase(drawingOptions.find("none"), string("none").length());
-          histo->SetLineWidth(0);
-        }
-        if(drawingOptions.find("hist") != string::npos)
-        {
-          drawingOptions += " HIST";
-        }
-        else if(drawingOptions.find("band") != string::npos)
-        {
-          drawingOptions.erase(drawingOptions.find("band"), string("band").length());
-          drawingOptions += " E5";
-          
-          histo->SetMarkerSize(0.);
-          histo->SetFillColor(color);
-          histo->SetFillStyle(1);
-        }
-        else if(drawingOptions.find("boxes") != string::npos)
-        {
-          drawingOptions.erase(drawingOptions.find("boxes"), string("boxes").length());
-          
-          TExec errorBoxesOn("errorBoxesOn","gStyle->SetErrorX(0.48)");
-          errorBoxesOn.Draw();
-          histo->SetFillStyle(0);
-          drawingOptions += " E2";
-          TExec errorBoxesOff("errorBoxesOff","gStyle->SetErrorX(0)");
-          errorBoxesOff.Draw("");
-        }
         histo->Draw(drawingOptions.c_str());
-        
       }
       else if(data->GetType() == "ratio")
       {
