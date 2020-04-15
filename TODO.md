@@ -6,7 +6,7 @@ ANALYSIS:
 - clean up file names and make useful sub-folders
 - add more qa plots for unfolding
 - finally fix the naming of the output -> unfoldedMeanPt, etc or use subfolders: generated/meanPt, unfolded/meanPt, generatedMC/meanPt?
-
+- mc linine statt punkten
 
 FRAMEWORK:
 ----------
@@ -41,6 +41,7 @@ Major Features:
 - check if 2d hist is part of plot, then change style
 
 Minor Features:
+- how to handle root and custom drawing options (check for allowed options?)
 - think about if order of objects is plotted correctly (why is frame on top?)
 - change from int to short wherever possible (colors, markers, etc)
 - option in main program to list loaded plots
@@ -93,6 +94,7 @@ Bugs:
 - if lables are 1, 2, 3 height is not calculated correctly?
 
 Structural changes:
+- internally use hashes instead of strings
 - use for (auto& [key, value]: myMap) {} loops
 - think about how things can be implemented in a more general way as templates
 - change arguments referring to internal variables to const ref if possible to be more memory efficient, use lambdas

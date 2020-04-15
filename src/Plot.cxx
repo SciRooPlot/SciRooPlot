@@ -26,7 +26,6 @@ Plot::Plot()
   mName = "dummyName";
   mPlotStyle = "default";
   mControlString.clear();
-  mClearCutoffBin = false;
   mFigureGroup = "";
   mFigureCategory = "";
   mCurrPad = 1;
@@ -71,13 +70,9 @@ Plot::Plot(ptree &plotTree)
           if(content.first.find("DATA") != string::npos)
           {
             string type = content.second.get<string>("type");
-            if(type == "graph")
+            if(type == "data")
             {
-              mData[padID].push_back(std::make_shared<Graph>(content.second));
-            }
-            if(type == "hist")
-            {
-              mData[padID].push_back(std::make_shared<Histogram>(content.second));
+              mData[padID].push_back(std::make_shared<Data>(content.second));
             }
             if(type == "ratio")
             {
@@ -114,14 +109,7 @@ Plot::Plot(ptree &plotTree)
   }catch(...){
     ERROR("Could not construct data from ptree.");
   }
-  mClearCutoffBin = false;
   mCurrPad = 1;
-}
-
-void Plot::AddGraph(string graphName, string inputIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
-{
-  if(inputIdentifier == "") inputIdentifier = mFigureGroup; // default identifier to figuregroup id
-  mData[mCurrPad].push_back(std::make_shared<Graph>(graphName, inputIdentifier, lable, color, marker, 0, drawingOptions, std::make_pair(cutoffLow, cutoff)));
 }
 
 void Plot::AddFrame(string histName, string inputIdentifier)
@@ -129,10 +117,22 @@ void Plot::AddFrame(string histName, string inputIdentifier)
   AddHisto(histName, inputIdentifier, "", 0, 0, "AXIS");
 }
 
-void Plot::AddHisto(string histName, string inputIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
+
+void Plot::Add(string dataName, string inputIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
 {
   if(inputIdentifier == "") inputIdentifier = mFigureGroup; // default identifier to figuregroup id
-  mData[mCurrPad].push_back(std::make_shared<Histogram>(histName, inputIdentifier, lable, color, marker, 0, drawingOptions, 1, std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
+  mData[mCurrPad].push_back(std::make_shared<Data>(dataName, inputIdentifier, lable, color, marker, 0, drawingOptions, 1, std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
+}
+
+
+// to be removed:
+void Plot::AddGraph(string dataName, string inputIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
+{
+  Add(dataName, inputIdentifier,lable, marker, color, drawingOptions, cutoff, cutoffLow);
+}
+void Plot::AddHisto(string dataName, string inputIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
+{
+  Add(dataName, inputIdentifier,lable, marker, color, drawingOptions, cutoff, cutoffLow);
 }
 
 void Plot::AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
