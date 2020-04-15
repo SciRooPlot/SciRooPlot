@@ -67,13 +67,13 @@ dataStyle pp_13TeV
 dataStyle pPb_5TeV
 {
   {
-  {data, {"pPb_5TeV", colors::magenta, markers::circle, 120}},
-  {mc, {"pPb_5TeV", colors::magenta, markers::circle_open, 120}},
-  {dpmjet, {"pPb_5TeV", colors::magenta, markers::circle_open, 120}},
-  {angantyr, {"Models:pythia_angantyr/pPb_5TeV", colors::magenta, markers::circle_open, 120}},
-  {epos_lhc, {"Models:epos_lhc/pPb_5TeV", colors::magenta, markers::circle_open, 120}},
-  {epos, {"Models:epos/pPb_5TeV", colors::magenta, markers::circle_open, 120}},
-  {geom_scaling, {"Models:geom_scaling/pPb_5TeV", colors::magenta, markers::circle_open, 120}},
+  {data, {"pPb_5TeV", colors::magenta, markers::circle, 100}},
+  {mc, {"pPb_5TeV", colors::magenta, markers::circle_open, 100}},
+  {dpmjet, {"pPb_5TeV", colors::magenta, markers::circle_open, 100}},
+  {angantyr, {"Models:pythia_angantyr/pPb_5TeV", colors::magenta, markers::circle_open, 100}},
+  {epos_lhc, {"Models:epos_lhc/pPb_5TeV", colors::magenta, markers::circle_open, 100}},
+  {epos, {"Models:epos/pPb_5TeV", colors::magenta, markers::circle_open, 100}},
+  {geom_scaling, {"Models:geom_scaling/pPb_5TeV", colors::magenta, markers::circle_open, 100}},
   }
 };
 dataStyle pPb_8TeV
@@ -93,11 +93,12 @@ dataStyle PbPb_2TeV
 dataStyle PbPb_5TeV
 {
   {
-  {data, {"PbPb_5TeV", colors::red, markers::circle, 3200}},
-  {mc, {"PbPb_5TeV", colors::red, markers::circle_open, 3200}},
-  {hijing, {"PbPb_5TeV", colors::red, markers::circle_open, 3200}},
-  {epos_lhc, {"Models:epos_lhc/PbPb_5TeV", colors::red, markers::circle_open, 3200}},
-  {epos, {"Models:epos/PbPb_5TeV", colors::red, markers::circle_open, 3200}},
+  {data, {"PbPb_5TeV", colors::red, markers::circle, 3000}},
+  {mc, {"PbPb_5TeV", colors::red, markers::circle_open, 3000}},
+  {hijing, {"PbPb_5TeV", colors::red, markers::circle_open, 3000}},
+  {angantyr, {"Models:pythia_angantyr/PbPb_5TeV", colors::red, markers::circle_open, 3000}},
+  {epos_lhc, {"Models:epos_lhc/PbPb_5TeV", colors::red, markers::circle_open, 3000}},
+  {epos, {"Models:epos/PbPb_5TeV", colors::red, markers::circle_open, 3000}},
   }
 };
 dataStyle XeXe_5TeV

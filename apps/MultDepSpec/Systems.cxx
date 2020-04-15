@@ -209,14 +209,14 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
      myPlot.AddHisto("momentUnfolded1_Syst", pPb_5TeV[data].input, "p-Pb",
                      pPb_5TeV[data].marker, pPb_5TeV[data].color, "boxes", pPb_5TeV[data].mult);
      myPlot.AddHisto("meanPt", pPb_5TeV[epos_lhc].input, "",
-                     pPb_5TeV[epos_lhc].marker, pPb_5TeV[epos_lhc].color, "", pPb_5TeV[epos].mult);
+                     pPb_5TeV[epos_lhc].marker, pPb_5TeV[epos_lhc].color, "", pPb_5TeV[epos_lhc].mult);
      //Pb-Pb
      myPlot.AddHisto("momentUnfolded1", PbPb_5TeV[data].input, "",
                      PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "", PbPb_5TeV[data].mult);
      myPlot.AddHisto("momentUnfolded1_Syst", PbPb_5TeV[data].input, "Pb-Pb",
                      PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "boxes", PbPb_5TeV[data].mult);
      myPlot.AddHisto("meanPt", PbPb_5TeV[epos_lhc].input, "",
-                     PbPb_5TeV[epos_lhc].marker, PbPb_5TeV[epos_lhc].color);
+                     PbPb_5TeV[epos_lhc].marker, PbPb_5TeV[epos_lhc].color, "", PbPb_5TeV[data].mult);
 
      myPlot.SetDrawingProperties("logX");
      myPlot.SetAxisRange("X", 0.1, 4000);

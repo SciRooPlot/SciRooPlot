@@ -11,6 +11,7 @@ ANALYSIS:
 FRAMEWORK:
 ----------
 Major Features:
+- if there is a frame defined, take it, otherwise construct frame from first hisogram (always draw a copy! then ranges can still be set)
 - graphs and hists should work seamlessly, user should not need to specify this
   - data agnostic of type graph or hist or func
   - TH1, TH2, TF1, ratio, (TProfile?)

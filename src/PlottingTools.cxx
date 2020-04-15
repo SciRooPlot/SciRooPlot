@@ -99,11 +99,16 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
       // setdefaultstyles only once per pad (textsize, etc)!!
       if(data->GetType() == "hist")
       {
+        bool convertToGraph = false;
         TH1* histo = GetDataClone<TH1>(data->GetUniqueName(), availableData);
         if(!histo) continue; // avoid crashes if something goes wrong
         
         // do modifications to histogram
-        CutHistogram(histo, std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutHigh(), std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutLow());
+        //CutHistogram(histo, std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutHigh(), std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutLow());
+        
+        histo->GetXaxis()->SetRangeUser(std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutLow(), std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutHigh());
+        
+        
         if(controlString.find("normalize") != string::npos) histo->Scale(1/histo->Integral(), "width");
         
         if(controlString.find("thick") != string::npos){
@@ -121,6 +126,13 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
           drawingOptions += string(" ") + plotStyle.GetDefault2DStyle();
           if(plotStyle.GetDefault2DStyle() == "COLZ") gStyle->SetNumberContours(256); // TODO make this flexible
         }
+
+        if(drawingOptions.find("smooth") != string::npos)
+        {
+          drawingOptions.erase(drawingOptions.find("smooth"), string("smooth").length());
+          histo->Smooth();
+        }
+
         
         if(drawingOptions.find("none") != string::npos)
         {
@@ -140,6 +152,20 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
           histo->SetFillColor(color);
           histo->SetFillStyle(1);
         }
+        else if(drawingOptions.find("curve") != string::npos)
+        {
+          drawingOptions.erase(drawingOptions.find("curve"), string("curve").length());
+          drawingOptions.erase(drawingOptions.find("EP"), string("EP").length());
+          drawingOptions += " HIST C";
+          //histo->SetMinimum(0.7);
+          
+          histo->SetLineStyle(kSolid);
+          histo->SetLineWidth(5.);
+          if(drawingOptions.find("dotted") != string::npos){
+            drawingOptions.erase(drawingOptions.find("dotted"), string("dotted").length());
+            histo->SetLineStyle(kDashed);
+          }
+        }
         else if(drawingOptions.find("boxes") != string::npos)
         {
           drawingOptions.erase(drawingOptions.find("boxes"), string("boxes").length());
@@ -151,7 +177,15 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
           TExec errorBoxesOff("errorBoxesOff","gStyle->SetErrorX(0)");
           errorBoxesOff.Draw("");
         }
-        histo->Draw(drawingOptions.c_str());
+        DEBUG("drawing with {}", drawingOptions);
+        if(convertToGraph){
+          TGraph* graphFromHist = new TGraph(histo);
+//          graphFromHist->Draw(drawingOptions.c_str());
+          graphFromHist->Draw("C same");
+          // delete histo;
+        }else{
+          histo->Draw(drawingOptions.c_str());
+        }
         
       }
       else if(data->GetType() == "ratio")
@@ -163,7 +197,10 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
         delete temp;
         
         // do modifications to histogram
-        CutHistogram(ratio, std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutHigh(), std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutLow());
+        //CutHistogram(ratio, std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutHigh(), std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutLow());
+        
+        ratio->GetXaxis()->SetRangeUser(std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutLow(), std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutHigh());
+
         
         ratio->SetTitle("");
         ratio->UseCurrentStyle();

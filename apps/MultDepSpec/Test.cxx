@@ -22,6 +22,138 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
 {
   string plotGroup = "test";
   
+  
+  // hard probes preliminaries:
+  
+  string systemSizeLablePrel = alicePrel + newLine + chargedParticles + ", " + erg5TeV_NN + newLine + eta08 + ", " + ptRange;
+  string energyLablePrel = alicePrel + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
+
+   { // -----------------------------------------------------------------------
+     // compare meanPt in all systems
+     string plotName = "meanPt_systems";
+     Plot myPlot(plotName, "preliminary");
+     myPlot.AddFrame("momentUnfolded1", PbPb_5TeV[data].input);
+     
+     //p-p
+     myPlot.AddHisto("momentUnfolded1", pp_5TeV[data].input, "",
+                     pp_5TeV[data].marker, pp_5TeV[data].color, "", pp_5TeV[data].mult);
+     myPlot.AddHisto("momentUnfolded1_Syst", pp_5TeV[data].input, "pp",
+                     pp_5TeV[data].marker, pp_5TeV[data].color, "boxes", pp_5TeV[data].mult);
+     myPlot.AddHisto("meanPt", pp_5TeV[epos_lhc].input, "",
+                     pp_5TeV[epos_lhc].marker, pp_5TeV[epos_lhc].color, "band", pp_5TeV[epos_lhc].mult);
+     myPlot.AddHisto("meanPt", pp_5TeV[pythia].input, "",
+                     pp_5TeV[pythia].marker, pp_5TeV[pythia].color, "band", pp_5TeV[pythia].mult);
+     //p-Pb
+     myPlot.AddHisto("momentUnfolded1", pPb_5TeV[data].input, "",
+                     pPb_5TeV[data].marker, pPb_5TeV[data].color, "", pPb_5TeV[data].mult);
+     myPlot.AddHisto("momentUnfolded1_Syst", pPb_5TeV[data].input, "p-Pb",
+                     pPb_5TeV[data].marker, pPb_5TeV[data].color, "boxes", pPb_5TeV[data].mult);
+     myPlot.AddHisto("meanPt", pPb_5TeV[epos_lhc].input, "",
+                     pPb_5TeV[epos_lhc].marker, pPb_5TeV[epos_lhc].color, "curve smooth", pPb_5TeV[epos_lhc].mult);
+     myPlot.AddHisto("meanPt", pPb_5TeV[angantyr].input, "",
+                     pPb_5TeV[angantyr].marker, pPb_5TeV[angantyr].color, "curve smooth dotted", pPb_5TeV[angantyr].mult);
+     //Pb-Pb
+     myPlot.AddHisto("momentUnfolded1", PbPb_5TeV[data].input, "",
+                     PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "", PbPb_5TeV[data].mult);
+     myPlot.AddHisto("momentUnfolded1_Syst", PbPb_5TeV[data].input, "Pb-Pb",
+                     PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "boxes", PbPb_5TeV[data].mult);
+     myPlot.AddHisto("meanPt", PbPb_5TeV[epos_lhc].input, "",
+                     PbPb_5TeV[epos_lhc].marker, PbPb_5TeV[epos_lhc].color, "curve smooth", PbPb_5TeV[epos_lhc].mult);
+     myPlot.AddHisto("meanPt", PbPb_5TeV[angantyr].input, "",
+                     PbPb_5TeV[angantyr].marker, PbPb_5TeV[angantyr].color, "curve smooth dotted", PbPb_5TeV[angantyr].mult);
+
+     myPlot.SetDrawingProperties("logX");
+     myPlot.SetAxisRange("X", 0.1, 4000);
+     //myPlot.SetAxisRange("X", 0.1, 120);
+
+     myPlot.SetAxisRange("Y", 0.45, 0.9);
+     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+     
+     myPlot.AddLegendBox(0.14, 0.92);
+     myPlot.AddTextBox(0.36, 0.3, systemSizeLablePrel);
+     plotEnv.AddPlot(myPlot);
+   } // -----------------------------------------------------------------------
+  
+  
+  { // -----------------------------------------------------------------------
+    // compare meanPt in pp, data only
+    string plotName = "meanPt_energies";
+    Plot myPlot(plotName, "preliminary");
+    myPlot.AddFrame("momentUnfolded1", pp_2TeV[data].input);
+    //p-p
+    myPlot.AddHisto("momentUnfolded1", pp_2TeV[data].input, "",
+                    pp_2TeV[data].marker, pp_2TeV[data].color, "", pp_2TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1_Syst", pp_2TeV[data].input, "pp, 2.76 TeV",
+                    pp_2TeV[data].marker, pp_2TeV[data].color, "boxes", pp_2TeV[data].mult);
+    myPlot.AddHisto("meanPt", pp_2TeV[pythia].input, "",
+                    pp_2TeV[pythia].marker, pp_2TeV[pythia].color, "curve dotted", pp_2TeV[pythia].mult);
+    //myPlot.AddHisto("meanPt", pp_2TeV[epos-lhc].input, "",
+    //                pp_2TeV[epos-lhc].marker, pp_2TeV[epos-lhc].color, "curve", pp_2TeV[epos-lhc].mult);
+
+    myPlot.AddHisto("momentUnfolded1", pp_5TeV[data].input, "",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "", pp_5TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1_Syst", pp_5TeV[data].input, "pp, 5.02 TeV",
+                    pp_5TeV[data].marker, pp_5TeV[data].color, "boxes", pp_5TeV[data].mult);
+    myPlot.AddHisto("meanPt", pp_5TeV[pythia].input, "",
+                    pp_5TeV[pythia].marker, pp_5TeV[pythia].color, "curve dotted", pp_5TeV[pythia].mult);
+    //myPlot.AddHisto("meanPt", pp_5TeV[epos_lhc].input, "",
+    //                pp_5TeV[epos_lhc].marker, pp_5TeV[epos_lhc].color, "curve dotted", pp_5TeV[epos_lhc].mult);
+
+    myPlot.AddHisto("momentUnfolded1", pp_7TeV[data].input, "",
+                    pp_7TeV[data].marker, pp_7TeV[data].color, "", pp_7TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1_Syst", pp_7TeV[data].input, "pp, 7 TeV",
+                    pp_7TeV[data].marker, pp_7TeV[data].color, "boxes", pp_7TeV[data].mult);
+    myPlot.AddHisto("meanPt", pp_7TeV[pythia].input, "",
+                    pp_7TeV[pythia].marker, pp_7TeV[pythia].color, "curve dotted", pp_7TeV[pythia].mult);
+    //myPlot.AddHisto("meanPt", pp_7TeV[epos_lhc].input, "",
+    //                pp_7TeV[epos_lhc].marker, pp_7TeV[epos_lhc].color, "curve", pp_7TeV[epos_lhc].mult);
+
+    
+    myPlot.AddHisto("momentUnfolded1", pp_13TeV[data].input, "",
+                    pp_13TeV[data].marker, pp_13TeV[data].color, "", pp_13TeV[data].mult);
+    myPlot.AddHisto("momentUnfolded1_Syst", pp_13TeV[data].input, "pp, 13 TeV",
+                    pp_13TeV[data].marker, pp_13TeV[data].color, "boxes", pp_13TeV[data].mult);
+    myPlot.AddHisto("meanPt", pp_13TeV[pythia].input, "",
+                    pp_13TeV[pythia].marker, pp_13TeV[pythia].color, "curve dotted", pp_13TeV[pythia].mult);
+    //myPlot.AddHisto("meanPt", pp_13TeV[epos_lhc].input, "",
+    //                pp_13TeV[epos_lhc].marker, pp_13TeV[epos_lhc].color, "curve dotted", pp_13TeV[epos_lhc].mult);
+
+    myPlot.SetAxisRange("X", 0.1, 70);
+    myPlot.SetAxisRange("Y", 0.45, 0.9);
+    myPlot.SetAxisTitle("X", "#it{N}_{ch}");
+    
+    myPlot.AddLegendBox(0.14, 0.92);
+    myPlot.AddTextBox(0.36, 0.3, energyLablePrel);
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   { // -----------------------------------------------------------------------
     string plotName = "multPtScaled_pp_2TeV";
     Plot myPlot(plotName, plotGroup);
