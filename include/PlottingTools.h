@@ -40,8 +40,6 @@ T* GetDataClone(string dataName, TObjArray* availableData);
 optional<data_ptr_t> GetDataClone(string dataName, TObjArray* availableData);
 TLegend* MakeLegend(shared_ptr<Plot::LegendBox> legendBox, TPad* pad, TObjArray& legendEntries, vector<string> legendTitles, vector<string>& errorStyles);
 TPaveText* MakeText(shared_ptr<Plot::TextBox> textBox);
-void CutHistogram(TH1* hist, double cutoff, double cutoffLow);
-void CutGraph(TGraph* graph, double cutoff, double cutoffLow);
 TGraph* DivideTSpline(TGraph* numerator, TGraph* denominator);
 TH1* DivideTSpline(TH1* numerator, TH1* denominator);
 } // end namespace PlottingTools
