@@ -69,6 +69,9 @@ public:
   
   // User accessors:
   void AddFrame(string histName, string inputIdentifier);
+  void Add(string dataName, string inputIdentifier = "", string lable = "", int marker = 0, int color = 0, string drawingOptions = "", double cutoff = -999, double cutoffLow = -999);
+
+
   void AddHisto(string histName, string inputIdentifier = "", string lable = "", int marker = 0, int color = 0, string drawingOptions = "", double cutoff = -999, double cutoffLow = -999);
   void AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier = "", string lable = "", int marker = 0, int color = 0, string errorStyle = "", double cutoff = -999, double cutoffLow = -999);
   void AddGraph(string graphName, string inputIdentifier = "", string lable = "", int marker = 0, int color = 0, string drawingOptions = "", double cutoff = -999, double cutoffLow = -999);
@@ -108,19 +111,51 @@ private:
   map<unsigned int, map<string, shared_ptr<Axis>>> mAxes; // padID, "x", axis properties
   
   map<unsigned int, string> mControlString; // mControlString[padID]
-  
-  bool mClearCutoffBin;
 };
 //========================================================================================
 
 //****************************************************************************************
 /**
- * Base class for representation of drawable data.
+ * Representation of drawable data.
  */
 //****************************************************************************************
 class Plot::Data
 {
 public:
+  // default constructor
+  Data(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions, int scale, pair<double, double> viewRangeX, pair<double, double> viewRangeY)
+  : mType("data"), mName(name), mInputIdentifier(inputIdentifier), mLable(lable), mColor(color), mStyle(style), mSize(size), mDrawingOptions(drawingOptions), mScale(scale), mViewRangeX(viewRangeX), mViewRangeY(viewRangeY)
+  {
+    // if input was specified further via inputIdentifier:some/path/in/file
+    auto subPathPos = inputIdentifier.find(":");
+    if(subPathPos != string::npos)
+    {
+      // prepend path to plot name
+      mName = inputIdentifier.substr(subPathPos+1) + "/" + name;
+      mInputIdentifier = inputIdentifier.substr(0, subPathPos);
+    }
+  }
+  // constructor to define entry from file
+  Data(ptree &dataTree){
+    try{
+      mType = dataTree.get<string>("type");
+      mName = dataTree.get<string>("name");
+      mInputIdentifier = dataTree.get<string>("inputIdentifier");
+      mLable = dataTree.get<string>("lable");
+      mColor = dataTree.get<int>("color");
+      mStyle = dataTree.get<int>("style");
+      mSize = dataTree.get<int>("size");
+      mDrawingOptions = dataTree.get<string>("drawingOptions");
+      mViewRangeX.first = dataTree.get<double>("viewRangeX_low");
+      mViewRangeX.second = dataTree.get<double>("viewRangeX_high");
+      mViewRangeY.first = dataTree.get<double>("viewRangeY_low");
+      mViewRangeY.second = dataTree.get<double>("viewRangeY_high");
+    }catch(...){
+      ERROR("Could not construct data from ptree.");
+    }
+  }
+
+  
   Data(const Data& otherPlot) = default;
   Data(Data& otherPlot) = default;
   
@@ -133,7 +168,12 @@ public:
   const int& GetSize(){return mSize;}
   const string& GetDrawingOptions(){return mDrawingOptions;}
   
-  //virtual bool isValidDrawingOption() = 0;
+  const double& GetScaleFactor(){return mScale;}
+  const double& GetViewRangeXLow(){return mViewRangeX.first;}
+  const double& GetViewRangeXHigh(){return mViewRangeX.second;}
+  const double& GetViewRangeYLow(){return mViewRangeY.first;}
+  const double& GetViewRangeYHigh(){return mViewRangeY.second;}
+
   string GetUniqueName(){return mName + gNameGroupSeparator + mInputIdentifier;}
   virtual ptree GetPropertyTree(){
     ptree dataTree;
@@ -145,43 +185,19 @@ public:
     dataTree.put("style", mStyle);
     dataTree.put("size", mSize);
     dataTree.put("drawingOptions", mDrawingOptions);
+    dataTree.put("scale", mScale);
+    dataTree.put("viewRangeX_low", mViewRangeX.first);
+    dataTree.put("viewRangeX_high", mViewRangeX.second);
+    dataTree.put("viewRangeY_low", mViewRangeY.first);
+    dataTree.put("viewRangeY_high", mViewRangeY.second);
     return dataTree;
   }
   
-  // constructor to define entry from file
-  Data(ptree &dataTree){
-    try{
-      mType = dataTree.get<string>("type");
-      mName = dataTree.get<string>("name");
-      mInputIdentifier = dataTree.get<string>("inputIdentifier");
-      mLable = dataTree.get<string>("lable");
-      mColor = dataTree.get<int>("color");
-      mStyle = dataTree.get<int>("style");
-      mSize = dataTree.get<int>("size");
-      mDrawingOptions = dataTree.get<string>("drawingOptions");
-    }catch(...){
-      ERROR("Could not construct data from ptree.");
-    }
-  }
-  
-  
 protected:
-  Data(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions)
-  : mType("none"), mName(name), mInputIdentifier(inputIdentifier), mLable(lable), mColor(color), mStyle(style), mSize(size), mDrawingOptions(drawingOptions)
-  {
-    // if input was specified further via inputIdentifier:some/path/in/file
-    auto subPathPos = inputIdentifier.find(":");
-    if(subPathPos != string::npos)
-    {
-      // prepend path to plot name
-      mName = inputIdentifier.substr(subPathPos+1) + "/" + name;
-      mInputIdentifier = inputIdentifier.substr(0, subPathPos);
-    }
-  }
   void SetType(string type){mType = type;}
   
 private:
-  string mType; // for introspection: "hist", "ratio", "graph", ...
+  string mType; // for introspection: "data", "ratio", "function", ...
   string mName;
   string mInputIdentifier;
   string mLable;
@@ -189,63 +205,11 @@ private:
   int mColor;
   int mStyle; // markerStyle or lineStyle
   int mSize;  // markerSize or lineWidth
-  string mDrawingOptions; // "normal", "boxes", "hist", "band" root: "text", "func" ...
-  // can be different for graphs and histos and functions
-  // put useful options in documentation!!!
-  // for functions "LSAME"!! smooth: "C" fill area: "FC"
-  // TODO: use root version of options + map more readable ones to corresponding root ones
-  // static const vector<string> allowedDrawingOptions = {"L", "C", "FC"};
-};
-
-//****************************************************************************************
-/**
- * Representation of a histogram.
- */
-//****************************************************************************************
-class Plot::Histogram : public Plot::Data
-{
-public:
-  Histogram(const Histogram& otherHistogram) = default;
-  Histogram(Histogram& otherHistogram) = default;
-  virtual ~Histogram() = default;
-  
-  Histogram(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions, int scale, pair<double, double> histoRangeX, pair<double, double> histoRangeY)
-  : Data(name, inputIdentifier, lable, color, style, size, drawingOptions), mScale(scale), mHistoRangeX(histoRangeX), mHistoRangeY(histoRangeY)
-  {
-    SetType("hist");
-  }
-  
-  const double& GetScaleFactor(){return mScale;}
-  // TODO better names for this + add Yaxis getters
-  const double& GetHistCutHigh(){return mHistoRangeX.second;}
-  const double& GetHistCutLow(){return mHistoRangeX.first;}
-  
-  ptree GetPropertyTree(){
-    ptree dataTree = Data::GetPropertyTree();
-    dataTree.put("scale", mScale);
-    dataTree.put("rangeX_low", mHistoRangeX.first);
-    dataTree.put("rangeX_high", mHistoRangeX.second);
-    dataTree.put("rangeY_low", mHistoRangeY.first);
-    dataTree.put("rangeY_high", mHistoRangeY.second);
-    return dataTree;
-  }
-  
-  // constructor to define entry from file
-  Histogram(ptree &dataTree) : Data(dataTree){
-    try{
-      mHistoRangeX.first = dataTree.get<double>("rangeX_low");
-      mHistoRangeX.second = dataTree.get<double>("rangeX_high");
-      mHistoRangeY.first = dataTree.get<double>("rangeX_low");
-      mHistoRangeY.second = dataTree.get<double>("rangeX_high");
-    }catch(...){
-      ERROR("Could not construct histogram from ptree.");
-    }
-  }
-  
-private:
+  string mDrawingOptions; // "boxes", "hist", "band", "curve", "smooth" root: "text", "func" ...
   double mScale;
-  pair<double, double> mHistoRangeX;
-  pair<double, double> mHistoRangeY;
+  pair<double, double> mViewRangeX;
+  pair<double, double> mViewRangeY;
+
 };
 
 //****************************************************************************************
@@ -253,15 +217,15 @@ private:
  * Representation of a ratio.
  */
 //****************************************************************************************
-class Plot::Ratio : public Plot::Histogram
+class Plot::Ratio : public Plot::Data
 {
 public:
   Ratio(const Ratio& otherRatio) = default;
   Ratio(Ratio& otherRatio) = default;
   virtual ~Ratio() = default;
   
-  Ratio(string name, string inputIdentifier, string denomName, string denomInputIdentifier, string lable, int color, int style, int size, string drawingOptions, string divideMethod, int scale, pair<double, double> histoRangeX, pair<double, double> histoRangeY)
-  : Histogram(name, inputIdentifier, lable, color, style, size, drawingOptions, scale, histoRangeX, histoRangeY), mDenomName(denomName), mDenomInputIdentifier(denomInputIdentifier), mDivideMethod(divideMethod)
+  Ratio(string name, string inputIdentifier, string denomName, string denomInputIdentifier, string lable, int color, int style, int size, string drawingOptions, string divideMethod, int scale, pair<double, double> viewRangeX, pair<double, double> viewRangeY)
+  : Data(name, inputIdentifier, lable, color, style, size, drawingOptions, scale, viewRangeX, viewRangeY), mDenomName(denomName), mDenomInputIdentifier(denomInputIdentifier), mDivideMethod(divideMethod)
   {
     SetType("ratio");
   }
@@ -269,7 +233,7 @@ public:
   string GetDenomName(){return mDenomName;}
   string GetUniqueNameDenom(){return mDenomName + gNameGroupSeparator + mDenomInputIdentifier;}
   ptree GetPropertyTree(){
-    ptree dataTree = Histogram::GetPropertyTree();
+    ptree dataTree = Data::GetPropertyTree();
     dataTree.put("denomName", mDenomName);
     dataTree.put("denomInputID", mDenomInputIdentifier);
     dataTree.put("divideMethod", mDivideMethod);
@@ -277,12 +241,11 @@ public:
   }
   
   // constructor to define entry from file
-  Ratio(ptree &dataTree) : Histogram(dataTree){
+  Ratio(ptree &dataTree) : Data(dataTree){
     try{
       mDenomName = dataTree.get<string>("denomName");
       mDenomInputIdentifier = dataTree.get<string>("denomInputID");
-      mDivideMethod = "";
-      //mDivideMethod = dataTree.get<double>("divideMethod"); // TODO:: it should not crash if xml entry is empty!!
+      mDivideMethod = dataTree.get<string>("divideMethod");
     }catch(...){
       ERROR("Could not construct ratio from ptree.");
     }
@@ -294,55 +257,12 @@ private:
   string mDivideMethod;  // "tspline3", "binomial", etc.
 };
 
-
-//****************************************************************************************
-/**
- * Representation of a graph.
- */
-//****************************************************************************************
-class Plot::Graph : public Plot::Data
-{
-public:
-  Graph(const Graph& otherGraph) = default;
-  Graph(Graph& otherGraph) = default;
-  virtual ~Graph() = default;
-  
-  Graph(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions, pair<double, double> graphRangeX)
-  : Data(name, inputIdentifier, lable, color, style, size, drawingOptions), mGraphRangeX(graphRangeX)
-  {
-    SetType("graph");
-  }
-  const double& GetGraphCutLow(){return mGraphRangeX.first;}
-  const double& GetGraphCutHigh(){return mGraphRangeX.second;}
-  
-  ptree GetPropertyTree(){
-    ptree dataTree = Data::GetPropertyTree();
-    dataTree.put("rangeX_low", mGraphRangeX.first);
-    dataTree.put("rangeX_high", mGraphRangeX.second);
-    return dataTree;
-  }
-  
-  // constructor to define entry from file
-  Graph(ptree &dataTree) : Data(dataTree){
-    try{
-      mGraphRangeX.first = dataTree.get<double>("rangeX_low");
-      mGraphRangeX.second = dataTree.get<double>("rangeX_high");
-    }catch(...){
-      ERROR("Could not construct graph from ptree.");
-    }
-  }
-private:
-  // specifics for graph...
-  pair<double, double> mGraphRangeX;
-  
-};
-
-
 //****************************************************************************************
 /**
  * Representation of a function.
  */
 //****************************************************************************************
+/*
 class Plot::Function : public Plot::Data
 {
 public:
@@ -380,7 +300,7 @@ private:
   string mFormula;
   // TODO: option to fit to loaded data? what about ratios, that exist only in manager?
 };
-
+*/
 
 //****************************************************************************************
 /**

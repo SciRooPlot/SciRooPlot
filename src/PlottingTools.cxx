@@ -33,8 +33,8 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     return nullptr;
   }
   
-  // Create empty plot
   gStyle->SetOptStat(0); // this needs to be done before creating the canvas! at later stage it would add to list of primitives in pad...
+  // Create empty plot
   string canvasName = plot.GetUniqueName();
   TCanvas* canvas = new TCanvas(canvasName.c_str(), canvasName.c_str(), plotStyle.GetWidth()+4, plotStyle.GetHeight()+28); // undo hard-coded offsets in TCanvas.cxx line 580
   canvas->SetMargin(0., 0., 0., 0.); // todo make this editable?
@@ -90,42 +90,46 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     string drawingOptions = "";
     int dataIndex = 0;
     for(auto data : plot.GetData(padID)){
-      int color = (data->GetColor()) ? data->GetColor() : plotStyle.GetDefaultColor(dataIndex); // TODO 0 is white!!
-      int style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex); // only gets marker not line style
+      int color = (data->GetColor()) ? data->GetColor() : plotStyle.GetDefaultColor(dataIndex); // TODO: 0 is white!!
+      int style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex); // FIXME: only gets marker not line style
       
-      if(color < 0) {dataIndex += color; color = plotStyle.GetDefaultColor(dataIndex);} // todo how to implement this feature better?
-      if(style < 0) {style = plotStyle.GetDefaultMarker(dataIndex);} // todo how to implement this feature better?
+      if(color < 0) {dataIndex += color; color = plotStyle.GetDefaultColor(dataIndex);} // TODO: how to implement this feature better?
+      if(style < 0) {style = plotStyle.GetDefaultMarker(dataIndex);} // TODO: how to implement this feature better?
       
       drawingOptions += data->GetDrawingOptions(); // errorStyle etc
-      // setdefaultstyles only once per pad (textsize, etc)!!
+      // set default styles only once per pad (textsize, etc)!!
       
       
       if(optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData))
       {
         std::visit([&](auto&& data_ptr)
         {
-          DEBUG("Looking at data {}.", data_ptr->GetName());
-          
-          // template cut histogram function
-          // template normalize function
-          
-          if(controlString.find("thick") != string::npos){
-            data_ptr->SetLineWidth(plotStyle.GetLineWidthThick());
-            data_ptr->SetMarkerSize(plotStyle.GetMarkerSizeThick());
-          }
-          
           data_ptr->UseCurrentStyle();
           data_ptr->SetMarkerStyle(style);
           data_ptr->SetMarkerColor(color);
           data_ptr->SetLineColor(color);
-
-          // 2d colz
           
-          if(drawingOptions.find("none") != string::npos)
+          if(std::is_convertible_v<decltype(data_ptr), TGraph*>)
           {
-            drawingOptions.erase(drawingOptions.find("none"), string("none").length());
-            data_ptr->SetLineWidth(0);
+            if(dataIndex == 0) drawingOptions += " AP";
           }
+
+          if(std::is_convertible_v<decltype(data_ptr), data_2d_ptr_t>)
+          {
+            // 2d colz
+            if(data_ptr->InheritsFrom("TH2"))
+            {
+              drawingOptions += string(" ") + plotStyle.GetDefault2DStyle();
+              if(plotStyle.GetDefault2DStyle() == "COLZ") gStyle->SetNumberContours(256); // TODO: make this flexible
+            }
+          }
+
+          // apply control string options
+          if(controlString.find("thick") != string::npos){
+            data_ptr->SetLineWidth(plotStyle.GetLineWidthThick());
+            data_ptr->SetMarkerSize(plotStyle.GetMarkerSizeThick());
+          }
+
           if(drawingOptions.find("hist") != string::npos)
           {
             drawingOptions += " HIST";
@@ -150,197 +154,84 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
             TExec errorBoxesOff("errorBoxesOff","gStyle->SetErrorX(0)");
             errorBoxesOff.Draw("");
           }
-          data_ptr->Draw(drawingOptions.c_str());
 
           if(data->GetType() == "ratio")
           {
             if(optional<data_ptr_t> rawDenomData = GetDataClone(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetUniqueNameDenom(), availableData))
             {
-              data_ptr_t data_ratio_ptr = *rawDenomData;
+
               std::visit([&](auto&& data_ratio_ptr)
               {
-
-                if(std::is_convertible_v<decltype(data_ratio_ptr), data_1d_ptr_t>)
+                data_ptr->SetTitle(""); // FIXME: this might not always be what the user wants...
+                // TODO: here all possibilities of graph/hist/etc should be accounted for
+                // TODO: add here alternative divide functions and options
+                if(std::is_convertible_v<decltype(data_ptr), TH1*> && std::is_convertible_v<decltype(data_ratio_ptr), TH1*>)
                 {
-                  DEBUG("I am a 1d ratio data type.");
-                  LOG("{}", data_ratio_ptr->GetName());
-
+                  ((TH1*)data_ptr)->Divide((TH1*)data_ratio_ptr);
                 }
+                // this should not be necessary, better check inherits from TH1?
+                if(std::is_convertible_v<decltype(data_ptr), TH2*> && std::is_convertible_v<decltype(data_ratio_ptr), TH2*>)
+                {
+                  ((TH2*)data_ptr)->Divide((TH2*)data_ratio_ptr);
+                }
+
+                if(std::is_convertible_v<decltype(data_ratio_ptr), TH1*>)
+                {
+                  data_ptr->GetYaxis()->CenterTitle(1);
+                  data_ptr->GetXaxis()->SetTickLength(0.06);
+                  data_ptr->GetYaxis()->SetNdivisions(305); //506
+                  if(dataIndex == 0)
+                  {
+                    // TODO:: this should be way more flexible!!
+                    TH1* dummyHist = (TH1*)data_ptr->Clone("dummy");
+                    dummyHist->GetXaxis()->SetTickLength(0.06); // TODO: this should automatically be the same as for the main plot!!
+                    dummyHist->GetYaxis()->SetNdivisions(305); //506
+                    dummyHist->SetLineColor(0); // make plot invisible
+                    TF1* line = new TF1("line", "1", dummyHist->GetXaxis()->GetXmin(), dummyHist->GetXaxis()->GetXmax());
+                    dummyHist->DrawCopy("AXIS");
+                    //line->SetLineColor(color);
+                    line->SetLineColor(kBlack);
+                    line->SetLineWidth(2);
+                    // line->SetLineStyle(9);
+                    line->Draw("SAME");
+                    drawingOptions += " SAME";
+                    dataIndex++;
+                    color = (data->GetColor()) ? data->GetColor() : plotStyle.GetDefaultColor(dataIndex);
+                    style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex);
+                  }
+                }
+                delete data_ratio_ptr; // FIXME: is this correct? What happens to optional?
                }, *rawDenomData);
             }
+          } // end ratio code
+
+          // TODO: normalize
+          // TODO: scale
+
+          // now set ranges
+          data_ptr->GetXaxis()->SetRangeUser(data->GetViewRangeXLow(), data->GetViewRangeXHigh());
+          //data_ptr->GetYaxis()->SetRangeUser(data->GetViewRangeYLow(), data->GetViewRangeYHigh());
+
+          // finally draw to pad
+          data_ptr->Draw(drawingOptions.c_str());
+          
+          dataIndex++;
+          drawingOptions = "EP SAME"; // next data should be drawn to same pad
+          
+          if (!data->GetLable().empty()) {
+            lables.push_back(data->GetLable());
+            legendEntries.Add(pad->GetListOfPrimitives()->Last());
+            errorStyles.push_back(data->GetDrawingOptions());
           }
 
           
-
-          if(std::is_convertible_v<decltype(data_ptr), data_1d_ptr_t>)
-          {
-            DEBUG("I am a 1d data type.");
-
-
-
-            if(std::is_convertible_v<decltype(data_ptr), TH1*>)
-            {
-              if(controlString.find("normalize") != string::npos) ((TH1*)data_ptr)->Scale(1/((TH1*)data_ptr)->Integral(), "width");
-
-              DEBUG("I am a histogram.");
-            }
-            if(std::is_convertible_v<decltype(data_ptr), TGraph*>)
-            {
-              DEBUG("I am a graph.");
-            }
-          }
-          
-          if(std::is_convertible_v<decltype(data_ptr), data_2d_ptr_t>)
-          {
-            DEBUG("I am a 2d data type.");
-            
-            
-            
-            
-            
-            if(std::is_convertible_v<decltype(data_ptr), TH2*>)
-            {
-              DEBUG("I am a histogram.");
-            }
-            if(std::is_convertible_v<decltype(data_ptr), TGraph2D*>)
-            {
-              DEBUG("I am a graph.");
-            }
-          }
         }, *rawData);
       }
+    } // end data code
 
-
-
-
-      if(data->GetType() == "hist")
-      {
-        
-        TH1* histo = GetDataClone<TH1>(data->GetUniqueName(), availableData);
-        if(!histo) continue; // avoid crashes if something goes wrong
-        
-        
-        if(histo->InheritsFrom("TH2"))
-        {
-          drawingOptions += string(" ") + plotStyle.GetDefault2DStyle();
-          if(plotStyle.GetDefault2DStyle() == "COLZ") gStyle->SetNumberContours(256); // TODO make this flexible
-        }
-        histo->Draw(drawingOptions.c_str());
-      }
-      else if(data->GetType() == "ratio")
-      {
-        TH1* ratio = GetDataClone<TH1>(data->GetUniqueName(), availableData);
-        TH1* temp = GetDataClone<TH1>(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetUniqueNameDenom(), availableData);
-        if(!ratio || !temp) continue; // avoid crashes if something goes wrong
-        ratio->Divide(temp); // todo add here alternative divide functions and options
-        delete temp;
-        
-        // do modifications to histogram
-        CutHistogram(ratio, std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutHigh(), std::dynamic_pointer_cast<Plot::Histogram>(data)->GetHistCutLow());
-        
-        ratio->SetTitle("");
-        ratio->UseCurrentStyle();
-        
-        if(ratio->InheritsFrom("TH2"))
-        {
-          drawingOptions += string(" ") + plotStyle.GetDefault2DStyle();
-          
-          TView* view = TView::CreateView(1);
-          view->SetRange(-0.5,-1,-3.610432,100.5,1.778151,0.1470754);
-          pad->SetTheta(49.5);
-          pad->SetPhi(230);
-        }
-        else{
-          ratio->GetYaxis()->CenterTitle(1);
-          ratio->GetXaxis()->SetTickLength(0.06);
-          ratio->GetYaxis()->SetNdivisions(305); //506
-          if(dataIndex == 0)
-          {
-            // todo:: this should be way more flexible!!
-            TH1* dummyHist = (TH1*)ratio->Clone("dummy");
-            dummyHist->GetXaxis()->SetTickLength(0.06); // todo:: this should automatically be the same as for the main plot!!
-            dummyHist->GetYaxis()->SetNdivisions(305); //506
-            dummyHist->SetLineColor(0); // make plot invisible
-            TF1* line = new TF1("line", "1", dummyHist->GetXaxis()->GetXmin(), dummyHist->GetXaxis()->GetXmax());
-            dummyHist->Draw("AXIS");
-            //line->SetLineColor(color);
-            line->SetLineColor(kBlack);
-            line->SetLineWidth(2);
-            // line->SetLineStyle(9);
-            line->Draw("SAME");
-            drawingOptions += " SAME";
-            dataIndex++;
-            color = (data->GetColor()) ? data->GetColor() : plotStyle.GetDefaultColor(dataIndex);
-            style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex);
-          }
-        }
-        if(drawingOptions.find("boxes") != string::npos)
-        {
-          drawingOptions.erase(drawingOptions.find("boxes"), string("boxes").length());
-          TExec errorBoxesOn("errorBoxesOn","gStyle->SetErrorX(0.48)");
-          errorBoxesOn.Draw();
-          ratio->SetFillStyle(0);
-          drawingOptions += " E2";
-          TExec errorBoxesOff("errorBoxesOff","gStyle->SetErrorX(0)");
-          errorBoxesOff.Draw("");
-        }
-        ratio->SetMarkerStyle(style);
-        ratio->SetMarkerColor(color);
-        ratio->SetLineColor(color);
-        ratio->Draw(drawingOptions.c_str());
-      }
-      else if(data->GetType() == "graph")
-      {
-        TGraph* graph = GetDataClone<TGraph>(data->GetUniqueName(), availableData);
-        if(!graph) continue; // avoid crashes if something goes wrong
-        //graph->SetTitle("");
-        
-        // do modifications to graph
-        CutGraph(graph, std::dynamic_pointer_cast<Plot::Graph>(data)->GetGraphCutHigh(), std::dynamic_pointer_cast<Plot::Graph>(data)->GetGraphCutLow());
-        
-        
-        graph->UseCurrentStyle();
-        graph->SetMarkerStyle(style);
-        graph->SetMarkerColor(color);
-        graph->SetLineColor(color);
-        
-        if(padID ==2){
-          graph->GetYaxis()->CenterTitle(1);
-          graph->GetXaxis()->SetTickLength(0.06);
-          graph->GetYaxis()->SetNdivisions(305); //506
-        }
-        if(drawingOptions.find("boxes") != string::npos)
-        {
-          drawingOptions.erase(drawingOptions.find("boxes"), string("boxes").length());
-          TExec errorBoxesOn("errorBoxesOn","gStyle->SetErrorX(0.48)");
-          errorBoxesOn.Draw();
-          graph->SetFillStyle(0);
-          drawingOptions = "E2 SAME"; // bug
-          TExec errorBoxesOff("errorBoxesOff","gStyle->SetErrorX(0)");
-          errorBoxesOff.Draw("");
-        }
-        
-        
-        if(dataIndex == 0) drawingOptions += " AP";
-        graph->Draw(drawingOptions.c_str());
-      }
-      else{
-        ERROR("No matching representation found for {}.", data->GetName());
-        continue;
-      }
-      
-      dataIndex++;
-      drawingOptions = "EP SAME"; // next data should be drawn to same pad
-      
-      if (!data->GetLable().empty()) {
-        lables.push_back(data->GetLable());
-        legendEntries.Add(pad->GetListOfPrimitives()->Last());
-        errorStyles.push_back(data->GetDrawingOptions());
-      }
-    }
     
     // TODO: set range and log scale properties must affect all linked pad-axes
-    // also add safety in case log and range are not compatible (zero in range)
+    // TODO: also add safety in case log and range are not compatible (zero in range)
     if(controlString.find("logX") != string::npos)
     {
       pad->SetLogx();

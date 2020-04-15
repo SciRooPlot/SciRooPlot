@@ -33,6 +33,7 @@ Major Features:
 - check if 2d hist is part of plot, then change style
 
 Minor Features:
+- how to handle root and custom drawing options (check for allowed options?)
 - think about if order of objects is plotted correctly (why is frame on top?)
 - change from int to short wherever possible (colors, markers, etc)
 - option in main program to list loaded plots
