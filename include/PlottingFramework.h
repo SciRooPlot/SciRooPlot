@@ -40,23 +40,25 @@
 #include <fmt/core.h>
 
 // root headers
+#include "TH1.h"
+#include "TH2.h"
+#include "TProfile.h"
+#include "TProfile2D.h"
+#include "TGraph.h"
+#include "TGraphErrors.h"
+#include "TGraph2D.h"
+#include "TGraph2DErrors.h"
+#include "TF1.h"
+#include "TF2.h"
+
+#include "TFile.h"
 #include "TCanvas.h"
 #include "TLegendEntry.h"
-#include "TFile.h"
 #include "TIterator.h"
 #include "TKey.h"
 #include "TObjArray.h"
 #include "TObject.h"
 #include "TStyle.h"
-#include "TGraph.h"
-#include "TF1.h"
-#include "TH1.h"
-#include "TProfile.h"
-#include "TProfile2D.h"
-#include "TH1D.h"
-#include "TH2D.h"
-#include "TH3D.h"
-#include "THn.h"
 #include "TSystem.h"
 #include <TROOT.h>
 #include <TObjectTable.h>
@@ -69,10 +71,6 @@
 #include "TLatex.h"
 #include "TError.h"
 #include "TSpline.h"
-#include "TGraph.h"
-#include "TGraphErrors.h"
-#include "TGraph2D.h"
-#include "TGraph2DErrors.h"
 #include "TPaletteAxis.h"
 #include "TView.h"
 #include "TApplication.h"
@@ -142,7 +140,20 @@ using std::shared_ptr;
 using std::variant;
 using std::optional;
 
-using data_ptr_t = variant<TH1*, TH2*, TGraph*, TGraph2D*, TProfile*, TProfile2D*>;
+using data_ptr_t = variant<TH1*, TH2*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF2*, TF1*>;
+
+using data_ptr_t_1d = variant<TH1*, TGraph*, TProfile*, TF1*>;
+using data_ptr_t_2d = variant<TH2*, TGraph2D*, TProfile2D*, TF2*>;
+using data_ptr_t_hist = variant<TH1*, TH2*, TProfile*, TProfile2D*>;
+using data_ptr_t_hist_1d = variant<TH1*, TProfile*>;
+using data_ptr_t_hist_2d = variant<TH2*, TProfile2D*>;
+using data_ptr_t_graph = variant<TGraph*, TGraph2D*>;
+using data_ptr_t_graph_1d = variant<TGraph*>;
+using data_ptr_t_graph_2d = variant<TGraph2D*>;
+using data_ptr_t_func = variant<TF1*, TF2*>;
+using data_ptr_t_func_1d = variant<TF1*>;
+using data_ptr_t_func_2d = variant<TF2*>;
+
 
 using boost::property_tree::ptree;
 using boost::property_tree::write_json;

@@ -102,15 +102,6 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
       drawingOptions += data->GetDrawingOptions(); // errorStyle etc
       
       
-      using data_ptr_t_1d = variant<TH1*, TGraph*, TProfile*>;
-      using data_ptr_t_2d = variant<TH2*, TGraph2D*, TProfile2D*>;
-      using data_ptr_t_hist = variant<TH1*, TH2*, TProfile*, TProfile2D*>;
-      using data_ptr_t_hist_1d = variant<TH1*, TProfile*>;
-      using data_ptr_t_hist_2d = variant<TH2*, TProfile2D*>;
-      using data_ptr_t_graph = variant<TGraph*, TGraph2D*>;
-      using data_ptr_t_graph_1d = variant<TGraph*>;
-      using data_ptr_t_graph_2d = variant<TGraph2D*>;
-
       if(optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData))
       {
 
@@ -480,7 +471,7 @@ optional<data_ptr_t> GetDataClone(string dataName, TObjArray* availableData)
   if(obj)
   {
     // IMPORTANT: TProfile2D is TH2, TH2 is TH1, TProfile is TH1 --> order matters here!
-    if(auto returnPointer = CastCorrectType<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph>(obj))
+    if(auto returnPointer = CastCorrectType<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1>(obj))
     {
       return returnPointer;
     }
