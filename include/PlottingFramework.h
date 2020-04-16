@@ -51,6 +51,8 @@
 #include "TGraph.h"
 #include "TF1.h"
 #include "TH1.h"
+#include "TProfile.h"
+#include "TProfile2D.h"
 #include "TH1D.h"
 #include "TH2D.h"
 #include "TH3D.h"
@@ -140,10 +142,7 @@ using std::shared_ptr;
 using std::variant;
 using std::optional;
 
-using data_1d_ptr_t = variant<TH1*, TGraph*>;
-using data_2d_ptr_t = variant<TH2*, TGraph2D*>;
-
-using data_ptr_t = variant<TH1*, TGraph*, TH2*, TGraph2D*>;
+using data_ptr_t = variant<TH1*, TH2*, TGraph*, TGraph2D*, TProfile*, TProfile2D*>;
 
 using boost::property_tree::ptree;
 using boost::property_tree::write_json;

@@ -90,6 +90,9 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     string drawingOptions = "";
     int dataIndex = 0;
     for(auto data : plot.GetData(padID)){
+      
+      
+      
       int color = (data->GetColor()) ? data->GetColor() : plotStyle.GetDefaultColor(dataIndex); // TODO: 0 is white!!
       int style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex); // FIXME: only gets marker not line style
       
@@ -97,31 +100,38 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
       if(style < 0) {style = plotStyle.GetDefaultMarker(dataIndex);} // TODO: how to implement this feature better?
       
       drawingOptions += data->GetDrawingOptions(); // errorStyle etc
-      // set default styles only once per pad (textsize, etc)!!
       
       
+      using data_ptr_t_1d = variant<TH1*, TGraph*, TProfile*>;
+      using data_ptr_t_2d = variant<TH2*, TGraph2D*, TProfile2D*>;
+      using data_ptr_t_hist = variant<TH1*, TH2*, TProfile*, TProfile2D*>;
+      using data_ptr_t_hist_1d = variant<TH1*, TProfile*>;
+      using data_ptr_t_hist_2d = variant<TH2*, TProfile2D*>;
+      using data_ptr_t_graph = variant<TGraph*, TGraph2D*>;
+      using data_ptr_t_graph_1d = variant<TGraph*>;
+      using data_ptr_t_graph_2d = variant<TGraph2D*>;
+
       if(optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData))
       {
-        std::visit([&](auto&& data_ptr)
+
+        std::visit([&](auto&& data_ptr) // could also return value!
         {
+          using data_type = std::decay_t<decltype(data_ptr)>;
+          
           data_ptr->UseCurrentStyle();
           data_ptr->SetMarkerStyle(style);
           data_ptr->SetMarkerColor(color);
           data_ptr->SetLineColor(color);
-          
-          if(std::is_convertible_v<decltype(data_ptr), TGraph*>)
+                    
+          if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph>)
           {
             if(dataIndex == 0) drawingOptions += " AP";
           }
 
-          if(std::is_convertible_v<decltype(data_ptr), data_2d_ptr_t>)
+          if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
           {
-            // 2d colz
-            if(data_ptr->InheritsFrom("TH2"))
-            {
               drawingOptions += string(" ") + plotStyle.GetDefault2DStyle();
               if(plotStyle.GetDefault2DStyle() == "COLZ") gStyle->SetNumberContours(256); // TODO: make this flexible
-            }
           }
 
           // apply control string options
@@ -148,7 +158,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
             drawingOptions.erase(drawingOptions.find("curve"), string("curve").length());
             drawingOptions.erase(drawingOptions.find("EP"), string("EP").length());
             drawingOptions += " HIST C";
-            
+
             data_ptr->SetLineStyle(kSolid);
             data_ptr->SetLineWidth(5.);
             if(drawingOptions.find("dotted") != string::npos){
@@ -175,20 +185,18 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
 
               std::visit([&](auto&& data_ratio_ptr)
               {
+                using ratio_data_type = std::decay_t<decltype(data_ratio_ptr)>;
+
                 data_ptr->SetTitle(""); // FIXME: this might not always be what the user wants...
                 // TODO: here all possibilities of graph/hist/etc should be accounted for
                 // TODO: add here alternative divide functions and options
-                if(std::is_convertible_v<decltype(data_ptr), TH1*> && std::is_convertible_v<decltype(data_ratio_ptr), TH1*>)
+                if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
+                  if constexpr (std::is_convertible_v<ratio_data_type, data_ptr_t_hist>)
                 {
-                  ((TH1*)data_ptr)->Divide((TH1*)data_ratio_ptr);
-                }
-                // this should not be necessary, better check inherits from TH1?
-                if(std::is_convertible_v<decltype(data_ptr), TH2*> && std::is_convertible_v<decltype(data_ratio_ptr), TH2*>)
-                {
-                  ((TH2*)data_ptr)->Divide((TH2*)data_ratio_ptr);
+                  data_ptr->Divide(data_ratio_ptr);
                 }
 
-                if(std::is_convertible_v<decltype(data_ratio_ptr), TH1*>)
+                if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
                 {
                   data_ptr->GetYaxis()->CenterTitle(1);
                   data_ptr->GetXaxis()->SetTickLength(0.06);
@@ -218,24 +226,27 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
             }
           } // end ratio code
 
-          
-          if(std::is_convertible_v<decltype(data_ptr), TH1*>)
+          if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
           {
             if(drawingOptions.find("smooth") != string::npos)
             {
               drawingOptions.erase(drawingOptions.find("smooth"), string("smooth").length());
-              ((TH1*)data_ptr)->Smooth();
+              data_ptr->Smooth();
             }
           }
 
           // TODO: normalize
-          // TODO: scale
+          if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
+          {
+            //data_ptr->Scale(data->GetScaleFactor());
+          }
 
           // now set ranges
           data_ptr->GetXaxis()->SetRangeUser(data->GetViewRangeXLow(), data->GetViewRangeXHigh());
           //data_ptr->GetYaxis()->SetRangeUser(data->GetViewRangeYLow(), data->GetViewRangeYHigh());
 
           // finally draw to pad
+          //DEBUG("{}", drawingOptions);
           data_ptr->Draw(drawingOptions.c_str());
           
           dataIndex++;
@@ -275,10 +286,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     {
       pad->SetGridy();
     }
-    // todo this is to figure out bug in log scale tpave moving
-    //pad->Modified();
-    //pad->Update();
-    //pad->ResizePad();
+
     
     int legendIndex = 1;
     int textIndex = 1;
@@ -471,7 +479,8 @@ optional<data_ptr_t> GetDataClone(string dataName, TObjArray* availableData)
   TObject* obj = availableData->FindObject(dataName.c_str());
   if(obj)
   {
-    if(auto returnPointer = CastCorrectType<TH2, TH1, TGraph2D, TGraph>(obj))
+    // IMPORTANT: TProfile2D is TH2, TH2 is TH1, TProfile is TH1 --> order matters here!
+    if(auto returnPointer = CastCorrectType<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph>(obj))
     {
       return returnPointer;
     }

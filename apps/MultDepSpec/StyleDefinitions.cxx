@@ -32,6 +32,7 @@ dataStyle pp_2TeV
   {mc, {"pp_2TeV", colors::green, markers::circle_open, 35}},
   {pythia6, {"pp_2TeV", colors::green, markers::circle_open, 35}},
   {pythia, {"Models:pythia/pp_2TeV", colors::green, markers::circle_open, 35}},
+  {epos_lhc, {"Models:pythia/pp_2TeV", colors::green, markers::circle_open, 35}},
   {geom_scaling, {"Models:geom_scaling/pp_2TeV", colors::green, markers::circle_open, 35}},
   }
 };
@@ -52,6 +53,7 @@ dataStyle pp_7TeV
   {data, {"pp_7TeV", colors::magenta, markers::circle, 60}},
   {mc, {"pp_7TeV", colors::magenta, markers::circle_open, 60}},
   {pythia, {"Models:pythia/pp_7TeV", colors::magenta, markers::circle_open, 60}},
+  {epos_lhc, {"Models:epos_lhc/pp_7TeV", colors::magenta, markers::circle_open, 60}},
   {geom_scaling, {"Models:geom_scaling/pp_7TeV", colors::magenta, markers::circle_open, 60}},
   }
 };
@@ -61,6 +63,7 @@ dataStyle pp_13TeV
   {data, {"pp_13TeV", colors::red, markers::circle, 75}},
   {mc, {"pp_13TeV", colors::red, markers::circle_open, 75}},
   {pythia, {"Models:pythia/pp_13TeV", colors::red, markers::circle_open, 75}},
+  {epos_lhc, {"Models:epos_lhc/pp_13TeV", colors::red, markers::circle_open, 75}},
   {geom_scaling, {"Models:geom_scaling/pp_13TeV", colors::red, markers::circle_open, 75}},
   }
 };

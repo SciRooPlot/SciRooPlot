@@ -57,8 +57,8 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
                      PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "", PbPb_5TeV[data].mult);
      myPlot.AddHisto("momentUnfolded1_Syst", PbPb_5TeV[data].input, "Pb-Pb",
                      PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "boxes", PbPb_5TeV[data].mult);
-     myPlot.AddHisto("meanPt", PbPb_5TeV[epos_lhc].input, "",
-                     PbPb_5TeV[epos_lhc].marker, PbPb_5TeV[epos_lhc].color, "curve smooth", PbPb_5TeV[epos_lhc].mult);
+     myPlot.AddHisto("meanPt", PbPb_5TeV[epos].input, "",
+                     PbPb_5TeV[epos].marker, PbPb_5TeV[epos].color, "curve smooth", PbPb_5TeV[epos].mult);
      myPlot.AddHisto("meanPt", PbPb_5TeV[angantyr].input, "",
                      PbPb_5TeV[angantyr].marker, PbPb_5TeV[angantyr].color, "curve smooth dotted", PbPb_5TeV[angantyr].mult);
 
@@ -87,8 +87,8 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
                     pp_2TeV[data].marker, pp_2TeV[data].color, "boxes", pp_2TeV[data].mult);
     myPlot.AddHisto("meanPt", pp_2TeV[pythia].input, "",
                     pp_2TeV[pythia].marker, pp_2TeV[pythia].color, "curve dotted", pp_2TeV[pythia].mult);
-    //myPlot.AddHisto("meanPt", pp_2TeV[epos-lhc].input, "",
-    //                pp_2TeV[epos-lhc].marker, pp_2TeV[epos-lhc].color, "curve", pp_2TeV[epos-lhc].mult);
+    myPlot.AddHisto("meanPt", pp_2TeV[epos_lhc].input, "",
+                    pp_2TeV[epos_lhc].marker, pp_2TeV[epos_lhc].color, "curve", pp_2TeV[epos_lhc].mult);
 
     myPlot.AddHisto("momentUnfolded1", pp_5TeV[data].input, "",
                     pp_5TeV[data].marker, pp_5TeV[data].color, "", pp_5TeV[data].mult);
@@ -96,8 +96,8 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
                     pp_5TeV[data].marker, pp_5TeV[data].color, "boxes", pp_5TeV[data].mult);
     myPlot.AddHisto("meanPt", pp_5TeV[pythia].input, "",
                     pp_5TeV[pythia].marker, pp_5TeV[pythia].color, "curve dotted", pp_5TeV[pythia].mult);
-    //myPlot.AddHisto("meanPt", pp_5TeV[epos_lhc].input, "",
-    //                pp_5TeV[epos_lhc].marker, pp_5TeV[epos_lhc].color, "curve dotted", pp_5TeV[epos_lhc].mult);
+    myPlot.AddHisto("meanPt", pp_5TeV[epos_lhc].input, "",
+                    pp_5TeV[epos_lhc].marker, pp_5TeV[epos_lhc].color, "curve dotted", pp_5TeV[epos_lhc].mult);
 
     myPlot.AddHisto("momentUnfolded1", pp_7TeV[data].input, "",
                     pp_7TeV[data].marker, pp_7TeV[data].color, "", pp_7TeV[data].mult);
@@ -105,8 +105,8 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
                     pp_7TeV[data].marker, pp_7TeV[data].color, "boxes", pp_7TeV[data].mult);
     myPlot.AddHisto("meanPt", pp_7TeV[pythia].input, "",
                     pp_7TeV[pythia].marker, pp_7TeV[pythia].color, "curve dotted", pp_7TeV[pythia].mult);
-    //myPlot.AddHisto("meanPt", pp_7TeV[epos_lhc].input, "",
-    //                pp_7TeV[epos_lhc].marker, pp_7TeV[epos_lhc].color, "curve", pp_7TeV[epos_lhc].mult);
+    myPlot.AddHisto("meanPt", pp_7TeV[epos_lhc].input, "",
+                    pp_7TeV[epos_lhc].marker, pp_7TeV[epos_lhc].color, "curve", pp_7TeV[epos_lhc].mult);
 
     
     myPlot.AddHisto("momentUnfolded1", pp_13TeV[data].input, "",
@@ -115,8 +115,8 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
                     pp_13TeV[data].marker, pp_13TeV[data].color, "boxes", pp_13TeV[data].mult);
     myPlot.AddHisto("meanPt", pp_13TeV[pythia].input, "",
                     pp_13TeV[pythia].marker, pp_13TeV[pythia].color, "curve dotted", pp_13TeV[pythia].mult);
-    //myPlot.AddHisto("meanPt", pp_13TeV[epos_lhc].input, "",
-    //                pp_13TeV[epos_lhc].marker, pp_13TeV[epos_lhc].color, "curve dotted", pp_13TeV[epos_lhc].mult);
+    myPlot.AddHisto("meanPt", pp_13TeV[epos_lhc].input, "",
+                    pp_13TeV[epos_lhc].marker, pp_13TeV[epos_lhc].color, "curve dotted", pp_13TeV[epos_lhc].mult);
 
     myPlot.SetAxisRange("X", 0.1, 70);
     myPlot.SetAxisRange("Y", 0.45, 0.9);
