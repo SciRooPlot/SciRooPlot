@@ -121,7 +121,7 @@ void Plot::AddFrame(string histName, string inputIdentifier)
 void Plot::AddData(string dataName, string inputIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
 {
   if(inputIdentifier == "") inputIdentifier = mFigureGroup; // default identifier to figuregroup id
-  mData[mCurrPad].push_back(std::make_shared<Data>(dataName, inputIdentifier, lable, color, marker, 0, drawingOptions, 1, std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
+  mData[mCurrPad].push_back(std::make_shared<Data>(dataName, inputIdentifier, lable, color, marker, 0, drawingOptions, 1., std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
 }
 
 
@@ -130,7 +130,7 @@ void Plot::AddRatio(string numerHist, string numerHistIdentifier, string denomHi
   if(numerHistIdentifier == "") numerHistIdentifier = mFigureGroup;
   if(denomHistIdentifier == "") denomHistIdentifier = mFigureGroup;
   int padID = (mData[mCurrPad].empty()) ? mCurrPad : 2; //mCurrPad TODO:: remove this stupid hack
-  mData[padID].push_back(std::make_shared<Ratio>(numerHist, numerHistIdentifier, denomHist, denomHistIdentifier, lable, color, marker, 0, drawingOptions, "", 1, std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
+  mData[padID].push_back(std::make_shared<Ratio>(numerHist, numerHistIdentifier, denomHist, denomHistIdentifier, lable, color, marker, 0, drawingOptions, "", 1., std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
 }
 
 

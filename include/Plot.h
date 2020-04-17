@@ -119,7 +119,7 @@ class Plot::Data
 {
 public:
   // default constructor
-  Data(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions, int scale, pair<double, double> viewRangeX, pair<double, double> viewRangeY)
+  Data(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions, double scale, pair<double, double> viewRangeX, pair<double, double> viewRangeY)
   : mType("data"), mName(name), mInputIdentifier(inputIdentifier), mLable(lable), mColor(color), mStyle(style), mSize(size), mDrawingOptions(drawingOptions), mScale(scale), mViewRangeX(viewRangeX), mViewRangeY(viewRangeY)
   {
     // if input was specified further via inputIdentifier:some/path/in/file
@@ -142,6 +142,7 @@ public:
       mStyle = dataTree.get<int>("style");
       mSize = dataTree.get<int>("size");
       mDrawingOptions = dataTree.get<string>("drawingOptions");
+      mScale = dataTree.get<double>("scale");
       mViewRangeX.first = dataTree.get<double>("viewRangeX_low");
       mViewRangeX.second = dataTree.get<double>("viewRangeX_high");
       mViewRangeY.first = dataTree.get<double>("viewRangeY_low");
@@ -220,7 +221,7 @@ public:
   Ratio(Ratio& otherRatio) = default;
   virtual ~Ratio() = default;
   
-  Ratio(string name, string inputIdentifier, string denomName, string denomInputIdentifier, string lable, int color, int style, int size, string drawingOptions, string divideMethod, int scale, pair<double, double> viewRangeX, pair<double, double> viewRangeY)
+  Ratio(string name, string inputIdentifier, string denomName, string denomInputIdentifier, string lable, int color, int style, int size, string drawingOptions, string divideMethod, double scale, pair<double, double> viewRangeX, pair<double, double> viewRangeY)
   : Data(name, inputIdentifier, lable, color, style, size, drawingOptions, scale, viewRangeX, viewRangeY), mDenomName(denomName), mDenomInputIdentifier(denomInputIdentifier), mDivideMethod(divideMethod)
   {
     SetType("ratio");

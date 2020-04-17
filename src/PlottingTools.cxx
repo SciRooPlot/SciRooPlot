@@ -107,7 +107,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
       // obtain a copy of the current data
       if(optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData))
       {
-        // visit the variant and determine the actual type
+        // retrieve the actual pointer to the data
         std::visit([&](auto&& data_ptr)
         {
           using data_type = std::decay_t<decltype(data_ptr)>;
@@ -174,9 +174,10 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
 
           if(data->GetType() == "ratio")
           {
+            // obtain a copy of the ratio denominator
             if(optional<data_ptr_t> rawDenomData = GetDataClone(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetUniqueNameDenom(), availableData))
             {
-
+              // retrieve the actual pointer to the denominator data
               std::visit([&](auto&& denom_data_ptr)
               {
                 using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
@@ -229,11 +230,18 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
             }
           }
 
-          // TODO: normalize
+          
           if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
           {
-            //data_ptr->Scale(data->GetScaleFactor());
+            if(controlString.find("normalize") != string::npos){
+              drawingOptions.erase(drawingOptions.find("normalize"), string("normalize").length());
+              data_ptr->Scale(1/data_ptr->Integral(), "width");
+            }
+            if(data->GetScaleFactor() != 1.){
+              data_ptr->Scale(data->GetScaleFactor());
+            }
           }
+          // TODO: add functionality for scaling and normalizing graphs
 
           // now set ranges
           data_ptr->GetXaxis()->SetRangeUser(data->GetViewRangeXLow(), data->GetViewRangeXHigh());
