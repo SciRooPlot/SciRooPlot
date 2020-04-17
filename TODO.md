@@ -11,13 +11,13 @@ ANALYSIS:
 FRAMEWORK:
 ----------
 WIP:
-- add possibility to make canvas intransparent (and colored)
 - fix dirty hacks for backward compatibility regarding ratio plots
-- check if padID starts with 1 is a problem (vectors maybe)
 - backward compatibility with "ratio" keyword in axis range and title?
 - possibility to set alias for axis e.g. "ratio"?
 - add support for grid styles
 - flexible number of color steps in 2d plots
+- add graph division feature with tspline3
+
 
 Major Features:
 - merge markerstyle and linestyle?
@@ -26,7 +26,6 @@ Major Features:
 - possibility to dump and load plot styles (manager should only read in required plot styles)
 - make sure PlotStyle names are unique
 - add some more formatting features for legend (floating point precision, exponent..)
-- add graph division feature with tspline3
 - add constructor to plotStyle that already gives useful default markers, colors, 2d style, etc
 - be clear about coordinate systems (fix relative positioning, maybe)
 - find a general way to automatically determine optimal axis offsets (in particular for 2d and 3d views) (what unit is title offset?)
@@ -34,7 +33,6 @@ Major Features:
 - generalize legend function to handle text boxes in a similar manner
 - pads must inherit plot properties (text size et al unless specified otherwise)
 - text size and style settings should by default be inherited by each object with text but there should be a possiblity to override
-- check if 2d hist is part of plot, then change style
 
 Minor Features:
 - how to handle root and custom drawing options (check for allowed options?)
@@ -76,6 +74,7 @@ Bugs:
 - if lables are 1, 2, 3 height is not calculated correctly?
 
 Structural changes:
+- use short instead of int whenever possible
 - internally use hashes instead of strings
 - use for (auto& [key, value]: myMap) {} loops
 - think about how things can be implemented in a more general way as templates

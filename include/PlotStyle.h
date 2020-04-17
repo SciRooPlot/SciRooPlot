@@ -59,7 +59,6 @@ public:
   void SetTextFont(int font){(font > 0 && font < 16) ? mTextFont = font * 10 + 3 : mTextFont = 43;}
   void SetLableFont(int font){(font > 0 && font < 16) ? mLableFont = font * 10 + 3 : mLableFont = 43;}
   void SetTitleFont(int font){(font > 0 && font < 16) ? mTitleFont = font * 10 + 3 : mTitleFont = 43;}
-  void SetBackgroundColor(int color) {SetTransparent(false); mFillColor = color;}
 
   void SetMarkerSize(double size){mMarkerSize = size;}
   void SetLineWidth(double width){mLineWidth = width;}
@@ -83,8 +82,11 @@ public:
     if(transparent) mFillStyle = 4000;
     else mFillStyle = 4100;
   }
+  bool IsTransparent(){return (mFillStyle == 4100);}
   
   int GetFillStyle(){return mFillStyle;}
+  int GetFillColor(){return mFillColor;}
+  void SetFillColor(int fillColor){mFillColor = fillColor;}
 
   void SetDrawTimestamps(bool drawTimestamps = true) {mDrawTimestamps = drawTimestamps;}
   void SetTimestampPosition(double x, double y) {mTimestampPosition = {x, y};}

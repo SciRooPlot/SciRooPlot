@@ -43,7 +43,9 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
   TCanvas* canvas = new TCanvas(plot.GetUniqueName().c_str(), plot.GetUniqueName().c_str(), plotStyle.GetWidth()+4, plotStyle.GetHeight()+28); // undo hard-coded offsets in TCanvas.cxx line 580
   canvas->SetMargin(0., 0., 0., 0.); // TODO: should this be flexible?
   canvas->SetFillStyle(plotStyle.GetFillStyle());
+  if(!plotStyle.IsTransparent()) canvas->SetFillColor(plotStyle.GetFillColor());
   if(plotStyle.IsFixedAspectRatio()) canvas->SetFixedAspectRatio();
+  
   int padID = 1;
   for(auto& padStyle : plotStyle.GetPadStyles())
   {
@@ -60,7 +62,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     
     //DEBUG("PAD dimensons: {}, {}, {}, {}.", padStyle.GetXLow(), padStyle.GetYLow(), padStyle.GetXUp(), padStyle.GetYUp());
     pad->SetFillStyle(plotStyle.GetFillStyle()); // todo make this pad dependent
-    //pad->SetFillColor(plotStyle.GetFillColor());
+    if(!plotStyle.IsTransparent()) pad->SetFillColor(plotStyle.GetFillColor());
     pad->SetTopMargin(padStyle.GetTopMargin());
     pad->SetBottomMargin(padStyle.GetBottomMargin());
     pad->SetLeftMargin(padStyle.GetLeftMargin());

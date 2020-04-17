@@ -896,6 +896,7 @@ void PlotManager::DefineDefaultPlottingStyles()
     myStyle.SetFromat(710, 1);
     myStyle.SetFixedAspectRatio(true);
     myStyle.SetTransparent();
+    //myStyle.SetFillColor(kGreen);
 
     //myStyle.LinkAxes("X", {1,2});
     //      myStyle.SetDefault2DStyle("SURF3");
