@@ -112,15 +112,16 @@ Plot::Plot(ptree &plotTree)
   mCurrPad = 1;
 }
 
-void Plot::AddFrame(string histName, string inputIdentifier)
+void Plot::AddFrame(string dataName, string inputIdentifier)
 {
-  AddData(histName, inputIdentifier, "", 0, 0, "AXIS");
+  if(inputIdentifier == "") inputIdentifier = mFigureGroup; // by default set identifier equal to figuregroup of plot
+  mData[mCurrPad].insert(mData[mCurrPad].begin(), std::make_shared<Data>(dataName, inputIdentifier, "", 0, 0, 0, "AXIS", 1., std::make_pair(-999, -999), std::make_pair(0,0)));
 }
 
 
 void Plot::AddData(string dataName, string inputIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
 {
-  if(inputIdentifier == "") inputIdentifier = mFigureGroup; // default identifier to figuregroup id
+  if(inputIdentifier == "") inputIdentifier = mFigureGroup; // by default set identifier equal to figuregroup of plot
   mData[mCurrPad].push_back(std::make_shared<Data>(dataName, inputIdentifier, lable, color, marker, 0, drawingOptions, 1., std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
 }
 

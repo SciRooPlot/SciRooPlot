@@ -90,8 +90,16 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     gStyle->SetTitleAlign(kHAlignCenter + kVAlignTop);
     //gStyle->SetTitleBorderSize(1);
     gStyle->SetMarkerSize(plotStyle.GetMarkerSize());
-
+    //gROOT->ForceStyle(); // forces all histos to use current style
     //---------------------------------------------------------------
+    
+    if (plot.GetData(padID).empty()) continue;
+    // in case user did not specify which data should define the axis frame, use first per default
+    if(plot.GetData(padID)[0]->GetDrawingOptions() != "AXIS")
+    {
+      plot.AddFrame(plot.GetData(padID)[0]->GetName(), plot.GetData(padID)[0]->GetInputIdentifier());
+    }
+    
     string drawingOptions = "";
     int dataIndex = 0;
     for(auto data : plot.GetData(padID)){
@@ -114,6 +122,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
           
           data_ptr->UseCurrentStyle();
           data_ptr->SetMarkerStyle(style);
+          //data_ptr->SetLineStyle(style);
           data_ptr->SetMarkerColor(color);
           data_ptr->SetLineColor(color);
                     

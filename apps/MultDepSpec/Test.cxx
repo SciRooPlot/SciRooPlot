@@ -58,7 +58,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
      myPlot.AddData("momentUnfolded1_Syst", PbPb_5TeV[data].input, "Pb-Pb",
                      PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "boxes", PbPb_5TeV[data].mult);
      myPlot.AddData("meanPt", PbPb_5TeV[epos].input, "",
-                     PbPb_5TeV[epos].marker, PbPb_5TeV[epos].color, "curve smooth", PbPb_5TeV[epos].mult);
+                     PbPb_5TeV[epos].marker, PbPb_5TeV[epos].color, "", PbPb_5TeV[epos].mult);
      myPlot.AddData("meanPt", PbPb_5TeV[angantyr].input, "",
                      PbPb_5TeV[angantyr].marker, PbPb_5TeV[angantyr].color, "curve smooth dotted", PbPb_5TeV[angantyr].mult);
 

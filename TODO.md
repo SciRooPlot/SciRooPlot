@@ -12,7 +12,6 @@ FRAMEWORK:
 ----------
 Major Features:
 - merge markerstyle and linestyle?
-- if there is a frame defined, take it, otherwise construct frame from first hisogram (always draw a copy! then ranges can still be set)
 - support for input types T{H,F}3, THn{Sparse}, THStack, TMultiGraph
 - support for setting up TView to have a 3d representations of 2d data
 - operator overloading for plots (+, <<, *)?
