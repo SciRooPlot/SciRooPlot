@@ -140,6 +140,7 @@ using std::shared_ptr;
 using std::variant;
 using std::optional;
 
+// supported input data types
 using data_ptr_t = variant<TH1*, TH2*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF2*, TF1*>;
 
 using data_ptr_t_1d = variant<TH1*, TGraph*, TProfile*, TF1*>;

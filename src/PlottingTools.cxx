@@ -35,11 +35,10 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
   
   gStyle->SetOptStat(0); // this needs to be done before creating the canvas! at later stage it would add to list of primitives in pad...
   // Create empty plot
-  string canvasName = plot.GetUniqueName();
-  TCanvas* canvas = new TCanvas(canvasName.c_str(), canvasName.c_str(), plotStyle.GetWidth()+4, plotStyle.GetHeight()+28); // undo hard-coded offsets in TCanvas.cxx line 580
-  canvas->SetMargin(0., 0., 0., 0.); // todo make this editable?
+  TCanvas* canvas = new TCanvas(plot.GetUniqueName().c_str(), plot.GetUniqueName().c_str(), plotStyle.GetWidth()+4, plotStyle.GetHeight()+28); // undo hard-coded offsets in TCanvas.cxx line 580
+  canvas->SetMargin(0., 0., 0., 0.); // TODO: should this be flexible?
   canvas->SetFillStyle(plotStyle.GetFillStyle());
-  //canvas->SetFixedAspectRatio();
+  if(plotStyle.IsFixedAspectRatio()) canvas->SetFixedAspectRatio();
   int padID = 1;
   for(auto& padStyle : plotStyle.GetPadStyles())
   {
@@ -87,11 +86,10 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     //gStyle->SetTitleBorderSize(1);
     gStyle->SetMarkerSize(plotStyle.GetMarkerSize());
 
+    //---------------------------------------------------------------
     string drawingOptions = "";
     int dataIndex = 0;
     for(auto data : plot.GetData(padID)){
-      
-      
       
       int color = (data->GetColor()) ? data->GetColor() : plotStyle.GetDefaultColor(dataIndex); // TODO: 0 is white!!
       int style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex); // FIXME: only gets marker not line style
@@ -101,10 +99,10 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
       
       drawingOptions += data->GetDrawingOptions(); // errorStyle etc
       
-      
+      // obtain a copy of the current data
       if(optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData))
       {
-
+        // visit the variant and determine the actual type
         std::visit([&](auto&& data_ptr) // could also return value!
         {
           using data_type = std::decay_t<decltype(data_ptr)>;
@@ -174,17 +172,17 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
             if(optional<data_ptr_t> rawDenomData = GetDataClone(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetUniqueNameDenom(), availableData))
             {
 
-              std::visit([&](auto&& data_ratio_ptr)
+              std::visit([&](auto&& denom_data_ptr)
               {
-                using ratio_data_type = std::decay_t<decltype(data_ratio_ptr)>;
+                using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
 
                 data_ptr->SetTitle(""); // FIXME: this might not always be what the user wants...
                 // TODO: here all possibilities of graph/hist/etc should be accounted for
                 // TODO: add here alternative divide functions and options
                 if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
-                  if constexpr (std::is_convertible_v<ratio_data_type, data_ptr_t_hist>)
+                  if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist>)
                 {
-                  data_ptr->Divide(data_ratio_ptr);
+                  data_ptr->Divide(denom_data_ptr);
                 }
 
                 if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
@@ -212,7 +210,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
                     style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex);
                   }
                 }
-                delete data_ratio_ptr; // FIXME: is this correct? What happens to optional?
+                delete denom_data_ptr; // FIXME: is this correct? What happens to optional?
                }, *rawDenomData);
             }
           } // end ratio code
@@ -253,7 +251,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
         }, *rawData);
       }
     } // end data code
-
+//---------------------------------------------------------------
     
     // TODO: set range and log scale properties must affect all linked pad-axes
     // TODO: also add safety in case log and range are not compatible (zero in range)

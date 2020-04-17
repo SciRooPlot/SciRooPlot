@@ -115,7 +115,8 @@ public:
   int GetMarkerSize(){return mMarkerSize;}
   int GetMarkerSizeThick(){return mMarkerSizeThick;}
   int GetLineWidthThick(){return mLineWidthThick;}
-
+  void SetFixedAspectRatio(bool isFixedAspectRatio = true){mIsFixedAspectRatio = isFixedAspectRatio;}
+  bool IsFixedAspectRatio(){return mIsFixedAspectRatio;}
 
 private:
   string mName;
@@ -155,6 +156,7 @@ private:
   vector<int> mDefaultMarkersOpen;
   vector<int> mDefaultLineStyles;
   string m2dStyle;
+  bool mIsFixedAspectRatio;
 };
 
 

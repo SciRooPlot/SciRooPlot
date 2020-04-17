@@ -11,14 +11,10 @@ ANALYSIS:
 FRAMEWORK:
 ----------
 Major Features:
+- merge markerstyle and linestyle?
 - if there is a frame defined, take it, otherwise construct frame from first hisogram (always draw a copy! then ranges can still be set)
-- graphs and hists should work seamlessly, user should not need to specify this
-  - data agnostic of type graph or hist or func
-  - TH1, TH2, TF1, ratio, (TProfile?)
-  - TGraph, TGraph2D, TF2, ratio, (TProfile2D)
-  - 3d? Nd?? THn, THnSparse
-  - check what are the common functions for all
-  - THStack, TMultiGraph
+- support for input types T{H,F}3, THn{Sparse}, THStack, TMultiGraph
+- support for setting up TView to have a 3d representations of 2d data
 - operator overloading for plots (+, <<, *)?
 - time axis opitons?
 - possibility to dump and load plot styles (manager should only read in required plot styles)
@@ -101,7 +97,6 @@ Structural changes:
 - add (copy-, move-) constructors and destructors; make sure all variables are initialized properly
 
 Long term goals:
-- add TView for 3d representations of th2
 - add shape objects
 - add functions, fitting
 - add data input and stand-alone definable objects (shapes, arrows, functions)

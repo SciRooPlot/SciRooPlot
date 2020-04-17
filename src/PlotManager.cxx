@@ -893,9 +893,11 @@ void PlotManager::DefineDefaultPlottingStyles()
   {// Definition of "default" style
     PlotStyle myStyle("default");
     
-    //myStyle.LinkAxes("X", {1,2});
     myStyle.SetFromat(710, 1);
+    myStyle.SetFixedAspectRatio(true);
     myStyle.SetTransparent();
+
+    //myStyle.LinkAxes("X", {1,2});
     //      myStyle.SetDefault2DStyle("SURF3");
     //      myStyle.SetDefault2DStyle("COLZ CONT3");
     myStyle.SetDefault2DStyle("COLZ");
@@ -930,11 +932,13 @@ void PlotManager::DefineDefaultPlottingStyles()
   }
   {// Definition of "default" style
     PlotStyle myStyle("default ratio");
-    
-    myStyle.LinkAxes("X", {1,2}); // scale x axis in data and ratio in same way automatically
+
     myStyle.SetFromat(710, 1.0);
+    myStyle.SetFixedAspectRatio(true);
     myStyle.SetTransparent();
-    
+
+    myStyle.LinkAxes("X", {1,2}); // scale x axis in data and ratio in same way automatically
+
     myStyle.SetTextFont(4); // allowed font values: 1-15
     myStyle.SetLableFont(4);
     myStyle.SetTitleFont(4);
