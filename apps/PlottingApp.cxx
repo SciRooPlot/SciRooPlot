@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
     }
     Plot myPlot("plot", inputIdentifier);
     for(auto& histName : plotNamesVector)
-      myPlot.AddHisto(histName, inputIdentifier, "<name>"); // FIXME: should also work for graphs
+      myPlot.AddData(histName, inputIdentifier, "<name>");
     myPlot.AddLegendBox();
     plotEnv.AddPlot(myPlot);
     plotEnv.CreatePlots(inputIdentifier, "", {}, "interactive");

@@ -28,14 +28,14 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "inverseSlope";
     Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto(plotName + "_PbPb_5TeV", "Fits", "Pb-Pb 5.02 TeV");
-    myPlot.AddHisto(plotName + "_pp_13TeV", "Fits", "13 TeV");
-    myPlot.AddHisto(plotName + "_pp_7TeV", "Fits", "7 TeV");
-    myPlot.AddHisto(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
-    myPlot.AddHisto(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
-    myPlot.AddHisto(plotName + "_pPb_5TeV", "Fits", "p-Pb 5.02 TeV");
-    myPlot.AddHisto(plotName + "_PbPb_5TeV", "Fits", "Pb-Pb 5.02 TeV");
-    //      myPlot.AddHisto(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
+    myPlot.AddData(plotName + "_PbPb_5TeV", "Fits", "Pb-Pb 5.02 TeV");
+    myPlot.AddData(plotName + "_pp_13TeV", "Fits", "13 TeV");
+    myPlot.AddData(plotName + "_pp_7TeV", "Fits", "7 TeV");
+    myPlot.AddData(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
+    myPlot.AddData(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
+    myPlot.AddData(plotName + "_pPb_5TeV", "Fits", "p-Pb 5.02 TeV");
+    myPlot.AddData(plotName + "_PbPb_5TeV", "Fits", "Pb-Pb 5.02 TeV");
+    //      myPlot.AddData(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
     myPlot.SetAxisRange("X", 0, 3000);
     myPlot.SetAxisRange("Y", 4, 11);
     myPlot.AddLegendBox(0.7, 0.9, "");
@@ -45,13 +45,13 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     string plotName = "yieldFractions";
     Plot myPlot(plotName, plotGroup);
     //myPlot.SetDrawingProperties("logX logY");
-    myPlot.AddHisto(plotName + "_pp_13TeV", "Fits", "13 TeV");
-    myPlot.AddHisto(plotName + "_pp_7TeV", "Fits", "7 TeV");
-    myPlot.AddHisto(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
-    myPlot.AddHisto(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
-    myPlot.AddHisto(plotName + "_pPb_5TeV", "Fits", "p-Pb 5.02 TeV");
-    myPlot.AddHisto(plotName + "_PbPb_5TeV", "Fits", "Pb-Pb 5.02 TeV");
-    //myPlot.AddHisto(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
+    myPlot.AddData(plotName + "_pp_13TeV", "Fits", "13 TeV");
+    myPlot.AddData(plotName + "_pp_7TeV", "Fits", "7 TeV");
+    myPlot.AddData(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
+    myPlot.AddData(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
+    myPlot.AddData(plotName + "_pPb_5TeV", "Fits", "p-Pb 5.02 TeV");
+    myPlot.AddData(plotName + "_PbPb_5TeV", "Fits", "Pb-Pb 5.02 TeV");
+    //myPlot.AddData(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
     //myPlot.SetAxisRange("Y", 4, 11);
     myPlot.AddLegendBox(0.13, 0.9, "");
     plotEnv.AddPlot(myPlot);
@@ -60,10 +60,10 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     string plotName = "yieldFractionsSelfNormalized";
     Plot myPlot(plotName, plotGroup);
     //myPlot.SetDrawingProperties("logX logY");
-    myPlot.AddHisto(plotName + "_pp_13TeV", "Fits", "13 TeV");
-    myPlot.AddHisto(plotName + "_pp_7TeV", "Fits", "7 TeV");
-    myPlot.AddHisto(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
-    myPlot.AddHisto(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
+    myPlot.AddData(plotName + "_pp_13TeV", "Fits", "13 TeV");
+    myPlot.AddData(plotName + "_pp_7TeV", "Fits", "7 TeV");
+    myPlot.AddData(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
+    myPlot.AddData(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
     //myPlot.SetAxisRange("Y", 4, 11);
     myPlot.AddLegendBox(0.3, 0.9, "");
     plotEnv.AddPlot(myPlot);
@@ -72,7 +72,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     string plotName = "multPtUnfoldedNormalized";
     Plot myPlot(plotName, plotGroup, "default");
     myPlot.SetDrawingProperties("logY logZ");
-    myPlot.AddHisto(plotName, "pp_5TeV", "5.02 TeV");
+    myPlot.AddData(plotName, "pp_5TeV", "5.02 TeV");
     myPlot.SetAxisRange("X", 0, 60);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
@@ -80,10 +80,10 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     string plotName = "momentUnfolded1SelfNormalized";
     Plot myPlot(plotName, plotGroup, "default");
     myPlot.SetDrawingProperties("logX logY");
-    myPlot.AddHisto(plotName, "pp_13TeV", "13 TeV");
-    myPlot.AddHisto(plotName, "pp_7TeV", "7 TeV");
-    myPlot.AddHisto(plotName, "pp_5TeV", "5.02 TeV");
-    myPlot.AddHisto(plotName, "pp_2TeV", "2.76 TeV");
+    myPlot.AddData(plotName, "pp_13TeV", "13 TeV");
+    myPlot.AddData(plotName, "pp_7TeV", "7 TeV");
+    myPlot.AddData(plotName, "pp_5TeV", "5.02 TeV");
+    myPlot.AddData(plotName, "pp_2TeV", "2.76 TeV");
     myPlot.SetAxisRange("X", 0, 9);
     myPlot.SetAxisRange("Y", 0.7, 1.6);
     //myPlot.AddLegendBox(0.4, 0.4);
@@ -96,14 +96,14 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     //myPlot.SetDrawingProperties("logX logY");
     string dataName = "momentUnfolded1SelfNormalized";
     string mcName = "momentGeneratedMC1SelfNormalized";
-    myPlot.AddHisto(dataName, "pp_13TeV", "13 TeV");
-    myPlot.AddHisto(mcName, "pp_13TeV", "", 0, -1, "band", 7);
-    myPlot.AddHisto(dataName, "pp_7TeV", "7 TeV");
-    myPlot.AddHisto(mcName, "pp_7TeV", "", 0, -1, "band", 7);
-    myPlot.AddHisto(dataName, "pp_5TeV", "5.02 TeV");
-    myPlot.AddHisto(mcName, "pp_5TeV", "", 0, -1, "band", 7);
-    myPlot.AddHisto(dataName, "pp_2TeV", "2.76 TeV", 0, 0, "", 7);
-    myPlot.AddHisto(mcName, "pp_2TeV", "", 0, -1, "band", 7);
+    myPlot.AddData(dataName, "pp_13TeV", "13 TeV");
+    myPlot.AddData(mcName, "pp_13TeV", "", 0, -1, "band", 7);
+    myPlot.AddData(dataName, "pp_7TeV", "7 TeV");
+    myPlot.AddData(mcName, "pp_7TeV", "", 0, -1, "band", 7);
+    myPlot.AddData(dataName, "pp_5TeV", "5.02 TeV");
+    myPlot.AddData(mcName, "pp_5TeV", "", 0, -1, "band", 7);
+    myPlot.AddData(dataName, "pp_2TeV", "2.76 TeV", 0, 0, "", 7);
+    myPlot.AddData(mcName, "pp_2TeV", "", 0, -1, "band", 7);
     myPlot.SetAxisRange("X", 0, 9);
     myPlot.SetAxisRange("Y", 0.7, 1.6);
     myPlot.AddLegendBox(0.4, 0.4);
@@ -114,10 +114,10 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     string plotName = "momentGeneratedMC1SelfNormalized";
     Plot myPlot(plotName, plotGroup, "default");
     myPlot.SetDrawingProperties("logX logY");
-    myPlot.AddHisto(plotName, "pp_13TeV", "13 TeV");
-    myPlot.AddHisto(plotName, "pp_7TeV", "7 TeV (Pythia6)");
-    myPlot.AddHisto(plotName, "pp_5TeV", "5.02 TeV");
-    myPlot.AddHisto(plotName, "pp_2TeV", "2.76 TeV");
+    myPlot.AddData(plotName, "pp_13TeV", "13 TeV");
+    myPlot.AddData(plotName, "pp_7TeV", "7 TeV (Pythia6)");
+    myPlot.AddData(plotName, "pp_5TeV", "5.02 TeV");
+    myPlot.AddData(plotName, "pp_2TeV", "2.76 TeV");
     myPlot.SetAxisRange("X", 0, 9);
     myPlot.SetAxisRange("Y", 0.7, 1.6);
     //myPlot.AddLegendBox(0.4, 0.4);
@@ -128,11 +128,11 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     string plotName = "inclusiveSpectrum";
     Plot myPlot(plotName, plotGroup, "default ratio");
     myPlot.SetDrawingProperties("logY logX");
-    myPlot.AddHisto(plotName, "PbPb_5TeV", "Pb-Pb 5.02 TeV");
-    myPlot.AddHisto(plotName, "pp_13TeV", "13 TeV");
-    myPlot.AddHisto(plotName, "pp_7TeV", "7 TeV");
-    myPlot.AddHisto(plotName, "pp_5TeV", "5.02 TeV");
-    myPlot.AddHisto(plotName, "pp_2TeV", "2.76 TeV");
+    myPlot.AddData(plotName, "PbPb_5TeV", "Pb-Pb 5.02 TeV");
+    myPlot.AddData(plotName, "pp_13TeV", "13 TeV");
+    myPlot.AddData(plotName, "pp_7TeV", "7 TeV");
+    myPlot.AddData(plotName, "pp_5TeV", "5.02 TeV");
+    myPlot.AddData(plotName, "pp_2TeV", "2.76 TeV");
     myPlot.AddLegendBox(0.7, 0.91);
     myPlot.AddRatio(plotName, "pp_7TeV", plotName, "pp_13TeV");
     myPlot.AddRatio(plotName, "pp_5TeV", plotName, "pp_13TeV");
@@ -237,7 +237,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     //vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
     for(auto& multBin : multBins)
     {
-      myPlot.AddHisto(string("meanPt_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
+      myPlot.AddData(string("meanPt_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
     }
     myPlot.SetAxisRange("Y", 0.3, 1.0);
     myPlot.AddLegendBox(0.24, 0.91, "", false, 3);
@@ -250,9 +250,9 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     vector<int> multBins = {2, 9, 16, 26, 36};
     for(auto& multBin : multBins)
     {
-      myPlot.AddHisto(string("meanPt_") + std::to_string(multBin), "Energyscan", string("#it{N}_{ch} = ") + std::to_string(multBin-1), 0, 0, "boxes");
-      myPlot.AddHisto(string("meanPtMC_") + std::to_string(multBin), "Energyscan", "", 0, -1, "band");
-      //        myPlot.AddHisto(string("meanPtMC_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
+      myPlot.AddData(string("meanPt_") + std::to_string(multBin), "Energyscan", string("#it{N}_{ch} = ") + std::to_string(multBin-1), 0, 0, "boxes");
+      myPlot.AddData(string("meanPtMC_") + std::to_string(multBin), "Energyscan", "", 0, -1, "band");
+      //        myPlot.AddData(string("meanPtMC_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
     }
     myPlot.SetAxisRange("Y", 0.3, 0.9);
     myPlot.AddLegendBox(0.15, 0.92, "", true, 2);
@@ -265,9 +265,9 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     vector<int> multBins = {2, 9, 16, 26, 36};
     for(auto& multBin : multBins)
     {
-      myPlot.AddHisto(string("meanPtMC_Log_") + std::to_string(multBin), "Energyscan", "", 0, 0, "band");
-      //        myPlot.AddHisto(string("meanPtMC_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
-      myPlot.AddHisto(string("meanPt_Log_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, -1, "boxes");
+      myPlot.AddData(string("meanPtMC_Log_") + std::to_string(multBin), "Energyscan", "", 0, 0, "band");
+      //        myPlot.AddData(string("meanPtMC_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
+      myPlot.AddData(string("meanPt_Log_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, -1, "boxes");
     }
     myPlot.SetAxisRange("Y", 0.3, 1.0);
     myPlot.AddLegendBox(0.24, 0.91, "", 3);
@@ -281,7 +281,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
     for(auto& multBin : multBins)
     {
-      myPlot.AddHisto(string("variance_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
+      myPlot.AddData(string("variance_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
     }
     myPlot.SetAxisRange("Y", -0.4, 0.8);
     myPlot.AddLegendBox(0.24, 0.91);
@@ -295,8 +295,8 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     vector<int> multBins = {2, 9, 16, 26, 36};
     for(auto& multBin : multBins)
     {
-      myPlot.AddHisto(string("variance_") + std::to_string(multBin), "Energyscan", string("#it{N}_{ch} = ") + std::to_string(multBin-1), 0, 0, "boxes");
-      myPlot.AddHisto(string("varianceMC_") + std::to_string(multBin), "Energyscan", "", 0, -1, "band");
+      myPlot.AddData(string("variance_") + std::to_string(multBin), "Energyscan", string("#it{N}_{ch} = ") + std::to_string(multBin-1), 0, 0, "boxes");
+      myPlot.AddData(string("varianceMC_") + std::to_string(multBin), "Energyscan", "", 0, -1, "band");
     }
     myPlot.SetAxisRange("Y", -0.4, 0.8);
     myPlot.AddLegendBox(0.24, 0.91, "",false, 2);
@@ -309,8 +309,8 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     vector<int> multBins = {2, 6, 9, 11, 16, 21, 26, 31, 36};
     for(auto& multBin : multBins)
     {
-      myPlot.AddHisto(string("varianceMC_Log_") + std::to_string(multBin), "Energyscan", "", 0, 0, "band");
-      myPlot.AddHisto(string("variance_Log_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, -1, "boxes");
+      myPlot.AddData(string("varianceMC_Log_") + std::to_string(multBin), "Energyscan", "", 0, 0, "band");
+      myPlot.AddData(string("variance_Log_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, -1, "boxes");
     }
     myPlot.SetAxisRange("Y", -0.4, 1.4);
     myPlot.AddLegendBox(0.24, 0.91);
@@ -321,35 +321,35 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "varianceMC";
     Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto("variance_2TeV", "Simulations", "2 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_2.5TeV", "Simulations", "2.5 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_3TeV", "Simulations", "3 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_3.5TeV", "Simulations", "3.5 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_4TeV", "Simulations", "4 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_4.5TeV", "Simulations", "4.5 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_5TeV", "Simulations", "5 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_5.5TeV", "Simulations", "5.5 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_6TeV", "Simulations", "6 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_6.5TeV", "Simulations", "6.5 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_7TeV", "Simulations", "7 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_7.5TeV", "Simulations", "7.5 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_8TeV", "Simulations", "8 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_8.5TeV", "Simulations", "8.5 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_9TeV", "Simulations", "9 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_9.5TeV", "Simulations", "9.5 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_10TeV", "Simulations", "10 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_10.5TeV", "Simulations", "10.5 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_11TeV", "Simulations", "11 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_11.5TeV", "Simulations", "11.5 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_12TeV", "Simulations", "12 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_12.5TeV", "Simulations", "12.5 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_13TeV", "Simulations", "13 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_13.5TeV", "Simulations", "13.5 TeV", 0, 0, "band");
-    myPlot.AddHisto("variance_14TeV", "Simulations", "14 TeV", 0, 0, "band");
-    //myPlot.AddHisto("variance_2.76TeV", "Simulations", "2.76 TeV", kFullSquare, kGreen+3, "", 40);
-    //myPlot.AddHisto("varianceGeneratedMC", "pp_5TeV", "5.02 TeV", kFullSquare, kBlue+1);
-    //myPlot.AddHisto("variance_7TeV", "Simulations", "7 TeV", kFullCircle, kMagenta+1);
-    //myPlot.AddHisto("varianceGeneratedMC", "pp_13TeV", "13 TeV", kFullCross, kRed+1);
+    myPlot.AddData("variance_2TeV", "Simulations", "2 TeV", 0, 0, "band");
+    myPlot.AddData("variance_2.5TeV", "Simulations", "2.5 TeV", 0, 0, "band");
+    myPlot.AddData("variance_3TeV", "Simulations", "3 TeV", 0, 0, "band");
+    myPlot.AddData("variance_3.5TeV", "Simulations", "3.5 TeV", 0, 0, "band");
+    myPlot.AddData("variance_4TeV", "Simulations", "4 TeV", 0, 0, "band");
+    myPlot.AddData("variance_4.5TeV", "Simulations", "4.5 TeV", 0, 0, "band");
+    myPlot.AddData("variance_5TeV", "Simulations", "5 TeV", 0, 0, "band");
+    myPlot.AddData("variance_5.5TeV", "Simulations", "5.5 TeV", 0, 0, "band");
+    myPlot.AddData("variance_6TeV", "Simulations", "6 TeV", 0, 0, "band");
+    myPlot.AddData("variance_6.5TeV", "Simulations", "6.5 TeV", 0, 0, "band");
+    myPlot.AddData("variance_7TeV", "Simulations", "7 TeV", 0, 0, "band");
+    myPlot.AddData("variance_7.5TeV", "Simulations", "7.5 TeV", 0, 0, "band");
+    myPlot.AddData("variance_8TeV", "Simulations", "8 TeV", 0, 0, "band");
+    myPlot.AddData("variance_8.5TeV", "Simulations", "8.5 TeV", 0, 0, "band");
+    myPlot.AddData("variance_9TeV", "Simulations", "9 TeV", 0, 0, "band");
+    myPlot.AddData("variance_9.5TeV", "Simulations", "9.5 TeV", 0, 0, "band");
+    myPlot.AddData("variance_10TeV", "Simulations", "10 TeV", 0, 0, "band");
+    myPlot.AddData("variance_10.5TeV", "Simulations", "10.5 TeV", 0, 0, "band");
+    myPlot.AddData("variance_11TeV", "Simulations", "11 TeV", 0, 0, "band");
+    myPlot.AddData("variance_11.5TeV", "Simulations", "11.5 TeV", 0, 0, "band");
+    myPlot.AddData("variance_12TeV", "Simulations", "12 TeV", 0, 0, "band");
+    myPlot.AddData("variance_12.5TeV", "Simulations", "12.5 TeV", 0, 0, "band");
+    myPlot.AddData("variance_13TeV", "Simulations", "13 TeV", 0, 0, "band");
+    myPlot.AddData("variance_13.5TeV", "Simulations", "13.5 TeV", 0, 0, "band");
+    myPlot.AddData("variance_14TeV", "Simulations", "14 TeV", 0, 0, "band");
+    //myPlot.AddData("variance_2.76TeV", "Simulations", "2.76 TeV", kFullSquare, kGreen+3, "", 40);
+    //myPlot.AddData("varianceGeneratedMC", "pp_5TeV", "5.02 TeV", kFullSquare, kBlue+1);
+    //myPlot.AddData("variance_7TeV", "Simulations", "7 TeV", kFullCircle, kMagenta+1);
+    //myPlot.AddData("varianceGeneratedMC", "pp_13TeV", "13 TeV", kFullCross, kRed+1);
     myPlot.SetAxisRange("X", 0, 40);
     myPlot.SetAxisRange("Y", 0.05, 0.9);
     myPlot.AddLegendBox(0.13, 0.9, "",4);
@@ -359,35 +359,35 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "moment1MC";
     Plot myPlot(plotName, plotGroup);
-    myPlot.AddHisto("meanPt_2TeV", "Simulations", "2 TeV", 0, 0, "band");
-    myPlot.AddHisto("meanPt_2.5TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_3TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_3.5TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_4TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_4.5TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_5TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_5.5TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_6TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_6.5TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_7TeV", "Simulations", "7 TeV", 0, 0, "band");
-    myPlot.AddHisto("meanPt_7.5TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_8TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_8.5TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_9TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_9.5TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_10TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_10.5TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_11TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_11.5TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_12TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_12.5TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_13TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_13.5TeV", "Simulations", "", 0, 0, "band");
-    myPlot.AddHisto("meanPt_14TeV", "Simulations", "14 TeV", 0, 0, "band");
-    //myPlot.AddHisto("meanPt_2.76TeV", "Simulations", "2.76 TeV", kFullSquare, kGreen+3, "", 40);
-    //myPlot.AddHisto("momentGeneratedMC1", "pp_5TeV", "5.02 TeV", kFullSquare, kBlue+1);
-    //myPlot.AddHisto("meanPt_7TeV", "Simulations", "7 TeV", kFullCircle, kMagenta+1);
-    //myPlot.AddHisto("momentGeneratedMC1", "pp_13TeV", "13 TeV", kFullCross, kRed+1);
+    myPlot.AddData("meanPt_2TeV", "Simulations", "2 TeV", 0, 0, "band");
+    myPlot.AddData("meanPt_2.5TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_3TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_3.5TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_4TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_4.5TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_5TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_5.5TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_6TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_6.5TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_7TeV", "Simulations", "7 TeV", 0, 0, "band");
+    myPlot.AddData("meanPt_7.5TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_8TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_8.5TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_9TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_9.5TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_10TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_10.5TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_11TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_11.5TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_12TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_12.5TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_13TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_13.5TeV", "Simulations", "", 0, 0, "band");
+    myPlot.AddData("meanPt_14TeV", "Simulations", "14 TeV", 0, 0, "band");
+    //myPlot.AddData("meanPt_2.76TeV", "Simulations", "2.76 TeV", kFullSquare, kGreen+3, "", 40);
+    //myPlot.AddData("momentGeneratedMC1", "pp_5TeV", "5.02 TeV", kFullSquare, kBlue+1);
+    //myPlot.AddData("meanPt_7TeV", "Simulations", "7 TeV", kFullCircle, kMagenta+1);
+    //myPlot.AddData("momentGeneratedMC1", "pp_13TeV", "13 TeV", kFullCross, kRed+1);
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0.45, 0.85);
     myPlot.AddLegendBox(0.35, 0.3, "",4);

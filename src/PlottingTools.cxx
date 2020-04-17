@@ -34,6 +34,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
   }
   
   gStyle->SetOptStat(0); // this needs to be done before creating the canvas! at later stage it would add to list of primitives in pad...
+
   // Create empty plot
   TCanvas* canvas = new TCanvas(plot.GetUniqueName().c_str(), plot.GetUniqueName().c_str(), plotStyle.GetWidth()+4, plotStyle.GetHeight()+28); // undo hard-coded offsets in TCanvas.cxx line 580
   canvas->SetMargin(0., 0., 0., 0.); // TODO: should this be flexible?
@@ -103,7 +104,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
       if(optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData))
       {
         // visit the variant and determine the actual type
-        std::visit([&](auto&& data_ptr) // could also return value!
+        std::visit([&](auto&& data_ptr)
         {
           using data_type = std::decay_t<decltype(data_ptr)>;
           
@@ -210,7 +211,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
                     style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex);
                   }
                 }
-                delete denom_data_ptr; // FIXME: is this correct? What happens to optional?
+                delete denom_data_ptr;
                }, *rawDenomData);
             }
           } // end ratio code
