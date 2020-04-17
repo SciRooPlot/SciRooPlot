@@ -69,8 +69,8 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
      myPlot.SetAxisRange("Y", 0.45, 0.9);
      myPlot.SetAxisTitle("X", "#it{N}_{ch}");
      
-     myPlot.AddLegendBox(0.14, 0.92);
-     myPlot.AddTextBox(0.36, 0.3, systemSizeLablePrel);
+     myPlot.AddLegend(0.14, 0.92);
+     myPlot.AddText(0.36, 0.3, systemSizeLablePrel);
      plotEnv.AddPlot(myPlot);
    } // -----------------------------------------------------------------------
   
@@ -122,8 +122,8 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("Y", 0.45, 0.9);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     
-    myPlot.AddLegendBox(0.14, 0.92);
-    myPlot.AddTextBox(0.36, 0.3, energyLablePrel);
+    myPlot.AddLegend(0.14, 0.92);
+    myPlot.AddText(0.36, 0.3, energyLablePrel);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
@@ -210,7 +210,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.AddData(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
     myPlot.AddData(plotName + "_pp_7TeV", "Fits", "7 TeV");
     myPlot.AddData(plotName + "_pp_13TeV", "Fits", "13 TeV");
-    myPlot.AddLegendBox();
+    myPlot.AddLegend();
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -221,8 +221,8 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.AddData(plotName + "_pp_5TeV", "Fits", "5.02 TeV (<mean>)");
     myPlot.AddData(plotName + "_pp_7TeV", "Fits", "7 TeV (<mean>)");
     myPlot.AddData(plotName + "_pp_13TeV", "Fits", "13 TeV (<mean>)");
-    myPlot.AddTextBox(0.5, 0.9, "6 GeV/#it{c} < #it{p}_{T} < 50 GeV/#it{c}");
-    myPlot.AddLegendBox();
+    myPlot.AddText(0.5, 0.9, "6 GeV/#it{c} < #it{p}_{T} < 50 GeV/#it{c}");
+    myPlot.AddLegend();
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -233,7 +233,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.AddData("multDistMeasuredMC", "pp_13TeV_old", "", kOpenSquare, kRed+1);
     myPlot.AddData("multDistMeasured", "pp_13TeV", "AilEventCuts and PhysSel plieup rejection", kFullCircle, kBlue+1);
     myPlot.AddData("multDistMeasuredMC", "pp_13TeV", "", kOpenCircle, kBlue+1);
-    myPlot.AddLegendBox(0.3, 0.9);
+    myPlot.AddLegend(0.3, 0.9);
     myPlot.SetAxisRange("X", 0, 60);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
@@ -246,7 +246,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("X", "#it{N}^{scaled}_{acc}");
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0, 60);
-    myPlot.AddLegendBox(0.2, 0.9, "");
+    myPlot.AddLegend(0.2, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -258,7 +258,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("X", "#it{N}^{scaled}_{ch}");
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0, 60);
-    myPlot.AddLegendBox(0.2, 0.9, "");
+    myPlot.AddLegend(0.2, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -271,9 +271,9 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.AddRatio("multDistUnfolded_Syst", "pp_13TeV", "multDistUnfolded", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1, "boxes", 60);
     myPlot.SetAxisRange("X", 0, 60);
     //    myPlot.SetAxisRange("Y", 0.45, 0.85);
-    myPlot.AddTextBox(0.2, 0.25, "data unfolded");
+    myPlot.AddText(0.2, 0.25, "data unfolded");
     myPlot.SetAxisRange("ratio", 0.8, 1.2);
-    myPlot.AddLegendBox(0.4, 0.9, "");
+    myPlot.AddLegend(0.4, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -285,9 +285,9 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.AddData("multDistUnfoldedKNO", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1, "", 60);
     myPlot.AddRatio("multDistUnfoldedKNO_Syst", "pp_13TeV", "multDistUnfoldedKNO", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1, "boxes", 60);
     myPlot.SetAxisRange("X", 0, 60);
-    myPlot.AddTextBox(0.2, 0.25, "data unfolded");
+    myPlot.AddText(0.2, 0.25, "data unfolded");
     myPlot.SetAxisRange("ratio", 0.8, 1.2);
-    myPlot.AddLegendBox(0.4, 0.9, "");
+    myPlot.AddLegend(0.4, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -299,9 +299,9 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.AddData("multDensityUnfolded", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1, "", 60);
     myPlot.AddRatio("multDensityUnfolded_Syst", "pp_13TeV", "multDensityUnfolded", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1, "boxes", 60);
     myPlot.SetAxisRange("X", 0, 60);
-    myPlot.AddTextBox(0.2, 0.25, "data unfolded");
+    myPlot.AddText(0.2, 0.25, "data unfolded");
     myPlot.SetAxisRange("ratio", 0.8, 1.2);
-    myPlot.AddLegendBox(0.4, 0.9, "");
+    myPlot.AddLegend(0.4, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -312,9 +312,9 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.AddData("multDistMeasuredMC", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1, "", 60);
     myPlot.AddRatio("multDistMeasuredMC", "pp_13TeV", "multDistMeasuredMC", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1, "", 60);
     myPlot.SetAxisRange("X", 0, 60);
-    myPlot.AddTextBox(0.2, 0.25, "MC measured");
+    myPlot.AddText(0.2, 0.25, "MC measured");
     myPlot.SetAxisRange("ratio", 0.8, 1.2);
-    myPlot.AddLegendBox(0.4, 0.9, "");
+    myPlot.AddLegend(0.4, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -325,8 +325,8 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.AddData("multDistGeneratedMC", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1, "", 60);
     myPlot.AddRatio("multDistGeneratedMC", "pp_13TeV", "multDistMeasuredMC", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1, "", 60);
     myPlot.SetAxisRange("X", 0, 60);
-    myPlot.AddTextBox(0.2, 0.25, "MC truth");
-    myPlot.AddLegendBox(0.4, 0.9, "");
+    myPlot.AddText(0.2, 0.25, "MC truth");
+    myPlot.AddLegend(0.4, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -334,7 +334,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     Plot myPlot(plotName, plotGroup);
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddData("multCorrelationMatrix", "pp_13TeV");
-    myPlot.AddTextBox(0.4, 0.25, "no data-driven corrections");
+    myPlot.AddText(0.4, 0.25, "no data-driven corrections");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -342,7 +342,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     Plot myPlot(plotName, plotGroup);
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddData("multCorrelationMatrix", "pp_13TeV_withDDC");
-    myPlot.AddTextBox(0.4, 0.25, "with data-driven corrections");
+    myPlot.AddText(0.4, 0.25, "with data-driven corrections");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -355,7 +355,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("ratio", 0.95, 1.05);
     myPlot.AddRatio("mean", "pp_13TeV", "mean", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1);
-    myPlot.AddLegendBox(0.2, 0.9);
+    myPlot.AddLegend(0.2, 0.9);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -368,7 +368,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("ratio", 0.5, 1.5);
     myPlot.AddRatio("sigma", "pp_13TeV", "sigma", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1);
-    myPlot.AddLegendBox(0.2, 0.9);
+    myPlot.AddLegend(0.2, 0.9);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -376,7 +376,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     Plot myPlot(plotName, plotGroup);
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddData("responseMatrix", "pp_13TeV");
-    myPlot.AddTextBox(0.4, 0.25, "no data-driven corrections");
+    myPlot.AddText(0.4, 0.25, "no data-driven corrections");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -384,7 +384,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     Plot myPlot(plotName, plotGroup);
     myPlot.SetDrawingProperties("logZ");
     myPlot.AddData("responseMatrix", "pp_13TeV_withDDC");
-    myPlot.AddTextBox(0.4, 0.25, "with data-driven corrections");
+    myPlot.AddText(0.4, 0.25, "with data-driven corrections");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -397,7 +397,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0.45, 0.85);
     myPlot.SetAxisRange("ratio", 0.99, 1.01);
-    myPlot.AddLegendBox(0.2, 0.9, "");
+    myPlot.AddLegend(0.2, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -410,7 +410,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0.05, 0.9);
     myPlot.SetAxisRange("ratio", 0.95, 1.05);
-    myPlot.AddLegendBox(0.2, 0.9, "");
+    myPlot.AddLegend(0.2, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 }

@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
     Plot myPlot("plot", inputIdentifier);
     for(auto& histName : plotNamesVector)
       myPlot.AddData(histName, inputIdentifier, "<name>");
-    myPlot.AddLegendBox();
+    myPlot.AddLegend();
     plotEnv.AddPlot(myPlot);
     plotEnv.CreatePlots(inputIdentifier, "", {}, "interactive");
   }

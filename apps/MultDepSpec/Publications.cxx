@@ -35,10 +35,10 @@ void MultDepSpec::DefinePublicationPlots(PlotManager& plotEnv)
     myPlot.AddData("meanPt_PbPb_2.76TeV_Syst", "Publications", "Pb-Pb  #sqrt{#it{s}_{NN}} = 2.76 TeV", kFullCross, kRed+1, "boxes");
     myPlot.SetAxisRange("X", 0, 100);
     myPlot.SetAxisRange("Y", 0.45, 0.92);
-    //      myPlot.AddLegendBox(0.5, 0.92, "");
-    //      myPlot.AddTextBox(0.3, 0.3, publicationLable);
-    myPlot.AddLegendBox(0.15, 0.7, "");
-    myPlot.AddTextBox(0.15, 0.92, publicationLable);
+    //      myPlot.AddLegend(0.5, 0.92, "");
+    //      myPlot.AddText(0.3, 0.3, publicationLable);
+    myPlot.AddLegend(0.15, 0.7, "");
+    myPlot.AddText(0.15, 0.92, publicationLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -56,8 +56,8 @@ void MultDepSpec::DefinePublicationPlots(PlotManager& plotEnv)
     myPlot.AddData("momentUnfolded1dNchDeta", "PbPb_5TeV", "PbPb", kOpenCross, kRed+1);
     //      myPlot.CropHisto("momentUnfolded1", "pp_5TeV", "X", 0, 40)
     myPlot.SetAxisRange("Y", 0.45, 0.92);
-    myPlot.AddLegendBox(0.55, 0.3, "");
-    myPlot.AddTextBox(0.5, 0.92, publicationLable);
+    myPlot.AddLegend(0.55, 0.3, "");
+    myPlot.AddText(0.5, 0.92, publicationLable);
     //  myPlot3.SetDrawingProperties("thick");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
@@ -75,9 +75,9 @@ void MultDepSpec::DefinePublicationPlots(PlotManager& plotEnv)
     //      myPlot.AddRatio("multDensityUnfolded", "pp_7TeV", "multDist_pp_7TeV_Stat", "Publications");
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("ratio", 0.75, 1.25);
-    myPlot.AddLegendBox(0.2, 0.25);
+    myPlot.AddLegend(0.2, 0.25);
     string energyLable = alice + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
-    myPlot.AddTextBox(0.42, 0.92, energyLable);
+    myPlot.AddText(0.42, 0.92, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 }

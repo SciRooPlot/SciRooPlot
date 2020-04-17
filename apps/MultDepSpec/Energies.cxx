@@ -38,7 +38,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     //      myPlot.AddData(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
     myPlot.SetAxisRange("X", 0, 3000);
     myPlot.SetAxisRange("Y", 4, 11);
-    myPlot.AddLegendBox(0.7, 0.9, "");
+    myPlot.AddLegend(0.7, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -53,7 +53,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddData(plotName + "_PbPb_5TeV", "Fits", "Pb-Pb 5.02 TeV");
     //myPlot.AddData(plotName + "_XeXe_5TeV", "Fits", "Xe-Xe 5.44 TeV");
     //myPlot.SetAxisRange("Y", 4, 11);
-    myPlot.AddLegendBox(0.13, 0.9, "");
+    myPlot.AddLegend(0.13, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -65,7 +65,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddData(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
     myPlot.AddData(plotName + "_pp_2TeV", "Fits", "2.76 TeV");
     //myPlot.SetAxisRange("Y", 4, 11);
-    myPlot.AddLegendBox(0.3, 0.9, "");
+    myPlot.AddLegend(0.3, 0.9, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -86,8 +86,8 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddData(plotName, "pp_2TeV", "2.76 TeV");
     myPlot.SetAxisRange("X", 0, 9);
     myPlot.SetAxisRange("Y", 0.7, 1.6);
-    //myPlot.AddLegendBox(0.4, 0.4);
-    myPlot.AddTextBox(0.15, 0.91, energyLable);
+    //myPlot.AddLegend(0.4, 0.4);
+    myPlot.AddText(0.15, 0.91, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -106,8 +106,8 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddData(mcName, "pp_2TeV", "", 0, -1, "band", 7);
     myPlot.SetAxisRange("X", 0, 9);
     myPlot.SetAxisRange("Y", 0.7, 1.6);
-    myPlot.AddLegendBox(0.4, 0.4);
-    myPlot.AddTextBox(0.15, 0.91, energyLable);
+    myPlot.AddLegend(0.4, 0.4);
+    myPlot.AddText(0.15, 0.91, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -120,8 +120,8 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddData(plotName, "pp_2TeV", "2.76 TeV");
     myPlot.SetAxisRange("X", 0, 9);
     myPlot.SetAxisRange("Y", 0.7, 1.6);
-    //myPlot.AddLegendBox(0.4, 0.4);
-    myPlot.AddTextBox(0.15, 0.91, energyLableMC);
+    //myPlot.AddLegend(0.4, 0.4);
+    myPlot.AddText(0.15, 0.91, energyLableMC);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -133,12 +133,12 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.AddData(plotName, "pp_7TeV", "7 TeV");
     myPlot.AddData(plotName, "pp_5TeV", "5.02 TeV");
     myPlot.AddData(plotName, "pp_2TeV", "2.76 TeV");
-    myPlot.AddLegendBox(0.7, 0.91);
+    myPlot.AddLegend(0.7, 0.91);
     myPlot.AddRatio(plotName, "pp_7TeV", plotName, "pp_13TeV");
     myPlot.AddRatio(plotName, "pp_5TeV", plotName, "pp_13TeV");
     myPlot.AddRatio(plotName, "pp_2TeV", plotName, "pp_13TeV");
     myPlot.SetAxisTitle("Y", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{2}#it{N})/(d#it{p}_{T}d#it{#eta}) [(GeV/#it{c})^{-2}]");
-    myPlot.AddTextBox(0.2, 0.25, energyLable);
+    myPlot.AddText(0.2, 0.25, energyLable);
     myPlot.ChangePad(2);
     myPlot.SetDrawingProperties("logX");
     myPlot.SetAxisTitle("ratio", "ratio to 13");
@@ -157,7 +157,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("Y", "#it{p}_{T} (GeV/#it{c})");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisTitle("Z", "5 TeV / 13 TeV");
-    //myPlot.AddTextBox(0.3, 0.6, "5 TeV / 13 TeV");
+    //myPlot.AddText(0.3, 0.6, "5 TeV / 13 TeV");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -171,7 +171,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("Y", "#it{p}_{T} (GeV/#it{c})");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisTitle("Z", "Pb-Pb / p-Pb");
-    //myPlot.AddTextBox(0.3, 0.6, "5 TeV / 13 TeV");
+    //myPlot.AddText(0.3, 0.6, "5 TeV / 13 TeV");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -185,7 +185,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("Y", "#it{p}_{T} (GeV/#it{c})");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisTitle("Z", "ratio to Pythia8 Monash13");
-    myPlot.AddTextBox(0.4, 0.4, "pp 2.76 TeV");
+    myPlot.AddText(0.4, 0.4, "pp 2.76 TeV");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -199,7 +199,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("Y", "#it{p}_{T} (GeV/#it{c})");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisTitle("Z", "ratio to Pythia8 Monash13");
-    myPlot.AddTextBox(0.4, 0.4, "pp 5 TeV");
+    myPlot.AddText(0.4, 0.4, "pp 5 TeV");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -213,7 +213,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("Y", "#it{p}_{T} (GeV/#it{c})");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisTitle("Z", "ratio to Pythia8 Monash13");
-    myPlot.AddTextBox(0.4, 0.4, "pp 7 TeV");
+    myPlot.AddText(0.4, 0.4, "pp 7 TeV");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -227,7 +227,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("Y", "#it{p}_{T} (GeV/#it{c})");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisTitle("Z", "ratio to Pythia8 Monash13");
-    myPlot.AddTextBox(0.4, 0.4, "pp 13 TeV");
+    myPlot.AddText(0.4, 0.4, "pp 13 TeV");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -240,8 +240,8 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
       myPlot.AddData(string("meanPt_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
     }
     myPlot.SetAxisRange("Y", 0.3, 1.0);
-    myPlot.AddLegendBox(0.24, 0.91, "", false, 3);
-    myPlot.AddTextBox(0.4, 0.3, energyLable);
+    myPlot.AddLegend(0.24, 0.91, "", false, 3);
+    myPlot.AddText(0.4, 0.3, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -255,8 +255,8 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
       //        myPlot.AddData(string("meanPtMC_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
     }
     myPlot.SetAxisRange("Y", 0.3, 0.9);
-    myPlot.AddLegendBox(0.15, 0.92, "", true, 2);
-    myPlot.AddTextBox(0.15, 0.35, energyLable + " // MC: Pythia8 Monash13");
+    myPlot.AddLegend(0.15, 0.92, "", true, 2);
+    myPlot.AddText(0.15, 0.35, energyLable + " // MC: Pythia8 Monash13");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -270,9 +270,9 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
       myPlot.AddData(string("meanPt_Log_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, -1, "boxes");
     }
     myPlot.SetAxisRange("Y", 0.3, 1.0);
-    myPlot.AddLegendBox(0.24, 0.91, "", 3);
-    //myPlot.AddTextBox(0.4, 0.3, energyLable);
-    myPlot.AddTextBox(0.4, 0.3, energyLableMC);
+    myPlot.AddLegend(0.24, 0.91, "", 3);
+    //myPlot.AddText(0.4, 0.3, energyLable);
+    myPlot.AddText(0.4, 0.3, energyLableMC);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -284,8 +284,8 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
       myPlot.AddData(string("variance_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, 0, "boxes");
     }
     myPlot.SetAxisRange("Y", -0.4, 0.8);
-    myPlot.AddLegendBox(0.24, 0.91);
-    myPlot.AddTextBox(0.4, 0.3, energyLable);
+    myPlot.AddLegend(0.24, 0.91);
+    myPlot.AddText(0.4, 0.3, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -299,8 +299,8 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
       myPlot.AddData(string("varianceMC_") + std::to_string(multBin), "Energyscan", "", 0, -1, "band");
     }
     myPlot.SetAxisRange("Y", -0.4, 0.8);
-    myPlot.AddLegendBox(0.24, 0.91, "",false, 2);
-    myPlot.AddTextBox(0.15, 0.35, energyLable + " // MC: Pythia8 Monash13");
+    myPlot.AddLegend(0.24, 0.91, "",false, 2);
+    myPlot.AddText(0.15, 0.35, energyLable + " // MC: Pythia8 Monash13");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -313,9 +313,9 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
       myPlot.AddData(string("variance_Log_") + std::to_string(multBin), "Energyscan", string("Nch = ") + std::to_string(multBin-1), 0, -1, "boxes");
     }
     myPlot.SetAxisRange("Y", -0.4, 1.4);
-    myPlot.AddLegendBox(0.24, 0.91);
-    //myPlot.AddTextBox(0.4, 0.3, energyLable);
-    myPlot.AddTextBox(0.4, 0.3, energyLableMC);
+    myPlot.AddLegend(0.24, 0.91);
+    //myPlot.AddText(0.4, 0.3, energyLable);
+    myPlot.AddText(0.4, 0.3, energyLableMC);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -352,8 +352,8 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     //myPlot.AddData("varianceGeneratedMC", "pp_13TeV", "13 TeV", kFullCross, kRed+1);
     myPlot.SetAxisRange("X", 0, 40);
     myPlot.SetAxisRange("Y", 0.05, 0.9);
-    myPlot.AddLegendBox(0.13, 0.9, "",4);
-    myPlot.AddTextBox(0.4, 0.3, energyLableMC);
+    myPlot.AddLegend(0.13, 0.9, "",4);
+    myPlot.AddText(0.4, 0.3, energyLableMC);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -390,8 +390,8 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     //myPlot.AddData("momentGeneratedMC1", "pp_13TeV", "13 TeV", kFullCross, kRed+1);
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 0.45, 0.85);
-    myPlot.AddLegendBox(0.35, 0.3, "",4);
-    myPlot.AddTextBox(0.4, 0.5, energyLableMC);
+    myPlot.AddLegend(0.35, 0.3, "",4);
+    myPlot.AddText(0.4, 0.5, energyLableMC);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 }

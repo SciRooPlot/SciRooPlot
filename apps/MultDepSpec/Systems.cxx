@@ -61,8 +61,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     
     myPlot.SetAxisRange("X", 0, 150);
     myPlot.SetAxisRange("Y", 0.45, 0.98);
-    myPlot.AddLegendBox(0.15, 0.92);
-    myPlot.AddTextBox(0.3, 0.3, pPb_lable);
+    myPlot.AddLegend(0.15, 0.92);
+    myPlot.AddText(0.3, 0.3, pPb_lable);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     plotEnv.AddPlot(myPlot);
    } // -----------------------------------------------------------------------
@@ -90,7 +90,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
                     XeXe_5TeV[hijing].marker, XeXe_5TeV[hijing].color);
     
     myPlot.SetDrawingProperties("logX");
-    myPlot.AddLegendBox(0.15, 0.92);
+    myPlot.AddLegend(0.15, 0.92);
     myPlot.SetAxisRange("X", 1, 3000);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisRange("Y", 0.45, 0.98);
@@ -146,8 +146,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("Y", 0.45, 0.9);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     
-    myPlot.AddLegendBox(0.14, 0.92);
-    myPlot.AddTextBox(0.36, 0.3, system_energy_lable);
+    myPlot.AddLegend(0.14, 0.92);
+    myPlot.AddText(0.36, 0.3, system_energy_lable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   
@@ -185,8 +185,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("Y", 0.45, 0.9);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     
-    myPlot.AddLegendBox(0.14, 0.92);
-    myPlot.AddTextBox(0.36, 0.3, systemSizeLable);
+    myPlot.AddLegend(0.14, 0.92);
+    myPlot.AddText(0.36, 0.3, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
@@ -225,8 +225,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
      myPlot.SetAxisRange("Y", 0.45, 0.9);
      myPlot.SetAxisTitle("X", "#it{N}_{ch}");
      
-     myPlot.AddLegendBox(0.14, 0.92);
-     myPlot.AddTextBox(0.36, 0.3, systemSizeLable);
+     myPlot.AddLegend(0.14, 0.92);
+     myPlot.AddText(0.36, 0.3, systemSizeLable);
      plotEnv.AddPlot(myPlot);
    } // -----------------------------------------------------------------------
   
@@ -257,8 +257,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("Y", 0.45, 0.9);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     
-    myPlot.AddLegendBox(0.14, 0.92);
-    myPlot.AddTextBox(0.36, 0.3, energyLable);
+    myPlot.AddLegend(0.14, 0.92);
+    myPlot.AddText(0.36, 0.3, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   
@@ -310,8 +310,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("Y", 0.05, 0.95);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     
-    myPlot.AddLegendBox(0.14, 0.92);
-    myPlot.AddTextBox(0.36, 0.3, system_energy_lable);
+    myPlot.AddLegend(0.14, 0.92);
+    myPlot.AddText(0.36, 0.3, system_energy_lable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   
@@ -358,8 +358,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     
     myPlot.SetDrawingProperties("logY logX");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-    myPlot.AddTextBox(0.12, 0.3, systemSizeLable);
-    myPlot.AddLegendBox(0.6, 0.92);
+    myPlot.AddText(0.12, 0.3, systemSizeLable);
+    myPlot.AddLegend(0.6, 0.92);
     myPlot.SetAxisRange("Y", 1e-5, 1);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
@@ -396,8 +396,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("Y", "#it{P}(#it{N}_{ch})");
     myPlot.SetAxisRange("X", 0, 60);
     myPlot.SetAxisRange("Y", 1e-4, 3e-1);
-    myPlot.AddLegendBox(0.18, 0.45);
-    myPlot.AddTextBox(0.4, 0.9, energyLable);
+    myPlot.AddLegend(0.18, 0.45);
+    myPlot.AddText(0.4, 0.9, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -428,8 +428,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("multDist_pp_0.9TeVKNO_Syst", "Publications", "0.9 TeV", kOpenStar, kBlack, "boxes");
     myPlot.SetAxisRange("X", 0, 5);
     //myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-    myPlot.AddLegendBox(0.7, 0.9);
-    myPlot.AddTextBox(0.15, 0.3, energyLable);
+    myPlot.AddLegend(0.7, 0.9);
+    myPlot.AddText(0.15, 0.3, energyLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 
@@ -462,7 +462,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
                     pPb_8TeV[geom_scaling].marker, pPb_8TeV[geom_scaling].color, "", 2.6);
     myPlot.AddData("meanPtScaled_Syst", pPb_8TeV[geom_scaling].input, "p-Pb, 8.16 TeV",
                     pPb_8TeV[geom_scaling].marker, pPb_8TeV[geom_scaling].color, "boxes", 2.6);
-    myPlot.AddLegendBox(0.15, 0.9);
+    myPlot.AddLegend(0.15, 0.9);
     myPlot.SetAxisRange("X", 0.7, 3.7);
     myPlot.SetAxisRange("Y", 0.48, 1.0);
     plotEnv.AddPlot(myPlot);
@@ -497,7 +497,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("Y", "#it{p}_{T} (GeV/#it{c})");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisTitle("Z", "p-Pb / pp");
-    myPlot.AddTextBox(0.2, 0.9, systemSizeLable);
+    myPlot.AddText(0.2, 0.9, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -511,7 +511,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("Y", "#it{p}_{T} (GeV/#it{c})");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.SetAxisTitle("Z", "Pb-Pb / pp");
-    myPlot.AddTextBox(0.2, 0.9, systemSizeLable);
+    myPlot.AddText(0.2, 0.9, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -521,10 +521,10 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("michaelRatio_XeXe", "Fits", "Xe-Xe", 0, kBlue+2);
     myPlot.AddData("michaelRatio_PbPb", "Fits", "Pb-Pb", 0, kBlack);
     myPlot.AddRatio("michaelRatio_XeXe", "Fits", "michaelRatio_PbPb", "Fits", "", 0, kBlue+2);
-    myPlot.AddLegendBox(0.6, 0.9);
-    myPlot.AddTextBox(0.3, 0.5, "1200 < #it{N}_{ch} < 2300");
+    myPlot.AddLegend(0.6, 0.9);
+    myPlot.AddText(0.3, 0.5, "1200 < #it{N}_{ch} < 2300");
     myPlot.SetAxisRange("ratio", 0.6, 1.1);
-    myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
+    myPlot.AddText(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "extreme / nearby");
     myPlot.ChangePad(2);
     myPlot.SetDrawingProperties("logX");
@@ -537,10 +537,10 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("spectraExtreme_PbPb", "Fits", "#it{N}_{ch} > 2000", 0, kBlue+2);
     myPlot.AddData("spectraNearby_PbPb", "Fits", "700 < #it{N}_{ch} < 1200", 0, kBlack);
     myPlot.AddRatio("spectraExtreme_PbPb", "Fits", "spectraNearby_PbPb", "Fits", "", 0, kBlue+2);
-    myPlot.AddLegendBox(0.6, 0.9);
-    myPlot.AddTextBox(0.4, 0.5, "#bf{Pb-Pb}");
+    myPlot.AddLegend(0.6, 0.9);
+    myPlot.AddText(0.4, 0.5, "#bf{Pb-Pb}");
     myPlot.SetAxisRange("ratio", 1.3, 3.3);
-    myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
+    myPlot.AddText(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "extreme / nearby");
     myPlot.ChangePad(2);
     myPlot.SetDrawingProperties("logX");
@@ -553,9 +553,9 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("spectraExtreme_XeXe", "Fits", "#it{N}_{ch} > 1200", 0, kBlue+2);
     myPlot.AddData("spectraNearby_XeXe", "Fits", "500 < #it{N}_{ch} < 800", 0, kBlack);
     myPlot.AddRatio("spectraExtreme_XeXe", "Fits", "spectraNearby_XeXe", "Fits", "", 0, kBlue+2);
-    myPlot.AddLegendBox(0.6, 0.9);
-    myPlot.AddTextBox(0.4, 0.5, "#bf{Xe-Xe}");
-    myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
+    myPlot.AddLegend(0.6, 0.9);
+    myPlot.AddText(0.4, 0.5, "#bf{Xe-Xe}");
+    myPlot.AddText(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "extreme / nearby");
     myPlot.SetAxisRange("ratio", 1.3, 3.3);
     myPlot.ChangePad(2);
@@ -570,9 +570,9 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("spectraExtreme_pp", "Fits", "#it{N}_{ch} > 40", 0, kBlue+2);
     myPlot.AddData("inclusiveSpectrum", "pp_5TeV", "all #it{N}_{ch}", 0, kBlack);
     myPlot.AddRatio("spectraExtreme_pp", "Fits", "inclusiveSpectrum", "pp_5TeV", "", 0, kBlue+2);
-    myPlot.AddLegendBox(0.6, 0.9);
-    myPlot.AddTextBox(0.4, 0.5, "#bf{pp}");
-    myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
+    myPlot.AddLegend(0.6, 0.9);
+    myPlot.AddText(0.4, 0.5, "#bf{pp}");
+    myPlot.AddText(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "extreme/MB");
     myPlot.ChangePad(2);
     myPlot.SetDrawingProperties("logX");
@@ -589,9 +589,9 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     //myPlot.AddRatio("spectraHighNch_pp_2TeV", "Fits", "spectraHighNch_pp_13TeV", "Fits", "", 0);
     myPlot.AddRatio("spectraHighNch_pp_5TeV", "Fits", "spectraHighNch_pp_13TeV", "Fits", "", 0);
     myPlot.AddRatio("spectraHighNch_pp_7TeV", "Fits", "spectraHighNch_pp_13TeV", "Fits", "", 0);
-    myPlot.AddLegendBox(0.6, 0.9);
-    myPlot.AddTextBox(0.4, 0.5, "#bf{pp}");
-    myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
+    myPlot.AddLegend(0.6, 0.9);
+    myPlot.AddText(0.4, 0.5, "#bf{pp}");
+    myPlot.AddText(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "ratio to 13");
     myPlot.ChangePad(2);
     myPlot.SetDrawingProperties("logX");
@@ -606,9 +606,9 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("spectraExtreme_pp", "Fits", "#it{N}_{ch} > 100", 0, kBlue+2);
     myPlot.AddData("inclusiveSpectrum", "pPb_5TeV", "all #it{N}_{ch}", 0, kBlack);
     myPlot.AddRatio("spectraExtreme_pp", "Fits", "inclusiveSpectrum", "pPb_5TeV", "", 0, kBlue+2);
-    myPlot.AddLegendBox(0.6, 0.9);
-    myPlot.AddTextBox(0.4, 0.5, "#bf{p-Pb}");
-    myPlot.AddTextBox(0.18, 0.2, systemSizeLable);
+    myPlot.AddLegend(0.6, 0.9);
+    myPlot.AddText(0.4, 0.5, "#bf{p-Pb}");
+    myPlot.AddText(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "extreme/MB");
     //      myPlot.SetAxisRange("ratio", 1.3, 3.3);
     myPlot.ChangePad(2);
@@ -627,8 +627,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddRatio("spectraNch2_PbPb", "Fits", "spectraNch2_XeXe", "Fits", "", kFullSquare, kGreen+2);
     myPlot.SetAxisRange("X", 0.15, 10);
     myPlot.SetAxisRange("ratio", 0.5, 1.5);
-    myPlot.AddLegendBox(0.2, 0.4);
-    //myPlot.AddTextBox(0.4, 0.3, "#bf{Xe-Xe}");
+    myPlot.AddLegend(0.2, 0.4);
+    //myPlot.AddText(0.4, 0.3, "#bf{Xe-Xe}");
     myPlot.SetAxisTitle("ratio", "Pb / Xe");
     myPlot.ChangePad(2);
     myPlot.SetDrawingProperties("logX");
@@ -640,8 +640,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetDrawingProperties("logY logX");
     myPlot.AddData("multDensityVsParticlesPerNucleon_XeXe_5TeV", "Fits", "Xe-Xe", kFullCircle, kGreen+2, "");
     myPlot.AddData("multDensityVsParticlesPerNucleon_PbPb_5TeV", "Fits", "Pb-Pb", kFullSquare, kRed+1, "");
-    myPlot.AddLegendBox(0.7, 0.8);
-    myPlot.AddTextBox(0.2, 0.3, systemSizeLable);
+    myPlot.AddLegend(0.7, 0.8);
+    myPlot.AddText(0.2, 0.3, systemSizeLable);
     myPlot.SetAxisRange("Y", 1e-4, 3e-2);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
@@ -652,7 +652,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("meanPtVsParticlesPerNucleon_PbPb_5TeV", "Fits", "Pb-Pb", kFullSquare, kRed+1, "");
     //myPlot.SetAxisRange("Y", 1e-4, 3e-2);
     //      myPlot.SetAxisRange("Y", 0.48, 0.75);
-    myPlot.AddLegendBox(0.7, 0.4);
+    myPlot.AddLegend(0.7, 0.4);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -662,15 +662,15 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("meanPtVsParticlesPerNucleon_PbPb_5TeV", "Fits", "Pb-Pb", kFullSquare, kRed+1, "");
     myPlot.SetAxisRange("Y", 0.75, 1.05);
     myPlot.SetAxisRange("X", 0, 10);
-    myPlot.AddLegendBox(0.7, 0.4);
+    myPlot.AddLegend(0.7, 0.4);
     for(int i = 0; i < 9; i++)
     {
-      //myPlot.AddTextBox(nchCent[i]/(2*208), 1, "#bf{|}", true);
+      //myPlot.AddText(nchCent[i]/(2*208), 1, "#bf{|}", true);
     }
     myPlot.ChangePad(2);
     for(int i = 0; i < 9; i++)
     {
-      //myPlot.AddTextBox(nchCent[i]/(2*208), 1, "#bf{|}", true);
+      //myPlot.AddText(nchCent[i]/(2*208), 1, "#bf{|}", true);
     }
     myPlot.AddData("ratioMeanPtVsParticlesPerNucleon", "Fits", "Xe / Pb", kFullCircle, kGreen+2, "");
     myPlot.SetAxisRange("Y", 0.99, 1.01);
@@ -695,8 +695,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("varianceGeneratedMC", "PbPb_5TeV", "Pb-Pb (HIJING)", kFullCross, kRed+1, "", 3000);
     myPlot.SetAxisRange("X", 0.1, 4000);
     myPlot.SetAxisRange("Y", 0.05, 0.8);
-    myPlot.AddLegendBox(0.15, 0.6);
-    myPlot.AddTextBox(0.14, 0.92, systemSizeLable);
+    myPlot.AddLegend(0.15, 0.6);
+    myPlot.AddText(0.14, 0.92, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -716,9 +716,9 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("ratio", "8 / 5 TeV");
     myPlot.SetAxisRange("X", 0, 100);
     myPlot.SetAxisRange("Y", 0.45, 0.95);
-    myPlot.AddLegendBox(0.2, 0.8, "");
+    myPlot.AddLegend(0.2, 0.8, "");
     
-    myPlot.AddTextBox(0.4, 0.3, alice + newLine + chargedParticles + newLine + eta08 + ", " + ptRange + newLine + "Open symbols: EPOS-LHC");
+    myPlot.AddText(0.4, 0.3, alice + newLine + chargedParticles + newLine + eta08 + ", " + ptRange + newLine + "Open symbols: EPOS-LHC");
     myPlot.ChangePad(2);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     
@@ -737,7 +737,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("ratio", "Pbp/pPb");
     myPlot.SetAxisRange("X", 0, 150);
     myPlot.SetAxisRange("Y", 0.45, 0.95);
-    myPlot.AddLegendBox(0.4, 0.4, "");
+    myPlot.AddLegend(0.4, 0.4, "");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -753,8 +753,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("ratio", "2018/2015");
     myPlot.SetAxisRange("X", 0, 3400);
     myPlot.SetAxisRange("Y", 0.45, 0.85);
-    myPlot.AddLegendBox(0.2, 0.9, "");
-    myPlot.AddTextBox(0.4, 0.2, systemSizeLable);
+    myPlot.AddLegend(0.2, 0.9, "");
+    myPlot.AddText(0.4, 0.2, systemSizeLable);
     myPlot.ChangePad(2);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     //     myPlot.SetDrawingProperties("logX");
@@ -774,8 +774,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("X", 0, 3400);
     myPlot.SetAxisRange("ratio", 0.9, 1.1);
     //          myPlot.SetAxisRange("Y", 0.45, 0.85);
-    myPlot.AddLegendBox(0.2, 0.9, "");
-    myPlot.AddTextBox(0.4, 0.2, systemSizeLable);
+    myPlot.AddLegend(0.2, 0.9, "");
+    myPlot.AddText(0.4, 0.2, systemSizeLable);
     myPlot.ChangePad(2);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     //     myPlot.SetDrawingProperties("logX");
@@ -795,8 +795,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("X", 0, 120);
     myPlot.SetAxisRange("ratio", 0.9, 1.1);
     //          myPlot.SetAxisRange("Y", 0.45, 0.85);
-    myPlot.AddLegendBox(0.7, 0.9, "");
-    myPlot.AddTextBox(0.4, 0.2, erg8TeV_NN);
+    myPlot.AddLegend(0.7, 0.9, "");
+    myPlot.AddText(0.4, 0.2, erg8TeV_NN);
     myPlot.ChangePad(2);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     //     myPlot.SetDrawingProperties("logX");
@@ -814,9 +814,9 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("ratio", "Xe / Pb");
     myPlot.SetAxisRange("X", 0, 100);
     myPlot.SetAxisRange("Y", 0.45, 0.85);
-    myPlot.AddLegendBox(0.2, 0.9, "");
+    myPlot.AddLegend(0.2, 0.9, "");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-    myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
+    myPlot.AddText(0.4, 0.3, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -831,9 +831,9 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("ratio", "Xe / Pb");
     myPlot.SetAxisRange("X", 0, 2000);
     myPlot.SetAxisRange("Y", 0.45, 0.85);
-    myPlot.AddLegendBox(0.2, 0.9, "");
+    myPlot.AddLegend(0.2, 0.9, "");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-    myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
+    myPlot.AddText(0.4, 0.3, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -847,8 +847,8 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("X", 0., 60);
     myPlot.SetAxisRange("Y", 0.45, 0.85);
     myPlot.SetAxisRange("ratio", 0.9, 1.1);
-    myPlot.AddLegendBox(0.2, 0.9, "");
-    myPlot.AddTextBox(0.4, 0.3, systemSizeLable);
+    myPlot.AddLegend(0.2, 0.9, "");
+    myPlot.AddText(0.4, 0.3, systemSizeLable);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
 }

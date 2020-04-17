@@ -135,17 +135,17 @@ void Plot::AddRatio(string numerHist, string numerHistIdentifier, string denomHi
 }
 
 
-void Plot::AddTextBox(double xPos, double yPos, string text, bool userCoordinates, int borderStyle, int borderSize, int borderColor)
+void Plot::AddText(double xPos, double yPos, string text, bool userCoordinates, int borderStyle, int borderSize, int borderColor)
 {
   mBoxes[mCurrPad].push_back(std::make_shared<TextBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, text));
 }
 // todo user coord should be possible in both cases
-void Plot::AddLegendBox(double xPos, double yPos, string title, bool userCoordinates, int nColumns, int borderStyle, int borderSize, int borderColor)
+void Plot::AddLegend(double xPos, double yPos, string title, bool userCoordinates, int nColumns, int borderStyle, int borderSize, int borderColor)
 {
   // TODO: add userCoordinates to arguments
   mBoxes[mCurrPad].push_back(std::make_shared<LegendBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, title, nColumns));
 }
-void Plot::AddLegendBox(string title, int nColumns, int borderStyle, int borderSize, int borderColor)
+void Plot::AddLegend(string title, int nColumns, int borderStyle, int borderSize, int borderColor)
 {
   // TODO: add userCoordinates to arguments
   mBoxes[mCurrPad].push_back(std::make_shared<LegendBox>(false, true, 0, 0, borderStyle, borderSize, borderColor, title, nColumns));
