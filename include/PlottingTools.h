@@ -35,8 +35,6 @@ namespace PlottingTools
 shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* availableData);
 
 // internal helpers
-template<typename T>
-T* GetDataClone(string dataName, TObjArray* availableData);
 optional<data_ptr_t> GetDataClone(string dataName, TObjArray* availableData);
 TLegend* MakeLegend(shared_ptr<Plot::LegendBox> legendBox, TPad* pad, TObjArray& legendEntries, vector<string> legendTitles, vector<string>& errorStyles);
 TPaveText* MakeText(shared_ptr<Plot::TextBox> textBox);

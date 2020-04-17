@@ -22,7 +22,11 @@ using namespace PlottingFramework;
 namespace PlottingFramework {
 namespace PlottingTools{
 
-
+//****************************************************************************************
+/**
+ * Function to generate the plot.
+ */
+//****************************************************************************************
 shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* availableData){
   
   // this should be in crator
@@ -424,31 +428,13 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
 }
 
 
-template<typename T>
-T* GetDataClone(string dataName, TObjArray* availableData)
-{
-  T* data = nullptr;
-  TObject* obj = availableData->FindObject(dataName.c_str());
-  if(obj)
-  {
-    if(!obj->InheritsFrom(T::Class()))
-    {
-      ERROR("Input data \"{}\" is of type {} instead of {}.", dataName, obj->ClassName(), string(typeid(T).name()).substr(1));
-    }
-    else
-    {
-      data = (T*)obj->Clone();
-      //data->SetDirectory(0); // does not work for tgraphs because they are not attached to current file
-    }
-  }else{
-    ERROR("Input data \"{}\" was not loaded.", dataName);
-  }
-  return data;
-}
-
-// helper template functions to cast input to correct type
+//****************************************************************************************
+/**
+ * Function to retrieve a copy of the stored data properly casted it to its actual type.
+ */
+//****************************************************************************************
 template <typename T>
-optional<data_ptr_t> CastCorrectType(TObject* obj)
+optional<data_ptr_t> GetDataClone(TObject* obj)
 {
   if(obj->InheritsFrom(T::Class()))
   {
@@ -457,20 +443,19 @@ optional<data_ptr_t> CastCorrectType(TObject* obj)
   return std::nullopt;
 }
 template <typename T, typename Next, typename... Rest>
-optional<data_ptr_t> CastCorrectType(TObject* obj)
+optional<data_ptr_t> GetDataClone(TObject* obj)
 {
-  if(auto returnPointer = CastCorrectType<T>(obj))
+  if(auto returnPointer = GetDataClone<T>(obj))
     return returnPointer;
-  return CastCorrectType<Next, Rest...>(obj);
+  return GetDataClone<Next, Rest...>(obj);
 }
-
 optional<data_ptr_t> GetDataClone(string dataName, TObjArray* availableData)
 {
   TObject* obj = availableData->FindObject(dataName.c_str());
   if(obj)
   {
     // IMPORTANT: TProfile2D is TH2, TH2 is TH1, TProfile is TH1 --> order matters here!
-    if(auto returnPointer = CastCorrectType<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1>(obj))
+    if(auto returnPointer = GetDataClone<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1>(obj))
     {
       return returnPointer;
     }
@@ -484,6 +469,11 @@ optional<data_ptr_t> GetDataClone(string dataName, TObjArray* availableData)
   return std::nullopt;
 }
 
+//****************************************************************************************
+/**
+ * Function to generate the pad legend.
+ */
+//****************************************************************************************
 TLegend* MakeLegend(shared_ptr<Plot::LegendBox> legendBox, TPad* pad, TObjArray& legendEntries, vector<string> legendTitles, vector<string>& errorStyles){
   
   // todo this has to be included in legend box...
@@ -699,7 +689,11 @@ TLegend* MakeLegend(shared_ptr<Plot::LegendBox> legendBox, TPad* pad, TObjArray&
   return legend;
 }
 
-
+//****************************************************************************************
+/**
+ * Function to generate a text box.
+ */
+//****************************************************************************************
 TPaveText* MakeText(shared_ptr<Plot::TextBox> textBox){
   // todo this has to be included in text box...
   double textSizePixel = 24;  //textBox->GetTextSize;
@@ -774,7 +768,6 @@ TPaveText* MakeText(shared_ptr<Plot::TextBox> textBox){
  * Helper-function dividing two TGraphs
  */
 //****************************************************************************************
-
 TGraph* DivideTSpline(TGraph* numerator, TGraph* denominator){
   
   TGraph* result = (TGraph*)numerator->Clone("ratio");
@@ -800,7 +793,6 @@ TGraph* DivideTSpline(TGraph* numerator, TGraph* denominator){
  * Helper-function dividing two histograms with different binning.
  */
 //****************************************************************************************
-
 TH1* DivideTSpline(TH1* numerator, TH1* denominator)
 {
   TGraph denominatorGraph(denominator);
