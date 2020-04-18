@@ -1,11 +1,10 @@
+.DS_Store
 build/*
 BUILD/*
 config/*
 misc/*
 XCode/*
-doxygen/html/*
-doxygen/latex/*
+doc/html/*
+doc/latex/*
 apps/MultDepSpec/config/*
 
-.DS_Store
-doxyge/.DS_Store

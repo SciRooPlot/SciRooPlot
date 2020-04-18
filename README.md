@@ -25,7 +25,7 @@ For usage details and available options see ./plot --help.
 
 To generate the documenation run:
 
-cd PlottingFramework/doxygen
+cd PlottingFramework/doc
 
 doxygen doxygen.conf
 
