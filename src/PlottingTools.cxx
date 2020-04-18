@@ -48,7 +48,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
   
   for(auto& [padID, padStyle]: plotStyle.GetPadStyles())
   {
-    string controlString = plot.GetControlString(padID);
+    string padOptions = plot.GetPadOptions(padID);
     
     vector<string> errorStyles;
     vector<string> lables;
@@ -138,8 +138,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
               if(plotStyle.GetDefault2DStyle() == "COLZ") gStyle->SetNumberContours(256); // TODO: make this flexible
           }
 
-          // apply control string options
-          if(controlString.find("thick") != string::npos){
+          if(drawingOptions.find("thick") != string::npos || padOptions.find("thick") != string::npos){
             data_ptr->SetLineWidth(plotStyle.GetLineWidthThick());
             data_ptr->SetMarkerSize(plotStyle.GetMarkerSizeThick());
           }
@@ -243,7 +242,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
           
           if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
           {
-            if(controlString.find("normalize") != string::npos){
+            if(drawingOptions.find("normalize") != string::npos){
               drawingOptions.erase(drawingOptions.find("normalize"), string("normalize").length());
               data_ptr->Scale(1/data_ptr->Integral(), "width");
             }
@@ -278,23 +277,23 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     
     // TODO: set range and log scale properties must affect all linked pad-axes
     // TODO: also add safety in case log and range are not compatible (zero in range)
-    if(controlString.find("logX") != string::npos)
+    if(padOptions.find("logX") != string::npos)
     {
       pad->SetLogx();
     }
-    if(controlString.find("logY") != string::npos)
+    if(padOptions.find("logY") != string::npos)
     {
       pad->SetLogy();
     }
-    if(controlString.find("logZ") != string::npos)
+    if(padOptions.find("logZ") != string::npos)
     {
       pad->SetLogz();
     }
-    if(controlString.find("gridX") != string::npos)
+    if(padOptions.find("gridX") != string::npos)
     {
       pad->SetGridx();
     }
-    if(controlString.find("gridY") != string::npos)
+    if(padOptions.find("gridY") != string::npos)
     {
       pad->SetGridy();
     }

@@ -27,11 +27,11 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "test";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("momentUnfolded1", "pp_5TeV");
     myPlot.ChangePad(2);
     myPlot.AddData("momentUnfolded1", "pp_5TeV");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     //myPlot.SetAxisRange("Y", 0.15, 50);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
@@ -93,7 +93,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
      myPlot.AddData("meanPt", PbPb_5TeV[angantyr].input, "",
                      PbPb_5TeV[angantyr].marker, PbPb_5TeV[angantyr].color, "curve smooth dotted", PbPb_5TeV[angantyr].mult);
 
-     myPlot.SetDrawingProperties("logX");
+     myPlot.SetPadOptions("logX");
      myPlot.SetAxisRange("X", 0.1, 4000);
      //myPlot.SetAxisRange("X", 0.1, 120);
 
@@ -188,7 +188,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtScaled_pp_2TeV";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.SetAxisRange("Y", 0.15, 50);
     myPlot.AddData(plotName, "Fits");
     plotEnv.AddPlot(myPlot);
@@ -196,7 +196,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtScaled_pp_5TeV";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.SetAxisRange("Y", 0.15, 50);
     myPlot.AddData(plotName, "Fits");
     plotEnv.AddPlot(myPlot);
@@ -204,7 +204,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtScaled_pp_7TeV";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.SetAxisRange("Y", 0.15, 50);
     myPlot.AddData(plotName, "Fits");
     plotEnv.AddPlot(myPlot);
@@ -212,7 +212,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtScaled_pp_13TeV";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.SetAxisRange("Y", 0.15, 50);
     myPlot.AddData(plotName, "Fits");
     plotEnv.AddPlot(myPlot);
@@ -220,7 +220,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtScaled_pPb_5TeV";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.SetAxisRange("Y", 0.15, 50);
     myPlot.AddData(plotName, "Fits");
     plotEnv.AddPlot(myPlot);
@@ -228,7 +228,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtScaled_PbPb_5TeV";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.SetAxisRange("Y", 0.15, 50);
     myPlot.AddData(plotName, "Fits");
     plotEnv.AddPlot(myPlot);
@@ -247,7 +247,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "selfNormalizedHighPtYieldNormalizedNch";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("normalize");
+    myPlot.SetPadOptions("normalize");
     myPlot.AddData(plotName + "_pp_2TeV", "Fits", "2.76 TeV (<mean>)");
     myPlot.AddData(plotName + "_pp_5TeV", "Fits", "5.02 TeV (<mean>)");
     myPlot.AddData(plotName + "_pp_7TeV", "Fits", "7 TeV (<mean>)");
@@ -259,7 +259,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multDistMeasured13TeV";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("multDistMeasured", "pp_13TeV_old", "event selection before", kFullSquare, kRed+1);
     myPlot.AddData("multDistMeasuredMC", "pp_13TeV_old", "", kOpenSquare, kRed+1);
     myPlot.AddData("multDistMeasured", "pp_13TeV", "AilEventCuts and PhysSel plieup rejection", kFullCircle, kBlue+1);
@@ -271,7 +271,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "scaleEffectDDCMeas";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logZ");
+    myPlot.SetPadOptions("logZ");
     myPlot.AddData("scaleEffectMultMeas", "pp_13TeV_withDDC", "");
     myPlot.SetAxisTitle("Y", "#it{N}^{MC}_{acc}");
     myPlot.SetAxisTitle("X", "#it{N}^{scaled}_{acc}");
@@ -283,7 +283,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "scaleEffectDDCTrue";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logZ");
+    myPlot.SetPadOptions("logZ");
     myPlot.AddData("scaleEffectMultTrue", "pp_13TeV_withDDC", "");
     myPlot.SetAxisTitle("Y", "#it{N}^{MC}_{ch}");
     myPlot.SetAxisTitle("X", "#it{N}^{scaled}_{ch}");
@@ -295,7 +295,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multDist_withDDC";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("multDistUnfolded_Syst", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1, "boxes", 60);
     myPlot.AddData("multDistUnfolded", "pp_13TeV", "", kFullSquare, kBlue+1, "", 60);
     myPlot.AddData("multDistUnfolded", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1, "", 60);
@@ -310,7 +310,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multDistKNO_withDDC";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("multDistUnfoldedKNO_Syst", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1, "boxes", 60);
     myPlot.AddData("multDistUnfoldedKNO", "pp_13TeV", "", kFullSquare, kBlue+1, "", 60);
     myPlot.AddData("multDistUnfoldedKNO", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1, "", 60);
@@ -324,7 +324,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multDensity_withDDC";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("multDensityUnfolded_Syst", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1, "boxes", 60);
     myPlot.AddData("multDensityUnfolded", "pp_13TeV", "", kFullSquare, kBlue+1, "", 60);
     myPlot.AddData("multDensityUnfolded", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1, "", 60);
@@ -338,7 +338,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multDistMeasuredMC_withDDC";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("multDistMeasuredMC", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1, "", 60);
     myPlot.AddData("multDistMeasuredMC", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1, "", 60);
     myPlot.AddRatio("multDistMeasuredMC", "pp_13TeV", "multDistMeasuredMC", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1, "", 60);
@@ -351,7 +351,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multDistGeneratedMC_withDDC";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("multDistGeneratedMC", "pp_13TeV", "without PCC and SecScaling", kFullSquare, kBlue+1, "", 60);
     myPlot.AddData("multDistGeneratedMC", "pp_13TeV_withDDC", "with PCC and SecScaling", kFullSquare, kRed+1, "", 60);
     myPlot.AddRatio("multDistGeneratedMC", "pp_13TeV", "multDistMeasuredMC", "pp_13TeV_withDDC", "", kFullSquare, kBlue+1, "", 60);
@@ -363,7 +363,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multCorrelationMatrix_noDDC";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logZ");
+    myPlot.SetPadOptions("logZ");
     myPlot.AddData("multCorrelationMatrix", "pp_13TeV");
     myPlot.AddText(0.4, 0.25, "no data-driven corrections");
     plotEnv.AddPlot(myPlot);
@@ -371,7 +371,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multCorrelationMatrix_withDDC";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logZ");
+    myPlot.SetPadOptions("logZ");
     myPlot.AddData("multCorrelationMatrix", "pp_13TeV_withDDC");
     myPlot.AddText(0.4, 0.25, "with data-driven corrections");
     plotEnv.AddPlot(myPlot);
@@ -405,7 +405,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "responseMatrix_noDDC";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logZ");
+    myPlot.SetPadOptions("logZ");
     myPlot.AddData("responseMatrix", "pp_13TeV");
     myPlot.AddText(0.4, 0.25, "no data-driven corrections");
     plotEnv.AddPlot(myPlot);
@@ -413,7 +413,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "responseMatrix_withDDC";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logZ");
+    myPlot.SetPadOptions("logZ");
     myPlot.AddData("responseMatrix", "pp_13TeV_withDDC");
     myPlot.AddText(0.4, 0.25, "with data-driven corrections");
     plotEnv.AddPlot(myPlot);

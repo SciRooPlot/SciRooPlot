@@ -66,7 +66,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "abs_covMat_multDistUnfolded";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ");
+    myPlot.SetPadOptions("logZ");
     myPlot.AddData(plotName, "", "");
     myPlot.AddLegend(0.6, 0.7);
     plotEnv.AddPlot(myPlot);
@@ -74,7 +74,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "edgeContamPt";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.AddData(plotName, "", "");
     myPlot.SetAxisRange("X", 0, 20);
     myPlot.SetAxisTitle("Y", "contamination");
@@ -109,7 +109,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "chi2_multDistUnfolded";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("chi2_multDistUnfolded", dataSet, "data", kFullCross, kRed+3);
     myPlot.AddData("chi2_multDistUnfoldedMC", dataSet, "mc", kFullCross, kBlue+3);
     myPlot.AddData("chi2_multDistUnfoldedClosureTestFlat", dataSet, "mc flat prior", kFullCross, kGreen+3);
@@ -121,7 +121,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "chi2_multPtUnfoldedRaw_PtBin";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     vector<int> ptBins = {2, 3, 5, 7, 11, 13, 15, 17, 20, 30, 40, 50, 51};
     int i = 0;
     for(int ptBin : ptBins)
@@ -136,7 +136,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "chi2_multPtUnfoldedRaw_MultBin";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     vector<int> multBins = {2, 6, 9, 11, 16, 21, 31, 41, 51, 61};
     int i = 0;
     for(int multBin : multBins)
@@ -186,7 +186,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
     { // -----------------------------------------------------------------------
       string plotName = "presentation_PtBin_measuredRawMC";
       Plot myPlot(plotName, dataSet);
-      myPlot.SetDrawingProperties("logY");
+      myPlot.SetPadOptions("logY");
       myPlot.AddData(string("multPtMeasuredMC_PtBin_") + std::to_string(ptBin), "", "measured", kFullCross, kGreen+3);
       myPlot.AddLegend(0.2, 0.4);
       myPlot.SetAxisRange("Y", 1e-8, 1e-3);
@@ -197,7 +197,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
     { // -----------------------------------------------------------------------
       string plotName = "presentation_PtBin_unfoldedRawMC";
       Plot myPlot(plotName, dataSet);
-      myPlot.SetDrawingProperties("logY");
+      myPlot.SetPadOptions("logY");
       myPlot.AddData(string("multPtUnfoldedMC_PtBin_") + std::to_string(ptBin), "", "un-smeared", kFullCircle, kBlue+1);
       myPlot.AddLegend(0.2, 0.4);
       myPlot.SetAxisRange("Y", 1e-8, 1e-3);
@@ -210,7 +210,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
     { // -----------------------------------------------------------------------
       string plotName = "presentation_MultBin_unfoldedRawMC";
       Plot myPlot(plotName, dataSet);
-      myPlot.SetDrawingProperties("logY logX");
+      myPlot.SetPadOptions("logY logX");
       //myPlot.AddData(string("multPtUnfoldedMC_MultBin_") + std::to_string(multBin), "", "unfolded", kFullCircle, kBlue+1);
       myPlot.AddData(string("multPtUnfoldedMC_MultBin_") + std::to_string(multBin), "", "un-smeared", kFullCircle, kBlue+1);
       myPlot.AddLegend(0.6, 0.8);
@@ -227,7 +227,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multDensity";
     Plot myPlot(plotName, dataSet, "default ratio");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("multDensityUnfolded", dataSet, "", kFullCircle, kBlue+1);
     myPlot.AddData("multDensityUnfolded_Syst", dataSet, "data", kFullCircle, kBlue+1, "boxes");
     myPlot.AddData("multDensityGeneratedMC", dataSet, "mc", kOpenCircle, kBlue+1);
@@ -240,7 +240,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multDists";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("multDistMeasured", dataSet, "measured");
     myPlot.AddData("multDistUnfolded", dataSet, "", kFullCircle, kBlue+1);
     myPlot.AddData("multDistUnfolded_Syst", dataSet, "unfolded", kFullCircle, kBlue+1, "boxes");
@@ -252,7 +252,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multDistsMC";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("multDistMeasuredMC", dataSet, "measured");
     myPlot.AddData("multDistUnfoldedMC", dataSet, "unfolded");
     myPlot.AddData("multDistGeneratedMC", dataSet, "generated");
@@ -264,7 +264,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtMeasured";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ logY");
+    myPlot.SetPadOptions("logZ logY");
     myPlot.AddData(plotName);
     //myPlot.SetAxisRange("X", 0, multRange);
     myPlot.SetAxisRange("Y", 0.15, 50.0);
@@ -279,7 +279,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtMeasuredRaw";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ logY");
+    myPlot.SetPadOptions("logZ logY");
     myPlot.AddData(plotName);
     //myPlot.SetAxisRange("X", 0, multRange);
     myPlot.SetAxisRange("Y", 0.15, 50.0);
@@ -295,7 +295,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtUnfolded";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ logY");
+    myPlot.SetPadOptions("logZ logY");
     myPlot.AddData(plotName);
     myPlot.SetAxisRange("X", 0, multRange);
     myPlot.SetAxisRange("Y", 0.15, 30.0);
@@ -313,7 +313,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtUnfoldedNormalized";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ logY");
+    myPlot.SetPadOptions("logZ logY");
     myPlot.AddData(plotName);
     myPlot.SetAxisRange("X", 0, multRange);
     myPlot.SetAxisRange("Y", 0.15, 50.0);
@@ -332,7 +332,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtMeasuredMC";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ logY");
+    myPlot.SetPadOptions("logZ logY");
     myPlot.AddData(plotName);
     //myPlot.SetAxisRange("X", 0, multRange);
     myPlot.SetAxisRange("Y", 0.15, 50.0);
@@ -347,7 +347,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtMeasuredRawMC";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ logY");
+    myPlot.SetPadOptions("logZ logY");
     myPlot.AddData(plotName);
     //myPlot.SetAxisRange("X", 0, multRange);
     myPlot.SetAxisRange("Y", 0.15, 50.0);
@@ -363,7 +363,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtUnfoldedMC";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ logY");
+    myPlot.SetPadOptions("logZ logY");
     myPlot.AddData(plotName);
     //myPlot.SetAxisRange("X", 0, multRange);
     myPlot.SetAxisRange("Y", 0.15, 50.0);
@@ -378,7 +378,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtGeneratedMC";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ logY");
+    myPlot.SetPadOptions("logZ logY");
     myPlot.AddData(plotName);
     //myPlot.SetAxisRange("X", 0, multRange);
     //myPlot.SetAxisRange("Y", 0.15, 50.0);
@@ -422,7 +422,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multCorrelationMatrix";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ");
+    myPlot.SetPadOptions("logZ");
     myPlot.AddData(plotName);
     myPlot.SetAxisRange("X", 0, 10);
     myPlot.SetAxisRange("Y", 0, 10);
@@ -432,7 +432,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "responseMatrixOrig";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ");
+    myPlot.SetPadOptions("logZ");
     myPlot.AddData(plotName);
     //myPlot.SetAxisRange("X", 0, multRange);
     //myPlot.SetAxisRange("Y", 0, multRange);
@@ -442,7 +442,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "unfoldingMatrix";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ");
+    myPlot.SetPadOptions("logZ");
     myPlot.AddData(plotName);
     //myPlot.SetAxisRange("X", 0, multRange);
     //myPlot.SetAxisRange("Y", 0, multRange);
@@ -457,7 +457,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "responseMatrix";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ");
+    myPlot.SetPadOptions("logZ");
     myPlot.AddData(plotName);
     //myPlot.SetAxisRange("X", 0, multRange);
     //myPlot.SetAxisRange("Y", 0, multRange);
@@ -472,7 +472,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "ptResolutionMatrix";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logX logY logZ");
+    myPlot.SetPadOptions("logX logY logZ");
     //myPlot.SetAxisRange("X", 0.15, 50);
     //myPlot.SetAxisRange("Y", 0.15, 50);
     myPlot.SetAxisTitle("X", "#it{p}^{ meas}_{T}");
@@ -486,7 +486,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "relPtResoFromCovData";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ logX");
+    myPlot.SetPadOptions("logZ logX");
     myPlot.SetAxisRange("X", 0.15, 50);
     myPlot.SetAxisRange("Z", 2, 5e7);
     myPlot.SetAxisTitle("Z", "# Tracks");
@@ -497,7 +497,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "relPtResoFromCovMC";
     Plot myPlot(plotName, dataSet);
-    myPlot.SetDrawingProperties("logZ logX");
+    myPlot.SetPadOptions("logZ logX");
     myPlot.SetAxisRange("X", 0.15, 50);
     myPlot.SetAxisTitle("Z", "# Tracks");
     myPlot.AddText(0.3, 0.9, datasetLable);
@@ -534,7 +534,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
     string plotName = "efficiencyMC";
     Plot myPlot(plotName, dataSet);
     myPlot.AddData("primTrackEff", dataSet, "", 0, kBlue);
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.SetAxisRange("X", 0.15, 50);
     myPlot.SetAxisRange("Y", 0.3, 0.9);
     myPlot.AddLegend(0.6, 0.4);
@@ -547,7 +547,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
     string plotName = "secContamMC";
     Plot myPlot(plotName, dataSet);
     myPlot.AddData(plotName, dataSet, "", 0, kBlue);
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.SetAxisRange("X", 0.15, 50);
     myPlot.SetAxisTitle("X", "#it{p}^{ true}_{T}");
     myPlot.AddText(0.4, 0.9, datasetLable);
@@ -558,7 +558,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
     string plotName = "secContamMC_mult";
     Plot myPlot(plotName, dataSet);
     myPlot.AddData(plotName, dataSet, "", 0, kBlue);
-    //myPlot.SetDrawingProperties("logX");
+    //myPlot.SetPadOptions("logX");
     myPlot.SetAxisRange("Y", 0.0, 0.08);
     //myPlot.SetAxisTitle("X", "#it{p}^{ true}_{T}");
     myPlot.AddText(0.4, 0.9, datasetLable);
@@ -594,7 +594,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
       string name = "efficiencyMultPtRaw_MultBin_" + std::to_string(multBin);
       myPlot.AddData(name, dataSet, multLable);
     }
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.AddLegend(0.22, 0.52);
     myPlot.AddText(0.41, 0.3, datasetLable);
     myPlot.SetAxisRange("Y", 0.2, 0.9);
@@ -628,7 +628,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
       string name = "secContamMultPtRaw_MultBin_" + std::to_string(multBin);
       myPlot.AddData(name, dataSet, std::to_string(multBin));
     }
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.AddLegend(0.7, 0.3);
     myPlot.SetAxisRange("Y", 0, 0.15);
     plotEnv.AddPlot(myPlot);
@@ -636,7 +636,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "meanRelPtReso_DataVsMC";
     Plot myPlot(plotName, dataSet, "default ratio");
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.SetAxisTitle("Y", "< #sigma(#it{p}_{T}) / #it{p}_{T} >");
     myPlot.SetAxisRange("X", 0.15, 50);
     myPlot.SetAxisRange("ratio", 0.95, 1.05);
@@ -658,7 +658,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
     myPlot.AddData("multDistMeasuredClosureTest", "", "measured");
     myPlot.AddRatio("multDistUnfoldedClosureTest", "", "multDistGeneratedClosureTest", "", "");
     myPlot.SetAxisTitle("ratio", "ratio");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.SetAxisRange("X", 0, multRange);
     //myPlot.SetAxisRange("Y", 0.9, 3e5);
     myPlot.AddLegend(0.6, 0.9);
@@ -676,7 +676,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
     myPlot.AddData("multDistInitialClosureTestFlat", "", "prior", 0, 0, "hist");
     myPlot.AddRatio("multDistUnfoldedClosureTestFlat", "", "multDistGeneratedClosureTest", "", "");
     myPlot.SetAxisTitle("ratio", "ratio");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.SetAxisRange("X", 0, multRange);
     //myPlot.SetAxisRange("Y", 0.9, 3e5);
     myPlot.SetAxisRange("ratio", 0.95, 1.05);
@@ -688,7 +688,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
     string plotName = "closureTestProjectionPt";
     Plot myPlot(plotName, dataSet, "default ratio");
     myPlot.SetFigureCategory(categoryClosure);
-    myPlot.SetDrawingProperties("logX logY");
+    myPlot.SetPadOptions("logX logY");
     myPlot.SetAxisRange("X", 0.15, 50);
     myPlot.AddData("trueParticlesPt", "", "true");
     myPlot.AddData("unfoParticlesPt", "", "unfolded");
@@ -712,7 +712,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
     myPlot.AddData("unfoParticlesMult", "", "unfolded");
     myPlot.AddRatio("unfoParticlesMult", "", "trueParticlesMult");
     myPlot.SetAxisTitle("ratio", "ratio");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.SetAxisRange("ratio", 0.95, 1.05);
     myPlot.AddLegend(0.7, 0.7);
     myPlot.AddText(0.16, 0.2, datasetLable);
@@ -795,7 +795,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
       string plotName = "closureTestMultBin_" + std::to_string(multBin);
       Plot myPlot(plotName, dataSet, "default ratio");
       myPlot.SetFigureCategory(categoryClosure + "/Nch-Bins");
-      myPlot.SetDrawingProperties("logX logY");
+      myPlot.SetPadOptions("logX logY");
       myPlot.AddData(string("multPtGeneratedMC_MultBin_") + std::to_string(multBin), "", "", kFullSquare, kBlack);
       myPlot.AddData(string("multPtMeasuredMC_MultBin_") + std::to_string(multBin), "", "measured", kFullCross, kGreen+3);
       myPlot.AddData(string("multPtGeneratedMC_MultBin_") + std::to_string(multBin), "", "generated", kFullSquare, kBlack);
@@ -821,7 +821,7 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotEnv)
     {
       string plotName = histName + "_SystContrib";
       Plot myPlot(plotName, dataSet, "default");
-      myPlot.SetDrawingProperties("thick");
+      myPlot.SetPadOptions("thick");
       myPlot.AddData(histName + "_RelSyst_total", "", "", 0, kWhite, "hist");
       myPlot.AddData(histName + "_RelSyst_DCAtoVertexZ", "", " 1", 0, colorsSyst[0], "hist");
       myPlot.AddData(histName + "_RelSyst_DCAtoVertexXYPtDep", "", " 2", 0, colorsSyst[1], "hist");

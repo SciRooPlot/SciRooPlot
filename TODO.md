@@ -6,7 +6,7 @@ ANALYSIS:
 - clean up file names and make useful sub-folders
 - add more qa plots for unfolding
 - finally fix the naming of the output -> unfoldedMeanPt, etc or use subfolders: generated/meanPt, unfolded/meanPt, generatedMC/meanPt?
-- mc linine statt punkten
+- mc lines instead of markers
 
 FRAMEWORK:
 ----------
@@ -19,6 +19,7 @@ WIP:
 - flexible number of color steps in 2d plots
 - add graph division feature with tspline3
 - font color should also be user definable
+- padID --> unsigned int??
 
 
 Major Features:

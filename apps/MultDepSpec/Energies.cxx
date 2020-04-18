@@ -44,7 +44,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "yieldFractions";
     Plot myPlot(plotName, plotGroup);
-    //myPlot.SetDrawingProperties("logX logY");
+    //myPlot.SetPadOptions("logX logY");
     myPlot.AddData(plotName + "_pp_13TeV", "Fits", "13 TeV");
     myPlot.AddData(plotName + "_pp_7TeV", "Fits", "7 TeV");
     myPlot.AddData(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
@@ -59,7 +59,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "yieldFractionsSelfNormalized";
     Plot myPlot(plotName, plotGroup);
-    //myPlot.SetDrawingProperties("logX logY");
+    //myPlot.SetPadOptions("logX logY");
     myPlot.AddData(plotName + "_pp_13TeV", "Fits", "13 TeV");
     myPlot.AddData(plotName + "_pp_7TeV", "Fits", "7 TeV");
     myPlot.AddData(plotName + "_pp_5TeV", "Fits", "5.02 TeV");
@@ -71,7 +71,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtUnfoldedNormalized";
     Plot myPlot(plotName, plotGroup, "default");
-    myPlot.SetDrawingProperties("logY logZ");
+    myPlot.SetPadOptions("logY logZ");
     myPlot.AddData(plotName, "pp_5TeV", "5.02 TeV");
     myPlot.SetAxisRange("X", 0, 60);
     plotEnv.AddPlot(myPlot);
@@ -79,7 +79,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "momentUnfolded1SelfNormalized";
     Plot myPlot(plotName, plotGroup, "default");
-    myPlot.SetDrawingProperties("logX logY");
+    myPlot.SetPadOptions("logX logY");
     myPlot.AddData(plotName, "pp_13TeV", "13 TeV");
     myPlot.AddData(plotName, "pp_7TeV", "7 TeV");
     myPlot.AddData(plotName, "pp_5TeV", "5.02 TeV");
@@ -93,7 +93,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "momentUnfolded1SelfNormalizedWithPythia";
     Plot myPlot(plotName, plotGroup, "default");
-    //myPlot.SetDrawingProperties("logX logY");
+    //myPlot.SetPadOptions("logX logY");
     string dataName = "momentUnfolded1SelfNormalized";
     string mcName = "momentGeneratedMC1SelfNormalized";
     myPlot.AddData(dataName, "pp_13TeV", "13 TeV");
@@ -113,7 +113,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "momentGeneratedMC1SelfNormalized";
     Plot myPlot(plotName, plotGroup, "default");
-    myPlot.SetDrawingProperties("logX logY");
+    myPlot.SetPadOptions("logX logY");
     myPlot.AddData(plotName, "pp_13TeV", "13 TeV");
     myPlot.AddData(plotName, "pp_7TeV", "7 TeV (Pythia6)");
     myPlot.AddData(plotName, "pp_5TeV", "5.02 TeV");
@@ -127,7 +127,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "inclusiveSpectrum";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logY logX");
+    myPlot.SetPadOptions("logY logX");
     myPlot.AddData(plotName, "PbPb_5TeV", "Pb-Pb 5.02 TeV");
     myPlot.AddData(plotName, "pp_13TeV", "13 TeV");
     myPlot.AddData(plotName, "pp_7TeV", "7 TeV");
@@ -140,7 +140,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("Y", "1/#it{N}_{evt} 1/(2#pi #it{p}_{T}) (d^{2}#it{N})/(d#it{p}_{T}d#it{#eta}) [(GeV/#it{c})^{-2}]");
     myPlot.AddText(0.2, 0.25, energyLable);
     myPlot.ChangePad(2);
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.SetAxisTitle("ratio", "ratio to 13");
     myPlot.SetAxisTitle("X", "#it{p}_{T} (GeV/#it{c})");
     plotEnv.AddPlot(myPlot);
@@ -148,7 +148,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatio_5Over13";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddRatio("multPtUnfoldedNormalized", "pp_5TeV", "multPtUnfoldedNormalized", "pp_13TeV");
     //myPlot.AddRatio("multPtUnfolded", "pp_5TeV", "multPtUnfolded", "pp_13TeV");
     myPlot.SetAxisRange("Z", 0, 1.5);
@@ -163,7 +163,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatio_PbPbOverpPb";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY logZ");
+    myPlot.SetPadOptions("logY logZ");
     myPlot.AddRatio("multPtUnfolded", "PbPb_5TeV", "multPtUnfolded", "pPb_5TeV");
     //myPlot.SetAxisRange("Z", 1e-4, 5e-1);
     myPlot.SetAxisRange("X", 0, 60);
@@ -177,7 +177,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatioToPythia_2.76TeV";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY logZ");
+    myPlot.SetPadOptions("logY logZ");
     myPlot.AddRatio("multPtUnfolded", "pp_2TeV", "multPt_2.76TeV", "Simulations");
     myPlot.SetAxisRange("Z", 0.5, 2.0);
     myPlot.SetAxisRange("X", 0, 40);
@@ -191,7 +191,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatioToPythia_5TeV";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY logZ");
+    myPlot.SetPadOptions("logY logZ");
     myPlot.AddRatio("multPtUnfolded", "pp_5TeV", "multPt_5.02TeV", "Simulations");
     myPlot.SetAxisRange("Z", 0.5, 2.0);
     myPlot.SetAxisRange("X", 0, 60);
@@ -205,7 +205,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatioToPythia_7TeV";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY logZ");
+    myPlot.SetPadOptions("logY logZ");
     myPlot.AddRatio("multPtUnfolded", "pp_7TeV", "multPt_7TeV", "Simulations");
     myPlot.SetAxisRange("Z", 0.5, 2.0);
     myPlot.SetAxisRange("X", 0, 60);
@@ -219,7 +219,7 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatioToPythia_13TeV";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY logZ");
+    myPlot.SetPadOptions("logY logZ");
     myPlot.AddRatio("multPtUnfolded", "pp_13TeV", "multPt_13TeV", "Simulations");
     myPlot.SetAxisRange("Z", 0.5, 2.0);
     myPlot.SetAxisRange("X", 0, 60);

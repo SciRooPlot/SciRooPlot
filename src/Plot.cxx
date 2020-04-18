@@ -25,7 +25,7 @@ Plot::Plot()
 {
   mName = "dummyName";
   mPlotStyle = "default";
-  mControlString.clear();
+  mPadOptions.clear();
   mFigureGroup = "";
   mFigureCategory = "";
   mCurrPad = 1;
@@ -64,7 +64,7 @@ Plot::Plot(ptree &plotTree)
       if(pad.first.find("PAD") != string::npos)
       {
         padID = std::stoi(pad.first.substr(pad.first.find("_")+1));
-        mControlString[padID] = pad.second.get<string>("controlString");
+        mPadOptions[padID] = pad.second.get<string>("padOptions");
         for(auto& content : pad.second)
         {
           // add data
@@ -227,7 +227,7 @@ ptree Plot::GetPropetyTree()
   {
     int padID = padData.first;
     ptree padTree;
-    padTree.put("controlString", mControlString[padID]);
+    padTree.put("padOptions", mPadOptions[padID]);
     
     // add data of pad
     int dataID = 1;

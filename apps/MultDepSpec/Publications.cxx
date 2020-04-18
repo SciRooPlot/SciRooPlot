@@ -25,7 +25,7 @@ void MultDepSpec::DefinePublicationPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "publication";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.AddData("meanPt_PbPb_2.76TeV_Stat", "Publications", "", kFullCross, kWhite);
     myPlot.AddData("meanPt_pp_7TeV_Stat", "Publications", "", kFullSquare, kBlue+1);
     myPlot.AddData("meanPt_pp_7TeV_Syst", "Publications", "pp #sqrt{s} = 7 TeV", kFullSquare, kBlue+1, "boxes");
@@ -58,13 +58,13 @@ void MultDepSpec::DefinePublicationPlots(PlotManager& plotEnv)
     myPlot.SetAxisRange("Y", 0.45, 0.92);
     myPlot.AddLegend(0.55, 0.3, "");
     myPlot.AddText(0.5, 0.92, publicationLable);
-    //  myPlot3.SetDrawingProperties("thick");
+    //  myPlot3.SetPadOptions("thick");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "multDistsComparisonPub";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("multDist_pp_7TeV_Stat", "Publications", "", kFullSquare, kMagenta+1);
     myPlot.AddData("multDist_pp_7TeV_Syst", "Publications", "preliminary (ALICE-PUBLIC-2013-001)", kFullSquare, kMagenta+1, "boxes");
     myPlot.AddData("multDensityUnfolded", "pp_7TeV", "", kOpenCircle, kBlue+1);

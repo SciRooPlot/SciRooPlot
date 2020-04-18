@@ -55,7 +55,7 @@ public:
   
   // accessors for internal use by manager
   string& GetName(){return mName;}
-  string& GetControlString(int padID){return mControlString[padID];}
+  string& GetPadOptions(int padID){return mPadOptions[padID];}
   string& GetFigureGroup(){return mFigureGroup;}
   string& GetFigureCategory(){return mFigureCategory;}
   map<unsigned int, vector<shared_ptr<Data>>>& GetData(){return mData;}
@@ -76,7 +76,8 @@ public:
   void AddLegend(string title = "", int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
   void SetAxisTitle(string axis, string axisTitle);
   void SetAxisRange(string axis, double low, double high);
-  inline void SetDrawingProperties(string controlString){mControlString[mCurrPad] = controlString;}
+  inline void SetPadOptions(string options){mPadOptions[mCurrPad] = options;}
+  inline void SetPadOptions(int padID, string options){mPadOptions[padID] = options;}
   inline void SetPlotStyle(string plotStyle){mPlotStyle = plotStyle;}
   inline void ChangePad(int padID) {mCurrPad = padID;}
   
@@ -106,7 +107,7 @@ private:
   map<unsigned int, vector<shared_ptr<Box>>> mBoxes; // mBoxes[padID][boxID]
   map<unsigned int, map<string, shared_ptr<Axis>>> mAxes; // padID, "x", axis properties
   
-  map<unsigned int, string> mControlString; // mControlString[padID]
+  map<unsigned int, string> mPadOptions; // mPadOptions[padID]
 };
 //========================================================================================
 

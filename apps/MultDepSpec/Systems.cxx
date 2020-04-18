@@ -89,7 +89,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("momentGeneratedMC1", XeXe_5TeV[hijing].input, "XeXe 5.44 TeV hijing",
                     XeXe_5TeV[hijing].marker, XeXe_5TeV[hijing].color);
     
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.AddLegend(0.15, 0.92);
     myPlot.SetAxisRange("X", 1, 3000);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
@@ -141,7 +141,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("momentUnfolded1_Syst", XeXe_5TeV[data].input, "Xe-Xe, 5.44 TeV",
                     XeXe_5TeV[data].marker, XeXe_5TeV[data].color, "", XeXe_5TeV[data].mult);
 
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.SetAxisRange("X", 0.1, 4000);
     myPlot.SetAxisRange("Y", 0.45, 0.9);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
@@ -179,7 +179,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("meanPt", PbPb_5TeV[epos].input, "",
                     PbPb_5TeV[epos].marker, PbPb_5TeV[epos].color);
 
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.SetAxisRange("X", 0.1, 4000);
     //myPlot.SetAxisRange("X", 0.1, 120);
     myPlot.SetAxisRange("Y", 0.45, 0.9);
@@ -218,7 +218,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
      myPlot.AddData("meanPt", PbPb_5TeV[epos_lhc].input, "",
                      PbPb_5TeV[epos_lhc].marker, PbPb_5TeV[epos_lhc].color, "", PbPb_5TeV[data].mult);
 
-     myPlot.SetDrawingProperties("logX");
+     myPlot.SetPadOptions("logX");
      myPlot.SetAxisRange("X", 0.1, 4000);
      //myPlot.SetAxisRange("X", 0.1, 120);
 
@@ -305,7 +305,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("varianceUnfolded_Syst", XeXe_5TeV[data].input, "Xe-Xe, 5.44 TeV",
                     XeXe_5TeV[data].marker, XeXe_5TeV[data].color, "", XeXe_5TeV[data].mult);
     
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.SetAxisRange("X", 0.1, 4000);
     myPlot.SetAxisRange("Y", 0.05, 0.95);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
@@ -356,7 +356,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddData("multDensityUnfolded_Syst", XeXe_5TeV[data].input, "Xe-Xe, 5.44 TeV",
                     XeXe_5TeV[data].marker, XeXe_5TeV[data].color, "", XeXe_5TeV[data].mult);
     
-    myPlot.SetDrawingProperties("logY logX");
+    myPlot.SetPadOptions("logY logX");
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
     myPlot.AddText(0.12, 0.3, systemSizeLable);
     myPlot.AddLegend(0.6, 0.92);
@@ -368,7 +368,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multiplicity_pp";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     
     myPlot.AddData("multDensityUnfolded", pp_2TeV[data].input, "",
                     pp_2TeV[data].marker, pp_2TeV[data].color, "", pp_2TeV[data].mult);
@@ -403,7 +403,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multiplicity_KNO_pp";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     
     myPlot.AddData("multDistUnfoldedKNO", pp_2TeV[data].input, "",
                     pp_2TeV[data].marker, pp_2TeV[data].color, "", pp_2TeV[data].mult);
@@ -489,7 +489,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatio_pPbOverpp";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddRatio("reducedMultPtpPb", "Fits", "multPtUnfoldedNormalized", "pp_5TeV"); // This does not work!!
     myPlot.SetAxisRange("Z", 0.0, 2.0);
     myPlot.SetAxisRange("X", 0, 60);
@@ -503,7 +503,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "multPtRatio_PbPbOverpp";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddRatio("reducedMultPtPbPb", "Fits", "multPtUnfoldedNormalized", "pp_5TeV");
     myPlot.SetAxisRange("Z", 0.0, 2.0);
     myPlot.SetAxisRange("X", 0, 60);
@@ -517,7 +517,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "studyExtremeMultPbPbXeXe";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logX logY");
+    myPlot.SetPadOptions("logX logY");
     myPlot.AddData("michaelRatio_XeXe", "Fits", "Xe-Xe", 0, kBlue+2);
     myPlot.AddData("michaelRatio_PbPb", "Fits", "Pb-Pb", 0, kBlack);
     myPlot.AddRatio("michaelRatio_XeXe", "Fits", "michaelRatio_PbPb", "Fits", "", 0, kBlue+2);
@@ -527,13 +527,13 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddText(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "extreme / nearby");
     myPlot.ChangePad(2);
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "studyExtremeMultPbPb";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logX logY");
+    myPlot.SetPadOptions("logX logY");
     myPlot.AddData("spectraExtreme_PbPb", "Fits", "#it{N}_{ch} > 2000", 0, kBlue+2);
     myPlot.AddData("spectraNearby_PbPb", "Fits", "700 < #it{N}_{ch} < 1200", 0, kBlack);
     myPlot.AddRatio("spectraExtreme_PbPb", "Fits", "spectraNearby_PbPb", "Fits", "", 0, kBlue+2);
@@ -543,13 +543,13 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddText(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "extreme / nearby");
     myPlot.ChangePad(2);
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "studyExtremeMultXeXe";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logX logY");
+    myPlot.SetPadOptions("logX logY");
     myPlot.AddData("spectraExtreme_XeXe", "Fits", "#it{N}_{ch} > 1200", 0, kBlue+2);
     myPlot.AddData("spectraNearby_XeXe", "Fits", "500 < #it{N}_{ch} < 800", 0, kBlack);
     myPlot.AddRatio("spectraExtreme_XeXe", "Fits", "spectraNearby_XeXe", "Fits", "", 0, kBlue+2);
@@ -559,13 +559,13 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("ratio", "extreme / nearby");
     myPlot.SetAxisRange("ratio", 1.3, 3.3);
     myPlot.ChangePad(2);
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "studyExtremeMultPP";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logX logY");
+    myPlot.SetPadOptions("logX logY");
     myPlot.AddData("inclusiveSpectrum", "pp_5TeV", "", 0, kBlack);
     myPlot.AddData("spectraExtreme_pp", "Fits", "#it{N}_{ch} > 40", 0, kBlue+2);
     myPlot.AddData("inclusiveSpectrum", "pp_5TeV", "all #it{N}_{ch}", 0, kBlack);
@@ -575,13 +575,13 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddText(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "extreme/MB");
     myPlot.ChangePad(2);
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "energyDepHighNchSpectra";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logX logY");
+    myPlot.SetPadOptions("logX logY");
     myPlot.AddData("spectraHighNch_pp_13TeV", "Fits", "", 0, 0);
     myPlot.AddData("spectraHighNch_pp_2TeV", "Fits", "", 0, 0);
     myPlot.AddData("spectraHighNch_pp_5TeV", "Fits", "", 0, 0);
@@ -594,14 +594,14 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddText(0.18, 0.2, systemSizeLable);
     myPlot.SetAxisTitle("ratio", "ratio to 13");
     myPlot.ChangePad(2);
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.SetAxisTitle("X", "#it{p}_{T}");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "studyExtremeMultPPb";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logX logY");
+    myPlot.SetPadOptions("logX logY");
     myPlot.AddData("inclusiveSpectrum", "pPb_5TeV", "", 0, kBlack);
     myPlot.AddData("spectraExtreme_pp", "Fits", "#it{N}_{ch} > 100", 0, kBlue+2);
     myPlot.AddData("inclusiveSpectrum", "pPb_5TeV", "all #it{N}_{ch}", 0, kBlack);
@@ -612,13 +612,13 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.SetAxisTitle("ratio", "extreme/MB");
     //      myPlot.SetAxisRange("ratio", 1.3, 3.3);
     myPlot.ChangePad(2);
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "studyLowMult";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logX logY");
+    myPlot.SetPadOptions("logX logY");
     myPlot.AddData("spectraNch2_PbPb", "Fits", "Pb-Pb, #it{N}_{ch} = 2", kFullSquare, kGreen+2);
     myPlot.AddData("spectraNch2_XeXe", "Fits", "Xe-Xe, #it{N}_{ch} = 2", kFullCircle, kGreen+2);
     myPlot.AddData("spectraNch1_PbPb", "Fits", "Pb-Pb, #it{N}_{ch} = 1", kFullSquare, kBlue+2);
@@ -631,13 +631,13 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     //myPlot.AddText(0.4, 0.3, "#bf{Xe-Xe}");
     myPlot.SetAxisTitle("ratio", "Pb / Xe");
     myPlot.ChangePad(2);
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "multDensityComparisonPerNuclPair";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logY logX");
+    myPlot.SetPadOptions("logY logX");
     myPlot.AddData("multDensityVsParticlesPerNucleon_XeXe_5TeV", "Fits", "Xe-Xe", kFullCircle, kGreen+2, "");
     myPlot.AddData("multDensityVsParticlesPerNucleon_PbPb_5TeV", "Fits", "Pb-Pb", kFullSquare, kRed+1, "");
     myPlot.AddLegend(0.7, 0.8);
@@ -688,7 +688,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "varianceFullRangeMC";
     Plot myPlot(plotName, plotGroup);
-    myPlot.SetDrawingProperties("logX");
+    myPlot.SetPadOptions("logX");
     myPlot.AddData("varianceGeneratedMC", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3000);
     myPlot.AddData("varianceGeneratedMC", "pp_5TeV", "pp (Pythia8)", kFullSquare, kBlue+1, "", 50);
     myPlot.AddData("varianceGeneratedMC", "pPb_5TeV", "p-Pb (DPMJET)", kFullCircle, kMagenta+1, "", 85);
@@ -743,7 +743,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
   { // -----------------------------------------------------------------------
     string plotName = "meanPtPbOverPb";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    //      myPlot.SetDrawingProperties("logX");
+    //      myPlot.SetPadOptions("logX");
     myPlot.AddData("momentUnfolded1", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3500);
     myPlot.AddData("momentUnfolded1_Syst", "PbPb_5TeV", "2015", kFullCross, kRed+1, "boxes", 3500);
     myPlot.AddData("momentUnfolded1", "PbPb_5TeV_2018", "", kFullStar, kGreen+2, "", 3500);
@@ -757,13 +757,13 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddText(0.4, 0.2, systemSizeLable);
     myPlot.ChangePad(2);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-    //     myPlot.SetDrawingProperties("logX");
+    //     myPlot.SetPadOptions("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "multDensityPbOverPb";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("multDensityUnfolded", "PbPb_5TeV", "", kFullCross, kRed+1, "", 3500);
     myPlot.AddData("multDensityUnfolded_Syst", "PbPb_5TeV", "2015", kFullCross, kRed+1, "boxes", 3500);
     myPlot.AddData("multDensityUnfolded", "PbPb_5TeV_2018", "", kFullStar, kGreen+2, "", 3500);
@@ -778,13 +778,13 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddText(0.4, 0.2, systemSizeLable);
     myPlot.ChangePad(2);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-    //     myPlot.SetDrawingProperties("logX");
+    //     myPlot.SetPadOptions("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "multDensityPbpOverpPb";
     Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetDrawingProperties("logY");
+    myPlot.SetPadOptions("logY");
     myPlot.AddData("multDensityUnfolded", "pPb_8TeV", "", kFullCross, kRed+1, "", 3500);
     myPlot.AddData("multDensityUnfolded_Syst", "pPb_8TeV", "p-Pb", kFullCross, kRed+1, "boxes", 3500);
     myPlot.AddData("multDensityUnfolded", "Pbp_8TeV", "", kFullStar, kGreen+2, "", 3500);
@@ -799,7 +799,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotEnv)
     myPlot.AddText(0.4, 0.2, erg8TeV_NN);
     myPlot.ChangePad(2);
     myPlot.SetAxisTitle("X", "#it{N}_{ch}");
-    //     myPlot.SetDrawingProperties("logX");
+    //     myPlot.SetPadOptions("logX");
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
