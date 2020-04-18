@@ -21,6 +21,37 @@
 void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
 {
   string plotGroup = "test";
+
+  
+  
+  { // -----------------------------------------------------------------------
+    string plotName = "test";
+    Plot myPlot(plotName, plotGroup, "default ratio");
+    myPlot.SetDrawingProperties("logY");
+    myPlot.AddData("momentUnfolded1", "pp_5TeV");
+    myPlot.ChangePad(2);
+    myPlot.AddData("momentUnfolded1", "pp_5TeV");
+    myPlot.SetDrawingProperties("logY");
+    //myPlot.SetAxisRange("Y", 0.15, 50);
+    plotEnv.AddPlot(myPlot);
+  } // -----------------------------------------------------------------------
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   
   // hard probes preliminaries:

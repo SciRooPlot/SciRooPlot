@@ -11,12 +11,14 @@ ANALYSIS:
 FRAMEWORK:
 ----------
 WIP:
-- fix dirty hacks for backward compatibility regarding ratio plots
-- backward compatibility with "ratio" keyword in axis range and title?
 - possibility to set alias for axis e.g. "ratio"?
+- how to define default location for AddRatio() in the style?
+- or: change interface overall, such that this is obsolete
+- generalize axis linking
 - add support for grid styles
 - flexible number of color steps in 2d plots
 - add graph division feature with tspline3
+- font color should also be user definable
 
 
 Major Features:

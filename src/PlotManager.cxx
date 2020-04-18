@@ -923,11 +923,11 @@ void PlotManager::DefineDefaultPlottingStyles()
     myStyle.SetDefaultMarkersFull(goodMarkersFull);
     myStyle.SetDefaultMarkersOpen(goodMarkersOpen);
     
-    vector<PlotStyle::PadStyle> pads;
-    pads.push_back(PlotStyle::PadStyle(""));
-    pads[0].SetCorners({0,0}, {1.0,1.0});
-    pads[0].SetMargins({0.07, 0.14, 0.12, 0.07});
-    pads[0].SetTitleOffsets({1.1, 1.4, 1.0});
+    map<int, PlotStyle::PadStyle> pads;
+    pads[1] = PlotStyle::PadStyle("");
+    pads[1].SetCorners({0,0}, {1.0,1.0});
+    pads[1].SetMargins({0.07, 0.14, 0.12, 0.07});
+    pads[1].SetTitleOffsets({1.1, 1.4, 1.0});
     myStyle.AddPadStyles(pads);
     mPlotStyles.push_back(std::move(myStyle)); // maybe AddPlotStyle(PlotStyle&)
   }
@@ -963,16 +963,15 @@ void PlotManager::DefineDefaultPlottingStyles()
     myStyle.SetDefaultMarkersFull(goodMarkersFull);
     myStyle.SetDefaultMarkersOpen(goodMarkersOpen);
     
-    vector<PlotStyle::PadStyle> pads;
-    pads.push_back(PlotStyle::PadStyle(""));
-    pads[0].SetCorners({0.0,0.28}, {1.0,1.0});
-    pads[0].SetMargins({0.05, 0.0, 0.14, 0.05});
-    pads[0].SetTitleOffsets({3.1, 1.5, 1.0});
-    pads.push_back(PlotStyle::PadStyle(""));
-    pads[1].SetCorners({0.0,0.0}, {1.0,0.28});
-    pads[1].SetMargins({0.015, 0.4, 0.14, 0.05});
-    pads[1].SetTitleOffsets({4.1, 1.5, 1.0});
-    
+    map<int, PlotStyle::PadStyle> pads;
+    pads[1] = PlotStyle::PadStyle("");
+    pads[1].SetCorners({0.0,0.28}, {1.0,1.0});
+    pads[1].SetMargins({0.05, 0.0, 0.14, 0.05});
+    pads[1].SetTitleOffsets({3.1, 1.5, 1.0});
+    pads[2] = PlotStyle::PadStyle("");
+    pads[2].SetCorners({0.0,0.0}, {1.0,0.28});
+    pads[2].SetMargins({0.015, 0.4, 0.14, 0.05});
+    pads[2].SetTitleOffsets({4.1, 1.5, 1.0});
     myStyle.AddPadStyles(pads);
     mPlotStyles.push_back(std::move(myStyle)); // maybe AddPlotStyle(PlotStyle&)
   }

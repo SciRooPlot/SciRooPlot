@@ -63,6 +63,7 @@ Plot::Plot(ptree &plotTree)
     {
       if(pad.first.find("PAD") != string::npos)
       {
+        padID = std::stoi(pad.first.substr(pad.first.find("_")+1));
         mControlString[padID] = pad.second.get<string>("controlString");
         for(auto& content : pad.second)
         {

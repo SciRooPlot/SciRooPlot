@@ -46,8 +46,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
   if(!plotStyle.IsTransparent()) canvas->SetFillColor(plotStyle.GetFillColor());
   if(plotStyle.IsFixedAspectRatio()) canvas->SetFixedAspectRatio();
   
-  int padID = 1;
-  for(auto& padStyle : plotStyle.GetPadStyles())
+  for(auto& [padID, padStyle]: plotStyle.GetPadStyles())
   {
     string controlString = plot.GetControlString(padID);
     
@@ -62,7 +61,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     
     //DEBUG("PAD dimensons: {}, {}, {}, {}.", padStyle.GetXLow(), padStyle.GetYLow(), padStyle.GetXUp(), padStyle.GetYUp());
     pad->SetFillStyle(plotStyle.GetFillStyle()); // todo make this pad dependent
-    if(!plotStyle.IsTransparent()) pad->SetFillColor(plotStyle.GetFillColor());
+    //if(!plotStyle.IsTransparent()) pad->SetFillColor(plotStyle.GetFillColor());
     pad->SetTopMargin(padStyle.GetTopMargin());
     pad->SetBottomMargin(padStyle.GetBottomMargin());
     pad->SetLeftMargin(padStyle.GetLeftMargin());
@@ -417,7 +416,6 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     
     pad->Modified();
     pad->Update();
-    padID++;
   }
   
   // finally apply canvas properties

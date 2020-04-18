@@ -41,8 +41,8 @@ public:
   double& GetWidth(){return mWidth;}
   double& GetHeight(){return mHeight;}
   int GetNPads() {return mPadStyles.size();};
-  vector<PadStyle>& GetPadStyles() {return mPadStyles;}
-  void AddPadStyles(vector<PadStyle> padStyles) {mPadStyles = padStyles;}
+  map<int, PadStyle>& GetPadStyles() {return mPadStyles;}
+  void AddPadStyles(map<int, PadStyle> padStyles) {mPadStyles = padStyles;}
 
   int GetPallette() {return mPalette;}
   int GetDefaultColor(int colorIndex) {return mDefaultColors[colorIndex % mDefaultColors.size()];}
@@ -128,7 +128,7 @@ private:
   string mName;
   double mWidth;
   double mHeight;
-  vector<PadStyle> mPadStyles;
+  map<int, PadStyle> mPadStyles; // padID, padStyle
   vector<int> mRatioPads;
   map<string, vector<vector<int>>> mLinkedAxes;
   // ratio corresponding to padID plots
