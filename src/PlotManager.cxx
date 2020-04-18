@@ -923,7 +923,7 @@ void PlotManager::DefineDefaultPlottingStyles()
     myStyle.SetDefaultMarkersFull(goodMarkersFull);
     myStyle.SetDefaultMarkersOpen(goodMarkersOpen);
     
-    map<int, PlotStyle::PadStyle> pads;
+    map<unsigned short, PlotStyle::PadStyle> pads;
     pads[1] = PlotStyle::PadStyle("");
     pads[1].SetCorners({0,0}, {1.0,1.0});
     pads[1].SetMargins({0.07, 0.14, 0.12, 0.07});
@@ -961,7 +961,7 @@ void PlotManager::DefineDefaultPlottingStyles()
     myStyle.SetDefaultMarkersFull(goodMarkersFull);
     myStyle.SetDefaultMarkersOpen(goodMarkersOpen);
     
-    map<int, PlotStyle::PadStyle> pads;
+    map<unsigned short, PlotStyle::PadStyle> pads;
     pads[1] = PlotStyle::PadStyle("");
     pads[1].SetCorners({0.0,0.28}, {1.0,1.0});
     pads[1].SetMargins({0.05, 0.0, 0.14, 0.05});

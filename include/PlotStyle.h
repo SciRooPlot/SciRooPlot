@@ -37,8 +37,8 @@ public:
   double& GetWidth(){return mWidth;}
   double& GetHeight(){return mHeight;}
   int GetNPads() {return mPadStyles.size();};
-  map<int, PadStyle>& GetPadStyles() {return mPadStyles;}
-  void AddPadStyles(map<int, PadStyle> padStyles) {mPadStyles = padStyles;}
+  map<unsigned short, PadStyle>& GetPadStyles() {return mPadStyles;}
+  void AddPadStyles(map<unsigned short, PadStyle> padStyles) {mPadStyles = padStyles;}
 
   int GetPallette() {return mPalette;}
   int GetDefaultColor(int colorIndex) {return mDefaultColors[colorIndex % mDefaultColors.size()];}
@@ -89,17 +89,17 @@ public:
   bool IsDrawTimestamps(){return mDrawTimestamps;}
   pair<double, double> GetTimestampPositon(){return mTimestampPosition;}
 
-  void LinkAxes(string axis, vector<int> padIDs)
+  void LinkAxes(string axis, vector<unsigned short> padIDs)
   {
     mLinkedAxes[axis].push_back(padIDs);
   }
   
-  vector<int> GetLinkedPads(string axis, int padID){
-    set<int> linkedPads = {padID};
+  vector<unsigned short> GetLinkedPads(string axis, unsigned short padID){
+    set<unsigned short> linkedPads = {padID};
     for(auto& pads : mLinkedAxes[axis]){
       if(std::find(pads.begin(), pads.end(), padID) != pads.end()) std::copy(pads.begin(), pads.end(), std::inserter(linkedPads, linkedPads.end()));
     }
-    vector<int> target(linkedPads.begin(), linkedPads.end());
+    vector<unsigned short> target(linkedPads.begin(), linkedPads.end());
     return target;
   }
 
@@ -123,9 +123,9 @@ private:
   string mName;
   double mWidth;
   double mHeight;
-  map<int, PadStyle> mPadStyles; // padID, padStyle
+  map<unsigned short, PadStyle> mPadStyles; // padID, padStyle
   vector<int> mRatioPads;
-  map<string, vector<vector<int>>> mLinkedAxes;
+  map<string, vector<vector<unsigned short>>> mLinkedAxes;
   // ratio corresponding to padID plots
   
   bool mDrawTimestamps;

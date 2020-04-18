@@ -28,7 +28,7 @@ Plot::Plot()
   mPadOptions.clear();
   mFigureGroup = "";
   mFigureCategory = "";
-  mCurrPad = 1;
+  mSelectedPad = 1;
 }
   
   
@@ -58,7 +58,7 @@ Plot::Plot(ptree &plotTree)
     mPlotStyle = plotTree.get<string>("plotStyle");
     
     // loop over pads defined in property tree
-    int padID = 1;
+    unsigned short padID = 1;
     for(auto& pad : plotTree)
     {
       if(pad.first.find("PAD") != string::npos)
@@ -110,22 +110,22 @@ Plot::Plot(ptree &plotTree)
   }catch(...){
     ERROR("Could not construct data from ptree.");
   }
-  mCurrPad = 1;
+  mSelectedPad = 1;
 }
 
 void Plot::AddFrame(string dataName, string inputIdentifier)
 {
   if(inputIdentifier == "") inputIdentifier = mFigureGroup; // by default set identifier equal to figuregroup of plot
-  mData[mCurrPad].insert(mData[mCurrPad].begin(), std::make_shared<Data>(dataName, inputIdentifier, "", 0, 0, 0, "AXIS", 1., std::make_pair(-999, -999), std::make_pair(0,0)));
-  mCurrPad = 1; // reset to first pad
+  mData[mSelectedPad].insert(mData[mSelectedPad].begin(), std::make_shared<Data>(dataName, inputIdentifier, "", 0, 0, 0, "AXIS", 1., std::make_pair(-999, -999), std::make_pair(0,0)));
+  mSelectedPad = 1; // reset to first pad
 }
 
 
 void Plot::AddData(string dataName, string inputIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
 {
   if(inputIdentifier == "") inputIdentifier = mFigureGroup; // by default set identifier equal to figuregroup of plot
-  mData[mCurrPad].push_back(std::make_shared<Data>(dataName, inputIdentifier, lable, color, marker, 0, drawingOptions, 1., std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
-  mCurrPad = 1; // reset to first pad
+  mData[mSelectedPad].push_back(std::make_shared<Data>(dataName, inputIdentifier, lable, color, marker, 0, drawingOptions, 1., std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
+  mSelectedPad = 1; // reset to first pad
 }
 
 
@@ -133,52 +133,52 @@ void Plot::AddRatio(string numerHist, string numerHistIdentifier, string denomHi
 {
   if(numerHistIdentifier == "") numerHistIdentifier = mFigureGroup;
   if(denomHistIdentifier == "") denomHistIdentifier = mFigureGroup;
-  mData[mCurrPad].push_back(std::make_shared<Ratio>(numerHist, numerHistIdentifier, denomHist, denomHistIdentifier, lable, color, marker, 0, drawingOptions, "", 1., std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
-  mCurrPad = 1; // reset to first pad
+  mData[mSelectedPad].push_back(std::make_shared<Ratio>(numerHist, numerHistIdentifier, denomHist, denomHistIdentifier, lable, color, marker, 0, drawingOptions, "", 1., std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
+  mSelectedPad = 1; // reset to first pad
 }
 
 
 void Plot::AddText(double xPos, double yPos, string text, bool userCoordinates, int borderStyle, int borderSize, int borderColor)
 {
-  mBoxes[mCurrPad].push_back(std::make_shared<TextBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, text));
-  mCurrPad = 1; // reset to first pad
+  mBoxes[mSelectedPad].push_back(std::make_shared<TextBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, text));
+  mSelectedPad = 1; // reset to first pad
 }
 // todo user coord should be possible in both cases
 void Plot::AddLegend(double xPos, double yPos, string title, bool userCoordinates, int nColumns, int borderStyle, int borderSize, int borderColor)
 {
   // TODO: add userCoordinates to arguments
-  mBoxes[mCurrPad].push_back(std::make_shared<LegendBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, title, nColumns));
-  mCurrPad = 1; // reset to first pad
+  mBoxes[mSelectedPad].push_back(std::make_shared<LegendBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, title, nColumns));
+  mSelectedPad = 1; // reset to first pad
 }
 void Plot::AddLegend(string title, int nColumns, int borderStyle, int borderSize, int borderColor)
 {
   // TODO: add userCoordinates to arguments
-  mBoxes[mCurrPad].push_back(std::make_shared<LegendBox>(false, true, 0, 0, borderStyle, borderSize, borderColor, title, nColumns));
-  mCurrPad = 1; // reset to first pad
+  mBoxes[mSelectedPad].push_back(std::make_shared<LegendBox>(false, true, 0, 0, borderStyle, borderSize, borderColor, title, nColumns));
+  mSelectedPad = 1; // reset to first pad
 }
 
 void Plot::SetAxisRange(string axis, double low, double high)
 {
-  if(mAxes[mCurrPad].find(axis) != mAxes[mCurrPad].end())
+  if(mAxes[mSelectedPad].find(axis) != mAxes[mSelectedPad].end())
   {
-    mAxes[mCurrPad][axis]->SetAxisRange(low, high);
+    mAxes[mSelectedPad][axis]->SetAxisRange(low, high);
   }
   else
   {
-    mAxes[mCurrPad][axis] = std::make_shared<Axis>(axis, std::make_pair(low, high));
+    mAxes[mSelectedPad][axis] = std::make_shared<Axis>(axis, std::make_pair(low, high));
   }
 }
 
 
 void Plot::SetAxisTitle(string axis, string axisTitle)
 {
-  if(mAxes[mCurrPad].find(axis) != mAxes[mCurrPad].end())
+  if(mAxes[mSelectedPad].find(axis) != mAxes[mSelectedPad].end())
   {
-    mAxes[mCurrPad][axis]->SetAxisTitle(axisTitle);
+    mAxes[mSelectedPad][axis]->SetAxisTitle(axisTitle);
   }
   else
   {
-    mAxes[mCurrPad][axis] = std::make_shared<Axis>(axis, axisTitle);
+    mAxes[mSelectedPad][axis] = std::make_shared<Axis>(axis, axisTitle);
   }
 }
 
@@ -216,7 +216,7 @@ ptree Plot::GetPropetyTree()
   
   for(auto& padData : mData)
   {
-    int padID = padData.first;
+    unsigned short padID = padData.first;
     ptree padTree;
     padTree.put("padOptions", mPadOptions[padID]);
     

@@ -46,7 +46,7 @@ public:
   class TextBox;
   class LegendBox;
   
-  Plot& operator[](unsigned int padID) { mCurrPad = padID; return *this; }
+  Plot& operator[](unsigned short padID) { mSelectedPad = padID; return *this; }
   
   Plot();
   Plot(ptree &plotTree);
@@ -56,12 +56,12 @@ public:
   
   // accessors for internal use by manager
   string& GetName(){return mName;}
-  string& GetPadOptions(int padID){return mPadOptions[padID];}
+  string& GetPadOptions(unsigned short padID){return mPadOptions[padID];}
   string& GetFigureGroup(){return mFigureGroup;}
   string& GetFigureCategory(){return mFigureCategory;}
-  map<unsigned int, vector<shared_ptr<Data>>>& GetData(){return mData;}
-  vector<shared_ptr<Data>>& GetData(int padID){return mData[padID];}
-  vector<shared_ptr<Box>>& GetBoxes(int padID){return mBoxes[padID];}
+  map<unsigned short, vector<shared_ptr<Data>>>& GetData(){return mData;}
+  vector<shared_ptr<Data>>& GetData(unsigned short padID){return mData[padID];}
+  vector<shared_ptr<Box>>& GetBoxes(unsigned short padID){return mBoxes[padID];}
   map<string, set<string>> GetRequiredInputData();
   
   void SetFigureCategory(string figureCategory){mFigureCategory = figureCategory;}
@@ -77,8 +77,7 @@ public:
   void AddLegend(string title = "", int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
   void SetAxisTitle(string axis, string axisTitle);
   void SetAxisRange(string axis, double low, double high);
-  inline void SetPadOptions(string options){mPadOptions[mCurrPad] = options;}
-  inline void SetPadOptions(int padID, string options){mPadOptions[padID] = options;}
+  inline void SetPadOptions(string options){mPadOptions[mSelectedPad] = options; mSelectedPad = 1;}
   inline void SetPlotStyle(string plotStyle){mPlotStyle = plotStyle;}
   
   // functions to modify
@@ -89,9 +88,8 @@ public:
   int GetNumRequiredPads(){return mData.size();}
   ptree GetPropetyTree();
   
-  //    pair<double, double> GetAxisRange(int padID, string axis) {return mAxes[padID][axis].GetAxisRange()}
-  bool IsAxisDefined(unsigned int padID, string axis) {return (mAxes[padID][axis] != nullptr);}
-  shared_ptr<Axis> GetAxis(unsigned int padID, string axis) {return mAxes[padID][axis];}
+  bool IsAxisDefined(unsigned short padID, string axis) {return (mAxes[padID][axis] != nullptr);}
+  shared_ptr<Axis> GetAxis(unsigned short padID, string axis) {return mAxes[padID][axis];}
   
 protected:
   // put some functions here that only manager should access. maybe the getters...
@@ -102,12 +100,12 @@ private:
   string mFigureCategory;
   string mPlotStyle;
   
-  unsigned int mCurrPad; // current pad to assign histograms to
-  map<unsigned int, vector<shared_ptr<Data>>> mData; // mData[padID][dataID]
-  map<unsigned int, vector<shared_ptr<Box>>> mBoxes; // mBoxes[padID][boxID]
-  map<unsigned int, map<string, shared_ptr<Axis>>> mAxes; // padID, "x", axis properties
+  unsigned short mSelectedPad; // current pad to assign histograms to
+  map<unsigned short, vector<shared_ptr<Data>>> mData; // mData[padID][dataID]
+  map<unsigned short, vector<shared_ptr<Box>>> mBoxes; // mBoxes[padID][boxID]
+  map<unsigned short, map<string, shared_ptr<Axis>>> mAxes; // padID, "x", axis properties
   
-  map<unsigned int, string> mPadOptions; // mPadOptions[padID]
+  map<unsigned short, string> mPadOptions; // mPadOptions[padID]
 };
 //========================================================================================
 
