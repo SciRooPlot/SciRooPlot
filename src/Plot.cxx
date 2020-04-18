@@ -117,6 +117,7 @@ void Plot::AddFrame(string dataName, string inputIdentifier)
 {
   if(inputIdentifier == "") inputIdentifier = mFigureGroup; // by default set identifier equal to figuregroup of plot
   mData[mCurrPad].insert(mData[mCurrPad].begin(), std::make_shared<Data>(dataName, inputIdentifier, "", 0, 0, 0, "AXIS", 1., std::make_pair(-999, -999), std::make_pair(0,0)));
+  mCurrPad = 1; // reset to first pad
 }
 
 
@@ -124,6 +125,7 @@ void Plot::AddData(string dataName, string inputIdentifier, string lable, int ma
 {
   if(inputIdentifier == "") inputIdentifier = mFigureGroup; // by default set identifier equal to figuregroup of plot
   mData[mCurrPad].push_back(std::make_shared<Data>(dataName, inputIdentifier, lable, color, marker, 0, drawingOptions, 1., std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
+  mCurrPad = 1; // reset to first pad
 }
 
 
@@ -131,63 +133,52 @@ void Plot::AddRatio(string numerHist, string numerHistIdentifier, string denomHi
 {
   if(numerHistIdentifier == "") numerHistIdentifier = mFigureGroup;
   if(denomHistIdentifier == "") denomHistIdentifier = mFigureGroup;
-  int padID = (mData[mCurrPad].empty()) ? mCurrPad : 2; //mCurrPad TODO:: remove this stupid hack
-  mData[padID].push_back(std::make_shared<Ratio>(numerHist, numerHistIdentifier, denomHist, denomHistIdentifier, lable, color, marker, 0, drawingOptions, "", 1., std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
+  mData[mCurrPad].push_back(std::make_shared<Ratio>(numerHist, numerHistIdentifier, denomHist, denomHistIdentifier, lable, color, marker, 0, drawingOptions, "", 1., std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
+  mCurrPad = 1; // reset to first pad
 }
 
 
 void Plot::AddText(double xPos, double yPos, string text, bool userCoordinates, int borderStyle, int borderSize, int borderColor)
 {
   mBoxes[mCurrPad].push_back(std::make_shared<TextBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, text));
+  mCurrPad = 1; // reset to first pad
 }
 // todo user coord should be possible in both cases
 void Plot::AddLegend(double xPos, double yPos, string title, bool userCoordinates, int nColumns, int borderStyle, int borderSize, int borderColor)
 {
   // TODO: add userCoordinates to arguments
   mBoxes[mCurrPad].push_back(std::make_shared<LegendBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, title, nColumns));
+  mCurrPad = 1; // reset to first pad
 }
 void Plot::AddLegend(string title, int nColumns, int borderStyle, int borderSize, int borderColor)
 {
   // TODO: add userCoordinates to arguments
   mBoxes[mCurrPad].push_back(std::make_shared<LegendBox>(false, true, 0, 0, borderStyle, borderSize, borderColor, title, nColumns));
+  mCurrPad = 1; // reset to first pad
 }
 
 void Plot::SetAxisRange(string axis, double low, double high)
 {
-  int seletedPad = mCurrPad;
-  vector<string> allowedAxes = {"X", "Y", "Z"};
-  if(std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end())
+  if(mAxes[mCurrPad].find(axis) != mAxes[mCurrPad].end())
   {
-    // an axis alias was specified, which refers to specific padID-axis combination
-    seletedPad = -1;
-  }
-  if(mAxes[seletedPad].find(axis) != mAxes[seletedPad].end())
-  {
-    mAxes[seletedPad][axis]->SetAxisRange(low, high);
+    mAxes[mCurrPad][axis]->SetAxisRange(low, high);
   }
   else
   {
-    mAxes[seletedPad][axis] = std::make_shared<Axis>(axis, std::make_pair(low, high));
+    mAxes[mCurrPad][axis] = std::make_shared<Axis>(axis, std::make_pair(low, high));
   }
 }
 
 
 void Plot::SetAxisTitle(string axis, string axisTitle)
 {
-  int seletedPad = mCurrPad;
-  vector<string> allowedAxes = {"X", "Y", "Z"};
-  if(std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end())
+  if(mAxes[mCurrPad].find(axis) != mAxes[mCurrPad].end())
   {
-    // an axis alias was specified, which refers to specific padID-axis combination
-    seletedPad = -1;
-  }
-  if(mAxes[seletedPad].find(axis) != mAxes[seletedPad].end())
-  {
-    mAxes[seletedPad][axis]->SetAxisTitle(axisTitle);
+    mAxes[mCurrPad][axis]->SetAxisTitle(axisTitle);
   }
   else
   {
-    mAxes[seletedPad][axis] = std::make_shared<Axis>(axis, axisTitle);
+    mAxes[mCurrPad][axis] = std::make_shared<Axis>(axis, axisTitle);
   }
 }
 

@@ -157,37 +157,37 @@ int main(int argc, char *argv[])
   }
   
   // create plotting environment
-  PlotManager plotEnv;
-  plotEnv.SetOutputDirectory(outputFolder);
+  PlotManager plotManager;
+  plotManager.SetOutputDirectory(outputFolder);
   INFO("Reading plot definitions from {}.", plotDefConfig);
 
   vector<string> figureGroupsVector = splitArguments(figureGroups);
   vector<string> plotNamesVector  = splitArguments(plotNames);
   if(mode == "find"){
     PRINT_SEPARATOR;
-    plotEnv.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
+    plotManager.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
     PRINT_SEPARATOR;
     return 0;
   }
   else if(mode == "inspect"){ // directly plot histograms from input identifier or file
     string inputIdentifier = figureGroupsVector[0];
     if(inputIdentifier.find(".root") == string::npos){
-      plotEnv.LoadInputDataFiles(inputFilesConfig);
+      plotManager.LoadInputDataFiles(inputFilesConfig);
     } else {
-      plotEnv.AddInputDataFiles("inspect_file", {inputIdentifier});
+      plotManager.AddInputDataFiles("inspect_file", {inputIdentifier});
       inputIdentifier = "inspect_file";
     }
-    Plot myPlot("plot", inputIdentifier);
+    Plot plot("plot", inputIdentifier);
     for(auto& histName : plotNamesVector)
-      myPlot.AddData(histName, inputIdentifier, "<name>");
-    myPlot.AddLegend();
-    plotEnv.AddPlot(myPlot);
-    plotEnv.CreatePlots(inputIdentifier, "", {}, "interactive");
+      plot.AddData(histName, inputIdentifier, "<name>");
+    plot.AddLegend();
+    plotManager.AddPlot(plot);
+    plotManager.CreatePlots(inputIdentifier, "", {}, "interactive");
   }
   else{
     INFO("Reading input files from {}.", inputFilesConfig);
-    plotEnv.LoadInputDataFiles(inputFilesConfig);
-    plotEnv.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
+    plotManager.LoadInputDataFiles(inputFilesConfig);
+    plotManager.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
     return 0;
   }
 }

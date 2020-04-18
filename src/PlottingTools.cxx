@@ -98,7 +98,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     // in case user did not specify which data should define the axis frame, use first per default
     if(plot.GetData(padID)[0]->GetDrawingOptions() != "AXIS")
     {
-      plot.AddFrame(plot.GetData(padID)[0]->GetName(), plot.GetData(padID)[0]->GetInputIdentifier());
+      plot[padID].AddFrame(plot.GetData(padID)[0]->GetName(), plot.GetData(padID)[0]->GetInputIdentifier());
     }
     
     string drawingOptions = "";

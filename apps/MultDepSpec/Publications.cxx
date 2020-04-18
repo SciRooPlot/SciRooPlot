@@ -18,66 +18,65 @@
 
 #include "MultDepSpec.h"
 
-void MultDepSpec::DefinePublicationPlots(PlotManager& plotEnv)
+void MultDepSpec::DefinePublicationPlots(PlotManager& plotManager)
 {
   string publicationLable = alice + ", " + chargedParticles +  newLine + eta03 + ", " + ptRange10GeV + newLine + "#it{N}_{ch} cut: #it{p}_{T} > 0 GeV/#it{c}";
   string plotGroup = "system_comparison";
   { // -----------------------------------------------------------------------
     string plotName = "publication";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.SetPadOptions("logX");
-    myPlot.AddData("meanPt_PbPb_2.76TeV_Stat", "Publications", "", kFullCross, kWhite);
-    myPlot.AddData("meanPt_pp_7TeV_Stat", "Publications", "", kFullSquare, kBlue+1);
-    myPlot.AddData("meanPt_pp_7TeV_Syst", "Publications", "pp #sqrt{s} = 7 TeV", kFullSquare, kBlue+1, "boxes");
-    myPlot.AddData("meanPt_pPb_5.02TeV_Stat", "Publications", "", kFullCircle, kMagenta+1);
-    myPlot.AddData("meanPt_pPb_5.02TeV_Syst", "Publications", "p-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV", kFullCircle, kMagenta+1, "boxes");
-    myPlot.AddData("meanPt_PbPb_2.76TeV_Stat", "Publications", "", kFullCross, kRed+1);
-    myPlot.AddData("meanPt_PbPb_2.76TeV_Syst", "Publications", "Pb-Pb  #sqrt{#it{s}_{NN}} = 2.76 TeV", kFullCross, kRed+1, "boxes");
-    myPlot.SetAxisRange("X", 0, 100);
-    myPlot.SetAxisRange("Y", 0.45, 0.92);
-    //      myPlot.AddLegend(0.5, 0.92, "");
-    //      myPlot.AddText(0.3, 0.3, publicationLable);
-    myPlot.AddLegend(0.15, 0.7, "");
-    myPlot.AddText(0.15, 0.92, publicationLable);
-    plotEnv.AddPlot(myPlot);
+    Plot plot(plotName, plotGroup);
+    plot[1].SetPadOptions("logX");
+    plot[1].AddData("meanPt_PbPb_2.76TeV_Stat", "Publications", "", kFullCross, kWhite);
+    plot[1].AddData("meanPt_pp_7TeV_Stat", "Publications", "", kFullSquare, kBlue+1);
+    plot[1].AddData("meanPt_pp_7TeV_Syst", "Publications", "pp #sqrt{s} = 7 TeV", kFullSquare, kBlue+1, "boxes");
+    plot[1].AddData("meanPt_pPb_5.02TeV_Stat", "Publications", "", kFullCircle, kMagenta+1);
+    plot[1].AddData("meanPt_pPb_5.02TeV_Syst", "Publications", "p-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV", kFullCircle, kMagenta+1, "boxes");
+    plot[1].AddData("meanPt_PbPb_2.76TeV_Stat", "Publications", "", kFullCross, kRed+1);
+    plot[1].AddData("meanPt_PbPb_2.76TeV_Syst", "Publications", "Pb-Pb  #sqrt{#it{s}_{NN}} = 2.76 TeV", kFullCross, kRed+1, "boxes");
+    plot[1].SetAxisRange("X", 0, 100);
+    plot[1].SetAxisRange("Y", 0.45, 0.92);
+    //      plot[1].AddLegend(0.5, 0.92, "");
+    //      plot[1].AddText(0.3, 0.3, publicationLable);
+    plot[1].AddLegend(0.15, 0.7, "");
+    plot[1].AddText(0.15, 0.92, publicationLable);
+    plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "publicationdNchdEta";
-    Plot myPlot(plotName, plotGroup);
-    myPlot.AddData("meanPt_PbPb_2.76TeV_dNchdEta_Stat", "Publications", "", kFullCross, kWhite);
-    myPlot.AddData("meanPt_pp_7TeV_dNchdEta_Stat", "Publications", "", kFullSquare, kBlue+1);
-    myPlot.AddData("meanPt_pp_7TeV_dNchdEta_Syst", "Publications", "pp #sqrt{s} = 7 TeV", kFullSquare, kBlue+1, "boxes");
-    myPlot.AddData("meanPt_pPb_5.02TeV_dNchdEta_Stat", "Publications", "", kFullCircle, kMagenta+1);
-    myPlot.AddData("meanPt_pPb_5.02TeV_dNchdEta_Syst", "Publications", "p-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV", kFullCircle, kMagenta+1, "boxes");
-    myPlot.AddData("meanPt_PbPb_2.76TeV_dNchdEta_Stat", "Publications", "", kFullCross, kRed+1);
-    myPlot.AddData("meanPt_PbPb_2.76TeV_dNchdEta_Syst", "Publications", "Pb-Pb #sqrt{#it{s}_{NN}} = 2.76 TeV", kFullCross, kRed+1, "boxes");
-    myPlot.AddData("momentUnfolded1dNchDeta", "pp_5TeV", "pp", kOpenSquare, kBlue+1);
-    myPlot.AddData("momentUnfolded1dNchDeta", "pPb_5TeV", "pPb", kOpenCircle, kMagenta+1);
-    myPlot.AddData("momentUnfolded1dNchDeta", "PbPb_5TeV", "PbPb", kOpenCross, kRed+1);
-    //      myPlot.CropHisto("momentUnfolded1", "pp_5TeV", "X", 0, 40)
-    myPlot.SetAxisRange("Y", 0.45, 0.92);
-    myPlot.AddLegend(0.55, 0.3, "");
-    myPlot.AddText(0.5, 0.92, publicationLable);
-    //  myPlot3.SetPadOptions("thick");
-    plotEnv.AddPlot(myPlot);
+    Plot plot(plotName, plotGroup);
+    plot[1].AddData("meanPt_PbPb_2.76TeV_dNchdEta_Stat", "Publications", "", kFullCross, kWhite);
+    plot[1].AddData("meanPt_pp_7TeV_dNchdEta_Stat", "Publications", "", kFullSquare, kBlue+1);
+    plot[1].AddData("meanPt_pp_7TeV_dNchdEta_Syst", "Publications", "pp #sqrt{s} = 7 TeV", kFullSquare, kBlue+1, "boxes");
+    plot[1].AddData("meanPt_pPb_5.02TeV_dNchdEta_Stat", "Publications", "", kFullCircle, kMagenta+1);
+    plot[1].AddData("meanPt_pPb_5.02TeV_dNchdEta_Syst", "Publications", "p-Pb #sqrt{#it{s}_{NN}} = 5.02 TeV", kFullCircle, kMagenta+1, "boxes");
+    plot[1].AddData("meanPt_PbPb_2.76TeV_dNchdEta_Stat", "Publications", "", kFullCross, kRed+1);
+    plot[1].AddData("meanPt_PbPb_2.76TeV_dNchdEta_Syst", "Publications", "Pb-Pb #sqrt{#it{s}_{NN}} = 2.76 TeV", kFullCross, kRed+1, "boxes");
+    plot[1].AddData("momentUnfolded1dNchDeta", "pp_5TeV", "pp", kOpenSquare, kBlue+1);
+    plot[1].AddData("momentUnfolded1dNchDeta", "pPb_5TeV", "pPb", kOpenCircle, kMagenta+1);
+    plot[1].AddData("momentUnfolded1dNchDeta", "PbPb_5TeV", "PbPb", kOpenCross, kRed+1);
+    plot[1].SetAxisRange("Y", 0.45, 0.92);
+    plot[1].AddLegend(0.55, 0.3, "");
+    plot[1].AddText(0.5, 0.92, publicationLable);
+    //  plot3.SetPadOptions("thick");
+    plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
     string plotName = "multDistsComparisonPub";
-    Plot myPlot(plotName, plotGroup, "default ratio");
-    myPlot.SetPadOptions("logY");
-    myPlot.AddData("multDist_pp_7TeV_Stat", "Publications", "", kFullSquare, kMagenta+1);
-    myPlot.AddData("multDist_pp_7TeV_Syst", "Publications", "preliminary (ALICE-PUBLIC-2013-001)", kFullSquare, kMagenta+1, "boxes");
-    myPlot.AddData("multDensityUnfolded", "pp_7TeV", "", kOpenCircle, kBlue+1);
-    myPlot.AddData("multDensityUnfolded_Syst", "pp_7TeV", "this work", kOpenCircle, kBlue+1, "boxes");
-    myPlot.AddData("multDensityGeneratedMC", "pp_7TeV", "Pythia6", kOpenCross, kGray+2);
-    //      myPlot.AddData("multDensityGeneratedMC", "Simulations", "Pythia8", kOpenCross, kGray+2);
-    myPlot.AddRatio("multDensityUnfolded_Syst", "pp_7TeV", "multDist_pp_7TeV_Syst", "Publications", "", kOpenCircle, kBlue+1, "boxes");
-    //      myPlot.AddRatio("multDensityUnfolded", "pp_7TeV", "multDist_pp_7TeV_Stat", "Publications");
-    myPlot.SetAxisRange("X", 0, 60);
-    myPlot.SetAxisRange("ratio", 0.75, 1.25);
-    myPlot.AddLegend(0.2, 0.25);
+    Plot plot(plotName, plotGroup, "default ratio");
+    plot[1].SetPadOptions("logY");
+    plot[1].AddData("multDist_pp_7TeV_Stat", "Publications", "", kFullSquare, kMagenta+1);
+    plot[1].AddData("multDist_pp_7TeV_Syst", "Publications", "preliminary (ALICE-PUBLIC-2013-001)", kFullSquare, kMagenta+1, "boxes");
+    plot[1].AddData("multDensityUnfolded", "pp_7TeV", "", kOpenCircle, kBlue+1);
+    plot[1].AddData("multDensityUnfolded_Syst", "pp_7TeV", "this work", kOpenCircle, kBlue+1, "boxes");
+    plot[1].AddData("multDensityGeneratedMC", "pp_7TeV", "Pythia6", kOpenCross, kGray+2);
+    //      plot[1].AddData("multDensityGeneratedMC", "Simulations", "Pythia8", kOpenCross, kGray+2);
+    plot[2].AddRatio("multDensityUnfolded_Syst", "pp_7TeV", "multDist_pp_7TeV_Syst", "Publications", "", kOpenCircle, kBlue+1, "boxes");
+    //      plot[2].AddRatio("multDensityUnfolded", "pp_7TeV", "multDist_pp_7TeV_Stat", "Publications");
+    plot[1].SetAxisRange("X", 0, 60);
+    plot[2].SetAxisRange("Y", 0.75, 1.25);
+    plot[1].AddLegend(0.2, 0.25);
     string energyLable = alice + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
-    myPlot.AddText(0.42, 0.92, energyLable);
-    plotEnv.AddPlot(myPlot);
+    plot[1].AddText(0.42, 0.92, energyLable);
+    plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
 }

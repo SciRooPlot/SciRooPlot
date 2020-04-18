@@ -46,6 +46,7 @@ public:
   class TextBox;
   class LegendBox;
   
+  Plot& operator[](unsigned int padID) { mCurrPad = padID; return *this; }
   
   Plot();
   Plot(ptree &plotTree);
@@ -79,7 +80,6 @@ public:
   inline void SetPadOptions(string options){mPadOptions[mCurrPad] = options;}
   inline void SetPadOptions(int padID, string options){mPadOptions[padID] = options;}
   inline void SetPlotStyle(string plotStyle){mPlotStyle = plotStyle;}
-  inline void ChangePad(int padID) {mCurrPad = padID;}
   
   // functions to modify
   const string& GetPlotStyle(){return mPlotStyle;}

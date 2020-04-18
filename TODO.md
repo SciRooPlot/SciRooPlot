@@ -22,6 +22,8 @@ WIP:
 - plot style: member pads should by default use all propertys of plot unless overridden explicitly
 - support steering of grids, X+, Y+ via plotOptions
 - add support for grid styles
+- get rid of these ugly default values (-997, etc)
+- possibility to set centered axis title in PlotStyle
 
 
 Major Features:
