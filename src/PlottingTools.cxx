@@ -98,9 +98,17 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     // in case user did not specify which data should define the axis frame, use first per default
     if(plot.GetData(padID)[0]->GetDrawingOptions() != "AXIS")
     {
-      plot[padID].AddFrame(plot.GetData(padID)[0]->GetName(), plot.GetData(padID)[0]->GetInputIdentifier());
+      // make a copy of first data that will serve as axis frame
+      if(plot.GetData(padID)[0]->GetType() == "ratio"){
+        plot.GetData(padID).insert(plot.GetData(padID).begin(), std::make_shared<Plot::Ratio>(*std::dynamic_pointer_cast<Plot::Ratio>(plot.GetData(padID)[0])));
+      }
+      else{
+        plot.GetData(padID).insert(plot.GetData(padID).begin(), std::make_shared<Plot::Data>(*plot.GetData(padID)[0]));
+      }
+      plot.GetData(padID)[0]->SetDrawingOptions("AXIS");
     }
-    
+
+    bool drawLine = false;
     string drawingOptions = "";
     int dataIndex = 0;
     for(auto data : plot.GetData(padID)){
@@ -204,26 +212,8 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
                 {
                   data_ptr->GetYaxis()->CenterTitle(1);
                   data_ptr->GetXaxis()->SetTickLength(0.06);
-                  data_ptr->GetYaxis()->SetNdivisions(305); //506
-                  if(dataIndex == 0)
-                  {
-                    // TODO:: this should be way more flexible!!
-                    TH1* dummyHist = (TH1*)data_ptr->Clone("dummy");
-                    dummyHist->GetXaxis()->SetTickLength(0.06); // TODO: this should automatically be the same as for the main plot!!
-                    dummyHist->GetYaxis()->SetNdivisions(305); //506
-                    dummyHist->SetLineColor(0); // make plot invisible
-                    TF1* line = new TF1("line", "1", dummyHist->GetXaxis()->GetXmin(), dummyHist->GetXaxis()->GetXmax());
-                    dummyHist->DrawCopy("AXIS");
-                    //line->SetLineColor(color);
-                    line->SetLineColor(kBlack);
-                    line->SetLineWidth(2);
-                    // line->SetLineStyle(9);
-                    line->Draw("SAME");
-                    drawingOptions += " SAME";
-                    dataIndex++;
-                    color = (data->GetColor()) ? data->GetColor() : plotStyle.GetDefaultColor(dataIndex);
-                    style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex);
-                  }
+                  data_ptr->GetYaxis()->SetNdivisions(305);
+                  drawLine = true;
                 }
                 delete denom_data_ptr;
                }, *rawDenomData);
@@ -257,8 +247,17 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
           //data_ptr->GetYaxis()->SetRangeUser(data->GetViewRangeYLow(), data->GetViewRangeYHigh());
 
           // finally draw to pad
-          //DEBUG("{}", drawingOptions);
           data_ptr->Draw(drawingOptions.c_str());
+          
+          // right after drawing the axis, put reference line
+          if(drawLine && dataIndex == 0)
+          {
+            TF1* line = new TF1("line", "1", data_ptr->GetXaxis()->GetXmin(), data_ptr->GetXaxis()->GetXmax());
+            line->SetLineColor(kBlack);
+            line->SetLineWidth(2);
+            // line->SetLineStyle(9);
+            line->Draw("SAME");
+          }
           
           dataIndex++;
           drawingOptions = "EP SAME"; // next data should be drawn to same pad
@@ -311,11 +310,6 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
         TLegend* legend = MakeLegend(std::static_pointer_cast<Plot::LegendBox>(box), pad, legendEntries, lables, errorStyles);
         legend->SetName(legendName.c_str());
         legend->Draw("SAME");
-        // todo this is to figure out bug in log scale tpave moving
-        //legend->ConvertNDCtoPad();
-        //legend->SetBorderSize(2);
-        //legend->SetLineWidth(2);
-        //legend->SetLineColor(kRed);
         legendIndex++;
       }
       else if(box->GetType() == "text")
@@ -324,15 +318,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
         TPaveText* text = MakeText(std::static_pointer_cast<Plot::TextBox>(box));
         text->SetName(textName.c_str());
         text->Draw("SAME");
-        
-        // todo this is to figure out bug in log scale tpave moving
-        //text->ConvertNDCtoPad();
-        //text->SetBorderSize(2);
-        //text->SetLineWidth(2);
-        //text->SetLineColor(kRed);
-        
         textIndex++;
-        
       }
     }
     

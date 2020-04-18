@@ -23,31 +23,16 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
   string plotGroup = "test";
 
   
-  // settings for canvas, aka all pads??
   { // -----------------------------------------------------------------------
     string plotName = "test";
     Plot plot(plotName, plotGroup, "default ratio");
-    //plot.SetCanvasOptions("");
     //plot[1].SetPadOptions("logY");
     plot[1].AddData("momentUnfolded1", "pp_5TeV");
-    plot[2].AddRatio("momentUnfolded1", "pp_13TeV", "momentUnfolded1", "pp_7TeV");
     plot[1].AddData("momentUnfolded1", "pp_13TeV");
-    //plot[1].AddData("momentUnfolded1", "pp_5TeV");
-    //plot[1].SetPadOptions("logY");
-    //plot[1].SetAxisRange("Y", 0.15, 50);
-    
-    //plot[2].SetPadOptions("logY");
-    //plot[2].AddData("momentUnfolded1", "pp_13TeV");
-
+    plot[2].AddRatio("momentUnfolded1", "pp_13TeV", "momentUnfolded1", "pp_5TeV");
     plot[2].SetAxisRange("Y", 0.9, 1.1);
     plot[2].SetAxisTitle("Y", "ratio");
     plot[1].SetAxisRange("X", 1, 60);
-
-    
-//    << ("momentUnfolded1", "pp_5TeV");
-//    << ("momentUnfolded1", "pp_5TeV") / ("momentUnfolded1", "pp_7TeV");
-    
-
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
 

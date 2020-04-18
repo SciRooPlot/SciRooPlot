@@ -46,7 +46,7 @@ public:
   class TextBox;
   class LegendBox;
   
-  Plot& operator[](unsigned short padID) { mSelectedPad = padID; return *this; }
+  Plot& operator[](unsigned short padID) { mSelectedPad = (padID > 0) ? padID : 1; return *this; }
   
   Plot();
   Plot(ptree &plotTree);
@@ -100,7 +100,7 @@ private:
   string mFigureCategory;
   string mPlotStyle;
   
-  unsigned short mSelectedPad; // current pad to assign histograms to
+  unsigned short mSelectedPad; // currently selected pad
   map<unsigned short, vector<shared_ptr<Data>>> mData; // mData[padID][dataID]
   map<unsigned short, vector<shared_ptr<Box>>> mBoxes; // mBoxes[padID][boxID]
   map<unsigned short, map<string, shared_ptr<Axis>>> mAxes; // padID, "x", axis properties
@@ -151,7 +151,6 @@ public:
     }
   }
 
-  
   Data(const Data& otherPlot) = default;
   Data(Data& otherPlot) = default;
   
@@ -163,7 +162,8 @@ public:
   const int& GetStyle(){return mStyle;}
   const int& GetSize(){return mSize;}
   const string& GetDrawingOptions(){return mDrawingOptions;}
-  
+  void SetDrawingOptions(string drawingOptions){ mDrawingOptions = drawingOptions;}
+
   const double& GetScaleFactor(){return mScale;}
   const double& GetViewRangeXLow(){return mViewRangeX.first;}
   const double& GetViewRangeXHigh(){return mViewRangeX.second;}

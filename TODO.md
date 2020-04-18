@@ -11,9 +11,6 @@ ANALYSIS:
 FRAMEWORK:
 ----------
 WIP:
-- possibility to set alias for axis e.g. "ratio"?
-- how to define default location for AddRatio() in the style?
-- or: change interface overall, such that this is obsolete
 - generalize axis linking
 - flexible number of color steps in 2d plots
 - add graph division feature with tspline3
@@ -24,11 +21,11 @@ WIP:
 - add support for grid styles
 - get rid of these ugly default values (-997, etc)
 - possibility to set centered axis title in PlotStyle
+- line in ratio should be part of style definition (that can be toggled off?) including the settings
 
 
 Major Features:
 - merge markerstyle and linestyle?
-- operator overloading for plots (+, <<, *)?
 - time axis opitons?
 - possibility to dump and load plot styles (manager should only read in required plot styles)
 - make sure PlotStyle names are unique
