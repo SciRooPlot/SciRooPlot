@@ -30,8 +30,9 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotEnv)
     myPlot.SetPadOptions("logY");
     myPlot.AddData("momentUnfolded1", "pp_5TeV");
     myPlot.ChangePad(2);
+    myPlot.AddRatio("momentUnfolded1", "pp_13TeV", "momentUnfolded1", "pp_7TeV");
     myPlot.AddData("momentUnfolded1", "pp_5TeV");
-    myPlot.SetPadOptions("logY");
+    //myPlot.SetPadOptions("logY");
     //myPlot.SetAxisRange("Y", 0.15, 50);
     plotEnv.AddPlot(myPlot);
   } // -----------------------------------------------------------------------

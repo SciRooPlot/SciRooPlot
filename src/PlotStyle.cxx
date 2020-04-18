@@ -20,6 +20,27 @@
 using namespace PlottingFramework;
 namespace PlottingFramework {
 
+PlotStyle::PlotStyle(string name) : PlotStyle()
+{
+  mName = name;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ////////////////////////////////////////////////////////////////////////////////
 /// Set color palette for 2D plots.
 ///

@@ -15,11 +15,13 @@ WIP:
 - how to define default location for AddRatio() in the style?
 - or: change interface overall, such that this is obsolete
 - generalize axis linking
-- add support for grid styles
 - flexible number of color steps in 2d plots
 - add graph division feature with tspline3
 - font color should also be user definable
 - padID --> unsigned int??
+- plot style: member pads should by default use all propertys of plot unless overridden explicitly
+- support steering of grids, X+, Y+ via plotOptions
+- add support for grid styles
 
 
 Major Features:

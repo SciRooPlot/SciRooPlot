@@ -30,13 +30,9 @@ namespace PlottingFramework {
 //****************************************************************************************
 class PlotStyle
 {
-  // todo add default intialization values!!
-  // todo a plot is a pad containing other pads, member pads by default use all pad propertys of plot unless overridden
 public:
-  // for specific pad as well would be nice SetPadProperties(int iPad, string properties)
-  // options that can be added to plotStyle: grids?, X+ (draw x axis on top) and Y+
   class PadStyle;
-  PlotStyle(string name) {mName = name;}
+  PlotStyle(string name);
   string& GetName(){return mName;}
   double& GetWidth(){return mWidth;}
   double& GetHeight(){return mHeight;}
@@ -125,6 +121,8 @@ public:
   void SetAxisAlias(string alias, int padID, string axis){mAxisAliases[alias] = {padID, axis};}
 
 private:
+  PlotStyle() = default;
+
   string mName;
   double mWidth;
   double mHeight;
