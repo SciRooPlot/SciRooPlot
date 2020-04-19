@@ -15,14 +15,17 @@ WIP:
 - flexible number of color steps in 2d plots
 - add graph division feature with tspline3
 - font color should also be user definable
-- padID --> unsigned int??
 - plot style: member pads should by default use all propertys of plot unless overridden explicitly
 - support steering of grids, X+, Y+ via plotOptions
 - add support for grid styles
 - get rid of these ugly default values (-997, etc)
 - possibility to set centered axis title in PlotStyle
 - line in ratio should be part of style definition (that can be toggled off?) including the settings
-
+- if set range user does not work as expected, either draw TPad::DrawFrame or set back all axes to possible values
+- something is strange in ranges of functions
+- set and get title accessors for Pad
+- fix z axis offset in colz plots
+- what should be default drawing style for graphs?
 
 Major Features:
 - merge markerstyle and linestyle?

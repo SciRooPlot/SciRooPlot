@@ -94,7 +94,10 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     //gROOT->ForceStyle(); // forces all histos to use current style
     //---------------------------------------------------------------
     
+    gStyle->SetNumberContours(256);
+    
     if (plot.GetData(padID).empty()) continue;
+    
     // in case user did not specify which data should define the axis frame, use first per default
     if(plot.GetData(padID)[0]->GetDrawingOptions() != "AXIS")
     {
@@ -105,17 +108,19 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
       else{
         plot.GetData(padID).insert(plot.GetData(padID).begin(), std::make_shared<Plot::Data>(*plot.GetData(padID)[0]));
       }
-      plot.GetData(padID)[0]->SetDrawingOptions("AXIS");
     }
 
+    map<unsigned short, TH1*> axisHistos;
     bool drawLine = false;
     string drawingOptions = "";
     int dataIndex = 0;
     for(auto data : plot.GetData(padID)){
-
       int color = (data->GetColor()) ? data->GetColor() : plotStyle.GetDefaultColor(dataIndex); // TODO: 0 is white!!
-      int style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex); // FIXME: only gets marker not line style
-      
+      //int style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(dataIndex); // FIXME: only gets marker not line style
+      int style = (data->GetStyle()) ? data->GetStyle() : plotStyle.GetDefaultMarker(0);
+      // autoChangeMarkers, autoChangeStyle
+      // increment color and marker index only if user did not override
+
       if(color < 0) {dataIndex += color; color = plotStyle.GetDefaultColor(dataIndex);} // TODO: how to implement this feature better?
       if(style < 0) {style = plotStyle.GetDefaultMarker(dataIndex);} // TODO: how to implement this feature better?
       
@@ -125,7 +130,7 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
       if(optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData))
       {
         // retrieve the actual pointer to the data
-        std::visit([&](auto&& data_ptr)
+        std::visit([&, padID = padID](auto&& data_ptr)
         {
           using data_type = std::decay_t<decltype(data_ptr)>;
           
@@ -135,15 +140,9 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
           data_ptr->SetMarkerColor(color);
           data_ptr->SetLineColor(color);
                     
-          if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph>)
-          {
-            if(dataIndex == 0) drawingOptions += " AP";
-          }
-
           if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
           {
               drawingOptions += string(" ") + plotStyle.GetDefault2DStyle();
-              if(plotStyle.GetDefault2DStyle() == "COLZ") gStyle->SetNumberContours(256); // TODO: make this flexible
           }
 
           if(drawingOptions.find("thick") != string::npos || padOptions.find("thick") != string::npos){
@@ -206,6 +205,10 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
                   if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist>)
                 {
                   data_ptr->Divide(denom_data_ptr);
+                  if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
+                    data_ptr->GetYaxis()->SetTitle("ratio");
+                  if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
+                    data_ptr->GetZaxis()->SetTitle("ratio");
                 }
 
                 if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
@@ -246,34 +249,75 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
           data_ptr->GetXaxis()->SetRangeUser(data->GetViewRangeXLow(), data->GetViewRangeXHigh());
           //data_ptr->GetYaxis()->SetRangeUser(data->GetViewRangeYLow(), data->GetViewRangeYHigh());
 
-          // finally draw to pad
-          data_ptr->Draw(drawingOptions.c_str());
           
-          // right after drawing the axis, put reference line
-          if(drawLine && dataIndex == 0)
+          // first data is only used to define the axes
+          if(dataIndex == 0){
+            if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph>)
+            {
+              data_ptr->GetHistogram()->Draw("AXIS");
+              axisHistos[padID] = data_ptr->GetHistogram();
+            }
+            if constexpr (std::is_convertible_v<data_type, data_ptr_t_func>)
+            {
+              data_ptr->Draw();
+              data_ptr->GetHistogram()->Draw("AXIS");
+              axisHistos[padID] = data_ptr->GetHistogram();
+            }
+            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
+            {
+              data_ptr->Draw("AXIS"); // FIXME: seems to always make a copy...
+              axisHistos[padID] = data_ptr;
+            }
+            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
+            {
+              // this is a hack to account for root bug
+              // when drawing only AXIS option, fBuffer is not filled then for some reason z axis title cannot be set via this hist
+              // data_ptr->Draw("COLZ");
+              data_ptr->Draw(drawingOptions.c_str());
+              data_ptr->Reset("ICE"); //reset only integral, contents and errors
+            }
+
+            // right after drawing the axis, put reference line if requested
+            if(drawLine)
+            {
+              TF1* line = new TF1("line", "1", data_ptr->GetXaxis()->GetXmin(), data_ptr->GetXaxis()->GetXmax());
+              line->SetLineColor(kBlack);
+              line->SetLineWidth(2);
+              // line->SetLineStyle(9);
+              line->Draw("SAME");
+            }
+            
+          }
+          // otherwise draw data to pad
+          else{
+            DEBUG("Drawing with {}", drawingOptions);
+            data_ptr->Draw(drawingOptions.c_str());
+          }
+
+          if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
           {
-            TF1* line = new TF1("line", "1", data_ptr->GetXaxis()->GetXmin(), data_ptr->GetXaxis()->GetXmax());
-            line->SetLineColor(kBlack);
-            line->SetLineWidth(2);
-            // line->SetLineStyle(9);
-            line->Draw("SAME");
+            pad->SetRightMargin(0.12+0.06);
+            pad->SetTopMargin(0.12-0.05);
+            pad->SetBottomMargin(0.12+0.02);
+
+            data_ptr->GetXaxis()->SetTitleOffset(1.1); //1.1
+            data_ptr->GetYaxis()->SetTitleOffset(1.1); //1.3
+            data_ptr->GetZaxis()->SetTitleOffset(1.6); //1.6
           }
           
           dataIndex++;
-          drawingOptions = "EP SAME"; // next data should be drawn to same pad
-          
+          drawingOptions = "SAME"; // next data should be drawn to same pad
+
           if (!data->GetLable().empty()) {
             lables.push_back(data->GetLable());
             legendEntries.Add(pad->GetListOfPrimitives()->Last());
             errorStyles.push_back(data->GetDrawingOptions());
           }
-
-          
         }, *rawData);
       }
     } // end data code
 //---------------------------------------------------------------
-    
+
     // TODO: set range and log scale properties must affect all linked pad-axes
     // TODO: also add safety in case log and range are not compatible (zero in range)
     if(padOptions.find("logX") != string::npos)
@@ -321,84 +365,56 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
         textIndex++;
       }
     }
-    
+
     // after data is drawn to pad axis porperties can be set
-    if(!pad->GetListOfPrimitives() || !pad->GetListOfPrimitives()->At(0)) continue; // if pad is empty
+    if(!axisHistos[padID]) continue; // this should never happen
+    axisHistos[padID]->SetName("axis_hist");
     
-    TObject* axisObject = nullptr;
-    // skip all non drawable objects stored in list of primitives
-    // todo merge this with the code below...
-    for(auto pointer : *pad->GetListOfPrimitives())
-    {
-      if(pointer->InheritsFrom(TH1::Class()) || pointer->InheritsFrom(TGraph::Class()) || pointer->InheritsFrom(TF1::Class())) {axisObject = pointer; break;}
-    }
-    TH1* axisHist = nullptr;
-    if(axisObject->InheritsFrom(TH1::Class())) axisHist = (TH1*)axisObject;
-    else if(axisObject->InheritsFrom(TGraph::Class())) axisHist = (TH1*)((TGraph*)axisObject)->GetHistogram();
-    else if(axisObject->InheritsFrom(TF1::Class())) axisHist = (TH1*)((TF1*)axisObject)->GetHistogram();
-    else ERROR("Cannot handle type {}.", typeid(axisObject).name());
-    if(!axisHist){ERROR("Unable to access axes."); continue;}
-    axisHist->GetXaxis()->SetTitleOffset(padStyle.GetTitleOffsetX());
-    axisHist->GetYaxis()->SetTitleOffset(padStyle.GetTitleOffsetY());
-    axisHist->GetZaxis()->SetTitleOffset(padStyle.GetTitleOffsetZ());
-    axisHist->SetTitle(padStyle.GetTitle().c_str());
+    // FIXME: why does this not work?
+    axisHistos[padID]->SetTitle(padStyle.GetTitle().c_str()); // should be per pad
     
-    
-    // todo write axis wrapper, avoid multiple calls of setting axis range, how to handle more than one axis change?
-    // change axis range
-    for(auto& padID : plotStyle.GetLinkedPads("X", padID)){
-      if(plot.IsAxisDefined(padID, "X") && plot.GetAxis(padID, "X")->IsRangeSet())
-      {
-        axisHist->GetXaxis()->SetRangeUser(plot.GetAxis(padID, "X")->GetAxisRange().first, plot.GetAxis(padID, "X")->GetAxisRange().second);
-      }
-    }
-    for(auto& padID : plotStyle.GetLinkedPads("Y", padID)){
-      if(plot.IsAxisDefined(padID, "Y") && plot.GetAxis(padID, "Y")->IsRangeSet())
-      {
-        axisHist->GetYaxis()->SetRangeUser(plot.GetAxis(padID, "Y")->GetAxisRange().first, plot.GetAxis(padID, "Y")->GetAxisRange().second);
-      }
-    }
-    for(auto& padID : plotStyle.GetLinkedPads("Z", padID)){
-      if(plot.IsAxisDefined(padID, "Z") && plot.GetAxis(padID, "Z")->IsRangeSet())
-      {
-        axisHist->GetZaxis()->SetRangeUser(plot.GetAxis(padID, "Z")->GetAxisRange().first, plot.GetAxis(padID, "Z")->GetAxisRange().second);
-      }
-    }
-    // change axis title
-    if(plot.IsAxisDefined(padID, "X") && plot.GetAxis(padID, "X")->IsTitleSet())
+    for(string axisLable : {"X", "Y", "Z"})
     {
-      axisHist->GetXaxis()->SetTitle(plot.GetAxis(padID, "X")->GetTitle().c_str());
-    }
-    if(plot.IsAxisDefined(padID, "Y") && plot.GetAxis(padID, "Y")->IsTitleSet())
-    {
-      axisHist->GetYaxis()->SetTitle(plot.GetAxis(padID, "Y")->GetTitle().c_str());
-    }
-    if(plot.IsAxisDefined(padID, "Z") && plot.GetAxis(padID, "Z")->IsTitleSet())
-    {
-      axisHist->GetZaxis()->SetTitle(plot.GetAxis(padID, "Z")->GetTitle().c_str());
-    }
-    
-    if(axisHist->InheritsFrom("TH2"))
-    {
-      pad->SetRightMargin(0.12+0.06);
-      pad->SetTopMargin(0.12-0.05);
-      pad->SetBottomMargin(0.12+0.02);
+      TAxis* axis = nullptr;
+      if(axisLable.find("X") != string::npos)
+        axis = axisHistos[padID]->GetXaxis();
+      else if(axisLable.find("Y") != string::npos)
+        axis = axisHistos[padID]->GetYaxis();
+      else if(axisLable.find("Z") != string::npos)
+        axis = axisHistos[padID]->GetZaxis();
+      if(!axis) continue;
+
+      axis->SetTitleOffset(padStyle.GetTitleOffset(axisLable)); // fixme
+
       
-      axisHist->GetXaxis()->SetTitleOffset(1.1); //1.1
-      axisHist->GetYaxis()->SetTitleOffset(1.1); //1.3
-      axisHist->GetZaxis()->SetTitleOffset(1.6); //1.6
-      // 2d hacks, re-adjust palette
-      pad->Update(); // this adds something to list of primitives!! do not call here
-      TPaletteAxis* palette = (TPaletteAxis*)axisHist->GetListOfFunctions()->FindObject("palette");
-      if(palette)
+      if(plot.IsAxisDefined(padID, axisLable))
       {
-        palette->SetX2NDC(0.865); //0.88
-        palette->SetTitleOffset();
+        // TODO: is reset of axis range compatible with linked axes?
+
+        //for(auto& padID : plotStyle.GetLinkedPads(axisLable, padID)){
+        //}
+
+        if(plot.GetAxis(padID, axisLable)->IsRangeSet())
+        {
+          double maxHistRange = axis->GetXmax();
+          double minHistRange = axis->GetXmin();
+          // TODO: add warnings when out of range
+          double setRangeMin = plot.GetAxis(padID, axisLable)->GetAxisRange().first;
+          setRangeMin = (setRangeMin < minHistRange) ? minHistRange : setRangeMin;
+          double setRangeMax = plot.GetAxis(padID, axisLable)->GetAxisRange().second;
+          setRangeMax = (setRangeMax > maxHistRange) ? maxHistRange : setRangeMax;
+          axis->SetRangeUser(setRangeMin, setRangeMax); // FIXME: range is probably wo upper border
+        }
+        if(plot.GetAxis(padID, axisLable)->IsTitleSet())
+        {
+          axis->SetTitle(plot.GetAxis(padID, axisLable)->GetTitle().c_str());
+          LOG("setting title to: {}", plot.GetAxis(padID, axisLable)->GetTitle());
+        }
+
       }
-      pad->Update(); // this adds something to list of primitives!! do not call here
     }
-    
-    
+    axisHistos[padID]->Draw("SAME AXIS"); // FIXME: maybe redraw axis only in 2d case?
+    //pad->GetListOfPrimitives()->ls();
     pad->Modified();
     pad->Update();
   }
@@ -417,13 +433,13 @@ shared_ptr<TCanvas> GeneratePlot(Plot& plot, PlotStyle& plotStyle, TObjArray* av
     timeStamp.DrawLatex(plotStyle.GetTimestampPositon().first, plotStyle.GetTimestampPositon().second, stTime);
   }
   
-  
   // patch truncated lowest lable
   //TPad* patch = new TPad("patch", "patch", mainPad->GetLeftMargin()/2 ,0, mainPad->GetLeftMargin()-0.004, mStyle.textSize / mainPad->YtoPixel(mainPad->GetY1()));
   //patch->Draw("SAME");
   //patch->SetFillColor(mainPad->GetFillColor());
   //patch->SetBorderMode(0);
   
+  // for TView:
   //    canvas->SetTheta(20);
   //    canvas->SetPhi(45);
   return shared_ptr<TCanvas>(canvas);

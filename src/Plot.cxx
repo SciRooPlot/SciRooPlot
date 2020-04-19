@@ -121,11 +121,13 @@ void Plot::AddFrame(string dataName, string inputIdentifier)
 }
 
 
-void Plot::AddData(string dataName, string inputIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
+Plot::Data& Plot::AddData(string dataName, string inputIdentifier, string lable, int marker, int color, string drawingOptions, double cutoff, double cutoffLow)
 {
   if(inputIdentifier == "") inputIdentifier = mFigureGroup; // by default set identifier equal to figuregroup of plot
   mData[mSelectedPad].push_back(std::make_shared<Data>(dataName, inputIdentifier, lable, color, marker, 0, drawingOptions, 1., std::make_pair(cutoffLow, cutoff), std::make_pair(0,0)));
   mSelectedPad = 1; // reset to first pad
+  
+  return *mData[mSelectedPad][mData[mSelectedPad].size()-1];
 }
 
 

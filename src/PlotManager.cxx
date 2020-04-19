@@ -875,17 +875,17 @@ void PlotManager::DefineDefaultPlottingStyles()
     kOrange+2, kYellow+3, kGray+2
   };
   vector<int> goodMarkers =
-  { kFullSquare, kFullCircle, kFullCross, kFullDiamond,
+  { kFullCircle, kFullSquare, kFullDiamond, kFullCross,
     kFullStar, kOpenCircle, kOpenSquare, kOpenCross,
     kOpenDiamond, kOpenStar
   };
   vector<int> goodMarkersFull =
-  { kFullSquare, kFullCircle, kFullCross, kFullDiamond,
+  { kFullCircle, kFullSquare, kFullDiamond, kFullCross,
     kFullStar, kFullCircle, kFullCircle, kFullCircle,
     kFullCircle, kFullCircle, kFullCircle
   };
   vector<int> goodMarkersOpen =
-  { kOpenSquare, kOpenCircle, kOpenCross, kOpenDiamond,
+  { kOpenCircle, kOpenSquare, kOpenDiamond, kOpenCross,
     kOpenStar, kOpenCircle, kOpenCircle, kOpenCircle,
     kOpenCircle, kOpenCircle, kOpenCircle
   };

@@ -24,19 +24,41 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
 
   
   { // -----------------------------------------------------------------------
-    string plotName = "test";
-    Plot plot(plotName, plotGroup, "default ratio");
+    string plotName = "test2";
+    Plot plot(plotName, plotGroup, "default");
     //plot[1].SetPadOptions("logY");
-    plot[1].AddData("momentUnfolded1", "pp_5TeV");
+    plot[1].AddData("func", "InputTest").SetViewRangeXHigh(35);
+    plot[1].AddData("momentUnfolded1", "pp_5TeV").SetViewRangeXHigh(50);
+    plot[1].AddData("meanPt", "Models:epos");
     plot[1].AddData("momentUnfolded1", "pp_13TeV");
-    plot[2].AddRatio("momentUnfolded1", "pp_13TeV", "momentUnfolded1", "pp_5TeV");
-    plot[2].SetAxisRange("Y", 0.9, 1.1);
-    plot[2].SetAxisTitle("Y", "ratio");
-    plot[1].SetAxisRange("X", 1, 60);
+    //plot[2].AddRatio("momentUnfolded1", "pp_13TeV", "momentUnfolded1", "pp_5TeV");
+    //plot[2].SetAxisRange("Y", 0.9, 1.1);
+    plot[1].SetAxisTitle("X", "Mult");
+    plot[1].SetAxisTitle("Y", "Something");
+    plot[1].SetAxisRange("X", 10, 70);
+
+    //plot[2].AddData("momentUnfolded1", "pp_5TeV").Divide("momentUnfolded1", "pp_5TeV").SetDivideMethod("binomial");
+    //plot[1].AddData("momentUnfolded1", "pp_5TeV") / ("momentUnfolded1", "pp_5TeV");
+
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
 
-  
+  { // -----------------------------------------------------------------------
+    string plotName = "test";
+    Plot plot(plotName, plotGroup);
+    plot[1].SetPadOptions("logZ logY");
+    plot[1].AddData("multPtUnfolded", "pp_13TeV").SetViewRangeXHigh(60);
+    plot[1].AddData("multPtUnfolded", "pp_5TeV").SetViewRangeXHigh(50);
+    plot[1].SetAxisTitle("X", "My X axis title");
+    plot[1].SetAxisTitle("Y", "My Y axis title");
+    plot[1].SetAxisTitle("Z", "My Z axis title");
+    plot[1].SetAxisRange("X", 10, 70);
+    plot[1].SetAxisRange("Y", .15, 5);
+    plot[1].SetAxisRange("Z", 1e-4, 1e-2);
+
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
+
   
   
   

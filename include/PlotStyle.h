@@ -197,10 +197,16 @@ public:
   double& GetLeftMargin(){return mMargins[2];}
   double& GetRightMargin(){return mMargins[3];}
   
-  double& GetTitleOffsetX(){return mTitleOffsets[0];}
-  double& GetTitleOffsetY(){return mTitleOffsets[1];}
-  double& GetTitleOffsetZ(){return mTitleOffsets[2];}
-  
+  double& GetTitleOffset(string axisLable){
+    if(axisLable.find("X") != string::npos)
+      return mTitleOffsets[0];
+    else if(axisLable.find("Y") != string::npos)
+      return mTitleOffsets[1];
+    else if(axisLable.find("Z") != string::npos)
+      return mTitleOffsets[2];
+    else
+      return mTitleOffsets[0];
+  }  
   string GetTitle() {return mTitle;}
   
 private:
