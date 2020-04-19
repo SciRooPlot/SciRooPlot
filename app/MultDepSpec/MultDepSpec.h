@@ -11,7 +11,7 @@ using PlottingFramework::PlotManager;
 using PlottingFramework::Plot;
 
 // default location of config and output
-const string gConfigFolder = "~/Desktop/PlottingFramework/apps/MultDepSpec/config/";
+const string gConfigFolder = "~/Desktop/PlottingFramework/app/MultDepSpec/config/";
 const string gInputFilesConfig = gConfigFolder + "inputFiles.XML";
 const string gPlotDefConfig = gConfigFolder + "plotDefinitions.XML";
 const string gDatasetFolder = "~/Desktop/AliMultDepSpec/Datasets/";

@@ -26,6 +26,7 @@ WIP:
 - set and get title accessors for Pad
 - fix z axis offset in colz plots
 - what should be default drawing style for graphs?
+- SetMinimum, SetMaximum for 2d plots
 
 Major Features:
 - merge markerstyle and linestyle?

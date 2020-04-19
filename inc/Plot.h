@@ -154,7 +154,12 @@ public:
   Data(const Data& otherPlot) = default;
   Data(Data& otherPlot) = default;
 
-  void SetViewRangeXHigh(double viewXHigh){mViewRangeX.second = viewXHigh;}
+  auto SetViewRangeXHigh(double viewXHigh) -> decltype(*this) {mViewRangeX.second = viewXHigh; return *this;}
+  auto SetViewRangeXLow(double viewXLow) -> decltype(*this) {mViewRangeX.first = viewXLow; return *this;}
+  auto SetViewRangeX(double viewXLow, double viewXHigh) -> decltype(*this) {mViewRangeX.first = viewXLow; mViewRangeX.second = viewXHigh; return *this;}
+
+  auto SetColor(int color) -> decltype(*this) {mColor = color; return *this;}
+  auto SetMarker(int marker) -> decltype(*this) {mStyle = marker; return *this;}
 
   
   const string& GetType(){return mType;}

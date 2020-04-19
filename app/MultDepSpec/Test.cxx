@@ -27,8 +27,8 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     string plotName = "test2";
     Plot plot(plotName, plotGroup, "default");
     //plot[1].SetPadOptions("logY");
-    plot[1].AddData("func", "InputTest").SetViewRangeXHigh(35);
-    plot[1].AddData("momentUnfolded1", "pp_5TeV").SetViewRangeXHigh(50);
+    plot[1].AddData("func", "InputTest").SetViewRangeXHigh(35).SetColor(kRed+1);
+    plot[1].AddData("momentUnfolded1", "pp_5TeV").SetViewRangeXHigh(50).SetMarker(kOpenSquare);
     plot[1].AddData("meanPt", "Models:epos");
     plot[1].AddData("momentUnfolded1", "pp_13TeV");
     //plot[2].AddRatio("momentUnfolded1", "pp_13TeV", "momentUnfolded1", "pp_5TeV");
@@ -48,7 +48,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     Plot plot(plotName, plotGroup);
     plot[1].SetPadOptions("logZ logY");
     plot[1].AddData("multPtUnfolded", "pp_13TeV").SetViewRangeXHigh(60);
-    plot[1].AddData("multPtUnfolded", "pp_5TeV").SetViewRangeXHigh(50);
+    plot[1].AddData("multPtUnfolded", "pp_5TeV").SetViewRangeXHigh(50).SetViewRangeXLow(40);
     plot[1].SetAxisTitle("X", "My X axis title");
     plot[1].SetAxisTitle("Y", "My Y axis title");
     plot[1].SetAxisTitle("Z", "My Z axis title");
