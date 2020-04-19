@@ -25,19 +25,19 @@ set(APPLICATIONS
 )
 # corresponding source file:
 set(APPLICATIONS_SRC
-  "apps/PlottingApp.cxx"
-  "apps/MultDepSpec/ConfigInput.cxx"
-  "apps/MultDepSpec/CreatePlots.cxx apps/MultDepSpec/Datasets.cxx apps/MultDepSpec/Energies.cxx apps/MultDepSpec/Systems.cxx apps/MultDepSpec/Publications.cxx apps/MultDepSpec/Test.cxx apps/MultDepSpec/Publications.cxx apps/MultDepSpec/Helpers.cxx apps/MultDepSpec/StyleDefinitions.cxx"
+  "app/PlottingApp.cxx"
+  "app/MultDepSpec/ConfigInput.cxx"
+  "app/MultDepSpec/CreatePlots.cxx app/MultDepSpec/Datasets.cxx app/MultDepSpec/Energies.cxx app/MultDepSpec/Systems.cxx app/MultDepSpec/Publications.cxx app/MultDepSpec/Test.cxx app/MultDepSpec/Publications.cxx app/MultDepSpec/Helpers.cxx app/MultDepSpec/StyleDefinitions.cxx"
 )
 # files that you want to associate to your app put "" if not required
 set(APPLICATIONS_ADDITIONAL_FILES
   ""
   ""
-  "apps/multDepSpec/MultDepSpec.h"
+  "app/multDepSpec/MultDepSpec.h"
 )
 
 set(MODULE PlottingFramework)
-set(MODULE_HDR include/${MODULE}.h)
+set(MODULE_HDR inc/${MODULE}.h)
 set(ADDITIONAL_FILES README.md TODO.md)
 
 # this variable contains the framework source code
@@ -48,7 +48,7 @@ set(SRCS
   src/Plot.cxx
 )
 string(REPLACE ".cxx" ".h" HDRS "${SRCS}")
-string(REPLACE "src" "include" HDRS "${HDRS}")
+string(REPLACE "src" "inc" HDRS "${HDRS}")
 
 # find dependencies
 find_package(ROOT ${REQUIRED_ROOT_VERSION} CONFIG REQUIRED)
@@ -68,7 +68,7 @@ target_link_libraries(${MODULE} PUBLIC
   fmt::fmt
 )
 include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/inc
   ${Boost_INCLUDE_DIRS}/boost/property_tree
   ${Boost_INCLUDE_DIRS}/boost/program_options
 )

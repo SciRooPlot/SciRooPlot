@@ -6,5 +6,5 @@ misc/*
 XCode/*
 doc/html/*
 doc/latex/*
-apps/MultDepSpec/config/*
+app/MultDepSpec/config/*
 
