@@ -47,11 +47,11 @@ inline bool fileExists(const std::string& name) {
 int main(int argc, char *argv[])
 {
   // set default values
-  string configFolder = (gSystem->Getenv("PLOTTING_CONFIG_FOLDER")) ?
-  gSystem->ExpandPathName("${PLOTTING_CONFIG_FOLDER}/") : "plotting_config/";
+  string configFolder = (gSystem->Getenv("__PLOTTING_CONFIG_DIR")) ?
+  gSystem->ExpandPathName("${__PLOTTING_CONFIG_DIR}/") : "plotting_config/";
   
-  string outputFolder = (gSystem->Getenv("PLOTTING_OUTPUT_FOLDER")) ?
-  gSystem->ExpandPathName("${PLOTTING_OUTPUT_FOLDER}/") : "plotting_output/";
+  string outputFolder = (gSystem->Getenv("__PLOTTING_OUTPUT_DIR")) ?
+  gSystem->ExpandPathName("${__PLOTTING_OUTPUT_DIR}/") : "plotting_output/";
 
   string inputFilesConfig = configFolder + "inputFiles.XML";
   string plotDefConfig = configFolder + "plotDefinitions.XML";
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
       PRINT("The use of blank spaces and colons in the regular expressions is not supported.");
       PRINT("To enable auto-completion on and global availability on Mac, add 'source /plotting/framework/location/.plottingrc' to your .zshrc.")
       PRINT("Locations of the configuration file containing the input file paths and the output directory");
-      PRINT("can be steered via the env variables PLOTTING_CONFIG_FOLDER and PLOTTING_OUTPUT_FOLDER.")
+      PRINT("can be steered via the env variables __PLOTTING_CONFIG_DIR and __PLOTTING_OUTPUT_DIR.")
       PRINT("Alternatively the following command line options can be used:");
       PRINT("");
       cout << options << endl;

@@ -1,22 +1,31 @@
 #!/bin/bash
 
 # add some global symbols
-PLOTTING_FRAMEWORK_FOLDER="$( cd "$( dirname "${0}" )" >/dev/null 2>&1 && pwd )/build"
-[[ -d "${PLOTTING_FRAMEWORK_FOLDER}" ]] && function plot(){ "${PLOTTING_FRAMEWORK_FOLDER}/plot" ${1} ${2} ${3} }
-[[ -d "${PLOTTING_FRAMEWORK_FOLDER}" ]] && function define_plots(){ "${PLOTTING_FRAMEWORK_FOLDER}/create" ${1} }
+if [[ "${BASH_SOURCE[0]}" != "" ]]
+then
+  __PLOTTING_BUILD_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/build"
+else
+  __PLOTTING_BUILD_DIR="$( cd "$( dirname "${0}"  )" >/dev/null 2>&1 && pwd )/build"
+fi
+
+if [[ -d "${__PLOTTING_BUILD_DIR}" ]]
+then
+  function plot(){  [[ "${1}" == "cd" ]] && (return 0;) || ("${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0;) }
+  function define_plots(){ "${__PLOTTING_BUILD_DIR}/create" ${1} }
+fi
 
 scope_func () {
 
-  if [ ! -d "${PLOTTING_CONFIG_FOLDER}" ]; then
-    echo ""; echo ">> Auto-complete script could not find plotting config folder: ${PLOTTING_CONFIG_FOLDER}."; echo "";
+  if [ ! -d "${__PLOTTING_CONFIG_DIR}" ]; then
+    echo ""; echo ">> Auto-complete script could not find plotting config folder: ${__PLOTTING_CONFIG_DIR}."; echo "";
     return
   fi
 
   _plot_completions_zsh() {
 
-    local plot_definitions="${PLOTTING_CONFIG_FOLDER}/plotDefinitions.XML"
+    local plot_definitions="${__PLOTTING_CONFIG_DIR}/plotDefinitions.XML"
 
-    local modes=('interactive' 'pdf' 'file' 'bitmap' 'find' 'macro')
+    local modes=('interactive' 'pdf' 'file' 'bitmap' 'find' 'macro' 'cd')
     local gropus
     local names
 
@@ -44,6 +53,7 @@ scope_func () {
     case $state in
       mode)
         _arguments '1:profiles:(${modes})'
+        [[ "${words[2]}" == "cd" ]] && cd ${__PLOTTING_BUILD_DIR}
       ;;
       group)
         _arguments '2:profiles:(${gropus})'
