@@ -100,6 +100,7 @@ int main(int argc, char *argv[])
       PRINT("Multiple figureGroups and plotNames can be specified separated by blank space: 'plotA plotB'.");
       PRINT("When using regular expressions or multiple entries, it is required to embrace this in quotes.");
       PRINT("The use of blank spaces and colons in the regular expressions is not supported.");
+      PRINT("To enable auto-completion on and global availability on Mac, add 'source /plotting/framework/location/.plottingrc' to your .zshrc.")
       PRINT("Locations of the configuration file containing the input file paths and the output directory");
       PRINT("can be steered via the env variables PLOTTING_CONFIG_FOLDER and PLOTTING_OUTPUT_FOLDER.")
       PRINT("Alternatively the following command line options can be used:");

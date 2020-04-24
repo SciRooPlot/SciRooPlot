@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# add some global symbols
+PLOTTING_FRAMEWORK_FOLDER="$( cd "$( dirname "${0}" )" >/dev/null 2>&1 && pwd )/build"
+[[ -d "${PLOTTING_FRAMEWORK_FOLDER}" ]] && function plot(){ "${PLOTTING_FRAMEWORK_FOLDER}/plot" ${1} ${2} ${3} }
+[[ -d "${PLOTTING_FRAMEWORK_FOLDER}" ]] && function define_plots(){ "${PLOTTING_FRAMEWORK_FOLDER}/create" ${1} }
+
+scope_func () {
+
+  if [ ! -d "${PLOTTING_CONFIG_FOLDER}" ]; then
+    echo ""; echo ">> Auto-complete script could not find plotting config folder: ${PLOTTING_CONFIG_FOLDER}."; echo "";
+    return
+  fi
+
+  _plot_completions_zsh() {
+
+    local plot_definitions="${PLOTTING_CONFIG_FOLDER}/plotDefinitions.XML"
+
+    local modes=('interactive' 'pdf' 'file' 'bitmap' 'find' 'macro')
+    local gropus
+    local names
+
+    while read -r line ; do
+      line="${line#<GROUP::}"
+      line="${line%>}"
+      gropus+=("${line}")
+    done <<(grep -o '<GROUP::.*' $plot_definitions)
+
+    updatePlotNames() {
+      local group=$1
+      names=()
+      while read -r line ; do
+        line="${line#<name>}"
+        line="${line%</name>}"
+        names+=("${line}")
+      done <<(grep -B 1 "<figureGroup>${group}</figureGroup>" $plot_definitions | grep -vE '.*figureGroup.*|^--$')
+    }
+
+    _arguments \
+      '1: :->mode'\
+      '2: :->group'\
+      '3: :->name'
+
+    case $state in
+      mode)
+        _arguments '1:profiles:(${modes})'
+      ;;
+      group)
+        _arguments '2:profiles:(${gropus})'
+      ;;
+      name)
+        updatePlotNames $words[3]
+        _arguments '3:profiles:(${names})'
+      ;;
+    esac
+  }
+  compdef _plot_completions_zsh plot
+}
+
+scope_func
+unset -f scope_func
