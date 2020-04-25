@@ -170,13 +170,13 @@ int main(int argc, char *argv[])
     PRINT_SEPARATOR;
     return 0;
   }
-  else if(mode == "inspect"){ // directly plot histograms from input identifier or file
+  else if(mode == "browse"){ // directly plot histograms from input identifier or file
     string inputIdentifier = figureGroupsVector[0];
     if(inputIdentifier.find(".root") == string::npos){
       plotManager.LoadInputDataFiles(inputFilesConfig);
     } else {
-      plotManager.AddInputDataFiles("inspect_file", {inputIdentifier});
-      inputIdentifier = "inspect_file";
+      plotManager.AddInputDataFiles("browse", {inputIdentifier});
+      inputIdentifier = "browse";
     }
     Plot plot("plot", inputIdentifier);
     for(auto& histName : plotNamesVector)

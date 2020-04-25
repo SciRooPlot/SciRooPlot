@@ -24,16 +24,25 @@ scope_func () {
   _plot_completions_zsh() {
 
     local plot_definitions="${__PLOTTING_CONFIG_DIR}/plotDefinitions.XML"
+    local input_identifiers="${__PLOTTING_CONFIG_DIR}/inputFiles.XML"
 
-    local modes=('interactive' 'pdf' 'file' 'bitmap' 'find' 'macro' 'cd')
+    local modes=('interactive' 'pdf' 'file' 'bitmap' 'find' 'macro' 'browse' 'cd')
     local gropus
     local names
+    local rootfiles
+    local inputIdentifiers
 
     while read -r line ; do
       line="${line#<GROUP::}"
       line="${line%>}"
       gropus+=("${line}")
     done <<(grep -o '<GROUP::.*' $plot_definitions)
+
+    while read -r line ; do
+      line="${line#<}"
+      line="${line%>}"
+      inputIdentifiers+=("${line}")
+    done <<(grep -o '<.*>' $input_identifiers | grep -vE '.*xml.*|.*FILE.*|.*</.*')
 
     updatePlotNames() {
       local group=$1
@@ -44,6 +53,11 @@ scope_func () {
         names+=("${line}")
       done <<(grep -B 1 "<figureGroup>${group}</figureGroup>" $plot_definitions | grep -vE '.*figureGroup.*|^--$')
     }
+
+    while read -r line ; do
+      rootfiles+=("${line}")
+    done <<(ls -d *.root | grep '.*.root')
+
 
     _arguments \
       '1: :->mode'\
@@ -56,11 +70,23 @@ scope_func () {
         [[ "${words[2]}" == "cd" ]] && cd ${__PLOTTING_BUILD_DIR}
       ;;
       group)
-        _arguments '2:profiles:(${gropus})'
+        if [[ "${words[2]}" == "browse" ]]
+        then
+          local gropusAndFiles=("${inputIdentifiers[@]}" "${rootfiles[@]}")
+          _arguments '2:profiles:(${gropusAndFiles})'
+        else
+          _arguments '2:profiles:(${gropus})'
+        fi
       ;;
       name)
-        updatePlotNames $words[3]
-        _arguments '3:profiles:(${names})'
+        if [[ "${words[2]}" == "browse" ]]
+        then
+          # for .root one could use rootls to check what is in file
+          _arguments '3:profiles:()'
+        else
+          updatePlotNames $words[3]
+          _arguments '3:profiles:(${names})'
+        fi
       ;;
     esac
   }
