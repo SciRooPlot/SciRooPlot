@@ -93,16 +93,17 @@ int main(int argc, char *argv[])
     if (vm.count("help")) {
       PRINT("");
       PRINT("Usage:");
-      PRINT("  ./plot <find|interactive|pdf|eps|bitmap|file> '<figureGroupRegex[:figureCategoryRegex]>'  '<plotNameRegex>'\n");
+      PRINT("  ./plot <find|interactive|pdf|eps|png|macro|file> '<figureGroupRegex[:figureCategoryRegex]>'  '<plotNameRegex>'\n");
       PRINT("You can use any standard regular expressions like 'begin.*end' or 'begin[a,b,c]end'.");
-      PRINT("An exhaustive list of such expressions can be found here:");
-      PRINT("-> http://www.cplusplus.com/reference/regex/ECMAScript/");
       PRINT("Multiple figureGroups and plotNames can be specified separated by blank space: 'plotA plotB'.");
       PRINT("When using regular expressions or multiple entries, it is required to embrace this in quotes.");
       PRINT("The use of blank spaces and colons in the regular expressions is not supported.");
-      PRINT("To enable auto-completion on and global availability on Mac, add 'source /plotting/framework/location/.plottingrc' to your .zshrc.")
+      PRINT("You can also have a quick look into input identifiers or .root files:");
+      PRINT("  ./plot browse '<inputIdentifier|rootfile[:fileSubPath]>'  '<dataName>'\n");
+      PRINT("To enable auto-completion on and global availability on Mac,");
+      PRINT("add 'source /plotting/framework/location/.plottingrc' to your .zshrc.");
       PRINT("Locations of the configuration file containing the input file paths and the output directory");
-      PRINT("can be steered via the env variables __PLOTTING_CONFIG_DIR and __PLOTTING_OUTPUT_DIR.")
+      PRINT("can be steered via the env variables __PLOTTING_CONFIG_DIR and __PLOTTING_OUTPUT_DIR.");
       PRINT("Alternatively the following command line options can be used:");
       PRINT("");
       cout << options << endl;

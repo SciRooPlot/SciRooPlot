@@ -301,7 +301,7 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
   if(outputMode.find("macro") != string::npos){
     fileEnding = ".C";
   }
-  if(outputMode.find("bitmap") != string::npos){
+  if(outputMode.find("png") != string::npos){
     fileEnding = ".png";
   }
   if(outputMode.find("eps") != string::npos){

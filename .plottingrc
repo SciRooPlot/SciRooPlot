@@ -26,7 +26,7 @@ scope_func () {
     local plot_definitions="${__PLOTTING_CONFIG_DIR}/plotDefinitions.XML"
     local input_identifiers="${__PLOTTING_CONFIG_DIR}/inputFiles.XML"
 
-    local modes=('interactive' 'pdf' 'file' 'bitmap' 'find' 'macro' 'browse' 'cd')
+    local modes=('interactive' 'pdf' 'file' 'png' 'find' 'macro' 'browse' 'cd')
     local gropus
     local names
     local rootfiles
