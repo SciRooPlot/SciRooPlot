@@ -3,7 +3,8 @@ set(CMAKE_VERBOSE_MAKEFILE off)
 set(CMAKE_BUILD_TYPE Debug)
 
 # The following two lines can be used to force using one specific root installation (comment out if not needed)
-set(ROOTSYS ~/alice/sw/osx_x86-64/ROOT/latest)
+set(ROOTSYS ~/alice/sw/osx_x86-64/ROOT/v6-18-04-alice1-7)
+#set(ROOTSYS ~/alice/sw/osx_x86-64/ROOT/latest)
 #set(ROOTSYS ~/root/mybuild)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
 
@@ -27,7 +28,7 @@ set(APPLICATIONS
 set(APPLICATIONS_SRC
   "app/PlottingApp.cxx"
   "app/MultDepSpec/ConfigInput.cxx"
-  "app/MultDepSpec/CreatePlots.cxx app/MultDepSpec/Datasets.cxx app/MultDepSpec/Energies.cxx app/MultDepSpec/Systems.cxx app/MultDepSpec/Publications.cxx app/MultDepSpec/Test.cxx app/MultDepSpec/Publications.cxx app/MultDepSpec/Helpers.cxx app/MultDepSpec/StyleDefinitions.cxx"
+  "app/MultDepSpec/CreatePlots.cxx app/MultDepSpec/Templates.cxx app/MultDepSpec/Datasets.cxx app/MultDepSpec/Energies.cxx app/MultDepSpec/Systems.cxx app/MultDepSpec/Publications.cxx app/MultDepSpec/Test.cxx app/MultDepSpec/Publications.cxx app/MultDepSpec/Helpers.cxx app/MultDepSpec/StyleDefinitions.cxx"
 )
 # files that you want to associate to your app put "" if not required
 set(APPLICATIONS_ADDITIONAL_FILES
@@ -42,10 +43,9 @@ set(ADDITIONAL_FILES README.md TODO.md)
 
 # this variable contains the framework source code
 set(SRCS
-  src/PlotManager.cxx
-  src/PlottingTools.cxx
-  src/PlotStyle.cxx
   src/Plot.cxx
+  src/PlotManager.cxx
+  src/PlotPainter.cxx
 )
 string(REPLACE ".cxx" ".h" HDRS "${SRCS}")
 string(REPLACE "src" "inc" HDRS "${HDRS}")

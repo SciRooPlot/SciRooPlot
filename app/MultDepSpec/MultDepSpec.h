@@ -17,11 +17,12 @@ const string gPlotDefConfig = gConfigFolder + "plotDefinitions.XML";
 const string gDatasetFolder = "~/Desktop/AliMultDepSpec/Datasets/";
 
 // main processing functions
-void DefineTestPlots(PlotManager& plotEnv);
-void DefineDatasetPlots(string& dataSet, PlotManager& plotEnv);
-void DefineSystemPlots(PlotManager& plotEnv);
-void DefineEnergyPlots(PlotManager& plotEnv);
-void DefinePublicationPlots(PlotManager& plotEnv);
+void DefinePlotTemplates(PlotManager& plotManager);
+void DefineTestPlots(PlotManager& plotManager);
+void DefineDatasetPlots(string& dataSet, PlotManager& plotManager);
+void DefineSystemPlots(PlotManager& plotManager);
+void DefineEnergyPlots(PlotManager& plotManager);
+void DefinePublicationPlots(PlotManager& plotManager);
 
 // helper functions
 string GetPtString(int pTbin);

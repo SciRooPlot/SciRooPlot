@@ -20,6 +20,7 @@
 
 void MultDepSpec::DefinePublicationPlots(PlotManager& plotManager)
 {
+  /*
   string publicationLable = alice + ", " + chargedParticles +  newLine + eta03 + ", " + ptRange10GeV + newLine + "#it{N}_{ch} cut: #it{p}_{T} > 0 GeV/#it{c}";
   string plotGroup = "system_comparison";
   { // -----------------------------------------------------------------------
@@ -79,4 +80,5 @@ void MultDepSpec::DefinePublicationPlots(PlotManager& plotManager)
     plot[1].AddText(0.42, 0.92, energyLable);
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
+   */
 }

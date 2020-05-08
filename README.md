@@ -51,12 +51,13 @@ The best way to do this is to create a scope via curly brackets {} and create a 
 You can change this plot object with a variaty of self explanatory accessors (see doxygen doc).
 Then you need to add this new plot to the PlotManager via AddPlot().
 This will move the settings of your plot to the manager and you will be left with an empty plot.
-After adding all plots to the manager you can dump the plot definitions to an external config file that can in principle also be modified by hand outside of the program via DumpPlots().
-These definitions you can read into the manager again via LoadPlots().
-Alternatively you can also load and generate only specific plots defined in the config file via CreatePlotsFromFile()
-By default plots are created as pdf in your output folder, but you can also choose "bitmap" for pngs "macro" to create root macros or "interactive" if you only want to look at the plot and not create a file.
+After adding all plots to the manager you can dump the plot definitions to an external config file (that can in principle also be modified by hand outside of the program) via DumpPlots().
+These plot definitions you can again read into the manager via LoadPlots().
+Alternatively you can also load and generate only specific plots defined in the config file via ExtractPlotsFromFile()
+By default plots are created as pdf in your output folder, but you can also choose "bitmap" for pngs "macro" to create root macros or "interactive" if you only want to look at the plot and not create a file. Using the keyword "file" it is also possible to write the plots to a root file.
 
 
-The framework is still contains some unfinished or not very general pragmatic implementations, so please regard this as a very early beta version..
- 
+The framework still contains some unfinished pragmatic implementations that are currently beeing generalized.
+Regard this as an early beta version...
+
 Any suggestions, bug reports and user feedback is very welcome.

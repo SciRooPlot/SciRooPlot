@@ -19,8 +19,7 @@
 #define PlotManager_h
 
 #include "PlottingFramework.h"
-#include "PlottingTools.h"
-#include "PlotStyle.h"
+#include "PlotPainter.h"
 #include "Plot.h"
 
 using namespace PlottingFramework;
@@ -57,16 +56,16 @@ public:
   
   // -> plots
   void AddPlot(Plot& plot);
+  void AddPlotTemplate(Plot& plotTemplate);
+
   void DumpPlots(string plotFileName, string figureGroup = "", vector<string> plotNames = {});
   void DumpPlot(string plotFileName, string figureGroup, string plotName);
   void CreatePlots(string figureGroup = "", string figureCategory = "", vector<string> plotNames = {}, string outputMode = "pdf");
   void CreatePlot(string name, string figureGroup, string figureCategory = "", string outputMode = "pdf");
     
   // --- status accessors --
-  void PrintStatus();
   void ListPlots(bool verbose = false){for(auto& plot : mPlots) {PRINT("{}", plot.GetName());}} // list all plots available in the manager
   void ListData(); // list all input data (histos, graphs, etc) available in the manager
-  void ListPlotStyles(); // list all available plot styles
   
   void SetOutputFileName(string fileName = "ResultPlots.root") {mOutputFileName = fileName;}  
   void ExtractPlotsFromFile(string plotFileName, vector<string> figureGroupsWithCategoryUser, vector<string> plotNamesUser, string mode = "load");
@@ -99,13 +98,10 @@ private:
   bool IsPlotAlreadyBooked(string plotName){for(auto& plot : mPlots){if(plot.GetUniqueName() == plotName) return true;} return false;};
   
   // style related members
-  vector<Plot> mPlots;   /// internal representation of of plots known to the manager
-  vector<PlotStyle> mPlotStyles;
-  void DefineDefaultPlottingStyles();
-  PlotStyle& GetPlotStyle(string plotStyleName);
-  //    bool IsPlotStyleAvailable(string "plot");
-  
-  map<string, ptree> mPlotTemplateCache;
+  vector<Plot> mPlots;
+  vector<Plot> mPlotTemplates;
+
+  map<string, ptree> mPlotTemplateCache; // FIXME: find better name for this or delete...
   ptree& ReadPlotTemplatesFromFile(string& plotFileName);
   
 };

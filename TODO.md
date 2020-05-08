@@ -10,65 +10,54 @@ ANALYSIS:
 
 FRAMEWORK:
 ----------
+
 WIP:
-- generalize axis linking
-- flexible number of color steps in 2d plots
-- add graph division feature with tspline3
-- font color should also be user definable
-- plot style: member pads should by default use all propertys of plot unless overridden explicitly
-- support steering of grids, X+, Y+ via plotOptions
-- add support for grid styles
-- get rid of these ugly default values (-997, etc)
-- possibility to set centered axis title in PlotStyle
-- line in ratio should be part of style definition (that can be toggled off?) including the settings
-- if set range user does not work as expected, either draw TPad::DrawFrame or set back all axes to possible values
-- something is strange in ranges of functions
-- set and get title accessors for Pad
-- fix z axis offset in colz plots
+- fix title stuff in Pad!
+    gStyle->SetTitleW((pad->GetX2() - pad->GetRightMargin()) - (pad->GetX1() + pad->GetLeftMargin()));
+    gStyle->SetTitleH(pad->GetTopMargin()*0.8);
+    gStyle->SetTitleAlign(kHAlignCenter + kVAlignTop);
+- add nContours as option to pad
+- add axis linking
+
+- better to use Data::SetFrame() to indicate which data should define frame! (automatically add copy to front of pad data vector)
+- add setters and getters to boxes + fix constructor
+- fix visibility of constructors + check if everything is initialized correctly
+- gStyle->SetPaintTextFormat("4.1f m");
 - what should be default drawing style for graphs?
-- SetMinimum, SetMaximum for 2d plots
+- for 2d -> use SAME0 to avoid axis range change when drawing on top?
+- xErrors!! toggle on and off?
+- predefined styles for the different datatypes (graph,hist,2d)
+- add angle to textboxes
+- put in some feasible defaults for colors, markers, line styles
+
 
 Major Features:
-- merge markerstyle and linestyle?
-- time axis opitons?
-- possibility to dump and load plot styles (manager should only read in required plot styles)
-- make sure PlotStyle names are unique
+- Plot needs AddFunction() and AddLine() accessor so one can directly plot simple functions. This must then also be of type data??
 - add some more formatting features for legend (floating point precision, exponent..)
 - add constructor to plotStyle that already gives useful default markers, colors, 2d style, etc
 - be clear about coordinate systems (fix relative positioning, maybe)
 - find a general way to automatically determine optimal axis offsets (in particular for 2d and 3d views) (what unit is title offset?)
-- it should be possible to conveniently pipe all root plotting functionality (drawing properties) to the plot
 - generalize legend function to handle text boxes in a similar manner
-- pads must inherit plot properties (text size et al unless specified otherwise)
-- text size and style settings should by default be inherited by each object with text but there should be a possiblity to override
 
 Minor Features:
-- how to handle root and custom drawing options (check for allowed options?)
-- think about if order of objects is plotted correctly (why is frame on top?)
-- change from int to short wherever possible (colors, markers, etc)
+- remove name argument from axis?
+- make ref-line configurable
+- normalize and scale should use same function
+- consider all possibilities where displayed symbols in legend have to be adjusted (in particular filled histos are missing)
+- can there be a 'use same as previous' color/marker/style feature (color = -1)
+- add graph division feature with tspline3
+- add another stand-alone app to quickly create and extend input file file
 - option in main program to list loaded plots
 - possibility to load all data from input files
-- setter for csv format string and delimiter
-- would it be possible to define 'top left' 'bottom right' etc default positons for boxes in general manner? maybe with flexible minimal distance to ticks
+- maybe define 'top left' 'bottom right' etc default positons for boxes in general manner? (flexible minimal distance to ticks)
 - is it possible to set the order in multi column tlegends? left-right vs top-bottom
-- pipe box line fill properties to drawing
-- improve use last color feature (color = -1)
-- change only color not marker options?
-- add line in ratio plots? in plot style? value of const line flexible?
+- possibility to split the legend?
 - think about more placeholders for legends and texts and how to format them
-- option to set n divisions of axes
-- add option in padstyle that identifies the pad as ratio plot
 - fix overlap between axis title and tick marks if they have too many digits
 - add possibility for grey tilted overlayed text like "draft"
-- write case-insensitive "contained in string" function for control string! as lambda function
-- text align, angle features!
-- put in some feasible defaults for colors, markers etc
-- for loading and saving styles: possibility for default values as fallback?
-- possibility to specify use of only full or open markers in AddData
-- also define default line styles
 - generalized version of white patch hiding the truncated zero
-- possibility to split the legend?
-- maybe linking axes should also be possible for different axes (x in pad1 to y in pad2)
+- axis->SetTicks("+-")
+
 
 Bugs:
 - width and height calculation wrong for text boxes (ndc vs relative pad coordinates?)
@@ -82,18 +71,24 @@ Bugs:
 - if lables are 1, 2, 3 height is not calculated correctly?
 
 Structural changes:
-- use short instead of int whenever possible
-- internally use hashes instead of strings
-- use for (auto& [key, value]: myMap) {} loops
+- understand why move constructors implicitly delete assignment operators
+- move analysis stuff out of the repository and make external repository (link cmakes?)
+- store strings in vector and then only work with indices everywhere
+- use str_contians() everywhere
+- always use smallest possible datatype whenever possible
+- put data pointers in vector instead of map and use index for all comparisons
+- use for (auto& [key, value]: myMap) {} loops everywhere
 - think about how things can be implemented in a more general way as templates
 - change arguments referring to internal variables to const ref if possible to be more memory efficient, use lambdas
 - add (copy-, move-) constructors and destructors; make sure all variables are initialized properly
 
 Feature ideas:
+- maybe at some point it could become useful to also copy data and boxes from template?
+- add alpha (transparency level) to plot,pad,frame
+- add root style, color, marker, linestyle pictures to documentation
+- support csv format (flexible string and delimiter)
+- add reverse axis and time axis and axis on opposite side (X+, Y+)
 - functions and fitting
 - shape objects (arrows)
-- support for input types T{H,F}3, THn{Sparse}, THStack, TMultiGraph
-- option for plotting projectins? is this reasonable?
+- support for input types T{H,F}3, THn{Sparse} (->Projection functionality), THStack, TMultiGraph
 - support for setting up TView to have a 3d representations of 2d data
-- investigate if using TPad::DrawFrame() makes sense
-- possibility for user to grep and change specific plotstyle or plot that was already loaded in manager

@@ -21,8 +21,12 @@
 int main(int argc, char *argv[])
 {
   // create plotting environment
-  PlotManager plotEnv;
-  plotEnv.LoadInputDataFiles(MultDepSpec::gInputFilesConfig);
+  PlotManager plotManager;
+  plotManager.LoadInputDataFiles(MultDepSpec::gInputFilesConfig);
+  
+  // define plot templates
+  MultDepSpec::DefinePlotTemplates(plotManager);
+
   
   // by default create plots for all available datasets
   vector<string> dataSets;
@@ -39,7 +43,7 @@ int main(int argc, char *argv[])
   bool createTestPlots = true;
   bool createEnergyPlots = true;
   bool createSystemPlots = true;
-  
+    
   // user can override
   if(argc > 1){
     createTestPlots = false;
@@ -59,15 +63,15 @@ int main(int argc, char *argv[])
   // create dataset specific plots:
   for(string dataSet : dataSets)
   {
-    MultDepSpec::DefineDatasetPlots(dataSet, plotEnv);
+    MultDepSpec::DefineDatasetPlots(dataSet, plotManager);
   }
   
-  if(createTestPlots) MultDepSpec::DefineTestPlots(plotEnv);
-  if(createEnergyPlots) MultDepSpec::DefineEnergyPlots(plotEnv);
-  if(createSystemPlots) MultDepSpec::DefineSystemPlots(plotEnv);
-  //MultDepSpec::DefinePublicationPlots(plotEnv);
+  if(createTestPlots) MultDepSpec::DefineTestPlots(plotManager);
+  if(createEnergyPlots) MultDepSpec::DefineEnergyPlots(plotManager);
+  if(createSystemPlots) MultDepSpec::DefineSystemPlots(plotManager);
+  //MultDepSpec::DefinePublicationPlots(plotManager);
   
-  plotEnv.DumpPlots(MultDepSpec::gPlotDefConfig);
+  plotManager.DumpPlots(MultDepSpec::gPlotDefConfig);
   INFO("Wrote plot definitions to {}", MultDepSpec::gPlotDefConfig);
   return 0;
 }

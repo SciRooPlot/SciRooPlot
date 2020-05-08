@@ -37,7 +37,7 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotManager)
 
   string system_energy_lable = alice + newLine + chargedParticles + newLine + eta08 + ", " + ptRange;
   string pPb_lable = alice + newLine + chargedParticles + ", " + pPb + newLine + eta08 + ", " + ptRange;
-  
+ /*
   { // -----------------------------------------------------------------------
     // compare meanPt in pPb at 5.02 and 8.16 with all available models
     string plotName = "meanPt_pPb_models";
@@ -839,4 +839,6 @@ void MultDepSpec::DefineSystemPlots(PlotManager& plotManager)
     plot[1].AddText(0.4, 0.3, systemSizeLable);
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
+  
+  */
 }

@@ -22,6 +22,8 @@
 #define COUT_LVL 2    // < 2: no log,   < 1: no info,     < 0 no print
 
 // std headers
+#include <cstdint>
+#include <cmath>
 #include <iostream>
 #include <map>
 #include <set>
@@ -53,6 +55,7 @@
 
 #include "TFile.h"
 #include "TCanvas.h"
+#include "TFrame.h"
 #include "TLegendEntry.h"
 #include "TIterator.h"
 #include "TKey.h"
@@ -163,6 +166,43 @@ using boost::property_tree::write_xml;
 using boost::property_tree::read_xml;
 
 const string gNameGroupSeparator = "_IN_";
+
+
+
+
+
+
+inline constexpr bool str_contains(const string &str1, const string &str2)
+{
+  return (str1.find(str2) != string::npos);
+}
+
+
+enum dataStyle : int
+{
+  // 1d stuff
+  none = 0,
+  points,
+  points_xerr,
+  points_endcaps,
+  line,
+  curve,
+  band,
+  band_line,
+  hist,
+  hist_borders,
+  fit,
+  bar,
+  area,
+  area_line,
+  boxes,
+  boxes_only,
+  // 2d stuff
+  colz,
+  surf,
+};
+
+
 
 } // end namespace PlottingFramework
 #endif /* PlottingFramework_h */

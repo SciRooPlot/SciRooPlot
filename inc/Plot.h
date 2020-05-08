@@ -25,235 +25,441 @@ namespace PlottingFramework {
 
 //****************************************************************************************
 /**
- * Class containing internal representation of a plot.
- * It stores:
- * - user defined plot properties
- * - data location and all corresponding user defined drawing properties
- * - position and content of legend and text boxes
- * - axis ranges
+ * Class for internal representation of a plot.
  */
 //****************************************************************************************
 class Plot
 {
 public:
-  class Data; // move to private
-  class Histogram;
+  class Pad;
+
+  Plot() = default;
+  Plot(ptree &plotTree);
+  Plot(string name, string figureGroup, string plotTemplateName = "");
+  Pad& operator[](uint8_t padID) { return mPads[padID]; }
+  void operator+=(const Plot& plot);
+  friend Plot operator+(const Plot& templatePlot, const Plot& plot);
+
+  Plot(Plot& plotTemplate, string name, string plotGroup) {*this = plotTemplate; this->mName = name; this->mFigureGroup = plotGroup;}
+
+  // accessors for user
+  inline void SetFigureCategory(string figureCategory){mFigureCategory = figureCategory;}
+  inline void SetPlotTemplateName(string plotTemplateName){mPlotTemplateName = plotTemplateName;}
+  
+  inline void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false){ mPlotDimensions = {width, height, fixAspectRatio};}
+  inline void SetWidth(int32_t width){ mPlotDimensions.width = width;}
+  inline void SetHeight(int32_t height){ mPlotDimensions.height = height;}
+  inline void SetFixAspectRatio(bool fixAspectRatio = true){ mPlotDimensions.fixAspectRatio = fixAspectRatio;}
+
+  auto SetFill(int16_t color, int16_t style = 1001)  ->decltype(*this);
+  auto SetTransparent()  ->decltype(*this);
+
+  
+protected:
+  friend class PlotManager;
+  friend class PlotPainter;
+  
+  inline void SetFigureGroup(string figureGroup){mFigureGroup = figureGroup;}
+
+  // accessors for internal use by manager and painter
+  const string& GetName(){return mName;}
+  const string& GetFigureGroup(){return mFigureGroup;}
+  const string& GetFigureCategory(){return mFigureCategory;}
+  const optional<string>& GetPlotTemplateName(){return mPlotTemplateName;}
+  string GetUniqueName(){return mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");}
+  int GetNumRequiredPads(){return mPads.size();} //TODO: this could return a set of padIDs that need to be present?
+  ptree GetPropetyTree();
+  
+  map<uint8_t, Pad>& GetPads() {return mPads;}
+  
+  const optional<int32_t>& GetHeight(){return mPlotDimensions.height;}
+  const optional<int32_t>& GetWidth(){return mPlotDimensions.width;}
+  const optional<bool>& IsFixAspectRatio(){return mPlotDimensions.fixAspectRatio;}
+
+  const optional<int16_t>& GetFillColor(){return mFill.color;}
+  const optional<int16_t>& GetFillStyle(){return mFill.style;}
+
+  
+private:
+  typedef struct{
+    optional<int32_t> width;
+    optional<int32_t> height;
+    optional<bool> fixAspectRatio;
+  } dimension_t;
+  typedef struct{
+    optional<int16_t> color;
+    optional<int16_t> style;
+  } plot_fill_t;
+
+  
+  string mName;
+  string mFigureGroup;
+  string mFigureCategory;
+  optional<string> mPlotTemplateName;
+  dimension_t mPlotDimensions;
+
+  plot_fill_t mFill;
+
+  //map<string, vector<vector<uint8_t>>> mLinkedAxes;// [padID, axis] -> {[padID, axis]}
+  
+  // per thing here one has font, color, etc -> structure textLayout
+  // -> how to reduce this info??
+  /*
+  vector<int> mDefaultColors;
+  vector<int> mDefaultMarkers;
+  vector<int> mDefaultMarkersFull;
+  vector<int> mDefaultMarkersOpen;
+  vector<int> mDefaultLineStyles;
+  string m2dStyle;
+  position_t mTimestampPosition;
+  bool mDrawTimestamp;
+  */
+
+  map<uint8_t, Pad> mPads;
+};
+
+//****************************************************************************************
+/**
+ * Representation of a pad.
+ */
+//****************************************************************************************
+class Plot::Pad
+{
+public:
+  class Data;
   class Ratio;
-  class Graph;
-  class Function;
   class Axis;
   class Box;
   class TextBox;
   class LegendBox;
-  
-  Plot& operator[](unsigned short padID) { mSelectedPad = (padID > 0) ? padID : 1; return *this; }
-  
-  Plot();
-  Plot(ptree &plotTree);
-  Plot(string name, string figureGroup, string plotStyle = "default");
-  Plot(const Plot& otherPlot) = default;
-  Plot(Plot& otherPlot) = default;
-  
-  // accessors for internal use by manager
-  string& GetName(){return mName;}
-  string& GetPadOptions(unsigned short padID){return mPadOptions[padID];}
-  string& GetFigureGroup(){return mFigureGroup;}
-  string& GetFigureCategory(){return mFigureCategory;}
-  map<unsigned short, vector<shared_ptr<Data>>>& GetData(){return mData;}
-  vector<shared_ptr<Data>>& GetData(unsigned short padID){return mData[padID];}
-  vector<shared_ptr<Box>>& GetBoxes(unsigned short padID){return mBoxes[padID];}
-  map<string, set<string>> GetRequiredInputData();
-  
-  void SetFigureCategory(string figureCategory){mFigureCategory = figureCategory;}
-  
-  void Print();
+
+  typedef struct{
+    string name;
+    string inputIdentifier;
+  } input_t;
+
+
+  Pad() = default;
+  Pad(ptree &padTree);
+  Axis& operator[](string axis);
+  void operator+=(const Pad& pad);
   
   // User accessors:
-  void AddFrame(string histName, string inputIdentifier);
-  Plot::Data& AddData(string dataName, string inputIdentifier = "", string lable = "", int marker = 0, int color = 0, string drawingOptions = "", double cutoff = -999, double cutoffLow = -999);
-  void AddRatio(string numerHist, string numerHistIdentifier, string denomHist, string denomHistIdentifier = "", string lable = "", int marker = 0, int color = 0, string errorStyle = "", double cutoff = -999, double cutoffLow = -999);
+  void AddFrame(input_t data);
+  Data& AddData(input_t input, string lable = "");
+  Ratio& AddRatio(input_t numerator, input_t denominator, string lable = "");
+
   void AddText(double xPos, double yPos, string text = "", bool userCoord = false, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
   void AddLegend(double xPos, double yPos, string title = "", bool userCoordinates = false, int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
   void AddLegend(string title = "", int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
-  void SetAxisTitle(string axis, string axisTitle);
-  void SetAxisRange(string axis, double low, double high);
-  inline void SetPadOptions(string options){mPadOptions[mSelectedPad] = options; mSelectedPad = 1;}
-  inline void SetPlotStyle(string plotStyle){mPlotStyle = plotStyle;}
-  
-  // functions to modify
-  const string& GetPlotStyle(){return mPlotStyle;}
-  // maybe also getlegends gettexts
-  string GetUniqueName(){return mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");}
-  
-  int GetNumRequiredPads(){return mData.size();}
-  ptree GetPropetyTree();
-  
-  bool IsAxisDefined(unsigned short padID, string axis) {return (mAxes[padID][axis] != nullptr);}
-  shared_ptr<Axis> GetAxis(unsigned short padID, string axis) {return mAxes[padID][axis];}
-  
+
+
+
+  inline void SetPadOptions(string options){mOptions = options;}
+
+  auto SetTitle(string title)  ->decltype(*this);
+  auto SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup) ->decltype(*this);
+  auto SetMargins(float_t top, float_t bottom, float_t left, float_t right) ->decltype(*this);
+  auto SetPalette(int32_t palette)  ->decltype(*this);
+
+  auto SetDefaultTextSize(float_t size)  ->decltype(*this);
+  auto SetDefaultTextColor(int16_t color)  ->decltype(*this);
+  auto SetDefaultTextFont(int16_t font)  ->decltype(*this);
+
+  auto SetDefaultMarkerSize(float_t size)  ->decltype(*this);
+  auto SetDefaultLineWidth(float_t width)  ->decltype(*this);
+
+  auto SetFill(int16_t color, int16_t style = 1001)  ->decltype(*this);
+  auto SetTransparent()  ->decltype(*this);
+
+  auto SetFillFrame(int16_t color, int16_t style = 1001)  ->decltype(*this);
+  auto SetLineFrame(int16_t color, int16_t style = kSolid, float_t width = 1.f)  ->decltype(*this);
+  auto SetTransparentFrame()  ->decltype(*this);
+
+  auto SetRedrawAxes(bool redraw = true)  ->decltype(*this);
+  auto SetRefFunc(string refFunc) ->decltype(*this) {mRefFunc = refFunc; return *this;}
+
+  //int GetDefaultColor(int colorIndex) {return mDefaultColors[colorIndex % mDefaultColors.size()];}
+  //void SetTextFont(int font){(font > 0 && font < 16) ? mTextFont = font * 10 + 3 : mTextFont = 43;}
+
 protected:
-  // put some functions here that only manager should access. maybe the getters...
+  friend class PlotManager;
+  friend class PlotPainter;
+  friend class Plot;
+
+  ptree GetPropetyTree();
+
+  vector<shared_ptr<Data>>& GetData(){return mData;}
+  vector<shared_ptr<Box>>& GetBoxes(){return mBoxes;}
+
+  const map<string, Axis>& GetAxes(){return mAxes;}
+
+  const optional<string>& GetTitle(){return mTitle;}
+  const optional<string>& GetOptions(){return mOptions;}
+
+  const optional<double_t>& GetXLow(){return mPosition.xlow;}
+  const optional<double_t>& GetYLow(){return mPosition.ylow;}
+  const optional<double_t>& GetXUp(){return mPosition.xup;}
+  const optional<double_t>& GetYUp(){return mPosition.yup;}
+
+  const optional<float_t>& GetMarginTop(){return mMargins.top;}
+  const optional<float_t>& GetMarginBottom(){return mMargins.bottom;}
+  const optional<float_t>& GetMarginLeft(){return mMargins.left;}
+  const optional<float_t>& GetMarginRight(){return mMargins.right;}
+
+  const optional<int32_t>& GetPalette(){return mPalette;}
+
+  const optional<int16_t>& GetFillColor(){return mFill.color;}
+  const optional<int16_t>& GetFillStyle(){return mFill.style;}
+
+  const optional<int16_t>& GetFillColorFrame(){return mFrame.fillColor;}
+  const optional<int16_t>& GetFillStyleFrame(){return mFrame.fillStyle;}
+  const optional<int16_t>& GetLineColorFrame(){return mFrame.lineColor;}
+  const optional<int16_t>& GetLineStyleFrame(){return mFrame.lineStyle;}
+  const optional<float_t>& GetLineWidthFrame(){return mFrame.lineWidth;}
+
+  const optional<int16_t>& GetDefaultTextColor(){return mText.color;}
+  const optional<int16_t>& GetDefaultTextFont(){return mText.font;}
+  const optional<float_t>& GetDefaultTextSize(){return mText.size;}
+
+  const optional<float_t>& GetDefaultMarkerSize(){return mMarkerSize;}
+  const optional<float_t>& GetDefaultLineWidth(){return mLineWidth;}
+
+  
+  const optional<bool>& GetRedrawAxes(){return mRedrawAxes;}
+  const optional<string>& GetRefFunc() {return mRefFunc;}
+
+  
 private:
-  friend class PlotManager; // allow PlotManager access to private and protected members
-  string mName;
-  string mFigureGroup;
-  string mFigureCategory;
-  string mPlotStyle;
+  typedef struct{
+    optional<double_t> xlow;
+    optional<double_t> ylow;
+    optional<double_t> xup;
+    optional<double_t> yup;
+  } pad_position_t;
+  typedef struct{
+    optional<float_t> top;
+    optional<float_t> bottom;
+    optional<float_t> left;
+    optional<float_t> right;
+  } pad_margin_t;
+  typedef struct{
+    optional<int16_t> color;
+    optional<int16_t> style;
+  } pad_fill_t;
+  typedef struct{
+    optional<int16_t> fillColor;
+    optional<int16_t> fillStyle;
+    optional<int16_t> lineColor;
+    optional<int16_t> lineStyle;
+    optional<float_t> lineWidth;
+  } frame_t;
+  typedef struct{
+    optional<float_t> size;
+    optional<int16_t> font;
+    optional<int16_t> color;
+  } text_t;
+
   
-  unsigned short mSelectedPad; // currently selected pad
-  map<unsigned short, vector<shared_ptr<Data>>> mData; // mData[padID][dataID]
-  map<unsigned short, vector<shared_ptr<Box>>> mBoxes; // mBoxes[padID][boxID]
-  map<unsigned short, map<string, shared_ptr<Axis>>> mAxes; // padID, "x", axis properties
-  
-  map<unsigned short, string> mPadOptions; // mPadOptions[padID]
+  // properties
+  optional<string> mTitle;
+  optional<string> mOptions;
+  pad_position_t mPosition;
+  pad_margin_t mMargins;
+  pad_fill_t mFill;
+  frame_t mFrame;
+  text_t mText;
+  optional<float_t> mMarkerSize;
+  optional<float_t> mLineWidth;
+
+  optional<int32_t> mPalette;
+
+  optional<bool> mRedrawAxes;
+  optional<string> mRefFunc;
+
+  map<string, Axis> mAxes;
+  vector<shared_ptr<Data>>  mData;
+  vector<shared_ptr<Box>>   mBoxes;
 };
-//========================================================================================
+
+
+
 
 //****************************************************************************************
 /**
  * Representation of drawable data.
  */
 //****************************************************************************************
-class Plot::Data
+class Plot::Pad::Data
 {
 public:
-  // default constructor
-  Data(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions, double scale, pair<double, double> viewRangeX, pair<double, double> viewRangeY)
-  : mType("data"), mName(name), mInputIdentifier(inputIdentifier), mLable(lable), mColor(color), mStyle(style), mSize(size), mDrawingOptions(drawingOptions), mScale(scale), mViewRangeX(viewRangeX), mViewRangeY(viewRangeY)
-  {
-    // if input was specified further via inputIdentifier:some/path/in/file
-    auto subPathPos = inputIdentifier.find(":");
-    if(subPathPos != string::npos)
-    {
-      // prepend path to plot name
-      mName = inputIdentifier.substr(subPathPos+1) + "/" + name;
-      mInputIdentifier = inputIdentifier.substr(0, subPathPos);
-    }
-  }
-  // constructor to define entry from file
-  Data(ptree &dataTree){
-    try{
-      mType = dataTree.get<string>("type");
-      mName = dataTree.get<string>("name");
-      mInputIdentifier = dataTree.get<string>("inputIdentifier");
-      mLable = dataTree.get<string>("lable");
-      mColor = dataTree.get<int>("color");
-      mStyle = dataTree.get<int>("style");
-      mSize = dataTree.get<int>("size");
-      mDrawingOptions = dataTree.get<string>("drawingOptions");
-      mScale = dataTree.get<double>("scale");
-      mViewRangeX.first = dataTree.get<double>("viewRangeX_low");
-      mViewRangeX.second = dataTree.get<double>("viewRangeX_high");
-      mViewRangeY.first = dataTree.get<double>("viewRangeY_low");
-      mViewRangeY.second = dataTree.get<double>("viewRangeY_high");
-    }catch(...){
-      ERROR("Could not construct data from ptree.");
-    }
-  }
 
+  // default constructor for user
+  Data(string name, string inputIdentifier, string lable = "");
+  Data(ptree &dataTree);
+  // copy constructor
   Data(const Data& otherPlot) = default;
-  Data(Data& otherPlot) = default;
 
-  auto SetViewRangeXHigh(double viewXHigh) -> decltype(*this) {mViewRangeX.second = viewXHigh; return *this;}
-  auto SetViewRangeXLow(double viewXLow) -> decltype(*this) {mViewRangeX.first = viewXLow; return *this;}
-  auto SetViewRangeX(double viewXLow, double viewXHigh) -> decltype(*this) {mViewRangeX.first = viewXLow; mViewRangeX.second = viewXHigh; return *this;}
-
-  auto SetColor(int color) -> decltype(*this) {mColor = color; return *this;}
-  auto SetMarker(int marker) -> decltype(*this) {mStyle = marker; return *this;}
-
+  // user accessors
+  virtual auto SetRangeX(double_t min, double_t max) -> decltype(*this);
+  virtual auto SetMaxRangeX(double_t max) -> decltype(*this);
+  virtual auto SetMinRangeX(double_t min) -> decltype(*this);
+  virtual auto SetRangeY(double_t min, double_t max) -> decltype(*this);
+  virtual auto SetMaxRangeY(double_t max) -> decltype(*this);
+  virtual auto SetMinRangeY(double_t min) -> decltype(*this);
+  virtual auto SetLable(string lable) -> decltype(*this);
+  virtual auto SetOptions(string opions) -> decltype(*this);
+  virtual auto SetScale(double_t scale) -> decltype(*this);
+  virtual auto SetColor(int16_t color) -> decltype(*this);
+  virtual auto SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this);
+  virtual auto SetMarkerColor(int16_t color) -> decltype(*this);
+  virtual auto SetMarkerStyle(int16_t style) -> decltype(*this);
+  virtual auto SetMarkerSize(float_t size) -> decltype(*this);
+  virtual auto SetLine(int16_t color, int16_t style, float_t width) -> decltype(*this);
+  virtual auto SetLineColor(int16_t color) -> decltype(*this);
+  virtual auto SetLineStyle(int16_t style) -> decltype(*this);
+  virtual auto SetLineWidth(float_t width) -> decltype(*this);
+  virtual auto SetFill(int16_t color, int16_t style) -> decltype(*this);
+  virtual auto SetFillColor(int16_t color) -> decltype(*this);
+  virtual auto SetFillStyle(int16_t style) -> decltype(*this);
   
+  //auto SetOptions(dataStyle opions) -> decltype(*this){};
+    
+protected:
+  friend class PlotManager;
+  friend class PlotPainter;
+  friend class Plot;
+
+  virtual ptree GetPropertyTree();
+
+  void SetType(string type){mType = type;}
+
+  string GetUniqueName(){return mName + gNameGroupSeparator + mInputIdentifier;}
+
   const string& GetType(){return mType;}
   const string& GetName() {return mName;}
   const string& GetInputIdentifier(){return mInputIdentifier;}
   const string& GetLable(){return mLable;}
-  const int& GetColor(){return mColor;}
-  const int& GetStyle(){return mStyle;}
-  const int& GetSize(){return mSize;}
+    
+  const optional<int16_t>& GetMarkerColor(){return mMarker.color;}
+  const optional<int16_t>& GetMarkerStyle(){return mMarker.style;}
+  const optional<float_t>& GetMarkerSize(){return mMarker.size;}
+
+  const optional<int16_t>& GetLineColor(){return mLine.color;}
+  const optional<int16_t>& GetLineStyle(){return mLine.style;}
+  const optional<float_t>& GetLineWidth(){return mLine.size;}
+
+  const optional<int16_t>& GetFillColor(){return mFill.color;}
+  const optional<int16_t>& GetFillStyle(){return mFill.style;}
+
   const string& GetDrawingOptions(){return mDrawingOptions;}
-  void SetDrawingOptions(string drawingOptions){ mDrawingOptions = drawingOptions;}
-
-  const double& GetScaleFactor(){return mScale;}
-  const double& GetViewRangeXLow(){return mViewRangeX.first;}
-  const double& GetViewRangeXHigh(){return mViewRangeX.second;}
-  const double& GetViewRangeYLow(){return mViewRangeY.first;}
-  const double& GetViewRangeYHigh(){return mViewRangeY.second;}
-
-  string GetUniqueName(){return mName + gNameGroupSeparator + mInputIdentifier;}
-  virtual ptree GetPropertyTree(){
-    ptree dataTree;
-    dataTree.put("type", mType);
-    dataTree.put("name", mName);
-    dataTree.put("inputIdentifier", mInputIdentifier);
-    dataTree.put("lable", mLable);
-    dataTree.put("color", mColor);
-    dataTree.put("style", mStyle);
-    dataTree.put("size", mSize);
-    dataTree.put("drawingOptions", mDrawingOptions);
-    dataTree.put("scale", mScale);
-    dataTree.put("viewRangeX_low", mViewRangeX.first);
-    dataTree.put("viewRangeX_high", mViewRangeX.second);
-    dataTree.put("viewRangeY_low", mViewRangeY.first);
-    dataTree.put("viewRangeY_high", mViewRangeY.second);
-    return dataTree;
-  }
+  const optional<double_t>& GetScaleFactor(){return mScale;}
   
-protected:
-  void SetType(string type){mType = type;}
-  
+  const optional<double_t>& GetMinRangeX(){return mRangeX.min;}
+  const optional<double_t>& GetMaxRangeX(){return mRangeX.max;}
+  const optional<double_t>& GetMinRangeY(){return mRangeY.min;}
+  const optional<double_t>& GetMaxRangeY(){return mRangeY.max;}
+
 private:
-  string mType; // for introspection: "data", "ratio", "function", ...
+  Data() = default;
+  
+  string mType; // for introspection: "data" or "ratio"
   string mName;
   string mInputIdentifier;
   string mLable;
-  
-  int mColor;
-  int mStyle; // markerStyle or lineStyle
-  int mSize;  // markerSize or lineWidth
-  string mDrawingOptions; // "boxes", "hist", "band", "curve", "smooth" root: "text", "func" ...
-  double mScale;
-  pair<double, double> mViewRangeX;
-  pair<double, double> mViewRangeY;
+  string mDrawingOptions;
+  optional<double_t> mScale;
 
+  typedef struct{
+    optional<int16_t> color;
+    optional<int16_t> style;
+    optional<float_t> size;
+  } dataLayout_t;
+  
+  typedef struct{
+    optional<double_t> min;
+    optional<double_t> max;
+  } dataRange_t;
+
+  
+  dataLayout_t mMarker;
+  dataLayout_t mLine;
+  dataLayout_t mFill;
+
+  dataRange_t mRangeX;
+  dataRange_t mRangeY;
 };
 
 //****************************************************************************************
 /**
- * Representation of a ratio.
+ * Representation of a Ratio.
  */
 //****************************************************************************************
-class Plot::Ratio : public Plot::Data
+class Plot::Pad::Ratio : public Plot::Pad::Data
 {
 public:
-  Ratio(const Ratio& otherRatio) = default;
-  Ratio(Ratio& otherRatio) = default;
+  Ratio(string name, string inputIdentifier, string denomName, string denomInputIdentifier, string lable);
+  Ratio(ptree &dataTree);
+
   virtual ~Ratio() = default;
+  Ratio(const Ratio& otherRatio) = default;
+
+  auto SetDivideMethod(string divideMethod) -> decltype(*this);
+
+  // return correct type for the data accessors
+  virtual auto SetRangeX(double_t min, double_t max) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetRangeX(min, max));}
+  virtual auto SetMaxRangeX(double_t max) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetMaxRangeX(max));}
+  virtual auto SetMinRangeX(double_t min) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetMinRangeX(min));}
+  virtual auto SetRangeY(double_t min, double_t max) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetRangeY(min, max));}
+  virtual auto SetMaxRangeY(double_t max) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetMaxRangeY(max));}
+  virtual auto SetMinRangeY(double_t min) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetMinRangeY(min));}
+  virtual auto SetLable(string lable) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetLable(lable));}
+  virtual auto SetOptions(string opions) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetOptions(opions));}
+  virtual auto SetScale(double_t scale) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetScale(scale));}
+  virtual auto SetColor(int16_t color) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetColor(color));}
+  virtual auto SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetMarker(color, style, size));}
+  virtual auto SetMarkerColor(int16_t color) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetMarkerColor(color));}
+  virtual auto SetMarkerStyle(int16_t style) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetMarkerStyle(style));}
+  virtual auto SetMarkerSize(float_t size) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetMarkerSize(size));}
+  virtual auto SetLine(int16_t color, int16_t style, float_t width) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetLine(color, style, width));}
+  virtual auto SetLineColor(int16_t color) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetLineColor(color));}
+  virtual auto SetLineStyle(int16_t style) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetLineStyle(style));}
+  virtual auto SetLineWidth(float_t width) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetLineWidth(width));}
+  virtual auto SetFill(int16_t color, int16_t style) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetFill(color, style));}
+  virtual auto SetFillColor(int16_t color) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetFillColor(color));}
+  virtual auto SetFillStyle(int16_t style) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetFillStyle(style));}
   
-  Ratio(string name, string inputIdentifier, string denomName, string denomInputIdentifier, string lable, int color, int style, int size, string drawingOptions, string divideMethod, double scale, pair<double, double> viewRangeX, pair<double, double> viewRangeY)
-  : Data(name, inputIdentifier, lable, color, style, size, drawingOptions, scale, viewRangeX, viewRangeY), mDenomName(denomName), mDenomInputIdentifier(denomInputIdentifier), mDivideMethod(divideMethod)
-  {
-    SetType("ratio");
-  }
+protected:
+  friend class PlotManager;
+  friend class PlotPainter;
+  friend class Plot;
+
+  ptree GetPropertyTree();
   string GetDenomIdentifier(){return mDenomInputIdentifier;}
   string GetDenomName(){return mDenomName;}
   string GetUniqueNameDenom(){return mDenomName + gNameGroupSeparator + mDenomInputIdentifier;}
-  ptree GetPropertyTree(){
-    ptree dataTree = Data::GetPropertyTree();
-    dataTree.put("denomName", mDenomName);
-    dataTree.put("denomInputID", mDenomInputIdentifier);
-    dataTree.put("divideMethod", mDivideMethod);
-    return dataTree;
-  }
-  
-  // constructor to define entry from file
-  Ratio(ptree &dataTree) : Data(dataTree){
-    try{
-      mDenomName = dataTree.get<string>("denomName");
-      mDenomInputIdentifier = dataTree.get<string>("denomInputID");
-      mDivideMethod = dataTree.get<string>("divideMethod");
-    }catch(...){
-      ERROR("Could not construct ratio from ptree.");
-    }
-  }
+
   
 private:
   string mDenomName;
@@ -261,106 +467,121 @@ private:
   string mDivideMethod;  // "tspline3", "binomial", etc.
 };
 
-//****************************************************************************************
-/**
- * Representation of a function.
- */
-//****************************************************************************************
-/*
-class Plot::Function : public Plot::Data
-{
-public:
-  Function(const Function& otherFunction) = default;
-  Function(Function& otherFunction) = default;
-  
-  Function(string name, string inputIdentifier, string lable, int color, int style, int size, string drawingOptions)
-  : Data(name, inputIdentifier, lable, color, style, size, drawingOptions), mFormula("")
-  {
-    SetType("func");
-  }
-  Function(string functionName, string formula, int xMin, int xMax, string lable, int color, int style, int size, string drawingOptions)  : Data(functionName, "", lable, color, style, size, drawingOptions), mFormula(formula)
-  
-  {
-    SetType("userFunc");
-    // CAREFUL this has to be handled different by manager!!
-  }
-  
-  ptree GetPropertyTree(){
-    ptree dataTree = Data::GetPropertyTree();
-    dataTree.put("fromula", mFormula);
-    return dataTree;
-  }
-  
-  // constructor to define entry from file
-  Function(ptree &dataTree) : Data(dataTree){
-    try{
-      mFormula = dataTree.get<string>("formula");
-    }catch(...){
-      ERROR("Could not construct function from ptree.");
-    }
-  }
-  
-private:
-  string mFormula;
-  // TODO: option to fit to loaded data? what about ratios, that exist only in manager?
-};
-*/
 
 //****************************************************************************************
 /**
  * Representation of an axis.
  */
 //****************************************************************************************
-class Plot::Axis {
+class Plot::Pad::Axis {
 public:
+  
+  Axis() =  default;
   Axis(const Axis& otherAxis) = default;
-  Axis(Axis& otherAxis) = default;
+
+  Axis(string axisName);
+  Axis(ptree &axisTree);
   
-  Axis(): mName("dummy"), mTitle(""), mRange(std::make_pair(0,0)){}
-  Axis(string axisName, string title) : mName(axisName), mTitle(title), mRange(std::make_pair(0,0)), mNumTicks(0)
-  {
-    
-  }
-  Axis(string axisName, pair<double, double> range) : mName(axisName), mTitle(""), mRange(range), mNumTicks(0)
-  {
-    
-  }
-  const string& GetTitle() {return mTitle;}
-  void SetAxisTitle(string title) {mTitle = title;}
-  void SetAxisRange(double low, double high) {mRange = std::make_pair(low, high);}
-  pair<double, double>& GetAxisRange() {return mRange;}
+  void operator+=(const Axis& axis);
+
+
+  auto SetTitle(string title) ->decltype(*this) {mTitle = title; return *this;}
+  auto SetRange(double_t min, double_t max) ->decltype(*this) {mRange = {min, max}; return *this;}
+  auto SetMaxRange(double_t max) ->decltype(*this) {mRange.max = max; return *this;}
+  auto SetMinRange(double_t min) ->decltype(*this) {mRange.min = min; return *this;}
+  auto SetColor(int16_t color) ->decltype(*this) {mAxisColor = color; mLableProperties.color = color; mTitleProperties.color = color; return *this;}
+  auto SetAxisColor(int16_t color) ->decltype(*this) {mAxisColor = color; return *this;}
+  auto SetNumDivisions(int32_t numDivisions) ->decltype(*this) {mNumDivisions = numDivisions; return *this;}
+  auto SetMaxDigits(int32_t maxDigtis) ->decltype(*this) {mMaxDigits = maxDigtis; return *this;}
+
+  auto SetTickLength(float_t tickLength) ->decltype(*this) {mTickLength = tickLength; return *this;}
+
+  auto SetTitleFont(int16_t font) ->decltype(*this) {mTitleProperties.font = font; return *this;}
+  auto SetLableFont(int16_t font) ->decltype(*this) {mLableProperties.font = font; return *this;}
+
+  auto SetTitleSize(float_t size) ->decltype(*this) {mTitleProperties.size = size; return *this;}
+  auto SetLableSize(float_t size) ->decltype(*this) {mLableProperties.size = size; return *this;}
+
+  auto SetTitleColor(int16_t color) ->decltype(*this) {mTitleProperties.color = color; return *this;}
+  auto SetLableColor(int16_t color) ->decltype(*this) {mLableProperties.color = color; return *this;}
+
+  auto SetTitleOffset(float_t offset) ->decltype(*this) {mTitleProperties.offset = offset; return *this;}
+  auto SetLableOffset(float_t offset) ->decltype(*this) {mLableProperties.offset = offset; return *this;}
+
+  auto SetTitleCenter(bool center = true) ->decltype(*this) {mTitleProperties.center = center; return *this;}
+  auto SetLableCenter(bool center = true) ->decltype(*this) {mLableProperties.center = center; return *this;}
+
+  auto SetLog(bool isLog = true) ->decltype(*this) {mIsLog = isLog; return *this;}
+  auto SetGrid(bool isGrid = true) ->decltype(*this) {mIsGrid = isGrid; return *this;}
+
   
-  bool IsRangeSet(){return !((mRange.first == 0) && (mRange.second == 0));}
-  bool IsTitleSet(){return (!mTitle.empty());}
+protected:
+  friend class PlotManager;
+  friend class PlotPainter;
+  friend class Plot;
+
+  ptree GetPropertyTree();
   
-  ptree GetPropertyTree(){
-    ptree axisTree;
-    axisTree.put("name", mName);
-    axisTree.put("title", mTitle);
-    axisTree.put("range_low", mRange.first);
-    axisTree.put("range_high", mRange.second);
-    axisTree.put("numTicks", mNumTicks);
-    return axisTree;
-  }
-  
-  // constructor to define entry from file
-  Axis(ptree &axisTree){
-    try{
-      mName = axisTree.get<string>("name");
-      mTitle = axisTree.get<string>("title");
-      mRange.first = axisTree.get<double>("range_low");
-      mRange.second = axisTree.get<double>("range_high");
-      mNumTicks = axisTree.get<int>("numTicks");
-    }catch(...){
-      ERROR("Could not construct axis from ptree.");
-    }
-  }
+  optional<double_t> GetMinRange() {return mRange.min;}
+  optional<double_t> GetMaxRange() {return mRange.max;}
+
+
+  const optional<float_t>& GetTickLength() {return mTickLength;}
+  const optional<int32_t>& GetNumDivisions() {return mNumDivisions;}
+  const optional<int32_t>& GetMaxDigits() {return mMaxDigits;}
+
+  const optional<int16_t>& GetAxisColor()   {return mAxisColor;}
+  const optional<string>& GetTitle() {return mTitle;}
+
+  const optional<int16_t>& GetTitleFont() {return mTitleProperties.font;}
+  const optional<int16_t>& GetLableFont() {return mLableProperties.font;}
+
+  const optional<float_t>& GetTitleSize() {return mTitleProperties.size;}
+  const optional<float_t>& GetLableSize() {return mLableProperties.size;}
+
+  const optional<int16_t>& GetTitleColor() {return mTitleProperties.color;}
+  const optional<int16_t>& GetLableColor() {return mLableProperties.color;}
+
+  const optional<float_t>& GetTitleOffset() {return mTitleProperties.offset;}
+  const optional<float_t>& GetLableOffset() {return mLableProperties.offset;}
+
+  const optional<bool>& GetTitleCenter() {return mTitleProperties.center;}
+  const optional<bool>& GetLableCenter() {return mLableProperties.center;}
+
+  const optional<bool>& GetLog() {return mIsLog;}
+  const optional<bool>& GetGrid() {return mIsGrid;}
+
+
   
 private:
+  
+  typedef struct{
+    optional<int16_t> font;
+    optional<float_t> size;
+    optional<int16_t> color;
+    optional<float_t> offset;
+    optional<bool> center;
+  } axisTextProperties_t;
+  
+  typedef struct{
+    optional<double_t> min;
+    optional<double_t> max;
+  } axisRange_t;
+
   string mName;
-  string mTitle;
-  pair<double, double> mRange;
-  int mNumTicks;
+  axisRange_t mRange;
+  optional<string>  mTitle;
+  optional<int32_t> mNumDivisions;
+  optional<int32_t> mMaxDigits;
+  optional<float_t> mTickLength;
+  optional<int16_t> mAxisColor;
+
+  optional<bool> mIsLog;
+  optional<bool> mIsGrid;
+
+  axisTextProperties_t mTitleProperties;
+  axisTextProperties_t mLableProperties;
+
 };
 
 
@@ -369,7 +590,7 @@ private:
  * Representation of a box.
  */
 //****************************************************************************************
-class Plot::Box {
+class Plot::Pad::Box {
 public:
   Box(const Box& otherBox) = default;
   Box(Box& otherBox) = default;
@@ -439,7 +660,7 @@ private:
  * Representation of a text box.
  */
 //****************************************************************************************
-class Plot::TextBox : public Plot::Box {
+class Plot::Pad::TextBox : public Plot::Pad::Box {
 public:
   TextBox(const TextBox& otherTextBox) = default;
   TextBox(TextBox& otherTextBox) = default;
@@ -483,7 +704,7 @@ private:
  * Representation of a legend box.
  */
 //****************************************************************************************
-class Plot::LegendBox : public Plot::Box {
+class Plot::Pad::LegendBox : public Plot::Pad::Box {
 public:
   LegendBox(const LegendBox& otherLegendBox) = default;
   LegendBox(LegendBox& otherLegendBox) = default;

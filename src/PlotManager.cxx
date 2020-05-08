@@ -36,7 +36,6 @@ PlotManager::PlotManager() : mApp("MainApp", 0, 0)
   mOutputFileName = "ResultPlots.root";
   
   mUseUniquePlotNames = false;
-  DefineDefaultPlottingStyles();
   gErrorIgnoreLevel = kWarning;
 }
 
@@ -165,8 +164,22 @@ void PlotManager::LoadInputDataFiles(string configFileName)
  */
 //****************************************************************************************
 void PlotManager::AddPlot(Plot& plot) {
+  if(plot.GetFigureGroup() == "TEMPLATES") ERROR("You cannot use reserved group name TEMPLATES!");
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(), [plot](Plot& curPlot) mutable { return curPlot.GetUniqueName() == plot.GetUniqueName(); } ), mPlots.end());
   mPlots.push_back(std::move(plot));
+}
+
+
+//****************************************************************************************
+/**
+ * Add template for plots, that share some common properties.
+ */
+//****************************************************************************************
+void PlotManager::AddPlotTemplate(Plot& plotTemplate)
+{
+  plotTemplate.SetFigureGroup("TEMPLATES");
+  mPlotTemplates.erase(std::remove_if(mPlotTemplates.begin(), mPlotTemplates.end(), [plotTemplate](Plot& curPlotTemplate) mutable { return curPlotTemplate.GetUniqueName() == plotTemplate.GetUniqueName(); } ), mPlotTemplates.end());
+  mPlotTemplates.push_back(std::move(plotTemplate));
 }
 
 //****************************************************************************************
@@ -177,23 +190,25 @@ void PlotManager::AddPlot(Plot& plot) {
 void PlotManager::DumpPlots(string plotFileName, string figureGroup, vector<string> plotNames)
 {
   ptree plotTree;
-  for(auto& plot : mPlots){
-    if(figureGroup != "")
-    {
-      if(plot.GetFigureGroup() != figureGroup) continue;
-      if(!plotNames.empty()){
-        bool found = false;
-        for(auto& plotName : plotNames)
-        {
-          if(plotName == plot.GetName()) found = true;
+  for(vector<Plot>& plots : {std::ref(mPlotTemplates), std::ref(mPlots)}){
+    for(Plot& plot : plots){
+      if(figureGroup != "")
+      {
+        if(plot.GetFigureGroup() != figureGroup) continue;
+        if(!plotNames.empty()){
+          bool found = false;
+          for(auto& plotName : plotNames)
+          {
+            if(plotName == plot.GetName()) found = true;
+          }
+          if(!found) continue;
         }
-        if(!found) continue;
       }
+      string displayedName = plot.GetUniqueName();
+      std::replace(displayedName.begin(),displayedName.end(), '.', '_');
+      std::replace(displayedName.begin(),displayedName.end(), '/', '|');
+      plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName), plot.GetPropetyTree());
     }
-    string displayedName = plot.GetUniqueName();
-    std::replace(displayedName.begin(),displayedName.end(), '.', '_');
-    std::replace(displayedName.begin(),displayedName.end(), '/', '|');
-    plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName), plot.GetPropetyTree());
   }
   boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
   write_xml(gSystem->ExpandPathName(plotFileName.c_str()), plotTree, std::locale(), settings);
@@ -232,16 +247,6 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
     mPlotLedger.erase(plot.GetUniqueName());
   }
   
-  bool isPlotStyleBooked = false;
-  for(auto& plotStyle : mPlotStyles)
-  {
-    if(plotStyle.GetName() == plot.GetPlotStyle()) isPlotStyleBooked = true;
-  }
-  if(!isPlotStyleBooked)
-  {
-    ERROR("PlotStyle {} is not booked. Cannot create plot {}.", plot.GetPlotStyle(), plot.GetUniqueName());
-    return;
-  }
   if(plot.GetFigureGroup() == ""){
     ERROR("No figure gropu was specified.");
     return;
@@ -250,9 +255,22 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
   if(outputMode.find("file") != string::npos){
     mSaveToRootFile = true;
   }
-  
-  PlotStyle& plotStyle = GetPlotStyle(plot.GetPlotStyle());
-  shared_ptr<TCanvas> canvas = PlottingTools::GeneratePlot(plot, plotStyle, mDataLedger);
+  Plot fullPlot = plot;
+  if(plot.GetPlotTemplateName())
+  {
+    string plotTemplateName = *plot.GetPlotTemplateName();
+    auto iterator = std::find_if(mPlotTemplates.begin(), mPlotTemplates.end(), [&](Plot& plotTemplate){return plotTemplate.GetName() == plotTemplateName;});
+    if(iterator != mPlotTemplates.end())
+    {
+      fullPlot = *iterator + plot;
+    }
+    else
+    {
+      WARNING("Could not find plot template named {}.", plotTemplateName);
+    }
+  }
+  PlotPainter painter;
+  shared_ptr<TCanvas> canvas = painter.GeneratePlot(fullPlot, mDataLedger);
   if(!canvas) return;
   LOG("Created plot \"{}\".", canvas->GetName());
   
@@ -348,9 +366,9 @@ void PlotManager::CreatePlots(string figureGroup, string figureCategory, vector<
     selectedPlots.push_back(&plot);
     
     // check which input data are needed for plot creation and accumulate in requiredData map
-    for(auto& padData : plot.GetData())
+    for(auto& [padID, pad] : plot.GetPads())
     {
-      for(auto& data : padData.second)
+      for(auto& data : pad.GetData())
       {
         // if this data entry is not loaded already, add it to required data
         if(mLoadedData[GetNameRegisterID(data->GetInputIdentifier())].find(GetNameRegisterID(data->GetName())) == mLoadedData[GetNameRegisterID(data->GetInputIdentifier())].end())
@@ -358,9 +376,9 @@ void PlotManager::CreatePlots(string figureGroup, string figureCategory, vector<
           requiredData[GetNameRegisterID(data->GetInputIdentifier())].insert(GetNameRegisterID(data->GetName()));
         }
         // for ratios also do the same for denominator
-        if(data->GetType() == "ratio" && mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomIdentifier())].find(GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomName())) == mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomIdentifier())].end())
+        if(data->GetType() == "ratio" && mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomIdentifier())].find(GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomName())) == mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomIdentifier())].end())
         {
-          requiredData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomIdentifier())].insert(GetNameRegisterID(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetDenomName()));
+          requiredData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomIdentifier())].insert(GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomName()));
         }
       }
     }
@@ -456,9 +474,10 @@ void PlotManager::ExtractPlotsFromFile(string plotFileName, vector<string> figur
   for(auto& plotGroupTree : inputTree){
     // first filter by group
     string groupIdentifier = plotGroupTree.first.substr(string("GROUP::").size());
+    bool isTemplate = (groupIdentifier == "TEMPLATES");
     if(std::find_if(groupCategoryRegex.begin(), groupCategoryRegex.end(), [groupIdentifier](std::pair<std::regex, std::regex>& curGroupCatRegex){return std::regex_match(groupIdentifier, curGroupCatRegex.first);}) == groupCategoryRegex.end())
     {
-      continue;
+      if(!isTemplate) continue;
     }
 
     for(auto& plotTree : plotGroupTree.second){
@@ -468,13 +487,21 @@ void PlotManager::ExtractPlotsFromFile(string plotFileName, vector<string> figur
       
       if(std::find_if(groupCategoryRegex.begin(), groupCategoryRegex.end(), [figureGroup, figureCategory](std::pair<std::regex, std::regex>& curGroupCatRegex){return std::regex_match(figureGroup, curGroupCatRegex.first) && std::regex_match(figureCategory, curGroupCatRegex.second);}) == groupCategoryRegex.end())
       {
-        continue;
+        if(!isTemplate) continue;
       }
 
       if(std::find_if(plotNamesRegex.begin(), plotNamesRegex.end(), [plotName](std::regex& curPlotNameRegex){return std::regex_match(plotName, curPlotNameRegex);}) == plotNamesRegex.end())
       {
+        if(!isTemplate) continue;
+      }
+      
+      if(isTemplate)
+      {
+        Plot plot(plotTree.second);
+        AddPlotTemplate(plot);
         continue;
       }
+
       nFoundPlots++;
       if(isSearchRequest)
       {
@@ -823,39 +850,17 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
 
 //****************************************************************************************
 /**
- * Print manager status.
- */
-//****************************************************************************************
-void PlotManager::PrintStatus()
-{
-  INFO("Printing manager status is not implemented yet.");
-}
-
-
-//****************************************************************************************
-/**
- * Print available plot styles.
- */
-//****************************************************************************************
-void PlotManager::ListPlotStyles()
-{
-  INFO("Listing PlotStyles is not implemented yet.");
-}
-
-//****************************************************************************************
-/**
- * Internal function to check if all input histograms are available to create the plot.
- * @param plot: reference to plot template
+ * Internal function to check if all input data are available to create the plot.
  */
 //****************************************************************************************
 bool PlotManager::IsPlotPossible(Plot &plot)
 {
-  for(auto& padData : plot.GetData())
-    for(auto data : padData.second)
+  for(auto& [padID, pad] : plot.GetPads())
+    for(auto data : pad.GetData())
     {
       vector<string> dataNames;
       dataNames.push_back(data->GetUniqueName());
-      if(data->GetType() == "ratio") dataNames.push_back(std::dynamic_pointer_cast<Plot::Ratio>(data)->GetUniqueNameDenom());
+      if(data->GetType() == "ratio") dataNames.push_back(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetUniqueNameDenom());
       
       for(auto& dataName : dataNames)
       {
@@ -864,125 +869,6 @@ bool PlotManager::IsPlotPossible(Plot &plot)
       }
     }
   return true;
-}
-
-
-void PlotManager::DefineDefaultPlottingStyles()
-{
-  vector<int> goodColors =
-  { kBlack, kBlue+1, kRed+2, kGreen+2, kTeal-7, kCyan+2,
-    kMagenta-4, kGreen+3, kOrange+1, kViolet-3, kPink+3,
-    kOrange+2, kYellow+3, kGray+2
-  };
-  vector<int> goodMarkers =
-  { kFullCircle, kFullSquare, kFullDiamond, kFullCross,
-    kFullStar, kOpenCircle, kOpenSquare, kOpenCross,
-    kOpenDiamond, kOpenStar
-  };
-  vector<int> goodMarkersFull =
-  { kFullCircle, kFullSquare, kFullDiamond, kFullCross,
-    kFullStar, kFullCircle, kFullCircle, kFullCircle,
-    kFullCircle, kFullCircle, kFullCircle
-  };
-  vector<int> goodMarkersOpen =
-  { kOpenCircle, kOpenSquare, kOpenDiamond, kOpenCross,
-    kOpenStar, kOpenCircle, kOpenCircle, kOpenCircle,
-    kOpenCircle, kOpenCircle, kOpenCircle
-  };
-  
-  {// Definition of "default" style
-    PlotStyle myStyle("default");
-    
-    myStyle.SetFromat(710, 1);
-    myStyle.SetFixedAspectRatio(true);
-    myStyle.SetTransparent();
-    //myStyle.SetFillColor(kGreen);
-
-    //myStyle.LinkAxes("X", {1,2});
-    //      myStyle.SetDefault2DStyle("SURF3");
-    //      myStyle.SetDefault2DStyle("COLZ CONT3");
-    myStyle.SetDefault2DStyle("COLZ");
-    
-    myStyle.SetTextFont(4); // allowed font values: 1-15
-    myStyle.SetLableFont(4);
-    myStyle.SetTitleFont(4);
-    myStyle.SetTextSize(24); // in pixels
-    myStyle.SetLableSizeScaling(1.0); // make this axis and pad dependent??
-    myStyle.SetTitleSizeScaling(1.2);
-    
-    myStyle.SetMarkerSize(1.2);
-    myStyle.SetMarkerSizeThick(2.2);
-    myStyle.SetLineWidth(1.0);
-    myStyle.SetLineWidthThick(2.0);
-    myStyle.SetPalette(kBird);
-    myStyle.SetTimestampPosition(0.05, 0.02);
-    myStyle.SetDrawTimestamps(false);
-    
-    myStyle.SetDefaultColors(goodColors);
-    myStyle.SetDefaultMarkers(goodMarkers);
-    myStyle.SetDefaultMarkersFull(goodMarkersFull);
-    myStyle.SetDefaultMarkersOpen(goodMarkersOpen);
-    
-    map<unsigned short, PlotStyle::PadStyle> pads;
-    pads[1] = PlotStyle::PadStyle("");
-    pads[1].SetCorners({0,0}, {1.0,1.0});
-    pads[1].SetMargins({0.07, 0.14, 0.12, 0.07});
-    pads[1].SetTitleOffsets({1.1, 1.4, 1.0});
-    myStyle.AddPadStyles(pads);
-    mPlotStyles.push_back(std::move(myStyle)); // maybe AddPlotStyle(PlotStyle&)
-  }
-  {// Definition of "default" style
-    PlotStyle myStyle("default ratio");
-    myStyle.LinkAxes("X", {1,2}); // scale x axis in data and ratio in same way automatically
-
-    myStyle.SetFromat(710, 1.0);
-    myStyle.SetFixedAspectRatio(true);
-    myStyle.SetTransparent();
-
-    myStyle.LinkAxes("X", {1,2}); // scale x axis in data and ratio in same way automatically
-
-    myStyle.SetTextFont(4); // allowed font values: 1-15
-    myStyle.SetLableFont(4);
-    myStyle.SetTitleFont(4);
-    myStyle.SetTextSize(24); // in pixels
-    myStyle.SetLableSizeScaling(1.0); // make this axis and pad dependent??
-    myStyle.SetTitleSizeScaling(1.2);
-    
-    myStyle.SetMarkerSize(1.2);
-    myStyle.SetMarkerSizeThick(2.2);
-    myStyle.SetLineWidth(1.0);
-    myStyle.SetLineWidthThick(2.0);
-    myStyle.SetPalette(kBird);
-    myStyle.SetTimestampPosition(0.05, 0.02);
-    myStyle.SetDrawTimestamps(false);
-    
-    myStyle.SetDefaultColors(goodColors);
-    myStyle.SetDefaultMarkers(goodMarkers);
-    myStyle.SetDefaultMarkersFull(goodMarkersFull);
-    myStyle.SetDefaultMarkersOpen(goodMarkersOpen);
-    
-    map<unsigned short, PlotStyle::PadStyle> pads;
-    pads[1] = PlotStyle::PadStyle("");
-    pads[1].SetCorners({0.0,0.28}, {1.0,1.0});
-    pads[1].SetMargins({0.05, 0.0, 0.14, 0.05});
-    pads[1].SetTitleOffsets({3.1, 1.5, 1.0});
-    pads[2] = PlotStyle::PadStyle("");
-    pads[2].SetCorners({0.0,0.0}, {1.0,0.28});
-    pads[2].SetMargins({0.015, 0.4, 0.14, 0.05});
-    pads[2].SetTitleOffsets({4.1, 1.5, 1.0});
-    myStyle.AddPadStyles(pads);
-    mPlotStyles.push_back(std::move(myStyle)); // maybe AddPlotStyle(PlotStyle&)
-  }
-}
-
-PlotStyle& PlotManager::GetPlotStyle(string plotStyleName)
-{
-  for(auto& plotStyle : mPlotStyles)
-  {
-    if(plotStyle.GetName() == plotStyleName) return plotStyle;
-  }
-  ERROR("PlotStyle named {} not found.", plotStyleName);
-  return GetPlotStyle("default"); // if style not found return default style
 }
 
 } // end namespace PlottingFramework

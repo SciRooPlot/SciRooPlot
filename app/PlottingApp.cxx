@@ -180,9 +180,9 @@ int main(int argc, char *argv[])
       inputIdentifier = "browse";
     }
     Plot plot("plot", inputIdentifier);
-    for(auto& histName : plotNamesVector)
-      plot.AddData(histName, inputIdentifier, "<name>");
-    plot.AddLegend();
+    for(auto& dataName : plotNamesVector)
+      plot[1].AddData({dataName, inputIdentifier}, "<name>");
+    plot[1].AddLegend();
     plotManager.AddPlot(plot);
     plotManager.CreatePlots(inputIdentifier, "", {}, "interactive");
   }

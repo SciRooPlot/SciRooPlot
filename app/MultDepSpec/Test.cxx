@@ -18,47 +18,71 @@
 
 #include "MultDepSpec.h"
 
+//****************************************************************************************
+/**
+ * Playground for testing.
+ */
+//****************************************************************************************
 void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
 {
   string plotGroup = "test";
 
-  
   { // -----------------------------------------------------------------------
-    string plotName = "test2";
-    Plot plot(plotName, plotGroup, "default");
-    //plot[1].SetPadOptions("logY");
-    plot[1].AddData("func", "InputTest").SetViewRangeXHigh(35).SetColor(kRed+1);
-    plot[1].AddData("momentUnfolded1", "pp_5TeV").SetViewRangeXHigh(50).SetMarker(kOpenSquare);
-    plot[1].AddData("meanPt", "Models:epos");
-    plot[1].AddData("momentUnfolded1", "pp_13TeV");
-    //plot[2].AddRatio("momentUnfolded1", "pp_13TeV", "momentUnfolded1", "pp_5TeV");
-    //plot[2].SetAxisRange("Y", 0.9, 1.1);
-    plot[1].SetAxisTitle("X", "Mult");
-    plot[1].SetAxisTitle("Y", "Something");
-    plot[1].SetAxisRange("X", 10, 70);
+    string plotName = "test1d";
+    Plot plot(plotName, plotGroup, "1d");
 
-    //plot[2].AddData("momentUnfolded1", "pp_5TeV").Divide("momentUnfolded1", "pp_5TeV").SetDivideMethod("binomial");
-    //plot[1].AddData("momentUnfolded1", "pp_5TeV") / ("momentUnfolded1", "pp_5TeV");
+    plot[1].AddData({"momentUnfolded1", "pPb_5TeV"}, "pPb, 5 TeV")
+    .SetMaxRangeX(60);
+
+    plot[1].AddData({"momentUnfolded1", "pp_2TeV"}, "2 TeV")
+    .SetMaxRangeX(40).SetMarkerColor(kRed);
+
+    plot[1].AddData({"momentUnfolded1", "pp_5TeV"}, "5 TeV")
+    .SetMaxRangeX(60);
+    
+    plot[1].AddData({"momentUnfolded1", "pp_7TeV"}, "7 TeV")
+    .SetMaxRangeX(60);
+    
+    plot[1].AddData({"momentUnfolded1", "pp_13TeV"}, "13 TeV")
+    .SetMaxRangeX(70);
+
+    plot[1].AddLegend();
+    plot[1]["Y"].SetRange(0.45, 0.85);
+    plot[1]["X"].SetMaxRange(70).SetTitle("Multiplicity");
 
     plotManager.AddPlot(plot);
+
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
-    string plotName = "test";
-    Plot plot(plotName, plotGroup);
-    plot[1].SetPadOptions("logZ logY");
-    plot[1].AddData("multPtUnfolded", "pp_13TeV").SetViewRangeXHigh(60);
-    plot[1].AddData("multPtUnfolded", "pp_5TeV").SetViewRangeXHigh(50).SetViewRangeXLow(40);
-    plot[1].SetAxisTitle("X", "My X axis title");
-    plot[1].SetAxisTitle("Y", "My Y axis title");
-    plot[1].SetAxisTitle("Z", "My Z axis title");
-    plot[1].SetAxisRange("X", 10, 70);
-    plot[1].SetAxisRange("Y", .15, 5);
-    plot[1].SetAxisRange("Z", 1e-4, 1e-2);
+    string plotName = "test1d_ratio";
+    Plot plot(plotName, plotGroup, "1d_ratio");
+
+    plot[1].AddData({"momentUnfolded1", "pp_5TeV"}, "5 TeV")
+    .SetMarker(kRed, kFullCircle, 1.2).SetMaxRangeX(60);
+    
+    plot[1].AddData({"momentUnfolded1", "pp_13TeV"}, "13 TeV")
+    .SetMarker(kBlack, kFullCircle, 1.2).SetMaxRangeX(70);
+
+    plot[2].AddRatio({"momentUnfolded1", "pp_13TeV"}, {"momentUnfolded1", "pp_5TeV"}, "ratio").SetMarker(kRed, kFullCircle, 1.2).SetMaxRangeX(60);
+
+    plot[1].AddLegend();
+
+    plot[0]["X"].SetRange(1, 70);
 
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
+  
+  { // -----------------------------------------------------------------------
+    string plotName = "test2d";
+    Plot plot(plotName, plotGroup, "2d");
+    
+    plot[1].AddData({"multPtUnfolded", "pp_13TeV"}).SetOptions("COLZ");
+    plot[1]["Z"].SetRange(1e-4, 1e-2).SetLog();
+    plot[1]["Y"].SetRange(.15, 4).SetLog();
 
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
   
   
   
@@ -72,9 +96,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
   
   
   
-  
-  
-  
+  /*
   
   // hard probes preliminaries:
   
@@ -88,7 +110,8 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
      plot[1].AddFrame("momentUnfolded1", PbPb_5TeV[data].input);
      
      //p-p
-     plot[1].AddData("momentUnfolded1", pp_5TeV[data].input, "",
+     plot[1]
+     .AddData("momentUnfolded1", pp_5TeV[data].input, "",
                      pp_5TeV[data].marker, pp_5TeV[data].color, "", pp_5TeV[data].mult);
      plot[1].AddData("momentUnfolded1_Syst", pp_5TeV[data].input, "pp",
                      pp_5TeV[data].marker, pp_5TeV[data].color, "boxes", pp_5TeV[data].mult);
@@ -466,4 +489,6 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     plot[1].AddLegend(0.2, 0.9, "");
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
+   
+   */
 }

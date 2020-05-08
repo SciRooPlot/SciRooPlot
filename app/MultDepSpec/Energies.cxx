@@ -20,6 +20,7 @@
 
 void MultDepSpec::DefineEnergyPlots(PlotManager& plotManager)
 {
+  /*
   string plotGroup = "energy_comparison";
   string energyLable = alice + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
   string energyLablePrel = alicePrel + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
@@ -393,4 +394,5 @@ void MultDepSpec::DefineEnergyPlots(PlotManager& plotManager)
     plot[1].AddText(0.4, 0.5, energyLableMC);
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
+   */
 }

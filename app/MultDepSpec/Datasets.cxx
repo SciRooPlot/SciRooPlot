@@ -20,6 +20,7 @@
 
 void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotManager)
 {
+  /*
   string erg = "0 TeV";
   string colSys = "?-?";
   string plotName;
@@ -844,4 +845,6 @@ void MultDepSpec::DefineDatasetPlots(string& dataSet, PlotManager& plotManager)
       plotManager.AddPlot(plot);
     }
   } // -----------------------------------------------------------------------
+   
+   */
 }
