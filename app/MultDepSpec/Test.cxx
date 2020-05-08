@@ -96,7 +96,6 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
   
   
   
-  /*
   
   // hard probes preliminaries:
   
@@ -106,50 +105,92 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
    { // -----------------------------------------------------------------------
      // compare meanPt in all systems
      string plotName = "meanPt_systems";
-     Plot plot(plotName, "preliminary");
-     plot[1].AddFrame("momentUnfolded1", PbPb_5TeV[data].input);
+     Plot plot(plotName, "preliminary", "1d");
+     plot[1].AddFrame({"momentUnfolded1", PbPb_5TeV[data].input});
      
      //p-p
-     plot[1]
-     .AddData("momentUnfolded1", pp_5TeV[data].input, "",
-                     pp_5TeV[data].marker, pp_5TeV[data].color, "", pp_5TeV[data].mult);
-     plot[1].AddData("momentUnfolded1_Syst", pp_5TeV[data].input, "pp",
-                     pp_5TeV[data].marker, pp_5TeV[data].color, "boxes", pp_5TeV[data].mult);
-     plot[1].AddData("meanPt", pp_5TeV[epos_lhc].input, "",
-                     pp_5TeV[epos_lhc].marker, pp_5TeV[epos_lhc].color, "band", pp_5TeV[epos_lhc].mult);
-     plot[1].AddData("meanPt", pp_5TeV[pythia].input, "",
-                     pp_5TeV[pythia].marker, pp_5TeV[pythia].color, "band", pp_5TeV[pythia].mult);
+     plot[1].AddData({"momentUnfolded1", pp_5TeV[data].input})
+     .SetMarkerStyle(pp_5TeV[data].marker)
+     .SetColor(pp_5TeV[data].color)
+     .SetMaxRangeX(pp_5TeV[data].mult);
+
+     plot[1].AddData({"momentUnfolded1_Syst", pp_5TeV[data].input}, "pp").SetOptions("E2").SetFillStyle(0)
+     .SetMarkerStyle(pp_5TeV[data].marker)
+     .SetColor(pp_5TeV[data].color)
+     .SetMaxRangeX(pp_5TeV[data].mult);
+
+     plot[1].AddData({"meanPt", pp_5TeV[epos_lhc].input})
+     .SetMarkerStyle(pp_5TeV[epos_lhc].marker)
+     .SetColor(pp_5TeV[epos_lhc].color)
+     .SetMaxRangeX(pp_5TeV[epos_lhc].mult)
+     .SetOptions("HIST C").SetLine(pp_5TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0);
+
+     plot[1].AddData({"meanPt", pp_5TeV[pythia].input})
+     .SetMarkerStyle(pp_5TeV[pythia].marker)
+     .SetColor(pp_5TeV[pythia].color)
+     .SetMaxRangeX(pp_5TeV[pythia].mult)
+     .SetOptions("HIST C").SetLine(pp_5TeV[pythia].color, kSolid, 3.).SetFillStyle(0);
+
      //p-Pb
-     plot[1].AddData("momentUnfolded1", pPb_5TeV[data].input, "",
-                     pPb_5TeV[data].marker, pPb_5TeV[data].color, "", pPb_5TeV[data].mult);
-     plot[1].AddData("momentUnfolded1_Syst", pPb_5TeV[data].input, "p-Pb",
-                     pPb_5TeV[data].marker, pPb_5TeV[data].color, "boxes", pPb_5TeV[data].mult);
-     plot[1].AddData("meanPt", pPb_5TeV[epos_lhc].input, "",
-                     pPb_5TeV[epos_lhc].marker, pPb_5TeV[epos_lhc].color, "curve smooth", pPb_5TeV[epos_lhc].mult);
-     plot[1].AddData("meanPt", pPb_5TeV[angantyr].input, "",
-                     pPb_5TeV[angantyr].marker, pPb_5TeV[angantyr].color, "curve smooth dotted", pPb_5TeV[angantyr].mult);
+     plot[1].AddData({"momentUnfolded1", pPb_5TeV[data].input})
+     .SetMarkerStyle(pPb_5TeV[data].marker)
+     .SetColor(pPb_5TeV[data].color)
+     .SetMaxRangeX(pPb_5TeV[data].mult);
+
+     plot[1].AddData({"momentUnfolded1_Syst", pPb_5TeV[data].input}, "p-Pb").SetOptions("E2").SetFillStyle(0)
+     .SetMarkerStyle(pPb_5TeV[data].marker)
+     .SetColor(pPb_5TeV[data].color)
+     .SetMaxRangeX(pPb_5TeV[data].mult);
+
+     plot[1].AddData({"meanPt", pPb_5TeV[epos_lhc].input})
+     .SetMarkerStyle(pPb_5TeV[epos_lhc].marker)
+     .SetColor(pPb_5TeV[epos_lhc].color)
+     .SetMaxRangeX(pPb_5TeV[epos_lhc].mult)
+     .SetOptions("HIST C").SetLine(pPb_5TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0);
+
+     plot[1].AddData({"meanPt", pPb_5TeV[angantyr].input})
+     .SetMarkerStyle(pPb_5TeV[angantyr].marker)
+     .SetColor(pPb_5TeV[angantyr].color)
+     .SetMaxRangeX(pPb_5TeV[angantyr].mult)
+     .SetOptions("HIST C").SetLine(pPb_5TeV[angantyr].color, kSolid, 3.).SetFillStyle(0);
+
      //Pb-Pb
-     plot[1].AddData("momentUnfolded1", PbPb_5TeV[data].input, "",
-                     PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "", PbPb_5TeV[data].mult);
-     plot[1].AddData("momentUnfolded1_Syst", PbPb_5TeV[data].input, "Pb-Pb",
-                     PbPb_5TeV[data].marker, PbPb_5TeV[data].color, "boxes", PbPb_5TeV[data].mult);
-     plot[1].AddData("meanPt", PbPb_5TeV[epos].input, "",
-                     PbPb_5TeV[epos].marker, PbPb_5TeV[epos].color, "", PbPb_5TeV[epos].mult);
-     plot[1].AddData("meanPt", PbPb_5TeV[angantyr].input, "",
-                     PbPb_5TeV[angantyr].marker, PbPb_5TeV[angantyr].color, "curve smooth dotted", PbPb_5TeV[angantyr].mult);
+     plot[1].AddData({"momentUnfolded1", PbPb_5TeV[data].input})
+     .SetMarkerStyle(PbPb_5TeV[data].marker)
+     .SetColor(PbPb_5TeV[data].color)
+     .SetMaxRangeX(PbPb_5TeV[data].mult);
+
+     plot[1].AddData({"momentUnfolded1_Syst", PbPb_5TeV[data].input}, "Pb-Pb").SetOptions("E2").SetFillStyle(0)
+     .SetMarkerStyle(PbPb_5TeV[data].marker)
+     .SetColor(PbPb_5TeV[data].color)
+     .SetMaxRangeX(PbPb_5TeV[data].mult);
+
+     plot[1].AddData({"meanPt", PbPb_5TeV[epos].input})
+     .SetMarkerStyle(PbPb_5TeV[epos].marker)
+     .SetColor(PbPb_5TeV[epos].color)
+     .SetMaxRangeX(PbPb_5TeV[epos].mult)
+     .SetOptions("HIST C").SetLine(PbPb_5TeV[epos].color, kDashed, 3.).SetFillStyle(0);
+
+     plot[1].AddData({"meanPt", PbPb_5TeV[angantyr].input})
+     .SetMarkerStyle(PbPb_5TeV[angantyr].marker)
+     .SetColor(PbPb_5TeV[angantyr].color)
+     .SetMaxRangeX(PbPb_5TeV[angantyr].mult)
+     .SetOptions("HIST C").SetLine(PbPb_5TeV[angantyr].color, kSolid, 3.).SetFillStyle(0);
+
+     plot[1].AddText(0.14, 0.7, "dashed: Pythia // solid: EPOS");
 
      plot[1].SetPadOptions("logX");
-     plot[1].SetAxisRange("X", 0.1, 4000);
-     //plot[1].SetAxisRange("X", 0.1, 120);
-
-     plot[1].SetAxisRange("Y", 0.45, 0.9);
-     plot[1].SetAxisTitle("X", "#it{N}_{ch}");
+     plot[1]["X"].SetRange(0.1, 4000).SetLog();
+     plot[1]["Y"].SetRange(0.45, 0.9);
+     plot[1]["X"].SetTitle("#it{N}_{ch}");
      
      plot[1].AddLegend(0.14, 0.92);
-     plot[1].AddText(0.36, 0.3, systemSizeLablePrel);
+     plot[1].AddText(0.35, 0.3, systemSizeLablePrel);
      plotManager.AddPlot(plot);
    } // -----------------------------------------------------------------------
-  
+
+  /*
+
   
   { // -----------------------------------------------------------------------
     // compare meanPt in pp, data only

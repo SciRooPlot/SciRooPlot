@@ -303,8 +303,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
           
           // first data is only used to define the axes
           if(dataIndex == 0){
-            data_ptr->SetTitle(title.c_str());
-            DEBUG("{}", title);
+            data_ptr->SetTitle("axis");
 
             if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph>)
             {
@@ -522,7 +521,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     }
     bool redrawAxes = (pad.GetRedrawAxes()) ? *pad.GetRedrawAxes() : ((padDefaults.GetRedrawAxes()) ? *padDefaults.GetRedrawAxes() : false);
     if(redrawAxes) axisHistos[padID]->Draw("SAME AXIS");
-
     pad_ptr->Modified();
     pad_ptr->Update();
   }
@@ -834,7 +832,7 @@ TPaveText* PlotPainter::MakeText(shared_ptr<Plot::Pad::TextBox> textBox){
   
   string delimiter = " // ";
   string text = textBox->GetText();
-  
+    
   int nLetters = 0;
   vector<string> lines;
   
@@ -851,7 +849,8 @@ TPaveText* PlotPainter::MakeText(shared_ptr<Plot::Pad::TextBox> textBox){
   
   
   int nLines = lines.size();
-  
+  gPad->Update();
+
   double textSizeNDC = textSizePixel / gPad->YtoPixel(gPad->GetY1());
   double textSizeNDCx = 0.6*textSizePixel / gPad->XtoPixel(gPad->GetX2());
   
@@ -870,7 +869,7 @@ TPaveText* PlotPainter::MakeText(shared_ptr<Plot::Pad::TextBox> textBox){
     upperLeftX = (upperLeftX - gPad->GetX1())/(gPad->GetX2()-gPad->GetX1());
     upperLeftY = (upperLeftY - gPad->GetY1())/(gPad->GetY2()-gPad->GetY1());
   }
-  
+
   TPaveText* tPaveText = new TPaveText(upperLeftX, upperLeftY - yWidth, upperLeftX + xWidth, upperLeftY, "NDC");
   
   double boxExtent = 0;
@@ -879,21 +878,26 @@ TPaveText* PlotPainter::MakeText(shared_ptr<Plot::Pad::TextBox> textBox){
     TText* text = tPaveText->AddText(line.c_str());
     text->SetTextFont(textFont);
     text->SetTextSize(textSizePixel);
+    //text->SetTextColor(kOrange);
     double width = text->GetBBox().fWidth;
     if(width > boxExtent) boxExtent = width;
   }
-  tPaveText->SetBBoxX2(tPaveText->GetBBox().fX + boxExtent +2*margin);
+  //tPaveText->SetBBoxX2(tPaveText->GetBBox().fX + boxExtent +2*margin);
   tPaveText->SetBorderSize(1);
   tPaveText->SetLineStyle(textBox->GetBorderStyle());
   tPaveText->SetLineColor(textBox->GetBorderColor());
   tPaveText->SetLineWidth(textBox->GetBorderSize());
-  tPaveText->SetMargin(margin/(tPaveText->GetBBox().fX + boxExtent +2*margin));
+  //tPaveText->SetMargin(margin/(tPaveText->GetBBox().fX + boxExtent +2*margin));
   tPaveText->SetTextAlign(12);
+  //tPaveText->SetTextAlign(kHAlignLeft+kVAlignBottom);
+
   tPaveText->SetTextFont(textFont);
   tPaveText->SetTextSize(textSizePixel);
   tPaveText->SetFillStyle(0); //todo fix this hard coded value, 4000 only works for pads!
-  //    tPaveText->SetTextColor(kRed);
+  //tPaveText->SetFillColor(kRed);
+  //tPaveText->SetTextColor(kGreen);
   return tPaveText;
+  
 }
 
 //****************************************************************************************

@@ -2,10 +2,13 @@ cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 set(CMAKE_VERBOSE_MAKEFILE off)
 set(CMAKE_BUILD_TYPE Debug)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # The following two lines can be used to force using one specific root installation (comment out if not needed)
-set(ROOTSYS ~/alice/sw/osx_x86-64/ROOT/v6-18-04-alice1-7)
+#set(ROOTSYS ~/alice/sw/osx_x86-64/ROOT/v6-18-04-alice1-7)
 #set(ROOTSYS ~/alice/sw/osx_x86-64/ROOT/latest)
-#set(ROOTSYS ~/root/mybuild)
+set(ROOTSYS ~/root/mybuild)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
 
 project(PlottingFramework CXX)

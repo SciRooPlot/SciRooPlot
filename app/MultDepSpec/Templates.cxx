@@ -32,7 +32,7 @@ void MultDepSpec::DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[0].SetDefaultTextFont(43);
     templatePlot[0].SetDefaultTextSize(24);
     templatePlot[0].SetDefaultMarkerSize(1.2);
-    templatePlot[0].SetDefaultLineWidth(3.);
+    templatePlot[0].SetDefaultLineWidth(2.);
     //templatePlot[0].SetDefaultMarkerStyles({kFullCircle, kOpenCircle});
     templatePlot[0].SetTransparent();
     templatePlot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
