@@ -323,8 +323,7 @@ public:
   virtual auto SetFillColor(int16_t color) -> decltype(*this);
   virtual auto SetFillStyle(int16_t style) -> decltype(*this);
   virtual auto SetFillOpacity(float_t opacity) -> decltype(*this);
-
-  //auto SetOptions(dataStyle opions) -> decltype(*this){};
+  virtual auto SetOptions(drawing_options_t optionAlias) -> decltype(*this);
     
 protected:
   friend class PlotManager;
@@ -355,6 +354,7 @@ protected:
   const optional<float_t>& GetFillOpacity(){return mFillOpacity;}
 
   const string& GetDrawingOptions(){return mDrawingOptions;}
+  const optional<drawing_options_t>& GetDrawingOptionAlias(){return mDrawingOptionAlias;}
   const optional<double_t>& GetScaleFactor(){return mScale;}
   
   const optional<double_t>& GetMinRangeX(){return mRangeX.min;}
@@ -370,6 +370,7 @@ private:
   string mInputIdentifier;
   string mLable;
   string mDrawingOptions;
+  optional<drawing_options_t> mDrawingOptionAlias;
   optional<double_t> mScale;
 
   typedef struct{
@@ -388,7 +389,6 @@ private:
   dataLayout_t mLine;
   dataLayout_t mFill;
   optional<float_t> mFillOpacity;
-
   dataRange_t mRangeX;
   dataRange_t mRangeY;
 };
@@ -454,6 +454,8 @@ public:
   {return dynamic_cast<decltype(*this)&>(Data::SetFillStyle(style));}
   virtual auto SetFillOpacity(float_t opacity) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetFillOpacity(opacity));}
+  virtual auto SetOptions(drawing_options_t optionAlias) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetOptions(optionAlias));}
 
 protected:
   friend class PlotManager;

@@ -34,7 +34,6 @@ WIP:
 Major Features:
 - Plot needs AddFunction() and AddLine() accessor so one can directly plot simple functions. This must then also be of type data??
 - add some more formatting features for legend (floating point precision, exponent..)
-- add constructor to plotStyle that already gives useful default markers, colors, 2d style, etc
 - be clear about coordinate systems (fix relative positioning, maybe)
 - find a general way to automatically determine optimal axis offsets (in particular for 2d and 3d views) (what unit is title offset?)
 - generalize legend function to handle text boxes in a similar manner

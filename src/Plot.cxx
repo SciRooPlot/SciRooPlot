@@ -685,6 +685,7 @@ Plot::Pad::Data::Data(ptree &dataTree) : Data()
   }
   if(auto var = dataTree.get_optional<string>("lable")) mLable = *var;
   if(auto var = dataTree.get_optional<string>("drawingOptions")) mDrawingOptions = *var;
+  if(auto var = dataTree.get_optional<uint8_t>("drawingOptionAlias")) mDrawingOptionAlias = (drawing_options_t)*var;
   if(auto var = dataTree.get_optional<int16_t>("marker_color")) mMarker.color = *var;
   if(auto var = dataTree.get_optional<int16_t>("marker_style")) mMarker.style = *var;
   if(auto var = dataTree.get_optional<float_t>("marker_size")) mMarker.size = *var;
@@ -722,6 +723,7 @@ ptree Plot::Pad::Data::GetPropertyTree(){
   if(mFill.style)   dataTree.put("fill_style", *mFill.style);
   if(mFillOpacity)   dataTree.put("fill_opacity", *mFillOpacity);
   if(mDrawingOptions != "") dataTree.put("drawingOptions", mDrawingOptions);
+  if(mDrawingOptionAlias) dataTree.put("drawingOptionAlias", *mDrawingOptionAlias);
   if(mScale) dataTree.put("scale", *mScale);
   if(mRangeX.min) dataTree.put("rangeX_min", *mRangeX.min);
   if(mRangeX.max) dataTree.put("rangeX_max", *mRangeX.max);
@@ -860,6 +862,11 @@ auto Plot::Pad::Data::SetFillOpacity(float_t opacity) -> decltype(*this)
   {
     mFillOpacity = opacity;
   }
+  return *this;
+}
+auto Plot::Pad::Data::SetOptions(drawing_options_t optionAlias) -> decltype(*this)
+{
+  mDrawingOptionAlias = optionAlias;
   return *this;
 }
 

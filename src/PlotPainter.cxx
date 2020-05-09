@@ -130,81 +130,28 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
       }
       pad.GetData()[0]->SetLable(""); // axis frame should not appear in legend
     }
-//------------------------------------
-    
-    map<dataStyle, string> defaultDrawingOpionsHist
-    {
-      { none, "" },
-      { points, "X0 EP" },
-      { points_xerr, "EP" },
-      { points_endcaps, "E1" },
-      { curve, "HIST C" },
-      { line, "HIST L" },
-      { bar, "HIST B" },
-      { boxes, "E2" },
-      { band, "E6" },
-      { band_line, "E5" },
-      { area, "HIST CF" },
-      { area_line, "HIST LF" },
-      
-      // only for hist
-//      { hist_borders, "HIST" },
-      { hist, "HIST B" },
-//      { hist, "HIST ][" },
-    };
-    
-    map<dataStyle, string> defaultDrawingOpionsGraph
-    {
-      { none, "" },
-      { points, "P Z" },
-      { points_endcaps, "P" },
-      { curve, "X C" },
-      { line, "X L" },
-      { bar, "X B" },
-      { boxes, "P2" },
-      { band, "4" },
-      { band_line, "3" },
-      { area, "X CF" },
-      { area_line, "X LC" },//?
-      
-      // only for graph
-      { boxes_only, "2" },
 
-    };
-
-    
-    
-    
-    
-    
-    
-    
-    
-//------------------------------------
     map<uint8_t, TH1*> axisHistos;
     bool drawLine = false;
     string drawingOptions = "";
     int dataIndex = 0;
     for(auto& data : pad.GetData())
     {
-      optional<int16_t> markerColor = (data->GetMarkerColor()) ? data->GetMarkerColor() : std::nullopt;
-      optional<int16_t> markerStyle = (data->GetMarkerStyle()) ? data->GetMarkerStyle() : kFullCircle;
-      optional<float_t> markerSize  = (data->GetMarkerSize())  ? data->GetMarkerSize()  : defaultMarkerSize;
-      optional<int16_t> lineColor   = (data->GetLineColor())   ? data->GetLineColor()   : std::nullopt;
-      optional<int16_t> lineStyle   = (data->GetLineStyle())   ? data->GetLineStyle()   : kSolid;
-      optional<float_t> lineWidth   = (data->GetLineWidth())   ? data->GetLineWidth()   : defaultLineWidth;
-      optional<int16_t> fillColor   = (data->GetFillColor())   ? data->GetFillColor()   : std::nullopt;
-      optional<int16_t> fillStyle   = (data->GetFillStyle())   ? data->GetFillStyle()   : std::nullopt;
-      optional<float_t> fillOpacity   = (data->GetFillOpacity())   ? data->GetFillOpacity()   : std::nullopt;
+      optional<int16_t> markerColor   = (data->GetMarkerColor())  ? data->GetMarkerColor()  : std::nullopt;
+      optional<int16_t> markerStyle   = (data->GetMarkerStyle())  ? data->GetMarkerStyle()  : std::nullopt;
+      optional<float_t> markerSize    = (data->GetMarkerSize())   ? data->GetMarkerSize()   : std::nullopt;
+      optional<int16_t> lineColor     = (data->GetLineColor())    ? data->GetLineColor()    : std::nullopt;
+      optional<int16_t> lineStyle     = (data->GetLineStyle())    ? data->GetLineStyle()    : std::nullopt;
+      optional<float_t> lineWidth     = (data->GetLineWidth())    ? data->GetLineWidth()    : std::nullopt;
+      optional<int16_t> fillColor     = (data->GetFillColor())    ? data->GetFillColor()    : std::nullopt;
+      optional<int16_t> fillStyle     = (data->GetFillStyle())    ? data->GetFillStyle()    : std::nullopt;
+      optional<float_t> fillOpacity   = (data->GetFillOpacity())  ? data->GetFillOpacity()  : std::nullopt;
       //0 : hollow, 1001 : Solid, 3000+pattern_number : pattern
       
       
-      if(!markerColor) markerColor = GetDefaultColor(dataIndex);
-      if(!lineColor) lineColor = GetDefaultColor(dataIndex);
-
-      
+      //if(!markerColor) markerColor = GetDefaultColor(dataIndex);
+      //if(!lineColor) lineColor = GetDefaultColor(dataIndex);
       //if(!markerStyle) markerStyle = pad.GetDefaultMarkers(0) : plot[0].GetDefaultMarkerSize(0) : GetDefaultMarker(0);
-      //
       
       drawingOptions += data->GetDrawingOptions();
       
@@ -230,17 +177,27 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
           if(fillOpacity && fillColor && dataIndex != 0) *fillColor = TColor::GetColorTransparent(*fillColor, *fillOpacity);
           if(fillColor) data_ptr->SetFillColor(*fillColor);
           
-          dataStyle defaultDataStyle = points;
+          optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
-          if(data->GetDrawingOptions() == "")
+          if(data->GetDrawingOptions() == "" && defaultDrawingOption)
           {
             if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
             {
-                drawingOptions += defaultDrawingOpionsHist[defaultDataStyle];
+              if(defaultDrawingOpions_Hist.find(*defaultDrawingOption) != defaultDrawingOpions_Hist.end())
+              {
+                drawingOptions += defaultDrawingOpions_Hist.at(*defaultDrawingOption);
+              }else{
+                WARNING("Default drawing opiton not available for type {}.", data_ptr->ClassName());
+              }
             }
             else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>)
             {
-                drawingOptions += defaultDrawingOpionsGraph[defaultDataStyle];
+                if(defaultDrawingOpions_Graph.find(*defaultDrawingOption) != defaultDrawingOpions_Graph.end())
+                {
+                  drawingOptions += defaultDrawingOpions_Graph.at(*defaultDrawingOption);
+                }else{
+                  WARNING("Default drawing opiton not available for type {}.", data_ptr->ClassName());
+                }
             }
 
           }

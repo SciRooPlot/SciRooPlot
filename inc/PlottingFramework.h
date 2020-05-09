@@ -178,11 +178,10 @@ inline constexpr bool str_contains(const string &str1, const string &str2)
 }
 
 
-enum dataStyle : int
+enum drawing_options_t : uint8_t
 {
-  // 1d stuff
-  none = 0,
-  points,
+  // 1d options
+  points = 0,
   points_xerr,
   points_endcaps,
   line,
@@ -190,16 +189,52 @@ enum dataStyle : int
   band,
   band_line,
   hist,
-  hist_borders,
+  hist_no_borders,
   fit,
   bar,
   area,
+  area_curve,
   area_line,
   boxes,
   boxes_only,
-  // 2d stuff
+  // 2d options
   colz,
   surf,
+};
+
+
+const map<drawing_options_t, string> defaultDrawingOpions_Hist
+{
+  { points, "X0 EP" },
+  { points_xerr, "EP" },
+  { points_endcaps, "E1" },
+  { curve, "HIST C" },
+  { line, "HIST L" },
+  { bar, "HIST B" },
+  { boxes, "E2" },
+  { band, "E6" },
+  { band_line, "E5" },
+  { area, "HIST F" },
+  { area_curve, "HIST CF" },
+  { area_line, "HIST LF" },
+  { hist, "HIST" },
+  { bar, "HIST B" },
+  { hist_no_borders, "HIST ][" },
+};
+
+const map<drawing_options_t, string> defaultDrawingOpions_Graph
+{
+  { points, "P Z" },
+  { points_endcaps, "P" },
+  { curve, "X C" },
+  { line, "X L" },
+  { bar, "X B" },
+  { boxes, "P2" },
+  { band, "4" },
+  { band_line, "3" },
+  { area, "X CF" },
+  { area_line, "X LC" },
+  { boxes_only, "2" },
 };
 
 

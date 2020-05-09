@@ -32,7 +32,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     Plot plot(plotName, plotGroup, "1d");
 
     plot[1].AddData({"momentUnfolded1", "pPb_5TeV"}, "pPb, 5 TeV")
-    .SetMaxRangeX(60);
+    .SetMaxRangeX(60).SetOptions(area_line).SetColor(kGreen+1).SetLineWidth(3.);
 
     plot[1].AddData({"momentUnfolded1", "pp_2TeV"}, "2 TeV")
     .SetMaxRangeX(40).SetMarkerColor(kRed);
@@ -324,22 +324,22 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     plot[1].AddData({"momentUnfolded1_SystBand", pp_13TeV[data].input})
     .SetFill(pp_13TeV[data].color, 1001).SetFillOpacity(0.3)
     .SetRangeX(1., pp_13TeV[data].mult)
-    .SetOptions("4")
+    .SetOptions(band)
     ;
     plot[1].AddData({"momentUnfolded1_SystBand", pp_7TeV[data].input})
     .SetFill(pp_7TeV[data].color, 1001).SetFillOpacity(0.3)
     .SetRangeX(1., pp_7TeV[data].mult)
-    .SetOptions("4")
+    .SetOptions(band)
     ;
     plot[1].AddData({"momentUnfolded1_SystBand", pp_5TeV[data].input})
     .SetFill(pp_5TeV[data].color, 1001).SetFillOpacity(0.3)
     .SetRangeX(1., pp_5TeV[data].mult)
-    .SetOptions("4")
+    .SetOptions(band)
     ;
     plot[1].AddData({"momentUnfolded1_SystBand", pp_2TeV[data].input})
     .SetFill(pp_2TeV[data].color, 1001).SetFillOpacity(0.3)
     .SetRangeX(1., pp_2TeV[data].mult)
-    .SetOptions("4")
+    .SetOptions(band)
     ;
 
     
