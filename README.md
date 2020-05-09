@@ -21,7 +21,8 @@ make
 The user needs to write an application that defines and saves the required plots (for inspiration see to app/MultDepSpec/).
 This app can be added in the CMakeList.txt file (similar to the apps "plot" and "create" already specified there).
 The framework ships with a simple command-line program that lets you easily generate plots from the files created by the user app.
-For usage details and available options see ./plot --help.
+If you source the .plottingrc in your .bashrc this program can be used from everywhere.
+For usage details and available options see plot --help.
 
 To generate the documenation run:
 
@@ -37,9 +38,6 @@ DESIGN
 
 The PlotManager is the pivot point of the plotting framework.
 There you define which input files should be loaded and where the output plots should be stored.
-The basic idea is that there are plot designs that can be specified and then have a unique name inside the framework.
-Currently the designs "default" and "default ratio" are implemented. This can be extended or changed in PlotManager code.
-In the final version this will be more flexible and more user frienldy to change via configure files.
 
 First you need to define via SetOutputDirectory() the output folder where any output plots will be saved.
 
@@ -54,7 +52,7 @@ This will move the settings of your plot to the manager and you will be left wit
 After adding all plots to the manager you can dump the plot definitions to an external config file (that can in principle also be modified by hand outside of the program) via DumpPlots().
 These plot definitions you can again read into the manager via LoadPlots().
 Alternatively you can also load and generate only specific plots defined in the config file via ExtractPlotsFromFile()
-By default plots are created as pdf in your output folder, but you can also choose "bitmap" for pngs "macro" to create root macros or "interactive" if you only want to look at the plot and not create a file. Using the keyword "file" it is also possible to write the plots to a root file.
+By default plots are created as pdf in your output folder, but you can also choose png or macro to create root macros or "interactive" if you only want to look at the plot and not create a file. Using the keyword "file" it is also possible to write the plots to a root file.
 
 
 The framework still contains some unfinished pragmatic implementations that are currently beeing generalized.
