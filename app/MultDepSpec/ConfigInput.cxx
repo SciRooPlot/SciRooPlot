@@ -40,7 +40,8 @@ int main(int argc, char *argv[])
     string folder = dataSetFolder + dataSet + "/";
     string inputFile = folder + dataSet + "_Results.root";
     string inputFileSyst = folder + dataSet + "_Syst.root";
-    plotEnv.AddInputDataFiles(dataSet, {inputFile, inputFileSyst});
+    string inputFileSystGraphs = folder + dataSet + "_Syst_Graphs.root";
+    plotEnv.AddInputDataFiles(dataSet, {inputFile, inputFileSyst, inputFileSystGraphs});
   }
 
   // Define simulation inputs

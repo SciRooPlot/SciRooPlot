@@ -322,7 +322,8 @@ public:
   virtual auto SetFill(int16_t color, int16_t style) -> decltype(*this);
   virtual auto SetFillColor(int16_t color) -> decltype(*this);
   virtual auto SetFillStyle(int16_t style) -> decltype(*this);
-  
+  virtual auto SetFillOpacity(float_t opacity) -> decltype(*this);
+
   //auto SetOptions(dataStyle opions) -> decltype(*this){};
     
 protected:
@@ -351,6 +352,7 @@ protected:
 
   const optional<int16_t>& GetFillColor(){return mFill.color;}
   const optional<int16_t>& GetFillStyle(){return mFill.style;}
+  const optional<float_t>& GetFillOpacity(){return mFillOpacity;}
 
   const string& GetDrawingOptions(){return mDrawingOptions;}
   const optional<double_t>& GetScaleFactor(){return mScale;}
@@ -385,6 +387,7 @@ private:
   dataLayout_t mMarker;
   dataLayout_t mLine;
   dataLayout_t mFill;
+  optional<float_t> mFillOpacity;
 
   dataRange_t mRangeX;
   dataRange_t mRangeY;
@@ -449,7 +452,9 @@ public:
   {return dynamic_cast<decltype(*this)&>(Data::SetFillColor(color));}
   virtual auto SetFillStyle(int16_t style) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetFillStyle(style));}
-  
+  virtual auto SetFillOpacity(float_t opacity) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetFillOpacity(opacity));}
+
 protected:
   friend class PlotManager;
   friend class PlotPainter;

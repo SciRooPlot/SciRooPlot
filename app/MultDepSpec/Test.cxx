@@ -97,8 +97,10 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
   
   
   
-  // hard probes preliminaries:
-  
+  // -----------------------------------------------------------------------
+  // hard probes 2020 preliminaries:
+  // -----------------------------------------------------------------------
+
   string systemSizeLablePrel = alicePrel + newLine + chargedParticles + ", " + erg5TeV_NN + newLine + eta08 + ", " + ptRange;
   string energyLablePrel = alicePrel + newLine + chargedParticles + ", " + "pp collisions" + newLine + eta08 + ", " + ptRange;
 
@@ -110,141 +112,298 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
      
      //p-p
      plot[1].AddData({"momentUnfolded1", pp_5TeV[data].input})
-     .SetMarkerStyle(pp_5TeV[data].marker)
+     .SetMarkerStyle(kFullCross)
      .SetColor(pp_5TeV[data].color)
-     .SetMaxRangeX(pp_5TeV[data].mult);
-
+     .SetMaxRangeX(pp_5TeV[data].mult)
+     ;
      plot[1].AddData({"momentUnfolded1_Syst", pp_5TeV[data].input}, "pp").SetOptions("E2").SetFillStyle(0)
-     .SetMarkerStyle(pp_5TeV[data].marker)
+     .SetMarkerStyle(kFullCross)
      .SetColor(pp_5TeV[data].color)
-     .SetMaxRangeX(pp_5TeV[data].mult);
-
+     .SetMaxRangeX(pp_5TeV[data].mult)
+     ;
      plot[1].AddData({"meanPt", pp_5TeV[epos_lhc].input})
      .SetMarkerStyle(pp_5TeV[epos_lhc].marker)
      .SetColor(pp_5TeV[epos_lhc].color)
      .SetMaxRangeX(pp_5TeV[epos_lhc].mult)
-     .SetOptions("HIST C").SetLine(pp_5TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0);
-
+     .SetOptions("HIST C").SetLine(pp_5TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
+     ;
      plot[1].AddData({"meanPt", pp_5TeV[pythia].input})
      .SetMarkerStyle(pp_5TeV[pythia].marker)
      .SetColor(pp_5TeV[pythia].color)
      .SetMaxRangeX(pp_5TeV[pythia].mult)
-     .SetOptions("HIST C").SetLine(pp_5TeV[pythia].color, kSolid, 3.).SetFillStyle(0);
-
+     .SetOptions("HIST C").SetLine(pp_5TeV[pythia].color, kSolid, 3.).SetFillStyle(0)
+     ;
      //p-Pb
      plot[1].AddData({"momentUnfolded1", pPb_5TeV[data].input})
      .SetMarkerStyle(pPb_5TeV[data].marker)
      .SetColor(pPb_5TeV[data].color)
-     .SetMaxRangeX(pPb_5TeV[data].mult);
-
+     .SetMaxRangeX(pPb_5TeV[data].mult)
+     ;
      plot[1].AddData({"momentUnfolded1_Syst", pPb_5TeV[data].input}, "p-Pb").SetOptions("E2").SetFillStyle(0)
      .SetMarkerStyle(pPb_5TeV[data].marker)
      .SetColor(pPb_5TeV[data].color)
-     .SetMaxRangeX(pPb_5TeV[data].mult);
-
+     .SetMaxRangeX(pPb_5TeV[data].mult)
+     ;
      plot[1].AddData({"meanPt", pPb_5TeV[epos_lhc].input})
      .SetMarkerStyle(pPb_5TeV[epos_lhc].marker)
      .SetColor(pPb_5TeV[epos_lhc].color)
      .SetMaxRangeX(pPb_5TeV[epos_lhc].mult)
-     .SetOptions("HIST C").SetLine(pPb_5TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0);
-
+     .SetOptions("HIST C").SetLine(pPb_5TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
+     ;
      plot[1].AddData({"meanPt", pPb_5TeV[angantyr].input})
      .SetMarkerStyle(pPb_5TeV[angantyr].marker)
      .SetColor(pPb_5TeV[angantyr].color)
      .SetMaxRangeX(pPb_5TeV[angantyr].mult)
-     .SetOptions("HIST C").SetLine(pPb_5TeV[angantyr].color, kSolid, 3.).SetFillStyle(0);
-
+     .SetOptions("HIST C").SetLine(pPb_5TeV[angantyr].color, kSolid, 3.).SetFillStyle(0)
+     ;
      //Pb-Pb
      plot[1].AddData({"momentUnfolded1", PbPb_5TeV[data].input})
      .SetMarkerStyle(PbPb_5TeV[data].marker)
      .SetColor(PbPb_5TeV[data].color)
-     .SetMaxRangeX(PbPb_5TeV[data].mult);
-
+     .SetMaxRangeX(PbPb_5TeV[data].mult)
+     ;
      plot[1].AddData({"momentUnfolded1_Syst", PbPb_5TeV[data].input}, "Pb-Pb").SetOptions("E2").SetFillStyle(0)
      .SetMarkerStyle(PbPb_5TeV[data].marker)
      .SetColor(PbPb_5TeV[data].color)
-     .SetMaxRangeX(PbPb_5TeV[data].mult);
-
+     .SetMaxRangeX(PbPb_5TeV[data].mult)
+     ;
      plot[1].AddData({"meanPt", PbPb_5TeV[epos].input})
      .SetMarkerStyle(PbPb_5TeV[epos].marker)
      .SetColor(PbPb_5TeV[epos].color)
      .SetMaxRangeX(PbPb_5TeV[epos].mult)
-     .SetOptions("HIST C").SetLine(PbPb_5TeV[epos].color, kDashed, 3.).SetFillStyle(0);
-
+     .SetOptions("X C").SetLine(PbPb_5TeV[epos].color, kDashed, 3.).SetFillStyle(0)
+     ;
      plot[1].AddData({"meanPt", PbPb_5TeV[angantyr].input})
      .SetMarkerStyle(PbPb_5TeV[angantyr].marker)
      .SetColor(PbPb_5TeV[angantyr].color)
      .SetMaxRangeX(PbPb_5TeV[angantyr].mult)
      .SetOptions("HIST C").SetLine(PbPb_5TeV[angantyr].color, kSolid, 3.).SetFillStyle(0);
 
-     plot[1].AddText(0.14, 0.7, "dashed: Pythia // solid: EPOS");
+     plot[1].AddText(0.14, 0.75, "dashed: Pythia // solid: EPOS");
+     plot[1]["Y"].SetTitleOffset(1.7);
 
      plot[1].SetPadOptions("logX");
      plot[1]["X"].SetRange(0.1, 4000).SetLog();
-     plot[1]["Y"].SetRange(0.45, 0.9);
+     plot[1]["Y"].SetRange(0.45, 0.85);
      plot[1]["X"].SetTitle("#it{N}_{ch}");
      
      plot[1].AddLegend(0.14, 0.92);
-     plot[1].AddText(0.35, 0.3, systemSizeLablePrel);
+     plot[1].AddText(0.34, 0.3, systemSizeLablePrel);
+     
+     Plot plotLin(plot, plotName + "_lin", "preliminary");
+     plotLin[1]["X"].SetMaxRange(100).SetLog(false);
+     plotManager.AddPlot(plotLin);
      plotManager.AddPlot(plot);
    } // -----------------------------------------------------------------------
 
-  /*
 
   
   { // -----------------------------------------------------------------------
-    // compare meanPt in pp, data only
+    // compare meanPt for different ernergies in pp
     string plotName = "meanPt_energies";
-    Plot plot(plotName, "preliminary");
-    plot[1].AddFrame("momentUnfolded1", pp_2TeV[data].input);
-    //p-p
-    plot[1].AddData("momentUnfolded1", pp_2TeV[data].input, "",
-                    pp_2TeV[data].marker, pp_2TeV[data].color, "", pp_2TeV[data].mult);
-    plot[1].AddData("momentUnfolded1_Syst", pp_2TeV[data].input, "pp, 2.76 TeV",
-                    pp_2TeV[data].marker, pp_2TeV[data].color, "boxes", pp_2TeV[data].mult);
-    plot[1].AddData("meanPt", pp_2TeV[pythia].input, "",
-                    pp_2TeV[pythia].marker, pp_2TeV[pythia].color, "curve dotted", pp_2TeV[pythia].mult);
-    plot[1].AddData("meanPt", pp_2TeV[epos_lhc].input, "",
-                    pp_2TeV[epos_lhc].marker, pp_2TeV[epos_lhc].color, "curve", pp_2TeV[epos_lhc].mult);
+    Plot plot(plotName, "preliminary", "1d");
 
-    plot[1].AddData("momentUnfolded1", pp_5TeV[data].input, "",
-                    pp_5TeV[data].marker, pp_5TeV[data].color, "", pp_5TeV[data].mult);
-    plot[1].AddData("momentUnfolded1_Syst", pp_5TeV[data].input, "pp, 5.02 TeV",
-                    pp_5TeV[data].marker, pp_5TeV[data].color, "boxes", pp_5TeV[data].mult);
-    plot[1].AddData("meanPt", pp_5TeV[pythia].input, "",
-                    pp_5TeV[pythia].marker, pp_5TeV[pythia].color, "curve dotted", pp_5TeV[pythia].mult);
-    plot[1].AddData("meanPt", pp_5TeV[epos_lhc].input, "",
-                    pp_5TeV[epos_lhc].marker, pp_5TeV[epos_lhc].color, "curve dotted", pp_5TeV[epos_lhc].mult);
-
-    plot[1].AddData("momentUnfolded1", pp_7TeV[data].input, "",
-                    pp_7TeV[data].marker, pp_7TeV[data].color, "", pp_7TeV[data].mult);
-    plot[1].AddData("momentUnfolded1_Syst", pp_7TeV[data].input, "pp, 7 TeV",
-                    pp_7TeV[data].marker, pp_7TeV[data].color, "boxes", pp_7TeV[data].mult);
-    plot[1].AddData("meanPt", pp_7TeV[pythia].input, "",
-                    pp_7TeV[pythia].marker, pp_7TeV[pythia].color, "curve dotted", pp_7TeV[pythia].mult);
-    plot[1].AddData("meanPt", pp_7TeV[epos_lhc].input, "",
-                    pp_7TeV[epos_lhc].marker, pp_7TeV[epos_lhc].color, "curve", pp_7TeV[epos_lhc].mult);
-
+    double_t maxMult = 59;
+    // pp, 13 TeV
+    plot[1].AddData({"momentUnfolded1", pp_13TeV[data].input})
+    .SetMarkerStyle(pp_13TeV[data].marker)
+    .SetColor(pp_13TeV[data].color)
+    .SetRangeX(1., maxMult)
+    ;
+    plot[1].AddData({"momentUnfolded1_Syst", pp_13TeV[data].input}, "13 TeV").SetOptions("E2").SetFillStyle(0)
+    .SetMarkerStyle(pp_13TeV[data].marker)
+    .SetColor(pp_13TeV[data].color)
+    .SetRangeX(1., maxMult)
+    ;
+    plot[1].AddData({"meanPt", pp_13TeV[epos_lhc].input})
+    .SetMarkerStyle(pp_13TeV[epos_lhc].marker)
+    .SetColor(pp_13TeV[epos_lhc].color)
+    .SetRangeX(1., maxMult)
+    .SetOptions("HIST C").SetLine(pp_13TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
+    ;
+    plot[1].AddData({"meanPt", pp_13TeV[pythia].input})
+    .SetMarkerStyle(pp_13TeV[pythia].marker)
+    .SetColor(pp_13TeV[pythia].color)
+    .SetRangeX(1., maxMult)
+    .SetOptions("HIST C").SetLine(pp_13TeV[pythia].color, kSolid, 3.).SetFillStyle(0)
+    ;
+    // pp, 7 TeV
+    plot[1].AddData({"momentUnfolded1", pp_7TeV[data].input})
+    .SetMarkerStyle(pp_7TeV[data].marker)
+    .SetColor(pp_7TeV[data].color)
+    .SetRangeX(1., pp_7TeV[data].mult-1)
+    ;
+    plot[1].AddData({"momentUnfolded1_Syst", pp_7TeV[data].input}, "7 TeV").SetOptions("E2").SetFillStyle(0)
+    .SetMarkerStyle(pp_7TeV[data].marker)
+    .SetColor(pp_7TeV[data].color)
+    .SetRangeX(1., pp_7TeV[data].mult-1)
+    ;
+    plot[1].AddData({"meanPt", pp_7TeV[epos_lhc].input})
+    .SetMarkerStyle(pp_7TeV[epos_lhc].marker)
+    .SetColor(pp_7TeV[epos_lhc].color)
+    .SetRangeX(1., pp_7TeV[epos_lhc].mult-1)
+    .SetOptions("HIST C").SetLine(pp_7TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
+    ;
+    plot[1].AddData({"meanPt", pp_7TeV[pythia].input})
+    .SetMarkerStyle(pp_7TeV[pythia].marker)
+    .SetColor(pp_7TeV[pythia].color)
+    .SetRangeX(1., pp_7TeV[pythia].mult-1)
+    .SetOptions("HIST C").SetLine(pp_7TeV[pythia].color, kSolid, 3.).SetFillStyle(0)
+    ;
+    // pp, 5 TeV
+    plot[1].AddData({"momentUnfolded1", pp_5TeV[data].input})
+    .SetMarkerStyle(pp_5TeV[data].marker)
+    .SetColor(pp_5TeV[data].color)
+    .SetRangeX(1., pp_5TeV[data].mult-1)
+    ;
+    plot[1].AddData({"momentUnfolded1_Syst", pp_5TeV[data].input}, "5.02 TeV").SetOptions("E2").SetFillStyle(0)
+    .SetMarkerStyle(pp_5TeV[data].marker)
+    .SetColor(pp_5TeV[data].color)
+    .SetRangeX(1., pp_5TeV[data].mult-1)
+    ;
+    plot[1].AddData({"meanPt", pp_5TeV[epos_lhc].input})
+    .SetMarkerStyle(pp_5TeV[epos_lhc].marker)
+    .SetColor(pp_5TeV[epos_lhc].color)
+    .SetRangeX(1., pp_5TeV[epos_lhc].mult-1)
+    .SetOptions("HIST C").SetLine(pp_5TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
+    ;
+    plot[1].AddData({"meanPt", pp_5TeV[pythia].input})
+    .SetMarkerStyle(pp_5TeV[pythia].marker)
+    .SetColor(pp_5TeV[pythia].color)
+    .SetRangeX(1., pp_5TeV[pythia].mult-1)
+    .SetOptions("HIST C").SetLine(pp_5TeV[pythia].color, kSolid, 3.).SetFillStyle(0)
+    ;
+    // pp, 2 TeV
+    plot[1].AddData({"momentUnfolded1", pp_2TeV[data].input})
+    .SetMarkerStyle(pp_2TeV[data].marker)
+    .SetColor(pp_2TeV[data].color)
+    .SetRangeX(1., pp_2TeV[data].mult)
+    ;
+    plot[1].AddData({"momentUnfolded1_Syst", pp_2TeV[data].input}, "2.76 TeV").SetOptions("E2").SetFillStyle(0)
+    .SetMarkerStyle(pp_2TeV[data].marker)
+    .SetColor(pp_2TeV[data].color)
+    .SetRangeX(1., pp_2TeV[data].mult)
+    ;
+    plot[1].AddData({"meanPt", pp_2TeV[epos_lhc].input})
+    .SetMarkerStyle(pp_2TeV[epos_lhc].marker)
+    .SetColor(pp_2TeV[epos_lhc].color)
+    .SetRangeX(1., pp_2TeV[epos_lhc].mult)
+    .SetOptions("HIST C").SetLine(pp_2TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
+    ;
+    plot[1].AddData({"meanPt", pp_2TeV[pythia].input})
+    .SetMarkerStyle(pp_2TeV[pythia].marker)
+    .SetColor(pp_2TeV[pythia].color)
+    .SetRangeX(1., pp_2TeV[pythia].mult)
+    .SetOptions("HIST C").SetLine(pp_2TeV[pythia].color, kSolid, 3.).SetFillStyle(0)
+    ;
     
-    plot[1].AddData("momentUnfolded1", pp_13TeV[data].input, "",
-                    pp_13TeV[data].marker, pp_13TeV[data].color, "", pp_13TeV[data].mult);
-    plot[1].AddData("momentUnfolded1_Syst", pp_13TeV[data].input, "pp, 13 TeV",
-                    pp_13TeV[data].marker, pp_13TeV[data].color, "boxes", pp_13TeV[data].mult);
-    plot[1].AddData("meanPt", pp_13TeV[pythia].input, "",
-                    pp_13TeV[pythia].marker, pp_13TeV[pythia].color, "curve dotted", pp_13TeV[pythia].mult);
-    plot[1].AddData("meanPt", pp_13TeV[epos_lhc].input, "",
-                    pp_13TeV[epos_lhc].marker, pp_13TeV[epos_lhc].color, "curve dotted", pp_13TeV[epos_lhc].mult);
+    plot[1]["X"].SetRange(0.1, 60);
+    plot[1]["Y"].SetRange(0.45, 0.85);
+    plot[1]["X"].SetTitle("#it{N}_{ch}");
+    
+    plot[1]["Y"].SetTitleOffset(1.7);
 
-    plot[1].SetAxisRange("X", 0.1, 70);
-    plot[1].SetAxisRange("Y", 0.45, 0.9);
-    plot[1].SetAxisTitle("X", "#it{N}_{ch}");
     
     plot[1].AddLegend(0.14, 0.92);
-    plot[1].AddText(0.36, 0.3, energyLablePrel);
+    plot[1].AddText(0.4, 0.45, "solid: Pythia8 Monash13 // dashed: EPOS-LHC");
+    plot[1].AddText(0.34, 0.3, energyLablePrel);
+    
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
 
   
+  
+  
+  { // -----------------------------------------------------------------------
+    // compare meanPt for different ernergies in pp
+    string plotName = "meanPt_energies_ratio";
+    Plot plot(plotName, "preliminary", "1d");
+
+    plot[1].SetRefFunc("1");
+
+    plot[1].AddData({"momentUnfolded1_SystBand", pp_13TeV[data].input})
+    .SetFill(pp_13TeV[data].color, 1001).SetFillOpacity(0.3)
+    .SetRangeX(1., pp_13TeV[data].mult)
+    .SetOptions("4")
+    ;
+    plot[1].AddData({"momentUnfolded1_SystBand", pp_7TeV[data].input})
+    .SetFill(pp_7TeV[data].color, 1001).SetFillOpacity(0.3)
+    .SetRangeX(1., pp_7TeV[data].mult)
+    .SetOptions("4")
+    ;
+    plot[1].AddData({"momentUnfolded1_SystBand", pp_5TeV[data].input})
+    .SetFill(pp_5TeV[data].color, 1001).SetFillOpacity(0.3)
+    .SetRangeX(1., pp_5TeV[data].mult)
+    .SetOptions("4")
+    ;
+    plot[1].AddData({"momentUnfolded1_SystBand", pp_2TeV[data].input})
+    .SetFill(pp_2TeV[data].color, 1001).SetFillOpacity(0.3)
+    .SetRangeX(1., pp_2TeV[data].mult)
+    .SetOptions("4")
+    ;
+
+    
+    // pp, 13 TeV
+    plot[1].AddRatio({"meanPt", pp_13TeV[epos_lhc].input}, {"momentUnfolded1_Syst", pp_13TeV[data].input})
+    .SetColor(pp_13TeV[epos_lhc].color)
+    .SetRangeX(1., pp_13TeV[epos_lhc].mult)
+    .SetOptions("HIST C").SetLine(pp_13TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
+    ;
+    plot[1].AddRatio({"meanPt", pp_13TeV[pythia].input}, {"momentUnfolded1_Syst", pp_13TeV[data].input},  "13 TeV")
+    .SetColor(pp_13TeV[pythia].color)
+    .SetRangeX(1., pp_13TeV[pythia].mult)
+    .SetOptions("HIST C").SetLine(pp_13TeV[pythia].color, kSolid, 3.).SetFillStyle(0)
+    ;
+    // pp, 7 TeV
+    plot[1].AddRatio({"meanPt", pp_7TeV[epos_lhc].input}, {"momentUnfolded1_Syst", pp_7TeV[data].input})
+    .SetColor(pp_7TeV[epos_lhc].color)
+    .SetRangeX(1., pp_7TeV[epos_lhc].mult)
+    .SetOptions("HIST C").SetLine(pp_7TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
+    ;
+    plot[1].AddRatio({"meanPt", pp_7TeV[pythia].input}, {"momentUnfolded1_Syst", pp_7TeV[data].input},  "7 TeV")
+    .SetColor(pp_7TeV[pythia].color)
+    .SetRangeX(1., pp_7TeV[pythia].mult)
+    .SetOptions("HIST C").SetLine(pp_7TeV[pythia].color, kSolid, 3.).SetFillStyle(0)
+    ;
+    // pp, 5 TeV
+    plot[1].AddRatio({"meanPt", pp_5TeV[epos_lhc].input}, {"momentUnfolded1_Syst", pp_5TeV[data].input})
+    .SetColor(pp_5TeV[epos_lhc].color)
+    .SetRangeX(1., pp_5TeV[epos_lhc].mult)
+    .SetOptions("HIST C").SetLine(pp_5TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
+    ;
+    plot[1].AddRatio({"meanPt", pp_5TeV[pythia].input}, {"momentUnfolded1_Syst", pp_5TeV[data].input},  "5.02")
+    .SetColor(pp_5TeV[pythia].color)
+    .SetRangeX(1., pp_5TeV[pythia].mult)
+    .SetOptions("HIST C").SetLine(pp_5TeV[pythia].color, kSolid, 3.).SetFillStyle(0)
+    ;
+    // pp, 2 TeV
+    plot[1].AddRatio({"meanPt", pp_2TeV[epos_lhc].input}, {"momentUnfolded1_Syst", pp_2TeV[data].input})
+    .SetColor(pp_2TeV[epos_lhc].color)
+    .SetRangeX(1., pp_2TeV[epos_lhc].mult)
+    .SetOptions("HIST C").SetLine(pp_2TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
+    ;
+    plot[1].AddRatio({"meanPt", pp_2TeV[pythia].input}, {"momentUnfolded1_Syst", pp_2TeV[data].input},  "2.76 TeV")
+    .SetColor(pp_2TeV[pythia].color)
+    .SetRangeX(1., pp_2TeV[pythia].mult)
+    .SetOptions("HIST C").SetLine(pp_2TeV[pythia].color, kSolid, 3.).SetFillStyle(0)
+    ;
+
+    
+    plot[1]["X"].SetRange(0.1, 60);
+    plot[1]["Y"].SetRange(0.94, 1.06);
+    plot[1]["X"].SetTitle("#it{N}_{ch}");
+    plot[1]["Y"].SetTitle("model / data");
+
+    plot[1]["Y"].SetTitleOffset(1.7);
+    
+    plot[1].AddLegend(0.18, 0.92);
+    plot[1].AddText(0.44, 0.42, "solid: Pythia8 Monash13 // dashed: EPOS-LHC");
+    plot[1].AddText(0.34, 0.3, energyLablePrel);
+    
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
+  /*
+
   
   
   

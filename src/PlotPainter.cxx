@@ -195,6 +195,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
       optional<float_t> lineWidth   = (data->GetLineWidth())   ? data->GetLineWidth()   : defaultLineWidth;
       optional<int16_t> fillColor   = (data->GetFillColor())   ? data->GetFillColor()   : std::nullopt;
       optional<int16_t> fillStyle   = (data->GetFillStyle())   ? data->GetFillStyle()   : std::nullopt;
+      optional<float_t> fillOpacity   = (data->GetFillOpacity())   ? data->GetFillOpacity()   : std::nullopt;
       //0 : hollow, 1001 : Solid, 3000+pattern_number : pattern
       
       
@@ -226,8 +227,9 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
           if(lineWidth) data_ptr->SetLineWidth(*lineWidth);
 
           if(fillStyle) data_ptr->SetFillStyle(*fillStyle);
+          if(fillOpacity && fillColor && dataIndex != 0) *fillColor = TColor::GetColorTransparent(*fillColor, *fillOpacity);
           if(fillColor) data_ptr->SetFillColor(*fillColor);
-
+          
           dataStyle defaultDataStyle = points;
 
           if(data->GetDrawingOptions() == "")
@@ -380,7 +382,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               std::replace(drawingOptions.begin(),drawingOptions.end(), 'Z', ' ');
             }
 
-            DEBUG("Drawing {} ({}) in pad {} with option \"{}\"", data_ptr->GetName(), data_ptr->ClassName(), padID, drawingOptions);
+            //DEBUG("Drawing {} ({}) in pad {} with option \"{}\"", data_ptr->GetName(), data_ptr->ClassName(), padID, drawingOptions);
             data_ptr->Draw(drawingOptions.c_str());
             pad_ptr->Update();
 

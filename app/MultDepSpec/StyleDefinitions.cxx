@@ -28,18 +28,18 @@ const int range::maxMult = 100;
 dataStyle pp_2TeV
 {
   {
-  {data, {"pp_2TeV", colors::green, markers::circle, 35}},
+  {data, {"pp_2TeV", colors::green, markers::diamond, 35}},
   {mc, {"pp_2TeV", colors::green, markers::circle_open, 35}},
   {pythia6, {"pp_2TeV", colors::green, markers::circle_open, 35}},
   {pythia, {"Models:pythia/pp_2TeV", colors::green, markers::circle_open, 35}},
-  {epos_lhc, {"Models:pythia/pp_2TeV", colors::green, markers::circle_open, 35}},
+  {epos_lhc, {"Models:epos_lhc/pp_2TeV", colors::green, markers::circle_open, 35}},
   {geom_scaling, {"Models:geom_scaling/pp_2TeV", colors::green, markers::circle_open, 35}},
   }
 };
 dataStyle pp_5TeV
 {
   {
-  {data, {"pp_5TeV", colors::blue, markers::circle, 60}},
+  {data, {"pp_5TeV", colors::blue, markers::cross, 60}},
   {mc, {"pp_5TeV", colors::blue, markers::circle_open, 60}},
   {pythia, {"Models:pythia/pp_5TeV", colors::blue, markers::circle_open, 60}},
   {epos_lhc, {"Models:epos_lhc/pp_5TeV", colors::blue, markers::circle_open, 60}},
@@ -60,7 +60,7 @@ dataStyle pp_7TeV
 dataStyle pp_13TeV
 {
   {
-  {data, {"pp_13TeV", colors::red, markers::circle, 75}},
+  {data, {"pp_13TeV", colors::red, markers::square, 75}},
   {mc, {"pp_13TeV", colors::red, markers::circle_open, 75}},
   {pythia, {"Models:pythia/pp_13TeV", colors::red, markers::circle_open, 75}},
   {epos_lhc, {"Models:epos_lhc/pp_13TeV", colors::red, markers::circle_open, 75}},
@@ -96,7 +96,7 @@ dataStyle PbPb_2TeV
 dataStyle PbPb_5TeV
 {
   {
-  {data, {"PbPb_5TeV", colors::red, markers::circle, 3000}},
+  {data, {"PbPb_5TeV", colors::red, markers::cross, 3000}},
   {mc, {"PbPb_5TeV", colors::red, markers::circle_open, 3000}},
   {hijing, {"PbPb_5TeV", colors::red, markers::circle_open, 3000}},
   {angantyr, {"Models:pythia_angantyr/PbPb_5TeV", colors::red, markers::circle_open, 3000}},

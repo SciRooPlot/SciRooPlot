@@ -139,7 +139,7 @@ void Plot::operator+=(const Plot& plot)
 {
   mName = plot.mName;
   mFigureGroup = plot.mFigureGroup;
-  mFigureCategory = plot.mFigureGroup;
+  mFigureCategory = plot.mFigureCategory;
   mPlotTemplateName = plot.mPlotTemplateName;
   
   if(plot.mPlotDimensions.width) mPlotDimensions.width = plot.mPlotDimensions.width;
@@ -693,6 +693,7 @@ Plot::Pad::Data::Data(ptree &dataTree) : Data()
   if(auto var = dataTree.get_optional<float_t>("line_width")) mLine.size = *var;
   if(auto var = dataTree.get_optional<int16_t>("fill_color")) mFill.color = *var;
   if(auto var = dataTree.get_optional<int16_t>("fill_style")) mFill.style = *var;
+  if(auto var = dataTree.get_optional<float_t>("fill_opacity")) mFillOpacity = *var;
   if(auto var = dataTree.get_optional<double_t>("scale")) mScale = *var;
   if(auto var = dataTree.get_optional<double_t>("rangeX_min")) mRangeX.min = *var;
   if(auto var = dataTree.get_optional<double_t>("rangeX_max")) mRangeX.max = *var;
@@ -719,6 +720,7 @@ ptree Plot::Pad::Data::GetPropertyTree(){
   if(mLine.size)    dataTree.put("line_width", *mLine.size);
   if(mFill.color)   dataTree.put("fill_color", *mFill.color);
   if(mFill.style)   dataTree.put("fill_style", *mFill.style);
+  if(mFillOpacity)   dataTree.put("fill_opacity", *mFillOpacity);
   if(mDrawingOptions != "") dataTree.put("drawingOptions", mDrawingOptions);
   if(mScale) dataTree.put("scale", *mScale);
   if(mRangeX.min) dataTree.put("rangeX_min", *mRangeX.min);
@@ -846,6 +848,18 @@ auto Plot::Pad::Data::SetFillColor(int16_t color) -> decltype(*this)
 auto Plot::Pad::Data::SetFillStyle(int16_t style) -> decltype(*this)
 {
   mFill.style = style;
+  return *this;
+}
+auto Plot::Pad::Data::SetFillOpacity(float_t opacity) -> decltype(*this)
+{
+  if(opacity < 0.f || opacity > 1.f)
+  {
+    WARNING("Illegal value for opacity! It has to be between 0 (transparent) and 1 (fully opaque).");
+  }
+  else
+  {
+    mFillOpacity = opacity;
+  }
   return *this;
 }
 
