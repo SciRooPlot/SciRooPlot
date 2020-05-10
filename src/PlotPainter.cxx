@@ -45,11 +45,11 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
   if(plot.GetFillStyle())canvas_ptr->SetFillStyle(*plot.GetFillStyle());
   if(plot.IsFixAspectRatio() && *plot.IsFixAspectRatio()) canvas_ptr->SetFixedAspectRatio();
   
-  Plot::Pad& padDefaults = plot[0];
+  Plot::Pad& defaultPad = plot[0];
   for(auto& [padID, pad]: plot.GetPads())
   {
     if(padID == 0) continue; // pad 0 is used only to define the defaults
-    
+
     string padOptions = (pad.GetOptions()) ? *pad.GetOptions() : "";
     
     vector<string> errorStyles;
@@ -67,33 +67,33 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     }
 
     // get the settings for this pad
-    optional<float_t> marginTop = (pad.GetMarginTop()) ? pad.GetMarginTop() : padDefaults.GetMarginTop();
-    optional<float_t> marginBottom = (pad.GetMarginBottom()) ? pad.GetMarginBottom() : padDefaults.GetMarginBottom();
-    optional<float_t> marginLeft = (pad.GetMarginLeft()) ? pad.GetMarginLeft() : padDefaults.GetMarginLeft();
-    optional<float_t> marginRight = (pad.GetMarginRight()) ? pad.GetMarginRight() : padDefaults.GetMarginRight();
-    optional<int32_t> palette = (pad.GetPalette()) ? pad.GetPalette() : padDefaults.GetPalette();
-    optional<int16_t> padFillColor = (pad.GetFillColor()) ? pad.GetFillColor() : padDefaults.GetFillColor();
-    optional<int16_t> padFillStyle = (pad.GetFillStyle()) ? pad.GetFillStyle() : padDefaults.GetFillStyle();
-    optional<int16_t> frameFillColor = (pad.GetFillColorFrame()) ? pad.GetFillColorFrame() : padDefaults.GetFillColorFrame();
-    optional<int16_t> frameFillStyle = (pad.GetFillStyleFrame()) ? pad.GetFillStyleFrame() : padDefaults.GetFillStyleFrame();
-    optional<int16_t> frameLineColor = (pad.GetLineColorFrame()) ? pad.GetLineColorFrame() : padDefaults.GetLineColorFrame();
-    optional<int16_t> frameLineStyle = (pad.GetLineStyleFrame()) ? pad.GetLineStyleFrame() : padDefaults.GetLineStyleFrame();
-    optional<float_t> frameLineWidth = (pad.GetLineWidthFrame()) ? pad.GetLineWidthFrame() : padDefaults.GetLineWidthFrame();
+    optional<float_t> marginTop = (pad.GetMarginTop()) ? pad.GetMarginTop() : defaultPad.GetMarginTop();
+    optional<float_t> marginBottom = (pad.GetMarginBottom()) ? pad.GetMarginBottom() : defaultPad.GetMarginBottom();
+    optional<float_t> marginLeft = (pad.GetMarginLeft()) ? pad.GetMarginLeft() : defaultPad.GetMarginLeft();
+    optional<float_t> marginRight = (pad.GetMarginRight()) ? pad.GetMarginRight() : defaultPad.GetMarginRight();
+    optional<int32_t> palette = (pad.GetPalette()) ? pad.GetPalette() : defaultPad.GetPalette();
+    optional<int16_t> padFillColor = (pad.GetFillColor()) ? pad.GetFillColor() : defaultPad.GetFillColor();
+    optional<int16_t> padFillStyle = (pad.GetFillStyle()) ? pad.GetFillStyle() : defaultPad.GetFillStyle();
+    optional<int16_t> frameFillColor = (pad.GetFillColorFrame()) ? pad.GetFillColorFrame() : defaultPad.GetFillColorFrame();
+    optional<int16_t> frameFillStyle = (pad.GetFillStyleFrame()) ? pad.GetFillStyleFrame() : defaultPad.GetFillStyleFrame();
+    optional<int16_t> frameLineColor = (pad.GetLineColorFrame()) ? pad.GetLineColorFrame() : defaultPad.GetLineColorFrame();
+    optional<int16_t> frameLineStyle = (pad.GetLineStyleFrame()) ? pad.GetLineStyleFrame() : defaultPad.GetLineStyleFrame();
+    optional<float_t> frameLineWidth = (pad.GetLineWidthFrame()) ? pad.GetLineWidthFrame() : defaultPad.GetLineWidthFrame();
 
-    optional<int16_t> textFont = (pad.GetDefaultTextFont()) ? pad.GetDefaultTextFont() : padDefaults.GetDefaultTextFont();
-    optional<float_t> textSize = (pad.GetDefaultTextSize()) ? pad.GetDefaultTextSize() : padDefaults.GetDefaultTextSize();
-    optional<int16_t> textColor = (pad.GetDefaultTextColor()) ? pad.GetDefaultTextColor() : padDefaults.GetDefaultTextColor();
+    optional<int16_t> textFont = (pad.GetDefaultTextFont()) ? pad.GetDefaultTextFont() : defaultPad.GetDefaultTextFont();
+    optional<float_t> textSize = (pad.GetDefaultTextSize()) ? pad.GetDefaultTextSize() : defaultPad.GetDefaultTextSize();
+    optional<int16_t> textColor = (pad.GetDefaultTextColor()) ? pad.GetDefaultTextColor() : defaultPad.GetDefaultTextColor();
 
-    optional<float_t> defaultMarkerSize = (pad.GetDefaultMarkerSize()) ? pad.GetDefaultMarkerSize() : padDefaults.GetDefaultMarkerSize();
-    optional<float_t> defaultLineWidth = (pad.GetDefaultLineWidth()) ? pad.GetDefaultLineWidth() : padDefaults.GetDefaultLineWidth();
+    optional<float_t> defaultMarkerSize = (pad.GetDefaultMarkerSize()) ? pad.GetDefaultMarkerSize() : defaultPad.GetDefaultMarkerSize();
+    optional<float_t> defaultLineWidth = (pad.GetDefaultLineWidth()) ? pad.GetDefaultLineWidth() : defaultPad.GetDefaultLineWidth();
 
     
-    string title = *pad.GetTitle();
+    string padTitle = (pad.GetTitle()) ? *pad.GetTitle() : (defaultPad.GetTitle()) ? *defaultPad.GetTitle() : "";
     
     canvas_ptr->cd();
     string padName = "Pad_" + std::to_string(padID);
 
-    TPad* pad_ptr = new TPad(padName.c_str(), title.c_str(), padPos[0], padPos[1], padPos[2], padPos[3]);
+    TPad* pad_ptr = new TPad(padName.c_str(), padTitle.c_str(), padPos[0], padPos[1], padPos[2], padPos[3]);
     if(marginTop) pad_ptr->SetTopMargin(*marginTop);
     if(marginBottom) pad_ptr->SetBottomMargin(*marginBottom);
     if(marginLeft) pad_ptr->SetLeftMargin(*marginLeft);
@@ -111,15 +111,20 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     pad_ptr->Draw();
     pad_ptr->cd();
 
+    gStyle->SetTitleW((pad_ptr->GetX2() - pad_ptr->GetRightMargin()) - (pad_ptr->GetX1() + pad_ptr->GetLeftMargin()));
+    gStyle->SetTitleH(pad_ptr->GetTopMargin()*0.8);
+    gStyle->SetTitleAlign(kHAlignCenter + kVAlignTop);
     //TGaxis::SetMaxDigits(3);
     //gStyle->SetTextFont(plotStyle.GetTextFont());
 
-
     
-    if (pad.GetData().empty()) continue;
-    
+    if (pad.GetData().empty())
+    {
+      WARNING("No data to be drawn in pad {}.", padID);
+      continue;
+    }
     // in case user did not specify which data should define the axis frame, use first per default
-    if(pad.GetData()[0]->GetDrawingOptions() != "AXIS")
+    if(pad.GetData()[0]->GetDrawingOptions() != "AXIS") // FIXME: this has to be handled differently!
     {
       // make a copy of first data that will serve as axis frame -- this way global ranges can be set independent from first data
       if(pad.GetData()[0]->GetType() == "ratio"){
@@ -131,28 +136,12 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
       pad.GetData()[0]->SetLable(""); // axis frame should not appear in legend
     }
 
-    map<uint8_t, TH1*> axisHistos;
+    TH1* axisHist_ptr = nullptr;
     bool drawLine = false;
     string drawingOptions = "";
     int dataIndex = 0;
     for(auto& data : pad.GetData())
     {
-      optional<int16_t> markerColor   = (data->GetMarkerColor())  ? data->GetMarkerColor()  : std::nullopt;
-      optional<int16_t> markerStyle   = (data->GetMarkerStyle())  ? data->GetMarkerStyle()  : std::nullopt;
-      optional<float_t> markerSize    = (data->GetMarkerSize())   ? data->GetMarkerSize()   : std::nullopt;
-      optional<int16_t> lineColor     = (data->GetLineColor())    ? data->GetLineColor()    : std::nullopt;
-      optional<int16_t> lineStyle     = (data->GetLineStyle())    ? data->GetLineStyle()    : std::nullopt;
-      optional<float_t> lineWidth     = (data->GetLineWidth())    ? data->GetLineWidth()    : std::nullopt;
-      optional<int16_t> fillColor     = (data->GetFillColor())    ? data->GetFillColor()    : std::nullopt;
-      optional<int16_t> fillStyle     = (data->GetFillStyle())    ? data->GetFillStyle()    : std::nullopt;
-      optional<float_t> fillOpacity   = (data->GetFillOpacity())  ? data->GetFillOpacity()  : std::nullopt;
-      //0 : hollow, 1001 : Solid, 3000+pattern_number : pattern
-      
-      
-      //if(!markerColor) markerColor = GetDefaultColor(dataIndex);
-      //if(!lineColor) lineColor = GetDefaultColor(dataIndex);
-      //if(!markerStyle) markerStyle = pad.GetDefaultMarkers(0) : plot[0].GetDefaultMarkerSize(0) : GetDefaultMarker(0);
-      
       drawingOptions += data->GetDrawingOptions();
       
       // obtain a copy of the current data
@@ -162,21 +151,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
         std::visit([&, padID = padID](auto&& data_ptr)
         {
           using data_type = std::decay_t<decltype(data_ptr)>;
-          
-          // define data appearance
-          
-          if(markerStyle) data_ptr->SetMarkerStyle(*markerStyle);
-          if(markerColor) data_ptr->SetMarkerColor(*markerColor);
-          if(markerSize) data_ptr->SetMarkerSize(*markerSize);
-
-          if(lineStyle) data_ptr->SetLineStyle(*lineStyle);
-          if(lineColor) data_ptr->SetLineColor(*lineColor);
-          if(lineWidth) data_ptr->SetLineWidth(*lineWidth);
-
-          if(fillStyle) data_ptr->SetFillStyle(*fillStyle);
-          if(fillOpacity && fillColor && dataIndex != 0) *fillColor = TColor::GetColorTransparent(*fillColor, *fillOpacity);
-          if(fillColor) data_ptr->SetFillColor(*fillColor);
-          
+                    
           optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
           if(data->GetDrawingOptions() == "" && defaultDrawingOption)
@@ -211,10 +186,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               std::visit([&](auto&& denom_data_ptr)
               {
                 using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
-
-                //data_ptr->SetTitle(""); // FIXME: this might not always be what the user wants...
-                // TODO: here all possibilities of graph/hist/etc should be accounted for
-                // TODO: add here alternative divide functions and options
                 if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
                   if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist>)
                 {
@@ -224,7 +195,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                   if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
                     data_ptr->GetZaxis()->SetTitle("ratio");
                 }
-                
                 delete denom_data_ptr;
                }, *rawDenomData);
             }
@@ -257,45 +227,116 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             }
           }
 
-
-
-          
           // first data is only used to define the axes
           if(dataIndex == 0){
-            data_ptr->SetTitle("axis");
-
-            if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph>)
+            data_ptr->Draw();
+            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
             {
-              //data_ptr->Draw("A");
-              data_ptr->GetHistogram()->Draw("AXIS");
-              data_ptr->GetHistogram()->Draw("SAME AXIG");
-              axisHistos[padID] = data_ptr->GetHistogram();
-            }
-            if constexpr (std::is_convertible_v<data_type, data_ptr_t_func>)
-            {
-              data_ptr->Draw();
-              data_ptr->GetHistogram()->Draw("AXIS");
-              data_ptr->GetHistogram()->Draw("SAME AXIG");
-              axisHistos[padID] = data_ptr->GetHistogram();
-            }
-            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
-            {
-              data_ptr->Draw("AXIS");
-              data_ptr->Draw("SAME AXIG");
-              axisHistos[padID] = data_ptr;
+              axisHist_ptr = data_ptr;
+              axisHist_ptr->SetMarkerStyle(-1);
+              axisHist_ptr->SetLineWidth(0.);
+            }else{
+              data_ptr->SetMarkerStyle(-1);
+              data_ptr->SetLineWidth(0.);
+              axisHist_ptr = data_ptr->GetHistogram();
             }
             if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
             {
-              // this is a hack to account for root bug
-              // when drawing only AXIS option, fBuffer is not filled then for some reason z axis title cannot be set via this hist
-              data_ptr->Draw(drawingOptions.c_str());
-              double_t dataMin = data_ptr->GetMinimum();
-              double_t dataMax = data_ptr->GetMaximum();
-              data_ptr->Reset("ICE"); //reset only integral, contents and errors
-              data_ptr->SetMinimum(dataMin);
-              data_ptr->SetMaximum(dataMax);
+              data_ptr->Draw(drawingOptions.c_str()); // z axis is only drawn if specified
+              axisHist_ptr->Reset("ICE"); //reset only integral, contents and errors
+            }
+            axisHist_ptr->Draw("SAME AXIG");
+            axisHist_ptr->SetTitle(padTitle.c_str());
+            axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).c_str());
+            
+            
+            // apply axis settings
+            for(string axisLable : {"X", "Y", "Z"})
+            {
+              TAxis* axis_ptr = nullptr;
+              if(axisLable == "X")
+                axis_ptr = axisHist_ptr->GetXaxis();
+              else if(axisLable == "Y")
+                axis_ptr = axisHist_ptr->GetYaxis();
+              else if(axisLable == "Z")
+                axis_ptr = axisHist_ptr->GetZaxis();
+              if(!axis_ptr) continue;
+
+
+              optional<int16_t> textFontTitle = textFont;
+              optional<int16_t> textFontLable = textFont;
+              optional<int16_t> textColorTitle = textColor;
+              optional<int16_t> textColorLable = textColor;
+              optional<float_t> textSizeTitle = textSize;
+              optional<float_t> textSizeLable = textSize;
+              
+              // first apply default pad values and then settings for this specific pad
+              for (Plot::Pad& curPad : {std::ref(defaultPad), std::ref(plot.GetPads()[padID])})
+              {
+                if(curPad.GetAxes().find(axisLable) != curPad.GetAxes().end())
+                {
+                  auto axisLayout = curPad[axisLable];
+                  if(axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).c_str());
+
+                  if(axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
+                  if(axisLayout.GetLableFont()) textFontLable = axisLayout.GetLableFont();
+
+                  if(axisLayout.GetTitleColor()) textColorTitle = axisLayout.GetTitleColor();
+                  if(axisLayout.GetLableColor()) textColorLable = axisLayout.GetLableColor();
+
+                  if(axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
+                  if(axisLayout.GetLableSize()) textSizeLable = axisLayout.GetLableSize();
+
+                  if(axisLayout.GetTitleCenter()) axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
+                  if(axisLayout.GetLableCenter()) axis_ptr->CenterLabels(*axisLayout.GetLableCenter());
+
+                  
+                  if(axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(*axisLayout.GetAxisColor());
+                  
+                  if(axisLayout.GetTitleOffset()) axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
+                  if(axisLayout.GetLableOffset()) axis_ptr->SetLabelOffset(*axisLayout.GetLableOffset());
+
+                  if(axisLayout.GetTickLength()) axis_ptr->SetTickLength(*axisLayout.GetTickLength());
+                  if(axisLayout.GetMaxDigits()) axis_ptr->SetMaxDigits(*axisLayout.GetMaxDigits());
+                  
+                  if(axisLayout.GetNumDivisions()) axis_ptr->SetNdivisions(*axisLayout.GetNumDivisions());
+
+                  if(axisLayout.GetLog())
+                  {
+                    if(axisLable == "X") pad_ptr->SetLogx(*axisLayout.GetLog());
+                    else if(axisLable == "Y") pad_ptr->SetLogy(*axisLayout.GetLog());
+                    else if(axisLable == "Z") pad_ptr->SetLogz(*axisLayout.GetLog());
+                  }
+                  if(axisLayout.GetGrid())
+                  {
+                    if(axisLable == "X") pad_ptr->SetGridx(*axisLayout.GetGrid());
+                    else if(axisLable == "Y") pad_ptr->SetGridy(*axisLayout.GetGrid());
+                  }
+
+                  if(axisLayout.GetMinRange() || axisLayout.GetMaxRange())
+                  {
+                    pad_ptr->Update(); // needed here so current user ranges correct
+                    double_t curRangeMin = (axisLable == "X") ? pad_ptr->GetUxmin() : ((axisLable == "Y") ? pad_ptr->GetUymin() : axisHist_ptr->GetMinimum());
+                    double_t curRangeMax = (axisLable == "X") ? pad_ptr->GetUxmax() : ((axisLable == "Y") ? pad_ptr->GetUymax() : axisHist_ptr->GetMaximum());
+
+                    double_t rangeMin = (axisLayout.GetMinRange()) ? *axisLayout.GetMinRange() : curRangeMin;
+                    double_t rangeMax = (axisLayout.GetMaxRange()) ? *axisLayout.GetMaxRange() : curRangeMax;
+
+                    axis_ptr->SetRangeUser(rangeMin, rangeMax);
+                  }
+                  
+                }
+
+              }
+              if(textFontTitle)   axis_ptr->SetTitleFont(*textFontTitle);
+              if(textFontLable)   axis_ptr->SetLabelFont(*textFontLable);
+              if(textColorTitle)  axis_ptr->SetTitleColor(*textColorTitle);
+              if(textColorLable)  axis_ptr->SetLabelColor(*textColorLable);
+              if(textSizeTitle)   axis_ptr->SetTitleSize(*textSizeTitle);
+              if(textSizeLable)   axis_ptr->SetLabelSize(*textSizeLable);
             }
 
+            
             // right after drawing the axis, put reference line if requested
             optional<string> refFunc = (plot[padID].GetRefFunc()) ? plot[padID].GetRefFunc() : plot[0].GetRefFunc();
             if(refFunc)
@@ -306,15 +347,47 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               // line->SetLineStyle(9);
               line->Draw("SAME");
             }
-            
+            pad_ptr->Update();
           }
-          else{
-            pad_ptr->Update(); // needed here so user ranges are set properly!
-            double_t rangeMinX = (data->GetMinRangeX()) ? *data->GetMinRangeX() : pad_ptr->GetUxmin();
-            double_t rangeMaxX = (data->GetMaxRangeX()) ? *data->GetMaxRangeX() : pad_ptr->GetUxmax();
+          else
+          {
+            // define data appearance
+            optional<int16_t> markerColor   = (data->GetMarkerColor())  ? data->GetMarkerColor()  : std::nullopt;
+            optional<int16_t> markerStyle   = (data->GetMarkerStyle())  ? data->GetMarkerStyle()  : std::nullopt;
+            optional<float_t> markerSize    = (data->GetMarkerSize())   ? data->GetMarkerSize()   : std::nullopt;
+            optional<int16_t> lineColor     = (data->GetLineColor())    ? data->GetLineColor()    : std::nullopt;
+            optional<int16_t> lineStyle     = (data->GetLineStyle())    ? data->GetLineStyle()    : std::nullopt;
+            optional<float_t> lineWidth     = (data->GetLineWidth())    ? data->GetLineWidth()    : std::nullopt;
+            optional<int16_t> fillColor     = (data->GetFillColor())    ? data->GetFillColor()    : std::nullopt;
+            optional<int16_t> fillStyle     = (data->GetFillStyle())    ? data->GetFillStyle()    : std::nullopt;
+            optional<float_t> fillOpacity   = (data->GetFillOpacity())  ? data->GetFillOpacity()  : std::nullopt;
+            //0 : hollow, 1001 : Solid, 3000+pattern_number : pattern
+            
+            //if(!markerColor) markerColor = GetDefaultColor(dataIndex);
+            //if(!lineColor) lineColor = GetDefaultColor(dataIndex);
+            //if(!markerStyle) markerStyle = pad.GetDefaultMarkers(0) : plot[0].GetDefaultMarkerSize(0) : GetDefaultMarker(0);
+            
+            if(markerStyle) data_ptr->SetMarkerStyle(*markerStyle);
+            if(markerColor) data_ptr->SetMarkerColor(*markerColor);
+            if(markerSize) data_ptr->SetMarkerSize(*markerSize);
 
-            double_t rangeMinY = (data->GetMinRangeY()) ? *data->GetMinRangeY() : pad_ptr->GetUymin();
-            double_t rangeMaxY = (data->GetMaxRangeY()) ? *data->GetMaxRangeY() : pad_ptr->GetUymax();
+            if(lineStyle) data_ptr->SetLineStyle(*lineStyle);
+            if(lineColor) data_ptr->SetLineColor(*lineColor);
+            if(lineWidth) data_ptr->SetLineWidth(*lineWidth);
+
+            if(fillStyle) data_ptr->SetFillStyle(*fillStyle);
+            if(fillOpacity && fillColor && dataIndex != 0) *fillColor = TColor::GetColorTransparent(*fillColor, *fillOpacity);
+            if(fillColor) data_ptr->SetFillColor(*fillColor);
+
+            // now define data ranges
+            data_ptr->SetMinimum(axisHist_ptr->GetMinimum()); // important for correct display of bar diagrams
+            //data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
+
+            double_t rangeMinX = (data->GetMinRangeX()) ? *data->GetMinRangeX() : axisHist_ptr->GetXaxis()->GetXmin();
+            double_t rangeMaxX = (data->GetMaxRangeX()) ? *data->GetMaxRangeX() : axisHist_ptr->GetXaxis()->GetXmax();
+
+            double_t rangeMinY = (data->GetMinRangeY()) ? *data->GetMinRangeY() : axisHist_ptr->GetYaxis()->GetXmin();
+            double_t rangeMaxY = (data->GetMaxRangeY()) ? *data->GetMaxRangeY() : axisHist_ptr->GetYaxis()->GetXmax();
             
             if constexpr (std::is_convertible_v<data_type, data_ptr_t_func_2d>)
             {
@@ -341,25 +414,22 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
 
             //DEBUG("Drawing {} ({}) in pad {} with option \"{}\"", data_ptr->GetName(), data_ptr->ClassName(), padID, drawingOptions);
             data_ptr->Draw(drawingOptions.c_str());
-            pad_ptr->Update();
-
+            
+            // in case a lable was specified for the data, remember this for later
+            if (!data->GetLable().empty()) {
+              lables.push_back(data->GetLable());
+              legendEntries.Add(pad_ptr->GetListOfPrimitives()->Last());
+              errorStyles.push_back(drawingOptions);
+            }
+            pad_ptr->Update(); // adds something to the list of primitives
           }
-          
-          // in case a lable was specified for the data, remember this for later
-          if (!data->GetLable().empty()) {
-            lables.push_back(data->GetLable());
-            legendEntries.Add(pad_ptr->GetListOfPrimitives()->Last());
-            errorStyles.push_back(drawingOptions);
-          }
-
           dataIndex++;
           drawingOptions = "SAME "; // next data should be drawn to same pad
         }, *rawData);
       }
     } // end data code
-//---------------------------------------------------------------
-
     
+    // draw text boxes
     uint8_t legendIndex = 1;
     uint8_t textIndex = 1;
     // now place legends, textboxes and shapes
@@ -384,102 +454,9 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
       }
     }
 
-    // after data is drawn to pad axis porperties can be set
-    if(!axisHistos[padID]) continue; // this should never happen
-    axisHistos[padID]->SetName("axis_hist");
+    bool redrawAxes = (pad.GetRedrawAxes()) ? *pad.GetRedrawAxes() : ((defaultPad.GetRedrawAxes()) ? *defaultPad.GetRedrawAxes() : false);
+    if(redrawAxes) axisHist_ptr->Draw("SAME AXIS");
 
-    for(string axisLable : {"X", "Y", "Z"})
-    {
-      TAxis* axis = nullptr;
-      if(axisLable.find("X") != string::npos)
-        axis = axisHistos[padID]->GetXaxis();
-      else if(axisLable.find("Y") != string::npos)
-        axis = axisHistos[padID]->GetYaxis();
-      else if(axisLable.find("Z") != string::npos)
-        axis = axisHistos[padID]->GetZaxis();
-      if(!axis) continue;
-
-
-      optional<int16_t> textFontTitle = textFont;
-      optional<int16_t> textFontLable = textFont;
-      optional<int16_t> textColorTitle = textColor;
-      optional<int16_t> textColorLable = textColor;
-      optional<float_t> textSizeTitle = textSize;
-      optional<float_t> textSizeLable = textSize;
-      
-      // first apply default pad values and then settings for this specific pad
-      for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(pad)})
-      {
-        if(curPad.GetAxes().find(axisLable) != curPad.GetAxes().end())
-        {
-          auto axisLayout = curPad[axisLable];
-          
-          if(axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
-          if(axisLayout.GetLableFont()) textFontLable = axisLayout.GetLableFont();
-
-          if(axisLayout.GetTitleColor()) textColorTitle = axisLayout.GetTitleColor();
-          if(axisLayout.GetLableColor()) textColorLable = axisLayout.GetLableColor();
-
-          if(axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
-          if(axisLayout.GetLableSize()) textSizeLable = axisLayout.GetLableSize();
-
-          if(axisLayout.GetTitleCenter()) axis->CenterTitle(*axisLayout.GetTitleCenter());
-          if(axisLayout.GetLableCenter()) axis->CenterLabels(*axisLayout.GetLableCenter());
-
-          
-          if(axisLayout.GetAxisColor()) axis->SetAxisColor(*axisLayout.GetAxisColor());
-          
-          if(axisLayout.GetTitleOffset()) axis->SetTitleOffset(*axisLayout.GetTitleOffset());
-          if(axisLayout.GetLableOffset()) axis->SetLabelOffset(*axisLayout.GetLableOffset());
-
-          if(axisLayout.GetTickLength()) axis->SetTickLength(*axisLayout.GetTickLength());
-          if(axisLayout.GetMaxDigits()) axis->SetMaxDigits(*axisLayout.GetMaxDigits());
-          
-          if(axisLayout.GetNumDivisions()) axis->SetNdivisions(*axisLayout.GetNumDivisions());
-
-
-          if(axisLayout.GetMinRange() || axisLayout.GetMaxRange())
-          {
-            pad_ptr->Update(); // needed here so current user ranges correct
-            double_t curRangeMin = (axisLable == "X") ? pad_ptr->GetUxmin() : ((axisLable == "Y") ? pad_ptr->GetUymin() : axisHistos[padID]->GetMinimum());
-            double_t curRangeMax = (axisLable == "X") ? pad_ptr->GetUxmax() : ((axisLable == "Y") ? pad_ptr->GetUymax() : axisHistos[padID]->GetMaximum());
-
-            double_t rangeMin = (axisLayout.GetMinRange()) ? *axisLayout.GetMinRange() : curRangeMin;
-            double_t rangeMax = (axisLayout.GetMaxRange()) ? *axisLayout.GetMaxRange() : curRangeMax;
-            
-            axis->SetRangeUser(rangeMin, rangeMax);
-          }
-          
-          if(axisLayout.GetLog())
-          {
-            if(axisLable == "X") pad_ptr->SetLogx(*axisLayout.GetLog());
-            else if(axisLable == "Y") pad_ptr->SetLogy(*axisLayout.GetLog());
-            else if(axisLable == "Z") pad_ptr->SetLogz(*axisLayout.GetLog());
-          }
-          if(axisLayout.GetGrid())
-          {
-            if(axisLable == "X") pad_ptr->SetGridx(*axisLayout.GetGrid());
-            else if(axisLable == "Y") pad_ptr->SetGridy(*axisLayout.GetGrid());
-          }
-
-          if(axisLayout.GetTitle()) axis->SetTitle((*axisLayout.GetTitle()).c_str());
-
-        }
-        
-      }
-      
-      if(textFontTitle)   axis->SetTitleFont(*textFontTitle);
-      if(textFontLable)   axis->SetLabelFont(*textFontLable);
-      if(textColorTitle)  axis->SetTitleColor(*textColorTitle);
-      if(textColorLable)  axis->SetLabelColor(*textColorLable);
-      if(textSizeTitle)   axis->SetTitleSize(*textSizeTitle);
-      if(textSizeLable)   axis->SetLabelSize(*textSizeLable);
-
-
-      
-    }
-    bool redrawAxes = (pad.GetRedrawAxes()) ? *pad.GetRedrawAxes() : ((padDefaults.GetRedrawAxes()) ? *padDefaults.GetRedrawAxes() : false);
-    if(redrawAxes) axisHistos[padID]->Draw("SAME AXIS");
     pad_ptr->Modified();
     pad_ptr->Update();
   }

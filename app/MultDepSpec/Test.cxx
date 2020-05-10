@@ -31,8 +31,14 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     string plotName = "test1d";
     Plot plot(plotName, plotGroup, "1d");
 
+
+    plot[1].AddData({"func", "dummyInput"}, "func").SetRangeX(0, 20).SetLineWidth(3.).SetLineColor(kBlue);
+
     plot[1].AddData({"momentUnfolded1", "pPb_5TeV"}, "pPb, 5 TeV")
-    .SetMaxRangeX(60).SetOptions(area_line).SetColor(kGreen+1).SetLineWidth(3.);
+    .SetOptions(hist)
+    .SetRangeX(1, 60).SetColor(kGreen+1).SetLineWidth(3.).SetLineColor(kRed);
+
+    plot[1].AddData({"graph", "dummyInput"}, "graph").SetOptions(points).SetMarkerStyle(kFullCircle).SetMarkerColor(kRed).SetMarkerSize(1.5).SetLine(kBlue, kSolid, 3.);
 
     plot[1].AddData({"momentUnfolded1", "pp_2TeV"}, "2 TeV")
     .SetMaxRangeX(40).SetMarkerColor(kRed);
@@ -46,8 +52,9 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     plot[1].AddData({"momentUnfolded1", "pp_13TeV"}, "13 TeV")
     .SetMaxRangeX(70);
 
+    plot[1].SetRedrawAxes();
     plot[1].AddLegend();
-    plot[1]["Y"].SetRange(0.45, 0.85);
+    plot[1]["Y"].SetRange(0.40, 0.85);
     plot[1]["X"].SetMaxRange(70).SetTitle("Multiplicity");
 
     plotManager.AddPlot(plot);
@@ -59,7 +66,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     Plot plot(plotName, plotGroup, "1d_ratio");
 
     plot[1].AddData({"momentUnfolded1", "pp_5TeV"}, "5 TeV")
-    .SetMarker(kRed, kFullCircle, 1.2).SetMaxRangeX(60);
+    .SetMarker(kRed, kFullCircle, 1.2).SetMaxRangeX(40);
     
     plot[1].AddData({"momentUnfolded1", "pp_13TeV"}, "13 TeV")
     .SetMarker(kBlack, kFullCircle, 1.2).SetMaxRangeX(70);
@@ -68,7 +75,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
 
     plot[1].AddLegend();
 
-    plot[0]["X"].SetRange(1, 70);
+    plot[0]["X"].SetRange(20, 70);
 
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
@@ -76,10 +83,10 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
   { // -----------------------------------------------------------------------
     string plotName = "test2d";
     Plot plot(plotName, plotGroup, "2d");
-    
+    plot[1].SetTitle("Hallo");
     plot[1].AddData({"multPtUnfolded", "pp_13TeV"}).SetOptions("COLZ");
     plot[1]["Z"].SetRange(1e-4, 1e-2).SetLog();
-    plot[1]["Y"].SetRange(.15, 4).SetLog();
+    plot[1]["Y"].SetLog().SetRange(0.15, 5);
 
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------

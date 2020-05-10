@@ -197,6 +197,7 @@ enum drawing_options_t : uint8_t
   area_line,
   boxes,
   boxes_only,
+  stars,
   // 2d options
   colz,
   surf,
@@ -220,6 +221,7 @@ const map<drawing_options_t, string> defaultDrawingOpions_Hist
   { hist, "HIST" },
   { bar, "HIST B" },
   { hist_no_borders, "HIST ][" },
+  { stars, "*H" },
 };
 
 const map<drawing_options_t, string> defaultDrawingOpions_Graph

@@ -12,10 +12,6 @@ FRAMEWORK:
 ----------
 
 WIP:
-- fix title stuff in Pad!
-    gStyle->SetTitleW((pad->GetX2() - pad->GetRightMargin()) - (pad->GetX1() + pad->GetLeftMargin()));
-    gStyle->SetTitleH(pad->GetTopMargin()*0.8);
-    gStyle->SetTitleAlign(kHAlignCenter + kVAlignTop);
 - add nContours as option to pad
 - add axis linking
 
