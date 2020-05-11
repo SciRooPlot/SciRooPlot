@@ -688,13 +688,13 @@ Plot::Pad::Data::Data(ptree &dataTree) : Data()
   if(auto var = dataTree.get_optional<uint8_t>("drawingOptionAlias")) mDrawingOptionAlias = (drawing_options_t)*var;
   if(auto var = dataTree.get_optional<int16_t>("marker_color")) mMarker.color = *var;
   if(auto var = dataTree.get_optional<int16_t>("marker_style")) mMarker.style = *var;
-  if(auto var = dataTree.get_optional<float_t>("marker_size")) mMarker.size = *var;
+  if(auto var = dataTree.get_optional<float_t>("marker_size")) mMarker.scale = *var;
   if(auto var = dataTree.get_optional<int16_t>("line_color")) mLine.color = *var;
   if(auto var = dataTree.get_optional<int16_t>("line_style")) mLine.style = *var;
-  if(auto var = dataTree.get_optional<float_t>("line_width")) mLine.size = *var;
+  if(auto var = dataTree.get_optional<float_t>("line_width")) mLine.scale = *var;
   if(auto var = dataTree.get_optional<int16_t>("fill_color")) mFill.color = *var;
   if(auto var = dataTree.get_optional<int16_t>("fill_style")) mFill.style = *var;
-  if(auto var = dataTree.get_optional<float_t>("fill_opacity")) mFillOpacity = *var;
+  if(auto var = dataTree.get_optional<float_t>("fill_opacity")) mFill.scale = *var;
   if(auto var = dataTree.get_optional<double_t>("scale")) mScale = *var;
   if(auto var = dataTree.get_optional<double_t>("rangeX_min")) mRangeX.min = *var;
   if(auto var = dataTree.get_optional<double_t>("rangeX_max")) mRangeX.max = *var;
@@ -715,13 +715,13 @@ ptree Plot::Pad::Data::GetPropertyTree(){
   if(mLable != "")  dataTree.put("lable", mLable);
   if(mMarker.color) dataTree.put("marker_color", *mMarker.color);
   if(mMarker.style) dataTree.put("marker_style", *mMarker.style);
-  if(mMarker.size)  dataTree.put("marker_size", *mMarker.size);
+  if(mMarker.scale)  dataTree.put("marker_size", *mMarker.scale);
   if(mLine.color)   dataTree.put("line_color", *mLine.color);
   if(mLine.style)   dataTree.put("line_style", *mLine.style);
-  if(mLine.size)    dataTree.put("line_width", *mLine.size);
+  if(mLine.scale)    dataTree.put("line_width", *mLine.scale);
   if(mFill.color)   dataTree.put("fill_color", *mFill.color);
   if(mFill.style)   dataTree.put("fill_style", *mFill.style);
-  if(mFillOpacity)   dataTree.put("fill_opacity", *mFillOpacity);
+  if(mFill.scale)   dataTree.put("fill_opacity", *mFill.scale);
   if(mDrawingOptions != "") dataTree.put("drawingOptions", mDrawingOptions);
   if(mDrawingOptionAlias) dataTree.put("drawingOptionAlias", *mDrawingOptionAlias);
   if(mScale) dataTree.put("scale", *mScale);
@@ -796,7 +796,7 @@ auto Plot::Pad::Data::SetMarker(int16_t color, int16_t style, float_t size) -> d
 {
   mMarker.color = color;
   mMarker.style = style;
-  mMarker.size = size;
+  mMarker.scale = size;
   return *this;
 }
 auto Plot::Pad::Data::SetMarkerColor(int16_t color) -> decltype(*this)
@@ -811,14 +811,14 @@ auto Plot::Pad::Data::SetMarkerStyle(int16_t style) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetMarkerSize(float_t size) -> decltype(*this)
 {
-  mMarker.size = size;
+  mMarker.scale = size;
   return *this;
 }
 auto Plot::Pad::Data::SetLine(int16_t color, int16_t style, float_t width) -> decltype(*this)
 {
   mLine.color = color;
   mLine.style = style;
-  mLine.size = width;
+  mLine.scale = width;
   return *this;
 }
 auto Plot::Pad::Data::SetLineColor(int16_t color) -> decltype(*this)
@@ -833,7 +833,7 @@ auto Plot::Pad::Data::SetLineStyle(int16_t style) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetLineWidth(float_t width) -> decltype(*this)
 {
-  mLine.size = width;
+  mLine.scale = width;
   return *this;
 }
 auto Plot::Pad::Data::SetFill(int16_t color, int16_t style) -> decltype(*this)
@@ -860,7 +860,7 @@ auto Plot::Pad::Data::SetFillOpacity(float_t opacity) -> decltype(*this)
   }
   else
   {
-    mFillOpacity = opacity;
+    mFill.scale = opacity;
   }
   return *this;
 }

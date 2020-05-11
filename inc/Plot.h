@@ -343,15 +343,15 @@ protected:
     
   const optional<int16_t>& GetMarkerColor(){return mMarker.color;}
   const optional<int16_t>& GetMarkerStyle(){return mMarker.style;}
-  const optional<float_t>& GetMarkerSize(){return mMarker.size;}
+  const optional<float_t>& GetMarkerSize(){return mMarker.scale;}
 
   const optional<int16_t>& GetLineColor(){return mLine.color;}
   const optional<int16_t>& GetLineStyle(){return mLine.style;}
-  const optional<float_t>& GetLineWidth(){return mLine.size;}
+  const optional<float_t>& GetLineWidth(){return mLine.scale;}
 
   const optional<int16_t>& GetFillColor(){return mFill.color;}
   const optional<int16_t>& GetFillStyle(){return mFill.style;}
-  const optional<float_t>& GetFillOpacity(){return mFillOpacity;}
+  const optional<float_t>& GetFillOpacity(){return mFill.scale;}
 
   const string& GetDrawingOptions(){return mDrawingOptions;}
   const optional<drawing_options_t>& GetDrawingOptionAlias(){return mDrawingOptionAlias;}
@@ -376,7 +376,7 @@ private:
   typedef struct{
     optional<int16_t> color;
     optional<int16_t> style;
-    optional<float_t> size;
+    optional<float_t> scale;  // marker size , line width, fill opacity
   } dataLayout_t;
   
   typedef struct{
@@ -388,7 +388,6 @@ private:
   dataLayout_t mMarker;
   dataLayout_t mLine;
   dataLayout_t mFill;
-  optional<float_t> mFillOpacity;
   dataRange_t mRangeX;
   dataRange_t mRangeY;
 };
