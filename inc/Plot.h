@@ -307,9 +307,9 @@ public:
   virtual auto SetRangeY(double_t min, double_t max) -> decltype(*this);
   virtual auto SetMaxRangeY(double_t max) -> decltype(*this);
   virtual auto SetMinRangeY(double_t min) -> decltype(*this);
-  virtual auto SetLable(string lable) -> decltype(*this);
+  virtual auto SetLegendLable(string legendLable) -> decltype(*this);
   virtual auto SetOptions(string opions) -> decltype(*this);
-  virtual auto SetScale(double_t scale) -> decltype(*this);
+  virtual auto SetScaleFactor(double_t scale) -> decltype(*this);
   virtual auto SetColor(int16_t color) -> decltype(*this);
   virtual auto SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this);
   virtual auto SetMarkerColor(int16_t color) -> decltype(*this);
@@ -339,7 +339,7 @@ protected:
   const string& GetType(){return mType;}
   const string& GetName() {return mName;}
   const string& GetInputIdentifier(){return mInputIdentifier;}
-  const string& GetLable(){return mLable;}
+  const optional<string>& GetLegendLable(){return mLegendLable;}
     
   const optional<int16_t>& GetMarkerColor(){return mMarker.color;}
   const optional<int16_t>& GetMarkerStyle(){return mMarker.style;}
@@ -353,9 +353,9 @@ protected:
   const optional<int16_t>& GetFillStyle(){return mFill.style;}
   const optional<float_t>& GetFillOpacity(){return mFill.scale;}
 
-  const string& GetDrawingOptions(){return mDrawingOptions;}
+  const optional<string>& GetDrawingOptions(){return mDrawingOptions;}
   const optional<drawing_options_t>& GetDrawingOptionAlias(){return mDrawingOptionAlias;}
-  const optional<double_t>& GetScaleFactor(){return mScale;}
+  const optional<double_t>& GetScaleFactor(){return mScaleFactor;}
   
   const optional<double_t>& GetMinRangeX(){return mRangeX.min;}
   const optional<double_t>& GetMaxRangeX(){return mRangeX.max;}
@@ -368,10 +368,11 @@ private:
   string mType; // for introspection: "data" or "ratio"
   string mName;
   string mInputIdentifier;
-  string mLable;
-  string mDrawingOptions;
+  
+  optional<string> mLegendLable;
+  optional<string> mDrawingOptions;
   optional<drawing_options_t> mDrawingOptionAlias;
-  optional<double_t> mScale;
+  optional<double_t> mScaleFactor;
 
   typedef struct{
     optional<int16_t> color;
@@ -421,12 +422,12 @@ public:
   {return dynamic_cast<decltype(*this)&>(Data::SetMaxRangeY(max));}
   virtual auto SetMinRangeY(double_t min) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetMinRangeY(min));}
-  virtual auto SetLable(string lable) -> decltype(*this)
-  {return dynamic_cast<decltype(*this)&>(Data::SetLable(lable));}
+  virtual auto SetLegendLable(string legendLable) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetLegendLable(legendLable));}
   virtual auto SetOptions(string opions) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetOptions(opions));}
   virtual auto SetScale(double_t scale) -> decltype(*this)
-  {return dynamic_cast<decltype(*this)&>(Data::SetScale(scale));}
+  {return dynamic_cast<decltype(*this)&>(Data::SetScaleFactor(scale));}
   virtual auto SetColor(int16_t color) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetColor(color));}
   virtual auto SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this)

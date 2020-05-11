@@ -649,12 +649,12 @@ void Plot::Pad::AddLegend(string title, int nColumns, int borderStyle, int borde
  * Default constructor for Data objects.
  */
 //****************************************************************************************
-Plot::Pad::Data::Data(string name, string inputIdentifier, string lable)
+Plot::Pad::Data::Data(string name, string inputIdentifier, string legendLable)
   : Data()
   {
     mType = "data";
-    mLable = lable;
-
+    
+    if(legendLable != "") mLegendLable = legendLable;
     // in case input was specified further via inputIdentifier:some/path/in/file
     auto subPathPos = inputIdentifier.find(":");
     if(subPathPos != string::npos)
@@ -683,7 +683,7 @@ Plot::Pad::Data::Data(ptree &dataTree) : Data()
   }catch(...){
     ERROR("Could not construct data from ptree."); // FIXME: what to do if this happens??
   }
-  if(auto var = dataTree.get_optional<string>("lable")) mLable = *var;
+  if(auto var = dataTree.get_optional<string>("legend_lable")) mLegendLable = *var;
   if(auto var = dataTree.get_optional<string>("drawingOptions")) mDrawingOptions = *var;
   if(auto var = dataTree.get_optional<uint8_t>("drawingOptionAlias")) mDrawingOptionAlias = (drawing_options_t)*var;
   if(auto var = dataTree.get_optional<int16_t>("marker_color")) mMarker.color = *var;
@@ -695,7 +695,7 @@ Plot::Pad::Data::Data(ptree &dataTree) : Data()
   if(auto var = dataTree.get_optional<int16_t>("fill_color")) mFill.color = *var;
   if(auto var = dataTree.get_optional<int16_t>("fill_style")) mFill.style = *var;
   if(auto var = dataTree.get_optional<float_t>("fill_opacity")) mFill.scale = *var;
-  if(auto var = dataTree.get_optional<double_t>("scale")) mScale = *var;
+  if(auto var = dataTree.get_optional<double_t>("scale_factor")) mScaleFactor = *var;
   if(auto var = dataTree.get_optional<double_t>("rangeX_min")) mRangeX.min = *var;
   if(auto var = dataTree.get_optional<double_t>("rangeX_max")) mRangeX.max = *var;
   if(auto var = dataTree.get_optional<double_t>("rangeY_min")) mRangeY.min = *var;
@@ -712,19 +712,19 @@ ptree Plot::Pad::Data::GetPropertyTree(){
   dataTree.put("type", mType);
   dataTree.put("name", mName);
   dataTree.put("inputIdentifier", mInputIdentifier);
-  if(mLable != "")  dataTree.put("lable", mLable);
-  if(mMarker.color) dataTree.put("marker_color", *mMarker.color);
-  if(mMarker.style) dataTree.put("marker_style", *mMarker.style);
-  if(mMarker.scale)  dataTree.put("marker_size", *mMarker.scale);
-  if(mLine.color)   dataTree.put("line_color", *mLine.color);
-  if(mLine.style)   dataTree.put("line_style", *mLine.style);
-  if(mLine.scale)    dataTree.put("line_width", *mLine.scale);
-  if(mFill.color)   dataTree.put("fill_color", *mFill.color);
-  if(mFill.style)   dataTree.put("fill_style", *mFill.style);
-  if(mFill.scale)   dataTree.put("fill_opacity", *mFill.scale);
-  if(mDrawingOptions != "") dataTree.put("drawingOptions", mDrawingOptions);
+  if(mLegendLable)    dataTree.put("legend_lable", *mLegendLable);
+  if(mMarker.color)   dataTree.put("marker_color", *mMarker.color);
+  if(mMarker.style)   dataTree.put("marker_style", *mMarker.style);
+  if(mMarker.scale)   dataTree.put("marker_size", *mMarker.scale);
+  if(mLine.color)     dataTree.put("line_color", *mLine.color);
+  if(mLine.style)     dataTree.put("line_style", *mLine.style);
+  if(mLine.scale)     dataTree.put("line_width", *mLine.scale);
+  if(mFill.color)     dataTree.put("fill_color", *mFill.color);
+  if(mFill.style)     dataTree.put("fill_style", *mFill.style);
+  if(mFill.scale)     dataTree.put("fill_opacity", *mFill.scale);
+  if(mDrawingOptions) dataTree.put("drawingOptions", *mDrawingOptions);
   if(mDrawingOptionAlias) dataTree.put("drawingOptionAlias", *mDrawingOptionAlias);
-  if(mScale) dataTree.put("scale", *mScale);
+  if(mScaleFactor) dataTree.put("scale_factor", *mScaleFactor);
   if(mRangeX.min) dataTree.put("rangeX_min", *mRangeX.min);
   if(mRangeX.max) dataTree.put("rangeX_max", *mRangeX.max);
   if(mRangeY.min) dataTree.put("rangeY_min", *mRangeY.min);
@@ -738,9 +738,9 @@ ptree Plot::Pad::Data::GetPropertyTree(){
  * User accessors.
  */
 //****************************************************************************************
-auto Plot::Pad::Data::SetLable(string lable) -> decltype(*this)
+auto Plot::Pad::Data::SetLegendLable(string legendLable) -> decltype(*this)
 {
-  mLable = lable;
+  mLegendLable = legendLable;
   return *this;
 }
 auto Plot::Pad::Data::SetOptions(string opions) -> decltype(*this)
@@ -748,9 +748,9 @@ auto Plot::Pad::Data::SetOptions(string opions) -> decltype(*this)
   mDrawingOptions = opions;
   return *this;
 }
-auto Plot::Pad::Data::SetScale(double_t scale) -> decltype(*this)
+auto Plot::Pad::Data::SetScaleFactor(double_t scale) -> decltype(*this)
 {
-  mScale = scale;
+  mScaleFactor = scale;
   return *this;
 }
 auto Plot::Pad::Data::SetRangeX(double_t min, double_t max) -> decltype(*this)

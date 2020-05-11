@@ -124,7 +124,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
       continue;
     }
     // in case user did not specify which data should define the axis frame, use first per default
-    if(pad.GetData()[0]->GetDrawingOptions() != "AXIS") // FIXME: this has to be handled differently!
+    if(true) // FIXME: this has to be handled differently!
     {
       // make a copy of first data that will serve as axis frame -- this way global ranges can be set independent from first data
       if(pad.GetData()[0]->GetType() == "ratio"){
@@ -133,7 +133,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
       else{
         pad.GetData().insert(pad.GetData().begin(), std::make_shared<Plot::Pad::Data>(*pad.GetData()[0]));
       }
-      pad.GetData()[0]->SetLable(""); // axis frame should not appear in legend
+      pad.GetData()[0]->SetLegendLable(""); // axis frame should not appear in legend
     }
 
     TH1* axisHist_ptr = nullptr;
@@ -142,7 +142,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     int dataIndex = 0;
     for(auto& data : pad.GetData())
     {
-      drawingOptions += data->GetDrawingOptions();
+      if(data->GetDrawingOptions()) drawingOptions += *data->GetDrawingOptions();
       
       // obtain a copy of the current data
       if(optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData))
@@ -154,7 +154,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                     
           optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
-          if(data->GetDrawingOptions() == "" && defaultDrawingOption)
+          if(!data->GetDrawingOptions() && defaultDrawingOption)
           {
             if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
             {
@@ -416,8 +416,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             data_ptr->Draw(drawingOptions.c_str());
             
             // in case a lable was specified for the data, remember this for later
-            if (!data->GetLable().empty()) {
-              lables.push_back(data->GetLable());
+            if (data->GetLegendLable() && !(*data->GetLegendLable()).empty()) {
+              lables.push_back(*data->GetLegendLable());
               legendEntries.Add(pad_ptr->GetListOfPrimitives()->Last());
               errorStyles.push_back(drawingOptions);
             }
