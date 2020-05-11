@@ -111,9 +111,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     pad_ptr->Draw();
     pad_ptr->cd();
 
-    gStyle->SetTitleW((pad_ptr->GetX2() - pad_ptr->GetRightMargin()) - (pad_ptr->GetX1() + pad_ptr->GetLeftMargin()));
-    gStyle->SetTitleH(pad_ptr->GetTopMargin()*0.8);
-    gStyle->SetTitleAlign(kHAlignCenter + kVAlignTop);
     //TGaxis::SetMaxDigits(3);
     //gStyle->SetTextFont(plotStyle.GetTextFont());
 
@@ -143,7 +140,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     for(auto& data : pad.GetData())
     {
       if(data->GetDrawingOptions()) drawingOptions += *data->GetDrawingOptions();
-      
       // obtain a copy of the current data
       if(optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData))
       {
@@ -151,7 +147,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
         std::visit([&, padID = padID](auto&& data_ptr)
         {
           using data_type = std::decay_t<decltype(data_ptr)>;
-                    
+          data_ptr->SetTitle("");
+
           optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
           if(!data->GetDrawingOptions() && defaultDrawingOption)
@@ -229,27 +226,27 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
 
           // first data is only used to define the axes
           if(dataIndex == 0){
-            data_ptr->Draw();
+            bool isDrawn = false;
+            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
+            {
+              if(drawingOptions.find("Z") != string::npos){
+                data_ptr->Draw(drawingOptions.c_str()); // z axis is only drawn if specified
+                data_ptr->Reset("ICE"); //reset only integral, contents and errors
+                isDrawn = true;
+              }
+            }
             if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
             {
               axisHist_ptr = data_ptr;
-              axisHist_ptr->SetMarkerStyle(-1);
-              axisHist_ptr->SetLineWidth(0.);
-            }else{
-              data_ptr->SetMarkerStyle(-1);
-              data_ptr->SetLineWidth(0.);
+            }else
+            {
+              data_ptr->Draw();
               axisHist_ptr = data_ptr->GetHistogram();
             }
-            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
-            {
-              data_ptr->Draw(drawingOptions.c_str()); // z axis is only drawn if specified
-              axisHist_ptr->Reset("ICE"); //reset only integral, contents and errors
-            }
+            if(!isDrawn) axisHist_ptr->Draw("AXIS");
             axisHist_ptr->Draw("SAME AXIG");
-            axisHist_ptr->SetTitle(padTitle.c_str());
             axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).c_str());
-            
-            
+                        
             // apply axis settings
             for(string axisLable : {"X", "Y", "Z"})
             {
@@ -429,6 +426,13 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
       }
     } // end data code
     
+    
+    if(!padTitle.empty())
+    {
+      // dummy title feature (will be improved once text boxes are implemented propely)
+      TPaveText* titleBox = MakeText(std::make_shared<Plot::Pad::TextBox>(false, false, 0.5, 0.98, kSolid, 0., kWhite, padTitle));
+      titleBox->Draw("SAME");
+    }
     // draw text boxes
     uint8_t legendIndex = 1;
     uint8_t textIndex = 1;

@@ -31,7 +31,6 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     string plotName = "test1d";
     Plot plot(plotName, plotGroup, "1d");
 
-
     plot[1].AddData({"func", "dummyInput"}, "func").SetRangeX(0, 20).SetLineWidth(3.).SetLineColor(kBlue);
 
     plot[1].AddData({"momentUnfolded1", "pPb_5TeV"}, "pPb, 5 TeV")
@@ -84,7 +83,10 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     string plotName = "test2d";
     Plot plot(plotName, plotGroup, "2d");
     plot[1].SetTitle("Hallo");
-    plot[1].AddData({"multPtUnfolded", "pp_13TeV"}).SetOptions("COLZ");
+    plot[1].AddData({"multPtUnfolded", "pp_13TeV"})
+    .SetOptions("COLZ")
+    //.SetOptions("LEGO")
+    ;
     plot[1]["Z"].SetRange(1e-4, 1e-2).SetLog();
     plot[1]["Y"].SetLog().SetRange(0.15, 5);
 
@@ -178,6 +180,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
      .SetMarkerStyle(PbPb_5TeV[epos].marker)
      .SetColor(PbPb_5TeV[epos].color)
      .SetMaxRangeX(PbPb_5TeV[epos].mult)
+     .SetMinRangeX(5.)
      .SetOptions(curve).SetLine(PbPb_5TeV[epos].color, kDashed, 3.).SetFillStyle(0)
      ;
      plot[1].AddData({"meanPt", PbPb_5TeV[angantyr].input})
@@ -186,19 +189,23 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
      .SetMaxRangeX(PbPb_5TeV[angantyr].mult)
      .SetOptions(curve).SetLine(PbPb_5TeV[angantyr].color, kSolid, 3.).SetFillStyle(0);
 
-     plot[1].AddText(0.14, 0.75, "dashed: Pythia // solid: EPOS");
+     plot[1].AddText(0.34, 0.3, systemSizeLablePrel);
+     plot[1]["Y"].SetRange(0.45, 0.85);
+     plot[1]["X"].SetTitle("#it{N}_{ch}");
      plot[1]["Y"].SetTitleOffset(1.7);
+     plot[1].AddText(0.12, 0.93, "solid: //   Pythia8 (pp), //   Angantyr (p-Pb, Pb-Pb) // dashed: //   EOPOS-LHC (pp, p-Pb), //   EPOS3 (Pb-Pb)");
+
+     Plot plotLin(plot, plotName + "_lin", "preliminary");
+
+     plot[1].AddLegend(0.65, 0.9);
 
      plot[1].SetPadOptions("logX");
      plot[1]["X"].SetRange(0.1, 4000).SetLog();
-     plot[1]["Y"].SetRange(0.45, 0.85);
-     plot[1]["X"].SetTitle("#it{N}_{ch}");
      
-     plot[1].AddLegend(0.14, 0.92);
-     plot[1].AddText(0.34, 0.3, systemSizeLablePrel);
-     
-     Plot plotLin(plot, plotName + "_lin", "preliminary");
+     plotLin[1]["Y"].SetRange(0.45, 0.95);
+
      plotLin[1]["X"].SetMaxRange(100).SetLog(false);
+     plotLin[1].AddLegend(0.65, 0.9);
      plotManager.AddPlot(plotLin);
      plotManager.AddPlot(plot);
    } // -----------------------------------------------------------------------
