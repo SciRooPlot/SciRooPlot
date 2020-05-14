@@ -48,7 +48,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     plot[1].AddData({"momentUnfolded1", "pp_7TeV"}, "7 TeV")
     .SetMaxRangeX(60);
     
-    plot[1].AddData({"momentUnfolded1", "pp_13TeV"}, "13 TeV")
+    plot[1].AddData({"momentUnfolded1", "pp_13TeV"}, "13 TeV").SetDefinesFrame()
     .SetMaxRangeX(70);
 
     plot[1].SetRedrawAxes();
@@ -117,8 +117,6 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
      // compare meanPt in all systems
      string plotName = "meanPt_systems";
      Plot plot(plotName, "preliminary", "1d");
-     plot[1].AddFrame({"momentUnfolded1", PbPb_5TeV[data].input});
-     
      //p-p
      plot[1].AddData({"momentUnfolded1", pp_5TeV[data].input})
      .SetMarkerStyle(kFullCross)
@@ -170,6 +168,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
      .SetMarkerStyle(PbPb_5TeV[data].marker)
      .SetColor(PbPb_5TeV[data].color)
      .SetMaxRangeX(PbPb_5TeV[data].mult)
+     .SetDefinesFrame()
      ;
      plot[1].AddData({"momentUnfolded1_Syst", PbPb_5TeV[data].input}, "Pb-Pb").SetOptions(boxes).SetFillStyle(0)
      .SetMarkerStyle(PbPb_5TeV[data].marker)
@@ -214,7 +213,6 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     // compare meanPt in all systems
     string plotName = "variance_systems";
     Plot plot(plotName, "preliminary", "1d");
-    plot[1].AddFrame({"varianceUnfolded", PbPb_5TeV[data].input});
     
     //p-p
     plot[1].AddData({"varianceUnfolded", pp_5TeV[data].input})

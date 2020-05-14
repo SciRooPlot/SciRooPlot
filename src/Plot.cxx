@@ -570,18 +570,6 @@ void Plot::Pad::operator+=(const Pad& pad)
   mBoxes = pad.mBoxes;
 }
 
-
-//****************************************************************************************
-/**
- * Add frame defined by specific in put data to this plot (FIXME: replace this by .SetFrame()?)
- */
-//****************************************************************************************
-void Plot::Pad::AddFrame(input_t data)
-{
-  mData.insert(mData.begin(), std::make_shared<Data>(data.name, data.inputIdentifier));
-  mData[0]->SetOptions("AXIS");
-}
-
 //****************************************************************************************
 /**
  * Add data to this pad.
@@ -700,6 +688,8 @@ Plot::Pad::Data::Data(ptree &dataTree) : Data()
   if(auto var = dataTree.get_optional<double_t>("rangeX_max")) mRangeX.max = *var;
   if(auto var = dataTree.get_optional<double_t>("rangeY_min")) mRangeY.min = *var;
   if(auto var = dataTree.get_optional<double_t>("rangeY_max")) mRangeY.max = *var;
+
+  if(auto var = dataTree.get_optional<bool>("defines_frame")) mDefinesFrame = *var;
 }
 
 //****************************************************************************************
@@ -729,6 +719,9 @@ ptree Plot::Pad::Data::GetPropertyTree(){
   if(mRangeX.max) dataTree.put("rangeX_max", *mRangeX.max);
   if(mRangeY.min) dataTree.put("rangeY_min", *mRangeY.min);
   if(mRangeY.max) dataTree.put("rangeY_max", *mRangeY.max);
+
+  if(mDefinesFrame) dataTree.put("defines_frame", mDefinesFrame);
+
   return dataTree;
 }
 
@@ -867,6 +860,12 @@ auto Plot::Pad::Data::SetFillOpacity(float_t opacity) -> decltype(*this)
 auto Plot::Pad::Data::SetOptions(drawing_options_t optionAlias) -> decltype(*this)
 {
   mDrawingOptionAlias = optionAlias;
+  return *this;
+}
+
+auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
+{
+  mDefinesFrame = true;
   return *this;
 }
 

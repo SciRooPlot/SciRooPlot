@@ -116,18 +116,18 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
       WARNING("No data to be drawn in pad {}.", padID);
       continue;
     }
-    // in case user did not specify which data should define the axis frame, use first per default
-    if(true) // FIXME: this has to be handled differently!
-    {
-      // make a copy of first data that will serve as axis frame -- this way global ranges can be set independent from first data
-      if(pad.GetData()[0]->GetType() == "ratio"){
-        pad.GetData().insert(pad.GetData().begin(), std::make_shared<Plot::Pad::Ratio>(*std::dynamic_pointer_cast<Plot::Pad::Ratio>(pad.GetData()[0])));
-      }
-      else{
-        pad.GetData().insert(pad.GetData().begin(), std::make_shared<Plot::Pad::Data>(*pad.GetData()[0]));
-      }
-      pad.GetData()[0]->SetLegendLable(""); // axis frame should not appear in legend
+    
+    // find data that should define the axis frame
+    auto framePos = std::find_if(pad.GetData().begin(), pad.GetData().end(), [](auto curData){return curData->GetDefinesFrame();});
+    uint8_t frameDataID = (framePos != pad.GetData().end()) ? framePos - pad.GetData().begin() : 0;
+    // make a copy of data that will serve as axis frame and put it in front of data vector
+    if(pad.GetData()[frameDataID]->GetType() == "ratio"){
+      pad.GetData().insert(pad.GetData().begin(), std::make_shared<Plot::Pad::Ratio>(*std::dynamic_pointer_cast<Plot::Pad::Ratio>(pad.GetData()[frameDataID])));
     }
+    else{
+      pad.GetData().insert(pad.GetData().begin(), std::make_shared<Plot::Pad::Data>(*pad.GetData()[frameDataID]));
+    }
+    pad.GetData()[0]->SetLegendLable(""); // axis frame should not appear in legend
 
     TH1* axisHist_ptr = nullptr;
     bool drawLine = false;

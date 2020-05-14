@@ -145,7 +145,6 @@ public:
   void operator+=(const Pad& pad);
   
   // User accessors:
-  void AddFrame(input_t data);
   Data& AddData(input_t input, string lable = "");
   Ratio& AddRatio(input_t numerator, input_t denominator, string lable = "");
 
@@ -324,7 +323,10 @@ public:
   virtual auto SetFillStyle(int16_t style) -> decltype(*this);
   virtual auto SetFillOpacity(float_t opacity) -> decltype(*this);
   virtual auto SetOptions(drawing_options_t optionAlias) -> decltype(*this);
-    
+
+  virtual auto SetDefinesFrame() -> decltype(*this);
+
+  
 protected:
   friend class PlotManager;
   friend class PlotPainter;
@@ -362,9 +364,13 @@ protected:
   const optional<double_t>& GetMinRangeY(){return mRangeY.min;}
   const optional<double_t>& GetMaxRangeY(){return mRangeY.max;}
 
+  const bool& GetDefinesFrame(){return mDefinesFrame;}
+
 private:
   Data() = default;
-  
+
+  bool mDefinesFrame;
+
   string mType; // for introspection: "data" or "ratio"
   string mName;
   string mInputIdentifier;
@@ -456,6 +462,8 @@ public:
   {return dynamic_cast<decltype(*this)&>(Data::SetFillOpacity(opacity));}
   virtual auto SetOptions(drawing_options_t optionAlias) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetOptions(optionAlias));}
+  virtual auto SetDefinesFrame() -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetDefinesFrame());}
 
 protected:
   friend class PlotManager;
