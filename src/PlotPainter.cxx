@@ -110,10 +110,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     pad_ptr->SetNumber(padID);
     pad_ptr->Draw();
     pad_ptr->cd();
-
-    //TGaxis::SetMaxDigits(3);
-    //gStyle->SetTextFont(plotStyle.GetTextFont());
-
     
     if (pad.GetData().empty())
     {
@@ -313,6 +309,15 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                   {
                     if(axisLable == "X") pad_ptr->SetTickx(*axisLayout.GetOppositeTicks());
                     else if(axisLable == "Y") pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
+                  }
+                  if(axisLayout.GetTimeFormat())
+                  {
+                    axis_ptr->SetTimeDisplay(1);
+                    axis_ptr->SetTimeFormat((*axisLayout.GetTimeFormat()).c_str());
+                  }
+                  if(axisLayout.GetTickOrientation())
+                  {
+                    axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).c_str());
                   }
 
                   if(axisLayout.GetMinRange() || axisLayout.GetMaxRange())

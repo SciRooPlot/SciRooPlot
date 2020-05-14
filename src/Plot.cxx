@@ -967,6 +967,8 @@ Plot::Pad::Axis::Axis(ptree &axisTree) : Axis()
   if(auto var = axisTree.get_optional<bool>("isLog")) mIsLog = *var;
   if(auto var = axisTree.get_optional<bool>("isGrid")) mIsGrid = *var;
   if(auto var = axisTree.get_optional<bool>("isOppositeTicks")) mIsOppositeTicks = *var;
+  if(auto var = axisTree.get_optional<string>("time_format")) mTimeFormat = *var;
+  if(auto var = axisTree.get_optional<string>("tick_orientation")) mTickOrientation = *var;
 }
 
 //****************************************************************************************
@@ -997,7 +999,9 @@ ptree Plot::Pad::Axis::GetPropertyTree(){
   if(mIsLog) axisTree.put("isLog", *mIsLog);
   if(mIsGrid) axisTree.put("isGrid", *mIsGrid);
   if(mIsOppositeTicks) axisTree.put("isOppositeTicks", *mIsOppositeTicks);
-  
+  if(mTimeFormat) axisTree.put("time_format", *mTimeFormat);
+  if(mTickOrientation) axisTree.put("tick_orientation", *mTickOrientation);
+
   return axisTree;
 }
 
@@ -1037,6 +1041,8 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
   if(axis.mLableProperties.offset) mLableProperties.offset = axis.mLableProperties.offset;
   if(axis.mLableProperties.center) mLableProperties.center = axis.mLableProperties.center;
 
+  if(axis.mTimeFormat) mTimeFormat = axis.mTimeFormat;
+  if(axis.mTickOrientation) mTickOrientation = axis.mTickOrientation;
 }
 
 

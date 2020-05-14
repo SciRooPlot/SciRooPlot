@@ -74,7 +74,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
 
     plot[1].AddLegend();
 
-    plot[0]["X"].SetRange(20, 70);
+    plot[0]["X"].SetRange(20, 70).SetTickOrientation("+-");
 
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------

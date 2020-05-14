@@ -521,6 +521,8 @@ public:
   auto SetLog(bool isLog = true) ->decltype(*this) {mIsLog = isLog; return *this;}
   auto SetGrid(bool isGrid = true) ->decltype(*this) {mIsGrid = isGrid; return *this;}
   auto SetOppositeTicks(bool isOppositeTicks = true) ->decltype(*this) {mIsOppositeTicks = isOppositeTicks; return *this;}
+  auto SetTimeFormat(string timeFormat) ->decltype(*this) {mTimeFormat = timeFormat; return *this;}
+  auto SetTickOrientation(string tickOrientation) ->decltype(*this) {mTickOrientation = tickOrientation; return *this;}
   
 protected:
   friend class PlotManager;
@@ -559,8 +561,9 @@ protected:
   const optional<bool>& GetGrid() {return mIsGrid;}
   const optional<bool>& GetOppositeTicks() {return mIsOppositeTicks;}
 
+  const optional<string>& GetTimeFormat() {return mTimeFormat;}
+  const optional<string>& GetTickOrientation() {return mTickOrientation;}
 
-  
 private:
   
   typedef struct{
@@ -587,6 +590,8 @@ private:
   optional<bool> mIsLog;
   optional<bool> mIsGrid;
   optional<bool> mIsOppositeTicks;
+  optional<string>  mTimeFormat;
+  optional<string>  mTickOrientation;
 
   axisTextProperties_t mTitleProperties;
   axisTextProperties_t mLableProperties;

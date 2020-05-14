@@ -12,11 +12,8 @@ FRAMEWORK:
 ----------
 
 WIP:
-- add nContours as option to pad
-- add axis linking
 - save only templates that are used for plots!
-- dump and load plot templates in separate file
-- better to use Data::SetFrame() to indicate which data should define frame! (automatically add copy to front of pad data vector)
+- use Data::SetFrame() to indicate which data should define frame! (automatically add copy to front of pad data vector)
 - add setters and getters to boxes + fix constructor
 - fix visibility of constructors + check if everything is initialized correctly
 - gStyle->SetPaintTextFormat("4.1f m");
@@ -36,7 +33,8 @@ Major Features:
 - generalize legend function to handle text boxes in a similar manner
 
 Minor Features:
-- remove name argument from axis?
+- add nContours as option to pad
+- add axis linking
 - make ref-line configurable
 - normalize and scale should use same function
 - consider all possibilities where displayed symbols in legend have to be adjusted (in particular filled histos are missing)
@@ -52,7 +50,6 @@ Minor Features:
 - fix overlap between axis title and tick marks if they have too many digits
 - add possibility for grey tilted overlayed text like "draft"
 - generalized version of white patch hiding the truncated zero
-- axis->SetTicks("+-")
 
 
 Bugs:
@@ -80,10 +77,8 @@ Structural changes:
 
 Feature ideas:
 - maybe at some point it could become useful to also copy data and boxes from template?
-- add alpha (transparency level) to plot,pad,frame
 - add root style, color, marker, linestyle pictures to documentation
 - support csv format (flexible string and delimiter)
-- add reverse axis and time axis and axis on opposite side (X+, Y+)
 - functions and fitting
 - shape objects (arrows)
 - support for input types T{H,F}3, THn{Sparse} (->Projection functionality), THStack, TMultiGraph
