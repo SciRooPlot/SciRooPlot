@@ -29,6 +29,7 @@ void MultDepSpec::DefinePlotTemplates(PlotManager& plotManager)
     // template 1d
     Plot templatePlot("1d", "TEMPLATES");
     templatePlot.SetDimensions(710, 710, true);
+    templatePlot.SetTransparent();
     templatePlot[0].SetDefaultTextFont(43);
     templatePlot[0].SetDefaultTextSize(24);
     templatePlot[0].SetDefaultMarkerSize(1.2);
@@ -47,6 +48,7 @@ void MultDepSpec::DefinePlotTemplates(PlotManager& plotManager)
     // template 1d ratio
     Plot templatePlot("1d_ratio", "TEMPLATES");
     templatePlot.SetDimensions(710, 710, true);
+    templatePlot.SetTransparent();
     templatePlot[0].SetDefaultTextFont(43);
     templatePlot[0].SetDefaultTextSize(24);
     templatePlot[0].SetTransparent();
@@ -68,6 +70,7 @@ void MultDepSpec::DefinePlotTemplates(PlotManager& plotManager)
     // template 2d
     Plot templatePlot("2d", "TEMPLATES");
     templatePlot.SetDimensions(710, 710, true);
+    templatePlot.SetTransparent();
     templatePlot[0].SetDefaultTextFont(43);
     templatePlot[0].SetDefaultTextSize(24);
     templatePlot[0].SetTransparent();
