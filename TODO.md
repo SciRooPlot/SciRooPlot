@@ -12,8 +12,6 @@ FRAMEWORK:
 ----------
 
 WIP:
-- save only templates that are used for plots!
-- use Data::SetFrame() to indicate which data should define frame! (automatically add copy to front of pad data vector)
 - add setters and getters to boxes + fix constructor
 - fix visibility of constructors + check if everything is initialized correctly
 - gStyle->SetPaintTextFormat("4.1f m");

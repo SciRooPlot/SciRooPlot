@@ -189,10 +189,18 @@ void PlotManager::AddPlotTemplate(Plot& plotTemplate)
 //****************************************************************************************
 void PlotManager::DumpPlots(string plotFileName, string figureGroup, vector<string> plotNames)
 {
+  set<string> usedTemplates;
+  std::for_each(mPlots.begin(), mPlots.end(), [&usedTemplates] (auto& plot) {if(plot.GetPlotTemplateName()) usedTemplates.insert(*plot.GetPlotTemplateName());});
+  
   ptree plotTree;
   for(vector<Plot>& plots : {std::ref(mPlotTemplates), std::ref(mPlots)}){
     for(Plot& plot : plots){
-      if(figureGroup != "")
+      
+      if(plot.GetFigureGroup() == "TEMPLATES" && usedTemplates.find(plot.GetName()) == usedTemplates.end())
+      {
+        continue;
+      }
+      else if(figureGroup != "")
       {
         if(plot.GetFigureGroup() != figureGroup) continue;
         if(!plotNames.empty()){
