@@ -520,7 +520,7 @@ public:
 
   auto SetLog(bool isLog = true) ->decltype(*this) {mIsLog = isLog; return *this;}
   auto SetGrid(bool isGrid = true) ->decltype(*this) {mIsGrid = isGrid; return *this;}
-
+  auto SetOppositeTicks(bool isOppositeTicks = true) ->decltype(*this) {mIsOppositeTicks = isOppositeTicks; return *this;}
   
 protected:
   friend class PlotManager;
@@ -557,6 +557,7 @@ protected:
 
   const optional<bool>& GetLog() {return mIsLog;}
   const optional<bool>& GetGrid() {return mIsGrid;}
+  const optional<bool>& GetOppositeTicks() {return mIsOppositeTicks;}
 
 
   
@@ -585,6 +586,7 @@ private:
 
   optional<bool> mIsLog;
   optional<bool> mIsGrid;
+  optional<bool> mIsOppositeTicks;
 
   axisTextProperties_t mTitleProperties;
   axisTextProperties_t mLableProperties;

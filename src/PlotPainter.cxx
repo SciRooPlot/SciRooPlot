@@ -309,6 +309,11 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                     if(axisLable == "X") pad_ptr->SetGridx(*axisLayout.GetGrid());
                     else if(axisLable == "Y") pad_ptr->SetGridy(*axisLayout.GetGrid());
                   }
+                  if(axisLayout.GetOppositeTicks())
+                  {
+                    if(axisLable == "X") pad_ptr->SetTickx(*axisLayout.GetOppositeTicks());
+                    else if(axisLable == "Y") pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
+                  }
 
                   if(axisLayout.GetMinRange() || axisLayout.GetMaxRange())
                   {

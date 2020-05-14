@@ -34,7 +34,6 @@ void MultDepSpec::DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[0].SetDefaultTextSize(24);
     templatePlot[0].SetDefaultMarkerSize(1.2);
     templatePlot[0].SetDefaultLineWidth(2.);
-    //templatePlot[0].SetDefaultMarkerStyles({kFullCircle, kOpenCircle});
     templatePlot[0].SetTransparent();
     templatePlot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
     templatePlot[0]["X"].SetTitleOffset(1.1);
@@ -61,7 +60,7 @@ void MultDepSpec::DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[2].SetPosition(0., 0., 1., 0.28);
     templatePlot[2].SetMargins(0.015, 0.4, 0.14, 0.05);
     templatePlot[2].SetRefFunc("1");
-    templatePlot[2]["X"].SetTickLength(0.06).SetTitleOffset(4.1);
+    templatePlot[2]["X"].SetTickLength(0.06).SetTitleOffset(4.1).SetOppositeTicks();
     templatePlot[2]["Y"].SetNumDivisions(305).SetTitleOffset(1.5).SetTitleCenter();
     plotManager.AddPlotTemplate(templatePlot);
   } // -----------------------------------------------------------------------

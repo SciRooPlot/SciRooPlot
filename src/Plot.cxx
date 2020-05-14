@@ -126,7 +126,7 @@ auto Plot::SetFill(int16_t color, int16_t style)  ->decltype(*this)
 //****************************************************************************************
 auto Plot::SetTransparent()  ->decltype(*this)
 {
-  mFill.style = 0;
+  mFill.style = 4000;
   return *this;
 }
 
@@ -260,7 +260,7 @@ auto Plot::Pad::SetFill(int16_t color, int16_t style)  ->decltype(*this)
 //****************************************************************************************
 auto Plot::Pad::SetTransparent()  ->decltype(*this)
 {
-  mFill.style = 0;
+  mFill.style = 4000;
   return *this;
 }
 
@@ -966,6 +966,7 @@ Plot::Pad::Axis::Axis(ptree &axisTree) : Axis()
   if(auto var = axisTree.get_optional<bool>("lable_center")) mLableProperties.center = *var;
   if(auto var = axisTree.get_optional<bool>("isLog")) mIsLog = *var;
   if(auto var = axisTree.get_optional<bool>("isGrid")) mIsGrid = *var;
+  if(auto var = axisTree.get_optional<bool>("isOppositeTicks")) mIsOppositeTicks = *var;
 }
 
 //****************************************************************************************
@@ -995,7 +996,8 @@ ptree Plot::Pad::Axis::GetPropertyTree(){
   if(mLableProperties.center) axisTree.put("lable_center", *mLableProperties.center);
   if(mIsLog) axisTree.put("isLog", *mIsLog);
   if(mIsGrid) axisTree.put("isGrid", *mIsGrid);
-
+  if(mIsOppositeTicks) axisTree.put("isOppositeTicks", *mIsOppositeTicks);
+  
   return axisTree;
 }
 
@@ -1021,6 +1023,7 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
 
   if(axis.mIsLog) mIsLog = axis.mIsLog;
   if(axis.mIsGrid) mIsGrid = axis.mIsGrid;
+  if(axis.mIsOppositeTicks) mIsOppositeTicks = axis.mIsOppositeTicks;
 
   if(axis.mTitleProperties.font) mTitleProperties.font = axis.mTitleProperties.font;
   if(axis.mTitleProperties.size) mTitleProperties.size = axis.mTitleProperties.size;

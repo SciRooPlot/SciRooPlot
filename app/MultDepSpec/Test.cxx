@@ -210,6 +210,96 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
      plotManager.AddPlot(plot);
    } // -----------------------------------------------------------------------
 
+  { // -----------------------------------------------------------------------
+    // compare meanPt in all systems
+    string plotName = "variance_systems";
+    Plot plot(plotName, "preliminary", "1d");
+    plot[1].AddFrame({"varianceUnfolded", PbPb_5TeV[data].input});
+    
+    //p-p
+    plot[1].AddData({"varianceUnfolded", pp_5TeV[data].input})
+    .SetMarkerStyle(kFullCross)
+    .SetColor(pp_5TeV[data].color)
+    .SetMaxRangeX(pp_5TeV[data].mult)
+    ;
+    plot[1].AddData({"varianceUnfolded_Syst", pp_5TeV[data].input}, "pp").SetOptions(boxes).SetFillStyle(0)
+    .SetMarkerStyle(kFullCross)
+    .SetColor(pp_5TeV[data].color)
+    .SetMaxRangeX(pp_5TeV[data].mult)
+    ;
+    plot[1].AddData({"variance", pp_5TeV[epos_lhc].input})
+    .SetMarkerStyle(pp_5TeV[epos_lhc].marker)
+    .SetColor(pp_5TeV[epos_lhc].color)
+    .SetMaxRangeX(pp_5TeV[epos_lhc].mult)
+    .SetOptions(curve).SetLine(pp_5TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
+    ;
+    plot[1].AddData({"variance", pp_5TeV[pythia].input})
+    .SetMarkerStyle(pp_5TeV[pythia].marker)
+    .SetColor(pp_5TeV[pythia].color)
+    .SetMaxRangeX(pp_5TeV[pythia].mult)
+    .SetOptions(curve).SetLine(pp_5TeV[pythia].color, kSolid, 3.).SetFillStyle(0)
+    ;
+    //p-Pb
+    plot[1].AddData({"varianceUnfolded", pPb_5TeV[data].input})
+    .SetMarkerStyle(pPb_5TeV[data].marker)
+    .SetColor(pPb_5TeV[data].color)
+    .SetMaxRangeX(pPb_5TeV[data].mult)
+    ;
+    plot[1].AddData({"varianceUnfolded_Syst", pPb_5TeV[data].input}, "p-Pb").SetOptions(boxes).SetFillStyle(0)
+    .SetMarkerStyle(pPb_5TeV[data].marker)
+    .SetColor(pPb_5TeV[data].color)
+    .SetMaxRangeX(pPb_5TeV[data].mult)
+    ;
+    plot[1].AddData({"variance", pPb_5TeV[epos_lhc].input})
+    .SetMarkerStyle(pPb_5TeV[epos_lhc].marker)
+    .SetColor(pPb_5TeV[epos_lhc].color)
+    .SetMaxRangeX(pPb_5TeV[epos_lhc].mult)
+    .SetOptions(curve).SetLine(pPb_5TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
+    ;
+    plot[1].AddData({"variance", pPb_5TeV[angantyr].input})
+    .SetMarkerStyle(pPb_5TeV[angantyr].marker)
+    .SetColor(pPb_5TeV[angantyr].color)
+    .SetMaxRangeX(pPb_5TeV[angantyr].mult)
+    .SetOptions(curve).SetLine(pPb_5TeV[angantyr].color, kSolid, 3.).SetFillStyle(0)
+    ;
+    //Pb-Pb
+    plot[1].AddData({"varianceUnfolded", PbPb_5TeV[data].input})
+    .SetMarkerStyle(PbPb_5TeV[data].marker)
+    .SetColor(PbPb_5TeV[data].color)
+    .SetMaxRangeX(PbPb_5TeV[data].mult)
+    ;
+    plot[1].AddData({"varianceUnfolded_Syst", PbPb_5TeV[data].input}, "Pb-Pb").SetOptions(boxes).SetFillStyle(0)
+    .SetMarkerStyle(PbPb_5TeV[data].marker)
+    .SetColor(PbPb_5TeV[data].color)
+    .SetMaxRangeX(PbPb_5TeV[data].mult)
+    ;
+    plot[1].AddData({"variance", PbPb_5TeV[angantyr].input})
+    .SetMarkerStyle(PbPb_5TeV[angantyr].marker)
+    .SetColor(PbPb_5TeV[angantyr].color)
+    .SetMaxRangeX(PbPb_5TeV[angantyr].mult)
+    .SetOptions(curve).SetLine(PbPb_5TeV[angantyr].color, kSolid, 3.).SetFillStyle(0);
+
+    plot[1].AddText(0.34, 0.3, systemSizeLablePrel);
+    plot[1]["Y"].SetRange(0.05, 0.8);
+    plot[1]["X"].SetTitle("#it{N}_{ch}");
+    plot[1]["Y"].SetTitleOffset(1.7);
+    plot[1].AddText(0.12, 0.93, "solid: //   Pythia8 (pp), //   Angantyr (p-Pb, Pb-Pb) // dashed: //   EOPOS-LHC (pp, p-Pb), //   EPOS3 (Pb-Pb)");
+
+    Plot plotLin(plot, plotName + "_lin", "preliminary");
+
+    plot[1].AddLegend(0.65, 0.9);
+
+    plot[1].SetPadOptions("logX");
+    plot[1]["X"].SetRange(0.1, 4000).SetLog();
+    
+    //plotLin[1]["Y"].SetRange(0.45, 0.95);
+
+    plotLin[1]["X"].SetMaxRange(100).SetLog(false);
+    plotLin[1].AddLegend(0.65, 0.9);
+    plotManager.AddPlot(plotLin);
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
+  
 
   
   { // -----------------------------------------------------------------------
