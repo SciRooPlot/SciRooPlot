@@ -2,7 +2,6 @@
 //
 // Copyright (C) 2019-2020  Mario Krüger
 // Contact: mario.kruger@cern.ch
-// For a full list of contributors please see docs/Credits
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -28,7 +27,7 @@ namespace PlottingFramework
 //****************************************************************************************
 /**
  * Central manager class.
-  */
+*/
 //****************************************************************************************
 class PlotManager
 {
@@ -40,8 +39,6 @@ public:
   void ReadDataFromFiles(TObjArray& outputDataArray, vector<string> fileNames, vector<string> dataNames, vector<string> newDataNames = {});
   void ReadData(TObject* folder, TObjArray& outputDataArray, vector<string>& dataNames, vector<string>& newDataNames);
   
-  
-  // -> files
   void SetUseUniquePlotNames(bool useUniquePlotNames = true){mUseUniquePlotNames = useUniquePlotNames;}
   void SetOutputDirectory(string path);
   void AddInputDataFiles(string inputIdentifier, vector<string> inputFilePathList);
@@ -49,12 +46,7 @@ public:
   void DumpInputDataFiles(string configFileName);
   void LoadInputDataFiles(string configFileName);
   void ClearLoadedData() {mDataLedger->Delete(); mLoadedData.clear();};
-  
-  // -> styles
-  void DumpPlottingStyles(string configFileName){} // todo: possibility to also dump only specific style to the file
-  void LoadPlottingStyles(string configFileName){} // todo: possibility to load only specific style from the file
-  
-  // -> plots
+    
   void AddPlot(Plot& plot);
   void AddPlotTemplate(Plot& plotTemplate);
 
@@ -63,47 +55,34 @@ public:
   void CreatePlots(string figureGroup = "", string figureCategory = "", vector<string> plotNames = {}, string outputMode = "pdf");
   void CreatePlot(string name, string figureGroup, string figureCategory = "", string outputMode = "pdf");
     
-  // --- status accessors --
-  void ListPlots(bool verbose = false){for(auto& plot : mPlots) {PRINT("{}", plot.GetName());}} // list all plots available in the manager
-  void ListData(); // list all input data (histos, graphs, etc) available in the manager
-  
   void SetOutputFileName(string fileName = "ResultPlots.root") {mOutputFileName = fileName;}  
   void ExtractPlotsFromFile(string plotFileName, vector<string> figureGroupsWithCategoryUser, vector<string> plotNamesUser, string mode = "load");
 
 private:
-  vector<string> splitString(string argString, char deliminator = ':');
-  
-  map<string, int> mNameRegister; // bi-directional mapping between name and unique id
+  TObject* FindSubDirectory(TObject* folder, vector<string> subDirs);
   inline int GetNameRegisterID(const string& name);
   inline const string& GetNameRegisterName(int nameID);
-  map<int, set<int>> mLoadedData;
   void LoadData(map<int, set<int>>& requiredData);
-  
-  vector<string> mPlotViewHistory;
-  
+  void GeneratePlot(Plot& plot, string outputMode = "pdf");
+  bool IsPlotPossible(Plot &plot);
+  bool IsPlotAlreadyBooked(string plotName){for(auto& plot : mPlots){if(plot.GetUniqueName() == plotName) return true;} return false;};
+  ptree& ReadPlotTemplatesFromFile(string& plotFileName);
+
   TApplication mApp;
-  // IO management related
+  vector<string> splitString(string argString, char deliminator = ':');
+  map<string, int> mNameRegister; // bi-directional mapping between name and unique id
+  map<int, set<int>> mLoadedData;
   bool mSaveToRootFile;
   string mOutputFileName;
   map<string, shared_ptr<TCanvas>> mPlotLedger;
-  
   string mOutputDirectory;    /// directory to store output
   bool mUseUniquePlotNames; // wether to use plot names or unique plot names for output files
   map<string, vector<string>> mInputFiles; // inputFileIdentifier, inputFilePaths
   TObjArray* mDataLedger;     /// all external data representations currently loaded by the manager
-  TObject* FindSubDirectory(TObject* folder, vector<string> subDirs);
-  // content related members
-  void GeneratePlot(Plot& plot, string outputMode = "pdf");
-  bool IsPlotPossible(Plot &plot);
-  bool IsPlotAlreadyBooked(string plotName){for(auto& plot : mPlots){if(plot.GetUniqueName() == plotName) return true;} return false;};
-  
-  // style related members
   vector<Plot> mPlots;
   vector<Plot> mPlotTemplates;
-
-  map<string, ptree> mPlotTemplateCache; // FIXME: find better name for this or delete...
-  ptree& ReadPlotTemplatesFromFile(string& plotFileName);
-  
+  map<string, ptree> mPropertyTreeCache;
+  vector<string> mPlotViewHistory;
 };
 
 } // end namespace PlottingFramework

@@ -2,7 +2,6 @@
 //
 // Copyright (C) 2019-2020  Mario Krüger
 // Contact: mario.kruger@cern.ch
-// For a full list of contributors please see docs/Credits
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -26,8 +25,8 @@ namespace PlottingFramework {
  * Function to generate the plot.
  */
 //****************************************************************************************
-shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableData){
-
+shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableData)
+{
   gStyle->SetOptStat(0); // this needs to be done before creating the canvas! at later stage it would add to list of primitives in pad...
 
   if(!(plot.GetWidth() || plot.GetHeight()))
@@ -132,7 +131,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     TH1* axisHist_ptr = nullptr;
     bool drawLine = false;
     string drawingOptions = "";
-    int dataIndex = 0;
+    uint16_t dataIndex = 0;
     for(auto& data : pad.GetData())
     {
       if(data->GetDrawingOptions()) drawingOptions += *data->GetDrawingOptions();
@@ -479,7 +478,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
   return shared_ptr<TCanvas>(canvas_ptr);
 }
 
-
 //****************************************************************************************
 /**
  * Function to retrieve a copy of the stored data properly casted it to its actual ROOT type.
@@ -526,19 +524,19 @@ optional<data_ptr_t> PlotPainter::GetDataClone(string dataName, TObjArray* avail
  * Helper-function dividing two TGraphs
  */
 //****************************************************************************************
-TGraph* PlotPainter::DivideTSpline(TGraph* numerator, TGraph* denominator){
-  
+TGraph* PlotPainter::DivideTSpline(TGraph* numerator, TGraph* denominator)
+{
   TGraph* result = (TGraph*)numerator->Clone("ratio");
   TSpline3* denSpline = new TSpline3("denSpline", denominator);
   
-  int nPoints = result->GetN();
+  int32_t nPoints = result->GetN();
   
-  double *x = result->GetX();
-  double *y = result->GetY();
-  double *ey = result->GetEY();
+  double_t *x = result->GetX();
+  double_t *y = result->GetY();
+  double_t *ey = result->GetEY();
   
-  for(int i = 0; i < nPoints; i++) {
-    double deonomValiue = denominator->Eval(x[i], denSpline);
+  for(int32_t i = 0; i < nPoints; i++) {
+    double_t deonomValiue = denominator->Eval(x[i], denSpline);
     y[i] = y[i] / deonomValiue;
     ey[i] = ey[i] * deonomValiue;
   }
@@ -559,11 +557,11 @@ TH1* PlotPainter::DivideTSpline(TH1* numerator, TH1* denominator)
   TH1* ratio = (TH1*)numerator->Clone("dummyRatio");
   ratio->Reset();
   
-  for(int i = 1; i <= numerator->GetNbinsX(); i++)
+  for(int32_t i = 1; i <= numerator->GetNbinsX(); i++)
   {
-    double numeratorValue = numerator->GetBinContent(i);
-    double x = numerator->GetBinCenter(i);
-    double denomValue = denominatorGraph.Eval(x, &denominatorSpline);
+    double_t numeratorValue = numerator->GetBinContent(i);
+    double_t x = numerator->GetBinCenter(i);
+    double_t denomValue = denominatorGraph.Eval(x, &denominatorSpline);
     if(denomValue) ratio->SetBinContent(i, numeratorValue/denomValue);
   }
   return ratio;
@@ -608,7 +606,7 @@ void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<
 //****************************************************************************************
 void PlotPainter::ScaleGraph(TGraph* graph, double_t scale)
 {
-  for (int i = 0; i < graph->GetN(); i++) graph->GetY()[i] *= scale;
+  for (int32_t i = 0; i < graph->GetN(); i++) graph->GetY()[i] *= scale;
 }
 
 //****************************************************************************************
@@ -620,7 +618,7 @@ void PlotPainter::SmoothGraph(TGraph* graph, optional<double_t> min, optional<do
 {
   TGraphSmooth smoother;
   TGraph* smoothGraph = smoother.SmoothSuper(graph);
-  for (int i = 0; i < graph->GetN(); i++)
+  for (int32_t i = 0; i < graph->GetN(); i++)
   {
     double_t curX = graph->GetX()[i];
     if(min && curX < *min) continue;
@@ -678,8 +676,8 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
  * Function to generate a legend or text box.
  */
 //****************************************************************************************
-TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vector<string> lines, vector<TObject*> legendEntries){
-
+TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vector<string> lines, vector<TObject*> legendEntries)
+{
   optional<int16_t> textColor = box->GetTextColor();
   optional<int16_t> textFont  = box->GetTextFont();
   optional<float_t> textSize  = box->GetTextSize();
@@ -712,24 +710,24 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
 
   float_t text_size = (textSize) ? *textSize : 24;
   int16_t text_font = (textFont) ? *textFont : 43;
-  int nColumns = 1;//box->GetNumColumns();
+  uint8_t nColumns = 1;//box->GetNumColumns();
   
-  int nEntries = legendEntries.size();
-  int nLines = lines.size();
+  uint16_t nEntries = legendEntries.size();
+  uint16_t nLines = lines.size();
   //if(!legendBox->GetTitle().empty()) nEntries++;
   
-  int padWidthPixel = pad->XtoPixel(pad->GetX2()); // looks correct, but why does it work??
-  int padHeightPixel = pad->YtoPixel(pad->GetY1());
+  int32_t padWidthPixel = pad->XtoPixel(pad->GetX2()); // looks correct, but why does it work??
+  int32_t padHeightPixel = pad->YtoPixel(pad->GetY1());
   
 
   // determine max width and height of legend entries
   uint8_t iColumn = 0;
-  double legendWidthPixel = 0;
-  double titleWidthPixel = 0;
-  vector<unsigned int> legendWidthPixelPerColumn(nColumns, 0);
-  double legendHeightPixel = 0;
+  double_t legendWidthPixel = 0;
+  double_t titleWidthPixel = 0;
+  vector<uint32_t> legendWidthPixelPerColumn(nColumns, 0);
+  double_t legendHeightPixel = 0;
   //if(!legendBox->GetTitle().empty()) legendTitles.push_back(legendBox->GetTitle());
-  int iLegend = 1;
+  uint8_t iLegend = 1;
   for(auto& legendTitle : lines)
   {
     if(isLegend)
@@ -749,31 +747,26 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
       }
       if(legendTitle.find("<entries>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
       {
-        // todo add some formating options for this
-        string entries = std::to_string((long int)((TH1*)legendEntries[iLegend-1])->GetEntries());
+        string entries = std::to_string((double_t)((TH1*)legendEntries[iLegend-1])->GetEntries());
         legendTitle.replace(legendTitle.find("<entries>"), string("<entries>").size(), entries);
       }
       if(legendTitle.find("<integral>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
       {
-        // todo add some formating options for this
         string integral = std::to_string(((TH1*)legendEntries[iLegend-1])->Integral());
         legendTitle.replace(legendTitle.find("<integral>"), string("<integral>").size(), integral);
       }
       if(legendTitle.find("<mean>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
       {
-        // todo add some formating options for this
         string mean = std::to_string(((TH1*)legendEntries[iLegend-1])->GetMean());
         legendTitle.replace(legendTitle.find("<mean>"), string("<mean>").size(), mean);
       }
       if(legendTitle.find("<maximum>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
       {
-        // todo add some formating options for this
         string maximum = std::to_string(((TH1*)legendEntries[iLegend-1])->GetMaximum());
         legendTitle.replace(legendTitle.find("<maximum>"), string("<maximum>").size(), maximum);
       }
       if(legendTitle.find("<minimum>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
       {
-        // todo add some formating options for this
         string minimum = std::to_string(((TH1*)legendEntries[iLegend-1])->GetMinimum());
         legendTitle.replace(legendTitle.find("<minimum>"), string("<minimum>").size(), minimum);
       }
@@ -809,14 +802,14 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
     markerWidthPixel = w;
   }
 
-  double legendWidthNDC =  (double)legendWidthPixel/padWidthPixel;
-  double legendHeightNDC =  (double)legendHeightPixel/padHeightPixel;
-  double markerWidthNDC =  (double)markerWidthPixel/padWidthPixel;
-  double titleWidthNDC =  (double)titleWidthPixel/padWidthPixel;
+  double_t legendWidthNDC =  (double_t)legendWidthPixel/padWidthPixel;
+  double_t legendHeightNDC =  (double_t)legendHeightPixel/padHeightPixel;
+  double_t markerWidthNDC =  (double_t)markerWidthPixel/padWidthPixel;
+  double_t titleWidthNDC =  (double_t)titleWidthPixel/padWidthPixel;
   
-  double totalWidthNDC = 0.;
-  double totalHeightNDC = 0.;
-  double marginNDC = 0.01;
+  double_t totalWidthNDC = 0.;
+  double_t totalHeightNDC = 0.;
+  double_t marginNDC = 0.01;
   if(isLegend)
   {
     totalWidthNDC = 3*marginNDC + markerWidthNDC + legendWidthNDC;
@@ -829,19 +822,19 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
   
   if(titleWidthPixel > legendWidthPixel) totalWidthNDC = (0.3333) * markerWidthNDC + titleWidthNDC;
   
-  double upperLeftX = box->GetXPosition();
-  double upperLeftY = box->GetYPosition();
+  double_t upperLeftX = box->GetXPosition();
+  double_t upperLeftY = box->GetYPosition();
   
   if(box->IsAutoPlacement())
   {
     pad->cd();
     pad->Update();
-    double lowerLeftX = 0;
-    double lowerLeftY = 0;
-    double fractionOfTickLenght = 0.9;
+    double_t lowerLeftX = 0;
+    double_t lowerLeftY = 0;
+    double_t fractionOfTickLenght = 0.9;
     // required distance in pad coordinates of box to objects and tics (set to be 90& of the tick length)
-    double marginX = fractionOfTickLenght * gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()) / (pad->GetX2()-pad->GetX1());
-    double marginY = fractionOfTickLenght * gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()) / (pad->GetY2()-pad->GetY1());
+    double_t marginX = fractionOfTickLenght * gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()) / (pad->GetX2()-pad->GetX1());
+    double_t marginY = fractionOfTickLenght * gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()) / (pad->GetY2()-pad->GetY1());
     bool foundPosition = false;
     
     // draw temporary boxes to exclude areas outside of the coordinate system
@@ -895,7 +888,7 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
     legend->SetTextFont(text_font);
     legend->SetTextSize(text_size);
     
-    int i = 0;
+    uint8_t i = 0;
     for(auto entry : legendEntries)
     {
       string drawingOption = entry->GetDrawOption();
@@ -954,7 +947,6 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
     }
     return paveText;
   }
-  
 }
 
 } // end namespace PlottingFramework

@@ -2,7 +2,6 @@
 //
 // Copyright (C) 2019-2020  Mario Krüger
 // Contact: mario.kruger@cern.ch
-// For a full list of contributors please see docs/Credits
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -67,7 +66,6 @@ protected:
   const string& GetFigureCategory(){return mFigureCategory;}
   const optional<string>& GetPlotTemplateName(){return mPlotTemplateName;}
   string GetUniqueName(){return mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");}
-  int GetNumRequiredPads(){return mPads.size();} //TODO: this could return a set of padIDs that need to be present?
   ptree GetPropetyTree();
   
   map<uint8_t, Pad>& GetPads() {return mPads;}
@@ -99,21 +97,6 @@ private:
   dimension_t mPlotDimensions;
 
   plot_fill_t mFill;
-
-  //map<string, vector<vector<uint8_t>>> mLinkedAxes;// [padID, axis] -> {[padID, axis]}
-  
-  // per thing here one has font, color, etc -> structure textLayout
-  // -> how to reduce this info??
-  /*
-  vector<int> mDefaultColors;
-  vector<int> mDefaultMarkers;
-  vector<int> mDefaultMarkersFull;
-  vector<int> mDefaultMarkersOpen;
-  vector<int> mDefaultLineStyles;
-  string m2dStyle;
-  position_t mTimestampPosition;
-  bool mDrawTimestamp;
-  */
 
   map<uint8_t, Pad> mPads;
 };
@@ -618,18 +601,20 @@ public:
   Box() =  default;
   Box(const Box& otherBox) = default;
   Box(Box& otherBox) = default;
+  Box(ptree &boxTree);
+  Box(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor);
   
-  Box(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor)
-  : Box()
-  {
-    mType = "none";
-    mUserCoordinates = userCoordinates;
-    mAutoPlacement = autoPlacement;
-    mX = x;
-    mY = y;
-  }
-  double GetXPosition(){return mX;}
-  double GetYPosition(){return mY;}
+protected:
+  friend class PlotManager;
+  friend class PlotPainter;
+  friend class Plot;
+
+  virtual ptree GetPropertyTree();
+  void SetType(string type){mType = type;}
+  const string& GetType(){return mType;}
+
+  double_t GetXPosition(){return mX;}
+  double_t GetYPosition(){return mY;}
   optional<int16_t>& GetBorderStyle(){return mBorder.style;}
   optional<float_t>& GetBorderWidth(){return mBorder.scale;}
   optional<int16_t>& GetBorderColor(){return mBorder.color;}
@@ -645,53 +630,6 @@ public:
   bool IsUserCoordinates(){return mUserCoordinates;}
   bool IsAutoPlacement(){return mAutoPlacement;}
   
-  const string& GetType(){return mType;}
-  
-  virtual ptree GetPropertyTree(){
-    ptree boxTree;
-    boxTree.put("type", mType);
-    boxTree.put("userCoordinates", mUserCoordinates);
-    boxTree.put("autoPlacement", mAutoPlacement);
-    boxTree.put("x", mX);
-    boxTree.put("y", mY);
-    if(mBorder.style) boxTree.put("border_style", *mBorder.style);
-    if(mBorder.scale) boxTree.put("border_width", *mBorder.scale);
-    if(mBorder.color) boxTree.put("border_color", *mBorder.color);
-    if(mFill.style) boxTree.put("fill_style", *mFill.style);
-    if(mFill.scale) boxTree.put("fill_opacity", *mFill.scale);
-    if(mFill.color) boxTree.put("fill_color", *mFill.color);
-    if(mText.style) boxTree.put("text_style", *mText.style);
-    if(mText.scale) boxTree.put("text_size", *mText.scale);
-    if(mText.color) boxTree.put("text_color", *mText.color);
-    return boxTree;
-  };
-  
-  // constructor to define entry from file
-  Box(ptree &boxTree){
-    try{
-      mType = boxTree.get<string>("type");
-      mUserCoordinates = boxTree.get<bool>("userCoordinates");
-      mAutoPlacement = boxTree.get<bool>("autoPlacement");
-      mX = boxTree.get<double>("x");
-      mY = boxTree.get<double>("y");
-    }catch(...){
-      ERROR("Could not construct box from ptree.");
-    }
-    
-    if(auto var = boxTree.get_optional<int16_t>("border_style")) mBorder.style = *var;
-    if(auto var = boxTree.get_optional<float_t>("border_width")) mBorder.scale = *var;
-    if(auto var = boxTree.get_optional<int16_t>("border_color")) mBorder.color = *var;
-    if(auto var = boxTree.get_optional<int16_t>("fill_style")) mFill.style = *var;
-    if(auto var = boxTree.get_optional<float_t>("fill_opacity")) mFill.scale = *var;
-    if(auto var = boxTree.get_optional<int16_t>("fill_color")) mFill.color = *var;
-    if(auto var = boxTree.get_optional<int16_t>("text_style")) mText.style = *var;
-    if(auto var = boxTree.get_optional<float_t>("text_size")) mText.scale = *var;
-    if(auto var = boxTree.get_optional<int16_t>("text_color")) mText.color = *var;
-  }
-  
-  
-protected:
-  void SetType(string type){mType = type;}
 private:
   
   typedef struct{
@@ -707,8 +645,8 @@ private:
 
   bool mUserCoordinates;
   bool mAutoPlacement;
-  double mX;
-  double mY;
+  double_t mX;
+  double_t mY;
 };
 
 

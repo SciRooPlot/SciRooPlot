@@ -2,7 +2,6 @@
 //
 // Copyright (C) 2019-2020  Mario Krüger
 // Contact: mario.kruger@cern.ch
-// For a full list of contributors please see docs/Credits
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -54,7 +53,7 @@ PlotManager::~PlotManager()
         return;
       }
       outputFile.cd();
-      int nPlots{0};
+      uint32_t nPlots{0};
       for(auto& plotTuple : mPlotLedger){
         auto canvas = plotTuple.second;
         string uniqueName = plotTuple.first;
@@ -76,12 +75,6 @@ PlotManager::~PlotManager()
     mPlotLedger.clear();
   }
 }
-
-// ---------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------
-// --------------------------------------- I/O -------------------------------------------
-// ---------------------------------------------------------------------------------------
-// ---------------------------------------------------------------------------------------
 
 //****************************************************************************************
 /**
@@ -117,11 +110,12 @@ void PlotManager::AddInputDataFile(string inputIdentifier, string inputFilePath)
  * Dump input file identifiers and paths that are currently defined in the manager to a config file.
  */
 //****************************************************************************************
-void PlotManager::DumpInputDataFiles(string configFileName){
+void PlotManager::DumpInputDataFiles(string configFileName)
+{
   ptree inputFileTree;
   for(auto& inFileTuple : mInputFiles){
     ptree filesOfIdentifier;
-    int fileID = 1;
+    uint16_t fileID = 1;
     for(auto& fileName : inFileTuple.second){
       filesOfIdentifier.put("FILE_" + std::to_string(fileID), fileName);
       fileID++;
@@ -157,18 +151,17 @@ void PlotManager::LoadInputDataFiles(string configFileName)
   }
 }
 
-
 //****************************************************************************************
 /**
  * Add pre-defined plot to the manager. Plot will be moved and no longer accessible from outside the manager.
  */
 //****************************************************************************************
-void PlotManager::AddPlot(Plot& plot) {
+void PlotManager::AddPlot(Plot& plot)
+{
   if(plot.GetFigureGroup() == "TEMPLATES") ERROR("You cannot use reserved group name TEMPLATES!");
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(), [plot](Plot& curPlot) mutable { return curPlot.GetUniqueName() == plot.GetUniqueName(); } ), mPlots.end());
   mPlots.push_back(std::move(plot));
 }
-
 
 //****************************************************************************************
 /**
@@ -231,14 +224,15 @@ void PlotManager::DumpPlot(string plotFileName, string figureGroup, string plotN
  * Read and cache plots defined in xml file.
  */
 //****************************************************************************************
-ptree& PlotManager::ReadPlotTemplatesFromFile(string& plotFileName){
-  if (mPlotTemplateCache.find(plotFileName) == mPlotTemplateCache.end())
+ptree& PlotManager::ReadPlotTemplatesFromFile(string& plotFileName)
+{
+  if (mPropertyTreeCache.find(plotFileName) == mPropertyTreeCache.end())
   {
     ptree tempTree;
     read_xml(gSystem->ExpandPathName(plotFileName.c_str()), tempTree);
-    mPlotTemplateCache[plotFileName] = std::move(tempTree);
+    mPropertyTreeCache[plotFileName] = std::move(tempTree);
   }
-  return mPlotTemplateCache[plotFileName];
+  return mPropertyTreeCache[plotFileName];
 }
 
 //****************************************************************************************
@@ -287,12 +281,12 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
     
     mPlotLedger[plot.GetUniqueName()] = canvas;
     mPlotViewHistory.push_back(plot.GetUniqueName());
-    int currPlotIndex = mPlotViewHistory.size()-1;
+    int32_t currPlotIndex = mPlotViewHistory.size()-1;
     
     // move new canvas to position of previous window
-    int curXpos;
-    int curYpos;
-    const int windowOffsetY = 22; // might depend on os, probably comes from move operation called via TVirtualX interface
+    int32_t curXpos;
+    int32_t curYpos;
+    const int32_t windowOffsetY = 22; // might depend on os, probably comes from move operation called via TVirtualX interface
     if(currPlotIndex > 0){
       curXpos = mPlotLedger[mPlotViewHistory[currPlotIndex-1]]->GetWindowTopX();
       curYpos = mPlotLedger[mPlotViewHistory[currPlotIndex-1]]->GetWindowTopY();
@@ -304,7 +298,7 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
         curYpos = canvas->GetWindowTopY();
         TRootCanvas* canvasWindow = ((TRootCanvas*)canvas->GetCanvasImp());
         canvasWindow->UnmapWindow();
-        bool forward = ((double)canvas->GetEventX()/(double)canvas->GetWw() > 0.5);
+        bool forward = ((double_t)canvas->GetEventX()/(double_t)canvas->GetWw() > 0.5);
         if(forward){
           if(currPlotIndex == mPlotViewHistory.size()-1) break;
           currPlotIndex++;
@@ -360,7 +354,7 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
 //****************************************************************************************
 void PlotManager::CreatePlots(string figureGroup, string figureCategory, vector<string> plotNames, string outputMode)
 {
-  map<int, set<int>> requiredData;
+  map<int32_t, set<int32_t>> requiredData;
   bool saveAll = (figureGroup == "");
   bool saveSpecificPlots = !saveAll && !plotNames.empty();
   vector<Plot*> selectedPlots;
@@ -426,7 +420,12 @@ void PlotManager::CreatePlots(string figureGroup, string figureCategory, vector<
   }
 }
 
-int PlotManager::GetNameRegisterID(const string& name)
+//****************************************************************************************
+/**
+ * Helper function to get id corresponding name in register.
+ */
+//****************************************************************************************
+int32_t PlotManager::GetNameRegisterID(const string& name)
 {
   if( mNameRegister.find(name) == mNameRegister.end())
   {
@@ -435,7 +434,12 @@ int PlotManager::GetNameRegisterID(const string& name)
   return mNameRegister[name];
 }
 
-const string& PlotManager::GetNameRegisterName(int nameID)
+//****************************************************************************************
+/**
+ * Helper function to get name corresponding to register id.
+ */
+//****************************************************************************************
+const string& PlotManager::GetNameRegisterName(int32_t nameID)
 {
   for(auto& registerTuple : mNameRegister){
     if(registerTuple.second == nameID) return registerTuple.first;
@@ -450,7 +454,7 @@ const string& PlotManager::GetNameRegisterName(int nameID)
 //****************************************************************************************
 void PlotManager::ExtractPlotsFromFile(string plotFileName, vector<string> figureGroupsWithCategoryUser, vector<string> plotNamesUser, string mode)
 {
-  int nFoundPlots = 0;
+  uint32_t nFoundPlots = 0;
   bool isSearchRequest = (mode == "find") ? true : false;
   vector< std::pair<std::regex, std::regex> > groupCategoryRegex;
   for(auto& figureGroupWithCategoryUser : figureGroupsWithCategoryUser)
@@ -538,7 +542,11 @@ void PlotManager::ExtractPlotsFromFile(string plotFileName, vector<string> figur
   }
 }
 
-// Helper function to split a string
+//****************************************************************************************
+/**
+ * Helper function to split a string.
+ */
+//****************************************************************************************
 vector<string> PlotManager::splitString(string argString, char deliminator)
 {
   vector<string> arguments;
@@ -550,34 +558,19 @@ vector<string> PlotManager::splitString(string argString, char deliminator)
   return arguments;
 }
 
-
-//****************************************************************************************
-/**
- * Show the data that are currently booked in the manager.
- */
-//****************************************************************************************
-void PlotManager::ListData()
-{
-  PRINT("Loaded input data:");
-  for(const auto& data : *mDataLedger)
-  {
-    PRINT(" - ", ((TNamed*)data)->GetName());
-  }
-}
-
 //****************************************************************************************
 /**
  * Read data from csv file.
  */
 //****************************************************************************************
-void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, vector<string> fileNames, string inputIdentifier){
-  
+void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, vector<string> fileNames, string inputIdentifier)
+{
   for(auto& inputFileName : fileNames)
   {
     if(inputFileName.find(".csv") == string::npos) continue;
     // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
     string graphName = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
-    string delimiter = "\t"; // todo: this must somehow be user definable
+    string delimiter = "\t"; // TODO: this must somehow be user definable
     string pattern = "%lg %lg %lg %lg";
     TGraphErrors* graph = new TGraphErrors(inputFileName.c_str(), pattern.c_str(), delimiter.c_str());
     string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
@@ -591,8 +584,8 @@ void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, vector<string
  * Recursively read data from root file.
  */
 //****************************************************************************************
-void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> fileNames, vector<string> dataNames, vector<string> newDataNames){
-  
+void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> fileNames, vector<string> dataNames, vector<string> newDataNames)
+{
   // first determine if which sub-folders are required by the user
   set<string> dataSubSpecs;
   for(auto& dataName : dataNames)
@@ -605,9 +598,6 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
     dataSubSpecs.insert(subSpec);
   }
   
-  
-  
-
   for(auto& inputFileName : fileNames)
   {
     if(dataNames.empty()) break;
@@ -654,7 +644,7 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
       vector<string> curDataNames;
       vector<string> curNewDataNames;
       
-      for(int i = 0; i < dataNames.size(); i++)
+      for(auto i = 0; i < dataNames.size(); i++)
       {
         if(dataNames[i] == "") continue;
         auto pathPos = dataNames[i].find_last_of("/");

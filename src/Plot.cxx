@@ -2,7 +2,6 @@
 //
 // Copyright (C) 2019-2020  Mario Krüger
 // Contact: mario.kruger@cern.ch
-// For a full list of contributors please see docs/Credits
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -169,20 +168,11 @@ Plot operator+(const Plot& templatePlot, const Plot& plot)
   return combinedPlot;
 }
 
-
-
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
 // IMPLEMENTATION class Pad
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
-
-//****************************************************************************************
-/**
- * Constructor of Pad
- */
-//****************************************************************************************
-
 
 //****************************************************************************************
 /**
@@ -219,7 +209,7 @@ auto Plot::Pad::SetDefaultTextColor(int16_t color)  ->decltype(*this)
 
 //****************************************************************************************
 /**
- * Set text font
+ * Set text font for this pad.
  */
 //****************************************************************************************
 auto Plot::Pad::SetDefaultTextFont(int16_t font)  ->decltype(*this)
@@ -228,19 +218,27 @@ auto Plot::Pad::SetDefaultTextFont(int16_t font)  ->decltype(*this)
   return *this;
 }
 
+//****************************************************************************************
+/**
+ * Set default marker size for this pad.
+ */
+//****************************************************************************************
 auto Plot::Pad::SetDefaultMarkerSize(float_t size)  ->decltype(*this)
 {
   mMarkerSize = size;
   return *this;
 }
 
+//****************************************************************************************
+/**
+ * Set default line width for this pad.
+ */
+//****************************************************************************************
 auto Plot::Pad::SetDefaultLineWidth(float_t width)  ->decltype(*this)
 {
   mLineWidth = width;
   return *this;
 }
-
-
 
 //****************************************************************************************
 /**
@@ -256,7 +254,7 @@ auto Plot::Pad::SetFill(int16_t color, int16_t style)  ->decltype(*this)
 
 //****************************************************************************************
 /**
- * Set this pad transparent.
+ * Make this pad transparent.
  */
 //****************************************************************************************
 auto Plot::Pad::SetTransparent()  ->decltype(*this)
@@ -264,7 +262,6 @@ auto Plot::Pad::SetTransparent()  ->decltype(*this)
   mFill.style = 4000;
   return *this;
 }
-
 
 //****************************************************************************************
 /**
@@ -301,7 +298,6 @@ auto Plot::Pad::SetTransparentFrame()  ->decltype(*this)
   mFrame.fillStyle = 0;
   return *this;
 }
-
 
 //****************************************************************************************
 /**
@@ -364,7 +360,6 @@ auto Plot::Pad::SetMargins(float_t top, float_t bottom, float_t left, float_t ri
   mMargins.right = right;
   return *this;
 }
-
 
 //****************************************************************************************
 /**
@@ -626,7 +621,6 @@ void Plot::Pad::AddLegend(string title, int nColumns, int borderStyle, int borde
 }
 
 
-
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
 // IMPLEMENTATION class Data
@@ -725,7 +719,6 @@ ptree Plot::Pad::Data::GetPropertyTree(){
 
   return dataTree;
 }
-
 
 //****************************************************************************************
 /**
@@ -863,13 +856,11 @@ auto Plot::Pad::Data::SetOptions(drawing_options_t optionAlias) -> decltype(*thi
   mDrawingOptionAlias = optionAlias;
   return *this;
 }
-
 auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
 {
   mDefinesFrame = true;
   return *this;
 }
-
 
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
@@ -882,14 +873,17 @@ auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
  * Default constructor.
  */
 //****************************************************************************************
-
 Plot::Pad::Ratio::Ratio(string name, string inputIdentifier, string denomName, string denomInputIdentifier, string lable)
 : Data(name, inputIdentifier, lable), mDenomName(denomName), mDenomInputIdentifier(denomInputIdentifier), mDivideMethod("")
 {
   SetType("ratio");
 }
 
-// constructor to define entry from file
+//****************************************************************************************
+/**
+ * Constructor from property tree.
+ */
+//****************************************************************************************
 Plot::Pad::Ratio::Ratio(ptree &dataTree) : Data(dataTree)
 {
   try{
@@ -901,6 +895,11 @@ Plot::Pad::Ratio::Ratio(ptree &dataTree) : Data(dataTree)
   }
 }
 
+//****************************************************************************************
+/**
+ * Convert ratio to property tree.
+ */
+//****************************************************************************************
 ptree Plot::Pad::Ratio::GetPropertyTree()
 {
   ptree dataTree = Data::GetPropertyTree();
@@ -910,14 +909,16 @@ ptree Plot::Pad::Ratio::GetPropertyTree()
   return dataTree;
 }
 
-
-
+//****************************************************************************************
+/**
+ * Specify how the division should be done (spline, biniomial, etc...).
+ */
+//****************************************************************************************
 auto Plot::Pad::Ratio::SetDivideMethod(string divideMethod) -> decltype(*this)
 {
   mDivideMethod = divideMethod;
   return *this;
 }
-
 
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
@@ -1005,7 +1006,6 @@ ptree Plot::Pad::Axis::GetPropertyTree(){
   return axisTree;
 }
 
-
 //****************************************************************************************
 /**
  * Apply all settings from axis on top of this axis.
@@ -1045,7 +1045,6 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
   if(axis.mTickOrientation) mTickOrientation = axis.mTickOrientation;
 }
 
-
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
 // IMPLEMENTATION class Box
@@ -1057,9 +1056,69 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
  * Constructor of Box
  */
 //****************************************************************************************
+Plot::Pad::Box::Box(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor)
+: Box()
+{
+  mType = "none";
+  mUserCoordinates = userCoordinates;
+  mAutoPlacement = autoPlacement;
+  mX = x;
+  mY = y;
+}
 
 
+//****************************************************************************************
+/**
+ * Construct box from property tree.
+ */
+//****************************************************************************************
+Plot::Pad::Box::Box(ptree &boxTree)
+{
+  try{
+    mType = boxTree.get<string>("type");
+    mUserCoordinates = boxTree.get<bool>("userCoordinates");
+    mAutoPlacement = boxTree.get<bool>("autoPlacement");
+    mX = boxTree.get<double>("x");
+    mY = boxTree.get<double>("y");
+  }catch(...){
+    ERROR("Could not construct box from ptree.");
+  }
+  
+  if(auto var = boxTree.get_optional<int16_t>("border_style")) mBorder.style = *var;
+  if(auto var = boxTree.get_optional<float_t>("border_width")) mBorder.scale = *var;
+  if(auto var = boxTree.get_optional<int16_t>("border_color")) mBorder.color = *var;
+  if(auto var = boxTree.get_optional<int16_t>("fill_style")) mFill.style = *var;
+  if(auto var = boxTree.get_optional<float_t>("fill_opacity")) mFill.scale = *var;
+  if(auto var = boxTree.get_optional<int16_t>("fill_color")) mFill.color = *var;
+  if(auto var = boxTree.get_optional<int16_t>("text_style")) mText.style = *var;
+  if(auto var = boxTree.get_optional<float_t>("text_size")) mText.scale = *var;
+  if(auto var = boxTree.get_optional<int16_t>("text_color")) mText.color = *var;
+}
 
+//****************************************************************************************
+/**
+ * Get property tree representation of box.
+ */
+//****************************************************************************************
+ptree Plot::Pad::Box::GetPropertyTree()
+{
+  ptree boxTree;
+  boxTree.put("type", mType);
+  boxTree.put("userCoordinates", mUserCoordinates);
+  boxTree.put("autoPlacement", mAutoPlacement);
+  boxTree.put("x", mX);
+  boxTree.put("y", mY);
+  if(mBorder.style) boxTree.put("border_style", *mBorder.style);
+  if(mBorder.scale) boxTree.put("border_width", *mBorder.scale);
+  if(mBorder.color) boxTree.put("border_color", *mBorder.color);
+  if(mFill.style) boxTree.put("fill_style", *mFill.style);
+  if(mFill.scale) boxTree.put("fill_opacity", *mFill.scale);
+  if(mFill.color) boxTree.put("fill_color", *mFill.color);
+  if(mText.style) boxTree.put("text_style", *mText.style);
+  if(mText.scale) boxTree.put("text_size", *mText.scale);
+  if(mText.color) boxTree.put("text_color", *mText.color);
+  return boxTree;
+};
 
 
 } // end namespace PlottingFramework

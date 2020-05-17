@@ -2,7 +2,6 @@
 //
 // Copyright (C) 2019-2020  Mario Krüger
 // Contact: mario.kruger@cern.ch
-// For a full list of contributors please see docs/Credits
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -167,11 +166,6 @@ using boost::property_tree::read_xml;
 
 const string gNameGroupSeparator = "_IN_";
 
-
-
-
-
-
 inline constexpr bool str_contains(const string &str1, const string &str2)
 {
   return (str1.find(str2) != string::npos);
@@ -238,8 +232,6 @@ const map<drawing_options_t, string> defaultDrawingOpions_Graph
   { area_line, "X LC" },
   { boxes_only, "2" },
 };
-
-
 
 } // end namespace PlottingFramework
 #endif /* PlottingFramework_h */

@@ -2,7 +2,6 @@
 //
 // Copyright (C) 2019-2020  Mario Krüger
 // Contact: mario.kruger@cern.ch
-// For a full list of contributors please see docs/Credits
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -43,7 +42,6 @@ private:
   void ScaleGraph(TGraph* graph, double_t scale);
   void SmoothGraph(TGraph* graph, optional<double_t> min = std::nullopt, optional<double_t> = std::nullopt);
   void SmoothHist(TH1* hist, optional<double_t> min = std::nullopt, optional<double_t> max = std::nullopt);
-  // internal helpers
   TGraph* DivideTSpline(TGraph* numerator, TGraph* denominator);
   TH1* DivideTSpline(TH1* numerator, TH1* denominator);
   
