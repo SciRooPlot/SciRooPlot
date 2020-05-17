@@ -41,6 +41,8 @@ private:
   
   void SetGraphRange(TGraph* graph, optional<double_t> min, optional<double_t> max);
   void ScaleGraph(TGraph* graph, double_t scale);
+  void SmoothGraph(TGraph* graph, optional<double_t> min = std::nullopt, optional<double_t> = std::nullopt);
+  void SmoothHist(TH1* hist, optional<double_t> min = std::nullopt, optional<double_t> max = std::nullopt);
   // internal helpers
   TGraph* DivideTSpline(TGraph* numerator, TGraph* denominator);
   TH1* DivideTSpline(TH1* numerator, TH1* denominator);

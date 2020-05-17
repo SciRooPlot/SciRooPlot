@@ -627,8 +627,6 @@ public:
     mAutoPlacement = autoPlacement;
     mX = x;
     mY = y;
-    //mBorderStyle(borderStyle), mBorderSize(borderSize), mBorderColor(borderColor
-    // constructor code
   }
   double GetXPosition(){return mX;}
   double GetYPosition(){return mY;}

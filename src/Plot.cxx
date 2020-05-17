@@ -34,6 +34,7 @@ namespace PlottingFramework {
 Plot::Plot(string name, string figureGroup, string plotTemplateName)
 : Plot()
 {
+  if(figureGroup.find(".") != string::npos) ERROR("Figure Group must not contain '.'!");
   mName = name;
   mFigureGroup = figureGroup;
   if(plotTemplateName != "") mPlotTemplateName = plotTemplateName;

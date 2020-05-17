@@ -50,6 +50,7 @@
 #include "TGraphErrors.h"
 #include "TGraph2D.h"
 #include "TGraph2DErrors.h"
+#include "TGraphSmooth.h"
 #include "TF1.h"
 #include "TF2.h"
 
@@ -79,7 +80,6 @@
 #include "TApplication.h"
 #include "TGWindow.h"
 #include "TRootCanvas.h"
-
 
 
 // some preprocessor macros for logging, printing and debugging

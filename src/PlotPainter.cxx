@@ -143,23 +143,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
         std::visit([&, padID = padID](auto&& data_ptr)
         {
           using data_type = std::decay_t<decltype(data_ptr)>;
-
-          // hack
-          if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
-          {
-            if(data->GetUniqueName().find("meanPt_IN_Models") != string::npos)
-            {
-              double_t rangeMinX = *data->GetMinRangeX();
-              double_t rangeMaxX = *data->GetMaxRangeX();
-              //data_ptr->GetXaxis()->SetRangeUser(rangeMinX, rangeMaxX);
-              data_ptr->GetXaxis()->SetRangeUser(10, rangeMaxX);
-
-              data_ptr->Smooth(100, "R");
-            }
-          }
-          // hack
-          
-          
           data_ptr->SetTitle("");
 
           optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
@@ -184,7 +167,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                   WARNING("Default drawing opiton not available for type {}.", data_ptr->ClassName());
                 }
             }
-
           }
 
           if(data->GetType() == "ratio")
@@ -483,126 +465,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
         textIndex++;
       }
     }
-    
-    // begin hack
-    
-    {
-      float_t lineWidth = 3.;
-      float_t textSize = 28;
-      if(plot.GetName() == "meanPt_energies")
-      {
-        array<double_t, 4> pos = {0.56, 0.43, 0.82, 0.52};
-        
-        TLegend* legend = new TLegend(pos[0], pos[1], pos[2], pos[3]);
-        legend->SetFillStyle(0);
-        legend->SetLineWidth(0.);
-        legend->SetTextFont(43);
-        legend->SetTextSize(textSize);
-        //legend->SetEntrySeparation(1.0);
-        legend->SetTextAlign(kHAlignLeft+kVAlignCenter);
-
-        auto pythia = legend->AddEntry((TObject*)0, "Pythia", "l");
-        pythia->SetLineWidth(lineWidth);
-        pythia->SetLineStyle(kSolid);
-
-        auto epos = legend->AddEntry((TObject*)0, "EPOS-LHC", "l");
-        epos->SetLineWidth(lineWidth);
-        epos->SetLineStyle(kDashed);
-        
-        legend->Draw();
-      }
-      if(plot.GetName() == "meanPt_energies_ratio")
-      {
-        array<double_t, 4> pos = {0.487, 0.812, 0.747, 0.902};
-        
-        TLegend* legend = new TLegend(pos[0], pos[1], pos[2], pos[3]);
-        legend->SetFillStyle(0);
-        legend->SetLineWidth(0.);
-        legend->SetTextFont(43);
-        legend->SetTextSize(textSize);
-        //legend->SetEntrySeparation(1.0);
-        legend->SetTextAlign(kHAlignLeft+kVAlignCenter);
-
-        auto pythia = legend->AddEntry((TObject*)0, "Pythia", "l");
-        pythia->SetLineWidth(lineWidth);
-        pythia->SetLineStyle(kSolid);
-
-        auto epos = legend->AddEntry((TObject*)0, "EPOS-LHC", "l");
-        epos->SetLineWidth(lineWidth);
-        epos->SetLineStyle(kDashed);
-        
-        legend->Draw();
-      }
-      if(plot.GetName() == "meanPt_systems_lin")
-      {
-        array<double_t, 4> pos = {0.139, 0.724, 0.459, 0.903};
-        
-        TLegend* legend = new TLegend(pos[0], pos[1], pos[2], pos[3]);
-        legend->SetFillStyle(0);
-        legend->SetLineWidth(0.);
-        legend->SetTextFont(43);
-        legend->SetTextSize(textSize);
-        //legend->SetEntrySeparation(1.0);
-        legend->SetTextAlign(kHAlignLeft+kVAlignCenter);
-
-        auto pythia = legend->AddEntry((TObject*)0, "Pythia (pp)", "l");
-        pythia->SetLineWidth(lineWidth);
-        pythia->SetLineStyle(kSolid);
-        auto angantyr = legend->AddEntry((TObject*)0, "Angantyr (p-Pb, Pb-Pb)", "l");
-        angantyr->SetLineWidth(lineWidth);
-        angantyr->SetLineStyle(9);
-
-        auto epos = legend->AddEntry((TObject*)0, "EPOS-LHC (pp, p-Pb)", "l");
-        epos->SetLineWidth(lineWidth);
-        epos->SetLineStyle(kDashed);
-        auto epos3 = legend->AddEntry((TObject*)0, "EPOS3 (Pb-Pb)", "l");
-        epos3->SetLineWidth(lineWidth);
-        epos3->SetLineStyle(6);
-
-        legend->Draw();
-      }
-      if(plot.GetName() == "meanPt_systems")
-      {
-        array<double_t, 4> pos = {0.466, 0.156, 0.73, 0.345};
-        
-        TLegend* legend = new TLegend(pos[0], pos[1], pos[2], pos[3]);
-        legend->SetFillStyle(0);
-        legend->SetLineWidth(0.);
-        legend->SetTextFont(43);
-        legend->SetTextSize(textSize);
-        //legend->SetEntrySeparation(1.0);
-        legend->SetTextAlign(kHAlignLeft+kVAlignCenter);
-
-        auto pythia = legend->AddEntry((TObject*)0, "Pythia (pp)", "l");
-        pythia->SetLineWidth(lineWidth);
-        pythia->SetLineStyle(kSolid);
-        auto angantyr = legend->AddEntry((TObject*)0, "Angantyr (p-Pb, Pb-Pb)", "l");
-        angantyr->SetLineWidth(lineWidth);
-        angantyr->SetLineStyle(9);
-
-        auto epos = legend->AddEntry((TObject*)0, "EPOS-LHC (pp, p-Pb)", "l");
-        epos->SetLineWidth(lineWidth);
-        epos->SetLineStyle(kDashed);
-        auto epos3 = legend->AddEntry((TObject*)0, "EPOS3 (Pb-Pb)", "l");
-        epos3->SetLineWidth(lineWidth);
-        epos3->SetLineStyle(6);
-
-        legend->Draw();
-      }
-    
-    }
-    
-    
-    
-    
-    
-    // end hack
-    
-    
-    
-    
-    
-    
 
     bool redrawAxes = (pad.GetRedrawAxes()) ? *pad.GetRedrawAxes() : ((defaultPad.GetRedrawAxes()) ? *defaultPad.GetRedrawAxes() : false);
     if(redrawAxes) axisHist_ptr->Draw("SAME AXIS");
@@ -614,30 +476,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
   canvas_ptr->cd();
   canvas_ptr->Modified();
   canvas_ptr->Update();
-  /*
-  if(plot.IsDrawTimestamps()){
-    TTimeStamp time;
-    TString stTime;
-    stTime = Form("#color[16]{%i}", time.GetDate()); // TODO: make format user definable
-    TLatex timeStamp;
-    timeStamp.SetNDC();
-    timeStamp.SetTextAlign(22);
-    timeStamp.SetTextFont(63);
-    timeStamp.SetTextSizePixels(10);
-    timeStamp.DrawLatex(plotStyle.GetTimestampPositon().first, plotStyle.GetTimestampPositon().second, stTime);
-  }
-  
-  // patch truncated lowest lable
-  //TPad* patch = new TPad("patch", "patch", mainPad->GetLeftMargin()/2 ,0, mainPad->GetLeftMargin()-0.004, mStyle.textSize / mainPad->YtoPixel(mainPad->GetY1()));
-  //patch->Draw("SAME");
-  //patch->SetFillColor(mainPad->GetFillColor());
-  //patch->SetBorderMode(0);
-  
-  // for TView:
-  //    canvas_ptr->SetTheta(20);
-  //    canvas_ptr->SetPhi(45);
-   
-   */
   return shared_ptr<TCanvas>(canvas_ptr);
 }
 
@@ -773,8 +611,41 @@ void PlotPainter::ScaleGraph(TGraph* graph, double_t scale)
   for (int i = 0; i < graph->GetN(); i++) graph->GetY()[i] *= scale;
 }
 
+//****************************************************************************************
+/**
+ * Smoothes 1d graph in range.
+ */
+//****************************************************************************************
+void PlotPainter::SmoothGraph(TGraph* graph, optional<double_t> min, optional<double_t> max)
+{
+  TGraphSmooth smoother;
+  TGraph* smoothGraph = smoother.SmoothSuper(graph);
+  for (int i = 0; i < graph->GetN(); i++)
+  {
+    double_t curX = graph->GetX()[i];
+    if(min && curX < *min) continue;
+    if(max && curX > *max) continue;
+    graph->GetY()[i] = smoothGraph->GetY()[i];
+  }
+  delete smoothGraph;
+}
 
-} // end namespace PlottingFramework
+//****************************************************************************************
+/**
+ * Smoothes 1d hist in range.
+ */
+//****************************************************************************************
+void PlotPainter::SmoothHist(TH1* hist, optional<double_t> min, optional<double_t> max)
+{
+  double_t minRange = hist->GetXaxis()->GetXmin();
+  double_t maxRange = hist->GetXaxis()->GetXmax();
+
+  if(min && max) hist->GetXaxis()->SetRangeUser(*min, *max);
+  else if(min && !max) hist->GetXaxis()->SetRangeUser(*min, maxRange);
+  else if(!min && max) hist->GetXaxis()->SetRangeUser(minRange, *max);
+
+  hist->Smooth(100, "R");
+}
 
 
 //****************************************************************************************
@@ -802,19 +673,12 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
   return {width, height};
 }
 
-
-
-
-
-
-
 //****************************************************************************************
 /**
  * Function to generate a legend or text box.
  */
 //****************************************************************************************
 TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vector<string> lines, vector<TObject*> legendEntries){
-  
 
   optional<int16_t> textColor = box->GetTextColor();
   optional<int16_t> textFont  = box->GetTextFont();
@@ -828,7 +692,6 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
   optional<int16_t> fillStyle   = box->GetFillStyle();
   optional<float_t> fillOpacity = box->GetFillOpacity();
 
-  
   bool isLegend = (box->GetType() == "legend");
   if(!isLegend)
   {
@@ -1093,3 +956,5 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
   }
   
 }
+
+} // end namespace PlottingFramework
