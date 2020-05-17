@@ -614,19 +614,32 @@ private:
 //****************************************************************************************
 class Plot::Pad::Box {
 public:
+
+  Box() =  default;
   Box(const Box& otherBox) = default;
   Box(Box& otherBox) = default;
   
   Box(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor)
-  : mType("none"), mUserCoordinates(userCoordinates), mAutoPlacement(autoPlacement), mX(x), mY(y), mBorderStyle(borderStyle), mBorderSize(borderSize), mBorderColor(borderColor)
+  : Box()
   {
+    mType = "none";
+    mUserCoordinates = userCoordinates;
+    mAutoPlacement = autoPlacement;
+    mX = x;
+    mY = y;
+    //mBorderStyle(borderStyle), mBorderSize(borderSize), mBorderColor(borderColor
     // constructor code
   }
   double GetXPosition(){return mX;}
   double GetYPosition(){return mY;}
-  int GetBorderStyle(){return mBorderStyle;}
-  int GetBorderSize(){return mBorderSize;}
-  int GetBorderColor(){return mBorderColor;}
+  optional<int16_t>& GetBorderStyle(){return mBorder.style;}
+  optional<float_t>& GetBorderWidth(){return mBorder.scale;}
+  optional<int16_t>& GetBorderColor(){return mBorder.color;}
+
+  optional<int16_t>& GetTextFont(){return mText.style;}
+  optional<float_t>& GetTextSize(){return mText.scale;}
+  optional<int16_t>& GetTextColor(){return mText.color;}
+
   bool IsUserCoordinates(){return mUserCoordinates;}
   bool IsAutoPlacement(){return mAutoPlacement;}
   
@@ -639,9 +652,12 @@ public:
     boxTree.put("autoPlacement", mAutoPlacement);
     boxTree.put("x", mX);
     boxTree.put("y", mY);
-    boxTree.put("borderStyle", mBorderStyle);
-    boxTree.put("borderSize", mBorderSize);
-    boxTree.put("borderColor", mBorderColor);
+    if(mBorder.style) boxTree.put("border_style", *mBorder.style);
+    if(mBorder.scale) boxTree.put("border_width", *mBorder.scale);
+    if(mBorder.color) boxTree.put("border_color", *mBorder.color);
+    if(mText.style) boxTree.put("text_style", *mText.style);
+    if(mText.scale) boxTree.put("text_size", *mText.scale);
+    if(mText.color) boxTree.put("text_color", *mText.color);
     return boxTree;
   };
   
@@ -653,27 +669,37 @@ public:
       mAutoPlacement = boxTree.get<bool>("autoPlacement");
       mX = boxTree.get<double>("x");
       mY = boxTree.get<double>("y");
-      mBorderStyle = boxTree.get<int>("borderStyle");
-      mBorderSize = boxTree.get<int>("borderSize");
-      mBorderColor = boxTree.get<int>("borderColor");
     }catch(...){
       ERROR("Could not construct box from ptree.");
     }
     
+    if(auto var = boxTree.get_optional<int16_t>("border_style")) mBorder.style = *var;
+    if(auto var = boxTree.get_optional<float_t>("border_width")) mBorder.scale = *var;
+    if(auto var = boxTree.get_optional<int16_t>("border_color")) mBorder.color = *var;
+    if(auto var = boxTree.get_optional<int16_t>("text_style")) mText.style = *var;
+    if(auto var = boxTree.get_optional<float_t>("text_size")) mText.scale = *var;
+    if(auto var = boxTree.get_optional<int16_t>("text_color")) mText.color = *var;
   }
   
   
 protected:
   void SetType(string type){mType = type;}
 private:
+  
+  typedef struct{
+    optional<int16_t> color;
+    optional<int16_t> style;
+    optional<float_t> scale;  // marker size , line width, fill opacity
+  } layout_t;
+
   string mType; // for introspection
+  layout_t mText;
+  layout_t mBorder;
+
   bool mUserCoordinates;
   bool mAutoPlacement;
   double mX;
   double mY;
-  int mBorderStyle;
-  int mBorderSize;
-  int mBorderColor;
 };
 
 

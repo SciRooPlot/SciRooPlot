@@ -32,13 +32,13 @@ void MultDepSpec::DefinePlotTemplates(PlotManager& plotManager)
     templatePlot.SetTransparent();
     templatePlot[0].SetDefaultTextFont(43);
     templatePlot[0].SetDefaultTextSize(24);
+
     templatePlot[0].SetDefaultMarkerSize(1.2);
     templatePlot[0].SetDefaultLineWidth(2.);
     templatePlot[0].SetTransparent();
     templatePlot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
-    templatePlot[0]["X"].SetTitleOffset(1.1);
-    templatePlot[0]["Y"].SetTitleOffset(1.4);
-    templatePlot[0]["Z"].SetTitleOffset(1.);
+    templatePlot[0]["X"].SetTitleOffset(1.).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks();
+    templatePlot[0]["Y"].SetTitleOffset(1.2).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks();
     templatePlot[1].SetPosition(0., 0., 1., 1.);
     plotManager.AddPlotTemplate(templatePlot);
   } // -----------------------------------------------------------------------

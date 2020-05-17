@@ -31,6 +31,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     string plotName = "test1d";
     Plot plot(plotName, plotGroup, "1d");
 
+    /*
     plot[1].AddData({"func", "dummyInput"}, "func").SetRangeX(0, 20).SetLineWidth(3.).SetLineColor(kBlue);
 
     plot[1].AddData({"momentUnfolded1", "pPb_5TeV"}, "pPb, 5 TeV")
@@ -41,14 +42,14 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
 
     plot[1].AddData({"momentUnfolded1", "pp_2TeV"}, "2 TeV")
     .SetMaxRangeX(40).SetMarkerColor(kRed);
-
-    plot[1].AddData({"momentUnfolded1", "pp_5TeV"}, "5 TeV")
+*/
+    plot[1].AddData({"momentUnfolded1", "pp_5TeV"}, "1")
     .SetMaxRangeX(60);
     
-    plot[1].AddData({"momentUnfolded1", "pp_7TeV"}, "7 TeV")
+    plot[1].AddData({"momentUnfolded1", "pp_7TeV"}, "2")
     .SetMaxRangeX(60);
     
-    plot[1].AddData({"momentUnfolded1", "pp_13TeV"}, "13 TeV").SetDefinesFrame()
+    plot[1].AddData({"momentUnfolded1", "pp_13TeV"}, "3").SetDefinesFrame()
     .SetMaxRangeX(70);
 
     plot[1].SetRedrawAxes();
@@ -64,15 +65,16 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     string plotName = "test1d_ratio";
     Plot plot(plotName, plotGroup, "1d_ratio");
 
-    plot[1].AddData({"momentUnfolded1", "pp_5TeV"}, "5 TeV")
+    plot[1].AddData({"momentUnfolded1", "pp_5TeV"}, "5 TeV #Delta = #sqrt{s}")
     .SetMarker(kRed, kFullCircle, 1.2).SetMaxRangeX(40);
     
-    plot[1].AddData({"momentUnfolded1", "pp_13TeV"}, "13 TeV")
+    plot[1].AddData({"momentUnfolded1", "pp_13TeV"}, "ratio")
     .SetMarker(kBlack, kFullCircle, 1.2).SetMaxRangeX(70);
 
     plot[2].AddRatio({"momentUnfolded1", "pp_13TeV"}, {"momentUnfolded1", "pp_5TeV"}, "ratio").SetMarker(kRed, kFullCircle, 1.2).SetMaxRangeX(60);
 
-    plot[1].AddLegend();
+    plot[1].AddLegend(0.,0.9);
+    plot[2].AddLegend(0.,0.9);
 
     plot[0]["X"].SetRange(20, 70).SetTickOrientation("+-");
 
@@ -158,8 +160,8 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
      plot[1].AddData({"meanPt", pPb_5TeV[angantyr].input})
      .SetMarkerStyle(pPb_5TeV[angantyr].marker)
      .SetColor(pPb_5TeV[angantyr].color)
-     .SetMaxRangeX(pPb_5TeV[angantyr].mult)
-     .SetOptions(curve).SetLine(pPb_5TeV[angantyr].color, kSolid, 3.).SetFillStyle(0)
+     .SetMaxRangeX(pPb_5TeV[angantyr].mult-1)
+     .SetOptions(curve).SetLine(pPb_5TeV[angantyr].color, 9, 3.).SetFillStyle(0)
      ;
      //Pb-Pb
      plot[1].AddData({"momentUnfolded1", PbPb_5TeV[data].input})
@@ -173,129 +175,41 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
      .SetColor(PbPb_5TeV[data].color)
      .SetMaxRangeX(PbPb_5TeV[data].mult)
      ;
-     plot[1].AddData({"meanPt", PbPb_5TeV[epos].input})
+     plot[1].AddData({"meanPt_smooth", PbPb_5TeV[epos].input})
      .SetMarkerStyle(PbPb_5TeV[epos].marker)
      .SetColor(PbPb_5TeV[epos].color)
      .SetMaxRangeX(PbPb_5TeV[epos].mult)
      //.SetMinRangeX(5.)
-     .SetOptions(line).SetLine(PbPb_5TeV[epos].color, kDashed, 3.).SetFillStyle(0)
+     .SetOptions(line).SetLine(PbPb_5TeV[epos].color, 6, 3.).SetFillStyle(0)
      ;
      plot[1].AddData({"meanPt", PbPb_5TeV[angantyr].input})
      .SetMarkerStyle(PbPb_5TeV[angantyr].marker)
      .SetColor(PbPb_5TeV[angantyr].color)
      .SetMaxRangeX(PbPb_5TeV[angantyr].mult)
-     .SetOptions(curve).SetLine(PbPb_5TeV[angantyr].color, kSolid, 3.).SetFillStyle(0);
+     .SetOptions(curve).SetLine(PbPb_5TeV[angantyr].color, 9, 3.).SetFillStyle(0);
 
-     plot[1].AddText(0.34, 0.3, systemSizeLablePrel);
      plot[1]["Y"].SetRange(0.45, 0.85);
      plot[1]["X"].SetTitle("#it{N}_{ch}");
-     plot[1]["Y"].SetTitleOffset(1.7);
-     plot[1].AddText(0.12, 0.93, "solid: //   Pythia8 (pp), //   Angantyr (p-Pb, Pb-Pb) // dashed: //   EOPOS-LHC (pp, p-Pb), //   EPOS3 (Pb-Pb)");
+     //plot[1]["Y"].SetTitleOffset(1.46);
+     //plot[1].AddText(0.12, 0.93, "solid: //   Pythia8 (pp), //   Angantyr (p-Pb, Pb-Pb) // dashed: //   EOPOS-LHC (pp, p-Pb), //   EPOS3 (Pb-Pb)");
 
      Plot plotLin(plot, plotName + "_lin", "preliminary");
 
-     plot[1].AddLegend(0.65, 0.9);
+     plot[1]["Y"].SetRange(0.45, 0.93);
+     plot[1].AddLegend(0.15, 0.7);
+     plot[1].AddText(0.1, 0.905, systemSizeLablePrel);
 
      plot[1].SetPadOptions("logX");
-     plot[1]["X"].SetRange(0.1, 4000).SetLog();
+     plot[1]["X"].SetRange(0.0001, 4000).SetLog();
      
      plotLin[1]["Y"].SetRange(0.45, 0.95);
+     plotLin[1].AddText(0.3, 0.3, systemSizeLablePrel);
 
      plotLin[1]["X"].SetMaxRange(100).SetLog(false);
      plotLin[1].AddLegend(0.65, 0.9);
      plotManager.AddPlot(plotLin);
      plotManager.AddPlot(plot);
    } // -----------------------------------------------------------------------
-
-  { // -----------------------------------------------------------------------
-    // compare meanPt in all systems
-    string plotName = "variance_systems";
-    Plot plot(plotName, "preliminary", "1d");
-    
-    //p-p
-    plot[1].AddData({"varianceUnfolded", pp_5TeV[data].input})
-    .SetMarkerStyle(kFullCross)
-    .SetColor(pp_5TeV[data].color)
-    .SetMaxRangeX(pp_5TeV[data].mult)
-    ;
-    plot[1].AddData({"varianceUnfolded_Syst", pp_5TeV[data].input}, "pp").SetOptions(boxes).SetFillStyle(0)
-    .SetMarkerStyle(kFullCross)
-    .SetColor(pp_5TeV[data].color)
-    .SetMaxRangeX(pp_5TeV[data].mult)
-    ;
-    plot[1].AddData({"variance", pp_5TeV[epos_lhc].input})
-    .SetMarkerStyle(pp_5TeV[epos_lhc].marker)
-    .SetColor(pp_5TeV[epos_lhc].color)
-    .SetMaxRangeX(pp_5TeV[epos_lhc].mult)
-    .SetOptions(curve).SetLine(pp_5TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
-    ;
-    plot[1].AddData({"variance", pp_5TeV[pythia].input})
-    .SetMarkerStyle(pp_5TeV[pythia].marker)
-    .SetColor(pp_5TeV[pythia].color)
-    .SetMaxRangeX(pp_5TeV[pythia].mult)
-    .SetOptions(curve).SetLine(pp_5TeV[pythia].color, kSolid, 3.).SetFillStyle(0)
-    ;
-    //p-Pb
-    plot[1].AddData({"varianceUnfolded", pPb_5TeV[data].input})
-    .SetMarkerStyle(pPb_5TeV[data].marker)
-    .SetColor(pPb_5TeV[data].color)
-    .SetMaxRangeX(pPb_5TeV[data].mult)
-    ;
-    plot[1].AddData({"varianceUnfolded_Syst", pPb_5TeV[data].input}, "p-Pb").SetOptions(boxes).SetFillStyle(0)
-    .SetMarkerStyle(pPb_5TeV[data].marker)
-    .SetColor(pPb_5TeV[data].color)
-    .SetMaxRangeX(pPb_5TeV[data].mult)
-    ;
-    plot[1].AddData({"variance", pPb_5TeV[epos_lhc].input})
-    .SetMarkerStyle(pPb_5TeV[epos_lhc].marker)
-    .SetColor(pPb_5TeV[epos_lhc].color)
-    .SetMaxRangeX(pPb_5TeV[epos_lhc].mult)
-    .SetOptions(curve).SetLine(pPb_5TeV[epos_lhc].color, kDashed, 3.).SetFillStyle(0)
-    ;
-    plot[1].AddData({"variance", pPb_5TeV[angantyr].input})
-    .SetMarkerStyle(pPb_5TeV[angantyr].marker)
-    .SetColor(pPb_5TeV[angantyr].color)
-    .SetMaxRangeX(pPb_5TeV[angantyr].mult)
-    .SetOptions(curve).SetLine(pPb_5TeV[angantyr].color, kSolid, 3.).SetFillStyle(0)
-    ;
-    //Pb-Pb
-    plot[1].AddData({"varianceUnfolded", PbPb_5TeV[data].input})
-    .SetMarkerStyle(PbPb_5TeV[data].marker)
-    .SetColor(PbPb_5TeV[data].color)
-    .SetMaxRangeX(PbPb_5TeV[data].mult)
-    ;
-    plot[1].AddData({"varianceUnfolded_Syst", PbPb_5TeV[data].input}, "Pb-Pb").SetOptions(boxes).SetFillStyle(0)
-    .SetMarkerStyle(PbPb_5TeV[data].marker)
-    .SetColor(PbPb_5TeV[data].color)
-    .SetMaxRangeX(PbPb_5TeV[data].mult)
-    ;
-    plot[1].AddData({"variance", PbPb_5TeV[angantyr].input})
-    .SetMarkerStyle(PbPb_5TeV[angantyr].marker)
-    .SetColor(PbPb_5TeV[angantyr].color)
-    .SetMaxRangeX(PbPb_5TeV[angantyr].mult)
-    .SetOptions(curve).SetLine(PbPb_5TeV[angantyr].color, kSolid, 3.).SetFillStyle(0);
-
-    plot[1].AddText(0.34, 0.3, systemSizeLablePrel);
-    plot[1]["Y"].SetRange(0.05, 0.8);
-    plot[1]["X"].SetTitle("#it{N}_{ch}");
-    plot[1]["Y"].SetTitleOffset(1.7);
-    plot[1].AddText(0.12, 0.93, "solid: //   Pythia8 (pp), //   Angantyr (p-Pb, Pb-Pb) // dashed: //   EOPOS-LHC (pp, p-Pb), //   EPOS3 (Pb-Pb)");
-
-    Plot plotLin(plot, plotName + "_lin", "preliminary");
-
-    plot[1].AddLegend(0.65, 0.9);
-
-    plot[1].SetPadOptions("logX");
-    plot[1]["X"].SetRange(0.1, 4000).SetLog();
-    
-    //plotLin[1]["Y"].SetRange(0.45, 0.95);
-
-    plotLin[1]["X"].SetMaxRange(100).SetLog(false);
-    plotLin[1].AddLegend(0.65, 0.9);
-    plotManager.AddPlot(plotLin);
-    plotManager.AddPlot(plot);
-  } // -----------------------------------------------------------------------
-  
 
   
   { // -----------------------------------------------------------------------
@@ -398,15 +312,15 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     ;
     
     plot[1]["X"].SetRange(0.1, 60);
-    plot[1]["Y"].SetRange(0.45, 0.85);
+    plot[1]["Y"].SetRange(0.45, 0.9);
     plot[1]["X"].SetTitle("#it{N}_{ch}");
     
-    plot[1]["Y"].SetTitleOffset(1.7);
+    //plot[1]["Y"].SetTitleOffset(1.4);
 
     
-    plot[1].AddLegend(0.14, 0.92);
-    plot[1].AddText(0.4, 0.45, "solid: Pythia8 Monash13 // dashed: EPOS-LHC");
-    plot[1].AddText(0.34, 0.3, energyLablePrel);
+    plot[1].AddLegend(0.15, 0.9);
+    //plot[1].AddText(0.4, 0.45, "solid: Pythia8 Monash13 // dashed: EPOS-LHC");
+    plot[1].AddText(0.3, 0.31, energyLablePrel);
     
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
@@ -491,13 +405,13 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     plot[1]["X"].SetRange(0.1, 60);
     plot[1]["Y"].SetRange(0.94, 1.06);
     plot[1]["X"].SetTitle("#it{N}_{ch}");
-    plot[1]["Y"].SetTitle("model / data");
+    plot[1]["Y"].SetTitle("#LT#it{p}_{T}#GT model / data");
 
-    plot[1]["Y"].SetTitleOffset(1.7);
+    plot[1]["Y"].SetTitleOffset(1.2);
     
-    plot[1].AddLegend(0.18, 0.92);
-    plot[1].AddText(0.44, 0.42, "solid: Pythia8 Monash13 // dashed: EPOS-LHC");
-    plot[1].AddText(0.34, 0.3, energyLablePrel);
+    plot[1].AddLegend(0.18, 0.905);
+    //plot[1].AddText(0.44, 0.42, "solid: Pythia8 Monash13 // dashed: EPOS-LHC");
+    plot[1].AddText(0.3, 0.31, energyLablePrel);
     
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------

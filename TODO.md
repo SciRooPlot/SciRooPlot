@@ -12,6 +12,9 @@ FRAMEWORK:
 ----------
 
 WIP:
+- allow for multi-column text boxes and make tab width between them a text box property
+- mode1: add manually entries to legend
+- mode2: implicitly do it via data (here multiple legends would be nice?)
 - add setters and getters to boxes + fix constructor
 - fix visibility of constructors + check if everything is initialized correctly
 - gStyle->SetPaintTextFormat("4.1f m");
@@ -59,7 +62,6 @@ Bugs:
 - exponents on x axis are not in the proper position
 - boxes are not transparent by default
 - sometimes text boxes are randomly not drawn?
-- if lables are 1, 2, 3 height is not calculated correctly?
 
 Structural changes:
 - understand why move constructors implicitly delete assignment operators
