@@ -31,7 +31,6 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
     string plotName = "test1d";
     Plot plot(plotName, plotGroup, "1d");
 
-    /*
     plot[1].AddData({"func", "dummyInput"}, "func").SetRangeX(0, 20).SetLineWidth(3.).SetLineColor(kBlue);
 
     plot[1].AddData({"momentUnfolded1", "pPb_5TeV"}, "pPb, 5 TeV")
@@ -42,7 +41,7 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
 
     plot[1].AddData({"momentUnfolded1", "pp_2TeV"}, "2 TeV")
     .SetMaxRangeX(40).SetMarkerColor(kRed);
-*/
+
     plot[1].AddData({"momentUnfolded1", "pp_5TeV"}, "1")
     .SetMaxRangeX(60);
     

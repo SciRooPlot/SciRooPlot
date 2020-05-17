@@ -42,8 +42,6 @@ private:
   void SetGraphRange(TGraph* graph, optional<double_t> min, optional<double_t> max);
   void ScaleGraph(TGraph* graph, double_t scale);
   // internal helpers
-  TLegend* MakeLegend(shared_ptr<Plot::Pad::LegendBox> legendBox, TPad* pad, TObjArray& legendEntries, vector<string> legendTitles, vector<string>& errorStyles);
-  TPaveText* MakeText(shared_ptr<Plot::Pad::TextBox> textBox);
   TGraph* DivideTSpline(TGraph* numerator, TGraph* denominator);
   TH1* DivideTSpline(TH1* numerator, TH1* denominator);
   

@@ -636,6 +636,10 @@ public:
   optional<float_t>& GetBorderWidth(){return mBorder.scale;}
   optional<int16_t>& GetBorderColor(){return mBorder.color;}
 
+  optional<int16_t>& GetFillStyle(){return mFill.style;}
+  optional<float_t>& GetFillOpacity(){return mFill.scale;}
+  optional<int16_t>& GetFillColor(){return mFill.color;}
+
   optional<int16_t>& GetTextFont(){return mText.style;}
   optional<float_t>& GetTextSize(){return mText.scale;}
   optional<int16_t>& GetTextColor(){return mText.color;}
@@ -655,6 +659,9 @@ public:
     if(mBorder.style) boxTree.put("border_style", *mBorder.style);
     if(mBorder.scale) boxTree.put("border_width", *mBorder.scale);
     if(mBorder.color) boxTree.put("border_color", *mBorder.color);
+    if(mFill.style) boxTree.put("fill_style", *mFill.style);
+    if(mFill.scale) boxTree.put("fill_opacity", *mFill.scale);
+    if(mFill.color) boxTree.put("fill_color", *mFill.color);
     if(mText.style) boxTree.put("text_style", *mText.style);
     if(mText.scale) boxTree.put("text_size", *mText.scale);
     if(mText.color) boxTree.put("text_color", *mText.color);
@@ -676,6 +683,9 @@ public:
     if(auto var = boxTree.get_optional<int16_t>("border_style")) mBorder.style = *var;
     if(auto var = boxTree.get_optional<float_t>("border_width")) mBorder.scale = *var;
     if(auto var = boxTree.get_optional<int16_t>("border_color")) mBorder.color = *var;
+    if(auto var = boxTree.get_optional<int16_t>("fill_style")) mFill.style = *var;
+    if(auto var = boxTree.get_optional<float_t>("fill_opacity")) mFill.scale = *var;
+    if(auto var = boxTree.get_optional<int16_t>("fill_color")) mFill.color = *var;
     if(auto var = boxTree.get_optional<int16_t>("text_style")) mText.style = *var;
     if(auto var = boxTree.get_optional<float_t>("text_size")) mText.scale = *var;
     if(auto var = boxTree.get_optional<int16_t>("text_color")) mText.color = *var;
@@ -695,6 +705,7 @@ private:
   string mType; // for introspection
   layout_t mText;
   layout_t mBorder;
+  layout_t mFill;
 
   bool mUserCoordinates;
   bool mAutoPlacement;
