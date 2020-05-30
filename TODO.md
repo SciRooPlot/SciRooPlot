@@ -53,6 +53,7 @@ Feature ideas:
 
 
 Structural changes:
+- use constexpr everywhere!!
 - understand why move constructors implicitly delete assignment operators
 - move analysis stuff out of the repository and make external repository (link cmakes?)
 - store strings in vector and then only work with indices everywhere

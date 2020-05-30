@@ -48,7 +48,7 @@ PlotManager::~PlotManager()
   mDataLedger->Delete();
   if(!mPlotLedger.empty()){
     if(mSaveToRootFile == true){
-      TFile outputFile(mOutputFileName.c_str(), "RECREATE");
+      TFile outputFile(mOutputFileName.data(), "RECREATE");
       if (outputFile.IsZombie()){
         return;
       }
@@ -57,16 +57,16 @@ PlotManager::~PlotManager()
       for(auto& plotTuple : mPlotLedger){
         auto canvas = plotTuple.second;
         string uniqueName = plotTuple.first;
-        size_t delimiterPos = uniqueName.find(gNameGroupSeparator.c_str());
+        size_t delimiterPos = uniqueName.find(gNameGroupSeparator.data());
         string plotName = uniqueName.substr(0, delimiterPos);
         string subfolder = uniqueName.substr(delimiterPos + gNameGroupSeparator.size());
         std::replace(subfolder.begin(),subfolder.end(), ':', '/');
-        if(!outputFile.GetDirectory(subfolder.c_str(), kFALSE, "cd"))
+        if(!outputFile.GetDirectory(subfolder.data(), kFALSE, "cd"))
         {
-          outputFile.mkdir(subfolder.c_str());
+          outputFile.mkdir(subfolder.data());
         }
-        outputFile.cd(subfolder.c_str());
-        canvas->Write(plotName.c_str());
+        outputFile.cd(subfolder.data());
+        canvas->Write(plotName.data());
         nPlots++;
       }
       outputFile.Close();
@@ -123,7 +123,7 @@ void PlotManager::DumpInputDataFiles(string configFileName)
     inputFileTree.put_child(inFileTuple.first, filesOfIdentifier);
   }
   boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
-  write_xml(gSystem->ExpandPathName(configFileName.c_str()), inputFileTree, std::locale(), settings);
+  write_xml(gSystem->ExpandPathName(configFileName.data()), inputFileTree, std::locale(), settings);
 }
 
 //****************************************************************************************
@@ -135,7 +135,7 @@ void PlotManager::LoadInputDataFiles(string configFileName)
 {
   ptree inputFileTree;
   try{
-    read_xml(gSystem->ExpandPathName(configFileName.c_str()), inputFileTree);
+    read_xml(gSystem->ExpandPathName(configFileName.data()), inputFileTree);
   }catch(...){
     ERROR("Cannot load file {}.", configFileName);
     return;
@@ -212,7 +212,7 @@ void PlotManager::DumpPlots(string plotFileName, string figureGroup, vector<stri
     }
   }
   boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
-  write_xml(gSystem->ExpandPathName(plotFileName.c_str()), plotTree, std::locale(), settings);
+  write_xml(gSystem->ExpandPathName(plotFileName.data()), plotTree, std::locale(), settings);
 }
 void PlotManager::DumpPlot(string plotFileName, string figureGroup, string plotName)
 {
@@ -229,7 +229,7 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(string& plotFileName)
   if (mPropertyTreeCache.find(plotFileName) == mPropertyTreeCache.end())
   {
     ptree tempTree;
-    read_xml(gSystem->ExpandPathName(plotFileName.c_str()), tempTree);
+    read_xml(gSystem->ExpandPathName(plotFileName.data()), tempTree);
     mPropertyTreeCache[plotFileName] = std::move(tempTree);
   }
   return mPropertyTreeCache[plotFileName];
@@ -342,8 +342,8 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
   // create output folders and files
   string folderName = mOutputDirectory + "/" + plot.GetFigureGroup();
   if(subFolder != "") folderName += "/" + subFolder;
-  gSystem->Exec((string("mkdir -p ") + folderName).c_str());
-  canvas->SaveAs((folderName + "/" + fileName + fileEnding).c_str());
+  gSystem->Exec((string("mkdir -p ") + folderName).data());
+  canvas->SaveAs((folderName + "/" + fileName + fileEnding).data());
 }
 
 
@@ -572,9 +572,9 @@ void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, vector<string
     string graphName = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
     string delimiter = "\t"; // TODO: this must somehow be user definable
     string pattern = "%lg %lg %lg %lg";
-    TGraphErrors* graph = new TGraphErrors(inputFileName.c_str(), pattern.c_str(), delimiter.c_str());
+    TGraphErrors* graph = new TGraphErrors(inputFileName.data(), pattern.data(), delimiter.data());
     string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
-    ((TNamed*)graph)->SetName(uniqueName.c_str());
+    ((TNamed*)graph)->SetName(uniqueName.data());
     outputDataArray.Add(graph);
   }
 }
@@ -611,7 +611,7 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
     }
     string fileName = tokens[0];
             
-    TFile inputFile(fileName.c_str(), "READ");
+    TFile inputFile(fileName.data(), "READ");
     if (inputFile.IsZombie()) {
       ERROR("Input file {} not found.", fileName);
       break;
@@ -719,18 +719,18 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
   TObject* subFolder = nullptr;
   if(folder->InheritsFrom("TDirectory"))
   {
-    TKey* key = ((TDirectory*)folder)->FindKey(subDirs[0].c_str());
+    TKey* key = ((TDirectory*)folder)->FindKey(subDirs[0].data());
     if(key){
       subFolder = key->ReadObj();
     }
     else{
-      subFolder = ((TDirectory*)folder)->FindObject(subDirs[0].c_str());
+      subFolder = ((TDirectory*)folder)->FindObject(subDirs[0].data());
     }
     deleteFolder = false;
   }
   else if(folder->InheritsFrom("TCollection"))
   {
-    subFolder = ((TCollection*)folder)->FindObject(subDirs[0].c_str());
+    subFolder = ((TCollection*)folder)->FindObject(subDirs[0].data());
     if(subFolder){
       ((TCollection*)subFolder)->SetOwner();
       // if subfolder is part of list, remove it first to avoid double deletion
@@ -822,7 +822,7 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
         // re-name data
         if(!newDataNames.empty()){
           auto vectorIndex = it - dataNames.begin();
-          ((TNamed*)obj)->SetName((newDataNames[vectorIndex]).c_str());
+          ((TNamed*)obj)->SetName((newDataNames[vectorIndex]).data());
           newDataNames.erase(std::find(newDataNames.begin(), newDataNames.end(), newDataNames[vectorIndex]));
         }
         dataNames.erase(it);
@@ -862,7 +862,7 @@ bool PlotManager::IsPlotPossible(Plot &plot)
       
       for(auto& dataName : dataNames)
       {
-        TObject* obj = mDataLedger->FindObject(dataName.c_str());
+        TObject* obj = mDataLedger->FindObject(dataName.data());
         if(!obj) return false;
       }
     }

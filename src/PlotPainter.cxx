@@ -35,7 +35,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     return nullptr;
   }
   
-  TCanvas* canvas_ptr = new TCanvas(plot.GetUniqueName().c_str(), plot.GetUniqueName().c_str(), *plot.GetWidth()+4, *plot.GetHeight()+28);
+  TCanvas* canvas_ptr = new TCanvas(plot.GetUniqueName().data(), plot.GetUniqueName().data(), *plot.GetWidth()+4, *plot.GetHeight()+28);
   // NB.: +4 and +28 are needed to undo hard-coded offsets in TCanvas.cxx line 580
   canvas_ptr->SetMargin(0., 0., 0., 0.);
 
@@ -92,7 +92,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     canvas_ptr->cd();
     string padName = "Pad_" + std::to_string(padID);
 
-    TPad* pad_ptr = new TPad(padName.c_str(), padTitle.c_str(), padPos[0], padPos[1], padPos[2], padPos[3]);
+    TPad* pad_ptr = new TPad(padName.data(), padTitle.data(), padPos[0], padPos[1], padPos[2], padPos[3]);
     if(marginTop) pad_ptr->SetTopMargin(*marginTop);
     if(marginBottom) pad_ptr->SetBottomMargin(*marginBottom);
     if(marginLeft) pad_ptr->SetLeftMargin(*marginLeft);
@@ -224,7 +224,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
             {
               if(drawingOptions.find("Z") != string::npos){
-                data_ptr->Draw(drawingOptions.c_str()); // z axis is only drawn if specified
+                data_ptr->Draw(drawingOptions.data()); // z axis is only drawn if specified
                 data_ptr->Reset("ICE"); //reset only integral, contents and errors
                 isDrawn = true;
               }
@@ -239,7 +239,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             }
             if(!isDrawn) axisHist_ptr->Draw("AXIS");
             axisHist_ptr->Draw("SAME AXIG");
-            axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).c_str());
+            axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
                         
             // apply axis settings
             for(string axisLable : {"X", "Y", "Z"})
@@ -267,7 +267,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                 if(curPad.GetAxes().find(axisLable) != curPad.GetAxes().end())
                 {
                   auto axisLayout = curPad[axisLable];
-                  if(axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).c_str());
+                  if(axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).data());
 
                   if(axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
                   if(axisLayout.GetLableFont()) textFontLable = axisLayout.GetLableFont();
@@ -311,11 +311,11 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                   if(axisLayout.GetTimeFormat())
                   {
                     axis_ptr->SetTimeDisplay(1);
-                    axis_ptr->SetTimeFormat((*axisLayout.GetTimeFormat()).c_str());
+                    axis_ptr->SetTimeFormat((*axisLayout.GetTimeFormat()).data());
                   }
                   if(axisLayout.GetTickOrientation())
                   {
-                    axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).c_str());
+                    axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).data());
                   }
 
                   if(axisLayout.GetMinRange() || axisLayout.GetMaxRange())
@@ -346,7 +346,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             optional<string> refFunc = (plot[padID].GetRefFunc()) ? plot[padID].GetRefFunc() : plot[0].GetRefFunc();
             if(refFunc)
             {
-              TF1* line = new TF1("line", (*refFunc).c_str(), data_ptr->GetXaxis()->GetXmin(), data_ptr->GetXaxis()->GetXmax());
+              TF1* line = new TF1("line", (*refFunc).data(), data_ptr->GetXaxis()->GetXmin(), data_ptr->GetXaxis()->GetXmax());
               line->SetLineColor(kBlack);
               line->SetLineWidth(2);
               // line->SetLineStyle(9);
@@ -417,7 +417,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               std::replace(drawingOptions.begin(),drawingOptions.end(), 'Z', ' ');
             }
 
-            data_ptr->Draw(drawingOptions.c_str());
+            data_ptr->Draw(drawingOptions.data());
             
             // in case a lable was specified for the data, remember this for later
             if (data->GetLegendLable() && !(*data->GetLegendLable()).empty()) {
@@ -451,7 +451,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
         string legendName = "LegendBox_" + std::to_string(legendIndex);
         if(lables.empty()) break;
         TPave* legend = GenerateBox(box, pad_ptr, lables, legendEntries);
-        legend->SetName(legendName.c_str());
+        legend->SetName(legendName.data());
         legend->Draw("SAME");
         legendIndex++;
       }
@@ -459,7 +459,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
       {
         string textName = "TextBox_" + std::to_string(textIndex);
         TPave* text = GenerateBox(box, pad_ptr, {}, {});
-        text->SetName(textName.c_str());
+        text->SetName(textName.data());
         text->Draw("SAME");
         textIndex++;
       }
@@ -501,7 +501,7 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
 }
 optional<data_ptr_t> PlotPainter::GetDataClone(string dataName, TObjArray* availableData)
 {
-  TObject* obj = availableData->FindObject(dataName.c_str());
+  TObject* obj = availableData->FindObject(dataName.data());
   if(obj)
   {
     // IMPORTANT: TProfile2D is TH2, TH2 is TH1, TProfile is TH1 --> order matters here!
@@ -773,7 +773,7 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
     }
     
     // determine width and height of line to find max width and height (per column)
-    TLatex textLine(0,0, legendTitle.c_str());
+    TLatex textLine(0,0, legendTitle.data());
     textLine.SetTextFont(text_font);
     textLine.SetTextSize(text_size);
     auto [width, height] = GetTextDimensions(textLine);
@@ -795,7 +795,7 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
   if(isLegend)
   {
     string markerDummyString = "-+-"; // defines width of marker
-    TLatex markerDummy(0,0, markerDummyString.c_str());
+    TLatex markerDummy(0,0, markerDummyString.data());
     markerDummy.SetTextFont(text_font);
     markerDummy.SetTextSize(text_size);
     auto [w, h] = GetTextDimensions(markerDummy);
@@ -902,7 +902,7 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
       {
         drawStyle = "F";
       }
-      legend->AddEntry((TH1*)entry, lines[i].c_str(), drawStyle.c_str());
+      legend->AddEntry((TH1*)entry, lines[i].data(), drawStyle.data());
       i++;
     }
     
@@ -941,7 +941,7 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
 
     for(auto& line : lines)
     {
-      TText* text = paveText->AddText(line.c_str());
+      TText* text = paveText->AddText(line.data());
       text->SetTextFont(text_font);
       text->SetTextSize(text_size);
     }

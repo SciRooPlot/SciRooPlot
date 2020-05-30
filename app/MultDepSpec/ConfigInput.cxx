@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
   plotEnv.AddInputDataFiles(fitsIdentifer, {dataSetFolder + fitsIdentifer + "/" + fitsIdentifer + ".root"});
   
   INFO("Saving input file paths in: '{}'.", MultDepSpec::gInputFilesConfig);
-  gSystem->Exec((string("mkdir -p ") + MultDepSpec::gConfigFolder).c_str());
+  gSystem->Exec((string("mkdir -p ") + MultDepSpec::gConfigFolder).data());
   plotEnv.DumpInputDataFiles(MultDepSpec::gInputFilesConfig);
   return 0;
 }
