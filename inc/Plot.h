@@ -131,6 +131,8 @@ public:
   Data& AddData(input_t input, string lable = "");
   Ratio& AddRatio(input_t numerator, input_t denominator, string lable = "");
 
+  
+  // FIXME: These accessors will be simplified and properties like borderStyle etc can be set with extra functions directly on the boxes (as it is for Pad and Data properties)
   void AddText(double xPos, double yPos, string text = "", bool userCoord = false, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
   void AddLegend(double xPos, double yPos, string title = "", bool userCoordinates = false, int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
   void AddLegend(string title = "", int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);

@@ -34,31 +34,53 @@ class PlotManager
 public:
   PlotManager();
   virtual ~PlotManager();
+
+  // :: user settings ::
   
-  void ReadDataFromCSVFiles(TObjArray& outputDataArray, vector<string> fileNames, string inputIdentifier);
-  void ReadDataFromFiles(TObjArray& outputDataArray, vector<string> fileNames, vector<string> dataNames, vector<string> newDataNames = {});
-  void ReadData(TObject* folder, TObjArray& outputDataArray, vector<string>& dataNames, vector<string>& newDataNames);
-  
-  void SetUseUniquePlotNames(bool useUniquePlotNames = true){mUseUniquePlotNames = useUniquePlotNames;}
+  // settings for output
   void SetOutputDirectory(string path);
+  void SetUseUniquePlotNames(bool useUniquePlotNames = true){mUseUniquePlotNames = useUniquePlotNames;} // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
+  void SetOutputFileName(string fileName = "ResultPlots.root") {mOutputFileName = fileName;} // in case canvases should be saved in .root file
+
+  // settings related to the input root files
   void AddInputDataFiles(string inputIdentifier, vector<string> inputFilePathList);
   void AddInputDataFile(string inputIdentifier, string inputFilePath);
-  void DumpInputDataFiles(string configFileName);
-  void LoadInputDataFiles(string configFileName);
+  void DumpInputDataFiles(string configFileName); // save input file paths to config file
+  void LoadInputDataFiles(string configFileName); // load the input file paths from config file
+
+  // remove all loaded input data (histograms, graphs, ...) from the manager (usually not needed)
   void ClearLoadedData() {mDataLedger->Delete(); mLoadedData.clear();};
-    
+
+  // add plots or templates for plots to the manager
   void AddPlot(Plot& plot);
   void AddPlotTemplate(Plot& plotTemplate);
 
+  // saving plot definitions to external file (which can e.g. be read by the commandlne plotting app included in the framework)
   void DumpPlots(string plotFileName, string figureGroup = "", vector<string> plotNames = {});
   void DumpPlot(string plotFileName, string figureGroup, string plotName);
-  void CreatePlots(string figureGroup = "", string figureCategory = "", vector<string> plotNames = {}, string outputMode = "pdf");
-  void CreatePlot(string name, string figureGroup, string figureCategory = "", string outputMode = "pdf");
-    
-  void SetOutputFileName(string fileName = "ResultPlots.root") {mOutputFileName = fileName;}  
+
+  // read plots from plot definition file created by the above functions (regular expressions are allowed);
+  // the mode variable can be "load" to add these plots to the manager, or "find" to check only if the specified plots exist (prints out this info)
   void ExtractPlotsFromFile(string plotFileName, vector<string> figureGroupsWithCategoryUser, vector<string> plotNamesUser, string mode = "load");
 
+
+  // after desired plots were added to the manager they can be created
+  // the program then will try to extract the required input data (TH1,TGraph,..) from the specified input files (.root output of your analysis)
+  // there are several modes:
+  // "interactive": you will be prompted the plot and can scroll through all plots by double clicking on the right side of the canvas
+  // "pdf", "png": plots will be stored as such files in the specified output directory (subdirectories are created for the figure groups and categories)
+  // "macro": plots are saved as root macros (.C)
+  // "file": all plots (canvases) are put in a .root file with a directory structure corresponding to figure groups and categories
+  void CreatePlots(string figureGroup = "", string figureCategory = "", vector<string> plotNames = {}, string outputMode = "pdf");
+  void CreatePlot(string name, string figureGroup, string figureCategory = "", string outputMode = "pdf");
+
+  
 private:
+  void ReadDataFromCSVFiles(TObjArray& outputDataArray, vector<string> fileNames, string inputIdentifier);
+  void ReadDataFromFiles(TObjArray& outputDataArray, vector<string> fileNames, vector<string> dataNames, vector<string> newDataNames = {});
+  void ReadData(TObject* folder, TObjArray& outputDataArray, vector<string>& dataNames, vector<string>& newDataNames);
+
+  
   TObject* FindSubDirectory(TObject* folder, vector<string> subDirs);
   inline int GetNameRegisterID(const string& name);
   inline const string& GetNameRegisterName(int nameID);

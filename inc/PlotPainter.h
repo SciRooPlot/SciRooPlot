@@ -24,7 +24,7 @@ namespace PlottingFramework {
 
 //****************************************************************************************
 /**
- * Class that contains functionality to generate generate plots using the ROOT framework.
+ * Class that contains functionality to generate plots using the ROOT framework.
  */
 //****************************************************************************************
 class PlotPainter
