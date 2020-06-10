@@ -178,6 +178,7 @@ enum drawing_options_t : uint8_t
   points = 0,
   points_xerr,
   points_endcaps,
+  points_line,
   line,
   curve,
   band,
@@ -221,6 +222,7 @@ const map<drawing_options_t, string> defaultDrawingOpions_Hist
 const map<drawing_options_t, string> defaultDrawingOpions_Graph
 {
   { points, "P Z" },
+  { points_line, "P Z L" },
   { points_endcaps, "P" },
   { curve, "X C" },
   { line, "X L" },

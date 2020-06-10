@@ -186,6 +186,11 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                   if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
                     data_ptr->GetZaxis()->SetTitle("ratio");
                 }
+                if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>)
+                  if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_graph_1d>)
+                {
+                  DivideTSpline(data_ptr, denom_data_ptr);
+                }
                 delete denom_data_ptr;
                }, *rawDenomData);
             }
@@ -524,24 +529,24 @@ optional<data_ptr_t> PlotPainter::GetDataClone(string dataName, TObjArray* avail
  * Helper-function dividing two TGraphs
  */
 //****************************************************************************************
-TGraph* PlotPainter::DivideTSpline(TGraph* numerator, TGraph* denominator)
+void PlotPainter::DivideTSpline(TGraph* numerator, TGraph* denominator)
 {
-  TGraph* result = (TGraph*)numerator->Clone("ratio");
+  //TGraph* result = (TGraph*)numerator->Clone("ratio");
   TSpline3* denSpline = new TSpline3("denSpline", denominator);
   
-  int32_t nPoints = result->GetN();
+  int32_t nPoints = numerator->GetN();
   
-  double_t *x = result->GetX();
-  double_t *y = result->GetY();
-  double_t *ey = result->GetEY();
+  double_t *x = numerator->GetX();
+  double_t *y = numerator->GetY();
+  double_t *ey = numerator->GetEY();
   
   for(int32_t i = 0; i < nPoints; i++) {
-    double_t deonomValiue = denominator->Eval(x[i], denSpline);
-    y[i] = y[i] / deonomValiue;
-    ey[i] = ey[i] * deonomValiue;
+    double_t denomValue = denominator->Eval(x[i], denSpline);
+    y[i] = y[i] / denomValue;
+    ey[i] = 0.;//ey[i] * denomValue; // FIXME: is this correct?
   }
-  delete denSpline;
-  return result;
+  //delete denSpline;
+  //return result;
 }
 
 //****************************************************************************************
@@ -898,7 +903,7 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
       {
         drawStyle = "L";
       }
-      if(entry->InheritsFrom("TH1") && (str_contains(drawingOption, "HIST") || str_contains(drawingOption, "B"))  && ((TH1*)entry)->GetFillStyle() != 0)
+      else if(entry->InheritsFrom("TH1") && (str_contains(drawingOption, "HIST") || str_contains(drawingOption, "B"))  && ((TH1*)entry)->GetFillStyle() != 0)
       {
         drawStyle = "F";
       }

@@ -31,7 +31,7 @@ set(APPLICATIONS
 set(APPLICATIONS_SRC
   "app/PlottingApp.cxx"
   "app/MultDepSpec/ConfigInput.cxx"
-  "app/MultDepSpec/CreatePlots.cxx app/MultDepSpec/Templates.cxx app/MultDepSpec/Datasets.cxx app/MultDepSpec/Energies.cxx app/MultDepSpec/Systems.cxx app/MultDepSpec/Publications.cxx app/MultDepSpec/Test.cxx app/MultDepSpec/Publications.cxx app/MultDepSpec/Helpers.cxx app/MultDepSpec/StyleDefinitions.cxx"
+  "app/MultDepSpec/CreatePlots.cxx app/MultDepSpec/Templates.cxx app/MultDepSpec/Datasets.cxx app/MultDepSpec/Energies.cxx app/MultDepSpec/Systems.cxx app/MultDepSpec/Publications.cxx app/MultDepSpec/Test.cxx app/MultDepSpec/Publications.cxx app/MultDepSpec/Helpers.cxx app/MultDepSpec/StyleDefinitions.cxx  app/MultDepSpec/TrackQA.cxx"
 )
 # files that you want to associate to your app put "" if not required
 set(APPLICATIONS_ADDITIONAL_FILES

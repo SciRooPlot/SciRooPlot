@@ -41,12 +41,14 @@ int main(int argc, char *argv[])
   bool createTestPlots = true;
   bool createEnergyPlots = true;
   bool createSystemPlots = true;
-    
+  bool createTrackQAPlots = true;
+
   // user can override
   if(argc > 1){
     createTestPlots = false;
     createEnergyPlots = false;
     createSystemPlots = false;
+    createTrackQAPlots = false;
     dataSets.clear();
     for(auto argID = 1; argID < argc; argID++)
     {
@@ -54,6 +56,7 @@ int main(int argc, char *argv[])
       if(argument == "test") createTestPlots = true;
       else if(argument == "energy") createEnergyPlots = true;
       else if(argument == "system") createSystemPlots = true;
+      else if(argument == "tracks") createTrackQAPlots = true;
       else dataSets.push_back(argv[argID]);
     }
   }
@@ -67,6 +70,7 @@ int main(int argc, char *argv[])
   if(createTestPlots) MultDepSpec::DefineTestPlots(plotManager);
   if(createEnergyPlots) MultDepSpec::DefineEnergyPlots(plotManager);
   if(createSystemPlots) MultDepSpec::DefineSystemPlots(plotManager);
+  if(createTrackQAPlots) MultDepSpec::DefineTrackQAPlots(plotManager);
   //MultDepSpec::DefinePublicationPlots(plotManager);
   
   plotManager.DumpPlots(MultDepSpec::gPlotDefConfig);

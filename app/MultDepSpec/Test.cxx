@@ -25,6 +25,118 @@ void MultDepSpec::DefineTestPlots(PlotManager& plotManager)
 {
   string plotGroup = "test";
 
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  { // -----------------------------------------------------------------------
+    string plotName = "niter";
+    Plot plot(plotName, plotGroup, "1d");
+    plot[1].AddData({"pp_13TeV/config-1", "benchmark"},"pp, 13 TeV")
+    .SetOptions(points_line).SetMarkerStyle(kFullCircle).SetMarkerColor(kRed).SetMarkerSize(1.5).SetLine(kRed, kSolid, 3.);
+    plot[1].AddData({"pp_5TeV/config-1", "benchmark"},"pp, 5 TeV")
+    .SetOptions(points_line).SetMarkerStyle(kFullCircle).SetMarkerColor(kBlue).SetMarkerSize(1.5).SetLine(kBlue, kSolid, 3.);
+
+    plot[1].AddLegend(0.3, 0.8);
+    plot[1]["Y"].SetRange(7., 44);
+    //plot[1]["X"].SetMaxRange(70).SetTitle("Multiplicity");
+
+    Plot plot2(plot, "niter2", plotGroup);
+    plot2[1].AddData({"pp_13TeV/config-2", "benchmark"},"")
+    .SetOptions(points_line).SetMarkerStyle(kFullSquare).SetMarkerColor(kRed).SetMarkerSize(1.5).SetLine(kRed, kSolid, 3.);
+    plot2[1].AddData({"pp_5TeV/config-2", "benchmark"},"")
+    .SetOptions(points_line).SetMarkerStyle(kFullSquare).SetMarkerColor(kBlue).SetMarkerSize(1.5).SetLine(kBlue, kSolid, 3.);
+
+    plotManager.AddPlot(plot2);
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
+
+  { // -----------------------------------------------------------------------
+    string plotName = "niter_ratio";
+    Plot plot(plotName, plotGroup, "1d");
+    plot[1].AddRatio({"pp_13TeV/config-2", "benchmark"}, {"pp_13TeV/config-1", "benchmark"},"pp, 13 TeV")
+    .SetOptions(points_line).SetMarkerStyle(kFullCircle).SetMarkerColor(kRed).SetMarkerSize(1.5).SetLine(kRed, kSolid, 3.);
+    plot[1].AddRatio({"pp_13TeV/config-2", "benchmark"}, {"pp_5TeV/config-1", "benchmark"},"pp, 5 TeV")
+    .SetOptions(points_line).SetMarkerStyle(kFullCircle).SetMarkerColor(kBlue).SetMarkerSize(1.5).SetLine(kBlue, kSolid, 3.);
+
+    plot[1].AddLegend(0.3, 0.8);
+    plot[1]["Y"].SetRange(0.76, 1.).SetTitle("with / without patch");
+    //plot[1]["X"].SetMaxRange(70).SetTitle("Multiplicity");
+
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
+
+  { // -----------------------------------------------------------------------
+    string plotName = "nthreads_ratio";
+    Plot plot(plotName, plotGroup, "1d");
+    plot[1].AddRatio({"pp_13TeV/config-4", "benchmark"}, {"pp_13TeV/config-3", "benchmark"},"pp, 13 TeV")
+    .SetOptions(points_line).SetMarkerStyle(kFullCircle).SetMarkerColor(kRed).SetMarkerSize(1.5).SetLine(kRed, kSolid, 3.);
+    plot[1].AddRatio({"pp_13TeV/config-4", "benchmark"}, {"pp_5TeV/config-3", "benchmark"},"pp, 5 TeV")
+    .SetOptions(points_line).SetMarkerStyle(kFullCircle).SetMarkerColor(kBlue).SetMarkerSize(1.5).SetLine(kBlue, kSolid, 3.);
+
+    plot[1].AddLegend(0.2, 0.85);
+    plot[1]["Y"].SetRange(0.55, 0.68).SetTitle("with / without early stopping");
+    //plot[1]["X"].SetMaxRange(70).SetTitle("Multiplicity");
+
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
+
+  
+  
+  { // -----------------------------------------------------------------------
+    string plotName = "nthreads";
+    Plot plot(plotName, plotGroup, "1d");
+    plot[1].AddData({"pp_13TeV/config-3", "benchmark"},"pp, 13 TeV")
+    .SetOptions(points_line).SetMarkerStyle(kFullCircle).SetMarkerColor(kRed).SetMarkerSize(1.5).SetLine(kRed, kSolid, 3.);
+    plot[1].AddData({"pp_5TeV/config-3", "benchmark"},"pp, 5 TeV")
+    .SetOptions(points_line).SetMarkerStyle(kFullCircle).SetMarkerColor(kBlue).SetMarkerSize(1.5).SetLine(kBlue, kSolid, 3.);
+
+    plot[1].AddLegend(0.6, 0.8);
+    plot[1]["Y"].SetRange(10., 65);
+    //plot[1]["X"].SetMaxRange(70).SetTitle("Multiplicity");
+
+    Plot plot2(plot, "nthreads2", plotGroup);
+    plot2[1].AddData({"pp_13TeV/config-4", "benchmark"},"")
+    .SetOptions(points_line).SetMarkerStyle(kFullSquare).SetMarkerColor(kRed).SetMarkerSize(1.5).SetLine(kRed, kSolid, 3.);
+    plot2[1].AddData({"pp_5TeV/config-4", "benchmark"},"")
+    .SetOptions(points_line).SetMarkerStyle(kFullSquare).SetMarkerColor(kBlue).SetMarkerSize(1.5).SetLine(kBlue, kSolid, 3.);
+
+    plotManager.AddPlot(plot2);
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
+
+  
+  { // -----------------------------------------------------------------------
+    string plotName = "response";
+    Plot plot(plotName, plotGroup, "2d");
+    plot[1].AddData({"responseMatrix", "pp_13TeV"})
+    .SetOptions("COLZ")
+    ;
+    plot[1]["Z"].SetRange(1e-4, 1).SetLog();
+    //plot[1]["Y"].SetLog().SetRange(0.15, 5);
+    Plot plot2(plot, plotName + "2", plotGroup);
+    plot2[1].SetFillFrame(kRed+2);
+
+    plotManager.AddPlot(plot2);
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
+
+  
+  
+  
+  
+  
+  
+  
   { // -----------------------------------------------------------------------
     string plotName = "test1d";
     Plot plot(plotName, plotGroup, "1d");

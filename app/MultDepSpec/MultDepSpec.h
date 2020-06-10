@@ -38,6 +38,7 @@ void DefineDatasetPlots(string& dataSet, PlotManager& plotManager);
 void DefineSystemPlots(PlotManager& plotManager);
 void DefineEnergyPlots(PlotManager& plotManager);
 void DefinePublicationPlots(PlotManager& plotManager);
+void DefineTrackQAPlots(PlotManager& plotManager);
 
 // helper functions
 string GetPtString(int pTbin);

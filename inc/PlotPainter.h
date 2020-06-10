@@ -42,7 +42,7 @@ private:
   void ScaleGraph(TGraph* graph, double_t scale);
   void SmoothGraph(TGraph* graph, optional<double_t> min = std::nullopt, optional<double_t> = std::nullopt);
   void SmoothHist(TH1* hist, optional<double_t> min = std::nullopt, optional<double_t> max = std::nullopt);
-  TGraph* DivideTSpline(TGraph* numerator, TGraph* denominator);
+  void DivideTSpline(TGraph* numerator, TGraph* denominator);
   TH1* DivideTSpline(TH1* numerator, TH1* denominator);
   
   int16_t GetDefaultColor(uint8_t colorID) {return mDefaultColors[colorID % mDefaultColors.size()];}
