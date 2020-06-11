@@ -897,6 +897,7 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
     for(auto entry : legendEntries)
     {
       string drawingOption = entry->GetDrawOption();
+      std::for_each(drawingOption.begin(), drawingOption.end(), [](char & c){c = ::toupper(c);});
       string drawStyle = "EP";
 
       if((entry->InheritsFrom("TF1")) || str_contains(drawingOption, "C")|| str_contains(drawingOption, "L") || str_contains(drawingOption, "HIST"))

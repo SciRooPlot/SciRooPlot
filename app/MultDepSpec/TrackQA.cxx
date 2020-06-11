@@ -307,4 +307,142 @@ void MultDepSpec::DefineTrackQAPlots(PlotManager& plotManager)
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
 
+  
+  
+  // chi2 / cluster differential studies
+  
+  
+  
+  string chi2Name = "chi2PerCluster";
+  { // -----------------------------------------------------------------------
+    string plotName = "chi2PerCluster_cent";
+    Plot plot(plotName, plotGroup, "1d");
+    
+    vector<string> centName = {"0-30%", "30-60%", "60-90%"};
+    vector<int> colors2015 = {kRed, kOrange+2, kMagenta+2};
+    vector<int> colors2018 = {kBlue, kCyan+2, kGreen+3};
+    plot[1].SetRefFunc("1");
+    for(int i = 1; i <= 3; i++)
+    {
+      plot[1].AddRatio({string("PbPb_2015/Data/") + "tpc-" + chi2Name + "_cent_" + std::to_string(i), "cutStudies"}, {string("PbPb_2015/Data/") + "tpc-" + chi2Name, "cutStudies"}, string("Pb-Pb, 2015, ") + centName[i-1])
+      .SetOptions(curve).SetLine(colors2015[i-1], kSolid, 3.);
+
+      plot[1].AddRatio({string("PbPb_2015/MC/") + "tpc-" + chi2Name + "_cent_" + std::to_string(i), "cutStudies"}, {string("PbPb_2015/MC/") + "tpc-" + chi2Name, "cutStudies"},"")
+      .SetOptions(curve).SetLine(colors2015[i-1], kDashed, 3.);
+
+      
+      plot[1].AddRatio({string("PbPb_2018/Data/") + "tpc-" + chi2Name + "_cent_" + std::to_string(i), "cutStudies"}, {string("PbPb_2018/Data/") + "tpc-" + chi2Name, "cutStudies"},string("Pb-Pb, 2018, ") + centName[i-1])
+      .SetOptions(curve).SetLine(colors2018[i-1], kSolid, 3.);
+      
+      plot[1].AddRatio({string("PbPb_2018/MC/") + "tpc-" + chi2Name + "_cent_" + std::to_string(i), "cutStudies"}, {string("PbPb_2018/MC/") + "tpc-" + chi2Name, "cutStudies"},"")
+      .SetOptions(curve).SetLine(colors2018[i-1], kDashed, 3.);
+    }
+
+    plot[1].AddLegend(0.52, 0.9);
+    plot[1]["Y"].SetRange(0., 6.2).SetTitle("ratio to MB");
+    //plot[1]["X"].SetMaxRange(4.);
+
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
+
+  
+  { // -----------------------------------------------------------------------
+    string plotName = "chi2PerCluster_phi";
+    Plot plot(plotName, plotGroup, "1d");
+    
+    vector<string> centName = {"0-1/2#pi", "1/2#pi-#pi", "#pi-3/2#pi", "3/2#pi-2#pi"};
+    vector<int> colors2015 = {kRed, kOrange+2, kMagenta+2, kYellow+2};
+    vector<int> colors2018 = {kBlue, kCyan+2, kGreen+3, kPink+3};
+    plot[1].SetRefFunc("1");
+    for(int i = 1; i <= 4; i++)
+    {
+      plot[1].AddRatio({string("PbPb_2015/Data/") + "tpc-" + chi2Name + "_phi_" + std::to_string(i), "cutStudies"}, {string("PbPb_2015/Data/") + "tpc-" + chi2Name, "cutStudies"}, string("Pb-Pb, 2015, ") + centName[i-1])
+      .SetOptions(curve).SetLine(colors2015[i-1], kSolid, 3.);
+
+      plot[1].AddRatio({string("PbPb_2015/MC/") + "tpc-" + chi2Name + "_phi_" + std::to_string(i), "cutStudies"}, {string("PbPb_2015/MC/") + "tpc-" + chi2Name, "cutStudies"},"")
+      .SetOptions(curve).SetLine(colors2015[i-1], kDashed, 3.);
+
+      
+      plot[1].AddRatio({string("PbPb_2018/Data/") + "tpc-" + chi2Name + "_phi_" + std::to_string(i), "cutStudies"}, {string("PbPb_2018/Data/") + "tpc-" + chi2Name, "cutStudies"},string("Pb-Pb, 2018, ") + centName[i-1])
+      .SetOptions(curve).SetLine(colors2018[i-1], kSolid, 3.);
+      
+      plot[1].AddRatio({string("PbPb_2018/MC/") + "tpc-" + chi2Name + "_phi_" + std::to_string(i), "cutStudies"}, {string("PbPb_2018/MC/") + "tpc-" + chi2Name, "cutStudies"},"")
+      .SetOptions(curve).SetLine(colors2018[i-1], kDashed, 3.);
+    }
+
+    plot[1].AddLegend(0.52, 0.9);
+    plot[1]["Y"].SetRange(0.6, 1.9).SetTitle("ratio to MB");
+    //plot[1]["X"].SetMaxRange(4.);
+
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
+
+  { // -----------------------------------------------------------------------
+    string plotName = "chi2PerCluster_eta";
+    Plot plot(plotName, plotGroup, "1d");
+    
+    vector<string> centName = {"#eta -", "#eta +"};
+    vector<int> colors2015 = {kRed, kOrange+2};
+    vector<int> colors2018 = {kBlue, kCyan+2};
+    plot[1].SetRefFunc("1");
+    for(int i = 1; i <= 2; i++)
+    {
+      plot[1].AddRatio({string("PbPb_2015/Data/") + "tpc-" + chi2Name + "_eta_" + std::to_string(i), "cutStudies"}, {string("PbPb_2015/Data/") + "tpc-" + chi2Name, "cutStudies"}, string("Pb-Pb, 2015, ") + centName[i-1])
+      .SetOptions(curve).SetLine(colors2015[i-1], kSolid, 3.);
+
+      plot[1].AddRatio({string("PbPb_2015/MC/") + "tpc-" + chi2Name + "_eta_" + std::to_string(i), "cutStudies"}, {string("PbPb_2015/MC/") + "tpc-" + chi2Name, "cutStudies"},"")
+      .SetOptions(curve).SetLine(colors2015[i-1], kDashed, 3.);
+
+      
+      plot[1].AddRatio({string("PbPb_2018/Data/") + "tpc-" + chi2Name + "_eta_" + std::to_string(i), "cutStudies"}, {string("PbPb_2018/Data/") + "tpc-" + chi2Name, "cutStudies"},string("Pb-Pb, 2018, ") + centName[i-1])
+      .SetOptions(curve).SetLine(colors2018[i-1], kSolid, 3.);
+      
+      plot[1].AddRatio({string("PbPb_2018/MC/") + "tpc-" + chi2Name + "_eta_" + std::to_string(i), "cutStudies"}, {string("PbPb_2018/MC/") + "tpc-" + chi2Name, "cutStudies"},"")
+      .SetOptions(curve).SetLine(colors2018[i-1], kDashed, 3.);
+    }
+
+    plot[1].AddLegend(0.52, 0.9);
+    plot[1]["Y"].SetRange(0.8, 1.3).SetTitle("ratio to MB");
+    //plot[1]["X"].SetMaxRange(4.);
+
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
+
+  
+  
+  
+  { // -----------------------------------------------------------------------
+    string plotName = "meanChi2VsPt";
+    Plot plot(plotName, plotGroup, "1d");
+    plot[1].AddData({string("PbPb_2015/Data/") + plotName, "cutStudies"},"Pb-Pb, 2015")
+    .SetOptions(curve).SetLine(kRed, kSolid, 3.);
+    plot[1].AddData({string("PbPb_2015/MC/") + plotName, "cutStudies"},"")
+    .SetOptions(curve).SetLine(kRed, kDashed, 3.);
+
+    plot[1].AddData({string("PbPb_2018/Data/") + plotName, "cutStudies"},"Pb-Pb, 2018")
+    .SetOptions(curve).SetLine(kBlue, kSolid, 3.);
+    plot[1].AddData({string("PbPb_2018/MC/") + plotName, "cutStudies"},"")
+    .SetOptions(curve).SetLine(kBlue, kDashed, 3.);
+
+    plot[1].AddLegend(0.5, 0.5);
+    plot[1]["Y"].SetRange(0.9, 2.2);
+    plot[1]["X"].SetMaxRange(7.);
+
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
 }
+
+
+
+
+
