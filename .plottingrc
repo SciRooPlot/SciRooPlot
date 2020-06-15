@@ -3,15 +3,15 @@
 # add some global symbols
 if [[ "${BASH_SOURCE[0]}" != "" ]]
 then
-  __PLOTTING_BUILD_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )/build"
+  __PLOTTING_FRAMEWORK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 else
-  __PLOTTING_BUILD_DIR="$( cd "$( dirname "${0}"  )" >/dev/null 2>&1 && pwd )/build"
+  __PLOTTING_FRAMEWORK_DIR="$( cd "$( dirname "${0}"  )" >/dev/null 2>&1 && pwd )"
 fi
-
+export __PLOTTING_FRAMEWORK_DIR
+__PLOTTING_BUILD_DIR="${__PLOTTING_FRAMEWORK_DIR}/build"
 if [[ -d "${__PLOTTING_BUILD_DIR}" ]]
 then
   function plot(){  [[ "${1}" == "cd" ]] && (return 0;) || ("${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0;) }
-  function define_plots(){ "${__PLOTTING_BUILD_DIR}/create" ${1} }
 fi
 
 scope_func () {
