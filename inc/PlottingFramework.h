@@ -74,7 +74,6 @@
 #include "TLatex.h"
 #include "TError.h"
 #include "TSpline.h"
-#include "TPaletteAxis.h"
 #include "TView.h"
 #include "TApplication.h"
 #include "TGWindow.h"

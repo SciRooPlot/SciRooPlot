@@ -66,6 +66,8 @@ message(STATUS "fmt   version: ${fmt_VERSION}")
 # create PlottingFramework library
 add_library(${MODULE} SHARED ${SRCS} ${HDRS} ${MODULE_HDR} ${ADDITIONAL_FILES})
 target_link_libraries(${MODULE} PUBLIC
+  ROOT::Gui
+  ROOT::Hist
   ROOT::Gpad
   Boost::program_options
   fmt::fmt

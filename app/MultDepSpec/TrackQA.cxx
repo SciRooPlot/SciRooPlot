@@ -34,13 +34,18 @@ void MultDepSpec::DefineTrackQAPlots(PlotManager& plotManager)
     plot[1].AddData({string("PbPb_2015/MC/") + "tpc-" + plotName, "cutStudies"},"")
     .SetOptions(curve).SetLine(kRed, kDashed, 3.);
 
+    plot[1].AddData({string("PbPb_2018_pass1/Data/") + "tpc-" + plotName, "cutStudies"},"Pb-Pb, 2018, pass1")
+    .SetOptions(curve).SetLine(kGreen+2, kSolid, 3.);
+    plot[1].AddData({string("PbPb_2018_pass1/MC/") + "tpc-" + plotName, "cutStudies"},"")
+    .SetOptions(curve).SetLine(kGreen+2, kDashed, 3.);
+
     plot[1].AddData({string("PbPb_2018/Data/") + "tpc-" + plotName, "cutStudies"},"Pb-Pb, 2018")
     .SetOptions(curve).SetLine(kBlue, kSolid, 3.);
     plot[1].AddData({string("PbPb_2018/MC/") + "tpc-" + plotName, "cutStudies"},"")
     .SetOptions(curve).SetLine(kBlue, kDashed, 3.);
 
-    plot[1].AddLegend(0.6, 0.8);
-    plot[1]["Y"].SetRange(0., 0.1);
+    plot[1].AddLegend(0.55, 0.88);
+    plot[1]["Y"].SetRange(0., 2.);
     plot[1]["X"].SetMaxRange(4.);
 
     plotManager.AddPlot(plot);
