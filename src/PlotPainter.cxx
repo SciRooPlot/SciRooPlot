@@ -432,7 +432,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             }
             pad_ptr->Update(); // adds something to the list of primitives
           }
-          dataIndex++;
+          ++dataIndex;
           drawingOptions = "SAME "; // next data should be drawn to same pad
         }, *rawData);
       }
@@ -458,7 +458,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
         TPave* legend = GenerateBox(box, pad_ptr, lables, legendEntries);
         legend->SetName(legendName.data());
         legend->Draw("SAME");
-        legendIndex++;
+        ++legendIndex;
       }
       else if(box->GetType() == "text")
       {
@@ -466,7 +466,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
         TPave* text = GenerateBox(box, pad_ptr, {}, {});
         text->SetName(textName.data());
         text->Draw("SAME");
-        textIndex++;
+        ++textIndex;
       }
     }
 
@@ -540,7 +540,7 @@ void PlotPainter::DivideTSpline(TGraph* numerator, TGraph* denominator)
   double_t *y = numerator->GetY();
   double_t *ey = numerator->GetEY();
   
-  for(int32_t i = 0; i < nPoints; i++) {
+  for(int32_t i = 0; i < nPoints; ++i) {
     double_t denomValue = denominator->Eval(x[i], denSpline);
     y[i] = y[i] / denomValue;
     ey[i] = 0.;//ey[i] * denomValue; // FIXME: is this correct?
@@ -562,7 +562,7 @@ TH1* PlotPainter::DivideTSpline(TH1* numerator, TH1* denominator)
   TH1* ratio = (TH1*)numerator->Clone("dummyRatio");
   ratio->Reset();
   
-  for(int32_t i = 1; i <= numerator->GetNbinsX(); i++)
+  for(int32_t i = 1; i <= numerator->GetNbinsX(); ++i)
   {
     double_t numeratorValue = numerator->GetBinContent(i);
     double_t x = numerator->GetBinCenter(i);
@@ -582,22 +582,22 @@ void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<
   int16_t pointsToRemoveHigh = 0;
   int16_t pointsToRemoveLow = 0;
   
-  for(int16_t i = 0; i < graph->GetN(); i++){
+  for(int16_t i = 0; i < graph->GetN(); ++i){
     if(min && graph->GetX()[i] < *min)
     {
-      pointsToRemoveLow++;
+      ++pointsToRemoveLow;
     }
     if(max && graph->GetX()[i] >= *max)
     {
-      pointsToRemoveHigh++;
+      ++pointsToRemoveHigh;
     }
   }
   
-  for(int16_t i = 0; i < pointsToRemoveHigh; i++)
+  for(int16_t i = 0; i < pointsToRemoveHigh; ++i)
   {
     graph->RemovePoint(graph->GetN()-1);
   }
-  for(int16_t i = 0; i < pointsToRemoveLow; i++)
+  for(int16_t i = 0; i < pointsToRemoveLow; ++i)
   {
     graph->RemovePoint(0);
   }
@@ -611,7 +611,7 @@ void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<
 //****************************************************************************************
 void PlotPainter::ScaleGraph(TGraph* graph, double_t scale)
 {
-  for (int32_t i = 0; i < graph->GetN(); i++) graph->GetY()[i] *= scale;
+  for (int32_t i = 0; i < graph->GetN(); ++i) graph->GetY()[i] *= scale;
 }
 
 //****************************************************************************************
@@ -623,7 +623,7 @@ void PlotPainter::SmoothGraph(TGraph* graph, optional<double_t> min, optional<do
 {
   TGraphSmooth smoother;
   TGraph* smoothGraph = smoother.SmoothSuper(graph);
-  for (int32_t i = 0; i < graph->GetN(); i++)
+  for (int32_t i = 0; i < graph->GetN(); ++i)
   {
     double_t curX = graph->GetX()[i];
     if(min && curX < *min) continue;
@@ -719,7 +719,7 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
   
   uint16_t nEntries = legendEntries.size();
   uint16_t nLines = lines.size();
-  //if(!legendBox->GetTitle().empty()) nEntries++;
+  //if(!legendBox->GetTitle().empty()) ++nEntries;
   
   int32_t padWidthPixel = pad->XtoPixel(pad->GetX2()); // looks correct, but why does it work??
   int32_t padHeightPixel = pad->YtoPixel(pad->GetY1());
@@ -790,9 +790,9 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
       //continue;
     //}
     if(width > legendWidthPixelPerColumn[iColumn]) legendWidthPixelPerColumn[iColumn] = width;
-    iColumn++;
+    ++iColumn;
     iColumn %= nColumns;
-    iLegend++;
+    ++iLegend;
   }
   for(auto& length : legendWidthPixelPerColumn) legendWidthPixel += length;
     
@@ -909,7 +909,7 @@ TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vecto
         drawStyle = "F";
       }
       legend->AddEntry((TH1*)entry, lines[i].data(), drawStyle.data());
-      i++;
+      ++i;
     }
     
     if(legend->GetHeader())

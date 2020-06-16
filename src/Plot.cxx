@@ -495,14 +495,14 @@ ptree Plot::Pad::GetPropetyTree()
   for(auto& data : mData)
   {
     padTree.put_child("DATA_" + std::to_string(dataID), data->GetPropertyTree());
-    dataID++;
+    ++dataID;
   }
 
   int boxID = 1;
   for(auto& box : mBoxes)
   {
     padTree.put_child("BOX_" + std::to_string(boxID), box->GetPropertyTree());
-    boxID++;
+    ++boxID;
   }
     
   for(auto& axis : {"X", "Y", "Z"})

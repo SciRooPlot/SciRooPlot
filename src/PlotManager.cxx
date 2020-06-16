@@ -67,7 +67,7 @@ PlotManager::~PlotManager()
         }
         outputFile.cd(subfolder.data());
         canvas->Write(plotName.data());
-        nPlots++;
+        ++nPlots;
       }
       outputFile.Close();
       INFO("Saved {} plots to file \"{}\".", nPlots, mOutputFileName);
@@ -118,7 +118,7 @@ void PlotManager::DumpInputDataFiles(string configFileName)
     uint16_t fileID = 1;
     for(auto& fileName : inFileTuple.second){
       filesOfIdentifier.put("FILE_" + std::to_string(fileID), fileName);
-      fileID++;
+      ++fileID;
     }
     inputFileTree.put_child(inFileTuple.first, filesOfIdentifier);
   }
@@ -301,7 +301,7 @@ void PlotManager::GeneratePlot(Plot& plot, string outputMode)
         bool forward = ((double_t)canvas->GetEventX()/(double_t)canvas->GetWw() > 0.5);
         if(forward){
           if(currPlotIndex == mPlotViewHistory.size()-1) break;
-          currPlotIndex++;
+          ++currPlotIndex;
         }
         else{
           if(currPlotIndex != 0)
@@ -514,7 +514,7 @@ void PlotManager::ExtractPlotsFromFile(string plotFileName, vector<string> figur
         continue;
       }
 
-      nFoundPlots++;
+      ++nFoundPlots;
       if(isSearchRequest)
       {
         PRINT("-- found plot \033[1;32m{}\033[0m in group \033[1;33m{}\033[0m", plotName, figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
@@ -644,7 +644,7 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, vector<string> f
       vector<string> curDataNames;
       vector<string> curNewDataNames;
       
-      for(auto i = 0; i < dataNames.size(); i++)
+      for(auto i = 0; i < dataNames.size(); ++i)
       {
         if(dataNames[i] == "") continue;
         auto pathPos = dataNames[i].find_last_of("/");
