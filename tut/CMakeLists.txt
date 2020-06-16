@@ -15,19 +15,63 @@ if (NOT "$ENV{__PLOTTING_FRAMEWORK_DIR}" STREQUAL "")
 else()
   message(FATAL_ERROR "Did not find PlottingFramework. Please source the .plotrc file!")
 endif()
-include_directories(
-  ${PLOTTING_FRAMEWORK}/inc
-)
 
-# change this part according to your needs
-set(APP_NAME ex)
+################################################################################
+# User Settings:
+################################################################################
+# Change this part according to your needs...
+set(APP_NAME example)
 set(SRCS
   Example.cxx
 )
+set(IS_FRAMEWORK_DEV OFF)
+################################################################################
 
-# use the following line when using this from somewhere else
-add_subdirectory(${PLOTTING_FRAMEWORK} ${PLOTTING_FRAMEWORK}/build)
 
+if (IS_FRAMEWORK_DEV)
+  ################################################################################
+  # Developer Mode:
+  ################################################################################
+  # This does not work if the folder lives in the framework hierarchy
+  add_subdirectory(${PLOTTING_FRAMEWORK} ${PLOTTING_FRAMEWORK}/build)
+  add_executable(${APP_NAME} ${SRCS})
+  target_link_libraries(${APP_NAME} PlottingFramework)
+else()
+  ################################################################################
+  # User Mode:
+  ################################################################################
+  # find dependencies
+  find_package(ROOT ${REQUIRED_ROOT_VERSION} CONFIG REQUIRED)
+  include(${ROOT_USE_FILE})
+  message(STATUS "root  version: ${ROOT_VERSION}")
+  find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED COMPONENTS program_options)
+  message(STATUS "boost version: ${Boost_VERSION}")
+  find_package(fmt)
+  find_package(fmt ${REQUIRED_FMT_VERSION} REQUIRED)
+  message(STATUS "fmt   version: ${fmt_VERSION}")
 
-add_executable(${APP_NAME} ${SRCS})
-target_link_libraries(${APP_NAME} PlottingFramework)
+  # add include paths
+  include_directories(
+    ${PLOTTING_FRAMEWORK}/inc
+    ${Boost_INCLUDE_DIRS}/boost/property_tree
+    ${Boost_INCLUDE_DIRS}/boost/program_options
+  )
+
+  # add plotting framework lib
+  set(PLOTTING_FRAMEWORK_LIB ${PLOTTING_FRAMEWORK}/build/libPlottingFramework.so)
+  if(APPLE)
+    set(CMAKE_MACOSX_RPATH ON)
+    string(REPLACE ".so" ".dylib" PLOTTING_FRAMEWORK_LIB "${PLOTTING_FRAMEWORK_LIB}")
+  endif(APPLE)
+
+  # create and link executable
+  add_executable(${APP_NAME} ${SRCS})
+  target_link_libraries(${APP_NAME} PUBLIC
+    ${PLOTTING_FRAMEWORK_LIB}
+    ROOT::Gui
+    ROOT::Hist
+    ROOT::Gpad
+    Boost::program_options
+    fmt::fmt
+  )
+endif()
