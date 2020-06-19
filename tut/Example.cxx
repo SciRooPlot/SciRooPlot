@@ -106,8 +106,9 @@ int main(int argc, char *argv[])
 
       // to modify the axis titles, offsets, ranges, etc of a pad, just do the following
       plot[1]["Y"].SetTitle("my y axis tilte with meaning");
-      plot[1]["X"].SetRange(1.4, 2.8).SetTitle("what i am showing on x axis");
+      plot[1]["X"].SetRange(1.4, 2.8).SetTitle("what i am showing on x axis").SetLog();
       plot[1]["X"].SetMaxRangeX(5.);
+      // a full list of axis property accessors can be found in the Axis class definition in inc/Plot.h
 
 
       // finally after plot definition is done we can add it to the manager
@@ -305,7 +306,7 @@ int main(int argc, char *argv[])
     // plot
     // from everywhere
     // to see the program options run
-    // plot help
+    // plot --help
     // for zsh shells auto-completion is supported to tab through the available commands, figureGroups and plots
 
     // the app also has a 'browse' feature that gives you access to quickly plot the content of root files

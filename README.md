@@ -18,9 +18,8 @@ cmake ../
 
 make
 
-The user needs to write an application that defines and saves the required plots (for inspiration see to app/MultDepSpec/).
-This app can be added in the CMakeList.txt file (similar to the apps "plot" and "create" already specified there).
-The framework ships with a simple command-line program that lets you easily generate plots from the files created by the user app.
+You can find a commented example on how to use the framework in tut/Example.cxx
+The framework ships with a simple command-line program that lets you easily generate plots from the plot definitions created by the user.
 If you source the .plottingrc in your .bashrc this program can be used from everywhere.
 For usage details and available options see plot --help.
 
@@ -55,7 +54,6 @@ Alternatively you can also load and generate only specific plots defined in the 
 By default plots are created as pdf in your output folder, but you can also choose png or macro to create root macros or "interactive" if you only want to look at the plot and not create a file. Using the keyword "file" it is also possible to write the plots to a root file.
 
 
-The framework still contains some unfinished pragmatic implementations that are currently beeing generalized.
 Regard this as an early beta version...
 
 Any suggestions, bug reports and user feedback is very welcome.
