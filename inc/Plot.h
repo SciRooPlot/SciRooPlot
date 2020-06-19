@@ -79,15 +79,15 @@ protected:
 
   
 private:
-  typedef struct{
+  struct dimension_t{
     optional<int32_t> width;
     optional<int32_t> height;
     optional<bool> fixAspectRatio;
-  } dimension_t;
-  typedef struct{
+  };
+  struct plot_fill_t{
     optional<int16_t> color;
     optional<int16_t> style;
-  } plot_fill_t;
+  };
 
   
   string mName;
@@ -116,10 +116,10 @@ public:
   class TextBox;
   class LegendBox;
 
-  typedef struct{
+  struct input_t{
     string name;
     string inputIdentifier;
-  } input_t;
+  };
 
 
   Pad() = default;
@@ -215,34 +215,34 @@ protected:
 
   
 private:
-  typedef struct{
+  struct pad_position_t{
     optional<double_t> xlow;
     optional<double_t> ylow;
     optional<double_t> xup;
     optional<double_t> yup;
-  } pad_position_t;
-  typedef struct{
+  };
+  struct pad_margin_t{
     optional<float_t> top;
     optional<float_t> bottom;
     optional<float_t> left;
     optional<float_t> right;
-  } pad_margin_t;
-  typedef struct{
+  };
+  struct pad_fill_t{
     optional<int16_t> color;
     optional<int16_t> style;
-  } pad_fill_t;
-  typedef struct{
+  };
+  struct frame_t{
     optional<int16_t> fillColor;
     optional<int16_t> fillStyle;
     optional<int16_t> lineColor;
     optional<int16_t> lineStyle;
     optional<float_t> lineWidth;
-  } frame_t;
-  typedef struct{
+  };
+  struct text_t{
     optional<float_t> size;
     optional<int16_t> font;
     optional<int16_t> color;
-  } text_t;
+  };
 
   
   // properties
@@ -365,16 +365,16 @@ private:
   optional<drawing_options_t> mDrawingOptionAlias;
   optional<double_t> mScaleFactor;
 
-  typedef struct{
+  struct dataLayout_t{
     optional<int16_t> color;
     optional<int16_t> style;
     optional<float_t> scale;  // marker size , line width, fill opacity
-  } dataLayout_t;
+  };
   
-  typedef struct{
+  struct dataRange_t{
     optional<double_t> min;
     optional<double_t> max;
-  } dataRange_t;
+  };
 
   
   dataLayout_t mMarker;
@@ -559,18 +559,18 @@ protected:
 
 private:
   
-  typedef struct{
+  struct axisTextProperties_t{
     optional<int16_t> font;
     optional<float_t> size;
     optional<int16_t> color;
     optional<float_t> offset;
     optional<bool> center;
-  } axisTextProperties_t;
+  };
   
-  typedef struct{
+  struct axisRange_t{
     optional<double_t> min;
     optional<double_t> max;
-  } axisRange_t;
+  };
 
   string mName;
   axisRange_t mRange;
@@ -633,11 +633,11 @@ protected:
   
 private:
   
-  typedef struct{
+  struct layout_t{
     optional<int16_t> color;
     optional<int16_t> style;
     optional<float_t> scale;  // marker size , line width, fill opacity
-  } layout_t;
+  };
 
   string mType; // for introspection
   layout_t mText;
