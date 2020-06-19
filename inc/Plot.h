@@ -128,18 +128,18 @@ public:
   void operator+=(const Pad& pad);
   
   // User accessors:
-  Data& AddData(input_t input, string lable = "");
-  Ratio& AddRatio(input_t numerator, input_t denominator, string lable = "");
+  Data& AddData(const input_t& input, const string& lable = "");
+  Ratio& AddRatio(const input_t& numerator, const input_t& denominator, const string& lable = "");
 
   
   // FIXME: These accessors will be simplified and properties like borderStyle etc can be set with extra functions directly on the boxes (as it is for Pad and Data properties)
-  void AddText(double xPos, double yPos, string text = "", bool userCoord = false, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
-  void AddLegend(double xPos, double yPos, string title = "", bool userCoordinates = false, int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
-  void AddLegend(string title = "", int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
+  void AddText(double xPos, double yPos, const string& text = "", bool userCoord = false, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
+  void AddLegend(double xPos, double yPos, const string& title = "", bool userCoordinates = false, int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
+  void AddLegend(const string& title = "", int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
 
 
 
-  inline void SetPadOptions(string options){mOptions = options;}
+  inline void SetPadOptions(const string& options){mOptions = options;}
 
   auto SetTitle(const string& title)  ->decltype(*this);
   auto SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup) ->decltype(*this);
@@ -161,7 +161,7 @@ public:
   auto SetTransparentFrame()  ->decltype(*this);
 
   auto SetRedrawAxes(bool redraw = true)  ->decltype(*this);
-  auto SetRefFunc(string refFunc) ->decltype(*this) {mRefFunc = refFunc; return *this;}
+  auto SetRefFunc(const string& refFunc) ->decltype(*this) {mRefFunc = refFunc; return *this;}
 
   //int GetDefaultColor(int colorIndex) {return mDefaultColors[colorIndex % mDefaultColors.size()];}
   //void SetTextFont(int font){(font > 0 && font < 16) ? mTextFont = font * 10 + 3 : mTextFont = 43;}
@@ -291,8 +291,8 @@ public:
   virtual auto SetRangeY(double_t min, double_t max) -> decltype(*this);
   virtual auto SetMaxRangeY(double_t max) -> decltype(*this);
   virtual auto SetMinRangeY(double_t min) -> decltype(*this);
-  virtual auto SetLegendLable(string legendLable) -> decltype(*this);
-  virtual auto SetOptions(string opions) -> decltype(*this);
+  virtual auto SetLegendLable(const string& legendLable) -> decltype(*this);
+  virtual auto SetOptions(const string& opions) -> decltype(*this);
   virtual auto SetScaleFactor(double_t scale) -> decltype(*this);
   virtual auto SetColor(int16_t color) -> decltype(*this);
   virtual auto SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this);
@@ -413,9 +413,9 @@ public:
   {return dynamic_cast<decltype(*this)&>(Data::SetMaxRangeY(max));}
   virtual auto SetMinRangeY(double_t min) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetMinRangeY(min));}
-  virtual auto SetLegendLable(string legendLable) -> decltype(*this)
+  virtual auto SetLegendLable(const string& legendLable) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetLegendLable(legendLable));}
-  virtual auto SetOptions(string opions) -> decltype(*this)
+  virtual auto SetOptions(const string& opions) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetOptions(opions));}
   virtual auto SetScale(double_t scale) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetScaleFactor(scale));}
@@ -514,8 +514,8 @@ public:
   auto SetLog(bool isLog = true) ->decltype(*this) {mIsLog = isLog; return *this;}
   auto SetGrid(bool isGrid = true) ->decltype(*this) {mIsGrid = isGrid; return *this;}
   auto SetOppositeTicks(bool isOppositeTicks = true) ->decltype(*this) {mIsOppositeTicks = isOppositeTicks; return *this;}
-  auto SetTimeFormat(string timeFormat) ->decltype(*this) {mTimeFormat = timeFormat; return *this;}
-  auto SetTickOrientation(string tickOrientation) ->decltype(*this) {mTickOrientation = tickOrientation; return *this;}
+  auto SetTimeFormat(const string& timeFormat) ->decltype(*this) {mTimeFormat = timeFormat; return *this;}
+  auto SetTickOrientation(const string& tickOrientation) ->decltype(*this) {mTickOrientation = tickOrientation; return *this;}
   
 protected:
   friend class PlotManager;
@@ -661,14 +661,14 @@ public:
   TextBox(const TextBox& otherTextBox) = default;
   virtual ~TextBox() = default;
   
-  TextBox(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor, string text)
+  TextBox(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor, const string& text)
   : Box(userCoordinates, autoPlacement, x, y, borderStyle, borderSize, borderColor), mText(text)
   {
     SetType("text");
     // constructor code
   }
   string GetText(){return mText;}
-  void SetText(string text);
+  void SetText(const string& text) {mText = text;}
   //void SetDelimiter(string delimiter){mDelimiter = delimiter;}
   
   ptree GetPropertyTree(){

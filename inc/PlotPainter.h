@@ -34,7 +34,7 @@ public:
   
 private:
   
-  optional<data_ptr_t> GetDataClone(string dataName, TObjArray* availableData);
+  optional<data_ptr_t> GetDataClone(const string& dataName, TObjArray* availableData);
   template <typename T> optional<data_ptr_t> GetDataClone(TObject* obj);
   template <typename T, typename Next, typename... Rest> optional<data_ptr_t> GetDataClone(TObject* obj);
   

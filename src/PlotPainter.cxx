@@ -504,7 +504,7 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
     return returnPointer;
   return GetDataClone<Next, Rest...>(obj);
 }
-optional<data_ptr_t> PlotPainter::GetDataClone(string dataName, TObjArray* availableData)
+optional<data_ptr_t> PlotPainter::GetDataClone(const string& dataName, TObjArray* availableData)
 {
   TObject* obj = availableData->FindObject(dataName.data());
   if(obj)

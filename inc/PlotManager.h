@@ -36,15 +36,15 @@ public:
   virtual ~PlotManager();
 
   // settings for output
-  void SetOutputDirectory(string path);
+  void SetOutputDirectory(const string& path);
   void SetUseUniquePlotNames(bool useUniquePlotNames = true){mUseUniquePlotNames = useUniquePlotNames;} // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
-  void SetOutputFileName(string fileName = "ResultPlots.root") {mOutputFileName = fileName;} // in case canvases should be saved in .root file
+  void SetOutputFileName(const string& fileName = "ResultPlots.root") {mOutputFileName = fileName;} // in case canvases should be saved in .root file
 
   // settings related to the input root files
-  void AddInputDataFiles(string inputIdentifier, vector<string> inputFilePathList);
-  void AddInputDataFile(string inputIdentifier, string inputFilePath);
-  void DumpInputDataFiles(string configFileName); // save input file paths to config file
-  void LoadInputDataFiles(string configFileName); // load the input file paths from config file
+  void AddInputDataFiles(const string& inputIdentifier, const vector<string>& inputFilePathList);
+  void AddInputDataFile(const string& inputIdentifier, const string& inputFilePath);
+  void DumpInputDataFiles(const string& configFileName); // save input file paths to config file
+  void LoadInputDataFiles(const string& configFileName); // load the input file paths from config file
 
   // remove all loaded input data (histograms, graphs, ...) from the manager (usually not needed)
   void ClearLoadedData() {mDataLedger->Delete(); mLoadedData.clear();};
@@ -54,12 +54,12 @@ public:
   void AddPlotTemplate(Plot& plotTemplate);
 
   // saving plot definitions to external file (which can e.g. be read by the commandlne plotting app included in the framework)
-  void DumpPlots(string plotFileName, string figureGroup = "", vector<string> plotNames = {});
-  void DumpPlot(string plotFileName, string figureGroup, string plotName);
+  void DumpPlots(const string& plotFileName, const string& figureGroup = "", const vector<string>& plotNames = {});
+  void DumpPlot(const string& plotFileName, const string& figureGroup, const string& plotName);
 
   // read plots from plot definition file created by the above functions (regular expressions are allowed);
   // the mode variable can be "load" to add these plots to the manager, or "find" to check only if the specified plots exist (prints out this info)
-  void ExtractPlotsFromFile(string plotFileName, vector<string> figureGroupsWithCategoryUser = {}, vector<string> plotNamesUser = {}, string mode = "load");
+  void ExtractPlotsFromFile(const string& plotFileName, const vector<string>& figureGroupsWithCategoryUser = {}, const vector<string>& plotNamesUser = {}, const string& mode = "load");
 
 
   // after desired plots were added to the manager they can be created
@@ -69,13 +69,13 @@ public:
   // "pdf", "png": plots will be stored as such files in the specified output directory (subdirectories are created for the figure groups and categories)
   // "macro": plots are saved as root macros (.C)
   // "file": all plots (canvases) are put in a .root file with a directory structure corresponding to figure groups and categories
-  void CreatePlots(string figureGroup = "", string figureCategory = "", vector<string> plotNames = {}, string outputMode = "pdf");
-  void CreatePlot(string name, string figureGroup, string figureCategory = "", string outputMode = "pdf");
+  void CreatePlots(const string& figureGroup = "", const string& figureCategory = "", vector<string> plotNames = {}, const string& outputMode = "pdf");
+  void CreatePlot(const string& name, const string& figureGroup, const string& figureCategory = "", const string& outputMode = "pdf");
 
   
 private:
-  void ReadDataFromCSVFiles(TObjArray& outputDataArray, vector<string> fileNames, string inputIdentifier);
-  void ReadDataFromFiles(TObjArray& outputDataArray, vector<string> fileNames, vector<string> dataNames, vector<string> newDataNames = {});
+  void ReadDataFromCSVFiles(TObjArray& outputDataArray, const vector<string>& fileNames, const string& inputIdentifier);
+  void ReadDataFromFiles(TObjArray& outputDataArray, const vector<string>& fileNames, vector<string> dataNames, vector<string> newDataNames = {});
   void ReadData(TObject* folder, TObjArray& outputDataArray, vector<string>& dataNames, vector<string>& newDataNames);
 
   
@@ -83,13 +83,13 @@ private:
   inline int GetNameRegisterID(const string& name);
   inline const string& GetNameRegisterName(int nameID);
   void LoadData(map<int, set<int>>& requiredData);
-  void GeneratePlot(Plot& plot, string outputMode = "pdf");
+  void GeneratePlot(Plot& plot, const string& outputMode = "pdf");
   bool IsPlotPossible(Plot &plot);
-  bool IsPlotAlreadyBooked(string plotName){for(auto& plot : mPlots){if(plot.GetUniqueName() == plotName) return true;} return false;};
-  ptree& ReadPlotTemplatesFromFile(string& plotFileName);
+  bool IsPlotAlreadyBooked(const string& plotName){for(auto& plot : mPlots){if(plot.GetUniqueName() == plotName) return true;} return false;};
+  ptree& ReadPlotTemplatesFromFile(const string& plotFileName);
 
   TApplication mApp;
-  vector<string> splitString(string argString, char deliminator = ':');
+  vector<string> splitString(const string& argString, char deliminator = ':');
   map<string, int> mNameRegister; // bi-directional mapping between name and unique id
   map<int, set<int>> mLoadedData;
   bool mSaveToRootFile;

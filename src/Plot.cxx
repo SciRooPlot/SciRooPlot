@@ -571,7 +571,7 @@ void Plot::Pad::operator+=(const Pad& pad)
  * Add data to this pad.
  */
 //****************************************************************************************
-Plot::Pad::Data& Plot::Pad::AddData(input_t data, string lable)
+Plot::Pad::Data& Plot::Pad::AddData(const input_t& data, const string& lable)
 {
   mData.push_back(std::make_shared<Data>(data.name, data.inputIdentifier, lable));
   return *mData[mData.size()-1];
@@ -582,7 +582,7 @@ Plot::Pad::Data& Plot::Pad::AddData(input_t data, string lable)
  * Add ratio to this pad.
  */
 //****************************************************************************************
-Plot::Pad::Ratio& Plot::Pad::AddRatio(input_t numerator, input_t denominator, string lable)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const input_t& numerator, const input_t& denominator, const string& lable)
 {
   mData.push_back(std::make_shared<Ratio>(numerator.name, numerator.inputIdentifier, denominator.name, denominator.inputIdentifier, lable));
   return *std::dynamic_pointer_cast<Ratio>(mData[mData.size()-1]);
@@ -593,7 +593,7 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(input_t numerator, input_t denominator, st
  * Add text box to this pad.
  */
 //****************************************************************************************
-void Plot::Pad::AddText(double xPos, double yPos, string text, bool userCoordinates, int borderStyle, int borderSize, int borderColor)
+void Plot::Pad::AddText(double xPos, double yPos, const string& text, bool userCoordinates, int borderStyle, int borderSize, int borderColor)
 {
   mBoxes.push_back(std::make_shared<TextBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, text));
 }
@@ -603,7 +603,7 @@ void Plot::Pad::AddText(double xPos, double yPos, string text, bool userCoordina
  * Add legend box to this pad.
  */
 //****************************************************************************************
-void Plot::Pad::AddLegend(double xPos, double yPos, string title, bool userCoordinates, int nColumns, int borderStyle, int borderSize, int borderColor)
+void Plot::Pad::AddLegend(double xPos, double yPos, const string& title, bool userCoordinates, int nColumns, int borderStyle, int borderSize, int borderColor)
 {
   // TODO: add userCoordinates to arguments
   mBoxes.push_back(std::make_shared<LegendBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, title, nColumns));
@@ -614,7 +614,7 @@ void Plot::Pad::AddLegend(double xPos, double yPos, string title, bool userCoord
  * Add legend box to this pad and auto-place it.
  */
 //****************************************************************************************
-void Plot::Pad::AddLegend(string title, int nColumns, int borderStyle, int borderSize, int borderColor)
+void Plot::Pad::AddLegend(const string& title, int nColumns, int borderStyle, int borderSize, int borderColor)
 {
   // TODO: add userCoordinates to arguments
   mBoxes.push_back(std::make_shared<LegendBox>(false, true, 0, 0, borderStyle, borderSize, borderColor, title, nColumns));
@@ -725,12 +725,12 @@ ptree Plot::Pad::Data::GetPropertyTree(){
  * User accessors.
  */
 //****************************************************************************************
-auto Plot::Pad::Data::SetLegendLable(string legendLable) -> decltype(*this)
+auto Plot::Pad::Data::SetLegendLable(const string& legendLable) -> decltype(*this)
 {
   mLegendLable = legendLable;
   return *this;
 }
-auto Plot::Pad::Data::SetOptions(string opions) -> decltype(*this)
+auto Plot::Pad::Data::SetOptions(const string& opions) -> decltype(*this)
 {
   mDrawingOptions = opions;
   return *this;
