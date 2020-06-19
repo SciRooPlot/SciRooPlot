@@ -35,8 +35,6 @@ public:
   PlotManager();
   virtual ~PlotManager();
 
-  // :: user settings ::
-  
   // settings for output
   void SetOutputDirectory(string path);
   void SetUseUniquePlotNames(bool useUniquePlotNames = true){mUseUniquePlotNames = useUniquePlotNames;} // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
@@ -61,7 +59,7 @@ public:
 
   // read plots from plot definition file created by the above functions (regular expressions are allowed);
   // the mode variable can be "load" to add these plots to the manager, or "find" to check only if the specified plots exist (prints out this info)
-  void ExtractPlotsFromFile(string plotFileName, vector<string> figureGroupsWithCategoryUser, vector<string> plotNamesUser, string mode = "load");
+  void ExtractPlotsFromFile(string plotFileName, vector<string> figureGroupsWithCategoryUser = {}, vector<string> plotNamesUser = {}, string mode = "load");
 
 
   // after desired plots were added to the manager they can be created

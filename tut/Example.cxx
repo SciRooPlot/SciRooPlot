@@ -143,30 +143,29 @@ int main(int argc, char *argv[])
     } // -----------------------------------------------------------------------
 
 
-    // after all plots are known to the manager we can finally create them:
-    plotManager.CreatePlots("", "", {}, "interactive");
-    // in "interactive" mode a root canvas window will pop up
-    // and you can scroll throught the plots by double clicking on the right resp. left side of the plot
-
-    // to create only plots belonging to a certain figureGroup (and/or category) you can do:
-    plotManager.CreatePlots("myPlotGroup", "myCategory", {}, "interactive");
-
-    // if it should be only specific plots in this plot group:
-    plotManager.CreatePlots("myPlotGroup", "", {"myPlot1", "myPlot2"}, "interactive");
-
-    // to save the plots to disk as pdf (or eps, png) you first have to tell
-    // the manager where to put them
+    // to save the plots to disk as pdf you first have to tell the manager where to put them
     plotManager.SetOutputDirectory("path/to/my/OutputFolder");
     // the manager will automatically create subfolders for the figureGroups and categories
-    plotManager.CreatePlots("myPlotGroup", "", {"myPlot1", "myPlot2"}, "pdf");
+    // to generate all stored plots as pdf you can call
+    plotManager.CreatePlots();
+
+    // for a specific figureGroup, figureCategory and or plotName just specify them:
+    plotManager.CreatePlots("myPlotGroup", "myCategory");
+    // or
+    plotManager.CreatePlots("myPlotGroup", "", {"myPlot1", "myPlot2"});
+    // in case you want the pdf files to contain the figureGroup and category in the file name, you can use
+    plotManager.SetUseUniquePlotNames();
+
+    // in "interactive" mode a root canvas window will pop up
+    // and you can scroll throught the plots by double clicking on the right resp. left side of the plot
+    plotManager.CreatePlots("", "", {}, "interactive");
 
     // you can also save the plots as a root macro (.C):
     plotManager.CreatePlots("myPlotGroup", "", {"myPlot1", "myPlot2"}, "macro");
 
-    // or (after you specify the corresponding file name) save them in a .root file
+    // after you specifying a file name you can also save the plots to a .root file
     plotManager.SetOutputFileName("ResultPlots.root");
     plotManager.CreatePlots("myPlotGroup", "", {"myPlot1", "myPlot2"}, "file");
-
   }
 
   //============================================================================
@@ -282,16 +281,21 @@ int main(int argc, char *argv[])
     plotManager.DumpPlots("path/to/my/plotDefinitions.XML");
 
     // this file can then be read in by another one of your programs via
-    plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {}, "load");
+    plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML");
     // this extracts all plots from this file!
-    // in case you want to load only certain figure groups and plots:
-    plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {"FigureGroup1", "figures", "figureGroup:myCategory"}, {"plot1", "plot4"}, "load");
+    // in case you want to load only certain figure groups:
+    plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {"figureGroup1", "figures", "figureGroup:myCategory"});
+    // ... or plots:
+    plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {"invMass", "ptSpec"});
     // the figure group and plot strings can be regular expressions
     // this means you can put "plot.*" and this will add "plot1", "plot123", "plot_adsf", etc.
-    // instead of "load", which adds these plots to the manager,  the mode can also be
-    // "find" in orderto check only if the specified plots exist (prints out this info)
 
-    // the main reasoning behind this "dump-to-file" feature is that you can then
+    // instead of the default option "load", which adds these plots to the manager, the mode can also be
+    // "find" in order to check only if the specified plots exist (prints out this info)
+    plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {}, "find");
+
+
+    // the main reasoning behind the "dump-to-file" feature is that you can then
     // make use the builtin commandline plotting tool, which can conveniently
     // create specific plots you defined and saved to file
 

@@ -25,7 +25,6 @@ Minor Features:
 - add nContours as option to pad
 - normalize and scale should use same function
 - use same as previous color/marker/style feature (color = -1)?
-- add graph division feature with tspline3
 - add another stand-alone app to quickly create and extend input file file
 - option in main program to list loaded plots
 - possibility to load all data from input files
@@ -56,11 +55,9 @@ Structural changes:
 - use constexpr everywhere!!
 - understand why move constructors implicitly delete assignment operators
 - move analysis stuff out of the repository and make external repository (link cmakes?)
-- store strings in vector and then only work with indices everywhere
 - use str_contians() everywhere
 - always use smallest possible datatype whenever possible
 - put data pointers in vector instead of map and use index for all comparisons
-- use for (auto& [key, value]: myMap) {} loops everywhere
 - think about how things can be implemented in a more general way as templates
 - change arguments referring to internal variables to const ref if possible to be more memory efficient, use lambdas
 - add (copy-, move-) constructors and destructors; make sure all variables are initialized properly

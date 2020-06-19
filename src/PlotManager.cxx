@@ -427,7 +427,7 @@ void PlotManager::CreatePlots(string figureGroup, string figureCategory, vector<
 //****************************************************************************************
 int32_t PlotManager::GetNameRegisterID(const string& name)
 {
-  if( mNameRegister.find(name) == mNameRegister.end())
+  if(mNameRegister.find(name) == mNameRegister.end())
   {
     mNameRegister[name] = mNameRegister.size();
   }
