@@ -35,7 +35,7 @@ scope_func () {
     while read -r line ; do
       line="${line#<GROUP::}"
       line="${line%>}"
-      gropus+=("${line}")
+      [[ "${line}" != "TEMPLATES" ]] && gropus+=("${line}")
     done <<(grep -o '<GROUP::.*' $plot_definitions)
 
     while read -r line ; do
