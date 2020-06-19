@@ -33,6 +33,7 @@ if (IS_FRAMEWORK_DEV)
   # Developer Mode:
   ################################################################################
   # This does not work if the folder lives in the framework hierarchy
+  include_directories(${PLOTTING_FRAMEWORK}/inc)
   add_subdirectory(${PLOTTING_FRAMEWORK} ${PLOTTING_FRAMEWORK}/build)
   add_executable(${APP_NAME} ${SRCS})
   target_link_libraries(${APP_NAME} PlottingFramework)

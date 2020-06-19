@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # The following two lines can be used to force using one specific root installation (comment out if not needed)
-#set(ROOTSYS ~/alice/sw/osx_x86-64/ROOT/v6-18-04-alice1-7)
 #set(ROOTSYS ~/alice/sw/osx_x86-64/ROOT/latest)
 set(ROOTSYS ~/root/mybuild)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
@@ -24,20 +23,14 @@ endif(APPLE)
 # name of the executable:
 set(APPLICATIONS
   plot
-  config
-  create
 )
 # corresponding source file:
 set(APPLICATIONS_SRC
   "app/PlottingApp.cxx"
-  "app/MultDepSpec/ConfigInput.cxx"
-  "app/MultDepSpec/CreatePlots.cxx app/MultDepSpec/Templates.cxx app/MultDepSpec/Datasets.cxx app/MultDepSpec/Energies.cxx app/MultDepSpec/Systems.cxx app/MultDepSpec/Publications.cxx app/MultDepSpec/Test.cxx app/MultDepSpec/Publications.cxx app/MultDepSpec/Helpers.cxx app/MultDepSpec/StyleDefinitions.cxx  app/MultDepSpec/TrackQA.cxx"
 )
 # files that you want to associate to your app put "" if not required
 set(APPLICATIONS_ADDITIONAL_FILES
   ""
-  ""
-  "app/multDepSpec/MultDepSpec.h"
 )
 
 set(MODULE PlottingFramework)
@@ -84,7 +77,7 @@ math(EXPR NUMBER_OF_APPS "${NUMBER_OF_APPS} - 1")
 foreach(INDEX RANGE ${NUMBER_OF_APPS})
   list(GET APPLICATIONS ${INDEX} APP_NAME)
   list(GET APPLICATIONS_SRC ${INDEX} APP_CODE)
-  list(GET APPLICATIONS_ADDITIONAL_FILES ${INDEX} APP_ADD_FILE)
+  #list(GET APPLICATIONS_ADDITIONAL_FILES ${INDEX} APP_ADD_FILE)
   message(STATUS "Creating executable ${APP_NAME} from file(s) ${APP_CODE} including ${APP_ADD_FILE}")
   string(REPLACE " " ";" APP_ADD_FILE "${APP_ADD_FILE}")
   string(REPLACE " " ";" APP_CODE "${APP_CODE}")
