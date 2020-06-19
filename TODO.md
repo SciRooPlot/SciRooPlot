@@ -52,6 +52,7 @@ Feature ideas:
 
 
 Structural changes:
+- fix header inclusion and be sure to not pllute global namespace
 - use constexpr everywhere!!
 - understand why move constructors implicitly delete assignment operators
 - move analysis stuff out of the repository and make external repository (link cmakes?)

@@ -30,7 +30,7 @@ namespace PlottingFramework {
  * Default constructor.
  */
 //****************************************************************************************
-Plot::Plot(string name, string figureGroup, string plotTemplateName)
+Plot::Plot(const string& name, const string& figureGroup, const string& plotTemplateName)
 : Plot()
 {
   if(figureGroup.find(".") != string::npos) ERROR("Figure Group must not contain '.'!");
@@ -52,7 +52,7 @@ Plot::Plot(string name, string figureGroup, string plotTemplateName)
  * Constructor from property tree.
  */
 //****************************************************************************************
-Plot::Plot(ptree &plotTree)
+Plot::Plot(const ptree& plotTree)
 {
   try{
     mName = plotTree.get<string>("name");
@@ -326,7 +326,7 @@ auto Plot::Pad::SetPalette(int32_t palette)  ->decltype(*this)
  * Set title of pad
  */
 //****************************************************************************************
-auto Plot::Pad::SetTitle(string title)  ->decltype(*this)
+auto Plot::Pad::SetTitle(const string& title)  ->decltype(*this)
 {
   mTitle = title;
   return *this;
@@ -366,7 +366,7 @@ auto Plot::Pad::SetMargins(float_t top, float_t bottom, float_t left, float_t ri
  * Constructor from property tree.
  */
 //****************************************************************************************
-Plot::Pad::Pad(ptree &padTree)
+Plot::Pad::Pad(const ptree& padTree)
 {
   if(auto var = padTree.get_optional<string>("title")) mTitle = *var;
   if(auto var = padTree.get_optional<string>("options")) mOptions = *var;
@@ -632,7 +632,7 @@ void Plot::Pad::AddLegend(string title, int nColumns, int borderStyle, int borde
  * Default constructor for Data objects.
  */
 //****************************************************************************************
-Plot::Pad::Data::Data(string name, string inputIdentifier, string legendLable)
+Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const string& legendLable)
   : Data()
   {
     mType = "data";
@@ -657,7 +657,7 @@ Plot::Pad::Data::Data(string name, string inputIdentifier, string legendLable)
  * Constructor for Data objects from property tree.
  */
 //****************************************************************************************
-Plot::Pad::Data::Data(ptree &dataTree) : Data()
+Plot::Pad::Data::Data(const ptree& dataTree) : Data()
 {
   try{
     mType = dataTree.get<string>("type");
@@ -873,7 +873,7 @@ auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
  * Default constructor.
  */
 //****************************************************************************************
-Plot::Pad::Ratio::Ratio(string name, string inputIdentifier, string denomName, string denomInputIdentifier, string lable)
+Plot::Pad::Ratio::Ratio(const string& name, const string& inputIdentifier, const string& denomName, const string& denomInputIdentifier, const string& lable)
 : Data(name, inputIdentifier, lable), mDenomName(denomName), mDenomInputIdentifier(denomInputIdentifier), mDivideMethod("")
 {
   SetType("ratio");
@@ -884,7 +884,7 @@ Plot::Pad::Ratio::Ratio(string name, string inputIdentifier, string denomName, s
  * Constructor from property tree.
  */
 //****************************************************************************************
-Plot::Pad::Ratio::Ratio(ptree &dataTree) : Data(dataTree)
+Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
 {
   try{
     mDenomName = dataTree.get<string>("denomName");
@@ -914,7 +914,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree()
  * Specify how the division should be done (spline, biniomial, etc...).
  */
 //****************************************************************************************
-auto Plot::Pad::Ratio::SetDivideMethod(string divideMethod) -> decltype(*this)
+auto Plot::Pad::Ratio::SetDivideMethod(const string& divideMethod) -> decltype(*this)
 {
   mDivideMethod = divideMethod;
   return *this;
@@ -931,7 +931,7 @@ auto Plot::Pad::Ratio::SetDivideMethod(string divideMethod) -> decltype(*this)
  * Constructor setting axis name (X,Y,Z).
  */
 //****************************************************************************************
-Plot::Pad::Axis::Axis(string axisName) : Axis()
+Plot::Pad::Axis::Axis(const string& axisName) : Axis()
 {
   mName = axisName;
 }
@@ -941,7 +941,7 @@ Plot::Pad::Axis::Axis(string axisName) : Axis()
  * Constructor to define entry from file.
  */
 //****************************************************************************************
-Plot::Pad::Axis::Axis(ptree &axisTree) : Axis()
+Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
 {
   try{
     mName = axisTree.get<string>("name");
@@ -1072,7 +1072,7 @@ Plot::Pad::Box::Box(bool userCoordinates, bool autoPlacement, double x, double y
  * Construct box from property tree.
  */
 //****************************************************************************************
-Plot::Pad::Box::Box(ptree &boxTree)
+Plot::Pad::Box::Box(const ptree& boxTree)
 {
   try{
     mType = boxTree.get<string>("type");

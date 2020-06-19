@@ -33,17 +33,17 @@ public:
   class Pad;
 
   Plot() = default;
-  Plot(ptree &plotTree);
-  Plot(string name, string figureGroup, string plotTemplateName = "");
+  Plot(const ptree& plotTree);
+  Plot(const string& name, const string& figureGroup, const string& plotTemplateName = "");
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& templatePlot, const Plot& plot);
 
-  Plot(Plot& plotTemplate, string name, string plotGroup) {*this = plotTemplate; this->mName = name; this->mFigureGroup = plotGroup;}
+  Plot(const Plot& plotTemplate, const string& name, const string& plotGroup) {*this = plotTemplate; this->mName = name; this->mFigureGroup = plotGroup;}
 
   // accessors for user
-  inline void SetFigureCategory(string figureCategory){mFigureCategory = figureCategory;}
-  inline void SetPlotTemplateName(string plotTemplateName){mPlotTemplateName = plotTemplateName;}
+  inline void SetFigureCategory(const string& figureCategory){mFigureCategory = figureCategory;}
+  inline void SetPlotTemplateName(const string& plotTemplateName){mPlotTemplateName = plotTemplateName;}
   
   inline void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false){ mPlotDimensions = {width, height, fixAspectRatio};}
   inline void SetWidth(int32_t width){ mPlotDimensions.width = width;}
@@ -58,7 +58,7 @@ protected:
   friend class PlotManager;
   friend class PlotPainter;
   
-  inline void SetFigureGroup(string figureGroup){mFigureGroup = figureGroup;}
+  inline void SetFigureGroup(const string& figureGroup){mFigureGroup = figureGroup;}
 
   // accessors for internal use by manager and painter
   const string& GetName(){return mName;}
@@ -123,7 +123,7 @@ public:
 
 
   Pad() = default;
-  Pad(ptree &padTree);
+  Pad(const ptree &padTree);
   Axis& operator[](string axis);
   void operator+=(const Pad& pad);
   
@@ -141,7 +141,7 @@ public:
 
   inline void SetPadOptions(string options){mOptions = options;}
 
-  auto SetTitle(string title)  ->decltype(*this);
+  auto SetTitle(const string& title)  ->decltype(*this);
   auto SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup) ->decltype(*this);
   auto SetMargins(float_t top, float_t bottom, float_t left, float_t right) ->decltype(*this);
   auto SetPalette(int32_t palette)  ->decltype(*this);
@@ -279,8 +279,8 @@ class Plot::Pad::Data
 public:
 
   // default constructor for user
-  Data(string name, string inputIdentifier, string lable = "");
-  Data(ptree &dataTree);
+  Data(const string& name, const string& inputIdentifier, const string& lable = "");
+  Data(const ptree &dataTree);
   // copy constructor
   Data(const Data& otherPlot) = default;
 
@@ -319,7 +319,7 @@ protected:
 
   virtual ptree GetPropertyTree();
 
-  void SetType(string type){mType = type;}
+  void SetType(const string& type){mType = type;}
 
   string GetUniqueName(){return mName + gNameGroupSeparator + mInputIdentifier;}
 
@@ -392,13 +392,13 @@ private:
 class Plot::Pad::Ratio : public Plot::Pad::Data
 {
 public:
-  Ratio(string name, string inputIdentifier, string denomName, string denomInputIdentifier, string lable);
-  Ratio(ptree &dataTree);
+  Ratio(const string& name, const string& inputIdentifier, const string& denomName, const string& denomInputIdentifier, const string& lable);
+  Ratio(const ptree &dataTree);
 
   virtual ~Ratio() = default;
   Ratio(const Ratio& otherRatio) = default;
 
-  auto SetDivideMethod(string divideMethod) -> decltype(*this);
+  auto SetDivideMethod(const string& divideMethod) -> decltype(*this);
 
   // return correct type for the data accessors
   virtual auto SetRangeX(double_t min, double_t max) -> decltype(*this)
@@ -479,13 +479,13 @@ public:
   Axis() =  default;
   Axis(const Axis& otherAxis) = default;
 
-  Axis(string axisName);
-  Axis(ptree &axisTree);
+  Axis(const string& axisName);
+  Axis(const ptree &axisTree);
   
   void operator+=(const Axis& axis);
 
 
-  auto SetTitle(string title) ->decltype(*this) {mTitle = title; return *this;}
+  auto SetTitle(const string& title) ->decltype(*this) {mTitle = title; return *this;}
   auto SetRange(double_t min, double_t max) ->decltype(*this) {mRange = {min, max}; return *this;}
   auto SetMaxRange(double_t max) ->decltype(*this) {mRange.max = max; return *this;}
   auto SetMinRange(double_t min) ->decltype(*this) {mRange.min = min; return *this;}
@@ -602,8 +602,7 @@ public:
 
   Box() =  default;
   Box(const Box& otherBox) = default;
-  Box(Box& otherBox) = default;
-  Box(ptree &boxTree);
+  Box(const ptree &boxTree);
   Box(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor);
   
 protected:
@@ -612,7 +611,7 @@ protected:
   friend class Plot;
 
   virtual ptree GetPropertyTree();
-  void SetType(string type){mType = type;}
+  void SetType(const string& type){mType = type;}
   const string& GetType(){return mType;}
 
   double_t GetXPosition(){return mX;}
@@ -660,7 +659,6 @@ private:
 class Plot::Pad::TextBox : public Plot::Pad::Box {
 public:
   TextBox(const TextBox& otherTextBox) = default;
-  TextBox(TextBox& otherTextBox) = default;
   virtual ~TextBox() = default;
   
   TextBox(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor, string text)
@@ -680,7 +678,7 @@ public:
   };
   
   // constructor to define entry from file
-  TextBox(ptree &boxTree) : Box(boxTree)
+  TextBox(const ptree &boxTree) : Box(boxTree)
   {
     try{
       mText = boxTree.get<string>("text");
@@ -704,7 +702,6 @@ private:
 class Plot::Pad::LegendBox : public Plot::Pad::Box {
 public:
   LegendBox(const LegendBox& otherLegendBox) = default;
-  LegendBox(LegendBox& otherLegendBox) = default;
   virtual ~LegendBox() = default;
   
   LegendBox(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor, string title, int nColumns)
@@ -724,7 +721,7 @@ public:
   };
   
   // constructor to define entry from file
-  LegendBox(ptree &boxTree) : Box(boxTree)
+  LegendBox(const ptree &boxTree) : Box(boxTree)
   {
     try{
       mTitle = boxTree.get<string>("title");
