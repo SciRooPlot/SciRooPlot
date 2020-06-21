@@ -586,7 +586,7 @@ void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, const vector<
 //****************************************************************************************
 void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<string>& fileNames, vector<string> dataNames, vector<string> newDataNames)
 {
-  // first determine if which sub-folders are required by the user
+  // first determine if which sub-folders are requested by the user
   set<string> dataSubSpecs;
   for(auto& dataName : dataNames)
   {

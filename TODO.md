@@ -39,7 +39,7 @@ Feature ideas:
 - find a general way to automatically determine optimal axis offsets (in particular for 2d and 3d views) (what unit is title offset?)
 - AddFunction() and AddLine() accessor so one can directly plot simple functions
 - revisit idea of axis linking
-- can exponents on x axis be moved down, so they do not interfere with col z axis?
+- can exponents on x axis be moved down, so they do not interfere with col z axis? (property of GAxis?)
 - maybe at some point it could become useful to also copy data and boxes from template?
 - add root style, color, marker, linestyle pictures to documentation
 - support csv format (flexible string and delimiter)
@@ -52,7 +52,7 @@ Feature ideas:
 
 
 Structural changes:
-- fix header inclusion and be sure to not pllute global namespace
+- fix header inclusion and be sure to not pollute global namespace
 - use constexpr everywhere!!
 - understand why move constructors implicitly delete assignment operators
 - move analysis stuff out of the repository and make external repository (link cmakes?)
