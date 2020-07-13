@@ -83,9 +83,14 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     optional<float_t> textSize = (pad.GetDefaultTextSize()) ? pad.GetDefaultTextSize() : defaultPad.GetDefaultTextSize();
     optional<int16_t> textColor = (pad.GetDefaultTextColor()) ? pad.GetDefaultTextColor() : defaultPad.GetDefaultTextColor();
 
-    optional<float_t> defaultMarkerSize = (pad.GetDefaultMarkerSize()) ? pad.GetDefaultMarkerSize() : defaultPad.GetDefaultMarkerSize();
-    optional<float_t> defaultLineWidth = (pad.GetDefaultLineWidth()) ? pad.GetDefaultLineWidth() : defaultPad.GetDefaultLineWidth();
+    // data related default settings for this pad
+    optional<float_t> markerSizeDefault = (pad.GetDefaultMarkerSize()) ? pad.GetDefaultMarkerSize() : defaultPad.GetDefaultMarkerSize();
+    optional<float_t> lineWidthDefault  = (pad.GetDefaultLineWidth())  ? pad.GetDefaultLineWidth()  : defaultPad.GetDefaultLineWidth();
 
+    //bool autoSelectMarkerColor = (pad.GetAutoSelectMarkerColor()) ? *pad.GetAutoSelectMarkerColor() : (defaultPad.GetAutoSelectMarkerColor()) ? *defaultPad.GetAutoSelectMarkerColor() : false;
+
+    //bool autoSelectLineColor = (pad.GetAutoSelectLineColor()) ? *pad.GetAutoSelectLineColor() : (defaultPad.GetAutoSelectLineColor()) ? *defaultPad.GetAutoSelectLineColor() : false;
+    
     
     string padTitle = (pad.GetTitle()) ? *pad.GetTitle() : (defaultPad.GetTitle()) ? *defaultPad.GetTitle() : "";
     
@@ -364,19 +369,36 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             // define data appearance
             optional<int16_t> markerColor   = (data->GetMarkerColor())  ? data->GetMarkerColor()  : std::nullopt;
             optional<int16_t> markerStyle   = (data->GetMarkerStyle())  ? data->GetMarkerStyle()  : std::nullopt;
-            optional<float_t> markerSize    = (data->GetMarkerSize())   ? data->GetMarkerSize()   : std::nullopt;
+            optional<float_t> markerSize    = (data->GetMarkerSize())   ? data->GetMarkerSize()   : markerSizeDefault;
             optional<int16_t> lineColor     = (data->GetLineColor())    ? data->GetLineColor()    : std::nullopt;
             optional<int16_t> lineStyle     = (data->GetLineStyle())    ? data->GetLineStyle()    : std::nullopt;
-            optional<float_t> lineWidth     = (data->GetLineWidth())    ? data->GetLineWidth()    : std::nullopt;
+            optional<float_t> lineWidth     = (data->GetLineWidth())    ? data->GetLineWidth()    : lineWidthDefault;
             optional<int16_t> fillColor     = (data->GetFillColor())    ? data->GetFillColor()    : std::nullopt;
             optional<int16_t> fillStyle     = (data->GetFillStyle())    ? data->GetFillStyle()    : std::nullopt;
             optional<float_t> fillOpacity   = (data->GetFillOpacity())  ? data->GetFillOpacity()  : std::nullopt;
             //0 : hollow, 1001 : Solid, 3000+pattern_number : pattern
             
-            //if(!markerColor) markerColor = GetDefaultColor(dataIndex);
-            //if(!lineColor) lineColor = GetDefaultColor(dataIndex);
-            //if(!markerStyle) markerStyle = pad.GetDefaultMarkers(0) : plot[0].GetDefaultMarkerSize(0) : GetDefaultMarker(0);
+            // if user did not explicitly specify color or style, fall back to default values specified for this pad if they are available
+            if(!markerColor) markerColor = (plot[padID].GetDefaultMarkerColors()) ? std::optional((*plot[padID].GetDefaultMarkerColors())[(dataIndex-1) % (*plot[padID].GetDefaultMarkerColors()).size()]) :
+              (defaultPad.GetDefaultMarkerColors()) ? std::optional((*defaultPad.GetDefaultMarkerColors())[(dataIndex-1) % (*defaultPad.GetDefaultMarkerColors()).size()]) : std::nullopt;
+
+            if(!markerStyle) markerStyle = (plot[padID].GetDefaultMarkerStyles()) ? std::optional((*plot[padID].GetDefaultMarkerStyles())[(dataIndex-1) % (*plot[padID].GetDefaultMarkerStyles()).size()]) :
+              (defaultPad.GetDefaultMarkerStyles()) ? std::optional((*defaultPad.GetDefaultMarkerStyles())[(dataIndex-1) % (*defaultPad.GetDefaultMarkerStyles()).size()]) : std::nullopt;
             
+            if(!lineColor) lineColor = (plot[padID].GetDefaultLineColors()) ? std::optional((*plot[padID].GetDefaultLineColors())[(dataIndex-1) % (*plot[padID].GetDefaultLineColors()).size()]) :
+              (defaultPad.GetDefaultLineColors()) ? std::optional((*defaultPad.GetDefaultLineColors())[(dataIndex-1) % (*defaultPad.GetDefaultLineColors()).size()]) : std::nullopt;
+
+            if(!lineStyle) lineStyle = (plot[padID].GetDefaultLineStyles()) ? std::optional((*plot[padID].GetDefaultLineStyles())[(dataIndex-1) % (*plot[padID].GetDefaultLineStyles()).size()]) :
+              (defaultPad.GetDefaultLineStyles()) ? std::optional((*defaultPad.GetDefaultLineStyles())[(dataIndex-1) % (*defaultPad.GetDefaultLineStyles()).size()]) : std::nullopt;
+
+            if(!fillColor) fillColor = (plot[padID].GetDefaultFillColors()) ? std::optional((*plot[padID].GetDefaultFillColors())[(dataIndex-1) % (*plot[padID].GetDefaultFillColors()).size()]) :
+              (defaultPad.GetDefaultFillColors()) ? std::optional((*defaultPad.GetDefaultFillColors())[(dataIndex-1) % (*defaultPad.GetDefaultFillColors()).size()]) : std::nullopt;
+
+            if(!fillStyle) fillStyle = (plot[padID].GetDefaultFillStyles()) ? std::optional((*plot[padID].GetDefaultFillStyles())[(dataIndex-1) % (*plot[padID].GetDefaultFillStyles()).size()]) :
+              (defaultPad.GetDefaultFillStyles()) ? std::optional((*defaultPad.GetDefaultFillStyles())[(dataIndex-1) % (*defaultPad.GetDefaultFillStyles()).size()]) : std::nullopt;
+
+            
+            // finally apply all settings in case they are defined
             if(markerStyle) data_ptr->SetMarkerStyle(*markerStyle);
             if(markerColor) data_ptr->SetMarkerColor(*markerColor);
             if(markerSize) data_ptr->SetMarkerSize(*markerSize);

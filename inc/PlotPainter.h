@@ -47,7 +47,8 @@ private:
   
   int16_t GetDefaultColor(uint8_t colorID) {return mDefaultColors[colorID % mDefaultColors.size()];}
   int16_t GetDefaultMarker(uint8_t markerID)  {return mDefaultColors[markerID % mDefaultColors.size()];}
-  
+
+  // TODO: put this in manager and add GetGoodColors() to give user some usable colors at hand
   vector<int16_t> mDefaultColors = {kBlack, kBlue+1, kRed+1, kYellow+1,
     kMagenta-4, kGreen+3, kOrange+1, kViolet-3, kCyan+2, kPink+3, kTeal-7, kMagenta+1, kPink+8, kCyan-6, kMagenta, kRed+2, kGreen+2,
     kOrange+2, kMagenta+2, kYellow+3, kGray+2, kBlue+2, kYellow+2, kRed, kBlue, kMagenta+3, kGreen+4, 28, 8, 15, 17, 12};

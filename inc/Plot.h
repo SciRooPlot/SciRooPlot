@@ -137,8 +137,6 @@ public:
   void AddLegend(double xPos, double yPos, const string& title = "", bool userCoordinates = false, int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
   void AddLegend(const string& title = "", int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
 
-
-
   inline void SetPadOptions(const string& options){mOptions = options;}
 
   auto SetTitle(const string& title)  ->decltype(*this);
@@ -152,7 +150,16 @@ public:
 
   auto SetDefaultMarkerSize(float_t size)  ->decltype(*this);
   auto SetDefaultLineWidth(float_t width)  ->decltype(*this);
+  auto SetDefaultFillOpacity(float_t opacity)  ->decltype(*this);
 
+  auto SetDefaultMarkerColors(const vector<int16_t>& colors)  ->decltype(*this);
+  auto SetDefaultLineColors(const vector<int16_t>& colors)  ->decltype(*this);
+  auto SetDefaultFillColors(const vector<int16_t>& colors)  ->decltype(*this);  // TODO: how to handle fill when not wanted??
+
+  auto SetDefaultMarkerStyles(const vector<int16_t>& styles)  ->decltype(*this);
+  auto SetDefaultLineStyles(const vector<int16_t>& styles)  ->decltype(*this);
+  auto SetDefaultFillStyles(const vector<int16_t>& styles)  ->decltype(*this);
+  
   auto SetFill(int16_t color, int16_t style = 1001)  ->decltype(*this);
   auto SetTransparent()  ->decltype(*this);
 
@@ -162,9 +169,6 @@ public:
 
   auto SetRedrawAxes(bool redraw = true)  ->decltype(*this);
   auto SetRefFunc(const string& refFunc) ->decltype(*this) {mRefFunc = refFunc; return *this;}
-
-  //int GetDefaultColor(int colorIndex) {return mDefaultColors[colorIndex % mDefaultColors.size()];}
-  //void SetTextFont(int font){(font > 0 && font < 16) ? mTextFont = font * 10 + 3 : mTextFont = 43;}
 
 protected:
   friend class PlotManager;
@@ -206,8 +210,16 @@ protected:
   const optional<int16_t>& GetDefaultTextFont(){return mText.font;}
   const optional<float_t>& GetDefaultTextSize(){return mText.size;}
 
-  const optional<float_t>& GetDefaultMarkerSize(){return mMarkerSize;}
-  const optional<float_t>& GetDefaultLineWidth(){return mLineWidth;}
+  const optional<float_t>& GetDefaultMarkerSize(){return mMarkerDefaults.scale;}
+  const optional<float_t>& GetDefaultLineWidth(){return mLineDefaults.scale;}
+  const optional<float_t>& GetDefaultFillOpacity(){return mFillDefaults.scale;}
+
+  const optional<vector<int16_t>>& GetDefaultMarkerColors() {return mMarkerDefaults.colors;}
+  const optional<vector<int16_t>>& GetDefaultLineColors() {return mLineDefaults.colors;}
+  const optional<vector<int16_t>>& GetDefaultFillColors() {return mFillDefaults.colors;}
+  const optional<vector<int16_t>>& GetDefaultMarkerStyles() {return mMarkerDefaults.styles;}
+  const optional<vector<int16_t>>& GetDefaultLineStyles() {return mLineDefaults.styles;}
+  const optional<vector<int16_t>>& GetDefaultFillStyles() {return mFillDefaults.styles;}
 
   
   const optional<bool>& GetRedrawAxes(){return mRedrawAxes;}
@@ -215,6 +227,9 @@ protected:
 
   
 private:
+  string VectorToString(vector<int16_t> numbers);
+  vector<int16_t> StringToVector(string numberString);
+
   struct pad_position_t{
     optional<double_t> xlow;
     optional<double_t> ylow;
@@ -243,7 +258,12 @@ private:
     optional<int16_t> font;
     optional<int16_t> color;
   };
-
+  
+  struct data_defaults_t{
+    optional<float_t> scale;
+    optional<vector<int16_t>> styles;
+    optional<vector<int16_t>> colors;
+  };
   
   // properties
   optional<string> mTitle;
@@ -253,8 +273,14 @@ private:
   pad_fill_t mFill;
   frame_t mFrame;
   text_t mText;
-  optional<float_t> mMarkerSize;
-  optional<float_t> mLineWidth;
+  
+  // user defined default data representation
+  data_defaults_t mMarkerDefaults;
+  data_defaults_t mLineDefaults;
+  data_defaults_t mFillDefaults;
+  optional<drawing_options_t> mGraphOptionDefault;
+  optional<drawing_options_t> mHistOptionDefault;
+
 
   optional<int32_t> mPalette;
 
@@ -294,7 +320,6 @@ public:
   virtual auto SetLegendLable(const string& legendLable) -> decltype(*this);
   virtual auto SetOptions(const string& opions) -> decltype(*this);
   virtual auto SetScaleFactor(double_t scale) -> decltype(*this);
-  virtual auto SetColor(int16_t color) -> decltype(*this);
   virtual auto SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this);
   virtual auto SetMarkerColor(int16_t color) -> decltype(*this);
   virtual auto SetMarkerStyle(int16_t style) -> decltype(*this);
@@ -303,7 +328,7 @@ public:
   virtual auto SetLineColor(int16_t color) -> decltype(*this);
   virtual auto SetLineStyle(int16_t style) -> decltype(*this);
   virtual auto SetLineWidth(float_t width) -> decltype(*this);
-  virtual auto SetFill(int16_t color, int16_t style) -> decltype(*this);
+  virtual auto SetFill(int16_t color, int16_t style, float_t opacity = 1.) -> decltype(*this);
   virtual auto SetFillColor(int16_t color) -> decltype(*this);
   virtual auto SetFillStyle(int16_t style) -> decltype(*this);
   virtual auto SetFillOpacity(float_t opacity) -> decltype(*this);
@@ -419,8 +444,6 @@ public:
   {return dynamic_cast<decltype(*this)&>(Data::SetOptions(opions));}
   virtual auto SetScale(double_t scale) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetScaleFactor(scale));}
-  virtual auto SetColor(int16_t color) -> decltype(*this)
-  {return dynamic_cast<decltype(*this)&>(Data::SetColor(color));}
   virtual auto SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetMarker(color, style, size));}
   virtual auto SetMarkerColor(int16_t color) -> decltype(*this)
@@ -437,8 +460,8 @@ public:
   {return dynamic_cast<decltype(*this)&>(Data::SetLineStyle(style));}
   virtual auto SetLineWidth(float_t width) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetLineWidth(width));}
-  virtual auto SetFill(int16_t color, int16_t style) -> decltype(*this)
-  {return dynamic_cast<decltype(*this)&>(Data::SetFill(color, style));}
+  virtual auto SetFill(int16_t color, int16_t style, float_t opacity = 1.) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetFill(color, style, opacity));}
   virtual auto SetFillColor(int16_t color) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetFillColor(color));}
   virtual auto SetFillStyle(int16_t style) -> decltype(*this)
