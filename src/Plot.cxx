@@ -225,7 +225,7 @@ auto Plot::Pad::SetDefaultTextFont(int16_t font)  ->decltype(*this)
 //****************************************************************************************
 auto Plot::Pad::SetDefaultMarkerSize(float_t size)  ->decltype(*this)
 {
-  mMarkerSize = size;
+  mMarkerDefaults.scale = size;
   return *this;
 }
 
@@ -236,7 +236,84 @@ auto Plot::Pad::SetDefaultMarkerSize(float_t size)  ->decltype(*this)
 //****************************************************************************************
 auto Plot::Pad::SetDefaultLineWidth(float_t width)  ->decltype(*this)
 {
-  mLineWidth = width;
+  mLineDefaults.scale = width;
+  return *this;
+}
+
+//****************************************************************************************
+/**
+ * Set default fill opacity for this pad.
+ */
+//****************************************************************************************
+auto Plot::Pad::SetDefaultFillOpacity(float_t opacity)  ->decltype(*this)
+{
+  mFillDefaults.scale = opacity;
+  return *this;
+}
+
+//****************************************************************************************
+/**
+ * Set default marker colors.
+ */
+//****************************************************************************************
+auto Plot::Pad::SetDefaultMarkerColors(const vector<int16_t>& colors)  ->decltype(*this)
+{
+  mMarkerDefaults.colors = colors;
+  return *this;
+}
+
+//****************************************************************************************
+/**
+ * Set default line colors.
+ */
+//****************************************************************************************
+auto Plot::Pad::SetDefaultLineColors(const vector<int16_t>& colors)  ->decltype(*this)
+{
+  mLineDefaults.colors = colors;
+  return *this;
+}
+
+//****************************************************************************************
+/**
+ * Set default fill colors.
+ */
+//****************************************************************************************
+auto Plot::Pad::SetDefaultFillColors(const vector<int16_t>& colors)  ->decltype(*this)
+{
+  mFillDefaults.colors = colors;
+  return *this;
+}
+
+//****************************************************************************************
+/**
+ * Set default marker styles.
+ */
+//****************************************************************************************
+auto Plot::Pad::SetDefaultMarkerStyles(const vector<int16_t>& styles)  ->decltype(*this)
+{
+  mMarkerDefaults.styles = styles;
+  return *this;
+}
+
+//****************************************************************************************
+/**
+ * Set default line styles.
+ */
+//****************************************************************************************
+auto Plot::Pad::SetDefaultLineStyles(const vector<int16_t>& styles)  ->decltype(*this)
+{
+  mLineDefaults.styles = styles;
+  return *this;
+}
+
+//****************************************************************************************
+/**
+ * Set default fill styles.
+ */
+//****************************************************************************************
+auto Plot::Pad::SetDefaultFillStyles(const vector<int16_t>& styles)  ->decltype(*this)
+{
+  mFillDefaults.styles = styles;
   return *this;
 }
 
@@ -389,8 +466,18 @@ Plot::Pad::Pad(const ptree& padTree)
   if(auto var = padTree.get_optional<int32_t>("text_color")) mText.color = *var;
   if(auto var = padTree.get_optional<int32_t>("text_font")) mText.font = *var;
   if(auto var = padTree.get_optional<float_t>("text_size")) mText.size = *var;
-  if(auto var = padTree.get_optional<float_t>("marker_size")) mMarkerSize = *var;
-  if(auto var = padTree.get_optional<float_t>("line_width")) mLineWidth = *var;
+  if(auto var = padTree.get_optional<float_t>("default_marker_size")) mMarkerDefaults.scale = *var;
+  if(auto var = padTree.get_optional<float_t>("default_line_width")) mLineDefaults.scale = *var;
+  if(auto var = padTree.get_optional<float_t>("default_fill_opacity")) mFillDefaults.scale = *var;
+  
+  if(auto var = padTree.get_optional<string>("default_marker_colors")) mMarkerDefaults.colors = StringToVector(*var);
+  if(auto var = padTree.get_optional<string>("default_line_colors")) mLineDefaults.colors = StringToVector(*var);
+  if(auto var = padTree.get_optional<string>("default_fill_colors")) mFillDefaults.colors = StringToVector(*var);
+  if(auto var = padTree.get_optional<string>("default_marker_styles")) mMarkerDefaults.styles = StringToVector(*var);
+  if(auto var = padTree.get_optional<string>("default_line_styles")) mLineDefaults.styles = StringToVector(*var);
+  if(auto var = padTree.get_optional<string>("default_fill_styles")) mFillDefaults.styles = StringToVector(*var);
+
+
   if(auto var = padTree.get_optional<bool>("redraw_axes")) mRedrawAxes = *var;
   if(auto var = padTree.get_optional<string>("ref_func")) mRefFunc = *var;
 
@@ -431,7 +518,6 @@ Plot::Pad::Pad(const ptree& padTree)
       mAxes[axis] = std::move(Axis(content.second));
     }
   }
-
 }
 
 //****************************************************************************************
@@ -486,8 +572,19 @@ ptree Plot::Pad::GetPropetyTree()
   if(mText.color) padTree.put("text_color", *mText.color);
   if(mText.size) padTree.put("text_size", *mText.size);
   if(mText.font) padTree.put("text_font", *mText.font);
-  if(mMarkerSize) padTree.put("marker_size", *mMarkerSize);
-  if(mLineWidth) padTree.put("line_width", *mLineWidth);
+  if(mMarkerDefaults.scale) padTree.put("default_marker_size", *mMarkerDefaults.scale);
+  if(mLineDefaults.scale) padTree.put("default_line_width", *mLineDefaults.scale);
+  if(mFillDefaults.scale) padTree.put("default_fill_opacity", *mFillDefaults.scale);
+  
+  if(mMarkerDefaults.colors) padTree.put("default_marker_colors", VectorToString(*mMarkerDefaults.colors));
+  if(mLineDefaults.colors) padTree.put("default_line_colors", VectorToString(*mLineDefaults.colors));
+  if(mFillDefaults.colors) padTree.put("default_fill_colors", VectorToString(*mFillDefaults.colors));
+  if(mMarkerDefaults.styles) padTree.put("default_marker_styles", VectorToString(*mMarkerDefaults.styles));
+  if(mLineDefaults.styles) padTree.put("default_line_styles", VectorToString(*mLineDefaults.styles));
+  if(mFillDefaults.styles) padTree.put("default_fill_styles", VectorToString(*mFillDefaults.styles));
+
+
+
   if(mRedrawAxes) padTree.put("redraw_axes", *mRedrawAxes);
   if(mRefFunc) padTree.put("ref_func", *mRefFunc);
 
@@ -550,8 +647,18 @@ void Plot::Pad::operator+=(const Pad& pad)
   if(pad.mText.font) mText.font = pad.mText.font;
   if(pad.mText.color) mText.color = pad.mText.color;
 
-  if(pad.mMarkerSize) mMarkerSize = pad.mMarkerSize;
-  if(pad.mLineWidth) mLineWidth = pad.mLineWidth;
+  if(pad.mMarkerDefaults.scale) mMarkerDefaults.scale = pad.mMarkerDefaults.scale;
+  if(pad.mLineDefaults.scale) mLineDefaults.scale = pad.mLineDefaults.scale;
+  if(pad.mFillDefaults.scale) mFillDefaults.scale = pad.mFillDefaults.scale;
+  
+  if(pad.mMarkerDefaults.colors) mMarkerDefaults.colors = pad.mMarkerDefaults.colors;
+  if(pad.mLineDefaults.colors) mLineDefaults.colors = pad.mLineDefaults.colors;
+  if(pad.mFillDefaults.colors) mFillDefaults.colors = pad.mFillDefaults.colors;
+  if(pad.mMarkerDefaults.styles) mMarkerDefaults.styles = pad.mMarkerDefaults.styles;
+  if(pad.mLineDefaults.styles) mLineDefaults.styles = pad.mLineDefaults.styles;
+  if(pad.mFillDefaults.styles) mFillDefaults.styles = pad.mFillDefaults.styles;
+
+  
   if(pad.mPalette) mPalette = pad.mPalette;
 
   if(pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
@@ -620,6 +727,39 @@ void Plot::Pad::AddLegend(const string& title, int nColumns, int borderStyle, in
   mBoxes.push_back(std::make_shared<LegendBox>(false, true, 0, 0, borderStyle, borderSize, borderColor, title, nColumns));
 }
 
+//****************************************************************************************
+/**
+ * Helper function to convert vector of integers to string for saving in ptree.
+ */
+//****************************************************************************************
+string Plot::Pad::VectorToString(vector<int16_t> numbers)
+{
+  string numberString;
+  for(auto& number : numbers)
+  {
+    numberString += std::to_string(number);
+    if(&number != &numbers.back()) numberString += ",";
+  }
+  return numberString;
+}
+
+//****************************************************************************************
+/**
+ * Helper function to convert string from ptree to vector of integers.
+ */
+//****************************************************************************************
+vector<int16_t> Plot::Pad::StringToVector(string numberString)
+{
+  // savety in case user put some blank spaces between numbers
+  std::remove_if(numberString.begin(), numberString.end(), ::isspace);
+  vector<int16_t> numbers;
+  string curNumStr;
+  std::istringstream stream(numberString);
+  while(std::getline(stream, curNumStr, ',')) {
+    numbers.push_back(std::stoi(curNumStr));
+  }
+  return numbers;
+}
 
 //----------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------
@@ -772,13 +912,6 @@ auto Plot::Pad::Data::SetMaxRangeY(double_t max) -> decltype(*this)
   mRangeY.max = max;
   return *this;
 }
-auto Plot::Pad::Data::SetColor(int16_t color) -> decltype(*this)
-{
-  mMarker.color = color;
-  mLine.color = color;
-  mFill.color = color;
-  return *this;
-}
 auto Plot::Pad::Data::SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this)
 {
   mMarker.color = color;
@@ -823,10 +956,11 @@ auto Plot::Pad::Data::SetLineWidth(float_t width) -> decltype(*this)
   mLine.scale = width;
   return *this;
 }
-auto Plot::Pad::Data::SetFill(int16_t color, int16_t style) -> decltype(*this)
+auto Plot::Pad::Data::SetFill(int16_t color, int16_t style, float_t opacity) -> decltype(*this)
 {
   mFill.color = color;
   mFill.style = style;
+  SetFillOpacity(opacity);
   return *this;
 }
 auto Plot::Pad::Data::SetFillColor(int16_t color) -> decltype(*this)

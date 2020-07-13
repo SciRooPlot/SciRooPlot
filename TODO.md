@@ -19,9 +19,11 @@ WIP:
 - for 2d -> use SAME0 to avoid axis range change when drawing on top?
 - xErrors!! toggle on and off?
 - predefined styles for the different datatypes (graph,hist,2d)
-- put in some feasible defaults for colors, markers, line styles
 
 Minor Features:
+- for now the color/style index corresponds to the data index. Maybe it could be useful to support independent indices not affected by the user overriding settings for one data??
+- mabye it could even be nice for the user to specify which default color / marker ID to use?? -> feels like a hack...
+- consider adding .SetLineColor(-1), etc. to select properties of previous data (nice feature but feels like a hack...)
 - add nContours as option to pad
 - normalize and scale should use same function
 - use same as previous color/marker/style feature (color = -1)?
