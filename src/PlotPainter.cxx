@@ -384,7 +384,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
 
             if(!markerStyle) markerStyle = (plot[padID].GetDefaultMarkerStyles()) ? std::optional((*plot[padID].GetDefaultMarkerStyles())[(dataIndex-1) % (*plot[padID].GetDefaultMarkerStyles()).size()]) :
               (defaultPad.GetDefaultMarkerStyles()) ? std::optional((*defaultPad.GetDefaultMarkerStyles())[(dataIndex-1) % (*defaultPad.GetDefaultMarkerStyles()).size()]) : std::nullopt;
-            
+
             if(!lineColor) lineColor = (plot[padID].GetDefaultLineColors()) ? std::optional((*plot[padID].GetDefaultLineColors())[(dataIndex-1) % (*plot[padID].GetDefaultLineColors()).size()]) :
               (defaultPad.GetDefaultLineColors()) ? std::optional((*defaultPad.GetDefaultLineColors())[(dataIndex-1) % (*defaultPad.GetDefaultLineColors()).size()]) : std::nullopt;
 
