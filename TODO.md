@@ -12,6 +12,7 @@ FRAMEWORK:
 ----------
 
 WIP:
+- option to set predefined data layout via struct or such
 - allow for multi-column text boxes and make tab width between them a text box property
 - add setters and getters to boxes + fix constructor
 - gStyle->SetPaintTextFormat("4.1f m");

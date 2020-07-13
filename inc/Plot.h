@@ -149,16 +149,21 @@ public:
   auto SetDefaultTextFont(int16_t font)  ->decltype(*this);
 
   auto SetDefaultMarkerSize(float_t size)  ->decltype(*this);
-  auto SetDefaultLineWidth(float_t width)  ->decltype(*this);
-  auto SetDefaultFillOpacity(float_t opacity)  ->decltype(*this);
-
   auto SetDefaultMarkerColors(const vector<int16_t>& colors)  ->decltype(*this);
-  auto SetDefaultLineColors(const vector<int16_t>& colors)  ->decltype(*this);
-  auto SetDefaultFillColors(const vector<int16_t>& colors)  ->decltype(*this);  // TODO: how to handle fill when not wanted??
-
   auto SetDefaultMarkerStyles(const vector<int16_t>& styles)  ->decltype(*this);
+
+  auto SetDefaultLineWidth(float_t width)  ->decltype(*this);
+  auto SetDefaultLineColors(const vector<int16_t>& colors)  ->decltype(*this);
   auto SetDefaultLineStyles(const vector<int16_t>& styles)  ->decltype(*this);
+
+  auto SetDefaultFillOpacity(float_t opacity)  ->decltype(*this);
+  auto SetDefaultFillColors(const vector<int16_t>& colors)  ->decltype(*this);
   auto SetDefaultFillStyles(const vector<int16_t>& styles)  ->decltype(*this);
+  
+  auto SetDefaultDrawingOptionGraph(drawing_options_t drawingOption)  ->decltype(*this);
+  auto SetDefaultDrawingOptionHist(drawing_options_t drawingOption)  ->decltype(*this);
+  auto SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption)  ->decltype(*this);
+
   
   auto SetFill(int16_t color, int16_t style = 1001)  ->decltype(*this);
   auto SetTransparent()  ->decltype(*this);
@@ -221,6 +226,10 @@ protected:
   const optional<vector<int16_t>>& GetDefaultLineStyles() {return mLineDefaults.styles;}
   const optional<vector<int16_t>>& GetDefaultFillStyles() {return mFillDefaults.styles;}
 
+  const optional<drawing_options_t>& GetDefaultDrawingOptionGraph() {return mDrawingOptionDefaults.graph;}
+  const optional<drawing_options_t>& GetDefaultDrawingOptionHist() {return mDrawingOptionDefaults.hist;}
+  const optional<drawing_options_t>& GetDefaultDrawingOptionHist2d() {return mDrawingOptionDefaults.hist2d;}
+
   
   const optional<bool>& GetRedrawAxes(){return mRedrawAxes;}
   const optional<string>& GetRefFunc() {return mRefFunc;}
@@ -259,11 +268,18 @@ private:
     optional<int16_t> color;
   };
   
-  struct data_defaults_t{
+  struct view_defaults_t{
     optional<float_t> scale;
     optional<vector<int16_t>> styles;
     optional<vector<int16_t>> colors;
   };
+  
+  struct data_defaults_t{
+    optional<drawing_options_t> graph;
+    optional<drawing_options_t> hist;
+    optional<drawing_options_t> hist2d;
+  };
+
   
   // properties
   optional<string> mTitle;
@@ -275,12 +291,10 @@ private:
   text_t mText;
   
   // user defined default data representation
-  data_defaults_t mMarkerDefaults;
-  data_defaults_t mLineDefaults;
-  data_defaults_t mFillDefaults;
-  optional<drawing_options_t> mGraphOptionDefault;
-  optional<drawing_options_t> mHistOptionDefault;
-
+  view_defaults_t mMarkerDefaults;
+  view_defaults_t mLineDefaults;
+  view_defaults_t mFillDefaults;
+  data_defaults_t mDrawingOptionDefaults;
 
   optional<int32_t> mPalette;
 

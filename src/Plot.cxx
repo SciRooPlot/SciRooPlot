@@ -319,6 +319,39 @@ auto Plot::Pad::SetDefaultFillStyles(const vector<int16_t>& styles)  ->decltype(
 
 //****************************************************************************************
 /**
+ * Set default fill styles.
+ */
+//****************************************************************************************
+auto Plot::Pad::SetDefaultDrawingOptionGraph(drawing_options_t drawingOption)  ->decltype(*this)
+{
+  mDrawingOptionDefaults.graph = drawingOption;
+  return *this;
+}
+
+//****************************************************************************************
+/**
+ * Set default fill styles.
+ */
+//****************************************************************************************
+auto Plot::Pad::SetDefaultDrawingOptionHist(drawing_options_t drawingOption)  ->decltype(*this)
+{
+  mDrawingOptionDefaults.hist = drawingOption;
+  return *this;
+}
+
+//****************************************************************************************
+/**
+ * Set default fill styles.
+ */
+//****************************************************************************************
+auto Plot::Pad::SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption)  ->decltype(*this)
+{
+  mDrawingOptionDefaults.hist2d = drawingOption;
+  return *this;
+}
+
+//****************************************************************************************
+/**
  * Set fill for this pad.
  */
 //****************************************************************************************
@@ -477,6 +510,10 @@ Plot::Pad::Pad(const ptree& padTree)
   if(auto var = padTree.get_optional<string>("default_line_styles")) mLineDefaults.styles = StringToVector(*var);
   if(auto var = padTree.get_optional<string>("default_fill_styles")) mFillDefaults.styles = StringToVector(*var);
 
+  if(auto var = padTree.get_optional<uint8_t>("default_drawing_option_graph")) mDrawingOptionDefaults.graph = (drawing_options_t)*var;
+  if(auto var = padTree.get_optional<uint8_t>("default_drawing_option_hist")) mDrawingOptionDefaults.hist = (drawing_options_t)*var;
+  if(auto var = padTree.get_optional<uint8_t>("default_drawing_option_hist2d")) mDrawingOptionDefaults.hist2d = (drawing_options_t)*var;
+
 
   if(auto var = padTree.get_optional<bool>("redraw_axes")) mRedrawAxes = *var;
   if(auto var = padTree.get_optional<string>("ref_func")) mRefFunc = *var;
@@ -583,7 +620,11 @@ ptree Plot::Pad::GetPropetyTree()
   if(mLineDefaults.styles) padTree.put("default_line_styles", VectorToString(*mLineDefaults.styles));
   if(mFillDefaults.styles) padTree.put("default_fill_styles", VectorToString(*mFillDefaults.styles));
 
+  if(mDrawingOptionDefaults.graph) padTree.put("default_drawing_option_graph", *mDrawingOptionDefaults.graph);
+  if(mDrawingOptionDefaults.hist) padTree.put("default_drawing_option_hist", *mDrawingOptionDefaults.hist);
+  if(mDrawingOptionDefaults.hist2d) padTree.put("default_drawing_option_hist2d", *mDrawingOptionDefaults.hist2d);
 
+  
 
   if(mRedrawAxes) padTree.put("redraw_axes", *mRedrawAxes);
   if(mRefFunc) padTree.put("ref_func", *mRefFunc);
@@ -658,7 +699,10 @@ void Plot::Pad::operator+=(const Pad& pad)
   if(pad.mLineDefaults.styles) mLineDefaults.styles = pad.mLineDefaults.styles;
   if(pad.mFillDefaults.styles) mFillDefaults.styles = pad.mFillDefaults.styles;
 
-  
+  if(pad.mDrawingOptionDefaults.graph) mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
+  if(pad.mDrawingOptionDefaults.hist) mDrawingOptionDefaults.hist = pad.mDrawingOptionDefaults.hist;
+  if(pad.mDrawingOptionDefaults.hist2d) mDrawingOptionDefaults.hist2d = pad.mDrawingOptionDefaults.hist2d;
+
   if(pad.mPalette) mPalette = pad.mPalette;
 
   if(pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;

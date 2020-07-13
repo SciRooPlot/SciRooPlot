@@ -197,6 +197,11 @@ enum drawing_options_t : uint8_t
   surf,
 };
 
+const map<drawing_options_t, string> defaultDrawingOpions_Hist2d
+{
+  { colz, "COLZ" },
+  { surf, "SURF" },
+};
 
 const map<drawing_options_t, string> defaultDrawingOpions_Hist
 {

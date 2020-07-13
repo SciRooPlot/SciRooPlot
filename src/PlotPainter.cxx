@@ -151,25 +151,35 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
 
           optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
-          if(!data->GetDrawingOptions() && defaultDrawingOption)
+          if(!data->GetDrawingOptions())
           {
-            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
+            // FIXME: avoid code duplication here by implementing this in more clever way
+            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
             {
-              if(defaultDrawingOpions_Hist.find(*defaultDrawingOption) != defaultDrawingOpions_Hist.end())
+              if(!defaultDrawingOption) defaultDrawingOption = (plot[padID].GetDefaultDrawingOptionHist2d()) ? plot[padID].GetDefaultDrawingOptionHist2d() : (defaultPad.GetDefaultDrawingOptionHist2d()) ? defaultPad.GetDefaultDrawingOptionHist2d() : std::nullopt;
+
+              if(defaultDrawingOption && defaultDrawingOpions_Hist2d.find(*defaultDrawingOption) != defaultDrawingOpions_Hist2d.end())
+              {
+                drawingOptions += defaultDrawingOpions_Hist2d.at(*defaultDrawingOption);
+              }
+            }
+            else if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
+            {
+              if(!defaultDrawingOption) defaultDrawingOption = (plot[padID].GetDefaultDrawingOptionHist()) ? plot[padID].GetDefaultDrawingOptionHist() : (defaultPad.GetDefaultDrawingOptionHist()) ? defaultPad.GetDefaultDrawingOptionHist() : std::nullopt;
+
+              if(defaultDrawingOption && defaultDrawingOpions_Hist.find(*defaultDrawingOption) != defaultDrawingOpions_Hist.end())
               {
                 drawingOptions += defaultDrawingOpions_Hist.at(*defaultDrawingOption);
-              }else{
-                WARNING("Default drawing opiton not available for type {}.", data_ptr->ClassName());
               }
             }
             else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>)
             {
-                if(defaultDrawingOpions_Graph.find(*defaultDrawingOption) != defaultDrawingOpions_Graph.end())
-                {
-                  drawingOptions += defaultDrawingOpions_Graph.at(*defaultDrawingOption);
-                }else{
-                  WARNING("Default drawing opiton not available for type {}.", data_ptr->ClassName());
-                }
+              if(!defaultDrawingOption) defaultDrawingOption = (plot[padID].GetDefaultDrawingOptionGraph()) ? plot[padID].GetDefaultDrawingOptionGraph() : (defaultPad.GetDefaultDrawingOptionGraph()) ? defaultPad.GetDefaultDrawingOptionGraph() : std::nullopt;
+
+              if(defaultDrawingOption && defaultDrawingOpions_Graph.find(*defaultDrawingOption) != defaultDrawingOpions_Graph.end())
+              {
+                drawingOptions += defaultDrawingOpions_Graph.at(*defaultDrawingOption);
+              }
             }
           }
 
