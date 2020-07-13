@@ -319,7 +319,7 @@ auto Plot::Pad::SetDefaultFillStyles(const vector<int16_t>& styles)  ->decltype(
 
 //****************************************************************************************
 /**
- * Set default fill styles.
+ * Set default drawing option for graphs.
  */
 //****************************************************************************************
 auto Plot::Pad::SetDefaultDrawingOptionGraph(drawing_options_t drawingOption)  ->decltype(*this)
@@ -330,7 +330,7 @@ auto Plot::Pad::SetDefaultDrawingOptionGraph(drawing_options_t drawingOption)  -
 
 //****************************************************************************************
 /**
- * Set default fill styles.
+ * Set default drawing option for histograms.
  */
 //****************************************************************************************
 auto Plot::Pad::SetDefaultDrawingOptionHist(drawing_options_t drawingOption)  ->decltype(*this)
@@ -341,7 +341,7 @@ auto Plot::Pad::SetDefaultDrawingOptionHist(drawing_options_t drawingOption)  ->
 
 //****************************************************************************************
 /**
- * Set default fill styles.
+ * Set default drawing option for 2d histograms.
  */
 //****************************************************************************************
 auto Plot::Pad::SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption)  ->decltype(*this)
