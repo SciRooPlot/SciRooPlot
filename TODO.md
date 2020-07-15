@@ -11,21 +11,19 @@ ANALYSIS:
 FRAMEWORK:
 ----------
 
-WIP:
+Minor Features:
 - option to set predefined data layout via struct or such
-- allow for multi-column text boxes and make tab width between them a text box property
 - add setters and getters to boxes + fix constructor
 - gStyle->SetPaintTextFormat("4.1f m");
 - for 2d -> use SAME0 to avoid axis range change when drawing on top?
 - xErrors!! toggle on and off?
-
-Minor Features:
 - mabye it could even be nice for the user to specify which default color / marker ID to use?? -> feels like a hack...
 - add nContours as option to pad
 - normalize and scale should use same function
 - use same as previous color/marker/style feature (color = -1)?
 - option in main program to list loaded plots
 - possibility to load all data from input files
+- allow for multi-column text boxes and make tab width between them a text box property
 - is it possible to set the order in multi column tlegends? left-right vs top-bottom
 - possibility to split the legend?
 - think about more placeholders for legends and texts and how to format them

@@ -437,7 +437,7 @@ public:
   virtual ~Ratio() = default;
   Ratio(const Ratio& otherRatio) = default;
 
-  auto SetDivideMethod(const string& divideMethod) -> decltype(*this);
+  auto SetIsCorrelated(bool isCorrelated = true) -> decltype(*this);
 
   // return correct type for the data accessors
   virtual auto SetRangeX(double_t min, double_t max) -> decltype(*this)
@@ -497,13 +497,13 @@ protected:
   string GetDenomName(){return mDenomName;}
   string GetUniqueNameDenom(){return mDenomName + gNameGroupSeparator + mDenomInputIdentifier;}
 
-  const string& GetDivideMethod() {return mDivideMethod;}
+  const bool& GetIsCorrelated() {return mIsCorrelated;}
 
   
 private:
   string mDenomName;
   string mDenomInputIdentifier;
-  string mDivideMethod;  // "tspline3", "binomial", etc.
+  bool mIsCorrelated;
 };
 
 

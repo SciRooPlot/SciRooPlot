@@ -1052,7 +1052,7 @@ auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
  */
 //****************************************************************************************
 Plot::Pad::Ratio::Ratio(const string& name, const string& inputIdentifier, const string& denomName, const string& denomInputIdentifier, const string& lable)
-: Data(name, inputIdentifier, lable), mDenomName(denomName), mDenomInputIdentifier(denomInputIdentifier), mDivideMethod("")
+: Data(name, inputIdentifier, lable), mDenomName(denomName), mDenomInputIdentifier(denomInputIdentifier), mIsCorrelated(false)
 {
   SetType("ratio");
 }
@@ -1067,7 +1067,7 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   try{
     mDenomName = dataTree.get<string>("denomName");
     mDenomInputIdentifier = dataTree.get<string>("denomInputID");
-    mDivideMethod = dataTree.get<string>("divideMethod");
+    mIsCorrelated = dataTree.get<bool>("isCorrelated");
   }catch(...){
     ERROR("Could not construct ratio from ptree.");
   }
@@ -1083,7 +1083,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree()
   ptree dataTree = Data::GetPropertyTree();
   dataTree.put("denomName", mDenomName);
   dataTree.put("denomInputID", mDenomInputIdentifier);
-  dataTree.put("divideMethod", mDivideMethod);
+  dataTree.put("isCorrelated", mIsCorrelated);
   return dataTree;
 }
 
@@ -1092,9 +1092,9 @@ ptree Plot::Pad::Ratio::GetPropertyTree()
  * Specify how the division should be done (spline, biniomial, etc...).
  */
 //****************************************************************************************
-auto Plot::Pad::Ratio::SetDivideMethod(const string& divideMethod) -> decltype(*this)
+auto Plot::Pad::Ratio::SetIsCorrelated(bool isCorrelated) -> decltype(*this)
 {
-  mDivideMethod = divideMethod;
+  mIsCorrelated = isCorrelated;
   return *this;
 }
 

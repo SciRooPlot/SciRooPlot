@@ -195,7 +195,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                 if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
                   if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist>)
                 {
-                  if(!data_ptr->Divide(denom_data_ptr))
+                  string divideOpt = (std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetIsCorrelated()) ? "B" : "";
+                  if(!data_ptr->Divide (data_ptr, denom_data_ptr, 1., 1., divideOpt.data()))
                   {
                     WARNING("Could not divide histograms properly. Trying approximated division using TSpline. Errors will not be fully correct!");
                     DivideTSpline(data_ptr, denom_data_ptr);
