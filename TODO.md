@@ -12,6 +12,7 @@ FRAMEWORK:
 ----------
 
 WIP:
+- remove necissity for FILE_ number in xml to be correct better remove the number completely (?) as this is something the user could do wrong
 - option to set predefined data layout via struct or such
 - allow for multi-column text boxes and make tab width between them a text box property
 - add setters and getters to boxes + fix constructor
@@ -19,16 +20,12 @@ WIP:
 - what should be default drawing style for graphs?
 - for 2d -> use SAME0 to avoid axis range change when drawing on top?
 - xErrors!! toggle on and off?
-- predefined styles for the different datatypes (graph,hist,2d)
 
 Minor Features:
-- for now the color/style index corresponds to the data index. Maybe it could be useful to support independent indices not affected by the user overriding settings for one data??
 - mabye it could even be nice for the user to specify which default color / marker ID to use?? -> feels like a hack...
-- consider adding .SetLineColor(-1), etc. to select properties of previous data (nice feature but feels like a hack...)
 - add nContours as option to pad
 - normalize and scale should use same function
 - use same as previous color/marker/style feature (color = -1)?
-- add another stand-alone app to quickly create and extend input file file
 - option in main program to list loaded plots
 - possibility to load all data from input files
 - is it possible to set the order in multi column tlegends? left-right vs top-bottom

@@ -497,6 +497,8 @@ protected:
   string GetDenomName(){return mDenomName;}
   string GetUniqueNameDenom(){return mDenomName + gNameGroupSeparator + mDenomInputIdentifier;}
 
+  const string& GetDivideMethod() {return mDivideMethod;}
+
   
 private:
   string mDenomName;

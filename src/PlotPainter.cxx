@@ -195,7 +195,11 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                 if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
                   if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist>)
                 {
-                  data_ptr->Divide(denom_data_ptr);
+                  if(!data_ptr->Divide(denom_data_ptr))
+                  {
+                    WARNING("Could not divide histograms properly. Trying approximated division using TSpline. Errors will not be fully correct!");
+                    DivideTSpline(data_ptr, denom_data_ptr);
+                  }
                   if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
                     data_ptr->GetYaxis()->SetTitle("ratio");
                   if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
@@ -204,7 +208,11 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                 if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>)
                   if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_graph_1d>)
                 {
-                  DivideTSpline(data_ptr, denom_data_ptr);
+                  if(!DivideGraphs(data_ptr, denom_data_ptr)) // first try if exact division is possible
+                  {
+                    WARNING("In general Graphs cannot be divided. Trying approximated division using TSpline. Errors will not be fully correct!");
+                    DivideTSpline(data_ptr, denom_data_ptr);
+                  }
                 }
                 delete denom_data_ptr;
                }, *rawDenomData);
@@ -558,14 +566,39 @@ optional<data_ptr_t> PlotPainter::GetDataClone(const string& dataName, TObjArray
 
 //****************************************************************************************
 /**
- * Helper-function dividing two TGraphs
+ * Helper-function dividing two TGraphs.
+ * This is meant only for the rare use case, where the x values of all points are are exactly the same.
+ * In this scenario the values and errors can be calculated exactly. If this condition is not met, the function will return false.
+ */
+//****************************************************************************************
+bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
+{
+  // first check if graphs indeed have the same x values
+  for(int32_t i = 0; i < numerator->GetN(); ++i)
+  {
+    if(numerator->GetX()[i] != denominator->GetX()[i]) return false;
+  }
+  // now divide
+  for(int32_t i = 0; i < numerator->GetN(); ++i)
+  {
+    // FIXME: protect against division by zero
+    numerator->GetY()[i] = numerator->GetY()[i] / denominator->GetY()[i];
+    numerator->GetEY()[i] = numerator->GetEY()[i] / denominator->GetY()[i] + denominator->GetEY()[i] * numerator->GetY()[i] / (denominator->GetY()[i] *  denominator->GetY()[i]);
+  }
+  return true;
+}
+
+
+//****************************************************************************************
+/**
+ * Helper-function dividing two TGraphs.
+ * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the uncertainties are not fully correct!
  */
 //****************************************************************************************
 void PlotPainter::DivideTSpline(TGraph* numerator, TGraph* denominator)
 {
-  //TGraph* result = (TGraph*)numerator->Clone("ratio");
-  TSpline3* denSpline = new TSpline3("denSpline", denominator);
-  
+  TSpline3 denSpline("denSpline", denominator);
+
   int32_t nPoints = numerator->GetN();
   
   double_t *x = numerator->GetX();
@@ -573,35 +606,47 @@ void PlotPainter::DivideTSpline(TGraph* numerator, TGraph* denominator)
   double_t *ey = numerator->GetEY();
   
   for(int32_t i = 0; i < nPoints; ++i) {
-    double_t denomValue = denominator->Eval(x[i], denSpline);
-    y[i] = y[i] / denomValue;
-    ey[i] = 0.;//ey[i] * denomValue; // FIXME: is this correct?
+    double_t denomValue = denominator->Eval(x[i], &denSpline);
+    double_t newValue = 0.;
+    double_t newError = 0.;
+    if(denomValue)
+    {
+      newValue = y[i] / denomValue;
+      newError = ey[i] / denomValue; // Only proxy. Ignoring error of denominator!
+    }
+    y[i] = newValue;
+    ey[i] = newError;
   }
-  //delete denSpline;
-  //return result;
 }
 
 //****************************************************************************************
 /**
- * Helper-function dividing two histograms with different binning.
+ * Helper-function dividing two 1d histograms with different binning.
+ * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the uncertainties are not fully correct!
  */
 //****************************************************************************************
-TH1* PlotPainter::DivideTSpline(TH1* numerator, TH1* denominator)
+void PlotPainter::DivideTSpline(TH1* numerator, TH1* denominator)
 {
   TGraph denominatorGraph(denominator);
   TSpline3 denominatorSpline(denominator);
-  
-  TH1* ratio = (TH1*)numerator->Clone("dummyRatio");
-  ratio->Reset();
-  
+    
   for(int32_t i = 1; i <= numerator->GetNbinsX(); ++i)
   {
     double_t numeratorValue = numerator->GetBinContent(i);
+    double_t numeratorError = numerator->GetBinError(i);
     double_t x = numerator->GetBinCenter(i);
     double_t denomValue = denominatorGraph.Eval(x, &denominatorSpline);
-    if(denomValue) ratio->SetBinContent(i, numeratorValue/denomValue);
+    double_t newValue = 0.;
+    double_t newError = 0.;
+    if(denomValue)
+    {
+      newValue = numeratorValue/denomValue;
+      // uncertainty of denominator is not taken into account (cannot be extracted from spline)
+      newError = numeratorError/denomValue;
+    }
+    numerator->SetBinContent(i, newValue);
+    numerator->SetBinError(i, newError);
   }
-  return ratio;
 }
 
 //****************************************************************************************
