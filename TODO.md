@@ -12,12 +12,10 @@ FRAMEWORK:
 ----------
 
 WIP:
-- remove necissity for FILE_ number in xml to be correct better remove the number completely (?) as this is something the user could do wrong
 - option to set predefined data layout via struct or such
 - allow for multi-column text boxes and make tab width between them a text box property
 - add setters and getters to boxes + fix constructor
 - gStyle->SetPaintTextFormat("4.1f m");
-- what should be default drawing style for graphs?
 - for 2d -> use SAME0 to avoid axis range change when drawing on top?
 - xErrors!! toggle on and off?
 

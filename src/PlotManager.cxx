@@ -115,10 +115,9 @@ void PlotManager::DumpInputDataFiles(const string& configFileName)
   ptree inputFileTree;
   for(auto& inFileTuple : mInputFiles){
     ptree filesOfIdentifier;
-    uint16_t fileID = 1;
-    for(auto& fileName : inFileTuple.second){
-      filesOfIdentifier.put("FILE_" + std::to_string(fileID), fileName);
-      ++fileID;
+    for(auto& fileName : inFileTuple.second)
+    {
+      filesOfIdentifier.add("FILE", fileName);
     }
     inputFileTree.put_child(inFileTuple.first, filesOfIdentifier);
   }
@@ -144,8 +143,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
     string inputIdentifier = inputPair.first;
     vector<string> allFileNames;
     for(auto& file : inputPair.second){
-      string fileName = inputFileTree.get<string>(inputIdentifier + "." + file.first);
-      allFileNames.push_back(fileName);
+      allFileNames.push_back(file.second.get_value<string>());
     }
     AddInputDataFiles(inputIdentifier, allFileNames);
   }
