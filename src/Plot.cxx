@@ -956,6 +956,13 @@ auto Plot::Pad::Data::SetMaxRangeY(double_t max) -> decltype(*this)
   mRangeY.max = max;
   return *this;
 }
+auto Plot::Pad::Data::SetColor(int16_t color) -> decltype(*this)
+{
+  mMarker.color = color;
+  mLine.color = color;
+  mFill.color = color;
+  return *this;
+}
 auto Plot::Pad::Data::SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this)
 {
   mMarker.color = color;

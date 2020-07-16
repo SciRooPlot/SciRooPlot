@@ -334,6 +334,7 @@ public:
   virtual auto SetLegendLable(const string& legendLable) -> decltype(*this);
   virtual auto SetOptions(const string& opions) -> decltype(*this);
   virtual auto SetScaleFactor(double_t scale) -> decltype(*this);
+  virtual auto SetColor(int16_t color) -> decltype(*this);
   virtual auto SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this);
   virtual auto SetMarkerColor(int16_t color) -> decltype(*this);
   virtual auto SetMarkerStyle(int16_t style) -> decltype(*this);
@@ -458,6 +459,8 @@ public:
   {return dynamic_cast<decltype(*this)&>(Data::SetOptions(opions));}
   virtual auto SetScale(double_t scale) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetScaleFactor(scale));}
+  virtual auto SetColor(int16_t color) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetColor(color));}
   virtual auto SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetMarker(color, style, size));}
   virtual auto SetMarkerColor(int16_t color) -> decltype(*this)
