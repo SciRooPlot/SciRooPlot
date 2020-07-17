@@ -53,7 +53,6 @@ public:
   auto SetFill(int16_t color, int16_t style = 1001)  ->decltype(*this);
   auto SetTransparent()  ->decltype(*this);
 
-  
 protected:
   friend class PlotManager;
   friend class PlotPainter;
@@ -77,7 +76,6 @@ protected:
   const optional<int16_t>& GetFillColor(){return mFill.color;}
   const optional<int16_t>& GetFillStyle(){return mFill.style;}
 
-  
 private:
   struct dimension_t{
     optional<int32_t> width;
@@ -89,7 +87,6 @@ private:
     optional<int16_t> style;
   };
 
-  
   string mName;
   string mFigureGroup;
   string mFigureCategory;
@@ -120,7 +117,6 @@ public:
     string name;
     string inputIdentifier;
   };
-
 
   Pad() = default;
   Pad(const ptree &padTree);
@@ -164,7 +160,6 @@ public:
   auto SetDefaultDrawingOptionHist(drawing_options_t drawingOption)  ->decltype(*this);
   auto SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption)  ->decltype(*this);
 
-  
   auto SetFill(int16_t color, int16_t style = 1001)  ->decltype(*this);
   auto SetTransparent()  ->decltype(*this);
 
@@ -230,11 +225,9 @@ protected:
   const optional<drawing_options_t>& GetDefaultDrawingOptionHist() {return mDrawingOptionDefaults.hist;}
   const optional<drawing_options_t>& GetDefaultDrawingOptionHist2d() {return mDrawingOptionDefaults.hist2d;}
 
-  
   const optional<bool>& GetRedrawAxes(){return mRedrawAxes;}
   const optional<string>& GetRefFunc() {return mRefFunc;}
 
-  
 private:
   string VectorToString(vector<int16_t> numbers);
   vector<int16_t> StringToVector(string numberString);
@@ -267,19 +260,16 @@ private:
     optional<int16_t> font;
     optional<int16_t> color;
   };
-  
   struct view_defaults_t{
     optional<float_t> scale;
     optional<vector<int16_t>> styles;
     optional<vector<int16_t>> colors;
   };
-  
   struct data_defaults_t{
     optional<drawing_options_t> graph;
     optional<drawing_options_t> hist;
     optional<drawing_options_t> hist2d;
   };
-
   
   // properties
   optional<string> mTitle;
@@ -305,9 +295,6 @@ private:
   vector<shared_ptr<Data>>  mData;
   vector<shared_ptr<Box>>   mBoxes;
 };
-
-
-
 
 //****************************************************************************************
 /**
@@ -351,7 +338,6 @@ public:
 
   virtual auto SetDefinesFrame() -> decltype(*this);
 
-  
 protected:
   friend class PlotManager;
   friend class PlotPainter;
@@ -416,7 +402,6 @@ private:
     optional<double_t> max;
   };
 
-  
   dataLayout_t mMarker;
   dataLayout_t mLine;
   dataLayout_t mFill;
@@ -502,13 +487,11 @@ protected:
 
   const bool& GetIsCorrelated() {return mIsCorrelated;}
 
-  
 private:
   string mDenomName;
   string mDenomInputIdentifier;
   bool mIsCorrelated;
 };
-
 
 //****************************************************************************************
 /**
@@ -569,7 +552,6 @@ protected:
   optional<double_t> GetMinRange() {return mRange.min;}
   optional<double_t> GetMaxRange() {return mRange.max;}
 
-
   const optional<float_t>& GetTickLength() {return mTickLength;}
   const optional<int32_t>& GetNumDivisions() {return mNumDivisions;}
   const optional<int32_t>& GetMaxDigits() {return mMaxDigits;}
@@ -608,7 +590,6 @@ private:
     optional<float_t> offset;
     optional<bool> center;
   };
-  
   struct axisRange_t{
     optional<double_t> min;
     optional<double_t> max;
@@ -630,9 +611,7 @@ private:
 
   axisTextProperties_t mTitleProperties;
   axisTextProperties_t mLableProperties;
-
 };
-
 
 //****************************************************************************************
 /**
@@ -691,7 +670,6 @@ private:
   double_t mX;
   double_t mY;
 };
-
 
 //****************************************************************************************
 /**

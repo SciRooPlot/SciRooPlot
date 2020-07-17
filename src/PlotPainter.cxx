@@ -252,9 +252,15 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             bool isDrawn = false;
             if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
             {
-              if(drawingOptions.find("Z") != string::npos){
+              if(drawingOptions.find("Z") != string::npos)
+              {
                 data_ptr->Draw(drawingOptions.data()); // z axis is only drawn if specified
-                data_ptr->Reset("ICE"); //reset only integral, contents and errors
+                // reset the axis histogram which now owns the z axis, but keep default range defined by the data
+                double_t zMin = data_ptr->GetMinimum();
+                double_t zMax = data_ptr->GetMaximum();
+                data_ptr->Reset("ICE"); //reset integral, contents and errors
+                data_ptr->SetMinimum(zMin);
+                data_ptr->SetMaximum(zMax);
                 isDrawn = true;
               }
             }
@@ -358,9 +364,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
 
                     axis_ptr->SetRangeUser(rangeMin, rangeMax);
                   }
-                  
                 }
-
               }
               if(textFontTitle)   axis_ptr->SetTitleFont(*textFontTitle);
               if(textFontLable)   axis_ptr->SetLabelFont(*textFontLable);
@@ -370,7 +374,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               if(textSizeLable)   axis_ptr->SetLabelSize(*textSizeLable);
             }
 
-            
             // right after drawing the axis, put reference line if requested
             optional<string> refFunc = (plot[padID].GetRefFunc()) ? plot[padID].GetRefFunc() : plot[0].GetRefFunc();
             if(refFunc)
