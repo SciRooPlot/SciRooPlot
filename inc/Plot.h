@@ -340,6 +340,9 @@ public:
 
   virtual auto SetDefinesFrame() -> decltype(*this);
 
+  auto SetInputID(const string& inputIdentifier) -> decltype(*this) {mInputIdentifier = inputIdentifier; return *this;}
+  const string& GetInputID(){return mInputIdentifier;}
+
 protected:
   friend class PlotManager;
   friend class PlotPainter;
@@ -353,7 +356,6 @@ protected:
 
   const string& GetType(){return mType;}
   const string& GetName() {return mName;}
-  const string& GetInputIdentifier(){return mInputIdentifier;}
   const optional<string>& GetLegendLable(){return mLegendLable;}
     
   const optional<int16_t>& GetMarkerColor(){return mMarker.color;}

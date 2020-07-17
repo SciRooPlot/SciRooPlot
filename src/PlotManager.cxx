@@ -371,9 +371,9 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
       for(auto& data : pad.GetData())
       {
         // if this data entry is not loaded already, add it to required data
-        if(mLoadedData[GetNameRegisterID(data->GetInputIdentifier())].find(GetNameRegisterID(data->GetName())) == mLoadedData[GetNameRegisterID(data->GetInputIdentifier())].end())
+        if(mLoadedData[GetNameRegisterID(data->GetInputID())].find(GetNameRegisterID(data->GetName())) == mLoadedData[GetNameRegisterID(data->GetInputID())].end())
         {
-          requiredData[GetNameRegisterID(data->GetInputIdentifier())].insert(GetNameRegisterID(data->GetName()));
+          requiredData[GetNameRegisterID(data->GetInputID())].insert(GetNameRegisterID(data->GetName()));
         }
         // for ratios also do the same for denominator
         if(data->GetType() == "ratio" && mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomIdentifier())].find(GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomName())) == mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomIdentifier())].end())

@@ -463,7 +463,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             {
               data_ptr->GetYaxis()->SetRangeUser(rangeMinY, rangeMaxY);
               // do not draw the Z axis a second time!
-              std::replace(drawingOptions.begin(),drawingOptions.end(), 'Z', ' ');
+              std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
             }
 
             data_ptr->Draw(drawingOptions.data());
