@@ -12,7 +12,6 @@ FRAMEWORK:
 ----------
 
 Minor Features:
-- option to set predefined data layout via struct or such
 - add setters and getters to boxes + fix constructor
 - gStyle->SetPaintTextFormat("4.1f m");
 - for 2d -> use SAME0 to avoid axis range change when drawing on top?

@@ -141,6 +141,12 @@ using std::shared_ptr;
 using std::variant;
 using std::optional;
 
+using boost::property_tree::ptree;
+using boost::property_tree::write_json;
+using boost::property_tree::read_json;
+using boost::property_tree::write_xml;
+using boost::property_tree::read_xml;
+
 // supported input data types
 using data_ptr_t = variant<TH1*, TH2*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF2*, TF1*>;
 
@@ -155,13 +161,6 @@ using data_ptr_t_graph_2d = variant<TGraph2D*>;
 using data_ptr_t_func = variant<TF1*, TF2*>;
 using data_ptr_t_func_1d = variant<TF1*>;
 using data_ptr_t_func_2d = variant<TF2*>;
-
-
-using boost::property_tree::ptree;
-using boost::property_tree::write_json;
-using boost::property_tree::read_json;
-using boost::property_tree::write_xml;
-using boost::property_tree::read_xml;
 
 const string gNameGroupSeparator = "_IN_";
 

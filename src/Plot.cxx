@@ -909,6 +909,26 @@ ptree Plot::Pad::Data::GetPropertyTree(){
  * User accessors.
  */
 //****************************************************************************************
+auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
+{
+  // apply all properties related to the appearence of the data
+  mDrawingOptions = dataLayout.mDrawingOptions;
+  mDrawingOptionAlias = dataLayout.mDrawingOptionAlias;
+  mRangeX.min = dataLayout.mRangeX.min;
+  mRangeX.max = dataLayout.mRangeX.max;
+  mRangeY.min = dataLayout.mRangeY.min;
+  mRangeY.max = dataLayout.mRangeY.max;
+  mMarker.color = dataLayout.mMarker.color;
+  mMarker.style = dataLayout.mMarker.style;
+  mMarker.scale = dataLayout.mMarker.scale;
+  mLine.color = dataLayout.mLine.color;
+  mLine.style = dataLayout.mLine.style;
+  mLine.scale = dataLayout.mLine.scale;
+  mFill.color = dataLayout.mFill.color;
+  mFill.style = dataLayout.mFill.style;
+  mFill.scale = dataLayout.mFill.scale;
+  return *this;
+}
 auto Plot::Pad::Data::SetLegendLable(const string& legendLable) -> decltype(*this)
 {
   mLegendLable = legendLable;

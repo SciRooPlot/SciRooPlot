@@ -304,14 +304,16 @@ private:
 class Plot::Pad::Data
 {
 public:
+  Data() = default;
 
   // default constructor for user
   Data(const string& name, const string& inputIdentifier, const string& lable = "");
   Data(const ptree &dataTree);
   // copy constructor
-  Data(const Data& otherPlot) = default;
+  Data(const Data& otherData) = default;
 
   // user accessors
+  virtual auto SetLayout(const Data& dataLayout) -> decltype(*this);
   virtual auto SetRangeX(double_t min, double_t max) -> decltype(*this);
   virtual auto SetMaxRangeX(double_t max) -> decltype(*this);
   virtual auto SetMinRangeX(double_t min) -> decltype(*this);
@@ -378,7 +380,6 @@ protected:
   const bool& GetDefinesFrame(){return mDefinesFrame;}
 
 private:
-  Data() = default;
 
   bool mDefinesFrame;
 
@@ -426,6 +427,8 @@ public:
   auto SetIsCorrelated(bool isCorrelated = true) -> decltype(*this);
 
   // return correct type for the data accessors
+  virtual auto SetLayout(const Data& dataLayout) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetLayout(dataLayout));}
   virtual auto SetRangeX(double_t min, double_t max) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetRangeX(min, max));}
   virtual auto SetMaxRangeX(double_t max) -> decltype(*this)
