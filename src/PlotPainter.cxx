@@ -660,6 +660,9 @@ void PlotPainter::DivideTSpline(TH1* numerator, TH1* denominator)
 //****************************************************************************************
 void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<double_t> max)
 {
+  // sort the points first for the following algorithm to work properly
+  graph->Sort();
+
   int16_t pointsToRemoveHigh = 0;
   int16_t pointsToRemoveLow = 0;
   
@@ -682,7 +685,6 @@ void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<
   {
     graph->RemovePoint(0);
   }
-  
 }
 
 //****************************************************************************************
