@@ -128,10 +128,10 @@ public:
   Ratio& AddRatio(const input_t& numerator, const input_t& denominator, const string& lable = "");
 
   
-  // FIXME: These accessors will be simplified and properties like borderStyle etc can be set with extra functions directly on the boxes (as it is for Pad and Data properties)
-  void AddText(double xPos, double yPos, const string& text = "", bool userCoord = false, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
-  void AddLegend(double xPos, double yPos, const string& title = "", bool userCoordinates = false, int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
-  void AddLegend(const string& title = "", int nColumns = 1, int borderStyle = kSolid, int borderSize = 0, int borderColor = kBlack);
+  TextBox& AddText(double xPos, double yPos, const string& text);
+  TextBox& AddText(const string& text);
+  LegendBox& AddLegend(double xPos, double yPos);
+  LegendBox& AddLegend();
 
   inline void SetPadOptions(const string& options){mOptions = options;}
 
@@ -518,37 +518,37 @@ public:
   void operator+=(const Axis& axis);
 
 
-  auto SetTitle(const string& title) ->decltype(*this) {mTitle = title; return *this;}
-  auto SetRange(double_t min, double_t max) ->decltype(*this) {mRange = {min, max}; return *this;}
-  auto SetMaxRange(double_t max) ->decltype(*this) {mRange.max = max; return *this;}
-  auto SetMinRange(double_t min) ->decltype(*this) {mRange.min = min; return *this;}
-  auto SetColor(int16_t color) ->decltype(*this) {mAxisColor = color; mLableProperties.color = color; mTitleProperties.color = color; return *this;}
-  auto SetAxisColor(int16_t color) ->decltype(*this) {mAxisColor = color; return *this;}
-  auto SetNumDivisions(int32_t numDivisions) ->decltype(*this) {mNumDivisions = numDivisions; return *this;}
-  auto SetMaxDigits(int32_t maxDigtis) ->decltype(*this) {mMaxDigits = maxDigtis; return *this;}
+  auto& SetTitle(const string& title) {mTitle = title; return *this;}
+  auto& SetRange(double_t min, double_t max) {mRange = {min, max}; return *this;}
+  auto& SetMaxRange(double_t max) {mRange.max = max; return *this;}
+  auto& SetMinRange(double_t min) {mRange.min = min; return *this;}
+  auto& SetColor(int16_t color) {mAxisColor = color; mLableProperties.color = color; mTitleProperties.color = color; return *this;}
+  auto& SetAxisColor(int16_t color) {mAxisColor = color; return *this;}
+  auto& SetNumDivisions(int32_t numDivisions) {mNumDivisions = numDivisions; return *this;}
+  auto& SetMaxDigits(int32_t maxDigtis) {mMaxDigits = maxDigtis; return *this;}
 
-  auto SetTickLength(float_t tickLength) ->decltype(*this) {mTickLength = tickLength; return *this;}
+  auto& SetTickLength(float_t tickLength) {mTickLength = tickLength; return *this;}
 
-  auto SetTitleFont(int16_t font) ->decltype(*this) {mTitleProperties.font = font; return *this;}
-  auto SetLableFont(int16_t font) ->decltype(*this) {mLableProperties.font = font; return *this;}
+  auto& SetTitleFont(int16_t font) {mTitleProperties.font = font; return *this;}
+  auto& SetLableFont(int16_t font) {mLableProperties.font = font; return *this;}
 
-  auto SetTitleSize(float_t size) ->decltype(*this) {mTitleProperties.size = size; return *this;}
-  auto SetLableSize(float_t size) ->decltype(*this) {mLableProperties.size = size; return *this;}
+  auto& SetTitleSize(float_t size) {mTitleProperties.size = size; return *this;}
+  auto& SetLableSize(float_t size) {mLableProperties.size = size; return *this;}
 
-  auto SetTitleColor(int16_t color) ->decltype(*this) {mTitleProperties.color = color; return *this;}
-  auto SetLableColor(int16_t color) ->decltype(*this) {mLableProperties.color = color; return *this;}
+  auto& SetTitleColor(int16_t color) {mTitleProperties.color = color; return *this;}
+  auto& SetLableColor(int16_t color) {mLableProperties.color = color; return *this;}
 
-  auto SetTitleOffset(float_t offset) ->decltype(*this) {mTitleProperties.offset = offset; return *this;}
-  auto SetLableOffset(float_t offset) ->decltype(*this) {mLableProperties.offset = offset; return *this;}
+  auto& SetTitleOffset(float_t offset) {mTitleProperties.offset = offset; return *this;}
+  auto& SetLableOffset(float_t offset) {mLableProperties.offset = offset; return *this;}
 
-  auto SetTitleCenter(bool center = true) ->decltype(*this) {mTitleProperties.center = center; return *this;}
-  auto SetLableCenter(bool center = true) ->decltype(*this) {mLableProperties.center = center; return *this;}
+  auto& SetTitleCenter(bool center = true) {mTitleProperties.center = center; return *this;}
+  auto& SetLableCenter(bool center = true) {mLableProperties.center = center; return *this;}
 
-  auto SetLog(bool isLog = true) ->decltype(*this) {mIsLog = isLog; return *this;}
-  auto SetGrid(bool isGrid = true) ->decltype(*this) {mIsGrid = isGrid; return *this;}
-  auto SetOppositeTicks(bool isOppositeTicks = true) ->decltype(*this) {mIsOppositeTicks = isOppositeTicks; return *this;}
-  auto SetTimeFormat(const string& timeFormat) ->decltype(*this) {mTimeFormat = timeFormat; return *this;}
-  auto SetTickOrientation(const string& tickOrientation) ->decltype(*this) {mTickOrientation = tickOrientation; return *this;}
+  auto& SetLog(bool isLog = true) {mIsLog = isLog; return *this;}
+  auto& SetGrid(bool isGrid = true) {mIsGrid = isGrid; return *this;}
+  auto& SetOppositeTicks(bool isOppositeTicks = true) {mIsOppositeTicks = isOppositeTicks; return *this;}
+  auto& SetTimeFormat(const string& timeFormat) {mTimeFormat = timeFormat; return *this;}
+  auto& SetTickOrientation(const string& tickOrientation) {mTickOrientation = tickOrientation; return *this;}
   
 protected:
   friend class PlotManager;
@@ -630,25 +630,38 @@ template<class BoxType>
 class Plot::Pad::Box
 {
 public:
-
   Box() =  default;
   Box(const Box& otherBox) = default;
   Box(const ptree &boxTree);
-  Box(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor);
-  
-  auto SetUserCoordinates(bool userCoordinates = true) ->decltype(*this) {mUserCoordinates = userCoordinates; return *this;}
-  
+  Box(double xPos, double yPos);
+
+  BoxType& SetPosition(double_t x, double_t y) {mPos.x = x; mPos.y = y; return *GetThis();}
+  BoxType& SetUserCoordinates(bool userCoordinates = true) {mPos.isUserCoord = userCoordinates; return *GetThis();}
+  BoxType& SetAutoPlacement(bool autoPlacement = true) {mPos.x = std::nullopt; mPos.y = std::nullopt; return *GetThis();}
+  BoxType& SetBorder(int16_t color, int16_t style, float_t width) {mBorder.color = color; return *GetThis();}
+  BoxType& SetBorderColor(int16_t color) {mBorder.color = color; return *GetThis();}
+  BoxType& SetBorderStyle(int16_t style) {mBorder.style = style; return *GetThis();}
+  BoxType& SetBorderWidth(float_t width) {mBorder.scale = width; return *GetThis();}
+  BoxType& SetText(int16_t color, int16_t font, float_t size) {mText.color = color; mText.font = font; mText.size = size; return *GetThis();}
+  BoxType& SetTextColor(int16_t color) {mText.color = color; return *GetThis();}
+  BoxType& SetTextFont(int16_t font) {mText.font = font; return *GetThis();}
+  BoxType& SetTextSize(float_t size) {mText.scale = size; return *GetThis();}
+  BoxType& SetFill(int16_t color, int16_t style, float_t opacity) {mFill.color = color; mFill.style = style; mFill.opacity = opacity; return *GetThis();}
+  BoxType& SetFillColor(int16_t color) {mFill.color = color; return *GetThis();}
+  BoxType& SetFillStyle(int16_t style) {mFill.style = style; return *GetThis();}
+  BoxType& SetFillOpacity(float_t opacity) {mFill.scale = opacity; return *GetThis();}
+  BoxType& SetTransparent() {mFill.style = 0; return *GetThis();}
+  BoxType& SetNoBox() {mFill.style = 0; mBorder.scale = 0.f; return *GetThis();}
+
 protected:
   friend class PlotManager;
   friend class PlotPainter;
   friend class Plot;
 
-  virtual ptree GetPropertyTree();
-  void SetType(const string& type){mType = type;}
-  const string& GetType(){return mType;}
+  ptree GetPropertyTree();
 
-  double_t GetXPosition(){return mX;}
-  double_t GetYPosition(){return mY;}
+  double_t GetXPosition(){return (mPos.x) ? *mPos.x : 0.;}
+  double_t GetYPosition(){return (mPos.y) ? *mPos.y : 0.;}
   optional<int16_t>& GetBorderStyle(){return mBorder.style;}
   optional<float_t>& GetBorderWidth(){return mBorder.scale;}
   optional<int16_t>& GetBorderColor(){return mBorder.color;}
@@ -661,26 +674,30 @@ protected:
   optional<float_t>& GetTextSize(){return mText.scale;}
   optional<int16_t>& GetTextColor(){return mText.color;}
 
-  bool IsUserCoordinates(){return mUserCoordinates;}
-  bool IsAutoPlacement(){return mAutoPlacement;}
+  bool IsUserCoordinates(){return (mPos.isUserCoord) ? *mPos.isUserCoord : false;}
+  bool IsAutoPlacement(){return (!mPos.x || !mPos.y);}
   
 private:
   
+  inline auto GetThis(){return static_cast<BoxType*>(this);}
+    
   struct layout_t{
     optional<int16_t> color;
     optional<int16_t> style;
     optional<float_t> scale;  // marker size , line width, fill opacity
   };
 
-  string mType; // for introspection
+  struct position_t{
+    optional<double_t> x;
+    optional<double_t> y;
+    optional<bool> isUserCoord;
+  };
+
+  position_t mPos;
+  
   layout_t mText;
   layout_t mBorder;
   layout_t mFill;
-
-  bool mUserCoordinates;
-  bool mAutoPlacement;
-  double_t mX; // optional?
-  double_t mY;
 };
 
 //****************************************************************************************
@@ -692,14 +709,16 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 {
 public:
   TextBox(const TextBox& otherTextBox) = default;
+  TextBox(double xPos, double yPos, const string& text)
+  : Box(xPos, yPos), mText{text}
+  {}
+  TextBox(const string& text)
+  : Box(), mText{text}
+  {
+    SetAutoPlacement();
+  }
   virtual ~TextBox() = default;
   
-  TextBox(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor, const string& text)
-  : Box(userCoordinates, autoPlacement, x, y, borderStyle, borderSize, borderColor), mText(text)
-  {
-    SetType("text");
-    // constructor code
-  }
   string GetText(){return mText;}
   void SetText(const string& text) {mText = text;}
   //void SetDelimiter(string delimiter){mDelimiter = delimiter;}
@@ -726,7 +745,6 @@ private:
   string mText;
 };
 
-
 //****************************************************************************************
 /**
  * Representation of a legend box.
@@ -736,17 +754,21 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 {
 public:
   LegendBox(const LegendBox& otherLegendBox) = default;
+  LegendBox(double xPos, double yPos)
+  : Box(xPos, yPos), mTitle{}, mNumColumns{}
+  {}
+  LegendBox()
+  : Box(), mTitle{}, mNumColumns{}
+  {
+    SetAutoPlacement();
+  }
   virtual ~LegendBox() = default;
   
-  LegendBox(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor, string title, int nColumns)
-  : Box(userCoordinates, autoPlacement, x, y, borderStyle, borderSize, borderColor), mTitle(title), mNumColumns(nColumns)
-  {
-    SetType("legend");
-    // constructor code
-  }
-  string& GetTitle(){return mTitle;}
+  auto SetTitle(const string& title) ->decltype(*this) {mTitle = title; return *this;}
+
   int GetNumColumns(){return mNumColumns;}
-  
+  string& GetTitle(){return mTitle;}
+
   ptree GetPropertyTree(){
     ptree boxTree = Box::GetPropertyTree();
     boxTree.put("title", mTitle);

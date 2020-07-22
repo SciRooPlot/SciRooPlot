@@ -747,9 +747,21 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const input_t& numerator, const input_t& d
  * Add text box to this pad.
  */
 //****************************************************************************************
-void Plot::Pad::AddText(double xPos, double yPos, const string& text, bool userCoordinates, int borderStyle, int borderSize, int borderColor)
+Plot::Pad::TextBox& Plot::Pad::AddText(double xPos, double yPos, const string& text)
 {
-  mTextBoxes.push_back(std::make_shared<TextBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, text));
+  mTextBoxes.push_back(std::make_shared<TextBox>(xPos, yPos, text));
+  return *mTextBoxes[mTextBoxes.size()-1];
+}
+
+//****************************************************************************************
+/**
+ * Add text box to this pad automatically find a position for it.
+ */
+//****************************************************************************************
+Plot::Pad::TextBox& Plot::Pad::AddText(const string& text)
+{
+  mTextBoxes.push_back(std::make_shared<TextBox>(text));
+  return *mTextBoxes[mTextBoxes.size()-1];
 }
 
 //****************************************************************************************
@@ -757,21 +769,21 @@ void Plot::Pad::AddText(double xPos, double yPos, const string& text, bool userC
  * Add legend box to this pad.
  */
 //****************************************************************************************
-void Plot::Pad::AddLegend(double xPos, double yPos, const string& title, bool userCoordinates, int nColumns, int borderStyle, int borderSize, int borderColor)
+Plot::Pad::LegendBox& Plot::Pad::AddLegend(double xPos, double yPos)
 {
-  // TODO: add userCoordinates to arguments
-  mLegendBoxes.push_back(std::make_shared<LegendBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, title, nColumns));
+  mLegendBoxes.push_back(std::make_shared<LegendBox>(xPos, yPos));
+  return *mLegendBoxes[mLegendBoxes.size()-1];
 }
 
 //****************************************************************************************
 /**
- * Add legend box to this pad and auto-place it.
+ * Add legend box to this pad and automatically find a position for it.
  */
 //****************************************************************************************
-void Plot::Pad::AddLegend(const string& title, int nColumns, int borderStyle, int borderSize, int borderColor)
+Plot::Pad::LegendBox& Plot::Pad::AddLegend()
 {
-  // TODO: add userCoordinates to arguments
-  mLegendBoxes.push_back(std::make_shared<LegendBox>(false, true, 0, 0, borderStyle, borderSize, borderColor, title, nColumns));
+  mLegendBoxes.push_back(std::make_shared<LegendBox>());
+  return *mLegendBoxes[mLegendBoxes.size()-1];
 }
 
 //****************************************************************************************
@@ -1265,16 +1277,12 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
  */
 //****************************************************************************************
 template <typename BoxType>
-Plot::Pad::Box<BoxType>::Box(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor)
+Plot::Pad::Box<BoxType>::Box(double xPos, double yPos)
 : Box()
 {
-  mType = "none";
-  mUserCoordinates = userCoordinates;
-  mAutoPlacement = autoPlacement;
-  mX = x;
-  mY = y;
+  mPos.x = xPos;
+  mPos.y = yPos;
 }
-
 
 //****************************************************************************************
 /**
@@ -1283,17 +1291,12 @@ Plot::Pad::Box<BoxType>::Box(bool userCoordinates, bool autoPlacement, double x,
 //****************************************************************************************
 template <typename BoxType>
 Plot::Pad::Box<BoxType>::Box(const ptree& boxTree)
+: Box()
 {
-  try{
-    mType = boxTree.get<string>("type");
-    mUserCoordinates = boxTree.get<bool>("userCoordinates");
-    mAutoPlacement = boxTree.get<bool>("autoPlacement");
-    mX = boxTree.get<double>("x");
-    mY = boxTree.get<double>("y");
-  }catch(...){
-    ERROR("Could not construct box from ptree.");
-  }
-  
+  if(auto var = boxTree.get_optional<double_t>("x")) mPos.x = *var;
+  if(auto var = boxTree.get_optional<double_t>("y")) mPos.y = *var;
+  if(auto var = boxTree.get_optional<bool>("userCoordinates")) mPos.isUserCoord = *var;
+
   if(auto var = boxTree.get_optional<int16_t>("border_style")) mBorder.style = *var;
   if(auto var = boxTree.get_optional<float_t>("border_width")) mBorder.scale = *var;
   if(auto var = boxTree.get_optional<int16_t>("border_color")) mBorder.color = *var;
@@ -1314,11 +1317,10 @@ template <typename BoxType>
 ptree Plot::Pad::Box<BoxType>::GetPropertyTree()
 {
   ptree boxTree;
-  boxTree.put("type", mType);
-  boxTree.put("userCoordinates", mUserCoordinates);
-  boxTree.put("autoPlacement", mAutoPlacement);
-  boxTree.put("x", mX);
-  boxTree.put("y", mY);
+  if(mPos.x) boxTree.put("x", *mPos.x);
+  if(mPos.y) boxTree.put("y", *mPos.y);
+  if(mPos.isUserCoord) boxTree.put("userCoordinates", *mPos.isUserCoord);
+
   if(mBorder.style) boxTree.put("border_style", *mBorder.style);
   if(mBorder.scale) boxTree.put("border_width", *mBorder.scale);
   if(mBorder.color) boxTree.put("border_color", *mBorder.color);
@@ -1330,6 +1332,5 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree()
   if(mText.color) boxTree.put("text_color", *mText.color);
   return boxTree;
 };
-
 
 } // end namespace PlottingFramework

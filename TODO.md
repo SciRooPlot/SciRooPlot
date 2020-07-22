@@ -1,16 +1,13 @@
-- check again if auto placement works correct
+Missing Box Features
+- add flexible margins for the boxes
+- maybe better use one vector for all boxes and tag legends via alias or automatically set number (size of vector)
+- Data::SetPreferedLegend()
+- check again if auto placement works correct (also with multiple boxes)
 - add some top right etc position (enum) functionality with modifyable distance to axis
-- default box properties in pad
-- separate box vector in pad
-- ids for boxes
-- Set
-- data.SetPreferedLegend()
-
-
+- ability to set default box properties in pad
+-
 
 Planned Features:
-- streamline legend and text boxes (add setters and getters + fix constructor)
-- possibility to split the legend in separate boxes (add some sort of id)
 - possibility to specify digit format gStyle->SetPaintTextFormat("4.1f m");
 - add setting for nContours in 2d plots
 - normalize and scale should use same function

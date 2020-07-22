@@ -760,278 +760,288 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
  * Function to generate a legend or text box.
  */
 //****************************************************************************************
-TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box, TPad* pad, vector<string> lines, vector<TObject*> legendEntries)
+TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> boxVariant, TPad* pad, vector<string> lines, vector<TObject*> legendEntries)
 {
-  optional<int16_t> textColor = box->GetTextColor();
-  optional<int16_t> textFont  = box->GetTextFont();
-  optional<float_t> textSize  = box->GetTextSize();
-
-  optional<int16_t> borderColor = box->GetBorderColor();
-  optional<int16_t> borderStyle = box->GetBorderStyle();
-  optional<float_t> borderWidth = box->GetBorderWidth();
-
-  optional<int16_t> fillColor   = box->GetFillColor();
-  optional<int16_t> fillStyle   = box->GetFillStyle();
-  optional<float_t> fillOpacity = box->GetFillOpacity();
-
-  bool isLegend = (box->GetType() == "legend");
-  if(!isLegend)
+  TPave* returnBox = nullptr;
+  
+  std::visit([&](auto&& box)
   {
-    // split text string to vector
-    string delimiter = " // ";
-    string text = std::static_pointer_cast<Plot::Pad::TextBox>(box)->GetText();
-    size_t pos = 0;
-    size_t last = 0;
-    std::string token;
-    while ((pos = text.find(delimiter, last)) != std::string::npos)
+    using BoxType = std::decay_t<decltype(*box)>;
+      
+    optional<int16_t> textColor = box->GetTextColor();
+    optional<int16_t> textFont  = box->GetTextFont();
+    optional<float_t> textSize  = box->GetTextSize();
+
+    optional<int16_t> borderColor = box->GetBorderColor();
+    optional<int16_t> borderStyle = box->GetBorderStyle();
+    optional<float_t> borderWidth = box->GetBorderWidth();
+
+    optional<int16_t> fillColor   = box->GetFillColor();
+    optional<int16_t> fillStyle   = box->GetFillStyle();
+    optional<float_t> fillOpacity = box->GetFillOpacity();
+
+    if constexpr (std::is_same_v<BoxType, Plot::Pad::TextBox>)
     {
-      token = text.substr(last, pos-last);
-      lines.push_back(token);
-      last = pos + delimiter.length();
+      // split text string to vector
+      string delimiter = " // ";
+      string text = box->GetText();
+      size_t pos = 0;
+      size_t last = 0;
+      std::string token;
+      while ((pos = text.find(delimiter, last)) != std::string::npos)
+      {
+        token = text.substr(last, pos-last);
+        lines.push_back(token);
+        last = pos + delimiter.length();
+      }
+      lines.push_back(text.substr(last));
     }
-    lines.push_back(text.substr(last));
-  }
 
-  float_t text_size = (textSize) ? *textSize : 24;
-  int16_t text_font = (textFont) ? *textFont : 43;
-  uint8_t nColumns = 1;//box->GetNumColumns();
-  
-  uint16_t nEntries = legendEntries.size();
-  uint16_t nLines = lines.size();
-  //if(!legendBox->GetTitle().empty()) ++nEntries;
-  
-  int32_t padWidthPixel = pad->XtoPixel(pad->GetX2()); // looks correct, but why does it work??
-  int32_t padHeightPixel = pad->YtoPixel(pad->GetY1());
-  
+    float_t text_size = (textSize) ? *textSize : 24;
+    int16_t text_font = (textFont) ? *textFont : 43;
+    uint8_t nColumns = 1;//box->GetNumColumns();
+    
+    uint16_t nEntries = legendEntries.size();
+    uint16_t nLines = lines.size();
+    //if(!legendBox->GetTitle().empty()) ++nEntries;
+    
+    int32_t padWidthPixel = pad->XtoPixel(pad->GetX2()); // looks correct, but why does it work??
+    int32_t padHeightPixel = pad->YtoPixel(pad->GetY1());
+    
 
-  // determine max width and height of legend entries
-  uint8_t iColumn = 0;
-  double_t legendWidthPixel = 0;
-  double_t titleWidthPixel = 0;
-  vector<uint32_t> legendWidthPixelPerColumn(nColumns, 0);
-  double_t legendHeightPixel = 0;
-  //if(!legendBox->GetTitle().empty()) legendTitles.push_back(legendBox->GetTitle());
-  uint8_t iLegend = 1;
-  for(auto& legendTitle : lines)
-  {
-    if(isLegend)
+    // determine max width and height of legend entries
+    uint8_t iColumn = 0;
+    double_t legendWidthPixel = 0;
+    double_t titleWidthPixel = 0;
+    vector<uint32_t> legendWidthPixelPerColumn(nColumns, 0);
+    double_t legendHeightPixel = 0;
+    //if(!legendBox->GetTitle().empty()) legendTitles.push_back(legendBox->GetTitle());
+    uint8_t iLegend = 1;
+    for(auto& legendTitle : lines)
     {
-      // first replace placeholders for content dependent lables
-      if(legendTitle.find("<name>") != string::npos)
+      if constexpr (std::is_same_v<BoxType, Plot::Pad::LegendBox>)
       {
-        string name = ((TNamed*)legendEntries[iLegend-1])->GetName();
-        name = name.substr(0, name.find(gNameGroupSeparator));
-        
-        legendTitle.replace(legendTitle.find("<name>"), string("<name>").size(), name);
+        // first replace placeholders for content dependent lables
+        if(legendTitle.find("<name>") != string::npos)
+        {
+          string name = ((TNamed*)legendEntries[iLegend-1])->GetName();
+          name = name.substr(0, name.find(gNameGroupSeparator));
+          
+          legendTitle.replace(legendTitle.find("<name>"), string("<name>").size(), name);
+        }
+        if(legendTitle.find("<title>") != string::npos)
+        {
+          string title = ((TNamed*)legendEntries[iLegend-1])->GetTitle();
+          legendTitle.replace(legendTitle.find("<title>"), string("<title>").size(), title);
+        }
+        if(legendTitle.find("<entries>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
+        {
+          string entries = std::to_string((double_t)((TH1*)legendEntries[iLegend-1])->GetEntries());
+          legendTitle.replace(legendTitle.find("<entries>"), string("<entries>").size(), entries);
+        }
+        if(legendTitle.find("<integral>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
+        {
+          string integral = std::to_string(((TH1*)legendEntries[iLegend-1])->Integral());
+          legendTitle.replace(legendTitle.find("<integral>"), string("<integral>").size(), integral);
+        }
+        if(legendTitle.find("<mean>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
+        {
+          string mean = std::to_string(((TH1*)legendEntries[iLegend-1])->GetMean());
+          legendTitle.replace(legendTitle.find("<mean>"), string("<mean>").size(), mean);
+        }
+        if(legendTitle.find("<maximum>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
+        {
+          string maximum = std::to_string(((TH1*)legendEntries[iLegend-1])->GetMaximum());
+          legendTitle.replace(legendTitle.find("<maximum>"), string("<maximum>").size(), maximum);
+        }
+        if(legendTitle.find("<minimum>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
+        {
+          string minimum = std::to_string(((TH1*)legendEntries[iLegend-1])->GetMinimum());
+          legendTitle.replace(legendTitle.find("<minimum>"), string("<minimum>").size(), minimum);
+        }
       }
-      if(legendTitle.find("<title>") != string::npos)
-      {
-        string title = ((TNamed*)legendEntries[iLegend-1])->GetTitle();
-        legendTitle.replace(legendTitle.find("<title>"), string("<title>").size(), title);
-      }
-      if(legendTitle.find("<entries>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
-      {
-        string entries = std::to_string((double_t)((TH1*)legendEntries[iLegend-1])->GetEntries());
-        legendTitle.replace(legendTitle.find("<entries>"), string("<entries>").size(), entries);
-      }
-      if(legendTitle.find("<integral>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
-      {
-        string integral = std::to_string(((TH1*)legendEntries[iLegend-1])->Integral());
-        legendTitle.replace(legendTitle.find("<integral>"), string("<integral>").size(), integral);
-      }
-      if(legendTitle.find("<mean>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
-      {
-        string mean = std::to_string(((TH1*)legendEntries[iLegend-1])->GetMean());
-        legendTitle.replace(legendTitle.find("<mean>"), string("<mean>").size(), mean);
-      }
-      if(legendTitle.find("<maximum>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
-      {
-        string maximum = std::to_string(((TH1*)legendEntries[iLegend-1])->GetMaximum());
-        legendTitle.replace(legendTitle.find("<maximum>"), string("<maximum>").size(), maximum);
-      }
-      if(legendTitle.find("<minimum>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
-      {
-        string minimum = std::to_string(((TH1*)legendEntries[iLegend-1])->GetMinimum());
-        legendTitle.replace(legendTitle.find("<minimum>"), string("<minimum>").size(), minimum);
-      }
+      
+      // determine width and height of line to find max width and height (per column)
+      TLatex textLine(0,0, legendTitle.data());
+      textLine.SetTextFont(text_font);
+      textLine.SetTextSize(text_size);
+      auto [width, height] = GetTextDimensions(textLine);
+
+      if(height > legendHeightPixel) legendHeightPixel = height;
+      //if(!legendBox->GetTitle().empty() && iLegend == legendTitles.size())
+      //{
+        //titleWidthPixel = width;
+        //continue;
+      //}
+      if(width > legendWidthPixelPerColumn[iColumn]) legendWidthPixelPerColumn[iColumn] = width;
+      ++iColumn;
+      iColumn %= nColumns;
+      ++iLegend;
     }
-    
-    // determine width and height of line to find max width and height (per column)
-    TLatex textLine(0,0, legendTitle.data());
-    textLine.SetTextFont(text_font);
-    textLine.SetTextSize(text_size);
-    auto [width, height] = GetTextDimensions(textLine);
-
-    if(height > legendHeightPixel) legendHeightPixel = height;
-    //if(!legendBox->GetTitle().empty() && iLegend == legendTitles.size())
-    //{
-      //titleWidthPixel = width;
-      //continue;
-    //}
-    if(width > legendWidthPixelPerColumn[iColumn]) legendWidthPixelPerColumn[iColumn] = width;
-    ++iColumn;
-    iColumn %= nColumns;
-    ++iLegend;
-  }
-  for(auto& length : legendWidthPixelPerColumn) legendWidthPixel += length;
-    
-  uint32_t markerWidthPixel = 0;
-  if(isLegend)
-  {
-    string markerDummyString = "-+-"; // defines width of marker
-    TLatex markerDummy(0,0, markerDummyString.data());
-    markerDummy.SetTextFont(text_font);
-    markerDummy.SetTextSize(text_size);
-    auto [w, h] = GetTextDimensions(markerDummy);
-    markerWidthPixel = w;
-  }
-
-  double_t legendWidthNDC =  (double_t)legendWidthPixel/padWidthPixel;
-  double_t legendHeightNDC =  (double_t)legendHeightPixel/padHeightPixel;
-  double_t markerWidthNDC =  (double_t)markerWidthPixel/padWidthPixel;
-  double_t titleWidthNDC =  (double_t)titleWidthPixel/padWidthPixel;
-  
-  double_t totalWidthNDC = 0.;
-  double_t totalHeightNDC = 0.;
-  double_t marginNDC = 0.01;
-  if(isLegend)
-  {
-    totalWidthNDC = 3*marginNDC + markerWidthNDC + legendWidthNDC;
-    totalHeightNDC = (nLines + 0.5*(nLines+1))* legendHeightNDC / nColumns;
-  }else{
-    totalWidthNDC = 2*marginNDC + legendWidthNDC;
-    totalHeightNDC = (nLines + 0.5*(nLines-1))* legendHeightNDC;
-
-  }
-  
-  if(titleWidthPixel > legendWidthPixel) totalWidthNDC = (0.3333) * markerWidthNDC + titleWidthNDC;
-  
-  double_t upperLeftX = box->GetXPosition();
-  double_t upperLeftY = box->GetYPosition();
-  
-  if(box->IsAutoPlacement())
-  {
-    pad->cd();
-    pad->Update();
-    double_t lowerLeftX = 0;
-    double_t lowerLeftY = 0;
-    double_t fractionOfTickLenght = 0.9;
-    // required distance in pad coordinates of box to objects and tics (set to be 90& of the tick length)
-    double_t marginX = fractionOfTickLenght * gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()) / (pad->GetX2()-pad->GetX1());
-    double_t marginY = fractionOfTickLenght * gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()) / (pad->GetY2()-pad->GetY1());
-    bool foundPosition = false;
-    
-    // draw temporary boxes to exclude areas outside of the coordinate system
-    TBox marginsBottom (pad->GetX1(), pad->GetY1(), pad->GetX2(),pad->GetUymin() + gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()));
-    TBox marginsTop (pad->GetX1(), pad->GetUymax() - gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()), pad->GetX2(),pad->GetY2());
-    TBox marginsLeft (pad->GetX1(), pad->GetY1(), pad->GetUxmin() + gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()), pad->GetY2());
-    TBox marginsRight (pad->GetUxmax() - gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()), pad->GetY1(), pad->GetX2(),pad->GetY2());
-    marginsBottom.Draw("SAME");
-    marginsTop.Draw("SAME");
-    marginsLeft.Draw("SAME");
-    marginsRight.Draw("SAME");
-    
-    // find box position that does not collide with any of the drawn objects
-    for(TObject* o : *pad->GetListOfPrimitives())
+    for(auto& length : legendWidthPixelPerColumn) legendWidthPixel += length;
+      
+    uint32_t markerWidthPixel = 0;
+    if constexpr (std::is_same_v<BoxType, Plot::Pad::LegendBox>)
     {
-      foundPosition = pad->PlaceBox(o, totalWidthNDC + 2*marginX, totalHeightNDC + 2*marginY, lowerLeftX, lowerLeftY);
+      string markerDummyString = "-+-"; // defines width of marker
+      TLatex markerDummy(0,0, markerDummyString.data());
+      markerDummy.SetTextFont(text_font);
+      markerDummy.SetTextSize(text_size);
+      auto [w, h] = GetTextDimensions(markerDummy);
+      markerWidthPixel = w;
     }
-    if(foundPosition)
-    {
-      upperLeftX = lowerLeftX + 2*marginX;
-      upperLeftY = lowerLeftY + totalHeightNDC + 2*marginY;
-    }
-    else{
-      WARNING("Could not find enough space to place the legend properly.");
-      // just place legend within axis ranges of pad
-      upperLeftX = (pad->GetUxmin() - pad->GetX1())/(pad->GetX2()-pad->GetX1()) + (1+1/fractionOfTickLenght)*marginX;
-      upperLeftY = (pad->GetUymax() - pad->GetY1())/(pad->GetY2()-pad->GetY1()) - (1+1/fractionOfTickLenght)*marginY;
-    }
-    // now remove temporary boxes again
-    pad->GetListOfPrimitives()->Remove(&marginsBottom);
-    pad->GetListOfPrimitives()->Remove(&marginsTop);
-    pad->GetListOfPrimitives()->Remove(&marginsLeft);
-    pad->GetListOfPrimitives()->Remove(&marginsRight);
-    //pad->DrawCollideGrid();
-  }
-  else if(box->IsUserCoordinates())
-  {
-    // convert user coordinates to NDC
-    pad->Update();
-    upperLeftX = (upperLeftX - pad->GetX1())/(pad->GetX2()-pad->GetX1());
-    upperLeftY = (upperLeftY - pad->GetY1())/(pad->GetY2()-pad->GetY1());
-  }
-  
-  if(isLegend)
-  {
-    TLegend* legend = new TLegend(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "", "NDC");
-    legend->SetMargin((2*marginNDC + markerWidthNDC)/totalWidthNDC);
-    legend->SetTextAlign(kHAlignLeft+kVAlignCenter);
-    legend->SetNColumns(nColumns);
 
-    legend->SetTextFont(text_font);
-    legend->SetTextSize(text_size);
+    double_t legendWidthNDC =  (double_t)legendWidthPixel/padWidthPixel;
+    double_t legendHeightNDC =  (double_t)legendHeightPixel/padHeightPixel;
+    double_t markerWidthNDC =  (double_t)markerWidthPixel/padWidthPixel;
+    double_t titleWidthNDC =  (double_t)titleWidthPixel/padWidthPixel;
     
-    uint8_t i = 0;
-    for(auto entry : legendEntries)
-    {
-      string drawingOption = entry->GetDrawOption();
-      std::for_each(drawingOption.begin(), drawingOption.end(), [](char & c){c = ::toupper(c);});
-      string drawStyle = "EP";
+    double_t totalWidthNDC = 0.;
+    double_t totalHeightNDC = 0.;
+    double_t marginNDC = 0.01;
 
-      if((entry->InheritsFrom("TF1")) || str_contains(drawingOption, "C")|| str_contains(drawingOption, "L") || str_contains(drawingOption, "HIST"))
+    if constexpr (std::is_same_v<BoxType, Plot::Pad::LegendBox>)
+    {
+      totalWidthNDC = 3*marginNDC + markerWidthNDC + legendWidthNDC;
+      totalHeightNDC = (nLines + 0.5*(nLines+1))* legendHeightNDC / nColumns;
+    }else{
+      totalWidthNDC = 2*marginNDC + legendWidthNDC;
+      totalHeightNDC = (nLines + 0.5*(nLines-1))* legendHeightNDC;
+
+    }
+    
+    if(titleWidthPixel > legendWidthPixel) totalWidthNDC = (0.3333) * markerWidthNDC + titleWidthNDC;
+    
+    double_t upperLeftX = box->GetXPosition();
+    double_t upperLeftY = box->GetYPosition();
+    
+    if(box->IsAutoPlacement())
+    {
+      pad->cd();
+      pad->Update();
+      double_t lowerLeftX = 0;
+      double_t lowerLeftY = 0;
+      double_t fractionOfTickLenght = 0.9;
+      // required distance in pad coordinates of box to objects and tics (set to be 90& of the tick length)
+      double_t marginX = fractionOfTickLenght * gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()) / (pad->GetX2()-pad->GetX1());
+      double_t marginY = fractionOfTickLenght * gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()) / (pad->GetY2()-pad->GetY1());
+      bool foundPosition = false;
+      
+      // draw temporary boxes to exclude areas outside of the coordinate system
+      TBox marginsBottom (pad->GetX1(), pad->GetY1(), pad->GetX2(),pad->GetUymin() + gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()));
+      TBox marginsTop (pad->GetX1(), pad->GetUymax() - gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()), pad->GetX2(),pad->GetY2());
+      TBox marginsLeft (pad->GetX1(), pad->GetY1(), pad->GetUxmin() + gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()), pad->GetY2());
+      TBox marginsRight (pad->GetUxmax() - gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()), pad->GetY1(), pad->GetX2(),pad->GetY2());
+      marginsBottom.Draw("SAME");
+      marginsTop.Draw("SAME");
+      marginsLeft.Draw("SAME");
+      marginsRight.Draw("SAME");
+      
+      // find box position that does not collide with any of the drawn objects
+      for(TObject* o : *pad->GetListOfPrimitives())
       {
-        drawStyle = "L";
+        foundPosition = pad->PlaceBox(o, totalWidthNDC + 2*marginX, totalHeightNDC + 2*marginY, lowerLeftX, lowerLeftY);
       }
-      else if(entry->InheritsFrom("TH1") && (str_contains(drawingOption, "HIST") || str_contains(drawingOption, "B"))  && ((TH1*)entry)->GetFillStyle() != 0)
+      if(foundPosition)
       {
-        drawStyle = "F";
+        upperLeftX = lowerLeftX + 2*marginX;
+        upperLeftY = lowerLeftY + totalHeightNDC + 2*marginY;
       }
-      legend->AddEntry((TH1*)entry, lines[i].data(), drawStyle.data());
-      ++i;
+      else{
+        WARNING("Could not find enough space to place the legend properly.");
+        // just place legend within axis ranges of pad
+        upperLeftX = (pad->GetUxmin() - pad->GetX1())/(pad->GetX2()-pad->GetX1()) + (1+1/fractionOfTickLenght)*marginX;
+        upperLeftY = (pad->GetUymax() - pad->GetY1())/(pad->GetY2()-pad->GetY1()) - (1+1/fractionOfTickLenght)*marginY;
+      }
+      // now remove temporary boxes again
+      pad->GetListOfPrimitives()->Remove(&marginsBottom);
+      pad->GetListOfPrimitives()->Remove(&marginsTop);
+      pad->GetListOfPrimitives()->Remove(&marginsLeft);
+      pad->GetListOfPrimitives()->Remove(&marginsRight);
+      //pad->DrawCollideGrid();
     }
-    
-    if(legend->GetHeader())
+    else if(box->IsUserCoordinates())
     {
-      ((TLegendEntry*)(legend->GetListOfPrimitives()->At(0)))->SetTextFont(text_font);
-      ((TLegendEntry*)(legend->GetListOfPrimitives()->At(0)))->SetTextSize(text_size);
+      // convert user coordinates to NDC
+      pad->Update();
+      upperLeftX = (upperLeftX - pad->GetX1())/(pad->GetX2()-pad->GetX1());
+      upperLeftY = (upperLeftY - pad->GetY1())/(pad->GetY2()-pad->GetY1());
     }
     
-    if(borderStyle) legend->SetLineStyle(*borderStyle);
-    if(borderColor) legend->SetLineColor(*borderColor);
-    if(borderWidth) legend->SetLineWidth(*borderWidth);
-    
-    if(fillStyle) legend->SetFillStyle(*fillStyle);
-    if(fillColor) legend->SetFillColor(*fillColor);
-    if(fillOpacity && fillColor) legend->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
-
-    return legend;
-    
-  } else{
-    
-    TPaveText* paveText = new TPaveText(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "NDC");
-    paveText->SetMargin(marginNDC/totalWidthNDC);
-    paveText->SetTextAlign(kHAlignLeft+kVAlignCenter);
-
-    paveText->SetTextFont(text_font);
-    paveText->SetTextSize(text_size);
-
-    if(borderStyle) paveText->SetLineStyle(*borderStyle);
-    if(borderColor) paveText->SetLineColor(*borderColor);
-    if(borderWidth) paveText->SetLineWidth(*borderWidth);
-    
-    if(fillStyle) paveText->SetFillStyle(*fillStyle);
-    if(fillColor) paveText->SetFillColor(*fillColor);
-    if(fillOpacity && fillColor) paveText->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
-
-    for(auto& line : lines)
+    if constexpr (std::is_same_v<BoxType, Plot::Pad::LegendBox>)
     {
-      TText* text = paveText->AddText(line.data());
-      text->SetTextFont(text_font);
-      text->SetTextSize(text_size);
+      TLegend* legend = new TLegend(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "", "NDC");
+      legend->SetMargin((2*marginNDC + markerWidthNDC)/totalWidthNDC);
+      legend->SetTextAlign(kHAlignLeft+kVAlignCenter);
+      legend->SetNColumns(nColumns);
+
+      legend->SetTextFont(text_font);
+      legend->SetTextSize(text_size);
+      
+      uint8_t i = 0;
+      for(auto entry : legendEntries)
+      {
+        string drawingOption = entry->GetDrawOption();
+        std::for_each(drawingOption.begin(), drawingOption.end(), [](char & c){c = ::toupper(c);});
+        string drawStyle = "EP";
+
+        if((entry->InheritsFrom("TF1")) || str_contains(drawingOption, "C")|| str_contains(drawingOption, "L") || str_contains(drawingOption, "HIST"))
+        {
+          drawStyle = "L";
+        }
+        else if(entry->InheritsFrom("TH1") && (str_contains(drawingOption, "HIST") || str_contains(drawingOption, "B"))  && ((TH1*)entry)->GetFillStyle() != 0)
+        {
+          drawStyle = "F";
+        }
+        legend->AddEntry((TH1*)entry, lines[i].data(), drawStyle.data());
+        ++i;
+      }
+      
+      if(legend->GetHeader())
+      {
+        ((TLegendEntry*)(legend->GetListOfPrimitives()->At(0)))->SetTextFont(text_font);
+        ((TLegendEntry*)(legend->GetListOfPrimitives()->At(0)))->SetTextSize(text_size);
+      }
+      
+      if(borderStyle) legend->SetLineStyle(*borderStyle);
+      if(borderColor) legend->SetLineColor(*borderColor);
+      if(borderWidth) legend->SetLineWidth(*borderWidth);
+      
+      if(fillStyle) legend->SetFillStyle(*fillStyle);
+      if(fillColor) legend->SetFillColor(*fillColor);
+      if(fillOpacity && fillColor) legend->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
+
+      returnBox = (TPave*)legend;
+      
+    } else{
+      
+      TPaveText* paveText = new TPaveText(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "NDC");
+      paveText->SetMargin(marginNDC/totalWidthNDC);
+      paveText->SetTextAlign(kHAlignLeft+kVAlignCenter);
+
+      paveText->SetTextFont(text_font);
+      paveText->SetTextSize(text_size);
+
+      if(borderStyle) paveText->SetLineStyle(*borderStyle);
+      if(borderColor) paveText->SetLineColor(*borderColor);
+      if(borderWidth) paveText->SetLineWidth(*borderWidth);
+      
+      if(fillStyle) paveText->SetFillStyle(*fillStyle);
+      if(fillColor) paveText->SetFillColor(*fillColor);
+      if(fillOpacity && fillColor) paveText->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
+
+      for(auto& line : lines)
+      {
+        TText* text = paveText->AddText(line.data());
+        text->SetTextFont(text_font);
+        text->SetTextSize(text_size);
+      }
+      returnBox = (TPave*)paveText;
     }
-    return paveText;
-  }
+      
+  }, boxVariant);
+    
+  return returnBox;
 }
 
 } // end namespace PlottingFramework
