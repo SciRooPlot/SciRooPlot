@@ -489,29 +489,25 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
       //TPaveText* titleBox = MakeText(std::make_shared<Plot::Pad::TextBox>(false, false, 0.5, 0.98, kSolid, 0., kWhite, padTitle));
       //titleBox->Draw("SAME");
     }
-    // draw text boxes
-    uint8_t legendIndex = 1;
-    uint8_t textIndex = 1;
     // now place legends, textboxes and shapes
-    for(auto& box : pad.GetBoxes())
+    uint8_t legendIndex = 1;
+    for(auto& box : pad.GetLegendBoxes())
     {
-      if(box->GetType() == "legend")
-      {
         string legendName = "LegendBox_" + std::to_string(legendIndex);
         if(lables.empty()) break;
         TPave* legend = GenerateBox(box, pad_ptr, lables, legendEntries);
         legend->SetName(legendName.data());
         legend->Draw("SAME");
         ++legendIndex;
-      }
-      else if(box->GetType() == "text")
-      {
-        string textName = "TextBox_" + std::to_string(textIndex);
-        TPave* text = GenerateBox(box, pad_ptr, {}, {});
-        text->SetName(textName.data());
-        text->Draw("SAME");
-        ++textIndex;
-      }
+    }
+    uint8_t textIndex = 1;
+    for(auto& box : pad.GetTextBoxes())
+    {
+      string textName = "TextBox_" + std::to_string(textIndex);
+      TPave* text = GenerateBox(box, pad_ptr, {}, {});
+      text->SetName(textName.data());
+      text->Draw("SAME");
+      ++textIndex;
     }
 
     bool redrawAxes = (pad.GetRedrawAxes()) ? *pad.GetRedrawAxes() : ((defaultPad.GetRedrawAxes()) ? *defaultPad.GetRedrawAxes() : false);
@@ -764,7 +760,7 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
  * Function to generate a legend or text box.
  */
 //****************************************************************************************
-TPave* PlotPainter::GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vector<string> lines, vector<TObject*> legendEntries)
+TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box, TPad* pad, vector<string> lines, vector<TObject*> legendEntries)
 {
   optional<int16_t> textColor = box->GetTextColor();
   optional<int16_t> textFont  = box->GetTextFont();

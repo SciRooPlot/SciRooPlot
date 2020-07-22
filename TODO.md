@@ -1,3 +1,13 @@
+- check again if auto placement works correct
+- add some top right etc position (enum) functionality with modifyable distance to axis
+- default box properties in pad
+- separate box vector in pad
+- ids for boxes
+- Set
+- data.SetPreferedLegend()
+
+
+
 Planned Features:
 - streamline legend and text boxes (add setters and getters + fix constructor)
 - possibility to split the legend in separate boxes (add some sort of id)
@@ -42,5 +52,5 @@ Structural:
 - change arguments referring to internal variables to const ref if possible to be more memory efficient, use lambdas
 - add (copy-, move-) constructors and destructors; make sure all variables are initialized properly
 
-
+- fully grasp the difference between emplace_back and push_back in terms of copy/move: why does push_back not work for variants?
 

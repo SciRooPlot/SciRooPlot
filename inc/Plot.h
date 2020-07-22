@@ -109,7 +109,7 @@ public:
   class Data;
   class Ratio;
   class Axis;
-  class Box;
+  template<class BoxType> class Box;
   class TextBox;
   class LegendBox;
 
@@ -178,7 +178,8 @@ protected:
   ptree GetPropetyTree();
 
   vector<shared_ptr<Data>>& GetData(){return mData;}
-  vector<shared_ptr<Box>>& GetBoxes(){return mBoxes;}
+  vector<shared_ptr<LegendBox>>& GetLegendBoxes(){return mLegendBoxes;}
+  vector<shared_ptr<TextBox>>& GetTextBoxes(){return mTextBoxes;}
 
   const map<string, Axis>& GetAxes(){return mAxes;}
 
@@ -293,7 +294,9 @@ private:
 
   map<string, Axis> mAxes;
   vector<shared_ptr<Data>>  mData;
-  vector<shared_ptr<Box>>   mBoxes;
+
+  vector<shared_ptr<LegendBox>>  mLegendBoxes;
+  vector<shared_ptr<TextBox>>  mTextBoxes;
 };
 
 //****************************************************************************************
@@ -623,13 +626,17 @@ private:
  * Representation of a box.
  */
 //****************************************************************************************
-class Plot::Pad::Box {
+template<class BoxType>
+class Plot::Pad::Box
+{
 public:
 
   Box() =  default;
   Box(const Box& otherBox) = default;
   Box(const ptree &boxTree);
   Box(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor);
+  
+  auto SetUserCoordinates(bool userCoordinates = true) ->decltype(*this) {mUserCoordinates = userCoordinates; return *this;}
   
 protected:
   friend class PlotManager;
@@ -672,7 +679,7 @@ private:
 
   bool mUserCoordinates;
   bool mAutoPlacement;
-  double_t mX;
+  double_t mX; // optional?
   double_t mY;
 };
 
@@ -681,7 +688,8 @@ private:
  * Representation of a text box.
  */
 //****************************************************************************************
-class Plot::Pad::TextBox : public Plot::Pad::Box {
+class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
+{
 public:
   TextBox(const TextBox& otherTextBox) = default;
   virtual ~TextBox() = default;
@@ -724,7 +732,8 @@ private:
  * Representation of a legend box.
  */
 //****************************************************************************************
-class Plot::Pad::LegendBox : public Plot::Pad::Box {
+class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
+{
 public:
   LegendBox(const LegendBox& otherLegendBox) = default;
   virtual ~LegendBox() = default;

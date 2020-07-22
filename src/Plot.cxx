@@ -533,19 +533,14 @@ Plot::Pad::Pad(const ptree& padTree)
         mData.push_back(std::make_shared<Ratio>(content.second));
       }
     }
-    
-    // add boxes
-    if(content.first.find("BOX") != string::npos)
+
+    if(content.first.find("LEGEND") != string::npos)
     {
-      string type = content.second.get<string>("type");
-      if(type == "legend")
-      {
-        mBoxes.push_back(std::make_shared<LegendBox>(content.second));
-      }
-      if(type == "text")
-      {
-        mBoxes.push_back(std::make_shared<TextBox>(content.second));
-      }
+      mLegendBoxes.push_back(std::make_shared<LegendBox>(content.second));
+    }
+    if(content.first.find("TEXT") != string::npos)
+    {
+      mTextBoxes.push_back(std::make_shared<TextBox>(content.second));
     }
     
     // add axes
@@ -636,12 +631,19 @@ ptree Plot::Pad::GetPropetyTree()
     ++dataID;
   }
 
-  int boxID = 1;
-  for(auto& box : mBoxes)
+  int legendBoxID = 1;
+  for(auto& legendBox : mLegendBoxes)
   {
-    padTree.put_child("BOX_" + std::to_string(boxID), box->GetPropertyTree());
-    ++boxID;
+    padTree.put_child("LEGEND_" + std::to_string(legendBoxID), legendBox->GetPropertyTree());
+    ++legendBoxID;
   }
+  int textBoxID = 1;
+  for(auto& textBox : mTextBoxes)
+  {
+    padTree.put_child("TEXT_" + std::to_string(textBoxID), textBox->GetPropertyTree());
+    ++textBoxID;
+  }
+
     
   for(auto& axis : {"X", "Y", "Z"})
   {
@@ -714,7 +716,8 @@ void Plot::Pad::operator+=(const Pad& pad)
     mAxes[axisLable] += axis;
   }
   mData = pad.mData; // this does not copy the data itself, which might become a problem at some point
-  mBoxes = pad.mBoxes;
+  mLegendBoxes = pad.mLegendBoxes;
+  mTextBoxes = pad.mTextBoxes;
 }
 
 //****************************************************************************************
@@ -746,7 +749,7 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const input_t& numerator, const input_t& d
 //****************************************************************************************
 void Plot::Pad::AddText(double xPos, double yPos, const string& text, bool userCoordinates, int borderStyle, int borderSize, int borderColor)
 {
-  mBoxes.push_back(std::make_shared<TextBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, text));
+  mTextBoxes.push_back(std::make_shared<TextBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, text));
 }
 
 //****************************************************************************************
@@ -757,7 +760,7 @@ void Plot::Pad::AddText(double xPos, double yPos, const string& text, bool userC
 void Plot::Pad::AddLegend(double xPos, double yPos, const string& title, bool userCoordinates, int nColumns, int borderStyle, int borderSize, int borderColor)
 {
   // TODO: add userCoordinates to arguments
-  mBoxes.push_back(std::make_shared<LegendBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, title, nColumns));
+  mLegendBoxes.push_back(std::make_shared<LegendBox>(userCoordinates, false, xPos, yPos, borderStyle, borderSize, borderColor, title, nColumns));
 }
 
 //****************************************************************************************
@@ -768,7 +771,7 @@ void Plot::Pad::AddLegend(double xPos, double yPos, const string& title, bool us
 void Plot::Pad::AddLegend(const string& title, int nColumns, int borderStyle, int borderSize, int borderColor)
 {
   // TODO: add userCoordinates to arguments
-  mBoxes.push_back(std::make_shared<LegendBox>(false, true, 0, 0, borderStyle, borderSize, borderColor, title, nColumns));
+  mLegendBoxes.push_back(std::make_shared<LegendBox>(false, true, 0, 0, borderStyle, borderSize, borderColor, title, nColumns));
 }
 
 //****************************************************************************************
@@ -1261,7 +1264,8 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
  * Constructor of Box
  */
 //****************************************************************************************
-Plot::Pad::Box::Box(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor)
+template <typename BoxType>
+Plot::Pad::Box<BoxType>::Box(bool userCoordinates, bool autoPlacement, double x, double y, int borderStyle, int borderSize, int borderColor)
 : Box()
 {
   mType = "none";
@@ -1277,7 +1281,8 @@ Plot::Pad::Box::Box(bool userCoordinates, bool autoPlacement, double x, double y
  * Construct box from property tree.
  */
 //****************************************************************************************
-Plot::Pad::Box::Box(const ptree& boxTree)
+template <typename BoxType>
+Plot::Pad::Box<BoxType>::Box(const ptree& boxTree)
 {
   try{
     mType = boxTree.get<string>("type");
@@ -1305,7 +1310,8 @@ Plot::Pad::Box::Box(const ptree& boxTree)
  * Get property tree representation of box.
  */
 //****************************************************************************************
-ptree Plot::Pad::Box::GetPropertyTree()
+template <typename BoxType>
+ptree Plot::Pad::Box<BoxType>::GetPropertyTree()
 {
   ptree boxTree;
   boxTree.put("type", mType);

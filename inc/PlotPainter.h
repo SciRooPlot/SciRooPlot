@@ -58,7 +58,7 @@ private:
     kOpenDiamond, kOpenStar};
 
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text);
-  TPave* GenerateBox(shared_ptr<Plot::Pad::Box> box, TPad* pad, vector<string> lines, vector<TObject*> legendEntries);
+  TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box, TPad* pad, vector<string> lines, vector<TObject*> legendEntries);
 };
 } // end namespace PlottingFramework
 #endif /* PlotGenerator_h */
