@@ -48,10 +48,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
   for(auto& [padID, pad]: plot.GetPads())
   {
     if(padID == 0) continue; // pad 0 is used only to define the defaults
-
-    string padOptions = (pad.GetOptions()) ? *pad.GetOptions() : "";
     
-    vector<string> errorStyles;
     vector<string> lables;
     vector<TObject*> legendEntries;
     
@@ -87,11 +84,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     optional<float_t> markerSizeDefault = (pad.GetDefaultMarkerSize()) ? pad.GetDefaultMarkerSize() : defaultPad.GetDefaultMarkerSize();
     optional<float_t> lineWidthDefault  = (pad.GetDefaultLineWidth())  ? pad.GetDefaultLineWidth()  : defaultPad.GetDefaultLineWidth();
 
-    //bool autoSelectMarkerColor = (pad.GetAutoSelectMarkerColor()) ? *pad.GetAutoSelectMarkerColor() : (defaultPad.GetAutoSelectMarkerColor()) ? *defaultPad.GetAutoSelectMarkerColor() : false;
-
-    //bool autoSelectLineColor = (pad.GetAutoSelectLineColor()) ? *pad.GetAutoSelectLineColor() : (defaultPad.GetAutoSelectLineColor()) ? *defaultPad.GetAutoSelectLineColor() : false;
-    
-    
     string padTitle = (pad.GetTitle()) ? *pad.GetTitle() : (defaultPad.GetTitle()) ? *defaultPad.GetTitle() : "";
     
     canvas_ptr->cd();
@@ -468,11 +460,15 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
 
             data_ptr->Draw(drawingOptions.data());
             
-            // in case a lable was specified for the data, remember this for later
-            if (data->GetLegendLable() && !(*data->GetLegendLable()).empty()) {
+            // in case a lable was specified for the data, add it to corresponding legend
+            if (data->GetLegendLable() && !(*data->GetLegendLable()).empty())
+            {
+              // data->GetLegendID()
+              // if it exists, fall back to first legend
+              // plot[padID].GetLegendBoxes();
+              // lable.AddEntry({data->GetName(), data->GetInputID()});
               lables.push_back(*data->GetLegendLable());
               legendEntries.push_back(pad_ptr->GetListOfPrimitives()->Last());
-              errorStyles.push_back(drawingOptions);
             }
             pad_ptr->Update(); // adds something to the list of primitives
           }
@@ -799,7 +795,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     float_t text_size = (textSize) ? *textSize : 24;
     int16_t text_font = (textFont) ? *textFont : 43;
-    uint8_t nColumns = 1;//box->GetNumColumns();
+    uint8_t nColumns = 1; //(box->GetNumColumns()) ? *box->GetNumColumns() : 1;
     
     uint16_t nEntries = legendEntries.size();
     uint16_t nLines = lines.size();
@@ -993,7 +989,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         {
           drawStyle = "F";
         }
-        legend->AddEntry((TH1*)entry, lines[i].data(), drawStyle.data());
+        //legend->AddEntry((TH1*)entry, lines[i].data(), drawStyle.data());
+        legend->AddEntry(((TH1*)entry)->GetName(), lines[i].data(), drawStyle.data());
         ++i;
       }
       

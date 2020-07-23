@@ -49,6 +49,19 @@ Plot::Plot(const string& name, const string& figureGroup, const string& plotTemp
 
 //****************************************************************************************
 /**
+ * Constructor from existing plot.
+ */
+//****************************************************************************************
+Plot::Plot(Plot& otherPlot, const string& name, const string& plotGroup)
+{
+  //*this = otherPlot;
+  *this = otherPlot.GetDeepCopy();
+  this->mName = name;
+  this->mFigureGroup = plotGroup;
+}
+
+//****************************************************************************************
+/**
  * Constructor from property tree.
  */
 //****************************************************************************************
@@ -106,6 +119,34 @@ ptree Plot::GetPropetyTree()
   return plotTree;
 }
 
+//****************************************************************************************
+/**
+ * Make a deep copy of the Plot where also data and boxes are copied.
+ */
+//****************************************************************************************
+Plot Plot::GetDeepCopy()
+{
+  Plot newPlot = *this;
+  for(auto& [padID, pad] : this->GetPads())
+  {
+    newPlot[padID].GetData().clear();
+    for(auto data_ptr : pad.GetData())
+    {
+      newPlot[padID].GetData().push_back(data_ptr->Clone());
+    }
+    newPlot[padID].GetLegendBoxes().clear();
+    for(auto legend_ptr : pad.GetLegendBoxes())
+    {
+      newPlot[padID].GetLegendBoxes().push_back(std::make_shared<Plot::Pad::LegendBox>(*legend_ptr));
+    }
+    newPlot[padID].GetTextBoxes().clear();
+    for(auto text_ptr : pad.GetTextBoxes())
+    {
+      newPlot[padID].GetTextBoxes().push_back(std::make_shared<Plot::Pad::TextBox>(*text_ptr));
+    }
+  }
+  return newPlot;
+}
 
 //****************************************************************************************
 /**
@@ -557,21 +598,74 @@ Plot::Pad::Pad(const ptree& padTree)
  * Access operator for pad axis.
  */
 //****************************************************************************************
-
-Plot::Pad::Axis& Plot::Pad::operator[](string axis)
+Plot::Pad::Axis& Plot::Pad::operator[](const string& axis)
 {
-  std::transform(axis.begin(), axis.end(),axis.begin(), ::toupper);
-  vector<string> allowedAxes = {"X", "Y", "Z"};
+  return GetAxis(axis);
+}
+
+//****************************************************************************************
+/**
+ * Access function for pad axis.
+ */
+//****************************************************************************************
+Plot::Pad::Axis& Plot::Pad::GetAxis(const string& axis)
+{
+  const vector<string> allowedAxes = {"X", "Y", "Z"};
   if(std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end())
   {
-    ERROR("Axis \"{}\" is not allowed! Falling back to \"X\".", axis);
-    axis = "X";
+    ERROR("Axis \"{}\" is not allowed! Please use \"X\", \"Y\" or \"Z\".", axis);
+    std::exit(EXIT_FAILURE);
   }
   if(mAxes.find(axis) == mAxes.end())
   {
     mAxes[axis] = Axis(axis);
   }
   return mAxes[axis];
+}
+
+//****************************************************************************************
+/**
+ * Access function for pad data.
+ */
+//****************************************************************************************
+Plot::Pad::Data& Plot::Pad::GetData(uint8_t dataID)
+{
+  if(dataID < 1 || dataID > mData.size())
+  {
+    ERROR("Data with ID {} is not defined! You can access only data that was already added to the pad.", dataID);
+    std::exit(EXIT_FAILURE);
+  }
+  return *mData[dataID-1];
+}
+
+//****************************************************************************************
+/**
+ * Access function for pad legends.
+ */
+//****************************************************************************************
+Plot::Pad::LegendBox& Plot::Pad::GetLegend(uint8_t legendID)
+{
+  if(legendID < 1 || legendID > mLegendBoxes.size())
+  {
+    ERROR("Legend with ID {} is not defined! You can access only legends that have already been added to the pad.", legendID);
+    std::exit(EXIT_FAILURE);
+  }
+  return *mLegendBoxes[legendID-1];
+}
+
+//****************************************************************************************
+/**
+ * Access function for pad axis.
+ */
+//****************************************************************************************
+Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
+{
+  if(textID < 1 || textID > mTextBoxes.size())
+  {
+    ERROR("Text with ID {} is not defined! You can access only texts that have already been added to the pad.", textID);
+    std::exit(EXIT_FAILURE);
+  }
+  return *mTextBoxes[textID-1];
 }
 
 //****************************************************************************************
@@ -1234,33 +1328,26 @@ ptree Plot::Pad::Axis::GetPropertyTree(){
 void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
 {
   mName = axis.mName;
-
   if(axis.mRange.min) mRange.min = axis.mRange.min;
   if(axis.mRange.max) mRange.max = axis.mRange.max;
-
   if(axis.mTitle) mTitle = axis.mTitle;
   if(axis.mNumDivisions) mNumDivisions = axis.mNumDivisions;
-
   if(axis.mMaxDigits) mMaxDigits = axis.mMaxDigits;
   if(axis.mTickLength) mTickLength = axis.mTickLength;
   if(axis.mAxisColor) mAxisColor = axis.mAxisColor;
-
   if(axis.mIsLog) mIsLog = axis.mIsLog;
   if(axis.mIsGrid) mIsGrid = axis.mIsGrid;
   if(axis.mIsOppositeTicks) mIsOppositeTicks = axis.mIsOppositeTicks;
-
   if(axis.mTitleProperties.font) mTitleProperties.font = axis.mTitleProperties.font;
   if(axis.mTitleProperties.size) mTitleProperties.size = axis.mTitleProperties.size;
   if(axis.mTitleProperties.color) mTitleProperties.color = axis.mTitleProperties.color;
   if(axis.mTitleProperties.offset) mTitleProperties.offset = axis.mTitleProperties.offset;
   if(axis.mTitleProperties.center) mTitleProperties.center = axis.mTitleProperties.center;
-
   if(axis.mLableProperties.font) mLableProperties.font = axis.mLableProperties.font;
   if(axis.mLableProperties.size) mLableProperties.size = axis.mLableProperties.size;
   if(axis.mLableProperties.color) mLableProperties.color = axis.mLableProperties.color;
   if(axis.mLableProperties.offset) mLableProperties.offset = axis.mLableProperties.offset;
   if(axis.mLableProperties.center) mLableProperties.center = axis.mLableProperties.center;
-
   if(axis.mTimeFormat) mTimeFormat = axis.mTimeFormat;
   if(axis.mTickOrientation) mTickOrientation = axis.mTickOrientation;
 }
@@ -1296,7 +1383,6 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree)
   if(auto var = boxTree.get_optional<double_t>("x")) mPos.x = *var;
   if(auto var = boxTree.get_optional<double_t>("y")) mPos.y = *var;
   if(auto var = boxTree.get_optional<bool>("userCoordinates")) mPos.isUserCoord = *var;
-
   if(auto var = boxTree.get_optional<int16_t>("border_style")) mBorder.style = *var;
   if(auto var = boxTree.get_optional<float_t>("border_width")) mBorder.scale = *var;
   if(auto var = boxTree.get_optional<int16_t>("border_color")) mBorder.color = *var;
@@ -1320,7 +1406,6 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree()
   if(mPos.x) boxTree.put("x", *mPos.x);
   if(mPos.y) boxTree.put("y", *mPos.y);
   if(mPos.isUserCoord) boxTree.put("userCoordinates", *mPos.isUserCoord);
-
   if(mBorder.style) boxTree.put("border_style", *mBorder.style);
   if(mBorder.scale) boxTree.put("border_width", *mBorder.scale);
   if(mBorder.color) boxTree.put("border_color", *mBorder.color);
@@ -1566,12 +1651,8 @@ Plot::Pad::LegendBox::LegendBox()
 Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree)
 : Box(legendBoxTree)
 {
-  try{
-    mTitle = legendBoxTree.get<string>("title");
-    mNumColumns = legendBoxTree.get<int>("numColumns");
-  }catch(...){
-    ERROR("Could not construct legendbox from ptree.");
-  }
+  if(auto var = legendBoxTree.get_optional<string>("title")) mTitle = *var;
+  if(auto var = legendBoxTree.get_optional<uint8_t>("numColumns")) mNumColumns = *var;
 }
 
 //****************************************************************************************
@@ -1581,10 +1662,10 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree)
 //****************************************************************************************
 ptree Plot::Pad::LegendBox::GetPropertyTree()
 {
-  ptree boxTree = Box::GetPropertyTree();
-  boxTree.put("title", mTitle);
-  boxTree.put("numColumns", mNumColumns);
-  return boxTree;
+  ptree legendBoxTree = Box::GetPropertyTree();
+  if(mTitle) legendBoxTree.put("title", *mTitle);
+  if(mNumColumns) legendBoxTree.put("numColumns", *mNumColumns);
+  return legendBoxTree;
 };
 
 //****************************************************************************************

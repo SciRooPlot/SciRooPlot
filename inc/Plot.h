@@ -36,10 +36,12 @@ public:
   Plot(const ptree& plotTree);
   Plot(const string& name, const string& figureGroup, const string& plotTemplateName = "");
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
+  Pad& GetPad(uint8_t padID) { return mPads[padID]; }
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& templatePlot, const Plot& plot);
 
-  Plot(const Plot& plotTemplate, const string& name, const string& plotGroup) {*this = plotTemplate; this->mName = name; this->mFigureGroup = plotGroup;}
+  Plot(Plot& otherPlot, const string& name, const string& plotGroup);
+  Plot GetDeepCopy();
 
   // accessors for user
   inline void SetFigureCategory(const string& figureCategory){mFigureCategory = figureCategory;}
@@ -120,20 +122,22 @@ public:
 
   Pad() = default;
   Pad(const ptree &padTree);
-  Axis& operator[](string axis);
+  Axis& operator[](const string& axis);
   void operator+=(const Pad& pad);
   
   // User accessors:
   Data& AddData(const input_t& input, const string& lable = "");
   Ratio& AddRatio(const input_t& numerator, const input_t& denominator, const string& lable = "");
 
-  
   TextBox& AddText(double xPos, double yPos, const string& text);
   TextBox& AddText(const string& text);
   LegendBox& AddLegend(double xPos, double yPos);
   LegendBox& AddLegend();
 
-  inline void SetPadOptions(const string& options){mOptions = options;}
+  Axis& GetAxis(const string& axis);
+  Data& GetData(uint8_t dataID);
+  LegendBox& GetLegend(uint8_t legendID);
+  TextBox& GetText(uint8_t textID);
 
   auto SetTitle(const string& title)  ->decltype(*this);
   auto SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup) ->decltype(*this);
@@ -184,7 +188,6 @@ protected:
   const map<string, Axis>& GetAxes(){return mAxes;}
 
   const optional<string>& GetTitle(){return mTitle;}
-  const optional<string>& GetOptions(){return mOptions;}
 
   const optional<double_t>& GetXLow(){return mPosition.xlow;}
   const optional<double_t>& GetYLow(){return mPosition.ylow;}
@@ -351,6 +354,11 @@ protected:
   friend class PlotPainter;
   friend class Plot;
 
+  virtual std::shared_ptr<Data> Clone() const
+  {
+      return std::make_shared<Data>(*this);
+  }
+  
   virtual ptree GetPropertyTree();
 
   void SetType(const string& type){mType = type;}
@@ -488,6 +496,11 @@ protected:
   friend class PlotPainter;
   friend class Plot;
 
+  virtual std::shared_ptr<Data> Clone() const
+  {
+      return std::make_shared<Data>(*this);
+  }
+
   ptree GetPropertyTree();
   string GetDenomIdentifier(){return mDenomInputIdentifier;}
   string GetDenomName(){return mDenomName;}
@@ -517,38 +530,30 @@ public:
   
   void operator+=(const Axis& axis);
 
-
-  auto& SetTitle(const string& title) {mTitle = title; return *this;}
-  auto& SetRange(double_t min, double_t max) {mRange = {min, max}; return *this;}
-  auto& SetMaxRange(double_t max) {mRange.max = max; return *this;}
-  auto& SetMinRange(double_t min) {mRange.min = min; return *this;}
-  auto& SetColor(int16_t color) {mAxisColor = color; mLableProperties.color = color; mTitleProperties.color = color; return *this;}
-  auto& SetAxisColor(int16_t color) {mAxisColor = color; return *this;}
-  auto& SetNumDivisions(int32_t numDivisions) {mNumDivisions = numDivisions; return *this;}
-  auto& SetMaxDigits(int32_t maxDigtis) {mMaxDigits = maxDigtis; return *this;}
-
-  auto& SetTickLength(float_t tickLength) {mTickLength = tickLength; return *this;}
-
-  auto& SetTitleFont(int16_t font) {mTitleProperties.font = font; return *this;}
-  auto& SetLableFont(int16_t font) {mLableProperties.font = font; return *this;}
-
-  auto& SetTitleSize(float_t size) {mTitleProperties.size = size; return *this;}
-  auto& SetLableSize(float_t size) {mLableProperties.size = size; return *this;}
-
-  auto& SetTitleColor(int16_t color) {mTitleProperties.color = color; return *this;}
-  auto& SetLableColor(int16_t color) {mLableProperties.color = color; return *this;}
-
-  auto& SetTitleOffset(float_t offset) {mTitleProperties.offset = offset; return *this;}
-  auto& SetLableOffset(float_t offset) {mLableProperties.offset = offset; return *this;}
-
-  auto& SetTitleCenter(bool center = true) {mTitleProperties.center = center; return *this;}
-  auto& SetLableCenter(bool center = true) {mLableProperties.center = center; return *this;}
-
-  auto& SetLog(bool isLog = true) {mIsLog = isLog; return *this;}
-  auto& SetGrid(bool isGrid = true) {mIsGrid = isGrid; return *this;}
-  auto& SetOppositeTicks(bool isOppositeTicks = true) {mIsOppositeTicks = isOppositeTicks; return *this;}
-  auto& SetTimeFormat(const string& timeFormat) {mTimeFormat = timeFormat; return *this;}
-  auto& SetTickOrientation(const string& tickOrientation) {mTickOrientation = tickOrientation; return *this;}
+  Axis& SetTitle(const string& title) {mTitle = title; return *this;}
+  Axis& SetRange(double_t min, double_t max) {mRange = {min, max}; return *this;}
+  Axis& SetMaxRange(double_t max) {mRange.max = max; return *this;}
+  Axis& SetMinRange(double_t min) {mRange.min = min; return *this;}
+  Axis& SetColor(int16_t color) {mAxisColor = color; mLableProperties.color = color; mTitleProperties.color = color; return *this;}
+  Axis& SetAxisColor(int16_t color) {mAxisColor = color; return *this;}
+  Axis& SetNumDivisions(int32_t numDivisions) {mNumDivisions = numDivisions; return *this;}
+  Axis& SetMaxDigits(int32_t maxDigtis) {mMaxDigits = maxDigtis; return *this;}
+  Axis& SetTickLength(float_t tickLength) {mTickLength = tickLength; return *this;}
+  Axis& SetTitleFont(int16_t font) {mTitleProperties.font = font; return *this;}
+  Axis& SetLableFont(int16_t font) {mLableProperties.font = font; return *this;}
+  Axis& SetTitleSize(float_t size) {mTitleProperties.size = size; return *this;}
+  Axis& SetLableSize(float_t size) {mLableProperties.size = size; return *this;}
+  Axis& SetTitleColor(int16_t color) {mTitleProperties.color = color; return *this;}
+  Axis& SetLableColor(int16_t color) {mLableProperties.color = color; return *this;}
+  Axis& SetTitleOffset(float_t offset) {mTitleProperties.offset = offset; return *this;}
+  Axis& SetLableOffset(float_t offset) {mLableProperties.offset = offset; return *this;}
+  Axis& SetTitleCenter(bool center = true) {mTitleProperties.center = center; return *this;}
+  Axis& SetLableCenter(bool center = true) {mLableProperties.center = center; return *this;}
+  Axis& SetLog(bool isLog = true) {mIsLog = isLog; return *this;}
+  Axis& SetGrid(bool isGrid = true) {mIsGrid = isGrid; return *this;}
+  Axis& SetOppositeTicks(bool isOppositeTicks = true) {mIsOppositeTicks = isOppositeTicks; return *this;}
+  Axis& SetTimeFormat(const string& timeFormat) {mTimeFormat = timeFormat; return *this;}
+  Axis& SetTickOrientation(const string& tickOrientation) {mTickOrientation = tickOrientation; return *this;}
   
 protected:
   friend class PlotManager;
@@ -557,35 +562,26 @@ protected:
 
   ptree GetPropertyTree();
   
-  optional<double_t> GetMinRange() {return mRange.min;}
-  optional<double_t> GetMaxRange() {return mRange.max;}
-
+  const optional<double_t>& GetMinRange() {return mRange.min;}
+  const optional<double_t>& GetMaxRange() {return mRange.max;}
   const optional<float_t>& GetTickLength() {return mTickLength;}
   const optional<int32_t>& GetNumDivisions() {return mNumDivisions;}
   const optional<int32_t>& GetMaxDigits() {return mMaxDigits;}
-
   const optional<int16_t>& GetAxisColor()   {return mAxisColor;}
   const optional<string>& GetTitle() {return mTitle;}
-
   const optional<int16_t>& GetTitleFont() {return mTitleProperties.font;}
   const optional<int16_t>& GetLableFont() {return mLableProperties.font;}
-
   const optional<float_t>& GetTitleSize() {return mTitleProperties.size;}
   const optional<float_t>& GetLableSize() {return mLableProperties.size;}
-
   const optional<int16_t>& GetTitleColor() {return mTitleProperties.color;}
   const optional<int16_t>& GetLableColor() {return mLableProperties.color;}
-
   const optional<float_t>& GetTitleOffset() {return mTitleProperties.offset;}
   const optional<float_t>& GetLableOffset() {return mLableProperties.offset;}
-
   const optional<bool>& GetTitleCenter() {return mTitleProperties.center;}
   const optional<bool>& GetLableCenter() {return mLableProperties.center;}
-
   const optional<bool>& GetLog() {return mIsLog;}
   const optional<bool>& GetGrid() {return mIsGrid;}
   const optional<bool>& GetOppositeTicks() {return mIsOppositeTicks;}
-
   const optional<string>& GetTimeFormat() {return mTimeFormat;}
   const optional<string>& GetTickOrientation() {return mTickOrientation;}
 
@@ -656,11 +652,9 @@ protected:
   optional<int16_t>& GetBorderStyle() {return mBorder.style;}
   optional<float_t>& GetBorderWidth() {return mBorder.scale;}
   optional<int16_t>& GetBorderColor() {return mBorder.color;}
-
   optional<int16_t>& GetFillStyle() {return mFill.style;}
   optional<float_t>& GetFillOpacity() {return mFill.scale;}
   optional<int16_t>& GetFillColor() {return mFill.color;}
-
   optional<int16_t>& GetTextFont() {return mText.style;}
   optional<float_t>& GetTextSize() {return mText.scale;}
   optional<int16_t>& GetTextColor() {return mText.color;}
@@ -747,12 +741,21 @@ protected:
   friend class Plot;
 
   ptree GetPropertyTree();
-  uint8_t GetNumColumns(){return mNumColumns;}
-  const string& GetTitle(){return mTitle;}
+  const optional<uint8_t>& GetNumColumns(){return mNumColumns;}
+  const optional<string>& GetTitle(){return mTitle;}
   
 private:
-  string mTitle;
-  uint8_t mNumColumns;
+  optional<string> mTitle;
+  optional<uint8_t> mNumColumns;
+  
+  struct legendEntry_t
+  {
+    optional<string> refDataName;
+    optional<string> lable;
+    optional<string> options;
+  };
+  // FIXME: every entry needs marker/line/fill/text attributes ...
+  
 };
 
 } // end namespace PlottingFramework

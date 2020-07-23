@@ -442,7 +442,8 @@ const string& PlotManager::GetNameRegisterName(int32_t nameID)
   for(auto& registerTuple : mNameRegister){
     if(registerTuple.second == nameID) return registerTuple.first;
   }
-  return mOutputDirectory; //FIXME: this nonsense-fix is just to get rid of the warning! Re-think returning ref to member..
+  ERROR("Something went terribly wrong. Name was not found in register. Exiting...");
+  std::exit(EXIT_FAILURE);
 }
 
 //****************************************************************************************

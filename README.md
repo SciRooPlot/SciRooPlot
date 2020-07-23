@@ -8,15 +8,11 @@ DEPENDENCIES
 
 USE FRAMEWORK
 -------------
-cd PlottingFramework
-
-mkdir build
-
-cd build
-
-cmake ../
-
-make
+    cd PlottingFramework
+    mkdir build
+    cd build
+    cmake ../
+    make
 
 You can find a commented example on how to use the framework in tut/Example.cxx
 The framework ships with a simple command-line program that lets you easily generate plots from the plot definitions created by the user.
@@ -25,11 +21,9 @@ For usage details and available options see plot --help.
 
 To generate the documenation run:
 
-cd PlottingFramework/doc
-
-doxygen doxygen.conf
-
-open html/index.html
+    cd PlottingFramework/doc
+    doxygen doxygen.conf
+    open html/index.html
 
 
 DESIGN

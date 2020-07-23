@@ -7,6 +7,8 @@ Missing Box Features
 - ability to set default box properties in pad
 - possibility to add full layout of box
 - add title feature to legends again
+- AddLine function for texts?
+- possibility to AddEntry at specific position -> move automatic lables around?!
 
 Planned Features:
 - possibility to specify digit format gStyle->SetPaintTextFormat("4.1f m");
