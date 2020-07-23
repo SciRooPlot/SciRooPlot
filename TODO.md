@@ -5,7 +5,8 @@ Missing Box Features
 - check again if auto placement works correct (also with multiple boxes)
 - add some top right etc position (enum) functionality with modifyable distance to axis
 - ability to set default box properties in pad
--
+- possibility to add full layout of box
+- add title feature to legends again
 
 Planned Features:
 - possibility to specify digit format gStyle->SetPaintTextFormat("4.1f m");
@@ -25,10 +26,10 @@ Feature Ideas:
 - support for input types T{H,F}3, THn{Sparse} (->Projection functionality), THStack, TMultiGraph
 - support for setting up TView to have a 3d representations of 2d data
 - add inclination angle setting to textboxes
-- define 'top left' 'bottom right',... positons for boxes with flexible distance to ticks
 - add 'same as previous' color/marker/style feature (color = -1)?
 - allow for multi-column text boxes and make tab width between them a text box property
 - customizable legends that can be added independent of data in plot
+- option to draw help-grid on top of the plot to indicate NDC coordinates
 
 Notes:
 - for 2d plots SAME0 can be used to avoid axis range change when drawing on top

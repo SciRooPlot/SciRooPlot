@@ -921,7 +921,7 @@ ptree Plot::Pad::Data::GetPropertyTree(){
 
 //****************************************************************************************
 /**
- * User accessors.
+ * User accessors for Data properties.
  */
 //****************************************************************************************
 auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
@@ -1333,4 +1333,281 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree()
   return boxTree;
 };
 
+//****************************************************************************************
+/**
+ * User accessors to change box properties.
+ */
+//****************************************************************************************
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetPosition(double_t x, double_t y)
+{
+  mPos.x = x;
+  mPos.y = y;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetUserCoordinates(bool userCoordinates)
+{
+  mPos.isUserCoord = userCoordinates;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetAutoPlacement(bool autoPlacement)
+{
+  mPos.x = std::nullopt;
+  mPos.y = std::nullopt;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetBorder(int16_t color, int16_t style, float_t width)
+{
+  mBorder.color = color;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetBorderColor(int16_t color)
+{
+  mBorder.color = color;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetBorderStyle(int16_t style)
+{
+  mBorder.style = style;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetBorderWidth(float_t width)
+{
+  mBorder.scale = width;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetText(int16_t color, int16_t font, float_t size)
+{
+  mText.color = color;
+  mText.style = font;
+  mText.scale = size;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetTextColor(int16_t color)
+{
+  mText.color = color;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetTextFont(int16_t font)
+{
+  mText.style = font;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetTextSize(float_t size)
+{
+  mText.scale = size;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetFill(int16_t color, int16_t style, float_t opacity)
+{
+  mFill.color = color;
+  mFill.style = style;
+  mFill.scale = opacity;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetFillColor(int16_t color)
+{
+  mFill.color = color;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetFillStyle(int16_t style)
+{
+  mFill.style = style;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetFillOpacity(float_t opacity)
+{
+  mFill.scale = opacity;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetTransparent()
+{
+  mFill.style = 0;
+  return *GetThis();
+}
+
+template<typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetNoBox()
+{
+  mFill.style = 0;
+  mBorder.scale = 0.f;
+  return *GetThis();
+}
+
+//----------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+// IMPLEMENTATION class TextBox
+//----------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+
+//****************************************************************************************
+/**
+ * TextBox constructor.
+ */
+//****************************************************************************************
+Plot::Pad::TextBox::TextBox(double xPos, double yPos, const string& text)
+: Box(xPos, yPos), mText{text}
+{
+  
+}
+
+//****************************************************************************************
+/**
+ * TextBox constructor with automatic placing.
+ */
+//****************************************************************************************
+Plot::Pad::TextBox::TextBox(const string& text)
+: Box(), mText{text}
+{
+  SetAutoPlacement();
+}
+
+//****************************************************************************************
+/**
+ * TextBox constructor from property tree.
+ */
+//****************************************************************************************
+Plot::Pad::TextBox::TextBox(const ptree& textBoxTree)
+: Box(textBoxTree)
+{
+  try{
+    mText = textBoxTree.get<string>("text");
+  }catch(...){
+    ERROR("Could not construct textbox from ptree.");
+  }
+}
+
+//****************************************************************************************
+/**
+ * Get property tree representation of TextBox.
+ */
+//****************************************************************************************
+ptree Plot::Pad::TextBox::GetPropertyTree()
+{
+  ptree boxTree = Box::GetPropertyTree();
+  boxTree.put("text", mText);
+  return boxTree;
+};
+
+//****************************************************************************************
+/**
+ * Set text displayed in TextBox.
+ */
+//****************************************************************************************
+Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const string& text)
+{
+  mText = text;
+  return *this;
+}
+
+//----------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+// IMPLEMENTATION class LegendBox
+//----------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
+
+//****************************************************************************************
+/**
+ * LegendBox constructor.
+ */
+//****************************************************************************************
+Plot::Pad::LegendBox::LegendBox(double_t xPos, double_t yPos)
+: Box(xPos, yPos), mTitle{}, mNumColumns{}
+{
+  
+}
+
+//****************************************************************************************
+/**
+ * LegendBox constructor with automatic placing.
+ */
+//****************************************************************************************
+Plot::Pad::LegendBox::LegendBox()
+: Box(), mTitle{}, mNumColumns{}
+{
+  SetAutoPlacement();
+}
+
+//****************************************************************************************
+/**
+ * LegendBox constructor from property tree.
+ */
+//****************************************************************************************
+Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree)
+: Box(legendBoxTree)
+{
+  try{
+    mTitle = legendBoxTree.get<string>("title");
+    mNumColumns = legendBoxTree.get<int>("numColumns");
+  }catch(...){
+    ERROR("Could not construct legendbox from ptree.");
+  }
+}
+
+//****************************************************************************************
+/**
+ * Get property tree of LegendBox.
+ */
+//****************************************************************************************
+ptree Plot::Pad::LegendBox::GetPropertyTree()
+{
+  ptree boxTree = Box::GetPropertyTree();
+  boxTree.put("title", mTitle);
+  boxTree.put("numColumns", mNumColumns);
+  return boxTree;
+};
+
+//****************************************************************************************
+/**
+ * User accessors for LegendBox properties.
+ */
+//****************************************************************************************
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetTitle(const string& title)
+{
+  mTitle = title;
+  return *this;
+}
+
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns)
+{
+  mNumColumns = numColumns;
+  return *this;
+}
+
+
+//****************************************************************************************
+// explicitly instanciate required box templates
+template class Plot::Pad::Box<Plot::Pad::TextBox>;
+template class Plot::Pad::Box<Plot::Pad::LegendBox>;
+//****************************************************************************************
 } // end namespace PlottingFramework

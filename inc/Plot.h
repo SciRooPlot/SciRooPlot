@@ -630,63 +630,60 @@ template<class BoxType>
 class Plot::Pad::Box
 {
 public:
+  BoxType& SetPosition(double_t x, double_t y);
+  BoxType& SetUserCoordinates(bool userCoordinates = true);
+  BoxType& SetAutoPlacement(bool autoPlacement = true);
+  BoxType& SetBorder(int16_t color, int16_t style, float_t width);
+  BoxType& SetBorderColor(int16_t color);
+  BoxType& SetBorderStyle(int16_t style);
+  BoxType& SetBorderWidth(float_t width);
+  BoxType& SetText(int16_t color, int16_t font, float_t size);
+  BoxType& SetTextColor(int16_t color);
+  BoxType& SetTextFont(int16_t font);
+  BoxType& SetTextSize(float_t size);
+  BoxType& SetFill(int16_t color, int16_t style, float_t opacity);
+  BoxType& SetFillColor(int16_t color);
+  BoxType& SetFillStyle(int16_t style);
+  BoxType& SetFillOpacity(float_t opacity);
+  BoxType& SetTransparent();
+  BoxType& SetNoBox();
+
+protected:
+  ptree GetPropertyTree();
+
+  double_t GetXPosition() {return (mPos.x) ? *mPos.x : 0.;}
+  double_t GetYPosition() {return (mPos.y) ? *mPos.y : 0.;}
+  optional<int16_t>& GetBorderStyle() {return mBorder.style;}
+  optional<float_t>& GetBorderWidth() {return mBorder.scale;}
+  optional<int16_t>& GetBorderColor() {return mBorder.color;}
+
+  optional<int16_t>& GetFillStyle() {return mFill.style;}
+  optional<float_t>& GetFillOpacity() {return mFill.scale;}
+  optional<int16_t>& GetFillColor() {return mFill.color;}
+
+  optional<int16_t>& GetTextFont() {return mText.style;}
+  optional<float_t>& GetTextSize() {return mText.scale;}
+  optional<int16_t>& GetTextColor() {return mText.color;}
+
+  bool IsUserCoordinates() {return (mPos.isUserCoord) ? *mPos.isUserCoord : false;}
+  bool IsAutoPlacement() {return (!mPos.x || !mPos.y);}
+  
+private:
+  
+   // allow construction of Box base class only in context actual boxes
+  friend BoxType;
   Box() =  default;
   Box(const Box& otherBox) = default;
   Box(const ptree &boxTree);
   Box(double xPos, double yPos);
-
-  BoxType& SetPosition(double_t x, double_t y) {mPos.x = x; mPos.y = y; return *GetThis();}
-  BoxType& SetUserCoordinates(bool userCoordinates = true) {mPos.isUserCoord = userCoordinates; return *GetThis();}
-  BoxType& SetAutoPlacement(bool autoPlacement = true) {mPos.x = std::nullopt; mPos.y = std::nullopt; return *GetThis();}
-  BoxType& SetBorder(int16_t color, int16_t style, float_t width) {mBorder.color = color; return *GetThis();}
-  BoxType& SetBorderColor(int16_t color) {mBorder.color = color; return *GetThis();}
-  BoxType& SetBorderStyle(int16_t style) {mBorder.style = style; return *GetThis();}
-  BoxType& SetBorderWidth(float_t width) {mBorder.scale = width; return *GetThis();}
-  BoxType& SetText(int16_t color, int16_t font, float_t size) {mText.color = color; mText.font = font; mText.size = size; return *GetThis();}
-  BoxType& SetTextColor(int16_t color) {mText.color = color; return *GetThis();}
-  BoxType& SetTextFont(int16_t font) {mText.font = font; return *GetThis();}
-  BoxType& SetTextSize(float_t size) {mText.scale = size; return *GetThis();}
-  BoxType& SetFill(int16_t color, int16_t style, float_t opacity) {mFill.color = color; mFill.style = style; mFill.opacity = opacity; return *GetThis();}
-  BoxType& SetFillColor(int16_t color) {mFill.color = color; return *GetThis();}
-  BoxType& SetFillStyle(int16_t style) {mFill.style = style; return *GetThis();}
-  BoxType& SetFillOpacity(float_t opacity) {mFill.scale = opacity; return *GetThis();}
-  BoxType& SetTransparent() {mFill.style = 0; return *GetThis();}
-  BoxType& SetNoBox() {mFill.style = 0; mBorder.scale = 0.f; return *GetThis();}
-
-protected:
-  friend class PlotManager;
-  friend class PlotPainter;
-  friend class Plot;
-
-  ptree GetPropertyTree();
-
-  double_t GetXPosition(){return (mPos.x) ? *mPos.x : 0.;}
-  double_t GetYPosition(){return (mPos.y) ? *mPos.y : 0.;}
-  optional<int16_t>& GetBorderStyle(){return mBorder.style;}
-  optional<float_t>& GetBorderWidth(){return mBorder.scale;}
-  optional<int16_t>& GetBorderColor(){return mBorder.color;}
-
-  optional<int16_t>& GetFillStyle(){return mFill.style;}
-  optional<float_t>& GetFillOpacity(){return mFill.scale;}
-  optional<int16_t>& GetFillColor(){return mFill.color;}
-
-  optional<int16_t>& GetTextFont(){return mText.style;}
-  optional<float_t>& GetTextSize(){return mText.scale;}
-  optional<int16_t>& GetTextColor(){return mText.color;}
-
-  bool IsUserCoordinates(){return (mPos.isUserCoord) ? *mPos.isUserCoord : false;}
-  bool IsAutoPlacement(){return (!mPos.x || !mPos.y);}
   
-private:
-  
-  inline auto GetThis(){return static_cast<BoxType*>(this);}
+  auto GetThis(){return static_cast<BoxType*>(this);}
     
   struct layout_t{
     optional<int16_t> color;
     optional<int16_t> style;
     optional<float_t> scale;  // marker size , line width, fill opacity
   };
-
   struct position_t{
     optional<double_t> x;
     optional<double_t> y;
@@ -694,7 +691,6 @@ private:
   };
 
   position_t mPos;
-  
   layout_t mText;
   layout_t mBorder;
   layout_t mFill;
@@ -708,40 +704,23 @@ private:
 class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 {
 public:
+  TextBox(const string& text);
+  TextBox(double xPos, double yPos, const string& text);
+  TextBox(const ptree& textBoxTree);
   TextBox(const TextBox& otherTextBox) = default;
-  TextBox(double xPos, double yPos, const string& text)
-  : Box(xPos, yPos), mText{text}
-  {}
-  TextBox(const string& text)
-  : Box(), mText{text}
-  {
-    SetAutoPlacement();
-  }
   virtual ~TextBox() = default;
   
-  string GetText(){return mText;}
-  void SetText(const string& text) {mText = text;}
-  //void SetDelimiter(string delimiter){mDelimiter = delimiter;}
-  
-  ptree GetPropertyTree(){
-    ptree boxTree = Box::GetPropertyTree();
-    boxTree.put("text", mText);
-    return boxTree;
-  };
-  
-  // constructor to define entry from file
-  TextBox(const ptree &boxTree) : Box(boxTree)
-  {
-    try{
-      mText = boxTree.get<string>("text");
-    }catch(...){
-      ERROR("Could not construct textbox from ptree.");
-    }
-  }
+  TextBox& SetText(const string& text);
+    
+protected:
+  friend class PlotManager;
+  friend class PlotPainter;
+  friend class Plot;
+
+  ptree GetPropertyTree();
+  const string& GetText(){return mText;}
   
 private:
-  int GetNumLines();
-  //string mDelimiter;
   string mText;
 };
 
@@ -753,44 +732,27 @@ private:
 class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 {
 public:
+  LegendBox();
+  LegendBox(double_t xPos, double_t yPos);
+  LegendBox(const ptree& legendBoxTree);
   LegendBox(const LegendBox& otherLegendBox) = default;
-  LegendBox(double xPos, double yPos)
-  : Box(xPos, yPos), mTitle{}, mNumColumns{}
-  {}
-  LegendBox()
-  : Box(), mTitle{}, mNumColumns{}
-  {
-    SetAutoPlacement();
-  }
   virtual ~LegendBox() = default;
   
-  auto SetTitle(const string& title) ->decltype(*this) {mTitle = title; return *this;}
-
-  int GetNumColumns(){return mNumColumns;}
-  string& GetTitle(){return mTitle;}
-
-  ptree GetPropertyTree(){
-    ptree boxTree = Box::GetPropertyTree();
-    boxTree.put("title", mTitle);
-    boxTree.put("numColumns", mNumColumns);
-    return boxTree;
-  };
+  LegendBox& SetTitle(const string& title);
+  LegendBox& SetNumColumns(uint8_t numColumns);
   
-  // constructor to define entry from file
-  LegendBox(const ptree &boxTree) : Box(boxTree)
-  {
-    try{
-      mTitle = boxTree.get<string>("title");
-      mNumColumns = boxTree.get<int>("numColumns");
-    }catch(...){
-      ERROR("Could not construct legendbox from ptree.");
-    }
-  }
+protected:
+  friend class PlotManager;
+  friend class PlotPainter;
+  friend class Plot;
+
+  ptree GetPropertyTree();
+  uint8_t GetNumColumns(){return mNumColumns;}
+  const string& GetTitle(){return mTitle;}
   
 private:
-  int GetNumEntries();
   string mTitle;
-  int mNumColumns;
+  uint8_t mNumColumns;
 };
 
 } // end namespace PlottingFramework
