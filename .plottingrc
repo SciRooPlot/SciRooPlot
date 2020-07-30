@@ -11,7 +11,7 @@ export __PLOTTING_FRAMEWORK_DIR
 __PLOTTING_BUILD_DIR="${__PLOTTING_FRAMEWORK_DIR}/build"
 if [[ -d "${__PLOTTING_BUILD_DIR}" ]]
 then
-  function plot(){  [[ "${1}" == "cd" ]] && (return 0;) || ("${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0;) }
+  function plot(){ [[ "${1}" == "cd" ]] && {cd ${__PLOTTING_BUILD_DIR}; return 0;} || {"${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0;} }
 fi
 
 scope_func () {
@@ -67,7 +67,6 @@ scope_func () {
     case $state in
       mode)
         _arguments '1:profiles:(${modes})'
-        [[ "${words[2]}" == "cd" ]] && cd ${__PLOTTING_BUILD_DIR}
       ;;
       group)
         if [[ "${words[2]}" == "browse" ]]
