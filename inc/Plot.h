@@ -311,6 +311,7 @@ class Plot::Pad::Data
 {
 public:
   Data() = default;
+  virtual ~Data() = default;
 
   // default constructor for user
   Data(const string& name, const string& inputIdentifier, const string& lable = "");
@@ -628,7 +629,7 @@ class Plot::Pad::Box
 public:
   BoxType& SetPosition(double_t x, double_t y);
   BoxType& SetUserCoordinates(bool userCoordinates = true);
-  BoxType& SetAutoPlacement(bool autoPlacement = true);
+  BoxType& SetAutoPlacement();
   BoxType& SetBorder(int16_t color, int16_t style, float_t width);
   BoxType& SetBorderColor(int16_t color);
   BoxType& SetBorderStyle(int16_t style);

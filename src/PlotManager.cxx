@@ -279,7 +279,7 @@ void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
     
     mPlotLedger[plot.GetUniqueName()] = canvas;
     mPlotViewHistory.push_back(plot.GetUniqueName());
-    int32_t currPlotIndex = mPlotViewHistory.size()-1;
+    uint32_t currPlotIndex = mPlotViewHistory.size()-1;
     
     // move new canvas to position of previous window
     int32_t curXpos;
@@ -643,7 +643,7 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<str
       vector<string> curDataNames;
       vector<string> curNewDataNames;
       
-      for(auto i = 0; i < dataNames.size(); ++i)
+      for(size_t i = 0; i < dataNames.size(); ++i)
       {
         if(dataNames[i] == "") continue;
         auto pathPos = dataNames[i].find_last_of("/");

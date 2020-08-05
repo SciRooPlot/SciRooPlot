@@ -126,7 +126,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     pad.GetData()[0]->SetLegendLable(""); // axis frame should not appear in legend
 
     TH1* axisHist_ptr = nullptr;
-    bool drawLine = false;
     string drawingOptions = "";
     uint16_t dataIndex = 0;
     for(auto& data : pad.GetData())
@@ -797,7 +796,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     int16_t text_font = (textFont) ? *textFont : 43;
     uint8_t nColumns = 1; //(box->GetNumColumns()) ? *box->GetNumColumns() : 1;
     
-    uint16_t nEntries = legendEntries.size();
+    //uint16_t nEntries = legendEntries.size();
     uint16_t nLines = lines.size();
     //if(!legendBox->GetTitle().empty()) ++nEntries;
     
@@ -973,6 +972,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
       legend->SetTextFont(text_font);
       legend->SetTextSize(text_size);
+      if(textColor) legend->SetTextColor(*textColor);
       
       uint8_t i = 0;
       for(auto entry : legendEntries)
@@ -1018,6 +1018,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
       paveText->SetTextFont(text_font);
       paveText->SetTextSize(text_size);
+      if(textColor) paveText->SetTextColor(*textColor);
 
       if(borderStyle) paveText->SetLineStyle(*borderStyle);
       if(borderColor) paveText->SetLineColor(*borderColor);

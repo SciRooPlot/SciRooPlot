@@ -88,7 +88,7 @@ Plot::Plot(const ptree& plotTree)
     if(pad.first.find("PAD") != string::npos)
     {
       uint8_t padID = std::stoi(pad.first.substr(pad.first.find("_")+1));
-      mPads[padID] = std::move(Pad(pad.second));
+      mPads[padID] = Pad(pad.second);
     }
   }
 }
@@ -1439,7 +1439,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetUserCoordinates(bool userCoordinates)
 }
 
 template<typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetAutoPlacement(bool autoPlacement)
+BoxType& Plot::Pad::Box<BoxType>::SetAutoPlacement()
 {
   mPos.x = std::nullopt;
   mPos.y = std::nullopt;
@@ -1450,6 +1450,8 @@ template<typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetBorder(int16_t color, int16_t style, float_t width)
 {
   mBorder.color = color;
+  mBorder.style = style;
+  mBorder.scale = width;
   return *GetThis();
 }
 
