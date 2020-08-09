@@ -53,7 +53,7 @@ PlotManager::~PlotManager()
         return;
       }
       outputFile.cd();
-      uint32_t nPlots{0};
+      uint32_t nPlots{0u};
       for(auto& plotTuple : mPlotLedger){
         auto canvas = plotTuple.second;
         string uniqueName = plotTuple.first;
@@ -453,7 +453,7 @@ const string& PlotManager::GetNameRegisterName(int32_t nameID)
 //****************************************************************************************
 void PlotManager::ExtractPlotsFromFile(const string& plotFileName, const vector<string>& figureGroupsWithCategoryUser, const vector<string>& plotNamesUser, const string& mode)
 {
-  uint32_t nFoundPlots = 0;
+  uint32_t nFoundPlots = 0u;
   bool isSearchRequest = (mode == "find") ? true : false;
   vector< std::pair<std::regex, std::regex> > groupCategoryRegex;
   for(auto& figureGroupWithCategoryUser : figureGroupsWithCategoryUser)

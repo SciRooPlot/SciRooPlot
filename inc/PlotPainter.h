@@ -31,9 +31,7 @@ class PlotPainter
 {
 public:
   shared_ptr<TCanvas> GeneratePlot(Plot& plot, TObjArray* availableData);
-  
 private:
-  
   optional<data_ptr_t> GetDataClone(const string& dataName, TObjArray* availableData);
   template <typename T> optional<data_ptr_t> GetDataClone(TObject* obj);
   template <typename T, typename Next, typename... Rest> optional<data_ptr_t> GetDataClone(TObject* obj);
@@ -45,18 +43,6 @@ private:
   bool DivideGraphs(TGraph* numerator, TGraph* denominator);
   void DivideTSpline(TGraph* numerator, TGraph* denominator);
   void DivideTSpline(TH1* numerator, TH1* denominator);
-  int16_t GetDefaultColor(uint8_t colorID) {return mDefaultColors[colorID % mDefaultColors.size()];}
-  int16_t GetDefaultMarker(uint8_t markerID)  {return mDefaultColors[markerID % mDefaultColors.size()];}
-
-  // TODO: put this in manager and add GetGoodColors() to give user some usable colors at hand
-  vector<int16_t> mDefaultColors = {kBlack, kBlue+1, kRed+1, kYellow+1,
-    kMagenta-4, kGreen+3, kOrange+1, kViolet-3, kCyan+2, kPink+3, kTeal-7, kMagenta+1, kPink+8, kCyan-6, kMagenta, kRed+2, kGreen+2,
-    kOrange+2, kMagenta+2, kYellow+3, kGray+2, kBlue+2, kYellow+2, kRed, kBlue, kMagenta+3, kGreen+4, 28, 8, 15, 17, 12};
-
-  vector<int16_t> mDefaultMarkers = {kFullCircle, kFullSquare, kFullDiamond, kFullCross,
-    kFullStar, kOpenCircle, kOpenSquare, kOpenCross,
-    kOpenDiamond, kOpenStar};
-
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text);
   TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box, TPad* pad, vector<string> lines, vector<TObject*> legendEntries);
 };

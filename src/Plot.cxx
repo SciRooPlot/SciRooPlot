@@ -33,7 +33,11 @@ namespace PlottingFramework {
 Plot::Plot(const string& name, const string& figureGroup, const string& plotTemplateName)
 : Plot()
 {
-  if(figureGroup.find(".") != string::npos) ERROR("Figure Group must not contain '.'!");
+  if(str_contains(figureGroup, "."))
+  {
+    ERROR("Figure Group must not contain '.'!");
+    std::exit(EXIT_FAILURE);
+  }
   mName = name;
   mFigureGroup = figureGroup;
   if(plotTemplateName != "") mPlotTemplateName = plotTemplateName;
@@ -84,7 +88,7 @@ Plot::Plot(const ptree& plotTree)
   // loop over all pads defined in property tree
   for(auto& pad : plotTree)
   {
-    if(pad.first.find("PAD") != string::npos)
+    if(str_contains(pad.first, "PAD"))
     {
       uint8_t padID = std::stoi(pad.first.substr(pad.first.find("_")+1));
       mPads[padID] = Pad(pad.second);
@@ -556,7 +560,7 @@ Plot::Pad::Pad(const ptree& padTree)
   for(auto& content : padTree)
   {
     // add data
-    if(content.first.find("DATA") != string::npos)
+    if(str_contains(content.first, "DATA"))
     {
       string type = content.second.get<string>("type");
       if(type == "data")
@@ -568,18 +572,17 @@ Plot::Pad::Pad(const ptree& padTree)
         mData.push_back(std::make_shared<Ratio>(content.second));
       }
     }
-
-    if(content.first.find("LEGEND") != string::npos)
+    // add boxes
+    if(str_contains(content.first, "LEGEND"))
     {
       mLegendBoxes.push_back(std::make_shared<LegendBox>(content.second));
     }
-    if(content.first.find("TEXT") != string::npos)
+    if(str_contains(content.first, "TEXT"))
     {
       mTextBoxes.push_back(std::make_shared<TextBox>(content.second));
     }
-    
     // add axes
-    if(content.first.find("AXIS") != string::npos)
+    if(str_contains(content.first, "AXIS"))
     {
       string axis = content.second.get<string>("name");
       mAxes[axis] = std::move(Axis(content.second));
