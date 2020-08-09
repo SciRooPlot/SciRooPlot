@@ -18,6 +18,7 @@
 #define Plot_h
 
 #include "PlottingFramework.h"
+#include "HelperFunctions.h"
 
 using namespace PlottingFramework;
 namespace PlottingFramework {
@@ -233,8 +234,6 @@ protected:
   const optional<string>& GetRefFunc() {return mRefFunc;}
 
 private:
-  string VectorToString(vector<int16_t> numbers);
-  vector<int16_t> StringToVector(string numberString);
 
   struct pad_position_t{
     optional<double_t> xlow;

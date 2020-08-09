@@ -35,7 +35,7 @@ set(APPLICATIONS_ADDITIONAL_FILES
 
 set(MODULE PlottingFramework)
 set(MODULE_HDR inc/${MODULE}.h)
-set(ADDITIONAL_FILES README.md TODO.md)
+set(ADDITIONAL_FILES ${CMAKE_CURRENT_SOURCE_DIR}/inc/HelperFunctions.h README.md TODO.md)
 
 # this variable contains the framework source code
 set(SRCS

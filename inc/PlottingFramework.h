@@ -79,7 +79,6 @@
 #include "TGWindow.h"
 #include "TRootCanvas.h"
 
-
 // some preprocessor macros for logging, printing and debugging
 #define DEBUG(s, ...) {fmt::print(stderr, "\033[1;36m[ DEBU ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");}
 #define WARNING(s, ...) {fmt::print(stderr, "\033[1;33m[ WARN ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");}
@@ -163,34 +162,6 @@ using data_ptr_t_func_1d = variant<TF1*>;
 using data_ptr_t_func_2d = variant<TF2*>;
 
 const string gNameGroupSeparator = "_IN_";
-
-// helper functions
-inline constexpr bool str_contains(const string &str1, const string &str2)
-{
-  return (str1.find(str2) != string::npos);
-}
-template<typename T>
-void put_in_tree_optional(ptree& tree, const optional<T>& var, const string& lable)
-{
-   // TODO: if is_vector ... VectorToString(*var)
-   if(var) tree.put(lable, *var);
-}
-template<typename T>
-void read_from_tree_optional(const ptree& tree, optional<T>& var, const string& lable)
-{
-  // TODO: if is_vector ... StringToVector(*var)
-  if constexpr (std::is_enum<T>::value)
-  {
-    using underlying_type_t = typename std::underlying_type<T>::type;
-    if(auto tmp = tree.get_optional<underlying_type_t>(lable)) var = static_cast<T>(*tmp);
-  }
-  else
-  {
-    if(auto tmp = tree.get_optional<T>(lable)) var = *tmp;
-  }
-}
-
-
 
 enum drawing_options_t : uint8_t
 {

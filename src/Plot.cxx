@@ -541,18 +541,12 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree_optional(padTree, mMarkerDefaults.scale, "default_marker_size");
   read_from_tree_optional(padTree, mLineDefaults.scale, "default_line_width");
   read_from_tree_optional(padTree, mFillDefaults.scale, "default_fill_opacity");
-  //read_from_tree_optional(padTree, mMarkerDefaults.colors, "default_marker_colors");
-  //read_from_tree_optional(padTree, mLineDefaults.colors, "default_line_colors");
-  //read_from_tree_optional(padTree, mFillDefaults.colors, "default_fill_colors");
-  if(auto var = padTree.get_optional<string>("default_marker_colors")) mMarkerDefaults.colors = StringToVector(*var);
-  if(auto var = padTree.get_optional<string>("default_line_colors")) mLineDefaults.colors = StringToVector(*var);
-  if(auto var = padTree.get_optional<string>("default_fill_colors")) mFillDefaults.colors = StringToVector(*var);
-  //read_from_tree_optional(padTree, mMarkerDefaults.styles, "default_marker_styles");
-  //read_from_tree_optional(padTree, mLineDefaults.styles, "default_line_styles");
-  //read_from_tree_optional(padTree, mFillDefaults.styles, "default_fill_styles");
-  if(auto var = padTree.get_optional<string>("default_marker_styles")) mMarkerDefaults.styles = StringToVector(*var);
-  if(auto var = padTree.get_optional<string>("default_line_styles")) mLineDefaults.styles = StringToVector(*var);
-  if(auto var = padTree.get_optional<string>("default_fill_styles")) mFillDefaults.styles = StringToVector(*var);
+  read_from_tree_optional(padTree, mMarkerDefaults.colors, "default_marker_colors");
+  read_from_tree_optional(padTree, mLineDefaults.colors, "default_line_colors");
+  read_from_tree_optional(padTree, mFillDefaults.colors, "default_fill_colors");
+  read_from_tree_optional(padTree, mMarkerDefaults.styles, "default_marker_styles");
+  read_from_tree_optional(padTree, mLineDefaults.styles, "default_line_styles");
+  read_from_tree_optional(padTree, mFillDefaults.styles, "default_fill_styles");
   read_from_tree_optional(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
   read_from_tree_optional(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
   read_from_tree_optional(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
@@ -626,18 +620,12 @@ ptree Plot::Pad::GetPropetyTree()
   put_in_tree_optional(padTree, mMarkerDefaults.scale, "default_marker_size");
   put_in_tree_optional(padTree, mLineDefaults.scale, "default_line_width");
   put_in_tree_optional(padTree, mFillDefaults.scale, "default_fill_opacity");
-  //put_in_tree_optional(padTree, mMarkerDefaults.colors, "default_marker_colors");
-  //put_in_tree_optional(padTree, mLineDefaults.colors, "default_line_colors");
-  //put_in_tree_optional(padTree, mFillDefaults.colors, "default_fill_colors");
-  if(mMarkerDefaults.colors) padTree.put("default_marker_colors", VectorToString(*mMarkerDefaults.colors));
-  if(mLineDefaults.colors) padTree.put("default_line_colors", VectorToString(*mLineDefaults.colors));
-  if(mFillDefaults.colors) padTree.put("default_fill_colors", VectorToString(*mFillDefaults.colors));
-  //put_in_tree_optional(padTree, mMarkerDefaults.styles, "default_marker_styles");
-  //put_in_tree_optional(padTree, mLineDefaults.styles, "default_line_styles");
-  //put_in_tree_optional(padTree, mFillDefaults.styles, "default_fill_styles");
-  if(mMarkerDefaults.styles) padTree.put("default_marker_styles", VectorToString(*mMarkerDefaults.styles));
-  if(mLineDefaults.styles) padTree.put("default_line_styles", VectorToString(*mLineDefaults.styles));
-  if(mFillDefaults.styles) padTree.put("default_fill_styles", VectorToString(*mFillDefaults.styles));
+  put_in_tree_optional(padTree, mMarkerDefaults.colors, "default_marker_colors");
+  put_in_tree_optional(padTree, mLineDefaults.colors, "default_line_colors");
+  put_in_tree_optional(padTree, mFillDefaults.colors, "default_fill_colors");
+  put_in_tree_optional(padTree, mMarkerDefaults.styles, "default_marker_styles");
+  put_in_tree_optional(padTree, mLineDefaults.styles, "default_line_styles");
+  put_in_tree_optional(padTree, mFillDefaults.styles, "default_fill_styles");
   put_in_tree_optional(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
   put_in_tree_optional(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
   put_in_tree_optional(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
@@ -879,40 +867,6 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend()
 {
   mLegendBoxes.push_back(std::make_shared<LegendBox>());
   return *mLegendBoxes[mLegendBoxes.size()-1];
-}
-
-//****************************************************************************************
-/**
- * Helper function to convert vector of integers to string for saving in ptree.
- */
-//****************************************************************************************
-string Plot::Pad::VectorToString(vector<int16_t> numbers)
-{
-  string numberString;
-  for(auto& number : numbers)
-  {
-    numberString += std::to_string(number);
-    if(&number != &numbers.back()) numberString += ",";
-  }
-  return numberString;
-}
-
-//****************************************************************************************
-/**
- * Helper function to convert string from ptree to vector of integers.
- */
-//****************************************************************************************
-vector<int16_t> Plot::Pad::StringToVector(string numberString)
-{
-  // savety in case user put some blank spaces between numbers
-  std::remove_if(numberString.begin(), numberString.end(), ::isspace);
-  vector<int16_t> numbers;
-  string curNumStr;
-  std::istringstream stream(numberString);
-  while(std::getline(stream, curNumStr, ',')) {
-    numbers.push_back(std::stoi(curNumStr));
-  }
-  return numbers;
 }
 
 //----------------------------------------------------------------------------------------
