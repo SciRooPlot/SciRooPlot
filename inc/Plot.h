@@ -329,6 +329,7 @@ public:
   virtual auto SetMinRangeY(double_t min) -> decltype(*this);
   virtual auto SetLegendLable(const string& legendLable) -> decltype(*this);
   virtual auto SetOptions(const string& opions) -> decltype(*this);
+  virtual auto SetNormalize(bool useWidth = false) -> decltype(*this);
   virtual auto SetScaleFactor(double_t scale) -> decltype(*this);
   virtual auto SetColor(int16_t color) -> decltype(*this);
   virtual auto SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this);
@@ -384,8 +385,9 @@ protected:
 
   const optional<string>& GetDrawingOptions(){return mDrawingOptions;}
   const optional<drawing_options_t>& GetDrawingOptionAlias(){return mDrawingOptionAlias;}
-  const optional<double_t>& GetScaleFactor(){return mScaleFactor;}
-  
+  const optional<double_t>& GetScaleFactor(){return mModify.scale_factor;}
+  const optional<uint8_t>& GetNormMode(){return mModify.norm_mode;}
+
   const optional<double_t>& GetMinRangeX(){return mRangeX.min;}
   const optional<double_t>& GetMaxRangeX(){return mRangeX.max;}
   const optional<double_t>& GetMinRangeY(){return mRangeY.min;}
@@ -404,7 +406,11 @@ private:
   optional<string> mLegendLable;
   optional<string> mDrawingOptions;
   optional<drawing_options_t> mDrawingOptionAlias;
-  optional<double_t> mScaleFactor;
+
+  struct modify_t{
+    optional<uint8_t> norm_mode; // 0: normalize by summing of bin contents, 1: additionally multiply with bin width
+    optional<double_t> scale_factor;
+  };
 
   struct dataLayout_t{
     optional<int16_t> color;
@@ -422,6 +428,7 @@ private:
   dataLayout_t mFill;
   dataRange_t mRangeX;
   dataRange_t mRangeY;
+  modify_t mModify;
 };
 
 //****************************************************************************************
@@ -459,6 +466,8 @@ public:
   {return dynamic_cast<decltype(*this)&>(Data::SetLegendLable(legendLable));}
   virtual auto SetOptions(const string& opions) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetOptions(opions));}
+  virtual auto SetNormalize(bool useWidth = false) -> decltype(*this)
+  {return dynamic_cast<decltype(*this)&>(Data::SetNormalize(useWidth));}
   virtual auto SetScale(double_t scale) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetScaleFactor(scale));}
   virtual auto SetColor(int16_t color) -> decltype(*this)

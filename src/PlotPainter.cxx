@@ -223,16 +223,24 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
           }
           if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
           {
-            if(drawingOptions.find("normalize") != string::npos){ // FIXME: should this only be normalized in range?
-              drawingOptions.erase(drawingOptions.find("normalize"), string("normalize").length());
-              data_ptr->Scale(1/data_ptr->Integral(), "width");
+            optional<double_t> scaleFactor;
+            string scaleMode = "";
+
+            if(data->GetNormMode()){
+              // FIXME: what about over and underflow?? this is included here! Probably never wanted...
+              // FIXME: needs protection against division by zero...
+              scaleFactor = 1/data_ptr->Integral();
+              if(*data->GetNormMode() > 0) scaleMode = "width";
             }
             if(data->GetScaleFactor()){
-              data_ptr->Scale(*data->GetScaleFactor());
+              scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor()) :  (*data->GetScaleFactor());
             }
+            if(scaleFactor) data_ptr->Scale(*scaleFactor);
+
           }
           if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>)
           {
+            // TODO: add normalizing feature here as well
             if(data->GetScaleFactor()){
               ScaleGraph((TGraph*)data_ptr, *data->GetScaleFactor());
             }
