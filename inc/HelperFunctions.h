@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef PlottingFrameworkHelpers_h
-#define PlottingFrameworkHelpers_h
+#ifndef HelperFunctions_h
+#define HelperFunctions_h
 
 #include "PlottingFramework.h"
 
@@ -33,29 +33,29 @@ template<typename T, typename A>
 struct is_vector<std::vector<T, A>> : public std::true_type {};
 
 template<typename T>
-string vector_to_string(vector<T> numbers)
+string vector_to_string(vector<T> items)
 {
-  string numberString;
-  for(auto& number : numbers)
+  string itemString;
+  for(auto& item : items)
   {
-    numberString += std::to_string(number);
-    if(&number != &numbers.back()) numberString += ",";
+    itemString += std::to_string(item);
+    if(&item != &items.back()) itemString += ",";
   }
-  return numberString;
+  return itemString;
 }
 
 template<typename T>
-vector<T> string_to_vector(string numberString)
+vector<T> string_to_vector(string itemString)
 {
   // savety in case user put some blank spaces between numbers
-  std::remove_if(numberString.begin(), numberString.end(), ::isspace);
-  vector<T> numbers;
-  string curNumStr;
-  std::istringstream stream(numberString);
-  while(std::getline(stream, curNumStr, ',')) {
-    numbers.push_back(std::stoi(curNumStr));
+  std::remove_if(itemString.begin(), itemString.end(), ::isspace);
+  vector<T> items;
+  string curItemStr;
+  std::istringstream stream(itemString);
+  while(std::getline(stream, curItemStr, ',')) {
+    items.push_back(std::stoi(curItemStr));
   }
-  return numbers;
+  return items;
 }
 
 template<typename T>
@@ -89,4 +89,4 @@ void read_from_tree_optional(const ptree& tree, optional<T>& var, const string& 
 }
 
 } // end namespace PlottingFramework
-#endif /* PlottingFrameworkHelpers_h */
+#endif /* HelperFunctions_h */
