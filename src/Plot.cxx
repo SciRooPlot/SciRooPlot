@@ -912,7 +912,8 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
     mName = dataTree.get<string>("name");
     mInputIdentifier = dataTree.get<string>("inputIdentifier");
   }catch(...){
-    ERROR("Could not construct data from ptree."); // FIXME: what to do if this happens??
+    ERROR("Could not construct data from ptree.");
+    std::exit(EXIT_FAILURE);
   }
   if(auto var = dataTree.get_optional<bool>("defines_frame")) mDefinesFrame = *var;
   read_from_tree_optional(dataTree, mLegendLable, "legend_lable");

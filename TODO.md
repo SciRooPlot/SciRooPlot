@@ -13,7 +13,6 @@ Missing Box Features
 Planned Features:
 - possibility to specify digit format gStyle->SetPaintTextFormat("4.1f m");
 - add setting for nContours in 2d plots
-- normalize and scale should use same function
 - add option in main program to list all loaded plots
 - possibility to do fast loading of all data from input files (skip chek if data was requested)
 - add more placeholders for legends and texts and how to format them

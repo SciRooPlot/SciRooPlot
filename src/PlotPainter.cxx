@@ -212,7 +212,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
           } // end ratio code
 
           // modify content (FIXME: this should be steered differently)
-          // TODO: add functionality for scaling and normalizing graphs
+          // FIXME: probably this should be done after setting ranges but axis ranges depend on scaling!
           if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
           {
             if(str_contains(drawingOptions,"smooth"))
@@ -226,10 +226,17 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             optional<double_t> scaleFactor;
             string scaleMode = "";
 
-            if(data->GetNormMode()){
-              // FIXME: what about over and underflow?? this is included here! Probably never wanted...
-              // FIXME: needs protection against division by zero...
-              scaleFactor = 1/data_ptr->Integral();
+            if(data->GetNormMode())
+            {
+              double integral = data_ptr->Integral(); // integral in viewing range
+              if(integral == 0.)
+              {
+                ERROR("Cannot normalize histogram because integral is zero.");
+              }
+              else
+              {
+                scaleFactor = 1./integral;
+              }
               if(*data->GetNormMode() > 0) scaleMode = "width";
             }
             if(data->GetScaleFactor()){
@@ -238,12 +245,31 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             if(scaleFactor) data_ptr->Scale(*scaleFactor);
 
           }
-          if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>)
+          else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>)
           {
-            // TODO: add normalizing feature here as well
-            if(data->GetScaleFactor()){
-              ScaleGraph((TGraph*)data_ptr, *data->GetScaleFactor());
+            // FIXME: violating DRY principle...
+            optional<double_t> scaleFactor;
+            string scaleMode = "";
+
+            if(data->GetNormMode())
+            {
+              double integral = data_ptr->Integral(); // integral in viewing range
+              if(integral == 0.)
+              {
+                ERROR("Cannot normalize graph because integral is zero.");
+              }
+              else
+              {
+                scaleFactor = 1./integral;
+              }
+              if(*data->GetNormMode() > 0){
+                ERROR("Cannot normalize graph by width.");
+              }
             }
+            if(data->GetScaleFactor()){
+              scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor()) :  (*data->GetScaleFactor());
+            }
+            if(scaleFactor) ScaleGraph((TGraph*)data_ptr, *scaleFactor);
           }
 
           // first data is only used to define the axes
@@ -584,9 +610,14 @@ bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
   // now divide
   for(int32_t i = 0; i < numerator->GetN(); ++i)
   {
-    // FIXME: protect against division by zero
-    numerator->GetY()[i] = numerator->GetY()[i] / denominator->GetY()[i];
-    numerator->GetEY()[i] = numerator->GetEY()[i] / denominator->GetY()[i] + denominator->GetEY()[i] * numerator->GetY()[i] / (denominator->GetY()[i] *  denominator->GetY()[i]);
+    bool illegalDivision = false;
+    if(denominator->GetY()[i] == 0.)
+    {
+      ERROR("Dividing by zero!");
+      illegalDivision = true;
+    }
+    numerator->GetY()[i] = (illegalDivision) ? 0. : numerator->GetY()[i] / denominator->GetY()[i];
+    numerator->GetEY()[i] = (illegalDivision) ? 0. : numerator->GetEY()[i] / denominator->GetY()[i] + denominator->GetEY()[i] * numerator->GetY()[i] / (denominator->GetY()[i] *  denominator->GetY()[i]);
   }
   return true;
 }
@@ -617,6 +648,10 @@ void PlotPainter::DivideTSpline(TGraph* numerator, TGraph* denominator)
       newValue = y[i] / denomValue;
       newError = ey[i] / denomValue; // Only proxy. Ignoring error of denominator!
     }
+    else
+    {
+      ERROR("Dividing by zero!");
+    }
     y[i] = newValue;
     ey[i] = newError;
   }
@@ -646,6 +681,10 @@ void PlotPainter::DivideTSpline(TH1* numerator, TH1* denominator)
       newValue = numeratorValue/denomValue;
       // uncertainty of denominator is not taken into account (cannot be extracted from spline)
       newError = numeratorError/denomValue;
+    }
+    else
+    {
+      ERROR("Dividing by zero!");
     }
     numerator->SetBinContent(i, newValue);
     numerator->SetBinError(i, newError);
@@ -731,7 +770,6 @@ void PlotPainter::SmoothHist(TH1* hist, optional<double_t> min, optional<double_
 
   hist->Smooth(100, "R");
 }
-
 
 //****************************************************************************************
 /**

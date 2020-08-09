@@ -50,4 +50,4 @@ By default plots are created as pdf in your output folder, but you can also choo
 
 Regard this as an early beta version...
 
-Any suggestions, bug reports and user feedback is very welcome.
+Any contributions, suggestions or bug reports are very welcome.
