@@ -825,7 +825,7 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const input_t& numerator, const input_t& d
  * Add text box to this pad.
  */
 //****************************************************************************************
-Plot::Pad::TextBox& Plot::Pad::AddText(double xPos, double yPos, const string& text)
+Plot::Pad::TextBox& Plot::Pad::AddText(double_t xPos, double_t yPos, const string& text)
 {
   mTextBoxes.push_back(std::make_shared<TextBox>(xPos, yPos, text));
   return *mTextBoxes[mTextBoxes.size()-1];
@@ -847,7 +847,7 @@ Plot::Pad::TextBox& Plot::Pad::AddText(const string& text)
  * Add legend box to this pad.
  */
 //****************************************************************************************
-Plot::Pad::LegendBox& Plot::Pad::AddLegend(double xPos, double yPos)
+Plot::Pad::LegendBox& Plot::Pad::AddLegend(double_t xPos, double_t yPos)
 {
   mLegendBoxes.push_back(std::make_shared<LegendBox>(xPos, yPos));
   return *mLegendBoxes[mLegendBoxes.size()-1];
@@ -1320,7 +1320,7 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
  */
 //****************************************************************************************
 template <typename BoxType>
-Plot::Pad::Box<BoxType>::Box(double xPos, double yPos)
+Plot::Pad::Box<BoxType>::Box(double_t xPos, double_t yPos)
 : Box()
 {
   mPos.x = xPos;
@@ -1519,7 +1519,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetNoBox()
  * TextBox constructor.
  */
 //****************************************************************************************
-Plot::Pad::TextBox::TextBox(double xPos, double yPos, const string& text)
+Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const string& text)
 : Box(xPos, yPos), mText{text}
 {
   

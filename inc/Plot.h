@@ -129,9 +129,9 @@ public:
   Data& AddData(const input_t& input, const string& lable = "");
   Ratio& AddRatio(const input_t& numerator, const input_t& denominator, const string& lable = "");
 
-  TextBox& AddText(double xPos, double yPos, const string& text);
+  TextBox& AddText(double_t xPos, double_t yPos, const string& text);
   TextBox& AddText(const string& text);
-  LegendBox& AddLegend(double xPos, double yPos);
+  LegendBox& AddLegend(double_t xPos, double_t yPos);
   LegendBox& AddLegend();
 
   Axis& GetAxis(const string& axis);
@@ -682,7 +682,7 @@ private:
   // allow construction of Box base class only in context actually useful boxes
   friend BoxType;
   Box() = default;
-  Box(double xPos, double yPos);
+  Box(double_t xPos, double_t yPos);
   Box(const ptree &boxTree);
 
   auto GetThis(){return static_cast<BoxType*>(this);}
@@ -713,7 +713,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 {
 public:
   TextBox(const string& text);
-  TextBox(double xPos, double yPos, const string& text);
+  TextBox(double_t xPos, double_t yPos, const string& text);
   TextBox(const ptree& textBoxTree);
   
   virtual ~TextBox() = default;

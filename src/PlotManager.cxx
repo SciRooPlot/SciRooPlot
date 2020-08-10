@@ -280,12 +280,12 @@ void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
     
     mPlotLedger[plot.GetUniqueName()] = canvas;
     mPlotViewHistory.push_back(plot.GetUniqueName());
-    uint32_t currPlotIndex = mPlotViewHistory.size()-1;
+    uint32_t currPlotIndex{static_cast<uint32_t>(mPlotViewHistory.size()-1)};
     
     // move new canvas to position of previous window
-    int32_t curXpos;
-    int32_t curYpos;
-    const int32_t windowOffsetY = 22; // might depend on os, probably comes from move operation called via TVirtualX interface
+    int32_t curXpos{};
+    int32_t curYpos{};
+    const int32_t windowOffsetY{22}; // might depend on os, probably comes from move operation called via TVirtualX interface
     if(currPlotIndex > 0){
       curXpos = mPlotLedger[mPlotViewHistory[currPlotIndex-1]]->GetWindowTopX();
       curYpos = mPlotLedger[mPlotViewHistory[currPlotIndex-1]]->GetWindowTopY();
@@ -297,7 +297,7 @@ void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
         curYpos = canvas->GetWindowTopY();
         TRootCanvas* canvasWindow = ((TRootCanvas*)canvas->GetCanvasImp());
         canvasWindow->UnmapWindow();
-        bool forward = ((double_t)canvas->GetEventX()/(double_t)canvas->GetWw() > 0.5);
+        bool forward{((double_t)canvas->GetEventX()/(double_t)canvas->GetWw() > 0.5)};
         if(forward){
           if(currPlotIndex == mPlotViewHistory.size()-1) break;
           ++currPlotIndex;
@@ -455,7 +455,7 @@ const string& PlotManager::GetNameRegisterName(int32_t nameID)
 //****************************************************************************************
 void PlotManager::ExtractPlotsFromFile(const string& plotFileName, const vector<string>& figureGroupsWithCategoryUser, const vector<string>& plotNamesUser, const string& mode)
 {
-  uint32_t nFoundPlots = 0u;
+  uint32_t nFoundPlots{};
   bool isSearchRequest = (mode == "find") ? true : false;
   vector< std::pair<std::regex, std::regex> > groupCategoryRegex;
   groupCategoryRegex.reserve(figureGroupsWithCategoryUser.size());

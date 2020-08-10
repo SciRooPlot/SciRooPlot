@@ -86,8 +86,8 @@ private:
   
   TObject* FindSubDirectory(TObject* folder, vector<string> subDirs);
   inline int GetNameRegisterID(const string& name);
-  inline const string& GetNameRegisterName(int nameID);
-  void LoadData(map<int, set<int>>& requiredData);
+  inline const string& GetNameRegisterName(int32_t nameID);
+  void LoadData(map<int32_t, set<int32_t>>& requiredData);
   void GeneratePlot(Plot& plot, const string& outputMode = "pdf");
   bool IsPlotPossible(Plot &plot);
   bool IsPlotAlreadyBooked(const string& plotName){for(auto& plot : mPlots){if(plot.GetUniqueName() == plotName) return true;} return false;};
@@ -95,8 +95,8 @@ private:
 
   TApplication mApp;
   vector<string> splitString(const string& argString, char deliminator = ':');
-  map<string, int> mNameRegister; // bi-directional mapping between name and unique id
-  map<int, set<int>> mLoadedData;
+  map<string, int32_t> mNameRegister; // bi-directional mapping between name and unique id
+  map<int32_t, set<int32_t>> mLoadedData;
   bool mSaveToRootFile;
   string mOutputFileName;
   map<string, shared_ptr<TCanvas>> mPlotLedger;

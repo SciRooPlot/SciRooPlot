@@ -125,9 +125,9 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     }
     pad.GetData()[0]->SetLegendLable(""); // axis frame should not appear in legend
 
-    TH1* axisHist_ptr = nullptr;
+    TH1* axisHist_ptr{nullptr};
     string drawingOptions = "";
-    uint16_t dataIndex = 0u;
+    uint16_t dataIndex{};
     for(auto& data : pad.GetData())
     {
       if(data->GetDrawingOptions()) drawingOptions += *data->GetDrawingOptions();
@@ -224,7 +224,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
           if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
           {
             optional<double_t> scaleFactor;
-            string scaleMode = "";
+            string scaleMode{};
 
             if(data->GetNormMode())
             {
@@ -249,7 +249,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
           {
             // FIXME: violating DRY principle...
             optional<double_t> scaleFactor;
-            string scaleMode = "";
+            string scaleMode{};
 
             if(data->GetNormMode())
             {
@@ -519,7 +519,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
       //titleBox->Draw("SAME");
     }
     // now place legends, textboxes and shapes
-    uint8_t legendIndex = 1u;
+    uint8_t legendIndex{1u};
     for(auto& box : pad.GetLegendBoxes())
     {
         string legendName = "LegendBox_" + std::to_string(legendIndex);
@@ -529,7 +529,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
         legend->Draw("SAME");
         ++legendIndex;
     }
-    uint8_t textIndex = 1u;
+    uint8_t textIndex{1u};
     for(auto& box : pad.GetTextBoxes())
     {
       string textName = "TextBox_" + std::to_string(textIndex);
@@ -678,9 +678,9 @@ void PlotPainter::DivideTSpline(TH1* numerator, TH1* denominator)
     double_t newError = 0.;
     if(denomValue)
     {
-      newValue = numeratorValue/denomValue;
+      newValue = numeratorValue / denomValue;
       // uncertainty of denominator is not taken into account (cannot be extracted from spline)
-      newError = numeratorError/denomValue;
+      newError = numeratorError / denomValue;
     }
     else
     {
@@ -778,20 +778,23 @@ void PlotPainter::SmoothHist(TH1* hist, optional<double_t> min, optional<double_
 //****************************************************************************************
 std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
 {
-  uint32_t width = 0u;
-  uint32_t height = 0u;
-  int16_t font = text.GetTextFont();
+  uint32_t width{};
+  uint32_t height{};
+  int16_t font{text.GetTextFont()};
 
-  if (font%10<=2) {
+  if(font%10 <= 2)
+  {
     text.GetBoundingBox(width, height);
-  }else{
-    TLatex t2 = text;
-    t2.SetTextFont(font-1);
+  }
+  else
+  {
+    TLatex textBox{text};
+    textBox.SetTextFont(font-1);
     TVirtualPad *pad = gROOT->GetSelectedPad();
-    Float_t dy = pad->AbsPixeltoY(0) - pad->AbsPixeltoY((Int_t)(text.GetTextSize()));
-    Float_t tsize = dy/(pad->GetY2() - pad->GetY1());
-    t2.SetTextSize(tsize);
-    t2.GetBoundingBox(width, height);
+    double_t dy{pad->AbsPixeltoY(0) - pad->AbsPixeltoY((int32_t)(text.GetTextSize()))};
+    double_t textSize{dy/(pad->GetY2() - pad->GetY1())};
+    textBox.SetTextSize(textSize);
+    textBox.GetBoundingBox(width, height);
   }
   return {width, height};
 }
@@ -840,7 +843,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     float_t text_size = (textSize) ? *textSize : 24;
     int16_t text_font = (textFont) ? *textFont : 43;
-    uint8_t nColumns = 1u; //(box->GetNumColumns()) ? *box->GetNumColumns() : 1;
+    uint8_t nColumns{1u}; //(box->GetNumColumns()) ? *box->GetNumColumns() : 1;
     
     //uint16_t nEntries = legendEntries.size();
     uint16_t nLines = lines.size();
@@ -851,13 +854,13 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     
 
     // determine max width and height of legend entries
-    uint8_t iColumn = 0u;
-    double_t legendWidthPixel = 0.;
-    double_t titleWidthPixel = 0.;
+    uint8_t iColumn{};
+    double_t legendWidthPixel{};
+    double_t titleWidthPixel{};
     vector<uint32_t> legendWidthPixelPerColumn(nColumns, 0);
-    double_t legendHeightPixel = 0.;
+    double_t legendHeightPixel{};
     //if(!legendBox->GetTitle().empty()) legendTitles.push_back(legendBox->GetTitle());
-    uint8_t iLegend = 1u;
+    uint8_t iLegend{1u};
     for(auto& legendTitle : lines)
     {
       if constexpr (std::is_same_v<BoxType, Plot::Pad::LegendBox>)
@@ -921,7 +924,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     }
     for(auto& length : legendWidthPixelPerColumn) legendWidthPixel += length;
       
-    uint32_t markerWidthPixel = 0u;
+    uint32_t markerWidthPixel{};
     if constexpr (std::is_same_v<BoxType, Plot::Pad::LegendBox>)
     {
       string markerDummyString = "-+-"; // defines width of marker
@@ -937,9 +940,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     double_t markerWidthNDC =  (double_t)markerWidthPixel/padWidthPixel;
     double_t titleWidthNDC =  (double_t)titleWidthPixel/padWidthPixel;
     
-    double_t totalWidthNDC = 0.;
-    double_t totalHeightNDC = 0.;
-    double_t marginNDC = 0.01;
+    double_t totalWidthNDC{};
+    double_t totalHeightNDC{};
+    double_t marginNDC{0.01};
 
     if constexpr (std::is_same_v<BoxType, Plot::Pad::LegendBox>)
     {
@@ -948,21 +951,20 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     }else{
       totalWidthNDC = 2*marginNDC + legendWidthNDC;
       totalHeightNDC = (nLines + 0.5*(nLines-1))* legendHeightNDC;
-
     }
     
     if(titleWidthPixel > legendWidthPixel) totalWidthNDC = (0.3333) * markerWidthNDC + titleWidthNDC;
     
-    double_t upperLeftX = box->GetXPosition();
-    double_t upperLeftY = box->GetYPosition();
+    double_t upperLeftX{box->GetXPosition()};
+    double_t upperLeftY{box->GetYPosition()};
     
     if(box->IsAutoPlacement())
     {
       pad->cd();
       pad->Update();
-      double_t lowerLeftX = 0.;
-      double_t lowerLeftY = 0.;
-      double_t fractionOfTickLenght = 0.9;
+      double_t lowerLeftX{};
+      double_t lowerLeftY{};
+      double_t fractionOfTickLenght{0.9};
       // required distance in pad coordinates of box to objects and tics (set to be 90& of the tick length)
       double_t marginX = fractionOfTickLenght * gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()) / (pad->GetX2()-pad->GetX1());
       double_t marginY = fractionOfTickLenght * gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()) / (pad->GetY2()-pad->GetY1());
@@ -1020,7 +1022,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       legend->SetTextSize(text_size);
       if(textColor) legend->SetTextColor(*textColor);
       
-      uint8_t i = 0u;
+      uint8_t i{};
       for(auto entry : legendEntries)
       {
         string drawingOption = entry->GetDrawOption();
