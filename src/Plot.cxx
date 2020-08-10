@@ -56,10 +56,9 @@ Plot::Plot(const string& name, const string& figureGroup, const string& plotTemp
  * Constructor from existing plot.
  */
 //****************************************************************************************
-Plot::Plot(Plot& otherPlot, const string& name, const string& plotGroup)
+Plot::Plot(const Plot& otherPlot, const string& name, const string& plotGroup)
 {
-  //*this = otherPlot;
-  *this = otherPlot.GetDeepCopy();
+  *this = otherPlot.Clone();
   this->mName = name;
   this->mFigureGroup = plotGroup;
 }
@@ -126,26 +125,19 @@ ptree Plot::GetPropetyTree()
  * Make a deep copy of the Plot where also data and boxes are copied.
  */
 //****************************************************************************************
-Plot Plot::GetDeepCopy()
+Plot Plot::Clone() const
 {
-  Plot newPlot = *this;
-  for(auto& [padID, pad] : this->GetPads())
+  Plot newPlot(*this);
+  for(auto& [padID, pad] : newPlot.GetPads())
   {
-    newPlot[padID].GetData().clear();
-    for(auto data_ptr : pad.GetData())
-    {
-      newPlot[padID].GetData().push_back(data_ptr->Clone());
-    }
-    newPlot[padID].GetLegendBoxes().clear();
-    for(auto legend_ptr : pad.GetLegendBoxes())
-    {
-      newPlot[padID].GetLegendBoxes().push_back(std::make_shared<Plot::Pad::LegendBox>(*legend_ptr));
-    }
-    newPlot[padID].GetTextBoxes().clear();
-    for(auto text_ptr : pad.GetTextBoxes())
-    {
-      newPlot[padID].GetTextBoxes().push_back(std::make_shared<Plot::Pad::TextBox>(*text_ptr));
-    }
+    std::transform(newPlot[padID].GetData().begin(), newPlot[padID].GetData().end(), newPlot[padID].GetData().begin(),
+                   [](auto data_ptr) { return data_ptr->Clone(); });
+
+    std::transform(newPlot[padID].GetLegendBoxes().begin(), newPlot[padID].GetLegendBoxes().end(), newPlot[padID].GetLegendBoxes().begin(),
+                   [](auto legend_ptr) { return std::make_shared<Plot::Pad::LegendBox>(*legend_ptr); });
+
+    std::transform(newPlot[padID].GetTextBoxes().begin(), newPlot[padID].GetTextBoxes().end(), newPlot[padID].GetTextBoxes().begin(),
+                   [](auto text_ptr) { return std::make_shared<Plot::Pad::TextBox>(*text_ptr); });
   }
   return newPlot;
 }

@@ -202,7 +202,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                 {
                   if(!DivideGraphs(data_ptr, denom_data_ptr)) // first try if exact division is possible
                   {
-                    WARNING("In general Graphs cannot be divided. Trying approximated division using TSpline. Errors will not be fully correct!");
+                    WARNING("In general graphs cannot be divided. Trying approximated division using TSpline. Errors will not be fully correct!");
                     DivideTSpline(data_ptr, denom_data_ptr);
                   }
                 }

@@ -21,9 +21,9 @@
 
 namespace PlottingFramework {
 
-inline constexpr bool str_contains(const std::string &str1, const std::string &str2)
+inline constexpr bool str_contains(const std::string &str, const std::string &substr)
 {
-  return (str1.find(str2) != string::npos);
+  return (str.find(substr) != string::npos);
 }
 
 template<typename T>

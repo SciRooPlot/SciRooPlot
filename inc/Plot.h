@@ -41,8 +41,8 @@ public:
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& templatePlot, const Plot& plot);
 
-  Plot(Plot& otherPlot, const string& name, const string& plotGroup);
-  Plot GetDeepCopy();
+  Plot(const Plot& otherPlot, const string& name, const string& plotGroup);
+  Plot Clone() const;
 
   // accessors for user
   inline void SetFigureCategory(const string& figureCategory){mFigureCategory = figureCategory;}
@@ -507,7 +507,7 @@ protected:
 
   virtual std::shared_ptr<Data> Clone() const
   {
-      return std::make_shared<Data>(*this);
+      return std::make_shared<Ratio>(*this);
   }
 
   ptree GetPropertyTree();
