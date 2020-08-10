@@ -17,7 +17,8 @@
 #include "Plot.h"
 
 using namespace PlottingFramework;
-namespace PlottingFramework {
+namespace PlottingFramework
+{
 
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -30,8 +31,7 @@ namespace PlottingFramework {
  * Default constructor.
  */
 //**************************************************************************************************
-Plot::Plot(const string& name, const string& figureGroup, const string& plotTemplateName)
-: Plot()
+Plot::Plot(const string& name, const string& figureGroup, const string& plotTemplateName) : Plot()
 {
   if(str_contains(figureGroup, "."))
   {
@@ -41,13 +41,13 @@ Plot::Plot(const string& name, const string& figureGroup, const string& plotTemp
   mName = name;
   mFigureGroup = figureGroup;
   if(plotTemplateName != "") mPlotTemplateName = plotTemplateName;
-  
+
   // in case category was specified via figureGroup:my/category/tree
   auto subPathPos = figureGroup.find(":");
   if(subPathPos != string::npos)
   {
     mFigureGroup = figureGroup.substr(0, subPathPos);
-    mFigureCategory = figureGroup.substr(subPathPos+1);
+    mFigureCategory = figureGroup.substr(subPathPos + 1);
   }
 }
 
@@ -70,11 +70,14 @@ Plot::Plot(const Plot& otherPlot, const string& name, const string& plotGroup)
 //**************************************************************************************************
 Plot::Plot(const ptree& plotTree)
 {
-  try{
+  try
+  {
     mName = plotTree.get<string>("name");
     mFigureGroup = plotTree.get<string>("figureGroup");
     mFigureCategory = plotTree.get<string>("figureCategory");
-  }catch(...){
+  }
+  catch(...)
+  {
     ERROR("Could not construct data from ptree.");
   }
   read_from_tree_optional(plotTree, mPlotTemplateName, "plot_template_name");
@@ -89,7 +92,7 @@ Plot::Plot(const ptree& plotTree)
   {
     if(str_contains(pad.first, "PAD"))
     {
-      uint8_t padID = std::stoi(pad.first.substr(pad.first.find("_")+1));
+      uint8_t padID = std::stoi(pad.first.substr(pad.first.find("_") + 1));
       mPads[padID] = Pad(pad.second);
     }
   }
@@ -130,13 +133,17 @@ Plot Plot::Clone() const
   Plot newPlot(*this);
   for(auto& [padID, pad] : newPlot.GetPads())
   {
-    std::transform(newPlot[padID].GetData().begin(), newPlot[padID].GetData().end(), newPlot[padID].GetData().begin(),
+    std::transform(newPlot[padID].GetData().begin(), newPlot[padID].GetData().end(),
+                   newPlot[padID].GetData().begin(),
                    [](auto data_ptr) { return data_ptr->Clone(); });
 
-    std::transform(newPlot[padID].GetLegendBoxes().begin(), newPlot[padID].GetLegendBoxes().end(), newPlot[padID].GetLegendBoxes().begin(),
-                   [](auto legend_ptr) { return std::make_shared<Plot::Pad::LegendBox>(*legend_ptr); });
+    std::transform(newPlot[padID].GetLegendBoxes().begin(), newPlot[padID].GetLegendBoxes().end(),
+                   newPlot[padID].GetLegendBoxes().begin(), [](auto legend_ptr) {
+                     return std::make_shared<Plot::Pad::LegendBox>(*legend_ptr);
+                   });
 
-    std::transform(newPlot[padID].GetTextBoxes().begin(), newPlot[padID].GetTextBoxes().end(), newPlot[padID].GetTextBoxes().begin(),
+    std::transform(newPlot[padID].GetTextBoxes().begin(), newPlot[padID].GetTextBoxes().end(),
+                   newPlot[padID].GetTextBoxes().begin(),
                    [](auto text_ptr) { return std::make_shared<Plot::Pad::TextBox>(*text_ptr); });
   }
   return newPlot;
@@ -147,7 +154,7 @@ Plot Plot::Clone() const
  * Set fill for this plot.
  */
 //**************************************************************************************************
-auto Plot::SetFill(int16_t color, int16_t style)  ->decltype(*this)
+auto Plot::SetFill(int16_t color, int16_t style) -> decltype(*this)
 {
   mFill.color = color;
   mFill.style = style;
@@ -159,7 +166,7 @@ auto Plot::SetFill(int16_t color, int16_t style)  ->decltype(*this)
  * Set this plot transparent.
  */
 //**************************************************************************************************
-auto Plot::SetTransparent()  ->decltype(*this)
+auto Plot::SetTransparent() -> decltype(*this)
 {
   mFill.style = 4000;
   return *this;
@@ -176,10 +183,11 @@ void Plot::operator+=(const Plot& plot)
   mFigureGroup = plot.mFigureGroup;
   mFigureCategory = plot.mFigureCategory;
   mPlotTemplateName = plot.mPlotTemplateName;
-  
+
   if(plot.mPlotDimensions.width) mPlotDimensions.width = plot.mPlotDimensions.width;
   if(plot.mPlotDimensions.height) mPlotDimensions.height = plot.mPlotDimensions.height;
-  if(plot.mPlotDimensions.fixAspectRatio) mPlotDimensions.fixAspectRatio = plot.mPlotDimensions.fixAspectRatio;
+  if(plot.mPlotDimensions.fixAspectRatio)
+    mPlotDimensions.fixAspectRatio = plot.mPlotDimensions.fixAspectRatio;
 
   if(plot.mFill.color) mFill.color = plot.mFill.color;
   if(plot.mFill.style) mFill.style = plot.mFill.style;
@@ -214,7 +222,7 @@ Plot operator+(const Plot& templatePlot, const Plot& plot)
  * Trigger redrawing of axes after all data was drawn to the pad.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetRedrawAxes(bool redraw)  ->decltype(*this)
+auto Plot::Pad::SetRedrawAxes(bool redraw) -> decltype(*this)
 {
   mRedrawAxes = redraw;
   return *this;
@@ -225,7 +233,7 @@ auto Plot::Pad::SetRedrawAxes(bool redraw)  ->decltype(*this)
  * Set text size
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultTextSize(float_t size)  ->decltype(*this)
+auto Plot::Pad::SetDefaultTextSize(float_t size) -> decltype(*this)
 {
   mText.size = size;
   return *this;
@@ -236,7 +244,7 @@ auto Plot::Pad::SetDefaultTextSize(float_t size)  ->decltype(*this)
  * Set text color
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultTextColor(int16_t color)  ->decltype(*this)
+auto Plot::Pad::SetDefaultTextColor(int16_t color) -> decltype(*this)
 {
   mText.color = color;
   return *this;
@@ -247,7 +255,7 @@ auto Plot::Pad::SetDefaultTextColor(int16_t color)  ->decltype(*this)
  * Set text font for this pad.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultTextFont(int16_t font)  ->decltype(*this)
+auto Plot::Pad::SetDefaultTextFont(int16_t font) -> decltype(*this)
 {
   mText.font = font;
   return *this;
@@ -258,7 +266,7 @@ auto Plot::Pad::SetDefaultTextFont(int16_t font)  ->decltype(*this)
  * Set default marker size for this pad.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultMarkerSize(float_t size)  ->decltype(*this)
+auto Plot::Pad::SetDefaultMarkerSize(float_t size) -> decltype(*this)
 {
   mMarkerDefaults.scale = size;
   return *this;
@@ -269,7 +277,7 @@ auto Plot::Pad::SetDefaultMarkerSize(float_t size)  ->decltype(*this)
  * Set default line width for this pad.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultLineWidth(float_t width)  ->decltype(*this)
+auto Plot::Pad::SetDefaultLineWidth(float_t width) -> decltype(*this)
 {
   mLineDefaults.scale = width;
   return *this;
@@ -280,7 +288,7 @@ auto Plot::Pad::SetDefaultLineWidth(float_t width)  ->decltype(*this)
  * Set default fill opacity for this pad.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultFillOpacity(float_t opacity)  ->decltype(*this)
+auto Plot::Pad::SetDefaultFillOpacity(float_t opacity) -> decltype(*this)
 {
   mFillDefaults.scale = opacity;
   return *this;
@@ -291,7 +299,7 @@ auto Plot::Pad::SetDefaultFillOpacity(float_t opacity)  ->decltype(*this)
  * Set default marker colors.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultMarkerColors(const vector<int16_t>& colors)  ->decltype(*this)
+auto Plot::Pad::SetDefaultMarkerColors(const vector<int16_t>& colors) -> decltype(*this)
 {
   mMarkerDefaults.colors = colors;
   return *this;
@@ -302,7 +310,7 @@ auto Plot::Pad::SetDefaultMarkerColors(const vector<int16_t>& colors)  ->decltyp
  * Set default line colors.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultLineColors(const vector<int16_t>& colors)  ->decltype(*this)
+auto Plot::Pad::SetDefaultLineColors(const vector<int16_t>& colors) -> decltype(*this)
 {
   mLineDefaults.colors = colors;
   return *this;
@@ -313,7 +321,7 @@ auto Plot::Pad::SetDefaultLineColors(const vector<int16_t>& colors)  ->decltype(
  * Set default fill colors.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultFillColors(const vector<int16_t>& colors)  ->decltype(*this)
+auto Plot::Pad::SetDefaultFillColors(const vector<int16_t>& colors) -> decltype(*this)
 {
   mFillDefaults.colors = colors;
   return *this;
@@ -324,7 +332,7 @@ auto Plot::Pad::SetDefaultFillColors(const vector<int16_t>& colors)  ->decltype(
  * Set default marker styles.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultMarkerStyles(const vector<int16_t>& styles)  ->decltype(*this)
+auto Plot::Pad::SetDefaultMarkerStyles(const vector<int16_t>& styles) -> decltype(*this)
 {
   mMarkerDefaults.styles = styles;
   return *this;
@@ -335,7 +343,7 @@ auto Plot::Pad::SetDefaultMarkerStyles(const vector<int16_t>& styles)  ->decltyp
  * Set default line styles.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultLineStyles(const vector<int16_t>& styles)  ->decltype(*this)
+auto Plot::Pad::SetDefaultLineStyles(const vector<int16_t>& styles) -> decltype(*this)
 {
   mLineDefaults.styles = styles;
   return *this;
@@ -346,7 +354,7 @@ auto Plot::Pad::SetDefaultLineStyles(const vector<int16_t>& styles)  ->decltype(
  * Set default fill styles.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultFillStyles(const vector<int16_t>& styles)  ->decltype(*this)
+auto Plot::Pad::SetDefaultFillStyles(const vector<int16_t>& styles) -> decltype(*this)
 {
   mFillDefaults.styles = styles;
   return *this;
@@ -357,7 +365,7 @@ auto Plot::Pad::SetDefaultFillStyles(const vector<int16_t>& styles)  ->decltype(
  * Set default drawing option for graphs.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultDrawingOptionGraph(drawing_options_t drawingOption)  ->decltype(*this)
+auto Plot::Pad::SetDefaultDrawingOptionGraph(drawing_options_t drawingOption) -> decltype(*this)
 {
   mDrawingOptionDefaults.graph = drawingOption;
   return *this;
@@ -368,7 +376,7 @@ auto Plot::Pad::SetDefaultDrawingOptionGraph(drawing_options_t drawingOption)  -
  * Set default drawing option for histograms.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultDrawingOptionHist(drawing_options_t drawingOption)  ->decltype(*this)
+auto Plot::Pad::SetDefaultDrawingOptionHist(drawing_options_t drawingOption) -> decltype(*this)
 {
   mDrawingOptionDefaults.hist = drawingOption;
   return *this;
@@ -379,7 +387,7 @@ auto Plot::Pad::SetDefaultDrawingOptionHist(drawing_options_t drawingOption)  ->
  * Set default drawing option for 2d histograms.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption)  ->decltype(*this)
+auto Plot::Pad::SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption) -> decltype(*this)
 {
   mDrawingOptionDefaults.hist2d = drawingOption;
   return *this;
@@ -390,7 +398,7 @@ auto Plot::Pad::SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption)  
  * Set fill for this pad.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetFill(int16_t color, int16_t style)  ->decltype(*this)
+auto Plot::Pad::SetFill(int16_t color, int16_t style) -> decltype(*this)
 {
   mFill.color = color;
   mFill.style = style;
@@ -402,7 +410,7 @@ auto Plot::Pad::SetFill(int16_t color, int16_t style)  ->decltype(*this)
  * Make this pad transparent.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetTransparent()  ->decltype(*this)
+auto Plot::Pad::SetTransparent() -> decltype(*this)
 {
   mFill.style = 4000;
   return *this;
@@ -413,7 +421,7 @@ auto Plot::Pad::SetTransparent()  ->decltype(*this)
  * Set frame fill properties.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetFillFrame(int16_t color, int16_t style)  ->decltype(*this)
+auto Plot::Pad::SetFillFrame(int16_t color, int16_t style) -> decltype(*this)
 {
   mFrame.fillColor = color;
   mFrame.fillStyle = style;
@@ -425,7 +433,7 @@ auto Plot::Pad::SetFillFrame(int16_t color, int16_t style)  ->decltype(*this)
  * Set frame line properties.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetLineFrame(int16_t color, int16_t style, float_t width)  ->decltype(*this)
+auto Plot::Pad::SetLineFrame(int16_t color, int16_t style, float_t width) -> decltype(*this)
 {
   mFrame.lineColor = color;
   mFrame.lineStyle = style;
@@ -438,7 +446,7 @@ auto Plot::Pad::SetLineFrame(int16_t color, int16_t style, float_t width)  ->dec
  * Set this pad transparent.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetTransparentFrame()  ->decltype(*this)
+auto Plot::Pad::SetTransparentFrame() -> decltype(*this)
 {
   mFrame.fillStyle = 0;
   return *this;
@@ -457,10 +465,11 @@ auto Plot::Pad::SetTransparentFrame()  ->decltype(*this)
  * - BlueYellow: kBlueYellow, kStarryNight
  * - Brown: kCoffee, kFall, kSandyTerrain, kCopper
  * - Purple: kFuchsia
- * - Intense: kGreenPink, kOcean, kDarkBodyRadiator, kInvertedDarkBodyRadiator, kSunset, kVisibleSpectrum
+ * - Intense: kGreenPink, kOcean, kDarkBodyRadiator, kInvertedDarkBodyRadiator, kSunset,
+ * kVisibleSpectrum
  */
 //**************************************************************************************************
-auto Plot::Pad::SetPalette(int32_t palette)  ->decltype(*this)
+auto Plot::Pad::SetPalette(int32_t palette) -> decltype(*this)
 {
   mPalette = palette;
   return *this;
@@ -471,7 +480,7 @@ auto Plot::Pad::SetPalette(int32_t palette)  ->decltype(*this)
  * Set title of pad
  */
 //**************************************************************************************************
-auto Plot::Pad::SetTitle(const string& title)  ->decltype(*this)
+auto Plot::Pad::SetTitle(const string& title) -> decltype(*this)
 {
   mTitle = title;
   return *this;
@@ -479,11 +488,13 @@ auto Plot::Pad::SetTitle(const string& title)  ->decltype(*this)
 
 //**************************************************************************************************
 /**
- * Set position of pad within plot. The variables are given in fractions of plot width resp. height (between 0 and 1).
- * The lower left corner is defined by (xlow, ylow) and the upper right corner by (xup, yup).
+ * Set position of pad within plot. The variables are given in fractions of plot width resp. height
+ * (between 0 and 1). The lower left corner is defined by (xlow, ylow) and the upper right corner by
+ * (xup, yup).
  */
 //**************************************************************************************************
-auto Plot::Pad::SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup) ->decltype(*this)
+auto Plot::Pad::SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup)
+  -> decltype(*this)
 {
   mPosition.xlow = xlow;
   mPosition.ylow = ylow;
@@ -497,7 +508,8 @@ auto Plot::Pad::SetPosition(double_t xlow, double_t ylow, double_t xup, double_t
  * Set margins of pad.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetMargins(float_t top, float_t bottom, float_t left, float_t right) ->decltype(*this)
+auto Plot::Pad::SetMargins(float_t top, float_t bottom, float_t left, float_t right)
+  -> decltype(*this)
 {
   mMargins.top = top;
   mMargins.bottom = bottom;
@@ -647,8 +659,7 @@ ptree Plot::Pad::GetPropetyTree()
     ++textBoxID;
   }
 
-    
-  for(auto& axis : {"X", "Y", "Z"})
+  for(auto& axis : { "X", "Y", "Z" })
   {
     if(mAxes.find(axis) != mAxes.end())
     {
@@ -668,7 +679,6 @@ void Plot::Pad::operator+=(const Pad& pad)
 {
   if(pad.mTitle) mTitle = pad.mTitle;
   if(pad.mOptions) mOptions = pad.mOptions;
-
 
   if(pad.mPosition.xlow) mPosition.xlow = pad.mPosition.xlow;
   if(pad.mPosition.ylow) mPosition.ylow = pad.mPosition.ylow;
@@ -696,7 +706,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   if(pad.mMarkerDefaults.scale) mMarkerDefaults.scale = pad.mMarkerDefaults.scale;
   if(pad.mLineDefaults.scale) mLineDefaults.scale = pad.mLineDefaults.scale;
   if(pad.mFillDefaults.scale) mFillDefaults.scale = pad.mFillDefaults.scale;
-  
+
   if(pad.mMarkerDefaults.colors) mMarkerDefaults.colors = pad.mMarkerDefaults.colors;
   if(pad.mLineDefaults.colors) mLineDefaults.colors = pad.mLineDefaults.colors;
   if(pad.mFillDefaults.colors) mFillDefaults.colors = pad.mFillDefaults.colors;
@@ -704,9 +714,11 @@ void Plot::Pad::operator+=(const Pad& pad)
   if(pad.mLineDefaults.styles) mLineDefaults.styles = pad.mLineDefaults.styles;
   if(pad.mFillDefaults.styles) mFillDefaults.styles = pad.mFillDefaults.styles;
 
-  if(pad.mDrawingOptionDefaults.graph) mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
+  if(pad.mDrawingOptionDefaults.graph)
+    mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
   if(pad.mDrawingOptionDefaults.hist) mDrawingOptionDefaults.hist = pad.mDrawingOptionDefaults.hist;
-  if(pad.mDrawingOptionDefaults.hist2d) mDrawingOptionDefaults.hist2d = pad.mDrawingOptionDefaults.hist2d;
+  if(pad.mDrawingOptionDefaults.hist2d)
+    mDrawingOptionDefaults.hist2d = pad.mDrawingOptionDefaults.hist2d;
 
   if(pad.mPalette) mPalette = pad.mPalette;
 
@@ -718,7 +730,7 @@ void Plot::Pad::operator+=(const Pad& pad)
     mAxes[axisLable]; // default initiialize in case this axis was not yet defined
     mAxes[axisLable] += axis;
   }
-  mData = pad.mData; // this does not copy the data itself, which might become a problem at some point
+  mData = pad.mData; // this does not copy the data (!!)
   mLegendBoxes = pad.mLegendBoxes;
   mTextBoxes = pad.mTextBoxes;
 }
@@ -740,7 +752,7 @@ Plot::Pad::Axis& Plot::Pad::operator[](const string& axis)
 //**************************************************************************************************
 Plot::Pad::Axis& Plot::Pad::GetAxis(const string& axis)
 {
-  const vector<string> allowedAxes = {"X", "Y", "Z"};
+  const vector<string> allowedAxes = { "X", "Y", "Z" };
   if(std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end())
   {
     ERROR("Axis \"{}\" is not allowed! Please use \"X\", \"Y\" or \"Z\".", axis);
@@ -762,10 +774,12 @@ Plot::Pad::Data& Plot::Pad::GetData(uint8_t dataID)
 {
   if(dataID < 1 || dataID > mData.size())
   {
-    ERROR("Data with ID {} is not defined! You can access only data that was already added to the pad.", dataID);
+    ERROR(
+      "Data with ID {} is not defined! You can access only data that was already added to the pad.",
+      dataID);
     std::exit(EXIT_FAILURE);
   }
-  return *mData[dataID-1];
+  return *mData[dataID - 1];
 }
 
 //**************************************************************************************************
@@ -777,10 +791,13 @@ Plot::Pad::LegendBox& Plot::Pad::GetLegend(uint8_t legendID)
 {
   if(legendID < 1 || legendID > mLegendBoxes.size())
   {
-    ERROR("Legend with ID {} is not defined! You can access only legends that have already been added to the pad.", legendID);
+    ERROR(
+      "Legend with ID {} is not defined! You can access only legends that have already been added "
+      "to the pad.",
+      legendID);
     std::exit(EXIT_FAILURE);
   }
-  return *mLegendBoxes[legendID-1];
+  return *mLegendBoxes[legendID - 1];
 }
 
 //**************************************************************************************************
@@ -792,10 +809,13 @@ Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
 {
   if(textID < 1 || textID > mTextBoxes.size())
   {
-    ERROR("Text with ID {} is not defined! You can access only texts that have already been added to the pad.", textID);
+    ERROR(
+      "Text with ID {} is not defined! You can access only texts that have already been added to "
+      "the pad.",
+      textID);
     std::exit(EXIT_FAILURE);
   }
-  return *mTextBoxes[textID-1];
+  return *mTextBoxes[textID - 1];
 }
 
 //**************************************************************************************************
@@ -806,7 +826,7 @@ Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
 Plot::Pad::Data& Plot::Pad::AddData(const input_t& data, const string& lable)
 {
   mData.push_back(std::make_shared<Data>(data.name, data.inputIdentifier, lable));
-  return *mData[mData.size()-1];
+  return *mData[mData.size() - 1];
 }
 
 //**************************************************************************************************
@@ -814,10 +834,12 @@ Plot::Pad::Data& Plot::Pad::AddData(const input_t& data, const string& lable)
  * Add ratio to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const input_t& numerator, const input_t& denominator, const string& lable)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const input_t& numerator, const input_t& denominator,
+                                      const string& lable)
 {
-  mData.push_back(std::make_shared<Ratio>(numerator.name, numerator.inputIdentifier, denominator.name, denominator.inputIdentifier, lable));
-  return *std::dynamic_pointer_cast<Ratio>(mData[mData.size()-1]);
+  mData.push_back(std::make_shared<Ratio>(numerator.name, numerator.inputIdentifier,
+                                          denominator.name, denominator.inputIdentifier, lable));
+  return *std::dynamic_pointer_cast<Ratio>(mData[mData.size() - 1]);
 }
 
 //**************************************************************************************************
@@ -828,7 +850,7 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const input_t& numerator, const input_t& d
 Plot::Pad::TextBox& Plot::Pad::AddText(double_t xPos, double_t yPos, const string& text)
 {
   mTextBoxes.push_back(std::make_shared<TextBox>(xPos, yPos, text));
-  return *mTextBoxes[mTextBoxes.size()-1];
+  return *mTextBoxes[mTextBoxes.size() - 1];
 }
 
 //**************************************************************************************************
@@ -839,7 +861,7 @@ Plot::Pad::TextBox& Plot::Pad::AddText(double_t xPos, double_t yPos, const strin
 Plot::Pad::TextBox& Plot::Pad::AddText(const string& text)
 {
   mTextBoxes.push_back(std::make_shared<TextBox>(text));
-  return *mTextBoxes[mTextBoxes.size()-1];
+  return *mTextBoxes[mTextBoxes.size() - 1];
 }
 
 //**************************************************************************************************
@@ -850,7 +872,7 @@ Plot::Pad::TextBox& Plot::Pad::AddText(const string& text)
 Plot::Pad::LegendBox& Plot::Pad::AddLegend(double_t xPos, double_t yPos)
 {
   mLegendBoxes.push_back(std::make_shared<LegendBox>(xPos, yPos));
-  return *mLegendBoxes[mLegendBoxes.size()-1];
+  return *mLegendBoxes[mLegendBoxes.size() - 1];
 }
 
 //**************************************************************************************************
@@ -861,7 +883,7 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend(double_t xPos, double_t yPos)
 Plot::Pad::LegendBox& Plot::Pad::AddLegend()
 {
   mLegendBoxes.push_back(std::make_shared<LegendBox>());
-  return *mLegendBoxes[mLegendBoxes.size()-1];
+  return *mLegendBoxes[mLegendBoxes.size() - 1];
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -877,23 +899,24 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend()
 //**************************************************************************************************
 Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const string& legendLable)
   : Data()
+{
+  mType = "data";
+
+  if(legendLable != "") mLegendLable = legendLable;
+  // in case input was specified further via inputIdentifier:some/path/in/file
+  auto subPathPos = inputIdentifier.find(":");
+  if(subPathPos != string::npos)
   {
-    mType = "data";
-    
-    if(legendLable != "") mLegendLable = legendLable;
-    // in case input was specified further via inputIdentifier:some/path/in/file
-    auto subPathPos = inputIdentifier.find(":");
-    if(subPathPos != string::npos)
-    {
-      // prepend path to plot name
-      mName = inputIdentifier.substr(subPathPos+1) + "/" + name;
-      mInputIdentifier = inputIdentifier.substr(0, subPathPos);
-    }
-    else{
-      mName = name;
-      mInputIdentifier = inputIdentifier;
-    }
+    // prepend path to plot name
+    mName = inputIdentifier.substr(subPathPos + 1) + "/" + name;
+    mInputIdentifier = inputIdentifier.substr(0, subPathPos);
   }
+  else
+  {
+    mName = name;
+    mInputIdentifier = inputIdentifier;
+  }
+}
 
 //**************************************************************************************************
 /**
@@ -902,11 +925,14 @@ Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const s
 //**************************************************************************************************
 Plot::Pad::Data::Data(const ptree& dataTree) : Data()
 {
-  try{
+  try
+  {
     mType = dataTree.get<string>("type");
     mName = dataTree.get<string>("name");
     mInputIdentifier = dataTree.get<string>("inputIdentifier");
-  }catch(...){
+  }
+  catch(...)
+  {
     ERROR("Could not construct data from ptree.");
     std::exit(EXIT_FAILURE);
   }
@@ -936,7 +962,8 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
  * Generate property tree for this Data object.
  */
 //**************************************************************************************************
-ptree Plot::Pad::Data::GetPropertyTree(){
+ptree Plot::Pad::Data::GetPropertyTree()
+{
   ptree dataTree;
   dataTree.put("type", mType);
   dataTree.put("name", mName);
@@ -1113,7 +1140,8 @@ auto Plot::Pad::Data::SetFillOpacity(float_t opacity) -> decltype(*this)
 {
   if(opacity < 0.f || opacity > 1.f)
   {
-    WARNING("Illegal value for opacity! It has to be between 0 (transparent) and 1 (fully opaque).");
+    WARNING(
+      "Illegal value for opacity! It has to be between 0 (transparent) and 1 (fully opaque).");
   }
   else
   {
@@ -1143,8 +1171,10 @@ auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
  * Default constructor.
  */
 //**************************************************************************************************
-Plot::Pad::Ratio::Ratio(const string& name, const string& inputIdentifier, const string& denomName, const string& denomInputIdentifier, const string& lable)
-: Data(name, inputIdentifier, lable), mDenomName(denomName), mDenomInputIdentifier(denomInputIdentifier), mIsCorrelated(false)
+Plot::Pad::Ratio::Ratio(const string& name, const string& inputIdentifier, const string& denomName,
+                        const string& denomInputIdentifier, const string& lable)
+  : Data(name, inputIdentifier, lable), mDenomName(denomName),
+    mDenomInputIdentifier(denomInputIdentifier), mIsCorrelated(false)
 {
   SetType("ratio");
 }
@@ -1156,11 +1186,14 @@ Plot::Pad::Ratio::Ratio(const string& name, const string& inputIdentifier, const
 //**************************************************************************************************
 Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
 {
-  try{
+  try
+  {
     mDenomName = dataTree.get<string>("denomName");
     mDenomInputIdentifier = dataTree.get<string>("denomInputID");
     mIsCorrelated = dataTree.get<bool>("isCorrelated");
-  }catch(...){
+  }
+  catch(...)
+  {
     ERROR("Could not construct ratio from ptree.");
   }
 }
@@ -1213,9 +1246,12 @@ Plot::Pad::Axis::Axis(const string& axisName) : Axis()
 //**************************************************************************************************
 Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
 {
-  try{
+  try
+  {
     mName = axisTree.get<string>("name");
-  }catch(...){
+  }
+  catch(...)
+  {
     ERROR("Could not construct axis from ptree.");
   }
   read_from_tree_optional(axisTree, mTitle, "title");
@@ -1247,9 +1283,10 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
  * Convert axis object to property tree.
  */
 //**************************************************************************************************
-ptree Plot::Pad::Axis::GetPropertyTree(){
+ptree Plot::Pad::Axis::GetPropertyTree()
+{
   ptree axisTree;
-  axisTree.put("name", mName);  
+  axisTree.put("name", mName);
   put_in_tree_optional(axisTree, mTitle, "title");
   put_in_tree_optional(axisTree, mRange.min, "range_min");
   put_in_tree_optional(axisTree, mRange.max, "range_max");
@@ -1320,8 +1357,7 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
  */
 //**************************************************************************************************
 template <typename BoxType>
-Plot::Pad::Box<BoxType>::Box(double_t xPos, double_t yPos)
-: Box()
+Plot::Pad::Box<BoxType>::Box(double_t xPos, double_t yPos) : Box()
 {
   mPos.x = xPos;
   mPos.y = yPos;
@@ -1333,8 +1369,7 @@ Plot::Pad::Box<BoxType>::Box(double_t xPos, double_t yPos)
  */
 //**************************************************************************************************
 template <typename BoxType>
-Plot::Pad::Box<BoxType>::Box(const ptree& boxTree)
-: Box()
+Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
 {
   read_from_tree_optional(boxTree, mPos.x, "x");
   read_from_tree_optional(boxTree, mPos.y, "y");
@@ -1380,7 +1415,7 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree()
  * User accessors to change box properties.
  */
 //**************************************************************************************************
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetPosition(double_t x, double_t y)
 {
   mPos.x = x;
@@ -1388,14 +1423,14 @@ BoxType& Plot::Pad::Box<BoxType>::SetPosition(double_t x, double_t y)
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetUserCoordinates(bool userCoordinates)
 {
   mPos.isUserCoord = userCoordinates;
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetAutoPlacement()
 {
   mPos.x = std::nullopt;
@@ -1403,7 +1438,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetAutoPlacement()
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetBorder(int16_t color, int16_t style, float_t width)
 {
   mBorder.color = color;
@@ -1412,28 +1447,28 @@ BoxType& Plot::Pad::Box<BoxType>::SetBorder(int16_t color, int16_t style, float_
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetBorderColor(int16_t color)
 {
   mBorder.color = color;
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetBorderStyle(int16_t style)
 {
   mBorder.style = style;
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetBorderWidth(float_t width)
 {
   mBorder.scale = width;
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetText(int16_t color, int16_t font, float_t size)
 {
   mText.color = color;
@@ -1442,28 +1477,28 @@ BoxType& Plot::Pad::Box<BoxType>::SetText(int16_t color, int16_t font, float_t s
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetTextColor(int16_t color)
 {
   mText.color = color;
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetTextFont(int16_t font)
 {
   mText.style = font;
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetTextSize(float_t size)
 {
   mText.scale = size;
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetFill(int16_t color, int16_t style, float_t opacity)
 {
   mFill.color = color;
@@ -1472,35 +1507,35 @@ BoxType& Plot::Pad::Box<BoxType>::SetFill(int16_t color, int16_t style, float_t 
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetFillColor(int16_t color)
 {
   mFill.color = color;
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetFillStyle(int16_t style)
 {
   mFill.style = style;
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetFillOpacity(float_t opacity)
 {
   mFill.scale = opacity;
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetTransparent()
 {
   mFill.style = 0;
   return *GetThis();
 }
 
-template<typename BoxType>
+template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetNoBox()
 {
   mFill.style = 0;
@@ -1520,9 +1555,8 @@ BoxType& Plot::Pad::Box<BoxType>::SetNoBox()
  */
 //**************************************************************************************************
 Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const string& text)
-: Box(xPos, yPos), mText{text}
+  : Box(xPos, yPos), mText{ text }
 {
-  
 }
 
 //**************************************************************************************************
@@ -1530,8 +1564,7 @@ Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const string& text)
  * TextBox constructor with automatic placing.
  */
 //**************************************************************************************************
-Plot::Pad::TextBox::TextBox(const string& text)
-: Box(), mText{text}
+Plot::Pad::TextBox::TextBox(const string& text) : Box(), mText{ text }
 {
   SetAutoPlacement();
 }
@@ -1541,12 +1574,14 @@ Plot::Pad::TextBox::TextBox(const string& text)
  * TextBox constructor from property tree.
  */
 //**************************************************************************************************
-Plot::Pad::TextBox::TextBox(const ptree& textBoxTree)
-: Box(textBoxTree)
+Plot::Pad::TextBox::TextBox(const ptree& textBoxTree) : Box(textBoxTree)
 {
-  try{
+  try
+  {
     mText = textBoxTree.get<string>("text");
-  }catch(...){
+  }
+  catch(...)
+  {
     ERROR("Could not construct textbox from ptree.");
   }
 }
@@ -1586,9 +1621,8 @@ Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const string& text)
  */
 //**************************************************************************************************
 Plot::Pad::LegendBox::LegendBox(double_t xPos, double_t yPos)
-: Box(xPos, yPos), mTitle{}, mNumColumns{}
+  : Box(xPos, yPos), mTitle{}, mNumColumns{}
 {
-  
 }
 
 //**************************************************************************************************
@@ -1596,8 +1630,7 @@ Plot::Pad::LegendBox::LegendBox(double_t xPos, double_t yPos)
  * LegendBox constructor with automatic placing.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendBox()
-: Box(), mTitle{}, mNumColumns{}
+Plot::Pad::LegendBox::LegendBox() : Box(), mTitle{}, mNumColumns{}
 {
   SetAutoPlacement();
 }
@@ -1607,8 +1640,7 @@ Plot::Pad::LegendBox::LegendBox()
  * LegendBox constructor from property tree.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree)
-: Box(legendBoxTree)
+Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
 {
   read_from_tree_optional(legendBoxTree, mTitle, "title");
   read_from_tree_optional(legendBoxTree, mNumColumns, "num_columns");
@@ -1643,7 +1675,6 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns)
   mNumColumns = numColumns;
   return *this;
 }
-
 
 //**************************************************************************************************
 // explicitly instanciate required box templates
