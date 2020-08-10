@@ -40,7 +40,6 @@ public:
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& templatePlot, const Plot& plot);
-
   Plot(const Plot& otherPlot, const string& name, const string& plotGroup);
   Plot Clone() const;
 
@@ -310,13 +309,14 @@ class Plot::Pad::Data
 {
 public:
   Data() = default;
-  virtual ~Data() = default;
-
-  // default constructor for user
   Data(const string& name, const string& inputIdentifier, const string& lable = "");
   Data(const ptree &dataTree);
-  // copy constructor
-  Data(const Data& otherData) = default;
+
+  virtual ~Data() = default;
+  Data(const Data& other) = default;
+  Data(Data&&) = default;
+  Data& operator=(const Data& other) = default;
+  Data& operator=(Data&& other) = default;
 
   // user accessors
   virtual auto SetLayout(const Data& dataLayout) -> decltype(*this);
@@ -442,10 +442,13 @@ public:
   Ratio(const ptree &dataTree);
 
   virtual ~Ratio() = default;
-  Ratio(const Ratio& otherRatio) = default;
+  Ratio(const Ratio& other) = default;
+  Ratio(Ratio&&) = default;
+  Ratio& operator=(const Ratio& other) = default;
+  Ratio& operator=(Ratio&& other) = default;
 
   auto SetIsCorrelated(bool isCorrelated = true) -> decltype(*this);
-
+  
   // return correct type for the data accessors
   virtual auto SetLayout(const Data& dataLayout) -> decltype(*this)
   {return dynamic_cast<decltype(*this)&>(Data::SetLayout(dataLayout));}
@@ -530,14 +533,7 @@ private:
 //****************************************************************************************
 class Plot::Pad::Axis {
 public:
-  
   Axis() =  default;
-  Axis(const Axis& otherAxis) = default;
-
-  Axis(const string& axisName);
-  Axis(const ptree &axisTree);
-  
-  void operator+=(const Axis& axis);
 
   Axis& SetTitle(const string& title) {mTitle = title; return *this;}
   Axis& SetRange(double_t min, double_t max) {mRange = {min, max}; return *this;}
@@ -568,9 +564,13 @@ protected:
   friend class PlotManager;
   friend class PlotPainter;
   friend class Plot;
+  
+  Axis(const string& axisName);
+  Axis(const ptree &axisTree);
 
   ptree GetPropertyTree();
-  
+  void operator+=(const Axis& axis);
+
   const optional<double_t>& GetMinRange() {return mRange.min;}
   const optional<double_t>& GetMaxRange() {return mRange.max;}
   const optional<float_t>& GetTickLength() {return mTickLength;}
@@ -635,6 +635,13 @@ template<class BoxType>
 class Plot::Pad::Box
 {
 public:
+  
+  virtual ~Box() = default;
+  Box(const Box& other) = default;
+  Box(Box&&) = default;
+  Box& operator=(const Box& other) = default;
+  Box& operator=(Box&& other) = default;
+
   BoxType& SetPosition(double_t x, double_t y);
   BoxType& SetUserCoordinates(bool userCoordinates = true);
   BoxType& SetAutoPlacement();
@@ -672,14 +679,12 @@ protected:
   bool IsAutoPlacement() {return (!mPos.x || !mPos.y);}
   
 private:
-  
-   // allow construction of Box base class only in context actual boxes
+  // allow construction of Box base class only in context actually useful boxes
   friend BoxType;
-  Box() =  default;
-  Box(const Box& otherBox) = default;
-  Box(const ptree &boxTree);
+  Box() = default;
   Box(double xPos, double yPos);
-  
+  Box(const ptree &boxTree);
+
   auto GetThis(){return static_cast<BoxType*>(this);}
     
   struct layout_t{
@@ -710,8 +715,12 @@ public:
   TextBox(const string& text);
   TextBox(double xPos, double yPos, const string& text);
   TextBox(const ptree& textBoxTree);
-  TextBox(const TextBox& otherTextBox) = default;
+  
   virtual ~TextBox() = default;
+  TextBox(const TextBox& other) = default;
+  TextBox(TextBox&&) = default;
+  TextBox& operator=(const TextBox& other) = default;
+  TextBox& operator=(TextBox&& other) = default;
   
   TextBox& SetText(const string& text);
     
@@ -738,9 +747,13 @@ public:
   LegendBox();
   LegendBox(double_t xPos, double_t yPos);
   LegendBox(const ptree& legendBoxTree);
-  LegendBox(const LegendBox& otherLegendBox) = default;
-  virtual ~LegendBox() = default;
   
+  virtual ~LegendBox() = default;
+  LegendBox(const LegendBox& other) = default;
+  LegendBox(LegendBox&&) = default;
+  LegendBox& operator=(const LegendBox& other) = default;
+  LegendBox& operator=(LegendBox&& other) = default;
+
   LegendBox& SetTitle(const string& title);
   LegendBox& SetNumColumns(uint8_t numColumns);
   

@@ -33,7 +33,12 @@ class PlotManager
 {
 public:
   PlotManager();
-  virtual ~PlotManager();
+
+  ~PlotManager();
+  PlotManager(const PlotManager& other) = delete;
+  PlotManager(PlotManager&&) = delete;
+  PlotManager& operator=(const PlotManager& other) = delete;
+  PlotManager& operator=(PlotManager&& other) = delete;
 
   // settings for output
   void SetOutputDirectory(const string& path);
