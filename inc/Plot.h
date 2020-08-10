@@ -37,24 +37,15 @@ class Plot
   Plot() = default;
   Plot(const ptree& plotTree);
   Plot(const string& name, const string& figureGroup, const string& plotTemplateName = "");
-  Pad& operator[](uint8_t padID)
-  {
-    return mPads[padID];
-  }
-  Pad& GetPad(uint8_t padID)
-  {
-    return mPads[padID];
-  }
+  Pad& operator[](uint8_t padID) { return mPads[padID]; }
+  Pad& GetPad(uint8_t padID) { return mPads[padID]; }
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& templatePlot, const Plot& plot);
   Plot(const Plot& otherPlot, const string& name, const string& plotGroup);
   Plot Clone() const;
 
   // accessors for user
-  inline void SetFigureCategory(const string& figureCategory)
-  {
-    mFigureCategory = figureCategory;
-  }
+  inline void SetFigureCategory(const string& figureCategory) { mFigureCategory = figureCategory; }
   inline void SetPlotTemplateName(const string& plotTemplateName)
   {
     mPlotTemplateName = plotTemplateName;
@@ -64,14 +55,8 @@ class Plot
   {
     mPlotDimensions = { width, height, fixAspectRatio };
   }
-  inline void SetWidth(int32_t width)
-  {
-    mPlotDimensions.width = width;
-  }
-  inline void SetHeight(int32_t height)
-  {
-    mPlotDimensions.height = height;
-  }
+  inline void SetWidth(int32_t width) { mPlotDimensions.width = width; }
+  inline void SetHeight(int32_t height) { mPlotDimensions.height = height; }
   inline void SetFixAspectRatio(bool fixAspectRatio = true)
   {
     mPlotDimensions.fixAspectRatio = fixAspectRatio;
@@ -84,28 +69,13 @@ class Plot
   friend class PlotManager;
   friend class PlotPainter;
 
-  inline void SetFigureGroup(const string& figureGroup)
-  {
-    mFigureGroup = figureGroup;
-  }
+  inline void SetFigureGroup(const string& figureGroup) { mFigureGroup = figureGroup; }
 
   // accessors for internal use by manager and painter
-  const string& GetName()
-  {
-    return mName;
-  }
-  const string& GetFigureGroup()
-  {
-    return mFigureGroup;
-  }
-  const string& GetFigureCategory()
-  {
-    return mFigureCategory;
-  }
-  const optional<string>& GetPlotTemplateName()
-  {
-    return mPlotTemplateName;
-  }
+  const string& GetName() { return mName; }
+  const string& GetFigureGroup() { return mFigureGroup; }
+  const string& GetFigureCategory() { return mFigureCategory; }
+  const optional<string>& GetPlotTemplateName() { return mPlotTemplateName; }
   string GetUniqueName()
   {
     return mName + gNameGroupSeparator + mFigureGroup
@@ -113,32 +83,14 @@ class Plot
   }
   ptree GetPropetyTree();
 
-  map<uint8_t, Pad>& GetPads()
-  {
-    return mPads;
-  }
+  map<uint8_t, Pad>& GetPads() { return mPads; }
 
-  const optional<int32_t>& GetHeight()
-  {
-    return mPlotDimensions.height;
-  }
-  const optional<int32_t>& GetWidth()
-  {
-    return mPlotDimensions.width;
-  }
-  const optional<bool>& IsFixAspectRatio()
-  {
-    return mPlotDimensions.fixAspectRatio;
-  }
+  const optional<int32_t>& GetHeight() { return mPlotDimensions.height; }
+  const optional<int32_t>& GetWidth() { return mPlotDimensions.width; }
+  const optional<bool>& IsFixAspectRatio() { return mPlotDimensions.fixAspectRatio; }
 
-  const optional<int16_t>& GetFillColor()
-  {
-    return mFill.color;
-  }
-  const optional<int16_t>& GetFillStyle()
-  {
-    return mFill.style;
-  }
+  const optional<int16_t>& GetFillColor() { return mFill.color; }
+  const optional<int16_t>& GetFillStyle() { return mFill.style; }
 
  private:
   struct dimension_t
@@ -251,148 +203,49 @@ class Plot::Pad
 
   ptree GetPropetyTree();
 
-  vector<shared_ptr<Data>>& GetData()
-  {
-    return mData;
-  }
-  vector<shared_ptr<LegendBox>>& GetLegendBoxes()
-  {
-    return mLegendBoxes;
-  }
-  vector<shared_ptr<TextBox>>& GetTextBoxes()
-  {
-    return mTextBoxes;
-  }
+  vector<shared_ptr<Data>>& GetData() { return mData; }
+  vector<shared_ptr<LegendBox>>& GetLegendBoxes() { return mLegendBoxes; }
+  vector<shared_ptr<TextBox>>& GetTextBoxes() { return mTextBoxes; }
 
-  const map<string, Axis>& GetAxes()
-  {
-    return mAxes;
-  }
+  const map<string, Axis>& GetAxes() { return mAxes; }
 
-  const optional<string>& GetTitle()
-  {
-    return mTitle;
-  }
+  const optional<string>& GetTitle() { return mTitle; }
 
-  const optional<double_t>& GetXLow()
-  {
-    return mPosition.xlow;
-  }
-  const optional<double_t>& GetYLow()
-  {
-    return mPosition.ylow;
-  }
-  const optional<double_t>& GetXUp()
-  {
-    return mPosition.xup;
-  }
-  const optional<double_t>& GetYUp()
-  {
-    return mPosition.yup;
-  }
+  const optional<double_t>& GetXLow() { return mPosition.xlow; }
+  const optional<double_t>& GetYLow() { return mPosition.ylow; }
+  const optional<double_t>& GetXUp() { return mPosition.xup; }
+  const optional<double_t>& GetYUp() { return mPosition.yup; }
 
-  const optional<float_t>& GetMarginTop()
-  {
-    return mMargins.top;
-  }
-  const optional<float_t>& GetMarginBottom()
-  {
-    return mMargins.bottom;
-  }
-  const optional<float_t>& GetMarginLeft()
-  {
-    return mMargins.left;
-  }
-  const optional<float_t>& GetMarginRight()
-  {
-    return mMargins.right;
-  }
+  const optional<float_t>& GetMarginTop() { return mMargins.top; }
+  const optional<float_t>& GetMarginBottom() { return mMargins.bottom; }
+  const optional<float_t>& GetMarginLeft() { return mMargins.left; }
+  const optional<float_t>& GetMarginRight() { return mMargins.right; }
 
-  const optional<int32_t>& GetPalette()
-  {
-    return mPalette;
-  }
+  const optional<int32_t>& GetPalette() { return mPalette; }
 
-  const optional<int16_t>& GetFillColor()
-  {
-    return mFill.color;
-  }
-  const optional<int16_t>& GetFillStyle()
-  {
-    return mFill.style;
-  }
+  const optional<int16_t>& GetFillColor() { return mFill.color; }
+  const optional<int16_t>& GetFillStyle() { return mFill.style; }
 
-  const optional<int16_t>& GetFillColorFrame()
-  {
-    return mFrame.fillColor;
-  }
-  const optional<int16_t>& GetFillStyleFrame()
-  {
-    return mFrame.fillStyle;
-  }
-  const optional<int16_t>& GetLineColorFrame()
-  {
-    return mFrame.lineColor;
-  }
-  const optional<int16_t>& GetLineStyleFrame()
-  {
-    return mFrame.lineStyle;
-  }
-  const optional<float_t>& GetLineWidthFrame()
-  {
-    return mFrame.lineWidth;
-  }
+  const optional<int16_t>& GetFillColorFrame() { return mFrame.fillColor; }
+  const optional<int16_t>& GetFillStyleFrame() { return mFrame.fillStyle; }
+  const optional<int16_t>& GetLineColorFrame() { return mFrame.lineColor; }
+  const optional<int16_t>& GetLineStyleFrame() { return mFrame.lineStyle; }
+  const optional<float_t>& GetLineWidthFrame() { return mFrame.lineWidth; }
 
-  const optional<int16_t>& GetDefaultTextColor()
-  {
-    return mText.color;
-  }
-  const optional<int16_t>& GetDefaultTextFont()
-  {
-    return mText.font;
-  }
-  const optional<float_t>& GetDefaultTextSize()
-  {
-    return mText.size;
-  }
+  const optional<int16_t>& GetDefaultTextColor() { return mText.color; }
+  const optional<int16_t>& GetDefaultTextFont() { return mText.font; }
+  const optional<float_t>& GetDefaultTextSize() { return mText.size; }
 
-  const optional<float_t>& GetDefaultMarkerSize()
-  {
-    return mMarkerDefaults.scale;
-  }
-  const optional<float_t>& GetDefaultLineWidth()
-  {
-    return mLineDefaults.scale;
-  }
-  const optional<float_t>& GetDefaultFillOpacity()
-  {
-    return mFillDefaults.scale;
-  }
+  const optional<float_t>& GetDefaultMarkerSize() { return mMarkerDefaults.scale; }
+  const optional<float_t>& GetDefaultLineWidth() { return mLineDefaults.scale; }
+  const optional<float_t>& GetDefaultFillOpacity() { return mFillDefaults.scale; }
 
-  const optional<vector<int16_t>>& GetDefaultMarkerColors()
-  {
-    return mMarkerDefaults.colors;
-  }
-  const optional<vector<int16_t>>& GetDefaultLineColors()
-  {
-    return mLineDefaults.colors;
-  }
-  const optional<vector<int16_t>>& GetDefaultFillColors()
-  {
-    return mFillDefaults.colors;
-  }
-  const optional<vector<int16_t>>& GetDefaultMarkerStyles()
-  {
-    return mMarkerDefaults.styles;
-  }
-  const optional<vector<int16_t>>& GetDefaultLineStyles()
-  {
-    return mLineDefaults.styles;
-  }
-  const optional<vector<int16_t>>& GetDefaultFillStyles()
-  {
-    return mFillDefaults.styles;
-  }
+  const optional<vector<int16_t>>& GetDefaultMarkerColors() { return mMarkerDefaults.colors; }
+  const optional<vector<int16_t>>& GetDefaultLineColors() { return mLineDefaults.colors; }
+  const optional<vector<int16_t>>& GetDefaultFillColors() { return mFillDefaults.colors; }
+  const optional<vector<int16_t>>& GetDefaultMarkerStyles() { return mMarkerDefaults.styles; }
+  const optional<vector<int16_t>>& GetDefaultLineStyles() { return mLineDefaults.styles; }
+  const optional<vector<int16_t>>& GetDefaultFillStyles() { return mFillDefaults.styles; }
 
   const optional<drawing_options_t>& GetDefaultDrawingOptionGraph()
   {
@@ -407,14 +260,8 @@ class Plot::Pad
     return mDrawingOptionDefaults.hist2d;
   }
 
-  const optional<bool>& GetRedrawAxes()
-  {
-    return mRedrawAxes;
-  }
-  const optional<string>& GetRefFunc()
-  {
-    return mRefFunc;
-  }
+  const optional<bool>& GetRedrawAxes() { return mRedrawAxes; }
+  const optional<string>& GetRefFunc() { return mRefFunc; }
 
  private:
   struct pad_position_t
@@ -542,123 +389,48 @@ class Plot::Pad::Data
     mInputIdentifier = inputIdentifier;
     return *this;
   }
-  const string& GetInputID()
-  {
-    return mInputIdentifier;
-  }
+  const string& GetInputID() { return mInputIdentifier; }
 
  protected:
   friend class PlotManager;
   friend class PlotPainter;
   friend class Plot;
 
-  virtual std::shared_ptr<Data> Clone() const
-  {
-    return std::make_shared<Data>(*this);
-  }
+  virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Data>(*this); }
 
   virtual ptree GetPropertyTree();
 
-  void SetType(const string& type)
-  {
-    mType = type;
-  }
+  void SetType(const string& type) { mType = type; }
 
-  string GetUniqueName()
-  {
-    return mName + gNameGroupSeparator + mInputIdentifier;
-  }
+  string GetUniqueName() { return mName + gNameGroupSeparator + mInputIdentifier; }
 
-  const string& GetType()
-  {
-    return mType;
-  }
-  const string& GetName()
-  {
-    return mName;
-  }
-  const optional<string>& GetLegendLable()
-  {
-    return mLegendLable;
-  }
+  const string& GetType() { return mType; }
+  const string& GetName() { return mName; }
+  const optional<string>& GetLegendLable() { return mLegendLable; }
 
-  const optional<int16_t>& GetMarkerColor()
-  {
-    return mMarker.color;
-  }
-  const optional<int16_t>& GetMarkerStyle()
-  {
-    return mMarker.style;
-  }
-  const optional<float_t>& GetMarkerSize()
-  {
-    return mMarker.scale;
-  }
+  const optional<int16_t>& GetMarkerColor() { return mMarker.color; }
+  const optional<int16_t>& GetMarkerStyle() { return mMarker.style; }
+  const optional<float_t>& GetMarkerSize() { return mMarker.scale; }
 
-  const optional<int16_t>& GetLineColor()
-  {
-    return mLine.color;
-  }
-  const optional<int16_t>& GetLineStyle()
-  {
-    return mLine.style;
-  }
-  const optional<float_t>& GetLineWidth()
-  {
-    return mLine.scale;
-  }
+  const optional<int16_t>& GetLineColor() { return mLine.color; }
+  const optional<int16_t>& GetLineStyle() { return mLine.style; }
+  const optional<float_t>& GetLineWidth() { return mLine.scale; }
 
-  const optional<int16_t>& GetFillColor()
-  {
-    return mFill.color;
-  }
-  const optional<int16_t>& GetFillStyle()
-  {
-    return mFill.style;
-  }
-  const optional<float_t>& GetFillOpacity()
-  {
-    return mFill.scale;
-  }
+  const optional<int16_t>& GetFillColor() { return mFill.color; }
+  const optional<int16_t>& GetFillStyle() { return mFill.style; }
+  const optional<float_t>& GetFillOpacity() { return mFill.scale; }
 
-  const optional<string>& GetDrawingOptions()
-  {
-    return mDrawingOptions;
-  }
-  const optional<drawing_options_t>& GetDrawingOptionAlias()
-  {
-    return mDrawingOptionAlias;
-  }
-  const optional<double_t>& GetScaleFactor()
-  {
-    return mModify.scale_factor;
-  }
-  const optional<uint8_t>& GetNormMode()
-  {
-    return mModify.norm_mode;
-  }
+  const optional<string>& GetDrawingOptions() { return mDrawingOptions; }
+  const optional<drawing_options_t>& GetDrawingOptionAlias() { return mDrawingOptionAlias; }
+  const optional<double_t>& GetScaleFactor() { return mModify.scale_factor; }
+  const optional<uint8_t>& GetNormMode() { return mModify.norm_mode; }
 
-  const optional<double_t>& GetMinRangeX()
-  {
-    return mRangeX.min;
-  }
-  const optional<double_t>& GetMaxRangeX()
-  {
-    return mRangeX.max;
-  }
-  const optional<double_t>& GetMinRangeY()
-  {
-    return mRangeY.min;
-  }
-  const optional<double_t>& GetMaxRangeY()
-  {
-    return mRangeY.max;
-  }
+  const optional<double_t>& GetMinRangeX() { return mRangeX.min; }
+  const optional<double_t>& GetMaxRangeX() { return mRangeX.max; }
+  const optional<double_t>& GetMinRangeY() { return mRangeY.min; }
+  const optional<double_t>& GetMaxRangeY() { return mRangeY.max; }
 
-  const bool& GetDefinesFrame()
-  {
-    return mDefinesFrame;
-  }
+  const bool& GetDefinesFrame() { return mDefinesFrame; }
 
  private:
   bool mDefinesFrame;
@@ -673,8 +445,7 @@ class Plot::Pad::Data
 
   struct modify_t
   {
-    optional<uint8_t>
-      norm_mode; // 0: normalize by summing of bin contents, 1: additionally multiply with bin width
+    optional<uint8_t> norm_mode; // 0: sum over bin contents, 1: with bin width
     optional<double_t> scale_factor;
   };
 
@@ -830,29 +601,14 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   friend class PlotPainter;
   friend class Plot;
 
-  virtual std::shared_ptr<Data> Clone() const
-  {
-    return std::make_shared<Ratio>(*this);
-  }
+  virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Ratio>(*this); }
 
   ptree GetPropertyTree();
-  string GetDenomIdentifier()
-  {
-    return mDenomInputIdentifier;
-  }
-  string GetDenomName()
-  {
-    return mDenomName;
-  }
-  string GetUniqueNameDenom()
-  {
-    return mDenomName + gNameGroupSeparator + mDenomInputIdentifier;
-  }
+  string GetDenomIdentifier() { return mDenomInputIdentifier; }
+  string GetDenomName() { return mDenomName; }
+  string GetUniqueNameDenom() { return mDenomName + gNameGroupSeparator + mDenomInputIdentifier; }
 
-  const bool& GetIsCorrelated()
-  {
-    return mIsCorrelated;
-  }
+  const bool& GetIsCorrelated() { return mIsCorrelated; }
 
  private:
   string mDenomName;
@@ -1004,94 +760,28 @@ class Plot::Pad::Axis
   ptree GetPropertyTree();
   void operator+=(const Axis& axis);
 
-  const optional<double_t>& GetMinRange()
-  {
-    return mRange.min;
-  }
-  const optional<double_t>& GetMaxRange()
-  {
-    return mRange.max;
-  }
-  const optional<float_t>& GetTickLength()
-  {
-    return mTickLength;
-  }
-  const optional<int32_t>& GetNumDivisions()
-  {
-    return mNumDivisions;
-  }
-  const optional<int32_t>& GetMaxDigits()
-  {
-    return mMaxDigits;
-  }
-  const optional<int16_t>& GetAxisColor()
-  {
-    return mAxisColor;
-  }
-  const optional<string>& GetTitle()
-  {
-    return mTitle;
-  }
-  const optional<int16_t>& GetTitleFont()
-  {
-    return mTitleProperties.font;
-  }
-  const optional<int16_t>& GetLableFont()
-  {
-    return mLableProperties.font;
-  }
-  const optional<float_t>& GetTitleSize()
-  {
-    return mTitleProperties.size;
-  }
-  const optional<float_t>& GetLableSize()
-  {
-    return mLableProperties.size;
-  }
-  const optional<int16_t>& GetTitleColor()
-  {
-    return mTitleProperties.color;
-  }
-  const optional<int16_t>& GetLableColor()
-  {
-    return mLableProperties.color;
-  }
-  const optional<float_t>& GetTitleOffset()
-  {
-    return mTitleProperties.offset;
-  }
-  const optional<float_t>& GetLableOffset()
-  {
-    return mLableProperties.offset;
-  }
-  const optional<bool>& GetTitleCenter()
-  {
-    return mTitleProperties.center;
-  }
-  const optional<bool>& GetLableCenter()
-  {
-    return mLableProperties.center;
-  }
-  const optional<bool>& GetLog()
-  {
-    return mIsLog;
-  }
-  const optional<bool>& GetGrid()
-  {
-    return mIsGrid;
-  }
-  const optional<bool>& GetOppositeTicks()
-  {
-    return mIsOppositeTicks;
-  }
-  const optional<string>& GetTimeFormat()
-  {
-    return mTimeFormat;
-  }
-  const optional<string>& GetTickOrientation()
-  {
-    return mTickOrientation;
-  }
+  const optional<double_t>& GetMinRange() { return mRange.min; }
+  const optional<double_t>& GetMaxRange() { return mRange.max; }
+  const optional<float_t>& GetTickLength() { return mTickLength; }
+  const optional<int32_t>& GetNumDivisions() { return mNumDivisions; }
+  const optional<int32_t>& GetMaxDigits() { return mMaxDigits; }
+  const optional<int16_t>& GetAxisColor() { return mAxisColor; }
+  const optional<string>& GetTitle() { return mTitle; }
+  const optional<int16_t>& GetTitleFont() { return mTitleProperties.font; }
+  const optional<int16_t>& GetLableFont() { return mLableProperties.font; }
+  const optional<float_t>& GetTitleSize() { return mTitleProperties.size; }
+  const optional<float_t>& GetLableSize() { return mLableProperties.size; }
+  const optional<int16_t>& GetTitleColor() { return mTitleProperties.color; }
+  const optional<int16_t>& GetLableColor() { return mLableProperties.color; }
+  const optional<float_t>& GetTitleOffset() { return mTitleProperties.offset; }
+  const optional<float_t>& GetLableOffset() { return mLableProperties.offset; }
+  const optional<bool>& GetTitleCenter() { return mTitleProperties.center; }
+  const optional<bool>& GetLableCenter() { return mLableProperties.center; }
+  const optional<bool>& GetLog() { return mIsLog; }
+  const optional<bool>& GetGrid() { return mIsGrid; }
+  const optional<bool>& GetOppositeTicks() { return mIsOppositeTicks; }
+  const optional<string>& GetTimeFormat() { return mTimeFormat; }
+  const optional<string>& GetTickOrientation() { return mTickOrientation; }
 
  private:
   struct axisTextProperties_t
@@ -1162,59 +852,20 @@ class Plot::Pad::Box
  protected:
   ptree GetPropertyTree();
 
-  double_t GetXPosition()
-  {
-    return (mPos.x) ? *mPos.x : 0.;
-  }
-  double_t GetYPosition()
-  {
-    return (mPos.y) ? *mPos.y : 0.;
-  }
-  optional<int16_t>& GetBorderStyle()
-  {
-    return mBorder.style;
-  }
-  optional<float_t>& GetBorderWidth()
-  {
-    return mBorder.scale;
-  }
-  optional<int16_t>& GetBorderColor()
-  {
-    return mBorder.color;
-  }
-  optional<int16_t>& GetFillStyle()
-  {
-    return mFill.style;
-  }
-  optional<float_t>& GetFillOpacity()
-  {
-    return mFill.scale;
-  }
-  optional<int16_t>& GetFillColor()
-  {
-    return mFill.color;
-  }
-  optional<int16_t>& GetTextFont()
-  {
-    return mText.style;
-  }
-  optional<float_t>& GetTextSize()
-  {
-    return mText.scale;
-  }
-  optional<int16_t>& GetTextColor()
-  {
-    return mText.color;
-  }
+  double_t GetXPosition() { return (mPos.x) ? *mPos.x : 0.; }
+  double_t GetYPosition() { return (mPos.y) ? *mPos.y : 0.; }
+  optional<int16_t>& GetBorderStyle() { return mBorder.style; }
+  optional<float_t>& GetBorderWidth() { return mBorder.scale; }
+  optional<int16_t>& GetBorderColor() { return mBorder.color; }
+  optional<int16_t>& GetFillStyle() { return mFill.style; }
+  optional<float_t>& GetFillOpacity() { return mFill.scale; }
+  optional<int16_t>& GetFillColor() { return mFill.color; }
+  optional<int16_t>& GetTextFont() { return mText.style; }
+  optional<float_t>& GetTextSize() { return mText.scale; }
+  optional<int16_t>& GetTextColor() { return mText.color; }
 
-  bool IsUserCoordinates()
-  {
-    return (mPos.isUserCoord) ? *mPos.isUserCoord : false;
-  }
-  bool IsAutoPlacement()
-  {
-    return (!mPos.x || !mPos.y);
-  }
+  bool IsUserCoordinates() { return (mPos.isUserCoord) ? *mPos.isUserCoord : false; }
+  bool IsAutoPlacement() { return (!mPos.x || !mPos.y); }
 
  private:
   // allow construction of Box base class only in context actually useful boxes
@@ -1223,10 +874,7 @@ class Plot::Pad::Box
   Box(double_t xPos, double_t yPos);
   Box(const ptree& boxTree);
 
-  auto GetThis()
-  {
-    return static_cast<BoxType*>(this);
-  }
+  auto GetThis() { return static_cast<BoxType*>(this); }
 
   struct layout_t
   {
@@ -1273,10 +921,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
   friend class Plot;
 
   ptree GetPropertyTree();
-  const string& GetText()
-  {
-    return mText;
-  }
+  const string& GetText() { return mText; }
 
  private:
   string mText;
@@ -1309,14 +954,8 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   friend class Plot;
 
   ptree GetPropertyTree();
-  const optional<uint8_t>& GetNumColumns()
-  {
-    return mNumColumns;
-  }
-  const optional<string>& GetTitle()
-  {
-    return mTitle;
-  }
+  const optional<uint8_t>& GetNumColumns() { return mNumColumns; }
+  const optional<string>& GetTitle() { return mTitle; }
 
  private:
   optional<string> mTitle;

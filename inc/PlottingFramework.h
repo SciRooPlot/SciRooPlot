@@ -33,7 +33,6 @@
 
 // boost headers
 #include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/program_options.hpp>
 
