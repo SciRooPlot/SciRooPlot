@@ -17,8 +17,8 @@
 #ifndef PlottingFramework_h
 #define PlottingFramework_h
 
-#define DEBUG_LVL 2   // < 2: no debug, < 1: no warnings, < 0 no errors
-#define COUT_LVL 2    // < 2: no log,   < 1: no info,     < 0 no print
+#define DEBUG_LVL 2 // < 2: no debug, < 1: no warnings, < 0 no errors
+#define COUT_LVL 2  // < 2: no log,   < 1: no info,     < 0 no print
 
 // std headers
 #include <cstdint>
@@ -80,71 +80,110 @@
 #include "TRootCanvas.h"
 
 // some preprocessor macros for logging, printing and debugging
-#define DEBUG(s, ...) {fmt::print(stderr, "\033[1;36m[ DEBU ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");}
-#define WARNING(s, ...) {fmt::print(stderr, "\033[1;33m[ WARN ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");}
-#define ERROR(s, ...) {fmt::print(stderr, "\033[1;31m[ ERR  ]\033[0m "); fmt::print(stderr, s, ##__VA_ARGS__); fmt::print(stderr, "\n");}
+#define DEBUG(s, ...)                                 \
+  {                                                   \
+    fmt::print(stderr, "\033[1;36m[ DEBU ]\033[0m "); \
+    fmt::print(stderr, s, ##__VA_ARGS__);             \
+    fmt::print(stderr, "\n");                         \
+  }
+#define WARNING(s, ...)                               \
+  {                                                   \
+    fmt::print(stderr, "\033[1;33m[ WARN ]\033[0m "); \
+    fmt::print(stderr, s, ##__VA_ARGS__);             \
+    fmt::print(stderr, "\n");                         \
+  }
+#define ERROR(s, ...)                                 \
+  {                                                   \
+    fmt::print(stderr, "\033[1;31m[ ERR  ]\033[0m "); \
+    fmt::print(stderr, s, ##__VA_ARGS__);             \
+    fmt::print(stderr, "\n");                         \
+  }
 
-#define LOG(s, ...) {fmt::print("\033[1;32m[ LOG  ]\033[0m "); fmt::print(s, ##__VA_ARGS__); fmt::print("\n");}
-#define INFO(s, ...) {fmt::print("\033[1;37m[ INFO ]\033[0m "); fmt::print(s, ##__VA_ARGS__); fmt::print("\n");}
+#define LOG(s, ...)                           \
+  {                                           \
+    fmt::print("\033[1;32m[ LOG  ]\033[0m "); \
+    fmt::print(s, ##__VA_ARGS__);             \
+    fmt::print("\n");                         \
+  }
+#define INFO(s, ...)                          \
+  {                                           \
+    fmt::print("\033[1;37m[ INFO ]\033[0m "); \
+    fmt::print(s, ##__VA_ARGS__);             \
+    fmt::print("\n");                         \
+  }
 
-#define PRINT(s, ...) {fmt::print("         "); fmt::print(s, ##__VA_ARGS__); fmt::print("\n");}
-#define PRINT_INLINE(s, ...) {fmt::print(s, ##__VA_ARGS__);}
-#define PRINT_SEPARATOR {PRINT(fmt::format("{:-<{}}", "-", 80));}
-#define HERE {fmt::print("\033[1;33m[ ---> ]\033[0m Line {} in function {} ({})", __LINE__, __FUNCTION__, __FILE__); fmt::print("\n");}
+#define PRINT(s, ...)             \
+  {                               \
+    fmt::print("         ");      \
+    fmt::print(s, ##__VA_ARGS__); \
+    fmt::print("\n");             \
+  }
+#define PRINT_INLINE(s, ...)      \
+  {                               \
+    fmt::print(s, ##__VA_ARGS__); \
+  }
+#define PRINT_SEPARATOR                     \
+  {                                         \
+    PRINT(fmt::format("{:-<{}}", "-", 80)); \
+  }
+#define HERE                                                                                    \
+  {                                                                                             \
+    fmt::print("\033[1;33m[ ---> ]\033[0m Line {} in function {} ({})", __LINE__, __FUNCTION__, \
+               __FILE__);                                                                       \
+    fmt::print("\n");                                                                           \
+  }
 
 // Debug suppression levels
 #if DEBUG_LVL < 2
-  #undef DEBUG
-  #define DEBUG(s, ...) ;
+#undef DEBUG
+#define DEBUG(s, ...) ;
 #endif
 #if DEBUG_LVL < 1
-  #undef WARNING
-  #define WARNING(s, ...) ;
+#undef WARNING
+#define WARNING(s, ...) ;
 #endif
 #if DEBUG_LVL < 0
-  #undef ERROR
-  #define ERROR(s, ...) ;
+#undef ERROR
+#define ERROR(s, ...) ;
 #endif
 
 // Output stream suppression levels
 #if COUT_LVL < 2
-  #undef LOG
-  #define LOG(s, ...) ;
+#undef LOG
+#define LOG(s, ...) ;
 #endif
 #if COUT_LVL < 1
-  #undef INFO
-  #define INFO(s, ...) ;
+#undef INFO
+#define INFO(s, ...) ;
 #endif
 #if COUT_LVL < 0
-  #undef PRINT
-  #define PRINT(s, ...) ;
-  #undef PRINT_INLINE
-  #define PRINT_INLINE(s, ...) ;
+#undef PRINT
+#define PRINT(s, ...) ;
+#undef PRINT_INLINE
+#define PRINT_INLINE(s, ...) ;
 #endif
 
 namespace PlottingFramework
 {
 
 // aliases
+using std::array;
 using std::cout;
 using std::endl;
 using std::flush;
-using std::string;
-using std::vector;
-using std::tuple;
-using std::pair;
 using std::map;
-using std::set;
-using std::array;
-using std::shared_ptr;
-using std::variant;
 using std::optional;
+using std::pair;
+using std::set;
+using std::shared_ptr;
+using std::string;
+using std::tuple;
+using std::variant;
+using std::vector;
 
 using boost::property_tree::ptree;
-using boost::property_tree::write_json;
-using boost::property_tree::read_json;
-using boost::property_tree::write_xml;
 using boost::property_tree::read_xml;
+using boost::property_tree::write_xml;
 
 // supported input data types
 using data_ptr_t = variant<TH1*, TH2*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF2*, TF1*>;
@@ -189,14 +228,12 @@ enum drawing_options_t : uint8_t
   surf,
 };
 
-const map<drawing_options_t, string> defaultDrawingOpions_Hist2d
-{
+const map<drawing_options_t, string> defaultDrawingOpions_Hist2d{
   { colz, "COLZ" },
   { surf, "SURF" },
 };
 
-const map<drawing_options_t, string> defaultDrawingOpions_Hist
-{
+const map<drawing_options_t, string> defaultDrawingOpions_Hist{
   { points, "X0 EP" },
   { points_xerr, "EP" },
   { points_endcaps, "E1" },
@@ -215,20 +252,10 @@ const map<drawing_options_t, string> defaultDrawingOpions_Hist
   { stars, "*H" },
 };
 
-const map<drawing_options_t, string> defaultDrawingOpions_Graph
-{
-  { points, "P Z" },
-  { points_line, "P Z L" },
-  { points_endcaps, "P" },
-  { curve, "X C" },
-  { line, "X L" },
-  { bar, "X B" },
-  { boxes, "P2" },
-  { band, "4" },
-  { band_line, "3" },
-  { area, "X CF" },
-  { area_line, "X LC" },
-  { boxes_only, "2" },
+const map<drawing_options_t, string> defaultDrawingOpions_Graph{
+  { points, "P Z" },  { points_line, "P Z L" }, { points_endcaps, "P" }, { curve, "X C" },
+  { line, "X L" },    { bar, "X B" },           { boxes, "P2" },         { band, "4" },
+  { band_line, "3" }, { area, "X CF" },         { area_line, "X LC" },   { boxes_only, "2" },
 };
 
 } // end namespace PlottingFramework

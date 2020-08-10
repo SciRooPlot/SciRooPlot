@@ -15,14 +15,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 #include "PlottingFramework.h"
 #include "PlotManager.h"
 #include "Plot.h"
 #include <sys/stat.h>
 
-using PlottingFramework::PlotManager;
 using PlottingFramework::Plot;
+using PlottingFramework::PlotManager;
 namespace po = boost::program_options;
 
 // Helper function to split comma separated argument strings
@@ -31,27 +30,30 @@ vector<string> splitArguments(string argString, char deliminator = ' ')
   vector<string> arguments;
   string currArg;
   std::istringstream argStream(argString);
-  while(std::getline(argStream, currArg, deliminator)) {
+  while(std::getline(argStream, currArg, deliminator))
+  {
     arguments.push_back(currArg);
   }
   return arguments;
 }
 // Helper function to check if specified file is available on the system
-inline bool fileExists(const std::string& name) {
+inline bool fileExists(const std::string& name)
+{
   struct stat buffer;
-  return (stat (name.c_str(), &buffer) == 0);
+  return (stat(name.c_str(), &buffer) == 0);
 }
 
-
 // This program is intended to generate plots from plotDefinitions saved in xml files
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
   // set default values
-  string configFolder = (gSystem->Getenv("__PLOTTING_CONFIG_DIR")) ?
-  gSystem->ExpandPathName("${__PLOTTING_CONFIG_DIR}/") : "plotting_config/";
-  
-  string outputFolder = (gSystem->Getenv("__PLOTTING_OUTPUT_DIR")) ?
-  gSystem->ExpandPathName("${__PLOTTING_OUTPUT_DIR}/") : "plotting_output/";
+  string configFolder = (gSystem->Getenv("__PLOTTING_CONFIG_DIR"))
+                          ? gSystem->ExpandPathName("${__PLOTTING_CONFIG_DIR}/")
+                          : "plotting_config/";
+
+  string outputFolder = (gSystem->Getenv("__PLOTTING_OUTPUT_DIR"))
+                          ? gSystem->ExpandPathName("${__PLOTTING_OUTPUT_DIR}/")
+                          : "plotting_output/";
 
   string inputFilesConfig = configFolder + "inputFiles.XML";
   string plotDefConfig = configFolder + "plotDefinitions.XML";
@@ -59,77 +61,95 @@ int main(int argc, char *argv[])
   string mode;
   string figureGroups;
   string plotNames;
-  
+
   // handle user inputs
   try
   {
     po::options_description options("Configuration options");
-    options.add_options()
-    ("help", "Show this help message.")
-    ("inputFilesConfig", po::value<string>(), "Location of config file containing the input file paths.")
-    ("plotDefConfig", po::value<string>(), "Location of config file containing the plot definitions.")
-    ("outputFolder", po::value<string>(), "Folder where output files should be saved.")
-    ;
-    
+    options.add_options()("help", "Show this help message.")(
+      "inputFilesConfig", po::value<string>(),
+      "Location of config file containing the input file paths.")(
+      "plotDefConfig", po::value<string>(),
+      "Location of config file containing the plot definitions.")(
+      "outputFolder", po::value<string>(), "Folder where output files should be saved.");
+
     po::options_description arguments("Positional arguments");
-    arguments.add_options()
-    ("mode", po::value<string>(), "mode")
-    ("figureGroups", po::value<string>(), "figure group")
-    ("plotNames", po::value<string>(), "plot name")
-    ("arguments", po::value< vector<string> >(), "arguments");
-    
-    po::positional_options_description pos; // this needs to be synchronous with the arguments options_description
+    arguments.add_options()("mode", po::value<string>(), "mode")(
+      "figureGroups", po::value<string>(), "figure group")(
+      "plotNames", po::value<string>(), "plot name")("arguments", po::value<vector<string>>(),
+                                                     "arguments");
+
+    po::positional_options_description
+      pos; // this needs to be synchronous with the arguments options_description
     pos.add("mode", 1);
     pos.add("figureGroups", 1);
     pos.add("plotNames", 1);
     pos.add("arguments", -1);
-    
+
     po::variables_map vm;
     po::options_description cmdline_options;
     cmdline_options.add(options).add(arguments);
-    po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(pos).run(), vm);
+    po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(pos).run(),
+              vm);
     po::notify(vm);
-    
-    if (vm.count("help")) {
+
+    if(vm.count("help"))
+    {
       PRINT("");
       PRINT("Usage:");
-      PRINT("  ./plot <find|interactive|pdf|eps|png|macro|file> '<figureGroupRegex[:figureCategoryRegex]>'  '<plotNameRegex>'\n");
+      PRINT(
+        "  ./plot <find|interactive|pdf|eps|png|macro|file> "
+        "'<figureGroupRegex[:figureCategoryRegex]>'  '<plotNameRegex>'\n");
       PRINT("You can use any standard regular expressions like 'begin.*end' or 'begin[a,b,c]end'.");
-      PRINT("Multiple figureGroups and plotNames can be specified separated by blank space: 'plotA plotB'.");
-      PRINT("When using regular expressions or multiple entries, it is required to embrace this in quotes.");
+      PRINT(
+        "Multiple figureGroups and plotNames can be specified separated by blank space: 'plotA "
+        "plotB'.");
+      PRINT(
+        "When using regular expressions or multiple entries, it is required to embrace this in "
+        "quotes.");
       PRINT("The use of blank spaces and colons in the regular expressions is not supported.");
       PRINT("You can also have a quick look into input identifiers or .root files:");
       PRINT("  ./plot browse '<inputIdentifier|rootfile[:fileSubPath]>'  '<dataName>'\n");
       PRINT("To enable auto-completion on and global availability on Mac,");
       PRINT("add 'source /plotting/framework/location/.plottingrc' to your .zshrc.");
-      PRINT("Locations of the configuration file containing the input file paths and the output directory");
-      PRINT("can be steered via the env variables __PLOTTING_CONFIG_DIR and __PLOTTING_OUTPUT_DIR.");
+      PRINT(
+        "Locations of the configuration file containing the input file paths and the output "
+        "directory");
+      PRINT(
+        "can be steered via the env variables __PLOTTING_CONFIG_DIR and __PLOTTING_OUTPUT_DIR.");
       PRINT("Alternatively the following command line options can be used:");
       PRINT("");
       cout << options << endl;
       return 0;
     }
-    if (vm.count("inputFilesConfig")) {
+    if(vm.count("inputFilesConfig"))
+    {
       inputFilesConfig = vm["inputFilesConfig"].as<string>();
     }
-    if (vm.count("plotDefConfig")) {
+    if(vm.count("plotDefConfig"))
+    {
       plotDefConfig = vm["plotDefConfig"].as<string>();
     }
-    if (vm.count("outputFolder")) {
+    if(vm.count("outputFolder"))
+    {
       outputFolder = vm["outputFolder"].as<string>();
     }
-    if (vm.count("mode")) {
+    if(vm.count("mode"))
+    {
       mode = vm["mode"].as<string>();
     }
-    if (vm.count("figureGroups")) {
+    if(vm.count("figureGroups"))
+    {
       figureGroups = vm["figureGroups"].as<string>();
     }
-    if (vm.count("plotNames")) {
+    if(vm.count("plotNames"))
+    {
       plotNames = vm["plotNames"].as<string>();
     }
-    if (vm.count("arguments")) {
+    if(vm.count("arguments"))
+    {
       PRINT("Found additional arguments:");
-      for(auto& argument : vm["arguments"].as< vector<string> >())
+      for(auto& argument : vm["arguments"].as<vector<string>>())
       {
         PRINT("   {}", argument);
       }
@@ -145,7 +165,7 @@ int main(int argc, char *argv[])
     ERROR("Exception of unknown type! Exiting.");
     return 1;
   }
-  
+
   // check if specified input files exist
   if(!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str())))
   {
@@ -157,36 +177,42 @@ int main(int argc, char *argv[])
     ERROR("File \"{}\" does not exists! Exiting.", plotDefConfig);
     return 1;
   }
-  
+
   // create plotting environment
   PlotManager plotManager;
   plotManager.SetOutputDirectory(outputFolder);
   INFO("Reading plot definitions from {}.", plotDefConfig);
 
   vector<string> figureGroupsVector = splitArguments(figureGroups);
-  vector<string> plotNamesVector  = splitArguments(plotNames);
-  if(mode == "find"){
+  vector<string> plotNamesVector = splitArguments(plotNames);
+  if(mode == "find")
+  {
     PRINT_SEPARATOR;
     plotManager.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
     PRINT_SEPARATOR;
     return 0;
   }
-  else if(mode == "browse"){ // directly plot histograms from input identifier or file
+  else if(mode == "browse")
+  { // directly plot histograms from input identifier or file
     string inputIdentifier = figureGroupsVector[0];
-    if(inputIdentifier.find(".root") == string::npos){
+    if(inputIdentifier.find(".root") == string::npos)
+    {
       plotManager.LoadInputDataFiles(inputFilesConfig);
-    } else {
-      plotManager.AddInputDataFiles("browse", {inputIdentifier});
+    }
+    else
+    {
+      plotManager.AddInputDataFiles("browse", { inputIdentifier });
       inputIdentifier = "browse";
     }
     Plot plot("plot", inputIdentifier);
     for(auto& dataName : plotNamesVector)
-      plot[1].AddData({dataName, inputIdentifier}, "<name>");
+      plot[1].AddData({ dataName, inputIdentifier }, "<name>");
     plot[1].AddLegend();
     plotManager.AddPlot(plot);
     plotManager.CreatePlots(inputIdentifier, "", {}, "interactive");
   }
-  else{
+  else
+  {
     INFO("Reading input files from {}.", inputFilesConfig);
     plotManager.LoadInputDataFiles(inputFilesConfig);
     plotManager.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);

@@ -20,7 +20,8 @@
 #include "PlottingFramework.h"
 #include "Plot.h"
 using namespace PlottingFramework;
-namespace PlottingFramework {
+namespace PlottingFramework
+{
 
 //**************************************************************************************************
 /**
@@ -29,22 +30,28 @@ namespace PlottingFramework {
 //**************************************************************************************************
 class PlotPainter
 {
-public:
+ public:
   shared_ptr<TCanvas> GeneratePlot(Plot& plot, TObjArray* availableData);
-private:
+
+ private:
   optional<data_ptr_t> GetDataClone(const string& dataName, TObjArray* availableData);
-  template <typename T> optional<data_ptr_t> GetDataClone(TObject* obj);
-  template <typename T, typename Next, typename... Rest> optional<data_ptr_t> GetDataClone(TObject* obj);
-  
+  template <typename T>
+  optional<data_ptr_t> GetDataClone(TObject* obj);
+  template <typename T, typename Next, typename... Rest>
+  optional<data_ptr_t> GetDataClone(TObject* obj);
+
   void SetGraphRange(TGraph* graph, optional<double_t> min, optional<double_t> max);
   void ScaleGraph(TGraph* graph, double_t scale);
-  void SmoothGraph(TGraph* graph, optional<double_t> min = std::nullopt, optional<double_t> = std::nullopt);
-  void SmoothHist(TH1* hist, optional<double_t> min = std::nullopt, optional<double_t> max = std::nullopt);
+  void SmoothGraph(TGraph* graph, optional<double_t> min = std::nullopt,
+                   optional<double_t> = std::nullopt);
+  void SmoothHist(TH1* hist, optional<double_t> min = std::nullopt,
+                  optional<double_t> max = std::nullopt);
   bool DivideGraphs(TGraph* numerator, TGraph* denominator);
   void DivideTSpline(TGraph* numerator, TGraph* denominator);
   void DivideTSpline(TH1* numerator, TH1* denominator);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text);
-  TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box, TPad* pad, vector<string> lines, vector<TObject*> legendEntries);
+  TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box,
+                     TPad* pad, vector<string> lines, vector<TObject*> legendEntries);
 };
 } // end namespace PlottingFramework
 #endif /* PlotGenerator_h */
