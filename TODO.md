@@ -42,19 +42,15 @@ Notes:
 Structural:
 - fix header inclusion and be sure to not pollute global namespace
 - use constexpr everywhere!!
-- understand why move constructors implicitly delete assignment operators
 - use str_contians() everywhere
 - put data pointers in vector instead of map and use index for all comparisons
 - think about how things can be implemented in a more general way as templates
 - change arguments referring to internal variables to const ref if possible to be more memory efficient, use lambdas
-- add (copy-, move-) constructors and destructors; make sure all variables are initialized properly
 - fully grasp the difference between emplace_back and push_back in terms of copy/move: why does push_back not work for variants?
 - remove puts empty items to end and gives new end of vector! -> avoid useless erase calls per item
 - can multi-threading be used somewhere?
 - capture via const ref: [&best_string = std::as_const(best_string)]
 - use for_each() instead of range based loops
-- std::transform
-- std::generate
 - use size_t in the loops
 - use brace-or-equal initializers in class definitions
 - what about std::format?? is it the same as fmt? can dependency be dropped?

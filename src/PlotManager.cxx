@@ -142,6 +142,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
   for(auto& inputPair : inputFileTree){
     string inputIdentifier = inputPair.first;
     vector<string> allFileNames;
+    allFileNames.reserve(inputPair.second.size());
     for(auto& file : inputPair.second){
       allFileNames.push_back(file.second.get_value<string>());
     }
@@ -344,7 +345,6 @@ void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
   canvas->SaveAs((folderName + "/" + fileName + fileEnding).data());
 }
 
-
 //****************************************************************************************
 /**
  * Creates plots.
@@ -396,6 +396,8 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   for(auto& inputIDTuple : requiredData){
     vector<string> dataNames;
     vector<string> uniqueDataNames;
+    dataNames.reserve(inputIDTuple.second.size());
+    uniqueDataNames.reserve(inputIDTuple.second.size());
     for(auto& dataNameID : inputIDTuple.second)
     {
       dataNames.push_back(GetNameRegisterName(dataNameID));
@@ -456,6 +458,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName, const vector<
   uint32_t nFoundPlots = 0u;
   bool isSearchRequest = (mode == "find") ? true : false;
   vector< std::pair<std::regex, std::regex> > groupCategoryRegex;
+  groupCategoryRegex.reserve(figureGroupsWithCategoryUser.size());
   for(auto& figureGroupWithCategoryUser : figureGroupsWithCategoryUser)
   {
     // by default select all groups and all categories
@@ -473,13 +476,11 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName, const vector<
     std::regex categoryRegex(category);
     groupCategoryRegex.push_back(std::make_pair(groupRegex, categoryRegex));
   }
-
-  vector< std::regex > plotNamesRegex;
-  for(auto& plotNameUser : plotNamesUser)
-  {
-    std::regex plotNameRegex(plotNameUser);
-    plotNamesRegex.push_back(plotNameRegex);
-  }
+  
+  std::vector<std::regex> plotNamesRegex;
+  plotNamesRegex.reserve(plotNamesUser.size());
+  std::transform(plotNamesUser.begin(), plotNamesUser.end(), std::back_inserter(plotNamesRegex),
+                 [](auto& plotNameUser) { return std::regex(plotNameUser); });
   
   ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
   for(auto& plotGroupTree : inputTree){
@@ -746,7 +747,8 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
 
 //****************************************************************************************
 /**
- * Recursively reads data from folder / list and adds it to output data array. found dataNames are remeoved from the vectors
+ * Recursively reads data from folder / list and adds it to output data array.
+ * Found dataNames are remeoved from the vectors.
  */
 //****************************************************************************************
 void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<string>& dataNames, vector<string>& newDataNames)

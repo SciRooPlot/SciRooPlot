@@ -48,6 +48,4 @@ Alternatively you can also load and generate only specific plots defined in the 
 By default plots are created as pdf in your output folder, but you can also choose png or macro to create root macros or "interactive" if you only want to look at the plot and not create a file. Using the keyword "file" it is also possible to write the plots to a root file.
 
 
-Regard this as an early beta version...
-
 Any contributions, suggestions or bug reports are very welcome.
