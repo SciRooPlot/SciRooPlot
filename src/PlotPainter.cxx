@@ -20,11 +20,11 @@
 using namespace PlottingFramework;
 namespace PlottingFramework {
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Function to generate the plot.
  */
-//****************************************************************************************
+//**************************************************************************************************
 shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableData)
 {
   gStyle->SetOptStat(0); // this needs to be done before creating the canvas! at later stage it would add to list of primitives in pad...
@@ -552,11 +552,11 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
   return shared_ptr<TCanvas>(canvas_ptr);
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Function to retrieve a copy of the stored data properly casted it to its actual ROOT type.
  */
-//****************************************************************************************
+//**************************************************************************************************
 template <typename T>
 optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
 {
@@ -593,13 +593,13 @@ optional<data_ptr_t> PlotPainter::GetDataClone(const string& dataName, TObjArray
   return std::nullopt;
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Helper-function dividing two TGraphs.
  * This is meant only for the rare use case, where the x values of all points are are exactly the same.
  * In this scenario the values and errors can be calculated exactly. If this condition is not met, the function will return false.
  */
-//****************************************************************************************
+//**************************************************************************************************
 bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
 {
   // first check if graphs indeed have the same x values
@@ -623,12 +623,12 @@ bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
 }
 
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Helper-function dividing two TGraphs.
  * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the uncertainties are not fully correct!
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotPainter::DivideTSpline(TGraph* numerator, TGraph* denominator)
 {
   TSpline3 denSpline("denSpline", denominator);
@@ -657,12 +657,12 @@ void PlotPainter::DivideTSpline(TGraph* numerator, TGraph* denominator)
   }
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Helper-function dividing two 1d histograms with different binning.
  * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the uncertainties are not fully correct!
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotPainter::DivideTSpline(TH1* numerator, TH1* denominator)
 {
   TGraph denominatorGraph(denominator);
@@ -670,12 +670,12 @@ void PlotPainter::DivideTSpline(TH1* numerator, TH1* denominator)
     
   for(int32_t i = 1; i <= numerator->GetNbinsX(); ++i)
   {
-    double_t numeratorValue = numerator->GetBinContent(i);
-    double_t numeratorError = numerator->GetBinError(i);
-    double_t x = numerator->GetBinCenter(i);
-    double_t denomValue = denominatorGraph.Eval(x, &denominatorSpline);
-    double_t newValue = 0.;
-    double_t newError = 0.;
+    double_t numeratorValue{numerator->GetBinContent(i)};
+    double_t numeratorError{numerator->GetBinError(i)};
+    double_t x{numerator->GetBinCenter(i)};
+    double_t denomValue{denominatorGraph.Eval(x, &denominatorSpline)};
+    double_t newValue{};
+    double_t newError{};
     if(denomValue)
     {
       newValue = numeratorValue / denomValue;
@@ -691,18 +691,18 @@ void PlotPainter::DivideTSpline(TH1* numerator, TH1* denominator)
   }
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Deletes data points of graph beyond cutoff values.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<double_t> max)
 {
   // sort the points first for the following algorithm to work properly
   graph->Sort();
 
-  int16_t pointsToRemoveHigh = 0;
-  int16_t pointsToRemoveLow = 0;
+  int16_t pointsToRemoveHigh{};
+  int16_t pointsToRemoveLow{};
   
   for(int16_t i = 0; i < graph->GetN(); ++i){
     if(min && graph->GetX()[i] < *min)
@@ -725,26 +725,26 @@ void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<
   }
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Scales graph by a constant value.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotPainter::ScaleGraph(TGraph* graph, double_t scale)
 {
-  for (int32_t i = 0; i < graph->GetN(); ++i) graph->GetY()[i] *= scale;
+  for (int32_t i{}; i < graph->GetN(); ++i) graph->GetY()[i] *= scale;
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Smoothes 1d graph in range.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotPainter::SmoothGraph(TGraph* graph, optional<double_t> min, optional<double_t> max)
 {
   TGraphSmooth smoother;
   TGraph* smoothGraph = smoother.SmoothSuper(graph);
-  for (int32_t i = 0; i < graph->GetN(); ++i)
+  for (int32_t i{}; i < graph->GetN(); ++i)
   {
     double_t curX = graph->GetX()[i];
     if(min && curX < *min) continue;
@@ -754,11 +754,11 @@ void PlotPainter::SmoothGraph(TGraph* graph, optional<double_t> min, optional<do
   delete smoothGraph;
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Smoothes 1d hist in range.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotPainter::SmoothHist(TH1* hist, optional<double_t> min, optional<double_t> max)
 {
   double_t minRange = hist->GetXaxis()->GetXmin();
@@ -771,11 +771,11 @@ void PlotPainter::SmoothHist(TH1* hist, optional<double_t> min, optional<double_
   hist->Smooth(100, "R");
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Returns actual dimensions in pixel of the text with latex formatting.
  */
-//****************************************************************************************
+//**************************************************************************************************
 std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
 {
   uint32_t width{};
@@ -799,38 +799,38 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
   return {width, height};
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Function to generate a legend or text box.
  */
-//****************************************************************************************
+//**************************************************************************************************
 TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> boxVariant, TPad* pad, vector<string> lines, vector<TObject*> legendEntries)
 {
-  TPave* returnBox = nullptr;
+  TPave* returnBox{nullptr};
   
   std::visit([&](auto&& box)
   {
     using BoxType = std::decay_t<decltype(*box)>;
       
-    optional<int16_t> textColor = box->GetTextColor();
-    optional<int16_t> textFont  = box->GetTextFont();
-    optional<float_t> textSize  = box->GetTextSize();
+    optional<int16_t> textColor { box->GetTextColor() };
+    optional<int16_t> textFont  { box->GetTextFont() };
+    optional<float_t> textSize  { box->GetTextSize() };
 
-    optional<int16_t> borderColor = box->GetBorderColor();
-    optional<int16_t> borderStyle = box->GetBorderStyle();
-    optional<float_t> borderWidth = box->GetBorderWidth();
+    optional<int16_t> borderColor { box->GetBorderColor() };
+    optional<int16_t> borderStyle { box->GetBorderStyle() };
+    optional<float_t> borderWidth { box->GetBorderWidth() };
 
-    optional<int16_t> fillColor   = box->GetFillColor();
-    optional<int16_t> fillStyle   = box->GetFillStyle();
-    optional<float_t> fillOpacity = box->GetFillOpacity();
+    optional<int16_t> fillColor   { box->GetFillColor() };
+    optional<int16_t> fillStyle   { box->GetFillStyle() };
+    optional<float_t> fillOpacity { box->GetFillOpacity() };
 
     if constexpr (std::is_same_v<BoxType, Plot::Pad::TextBox>)
     {
       // split text string to vector
-      string delimiter = " // ";
-      string text = box->GetText();
-      size_t pos = 0;
-      size_t last = 0;
+      string delimiter{" // "};
+      string text{ box->GetText() };
+      size_t pos{};
+      size_t last{};
       std::string token;
       while ((pos = text.find(delimiter, last)) != std::string::npos)
       {
@@ -868,39 +868,39 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         // first replace placeholders for content dependent lables
         if(legendTitle.find("<name>") != string::npos)
         {
-          string name = ((TNamed*)legendEntries[iLegend-1])->GetName();
+          string name{ ((TNamed*)legendEntries[iLegend-1])->GetName() };
           name = name.substr(0, name.find(gNameGroupSeparator));
           
           legendTitle.replace(legendTitle.find("<name>"), string("<name>").size(), name);
         }
         if(legendTitle.find("<title>") != string::npos)
         {
-          string title = ((TNamed*)legendEntries[iLegend-1])->GetTitle();
+          string title{ ((TNamed*)legendEntries[iLegend-1])->GetTitle() };
           legendTitle.replace(legendTitle.find("<title>"), string("<title>").size(), title);
         }
         if(legendTitle.find("<entries>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
         {
-          string entries = std::to_string((double_t)((TH1*)legendEntries[iLegend-1])->GetEntries());
+          string entries{ std::to_string((double_t)((TH1*)legendEntries[iLegend-1])->GetEntries()) };
           legendTitle.replace(legendTitle.find("<entries>"), string("<entries>").size(), entries);
         }
         if(legendTitle.find("<integral>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
         {
-          string integral = std::to_string(((TH1*)legendEntries[iLegend-1])->Integral());
+          string integral{ std::to_string(((TH1*)legendEntries[iLegend-1])->Integral()) };
           legendTitle.replace(legendTitle.find("<integral>"), string("<integral>").size(), integral);
         }
         if(legendTitle.find("<mean>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
         {
-          string mean = std::to_string(((TH1*)legendEntries[iLegend-1])->GetMean());
+          string mean{ std::to_string(((TH1*)legendEntries[iLegend-1])->GetMean()) };
           legendTitle.replace(legendTitle.find("<mean>"), string("<mean>").size(), mean);
         }
         if(legendTitle.find("<maximum>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
         {
-          string maximum = std::to_string(((TH1*)legendEntries[iLegend-1])->GetMaximum());
+          string maximum{ std::to_string(((TH1*)legendEntries[iLegend-1])->GetMaximum()) };
           legendTitle.replace(legendTitle.find("<maximum>"), string("<maximum>").size(), maximum);
         }
         if(legendTitle.find("<minimum>") != string::npos && legendEntries[iLegend-1]->InheritsFrom(TH1::Class()))
         {
-          string minimum = std::to_string(((TH1*)legendEntries[iLegend-1])->GetMinimum());
+          string minimum{ std::to_string(((TH1*)legendEntries[iLegend-1])->GetMinimum()) };
           legendTitle.replace(legendTitle.find("<minimum>"), string("<minimum>").size(), minimum);
         }
       }

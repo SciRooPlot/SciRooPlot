@@ -19,11 +19,11 @@
 using namespace PlottingFramework;
 namespace PlottingFramework{
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Constructor for PlotManager
  */
-//****************************************************************************************
+//**************************************************************************************************
 PlotManager::PlotManager() : mApp("MainApp", 0, 0)
 {
   TQObject::Connect("TGMainFrame", "CloseWindow()", "TApplication", gApplication, "Terminate()");
@@ -38,11 +38,11 @@ PlotManager::PlotManager() : mApp("MainApp", 0, 0)
   gErrorIgnoreLevel = kWarning;
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Destructor for PlotManager
  */
-//****************************************************************************************
+//**************************************************************************************************
 PlotManager::~PlotManager()
 {
   mDataLedger->Delete();
@@ -76,22 +76,22 @@ PlotManager::~PlotManager()
   }
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Sets path for output files.
  * @param outputFileName: Path to the output directory
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::SetOutputDirectory(const string& path)
 {
   mOutputDirectory = path;
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Define input file paths for user defined unique inputIDentifier.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::AddInputDataFiles(const string& inputIdentifier, const vector<string>& inputFilePathList)
 {
   if(mInputFiles.find(inputIdentifier) != mInputFiles.end() ){
@@ -105,11 +105,11 @@ void PlotManager::AddInputDataFile(const string& inputIdentifier, const string& 
   AddInputDataFiles(inputIdentifier, inputFilePathList);
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Dump input file identifiers and paths that are currently defined in the manager to a config file.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::DumpInputDataFiles(const string& configFileName)
 {
   ptree inputFileTree;
@@ -125,11 +125,11 @@ void PlotManager::DumpInputDataFiles(const string& configFileName)
   write_xml(gSystem->ExpandPathName(configFileName.data()), inputFileTree, std::locale(), settings);
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Load input file identifiers and paths from inputFile into manager.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::LoadInputDataFiles(const string& configFileName)
 {
   ptree inputFileTree;
@@ -150,11 +150,11 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
   }
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Add pre-defined plot to the manager. Plot will be moved and no longer accessible from outside the manager.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::AddPlot(Plot& plot)
 {
   if(plot.GetFigureGroup() == "TEMPLATES") ERROR("You cannot use reserved group name TEMPLATES!");
@@ -162,11 +162,11 @@ void PlotManager::AddPlot(Plot& plot)
   mPlots.push_back(std::move(plot));
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Add template for plots, that share some common properties.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::AddPlotTemplate(Plot& plotTemplate)
 {
   plotTemplate.SetFigureGroup("TEMPLATES");
@@ -174,11 +174,11 @@ void PlotManager::AddPlotTemplate(Plot& plotTemplate)
   mPlotTemplates.push_back(std::move(plotTemplate));
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Dump plots to xml file.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::DumpPlots(const string& plotFileName, const string& figureGroup, const vector<string>& plotNames)
 {
   set<string> usedTemplates;
@@ -218,11 +218,11 @@ void PlotManager::DumpPlot(const string& plotFileName, const string& figureGroup
   DumpPlots(plotFileName, figureGroup, {plotName});
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Read and cache plots defined in xml file.
  */
-//****************************************************************************************
+//**************************************************************************************************
 ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
 {
   if (mPropertyTreeCache.find(plotFileName) == mPropertyTreeCache.end())
@@ -234,11 +234,11 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
   return mPropertyTreeCache[plotFileName];
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Generates plot based on plot template.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
 {
   // if plot already exists, delete the old one first
@@ -345,11 +345,11 @@ void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
   canvas->SaveAs((folderName + "/" + fileName + fileEnding).data());
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Creates plots.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::CreatePlots(const string& figureGroup, const string& figureCategory, vector<string> plotNames, const string& outputMode)
 {
   map<int32_t, set<int32_t>> requiredData;
@@ -420,11 +420,11 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   }
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Helper function to get id corresponding name in register.
  */
-//****************************************************************************************
+//**************************************************************************************************
 int32_t PlotManager::GetNameRegisterID(const string& name)
 {
   if(mNameRegister.find(name) == mNameRegister.end())
@@ -434,11 +434,11 @@ int32_t PlotManager::GetNameRegisterID(const string& name)
   return mNameRegister[name];
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Helper function to get name corresponding to register id.
  */
-//****************************************************************************************
+//**************************************************************************************************
 const string& PlotManager::GetNameRegisterName(int32_t nameID)
 {
   for(auto& registerTuple : mNameRegister){
@@ -448,11 +448,11 @@ const string& PlotManager::GetNameRegisterName(int32_t nameID)
   std::exit(EXIT_FAILURE);
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Function to find plots in file via regexp match of user inputs
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::ExtractPlotsFromFile(const string& plotFileName, const vector<string>& figureGroupsWithCategoryUser, const vector<string>& plotNamesUser, const string& mode)
 {
   uint32_t nFoundPlots{};
@@ -542,11 +542,11 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName, const vector<
   }
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Helper function to split a string.
  */
-//****************************************************************************************
+//**************************************************************************************************
 vector<string> PlotManager::splitString(const string& argString, char deliminator)
 {
   vector<string> arguments;
@@ -558,11 +558,11 @@ vector<string> PlotManager::splitString(const string& argString, char deliminato
   return arguments;
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Read data from csv file.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, const vector<string>& fileNames, const string& inputIdentifier)
 {
   for(auto& inputFileName : fileNames)
@@ -579,11 +579,11 @@ void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, const vector<
   }
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Recursively read data from root file.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<string>& fileNames, vector<string> dataNames, vector<string> newDataNames)
 {
   // first determine if which sub-folders are requested by the user
@@ -697,11 +697,11 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<str
   }
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Recursively search for sub folder in file.
  */
-//****************************************************************************************
+//**************************************************************************************************
 TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
 {
   if(!folder) return nullptr;
@@ -745,12 +745,12 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
   return FindSubDirectory(subFolder, subDirs);
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Recursively reads data from folder / list and adds it to output data array.
  * Found dataNames are remeoved from the vectors.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<string>& dataNames, vector<string>& newDataNames)
 {
   if(dataNames.empty()) return; // nothing to do...
@@ -847,11 +847,11 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
   }
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Internal function to check if all input data are available to create the plot.
  */
-//****************************************************************************************
+//**************************************************************************************************
 bool PlotManager::IsPlotPossible(Plot &plot)
 {
   for(auto& [padID, pad] : plot.GetPads())
