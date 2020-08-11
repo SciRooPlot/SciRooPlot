@@ -230,6 +230,17 @@ auto Plot::Pad::SetRedrawAxes(bool redraw) -> decltype(*this)
 
 //**************************************************************************************************
 /**
+ * Set reference function..
+ */
+//**************************************************************************************************
+auto Plot::Pad::SetRefFunc(const string& refFunc) -> decltype(*this)
+{
+  mRefFunc = refFunc;
+  return *this;
+}
+
+//**************************************************************************************************
+/**
  * Set text size
  */
 //**************************************************************************************************
@@ -1157,6 +1168,11 @@ auto Plot::Pad::Data::SetOptions(drawing_options_t optionAlias) -> decltype(*thi
 auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
 {
   mDefinesFrame = true;
+  return *this;
+}
+auto Plot::Pad::Data::SetInputID(const string& inputIdentifier) -> decltype(*this)
+{
+  mInputIdentifier = inputIdentifier;
   return *this;
 }
 

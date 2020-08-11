@@ -88,7 +88,6 @@ class Plot
   const optional<int32_t>& GetHeight() { return mPlotDimensions.height; }
   const optional<int32_t>& GetWidth() { return mPlotDimensions.width; }
   const optional<bool>& IsFixAspectRatio() { return mPlotDimensions.fixAspectRatio; }
-
   const optional<int16_t>& GetFillColor() { return mFill.color; }
   const optional<int16_t>& GetFillStyle() { return mFill.style; }
 
@@ -161,40 +160,28 @@ class Plot::Pad
   auto SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup) -> decltype(*this);
   auto SetMargins(float_t top, float_t bottom, float_t left, float_t right) -> decltype(*this);
   auto SetPalette(int32_t palette) -> decltype(*this);
-
   auto SetDefaultTextSize(float_t size) -> decltype(*this);
   auto SetDefaultTextColor(int16_t color) -> decltype(*this);
   auto SetDefaultTextFont(int16_t font) -> decltype(*this);
-
   auto SetDefaultMarkerSize(float_t size) -> decltype(*this);
   auto SetDefaultMarkerColors(const vector<int16_t>& colors) -> decltype(*this);
   auto SetDefaultMarkerStyles(const vector<int16_t>& styles) -> decltype(*this);
-
   auto SetDefaultLineWidth(float_t width) -> decltype(*this);
   auto SetDefaultLineColors(const vector<int16_t>& colors) -> decltype(*this);
   auto SetDefaultLineStyles(const vector<int16_t>& styles) -> decltype(*this);
-
   auto SetDefaultFillOpacity(float_t opacity) -> decltype(*this);
   auto SetDefaultFillColors(const vector<int16_t>& colors) -> decltype(*this);
   auto SetDefaultFillStyles(const vector<int16_t>& styles) -> decltype(*this);
-
   auto SetDefaultDrawingOptionGraph(drawing_options_t drawingOption) -> decltype(*this);
   auto SetDefaultDrawingOptionHist(drawing_options_t drawingOption) -> decltype(*this);
   auto SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption) -> decltype(*this);
-
   auto SetFill(int16_t color, int16_t style = 1001) -> decltype(*this);
   auto SetTransparent() -> decltype(*this);
-
   auto SetFillFrame(int16_t color, int16_t style = 1001) -> decltype(*this);
   auto SetLineFrame(int16_t color, int16_t style = kSolid, float_t width = 1.f) -> decltype(*this);
   auto SetTransparentFrame() -> decltype(*this);
-
   auto SetRedrawAxes(bool redraw = true) -> decltype(*this);
-  auto SetRefFunc(const string& refFunc) -> decltype(*this)
-  {
-    mRefFunc = refFunc;
-    return *this;
-  }
+  auto SetRefFunc(const string& refFunc) -> decltype(*this);
 
  protected:
   friend class PlotManager;
@@ -208,45 +195,35 @@ class Plot::Pad
   vector<shared_ptr<TextBox>>& GetTextBoxes() { return mTextBoxes; }
 
   const map<string, Axis>& GetAxes() { return mAxes; }
-
   const optional<string>& GetTitle() { return mTitle; }
-
   const optional<double_t>& GetXLow() { return mPosition.xlow; }
   const optional<double_t>& GetYLow() { return mPosition.ylow; }
   const optional<double_t>& GetXUp() { return mPosition.xup; }
   const optional<double_t>& GetYUp() { return mPosition.yup; }
-
   const optional<float_t>& GetMarginTop() { return mMargins.top; }
   const optional<float_t>& GetMarginBottom() { return mMargins.bottom; }
   const optional<float_t>& GetMarginLeft() { return mMargins.left; }
   const optional<float_t>& GetMarginRight() { return mMargins.right; }
-
   const optional<int32_t>& GetPalette() { return mPalette; }
-
   const optional<int16_t>& GetFillColor() { return mFill.color; }
   const optional<int16_t>& GetFillStyle() { return mFill.style; }
-
   const optional<int16_t>& GetFillColorFrame() { return mFrame.fillColor; }
   const optional<int16_t>& GetFillStyleFrame() { return mFrame.fillStyle; }
   const optional<int16_t>& GetLineColorFrame() { return mFrame.lineColor; }
   const optional<int16_t>& GetLineStyleFrame() { return mFrame.lineStyle; }
   const optional<float_t>& GetLineWidthFrame() { return mFrame.lineWidth; }
-
   const optional<int16_t>& GetDefaultTextColor() { return mText.color; }
   const optional<int16_t>& GetDefaultTextFont() { return mText.font; }
   const optional<float_t>& GetDefaultTextSize() { return mText.size; }
-
   const optional<float_t>& GetDefaultMarkerSize() { return mMarkerDefaults.scale; }
   const optional<float_t>& GetDefaultLineWidth() { return mLineDefaults.scale; }
   const optional<float_t>& GetDefaultFillOpacity() { return mFillDefaults.scale; }
-
   const optional<vector<int16_t>>& GetDefaultMarkerColors() { return mMarkerDefaults.colors; }
   const optional<vector<int16_t>>& GetDefaultLineColors() { return mLineDefaults.colors; }
   const optional<vector<int16_t>>& GetDefaultFillColors() { return mFillDefaults.colors; }
   const optional<vector<int16_t>>& GetDefaultMarkerStyles() { return mMarkerDefaults.styles; }
   const optional<vector<int16_t>>& GetDefaultLineStyles() { return mLineDefaults.styles; }
   const optional<vector<int16_t>>& GetDefaultFillStyles() { return mFillDefaults.styles; }
-
   const optional<drawing_options_t>& GetDefaultDrawingOptionGraph()
   {
     return mDrawingOptionDefaults.graph;
@@ -259,7 +236,6 @@ class Plot::Pad
   {
     return mDrawingOptionDefaults.hist2d;
   }
-
   const optional<bool>& GetRedrawAxes() { return mRedrawAxes; }
   const optional<string>& GetRefFunc() { return mRefFunc; }
 
@@ -381,14 +357,9 @@ class Plot::Pad::Data
   virtual auto SetFillStyle(int16_t style) -> decltype(*this);
   virtual auto SetFillOpacity(float_t opacity) -> decltype(*this);
   virtual auto SetOptions(drawing_options_t optionAlias) -> decltype(*this);
-
   virtual auto SetDefinesFrame() -> decltype(*this);
 
-  auto SetInputID(const string& inputIdentifier) -> decltype(*this)
-  {
-    mInputIdentifier = inputIdentifier;
-    return *this;
-  }
+  auto SetInputID(const string& inputIdentifier) -> decltype(*this);
   const string& GetInputID() { return mInputIdentifier; }
 
  protected:
