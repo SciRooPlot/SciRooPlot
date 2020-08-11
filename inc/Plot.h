@@ -493,107 +493,107 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   // return correct type for the data accessors
   virtual auto SetLayout(const Data& dataLayout) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetLayout(dataLayout));
+    return static_cast<decltype(*this)&>(Data::SetLayout(dataLayout));
   }
   virtual auto SetRangeX(double_t min, double_t max) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetRangeX(min, max));
+    return static_cast<decltype(*this)&>(Data::SetRangeX(min, max));
   }
   virtual auto SetMaxRangeX(double_t max) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetMaxRangeX(max));
+    return static_cast<decltype(*this)&>(Data::SetMaxRangeX(max));
   }
   virtual auto SetMinRangeX(double_t min) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetMinRangeX(min));
+    return static_cast<decltype(*this)&>(Data::SetMinRangeX(min));
   }
   virtual auto SetRangeY(double_t min, double_t max) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetRangeY(min, max));
+    return static_cast<decltype(*this)&>(Data::SetRangeY(min, max));
   }
   virtual auto SetMaxRangeY(double_t max) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetMaxRangeY(max));
+    return static_cast<decltype(*this)&>(Data::SetMaxRangeY(max));
   }
   virtual auto SetMinRangeY(double_t min) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetMinRangeY(min));
+    return static_cast<decltype(*this)&>(Data::SetMinRangeY(min));
   }
   virtual auto SetLegendLable(const string& legendLable) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetLegendLable(legendLable));
+    return static_cast<decltype(*this)&>(Data::SetLegendLable(legendLable));
   }
   virtual auto SetOptions(const string& opions) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetOptions(opions));
+    return static_cast<decltype(*this)&>(Data::SetOptions(opions));
   }
   virtual auto SetNormalize(bool useWidth = false) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetNormalize(useWidth));
+    return static_cast<decltype(*this)&>(Data::SetNormalize(useWidth));
   }
   virtual auto SetScale(double_t scale) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetScaleFactor(scale));
+    return static_cast<decltype(*this)&>(Data::SetScaleFactor(scale));
   }
   virtual auto SetColor(int16_t color) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetColor(color));
+    return static_cast<decltype(*this)&>(Data::SetColor(color));
   }
   virtual auto SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetMarker(color, style, size));
+    return static_cast<decltype(*this)&>(Data::SetMarker(color, style, size));
   }
   virtual auto SetMarkerColor(int16_t color) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetMarkerColor(color));
+    return static_cast<decltype(*this)&>(Data::SetMarkerColor(color));
   }
   virtual auto SetMarkerStyle(int16_t style) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetMarkerStyle(style));
+    return static_cast<decltype(*this)&>(Data::SetMarkerStyle(style));
   }
   virtual auto SetMarkerSize(float_t size) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetMarkerSize(size));
+    return static_cast<decltype(*this)&>(Data::SetMarkerSize(size));
   }
   virtual auto SetLine(int16_t color, int16_t style, float_t width) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetLine(color, style, width));
+    return static_cast<decltype(*this)&>(Data::SetLine(color, style, width));
   }
   virtual auto SetLineColor(int16_t color) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetLineColor(color));
+    return static_cast<decltype(*this)&>(Data::SetLineColor(color));
   }
   virtual auto SetLineStyle(int16_t style) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetLineStyle(style));
+    return static_cast<decltype(*this)&>(Data::SetLineStyle(style));
   }
   virtual auto SetLineWidth(float_t width) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetLineWidth(width));
+    return static_cast<decltype(*this)&>(Data::SetLineWidth(width));
   }
   virtual auto SetFill(int16_t color, int16_t style, float_t opacity = 1.) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetFill(color, style, opacity));
+    return static_cast<decltype(*this)&>(Data::SetFill(color, style, opacity));
   }
   virtual auto SetFillColor(int16_t color) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetFillColor(color));
+    return static_cast<decltype(*this)&>(Data::SetFillColor(color));
   }
   virtual auto SetFillStyle(int16_t style) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetFillStyle(style));
+    return static_cast<decltype(*this)&>(Data::SetFillStyle(style));
   }
   virtual auto SetFillOpacity(float_t opacity) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetFillOpacity(opacity));
+    return static_cast<decltype(*this)&>(Data::SetFillOpacity(opacity));
   }
   virtual auto SetOptions(drawing_options_t optionAlias) -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetOptions(optionAlias));
+    return static_cast<decltype(*this)&>(Data::SetOptions(optionAlias));
   }
   virtual auto SetDefinesFrame() -> decltype(*this)
   {
-    return dynamic_cast<decltype(*this)&>(Data::SetDefinesFrame());
+    return static_cast<decltype(*this)&>(Data::SetDefinesFrame());
   }
 
  protected:
