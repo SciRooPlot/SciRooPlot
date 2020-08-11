@@ -3,7 +3,7 @@ AccessModifierOffset: -1
 AlignEscapedNewlinesLeft: true
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: false
-AllowShortFunctionsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: InlineOnly
 AllowShortIfStatementsOnASingleLine: true
 AllowShortLoopsOnASingleLine: false
 #AlwaysBreakBeforeMultilineStrings: true
