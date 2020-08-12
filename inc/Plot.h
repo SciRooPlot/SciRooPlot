@@ -20,7 +20,6 @@
 #include "PlottingFramework.h"
 #include "HelperFunctions.h"
 
-using namespace PlottingFramework;
 namespace PlottingFramework
 {
 

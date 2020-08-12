@@ -16,7 +16,6 @@
 
 #include "PlotManager.h"
 
-using namespace PlottingFramework;
 namespace PlottingFramework
 {
 

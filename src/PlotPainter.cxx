@@ -17,7 +17,6 @@
 #include "PlotPainter.h"
 #include "PlotManager.h"
 
-using namespace PlottingFramework;
 namespace PlottingFramework
 {
 
@@ -1253,21 +1252,10 @@ TPave* PlotPainter::GenerateBox(
           ((TLegendEntry*)(legend->GetListOfPrimitives()->At(0)))->SetTextFont(text_font);
           ((TLegendEntry*)(legend->GetListOfPrimitives()->At(0)))->SetTextSize(text_size);
         }
-
-        if(borderStyle) legend->SetLineStyle(*borderStyle);
-        if(borderColor) legend->SetLineColor(*borderColor);
-        if(borderWidth) legend->SetLineWidth(*borderWidth);
-
-        if(fillStyle) legend->SetFillStyle(*fillStyle);
-        if(fillColor) legend->SetFillColor(*fillColor);
-        if(fillOpacity && fillColor)
-          legend->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
-
         returnBox = (TPave*)legend;
       }
       else
       {
-
         TPaveText* paveText = new TPaveText(upperLeftX, upperLeftY - totalHeightNDC,
                                             upperLeftX + totalWidthNDC, upperLeftY, "NDC");
         paveText->SetMargin(marginNDC / totalWidthNDC);
@@ -1277,15 +1265,6 @@ TPave* PlotPainter::GenerateBox(
         paveText->SetTextSize(text_size);
         if(textColor) paveText->SetTextColor(*textColor);
 
-        if(borderStyle) paveText->SetLineStyle(*borderStyle);
-        if(borderColor) paveText->SetLineColor(*borderColor);
-        if(borderWidth) paveText->SetLineWidth(*borderWidth);
-
-        if(fillStyle) paveText->SetFillStyle(*fillStyle);
-        if(fillColor) paveText->SetFillColor(*fillColor);
-        if(fillOpacity && fillColor)
-          paveText->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
-
         for(auto& line : lines)
         {
           TText* text = paveText->AddText(line.data());
@@ -1294,8 +1273,23 @@ TPave* PlotPainter::GenerateBox(
         }
         returnBox = (TPave*)paveText;
       }
+    
+    if(returnBox)
+    {
+      if(borderStyle) returnBox->SetLineStyle(*borderStyle);
+      if(borderColor) returnBox->SetLineColor(*borderColor);
+      if(borderWidth) returnBox->SetLineWidth(*borderWidth);
+
+      if(fillStyle) returnBox->SetFillStyle(*fillStyle);
+      if(fillColor) returnBox->SetFillColor(*fillColor);
+      if(fillOpacity && fillColor)
+        returnBox->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
+    }
+
+    
     },
     boxVariant);
+      
 
   return returnBox;
 }

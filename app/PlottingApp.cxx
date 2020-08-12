@@ -20,8 +20,7 @@
 #include "Plot.h"
 #include <sys/stat.h>
 
-using PlottingFramework::Plot;
-using PlottingFramework::PlotManager;
+using namespace PlottingFramework;
 namespace po = boost::program_options;
 
 // Helper function to split comma separated argument strings

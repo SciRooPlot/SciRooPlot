@@ -62,8 +62,8 @@
 #include "TObject.h"
 #include "TStyle.h"
 #include "TSystem.h"
-#include <TROOT.h>
-#include <TObjectTable.h>
+#include "TROOT.h"
+#include "TObjectTable.h"
 #include "TExec.h"
 #include "TTimeStamp.h"
 #include "TLatex.h"
@@ -169,7 +169,6 @@ namespace PlottingFramework
 using std::array;
 using std::cout;
 using std::endl;
-using std::flush;
 using std::map;
 using std::optional;
 using std::pair;
