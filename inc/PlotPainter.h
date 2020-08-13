@@ -108,7 +108,7 @@ class PlotPainter
   void DivideTSpline(TH1* numerator, TH1* denominator);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text);
   TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box,
-                     TPad* pad, vector<string> lines, vector<TObject*> legendEntries);
+                     TPad* pad);
 };
 } // end namespace PlottingFramework
 #endif /* PlotGenerator_h */

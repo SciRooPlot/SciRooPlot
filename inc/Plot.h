@@ -951,20 +951,31 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   friend class PlotPainter;
   friend class Plot;
 
+  struct legendEntry_t
+  {
+    string refDataName;
+    string lable;
+    // transient entries are automatically generated from the input data and need not be saved
+    bool isTransient;
+    const string& GetRefDataName() const { return refDataName; }
+    const string& GetLable() const { return lable; }
+  };
+
   ptree GetPropertyTree();
   const optional<uint8_t>& GetNumColumns() { return mNumColumns; }
   const optional<string>& GetTitle() { return mTitle; }
 
+  const vector<legendEntry_t>& GetEntries() { return legendEntries; }
+
+  void AddEntry(const string& name, const string& lable)
+  {
+    legendEntries.push_back({ name, lable, true });
+  }
+
  private:
   optional<string> mTitle;
   optional<uint8_t> mNumColumns;
-
-  struct legendEntry_t
-  {
-    optional<string> refDataName;
-    optional<string> lable;
-    optional<string> options;
-  };
+  vector<legendEntry_t> legendEntries;
   // FIXME: every entry needs marker/line/fill/text attributes ...
 };
 

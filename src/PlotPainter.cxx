@@ -90,9 +90,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
   {
     if(padID == 0) continue; // pad 0 is used only to define the defaults
 
-    vector<string> lables;
-    vector<TObject*> legendEntries;
-
     // Pad placing
     array<double_t, 4> padPos = { 0., 0., 1., 1. };
     if(!(pad.GetXLow() || pad.GetYLow() || pad.GetXUp() || pad.GetYUp())
@@ -690,12 +687,9 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               // in case a lable was specified for the data, add it to corresponding legend
               if(data->GetLegendLable() && !(*data->GetLegendLable()).empty())
               {
-                // data->GetLegendID()
-                // if it exists, fall back to first legend
-                // plot[padID].GetLegendBoxes();
-                // lable.AddEntry({data->GetName(), data->GetInputID()});
-                lables.push_back(*data->GetLegendLable());
-                legendEntries.push_back(pad_ptr->GetListOfPrimitives()->Last());
+                uint8_t legendID {1u};
+                // data->GetLegendID() in case user chose specific legend, decide here...
+                plot[padID].GetLegendBoxes()[legendID-1]->AddEntry(data_ptr->GetName(), *data->GetLegendLable());
               }
               pad_ptr->Update(); // adds something to the list of primitives
             }
@@ -717,8 +711,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     for(auto& box : pad.GetLegendBoxes())
     {
       string legendName = "LegendBox_" + std::to_string(legendIndex);
-      if(lables.empty()) break;
-      TPave* legend = GenerateBox(box, pad_ptr, lables, legendEntries);
+      TPave* legend = GenerateBox(box, pad_ptr);
       legend->SetName(legendName.data());
       legend->Draw("SAME");
       ++legendIndex;
@@ -727,7 +720,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     for(auto& box : pad.GetTextBoxes())
     {
       string textName = "TextBox_" + std::to_string(textIndex);
-      TPave* text = GenerateBox(box, pad_ptr, {}, {});
+      TPave* text = GenerateBox(box, pad_ptr);
       text->SetName(textName.data());
       text->Draw("SAME");
       ++textIndex;
@@ -1015,8 +1008,7 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
  */
 //**************************************************************************************************
 TPave* PlotPainter::GenerateBox(
-  variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> boxVariant, TPad* pad,
-  vector<string> lines, vector<TObject*> legendEntries)
+  variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> boxVariant, TPad* pad)
 {
   TPave* returnBox{ nullptr };
 
@@ -1036,6 +1028,7 @@ TPave* PlotPainter::GenerateBox(
       optional<int16_t> fillStyle{ box->GetFillStyle() };
       optional<float_t> fillOpacity{ box->GetFillOpacity() };
 
+      vector<string> lines;
       if constexpr(std::is_same_v<BoxType, Plot::Pad::TextBox>)
       {
         // split text string to vector
@@ -1052,14 +1045,15 @@ TPave* PlotPainter::GenerateBox(
         }
         lines.push_back(text.substr(last));
       }
+      else{
+        std::for_each(box->GetEntries().begin(), box->GetEntries().end(), [&lines](const auto& entry){ lines.push_back(entry.GetLable());} );
+      }
 
       float_t text_size = (textSize) ? *textSize : 24;
       int16_t text_font = (textFont) ? *textFont : 43;
       uint8_t nColumns{ 1u }; //(box->GetNumColumns()) ? *box->GetNumColumns() : 1;
 
-      // uint16_t nEntries = legendEntries.size();
       uint16_t nLines = lines.size();
-      // if(!legendBox->GetTitle().empty()) ++nEntries;
 
       int32_t padWidthPixel = pad->XtoPixel(pad->GetX2()); // looks correct, but why does it work??
       int32_t padHeightPixel = pad->YtoPixel(pad->GetY1());
@@ -1071,74 +1065,72 @@ TPave* PlotPainter::GenerateBox(
       vector<uint32_t> legendWidthPixelPerColumn(nColumns, 0);
       double_t legendHeightPixel{};
       // if(!legendBox->GetTitle().empty()) legendTitles.push_back(legendBox->GetTitle());
-      uint8_t iLegend{ 1u };
-      for(auto& legendTitle : lines)
+      uint8_t lineID{};
+      for(auto& line : lines)
       {
         if constexpr(std::is_same_v<BoxType, Plot::Pad::LegendBox>)
         {
+          TNamed* data_ptr = (TNamed*)pad->FindObject(box->GetEntries()[lineID].GetRefDataName().data());
+          if(!data_ptr) ERROR("NOT FOUND {}", line);
           // first replace placeholders for content dependent lables
-          if(legendTitle.find("<name>") != string::npos)
+          if(line.find("<name>") != string::npos)
           {
-            string name{ ((TNamed*)legendEntries[iLegend - 1])->GetName() };
+            string name{ data_ptr->GetName() };
             name = name.substr(0, name.find(gNameGroupSeparator));
 
-            legendTitle.replace(legendTitle.find("<name>"), string("<name>").size(), name);
+            line.replace(line.find("<name>"), string("<name>").size(), name);
           }
-          if(legendTitle.find("<title>") != string::npos)
+          if(line.find("<title>") != string::npos)
           {
-            string title{ ((TNamed*)legendEntries[iLegend - 1])->GetTitle() };
-            legendTitle.replace(legendTitle.find("<title>"), string("<title>").size(), title);
+            string title{ data_ptr->GetTitle() };
+            line.replace(line.find("<title>"), string("<title>").size(), title);
           }
-          if(legendTitle.find("<entries>") != string::npos
-             && legendEntries[iLegend - 1]->InheritsFrom(TH1::Class()))
+          if(line.find("<entries>") != string::npos
+             && data_ptr->InheritsFrom(TH1::Class()))
           {
             string entries{ std::to_string(
-              (double_t)((TH1*)legendEntries[iLegend - 1])->GetEntries()) };
-            legendTitle.replace(legendTitle.find("<entries>"), string("<entries>").size(), entries);
+              (double_t)((TH1*)data_ptr)->GetEntries()) };
+            line.replace(line.find("<entries>"), string("<entries>").size(), entries);
           }
-          if(legendTitle.find("<integral>") != string::npos
-             && legendEntries[iLegend - 1]->InheritsFrom(TH1::Class()))
+          if(line.find("<integral>") != string::npos
+             && data_ptr->InheritsFrom(TH1::Class()))
           {
-            string integral{ std::to_string(((TH1*)legendEntries[iLegend - 1])->Integral()) };
-            legendTitle.replace(legendTitle.find("<integral>"), string("<integral>").size(),
+            string integral{ std::to_string(((TH1*)data_ptr)->Integral()) };
+            line.replace(line.find("<integral>"), string("<integral>").size(),
                                 integral);
           }
-          if(legendTitle.find("<mean>") != string::npos
-             && legendEntries[iLegend - 1]->InheritsFrom(TH1::Class()))
+          if(line.find("<mean>") != string::npos
+             && data_ptr->InheritsFrom(TH1::Class()))
           {
-            string mean{ std::to_string(((TH1*)legendEntries[iLegend - 1])->GetMean()) };
-            legendTitle.replace(legendTitle.find("<mean>"), string("<mean>").size(), mean);
+            string mean{ std::to_string(((TH1*)data_ptr)->GetMean()) };
+            line.replace(line.find("<mean>"), string("<mean>").size(), mean);
           }
-          if(legendTitle.find("<maximum>") != string::npos
-             && legendEntries[iLegend - 1]->InheritsFrom(TH1::Class()))
+          if(line.find("<maximum>") != string::npos
+             && data_ptr->InheritsFrom(TH1::Class()))
           {
-            string maximum{ std::to_string(((TH1*)legendEntries[iLegend - 1])->GetMaximum()) };
-            legendTitle.replace(legendTitle.find("<maximum>"), string("<maximum>").size(), maximum);
+            string maximum{ std::to_string(((TH1*)data_ptr)->GetMaximum()) };
+            line.replace(line.find("<maximum>"), string("<maximum>").size(), maximum);
           }
-          if(legendTitle.find("<minimum>") != string::npos
-             && legendEntries[iLegend - 1]->InheritsFrom(TH1::Class()))
+          if(line.find("<minimum>") != string::npos
+             && data_ptr->InheritsFrom(TH1::Class()))
           {
-            string minimum{ std::to_string(((TH1*)legendEntries[iLegend - 1])->GetMinimum()) };
-            legendTitle.replace(legendTitle.find("<minimum>"), string("<minimum>").size(), minimum);
+            string minimum{ std::to_string(((TH1*)data_ptr)->GetMinimum()) };
+            line.replace(line.find("<minimum>"), string("<minimum>").size(), minimum);
           }
         }
 
         // determine width and height of line to find max width and height (per column)
-        TLatex textLine(0, 0, legendTitle.data());
+        TLatex textLine(0, 0, line.data());
         textLine.SetTextFont(text_font);
         textLine.SetTextSize(text_size);
         auto [width, height] = GetTextDimensions(textLine);
 
         if(height > legendHeightPixel) legendHeightPixel = height;
-        // if(!legendBox->GetTitle().empty() && iLegend == legendTitles.size())
-        //{
-        // titleWidthPixel = width;
-        // continue;
-        //}
+
         if(width > legendWidthPixelPerColumn[iColumn]) legendWidthPixelPerColumn[iColumn] = width;
         ++iColumn;
         iColumn %= nColumns;
-        ++iLegend;
+        ++lineID;
       }
       for(auto& length : legendWidthPixelPerColumn)
         legendWidthPixel += length;
@@ -1263,26 +1255,26 @@ TPave* PlotPainter::GenerateBox(
         if(textColor) legend->SetTextColor(*textColor);
 
         uint8_t i{};
-        for(auto entry : legendEntries)
+        for(auto entry : box->GetEntries())
         {
-          string drawingOption = entry->GetDrawOption();
+          TNamed* data_ptr = (TNamed*)pad->FindObject(entry.GetRefDataName().data());
+          string drawingOption = data_ptr->GetDrawOption();
           std::for_each(drawingOption.begin(), drawingOption.end(),
                         [](char& c) { c = ::toupper(c); });
           string drawStyle = "EP";
 
-          if((entry->InheritsFrom("TF1")) || str_contains(drawingOption, "C")
+          if((data_ptr->InheritsFrom("TF1")) || str_contains(drawingOption, "C")
              || str_contains(drawingOption, "L") || str_contains(drawingOption, "HIST"))
           {
             drawStyle = "L";
           }
-          else if(entry->InheritsFrom("TH1")
+          else if(data_ptr->InheritsFrom("TH1")
                   && (str_contains(drawingOption, "HIST") || str_contains(drawingOption, "B"))
-                  && ((TH1*)entry)->GetFillStyle() != 0)
+                  && ((TH1*)data_ptr)->GetFillStyle() != 0)
           {
             drawStyle = "F";
           }
-          // legend->AddEntry((TH1*)entry, lines[i].data(), drawStyle.data());
-          legend->AddEntry(((TH1*)entry)->GetName(), lines[i].data(), drawStyle.data());
+          legend->AddEntry(data_ptr->GetName(), lines[i].data(), drawStyle.data());
           ++i;
         }
 

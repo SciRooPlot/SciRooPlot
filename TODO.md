@@ -40,6 +40,7 @@ Notes:
 - should smoothing be done before or after division for ratios (or both)??
 
 Structural:
+- mark all getters as const
 - use constexpr everywhere!!
 - use str_contians() everywhere
 - put data pointers in vector instead of map and use index for all comparisons
