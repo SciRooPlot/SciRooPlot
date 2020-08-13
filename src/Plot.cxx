@@ -601,7 +601,7 @@ Plot::Pad::Pad(const ptree& padTree)
     if(str_contains(content.first, "AXIS"))
     {
       string axis = content.second.get<string>("name");
-      mAxes[axis] = std::move(Axis(content.second));
+      mAxes[axis] = Axis(content.second);
     }
   }
 }

@@ -19,6 +19,12 @@
 #include "PlotPainter.h"
 #include "Logging.h"
 
+// std dependencies
+#include <regex>
+
+// boost dependencies
+#include <boost/property_tree/xml_parser.hpp>
+
 // root dependencies
 #include "TROOT.h"
 #include "TSystem.h"
@@ -29,17 +35,6 @@
 #include "TKey.h"
 #include "TH1.h"
 #include "TGraphErrors.h"
-
-// std dependencies
-#include <regex>
-
-// boost dependencies
-#include <boost/property_tree/xml_parser.hpp>
-namespace PlottingFramework
-{
-  using boost::property_tree::read_xml;
-  using boost::property_tree::write_xml;
-}
 
 namespace PlottingFramework
 {
@@ -178,7 +173,9 @@ void PlotManager::DumpInputDataFiles(const string& configFileName)
     }
     inputFileTree.put_child(inFileTuple.first, filesOfIdentifier);
   }
-  boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
+  using boost::property_tree::xml_writer_settings;
+  xml_writer_settings<std::string> settings('\t', 1);
+  using boost::property_tree::write_xml;
   write_xml(gSystem->ExpandPathName(configFileName.data()), inputFileTree, std::locale(), settings);
 }
 
@@ -192,6 +189,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
   ptree inputFileTree;
   try
   {
+    using boost::property_tree::read_xml;
     read_xml(gSystem->ExpandPathName(configFileName.data()), inputFileTree);
   }
   catch(...)
@@ -290,7 +288,9 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
                          plot.GetPropetyTree());
     }
   }
-  boost::property_tree::xml_writer_settings<std::string> settings('\t', 1);
+  using boost::property_tree::xml_writer_settings;
+  xml_writer_settings<std::string> settings('\t', 1);
+  using boost::property_tree::write_xml;
   write_xml(gSystem->ExpandPathName(plotFileName.data()), plotTree, std::locale(), settings);
 }
 void PlotManager::DumpPlot(const string& plotFileName, const string& figureGroup,
@@ -309,6 +309,7 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
   if(mPropertyTreeCache.find(plotFileName) == mPropertyTreeCache.end())
   {
     ptree tempTree;
+    using boost::property_tree::read_xml;
     read_xml(gSystem->ExpandPathName(plotFileName.data()), tempTree);
     mPropertyTreeCache[plotFileName] = std::move(tempTree);
   }

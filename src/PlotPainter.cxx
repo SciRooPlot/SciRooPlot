@@ -18,7 +18,7 @@
 #include "PlotPainter.h"
 #include "PlottingFramework.h"
 #include "Logging.h"
-#include "HelperFunctions.h" // this header still depends on framework header!
+#include "HelperFunctions.h"
 
 // root dependencies
 #include "TROOT.h"
