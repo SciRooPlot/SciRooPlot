@@ -14,8 +14,47 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+// framework dependencies
 #include "PlotPainter.h"
-#include "PlotManager.h"
+#include "PlottingFramework.h"
+#include "Logging.h"
+#include "HelperFunctions.h" // this header still depends on framework header!
+
+// root dependencies
+#include "TROOT.h"
+#include "TSystem.h"
+#include "TStyle.h"
+#include "TCanvas.h"
+#include "TH1.h"
+#include "TH2.h"
+#include "TProfile.h"
+#include "TProfile2D.h"
+#include "TGraph.h"
+#include "TGraphErrors.h"
+#include "TGraph2D.h"
+#include "TGraph2DErrors.h"
+#include "TGraphSmooth.h"
+#include "TF1.h"
+#include "TF2.h"
+
+#include "TFrame.h"
+#include "TLegendEntry.h"
+#include "TIterator.h"
+#include "TObjArray.h"
+#include "TObject.h"
+#include "TObjectTable.h"
+#include "TExec.h"
+#include "TTimeStamp.h"
+#include "TLatex.h"
+#include "TLegend.h"
+#include "TText.h"
+#include "TPaveText.h"
+#include "TLatex.h"
+#include "TSpline.h"
+#include "TView.h"
+#include "TApplication.h"
+#include "TGWindow.h"
+
 
 namespace PlottingFramework
 {

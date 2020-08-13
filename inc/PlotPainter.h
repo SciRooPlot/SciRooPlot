@@ -17,11 +17,68 @@
 #ifndef PlotGenerator_h
 #define PlotGenerator_h
 
-#include "PlottingFramework.h"
 #include "Plot.h"
+class TH1;
+class TH2;
+class TGraph;
+class TGraph2D;
+class TProfile;
+class TProfile2D;
+class TF1;
+class TF2;
+class TCanvas;
+class TObject;
+class TLatex;
+class TPad;
+class TObjArray;
+class TPave;
 
 namespace PlottingFramework
 {
+
+// supported input data types
+using data_ptr_t = variant<TH1*, TH2*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF2*, TF1*>;
+using data_ptr_t_1d = variant<TH1*, TGraph*, TProfile*, TF1*>;
+using data_ptr_t_2d = variant<TH2*, TGraph2D*, TProfile2D*, TF2*>;
+using data_ptr_t_hist = variant<TH1*, TH2*, TProfile*, TProfile2D*>;
+using data_ptr_t_hist_1d = variant<TH1*, TProfile*>;
+using data_ptr_t_hist_2d = variant<TH2*, TProfile2D*>;
+using data_ptr_t_graph = variant<TGraph*, TGraph2D*>;
+using data_ptr_t_graph_1d = variant<TGraph*>;
+using data_ptr_t_graph_2d = variant<TGraph2D*>;
+using data_ptr_t_func = variant<TF1*, TF2*>;
+using data_ptr_t_func_1d = variant<TF1*>;
+using data_ptr_t_func_2d = variant<TF2*>;
+
+const map<drawing_options_t, string> defaultDrawingOpions_Hist2d{
+  { colz, "COLZ" },
+  { surf, "SURF" },
+};
+
+const map<drawing_options_t, string> defaultDrawingOpions_Hist{
+  { points, "X0 EP" },
+  { points_xerr, "EP" },
+  { points_endcaps, "E1" },
+  { curve, "HIST C" },
+  { line, "HIST L" },
+  { bar, "HIST B" },
+  { boxes, "E2" },
+  { band, "E6" },
+  { band_line, "E5" },
+  { area, "HIST F" },
+  { area_curve, "HIST CF" },
+  { area_line, "HIST LF" },
+  { hist, "HIST" },
+  { bar, "HIST B" },
+  { hist_no_borders, "HIST ][" },
+  { stars, "*H" },
+};
+
+const map<drawing_options_t, string> defaultDrawingOpions_Graph{
+  { points, "P Z" },  { points_line, "P Z L" }, { points_endcaps, "P" }, { curve, "X C" },
+  { line, "X L" },    { bar, "X B" },           { boxes, "P2" },         { band, "4" },
+  { band_line, "3" }, { area, "X CF" },         { area_line, "X LC" },   { boxes_only, "2" },
+};
 
 //**************************************************************************************************
 /**

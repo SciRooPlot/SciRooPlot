@@ -15,6 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "Plot.h"
+#include "HelperFunctions.h"
+#include "Logging.h"
 
 namespace PlottingFramework
 {

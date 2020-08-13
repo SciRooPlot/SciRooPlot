@@ -17,11 +17,42 @@
 #ifndef Plot_h
 #define Plot_h
 
+// make root style property enums available to user
+#include "TAttMarker.h"
+#include "TAttLine.h"
+#include "TAttFill.h"
+#include "Rtypes.h"
+
 #include "PlottingFramework.h"
-#include "HelperFunctions.h"
 
 namespace PlottingFramework
 {
+
+enum drawing_options_t : uint8_t
+{
+  // 1d options
+  points = 0,
+  points_xerr,
+  points_endcaps,
+  points_line,
+  line,
+  curve,
+  band,
+  band_line,
+  hist,
+  hist_no_borders,
+  fit,
+  bar,
+  area,
+  area_curve,
+  area_line,
+  boxes,
+  boxes_only,
+  stars,
+  // 2d options
+  colz,
+  surf,
+};
 
 //**************************************************************************************************
 /**
@@ -44,19 +75,16 @@ class Plot
   Plot Clone() const;
 
   // accessors for user
-  inline void SetFigureCategory(const string& figureCategory) { mFigureCategory = figureCategory; }
-  inline void SetPlotTemplateName(const string& plotTemplateName)
-  {
-    mPlotTemplateName = plotTemplateName;
-  }
+  void SetFigureCategory(const string& figureCategory) { mFigureCategory = figureCategory; }
+  void SetPlotTemplateName(const string& plotTemplateName) { mPlotTemplateName = plotTemplateName; }
 
-  inline void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false)
+  void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false)
   {
     mPlotDimensions = { width, height, fixAspectRatio };
   }
-  inline void SetWidth(int32_t width) { mPlotDimensions.width = width; }
-  inline void SetHeight(int32_t height) { mPlotDimensions.height = height; }
-  inline void SetFixAspectRatio(bool fixAspectRatio = true)
+  void SetWidth(int32_t width) { mPlotDimensions.width = width; }
+  void SetHeight(int32_t height) { mPlotDimensions.height = height; }
+  void SetFixAspectRatio(bool fixAspectRatio = true)
   {
     mPlotDimensions.fixAspectRatio = fixAspectRatio;
   }

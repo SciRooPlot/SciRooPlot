@@ -14,7 +14,32 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+// framework dependencies
 #include "PlotManager.h"
+#include "PlotPainter.h"
+#include "Logging.h"
+
+// root dependencies
+#include "TROOT.h"
+#include "TSystem.h"
+#include "TError.h"
+#include "TFile.h"
+#include "TRootCanvas.h"
+#include "TCanvas.h"
+#include "TKey.h"
+#include "TH1.h"
+#include "TGraphErrors.h"
+
+// std dependencies
+#include <regex>
+
+// boost dependencies
+#include <boost/property_tree/xml_parser.hpp>
+namespace PlottingFramework
+{
+  using boost::property_tree::read_xml;
+  using boost::property_tree::write_xml;
+}
 
 namespace PlottingFramework
 {
@@ -79,6 +104,31 @@ PlotManager::~PlotManager()
     mPlotLedger.clear();
   }
 }
+
+//**************************************************************************************************
+/**
+ * Properly delete all loaded root raw data.
+ */
+//**************************************************************************************************
+void PlotManager::ClearLoadedData()
+{
+  mDataLedger->Delete();
+  mLoadedData.clear();
+};
+
+//**************************************************************************************************
+/**
+ * Check if plot was already booked to the manager.
+ */
+//**************************************************************************************************
+bool PlotManager::IsPlotAlreadyBooked(const string& plotName)
+{
+  for(auto& plot : mPlots)
+  {
+    if(plot.GetUniqueName() == plotName) return true;
+  }
+  return false;
+};
 
 //**************************************************************************************************
 /**

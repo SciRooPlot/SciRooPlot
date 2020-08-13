@@ -18,7 +18,11 @@
 #include "PlottingFramework.h"
 #include "PlotManager.h"
 #include "Plot.h"
+#include "Logging.h"
+
 #include <sys/stat.h>
+#include <boost/program_options.hpp>
+#include "TSystem.h"
 
 using namespace PlottingFramework;
 namespace po = boost::program_options;

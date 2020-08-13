@@ -18,8 +18,10 @@
 #define PlotManager_h
 
 #include "PlottingFramework.h"
-#include "PlotPainter.h"
 #include "Plot.h"
+
+#include "TApplication.h" // FIXME: make application a pointer to avoid this  inlude
+class TCanvas;
 
 namespace PlottingFramework
 {
@@ -58,11 +60,7 @@ class PlotManager
     const string& configFileName); // load the input file paths from config file
 
   // remove all loaded input data (histograms, graphs, ...) from the manager (usually not needed)
-  void ClearLoadedData()
-  {
-    mDataLedger->Delete();
-    mLoadedData.clear();
-  };
+  void ClearLoadedData();
 
   // add plots or templates for plots to the manager
   void AddPlot(Plot& plot);
@@ -108,14 +106,7 @@ class PlotManager
   void LoadData(map<int32_t, set<int32_t>>& requiredData);
   void GeneratePlot(Plot& plot, const string& outputMode = "pdf");
   bool IsPlotPossible(Plot& plot);
-  bool IsPlotAlreadyBooked(const string& plotName)
-  {
-    for(auto& plot : mPlots)
-    {
-      if(plot.GetUniqueName() == plotName) return true;
-    }
-    return false;
-  };
+  bool IsPlotAlreadyBooked(const string& plotName);
   ptree& ReadPlotTemplatesFromFile(const string& plotFileName);
 
   TApplication mApp;
