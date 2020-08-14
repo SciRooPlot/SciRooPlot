@@ -55,7 +55,6 @@
 #include "TApplication.h"
 #include "TGWindow.h"
 
-
 namespace PlottingFramework
 {
 
@@ -687,9 +686,10 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               // in case a lable was specified for the data, add it to corresponding legend
               if(data->GetLegendLable() && !(*data->GetLegendLable()).empty())
               {
-                uint8_t legendID {1u};
+                uint8_t legendID{ 1u };
                 // data->GetLegendID() in case user chose specific legend, decide here...
-                plot[padID].GetLegendBoxes()[legendID-1]->AddEntry(data_ptr->GetName(), *data->GetLegendLable());
+                plot[padID].GetLegendBoxes()[legendID - 1]->AddEntry(data_ptr->GetName(),
+                                                                     *data->GetLegendLable());
               }
               pad_ptr->Update(); // adds something to the list of primitives
             }
@@ -1045,8 +1045,10 @@ TPave* PlotPainter::GenerateBox(
         }
         lines.push_back(text.substr(last));
       }
-      else{
-        std::for_each(box->GetEntries().begin(), box->GetEntries().end(), [&lines](const auto& entry){ lines.push_back(entry.GetLable());} );
+      else
+      {
+        std::for_each(box->GetEntries().begin(), box->GetEntries().end(),
+                      [&lines](const auto& entry) { lines.push_back(entry.GetLable()); });
       }
 
       float_t text_size = (textSize) ? *textSize : 24;
@@ -1070,7 +1072,8 @@ TPave* PlotPainter::GenerateBox(
       {
         if constexpr(std::is_same_v<BoxType, Plot::Pad::LegendBox>)
         {
-          TNamed* data_ptr = (TNamed*)pad->FindObject(box->GetEntries()[lineID].GetRefDataName().data());
+          TNamed* data_ptr
+            = (TNamed*)pad->FindObject(box->GetEntries()[lineID].GetRefDataName().data());
           if(!data_ptr) ERROR("NOT FOUND {}", line);
           // first replace placeholders for content dependent lables
           if(line.find("<name>") != string::npos)
@@ -1085,34 +1088,27 @@ TPave* PlotPainter::GenerateBox(
             string title{ data_ptr->GetTitle() };
             line.replace(line.find("<title>"), string("<title>").size(), title);
           }
-          if(line.find("<entries>") != string::npos
-             && data_ptr->InheritsFrom(TH1::Class()))
+          if(line.find("<entries>") != string::npos && data_ptr->InheritsFrom(TH1::Class()))
           {
-            string entries{ std::to_string(
-              (double_t)((TH1*)data_ptr)->GetEntries()) };
+            string entries{ std::to_string((double_t)((TH1*)data_ptr)->GetEntries()) };
             line.replace(line.find("<entries>"), string("<entries>").size(), entries);
           }
-          if(line.find("<integral>") != string::npos
-             && data_ptr->InheritsFrom(TH1::Class()))
+          if(line.find("<integral>") != string::npos && data_ptr->InheritsFrom(TH1::Class()))
           {
             string integral{ std::to_string(((TH1*)data_ptr)->Integral()) };
-            line.replace(line.find("<integral>"), string("<integral>").size(),
-                                integral);
+            line.replace(line.find("<integral>"), string("<integral>").size(), integral);
           }
-          if(line.find("<mean>") != string::npos
-             && data_ptr->InheritsFrom(TH1::Class()))
+          if(line.find("<mean>") != string::npos && data_ptr->InheritsFrom(TH1::Class()))
           {
             string mean{ std::to_string(((TH1*)data_ptr)->GetMean()) };
             line.replace(line.find("<mean>"), string("<mean>").size(), mean);
           }
-          if(line.find("<maximum>") != string::npos
-             && data_ptr->InheritsFrom(TH1::Class()))
+          if(line.find("<maximum>") != string::npos && data_ptr->InheritsFrom(TH1::Class()))
           {
             string maximum{ std::to_string(((TH1*)data_ptr)->GetMaximum()) };
             line.replace(line.find("<maximum>"), string("<maximum>").size(), maximum);
           }
-          if(line.find("<minimum>") != string::npos
-             && data_ptr->InheritsFrom(TH1::Class()))
+          if(line.find("<minimum>") != string::npos && data_ptr->InheritsFrom(TH1::Class()))
           {
             string minimum{ std::to_string(((TH1*)data_ptr)->GetMinimum()) };
             line.replace(line.find("<minimum>"), string("<minimum>").size(), minimum);
@@ -1304,23 +1300,20 @@ TPave* PlotPainter::GenerateBox(
         }
         returnBox = (TPave*)paveText;
       }
-    
-    if(returnBox)
-    {
-      if(borderStyle) returnBox->SetLineStyle(*borderStyle);
-      if(borderColor) returnBox->SetLineColor(*borderColor);
-      if(borderWidth) returnBox->SetLineWidth(*borderWidth);
 
-      if(fillStyle) returnBox->SetFillStyle(*fillStyle);
-      if(fillColor) returnBox->SetFillColor(*fillColor);
-      if(fillOpacity && fillColor)
-        returnBox->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
-    }
+      if(returnBox)
+      {
+        if(borderStyle) returnBox->SetLineStyle(*borderStyle);
+        if(borderColor) returnBox->SetLineColor(*borderColor);
+        if(borderWidth) returnBox->SetLineWidth(*borderWidth);
 
-    
+        if(fillStyle) returnBox->SetFillStyle(*fillStyle);
+        if(fillColor) returnBox->SetFillColor(*fillColor);
+        if(fillOpacity && fillColor)
+          returnBox->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
+      }
     },
     boxVariant);
-      
 
   return returnBox;
 }
