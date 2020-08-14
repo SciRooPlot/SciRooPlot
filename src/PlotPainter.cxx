@@ -20,6 +20,9 @@
 #include "Logging.h"
 #include "HelperFunctions.h"
 
+// std dependencies
+#include <regex>
+
 // root dependencies
 #include "TROOT.h"
 #include "TSystem.h"
@@ -206,7 +209,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
         std::visit(
           [&, padID = padID](auto&& data_ptr) {
             using data_type = std::decay_t<decltype(data_ptr)>;
-            data_ptr->SetTitle("");
+            data_ptr->SetTitle(""); // FIXME: only make this invisible but dont remove this metadata
 
             optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
@@ -1005,6 +1008,86 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
 
 //**************************************************************************************************
 /**
+ * Function to replace placeholders in lables.
+ */
+//**************************************************************************************************
+void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
+{
+  std::regex words_regex("<.*?>");
+  auto words_begin = std::sregex_iterator(str.begin(), str.end(), words_regex);
+  auto words_end = std::sregex_iterator();
+
+  for (std::sregex_iterator match = words_begin; match != words_end; ++match)
+  {
+    std::string match_str = (*match).str();
+
+    string format = "{:.2f}"; // by default use two digits
+
+    // check if user specified different formatting (e.g. via <mean[%2.6]>)
+    std::regex format_regex("\\[.*?\\]");
+    auto format_it = std::sregex_iterator(match_str.begin(), match_str.end(), format_regex);
+    if(format_it != std::sregex_iterator())
+    {
+      format = (*format_it).str();
+      format = format.substr(1, format.size() - 2);
+      
+      // for backward compatibility also support printf-style formatting
+      auto percent_pos = format.find("%");
+      if(percent_pos != string::npos)
+      {
+        format.replace(percent_pos, percent_pos+1, "{:");
+        format += "}";
+      }
+    }
+    
+    string replace_str;
+    if(match_str.find("name") != string::npos)
+    {
+      replace_str = data_ptr->GetName();
+      replace_str = replace_str.substr(0, replace_str.find(gNameGroupSeparator));
+    }
+    else if(match_str.find("title") != string::npos)
+    {
+      replace_str = data_ptr->GetTitle();
+    }
+    else if (data_ptr->InheritsFrom(TH1::Class()))
+    {
+      try
+      {
+      if(match_str.find("entries") != string::npos)
+      {
+        replace_str = fmt::format(format, ((TH1*)data_ptr)->GetEntries());
+      }
+      else if(match_str.find("integral") != string::npos)
+      {
+        replace_str = fmt::format(format, ((TH1*)data_ptr)->Integral());
+      }
+      else if(match_str.find("mean") != string::npos)
+      {
+        replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMean());
+      }
+      else if(match_str.find("maximum") != string::npos)
+      {
+        replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMaximum());
+      }
+      else if(match_str.find("minimum") != string::npos)
+      {
+        replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMinimum());
+      }
+      }
+      catch(...)
+      {
+        ERROR("Incompatible format string in {}.", match_str);
+        replace_str = match_str;
+      }
+    }
+    str.replace(str.find(match_str), string(match_str).size(), replace_str);
+  }
+}
+
+
+//**************************************************************************************************
+/**
  * Function to generate a legend or text box.
  */
 //**************************************************************************************************
@@ -1067,8 +1150,8 @@ TPave* PlotPainter::GenerateBox(
       double_t titleWidthPixel{};
       vector<uint32_t> legendWidthPixelPerColumn(nColumns, 0);
       double_t legendHeightPixel{};
-      // if(!legendBox->GetTitle().empty()) legendTitles.push_back(legendBox->GetTitle());
-      uint8_t lineID{};
+
+    uint8_t lineID{};
       for(auto& line : lines)
       {
         if constexpr(std::is_same_v<BoxType, Plot::Pad::LegendBox>)
@@ -1076,44 +1159,7 @@ TPave* PlotPainter::GenerateBox(
           TNamed* data_ptr
             = (TNamed*)pad->FindObject(box->GetEntries()[lineID].GetRefDataName().data());
           if(!data_ptr) ERROR("Object belonging to legend entry {} not found.", line);
-          // first replace placeholders for content dependent lables
-          if(line.find("<name>") != string::npos)
-          {
-            string name{ data_ptr->GetName() };
-            name = name.substr(0, name.find(gNameGroupSeparator));
-
-            line.replace(line.find("<name>"), string("<name>").size(), name);
-          }
-          if(line.find("<title>") != string::npos)
-          {
-            string title{ data_ptr->GetTitle() };
-            line.replace(line.find("<title>"), string("<title>").size(), title);
-          }
-          if(line.find("<entries>") != string::npos && data_ptr->InheritsFrom(TH1::Class()))
-          {
-            string entries{ std::to_string((double_t)((TH1*)data_ptr)->GetEntries()) };
-            line.replace(line.find("<entries>"), string("<entries>").size(), entries);
-          }
-          if(line.find("<integral>") != string::npos && data_ptr->InheritsFrom(TH1::Class()))
-          {
-            string integral{ std::to_string(((TH1*)data_ptr)->Integral()) };
-            line.replace(line.find("<integral>"), string("<integral>").size(), integral);
-          }
-          if(line.find("<mean>") != string::npos && data_ptr->InheritsFrom(TH1::Class()))
-          {
-            string mean{ std::to_string(((TH1*)data_ptr)->GetMean()) };
-            line.replace(line.find("<mean>"), string("<mean>").size(), mean);
-          }
-          if(line.find("<maximum>") != string::npos && data_ptr->InheritsFrom(TH1::Class()))
-          {
-            string maximum{ std::to_string(((TH1*)data_ptr)->GetMaximum()) };
-            line.replace(line.find("<maximum>"), string("<maximum>").size(), maximum);
-          }
-          if(line.find("<minimum>") != string::npos && data_ptr->InheritsFrom(TH1::Class()))
-          {
-            string minimum{ std::to_string(((TH1*)data_ptr)->GetMinimum()) };
-            line.replace(line.find("<minimum>"), string("<minimum>").size(), minimum);
-          }
+          ReplacePlaceholders(line, data_ptr);
         }
 
         // determine width and height of line to find max width and height (per column)
