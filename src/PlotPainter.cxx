@@ -684,7 +684,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                 std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
               }
               if(data->GetTextFormat()) gStyle->SetPaintTextFormat((*data->GetTextFormat()).data());
-              
+
               data_ptr->Draw(drawingOptions.data());
 
               // in case a lable was specified for the data, add it to corresponding legend
@@ -1017,7 +1017,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
   auto words_begin = std::sregex_iterator(str.begin(), str.end(), words_regex);
   auto words_end = std::sregex_iterator();
 
-  for (std::sregex_iterator match = words_begin; match != words_end; ++match)
+  for(std::sregex_iterator match = words_begin; match != words_end; ++match)
   {
     std::string match_str = (*match).str();
 
@@ -1030,16 +1030,16 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     {
       format = (*format_it).str();
       format = format.substr(1, format.size() - 2);
-      
+
       // for backward compatibility also support printf-style formatting
       auto percent_pos = format.find("%");
       if(percent_pos != string::npos)
       {
-        format.replace(percent_pos, percent_pos+1, "{:");
+        format.replace(percent_pos, percent_pos + 1, "{:");
         format += "}";
       }
     }
-    
+
     string replace_str;
     if(match_str.find("name") != string::npos)
     {
@@ -1050,30 +1050,30 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     {
       replace_str = data_ptr->GetTitle();
     }
-    else if (data_ptr->InheritsFrom(TH1::Class()))
+    else if(data_ptr->InheritsFrom(TH1::Class()))
     {
       try
       {
-      if(match_str.find("entries") != string::npos)
-      {
-        replace_str = fmt::format(format, ((TH1*)data_ptr)->GetEntries());
-      }
-      else if(match_str.find("integral") != string::npos)
-      {
-        replace_str = fmt::format(format, ((TH1*)data_ptr)->Integral());
-      }
-      else if(match_str.find("mean") != string::npos)
-      {
-        replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMean());
-      }
-      else if(match_str.find("maximum") != string::npos)
-      {
-        replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMaximum());
-      }
-      else if(match_str.find("minimum") != string::npos)
-      {
-        replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMinimum());
-      }
+        if(match_str.find("entries") != string::npos)
+        {
+          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetEntries());
+        }
+        else if(match_str.find("integral") != string::npos)
+        {
+          replace_str = fmt::format(format, ((TH1*)data_ptr)->Integral());
+        }
+        else if(match_str.find("mean") != string::npos)
+        {
+          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMean());
+        }
+        else if(match_str.find("maximum") != string::npos)
+        {
+          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMaximum());
+        }
+        else if(match_str.find("minimum") != string::npos)
+        {
+          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMinimum());
+        }
       }
       catch(...)
       {
@@ -1084,7 +1084,6 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     str.replace(str.find(match_str), string(match_str).size(), replace_str);
   }
 }
-
 
 //**************************************************************************************************
 /**
@@ -1151,7 +1150,7 @@ TPave* PlotPainter::GenerateBox(
       vector<uint32_t> legendWidthPixelPerColumn(nColumns, 0);
       double_t legendHeightPixel{};
 
-    uint8_t lineID{};
+      uint8_t lineID{};
       for(auto& line : lines)
       {
         if constexpr(std::is_same_v<BoxType, Plot::Pad::LegendBox>)
