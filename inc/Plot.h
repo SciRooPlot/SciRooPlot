@@ -49,6 +49,7 @@ enum drawing_options_t : uint8_t
   boxes,
   boxes_only,
   stars,
+  text,
   // 2d options
   colz,
   surf,
@@ -69,6 +70,7 @@ class Plot
   Plot(const string& name, const string& figureGroup, const string& plotTemplateName = "");
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
+  Pad& GetPadDefaults() { return mPads[0]; }
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& templatePlot, const Plot& plot);
   Plot(const Plot& otherPlot, const string& name, const string& plotGroup);
@@ -368,6 +370,7 @@ class Plot::Pad::Data
   virtual auto SetMinRangeY(double_t min) -> decltype(*this);
   virtual auto SetLegendLable(const string& legendLable) -> decltype(*this);
   virtual auto SetOptions(const string& opions) -> decltype(*this);
+  virtual auto SetTextFormat(const string& textFormat) -> decltype(*this);
   virtual auto SetNormalize(bool useWidth = false) -> decltype(*this);
   virtual auto SetScaleFactor(double_t scale) -> decltype(*this);
   virtual auto SetColor(int16_t color) -> decltype(*this);
@@ -420,6 +423,7 @@ class Plot::Pad::Data
 
   const optional<string>& GetDrawingOptions() { return mDrawingOptions; }
   const optional<drawing_options_t>& GetDrawingOptionAlias() { return mDrawingOptionAlias; }
+  const optional<string>& GetTextFormat() { return mTextFormat; }
   const optional<double_t>& GetScaleFactor() { return mModify.scale_factor; }
   const optional<uint8_t>& GetNormMode() { return mModify.norm_mode; }
 
@@ -440,6 +444,7 @@ class Plot::Pad::Data
   optional<string> mLegendLable;
   optional<string> mDrawingOptions;
   optional<drawing_options_t> mDrawingOptionAlias;
+  optional<string> mTextFormat;
 
   struct modify_t
   {
@@ -524,6 +529,10 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   virtual auto SetOptions(const string& opions) -> decltype(*this)
   {
     return static_cast<decltype(*this)&>(Data::SetOptions(opions));
+  }
+  virtual auto SetTextFormat(const string& textFormat) -> decltype(*this)
+  {
+    return static_cast<decltype(*this)&>(Data::SetTextFormat(textFormat));
   }
   virtual auto SetNormalize(bool useWidth = false) -> decltype(*this)
   {

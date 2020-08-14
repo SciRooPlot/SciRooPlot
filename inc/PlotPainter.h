@@ -53,6 +53,7 @@ using data_ptr_t_func_2d = variant<TF2*>;
 const map<drawing_options_t, string> defaultDrawingOpions_Hist2d{
   { colz, "COLZ" },
   { surf, "SURF" },
+  { text, "TEXT" },
 };
 
 const map<drawing_options_t, string> defaultDrawingOpions_Hist{
@@ -72,6 +73,7 @@ const map<drawing_options_t, string> defaultDrawingOpions_Hist{
   { bar, "HIST B" },
   { hist_no_borders, "HIST ][" },
   { stars, "*H" },
+  { text, "TEXT" },
 };
 
 const map<drawing_options_t, string> defaultDrawingOpions_Graph{

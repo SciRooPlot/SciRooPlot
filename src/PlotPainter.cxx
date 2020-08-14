@@ -680,7 +680,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                 // do not draw the Z axis a second time!
                 std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
               }
-
+              if(data->GetTextFormat()) gStyle->SetPaintTextFormat((*data->GetTextFormat()).data());
+              
               data_ptr->Draw(drawingOptions.data());
 
               // in case a lable was specified for the data, add it to corresponding legend
@@ -1074,7 +1075,7 @@ TPave* PlotPainter::GenerateBox(
         {
           TNamed* data_ptr
             = (TNamed*)pad->FindObject(box->GetEntries()[lineID].GetRefDataName().data());
-          if(!data_ptr) ERROR("NOT FOUND {}", line);
+          if(!data_ptr) ERROR("Object belonging to legend entry {} not found.", line);
           // first replace placeholders for content dependent lables
           if(line.find("<name>") != string::npos)
           {

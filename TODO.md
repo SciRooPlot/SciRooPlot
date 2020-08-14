@@ -1,6 +1,7 @@
 Missing Box Features
 - add flexible margins for the boxes
 - maybe better use one vector for all boxes and tag legends via alias or automatically set number (size of vector)
+- possibility to specify digit format  <mean[4.f m]> (use regexp)
 - Data::SetPreferedLegend()
 - check again if auto placement works correct (also with multiple boxes)
 - add some top right etc position (enum) functionality with modifyable distance to axis
@@ -11,11 +12,12 @@ Missing Box Features
 - possibility to AddEntry at specific position -> move automatic lables around?!
 
 Planned Features:
-- possibility to specify digit format gStyle->SetPaintTextFormat("4.1f m");
 - add setting for nContours in 2d plots
 - add option in main program to list all loaded plots
 - possibility to do fast loading of all data from input files (skip chek if data was requested)
 - add more placeholders for legends and texts and how to format them
+
+- give warning if selected drawing alias not available for this type of data
 
 Feature Ideas:
 - generic algorithm to automatically determine optimal axis offsets + avoid overlap with lables

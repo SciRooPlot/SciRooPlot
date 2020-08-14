@@ -691,52 +691,41 @@ void Plot::Pad::operator+=(const Pad& pad)
 {
   if(pad.mTitle) mTitle = pad.mTitle;
   if(pad.mOptions) mOptions = pad.mOptions;
-
   if(pad.mPosition.xlow) mPosition.xlow = pad.mPosition.xlow;
   if(pad.mPosition.ylow) mPosition.ylow = pad.mPosition.ylow;
   if(pad.mPosition.xup) mPosition.xup = pad.mPosition.xup;
   if(pad.mPosition.yup) mPosition.yup = pad.mPosition.yup;
-
   if(pad.mMargins.top) mMargins.top = pad.mMargins.top;
   if(pad.mMargins.bottom) mMargins.bottom = pad.mMargins.bottom;
   if(pad.mMargins.left) mMargins.left = pad.mMargins.left;
   if(pad.mMargins.right) mMargins.right = pad.mMargins.right;
-
   if(pad.mFill.color) mFill.color = pad.mFill.color;
   if(pad.mFill.style) mFill.style = pad.mFill.style;
-
   if(pad.mFrame.fillColor) mFrame.fillColor = pad.mFrame.fillColor;
   if(pad.mFrame.fillStyle) mFrame.fillStyle = pad.mFrame.fillStyle;
   if(pad.mFrame.lineColor) mFrame.lineColor = pad.mFrame.lineColor;
   if(pad.mFrame.lineStyle) mFrame.lineStyle = pad.mFrame.lineStyle;
   if(pad.mFrame.lineWidth) mFrame.lineWidth = pad.mFrame.lineWidth;
-
   if(pad.mText.size) mText.size = pad.mText.size;
   if(pad.mText.font) mText.font = pad.mText.font;
   if(pad.mText.color) mText.color = pad.mText.color;
-
   if(pad.mMarkerDefaults.scale) mMarkerDefaults.scale = pad.mMarkerDefaults.scale;
   if(pad.mLineDefaults.scale) mLineDefaults.scale = pad.mLineDefaults.scale;
   if(pad.mFillDefaults.scale) mFillDefaults.scale = pad.mFillDefaults.scale;
-
   if(pad.mMarkerDefaults.colors) mMarkerDefaults.colors = pad.mMarkerDefaults.colors;
   if(pad.mLineDefaults.colors) mLineDefaults.colors = pad.mLineDefaults.colors;
   if(pad.mFillDefaults.colors) mFillDefaults.colors = pad.mFillDefaults.colors;
   if(pad.mMarkerDefaults.styles) mMarkerDefaults.styles = pad.mMarkerDefaults.styles;
   if(pad.mLineDefaults.styles) mLineDefaults.styles = pad.mLineDefaults.styles;
   if(pad.mFillDefaults.styles) mFillDefaults.styles = pad.mFillDefaults.styles;
-
   if(pad.mDrawingOptionDefaults.graph)
     mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
   if(pad.mDrawingOptionDefaults.hist) mDrawingOptionDefaults.hist = pad.mDrawingOptionDefaults.hist;
   if(pad.mDrawingOptionDefaults.hist2d)
     mDrawingOptionDefaults.hist2d = pad.mDrawingOptionDefaults.hist2d;
-
   if(pad.mPalette) mPalette = pad.mPalette;
-
   if(pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if(pad.mRefFunc) mRefFunc = pad.mRefFunc;
-
   for(auto& [axisLable, axis] : pad.mAxes)
   {
     mAxes[axisLable]; // default initiialize in case this axis was not yet defined
@@ -952,6 +941,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree_optional(dataTree, mLegendLable, "legend_lable");
   read_from_tree_optional(dataTree, mDrawingOptions, "drawing_options");
   read_from_tree_optional(dataTree, mDrawingOptionAlias, "drawing_option_alias");
+  read_from_tree_optional(dataTree, mTextFormat, "text_format");
   read_from_tree_optional(dataTree, mMarker.color, "marker_color");
   read_from_tree_optional(dataTree, mMarker.style, "marker_style");
   read_from_tree_optional(dataTree, mMarker.scale, "marker_size");
@@ -984,6 +974,7 @@ ptree Plot::Pad::Data::GetPropertyTree()
   put_in_tree_optional(dataTree, mLegendLable, "legend_lable");
   put_in_tree_optional(dataTree, mDrawingOptions, "drawing_options");
   put_in_tree_optional(dataTree, mDrawingOptionAlias, "drawing_option_alias");
+  put_in_tree_optional(dataTree, mTextFormat, "text_format");
   put_in_tree_optional(dataTree, mMarker.color, "marker_color");
   put_in_tree_optional(dataTree, mMarker.style, "marker_style");
   put_in_tree_optional(dataTree, mMarker.scale, "marker_size");
@@ -1013,6 +1004,7 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
   // apply all properties related to the appearence of the data
   mDrawingOptions = dataLayout.mDrawingOptions;
   mDrawingOptionAlias = dataLayout.mDrawingOptionAlias;
+  mTextFormat = dataLayout.mTextFormat;
   mRangeX.min = dataLayout.mRangeX.min;
   mRangeX.max = dataLayout.mRangeX.max;
   mRangeY.min = dataLayout.mRangeY.min;
@@ -1036,6 +1028,11 @@ auto Plot::Pad::Data::SetLegendLable(const string& legendLable) -> decltype(*thi
 auto Plot::Pad::Data::SetOptions(const string& opions) -> decltype(*this)
 {
   mDrawingOptions = opions;
+  return *this;
+}
+auto Plot::Pad::Data::SetTextFormat(const string& textFormat) -> decltype(*this)
+{
+  mTextFormat = textFormat;
   return *this;
 }
 auto Plot::Pad::Data::SetScaleFactor(double_t scale) -> decltype(*this)
