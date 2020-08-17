@@ -1021,7 +1021,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
   {
     std::string match_str = (*match).str();
 
-    string format = "{:.2f}"; // by default use two digits
+    string format{};
 
     // check if user specified different formatting (e.g. via <mean[%2.6]>)
     std::regex format_regex("\\[.*?\\]");
@@ -1030,15 +1030,18 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     {
       format = (*format_it).str();
       format = format.substr(1, format.size() - 2);
-
-      // for backward compatibility also support printf-style formatting
-      auto percent_pos = format.find("%");
-      if(percent_pos != string::npos)
-      {
-        format.replace(percent_pos, percent_pos + 1, "{:");
-        format += "}";
-      }
     }
+    // allow printf style and protect against wrong usage
+    format.erase(remove(format.begin(), format.end(), '%'), format.end());
+    format.erase(remove(format.begin(), format.end(), ' '), format.end());
+
+    // if no valid formatting pattern is given, fall back to 'general' mode
+    if(!(str_contains(format, "e") || str_contains(format, "f") || str_contains(format, "g")
+         || str_contains(format, "E") || str_contains(format, "F") || str_contains(format, "G")))
+    {
+      format = format + "g";
+    }
+    format = "{:" + format + "}";
 
     string replace_str;
     if(match_str.find("name") != string::npos)
@@ -1134,6 +1137,7 @@ TPave* PlotPainter::GenerateBox(
                       [&lines](const auto& entry) { lines.push_back(entry.GetLable()); });
       }
 
+      // FIXME: this shall inherit default text size and font from pad
       float_t text_size = (textSize) ? *textSize : 24;
       int16_t text_font = (textFont) ? *textFont : 43;
       uint8_t nColumns{ 1u }; //(box->GetNumColumns()) ? *box->GetNumColumns() : 1;
