@@ -9,7 +9,7 @@ Every one of us has his own set of plotting macros, usually tailored for exactly
 This introduces a large verbosity of trivial code that is basically always the same.
 Generation after generation has to waste their time adapting to all the complexity and inconsistencies of the ROOT interfaces to meet their specific needs.
 Since plotting usually is not our main focus but an annoying necessity on the way to success (conveying information), in times of pressure and with many other things on the todo list we often tend to choose the lazy mans apporach every time new plots have to be created.
-Therefore lots of code is beeing copied leading to a large redundancy of basic functionality
+Therefore lots of code is beeing copied leading to a large redundancy of basic functionality.
 For example in all of our plotting macros many lines of code are beeing spent on stupid tasks like opening files, reading in the desired data from the directory or list substructure of the .root file and applying the plotting layout.
 Usually each macro is coined to one specific use case (creating one plot).
 Knowing this every single one of us already has created levels of abstraction to reduce the verbosity in terms of functions that can at least automatize ones own particular use cases.
@@ -18,11 +18,11 @@ Except for the joy of doing it I cannot see any use in this. What we need is re-
 In an ideal world the scientist shall not spend his time thinking about how to open files, traverse through a file structure (which is of course needed to keep your data organized).
 I dont want to keep inventing new temporary names for the data which I extract from a file for no other reason but to put it in the damn plot. I dont want to be responsible for each and every temporary histogram that I extracted and take care that it is properly deleted.
 All I want to do is tell my program: Take data X and Y from files A and B respectively and put it in a plot that should look like I tell you (only once) -- how you do it, I dont care!.
-This is the spirit in which this framework was / is beeing developed.
+This is the spirit in which this framework is beeing developed.
 In my opinion it is good practice for data manipulation and data display (aka plotting) to be done in separate successive steps in every analysis for reasons that are quiet obvious (when changing the color of one line in the plot I dont really want to re-calculate 4-momenta and opening angles or re-run my simulation).
 Knowing that this is often not done out of the sheer fear of having to write yet another macro where the exact the same data that I just manipulated needs to be read in again just to put it in a plot, I hope that this framework can help reduce the reluctance to separate these two independent and conceptually disjunct steps of the data analysis workflow.
 
-Everybody is invided to use, report bugs or contribute new features.
+Everybody is invided to use this framework, report bugs or contribute new features.
 
 Prequesites
 -----------
@@ -55,7 +55,7 @@ For inspiration on how to do that you can have a look at the CMakeLists_USER.txt
 
 The PlotManager is the pivot point of the Plotting Framework. In your application you will have to
 ```cpp
-    #include "PlottingFramework.h"
+    #include "PlotManager.h"
 ```
 which will provide you with all the user interfaces you need.
 The Manager needs to know which input files should be loaded and where the output plots should be stored.
@@ -69,7 +69,7 @@ Example 1
 // Create a simple plot from multiple input root files.
 //============================================================================
 
-#include "PlottingFramework.h"
+#include "PlotManager.h"
 
 // create plotting environment that handles IO and plot creation
 PlotManager plotManager;
@@ -225,7 +225,7 @@ Example 2
 // Create plots based on a template and save plot definitions to file.
 //============================================================================
 
-#include "PlottingFramework.h"
+#include "PlotManager.h"
 
 PlotManager plotManager;
 
@@ -356,18 +356,15 @@ plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {}, "find
 
 Using the App
 --------
-The Plotting Framework ships with a builtin plotting application that enables you to quickly create plots from previously defined plot definitions that were saved to an xml file by your code.
+The Plotting Framework ships with a builtin plotting application that enables you to quickly create plots from previously saved plot definitions.
 To use this app you need to:
 - source the .plotrc in the main directory of the repository
 - place both the "inputFilesConfig.XML" and "plotDefinitions.XML" (names have to be like this for now) produced by your program in some central config folder
 - define the environment variable `__PLOTTING_CONFIG_DIR` to point to this folder
 - define the environment variable `__PLOTTING_OUTPUT_DIR` to the directory where you want to store the created plots (pdf, png, etc.)
 
-Now you can run the command
-    plot
-from everywhere.
-To see the available program options run
-    plot --help
-For zsh shells auto-completion is supported to tab through the available commands, figureGroups and plots.
-The app also has a 'browse' feature that gives you access to quickly plot the content of root files.
+Now you can run the command `plot` from everywhere.
+To see the available program options run `plot --help`.
+For zsh shells auto-completion is supported and you can to tab through the available commands, figureGroups and plots.
+The app also has a 'browse' feature that enables you to quickly plot the content of root files.
 
