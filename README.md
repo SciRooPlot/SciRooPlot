@@ -3,6 +3,7 @@ Rationale
 This piece of software is meant to simplify plotting of ROOT data by adding a level of abstraction on top of the mighty ROOT data analysis framework.
 If you have already worked with ROOT, you probably ask yourself:
 > We already have ROOT and it is perfectly fine as it is. I have learned to master it over the years and all my macros work just fine. Why the hell do I need this Plotting Framework? Why should I learn to use yet another interface?
+
 Well, what I can tell from my experience is that when it comes to plotting there is a tendency to largely violate one basic guiding principle in software development (and common sense): the do not repeat yourself (DRY) principle.
 Every one of us has his own set of plotting macros, usually tailored for exactly one (or mabye a few) use cases to design our plots in the way we wish them to be.
 This introduces a large verbosity of trivial code that is basically always the same.
@@ -15,6 +16,7 @@ In an ideal world the scientist shall not spend his time thinking about how to o
 I dont want to keep inventing new temporary names for the data which I extract from a file for no other reason but to put it in the damn plot. I dont want to be responsible for each and every temporary histogram that I extracted and take care that it is properly deleted. I dont want to think about how a graph needs to be handled different than a histogram.
 All I want to do is tell the program:
 > Take data X and Y from files A and B respectively and put it in a plot that should look like I tell you (or already have told you) -- I dont care how you do it!.
+
 This is the spirit in which this framework is beeing developed.
 In my opinion it is good practice for data manipulation and data display (aka plotting) to be done in separate successive steps.
 Often this is not done out of the sheer fear of having to write yet another macro where the exact the same data that was just manipulated and written into a file, needs to be read in again only to put it into a plot, leading to very confusing and non-modular code.
