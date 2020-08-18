@@ -862,7 +862,6 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<str
   if(!dataNames.empty())
   {
     WARNING("Not all required inputs could be found.");
-    PRINT_SEPARATOR;
     PRINT(" Data:");
     for(auto& dataName : newDataNames)
       PRINT("  - {} ({})", dataName.substr(0, dataName.find(gNameGroupSeparator)),
@@ -870,7 +869,6 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<str
     PRINT(" not found in any of the following files:");
     for(auto& inputFileName : fileNames)
       PRINT("  - {}", inputFileName);
-    PRINT_SEPARATOR;
   }
 }
 

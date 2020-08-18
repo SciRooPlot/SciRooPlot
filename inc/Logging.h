@@ -55,11 +55,11 @@
     fmt::print("\n");                         \
   }
 
-#define PRINT(s, ...)             \
-  {                               \
-    fmt::print("         ");      \
-    fmt::print(s, ##__VA_ARGS__); \
-    fmt::print("\n");             \
+#define PRINT(s, ...)               \
+  {                                 \
+    fmt::print(stderr, "       |"); \
+    fmt::print(s, ##__VA_ARGS__);   \
+    fmt::print("\n");               \
   }
 #define PRINT_INLINE(s, ...)      \
   {                               \
@@ -67,7 +67,7 @@
   }
 #define PRINT_SEPARATOR                     \
   {                                         \
-    PRINT(fmt::format("{:-<{}}", "-", 80)); \
+    PRINT(fmt::format("{:-<{}}", "-", 60)); \
   }
 #define HERE                                                                                    \
   {                                                                                             \
