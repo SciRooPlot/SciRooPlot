@@ -15,7 +15,8 @@ Knowing this, most of us already created levels of abstraction to reduce the ver
 In an ideal world the scientist shall not spend his time thinking about how to open files and traverse through a file structure (which is of course needed to keep your data organized).
 I dont want to keep inventing new temporary names for the data which I extract from a file for no other reason but to put it in the damn plot. I dont want to be responsible for each and every temporary histogram that I extracted and take care that it is properly deleted. I dont want to think about how a graph needs to be handled different than a histogram.
 All I want to do is tell the program:
-> Take data X and Y from files A and B respectively and put it in a plot that should look like I tell you (or already have told you) -- I dont care how you do it!.
+> Take data X and Y from files A and B respectively and put it in a plot that should look like I tell you (or already have told you)
+> -- I dont care how you do it!
 
 This is the spirit in which this framework is beeing developed.
 In my opinion it is good practice for data manipulation and data display (aka plotting) to be done in separate successive steps.
@@ -85,20 +86,16 @@ plotManager.DumpInputDataFiles("path/to/inputFilesConfig.XML");
 // xml file and then read it into your program via
 plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 
-
 // now that we know where to look for the data, we can start creating plot(s).
-// the plot will be handed over to the manager after it was created and defined via std::move()
-// therefore it makes sense to put this part in a scope {}
-// this way you you can re-use the symbol 'plot' for the next plots
-
+// the plot will be handed over to the manager after it was created and defined
 { // -----------------------------------------------------------------------
   // create the Plot object
   Plot plot("myPlot1", "myPlotGroup"); // plots are classified in user defined groups
-  // optionally you can also define figure categories within the figureGroup
-  plot.SetFigureCategory("QA");
+  // optionally you can also define figure categories (and subcatecories) within the figureGroup
+  plot.SetFigureCategory("QA-Plots/");
    // you always have to specify height and width of the plot:
   plot.SetDimensions(710, 710);
-  plot.SetTransparent(); // for all other settings see inc/Plot.h
+  plot.SetTransparent(); // for all other settings see the class definition in inc/Plot.h
 
   // a plot consists of multiple pads, which you can access via the [] operator (counting starts at '1'):
   plot[1].SetPosition(0., 0., 1., 1.); // specifies a pad that expands over the whole plot
@@ -108,7 +105,10 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // you can also define default settings for ALL pads of the plot by using the padID=0, e.g.:
   plot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
   plot[0].SetDefaultMarkerSize(1.2).SetDefaultLineWidth(2.);
-  // As you can see here the user interface is designed such that each setter returns a reference to the object that is currently beeing modified. This allows you to concaternate all the settings belonging to a pad. This design pattern is consistently used also for all the other user definable objects (Data, Axis, Legends, etc.).
+  // As you can see here the user interface is designed such that each setter returns
+  // a reference to the object that is currently beeing modified. This allows you to concaternate
+  // all the settings belonging to a pad. This design pattern is consistently used also for all
+  // the other user definable objects (Data, Axis, Legends, etc.).
 
   // now set text properties, that will be used everywhere in the pad if not overridden for a specific lable/title/etc..
   plot[1].SetDefaultTextFont(43);
@@ -128,10 +128,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // you can use the standard printf style to specify how these numbers shall be formatted:
   plot[1].AddData({"histName1", "inputGroupA"} ,"myLable avg = <mean[.2f]>");
   plot[1].AddData({"histName2", "inputGroupA"} ,"myLable sum = <integral[.2e]>");
-  // or let the framework decide the best way to do it
-  plot[1].AddData({"histName2", "inputGroupA"} ,"myLable sum = <integral[.2]>");
 
-  
   // now lets add another piece of input data from the second group (this time without adding a lable to the legend)
   plot[1].AddData({"histName3", "inputGroupB"});
 
@@ -142,9 +139,11 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // to mdify how the data is displayed we can apply the settings via:
   plot[1].AddData({"histName4", "inputGroupB"}).SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
   // instead of directly using the ROOT drawing option string ("HIST C") you can
-  // use pre-defined human readible options like curve, points, points_line, etc (you can find all available options in PlottingFramework.h):
+  // use pre-defined human readible options like curve, points, points_line, etc
+  // (you can find all available options in inc/PlotPainter.h):
   plot[1].AddData({"graphName1", "inputGroupA"}).SetOptions(points).SetMarker(kRed, kFullCircle, 1.);
-  // all root layout settings can be applied in this manner (see definition of Data class in inc/Plot.h for the list of all accessors)
+  // all root layout settings can be applied in this manner
+  // (see definition of Data class in inc/Plot.h for the list of all accessors)
 
   // now add a legend containing the lables that were specified when adding the data
   plot[1].AddLegend(0.5, 0.8);
@@ -239,17 +238,25 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 // stay the same for all (or a group of) your plots and you do not want to
 // verbously specify them again and again for every one of your plots
 // therefore the framework provides the optin to specify plot templates
-// these are just normal plots, but you can use their settings as a baseline for your actual plots
+// these are just ordinary plots, but you can use their settings as a baseline
+// and the properties specified for your final plot will be applied on top of these
 
 // for instance the following will give you some nice default plots:
+vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
 { // -----------------------------------------------------------------------
   // template 1d
   Plot templatePlot("1d", "TEMPLATES");
   templatePlot.SetDimensions(710, 710, true);
   templatePlot.SetTransparent();
+  templatePlot[0].SetDefaultLineColors(goodColors);
+  templatePlot[0].SetDefaultMarkerColors(goodColors);
+  templatePlot[0].SetDefaultFillColors(goodColors);
+  templatePlot[0].SetDefaultFillStyles({0});
+  templatePlot[0].SetDefaultMarkerStyles({kFullCircle});
+  templatePlot[0].SetDefaultLineStyles({kSolid});
   templatePlot[0].SetDefaultTextFont(43);
   templatePlot[0].SetDefaultTextSize(24);
-  templatePlot[0].SetDefaultMarkerSize(1.2);
+  templatePlot[0].SetDefaultMarkerSize(1.);
   templatePlot[0].SetDefaultLineWidth(2.);
   templatePlot[0].SetTransparent();
   templatePlot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
@@ -264,11 +271,19 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   Plot templatePlot("1d_ratio", "TEMPLATES");
   templatePlot.SetDimensions(710, 710, true);
   templatePlot.SetTransparent();
+  templatePlot[0].SetDefaultLineColors(goodColors);
+  templatePlot[0].SetDefaultMarkerColors(goodColors);
+  templatePlot[0].SetDefaultFillColors(goodColors);
+  templatePlot[0].SetDefaultFillStyles({0});
+  templatePlot[0].SetDefaultMarkerStyles({kFullCircle});
+  templatePlot[0].SetDefaultLineStyles({kSolid});
+  templatePlot[0].SetDefaultMarkerSize(1.2);
+  templatePlot[0].SetDefaultLineWidth(3.);
   templatePlot[0].SetDefaultTextFont(43);
   templatePlot[0].SetDefaultTextSize(24);
   templatePlot[0].SetTransparent();
-  templatePlot[0]["X"].SetTitleOffset(1.1);
-  templatePlot[0]["Y"].SetTitleOffset(1.4);
+  templatePlot[0]["X"].SetTitleOffset(1.1).SetOppositeTicks();;
+  templatePlot[0]["Y"].SetTitleOffset(1.4).SetOppositeTicks();;
   templatePlot[1].SetPosition(0., 0.28, 1., 1.);
   templatePlot[1].SetMargins(0.05, 0.0, 0.14, 0.05);
   templatePlot[1]["X"].SetTitleOffset(3.1);
@@ -286,6 +301,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   Plot templatePlot("2d", "TEMPLATES");
   templatePlot.SetDimensions(710, 710, true);
   templatePlot.SetTransparent();
+  templatePlot[0].SetDefaultDrawingOptionHist2d(colz);
   templatePlot[0].SetDefaultTextFont(43);
   templatePlot[0].SetDefaultTextSize(24);
   templatePlot[0].SetTransparent();
@@ -297,7 +313,6 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   templatePlot[1].SetPosition(0., 0., 1., 1.);
   plotManager.AddPlotTemplate(templatePlot);
 } // -----------------------------------------------------------------------
-
 
 // as you have seen, these template plots need to live in the figureGroup called "TEMPLATES"
 // and then be added to the manager via
@@ -344,9 +359,8 @@ plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {"invMass
 // this means you can put "plot.*" and this will add "plot1", "plot123", "plot_adsf", etc.
 
 // instead of the default option "load", which adds these plots to the manager, the mode can also be
-// "find" in order to check only if the specified plots exist (prints out this info)
+// "find" in order to check only if the specified plots exist (it prints out this info)
 plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {}, "find");
-
 
 // the main reasoning behind the "dump-to-file" feature is that you can then
 // make use the builtin commandline plotting tool, which can conveniently
