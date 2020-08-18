@@ -51,7 +51,7 @@ By default plots are created as pdf in your output folder, but you can also choo
 Any contributions, suggestions or bug reports are very welcome.
 
 
-Example1
+Example 1
 --------
 ```cpp
 //============================================================================
@@ -204,3 +204,156 @@ Example1
   plotManager.CreatePlots("myPlotGroup", "", {"myPlot1", "myPlot2"}, "file");
 }
 ```
+Example 2
+--------
+```cpp
+//============================================================================
+// Example 2:
+// Create plots based on a template and save plot definitions to file.
+//============================================================================
+{
+  PlotManager plotManager;
+
+  // assuming you saved the list of input root files from example 1 to a xml file via
+  // plotManager.DumpInputDataFiles("path/to/inputFilesConfig.XML");
+  // we can now load this directly into the manager via:
+  plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
+
+  // as you know from your personal plotting experience
+  // there are plenty of settings that have to be applied to generate a beautyful plot
+  // most of these settings e.g. the number and alignment of pads, background colors, transparency, etc..
+  // stay the same for all (or a group of) your plots and you do not want to
+  // verbously specify them again and again for every one of your plots
+  // therefore the framework provides the optin to specify plot templates
+  // these are just normal plots, but you can use their settings as a baseline for your actual plots
+
+  // for instance the following will give you some nice default plots:
+  { // -----------------------------------------------------------------------
+    // template 1d
+    Plot templatePlot("1d", "TEMPLATES");
+    templatePlot.SetDimensions(710, 710, true);
+    templatePlot.SetTransparent();
+    templatePlot[0].SetDefaultTextFont(43);
+    templatePlot[0].SetDefaultTextSize(24);
+    templatePlot[0].SetDefaultMarkerSize(1.2);
+    templatePlot[0].SetDefaultLineWidth(2.);
+    templatePlot[0].SetTransparent();
+    templatePlot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
+    templatePlot[0]["X"].SetTitleOffset(1.).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks();
+    templatePlot[0]["Y"].SetTitleOffset(1.2).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks();
+    templatePlot[1].SetPosition(0., 0., 1., 1.);
+    plotManager.AddPlotTemplate(templatePlot);
+  } // -----------------------------------------------------------------------
+
+  { // -----------------------------------------------------------------------
+    // template 1d ratio
+    Plot templatePlot("1d_ratio", "TEMPLATES");
+    templatePlot.SetDimensions(710, 710, true);
+    templatePlot.SetTransparent();
+    templatePlot[0].SetDefaultTextFont(43);
+    templatePlot[0].SetDefaultTextSize(24);
+    templatePlot[0].SetTransparent();
+    templatePlot[0]["X"].SetTitleOffset(1.1);
+    templatePlot[0]["Y"].SetTitleOffset(1.4);
+    templatePlot[1].SetPosition(0., 0.28, 1., 1.);
+    templatePlot[1].SetMargins(0.05, 0.0, 0.14, 0.05);
+    templatePlot[1]["X"].SetTitleOffset(3.1);
+    templatePlot[1]["Y"].SetTitleOffset(1.5);
+    templatePlot[2].SetPosition(0., 0., 1., 0.28);
+    templatePlot[2].SetMargins(0.015, 0.4, 0.14, 0.05);
+    templatePlot[2].SetRefFunc("1");
+    templatePlot[2]["X"].SetTickLength(0.06).SetTitleOffset(4.1).SetOppositeTicks();
+    templatePlot[2]["Y"].SetNumDivisions(305).SetTitleOffset(1.5).SetTitleCenter();
+    plotManager.AddPlotTemplate(templatePlot);
+  } // -----------------------------------------------------------------------
+
+  { // -----------------------------------------------------------------------
+    // template 2d
+    Plot templatePlot("2d", "TEMPLATES");
+    templatePlot.SetDimensions(710, 710, true);
+    templatePlot.SetTransparent();
+    templatePlot[0].SetDefaultTextFont(43);
+    templatePlot[0].SetDefaultTextSize(24);
+    templatePlot[0].SetTransparent();
+    templatePlot[0].SetMargins(0.12-0.05, 0.12+0.02, 0.12, 0.12+0.06);
+    templatePlot[0]["X"].SetTitleOffset(1.1);
+    templatePlot[0]["Y"].SetTitleOffset(1.1);
+    templatePlot[0]["Z"].SetTitleOffset(1.6);
+    templatePlot[0].SetRedrawAxes();
+    templatePlot[1].SetPosition(0., 0., 1., 1.);
+    plotManager.AddPlotTemplate(templatePlot);
+  } // -----------------------------------------------------------------------
+
+
+  // as you have seen, these template plots need to live in the figureGroup called "TEMPLATES"
+  // and then be added to the manager via
+  // plotManager.AddPlotTemplate(templatePlot);
+
+  // once this is done, you can define plots based on these templates
+  // by specifying their name as the third argument in the new plots' constructor:
+  { // -----------------------------------------------------------------------
+    Plot plot("test1d_ratio", "myFigureGroup", "1d_ratio");
+
+    plot[1].AddData({"graph2", "inputGroupA"}, "5 TeV #Delta = #sqrt{s}")
+    .SetMarker(kRed, kFullCircle, 1.2).SetMaxRangeX(40);
+
+    plot[1].AddData({"func3", "inputGroupB"}, "ratio")
+    .SetMarker(kBlack, kFullCircle, 1.2).SetMaxRangeX(70);
+
+    plot[2].AddRatio({"invMassSpec", "inputGroupA"}, {"momentUnfolded1", "pp_5TeV"}, "ratio")
+    .SetMarker(kRed, kFullCircle, 1.2)
+    .SetMaxRangeX(60);
+
+    plot[1].AddLegend(0.,0.9);
+    plot[2].AddLegend(0.,0.9);
+
+    plot[0]["X"].SetRange(20, 70).SetTickOrientation("+-");
+
+    plotManager.AddPlot(plot);
+  } // -----------------------------------------------------------------------
+
+  // as you can see the plot definition becomes way simpler now since we
+  // do not have to specify again all of the layout overhead and can focus on the content
+
+  // instead of creating the plots directly as we have done in the previous example,
+  // we can also save the plot definitions into another xml file via:
+  plotManager.DumpPlots("path/to/my/plotDefinitions.XML");
+
+  // this file can then be read in by another one of your programs via
+  plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML");
+  // this extracts all plots from this file!
+  // in case you want to load only certain figure groups:
+  plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {"figureGroup1", "figures", "figureGroup:myCategory"});
+  // ... or plots:
+  plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {"invMass", "ptSpec"});
+  // the figure group and plot strings can be regular expressions
+  // this means you can put "plot.*" and this will add "plot1", "plot123", "plot_adsf", etc.
+
+  // instead of the default option "load", which adds these plots to the manager, the mode can also be
+  // "find" in order to check only if the specified plots exist (prints out this info)
+  plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {}, "find");
+
+
+  // the main reasoning behind the "dump-to-file" feature is that you can then
+  // make use the builtin commandline plotting tool, which can conveniently
+  // create specific plots you defined and saved to file (see next section)
+
+}
+```
+Using the App
+--------
+The Plotting Framework ships with a builtin plotting application that enables you to quickly create plots from previously defined plot definitions that were saved to an xml file by your code.
+To use this app you need to:
+- source the .plotrc in the main directory of the repository
+- place both the "inputFilesConfig.XML" and "plotDefinitions.XML" (names have to be like this for now) produced by your program in some central config folder
+- define the environment variable `__PLOTTING_CONFIG_DIR` to point to this folder
+- define the environment variable `__PLOTTING_OUTPUT_DIR` to the directory where you want to store the created plots (pdf, png, etc.)
+
+Now you can run the command
+    plot
+from everywhere.
+To see the available program options run
+    plot --help
+For zsh shells auto-completion is supported to tab through the available commands, figureGroups and plots.
+The app also has a 'browse' feature that gives you access to quickly plot the content of root files.
+
