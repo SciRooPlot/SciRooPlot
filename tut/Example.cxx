@@ -84,6 +84,16 @@ int main(int argc, char *argv[])
       plot[1].AddData({"folder1/histName2", "inputGroupA"} ,"myLable2");
       plot[1].AddData({"folder2/histName2", "inputGroupA"} ,"myLable3");
 
+      // it is possible to specify in the lables that you want to include some meta info of the data that is drawn, e.g.:
+      plot[1].AddData({"histName1", "inputGroupA"} ,"myLable avg = <mean>");
+      // possible options are: <name>, <title>, <entries>, <integral>, <maximum>, <minimum>, <mean>
+      // you can use the standard printf style to specify how these numbers shall be formatted:
+      plot[1].AddData({"histName1", "inputGroupA"} ,"myLable avg = <mean[.2f]>");
+      plot[1].AddData({"histName2", "inputGroupA"} ,"myLable sum = <integral[.2e]>");
+      // or let the framework decide the best way to do it
+      plot[1].AddData({"histName2", "inputGroupA"} ,"myLable sum = <integral[.2]>");
+
+      
       // now lets add another piece of input data from the second group (this time without adding a lable to the legend)
       plot[1].AddData({"histName3", "inputGroupB"});
 

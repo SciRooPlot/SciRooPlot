@@ -38,6 +38,7 @@ set(MODULE_HDR inc/${MODULE}.h)
 set(ADDITIONAL_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/inc/Logging.h
   ${CMAKE_CURRENT_SOURCE_DIR}/inc/HelperFunctions.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/tut/Example.cxx
   README.md
   TODO.md
   )

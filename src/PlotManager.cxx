@@ -894,7 +894,7 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
       return nullptr;
     }
   }
-  TObject* subFolder = nullptr;
+  TObject* subFolder{ nullptr };
   if(folder->InheritsFrom("TDirectory"))
   {
     TKey* key = ((TDirectory*)folder)->FindKey(subDirs[0].data());
