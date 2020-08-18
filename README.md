@@ -1,28 +1,26 @@
 Rationale
 ---------
-This piece of software is meant to simplify plotting of ROOT data by adding a level of abstraction on top of the very useful and mighty ROOT framework.
+This piece of software is meant to simplify plotting of ROOT data by adding a level of abstraction on top of the mighty ROOT data analysis framework.
 If you have already worked with ROOT, you probably ask yourself:
 > We already have ROOT and it is perfectly fine as it is. I have learned to master it over the years and all my macros work just fine. Why the hell do I need this Plotting Framework? Why should I learn to use yet another interface?
-
 Well, what I can tell from my experience is that when it comes to plotting there is a tendency to largely violate one basic guiding principle in software development (and common sense): the do not repeat yourself (DRY) principle.
-Every one of us has his own set of plotting macros, usually tailored for exactly one (or a few) use cases to design our plots in the way we wish them to be.
+Every one of us has his own set of plotting macros, usually tailored for exactly one (or mabye a few) use cases to design our plots in the way we wish them to be.
 This introduces a large verbosity of trivial code that is basically always the same.
 Generation after generation has to waste their time adapting to all the complexity and inconsistencies of the ROOT interfaces to meet their specific needs.
-Since plotting usually is not our main focus but an annoying necessity on the way to success (conveying information), in times of pressure and with many other things on the todo list we often tend to choose the lazy mans apporach every time new plots have to be created.
+Since plotting usually is not our main focus but an annoying necessity on the way to success (conveying information), we often tend to choose the lazy mans apporach every time new plots have to be produced.
 Therefore lots of code is beeing copied leading to a large redundancy of basic functionality.
-For example in all of our plotting macros many lines of code are beeing spent on stupid tasks like opening files, reading in the desired data from the directory or list substructure of the .root file and applying the plotting layout.
-Usually each macro is coined to one specific use case (creating one plot).
-Knowing this every single one of us already has created levels of abstraction to reduce the verbosity in terms of functions that can at least automatize ones own particular use cases.
-But why do it all again and again? Why waste our time with stuff that should be solved once and then be done with?
-Except for the joy of doing it I cannot see any use in this. What we need is re-usable, flexible and generic code that can be utilized by everyone.
-In an ideal world the scientist shall not spend his time thinking about how to open files, traverse through a file structure (which is of course needed to keep your data organized).
-I dont want to keep inventing new temporary names for the data which I extract from a file for no other reason but to put it in the damn plot. I dont want to be responsible for each and every temporary histogram that I extracted and take care that it is properly deleted.
-All I want to do is tell my program: Take data X and Y from files A and B respectively and put it in a plot that should look like I tell you (only once) -- how you do it, I dont care!.
+For example in all of our plotting macros many lines of code are beeing spent on stupid tasks like opening files, reading in the desired data from the directory or list substructure of the .root file and then applying the plotting layout.
+Knowing this, most of us already created levels of abstraction to reduce the verbosity in terms of functions that can at least automatize ones own particular use cases.
+In an ideal world the scientist shall not spend his time thinking about how to open files and traverse through a file structure (which is of course needed to keep your data organized).
+I dont want to keep inventing new temporary names for the data which I extract from a file for no other reason but to put it in the damn plot. I dont want to be responsible for each and every temporary histogram that I extracted and take care that it is properly deleted. I dont want to think about how a graph needs to be handled different than a histogram.
+All I want to do is tell the program:
+> Take data X and Y from files A and B respectively and put it in a plot that should look like I tell you (or already have told you) -- I dont care how you do it!.
 This is the spirit in which this framework is beeing developed.
-In my opinion it is good practice for data manipulation and data display (aka plotting) to be done in separate successive steps in every analysis for reasons that are quiet obvious (when changing the color of one line in the plot I dont really want to re-calculate 4-momenta and opening angles or re-run my simulation).
-Knowing that this is often not done out of the sheer fear of having to write yet another macro where the exact the same data that I just manipulated needs to be read in again just to put it in a plot, I hope that this framework can help reduce the reluctance to separate these two independent and conceptually disjunct steps of the data analysis workflow.
+In my opinion it is good practice for data manipulation and data display (aka plotting) to be done in separate successive steps.
+Often this is not done out of the sheer fear of having to write yet another macro where the exact the same data that was just manipulated and written into a file, needs to be read in again only to put it into a plot, leading to very confusing and non-modular code.
+I hope that this software can help reduce the reluctance to separate these two independent and conceptually disjunct steps of the data analysis workflow and simplify the 'problem' producing great plots so we can focus on the 'real stuff'.
 
-Everybody is invided to use this framework, report bugs or contribute new features.
+Everybody is welcome to use this framework, report bugs, say it is all stupid, or contribute new features.
 
 Prerequisites
 -------------
@@ -58,7 +56,6 @@ The PlotManager is the pivot point of the Plotting Framework. In your applicatio
     #include "PlotManager.h"
 ```
 which will provide you with all the user interfaces you need.
-The Manager needs to know which input files should be loaded and where the output plots should be stored.
 In the following you can find some examples illustrating how to use the framework.
 
 Example 1
