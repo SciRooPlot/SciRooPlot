@@ -15,8 +15,9 @@ Knowing this, most of us already created levels of abstraction to reduce the ver
 In an ideal world the scientist shall not spend his time thinking about how to open files and traverse through a file structure (which is of course needed to keep your data organized).
 I dont want to keep inventing new temporary names for the data which I extract from a file for no other reason but to put it in the damn plot. I dont want to be responsible for each and every temporary histogram that I extracted and take care that it is properly deleted. I dont want to think about how a graph needs to be handled different than a histogram.
 All I want to do is tell the program:
-> Take data X and Y from files A and B respectively and put it in a plot that should look like I tell you (or already have told you)
-> -- I dont care how you do it!
+> Take data X and Y from files A and B respectively and put it in a plot that should look like I tell you (or already have told you).
+>
+> -- I really dont care how you do it!
 
 This is the spirit in which this framework is beeing developed.
 In my opinion it is good practice for data manipulation and data display (aka plotting) to be done in separate successive steps.
@@ -181,7 +182,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 
   // now I want to have exact same plot, but with some additional data points
   // this can be helpful to avoid useless code duplication
-  Plot plot2(plot, "myPlotGroup2");
+  Plot plot2(plot, "myPlot2", "myPlotGroup2");
   plot2[1].AddData({"graphName1", "inputGroupB"} ,"more data");
 
   // now add both to the manager
