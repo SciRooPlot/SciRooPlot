@@ -1,28 +1,29 @@
 Rationale
 ---------
-This piece of software is meant to simplify plotting of ROOT data by adding a level of abstraction on top of the mighty ROOT data analysis framework.
+This piece of software is meant to simplify plotting of ROOT data by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
 If you have already worked with ROOT, you probably ask yourself:
-> We already have ROOT and it is perfectly fine as it is. I have learned to master it over the years and all my macros work just fine. Why the hell do I need this Plotting Framework? Why should I learn to use yet another interface?
+> We already have ROOT and it is perfectly fine as it is. I have learned to master it over the years and all my macros work just fine. Why do I need this additional Plotting Framework? Why should I learn to use yet another library interface?
 
-Well, what I can tell from my experience is that when it comes to plotting there is a tendency to largely violate one basic guiding principle in software development (and common sense): the dont repeat yourself (DRY) principle.
+Well, what I can tell from my experience is that when it comes to plotting there is a tendency to largely violate one basic guiding principle in software development (and common sense): do not repeat yourself.
+Even though data representation is a very important aspect of data science, there seems to be no generic easy-access solution to quickly make presentable plots with a somewhat streamlined interface that abstracts away all the complicated technical details that come with the broad ROOT functionallity (it can do way more than just plotting!).
 Every one of us has his own set of plotting macros, usually tailored for exactly one (or mabye a few) use cases to design our plots in the way we wish them to be.
 This introduces a large verbosity of trivial code that is basically always the same.
-Generation after generation has to waste their time adapting to all the complexity and inconsistencies of the ROOT interfaces to meet their specific needs.
-Since plotting usually is not our main focus but an annoying necessity on the way to success (conveying information), we often tend to choose the lazy mans apporach every time new plots have to be produced.
+In addition each researcher has to waste his precious time adapting to all the complexity and inconsistencies of the ROOT interfaces to meet their specific needs.
+Since plotting usually is not our main focus but an annoying necessity on the way to success (condensing and conveying information), we often tend to choose the lazy mans apporach every time new plots have to be produced.
 Therefore lots of code is beeing copied leading to a large redundancy of basic functionality.
-For example in all of our plotting macros many lines of code are beeing spent on stupid tasks like opening files, reading in the desired data from the directory or list substructure of the .root file and then applying the plotting layout.
+For example in all of our plotting macros many lines of code are beeing spent on primitive tasks like opening files, reading in the desired data from a directory or list substructure of the .root file and then applying the plotting layout.
 Knowing this, most of us already created levels of abstraction to reduce the verbosity in terms of functions that can at least automatize ones own particular use cases.
 In an ideal world the scientist shall not spend his time thinking about how to open files and traverse through a file structure (which is of course needed to keep your data organized).
-I dont want to keep inventing new temporary names for the data which I extract from a file for no other reason but to put it in the damn plot. I dont want to be responsible for each and every temporary histogram that I extracted and take care that it is properly deleted. I dont want to think about how a graph needs to be handled different than a histogram.
+I dont want to keep inventing new temporary names for the data which I extract from a file for no other reason but to put it into a plot. I dont want to think about wether the file I just opened owns the histogram leaving me with a pointer into nothing when being closed. I dont want to be responsible for each and every temporary histogram that I extracted and take care that it is properly deleted. I dont want to think about how a graph or a function needs to be handled differently than a histogram.
 All I want to do is tell the program:
-> Take data X and Y from files A and B respectively and put it in a plot that should look like I tell you (or already have told you).
+> Take data X and Y from files A and B respectively and put both in a plot that should look like I tell you to.
 >
 > -- I really dont care how you do it!
 
 This is the spirit in which this framework is beeing developed.
 In my opinion it is good practice for data manipulation and data display (aka plotting) to be done in separate successive steps.
-Often this is not done out of the sheer fear of having to write yet another macro where the exact the same data that was just manipulated and written into a file, needs to be read in again only to put it into a plot, leading to very confusing and non-modular code.
-I hope that this software can help reduce the reluctance to separate these two independent and conceptually disjunct steps of the data analysis workflow and simplify the technical problem of producing great plots so we can focus on the 'real stuff'.
+Often this is not done out of the sheer fear of having to write yet another piece of code where the exact the same data that was just manipulated and written into a file, needs to be read in again only to put it into a plot.
+I hope that this software can help reduce the reluctance to separate these two independent and conceptually disjunct steps of the data analysis workflow and simplify the technical problem of quickly producing presentable plots so we can focus on the 'real stuff'.
 
 Everybody is welcome to use this framework, report bugs or contribute new features.
 
@@ -93,7 +94,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // create the Plot object
   Plot plot("myPlot1", "myPlotGroup"); // plots are classified in user defined groups
   // optionally you can also define figure categories (and subcatecories) within the figureGroup
-  plot.SetFigureCategory("QA-Plots/");
+  plot.SetFigureCategory("QA-Plots/closureTests");
    // you always have to specify height and width of the plot:
   plot.SetDimensions(710, 710);
   plot.SetTransparent(); // for all other settings see the class definition in inc/Plot.h
