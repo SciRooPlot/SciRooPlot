@@ -4,7 +4,7 @@ This piece of software is meant to simplify plotting of ROOT data by adding a le
 If you have already worked with ROOT, you probably ask yourself:
 > We already have ROOT and it is perfectly fine as it is. I have learned to master it over the years and all my macros work just fine. Why the hell do I need this Plotting Framework? Why should I learn to use yet another interface?
 
-Well, what I can tell from my experience is that when it comes to plotting there is a tendency to largely violate one basic guiding principle in software development (and common sense): the do not repeat yourself (DRY) principle.
+Well, what I can tell from my experience is that when it comes to plotting there is a tendency to largely violate one basic guiding principle in software development (and common sense): the dont repeat yourself (DRY) principle.
 Every one of us has his own set of plotting macros, usually tailored for exactly one (or mabye a few) use cases to design our plots in the way we wish them to be.
 This introduces a large verbosity of trivial code that is basically always the same.
 Generation after generation has to waste their time adapting to all the complexity and inconsistencies of the ROOT interfaces to meet their specific needs.
@@ -22,9 +22,9 @@ All I want to do is tell the program:
 This is the spirit in which this framework is beeing developed.
 In my opinion it is good practice for data manipulation and data display (aka plotting) to be done in separate successive steps.
 Often this is not done out of the sheer fear of having to write yet another macro where the exact the same data that was just manipulated and written into a file, needs to be read in again only to put it into a plot, leading to very confusing and non-modular code.
-I hope that this software can help reduce the reluctance to separate these two independent and conceptually disjunct steps of the data analysis workflow and simplify the 'problem' producing great plots so we can focus on the 'real stuff'.
+I hope that this software can help reduce the reluctance to separate these two independent and conceptually disjunct steps of the data analysis workflow and simplify the technical problem of producing great plots so we can focus on the 'real stuff'.
 
-Everybody is welcome to use this framework, report bugs, say it is all stupid, or contribute new features.
+Everybody is welcome to use this framework, report bugs or contribute new features.
 
 Prerequisites
 -------------
