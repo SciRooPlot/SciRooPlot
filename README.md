@@ -24,8 +24,8 @@ Knowing that this is often not done out of the sheer fear of having to write yet
 
 Everybody is invided to use this framework, report bugs or contribute new features.
 
-Prequesites
------------
+Prerequisites
+-------------
 The Plotting Framework depends on the following external software which you need have installed on your system:
 
 - c++   >= 17
