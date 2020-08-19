@@ -54,7 +54,13 @@ In case you have doxygen installed, you can also generate a documenation from th
     open html/index.html
 
 After building the library, you can write your own individual plotting programs and link them against the Plottting Framework.
-For inspiration on how to do that you can have a look at the CMakeLists_USER.txt included in this repository.
+For inspiration you can have a look at the CMakeLists_USER.txt included in this repository.
+Just copy it to a location on your computer, rename it to CMakeLists.txt, create a Example.cxx file containing your main() function, create a `build` folder, `cd` into it and run `cmake ../`.
+This should work out of the box, but it requires to know where the Plotting Framework library is located.
+The easisest way to define this is by putting the following line in your .bashrc or .bash_aliases:
+```
+    source /path/to/repository/plottingframework/.plottingrc
+```
 
 The PlotManager is the pivot point of the Plotting Framework. In your application you will have to
 ```cpp
