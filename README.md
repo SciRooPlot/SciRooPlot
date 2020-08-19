@@ -260,8 +260,8 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   templatePlot[0].SetDefaultLineWidth(2.);
   templatePlot[0].SetTransparent();
   templatePlot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
-  templatePlot[0]["X"].SetTitleOffset(1.).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks();
-  templatePlot[0]["Y"].SetTitleOffset(1.2).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks();
+  templatePlot[0]["X"].SetTitleOffset(1.).SetTitleSize(34).SetOppositeTicks();
+  templatePlot[0]["Y"].SetTitleOffset(1.2).SetTitleSize(34).SetOppositeTicks();
   templatePlot[1].SetPosition(0., 0., 1., 1.);
   plotManager.AddPlotTemplate(templatePlot);
 } // -----------------------------------------------------------------------
@@ -314,9 +314,8 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   plotManager.AddPlotTemplate(templatePlot);
 } // -----------------------------------------------------------------------
 
-// as you have seen, these template plots need to live in the figureGroup called "TEMPLATES"
-// and then be added to the manager via
-// plotManager.AddPlotTemplate(templatePlot);
+// as you have seen, these template plots shall live in a figureGroup called "TEMPLATES"
+// and have to be added to the manager via plotManager.AddPlotTemplate(templatePlot);
 
 // once this is done, you can define plots based on these templates
 // by specifying their name as the third argument in the new plots' constructor:
@@ -368,7 +367,7 @@ plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {}, "find
 ```
 
 Using the App
---------
+-------------
 The Plotting Framework ships with a builtin plotting application that enables you to quickly create plots from previously saved plot definitions.
 To use this app you need to:
 - source the ".plotrc" script in the main directory of the repository
@@ -378,6 +377,6 @@ To use this app you need to:
 
 Now you can run the command `plot` from everywhere.
 To see the available program options run `plot --help`.
-For Z shells (zsh) this program supports an auto-completion feature, so you can to tab through the available commands, figureGroups and plots.
+For Z shells (zsh) this program supports an auto-completion feature, so you can tab through the available commands, figureGroups and plots.
 The app also has a 'browse' option that enables you to directly plot the content of root files without creating a plot definition.
 
