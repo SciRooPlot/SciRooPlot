@@ -37,8 +37,8 @@ The Plotting Framework depends on the following external software which you need
 - boost >= 1.72
 - ROOT  >= 6.16
 
-Use the framework
------------------
+Useing the Framework
+--------------------
 In order to use the framework, first you need to compile the library in the follwoing way:
 
     cd PlottingFramework
@@ -349,9 +349,26 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
 
   plotManager.AddPlot(plot);
 } // -----------------------------------------------------------------------
-
 // as you can see the plot definition becomes way simpler now since we
 // do not have to specify again all of the layout overhead and can focus on the content
+
+// for re-occuring data it can make sense to define a bunch of properties only once
+// and then just re-use this layout for different plots:
+using DataLayout = Plot::Pad::Data;
+DataLayout pp5TeV = DataLayout()
+                    .SetRangeX(1,35)
+                    .SetOptions(curve)
+                    .SetLineStyle(9)
+                    .SetColor(kGreen+3);
+{ // -----------------------------------------------------------------------
+  Plot plot("test1d", "myFigureGroup", "1d");
+  plot[1].AddData({"graph2", "inputGroupA"}).SetLayout(pp5TeV);;
+  plot[1].AddData({"graph3", "inputGroupA"}).SetLayout(pp5TeV);;
+
+  plot[1].AddLegend(0.,0.9);
+  plotManager.AddPlot(plot);
+} // -----------------------------------------------------------------------
+
 
 // instead of creating the plots directly as we have done in the previous example,
 // we can also save the plot definitions into another xml file via:
