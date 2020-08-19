@@ -37,7 +37,7 @@ The Plotting Framework depends on the following external software which you need
 - boost >= 1.72
 - ROOT  >= 6.16
 
-Useing the Framework
+Using the Framework
 --------------------
 In order to use the framework, first you need to compile the library in the follwoing way:
 
