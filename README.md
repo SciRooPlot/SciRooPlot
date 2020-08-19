@@ -14,7 +14,7 @@ Therefore lots of code is beeing copied leading to a large redundancy of basic f
 For example in all of our plotting macros many lines of code are beeing spent on primitive tasks like opening files, reading in the desired data from a directory or list substructure of the .root file and then applying the plotting layout.
 Knowing this, most of us already created levels of abstraction to reduce the verbosity in terms of functions that can at least automatize ones own particular use cases.
 In an ideal world the scientist shall not spend his time thinking about how to open files and traverse through a file structure (which is of course needed to keep your data organized).
-I dont want to keep inventing new temporary names for the data which I extract from a file for no other reason but to put it into a plot. I dont want to think about wether the file I just opened owns the histogram leaving me with a pointer into nothing when being closed. I dont want to be responsible for each and every temporary histogram that I extracted and take care that it is properly deleted. I dont want to think about how a graph or a function needs to be handled differently than a histogram.
+I dont want to keep inventing new temporary names for the data which I extract from a file for no other reason but to put it into a plot. I dont want to think about wether the file I just opened owns the histogram leaving me with a pointer to nothing when being closed. I dont want to be responsible for each and every temporary histogram that I extracted and take care that it is properly deleted. I dont want to think about how a graph or a function needs to be handled differently than a histogram.
 All I want to do is tell the program:
 > Take data X and Y from files A and B respectively and put both in a plot that should look like I tell you to.
 >
@@ -137,7 +137,6 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // you can also simply add ratios of two input data
   plot[1].AddRatio({"histName3", "inputGroupB"}, {"histName1", "inputGroupA"}, "ratioLable");
 
-
   // to mdify how the data is displayed we can apply the settings via:
   plot[1].AddData({"histName4", "inputGroupB"}).SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
   // instead of directly using the ROOT drawing option string ("HIST C") you can
@@ -191,7 +190,6 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   plotManager.AddPlot(plot2);
 } // -----------------------------------------------------------------------
 
-
 // to save the plots to disk as pdf you first have to tell the manager where to put them
 plotManager.SetOutputDirectory("path/to/my/OutputFolder");
 // the manager will automatically create subfolders for the figureGroups and categories
@@ -212,7 +210,7 @@ plotManager.CreatePlots("", "", {}, "interactive");
 // you can also save the plots as a root macro (.C):
 plotManager.CreatePlots("myPlotGroup", "", {"myPlot1", "myPlot2"}, "macro");
 
-// after you specifying a file name you can also save the plots to a .root file
+// after specifying a file name you can also save the plots to a .root file
 plotManager.SetOutputFileName("ResultPlots.root");
 plotManager.CreatePlots("myPlotGroup", "", {"myPlot1", "myPlot2"}, "file");
 
@@ -373,13 +371,13 @@ Using the App
 --------
 The Plotting Framework ships with a builtin plotting application that enables you to quickly create plots from previously saved plot definitions.
 To use this app you need to:
-- source the .plotrc in the main directory of the repository
+- source the ".plotrc" script in the main directory of the repository
 - place both the "inputFilesConfig.XML" and "plotDefinitions.XML" (names have to be like this for now) produced by your program in some central config folder
 - define the environment variable `__PLOTTING_CONFIG_DIR` to point to this folder
 - define the environment variable `__PLOTTING_OUTPUT_DIR` to the directory where you want to store the created plots (pdf, png, etc.)
 
 Now you can run the command `plot` from everywhere.
 To see the available program options run `plot --help`.
-For zsh shells auto-completion is supported and you can to tab through the available commands, figureGroups and plots.
-The app also has a 'browse' feature that enables you to quickly plot the content of root files.
+For Z shells (zsh) this program supports an auto-completion feature, so you can to tab through the available commands, figureGroups and plots.
+The app also has a 'browse' option that enables you to directly plot the content of root files without creating a plot definition.
 
