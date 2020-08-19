@@ -72,6 +72,8 @@ Example 1
 //============================================================================
 
 #include "PlotManager.h"
+using PlottingFramework::PlotManager;
+using PlottingFramework::Plot;
 
 // create plotting environment that handles IO and plot creation
 PlotManager plotManager;
@@ -224,6 +226,8 @@ Example 2
 //============================================================================
 
 #include "PlotManager.h"
+using PlottingFramework::PlotManager;
+using PlottingFramework::Plot;
 
 PlotManager plotManager;
 
