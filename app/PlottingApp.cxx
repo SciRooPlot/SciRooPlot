@@ -169,6 +169,8 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  if(mode.empty()) return 1;
+
   // check if specified input files exist
   if(!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str())))
   {
