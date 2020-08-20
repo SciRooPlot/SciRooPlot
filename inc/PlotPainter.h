@@ -106,8 +106,8 @@ class PlotPainter
   void SmoothHist(TH1* hist, optional<double_t> min = std::nullopt,
                   optional<double_t> max = std::nullopt);
   bool DivideGraphs(TGraph* numerator, TGraph* denominator);
-  void DivideTSpline(TGraph* numerator, TGraph* denominator);
-  void DivideTSpline(TH1* numerator, TH1* denominator);
+  void DivideGraphsInterpolated(TGraph* numerator, TGraph* denominator);
+  void DivideHistosInterpolated(TH1* numerator, TH1* denominator);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text);
   void ReplacePlaceholders(string& str, TNamed* data_ptr);
   TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box,

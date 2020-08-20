@@ -288,8 +288,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                         {
                           WARNING(
                             "Could not divide histograms properly. Trying approximated division "
-                            "using TSpline. Errors will not be fully correct!");
-                          DivideTSpline(data_ptr, denom_data_ptr);
+                            "via spline interpolation. Errors will not be fully correct!");
+                          DivideHistosInterpolated(data_ptr, denom_data_ptr);
                         }
                         if constexpr(std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
                           data_ptr->GetYaxis()->SetTitle("ratio");
@@ -304,8 +304,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                         {
                           WARNING(
                             "In general graphs cannot be divided. Trying approximated division "
-                            "using TSpline. Errors will not be fully correct!");
-                          DivideTSpline(data_ptr, denom_data_ptr);
+                            "via spline interpolation. Errors will not be fully correct!");
+                          DivideGraphsInterpolated(data_ptr, denom_data_ptr);
                         }
                       }
                     delete denom_data_ptr;
@@ -829,7 +829,7 @@ bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
  * uncertainties are not fully correct!
  */
 //**************************************************************************************************
-void PlotPainter::DivideTSpline(TGraph* numerator, TGraph* denominator)
+void PlotPainter::DivideGraphsInterpolated(TGraph* numerator, TGraph* denominator)
 {
   TSpline3 denSpline("denSpline", denominator);
 
@@ -865,7 +865,7 @@ void PlotPainter::DivideTSpline(TGraph* numerator, TGraph* denominator)
  * uncertainties are not fully correct!
  */
 //**************************************************************************************************
-void PlotPainter::DivideTSpline(TH1* numerator, TH1* denominator)
+void PlotPainter::DivideHistosInterpolated(TH1* numerator, TH1* denominator)
 {
   TGraph denominatorGraph(denominator);
   TSpline3 denominatorSpline(denominator);
@@ -1224,9 +1224,8 @@ TPave* PlotPainter::GenerateBox(
         pad->Update();
         double_t lowerLeftX{};
         double_t lowerLeftY{};
+        // minimum distance of box to objects and ticks (in units of tick length)
         double_t fractionOfTickLenght{ 0.9 };
-        // required distance in pad coordinates of box to objects and tics (set to be 90& of the
-        // tick length)
         double_t marginX = fractionOfTickLenght * gStyle->GetTickLength("Y")
                            * (pad->GetUxmax() - pad->GetUxmin()) / (pad->GetX2() - pad->GetX1());
         double_t marginY = fractionOfTickLenght * gStyle->GetTickLength("X")
