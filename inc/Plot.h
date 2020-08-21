@@ -942,6 +942,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 {
  public:
+  class LegendEntry;
   LegendBox();
   LegendBox(double_t xPos, double_t yPos);
   LegendBox(const ptree& legendBoxTree);
@@ -960,32 +961,47 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   friend class PlotPainter;
   friend class Plot;
 
-  struct legendEntry_t
-  {
-    string refDataName;
-    string lable;
-    // transient entries are automatically generated from the input data and need not be saved
-    bool isTransient;
-    const string& GetRefDataName() const { return refDataName; }
-    const string& GetLable() const { return lable; }
-  };
-
   ptree GetPropertyTree();
   const optional<uint8_t>& GetNumColumns() { return mNumColumns; }
   const optional<string>& GetTitle() { return mTitle; }
 
-  const vector<legendEntry_t>& GetEntries() { return legendEntries; }
+  const vector<LegendEntry>& GetEntries() { return legendEntries; }
 
-  void AddEntry(const string& name, const string& lable)
-  {
-    legendEntries.push_back({ name, lable, true });
-  }
+  LegendEntry& AddEntry(const string& name, const string& lable);
 
  private:
   optional<string> mTitle;
   optional<uint8_t> mNumColumns;
-  vector<legendEntry_t> legendEntries;
+  vector<LegendEntry> legendEntries;
   // FIXME: every entry needs marker/line/fill/text attributes ...
+};
+
+//**************************************************************************************************
+/**
+ * Representation of a legend box entry.
+ */
+//**************************************************************************************************
+class Plot::Pad::LegendBox::LegendEntry
+{
+ public:
+  LegendEntry();
+  LegendEntry(const string& name, const string& lable)
+  {
+    mRefDataName = name;
+    mLable = lable;
+  }
+
+ protected:
+  friend class PlotPainter;
+
+  const string& GetRefDataName() const { return mRefDataName; }
+  const string& GetLable() const { return mLable; }
+
+ private:
+  string mRefDataName;
+  string mLable;
+  // transient entries are automatically generated from the input data and need not be saved
+  bool isTransient;
 };
 
 } // end namespace PlottingFramework

@@ -1,7 +1,6 @@
 Missing Box Features
 - flexible deliminter for text lines
 - add flexible margins for the boxes
-- maybe better use one vector for all boxes and tag legends via alias or automatically set number (size of vector)
 - Data::SetPreferedLegend()
 - check again if auto placement works correct (also with multiple boxes)
 - add some top right etc position (enum) functionality with modifyable distance to axis
@@ -15,8 +14,8 @@ Planned Features:
 - add setting for nContours in 2d plots
 - add option in main program to list all loaded plots
 - possibility to do fast loading of all data from input files (skip chek if data was requested)
-
 - give warning if selected drawing alias not available for this type of data
+- decide where data manipulation part should be put (before or after setting ranges?)
 
 Feature Ideas:
 - generic algorithm to automatically determine optimal axis offsets + avoid overlap with lables

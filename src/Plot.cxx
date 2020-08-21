@@ -827,7 +827,7 @@ Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
 Plot::Pad::Data& Plot::Pad::AddData(const input_t& data, const string& lable)
 {
   mData.push_back(std::make_shared<Data>(data.name, data.inputIdentifier, lable));
-  return *mData[mData.size() - 1];
+  return *mData.back();
 }
 
 //**************************************************************************************************
@@ -840,7 +840,7 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const input_t& numerator, const input_t& d
 {
   mData.push_back(std::make_shared<Ratio>(numerator.name, numerator.inputIdentifier,
                                           denominator.name, denominator.inputIdentifier, lable));
-  return *std::dynamic_pointer_cast<Ratio>(mData[mData.size() - 1]);
+  return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
 
 //**************************************************************************************************
@@ -851,7 +851,7 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const input_t& numerator, const input_t& d
 Plot::Pad::TextBox& Plot::Pad::AddText(double_t xPos, double_t yPos, const string& text)
 {
   mTextBoxes.push_back(std::make_shared<TextBox>(xPos, yPos, text));
-  return *mTextBoxes[mTextBoxes.size() - 1];
+  return *mTextBoxes.back();
 }
 
 //**************************************************************************************************
@@ -862,7 +862,7 @@ Plot::Pad::TextBox& Plot::Pad::AddText(double_t xPos, double_t yPos, const strin
 Plot::Pad::TextBox& Plot::Pad::AddText(const string& text)
 {
   mTextBoxes.push_back(std::make_shared<TextBox>(text));
-  return *mTextBoxes[mTextBoxes.size() - 1];
+  return *mTextBoxes.back();
 }
 
 //**************************************************************************************************
@@ -873,7 +873,7 @@ Plot::Pad::TextBox& Plot::Pad::AddText(const string& text)
 Plot::Pad::LegendBox& Plot::Pad::AddLegend(double_t xPos, double_t yPos)
 {
   mLegendBoxes.push_back(std::make_shared<LegendBox>(xPos, yPos));
-  return *mLegendBoxes[mLegendBoxes.size() - 1];
+  return *mLegendBoxes.back();
 }
 
 //**************************************************************************************************
@@ -884,7 +884,7 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend(double_t xPos, double_t yPos)
 Plot::Pad::LegendBox& Plot::Pad::AddLegend()
 {
   mLegendBoxes.push_back(std::make_shared<LegendBox>());
-  return *mLegendBoxes[mLegendBoxes.size() - 1];
+  return *mLegendBoxes.back();
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1688,6 +1688,13 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns)
 {
   mNumColumns = numColumns;
   return *this;
+}
+
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& name,
+                                                                  const string& lable)
+{
+  legendEntries.push_back(LegendEntry(name, lable));
+  return legendEntries.back();
 }
 
 //**************************************************************************************************
