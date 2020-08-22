@@ -101,7 +101,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 { // -----------------------------------------------------------------------
   // create the Plot object
   Plot plot("myPlot1", "myPlotGroup"); // plots are classified in user defined groups
-  // optionally you can also define figure categories (and subcatecories) within the figureGroup
+  // optionally you can also define figure categories (and subcategories) within the figureGroup
   plot.SetFigureCategory("QA-Plots/closureTests");
    // you always have to specify height and width of the plot:
   plot.SetDimensions(710, 710);

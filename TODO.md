@@ -1,7 +1,6 @@
 Missing Box Features
 - flexible deliminter for text lines
 - add flexible margins for the boxes
-- Data::SetPreferedLegend()
 - check again if auto placement works correct (also with multiple boxes)
 - add some top right etc position (enum) functionality with modifyable distance to axis
 - ability to set default box properties in pad

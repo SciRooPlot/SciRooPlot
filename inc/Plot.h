@@ -369,6 +369,7 @@ class Plot::Pad::Data
   virtual auto SetMaxRangeY(double_t max) -> decltype(*this);
   virtual auto SetMinRangeY(double_t min) -> decltype(*this);
   virtual auto SetLegendLable(const string& legendLable) -> decltype(*this);
+  virtual auto SetLegendID(uint8_t legendID) -> decltype(*this);
   virtual auto SetOptions(const string& opions) -> decltype(*this);
   virtual auto SetTextFormat(const string& textFormat) -> decltype(*this);
   virtual auto SetNormalize(bool useWidth = false) -> decltype(*this);
@@ -407,7 +408,8 @@ class Plot::Pad::Data
 
   const string& GetType() { return mType; }
   const string& GetName() { return mName; }
-  const optional<string>& GetLegendLable() { return mLegendLable; }
+  const optional<string>& GetLegendLable() { return mLegend.lable; }
+  const optional<uint8_t>& GetLegendID() { return mLegend.identifier; }
 
   const optional<int16_t>& GetMarkerColor() { return mMarker.color; }
   const optional<int16_t>& GetMarkerStyle() { return mMarker.style; }
@@ -441,7 +443,6 @@ class Plot::Pad::Data
   string mName;
   string mInputIdentifier;
 
-  optional<string> mLegendLable;
   optional<string> mDrawingOptions;
   optional<drawing_options_t> mDrawingOptionAlias;
   optional<string> mTextFormat;
@@ -450,6 +451,11 @@ class Plot::Pad::Data
   {
     optional<uint8_t> norm_mode; // 0: sum over bin contents, 1: with bin width
     optional<double_t> scale_factor;
+  };
+  struct legend_t
+  {
+    optional<string> lable;
+    optional<uint8_t> identifier;
   };
 
   struct dataLayout_t
@@ -465,6 +471,7 @@ class Plot::Pad::Data
     optional<double_t> max;
   };
 
+  legend_t mLegend;
   dataLayout_t mMarker;
   dataLayout_t mLine;
   dataLayout_t mFill;
@@ -525,6 +532,10 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   virtual auto SetLegendLable(const string& legendLable) -> decltype(*this)
   {
     return static_cast<decltype(*this)&>(Data::SetLegendLable(legendLable));
+  }
+  virtual auto SetLegendID(uint8_t legendID) -> decltype(*this)
+  {
+    return static_cast<decltype(*this)&>(Data::SetLegendID(legendID));
   }
   virtual auto SetOptions(const string& opions) -> decltype(*this)
   {
@@ -955,6 +966,9 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 
   LegendBox& SetTitle(const string& title);
   LegendBox& SetNumColumns(uint8_t numColumns);
+  LegendEntry& AddEntry(input_t inputTuple, const string& lable);
+  LegendEntry& AddEntry(const string& lable);
+  LegendEntry& GetEntry(uint8_t entryID) { return legendEntries[entryID]; }
 
  protected:
   friend class PlotManager;
@@ -973,7 +987,6 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   optional<string> mTitle;
   optional<uint8_t> mNumColumns;
   vector<LegendEntry> legendEntries;
-  // FIXME: every entry needs marker/line/fill/text attributes ...
 };
 
 //**************************************************************************************************
@@ -985,10 +998,11 @@ class Plot::Pad::LegendBox::LegendEntry
 {
  public:
   LegendEntry();
-  LegendEntry(const string& name, const string& lable)
+  LegendEntry(const string& name, const string& lable, bool isTransient = false)
   {
     mRefDataName = name;
     mLable = lable;
+    mIsTransient = isTransient;
   }
 
  protected:
@@ -998,10 +1012,20 @@ class Plot::Pad::LegendBox::LegendEntry
   const string& GetLable() const { return mLable; }
 
  private:
-  string mRefDataName;
+  struct dataLayout_t
+  {
+    optional<int16_t> color;
+    optional<int16_t> style;
+    optional<float_t> scale; // marker size , line width, fill opacity
+  };
+
+  string mRefDataName; // if empty legend entry is not related to some data
   string mLable;
-  // transient entries are automatically generated from the input data and need not be saved
-  bool isTransient;
+  optional<string> mOption;
+  bool mIsTransient;
+  dataLayout_t mFill;
+  dataLayout_t mMarker;
+  dataLayout_t mLine;
 };
 
 } // end namespace PlottingFramework

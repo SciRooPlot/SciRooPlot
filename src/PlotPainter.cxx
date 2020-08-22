@@ -690,10 +690,21 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               // in case a lable was specified for the data, add it to corresponding legend
               if(data->GetLegendLable() && !(*data->GetLegendLable()).empty())
               {
+                // by default place legend entries in first legend
                 uint8_t legendID{ 1u };
-                // data->GetLegendID() in case user chose specific legend, decide here...
-                plot[padID].GetLegendBoxes()[legendID - 1]->AddEntry(data_ptr->GetName(),
-                                                                     *data->GetLegendLable());
+                // explicit user choice overrides this
+                if(data->GetLegendID()) legendID = *data->GetLegendID();
+
+                auto& boxVector = plot[padID].GetLegendBoxes();
+                if(legendID > 0u && legendID <= boxVector.size())
+                {
+                  boxVector[legendID - 1]->AddEntry(data_ptr->GetName(), *data->GetLegendLable());
+                }
+                else
+                {
+                  ERROR("Invalid legend lable ({}) specified for data \"{}\" in \"{}\".", legendID,
+                        data->GetName(), data->GetInputID());
+                }
               }
               pad_ptr->Update(); // adds something to the list of primitives
             }
@@ -716,18 +727,32 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     {
       string legendName = "LegendBox_" + std::to_string(legendIndex);
       TPave* legend = GenerateBox(box, pad_ptr);
-      legend->SetName(legendName.data());
-      legend->Draw("SAME");
-      ++legendIndex;
+      if(legend)
+      {
+        legend->SetName(legendName.data());
+        legend->Draw("SAME");
+        ++legendIndex;
+      }
+      else
+      {
+        ERROR("Legend {} was not added since it is empty.", legendIndex);
+      }
     }
     uint8_t textIndex{ 1u };
     for(auto& box : pad.GetTextBoxes())
     {
       string textName = "TextBox_" + std::to_string(textIndex);
       TPave* text = GenerateBox(box, pad_ptr);
-      text->SetName(textName.data());
-      text->Draw("SAME");
-      ++textIndex;
+      if(text)
+      {
+        text->SetName(textName.data());
+        text->Draw("SAME");
+        ++textIndex;
+      }
+      else
+      {
+        ERROR("Text {} was not added since it is empty.", textIndex);
+      }
     }
 
     bool redrawAxes = (pad.GetRedrawAxes())
@@ -743,349 +768,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
   canvas_ptr->Modified();
   canvas_ptr->Update();
   return shared_ptr<TCanvas>(canvas_ptr);
-}
-
-//**************************************************************************************************
-/**
- * Function to retrieve a copy of the stored data properly casted it to its actual ROOT type.
- */
-//**************************************************************************************************
-template <typename T>
-optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
-{
-  if(obj->InheritsFrom(T::Class()))
-  {
-    return (T*)obj->Clone();
-  }
-  return std::nullopt;
-}
-template <typename T, typename Next, typename... Rest>
-optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
-{
-  if(auto returnPointer = GetDataClone<T>(obj)) return returnPointer;
-  return GetDataClone<Next, Rest...>(obj);
-}
-optional<data_ptr_t> PlotPainter::GetDataClone(const string& dataName, TObjArray* availableData)
-{
-  TObject* obj = availableData->FindObject(dataName.data());
-  if(obj)
-  {
-    // IMPORTANT: TProfile2D is TH2, TH2 is TH1, TProfile is TH1 --> order matters here!
-    if(auto returnPointer
-       = GetDataClone<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1>(obj))
-    {
-      return returnPointer;
-    }
-    else
-    {
-      ERROR("Input data \"{}\" is of unsupported type {}.", dataName, obj->ClassName());
-    }
-  }
-  else
-  {
-    ERROR("Input data \"{}\" was not loaded.", dataName);
-  }
-  return std::nullopt;
-}
-
-//**************************************************************************************************
-/**
- * Helper-function dividing two TGraphs.
- * This is meant only for the rare use case, where the x values of all points are are exactly the
- * same. In this scenario the values and errors can be calculated exactly. If this condition is not
- * met, the function will return false.
- */
-//**************************************************************************************************
-bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
-{
-  // first check if graphs indeed have the same x values
-  for(int32_t i = 0; i < numerator->GetN(); ++i)
-  {
-    if(numerator->GetX()[i] != denominator->GetX()[i]) return false;
-  }
-  // now divide
-  for(int32_t i = 0; i < numerator->GetN(); ++i)
-  {
-    bool illegalDivision = false;
-    if(denominator->GetY()[i] == 0.)
-    {
-      ERROR("Dividing by zero!");
-      illegalDivision = true;
-    }
-    numerator->GetY()[i] = (illegalDivision) ? 0. : numerator->GetY()[i] / denominator->GetY()[i];
-    numerator->GetEY()[i] = (illegalDivision)
-                              ? 0.
-                              : numerator->GetEY()[i] / denominator->GetY()[i]
-                                  + denominator->GetEY()[i] * numerator->GetY()[i]
-                                      / (denominator->GetY()[i] * denominator->GetY()[i]);
-  }
-  return true;
-}
-
-//**************************************************************************************************
-/**
- * Helper-function dividing two TGraphs.
- * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the
- * uncertainties are not fully correct!
- */
-//**************************************************************************************************
-void PlotPainter::DivideGraphsInterpolated(TGraph* numerator, TGraph* denominator)
-{
-  TSpline3 denSpline("denSpline", denominator);
-
-  int32_t nPoints = numerator->GetN();
-
-  double_t* x = numerator->GetX();
-  double_t* y = numerator->GetY();
-  double_t* ey = numerator->GetEY();
-
-  for(int32_t i = 0; i < nPoints; ++i)
-  {
-    double_t denomValue = denominator->Eval(x[i], &denSpline);
-    double_t newValue = 0.;
-    double_t newError = 0.;
-    if(denomValue)
-    {
-      newValue = y[i] / denomValue;
-      newError = ey[i] / denomValue; // Only proxy. Ignoring error of denominator!
-    }
-    else
-    {
-      ERROR("Dividing by zero!");
-    }
-    y[i] = newValue;
-    ey[i] = newError;
-  }
-}
-
-//**************************************************************************************************
-/**
- * Helper-function dividing two 1d histograms with different binning.
- * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the
- * uncertainties are not fully correct!
- */
-//**************************************************************************************************
-void PlotPainter::DivideHistosInterpolated(TH1* numerator, TH1* denominator)
-{
-  TGraph denominatorGraph(denominator);
-  TSpline3 denominatorSpline(denominator);
-
-  for(int32_t i = 1; i <= numerator->GetNbinsX(); ++i)
-  {
-    double_t numeratorValue{ numerator->GetBinContent(i) };
-    double_t numeratorError{ numerator->GetBinError(i) };
-    double_t x{ numerator->GetBinCenter(i) };
-    double_t denomValue{ denominatorGraph.Eval(x, &denominatorSpline) };
-    double_t newValue{};
-    double_t newError{};
-    if(denomValue)
-    {
-      newValue = numeratorValue / denomValue;
-      // uncertainty of denominator is not taken into account (cannot be extracted from spline)
-      newError = numeratorError / denomValue;
-    }
-    else
-    {
-      ERROR("Dividing by zero!");
-    }
-    numerator->SetBinContent(i, newValue);
-    numerator->SetBinError(i, newError);
-  }
-}
-
-//**************************************************************************************************
-/**
- * Deletes data points of graph beyond cutoff values.
- */
-//**************************************************************************************************
-void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<double_t> max)
-{
-  // sort the points first for the following algorithm to work properly
-  graph->Sort();
-
-  int16_t pointsToRemoveHigh{};
-  int16_t pointsToRemoveLow{};
-
-  for(int16_t i = 0; i < graph->GetN(); ++i)
-  {
-    if(min && graph->GetX()[i] < *min)
-    {
-      ++pointsToRemoveLow;
-    }
-    if(max && graph->GetX()[i] >= *max)
-    {
-      ++pointsToRemoveHigh;
-    }
-  }
-
-  for(int16_t i = 0; i < pointsToRemoveHigh; ++i)
-  {
-    graph->RemovePoint(graph->GetN() - 1);
-  }
-  for(int16_t i = 0; i < pointsToRemoveLow; ++i)
-  {
-    graph->RemovePoint(0);
-  }
-}
-
-//**************************************************************************************************
-/**
- * Scales graph by a constant value.
- */
-//**************************************************************************************************
-void PlotPainter::ScaleGraph(TGraph* graph, double_t scale)
-{
-  for(int32_t i{}; i < graph->GetN(); ++i)
-    graph->GetY()[i] *= scale;
-}
-
-//**************************************************************************************************
-/**
- * Smoothes 1d graph in range.
- */
-//**************************************************************************************************
-void PlotPainter::SmoothGraph(TGraph* graph, optional<double_t> min, optional<double_t> max)
-{
-  TGraphSmooth smoother;
-  TGraph* smoothGraph = smoother.SmoothSuper(graph);
-  for(int32_t i{}; i < graph->GetN(); ++i)
-  {
-    double_t curX = graph->GetX()[i];
-    if(min && curX < *min) continue;
-    if(max && curX > *max) continue;
-    graph->GetY()[i] = smoothGraph->GetY()[i];
-  }
-  delete smoothGraph;
-}
-
-//**************************************************************************************************
-/**
- * Smoothes 1d hist in range.
- */
-//**************************************************************************************************
-void PlotPainter::SmoothHist(TH1* hist, optional<double_t> min, optional<double_t> max)
-{
-  double_t minRange = hist->GetXaxis()->GetXmin();
-  double_t maxRange = hist->GetXaxis()->GetXmax();
-
-  if(min && max)
-    hist->GetXaxis()->SetRangeUser(*min, *max);
-  else if(min && !max)
-    hist->GetXaxis()->SetRangeUser(*min, maxRange);
-  else if(!min && max)
-    hist->GetXaxis()->SetRangeUser(minRange, *max);
-
-  hist->Smooth(100, "R");
-}
-
-//**************************************************************************************************
-/**
- * Returns actual dimensions in pixel of the text with latex formatting.
- */
-//**************************************************************************************************
-std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
-{
-  uint32_t width{};
-  uint32_t height{};
-  int16_t font{ text.GetTextFont() };
-
-  if(font % 10 <= 2)
-  {
-    text.GetBoundingBox(width, height);
-  }
-  else
-  {
-    TLatex textBox{ text };
-    textBox.SetTextFont(font - 1);
-    TVirtualPad* pad = gROOT->GetSelectedPad();
-    double_t dy{ pad->AbsPixeltoY(0) - pad->AbsPixeltoY((int32_t)(text.GetTextSize())) };
-    double_t textSize{ dy / (pad->GetY2() - pad->GetY1()) };
-    textBox.SetTextSize(textSize);
-    textBox.GetBoundingBox(width, height);
-  }
-  return { width, height };
-}
-
-//**************************************************************************************************
-/**
- * Function to replace placeholders in lables.
- */
-//**************************************************************************************************
-void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
-{
-  std::regex words_regex("<.*?>");
-  auto words_begin = std::sregex_iterator(str.begin(), str.end(), words_regex);
-  auto words_end = std::sregex_iterator();
-
-  for(std::sregex_iterator match = words_begin; match != words_end; ++match)
-  {
-    std::string match_str = (*match).str();
-
-    string format{};
-
-    // check if user specified different formatting (e.g. via <mean[%2.6]>)
-    std::regex format_regex("\\[.*?\\]");
-    auto format_it = std::sregex_iterator(match_str.begin(), match_str.end(), format_regex);
-    if(format_it != std::sregex_iterator())
-    {
-      format = (*format_it).str();
-      format = format.substr(1, format.size() - 2);
-    }
-    // allow printf style and protect against wrong usage
-    format.erase(remove(format.begin(), format.end(), '%'), format.end());
-    format.erase(remove(format.begin(), format.end(), ' '), format.end());
-
-    // if no valid formatting pattern is given, fall back to 'general' mode
-    if(!(str_contains(format, "e") || str_contains(format, "f") || str_contains(format, "g")
-         || str_contains(format, "E") || str_contains(format, "F") || str_contains(format, "G")))
-    {
-      format = format + "g";
-    }
-    format = "{:" + format + "}";
-
-    string replace_str;
-    if(match_str.find("name") != string::npos)
-    {
-      replace_str = data_ptr->GetName();
-      replace_str = replace_str.substr(0, replace_str.find(gNameGroupSeparator));
-    }
-    else if(match_str.find("title") != string::npos)
-    {
-      replace_str = data_ptr->GetTitle();
-    }
-    else if(data_ptr->InheritsFrom(TH1::Class()))
-    {
-      try
-      {
-        if(match_str.find("entries") != string::npos)
-        {
-          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetEntries());
-        }
-        else if(match_str.find("integral") != string::npos)
-        {
-          replace_str = fmt::format(format, ((TH1*)data_ptr)->Integral());
-        }
-        else if(match_str.find("mean") != string::npos)
-        {
-          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMean());
-        }
-        else if(match_str.find("maximum") != string::npos)
-        {
-          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMaximum());
-        }
-        else if(match_str.find("minimum") != string::npos)
-        {
-          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMinimum());
-        }
-      }
-      catch(...)
-      {
-        ERROR("Incompatible format string in {}.", match_str);
-        replace_str = match_str;
-      }
-    }
-    str.replace(str.find(match_str), string(match_str).size(), replace_str);
-  }
 }
 
 //**************************************************************************************************
@@ -1143,6 +825,7 @@ TPave* PlotPainter::GenerateBox(
       uint8_t nColumns{ 1u }; //(box->GetNumColumns()) ? *box->GetNumColumns() : 1;
 
       uint16_t nLines = lines.size();
+      if(nLines < 1) return;
 
       int32_t padWidthPixel = pad->XtoPixel(pad->GetX2()); // looks correct, but why does it work??
       int32_t padHeightPixel = pad->YtoPixel(pad->GetY1());
@@ -1367,4 +1050,346 @@ TPave* PlotPainter::GenerateBox(
   return returnBox;
 }
 
+//**************************************************************************************************
+/**
+ * Function to retrieve a copy of the stored data properly casted it to its actual ROOT type.
+ */
+//**************************************************************************************************
+template <typename T>
+optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
+{
+  if(obj->InheritsFrom(T::Class()))
+  {
+    return (T*)obj->Clone();
+  }
+  return std::nullopt;
+}
+template <typename T, typename Next, typename... Rest>
+optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
+{
+  if(auto returnPointer = GetDataClone<T>(obj)) return returnPointer;
+  return GetDataClone<Next, Rest...>(obj);
+}
+optional<data_ptr_t> PlotPainter::GetDataClone(const string& dataName, TObjArray* availableData)
+{
+  TObject* obj = availableData->FindObject(dataName.data());
+  if(obj)
+  {
+    // IMPORTANT: TProfile2D is TH2, TH2 is TH1, TProfile is TH1 --> order matters here!
+    if(auto returnPointer
+       = GetDataClone<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1>(obj))
+    {
+      return returnPointer;
+    }
+    else
+    {
+      ERROR("Input data \"{}\" is of unsupported type {}.", dataName, obj->ClassName());
+    }
+  }
+  else
+  {
+    ERROR("Input data \"{}\" was not loaded.", dataName);
+  }
+  return std::nullopt;
+}
+
+//**************************************************************************************************
+/**
+ * Helper-function dividing two TGraphs.
+ * This is meant only for the rare use case, where the x values of all points are are exactly the
+ * same. In this scenario the values and errors can be calculated exactly. If this condition is not
+ * met, the function will return false.
+ */
+//**************************************************************************************************
+bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
+{
+  // first check if graphs indeed have the same x values
+  for(int32_t i = 0; i < numerator->GetN(); ++i)
+  {
+    if(numerator->GetX()[i] != denominator->GetX()[i]) return false;
+  }
+  // now divide
+  for(int32_t i = 0; i < numerator->GetN(); ++i)
+  {
+    bool illegalDivision = false;
+    if(denominator->GetY()[i] == 0.)
+    {
+      ERROR("Dividing by zero!");
+      illegalDivision = true;
+    }
+    numerator->GetY()[i] = (illegalDivision) ? 0. : numerator->GetY()[i] / denominator->GetY()[i];
+    numerator->GetEY()[i] = (illegalDivision)
+                              ? 0.
+                              : numerator->GetEY()[i] / denominator->GetY()[i]
+                                  + denominator->GetEY()[i] * numerator->GetY()[i]
+                                      / (denominator->GetY()[i] * denominator->GetY()[i]);
+  }
+  return true;
+}
+
+//**************************************************************************************************
+/**
+ * Helper-function dividing two TGraphs.
+ * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the
+ * uncertainties are not fully correct!
+ */
+//**************************************************************************************************
+void PlotPainter::DivideGraphsInterpolated(TGraph* numerator, TGraph* denominator)
+{
+  TSpline3 denSpline("denSpline", denominator);
+
+  int32_t nPoints = numerator->GetN();
+
+  double_t* x = numerator->GetX();
+  double_t* y = numerator->GetY();
+  double_t* ey = numerator->GetEY();
+
+  for(int32_t i = 0; i < nPoints; ++i)
+  {
+    double_t denomValue = denominator->Eval(x[i], &denSpline);
+    double_t newValue = 0.;
+    double_t newError = 0.;
+    if(denomValue)
+    {
+      newValue = y[i] / denomValue;
+      newError = ey[i] / denomValue; // Only proxy. Ignoring error of denominator!
+    }
+    else
+    {
+      ERROR("Dividing by zero!");
+    }
+    y[i] = newValue;
+    ey[i] = newError;
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Helper-function dividing two 1d histograms with different binning.
+ * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the
+ * uncertainties are not fully correct!
+ */
+//**************************************************************************************************
+void PlotPainter::DivideHistosInterpolated(TH1* numerator, TH1* denominator)
+{
+  TGraph denominatorGraph(denominator);
+  TSpline3 denominatorSpline(denominator);
+
+  for(int32_t i = 1; i <= numerator->GetNbinsX(); ++i)
+  {
+    double_t numeratorValue{ numerator->GetBinContent(i) };
+    double_t numeratorError{ numerator->GetBinError(i) };
+    double_t x{ numerator->GetBinCenter(i) };
+    double_t denomValue{ denominatorGraph.Eval(x, &denominatorSpline) };
+    double_t newValue{};
+    double_t newError{};
+    if(denomValue)
+    {
+      newValue = numeratorValue / denomValue;
+      // uncertainty of denominator is not taken into account (cannot be extracted from spline)
+      newError = numeratorError / denomValue;
+    }
+    else
+    {
+      // ERROR("Dividing by zero in bin {}!", i);
+    }
+    numerator->SetBinContent(i, newValue);
+    numerator->SetBinError(i, newError);
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Deletes data points of graph beyond cutoff values.
+ */
+//**************************************************************************************************
+void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<double_t> max)
+{
+  // sort the points first for the following algorithm to work properly
+  graph->Sort();
+
+  int16_t pointsToRemoveHigh{};
+  int16_t pointsToRemoveLow{};
+
+  for(int16_t i = 0; i < graph->GetN(); ++i)
+  {
+    if(min && graph->GetX()[i] < *min)
+    {
+      ++pointsToRemoveLow;
+    }
+    if(max && graph->GetX()[i] >= *max)
+    {
+      ++pointsToRemoveHigh;
+    }
+  }
+
+  for(int16_t i = 0; i < pointsToRemoveHigh; ++i)
+  {
+    graph->RemovePoint(graph->GetN() - 1);
+  }
+  for(int16_t i = 0; i < pointsToRemoveLow; ++i)
+  {
+    graph->RemovePoint(0);
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Scales graph by a constant value.
+ */
+//**************************************************************************************************
+void PlotPainter::ScaleGraph(TGraph* graph, double_t scale)
+{
+  for(int32_t i{}; i < graph->GetN(); ++i)
+    graph->GetY()[i] *= scale;
+}
+
+//**************************************************************************************************
+/**
+ * Smoothes 1d graph in range.
+ */
+//**************************************************************************************************
+void PlotPainter::SmoothGraph(TGraph* graph, optional<double_t> min, optional<double_t> max)
+{
+  TGraphSmooth smoother;
+  TGraph* smoothGraph = smoother.SmoothSuper(graph);
+  for(int32_t i{}; i < graph->GetN(); ++i)
+  {
+    double_t curX = graph->GetX()[i];
+    if(min && curX < *min) continue;
+    if(max && curX > *max) continue;
+    graph->GetY()[i] = smoothGraph->GetY()[i];
+  }
+  delete smoothGraph;
+}
+
+//**************************************************************************************************
+/**
+ * Smoothes 1d hist in range.
+ */
+//**************************************************************************************************
+void PlotPainter::SmoothHist(TH1* hist, optional<double_t> min, optional<double_t> max)
+{
+  double_t minRange = hist->GetXaxis()->GetXmin();
+  double_t maxRange = hist->GetXaxis()->GetXmax();
+
+  if(min && max)
+    hist->GetXaxis()->SetRangeUser(*min, *max);
+  else if(min && !max)
+    hist->GetXaxis()->SetRangeUser(*min, maxRange);
+  else if(!min && max)
+    hist->GetXaxis()->SetRangeUser(minRange, *max);
+
+  hist->Smooth(100, "R");
+}
+
+//**************************************************************************************************
+/**
+ * Returns actual dimensions in pixel of the text with latex formatting.
+ */
+//**************************************************************************************************
+std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
+{
+  uint32_t width{};
+  uint32_t height{};
+  int16_t font{ text.GetTextFont() };
+
+  if(font % 10 <= 2)
+  {
+    text.GetBoundingBox(width, height);
+  }
+  else
+  {
+    TLatex textBox{ text };
+    textBox.SetTextFont(font - 1);
+    TVirtualPad* pad = gROOT->GetSelectedPad();
+    double_t dy{ pad->AbsPixeltoY(0) - pad->AbsPixeltoY((int32_t)(text.GetTextSize())) };
+    double_t textSize{ dy / (pad->GetY2() - pad->GetY1()) };
+    textBox.SetTextSize(textSize);
+    textBox.GetBoundingBox(width, height);
+  }
+  return { width, height };
+}
+
+//**************************************************************************************************
+/**
+ * Function to replace placeholders in lables.
+ */
+//**************************************************************************************************
+void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
+{
+  std::regex words_regex("<.*?>");
+  auto words_begin = std::sregex_iterator(str.begin(), str.end(), words_regex);
+  auto words_end = std::sregex_iterator();
+
+  for(std::sregex_iterator match = words_begin; match != words_end; ++match)
+  {
+    std::string match_str = (*match).str();
+
+    string format{};
+
+    // check if user specified different formatting (e.g. via <mean[%2.6]>)
+    std::regex format_regex("\\[.*?\\]");
+    auto format_it = std::sregex_iterator(match_str.begin(), match_str.end(), format_regex);
+    if(format_it != std::sregex_iterator())
+    {
+      format = (*format_it).str();
+      format = format.substr(1, format.size() - 2);
+    }
+    // allow printf style and protect against wrong usage
+    format.erase(remove(format.begin(), format.end(), '%'), format.end());
+    format.erase(remove(format.begin(), format.end(), ' '), format.end());
+
+    // if no valid formatting pattern is given, fall back to 'general' mode
+    if(!(str_contains(format, "e") || str_contains(format, "f") || str_contains(format, "g")
+         || str_contains(format, "E") || str_contains(format, "F") || str_contains(format, "G")))
+    {
+      format = format + "g";
+    }
+    format = "{:" + format + "}";
+
+    string replace_str;
+    if(match_str.find("name") != string::npos)
+    {
+      replace_str = data_ptr->GetName();
+      replace_str = replace_str.substr(0, replace_str.find(gNameGroupSeparator));
+    }
+    else if(match_str.find("title") != string::npos)
+    {
+      replace_str = data_ptr->GetTitle();
+    }
+    else if(data_ptr->InheritsFrom(TH1::Class()))
+    {
+      try
+      {
+        if(match_str.find("entries") != string::npos)
+        {
+          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetEntries());
+        }
+        else if(match_str.find("integral") != string::npos)
+        {
+          replace_str = fmt::format(format, ((TH1*)data_ptr)->Integral());
+        }
+        else if(match_str.find("mean") != string::npos)
+        {
+          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMean());
+        }
+        else if(match_str.find("maximum") != string::npos)
+        {
+          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMaximum());
+        }
+        else if(match_str.find("minimum") != string::npos)
+        {
+          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMinimum());
+        }
+      }
+      catch(...)
+      {
+        ERROR("Incompatible format string in {}.", match_str);
+        replace_str = match_str;
+      }
+    }
+    str.replace(str.find(match_str), string(match_str).size(), replace_str);
+  }
+}
 } // end namespace PlottingFramework

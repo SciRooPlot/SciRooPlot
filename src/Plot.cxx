@@ -903,7 +903,7 @@ Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const s
 {
   mType = "data";
 
-  if(legendLable != "") mLegendLable = legendLable;
+  if(legendLable != "") mLegend.lable = legendLable;
   // in case input was specified further via inputIdentifier:some/path/in/file
   auto subPathPos = inputIdentifier.find(":");
   if(subPathPos != string::npos)
@@ -938,7 +938,8 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
     std::exit(EXIT_FAILURE);
   }
   if(auto var = dataTree.get_optional<bool>("defines_frame")) mDefinesFrame = *var;
-  read_from_tree_optional(dataTree, mLegendLable, "legend_lable");
+  read_from_tree_optional(dataTree, mLegend.lable, "legend_lable");
+  read_from_tree_optional(dataTree, mLegend.identifier, "legend_id");
   read_from_tree_optional(dataTree, mDrawingOptions, "drawing_options");
   read_from_tree_optional(dataTree, mDrawingOptionAlias, "drawing_option_alias");
   read_from_tree_optional(dataTree, mTextFormat, "text_format");
@@ -971,7 +972,8 @@ ptree Plot::Pad::Data::GetPropertyTree()
   dataTree.put("name", mName);
   dataTree.put("inputIdentifier", mInputIdentifier);
   if(mDefinesFrame) dataTree.put("defines_frame", mDefinesFrame);
-  put_in_tree_optional(dataTree, mLegendLable, "legend_lable");
+  put_in_tree_optional(dataTree, mLegend.lable, "legend_lable");
+  put_in_tree_optional(dataTree, mLegend.identifier, "legend_id");
   put_in_tree_optional(dataTree, mDrawingOptions, "drawing_options");
   put_in_tree_optional(dataTree, mDrawingOptionAlias, "drawing_option_alias");
   put_in_tree_optional(dataTree, mTextFormat, "text_format");
@@ -1022,7 +1024,12 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetLegendLable(const string& legendLable) -> decltype(*this)
 {
-  mLegendLable = legendLable;
+  mLegend.lable = legendLable;
+  return *this;
+}
+auto Plot::Pad::Data::SetLegendID(uint8_t legendID) -> decltype(*this)
+{
+  mLegend.identifier = legendID;
   return *this;
 }
 auto Plot::Pad::Data::SetOptions(const string& opions) -> decltype(*this)
@@ -1690,10 +1697,27 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns)
   return *this;
 }
 
+//**************************************************************************************************
+/**
+ * Add entry to LegendBox.
+ */
+//**************************************************************************************************
 Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& name,
                                                                   const string& lable)
 {
-  legendEntries.push_back(LegendEntry(name, lable));
+  legendEntries.push_back(LegendEntry(name, lable, true));
+  return legendEntries.back();
+}
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(input_t inputTuple,
+                                                                  const string& lable)
+{
+  legendEntries.push_back(
+    LegendEntry(inputTuple.name + gNameGroupSeparator + inputTuple.inputIdentifier, lable));
+  return legendEntries.back();
+}
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& lable)
+{
+  legendEntries.push_back(LegendEntry("", lable));
   return legendEntries.back();
 }
 
