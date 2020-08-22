@@ -59,7 +59,7 @@ Just copy it to a location on your computer, rename it to CMakeLists.txt, create
 This should work out of the box, but it requires to know where the Plotting Framework library is located.
 The easisest way to define this is by putting the following line in your .bashrc or .bash_aliases:
 ```
-    source /path/to/repository/plottingframework/.plottingrc
+    source /path/to/repository/plottingframework/.plotrc
 ```
 
 The PlotManager is the pivot point of the Plotting Framework. In your application you will have to
