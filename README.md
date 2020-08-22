@@ -404,6 +404,6 @@ To use this app you need to:
 
 Now you can run the command `plot` from everywhere.
 To see the available program options run `plot --help`.
-For Z shells (zsh) this program supports an auto-completion feature, so you can tab through the available commands, figureGroups and plots.
+For bash and zsh shells this program supports an auto-completion feature, so you can tab through the available commands, figureGroups and plots.
 The app also has a 'browse' option that enables you to directly plot the content of root files without creating a plot definition.
 

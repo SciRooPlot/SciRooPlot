@@ -11,86 +11,158 @@ export __PLOTTING_FRAMEWORK_DIR
 __PLOTTING_BUILD_DIR="${__PLOTTING_FRAMEWORK_DIR}/build"
 if [[ -d "${__PLOTTING_BUILD_DIR}" ]]
 then
-  function plot(){ [[ "${1}" == "cd" ]] && {cd ${__PLOTTING_BUILD_DIR}; return 0;} || {"${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0;} }
+  function plot(){ [[ "${1}" == "cd" ]] && { cd ${__PLOTTING_BUILD_DIR}; return 0; } || { "${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0; } }
 fi
 
-scope_func () {
+if [ ! -d "${__PLOTTING_CONFIG_DIR}" ]; then
+  echo ""; echo ">> Auto-complete script could not find plotting config folder: ${__PLOTTING_CONFIG_DIR}."; echo "";
+  return
+fi
 
-  if [ ! -d "${__PLOTTING_CONFIG_DIR}" ]; then
-    echo ""; echo ">> Auto-complete script could not find plotting config folder: ${__PLOTTING_CONFIG_DIR}."; echo "";
-    return
-  fi
+_plot_completions_zsh() {
 
-  _plot_completions_zsh() {
+  local plot_definitions="${__PLOTTING_CONFIG_DIR}/plotDefinitions.XML"
+  local input_identifiers="${__PLOTTING_CONFIG_DIR}/inputFiles.XML"
 
-    local plot_definitions="${__PLOTTING_CONFIG_DIR}/plotDefinitions.XML"
-    local input_identifiers="${__PLOTTING_CONFIG_DIR}/inputFiles.XML"
+  local modes=('interactive' 'pdf' 'file' 'png' 'find' 'macro' 'browse' 'cd')
+  local gropus
+  local names
+  local rootfiles
+  local inputIdentifiers
 
-    local modes=('interactive' 'pdf' 'file' 'png' 'find' 'macro' 'browse' 'cd')
-    local gropus
-    local names
-    local rootfiles
-    local inputIdentifiers
+  while read -r line ; do
+    line="${line#<GROUP::}"
+    line="${line%>}"
+    [[ "${line}" != "TEMPLATES" ]] && gropus+=("${line}")
+  done < <(grep -o '<GROUP::.*' $plot_definitions)
 
+  while read -r line ; do
+    line="${line#<}"
+    line="${line%>}"
+    inputIdentifiers+=("${line}")
+  done < <(grep -o '<.*>' $input_identifiers | grep -vE '.*xml.*|.*FILE.*|.*</.*')
+
+  updatePlotNames() {
+    local group=$1
+    names=()
     while read -r line ; do
-      line="${line#<GROUP::}"
-      line="${line%>}"
-      [[ "${line}" != "TEMPLATES" ]] && gropus+=("${line}")
-    done <<(grep -o '<GROUP::.*' $plot_definitions)
-
-    while read -r line ; do
-      line="${line#<}"
-      line="${line%>}"
-      inputIdentifiers+=("${line}")
-    done <<(grep -o '<.*>' $input_identifiers | grep -vE '.*xml.*|.*FILE.*|.*</.*')
-
-    updatePlotNames() {
-      local group=$1
-      names=()
-      while read -r line ; do
-        line="${line#<name>}"
-        line="${line%</name>}"
-        names+=("${line}")
-      done <<(grep -B 1 "<figureGroup>${group}</figureGroup>" $plot_definitions | grep -vE '.*figureGroup.*|^--$')
-    }
-
-    while read -r line ; do
-      rootfiles+=("${line}")
-    done <<(ls -d *.root | grep '.*.root')
-
-
-    _arguments \
-      '1: :->mode'\
-      '2: :->group'\
-      '3: :->name'
-
-    case $state in
-      mode)
-        _arguments '1:profiles:(${modes})'
-      ;;
-      group)
-        if [[ "${words[2]}" == "browse" ]]
-        then
-          local gropusAndFiles=("${inputIdentifiers[@]}" "${rootfiles[@]}")
-          _arguments '2:profiles:(${gropusAndFiles})'
-        else
-          _arguments '2:profiles:(${gropus})'
-        fi
-      ;;
-      name)
-        if [[ "${words[2]}" == "browse" ]]
-        then
-          # for .root one could use rootls to check what is in file
-          _arguments '3:profiles:()'
-        else
-          updatePlotNames $words[3]
-          _arguments '3:profiles:(${names})'
-        fi
-      ;;
-    esac
+      line="${line#<name>}"
+      line="${line%</name>}"
+      names+=("${line}")
+    done < <(grep -B 1 "<figureGroup>${group}</figureGroup>" $plot_definitions | grep -vE '.*figureGroup.*|^--$')
   }
-  compdef _plot_completions_zsh plot
+
+  while read -r line ; do
+    rootfiles+=("${line}")
+  done < <(ls -d *.root 2>/dev/null | grep '.*.root')
+
+
+  _arguments \
+    '1: :->mode'\
+    '2: :->group'\
+    '3: :->name'
+
+  case $state in
+    mode)
+      _arguments '1:profiles:(${modes})'
+    ;;
+    group)
+      if [[ "${words[2]}" == "cd" ]]
+      then
+        _arguments '3:profiles:()'
+      elif [[ "${words[2]}" == "browse" ]]
+      then
+        local gropusAndFiles=("${inputIdentifiers[@]}" "${rootfiles[@]}")
+        _arguments '2:profiles:(${gropusAndFiles})'
+      else
+        _arguments '2:profiles:(${gropus})'
+      fi
+    ;;
+    name)
+      if [[ "${words[2]}" == "browse" ]]
+      then
+        # for .root one could use rootls to check what is in file
+        _arguments '3:profiles:()'
+      else
+        updatePlotNames $words[3]
+        _arguments '3:profiles:(${names})'
+      fi
+    ;;
+  esac
+
+  unset -f updatePlotNames
 }
 
-scope_func
-unset -f scope_func
+_plot_completions_bash() {
+  local plot_definitions="${__PLOTTING_CONFIG_DIR}/plotDefinitions.XML"
+  local input_identifiers="${__PLOTTING_CONFIG_DIR}/inputFiles.XML"
+
+  local modes=('interactive pdf file png find macro browse cd')
+  local gropus
+  local names
+  local rootfiles
+  local inputIdentifiers
+
+  while read -r line ; do
+    line="${line#<GROUP::}"
+    line="${line%>}"
+    [[ "${line}" != "TEMPLATES" ]] && gropus+=" ${line}"
+  done < <(grep -o '<GROUP::.*' $plot_definitions)
+
+  while read -r line ; do
+    line="${line#<}"
+    line="${line%>}"
+    inputIdentifiers+=" ${line}"
+  done < <(grep -o '<.*>' $input_identifiers | grep -vE '.*xml.*|.*FILE.*|.*</.*')
+
+  updatePlotNames() {
+    local group=$1
+    names=()
+    while read -r line ; do
+      line="${line#<name>}"
+      line="${line%</name>}"
+      names+=" ${line}"
+    done < <(grep -B 1 "<figureGroup>${group}</figureGroup>" $plot_definitions | grep -vE '.*figureGroup.*|^--$')
+  }
+
+  while read -r line ; do
+    rootfiles+=" ${line}"
+  done < <(ls -d *.root 2>/dev/null | grep '.*.root')
+
+
+  case $COMP_CWORD in
+  1)
+    COMPREPLY=( $( compgen -W "${modes}" -- "${COMP_WORDS[COMP_CWORD]}" ) )
+  ;;
+  2)
+    if [[ "${COMP_WORDS[COMP_CWORD-1]}" == "cd" ]]
+    then
+      COMPREPLY=( )
+    elif [[ "${COMP_WORDS[COMP_CWORD-1]}" == "browse" ]]
+    then
+      local gropusAndFiles=("${inputIdentifiers} ${rootfiles}")
+      COMPREPLY=( $(compgen -W "${gropusAndFiles}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    else
+      COMPREPLY=( $(compgen -W "${gropus}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    fi
+  ;;
+  3)
+  if [[ "${COMP_WORDS[COMP_CWORD-2]}" == "browse" ]]
+    then
+      # for .root one could use rootls to check what is in file
+      COMPREPLY=( )
+    else
+      updatePlotNames "${COMP_WORDS[COMP_CWORD-1]}"
+      COMPREPLY=( $(compgen -W "${names}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    fi
+  ;;
+  esac
+
+  unset -f updatePlotNames
+}
+
+if [ -n "$ZSH_VERSION" ]; then
+  compdef _plot_completions_zsh plot
+elif [ -n "$BASH_VERSION" ]; then
+  complete -F _plot_completions_bash plot
+fi
