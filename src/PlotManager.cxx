@@ -863,13 +863,21 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<str
   if(!dataNames.empty())
   {
     WARNING("Not all required inputs could be found.");
-    PRINT(" Data:");
+    string inputIdentifier = newDataNames[0].substr(newDataNames[0].find(gNameGroupSeparator)
+                                                    + gNameGroupSeparator.size());
+    PRINT("None of the files of input identifier \"{}\":", inputIdentifier);
+    if(fileNames.empty())
+    {
+      PRINT(" - no file was specified (!)");
+    }
+    else
+    {
+      for(auto& inputFileName : fileNames)
+        PRINT(" - {}", inputFileName);
+    }
+    PRINT("contain the follwowing data:");
     for(auto& dataName : newDataNames)
-      PRINT("  - {} ({})", dataName.substr(0, dataName.find(gNameGroupSeparator)),
-            dataName.substr(dataName.find(gNameGroupSeparator) + gNameGroupSeparator.size()));
-    PRINT(" not found in any of the following files:");
-    for(auto& inputFileName : fileNames)
-      PRINT("  - {}", inputFileName);
+      PRINT(" - {}", dataName.substr(0, dataName.find(gNameGroupSeparator)));
   }
 }
 

@@ -113,8 +113,8 @@ int main(int argc, char* argv[])
       PRINT("The use of blank spaces and colons in the regular expressions is not supported.");
       PRINT("You can also have a quick look into input identifiers or .root files:");
       PRINT("  ./plot browse '<inputIdentifier|rootfile[:fileSubPath]>'  '<dataName>'\n");
-      PRINT("To enable auto-completion on and global availability on Mac,");
-      PRINT("add 'source /plotting/framework/location/.plotrc' to your .zshrc.");
+      PRINT("To enable auto-completion on and global availability,");
+      PRINT("add 'source /plotting/framework/location/.plotrc' to your .bashrc or .bash_aliases.");
       PRINT(
         "Locations of the configuration file containing the input file paths and the output "
         "directory");

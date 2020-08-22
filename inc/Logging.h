@@ -55,11 +55,11 @@
     fmt::print("\n");                         \
   }
 
-#define PRINT(s, ...)               \
-  {                                 \
-    fmt::print(stderr, "       |"); \
-    fmt::print(s, ##__VA_ARGS__);   \
-    fmt::print("\n");               \
+#define PRINT(s, ...)                              \
+  {                                                \
+    fmt::print(stderr, "\033[1m       |\033[0m "); \
+    fmt::print(s, ##__VA_ARGS__);                  \
+    fmt::print("\n");                              \
   }
 #define PRINT_INLINE(s, ...)      \
   {                               \
