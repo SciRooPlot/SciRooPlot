@@ -20,8 +20,9 @@
 #include "PlottingFramework.h"
 #include "Plot.h"
 
-#include "TApplication.h" // FIXME: make application a pointer to avoid this include
+class TApplication;
 class TCanvas;
+class TObjArray;
 
 namespace PlottingFramework
 {
@@ -109,7 +110,7 @@ class PlotManager
   bool IsPlotAlreadyBooked(const string& plotName);
   ptree& ReadPlotTemplatesFromFile(const string& plotFileName);
 
-  TApplication mApp;
+  std::unique_ptr<TApplication> mApp;
   vector<string> splitString(const string& argString, char deliminator = ':');
   map<string, int32_t> mNameRegister; // bi-directional mapping between name and unique id
   map<int32_t, set<int32_t>> mLoadedData;

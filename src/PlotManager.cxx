@@ -26,6 +26,7 @@
 #include <boost/property_tree/xml_parser.hpp>
 
 // root dependencies
+#include "TApplication.h"
 #include "TROOT.h"
 #include "TSystem.h"
 #include "TError.h"
@@ -44,7 +45,7 @@ namespace PlottingFramework
  * Constructor for PlotManager
  */
 //**************************************************************************************************
-PlotManager::PlotManager() : mApp("MainApp", 0, 0)
+PlotManager::PlotManager() : mApp(std::unique_ptr<TApplication>(new TApplication("MainApp", 0, 0)))
 {
   TQObject::Connect("TGMainFrame", "CloseWindow()", "TApplication", gApplication, "Terminate()");
 
