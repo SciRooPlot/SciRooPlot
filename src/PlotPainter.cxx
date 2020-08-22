@@ -820,6 +820,8 @@ TPave* PlotPainter::GenerateBox(
       }
 
       // FIXME: this shall inherit default text size and font from pad
+      // convert ndc text sizes to pixel!
+      // if(text_font % 10 > 2 && lineHeightPixel < text_size)
       float_t text_size = (textSize) ? *textSize : 24;
       int16_t text_font = (textFont) ? *textFont : 43;
       uint8_t nColumns{ 1u }; //(box->GetNumColumns()) ? *box->GetNumColumns() : 1;
@@ -835,7 +837,7 @@ TPave* PlotPainter::GenerateBox(
       double_t legendWidthPixel{};
       double_t titleWidthPixel{};
       vector<uint32_t> legendWidthPixelPerColumn(nColumns, 0);
-      double_t legendHeightPixel{};
+      double_t lineHeightPixel{ text_size };
 
       uint8_t lineID{};
       for(auto& line : lines)
@@ -853,8 +855,7 @@ TPave* PlotPainter::GenerateBox(
         textLine.SetTextFont(text_font);
         textLine.SetTextSize(text_size);
         auto [width, height] = GetTextDimensions(textLine);
-
-        if(height > legendHeightPixel) legendHeightPixel = height;
+        if(height > lineHeightPixel) lineHeightPixel = height;
 
         if(width > legendWidthPixelPerColumn[iColumn]) legendWidthPixelPerColumn[iColumn] = width;
         ++iColumn;
@@ -876,23 +877,24 @@ TPave* PlotPainter::GenerateBox(
       }
 
       double_t legendWidthNDC = (double_t)legendWidthPixel / padWidthPixel;
-      double_t legendHeightNDC = (double_t)legendHeightPixel / padHeightPixel;
+      double_t lineHeightNDC = (double_t)lineHeightPixel / padHeightPixel;
       double_t markerWidthNDC = (double_t)markerWidthPixel / padWidthPixel;
       double_t titleWidthNDC = (double_t)titleWidthPixel / padWidthPixel;
 
       double_t totalWidthNDC{};
       double_t totalHeightNDC{};
       double_t marginNDC{ 0.01 };
+      double_t lineSpacing{ 0.3 }; // fraction of line hight
 
       if constexpr(std::is_same_v<BoxType, Plot::Pad::LegendBox>)
       {
         totalWidthNDC = 3 * marginNDC + markerWidthNDC + legendWidthNDC;
-        totalHeightNDC = (nLines + 0.5 * (nLines + 1)) * legendHeightNDC / nColumns;
+        totalHeightNDC = (nLines + lineSpacing * (nLines + 1)) * lineHeightNDC / nColumns;
       }
       else
       {
         totalWidthNDC = 2 * marginNDC + legendWidthNDC;
-        totalHeightNDC = (nLines + 0.5 * (nLines - 1)) * legendHeightNDC;
+        totalHeightNDC = (nLines + 0.5 * (nLines - 1)) * lineHeightNDC;
       }
 
       if(titleWidthPixel > legendWidthPixel)
