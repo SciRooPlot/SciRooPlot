@@ -33,7 +33,7 @@ namespace PlottingFramework
 //**************************************************************************************************
 class PlotManager
 {
- public:
+public:
   PlotManager();
 
   ~PlotManager();
@@ -93,7 +93,7 @@ class PlotManager
   void CreatePlot(const string& name, const string& figureGroup, const string& figureCategory = "",
                   const string& outputMode = "pdf");
 
- private:
+private:
   void ReadDataFromCSVFiles(TObjArray& outputDataArray, const vector<string>& fileNames,
                             const string& inputIdentifier);
   void ReadDataFromFiles(TObjArray& outputDataArray, const vector<string>& fileNames,

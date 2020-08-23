@@ -89,10 +89,10 @@ const map<drawing_options_t, string> defaultDrawingOpions_Graph{
 //**************************************************************************************************
 class PlotPainter
 {
- public:
+public:
   shared_ptr<TCanvas> GeneratePlot(Plot& plot, TObjArray* availableData);
 
- private:
+private:
   optional<data_ptr_t> GetDataClone(const string& dataName, TObjArray* availableData);
   template <typename T>
   optional<data_ptr_t> GetDataClone(TObject* obj);
