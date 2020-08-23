@@ -1008,8 +1008,8 @@ public:
 protected:
   friend class PlotPainter;
 
-  const string& GetRefDataName() const { return mRefDataName; }
-  const string& GetLable() const { return mLable; }
+  const optional<string>& GetRefDataName() const { return mRefDataName; }
+  const optional<string>& GetLable() const { return mLable; }
 
 private:
   struct dataLayout_t
@@ -1019,8 +1019,8 @@ private:
     optional<float_t> scale; // marker size , line width, fill opacity
   };
 
-  string mRefDataName; // if empty legend entry is not related to some data
-  string mLable;
+  optional<string> mRefDataName;
+  optional<string> mLable;
   optional<string> mOption;
   bool mIsTransient;
   dataLayout_t mFill;

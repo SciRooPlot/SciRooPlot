@@ -808,7 +808,7 @@ TPave* PlotPainter::GenerateBox(
     if constexpr(isLegend)
     {
       std::for_each(box->GetEntries().begin(), box->GetEntries().end(),
-                    [&lines](const auto& entry) { lines.push_back(entry.GetLable()); });
+                    [&lines](const auto& entry) { if(entry.GetLable()) lines.push_back(*entry.GetLable()); });
     }
     else
     {
@@ -855,10 +855,14 @@ TPave* PlotPainter::GenerateBox(
     {
       if constexpr(isLegend)
       {
-        TNamed* data_ptr
-          = (TNamed*)pad->FindObject(box->GetEntries()[lineID].GetRefDataName().data());
-        if(!data_ptr) ERROR("Object belonging to legend entry {} not found.", line);
-        ReplacePlaceholders(line, data_ptr);
+        auto& entry = box->GetEntries()[lineID];
+        if(entry.GetRefDataName())
+        {
+          TNamed* data_ptr
+            = (TNamed*)pad->FindObject((*entry.GetRefDataName()).data());
+          if(!data_ptr) ERROR("Object belonging to legend entry {} not found.", line);
+          ReplacePlaceholders(line, data_ptr);
+        }
       }
 
       // determine width and height of line to find max width and height (per column)
@@ -998,24 +1002,31 @@ TPave* PlotPainter::GenerateBox(
       uint8_t i{};
       for(auto entry : box->GetEntries())
       {
-        TNamed* data_ptr = (TNamed*)pad->FindObject(entry.GetRefDataName().data());
-        string drawingOption = data_ptr->GetDrawOption();
-        std::for_each(drawingOption.begin(), drawingOption.end(),
-                      [](char& c) { c = ::toupper(c); });
-        string drawStyle = "EP";
+        if(entry.GetRefDataName())
+        {
+          TNamed* data_ptr = (TNamed*)pad->FindObject((*entry.GetRefDataName()).data());
+          string drawingOption = data_ptr->GetDrawOption();
+          std::for_each(drawingOption.begin(), drawingOption.end(),
+                        [](char& c) { c = ::toupper(c); });
+          string drawStyle = "EP";
 
-        if((data_ptr->InheritsFrom("TF1")) || str_contains(drawingOption, "C")
-           || str_contains(drawingOption, "L") || str_contains(drawingOption, "HIST"))
-        {
-          drawStyle = "L";
+          if((data_ptr->InheritsFrom("TF1")) || str_contains(drawingOption, "C")
+             || str_contains(drawingOption, "L") || str_contains(drawingOption, "HIST"))
+          {
+            drawStyle = "L";
+          }
+          else if(data_ptr->InheritsFrom("TH1")
+                  && (str_contains(drawingOption, "HIST") || str_contains(drawingOption, "B"))
+                  && ((TH1*)data_ptr)->GetFillStyle() != 0)
+          {
+            drawStyle = "F";
+          }
+          legend->AddEntry(data_ptr, lines[i].data(), drawStyle.data());
         }
-        else if(data_ptr->InheritsFrom("TH1")
-                && (str_contains(drawingOption, "HIST") || str_contains(drawingOption, "B"))
-                && ((TH1*)data_ptr)->GetFillStyle() != 0)
+        else
         {
-          drawStyle = "F";
+          legend->AddEntry((TObject*)nullptr, "test", "L");
         }
-        legend->AddEntry(data_ptr->GetName(), lines[i].data(), drawStyle.data());
         ++i;
       }
 
