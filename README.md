@@ -159,6 +159,11 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // if you leave out the xy pad coordinates, the framework will try to auto-place the legend without overlapping your data or the axes
   plot[1].AddLegend();
 
+  // in a similar way you can add a text box to your plot
+  plot[1].AddText("my important description spanning // over two lines");
+  // or
+  plot[1].AddText(0.2, 0.9, "this is // where I // want my text");
+  // by default " // " is used as a delimiter between multiple lines
 
   // to modify the axis titles, offsets, ranges, etc of a pad, just do the following
   plot[1]["Y"].SetTitle("my y axis tilte with meaning");

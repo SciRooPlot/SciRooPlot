@@ -783,6 +783,7 @@ TPave* PlotPainter::GenerateBox(
   std::visit(
     [&](auto&& box) {
       using BoxType = std::decay_t<decltype(*box)>;
+      constexpr bool isLegend = std::is_same_v<BoxType, Plot::Pad::LegendBox>;
 
       optional<int16_t> textColor{ box->GetTextColor() };
       optional<int16_t> textFont{ box->GetTextFont() };
@@ -797,7 +798,12 @@ TPave* PlotPainter::GenerateBox(
       optional<float_t> fillOpacity{ box->GetFillOpacity() };
 
       vector<string> lines;
-      if constexpr(std::is_same_v<BoxType, Plot::Pad::TextBox>)
+      if constexpr(isLegend)
+      {
+        std::for_each(box->GetEntries().begin(), box->GetEntries().end(),
+                      [&lines](const auto& entry) { lines.push_back(entry.GetLable()); });
+      }
+      else
       {
         // split text string to vector
         string delimiter{ " // " };
@@ -813,17 +819,15 @@ TPave* PlotPainter::GenerateBox(
         }
         lines.push_back(text.substr(last));
       }
-      else
-      {
-        std::for_each(box->GetEntries().begin(), box->GetEntries().end(),
-                      [&lines](const auto& entry) { lines.push_back(entry.GetLable()); });
-      }
 
       // FIXME: this shall inherit default text size and font from pad
       float_t text_size = (textSize) ? *textSize : 24;
       int16_t text_font = (textFont) ? *textFont : 43;
-      uint8_t nColumns{ 1u }; //(box->GetNumColumns()) ? *box->GetNumColumns() : 1;
-
+      uint8_t nColumns{ 1u };
+      if constexpr(isLegend)
+      {
+        if(box->GetNumColumns()) nColumns = *box->GetNumColumns();
+      }
       uint16_t nLines = lines.size();
       if(nLines < 1) return;
 
@@ -842,7 +846,7 @@ TPave* PlotPainter::GenerateBox(
       uint8_t lineID{};
       for(auto& line : lines)
       {
-        if constexpr(std::is_same_v<BoxType, Plot::Pad::LegendBox>)
+        if constexpr(isLegend)
         {
           TNamed* data_ptr
             = (TNamed*)pad->FindObject(box->GetEntries()[lineID].GetRefDataName().data());
@@ -866,7 +870,7 @@ TPave* PlotPainter::GenerateBox(
         legendWidthPixel += length;
 
       uint32_t markerWidthPixel{};
-      if constexpr(std::is_same_v<BoxType, Plot::Pad::LegendBox>)
+      if constexpr(isLegend)
       {
         string markerDummyString = "-+-"; // defines width of marker
         TLatex markerDummy(0, 0, markerDummyString.data());
@@ -886,7 +890,7 @@ TPave* PlotPainter::GenerateBox(
       double_t marginNDC{ 0.01 };
       double_t lineSpacing{ 0.3 }; // fraction of line hight
 
-      if constexpr(std::is_same_v<BoxType, Plot::Pad::LegendBox>)
+      if constexpr(isLegend)
       {
         totalWidthNDC = 3 * marginNDC + markerWidthNDC + legendWidthNDC;
         totalHeightNDC = (nLines + lineSpacing * (nLines + 1)) * lineHeightNDC / nColumns;
@@ -972,7 +976,7 @@ TPave* PlotPainter::GenerateBox(
         upperLeftY = (upperLeftY - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
       }
 
-      if constexpr(std::is_same_v<BoxType, Plot::Pad::LegendBox>)
+      if constexpr(isLegend)
       {
         TLegend* legend = new TLegend(upperLeftX, upperLeftY - totalHeightNDC,
                                       upperLeftX + totalWidthNDC, upperLeftY, "", "NDC");
