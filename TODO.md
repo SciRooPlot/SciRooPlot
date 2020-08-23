@@ -8,6 +8,7 @@ Missing Box Features
 - add title feature to legends again
 - AddLine function for texts?
 - possibility to AddEntry at specific position -> move automatic lables around?!
+- might be useful to specify size of boxes
 
 Planned Features:
 - add setting for nContours in 2d plots

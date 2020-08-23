@@ -112,6 +112,7 @@ class PlotPainter
   void ReplacePlaceholders(string& str, TNamed* data_ptr);
   TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box,
                      TPad* pad);
+  float_t GetTextSizePixel(float_t textsizeNDC);
 };
 } // end namespace PlottingFramework
 #endif /* PlotGenerator_h */

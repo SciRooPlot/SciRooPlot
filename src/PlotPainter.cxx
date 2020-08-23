@@ -820,8 +820,6 @@ TPave* PlotPainter::GenerateBox(
       }
 
       // FIXME: this shall inherit default text size and font from pad
-      // convert ndc text sizes to pixel!
-      // if(text_font % 10 > 2 && lineHeightPixel < text_size)
       float_t text_size = (textSize) ? *textSize : 24;
       int16_t text_font = (textFont) ? *textFont : 43;
       uint8_t nColumns{ 1u }; //(box->GetNumColumns()) ? *box->GetNumColumns() : 1;
@@ -837,7 +835,9 @@ TPave* PlotPainter::GenerateBox(
       double_t legendWidthPixel{};
       double_t titleWidthPixel{};
       vector<uint32_t> legendWidthPixelPerColumn(nColumns, 0);
+
       double_t lineHeightPixel{ text_size };
+      if(text_font % 10 <= 2) lineHeightPixel = GetTextSizePixel(text_size);
 
       uint8_t lineID{};
       for(auto& line : lines)
@@ -1311,6 +1311,23 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
     textBox.GetBoundingBox(width, height);
   }
   return { width, height };
+}
+
+//**************************************************************************************************
+/**
+ * Converts NDC text size to pixel.
+ */
+//**************************************************************************************************
+float_t PlotPainter::GetTextSizePixel(float_t textsizeNDC)
+{
+  float_t textSizePixel{};
+  int32_t pad_width{ gPad->XtoPixel(gPad->GetX2()) };
+  int32_t pad_height{ gPad->YtoPixel(gPad->GetY1()) };
+  if(pad_width < pad_height)
+    textSizePixel = textsizeNDC * pad_width;
+  else
+    textSizePixel = textsizeNDC * pad_height;
+  return textSizePixel;
 }
 
 //**************************************************************************************************
