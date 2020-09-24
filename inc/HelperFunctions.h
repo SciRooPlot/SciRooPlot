@@ -71,6 +71,10 @@ void put_in_tree_optional(ptree& tree, const optional<T>& var, const string& lab
   {
     if(var) tree.put(lable, vector_to_string(*var));
   }
+  else if constexpr(std::is_enum<T>::value) // in case using enum types of the framework
+  {
+    if(var) tree.put(lable, static_cast<typename std::underlying_type<T>::type>(*var));
+  }
   else
   {
     if(var) tree.put(lable, *var);

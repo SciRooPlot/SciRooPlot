@@ -168,7 +168,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // to modify the axis titles, offsets, ranges, etc of a pad, just do the following
   plot[1]["Y"].SetTitle("my y axis tilte with meaning");
   plot[1]["X"].SetRange(1.4, 2.8).SetTitle("what i am showing on x axis").SetLog();
-  plot[1]["X"].SetMaxRangeX(5.);
+  plot[1]["X"].SetMaxRange(5.);
   // a full list of axis property accessors can be found in the Axis class definition in inc/Plot.h
 
 
