@@ -36,6 +36,7 @@
 #include "TKey.h"
 #include "TH1.h"
 #include "TGraphErrors.h"
+#include "TFolder.h"
 
 namespace PlottingFramework
 {
@@ -894,7 +895,7 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
 
   if(subDirs.size() == 0)
   {
-    if(folder->InheritsFrom("TDirectory") || folder->InheritsFrom("TCollection"))
+    if(folder->InheritsFrom("TDirectory") || folder->InheritsFrom("TFolder") || folder->InheritsFrom("TCollection"))
     {
       return folder;
     }
@@ -917,7 +918,7 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
     }
     deleteFolder = false;
   }
-  else if(folder->InheritsFrom("TCollection"))
+  else if(folder->InheritsFrom("TCollection") || folder->InheritsFrom("TFolder"))
   {
     subFolder = ((TCollection*)folder)->FindObject(subDirs[0].data());
     if(subFolder)
@@ -968,6 +969,10 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
   {
     itemList = ((TDirectoryFile*)folder)->GetListOfKeys();
   }
+  else if(folder->InheritsFrom("TFolder"))
+  {
+    itemList = ((TFolder*)folder)->GetListOfFolders();
+  }
   else if(folder->InheritsFrom("TCollection"))
   {
     itemList = (TCollection*)folder;
@@ -997,6 +1002,7 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
       string keyName = ((TKey*)obj)->GetName();
 
       bool isTraversable = className.find("TDirectory") != string::npos
+                           || className.find("TFolder") != string::npos
                            || className.find("TList") != string::npos
                            || className.find("TObjArray") != string::npos;
       if(isTraversable
@@ -1013,7 +1019,7 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
     }
 
     // in case this object is directory or list, repeat the same for this substructure
-    if(obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TCollection"))
+    if(obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection"))
     {
       ReadData(obj, outputDataArray, dataNames, newDataNames);
     }
