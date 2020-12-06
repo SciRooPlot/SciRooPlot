@@ -1,29 +1,15 @@
 Rationale
 ---------
-This piece of software is meant to simplify plotting of ROOT data by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
+This piece of software is my humble attempt to simplify plotting of ROOT data by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
 If you have already worked with ROOT, you probably ask yourself:
 > We already have ROOT and it is perfectly fine as it is. I have learned to master it over the years and all my macros work just fine. Why do I need this additional Plotting Framework? Why should I learn to use yet another library interface?
 
 Well, what I can tell from my experience is that when it comes to plotting there is a tendency to largely violate one basic guiding principle in software development (and common sense): do not repeat yourself.
-Even though data representation is a very important aspect of data science, there seems to be no generic easy-access solution to quickly make presentable plots with a somewhat streamlined interface that abstracts away all the complicated technical details that come with the broad ROOT functionallity (it can do way more than just plotting!).
-Every one of us has his own set of plotting macros, usually tailored for exactly one (or mabye a few) use cases to design our plots in the way we wish them to be.
-This introduces a large verbosity of trivial code that is basically always the same.
-In addition each researcher has to waste his precious time adapting to all the complexity and inconsistencies of the ROOT interfaces to meet their specific needs.
-Since plotting usually is not our main focus but an annoying necessity on the way to success (condensing and conveying information), we often tend to choose the lazy mans apporach every time new plots have to be produced.
-Therefore lots of code is beeing copied leading to a large redundancy of basic functionality.
-For example in all of our plotting macros many lines of code are beeing spent on primitive tasks like opening files, reading in the desired data from a directory or list substructure of the .root file and then applying the plotting layout.
-Knowing this, most of us already created levels of abstraction to reduce the verbosity in terms of functions that can at least automatize ones own particular use cases.
-In an ideal world the scientist shall not spend his time thinking about how to open files and traverse through a file structure (which is of course needed to keep your data organized).
-I dont want to keep inventing new temporary names for the data which I extract from a file for no other reason but to put it into a plot. I dont want to think about wether the file I just opened owns the histogram leaving me with a pointer to nothing when being closed. I dont want to be responsible for each and every temporary histogram that I extracted and take care that it is properly deleted. I dont want to think about how a graph or a function needs to be handled differently than a histogram.
-All I want to do is tell the program:
-> Take data X and Y from files A and B respectively and put both in a plot that should look like I tell you to.
->
-> -- I really dont care how you do it!
-
-This is the spirit in which this framework is beeing developed.
-In my opinion it is good practice for data manipulation and data display (aka plotting) to be done in separate successive steps.
-Often this is not done out of the sheer fear of having to write yet another piece of code where the exact the same data that was just manipulated and written into a file, needs to be read in again only to put it into a plot.
-I hope that this software can help reduce the reluctance to separate these two independent and conceptually disjunct steps of the data analysis workflow and simplify the technical problem of quickly producing presentable plots so we can focus on the 'real stuff'.
+Even though data representation is a very important aspect of data science, there seems to be no generic easy-access solution to quickly make presentable plots with a somewhat streamlined interface that abstracts away all the complicated technical details that come with the broad ROOT functionallity.
+Everybody has his own set of plotting macros, usually tailored only for a few use cases.
+This introduces a large amount of redundant code and becomes a nightmare to maintain when one handles a lot of input data from different sources and many plots in which these different input data have to converge.
+In every plotting macro plenty of lines of code are spent on opening files, reading the desired data from a substructure within the .root file and then applying the desired plotting layout.
+The goal of this project is to handle all of these rather technical steps automatically and provide the user with a more abstract interface to define his plots.
 
 Everybody is welcome to use this framework, report bugs or contribute new features.
 
