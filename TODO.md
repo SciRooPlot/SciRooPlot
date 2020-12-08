@@ -1,4 +1,17 @@
+Autocomplete:
+- category search?
+- how to handle multiple figureGroups?
+- how to handle multiple xml config files?
+
+Bugs:
+- histograms without error can be drawn only as hist??
+- if same histogram is added to plot twice, the name is no longer unique and this results in unwanted behaviour for ref data specified in legend entries
+
 Missing Box Features
+- make no box default setting
+- box auto-size must consider that legend entries can have different text sizes
+- text lines maybe also configurable separately?
+- flexible width of marker part
 - flexible deliminter for text lines
 - add flexible margins for the boxes
 - check again if auto placement works correct (also with multiple boxes)
@@ -7,7 +20,6 @@ Missing Box Features
 - possibility to add full layout of box
 - add title feature to legends again
 - AddLine function for texts?
-- possibility to AddEntry at specific position -> move automatic lables around?!
 - might be useful to specify size of boxes
 
 Planned Features:
@@ -18,6 +30,7 @@ Planned Features:
 - decide where data manipulation part should be put (before or after setting ranges?)
 
 Feature Ideas:
+- add support for add/subtract + pulls? / generic binary operator thing
 - generic algorithm to automatically determine optimal axis offsets + avoid overlap with lables
 - revisit idea of axis linking between pads
 - add root style, color, marker, linestyle pictures to documentation

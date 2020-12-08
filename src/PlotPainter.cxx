@@ -862,7 +862,6 @@ TPave* PlotPainter::GenerateBox(
         if(entry.GetRefDataName())
         {
           // FIXME: this gives always the first -> problem when drawing the same histogram twice!
-          // here we have a problem because access by name is necessary
           TNamed* data_ptr = (TNamed*)pad->FindObject((*entry.GetRefDataName()).data());
           if(!data_ptr) ERROR("Object belonging to legend entry {} not found.", line);
           ReplacePlaceholders(line, data_ptr);
@@ -1074,8 +1073,7 @@ TPave* PlotPainter::GenerateBox(
         {
           curEntry = legend->AddEntry((TObject*)nullptr, lable.data(), drawStyle.data());
         }
-        // here we must be able to have all settings also per legend (color) no this is already done
-        // for text above
+
         if(entry.GetMarkerColor()) curEntry->SetMarkerColor(*entry.GetMarkerColor());
         if(entry.GetMarkerStyle()) curEntry->SetMarkerStyle(*entry.GetMarkerStyle());
         if(entry.GetMarkerSize()) curEntry->SetMarkerSize(*entry.GetMarkerSize());
@@ -1093,10 +1091,6 @@ TPave* PlotPainter::GenerateBox(
         if(entry.GetTextColor()) curEntry->SetTextColor(*entry.GetTextColor());
         if(entry.GetTextFont()) curEntry->SetTextFont(*entry.GetTextFont());
         if(entry.GetTextSize()) curEntry->SetTextSize(*entry.GetTextSize());
-
-        // FIXME: I completely forgot text prperties here! -> want to be able to make second line of
-        // text red
-        // FIXME: what the heck about text boxes? there I also need text prperties!!
       }
 
       if(legend->GetHeader())
