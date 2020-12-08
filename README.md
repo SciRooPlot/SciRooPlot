@@ -4,11 +4,11 @@ This piece of software is my humble attempt to simplify plotting of ROOT data by
 If you have already worked with ROOT, you probably ask yourself:
 > We already have ROOT and it is perfectly fine as it is. I have learned to master it over the years and all my macros work just fine. Why do I need this additional Plotting Framework? Why should I learn to use yet another library interface?
 
-Well, what I can tell from my experience is that when it comes to plotting there is a tendency to largely violate one basic guiding principle in software development (and common sense): do not repeat yourself.
+Well, when it comes to plotting there is a tendency to largely violate one basic guiding principle in software development: do not repeat yourself.
 Even though data representation is a very important aspect of data science, there seems to be no generic easy-access solution to quickly make presentable plots with a somewhat streamlined interface that abstracts away all the complicated technical details that come with the broad ROOT functionallity.
 Everybody has his own set of plotting macros, usually tailored only for a few use cases.
 This introduces a large amount of redundant code and becomes a nightmare to maintain when one handles a lot of input data from different sources and many plots in which these different input data have to converge.
-In every plotting macro plenty of lines of code are spent on opening files, reading the desired data from a substructure within the .root file and then applying the desired plotting layout.
+In every plotting macro plenty of lines of code are spent on opening files, reading the desired data from file and then applying the desired layout.
 The goal of this project is to handle all of these rather technical steps automatically and provide the user with a more abstract interface to define his plots.
 
 Everybody is welcome to use this framework, report bugs or contribute new features.
@@ -392,6 +392,7 @@ To use this app you need to:
 - place both the "inputFilesConfig.XML" and "plotDefinitions.XML" (names have to be like this for now) produced by your program in some central config folder
 - define the environment variable `__PLOTTING_CONFIG_DIR` to point to this folder
 - define the environment variable `__PLOTTING_OUTPUT_DIR` to the directory where you want to store the created plots (pdf, png, etc.)
+- (optional) define the environment variable `__MY_PLOTS_BUILD_DIR` to the directory where your code that creates the plot definitions resides - then the app will automatically rebuild and execute `./create` (which should be the name of your executable for this to work)
 
 Now you can run the command `plot` from everywhere.
 To see the available program options run `plot --help`.

@@ -84,9 +84,9 @@ int main(int argc, char* argv[])
 
     po::positional_options_description
       pos; // this needs to be synchronous with the arguments options_description
-    pos.add("mode", 1);
     pos.add("figureGroups", 1);
     pos.add("plotNames", 1);
+    pos.add("mode", 1);
     pos.add("arguments", -1);
 
     po::variables_map vm;
@@ -101,8 +101,8 @@ int main(int argc, char* argv[])
       PRINT("");
       PRINT("Usage:");
       PRINT(
-        "  ./plot <find|interactive|pdf|eps|png|macro|file> "
-        "'<figureGroupRegex[:figureCategoryRegex]>'  '<plotNameRegex>'\n");
+        "  ./plot "
+        "'<figureGroupRegex[:figureCategoryRegex]>'  '<plotNameRegex>' <find|interactive|pdf|eps|png|macro|file> \n");
       PRINT("You can use any standard regular expressions like 'begin.*end' or 'begin[a,b,c]end'.");
       PRINT(
         "Multiple figureGroups and plotNames can be specified separated by blank space: 'plotA "
@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  if(mode.empty()) return 1;
+  if(mode.empty()) mode = "interactive";
 
   // check if specified input files exist
   if(!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str())))

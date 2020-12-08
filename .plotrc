@@ -11,7 +11,7 @@ export __PLOTTING_FRAMEWORK_DIR
 __PLOTTING_BUILD_DIR="${__PLOTTING_FRAMEWORK_DIR}/build"
 if [[ -d "${__PLOTTING_BUILD_DIR}" ]]
 then
-  function plot(){ [[ "${1}" == "cd" ]] && { cd ${__PLOTTING_BUILD_DIR}; return 0; } || { "${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0; } }
+  function plot(){ [[ "${1}" == "cd" ]] && { cd ${__PLOTTING_BUILD_DIR}; return 0; } || { [[ "${__MY_PLOTS_BUILD_DIR}" != "" ]] && { (cd ${__MY_PLOTS_BUILD_DIR}; make 1>/dev/null || exit 1; [[ ! -z `find './' -name 'create' -mmin +1` ]] || ./create;) || return 1; } || { }; "${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0; } }
 fi
 
 if [ ! -d "${__PLOTTING_CONFIG_DIR}" ]; then
@@ -24,7 +24,7 @@ _plot_completions_zsh() {
   local plot_definitions="${__PLOTTING_CONFIG_DIR}/plotDefinitions.XML"
   local input_identifiers="${__PLOTTING_CONFIG_DIR}/inputFiles.XML"
 
-  local modes=('interactive' 'pdf' 'file' 'png' 'find' 'macro' 'browse' 'cd')
+  local modes=('interactive' 'pdf' 'file' 'png' 'find' 'macro')
   local gropus
   local names
   local rootfiles
@@ -58,35 +58,26 @@ _plot_completions_zsh() {
 
 
   _arguments \
-    '1: :->mode'\
-    '2: :->group'\
-    '3: :->name'
+    '1: :->group'\
+    '2: :->name'\
+    '3: :->mode'
+
 
   case $state in
-    mode)
-      _arguments '1:profiles:(${modes})'
-    ;;
     group)
-      if [[ "${words[2]}" == "cd" ]]
-      then
-        _arguments '3:profiles:()'
-      elif [[ "${words[2]}" == "browse" ]]
-      then
-        local gropusAndFiles=("${inputIdentifiers[@]}" "${rootfiles[@]}")
-        _arguments '2:profiles:(${gropusAndFiles})'
-      else
-        _arguments '2:profiles:(${gropus})'
-      fi
+      _arguments '1:profiles:(${gropus})'
     ;;
     name)
-      if [[ "${words[2]}" == "browse" ]]
+      if [[ "${words[2]}" == "cd" ]]
       then
-        # for .root one could use rootls to check what is in file
-        _arguments '3:profiles:()'
+        _arguments '2:profiles:()'
       else
-        updatePlotNames $words[3]
-        _arguments '3:profiles:(${names})'
+        updatePlotNames $words[2]
+        _arguments '2:profiles:(${names})'
       fi
+    ;;
+    mode)
+      _arguments '3:profiles:(${modes})'
     ;;
   esac
 
@@ -97,7 +88,7 @@ _plot_completions_bash() {
   local plot_definitions="${__PLOTTING_CONFIG_DIR}/plotDefinitions.XML"
   local input_identifiers="${__PLOTTING_CONFIG_DIR}/inputFiles.XML"
 
-  local modes=('interactive pdf file png find macro browse cd')
+  local modes=('interactive pdf file png find macro')
   local gropus
   local names
   local rootfiles
@@ -129,7 +120,7 @@ _plot_completions_bash() {
     rootfiles+=" ${line}"
   done < <(ls -d *.root 2>/dev/null | grep '.*.root')
 
-
+  # fixme: with new order this logic no longer works
   case $COMP_CWORD in
   1)
     COMPREPLY=( $( compgen -W "${modes}" -- "${COMP_WORDS[COMP_CWORD]}" ) )
