@@ -287,7 +287,7 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
       std::replace(displayedName.begin(), displayedName.end(), '.', '_');
       std::replace(displayedName.begin(), displayedName.end(), '/', '|');
       plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName),
-                         plot.GetPropetyTree());
+                         plot.GetPropertyTree());
     }
   }
   using boost::property_tree::xml_writer_settings;
@@ -374,7 +374,7 @@ void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
     // move new canvas to position of previous window
     int32_t curXpos{};
     int32_t curYpos{};
-    const int32_t windowOffsetY{ 22 }; // might depend on os
+    const int32_t windowOffsetY{ 28 }; // might depend on os (was 22)
     if(currPlotIndex > 0)
     {
       curXpos = mPlotLedger[mPlotViewHistory[currPlotIndex - 1]]->GetWindowTopX();
@@ -895,7 +895,8 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
 
   if(subDirs.size() == 0)
   {
-    if(folder->InheritsFrom("TDirectory") || folder->InheritsFrom("TFolder") || folder->InheritsFrom("TCollection"))
+    if(folder->InheritsFrom("TDirectory") || folder->InheritsFrom("TFolder")
+       || folder->InheritsFrom("TCollection"))
     {
       return folder;
     }
@@ -1001,10 +1002,9 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
       string className = ((TKey*)obj)->GetClassName();
       string keyName = ((TKey*)obj)->GetName();
 
-      bool isTraversable = className.find("TDirectory") != string::npos
-                           || className.find("TFolder") != string::npos
-                           || className.find("TList") != string::npos
-                           || className.find("TObjArray") != string::npos;
+      bool isTraversable
+        = className.find("TDirectory") != string::npos || className.find("TFolder") != string::npos
+          || className.find("TList") != string::npos || className.find("TObjArray") != string::npos;
       if(isTraversable
          || std::find(dataNames.begin(), dataNames.end(), subSpec + keyName) != dataNames.end())
       {
@@ -1019,7 +1019,8 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
     }
 
     // in case this object is directory or list, repeat the same for this substructure
-    if(obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection"))
+    if(obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder")
+       || obj->InheritsFrom("TCollection"))
     {
       ReadData(obj, outputDataArray, dataNames, newDataNames);
     }

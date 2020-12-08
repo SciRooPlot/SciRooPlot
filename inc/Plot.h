@@ -55,6 +55,13 @@ enum drawing_options_t : uint8_t
   surf,
 };
 
+struct layout_t
+{
+  optional<int16_t> color; // marker_color , line_color, fill_color, text_color
+  optional<int16_t> style; // marker_style , line_style, fill_style, text_font
+  optional<float_t> scale; // marker_size , line_width, fill_opacity, text_size
+};
+
 //**************************************************************************************************
 /**
  * Class for internal representation of a plot.
@@ -110,7 +117,7 @@ protected:
     return mName + gNameGroupSeparator + mFigureGroup
            + ((mFigureCategory != "") ? ":" + mFigureCategory : "");
   }
-  ptree GetPropetyTree();
+  ptree GetPropertyTree();
 
   map<uint8_t, Pad>& GetPads() { return mPads; }
 
@@ -217,7 +224,7 @@ protected:
   friend class PlotPainter;
   friend class Plot;
 
-  ptree GetPropetyTree();
+  ptree GetPropertyTree();
 
   vector<shared_ptr<Data>>& GetData() { return mData; }
   vector<shared_ptr<LegendBox>>& GetLegendBoxes() { return mLegendBoxes; }
@@ -298,9 +305,9 @@ private:
   };
   struct text_t
   {
-    optional<float_t> size;
-    optional<int16_t> font;
     optional<int16_t> color;
+    optional<int16_t> font;
+    optional<float_t> size;
   };
   struct view_defaults_t
   {
@@ -458,13 +465,6 @@ private:
     optional<uint8_t> identifier;
   };
 
-  struct dataLayout_t
-  {
-    optional<int16_t> color;
-    optional<int16_t> style;
-    optional<float_t> scale; // marker size , line width, fill opacity
-  };
-
   struct dataRange_t
   {
     optional<double_t> min;
@@ -472,9 +472,9 @@ private:
   };
 
   legend_t mLegend;
-  dataLayout_t mMarker;
-  dataLayout_t mLine;
-  dataLayout_t mFill;
+  layout_t mMarker;
+  layout_t mLine;
+  layout_t mFill;
   dataRange_t mRangeX;
   dataRange_t mRangeY;
   modify_t mModify;
@@ -894,12 +894,6 @@ private:
 
   auto GetThis() { return static_cast<BoxType*>(this); }
 
-  struct layout_t
-  {
-    optional<int16_t> color;
-    optional<int16_t> style;
-    optional<float_t> scale; // marker size , line width, fill opacity
-  };
   struct position_t
   {
     optional<double_t> x;
@@ -966,9 +960,21 @@ public:
 
   LegendBox& SetTitle(const string& title);
   LegendBox& SetNumColumns(uint8_t numColumns);
-  LegendEntry& AddEntry(input_t inputTuple, const string& lable);
-  LegendEntry& AddEntry(const string& lable);
-  LegendEntry& GetEntry(uint8_t entryID) { return legendEntries[entryID]; }
+  LegendEntry& GetEntry(uint8_t entryID) { return mLegendEntriesUser[entryID]; }
+
+  LegendBox& SetDefaultDrawStyle(string drawStyle);
+
+  LegendBox& SetDefaultLineColor(int16_t color);
+  LegendBox& SetDefaultLineStyle(int16_t style);
+  LegendBox& SetDefaultLineWidth(float_t width);
+
+  LegendBox& SetDefaultMarkerColor(int16_t color);
+  LegendBox& SetDefaultMarkerStyle(int16_t style);
+  LegendBox& SetDefaultMarkerSize(float_t size);
+
+  LegendBox& SetDefaultFillColor(int16_t color);
+  LegendBox& SetDefaultFillStyle(int16_t style);
+  LegendBox& SetDefaultFillOpacity(float_t opacity);
 
 protected:
   friend class PlotManager;
@@ -979,14 +985,36 @@ protected:
   const optional<uint8_t>& GetNumColumns() { return mNumColumns; }
   const optional<string>& GetTitle() { return mTitle; }
 
-  const vector<LegendEntry>& GetEntries() { return legendEntries; }
+  const vector<LegendEntry>& GetEntries() { return mLegendEntries; }
 
   LegendEntry& AddEntry(const string& name, const string& lable);
+
+  const optional<string>& GetDefaultDrawStyle() { return mDrawStyleDefault; }
+
+  const optional<int16_t>& GetDefaultMarkerColor() { return mMarkerDefault.color; }
+  const optional<int16_t>& GetDefaultMarkerStyle() { return mMarkerDefault.style; }
+  const optional<float_t>& GetDefaultMarkerSize() { return mMarkerDefault.scale; }
+
+  const optional<int16_t>& GetDefaultLineColor() { return mLineDefault.color; }
+  const optional<int16_t>& GetDefaultLineStyle() { return mLineDefault.style; }
+  const optional<float_t>& GetDefaultLineWidth() { return mLineDefault.scale; }
+
+  const optional<int16_t>& GetDefaultFillColor() { return mFillDefault.color; }
+  const optional<int16_t>& GetDefaultFillStyle() { return mFillDefault.style; }
+  const optional<float_t>& GetDefaultFillOpacity() { return mFillDefault.scale; }
 
 private:
   optional<string> mTitle;
   optional<uint8_t> mNumColumns;
-  vector<LegendEntry> legendEntries;
+  vector<LegendEntry> mLegendEntries; // this is transient and will be generated automatically
+  map<uint8_t, LegendEntry> mLegendEntriesUser; // this is persistent and must be saved
+
+  layout_t mLineDefault;
+  layout_t mMarkerDefault;
+  layout_t mFillDefault;
+  optional<string> mDrawStyleDefault;
+
+  void MergeLegendEntries();
 };
 
 //**************************************************************************************************
@@ -997,35 +1025,71 @@ private:
 class Plot::Pad::LegendBox::LegendEntry
 {
 public:
-  LegendEntry();
-  LegendEntry(const string& name, const string& lable, bool isTransient = false)
+  LegendEntry(const optional<string>& lable = {}, const optional<string>& refDataName = {},
+              const optional<string>& drawStyle = {})
+    : mFill{}, mMarker{}, mLine{}
   {
-    mRefDataName = name;
     mLable = lable;
-    mIsTransient = isTransient;
+    mRefDataName = refDataName;
+    mDrawStyle = drawStyle;
   }
+
+  LegendEntry(const ptree& legendEntryTree);
+
+  LegendEntry& SetLable(string lable);
+  LegendEntry& SetRefData(input_t inputTuple);
+  LegendEntry& SetDrawStyle(string drawStyle);
+
+  LegendEntry& SetMarkerColor(int16_t color);
+  LegendEntry& SetMarkerStyle(int16_t style);
+  LegendEntry& SetMarkerSize(float_t size);
+
+  LegendEntry& SetLineColor(int16_t color);
+  LegendEntry& SetLineStyle(int16_t style);
+  LegendEntry& SetLineWidth(float_t width);
+
+  LegendEntry& SetFillColor(int16_t color);
+  LegendEntry& SetFillStyle(int16_t style);
+  LegendEntry& SetFillOpacity(float_t opacity);
+
+  LegendEntry& SetTextColor(int16_t color);
+  LegendEntry& SetTextFont(int16_t font);
+  LegendEntry& SetTextSize(float_t size);
 
 protected:
   friend class PlotPainter;
+  friend class LegendBox;
+  void operator+=(const LegendEntry& legendEntry);
 
+  ptree GetPropertyTree();
   const optional<string>& GetRefDataName() const { return mRefDataName; }
   const optional<string>& GetLable() const { return mLable; }
+  const optional<string>& GetDrawStyle() const { return mDrawStyle; }
+
+  const optional<int16_t>& GetMarkerColor() const { return mMarker.color; }
+  const optional<int16_t>& GetMarkerStyle() const { return mMarker.style; }
+  const optional<float_t>& GetMarkerSize() const { return mMarker.scale; }
+
+  const optional<int16_t>& GetLineColor() const { return mLine.color; }
+  const optional<int16_t>& GetLineStyle() const { return mLine.style; }
+  const optional<float_t>& GetLineWidth() const { return mLine.scale; }
+
+  const optional<int16_t>& GetFillColor() const { return mFill.color; }
+  const optional<int16_t>& GetFillStyle() const { return mFill.style; }
+  const optional<float_t>& GetFillOpacity() const { return mFill.scale; }
+
+  const optional<int16_t>& GetTextColor() const { return mText.color; }
+  const optional<int16_t>& GetTextFont() const { return mText.style; }
+  const optional<float_t>& GetTextSize() const { return mText.scale; }
 
 private:
-  struct dataLayout_t
-  {
-    optional<int16_t> color;
-    optional<int16_t> style;
-    optional<float_t> scale; // marker size , line width, fill opacity
-  };
-
-  optional<string> mRefDataName;
   optional<string> mLable;
-  optional<string> mOption;
-  bool mIsTransient;
-  dataLayout_t mFill;
-  dataLayout_t mMarker;
-  dataLayout_t mLine;
+  optional<string> mRefDataName;
+  optional<string> mDrawStyle;
+  layout_t mFill;
+  layout_t mMarker;
+  layout_t mLine;
+  layout_t mText;
 };
 
 } // end namespace PlottingFramework

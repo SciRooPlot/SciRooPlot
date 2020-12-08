@@ -79,7 +79,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
 
   TCanvas* canvas_ptr = new TCanvas(plot.GetUniqueName().data(), plot.GetUniqueName().data(),
                                     *plot.GetWidth() + 4, *plot.GetHeight() + 28);
-  // NB.: +4 and +28 are needed to undo hard-coded offsets in TCanvas.cxx line 580
+  // NB.: +4 and +28 are needed to undo hard-coded offsets in TCanvas.cxx line 595
   canvas_ptr->SetMargin(0., 0., 0., 0.);
 
   // apply user settings for plot
@@ -705,7 +705,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               auto& boxVector = plot[padID].GetLegendBoxes();
               if(legendID > 0u && legendID <= boxVector.size())
               {
-                boxVector[legendID - 1]->AddEntry(data_ptr->GetName(), *data->GetLegendLable());
+                boxVector[legendID - 1]->AddEntry(*data->GetLegendLable(), data_ptr->GetName());
               }
               else
               {
@@ -734,6 +734,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     for(auto& box : pad.GetLegendBoxes())
     {
       string legendName = "LegendBox_" + std::to_string(legendIndex);
+      box->MergeLegendEntries(); // apply individual user settings on top of automatic entries
       TPave* legend = GenerateBox(box, pad_ptr);
       if(legend)
       {
@@ -808,7 +809,9 @@ TPave* PlotPainter::GenerateBox(
     if constexpr(isLegend)
     {
       std::for_each(box->GetEntries().begin(), box->GetEntries().end(),
-                    [&lines](const auto& entry) { if(entry.GetLable()) lines.push_back(*entry.GetLable()); });
+                    [&lines](const auto& entry) {
+                      if(entry.GetLable()) lines.push_back(*entry.GetLable());
+                    });
     }
     else
     {
@@ -858,8 +861,9 @@ TPave* PlotPainter::GenerateBox(
         auto& entry = box->GetEntries()[lineID];
         if(entry.GetRefDataName())
         {
-          TNamed* data_ptr
-            = (TNamed*)pad->FindObject((*entry.GetRefDataName()).data());
+          // FIXME: this gives always the first -> problem when drawing the same histogram twice!
+          // here we have a problem because access by name is necessary
+          TNamed* data_ptr = (TNamed*)pad->FindObject((*entry.GetRefDataName()).data());
           if(!data_ptr) ERROR("Object belonging to legend entry {} not found.", line);
           ReplacePlaceholders(line, data_ptr);
         }
@@ -997,37 +1001,102 @@ TPave* PlotPainter::GenerateBox(
 
       legend->SetTextFont(text_font);
       legend->SetTextSize(text_size);
-      if(textColor) legend->SetTextColor(*textColor);
 
-      uint8_t i{};
+      if(textColor) legend->SetTextColor(*textColor);
+      if(textSize) legend->SetTextSize(*textSize);
+      if(textFont) legend->SetTextFont(*textFont);
+
       for(auto entry : box->GetEntries())
       {
+        string lable
+          = entry.GetLable() ? *entry.GetLable() : ""; // fixme: this is equal to lines[i]
+        string drawStyle = entry.GetDrawStyle() ? *entry.GetDrawStyle() : "";
+
+        // TLegendEntry* curEntry = legend->AddEntry((TObject*)nullptr, lable.data(),
+        // drawStyle.data());
+        TLegendEntry* curEntry = nullptr;
         if(entry.GetRefDataName())
         {
           TNamed* data_ptr = (TNamed*)pad->FindObject((*entry.GetRefDataName()).data());
-          string drawingOption = data_ptr->GetDrawOption();
-          std::for_each(drawingOption.begin(), drawingOption.end(),
-                        [](char& c) { c = ::toupper(c); });
-          string drawStyle = "EP";
+          // TODO: here we need a check that if exists
 
-          if((data_ptr->InheritsFrom("TF1")) || str_contains(drawingOption, "C")
-             || str_contains(drawingOption, "L") || str_contains(drawingOption, "HIST"))
+          if(drawStyle.empty())
           {
-            drawStyle = "L";
+            drawStyle = (box->GetDefaultDrawStyle()) ? *box->GetDefaultDrawStyle() : "EP";
+
+            string drawingOption = data_ptr->GetDrawOption();
+            std::for_each(drawingOption.begin(), drawingOption.end(),
+                          [](char& c) { c = ::toupper(c); });
+
+            if((data_ptr->InheritsFrom("TF1")) || str_contains(drawingOption, "C")
+               || str_contains(drawingOption, "L") || str_contains(drawingOption, "HIST"))
+            {
+              drawStyle = "L";
+            }
+            else if(data_ptr->InheritsFrom("TH1")
+                    && (str_contains(drawingOption, "HIST") || str_contains(drawingOption, "B"))
+                    && ((TH1*)data_ptr)->GetFillStyle() != 0)
+            {
+              drawStyle = "F";
+            }
           }
-          else if(data_ptr->InheritsFrom("TH1")
-                  && (str_contains(drawingOption, "HIST") || str_contains(drawingOption, "B"))
-                  && ((TH1*)data_ptr)->GetFillStyle() != 0)
-          {
-            drawStyle = "F";
-          }
-          legend->AddEntry(data_ptr, lines[i].data(), drawStyle.data());
+          curEntry = legend->AddEntry((TObject*)data_ptr, lable.data(), drawStyle.data());
+          curEntry->SetObject((TObject*)nullptr);
+
+          TAttMarker markerAttr;
+          TAttLine lineAttr;
+          TAttFill fillAttr;
+          dynamic_cast<TAttMarker*>(data_ptr)->Copy(markerAttr);
+          dynamic_cast<TAttLine*>(data_ptr)->Copy(lineAttr);
+          dynamic_cast<TAttFill*>(data_ptr)->Copy(fillAttr);
+
+          curEntry->SetMarkerColor(markerAttr.GetMarkerColor());
+          curEntry->SetMarkerStyle(markerAttr.GetMarkerStyle());
+          curEntry->SetMarkerSize(markerAttr.GetMarkerSize());
+
+          if(box->GetDefaultLineColor())
+            curEntry->SetLineColor(*box->GetDefaultLineColor());
+          else
+            curEntry->SetLineColor(lineAttr.GetLineColor());
+          if(box->GetDefaultLineStyle())
+            curEntry->SetLineColor(*box->GetDefaultLineStyle());
+          else
+            curEntry->SetLineStyle(lineAttr.GetLineStyle());
+          if(box->GetDefaultLineWidth())
+            curEntry->SetLineColor(*box->GetDefaultLineWidth());
+          else
+            curEntry->SetLineWidth(lineAttr.GetLineWidth());
+
+          curEntry->SetFillColor(fillAttr.GetFillColor());
+          curEntry->SetFillStyle(fillAttr.GetFillStyle());
         }
         else
         {
-          legend->AddEntry((TObject*)nullptr, "test", "L");
+          curEntry = legend->AddEntry((TObject*)nullptr, lable.data(), drawStyle.data());
         }
-        ++i;
+        // here we must be able to have all settings also per legend (color) no this is already done
+        // for text above
+        if(entry.GetMarkerColor()) curEntry->SetMarkerColor(*entry.GetMarkerColor());
+        if(entry.GetMarkerStyle()) curEntry->SetMarkerStyle(*entry.GetMarkerStyle());
+        if(entry.GetMarkerSize()) curEntry->SetMarkerSize(*entry.GetMarkerSize());
+
+        if(entry.GetLineColor()) curEntry->SetLineColor(*entry.GetLineColor());
+        if(entry.GetLineStyle()) curEntry->SetLineStyle(*entry.GetLineStyle());
+        if(entry.GetLineWidth()) curEntry->SetLineWidth(*entry.GetLineWidth());
+
+        if(entry.GetFillColor()) curEntry->SetFillColor(*entry.GetFillColor());
+        if(entry.GetFillStyle()) curEntry->SetFillStyle(*entry.GetFillStyle());
+        if(entry.GetFillOpacity() && entry.GetFillColor())
+          curEntry->SetFillColor(
+            TColor::GetColorTransparent(*entry.GetFillColor(), *entry.GetFillOpacity()));
+
+        if(entry.GetTextColor()) curEntry->SetTextColor(*entry.GetTextColor());
+        if(entry.GetTextFont()) curEntry->SetTextFont(*entry.GetTextFont());
+        if(entry.GetTextSize()) curEntry->SetTextSize(*entry.GetTextSize());
+
+        // FIXME: I completely forgot text prperties here! -> want to be able to make second line of
+        // text red
+        // FIXME: what the heck about text boxes? there I also need text prperties!!
       }
 
       if(legend->GetHeader())
