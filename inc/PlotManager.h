@@ -117,10 +117,10 @@ private:
   bool mSaveToRootFile;
   string mOutputFileName;
   map<string, shared_ptr<TCanvas>> mPlotLedger;
-  string mOutputDirectory;  // directory to store output
-  bool mUseUniquePlotNames; // wether to use plot names or unique plot names for output files
+  string mOutputDirectory;                 // directory to store output
+  bool mUseUniquePlotNames;                // wether to use plot names or unique plot names for output files
   map<string, vector<string>> mInputFiles; // inputFileIdentifier, inputFilePaths
-  TObjArray* mDataLedger; // all external data representations currently loaded by the manager
+  TObjArray* mDataLedger;                  // all external data representations currently loaded by the manager
   vector<Plot> mPlots;
   vector<Plot> mPlotTemplates;
   map<string, ptree> mPropertyTreeCache;

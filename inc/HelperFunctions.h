@@ -28,23 +28,20 @@ inline constexpr bool str_contains(const std::string& str, const std::string& su
 }
 
 template <typename T>
-struct is_vector : public std::false_type
-{
+struct is_vector : public std::false_type {
 };
 
 template <typename T, typename A>
-struct is_vector<std::vector<T, A>> : public std::true_type
-{
+struct is_vector<std::vector<T, A>> : public std::true_type {
 };
 
 template <typename T>
 string vector_to_string(vector<T> items)
 {
   string itemString;
-  for(auto& item : items)
-  {
+  for (auto& item : items) {
     itemString += std::to_string(item);
-    if(&item != &items.back()) itemString += ",";
+    if (&item != &items.back()) itemString += ",";
   }
   return itemString;
 }
@@ -57,8 +54,7 @@ vector<T> string_to_vector(string itemString)
   vector<T> items;
   string curItemStr;
   std::istringstream stream(itemString);
-  while(std::getline(stream, curItemStr, ','))
-  {
+  while (std::getline(stream, curItemStr, ',')) {
     items.push_back(std::stoi(curItemStr));
   }
   return items;
@@ -67,36 +63,30 @@ vector<T> string_to_vector(string itemString)
 template <typename T>
 void put_in_tree_optional(ptree& tree, const optional<T>& var, const string& lable)
 {
-  if constexpr(is_vector<T>{}) // vectors are stored as comma separated strings
+  if constexpr (is_vector<T>{}) // vectors are stored as comma separated strings
   {
-    if(var) tree.put(lable, vector_to_string(*var));
-  }
-  else if constexpr(std::is_enum<T>::value) // in case using enum types of the framework
+    if (var) tree.put(lable, vector_to_string(*var));
+  } else if constexpr (std::is_enum<T>::value) // in case using enum types of the framework
   {
-    if(var) tree.put(lable, static_cast<typename std::underlying_type<T>::type>(*var));
-  }
-  else
-  {
-    if(var) tree.put(lable, *var);
+    if (var) tree.put(lable, static_cast<typename std::underlying_type<T>::type>(*var));
+  } else {
+    if (var) tree.put(lable, *var);
   }
 }
 
 template <typename T>
 void read_from_tree_optional(const ptree& tree, optional<T>& var, const string& lable)
 {
-  if constexpr(is_vector<T>{}) // vectors are stored as comma separated strings
+  if constexpr (is_vector<T>{}) // vectors are stored as comma separated strings
   {
-    if(auto tmp = tree.get_optional<string>(lable))
+    if (auto tmp = tree.get_optional<string>(lable))
       var = string_to_vector<typename T::value_type>(*tmp);
-  }
-  else if constexpr(std::is_enum<T>::value) // in case using enum types of the framework
+  } else if constexpr (std::is_enum<T>::value) // in case using enum types of the framework
   {
-    if(auto tmp = tree.get_optional<typename std::underlying_type<T>::type>(lable))
+    if (auto tmp = tree.get_optional<typename std::underlying_type<T>::type>(lable))
       var = static_cast<T>(*tmp);
-  }
-  else
-  {
-    if(auto tmp = tree.get_optional<T>(lable)) var = *tmp;
+  } else {
+    if (auto tmp = tree.get_optional<T>(lable)) var = *tmp;
   }
 }
 

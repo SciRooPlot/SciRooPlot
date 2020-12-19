@@ -51,35 +51,44 @@ using data_ptr_t_func_1d = variant<TF1*>;
 using data_ptr_t_func_2d = variant<TF2*>;
 
 const map<drawing_options_t, string> defaultDrawingOpions_Hist2d{
-  { colz, "COLZ" },
-  { surf, "SURF" },
-  { text, "TEXT" },
+  {colz, "COLZ"},
+  {surf, "SURF"},
+  {text, "TEXT"},
 };
 
 const map<drawing_options_t, string> defaultDrawingOpions_Hist{
-  { points, "X0 EP" },
-  { points_xerr, "EP" },
-  { points_endcaps, "E1" },
-  { curve, "HIST C" },
-  { line, "HIST L" },
-  { bar, "HIST B" },
-  { boxes, "E2" },
-  { band, "E6" },
-  { band_line, "E5" },
-  { area, "HIST F" },
-  { area_curve, "HIST CF" },
-  { area_line, "HIST LF" },
-  { hist, "HIST" },
-  { bar, "HIST B" },
-  { hist_no_borders, "HIST ][" },
-  { stars, "*H" },
-  { text, "TEXT" },
+  {points, "X0 EP"},
+  {points_xerr, "EP"},
+  {points_endcaps, "E1"},
+  {curve, "HIST C"},
+  {line, "HIST L"},
+  {bar, "HIST B"},
+  {boxes, "E2"},
+  {band, "E6"},
+  {band_line, "E5"},
+  {area, "HIST F"},
+  {area_curve, "HIST CF"},
+  {area_line, "HIST LF"},
+  {hist, "HIST"},
+  {bar, "HIST B"},
+  {hist_no_borders, "HIST ]["},
+  {stars, "*H"},
+  {text, "TEXT"},
 };
 
 const map<drawing_options_t, string> defaultDrawingOpions_Graph{
-  { points, "P Z" },  { points_line, "P Z L" }, { points_endcaps, "P" }, { curve, "X C" },
-  { line, "X L" },    { bar, "X B" },           { boxes, "P2" },         { band, "4" },
-  { band_line, "3" }, { area, "X CF" },         { area_line, "X LC" },   { boxes_only, "2" },
+  {points, "P Z"},
+  {points_line, "P Z L"},
+  {points_endcaps, "P"},
+  {curve, "X C"},
+  {line, "X L"},
+  {bar, "X B"},
+  {boxes, "P2"},
+  {band, "4"},
+  {band_line, "3"},
+  {area, "X CF"},
+  {area_line, "X LC"},
+  {boxes_only, "2"},
 };
 
 //**************************************************************************************************

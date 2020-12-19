@@ -34,19 +34,17 @@ namespace PlottingFramework
 //**************************************************************************************************
 Plot::Plot(const string& name, const string& figureGroup, const string& plotTemplateName) : Plot()
 {
-  if(str_contains(figureGroup, "."))
-  {
+  if (str_contains(figureGroup, ".")) {
     ERROR("Figure Group must not contain '.'!");
     std::exit(EXIT_FAILURE);
   }
   mName = name;
   mFigureGroup = figureGroup;
-  if(plotTemplateName != "") mPlotTemplateName = plotTemplateName;
+  if (plotTemplateName != "") mPlotTemplateName = plotTemplateName;
 
   // in case category was specified via figureGroup:my/category/tree
   auto subPathPos = figureGroup.find(":");
-  if(subPathPos != string::npos)
-  {
+  if (subPathPos != string::npos) {
     mFigureGroup = figureGroup.substr(0, subPathPos);
     mFigureCategory = figureGroup.substr(subPathPos + 1);
   }
@@ -71,14 +69,11 @@ Plot::Plot(const Plot& otherPlot, const string& name, const string& plotGroup)
 //**************************************************************************************************
 Plot::Plot(const ptree& plotTree)
 {
-  try
-  {
+  try {
     mName = plotTree.get<string>("name");
     mFigureGroup = plotTree.get<string>("figureGroup");
     mFigureCategory = plotTree.get<string>("figureCategory");
-  }
-  catch(...)
-  {
+  } catch (...) {
     ERROR("Could not construct data from ptree.");
   }
   read_from_tree_optional(plotTree, mPlotTemplateName, "plot_template_name");
@@ -89,10 +84,8 @@ Plot::Plot(const ptree& plotTree)
   read_from_tree_optional(plotTree, mFill.style, "fill_style");
 
   // loop over all pads defined in property tree
-  for(auto& pad : plotTree)
-  {
-    if(str_contains(pad.first, "PAD"))
-    {
+  for (auto& pad : plotTree) {
+    if (str_contains(pad.first, "PAD")) {
       uint8_t padID = std::stoi(pad.first.substr(pad.first.find("_") + 1));
       mPads[padID] = Pad(pad.second);
     }
@@ -117,8 +110,7 @@ ptree Plot::GetPropertyTree()
   put_in_tree_optional(plotTree, mFill.color, "fill_color");
   put_in_tree_optional(plotTree, mFill.style, "fill_style");
 
-  for(auto& [padID, pad] : mPads)
-  {
+  for (auto& [padID, pad] : mPads) {
     plotTree.put_child("PAD_" + std::to_string(padID), pad.GetPropertyTree());
   }
   return plotTree;
@@ -132,8 +124,7 @@ ptree Plot::GetPropertyTree()
 Plot Plot::Clone() const
 {
   Plot newPlot(*this);
-  for(auto& [padID, pad] : newPlot.GetPads())
-  {
+  for (auto& [padID, pad] : newPlot.GetPads()) {
     std::transform(newPlot[padID].GetData().begin(), newPlot[padID].GetData().end(),
                    newPlot[padID].GetData().begin(),
                    [](auto data_ptr) { return data_ptr->Clone(); });
@@ -185,16 +176,15 @@ void Plot::operator+=(const Plot& plot)
   mFigureCategory = plot.mFigureCategory;
   mPlotTemplateName = plot.mPlotTemplateName;
 
-  if(plot.mPlotDimensions.width) mPlotDimensions.width = plot.mPlotDimensions.width;
-  if(plot.mPlotDimensions.height) mPlotDimensions.height = plot.mPlotDimensions.height;
-  if(plot.mPlotDimensions.fixAspectRatio)
+  if (plot.mPlotDimensions.width) mPlotDimensions.width = plot.mPlotDimensions.width;
+  if (plot.mPlotDimensions.height) mPlotDimensions.height = plot.mPlotDimensions.height;
+  if (plot.mPlotDimensions.fixAspectRatio)
     mPlotDimensions.fixAspectRatio = plot.mPlotDimensions.fixAspectRatio;
 
-  if(plot.mFill.color) mFill.color = plot.mFill.color;
-  if(plot.mFill.style) mFill.style = plot.mFill.style;
+  if (plot.mFill.color) mFill.color = plot.mFill.color;
+  if (plot.mFill.style) mFill.style = plot.mFill.style;
 
-  for(auto& [padID, pad] : plot.mPads)
-  {
+  for (auto& [padID, pad] : plot.mPads) {
     mPads[padID]; // initializes the pad in case it was not yet defined in this plot
     mPads[padID] += pad;
   }
@@ -573,33 +563,26 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree_optional(padTree, mRedrawAxes, "redraw_axes");
   read_from_tree_optional(padTree, mRefFunc, "ref_func");
 
-  for(auto& content : padTree)
-  {
+  for (auto& content : padTree) {
     // add data
-    if(str_contains(content.first, "DATA"))
-    {
+    if (str_contains(content.first, "DATA")) {
       string type = content.second.get<string>("type");
-      if(type == "data")
-      {
+      if (type == "data") {
         mData.push_back(std::make_shared<Data>(content.second));
       }
-      if(type == "ratio")
-      {
+      if (type == "ratio") {
         mData.push_back(std::make_shared<Ratio>(content.second));
       }
     }
     // add boxes
-    if(str_contains(content.first, "LEGEND"))
-    {
+    if (str_contains(content.first, "LEGEND")) {
       mLegendBoxes.push_back(std::make_shared<LegendBox>(content.second));
     }
-    if(str_contains(content.first, "TEXT"))
-    {
+    if (str_contains(content.first, "TEXT")) {
       mTextBoxes.push_back(std::make_shared<TextBox>(content.second));
     }
     // add axes
-    if(str_contains(content.first, "AXIS"))
-    {
+    if (str_contains(content.first, "AXIS")) {
       string axis = content.second.get<string>("name");
       mAxes[axis] = Axis(content.second);
     }
@@ -652,29 +635,24 @@ ptree Plot::Pad::GetPropertyTree()
   put_in_tree_optional(padTree, mRefFunc, "ref_func");
 
   int dataID = 1;
-  for(auto& data : mData)
-  {
+  for (auto& data : mData) {
     padTree.put_child("DATA_" + std::to_string(dataID), data->GetPropertyTree());
     ++dataID;
   }
 
   int legendBoxID = 1;
-  for(auto& legendBox : mLegendBoxes)
-  {
+  for (auto& legendBox : mLegendBoxes) {
     padTree.put_child("LEGEND_" + std::to_string(legendBoxID), legendBox->GetPropertyTree());
     ++legendBoxID;
   }
   int textBoxID = 1;
-  for(auto& textBox : mTextBoxes)
-  {
+  for (auto& textBox : mTextBoxes) {
     padTree.put_child("TEXT_" + std::to_string(textBoxID), textBox->GetPropertyTree());
     ++textBoxID;
   }
 
-  for(auto& axis : { "X", "Y", "Z" })
-  {
-    if(mAxes.find(axis) != mAxes.end())
-    {
+  for (auto& axis : {"X", "Y", "Z"}) {
+    if (mAxes.find(axis) != mAxes.end()) {
       padTree.put_child(string("AXIS_") + axis, mAxes[axis].GetPropertyTree());
     }
   }
@@ -689,43 +667,42 @@ ptree Plot::Pad::GetPropertyTree()
 //**************************************************************************************************
 void Plot::Pad::operator+=(const Pad& pad)
 {
-  if(pad.mTitle) mTitle = pad.mTitle;
-  if(pad.mOptions) mOptions = pad.mOptions;
-  if(pad.mPosition.xlow) mPosition.xlow = pad.mPosition.xlow;
-  if(pad.mPosition.ylow) mPosition.ylow = pad.mPosition.ylow;
-  if(pad.mPosition.xup) mPosition.xup = pad.mPosition.xup;
-  if(pad.mPosition.yup) mPosition.yup = pad.mPosition.yup;
-  if(pad.mMargins.top) mMargins.top = pad.mMargins.top;
-  if(pad.mMargins.bottom) mMargins.bottom = pad.mMargins.bottom;
-  if(pad.mMargins.left) mMargins.left = pad.mMargins.left;
-  if(pad.mMargins.right) mMargins.right = pad.mMargins.right;
-  if(pad.mFill.color) mFill.color = pad.mFill.color;
-  if(pad.mFill.style) mFill.style = pad.mFill.style;
-  if(pad.mFrame.fillColor) mFrame.fillColor = pad.mFrame.fillColor;
-  if(pad.mFrame.fillStyle) mFrame.fillStyle = pad.mFrame.fillStyle;
-  if(pad.mFrame.lineColor) mFrame.lineColor = pad.mFrame.lineColor;
-  if(pad.mFrame.lineStyle) mFrame.lineStyle = pad.mFrame.lineStyle;
-  if(pad.mFrame.lineWidth) mFrame.lineWidth = pad.mFrame.lineWidth;
-  if(pad.mText.size) mText.size = pad.mText.size;
-  if(pad.mText.font) mText.font = pad.mText.font;
-  if(pad.mText.color) mText.color = pad.mText.color;
-  if(pad.mMarkerDefaults.scale) mMarkerDefaults.scale = pad.mMarkerDefaults.scale;
-  if(pad.mLineDefaults.scale) mLineDefaults.scale = pad.mLineDefaults.scale;
-  if(pad.mFillDefaults.scale) mFillDefaults.scale = pad.mFillDefaults.scale;
-  if(pad.mMarkerDefaults.colors) mMarkerDefaults.colors = pad.mMarkerDefaults.colors;
-  if(pad.mLineDefaults.colors) mLineDefaults.colors = pad.mLineDefaults.colors;
-  if(pad.mFillDefaults.colors) mFillDefaults.colors = pad.mFillDefaults.colors;
-  if(pad.mMarkerDefaults.styles) mMarkerDefaults.styles = pad.mMarkerDefaults.styles;
-  if(pad.mLineDefaults.styles) mLineDefaults.styles = pad.mLineDefaults.styles;
-  if(pad.mFillDefaults.styles) mFillDefaults.styles = pad.mFillDefaults.styles;
-  if(pad.mDrawingOptionDefaults.graph) mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
-  if(pad.mDrawingOptionDefaults.hist) mDrawingOptionDefaults.hist = pad.mDrawingOptionDefaults.hist;
-  if(pad.mDrawingOptionDefaults.hist2d) mDrawingOptionDefaults.hist2d = pad.mDrawingOptionDefaults.hist2d;
-  if(pad.mPalette) mPalette = pad.mPalette;
-  if(pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
-  if(pad.mRefFunc) mRefFunc = pad.mRefFunc;
-  for(auto& [axisLable, axis] : pad.mAxes)
-  {
+  if (pad.mTitle) mTitle = pad.mTitle;
+  if (pad.mOptions) mOptions = pad.mOptions;
+  if (pad.mPosition.xlow) mPosition.xlow = pad.mPosition.xlow;
+  if (pad.mPosition.ylow) mPosition.ylow = pad.mPosition.ylow;
+  if (pad.mPosition.xup) mPosition.xup = pad.mPosition.xup;
+  if (pad.mPosition.yup) mPosition.yup = pad.mPosition.yup;
+  if (pad.mMargins.top) mMargins.top = pad.mMargins.top;
+  if (pad.mMargins.bottom) mMargins.bottom = pad.mMargins.bottom;
+  if (pad.mMargins.left) mMargins.left = pad.mMargins.left;
+  if (pad.mMargins.right) mMargins.right = pad.mMargins.right;
+  if (pad.mFill.color) mFill.color = pad.mFill.color;
+  if (pad.mFill.style) mFill.style = pad.mFill.style;
+  if (pad.mFrame.fillColor) mFrame.fillColor = pad.mFrame.fillColor;
+  if (pad.mFrame.fillStyle) mFrame.fillStyle = pad.mFrame.fillStyle;
+  if (pad.mFrame.lineColor) mFrame.lineColor = pad.mFrame.lineColor;
+  if (pad.mFrame.lineStyle) mFrame.lineStyle = pad.mFrame.lineStyle;
+  if (pad.mFrame.lineWidth) mFrame.lineWidth = pad.mFrame.lineWidth;
+  if (pad.mText.size) mText.size = pad.mText.size;
+  if (pad.mText.font) mText.font = pad.mText.font;
+  if (pad.mText.color) mText.color = pad.mText.color;
+  if (pad.mMarkerDefaults.scale) mMarkerDefaults.scale = pad.mMarkerDefaults.scale;
+  if (pad.mLineDefaults.scale) mLineDefaults.scale = pad.mLineDefaults.scale;
+  if (pad.mFillDefaults.scale) mFillDefaults.scale = pad.mFillDefaults.scale;
+  if (pad.mMarkerDefaults.colors) mMarkerDefaults.colors = pad.mMarkerDefaults.colors;
+  if (pad.mLineDefaults.colors) mLineDefaults.colors = pad.mLineDefaults.colors;
+  if (pad.mFillDefaults.colors) mFillDefaults.colors = pad.mFillDefaults.colors;
+  if (pad.mMarkerDefaults.styles) mMarkerDefaults.styles = pad.mMarkerDefaults.styles;
+  if (pad.mLineDefaults.styles) mLineDefaults.styles = pad.mLineDefaults.styles;
+  if (pad.mFillDefaults.styles) mFillDefaults.styles = pad.mFillDefaults.styles;
+  if (pad.mDrawingOptionDefaults.graph) mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
+  if (pad.mDrawingOptionDefaults.hist) mDrawingOptionDefaults.hist = pad.mDrawingOptionDefaults.hist;
+  if (pad.mDrawingOptionDefaults.hist2d) mDrawingOptionDefaults.hist2d = pad.mDrawingOptionDefaults.hist2d;
+  if (pad.mPalette) mPalette = pad.mPalette;
+  if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
+  if (pad.mRefFunc) mRefFunc = pad.mRefFunc;
+  for (auto& [axisLable, axis] : pad.mAxes) {
     mAxes[axisLable]; // default initiialize in case this axis was not yet defined
     mAxes[axisLable] += axis;
   }
@@ -751,14 +728,12 @@ Plot::Pad::Axis& Plot::Pad::operator[](const string& axis)
 //**************************************************************************************************
 Plot::Pad::Axis& Plot::Pad::GetAxis(const string& axis)
 {
-  const vector<string> allowedAxes = { "X", "Y", "Z" };
-  if(std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end())
-  {
+  const vector<string> allowedAxes = {"X", "Y", "Z"};
+  if (std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end()) {
     ERROR("Axis \"{}\" is not allowed! Please use \"X\", \"Y\" or \"Z\".", axis);
     std::exit(EXIT_FAILURE);
   }
-  if(mAxes.find(axis) == mAxes.end())
-  {
+  if (mAxes.find(axis) == mAxes.end()) {
     mAxes[axis] = Axis(axis);
   }
   return mAxes[axis];
@@ -771,8 +746,7 @@ Plot::Pad::Axis& Plot::Pad::GetAxis(const string& axis)
 //**************************************************************************************************
 Plot::Pad::Data& Plot::Pad::GetData(uint8_t dataID)
 {
-  if(dataID < 1 || dataID > mData.size())
-  {
+  if (dataID < 1 || dataID > mData.size()) {
     ERROR(
       "Data with ID {} is not defined! You can access only data that was already added to the pad.",
       dataID);
@@ -788,8 +762,7 @@ Plot::Pad::Data& Plot::Pad::GetData(uint8_t dataID)
 //**************************************************************************************************
 Plot::Pad::LegendBox& Plot::Pad::GetLegend(uint8_t legendID)
 {
-  if(legendID < 1 || legendID > mLegendBoxes.size())
-  {
+  if (legendID < 1 || legendID > mLegendBoxes.size()) {
     ERROR(
       "Legend with ID {} is not defined! You can access only legends that have already been added "
       "to the pad.",
@@ -806,8 +779,7 @@ Plot::Pad::LegendBox& Plot::Pad::GetLegend(uint8_t legendID)
 //**************************************************************************************************
 Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
 {
-  if(textID < 1 || textID > mTextBoxes.size())
-  {
+  if (textID < 1 || textID > mTextBoxes.size()) {
     ERROR(
       "Text with ID {} is not defined! You can access only texts that have already been added to "
       "the pad.",
@@ -929,17 +901,14 @@ Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const s
 {
   mType = "data";
 
-  if(legendLable != "") mLegend.lable = legendLable;
+  if (legendLable != "") mLegend.lable = legendLable;
   // in case input was specified further via inputIdentifier:some/path/in/file
   auto subPathPos = inputIdentifier.find(":");
-  if(subPathPos != string::npos)
-  {
+  if (subPathPos != string::npos) {
     // prepend path to plot name
     mName = inputIdentifier.substr(subPathPos + 1) + "/" + name;
     mInputIdentifier = inputIdentifier.substr(0, subPathPos);
-  }
-  else
-  {
+  } else {
     mName = name;
     mInputIdentifier = inputIdentifier;
   }
@@ -952,18 +921,15 @@ Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const s
 //**************************************************************************************************
 Plot::Pad::Data::Data(const ptree& dataTree) : Data()
 {
-  try
-  {
+  try {
     mType = dataTree.get<string>("type");
     mName = dataTree.get<string>("name");
     mInputIdentifier = dataTree.get<string>("inputIdentifier");
-  }
-  catch(...)
-  {
+  } catch (...) {
     ERROR("Could not construct data from ptree.");
     std::exit(EXIT_FAILURE);
   }
-  if(auto var = dataTree.get_optional<bool>("defines_frame")) mDefinesFrame = *var;
+  if (auto var = dataTree.get_optional<bool>("defines_frame")) mDefinesFrame = *var;
   read_from_tree_optional(dataTree, mLegend.lable, "legend_lable");
   read_from_tree_optional(dataTree, mLegend.identifier, "legend_id");
   read_from_tree_optional(dataTree, mDrawingOptions, "drawing_options");
@@ -997,7 +963,7 @@ ptree Plot::Pad::Data::GetPropertyTree()
   dataTree.put("type", mType);
   dataTree.put("name", mName);
   dataTree.put("inputIdentifier", mInputIdentifier);
-  if(mDefinesFrame) dataTree.put("defines_frame", mDefinesFrame);
+  if (mDefinesFrame) dataTree.put("defines_frame", mDefinesFrame);
   put_in_tree_optional(dataTree, mLegend.lable, "legend_lable");
   put_in_tree_optional(dataTree, mLegend.identifier, "legend_id");
   put_in_tree_optional(dataTree, mDrawingOptions, "drawing_options");
@@ -1203,13 +1169,10 @@ auto Plot::Pad::Data::SetFillStyle(int16_t style) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetFillOpacity(float_t opacity) -> decltype(*this)
 {
-  if(opacity < 0.f || opacity > 1.f)
-  {
+  if (opacity < 0.f || opacity > 1.f) {
     WARNING(
       "Illegal value for opacity! It has to be between 0 (transparent) and 1 (fully opaque).");
-  }
-  else
-  {
+  } else {
     mFill.scale = opacity;
   }
   return *this;
@@ -1251,14 +1214,11 @@ Plot::Pad::Ratio::Ratio(const string& name, const string& inputIdentifier, const
 //**************************************************************************************************
 Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
 {
-  try
-  {
+  try {
     mDenomName = dataTree.get<string>("denomName");
     mDenomInputIdentifier = dataTree.get<string>("denomInputID");
     mIsCorrelated = dataTree.get<bool>("isCorrelated");
-  }
-  catch(...)
-  {
+  } catch (...) {
     ERROR("Could not construct ratio from ptree.");
   }
 }
@@ -1311,12 +1271,9 @@ Plot::Pad::Axis::Axis(const string& axisName) : Axis()
 //**************************************************************************************************
 Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
 {
-  try
-  {
+  try {
     mName = axisTree.get<string>("name");
-  }
-  catch(...)
-  {
+  } catch (...) {
     ERROR("Could not construct axis from ptree.");
   }
   read_from_tree_optional(axisTree, mTitle, "title");
@@ -1386,28 +1343,28 @@ ptree Plot::Pad::Axis::GetPropertyTree()
 void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
 {
   mName = axis.mName;
-  if(axis.mRange.min) mRange.min = axis.mRange.min;
-  if(axis.mRange.max) mRange.max = axis.mRange.max;
-  if(axis.mTitle) mTitle = axis.mTitle;
-  if(axis.mNumDivisions) mNumDivisions = axis.mNumDivisions;
-  if(axis.mMaxDigits) mMaxDigits = axis.mMaxDigits;
-  if(axis.mTickLength) mTickLength = axis.mTickLength;
-  if(axis.mAxisColor) mAxisColor = axis.mAxisColor;
-  if(axis.mIsLog) mIsLog = axis.mIsLog;
-  if(axis.mIsGrid) mIsGrid = axis.mIsGrid;
-  if(axis.mIsOppositeTicks) mIsOppositeTicks = axis.mIsOppositeTicks;
-  if(axis.mTitleProperties.font) mTitleProperties.font = axis.mTitleProperties.font;
-  if(axis.mTitleProperties.size) mTitleProperties.size = axis.mTitleProperties.size;
-  if(axis.mTitleProperties.color) mTitleProperties.color = axis.mTitleProperties.color;
-  if(axis.mTitleProperties.offset) mTitleProperties.offset = axis.mTitleProperties.offset;
-  if(axis.mTitleProperties.center) mTitleProperties.center = axis.mTitleProperties.center;
-  if(axis.mLableProperties.font) mLableProperties.font = axis.mLableProperties.font;
-  if(axis.mLableProperties.size) mLableProperties.size = axis.mLableProperties.size;
-  if(axis.mLableProperties.color) mLableProperties.color = axis.mLableProperties.color;
-  if(axis.mLableProperties.offset) mLableProperties.offset = axis.mLableProperties.offset;
-  if(axis.mLableProperties.center) mLableProperties.center = axis.mLableProperties.center;
-  if(axis.mTimeFormat) mTimeFormat = axis.mTimeFormat;
-  if(axis.mTickOrientation) mTickOrientation = axis.mTickOrientation;
+  if (axis.mRange.min) mRange.min = axis.mRange.min;
+  if (axis.mRange.max) mRange.max = axis.mRange.max;
+  if (axis.mTitle) mTitle = axis.mTitle;
+  if (axis.mNumDivisions) mNumDivisions = axis.mNumDivisions;
+  if (axis.mMaxDigits) mMaxDigits = axis.mMaxDigits;
+  if (axis.mTickLength) mTickLength = axis.mTickLength;
+  if (axis.mAxisColor) mAxisColor = axis.mAxisColor;
+  if (axis.mIsLog) mIsLog = axis.mIsLog;
+  if (axis.mIsGrid) mIsGrid = axis.mIsGrid;
+  if (axis.mIsOppositeTicks) mIsOppositeTicks = axis.mIsOppositeTicks;
+  if (axis.mTitleProperties.font) mTitleProperties.font = axis.mTitleProperties.font;
+  if (axis.mTitleProperties.size) mTitleProperties.size = axis.mTitleProperties.size;
+  if (axis.mTitleProperties.color) mTitleProperties.color = axis.mTitleProperties.color;
+  if (axis.mTitleProperties.offset) mTitleProperties.offset = axis.mTitleProperties.offset;
+  if (axis.mTitleProperties.center) mTitleProperties.center = axis.mTitleProperties.center;
+  if (axis.mLableProperties.font) mLableProperties.font = axis.mLableProperties.font;
+  if (axis.mLableProperties.size) mLableProperties.size = axis.mLableProperties.size;
+  if (axis.mLableProperties.color) mLableProperties.color = axis.mLableProperties.color;
+  if (axis.mLableProperties.offset) mLableProperties.offset = axis.mLableProperties.offset;
+  if (axis.mLableProperties.center) mLableProperties.center = axis.mLableProperties.center;
+  if (axis.mTimeFormat) mTimeFormat = axis.mTimeFormat;
+  if (axis.mTickOrientation) mTickOrientation = axis.mTickOrientation;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -1620,7 +1577,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetNoBox()
  */
 //**************************************************************************************************
 Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const string& text)
-  : Box(xPos, yPos), mText{ text }
+  : Box(xPos, yPos), mText{text}
 {
 }
 
@@ -1629,7 +1586,7 @@ Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const string& text)
  * TextBox constructor with automatic placing.
  */
 //**************************************************************************************************
-Plot::Pad::TextBox::TextBox(const string& text) : Box(), mText{ text }
+Plot::Pad::TextBox::TextBox(const string& text) : Box(), mText{text}
 {
   SetAutoPlacement();
 }
@@ -1641,12 +1598,9 @@ Plot::Pad::TextBox::TextBox(const string& text) : Box(), mText{ text }
 //**************************************************************************************************
 Plot::Pad::TextBox::TextBox(const ptree& textBoxTree) : Box(textBoxTree)
 {
-  try
-  {
+  try {
     mText = textBoxTree.get<string>("text");
-  }
-  catch(...)
-  {
+  } catch (...) {
     ERROR("Could not construct textbox from ptree.");
   }
 }
@@ -1723,10 +1677,8 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
   read_from_tree_optional(legendBoxTree, mFillDefault.style, "default_fill_style");
   read_from_tree_optional(legendBoxTree, mFillDefault.scale, "default_fill_opacity");
 
-  for(auto& content : legendBoxTree)
-  {
-    if(str_contains(content.first, "ENTRY"))
-    {
+  for (auto& content : legendBoxTree) {
+    if (str_contains(content.first, "ENTRY")) {
       uint8_t legendEntryID = std::stoi(content.first.substr(content.first.find("_") + 1));
       mLegendEntriesUser[legendEntryID] = LegendEntry(content.second);
     }
@@ -1757,8 +1709,7 @@ ptree Plot::Pad::LegendBox::GetPropertyTree()
   put_in_tree_optional(legendBoxTree, mFillDefault.style, "default_fill_style");
   put_in_tree_optional(legendBoxTree, mFillDefault.scale, "default_fill_opacity");
 
-  for(auto& [legendEntryID, legendEntry] : mLegendEntriesUser)
-  {
+  for (auto& [legendEntryID, legendEntry] : mLegendEntriesUser) {
     legendBoxTree.put_child("ENTRY_" + std::to_string(legendEntryID),
                             legendEntry.GetPropertyTree());
   }
@@ -1863,19 +1814,13 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& 
 void Plot::Pad::LegendBox::MergeLegendEntries()
 {
 
-  for(auto iter = mLegendEntriesUser.begin(); iter != mLegendEntriesUser.end(); ++iter)
-  {
+  for (auto iter = mLegendEntriesUser.begin(); iter != mLegendEntriesUser.end(); ++iter) {
     uint8_t legendIndex = iter->first;
-    if(legendIndex == mLegendEntries.size() + 1)
-    {
+    if (legendIndex == mLegendEntries.size() + 1) {
       mLegendEntries.push_back(iter->second);
-    }
-    else if(legendIndex > 0 && legendIndex < mLegendEntries.size())
-    {
+    } else if (legendIndex > 0 && legendIndex < mLegendEntries.size()) {
       mLegendEntries[legendIndex - 1] += iter->second;
-    }
-    else
-    {
+    } else {
       ERROR("Invalid index ({}) specified for legend entry!", legendIndex);
     }
   }

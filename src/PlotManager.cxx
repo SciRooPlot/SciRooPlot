@@ -68,27 +68,22 @@ PlotManager::PlotManager() : mApp(std::unique_ptr<TApplication>(new TApplication
 PlotManager::~PlotManager()
 {
   mDataLedger->Delete();
-  if(!mPlotLedger.empty())
-  {
-    if(mSaveToRootFile == true)
-    {
+  if (!mPlotLedger.empty()) {
+    if (mSaveToRootFile == true) {
       TFile outputFile(mOutputFileName.data(), "RECREATE");
-      if(outputFile.IsZombie())
-      {
+      if (outputFile.IsZombie()) {
         return;
       }
       outputFile.cd();
-      uint32_t nPlots{ 0u };
-      for(auto& plotTuple : mPlotLedger)
-      {
+      uint32_t nPlots{0u};
+      for (auto& plotTuple : mPlotLedger) {
         auto canvas = plotTuple.second;
         string uniqueName = plotTuple.first;
         size_t delimiterPos = uniqueName.find(gNameGroupSeparator.data());
         string plotName = uniqueName.substr(0, delimiterPos);
         string subfolder = uniqueName.substr(delimiterPos + gNameGroupSeparator.size());
         std::replace(subfolder.begin(), subfolder.end(), ':', '/');
-        if(!outputFile.GetDirectory(subfolder.data(), kFALSE, "cd"))
-        {
+        if (!outputFile.GetDirectory(subfolder.data(), kFALSE, "cd")) {
           outputFile.mkdir(subfolder.data());
         }
         outputFile.cd(subfolder.data());
@@ -120,9 +115,8 @@ void PlotManager::ClearLoadedData()
 //**************************************************************************************************
 bool PlotManager::IsPlotAlreadyBooked(const string& plotName)
 {
-  for(auto& plot : mPlots)
-  {
-    if(plot.GetUniqueName() == plotName) return true;
+  for (auto& plot : mPlots) {
+    if (plot.GetUniqueName() == plotName) return true;
   }
   return false;
 };
@@ -146,15 +140,14 @@ void PlotManager::SetOutputDirectory(const string& path)
 void PlotManager::AddInputDataFiles(const string& inputIdentifier,
                                     const vector<string>& inputFilePathList)
 {
-  if(mInputFiles.find(inputIdentifier) != mInputFiles.end())
-  {
+  if (mInputFiles.find(inputIdentifier) != mInputFiles.end()) {
     WARNING("Replacing input identifier {}.", inputIdentifier);
   }
   mInputFiles[inputIdentifier] = inputFilePathList;
 }
 void PlotManager::AddInputDataFile(const string& inputIdentifier, const string& inputFilePath)
 {
-  vector<string> inputFilePathList = { inputFilePath };
+  vector<string> inputFilePathList = {inputFilePath};
   AddInputDataFiles(inputIdentifier, inputFilePathList);
 }
 
@@ -166,11 +159,9 @@ void PlotManager::AddInputDataFile(const string& inputIdentifier, const string& 
 void PlotManager::DumpInputDataFiles(const string& configFileName)
 {
   ptree inputFileTree;
-  for(auto& inFileTuple : mInputFiles)
-  {
+  for (auto& inFileTuple : mInputFiles) {
     ptree filesOfIdentifier;
-    for(auto& fileName : inFileTuple.second)
-    {
+    for (auto& fileName : inFileTuple.second) {
       filesOfIdentifier.add("FILE", fileName);
     }
     inputFileTree.put_child(inFileTuple.first, filesOfIdentifier);
@@ -189,23 +180,18 @@ void PlotManager::DumpInputDataFiles(const string& configFileName)
 void PlotManager::LoadInputDataFiles(const string& configFileName)
 {
   ptree inputFileTree;
-  try
-  {
+  try {
     using boost::property_tree::read_xml;
     read_xml(gSystem->ExpandPathName(configFileName.data()), inputFileTree);
-  }
-  catch(...)
-  {
+  } catch (...) {
     ERROR("Cannot load file {}.", configFileName);
     return;
   }
-  for(auto& inputPair : inputFileTree)
-  {
+  for (auto& inputPair : inputFileTree) {
     string inputIdentifier = inputPair.first;
     vector<string> allFileNames;
     allFileNames.reserve(inputPair.second.size());
-    for(auto& file : inputPair.second)
-    {
+    for (auto& file : inputPair.second) {
       allFileNames.push_back(file.second.get_value<string>());
     }
     AddInputDataFiles(inputIdentifier, allFileNames);
@@ -220,7 +206,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
 //**************************************************************************************************
 void PlotManager::AddPlot(Plot& plot)
 {
-  if(plot.GetFigureGroup() == "TEMPLATES") ERROR("You cannot use reserved group name TEMPLATES!");
+  if (plot.GetFigureGroup() == "TEMPLATES") ERROR("You cannot use reserved group name TEMPLATES!");
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [plot](Plot& curPlot) mutable {
                                 return curPlot.GetUniqueName() == plot.GetUniqueName();
@@ -239,8 +225,7 @@ void PlotManager::AddPlotTemplate(Plot& plotTemplate)
   plotTemplate.SetFigureGroup("TEMPLATES");
   mPlotTemplates.erase(std::remove_if(mPlotTemplates.begin(), mPlotTemplates.end(),
                                       [plotTemplate](Plot& curPlotTemplate) mutable {
-                                        return curPlotTemplate.GetUniqueName()
-                                               == plotTemplate.GetUniqueName();
+                                        return curPlotTemplate.GetUniqueName() == plotTemplate.GetUniqueName();
                                       }),
                        mPlotTemplates.end());
   mPlotTemplates.push_back(std::move(plotTemplate));
@@ -256,31 +241,23 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
 {
   set<string> usedTemplates;
   std::for_each(mPlots.begin(), mPlots.end(), [&usedTemplates](auto& plot) {
-    if(plot.GetPlotTemplateName()) usedTemplates.insert(*plot.GetPlotTemplateName());
+    if (plot.GetPlotTemplateName()) usedTemplates.insert(*plot.GetPlotTemplateName());
   });
 
   ptree plotTree;
-  for(vector<Plot>& plots : { std::ref(mPlotTemplates), std::ref(mPlots) })
-  {
-    for(Plot& plot : plots)
-    {
+  for (vector<Plot>& plots : {std::ref(mPlotTemplates), std::ref(mPlots)}) {
+    for (Plot& plot : plots) {
 
-      if(plot.GetFigureGroup() == "TEMPLATES"
-         && usedTemplates.find(plot.GetName()) == usedTemplates.end())
-      {
+      if (plot.GetFigureGroup() == "TEMPLATES" && usedTemplates.find(plot.GetName()) == usedTemplates.end()) {
         continue;
-      }
-      else if(figureGroup != "")
-      {
-        if(plot.GetFigureGroup() != figureGroup) continue;
-        if(!plotNames.empty())
-        {
+      } else if (figureGroup != "") {
+        if (plot.GetFigureGroup() != figureGroup) continue;
+        if (!plotNames.empty()) {
           bool found = false;
-          for(auto& plotName : plotNames)
-          {
-            if(plotName == plot.GetName()) found = true;
+          for (auto& plotName : plotNames) {
+            if (plotName == plot.GetName()) found = true;
           }
-          if(!found) continue;
+          if (!found) continue;
         }
       }
       string displayedName = plot.GetUniqueName();
@@ -298,7 +275,7 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
 void PlotManager::DumpPlot(const string& plotFileName, const string& figureGroup,
                            const string& plotName)
 {
-  DumpPlots(plotFileName, figureGroup, { plotName });
+  DumpPlots(plotFileName, figureGroup, {plotName});
 }
 
 //**************************************************************************************************
@@ -308,8 +285,7 @@ void PlotManager::DumpPlot(const string& plotFileName, const string& figureGroup
 //**************************************************************************************************
 ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
 {
-  if(mPropertyTreeCache.find(plotFileName) == mPropertyTreeCache.end())
-  {
+  if (mPropertyTreeCache.find(plotFileName) == mPropertyTreeCache.end()) {
     ptree tempTree;
     using boost::property_tree::read_xml;
     read_xml(gSystem->ExpandPathName(plotFileName.data()), tempTree);
@@ -326,78 +302,64 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
 void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
 {
   // if plot already exists, delete the old one first
-  if(mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end())
-  {
+  if (mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()) {
     ERROR("Plot {} was already created. Replacing it.", plot.GetUniqueName());
     mPlotLedger.erase(plot.GetUniqueName());
   }
 
-  if(plot.GetFigureGroup() == "")
-  {
+  if (plot.GetFigureGroup() == "") {
     ERROR("No figure gropu was specified.");
     return;
   }
 
-  if(outputMode.find("file") != string::npos)
-  {
+  if (outputMode.find("file") != string::npos) {
     mSaveToRootFile = true;
   }
   Plot fullPlot = plot;
-  if(plot.GetPlotTemplateName())
-  {
+  if (plot.GetPlotTemplateName()) {
     string plotTemplateName = *plot.GetPlotTemplateName();
     auto iterator = std::find_if(
       mPlotTemplates.begin(), mPlotTemplates.end(),
       [&](Plot& plotTemplate) { return plotTemplate.GetName() == plotTemplateName; });
-    if(iterator != mPlotTemplates.end())
-    {
+    if (iterator != mPlotTemplates.end()) {
       fullPlot = *iterator + plot;
-    }
-    else
-    {
+    } else {
       WARNING("Could not find plot template named {}.", plotTemplateName);
     }
   }
   PlotPainter painter;
   shared_ptr<TCanvas> canvas = painter.GeneratePlot(fullPlot, mDataLedger);
-  if(!canvas) return;
+  if (!canvas) return;
   LOG("Created plot \"{}\".", canvas->GetName());
 
   // if interactive mode is specified, open window instead of saving the plot
-  if(outputMode.find("interactive") != string::npos)
-  {
+  if (outputMode.find("interactive") != string::npos) {
 
     mPlotLedger[plot.GetUniqueName()] = canvas;
     mPlotViewHistory.push_back(plot.GetUniqueName());
-    uint32_t currPlotIndex{ static_cast<uint32_t>(mPlotViewHistory.size() - 1) };
+    uint32_t currPlotIndex{static_cast<uint32_t>(mPlotViewHistory.size() - 1)};
 
     // move new canvas to position of previous window
     int32_t curXpos{};
     int32_t curYpos{};
-    const int32_t windowOffsetY{ 28 }; // might depend on os (was 22)
-    if(currPlotIndex > 0)
-    {
+    const int32_t windowOffsetY{28}; // might depend on os (was 22)
+    if (currPlotIndex > 0) {
       curXpos = mPlotLedger[mPlotViewHistory[currPlotIndex - 1]]->GetWindowTopX();
       curYpos = mPlotLedger[mPlotViewHistory[currPlotIndex - 1]]->GetWindowTopY();
       canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
     }
-    while(!gSystem->ProcessEvents() && gROOT->GetSelectedPad())
-    {
-      if(canvas->GetEvent() == kButton1Double)
-      {
+    while (!gSystem->ProcessEvents() && gROOT->GetSelectedPad()) {
+      if (canvas->GetEvent() == kButton1Double) {
         curXpos = canvas->GetWindowTopX();
         curYpos = canvas->GetWindowTopY();
         TRootCanvas* canvasWindow = ((TRootCanvas*)canvas->GetCanvasImp());
         canvasWindow->UnmapWindow();
-        bool forward{ ((double_t)canvas->GetEventX() / (double_t)canvas->GetWw() > 0.5) };
-        if(forward)
-        {
-          if(currPlotIndex == mPlotViewHistory.size() - 1) break;
+        bool forward{((double_t)canvas->GetEventX() / (double_t)canvas->GetWw() > 0.5)};
+        if (forward) {
+          if (currPlotIndex == mPlotViewHistory.size() - 1) break;
           ++currPlotIndex;
-        }
-        else
-        {
-          if(currPlotIndex != 0) currPlotIndex--;
+        } else {
+          if (currPlotIndex != 0) currPlotIndex--;
         }
         canvas = mPlotLedger[mPlotViewHistory[currPlotIndex]];
         canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
@@ -410,34 +372,30 @@ void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
 
   string subFolder = plot.GetFigureCategory();
   string fileEnding = ".pdf";
-  if(outputMode.find("macro") != string::npos)
-  {
+  if (outputMode.find("macro") != string::npos) {
     fileEnding = ".C";
   }
-  if(outputMode.find("png") != string::npos)
-  {
+  if (outputMode.find("png") != string::npos) {
     fileEnding = ".png";
   }
-  if(outputMode.find("eps") != string::npos)
-  {
+  if (outputMode.find("eps") != string::npos) {
     fileEnding = ".eps";
   }
 
   string fileName = plot.GetUniqueName();
 
-  if(outputMode.find("file") != string::npos)
-  {
+  if (outputMode.find("file") != string::npos) {
     mPlotLedger[plot.GetUniqueName()] = canvas;
     return;
   }
 
-  if(!mUseUniquePlotNames) fileName = plot.GetName();
+  if (!mUseUniquePlotNames) fileName = plot.GetName();
   std::replace(fileName.begin(), fileName.end(), '/', '_');
   std::replace(fileName.begin(), fileName.end(), ':', '_');
 
   // create output folders and files
   string folderName = mOutputDirectory + "/" + plot.GetFigureGroup();
-  if(subFolder != "") folderName += "/" + subFolder;
+  if (subFolder != "") folderName += "/" + subFolder;
   gSystem->Exec((string("mkdir -p ") + folderName).data());
   canvas->SaveAs((folderName + "/" + fileName + fileEnding).data());
 }
@@ -456,42 +414,32 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   vector<Plot*> selectedPlots;
 
   // first determine which data needs to be loaded
-  for(auto& plot : mPlots)
-  {
-    if(!saveAll
-       && !(plot.GetFigureGroup() == figureGroup && plot.GetFigureCategory() == figureCategory))
+  for (auto& plot : mPlots) {
+    if (!saveAll && !(plot.GetFigureGroup() == figureGroup && plot.GetFigureCategory() == figureCategory))
       continue;
-    if(saveSpecificPlots
-       && std::find(plotNames.begin(), plotNames.end(), plot.GetName()) == plotNames.end())
+    if (saveSpecificPlots && std::find(plotNames.begin(), plotNames.end(), plot.GetName()) == plotNames.end())
       continue;
-    if(!plotNames.empty())
+    if (!plotNames.empty())
       plotNames.erase(std::remove(plotNames.begin(), plotNames.end(), plot.GetName()),
                       plotNames.end());
     selectedPlots.push_back(&plot);
 
     // check which input data are needed for plot creation and accumulate in requiredData map
-    for(auto& [padID, pad] : plot.GetPads())
-    {
-      for(auto& data : pad.GetData())
-      {
+    for (auto& [padID, pad] : plot.GetPads()) {
+      for (auto& data : pad.GetData()) {
         // if this data entry is not loaded already, add it to required data
-        if(mLoadedData[GetNameRegisterID(data->GetInputID())].find(
-             GetNameRegisterID(data->GetName()))
-           == mLoadedData[GetNameRegisterID(data->GetInputID())].end())
-        {
+        if (mLoadedData[GetNameRegisterID(data->GetInputID())].find(
+              GetNameRegisterID(data->GetName())) == mLoadedData[GetNameRegisterID(data->GetInputID())].end()) {
           requiredData[GetNameRegisterID(data->GetInputID())].insert(
             GetNameRegisterID(data->GetName()));
         }
         // for ratios also do the same for denominator
-        if(data->GetType() == "ratio"
-           && mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)
-                                              ->GetDenomIdentifier())]
-                  .find(GetNameRegisterID(
-                    std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomName()))
-                == mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)
-                                                   ->GetDenomIdentifier())]
-                     .end())
-        {
+        if (data->GetType() == "ratio" && mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)
+                                                                          ->GetDenomIdentifier())]
+                                              .find(GetNameRegisterID(
+                                                std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomName())) == mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)
+                                                                                                                                                       ->GetDenomIdentifier())]
+                                                                                                                         .end()) {
           requiredData[GetNameRegisterID(
                          std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomIdentifier())]
             .insert(
@@ -502,27 +450,22 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   }
 
   // were definitions for all requeseted plots available?
-  if(!plotNames.empty())
-  {
-    for(auto& plotName : plotNames)
-    {
+  if (!plotNames.empty()) {
+    for (auto& plotName : plotNames) {
       WARNING("Could not find plot \"{}\" in group \"{}\"", plotName,
               figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
     }
   }
 
   // now read the data
-  for(auto& inputIDTuple : requiredData)
-  {
+  for (auto& inputIDTuple : requiredData) {
     vector<string> dataNames;
     vector<string> uniqueDataNames;
     dataNames.reserve(inputIDTuple.second.size());
     uniqueDataNames.reserve(inputIDTuple.second.size());
-    for(auto& dataNameID : inputIDTuple.second)
-    {
+    for (auto& dataNameID : inputIDTuple.second) {
       dataNames.push_back(GetNameRegisterName(dataNameID));
-      uniqueDataNames.push_back(GetNameRegisterName(dataNameID) + gNameGroupSeparator
-                                + GetNameRegisterName(inputIDTuple.first));
+      uniqueDataNames.push_back(GetNameRegisterName(dataNameID) + gNameGroupSeparator + GetNameRegisterName(inputIDTuple.first));
     }
     ReadDataFromCSVFiles(*mDataLedger, mInputFiles[GetNameRegisterName(inputIDTuple.first)],
                          GetNameRegisterName(inputIDTuple.first));
@@ -532,15 +475,12 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   }
 
   // generate plots
-  for(auto plot : selectedPlots)
-  {
-    if(IsPlotPossible(*plot))
+  for (auto plot : selectedPlots) {
+    if (IsPlotPossible(*plot))
       GeneratePlot(*plot, outputMode);
-    else
-    {
+    else {
       ERROR("Plot \"{}\" in figure group \"{}\" could not be created.", plot->GetName(),
-            plot->GetFigureGroup()
-              + ((plot->GetFigureCategory() != "") ? ":" + plot->GetFigureCategory() : ""));
+            plot->GetFigureGroup() + ((plot->GetFigureCategory() != "") ? ":" + plot->GetFigureCategory() : ""));
     }
   }
 }
@@ -552,8 +492,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
 //**************************************************************************************************
 int32_t PlotManager::GetNameRegisterID(const string& name)
 {
-  if(mNameRegister.find(name) == mNameRegister.end())
-  {
+  if (mNameRegister.find(name) == mNameRegister.end()) {
     mNameRegister[name] = mNameRegister.size();
   }
   return mNameRegister[name];
@@ -566,9 +505,8 @@ int32_t PlotManager::GetNameRegisterID(const string& name)
 //**************************************************************************************************
 const string& PlotManager::GetNameRegisterName(int32_t nameID)
 {
-  for(auto& registerTuple : mNameRegister)
-  {
-    if(registerTuple.second == nameID) return registerTuple.first;
+  for (auto& registerTuple : mNameRegister) {
+    if (registerTuple.second == nameID) return registerTuple.first;
   }
   ERROR("Something went terribly wrong. Name was not found in register. Exiting...");
   std::exit(EXIT_FAILURE);
@@ -587,16 +525,14 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
   bool isSearchRequest = (mode == "find") ? true : false;
   vector<std::pair<std::regex, std::regex>> groupCategoryRegex;
   groupCategoryRegex.reserve(figureGroupsWithCategoryUser.size());
-  for(auto& figureGroupWithCategoryUser : figureGroupsWithCategoryUser)
-  {
+  for (auto& figureGroupWithCategoryUser : figureGroupsWithCategoryUser) {
     // by default select all groups and all categories
     string group = ".*";
     string category = ".*";
     vector<string> groupCat = splitString(figureGroupWithCategoryUser, ':');
-    if(groupCat.size() > 0 && !groupCat[0].empty()) group = groupCat[0];
-    if(groupCat.size() > 1 && !groupCat[1].empty()) category = groupCat[1];
-    if(groupCat.size() > 2)
-    {
+    if (groupCat.size() > 0 && !groupCat[0].empty()) group = groupCat[0];
+    if (groupCat.size() > 1 && !groupCat[1].empty()) category = groupCat[1];
+    if (groupCat.size() > 2) {
       ERROR(
         "Do not put \":\" in your regular expressions! Colons should be used solely to separate "
         "figureGroup and figureCategory");
@@ -613,83 +549,63 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
                  [](auto& plotNameUser) { return std::regex(plotNameUser); });
 
   ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
-  for(auto& plotGroupTree : inputTree)
-  {
+  for (auto& plotGroupTree : inputTree) {
     // first filter by group
     string groupIdentifier = plotGroupTree.first.substr(string("GROUP::").size());
     bool isTemplate = (groupIdentifier == "TEMPLATES");
-    if(std::find_if(groupCategoryRegex.begin(), groupCategoryRegex.end(),
-                    [groupIdentifier](std::pair<std::regex, std::regex>& curGroupCatRegex) {
-                      return std::regex_match(groupIdentifier, curGroupCatRegex.first);
-                    })
-       == groupCategoryRegex.end())
-    {
-      if(!isTemplate) continue;
+    if (std::find_if(groupCategoryRegex.begin(), groupCategoryRegex.end(),
+                     [groupIdentifier](std::pair<std::regex, std::regex>& curGroupCatRegex) {
+                       return std::regex_match(groupIdentifier, curGroupCatRegex.first);
+                     }) == groupCategoryRegex.end()) {
+      if (!isTemplate) continue;
     }
 
-    for(auto& plotTree : plotGroupTree.second)
-    {
+    for (auto& plotTree : plotGroupTree.second) {
       string plotName = plotTree.second.get<string>("name");
       string figureGroup = plotTree.second.get<string>("figureGroup");
       string figureCategory = plotTree.second.get<string>("figureCategory");
 
-      if(std::find_if(
-           groupCategoryRegex.begin(), groupCategoryRegex.end(),
-           [figureGroup, figureCategory](std::pair<std::regex, std::regex>& curGroupCatRegex) {
-             return std::regex_match(figureGroup, curGroupCatRegex.first)
-                    && std::regex_match(figureCategory, curGroupCatRegex.second);
-           })
-         == groupCategoryRegex.end())
-      {
-        if(!isTemplate) continue;
+      if (std::find_if(
+            groupCategoryRegex.begin(), groupCategoryRegex.end(),
+            [figureGroup, figureCategory](std::pair<std::regex, std::regex>& curGroupCatRegex) {
+              return std::regex_match(figureGroup, curGroupCatRegex.first) && std::regex_match(figureCategory, curGroupCatRegex.second);
+            }) == groupCategoryRegex.end()) {
+        if (!isTemplate) continue;
       }
 
-      if(std::find_if(plotNamesRegex.begin(), plotNamesRegex.end(),
-                      [plotName](std::regex& curPlotNameRegex) {
-                        return std::regex_match(plotName, curPlotNameRegex);
-                      })
-         == plotNamesRegex.end())
-      {
-        if(!isTemplate) continue;
+      if (std::find_if(plotNamesRegex.begin(), plotNamesRegex.end(),
+                       [plotName](std::regex& curPlotNameRegex) {
+                         return std::regex_match(plotName, curPlotNameRegex);
+                       }) == plotNamesRegex.end()) {
+        if (!isTemplate) continue;
       }
 
-      if(isTemplate)
-      {
+      if (isTemplate) {
         Plot plot(plotTree.second);
         AddPlotTemplate(plot);
         continue;
       }
 
       ++nFoundPlots;
-      if(isSearchRequest)
-      {
+      if (isSearchRequest) {
         PRINT("-- found plot \033[1;32m{}\033[0m in group \033[1;33m{}\033[0m", plotName,
               figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
-      }
-      else
-      {
-        try
-        {
+      } else {
+        try {
           Plot plot(plotTree.second);
           AddPlot(plot);
-        }
-        catch(...)
-        {
+        } catch (...) {
           ERROR("Could not generate plot {} from XML file.", plotTree.first);
         }
       }
     }
   }
-  if(nFoundPlots == 0)
-  {
+  if (nFoundPlots == 0) {
     ERROR("Requested plots are not defined.");
-  }
-  else
-  {
+  } else {
     INFO("Found {} plots matching the request.", nFoundPlots);
   }
-  if(!isSearchRequest && mode != "load")
-  {
+  if (!isSearchRequest && mode != "load") {
     // now produce the loaded plots
     CreatePlots("", "", {}, mode);
   }
@@ -705,8 +621,7 @@ vector<string> PlotManager::splitString(const string& argString, char deliminato
   vector<string> arguments;
   string currArg;
   std::istringstream argStream(argString);
-  while(std::getline(argStream, currArg, deliminator))
-  {
+  while (std::getline(argStream, currArg, deliminator)) {
     arguments.push_back(currArg);
   }
   return arguments;
@@ -720,9 +635,8 @@ vector<string> PlotManager::splitString(const string& argString, char deliminato
 void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, const vector<string>& fileNames,
                                        const string& inputIdentifier)
 {
-  for(auto& inputFileName : fileNames)
-  {
-    if(inputFileName.find(".csv") == string::npos) continue;
+  for (auto& inputFileName : fileNames) {
+    if (inputFileName.find(".csv") == string::npos) continue;
     // extract from path the csv file name that will then become graph name TODO: protect this
     // against wrong usage...
     string graphName = inputFileName.substr(
@@ -746,34 +660,29 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<str
 {
   // first determine if which sub-folders are requested by the user
   set<string> dataSubSpecs;
-  for(auto& dataName : dataNames)
-  {
+  for (auto& dataName : dataNames) {
     auto pathPos = dataName.find_last_of("/");
     string subSpec;
-    if(pathPos != string::npos)
-    {
+    if (pathPos != string::npos) {
       subSpec = dataName.substr(0, pathPos);
     }
     dataSubSpecs.insert(subSpec);
   }
 
-  for(auto& inputFileName : fileNames)
-  {
-    if(dataNames.empty()) break;
-    if(inputFileName.find(".root") == string::npos) continue;
+  for (auto& inputFileName : fileNames) {
+    if (dataNames.empty()) break;
+    if (inputFileName.find(".root") == string::npos) continue;
     // first check if sub-structure is defined
     std::istringstream ss(inputFileName);
     vector<string> tokens;
     string token;
-    while(std::getline(ss, token, ':'))
-    {
+    while (std::getline(ss, token, ':')) {
       tokens.push_back(token);
     }
     string fileName = tokens[0];
 
     TFile inputFile(fileName.data(), "READ");
-    if(inputFile.IsZombie())
-    {
+    if (inputFile.IsZombie()) {
       ERROR("Input file {} not found.", fileName);
       break;
     }
@@ -781,19 +690,16 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<str
     TObject* folder = &inputFile;
 
     // find top level entry point for this input file
-    if(tokens.size() > 1)
-    {
+    if (tokens.size() > 1) {
       std::istringstream path(tokens[1]);
       vector<string> subDirs;
       string directory;
-      while(std::getline(path, directory, '/'))
-      {
+      while (std::getline(path, directory, '/')) {
         subDirs.push_back(directory);
       }
       // append subspecification from input name
       folder = FindSubDirectory(folder, subDirs);
-      if(!folder)
-      {
+      if (!folder) {
         ERROR("Subdirectory \"{}\" not found in \"{}\".", tokens[1], fileName);
         return;
       }
@@ -802,43 +708,36 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<str
     // there might be subfolders explicitly specified by the user
     vector<string> remainingDataNames;
     vector<string> remainingNewDataNames;
-    for(auto& dataSubSpec : dataSubSpecs)
-    {
+    for (auto& dataSubSpec : dataSubSpecs) {
       vector<string> curDataNames;
       vector<string> curNewDataNames;
 
-      for(size_t i = 0; i < dataNames.size(); ++i)
-      {
-        if(dataNames[i] == "") continue;
+      for (size_t i = 0; i < dataNames.size(); ++i) {
+        if (dataNames[i] == "") continue;
         auto pathPos = dataNames[i].find_last_of("/");
         string tempSubSpec;
-        if(pathPos != string::npos)
-        {
+        if (pathPos != string::npos) {
           tempSubSpec = dataNames[i].substr(0, pathPos);
         }
-        if(tempSubSpec == dataSubSpec)
-        {
+        if (tempSubSpec == dataSubSpec) {
           curDataNames.push_back(std::move(dataNames[i]));
           curNewDataNames.push_back(std::move(newDataNames[i]));
         }
       }
-      if(curDataNames.empty()) continue;
+      if (curDataNames.empty()) continue;
       // now find subdirectory belonging to subspec
       std::istringstream path(dataSubSpec);
       vector<string> subDirs;
       string directory;
-      while(std::getline(path, directory, '/'))
-      {
+      while (std::getline(path, directory, '/')) {
         subDirs.push_back(directory);
       }
       // append subspecification from input name
       TObject* subfolder = FindSubDirectory(folder, subDirs);
-      if(subfolder)
-      {
+      if (subfolder) {
         // recursively traverse the file and look for input files
         ReadData(subfolder, outputDataArray, curDataNames, curNewDataNames);
-        if(subfolder != &inputFile)
-        {
+        if (subfolder != &inputFile) {
           delete subfolder;
           subfolder = nullptr;
         }
@@ -861,23 +760,18 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<str
               std::back_inserter(newDataNames));
   }
 
-  if(!dataNames.empty())
-  {
+  if (!dataNames.empty()) {
     WARNING("Not all required inputs could be found.");
-    string inputIdentifier = newDataNames[0].substr(newDataNames[0].find(gNameGroupSeparator)
-                                                    + gNameGroupSeparator.size());
+    string inputIdentifier = newDataNames[0].substr(newDataNames[0].find(gNameGroupSeparator) + gNameGroupSeparator.size());
     PRINT("None of the files of input identifier \"{}\":", inputIdentifier);
-    if(fileNames.empty())
-    {
+    if (fileNames.empty()) {
       PRINT(" - no file was specified (!)");
-    }
-    else
-    {
-      for(auto& inputFileName : fileNames)
+    } else {
+      for (auto& inputFileName : fileNames)
         PRINT(" - {}", inputFileName);
     }
     PRINT("contain the follwowing data:");
-    for(auto& dataName : newDataNames)
+    for (auto& dataName : newDataNames)
       PRINT(" - {}", dataName.substr(0, dataName.find(gNameGroupSeparator)));
   }
 }
@@ -889,51 +783,38 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<str
 //**************************************************************************************************
 TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
 {
-  if(!folder) return nullptr;
+  if (!folder) return nullptr;
   bool deleteFolder = true;
-  if(folder->InheritsFrom("TFile")) deleteFolder = false;
+  if (folder->InheritsFrom("TFile")) deleteFolder = false;
 
-  if(subDirs.size() == 0)
-  {
-    if(folder->InheritsFrom("TDirectory") || folder->InheritsFrom("TFolder")
-       || folder->InheritsFrom("TCollection"))
-    {
+  if (subDirs.size() == 0) {
+    if (folder->InheritsFrom("TDirectory") || folder->InheritsFrom("TFolder") || folder->InheritsFrom("TCollection")) {
       return folder;
-    }
-    else
-    {
+    } else {
       return nullptr;
     }
   }
-  TObject* subFolder{ nullptr };
-  if(folder->InheritsFrom("TDirectory"))
-  {
+  TObject* subFolder{nullptr};
+  if (folder->InheritsFrom("TDirectory")) {
     TKey* key = ((TDirectory*)folder)->FindKey(subDirs[0].data());
-    if(key)
-    {
+    if (key) {
       subFolder = key->ReadObj();
-    }
-    else
-    {
+    } else {
       subFolder = ((TDirectory*)folder)->FindObject(subDirs[0].data());
     }
     deleteFolder = false;
-  }
-  else if(folder->InheritsFrom("TCollection") || folder->InheritsFrom("TFolder"))
-  {
+  } else if (folder->InheritsFrom("TCollection") || folder->InheritsFrom("TFolder")) {
     subFolder = ((TCollection*)folder)->FindObject(subDirs[0].data());
-    if(subFolder)
-    {
+    if (subFolder) {
       ((TCollection*)subFolder)->SetOwner();
       // if subfolder is part of list, remove it first to avoid double deletion
       ((TCollection*)folder)->Remove(subFolder);
     }
   }
-  if(deleteFolder)
-  {
+  if (deleteFolder) {
     delete folder;
   }
-  if(!subFolder) return nullptr;
+  if (!subFolder) return nullptr;
   subDirs.erase(subDirs.begin());
   return FindSubDirectory(subFolder, subDirs);
 }
@@ -947,11 +828,10 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
 void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<string>& dataNames,
                            vector<string>& newDataNames)
 {
-  if(dataNames.empty()) return; // nothing to do...
+  if (dataNames.empty()) return; // nothing to do...
 
   // consistency check for name vectors
-  if(!newDataNames.empty() && newDataNames.size() != dataNames.size())
-  {
+  if (!newDataNames.empty() && newDataNames.size() != dataNames.size()) {
     ERROR("newDataNames vector has the wrong size");
     return;
   }
@@ -959,27 +839,19 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
   // first determine what is the required subspecification (path) that needs to be prepended
   auto pathPos = dataNames[0].find_last_of("/");
   string subSpec;
-  if(pathPos != string::npos)
-  {
+  if (pathPos != string::npos) {
     subSpec = dataNames[0].substr(0, pathPos);
   }
-  if(subSpec != "") subSpec = subSpec + "/";
+  if (subSpec != "") subSpec = subSpec + "/";
 
   TCollection* itemList = nullptr;
-  if(folder->InheritsFrom("TDirectory"))
-  {
+  if (folder->InheritsFrom("TDirectory")) {
     itemList = ((TDirectoryFile*)folder)->GetListOfKeys();
-  }
-  else if(folder->InheritsFrom("TFolder"))
-  {
+  } else if (folder->InheritsFrom("TFolder")) {
     itemList = ((TFolder*)folder)->GetListOfFolders();
-  }
-  else if(folder->InheritsFrom("TCollection"))
-  {
+  } else if (folder->InheritsFrom("TCollection")) {
     itemList = (TCollection*)folder;
-  }
-  else
-  {
+  } else {
     ERROR("Dataformat not supported.");
     return;
   }
@@ -990,51 +862,37 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
   bool deleteObject;
   bool removeFromList;
 
-  while(iterator != itemList->end())
-  {
+  while (iterator != itemList->end()) {
     obj = *iterator;
     deleteObject = true;
     removeFromList = true;
 
     // read actual object to memory when traversing a directory
-    if(obj->IsA() == TKey::Class())
-    {
+    if (obj->IsA() == TKey::Class()) {
       string className = ((TKey*)obj)->GetClassName();
       string keyName = ((TKey*)obj)->GetName();
 
-      bool isTraversable
-        = className.find("TDirectory") != string::npos || className.find("TFolder") != string::npos
-          || className.find("TList") != string::npos || className.find("TObjArray") != string::npos;
-      if(isTraversable
-         || std::find(dataNames.begin(), dataNames.end(), subSpec + keyName) != dataNames.end())
-      {
+      bool isTraversable = className.find("TDirectory") != string::npos || className.find("TFolder") != string::npos || className.find("TList") != string::npos || className.find("TObjArray") != string::npos;
+      if (isTraversable || std::find(dataNames.begin(), dataNames.end(), subSpec + keyName) != dataNames.end()) {
         obj = ((TKey*)obj)->ReadObj();
         removeFromList = false;
-      }
-      else
-      {
+      } else {
         ++iterator;
         continue;
       }
     }
 
     // in case this object is directory or list, repeat the same for this substructure
-    if(obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder")
-       || obj->InheritsFrom("TCollection"))
-    {
+    if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection")) {
       ReadData(obj, outputDataArray, dataNames, newDataNames);
-    }
-    else
-    {
+    } else {
       auto it = std::find(dataNames.begin(), dataNames.end(), subSpec + ((TNamed*)obj)->GetName());
-      if(it != dataNames.end())
-      {
+      if (it != dataNames.end()) {
         // TODO: select here that only known root input types are beeing processed
-        if(obj->InheritsFrom("TH1")) ((TH1*)obj)->SetDirectory(0); // demand ownership for histogram
+        if (obj->InheritsFrom("TH1")) ((TH1*)obj)->SetDirectory(0); // demand ownership for histogram
 
         // re-name data
-        if(!newDataNames.empty())
-        {
+        if (!newDataNames.empty()) {
           auto vectorIndex = it - dataNames.begin();
           ((TNamed*)obj)->SetName((newDataNames[vectorIndex]).data());
           newDataNames.erase(
@@ -1048,19 +906,16 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
 
     // increase iterator before removing objects from collection
     ++iterator;
-    if(removeFromList)
-    {
-      if(itemList->Remove(obj) == nullptr)
-      {
+    if (removeFromList) {
+      if (itemList->Remove(obj) == nullptr) {
         ERROR("Could not remove item {} ({}) from collection {}.", ((TNamed*)obj)->GetName(),
               (void*)obj, itemList->GetName());
       }
     }
-    if(deleteObject)
-    {
+    if (deleteObject) {
       delete obj;
     }
-    if(dataNames.empty()) break;
+    if (dataNames.empty()) break;
   }
 }
 
@@ -1071,19 +926,17 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
 //**************************************************************************************************
 bool PlotManager::IsPlotPossible(Plot& plot)
 {
-  for(auto& [padID, pad] : plot.GetPads())
-    for(auto data : pad.GetData())
-    {
+  for (auto& [padID, pad] : plot.GetPads())
+    for (auto data : pad.GetData()) {
       vector<string> dataNames;
       dataNames.push_back(data->GetUniqueName());
-      if(data->GetType() == "ratio")
+      if (data->GetType() == "ratio")
         dataNames.push_back(
           std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetUniqueNameDenom());
 
-      for(auto& dataName : dataNames)
-      {
+      for (auto& dataName : dataNames) {
         TObject* obj = mDataLedger->FindObject(dataName.data());
-        if(!obj) return false;
+        if (!obj) return false;
       }
     }
   return true;

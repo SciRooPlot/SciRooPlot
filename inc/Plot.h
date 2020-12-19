@@ -28,8 +28,7 @@
 namespace PlottingFramework
 {
 
-enum drawing_options_t : uint8_t
-{
+enum drawing_options_t : uint8_t {
   // 1d options
   points = 0,
   points_xerr,
@@ -55,8 +54,7 @@ enum drawing_options_t : uint8_t
   surf,
 };
 
-struct layout_t
-{
+struct layout_t {
   optional<int16_t> color; // marker_color , line_color, fill_color, text_color
   optional<int16_t> style; // marker_style , line_style, fill_style, text_font
   optional<float_t> scale; // marker_size , line_width, fill_opacity, text_size
@@ -89,7 +87,7 @@ public:
 
   void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false)
   {
-    mPlotDimensions = { width, height, fixAspectRatio };
+    mPlotDimensions = {width, height, fixAspectRatio};
   }
   void SetWidth(int32_t width) { mPlotDimensions.width = width; }
   void SetHeight(int32_t height) { mPlotDimensions.height = height; }
@@ -114,8 +112,7 @@ protected:
   const optional<string>& GetPlotTemplateName() { return mPlotTemplateName; }
   string GetUniqueName()
   {
-    return mName + gNameGroupSeparator + mFigureGroup
-           + ((mFigureCategory != "") ? ":" + mFigureCategory : "");
+    return mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");
   }
   ptree GetPropertyTree();
 
@@ -128,14 +125,12 @@ protected:
   const optional<int16_t>& GetFillStyle() { return mFill.style; }
 
 private:
-  struct dimension_t
-  {
+  struct dimension_t {
     optional<int32_t> width;
     optional<int32_t> height;
     optional<bool> fixAspectRatio;
   };
-  struct plot_fill_t
-  {
+  struct plot_fill_t {
     optional<int16_t> color;
     optional<int16_t> style;
   };
@@ -278,47 +273,40 @@ protected:
   const optional<string>& GetRefFunc() { return mRefFunc; }
 
 private:
-  struct pad_position_t
-  {
+  struct pad_position_t {
     optional<double_t> xlow;
     optional<double_t> ylow;
     optional<double_t> xup;
     optional<double_t> yup;
   };
-  struct pad_margin_t
-  {
+  struct pad_margin_t {
     optional<float_t> top;
     optional<float_t> bottom;
     optional<float_t> left;
     optional<float_t> right;
   };
-  struct pad_fill_t
-  {
+  struct pad_fill_t {
     optional<int16_t> color;
     optional<int16_t> style;
   };
-  struct frame_t
-  {
+  struct frame_t {
     optional<int16_t> fillColor;
     optional<int16_t> fillStyle;
     optional<int16_t> lineColor;
     optional<int16_t> lineStyle;
     optional<float_t> lineWidth;
   };
-  struct text_t
-  {
+  struct text_t {
     optional<int16_t> color;
     optional<int16_t> font;
     optional<float_t> size;
   };
-  struct view_defaults_t
-  {
+  struct view_defaults_t {
     optional<float_t> scale;
     optional<vector<int16_t>> styles;
     optional<vector<int16_t>> colors;
   };
-  struct data_defaults_t
-  {
+  struct data_defaults_t {
     optional<drawing_options_t> graph;
     optional<drawing_options_t> hist;
     optional<drawing_options_t> hist2d;
@@ -459,19 +447,16 @@ private:
   optional<drawing_options_t> mDrawingOptionAlias;
   optional<string> mTextFormat;
 
-  struct modify_t
-  {
+  struct modify_t {
     optional<uint8_t> norm_mode; // 0: sum over bin contents, 1: with bin width
     optional<double_t> scale_factor;
   };
-  struct legend_t
-  {
+  struct legend_t {
     optional<string> lable;
     optional<uint8_t> identifier;
   };
 
-  struct dataRange_t
-  {
+  struct dataRange_t {
     optional<double_t> min;
     optional<double_t> max;
   };
@@ -668,7 +653,7 @@ public:
   }
   Axis& SetRange(double_t min, double_t max)
   {
-    mRange = { min, max };
+    mRange = {min, max};
     return *this;
   }
   Axis& SetMaxRange(double_t max)
@@ -819,16 +804,14 @@ protected:
   const optional<string>& GetTickOrientation() { return mTickOrientation; }
 
 private:
-  struct axisTextProperties_t
-  {
+  struct axisTextProperties_t {
     optional<int16_t> font;
     optional<float_t> size;
     optional<int16_t> color;
     optional<float_t> offset;
     optional<bool> center;
   };
-  struct axisRange_t
-  {
+  struct axisRange_t {
     optional<double_t> min;
     optional<double_t> max;
   };
@@ -911,8 +894,7 @@ private:
 
   auto GetThis() { return static_cast<BoxType*>(this); }
 
-  struct position_t
-  {
+  struct position_t {
     optional<double_t> x;
     optional<double_t> y;
     optional<bool> isUserCoord;
@@ -1023,7 +1005,7 @@ protected:
 private:
   optional<string> mTitle;
   optional<uint8_t> mNumColumns;
-  vector<LegendEntry> mLegendEntries; // this is transient and will be generated automatically
+  vector<LegendEntry> mLegendEntries;           // this is transient and will be generated automatically
   map<uint8_t, LegendEntry> mLegendEntriesUser; // this is persistent and must be saved
 
   layout_t mLineDefault;

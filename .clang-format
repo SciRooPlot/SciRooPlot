@@ -3,31 +3,27 @@ AccessModifierOffset: -2
 AlignEscapedNewlinesLeft: true
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: false
-AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortFunctionsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: true
 AllowShortLoopsOnASingleLine: false
 #AlwaysBreakBeforeMultilineStrings: true
 AlwaysBreakTemplateDeclarations: true
 BinPackParameters: true
-BreakBeforeBinaryOperators: true
-BreakBeforeBraces: Allman #Linux
+BreakBeforeBinaryOperators: false
+BreakBeforeBraces: Linux
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: false
-BreakConstructorInitializers: BeforeColon
-ColumnLimit: 100
+ColumnLimit: 0
 CommentPragmas:  '^ IWYU pragma:'
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ConstructorInitializerIndentWidth: 2
 ContinuationIndentWidth: 2
-Cpp11BracedListStyle: false
+Cpp11BracedListStyle: true
 DerivePointerBinding: false
 ExperimentalAutoDetectBinPacking: false
 IndentCaseLabels: true
 IndentFunctionDeclarationAfterType: true
 IndentWidth:     2
-#BreakBeforeBraces: Custom
-#BraceWrapping:
-#  AfterControlStatement: true
 # It is broken on windows. Breaks all #include "header.h"
 ---
 Language:        Cpp
@@ -44,7 +40,7 @@ PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 200
 SortIncludes: false
 SpaceBeforeAssignmentOperators: true
-SpaceBeforeParens: Never
+SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 1
 SpacesInAngles:  false
