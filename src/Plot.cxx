@@ -127,16 +127,16 @@ Plot Plot::Clone() const
   for (auto& [padID, pad] : newPlot.GetPads()) {
     std::transform(newPlot[padID].GetData().begin(), newPlot[padID].GetData().end(),
                    newPlot[padID].GetData().begin(),
-                   [](auto data_ptr) { return data_ptr->Clone(); });
+                   [](auto& data_ptr) { return data_ptr->Clone(); });
 
     std::transform(newPlot[padID].GetLegendBoxes().begin(), newPlot[padID].GetLegendBoxes().end(),
-                   newPlot[padID].GetLegendBoxes().begin(), [](auto legend_ptr) {
+                   newPlot[padID].GetLegendBoxes().begin(), [](auto& legend_ptr) {
                      return std::make_shared<Plot::Pad::LegendBox>(*legend_ptr);
                    });
 
     std::transform(newPlot[padID].GetTextBoxes().begin(), newPlot[padID].GetTextBoxes().end(),
                    newPlot[padID].GetTextBoxes().begin(),
-                   [](auto text_ptr) { return std::make_shared<Plot::Pad::TextBox>(*text_ptr); });
+                   [](auto& text_ptr) { return std::make_shared<Plot::Pad::TextBox>(*text_ptr); });
   }
   return newPlot;
 }
@@ -594,7 +594,7 @@ Plot::Pad::Pad(const ptree& padTree)
  * Get representation of pad as property tree.
  */
 //**************************************************************************************************
-ptree Plot::Pad::GetPropertyTree()
+ptree Plot::Pad::GetPropertyTree() const
 {
   // convert properties of plot to ptree
   ptree padTree;
@@ -653,7 +653,7 @@ ptree Plot::Pad::GetPropertyTree()
 
   for (auto& axis : {'X', 'Y', 'Z'}) {
     if (mAxes.find(axis) != mAxes.end()) {
-      padTree.put_child(string("AXIS_") + axis, mAxes[axis].GetPropertyTree());
+      padTree.put_child(string("AXIS_") + axis, mAxes.at(axis).GetPropertyTree());
     }
   }
 
@@ -957,7 +957,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
  * Generate property tree for this Data object.
  */
 //**************************************************************************************************
-ptree Plot::Pad::Data::GetPropertyTree()
+ptree Plot::Pad::Data::GetPropertyTree() const
 {
   ptree dataTree;
   dataTree.put("type", mType);
@@ -1228,7 +1228,7 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
  * Convert ratio to property tree.
  */
 //**************************************************************************************************
-ptree Plot::Pad::Ratio::GetPropertyTree()
+ptree Plot::Pad::Ratio::GetPropertyTree() const
 {
   ptree dataTree = Data::GetPropertyTree();
   dataTree.put("denomName", mDenomName);
@@ -1305,7 +1305,7 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
  * Convert axis object to property tree.
  */
 //**************************************************************************************************
-ptree Plot::Pad::Axis::GetPropertyTree()
+ptree Plot::Pad::Axis::GetPropertyTree() const
 {
   ptree axisTree;
   axisTree.put("name", mName);
@@ -1541,7 +1541,7 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
  */
 //**************************************************************************************************
 template <typename BoxType>
-ptree Plot::Pad::Box<BoxType>::GetPropertyTree()
+ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
 {
   ptree boxTree;
   put_in_tree_optional(boxTree, mPos.x, "x");
@@ -1738,7 +1738,7 @@ Plot::Pad::TextBox::TextBox(const ptree& textBoxTree) : Box(textBoxTree)
  * Get property tree representation of TextBox.
  */
 //**************************************************************************************************
-ptree Plot::Pad::TextBox::GetPropertyTree()
+ptree Plot::Pad::TextBox::GetPropertyTree() const
 {
   ptree boxTree = Box::GetPropertyTree();
   boxTree.put("text", mText);
@@ -1818,7 +1818,7 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
  * Get property tree of LegendBox.
  */
 //**************************************************************************************************
-ptree Plot::Pad::LegendBox::GetPropertyTree()
+ptree Plot::Pad::LegendBox::GetPropertyTree() const
 {
   ptree legendBoxTree = Box::GetPropertyTree();
   put_in_tree_optional(legendBoxTree, mTitle, "title");
@@ -2015,7 +2015,7 @@ Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
  * Get property tree of LegendEntry.
  */
 //**************************************************************************************************
-ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree()
+ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree() const
 {
   ptree legendEntryTree;
   put_in_tree_optional(legendEntryTree, mLable, "lable");

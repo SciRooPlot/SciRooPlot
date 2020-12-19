@@ -211,47 +211,47 @@ protected:
   friend class PlotPainter;
   friend class Plot;
 
-  ptree GetPropertyTree();
+  ptree GetPropertyTree() const;
 
   auto& GetData() { return mData; }
   auto& GetLegendBoxes() { return mLegendBoxes; }
   auto& GetTextBoxes() { return mTextBoxes; }
 
-  const auto& GetAxes() { return mAxes; }
-  const auto& GetTitle() { return mTitle; }
-  const auto& GetXLow() { return mPosition.xlow; }
-  const auto& GetYLow() { return mPosition.ylow; }
-  const auto& GetXUp() { return mPosition.xup; }
-  const auto& GetYUp() { return mPosition.yup; }
-  const auto& GetMarginTop() { return mMargins.top; }
-  const auto& GetMarginBottom() { return mMargins.bottom; }
-  const auto& GetMarginLeft() { return mMargins.left; }
-  const auto& GetMarginRight() { return mMargins.right; }
-  const auto& GetPalette() { return mPalette; }
-  const auto& GetFillColor() { return mFill.color; }
-  const auto& GetFillStyle() { return mFill.style; }
-  const auto& GetFillColorFrame() { return mFrame.fillColor; }
-  const auto& GetFillStyleFrame() { return mFrame.fillStyle; }
-  const auto& GetLineColorFrame() { return mFrame.lineColor; }
-  const auto& GetLineStyleFrame() { return mFrame.lineStyle; }
-  const auto& GetLineWidthFrame() { return mFrame.lineWidth; }
-  const auto& GetDefaultTextColor() { return mText.color; }
-  const auto& GetDefaultTextFont() { return mText.font; }
-  const auto& GetDefaultTextSize() { return mText.size; }
-  const auto& GetDefaultMarkerSize() { return mMarkerDefaults.scale; }
-  const auto& GetDefaultLineWidth() { return mLineDefaults.scale; }
-  const auto& GetDefaultFillOpacity() { return mFillDefaults.scale; }
-  const auto& GetDefaultMarkerColors() { return mMarkerDefaults.colors; }
-  const auto& GetDefaultLineColors() { return mLineDefaults.colors; }
-  const auto& GetDefaultFillColors() { return mFillDefaults.colors; }
-  const auto& GetDefaultMarkerStyles() { return mMarkerDefaults.styles; }
-  const auto& GetDefaultLineStyles() { return mLineDefaults.styles; }
-  const auto& GetDefaultFillStyles() { return mFillDefaults.styles; }
-  const auto& GetDefaultDrawingOptionGraph() { return mDrawingOptionDefaults.graph; }
-  const auto& GetDefaultDrawingOptionHist() { return mDrawingOptionDefaults.hist; }
-  const auto& GetDefaultDrawingOptionHist2d() { return mDrawingOptionDefaults.hist2d; }
-  const auto& GetRedrawAxes() { return mRedrawAxes; }
-  const auto& GetRefFunc() { return mRefFunc; }
+  const auto& GetAxes() const { return mAxes; }
+  const auto& GetTitle() const { return mTitle; }
+  const auto& GetXLow() const { return mPosition.xlow; }
+  const auto& GetYLow() const { return mPosition.ylow; }
+  const auto& GetXUp() const { return mPosition.xup; }
+  const auto& GetYUp() const { return mPosition.yup; }
+  const auto& GetMarginTop() const { return mMargins.top; }
+  const auto& GetMarginBottom() const { return mMargins.bottom; }
+  const auto& GetMarginLeft() const { return mMargins.left; }
+  const auto& GetMarginRight() const { return mMargins.right; }
+  const auto& GetPalette() const { return mPalette; }
+  const auto& GetFillColor() const { return mFill.color; }
+  const auto& GetFillStyle() const { return mFill.style; }
+  const auto& GetFillColorFrame() const { return mFrame.fillColor; }
+  const auto& GetFillStyleFrame() const { return mFrame.fillStyle; }
+  const auto& GetLineColorFrame() const { return mFrame.lineColor; }
+  const auto& GetLineStyleFrame() const { return mFrame.lineStyle; }
+  const auto& GetLineWidthFrame() const { return mFrame.lineWidth; }
+  const auto& GetDefaultTextColor() const { return mText.color; }
+  const auto& GetDefaultTextFont() const { return mText.font; }
+  const auto& GetDefaultTextSize() const { return mText.size; }
+  const auto& GetDefaultMarkerSize() const { return mMarkerDefaults.scale; }
+  const auto& GetDefaultLineWidth() const { return mLineDefaults.scale; }
+  const auto& GetDefaultFillOpacity() const { return mFillDefaults.scale; }
+  const auto& GetDefaultMarkerColors() const { return mMarkerDefaults.colors; }
+  const auto& GetDefaultLineColors() const { return mLineDefaults.colors; }
+  const auto& GetDefaultFillColors() const { return mFillDefaults.colors; }
+  const auto& GetDefaultMarkerStyles() const { return mMarkerDefaults.styles; }
+  const auto& GetDefaultLineStyles() const { return mLineDefaults.styles; }
+  const auto& GetDefaultFillStyles() const { return mFillDefaults.styles; }
+  const auto& GetDefaultDrawingOptionGraph() const { return mDrawingOptionDefaults.graph; }
+  const auto& GetDefaultDrawingOptionHist() const { return mDrawingOptionDefaults.hist; }
+  const auto& GetDefaultDrawingOptionHist2d() const { return mDrawingOptionDefaults.hist2d; }
+  const auto& GetRedrawAxes() const { return mRedrawAxes; }
+  const auto& GetRefFunc() const { return mRefFunc; }
 
 private:
   struct pad_position_t {
@@ -381,41 +381,41 @@ protected:
 
   virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Data>(*this); }
 
-  virtual ptree GetPropertyTree();
+  virtual ptree GetPropertyTree() const;
 
   void SetType(const string& type) { mType = type; }
 
-  string GetUniqueName() { return mName + gNameGroupSeparator + mInputIdentifier; }
+  string GetUniqueName() const { return mName + gNameGroupSeparator + mInputIdentifier; }
 
   const auto& GetType() const { return mType; }
   const auto& GetName() const { return mName; }
-  const auto& GetLegendLable() { return mLegend.lable; }
-  const auto& GetLegendID() { return mLegend.identifier; }
+  const auto& GetLegendLable() const { return mLegend.lable; }
+  const auto& GetLegendID() const { return mLegend.identifier; }
 
-  const auto& GetMarkerColor() { return mMarker.color; }
-  const auto& GetMarkerStyle() { return mMarker.style; }
-  const auto& GetMarkerSize() { return mMarker.scale; }
+  const auto& GetMarkerColor() const { return mMarker.color; }
+  const auto& GetMarkerStyle() const { return mMarker.style; }
+  const auto& GetMarkerSize() const { return mMarker.scale; }
 
-  const auto& GetLineColor() { return mLine.color; }
-  const auto& GetLineStyle() { return mLine.style; }
-  const auto& GetLineWidth() { return mLine.scale; }
+  const auto& GetLineColor() const { return mLine.color; }
+  const auto& GetLineStyle() const { return mLine.style; }
+  const auto& GetLineWidth() const { return mLine.scale; }
 
-  const auto& GetFillColor() { return mFill.color; }
-  const auto& GetFillStyle() { return mFill.style; }
-  const auto& GetFillOpacity() { return mFill.scale; }
+  const auto& GetFillColor() const { return mFill.color; }
+  const auto& GetFillStyle() const { return mFill.style; }
+  const auto& GetFillOpacity() const { return mFill.scale; }
 
-  const auto& GetDrawingOptions() { return mDrawingOptions; }
-  const auto& GetDrawingOptionAlias() { return mDrawingOptionAlias; }
-  const auto& GetTextFormat() { return mTextFormat; }
-  const auto& GetScaleFactor() { return mModify.scale_factor; }
-  const auto& GetNormMode() { return mModify.norm_mode; }
+  const auto& GetDrawingOptions() const { return mDrawingOptions; }
+  const auto& GetDrawingOptionAlias() const { return mDrawingOptionAlias; }
+  const auto& GetTextFormat() const { return mTextFormat; }
+  const auto& GetScaleFactor() const { return mModify.scale_factor; }
+  const auto& GetNormMode() const { return mModify.norm_mode; }
 
-  const auto& GetMinRangeX() { return mRangeX.min; }
-  const auto& GetMaxRangeX() { return mRangeX.max; }
-  const auto& GetMinRangeY() { return mRangeY.min; }
-  const auto& GetMaxRangeY() { return mRangeY.max; }
+  const auto& GetMinRangeX() const { return mRangeX.min; }
+  const auto& GetMaxRangeX() const { return mRangeX.max; }
+  const auto& GetMinRangeY() const { return mRangeY.min; }
+  const auto& GetMaxRangeY() const { return mRangeY.max; }
 
-  const bool& GetDefinesFrame() { return mDefinesFrame; }
+  const bool& GetDefinesFrame() const { return mDefinesFrame; }
 
 private:
   bool mDefinesFrame;
@@ -511,12 +511,12 @@ protected:
 
   virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Ratio>(*this); }
 
-  ptree GetPropertyTree();
-  string GetDenomIdentifier() { return mDenomInputIdentifier; }
-  string GetDenomName() { return mDenomName; }
-  string GetUniqueNameDenom() { return mDenomName + gNameGroupSeparator + mDenomInputIdentifier; }
+  ptree GetPropertyTree() const;
+  string GetDenomIdentifier() const { return mDenomInputIdentifier; }
+  string GetDenomName() const { return mDenomName; }
+  string GetUniqueNameDenom() const { return mDenomName + gNameGroupSeparator + mDenomInputIdentifier; }
 
-  const bool& GetIsCorrelated() { return mIsCorrelated; }
+  const bool& GetIsCorrelated() const { return mIsCorrelated; }
 
 private:
   string mDenomName;
@@ -567,31 +567,31 @@ protected:
   Axis(const char axisName);
   Axis(const ptree& axisTree);
 
-  ptree GetPropertyTree();
+  ptree GetPropertyTree() const;
   void operator+=(const Axis& axis);
 
-  const auto& GetMinRange() { return mRange.min; }
-  const auto& GetMaxRange() { return mRange.max; }
-  const auto& GetTickLength() { return mTickLength; }
-  const auto& GetNumDivisions() { return mNumDivisions; }
-  const auto& GetMaxDigits() { return mMaxDigits; }
-  const auto& GetAxisColor() { return mAxisColor; }
-  const auto& GetTitle() { return mTitle; }
-  const auto& GetTitleFont() { return mTitleProperties.font; }
-  const auto& GetLableFont() { return mLableProperties.font; }
-  const auto& GetTitleSize() { return mTitleProperties.size; }
-  const auto& GetLableSize() { return mLableProperties.size; }
-  const auto& GetTitleColor() { return mTitleProperties.color; }
-  const auto& GetLableColor() { return mLableProperties.color; }
-  const auto& GetTitleOffset() { return mTitleProperties.offset; }
-  const auto& GetLableOffset() { return mLableProperties.offset; }
-  const auto& GetTitleCenter() { return mTitleProperties.center; }
-  const auto& GetLableCenter() { return mLableProperties.center; }
-  const auto& GetLog() { return mIsLog; }
-  const auto& GetGrid() { return mIsGrid; }
-  const auto& GetOppositeTicks() { return mIsOppositeTicks; }
-  const auto& GetTimeFormat() { return mTimeFormat; }
-  const auto& GetTickOrientation() { return mTickOrientation; }
+  const auto& GetMinRange() const { return mRange.min; }
+  const auto& GetMaxRange() const { return mRange.max; }
+  const auto& GetTickLength() const { return mTickLength; }
+  const auto& GetNumDivisions() const { return mNumDivisions; }
+  const auto& GetMaxDigits() const { return mMaxDigits; }
+  const auto& GetAxisColor() const { return mAxisColor; }
+  const auto& GetTitle() const { return mTitle; }
+  const auto& GetTitleFont() const { return mTitleProperties.font; }
+  const auto& GetLableFont() const { return mLableProperties.font; }
+  const auto& GetTitleSize() const { return mTitleProperties.size; }
+  const auto& GetLableSize() const { return mLableProperties.size; }
+  const auto& GetTitleColor() const { return mTitleProperties.color; }
+  const auto& GetLableColor() const { return mLableProperties.color; }
+  const auto& GetTitleOffset() const { return mTitleProperties.offset; }
+  const auto& GetLableOffset() const { return mLableProperties.offset; }
+  const auto& GetTitleCenter() const { return mTitleProperties.center; }
+  const auto& GetLableCenter() const { return mLableProperties.center; }
+  const auto& GetLog() const { return mIsLog; }
+  const auto& GetGrid() const { return mIsGrid; }
+  const auto& GetOppositeTicks() const { return mIsOppositeTicks; }
+  const auto& GetTimeFormat() const { return mTimeFormat; }
+  const auto& GetTickOrientation() const { return mTickOrientation; }
 
 private:
   struct axisTextProperties_t {
@@ -658,22 +658,22 @@ public:
   BoxType& SetNoBox();
 
 protected:
-  ptree GetPropertyTree();
+  ptree GetPropertyTree() const;
 
-  double_t GetXPosition() { return (mPos.x) ? *mPos.x : 0.; }
-  double_t GetYPosition() { return (mPos.y) ? *mPos.y : 0.; }
-  auto& GetBorderStyle() { return mBorder.style; }
-  auto& GetBorderWidth() { return mBorder.scale; }
-  auto& GetBorderColor() { return mBorder.color; }
-  auto& GetFillStyle() { return mFill.style; }
-  auto& GetFillOpacity() { return mFill.scale; }
-  auto& GetFillColor() { return mFill.color; }
-  auto& GetTextFont() { return mText.style; }
-  auto& GetTextSize() { return mText.scale; }
-  auto& GetTextColor() { return mText.color; }
+  double_t GetXPosition() const { return (mPos.x) ? *mPos.x : 0.; }
+  double_t GetYPosition() const { return (mPos.y) ? *mPos.y : 0.; }
+  auto& GetBorderStyle() const { return mBorder.style; }
+  auto& GetBorderWidth() const { return mBorder.scale; }
+  auto& GetBorderColor() const { return mBorder.color; }
+  auto& GetFillStyle() const { return mFill.style; }
+  auto& GetFillOpacity() const { return mFill.scale; }
+  auto& GetFillColor() const { return mFill.color; }
+  auto& GetTextFont() const { return mText.style; }
+  auto& GetTextSize() const { return mText.scale; }
+  auto& GetTextColor() const { return mText.color; }
 
-  bool IsUserCoordinates() { return (mPos.isUserCoord) ? *mPos.isUserCoord : false; }
-  bool IsAutoPlacement() { return (!mPos.x || !mPos.y); }
+  bool IsUserCoordinates() const { return (mPos.isUserCoord) ? *mPos.isUserCoord : false; }
+  bool IsAutoPlacement() const { return (!mPos.x || !mPos.y); }
 
 private:
   // allow construction of Box base class only in context actually useful boxes
@@ -721,8 +721,8 @@ protected:
   friend class PlotPainter;
   friend class Plot;
 
-  ptree GetPropertyTree();
-  const string& GetText() { return mText; }
+  ptree GetPropertyTree() const;
+  const string& GetText() const { return mText; }
 
 private:
   string mText;
@@ -770,27 +770,27 @@ protected:
   friend class PlotPainter;
   friend class Plot;
 
-  ptree GetPropertyTree();
-  const optional<uint8_t>& GetNumColumns() { return mNumColumns; }
-  const optional<string>& GetTitle() { return mTitle; }
+  ptree GetPropertyTree() const;
+  const optional<uint8_t>& GetNumColumns() const { return mNumColumns; }
+  const optional<string>& GetTitle() const { return mTitle; }
 
-  const vector<LegendEntry>& GetEntries() { return mLegendEntries; }
+  const vector<LegendEntry>& GetEntries() const { return mLegendEntries; }
 
   LegendEntry& AddEntry(const string& name, const string& lable);
 
-  const auto& GetDefaultDrawStyle() { return mDrawStyleDefault; }
+  const auto& GetDefaultDrawStyle() const { return mDrawStyleDefault; }
 
-  const auto& GetDefaultMarkerColor() { return mMarkerDefault.color; }
-  const auto& GetDefaultMarkerStyle() { return mMarkerDefault.style; }
-  const auto& GetDefaultMarkerSize() { return mMarkerDefault.scale; }
+  const auto& GetDefaultMarkerColor() const { return mMarkerDefault.color; }
+  const auto& GetDefaultMarkerStyle() const { return mMarkerDefault.style; }
+  const auto& GetDefaultMarkerSize() const { return mMarkerDefault.scale; }
 
-  const auto& GetDefaultLineColor() { return mLineDefault.color; }
-  const auto& GetDefaultLineStyle() { return mLineDefault.style; }
-  const auto& GetDefaultLineWidth() { return mLineDefault.scale; }
+  const auto& GetDefaultLineColor() const { return mLineDefault.color; }
+  const auto& GetDefaultLineStyle() const { return mLineDefault.style; }
+  const auto& GetDefaultLineWidth() const { return mLineDefault.scale; }
 
-  const auto& GetDefaultFillColor() { return mFillDefault.color; }
-  const auto& GetDefaultFillStyle() { return mFillDefault.style; }
-  const auto& GetDefaultFillOpacity() { return mFillDefault.scale; }
+  const auto& GetDefaultFillColor() const { return mFillDefault.color; }
+  const auto& GetDefaultFillStyle() const { return mFillDefault.style; }
+  const auto& GetDefaultFillOpacity() const { return mFillDefault.scale; }
 
 private:
   optional<string> mTitle;
@@ -850,7 +850,7 @@ protected:
   friend class LegendBox;
   void operator+=(const LegendEntry& legendEntry);
 
-  ptree GetPropertyTree();
+  ptree GetPropertyTree() const;
   const auto& GetRefDataName() const { return mRefDataName; }
   const auto& GetLable() const { return mLable; }
   const auto& GetDrawStyle() const { return mDrawStyle; }
