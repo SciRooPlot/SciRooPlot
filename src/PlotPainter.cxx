@@ -335,13 +335,13 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
 
             // apply axis settings
-            for (string axisLable : {"X", "Y", "Z"}) {
+            for (auto axisLable : {'X', 'Y', 'Z'}) {
               TAxis* axis_ptr = nullptr;
-              if (axisLable == "X")
+              if (axisLable == 'X')
                 axis_ptr = axisHist_ptr->GetXaxis();
-              else if (axisLable == "Y")
+              else if (axisLable == 'Y')
                 axis_ptr = axisHist_ptr->GetYaxis();
-              else if (axisLable == "Z")
+              else if (axisLable == 'Z')
                 axis_ptr = axisHist_ptr->GetZaxis();
               if (!axis_ptr) continue;
 
@@ -387,24 +387,24 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
                     axis_ptr->SetNdivisions(*axisLayout.GetNumDivisions());
 
                   if (axisLayout.GetLog()) {
-                    if (axisLable == "X") {
+                    if (axisLable == 'X') {
                       pad_ptr->SetLogx(*axisLayout.GetLog());
-                    } else if (axisLable == "Y") {
+                    } else if (axisLable == 'Y') {
                       pad_ptr->SetLogy(*axisLayout.GetLog());
-                    } else if (axisLable == "Z") {
+                    } else if (axisLable == 'Z') {
                       pad_ptr->SetLogz(*axisLayout.GetLog());
                     }
                   }
                   if (axisLayout.GetGrid()) {
-                    if (axisLable == "X")
+                    if (axisLable == 'X')
                       pad_ptr->SetGridx(*axisLayout.GetGrid());
-                    else if (axisLable == "Y")
+                    else if (axisLable == 'Y')
                       pad_ptr->SetGridy(*axisLayout.GetGrid());
                   }
                   if (axisLayout.GetOppositeTicks()) {
-                    if (axisLable == "X")
+                    if (axisLable == 'X')
                       pad_ptr->SetTickx(*axisLayout.GetOppositeTicks());
-                    else if (axisLable == "Y")
+                    else if (axisLable == 'Y')
                       pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
                   }
                   if (axisLayout.GetTimeFormat()) {
@@ -417,12 +417,12 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
 
                   if (axisLayout.GetMinRange() || axisLayout.GetMaxRange()) {
                     pad_ptr->Update(); // needed here so current user ranges correct
-                    double_t curRangeMin = (axisLable == "X")
+                    double_t curRangeMin = (axisLable == 'X')
                                              ? pad_ptr->GetUxmin()
-                                             : ((axisLable == "Y") ? pad_ptr->GetUymin() : axisHist_ptr->GetMinimum());
-                    double_t curRangeMax = (axisLable == "X")
+                                             : ((axisLable == 'Y') ? pad_ptr->GetUymin() : axisHist_ptr->GetMinimum());
+                    double_t curRangeMax = (axisLable == 'X')
                                              ? pad_ptr->GetUxmax()
-                                             : ((axisLable == "Y") ? pad_ptr->GetUymax() : axisHist_ptr->GetMaximum());
+                                             : ((axisLable == 'Y') ? pad_ptr->GetUymax() : axisHist_ptr->GetMaximum());
 
                     double_t rangeMin = (axisLayout.GetMinRange()) ? *axisLayout.GetMinRange() : curRangeMin;
                     double_t rangeMax = (axisLayout.GetMaxRange()) ? *axisLayout.GetMaxRange() : curRangeMax;

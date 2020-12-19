@@ -583,7 +583,7 @@ Plot::Pad::Pad(const ptree& padTree)
     }
     // add axes
     if (str_contains(content.first, "AXIS")) {
-      string axis = content.second.get<string>("name");
+      char axis = content.second.get<char>("name");
       mAxes[axis] = Axis(content.second);
     }
   }
@@ -651,7 +651,7 @@ ptree Plot::Pad::GetPropertyTree()
     ++textBoxID;
   }
 
-  for (auto& axis : {"X", "Y", "Z"}) {
+  for (auto& axis : {'X', 'Y', 'Z'}) {
     if (mAxes.find(axis) != mAxes.end()) {
       padTree.put_child(string("AXIS_") + axis, mAxes[axis].GetPropertyTree());
     }
@@ -716,7 +716,7 @@ void Plot::Pad::operator+=(const Pad& pad)
  * Access operator for pad axis.
  */
 //**************************************************************************************************
-Plot::Pad::Axis& Plot::Pad::operator[](const string& axis)
+Plot::Pad::Axis& Plot::Pad::operator[](const char axis)
 {
   return GetAxis(axis);
 }
@@ -726,11 +726,11 @@ Plot::Pad::Axis& Plot::Pad::operator[](const string& axis)
  * Access function for pad axis.
  */
 //**************************************************************************************************
-Plot::Pad::Axis& Plot::Pad::GetAxis(const string& axis)
+Plot::Pad::Axis& Plot::Pad::GetAxis(const char axis)
 {
-  const vector<string> allowedAxes = {"X", "Y", "Z"};
+  const vector<char> allowedAxes = {'X', 'Y', 'Z'};
   if (std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end()) {
-    ERROR("Axis \"{}\" is not allowed! Please use \"X\", \"Y\" or \"Z\".", axis);
+    ERROR("Axis \"{}\" is not allowed! Please use 'X', 'Y' or 'Z'.", axis);
     std::exit(EXIT_FAILURE);
   }
   if (mAxes.find(axis) == mAxes.end()) {
@@ -1259,7 +1259,7 @@ auto Plot::Pad::Ratio::SetIsCorrelated(bool isCorrelated) -> decltype(*this)
  * Constructor setting axis name (X,Y,Z).
  */
 //**************************************************************************************************
-Plot::Pad::Axis::Axis(const string& axisName) : Axis()
+Plot::Pad::Axis::Axis(const char axisName) : Axis()
 {
   mName = axisName;
 }
@@ -1272,7 +1272,7 @@ Plot::Pad::Axis::Axis(const string& axisName) : Axis()
 Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
 {
   try {
-    mName = axisTree.get<string>("name");
+    mName = axisTree.get<char>("name");
   } catch (...) {
     ERROR("Could not construct axis from ptree.");
   }

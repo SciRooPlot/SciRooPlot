@@ -154,7 +154,7 @@ public:
 
   Pad() = default;
   Pad(const ptree& padTree);
-  Axis& operator[](const string& axis);
+  Axis& operator[](const char axis);
   void operator+=(const Pad& pad);
 
   // User accessors:
@@ -174,7 +174,7 @@ public:
   LegendBox& AddLegend(double_t xPos, double_t yPos);
   LegendBox& AddLegend();
 
-  Axis& GetAxis(const string& axis);
+  Axis& GetAxis(const char axis);
   Data& GetData(uint8_t dataID);
   LegendBox& GetLegend(uint8_t legendID);
   TextBox& GetText(uint8_t textID);
@@ -313,7 +313,7 @@ private:
   optional<bool> mRedrawAxes;
   optional<string> mRefFunc;
 
-  map<string, Axis> mAxes;
+  map<char, Axis> mAxes;
   vector<shared_ptr<Data>> mData;
 
   vector<shared_ptr<LegendBox>> mLegendBoxes;
@@ -564,7 +564,7 @@ protected:
   friend class PlotPainter;
   friend class Plot;
 
-  Axis(const string& axisName);
+  Axis(const char axisName);
   Axis(const ptree& axisTree);
 
   ptree GetPropertyTree();
@@ -606,7 +606,7 @@ private:
     optional<double_t> max;
   };
 
-  string mName;
+  char mName;
   axisRange_t mRange;
   optional<string> mTitle;
   optional<int32_t> mNumDivisions;

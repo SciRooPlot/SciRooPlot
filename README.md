@@ -152,9 +152,9 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // by default " // " is used as a delimiter between multiple lines
 
   // to modify the axis titles, offsets, ranges, etc of a pad, just do the following
-  plot[1]["Y"].SetTitle("my y axis tilte with meaning");
-  plot[1]["X"].SetRange(1.4, 2.8).SetTitle("what i am showing on x axis").SetLog();
-  plot[1]["X"].SetMaxRange(5.);
+  plot[1]['Y'].SetTitle("my y axis tilte with meaning");
+  plot[1]['X'].SetRange(1.4, 2.8).SetTitle("what i am showing on x axis").SetLog();
+  plot[1]['X'].SetMaxRange(5.);
   // a full list of axis property accessors can be found in the Axis class definition in inc/Plot.h
 
 
@@ -261,8 +261,8 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   templatePlot[0].SetDefaultLineWidth(2.);
   templatePlot[0].SetTransparent();
   templatePlot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
-  templatePlot[0]["X"].SetTitleOffset(1.).SetTitleSize(34).SetOppositeTicks();
-  templatePlot[0]["Y"].SetTitleOffset(1.2).SetTitleSize(34).SetOppositeTicks();
+  templatePlot[0]['X'].SetTitleOffset(1.).SetTitleSize(34).SetOppositeTicks();
+  templatePlot[0]['Y'].SetTitleOffset(1.2).SetTitleSize(34).SetOppositeTicks();
   templatePlot[1].SetPosition(0., 0., 1., 1.);
   plotManager.AddPlotTemplate(templatePlot);
 } // -----------------------------------------------------------------------
@@ -283,17 +283,17 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   templatePlot[0].SetDefaultTextFont(43);
   templatePlot[0].SetDefaultTextSize(24);
   templatePlot[0].SetTransparent();
-  templatePlot[0]["X"].SetTitleOffset(1.1).SetOppositeTicks();;
-  templatePlot[0]["Y"].SetTitleOffset(1.4).SetOppositeTicks();;
+  templatePlot[0]['X'].SetTitleOffset(1.1).SetOppositeTicks();;
+  templatePlot[0]['Y'].SetTitleOffset(1.4).SetOppositeTicks();;
   templatePlot[1].SetPosition(0., 0.28, 1., 1.);
   templatePlot[1].SetMargins(0.05, 0.0, 0.14, 0.05);
-  templatePlot[1]["X"].SetTitleOffset(3.1);
-  templatePlot[1]["Y"].SetTitleOffset(1.5);
+  templatePlot[1]['X'].SetTitleOffset(3.1);
+  templatePlot[1]['Y'].SetTitleOffset(1.5);
   templatePlot[2].SetPosition(0., 0., 1., 0.28);
   templatePlot[2].SetMargins(0.015, 0.4, 0.14, 0.05);
   templatePlot[2].SetRefFunc("1");
-  templatePlot[2]["X"].SetTickLength(0.06).SetTitleOffset(4.1).SetOppositeTicks();
-  templatePlot[2]["Y"].SetNumDivisions(305).SetTitleOffset(1.5).SetTitleCenter();
+  templatePlot[2]['X'].SetTickLength(0.06).SetTitleOffset(4.1).SetOppositeTicks();
+  templatePlot[2]['Y'].SetNumDivisions(305).SetTitleOffset(1.5).SetTitleCenter();
   plotManager.AddPlotTemplate(templatePlot);
 } // -----------------------------------------------------------------------
 
@@ -307,9 +307,9 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   templatePlot[0].SetDefaultTextSize(24);
   templatePlot[0].SetTransparent();
   templatePlot[0].SetMargins(0.12-0.05, 0.12+0.02, 0.12, 0.12+0.06);
-  templatePlot[0]["X"].SetTitleOffset(1.1);
-  templatePlot[0]["Y"].SetTitleOffset(1.1);
-  templatePlot[0]["Z"].SetTitleOffset(1.6);
+  templatePlot[0]['X'].SetTitleOffset(1.1);
+  templatePlot[0]['Y'].SetTitleOffset(1.1);
+  templatePlot[0]['Z'].SetTitleOffset(1.6);
   templatePlot[0].SetRedrawAxes();
   templatePlot[1].SetPosition(0., 0., 1., 1.);
   plotManager.AddPlotTemplate(templatePlot);
@@ -336,7 +336,7 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   plot[1].AddLegend(0.,0.9);
   plot[2].AddLegend(0.,0.9);
 
-  plot[0]["X"].SetRange(20, 70).SetTickOrientation("+-");
+  plot[0]['X'].SetRange(20, 70).SetTickOrientation("+-");
 
   plotManager.AddPlot(plot);
 } // -----------------------------------------------------------------------
