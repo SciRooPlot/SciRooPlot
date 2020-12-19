@@ -397,33 +397,33 @@ protected:
 
   string GetUniqueName() { return mName + gNameGroupSeparator + mInputIdentifier; }
 
-  const string& GetType() const { return mType; }
-  const string& GetName() const { return mName; }
-  const optional<string>& GetLegendLable() { return mLegend.lable; }
-  const optional<uint8_t>& GetLegendID() { return mLegend.identifier; }
+  const auto& GetType() const { return mType; }
+  const auto& GetName() const { return mName; }
+  const auto& GetLegendLable() { return mLegend.lable; }
+  const auto& GetLegendID() { return mLegend.identifier; }
 
-  const optional<int16_t>& GetMarkerColor() { return mMarker.color; }
-  const optional<int16_t>& GetMarkerStyle() { return mMarker.style; }
-  const optional<float_t>& GetMarkerSize() { return mMarker.scale; }
+  const auto& GetMarkerColor() { return mMarker.color; }
+  const auto& GetMarkerStyle() { return mMarker.style; }
+  const auto& GetMarkerSize() { return mMarker.scale; }
 
-  const optional<int16_t>& GetLineColor() { return mLine.color; }
-  const optional<int16_t>& GetLineStyle() { return mLine.style; }
-  const optional<float_t>& GetLineWidth() { return mLine.scale; }
+  const auto& GetLineColor() { return mLine.color; }
+  const auto& GetLineStyle() { return mLine.style; }
+  const auto& GetLineWidth() { return mLine.scale; }
 
-  const optional<int16_t>& GetFillColor() { return mFill.color; }
-  const optional<int16_t>& GetFillStyle() { return mFill.style; }
-  const optional<float_t>& GetFillOpacity() { return mFill.scale; }
+  const auto& GetFillColor() { return mFill.color; }
+  const auto& GetFillStyle() { return mFill.style; }
+  const auto& GetFillOpacity() { return mFill.scale; }
 
-  const optional<string>& GetDrawingOptions() { return mDrawingOptions; }
-  const optional<drawing_options_t>& GetDrawingOptionAlias() { return mDrawingOptionAlias; }
-  const optional<string>& GetTextFormat() { return mTextFormat; }
-  const optional<double_t>& GetScaleFactor() { return mModify.scale_factor; }
-  const optional<uint8_t>& GetNormMode() { return mModify.norm_mode; }
+  const auto& GetDrawingOptions() { return mDrawingOptions; }
+  const auto& GetDrawingOptionAlias() { return mDrawingOptionAlias; }
+  const auto& GetTextFormat() { return mTextFormat; }
+  const auto& GetScaleFactor() { return mModify.scale_factor; }
+  const auto& GetNormMode() { return mModify.norm_mode; }
 
-  const optional<double_t>& GetMinRangeX() { return mRangeX.min; }
-  const optional<double_t>& GetMaxRangeX() { return mRangeX.max; }
-  const optional<double_t>& GetMinRangeY() { return mRangeY.min; }
-  const optional<double_t>& GetMaxRangeY() { return mRangeY.max; }
+  const auto& GetMinRangeX() { return mRangeX.min; }
+  const auto& GetMaxRangeX() { return mRangeX.max; }
+  const auto& GetMinRangeY() { return mRangeY.min; }
+  const auto& GetMaxRangeY() { return mRangeY.max; }
 
   const bool& GetDefinesFrame() { return mDefinesFrame; }
 
@@ -544,128 +544,30 @@ class Plot::Pad::Axis
 public:
   Axis() = default;
 
-  Axis& SetTitle(const string& title)
-  {
-    mTitle = title;
-    return *this;
-  }
-  Axis& SetRange(double_t min, double_t max)
-  {
-    mRange = {min, max};
-    return *this;
-  }
-  Axis& SetMaxRange(double_t max)
-  {
-    mRange.max = max;
-    return *this;
-  }
-  Axis& SetMinRange(double_t min)
-  {
-    mRange.min = min;
-    return *this;
-  }
-  Axis& SetColor(int16_t color)
-  {
-    mAxisColor = color;
-    mLableProperties.color = color;
-    mTitleProperties.color = color;
-    return *this;
-  }
-  Axis& SetAxisColor(int16_t color)
-  {
-    mAxisColor = color;
-    return *this;
-  }
-  Axis& SetNumDivisions(int32_t numDivisions)
-  {
-    mNumDivisions = numDivisions;
-    return *this;
-  }
-  Axis& SetMaxDigits(int32_t maxDigtis)
-  {
-    mMaxDigits = maxDigtis;
-    return *this;
-  }
-  Axis& SetTickLength(float_t tickLength)
-  {
-    mTickLength = tickLength;
-    return *this;
-  }
-  Axis& SetTitleFont(int16_t font)
-  {
-    mTitleProperties.font = font;
-    return *this;
-  }
-  Axis& SetLableFont(int16_t font)
-  {
-    mLableProperties.font = font;
-    return *this;
-  }
-  Axis& SetTitleSize(float_t size)
-  {
-    mTitleProperties.size = size;
-    return *this;
-  }
-  Axis& SetLableSize(float_t size)
-  {
-    mLableProperties.size = size;
-    return *this;
-  }
-  Axis& SetTitleColor(int16_t color)
-  {
-    mTitleProperties.color = color;
-    return *this;
-  }
-  Axis& SetLableColor(int16_t color)
-  {
-    mLableProperties.color = color;
-    return *this;
-  }
-  Axis& SetTitleOffset(float_t offset)
-  {
-    mTitleProperties.offset = offset;
-    return *this;
-  }
-  Axis& SetLableOffset(float_t offset)
-  {
-    mLableProperties.offset = offset;
-    return *this;
-  }
-  Axis& SetTitleCenter(bool center = true)
-  {
-    mTitleProperties.center = center;
-    return *this;
-  }
-  Axis& SetLableCenter(bool center = true)
-  {
-    mLableProperties.center = center;
-    return *this;
-  }
-  Axis& SetLog(bool isLog = true)
-  {
-    mIsLog = isLog;
-    return *this;
-  }
-  Axis& SetGrid(bool isGrid = true)
-  {
-    mIsGrid = isGrid;
-    return *this;
-  }
-  Axis& SetOppositeTicks(bool isOppositeTicks = true)
-  {
-    mIsOppositeTicks = isOppositeTicks;
-    return *this;
-  }
-  Axis& SetTimeFormat(const string& timeFormat)
-  {
-    mTimeFormat = timeFormat;
-    return *this;
-  }
-  Axis& SetTickOrientation(const string& tickOrientation)
-  {
-    mTickOrientation = tickOrientation;
-    return *this;
-  }
+  Axis& SetTitle(const string& title);
+  Axis& SetRange(double_t min, double_t max);
+  Axis& SetMaxRange(double_t max);
+  Axis& SetMinRange(double_t min);
+  Axis& SetColor(int16_t color);
+  Axis& SetAxisColor(int16_t color);
+  Axis& SetNumDivisions(int32_t numDivisions);
+  Axis& SetMaxDigits(int32_t maxDigtis);
+  Axis& SetTickLength(float_t tickLength);
+  Axis& SetTitleFont(int16_t font);
+  Axis& SetLableFont(int16_t font);
+  Axis& SetTitleSize(float_t size);
+  Axis& SetLableSize(float_t size);
+  Axis& SetTitleColor(int16_t color);
+  Axis& SetLableColor(int16_t color);
+  Axis& SetTitleOffset(float_t offset);
+  Axis& SetLableOffset(float_t offset);
+  Axis& SetTitleCenter(bool center = true);
+  Axis& SetLableCenter(bool center = true);
+  Axis& SetLog(bool isLog = true);
+  Axis& SetGrid(bool isGrid = true);
+  Axis& SetOppositeTicks(bool isOppositeTicks = true);
+  Axis& SetTimeFormat(const string& timeFormat);
+  Axis& SetTickOrientation(const string& tickOrientation);
 
 protected:
   friend class PlotManager;
@@ -678,28 +580,28 @@ protected:
   ptree GetPropertyTree();
   void operator+=(const Axis& axis);
 
-  const optional<double_t>& GetMinRange() { return mRange.min; }
-  const optional<double_t>& GetMaxRange() { return mRange.max; }
-  const optional<float_t>& GetTickLength() { return mTickLength; }
-  const optional<int32_t>& GetNumDivisions() { return mNumDivisions; }
-  const optional<int32_t>& GetMaxDigits() { return mMaxDigits; }
-  const optional<int16_t>& GetAxisColor() { return mAxisColor; }
-  const optional<string>& GetTitle() { return mTitle; }
-  const optional<int16_t>& GetTitleFont() { return mTitleProperties.font; }
-  const optional<int16_t>& GetLableFont() { return mLableProperties.font; }
-  const optional<float_t>& GetTitleSize() { return mTitleProperties.size; }
-  const optional<float_t>& GetLableSize() { return mLableProperties.size; }
-  const optional<int16_t>& GetTitleColor() { return mTitleProperties.color; }
-  const optional<int16_t>& GetLableColor() { return mLableProperties.color; }
-  const optional<float_t>& GetTitleOffset() { return mTitleProperties.offset; }
-  const optional<float_t>& GetLableOffset() { return mLableProperties.offset; }
-  const optional<bool>& GetTitleCenter() { return mTitleProperties.center; }
-  const optional<bool>& GetLableCenter() { return mLableProperties.center; }
-  const optional<bool>& GetLog() { return mIsLog; }
-  const optional<bool>& GetGrid() { return mIsGrid; }
-  const optional<bool>& GetOppositeTicks() { return mIsOppositeTicks; }
-  const optional<string>& GetTimeFormat() { return mTimeFormat; }
-  const optional<string>& GetTickOrientation() { return mTickOrientation; }
+  const auto& GetMinRange() { return mRange.min; }
+  const auto& GetMaxRange() { return mRange.max; }
+  const auto& GetTickLength() { return mTickLength; }
+  const auto& GetNumDivisions() { return mNumDivisions; }
+  const auto& GetMaxDigits() { return mMaxDigits; }
+  const auto& GetAxisColor() { return mAxisColor; }
+  const auto& GetTitle() { return mTitle; }
+  const auto& GetTitleFont() { return mTitleProperties.font; }
+  const auto& GetLableFont() { return mLableProperties.font; }
+  const auto& GetTitleSize() { return mTitleProperties.size; }
+  const auto& GetLableSize() { return mLableProperties.size; }
+  const auto& GetTitleColor() { return mTitleProperties.color; }
+  const auto& GetLableColor() { return mLableProperties.color; }
+  const auto& GetTitleOffset() { return mTitleProperties.offset; }
+  const auto& GetLableOffset() { return mLableProperties.offset; }
+  const auto& GetTitleCenter() { return mTitleProperties.center; }
+  const auto& GetLableCenter() { return mLableProperties.center; }
+  const auto& GetLog() { return mIsLog; }
+  const auto& GetGrid() { return mIsGrid; }
+  const auto& GetOppositeTicks() { return mIsOppositeTicks; }
+  const auto& GetTimeFormat() { return mTimeFormat; }
+  const auto& GetTickOrientation() { return mTickOrientation; }
 
 private:
   struct axisTextProperties_t {
@@ -770,15 +672,15 @@ protected:
 
   double_t GetXPosition() { return (mPos.x) ? *mPos.x : 0.; }
   double_t GetYPosition() { return (mPos.y) ? *mPos.y : 0.; }
-  optional<int16_t>& GetBorderStyle() { return mBorder.style; }
-  optional<float_t>& GetBorderWidth() { return mBorder.scale; }
-  optional<int16_t>& GetBorderColor() { return mBorder.color; }
-  optional<int16_t>& GetFillStyle() { return mFill.style; }
-  optional<float_t>& GetFillOpacity() { return mFill.scale; }
-  optional<int16_t>& GetFillColor() { return mFill.color; }
-  optional<int16_t>& GetTextFont() { return mText.style; }
-  optional<float_t>& GetTextSize() { return mText.scale; }
-  optional<int16_t>& GetTextColor() { return mText.color; }
+  auto& GetBorderStyle() { return mBorder.style; }
+  auto& GetBorderWidth() { return mBorder.scale; }
+  auto& GetBorderColor() { return mBorder.color; }
+  auto& GetFillStyle() { return mFill.style; }
+  auto& GetFillOpacity() { return mFill.scale; }
+  auto& GetFillColor() { return mFill.color; }
+  auto& GetTextFont() { return mText.style; }
+  auto& GetTextSize() { return mText.scale; }
+  auto& GetTextColor() { return mText.color; }
 
   bool IsUserCoordinates() { return (mPos.isUserCoord) ? *mPos.isUserCoord : false; }
   bool IsAutoPlacement() { return (!mPos.x || !mPos.y); }
@@ -886,19 +788,19 @@ protected:
 
   LegendEntry& AddEntry(const string& name, const string& lable);
 
-  const optional<string>& GetDefaultDrawStyle() { return mDrawStyleDefault; }
+  const auto& GetDefaultDrawStyle() { return mDrawStyleDefault; }
 
-  const optional<int16_t>& GetDefaultMarkerColor() { return mMarkerDefault.color; }
-  const optional<int16_t>& GetDefaultMarkerStyle() { return mMarkerDefault.style; }
-  const optional<float_t>& GetDefaultMarkerSize() { return mMarkerDefault.scale; }
+  const auto& GetDefaultMarkerColor() { return mMarkerDefault.color; }
+  const auto& GetDefaultMarkerStyle() { return mMarkerDefault.style; }
+  const auto& GetDefaultMarkerSize() { return mMarkerDefault.scale; }
 
-  const optional<int16_t>& GetDefaultLineColor() { return mLineDefault.color; }
-  const optional<int16_t>& GetDefaultLineStyle() { return mLineDefault.style; }
-  const optional<float_t>& GetDefaultLineWidth() { return mLineDefault.scale; }
+  const auto& GetDefaultLineColor() { return mLineDefault.color; }
+  const auto& GetDefaultLineStyle() { return mLineDefault.style; }
+  const auto& GetDefaultLineWidth() { return mLineDefault.scale; }
 
-  const optional<int16_t>& GetDefaultFillColor() { return mFillDefault.color; }
-  const optional<int16_t>& GetDefaultFillStyle() { return mFillDefault.style; }
-  const optional<float_t>& GetDefaultFillOpacity() { return mFillDefault.scale; }
+  const auto& GetDefaultFillColor() { return mFillDefault.color; }
+  const auto& GetDefaultFillStyle() { return mFillDefault.style; }
+  const auto& GetDefaultFillOpacity() { return mFillDefault.scale; }
 
 private:
   optional<string> mTitle;
@@ -959,25 +861,25 @@ protected:
   void operator+=(const LegendEntry& legendEntry);
 
   ptree GetPropertyTree();
-  const optional<string>& GetRefDataName() const { return mRefDataName; }
-  const optional<string>& GetLable() const { return mLable; }
-  const optional<string>& GetDrawStyle() const { return mDrawStyle; }
+  const auto& GetRefDataName() const { return mRefDataName; }
+  const auto& GetLable() const { return mLable; }
+  const auto& GetDrawStyle() const { return mDrawStyle; }
 
-  const optional<int16_t>& GetMarkerColor() const { return mMarker.color; }
-  const optional<int16_t>& GetMarkerStyle() const { return mMarker.style; }
-  const optional<float_t>& GetMarkerSize() const { return mMarker.scale; }
+  const auto& GetMarkerColor() const { return mMarker.color; }
+  const auto& GetMarkerStyle() const { return mMarker.style; }
+  const auto& GetMarkerSize() const { return mMarker.scale; }
 
-  const optional<int16_t>& GetLineColor() const { return mLine.color; }
-  const optional<int16_t>& GetLineStyle() const { return mLine.style; }
-  const optional<float_t>& GetLineWidth() const { return mLine.scale; }
+  const auto& GetLineColor() const { return mLine.color; }
+  const auto& GetLineStyle() const { return mLine.style; }
+  const auto& GetLineWidth() const { return mLine.scale; }
 
-  const optional<int16_t>& GetFillColor() const { return mFill.color; }
-  const optional<int16_t>& GetFillStyle() const { return mFill.style; }
-  const optional<float_t>& GetFillOpacity() const { return mFill.scale; }
+  const auto& GetFillColor() const { return mFill.color; }
+  const auto& GetFillStyle() const { return mFill.style; }
+  const auto& GetFillOpacity() const { return mFill.scale; }
 
-  const optional<int16_t>& GetTextColor() const { return mText.color; }
-  const optional<int16_t>& GetTextFont() const { return mText.style; }
-  const optional<float_t>& GetTextSize() const { return mText.scale; }
+  const auto& GetTextColor() const { return mText.color; }
+  const auto& GetTextFont() const { return mText.style; }
+  const auto& GetTextSize() const { return mText.scale; }
 
 private:
   optional<string> mLable;

@@ -1367,6 +1367,134 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
   if (axis.mTickOrientation) mTickOrientation = axis.mTickOrientation;
 }
 
+//**************************************************************************************************
+/**
+ * User accessors to change axis properties.
+ */
+//**************************************************************************************************
+auto Plot::Pad::Axis::SetTitle(const string& title) -> decltype(*this)
+{
+  mTitle = title;
+  return *this;
+}
+auto Plot::Pad::Axis::SetRange(double_t min, double_t max) -> decltype(*this)
+{
+  mRange = {min, max};
+  return *this;
+}
+auto Plot::Pad::Axis::SetMaxRange(double_t max) -> decltype(*this)
+{
+  mRange.max = max;
+  return *this;
+}
+auto Plot::Pad::Axis::SetMinRange(double_t min) -> decltype(*this)
+{
+  mRange.min = min;
+  return *this;
+}
+auto Plot::Pad::Axis::SetColor(int16_t color) -> decltype(*this)
+{
+  mAxisColor = color;
+  mLableProperties.color = color;
+  mTitleProperties.color = color;
+  return *this;
+}
+auto Plot::Pad::Axis::SetAxisColor(int16_t color) -> decltype(*this)
+{
+  mAxisColor = color;
+  return *this;
+}
+auto Plot::Pad::Axis::SetNumDivisions(int32_t numDivisions) -> decltype(*this)
+{
+  mNumDivisions = numDivisions;
+  return *this;
+}
+auto Plot::Pad::Axis::SetMaxDigits(int32_t maxDigtis) -> decltype(*this)
+{
+  mMaxDigits = maxDigtis;
+  return *this;
+}
+auto Plot::Pad::Axis::SetTickLength(float_t tickLength) -> decltype(*this)
+{
+  mTickLength = tickLength;
+  return *this;
+}
+auto Plot::Pad::Axis::SetTitleFont(int16_t font) -> decltype(*this)
+{
+  mTitleProperties.font = font;
+  return *this;
+}
+auto Plot::Pad::Axis::SetLableFont(int16_t font) -> decltype(*this)
+{
+  mLableProperties.font = font;
+  return *this;
+}
+auto Plot::Pad::Axis::SetTitleSize(float_t size) -> decltype(*this)
+{
+  mTitleProperties.size = size;
+  return *this;
+}
+auto Plot::Pad::Axis::SetLableSize(float_t size) -> decltype(*this)
+{
+  mLableProperties.size = size;
+  return *this;
+}
+auto Plot::Pad::Axis::SetTitleColor(int16_t color) -> decltype(*this)
+{
+  mTitleProperties.color = color;
+  return *this;
+}
+auto Plot::Pad::Axis::SetLableColor(int16_t color) -> decltype(*this)
+{
+  mLableProperties.color = color;
+  return *this;
+}
+auto Plot::Pad::Axis::SetTitleOffset(float_t offset) -> decltype(*this)
+{
+  mTitleProperties.offset = offset;
+  return *this;
+}
+auto Plot::Pad::Axis::SetLableOffset(float_t offset) -> decltype(*this)
+{
+  mLableProperties.offset = offset;
+  return *this;
+}
+auto Plot::Pad::Axis::SetTitleCenter(bool center) -> decltype(*this)
+{
+  mTitleProperties.center = center;
+  return *this;
+}
+auto Plot::Pad::Axis::SetLableCenter(bool center) -> decltype(*this)
+{
+  mLableProperties.center = center;
+  return *this;
+}
+auto Plot::Pad::Axis::SetLog(bool isLog) -> decltype(*this)
+{
+  mIsLog = isLog;
+  return *this;
+}
+auto Plot::Pad::Axis::SetGrid(bool isGrid) -> decltype(*this)
+{
+  mIsGrid = isGrid;
+  return *this;
+}
+auto Plot::Pad::Axis::SetOppositeTicks(bool isOppositeTicks) -> decltype(*this)
+{
+  mIsOppositeTicks = isOppositeTicks;
+  return *this;
+}
+auto Plot::Pad::Axis::SetTimeFormat(const string& timeFormat) -> decltype(*this)
+{
+  mTimeFormat = timeFormat;
+  return *this;
+}
+auto Plot::Pad::Axis::SetTickOrientation(const string& tickOrientation) -> decltype(*this)
+{
+  mTickOrientation = tickOrientation;
+  return *this;
+}
+
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 // IMPLEMENTATION class Box
