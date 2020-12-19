@@ -1,6 +1,6 @@
 Rationale
 ---------
-This piece of software is my humble attempt to simplify plotting of ROOT data by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
+This piece of software is ment to simplify plotting of ROOT data by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
 If you have already worked with ROOT, you probably ask yourself:
 > We already have ROOT and it is perfectly fine as it is. I have learned to master it over the years and all my macros work just fine. Why do I need this additional Plotting Framework? Why should I learn to use yet another library interface?
 
@@ -111,19 +111,19 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   plot[1].SetDefaultTextSize(24);
 
   // finally we can start adding data to the plot
-  plot[1].AddData("histName1", "inputGroupA" ,"myLable");
+  plot[1].AddData("histName1", "inputGroupA", "myLable");
   // this will search for a hist/graph/fuc called histName1 in all files specified in "inputGroupA"
   // the algorithm by default recursively traverses the whole directory or list substructure of the files and returns the first match
   // in case of multiple data with the same name, living in different subfolders/lists within the file you can do
-  plot[1].AddData("folder1/histName2", "inputGroupA" ,"myLable2");
-  plot[1].AddData("folder2/histName2", "inputGroupA" ,"myLable3");
+  plot[1].AddData("folder1/histName2", "inputGroupA", "myLable2");
+  plot[1].AddData("folder2/histName2", "inputGroupA", "myLable3");
 
   // it is possible to specify in the lables that you want to include some meta info of the data that is drawn, e.g.:
-  plot[1].AddData("histName1", "inputGroupA" ,"myLable avg = <mean>");
+  plot[1].AddData("histName1", "inputGroupA", "myLable avg = <mean>");
   // possible options are: <name>, <title>, <entries>, <integral>, <maximum>, <minimum>, <mean>
   // you can use the standard printf style to specify how these numbers shall be formatted:
-  plot[1].AddData("histName1", "inputGroupA" ,"myLable avg = <mean[.2f]>");
-  plot[1].AddData("histName2", "inputGroupA" ,"myLable sum = <integral[.2e]>");
+  plot[1].AddData("histName1", "inputGroupA", "myLable avg = <mean[.2f]>");
+  plot[1].AddData("histName2", "inputGroupA", "myLable sum = <integral[.2e]>");
 
   // now lets add another piece of input data from the second group (this time without adding a lable to the legend)
   plot[1].AddData("histName3", "inputGroupB");
@@ -176,13 +176,13 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 { // -----------------------------------------------------------------------
   Plot plot("myPlot", "myPlotGroup2");
   // ...
-  plot[1].AddData("folder1/histName2", "inputGroupA" ,"myLable2");
+  plot[1].AddData("folder1/histName2", "inputGroupA", "myLable2");
   //...
 
   // now I want to have exact same plot, but with some additional data points
   // this can be helpful to avoid useless code duplication
   Plot plot2(plot, "myPlot2", "myPlotGroup2");
-  plot2[1].AddData("graphName1", "inputGroupB" ,"more data");
+  plot2[1].AddData("graphName1", "inputGroupB", "more data");
 
   // now add both to the manager
   plotManager.AddPlot(plot);
