@@ -111,32 +111,32 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   plot[1].SetDefaultTextSize(24);
 
   // finally we can start adding data to the plot
-  plot[1].AddData({"histName1", "inputGroupA"} ,"myLable");
+  plot[1].AddData("histName1", "inputGroupA" ,"myLable");
   // this will search for a hist/graph/fuc called histName1 in all files specified in "inputGroupA"
   // the algorithm by default recursively traverses the whole directory or list substructure of the files and returns the first match
   // in case of multiple data with the same name, living in different subfolders/lists within the file you can do
-  plot[1].AddData({"folder1/histName2", "inputGroupA"} ,"myLable2");
-  plot[1].AddData({"folder2/histName2", "inputGroupA"} ,"myLable3");
+  plot[1].AddData("folder1/histName2", "inputGroupA" ,"myLable2");
+  plot[1].AddData("folder2/histName2", "inputGroupA" ,"myLable3");
 
   // it is possible to specify in the lables that you want to include some meta info of the data that is drawn, e.g.:
-  plot[1].AddData({"histName1", "inputGroupA"} ,"myLable avg = <mean>");
+  plot[1].AddData("histName1", "inputGroupA" ,"myLable avg = <mean>");
   // possible options are: <name>, <title>, <entries>, <integral>, <maximum>, <minimum>, <mean>
   // you can use the standard printf style to specify how these numbers shall be formatted:
-  plot[1].AddData({"histName1", "inputGroupA"} ,"myLable avg = <mean[.2f]>");
-  plot[1].AddData({"histName2", "inputGroupA"} ,"myLable sum = <integral[.2e]>");
+  plot[1].AddData("histName1", "inputGroupA" ,"myLable avg = <mean[.2f]>");
+  plot[1].AddData("histName2", "inputGroupA" ,"myLable sum = <integral[.2e]>");
 
   // now lets add another piece of input data from the second group (this time without adding a lable to the legend)
-  plot[1].AddData({"histName3", "inputGroupB"});
+  plot[1].AddData("histName3", "inputGroupB");
 
   // you can also simply add ratios of two input data
-  plot[1].AddRatio({"histName3", "inputGroupB"}, {"histName1", "inputGroupA"}, "ratioLable");
+  plot[1].AddRatio("histName3", "inputGroupB", "histName1", "inputGroupA", "ratioLable");
 
   // to mdify how the data is displayed we can apply the settings via:
-  plot[1].AddData({"histName4", "inputGroupB"}).SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
+  plot[1].AddData("histName4", "inputGroupB").SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
   // instead of directly using the ROOT drawing option string ("HIST C") you can
   // use pre-defined human readible options like curve, points, points_line, etc
   // (you can find all available options in inc/PlotPainter.h):
-  plot[1].AddData({"graphName1", "inputGroupA"}).SetOptions(points).SetMarker(kRed, kFullCircle, 1.);
+  plot[1].AddData("graphName1", "inputGroupA").SetOptions(points).SetMarker(kRed, kFullCircle, 1.);
   // all root layout settings can be applied in this manner
   // (see definition of Data class in inc/Plot.h for the list of all accessors)
 
@@ -176,13 +176,13 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 { // -----------------------------------------------------------------------
   Plot plot("myPlot", "myPlotGroup2");
   // ...
-  plot[1].AddData({"folder1/histName2", "inputGroupA"} ,"myLable2");
+  plot[1].AddData("folder1/histName2", "inputGroupA" ,"myLable2");
   //...
 
   // now I want to have exact same plot, but with some additional data points
   // this can be helpful to avoid useless code duplication
   Plot plot2(plot, "myPlot2", "myPlotGroup2");
-  plot2[1].AddData({"graphName1", "inputGroupB"} ,"more data");
+  plot2[1].AddData("graphName1", "inputGroupB" ,"more data");
 
   // now add both to the manager
   plotManager.AddPlot(plot);
@@ -323,13 +323,13 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
 { // -----------------------------------------------------------------------
   Plot plot("test1d_ratio", "myFigureGroup", "1d_ratio");
 
-  plot[1].AddData({"graph2", "inputGroupA"}, "5 TeV #Delta = #sqrt{s}")
+  plot[1].AddData("graph2", "inputGroupA", "5 TeV #Delta = #sqrt{s}")
   .SetMarker(kRed, kFullCircle, 1.2).SetMaxRangeX(40);
 
-  plot[1].AddData({"func3", "inputGroupB"}, "ratio")
+  plot[1].AddData("func3", "inputGroupB", "ratio")
   .SetMarker(kBlack, kFullCircle, 1.2).SetMaxRangeX(70);
 
-  plot[2].AddRatio({"invMassSpec", "inputGroupA"}, {"momentUnfolded1", "pp_5TeV"}, "ratio")
+  plot[2].AddRatio("invMassSpec", "inputGroupA", "momentUnfolded1", "pp_5TeV", "ratio")
   .SetMarker(kRed, kFullCircle, 1.2)
   .SetMaxRangeX(60);
 
@@ -353,8 +353,15 @@ DataLayout pp5TeV = DataLayout()
                     .SetColor(kGreen+3);
 { // -----------------------------------------------------------------------
   Plot plot("test1d", "myFigureGroup", "1d");
-  plot[1].AddData({"graph2", "inputGroupA"}).SetLayout(pp5TeV);;
-  plot[1].AddData({"graph3", "inputGroupA"}).SetLayout(pp5TeV);;
+  plot[1].AddData("graph2", "inputGroupA").SetLayout(pp5TeV);;
+  plot[1].AddData("graph3", "inputGroupA").SetLayout(pp5TeV);;
+
+  // if your data layout also contains an input identifier
+  pp5TeV.SetInputID("inputGroupA");
+  // you can add the data and layout in the following way:
+  plot[1].AddData("graph2", pp5TeV);
+  // and this cna be done in a similar manner also for ratios:
+  plot[1].AddRatio("graph2", pp5TeV, "graph3", "inputGroupA");
 
   plot[1].AddLegend(0.,0.9);
   plotManager.AddPlot(plot);

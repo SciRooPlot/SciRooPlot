@@ -167,20 +167,22 @@ public:
   class TextBox;
   class LegendBox;
 
-  struct input_t
-  {
-    string name;
-    string inputIdentifier;
-  };
-
   Pad() = default;
   Pad(const ptree& padTree);
   Axis& operator[](const string& axis);
   void operator+=(const Pad& pad);
 
   // User accessors:
-  Data& AddData(const input_t& input, const string& lable = "");
-  Ratio& AddRatio(const input_t& numerator, const input_t& denominator, const string& lable = "");
+  Data& AddData(const string& name, const string& inputIdentifier, const string& lable = "");
+  Data& AddData(const string& name, const Data& dataTemplate, const string& lable = "");
+  // Data& AddData(const Data& data, const string& lable);
+  // Data& AddData(const Data& data);
+
+  Ratio& AddRatio(const string& numeratorName, const string& numeratorInputIdentifier,
+                  const string& denominatorName, const string& denominatorInputIdentifier,
+                  const string& lable = "");
+  Ratio& AddRatio(const string& numeratorName, const Data& data, const string& denominatorName,
+                  const string& denominatorInputIdentifier, const string& lable = "");
 
   TextBox& AddText(double_t xPos, double_t yPos, const string& text);
   TextBox& AddText(const string& text);
@@ -372,12 +374,16 @@ public:
   virtual auto SetRangeX(double_t min, double_t max) -> decltype(*this);
   virtual auto SetMaxRangeX(double_t max) -> decltype(*this);
   virtual auto SetMinRangeX(double_t min) -> decltype(*this);
+  virtual auto UnsetRangeX() -> decltype(*this);
   virtual auto SetRangeY(double_t min, double_t max) -> decltype(*this);
   virtual auto SetMaxRangeY(double_t max) -> decltype(*this);
   virtual auto SetMinRangeY(double_t min) -> decltype(*this);
+  virtual auto UnsetRangeY() -> decltype(*this);
   virtual auto SetLegendLable(const string& legendLable) -> decltype(*this);
   virtual auto SetLegendID(uint8_t legendID) -> decltype(*this);
   virtual auto SetOptions(const string& opions) -> decltype(*this);
+  virtual auto SetOptions(drawing_options_t optionAlias) -> decltype(*this);
+  virtual auto UnsetOptions() -> decltype(*this);
   virtual auto SetTextFormat(const string& textFormat) -> decltype(*this);
   virtual auto SetNormalize(bool useWidth = false) -> decltype(*this);
   virtual auto SetScaleFactor(double_t scale) -> decltype(*this);
@@ -394,11 +400,10 @@ public:
   virtual auto SetFillColor(int16_t color) -> decltype(*this);
   virtual auto SetFillStyle(int16_t style) -> decltype(*this);
   virtual auto SetFillOpacity(float_t opacity) -> decltype(*this);
-  virtual auto SetOptions(drawing_options_t optionAlias) -> decltype(*this);
   virtual auto SetDefinesFrame() -> decltype(*this);
 
   auto SetInputID(const string& inputIdentifier) -> decltype(*this);
-  const string& GetInputID() { return mInputIdentifier; }
+  const string& GetInputID() const { return mInputIdentifier; }
 
 protected:
   friend class PlotManager;
@@ -413,8 +418,8 @@ protected:
 
   string GetUniqueName() { return mName + gNameGroupSeparator + mInputIdentifier; }
 
-  const string& GetType() { return mType; }
-  const string& GetName() { return mName; }
+  const string& GetType() const { return mType; }
+  const string& GetName() const { return mName; }
   const optional<string>& GetLegendLable() { return mLegend.lable; }
   const optional<uint8_t>& GetLegendID() { return mLegend.identifier; }
 
@@ -517,6 +522,10 @@ public:
   {
     return static_cast<decltype(*this)&>(Data::SetMinRangeX(min));
   }
+  virtual auto UnsetRangeX() -> decltype(*this)
+  {
+    return static_cast<decltype(*this)&>(Data::UnsetRangeY());
+  }
   virtual auto SetRangeY(double_t min, double_t max) -> decltype(*this)
   {
     return static_cast<decltype(*this)&>(Data::SetRangeY(min, max));
@@ -529,6 +538,10 @@ public:
   {
     return static_cast<decltype(*this)&>(Data::SetMinRangeY(min));
   }
+  virtual auto UnsetRangeY() -> decltype(*this)
+  {
+    return static_cast<decltype(*this)&>(Data::UnsetRangeY());
+  }
   virtual auto SetLegendLable(const string& legendLable) -> decltype(*this)
   {
     return static_cast<decltype(*this)&>(Data::SetLegendLable(legendLable));
@@ -540,6 +553,14 @@ public:
   virtual auto SetOptions(const string& opions) -> decltype(*this)
   {
     return static_cast<decltype(*this)&>(Data::SetOptions(opions));
+  }
+  virtual auto SetOptions(drawing_options_t optionAlias) -> decltype(*this)
+  {
+    return static_cast<decltype(*this)&>(Data::SetOptions(optionAlias));
+  }
+  virtual auto UnsetOptions() -> decltype(*this)
+  {
+    return static_cast<decltype(*this)&>(Data::UnsetOptions());
   }
   virtual auto SetTextFormat(const string& textFormat) -> decltype(*this)
   {
@@ -604,10 +625,6 @@ public:
   virtual auto SetFillOpacity(float_t opacity) -> decltype(*this)
   {
     return static_cast<decltype(*this)&>(Data::SetFillOpacity(opacity));
-  }
-  virtual auto SetOptions(drawing_options_t optionAlias) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetOptions(optionAlias));
   }
   virtual auto SetDefinesFrame() -> decltype(*this)
   {
@@ -1036,9 +1053,9 @@ public:
 
   LegendEntry(const ptree& legendEntryTree);
 
-  LegendEntry& SetLable(string lable);
-  LegendEntry& SetRefData(input_t inputTuple);
-  LegendEntry& SetDrawStyle(string drawStyle);
+  LegendEntry& SetLable(const string& lable);
+  LegendEntry& SetRefData(const string& name, const string& inputIdentifier);
+  LegendEntry& SetDrawStyle(const string& drawStyle);
 
   LegendEntry& SetMarkerColor(int16_t color);
   LegendEntry& SetMarkerStyle(int16_t style);

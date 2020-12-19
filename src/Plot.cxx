@@ -718,11 +718,9 @@ void Plot::Pad::operator+=(const Pad& pad)
   if(pad.mMarkerDefaults.styles) mMarkerDefaults.styles = pad.mMarkerDefaults.styles;
   if(pad.mLineDefaults.styles) mLineDefaults.styles = pad.mLineDefaults.styles;
   if(pad.mFillDefaults.styles) mFillDefaults.styles = pad.mFillDefaults.styles;
-  if(pad.mDrawingOptionDefaults.graph)
-    mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
+  if(pad.mDrawingOptionDefaults.graph) mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
   if(pad.mDrawingOptionDefaults.hist) mDrawingOptionDefaults.hist = pad.mDrawingOptionDefaults.hist;
-  if(pad.mDrawingOptionDefaults.hist2d)
-    mDrawingOptionDefaults.hist2d = pad.mDrawingOptionDefaults.hist2d;
+  if(pad.mDrawingOptionDefaults.hist2d) mDrawingOptionDefaults.hist2d = pad.mDrawingOptionDefaults.hist2d;
   if(pad.mPalette) mPalette = pad.mPalette;
   if(pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if(pad.mRefFunc) mRefFunc = pad.mRefFunc;
@@ -824,22 +822,50 @@ Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
  * Add data to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Data& Plot::Pad::AddData(const input_t& data, const string& lable)
+Plot::Pad::Data& Plot::Pad::AddData(const string& name, const string& inputIdentifier, const string& lable)
 {
-  mData.push_back(std::make_shared<Data>(data.name, data.inputIdentifier, lable));
+  mData.push_back(std::make_shared<Data>(name, inputIdentifier, lable));
   return *mData.back();
 }
+
+Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const string& lable)
+{
+  mData.push_back(std::make_shared<Data>(name, data.GetInputID(), lable));
+  mData.back()->SetLayout(data);
+  return *mData.back();
+}
+/*
+Plot::Pad::Data& Plot::Pad::AddData(const Data& data, const string& lable)
+{
+  mData.push_back(std::make_shared<Data>(data.GetName(), data.GetInputID(), lable));
+  mData.back()->SetLayout(data);
+  return *mData.back();
+}
+
+Plot::Pad::Data& Plot::Pad::AddData(const Data& data)
+{
+  mData.push_back(std::make_shared<Data>(data));
+  return *mData.back();
+}
+*/
 
 //**************************************************************************************************
 /**
  * Add ratio to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const input_t& numerator, const input_t& denominator,
-                                      const string& lable)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorInputIdentifier, const string& denominatorName, const string& denominatorInputIdentifier, const string& lable)
 {
-  mData.push_back(std::make_shared<Ratio>(numerator.name, numerator.inputIdentifier,
-                                          denominator.name, denominator.inputIdentifier, lable));
+  mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorInputIdentifier,
+                                          denominatorName, denominatorInputIdentifier, lable));
+  return *std::dynamic_pointer_cast<Ratio>(mData.back());
+}
+
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& data, const string& denominatorName, const string& denominatorInputIdentifier, const string& lable)
+{
+  mData.push_back(std::make_shared<Ratio>(numeratorName, data.GetInputID(),
+                                          denominatorName, denominatorInputIdentifier, lable));
+  mData.back()->SetLayout(data);
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
 
@@ -1037,6 +1063,17 @@ auto Plot::Pad::Data::SetOptions(const string& opions) -> decltype(*this)
   mDrawingOptions = opions;
   return *this;
 }
+auto Plot::Pad::Data::SetOptions(drawing_options_t optionAlias) -> decltype(*this)
+{
+  mDrawingOptionAlias = optionAlias;
+  return *this;
+}
+auto Plot::Pad::Data::UnsetOptions() -> decltype(*this)
+{
+  mDrawingOptionAlias = {};
+  mDrawingOptions = {};
+  return *this;
+}
 auto Plot::Pad::Data::SetTextFormat(const string& textFormat) -> decltype(*this)
 {
   mTextFormat = textFormat;
@@ -1068,6 +1105,12 @@ auto Plot::Pad::Data::SetMaxRangeX(double_t max) -> decltype(*this)
   mRangeX.max = max;
   return *this;
 }
+auto Plot::Pad::Data::UnsetRangeX() -> decltype(*this)
+{
+  mRangeX.min = {};
+  mRangeX.max = {};
+  return *this;
+}
 auto Plot::Pad::Data::SetRangeY(double_t min, double_t max) -> decltype(*this)
 {
   mRangeY.min = min;
@@ -1082,6 +1125,12 @@ auto Plot::Pad::Data::SetMinRangeY(double_t min) -> decltype(*this)
 auto Plot::Pad::Data::SetMaxRangeY(double_t max) -> decltype(*this)
 {
   mRangeY.max = max;
+  return *this;
+}
+auto Plot::Pad::Data::UnsetRangeY() -> decltype(*this)
+{
+  mRangeY.min = {};
+  mRangeY.max = {};
   return *this;
 }
 auto Plot::Pad::Data::SetColor(int16_t color) -> decltype(*this)
@@ -1163,11 +1212,6 @@ auto Plot::Pad::Data::SetFillOpacity(float_t opacity) -> decltype(*this)
   {
     mFill.scale = opacity;
   }
-  return *this;
-}
-auto Plot::Pad::Data::SetOptions(drawing_options_t optionAlias) -> decltype(*this)
-{
-  mDrawingOptionAlias = optionAlias;
   return *this;
 }
 auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
@@ -1930,19 +1974,19 @@ ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree()
  */
 //**************************************************************************************************
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLable(string lable)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLable(const string& lable)
 {
   mLable = lable;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetRefData(input_t inputTuple)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetRefData(const string& name, const string& inputIdentifier)
 {
-  mRefDataName = inputTuple.name + gNameGroupSeparator + inputTuple.inputIdentifier;
+  mRefDataName = name + gNameGroupSeparator + inputIdentifier;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetDrawStyle(string drawStyle)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetDrawStyle(const string& drawStyle)
 {
   mDrawStyle = drawStyle;
   return *this;

@@ -218,11 +218,10 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             if constexpr(std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
             {
               if(!defaultDrawingOption)
-                defaultDrawingOption = (plot[padID].GetDefaultDrawingOptionHist2d())
-                                         ? plot[padID].GetDefaultDrawingOptionHist2d()
-                                         : (defaultPad.GetDefaultDrawingOptionHist2d())
-                                             ? defaultPad.GetDefaultDrawingOptionHist2d()
-                                             : std::nullopt;
+              {
+                if(plot[padID].GetDefaultDrawingOptionHist2d()) defaultDrawingOption = plot[padID].GetDefaultDrawingOptionHist2d();
+                else if(defaultPad.GetDefaultDrawingOptionHist2d()) defaultDrawingOption = defaultPad.GetDefaultDrawingOptionHist2d();
+              }
 
               if(defaultDrawingOption
                  && defaultDrawingOpions_Hist2d.find(*defaultDrawingOption)
@@ -466,12 +465,15 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
 
                   if(axisLayout.GetLog())
                   {
-                    if(axisLable == "X")
+                    if(axisLable == "X"){
                       pad_ptr->SetLogx(*axisLayout.GetLog());
-                    else if(axisLable == "Y")
+                    }
+                    else if(axisLable == "Y"){
                       pad_ptr->SetLogy(*axisLayout.GetLog());
-                    else if(axisLable == "Z")
+                    }
+                    else if(axisLable == "Z"){
                       pad_ptr->SetLogz(*axisLayout.GetLog());
+                    }
                   }
                   if(axisLayout.GetGrid())
                   {
@@ -654,8 +656,10 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             if(fillColor) data_ptr->SetFillColor(*fillColor);
 
             // now define data ranges
-            data_ptr->SetMinimum(
-              axisHist_ptr->GetMinimum()); // important for correct display of bar diagrams
+            if(axisHist_ptr->GetMinimum()){
+              // TODO: check if this still works for bar histos
+              data_ptr->SetMinimum(axisHist_ptr->GetMinimum()); // important for correct display of bar diagrams
+            }
             // data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
 
             double_t rangeMinX = (data->GetMinRangeX()) ? *data->GetMinRangeX()
@@ -1125,8 +1129,10 @@ TPave* PlotPainter::GenerateBox(
       if(borderStyle) returnBox->SetLineStyle(*borderStyle);
       if(borderColor) returnBox->SetLineColor(*borderColor);
       if(borderWidth) returnBox->SetLineWidth(*borderWidth);
+      else returnBox->SetLineWidth(0); // TODO: steer via pad defaults
 
       if(fillStyle) returnBox->SetFillStyle(*fillStyle);
+      else returnBox->SetFillStyle(0); // TODO: steer via pad defaults
       if(fillColor) returnBox->SetFillColor(*fillColor);
       if(fillOpacity && fillColor)
         returnBox->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
