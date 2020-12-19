@@ -54,12 +54,6 @@ enum drawing_options_t : uint8_t {
   surf,
 };
 
-struct layout_t {
-  optional<int16_t> color; // marker_color , line_color, fill_color, text_color
-  optional<int16_t> style; // marker_style , line_style, fill_style, text_font
-  optional<float_t> scale; // marker_size , line_width, fill_opacity, text_size
-};
-
 //**************************************************************************************************
 /**
  * Class for internal representation of a plot.
@@ -69,6 +63,11 @@ class Plot
 {
 public:
   class Pad;
+  struct layout_t {
+    optional<int16_t> color; // marker_color , line_color, fill_color, text_color
+    optional<int16_t> style; // marker_style , line_style, fill_style, text_font
+    optional<float_t> scale; // marker_size , line_width, fill_opacity, text_size
+  };
 
   Plot() = default;
   Plot(const ptree& plotTree);
@@ -85,16 +84,10 @@ public:
   void SetFigureCategory(const string& figureCategory) { mFigureCategory = figureCategory; }
   void SetPlotTemplateName(const string& plotTemplateName) { mPlotTemplateName = plotTemplateName; }
 
-  void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false)
-  {
-    mPlotDimensions = {width, height, fixAspectRatio};
-  }
+  void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false) { mPlotDimensions = {width, height, fixAspectRatio}; }
   void SetWidth(int32_t width) { mPlotDimensions.width = width; }
   void SetHeight(int32_t height) { mPlotDimensions.height = height; }
-  void SetFixAspectRatio(bool fixAspectRatio = true)
-  {
-    mPlotDimensions.fixAspectRatio = fixAspectRatio;
-  }
+  void SetFixAspectRatio(bool fixAspectRatio = true) { mPlotDimensions.fixAspectRatio = fixAspectRatio; }
 
   Plot& SetFill(int16_t color, int16_t style = 1001);
   Plot& SetTransparent();
@@ -110,19 +103,16 @@ protected:
   const string& GetFigureGroup() { return mFigureGroup; }
   const string& GetFigureCategory() { return mFigureCategory; }
   const optional<string>& GetPlotTemplateName() { return mPlotTemplateName; }
-  string GetUniqueName()
-  {
-    return mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");
-  }
+  string GetUniqueName() { return mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : ""); }
   ptree GetPropertyTree();
 
   map<uint8_t, Pad>& GetPads() { return mPads; }
 
-  const optional<int32_t>& GetHeight() { return mPlotDimensions.height; }
-  const optional<int32_t>& GetWidth() { return mPlotDimensions.width; }
-  const optional<bool>& IsFixAspectRatio() { return mPlotDimensions.fixAspectRatio; }
-  const optional<int16_t>& GetFillColor() { return mFill.color; }
-  const optional<int16_t>& GetFillStyle() { return mFill.style; }
+  const auto& GetHeight() { return mPlotDimensions.height; }
+  const auto& GetWidth() { return mPlotDimensions.width; }
+  const auto& IsFixAspectRatio() { return mPlotDimensions.fixAspectRatio; }
+  const auto& GetFillColor() { return mFill.color; }
+  const auto& GetFillStyle() { return mFill.style; }
 
 private:
   struct dimension_t {
@@ -223,9 +213,9 @@ protected:
 
   ptree GetPropertyTree();
 
-  vector<shared_ptr<Data>>& GetData() { return mData; }
-  vector<shared_ptr<LegendBox>>& GetLegendBoxes() { return mLegendBoxes; }
-  vector<shared_ptr<TextBox>>& GetTextBoxes() { return mTextBoxes; }
+  auto& GetData() { return mData; }
+  auto& GetLegendBoxes() { return mLegendBoxes; }
+  auto& GetTextBoxes() { return mTextBoxes; }
 
   const auto& GetAxes() { return mAxes; }
   const auto& GetTitle() { return mTitle; }
