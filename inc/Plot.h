@@ -96,8 +96,8 @@ public:
     mPlotDimensions.fixAspectRatio = fixAspectRatio;
   }
 
-  auto SetFill(int16_t color, int16_t style = 1001) -> decltype(*this);
-  auto SetTransparent() -> decltype(*this);
+  Plot& SetFill(int16_t color, int16_t style = 1001);
+  Plot& SetTransparent();
 
 protected:
   friend class PlotManager;
@@ -189,32 +189,32 @@ public:
   LegendBox& GetLegend(uint8_t legendID);
   TextBox& GetText(uint8_t textID);
 
-  auto SetTitle(const string& title) -> decltype(*this);
-  auto SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup) -> decltype(*this);
-  auto SetMargins(float_t top, float_t bottom, float_t left, float_t right) -> decltype(*this);
-  auto SetPalette(int32_t palette) -> decltype(*this);
-  auto SetDefaultTextSize(float_t size) -> decltype(*this);
-  auto SetDefaultTextColor(int16_t color) -> decltype(*this);
-  auto SetDefaultTextFont(int16_t font) -> decltype(*this);
-  auto SetDefaultMarkerSize(float_t size) -> decltype(*this);
-  auto SetDefaultMarkerColors(const vector<int16_t>& colors) -> decltype(*this);
-  auto SetDefaultMarkerStyles(const vector<int16_t>& styles) -> decltype(*this);
-  auto SetDefaultLineWidth(float_t width) -> decltype(*this);
-  auto SetDefaultLineColors(const vector<int16_t>& colors) -> decltype(*this);
-  auto SetDefaultLineStyles(const vector<int16_t>& styles) -> decltype(*this);
-  auto SetDefaultFillOpacity(float_t opacity) -> decltype(*this);
-  auto SetDefaultFillColors(const vector<int16_t>& colors) -> decltype(*this);
-  auto SetDefaultFillStyles(const vector<int16_t>& styles) -> decltype(*this);
-  auto SetDefaultDrawingOptionGraph(drawing_options_t drawingOption) -> decltype(*this);
-  auto SetDefaultDrawingOptionHist(drawing_options_t drawingOption) -> decltype(*this);
-  auto SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption) -> decltype(*this);
-  auto SetFill(int16_t color, int16_t style = 1001) -> decltype(*this);
-  auto SetTransparent() -> decltype(*this);
-  auto SetFillFrame(int16_t color, int16_t style = 1001) -> decltype(*this);
-  auto SetLineFrame(int16_t color, int16_t style = kSolid, float_t width = 1.f) -> decltype(*this);
-  auto SetTransparentFrame() -> decltype(*this);
-  auto SetRedrawAxes(bool redraw = true) -> decltype(*this);
-  auto SetRefFunc(const string& refFunc) -> decltype(*this);
+  Pad& SetTitle(const string& title);
+  Pad& SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup);
+  Pad& SetMargins(float_t top, float_t bottom, float_t left, float_t right);
+  Pad& SetPalette(int32_t palette);
+  Pad& SetDefaultTextSize(float_t size);
+  Pad& SetDefaultTextColor(int16_t color);
+  Pad& SetDefaultTextFont(int16_t font);
+  Pad& SetDefaultMarkerSize(float_t size);
+  Pad& SetDefaultMarkerColors(const vector<int16_t>& colors);
+  Pad& SetDefaultMarkerStyles(const vector<int16_t>& styles);
+  Pad& SetDefaultLineWidth(float_t width);
+  Pad& SetDefaultLineColors(const vector<int16_t>& colors);
+  Pad& SetDefaultLineStyles(const vector<int16_t>& styles);
+  Pad& SetDefaultFillOpacity(float_t opacity);
+  Pad& SetDefaultFillColors(const vector<int16_t>& colors);
+  Pad& SetDefaultFillStyles(const vector<int16_t>& styles);
+  Pad& SetDefaultDrawingOptionGraph(drawing_options_t drawingOption);
+  Pad& SetDefaultDrawingOptionHist(drawing_options_t drawingOption);
+  Pad& SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption);
+  Pad& SetFill(int16_t color, int16_t style = 1001);
+  Pad& SetTransparent();
+  Pad& SetFillFrame(int16_t color, int16_t style = 1001);
+  Pad& SetLineFrame(int16_t color, int16_t style = kSolid, float_t width = 1.f);
+  Pad& SetTransparentFrame();
+  Pad& SetRedrawAxes(bool redraw = true);
+  Pad& SetRefFunc(const string& refFunc);
 
 protected:
   friend class PlotManager;
@@ -227,50 +227,41 @@ protected:
   vector<shared_ptr<LegendBox>>& GetLegendBoxes() { return mLegendBoxes; }
   vector<shared_ptr<TextBox>>& GetTextBoxes() { return mTextBoxes; }
 
-  const map<string, Axis>& GetAxes() { return mAxes; }
-  const optional<string>& GetTitle() { return mTitle; }
-  const optional<double_t>& GetXLow() { return mPosition.xlow; }
-  const optional<double_t>& GetYLow() { return mPosition.ylow; }
-  const optional<double_t>& GetXUp() { return mPosition.xup; }
-  const optional<double_t>& GetYUp() { return mPosition.yup; }
-  const optional<float_t>& GetMarginTop() { return mMargins.top; }
-  const optional<float_t>& GetMarginBottom() { return mMargins.bottom; }
-  const optional<float_t>& GetMarginLeft() { return mMargins.left; }
-  const optional<float_t>& GetMarginRight() { return mMargins.right; }
-  const optional<int32_t>& GetPalette() { return mPalette; }
-  const optional<int16_t>& GetFillColor() { return mFill.color; }
-  const optional<int16_t>& GetFillStyle() { return mFill.style; }
-  const optional<int16_t>& GetFillColorFrame() { return mFrame.fillColor; }
-  const optional<int16_t>& GetFillStyleFrame() { return mFrame.fillStyle; }
-  const optional<int16_t>& GetLineColorFrame() { return mFrame.lineColor; }
-  const optional<int16_t>& GetLineStyleFrame() { return mFrame.lineStyle; }
-  const optional<float_t>& GetLineWidthFrame() { return mFrame.lineWidth; }
-  const optional<int16_t>& GetDefaultTextColor() { return mText.color; }
-  const optional<int16_t>& GetDefaultTextFont() { return mText.font; }
-  const optional<float_t>& GetDefaultTextSize() { return mText.size; }
-  const optional<float_t>& GetDefaultMarkerSize() { return mMarkerDefaults.scale; }
-  const optional<float_t>& GetDefaultLineWidth() { return mLineDefaults.scale; }
-  const optional<float_t>& GetDefaultFillOpacity() { return mFillDefaults.scale; }
-  const optional<vector<int16_t>>& GetDefaultMarkerColors() { return mMarkerDefaults.colors; }
-  const optional<vector<int16_t>>& GetDefaultLineColors() { return mLineDefaults.colors; }
-  const optional<vector<int16_t>>& GetDefaultFillColors() { return mFillDefaults.colors; }
-  const optional<vector<int16_t>>& GetDefaultMarkerStyles() { return mMarkerDefaults.styles; }
-  const optional<vector<int16_t>>& GetDefaultLineStyles() { return mLineDefaults.styles; }
-  const optional<vector<int16_t>>& GetDefaultFillStyles() { return mFillDefaults.styles; }
-  const optional<drawing_options_t>& GetDefaultDrawingOptionGraph()
-  {
-    return mDrawingOptionDefaults.graph;
-  }
-  const optional<drawing_options_t>& GetDefaultDrawingOptionHist()
-  {
-    return mDrawingOptionDefaults.hist;
-  }
-  const optional<drawing_options_t>& GetDefaultDrawingOptionHist2d()
-  {
-    return mDrawingOptionDefaults.hist2d;
-  }
-  const optional<bool>& GetRedrawAxes() { return mRedrawAxes; }
-  const optional<string>& GetRefFunc() { return mRefFunc; }
+  const auto& GetAxes() { return mAxes; }
+  const auto& GetTitle() { return mTitle; }
+  const auto& GetXLow() { return mPosition.xlow; }
+  const auto& GetYLow() { return mPosition.ylow; }
+  const auto& GetXUp() { return mPosition.xup; }
+  const auto& GetYUp() { return mPosition.yup; }
+  const auto& GetMarginTop() { return mMargins.top; }
+  const auto& GetMarginBottom() { return mMargins.bottom; }
+  const auto& GetMarginLeft() { return mMargins.left; }
+  const auto& GetMarginRight() { return mMargins.right; }
+  const auto& GetPalette() { return mPalette; }
+  const auto& GetFillColor() { return mFill.color; }
+  const auto& GetFillStyle() { return mFill.style; }
+  const auto& GetFillColorFrame() { return mFrame.fillColor; }
+  const auto& GetFillStyleFrame() { return mFrame.fillStyle; }
+  const auto& GetLineColorFrame() { return mFrame.lineColor; }
+  const auto& GetLineStyleFrame() { return mFrame.lineStyle; }
+  const auto& GetLineWidthFrame() { return mFrame.lineWidth; }
+  const auto& GetDefaultTextColor() { return mText.color; }
+  const auto& GetDefaultTextFont() { return mText.font; }
+  const auto& GetDefaultTextSize() { return mText.size; }
+  const auto& GetDefaultMarkerSize() { return mMarkerDefaults.scale; }
+  const auto& GetDefaultLineWidth() { return mLineDefaults.scale; }
+  const auto& GetDefaultFillOpacity() { return mFillDefaults.scale; }
+  const auto& GetDefaultMarkerColors() { return mMarkerDefaults.colors; }
+  const auto& GetDefaultLineColors() { return mLineDefaults.colors; }
+  const auto& GetDefaultFillColors() { return mFillDefaults.colors; }
+  const auto& GetDefaultMarkerStyles() { return mMarkerDefaults.styles; }
+  const auto& GetDefaultLineStyles() { return mLineDefaults.styles; }
+  const auto& GetDefaultFillStyles() { return mFillDefaults.styles; }
+  const auto& GetDefaultDrawingOptionGraph() { return mDrawingOptionDefaults.graph; }
+  const auto& GetDefaultDrawingOptionHist() { return mDrawingOptionDefaults.hist; }
+  const auto& GetDefaultDrawingOptionHist2d() { return mDrawingOptionDefaults.hist2d; }
+  const auto& GetRedrawAxes() { return mRedrawAxes; }
+  const auto& GetRefFunc() { return mRefFunc; }
 
 private:
   struct pad_position_t {
@@ -358,39 +349,39 @@ public:
   Data& operator=(Data&& other) = default;
 
   // user accessors
-  virtual auto SetLayout(const Data& dataLayout) -> decltype(*this);
-  virtual auto SetRangeX(double_t min, double_t max) -> decltype(*this);
-  virtual auto SetMaxRangeX(double_t max) -> decltype(*this);
-  virtual auto SetMinRangeX(double_t min) -> decltype(*this);
-  virtual auto UnsetRangeX() -> decltype(*this);
-  virtual auto SetRangeY(double_t min, double_t max) -> decltype(*this);
-  virtual auto SetMaxRangeY(double_t max) -> decltype(*this);
-  virtual auto SetMinRangeY(double_t min) -> decltype(*this);
-  virtual auto UnsetRangeY() -> decltype(*this);
-  virtual auto SetLegendLable(const string& legendLable) -> decltype(*this);
-  virtual auto SetLegendID(uint8_t legendID) -> decltype(*this);
-  virtual auto SetOptions(const string& opions) -> decltype(*this);
-  virtual auto SetOptions(drawing_options_t optionAlias) -> decltype(*this);
-  virtual auto UnsetOptions() -> decltype(*this);
-  virtual auto SetTextFormat(const string& textFormat) -> decltype(*this);
-  virtual auto SetNormalize(bool useWidth = false) -> decltype(*this);
-  virtual auto SetScaleFactor(double_t scale) -> decltype(*this);
-  virtual auto SetColor(int16_t color) -> decltype(*this);
-  virtual auto SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this);
-  virtual auto SetMarkerColor(int16_t color) -> decltype(*this);
-  virtual auto SetMarkerStyle(int16_t style) -> decltype(*this);
-  virtual auto SetMarkerSize(float_t size) -> decltype(*this);
-  virtual auto SetLine(int16_t color, int16_t style, float_t width) -> decltype(*this);
-  virtual auto SetLineColor(int16_t color) -> decltype(*this);
-  virtual auto SetLineStyle(int16_t style) -> decltype(*this);
-  virtual auto SetLineWidth(float_t width) -> decltype(*this);
-  virtual auto SetFill(int16_t color, int16_t style, float_t opacity = 1.) -> decltype(*this);
-  virtual auto SetFillColor(int16_t color) -> decltype(*this);
-  virtual auto SetFillStyle(int16_t style) -> decltype(*this);
-  virtual auto SetFillOpacity(float_t opacity) -> decltype(*this);
-  virtual auto SetDefinesFrame() -> decltype(*this);
+  virtual Data& SetLayout(const Data& dataLayout);
+  virtual Data& SetRangeX(double_t min, double_t max);
+  virtual Data& SetMaxRangeX(double_t max);
+  virtual Data& SetMinRangeX(double_t min);
+  virtual Data& UnsetRangeX();
+  virtual Data& SetRangeY(double_t min, double_t max);
+  virtual Data& SetMaxRangeY(double_t max);
+  virtual Data& SetMinRangeY(double_t min);
+  virtual Data& UnsetRangeY();
+  virtual Data& SetLegendLable(const string& legendLable);
+  virtual Data& SetLegendID(uint8_t legendID);
+  virtual Data& SetOptions(const string& opions);
+  virtual Data& SetOptions(drawing_options_t optionAlias);
+  virtual Data& UnsetOptions();
+  virtual Data& SetTextFormat(const string& textFormat);
+  virtual Data& SetNormalize(bool useWidth = false);
+  virtual Data& SetScaleFactor(double_t scale);
+  virtual Data& SetColor(int16_t color);
+  virtual Data& SetMarker(int16_t color, int16_t style, float_t size);
+  virtual Data& SetMarkerColor(int16_t color);
+  virtual Data& SetMarkerStyle(int16_t style);
+  virtual Data& SetMarkerSize(float_t size);
+  virtual Data& SetLine(int16_t color, int16_t style, float_t width);
+  virtual Data& SetLineColor(int16_t color);
+  virtual Data& SetLineStyle(int16_t style);
+  virtual Data& SetLineWidth(float_t width);
+  virtual Data& SetFill(int16_t color, int16_t style, float_t opacity = 1.);
+  virtual Data& SetFillColor(int16_t color);
+  virtual Data& SetFillStyle(int16_t style);
+  virtual Data& SetFillOpacity(float_t opacity);
+  virtual Data& SetDefinesFrame();
 
-  auto SetInputID(const string& inputIdentifier) -> decltype(*this);
+  Data& SetInputID(const string& inputIdentifier);
   const string& GetInputID() const { return mInputIdentifier; }
 
 protected:
@@ -488,133 +479,40 @@ public:
   Ratio& operator=(const Ratio& other) = default;
   Ratio& operator=(Ratio&& other) = default;
 
-  auto SetIsCorrelated(bool isCorrelated = true) -> decltype(*this);
+  Ratio& SetIsCorrelated(bool isCorrelated = true);
 
   // return correct type for the data accessors
-  virtual auto SetLayout(const Data& dataLayout) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetLayout(dataLayout));
-  }
-  virtual auto SetRangeX(double_t min, double_t max) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetRangeX(min, max));
-  }
-  virtual auto SetMaxRangeX(double_t max) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetMaxRangeX(max));
-  }
-  virtual auto SetMinRangeX(double_t min) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetMinRangeX(min));
-  }
-  virtual auto UnsetRangeX() -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::UnsetRangeY());
-  }
-  virtual auto SetRangeY(double_t min, double_t max) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetRangeY(min, max));
-  }
-  virtual auto SetMaxRangeY(double_t max) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetMaxRangeY(max));
-  }
-  virtual auto SetMinRangeY(double_t min) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetMinRangeY(min));
-  }
-  virtual auto UnsetRangeY() -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::UnsetRangeY());
-  }
-  virtual auto SetLegendLable(const string& legendLable) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetLegendLable(legendLable));
-  }
-  virtual auto SetLegendID(uint8_t legendID) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetLegendID(legendID));
-  }
-  virtual auto SetOptions(const string& opions) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetOptions(opions));
-  }
-  virtual auto SetOptions(drawing_options_t optionAlias) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetOptions(optionAlias));
-  }
-  virtual auto UnsetOptions() -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::UnsetOptions());
-  }
-  virtual auto SetTextFormat(const string& textFormat) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetTextFormat(textFormat));
-  }
-  virtual auto SetNormalize(bool useWidth = false) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetNormalize(useWidth));
-  }
-  virtual auto SetScale(double_t scale) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetScaleFactor(scale));
-  }
-  virtual auto SetColor(int16_t color) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetColor(color));
-  }
-  virtual auto SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetMarker(color, style, size));
-  }
-  virtual auto SetMarkerColor(int16_t color) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetMarkerColor(color));
-  }
-  virtual auto SetMarkerStyle(int16_t style) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetMarkerStyle(style));
-  }
-  virtual auto SetMarkerSize(float_t size) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetMarkerSize(size));
-  }
-  virtual auto SetLine(int16_t color, int16_t style, float_t width) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetLine(color, style, width));
-  }
-  virtual auto SetLineColor(int16_t color) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetLineColor(color));
-  }
-  virtual auto SetLineStyle(int16_t style) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetLineStyle(style));
-  }
-  virtual auto SetLineWidth(float_t width) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetLineWidth(width));
-  }
-  virtual auto SetFill(int16_t color, int16_t style, float_t opacity = 1.) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetFill(color, style, opacity));
-  }
-  virtual auto SetFillColor(int16_t color) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetFillColor(color));
-  }
-  virtual auto SetFillStyle(int16_t style) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetFillStyle(style));
-  }
-  virtual auto SetFillOpacity(float_t opacity) -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetFillOpacity(opacity));
-  }
-  virtual auto SetDefinesFrame() -> decltype(*this)
-  {
-    return static_cast<decltype(*this)&>(Data::SetDefinesFrame());
-  }
+  Ratio& SetLayout(const Data& dataLayout) { return static_cast<decltype(*this)&>(Data::SetLayout(dataLayout)); }
+  Ratio& SetRangeX(double_t min, double_t max) { return static_cast<decltype(*this)&>(Data::SetRangeX(min, max)); }
+  Ratio& SetMaxRangeX(double_t max) { return static_cast<decltype(*this)&>(Data::SetMaxRangeX(max)); }
+  Ratio& SetMinRangeX(double_t min) { return static_cast<decltype(*this)&>(Data::SetMinRangeX(min)); }
+  Ratio& UnsetRangeX() { return static_cast<decltype(*this)&>(Data::UnsetRangeY()); }
+  Ratio& SetRangeY(double_t min, double_t max) { return static_cast<decltype(*this)&>(Data::SetRangeY(min, max)); }
+  Ratio& SetMaxRangeY(double_t max) { return static_cast<decltype(*this)&>(Data::SetMaxRangeY(max)); }
+  Ratio& SetMinRangeY(double_t min) { return static_cast<decltype(*this)&>(Data::SetMinRangeY(min)); }
+  Ratio& UnsetRangeY() { return static_cast<decltype(*this)&>(Data::UnsetRangeY()); }
+  Ratio& SetLegendLable(const string& legendLable) { return static_cast<decltype(*this)&>(Data::SetLegendLable(legendLable)); }
+  Ratio& SetLegendID(uint8_t legendID) { return static_cast<decltype(*this)&>(Data::SetLegendID(legendID)); }
+  Ratio& SetOptions(const string& opions) { return static_cast<decltype(*this)&>(Data::SetOptions(opions)); }
+  Ratio& SetOptions(drawing_options_t optionAlias) { return static_cast<decltype(*this)&>(Data::SetOptions(optionAlias)); }
+  Ratio& UnsetOptions() { return static_cast<decltype(*this)&>(Data::UnsetOptions()); }
+  Ratio& SetTextFormat(const string& textFormat) { return static_cast<decltype(*this)&>(Data::SetTextFormat(textFormat)); }
+  Ratio& SetNormalize(bool useWidth = false) { return static_cast<decltype(*this)&>(Data::SetNormalize(useWidth)); }
+  Ratio& SetScale(double_t scale) { return static_cast<decltype(*this)&>(Data::SetScaleFactor(scale)); }
+  Ratio& SetColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetColor(color)); }
+  Ratio& SetMarker(int16_t color, int16_t style, float_t size) { return static_cast<decltype(*this)&>(Data::SetMarker(color, style, size)); }
+  Ratio& SetMarkerColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetMarkerColor(color)); }
+  Ratio& SetMarkerStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetMarkerStyle(style)); }
+  Ratio& SetMarkerSize(float_t size) { return static_cast<decltype(*this)&>(Data::SetMarkerSize(size)); }
+  Ratio& SetLine(int16_t color, int16_t style, float_t width) { return static_cast<decltype(*this)&>(Data::SetLine(color, style, width)); }
+  Ratio& SetLineColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetLineColor(color)); }
+  Ratio& SetLineStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetLineStyle(style)); }
+  Ratio& SetLineWidth(float_t width) { return static_cast<decltype(*this)&>(Data::SetLineWidth(width)); }
+  Ratio& SetFill(int16_t color, int16_t style, float_t opacity = 1.) { return static_cast<decltype(*this)&>(Data::SetFill(color, style, opacity)); }
+  Ratio& SetFillColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetFillColor(color)); }
+  Ratio& SetFillStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetFillStyle(style)); }
+  Ratio& SetFillOpacity(float_t opacity) { return static_cast<decltype(*this)&>(Data::SetFillOpacity(opacity)); }
+  Ratio& SetDefinesFrame() { return static_cast<decltype(*this)&>(Data::SetDefinesFrame()); }
 
 protected:
   friend class PlotManager;
