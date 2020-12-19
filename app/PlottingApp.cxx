@@ -33,8 +33,7 @@ vector<string> splitArguments(string argString, char deliminator = ' ')
   vector<string> arguments;
   string currArg;
   std::istringstream argStream(argString);
-  while(std::getline(argStream, currArg, deliminator))
-  {
+  while (std::getline(argStream, currArg, deliminator)) {
     arguments.push_back(currArg);
   }
   return arguments;
@@ -66,8 +65,7 @@ int main(int argc, char* argv[])
   string plotNames;
 
   // handle user inputs
-  try
-  {
+  try {
     po::options_description options("Configuration options");
     options.add_options()("help", "Show this help message.")(
       "inputFilesConfig", po::value<string>(),
@@ -96,8 +94,7 @@ int main(int argc, char* argv[])
               vm);
     po::notify(vm);
 
-    if(vm.count("help"))
-    {
+    if (vm.count("help")) {
       PRINT("");
       PRINT("Usage:");
       PRINT(
@@ -125,61 +122,52 @@ int main(int argc, char* argv[])
       cout << options << endl;
       return 0;
     }
-    if(vm.count("inputFilesConfig"))
-    {
+    if (vm.count("inputFilesConfig")) {
       inputFilesConfig = vm["inputFilesConfig"].as<string>();
     }
-    if(vm.count("plotDefConfig"))
-    {
+    if (vm.count("plotDefConfig")) {
       plotDefConfig = vm["plotDefConfig"].as<string>();
     }
-    if(vm.count("outputFolder"))
-    {
+    if (vm.count("outputFolder")) {
       outputFolder = vm["outputFolder"].as<string>();
     }
-    if(vm.count("mode"))
-    {
+    if (vm.count("mode")) {
       mode = vm["mode"].as<string>();
     }
-    if(vm.count("figureGroups"))
-    {
+    if (vm.count("figureGroups")) {
       figureGroups = vm["figureGroups"].as<string>();
     }
-    if(vm.count("plotNames"))
-    {
+    if (vm.count("plotNames")) {
       plotNames = vm["plotNames"].as<string>();
     }
-    if(vm.count("arguments"))
-    {
+    if (vm.count("arguments")) {
       PRINT("Found additional arguments:");
-      for(auto& argument : vm["arguments"].as<vector<string>>())
-      {
+      for (auto& argument : vm["arguments"].as<vector<string>>()) {
         PRINT("   {}", argument);
       }
     }
-  }
-  catch(std::exception& e)
-  {
+  } catch (std::exception& e) {
     ERROR("Exception \"{}\"! Exiting.", e.what());
     return 1;
-  }
-  catch(...)
-  {
+  } catch (...) {
     ERROR("Exception of unknown type! Exiting.");
     return 1;
   }
 
-  if(mode.empty()) mode = "interactive";
+  if (mode.empty()) mode = "interactive";
 
   // check if specified input files exist
-  if(!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str())))
-  {
+  if (!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str()))) {
     ERROR("File \"{}\" does not exists! Exiting.", inputFilesConfig);
     return 1;
   }
-  if(!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str())))
-  {
+  if (!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str()))) {
     ERROR("File \"{}\" does not exists! Exiting.", plotDefConfig);
+    return 1;
+  }
+
+  if (plotNames.empty()) {
+    ERROR("No plots were specified.");
     return 1;
   }
 
@@ -190,34 +178,26 @@ int main(int argc, char* argv[])
 
   vector<string> figureGroupsVector = splitArguments(figureGroups);
   vector<string> plotNamesVector = splitArguments(plotNames);
-  if(mode == "find")
-  {
+  if (mode == "find") {
     PRINT_SEPARATOR;
     plotManager.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
     PRINT_SEPARATOR;
     return 0;
-  }
-  else if(mode == "browse")
-  { // directly plot histograms from input identifier or file
+  } else if (mode == "browse") { // directly plot histograms from input identifier or file
     string inputIdentifier = figureGroupsVector[0];
-    if(inputIdentifier.find(".root") == string::npos)
-    {
+    if (inputIdentifier.find(".root") == string::npos) {
       plotManager.LoadInputDataFiles(inputFilesConfig);
-    }
-    else
-    {
-      plotManager.AddInputDataFiles("browse", { inputIdentifier });
+    } else {
+      plotManager.AddInputDataFiles("browse", {inputIdentifier});
       inputIdentifier = "browse";
     }
     Plot plot("plot", inputIdentifier);
-    for(auto& dataName : plotNamesVector)
+    for (auto& dataName : plotNamesVector)
       plot[1].AddData(dataName, inputIdentifier, "<name>");
     plot[1].AddLegend();
     plotManager.AddPlot(plot);
     plotManager.CreatePlots(inputIdentifier, "", {}, "interactive");
-  }
-  else
-  {
+  } else {
     INFO("Reading input files from {}.", inputFilesConfig);
     plotManager.LoadInputDataFiles(inputFilesConfig);
     plotManager.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
