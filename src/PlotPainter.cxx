@@ -68,8 +68,7 @@ namespace PlottingFramework
 //**************************************************************************************************
 shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableData)
 {
-  gStyle->SetOptStat(0); // this needs to be done before creating the canvas! at later stage it
-                         // would add to list of primitives in pad...
+  gStyle->SetOptStat(0); // this needs to be done before creating the canvas! at later stage it would add to list of primitives in pad...
 
   if (!(plot.GetWidth() || plot.GetHeight())) {
     ERROR("No dimensions specified for plot.");
@@ -86,9 +85,10 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
   if (plot.GetFillStyle()) canvas_ptr->SetFillStyle(*plot.GetFillStyle());
   if (plot.IsFixAspectRatio()) canvas_ptr->SetFixedAspectRatio(*plot.IsFixAspectRatio());
 
-  Plot::Pad& defaultPad = plot[0];
-  for (auto& [padID, pad] : plot.GetPads()) {
+  Plot::Pad& padDefaults = plot[0];
+  for (const auto& [padID, dummy] : plot.GetPads()) {
     if (padID == 0) continue; // pad 0 is used only to define the defaults
+    auto& pad = plot[padID];  // needed because processData lambda cannot capture vairiable from structured binding ('dummy')
 
     // Pad placing
     array<double_t, 4> padPos = {0., 0., 1., 1.};
@@ -99,29 +99,29 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     }
 
     // get the settings for this pad
-    auto textFont = get_first(pad.GetDefaultTextFont(), defaultPad.GetDefaultTextFont());
-    auto textSize = get_first(pad.GetDefaultTextSize(), defaultPad.GetDefaultTextSize());
-    auto textColor = get_first(pad.GetDefaultTextColor(), defaultPad.GetDefaultTextColor());
+    auto textFont = get_first(pad.GetDefaultTextFont(), padDefaults.GetDefaultTextFont());
+    auto textSize = get_first(pad.GetDefaultTextSize(), padDefaults.GetDefaultTextSize());
+    auto textColor = get_first(pad.GetDefaultTextColor(), padDefaults.GetDefaultTextColor());
 
-    string padTitle = get_first_or({""}, pad.GetTitle(), defaultPad.GetTitle());
+    string padTitle = get_first_or({""}, pad.GetTitle(), padDefaults.GetTitle());
 
     canvas_ptr->cd();
     string padName = "Pad_" + std::to_string(padID);
 
     TPad* pad_ptr = new TPad(padName.data(), padTitle.data(), padPos[0], padPos[1], padPos[2], padPos[3]);
 
-    if (auto marginTop = get_first(pad.GetMarginTop(), defaultPad.GetMarginTop())) pad_ptr->SetTopMargin(*marginTop);
-    if (auto marginBottom = get_first(pad.GetMarginBottom(), defaultPad.GetMarginBottom())) pad_ptr->SetBottomMargin(*marginBottom);
-    if (auto marginLeft = get_first(pad.GetMarginLeft(), defaultPad.GetMarginLeft())) pad_ptr->SetLeftMargin(*marginLeft);
-    if (auto marginRight = get_first(pad.GetMarginRight(), defaultPad.GetMarginRight())) pad_ptr->SetRightMargin(*marginRight);
-    if (auto padFillColor = get_first(pad.GetFillColor(), defaultPad.GetFillColor())) pad_ptr->SetFillColor(*padFillColor);
-    if (auto padFillStyle = get_first(pad.GetFillStyle(), defaultPad.GetFillStyle())) pad_ptr->SetFillStyle(*padFillStyle);
-    if (auto frameFillColor = get_first(pad.GetFillColorFrame(), defaultPad.GetFillColorFrame())) pad_ptr->SetFrameFillColor(*frameFillColor);
-    if (auto frameFillStyle = get_first(pad.GetFillStyleFrame(), defaultPad.GetFillStyleFrame())) pad_ptr->SetFrameFillStyle(*frameFillStyle);
-    if (auto frameLineColor = get_first(pad.GetLineColorFrame(), defaultPad.GetLineColorFrame())) pad_ptr->SetFrameLineColor(*frameLineColor);
-    if (auto frameLineStyle = get_first(pad.GetLineStyleFrame(), defaultPad.GetLineStyleFrame())) pad_ptr->SetFrameLineStyle(*frameLineStyle);
-    if (auto frameLineWidth = get_first(pad.GetLineWidthFrame(), defaultPad.GetLineWidthFrame())) pad_ptr->SetFrameLineWidth(*frameLineWidth);
-    if (auto palette = get_first(pad.GetPalette(), defaultPad.GetPalette())) gStyle->SetPalette(*palette);
+    if (auto marginTop = get_first(pad.GetMarginTop(), padDefaults.GetMarginTop())) pad_ptr->SetTopMargin(*marginTop);
+    if (auto marginBottom = get_first(pad.GetMarginBottom(), padDefaults.GetMarginBottom())) pad_ptr->SetBottomMargin(*marginBottom);
+    if (auto marginLeft = get_first(pad.GetMarginLeft(), padDefaults.GetMarginLeft())) pad_ptr->SetLeftMargin(*marginLeft);
+    if (auto marginRight = get_first(pad.GetMarginRight(), padDefaults.GetMarginRight())) pad_ptr->SetRightMargin(*marginRight);
+    if (auto padFillColor = get_first(pad.GetFillColor(), padDefaults.GetFillColor())) pad_ptr->SetFillColor(*padFillColor);
+    if (auto padFillStyle = get_first(pad.GetFillStyle(), padDefaults.GetFillStyle())) pad_ptr->SetFillStyle(*padFillStyle);
+    if (auto frameFillColor = get_first(pad.GetFillColorFrame(), padDefaults.GetFillColorFrame())) pad_ptr->SetFrameFillColor(*frameFillColor);
+    if (auto frameFillStyle = get_first(pad.GetFillStyleFrame(), padDefaults.GetFillStyleFrame())) pad_ptr->SetFrameFillStyle(*frameFillStyle);
+    if (auto frameLineColor = get_first(pad.GetLineColorFrame(), padDefaults.GetLineColorFrame())) pad_ptr->SetFrameLineColor(*frameLineColor);
+    if (auto frameLineStyle = get_first(pad.GetLineStyleFrame(), padDefaults.GetLineStyleFrame())) pad_ptr->SetFrameLineStyle(*frameLineStyle);
+    if (auto frameLineWidth = get_first(pad.GetLineWidthFrame(), padDefaults.GetLineWidthFrame())) pad_ptr->SetFrameLineWidth(*frameLineWidth);
+    if (auto palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) gStyle->SetPalette(*palette);
 
     pad_ptr->SetNumber(padID);
     pad_ptr->Draw();
@@ -166,10 +166,10 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             // FIXME: avoid code duplication here by implementing this in more clever way
             if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
               if (!defaultDrawingOption) {
-                if (plot[padID].GetDefaultDrawingOptionHist2d())
-                  defaultDrawingOption = plot[padID].GetDefaultDrawingOptionHist2d();
-                else if (defaultPad.GetDefaultDrawingOptionHist2d())
-                  defaultDrawingOption = defaultPad.GetDefaultDrawingOptionHist2d();
+                if (pad.GetDefaultDrawingOptionHist2d())
+                  defaultDrawingOption = pad.GetDefaultDrawingOptionHist2d();
+                else if (padDefaults.GetDefaultDrawingOptionHist2d())
+                  defaultDrawingOption = padDefaults.GetDefaultDrawingOptionHist2d();
               }
 
               if (defaultDrawingOption && defaultDrawingOpions_Hist2d.find(*defaultDrawingOption) != defaultDrawingOpions_Hist2d.end()) {
@@ -177,10 +177,10 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               }
             } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>) {
               if (!defaultDrawingOption)
-                defaultDrawingOption = (plot[padID].GetDefaultDrawingOptionHist())
-                                         ? plot[padID].GetDefaultDrawingOptionHist()
-                                         : (defaultPad.GetDefaultDrawingOptionHist())
-                                             ? defaultPad.GetDefaultDrawingOptionHist()
+                defaultDrawingOption = (pad.GetDefaultDrawingOptionHist())
+                                         ? pad.GetDefaultDrawingOptionHist()
+                                         : (padDefaults.GetDefaultDrawingOptionHist())
+                                             ? padDefaults.GetDefaultDrawingOptionHist()
                                              : std::nullopt;
 
               if (defaultDrawingOption && defaultDrawingOpions_Hist.find(*defaultDrawingOption) != defaultDrawingOpions_Hist.end()) {
@@ -188,10 +188,10 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               }
             } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
               if (!defaultDrawingOption)
-                defaultDrawingOption = (plot[padID].GetDefaultDrawingOptionGraph())
-                                         ? plot[padID].GetDefaultDrawingOptionGraph()
-                                         : (defaultPad.GetDefaultDrawingOptionGraph())
-                                             ? defaultPad.GetDefaultDrawingOptionGraph()
+                defaultDrawingOption = (pad.GetDefaultDrawingOptionGraph())
+                                         ? pad.GetDefaultDrawingOptionGraph()
+                                         : (padDefaults.GetDefaultDrawingOptionGraph())
+                                             ? padDefaults.GetDefaultDrawingOptionGraph()
                                              : std::nullopt;
 
               if (defaultDrawingOption && defaultDrawingOpions_Graph.find(*defaultDrawingOption) != defaultDrawingOpions_Graph.end()) {
@@ -335,7 +335,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               optional<float_t> textSizeLable = textSize;
 
               // first apply default pad values and then settings for this specific pad
-              for (Plot::Pad& curPad : {std::ref(defaultPad), std::ref(plot.GetPads()[padID])}) {
+              for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
                 if (curPad.GetAxes().find(axisLable) != curPad.GetAxes().end()) {
                   auto axisLayout = curPad[axisLable];
                   if (axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).data());
@@ -422,7 +422,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             }
 
             // right after drawing the axis, put reference line if requested
-            optional<string> refFunc = (plot[padID].GetRefFunc()) ? plot[padID].GetRefFunc() : plot[0].GetRefFunc();
+            optional<string> refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
             if (refFunc) {
               TF1* line = new TF1("line", (*refFunc).data(), data_ptr->GetXaxis()->GetXmin(),
                                   data_ptr->GetXaxis()->GetXmax());
@@ -435,48 +435,48 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
           } else {
             // define data appearance
             if (auto markerColor = get_first(data->GetMarkerColor(),
-                                             pick(dataIndex, plot[padID].GetDefaultMarkerColors()),
-                                             pick(dataIndex, defaultPad.GetDefaultMarkerColors()))) {
+                                             pick(dataIndex, pad.GetDefaultMarkerColors()),
+                                             pick(dataIndex, padDefaults.GetDefaultMarkerColors()))) {
               data_ptr->SetMarkerColor(*markerColor);
             }
             if (auto markerStyle = get_first(data->GetMarkerStyle(),
-                                             pick(dataIndex, plot[padID].GetDefaultMarkerStyles()),
-                                             pick(dataIndex, defaultPad.GetDefaultMarkerStyles()))) {
+                                             pick(dataIndex, pad.GetDefaultMarkerStyles()),
+                                             pick(dataIndex, padDefaults.GetDefaultMarkerStyles()))) {
               data_ptr->SetMarkerStyle(*markerStyle);
             }
             if (auto markerSize = get_first(data->GetMarkerSize(),
-                                            plot[padID].GetDefaultMarkerSize(),
-                                            defaultPad.GetDefaultMarkerSize())) {
+                                            pad.GetDefaultMarkerSize(),
+                                            padDefaults.GetDefaultMarkerSize())) {
               data_ptr->SetMarkerSize(*markerSize);
             }
             if (auto lineColor = get_first(data->GetLineColor(),
-                                           pick(dataIndex, plot[padID].GetDefaultLineColors()),
-                                           pick(dataIndex, defaultPad.GetDefaultLineColors()))) {
+                                           pick(dataIndex, pad.GetDefaultLineColors()),
+                                           pick(dataIndex, padDefaults.GetDefaultLineColors()))) {
               data_ptr->SetLineColor(*lineColor);
             }
             if (auto lineStyle = get_first(data->GetLineStyle(),
-                                           pick(dataIndex, plot[padID].GetDefaultLineStyles()),
-                                           pick(dataIndex, defaultPad.GetDefaultLineStyles()))) {
+                                           pick(dataIndex, pad.GetDefaultLineStyles()),
+                                           pick(dataIndex, padDefaults.GetDefaultLineStyles()))) {
               data_ptr->SetLineStyle(*lineStyle);
             }
             if (auto lineWidth = get_first(data->GetLineWidth(),
-                                           plot[padID].GetDefaultLineWidth(),
-                                           defaultPad.GetDefaultLineWidth())) {
+                                           pad.GetDefaultLineWidth(),
+                                           padDefaults.GetDefaultLineWidth())) {
               data_ptr->SetLineWidth(*lineWidth);
             }
             if (auto fillColor = get_first(data->GetFillColor(),
-                                           pick(dataIndex, plot[padID].GetDefaultFillColors()),
-                                           pick(dataIndex, defaultPad.GetDefaultFillColors()))) {
+                                           pick(dataIndex, pad.GetDefaultFillColors()),
+                                           pick(dataIndex, padDefaults.GetDefaultFillColors()))) {
               data_ptr->SetFillColor(*fillColor);
             }
             if (auto fillStyle = get_first(data->GetFillStyle(),
-                                           pick(dataIndex, plot[padID].GetDefaultFillStyles()),
-                                           pick(dataIndex, defaultPad.GetDefaultFillStyles()))) {
+                                           pick(dataIndex, pad.GetDefaultFillStyles()),
+                                           pick(dataIndex, padDefaults.GetDefaultFillStyles()))) {
               data_ptr->SetFillStyle(*fillStyle);
             }
             if (auto fillOpacity = get_first(data->GetFillOpacity(),
-                                             plot[padID].GetDefaultFillOpacity(),
-                                             defaultPad.GetDefaultFillOpacity())) {
+                                             pad.GetDefaultFillOpacity(),
+                                             padDefaults.GetDefaultFillOpacity())) {
               data_ptr->SetFillColor(TColor::GetColorTransparent(data_ptr->GetFillColor(), *fillOpacity));
             }
 
@@ -522,7 +522,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               // explicit user choice overrides this
               if (data->GetLegendID()) legendID = *data->GetLegendID();
 
-              auto& boxVector = plot[padID].GetLegendBoxes();
+              auto& boxVector = pad.GetLegendBoxes();
               if (legendID > 0u && legendID <= boxVector.size()) {
                 boxVector[legendID - 1]->AddEntry(*data->GetLegendLable(), data_ptr->GetName());
               } else {
@@ -574,7 +574,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
 
     bool redrawAxes = (pad.GetRedrawAxes())
                         ? *pad.GetRedrawAxes()
-                        : ((defaultPad.GetRedrawAxes()) ? *defaultPad.GetRedrawAxes() : false);
+                        : ((padDefaults.GetRedrawAxes()) ? *padDefaults.GetRedrawAxes() : false);
     if (redrawAxes) axisHist_ptr->Draw("SAME AXIS");
 
     pad_ptr->Modified();
