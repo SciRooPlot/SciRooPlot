@@ -434,35 +434,51 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
             pad_ptr->Update();
           } else {
             // define data appearance
-            auto markerColor = get_first(data->GetMarkerColor(), pick(dataIndex, plot[padID].GetDefaultMarkerColors()), pick(dataIndex, defaultPad.GetDefaultMarkerColors()));
-
-            auto markerStyle = get_first(data->GetMarkerStyle(), pick(dataIndex, plot[padID].GetDefaultMarkerStyles()), pick(dataIndex, defaultPad.GetDefaultMarkerStyles()));
-
-            auto markerSize = get_first(data->GetMarkerSize(), plot[padID].GetDefaultMarkerSize(), defaultPad.GetDefaultMarkerSize());
-
-            auto lineColor = get_first(data->GetLineColor(), pick(dataIndex, plot[padID].GetDefaultLineColors()), pick(dataIndex, defaultPad.GetDefaultLineColors()));
-
-            auto lineStyle = get_first(data->GetLineStyle(), pick(dataIndex, plot[padID].GetDefaultLineStyles()), pick(dataIndex, defaultPad.GetDefaultLineStyles()));
-
-            auto lineWidth = get_first(data->GetLineWidth(), plot[padID].GetDefaultLineWidth(), defaultPad.GetDefaultLineWidth());
-
-            auto fillColor = get_first(data->GetFillColor(), pick(dataIndex, plot[padID].GetDefaultFillColors()), pick(dataIndex, defaultPad.GetDefaultFillColors()));
-
-            auto fillStyle = get_first(data->GetFillStyle(), pick(dataIndex, plot[padID].GetDefaultFillStyles()), pick(dataIndex, defaultPad.GetDefaultFillStyles()));
-
-            auto fillOpacity = get_first(data->GetFillOpacity(), plot[padID].GetDefaultFillOpacity(), defaultPad.GetDefaultFillOpacity());
-
-            if (markerStyle) data_ptr->SetMarkerStyle(*markerStyle);
-            if (markerColor) data_ptr->SetMarkerColor(*markerColor);
-            if (markerSize) data_ptr->SetMarkerSize(*markerSize);
-
-            if (lineStyle) data_ptr->SetLineStyle(*lineStyle);
-            if (lineColor) data_ptr->SetLineColor(*lineColor);
-            if (lineWidth) data_ptr->SetLineWidth(*lineWidth);
-
-            if (fillStyle) data_ptr->SetFillStyle(*fillStyle);
-            if (fillOpacity && fillColor && dataIndex != 0) *fillColor = TColor::GetColorTransparent(*fillColor, *fillOpacity);
-            if (fillColor) data_ptr->SetFillColor(*fillColor);
+            if (auto markerColor = get_first(data->GetMarkerColor(),
+                                             pick(dataIndex, plot[padID].GetDefaultMarkerColors()),
+                                             pick(dataIndex, defaultPad.GetDefaultMarkerColors()))) {
+              data_ptr->SetMarkerColor(*markerColor);
+            }
+            if (auto markerStyle = get_first(data->GetMarkerStyle(),
+                                             pick(dataIndex, plot[padID].GetDefaultMarkerStyles()),
+                                             pick(dataIndex, defaultPad.GetDefaultMarkerStyles()))) {
+              data_ptr->SetMarkerStyle(*markerStyle);
+            }
+            if (auto markerSize = get_first(data->GetMarkerSize(),
+                                            plot[padID].GetDefaultMarkerSize(),
+                                            defaultPad.GetDefaultMarkerSize())) {
+              data_ptr->SetMarkerSize(*markerSize);
+            }
+            if (auto lineColor = get_first(data->GetLineColor(),
+                                           pick(dataIndex, plot[padID].GetDefaultLineColors()),
+                                           pick(dataIndex, defaultPad.GetDefaultLineColors()))) {
+              data_ptr->SetLineColor(*lineColor);
+            }
+            if (auto lineStyle = get_first(data->GetLineStyle(),
+                                           pick(dataIndex, plot[padID].GetDefaultLineStyles()),
+                                           pick(dataIndex, defaultPad.GetDefaultLineStyles()))) {
+              data_ptr->SetLineStyle(*lineStyle);
+            }
+            if (auto lineWidth = get_first(data->GetLineWidth(),
+                                           plot[padID].GetDefaultLineWidth(),
+                                           defaultPad.GetDefaultLineWidth())) {
+              data_ptr->SetLineWidth(*lineWidth);
+            }
+            if (auto fillColor = get_first(data->GetFillColor(),
+                                           pick(dataIndex, plot[padID].GetDefaultFillColors()),
+                                           pick(dataIndex, defaultPad.GetDefaultFillColors()))) {
+              data_ptr->SetFillColor(*fillColor);
+            }
+            if (auto fillStyle = get_first(data->GetFillStyle(),
+                                           pick(dataIndex, plot[padID].GetDefaultFillStyles()),
+                                           pick(dataIndex, defaultPad.GetDefaultFillStyles()))) {
+              data_ptr->SetFillStyle(*fillStyle);
+            }
+            if (auto fillOpacity = get_first(data->GetFillOpacity(),
+                                             plot[padID].GetDefaultFillOpacity(),
+                                             defaultPad.GetDefaultFillOpacity())) {
+              data_ptr->SetFillColor(TColor::GetColorTransparent(data_ptr->GetFillColor(), *fillOpacity));
+            }
 
             // now define data ranges
             if (axisHist_ptr->GetMinimum()) {
