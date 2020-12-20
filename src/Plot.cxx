@@ -747,9 +747,7 @@ Plot::Pad::Axis& Plot::Pad::GetAxis(const char axis)
 Plot::Pad::Data& Plot::Pad::GetData(uint8_t dataID)
 {
   if (dataID < 1 || dataID > mData.size()) {
-    ERROR(
-      "Data with ID {} is not defined! You can access only data that was already added to the pad.",
-      dataID);
+    ERROR("Data with ID {} is not defined! You can access only data that was already added to the pad.", dataID);
     std::exit(EXIT_FAILURE);
   }
   return *mData[dataID - 1];
@@ -763,10 +761,7 @@ Plot::Pad::Data& Plot::Pad::GetData(uint8_t dataID)
 Plot::Pad::LegendBox& Plot::Pad::GetLegend(uint8_t legendID)
 {
   if (legendID < 1 || legendID > mLegendBoxes.size()) {
-    ERROR(
-      "Legend with ID {} is not defined! You can access only legends that have already been added "
-      "to the pad.",
-      legendID);
+    ERROR("Legend with ID {} is not defined! You can access only legends that have already been added to the pad.", legendID);
     std::exit(EXIT_FAILURE);
   }
   return *mLegendBoxes[legendID - 1];
@@ -780,10 +775,7 @@ Plot::Pad::LegendBox& Plot::Pad::GetLegend(uint8_t legendID)
 Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
 {
   if (textID < 1 || textID > mTextBoxes.size()) {
-    ERROR(
-      "Text with ID {} is not defined! You can access only texts that have already been added to "
-      "the pad.",
-      textID);
+    ERROR("Text with ID {} is not defined! You can access only texts that have already been added to the pad.", textID);
     std::exit(EXIT_FAILURE);
   }
   return *mTextBoxes[textID - 1];

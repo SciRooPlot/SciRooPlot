@@ -90,5 +90,31 @@ void read_from_tree_optional(const ptree& tree, optional<T>& var, const string& 
   }
 }
 
+template <typename T>
+optional<T> pick(int i, const optional<vector<T>>& vec)
+{
+  if (!vec) return std::nullopt;
+  return optional((*vec)[(i - 1) % (*vec).size()]);
+}
+
+template <typename T, typename... Ts>
+optional<T> get_first(const optional<T>& property, const Ts&... properties)
+{
+  for (const auto ptr : {&property, &properties...}) {
+    if (*ptr) return *ptr;
+  }
+  return std::nullopt;
+}
+
+template <typename T, typename... Ts>
+T get_first_or(const T& fallback, const optional<T>& property, const Ts&... properties)
+{
+  if (auto match = get_first(property, properties...)) {
+    return *match;
+  } else {
+    return fallback;
+  }
+}
+
 } // end namespace PlottingFramework
 #endif /* HelperFunctions_h */
