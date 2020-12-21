@@ -106,4 +106,10 @@
 #define PRINT_INLINE(s, ...) ;
 #endif
 
+// helper macro to quickly instospect deduced type of a variable
+#define CHECK_TYPE(var)        \
+  {                            \
+    typename decltype(var)::_; \
+  }
+
 #endif /* Logging_h */

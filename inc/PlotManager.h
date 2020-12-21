@@ -44,21 +44,14 @@ public:
 
   // settings for output
   void SetOutputDirectory(const string& path);
-  void SetUseUniquePlotNames(bool useUniquePlotNames = true)
-  {
-    mUseUniquePlotNames = useUniquePlotNames;
-  } // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
-  void SetOutputFileName(const string& fileName = "ResultPlots.root")
-  {
-    mOutputFileName = fileName;
-  } // in case canvases should be saved in .root file
+  void SetUseUniquePlotNames(bool useUniquePlotNames = true);          // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
+  void SetOutputFileName(const string& fileName = "ResultPlots.root"); // in case canvases should be saved in .root file
 
   // settings related to the input root files
   void AddInputDataFiles(const string& inputIdentifier, const vector<string>& inputFilePathList);
   void AddInputDataFile(const string& inputIdentifier, const string& inputFilePath);
   void DumpInputDataFiles(const string& configFileName); // save input file paths to config file
-  void LoadInputDataFiles(
-    const string& configFileName); // load the input file paths from config file
+  void LoadInputDataFiles(const string& configFileName); // load the input file paths from config file
 
   // remove all loaded input data (histograms, graphs, ...) from the manager (usually not needed)
   void ClearLoadedData();
@@ -69,8 +62,7 @@ public:
 
   // saving plot definitions to external file (which can e.g. be read by the commandlne plotting app
   // included in the framework)
-  void DumpPlots(const string& plotFileName, const string& figureGroup = "",
-                 const vector<string>& plotNames = {});
+  void DumpPlots(const string& plotFileName, const string& figureGroup = "", const vector<string>& plotNames = {});
   void DumpPlot(const string& plotFileName, const string& figureGroup, const string& plotName);
 
   // read plots from plot definition file created by the above functions (regular expressions are

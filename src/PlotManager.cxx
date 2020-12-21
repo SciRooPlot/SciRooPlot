@@ -131,6 +131,14 @@ void PlotManager::SetOutputDirectory(const string& path)
 {
   mOutputDirectory = path;
 }
+void PlotManager::SetUseUniquePlotNames(bool useUniquePlotNames)
+{
+  mUseUniquePlotNames = useUniquePlotNames;
+}
+void PlotManager::SetOutputFileName(const string& fileName)
+{
+  mOutputFileName = fileName;
+}
 
 //**************************************************************************************************
 /**
@@ -209,7 +217,9 @@ void PlotManager::AddPlot(Plot& plot)
   if (plot.GetFigureGroup() == "TEMPLATES") ERROR("You cannot use reserved group name TEMPLATES!");
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [plot](Plot& curPlot) mutable {
-                                return curPlot.GetUniqueName() == plot.GetUniqueName();
+                                bool removePlot = curPlot.GetUniqueName() == plot.GetUniqueName();
+                                if (removePlot) WARNING(R"(Plot "{}" in "{}" already exists and will be replaced.)", curPlot.GetName(), curPlot.GetFigureGroup());
+                                return removePlot;
                               }),
                mPlots.end());
   mPlots.push_back(std::move(plot));
@@ -225,7 +235,9 @@ void PlotManager::AddPlotTemplate(Plot& plotTemplate)
   plotTemplate.SetFigureGroup("TEMPLATES");
   mPlotTemplates.erase(std::remove_if(mPlotTemplates.begin(), mPlotTemplates.end(),
                                       [plotTemplate](Plot& curPlotTemplate) mutable {
-                                        return curPlotTemplate.GetUniqueName() == plotTemplate.GetUniqueName();
+                                        bool removePlot = curPlotTemplate.GetUniqueName() == plotTemplate.GetUniqueName();
+                                        if (removePlot) WARNING(R"(Plot template "{}" already exists and will be replaced.)", curPlotTemplate.GetName());
+                                        return removePlot;
                                       }),
                        mPlotTemplates.end());
   mPlotTemplates.push_back(std::move(plotTemplate));
@@ -637,8 +649,7 @@ void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, const vector<
 {
   for (auto& inputFileName : fileNames) {
     if (inputFileName.find(".csv") == string::npos) continue;
-    // extract from path the csv file name that will then become graph name TODO: protect this
-    // against wrong usage...
+    // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
     string graphName = inputFileName.substr(
       inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
     string delimiter = "\t"; // TODO: this must somehow be user definable

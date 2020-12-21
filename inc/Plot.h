@@ -52,6 +52,7 @@ enum drawing_options_t : uint8_t {
   // 2d options
   colz,
   surf,
+  cont,
 };
 
 //**************************************************************************************************
@@ -338,7 +339,9 @@ public:
   Data& operator=(const Data& other) = default;
   Data& operator=(Data&& other) = default;
 
-  // user accessors
+  Data& SetInputID(const string& inputIdentifier);
+  const string& GetInputID() const { return mInputIdentifier; }
+
   virtual Data& SetLayout(const Data& dataLayout);
   virtual Data& SetRangeX(double_t min, double_t max);
   virtual Data& SetMaxRangeX(double_t max);
@@ -370,9 +373,8 @@ public:
   virtual Data& SetFillStyle(int16_t style);
   virtual Data& SetFillOpacity(float_t opacity);
   virtual Data& SetDefinesFrame();
-
-  Data& SetInputID(const string& inputIdentifier);
-  const string& GetInputID() const { return mInputIdentifier; }
+  virtual Data& SetContours(const vector<double>& contours);
+  virtual Data& SetContours(const int32_t nContours);
 
 protected:
   friend class PlotManager;
@@ -380,42 +382,35 @@ protected:
   friend class Plot;
 
   virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Data>(*this); }
-
   virtual ptree GetPropertyTree() const;
-
   void SetType(const string& type) { mType = type; }
-
   string GetUniqueName() const { return mName + gNameGroupSeparator + mInputIdentifier; }
 
   const auto& GetType() const { return mType; }
   const auto& GetName() const { return mName; }
   const auto& GetLegendLable() const { return mLegend.lable; }
   const auto& GetLegendID() const { return mLegend.identifier; }
-
   const auto& GetMarkerColor() const { return mMarker.color; }
   const auto& GetMarkerStyle() const { return mMarker.style; }
   const auto& GetMarkerSize() const { return mMarker.scale; }
-
   const auto& GetLineColor() const { return mLine.color; }
   const auto& GetLineStyle() const { return mLine.style; }
   const auto& GetLineWidth() const { return mLine.scale; }
-
   const auto& GetFillColor() const { return mFill.color; }
   const auto& GetFillStyle() const { return mFill.style; }
   const auto& GetFillOpacity() const { return mFill.scale; }
-
   const auto& GetDrawingOptions() const { return mDrawingOptions; }
   const auto& GetDrawingOptionAlias() const { return mDrawingOptionAlias; }
   const auto& GetTextFormat() const { return mTextFormat; }
   const auto& GetScaleFactor() const { return mModify.scale_factor; }
   const auto& GetNormMode() const { return mModify.norm_mode; }
-
   const auto& GetMinRangeX() const { return mRangeX.min; }
   const auto& GetMaxRangeX() const { return mRangeX.max; }
   const auto& GetMinRangeY() const { return mRangeY.min; }
   const auto& GetMaxRangeY() const { return mRangeY.max; }
-
   const bool& GetDefinesFrame() const { return mDefinesFrame; }
+  const auto& GetContours() const { return mContours; }
+  const auto& GetNContours() const { return mNContours; }
 
 private:
   bool mDefinesFrame;
@@ -449,6 +444,9 @@ private:
   dataRange_t mRangeX;
   dataRange_t mRangeY;
   modify_t mModify;
+
+  optional<vector<double_t>> mContours;
+  optional<int32_t> mNContours;
 };
 
 //**************************************************************************************************
@@ -470,8 +468,6 @@ public:
   Ratio& operator=(Ratio&& other) = default;
 
   Ratio& SetIsCorrelated(bool isCorrelated = true);
-
-  // return correct type for the data accessors
   Ratio& SetLayout(const Data& dataLayout) { return static_cast<decltype(*this)&>(Data::SetLayout(dataLayout)); }
   Ratio& SetRangeX(double_t min, double_t max) { return static_cast<decltype(*this)&>(Data::SetRangeX(min, max)); }
   Ratio& SetMaxRangeX(double_t max) { return static_cast<decltype(*this)&>(Data::SetMaxRangeX(max)); }
@@ -503,6 +499,8 @@ public:
   Ratio& SetFillStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetFillStyle(style)); }
   Ratio& SetFillOpacity(float_t opacity) { return static_cast<decltype(*this)&>(Data::SetFillOpacity(opacity)); }
   Ratio& SetDefinesFrame() { return static_cast<decltype(*this)&>(Data::SetDefinesFrame()); }
+  Ratio& SetContours(const vector<double>& contours) { return static_cast<decltype(*this)&>(Data::SetContours(contours)); }
+  Ratio& SetContours(const int32_t nContours) { return static_cast<decltype(*this)&>(Data::SetContours(nContours)); }
 
 protected:
   friend class PlotManager;
@@ -747,20 +745,16 @@ public:
   LegendBox& operator=(const LegendBox& other) = default;
   LegendBox& operator=(LegendBox&& other) = default;
 
+  LegendEntry& GetEntry(uint8_t entryID) { return mLegendEntriesUser[entryID]; }
   LegendBox& SetTitle(const string& title);
   LegendBox& SetNumColumns(uint8_t numColumns);
-  LegendEntry& GetEntry(uint8_t entryID) { return mLegendEntriesUser[entryID]; }
-
   LegendBox& SetDefaultDrawStyle(string drawStyle);
-
   LegendBox& SetDefaultLineColor(int16_t color);
   LegendBox& SetDefaultLineStyle(int16_t style);
   LegendBox& SetDefaultLineWidth(float_t width);
-
   LegendBox& SetDefaultMarkerColor(int16_t color);
   LegendBox& SetDefaultMarkerStyle(int16_t style);
   LegendBox& SetDefaultMarkerSize(float_t size);
-
   LegendBox& SetDefaultFillColor(int16_t color);
   LegendBox& SetDefaultFillStyle(int16_t style);
   LegendBox& SetDefaultFillOpacity(float_t opacity);
@@ -774,20 +768,16 @@ protected:
   const optional<uint8_t>& GetNumColumns() const { return mNumColumns; }
   const optional<string>& GetTitle() const { return mTitle; }
 
-  const vector<LegendEntry>& GetEntries() const { return mLegendEntries; }
-
   LegendEntry& AddEntry(const string& name, const string& lable);
 
+  const auto& GetEntries() const { return mLegendEntries; }
   const auto& GetDefaultDrawStyle() const { return mDrawStyleDefault; }
-
   const auto& GetDefaultMarkerColor() const { return mMarkerDefault.color; }
   const auto& GetDefaultMarkerStyle() const { return mMarkerDefault.style; }
   const auto& GetDefaultMarkerSize() const { return mMarkerDefault.scale; }
-
   const auto& GetDefaultLineColor() const { return mLineDefault.color; }
   const auto& GetDefaultLineStyle() const { return mLineDefault.style; }
   const auto& GetDefaultLineWidth() const { return mLineDefault.scale; }
-
   const auto& GetDefaultFillColor() const { return mFillDefault.color; }
   const auto& GetDefaultFillStyle() const { return mFillDefault.style; }
   const auto& GetDefaultFillOpacity() const { return mFillDefault.scale; }
@@ -814,33 +804,21 @@ private:
 class Plot::Pad::LegendBox::LegendEntry
 {
 public:
-  LegendEntry(const optional<string>& lable = {}, const optional<string>& refDataName = {},
-              const optional<string>& drawStyle = {})
-    : mFill{}, mMarker{}, mLine{}
-  {
-    mLable = lable;
-    mRefDataName = refDataName;
-    mDrawStyle = drawStyle;
-  }
-
+  LegendEntry(const optional<string>& lable = {}, const optional<string>& refDataName = {}, const optional<string>& drawStyle = {});
   LegendEntry(const ptree& legendEntryTree);
 
   LegendEntry& SetLable(const string& lable);
   LegendEntry& SetRefData(const string& name, const string& inputIdentifier);
   LegendEntry& SetDrawStyle(const string& drawStyle);
-
   LegendEntry& SetMarkerColor(int16_t color);
   LegendEntry& SetMarkerStyle(int16_t style);
   LegendEntry& SetMarkerSize(float_t size);
-
   LegendEntry& SetLineColor(int16_t color);
   LegendEntry& SetLineStyle(int16_t style);
   LegendEntry& SetLineWidth(float_t width);
-
   LegendEntry& SetFillColor(int16_t color);
   LegendEntry& SetFillStyle(int16_t style);
   LegendEntry& SetFillOpacity(float_t opacity);
-
   LegendEntry& SetTextColor(int16_t color);
   LegendEntry& SetTextFont(int16_t font);
   LegendEntry& SetTextSize(float_t size);

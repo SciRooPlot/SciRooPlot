@@ -942,6 +942,8 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree_optional(dataTree, mRangeX.max, "rangeX_max");
   read_from_tree_optional(dataTree, mRangeY.min, "rangeY_min");
   read_from_tree_optional(dataTree, mRangeY.max, "rangeY_max");
+  read_from_tree_optional(dataTree, mContours, "contours");
+  read_from_tree_optional(dataTree, mNContours, "number_of_contours");
 }
 
 //**************************************************************************************************
@@ -976,7 +978,8 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree_optional(dataTree, mRangeX.max, "rangeX_max");
   put_in_tree_optional(dataTree, mRangeY.min, "rangeY_min");
   put_in_tree_optional(dataTree, mRangeY.max, "rangeY_max");
-
+  put_in_tree_optional(dataTree, mContours, "contours");
+  put_in_tree_optional(dataTree, mNContours, "number_of_contours");
   return dataTree;
 }
 
@@ -1004,6 +1007,13 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
   mFill.color = dataLayout.mFill.color;
   mFill.style = dataLayout.mFill.style;
   mFill.scale = dataLayout.mFill.scale;
+  mContours = dataLayout.mContours;
+  mNContours = dataLayout.mNContours;
+  return *this;
+}
+auto Plot::Pad::Data::SetInputID(const string& inputIdentifier) -> decltype(*this)
+{
+  mInputIdentifier = inputIdentifier;
   return *this;
 }
 auto Plot::Pad::Data::SetLegendLable(const string& legendLable) -> decltype(*this)
@@ -1174,9 +1184,14 @@ auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
   mDefinesFrame = true;
   return *this;
 }
-auto Plot::Pad::Data::SetInputID(const string& inputIdentifier) -> decltype(*this)
+auto Plot::Pad::Data::SetContours(const vector<double>& contours) -> decltype(*this)
 {
-  mInputIdentifier = inputIdentifier;
+  mContours = contours;
+  return *this;
+}
+auto Plot::Pad::Data::SetContours(const int32_t nContours) -> decltype(*this)
+{
+  mNContours = nContours;
   return *this;
 }
 
@@ -1784,15 +1799,12 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
   read_from_tree_optional(legendBoxTree, mTitle, "title");
   read_from_tree_optional(legendBoxTree, mNumColumns, "num_columns");
   read_from_tree_optional(legendBoxTree, mDrawStyleDefault, "default_draw_style");
-
   read_from_tree_optional(legendBoxTree, mMarkerDefault.color, "default_marker_color");
   read_from_tree_optional(legendBoxTree, mMarkerDefault.style, "default_marker_style");
   read_from_tree_optional(legendBoxTree, mMarkerDefault.scale, "default_marker_size");
-
   read_from_tree_optional(legendBoxTree, mLineDefault.color, "default_line_color");
   read_from_tree_optional(legendBoxTree, mLineDefault.style, "default_line_style");
   read_from_tree_optional(legendBoxTree, mLineDefault.scale, "default_line_width");
-
   read_from_tree_optional(legendBoxTree, mFillDefault.color, "default_fill_color");
   read_from_tree_optional(legendBoxTree, mFillDefault.style, "default_fill_style");
   read_from_tree_optional(legendBoxTree, mFillDefault.scale, "default_fill_opacity");
@@ -1816,15 +1828,12 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
   put_in_tree_optional(legendBoxTree, mTitle, "title");
   put_in_tree_optional(legendBoxTree, mNumColumns, "num_columns");
   put_in_tree_optional(legendBoxTree, mDrawStyleDefault, "default_draw_style");
-
   put_in_tree_optional(legendBoxTree, mMarkerDefault.color, "default_marker_color");
   put_in_tree_optional(legendBoxTree, mMarkerDefault.style, "default_marker_style");
   put_in_tree_optional(legendBoxTree, mMarkerDefault.scale, "default_marker_size");
-
   put_in_tree_optional(legendBoxTree, mLineDefault.color, "default_line_color");
   put_in_tree_optional(legendBoxTree, mLineDefault.style, "default_line_style");
   put_in_tree_optional(legendBoxTree, mLineDefault.scale, "default_line_width");
-
   put_in_tree_optional(legendBoxTree, mFillDefault.color, "default_fill_color");
   put_in_tree_optional(legendBoxTree, mFillDefault.style, "default_fill_style");
   put_in_tree_optional(legendBoxTree, mFillDefault.scale, "default_fill_opacity");
@@ -1919,8 +1928,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillOpacity(float_t opacit
  * Add entry to LegendBox.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& lable,
-                                                                  const string& refDataName)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& lable, const string& refDataName)
 {
   mLegendEntries.push_back(LegendEntry(lable, refDataName));
   return mLegendEntries.back();
@@ -1948,29 +1956,14 @@ void Plot::Pad::LegendBox::MergeLegendEntries()
 
 //**************************************************************************************************
 /**
- * Apply user defined properties to existing LegendEntry
+ * Construct LegendEntry.
  */
 //**************************************************************************************************
-void Plot::Pad::LegendBox::LegendEntry::operator+=(
-  const Plot::Pad::LegendBox::LegendEntry& legendEntry)
+Plot::Pad::LegendBox::LegendEntry::LegendEntry(const optional<string>& lable, const optional<string>& refDataName, const optional<string>& drawStyle)
 {
-  this->mDrawStyle = legendEntry.mDrawStyle;
-
-  this->mMarker.color = legendEntry.mMarker.color;
-  this->mMarker.scale = legendEntry.mMarker.scale;
-  this->mMarker.style = legendEntry.mMarker.style;
-
-  this->mLine.color = legendEntry.mLine.color;
-  this->mLine.scale = legendEntry.mLine.scale;
-  this->mLine.style = legendEntry.mLine.style;
-
-  this->mFill.color = legendEntry.mFill.color;
-  this->mFill.scale = legendEntry.mFill.scale;
-  this->mFill.style = legendEntry.mFill.style;
-
-  this->mText.color = legendEntry.mText.color;
-  this->mText.scale = legendEntry.mText.scale;
-  this->mText.style = legendEntry.mText.style;
+  mLable = lable;
+  mRefDataName = refDataName;
+  mDrawStyle = drawStyle;
 }
 
 //**************************************************************************************************
@@ -1979,24 +1972,19 @@ void Plot::Pad::LegendBox::LegendEntry::operator+=(
  */
 //**************************************************************************************************
 Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
-  : mFill{}, mMarker{}, mLine{}
 {
   read_from_tree_optional(legendEntryTree, mLable, "lable");
   read_from_tree_optional(legendEntryTree, mRefDataName, "ref_data_name");
   read_from_tree_optional(legendEntryTree, mDrawStyle, "draw_style");
-
   read_from_tree_optional(legendEntryTree, mFill.color, "fill_color");
   read_from_tree_optional(legendEntryTree, mFill.style, "fill_style");
   read_from_tree_optional(legendEntryTree, mFill.scale, "fill_opacity");
-
   read_from_tree_optional(legendEntryTree, mLine.color, "line_color");
   read_from_tree_optional(legendEntryTree, mLine.style, "line_style");
   read_from_tree_optional(legendEntryTree, mLine.scale, "line_width");
-
   read_from_tree_optional(legendEntryTree, mMarker.color, "marker_color");
   read_from_tree_optional(legendEntryTree, mMarker.style, "marker_style");
   read_from_tree_optional(legendEntryTree, mMarker.scale, "marker_width");
-
   read_from_tree_optional(legendEntryTree, mText.color, "text_color");
   read_from_tree_optional(legendEntryTree, mText.style, "text_font");
   read_from_tree_optional(legendEntryTree, mText.scale, "text_size");
@@ -2013,25 +2001,43 @@ ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree() const
   put_in_tree_optional(legendEntryTree, mLable, "lable");
   put_in_tree_optional(legendEntryTree, mRefDataName, "ref_data_name");
   put_in_tree_optional(legendEntryTree, mDrawStyle, "draw_style");
-
   put_in_tree_optional(legendEntryTree, mFill.color, "fill_color");
   put_in_tree_optional(legendEntryTree, mFill.style, "fill_style");
   put_in_tree_optional(legendEntryTree, mFill.scale, "fill_opacity");
-
   put_in_tree_optional(legendEntryTree, mLine.color, "line_color");
   put_in_tree_optional(legendEntryTree, mLine.style, "line_style");
   put_in_tree_optional(legendEntryTree, mLine.scale, "line_width");
-
   put_in_tree_optional(legendEntryTree, mMarker.color, "marker_color");
   put_in_tree_optional(legendEntryTree, mMarker.style, "marker_style");
   put_in_tree_optional(legendEntryTree, mMarker.scale, "marker_width");
-
   put_in_tree_optional(legendEntryTree, mText.color, "text_color");
   put_in_tree_optional(legendEntryTree, mText.style, "text_font");
   put_in_tree_optional(legendEntryTree, mText.scale, "text_size");
-
   return legendEntryTree;
 };
+
+//**************************************************************************************************
+/**
+ * Apply user defined properties to existing LegendEntry
+ */
+//**************************************************************************************************
+void Plot::Pad::LegendBox::LegendEntry::operator+=(
+  const Plot::Pad::LegendBox::LegendEntry& legendEntry)
+{
+  this->mDrawStyle = legendEntry.mDrawStyle;
+  this->mMarker.color = legendEntry.mMarker.color;
+  this->mMarker.scale = legendEntry.mMarker.scale;
+  this->mMarker.style = legendEntry.mMarker.style;
+  this->mLine.color = legendEntry.mLine.color;
+  this->mLine.scale = legendEntry.mLine.scale;
+  this->mLine.style = legendEntry.mLine.style;
+  this->mFill.color = legendEntry.mFill.color;
+  this->mFill.scale = legendEntry.mFill.scale;
+  this->mFill.style = legendEntry.mFill.style;
+  this->mText.color = legendEntry.mText.color;
+  this->mText.scale = legendEntry.mText.scale;
+  this->mText.style = legendEntry.mText.style;
+}
 
 //**************************************************************************************************
 /**

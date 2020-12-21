@@ -47,6 +47,18 @@ string vector_to_string(vector<T> items)
 }
 
 template <typename T>
+T string_to_type(const string& str)
+{
+  if constexpr (std::is_same_v<double_t, T>) {
+    return std::stod(str);
+  } else if constexpr (std::is_same_v<float_t, T>) {
+    return std::stof(str);
+  } else {
+    return std::stoi(str);
+  }
+}
+
+template <typename T>
 vector<T> string_to_vector(string itemString)
 {
   // savety in case user put some blank spaces between numbers
@@ -55,7 +67,7 @@ vector<T> string_to_vector(string itemString)
   string curItemStr;
   std::istringstream stream(itemString);
   while (std::getline(stream, curItemStr, ',')) {
-    items.push_back(std::stoi(curItemStr));
+    items.push_back(string_to_type<T>(curItemStr));
   }
   return items;
 }

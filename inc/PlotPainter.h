@@ -53,6 +53,7 @@ using data_ptr_t_func_2d = variant<TF2*>;
 const map<drawing_options_t, string> defaultDrawingOpions_Hist2d{
   {colz, "COLZ"},
   {surf, "SURF"},
+  {cont, "CONT3"},
   {text, "TEXT"},
 };
 

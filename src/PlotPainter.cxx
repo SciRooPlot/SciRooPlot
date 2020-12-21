@@ -85,10 +85,10 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
   if (plot.GetFillStyle()) canvas_ptr->SetFillStyle(*plot.GetFillStyle());
   if (plot.IsFixAspectRatio()) canvas_ptr->SetFixedAspectRatio(*plot.IsFixAspectRatio());
 
-  Plot::Pad& padDefaults = plot[0];
+  auto& padDefaults = plot[0];
   for (const auto& [padID, dummy] : plot.GetPads()) {
     if (padID == 0) continue; // pad 0 is used only to define the defaults
-    auto& pad = plot[padID];  // needed because processData lambda cannot capture vairiable from structured binding ('dummy')
+    auto& pad = plot[padID];  // needed because processData lambda cannot capture variable from structured binding ('dummy')
 
     // Pad placing
     array<double_t, 4> padPos = {0., 0., 1., 1.};
@@ -510,6 +510,12 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
               data_ptr->GetYaxis()->SetRangeUser(rangeMinY, rangeMaxY);
               // do not draw the Z axis a second time!
               std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
+
+              if (auto& contours = data->GetContours()) {
+                data_ptr->SetContour((*contours).size(), (*contours).data());
+              } else if (auto& nContours = data->GetNContours()) {
+                data_ptr->SetContour(*nContours);
+              }
             }
             if (data->GetTextFormat()) gStyle->SetPaintTextFormat((*data->GetTextFormat()).data());
 
@@ -601,17 +607,17 @@ TPave* PlotPainter::GenerateBox(
     using BoxType = std::decay_t<decltype(*box)>;
     constexpr bool isLegend = std::is_same_v<BoxType, Plot::Pad::LegendBox>;
 
-    optional<int16_t> textColor{box->GetTextColor()};
-    optional<int16_t> textFont{box->GetTextFont()};
-    optional<float_t> textSize{box->GetTextSize()};
+    auto textColor{box->GetTextColor()};
+    auto textFont{box->GetTextFont()};
+    auto textSize{box->GetTextSize()};
 
-    optional<int16_t> borderColor{box->GetBorderColor()};
-    optional<int16_t> borderStyle{box->GetBorderStyle()};
-    optional<float_t> borderWidth{box->GetBorderWidth()};
+    auto borderColor{box->GetBorderColor()};
+    auto borderStyle{box->GetBorderStyle()};
+    auto borderWidth{box->GetBorderWidth()};
 
-    optional<int16_t> fillColor{box->GetFillColor()};
-    optional<int16_t> fillStyle{box->GetFillStyle()};
-    optional<float_t> fillOpacity{box->GetFillOpacity()};
+    auto fillColor{box->GetFillColor()};
+    auto fillStyle{box->GetFillStyle()};
+    auto fillOpacity{box->GetFillOpacity()};
 
     vector<string> lines;
     if constexpr (isLegend) {
