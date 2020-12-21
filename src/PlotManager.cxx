@@ -488,12 +488,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
 
   // generate plots
   for (auto plot : selectedPlots) {
-    if (IsPlotPossible(*plot))
-      GeneratePlot(*plot, outputMode);
-    else {
-      ERROR("Plot \"{}\" in figure group \"{}\" could not be created.", plot->GetName(),
-            plot->GetFigureGroup() + ((plot->GetFigureCategory() != "") ? ":" + plot->GetFigureCategory() : ""));
-    }
+    GeneratePlot(*plot, outputMode);
   }
 }
 
@@ -770,21 +765,6 @@ void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<str
     std::move(std::begin(remainingNewDataNames), std::end(remainingNewDataNames),
               std::back_inserter(newDataNames));
   }
-
-  if (!dataNames.empty()) {
-    WARNING("Not all required inputs could be found.");
-    string inputIdentifier = newDataNames[0].substr(newDataNames[0].find(gNameGroupSeparator) + gNameGroupSeparator.size());
-    PRINT("None of the files of input identifier \"{}\":", inputIdentifier);
-    if (fileNames.empty()) {
-      PRINT(" - no file was specified (!)");
-    } else {
-      for (auto& inputFileName : fileNames)
-        PRINT(" - {}", inputFileName);
-    }
-    PRINT("contain the follwowing data:");
-    for (auto& dataName : newDataNames)
-      PRINT(" - {}", dataName.substr(0, dataName.find(gNameGroupSeparator)));
-  }
 }
 
 //**************************************************************************************************
@@ -928,29 +908,6 @@ void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<s
     }
     if (dataNames.empty()) break;
   }
-}
-
-//**************************************************************************************************
-/**
- * Internal function to check if all input data are available to create the plot.
- */
-//**************************************************************************************************
-bool PlotManager::IsPlotPossible(Plot& plot)
-{
-  for (auto& [padID, pad] : plot.GetPads())
-    for (auto data : pad.GetData()) {
-      vector<string> dataNames;
-      dataNames.push_back(data->GetUniqueName());
-      if (data->GetType() == "ratio")
-        dataNames.push_back(
-          std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetUniqueNameDenom());
-
-      for (auto& dataName : dataNames) {
-        TObject* obj = mDataLedger->FindObject(dataName.data());
-        if (!obj) return false;
-      }
-    }
-  return true;
 }
 
 } // end namespace PlottingFramework

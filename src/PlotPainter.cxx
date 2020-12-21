@@ -74,9 +74,9 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     ERROR("No dimensions specified for plot.");
     return nullptr;
   }
-
-  TCanvas* canvas_ptr = new TCanvas(plot.GetUniqueName().data(), plot.GetUniqueName().data(),
-                                    *plot.GetWidth() + 4, *plot.GetHeight() + 28);
+  bool fail = false;
+  shared_ptr<TCanvas> canvas_ptr(new TCanvas(plot.GetUniqueName().data(), plot.GetUniqueName().data(),
+                                             *plot.GetWidth() + 4, *plot.GetHeight() + 28));
   // NB.: +4 and +28 are needed to undo hard-coded offsets in TCanvas.cxx line 595
   canvas_ptr->SetMargin(0., 0., 0., 0.);
 
@@ -154,397 +154,410 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
     for (auto& data : pad.GetData()) {
       if (data->GetDrawingOptions()) drawingOptions += *data->GetDrawingOptions();
       // obtain a copy of the current data
-      if (optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData)) {
-        // retrieve the actual pointer to the data
-        auto processData = [&, padID = padID](auto&& data_ptr) {
-          using data_type = std::decay_t<decltype(data_ptr)>;
-          data_ptr->SetTitle(""); // FIXME: only make this invisible but dont remove this metadata
+      // retrieve the actual pointer to the data
+      auto processData = [&, padID = padID](auto&& data_ptr) {
+        using data_type = std::decay_t<decltype(data_ptr)>;
+        data_ptr->SetTitle(""); // FIXME: only make this invisible but dont remove this metadata
 
-          optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
+        optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
-          if (!data->GetDrawingOptions()) {
-            // FIXME: avoid code duplication here by implementing this in more clever way
-            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
-              if (!defaultDrawingOption) {
-                if (pad.GetDefaultDrawingOptionHist2d())
-                  defaultDrawingOption = pad.GetDefaultDrawingOptionHist2d();
-                else if (padDefaults.GetDefaultDrawingOptionHist2d())
-                  defaultDrawingOption = padDefaults.GetDefaultDrawingOptionHist2d();
-              }
+        if (!data->GetDrawingOptions()) {
+          // FIXME: avoid code duplication here by implementing this in more clever way
+          if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
+            if (!defaultDrawingOption) {
+              if (pad.GetDefaultDrawingOptionHist2d())
+                defaultDrawingOption = pad.GetDefaultDrawingOptionHist2d();
+              else if (padDefaults.GetDefaultDrawingOptionHist2d())
+                defaultDrawingOption = padDefaults.GetDefaultDrawingOptionHist2d();
+            }
 
-              if (defaultDrawingOption && defaultDrawingOpions_Hist2d.find(*defaultDrawingOption) != defaultDrawingOpions_Hist2d.end()) {
-                drawingOptions += defaultDrawingOpions_Hist2d.at(*defaultDrawingOption);
-              }
-            } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>) {
-              if (!defaultDrawingOption)
-                defaultDrawingOption = (pad.GetDefaultDrawingOptionHist())
-                                         ? pad.GetDefaultDrawingOptionHist()
-                                         : (padDefaults.GetDefaultDrawingOptionHist())
-                                             ? padDefaults.GetDefaultDrawingOptionHist()
-                                             : std::nullopt;
+            if (defaultDrawingOption && defaultDrawingOpions_Hist2d.find(*defaultDrawingOption) != defaultDrawingOpions_Hist2d.end()) {
+              drawingOptions += defaultDrawingOpions_Hist2d.at(*defaultDrawingOption);
+            }
+          } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>) {
+            if (!defaultDrawingOption)
+              defaultDrawingOption = (pad.GetDefaultDrawingOptionHist())
+                                       ? pad.GetDefaultDrawingOptionHist()
+                                       : (padDefaults.GetDefaultDrawingOptionHist())
+                                           ? padDefaults.GetDefaultDrawingOptionHist()
+                                           : std::nullopt;
 
-              if (defaultDrawingOption && defaultDrawingOpions_Hist.find(*defaultDrawingOption) != defaultDrawingOpions_Hist.end()) {
-                drawingOptions += defaultDrawingOpions_Hist.at(*defaultDrawingOption);
-              }
-            } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
-              if (!defaultDrawingOption)
-                defaultDrawingOption = (pad.GetDefaultDrawingOptionGraph())
-                                         ? pad.GetDefaultDrawingOptionGraph()
-                                         : (padDefaults.GetDefaultDrawingOptionGraph())
-                                             ? padDefaults.GetDefaultDrawingOptionGraph()
-                                             : std::nullopt;
+            if (defaultDrawingOption && defaultDrawingOpions_Hist.find(*defaultDrawingOption) != defaultDrawingOpions_Hist.end()) {
+              drawingOptions += defaultDrawingOpions_Hist.at(*defaultDrawingOption);
+            }
+          } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
+            if (!defaultDrawingOption)
+              defaultDrawingOption = (pad.GetDefaultDrawingOptionGraph())
+                                       ? pad.GetDefaultDrawingOptionGraph()
+                                       : (padDefaults.GetDefaultDrawingOptionGraph())
+                                           ? padDefaults.GetDefaultDrawingOptionGraph()
+                                           : std::nullopt;
 
-              if (defaultDrawingOption && defaultDrawingOpions_Graph.find(*defaultDrawingOption) != defaultDrawingOpions_Graph.end()) {
-                drawingOptions += defaultDrawingOpions_Graph.at(*defaultDrawingOption);
-              }
+            if (defaultDrawingOption && defaultDrawingOpions_Graph.find(*defaultDrawingOption) != defaultDrawingOpions_Graph.end()) {
+              drawingOptions += defaultDrawingOpions_Graph.at(*defaultDrawingOption);
             }
           }
+        }
 
-          if (data->GetType() == "ratio") {
-            // obtain a copy of the ratio denominator
-            if (optional<data_ptr_t> rawDenomData = GetDataClone(
-                  std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetUniqueNameDenom(),
-                  availableData)) {
-              // retrieve the actual pointer to the denominator data
-              auto processDenominator = [&](auto&& denom_data_ptr) {
-                using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
-                if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
-                  if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist>) {
-                    string divideOpt = (std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetIsCorrelated()) ? "B"
-                                                                                                              : "";
-                    if (!data_ptr->Divide(data_ptr, denom_data_ptr, 1., 1., divideOpt.data())) {
-                      WARNING(
-                        "Could not divide histograms properly. Trying approximated division "
-                        "via spline interpolation. Errors will not be fully correct!");
-                      DivideHistosInterpolated(data_ptr, denom_data_ptr);
-                    }
-                    if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
-                      data_ptr->GetYaxis()->SetTitle("ratio");
-                    if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
-                      data_ptr->GetZaxis()->SetTitle("ratio");
-                  }
-                if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>)
-                  if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_graph_1d>) {
-                    if (!DivideGraphs(data_ptr,
-                                      denom_data_ptr)) // first try if exact division is possible
-                    {
-                      WARNING(
-                        "In general graphs cannot be divided. Trying approximated division "
-                        "via spline interpolation. Errors will not be fully correct!");
-                      DivideGraphsInterpolated(data_ptr, denom_data_ptr);
-                    }
-                  }
-                delete denom_data_ptr;
-              };
-              std::visit(processDenominator, *rawDenomData);
+        if (data->GetType() == "ratio") {
+          // retrieve the actual pointer to the denominator data
+          auto processDenominator = [&](auto&& denom_data_ptr) {
+            using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
+            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
+              if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist>) {
+                string divideOpt = (std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetIsCorrelated()) ? "B"
+                                                                                                          : "";
+                if (!data_ptr->Divide(data_ptr, denom_data_ptr, 1., 1., divideOpt.data())) {
+                  WARNING(
+                    "Could not divide histograms properly. Trying approximated division "
+                    "via spline interpolation. Errors will not be fully correct!");
+                  DivideHistosInterpolated(data_ptr, denom_data_ptr);
+                }
+                if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
+                  data_ptr->GetYaxis()->SetTitle("ratio");
+                if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
+                  data_ptr->GetZaxis()->SetTitle("ratio");
+              }
+            if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>)
+              if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_graph_1d>) {
+                if (!DivideGraphs(data_ptr,
+                                  denom_data_ptr)) // first try if exact division is possible
+                {
+                  WARNING(
+                    "In general graphs cannot be divided. Trying approximated division "
+                    "via spline interpolation. Errors will not be fully correct!");
+                  DivideGraphsInterpolated(data_ptr, denom_data_ptr);
+                }
+              }
+            delete denom_data_ptr;
+          };
+
+          auto data_denom = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
+          auto rawDenomData = GetDataClone(data_denom->GetUniqueNameDenom(), availableData);
+          if (rawDenomData) {
+            std::visit(processDenominator, *rawDenomData);
+          } else {
+            fail = true;
+            if (dataIndex != 0)
+              ERROR(R"(Data "{}" not found in "{}".)", data_denom->GetDenomName(), data_denom->GetDenomIdentifier());
+          }
+        } // end ratio code
+
+        // modify content (FIXME: this should be steered differently)
+        // FIXME: probably this should be done after setting ranges but axis ranges depend on
+        // scaling!
+        if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>) {
+          if (str_contains(drawingOptions, "smooth")) {
+            drawingOptions.erase(drawingOptions.find("smooth"), string("smooth").length());
+            data_ptr->Smooth();
+          }
+        }
+        if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>) {
+          optional<double_t> scaleFactor;
+          string scaleMode{};
+
+          if (data->GetNormMode()) {
+            double integral = data_ptr->Integral(); // integral in viewing range
+            if (integral == 0.) {
+              ERROR("Cannot normalize histogram because integral is zero.");
+            } else {
+              scaleFactor = 1. / integral;
             }
-          } // end ratio code
+            if (*data->GetNormMode() > 0) scaleMode = "width";
+          }
+          if (data->GetScaleFactor()) {
+            scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor())
+                                        : (*data->GetScaleFactor());
+          }
+          if (scaleFactor) data_ptr->Scale(*scaleFactor);
+        } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
+          // FIXME: violating DRY principle...
+          optional<double_t> scaleFactor;
+          string scaleMode{};
 
-          // modify content (FIXME: this should be steered differently)
-          // FIXME: probably this should be done after setting ranges but axis ranges depend on
-          // scaling!
-          if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>) {
-            if (str_contains(drawingOptions, "smooth")) {
-              drawingOptions.erase(drawingOptions.find("smooth"), string("smooth").length());
-              data_ptr->Smooth();
+          if (data->GetNormMode()) {
+            double integral = data_ptr->Integral(); // integral in viewing range
+            if (integral == 0.) {
+              ERROR("Cannot normalize graph because integral is zero.");
+            } else {
+              scaleFactor = 1. / integral;
+            }
+            if (*data->GetNormMode() > 0) {
+              ERROR("Cannot normalize graph by width.");
+            }
+          }
+          if (data->GetScaleFactor()) {
+            scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor())
+                                        : (*data->GetScaleFactor());
+          }
+          if (scaleFactor) ScaleGraph((TGraph*)data_ptr, *scaleFactor);
+        }
+
+        // first data is only used to define the axes
+        if (dataIndex == 0) {
+          bool isDrawn = false;
+          if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
+            if (drawingOptions.find("Z") != string::npos) {
+              data_ptr->Draw(drawingOptions.data()); // z axis is only drawn if specified
+              // reset the axis histogram which now owns the z axis, but keep default range
+              // defined by the data
+              double_t zMin = data_ptr->GetMinimum();
+              double_t zMax = data_ptr->GetMaximum();
+              data_ptr->Reset("ICE"); // reset integral, contents and errors
+              data_ptr->SetMinimum(zMin);
+              data_ptr->SetMaximum(zMax);
+              isDrawn = true;
             }
           }
           if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>) {
-            optional<double_t> scaleFactor;
-            string scaleMode{};
-
-            if (data->GetNormMode()) {
-              double integral = data_ptr->Integral(); // integral in viewing range
-              if (integral == 0.) {
-                ERROR("Cannot normalize histogram because integral is zero.");
-              } else {
-                scaleFactor = 1. / integral;
-              }
-              if (*data->GetNormMode() > 0) scaleMode = "width";
-            }
-            if (data->GetScaleFactor()) {
-              scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor())
-                                          : (*data->GetScaleFactor());
-            }
-            if (scaleFactor) data_ptr->Scale(*scaleFactor);
-          } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
-            // FIXME: violating DRY principle...
-            optional<double_t> scaleFactor;
-            string scaleMode{};
-
-            if (data->GetNormMode()) {
-              double integral = data_ptr->Integral(); // integral in viewing range
-              if (integral == 0.) {
-                ERROR("Cannot normalize graph because integral is zero.");
-              } else {
-                scaleFactor = 1. / integral;
-              }
-              if (*data->GetNormMode() > 0) {
-                ERROR("Cannot normalize graph by width.");
-              }
-            }
-            if (data->GetScaleFactor()) {
-              scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor())
-                                          : (*data->GetScaleFactor());
-            }
-            if (scaleFactor) ScaleGraph((TGraph*)data_ptr, *scaleFactor);
+            axisHist_ptr = data_ptr;
+          } else {
+            data_ptr->Draw();
+            axisHist_ptr = data_ptr->GetHistogram();
           }
+          if (!isDrawn) axisHist_ptr->Draw("AXIS");
+          axisHist_ptr->Draw("SAME AXIG");
+          axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
 
-          // first data is only used to define the axes
-          if (dataIndex == 0) {
-            bool isDrawn = false;
-            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
-              if (drawingOptions.find("Z") != string::npos) {
-                data_ptr->Draw(drawingOptions.data()); // z axis is only drawn if specified
-                // reset the axis histogram which now owns the z axis, but keep default range
-                // defined by the data
-                double_t zMin = data_ptr->GetMinimum();
-                double_t zMax = data_ptr->GetMaximum();
-                data_ptr->Reset("ICE"); // reset integral, contents and errors
-                data_ptr->SetMinimum(zMin);
-                data_ptr->SetMaximum(zMax);
-                isDrawn = true;
-              }
-            }
-            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>) {
-              axisHist_ptr = data_ptr;
-            } else {
-              data_ptr->Draw();
-              axisHist_ptr = data_ptr->GetHistogram();
-            }
-            if (!isDrawn) axisHist_ptr->Draw("AXIS");
-            axisHist_ptr->Draw("SAME AXIG");
-            axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
+          // apply axis settings
+          for (auto axisLable : {'X', 'Y', 'Z'}) {
+            TAxis* axis_ptr = nullptr;
+            if (axisLable == 'X')
+              axis_ptr = axisHist_ptr->GetXaxis();
+            else if (axisLable == 'Y')
+              axis_ptr = axisHist_ptr->GetYaxis();
+            else if (axisLable == 'Z')
+              axis_ptr = axisHist_ptr->GetZaxis();
+            if (!axis_ptr) continue;
 
-            // apply axis settings
-            for (auto axisLable : {'X', 'Y', 'Z'}) {
-              TAxis* axis_ptr = nullptr;
-              if (axisLable == 'X')
-                axis_ptr = axisHist_ptr->GetXaxis();
-              else if (axisLable == 'Y')
-                axis_ptr = axisHist_ptr->GetYaxis();
-              else if (axisLable == 'Z')
-                axis_ptr = axisHist_ptr->GetZaxis();
-              if (!axis_ptr) continue;
+            optional<int16_t> textFontTitle = textFont;
+            optional<int16_t> textFontLable = textFont;
+            optional<int16_t> textColorTitle = textColor;
+            optional<int16_t> textColorLable = textColor;
+            optional<float_t> textSizeTitle = textSize;
+            optional<float_t> textSizeLable = textSize;
 
-              optional<int16_t> textFontTitle = textFont;
-              optional<int16_t> textFontLable = textFont;
-              optional<int16_t> textColorTitle = textColor;
-              optional<int16_t> textColorLable = textColor;
-              optional<float_t> textSizeTitle = textSize;
-              optional<float_t> textSizeLable = textSize;
+            // first apply default pad values and then settings for this specific pad
+            for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
+              if (curPad.GetAxes().find(axisLable) != curPad.GetAxes().end()) {
+                auto axisLayout = curPad[axisLable];
+                if (axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).data());
 
-              // first apply default pad values and then settings for this specific pad
-              for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
-                if (curPad.GetAxes().find(axisLable) != curPad.GetAxes().end()) {
-                  auto axisLayout = curPad[axisLable];
-                  if (axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).data());
+                if (axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
+                if (axisLayout.GetLableFont()) textFontLable = axisLayout.GetLableFont();
 
-                  if (axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
-                  if (axisLayout.GetLableFont()) textFontLable = axisLayout.GetLableFont();
+                if (axisLayout.GetTitleColor()) textColorTitle = axisLayout.GetTitleColor();
+                if (axisLayout.GetLableColor()) textColorLable = axisLayout.GetLableColor();
 
-                  if (axisLayout.GetTitleColor()) textColorTitle = axisLayout.GetTitleColor();
-                  if (axisLayout.GetLableColor()) textColorLable = axisLayout.GetLableColor();
+                if (axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
+                if (axisLayout.GetLableSize()) textSizeLable = axisLayout.GetLableSize();
 
-                  if (axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
-                  if (axisLayout.GetLableSize()) textSizeLable = axisLayout.GetLableSize();
+                if (axisLayout.GetTitleCenter())
+                  axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
+                if (axisLayout.GetLableCenter())
+                  axis_ptr->CenterLabels(*axisLayout.GetLableCenter());
 
-                  if (axisLayout.GetTitleCenter())
-                    axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
-                  if (axisLayout.GetLableCenter())
-                    axis_ptr->CenterLabels(*axisLayout.GetLableCenter());
+                if (axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(*axisLayout.GetAxisColor());
 
-                  if (axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(*axisLayout.GetAxisColor());
+                if (axisLayout.GetTitleOffset())
+                  axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
+                if (axisLayout.GetLableOffset())
+                  axis_ptr->SetLabelOffset(*axisLayout.GetLableOffset());
 
-                  if (axisLayout.GetTitleOffset())
-                    axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
-                  if (axisLayout.GetLableOffset())
-                    axis_ptr->SetLabelOffset(*axisLayout.GetLableOffset());
+                if (axisLayout.GetTickLength())
+                  axis_ptr->SetTickLength(*axisLayout.GetTickLength());
+                if (axisLayout.GetMaxDigits()) axis_ptr->SetMaxDigits(*axisLayout.GetMaxDigits());
 
-                  if (axisLayout.GetTickLength())
-                    axis_ptr->SetTickLength(*axisLayout.GetTickLength());
-                  if (axisLayout.GetMaxDigits()) axis_ptr->SetMaxDigits(*axisLayout.GetMaxDigits());
+                if (axisLayout.GetNumDivisions())
+                  axis_ptr->SetNdivisions(*axisLayout.GetNumDivisions());
 
-                  if (axisLayout.GetNumDivisions())
-                    axis_ptr->SetNdivisions(*axisLayout.GetNumDivisions());
-
-                  if (axisLayout.GetLog()) {
-                    if (axisLable == 'X') {
-                      pad_ptr->SetLogx(*axisLayout.GetLog());
-                    } else if (axisLable == 'Y') {
-                      pad_ptr->SetLogy(*axisLayout.GetLog());
-                    } else if (axisLable == 'Z') {
-                      pad_ptr->SetLogz(*axisLayout.GetLog());
-                    }
-                  }
-                  if (axisLayout.GetGrid()) {
-                    if (axisLable == 'X')
-                      pad_ptr->SetGridx(*axisLayout.GetGrid());
-                    else if (axisLable == 'Y')
-                      pad_ptr->SetGridy(*axisLayout.GetGrid());
-                  }
-                  if (axisLayout.GetOppositeTicks()) {
-                    if (axisLable == 'X')
-                      pad_ptr->SetTickx(*axisLayout.GetOppositeTicks());
-                    else if (axisLable == 'Y')
-                      pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
-                  }
-                  if (axisLayout.GetTimeFormat()) {
-                    axis_ptr->SetTimeDisplay(1);
-                    axis_ptr->SetTimeFormat((*axisLayout.GetTimeFormat()).data());
-                  }
-                  if (axisLayout.GetTickOrientation()) {
-                    axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).data());
-                  }
-
-                  if (axisLayout.GetMinRange() || axisLayout.GetMaxRange()) {
-                    pad_ptr->Update(); // needed here so current user ranges correct
-                    double_t curRangeMin = (axisLable == 'X')
-                                             ? pad_ptr->GetUxmin()
-                                             : ((axisLable == 'Y') ? pad_ptr->GetUymin() : axisHist_ptr->GetMinimum());
-                    double_t curRangeMax = (axisLable == 'X')
-                                             ? pad_ptr->GetUxmax()
-                                             : ((axisLable == 'Y') ? pad_ptr->GetUymax() : axisHist_ptr->GetMaximum());
-
-                    double_t rangeMin = (axisLayout.GetMinRange()) ? *axisLayout.GetMinRange() : curRangeMin;
-                    double_t rangeMax = (axisLayout.GetMaxRange()) ? *axisLayout.GetMaxRange() : curRangeMax;
-
-                    axis_ptr->SetRangeUser(rangeMin, rangeMax);
+                if (axisLayout.GetLog()) {
+                  if (axisLable == 'X') {
+                    pad_ptr->SetLogx(*axisLayout.GetLog());
+                  } else if (axisLable == 'Y') {
+                    pad_ptr->SetLogy(*axisLayout.GetLog());
+                  } else if (axisLable == 'Z') {
+                    pad_ptr->SetLogz(*axisLayout.GetLog());
                   }
                 }
-              }
-              if (textFontTitle) axis_ptr->SetTitleFont(*textFontTitle);
-              if (textFontLable) axis_ptr->SetLabelFont(*textFontLable);
-              if (textColorTitle) axis_ptr->SetTitleColor(*textColorTitle);
-              if (textColorLable) axis_ptr->SetLabelColor(*textColorLable);
-              if (textSizeTitle) axis_ptr->SetTitleSize(*textSizeTitle);
-              if (textSizeLable) axis_ptr->SetLabelSize(*textSizeLable);
-            }
+                if (axisLayout.GetGrid()) {
+                  if (axisLable == 'X')
+                    pad_ptr->SetGridx(*axisLayout.GetGrid());
+                  else if (axisLable == 'Y')
+                    pad_ptr->SetGridy(*axisLayout.GetGrid());
+                }
+                if (axisLayout.GetOppositeTicks()) {
+                  if (axisLable == 'X')
+                    pad_ptr->SetTickx(*axisLayout.GetOppositeTicks());
+                  else if (axisLable == 'Y')
+                    pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
+                }
+                if (axisLayout.GetTimeFormat()) {
+                  axis_ptr->SetTimeDisplay(1);
+                  axis_ptr->SetTimeFormat((*axisLayout.GetTimeFormat()).data());
+                }
+                if (axisLayout.GetTickOrientation()) {
+                  axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).data());
+                }
 
-            // right after drawing the axis, put reference line if requested
-            optional<string> refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
-            if (refFunc) {
-              TF1* line = new TF1("line", (*refFunc).data(), data_ptr->GetXaxis()->GetXmin(),
-                                  data_ptr->GetXaxis()->GetXmax());
-              line->SetLineColor(kBlack);
-              line->SetLineWidth(2);
-              // line->SetLineStyle(9);
-              line->Draw("SAME");
-            }
-            pad_ptr->Update();
-          } else {
-            // define data appearance
-            if (auto markerColor = get_first(data->GetMarkerColor(),
-                                             pick(dataIndex, pad.GetDefaultMarkerColors()),
-                                             pick(dataIndex, padDefaults.GetDefaultMarkerColors()))) {
-              data_ptr->SetMarkerColor(*markerColor);
-            }
-            if (auto markerStyle = get_first(data->GetMarkerStyle(),
-                                             pick(dataIndex, pad.GetDefaultMarkerStyles()),
-                                             pick(dataIndex, padDefaults.GetDefaultMarkerStyles()))) {
-              data_ptr->SetMarkerStyle(*markerStyle);
-            }
-            if (auto markerSize = get_first(data->GetMarkerSize(),
-                                            pad.GetDefaultMarkerSize(),
-                                            padDefaults.GetDefaultMarkerSize())) {
-              data_ptr->SetMarkerSize(*markerSize);
-            }
-            if (auto lineColor = get_first(data->GetLineColor(),
-                                           pick(dataIndex, pad.GetDefaultLineColors()),
-                                           pick(dataIndex, padDefaults.GetDefaultLineColors()))) {
-              data_ptr->SetLineColor(*lineColor);
-            }
-            if (auto lineStyle = get_first(data->GetLineStyle(),
-                                           pick(dataIndex, pad.GetDefaultLineStyles()),
-                                           pick(dataIndex, padDefaults.GetDefaultLineStyles()))) {
-              data_ptr->SetLineStyle(*lineStyle);
-            }
-            if (auto lineWidth = get_first(data->GetLineWidth(),
-                                           pad.GetDefaultLineWidth(),
-                                           padDefaults.GetDefaultLineWidth())) {
-              data_ptr->SetLineWidth(*lineWidth);
-            }
-            if (auto fillColor = get_first(data->GetFillColor(),
-                                           pick(dataIndex, pad.GetDefaultFillColors()),
-                                           pick(dataIndex, padDefaults.GetDefaultFillColors()))) {
-              data_ptr->SetFillColor(*fillColor);
-            }
-            if (auto fillStyle = get_first(data->GetFillStyle(),
-                                           pick(dataIndex, pad.GetDefaultFillStyles()),
-                                           pick(dataIndex, padDefaults.GetDefaultFillStyles()))) {
-              data_ptr->SetFillStyle(*fillStyle);
-            }
-            if (auto fillOpacity = get_first(data->GetFillOpacity(),
-                                             pad.GetDefaultFillOpacity(),
-                                             padDefaults.GetDefaultFillOpacity())) {
-              data_ptr->SetFillColor(TColor::GetColorTransparent(data_ptr->GetFillColor(), *fillOpacity));
-            }
+                if (axisLayout.GetMinRange() || axisLayout.GetMaxRange()) {
+                  pad_ptr->Update(); // needed here so current user ranges correct
+                  double_t curRangeMin = (axisLable == 'X')
+                                           ? pad_ptr->GetUxmin()
+                                           : ((axisLable == 'Y') ? pad_ptr->GetUymin() : axisHist_ptr->GetMinimum());
+                  double_t curRangeMax = (axisLable == 'X')
+                                           ? pad_ptr->GetUxmax()
+                                           : ((axisLable == 'Y') ? pad_ptr->GetUymax() : axisHist_ptr->GetMaximum());
 
-            // now define data ranges
-            if (axisHist_ptr->GetMinimum()) {
-              // TODO: check if this still works for bar histos
-              data_ptr->SetMinimum(axisHist_ptr->GetMinimum()); // important for correct display of bar diagrams
-            }
-            // data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
+                  double_t rangeMin = (axisLayout.GetMinRange()) ? *axisLayout.GetMinRange() : curRangeMin;
+                  double_t rangeMax = (axisLayout.GetMaxRange()) ? *axisLayout.GetMaxRange() : curRangeMax;
 
-            double_t rangeMinX = (data->GetMinRangeX()) ? *data->GetMinRangeX()
-                                                        : axisHist_ptr->GetXaxis()->GetXmin();
-            double_t rangeMaxX = (data->GetMaxRangeX()) ? *data->GetMaxRangeX()
-                                                        : axisHist_ptr->GetXaxis()->GetXmax();
-
-            double_t rangeMinY = (data->GetMinRangeY()) ? *data->GetMinRangeY()
-                                                        : axisHist_ptr->GetYaxis()->GetXmin();
-            double_t rangeMaxY = (data->GetMaxRangeY()) ? *data->GetMaxRangeY()
-                                                        : axisHist_ptr->GetYaxis()->GetXmax();
-
-            if constexpr (std::is_convertible_v<data_type, data_ptr_t_func_2d>) {
-              data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
-            } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_func>) {
-              data_ptr->SetRange(rangeMinX, rangeMaxX);
-            } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph>) {
-              SetGraphRange((TGraph*)data_ptr, data->GetMinRangeX(), data->GetMaxRangeX());
-            } else {
-              data_ptr->GetXaxis()->SetRangeUser(rangeMinX, rangeMaxX);
-            }
-            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
-              data_ptr->GetYaxis()->SetRangeUser(rangeMinY, rangeMaxY);
-              // do not draw the Z axis a second time!
-              std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
-
-              if (auto& contours = data->GetContours()) {
-                data_ptr->SetContour((*contours).size(), (*contours).data());
-              } else if (auto& nContours = data->GetNContours()) {
-                data_ptr->SetContour(*nContours);
+                  axis_ptr->SetRangeUser(rangeMin, rangeMax);
+                }
               }
             }
-            if (data->GetTextFormat()) gStyle->SetPaintTextFormat((*data->GetTextFormat()).data());
-
-            data_ptr->Draw(drawingOptions.data());
-
-            // in case a lable was specified for the data, add it to corresponding legend
-            if (data->GetLegendLable() && !(*data->GetLegendLable()).empty()) {
-              // by default place legend entries in first legend
-              uint8_t legendID{1u};
-              // explicit user choice overrides this
-              if (data->GetLegendID()) legendID = *data->GetLegendID();
-
-              auto& boxVector = pad.GetLegendBoxes();
-              if (legendID > 0u && legendID <= boxVector.size()) {
-                boxVector[legendID - 1]->AddEntry(*data->GetLegendLable(), data_ptr->GetName());
-              } else {
-                ERROR("Invalid legend lable ({}) specified for data \"{}\" in \"{}\".", legendID,
-                      data->GetName(), data->GetInputID());
-              }
-            }
-            pad_ptr->Update(); // adds something to the list of primitives
+            if (textFontTitle) axis_ptr->SetTitleFont(*textFontTitle);
+            if (textFontLable) axis_ptr->SetLabelFont(*textFontLable);
+            if (textColorTitle) axis_ptr->SetTitleColor(*textColorTitle);
+            if (textColorLable) axis_ptr->SetLabelColor(*textColorLable);
+            if (textSizeTitle) axis_ptr->SetTitleSize(*textSizeTitle);
+            if (textSizeLable) axis_ptr->SetLabelSize(*textSizeLable);
           }
-          ++dataIndex;
-          drawingOptions = "SAME "; // next data should be drawn to same pad
-        };
 
+          // right after drawing the axis, put reference line if requested
+          optional<string> refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
+          if (refFunc) {
+            TF1* line = new TF1("line", (*refFunc).data(), data_ptr->GetXaxis()->GetXmin(),
+                                data_ptr->GetXaxis()->GetXmax());
+            line->SetLineColor(kBlack);
+            line->SetLineWidth(2);
+            // line->SetLineStyle(9);
+            line->Draw("SAME");
+          }
+          pad_ptr->Update();
+        } else {
+          // define data appearance
+          if (auto markerColor = get_first(data->GetMarkerColor(),
+                                           pick(dataIndex, pad.GetDefaultMarkerColors()),
+                                           pick(dataIndex, padDefaults.GetDefaultMarkerColors()))) {
+            data_ptr->SetMarkerColor(*markerColor);
+          }
+          if (auto markerStyle = get_first(data->GetMarkerStyle(),
+                                           pick(dataIndex, pad.GetDefaultMarkerStyles()),
+                                           pick(dataIndex, padDefaults.GetDefaultMarkerStyles()))) {
+            data_ptr->SetMarkerStyle(*markerStyle);
+          }
+          if (auto markerSize = get_first(data->GetMarkerSize(),
+                                          pad.GetDefaultMarkerSize(),
+                                          padDefaults.GetDefaultMarkerSize())) {
+            data_ptr->SetMarkerSize(*markerSize);
+          }
+          if (auto lineColor = get_first(data->GetLineColor(),
+                                         pick(dataIndex, pad.GetDefaultLineColors()),
+                                         pick(dataIndex, padDefaults.GetDefaultLineColors()))) {
+            data_ptr->SetLineColor(*lineColor);
+          }
+          if (auto lineStyle = get_first(data->GetLineStyle(),
+                                         pick(dataIndex, pad.GetDefaultLineStyles()),
+                                         pick(dataIndex, padDefaults.GetDefaultLineStyles()))) {
+            data_ptr->SetLineStyle(*lineStyle);
+          }
+          if (auto lineWidth = get_first(data->GetLineWidth(),
+                                         pad.GetDefaultLineWidth(),
+                                         padDefaults.GetDefaultLineWidth())) {
+            data_ptr->SetLineWidth(*lineWidth);
+          }
+          if (auto fillColor = get_first(data->GetFillColor(),
+                                         pick(dataIndex, pad.GetDefaultFillColors()),
+                                         pick(dataIndex, padDefaults.GetDefaultFillColors()))) {
+            data_ptr->SetFillColor(*fillColor);
+          }
+          if (auto fillStyle = get_first(data->GetFillStyle(),
+                                         pick(dataIndex, pad.GetDefaultFillStyles()),
+                                         pick(dataIndex, padDefaults.GetDefaultFillStyles()))) {
+            data_ptr->SetFillStyle(*fillStyle);
+          }
+          if (auto fillOpacity = get_first(data->GetFillOpacity(),
+                                           pad.GetDefaultFillOpacity(),
+                                           padDefaults.GetDefaultFillOpacity())) {
+            data_ptr->SetFillColor(TColor::GetColorTransparent(data_ptr->GetFillColor(), *fillOpacity));
+          }
+
+          // now define data ranges
+          if (axisHist_ptr->GetMinimum()) {
+            // TODO: check if this still works for bar histos
+            data_ptr->SetMinimum(axisHist_ptr->GetMinimum()); // important for correct display of bar diagrams
+          }
+          // data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
+
+          double_t rangeMinX = (data->GetMinRangeX()) ? *data->GetMinRangeX()
+                                                      : axisHist_ptr->GetXaxis()->GetXmin();
+          double_t rangeMaxX = (data->GetMaxRangeX()) ? *data->GetMaxRangeX()
+                                                      : axisHist_ptr->GetXaxis()->GetXmax();
+
+          double_t rangeMinY = (data->GetMinRangeY()) ? *data->GetMinRangeY()
+                                                      : axisHist_ptr->GetYaxis()->GetXmin();
+          double_t rangeMaxY = (data->GetMaxRangeY()) ? *data->GetMaxRangeY()
+                                                      : axisHist_ptr->GetYaxis()->GetXmax();
+
+          if constexpr (std::is_convertible_v<data_type, data_ptr_t_func_2d>) {
+            data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
+          } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_func>) {
+            data_ptr->SetRange(rangeMinX, rangeMaxX);
+          } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph>) {
+            SetGraphRange((TGraph*)data_ptr, data->GetMinRangeX(), data->GetMaxRangeX());
+          } else {
+            data_ptr->GetXaxis()->SetRangeUser(rangeMinX, rangeMaxX);
+          }
+          if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
+            data_ptr->GetYaxis()->SetRangeUser(rangeMinY, rangeMaxY);
+            // do not draw the Z axis a second time!
+            std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
+
+            if (auto& contours = data->GetContours()) {
+              data_ptr->SetContour((*contours).size(), (*contours).data());
+            } else if (auto& nContours = data->GetNContours()) {
+              data_ptr->SetContour(*nContours);
+            }
+          }
+          if (data->GetTextFormat()) gStyle->SetPaintTextFormat((*data->GetTextFormat()).data());
+
+          data_ptr->Draw(drawingOptions.data());
+
+          // in case a lable was specified for the data, add it to corresponding legend
+          if (data->GetLegendLable() && !(*data->GetLegendLable()).empty()) {
+            // by default place legend entries in first legend
+            uint8_t legendID{1u};
+            // explicit user choice overrides this
+            if (data->GetLegendID()) legendID = *data->GetLegendID();
+
+            auto& boxVector = pad.GetLegendBoxes();
+            if (legendID > 0u && legendID <= boxVector.size()) {
+              boxVector[legendID - 1]->AddEntry(*data->GetLegendLable(), data_ptr->GetName());
+            } else {
+              ERROR("Invalid legend lable ({}) specified for data \"{}\" in \"{}\".", legendID,
+                    data->GetName(), data->GetInputID());
+            }
+          }
+          pad_ptr->Update(); // adds something to the list of primitives
+        }
+        ++dataIndex;
+        drawingOptions = "SAME "; // next data should be drawn to same pad
+      };
+
+      optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData);
+      if (rawData) {
         std::visit(processData, *rawData);
+      } else {
+        fail = true;
+        ERROR(R"(Data "{}" not found in "{}".)", data->GetName(), data->GetInputID());
       }
     } // end data code
+
+    if (fail) {
+      ERROR(R"(Plot "{}" in figure group "{}" could not be created.)", plot.GetName(), plot.GetFigureGroup());
+      return nullptr;
+    }
 
     if (!padTitle.empty()) {
       // dummy title feature (will be improved once text boxes are implemented propely)
@@ -590,7 +603,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
   canvas_ptr->cd();
   canvas_ptr->Modified();
   canvas_ptr->Update();
-  return shared_ptr<TCanvas>(canvas_ptr);
+  return canvas_ptr;
 }
 
 //**************************************************************************************************
@@ -938,14 +951,12 @@ optional<data_ptr_t> PlotPainter::GetDataClone(const string& dataName, TObjArray
 {
   TObject* obj = availableData->FindObject(dataName.data());
   if (obj) {
-    // IMPORTANT: TProfile2D is TH2, TH2 is TH1, TProfile is TH1 --> order matters here!
+    // TProfile2D is TH2, TH2 is TH1, TProfile is TH1
     if (auto returnPointer = GetDataClone<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1>(obj)) {
       return returnPointer;
     } else {
       ERROR("Input data \"{}\" is of unsupported type {}.", dataName, obj->ClassName());
     }
-  } else {
-    ERROR("Input data \"{}\" was not loaded.", dataName);
   }
   return std::nullopt;
 }
