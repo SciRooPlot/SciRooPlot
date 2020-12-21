@@ -73,7 +73,7 @@ vector<T> string_to_vector(string itemString)
 }
 
 template <typename T>
-void put_in_tree_optional(ptree& tree, const optional<T>& var, const string& lable)
+void put_in_tree(ptree& tree, const optional<T>& var, const string& lable)
 {
   if constexpr (is_vector<T>{}) // vectors are stored as comma separated strings
   {
@@ -87,7 +87,7 @@ void put_in_tree_optional(ptree& tree, const optional<T>& var, const string& lab
 }
 
 template <typename T>
-void read_from_tree_optional(const ptree& tree, optional<T>& var, const string& lable)
+void read_from_tree(const ptree& tree, optional<T>& var, const string& lable)
 {
   if constexpr (is_vector<T>{}) // vectors are stored as comma separated strings
   {

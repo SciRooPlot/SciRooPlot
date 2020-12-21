@@ -76,12 +76,12 @@ Plot::Plot(const ptree& plotTree)
   } catch (...) {
     ERROR("Could not construct data from ptree.");
   }
-  read_from_tree_optional(plotTree, mPlotTemplateName, "plot_template_name");
-  read_from_tree_optional(plotTree, mPlotDimensions.width, "width");
-  read_from_tree_optional(plotTree, mPlotDimensions.height, "height");
-  read_from_tree_optional(plotTree, mPlotDimensions.fixAspectRatio, "fix_aspect_ratio");
-  read_from_tree_optional(plotTree, mFill.color, "fill_color");
-  read_from_tree_optional(plotTree, mFill.style, "fill_style");
+  read_from_tree(plotTree, mPlotTemplateName, "plot_template_name");
+  read_from_tree(plotTree, mPlotDimensions.width, "width");
+  read_from_tree(plotTree, mPlotDimensions.height, "height");
+  read_from_tree(plotTree, mPlotDimensions.fixAspectRatio, "fix_aspect_ratio");
+  read_from_tree(plotTree, mFill.color, "fill_color");
+  read_from_tree(plotTree, mFill.style, "fill_style");
 
   // loop over all pads defined in property tree
   for (auto& pad : plotTree) {
@@ -103,12 +103,12 @@ ptree Plot::GetPropertyTree()
   plotTree.put("name", mName);
   plotTree.put("figureGroup", mFigureGroup);
   plotTree.put("figureCategory", mFigureCategory);
-  put_in_tree_optional(plotTree, mPlotTemplateName, "plot_template_name");
-  put_in_tree_optional(plotTree, mPlotDimensions.width, "width");
-  put_in_tree_optional(plotTree, mPlotDimensions.height, "height");
-  put_in_tree_optional(plotTree, mPlotDimensions.fixAspectRatio, "fix_aspect_ratio");
-  put_in_tree_optional(plotTree, mFill.color, "fill_color");
-  put_in_tree_optional(plotTree, mFill.style, "fill_style");
+  put_in_tree(plotTree, mPlotTemplateName, "plot_template_name");
+  put_in_tree(plotTree, mPlotDimensions.width, "width");
+  put_in_tree(plotTree, mPlotDimensions.height, "height");
+  put_in_tree(plotTree, mPlotDimensions.fixAspectRatio, "fix_aspect_ratio");
+  put_in_tree(plotTree, mFill.color, "fill_color");
+  put_in_tree(plotTree, mFill.style, "fill_style");
 
   for (auto& [padID, pad] : mPads) {
     plotTree.put_child("PAD_" + std::to_string(padID), pad.GetPropertyTree());
@@ -527,41 +527,41 @@ auto Plot::Pad::SetMargins(float_t top, float_t bottom, float_t left, float_t ri
 //**************************************************************************************************
 Plot::Pad::Pad(const ptree& padTree)
 {
-  read_from_tree_optional(padTree, mTitle, "title");
-  read_from_tree_optional(padTree, mOptions, "options");
-  read_from_tree_optional(padTree, mPosition.xlow, "position_xlow");
-  read_from_tree_optional(padTree, mPosition.ylow, "position_ylow");
-  read_from_tree_optional(padTree, mPosition.xup, "position_xup");
-  read_from_tree_optional(padTree, mPosition.yup, "position_yup");
-  read_from_tree_optional(padTree, mMargins.top, "margins_top");
-  read_from_tree_optional(padTree, mMargins.bottom, "margins_bottom");
-  read_from_tree_optional(padTree, mMargins.left, "margins_left");
-  read_from_tree_optional(padTree, mMargins.right, "margins_right");
-  read_from_tree_optional(padTree, mPalette, "palette");
-  read_from_tree_optional(padTree, mFill.color, "fill_color");
-  read_from_tree_optional(padTree, mFill.style, "fill_style");
-  read_from_tree_optional(padTree, mFrame.fillColor, "frame_fill_color");
-  read_from_tree_optional(padTree, mFrame.fillStyle, "frame_fill_style");
-  read_from_tree_optional(padTree, mFrame.lineColor, "frame_line_color");
-  read_from_tree_optional(padTree, mFrame.lineStyle, "frame_line_style");
-  read_from_tree_optional(padTree, mFrame.lineWidth, "frame_line_width");
-  read_from_tree_optional(padTree, mText.font, "text_font");
-  read_from_tree_optional(padTree, mText.color, "text_color");
-  read_from_tree_optional(padTree, mText.size, "text_size");
-  read_from_tree_optional(padTree, mMarkerDefaults.scale, "default_marker_size");
-  read_from_tree_optional(padTree, mLineDefaults.scale, "default_line_width");
-  read_from_tree_optional(padTree, mFillDefaults.scale, "default_fill_opacity");
-  read_from_tree_optional(padTree, mMarkerDefaults.colors, "default_marker_colors");
-  read_from_tree_optional(padTree, mLineDefaults.colors, "default_line_colors");
-  read_from_tree_optional(padTree, mFillDefaults.colors, "default_fill_colors");
-  read_from_tree_optional(padTree, mMarkerDefaults.styles, "default_marker_styles");
-  read_from_tree_optional(padTree, mLineDefaults.styles, "default_line_styles");
-  read_from_tree_optional(padTree, mFillDefaults.styles, "default_fill_styles");
-  read_from_tree_optional(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
-  read_from_tree_optional(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
-  read_from_tree_optional(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
-  read_from_tree_optional(padTree, mRedrawAxes, "redraw_axes");
-  read_from_tree_optional(padTree, mRefFunc, "ref_func");
+  read_from_tree(padTree, mTitle, "title");
+  read_from_tree(padTree, mOptions, "options");
+  read_from_tree(padTree, mPosition.xlow, "position_xlow");
+  read_from_tree(padTree, mPosition.ylow, "position_ylow");
+  read_from_tree(padTree, mPosition.xup, "position_xup");
+  read_from_tree(padTree, mPosition.yup, "position_yup");
+  read_from_tree(padTree, mMargins.top, "margins_top");
+  read_from_tree(padTree, mMargins.bottom, "margins_bottom");
+  read_from_tree(padTree, mMargins.left, "margins_left");
+  read_from_tree(padTree, mMargins.right, "margins_right");
+  read_from_tree(padTree, mPalette, "palette");
+  read_from_tree(padTree, mFill.color, "fill_color");
+  read_from_tree(padTree, mFill.style, "fill_style");
+  read_from_tree(padTree, mFrame.fillColor, "frame_fill_color");
+  read_from_tree(padTree, mFrame.fillStyle, "frame_fill_style");
+  read_from_tree(padTree, mFrame.lineColor, "frame_line_color");
+  read_from_tree(padTree, mFrame.lineStyle, "frame_line_style");
+  read_from_tree(padTree, mFrame.lineWidth, "frame_line_width");
+  read_from_tree(padTree, mText.font, "text_font");
+  read_from_tree(padTree, mText.color, "text_color");
+  read_from_tree(padTree, mText.size, "text_size");
+  read_from_tree(padTree, mMarkerDefaults.scale, "default_marker_size");
+  read_from_tree(padTree, mLineDefaults.scale, "default_line_width");
+  read_from_tree(padTree, mFillDefaults.scale, "default_fill_opacity");
+  read_from_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
+  read_from_tree(padTree, mLineDefaults.colors, "default_line_colors");
+  read_from_tree(padTree, mFillDefaults.colors, "default_fill_colors");
+  read_from_tree(padTree, mMarkerDefaults.styles, "default_marker_styles");
+  read_from_tree(padTree, mLineDefaults.styles, "default_line_styles");
+  read_from_tree(padTree, mFillDefaults.styles, "default_fill_styles");
+  read_from_tree(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
+  read_from_tree(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
+  read_from_tree(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
+  read_from_tree(padTree, mRedrawAxes, "redraw_axes");
+  read_from_tree(padTree, mRefFunc, "ref_func");
 
   for (auto& content : padTree) {
     // add data
@@ -598,41 +598,41 @@ ptree Plot::Pad::GetPropertyTree() const
 {
   // convert properties of plot to ptree
   ptree padTree;
-  put_in_tree_optional(padTree, mTitle, "title");
-  put_in_tree_optional(padTree, mOptions, "options");
-  put_in_tree_optional(padTree, mPosition.xlow, "position_xlow");
-  put_in_tree_optional(padTree, mPosition.ylow, "position_ylow");
-  put_in_tree_optional(padTree, mPosition.xup, "position_xup");
-  put_in_tree_optional(padTree, mPosition.yup, "position_yup");
-  put_in_tree_optional(padTree, mMargins.top, "margins_top");
-  put_in_tree_optional(padTree, mMargins.bottom, "margins_bottom");
-  put_in_tree_optional(padTree, mMargins.left, "margins_left");
-  put_in_tree_optional(padTree, mMargins.right, "margins_right");
-  put_in_tree_optional(padTree, mPalette, "palette");
-  put_in_tree_optional(padTree, mFill.color, "fill_color");
-  put_in_tree_optional(padTree, mFill.style, "fill_style");
-  put_in_tree_optional(padTree, mFrame.fillColor, "frame_fill_color");
-  put_in_tree_optional(padTree, mFrame.fillStyle, "frame_fill_style");
-  put_in_tree_optional(padTree, mFrame.lineColor, "frame_line_color");
-  put_in_tree_optional(padTree, mFrame.lineStyle, "frame_line_style");
-  put_in_tree_optional(padTree, mFrame.lineWidth, "frame_line_width");
-  put_in_tree_optional(padTree, mText.font, "text_font");
-  put_in_tree_optional(padTree, mText.color, "text_color");
-  put_in_tree_optional(padTree, mText.size, "text_size");
-  put_in_tree_optional(padTree, mMarkerDefaults.scale, "default_marker_size");
-  put_in_tree_optional(padTree, mLineDefaults.scale, "default_line_width");
-  put_in_tree_optional(padTree, mFillDefaults.scale, "default_fill_opacity");
-  put_in_tree_optional(padTree, mMarkerDefaults.colors, "default_marker_colors");
-  put_in_tree_optional(padTree, mLineDefaults.colors, "default_line_colors");
-  put_in_tree_optional(padTree, mFillDefaults.colors, "default_fill_colors");
-  put_in_tree_optional(padTree, mMarkerDefaults.styles, "default_marker_styles");
-  put_in_tree_optional(padTree, mLineDefaults.styles, "default_line_styles");
-  put_in_tree_optional(padTree, mFillDefaults.styles, "default_fill_styles");
-  put_in_tree_optional(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
-  put_in_tree_optional(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
-  put_in_tree_optional(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
-  put_in_tree_optional(padTree, mRedrawAxes, "redraw_axes");
-  put_in_tree_optional(padTree, mRefFunc, "ref_func");
+  put_in_tree(padTree, mTitle, "title");
+  put_in_tree(padTree, mOptions, "options");
+  put_in_tree(padTree, mPosition.xlow, "position_xlow");
+  put_in_tree(padTree, mPosition.ylow, "position_ylow");
+  put_in_tree(padTree, mPosition.xup, "position_xup");
+  put_in_tree(padTree, mPosition.yup, "position_yup");
+  put_in_tree(padTree, mMargins.top, "margins_top");
+  put_in_tree(padTree, mMargins.bottom, "margins_bottom");
+  put_in_tree(padTree, mMargins.left, "margins_left");
+  put_in_tree(padTree, mMargins.right, "margins_right");
+  put_in_tree(padTree, mPalette, "palette");
+  put_in_tree(padTree, mFill.color, "fill_color");
+  put_in_tree(padTree, mFill.style, "fill_style");
+  put_in_tree(padTree, mFrame.fillColor, "frame_fill_color");
+  put_in_tree(padTree, mFrame.fillStyle, "frame_fill_style");
+  put_in_tree(padTree, mFrame.lineColor, "frame_line_color");
+  put_in_tree(padTree, mFrame.lineStyle, "frame_line_style");
+  put_in_tree(padTree, mFrame.lineWidth, "frame_line_width");
+  put_in_tree(padTree, mText.font, "text_font");
+  put_in_tree(padTree, mText.color, "text_color");
+  put_in_tree(padTree, mText.size, "text_size");
+  put_in_tree(padTree, mMarkerDefaults.scale, "default_marker_size");
+  put_in_tree(padTree, mLineDefaults.scale, "default_line_width");
+  put_in_tree(padTree, mFillDefaults.scale, "default_fill_opacity");
+  put_in_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
+  put_in_tree(padTree, mLineDefaults.colors, "default_line_colors");
+  put_in_tree(padTree, mFillDefaults.colors, "default_fill_colors");
+  put_in_tree(padTree, mMarkerDefaults.styles, "default_marker_styles");
+  put_in_tree(padTree, mLineDefaults.styles, "default_line_styles");
+  put_in_tree(padTree, mFillDefaults.styles, "default_fill_styles");
+  put_in_tree(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
+  put_in_tree(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
+  put_in_tree(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
+  put_in_tree(padTree, mRedrawAxes, "redraw_axes");
+  put_in_tree(padTree, mRefFunc, "ref_func");
 
   int dataID = 1;
   for (auto& data : mData) {
@@ -922,28 +922,28 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
     std::exit(EXIT_FAILURE);
   }
   if (auto var = dataTree.get_optional<bool>("defines_frame")) mDefinesFrame = *var;
-  read_from_tree_optional(dataTree, mLegend.lable, "legend_lable");
-  read_from_tree_optional(dataTree, mLegend.identifier, "legend_id");
-  read_from_tree_optional(dataTree, mDrawingOptions, "drawing_options");
-  read_from_tree_optional(dataTree, mDrawingOptionAlias, "drawing_option_alias");
-  read_from_tree_optional(dataTree, mTextFormat, "text_format");
-  read_from_tree_optional(dataTree, mMarker.color, "marker_color");
-  read_from_tree_optional(dataTree, mMarker.style, "marker_style");
-  read_from_tree_optional(dataTree, mMarker.scale, "marker_size");
-  read_from_tree_optional(dataTree, mLine.color, "line_color");
-  read_from_tree_optional(dataTree, mLine.style, "line_style");
-  read_from_tree_optional(dataTree, mLine.scale, "line_width");
-  read_from_tree_optional(dataTree, mFill.color, "fill_color");
-  read_from_tree_optional(dataTree, mFill.style, "fill_style");
-  read_from_tree_optional(dataTree, mFill.scale, "fill_opacity");
-  read_from_tree_optional(dataTree, mModify.scale_factor, "scale_factor");
-  read_from_tree_optional(dataTree, mModify.norm_mode, "norm_mode");
-  read_from_tree_optional(dataTree, mRangeX.min, "rangeX_min");
-  read_from_tree_optional(dataTree, mRangeX.max, "rangeX_max");
-  read_from_tree_optional(dataTree, mRangeY.min, "rangeY_min");
-  read_from_tree_optional(dataTree, mRangeY.max, "rangeY_max");
-  read_from_tree_optional(dataTree, mContours, "contours");
-  read_from_tree_optional(dataTree, mNContours, "number_of_contours");
+  read_from_tree(dataTree, mLegend.lable, "legend_lable");
+  read_from_tree(dataTree, mLegend.identifier, "legend_id");
+  read_from_tree(dataTree, mDrawingOptions, "drawing_options");
+  read_from_tree(dataTree, mDrawingOptionAlias, "drawing_option_alias");
+  read_from_tree(dataTree, mTextFormat, "text_format");
+  read_from_tree(dataTree, mMarker.color, "marker_color");
+  read_from_tree(dataTree, mMarker.style, "marker_style");
+  read_from_tree(dataTree, mMarker.scale, "marker_size");
+  read_from_tree(dataTree, mLine.color, "line_color");
+  read_from_tree(dataTree, mLine.style, "line_style");
+  read_from_tree(dataTree, mLine.scale, "line_width");
+  read_from_tree(dataTree, mFill.color, "fill_color");
+  read_from_tree(dataTree, mFill.style, "fill_style");
+  read_from_tree(dataTree, mFill.scale, "fill_opacity");
+  read_from_tree(dataTree, mModify.scale_factor, "scale_factor");
+  read_from_tree(dataTree, mModify.norm_mode, "norm_mode");
+  read_from_tree(dataTree, mRangeX.min, "rangeX_min");
+  read_from_tree(dataTree, mRangeX.max, "rangeX_max");
+  read_from_tree(dataTree, mRangeY.min, "rangeY_min");
+  read_from_tree(dataTree, mRangeY.max, "rangeY_max");
+  read_from_tree(dataTree, mContours, "contours");
+  read_from_tree(dataTree, mNContours, "number_of_contours");
 }
 
 //**************************************************************************************************
@@ -958,28 +958,28 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   dataTree.put("name", mName);
   dataTree.put("inputIdentifier", mInputIdentifier);
   if (mDefinesFrame) dataTree.put("defines_frame", mDefinesFrame);
-  put_in_tree_optional(dataTree, mLegend.lable, "legend_lable");
-  put_in_tree_optional(dataTree, mLegend.identifier, "legend_id");
-  put_in_tree_optional(dataTree, mDrawingOptions, "drawing_options");
-  put_in_tree_optional(dataTree, mDrawingOptionAlias, "drawing_option_alias");
-  put_in_tree_optional(dataTree, mTextFormat, "text_format");
-  put_in_tree_optional(dataTree, mMarker.color, "marker_color");
-  put_in_tree_optional(dataTree, mMarker.style, "marker_style");
-  put_in_tree_optional(dataTree, mMarker.scale, "marker_size");
-  put_in_tree_optional(dataTree, mLine.color, "line_color");
-  put_in_tree_optional(dataTree, mLine.style, "line_style");
-  put_in_tree_optional(dataTree, mLine.scale, "line_width");
-  put_in_tree_optional(dataTree, mFill.color, "fill_color");
-  put_in_tree_optional(dataTree, mFill.style, "fill_style");
-  put_in_tree_optional(dataTree, mFill.scale, "fill_opacity");
-  put_in_tree_optional(dataTree, mModify.scale_factor, "scale_factor");
-  put_in_tree_optional(dataTree, mModify.norm_mode, "norm_mode");
-  put_in_tree_optional(dataTree, mRangeX.min, "rangeX_min");
-  put_in_tree_optional(dataTree, mRangeX.max, "rangeX_max");
-  put_in_tree_optional(dataTree, mRangeY.min, "rangeY_min");
-  put_in_tree_optional(dataTree, mRangeY.max, "rangeY_max");
-  put_in_tree_optional(dataTree, mContours, "contours");
-  put_in_tree_optional(dataTree, mNContours, "number_of_contours");
+  put_in_tree(dataTree, mLegend.lable, "legend_lable");
+  put_in_tree(dataTree, mLegend.identifier, "legend_id");
+  put_in_tree(dataTree, mDrawingOptions, "drawing_options");
+  put_in_tree(dataTree, mDrawingOptionAlias, "drawing_option_alias");
+  put_in_tree(dataTree, mTextFormat, "text_format");
+  put_in_tree(dataTree, mMarker.color, "marker_color");
+  put_in_tree(dataTree, mMarker.style, "marker_style");
+  put_in_tree(dataTree, mMarker.scale, "marker_size");
+  put_in_tree(dataTree, mLine.color, "line_color");
+  put_in_tree(dataTree, mLine.style, "line_style");
+  put_in_tree(dataTree, mLine.scale, "line_width");
+  put_in_tree(dataTree, mFill.color, "fill_color");
+  put_in_tree(dataTree, mFill.style, "fill_style");
+  put_in_tree(dataTree, mFill.scale, "fill_opacity");
+  put_in_tree(dataTree, mModify.scale_factor, "scale_factor");
+  put_in_tree(dataTree, mModify.norm_mode, "norm_mode");
+  put_in_tree(dataTree, mRangeX.min, "rangeX_min");
+  put_in_tree(dataTree, mRangeX.max, "rangeX_max");
+  put_in_tree(dataTree, mRangeY.min, "rangeY_min");
+  put_in_tree(dataTree, mRangeY.max, "rangeY_max");
+  put_in_tree(dataTree, mContours, "contours");
+  put_in_tree(dataTree, mNContours, "number_of_contours");
   return dataTree;
 }
 
@@ -1283,28 +1283,28 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
   } catch (...) {
     ERROR("Could not construct axis from ptree.");
   }
-  read_from_tree_optional(axisTree, mTitle, "title");
-  read_from_tree_optional(axisTree, mRange.min, "range_min");
-  read_from_tree_optional(axisTree, mRange.max, "range_max");
-  read_from_tree_optional(axisTree, mNumDivisions, "num_divisions");
-  read_from_tree_optional(axisTree, mMaxDigits, "max_digits");
-  read_from_tree_optional(axisTree, mTickLength, "tick_length");
-  read_from_tree_optional(axisTree, mAxisColor, "axis_color");
-  read_from_tree_optional(axisTree, mTitleProperties.font, "title_font");
-  read_from_tree_optional(axisTree, mTitleProperties.size, "title_size");
-  read_from_tree_optional(axisTree, mTitleProperties.color, "title_color");
-  read_from_tree_optional(axisTree, mTitleProperties.offset, "title_offset");
-  read_from_tree_optional(axisTree, mTitleProperties.center, "title_center");
-  read_from_tree_optional(axisTree, mLableProperties.font, "lable_font");
-  read_from_tree_optional(axisTree, mLableProperties.size, "lable_size");
-  read_from_tree_optional(axisTree, mLableProperties.color, "lable_color");
-  read_from_tree_optional(axisTree, mLableProperties.offset, "lable_offset");
-  read_from_tree_optional(axisTree, mLableProperties.center, "lable_center");
-  read_from_tree_optional(axisTree, mIsLog, "is_log");
-  read_from_tree_optional(axisTree, mIsGrid, "is_grid");
-  read_from_tree_optional(axisTree, mIsOppositeTicks, "is_opposite_ticks");
-  read_from_tree_optional(axisTree, mTickOrientation, "tick_orientation");
-  read_from_tree_optional(axisTree, mTimeFormat, "time_format");
+  read_from_tree(axisTree, mTitle, "title");
+  read_from_tree(axisTree, mRange.min, "range_min");
+  read_from_tree(axisTree, mRange.max, "range_max");
+  read_from_tree(axisTree, mNumDivisions, "num_divisions");
+  read_from_tree(axisTree, mMaxDigits, "max_digits");
+  read_from_tree(axisTree, mTickLength, "tick_length");
+  read_from_tree(axisTree, mAxisColor, "axis_color");
+  read_from_tree(axisTree, mTitleProperties.font, "title_font");
+  read_from_tree(axisTree, mTitleProperties.size, "title_size");
+  read_from_tree(axisTree, mTitleProperties.color, "title_color");
+  read_from_tree(axisTree, mTitleProperties.offset, "title_offset");
+  read_from_tree(axisTree, mTitleProperties.center, "title_center");
+  read_from_tree(axisTree, mLableProperties.font, "lable_font");
+  read_from_tree(axisTree, mLableProperties.size, "lable_size");
+  read_from_tree(axisTree, mLableProperties.color, "lable_color");
+  read_from_tree(axisTree, mLableProperties.offset, "lable_offset");
+  read_from_tree(axisTree, mLableProperties.center, "lable_center");
+  read_from_tree(axisTree, mIsLog, "is_log");
+  read_from_tree(axisTree, mIsGrid, "is_grid");
+  read_from_tree(axisTree, mIsOppositeTicks, "is_opposite_ticks");
+  read_from_tree(axisTree, mTickOrientation, "tick_orientation");
+  read_from_tree(axisTree, mTimeFormat, "time_format");
 }
 
 //**************************************************************************************************
@@ -1316,28 +1316,28 @@ ptree Plot::Pad::Axis::GetPropertyTree() const
 {
   ptree axisTree;
   axisTree.put("name", mName);
-  put_in_tree_optional(axisTree, mTitle, "title");
-  put_in_tree_optional(axisTree, mRange.min, "range_min");
-  put_in_tree_optional(axisTree, mRange.max, "range_max");
-  put_in_tree_optional(axisTree, mNumDivisions, "num_divisions");
-  put_in_tree_optional(axisTree, mMaxDigits, "max_digits");
-  put_in_tree_optional(axisTree, mTickLength, "tick_length");
-  put_in_tree_optional(axisTree, mAxisColor, "axis_color");
-  put_in_tree_optional(axisTree, mTitleProperties.font, "title_font");
-  put_in_tree_optional(axisTree, mTitleProperties.size, "title_size");
-  put_in_tree_optional(axisTree, mTitleProperties.color, "title_color");
-  put_in_tree_optional(axisTree, mTitleProperties.offset, "title_offset");
-  put_in_tree_optional(axisTree, mTitleProperties.center, "title_center");
-  put_in_tree_optional(axisTree, mLableProperties.font, "lable_font");
-  put_in_tree_optional(axisTree, mLableProperties.size, "lable_size");
-  put_in_tree_optional(axisTree, mLableProperties.color, "lable_color");
-  put_in_tree_optional(axisTree, mLableProperties.offset, "lable_offset");
-  put_in_tree_optional(axisTree, mLableProperties.center, "lable_center");
-  put_in_tree_optional(axisTree, mIsLog, "is_log");
-  put_in_tree_optional(axisTree, mIsGrid, "is_grid");
-  put_in_tree_optional(axisTree, mIsOppositeTicks, "is_opposite_ticks");
-  put_in_tree_optional(axisTree, mTickOrientation, "tick_orientation");
-  put_in_tree_optional(axisTree, mTimeFormat, "time_format");
+  put_in_tree(axisTree, mTitle, "title");
+  put_in_tree(axisTree, mRange.min, "range_min");
+  put_in_tree(axisTree, mRange.max, "range_max");
+  put_in_tree(axisTree, mNumDivisions, "num_divisions");
+  put_in_tree(axisTree, mMaxDigits, "max_digits");
+  put_in_tree(axisTree, mTickLength, "tick_length");
+  put_in_tree(axisTree, mAxisColor, "axis_color");
+  put_in_tree(axisTree, mTitleProperties.font, "title_font");
+  put_in_tree(axisTree, mTitleProperties.size, "title_size");
+  put_in_tree(axisTree, mTitleProperties.color, "title_color");
+  put_in_tree(axisTree, mTitleProperties.offset, "title_offset");
+  put_in_tree(axisTree, mTitleProperties.center, "title_center");
+  put_in_tree(axisTree, mLableProperties.font, "lable_font");
+  put_in_tree(axisTree, mLableProperties.size, "lable_size");
+  put_in_tree(axisTree, mLableProperties.color, "lable_color");
+  put_in_tree(axisTree, mLableProperties.offset, "lable_offset");
+  put_in_tree(axisTree, mLableProperties.center, "lable_center");
+  put_in_tree(axisTree, mIsLog, "is_log");
+  put_in_tree(axisTree, mIsGrid, "is_grid");
+  put_in_tree(axisTree, mIsOppositeTicks, "is_opposite_ticks");
+  put_in_tree(axisTree, mTickOrientation, "tick_orientation");
+  put_in_tree(axisTree, mTimeFormat, "time_format");
 
   return axisTree;
 }
@@ -1528,18 +1528,18 @@ Plot::Pad::Box<BoxType>::Box(double_t xPos, double_t yPos) : Box()
 template <typename BoxType>
 Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
 {
-  read_from_tree_optional(boxTree, mPos.x, "x");
-  read_from_tree_optional(boxTree, mPos.y, "y");
-  read_from_tree_optional(boxTree, mPos.isUserCoord, "is_user_coordinates");
-  read_from_tree_optional(boxTree, mBorder.style, "border_style");
-  read_from_tree_optional(boxTree, mBorder.color, "border_color");
-  read_from_tree_optional(boxTree, mBorder.scale, "border_width");
-  read_from_tree_optional(boxTree, mFill.style, "fill_style");
-  read_from_tree_optional(boxTree, mFill.color, "fill_color");
-  read_from_tree_optional(boxTree, mFill.scale, "fill_opacity");
-  read_from_tree_optional(boxTree, mText.style, "text_style");
-  read_from_tree_optional(boxTree, mText.color, "text_color");
-  read_from_tree_optional(boxTree, mText.scale, "text_size");
+  read_from_tree(boxTree, mPos.x, "x");
+  read_from_tree(boxTree, mPos.y, "y");
+  read_from_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
+  read_from_tree(boxTree, mBorder.style, "border_style");
+  read_from_tree(boxTree, mBorder.color, "border_color");
+  read_from_tree(boxTree, mBorder.scale, "border_width");
+  read_from_tree(boxTree, mFill.style, "fill_style");
+  read_from_tree(boxTree, mFill.color, "fill_color");
+  read_from_tree(boxTree, mFill.scale, "fill_opacity");
+  read_from_tree(boxTree, mText.style, "text_style");
+  read_from_tree(boxTree, mText.color, "text_color");
+  read_from_tree(boxTree, mText.scale, "text_size");
 }
 
 //**************************************************************************************************
@@ -1551,18 +1551,18 @@ template <typename BoxType>
 ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
 {
   ptree boxTree;
-  put_in_tree_optional(boxTree, mPos.x, "x");
-  put_in_tree_optional(boxTree, mPos.y, "y");
-  put_in_tree_optional(boxTree, mPos.isUserCoord, "is_user_coordinates");
-  put_in_tree_optional(boxTree, mBorder.style, "border_style");
-  put_in_tree_optional(boxTree, mBorder.color, "border_color");
-  put_in_tree_optional(boxTree, mBorder.scale, "border_width");
-  put_in_tree_optional(boxTree, mFill.style, "fill_style");
-  put_in_tree_optional(boxTree, mFill.color, "fill_color");
-  put_in_tree_optional(boxTree, mFill.scale, "fill_opacity");
-  put_in_tree_optional(boxTree, mText.style, "text_style");
-  put_in_tree_optional(boxTree, mText.color, "text_color");
-  put_in_tree_optional(boxTree, mText.scale, "text_size");
+  put_in_tree(boxTree, mPos.x, "x");
+  put_in_tree(boxTree, mPos.y, "y");
+  put_in_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
+  put_in_tree(boxTree, mBorder.style, "border_style");
+  put_in_tree(boxTree, mBorder.color, "border_color");
+  put_in_tree(boxTree, mBorder.scale, "border_width");
+  put_in_tree(boxTree, mFill.style, "fill_style");
+  put_in_tree(boxTree, mFill.color, "fill_color");
+  put_in_tree(boxTree, mFill.scale, "fill_opacity");
+  put_in_tree(boxTree, mText.style, "text_style");
+  put_in_tree(boxTree, mText.color, "text_color");
+  put_in_tree(boxTree, mText.scale, "text_size");
 
   return boxTree;
 };
@@ -1796,18 +1796,18 @@ Plot::Pad::LegendBox::LegendBox() : Box(), mTitle{}, mNumColumns{}
 //**************************************************************************************************
 Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
 {
-  read_from_tree_optional(legendBoxTree, mTitle, "title");
-  read_from_tree_optional(legendBoxTree, mNumColumns, "num_columns");
-  read_from_tree_optional(legendBoxTree, mDrawStyleDefault, "default_draw_style");
-  read_from_tree_optional(legendBoxTree, mMarkerDefault.color, "default_marker_color");
-  read_from_tree_optional(legendBoxTree, mMarkerDefault.style, "default_marker_style");
-  read_from_tree_optional(legendBoxTree, mMarkerDefault.scale, "default_marker_size");
-  read_from_tree_optional(legendBoxTree, mLineDefault.color, "default_line_color");
-  read_from_tree_optional(legendBoxTree, mLineDefault.style, "default_line_style");
-  read_from_tree_optional(legendBoxTree, mLineDefault.scale, "default_line_width");
-  read_from_tree_optional(legendBoxTree, mFillDefault.color, "default_fill_color");
-  read_from_tree_optional(legendBoxTree, mFillDefault.style, "default_fill_style");
-  read_from_tree_optional(legendBoxTree, mFillDefault.scale, "default_fill_opacity");
+  read_from_tree(legendBoxTree, mTitle, "title");
+  read_from_tree(legendBoxTree, mNumColumns, "num_columns");
+  read_from_tree(legendBoxTree, mDrawStyleDefault, "default_draw_style");
+  read_from_tree(legendBoxTree, mMarkerDefault.color, "default_marker_color");
+  read_from_tree(legendBoxTree, mMarkerDefault.style, "default_marker_style");
+  read_from_tree(legendBoxTree, mMarkerDefault.scale, "default_marker_size");
+  read_from_tree(legendBoxTree, mLineDefault.color, "default_line_color");
+  read_from_tree(legendBoxTree, mLineDefault.style, "default_line_style");
+  read_from_tree(legendBoxTree, mLineDefault.scale, "default_line_width");
+  read_from_tree(legendBoxTree, mFillDefault.color, "default_fill_color");
+  read_from_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
+  read_from_tree(legendBoxTree, mFillDefault.scale, "default_fill_opacity");
 
   for (auto& content : legendBoxTree) {
     if (str_contains(content.first, "ENTRY")) {
@@ -1825,18 +1825,18 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
 ptree Plot::Pad::LegendBox::GetPropertyTree() const
 {
   ptree legendBoxTree = Box::GetPropertyTree();
-  put_in_tree_optional(legendBoxTree, mTitle, "title");
-  put_in_tree_optional(legendBoxTree, mNumColumns, "num_columns");
-  put_in_tree_optional(legendBoxTree, mDrawStyleDefault, "default_draw_style");
-  put_in_tree_optional(legendBoxTree, mMarkerDefault.color, "default_marker_color");
-  put_in_tree_optional(legendBoxTree, mMarkerDefault.style, "default_marker_style");
-  put_in_tree_optional(legendBoxTree, mMarkerDefault.scale, "default_marker_size");
-  put_in_tree_optional(legendBoxTree, mLineDefault.color, "default_line_color");
-  put_in_tree_optional(legendBoxTree, mLineDefault.style, "default_line_style");
-  put_in_tree_optional(legendBoxTree, mLineDefault.scale, "default_line_width");
-  put_in_tree_optional(legendBoxTree, mFillDefault.color, "default_fill_color");
-  put_in_tree_optional(legendBoxTree, mFillDefault.style, "default_fill_style");
-  put_in_tree_optional(legendBoxTree, mFillDefault.scale, "default_fill_opacity");
+  put_in_tree(legendBoxTree, mTitle, "title");
+  put_in_tree(legendBoxTree, mNumColumns, "num_columns");
+  put_in_tree(legendBoxTree, mDrawStyleDefault, "default_draw_style");
+  put_in_tree(legendBoxTree, mMarkerDefault.color, "default_marker_color");
+  put_in_tree(legendBoxTree, mMarkerDefault.style, "default_marker_style");
+  put_in_tree(legendBoxTree, mMarkerDefault.scale, "default_marker_size");
+  put_in_tree(legendBoxTree, mLineDefault.color, "default_line_color");
+  put_in_tree(legendBoxTree, mLineDefault.style, "default_line_style");
+  put_in_tree(legendBoxTree, mLineDefault.scale, "default_line_width");
+  put_in_tree(legendBoxTree, mFillDefault.color, "default_fill_color");
+  put_in_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
+  put_in_tree(legendBoxTree, mFillDefault.scale, "default_fill_opacity");
 
   for (auto& [legendEntryID, legendEntry] : mLegendEntriesUser) {
     legendBoxTree.put_child("ENTRY_" + std::to_string(legendEntryID),
@@ -1973,21 +1973,21 @@ Plot::Pad::LegendBox::LegendEntry::LegendEntry(const optional<string>& lable, co
 //**************************************************************************************************
 Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
 {
-  read_from_tree_optional(legendEntryTree, mLable, "lable");
-  read_from_tree_optional(legendEntryTree, mRefDataName, "ref_data_name");
-  read_from_tree_optional(legendEntryTree, mDrawStyle, "draw_style");
-  read_from_tree_optional(legendEntryTree, mFill.color, "fill_color");
-  read_from_tree_optional(legendEntryTree, mFill.style, "fill_style");
-  read_from_tree_optional(legendEntryTree, mFill.scale, "fill_opacity");
-  read_from_tree_optional(legendEntryTree, mLine.color, "line_color");
-  read_from_tree_optional(legendEntryTree, mLine.style, "line_style");
-  read_from_tree_optional(legendEntryTree, mLine.scale, "line_width");
-  read_from_tree_optional(legendEntryTree, mMarker.color, "marker_color");
-  read_from_tree_optional(legendEntryTree, mMarker.style, "marker_style");
-  read_from_tree_optional(legendEntryTree, mMarker.scale, "marker_width");
-  read_from_tree_optional(legendEntryTree, mText.color, "text_color");
-  read_from_tree_optional(legendEntryTree, mText.style, "text_font");
-  read_from_tree_optional(legendEntryTree, mText.scale, "text_size");
+  read_from_tree(legendEntryTree, mLable, "lable");
+  read_from_tree(legendEntryTree, mRefDataName, "ref_data_name");
+  read_from_tree(legendEntryTree, mDrawStyle, "draw_style");
+  read_from_tree(legendEntryTree, mFill.color, "fill_color");
+  read_from_tree(legendEntryTree, mFill.style, "fill_style");
+  read_from_tree(legendEntryTree, mFill.scale, "fill_opacity");
+  read_from_tree(legendEntryTree, mLine.color, "line_color");
+  read_from_tree(legendEntryTree, mLine.style, "line_style");
+  read_from_tree(legendEntryTree, mLine.scale, "line_width");
+  read_from_tree(legendEntryTree, mMarker.color, "marker_color");
+  read_from_tree(legendEntryTree, mMarker.style, "marker_style");
+  read_from_tree(legendEntryTree, mMarker.scale, "marker_width");
+  read_from_tree(legendEntryTree, mText.color, "text_color");
+  read_from_tree(legendEntryTree, mText.style, "text_font");
+  read_from_tree(legendEntryTree, mText.scale, "text_size");
 }
 
 //**************************************************************************************************
@@ -1998,21 +1998,21 @@ Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
 ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree() const
 {
   ptree legendEntryTree;
-  put_in_tree_optional(legendEntryTree, mLable, "lable");
-  put_in_tree_optional(legendEntryTree, mRefDataName, "ref_data_name");
-  put_in_tree_optional(legendEntryTree, mDrawStyle, "draw_style");
-  put_in_tree_optional(legendEntryTree, mFill.color, "fill_color");
-  put_in_tree_optional(legendEntryTree, mFill.style, "fill_style");
-  put_in_tree_optional(legendEntryTree, mFill.scale, "fill_opacity");
-  put_in_tree_optional(legendEntryTree, mLine.color, "line_color");
-  put_in_tree_optional(legendEntryTree, mLine.style, "line_style");
-  put_in_tree_optional(legendEntryTree, mLine.scale, "line_width");
-  put_in_tree_optional(legendEntryTree, mMarker.color, "marker_color");
-  put_in_tree_optional(legendEntryTree, mMarker.style, "marker_style");
-  put_in_tree_optional(legendEntryTree, mMarker.scale, "marker_width");
-  put_in_tree_optional(legendEntryTree, mText.color, "text_color");
-  put_in_tree_optional(legendEntryTree, mText.style, "text_font");
-  put_in_tree_optional(legendEntryTree, mText.scale, "text_size");
+  put_in_tree(legendEntryTree, mLable, "lable");
+  put_in_tree(legendEntryTree, mRefDataName, "ref_data_name");
+  put_in_tree(legendEntryTree, mDrawStyle, "draw_style");
+  put_in_tree(legendEntryTree, mFill.color, "fill_color");
+  put_in_tree(legendEntryTree, mFill.style, "fill_style");
+  put_in_tree(legendEntryTree, mFill.scale, "fill_opacity");
+  put_in_tree(legendEntryTree, mLine.color, "line_color");
+  put_in_tree(legendEntryTree, mLine.style, "line_style");
+  put_in_tree(legendEntryTree, mLine.scale, "line_width");
+  put_in_tree(legendEntryTree, mMarker.color, "marker_color");
+  put_in_tree(legendEntryTree, mMarker.style, "marker_style");
+  put_in_tree(legendEntryTree, mMarker.scale, "marker_width");
+  put_in_tree(legendEntryTree, mText.color, "text_color");
+  put_in_tree(legendEntryTree, mText.style, "text_font");
+  put_in_tree(legendEntryTree, mText.scale, "text_size");
   return legendEntryTree;
 };
 
