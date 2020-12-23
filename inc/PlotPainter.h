@@ -100,10 +100,10 @@ const map<drawing_options_t, string> defaultDrawingOpions_Graph{
 class PlotPainter
 {
 public:
-  shared_ptr<TCanvas> GeneratePlot(Plot& plot, TObjArray* availableData);
+  shared_ptr<TCanvas> GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>>& dataBuffer);
 
 private:
-  optional<data_ptr_t> GetDataClone(const string& dataName, TObjArray* availableData);
+  optional<data_ptr_t> GetDataClone(TObject* obj);
   template <typename T>
   optional<data_ptr_t> GetDataClone(TObject* obj);
   template <typename T, typename Next, typename... Rest>

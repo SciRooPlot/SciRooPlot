@@ -19,6 +19,7 @@
 
 #include <iostream>
 #include <boost/property_tree/ptree.hpp>
+#include <unordered_map>
 
 namespace PlottingFramework
 {
@@ -34,6 +35,7 @@ using std::set;
 using std::shared_ptr;
 using std::string;
 using std::tuple;
+using std::unordered_map;
 using std::variant;
 using std::vector;
 

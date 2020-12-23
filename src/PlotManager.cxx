@@ -50,9 +50,6 @@ PlotManager::PlotManager() : mApp(std::unique_ptr<TApplication>(new TApplication
 {
   TQObject::Connect("TGMainFrame", "CloseWindow()", "TApplication", gApplication, "Terminate()");
 
-  mDataLedger = new TObjArray(1);
-  mDataLedger->SetOwner();
-
   mSaveToRootFile = false;
   mOutputFileName = "ResultPlots.root";
 
@@ -67,7 +64,6 @@ PlotManager::PlotManager() : mApp(std::unique_ptr<TApplication>(new TApplication
 //**************************************************************************************************
 PlotManager::~PlotManager()
 {
-  mDataLedger->Delete();
   if (!mPlotLedger.empty()) {
     if (mSaveToRootFile == true) {
       TFile outputFile(mOutputFileName.data(), "RECREATE");
@@ -102,23 +98,9 @@ PlotManager::~PlotManager()
  * Properly delete all loaded root raw data.
  */
 //**************************************************************************************************
-void PlotManager::ClearLoadedData()
+void PlotManager::ClearDataBuffer()
 {
-  mDataLedger->Delete();
-  mLoadedData.clear();
-};
-
-//**************************************************************************************************
-/**
- * Check if plot was already booked to the manager.
- */
-//**************************************************************************************************
-bool PlotManager::IsPlotAlreadyBooked(const string& plotName)
-{
-  for (auto& plot : mPlots) {
-    if (plot.GetUniqueName() == plotName) return true;
-  }
-  return false;
+  mDataBuffer.clear();
 };
 
 //**************************************************************************************************
@@ -311,7 +293,7 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
  * Generates plot based on plot template.
  */
 //**************************************************************************************************
-void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
+bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
 {
   // if plot already exists, delete the old one first
   if (mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()) {
@@ -320,8 +302,8 @@ void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
   }
 
   if (plot.GetFigureGroup() == "") {
-    ERROR("No figure gropu was specified.");
-    return;
+    ERROR("No figure group was specified.");
+    return false;
   }
 
   if (outputMode.find("file") != string::npos) {
@@ -340,9 +322,8 @@ void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
     }
   }
   PlotPainter painter;
-  shared_ptr<TCanvas> canvas = painter.GeneratePlot(fullPlot, mDataLedger);
-  if (!canvas) return;
-  LOG("Created plot \"{}\".", canvas->GetName());
+  shared_ptr<TCanvas> canvas = painter.GeneratePlot(fullPlot, mDataBuffer);
+  if (!canvas) return false;
 
   // if interactive mode is specified, open window instead of saving the plot
   if (outputMode.find("interactive") != string::npos) {
@@ -379,7 +360,7 @@ void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
       }
       gSystem->Sleep(20);
     }
-    return;
+    return true;
   }
 
   string subFolder = plot.GetFigureCategory();
@@ -398,7 +379,7 @@ void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
 
   if (outputMode.find("file") != string::npos) {
     mPlotLedger[plot.GetUniqueName()] = canvas;
-    return;
+    return true;
   }
 
   if (!mUseUniquePlotNames) fileName = plot.GetName();
@@ -410,6 +391,7 @@ void PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
   if (subFolder != "") folderName += "/" + subFolder;
   gSystem->Exec((string("mkdir -p ") + folderName).data());
   canvas->SaveAs((folderName + "/" + fileName + fileEnding).data());
+  return true;
 }
 
 //**************************************************************************************************
@@ -436,26 +418,13 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
                       plotNames.end());
     selectedPlots.push_back(&plot);
 
-    // check which input data are needed for plot creation and accumulate in requiredData map
+    // determine which input data are needed for plots
     for (auto& [padID, pad] : plot.GetPads()) {
       for (auto& data : pad.GetData()) {
-        // if this data entry is not loaded already, add it to required data
-        if (mLoadedData[GetNameRegisterID(data->GetInputID())].find(
-              GetNameRegisterID(data->GetName())) == mLoadedData[GetNameRegisterID(data->GetInputID())].end()) {
-          requiredData[GetNameRegisterID(data->GetInputID())].insert(
-            GetNameRegisterID(data->GetName()));
-        }
-        // for ratios also do the same for denominator
-        if (data->GetType() == "ratio" && mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)
-                                                                          ->GetDenomIdentifier())]
-                                              .find(GetNameRegisterID(
-                                                std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomName())) == mLoadedData[GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)
-                                                                                                                                                       ->GetDenomIdentifier())]
-                                                                                                                         .end()) {
-          requiredData[GetNameRegisterID(
-                         std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomIdentifier())]
-            .insert(
-              GetNameRegisterID(std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetDenomName()));
+        mDataBuffer[data->GetInputID()][data->GetName()];
+        if (data->GetType() == "ratio") {
+          const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
+          mDataBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()];
         }
       }
     }
@@ -469,54 +438,187 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
     }
   }
 
-  // now read the data
-  for (auto& inputIDTuple : requiredData) {
-    vector<string> dataNames;
-    vector<string> uniqueDataNames;
-    dataNames.reserve(inputIDTuple.second.size());
-    uniqueDataNames.reserve(inputIDTuple.second.size());
-    for (auto& dataNameID : inputIDTuple.second) {
-      dataNames.push_back(GetNameRegisterName(dataNameID));
-      uniqueDataNames.push_back(GetNameRegisterName(dataNameID) + gNameGroupSeparator + GetNameRegisterName(inputIDTuple.first));
-    }
-    ReadDataFromCSVFiles(*mDataLedger, mInputFiles[GetNameRegisterName(inputIDTuple.first)],
-                         GetNameRegisterName(inputIDTuple.first));
-    ReadDataFromFiles(*mDataLedger, mInputFiles[GetNameRegisterName(inputIDTuple.first)], dataNames,
-                      uniqueDataNames);
-    // TODO: Loaded data has to be updated!!
-  }
+  if (!FillBuffer()) PrintBufferStatus();
 
   // generate plots
   for (auto plot : selectedPlots) {
-    GeneratePlot(*plot, outputMode);
+    if (!GeneratePlot(*plot, outputMode))
+      ERROR(R"(Plot "{}" in figure group "{}" could not be created.)", plot->GetName(), plot->GetFigureGroup());
   }
 }
 
 //**************************************************************************************************
 /**
- * Helper function to get id corresponding name in register.
+ * Fills all the nodes defined in buffer hash map with data read from files.
  */
 //**************************************************************************************************
-int32_t PlotManager::GetNameRegisterID(const string& name)
+bool PlotManager::FillBuffer()
 {
-  if (mNameRegister.find(name) == mNameRegister.end()) {
-    mNameRegister[name] = mNameRegister.size();
+  bool success = true;
+  for (auto& [inputID, buffer] : mDataBuffer) {
+    unordered_map<string, vector<string>> requiredData; // subdir, names
+    for (auto& [dataName, dataPtr] : buffer) {
+      if (dataPtr) continue;
+      auto pathPos = dataName.find_last_of("/");
+      string path;
+      string name = dataName;
+      if (pathPos != string::npos) {
+        path = name.substr(0, pathPos);
+        name.erase(0, pathPos + 1);
+      }
+      requiredData[std::move(path)].push_back(std::move(name));
+    }
+
+    // open all input files belonging to the current inputID and extract the data
+    for (auto& inputFileName : mInputFiles[inputID]) {
+      if (requiredData.empty()) break;
+      if (inputFileName.rfind(".root") == string::npos) continue;
+      // check if only a sub-folder in input file should be searched
+      auto fileNamePath = splitString(inputFileName, ':');
+      string& fileName = fileNamePath[0];
+
+      TFile inputFile(fileName.data(), "READ");
+      if (inputFile.IsZombie()) {
+        ERROR("Input file {} not found.", fileName);
+        break;
+      }
+
+      TObject* folder = &inputFile;
+
+      // find top level entry point for this input file
+      if (fileNamePath.size() > 1) {
+        auto filePath = splitString(fileNamePath[1], '/');
+        // append subspecification from input name
+        folder = FindSubDirectory(folder, filePath);
+        if (!folder) {
+          ERROR(R"(Subdirectory "{}" not found in file "{}".)", fileNamePath[1], fileName);
+          return false;
+        }
+      }
+
+      vector<string> found;
+      for (auto& [pathStr, names] : requiredData) {
+        auto path = splitString(pathStr, '/');
+        TObject* subfolder = FindSubDirectory(folder, path);
+        if (subfolder) {
+          // recursively traverse the file and look for input files
+          string prefix = (pathStr.empty()) ? "" : pathStr + "/";
+          string suffix = gNameGroupSeparator + inputID;
+          ReadData(subfolder, names, prefix, suffix, inputID);
+
+          if (subfolder != &inputFile) {
+            delete subfolder;
+            subfolder = nullptr;
+          }
+        }
+        if (names.empty()) found.push_back(pathStr);
+      }
+      for (auto& pathStr : found) {
+        requiredData.erase(pathStr);
+      }
+    }
+    success &= requiredData.empty();
   }
-  return mNameRegister[name];
+  return success;
 }
 
 //**************************************************************************************************
 /**
- * Helper function to get name corresponding to register id.
+ * Show which data could and could not be found.
  */
 //**************************************************************************************************
-const string& PlotManager::GetNameRegisterName(int32_t nameID)
+void PlotManager::PrintBufferStatus()
 {
-  for (auto& registerTuple : mNameRegister) {
-    if (registerTuple.second == nameID) return registerTuple.first;
+  INFO("===============================================");
+  INFO("================= Data Buffer =================");
+  INFO("===============================================");
+  for (auto& [inputID, buffer] : mDataBuffer) {
+    INFO("{}", inputID);
+    for (auto& [dataName, dataPtr] : buffer) {
+      string colorStart = (dataPtr) ? "\033[32m" : "\033[31m";
+      string colorEnd = (dataPtr) ? "\033[0m" : "\033[0m";
+      INFO(" - {}{}{}", colorStart, dataName, colorEnd);
+    }
   }
-  ERROR("Something went terribly wrong. Name was not found in register. Exiting...");
-  std::exit(EXIT_FAILURE);
+  INFO("===============================================");
+}
+
+//**************************************************************************************************
+/**
+ * Recursively reads data from folder / list and adds it to output data array.
+ * Found dataNames are remeoved from the vectors.
+ */
+//**************************************************************************************************
+void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& inputID)
+{
+  TCollection* itemList = nullptr;
+  if (folder->InheritsFrom("TDirectory")) {
+    itemList = ((TDirectoryFile*)folder)->GetListOfKeys();
+  } else if (folder->InheritsFrom("TFolder")) {
+    itemList = ((TFolder*)folder)->GetListOfFolders();
+  } else if (folder->InheritsFrom("TCollection")) {
+    itemList = (TCollection*)folder;
+  } else {
+    ERROR("Dataformat not supported.");
+    return;
+  }
+  itemList->SetOwner();
+
+  TIter iterator = itemList->begin();
+  TObject* obj = *iterator;
+  bool deleteObject;
+  bool removeFromList;
+
+  while (iterator != itemList->end()) {
+    obj = *iterator;
+    deleteObject = true;
+    removeFromList = true;
+
+    // read actual object to memory when traversing a directory
+    if (obj->IsA() == TKey::Class()) {
+      string className = ((TKey*)obj)->GetClassName();
+      string keyName = ((TKey*)obj)->GetName();
+
+      bool isTraversable = className.find("TDirectory") != string::npos || className.find("TFolder") != string::npos || className.find("TList") != string::npos || className.find("TObjArray") != string::npos;
+      if (isTraversable || std::find(dataNames.begin(), dataNames.end(), keyName) != dataNames.end()) {
+        obj = ((TKey*)obj)->ReadObj();
+        removeFromList = false;
+      } else {
+        ++iterator;
+        continue;
+      }
+    }
+
+    // in case this object is directory or list, repeat the same for this substructure
+    if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection")) {
+      ReadData(obj, dataNames, prefix, suffix, inputID);
+    } else {
+      auto it = std::find(dataNames.begin(), dataNames.end(), ((TNamed*)obj)->GetName());
+      if (it != dataNames.end()) {
+        // TODO: select here that only known root input types are beeing processed
+        if (obj->InheritsFrom("TH1")) ((TH1*)obj)->SetDirectory(0); // demand ownership for histogram
+        // re-name data
+        string fullName = prefix + ((TNamed*)obj)->GetName();
+        ((TNamed*)obj)->SetName((fullName + suffix).data());
+        dataNames.erase(it); // TODO: why not erase-remove?
+        mDataBuffer[inputID][fullName].reset(obj);
+        deleteObject = false;
+      }
+    }
+
+    // increase iterator before removing objects from collection
+    ++iterator;
+    if (removeFromList) {
+      if (itemList->Remove(obj) == nullptr) {
+        ERROR("Could not remove item {} ({}) from collection {}.", ((TNamed*)obj)->GetName(),
+              (void*)obj, itemList->GetName());
+      }
+    }
+    if (deleteObject) {
+      delete obj;
+    }
+    if (dataNames.empty()) break;
+  }
 }
 
 //**************************************************************************************************
@@ -658,117 +760,6 @@ void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, const vector<
 
 //**************************************************************************************************
 /**
- * Recursively read data from root file.
- */
-//**************************************************************************************************
-void PlotManager::ReadDataFromFiles(TObjArray& outputDataArray, const vector<string>& fileNames,
-                                    vector<string> dataNames, vector<string> newDataNames)
-{
-  // first determine if which sub-folders are requested by the user
-  set<string> dataSubSpecs;
-  for (auto& dataName : dataNames) {
-    auto pathPos = dataName.find_last_of("/");
-    string subSpec;
-    if (pathPos != string::npos) {
-      subSpec = dataName.substr(0, pathPos);
-    }
-    dataSubSpecs.insert(subSpec);
-  }
-
-  for (auto& inputFileName : fileNames) {
-    if (dataNames.empty()) break;
-    if (inputFileName.find(".root") == string::npos) continue;
-    // first check if sub-structure is defined
-    std::istringstream ss(inputFileName);
-    vector<string> tokens;
-    string token;
-    while (std::getline(ss, token, ':')) {
-      tokens.push_back(token);
-    }
-    string fileName = tokens[0];
-
-    TFile inputFile(fileName.data(), "READ");
-    if (inputFile.IsZombie()) {
-      ERROR("Input file {} not found.", fileName);
-      break;
-    }
-
-    TObject* folder = &inputFile;
-
-    // find top level entry point for this input file
-    if (tokens.size() > 1) {
-      std::istringstream path(tokens[1]);
-      vector<string> subDirs;
-      string directory;
-      while (std::getline(path, directory, '/')) {
-        subDirs.push_back(directory);
-      }
-      // append subspecification from input name
-      folder = FindSubDirectory(folder, subDirs);
-      if (!folder) {
-        ERROR("Subdirectory \"{}\" not found in \"{}\".", tokens[1], fileName);
-        return;
-      }
-    }
-
-    // there might be subfolders explicitly specified by the user
-    vector<string> remainingDataNames;
-    vector<string> remainingNewDataNames;
-    for (auto& dataSubSpec : dataSubSpecs) {
-      vector<string> curDataNames;
-      vector<string> curNewDataNames;
-
-      for (size_t i = 0; i < dataNames.size(); ++i) {
-        if (dataNames[i] == "") continue;
-        auto pathPos = dataNames[i].find_last_of("/");
-        string tempSubSpec;
-        if (pathPos != string::npos) {
-          tempSubSpec = dataNames[i].substr(0, pathPos);
-        }
-        if (tempSubSpec == dataSubSpec) {
-          curDataNames.push_back(std::move(dataNames[i]));
-          curNewDataNames.push_back(std::move(newDataNames[i]));
-        }
-      }
-      if (curDataNames.empty()) continue;
-      // now find subdirectory belonging to subspec
-      std::istringstream path(dataSubSpec);
-      vector<string> subDirs;
-      string directory;
-      while (std::getline(path, directory, '/')) {
-        subDirs.push_back(directory);
-      }
-      // append subspecification from input name
-      TObject* subfolder = FindSubDirectory(folder, subDirs);
-      if (subfolder) {
-        // recursively traverse the file and look for input files
-        ReadData(subfolder, outputDataArray, curDataNames, curNewDataNames);
-        if (subfolder != &inputFile) {
-          delete subfolder;
-          subfolder = nullptr;
-        }
-      }
-      std::move(std::begin(curDataNames), std::end(curDataNames),
-                std::back_inserter(remainingDataNames));
-      std::move(std::begin(curNewDataNames), std::end(curNewDataNames),
-                std::back_inserter(remainingNewDataNames));
-    }
-
-    // get rid of empty strings left after moving
-    dataNames.erase(std::remove(dataNames.begin(), dataNames.end(), ""), dataNames.end());
-    newDataNames.erase(std::remove(newDataNames.begin(), newDataNames.end(), ""),
-                       newDataNames.end());
-
-    // now move unfound dataNames back to the original vector, so they can be searched in next file
-    std::move(std::begin(remainingDataNames), std::end(remainingDataNames),
-              std::back_inserter(dataNames));
-    std::move(std::begin(remainingNewDataNames), std::end(remainingNewDataNames),
-              std::back_inserter(newDataNames));
-  }
-}
-
-//**************************************************************************************************
-/**
  * Recursively search for sub folder in file.
  */
 //**************************************************************************************************
@@ -808,106 +799,6 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
   if (!subFolder) return nullptr;
   subDirs.erase(subDirs.begin());
   return FindSubDirectory(subFolder, subDirs);
-}
-
-//**************************************************************************************************
-/**
- * Recursively reads data from folder / list and adds it to output data array.
- * Found dataNames are remeoved from the vectors.
- */
-//**************************************************************************************************
-void PlotManager::ReadData(TObject* folder, TObjArray& outputDataArray, vector<string>& dataNames,
-                           vector<string>& newDataNames)
-{
-  if (dataNames.empty()) return; // nothing to do...
-
-  // consistency check for name vectors
-  if (!newDataNames.empty() && newDataNames.size() != dataNames.size()) {
-    ERROR("newDataNames vector has the wrong size");
-    return;
-  }
-
-  // first determine what is the required subspecification (path) that needs to be prepended
-  auto pathPos = dataNames[0].find_last_of("/");
-  string subSpec;
-  if (pathPos != string::npos) {
-    subSpec = dataNames[0].substr(0, pathPos);
-  }
-  if (subSpec != "") subSpec = subSpec + "/";
-
-  TCollection* itemList = nullptr;
-  if (folder->InheritsFrom("TDirectory")) {
-    itemList = ((TDirectoryFile*)folder)->GetListOfKeys();
-  } else if (folder->InheritsFrom("TFolder")) {
-    itemList = ((TFolder*)folder)->GetListOfFolders();
-  } else if (folder->InheritsFrom("TCollection")) {
-    itemList = (TCollection*)folder;
-  } else {
-    ERROR("Dataformat not supported.");
-    return;
-  }
-  itemList->SetOwner();
-
-  TIter iterator = itemList->begin();
-  TObject* obj = *iterator;
-  bool deleteObject;
-  bool removeFromList;
-
-  while (iterator != itemList->end()) {
-    obj = *iterator;
-    deleteObject = true;
-    removeFromList = true;
-
-    // read actual object to memory when traversing a directory
-    if (obj->IsA() == TKey::Class()) {
-      string className = ((TKey*)obj)->GetClassName();
-      string keyName = ((TKey*)obj)->GetName();
-
-      bool isTraversable = className.find("TDirectory") != string::npos || className.find("TFolder") != string::npos || className.find("TList") != string::npos || className.find("TObjArray") != string::npos;
-      if (isTraversable || std::find(dataNames.begin(), dataNames.end(), subSpec + keyName) != dataNames.end()) {
-        obj = ((TKey*)obj)->ReadObj();
-        removeFromList = false;
-      } else {
-        ++iterator;
-        continue;
-      }
-    }
-
-    // in case this object is directory or list, repeat the same for this substructure
-    if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection")) {
-      ReadData(obj, outputDataArray, dataNames, newDataNames);
-    } else {
-      auto it = std::find(dataNames.begin(), dataNames.end(), subSpec + ((TNamed*)obj)->GetName());
-      if (it != dataNames.end()) {
-        // TODO: select here that only known root input types are beeing processed
-        if (obj->InheritsFrom("TH1")) ((TH1*)obj)->SetDirectory(0); // demand ownership for histogram
-
-        // re-name data
-        if (!newDataNames.empty()) {
-          auto vectorIndex = it - dataNames.begin();
-          ((TNamed*)obj)->SetName((newDataNames[vectorIndex]).data());
-          newDataNames.erase(
-            std::find(newDataNames.begin(), newDataNames.end(), newDataNames[vectorIndex]));
-        }
-        dataNames.erase(it);
-        outputDataArray.Add(obj);
-        deleteObject = false;
-      }
-    }
-
-    // increase iterator before removing objects from collection
-    ++iterator;
-    if (removeFromList) {
-      if (itemList->Remove(obj) == nullptr) {
-        ERROR("Could not remove item {} ({}) from collection {}.", ((TNamed*)obj)->GetName(),
-              (void*)obj, itemList->GetName());
-      }
-    }
-    if (deleteObject) {
-      delete obj;
-    }
-    if (dataNames.empty()) break;
-  }
 }
 
 } // end namespace PlottingFramework

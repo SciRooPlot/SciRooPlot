@@ -66,7 +66,7 @@ namespace PlottingFramework
  * Function to generate the plot.
  */
 //**************************************************************************************************
-shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableData)
+shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>>& dataBuffer)
 {
   gStyle->SetOptStat(0); // this needs to be done before creating the canvas! at later stage it would add to list of primitives in pad...
 
@@ -233,13 +233,12 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
           };
 
           auto data_denom = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          auto rawDenomData = GetDataClone(data_denom->GetUniqueNameDenom(), availableData);
+          auto rawDenomData = GetDataClone(dataBuffer.at(data_denom->GetDenomIdentifier()).at(data_denom->GetDenomName()).get());
+
           if (rawDenomData) {
             std::visit(processDenominator, *rawDenomData);
           } else {
             fail = true;
-            if (dataIndex != 0)
-              ERROR(R"(Data "{}" not found in "{}".)", data_denom->GetDenomName(), data_denom->GetDenomIdentifier());
           }
         } // end ratio code
 
@@ -545,17 +544,15 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, TObjArray* availableDa
         drawingOptions = "SAME "; // next data should be drawn to same pad
       };
 
-      optional<data_ptr_t> rawData = GetDataClone(data->GetUniqueName(), availableData);
+      optional<data_ptr_t> rawData = GetDataClone(dataBuffer.at(data->GetInputID()).at(data->GetName()).get());
       if (rawData) {
         std::visit(processData, *rawData);
       } else {
         fail = true;
-        ERROR(R"(Data "{}" not found in "{}".)", data->GetName(), data->GetInputID());
       }
     } // end data code
 
     if (fail) {
-      ERROR(R"(Plot "{}" in figure group "{}" could not be created.)", plot.GetName(), plot.GetFigureGroup());
       return nullptr;
     }
 
@@ -947,15 +944,14 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
   if (auto returnPointer = GetDataClone<T>(obj)) return returnPointer;
   return GetDataClone<Next, Rest...>(obj);
 }
-optional<data_ptr_t> PlotPainter::GetDataClone(const string& dataName, TObjArray* availableData)
+optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
 {
-  TObject* obj = availableData->FindObject(dataName.data());
   if (obj) {
     // TProfile2D is TH2, TH2 is TH1, TProfile is TH1
     if (auto returnPointer = GetDataClone<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1>(obj)) {
       return returnPointer;
     } else {
-      ERROR("Input data \"{}\" is of unsupported type {}.", dataName, obj->ClassName());
+      ERROR(R"(Input data "{}" is of unsupported type {}.)", ((TNamed*)obj)->GetName(), obj->ClassName());
     }
   }
   return std::nullopt;

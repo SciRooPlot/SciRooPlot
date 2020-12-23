@@ -54,7 +54,7 @@ public:
   void LoadInputDataFiles(const string& configFileName); // load the input file paths from config file
 
   // remove all loaded input data (histograms, graphs, ...) from the manager (usually not needed)
-  void ClearLoadedData();
+  void ClearDataBuffer();
 
   // add plots or templates for plots to the manager
   void AddPlot(Plot& plot);
@@ -88,35 +88,28 @@ public:
 private:
   void ReadDataFromCSVFiles(TObjArray& outputDataArray, const vector<string>& fileNames,
                             const string& inputIdentifier);
-  void ReadDataFromFiles(TObjArray& outputDataArray, const vector<string>& fileNames,
-                         vector<string> dataNames, vector<string> newDataNames = {});
-  void ReadData(TObject* folder, TObjArray& outputDataArray, vector<string>& dataNames,
-                vector<string>& newDataNames);
 
   TObject* FindSubDirectory(TObject* folder, vector<string> subDirs);
-  inline int GetNameRegisterID(const string& name);
-  inline const string& GetNameRegisterName(int32_t nameID);
-  void LoadData(map<int32_t, set<int32_t>>& requiredData);
-  void GeneratePlot(Plot& plot, const string& outputMode = "pdf");
-  bool IsPlotPossible(Plot& plot);
-  bool IsPlotAlreadyBooked(const string& plotName);
+  bool GeneratePlot(Plot& plot, const string& outputMode = "pdf");
   ptree& ReadPlotTemplatesFromFile(const string& plotFileName);
 
   std::unique_ptr<TApplication> mApp;
   vector<string> splitString(const string& argString, char deliminator = ':');
-  map<string, int32_t> mNameRegister; // bi-directional mapping between name and unique id
-  map<int32_t, set<int32_t>> mLoadedData;
   bool mSaveToRootFile;
   string mOutputFileName;
   map<string, shared_ptr<TCanvas>> mPlotLedger;
-  string mOutputDirectory;                 // directory to store output
-  bool mUseUniquePlotNames;                // wether to use plot names or unique plot names for output files
-  map<string, vector<string>> mInputFiles; // inputFileIdentifier, inputFilePaths
-  TObjArray* mDataLedger;                  // all external data representations currently loaded by the manager
+  string mOutputDirectory;  // directory to store output
+  bool mUseUniquePlotNames; // wether to use plot names or unique plot names for output files
   vector<Plot> mPlots;
   vector<Plot> mPlotTemplates;
   map<string, ptree> mPropertyTreeCache;
   vector<string> mPlotViewHistory;
+
+  unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>> mDataBuffer;
+  map<string, vector<string>> mInputFiles; // inputFileIdentifier, inputFilePaths
+  void PrintBufferStatus();
+  bool FillBuffer();
+  void ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& inputID);
 };
 
 } // end namespace PlottingFramework
