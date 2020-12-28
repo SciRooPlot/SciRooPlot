@@ -534,7 +534,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (legendID > 0u && legendID <= boxVector.size()) {
               boxVector[legendID - 1]->AddEntry(*data->GetLegendLable(), data_ptr->GetName());
             } else {
-              ERROR("Invalid legend lable ({}) specified for data \"{}\" in \"{}\".", legendID,
+              ERROR(R"(Invalid legend lable ({}) specified for data "{}" in "{}".)", legendID,
                     data->GetName(), data->GetInputID());
             }
           }
@@ -679,7 +679,7 @@ TPave* PlotPainter::GenerateBox(
         if (entry.GetRefDataName()) {
           // FIXME: this gives always the first -> problem when drawing the same histogram twice!
           TNamed* data_ptr = (TNamed*)pad->FindObject((*entry.GetRefDataName()).data());
-          if (!data_ptr) ERROR("Object belonging to legend entry {} not found.", line);
+          if (!data_ptr) ERROR(R"(Object belonging to legend entry "{}" not found.)", line);
           ReplacePlaceholders(line, data_ptr);
         }
       }
@@ -835,9 +835,9 @@ TPave* PlotPainter::GenerateBox(
           TAttMarker markerAttr;
           TAttLine lineAttr;
           TAttFill fillAttr;
-          if(auto ptr = dynamic_cast<TAttMarker*>(data_ptr)) ptr->Copy(markerAttr);
-          if(auto ptr = dynamic_cast<TAttLine*>(data_ptr)) ptr->Copy(lineAttr);
-          if(auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(fillAttr);
+          if (auto ptr = dynamic_cast<TAttMarker*>(data_ptr)) ptr->Copy(markerAttr);
+          if (auto ptr = dynamic_cast<TAttLine*>(data_ptr)) ptr->Copy(lineAttr);
+          if (auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(fillAttr);
 
           curEntry->SetMarkerColor(markerAttr.GetMarkerColor());
           curEntry->SetMarkerStyle(markerAttr.GetMarkerStyle());
@@ -1223,7 +1223,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
           replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMinimum());
         }
       } catch (...) {
-        ERROR("Incompatible format string in {}.", match_str);
+        ERROR(R"(Incompatible format string in "{}".)", match_str);
         replace_str = match_str;
       }
     }

@@ -21,6 +21,7 @@
 
 // std dependencies
 #include <regex>
+#include <filesystem>
 
 // boost dependencies
 #include <boost/property_tree/xml_parser.hpp>
@@ -87,7 +88,7 @@ PlotManager::~PlotManager()
         ++nPlots;
       }
       outputFile.Close();
-      INFO("Saved {} plots to file \"{}\".", nPlots, mOutputFileName);
+      INFO(R"(Saved {} plots to file "{}".)", nPlots, mOutputFileName);
     }
     mPlotLedger.clear();
   }
@@ -131,7 +132,7 @@ void PlotManager::AddInputDataFiles(const string& inputIdentifier,
                                     const vector<string>& inputFilePathList)
 {
   if (mInputFiles.find(inputIdentifier) != mInputFiles.end()) {
-    WARNING("Replacing input identifier {}.", inputIdentifier);
+    WARNING(R"(Replacing input identifier "{}".)", inputIdentifier);
   }
   mInputFiles[inputIdentifier] = inputFilePathList;
 }
@@ -174,7 +175,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
     using boost::property_tree::read_xml;
     read_xml(gSystem->ExpandPathName(configFileName.data()), inputFileTree);
   } catch (...) {
-    ERROR("Cannot load file {}.", configFileName);
+    ERROR(R"(Cannot load file "{}".)", configFileName);
     return;
   }
   for (auto& inputPair : inputFileTree) {
@@ -284,8 +285,8 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
       using boost::property_tree::read_xml;
       read_xml(gSystem->ExpandPathName(plotFileName.data()), mPropertyTreeCache[plotFileName]);
     } catch (...) {
-      ERROR("Cannot load file {}.", plotFileName);
-      throw;
+      ERROR(R"(Cannot load file "{}".)", plotFileName);
+      std::exit(EXIT_FAILURE);
     }
   }
   return mPropertyTreeCache[plotFileName];
@@ -300,7 +301,7 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
 {
   // if plot already exists, delete the old one first
   if (mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()) {
-    ERROR("Plot {} was already created. Replacing it.", plot.GetUniqueName());
+    ERROR(R"(Plot "{}" was already created. Replacing it.)", plot.GetUniqueName());
     mPlotLedger.erase(plot.GetUniqueName());
   }
 
@@ -321,7 +322,7 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
     if (iterator != mPlotTemplates.end()) {
       fullPlot = *iterator + plot;
     } else {
-      WARNING("Could not find plot template named {}.", plotTemplateName);
+      WARNING(R"(Could not find plot template named "{}".)", plotTemplateName);
     }
   }
   PlotPainter painter;
@@ -436,7 +437,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   // were definitions for all requeseted plots available?
   if (!plotNames.empty()) {
     for (auto& plotName : plotNames) {
-      WARNING("Could not find plot \"{}\" in group \"{}\"", plotName,
+      WARNING(R"(Could not find plot "{}" in group "{}")", plotName,
               figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
     }
   }
@@ -481,7 +482,7 @@ bool PlotManager::FillBuffer()
 
       TFile inputFile(fileName.data(), "READ");
       if (inputFile.IsZombie()) {
-        ERROR("Input file {} not found.", fileName);
+        ERROR(R"(Input file "{}" not found.)", fileName);
         break;
       }
 
@@ -625,7 +626,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
     ++iterator;
     if (removeFromList) {
       if (itemList->Remove(obj) == nullptr) {
-        ERROR("Could not remove item {} ({}) from collection {}.", ((TNamed*)obj)->GetName(),
+        ERROR(R"(Could not remove item "{}" ({}) from collection "{}".)", ((TNamed*)obj)->GetName(),
               (void*)obj, itemList->GetName());
       }
     }
@@ -657,9 +658,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
     if (groupCat.size() > 0 && !groupCat[0].empty()) group = groupCat[0];
     if (groupCat.size() > 1 && !groupCat[1].empty()) category = groupCat[1];
     if (groupCat.size() > 2) {
-      ERROR(
-        "Do not put \":\" in your regular expressions! Colons should be used solely to separate "
-        "figureGroup and figureCategory");
+      ERROR(R"(Do not put ":" in your regular expressions! Colons should be used solely to separate figureGroup and figureCategory)");
       return;
     }
     groupCategoryRegex.push_back(std::make_pair(std::regex(group), std::regex(category)));
@@ -717,7 +716,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
           Plot plot(plotTree.second);
           AddPlot(plot);
         } catch (...) {
-          ERROR("Could not generate plot {} from XML file.", plotTree.first);
+          ERROR(R"(Could not generate plot "{}" from XML file.)", plotTree.first);
         }
       }
     }

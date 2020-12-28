@@ -730,7 +730,7 @@ Plot::Pad::Axis& Plot::Pad::GetAxis(const char axis)
 {
   const vector<char> allowedAxes = {'X', 'Y', 'Z'};
   if (std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end()) {
-    ERROR("Axis \"{}\" is not allowed! Please use 'X', 'Y' or 'Z'.", axis);
+    ERROR(R"(Axis '{}' does not exist! Please use 'X', 'Y' or 'Z'.)", axis);
     std::exit(EXIT_FAILURE);
   }
   if (mAxes.find(axis) == mAxes.end()) {
@@ -747,7 +747,7 @@ Plot::Pad::Axis& Plot::Pad::GetAxis(const char axis)
 Plot::Pad::Data& Plot::Pad::GetData(uint8_t dataID)
 {
   if (dataID < 1 || dataID > mData.size()) {
-    ERROR("Data with ID {} is not defined! You can access only data that was already added to the pad.", dataID);
+    ERROR("Data with ID '{}' is not defined! You can access only data that was already added to the pad.", dataID);
     std::exit(EXIT_FAILURE);
   }
   return *mData[dataID - 1];
