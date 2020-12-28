@@ -178,7 +178,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
     return;
   }
   for (auto& inputPair : inputFileTree) {
-    string inputIdentifier = inputPair.first;
+    const string& inputIdentifier = inputPair.first;
     vector<string> allFileNames;
     allFileNames.reserve(inputPair.second.size());
     for (auto& file : inputPair.second) {
@@ -280,10 +280,13 @@ void PlotManager::DumpPlot(const string& plotFileName, const string& figureGroup
 ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
 {
   if (mPropertyTreeCache.find(plotFileName) == mPropertyTreeCache.end()) {
-    ptree tempTree;
-    using boost::property_tree::read_xml;
-    read_xml(gSystem->ExpandPathName(plotFileName.data()), tempTree);
-    mPropertyTreeCache[plotFileName] = std::move(tempTree);
+    try {
+      using boost::property_tree::read_xml;
+      read_xml(gSystem->ExpandPathName(plotFileName.data()), mPropertyTreeCache[plotFileName]);
+    } catch (...) {
+      ERROR("Cannot load file {}.", plotFileName);
+      throw;
+    }
   }
   return mPropertyTreeCache[plotFileName];
 }
@@ -438,8 +441,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
     }
   }
 
-  if (!FillBuffer()) PrintBufferStatus();
-
+  if (!FillBuffer()) PrintBufferStatus(true);
   // generate plots
   for (auto plot : selectedPlots) {
     if (!GeneratePlot(*plot, outputMode))
@@ -527,19 +529,32 @@ bool PlotManager::FillBuffer()
  * Show which data could and could not be found.
  */
 //**************************************************************************************************
-void PlotManager::PrintBufferStatus()
+void PlotManager::PrintBufferStatus(bool missingOnly)
 {
   INFO("===============================================");
-  INFO("================= Data Buffer =================");
-  INFO("===============================================");
+  if (missingOnly) {
+    INFO("================= Missing Data ================");
+  } else {
+    INFO("================= Data Buffer =================");
+  }
+  uint32_t nNeededData{};
+  uint32_t nAvailableData{};
   for (auto& [inputID, buffer] : mDataBuffer) {
-    INFO("{}", inputID);
+    bool printInputID = true;
     for (auto& [dataName, dataPtr] : buffer) {
+      ++nNeededData;
       string colorStart = (dataPtr) ? "\033[32m" : "\033[31m";
       string colorEnd = (dataPtr) ? "\033[0m" : "\033[0m";
-      INFO(" - {}{}{}", colorStart, dataName, colorEnd);
+      bool show = missingOnly ? (dataPtr == nullptr) : true;
+      if (dataPtr) ++nAvailableData;
+      if (show) {
+        if (printInputID) INFO("{}", inputID);
+        printInputID = false;
+        INFO(" - {}{}{}", colorStart, dataName, colorEnd);
+      }
     }
   }
+  INFO("Found {}/{} required input data.", nAvailableData, nNeededData);
   INFO("===============================================");
 }
 
@@ -565,7 +580,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
   itemList->SetOwner();
 
   TIter iterator = itemList->begin();
-  TObject* obj = *iterator;
+  TObject* obj{};
   bool deleteObject;
   bool removeFromList;
 
@@ -647,9 +662,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
         "figureGroup and figureCategory");
       return;
     }
-    std::regex groupRegex(group);
-    std::regex categoryRegex(category);
-    groupCategoryRegex.push_back(std::make_pair(groupRegex, categoryRegex));
+    groupCategoryRegex.push_back(std::make_pair(std::regex(group), std::regex(category)));
   }
 
   std::vector<std::regex> plotNamesRegex;

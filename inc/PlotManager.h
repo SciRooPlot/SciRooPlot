@@ -107,7 +107,7 @@ private:
 
   unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>> mDataBuffer;
   map<string, vector<string>> mInputFiles; // inputFileIdentifier, inputFilePaths
-  void PrintBufferStatus();
+  void PrintBufferStatus(bool missingOnly = false);
   bool FillBuffer();
   void ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& inputID);
 };

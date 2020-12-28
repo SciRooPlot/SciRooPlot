@@ -591,7 +591,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     bool redrawAxes = (pad.GetRedrawAxes())
                         ? *pad.GetRedrawAxes()
                         : ((padDefaults.GetRedrawAxes()) ? *padDefaults.GetRedrawAxes() : false);
-    if (redrawAxes) axisHist_ptr->Draw("SAME AXIS");
+    if (redrawAxes && axisHist_ptr) axisHist_ptr->Draw("SAME AXIS");
 
     pad_ptr->Modified();
     pad_ptr->Update();
@@ -835,9 +835,9 @@ TPave* PlotPainter::GenerateBox(
           TAttMarker markerAttr;
           TAttLine lineAttr;
           TAttFill fillAttr;
-          dynamic_cast<TAttMarker*>(data_ptr)->Copy(markerAttr);
-          dynamic_cast<TAttLine*>(data_ptr)->Copy(lineAttr);
-          dynamic_cast<TAttFill*>(data_ptr)->Copy(fillAttr);
+          if(auto ptr = dynamic_cast<TAttMarker*>(data_ptr)) ptr->Copy(markerAttr);
+          if(auto ptr = dynamic_cast<TAttLine*>(data_ptr)) ptr->Copy(lineAttr);
+          if(auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(fillAttr);
 
           curEntry->SetMarkerColor(markerAttr.GetMarkerColor());
           curEntry->SetMarkerStyle(markerAttr.GetMarkerStyle());
