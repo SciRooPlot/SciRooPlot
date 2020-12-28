@@ -1,6 +1,6 @@
 // Plotting Framework
 //
-// Copyright (C) 2019-2020  Mario Krüger
+// Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
 // For a full list of contributors please see docs/Credits
 //
@@ -20,41 +20,22 @@
 #include "Plot.h"
 #include "Logging.h"
 
-#include <sys/stat.h>
 #include <boost/program_options.hpp>
-#include "TSystem.h"
+#include "HelperFunctions.h"
 
 using namespace PlottingFramework;
 namespace po = boost::program_options;
-
-// Helper function to split comma separated argument strings
-vector<string> splitArguments(string argString, char deliminator = ' ')
-{
-  vector<string> arguments;
-  string currArg;
-  std::istringstream argStream(argString);
-  while (std::getline(argStream, currArg, deliminator)) {
-    arguments.push_back(currArg);
-  }
-  return arguments;
-}
-// Helper function to check if specified file is available on the system
-inline bool fileExists(const std::string& name)
-{
-  struct stat buffer;
-  return (stat(name.c_str(), &buffer) == 0);
-}
 
 // This program is intended to generate plots from plotDefinitions saved in xml files
 int main(int argc, char* argv[])
 {
   // set default values
   string configFolder = (gSystem->Getenv("__PLOTTING_CONFIG_DIR"))
-                          ? gSystem->ExpandPathName("${__PLOTTING_CONFIG_DIR}/")
+                          ? expand_path("${__PLOTTING_CONFIG_DIR}/")
                           : "plotting_config/";
 
   string outputFolder = (gSystem->Getenv("__PLOTTING_OUTPUT_DIR"))
-                          ? gSystem->ExpandPathName("${__PLOTTING_OUTPUT_DIR}/")
+                          ? expand_path("${__PLOTTING_OUTPUT_DIR}/")
                           : "plotting_output/";
 
   string inputFilesConfig = configFolder + "inputFiles.XML";
@@ -147,7 +128,7 @@ int main(int argc, char* argv[])
       }
     }
   } catch (std::exception& e) {
-    ERROR("Exception \"{}\"! Exiting.", e.what());
+    ERROR(R"(Exception "{}"! Exiting.)", e.what());
     return 1;
   } catch (...) {
     ERROR("Exception of unknown type! Exiting.");
@@ -157,12 +138,12 @@ int main(int argc, char* argv[])
   if (mode.empty()) mode = "interactive";
 
   // check if specified input files exist
-  if (!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str()))) {
-    ERROR("File \"{}\" does not exists! Exiting.", inputFilesConfig);
+  if (!file_exists(expand_path(inputFilesConfig))) {
+    ERROR(R"(File "{}" does not exists! Exiting.)", inputFilesConfig);
     return 1;
   }
-  if (!fileExists(gSystem->ExpandPathName(inputFilesConfig.c_str()))) {
-    ERROR("File \"{}\" does not exists! Exiting.", plotDefConfig);
+  if (!file_exists(expand_path(plotDefConfig))) {
+    ERROR(R"(File "{}" does not exists! Exiting.)", plotDefConfig);
     return 1;
   }
 
@@ -174,10 +155,10 @@ int main(int argc, char* argv[])
   // create plotting environment
   PlotManager plotManager;
   plotManager.SetOutputDirectory(outputFolder);
-  INFO("Reading plot definitions from {}.", plotDefConfig);
+  INFO(R"(Reading plot definitions from "{}".)", plotDefConfig);
 
-  vector<string> figureGroupsVector = splitArguments(figureGroups);
-  vector<string> plotNamesVector = splitArguments(plotNames);
+  vector<string> figureGroupsVector = split_string(figureGroups, ' ');
+  vector<string> plotNamesVector = split_string(plotNames, ' ');
   if (mode == "find") {
     PRINT_SEPARATOR;
     plotManager.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
@@ -198,7 +179,7 @@ int main(int argc, char* argv[])
     plotManager.AddPlot(plot);
     plotManager.CreatePlots(inputIdentifier, "", {}, "interactive");
   } else {
-    INFO("Reading input files from {}.", inputFilesConfig);
+    INFO(R"(Reading input files from "{}".)", inputFilesConfig);
     plotManager.LoadInputDataFiles(inputFilesConfig);
     plotManager.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
     return 0;

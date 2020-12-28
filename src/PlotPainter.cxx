@@ -1,6 +1,6 @@
 // Plotting Framework
 //
-// Copyright (C) 2019-2020  Mario Krüger
+// Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
 //
 // This program is free software: you can redistribute it and/or modify

@@ -1,6 +1,6 @@
 // Plotting Framework
 //
-// Copyright (C) 2019-2020  Mario Krüger
+// Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
 //
 // This program is free software: you can redistribute it and/or modify
@@ -18,9 +18,13 @@
 #define HelperFunctions_h
 
 #include "PlottingFramework.h"
+#include "TSystem.h"
 
 namespace PlottingFramework
 {
+string expand_path(const string& path);
+vector<string> split_string(const string& argString, char delimiter);
+bool file_exists(const std::string& name);
 
 inline constexpr bool str_contains(const std::string& str, const std::string& substr)
 {

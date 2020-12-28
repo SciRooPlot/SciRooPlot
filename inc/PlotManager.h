@@ -1,6 +1,6 @@
 // Plotting Framework
 //
-// Copyright (C) 2019-2020  Mario Krüger
+// Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
 //
 // This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,6 @@
 
 class TApplication;
 class TCanvas;
-class TObjArray;
 
 namespace PlottingFramework
 {
@@ -84,17 +83,14 @@ public:
                    vector<string> plotNames = {}, const string& outputMode = "pdf");
   void CreatePlot(const string& name, const string& figureGroup, const string& figureCategory = "",
                   const string& outputMode = "pdf");
+  void PrintLoadedPlots();
 
 private:
-  void ReadDataFromCSVFiles(TObjArray& outputDataArray, const vector<string>& fileNames,
-                            const string& inputIdentifier);
-
   TObject* FindSubDirectory(TObject* folder, vector<string> subDirs);
   bool GeneratePlot(Plot& plot, const string& outputMode = "pdf");
   ptree& ReadPlotTemplatesFromFile(const string& plotFileName);
 
   std::unique_ptr<TApplication> mApp;
-  vector<string> splitString(const string& argString, char deliminator = ':');
   bool mSaveToRootFile;
   string mOutputFileName;
   map<string, shared_ptr<TCanvas>> mPlotLedger;
@@ -110,6 +106,7 @@ private:
   void PrintBufferStatus(bool missingOnly = false);
   bool FillBuffer();
   void ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& inputID);
+  void ReadDataCSV(const string& inputFileName, const string& inputIdentifier);
 };
 
 } // end namespace PlottingFramework

@@ -6,7 +6,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # The following two lines can be used to force using one specific root installation (comment out if not needed)
-#set(ROOTSYS ~/root/mybuild)
+set(ROOTSYS ~/root/mybuild)
+#set(ROOTSYS /Users/mkrueger/alice/sw/osx_x86-64/ROOT/v6-20-02-alice7-2)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
 
 project(PlottingFramework CXX)
@@ -36,7 +37,6 @@ set(MODULE PlottingFramework)
 set(MODULE_HDR inc/${MODULE}.h)
 set(ADDITIONAL_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/inc/Logging.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/inc/HelperFunctions.h
   README.md
   TODO.md
   )
@@ -46,6 +46,7 @@ set(SRCS
   src/Plot.cxx
   src/PlotManager.cxx
   src/PlotPainter.cxx
+  src/HelperFunctions.cxx
 )
 string(REPLACE ".cxx" ".h" HDRS "${SRCS}")
 string(REPLACE "src" "inc" HDRS "${HDRS}")

@@ -1,6 +1,6 @@
 // Plotting Framework
 //
-// Copyright (C) 2019-2020  Mario Krüger
+// Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
 //
 // This program is free software: you can redistribute it and/or modify
@@ -18,10 +18,10 @@
 #include "PlotManager.h"
 #include "PlotPainter.h"
 #include "Logging.h"
+#include "HelperFunctions.h"
 
 // std dependencies
 #include <regex>
-#include <filesystem>
 
 // boost dependencies
 #include <boost/property_tree/xml_parser.hpp>
@@ -74,8 +74,8 @@ PlotManager::~PlotManager()
       outputFile.cd();
       uint32_t nPlots{0u};
       for (auto& plotTuple : mPlotLedger) {
-        auto canvas = plotTuple.second;
-        string uniqueName = plotTuple.first;
+        auto& canvas = plotTuple.second;
+        const string& uniqueName = plotTuple.first;
         size_t delimiterPos = uniqueName.find(gNameGroupSeparator.data());
         string plotName = uniqueName.substr(0, delimiterPos);
         string subfolder = uniqueName.substr(delimiterPos + gNameGroupSeparator.size());
@@ -160,7 +160,7 @@ void PlotManager::DumpInputDataFiles(const string& configFileName)
   using boost::property_tree::xml_writer_settings;
   xml_writer_settings<std::string> settings('\t', 1);
   using boost::property_tree::write_xml;
-  write_xml(gSystem->ExpandPathName(configFileName.data()), inputFileTree, std::locale(), settings);
+  write_xml(expand_path(configFileName), inputFileTree, std::locale(), settings);
 }
 
 //**************************************************************************************************
@@ -173,7 +173,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
   ptree inputFileTree;
   try {
     using boost::property_tree::read_xml;
-    read_xml(gSystem->ExpandPathName(configFileName.data()), inputFileTree);
+    read_xml(expand_path(configFileName), inputFileTree);
   } catch (...) {
     ERROR(R"(Cannot load file "{}".)", configFileName);
     return;
@@ -265,7 +265,7 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
   using boost::property_tree::xml_writer_settings;
   xml_writer_settings<std::string> settings('\t', 1);
   using boost::property_tree::write_xml;
-  write_xml(gSystem->ExpandPathName(plotFileName.data()), plotTree, std::locale(), settings);
+  write_xml(expand_path(plotFileName), plotTree, std::locale(), settings);
 }
 void PlotManager::DumpPlot(const string& plotFileName, const string& figureGroup,
                            const string& plotName)
@@ -283,7 +283,7 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
   if (mPropertyTreeCache.find(plotFileName) == mPropertyTreeCache.end()) {
     try {
       using boost::property_tree::read_xml;
-      read_xml(gSystem->ExpandPathName(plotFileName.data()), mPropertyTreeCache[plotFileName]);
+      read_xml(expand_path(plotFileName), mPropertyTreeCache[plotFileName]);
     } catch (...) {
       ERROR(R"(Cannot load file "{}".)", plotFileName);
       std::exit(EXIT_FAILURE);
@@ -315,7 +315,7 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
   }
   Plot fullPlot = plot;
   if (plot.GetPlotTemplateName()) {
-    string plotTemplateName = *plot.GetPlotTemplateName();
+    const string& plotTemplateName = *plot.GetPlotTemplateName();
     auto iterator = std::find_if(
       mPlotTemplates.begin(), mPlotTemplates.end(),
       [&](Plot& plotTemplate) { return plotTemplate.GetName() == plotTemplateName; });
@@ -367,7 +367,7 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
     return true;
   }
 
-  string subFolder = plot.GetFigureCategory();
+  const string& subFolder = plot.GetFigureCategory();
   string fileEnding = ".pdf";
   if (outputMode.find("macro") != string::npos) {
     fileEnding = ".C";
@@ -475,9 +475,13 @@ bool PlotManager::FillBuffer()
     // open all input files belonging to the current inputID and extract the data
     for (auto& inputFileName : mInputFiles[inputID]) {
       if (requiredData.empty()) break;
+      if (inputFileName.rfind(".csv") != string::npos) {
+        ReadDataCSV(inputFileName, inputID);
+        // TODO: remove from required data
+      }
       if (inputFileName.rfind(".root") == string::npos) continue;
       // check if only a sub-folder in input file should be searched
-      auto fileNamePath = splitString(inputFileName, ':');
+      auto fileNamePath = split_string(inputFileName, ':');
       string& fileName = fileNamePath[0];
 
       TFile inputFile(fileName.data(), "READ");
@@ -490,7 +494,7 @@ bool PlotManager::FillBuffer()
 
       // find top level entry point for this input file
       if (fileNamePath.size() > 1) {
-        auto filePath = splitString(fileNamePath[1], '/');
+        auto filePath = split_string(fileNamePath[1], '/');
         // append subspecification from input name
         folder = FindSubDirectory(folder, filePath);
         if (!folder) {
@@ -501,7 +505,7 @@ bool PlotManager::FillBuffer()
 
       vector<string> found;
       for (auto& [pathStr, names] : requiredData) {
-        auto path = splitString(pathStr, '/');
+        auto path = split_string(pathStr, '/');
         TObject* subfolder = FindSubDirectory(folder, path);
         if (subfolder) {
           // recursively traverse the file and look for input files
@@ -556,6 +560,28 @@ void PlotManager::PrintBufferStatus(bool missingOnly)
     }
   }
   INFO("Found {}/{} required input data.", nAvailableData, nNeededData);
+  INFO("===============================================");
+}
+
+//**************************************************************************************************
+/**
+ * Show which plots are currently loaded in the framework.
+ */
+//**************************************************************************************************
+void PlotManager::PrintLoadedPlots()
+{
+  INFO("===============================================");
+  INFO("================ Loaded Plots =================");
+
+  string figureGroup;
+  for (auto& plot : mPlots) {
+    if (figureGroup != plot.GetFigureGroup()) {
+      figureGroup = plot.GetFigureGroup();
+      INFO("{}", figureGroup);
+    }
+    INFO(" - {}{}", plot.GetName(), (plot.GetFigureCategory().empty()) ? "" : " (" + plot.GetFigureCategory() + ")");
+  }
+  INFO("{} plots were loaded.", mPlots.size());
   INFO("===============================================");
 }
 
@@ -639,135 +665,20 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
 
 //**************************************************************************************************
 /**
- * Function to find plots in file via regexp match of user inputs
- */
-//**************************************************************************************************
-void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
-                                       const vector<string>& figureGroupsWithCategoryUser,
-                                       const vector<string>& plotNamesUser, const string& mode)
-{
-  uint32_t nFoundPlots{};
-  bool isSearchRequest = (mode == "find") ? true : false;
-  vector<std::pair<std::regex, std::regex>> groupCategoryRegex;
-  groupCategoryRegex.reserve(figureGroupsWithCategoryUser.size());
-  for (auto& figureGroupWithCategoryUser : figureGroupsWithCategoryUser) {
-    // by default select all groups and all categories
-    string group = ".*";
-    string category = ".*";
-    vector<string> groupCat = splitString(figureGroupWithCategoryUser, ':');
-    if (groupCat.size() > 0 && !groupCat[0].empty()) group = groupCat[0];
-    if (groupCat.size() > 1 && !groupCat[1].empty()) category = groupCat[1];
-    if (groupCat.size() > 2) {
-      ERROR(R"(Do not put ":" in your regular expressions! Colons should be used solely to separate figureGroup and figureCategory)");
-      return;
-    }
-    groupCategoryRegex.push_back(std::make_pair(std::regex(group), std::regex(category)));
-  }
-
-  std::vector<std::regex> plotNamesRegex;
-  plotNamesRegex.reserve(plotNamesUser.size());
-  std::transform(plotNamesUser.begin(), plotNamesUser.end(), std::back_inserter(plotNamesRegex),
-                 [](auto& plotNameUser) { return std::regex(plotNameUser); });
-
-  ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
-  for (auto& plotGroupTree : inputTree) {
-    // first filter by group
-    string groupIdentifier = plotGroupTree.first.substr(string("GROUP::").size());
-    bool isTemplate = (groupIdentifier == "TEMPLATES");
-    if (std::find_if(groupCategoryRegex.begin(), groupCategoryRegex.end(),
-                     [groupIdentifier](std::pair<std::regex, std::regex>& curGroupCatRegex) {
-                       return std::regex_match(groupIdentifier, curGroupCatRegex.first);
-                     }) == groupCategoryRegex.end()) {
-      if (!isTemplate) continue;
-    }
-
-    for (auto& plotTree : plotGroupTree.second) {
-      string plotName = plotTree.second.get<string>("name");
-      string figureGroup = plotTree.second.get<string>("figureGroup");
-      string figureCategory = plotTree.second.get<string>("figureCategory");
-
-      if (std::find_if(
-            groupCategoryRegex.begin(), groupCategoryRegex.end(),
-            [figureGroup, figureCategory](std::pair<std::regex, std::regex>& curGroupCatRegex) {
-              return std::regex_match(figureGroup, curGroupCatRegex.first) && std::regex_match(figureCategory, curGroupCatRegex.second);
-            }) == groupCategoryRegex.end()) {
-        if (!isTemplate) continue;
-      }
-
-      if (std::find_if(plotNamesRegex.begin(), plotNamesRegex.end(),
-                       [plotName](std::regex& curPlotNameRegex) {
-                         return std::regex_match(plotName, curPlotNameRegex);
-                       }) == plotNamesRegex.end()) {
-        if (!isTemplate) continue;
-      }
-
-      if (isTemplate) {
-        Plot plot(plotTree.second);
-        AddPlotTemplate(plot);
-        continue;
-      }
-
-      ++nFoundPlots;
-      if (isSearchRequest) {
-        PRINT("-- found plot \033[1;32m{}\033[0m in group \033[1;33m{}\033[0m", plotName,
-              figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
-      } else {
-        try {
-          Plot plot(plotTree.second);
-          AddPlot(plot);
-        } catch (...) {
-          ERROR(R"(Could not generate plot "{}" from XML file.)", plotTree.first);
-        }
-      }
-    }
-  }
-  if (nFoundPlots == 0) {
-    ERROR("Requested plots are not defined.");
-  } else {
-    INFO("Found {} plots matching the request.", nFoundPlots);
-  }
-  if (!isSearchRequest && mode != "load") {
-    // now produce the loaded plots
-    CreatePlots("", "", {}, mode);
-  }
-}
-
-//**************************************************************************************************
-/**
- * Helper function to split a string.
- */
-//**************************************************************************************************
-vector<string> PlotManager::splitString(const string& argString, char deliminator)
-{
-  vector<string> arguments;
-  string currArg;
-  std::istringstream argStream(argString);
-  while (std::getline(argStream, currArg, deliminator)) {
-    arguments.push_back(currArg);
-  }
-  return arguments;
-}
-
-//**************************************************************************************************
-/**
  * Read data from csv file.
  */
 //**************************************************************************************************
-void PlotManager::ReadDataFromCSVFiles(TObjArray& outputDataArray, const vector<string>& fileNames,
-                                       const string& inputIdentifier)
+void PlotManager::ReadDataCSV(const string& inputFileName, const string& inputIdentifier)
 {
-  for (auto& inputFileName : fileNames) {
-    if (inputFileName.find(".csv") == string::npos) continue;
-    // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
-    string graphName = inputFileName.substr(
-      inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
-    string delimiter = "\t"; // TODO: this must somehow be user definable
-    string pattern = "%lg %lg %lg %lg";
-    TGraphErrors* graph = new TGraphErrors(inputFileName.data(), pattern.data(), delimiter.data());
-    string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
-    ((TNamed*)graph)->SetName(uniqueName.data());
-    outputDataArray.Add(graph);
-  }
+  // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
+  string graphName = inputFileName.substr(
+    inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
+  string delimiter = "\t"; // TODO: this must somehow be user definable
+  string pattern = "%lg %lg %lg %lg";
+  TGraphErrors* graph = new TGraphErrors(inputFileName.data(), pattern.data(), delimiter.data());
+  string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
+  ((TNamed*)graph)->SetName(uniqueName.data());
+  mDataBuffer[inputIdentifier][graphName].reset(graph);
 }
 
 //**************************************************************************************************
@@ -811,6 +722,101 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
   if (!subFolder) return nullptr;
   subDirs.erase(subDirs.begin());
   return FindSubDirectory(subFolder, subDirs);
+}
+
+//**************************************************************************************************
+/**
+ * Function to find plots in file via regexp match of user inputs
+ */
+//**************************************************************************************************
+void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
+                                       const vector<string>& figureGroupsWithCategoryUser,
+                                       const vector<string>& plotNamesUser, const string& mode)
+{
+  uint32_t nFoundPlots{};
+  bool isSearchRequest = (mode == "find") ? true : false;
+  vector<std::pair<std::regex, std::regex>> groupCategoryRegex;
+  groupCategoryRegex.reserve(figureGroupsWithCategoryUser.size());
+  for (auto& figureGroupWithCategoryUser : figureGroupsWithCategoryUser) {
+    // by default select all groups and all categories
+    string group = ".*";
+    string category = ".*";
+    vector<string> groupCat = split_string(figureGroupWithCategoryUser, ':');
+    if (groupCat.size() > 0 && !groupCat[0].empty()) group = groupCat[0];
+    if (groupCat.size() > 1 && !groupCat[1].empty()) category = groupCat[1];
+    if (groupCat.size() > 2) {
+      ERROR(R"(Do not put ":" in your regular expressions! Colons should be used solely to separate figureGroup and figureCategory)");
+      return;
+    }
+    groupCategoryRegex.push_back(std::make_pair(std::regex(group), std::regex(category)));
+  }
+
+  std::vector<std::regex> plotNamesRegex;
+  plotNamesRegex.reserve(plotNamesUser.size());
+  std::transform(plotNamesUser.begin(), plotNamesUser.end(), std::back_inserter(plotNamesRegex),
+                 [](auto& plotNameUser) { return std::regex(plotNameUser); });
+
+  ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
+  for (auto& plotGroupTree : inputTree) {
+    // first filter by group
+    string groupIdentifier = plotGroupTree.first.substr(string("GROUP::").size());
+    bool isTemplate = (groupIdentifier == "TEMPLATES");
+    if (std::find_if(groupCategoryRegex.begin(), groupCategoryRegex.end(),
+                     [groupIdentifier](std::pair<std::regex, std::regex>& curGroupCatRegex) {
+                       return std::regex_match(groupIdentifier, curGroupCatRegex.first);
+                     }) == groupCategoryRegex.end()) {
+      if (!isTemplate) continue;
+    }
+
+    for (auto& plotTree : plotGroupTree.second) {
+      const string& plotName = plotTree.second.get<string>("name");
+      const string& figureGroup = plotTree.second.get<string>("figureGroup");
+      const string& figureCategory = plotTree.second.get<string>("figureCategory");
+
+      if (std::find_if(
+            groupCategoryRegex.begin(), groupCategoryRegex.end(),
+            [figureGroup, figureCategory](std::pair<std::regex, std::regex>& curGroupCatRegex) {
+              return std::regex_match(figureGroup, curGroupCatRegex.first) && std::regex_match(figureCategory, curGroupCatRegex.second);
+            }) == groupCategoryRegex.end()) {
+        if (!isTemplate) continue;
+      }
+
+      if (std::find_if(plotNamesRegex.begin(), plotNamesRegex.end(),
+                       [plotName](std::regex& curPlotNameRegex) {
+                         return std::regex_match(plotName, curPlotNameRegex);
+                       }) == plotNamesRegex.end()) {
+        if (!isTemplate) continue;
+      }
+
+      if (isTemplate) {
+        Plot plot(plotTree.second);
+        AddPlotTemplate(plot);
+        continue;
+      }
+
+      ++nFoundPlots;
+      if (isSearchRequest) {
+        PRINT("-- found plot \033[1;32m{}\033[0m in group \033[1;33m{}\033[0m", plotName,
+              figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
+      } else {
+        try {
+          Plot plot(plotTree.second);
+          AddPlot(plot);
+        } catch (...) {
+          ERROR(R"(Could not generate plot "{}" from XML file.)", plotTree.first);
+        }
+      }
+    }
+  }
+  if (nFoundPlots == 0) {
+    ERROR("Requested plots are not defined.");
+  } else {
+    INFO("Found {} plot{} matching the request.", nFoundPlots, (nFoundPlots == 1) ? "" : "s");
+  }
+  if (!isSearchRequest && mode != "load") {
+    // now produce the loaded plots
+    CreatePlots("", "", {}, mode);
+  }
 }
 
 } // end namespace PlottingFramework

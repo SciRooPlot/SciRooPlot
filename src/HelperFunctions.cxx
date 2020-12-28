@@ -14,32 +14,35 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef PlottingFramework_h
-#define PlottingFramework_h
-
-#include <iostream>
-#include <boost/property_tree/ptree.hpp>
-#include <unordered_map>
+#include "HelperFunctions.h"
+#include <sys/stat.h>
 
 namespace PlottingFramework
 {
 
-// aliases
-using boost::property_tree::ptree;
-using std::array;
-using std::cout;
-using std::endl;
-using std::map;
-using std::optional;
-using std::set;
-using std::shared_ptr;
-using std::string;
-using std::tuple;
-using std::unordered_map;
-using std::variant;
-using std::vector;
+string expand_path(const string& path)
+{
+  char* raw = gSystem->ExpandPathName(path.data());
+  string expandedPath(raw);
+  delete[] raw; // what happens if nullptr?
+  return expandedPath;
+}
 
-const string gNameGroupSeparator = "_IN_";
+vector<string> split_string(const string& argString, char delimiter)
+{
+  vector<string> arguments;
+  string currArg;
+  std::istringstream argStream(argString);
+  while (std::getline(argStream, currArg, delimiter)) {
+    arguments.push_back(currArg);
+  }
+  return arguments;
+}
+
+bool file_exists(const std::string& name)
+{
+  struct stat buffer;
+  return (stat(name.c_str(), &buffer) == 0);
+}
 
 } // end namespace PlottingFramework
-#endif /* PlottingFramework_h */
