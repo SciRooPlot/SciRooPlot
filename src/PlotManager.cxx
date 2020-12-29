@@ -47,14 +47,9 @@ namespace PlottingFramework
  * Constructor for PlotManager
  */
 //**************************************************************************************************
-PlotManager::PlotManager() : mApp(std::unique_ptr<TApplication>(new TApplication("MainApp", 0, 0)))
+PlotManager::PlotManager() : mApp(std::unique_ptr<TApplication>(new TApplication("MainApp", 0, nullptr))), mSaveToRootFile(false), mOutputFileName("ResultPlots.root"), mUseUniquePlotNames(false)
 {
   TQObject::Connect("TGMainFrame", "CloseWindow()", "TApplication", gApplication, "Terminate()");
-
-  mSaveToRootFile = false;
-  mOutputFileName = "ResultPlots.root";
-
-  mUseUniquePlotNames = false;
   gErrorIgnoreLevel = kWarning;
 }
 
@@ -65,32 +60,37 @@ PlotManager::PlotManager() : mApp(std::unique_ptr<TApplication>(new TApplication
 //**************************************************************************************************
 PlotManager::~PlotManager()
 {
+  if (mSaveToRootFile) SavePlotsToFile();
+}
+
+//**************************************************************************************************
+/**
+ * Save stored plots to .root file.
+ */
+//**************************************************************************************************
+void PlotManager::SavePlotsToFile()
+{
   if (!mPlotLedger.empty()) {
-    if (mSaveToRootFile == true) {
-      TFile outputFile(mOutputFileName.data(), "RECREATE");
-      if (outputFile.IsZombie()) {
-        return;
-      }
-      outputFile.cd();
-      uint32_t nPlots{0u};
-      for (auto& plotTuple : mPlotLedger) {
-        auto& canvas = plotTuple.second;
-        const string& uniqueName = plotTuple.first;
-        size_t delimiterPos = uniqueName.find(gNameGroupSeparator.data());
-        string plotName = uniqueName.substr(0, delimiterPos);
-        string subfolder = uniqueName.substr(delimiterPos + gNameGroupSeparator.size());
-        std::replace(subfolder.begin(), subfolder.end(), ':', '/');
-        if (!outputFile.GetDirectory(subfolder.data(), kFALSE, "cd")) {
-          outputFile.mkdir(subfolder.data());
-        }
-        outputFile.cd(subfolder.data());
-        canvas->Write(plotName.data());
-        ++nPlots;
-      }
-      outputFile.Close();
-      INFO(R"(Saved {} plots to file "{}".)", nPlots, mOutputFileName);
+    TFile outputFile(mOutputFileName.data(), "RECREATE");
+    if (outputFile.IsZombie()) {
+      return;
     }
-    mPlotLedger.clear();
+    outputFile.cd();
+    uint32_t nPlots{0u};
+    for (auto& [uniqueName, canvas] : mPlotLedger) {
+      size_t delimiterPos = uniqueName.find(gNameGroupSeparator.data());
+      string plotName = uniqueName.substr(0, delimiterPos);
+      string subfolder = uniqueName.substr(delimiterPos + gNameGroupSeparator.size());
+      std::replace(subfolder.begin(), subfolder.end(), ':', '/');
+      if (!outputFile.GetDirectory(subfolder.data(), kFALSE, "cd")) {
+        outputFile.mkdir(subfolder.data());
+      }
+      outputFile.cd(subfolder.data());
+      canvas->Write(plotName.data());
+      ++nPlots;
+    }
+    outputFile.Close();
+    INFO(R"(Saved {} plots to file "{}".)", nPlots, mOutputFileName);
   }
 }
 
@@ -197,7 +197,9 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
 //**************************************************************************************************
 void PlotManager::AddPlot(Plot& plot)
 {
-  if (plot.GetFigureGroup() == "TEMPLATES") ERROR("You cannot use reserved group name TEMPLATES!");
+  if (plot.GetFigureGroup() == "TEMPLATES") {
+    ERROR(R"(You cannot use reserved group name "TEMPLATES"!)");
+  }
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [plot](Plot& curPlot) mutable {
                                 bool removePlot = curPlot.GetUniqueName() == plot.GetUniqueName();
@@ -476,9 +478,11 @@ bool PlotManager::FillBuffer()
     for (auto& inputFileName : mInputFiles[inputID]) {
       if (requiredData.empty()) break;
       if (inputFileName.rfind(".csv") != string::npos) {
-        ReadDataCSV(inputFileName, inputID);
-        // TODO: remove from required data
-      }
+        string graphName = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
+        ReadDataCSV(inputFileName, graphName, inputID);
+        vector<string>& names = requiredData[""];
+        names.erase(std::remove_if(names.begin(), names.end(), [&](auto& name) { return name == graphName; }), names.end());
+      } //TODO: some of the code below must be executed as well...
       if (inputFileName.rfind(".root") == string::npos) continue;
       // check if only a sub-folder in input file should be searched
       auto fileNamePath = split_string(inputFileName, ':');
@@ -668,11 +672,9 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
  * Read data from csv file.
  */
 //**************************************************************************************************
-void PlotManager::ReadDataCSV(const string& inputFileName, const string& inputIdentifier)
+void PlotManager::ReadDataCSV(const string& inputFileName, const string& graphName, const string& inputIdentifier)
 {
   // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
-  string graphName = inputFileName.substr(
-    inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
   string delimiter = "\t"; // TODO: this must somehow be user definable
   string pattern = "%lg %lg %lg %lg";
   TGraphErrors* graph = new TGraphErrors(inputFileName.data(), pattern.data(), delimiter.data());
@@ -796,8 +798,8 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
 
       ++nFoundPlots;
       if (isSearchRequest) {
-        PRINT("-- found plot \033[1;32m{}\033[0m in group \033[1;33m{}\033[0m", plotName,
-              figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
+        INFO(" - \033[1;32m{}\033[0m in group \033[1;33m{}\033[0m", plotName,
+             figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
       } else {
         try {
           Plot plot(plotTree.second);

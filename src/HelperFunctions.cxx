@@ -23,8 +23,8 @@ namespace PlottingFramework
 string expand_path(const string& path)
 {
   char* raw = gSystem->ExpandPathName(path.data());
-  string expandedPath(raw);
-  delete[] raw; // what happens if nullptr?
+  string expandedPath(raw ? raw : "");
+  delete[] raw;
   return expandedPath;
 }
 

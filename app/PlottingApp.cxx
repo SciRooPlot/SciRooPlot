@@ -160,9 +160,7 @@ int main(int argc, char* argv[])
   vector<string> figureGroupsVector = split_string(figureGroups, ' ');
   vector<string> plotNamesVector = split_string(plotNames, ' ');
   if (mode == "find") {
-    PRINT_SEPARATOR;
     plotManager.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
-    PRINT_SEPARATOR;
     return 0;
   } else if (mode == "browse") { // directly plot histograms from input identifier or file
     string inputIdentifier = figureGroupsVector[0];

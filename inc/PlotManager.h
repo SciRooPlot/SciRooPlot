@@ -90,6 +90,8 @@ private:
   bool GeneratePlot(Plot& plot, const string& outputMode = "pdf");
   ptree& ReadPlotTemplatesFromFile(const string& plotFileName);
 
+  void SavePlotsToFile();
+
   std::unique_ptr<TApplication> mApp;
   bool mSaveToRootFile;
   string mOutputFileName;
@@ -106,7 +108,7 @@ private:
   void PrintBufferStatus(bool missingOnly = false);
   bool FillBuffer();
   void ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& inputID);
-  void ReadDataCSV(const string& inputFileName, const string& inputIdentifier);
+  void ReadDataCSV(const string& inputFileName, const string& graphName, const string& inputIdentifier);
 };
 
 } // end namespace PlottingFramework
