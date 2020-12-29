@@ -46,7 +46,7 @@ set(SRCS
   src/Plot.cxx
   src/PlotManager.cxx
   src/PlotPainter.cxx
-  src/HelperFunctions.cxx
+  src/Helpers.cxx
 )
 string(REPLACE ".cxx" ".h" HDRS "${SRCS}")
 string(REPLACE "src" "inc" HDRS "${HDRS}")

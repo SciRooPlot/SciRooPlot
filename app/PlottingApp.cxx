@@ -21,7 +21,7 @@
 #include "Logging.h"
 
 #include <boost/program_options.hpp>
-#include "HelperFunctions.h"
+#include "Helpers.h"
 
 using namespace PlottingFramework;
 namespace po = boost::program_options;

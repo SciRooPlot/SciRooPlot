@@ -18,7 +18,7 @@
 #include "PlotPainter.h"
 #include "PlottingFramework.h"
 #include "Logging.h"
-#include "HelperFunctions.h"
+#include "Helpers.h"
 
 // std dependencies
 #include <regex>

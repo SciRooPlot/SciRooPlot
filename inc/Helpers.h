@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef HelperFunctions_h
-#define HelperFunctions_h
+#ifndef Helpers_h
+#define Helpers_h
 
 #include "PlottingFramework.h"
 #include "TSystem.h"
@@ -133,4 +133,4 @@ T get_first_or(const T& fallback, const optional<T>& property, const Ts&... prop
 }
 
 } // end namespace PlottingFramework
-#endif /* HelperFunctions_h */
+#endif /* Helpers_h */
