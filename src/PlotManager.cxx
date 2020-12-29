@@ -482,7 +482,8 @@ bool PlotManager::FillBuffer()
         ReadDataCSV(inputFileName, graphName, inputID);
         vector<string>& names = requiredData[""];
         names.erase(std::remove_if(names.begin(), names.end(), [&](auto& name) { return name == graphName; }), names.end());
-      } //TODO: some of the code below must be executed as well...
+        if (names.empty()) requiredData.erase("");
+      }
       if (inputFileName.rfind(".root") == string::npos) continue;
       // check if only a sub-folder in input file should be searched
       auto fileNamePath = split_string(inputFileName, ':');
@@ -507,7 +508,7 @@ bool PlotManager::FillBuffer()
         }
       }
 
-      vector<string> found;
+      vector<string> emptySubDirs;
       for (auto& [pathStr, names] : requiredData) {
         auto path = split_string(pathStr, '/');
         TObject* subfolder = FindSubDirectory(folder, path);
@@ -522,9 +523,9 @@ bool PlotManager::FillBuffer()
             subfolder = nullptr;
           }
         }
-        if (names.empty()) found.push_back(pathStr);
+        if (names.empty()) emptySubDirs.push_back(pathStr);
       }
-      for (auto& pathStr : found) {
+      for (auto& pathStr : emptySubDirs) {
         requiredData.erase(pathStr);
       }
     }
@@ -579,11 +580,13 @@ void PlotManager::PrintLoadedPlots()
 
   string figureGroup;
   for (auto& plot : mPlots) {
+    uint8_t nInputs{};
     if (figureGroup != plot.GetFigureGroup()) {
       figureGroup = plot.GetFigureGroup();
       INFO("{}", figureGroup);
     }
     INFO(" - {}{}", plot.GetName(), (plot.GetFigureCategory().empty()) ? "" : " (" + plot.GetFigureCategory() + ")");
+    INFO("     ndata = {}", plot.InputDataCount());
   }
   INFO("{} plots were loaded.", mPlots.size());
   INFO("===============================================");

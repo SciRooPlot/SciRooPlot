@@ -115,6 +115,8 @@ protected:
   const auto& GetFillColor() { return mFill.color; }
   const auto& GetFillStyle() { return mFill.style; }
 
+  uint8_t InputDataCount();
+
 private:
   struct dimension_t {
     optional<int32_t> width;
