@@ -41,6 +41,7 @@ Plot::Plot(const string& name, const string& figureGroup, const string& plotTemp
   mName = name;
   mFigureGroup = figureGroup;
   if (plotTemplateName != "") mPlotTemplateName = plotTemplateName;
+  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");
 
   // in case category was specified via figureGroup:my/category/tree
   auto subPathPos = figureGroup.find(":");
@@ -55,11 +56,13 @@ Plot::Plot(const string& name, const string& figureGroup, const string& plotTemp
  * Constructor from existing plot.
  */
 //**************************************************************************************************
-Plot::Plot(const Plot& otherPlot, const string& name, const string& plotGroup)
+Plot::Plot(const Plot& otherPlot, const string& name, const string& figureGroup, const string& figureCategory)
 {
   *this = otherPlot.Clone();
-  this->mName = name;
-  this->mFigureGroup = plotGroup;
+  mName = name;
+  mFigureGroup = figureGroup;
+  mFigureCategory = figureCategory;
+  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");
 }
 
 //**************************************************************************************************
@@ -73,6 +76,7 @@ Plot::Plot(const ptree& plotTree)
     mName = plotTree.get<string>("name");
     mFigureGroup = plotTree.get<string>("figureGroup");
     mFigureCategory = plotTree.get<string>("figureCategory");
+    mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");
   } catch (...) {
     ERROR("Could not construct data from ptree.");
   }
@@ -188,6 +192,7 @@ void Plot::operator+=(const Plot& plot)
   mName = plot.mName;
   mFigureGroup = plot.mFigureGroup;
   mFigureCategory = plot.mFigureCategory;
+  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");
   mPlotTemplateName = plot.mPlotTemplateName;
 
   if (plot.mPlotDimensions.width) mPlotDimensions.width = plot.mPlotDimensions.width;
@@ -812,20 +817,6 @@ Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const 
   mData.back()->SetLayout(data);
   return *mData.back();
 }
-/*
-Plot::Pad::Data& Plot::Pad::AddData(const Data& data, const string& lable)
-{
-  mData.push_back(std::make_shared<Data>(data.GetName(), data.GetInputID(), lable));
-  mData.back()->SetLayout(data);
-  return *mData.back();
-}
-
-Plot::Pad::Data& Plot::Pad::AddData(const Data& data)
-{
-  mData.push_back(std::make_shared<Data>(data));
-  return *mData.back();
-}
-*/
 
 //**************************************************************************************************
 /**

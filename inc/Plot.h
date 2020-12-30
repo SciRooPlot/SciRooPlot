@@ -78,7 +78,7 @@ public:
   Pad& GetPadDefaults() { return mPads[0]; }
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& templatePlot, const Plot& plot);
-  Plot(const Plot& otherPlot, const string& name, const string& plotGroup);
+  Plot(const Plot& otherPlot, const string& name, const string& figureGroup, const string& figureCategory = "");
   Plot Clone() const;
 
   // accessors for user
@@ -104,10 +104,10 @@ protected:
   const string& GetFigureGroup() { return mFigureGroup; }
   const string& GetFigureCategory() { return mFigureCategory; }
   const optional<string>& GetPlotTemplateName() { return mPlotTemplateName; }
-  string GetUniqueName() { return mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : ""); }
+  const string& GetUniqueName() { return mUniqueName; }
   ptree GetPropertyTree();
 
-  map<uint8_t, Pad>& GetPads() { return mPads; }
+  auto& GetPads() { return mPads; }
 
   const auto& GetHeight() { return mPlotDimensions.height; }
   const auto& GetWidth() { return mPlotDimensions.width; }
@@ -131,6 +131,7 @@ private:
   string mName;
   string mFigureGroup;
   string mFigureCategory;
+  string mUniqueName;
   optional<string> mPlotTemplateName;
   dimension_t mPlotDimensions;
 
@@ -163,8 +164,6 @@ public:
   // User accessors:
   Data& AddData(const string& name, const string& inputIdentifier, const string& lable = "");
   Data& AddData(const string& name, const Data& dataTemplate, const string& lable = "");
-  // Data& AddData(const Data& data, const string& lable);
-  // Data& AddData(const Data& data);
 
   Ratio& AddRatio(const string& numeratorName, const string& numeratorInputIdentifier,
                   const string& denominatorName, const string& denominatorInputIdentifier,
@@ -386,7 +385,6 @@ protected:
   virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Data>(*this); }
   virtual ptree GetPropertyTree() const;
   void SetType(const string& type) { mType = type; }
-  string GetUniqueName() const { return mName + gNameGroupSeparator + mInputIdentifier; }
 
   const auto& GetType() const { return mType; }
   const auto& GetName() const { return mName; }
@@ -512,9 +510,8 @@ protected:
   virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Ratio>(*this); }
 
   ptree GetPropertyTree() const;
-  string GetDenomIdentifier() const { return mDenomInputIdentifier; }
-  string GetDenomName() const { return mDenomName; }
-  string GetUniqueNameDenom() const { return mDenomName + gNameGroupSeparator + mDenomInputIdentifier; }
+  const auto& GetDenomIdentifier() const { return mDenomInputIdentifier; }
+  const auto& GetDenomName() const { return mDenomName; }
 
   const bool& GetIsCorrelated() const { return mIsCorrelated; }
 

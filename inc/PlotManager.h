@@ -86,22 +86,21 @@ public:
   void PrintLoadedPlots();
 
 private:
-  TObject* FindSubDirectory(TObject* folder, vector<string> subDirs);
+  TObject* FindSubDirectory(TObject* folder, vector<string>& subDirs);
   bool GeneratePlot(Plot& plot, const string& outputMode = "pdf");
   ptree& ReadPlotTemplatesFromFile(const string& plotFileName);
-
   void SavePlotsToFile();
 
   std::unique_ptr<TApplication> mApp;
   bool mSaveToRootFile;
   string mOutputFileName;
   map<string, shared_ptr<TCanvas>> mPlotLedger;
-  string mOutputDirectory;  // directory to store output
-  bool mUseUniquePlotNames; // wether to use plot names or unique plot names for output files
+  string mOutputDirectory;
+  bool mUseUniquePlotNames;
   vector<Plot> mPlots;
   vector<Plot> mPlotTemplates;
   map<string, ptree> mPropertyTreeCache;
-  vector<string> mPlotViewHistory;
+  vector<const string*> mPlotViewHistory;
 
   unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>> mDataBuffer;
   map<string, vector<string>> mInputFiles; // inputFileIdentifier, inputFilePaths

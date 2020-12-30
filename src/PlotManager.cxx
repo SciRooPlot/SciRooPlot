@@ -44,10 +44,10 @@ namespace PlottingFramework
 
 //**************************************************************************************************
 /**
- * Constructor for PlotManager
+ * Constructor for PlotManager.
  */
 //**************************************************************************************************
-PlotManager::PlotManager() : mApp(std::unique_ptr<TApplication>(new TApplication("MainApp", 0, nullptr))), mSaveToRootFile(false), mOutputFileName("ResultPlots.root"), mUseUniquePlotNames(false)
+PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr)), mSaveToRootFile(false), mOutputFileName("ResultPlots.root"), mUseUniquePlotNames(false)
 {
   TQObject::Connect("TGMainFrame", "CloseWindow()", "TApplication", gApplication, "Terminate()");
   gErrorIgnoreLevel = kWarning;
@@ -55,7 +55,7 @@ PlotManager::PlotManager() : mApp(std::unique_ptr<TApplication>(new TApplication
 
 //**************************************************************************************************
 /**
- * Destructor for PlotManager
+ * Destructor for PlotManager.
  */
 //**************************************************************************************************
 PlotManager::~PlotManager()
@@ -330,12 +330,13 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
   PlotPainter painter;
   shared_ptr<TCanvas> canvas = painter.GeneratePlot(fullPlot, mDataBuffer);
   if (!canvas) return false;
+  LOG("Created \033[1;32m{}\033[0m from group \033[1;33m{}\033[0m", fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory() != "") ? ":" + fullPlot.GetFigureCategory() : ""));
 
   // if interactive mode is specified, open window instead of saving the plot
   if (outputMode.find("interactive") != string::npos) {
 
     mPlotLedger[plot.GetUniqueName()] = canvas;
-    mPlotViewHistory.push_back(plot.GetUniqueName());
+    mPlotViewHistory.push_back(&plot.GetUniqueName());
     uint32_t currPlotIndex{static_cast<uint32_t>(mPlotViewHistory.size() - 1)};
 
     // move new canvas to position of previous window
@@ -343,8 +344,8 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
     int32_t curYpos{};
     const int32_t windowOffsetY{28}; // might depend on os (was 22)
     if (currPlotIndex > 0) {
-      curXpos = mPlotLedger[mPlotViewHistory[currPlotIndex - 1]]->GetWindowTopX();
-      curYpos = mPlotLedger[mPlotViewHistory[currPlotIndex - 1]]->GetWindowTopY();
+      curXpos = mPlotLedger[*mPlotViewHistory[currPlotIndex - 1]]->GetWindowTopX();
+      curYpos = mPlotLedger[*mPlotViewHistory[currPlotIndex - 1]]->GetWindowTopY();
       canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
     }
     while (!gSystem->ProcessEvents() && gROOT->GetSelectedPad()) {
@@ -360,7 +361,7 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
         } else {
           if (currPlotIndex != 0) currPlotIndex--;
         }
-        canvas = mPlotLedger[mPlotViewHistory[currPlotIndex]];
+        canvas = mPlotLedger[*mPlotViewHistory[currPlotIndex]];
         canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
         ((TRootCanvas*)canvas->GetCanvasImp())->MapRaised();
       }
@@ -691,13 +692,13 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& graphNa
  * Recursively search for sub folder in file.
  */
 //**************************************************************************************************
-TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string> subDirs)
+TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs)
 {
   if (!folder) return nullptr;
   bool deleteFolder = true;
   if (folder->InheritsFrom("TFile")) deleteFolder = false;
 
-  if (subDirs.size() == 0) {
+  if (subDirs.empty()) {
     if (folder->InheritsFrom("TDirectory") || folder->InheritsFrom("TFolder") || folder->InheritsFrom("TCollection")) {
       return folder;
     } else {
