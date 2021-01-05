@@ -238,7 +238,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 // most of these settings e.g. the number and alignment of pads, background colors, transparency, etc..
 // stay the same for all (or a group of) your plots and you do not want to
 // verbously specify them again and again for every one of your plots
-// therefore the framework provides the optin to specify plot templates
+// therefore the framework provides the option to specify plot templates
 // these are just ordinary plots, but you can use their settings as a baseline
 // and the properties specified for your final plot will be applied on top of these
 
@@ -360,7 +360,7 @@ DataLayout pp5TeV = DataLayout()
   pp5TeV.SetInputID("inputGroupA");
   // you can add the data and layout in the following way:
   plot[1].AddData("graph2", pp5TeV);
-  // and this cna be done in a similar manner also for ratios:
+  // and this can be done in a similar manner also for ratios:
   plot[1].AddRatio("graph2", pp5TeV, "graph3", "inputGroupA");
 
   plot[1].AddLegend(0.,0.9);
