@@ -1,14 +1,82 @@
+Analysis open questions:
+- does multPtUnfoldedNormalized take into account bin width?
+- put proper axis titles already when data is created to avoid having to do this in plotting
+- what are multPtMeasured/raw exactly?
+- what are the actual z ranges of 2d spectra? be sure not to cut into distributions via setzaxis (different per dataset!)
+- naming of histograms urgendly needs re-work! (e.g. the matrices!)
+- resolution histogram range is smaller than data range for sigma
+- event efficiency in 2TeV never goes to 1!!
+- secondary contamination in 7TeV is strange at high pt
+- secondary contamination vs mult has entry at nch = 0 ->makes sense because all we measure there is not primary (?)
+- strange rising trend with nch in contamination for larger systems??
+- why efficiency goes down vs mult in large systems? (occupancy)
+- need strategy regarding qa -> optimize CutStudiesTask to suit my needs and run it for each dataset!
+- pPb 5TeV data / mc is crap! -> use 2016 Dataset!!
+- what is the problem with closure_multDistFromCorrelMat???
+- particleClosure counting does not take into account bin width -> shifted in larger systems
+- what are these event efficiencies? why so strange, how to properly normalize?
+- properly understand! efficiencies -> read again what others did!
+- signal loss?, INEL0?
+- why are there entries below .15 TeV??
+- something is severly wrong with MC truth pt distribution in 7TeV and 13 TeV and PbPb5 and xexe!!!!
+- projection on mult of closure tests does not account for bin widths in larger systems -> also for the pt,mult bins
+- 2TeV has no chi2 output included!
+- in PbPb systematics are zero at mult <3500
+- fix multdist multdensity confusion! be sure how to normalize!
+- propagate somehow meta-info about number of events contained in result
+- prepare QA-Task and corresponding default plots! (data / mc) -> make this flexible enough to have more than 1 dimensions (that are then filtered in intermediate step) -> centrality, mult, pt might be needed
+- info about runs used + respective number of events! (must be in standard task)
+- inclusive spectrum does not look close to publication!
+- exactly understand normation!! be very sure to include all necessary histograms in analysis task
+
+- extract published spectra! -> kno + mult vs cent
+- fix colors and linestyles to be unique and final -> make a table for the schema!
+- add qa plots per dataset (summary qa plots containing multiple datasets?)
+- find proper naming scheme for plots
+- I need the new framework asap to work with inputs I have and returning output in correct format!
+
+- make the KNO things graphs instead of histograms
+--------
+- store box defaults (no border, transparency, etc in pad) -> maybe add default-Box so we have all settings?
+- default legend and default textbox?
+- deeply look into regexp part
+- add option in main program to list all loaded plots -> plot list
+- fix inconsistencies in naming of variables
+- final streamlining / optimizing of internal data reading / buffering
+- projection feature! -> closure stuff easier 2d->1d
+- possibility to read / write multiple files
+- file names w/o ending!
+- give warning if selected drawing alias not available for this type of data
+- add xml examples to readme
+- why does ratio no longer put "ratio" as y axis title? -> graphs does no division -> put some printout
+
+- graphs with asym errors are not supported by any of the division functions
+- division graph/hist not implemented
+- the whole Painter::GeneratePlots is just a big ugly mess!
+
 Autocomplete:
 - category search?
 - how to handle multiple figureGroups?
 - how to handle multiple xml config files?
+- regexp matching used in group can be applied also in search! -> then show only once still
+
+- make example that works out of the box
 
 Bugs:
+- decide where data manipulation part should be put (before or after setting ranges?)
+- put using... to avoid lengthly if constexpr
+- make figureCategory optional
+- it is stupid to have figureGroup and category stored twice in the xml
+- plot name must not contain /
+- automatic placing in combination with log does not seem to work (wrong order of things?)
 - histograms without error can be drawn only as hist??
 - if same histogram is added to plot twice, the name is no longer unique and this results in unwanted behaviour for ref data specified in legend entries
+- csv w/o options -> invisible -> TGrapherrors has wrong defaults
+- ScaleGraph does not scale errors
+
 
 Missing Box Features
-- make no box default setting
+- default positions? , topLeft, BottomRight
 - box auto-size must consider that legend entries can have different text sizes
 - text lines maybe also configurable separately?
 - flexible width of marker part
@@ -22,12 +90,6 @@ Missing Box Features
 - AddLine function for texts?
 - might be useful to specify size of boxes
 
-Planned Features:
-- add setting for nContours in 2d plots
-- add option in main program to list all loaded plots
-- possibility to do fast loading of all data from input files (skip chek if data was requested)
-- give warning if selected drawing alias not available for this type of data
-- decide where data manipulation part should be put (before or after setting ranges?)
 
 Feature Ideas:
 - add support for add/subtract + pulls? / generic binary operator thing
@@ -46,14 +108,16 @@ Feature Ideas:
 - option to draw help-grid on top of the plot to indicate NDC coordinates
 
 Notes:
-- for 2d plots SAME0 can be used to avoid axis range change when drawing on top
 - is it possible to set the order in multi column tlegends? left-right vs top-bottom
 - maybe at some point it could become useful to also copy data and boxes from template
 - maybe generalized version of white patch hiding the truncated zero in ratio pads would be nice
 - should smoothing be done before or after division for ratios (or both)??
 
 Structural:
-- mark all getters as const
+- how to handle boolean things? do they also belong in optionals?
+- re-check which of the properties that are always stored are actually needed always
+- enhance speed wherever possible!
+- can callbacks / lambdas be used somewhere?
 - use constexpr everywhere!!
 - use str_contians() everywhere
 - put data pointers in vector instead of map and use index for all comparisons
@@ -65,5 +129,4 @@ Structural:
 - capture via const ref: [&best_string = std::as_const(best_string)]
 - use for_each() instead of range based loops
 - use size_t in the loops
-- use brace-or-equal initializers in class definitions
-- what about std::format?? is it the same as fmt? can dependency be dropped?
+- use brace-or-equal initializers in class definitions and get rid of initializer lists
