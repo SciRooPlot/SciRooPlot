@@ -1,9 +1,9 @@
-- make example that works out of the box
 - add xml examples to readme
 - possibility to read / write multiple files
 - digest file names w/o ending?
+- catch cannot open file exceptions from boost ptree
 
-Box Features
+Box Features:
 - add default-boxes (legend and text) that will be baseline for all boxes of this pad
 - default positions? , topLeft, BottomRight
 - box auto-size must consider that legend entries can have different text sizes

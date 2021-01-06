@@ -20,9 +20,9 @@ endif()
 # User Settings:
 ################################################################################
 # Change this part according to your needs...
-set(APP_NAME example)
+set(APP_NAME create)
 set(SRCS
-  Example.cxx
+  CreatePlots.cxx
 )
 set(IS_FRAMEWORK_DEV OFF)
 ################################################################################
