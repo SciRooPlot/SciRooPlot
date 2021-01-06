@@ -21,14 +21,14 @@ using namespace PlottingFramework;
 void DefinePlotTemplates(PlotManager& plotManager);
 
 // ======= minimal working example ==========
-// 0. copy directory containing this example to some place on your system (outside of the PlottingFramework repository)
-// 1. source the ".plotrc" script in the main directory of the PlottingFramework repository (best put this also it in your .bashrc, .bash_profile, or similar)
+// 0. source the ".plotrc" script in the main directory of the PlottingFramework repository (best put this also it in your .bashrc, .bash_profile, or similar)
+// 1. copy directory containing this example to some place on your system (outside of the PlottingFramework repository)
 // 2. generate files used in this example by running 'root -l generateMWE.C'
-// 2. create build folder in this directory: 'mkdir build; cd build'
-// 3. cmake ../
-// 4. make
-// 5. ./create
-// 6. play around with the features described in README.md
+// 3. create build folder in this directory: 'mkdir build; cd build'
+// 4. cmake ../
+// 5. make
+// 6. ./create
+// 7. play around with the features described in README.md
 
 int main(int argc, char *argv[])
 {
@@ -77,7 +77,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
   kMagenta-4, kGreen+3, kOrange+1, kViolet-3, kCyan+2, kPink+3, kTeal-7, kMagenta+1, kPink+8, kCyan-6, kMagenta, kRed+2, kGreen+2,
   kOrange+2, kMagenta+2, kYellow+3, kGray+2, kBlue+2, kYellow+2, kRed, kBlue, kMagenta+3, kGreen+4, 28, 8, 15, 17, 12};
 
-  
+
   { // -----------------------------------------------------------------------
     // template 1d
     Plot templatePlot("1d", "TEMPLATES");
@@ -148,5 +148,5 @@ void DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[1].SetPosition(0., 0., 1., 1.);
     plotManager.AddPlotTemplate(templatePlot);
   } // -----------------------------------------------------------------------
-  
+
 }
