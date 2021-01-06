@@ -25,7 +25,7 @@ _plot_completions_zsh() {
   local input_identifiers="${__PLOTTING_CONFIG_DIR}/inputFiles.XML"
 
   local modes=('interactive' 'pdf' 'file' 'png' 'find' 'macro')
-  local gropus
+  local groups
   local names
   local rootfiles
   local inputIdentifiers
@@ -33,7 +33,7 @@ _plot_completions_zsh() {
   while read -r line ; do
     line="${line#<GROUP::}"
     line="${line%>}"
-    [[ "${line}" != "TEMPLATES" ]] && gropus+=("${line}")
+    [[ "${line}" != "TEMPLATES" ]] && groups+=("${line}")
   done < <(grep -o '<GROUP::.*' $plot_definitions)
 
   while read -r line ; do
@@ -65,7 +65,7 @@ _plot_completions_zsh() {
 
   case $state in
     group)
-      _arguments '1:profiles:(${gropus})'
+      _arguments '1:profiles:(${groups})'
     ;;
     name)
       if [[ "${words[2]}" == "cd" ]]
@@ -89,7 +89,7 @@ _plot_completions_bash() {
   local input_identifiers="${__PLOTTING_CONFIG_DIR}/inputFiles.XML"
 
   local modes=('interactive pdf file png find macro')
-  local gropus
+  local groups
   local names
   local rootfiles
   local inputIdentifiers
@@ -97,7 +97,7 @@ _plot_completions_bash() {
   while read -r line ; do
     line="${line#<GROUP::}"
     line="${line%>}"
-    [[ "${line}" != "TEMPLATES" ]] && gropus+=" ${line}"
+    [[ "${line}" != "TEMPLATES" ]] && groups+=" ${line}"
   done < <(grep -o '<GROUP::.*' $plot_definitions)
 
   while read -r line ; do
@@ -131,10 +131,10 @@ _plot_completions_bash() {
       COMPREPLY=( )
     elif [[ "${COMP_WORDS[COMP_CWORD-1]}" == "browse" ]]
     then
-      local gropusAndFiles=("${inputIdentifiers} ${rootfiles}")
-      COMPREPLY=( $(compgen -W "${gropusAndFiles}" -- "${COMP_WORDS[COMP_CWORD]}") )
+      local groupsAndFiles=("${inputIdentifiers} ${rootfiles}")
+      COMPREPLY=( $(compgen -W "${groupsAndFiles}" -- "${COMP_WORDS[COMP_CWORD]}") )
     else
-      COMPREPLY=( $(compgen -W "${gropus}" -- "${COMP_WORDS[COMP_CWORD]}") )
+      COMPREPLY=( $(compgen -W "${groups}" -- "${COMP_WORDS[COMP_CWORD]}") )
     fi
   ;;
   3)
