@@ -398,10 +398,9 @@ To use this app you need to:
 - define the environment variable `__PLOTTING_OUTPUT_DIR` to the directory where you want to store the created plots (pdf, png, etc.)
 - (optional) define the environment variable `__MY_PLOTS_BUILD_DIR` to the directory where your code that creates the plot definitions resides - then the app will automatically rebuild and execute `./create` (which should be the name of your executable for this to work)
 
-Now you can run the command `plot` from everywhere.
-To see the available program options run `plot --help`.
-For bash and zsh shells this program supports an auto-completion feature, so you can tab through the available commands, figureGroups and plots.
-The app also has a `browse` option that enables you to directly plot the content of root files without creating a plot definition.
+Now you can run the command `plot` from everywhere. Regular expressions are supported. To see the available program options run `plot --help`.
+For bash and zsh shells this program provides an auto-completion feature, so you can tab through the available commands, figureGroups and plots.
+The app also has a `browse` option that enables you to directly plot the content of root files without explicitly creating a plot definition.
 
 Recommended Workflow
 --------------------
@@ -411,7 +410,7 @@ The most convenient way to work with the PlottingFramework is the following:
 - this program will dump your plot definitions into an xml-file by calling `plotManager.DumpPlotDefinitions(...)` at the end
 - this file is stored in the same location as the configuration file that contains the paths to your input data files
 - these files can be read in by the framework`s integrated plotting app (see above) which then can create your plots based on these definitions
-- in order for the app to know where to find the two configuration files, you have to make the envirionment variable ` __PLOTTING_CONFIG_DIR` point to this location
+- in order for the app to know where to find the two configuration files, you have to make the envirionment variable `__PLOTTING_CONFIG_DIR` point to this location
 - then you can easily create plots via the command line from everywhere on your computer by typing `plot figureGroup plotName`
 - saving the plot definitions to a file as an intermediate step enables you to quickly re-create any of your plots without having to run again the program that creates the plot definitions
 - it can however be annoying to first compile and run your user code and then in addition start the app in order to see the changes you made to the plot definitions
