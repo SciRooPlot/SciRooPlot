@@ -58,7 +58,6 @@ Structural:
 - can callbacks / lambdas be used somewhere?
 - use constexpr everywhere!!
 - use str_contians() everywhere
-- put data pointers in vector instead of map and use index for all comparisons
 - think about how things can be implemented in a more general way as templates
 - change arguments referring to internal variables to const ref if possible to be more memory efficient, use lambdas
 - fully grasp the difference between emplace_back and push_back in terms of copy/move: why does push_back not work for variants?
@@ -80,5 +79,6 @@ Bugs:
 - give warning if selected drawing alias not available for this type of data
 - division graph/hist, hist/graph not implemented yet -> put some printout to inform
 - graphs with asym errors are not supported by any of the division functions
+- with graph as numerator in ratio there is some logic problem that axis histo is not there -> seg fault
 
 

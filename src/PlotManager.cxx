@@ -420,9 +420,9 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
       continue;
     if (saveSpecificPlots && std::find(plotNames.begin(), plotNames.end(), plot.GetName()) == plotNames.end())
       continue;
-    if (!plotNames.empty())
-      plotNames.erase(std::remove(plotNames.begin(), plotNames.end(), plot.GetName()),
-                      plotNames.end());
+    if (!plotNames.empty()) {
+      plotNames.erase(std::remove(plotNames.begin(), plotNames.end(), plot.GetName()), plotNames.end());
+    }
     selectedPlots.push_back(&plot);
 
     // determine which input data are needed for plots

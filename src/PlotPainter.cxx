@@ -203,7 +203,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // retrieve the actual pointer to the denominator data
           auto processDenominator = [&](auto&& denom_data_ptr) {
             using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
-            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>)
+            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>) {
               if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist>) {
                 string divideOpt = (std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetIsCorrelated()) ? "B"
                                                                                                           : "";
@@ -217,18 +217,26 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   data_ptr->GetYaxis()->SetTitle("ratio");
                 if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
                   data_ptr->GetZaxis()->SetTitle("ratio");
+              } else if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_graph>) {
+                ERROR("Cannot divide histogram by graph.");
+                //DivideHistGraphInterpolated(data_ptr, denom_data_ptr);
               }
-            if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>)
+            } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
               if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_graph_1d>) {
-                if (!DivideGraphs(data_ptr,
-                                  denom_data_ptr)) // first try if exact division is possible
+                if (!DivideGraphs(data_ptr, denom_data_ptr)) // first try if exact division is possible
                 {
                   WARNING(
                     "In general graphs cannot be divided. Trying approximated division "
                     "via spline interpolation. Errors will not be fully correct!");
                   DivideGraphsInterpolated(data_ptr, denom_data_ptr);
                 }
+              } else if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist_1d>) {
+                ERROR("Cannot divide graph by histogram.");
+                //DivideGraphHistInterpolated(data_ptr, denom_data_ptr);
               }
+            } else {
+              ERROR("Unsupported division");
+            }
             delete denom_data_ptr;
           };
 
@@ -1016,6 +1024,33 @@ void PlotPainter::DivideGraphsInterpolated(TGraph* numerator, TGraph* denominato
     y[i] = newValue;
     ey[i] = newError;
   }
+}
+
+//**************************************************************************************************
+/**
+ * Helper-function dividing hist by graph.
+ * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the
+ * uncertainties are not fully correct!
+ */
+//**************************************************************************************************
+void PlotPainter::DivideHistGraphInterpolated(TH1* numerator, TGraph* denominator)
+{
+  TGraph numeratorGraph(numerator);
+  DivideGraphsInterpolated(&numeratorGraph, denominator);
+  // FXIME: numerator graph must be put in hist afterwards!
+}
+
+//**************************************************************************************************
+/**
+ * Helper-function dividing graph by hist.
+ * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the
+ * uncertainties are not fully correct!
+ */
+//**************************************************************************************************
+void PlotPainter::DivideGraphHistInterpolated(TGraph* numerator, TH1* denominator)
+{
+  TGraph denominatorGraph(denominator);
+  DivideGraphsInterpolated(numerator, &denominatorGraph);
 }
 
 //**************************************************************************************************
