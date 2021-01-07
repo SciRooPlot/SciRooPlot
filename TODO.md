@@ -34,6 +34,7 @@ Feature Ideas:
 - allow for multi-column text boxes and make tab width between them a text box property
 - customizable legends that can be added independent of data in plot
 - option to draw help-grid on top of the plot to indicate NDC coordinates
+- support TGraphAsymmErrors and check if TProfile{1,2,3}D would require some extra functionality
 
 Notes:
 - is it possible to set the order in multi column tlegends? left-right vs top-bottom
@@ -75,10 +76,8 @@ Bugs:
 - histograms without error can be drawn only as hist??
 - if same histogram is added to plot twice, the name is no longer unique and this results in unwanted behaviour for ref data specified in legend entries
 - csv w/o options -> invisible -> TGrapherrors has wrong defaults
-- ScaleGraph does not scale errors yet
 - give warning if selected drawing alias not available for this type of data
 - division graph/hist, hist/graph not implemented yet -> put some printout to inform
 - graphs with asym errors are not supported by any of the division functions
 - with graph as numerator in ratio there is some logic problem that axis histo is not there -> seg fault
-
 

@@ -1121,8 +1121,10 @@ void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<
 //**************************************************************************************************
 void PlotPainter::ScaleGraph(TGraph* graph, double_t scale)
 {
-  for (int32_t i{}; i < graph->GetN(); ++i)
+  for (int32_t i{}; i < graph->GetN(); ++i) {
     graph->GetY()[i] *= scale;
+    if (graph->GetEY()) graph->GetEY()[i] *= scale;
+  }
 }
 
 //**************************************************************************************************
