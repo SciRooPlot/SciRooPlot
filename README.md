@@ -39,8 +39,8 @@ In case you have doxygen installed, you can also generate a documenation from th
     doxygen doxygen.conf
     open html/index.html
 
-After building the library, you can write your own individual plotting programs and link them against the Plottting Framework.
-As a starting point you can copy the ```example``` folder to some location on your computer and follow the instructions provided in ```CreatePlots.cxx```.
+After building the library, you can write your own individual plotting programs and link them against the PlotttingFramework.
+As a starting point you can copy the `example` folder to some location on your computer and follow the instructions provided in `CreatePlots.cxx`.
 This example should work out of the box, but it requires to know where the Plotting Framework library is located.
 The easisest way to define this is by putting the following line in your .bashrc or .bash_aliases:
 ```
@@ -63,8 +63,7 @@ Example 1
 //============================================================================
 
 #include "PlotManager.h"
-using PlottingFramework::PlotManager;
-using PlottingFramework::Plot;
+using namespace PlottingFramework;
 
 // create plotting environment that handles IO and plot creation
 PlotManager plotManager;
@@ -222,8 +221,7 @@ Example 2
 //============================================================================
 
 #include "PlotManager.h"
-using PlottingFramework::PlotManager;
-using PlottingFramework::Plot;
+using namespace PlottingFramework;
 
 PlotManager plotManager;
 
@@ -394,8 +392,8 @@ Using the App
 -------------
 The Plotting Framework ships with a builtin plotting application that enables you to quickly create plots from previously saved plot definitions.
 To use this app you need to:
-- source the ".plotrc" script in the main directory of the repository
-- place both the "inputFilesConfig.XML" and "plotDefinitions.XML" (names have to be like this for now) produced by your program in some central config folder
+- source the `.plotrc` script in the main directory of the repository
+- place both the `inputFilesConfig.XML` and `plotDefinitions.XML` (names have to be like this for now) produced by your program in some central config folder
 - define the environment variable `__PLOTTING_CONFIG_DIR` to point to this folder
 - define the environment variable `__PLOTTING_OUTPUT_DIR` to the directory where you want to store the created plots (pdf, png, etc.)
 - (optional) define the environment variable `__MY_PLOTS_BUILD_DIR` to the directory where your code that creates the plot definitions resides - then the app will automatically rebuild and execute `./create` (which should be the name of your executable for this to work)
@@ -403,19 +401,19 @@ To use this app you need to:
 Now you can run the command `plot` from everywhere.
 To see the available program options run `plot --help`.
 For bash and zsh shells this program supports an auto-completion feature, so you can tab through the available commands, figureGroups and plots.
-The app also has a 'browse' option that enables you to directly plot the content of root files without creating a plot definition.
+The app also has a `browse` option that enables you to directly plot the content of root files without creating a plot definition.
 
 Recommended Workflow
 --------------------
 The most convenient way to work with the PlottingFramework is the following:
 
 - you have a program that creates the plot definitions for all your plots (e.g. based on the example provided in the framework)
-- this program will dump your plot definitions into an xml-file by calling ```plotManager.DumpPlotDefinitions(...)``` at the end
+- this program will dump your plot definitions into an xml-file by calling `plotManager.DumpPlotDefinitions(...)` at the end
 - this file is stored in the same location as the configuration file that contains the paths to your input data files
 - these files can be read in by the framework`s integrated plotting app (see above) which then can create your plots based on these definitions
-- in order for the app to know where to find the two configuration files, you have to make the envirionment variable ''' __PLOTTING_CONFIG_DIR''' point to this location
-- then you can easily create plots via the command line from everywhere on your computer by typing '''plot figureGroup plotName'''
+- in order for the app to know where to find the two configuration files, you have to make the envirionment variable ` __PLOTTING_CONFIG_DIR` point to this location
+- then you can easily create plots via the command line from everywhere on your computer by typing `plot figureGroup plotName`
 - saving the plot definitions to a file as an intermediate step enables you to quickly re-create any of your plots without having to run again the program that creates the plot definitions
 - it can however be annoying to first compile and run your user code and then in addition start the app in order to see the changes you made to the plot definitions
 - to simplify this, the command-line plotting app can take care of all these steps for you
-- you only need to define the environment variable ```__MY_PLOTS_BUILD_DIR=/path/to/my/plotting/build/folder``` then the app will automatically re-build and run your code that creates the plot definitions (in case this is necessary) before creating the plot itself. Please note that this (for now) assumes that the executable that creates your plots is called ```./create```.
+- you only need to define the environment variable `__MY_PLOTS_BUILD_DIR=/path/to/my/plotting/build/folder` then the app will automatically re-build and run your code that creates the plot definitions (in case this is necessary) before creating the plot itself. Please note that this (for now) assumes that the executable that creates your plots is called `./create`.
