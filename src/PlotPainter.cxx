@@ -213,10 +213,10 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     "via spline interpolation. Errors will not be fully correct!");
                   DivideHistosInterpolated(data_ptr, denom_data_ptr);
                 }
-                if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
-                  data_ptr->GetYaxis()->SetTitle("ratio");
                 if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
                   data_ptr->GetZaxis()->SetTitle("ratio");
+                else if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
+                  data_ptr->GetYaxis()->SetTitle("ratio");
               } else if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_graph>) {
                 ERROR("Cannot divide histogram by graph.");
                 //DivideHistGraphInterpolated(data_ptr, denom_data_ptr);

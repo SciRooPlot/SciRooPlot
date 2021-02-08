@@ -2,6 +2,9 @@
 - possibility to read / write multiple files
 - digest file names w/o ending?
 - catch cannot open file exceptions from boost ptree
+- divisions should have this reflected in their internal name
+- always call sumw2 before drawing otherwise drawing as points will not show anything
+- would be nice if in interactive mode showprojx and y would work for 2d histos
 
 Box Features:
 - add default-boxes (legend and text) that will be baseline for all boxes of this pad
@@ -35,6 +38,7 @@ Feature Ideas:
 - customizable legends that can be added independent of data in plot
 - option to draw help-grid on top of the plot to indicate NDC coordinates
 - support TGraphAsymmErrors and check if TProfile{1,2,3}D would require some extra functionality
+- double click on plot -> check if it touches a box and if yes print out the coordinates
 
 Notes:
 - is it possible to set the order in multi column tlegends? left-right vs top-bottom
@@ -80,4 +84,4 @@ Bugs:
 - division graph/hist, hist/graph not implemented yet -> put some printout to inform
 - graphs with asym errors are not supported by any of the division functions
 - with graph as numerator in ratio there is some logic problem that axis histo is not there -> seg fault
-
+- Could not find enough space to place the legend properly -> should say text for text boxes...
