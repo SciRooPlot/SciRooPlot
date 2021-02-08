@@ -619,55 +619,57 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
   bool deleteObject;
   bool removeFromList;
 
-  while (iterator != itemList->end()) {
-    obj = *iterator;
-    deleteObject = true;
-    removeFromList = true;
+  for(bool goDeeper : {false, true}){ // always first check current level before going more deeply into the dir structure
+    while (iterator != itemList->end()) {
+      obj = *iterator;
+      deleteObject = true;
+      removeFromList = true;
 
-    // read actual object to memory when traversing a directory
-    if (obj->IsA() == TKey::Class()) {
-      string className = ((TKey*)obj)->GetClassName();
-      string keyName = ((TKey*)obj)->GetName();
+      // read actual object to memory when traversing a directory
+      if (obj->IsA() == TKey::Class()) {
+        string className = ((TKey*)obj)->GetClassName();
+        string keyName = ((TKey*)obj)->GetName();
 
-      bool isTraversable = className.find("TDirectory") != string::npos || className.find("TFolder") != string::npos || className.find("TList") != string::npos || className.find("TObjArray") != string::npos;
-      if (isTraversable || std::find(dataNames.begin(), dataNames.end(), keyName) != dataNames.end()) {
-        obj = ((TKey*)obj)->ReadObj();
-        removeFromList = false;
+        bool isTraversable = className.find("TDirectory") != string::npos || className.find("TFolder") != string::npos || className.find("TList") != string::npos || className.find("TObjArray") != string::npos;
+        if (isTraversable || std::find(dataNames.begin(), dataNames.end(), keyName) != dataNames.end()) {
+          obj = ((TKey*)obj)->ReadObj();
+          removeFromList = false;
+        } else {
+          ++iterator;
+          continue;
+        }
+      }
+
+      // in case this object is directory or list, repeat the same for this substructure FIXME: do this only if object is not found in current level!
+      if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection")) {
+        if(goDeeper) ReadData(obj, dataNames, prefix, suffix, inputID);
       } else {
-        ++iterator;
-        continue;
+        auto it = std::find(dataNames.begin(), dataNames.end(), ((TNamed*)obj)->GetName());
+        if (it != dataNames.end()) {
+          // TODO: select here that only known root input types are beeing processed
+          if (obj->InheritsFrom("TH1")) ((TH1*)obj)->SetDirectory(0); // demand ownership for histogram
+          // re-name data
+          string fullName = prefix + ((TNamed*)obj)->GetName();
+          ((TNamed*)obj)->SetName((fullName + suffix).data());
+          dataNames.erase(it); // TODO: why not erase-remove?
+          mDataBuffer[inputID][fullName].reset(obj);
+          deleteObject = false;
+        }
       }
-    }
 
-    // in case this object is directory or list, repeat the same for this substructure
-    if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection")) {
-      ReadData(obj, dataNames, prefix, suffix, inputID);
-    } else {
-      auto it = std::find(dataNames.begin(), dataNames.end(), ((TNamed*)obj)->GetName());
-      if (it != dataNames.end()) {
-        // TODO: select here that only known root input types are beeing processed
-        if (obj->InheritsFrom("TH1")) ((TH1*)obj)->SetDirectory(0); // demand ownership for histogram
-        // re-name data
-        string fullName = prefix + ((TNamed*)obj)->GetName();
-        ((TNamed*)obj)->SetName((fullName + suffix).data());
-        dataNames.erase(it); // TODO: why not erase-remove?
-        mDataBuffer[inputID][fullName].reset(obj);
-        deleteObject = false;
+      // increase iterator before removing objects from collection
+      ++iterator;
+      if (removeFromList) {
+        if (itemList->Remove(obj) == nullptr) {
+          ERROR(R"(Could not remove item "{}" ({}) from collection "{}".)", ((TNamed*)obj)->GetName(),
+                (void*)obj, itemList->GetName());
+        }
       }
-    }
-
-    // increase iterator before removing objects from collection
-    ++iterator;
-    if (removeFromList) {
-      if (itemList->Remove(obj) == nullptr) {
-        ERROR(R"(Could not remove item "{}" ({}) from collection "{}".)", ((TNamed*)obj)->GetName(),
-              (void*)obj, itemList->GetName());
+      if (deleteObject) {
+        delete obj;
       }
+      if (dataNames.empty()) return;
     }
-    if (deleteObject) {
-      delete obj;
-    }
-    if (dataNames.empty()) break;
   }
 }
 
