@@ -32,6 +32,7 @@ class TLatex;
 class TPad;
 class TObjArray;
 class TPave;
+class TAxis;
 
 namespace PlottingFramework
 {
@@ -103,11 +104,12 @@ public:
   shared_ptr<TCanvas> GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>>& dataBuffer);
 
 private:
-  optional<data_ptr_t> GetDataClone(TObject* obj);
+  optional<data_ptr_t> GetDataClone(TObject* obj, const std::optional<Plot::Pad::Data::proj_info_t>& projInfo = std::nullopt);
   template <typename T>
   optional<data_ptr_t> GetDataClone(TObject* obj);
   template <typename T, typename Next, typename... Rest>
   optional<data_ptr_t> GetDataClone(TObject* obj);
+  optional<data_ptr_t> GetProjection(TObject* obj, Plot::Pad::Data::proj_info_t projInfo);
 
   void SetGraphRange(TGraph* graph, optional<double_t> min, optional<double_t> max);
   void ScaleGraph(TGraph* graph, double_t scale);
@@ -125,6 +127,10 @@ private:
   TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box,
                      TPad* pad);
   float_t GetTextSizePixel(float_t textsizeNDC);
+
+  template <typename T>
+  TAxis* GetAxis(T* histPtr, int i);
+  std::string GetAxisStr(int i);
 };
 } // end namespace PlottingFramework
 #endif /* PlotGenerator_h */

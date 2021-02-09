@@ -34,18 +34,38 @@ inline constexpr bool str_contains(const std::string& str, const std::string& su
 template <typename T>
 struct is_vector : public std::false_type {
 };
-
 template <typename T, typename A>
 struct is_vector<std::vector<T, A>> : public std::true_type {
 };
+
+template <typename>
+struct is_tuple : std::false_type {
+};
+template <typename... T>
+struct is_tuple<std::tuple<T...>> : std::true_type {
+};
+
+template <typename... Ts>
+string tuple_to_string(const std::tuple<Ts...>& items)
+{
+  string itemString;
+  std::apply([&](auto&&... item) { ((itemString += std::to_string(item) + ","), ...); }, items);
+  itemString.pop_back();
+  return itemString;
+}
 
 template <typename T>
 string vector_to_string(vector<T> items)
 {
   string itemString;
   for (auto& item : items) {
-    itemString += std::to_string(item);
-    if (&item != &items.back()) itemString += ",";
+    if constexpr (is_tuple<T>::value) {
+      itemString += tuple_to_string(item);
+      if (&item != &items.back()) itemString += ";";
+    } else {
+      itemString += std::to_string(item);
+      if (&item != &items.back()) itemString += ",";
+    }
   }
   return itemString;
 }
@@ -62,16 +82,38 @@ T string_to_type(const string& str)
   }
 }
 
+template <typename... Ts>
+std::tuple<Ts...> string_to_tuple(string itemString)
+{
+  // split string
+  string curItemStr;
+  std::istringstream stream(itemString);
+  string numbers[3];
+  uint8_t i = 0;
+  while (std::getline(stream, curItemStr, ',')) {
+    numbers[i] = curItemStr;
+    ++i;
+  }
+  return {string_to_type<uint8_t>(numbers[0]), string_to_type<double_t>(numbers[1]), string_to_type<double_t>(numbers[2])};
+}
+
 template <typename T>
-vector<T> string_to_vector(string itemString)
+std::vector<T> string_to_vector(string itemString)
 {
   // savety in case user put some blank spaces between numbers
   std::remove_if(itemString.begin(), itemString.end(), ::isspace);
   vector<T> items;
+
   string curItemStr;
   std::istringstream stream(itemString);
-  while (std::getline(stream, curItemStr, ',')) {
-    items.push_back(string_to_type<T>(curItemStr));
+  if constexpr (is_tuple<T>::value) {
+    while (std::getline(stream, curItemStr, ';')) {
+      items.push_back(string_to_tuple<uint8_t, double_t, double_t>(curItemStr));
+    }
+  } else {
+    while (std::getline(stream, curItemStr, ',')) {
+      items.push_back(string_to_type<T>(curItemStr));
+    }
   }
   return items;
 }

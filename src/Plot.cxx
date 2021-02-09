@@ -949,6 +949,18 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mRangeY.max, "rangeY_max");
   read_from_tree(dataTree, mContours, "contours");
   read_from_tree(dataTree, mNContours, "number_of_contours");
+
+  // ugly workaround
+  std::optional<vector<uint8_t>> dims;
+  std::optional<vector<std::tuple<uint8_t, double_t, double_t>>> ranges;
+  std::optional<bool> isUserCoord;
+  read_from_tree(dataTree, dims, "proj_dims");
+  read_from_tree(dataTree, ranges, "proj_ranges");
+  read_from_tree(dataTree, isUserCoord, "proj_isUserCoord");
+
+  if (dims) {
+    mProjInfo = {*dims, *ranges, *isUserCoord};
+  }
 }
 
 //**************************************************************************************************
@@ -985,6 +997,14 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mRangeY.max, "rangeY_max");
   put_in_tree(dataTree, mContours, "contours");
   put_in_tree(dataTree, mNContours, "number_of_contours");
+
+  // ugly workaround
+  if (mProjInfo) {
+    put_in_tree(dataTree, std::optional<vector<uint8_t>>{(*mProjInfo).dims}, "proj_dims");
+    put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{(*mProjInfo).ranges}, "proj_ranges");
+    put_in_tree(dataTree, std::optional<bool>{(*mProjInfo).isUserCoord}, "proj_isUserCoord");
+  }
+
   return dataTree;
 }
 
@@ -1198,6 +1218,51 @@ auto Plot::Pad::Data::SetContours(const int32_t nContours) -> decltype(*this)
 {
   mNContours = nContours;
   return *this;
+}
+auto Plot::Pad::Data::SetProjectionX(double_t startY, double_t endY, bool isUserCoord) -> decltype(*this)
+{
+  mProjInfo = {{0}, {{1, startY, endY}}, isUserCoord};
+  return *this;
+}
+auto Plot::Pad::Data::SetProjectionY(double_t startX, double_t endX, bool isUserCoord) -> decltype(*this)
+{
+  mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
+  return *this;
+}
+auto Plot::Pad::Data::SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, bool isUserCoord) -> decltype(*this)
+{
+  mProjInfo = {dims, ranges, isUserCoord};
+  return *this;
+}
+
+//**************************************************************************************************
+/**
+ * Name suffix encoding the details of projections.
+ */
+//**************************************************************************************************
+std::string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
+{
+  std::string nameSuffix = "_Proj{";
+  for (auto dim : dims)
+    nameSuffix += std::to_string(dim);
+  nameSuffix += "}";
+  if (!ranges.empty()) {
+    nameSuffix += "_Range";
+    for (auto range : ranges) {
+      nameSuffix += "{";
+      nameSuffix += std::to_string(std::get<0>(range)) + ":";
+      if (isUserCoord) {
+        nameSuffix += std::to_string(std::get<1>(range)) + "," + std::to_string(std::get<2>(range));
+      } else {
+        nameSuffix += std::to_string(static_cast<int>(std::get<1>(range))) + "," + std::to_string(static_cast<int>(std::get<2>(range)));
+      }
+      nameSuffix += "}";
+    }
+  }
+  if (isUserCoord) {
+    nameSuffix += "_User";
+  }
+  return nameSuffix;
 }
 
 //--------------------------------------------------------------------------------------------------

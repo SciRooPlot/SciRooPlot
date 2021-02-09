@@ -30,7 +30,7 @@ Feature Ideas:
 - fully support csv format (flexible string and delimiter)
 - add user functions and fitting (AddFunction() and AddLine())
 - add shape objects (arrows)
-- support for input types T{H,F}3, THn{Sparse} (->Projection functionality), THStack, TMultiGraph
+- support THStack, TMultiGraph
 - support for setting up TView to have a 3d representations of 2d data
 - add inclination angle setting to textboxes
 - add 'same as previous' color/marker/style feature (color = -1)?

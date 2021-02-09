@@ -377,6 +377,10 @@ public:
   virtual Data& SetContours(const vector<double>& contours);
   virtual Data& SetContours(const int32_t nContours);
 
+  virtual Data& SetProjectionX(double_t startY = 0, double_t endY = -1, bool isUserCoord = false); // for 2d histos
+  virtual Data& SetProjectionY(double_t startX = 0, double_t endX = -1, bool isUserCoord = false); // for 2d histos
+  virtual Data& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, bool isUserCoord = false);
+
 protected:
   friend class PlotManager;
   friend class PlotPainter;
@@ -411,6 +415,14 @@ protected:
   const bool& GetDefinesFrame() const { return mDefinesFrame; }
   const auto& GetContours() const { return mContours; }
   const auto& GetNContours() const { return mNContours; }
+  const auto& GetProjInfo() const { return mProjInfo; }
+
+  struct proj_info_t {
+    vector<uint8_t> dims;                                        // dimensions to project on (can be one or two)
+    std::vector<std::tuple<uint8_t, double_t, double_t>> ranges; // range restrictions on other dimensions
+    bool isUserCoord{};                                          // wether ranges are specified in user coordinates or as bins
+    std::string GetNameSuffix() const;
+  };
 
 private:
   bool mDefinesFrame;
@@ -436,6 +448,8 @@ private:
     optional<double_t> min;
     optional<double_t> max;
   };
+
+  optional<proj_info_t> mProjInfo;
 
   legend_t mLegend;
   layout_t mMarker;
@@ -501,6 +515,12 @@ public:
   Ratio& SetDefinesFrame() { return static_cast<decltype(*this)&>(Data::SetDefinesFrame()); }
   Ratio& SetContours(const vector<double>& contours) { return static_cast<decltype(*this)&>(Data::SetContours(contours)); }
   Ratio& SetContours(const int32_t nContours) { return static_cast<decltype(*this)&>(Data::SetContours(nContours)); }
+
+  Ratio& SetProjectionX(double_t startY = 0, double_t endY = -1, bool isUserCoord = false) { return static_cast<decltype(*this)&>(Data::SetProjectionX(startY, endY, isUserCoord)); }
+  Ratio& SetProjectionY(double_t startX = 0, double_t endX = -1, bool isUserCoord = false) { return static_cast<decltype(*this)&>(Data::SetProjectionY(startX, endX, isUserCoord)); }
+  Ratio& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, bool isUserCoord = false) { return static_cast<decltype(*this)&>(Data::SetProjection(dims, ranges, isUserCoord)); }
+
+  // TODO: add projection features for denominator as well
 
 protected:
   friend class PlotManager;

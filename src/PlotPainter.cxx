@@ -30,6 +30,8 @@
 #include "TCanvas.h"
 #include "TH1.h"
 #include "TH2.h"
+#include "TH3.h"
+#include "THn.h"
 #include "TProfile.h"
 #include "TProfile2D.h"
 #include "TGraph.h"
@@ -552,7 +554,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         drawingOptions = "SAME "; // next data should be drawn to same pad
       };
 
-      optional<data_ptr_t> rawData = GetDataClone(dataBuffer.at(data->GetInputID()).at(data->GetName()).get());
+      optional<data_ptr_t> rawData = GetDataClone(dataBuffer.at(data->GetInputID()).at(data->GetName()).get(), data->GetProjInfo());
       if (rawData) {
         std::visit(processData, *rawData);
       } else {
@@ -935,9 +937,36 @@ TPave* PlotPainter::GenerateBox(
 
 //**************************************************************************************************
 /**
- * Function to retrieve a copy of the stored data properly casted it to its actual ROOT type.
+ * Functions to retrieve a copy or projection of the stored data properly casted it to its actual ROOT type.
  */
 //**************************************************************************************************
+optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const std::optional<Plot::Pad::Data::proj_info_t>& projInfo)
+{
+  if (obj) {
+    if (projInfo) {
+      bool addDirStatus = TH1::AddDirectoryStatus();
+      TH1::AddDirectory(false);
+      string name = ((TNamed*)obj)->GetName();
+      name += projInfo->GetNameSuffix();
+      if (auto returnPointer = GetProjection(obj, *projInfo)) {
+        std::visit([&name](auto&& ptr) { ptr->SetName(name.data()); }, *returnPointer);
+        TH1::AddDirectory(addDirStatus);
+        return returnPointer;
+      } else {
+        ERROR(R"(Projection failed for "{}".)", ((TNamed*)obj)->GetName());
+      }
+    } else {
+      // TProfile2D is TH2, TH2 is TH1, TProfile is TH1
+      if (auto returnPointer = GetDataClone<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1>(obj)) {
+        return returnPointer;
+      } else {
+        ERROR(R"(Input data "{}" is of unsupported type {}.)", ((TNamed*)obj)->GetName(), obj->ClassName());
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 template <typename T>
 optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
 {
@@ -946,23 +975,123 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
   }
   return std::nullopt;
 }
+
 template <typename T, typename Next, typename... Rest>
 optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
 {
   if (auto returnPointer = GetDataClone<T>(obj)) return returnPointer;
   return GetDataClone<Next, Rest...>(obj);
 }
-optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
+
+optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::proj_info_t projInfo)
 {
-  if (obj) {
-    // TProfile2D is TH2, TH2 is TH1, TProfile is TH1
-    if (auto returnPointer = GetDataClone<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1>(obj)) {
-      return returnPointer;
-    } else {
-      ERROR(R"(Input data "{}" is of unsupported type {}.)", ((TNamed*)obj)->GetName(), obj->ClassName());
+  // only 1d and 2d histograms are valid outputs! (could be extended to 3d if there is a way to plot this)
+  if (projInfo.dims.size() == 0 || projInfo.dims.size() > 2) {
+    ERROR(R"(Invalid number of dimensions specified for projection of histogram "{}")", ((TNamed*)obj)->GetName());
+    return std::nullopt;
+  }
+
+  if (obj->InheritsFrom(THnBase::Class())) {
+    THnBase* histPtr = (THnBase*)obj;
+    // first reset all ranges in case this histogram was previously used
+    for (int i = 0; i < histPtr->GetNdimensions(); ++i) {
+      histPtr->GetAxis(i)->SetRange();
     }
+    for (auto rangeTuple : projInfo.ranges) {
+      int rangeDim = std::get<0>(rangeTuple);
+      if (rangeDim >= histPtr->GetNdimensions()) {
+        ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", ((TNamed*)obj)->GetName());
+        return std::nullopt;
+      }
+      int minBin = (projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
+      int maxBin = (projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
+      histPtr->GetAxis(rangeDim)->SetRange(minBin, maxBin);
+    }
+    if (projInfo.dims.size() == 2) {
+      return histPtr->Projection(projInfo.dims[1], projInfo.dims[0]);
+    } else if (projInfo.dims.size() == 1) {
+      return histPtr->Projection(projInfo.dims[0]);
+    }
+  } else if (obj->InheritsFrom(TH3::Class())) {
+    TH3* histPtr = (TH3*)obj;
+    // first reset all ranges in case this histogram was previously used
+    for (int i = 0; i < 3; ++i) {
+      GetAxis(histPtr, i)->SetRange();
+    }
+    for (auto rangeTuple : projInfo.ranges) {
+      int rangeDim = std::get<0>(rangeTuple);
+      if (rangeDim >= 3) {
+        ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", ((TNamed*)obj)->GetName());
+        return std::nullopt;
+      }
+      int minBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
+      int maxBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
+      GetAxis(histPtr, rangeDim)->SetRange(minBin, maxBin);
+    }
+    if (projInfo.dims.size() == 2) {
+      // get string if it is "xy" or "yx" or "zx"...
+      return histPtr->Project3D((GetAxisStr(projInfo.dims[1]) + GetAxisStr(projInfo.dims[0])).data());
+    } else if (projInfo.dims.size() == 1) {
+      return histPtr->Project3D(GetAxisStr(projInfo.dims[0]).data());
+    }
+  } else if (obj->InheritsFrom(TH2::Class())) {
+    TH2* histPtr = (TH2*)obj;
+    if (projInfo.dims.size() > 1) {
+      ERROR(R"(Invalid dimension specified for projecting histogram "{}")", ((TNamed*)obj)->GetName());
+      return std::nullopt;
+    }
+    int minBin = 0;
+    int maxBin = -1;
+
+    for (auto rangeTuple : projInfo.ranges) {
+      int rangeDim = std::get<0>(rangeTuple);
+      if (rangeDim >= 2) {
+        ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", ((TNamed*)obj)->GetName());
+        return std::nullopt;
+      }
+      minBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
+      maxBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
+    }
+    if (projInfo.dims[0] == 0) {
+      return histPtr->ProjectionX("_px", minBin, maxBin);
+    } else if (projInfo.dims[0] == 1) {
+      return histPtr->ProjectionY("_py", minBin, maxBin);
+    } else {
+      ERROR(R"(Invalid dimension specified for projection from "{}" ({}).)", ((TNamed*)obj)->GetName(), obj->ClassName());
+    }
+  } else {
+    ERROR(R"(Cannot do projections for type {} ("{}").)", obj->ClassName(), ((TNamed*)obj)->GetName());
   }
   return std::nullopt;
+}
+
+template <typename T>
+TAxis* PlotPainter::GetAxis(T* histPtr, int i)
+{
+  switch (i) {
+    case 0:
+      return histPtr->GetXaxis();
+    case 1:
+      return histPtr->GetYaxis();
+    case 2:
+      return histPtr->GetZaxis();
+    default:
+      return nullptr;
+  }
+}
+
+std::string PlotPainter::GetAxisStr(int i)
+{
+  switch (i) {
+    case 0:
+      return "x";
+    case 1:
+      return "y";
+    case 2:
+      return "z";
+    default:
+      return "";
+  }
 }
 
 //**************************************************************************************************
