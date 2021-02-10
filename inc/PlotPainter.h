@@ -131,6 +131,8 @@ private:
   template <typename T>
   TAxis* GetAxis(T* histPtr, int i);
   std::string GetAxisStr(int i);
+
+  vector<int16_t> GenerateGradientColors(int nColors, const vector<vector<float>>& rgbEndpoints, float_t alpha = 1.);
 };
 } // end namespace PlottingFramework
 #endif /* PlotGenerator_h */

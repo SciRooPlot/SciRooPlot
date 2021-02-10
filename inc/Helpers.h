@@ -151,8 +151,8 @@ void read_from_tree(const ptree& tree, optional<T>& var, const string& lable)
 template <typename T>
 optional<T> pick(int i, const optional<vector<T>>& vec)
 {
-  if (!vec) return std::nullopt;
-  return optional((*vec)[(i - 1) % (*vec).size()]);
+  if (!vec || vec->empty()) return std::nullopt;
+  return optional((*vec)[(i - 1) % vec->size()]);
 }
 
 template <typename T, typename... Ts>

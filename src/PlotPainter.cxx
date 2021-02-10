@@ -63,6 +63,32 @@
 namespace PlottingFramework
 {
 
+vector<int16_t> PlotPainter::GenerateGradientColors(int nColors, const vector<vector<float>>& rgbEndpoints, float_t alpha)
+{
+  uint16_t nPoints = rgbEndpoints.size();
+
+  vector<double_t> red;
+  vector<double_t> green;
+  vector<double_t> blue;
+  vector<double_t> stops;
+
+  for (auto& rgb : rgbEndpoints) {
+    if (rgb.size() != 4) {
+      ERROR("Gradient colors not specified correctly!");
+      throw;
+    }
+    red.push_back(rgb[0]);
+    green.push_back(rgb[1]);
+    blue.push_back(rgb[2]);
+    stops.push_back(rgb[3]);
+  }
+  int16_t firstColorIndex = TColor::CreateGradientColorTable(nPoints, stops.data(), red.data(), green.data(), blue.data(), nColors, alpha);
+
+  std::vector<int16_t> gradientColors(nColors);
+  std::generate(gradientColors.begin(), gradientColors.end(), [colorIndex = firstColorIndex]() mutable { return colorIndex++; });
+  return gradientColors;
+}
+
 //**************************************************************************************************
 /**
  * Function to generate the plot.
@@ -124,6 +150,13 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto frameLineStyle = get_first(pad.GetLineStyleFrame(), padDefaults.GetLineStyleFrame())) pad_ptr->SetFrameLineStyle(*frameLineStyle);
     if (auto frameLineWidth = get_first(pad.GetLineWidthFrame(), padDefaults.GetLineWidthFrame())) pad_ptr->SetFrameLineWidth(*frameLineWidth);
     if (auto palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) gStyle->SetPalette(*palette);
+
+    optional<vector<int16_t>> padColorGradient{};
+    if (false) { // TODO: propagate these settings from the user interface
+      int nColors = 20;
+      vector<vector<float_t>> rgbEndpoints = {{1., 0., 0., 0.}, {0., 1., 0., 1.}};
+      padColorGradient = std::optional<vector<int16_t>>(GenerateGradientColors(nColors, rgbEndpoints));
+    }
 
     pad_ptr->SetNumber(padID);
     pad_ptr->Draw();
@@ -448,7 +481,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // define data appearance
           if (auto markerColor = get_first(data->GetMarkerColor(),
                                            pick(dataIndex, pad.GetDefaultMarkerColors()),
-                                           pick(dataIndex, padDefaults.GetDefaultMarkerColors()))) {
+                                           pick(dataIndex, padDefaults.GetDefaultMarkerColors()),
+                                           pick(dataIndex, padColorGradient))) {
             data_ptr->SetMarkerColor(*markerColor);
           }
           if (auto markerStyle = get_first(data->GetMarkerStyle(),
@@ -463,7 +497,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           if (auto lineColor = get_first(data->GetLineColor(),
                                          pick(dataIndex, pad.GetDefaultLineColors()),
-                                         pick(dataIndex, padDefaults.GetDefaultLineColors()))) {
+                                         pick(dataIndex, padDefaults.GetDefaultLineColors()),
+                                         pick(dataIndex, padColorGradient))) {
             data_ptr->SetLineColor(*lineColor);
           }
           if (auto lineStyle = get_first(data->GetLineStyle(),
@@ -478,7 +513,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           if (auto fillColor = get_first(data->GetFillColor(),
                                          pick(dataIndex, pad.GetDefaultFillColors()),
-                                         pick(dataIndex, padDefaults.GetDefaultFillColors()))) {
+                                         pick(dataIndex, padDefaults.GetDefaultFillColors()),
+                                         pick(dataIndex, padColorGradient))) {
             data_ptr->SetFillColor(*fillColor);
           }
           if (auto fillStyle = get_first(data->GetFillStyle(),
