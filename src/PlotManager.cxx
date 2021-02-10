@@ -518,14 +518,20 @@ bool PlotManager::FillBuffer()
           string prefix = (pathStr.empty()) ? "" : pathStr + "/";
           string suffix = gNameGroupSeparator + inputID;
           ReadData(subfolder, names, prefix, suffix, inputID);
-
-          if (subfolder != &inputFile) {
+          // in case a subdrectory was opened, properly delete it
+          if (!path.empty() && subfolder != &inputFile) {
             delete subfolder;
             subfolder = nullptr;
           }
         }
         if (names.empty()) emptySubDirs.push_back(pathStr);
       }
+      // finally also remove top level folder
+      if (folder != &inputFile) {
+        delete folder;
+        folder = nullptr;
+      }
+
       for (auto& pathStr : emptySubDirs) {
         requiredData.erase(pathStr);
       }
@@ -614,12 +620,14 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
   }
   itemList->SetOwner();
 
-  TIter iterator = itemList->begin();
-  TObject* obj{};
-  bool deleteObject;
-  bool removeFromList;
+  // first match should always be the one in current level; traverse deeper only if not found
+  for (bool traverse : {false, true}) {
 
-  for(bool goDeeper : {false, true}){ // always first check current level before going more deeply into the dir structure
+    TIter iterator = itemList->begin();
+    TObject* obj{};
+    bool deleteObject;
+    bool removeFromList;
+
     while (iterator != itemList->end()) {
       obj = *iterator;
       deleteObject = true;
@@ -631,7 +639,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
         string keyName = ((TKey*)obj)->GetName();
 
         bool isTraversable = className.find("TDirectory") != string::npos || className.find("TFolder") != string::npos || className.find("TList") != string::npos || className.find("TObjArray") != string::npos;
-        if (isTraversable || std::find(dataNames.begin(), dataNames.end(), keyName) != dataNames.end()) {
+        if ((traverse && isTraversable) || std::find(dataNames.begin(), dataNames.end(), keyName) != dataNames.end()) {
           obj = ((TKey*)obj)->ReadObj();
           removeFromList = false;
         } else {
@@ -640,13 +648,12 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
         }
       }
 
-      // in case this object is directory or list, repeat the same for this substructure FIXME: do this only if object is not found in current level!
-      if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection")) {
-        if(goDeeper) ReadData(obj, dataNames, prefix, suffix, inputID);
+      // in case this object is directory or list, repeat the same for this substructure
+      if (traverse && (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection"))) {
+        ReadData(obj, dataNames, prefix, suffix, inputID);
       } else {
         auto it = std::find(dataNames.begin(), dataNames.end(), ((TNamed*)obj)->GetName());
         if (it != dataNames.end()) {
-          // TODO: select here that only known root input types are beeing processed
           if (obj->InheritsFrom("TH1")) ((TH1*)obj)->SetDirectory(0); // demand ownership for histogram
           // re-name data
           string fullName = prefix + ((TNamed*)obj)->GetName();
