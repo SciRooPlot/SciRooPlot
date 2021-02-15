@@ -276,7 +276,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           };
 
           auto data_denom = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          auto rawDenomData = GetDataClone(dataBuffer.at(data_denom->GetDenomIdentifier()).at(data_denom->GetDenomName()).get());
+          auto rawDenomData = GetDataClone(dataBuffer.at(data_denom->GetDenomIdentifier()).at(data_denom->GetDenomName()).get(), data_denom->GetProjInfoDenom());
 
           if (rawDenomData) {
             std::visit(processDenominator, *rawDenomData);

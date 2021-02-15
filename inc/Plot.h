@@ -520,7 +520,9 @@ public:
   Ratio& SetProjectionY(double_t startX = 0, double_t endX = -1, bool isUserCoord = false) { return static_cast<decltype(*this)&>(Data::SetProjectionY(startX, endX, isUserCoord)); }
   Ratio& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, bool isUserCoord = false) { return static_cast<decltype(*this)&>(Data::SetProjection(dims, ranges, isUserCoord)); }
 
-  // TODO: add projection features for denominator as well
+  Ratio& SetProjectionXDenom(double_t startY = 0, double_t endY = -1, bool isUserCoord = false);
+  Ratio& SetProjectionYDenom(double_t startX = 0, double_t endX = -1, bool isUserCoord = false);
+  Ratio& SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, bool isUserCoord = false);
 
 protected:
   friend class PlotManager;
@@ -534,11 +536,13 @@ protected:
   const auto& GetDenomName() const { return mDenomName; }
 
   const bool& GetIsCorrelated() const { return mIsCorrelated; }
+  const auto& GetProjInfoDenom() const { return mProjInfoDenom; }
 
 private:
   string mDenomName;
   string mDenomInputIdentifier;
   bool mIsCorrelated;
+  optional<proj_info_t> mProjInfoDenom;
 };
 
 //**************************************************************************************************

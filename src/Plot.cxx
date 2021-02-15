@@ -1298,6 +1298,19 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   } catch (...) {
     ERROR("Could not construct ratio from ptree.");
   }
+  
+  // ugly workaround
+  std::optional<vector<uint8_t>> dims;
+  std::optional<vector<std::tuple<uint8_t, double_t, double_t>>> ranges;
+  std::optional<bool> isUserCoord;
+  read_from_tree(dataTree, dims, "projDenom_dims");
+  read_from_tree(dataTree, ranges, "projDenom_ranges");
+  read_from_tree(dataTree, isUserCoord, "projDenom_isUserCoord");
+
+  if (dims) {
+    mProjInfoDenom = {*dims, *ranges, *isUserCoord};
+  }
+
 }
 
 //**************************************************************************************************
@@ -1311,6 +1324,14 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
   dataTree.put("denomName", mDenomName);
   dataTree.put("denomInputID", mDenomInputIdentifier);
   dataTree.put("isCorrelated", mIsCorrelated);
+  
+  // ugly workaround
+  if (mProjInfo) {
+    put_in_tree(dataTree, std::optional<vector<uint8_t>>{(*mProjInfoDenom).dims}, "projDenom_dims");
+    put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{(*mProjInfoDenom).ranges}, "projDenom_ranges");
+    put_in_tree(dataTree, std::optional<bool>{(*mProjInfoDenom).isUserCoord}, "projDenom_isUserCoord");
+  }
+  
   return dataTree;
 }
 
@@ -1324,6 +1345,23 @@ auto Plot::Pad::Ratio::SetIsCorrelated(bool isCorrelated) -> decltype(*this)
   mIsCorrelated = isCorrelated;
   return *this;
 }
+
+auto Plot::Pad::Ratio::SetProjectionXDenom(double_t startY, double_t endY, bool isUserCoord) -> decltype(*this)
+{
+  mProjInfoDenom = {{0}, {{1, startY, endY}}, isUserCoord};
+  return *this;
+}
+auto Plot::Pad::Ratio::SetProjectionYDenom(double_t startX, double_t endX, bool isUserCoord) -> decltype(*this)
+{
+  mProjInfoDenom = {{1}, {{0, startX, endX}}, isUserCoord};
+  return *this;
+}
+auto Plot::Pad::Ratio::SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, bool isUserCoord) -> decltype(*this)
+{
+  mProjInfoDenom = {dims, ranges, isUserCoord};
+  return *this;
+}
+
 
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
