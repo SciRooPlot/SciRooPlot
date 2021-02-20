@@ -213,9 +213,9 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (!defaultDrawingOption)
               defaultDrawingOption = (pad.GetDefaultDrawingOptionHist())
                                        ? pad.GetDefaultDrawingOptionHist()
-                                       : (padDefaults.GetDefaultDrawingOptionHist())
-                                           ? padDefaults.GetDefaultDrawingOptionHist()
-                                           : std::nullopt;
+                                     : (padDefaults.GetDefaultDrawingOptionHist())
+                                       ? padDefaults.GetDefaultDrawingOptionHist()
+                                       : std::nullopt;
 
             if (defaultDrawingOption && defaultDrawingOpions_Hist.find(*defaultDrawingOption) != defaultDrawingOpions_Hist.end()) {
               drawingOptions += defaultDrawingOpions_Hist.at(*defaultDrawingOption);
@@ -224,9 +224,9 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (!defaultDrawingOption)
               defaultDrawingOption = (pad.GetDefaultDrawingOptionGraph())
                                        ? pad.GetDefaultDrawingOptionGraph()
-                                       : (padDefaults.GetDefaultDrawingOptionGraph())
-                                           ? padDefaults.GetDefaultDrawingOptionGraph()
-                                           : std::nullopt;
+                                     : (padDefaults.GetDefaultDrawingOptionGraph())
+                                       ? padDefaults.GetDefaultDrawingOptionGraph()
+                                       : std::nullopt;
 
             if (defaultDrawingOption && defaultDrawingOpions_Graph.find(*defaultDrawingOption) != defaultDrawingOpions_Graph.end()) {
               drawingOptions += defaultDrawingOpions_Graph.at(*defaultDrawingOption);
@@ -894,11 +894,11 @@ TPave* PlotPainter::GenerateBox(
           else
             curEntry->SetLineColor(lineAttr.GetLineColor());
           if (box->GetDefaultLineStyle())
-            curEntry->SetLineColor(*box->GetDefaultLineStyle());
+            curEntry->SetLineStyle(*box->GetDefaultLineStyle());
           else
             curEntry->SetLineStyle(lineAttr.GetLineStyle());
           if (box->GetDefaultLineWidth())
-            curEntry->SetLineColor(*box->GetDefaultLineWidth());
+            curEntry->SetLineWidth(*box->GetDefaultLineWidth());
           else
             curEntry->SetLineWidth(lineAttr.GetLineWidth());
 
