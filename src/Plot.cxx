@@ -1282,6 +1282,14 @@ Plot::Pad::Ratio::Ratio(const string& name, const string& inputIdentifier, const
     mDenomInputIdentifier(denomInputIdentifier), mIsCorrelated(false)
 {
   SetType("ratio");
+
+  // in case denominator input was specified further via denomInputIdentifier:some/path/in/file
+  auto subPathPos = denomInputIdentifier.find(":");
+  if (subPathPos != string::npos) {
+    // prepend path to plot name
+    mDenomName = denomInputIdentifier.substr(subPathPos + 1) + "/" + denomName;
+    mDenomInputIdentifier = denomInputIdentifier.substr(0, subPathPos);
+  }
 }
 
 //**************************************************************************************************
@@ -1298,7 +1306,7 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   } catch (...) {
     ERROR("Could not construct ratio from ptree.");
   }
-  
+
   // ugly workaround
   std::optional<vector<uint8_t>> dims;
   std::optional<vector<std::tuple<uint8_t, double_t, double_t>>> ranges;
@@ -1310,7 +1318,6 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   if (dims) {
     mProjInfoDenom = {*dims, *ranges, *isUserCoord};
   }
-
 }
 
 //**************************************************************************************************
@@ -1324,14 +1331,14 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
   dataTree.put("denomName", mDenomName);
   dataTree.put("denomInputID", mDenomInputIdentifier);
   dataTree.put("isCorrelated", mIsCorrelated);
-  
+
   // ugly workaround
   if (mProjInfo) {
     put_in_tree(dataTree, std::optional<vector<uint8_t>>{(*mProjInfoDenom).dims}, "projDenom_dims");
     put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{(*mProjInfoDenom).ranges}, "projDenom_ranges");
     put_in_tree(dataTree, std::optional<bool>{(*mProjInfoDenom).isUserCoord}, "projDenom_isUserCoord");
   }
-  
+
   return dataTree;
 }
 
@@ -1361,7 +1368,6 @@ auto Plot::Pad::Ratio::SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uin
   mProjInfoDenom = {dims, ranges, isUserCoord};
   return *this;
 }
-
 
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
