@@ -5,6 +5,13 @@
 - divisions should have this reflected in their internal name
 - always call sumw2 before drawing otherwise drawing as points will not show anything
 - would be nice if in interactive mode showprojx and y would work for 2d histos
+- make color gradients work
+
+
+bug:
+- "multDensityUnfolded_Syst" fails -> "multDensityUnfolded/multDensityUnfolded_Syst" returns somehow wrong pointers??
+    I must have broken this with the recent changes!
+
 
 Box Features:
 - add default-boxes (legend and text) that will be baseline for all boxes of this pad
@@ -23,6 +30,7 @@ Box Features:
 - might be useful to specify size of boxes
 
 Feature Ideas:
+- one would probably want to be able to place legends and texts also in a different pad (or anywhere on the canvas)
 - add support for add/subtract + pulls? / generic binary operator thing
 - generic algorithm to automatically determine optimal axis offsets + avoid overlap with lables
 - revisit idea of axis linking between pads

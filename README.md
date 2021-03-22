@@ -1,17 +1,10 @@
 Rationale
 ---------
-This piece of software is ment to simplify plotting of ROOT data by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
-If you have already worked with ROOT, you probably ask yourself:
-> We already have ROOT and it is perfectly fine as it is. I have learned to master it over the years and all my macros work just fine. Why do I need this additional Plotting Framework? Why should I learn to use yet another library interface?
+This program is ment to simplify plotting by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
+It implements all the necesarry technical functionality (like opening files, finding and managing input data, applying layouts, etc...) while providing a very simple interface to the user.
+This allows to create beautyful plots very fast and helps to avoid redundant plotting-realted user code.
 
-Well, when it comes to plotting there is a tendency to largely violate one basic guiding principle in software development: do not repeat yourself.
-Even though data representation is a very important aspect of data science, there seems to be no generic easy-access solution to quickly make presentable plots with a somewhat streamlined interface that abstracts away all the complicated technical details that come with the broad ROOT functionallity.
-Everybody has his own set of plotting macros, usually tailored only for a few use cases.
-This introduces a large amount of redundant code and becomes a nightmare to maintain when one handles a lot of input data from different sources and many plots in which these different input data have to converge.
-In every plotting macro plenty of lines of code are spent on opening files, reading the desired data from file and then applying the desired layout.
-The goal of this project is to handle all of these rather technical steps automatically and provide the user with a more abstract interface to define his plots.
-
-Everybody is welcome to use this framework, report bugs or contribute new features.
+Everybody is welcome to use this software, report bugs or contribute new features.
 
 Prerequisites
 -------------
