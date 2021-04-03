@@ -377,7 +377,7 @@ plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {"invMass
 plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {}, "find");
 
 // the main reasoning behind the "dump-to-file" feature is that you can then
-// make use the builtin commandline plotting tool, which can conveniently
+// make use of the builtin commandline plotting tool, which can conveniently
 // create specific plots you defined and saved to file (see next section)
 ```
 

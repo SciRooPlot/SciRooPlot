@@ -91,6 +91,7 @@ const map<drawing_options_t, string> defaultDrawingOpions_Graph{
   {area, "X CF"},
   {area_line, "X LC"},
   {boxes_only, "2"},
+  {brackets, "[]"},
 };
 
 //**************************************************************************************************
