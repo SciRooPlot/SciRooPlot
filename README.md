@@ -1,8 +1,6 @@
 Rationale
 ---------
-This program is ment to simplify plotting by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
-It implements all the necesarry technical functionality (like opening files, finding and managing input data, applying layouts, etc...) while providing a very simple interface to the user.
-This allows to create beautyful plots very fast and helps to avoid redundant plotting-related user code.
+This program aims to simplify plotting by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
 
 Everybody is welcome to use this software, report bugs or contribute new features.
 

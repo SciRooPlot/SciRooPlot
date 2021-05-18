@@ -7,7 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # The following two lines can be used to force using one specific root installation (comment out if not needed)
 set(ROOTSYS ~/root/mybuild)
-#set(ROOTSYS /Users/mkrueger/alice/sw/osx_x86-64/ROOT/v6-20-02-alice7-2)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
 
 project(PlottingFramework CXX)
