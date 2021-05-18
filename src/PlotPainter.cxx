@@ -22,6 +22,7 @@
 
 // std dependencies
 #include <regex>
+#include <numeric>
 
 // root dependencies
 #include "TROOT.h"
@@ -85,7 +86,7 @@ vector<int16_t> PlotPainter::GenerateGradientColors(int nColors, const vector<ve
   int16_t firstColorIndex = TColor::CreateGradientColorTable(nPoints, stops.data(), red.data(), green.data(), blue.data(), nColors, alpha);
 
   std::vector<int16_t> gradientColors(nColors);
-  std::generate(gradientColors.begin(), gradientColors.end(), [colorIndex = firstColorIndex]() mutable { return colorIndex++; });
+  std::iota(gradientColors.begin(), gradientColors.end(), firstColorIndex);
   return gradientColors;
 }
 
@@ -152,9 +153,14 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) gStyle->SetPalette(*palette);
 
     optional<vector<int16_t>> padColorGradient{};
-    if (false) { // TODO: propagate these settings from the user interface
-      int nColors = 20;
-      vector<vector<float_t>> rgbEndpoints = {{1., 0., 0., 0.}, {0., 1., 0., 1.}};
+    if (true) {         // TODO: propagate these settings from the user interface
+      int nColors = 60; //dataBuffer.size();
+      vector<vector<float_t>> rgbEndpoints = {
+        {0., 0., 1., 0.},   // blue
+        {0., 1., 1., 0.25}, // cyan
+        {0., 1., 0., 0.50}, // green
+        {1., 1., 0., 0.75}, // yellow
+        {1., 0., 0., 1.}};  // red
       padColorGradient = std::optional<vector<int16_t>>(GenerateGradientColors(nColors, rgbEndpoints));
     }
 
