@@ -64,32 +64,6 @@
 namespace PlottingFramework
 {
 
-vector<int16_t> PlotPainter::GenerateGradientColors(int nColors, const vector<vector<float>>& rgbEndpoints, float_t alpha)
-{
-  uint16_t nPoints = rgbEndpoints.size();
-
-  vector<double_t> red;
-  vector<double_t> green;
-  vector<double_t> blue;
-  vector<double_t> stops;
-
-  for (auto& rgb : rgbEndpoints) {
-    if (rgb.size() != 4) {
-      ERROR("Gradient colors not specified correctly!");
-      throw;
-    }
-    red.push_back(rgb[0]);
-    green.push_back(rgb[1]);
-    blue.push_back(rgb[2]);
-    stops.push_back(rgb[3]);
-  }
-  int16_t firstColorIndex = TColor::CreateGradientColorTable(nPoints, stops.data(), red.data(), green.data(), blue.data(), nColors, alpha);
-
-  std::vector<int16_t> gradientColors(nColors);
-  std::iota(gradientColors.begin(), gradientColors.end(), firstColorIndex);
-  return gradientColors;
-}
-
 //**************************************************************************************************
 /**
  * Function to generate the plot.
@@ -153,7 +127,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) gStyle->SetPalette(*palette);
 
     optional<vector<int16_t>> padColorGradient{};
-    if (true) {         // TODO: propagate these settings from the user interface
+    if (false) {        // TODO: propagate these settings from the user interface
       int nColors = 60; //dataBuffer.size();
       vector<vector<float_t>> rgbEndpoints = {
         {0., 0., 1., 0.},   // blue
@@ -1438,4 +1412,36 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     str.replace(str.find(match_str), string(match_str).size(), replace_str);
   }
 }
+
+//**************************************************************************************************
+/**
+ * Helper to generate nColors between specified rgb endpoints.
+ */
+//**************************************************************************************************
+vector<int16_t> PlotPainter::GenerateGradientColors(int nColors, const vector<vector<float>>& rgbEndpoints, float_t alpha)
+{
+  uint16_t nPoints = rgbEndpoints.size();
+
+  vector<double_t> red;
+  vector<double_t> green;
+  vector<double_t> blue;
+  vector<double_t> stops;
+
+  for (auto& rgb : rgbEndpoints) {
+    if (rgb.size() != 4) {
+      ERROR("Gradient colors not specified correctly!");
+      throw;
+    }
+    red.push_back(rgb[0]);
+    green.push_back(rgb[1]);
+    blue.push_back(rgb[2]);
+    stops.push_back(rgb[3]);
+  }
+  int16_t firstColorIndex = TColor::CreateGradientColorTable(nPoints, stops.data(), red.data(), green.data(), blue.data(), nColors, alpha);
+
+  std::vector<int16_t> gradientColors(nColors);
+  std::iota(gradientColors.begin(), gradientColors.end(), firstColorIndex);
+  return gradientColors;
+}
+
 } // end namespace PlottingFramework
