@@ -26,7 +26,7 @@ string expand_path(const string& path);
 vector<string> split_string(const string& argString, char delimiter);
 bool file_exists(const std::string& name);
 
-inline constexpr bool str_contains(const std::string& str, const std::string& substr)
+inline bool str_contains(const std::string& str, const std::string& substr)
 {
   return (str.find(substr) != string::npos);
 }
