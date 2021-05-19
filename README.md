@@ -14,6 +14,27 @@ The Plotting Framework depends on the following external software which you need
 - boost >= 1.72
 - ROOT  >= 6.16
 
+Important note when using the gcc compiler (linux users):
+
+Since this project relies on cxx17 and ROOT has some compatibility issue when software using a different cxx standard is linked to it (see [here](https://root.cern/manual/integrate_root_into_my_cmake_project/)
+), it is necessary that your ROOT installation was also compiled with cxx17.
+You will spot this problem when you try to compile the framework and see errors such as
+`error: conflicting declaration of template ‘template<class _CharT, class _Traits> using basic_string_view = std::experimental::__ROOT::basic_string_view<_CharT, _Traits>’
+using basic_string_view = ::std::experimental::basic_string_view<_CharT,_Traits>;`
+
+This problem does not appear for mac users with usually use the clang compiler.
+In order to fix it, you can simply compile the ROOT software as follows:
+```console
+cd ~
+git clone https://github.com/root-project/root
+cd root
+mkdir mybuild
+cd mybuild
+cmake -DCMAKE_CXX_STANDARD=17 ..
+make
+```
+In case you dont install ROOT into `~/root/mybuild` you will need to adapt line `set(ROOTSYS ~/root/mybuild)` in the CmakeList.txt of this project accordingly.
+
 Using the Framework
 --------------------
 In order to use the framework, first you need to compile the library in the follwoing way:

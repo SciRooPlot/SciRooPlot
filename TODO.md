@@ -22,6 +22,7 @@ Box Features:
 - might be useful to specify size of boxes
 
 Feature Ideas:
+- possibility to read in whole folder of root files instead of specifying all separately
 - one would probably want to be able to place legends and texts also in a different pad (or anywhere on the canvas)
 - add support for add/subtract + pulls? / generic binary operator thing
 - generic algorithm to automatically determine optimal axis offsets + avoid overlap with lables
