@@ -51,13 +51,13 @@ In case you have doxygen installed, you can also generate a documenation from th
 
 After building the library, you can write your own individual plotting programs and link them against the PlotttingFramework.
 As a starting point you can copy the `example` folder to some location on your computer and follow the instructions provided in `CreatePlots.cxx`.
-This example should work out of the box, but it requires to know where the Plotting Framework library is located.
+This example should work out of the box, but it requires to know where the PlottingFramework library is located.
 The easisest way to define this is by putting the following line in your .bashrc or .bash_aliases:
 ```
-    source /path/to/repository/plottingframework/.plotrc
+    source /path/to/PlottingFramework/.plotrc
 ```
 
-The PlotManager is the pivot point of the Plotting Framework. In your application you will have to
+The PlotManager is the pivot point of the PlottingFramework. In your application you will have to
 ```cpp
     #include "PlotManager.h"
 ```
@@ -161,7 +161,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 
   // to modify the axis titles, offsets, ranges, etc of a pad, just do the following
   plot[1]['Y'].SetTitle("my y axis tilte with meaning");
-  plot[1]['X'].SetRange(1.4, 2.8).SetTitle("what i am showing on x axis").SetLog();
+  plot[1]['X'].SetRange(1.4, 2.8).SetTitle("what I am showing on x axis").SetLog();
   plot[1]['X'].SetMaxRange(5.);
   // a full list of axis property accessors can be found in the Axis class definition in inc/Plot.h
 
@@ -187,8 +187,8 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   plot[1].AddData("folder1/histName2", "inputGroupA", "myLable2");
   //...
 
-  // now I want to have exact same plot, but with some additional data points
-  // this can be helpful to avoid useless code duplication
+  // now we want to have exact same plot, but with some additional data points
+  // this can be helpful to avoid code duplication
   Plot plot2(plot, "myPlot2", "myPlotGroup2");
   plot2[1].AddData("graphName1", "inputGroupB", "more data");
 
@@ -400,7 +400,7 @@ plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {}, "find
 
 Using the App
 -------------
-The Plotting Framework ships with a builtin plotting application that enables you to quickly create plots from previously saved plot definitions.
+The PlottingFramework ships with a builtin plotting application that enables you to quickly create plots from previously saved plot definitions.
 To use this app you need to:
 - source the `.plotrc` script in the main directory of the repository
 - place both the `inputFilesConfig.XML` and `plotDefinitions.XML` (names have to be like this for now) produced by your program in some central config folder
