@@ -306,13 +306,11 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
     ERROR(R"(Plot "{}" was already created. Replacing it.)", plot.GetUniqueName());
     mPlotLedger.erase(plot.GetUniqueName());
   }
-
   if (plot.GetFigureGroup() == "") {
     ERROR("No figure group was specified.");
     return false;
   }
-
-  if (outputMode.find("file") != string::npos) {
+  if (outputMode == "file") {
     mSaveToRootFile = true;
   }
   Plot fullPlot = plot;
@@ -333,7 +331,7 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
   LOG("Created \033[1;32m{}\033[0m from group \033[1;33m{}\033[0m", fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory() != "") ? ":" + fullPlot.GetFigureCategory() : ""));
 
   // if interactive mode is specified, open window instead of saving the plot
-  if (outputMode.find("interactive") != string::npos) {
+  if (outputMode == "interactive") {
 
     mPlotLedger[plot.GetUniqueName()] = canvas;
     mPlotViewHistory.push_back(&plot.GetUniqueName());
@@ -372,19 +370,17 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
 
   const string& subFolder = plot.GetFigureCategory();
   string fileEnding = ".pdf";
-  if (outputMode.find("macro") != string::npos) {
+  if (outputMode == "macro") {
     fileEnding = ".C";
-  }
-  if (outputMode.find("png") != string::npos) {
+  } else if (outputMode == "png") {
     fileEnding = ".png";
-  }
-  if (outputMode.find("eps") != string::npos) {
+  } else if (outputMode == "eps") {
     fileEnding = ".eps";
   }
 
   string fileName = plot.GetUniqueName();
 
-  if (outputMode.find("file") != string::npos) {
+  if (outputMode == "file") {
     mPlotLedger[plot.GetUniqueName()] = canvas;
     return true;
   }
