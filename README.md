@@ -31,7 +31,7 @@ cd mybuild
 cmake -DCMAKE_CXX_STANDARD=17 ..
 make
 ```
-In case you do not want to install ROOT into `~/root/mybuild` you will need to adapt line `set(ROOTSYS ~/root/mybuild)` in the `CMakeList.txt` file of this project accordingly.
+In case you do not want to install ROOT into `~/root/mybuild` you will need to adapt line `set(ROOTSYS ~/root/mybuild)` in the `CMakeLists.txt` file of this project accordingly.
 
 Using the Framework
 --------------------
