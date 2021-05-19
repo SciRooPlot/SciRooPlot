@@ -18,6 +18,11 @@
 #define PlottingFramework_h
 
 #include <iostream>
+#include <map>
+#include <set>
+#include <variant>
+#include <cmath>
+#include <cstdint>
 #include <boost/property_tree/ptree.hpp>
 #include <unordered_map>
 
