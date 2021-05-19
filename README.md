@@ -11,7 +11,7 @@ The PlottingFramework depends on the following external software which you need 
 - c++   >= 17
 - cmake >= 3.15
 - fmt   >= 6.1.2
-- boost >= 1.72
+- boost >= 1.65
 - ROOT  >= 6.16
 
 ### Important note for linux users (gcc compiler):
