@@ -22,6 +22,7 @@
 
 // std dependencies
 #include <regex>
+#include <filesystem>
 
 // boost dependencies
 #include <boost/property_tree/xml_parser.hpp>
@@ -183,7 +184,16 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
     vector<string> allFileNames;
     allFileNames.reserve(inputPair.second.size());
     for (auto& file : inputPair.second) {
-      allFileNames.push_back(file.second.get_value<string>());
+      string fileOrDirName = expand_path(file.second.get_value<string>());
+      if (fileOrDirName.rfind(".root") != string::npos || fileOrDirName.rfind(".csv") != string::npos) {
+        allFileNames.push_back(fileOrDirName);
+      } else if (std::filesystem::is_directory(fileOrDirName)) {
+        for (auto& file : std::filesystem::recursive_directory_iterator(fileOrDirName)) {
+          if (file.path().extension() == ".root" || file.path().extension() == ".csv") {
+            allFileNames.push_back(file.path().string());
+          }
+        }
+      }
     }
     AddInputDataFiles(inputIdentifier, allFileNames);
   }

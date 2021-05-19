@@ -22,7 +22,6 @@ Box Features:
 - might be useful to specify size of boxes
 
 Feature Ideas:
-- possibility to read in whole folder of root files instead of specifying all separately
 - one would probably want to be able to place legends and texts also in a different pad (or anywhere on the canvas)
 - add support for add/subtract + pulls? / generic binary operator thing
 - generic algorithm to automatically determine optimal axis offsets + avoid overlap with lables
@@ -64,6 +63,7 @@ Structural:
 - use brace-or-equal initializers in class definitions and get rid of initializer lists
 
 Bugs:
+- apparently there is a seg fault when something with a path in the name is searched for, but no match is found on first level
 - catch 'cannot open file' exceptions from boost ptree
 - can we avoid storing figureGroup and figureCategory stored twice in the xml?
 - plot name must not contain / -> add savety mechanism
