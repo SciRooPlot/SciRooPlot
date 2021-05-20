@@ -90,6 +90,8 @@ PlotManager plotManager;
 plotManager.AddInputDataFiles("inputGroupA", {"path/to/file/a.root", "path/to/file/a2.root"});
 plotManager.AddInputDataFiles("inputGroupB", {"path/to/file/b.root", "path/to/file/b2.root", "path/to/file/b3.root:my/sub/list/or/dir/path"});
 
+// pro tip: you can also add whole directories (including their sub-directories) instead of specifying the root files directly
+
 // N.B.:
 // you can save these settings to a file via:
 plotManager.DumpInputDataFiles("path/to/inputFilesConfig.XML");
