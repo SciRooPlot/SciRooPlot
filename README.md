@@ -109,7 +109,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // you can also define default settings for ALL pads of the plot by using the padID=0, e.g.:
   plot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
   plot[0].SetDefaultMarkerSize(1.2).SetDefaultLineWidth(2.);
-  // As you can see here the user interface is designed such that each setter returns
+  // as you can see here the user interface is designed such that each setter returns
   // a reference to the object that is currently beeing modified. This allows you to concaternate
   // all the settings belonging to a pad. This design pattern is consistently used also for all
   // the other user definable objects (Data, Axis, Legends, etc.).
@@ -126,13 +126,12 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   plot[1].AddData("folder1/histName2", "inputGroupA", "myLable2");
   plot[1].AddData("folder2/histName2", "inputGroupA", "myLable3");
 
-  // by default the global coordinate system of the plot is defined by the first data that is added (equivalent how ROOT does it)
+  // by default the global coordinate system of the plot is defined by the first data that is added (equivalent to how ROOT does it)
   // however, every so often we want to plot first some data with a small range and on top of it some data with a larger range
   // while allowing the plot to show the full range of the second data
   // this can be achieved by explicity stating that the second data should be the one that defines the axis frame of the plot:
   plot[1].AddData("data2", "inputGroupA").SetDefinesFrame();
 
-  
   // it is possible to specify in the lables that you want to include some meta info of the data that is drawn, e.g.:
   plot[1].AddData("histName1", "inputGroupA", "myLable avg = <mean>");
   // possible options are: <name>, <title>, <entries>, <integral>, <maximum>, <minimum>, <mean>
@@ -202,6 +201,31 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // now add both to the manager
   plotManager.AddPlot(plot);
   plotManager.AddPlot(plot2);
+} // -----------------------------------------------------------------------
+
+// in case you are dealing with {2,3,n}-dimensional input data, it is also possible
+// to book only projections of the data for your plot
+{ // -----------------------------------------------------------------------
+  Plot plot("myProjectionsIllustration", "myPlotGroup2");
+
+  // projection of 2d data on X axis
+  plot[1].AddData("my2dhist1", "inputGroupA").SetProjectionX();
+  // projection of 2d data on X axis but with restricted Y range:
+  plot[1].AddData("my2dhist2", "inputGroupA").SetProjectionX(yBin, yBin);
+  // the same works also in user coordinates:
+  plot[1].AddData("my2dhist3", "inputGroupA").SetProjectionX(yValue, yValue, true);
+
+  // for arbitrary-dimensional data (also the 2d histograms above) you can use the more generic function
+  plot[1].AddData("myNdhist3", "inputGroupA").SetProjection({3}, { {0, 5, 10},  {1, 90, 100} });
+  // here the first argument is a vector of dimensions you want to project on
+  // for instance {2,0} would produce a projection of your n-dimensional input histogram where
+  // the third original axis will be the new x-axis and the 0th original axis will be the y axis of your plotted data
+  // with the second argument of the SetProjection() function you can specify the ranges of the other axes prior to the projection
+  // this means in the above example the axis 0 of the input data is restricted to bin 5 to 10 and axis 1 is restricted to bin 90 to 100
+  // before the histogram is projected on the axis 3
+  // also here one can provide user coordinates instead of bins by setting the  third argument of the function to 'true'
+  
+  plotManager.AddPlot(plot);
 } // -----------------------------------------------------------------------
 
 // to save the plots to disk as pdf you first have to tell the manager where to put them
