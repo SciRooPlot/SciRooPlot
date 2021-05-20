@@ -39,6 +39,7 @@
 #include "TH1.h"
 #include "TGraphErrors.h"
 #include "TFolder.h"
+#include "TPave.h"
 
 namespace PlottingFramework
 {
@@ -355,22 +356,30 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
       curYpos = mPlotLedger[*mPlotViewHistory[currPlotIndex - 1]]->GetWindowTopY();
       canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
     }
+    bool boxClicked = false;
     while (!gSystem->ProcessEvents() && gROOT->GetSelectedPad()) {
       if (canvas->GetEvent() == kButton1Double) {
-        curXpos = canvas->GetWindowTopX();
-        curYpos = canvas->GetWindowTopY();
-        TRootCanvas* canvasWindow = ((TRootCanvas*)canvas->GetCanvasImp());
-        canvasWindow->UnmapWindow();
-        bool forward{((double_t)canvas->GetEventX() / (double_t)canvas->GetWw() > 0.5)};
-        if (forward) {
-          if (currPlotIndex == mPlotViewHistory.size() - 1) break;
-          ++currPlotIndex;
+        if (auto selectedBox = dynamic_cast<TPave*>(canvas->GetSelected())) {
+          if (!boxClicked) INFO("Position of {}: ({:.3g}, {:.3g})", selectedBox->GetName(), selectedBox->GetX1NDC(), selectedBox->GetY2NDC());
+          boxClicked = true;
         } else {
-          if (currPlotIndex != 0) currPlotIndex--;
+          curXpos = canvas->GetWindowTopX();
+          curYpos = canvas->GetWindowTopY();
+          TRootCanvas* canvasWindow = ((TRootCanvas*)canvas->GetCanvasImp());
+          canvasWindow->UnmapWindow();
+          bool forward{((double_t)canvas->GetEventX() / (double_t)canvas->GetWw() > 0.5)};
+          if (forward) {
+            if (currPlotIndex == mPlotViewHistory.size() - 1) break;
+            ++currPlotIndex;
+          } else {
+            if (currPlotIndex != 0) currPlotIndex--;
+          }
+          canvas = mPlotLedger[*mPlotViewHistory[currPlotIndex]];
+          canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
+          ((TRootCanvas*)canvas->GetCanvasImp())->MapRaised();
         }
-        canvas = mPlotLedger[*mPlotViewHistory[currPlotIndex]];
-        canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
-        ((TRootCanvas*)canvas->GetCanvasImp())->MapRaised();
+      } else {
+        boxClicked = false;
       }
       gSystem->Sleep(20);
     }
