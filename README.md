@@ -1,6 +1,10 @@
 Rationale
 ---------
-This program aims to simplify plotting by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
+You may think: "Why do I need a plotting framework? I am using ROOT and have my own plotting macros."
+Of course you may be right, but what did you just said? Macros? Plural? Here everything starts!
+Suffering from tons of different macros to plot your data, the pain when a tiny change in style needs to be introduced in every macro, the mess of lots of different input root files, the re-thinking how to get a plot out of complex folder hierarchy's, the waiting for all plots to be produced although you only want a single one, all of the aforementioned and more is automatically solved and managed within this Plotting Framework.
+
+So, this Plotting Framework aims to simplify plotting by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
 
 Everybody is welcome to use this software, report bugs or contribute new features.
 
@@ -224,10 +228,10 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // this means in the above example the axis 0 of the input data is restricted to bin 5 to 10 and axis 1 is restricted to bin 90 to 100
   // before the histogram is projected on the axis 3
   // also here one can provide user coordinates instead of bins by setting the  third argument of the function to 'true'
-  
+
   // the same can be done also with the numerator and denominator of ratios
   // have a look at inc/Plot.h for the details
-  
+
   plotManager.AddPlot(plot);
 } // -----------------------------------------------------------------------
 
@@ -420,7 +424,7 @@ data_layout_t pp_7TeV
   plot[1].AddData("graph2", pp_5TeV);
   plot[1].AddData("graph2", pp_7TeV[data]);
   plot[1].AddData("graph2", pp_7TeV[mc]);
-  
+
 // and this can be done in a similar manner also for ratios:
   plot[1].AddRatio("graph2", pp_5TeV, "graph3", "inputGroupA");
 
