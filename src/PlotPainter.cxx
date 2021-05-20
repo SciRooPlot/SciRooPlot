@@ -986,7 +986,7 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const std::optional
 template <typename T>
 optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
 {
-  if (obj->InheritsFrom(T::Class())) {
+  if (obj && obj->InheritsFrom(T::Class())) {
     return (T*)obj->Clone();
   }
   return std::nullopt;

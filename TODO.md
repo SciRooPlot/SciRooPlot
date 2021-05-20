@@ -63,8 +63,6 @@ Structural:
 - use brace-or-equal initializers in class definitions and get rid of initializer lists
 
 Bugs:
-- apparently there is a seg fault when something with a path in the name is searched for, but no match is found on first level
-- catch 'cannot open file' exceptions from boost ptree
 - can we avoid storing figureGroup and figureCategory stored twice in the xml?
 - plot name must not contain / -> add savety mechanism
 - automatic placing in combination with log does not seem to work simetimes (??)

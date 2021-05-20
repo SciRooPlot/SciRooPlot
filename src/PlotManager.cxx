@@ -181,21 +181,20 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
   }
   for (auto& inputPair : inputFileTree) {
     const string& inputIdentifier = inputPair.first;
-    vector<string> allFileNames;
-    allFileNames.reserve(inputPair.second.size());
+    set<string> allFileNames;
     for (auto& file : inputPair.second) {
       string fileOrDirName = expand_path(file.second.get_value<string>());
       if (fileOrDirName.rfind(".root") != string::npos || fileOrDirName.rfind(".csv") != string::npos) {
-        allFileNames.push_back(fileOrDirName);
+        allFileNames.insert(fileOrDirName);
       } else if (std::filesystem::is_directory(fileOrDirName)) {
         for (auto& file : std::filesystem::recursive_directory_iterator(fileOrDirName)) {
           if (file.path().extension() == ".root" || file.path().extension() == ".csv") {
-            allFileNames.push_back(file.path().string());
+            allFileNames.insert(file.path().string());
           }
         }
       }
     }
-    AddInputDataFiles(inputIdentifier, allFileNames);
+    AddInputDataFiles(inputIdentifier, {allFileNames.begin(), allFileNames.end()});
   }
 }
 
@@ -655,8 +654,8 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       }
 
       // in case this object is directory or list, repeat the same for this substructure
-      if (traverse && (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection"))) {
-        ReadData(obj, dataNames, prefix, suffix, inputID);
+      if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection")) {
+        if (traverse) ReadData(obj, dataNames, prefix, suffix, inputID);
       } else {
         auto it = std::find(dataNames.begin(), dataNames.end(), ((TNamed*)obj)->GetName());
         if (it != dataNames.end()) {
