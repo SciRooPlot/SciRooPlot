@@ -21,7 +21,7 @@ Box Features:
 - might be useful to specify size of boxes
 
 Feature Ideas:
-- one would probably want to be able to place legends and texts also in a different pad (or anywhere on the canvas)
+- possibility to place legends and texts also in an empty pad (or anywhere on the canvas)
 - add support for add/subtract + pulls? / generic binary operator thing
 - generic algorithm to automatically determine optimal axis offsets + avoid overlap with lables
 - add root style, color, marker, linestyle pictures to documentation
@@ -33,10 +33,7 @@ Feature Ideas:
 - add inclination angle setting to textboxes
 - add 'same as previous' color/marker/style feature (color = -1)?
 - allow for multi-column text boxes and make tab width between them a text box property
-- customizable legends that can be added independent of data in plot
-- option to draw help-grid on top of the plot to indicate NDC coordinates
 - support TGraphAsymmErrors and check if TProfile{1,2,3}D would require some extra functionality
-- double click on plot -> check if it touches a box and if yes print out the coordinates
 
 Notes:
 - is it possible to set the order in multi column tlegends? left-right vs top-bottom

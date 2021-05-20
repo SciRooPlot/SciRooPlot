@@ -172,6 +172,10 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   plot[1].AddText(0.2, 0.9, "this is // where I // want my text");
   // by default " // " is used as a delimiter between multiple lines
 
+  // pro tip: to determine the perfect position of the legend or text,
+  // you can place it at the desired position in interactive mode (see below)
+  // and double-click on it to print out its current coordinates
+  
   // to modify the axis titles, offsets, ranges, etc of a pad, just do the following
   plot[1]['Y'].SetTitle("my y axis tilte with meaning");
   plot[1]['X'].SetRange(1.4, 2.8).SetTitle("what I am showing on x axis").SetLog();
