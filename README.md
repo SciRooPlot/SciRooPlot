@@ -398,7 +398,7 @@ data_layout_t pp_7TeV
   {data, DataLayout()
     .SetInputID("pp_7TeV")
     .SetOptions(points)
-    .SetMarkerStyle(markers::circle)
+    .SetMarkerStyle(kFullCircle)
     .SetColor(kBlue+2)
   },
   {mc, DataLayout()
