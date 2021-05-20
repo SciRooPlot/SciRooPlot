@@ -1,7 +1,7 @@
 Rationale
 ---------
 You may think: "Why do I need a plotting framework? I am using ROOT and have my own plotting macros."
-Of course you may be right, but what did you just said? Macros? Plural? Here everything starts!
+Of course you may be right, but what did you just say? Macros? Plural? Here everything starts!
 Suffering from tons of different macros to plot your data, the pain when a tiny change in style needs to be introduced in every macro, the mess of lots of different input root files, the re-thinking how to get a plot out of complex folder hierarchy's, the waiting for all plots to be produced although you only want a single one, all of the aforementioned and more is automatically solved and managed within this Plotting Framework.
 
 So, this Plotting Framework aims to simplify plotting by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
