@@ -799,7 +799,7 @@ TPave* PlotPainter::GenerateBox(
         upperLeftX = lowerLeftX + 2 * marginX;
         upperLeftY = lowerLeftY + totalHeightNDC + 2 * marginY;
       } else {
-        WARNING("Could not find enough space to place the legend properly.");
+        WARNING("Could not find enough space to place the {} properly.", (isLegend) ? "legend" : "text");
         // just place legend within axis ranges of pad
         upperLeftX = (pad->GetUxmin() - pad->GetX1()) / (pad->GetX2() - pad->GetX1()) + (1 + 1 / fractionOfTickLenght) * marginX;
         upperLeftY = (pad->GetUymax() - pad->GetY1()) / (pad->GetY2() - pad->GetY1()) - (1 + 1 / fractionOfTickLenght) * marginY;

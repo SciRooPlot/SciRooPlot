@@ -1,6 +1,5 @@
 Todo:
 - add xml examples to readme
-- illustrate projection feature in readme
 - add possibility to read / write multiple files
 - always call sumw2 before drawing histograms as points
 - propagate color gradient settings from user interface
@@ -25,7 +24,6 @@ Feature Ideas:
 - one would probably want to be able to place legends and texts also in a different pad (or anywhere on the canvas)
 - add support for add/subtract + pulls? / generic binary operator thing
 - generic algorithm to automatically determine optimal axis offsets + avoid overlap with lables
-- revisit idea of axis linking between pads
 - add root style, color, marker, linestyle pictures to documentation
 - fully support csv format (flexible string and delimiter)
 - add user functions and fitting (AddFunction() and AddLine())
@@ -72,4 +70,3 @@ Bugs:
 - division graph/hist, hist/graph not implemented yet -> put some printout to inform
 - graphs with asym errors are not supported by any of the division functions
 - with graph as numerator in ratio there is some logic problem that axis histo is not there -> seg fault
-- could not find enough space to place the legend properly -> should say 'text' for text boxes...
