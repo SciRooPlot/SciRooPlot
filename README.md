@@ -225,6 +225,9 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // before the histogram is projected on the axis 3
   // also here one can provide user coordinates instead of bins by setting the  third argument of the function to 'true'
   
+  // the same can be done also with the numerator and denominator of ratios
+  // have a look at inc/Plot.h for the details
+  
   plotManager.AddPlot(plot);
 } // -----------------------------------------------------------------------
 
@@ -378,28 +381,48 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
 
   plotManager.AddPlot(plot);
 } // -----------------------------------------------------------------------
-// as you can see the plot definition becomes way simpler now since we
+// as you can see the plot definition becomes simpler now since we
 // do not have to specify again all of the layout overhead and can focus on the content
 
 // for re-occuring data it can make sense to define a bunch of properties only once
 // and then just re-use this layout for different plots:
 using DataLayout = Plot::Pad::Data;
-DataLayout pp5TeV = DataLayout()
-                    .SetRangeX(1,35)
-                    .SetOptions(curve)
-                    .SetLineStyle(9)
-                    .SetColor(kGreen+3);
+DataLayout pp_5TeV = DataLayout().SetOptions(curve).SetLineStyle(9).SetColor(kGreen+3);
+
+// or if you want to logically group multiple layouts put them in a map:
+enum layoutID : int { data, mc, };
+using data_layout_t = map<layoutID, DataLayout>;
+
+data_layout_t pp_7TeV
+{
+  {data, DataLayout()
+    .SetInputID("pp_7TeV")
+    .SetOptions(points)
+    .SetMarkerStyle(markers::circle)
+    .SetColor(kBlue+2)
+  },
+  {mc, DataLayout()
+    .SetInputID("pp_7TeV")
+    .SetOptions(curve)
+    .SetLineStyle(kSolid)
+    .SetColor(kRed+1)
+  },
+};
+
 { // -----------------------------------------------------------------------
   Plot plot("test1d", "myFigureGroup", "1d");
-  plot[1].AddData("graph2", "inputGroupA").SetLayout(pp5TeV);;
-  plot[1].AddData("graph3", "inputGroupA").SetLayout(pp5TeV);;
+  plot[1].AddData("graph2", "inputGroupA").SetLayout(pp_5TeV);;
+  plot[1].AddData("graph3", "inputGroupA").SetLayout(pp_5TeV);;
 
   // if your data layout also contains an input identifier
   pp5TeV.SetInputID("inputGroupA");
   // you can add the data and layout in the following way:
-  plot[1].AddData("graph2", pp5TeV);
-  // and this can be done in a similar manner also for ratios:
-  plot[1].AddRatio("graph2", pp5TeV, "graph3", "inputGroupA");
+  plot[1].AddData("graph2", pp_5TeV);
+  plot[1].AddData("graph2", pp_7TeV[data]);
+  plot[1].AddData("graph2", pp_7TeV[mc]);
+  
+// and this can be done in a similar manner also for ratios:
+  plot[1].AddRatio("graph2", pp_5TeV, "graph3", "inputGroupA");
 
   plot[1].AddLegend(0.,0.9);
   plotManager.AddPlot(plot);
