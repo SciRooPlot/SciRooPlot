@@ -126,6 +126,13 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   plot[1].AddData("folder1/histName2", "inputGroupA", "myLable2");
   plot[1].AddData("folder2/histName2", "inputGroupA", "myLable3");
 
+  // by default the global coordinate system of the plot is defined by the first data that is added (equivalent how ROOT does it)
+  // however, every so often we want to plot first some data with a small range and on top of it some data with a larger range
+  // while allowing the plot to show the full range of the second data
+  // this can be achieved by explicity stating that the second data should be the one that defines the axis frame of the plot:
+  plot[1].AddData("data2", "inputGroupA").SetDefinesFrame();
+
+  
   // it is possible to specify in the lables that you want to include some meta info of the data that is drawn, e.g.:
   plot[1].AddData("histName1", "inputGroupA", "myLable avg = <mean>");
   // possible options are: <name>, <title>, <entries>, <integral>, <maximum>, <minimum>, <mean>

@@ -182,8 +182,8 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
   for (auto& inputPair : inputFileTree) {
     const string& inputIdentifier = inputPair.first;
     set<string> allFileNames;
-    for (auto& file : inputPair.second) {
-      string fileOrDirName = expand_path(file.second.get_value<string>());
+    for (auto& fileEntry : inputPair.second) {
+      string fileOrDirName = expand_path(fileEntry.second.get_value<string>());
       if (fileOrDirName.rfind(".root") != string::npos || fileOrDirName.rfind(".csv") != string::npos) {
         allFileNames.insert(fileOrDirName);
       } else if (std::filesystem::is_directory(fileOrDirName)) {
