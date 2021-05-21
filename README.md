@@ -244,7 +244,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   plot[1].AddData("myNdhist3", "inputIdentifierA").SetProjection({3}, { {0, 5, 10},  {1, 90, 100} });
   // here the first argument is a vector of dimensions you want to project on
   // for instance {2,0} would produce a projection of your n-dimensional input histogram where
-  // the third original axis will be the new x-axis and the 0th original axis will be the y axis of your plotted data
+  // the third original axis will be the new x-axis and the first original axis will be the y axis of your plotted data
   // with the second argument of the SetProjection() function you can specify the ranges of the other axes prior to the projection
   // this means in the above example the axis 0 of the input data is restricted to bin 5 to 10 and axis 1 is restricted to bin 90 to 100
   // before the histogram is projected on the axis 3
