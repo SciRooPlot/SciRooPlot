@@ -509,9 +509,8 @@ auto Plot::Pad::SetTitle(const string& title) -> decltype(*this)
 
 //**************************************************************************************************
 /**
- * Set position of pad within plot. The variables are given in fractions of plot width resp. height
- * (between 0 and 1). The lower left corner is defined by (xlow, ylow) and the upper right corner by
- * (xup, yup).
+ * Set position of pad within plot. The variables are given in fractions of plot width resp. height (between 0 and 1).
+ * The lower left corner is defined by (xlow, ylow) and the upper right corner by (xup, yup).
  */
 //**************************************************************************************************
 auto Plot::Pad::SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup)

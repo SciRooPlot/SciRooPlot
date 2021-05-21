@@ -114,10 +114,8 @@ private:
 
   void SetGraphRange(TGraph* graph, optional<double_t> min, optional<double_t> max);
   void ScaleGraph(TGraph* graph, double_t scale);
-  void SmoothGraph(TGraph* graph, optional<double_t> min = std::nullopt,
-                   optional<double_t> = std::nullopt);
-  void SmoothHist(TH1* hist, optional<double_t> min = std::nullopt,
-                  optional<double_t> max = std::nullopt);
+  void SmoothGraph(TGraph* graph, optional<double_t> min = std::nullopt, optional<double_t> = std::nullopt);
+  void SmoothHist(TH1* hist, optional<double_t> min = std::nullopt, optional<double_t> max = std::nullopt);
   bool DivideGraphs(TGraph* numerator, TGraph* denominator);
   void DivideGraphsInterpolated(TGraph* numerator, TGraph* denominator);
   void DivideHistosInterpolated(TH1* numerator, TH1* denominator);
@@ -125,15 +123,14 @@ private:
   void DivideGraphHistInterpolated(TGraph* numerator, TH1* denominator);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text);
   void ReplacePlaceholders(string& str, TNamed* data_ptr);
-  TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box,
-                     TPad* pad);
+  TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box, TPad* pad);
   float_t GetTextSizePixel(float_t textsizeNDC);
 
   template <typename T>
-  TAxis* GetAxis(T* histPtr, int i);
-  std::string GetAxisStr(int i);
+  TAxis* GetAxis(T* histPtr, int16_t i);
+  std::string GetAxisStr(int16_t i);
 
-  vector<int16_t> GenerateGradientColors(int nColors, const vector<vector<float>>& rgbEndpoints, float_t alpha = 1.);
+  vector<int16_t> GenerateGradientColors(int32_t nColors, const vector<vector<float_t>>& rgbEndpoints, float_t alpha = 1.);
 };
 } // end namespace PlottingFramework
 #endif /* PlotGenerator_h */

@@ -201,8 +201,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
 
 //**************************************************************************************************
 /**
- * Add pre-defined plot to the manager. Plot will be moved and no longer accessible from outside the
- * manager.
+ * Add pre-defined plot to the manager. Plot will be moved and no longer accessible from outside the manager.
  */
 //**************************************************************************************************
 void PlotManager::AddPlot(Plot& plot)
@@ -615,8 +614,7 @@ void PlotManager::PrintLoadedPlots()
 
 //**************************************************************************************************
 /**
- * Recursively reads data from folder / list and adds it to output data array.
- * Found dataNames are remeoved from the vectors.
+ * Recursively reads data from folder / list and adds it to output data array. Found dataNames are remeoved from the vectors.
  */
 //**************************************************************************************************
 void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& inputID)

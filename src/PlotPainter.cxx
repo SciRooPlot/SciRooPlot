@@ -127,8 +127,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) gStyle->SetPalette(*palette);
 
     optional<vector<int16_t>> padColorGradient{};
-    if (false) {        // TODO: propagate these settings from the user interface
-      int nColors = 60; //dataBuffer.size();
+    if (false) {            // TODO: propagate these settings from the user interface
+      int32_t nColors = 60; //dataBuffer.size();
       vector<vector<float_t>> rgbEndpoints = {
         {0., 0., 1., 0.},   // blue
         {0., 1., 1., 0.25}, // cyan
@@ -1010,17 +1010,17 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
   if (obj->InheritsFrom(THnBase::Class())) {
     THnBase* histPtr = (THnBase*)obj;
     // first reset all ranges in case this histogram was previously used
-    for (int i = 0; i < histPtr->GetNdimensions(); ++i) {
+    for (int16_t i = 0; i < histPtr->GetNdimensions(); ++i) {
       histPtr->GetAxis(i)->SetRange();
     }
     for (auto rangeTuple : projInfo.ranges) {
-      int rangeDim = std::get<0>(rangeTuple);
+      int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= histPtr->GetNdimensions()) {
         ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", ((TNamed*)obj)->GetName());
         return std::nullopt;
       }
-      int minBin = (projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
-      int maxBin = (projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
+      int32_t minBin = (projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
+      int32_t maxBin = (projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
       histPtr->GetAxis(rangeDim)->SetRange(minBin, maxBin);
     }
     if (projInfo.dims.size() == 2) {
@@ -1031,17 +1031,17 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
   } else if (obj->InheritsFrom(TH3::Class())) {
     TH3* histPtr = (TH3*)obj;
     // first reset all ranges in case this histogram was previously used
-    for (int i = 0; i < 3; ++i) {
+    for (int16_t i = 0; i < 3; ++i) {
       GetAxis(histPtr, i)->SetRange();
     }
     for (auto rangeTuple : projInfo.ranges) {
-      int rangeDim = std::get<0>(rangeTuple);
+      int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 3) {
         ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", ((TNamed*)obj)->GetName());
         return std::nullopt;
       }
-      int minBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
-      int maxBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
+      int32_t minBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
+      int32_t maxBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
       GetAxis(histPtr, rangeDim)->SetRange(minBin, maxBin);
     }
     if (projInfo.dims.size() == 2) {
@@ -1056,11 +1056,11 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       ERROR(R"(Invalid dimension specified for projecting histogram "{}")", ((TNamed*)obj)->GetName());
       return std::nullopt;
     }
-    int minBin = 0;
-    int maxBin = -1;
+    int32_t minBin = 0;
+    int32_t maxBin = -1;
 
     for (auto rangeTuple : projInfo.ranges) {
-      int rangeDim = std::get<0>(rangeTuple);
+      int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 2) {
         ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", ((TNamed*)obj)->GetName());
         return std::nullopt;
@@ -1082,7 +1082,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
 }
 
 template <typename T>
-TAxis* PlotPainter::GetAxis(T* histPtr, int i)
+TAxis* PlotPainter::GetAxis(T* histPtr, int16_t i)
 {
   switch (i) {
     case 0:
@@ -1096,7 +1096,7 @@ TAxis* PlotPainter::GetAxis(T* histPtr, int i)
   }
 }
 
-std::string PlotPainter::GetAxisStr(int i)
+std::string PlotPainter::GetAxisStr(int16_t i)
 {
   switch (i) {
     case 0:
@@ -1113,9 +1113,8 @@ std::string PlotPainter::GetAxisStr(int i)
 //**************************************************************************************************
 /**
  * Helper-function dividing two TGraphs.
- * This is meant only for the rare use case, where the x values of all points are are exactly the
- * same. In this scenario the values and errors can be calculated exactly. If this condition is not
- * met, the function will return false.
+ * This is meant only for the rare use case, where the x values of all points are are exactly the same.
+ * In this scenario the values and errors can be calculated exactly. If this condition is not met, the function will return false.
  */
 //**************************************************************************************************
 bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
@@ -1142,8 +1141,7 @@ bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
 //**************************************************************************************************
 /**
  * Helper-function dividing two TGraphs.
- * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the
- * uncertainties are not fully correct!
+ * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the uncertainties are not fully correct!
  */
 //**************************************************************************************************
 void PlotPainter::DivideGraphsInterpolated(TGraph* numerator, TGraph* denominator)
@@ -1174,8 +1172,7 @@ void PlotPainter::DivideGraphsInterpolated(TGraph* numerator, TGraph* denominato
 //**************************************************************************************************
 /**
  * Helper-function dividing hist by graph.
- * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the
- * uncertainties are not fully correct!
+ * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the uncertainties are not fully correct!
  */
 //**************************************************************************************************
 void PlotPainter::DivideHistGraphInterpolated(TH1* numerator, TGraph* denominator)
@@ -1188,8 +1185,7 @@ void PlotPainter::DivideHistGraphInterpolated(TH1* numerator, TGraph* denominato
 //**************************************************************************************************
 /**
  * Helper-function dividing graph by hist.
- * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the
- * uncertainties are not fully correct!
+ * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the uncertainties are not fully correct!
  */
 //**************************************************************************************************
 void PlotPainter::DivideGraphHistInterpolated(TGraph* numerator, TH1* denominator)
@@ -1201,8 +1197,7 @@ void PlotPainter::DivideGraphHistInterpolated(TGraph* numerator, TH1* denominato
 //**************************************************************************************************
 /**
  * Helper-function dividing two 1d histograms with different binning.
- * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the
- * uncertainties are not fully correct!
+ * This is only a proxy for the ratio as it depends on an interpolation. Therefore also the uncertainties are not fully correct!
  */
 //**************************************************************************************************
 void PlotPainter::DivideHistosInterpolated(TH1* numerator, TH1* denominator)
@@ -1418,7 +1413,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
  * Helper to generate nColors between specified rgb endpoints.
  */
 //**************************************************************************************************
-vector<int16_t> PlotPainter::GenerateGradientColors(int nColors, const vector<vector<float>>& rgbEndpoints, float_t alpha)
+vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vector<vector<float_t>>& rgbEndpoints, float_t alpha)
 {
   uint16_t nPoints = rgbEndpoints.size();
 

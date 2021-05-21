@@ -54,7 +54,7 @@ In case you have doxygen installed, you can also generate a documenation from th
 
     cd PlottingFramework/doc
     doxygen doxygen.conf
-    open html/index.html
+    open html/namespace_plotting_framework.html
 
 After building the library, you can write your own individual plotting programs and link them against the PlotttingFramework.
 As a starting point you can copy the `example` folder to some location on your computer and follow the instructions provided in `CreatePlots.cxx`.
@@ -87,10 +87,11 @@ PlotManager plotManager;
 
 // first tell the manager where to look for the data you want to use in your plots
 // the first argument gives these input files a unique identifier you can then use when creating the plots
-plotManager.AddInputDataFiles("inputGroupA", {"path/to/file/a.root", "path/to/file/a2.root"});
-plotManager.AddInputDataFiles("inputGroupB", {"path/to/file/b.root", "path/to/file/b2.root", "path/to/file/b3.root:my/sub/list/or/dir/path"});
+plotManager.AddInputDataFiles("inputIdentifierA", {"path/to/file/a.root", "path/to/file/a2.root"});
+plotManager.AddInputDataFiles("inputIdentifierB", {"path/to/file/b.root", "path/to/file/b2.root", "path/to/file/b3.root:my/sub/list/or/dir/path"});
 
-// pro tip: you can also add whole directories (including their sub-directories) instead of specifying the root files directly
+// it is also possible to add whole directories (including their sub-directories):
+plotManager.AddInputDataFiles("inputIdentifierC", {"path/to/folder/with/rootfiles/"});
 
 // N.B.:
 // you can save these settings to a file via:
@@ -128,38 +129,38 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   plot[1].SetDefaultTextSize(24);
 
   // finally we can start adding data to the plot
-  plot[1].AddData("histName1", "inputGroupA", "myLable");
-  // this will search for a hist/graph/fuc called histName1 in all files specified in "inputGroupA"
+  plot[1].AddData("histName1", "inputIdentifierA", "myLable");
+  // this will search for a histogram, graph or fuction called "histName1" in all files specified for "inputIdentifierA"
   // the algorithm by default recursively traverses the whole directory or list substructure of the files and returns the first match
   // in case of multiple data with the same name, living in different subfolders/lists within the file you can do
-  plot[1].AddData("folder1/histName2", "inputGroupA", "myLable2");
-  plot[1].AddData("folder2/histName2", "inputGroupA", "myLable3");
+  plot[1].AddData("folder1/histName2", "inputIdentifierA", "myLable2");
+  plot[1].AddData("folder2/histName2", "inputIdentifierA", "myLable3");
 
   // by default the global coordinate system of the plot is defined by the first data that is added (equivalent to how ROOT does it)
   // however, every so often we want to plot first some data with a small range and on top of it some data with a larger range
   // while allowing the plot to show the full range of the second data
   // this can be achieved by explicity stating that the second data should be the one that defines the axis frame of the plot:
-  plot[1].AddData("data2", "inputGroupA").SetDefinesFrame();
+  plot[1].AddData("data2", "inputIdentifierA").SetDefinesFrame();
 
   // it is possible to specify in the lables that you want to include some meta info of the data that is drawn, e.g.:
-  plot[1].AddData("histName1", "inputGroupA", "myLable avg = <mean>");
+  plot[1].AddData("histName1", "inputIdentifierA", "myLable avg = <mean>");
   // possible options are: <name>, <title>, <entries>, <integral>, <maximum>, <minimum>, <mean>
   // you can use the standard printf style to specify how these numbers shall be formatted:
-  plot[1].AddData("histName1", "inputGroupA", "myLable avg = <mean[.2f]>");
-  plot[1].AddData("histName2", "inputGroupA", "myLable sum = <integral[.2e]>");
+  plot[1].AddData("histName1", "inputIdentifierA", "myLable avg = <mean[.2f]>");
+  plot[1].AddData("histName2", "inputIdentifierA", "myLable sum = <integral[.2e]>");
 
   // now lets add another piece of input data from the second group (this time without adding a lable to the legend)
-  plot[1].AddData("histName3", "inputGroupB");
+  plot[1].AddData("histName3", "inputIdentifierB");
 
   // you can also simply add ratios of two input data
-  plot[1].AddRatio("histName3", "inputGroupB", "histName1", "inputGroupA", "ratioLable");
+  plot[1].AddRatio("histName3", "inputIdentifierB", "histName1", "inputIdentifierA", "ratioLable");
 
   // to mdify how the data is displayed we can apply the settings via:
-  plot[1].AddData("histName4", "inputGroupB").SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
+  plot[1].AddData("histName4", "inputIdentifierB").SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
   // instead of directly using the ROOT drawing option string ("HIST C") you can
   // use pre-defined human readible options like curve, points, points_line, etc
   // (you can find all available options in inc/PlotPainter.h):
-  plot[1].AddData("graphName1", "inputGroupA").SetOptions(points).SetMarker(kRed, kFullCircle, 1.);
+  plot[1].AddData("graphName1", "inputIdentifierA").SetOptions(points).SetMarker(kRed, kFullCircle, 1.);
   // all root layout settings can be applied in this manner
   // (see definition of Data class in inc/Plot.h for the list of all accessors)
 
@@ -167,8 +168,19 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   plot[1].AddLegend(0.5, 0.8);
   // if you leave out the xy pad coordinates, the framework will try to auto-place the legend without overlapping your data or the axes
   plot[1].AddLegend();
+  
+  // it is possible to add multiple legends to the plot (as done above) which are then identified by the order they were added
+  // in order to express that the lable for a specific data should be put in the second legend you can do the following:
+  plot[1].AddData("function1", "inputIdentifierA", "my lable in second legend").SetLegendID(2);
 
-  // in a similar way you can add a text box to your plot
+  // the styles and colors of the respective legend entries are by default based on the data that is represented
+  // you can however override this and specify different default settings for the legend
+  plot[1].GetLegend(2).SetDefaultLineWidth(5.);
+  // modifications can also be done on per entry:
+  plot[1].GetLegend(2).GetEntry(1).SetLineColor(kRed);
+  // (again please have a look at inc/Plot.h for the list of possibilities)
+
+  // similar to the legend boxes you can add a text box to your plot
   plot[1].AddText("my important description spanning // over two lines");
   // or
   plot[1].AddText(0.2, 0.9, "this is // where I // want my text");
@@ -177,7 +189,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // pro tip: to determine the perfect position of the legend or text,
   // you can place it at the desired position in interactive mode (see below)
   // and double-click on it to print out its current coordinates
-  
+    
   // to modify the axis titles, offsets, ranges, etc of a pad, just do the following
   plot[1]['Y'].SetTitle("my y axis tilte with meaning");
   plot[1]['X'].SetRange(1.4, 2.8).SetTitle("what I am showing on x axis").SetLog();
@@ -203,13 +215,13 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 { // -----------------------------------------------------------------------
   Plot plot("myPlot", "myPlotGroup2");
   // ...
-  plot[1].AddData("folder1/histName2", "inputGroupA", "myLable2");
+  plot[1].AddData("folder1/histName2", "inputIdentifierA", "myLable2");
   //...
 
   // now we want to have exact same plot, but with some additional data points
   // this can be helpful to avoid code duplication
   Plot plot2(plot, "myPlot2", "myPlotGroup2");
-  plot2[1].AddData("graphName1", "inputGroupB", "more data");
+  plot2[1].AddData("graphName1", "inputIdentifierB", "more data");
 
   // now add both to the manager
   plotManager.AddPlot(plot);
@@ -222,14 +234,14 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   Plot plot("myProjectionsIllustration", "myPlotGroup2");
 
   // projection of 2d data on X axis
-  plot[1].AddData("my2dhist1", "inputGroupA").SetProjectionX();
+  plot[1].AddData("my2dhist1", "inputIdentifierA").SetProjectionX();
   // projection of 2d data on X axis but with restricted Y range:
-  plot[1].AddData("my2dhist2", "inputGroupA").SetProjectionX(yBin, yBin);
+  plot[1].AddData("my2dhist2", "inputIdentifierA").SetProjectionX(yBin, yBin);
   // the same works also in user coordinates:
-  plot[1].AddData("my2dhist3", "inputGroupA").SetProjectionX(yValue, yValue, true);
+  plot[1].AddData("my2dhist3", "inputIdentifierA").SetProjectionX(yValue, yValue, true);
 
   // for arbitrary-dimensional data (also the 2d histograms above) you can use the more generic function
-  plot[1].AddData("myNdhist3", "inputGroupA").SetProjection({3}, { {0, 5, 10},  {1, 90, 100} });
+  plot[1].AddData("myNdhist3", "inputIdentifierA").SetProjection({3}, { {0, 5, 10},  {1, 90, 100} });
   // here the first argument is a vector of dimensions you want to project on
   // for instance {2,0} would produce a projection of your n-dimensional input histogram where
   // the third original axis will be the new x-axis and the 0th original axis will be the y axis of your plotted data
@@ -377,13 +389,13 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
 { // -----------------------------------------------------------------------
   Plot plot("test1d_ratio", "myFigureGroup", "1d_ratio");
 
-  plot[1].AddData("graph2", "inputGroupA", "5 TeV #Delta = #sqrt{s}")
+  plot[1].AddData("graph2", "inputIdentifierA", "5 TeV #Delta = #sqrt{s}")
   .SetMarker(kRed, kFullCircle, 1.2).SetMaxRangeX(40);
 
-  plot[1].AddData("func3", "inputGroupB", "ratio")
+  plot[1].AddData("func3", "inputIdentifierB", "ratio")
   .SetMarker(kBlack, kFullCircle, 1.2).SetMaxRangeX(70);
 
-  plot[2].AddRatio("invMassSpec", "inputGroupA", "momentUnfolded1", "pp_5TeV", "ratio")
+  plot[2].AddRatio("invMassSpec", "inputIdentifierA", "momentUnfolded1", "pp_5TeV", "ratio")
   .SetMarker(kRed, kFullCircle, 1.2)
   .SetMaxRangeX(60);
 
@@ -424,18 +436,18 @@ data_layout_t pp_7TeV
 
 { // -----------------------------------------------------------------------
   Plot plot("test1d", "myFigureGroup", "1d");
-  plot[1].AddData("graph2", "inputGroupA").SetLayout(pp_5TeV);;
-  plot[1].AddData("graph3", "inputGroupA").SetLayout(pp_5TeV);;
+  plot[1].AddData("graph2", "inputIdentifierA").SetLayout(pp_5TeV);;
+  plot[1].AddData("graph3", "inputIdentifierA").SetLayout(pp_5TeV);;
 
   // if your data layout also contains an input identifier
-  pp5TeV.SetInputID("inputGroupA");
+  pp5TeV.SetInputID("inputIdentifierA");
   // you can add the data and layout in the following way:
   plot[1].AddData("graph2", pp_5TeV);
   plot[1].AddData("graph2", pp_7TeV[data]);
   plot[1].AddData("graph2", pp_7TeV[mc]);
 
   // and this can be done in a similar manner also for ratios:
-  plot[1].AddRatio("graph2", pp_5TeV, "graph3", "inputGroupA");
+  plot[1].AddRatio("graph2", pp_5TeV, "graph3", "inputIdentifierA");
 
   plot[1].AddLegend(0.,0.9);
   plotManager.AddPlot(plot);
