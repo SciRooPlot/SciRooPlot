@@ -119,32 +119,32 @@ std::vector<T> string_to_vector(string itemString)
 }
 
 template <typename T>
-void put_in_tree(ptree& tree, const optional<T>& var, const string& lable)
+void put_in_tree(ptree& tree, const optional<T>& var, const string& label)
 {
   if constexpr (is_vector<T>{}) // vectors are stored as comma separated strings
   {
-    if (var) tree.put(lable, vector_to_string(*var));
+    if (var) tree.put(label, vector_to_string(*var));
   } else if constexpr (std::is_enum<T>::value) // in case using enum types of the framework
   {
-    if (var) tree.put(lable, static_cast<typename std::underlying_type<T>::type>(*var));
+    if (var) tree.put(label, static_cast<typename std::underlying_type<T>::type>(*var));
   } else {
-    if (var) tree.put(lable, *var);
+    if (var) tree.put(label, *var);
   }
 }
 
 template <typename T>
-void read_from_tree(const ptree& tree, optional<T>& var, const string& lable)
+void read_from_tree(const ptree& tree, optional<T>& var, const string& label)
 {
   if constexpr (is_vector<T>{}) // vectors are stored as comma separated strings
   {
-    if (auto tmp = tree.get_optional<string>(lable))
+    if (auto tmp = tree.get_optional<string>(label))
       var = string_to_vector<typename T::value_type>(*tmp);
   } else if constexpr (std::is_enum<T>::value) // in case using enum types of the framework
   {
-    if (auto tmp = tree.get_optional<typename std::underlying_type<T>::type>(lable))
+    if (auto tmp = tree.get_optional<typename std::underlying_type<T>::type>(label))
       var = static_cast<T>(*tmp);
   } else {
-    if (auto tmp = tree.get_optional<T>(lable)) var = *tmp;
+    if (auto tmp = tree.get_optional<T>(label)) var = *tmp;
   }
 }
 

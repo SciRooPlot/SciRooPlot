@@ -30,14 +30,14 @@ void DefinePlotTemplates(PlotManager& plotManager);
 // 6. ./create
 // 7. play around with the features described in README.md
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-  bool saveInputDataFiles =  true;
+  bool saveInputDataFiles = true;
   // create plotting environment
   PlotManager plotManager;
   DefinePlotTemplates(plotManager);
 
-  if(saveInputDataFiles){
+  if (saveInputDataFiles) {
     plotManager.AddInputDataFiles("measurements", {"../InputFiles/file1.root", "../InputFiles/file2.root"});
     plotManager.AddInputDataFiles("theory", {"../InputFiles/file3.root"});
     plotManager.DumpInputDataFiles("inputFilesConfig.XML");
@@ -69,14 +69,11 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-
-
 void DefinePlotTemplates(PlotManager& plotManager)
 {
-  vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1,
-  kMagenta-4, kGreen+3, kOrange+1, kViolet-3, kCyan+2, kPink+3, kTeal-7, kMagenta+1, kPink+8, kCyan-6, kMagenta, kRed+2, kGreen+2,
-  kOrange+2, kMagenta+2, kYellow+3, kGray+2, kBlue+2, kYellow+2, kRed, kBlue, kMagenta+3, kGreen+4, 28, 8, 15, 17, 12};
-
+  vector<int16_t> goodColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1,
+                                kMagenta - 4, kGreen + 3, kOrange + 1, kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7, kMagenta + 1, kPink + 8, kCyan - 6, kMagenta, kRed + 2, kGreen + 2,
+                                kOrange + 2, kMagenta + 2, kYellow + 3, kGray + 2, kBlue + 2, kYellow + 2, kRed, kBlue, kMagenta + 3, kGreen + 4, 28, 8, 15, 17, 12};
 
   { // -----------------------------------------------------------------------
     // template 1d
@@ -117,8 +114,8 @@ void DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[0].SetDefaultTextFont(43);
     templatePlot[0].SetDefaultTextSize(24);
     templatePlot[0].SetTransparent();
-    templatePlot[0]['X'].SetTitleOffset(1.1).SetOppositeTicks();;
-    templatePlot[0]['Y'].SetTitleOffset(1.4).SetOppositeTicks();;
+    templatePlot[0]['X'].SetTitleOffset(1.1).SetOppositeTicks();
+    templatePlot[0]['Y'].SetTitleOffset(1.4).SetOppositeTicks();
     templatePlot[1].SetPosition(0., 0.28, 1., 1.);
     templatePlot[1].SetMargins(0.05, 0.0, 0.14, 0.05);
     templatePlot[1]['X'].SetTitleOffset(3.1);
@@ -140,7 +137,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[0].SetDefaultTextFont(43);
     templatePlot[0].SetDefaultTextSize(24);
     templatePlot[0].SetTransparent();
-    templatePlot[0].SetMargins(0.12-0.05, 0.12+0.02, 0.12, 0.12+0.06);
+    templatePlot[0].SetMargins(0.12 - 0.05, 0.12 + 0.02, 0.12, 0.12 + 0.06);
     templatePlot[0]['X'].SetTitleOffset(1.1);
     templatePlot[0]['Y'].SetTitleOffset(1.1);
     templatePlot[0]['Z'].SetTitleOffset(1.6);
@@ -148,5 +145,4 @@ void DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[1].SetPosition(0., 0., 1., 1.);
     plotManager.AddPlotTemplate(templatePlot);
   } // -----------------------------------------------------------------------
-
 }

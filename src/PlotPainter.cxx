@@ -161,7 +161,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       pad.GetData().insert(pad.GetData().begin(),
                            std::make_shared<Plot::Pad::Data>(*pad.GetData()[frameDataID]));
     }
-    pad.GetData()[0]->SetLegendLable(""); // axis frame should not appear in legend
+    pad.GetData()[0]->SetLegendLabel(""); // axis frame should not appear in legend
 
     TH1* axisHist_ptr{nullptr};
     string drawingOptions = "";
@@ -342,49 +342,49 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
 
           // apply axis settings
-          for (auto axisLable : {'X', 'Y', 'Z'}) {
+          for (auto axisLabel : {'X', 'Y', 'Z'}) {
             TAxis* axis_ptr = nullptr;
-            if (axisLable == 'X')
+            if (axisLabel == 'X')
               axis_ptr = axisHist_ptr->GetXaxis();
-            else if (axisLable == 'Y')
+            else if (axisLabel == 'Y')
               axis_ptr = axisHist_ptr->GetYaxis();
-            else if (axisLable == 'Z')
+            else if (axisLabel == 'Z')
               axis_ptr = axisHist_ptr->GetZaxis();
             if (!axis_ptr) continue;
 
             optional<int16_t> textFontTitle = textFont;
-            optional<int16_t> textFontLable = textFont;
+            optional<int16_t> textFontLabel = textFont;
             optional<int16_t> textColorTitle = textColor;
-            optional<int16_t> textColorLable = textColor;
+            optional<int16_t> textColorLabel = textColor;
             optional<float_t> textSizeTitle = textSize;
-            optional<float_t> textSizeLable = textSize;
+            optional<float_t> textSizeLabel = textSize;
 
             // first apply default pad values and then settings for this specific pad
             for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
-              if (curPad.GetAxes().find(axisLable) != curPad.GetAxes().end()) {
-                auto axisLayout = curPad[axisLable];
+              if (curPad.GetAxes().find(axisLabel) != curPad.GetAxes().end()) {
+                auto axisLayout = curPad[axisLabel];
                 if (axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).data());
 
                 if (axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
-                if (axisLayout.GetLableFont()) textFontLable = axisLayout.GetLableFont();
+                if (axisLayout.GetLabelFont()) textFontLabel = axisLayout.GetLabelFont();
 
                 if (axisLayout.GetTitleColor()) textColorTitle = axisLayout.GetTitleColor();
-                if (axisLayout.GetLableColor()) textColorLable = axisLayout.GetLableColor();
+                if (axisLayout.GetLabelColor()) textColorLabel = axisLayout.GetLabelColor();
 
                 if (axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
-                if (axisLayout.GetLableSize()) textSizeLable = axisLayout.GetLableSize();
+                if (axisLayout.GetLabelSize()) textSizeLabel = axisLayout.GetLabelSize();
 
                 if (axisLayout.GetTitleCenter())
                   axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
-                if (axisLayout.GetLableCenter())
-                  axis_ptr->CenterLabels(*axisLayout.GetLableCenter());
+                if (axisLayout.GetLabelCenter())
+                  axis_ptr->CenterLabels(*axisLayout.GetLabelCenter());
 
                 if (axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(*axisLayout.GetAxisColor());
 
                 if (axisLayout.GetTitleOffset())
                   axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
-                if (axisLayout.GetLableOffset())
-                  axis_ptr->SetLabelOffset(*axisLayout.GetLableOffset());
+                if (axisLayout.GetLabelOffset())
+                  axis_ptr->SetLabelOffset(*axisLayout.GetLabelOffset());
 
                 if (axisLayout.GetTickLength())
                   axis_ptr->SetTickLength(*axisLayout.GetTickLength());
@@ -394,24 +394,24 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   axis_ptr->SetNdivisions(*axisLayout.GetNumDivisions());
 
                 if (axisLayout.GetLog()) {
-                  if (axisLable == 'X') {
+                  if (axisLabel == 'X') {
                     pad_ptr->SetLogx(*axisLayout.GetLog());
-                  } else if (axisLable == 'Y') {
+                  } else if (axisLabel == 'Y') {
                     pad_ptr->SetLogy(*axisLayout.GetLog());
-                  } else if (axisLable == 'Z') {
+                  } else if (axisLabel == 'Z') {
                     pad_ptr->SetLogz(*axisLayout.GetLog());
                   }
                 }
                 if (axisLayout.GetGrid()) {
-                  if (axisLable == 'X')
+                  if (axisLabel == 'X')
                     pad_ptr->SetGridx(*axisLayout.GetGrid());
-                  else if (axisLable == 'Y')
+                  else if (axisLabel == 'Y')
                     pad_ptr->SetGridy(*axisLayout.GetGrid());
                 }
                 if (axisLayout.GetOppositeTicks()) {
-                  if (axisLable == 'X')
+                  if (axisLabel == 'X')
                     pad_ptr->SetTickx(*axisLayout.GetOppositeTicks());
-                  else if (axisLable == 'Y')
+                  else if (axisLabel == 'Y')
                     pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
                 }
                 if (axisLayout.GetTimeFormat()) {
@@ -424,12 +424,12 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
                 if (axisLayout.GetMinRange() || axisLayout.GetMaxRange()) {
                   pad_ptr->Update(); // needed here so current user ranges correct
-                  double_t curRangeMin = (axisLable == 'X')
+                  double_t curRangeMin = (axisLabel == 'X')
                                            ? pad_ptr->GetUxmin()
-                                           : ((axisLable == 'Y') ? pad_ptr->GetUymin() : axisHist_ptr->GetMinimum());
-                  double_t curRangeMax = (axisLable == 'X')
+                                           : ((axisLabel == 'Y') ? pad_ptr->GetUymin() : axisHist_ptr->GetMinimum());
+                  double_t curRangeMax = (axisLabel == 'X')
                                            ? pad_ptr->GetUxmax()
-                                           : ((axisLable == 'Y') ? pad_ptr->GetUymax() : axisHist_ptr->GetMaximum());
+                                           : ((axisLabel == 'Y') ? pad_ptr->GetUymax() : axisHist_ptr->GetMaximum());
 
                   double_t rangeMin = (axisLayout.GetMinRange()) ? *axisLayout.GetMinRange() : curRangeMin;
                   double_t rangeMax = (axisLayout.GetMaxRange()) ? *axisLayout.GetMaxRange() : curRangeMax;
@@ -439,11 +439,11 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             }
             if (textFontTitle) axis_ptr->SetTitleFont(*textFontTitle);
-            if (textFontLable) axis_ptr->SetLabelFont(*textFontLable);
+            if (textFontLabel) axis_ptr->SetLabelFont(*textFontLabel);
             if (textColorTitle) axis_ptr->SetTitleColor(*textColorTitle);
-            if (textColorLable) axis_ptr->SetLabelColor(*textColorLable);
+            if (textColorLabel) axis_ptr->SetLabelColor(*textColorLabel);
             if (textSizeTitle) axis_ptr->SetTitleSize(*textSizeTitle);
-            if (textSizeLable) axis_ptr->SetLabelSize(*textSizeLable);
+            if (textSizeLabel) axis_ptr->SetLabelSize(*textSizeLabel);
           }
 
           // right after drawing the axis, put reference line if requested
@@ -549,8 +549,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
           data_ptr->Draw(drawingOptions.data());
 
-          // in case a lable was specified for the data, add it to corresponding legend
-          if (data->GetLegendLable() && !(*data->GetLegendLable()).empty()) {
+          // in case a label was specified for the data, add it to corresponding legend
+          if (data->GetLegendLabel() && !(*data->GetLegendLabel()).empty()) {
             // by default place legend entries in first legend
             uint8_t legendID{1u};
             // explicit user choice overrides this
@@ -558,9 +558,9 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
             auto& boxVector = pad.GetLegendBoxes();
             if (legendID > 0u && legendID <= boxVector.size()) {
-              boxVector[legendID - 1]->AddEntry(*data->GetLegendLable(), data_ptr->GetName());
+              boxVector[legendID - 1]->AddEntry(*data->GetLegendLabel(), data_ptr->GetName());
             } else {
-              ERROR(R"(Invalid legend lable ({}) specified for data "{}" in "{}".)", legendID,
+              ERROR(R"(Invalid legend label ({}) specified for data "{}" in "{}".)", legendID,
                     data->GetName(), data->GetInputID());
             }
           }
@@ -659,7 +659,7 @@ TPave* PlotPainter::GenerateBox(
     if constexpr (isLegend) {
       std::for_each(box->GetEntries().begin(), box->GetEntries().end(),
                     [&lines](const auto& entry) {
-                      if (entry.GetLable()) lines.push_back(*entry.GetLable());
+                      if (entry.GetLabel()) lines.push_back(*entry.GetLabel());
                     });
     } else {
       // split text string to vector
@@ -832,10 +832,10 @@ TPave* PlotPainter::GenerateBox(
       if (textFont) legend->SetTextFont(*textFont);
 
       for (auto entry : box->GetEntries()) {
-        string lable = entry.GetLable() ? *entry.GetLable() : ""; // fixme: this is equal to lines[i]
+        string label = entry.GetLabel() ? *entry.GetLabel() : ""; // fixme: this is equal to lines[i]
         string drawStyle = entry.GetDrawStyle() ? *entry.GetDrawStyle() : "";
 
-        // TLegendEntry* curEntry = legend->AddEntry((TObject*)nullptr, lable.data(),
+        // TLegendEntry* curEntry = legend->AddEntry((TObject*)nullptr, label.data(),
         // drawStyle.data());
         TLegendEntry* curEntry = nullptr;
         if (entry.GetRefDataName()) {
@@ -855,7 +855,7 @@ TPave* PlotPainter::GenerateBox(
               drawStyle = "F";
             }
           }
-          curEntry = legend->AddEntry((TObject*)data_ptr, lable.data(), drawStyle.data());
+          curEntry = legend->AddEntry((TObject*)data_ptr, label.data(), drawStyle.data());
           curEntry->SetObject((TObject*)nullptr);
 
           TAttMarker markerAttr;
@@ -885,7 +885,7 @@ TPave* PlotPainter::GenerateBox(
           curEntry->SetFillColor(fillAttr.GetFillColor());
           curEntry->SetFillStyle(fillAttr.GetFillStyle());
         } else {
-          curEntry = legend->AddEntry((TObject*)nullptr, lable.data(), drawStyle.data());
+          curEntry = legend->AddEntry((TObject*)nullptr, label.data(), drawStyle.data());
         }
 
         if (entry.GetMarkerColor()) curEntry->SetMarkerColor(*entry.GetMarkerColor());
@@ -1349,7 +1349,7 @@ float_t PlotPainter::GetTextSizePixel(float_t textsizeNDC)
 
 //**************************************************************************************************
 /**
- * Function to replace placeholders in lables.
+ * Function to replace placeholders in labels.
  */
 //**************************************************************************************************
 void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)

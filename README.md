@@ -42,7 +42,7 @@ In case you do not want to install ROOT into `~/root/mybuild` you will need to a
 
 Using the Framework
 --------------------
-In order to use the framework, first you need to compile the library in the follwoing way:
+In order to use the framework, first you need to compile the library in the following way:
 
     cd PlottingFramework
     mkdir build
@@ -50,7 +50,7 @@ In order to use the framework, first you need to compile the library in the foll
     cmake ../
     make
 
-In case you have doxygen installed, you can also generate a documenation from the comments in the code via:
+In case you have doxygen installed, you can also generate a documentation from the comments in the code via:
 
     cd PlottingFramework/doc
     doxygen doxygen.conf
@@ -59,7 +59,7 @@ In case you have doxygen installed, you can also generate a documenation from th
 After building the library, you can write your own individual plotting programs and link them against the PlotttingFramework.
 As a starting point you can copy the `example` folder to some location on your computer and follow the instructions provided in `CreatePlots.cxx`.
 This example should work out of the box, but it requires to know where the PlottingFramework library is located.
-The easisest way to define this is by putting the following line in your .bashrc or .bash_aliases:
+The easiest way to define this is by putting the following line in your .bashrc or .bash_aliases:
 ```
     source /path/to/PlottingFramework/.plotrc
 ```
@@ -82,15 +82,15 @@ Example 1
 #include "PlotManager.h"
 using namespace PlottingFramework;
 
-// create plotting environment that handles IO and plot creation
+// create plot manager that handles IO and plot creation
 PlotManager plotManager;
 
 // first tell the manager where to look for the data you want to use in your plots
-// the first argument gives these input files a unique identifier you can then use when creating the plots
+// the first argument gives these input files a unique identifier that is used in your plot definitions to specify where the data should come from
 plotManager.AddInputDataFiles("inputIdentifierA", {"path/to/file/a.root", "path/to/file/a2.root"});
-plotManager.AddInputDataFiles("inputIdentifierB", {"path/to/file/b.root", "path/to/file/b2.root", "path/to/file/b3.root:my/sub/list/or/dir/path"});
-
-// it is also possible to add whole directories (including their sub-directories):
+// instead of adding the whole root file, you can specify a sub-list or sub-folder in the file:
+plotManager.AddInputDataFiles("inputIdentifierB", {"path/to/file/b.root:my/sub/list/or/dir", "path/to/file/b2.root"});
+// it is also possible to add all root files within a directory (including sub-directories):
 plotManager.AddInputDataFiles("inputIdentifierC", {"path/to/folder/with/rootfiles/"});
 
 // N.B.:
@@ -120,60 +120,60 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   plot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
   plot[0].SetDefaultMarkerSize(1.2).SetDefaultLineWidth(2.);
   // as you can see here the user interface is designed such that each setter returns
-  // a reference to the object that is currently beeing modified. This allows you to concaternate
+  // a reference to the object that is currently being modified. This allows you to concatenate
   // all the settings belonging to a pad. This design pattern is consistently used also for all
   // the other user definable objects (Data, Axis, Legends, etc.).
 
-  // now set text properties, that will be used everywhere in the pad if not overridden for a specific lable/title/etc..
+  // now set text properties, that will be used everywhere in the pad if not overridden for a specific label/title/etc..
   plot[1].SetDefaultTextFont(43);
   plot[1].SetDefaultTextSize(24);
 
   // finally we can start adding data to the plot
-  plot[1].AddData("histName1", "inputIdentifierA", "myLable");
-  // this will search for a histogram, graph or fuction called "histName1" in all files specified for "inputIdentifierA"
+  plot[1].AddData("histName1", "inputIdentifierA", "myLabel");
+  // this will search for a histogram, graph or function called "histName1" in all files specified for "inputIdentifierA"
   // the algorithm by default recursively traverses the whole directory or list substructure of the files and returns the first match
   // in case of multiple data with the same name, living in different subfolders/lists within the file you can do
-  plot[1].AddData("folder1/histName2", "inputIdentifierA", "myLable2");
-  plot[1].AddData("folder2/histName2", "inputIdentifierA", "myLable3");
+  plot[1].AddData("folder1/histName2", "inputIdentifierA", "myLabel2");
+  plot[1].AddData("folder2/histName2", "inputIdentifierA", "myLabel3");
 
   // by default the global coordinate system of the plot is defined by the first data that is added (equivalent to how ROOT does it)
   // however, every so often we want to plot first some data with a small range and on top of it some data with a larger range
   // while allowing the plot to show the full range of the second data
-  // this can be achieved by explicity stating that the second data should be the one that defines the axis frame of the plot:
+  // this can be achieved by explicitly stating that the second data should be the one that defines the axis frame of the plot:
   plot[1].AddData("data2", "inputIdentifierA").SetDefinesFrame();
 
-  // it is possible to specify in the lables that you want to include some meta info of the data that is drawn, e.g.:
-  plot[1].AddData("histName1", "inputIdentifierA", "myLable avg = <mean>");
+  // it is possible to specify in the labels that you want to include some meta info of the data that is drawn, e.g.:
+  plot[1].AddData("histName1", "inputIdentifierA", "mylabel avg = <mean>");
   // possible options are: <name>, <title>, <entries>, <integral>, <maximum>, <minimum>, <mean>
   // you can use the standard printf style to specify how these numbers shall be formatted:
-  plot[1].AddData("histName1", "inputIdentifierA", "myLable avg = <mean[.2f]>");
-  plot[1].AddData("histName2", "inputIdentifierA", "myLable sum = <integral[.2e]>");
+  plot[1].AddData("histName1", "inputIdentifierA", "mylabel avg = <mean[.2f]>");
+  plot[1].AddData("histName2", "inputIdentifierA", "mylabel sum = <integral[.2e]>");
 
-  // now lets add another piece of input data from the second group (this time without adding a lable to the legend)
+  // now lets add another piece of input data from the second group (this time without adding a label to the legend)
   plot[1].AddData("histName3", "inputIdentifierB");
 
   // you can also simply add ratios of two input data
-  plot[1].AddRatio("histName3", "inputIdentifierB", "histName1", "inputIdentifierA", "ratioLable");
+  plot[1].AddRatio("histName3", "inputIdentifierB", "histName1", "inputIdentifierA", "ratioLabel");
 
-  // to mdify how the data is displayed we can apply the settings via:
+  // to modify how the data is displayed we can apply the settings via:
   plot[1].AddData("histName4", "inputIdentifierB").SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
   // instead of directly using the ROOT drawing option string ("HIST C") you can
-  // use pre-defined human readible options like curve, points, points_line, etc
+  // use pre-defined human readable options like curve, points, points_line, etc
   // (you can find all available options in inc/PlotPainter.h):
   plot[1].AddData("graphName1", "inputIdentifierA").SetOptions(points).SetMarker(kRed, kFullCircle, 1.);
   // all root layout settings can be applied in this manner
   // (see definition of Data class in inc/Plot.h for the list of all accessors)
 
-  // now add a legend containing the lables that were specified when adding the data
+  // now add a legend containing the labels that were specified when adding the data
   plot[1].AddLegend(0.5, 0.8);
   // if you leave out the xy pad coordinates, the framework will try to auto-place the legend without overlapping your data or the axes
   plot[1].AddLegend();
   
   // it is possible to add multiple legends to the plot (as done above) which are then identified by the order they were added
-  // in order to express that the lable for a specific data should be put in the second legend you can do the following:
-  plot[1].AddData("function1", "inputIdentifierA", "my lable in second legend").SetLegendID(2);
+  // in order to express that the label for a specific data should be put in the second legend you can do the following:
+  plot[1].AddData("function1", "inputIdentifierA", "my label in second legend").SetLegendID(2);
 
-  // the styles and colors of the respective legend entries are by default based on the data that is represented
+  // the styles and colours of the respective legend entries are by default based on the data that is represented
   // you can however override this and specify different default settings for the legend
   plot[1].GetLegend(2).SetDefaultLineWidth(5.);
   // modifications can also be done on per entry:
@@ -191,7 +191,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // and double-click on it to print out its current coordinates
     
   // to modify the axis titles, offsets, ranges, etc of a pad, just do the following
-  plot[1]['Y'].SetTitle("my y axis tilte with meaning");
+  plot[1]['Y'].SetTitle("my y axis title with meaning");
   plot[1]['X'].SetRange(1.4, 2.8).SetTitle("what I am showing on x axis").SetLog();
   plot[1]['X'].SetMaxRange(5.);
   // a full list of axis property accessors can be found in the Axis class definition in inc/Plot.h
@@ -215,7 +215,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 { // -----------------------------------------------------------------------
   Plot plot("myPlot", "myPlotGroup2");
   // ...
-  plot[1].AddData("folder1/histName2", "inputIdentifierA", "myLable2");
+  plot[1].AddData("folder1/histName2", "inputIdentifierA", "myLabel2");
   //...
 
   // now we want to have exact same plot, but with some additional data points
@@ -270,7 +270,7 @@ plotManager.CreatePlots("myPlotGroup", "", {"myPlot1", "myPlot2"});
 plotManager.SetUseUniquePlotNames();
 
 // in "interactive" mode a root canvas window will pop up
-// and you can scroll throught the plots by double clicking on the right resp. left side of the plot
+// and you can scroll through the plots by double clicking on the right resp. left side of the plot
 plotManager.CreatePlots("", "", {}, "interactive");
 
 // you can also save the plots as a root macro (.C):
@@ -300,10 +300,10 @@ PlotManager plotManager;
 plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 
 // as you know from your personal plotting experience
-// there are plenty of settings that have to be applied to generate a beautyful plot
-// most of these settings e.g. the number and alignment of pads, background colors, transparency, etc..
+// there are plenty of settings that have to be applied to generate a beautiful plot
+// most of these settings e.g. the number and alignment of pads, background colours, transparency, etc..
 // stay the same for all (or a group of) your plots and you do not want to
-// verbously specify them again and again for every one of your plots
+// verbosely specify them again and again for every one of your plots
 // therefore the framework provides the option to specify plot templates
 // these are just ordinary plots, but you can use their settings as a baseline
 // and the properties specified for your final plot will be applied on top of these
@@ -349,8 +349,8 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   templatePlot[0].SetDefaultTextFont(43);
   templatePlot[0].SetDefaultTextSize(24);
   templatePlot[0].SetTransparent();
-  templatePlot[0]['X'].SetTitleOffset(1.1).SetOppositeTicks();;
-  templatePlot[0]['Y'].SetTitleOffset(1.4).SetOppositeTicks();;
+  templatePlot[0]['X'].SetTitleOffset(1.1).SetOppositeTicks();
+  templatePlot[0]['Y'].SetTitleOffset(1.4).SetOppositeTicks();
   templatePlot[1].SetPosition(0., 0.28, 1., 1.);
   templatePlot[1].SetMargins(0.05, 0.0, 0.14, 0.05);
   templatePlot[1]['X'].SetTitleOffset(3.1);
@@ -409,7 +409,7 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
 // as you can see the plot definition becomes simpler now since we
 // do not have to specify again all of the layout overhead and can focus on the content
 
-// for re-occuring data it can make sense to define a bunch of properties only once
+// for re-occurring data it can make sense to define a bunch of properties only once
 // and then just re-use this layout for different plots:
 using DataLayout = Plot::Pad::Data;
 DataLayout pp_5TeV = DataLayout().SetOptions(curve).SetLineStyle(9).SetColor(kGreen+3);
@@ -436,8 +436,7 @@ data_layout_t pp_7TeV
 
 { // -----------------------------------------------------------------------
   Plot plot("test1d", "myFigureGroup", "1d");
-  plot[1].AddData("graph2", "inputIdentifierA").SetLayout(pp_5TeV);;
-  plot[1].AddData("graph3", "inputIdentifierA").SetLayout(pp_5TeV);;
+  plot[1].AddData("graph2", "inputIdentifierA").SetLayout(pp_5TeV);
 
   // if your data layout also contains an input identifier
   pp5TeV.SetInputID("inputIdentifierA");
@@ -473,7 +472,7 @@ plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {"invMass
 plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {}, "find");
 
 // the main reasoning behind the "dump-to-file" feature is that you can then
-// make use of the builtin commandline plotting tool, which can conveniently
+// make use of the builtin command-line plotting tool, which can conveniently
 // create specific plots you defined and saved to file (see next section)
 ```
 
@@ -498,8 +497,8 @@ The most convenient way to work with the PlottingFramework is the following:
 - you have a program that creates the plot definitions for all your plots (e.g. based on the example provided in the framework)
 - this program will dump your plot definitions into an xml-file by calling `plotManager.DumpPlotDefinitions(...)` at the end
 - this file is stored in the same location as the configuration file that contains the paths to your input data files
-- these files can be read in by the framework`s integrated plotting app (see above) which then can create your plots based on these definitions
-- in order for the app to know where to find the two configuration files, you have to make the envirionment variable `__PLOTTING_CONFIG_DIR` point to this location
+- these files can be read in by the frameworks integrated plotting app (see above) which then can create your plots based on these definitions
+- in order for the app to know where to find the two configuration files, you have to make the environment variable `__PLOTTING_CONFIG_DIR` point to this location
 - then you can easily create plots via the command line from everywhere on your computer by typing `plot figureGroup plotName`
 - saving the plot definitions to a file as an intermediate step enables you to quickly re-create any of your plots without having to run again the program that creates the plot definitions
 - it can however be annoying to first compile and run your user code and then in addition start the app in order to see the changes you made to the plot definitions

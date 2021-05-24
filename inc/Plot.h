@@ -163,14 +163,14 @@ public:
   void operator+=(const Pad& pad);
 
   // User accessors:
-  Data& AddData(const string& name, const string& inputIdentifier, const string& lable = "");
-  Data& AddData(const string& name, const Data& dataTemplate, const string& lable = "");
+  Data& AddData(const string& name, const string& inputIdentifier, const string& label = "");
+  Data& AddData(const string& name, const Data& dataTemplate, const string& label = "");
 
   Ratio& AddRatio(const string& numeratorName, const string& numeratorInputIdentifier,
                   const string& denominatorName, const string& denominatorInputIdentifier,
-                  const string& lable = "");
+                  const string& label = "");
   Ratio& AddRatio(const string& numeratorName, const Data& data, const string& denominatorName,
-                  const string& denominatorInputIdentifier, const string& lable = "");
+                  const string& denominatorInputIdentifier, const string& label = "");
 
   TextBox& AddText(double_t xPos, double_t yPos, const string& text);
   TextBox& AddText(const string& text);
@@ -332,7 +332,7 @@ class Plot::Pad::Data
 {
 public:
   Data() = default;
-  Data(const string& name, const string& inputIdentifier, const string& lable = "");
+  Data(const string& name, const string& inputIdentifier, const string& label = "");
   Data(const ptree& dataTree);
 
   virtual ~Data() = default;
@@ -353,7 +353,7 @@ public:
   virtual Data& SetMaxRangeY(double_t max);
   virtual Data& SetMinRangeY(double_t min);
   virtual Data& UnsetRangeY();
-  virtual Data& SetLegendLable(const string& legendLable);
+  virtual Data& SetLegendLabel(const string& legendLabel);
   virtual Data& SetLegendID(uint8_t legendID);
   virtual Data& SetOptions(const string& opions);
   virtual Data& SetOptions(drawing_options_t optionAlias);
@@ -393,7 +393,7 @@ protected:
 
   const auto& GetType() const { return mType; }
   const auto& GetName() const { return mName; }
-  const auto& GetLegendLable() const { return mLegend.lable; }
+  const auto& GetLegendLabel() const { return mLegend.label; }
   const auto& GetLegendID() const { return mLegend.identifier; }
   const auto& GetMarkerColor() const { return mMarker.color; }
   const auto& GetMarkerStyle() const { return mMarker.style; }
@@ -441,7 +441,7 @@ private:
     optional<double_t> scale_factor;
   };
   struct legend_t {
-    optional<string> lable;
+    optional<string> label;
     optional<uint8_t> identifier;
   };
 
@@ -473,7 +473,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 {
 public:
   Ratio(const string& name, const string& inputIdentifier, const string& denomName,
-        const string& denomInputIdentifier, const string& lable);
+        const string& denomInputIdentifier, const string& label);
   Ratio(const ptree& dataTree);
 
   virtual ~Ratio() = default;
@@ -492,7 +492,7 @@ public:
   Ratio& SetMaxRangeY(double_t max) { return static_cast<decltype(*this)&>(Data::SetMaxRangeY(max)); }
   Ratio& SetMinRangeY(double_t min) { return static_cast<decltype(*this)&>(Data::SetMinRangeY(min)); }
   Ratio& UnsetRangeY() { return static_cast<decltype(*this)&>(Data::UnsetRangeY()); }
-  Ratio& SetLegendLable(const string& legendLable) { return static_cast<decltype(*this)&>(Data::SetLegendLable(legendLable)); }
+  Ratio& SetLegendLabel(const string& legendLabel) { return static_cast<decltype(*this)&>(Data::SetLegendLabel(legendLabel)); }
   Ratio& SetLegendID(uint8_t legendID) { return static_cast<decltype(*this)&>(Data::SetLegendID(legendID)); }
   Ratio& SetOptions(const string& opions) { return static_cast<decltype(*this)&>(Data::SetOptions(opions)); }
   Ratio& SetOptions(drawing_options_t optionAlias) { return static_cast<decltype(*this)&>(Data::SetOptions(optionAlias)); }
@@ -566,15 +566,15 @@ public:
   Axis& SetMaxDigits(int32_t maxDigtis);
   Axis& SetTickLength(float_t tickLength);
   Axis& SetTitleFont(int16_t font);
-  Axis& SetLableFont(int16_t font);
+  Axis& SetLabelFont(int16_t font);
   Axis& SetTitleSize(float_t size);
-  Axis& SetLableSize(float_t size);
+  Axis& SetLabelSize(float_t size);
   Axis& SetTitleColor(int16_t color);
-  Axis& SetLableColor(int16_t color);
+  Axis& SetLabelColor(int16_t color);
   Axis& SetTitleOffset(float_t offset);
-  Axis& SetLableOffset(float_t offset);
+  Axis& SetLabelOffset(float_t offset);
   Axis& SetTitleCenter(bool center = true);
-  Axis& SetLableCenter(bool center = true);
+  Axis& SetLabelCenter(bool center = true);
   Axis& SetLog(bool isLog = true);
   Axis& SetGrid(bool isGrid = true);
   Axis& SetOppositeTicks(bool isOppositeTicks = true);
@@ -600,15 +600,15 @@ protected:
   const auto& GetAxisColor() const { return mAxisColor; }
   const auto& GetTitle() const { return mTitle; }
   const auto& GetTitleFont() const { return mTitleProperties.font; }
-  const auto& GetLableFont() const { return mLableProperties.font; }
+  const auto& GetLabelFont() const { return mLabelProperties.font; }
   const auto& GetTitleSize() const { return mTitleProperties.size; }
-  const auto& GetLableSize() const { return mLableProperties.size; }
+  const auto& GetLabelSize() const { return mLabelProperties.size; }
   const auto& GetTitleColor() const { return mTitleProperties.color; }
-  const auto& GetLableColor() const { return mLableProperties.color; }
+  const auto& GetLabelColor() const { return mLabelProperties.color; }
   const auto& GetTitleOffset() const { return mTitleProperties.offset; }
-  const auto& GetLableOffset() const { return mLableProperties.offset; }
+  const auto& GetLabelOffset() const { return mLabelProperties.offset; }
   const auto& GetTitleCenter() const { return mTitleProperties.center; }
-  const auto& GetLableCenter() const { return mLableProperties.center; }
+  const auto& GetLabelCenter() const { return mLabelProperties.center; }
   const auto& GetLog() const { return mIsLog; }
   const auto& GetGrid() const { return mIsGrid; }
   const auto& GetOppositeTicks() const { return mIsOppositeTicks; }
@@ -643,7 +643,7 @@ private:
   optional<string> mTickOrientation;
 
   axisTextProperties_t mTitleProperties;
-  axisTextProperties_t mLableProperties;
+  axisTextProperties_t mLabelProperties;
 };
 
 //**************************************************************************************************
@@ -792,7 +792,7 @@ protected:
   const optional<uint8_t>& GetNumColumns() const { return mNumColumns; }
   const optional<string>& GetTitle() const { return mTitle; }
 
-  LegendEntry& AddEntry(const string& name, const string& lable);
+  LegendEntry& AddEntry(const string& name, const string& label);
 
   const auto& GetEntries() const { return mLegendEntries; }
   const auto& GetDefaultDrawStyle() const { return mDrawStyleDefault; }
@@ -828,10 +828,10 @@ private:
 class Plot::Pad::LegendBox::LegendEntry
 {
 public:
-  LegendEntry(const optional<string>& lable = {}, const optional<string>& refDataName = {}, const optional<string>& drawStyle = {});
+  LegendEntry(const optional<string>& label = {}, const optional<string>& refDataName = {}, const optional<string>& drawStyle = {});
   LegendEntry(const ptree& legendEntryTree);
 
-  LegendEntry& SetLable(const string& lable);
+  LegendEntry& SetLabel(const string& label);
   LegendEntry& SetRefData(const string& name, const string& inputIdentifier);
   LegendEntry& SetDrawStyle(const string& drawStyle);
   LegendEntry& SetMarkerColor(int16_t color);
@@ -854,7 +854,7 @@ protected:
 
   ptree GetPropertyTree() const;
   const auto& GetRefDataName() const { return mRefDataName; }
-  const auto& GetLable() const { return mLable; }
+  const auto& GetLabel() const { return mLabel; }
   const auto& GetDrawStyle() const { return mDrawStyle; }
 
   const auto& GetMarkerColor() const { return mMarker.color; }
@@ -874,7 +874,7 @@ protected:
   const auto& GetTextSize() const { return mText.scale; }
 
 private:
-  optional<string> mLable;
+  optional<string> mLabel;
   optional<string> mRefDataName;
   optional<string> mDrawStyle;
   layout_t mFill;

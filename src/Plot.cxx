@@ -720,9 +720,9 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mPalette) mPalette = pad.mPalette;
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if (pad.mRefFunc) mRefFunc = pad.mRefFunc;
-  for (auto& [axisLable, axis] : pad.mAxes) {
-    mAxes[axisLable]; // default initiialize in case this axis was not yet defined
-    mAxes[axisLable] += axis;
+  for (auto& [axisLabel, axis] : pad.mAxes) {
+    mAxes[axisLabel]; // default initiialize in case this axis was not yet defined
+    mAxes[axisLabel] += axis;
   }
   mData = pad.mData; // this does not copy the data (!!)
   mLegendBoxes = pad.mLegendBoxes;
@@ -804,15 +804,15 @@ Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
  * Add data to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Data& Plot::Pad::AddData(const string& name, const string& inputIdentifier, const string& lable)
+Plot::Pad::Data& Plot::Pad::AddData(const string& name, const string& inputIdentifier, const string& label)
 {
-  mData.push_back(std::make_shared<Data>(name, inputIdentifier, lable));
+  mData.push_back(std::make_shared<Data>(name, inputIdentifier, label));
   return *mData.back();
 }
 
-Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const string& lable)
+Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const string& label)
 {
-  mData.push_back(std::make_shared<Data>(name, data.GetInputID(), lable));
+  mData.push_back(std::make_shared<Data>(name, data.GetInputID(), label));
   mData.back()->SetLayout(data);
   return *mData.back();
 }
@@ -822,17 +822,17 @@ Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const 
  * Add ratio to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorInputIdentifier, const string& denominatorName, const string& denominatorInputIdentifier, const string& lable)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorInputIdentifier, const string& denominatorName, const string& denominatorInputIdentifier, const string& label)
 {
   mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorInputIdentifier,
-                                          denominatorName, denominatorInputIdentifier, lable));
+                                          denominatorName, denominatorInputIdentifier, label));
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
 
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& data, const string& denominatorName, const string& denominatorInputIdentifier, const string& lable)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& data, const string& denominatorName, const string& denominatorInputIdentifier, const string& label)
 {
   mData.push_back(std::make_shared<Ratio>(numeratorName, data.GetInputID(),
-                                          denominatorName, denominatorInputIdentifier, lable));
+                                          denominatorName, denominatorInputIdentifier, label));
   mData.back()->SetLayout(data);
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
@@ -892,12 +892,12 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend()
  * Default constructor for Data objects.
  */
 //**************************************************************************************************
-Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const string& legendLable)
+Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const string& legendLabel)
   : Data()
 {
   mType = "data";
 
-  if (legendLable != "") mLegend.lable = legendLable;
+  if (legendLabel != "") mLegend.label = legendLabel;
   // in case input was specified further via inputIdentifier:some/path/in/file
   auto subPathPos = inputIdentifier.find(":");
   if (subPathPos != string::npos) {
@@ -926,7 +926,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
     std::exit(EXIT_FAILURE);
   }
   if (auto var = dataTree.get_optional<bool>("defines_frame")) mDefinesFrame = *var;
-  read_from_tree(dataTree, mLegend.lable, "legend_lable");
+  read_from_tree(dataTree, mLegend.label, "legend_label");
   read_from_tree(dataTree, mLegend.identifier, "legend_id");
   read_from_tree(dataTree, mDrawingOptions, "drawing_options");
   read_from_tree(dataTree, mDrawingOptionAlias, "drawing_option_alias");
@@ -974,7 +974,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   dataTree.put("name", mName);
   dataTree.put("inputIdentifier", mInputIdentifier);
   if (mDefinesFrame) dataTree.put("defines_frame", mDefinesFrame);
-  put_in_tree(dataTree, mLegend.lable, "legend_lable");
+  put_in_tree(dataTree, mLegend.label, "legend_label");
   put_in_tree(dataTree, mLegend.identifier, "legend_id");
   put_in_tree(dataTree, mDrawingOptions, "drawing_options");
   put_in_tree(dataTree, mDrawingOptionAlias, "drawing_option_alias");
@@ -1040,9 +1040,9 @@ auto Plot::Pad::Data::SetInputID(const string& inputIdentifier) -> decltype(*thi
   mInputIdentifier = inputIdentifier;
   return *this;
 }
-auto Plot::Pad::Data::SetLegendLable(const string& legendLable) -> decltype(*this)
+auto Plot::Pad::Data::SetLegendLabel(const string& legendLabel) -> decltype(*this)
 {
-  mLegend.lable = legendLable;
+  mLegend.label = legendLabel;
   return *this;
 }
 auto Plot::Pad::Data::SetLegendID(uint8_t legendID) -> decltype(*this)
@@ -1276,8 +1276,8 @@ std::string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
  */
 //**************************************************************************************************
 Plot::Pad::Ratio::Ratio(const string& name, const string& inputIdentifier, const string& denomName,
-                        const string& denomInputIdentifier, const string& lable)
-  : Data(name, inputIdentifier, lable), mDenomName(denomName),
+                        const string& denomInputIdentifier, const string& label)
+  : Data(name, inputIdentifier, label), mDenomName(denomName),
     mDenomInputIdentifier(denomInputIdentifier), mIsCorrelated(false)
 {
   SetType("ratio");
@@ -1408,11 +1408,11 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
   read_from_tree(axisTree, mTitleProperties.color, "title_color");
   read_from_tree(axisTree, mTitleProperties.offset, "title_offset");
   read_from_tree(axisTree, mTitleProperties.center, "title_center");
-  read_from_tree(axisTree, mLableProperties.font, "lable_font");
-  read_from_tree(axisTree, mLableProperties.size, "lable_size");
-  read_from_tree(axisTree, mLableProperties.color, "lable_color");
-  read_from_tree(axisTree, mLableProperties.offset, "lable_offset");
-  read_from_tree(axisTree, mLableProperties.center, "lable_center");
+  read_from_tree(axisTree, mLabelProperties.font, "label_font");
+  read_from_tree(axisTree, mLabelProperties.size, "label_size");
+  read_from_tree(axisTree, mLabelProperties.color, "label_color");
+  read_from_tree(axisTree, mLabelProperties.offset, "label_offset");
+  read_from_tree(axisTree, mLabelProperties.center, "label_center");
   read_from_tree(axisTree, mIsLog, "is_log");
   read_from_tree(axisTree, mIsGrid, "is_grid");
   read_from_tree(axisTree, mIsOppositeTicks, "is_opposite_ticks");
@@ -1441,11 +1441,11 @@ ptree Plot::Pad::Axis::GetPropertyTree() const
   put_in_tree(axisTree, mTitleProperties.color, "title_color");
   put_in_tree(axisTree, mTitleProperties.offset, "title_offset");
   put_in_tree(axisTree, mTitleProperties.center, "title_center");
-  put_in_tree(axisTree, mLableProperties.font, "lable_font");
-  put_in_tree(axisTree, mLableProperties.size, "lable_size");
-  put_in_tree(axisTree, mLableProperties.color, "lable_color");
-  put_in_tree(axisTree, mLableProperties.offset, "lable_offset");
-  put_in_tree(axisTree, mLableProperties.center, "lable_center");
+  put_in_tree(axisTree, mLabelProperties.font, "label_font");
+  put_in_tree(axisTree, mLabelProperties.size, "label_size");
+  put_in_tree(axisTree, mLabelProperties.color, "label_color");
+  put_in_tree(axisTree, mLabelProperties.offset, "label_offset");
+  put_in_tree(axisTree, mLabelProperties.center, "label_center");
   put_in_tree(axisTree, mIsLog, "is_log");
   put_in_tree(axisTree, mIsGrid, "is_grid");
   put_in_tree(axisTree, mIsOppositeTicks, "is_opposite_ticks");
@@ -1478,11 +1478,11 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
   if (axis.mTitleProperties.color) mTitleProperties.color = axis.mTitleProperties.color;
   if (axis.mTitleProperties.offset) mTitleProperties.offset = axis.mTitleProperties.offset;
   if (axis.mTitleProperties.center) mTitleProperties.center = axis.mTitleProperties.center;
-  if (axis.mLableProperties.font) mLableProperties.font = axis.mLableProperties.font;
-  if (axis.mLableProperties.size) mLableProperties.size = axis.mLableProperties.size;
-  if (axis.mLableProperties.color) mLableProperties.color = axis.mLableProperties.color;
-  if (axis.mLableProperties.offset) mLableProperties.offset = axis.mLableProperties.offset;
-  if (axis.mLableProperties.center) mLableProperties.center = axis.mLableProperties.center;
+  if (axis.mLabelProperties.font) mLabelProperties.font = axis.mLabelProperties.font;
+  if (axis.mLabelProperties.size) mLabelProperties.size = axis.mLabelProperties.size;
+  if (axis.mLabelProperties.color) mLabelProperties.color = axis.mLabelProperties.color;
+  if (axis.mLabelProperties.offset) mLabelProperties.offset = axis.mLabelProperties.offset;
+  if (axis.mLabelProperties.center) mLabelProperties.center = axis.mLabelProperties.center;
   if (axis.mTimeFormat) mTimeFormat = axis.mTimeFormat;
   if (axis.mTickOrientation) mTickOrientation = axis.mTickOrientation;
 }
@@ -1515,7 +1515,7 @@ auto Plot::Pad::Axis::SetMinRange(double_t min) -> decltype(*this)
 auto Plot::Pad::Axis::SetColor(int16_t color) -> decltype(*this)
 {
   mAxisColor = color;
-  mLableProperties.color = color;
+  mLabelProperties.color = color;
   mTitleProperties.color = color;
   return *this;
 }
@@ -1544,9 +1544,9 @@ auto Plot::Pad::Axis::SetTitleFont(int16_t font) -> decltype(*this)
   mTitleProperties.font = font;
   return *this;
 }
-auto Plot::Pad::Axis::SetLableFont(int16_t font) -> decltype(*this)
+auto Plot::Pad::Axis::SetLabelFont(int16_t font) -> decltype(*this)
 {
-  mLableProperties.font = font;
+  mLabelProperties.font = font;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleSize(float_t size) -> decltype(*this)
@@ -1554,9 +1554,9 @@ auto Plot::Pad::Axis::SetTitleSize(float_t size) -> decltype(*this)
   mTitleProperties.size = size;
   return *this;
 }
-auto Plot::Pad::Axis::SetLableSize(float_t size) -> decltype(*this)
+auto Plot::Pad::Axis::SetLabelSize(float_t size) -> decltype(*this)
 {
-  mLableProperties.size = size;
+  mLabelProperties.size = size;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleColor(int16_t color) -> decltype(*this)
@@ -1564,9 +1564,9 @@ auto Plot::Pad::Axis::SetTitleColor(int16_t color) -> decltype(*this)
   mTitleProperties.color = color;
   return *this;
 }
-auto Plot::Pad::Axis::SetLableColor(int16_t color) -> decltype(*this)
+auto Plot::Pad::Axis::SetLabelColor(int16_t color) -> decltype(*this)
 {
-  mLableProperties.color = color;
+  mLabelProperties.color = color;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleOffset(float_t offset) -> decltype(*this)
@@ -1574,9 +1574,9 @@ auto Plot::Pad::Axis::SetTitleOffset(float_t offset) -> decltype(*this)
   mTitleProperties.offset = offset;
   return *this;
 }
-auto Plot::Pad::Axis::SetLableOffset(float_t offset) -> decltype(*this)
+auto Plot::Pad::Axis::SetLabelOffset(float_t offset) -> decltype(*this)
 {
-  mLableProperties.offset = offset;
+  mLabelProperties.offset = offset;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleCenter(bool center) -> decltype(*this)
@@ -1584,9 +1584,9 @@ auto Plot::Pad::Axis::SetTitleCenter(bool center) -> decltype(*this)
   mTitleProperties.center = center;
   return *this;
 }
-auto Plot::Pad::Axis::SetLableCenter(bool center) -> decltype(*this)
+auto Plot::Pad::Axis::SetLabelCenter(bool center) -> decltype(*this)
 {
-  mLableProperties.center = center;
+  mLabelProperties.center = center;
   return *this;
 }
 auto Plot::Pad::Axis::SetLog(bool isLog) -> decltype(*this)
@@ -2041,9 +2041,9 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillOpacity(float_t opacit
  * Add entry to LegendBox.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& lable, const string& refDataName)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& label, const string& refDataName)
 {
-  mLegendEntries.push_back(LegendEntry(lable, refDataName));
+  mLegendEntries.push_back(LegendEntry(label, refDataName));
   return mLegendEntries.back();
 }
 
@@ -2072,9 +2072,9 @@ void Plot::Pad::LegendBox::MergeLegendEntries()
  * Construct LegendEntry.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendEntry::LegendEntry(const optional<string>& lable, const optional<string>& refDataName, const optional<string>& drawStyle)
+Plot::Pad::LegendBox::LegendEntry::LegendEntry(const optional<string>& label, const optional<string>& refDataName, const optional<string>& drawStyle)
 {
-  mLable = lable;
+  mLabel = label;
   mRefDataName = refDataName;
   mDrawStyle = drawStyle;
 }
@@ -2086,7 +2086,7 @@ Plot::Pad::LegendBox::LegendEntry::LegendEntry(const optional<string>& lable, co
 //**************************************************************************************************
 Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
 {
-  read_from_tree(legendEntryTree, mLable, "lable");
+  read_from_tree(legendEntryTree, mLabel, "label");
   read_from_tree(legendEntryTree, mRefDataName, "ref_data_name");
   read_from_tree(legendEntryTree, mDrawStyle, "draw_style");
   read_from_tree(legendEntryTree, mFill.color, "fill_color");
@@ -2111,7 +2111,7 @@ Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
 ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree() const
 {
   ptree legendEntryTree;
-  put_in_tree(legendEntryTree, mLable, "lable");
+  put_in_tree(legendEntryTree, mLabel, "label");
   put_in_tree(legendEntryTree, mRefDataName, "ref_data_name");
   put_in_tree(legendEntryTree, mDrawStyle, "draw_style");
   put_in_tree(legendEntryTree, mFill.color, "fill_color");
@@ -2158,9 +2158,9 @@ void Plot::Pad::LegendBox::LegendEntry::operator+=(
  */
 //**************************************************************************************************
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLable(const string& lable)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLabel(const string& label)
 {
-  mLable = lable;
+  mLabel = label;
   return *this;
 }
 
