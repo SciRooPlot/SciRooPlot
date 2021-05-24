@@ -361,7 +361,7 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
       bool isValidKey = canvas->GetEvent() == kKeyPress && (canvas->GetEventX() == 'a' || canvas->GetEventX() == 's');
       auto selectedBox = dynamic_cast<TPave*>(canvas->GetSelected());
       if (isClick && selectedBox) {
-        if (!boxClicked) INFO("Position of {}: ({:.3g}, {:.3g})", selectedBox->GetName(), selectedBox->GetX1NDC(), selectedBox->GetY2NDC());
+        if (!boxClicked) INFO("Current position of {}: ({:.3g}, {:.3g})", selectedBox->GetName(), selectedBox->GetX1NDC(), selectedBox->GetY2NDC());
         boxClicked = true;
       } else if (isClick || isValidKey) {
         curXpos = canvas->GetWindowTopX();

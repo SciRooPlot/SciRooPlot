@@ -152,8 +152,12 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // now lets add another piece of input data from the second group (this time without adding a label to the legend)
   plot[1].AddData("histName3", "inputIdentifierB");
 
-  // you can also simply add ratios of two input data
+  // you can also simply add the ratio of two input data
   plot[1].AddRatio("histName3", "inputIdentifierB", "histName1", "inputIdentifierA", "ratioLabel");
+  // for incopatible data (e.g. different number of bins or bin limits) the framework will try to use splines to interpolate the datapoints before dividing
+  // in case numerator and denominator are sub-samples of one another bayesian error propagation can be applied:
+  plot[1].AddRatio("histName3", "inputIdentifierB", "histName1", "inputIdentifierA", "ratioLabel").SetIsCorrelated();
+  
 
   // to modify how the data is displayed we can apply the settings via:
   plot[1].AddData("histName4", "inputIdentifierB").SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
@@ -193,7 +197,8 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // to modify the axis titles, offsets, ranges, etc of a pad, just do the following
   plot[1]['Y'].SetTitle("my y axis title with meaning");
   plot[1]['X'].SetRange(1.4, 2.8).SetTitle("what I am showing on x axis").SetLog();
-  plot[1]['X'].SetMaxRange(5.);
+  // or if you want to modify synchronously the axes of multiple plots (e.g. for 2-panel ratios) you can apply the settings to the default pad
+  plot[0]['X'].SetMaxRange(1.4, 2.8);
   // a full list of axis property accessors can be found in the Axis class definition in inc/Plot.h
 
 
@@ -271,7 +276,7 @@ plotManager.SetUseUniquePlotNames();
 
 // in "interactive" mode a root canvas window will pop up
 // and you can scroll through the plots by double clicking on the right resp. left side of the plot
-// or by pressing the keys 'a' (left) and 's' (right) while the mouse pointer lays on the canvas
+// or by pressing the keys 'a' (left) and 's' (right) while the mouse pointer resides on the canvas
 plotManager.CreatePlots("", "", {}, "interactive");
 
 // you can also save the plots as a root macro (.C):
@@ -460,7 +465,7 @@ plotManager.DumpPlots("path/to/my/plotDefinitions.XML");
 
 // this file can then be read in by another one of your programs via
 plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML");
-// this extracts all plots from this file!
+// this extracts all plots defined in the file
 // in case you want to load only certain figure groups:
 plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {"figureGroup1", "figures", "figureGroup:myCategory"});
 // ... or plots:
