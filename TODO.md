@@ -1,5 +1,4 @@
 Todo:
-- add xml examples to readme
 - add possibility to read / write multiple files
 - always call sumw2 before drawing histograms as points
 - propagate color gradient settings from user interface

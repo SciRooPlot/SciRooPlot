@@ -357,26 +357,33 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
     }
     bool boxClicked = false;
     while (!gSystem->ProcessEvents() && gROOT->GetSelectedPad()) {
-      if (canvas->GetEvent() == kButton1Double) {
-        if (auto selectedBox = dynamic_cast<TPave*>(canvas->GetSelected())) {
-          if (!boxClicked) INFO("Position of {}: ({:.3g}, {:.3g})", selectedBox->GetName(), selectedBox->GetX1NDC(), selectedBox->GetY2NDC());
-          boxClicked = true;
+      bool isClick = canvas->GetEvent() == kButton1Double;
+      bool isValidKey = canvas->GetEvent() == kKeyPress && (canvas->GetEventX() == 'a' || canvas->GetEventX() == 's');
+      auto selectedBox = dynamic_cast<TPave*>(canvas->GetSelected());
+      if (isClick && selectedBox) {
+        if (!boxClicked) INFO("Position of {}: ({:.3g}, {:.3g})", selectedBox->GetName(), selectedBox->GetX1NDC(), selectedBox->GetY2NDC());
+        boxClicked = true;
+      } else if (isClick || isValidKey) {
+        curXpos = canvas->GetWindowTopX();
+        curYpos = canvas->GetWindowTopY();
+        TRootCanvas* canvasWindow = ((TRootCanvas*)canvas->GetCanvasImp());
+        canvasWindow->UnmapWindow();
+        bool forward = false;
+        if (isValidKey) {
+          forward = (canvas->GetEventX() == 's');
         } else {
-          curXpos = canvas->GetWindowTopX();
-          curYpos = canvas->GetWindowTopY();
-          TRootCanvas* canvasWindow = ((TRootCanvas*)canvas->GetCanvasImp());
-          canvasWindow->UnmapWindow();
-          bool forward{((double_t)canvas->GetEventX() / (double_t)canvas->GetWw() > 0.5)};
-          if (forward) {
-            if (currPlotIndex == mPlotViewHistory.size() - 1) break;
-            ++currPlotIndex;
-          } else {
-            if (currPlotIndex != 0) currPlotIndex--;
-          }
-          canvas = mPlotLedger[*mPlotViewHistory[currPlotIndex]];
-          canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
-          ((TRootCanvas*)canvas->GetCanvasImp())->MapRaised();
+          forward = ((double_t)canvas->GetEventX() / (double_t)canvas->GetWw() > 0.5);
         }
+        if (forward) {
+          if (currPlotIndex == mPlotViewHistory.size() - 1) break;
+          ++currPlotIndex;
+        } else {
+          if (currPlotIndex == 0) std::exit(EXIT_FAILURE); // TODO: properly propagate this to caller
+          --currPlotIndex;
+        }
+        canvas = mPlotLedger[*mPlotViewHistory[currPlotIndex]];
+        canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
+        ((TRootCanvas*)canvas->GetCanvasImp())->MapRaised();
       } else {
         boxClicked = false;
       }

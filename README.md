@@ -271,6 +271,7 @@ plotManager.SetUseUniquePlotNames();
 
 // in "interactive" mode a root canvas window will pop up
 // and you can scroll through the plots by double clicking on the right resp. left side of the plot
+// or by pressing the keys 'a' (left) and 's' (right) while the mouse pointer lays on the canvas
 plotManager.CreatePlots("", "", {}, "interactive");
 
 // you can also save the plots as a root macro (.C):
