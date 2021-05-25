@@ -1,7 +1,8 @@
-// Plotting Framework
+// PlottingFramework
 //
 // Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
+// For a full list of contributors please see doc/CONTRIBUTORS.md
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,7 +18,7 @@
 #include "PlotManager.h"
 using namespace PlottingFramework;
 
-// helper that creates some good looking plot tempaltes you can base your plots on
+// helper that creates some good looking plot templates you can base your plots on
 void DefinePlotTemplates(PlotManager& plotManager);
 
 // ======= minimal working example ==========

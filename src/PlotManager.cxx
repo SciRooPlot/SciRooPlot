@@ -1,7 +1,8 @@
-// Plotting Framework
+// PlottingFramework
 //
 // Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
+// For a full list of contributors please see doc/CONTRIBUTORS.md
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -127,7 +128,7 @@ void PlotManager::SetOutputFileName(const string& fileName)
 
 //**************************************************************************************************
 /**
- * Define input file paths for user defined unique inputIDentifier.
+ * Define input file paths for user defined unique inputIdentifier.
  */
 //**************************************************************************************************
 void PlotManager::AddInputDataFiles(const string& inputIdentifier,
@@ -344,15 +345,15 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
 
     mPlotLedger[plot.GetUniqueName()] = canvas;
     mPlotViewHistory.push_back(&plot.GetUniqueName());
-    uint32_t currPlotIndex{static_cast<uint32_t>(mPlotViewHistory.size() - 1)};
+    uint32_t curPlotIndex{static_cast<uint32_t>(mPlotViewHistory.size() - 1)};
 
     // move new canvas to position of previous window
     int32_t curXpos{};
     int32_t curYpos{};
     const int32_t windowOffsetY{28}; // might depend on os (was 22)
-    if (currPlotIndex > 0) {
-      curXpos = mPlotLedger[*mPlotViewHistory[currPlotIndex - 1]]->GetWindowTopX();
-      curYpos = mPlotLedger[*mPlotViewHistory[currPlotIndex - 1]]->GetWindowTopY();
+    if (curPlotIndex > 0) {
+      curXpos = mPlotLedger[*mPlotViewHistory[curPlotIndex - 1]]->GetWindowTopX();
+      curYpos = mPlotLedger[*mPlotViewHistory[curPlotIndex - 1]]->GetWindowTopY();
       canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
     }
     bool boxClicked = false;
@@ -375,13 +376,13 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
           forward = ((double_t)canvas->GetEventX() / (double_t)canvas->GetWw() > 0.5);
         }
         if (forward) {
-          if (currPlotIndex == mPlotViewHistory.size() - 1) break;
-          ++currPlotIndex;
+          if (curPlotIndex == mPlotViewHistory.size() - 1) break;
+          ++curPlotIndex;
         } else {
-          if (currPlotIndex == 0) std::exit(EXIT_FAILURE); // TODO: properly propagate this to caller
-          --currPlotIndex;
+          if (curPlotIndex == 0) std::exit(EXIT_FAILURE); // TODO: properly propagate this to caller
+          --curPlotIndex;
         }
-        canvas = mPlotLedger[*mPlotViewHistory[currPlotIndex]];
+        canvas = mPlotLedger[*mPlotViewHistory[curPlotIndex]];
         canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
         ((TRootCanvas*)canvas->GetCanvasImp())->MapRaised();
       } else {
@@ -457,7 +458,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
     }
   }
 
-  // were definitions for all requeseted plots available?
+  // were definitions for all requested plots available?
   if (!plotNames.empty()) {
     for (auto& plotName : plotNames) {
       WARNING(R"(Could not find plot "{}" in group "{}")", plotName,
@@ -521,7 +522,7 @@ bool PlotManager::FillBuffer()
       // find top level entry point for this input file
       if (fileNamePath.size() > 1) {
         auto filePath = split_string(fileNamePath[1], '/');
-        // append subspecification from input name
+        // append sub-specification from input name
         folder = FindSubDirectory(folder, filePath);
         if (!folder) {
           ERROR(R"(Subdirectory "{}" not found in file "{}".)", fileNamePath[1], fileName);
@@ -538,7 +539,7 @@ bool PlotManager::FillBuffer()
           string prefix = (pathStr.empty()) ? "" : pathStr + "/";
           string suffix = gNameGroupSeparator + inputID;
           ReadData(subfolder, names, prefix, suffix, inputID);
-          // in case a subdrectory was opened, properly delete it
+          // in case a subdirectory was opened, properly delete it
           if (!path.empty() && subfolder != &inputFile) {
             delete subfolder;
             subfolder = nullptr;
@@ -621,7 +622,7 @@ void PlotManager::PrintLoadedPlots()
 
 //**************************************************************************************************
 /**
- * Recursively reads data from folder / list and adds it to output data array. Found dataNames are remeoved from the vectors.
+ * Recursively reads data from folder / list and adds it to output data array. Found dataNames are removed from the vectors.
  */
 //**************************************************************************************************
 void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& inputID)
@@ -634,7 +635,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
   } else if (folder->InheritsFrom("TCollection")) {
     itemList = (TCollection*)folder;
   } else {
-    ERROR("Dataformat not supported.");
+    ERROR("Data-format not supported.");
     return;
   }
   itemList->SetOwner();
@@ -760,7 +761,7 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs)
 
 //**************************************************************************************************
 /**
- * Function to find plots in file via regexp match of user inputs
+ * Function to find plots in file via regex match of user inputs
  */
 //**************************************************************************************************
 void PlotManager::ExtractPlotsFromFile(const string& plotFileName,

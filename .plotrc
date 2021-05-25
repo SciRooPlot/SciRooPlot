@@ -120,7 +120,7 @@ _plot_completions_bash() {
     rootfiles+=" ${line}"
   done < <(ls -d *.root 2>/dev/null | grep '.*.root')
 
-  # fixme: with new order this logic no longer works
+  # FIXME: with new order this logic no longer works
   case $COMP_CWORD in
   1)
     COMPREPLY=( $( compgen -W "${modes}" -- "${COMP_WORDS[COMP_CWORD]}" ) )

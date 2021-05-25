@@ -1,7 +1,8 @@
-// Plotting Framework
+// PlottingFramework
 //
 // Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
+// For a full list of contributors please see doc/CONTRIBUTORS.md
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -100,7 +101,7 @@ std::tuple<Ts...> string_to_tuple(string itemString)
 template <typename T>
 std::vector<T> string_to_vector(string itemString)
 {
-  // savety in case user put some blank spaces between numbers
+  // safety in case user put some blank spaces between numbers
   std::remove_if(itemString.begin(), itemString.end(), ::isspace);
   vector<T> items;
 

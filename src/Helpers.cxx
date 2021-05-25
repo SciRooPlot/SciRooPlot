@@ -1,7 +1,8 @@
-// Plotting Framework
+// PlottingFramework
 //
 // Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
+// For a full list of contributors please see doc/CONTRIBUTORS.md
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -31,10 +32,10 @@ string expand_path(const string& path)
 vector<string> split_string(const string& argString, char delimiter)
 {
   vector<string> arguments;
-  string currArg;
+  string curArg;
   std::istringstream argStream(argString);
-  while (std::getline(argStream, currArg, delimiter)) {
-    arguments.push_back(currArg);
+  while (std::getline(argStream, curArg, delimiter)) {
+    arguments.push_back(curArg);
   }
   return arguments;
 }

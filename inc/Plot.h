@@ -1,7 +1,8 @@
-// Plotting Framework
+// PlottingFramework
 //
 // Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
+// For a full list of contributors please see doc/CONTRIBUTORS.md
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -355,7 +356,7 @@ public:
   virtual Data& UnsetRangeY();
   virtual Data& SetLegendLabel(const string& legendLabel);
   virtual Data& SetLegendID(uint8_t legendID);
-  virtual Data& SetOptions(const string& opions);
+  virtual Data& SetOptions(const string& options);
   virtual Data& SetOptions(drawing_options_t optionAlias);
   virtual Data& UnsetOptions();
   virtual Data& SetTextFormat(const string& textFormat);
@@ -494,7 +495,7 @@ public:
   Ratio& UnsetRangeY() { return static_cast<decltype(*this)&>(Data::UnsetRangeY()); }
   Ratio& SetLegendLabel(const string& legendLabel) { return static_cast<decltype(*this)&>(Data::SetLegendLabel(legendLabel)); }
   Ratio& SetLegendID(uint8_t legendID) { return static_cast<decltype(*this)&>(Data::SetLegendID(legendID)); }
-  Ratio& SetOptions(const string& opions) { return static_cast<decltype(*this)&>(Data::SetOptions(opions)); }
+  Ratio& SetOptions(const string& options) { return static_cast<decltype(*this)&>(Data::SetOptions(options)); }
   Ratio& SetOptions(drawing_options_t optionAlias) { return static_cast<decltype(*this)&>(Data::SetOptions(optionAlias)); }
   Ratio& UnsetOptions() { return static_cast<decltype(*this)&>(Data::UnsetOptions()); }
   Ratio& SetTextFormat(const string& textFormat) { return static_cast<decltype(*this)&>(Data::SetTextFormat(textFormat)); }
@@ -563,7 +564,7 @@ public:
   Axis& SetColor(int16_t color);
   Axis& SetAxisColor(int16_t color);
   Axis& SetNumDivisions(int32_t numDivisions);
-  Axis& SetMaxDigits(int32_t maxDigtis);
+  Axis& SetMaxDigits(int32_t maxDigits);
   Axis& SetTickLength(float_t tickLength);
   Axis& SetTitleFont(int16_t font);
   Axis& SetLabelFont(int16_t font);

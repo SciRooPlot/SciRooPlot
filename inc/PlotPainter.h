@@ -1,7 +1,8 @@
-// Plotting Framework
+// PlottingFramework
 //
 // Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
+// For a full list of contributors please see doc/CONTRIBUTORS.md
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -51,14 +52,14 @@ using data_ptr_t_func = variant<TF1*, TF2*>;
 using data_ptr_t_func_1d = variant<TF1*>;
 using data_ptr_t_func_2d = variant<TF2*>;
 
-const map<drawing_options_t, string> defaultDrawingOpions_Hist2d{
+const map<drawing_options_t, string> defaultDrawingOptions_Hist2d{
   {colz, "COLZ"},
   {surf, "SURF"},
   {cont, "CONT3"},
   {text, "TEXT"},
 };
 
-const map<drawing_options_t, string> defaultDrawingOpions_Hist{
+const map<drawing_options_t, string> defaultDrawingOptions_Hist{
   {points, "X0 EP"},
   {points_xerr, "EP"},
   {points_endcaps, "E1"},
@@ -78,7 +79,7 @@ const map<drawing_options_t, string> defaultDrawingOpions_Hist{
   {text, "TEXT"},
 };
 
-const map<drawing_options_t, string> defaultDrawingOpions_Graph{
+const map<drawing_options_t, string> defaultDrawingOptions_Graph{
   {points, "P Z"},
   {points_line, "P Z L"},
   {points_endcaps, "P"},
@@ -124,7 +125,7 @@ private:
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text);
   void ReplacePlaceholders(string& str, TNamed* data_ptr);
   TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box, TPad* pad);
-  float_t GetTextSizePixel(float_t textsizeNDC);
+  float_t GetTextSizePixel(float_t textSizeNDC);
 
   template <typename T>
   TAxis* GetAxis(T* histPtr, int16_t i);

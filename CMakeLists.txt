@@ -27,7 +27,7 @@ set(APPLICATIONS
 set(APPLICATIONS_SRC
   "app/PlottingApp.cxx"
 )
-# files that you want to associate to your app put "" if not required
+# files that you want to associate to your app; put "" if not required
 set(APPLICATIONS_ADDITIONAL_FILES
   ""
 )

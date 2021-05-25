@@ -1,7 +1,8 @@
-// Plotting Framework
+// PlottingFramework
 //
 // Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
+// For a full list of contributors please see doc/CONTRIBUTORS.md
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -172,7 +173,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       // retrieve the actual pointer to the data
       auto processData = [&, padID = padID](auto&& data_ptr) {
         using data_type = std::decay_t<decltype(data_ptr)>;
-        data_ptr->SetTitle(""); // FIXME: only make this invisible but dont remove this metadata
+        data_ptr->SetTitle(""); // FIXME: only make this invisible but don't remove useful metadata
 
         optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
@@ -186,8 +187,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 defaultDrawingOption = padDefaults.GetDefaultDrawingOptionHist2d();
             }
 
-            if (defaultDrawingOption && defaultDrawingOpions_Hist2d.find(*defaultDrawingOption) != defaultDrawingOpions_Hist2d.end()) {
-              drawingOptions += defaultDrawingOpions_Hist2d.at(*defaultDrawingOption);
+            if (defaultDrawingOption && defaultDrawingOptions_Hist2d.find(*defaultDrawingOption) != defaultDrawingOptions_Hist2d.end()) {
+              drawingOptions += defaultDrawingOptions_Hist2d.at(*defaultDrawingOption);
             }
           } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>) {
             if (!defaultDrawingOption)
@@ -197,8 +198,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                        ? padDefaults.GetDefaultDrawingOptionHist()
                                        : std::nullopt;
 
-            if (defaultDrawingOption && defaultDrawingOpions_Hist.find(*defaultDrawingOption) != defaultDrawingOpions_Hist.end()) {
-              drawingOptions += defaultDrawingOpions_Hist.at(*defaultDrawingOption);
+            if (defaultDrawingOption && defaultDrawingOptions_Hist.find(*defaultDrawingOption) != defaultDrawingOptions_Hist.end()) {
+              drawingOptions += defaultDrawingOptions_Hist.at(*defaultDrawingOption);
             }
           } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
             if (!defaultDrawingOption)
@@ -208,8 +209,8 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                        ? padDefaults.GetDefaultDrawingOptionGraph()
                                        : std::nullopt;
 
-            if (defaultDrawingOption && defaultDrawingOpions_Graph.find(*defaultDrawingOption) != defaultDrawingOpions_Graph.end()) {
-              drawingOptions += defaultDrawingOpions_Graph.at(*defaultDrawingOption);
+            if (defaultDrawingOption && defaultDrawingOptions_Graph.find(*defaultDrawingOption) != defaultDrawingOptions_Graph.end()) {
+              drawingOptions += defaultDrawingOptions_Graph.at(*defaultDrawingOption);
             }
           }
         }
@@ -583,11 +584,11 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     }
 
     if (!padTitle.empty()) {
-      // dummy title feature (will be improved once text boxes are implemented propely)
+      // dummy title feature (will be improved once text boxes are implemented properly)
       // TPaveText* titleBox = MakeText(std::make_shared<Plot::Pad::TextBox>(false, false, 0.5,
       // 0.98, kSolid, 0., kWhite, padTitle)); titleBox->Draw("SAME");
     }
-    // now place legends, textboxes and shapes
+    // now place legends, text-boxes and shapes
     uint8_t legendIndex{1u};
     for (auto& box : pad.GetLegendBoxes()) {
       string legendName = "LegendBox_" + std::to_string(legendIndex);
@@ -765,9 +766,9 @@ TPave* PlotPainter::GenerateBox(
       double_t lowerLeftX{};
       double_t lowerLeftY{};
       // minimum distance of box to objects and ticks (in units of tick length)
-      double_t fractionOfTickLenght{0.9};
-      double_t marginX = fractionOfTickLenght * gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()) / (pad->GetX2() - pad->GetX1());
-      double_t marginY = fractionOfTickLenght * gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()) / (pad->GetY2() - pad->GetY1());
+      double_t fractionOfTickLength{0.9};
+      double_t marginX = fractionOfTickLength * gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()) / (pad->GetX2() - pad->GetX1());
+      double_t marginY = fractionOfTickLength * gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()) / (pad->GetY2() - pad->GetY1());
       bool foundPosition = false;
 
       // draw temporary boxes to exclude areas outside of the coordinate system
@@ -801,8 +802,8 @@ TPave* PlotPainter::GenerateBox(
       } else {
         WARNING("Could not find enough space to place the {} properly.", (isLegend) ? "legend" : "text");
         // just place legend within axis ranges of pad
-        upperLeftX = (pad->GetUxmin() - pad->GetX1()) / (pad->GetX2() - pad->GetX1()) + (1 + 1 / fractionOfTickLenght) * marginX;
-        upperLeftY = (pad->GetUymax() - pad->GetY1()) / (pad->GetY2() - pad->GetY1()) - (1 + 1 / fractionOfTickLenght) * marginY;
+        upperLeftX = (pad->GetUxmin() - pad->GetX1()) / (pad->GetX2() - pad->GetX1()) + (1 + 1 / fractionOfTickLength) * marginX;
+        upperLeftY = (pad->GetUymax() - pad->GetY1()) / (pad->GetY2() - pad->GetY1()) - (1 + 1 / fractionOfTickLength) * marginY;
       }
       // now remove temporary boxes again
       pad->GetListOfPrimitives()->Remove(&marginsBottom);
@@ -832,15 +833,14 @@ TPave* PlotPainter::GenerateBox(
       if (textFont) legend->SetTextFont(*textFont);
 
       for (auto entry : box->GetEntries()) {
-        string label = entry.GetLabel() ? *entry.GetLabel() : ""; // fixme: this is equal to lines[i]
+        string label = entry.GetLabel() ? *entry.GetLabel() : ""; // FIXME: this is equal to lines[i]
         string drawStyle = entry.GetDrawStyle() ? *entry.GetDrawStyle() : "";
 
-        // TLegendEntry* curEntry = legend->AddEntry((TObject*)nullptr, label.data(),
-        // drawStyle.data());
+        // TLegendEntry* curEntry = legend->AddEntry((TObject*)nullptr, label.data(), drawStyle.data());
         TLegendEntry* curEntry = nullptr;
         if (entry.GetRefDataName()) {
           TNamed* data_ptr = (TNamed*)pad->FindObject((*entry.GetRefDataName()).data());
-          // TODO: here we need a check that if exists
+          // TODO: here we need to check that it exists
 
           if (drawStyle.empty()) {
             drawStyle = (box->GetDefaultDrawStyle()) ? *box->GetDefaultDrawStyle() : "EP";
@@ -1335,15 +1335,15 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
  * Converts NDC text size to pixel.
  */
 //**************************************************************************************************
-float_t PlotPainter::GetTextSizePixel(float_t textsizeNDC)
+float_t PlotPainter::GetTextSizePixel(float_t textSizeNDC)
 {
   float_t textSizePixel{};
   int32_t pad_width{gPad->XtoPixel(gPad->GetX2())};
   int32_t pad_height{gPad->YtoPixel(gPad->GetY1())};
   if (pad_width < pad_height)
-    textSizePixel = textsizeNDC * pad_width;
+    textSizePixel = textSizeNDC * pad_width;
   else
-    textSizePixel = textsizeNDC * pad_height;
+    textSizePixel = textSizeNDC * pad_height;
   return textSizePixel;
 }
 

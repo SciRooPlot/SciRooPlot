@@ -1,7 +1,8 @@
-// Plotting Framework
+// PlottingFramework
 //
 // Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
+// For a full list of contributors please see doc/CONTRIBUTORS.md
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -59,7 +60,7 @@ public:
   void AddPlot(Plot& plot);
   void AddPlotTemplate(Plot& plotTemplate);
 
-  // saving plot definitions to external file (which can e.g. be read by the commandlne plotting app
+  // saving plot definitions to external file (which can e.g. be read by the command-line plotting app
   // included in the framework)
   void DumpPlots(const string& plotFileName, const string& figureGroup = "", const vector<string>& plotNames = {});
   void DumpPlot(const string& plotFileName, const string& figureGroup, const string& plotName);

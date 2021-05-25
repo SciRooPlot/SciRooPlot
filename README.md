@@ -56,7 +56,7 @@ In case you have doxygen installed, you can also generate a documentation from t
     doxygen doxygen.conf
     open html/namespace_plotting_framework.html
 
-After building the library, you can write your own individual plotting programs and link them against the PlotttingFramework.
+After building the library, you can write your own individual plotting programs and link them against the PlottingFramework.
 As a starting point you can copy the `example` folder to some location on your computer and follow the instructions provided in `CreatePlots.cxx`.
 This example should work out of the box, but it requires to know where the PlottingFramework library is located.
 The easiest way to define this is by putting the following line in your .bashrc or .bash_aliases:
@@ -154,7 +154,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 
   // you can also simply add the ratio of two input data
   plot[1].AddRatio("histName3", "inputIdentifierB", "histName1", "inputIdentifierA", "ratioLabel");
-  // for incopatible data (e.g. different number of bins or bin limits) the framework will try to use splines to interpolate the datapoints before dividing
+  // for incompatible data (e.g. different number of bins or bin limits) the framework will try to use splines to interpolate the data points before dividing
   // in case numerator and denominator are sub-samples of one another bayesian error propagation can be applied:
   plot[1].AddRatio("histName3", "inputIdentifierB", "histName1", "inputIdentifierA", "ratioLabel").SetIsCorrelated();
   
@@ -177,7 +177,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
   // in order to express that the label for a specific data should be put in the second legend you can do the following:
   plot[1].AddData("function1", "inputIdentifierA", "my label in second legend").SetLegendID(2);
 
-  // the styles and colours of the respective legend entries are by default based on the data that is represented
+  // the styles and colors of the respective legend entries are by default based on the data that is represented
   // you can however override this and specify different default settings for the legend
   plot[1].GetLegend(2).SetDefaultLineWidth(5.);
   // modifications can also be done on per entry:
@@ -307,7 +307,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 
 // as you know from your personal plotting experience
 // there are plenty of settings that have to be applied to generate a beautiful plot
-// most of these settings e.g. the number and alignment of pads, background colours, transparency, etc..
+// most of these settings e.g. the number and alignment of pads, background colors, transparency, etc..
 // stay the same for all (or a group of) your plots and you do not want to
 // verbosely specify them again and again for every one of your plots
 // therefore the framework provides the option to specify plot templates
@@ -433,7 +433,7 @@ data_layout_t pp_7TeV
     .SetColor(kBlue+2)
   },
   {mc, DataLayout()
-    .SetInputID("pp_7TeV")
+    .SetInputID("pp_7TeV_MC")
     .SetOptions(curve)
     .SetLineStyle(kSolid)
     .SetColor(kRed+1)
@@ -445,7 +445,7 @@ data_layout_t pp_7TeV
   plot[1].AddData("graph2", "inputIdentifierA").SetLayout(pp_5TeV);
 
   // if your data layout also contains an input identifier
-  pp5TeV.SetInputID("inputIdentifierA");
+  pp_5TeV.SetInputID("inputIdentifierA");
   // you can add the data and layout in the following way:
   plot[1].AddData("graph2", pp_5TeV);
   plot[1].AddData("graph2", pp_7TeV[data]);

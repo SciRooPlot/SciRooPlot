@@ -1,7 +1,8 @@
-// Plotting Framework
+// PlottingFramework
 //
 // Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
+// For a full list of contributors please see doc/CONTRIBUTORS.md
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -1014,7 +1015,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
 //**************************************************************************************************
 auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
 {
-  // apply all properties related to the appearence of the data
+  // apply all properties related to the appearance of the data
   mDrawingOptions = dataLayout.mDrawingOptions;
   mDrawingOptionAlias = dataLayout.mDrawingOptionAlias;
   mTextFormat = dataLayout.mTextFormat;
@@ -1050,9 +1051,9 @@ auto Plot::Pad::Data::SetLegendID(uint8_t legendID) -> decltype(*this)
   mLegend.identifier = legendID;
   return *this;
 }
-auto Plot::Pad::Data::SetOptions(const string& opions) -> decltype(*this)
+auto Plot::Pad::Data::SetOptions(const string& options) -> decltype(*this)
 {
-  mDrawingOptions = opions;
+  mDrawingOptions = options;
   return *this;
 }
 auto Plot::Pad::Data::SetOptions(drawing_options_t optionAlias) -> decltype(*this)
@@ -1343,7 +1344,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
 
 //**************************************************************************************************
 /**
- * Specify how the division should be done (spline, biniomial, etc...).
+ * Specify how the division should be done (spline, binomial, etc...).
  */
 //**************************************************************************************************
 auto Plot::Pad::Ratio::SetIsCorrelated(bool isCorrelated) -> decltype(*this)
@@ -1529,9 +1530,9 @@ auto Plot::Pad::Axis::SetNumDivisions(int32_t numDivisions) -> decltype(*this)
   mNumDivisions = numDivisions;
   return *this;
 }
-auto Plot::Pad::Axis::SetMaxDigits(int32_t maxDigtis) -> decltype(*this)
+auto Plot::Pad::Axis::SetMaxDigits(int32_t maxDigits) -> decltype(*this)
 {
-  mMaxDigits = maxDigtis;
+  mMaxDigits = maxDigits;
   return *this;
 }
 auto Plot::Pad::Axis::SetTickLength(float_t tickLength) -> decltype(*this)
@@ -1849,7 +1850,7 @@ Plot::Pad::TextBox::TextBox(const ptree& textBoxTree) : Box(textBoxTree)
   try {
     mText = textBoxTree.get<string>("text");
   } catch (...) {
-    ERROR("Could not construct textbox from ptree.");
+    ERROR("Could not construct text-box from ptree.");
   }
 }
 
@@ -2250,7 +2251,7 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetTextSiz
 }
 
 //**************************************************************************************************
-// explicitly instanciate required box templates
+// explicitly instantiate required box templates
 template class Plot::Pad::Box<Plot::Pad::TextBox>;
 template class Plot::Pad::Box<Plot::Pad::LegendBox>;
 //**************************************************************************************************

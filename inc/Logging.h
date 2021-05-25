@@ -1,7 +1,8 @@
-// Plotting Framework
+// PlottingFramework
 //
 // Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
+// For a full list of contributors please see doc/CONTRIBUTORS.md
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -106,7 +107,7 @@
 #define PRINT_INLINE(s, ...) ;
 #endif
 
-// helper macro to quickly instospect deduced type of a variable
+// helper macro to quickly introspect deduced type of a variable
 #define CHECK_TYPE(var)        \
   {                            \
     typename decltype(var)::_; \

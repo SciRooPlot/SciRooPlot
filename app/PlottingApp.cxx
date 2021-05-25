@@ -1,8 +1,8 @@
-// Plotting Framework
+// PlottingFramework
 //
 // Copyright (C) 2019-2021  Mario Krüger
 // Contact: mario.kruger@cern.ch
-// For a full list of contributors please see docs/Credits
+// For a full list of contributors please see doc/CONTRIBUTORS.md
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -68,8 +68,7 @@ int main(int argc, char* argv[])
     po::variables_map vm;
     po::options_description cmdline_options;
     cmdline_options.add(options).add(arguments);
-    po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(pos).run(),
-              vm);
+    po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(pos).run(), vm);
     po::notify(vm);
 
     if (vm.count("help")) {
