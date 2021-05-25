@@ -11,7 +11,7 @@ export __PLOTTING_FRAMEWORK_DIR
 __PLOTTING_BUILD_DIR="${__PLOTTING_FRAMEWORK_DIR}/build"
 if [[ -d "${__PLOTTING_BUILD_DIR}" ]]
 then
-  function plot(){ [[ "${1}" == "cd" ]] && { cd ${__PLOTTING_BUILD_DIR}; return 0; } || { [[ "${__MY_PLOTS_BUILD_DIR}" != "" ]] && { (cd ${__MY_PLOTS_BUILD_DIR}; make 1>/dev/null || exit 1; [[ ! -z `find './' -name 'create' -mmin +1` ]] || ./create;) || return 1; } || { }; "${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0; } }
+  function plot() { [[ "${1}" == "cd" ]] && { cd ${__PLOTTING_BUILD_DIR}; return 0; } || { [[ "${__MY_PLOTS_BUILD_DIR}" != "" ]] && { (cd ${__MY_PLOTS_BUILD_DIR}; make 1>/dev/null || exit 1; [[ ! -z `find './' -name 'create' -mmin +1` ]] || ./create;) || return 1; } || {}; "${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0; } }
 fi
 
 if [ ! -d "${__PLOTTING_CONFIG_DIR}" ]; then
@@ -120,32 +120,21 @@ _plot_completions_bash() {
     rootfiles+=" ${line}"
   done < <(ls -d *.root 2>/dev/null | grep '.*.root')
 
-  # FIXME: with new order this logic no longer works
   case $COMP_CWORD in
   1)
-    COMPREPLY=( $( compgen -W "${modes}" -- "${COMP_WORDS[COMP_CWORD]}" ) )
+    COMPREPLY=( $(compgen -W "${groups}" -- "${COMP_WORDS[COMP_CWORD]}") )
   ;;
   2)
     if [[ "${COMP_WORDS[COMP_CWORD-1]}" == "cd" ]]
     then
       COMPREPLY=( )
-    elif [[ "${COMP_WORDS[COMP_CWORD-1]}" == "browse" ]]
-    then
-      local groupsAndFiles=("${inputIdentifiers} ${rootfiles}")
-      COMPREPLY=( $(compgen -W "${groupsAndFiles}" -- "${COMP_WORDS[COMP_CWORD]}") )
-    else
-      COMPREPLY=( $(compgen -W "${groups}" -- "${COMP_WORDS[COMP_CWORD]}") )
-    fi
-  ;;
-  3)
-  if [[ "${COMP_WORDS[COMP_CWORD-2]}" == "browse" ]]
-    then
-      # for .root one could use rootls to check what is in file
-      COMPREPLY=( )
     else
       updatePlotNames "${COMP_WORDS[COMP_CWORD-1]}"
       COMPREPLY=( $(compgen -W "${names}" -- "${COMP_WORDS[COMP_CWORD]}") )
     fi
+  ;;
+  3)
+    COMPREPLY=( $( compgen -W "${modes}" -- "${COMP_WORDS[COMP_CWORD]}" ) )
   ;;
   esac
 

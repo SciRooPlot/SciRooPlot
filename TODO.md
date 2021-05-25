@@ -1,5 +1,4 @@
 Todo:
-- fix bash tab completion
 - add possibility to read / write multiple files
 - always call Sumw2() before drawing histograms as points
 - propagate color gradient settings from user interface
