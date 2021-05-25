@@ -13,7 +13,7 @@ Everybody is welcome to use this software, report bugs or contribute new feature
 
 Prerequisites
 -------------
-The PlottingFramework depends on the following external software which you need have installed on your system:
+The PlottingFramework depends on the following external software which has to be installed on your system:
 
 - c++   >= 17
 - cmake >= 3.15
@@ -104,8 +104,8 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 // the plot will be handed over to the manager after it was created and defined
 { // -----------------------------------------------------------------------
   // create the Plot object
-  Plot plot("myPlot1", "myPlotGroup"); // plots are classified in user defined groups
-  // optionally you can also define figure categories (and subcategories) within the figureGroup
+  Plot plot("myPlot1", "myFigureGroup"); // plots are organised in user defined figure groups
+  // optionally you can also define figure categories (and subcategories) within a figure group
   plot.SetFigureCategory("QA-Plots/closureTests");
    // you always have to specify height and width of the plot:
   plot.SetDimensions(710, 710);
@@ -210,7 +210,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 
 // we could now add plenty of more plots to the manager....
 { // -----------------------------------------------------------------------
-  //Plot plot("myPlot2", "myPlotGroup:myCategory");
+  //Plot plot("myPlot2", "myFigureGroup:myCategory");
   // ...
   // ...
   // plotManager.AddPlot(plot);
@@ -218,14 +218,14 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 
 // it is also possible to construct a plot based on a copy of another
 { // -----------------------------------------------------------------------
-  Plot plot("myPlot", "myPlotGroup2");
+  Plot plot("myPlot", "myFigureGroup2");
   // ...
   plot[1].AddData("folder1/histName2", "inputIdentifierA", "myLabel2");
   //...
 
   // now we want to have exact same plot, but with some additional data points
   // this can be helpful to avoid code duplication
-  Plot plot2(plot, "myPlot2", "myPlotGroup2");
+  Plot plot2(plot, "myPlot2", "myFigureGroup2");
   plot2[1].AddData("graphName1", "inputIdentifierB", "more data");
 
   // now add both to the manager
@@ -236,7 +236,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 // in case you are dealing with {2,3,n}-dimensional input data, it is also possible
 // to book only projections of the data for your plot
 { // -----------------------------------------------------------------------
-  Plot plot("myProjectionsIllustration", "myPlotGroup2");
+  Plot plot("myProjectionsIllustration", "myFigureGroup2");
 
   // projection of 2d data on X axis
   plot[1].AddData("my2dhist1", "inputIdentifierA").SetProjectionX();
@@ -263,14 +263,13 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 
 // to save the plots to disk as pdf you first have to tell the manager where to put them
 plotManager.SetOutputDirectory("path/to/my/OutputFolder");
-// the manager will automatically create subfolders for the figureGroups and categories
+// the manager will automatically create subfolders for the figure groups and categories
 // to generate all stored plots as pdf you can call
 plotManager.CreatePlots();
 
-// for a specific figureGroup, figureCategory and or plotName just specify them:
-plotManager.CreatePlots("myPlotGroup", "myCategory");
-// or
-plotManager.CreatePlots("myPlotGroup", "", {"myPlot1", "myPlot2"});
+// for a specific figure group, category and / or plot just specify them like this:
+plotManager.CreatePlots("myFigureGroup", "myFigureCategory");
+plotManager.CreatePlots("myFigureGroup", "", {"myPlot1", "myPlot2"});
 // in case you want the pdf files to contain the figureGroup and category in the file name, you can use
 plotManager.SetUseUniquePlotNames();
 
@@ -280,11 +279,11 @@ plotManager.SetUseUniquePlotNames();
 plotManager.CreatePlots("", "", {}, "interactive");
 
 // you can also save the plots as a root macro (.C):
-plotManager.CreatePlots("myPlotGroup", "", {"myPlot1", "myPlot2"}, "macro");
+plotManager.CreatePlots("myFigureGroup", "", {"myPlot1", "myPlot2"}, "macro");
 
 // after specifying a file name you can also save the plots to a .root file
 plotManager.SetOutputFileName("ResultPlots.root");
-plotManager.CreatePlots("myPlotGroup", "", {"myPlot1", "myPlot2"}, "file");
+plotManager.CreatePlots("myFigureGroup", "", {"myPlot1", "myPlot2"}, "file");
 
 ```
 Example 2
