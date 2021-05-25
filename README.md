@@ -89,17 +89,17 @@ PlotManager plotManager;
 plotManager.AddInputDataFiles("inputIdentifierA", {"/path/to/file/a.root", "/path/to/file/a2.root"});
 // instead of adding the whole root file, you can also specify a sub-list or sub-folder in the file:
 plotManager.AddInputDataFiles("inputIdentifierB", {"/path/to/file/b.root:my/sub/list/or/dir"});
-// the paths may contain any environment variables defined in your shell:
+// the paths may contain any environment variable defined in your shell:
 plotManager.AddInputDataFiles("inputIdentifierC", {"${HOME}/myRootFiles/b2.root"});
 // and it is possible to add all root files within a directory (including sub-directories):
 plotManager.AddInputDataFiles("inputIdentifierD", {"/path/to/folder/with/rootfiles/"});
 
 // N.B.:
 // you can save these settings to a file via:
-plotManager.DumpInputDataFiles("path/to/inputFilesConfig.XML");
+plotManager.DumpInputDataFiles("/path/to/inputFilesConfig.XML");
 // this way you can also modify this list of input files manually in the
 // xml file and then read it into your program via
-plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
+plotManager.LoadInputDataFiles("/path/to/inputFilesConfig.XML");
 
 // now that we know where to look for the data, we can start creating plot(s).
 // the plot will be handed over to the manager after it was created and defined
@@ -263,7 +263,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 } // -----------------------------------------------------------------------
 
 // to save the plots to disk as pdf you first have to tell the manager where to put them
-plotManager.SetOutputDirectory("path/to/my/OutputFolder");
+plotManager.SetOutputDirectory("/path/to/my/OutputFolder");
 // the manager will automatically create subfolders for the figure groups and categories
 // to generate all stored plots as pdf you can call
 plotManager.CreatePlots();
@@ -301,9 +301,9 @@ using namespace PlottingFramework;
 PlotManager plotManager;
 
 // assuming you saved the list of input root files from example 1 to a xml file via
-// plotManager.DumpInputDataFiles("path/to/inputFilesConfig.XML");
+// plotManager.DumpInputDataFiles("/path/to/inputFilesConfig.XML");
 // we can now load this directly into the manager via:
-plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
+plotManager.LoadInputDataFiles("/path/to/inputFilesConfig.XML");
 
 // as you know from your personal plotting experience
 // there are plenty of settings that have to be applied to generate a beautiful plot
@@ -461,21 +461,21 @@ data_layout_t pp_7TeV
 
 // instead of creating the plots directly as we have done in the previous example,
 // we can also save the plot definitions into another xml file via:
-plotManager.DumpPlots("path/to/my/plotDefinitions.XML");
+plotManager.DumpPlots("/path/to/my/plotDefinitions.XML");
 
 // this file can then be read in by another one of your programs via
-plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML");
+plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML");
 // this extracts all plots defined in the file
 // in case you want to load only certain figure groups:
-plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {"figureGroup1", "figures", "figureGroup:myCategory"});
+plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", {"figureGroup1", "figures", "figureGroup:myCategory"});
 // ... or plots:
-plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {"invMass", "ptSpec"});
+plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", {}, {"invMass", "ptSpec"});
 // the figure group and plot strings can be regular expressions
 // this means you can put "plot.*" and this will add "plot1", "plot123", "plot_adsf", etc.
 
 // instead of the default option "load", which adds these plots to the manager, the mode can also be
 // "find" in order to check only if the specified plots exist (it prints out this info)
-plotManager.ExtractPlotsFromFile("path/to/my/plotDefinitions.XML", {}, {}, "find");
+plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", {}, {}, "find");
 
 // the main reasoning behind the "dump-to-file" feature is that you can then
 // make use of the builtin command-line plotting tool, which can conveniently
