@@ -82,16 +82,17 @@ Example 1
 #include "PlotManager.h"
 using namespace PlottingFramework;
 
-// create plot manager that handles IO and plot creation
+// the plot manager is the central entity that handles and creates your plots
 PlotManager plotManager;
 
-// first tell the manager where to look for the data you want to use in your plots
-// the first argument gives these input files a unique identifier that is used in your plot definitions to specify where the data should come from
-plotManager.AddInputDataFiles("inputIdentifierA", {"path/to/file/a.root", "path/to/file/a2.root"});
-// instead of adding the whole root file, you can specify a sub-list or sub-folder in the file:
-plotManager.AddInputDataFiles("inputIdentifierB", {"path/to/file/b.root:my/sub/list/or/dir", "path/to/file/b2.root"});
-// it is also possible to add all root files within a directory (including sub-directories):
-plotManager.AddInputDataFiles("inputIdentifierC", {"path/to/folder/with/rootfiles/"});
+// first you need to define the data sources that should be available for your plots
+plotManager.AddInputDataFiles("inputIdentifierA", {"/path/to/file/a.root", "/path/to/file/a2.root"});
+// instead of adding the whole root file, you can also specify a sub-list or sub-folder in the file:
+plotManager.AddInputDataFiles("inputIdentifierB", {"/path/to/file/b.root:my/sub/list/or/dir"});
+// the paths may contain any environment variables defined in your shell:
+plotManager.AddInputDataFiles("inputIdentifierC", {"${HOME}/myRootFiles/b2.root"});
+// and it is possible to add all root files within a directory (including sub-directories):
+plotManager.AddInputDataFiles("inputIdentifierD", {"/path/to/folder/with/rootfiles/"});
 
 // N.B.:
 // you can save these settings to a file via:
@@ -104,7 +105,7 @@ plotManager.LoadInputDataFiles("path/to/inputFilesConfig.XML");
 // the plot will be handed over to the manager after it was created and defined
 { // -----------------------------------------------------------------------
   // create the Plot object
-  Plot plot("myPlot1", "myFigureGroup"); // plots are organised in user defined figure groups
+  Plot plot("myPlot1", "myFigureGroup"); // plots are organized in user defined figure groups
   // optionally you can also define figure categories (and subcategories) within a figure group
   plot.SetFigureCategory("QA-Plots/closureTests");
    // you always have to specify height and width of the plot:
