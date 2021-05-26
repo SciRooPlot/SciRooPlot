@@ -186,7 +186,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
     set<string> allFileNames;
     for (auto& fileEntry : inputPair.second) {
       string fileOrDirName = expand_path(fileEntry.second.get_value<string>());
-      if (fileOrDirName.rfind(".root") != string::npos || fileOrDirName.rfind(".csv") != string::npos) {
+      if (str_contains(fileOrDirName, ".root", true) || str_contains(fileOrDirName, ".csv", true)) {
         allFileNames.insert(fileOrDirName);
       } else if (std::filesystem::is_directory(fileOrDirName)) {
         for (auto& file : std::filesystem::recursive_directory_iterator(fileOrDirName)) {
@@ -499,14 +499,14 @@ bool PlotManager::FillBuffer()
     // open all input files belonging to the current inputID and extract the data
     for (auto& inputFileName : mInputFiles[inputID]) {
       if (requiredData.empty()) break;
-      if (inputFileName.rfind(".csv") != string::npos) {
+      if (str_contains(inputFileName, ".csv", true)) {
         string graphName = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
         ReadDataCSV(inputFileName, graphName, inputID);
         vector<string>& names = requiredData[""];
         names.erase(std::remove_if(names.begin(), names.end(), [&](auto& name) { return name == graphName; }), names.end());
         if (names.empty()) requiredData.erase("");
       }
-      if (inputFileName.rfind(".root") == string::npos) continue;
+      if (!str_contains(inputFileName, ".root", true)) continue;
       // check if only a sub-folder in input file should be searched
       auto fileNamePath = split_string(inputFileName, ':');
       string& fileName = fileNamePath[0];
@@ -658,7 +658,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
         string className = ((TKey*)obj)->GetClassName();
         string keyName = ((TKey*)obj)->GetName();
 
-        bool isTraversable = className.find("TDirectory") != string::npos || className.find("TFolder") != string::npos || className.find("TList") != string::npos || className.find("TObjArray") != string::npos;
+        bool isTraversable = str_contains(className, "TDirectory") || str_contains(className, "TFolder") || str_contains(className, "TList") || str_contains(className, "TObjArray");
         if ((traverse && isTraversable) || std::find(dataNames.begin(), dataNames.end(), keyName) != dataNames.end()) {
           obj = ((TKey*)obj)->ReadObj();
           removeFromList = false;

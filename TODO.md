@@ -1,5 +1,5 @@
 Todo:
-- add possibility to read / write multiple files
+- add possibility to read / write multiple files in app (config of config files??)
 - always call Sumw2() before drawing histograms as points
 - propagate color gradient settings from user interface
 
@@ -53,8 +53,6 @@ Structural:
 - fix inconsistencies in naming of variables
 - how to handle boolean variables? should they also be wrapped in optionals?
 - re-check which of the properties that are always stored are actually required to be non-optional
-- use str_contains() more
-- use brace-or-equal initializers in class definitions and get rid of initializer lists
 
 Bugs:
 - can we avoid storing figureGroup and figureCategory stored twice in the xml?

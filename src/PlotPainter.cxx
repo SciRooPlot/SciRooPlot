@@ -320,7 +320,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         if (dataIndex == 0) {
           bool isDrawn = false;
           if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
-            if (drawingOptions.find("Z") != string::npos) {
+            if (str_contains(drawingOptions, "Z")) {
               data_ptr->Draw(drawingOptions.data()); // z axis is only drawn if specified
               // reset the axis histogram which now owns the z axis, but keep default range
               // defined by the data
@@ -1381,22 +1381,22 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     format = "{:" + format + "}";
 
     string replace_str;
-    if (match_str.find("name") != string::npos) {
+    if (str_contains(match_str, "name")) {
       replace_str = data_ptr->GetName();
       replace_str = replace_str.substr(0, replace_str.find(gNameGroupSeparator));
-    } else if (match_str.find("title") != string::npos) {
+    } else if (str_contains(match_str, "title")) {
       replace_str = data_ptr->GetTitle();
     } else if (data_ptr->InheritsFrom(TH1::Class())) {
       try {
-        if (match_str.find("entries") != string::npos) {
+        if (str_contains(match_str, "entries")) {
           replace_str = fmt::format(format, ((TH1*)data_ptr)->GetEntries());
-        } else if (match_str.find("integral") != string::npos) {
+        } else if (str_contains(match_str, "integral")) {
           replace_str = fmt::format(format, ((TH1*)data_ptr)->Integral());
-        } else if (match_str.find("mean") != string::npos) {
+        } else if (str_contains(match_str, "mean")) {
           replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMean());
-        } else if (match_str.find("maximum") != string::npos) {
+        } else if (str_contains(match_str, "maximum")) {
           replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMaximum());
-        } else if (match_str.find("minimum") != string::npos) {
+        } else if (str_contains(match_str, "minimum")) {
           replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMinimum());
         }
       } catch (...) {

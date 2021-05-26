@@ -160,7 +160,7 @@ int main(int argc, char* argv[])
     return 0;
   } else if (mode == "browse") { // directly plot histograms from input identifier or file
     string inputIdentifier = figureGroupsVector[0];
-    if (inputIdentifier.find(".root") == string::npos) {
+    if (!str_contains(inputIdentifier, ".root", true)) {
       plotManager.LoadInputDataFiles(inputFilesConfig);
     } else {
       plotManager.AddInputDataFiles("browse", {inputIdentifier});

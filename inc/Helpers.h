@@ -27,9 +27,13 @@ string expand_path(const string& path);
 vector<string> split_string(const string& argString, char delimiter);
 bool file_exists(const std::string& name);
 
-inline bool str_contains(const std::string& str, const std::string& substr)
+inline bool str_contains(const std::string& str, const std::string& substr, bool reverseSearch = false)
 {
-  return (str.find(substr) != string::npos);
+  if (reverseSearch) {
+    return (str.rfind(substr) != string::npos);
+  } else {
+    return (str.find(substr) != string::npos);
+  }
 }
 
 template <typename T>
