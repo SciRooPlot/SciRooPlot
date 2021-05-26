@@ -86,7 +86,7 @@ public:
   // accessors for user
   void SetFigureCategory(const string& figureCategory)
   {
-    mFigureCategory = (figureCategory != "") ? optional<string>{figureCategory} : std::nullopt;
+    mFigureCategory = (!figureCategory.empty()) ? optional<string>{figureCategory} : std::nullopt;
     mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
   }
   void SetPlotTemplateName(const string& plotTemplateName) { mPlotTemplateName = plotTemplateName; }

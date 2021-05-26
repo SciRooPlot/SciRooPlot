@@ -257,7 +257,7 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
 
       if (plot.GetFigureGroup() == "TEMPLATES" && usedTemplates.find(plot.GetName()) == usedTemplates.end()) {
         continue;
-      } else if (figureGroup != "") {
+      } else if (!figureGroup.empty()) {
         if (plot.GetFigureGroup() != figureGroup) continue;
         if (!plotNames.empty()) {
           bool found = false;
@@ -316,7 +316,7 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
     ERROR(R"(Plot "{}" was already created. Replacing it.)", plot.GetUniqueName());
     mPlotLedger.erase(plot.GetUniqueName());
   }
-  if (plot.GetFigureGroup() == "") {
+  if (plot.GetFigureGroup().empty()) {
     ERROR("No figure group was specified.");
     return false;
   }
@@ -431,7 +431,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
                               vector<string> plotNames, const string& outputMode)
 {
   map<int32_t, set<int32_t>> requiredData;
-  bool saveAll = (figureGroup == "");
+  bool saveAll = (figureGroup.empty());
   bool saveSpecificPlots = !saveAll && !plotNames.empty();
   vector<Plot*> selectedPlots;
 
@@ -462,7 +462,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   if (!plotNames.empty()) {
     for (auto& plotName : plotNames) {
       WARNING(R"(Could not find plot "{}" in group "{}")", plotName,
-              figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
+              figureGroup + ((!figureCategory.empty()) ? ":" + figureCategory : ""));
     }
   }
 
@@ -834,7 +834,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
       ++nFoundPlots;
       if (isSearchRequest) {
         INFO(" - \033[1;32m{}\033[0m in group \033[1;33m{}\033[0m", plotName,
-             figureGroup + ((figureCategory != "") ? ":" + figureCategory : ""));
+             figureGroup + ((!figureCategory.empty()) ? ":" + figureCategory : ""));
       } else {
         try {
           Plot plot(plotTree.second);
