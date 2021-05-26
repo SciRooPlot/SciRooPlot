@@ -338,7 +338,7 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
   PlotPainter painter;
   shared_ptr<TCanvas> canvas = painter.GeneratePlot(fullPlot, mDataBuffer);
   if (!canvas) return false;
-  LOG("Created \033[1;32m{}\033[0m from group \033[1;33m{}\033[0m", fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory() != "") ? ":" + fullPlot.GetFigureCategory() : ""));
+  LOG("Created \033[1;32m{}\033[0m from group \033[1;33m{}\033[0m", fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? ":" + *fullPlot.GetFigureCategory() : ""));
 
   // if interactive mode is specified, open window instead of saving the plot
   if (outputMode == "interactive") {
@@ -393,7 +393,7 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
     return true;
   }
 
-  const string& subFolder = plot.GetFigureCategory();
+  const optional<string>& subFolder = plot.GetFigureCategory();
   string fileEnding = ".pdf";
   if (outputMode == "macro") {
     fileEnding = ".C";
@@ -416,7 +416,7 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
 
   // create output folders and files
   string folderName = mOutputDirectory + "/" + plot.GetFigureGroup();
-  if (subFolder != "") folderName += "/" + subFolder;
+  if (subFolder) folderName += "/" + *subFolder;
   gSystem->Exec((string("mkdir -p ") + folderName).data());
   canvas->SaveAs((folderName + "/" + fileName + fileEnding).data());
   return true;
@@ -437,7 +437,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
 
   // first determine which data needs to be loaded
   for (auto& plot : mPlots) {
-    if (!saveAll && !(plot.GetFigureGroup() == figureGroup && plot.GetFigureCategory() == figureCategory))
+    if (!saveAll && !(plot.GetFigureGroup() == figureGroup && plot.GetFigureCategory() && *plot.GetFigureCategory() == figureCategory))
       continue;
     if (saveSpecificPlots && std::find(plotNames.begin(), plotNames.end(), plot.GetName()) == plotNames.end())
       continue;
@@ -613,7 +613,7 @@ void PlotManager::PrintLoadedPlots()
       figureGroup = plot.GetFigureGroup();
       INFO("{}", figureGroup);
     }
-    INFO(" - {}{}", plot.GetName(), (plot.GetFigureCategory().empty()) ? "" : " (" + plot.GetFigureCategory() + ")");
+    INFO(" - {}{}", plot.GetName(), (plot.GetFigureCategory()) ? "" : " (" + *plot.GetFigureCategory() + ")");
     INFO("     ndata = {}", plot.InputDataCount());
   }
   INFO("{} plots were loaded.", mPlots.size());
@@ -805,8 +805,10 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
 
     for (auto& plotTree : plotGroupTree.second) {
       const string& plotName = plotTree.second.get<string>("name");
-      const string& figureGroup = plotTree.second.get<string>("figureGroup");
-      const string& figureCategory = plotTree.second.get<string>("figureCategory");
+      const string& figureGroup = plotTree.second.get<string>("figure_group");
+      optional<string> figureCategoryOpt;
+      read_from_tree(plotTree.second, figureCategoryOpt, "figure_category");
+      string figureCategory = (figureCategoryOpt) ? *figureCategoryOpt : "";
 
       if (std::find_if(
             groupCategoryRegex.begin(), groupCategoryRegex.end(),

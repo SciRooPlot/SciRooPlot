@@ -84,7 +84,11 @@ public:
   Plot Clone() const;
 
   // accessors for user
-  void SetFigureCategory(const string& figureCategory) { mFigureCategory = figureCategory; }
+  void SetFigureCategory(const string& figureCategory)
+  {
+    mFigureCategory = (figureCategory != "") ? optional<string>{figureCategory} : std::nullopt;
+    mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
+  }
   void SetPlotTemplateName(const string& plotTemplateName) { mPlotTemplateName = plotTemplateName; }
 
   void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false) { mPlotDimensions = {width, height, fixAspectRatio}; }
@@ -99,12 +103,16 @@ protected:
   friend class PlotManager;
   friend class PlotPainter;
 
-  inline void SetFigureGroup(const string& figureGroup) { mFigureGroup = figureGroup; }
+  void SetFigureGroup(const string& figureGroup)
+  {
+    mFigureGroup = figureGroup;
+    mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
+  }
 
   // accessors for internal use by manager and painter
   const string& GetName() { return mName; }
   const string& GetFigureGroup() { return mFigureGroup; }
-  const string& GetFigureCategory() { return mFigureCategory; }
+  const optional<string>& GetFigureCategory() { return mFigureCategory; }
   const optional<string>& GetPlotTemplateName() { return mPlotTemplateName; }
   const string& GetUniqueName() { return mUniqueName; }
   ptree GetPropertyTree();
@@ -132,7 +140,7 @@ private:
 
   string mName;
   string mFigureGroup;
-  string mFigureCategory;
+  optional<string> mFigureCategory;
   string mUniqueName;
   optional<string> mPlotTemplateName;
   dimension_t mPlotDimensions;

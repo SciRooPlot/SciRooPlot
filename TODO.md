@@ -49,14 +49,11 @@ Structural:
 - the whole Painter::GeneratePlots() function is just a big mess and needs major rework!
 - decide where data manipulation part should be put (before or after setting ranges?)
 - put using... to avoid lengthly if constexpr
-- make figureCategory optional
 - fix inconsistencies in naming of variables
 - how to handle boolean variables? should they also be wrapped in optionals?
 - re-check which of the properties that are always stored are actually required to be non-optional
 
 Bugs:
-- can we avoid storing figureGroup and figureCategory stored twice in the xml?
-- plot name must not contain / -> add safety mechanism
 - automatic placing in combination with log does not seem to work sometimes (??)
 - if same histogram is added to plot twice, the name is no longer unique and this results in unwanted behavior for ref data specified in legend entries
 - csv w/o options -> invisible -> TGraphErrors has wrong defaults

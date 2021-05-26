@@ -42,7 +42,6 @@ Plot::Plot(const string& name, const string& figureGroup, const string& plotTemp
   mName = name;
   mFigureGroup = figureGroup;
   if (plotTemplateName != "") mPlotTemplateName = plotTemplateName;
-  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");
 
   // in case category was specified via figureGroup:my/category/tree
   auto subPathPos = figureGroup.find(":");
@@ -50,6 +49,8 @@ Plot::Plot(const string& name, const string& figureGroup, const string& plotTemp
     mFigureGroup = figureGroup.substr(0, subPathPos);
     mFigureCategory = figureGroup.substr(subPathPos + 1);
   }
+
+  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
 }
 
 //**************************************************************************************************
@@ -62,8 +63,8 @@ Plot::Plot(const Plot& otherPlot, const string& name, const string& figureGroup,
   *this = otherPlot.Clone();
   mName = name;
   mFigureGroup = figureGroup;
-  mFigureCategory = figureCategory;
-  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");
+  mFigureCategory = (figureCategory != "") ? optional<string>{figureCategory} : std::nullopt;
+  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
 }
 
 //**************************************************************************************************
@@ -75,11 +76,12 @@ Plot::Plot(const ptree& plotTree)
 {
   try {
     mName = plotTree.get<string>("name");
-    mFigureGroup = plotTree.get<string>("figureGroup");
-    mFigureCategory = plotTree.get<string>("figureCategory");
-    mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");
+    mFigureGroup = plotTree.get<string>("figure_group");
+    read_from_tree(plotTree, mFigureCategory, "figure_category");
+    mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
   } catch (...) {
     ERROR("Could not construct data from ptree.");
+    std::exit(EXIT_FAILURE);
   }
   read_from_tree(plotTree, mPlotTemplateName, "plot_template_name");
   read_from_tree(plotTree, mPlotDimensions.width, "width");
@@ -106,8 +108,8 @@ ptree Plot::GetPropertyTree()
 {
   ptree plotTree;
   plotTree.put("name", mName);
-  plotTree.put("figureGroup", mFigureGroup);
-  plotTree.put("figureCategory", mFigureCategory);
+  plotTree.put("figure_group", mFigureGroup);
+  put_in_tree(plotTree, mFigureCategory, "figure_category");
   put_in_tree(plotTree, mPlotTemplateName, "plot_template_name");
   put_in_tree(plotTree, mPlotDimensions.width, "width");
   put_in_tree(plotTree, mPlotDimensions.height, "height");
@@ -193,7 +195,8 @@ void Plot::operator+=(const Plot& plot)
   mName = plot.mName;
   mFigureGroup = plot.mFigureGroup;
   mFigureCategory = plot.mFigureCategory;
-  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory != "") ? ":" + mFigureCategory : "");
+  if (plot.mFigureCategory) mFigureCategory = plot.mFigureCategory;
+  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
   mPlotTemplateName = plot.mPlotTemplateName;
 
   if (plot.mPlotDimensions.width) mPlotDimensions.width = plot.mPlotDimensions.width;

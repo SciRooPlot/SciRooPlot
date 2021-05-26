@@ -49,7 +49,7 @@ _plot_completions_zsh() {
       line="${line#<name>}"
       line="${line%</name>}"
       names+=("${line}")
-    done < <(grep -B 1 "<figureGroup>${group}</figureGroup>" $plot_definitions | grep -vE '.*figureGroup.*|^--$')
+    done < <(grep -B 1 "<figure_group>${group}</figure_group>" $plot_definitions | grep -vE '.*figure_group.*|^--$')
   }
 
   while read -r line ; do
@@ -113,7 +113,7 @@ _plot_completions_bash() {
       line="${line#<name>}"
       line="${line%</name>}"
       names+=" ${line}"
-    done < <(grep -B 1 "<figureGroup>${group}</figureGroup>" $plot_definitions | grep -vE '.*figureGroup.*|^--$')
+    done < <(grep -B 1 "<figure_group>${group}</figure_group>" $plot_definitions | grep -vE '.*figure_group.*|^--$')
   }
 
   while read -r line ; do
