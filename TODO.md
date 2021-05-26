@@ -52,6 +52,7 @@ Structural:
 - fix inconsistencies in naming of variables
 - how to handle boolean variables? should they also be wrapped in optionals?
 - re-check which of the properties that are always stored are actually required to be non-optional
+- use a-> for optionals instead of *a.
 
 Bugs:
 - automatic placing in combination with log does not seem to work sometimes (??)

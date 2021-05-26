@@ -200,12 +200,15 @@ public:
   Pad& SetDefaultTextFont(int16_t font);
   Pad& SetDefaultMarkerSize(float_t size);
   Pad& SetDefaultMarkerColors(const vector<int16_t>& colors);
+  Pad& SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints);
   Pad& SetDefaultMarkerStyles(const vector<int16_t>& styles);
   Pad& SetDefaultLineWidth(float_t width);
   Pad& SetDefaultLineColors(const vector<int16_t>& colors);
+  Pad& SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints);
   Pad& SetDefaultLineStyles(const vector<int16_t>& styles);
   Pad& SetDefaultFillOpacity(float_t opacity);
   Pad& SetDefaultFillColors(const vector<int16_t>& colors);
+  Pad& SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints);
   Pad& SetDefaultFillStyles(const vector<int16_t>& styles);
   Pad& SetDefaultDrawingOptionGraph(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist(drawing_options_t drawingOption);
@@ -251,13 +254,16 @@ protected:
   const auto& GetDefaultTextFont() const { return mText.font; }
   const auto& GetDefaultTextSize() const { return mText.size; }
   const auto& GetDefaultMarkerSize() const { return mMarkerDefaults.scale; }
-  const auto& GetDefaultLineWidth() const { return mLineDefaults.scale; }
-  const auto& GetDefaultFillOpacity() const { return mFillDefaults.scale; }
-  const auto& GetDefaultMarkerColors() const { return mMarkerDefaults.colors; }
-  const auto& GetDefaultLineColors() const { return mLineDefaults.colors; }
-  const auto& GetDefaultFillColors() const { return mFillDefaults.colors; }
   const auto& GetDefaultMarkerStyles() const { return mMarkerDefaults.styles; }
+  const auto& GetDefaultMarkerColors() const { return mMarkerDefaults.colors; }
+  const auto& GetDefaultMarkerColorsGradient() const { return mMarkerDefaults.rgbEndpoints; }
+  const auto& GetDefaultLineWidth() const { return mLineDefaults.scale; }
+  const auto& GetDefaultLineColors() const { return mLineDefaults.colors; }
+  const auto& GetDefaultLineColorsGradient() const { return mLineDefaults.rgbEndpoints; }
   const auto& GetDefaultLineStyles() const { return mLineDefaults.styles; }
+  const auto& GetDefaultFillOpacity() const { return mFillDefaults.scale; }
+  const auto& GetDefaultFillColors() const { return mFillDefaults.colors; }
+  const auto& GetDefaultFillColorsGradient() const { return mFillDefaults.rgbEndpoints; }
   const auto& GetDefaultFillStyles() const { return mFillDefaults.styles; }
   const auto& GetDefaultDrawingOptionGraph() const { return mDrawingOptionDefaults.graph; }
   const auto& GetDefaultDrawingOptionHist() const { return mDrawingOptionDefaults.hist; }
@@ -298,6 +304,7 @@ private:
     optional<float_t> scale;
     optional<vector<int16_t>> styles;
     optional<vector<int16_t>> colors;
+    optional<vector<tuple<float_t, float_t, float_t, float_t>>> rgbEndpoints;
   };
   struct data_defaults_t {
     optional<drawing_options_t> graph;
