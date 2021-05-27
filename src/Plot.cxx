@@ -541,8 +541,7 @@ auto Plot::Pad::SetTitle(const string& title) -> decltype(*this)
  * The lower left corner is defined by (xlow, ylow) and the upper right corner by (xup, yup).
  */
 //**************************************************************************************************
-auto Plot::Pad::SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup)
-  -> decltype(*this)
+auto Plot::Pad::SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup) -> decltype(*this)
 {
   mPosition.xlow = xlow;
   mPosition.ylow = ylow;
@@ -556,8 +555,7 @@ auto Plot::Pad::SetPosition(double_t xlow, double_t ylow, double_t xup, double_t
  * Set margins of pad.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetMargins(float_t top, float_t bottom, float_t left, float_t right)
-  -> decltype(*this)
+auto Plot::Pad::SetMargins(float_t top, float_t bottom, float_t left, float_t right) -> decltype(*this)
 {
   mMargins.top = top;
   mMargins.bottom = bottom;
@@ -595,14 +593,23 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mText.color, "text_color");
   read_from_tree(padTree, mText.size, "text_size");
   read_from_tree(padTree, mMarkerDefaults.scale, "default_marker_size");
-  read_from_tree(padTree, mLineDefaults.scale, "default_line_width");
-  read_from_tree(padTree, mFillDefaults.scale, "default_fill_opacity");
-  read_from_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
-  read_from_tree(padTree, mLineDefaults.colors, "default_line_colors");
-  read_from_tree(padTree, mFillDefaults.colors, "default_fill_colors");
   read_from_tree(padTree, mMarkerDefaults.styles, "default_marker_styles");
+  read_from_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
+  read_from_tree(padTree, mMarkerDefaults.colorGradient.rgbEndpoints, "default_marker_colors_gradient_endpoints");
+  read_from_tree(padTree, mMarkerDefaults.colorGradient.alpha, "default_marker_colors_gradient_alpha");
+  read_from_tree(padTree, mMarkerDefaults.colorGradient.nColors, "default_marker_colors_gradient_nColors");
+  read_from_tree(padTree, mLineDefaults.scale, "default_line_width");
   read_from_tree(padTree, mLineDefaults.styles, "default_line_styles");
+  read_from_tree(padTree, mLineDefaults.colors, "default_line_colors");
+  read_from_tree(padTree, mLineDefaults.colorGradient.rgbEndpoints, "default_line_colors_gradient_endpoints");
+  read_from_tree(padTree, mLineDefaults.colorGradient.alpha, "default_line_colors_gradient_alpha");
+  read_from_tree(padTree, mLineDefaults.colorGradient.nColors, "default_line_colors_gradient_nColors");
+  read_from_tree(padTree, mFillDefaults.scale, "default_fill_opacity");
   read_from_tree(padTree, mFillDefaults.styles, "default_fill_styles");
+  read_from_tree(padTree, mFillDefaults.colors, "default_fill_colors");
+  read_from_tree(padTree, mFillDefaults.colorGradient.rgbEndpoints, "default_fill_colors_gradient_endpoints");
+  read_from_tree(padTree, mFillDefaults.colorGradient.alpha, "default_fill_colors_gradient_alpha");
+  read_from_tree(padTree, mFillDefaults.colorGradient.nColors, "default_fill_colors_gradient_nColors");
   read_from_tree(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
   read_from_tree(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
   read_from_tree(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
@@ -666,14 +673,23 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mText.color, "text_color");
   put_in_tree(padTree, mText.size, "text_size");
   put_in_tree(padTree, mMarkerDefaults.scale, "default_marker_size");
-  put_in_tree(padTree, mLineDefaults.scale, "default_line_width");
-  put_in_tree(padTree, mFillDefaults.scale, "default_fill_opacity");
-  put_in_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
-  put_in_tree(padTree, mLineDefaults.colors, "default_line_colors");
-  put_in_tree(padTree, mFillDefaults.colors, "default_fill_colors");
   put_in_tree(padTree, mMarkerDefaults.styles, "default_marker_styles");
+  put_in_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
+  put_in_tree(padTree, mMarkerDefaults.colorGradient.rgbEndpoints, "default_marker_colors_gradient_endpoints");
+  put_in_tree(padTree, mMarkerDefaults.colorGradient.alpha, "default_marker_colors_gradient_alpha");
+  put_in_tree(padTree, mMarkerDefaults.colorGradient.nColors, "default_marker_colors_gradient_nColors");
+  put_in_tree(padTree, mLineDefaults.scale, "default_line_width");
   put_in_tree(padTree, mLineDefaults.styles, "default_line_styles");
+  put_in_tree(padTree, mLineDefaults.colors, "default_line_colors");
+  put_in_tree(padTree, mLineDefaults.colorGradient.rgbEndpoints, "default_line_colors_gradient_endpoints");
+  put_in_tree(padTree, mLineDefaults.colorGradient.alpha, "default_line_colors_gradient_alpha");
+  put_in_tree(padTree, mLineDefaults.colorGradient.nColors, "default_line_colors_gradient_nColors");
+  put_in_tree(padTree, mFillDefaults.scale, "default_fill_opacity");
   put_in_tree(padTree, mFillDefaults.styles, "default_fill_styles");
+  put_in_tree(padTree, mFillDefaults.colors, "default_fill_colors");
+  put_in_tree(padTree, mFillDefaults.colorGradient.rgbEndpoints, "default_fill_colors_gradient_endpoints");
+  put_in_tree(padTree, mFillDefaults.colorGradient.alpha, "default_fill_colors_gradient_alpha");
+  put_in_tree(padTree, mFillDefaults.colorGradient.nColors, "default_fill_colors_gradient_nColors");
   put_in_tree(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
   put_in_tree(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
   put_in_tree(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
@@ -734,14 +750,41 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mText.font) mText.font = pad.mText.font;
   if (pad.mText.color) mText.color = pad.mText.color;
   if (pad.mMarkerDefaults.scale) mMarkerDefaults.scale = pad.mMarkerDefaults.scale;
-  if (pad.mLineDefaults.scale) mLineDefaults.scale = pad.mLineDefaults.scale;
-  if (pad.mFillDefaults.scale) mFillDefaults.scale = pad.mFillDefaults.scale;
-  if (pad.mMarkerDefaults.colors) mMarkerDefaults.colors = pad.mMarkerDefaults.colors;
-  if (pad.mLineDefaults.colors) mLineDefaults.colors = pad.mLineDefaults.colors;
-  if (pad.mFillDefaults.colors) mFillDefaults.colors = pad.mFillDefaults.colors;
   if (pad.mMarkerDefaults.styles) mMarkerDefaults.styles = pad.mMarkerDefaults.styles;
+  if (pad.mMarkerDefaults.colors) {
+    mMarkerDefaults.colors = pad.mMarkerDefaults.colors;
+    mMarkerDefaults.colorGradient = {};
+  };
+  if (pad.mMarkerDefaults.colorGradient.rgbEndpoints) {
+    mMarkerDefaults.colorGradient.rgbEndpoints = pad.mMarkerDefaults.colorGradient.rgbEndpoints;
+    if (pad.mMarkerDefaults.colorGradient.alpha) mMarkerDefaults.colorGradient.alpha = pad.mMarkerDefaults.colorGradient.alpha;
+    if (pad.mMarkerDefaults.colorGradient.nColors) mMarkerDefaults.colorGradient.nColors = pad.mMarkerDefaults.colorGradient.nColors;
+    mMarkerDefaults.colors = std::nullopt;
+  }
+  if (pad.mLineDefaults.scale) mLineDefaults.scale = pad.mLineDefaults.scale;
   if (pad.mLineDefaults.styles) mLineDefaults.styles = pad.mLineDefaults.styles;
+  if (pad.mLineDefaults.colors) {
+    mLineDefaults.colors = pad.mLineDefaults.colors;
+    mLineDefaults.colorGradient = {};
+  };
+  if (pad.mLineDefaults.colorGradient.rgbEndpoints) {
+    mLineDefaults.colorGradient.rgbEndpoints = pad.mLineDefaults.colorGradient.rgbEndpoints;
+    if (pad.mLineDefaults.colorGradient.alpha) mLineDefaults.colorGradient.alpha = pad.mLineDefaults.colorGradient.alpha;
+    if (pad.mLineDefaults.colorGradient.nColors) mLineDefaults.colorGradient.nColors = pad.mLineDefaults.colorGradient.nColors;
+    mLineDefaults.colors = std::nullopt;
+  }
+  if (pad.mFillDefaults.scale) mFillDefaults.scale = pad.mFillDefaults.scale;
   if (pad.mFillDefaults.styles) mFillDefaults.styles = pad.mFillDefaults.styles;
+  if (pad.mFillDefaults.colors) {
+    mFillDefaults.colors = pad.mFillDefaults.colors;
+    mFillDefaults.colorGradient = {};
+  };
+  if (pad.mFillDefaults.colorGradient.rgbEndpoints) {
+    mFillDefaults.colorGradient.rgbEndpoints = pad.mFillDefaults.colorGradient.rgbEndpoints;
+    if (pad.mFillDefaults.colorGradient.alpha) mFillDefaults.colorGradient.alpha = pad.mFillDefaults.colorGradient.alpha;
+    if (pad.mFillDefaults.colorGradient.nColors) mFillDefaults.colorGradient.nColors = pad.mFillDefaults.colorGradient.nColors;
+    mFillDefaults.colors = std::nullopt;
+  }
   if (pad.mDrawingOptionDefaults.graph) mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
   if (pad.mDrawingOptionDefaults.hist) mDrawingOptionDefaults.hist = pad.mDrawingOptionDefaults.hist;
   if (pad.mDrawingOptionDefaults.hist2d) mDrawingOptionDefaults.hist2d = pad.mDrawingOptionDefaults.hist2d;

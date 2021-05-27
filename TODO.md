@@ -1,7 +1,6 @@
 Todo:
 - add possibility to read / write multiple files in app (config of config files??)
 - always call Sumw2() before drawing histograms as points
-- propagate color gradient settings from user interface
 
 Box Features:
 - add default-boxes (legend and text) that will be baseline for all boxes of this pad

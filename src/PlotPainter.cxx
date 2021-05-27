@@ -126,22 +126,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto frameLineStyle = get_first(pad.GetLineStyleFrame(), padDefaults.GetLineStyleFrame())) pad_ptr->SetFrameLineStyle(*frameLineStyle);
     if (auto frameLineWidth = get_first(pad.GetLineWidthFrame(), padDefaults.GetLineWidthFrame())) pad_ptr->SetFrameLineWidth(*frameLineWidth);
 
-    /*
-     // TODO: propagate this from user interface
-    pad.SetDefaultMarkerColors({ {0., 0., 1., 0.},   // blue
-                               {0., 1., 1., 0.25}, // cyan
-                               {0., 1., 0., 0.50}, // green
-                               {1., 1., 0., 0.75}, // yellow
-                               {1., 0., 0., 1.}  // red
-                                });
-    pad.SetDefaultLineColors({ {0., 0., 1., 0.},   // blue
-                               {0., 1., 1., 0.25}, // cyan
-                               {0., 1., 0., 0.50}, // green
-                               {1., 1., 0., 0.75}, // yellow
-                               {1., 0., 0., 1.}  // red
-                                }, 0.5);
-    */
-
     if (pad.GetDefaultMarkerColorsGradient().rgbEndpoints) {
       auto& gradient = pad.GetDefaultMarkerColorsGradient();
       pad.SetDefaultMarkerColors(GenerateGradientColors(get_first_or((int32_t)pad.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));

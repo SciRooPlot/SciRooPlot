@@ -270,8 +270,7 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
       string displayedName = plot.GetUniqueName();
       std::replace(displayedName.begin(), displayedName.end(), '.', '_');
       std::replace(displayedName.begin(), displayedName.end(), '/', '|');
-      plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName),
-                         plot.GetPropertyTree());
+      plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName), plot.GetPropertyTree());
     }
   }
   using boost::property_tree::xml_writer_settings;

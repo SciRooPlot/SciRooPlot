@@ -93,13 +93,19 @@ std::tuple<Ts...> string_to_tuple(string itemString)
   // split string
   string curItemStr;
   std::istringstream stream(itemString);
-  string numbers[3];
+  string numbers[sizeof...(Ts)];
   uint8_t i = 0;
   while (std::getline(stream, curItemStr, ',')) {
     numbers[i] = curItemStr;
     ++i;
   }
-  return {string_to_type<uint8_t>(numbers[0]), string_to_type<double_t>(numbers[1]), string_to_type<double_t>(numbers[2])};
+
+  // ugly hack...
+  if constexpr (sizeof...(Ts) == 3) {
+    return {string_to_type<uint8_t>(numbers[0]), string_to_type<double_t>(numbers[1]), string_to_type<double_t>(numbers[2])};
+  } else {
+    return {string_to_type<float_t>(numbers[0]), string_to_type<float_t>(numbers[1]), string_to_type<float_t>(numbers[2]), string_to_type<float_t>(numbers[3])};
+  }
 }
 
 template <typename T>
@@ -113,7 +119,12 @@ std::vector<T> string_to_vector(string itemString)
   std::istringstream stream(itemString);
   if constexpr (is_tuple<T>::value) {
     while (std::getline(stream, curItemStr, ';')) {
-      items.push_back(string_to_tuple<uint8_t, double_t, double_t>(curItemStr));
+      // ugly hack...
+      if constexpr (std::is_same_v<T, tuple<uint8_t, double_t, double_t>>) {
+        items.push_back(string_to_tuple<uint8_t, double_t, double_t>(curItemStr));
+      } else {
+        items.push_back(string_to_tuple<float_t, float_t, float_t, float_t>(curItemStr));
+      }
     }
   } else {
     while (std::getline(stream, curItemStr, ',')) {
