@@ -125,10 +125,9 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto frameLineColor = get_first(pad.GetLineColorFrame(), padDefaults.GetLineColorFrame())) pad_ptr->SetFrameLineColor(*frameLineColor);
     if (auto frameLineStyle = get_first(pad.GetLineStyleFrame(), padDefaults.GetLineStyleFrame())) pad_ptr->SetFrameLineStyle(*frameLineStyle);
     if (auto frameLineWidth = get_first(pad.GetLineWidthFrame(), padDefaults.GetLineWidthFrame())) pad_ptr->SetFrameLineWidth(*frameLineWidth);
-    if (auto palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) gStyle->SetPalette(*palette);
 
     /*
-    // TODO: propagate this from user interface
+     // TODO: propagate this from user interface
     pad.SetDefaultMarkerColors({ {0., 0., 1., 0.},   // blue
                                {0., 1., 1., 0.25}, // cyan
                                {0., 1., 0., 0.50}, // green
@@ -140,24 +139,32 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                {0., 1., 0., 0.50}, // green
                                {1., 1., 0., 0.75}, // yellow
                                {1., 0., 0., 1.}  // red
-                                });
+                                }, 0.5);
     */
 
-    if (pad.GetDefaultMarkerColorsGradient()) {
-      pad.SetDefaultMarkerColors(GenerateGradientColors(pad.GetData().size(), *pad.GetDefaultMarkerColorsGradient()));
-    } else if (padDefaults.GetDefaultMarkerColorsGradient()) {
-      padDefaults.SetDefaultMarkerColors(GenerateGradientColors(padDefaults.GetData().size(), *pad.GetDefaultMarkerColorsGradient()));
+    if (pad.GetDefaultMarkerColorsGradient().rgbEndpoints) {
+      auto& gradient = pad.GetDefaultMarkerColorsGradient();
+      pad.SetDefaultMarkerColors(GenerateGradientColors(get_first_or((int32_t)pad.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
+    } else if (padDefaults.GetDefaultMarkerColorsGradient().rgbEndpoints) {
+      auto& gradient = padDefaults.GetDefaultMarkerColorsGradient();
+      padDefaults.SetDefaultMarkerColors(GenerateGradientColors(get_first_or((int32_t)padDefaults.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
-    if (pad.GetDefaultLineColorsGradient()) {
-      pad.SetDefaultLineColors(GenerateGradientColors(pad.GetData().size(), *pad.GetDefaultLineColorsGradient()));
-    } else if (padDefaults.GetDefaultLineColorsGradient()) {
-      padDefaults.SetDefaultLineColors(GenerateGradientColors(padDefaults.GetData().size(), *pad.GetDefaultLineColorsGradient()));
+    if (pad.GetDefaultLineColorsGradient().rgbEndpoints) {
+      auto& gradient = pad.GetDefaultLineColorsGradient();
+      pad.SetDefaultLineColors(GenerateGradientColors(get_first_or((int32_t)pad.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
+    } else if (padDefaults.GetDefaultLineColorsGradient().rgbEndpoints) {
+      auto& gradient = padDefaults.GetDefaultLineColorsGradient();
+      padDefaults.SetDefaultLineColors(GenerateGradientColors(get_first_or((int32_t)padDefaults.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
-    if (pad.GetDefaultFillColorsGradient()) {
-      pad.SetDefaultFillColors(GenerateGradientColors(pad.GetData().size(), *pad.GetDefaultFillColorsGradient()));
-    } else if (padDefaults.GetDefaultFillColorsGradient()) {
-      padDefaults.SetDefaultFillColors(GenerateGradientColors(padDefaults.GetData().size(), *pad.GetDefaultFillColorsGradient()));
+    if (pad.GetDefaultFillColorsGradient().rgbEndpoints) {
+      auto& gradient = pad.GetDefaultFillColorsGradient();
+      pad.SetDefaultFillColors(GenerateGradientColors(get_first_or((int32_t)pad.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
+    } else if (padDefaults.GetDefaultFillColorsGradient().rgbEndpoints) {
+      auto& gradient = padDefaults.GetDefaultFillColorsGradient();
+      padDefaults.SetDefaultFillColors(GenerateGradientColors(get_first_or((int32_t)padDefaults.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
+    // TODO: color gradient feature can be used for 2d palette as well
+    if (auto palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) gStyle->SetPalette(*palette);
 
     pad_ptr->SetNumber(padID);
     pad_ptr->Draw();
@@ -1428,7 +1435,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
  * Helper to generate nColors between specified rgb endpoints.
  */
 //**************************************************************************************************
-vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha)
+vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha, bool savePalette)
 {
   uint16_t nPoints = rgbEndpoints.size();
 
@@ -1447,6 +1454,9 @@ vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vecto
 
   std::vector<int16_t> gradientColors(nColors);
   std::iota(gradientColors.begin(), gradientColors.end(), firstColorIndex);
+
+  // TColor::CreateGradientColorTable() changes current palette as side effect
+  if (!savePalette) gStyle->SetPalette(kBird);
   return gradientColors;
 }
 

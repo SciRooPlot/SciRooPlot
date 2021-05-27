@@ -131,7 +131,7 @@ private:
   TAxis* GetAxis(T* histPtr, int16_t i);
   std::string GetAxisStr(int16_t i);
 
-  vector<int16_t> GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1.);
+  vector<int16_t> GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1., bool savePalette = false);
 };
 } // end namespace PlottingFramework
 #endif /* PlotGenerator_h */

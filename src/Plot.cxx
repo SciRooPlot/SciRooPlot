@@ -326,15 +326,15 @@ auto Plot::Pad::SetDefaultFillOpacity(float_t opacity) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultMarkerColors(const vector<int16_t>& colors) -> decltype(*this)
 {
-  mMarkerDefaults.rgbEndpoints = std::nullopt;
+  mMarkerDefaults.colorGradient = {};
   mMarkerDefaults.colors = colors;
   return *this;
 }
 
-auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints) -> decltype(*this)
+auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   mMarkerDefaults.colors = std::nullopt;
-  mMarkerDefaults.rgbEndpoints = rgbEndpoints;
+  mMarkerDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
 }
 
@@ -345,15 +345,15 @@ auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, floa
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultLineColors(const vector<int16_t>& colors) -> decltype(*this)
 {
-  mLineDefaults.rgbEndpoints = std::nullopt;
+  mLineDefaults.colorGradient = {};
   mLineDefaults.colors = colors;
   return *this;
 }
 
-auto Plot::Pad::SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints) -> decltype(*this)
+auto Plot::Pad::SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   mLineDefaults.colors = std::nullopt;
-  mLineDefaults.rgbEndpoints = rgbEndpoints;
+  mLineDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
 }
 
@@ -364,15 +364,15 @@ auto Plot::Pad::SetDefaultLineColors(const vector<tuple<float_t, float_t, float_
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultFillColors(const vector<int16_t>& colors) -> decltype(*this)
 {
-  mFillDefaults.rgbEndpoints = std::nullopt;
+  mFillDefaults.colorGradient = {};
   mFillDefaults.colors = colors;
   return *this;
 }
 
-auto Plot::Pad::SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints) -> decltype(*this)
+auto Plot::Pad::SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   mFillDefaults.colors = std::nullopt;
-  mFillDefaults.rgbEndpoints = rgbEndpoints;
+  mFillDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
 }
 

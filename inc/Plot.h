@@ -200,15 +200,15 @@ public:
   Pad& SetDefaultTextFont(int16_t font);
   Pad& SetDefaultMarkerSize(float_t size);
   Pad& SetDefaultMarkerColors(const vector<int16_t>& colors);
-  Pad& SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints);
+  Pad& SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = std::nullopt, optional<int32_t> nColors = std::nullopt);
   Pad& SetDefaultMarkerStyles(const vector<int16_t>& styles);
   Pad& SetDefaultLineWidth(float_t width);
   Pad& SetDefaultLineColors(const vector<int16_t>& colors);
-  Pad& SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints);
+  Pad& SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = std::nullopt, optional<int32_t> nColors = std::nullopt);
   Pad& SetDefaultLineStyles(const vector<int16_t>& styles);
   Pad& SetDefaultFillOpacity(float_t opacity);
   Pad& SetDefaultFillColors(const vector<int16_t>& colors);
-  Pad& SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints);
+  Pad& SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = std::nullopt, optional<int32_t> nColors = std::nullopt);
   Pad& SetDefaultFillStyles(const vector<int16_t>& styles);
   Pad& SetDefaultDrawingOptionGraph(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist(drawing_options_t drawingOption);
@@ -256,14 +256,14 @@ protected:
   const auto& GetDefaultMarkerSize() const { return mMarkerDefaults.scale; }
   const auto& GetDefaultMarkerStyles() const { return mMarkerDefaults.styles; }
   const auto& GetDefaultMarkerColors() const { return mMarkerDefaults.colors; }
-  const auto& GetDefaultMarkerColorsGradient() const { return mMarkerDefaults.rgbEndpoints; }
+  const auto& GetDefaultMarkerColorsGradient() const { return mMarkerDefaults.colorGradient; }
   const auto& GetDefaultLineWidth() const { return mLineDefaults.scale; }
   const auto& GetDefaultLineColors() const { return mLineDefaults.colors; }
-  const auto& GetDefaultLineColorsGradient() const { return mLineDefaults.rgbEndpoints; }
+  const auto& GetDefaultLineColorsGradient() const { return mLineDefaults.colorGradient; }
   const auto& GetDefaultLineStyles() const { return mLineDefaults.styles; }
   const auto& GetDefaultFillOpacity() const { return mFillDefaults.scale; }
   const auto& GetDefaultFillColors() const { return mFillDefaults.colors; }
-  const auto& GetDefaultFillColorsGradient() const { return mFillDefaults.rgbEndpoints; }
+  const auto& GetDefaultFillColorsGradient() const { return mFillDefaults.colorGradient; }
   const auto& GetDefaultFillStyles() const { return mFillDefaults.styles; }
   const auto& GetDefaultDrawingOptionGraph() const { return mDrawingOptionDefaults.graph; }
   const auto& GetDefaultDrawingOptionHist() const { return mDrawingOptionDefaults.hist; }
@@ -300,11 +300,16 @@ private:
     optional<int16_t> font;
     optional<float_t> size;
   };
+  struct gradient_color_t {
+    optional<vector<tuple<float_t, float_t, float_t, float_t>>> rgbEndpoints;
+    optional<float_t> alpha;
+    optional<int32_t> nColors;
+  };
   struct view_defaults_t {
     optional<float_t> scale;
     optional<vector<int16_t>> styles;
     optional<vector<int16_t>> colors;
-    optional<vector<tuple<float_t, float_t, float_t, float_t>>> rgbEndpoints;
+    gradient_color_t colorGradient;
   };
   struct data_defaults_t {
     optional<drawing_options_t> graph;
