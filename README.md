@@ -458,6 +458,45 @@ data_layout_t pp_7TeV
   plotManager.AddPlot(plot);
 } // -----------------------------------------------------------------------
 
+{ // -----------------------------------------------------------------------
+  Plot plot("testColorGradients", "myFigureGroup", "1d");
+
+  // some of the data properties (e.g. styles, colors and line widths) we may not want to specify for each of the data separately
+  // therefore, as you have already seen in the definitions of the plot templates above, it is possible to define some default settings per pad
+  // for instance you can define a list of colors that should be used for drawing the data:
+  vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
+  plot[1].SetDefaultMarkerColors(goodColors);
+  // this way the first data will be black, the second blue, etc.
+  // if you add more data to the pad than the length of the defined color vector, it will continue with the first color in the vector
+
+  // analogous implementations are available for marker, line or fill styles
+  plot[1].SetDefaultMarkerStyles({kOpenCircle, kOpenCross});
+  plot[1].SetDefaultLineStyles({kDashed, kSolid});
+
+  // when drawing a lot of data to the plot, the color vector might become a bit lengthly
+  // in these cases we often want a continuous color spectrum between some color endpoints
+  // the following example shows how to generate a continuous rainbow color range that spans from blue, cyan, green and yellow to red
+  vector<tuple<float_t, float_t, float_t, float_t>> rainbowColors =
+  { {0., 0., 1., 0.},   // blue
+    {0., 1., 1., 0.25}, // cyan
+    {0., 1., 0., 0.50}, // green
+    {1., 1., 0., 0.75}, // yellow
+    {1., 0., 0., 1.}    // red
+  };
+  // here the first three numbers in the tuple correspond to rgb values (between 0. and 1.) of a color endpoint
+  // while the last number specifies the 'location' of the respective point in the color range to be defined (again between 0. and 1.)
+  plot[1].SetDefaultMarkerColors(rainbowColors);
+  plot[1].SetDefaultLineColors(rainbowColors);
+
+  plot[1].AddData("hist1", "inputIdentifierA");
+  plot[1].AddData("hist2", "inputIdentifierA");
+  plot[1].AddData("hist3", "inputIdentifierA");
+  plot[1].AddData("hist4", "inputIdentifierA");
+  plot[1].AddData("hist5", "inputIdentifierA");
+
+  plotManager.AddPlot(plot);
+} // -----------------------------------------------------------------------
+
 
 // instead of creating the plots directly as we have done in the previous example,
 // we can also save the plot definitions into another xml file via:
