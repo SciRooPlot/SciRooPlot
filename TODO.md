@@ -39,11 +39,6 @@ Notes:
 - maybe generalized version of white patch hiding the truncated zero in ratio pads would be nice
 - should smoothing be done before or after division for ratios (or both)??
 
-Autocomplete:
-- can we implement category search as well?
-- how to handle multiple figureGroups and still give useful options?
-- regex matching used in group could be applied also in search! -> this would be a really big effort...
-
 Structural:
 - the whole Painter::GeneratePlots() function is just a big mess and needs major rework!
 - decide where data manipulation part should be put (before or after setting ranges?)

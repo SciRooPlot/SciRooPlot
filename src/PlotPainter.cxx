@@ -278,8 +278,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         } // end ratio code
 
         // modify content (FIXME: this should be steered differently)
-        // FIXME: probably this should be done after setting ranges but axis ranges depend on
-        // scaling!
+        // FIXME: probably this should be done after setting ranges but axis ranges depend on scaling!
         if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>) {
           if (str_contains(drawingOptions, "smooth")) {
             drawingOptions.erase(drawingOptions.find("smooth"), string("smooth").length());

@@ -27,7 +27,7 @@ Since this project relies on cxx17 and ROOT has some compatibility issue when so
 You will spot this problem when you try to compile the framework and see errors such as\
 `error: conflicting declaration of template ‘template<class _CharT, class _Traits> using basic_string_view = std::experimental::__ROOT::basic_string_view<_CharT, _Traits>’
 using basic_string_view = ::std::experimental::basic_string_view<_CharT,_Traits>;`\
-This is not an issue for mac users, which usually work with the clang compiler.\
+This is not an issue for mac users, who usually work with the Clang compiler.\
 In order to fix it, simply compile the ROOT software as follows:
 ```console
 cd ~

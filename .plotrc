@@ -43,13 +43,23 @@ _plot_completions_zsh() {
   done < <(grep -o '<.*>' $input_identifiers | grep -vE '.*xml.*|.*FILE.*|.*</.*')
 
   updatePlotNames() {
-    local group=$1
+    local groupAndCat=$1
+    IFS=":" read -r group category <<< "$groupAndCat"
     names=()
-    while read -r line ; do
-      line="${line#<name>}"
-      line="${line%</name>}"
-      names+=("${line}")
-    done < <(grep -B 1 "<figure_group>${group}</figure_group>" $plot_definitions | grep -vE '.*figure_group.*|^--$')
+    if [[ ! -z "${category}" ]]
+    then
+      while read -r line ; do
+        line="${line#<name>}"
+        line="${line%</name>}"
+        names+=("${line}")
+      done < <(grep -B 1 -A 1 "<figure_group>${group}</figure_group>" $plot_definitions | grep -B 2 "<figure_category>${category}</figure_category>" | grep -vE '.*figure_group.*|^--$' | grep -vE '.*figure_category.*|^--$')
+    else
+      while read -r line ; do
+        line="${line#<name>}"
+        line="${line%</name>}"
+        names+=("${line}")
+      done < <(grep -B 1 "<figure_group>${group}</figure_group>" $plot_definitions | grep -vE '.*figure_group.*|^--$')
+    fi
   }
 
   while read -r line ; do
@@ -107,14 +117,25 @@ _plot_completions_bash() {
   done < <(grep -o '<.*>' $input_identifiers | grep -vE '.*xml.*|.*FILE.*|.*</.*')
 
   updatePlotNames() {
-    local group=$1
+    local groupAndCat=$1
+    IFS=":" read -r group category <<< "${groupAndCat}"
     names=()
-    while read -r line ; do
-      line="${line#<name>}"
-      line="${line%</name>}"
-      names+=" ${line}"
-    done < <(grep -B 1 "<figure_group>${group}</figure_group>" $plot_definitions | grep -vE '.*figure_group.*|^--$')
+    if [[ ! -z "${category}" ]]
+    then
+      while read -r line ; do
+        line="${line#<name>}"
+        line="${line%</name>}"
+        names+=" ${line}"
+      done < <(grep -B 1 -A 1 "<figure_group>${group}</figure_group>" $plot_definitions | grep -B 2 "<figure_category>${category}</figure_category>" | grep -vE '.*figure_group.*|^--$' | grep -vE '.*figure_category.*|^--$')
+    else
+      while read -r line ; do
+        line="${line#<name>}"
+        line="${line%</name>}"
+        names+=" ${line}"
+      done < <(grep -B 1 "<figure_group>${group}</figure_group>" $plot_definitions | grep -vE '.*figure_group.*|^--$')
+    fi
   }
+
 
   while read -r line ; do
     rootfiles+=" ${line}"
@@ -134,7 +155,26 @@ _plot_completions_bash() {
     fi
   ;;
   3)
-    COMPREPLY=( $( compgen -W "${modes}" -- "${COMP_WORDS[COMP_CWORD]}" ) )
+    if [[ "${COMP_WORDS[COMP_CWORD-1]}" == ":" ]]
+    then
+      COMPREPLY=( )
+    else
+      COMPREPLY=( $( compgen -W "${modes}" -- "${COMP_WORDS[COMP_CWORD]}" ) )
+    fi
+  ;;
+  4)
+    if [[ "${COMP_WORDS[COMP_CWORD-2]}" == ":" ]]
+    then
+      leGroup="${COMP_WORDS[COMP_CWORD-3]}${COMP_WORDS[COMP_CWORD-2]}${COMP_WORDS[COMP_CWORD-1]}"
+      updatePlotNames "${leGroup}"
+      COMPREPLY=( $(compgen -W "${names}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    fi
+  ;;
+  5)
+    if [[ "${COMP_WORDS[COMP_CWORD-3]}" == ":" ]]
+    then
+      COMPREPLY=( $( compgen -W "${modes}" -- "${COMP_WORDS[COMP_CWORD]}" ) )
+    fi
   ;;
   esac
 
