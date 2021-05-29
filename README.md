@@ -219,7 +219,7 @@ plotManager.LoadInputDataFiles("/path/to/inputFilesConfig.XML");
 
 // it is also possible to construct a plot based on a copy of another
 { // -----------------------------------------------------------------------
-  Plot plot("myPlot", "myFigureGroup2");
+  Plot plot("myPlot", "myFigureGroup2:my/figure/sub/category");
   // ...
   plot[1].AddData("folder1/histName2", "inputIdentifierA", "myLabel2");
   //...
