@@ -1,13 +1,14 @@
 Rationale
 ---------
-You may think: "Why do I need a plotting framework? I am using ROOT and have my own set of plotting macros."\
-Of course you are right, but what did you just say? Macros? Plural? Here the mess begins!
-This PlottingFramework aims to simplify plotting by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
-The goal is that you no longer have to suffer maintaining tons of different plotting macros,
-the pain when a tiny change in style needs to be introduced in every macro,
-the logistical challenge when handling lots of different input root files,
-the struggle to determine how to best get a histogram out of complex folder hierarchies,
-or the long waiting periods when your program produces all of your plots at once although you only want a single one of them.
+This piece of software is meant to simplify day-to-day scientific plotting by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
+If you have already worked with ROOT, you probably ask yourself:
+> We have ROOT and it is perfectly fine as it is. I have learned to master using it over the years and all my macros work just fine. Why do I need this additional PlottingFramework? Why should I learn to use yet another library interface?
+Of course you are right, but what did you just say? All your macros? Here the big mess begins!
+Every one of us has his own set of plotting programs, usually tailored only for a few very specific use cases.
+Not only does this introduce a large amount of redundant code for the individual, but it also means that the same basic functionality will be re-implemented every time someone new enters the 'plotting' game.
+In each of these macros plenty of lines of code are spent on opening files, reading data from folder or list hierarchies and then finally applying the desired layout to the plot.
+The goal of this project is to take care of all these rather technical steps and provide the user with a more abstract and simple interface to define and manage his plots.
+It includes a command-line plotting application that has proven very useful to quickly cherry-pick specific plots form your probably very large pool of plot definitions.
 
 Everybody is welcome to use this software, report bugs or contribute new features.
 
