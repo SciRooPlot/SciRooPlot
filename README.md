@@ -3,6 +3,7 @@ Rationale
 This piece of software is meant to simplify day-to-day scientific plotting by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
 If you have already worked with ROOT, you probably ask yourself:
 > We have ROOT and it is perfectly fine as it is. I have learned to master using it over the years and all my macros work just fine. Why do I need this additional PlottingFramework? Why should I learn to use yet another library interface?
+
 Of course you are right, but what did you just say? All your macros? Here the big mess begins!
 Every one of us has his own set of plotting programs, usually tailored only for a few very specific use cases.
 Not only does this introduce a large amount of redundant code for the individual, but it also means that the same basic functionality will be re-implemented every time someone new enters the 'plotting' game.
