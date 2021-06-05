@@ -156,6 +156,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
     if (pad.GetData().empty()) {
       WARNING("No data to be drawn in pad {}.", padID);
+      // TODO: but what if one still wants to add a text box??
       continue;
     }
 
@@ -1184,7 +1185,7 @@ void PlotPainter::DivideHistGraphInterpolated(TH1* numerator, TGraph* denominato
 {
   TGraph numeratorGraph(numerator);
   DivideGraphsInterpolated(&numeratorGraph, denominator);
-  // FXIME: numerator graph must be put in hist afterwards!
+  // FIXME: numerator graph must be put in hist afterwards!
 }
 
 //**************************************************************************************************
