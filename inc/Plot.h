@@ -191,7 +191,6 @@ public:
   LegendBox& GetLegend(uint8_t legendID);
   TextBox& GetText(uint8_t textID);
 
-  Pad& SetTitle(const string& title);
   Pad& SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup);
   Pad& SetMargins(float_t top, float_t bottom, float_t left, float_t right);
   Pad& SetPalette(int32_t palette);
@@ -233,7 +232,6 @@ protected:
   auto& GetTextBoxes() { return mTextBoxes; }
 
   const auto& GetAxes() const { return mAxes; }
-  const auto& GetTitle() const { return mTitle; }
   const auto& GetXLow() const { return mPosition.xlow; }
   const auto& GetYLow() const { return mPosition.ylow; }
   const auto& GetXUp() const { return mPosition.xup; }
@@ -318,7 +316,6 @@ private:
   };
 
   // properties
-  optional<string> mTitle;
   optional<string> mOptions;
   pad_position_t mPosition;
   pad_margin_t mMargins;

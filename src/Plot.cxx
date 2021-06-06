@@ -526,17 +526,6 @@ auto Plot::Pad::SetPalette(int32_t palette) -> decltype(*this)
 
 //**************************************************************************************************
 /**
- * Set title of pad
- */
-//**************************************************************************************************
-auto Plot::Pad::SetTitle(const string& title) -> decltype(*this)
-{
-  mTitle = title;
-  return *this;
-}
-
-//**************************************************************************************************
-/**
  * Set position of pad within plot. The variables are given in fractions of plot width resp. height (between 0 and 1).
  * The lower left corner is defined by (xlow, ylow) and the upper right corner by (xup, yup).
  */
@@ -571,7 +560,6 @@ auto Plot::Pad::SetMargins(float_t top, float_t bottom, float_t left, float_t ri
 //**************************************************************************************************
 Plot::Pad::Pad(const ptree& padTree)
 {
-  read_from_tree(padTree, mTitle, "title");
   read_from_tree(padTree, mOptions, "options");
   read_from_tree(padTree, mPosition.xlow, "position_xlow");
   read_from_tree(padTree, mPosition.ylow, "position_ylow");
@@ -651,7 +639,6 @@ ptree Plot::Pad::GetPropertyTree() const
 {
   // convert properties of plot to ptree
   ptree padTree;
-  put_in_tree(padTree, mTitle, "title");
   put_in_tree(padTree, mOptions, "options");
   put_in_tree(padTree, mPosition.xlow, "position_xlow");
   put_in_tree(padTree, mPosition.ylow, "position_ylow");
@@ -729,7 +716,6 @@ ptree Plot::Pad::GetPropertyTree() const
 //**************************************************************************************************
 void Plot::Pad::operator+=(const Pad& pad)
 {
-  if (pad.mTitle) mTitle = pad.mTitle;
   if (pad.mOptions) mOptions = pad.mOptions;
   if (pad.mPosition.xlow) mPosition.xlow = pad.mPosition.xlow;
   if (pad.mPosition.ylow) mPosition.ylow = pad.mPosition.ylow;

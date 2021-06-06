@@ -107,12 +107,10 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     auto textSize = get_first(pad.GetDefaultTextSize(), padDefaults.GetDefaultTextSize());
     auto textColor = get_first(pad.GetDefaultTextColor(), padDefaults.GetDefaultTextColor());
 
-    string padTitle = get_first_or({""}, pad.GetTitle(), padDefaults.GetTitle());
-
     canvas_ptr->cd();
     string padName = "Pad_" + std::to_string(padID);
 
-    TPad* pad_ptr = new TPad(padName.data(), padTitle.data(), padPos[0], padPos[1], padPos[2], padPos[3]);
+    TPad* pad_ptr = new TPad(padName.data(), "", padPos[0], padPos[1], padPos[2], padPos[3]);
 
     if (auto marginTop = get_first(pad.GetMarginTop(), padDefaults.GetMarginTop())) pad_ptr->SetTopMargin(*marginTop);
     if (auto marginBottom = get_first(pad.GetMarginBottom(), padDefaults.GetMarginBottom())) pad_ptr->SetBottomMargin(*marginBottom);
@@ -592,11 +590,6 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       return nullptr;
     }
 
-    if (!padTitle.empty()) {
-      // dummy title feature (will be improved once text boxes are implemented properly)
-      // TPaveText* titleBox = MakeText(std::make_shared<Plot::Pad::TextBox>(false, false, 0.5,
-      // 0.98, kSolid, 0., kWhite, padTitle)); titleBox->Draw("SAME");
-    }
     // now place legends, text-boxes and shapes
     uint8_t legendIndex{1u};
     for (auto& box : pad.GetLegendBoxes()) {
