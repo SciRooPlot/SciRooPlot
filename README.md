@@ -95,6 +95,7 @@ plotManager.AddInputDataFiles("inputIdentifierB", {"/path/to/file/b.root:my/sub/
 plotManager.AddInputDataFiles("inputIdentifierC", {"${HOME}/myRootFiles/b2.root"});
 // and it is possible to add all root files within a directory (including sub-directories):
 plotManager.AddInputDataFiles("inputIdentifierD", {"/path/to/folder/with/rootfiles/"});
+// please note that multiple root files grouped under one inputIdentifier will be treated as one big input file and are traversed in alphabetical order
 
 // N.B.:
 // you can save these settings to a file via:
@@ -183,8 +184,12 @@ plotManager.LoadInputDataFiles("/path/to/inputFilesConfig.XML");
   // the styles and colors of the respective legend entries are by default based on the data that is represented
   // you can however override this and specify different default settings for the legend
   plot[1].GetLegend(2).SetDefaultLineWidth(5.);
-  // modifications can also be done on per entry:
+  // modifications can also be done per entry:
   plot[1].GetLegend(2).GetEntry(1).SetLineColor(kRed);
+  // you can also add and modify legends without any automatically generated labels:
+  plot[1].AddLegend();
+  plot[1].GetLegend(3).GetEntry(1).SetLabel("my custom lable").SetDrawStyle("L").SetLineColor(kRed);
+  plot[1].GetLegend(3).GetEntry(1).SetLabel("my custom lable 2").SetDrawStyle("EP").SetLineColor(kBlue).SetMarkerColor(kRed);
   // (again please have a look at inc/Plot.h for the list of possibilities)
 
   // similar to the legend boxes you can add a text box to your plot
