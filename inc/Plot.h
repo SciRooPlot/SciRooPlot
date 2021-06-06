@@ -853,7 +853,7 @@ public:
   LegendEntry(const ptree& legendEntryTree);
 
   LegendEntry& SetLabel(const string& label);
-  LegendEntry& SetRefData(const string& name, const string& inputIdentifier);
+  LegendEntry& SetRefData(const string& name, const string& inputIdentifier); // will work only for data drawn in same pad
   LegendEntry& SetDrawStyle(const string& drawStyle);
   LegendEntry& SetMarkerColor(int16_t color);
   LegendEntry& SetMarkerStyle(int16_t style);

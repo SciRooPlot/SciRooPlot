@@ -155,26 +155,27 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     pad_ptr->cd();
 
     if (pad.GetData().empty()) {
-      WARNING("No data to be drawn in pad {}.", padID);
-      // TODO: but what if one still wants to add a text box??
-      continue;
-    }
-
-    // find data that should define the axis frame
-    auto framePos = std::find_if(pad.GetData().begin(), pad.GetData().end(),
-                                 [](auto curData) { return curData->GetDefinesFrame(); });
-    uint8_t frameDataID = (framePos != pad.GetData().end()) ? framePos - pad.GetData().begin() : 0u;
-    // make a copy of data that will serve as axis frame and put it in front of data vector
-    if (pad.GetData()[frameDataID]->GetType() == "ratio") {
-      pad.GetData().insert(
-        pad.GetData().begin(),
-        std::make_shared<Plot::Pad::Ratio>(
-          *std::dynamic_pointer_cast<Plot::Pad::Ratio>(pad.GetData()[frameDataID])));
+      if (pad.GetLegendBoxes().empty() && pad.GetTextBoxes().empty()) {
+        WARNING("Nothing to be drawn in pad {}.", padID);
+        continue;
+      }
     } else {
-      pad.GetData().insert(pad.GetData().begin(),
-                           std::make_shared<Plot::Pad::Data>(*pad.GetData()[frameDataID]));
+      // find data that should define the axis frame
+      auto framePos = std::find_if(pad.GetData().begin(), pad.GetData().end(),
+                                   [](auto curData) { return curData->GetDefinesFrame(); });
+      uint8_t frameDataID = (framePos != pad.GetData().end()) ? framePos - pad.GetData().begin() : 0u;
+      // make a copy of data that will serve as axis frame and put it in front of data vector
+      if (pad.GetData()[frameDataID]->GetType() == "ratio") {
+        pad.GetData().insert(
+          pad.GetData().begin(),
+          std::make_shared<Plot::Pad::Ratio>(
+            *std::dynamic_pointer_cast<Plot::Pad::Ratio>(pad.GetData()[frameDataID])));
+      } else {
+        pad.GetData().insert(pad.GetData().begin(),
+                             std::make_shared<Plot::Pad::Data>(*pad.GetData()[frameDataID]));
+      }
+      pad.GetData()[0]->SetLegendLabel(""); // axis frame should not appear in legend
     }
-    pad.GetData()[0]->SetLegendLabel(""); // axis frame should not appear in legend
 
     TH1* axisHist_ptr{nullptr};
     string drawingOptions = "";

@@ -3,10 +3,10 @@ Todo:
 - give warning if selected drawing alias not available for present type of data
 - re-check which of the properties that are always stored are actually required to be non-optional
 - check again if box auto placement works correctly (also with multiple boxes)
-- add possibility to place legends and texts also in an empty pad
 - check if box auto-size determination considers that legend entries may have different text sizes
 - add again the possiblity to display a legend title
 - propagate pad default text sizes to the boxes
+- make the LegendEntry digest a DataLayout to simplify adding legend properties in a different pad
 
 Feature ideas:
 - add default-boxes (legend and text) that will be baseline for all boxes of this pad
