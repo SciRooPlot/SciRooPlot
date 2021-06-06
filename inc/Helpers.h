@@ -172,18 +172,19 @@ optional<T> pick(int i, const optional<vector<T>>& vec)
 }
 
 template <typename T, typename... Ts>
-optional<T> get_first(const optional<T>& property, const Ts&... properties)
+const optional<T>& get_first(const optional<T>& property, const Ts&... properties)
 {
   for (const auto ptr : {&property, &properties...}) {
     if (*ptr) return *ptr;
   }
-  return std::nullopt;
+  // if all properties are std::nullopt, simply return reference to the first
+  return property;
 }
 
 template <typename T, typename... Ts>
 T get_first_or(const T& fallback, const optional<T>& property, const Ts&... properties)
 {
-  if (auto match = get_first(property, properties...)) {
+  if (const auto& match = get_first(property, properties...)) {
     return *match;
   } else {
     return fallback;
