@@ -595,6 +595,10 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     for (auto& box : pad.GetLegendBoxes()) {
       string legendName = "LegendBox_" + std::to_string(legendIndex);
       box->MergeLegendEntries(); // apply individual user settings on top of automatic entries
+      // apply default text properties of pad to the box
+      if (!box->GetTextFont() && textFont) box->SetTextFont(*textFont);
+      if (!box->GetTextSize() && textSize) box->SetTextSize(*textSize);
+      if (!box->GetTextColor() && textColor) box->SetTextColor(*textColor);
       TPave* legend = GenerateBox(box, pad_ptr);
       if (legend) {
         legend->SetName(legendName.data());
@@ -607,6 +611,10 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     uint8_t textIndex{1u};
     for (auto& box : pad.GetTextBoxes()) {
       string textName = "TextBox_" + std::to_string(textIndex);
+      // apply default text properties of pad to the box
+      if (!box->GetTextFont() && textFont) box->SetTextFont(*textFont);
+      if (!box->GetTextSize() && textSize) box->SetTextSize(*textSize);
+      if (!box->GetTextColor() && textColor) box->SetTextColor(*textColor);
       TPave* text = GenerateBox(box, pad_ptr);
       if (text) {
         text->SetName(textName.data());
@@ -678,8 +686,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       lines.push_back(text.substr(last));
     }
 
-    // FIXME: this shall inherit default text size and font from pad
-    float_t text_size = (textSize) ? *textSize : 24;
+    float_t text_size = (textSize) ? *textSize : 24.f;
     int16_t text_font = (textFont) ? *textFont : 43;
     uint8_t nColumns{1u};
     if constexpr (isLegend) {

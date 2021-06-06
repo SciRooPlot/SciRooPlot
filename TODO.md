@@ -5,7 +5,6 @@ Todo:
 - check again if box auto placement works correctly (also with multiple boxes)
 - check if box auto-size determination considers that legend entries may have different text sizes
 - add again the possiblity to display a legend title
-- propagate pad default text sizes to the boxes
 - make the LegendEntry digest a DataLayout to simplify adding legend properties in a different pad
 
 Feature ideas:
