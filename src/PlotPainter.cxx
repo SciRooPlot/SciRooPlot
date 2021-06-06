@@ -240,10 +240,11 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     "via spline interpolation. Errors will not be fully correct!");
                   DivideHistosInterpolated(data_ptr, denom_data_ptr);
                 }
-                if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>)
+                if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
                   data_ptr->GetZaxis()->SetTitle("ratio");
-                else if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>)
+                } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>) {
                   data_ptr->GetYaxis()->SetTitle("ratio");
+                }
               } else if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_graph>) {
                 ERROR("Cannot divide histogram by graph.");
                 //DivideHistGraphInterpolated(data_ptr, denom_data_ptr);
@@ -385,24 +386,18 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 if (axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
                 if (axisLayout.GetLabelSize()) textSizeLabel = axisLayout.GetLabelSize();
 
-                if (axisLayout.GetTitleCenter())
-                  axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
-                if (axisLayout.GetLabelCenter())
-                  axis_ptr->CenterLabels(*axisLayout.GetLabelCenter());
+                if (axisLayout.GetTitleCenter()) axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
+                if (axisLayout.GetLabelCenter()) axis_ptr->CenterLabels(*axisLayout.GetLabelCenter());
 
                 if (axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(*axisLayout.GetAxisColor());
 
-                if (axisLayout.GetTitleOffset())
-                  axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
-                if (axisLayout.GetLabelOffset())
-                  axis_ptr->SetLabelOffset(*axisLayout.GetLabelOffset());
+                if (axisLayout.GetTitleOffset()) axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
+                if (axisLayout.GetLabelOffset()) axis_ptr->SetLabelOffset(*axisLayout.GetLabelOffset());
 
-                if (axisLayout.GetTickLength())
-                  axis_ptr->SetTickLength(*axisLayout.GetTickLength());
+                if (axisLayout.GetTickLength()) axis_ptr->SetTickLength(*axisLayout.GetTickLength());
                 if (axisLayout.GetMaxDigits()) axis_ptr->SetMaxDigits(*axisLayout.GetMaxDigits());
 
-                if (axisLayout.GetNumDivisions())
-                  axis_ptr->SetNdivisions(*axisLayout.GetNumDivisions());
+                if (axisLayout.GetNumDivisions()) axis_ptr->SetNdivisions(*axisLayout.GetNumDivisions());
 
                 if (axisLayout.GetLog()) {
                   if (axisLabel == 'X') {
@@ -414,16 +409,18 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   }
                 }
                 if (axisLayout.GetGrid()) {
-                  if (axisLabel == 'X')
+                  if (axisLabel == 'X') {
                     pad_ptr->SetGridx(*axisLayout.GetGrid());
-                  else if (axisLabel == 'Y')
+                  } else if (axisLabel == 'Y') {
                     pad_ptr->SetGridy(*axisLayout.GetGrid());
+                  }
                 }
                 if (axisLayout.GetOppositeTicks()) {
-                  if (axisLabel == 'X')
+                  if (axisLabel == 'X') {
                     pad_ptr->SetTickx(*axisLayout.GetOppositeTicks());
-                  else if (axisLabel == 'Y')
+                  } else if (axisLabel == 'Y') {
                     pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
+                  }
                 }
                 if (axisLayout.GetTimeFormat()) {
                   axis_ptr->SetTimeDisplay(1);
@@ -460,8 +457,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // right after drawing the axis, put reference line if requested
           optional<string> refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
           if (refFunc) {
-            TF1* line = new TF1("line", (*refFunc).data(), data_ptr->GetXaxis()->GetXmin(),
-                                data_ptr->GetXaxis()->GetXmax());
+            TF1* line = new TF1("line", (*refFunc).data(), data_ptr->GetXaxis()->GetXmin(), data_ptr->GetXaxis()->GetXmax());
             line->SetLineColor(kBlack);
             line->SetLineWidth(2);
             // line->SetLineStyle(9);
@@ -568,8 +564,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (legendID > 0u && legendID <= boxVector.size()) {
               boxVector[legendID - 1]->AddEntry(*data->GetLegendLabel(), data_ptr->GetName());
             } else {
-              ERROR(R"(Invalid legend label ({}) specified for data "{}" in "{}".)", legendID,
-                    data->GetName(), data->GetInputID());
+              ERROR(R"(Invalid legend label ({}) specified for data "{}" in "{}".)", legendID, data->GetName(), data->GetInputID());
             }
           }
           pad_ptr->Update(); // adds something to the list of primitives
@@ -762,8 +757,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       totalHeightNDC = (nLines + 0.5 * (nLines - 1)) * lineHeightNDC;
     }
 
-    if (titleWidthPixel > legendWidthPixel)
+    if (titleWidthPixel > legendWidthPixel) {
       totalWidthNDC = (0.3333) * markerWidthNDC + titleWidthNDC;
+    }
 
     double_t upperLeftX{box->GetXPosition()};
     double_t upperLeftY{box->GetYPosition()};
@@ -876,19 +872,21 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           curEntry->SetMarkerStyle(markerAttr.GetMarkerStyle());
           curEntry->SetMarkerSize(markerAttr.GetMarkerSize());
 
-          if (box->GetDefaultLineColor())
+          if (box->GetDefaultLineColor()) {
             curEntry->SetLineColor(*box->GetDefaultLineColor());
-          else
+          } else {
             curEntry->SetLineColor(lineAttr.GetLineColor());
-          if (box->GetDefaultLineStyle())
+          }
+          if (box->GetDefaultLineStyle()) {
             curEntry->SetLineStyle(*box->GetDefaultLineStyle());
-          else
+          } else {
             curEntry->SetLineStyle(lineAttr.GetLineStyle());
-          if (box->GetDefaultLineWidth())
+          }
+          if (box->GetDefaultLineWidth()) {
             curEntry->SetLineWidth(*box->GetDefaultLineWidth());
-          else
+          } else {
             curEntry->SetLineWidth(lineAttr.GetLineWidth());
-
+          }
           curEntry->SetFillColor(fillAttr.GetFillColor());
           curEntry->SetFillStyle(fillAttr.GetFillStyle());
         } else {
@@ -905,9 +903,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
         if (entry.GetFillColor()) curEntry->SetFillColor(*entry.GetFillColor());
         if (entry.GetFillStyle()) curEntry->SetFillStyle(*entry.GetFillStyle());
-        if (entry.GetFillOpacity() && entry.GetFillColor())
-          curEntry->SetFillColor(
-            TColor::GetColorTransparent(*entry.GetFillColor(), *entry.GetFillOpacity()));
+        if (entry.GetFillOpacity() && entry.GetFillColor()) curEntry->SetFillColor(TColor::GetColorTransparent(*entry.GetFillColor(), *entry.GetFillOpacity()));
 
         if (entry.GetTextColor()) curEntry->SetTextColor(*entry.GetTextColor());
         if (entry.GetTextFont()) curEntry->SetTextFont(*entry.GetTextFont());
@@ -940,18 +936,18 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     if (returnBox) {
       if (borderStyle) returnBox->SetLineStyle(*borderStyle);
       if (borderColor) returnBox->SetLineColor(*borderColor);
-      if (borderWidth)
+      if (borderWidth) {
         returnBox->SetLineWidth(*borderWidth);
-      else
+      } else {
         returnBox->SetLineWidth(0); // TODO: steer via pad defaults
-
-      if (fillStyle)
+      }
+      if (fillStyle) {
         returnBox->SetFillStyle(*fillStyle);
-      else
+      } else {
         returnBox->SetFillStyle(0); // TODO: steer via pad defaults
+      }
       if (fillColor) returnBox->SetFillColor(*fillColor);
-      if (fillOpacity && fillColor)
-        returnBox->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
+      if (fillOpacity && fillColor) returnBox->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
     }
   };
   std::visit(processBox, boxVariant);
