@@ -343,6 +343,7 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   templatePlot[0]['X'].SetTitleOffset(1.).SetTitleSize(34).SetOppositeTicks();
   templatePlot[0]['Y'].SetTitleOffset(1.2).SetTitleSize(34).SetOppositeTicks();
   templatePlot[1].SetPosition(0., 0., 1., 1.);
+  //templatePlot[1].AddText(0.433, 0.98, "my Pad Title").SetTextColor(kRed);
   plotManager.AddPlotTemplate(templatePlot);
 } // -----------------------------------------------------------------------
 

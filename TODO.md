@@ -19,7 +19,6 @@ Feature ideas:
 - add user functions and maybe fitting (AddFunction() and AddLine())
 
 Structural considerations:
-- maybe at some point it could become useful to also copy data and boxes from template
 - the whole Painter::GeneratePlots() function is just a big mess and needs major rework!
 - decide where data manipulation part should be put (before or after setting ranges?)
 - should smoothing be done before or after division for ratios (or both)??

@@ -201,8 +201,7 @@ void Plot::operator+=(const Plot& plot)
 
   if (plot.mPlotDimensions.width) mPlotDimensions.width = plot.mPlotDimensions.width;
   if (plot.mPlotDimensions.height) mPlotDimensions.height = plot.mPlotDimensions.height;
-  if (plot.mPlotDimensions.fixAspectRatio)
-    mPlotDimensions.fixAspectRatio = plot.mPlotDimensions.fixAspectRatio;
+  if (plot.mPlotDimensions.fixAspectRatio) mPlotDimensions.fixAspectRatio = plot.mPlotDimensions.fixAspectRatio;
 
   if (plot.mFill.color) mFill.color = plot.mFill.color;
   if (plot.mFill.style) mFill.style = plot.mFill.style;
@@ -781,9 +780,12 @@ void Plot::Pad::operator+=(const Pad& pad)
     mAxes[axisLabel]; // default initiialize in case this axis was not yet defined
     mAxes[axisLabel] += axis;
   }
+  mLegendBoxes.insert(mLegendBoxes.end(), pad.mLegendBoxes.begin(), pad.mLegendBoxes.end());
+  mTextBoxes.insert(mTextBoxes.end(), pad.mTextBoxes.begin(), pad.mTextBoxes.end());
+
+  // due to the way this function is (currently) used, the 'pad' is only a temporary object
+  // and therefore we can 'steal' its data by copying the pointers
   mData = pad.mData; // this does not copy the data (!!)
-  mLegendBoxes = pad.mLegendBoxes;
-  mTextBoxes = pad.mTextBoxes;
 }
 
 //**************************************************************************************************

@@ -96,6 +96,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[0]['X'].SetTitleOffset(1.).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks();
     templatePlot[0]['Y'].SetTitleOffset(1.2).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks();
     templatePlot[1].SetPosition(0., 0., 1., 1.);
+    //templatePlot[1].AddText(0.433, 0.98, "my Pad Title").SetTextColor(kRed);
     plotManager.AddPlotTemplate(templatePlot);
   } // -----------------------------------------------------------------------
 
