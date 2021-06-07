@@ -44,8 +44,7 @@ Plot::Plot(const string& name, const string& figureGroup, const string& plotTemp
   if (plotTemplateName != "") mPlotTemplateName = plotTemplateName;
 
   // in case category was specified via figureGroup:my/category/tree
-  auto subPathPos = figureGroup.find(":");
-  if (subPathPos != string::npos) {
+  if (auto subPathPos = figureGroup.find(":"); subPathPos != string::npos) {
     mFigureGroup = figureGroup.substr(0, subPathPos);
     mFigureCategory = figureGroup.substr(subPathPos + 1);
   }
@@ -1058,9 +1057,9 @@ ptree Plot::Pad::Data::GetPropertyTree() const
 
   // ugly workaround
   if (mProjInfo) {
-    put_in_tree(dataTree, std::optional<vector<uint8_t>>{(*mProjInfo).dims}, "proj_dims");
-    put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{(*mProjInfo).ranges}, "proj_ranges");
-    put_in_tree(dataTree, std::optional<bool>{(*mProjInfo).isUserCoord}, "proj_isUserCoord");
+    put_in_tree(dataTree, std::optional<vector<uint8_t>>{mProjInfo->dims}, "proj_dims");
+    put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{mProjInfo->ranges}, "proj_ranges");
+    put_in_tree(dataTree, std::optional<bool>{mProjInfo->isUserCoord}, "proj_isUserCoord");
   }
 
   return dataTree;
@@ -1343,8 +1342,7 @@ Plot::Pad::Ratio::Ratio(const string& name, const string& inputIdentifier, const
   SetType("ratio");
 
   // in case denominator input was specified further via denomInputIdentifier:some/path/in/file
-  auto subPathPos = denomInputIdentifier.find(":");
-  if (subPathPos != string::npos) {
+  if (auto subPathPos = denomInputIdentifier.find(":"); subPathPos != string::npos) {
     // prepend path to plot name
     mDenomName = denomInputIdentifier.substr(subPathPos + 1) + "/" + denomName;
     mDenomInputIdentifier = denomInputIdentifier.substr(0, subPathPos);
@@ -1393,9 +1391,9 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
 
   // ugly workaround
   if (mProjInfo) {
-    put_in_tree(dataTree, std::optional<vector<uint8_t>>{(*mProjInfoDenom).dims}, "projDenom_dims");
-    put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{(*mProjInfoDenom).ranges}, "projDenom_ranges");
-    put_in_tree(dataTree, std::optional<bool>{(*mProjInfoDenom).isUserCoord}, "projDenom_isUserCoord");
+    put_in_tree(dataTree, std::optional<vector<uint8_t>>{mProjInfoDenom->dims}, "projDenom_dims");
+    put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{mProjInfoDenom->ranges}, "projDenom_ranges");
+    put_in_tree(dataTree, std::optional<bool>{mProjInfoDenom->isUserCoord}, "projDenom_isUserCoord");
   }
 
   return dataTree;
@@ -2116,8 +2114,7 @@ void Plot::Pad::LegendBox::MergeLegendEntries()
 {
 
   for (auto iter = mLegendEntriesUser.begin(); iter != mLegendEntriesUser.end(); ++iter) {
-    uint8_t legendIndex = iter->first;
-    if (legendIndex == mLegendEntries.size() + 1) {
+    if (auto legendIndex = iter->first; legendIndex == mLegendEntries.size() + 1) {
       mLegendEntries.push_back(iter->second);
     } else if (legendIndex > 0 && legendIndex < mLegendEntries.size()) {
       mLegendEntries[legendIndex - 1] += iter->second;

@@ -315,7 +315,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor())
                                         : (*data->GetScaleFactor());
           }
-          if (scaleFactor) ScaleGraph((TGraph*)data_ptr, *scaleFactor);
+          if (scaleFactor) ScaleGraph(static_cast<TGraph*>(data_ptr), *scaleFactor);
         }
 
         // first data is only used to define the axes
@@ -524,8 +524,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
           } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_func>) {
             data_ptr->SetRange(rangeMinX, rangeMaxX);
-          } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph>) {
-            SetGraphRange((TGraph*)data_ptr, data->GetMinRangeX(), data->GetMaxRangeX());
+          } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
+            SetGraphRange(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX());
           } else {
             data_ptr->GetXaxis()->SetRangeUser(rangeMinX, rangeMaxX);
           }
@@ -535,7 +535,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
 
             if (auto& contours = data->GetContours()) {
-              data_ptr->SetContour((*contours).size(), (*contours).data());
+              data_ptr->SetContour(contours->size(), contours->data());
             } else if (auto& nContours = data->GetNContours()) {
               data_ptr->SetContour(*nContours);
             }
@@ -545,7 +545,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           data_ptr->Draw(drawingOptions.data());
 
           // in case a label was specified for the data, add it to corresponding legend
-          if (data->GetLegendLabel() && !(*data->GetLegendLabel()).empty()) {
+          if (data->GetLegendLabel() && !data->GetLegendLabel()->empty()) {
             // by default place legend entries in first legend
             uint8_t legendID{1u};
             // explicit user choice overrides this
@@ -672,8 +672,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       lines.push_back(text.substr(last));
     }
 
-    float_t text_size = (textSize) ? *textSize : 24.f;
-    int16_t text_font = (textFont) ? *textFont : 43;
+    float_t text_size = textSize.value_or(24.f);
+    int16_t text_font = textFont.value_or(43);
     uint8_t nColumns{1u};
     if constexpr (isLegend) {
       if (box->GetNumColumns()) nColumns = *box->GetNumColumns();
@@ -699,7 +699,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         auto& entry = box->GetEntries()[lineID];
         if (entry.GetRefDataName()) {
           // FIXME: this gives always the first -> problem when drawing the same histogram twice!
-          TNamed* data_ptr = (TNamed*)pad->FindObject((*entry.GetRefDataName()).data());
+          TNamed* data_ptr = static_cast<TNamed*>(pad->FindObject(entry.GetRefDataName()->data()));
           if (!data_ptr) ERROR(R"(Object belonging to legend entry "{}" not found.)", line);
           ReplacePlaceholders(line, data_ptr);
         }
@@ -830,10 +830,10 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         string label = entry.GetLabel() ? *entry.GetLabel() : ""; // FIXME: this is equal to lines[i]
         string drawStyle = entry.GetDrawStyle() ? *entry.GetDrawStyle() : "";
 
-        // TLegendEntry* curEntry = legend->AddEntry((TObject*)nullptr, label.data(), drawStyle.data());
+        // TLegendEntry* curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), drawStyle.data());
         TLegendEntry* curEntry = nullptr;
         if (entry.GetRefDataName()) {
-          TNamed* data_ptr = (TNamed*)pad->FindObject((*entry.GetRefDataName()).data());
+          TNamed* data_ptr = static_cast<TNamed*>(pad->FindObject(entry.GetRefDataName()->data()));
           // TODO: here we need to check that it exists
 
           if (drawStyle.empty()) {
@@ -845,12 +845,12 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
             if ((data_ptr->InheritsFrom("TF1")) || str_contains(drawingOption, "C") || str_contains(drawingOption, "L") || str_contains(drawingOption, "HIST")) {
               drawStyle = "L";
-            } else if (data_ptr->InheritsFrom("TH1") && (str_contains(drawingOption, "HIST") || str_contains(drawingOption, "B")) && ((TH1*)data_ptr)->GetFillStyle() != 0) {
+            } else if (data_ptr->InheritsFrom("TH1") && (str_contains(drawingOption, "HIST") || str_contains(drawingOption, "B")) && static_cast<TH1*>(data_ptr)->GetFillStyle() != 0) {
               drawStyle = "F";
             }
           }
-          curEntry = legend->AddEntry((TObject*)data_ptr, label.data(), drawStyle.data());
-          curEntry->SetObject((TObject*)nullptr);
+          curEntry = legend->AddEntry(data_ptr, label.data(), drawStyle.data());
+          curEntry->SetObject(static_cast<TObject*>(nullptr));
 
           TAttMarker markerAttr;
           TAttLine lineAttr;
@@ -881,7 +881,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           curEntry->SetFillColor(fillAttr.GetFillColor());
           curEntry->SetFillStyle(fillAttr.GetFillStyle());
         } else {
-          curEntry = legend->AddEntry((TObject*)nullptr, label.data(), drawStyle.data());
+          curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), drawStyle.data());
         }
 
         if (entry.GetMarkerColor()) curEntry->SetMarkerColor(*entry.GetMarkerColor());
@@ -902,10 +902,10 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       }
 
       if (legend->GetHeader()) {
-        ((TLegendEntry*)(legend->GetListOfPrimitives()->At(0)))->SetTextFont(text_font);
-        ((TLegendEntry*)(legend->GetListOfPrimitives()->At(0)))->SetTextSize(text_size);
+        static_cast<TLegendEntry*>(legend->GetListOfPrimitives()->At(0))->SetTextFont(text_font);
+        static_cast<TLegendEntry*>(legend->GetListOfPrimitives()->At(0))->SetTextSize(text_size);
       }
-      returnBox = (TPave*)legend;
+      returnBox = legend;
     } else {
       TPaveText* paveText = new TPaveText(upperLeftX, upperLeftY - totalHeightNDC,
                                           upperLeftX + totalWidthNDC, upperLeftY, "NDC");
@@ -921,7 +921,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         text->SetTextFont(text_font);
         text->SetTextSize(text_size);
       }
-      returnBox = (TPave*)paveText;
+      returnBox = paveText;
     }
 
     if (returnBox) {
@@ -956,21 +956,21 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const std::optional
     if (projInfo) {
       bool addDirStatus = TH1::AddDirectoryStatus();
       TH1::AddDirectory(false);
-      string name = ((TNamed*)obj)->GetName();
+      string name = static_cast<TNamed*>(obj)->GetName();
       name += projInfo->GetNameSuffix();
       if (auto returnPointer = GetProjection(obj, *projInfo)) {
         std::visit([&name](auto&& ptr) { ptr->SetName(name.data()); }, *returnPointer);
         TH1::AddDirectory(addDirStatus);
         return returnPointer;
       } else {
-        ERROR(R"(Projection failed for "{}".)", ((TNamed*)obj)->GetName());
+        ERROR(R"(Projection failed for "{}".)", static_cast<TNamed*>(obj)->GetName());
       }
     } else {
       // TProfile2D is TH2, TH2 is TH1, TProfile is TH1
       if (auto returnPointer = GetDataClone<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1>(obj)) {
         return returnPointer;
       } else {
-        ERROR(R"(Input data "{}" is of unsupported type {}.)", ((TNamed*)obj)->GetName(), obj->ClassName());
+        ERROR(R"(Input data "{}" is of unsupported type {}.)", static_cast<TNamed*>(obj)->GetName(), obj->ClassName());
       }
     }
   }
@@ -981,7 +981,7 @@ template <typename T>
 optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
 {
   if (obj && obj->InheritsFrom(T::Class())) {
-    return (T*)obj->Clone();
+    return static_cast<T*>(obj->Clone());
   }
   return std::nullopt;
 }
@@ -997,12 +997,12 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
 {
   // only 1d and 2d histograms are valid outputs! (could be extended to 3d if there is a way to plot this)
   if (projInfo.dims.size() == 0 || projInfo.dims.size() > 2) {
-    ERROR(R"(Invalid number of dimensions specified for projection of histogram "{}")", ((TNamed*)obj)->GetName());
+    ERROR(R"(Invalid number of dimensions specified for projection of histogram "{}")", static_cast<TNamed*>(obj)->GetName());
     return std::nullopt;
   }
 
   if (obj->InheritsFrom(THnBase::Class())) {
-    THnBase* histPtr = (THnBase*)obj;
+    THnBase* histPtr = static_cast<THnBase*>(obj);
     // first reset all ranges in case this histogram was previously used
     for (int16_t i = 0; i < histPtr->GetNdimensions(); ++i) {
       histPtr->GetAxis(i)->SetRange();
@@ -1010,7 +1010,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     for (auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= histPtr->GetNdimensions()) {
-        ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", ((TNamed*)obj)->GetName());
+        ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", static_cast<TNamed*>(obj)->GetName());
         return std::nullopt;
       }
       int32_t minBin = (projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
@@ -1023,7 +1023,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       return histPtr->Projection(projInfo.dims[0]);
     }
   } else if (obj->InheritsFrom(TH3::Class())) {
-    TH3* histPtr = (TH3*)obj;
+    TH3* histPtr = static_cast<TH3*>(obj);
     // first reset all ranges in case this histogram was previously used
     for (int16_t i = 0; i < 3; ++i) {
       GetAxis(histPtr, i)->SetRange();
@@ -1031,7 +1031,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     for (auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 3) {
-        ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", ((TNamed*)obj)->GetName());
+        ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", static_cast<TNamed*>(obj)->GetName());
         return std::nullopt;
       }
       int32_t minBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
@@ -1045,9 +1045,9 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       return histPtr->Project3D(GetAxisStr(projInfo.dims[0]).data());
     }
   } else if (obj->InheritsFrom(TH2::Class())) {
-    TH2* histPtr = (TH2*)obj;
+    TH2* histPtr = static_cast<TH2*>(obj);
     if (projInfo.dims.size() > 1) {
-      ERROR(R"(Invalid dimension specified for projecting histogram "{}")", ((TNamed*)obj)->GetName());
+      ERROR(R"(Invalid dimension specified for projecting histogram "{}")", static_cast<TNamed*>(obj)->GetName());
       return std::nullopt;
     }
     int32_t minBin = 0;
@@ -1056,7 +1056,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     for (auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 2) {
-        ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", ((TNamed*)obj)->GetName());
+        ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", static_cast<TNamed*>(obj)->GetName());
         return std::nullopt;
       }
       minBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
@@ -1067,10 +1067,10 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     } else if (projInfo.dims[0] == 1) {
       return histPtr->ProjectionY("_py", minBin, maxBin);
     } else {
-      ERROR(R"(Invalid dimension specified for projection from "{}" ({}).)", ((TNamed*)obj)->GetName(), obj->ClassName());
+      ERROR(R"(Invalid dimension specified for projection from "{}" ({}).)", static_cast<TNamed*>(obj)->GetName(), obj->ClassName());
     }
   } else {
-    ERROR(R"(Cannot do projections for type {} ("{}").)", obj->ClassName(), ((TNamed*)obj)->GetName());
+    ERROR(R"(Cannot do projections for type {} ("{}").)", obj->ClassName(), static_cast<TNamed*>(obj)->GetName());
   }
   return std::nullopt;
 }
@@ -1349,15 +1349,14 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
   auto words_end = std::sregex_iterator();
 
   for (std::sregex_iterator match = words_begin; match != words_end; ++match) {
-    std::string match_str = (*match).str();
+    std::string match_str = match->str();
 
     string format{};
 
     // check if user specified different formatting (e.g. via <mean[%2.6]>)
     std::regex format_regex("\\[.*?\\]");
-    auto format_it = std::sregex_iterator(match_str.begin(), match_str.end(), format_regex);
-    if (format_it != std::sregex_iterator()) {
-      format = (*format_it).str();
+    if (auto format_it = std::sregex_iterator(match_str.begin(), match_str.end(), format_regex); format_it != std::sregex_iterator()) {
+      format = format_it->str();
       format = format.substr(1, format.size() - 2);
     }
     // allow printf style and protect against wrong usage
@@ -1379,15 +1378,15 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     } else if (data_ptr->InheritsFrom(TH1::Class())) {
       try {
         if (str_contains(match_str, "entries")) {
-          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetEntries());
+          replace_str = fmt::format(format, static_cast<TH1*>(data_ptr)->GetEntries());
         } else if (str_contains(match_str, "integral")) {
-          replace_str = fmt::format(format, ((TH1*)data_ptr)->Integral());
+          replace_str = fmt::format(format, static_cast<TH1*>(data_ptr)->Integral());
         } else if (str_contains(match_str, "mean")) {
-          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMean());
+          replace_str = fmt::format(format, static_cast<TH1*>(data_ptr)->GetMean());
         } else if (str_contains(match_str, "maximum")) {
-          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMaximum());
+          replace_str = fmt::format(format, static_cast<TH1*>(data_ptr)->GetMaximum());
         } else if (str_contains(match_str, "minimum")) {
-          replace_str = fmt::format(format, ((TH1*)data_ptr)->GetMinimum());
+          replace_str = fmt::format(format, static_cast<TH1*>(data_ptr)->GetMinimum());
         }
       } catch (...) {
         ERROR(R"(Incompatible format string in "{}".)", match_str);

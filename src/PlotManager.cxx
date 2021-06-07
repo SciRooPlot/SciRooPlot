@@ -365,7 +365,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
       } else if (isClick || isValidKey) {
         curXpos = canvas->GetWindowTopX();
         curYpos = canvas->GetWindowTopY();
-        TRootCanvas* canvasWindow = ((TRootCanvas*)canvas->GetCanvasImp());
+        TRootCanvas* canvasWindow = static_cast<TRootCanvas*>(canvas->GetCanvasImp());
         canvasWindow->UnmapWindow();
         bool forward = false;
         if (isValidKey) {
@@ -382,7 +382,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
         }
         canvas = mPlotLedger[*mPlotViewHistory[curPlotIndex]];
         canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
-        ((TRootCanvas*)canvas->GetCanvasImp())->MapRaised();
+        static_cast<TRootCanvas*>(canvas->GetCanvasImp())->MapRaised();
       } else {
         boxClicked = false;
       }
@@ -622,11 +622,11 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
 {
   TCollection* itemList = nullptr;
   if (folder->InheritsFrom("TDirectory")) {
-    itemList = ((TDirectoryFile*)folder)->GetListOfKeys();
+    itemList = static_cast<TDirectoryFile*>(folder)->GetListOfKeys();
   } else if (folder->InheritsFrom("TFolder")) {
-    itemList = ((TFolder*)folder)->GetListOfFolders();
+    itemList = static_cast<TFolder*>(folder)->GetListOfFolders();
   } else if (folder->InheritsFrom("TCollection")) {
-    itemList = (TCollection*)folder;
+    itemList = static_cast<TCollection*>(folder);
   } else {
     ERROR("Data-format not supported.");
     return;
@@ -648,12 +648,12 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
 
       // read actual object to memory when traversing a directory
       if (obj->IsA() == TKey::Class()) {
-        string className = ((TKey*)obj)->GetClassName();
-        string keyName = ((TKey*)obj)->GetName();
+        string className = static_cast<TKey*>(obj)->GetClassName();
+        string keyName = static_cast<TKey*>(obj)->GetName();
 
         bool isTraversable = str_contains(className, "TDirectory") || str_contains(className, "TFolder") || str_contains(className, "TList") || str_contains(className, "TObjArray");
         if ((traverse && isTraversable) || std::find(dataNames.begin(), dataNames.end(), keyName) != dataNames.end()) {
-          obj = ((TKey*)obj)->ReadObj();
+          obj = static_cast<TKey*>(obj)->ReadObj();
           removeFromList = false;
         } else {
           ++iterator;
@@ -665,12 +665,11 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection")) {
         if (traverse) ReadData(obj, dataNames, prefix, suffix, inputID);
       } else {
-        auto it = std::find(dataNames.begin(), dataNames.end(), ((TNamed*)obj)->GetName());
-        if (it != dataNames.end()) {
-          if (obj->InheritsFrom("TH1")) ((TH1*)obj)->SetDirectory(0); // demand ownership for histogram
+        if (auto it = std::find(dataNames.begin(), dataNames.end(), static_cast<TNamed*>(obj)->GetName()); it != dataNames.end()) {
+          if (obj->InheritsFrom("TH1")) static_cast<TH1*>(obj)->SetDirectory(0); // demand ownership for histogram
           // re-name data
-          string fullName = prefix + ((TNamed*)obj)->GetName();
-          ((TNamed*)obj)->SetName((fullName + suffix).data());
+          string fullName = prefix + static_cast<TNamed*>(obj)->GetName();
+          static_cast<TNamed*>(obj)->SetName((fullName + suffix).data());
           dataNames.erase(it); // TODO: why not erase-remove?
           mDataBuffer[inputID][fullName].reset(obj);
           deleteObject = false;
@@ -681,7 +680,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       ++iterator;
       if (removeFromList) {
         if (itemList->Remove(obj) == nullptr) {
-          ERROR(R"(Could not remove item "{}" ({}) from collection "{}".)", ((TNamed*)obj)->GetName(), (void*)obj, itemList->GetName());
+          ERROR(R"(Could not remove item "{}" ({}) from collection "{}".)", static_cast<TNamed*>(obj)->GetName(), static_cast<void*>(obj), itemList->GetName());
         }
       }
       if (deleteObject) {
@@ -704,7 +703,7 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& graphNa
   string pattern = "%lg %lg %lg %lg";
   TGraphErrors* graph = new TGraphErrors(inputFileName.data(), pattern.data(), delimiter.data());
   string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
-  ((TNamed*)graph)->SetName(uniqueName.data());
+  graph->SetName(uniqueName.data());
   mDataBuffer[inputIdentifier][graphName].reset(graph);
 }
 
@@ -728,19 +727,19 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs)
   }
   TObject* subFolder{nullptr};
   if (folder->InheritsFrom("TDirectory")) {
-    TKey* key = ((TDirectory*)folder)->FindKey(subDirs[0].data());
+    TKey* key = static_cast<TDirectory*>(folder)->FindKey(subDirs[0].data());
     if (key) {
       subFolder = key->ReadObj();
     } else {
-      subFolder = ((TDirectory*)folder)->FindObject(subDirs[0].data());
+      subFolder = static_cast<TDirectory*>(folder)->FindObject(subDirs[0].data());
     }
     deleteFolder = false;
   } else if (folder->InheritsFrom("TCollection") || folder->InheritsFrom("TFolder")) {
-    subFolder = ((TCollection*)folder)->FindObject(subDirs[0].data());
+    subFolder = static_cast<TCollection*>(folder)->FindObject(subDirs[0].data());
     if (subFolder) {
-      ((TCollection*)subFolder)->SetOwner();
+      static_cast<TCollection*>(subFolder)->SetOwner();
       // if subfolder is part of list, remove it first to avoid double deletion
-      ((TCollection*)folder)->Remove(subFolder);
+      static_cast<TCollection*>(folder)->Remove(subFolder);
     }
   }
   if (deleteFolder) {
