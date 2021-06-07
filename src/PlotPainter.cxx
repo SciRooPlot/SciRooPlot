@@ -70,7 +70,7 @@ namespace PlottingFramework
  * Function to generate the plot.
  */
 //**************************************************************************************************
-shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>>& dataBuffer)
+unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>>& dataBuffer)
 {
   gStyle->SetOptStat(0); // this needs to be done before creating the canvas! at later stage it would add to list of primitives in pad...
 
@@ -79,8 +79,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     return nullptr;
   }
   bool fail = false;
-  shared_ptr<TCanvas> canvas_ptr(new TCanvas(plot.GetUniqueName().data(), plot.GetUniqueName().data(),
-                                             *plot.GetWidth() + 4, *plot.GetHeight() + 28));
+  unique_ptr<TCanvas> canvas_ptr{new TCanvas(plot.GetUniqueName().data(), plot.GetUniqueName().data(), *plot.GetWidth() + 4, *plot.GetHeight() + 28)};
   // NB.: +4 and +28 are needed to undo hard-coded offsets in TCanvas.cxx line 595
   canvas_ptr->SetMargin(0., 0., 0., 0.);
 
@@ -160,17 +159,13 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     } else {
       // find data that should define the axis frame
       auto framePos = std::find_if(pad.GetData().begin(), pad.GetData().end(),
-                                   [](auto curData) { return curData->GetDefinesFrame(); });
+                                   [](auto& curData) { return curData->GetDefinesFrame(); });
       uint8_t frameDataID = (framePos != pad.GetData().end()) ? framePos - pad.GetData().begin() : 0u;
       // make a copy of data that will serve as axis frame and put it in front of data vector
       if (pad.GetData()[frameDataID]->GetType() == "ratio") {
-        pad.GetData().insert(
-          pad.GetData().begin(),
-          std::make_shared<Plot::Pad::Ratio>(
-            *std::dynamic_pointer_cast<Plot::Pad::Ratio>(pad.GetData()[frameDataID])));
+        pad.GetData().insert(pad.GetData().begin(), std::make_shared<Plot::Pad::Ratio>(*std::dynamic_pointer_cast<Plot::Pad::Ratio>(pad.GetData()[frameDataID])));
       } else {
-        pad.GetData().insert(pad.GetData().begin(),
-                             std::make_shared<Plot::Pad::Data>(*pad.GetData()[frameDataID]));
+        pad.GetData().insert(pad.GetData().begin(), std::make_shared<Plot::Pad::Data>(*pad.GetData()[frameDataID]));
       }
       pad.GetData()[0]->SetLegendLabel(""); // axis frame should not appear in legend
     }
@@ -235,9 +230,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 string divideOpt = (std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetIsCorrelated()) ? "B"
                                                                                                           : "";
                 if (!data_ptr->Divide(data_ptr, denom_data_ptr, 1., 1., divideOpt.data())) {
-                  WARNING(
-                    "Could not divide histograms properly. Trying approximated division "
-                    "via spline interpolation. Errors will not be fully correct!");
+                  WARNING("Could not divide histograms properly. Trying approximated division via spline interpolation. Errors will not be fully correct!");
                   DivideHistosInterpolated(data_ptr, denom_data_ptr);
                 }
                 if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
@@ -253,9 +246,7 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_graph_1d>) {
                 if (!DivideGraphs(data_ptr, denom_data_ptr)) // first try if exact division is possible
                 {
-                  WARNING(
-                    "In general graphs cannot be divided. Trying approximated division "
-                    "via spline interpolation. Errors will not be fully correct!");
+                  WARNING("In general graphs cannot be divided. Trying approximated division via spline interpolation. Errors will not be fully correct!");
                   DivideGraphsInterpolated(data_ptr, denom_data_ptr);
                 }
               } else if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist_1d>) {
@@ -364,17 +355,17 @@ shared_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               axis_ptr = axisHist_ptr->GetZaxis();
             if (!axis_ptr) continue;
 
-            optional<int16_t> textFontTitle = textFont;
-            optional<int16_t> textFontLabel = textFont;
-            optional<int16_t> textColorTitle = textColor;
-            optional<int16_t> textColorLabel = textColor;
-            optional<float_t> textSizeTitle = textSize;
-            optional<float_t> textSizeLabel = textSize;
+            auto textFontTitle = textFont;
+            auto textFontLabel = textFont;
+            auto textColorTitle = textColor;
+            auto textColorLabel = textColor;
+            auto textSizeTitle = textSize;
+            auto textSizeLabel = textSize;
 
             // first apply default pad values and then settings for this specific pad
             for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
               if (curPad.GetAxes().find(axisLabel) != curPad.GetAxes().end()) {
-                auto axisLayout = curPad[axisLabel];
+                auto& axisLayout = curPad[axisLabel];
                 if (axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).data());
 
                 if (axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
@@ -835,7 +826,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       if (textSize) legend->SetTextSize(*textSize);
       if (textFont) legend->SetTextFont(*textFont);
 
-      for (auto entry : box->GetEntries()) {
+      for (auto& entry : box->GetEntries()) {
         string label = entry.GetLabel() ? *entry.GetLabel() : ""; // FIXME: this is equal to lines[i]
         string drawStyle = entry.GetDrawStyle() ? *entry.GetDrawStyle() : "";
 
@@ -1016,7 +1007,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     for (int16_t i = 0; i < histPtr->GetNdimensions(); ++i) {
       histPtr->GetAxis(i)->SetRange();
     }
-    for (auto rangeTuple : projInfo.ranges) {
+    for (auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= histPtr->GetNdimensions()) {
         ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", ((TNamed*)obj)->GetName());
@@ -1037,7 +1028,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     for (int16_t i = 0; i < 3; ++i) {
       GetAxis(histPtr, i)->SetRange();
     }
-    for (auto rangeTuple : projInfo.ranges) {
+    for (auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 3) {
         ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", ((TNamed*)obj)->GetName());
@@ -1062,7 +1053,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     int32_t minBin = 0;
     int32_t maxBin = -1;
 
-    for (auto rangeTuple : projInfo.ranges) {
+    for (auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 2) {
         ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", ((TNamed*)obj)->GetName());
@@ -1340,13 +1331,9 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
 //**************************************************************************************************
 float_t PlotPainter::GetTextSizePixel(float_t textSizeNDC)
 {
-  float_t textSizePixel{};
   int32_t pad_width{gPad->XtoPixel(gPad->GetX2())};
   int32_t pad_height{gPad->YtoPixel(gPad->GetY1())};
-  if (pad_width < pad_height)
-    textSizePixel = textSizeNDC * pad_width;
-  else
-    textSizePixel = textSizeNDC * pad_height;
+  float_t textSizePixel{(pad_width < pad_height) ? textSizeNDC * pad_width : textSizeNDC * pad_height};
   return textSizePixel;
 }
 

@@ -334,7 +334,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     }
   }
   PlotPainter painter;
-  shared_ptr<TCanvas> canvas = painter.GeneratePlot(fullPlot, mDataBuffer);
+  shared_ptr<TCanvas> canvas{painter.GeneratePlot(fullPlot, mDataBuffer)};
   if (!canvas) return false;
   LOG("Created \033[1;32m{}\033[0m from group \033[1;33m{}\033[0m", fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? ":" + *fullPlot.GetFigureCategory() : ""));
 
@@ -389,9 +389,11 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
       gSystem->Sleep(20);
     }
     return true;
+  } else if (outputMode == "file") {
+    mPlotLedger[plot.GetUniqueName()] = canvas;
+    return true;
   }
 
-  const optional<string>& subFolder = plot.GetFigureCategory();
   string fileEnding = ".pdf";
   if (outputMode == "macro") {
     fileEnding = ".C";
@@ -401,20 +403,14 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     fileEnding = ".eps";
   }
 
-  string fileName = plot.GetUniqueName();
+  string fileName = (mUseUniquePlotNames) ? plot.GetUniqueName() : plot.GetName();
 
-  if (outputMode == "file") {
-    mPlotLedger[plot.GetUniqueName()] = canvas;
-    return true;
-  }
-
-  if (!mUseUniquePlotNames) fileName = plot.GetName();
   std::replace(fileName.begin(), fileName.end(), '/', '_');
   std::replace(fileName.begin(), fileName.end(), ':', '_');
 
   // create output folders and files
   string folderName = mOutputDirectory + "/" + plot.GetFigureGroup();
-  if (subFolder) folderName += "/" + *subFolder;
+  if (plot.GetFigureCategory()) folderName += "/" + *plot.GetFigureCategory();
   gSystem->Exec((string("mkdir -p ") + folderName).data());
   canvas->SaveAs((folderName + "/" + fileName + fileEnding).data());
   return true;
@@ -459,8 +455,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   // were definitions for all requested plots available?
   if (!plotNames.empty()) {
     for (auto& plotName : plotNames) {
-      WARNING(R"(Could not find plot "{}" in group "{}")", plotName,
-              figureGroup + ((!figureCategory.empty()) ? ":" + figureCategory : ""));
+      WARNING(R"(Could not find plot "{}" in group "{}")", plotName, figureGroup + ((!figureCategory.empty()) ? ":" + figureCategory : ""));
     }
   }
 
@@ -686,8 +681,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       ++iterator;
       if (removeFromList) {
         if (itemList->Remove(obj) == nullptr) {
-          ERROR(R"(Could not remove item "{}" ({}) from collection "{}".)", ((TNamed*)obj)->GetName(),
-                (void*)obj, itemList->GetName());
+          ERROR(R"(Could not remove item "{}" ({}) from collection "{}".)", ((TNamed*)obj)->GetName(), (void*)obj, itemList->GetName());
         }
       }
       if (deleteObject) {
@@ -831,8 +825,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
 
       ++nFoundPlots;
       if (isSearchRequest) {
-        INFO(" - \033[1;32m{}\033[0m in group \033[1;33m{}\033[0m", plotName,
-             figureGroup + ((!figureCategory.empty()) ? ":" + figureCategory : ""));
+        INFO(" - \033[1;32m{}\033[0m in group \033[1;33m{}\033[0m", plotName, figureGroup + ((!figureCategory.empty()) ? ":" + figureCategory : ""));
       } else {
         try {
           Plot plot(plotTree.second);

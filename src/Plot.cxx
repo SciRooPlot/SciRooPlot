@@ -1301,12 +1301,13 @@ auto Plot::Pad::Data::SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, 
 std::string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
 {
   std::string nameSuffix = "_Proj{";
-  for (auto dim : dims)
+  for (auto dim : dims) {
     nameSuffix += std::to_string(dim);
+  }
   nameSuffix += "}";
   if (!ranges.empty()) {
     nameSuffix += "_Range";
-    for (auto range : ranges) {
+    for (auto& range : ranges) {
       nameSuffix += "{";
       nameSuffix += std::to_string(std::get<0>(range)) + ":";
       if (isUserCoord) {

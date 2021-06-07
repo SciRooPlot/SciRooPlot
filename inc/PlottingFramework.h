@@ -41,6 +41,7 @@ using std::set;
 using std::shared_ptr;
 using std::string;
 using std::tuple;
+using std::unique_ptr;
 using std::unordered_map;
 using std::variant;
 using std::vector;

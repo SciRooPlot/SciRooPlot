@@ -110,11 +110,11 @@ protected:
   }
 
   // accessors for internal use by manager and painter
-  const string& GetName() const { return mName; }
-  const string& GetFigureGroup() const { return mFigureGroup; }
-  const optional<string>& GetFigureCategory() const { return mFigureCategory; }
-  const optional<string>& GetPlotTemplateName() const { return mPlotTemplateName; }
-  const string& GetUniqueName() const { return mUniqueName; }
+  const auto& GetName() const { return mName; }
+  const auto& GetFigureGroup() const { return mFigureGroup; }
+  const auto& GetFigureCategory() const { return mFigureCategory; }
+  const auto& GetPlotTemplateName() const { return mPlotTemplateName; }
+  const auto& GetUniqueName() const { return mUniqueName; }
   ptree GetPropertyTree() const;
 
   auto& GetPads() { return mPads; }
