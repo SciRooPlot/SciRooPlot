@@ -104,7 +104,7 @@ Plot::Plot(const ptree& plotTree)
  * Get representation of plot as property tree.
  */
 //**************************************************************************************************
-ptree Plot::GetPropertyTree()
+ptree Plot::GetPropertyTree() const
 {
   ptree plotTree;
   plotTree.put("name", mName);
@@ -153,11 +153,11 @@ Plot Plot::Clone() const
  * Count number of inputs needed to create the plot.
  */
 //**************************************************************************************************
-uint8_t Plot::InputDataCount()
+uint8_t Plot::GetDataCount() const
 {
   uint8_t count{};
   for (auto& [padID, pad] : mPads) {
-    count += pad.GetData().size();
+    count += pad.GetDataCount();
   }
   return count;
 }

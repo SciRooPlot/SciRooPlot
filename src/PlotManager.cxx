@@ -71,7 +71,7 @@ PlotManager::~PlotManager()
  * Save stored plots to .root file.
  */
 //**************************************************************************************************
-void PlotManager::SavePlotsToFile()
+void PlotManager::SavePlotsToFile() const
 {
   if (!mPlotLedger.empty()) {
     TFile outputFile(mOutputFileName.data(), "RECREATE");
@@ -131,8 +131,7 @@ void PlotManager::SetOutputFileName(const string& fileName)
  * Define input file paths for user defined unique inputIdentifier.
  */
 //**************************************************************************************************
-void PlotManager::AddInputDataFiles(const string& inputIdentifier,
-                                    const vector<string>& inputFilePathList)
+void PlotManager::AddInputDataFiles(const string& inputIdentifier, const vector<string>& inputFilePathList)
 {
   if (mInputFiles.find(inputIdentifier) != mInputFiles.end()) {
     WARNING(R"(Replacing input identifier "{}".)", inputIdentifier);
@@ -150,7 +149,7 @@ void PlotManager::AddInputDataFile(const string& inputIdentifier, const string& 
  * Dump input file identifiers and paths that are currently defined in the manager to a config file.
  */
 //**************************************************************************************************
-void PlotManager::DumpInputDataFiles(const string& configFileName)
+void PlotManager::DumpInputDataFiles(const string& configFileName) const
 {
   ptree inputFileTree;
   for (auto& inFileTuple : mInputFiles) {
@@ -244,7 +243,7 @@ void PlotManager::AddPlotTemplate(Plot& plotTemplate)
  */
 //**************************************************************************************************
 void PlotManager::DumpPlots(const string& plotFileName, const string& figureGroup,
-                            const vector<string>& plotNames)
+                            const vector<string>& plotNames) const
 {
   set<string> usedTemplates;
   std::for_each(mPlots.begin(), mPlots.end(), [&usedTemplates](auto& plot) {
@@ -252,8 +251,8 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
   });
 
   ptree plotTree;
-  for (vector<Plot>& plots : {std::ref(mPlotTemplates), std::ref(mPlots)}) {
-    for (Plot& plot : plots) {
+  for (const vector<Plot>& plots : {std::ref(mPlotTemplates), std::ref(mPlots)}) {
+    for (const Plot& plot : plots) {
 
       if (plot.GetFigureGroup() == "TEMPLATES" && usedTemplates.find(plot.GetName()) == usedTemplates.end()) {
         continue;
@@ -279,7 +278,7 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
   write_xml(expand_path(plotFileName), plotTree, std::locale(), settings);
 }
 void PlotManager::DumpPlot(const string& plotFileName, const string& figureGroup,
-                           const string& plotName)
+                           const string& plotName) const
 {
   DumpPlots(plotFileName, figureGroup, {plotName});
 }
@@ -308,7 +307,7 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
  * Generates plot based on plot template.
  */
 //**************************************************************************************************
-bool PlotManager::GeneratePlot(Plot& plot, const string& outputMode)
+bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
 {
   // if plot already exists, delete the old one first
   if (mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()) {
@@ -566,7 +565,7 @@ bool PlotManager::FillBuffer()
  * Show which data could and could not be found.
  */
 //**************************************************************************************************
-void PlotManager::PrintBufferStatus(bool missingOnly)
+void PlotManager::PrintBufferStatus(bool missingOnly) const
 {
   INFO("===============================================");
   if (missingOnly) {
@@ -600,7 +599,7 @@ void PlotManager::PrintBufferStatus(bool missingOnly)
  * Show which plots are currently loaded in the framework.
  */
 //**************************************************************************************************
-void PlotManager::PrintLoadedPlots()
+void PlotManager::PrintLoadedPlots() const
 {
   INFO("===============================================");
   INFO("================ Loaded Plots =================");
@@ -613,7 +612,7 @@ void PlotManager::PrintLoadedPlots()
       INFO("{}", figureGroup);
     }
     INFO(" - {}{}", plot.GetName(), (plot.GetFigureCategory()) ? "" : " (" + *plot.GetFigureCategory() + ")");
-    INFO("     ndata = {}", plot.InputDataCount());
+    INFO("     ndata = {}", plot.GetDataCount());
   }
   INFO("{} plots were loaded.", mPlots.size());
   INFO("===============================================");
@@ -720,7 +719,7 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& graphNa
  * Recursively search for sub folder in file.
  */
 //**************************************************************************************************
-TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs)
+TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs) const
 {
   if (!folder) return nullptr;
   bool deleteFolder = true;

@@ -50,8 +50,8 @@ public:
   // settings related to the input root files
   void AddInputDataFiles(const string& inputIdentifier, const vector<string>& inputFilePathList);
   void AddInputDataFile(const string& inputIdentifier, const string& inputFilePath);
-  void DumpInputDataFiles(const string& configFileName); // save input file paths to config file
-  void LoadInputDataFiles(const string& configFileName); // load the input file paths from config file
+  void DumpInputDataFiles(const string& configFileName) const; // save input file paths to config file
+  void LoadInputDataFiles(const string& configFileName);       // load the input file paths from config file
 
   // remove all loaded input data (histograms, graphs, ...) from the manager (usually not needed)
   void ClearDataBuffer();
@@ -62,8 +62,8 @@ public:
 
   // saving plot definitions to external file (which can e.g. be read by the command-line plotting app
   // included in the framework)
-  void DumpPlots(const string& plotFileName, const string& figureGroup = "", const vector<string>& plotNames = {});
-  void DumpPlot(const string& plotFileName, const string& figureGroup, const string& plotName);
+  void DumpPlots(const string& plotFileName, const string& figureGroup = "", const vector<string>& plotNames = {}) const;
+  void DumpPlot(const string& plotFileName, const string& figureGroup, const string& plotName) const;
 
   // read plots from plot definition file created by the above functions (regular expressions are
   // allowed); the mode variable can be "load" to add these plots to the manager, or "find" to check
@@ -84,13 +84,13 @@ public:
                    vector<string> plotNames = {}, const string& outputMode = "pdf");
   void CreatePlot(const string& name, const string& figureGroup, const string& figureCategory = "",
                   const string& outputMode = "pdf");
-  void PrintLoadedPlots();
+  void PrintLoadedPlots() const;
 
 private:
-  TObject* FindSubDirectory(TObject* folder, vector<string>& subDirs);
-  bool GeneratePlot(Plot& plot, const string& outputMode = "pdf");
+  TObject* FindSubDirectory(TObject* folder, vector<string>& subDirs) const;
+  bool GeneratePlot(const Plot& plot, const string& outputMode = "pdf");
   ptree& ReadPlotTemplatesFromFile(const string& plotFileName);
-  void SavePlotsToFile();
+  void SavePlotsToFile() const;
 
   std::unique_ptr<TApplication> mApp;
   bool mSaveToRootFile;
@@ -105,7 +105,7 @@ private:
 
   unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>> mDataBuffer;
   map<string, vector<string>> mInputFiles; // inputFileIdentifier, inputFilePaths
-  void PrintBufferStatus(bool missingOnly = false);
+  void PrintBufferStatus(bool missingOnly = false) const;
   bool FillBuffer();
   void ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& inputID);
   void ReadDataCSV(const string& inputFileName, const string& graphName, const string& inputIdentifier);

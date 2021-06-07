@@ -110,22 +110,22 @@ protected:
   }
 
   // accessors for internal use by manager and painter
-  const string& GetName() { return mName; }
-  const string& GetFigureGroup() { return mFigureGroup; }
-  const optional<string>& GetFigureCategory() { return mFigureCategory; }
-  const optional<string>& GetPlotTemplateName() { return mPlotTemplateName; }
-  const string& GetUniqueName() { return mUniqueName; }
-  ptree GetPropertyTree();
+  const string& GetName() const { return mName; }
+  const string& GetFigureGroup() const { return mFigureGroup; }
+  const optional<string>& GetFigureCategory() const { return mFigureCategory; }
+  const optional<string>& GetPlotTemplateName() const { return mPlotTemplateName; }
+  const string& GetUniqueName() const { return mUniqueName; }
+  ptree GetPropertyTree() const;
 
   auto& GetPads() { return mPads; }
 
-  const auto& GetHeight() { return mPlotDimensions.height; }
-  const auto& GetWidth() { return mPlotDimensions.width; }
-  const auto& IsFixAspectRatio() { return mPlotDimensions.fixAspectRatio; }
-  const auto& GetFillColor() { return mFill.color; }
-  const auto& GetFillStyle() { return mFill.style; }
+  const auto& GetHeight() const { return mPlotDimensions.height; }
+  const auto& GetWidth() const { return mPlotDimensions.width; }
+  const auto& IsFixAspectRatio() const { return mPlotDimensions.fixAspectRatio; }
+  const auto& GetFillColor() const { return mFill.color; }
+  const auto& GetFillStyle() const { return mFill.style; }
 
-  uint8_t InputDataCount();
+  uint8_t GetDataCount() const;
 
 private:
   struct dimension_t {
@@ -230,6 +230,7 @@ protected:
   auto& GetData() { return mData; }
   auto& GetLegendBoxes() { return mLegendBoxes; }
   auto& GetTextBoxes() { return mTextBoxes; }
+  uint8_t GetDataCount() const { return mData.size(); };
 
   const auto& GetAxes() const { return mAxes; }
   const auto& GetXLow() const { return mPosition.xlow; }
