@@ -50,7 +50,7 @@ namespace PlottingFramework
  * Constructor for PlotManager.
  */
 //**************************************************************************************************
-PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr)), mSaveToRootFile(false), mOutputFileName("ResultPlots.root"), mUseUniquePlotNames(false)
+PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr)), mOutputFileName("ResultPlots.root")
 {
   TQObject::Connect("TGMainFrame", "CloseWindow()", "TApplication", gApplication, "Terminate()");
   gErrorIgnoreLevel = kWarning;

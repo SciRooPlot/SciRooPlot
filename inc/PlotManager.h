@@ -93,11 +93,11 @@ private:
   void SavePlotsToFile() const;
 
   std::unique_ptr<TApplication> mApp;
-  bool mSaveToRootFile;
+  bool mSaveToRootFile{};
   string mOutputFileName;
   map<string, shared_ptr<TCanvas>> mPlotLedger;
   string mOutputDirectory;
-  bool mUseUniquePlotNames;
+  bool mUseUniquePlotNames{};
   vector<Plot> mPlots;
   vector<Plot> mPlotTemplates;
   map<string, ptree> mPropertyTreeCache;

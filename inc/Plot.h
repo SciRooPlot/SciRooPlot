@@ -445,7 +445,7 @@ protected:
   };
 
 private:
-  bool mDefinesFrame;
+  bool mDefinesFrame{};
 
   string mType; // for introspection: "data" or "ratio"
   string mName;
@@ -561,7 +561,7 @@ protected:
 private:
   string mDenomName;
   string mDenomInputIdentifier;
-  bool mIsCorrelated;
+  bool mIsCorrelated{};
   optional<proj_info_t> mProjInfoDenom;
 };
 
@@ -647,7 +647,7 @@ private:
     optional<double_t> max;
   };
 
-  char mName;
+  char mName{};
   axisRange_t mRange;
   optional<string> mTitle;
   optional<int32_t> mNumDivisions;
