@@ -15,7 +15,7 @@ then
 fi
 
 if [ ! -d "${__PLOTTING_CONFIG_DIR}" ]; then
-  echo ""; echo ">> Auto-complete script could not find plotting config folder: ${__PLOTTING_CONFIG_DIR}."; echo "";
+  #echo ""; echo ">> Auto-complete script could not find plotting config folder: ${__PLOTTING_CONFIG_DIR}."; echo "";
   return
 fi
 
