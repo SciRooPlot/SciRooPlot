@@ -5,7 +5,7 @@ set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# The following two lines can be used to force using one specific root installation (comment out if not needed)
+# The following two lines can be used to force using one specific root installation
 set(ROOTSYS ~/root/mybuild)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
 
@@ -18,29 +18,7 @@ if(APPLE)
   set(CMAKE_MACOSX_RPATH ON)
 endif(APPLE)
 
-# add user applications that should be linked to the framework here
-# name of the executable:
-set(APPLICATIONS
-  plot
-)
-# corresponding source file:
-set(APPLICATIONS_SRC
-  "app/PlottingApp.cxx"
-)
-# files that you want to associate to your app; put "" if not required
-set(APPLICATIONS_ADDITIONAL_FILES
-  ""
-)
-
 set(MODULE PlottingFramework)
-set(MODULE_HDR inc/${MODULE}.h)
-set(ADDITIONAL_FILES
-  ${CMAKE_CURRENT_SOURCE_DIR}/inc/Logging.h
-  README.md
-  TODO.md
-  )
-
-# this variable contains the framework source code
 set(SRCS
   src/Plot.cxx
   src/PlotManager.cxx
@@ -49,6 +27,12 @@ set(SRCS
 )
 string(REPLACE ".cxx" ".h" HDRS "${SRCS}")
 string(REPLACE "src" "inc" HDRS "${HDRS}")
+set(MODULE_HDR inc/${MODULE}.h)
+set(ADDITIONAL_FILES
+  ${CMAKE_CURRENT_SOURCE_DIR}/inc/Logging.h
+  README.md
+  TODO.md
+)
 
 # find dependencies
 find_package(ROOT ${REQUIRED_ROOT_VERSION} CONFIG REQUIRED)
@@ -60,6 +44,12 @@ find_package(fmt)
 find_package(fmt ${REQUIRED_FMT_VERSION} REQUIRED)
 message(STATUS "fmt   version: ${fmt_VERSION}")
 
+include_directories(
+  ${CMAKE_CURRENT_SOURCE_DIR}/inc
+  ${Boost_INCLUDE_DIRS}/boost/property_tree
+  ${Boost_INCLUDE_DIRS}/boost/program_options
+)
+
 # create PlottingFramework library
 add_library(${MODULE} SHARED ${SRCS} ${HDRS} ${MODULE_HDR} ${ADDITIONAL_FILES})
 target_link_libraries(${MODULE} PUBLIC
@@ -69,22 +59,19 @@ target_link_libraries(${MODULE} PUBLIC
   Boost::program_options
   fmt::fmt
 )
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/inc
-  ${Boost_INCLUDE_DIRS}/boost/property_tree
-  ${Boost_INCLUDE_DIRS}/boost/program_options
-)
 
-# create executables
-list(LENGTH APPLICATIONS NUMBER_OF_APPS)
-math(EXPR NUMBER_OF_APPS "${NUMBER_OF_APPS} - 1")
-foreach(INDEX RANGE ${NUMBER_OF_APPS})
-  list(GET APPLICATIONS ${INDEX} APP_NAME)
-  list(GET APPLICATIONS_SRC ${INDEX} APP_CODE)
-  #list(GET APPLICATIONS_ADDITIONAL_FILES ${INDEX} APP_ADD_FILE)
-  message(STATUS "Creating executable ${APP_NAME} from file(s) ${APP_CODE} including ${APP_ADD_FILE}")
-  string(REPLACE " " ";" APP_ADD_FILE "${APP_ADD_FILE}")
-  string(REPLACE " " ";" APP_CODE "${APP_CODE}")
-  add_executable(${APP_NAME} ${APP_CODE} ${APP_ADD_FILE})
-  target_link_libraries(${APP_NAME} ${MODULE})
-endforeach()
+# helper function to add executables that are linked to the PlottingFramework
+function(add_plotting_executable APP_NAME)
+  cmake_parse_arguments(PARSE_ARGV 1 APP "" "" "SOURCES;ADD_FILES")
+  if(APP_UNPARSED_ARGUMENTS)
+    message(FATAL_ERROR "Got trailing arguments ${APP_UNPARSED_ARGUMENTS}")
+  endif()
+  add_executable(${APP_NAME} ${APP_SOURCES} ${APP_ADD_FILES})
+  target_link_libraries(${APP_NAME} PlottingFramework)
+  message(STATUS "Creating executable ${APP_NAME} from file(s) ${APP_SOURCES}")
+endfunction()
+
+# add the command-line plotting app
+add_plotting_executable(plot
+  SOURCES app/PlottingApp.cxx
+)
