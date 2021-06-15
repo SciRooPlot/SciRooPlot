@@ -1,3 +1,4 @@
+project(PlottingFramework CXX)
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 set(CMAKE_VERBOSE_MAKEFILE off)
 set(CMAKE_BUILD_TYPE Debug)
@@ -5,11 +6,15 @@ set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+  message(STATUS "activating filesystem workaround for old gcc versions")
+  set(CXX_FILESYSTEM_LIBRARIES "stdc++fs")
+endif()
+
 # The following two lines can be used to force using one specific root installation
 set(ROOTSYS ~/root/mybuild)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
 
-project(PlottingFramework CXX)
 set(REQUIRED_ROOT_VERSION 6.16)
 set(REQUIRED_BOOST_VERSION 1.65)
 set(REQUIRED_FMT_VERSION 6.1.2)
@@ -58,6 +63,7 @@ target_link_libraries(${MODULE} PUBLIC
   ROOT::Gpad
   Boost::program_options
   fmt::fmt
+  ${CXX_FILESYSTEM_LIBRARIES}
 )
 
 # helper function to add executables that are linked to the PlottingFramework
