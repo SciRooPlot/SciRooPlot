@@ -646,13 +646,14 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       deleteObject = true;
       removeFromList = true;
 
+      string curDataName; // name of current key or data
       // read actual object to memory when traversing a directory
       if (obj->IsA() == TKey::Class()) {
         string className = static_cast<TKey*>(obj)->GetClassName();
-        string keyName = static_cast<TKey*>(obj)->GetName();
+        curDataName = static_cast<TKey*>(obj)->GetName();
 
         bool isTraversable = str_contains(className, "TDirectory") || str_contains(className, "TFolder") || str_contains(className, "TList") || str_contains(className, "TObjArray");
-        if ((traverse && isTraversable) || std::find(dataNames.begin(), dataNames.end(), keyName) != dataNames.end()) {
+        if ((traverse && isTraversable) || std::find(dataNames.begin(), dataNames.end(), curDataName) != dataNames.end()) {
           obj = static_cast<TKey*>(obj)->ReadObj();
           removeFromList = false;
         } else {
@@ -665,10 +666,12 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection")) {
         if (traverse) ReadData(obj, dataNames, prefix, suffix, inputID);
       } else {
-        if (auto it = std::find(dataNames.begin(), dataNames.end(), static_cast<TNamed*>(obj)->GetName()); it != dataNames.end()) {
+        // the key name supersedes the actual data name (in case they are different when written to file via h->Write("myKeyName"))
+        if (curDataName.empty()) curDataName = static_cast<TNamed*>(obj)->GetName();
+        if (auto it = std::find(dataNames.begin(), dataNames.end(), curDataName); it != dataNames.end()) {
           if (obj->InheritsFrom("TH1")) static_cast<TH1*>(obj)->SetDirectory(0); // demand ownership for histogram
           // re-name data
-          string fullName = prefix + static_cast<TNamed*>(obj)->GetName();
+          string fullName = prefix + curDataName;
           static_cast<TNamed*>(obj)->SetName((fullName + suffix).data());
           dataNames.erase(it); // TODO: why not erase-remove?
           mDataBuffer[inputID][fullName].reset(obj);
