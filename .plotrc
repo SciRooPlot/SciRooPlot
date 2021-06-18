@@ -181,8 +181,8 @@ _plot_completions_bash() {
   unset -f updatePlotNames
 }
 
-if [ -n "$ZSH_VERSION" ]; then
+if command -v compdef &> /dev/null; then
   compdef _plot_completions_zsh plot
-elif [ -n "$BASH_VERSION" ]; then
+elif command -v complete &> /dev/null; then
   complete -F _plot_completions_bash plot
 fi
