@@ -1,7 +1,6 @@
 Todo:
-- issue warning when path cant be found
-- append files with AddFiles()
-- missing data has not enough = signs
+- use constants for bash colors and implement colorless fallback (for non-dark console backgrounds)
+- simpler way to create all saved plots specifying only the mode
 - add possibility to read / write multiple plot definition and input config files in app (config of config files??)
 - give warning if selected drawing alias not available for present type of data
 - re-check which of the properties that are always stored are actually required to be non-optional

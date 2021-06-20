@@ -65,7 +65,12 @@ int main(int argc, char* argv[])
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
 
+  // create all the plots that were defined in interactive mode
   plotManager.CreatePlots("", "", {}, "interactive");
+
+  // create all the plots that were defined as pdf
+  //plotManager.SetOutputDirectory("/some/path/on/system/");
+  //plotManager.CreatePlots("", "", {}, "pdf");
 
   return 0;
 }
@@ -93,8 +98,8 @@ void DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[0].SetDefaultLineWidth(3.);
     templatePlot[0].SetTransparent();
     templatePlot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
-    templatePlot[0]['X'].SetTitleOffset(1.).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks();
-    templatePlot[0]['Y'].SetTitleOffset(1.2).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks();
+    templatePlot[0]['X'].SetTitleOffset(1.).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks().SetMaxDigits(3);
+    templatePlot[0]['Y'].SetTitleOffset(1.2).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks().SetMaxDigits(3);
     templatePlot[1].SetPosition(0., 0., 1., 1.);
     //templatePlot[1].AddText(0.433, 0.98, "my Pad Title").SetTextColor(kRed);
     plotManager.AddPlotTemplate(templatePlot);
@@ -116,8 +121,8 @@ void DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[0].SetDefaultTextFont(43);
     templatePlot[0].SetDefaultTextSize(24);
     templatePlot[0].SetTransparent();
-    templatePlot[0]['X'].SetTitleOffset(1.1).SetOppositeTicks();
-    templatePlot[0]['Y'].SetTitleOffset(1.4).SetOppositeTicks();
+    templatePlot[0]['X'].SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3);
+    templatePlot[0]['Y'].SetTitleOffset(1.4).SetOppositeTicks().SetMaxDigits(3);
     templatePlot[1].SetPosition(0., 0.28, 1., 1.);
     templatePlot[1].SetMargins(0.05, 0.0, 0.14, 0.05);
     templatePlot[1]['X'].SetTitleOffset(3.1);
@@ -140,9 +145,9 @@ void DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[0].SetDefaultTextSize(24);
     templatePlot[0].SetTransparent();
     templatePlot[0].SetMargins(0.12 - 0.05, 0.12 + 0.02, 0.12, 0.12 + 0.06);
-    templatePlot[0]['X'].SetTitleOffset(1.1);
-    templatePlot[0]['Y'].SetTitleOffset(1.1);
-    templatePlot[0]['Z'].SetTitleOffset(1.6);
+    templatePlot[0]['X'].SetTitleOffset(1.1).SetMaxDigits(3);
+    templatePlot[0]['Y'].SetTitleOffset(1.1).SetMaxDigits(3);
+    templatePlot[0]['Z'].SetTitleOffset(1.6).SetMaxDigits(3);
     templatePlot[0].SetRedrawAxes();
     templatePlot[1].SetPosition(0., 0., 1., 1.);
     plotManager.AddPlotTemplate(templatePlot);

@@ -81,6 +81,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   bool fail = false;
   unique_ptr<TCanvas> canvas_ptr{new TCanvas(plot.GetUniqueName().data(), plot.GetUniqueName().data(), *plot.GetWidth() + 4, *plot.GetHeight() + 28)};
   // NB.: +4 and +28 are needed to undo hard-coded offsets in TCanvas.cxx line 595
+  canvas_ptr->cd();
   canvas_ptr->SetMargin(0., 0., 0., 0.);
 
   // apply user settings for plot
