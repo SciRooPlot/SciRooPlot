@@ -400,15 +400,21 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     return true;
   }
 
-  string fileEnding = ".pdf";
-  if (outputMode == "macro") {
-    fileEnding = ".C";
+  string fileEnding;
+  if (outputMode == "pdf") {
+    fileEnding = ".pdf";
+  } else if (outputMode == "macro") {
+    fileEnding = ".png";
   } else if (outputMode == "png") {
     fileEnding = ".png";
   } else if (outputMode == "eps") {
     fileEnding = ".eps";
   } else if (outputMode == "svg") {
     fileEnding = ".svg";
+  }
+  if (fileEnding.empty()) {
+    ERROR("No valid output format was specified. Cannot save plot.");
+    return true;
   }
 
   string fileName = (mUseUniquePlotNames) ? plot.GetUniqueName() : plot.GetName();
