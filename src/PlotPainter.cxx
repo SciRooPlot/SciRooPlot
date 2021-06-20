@@ -149,6 +149,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto& palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) gStyle->SetPalette(*palette);
 
     pad_ptr->SetNumber(padID);
+    canvas_ptr->cd();
     pad_ptr->Draw();
     pad_ptr->cd();
 
