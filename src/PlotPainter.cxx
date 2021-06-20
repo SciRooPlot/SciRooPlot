@@ -80,9 +80,22 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     return nullptr;
   }
   bool fail = false;
-  unique_ptr<TCanvas> canvas_ptr{new TCanvas(plot.GetUniqueName().data(), plot.GetUniqueName().data(), *plot.GetWidth() + 4, *plot.GetHeight() + 28)};
-  // NB.: +4 and +28 are needed to undo hard-coded offsets in TCanvas.cxx line 595
-  static_cast<TRootCanvas*>(canvas_ptr->GetCanvasImp())->UnmapWindow(); // by default dont show the window
+
+  double_t canvasWidth = *plot.GetWidth();
+  double_t canvasHeight = *plot.GetHeight();
+  // generate canvas with 'invisible' dummy size to avoid annoying popup window
+  unique_ptr<TCanvas> canvas_ptr{new TCanvas(plot.GetUniqueName().data(), plot.GetUniqueName().data(), 1, 1)};
+  auto canvasImp = static_cast<TRootCanvas*>(canvas_ptr->GetCanvasImp());
+  canvasImp->UnmapWindow();
+  canvas_ptr->SetCanvasSize(canvasWidth, canvasHeight);
+  canvas_ptr->SetWindowPosition(gStyle->GetCanvasDefX(), gStyle->GetCanvasDefY());
+
+  // define window size such that canvas size is correct
+  canvasImp->Resize(canvasWidth, canvasHeight);
+  canvasImp->FitCanvas();
+  canvasImp->Resize(canvasWidth + (canvasWidth - canvas_ptr->GetWw()), canvasHeight + (canvasHeight - canvas_ptr->GetWh()));
+  canvasImp->FitCanvas();
+
   canvas_ptr->SetMargin(0., 0., 0., 0.);
 
   // apply user settings for plot
