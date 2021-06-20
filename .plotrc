@@ -24,7 +24,7 @@ _plot_completions_zsh() {
   local plot_definitions="${__PLOTTING_CONFIG_DIR}/plotDefinitions.XML"
   local input_identifiers="${__PLOTTING_CONFIG_DIR}/inputFiles.XML"
 
-  local modes=('interactive' 'pdf' 'file' 'png' 'find' 'macro')
+  local modes=('interactive' 'pdf' 'eps' 'svg' 'png' 'file' 'find' 'macro')
   local groups
   local names
   local rootfiles
@@ -98,7 +98,7 @@ _plot_completions_bash() {
   local plot_definitions="${__PLOTTING_CONFIG_DIR}/plotDefinitions.XML"
   local input_identifiers="${__PLOTTING_CONFIG_DIR}/inputFiles.XML"
 
-  local modes=('interactive pdf file png find macro')
+  local modes=('interactive pdf eps svg png file find macro')
   local groups
   local names
   local rootfiles

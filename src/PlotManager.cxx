@@ -407,6 +407,8 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     fileEnding = ".png";
   } else if (outputMode == "eps") {
     fileEnding = ".eps";
+  } else if (outputMode == "svg") {
+    fileEnding = ".svg";
   }
 
   string fileName = (mUseUniquePlotNames) ? plot.GetUniqueName() : plot.GetName();
