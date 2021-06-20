@@ -340,7 +340,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
 
   // if interactive mode is specified, open window instead of saving the plot
   if (outputMode == "interactive") {
-
     mPlotLedger[plot.GetUniqueName()] = canvas;
     mPlotViewHistory.push_back(&plot.GetUniqueName());
     uint32_t curPlotIndex{static_cast<uint32_t>(mPlotViewHistory.size() - 1)};
@@ -353,7 +352,9 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
       curXpos = mPlotLedger[*mPlotViewHistory[curPlotIndex - 1]]->GetWindowTopX();
       curYpos = mPlotLedger[*mPlotViewHistory[curPlotIndex - 1]]->GetWindowTopY();
       canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
+      static_cast<TRootCanvas*>(mPlotLedger[*mPlotViewHistory[curPlotIndex - 1]]->GetCanvasImp())->UnmapWindow();
     }
+    canvas->Show();
     bool boxClicked = false;
     while (!gSystem->ProcessEvents() && gROOT->GetSelectedPad()) {
       bool isClick = canvas->GetEvent() == kButton1Double;
@@ -365,8 +366,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
       } else if (isClick || isValidKey) {
         curXpos = canvas->GetWindowTopX();
         curYpos = canvas->GetWindowTopY();
-        TRootCanvas* canvasWindow = static_cast<TRootCanvas*>(canvas->GetCanvasImp());
-        canvasWindow->UnmapWindow();
         bool forward = false;
         if (isValidKey) {
           forward = (canvas->GetEventX() == 's');
@@ -377,12 +376,13 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
           if (curPlotIndex == mPlotViewHistory.size() - 1) break;
           ++curPlotIndex;
         } else {
-          if (curPlotIndex == 0) std::exit(EXIT_FAILURE); // TODO: properly propagate this to caller
+          if (curPlotIndex == 0) std::exit(EXIT_FAILURE);
           --curPlotIndex;
         }
+        static_cast<TRootCanvas*>(canvas->GetCanvasImp())->UnmapWindow();
         canvas = mPlotLedger[*mPlotViewHistory[curPlotIndex]];
         canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
-        static_cast<TRootCanvas*>(canvas->GetCanvasImp())->MapRaised();
+        canvas->Show();
       } else {
         boxClicked = false;
       }

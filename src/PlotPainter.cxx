@@ -61,6 +61,7 @@
 #include "TView.h"
 #include "TApplication.h"
 #include "TGWindow.h"
+#include "TRootCanvas.h"
 
 namespace PlottingFramework
 {
@@ -81,7 +82,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   bool fail = false;
   unique_ptr<TCanvas> canvas_ptr{new TCanvas(plot.GetUniqueName().data(), plot.GetUniqueName().data(), *plot.GetWidth() + 4, *plot.GetHeight() + 28)};
   // NB.: +4 and +28 are needed to undo hard-coded offsets in TCanvas.cxx line 595
-  canvas_ptr->cd();
+  static_cast<TRootCanvas*>(canvas_ptr->GetCanvasImp())->UnmapWindow(); // by default dont show the window
   canvas_ptr->SetMargin(0., 0., 0., 0.);
 
   // apply user settings for plot
@@ -149,7 +150,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto& palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) gStyle->SetPalette(*palette);
 
     pad_ptr->SetNumber(padID);
-    canvas_ptr->cd();
     pad_ptr->Draw();
     pad_ptr->cd();
 
@@ -1318,10 +1318,14 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
     TLatex textBox{text};
     textBox.SetTextFont(font - 1);
     TVirtualPad* pad = gROOT->GetSelectedPad();
-    double_t dy{pad->AbsPixeltoY(0) - pad->AbsPixeltoY((int32_t)(text.GetTextSize()))};
-    double_t textSize{dy / (pad->GetY2() - pad->GetY1())};
-    textBox.SetTextSize(textSize);
-    textBox.GetBoundingBox(width, height);
+    if (pad) {
+      double_t dy{pad->AbsPixeltoY(0) - pad->AbsPixeltoY((int32_t)(text.GetTextSize()))};
+      double_t textSize{dy / (pad->GetY2() - pad->GetY1())};
+      textBox.SetTextSize(textSize);
+      textBox.GetBoundingBox(width, height);
+    } else {
+      ERROR("Pad not found.");
+    }
   }
   return {width, height};
 }

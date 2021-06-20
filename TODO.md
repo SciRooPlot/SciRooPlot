@@ -27,7 +27,6 @@ Structural considerations:
 - fix inconsistencies in naming of variables
 
 Bugs:
-- canvas pops up when saving to pdf on some systems
 - should one always call Sumw2() before drawing histograms as points?
 - if same histogram is added to plot twice, the name is no longer unique and this results in unwanted behavior for ref data specified in legend entries
 - csv w/o options -> invisible -> TGraphErrors has wrong defaults
