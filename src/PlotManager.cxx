@@ -389,7 +389,13 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
       gSystem->Sleep(20);
     }
     return true;
-  } else if (outputMode == "file") {
+  }
+  if (mOutputDirectory.empty()) {
+    ERROR("No output directory was specified. Cannot save plot.");
+    return true;
+  }
+
+  if (outputMode == "file") {
     mPlotLedger[plot.GetUniqueName()] = canvas;
     return true;
   }
@@ -463,7 +469,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   // generate plots
   for (auto plot : selectedPlots) {
     if (!GeneratePlot(*plot, outputMode))
-      ERROR(R"(Plot "{}" in figure group "{}" could not be created.)", plot->GetName(), plot->GetFigureGroup());
+      ERROR("Plot \033[1;32m{}\033[0m from group \033[1;33m{}\033[0m could not be created.", plot->GetName(), plot->GetFigureGroup());
   }
 }
 
