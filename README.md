@@ -372,7 +372,7 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   templatePlot[2].SetPosition(0., 0., 1., 0.28);
   templatePlot[2].SetMargins(0.015, 0.4, 0.14, 0.05);
   templatePlot[2].SetRefFunc("1");
-  templatePlot[2]['X'].SetTickLength(0.06).SetTitleOffset(4.1).SetOppositeTicks();
+  templatePlot[2]['X'].SetTickLength(0.06).SetTitleOffset(1.1).SetOppositeTicks();
   templatePlot[2]['Y'].SetNumDivisions(305).SetTitleOffset(1.5).SetTitleCenter();
   plotManager.AddPlotTemplate(templatePlot);
 } // -----------------------------------------------------------------------
