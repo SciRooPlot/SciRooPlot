@@ -367,7 +367,7 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   templatePlot[0]['Y'].SetTitleOffset(1.4).SetOppositeTicks().SetMaxDigits(3);
   templatePlot[1].SetPosition(0., 0.28, 1., 1.);
   templatePlot[1].SetMargins(0.05, 0.0, 0.14, 0.05);
-  templatePlot[1]['X'].SetTitleOffset(3.1);
+  templatePlot[1]['X'].SetTitleSize(0.).SetLabelSize(0.);
   templatePlot[1]['Y'].SetTitleOffset(1.5);
   templatePlot[2].SetPosition(0., 0., 1., 0.28);
   templatePlot[2].SetMargins(0.015, 0.4, 0.14, 0.05);
