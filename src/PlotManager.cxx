@@ -390,8 +390,14 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     }
     return true;
   }
+
   if (mOutputDirectory.empty()) {
     ERROR("No output directory was specified. Cannot save plot.");
+    return true;
+  }
+  auto parentDir = (mOutputDirectory.back() == '/') ? std::filesystem::path(mOutputDirectory).parent_path().parent_path() : std::filesystem::path(mOutputDirectory).parent_path();
+  if (!std::filesystem::exists(parentDir)) {
+    ERROR(R"(Parent path "{}" of output directory does not exist.)", parentDir.string());
     return true;
   }
 
