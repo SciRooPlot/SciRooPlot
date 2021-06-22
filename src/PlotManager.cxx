@@ -54,6 +54,11 @@ PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr)), mOut
 {
   TQObject::Connect("TGMainFrame", "CloseWindow()", "TApplication", gApplication, "Terminate()");
   gErrorIgnoreLevel = kWarning;
+
+  // determine OS dependent offset between window and frame
+  TCanvas dummyCanvas("dummyCanvas", "dummyCanvas", 1., 1.);
+  dummyCanvas.SetWindowPosition(50, 50);
+  mWindowOffsetY = dummyCanvas.GetWindowTopY() - static_cast<TRootCanvas*>(dummyCanvas.GetCanvasImp())->GetY();
 }
 
 //**************************************************************************************************
@@ -349,11 +354,10 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     // move new canvas to position of previous window
     int32_t curXpos{};
     int32_t curYpos{};
-    const int32_t windowOffsetY{28}; // might depend on os (was 22)
     if (curPlotIndex > 0) {
       curXpos = mPlotLedger[*mPlotViewHistory[curPlotIndex - 1]]->GetWindowTopX();
       curYpos = mPlotLedger[*mPlotViewHistory[curPlotIndex - 1]]->GetWindowTopY();
-      canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
+      canvas->SetWindowPosition(curXpos, curYpos - mWindowOffsetY);
       static_cast<TRootCanvas*>(mPlotLedger[*mPlotViewHistory[curPlotIndex - 1]]->GetCanvasImp())->UnmapWindow();
     }
     canvas->Show();
@@ -383,7 +387,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
         }
         static_cast<TRootCanvas*>(canvas->GetCanvasImp())->UnmapWindow();
         canvas = mPlotLedger[*mPlotViewHistory[curPlotIndex]];
-        canvas->SetWindowPosition(curXpos, curYpos - windowOffsetY);
+        canvas->SetWindowPosition(curXpos, curYpos - mWindowOffsetY);
         canvas->Show();
       } else {
         boxClicked = false;

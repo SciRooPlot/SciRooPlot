@@ -102,6 +102,7 @@ private:
   vector<Plot> mPlotTemplates;
   map<string, ptree> mPropertyTreeCache;
   vector<const string*> mPlotViewHistory;
+  int32_t mWindowOffsetY{};
 
   unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>> mDataBuffer;
   map<string, vector<string>> mInputFiles; // inputFileIdentifier, inputFilePaths
