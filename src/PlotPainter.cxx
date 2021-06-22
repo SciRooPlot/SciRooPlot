@@ -74,27 +74,25 @@ namespace PlottingFramework
 unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>>& dataBuffer)
 {
   gStyle->SetOptStat(0); // this needs to be done before creating the canvas! at later stage it would add to list of primitives in pad...
-
-  if (!(plot.GetWidth() || plot.GetHeight())) {
-    ERROR("No dimensions specified for plot.");
-    return nullptr;
-  }
   bool fail = false;
 
-  double_t canvasWidth = *plot.GetWidth();
-  double_t canvasHeight = *plot.GetHeight();
+  double_t canvasWidth = plot.GetWidth().value_or(gStyle->GetCanvasDefW());
+  double_t canvasHeight = plot.GetHeight().value_or(gStyle->GetCanvasDefH());
   // generate canvas with 'invisible' dummy size to avoid annoying popup window
-  unique_ptr<TCanvas> canvas_ptr{new TCanvas(plot.GetUniqueName().data(), plot.GetUniqueName().data(), 1, 1)};
-  auto canvasImp = static_cast<TRootCanvas*>(canvas_ptr->GetCanvasImp());
-  canvasImp->UnmapWindow();
-  canvas_ptr->SetCanvasSize(canvasWidth, canvasHeight);
-  canvas_ptr->SetWindowPosition(gStyle->GetCanvasDefX(), gStyle->GetCanvasDefY());
-
-  // define window size such that canvas size is correct
-  canvasImp->Resize(canvasWidth, canvasHeight);
-  canvasImp->FitCanvas();
-  canvasImp->Resize(canvasWidth + (canvasWidth - canvas_ptr->GetWw()), canvasHeight + (canvasHeight - canvas_ptr->GetWh()));
-  canvasImp->FitCanvas();
+  unique_ptr<TCanvas> canvas_ptr{new TCanvas(plot.GetUniqueName().data(), plot.GetUniqueName().data(), 1., 1.)};
+  if (gROOT->IsBatch()) {
+    canvas_ptr->SetCanvasSize(canvasWidth, canvasHeight);
+  } else {
+    auto canvasImp = static_cast<TRootCanvas*>(canvas_ptr->GetCanvasImp());
+    canvasImp->UnmapWindow();
+    canvas_ptr->SetCanvasSize(canvasWidth, canvasHeight);
+    canvas_ptr->SetWindowPosition(gStyle->GetCanvasDefX(), gStyle->GetCanvasDefY());
+    // define window size such that canvas size is correct
+    canvasImp->Resize(canvasWidth, canvasHeight);
+    canvasImp->FitCanvas();
+    canvasImp->Resize(canvasWidth + (canvasWidth - canvas_ptr->GetWw()), canvasHeight + (canvasHeight - canvas_ptr->GetWh()));
+    canvasImp->FitCanvas();
+  }
 
   canvas_ptr->SetMargin(0., 0., 0., 0.);
 
@@ -724,7 +722,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       TLatex textLine(0, 0, line.data());
       textLine.SetTextFont(text_font);
       textLine.SetTextSize(text_size);
-      auto [width, height] = GetTextDimensions(textLine);
+      auto [width, height] = GetTextDimensions(textLine, pad);
       if (height > lineHeightPixel) lineHeightPixel = height;
 
       if (width > legendWidthPixelPerColumn[iColumn]) legendWidthPixelPerColumn[iColumn] = width;
@@ -741,7 +739,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       TLatex markerDummy(0, 0, markerDummyString.data());
       markerDummy.SetTextFont(text_font);
       markerDummy.SetTextSize(text_size);
-      auto [w, h] = GetTextDimensions(markerDummy);
+      auto [w, h] = GetTextDimensions(markerDummy, pad);
       markerWidthPixel = w;
     }
 
@@ -1319,7 +1317,7 @@ void PlotPainter::SmoothHist(TH1* hist, optional<double_t> min, optional<double_
  * Returns actual dimensions in pixel of the text with latex formatting.
  */
 //**************************************************************************************************
-std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
+std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad* pad)
 {
   uint32_t width{};
   uint32_t height{};
@@ -1330,15 +1328,10 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text)
   } else {
     TLatex textBox{text};
     textBox.SetTextFont(font - 1);
-    TVirtualPad* pad = gROOT->GetSelectedPad();
-    if (pad) {
-      double_t dy{pad->AbsPixeltoY(0) - pad->AbsPixeltoY((int32_t)(text.GetTextSize()))};
-      double_t textSize{dy / (pad->GetY2() - pad->GetY1())};
-      textBox.SetTextSize(textSize);
-      textBox.GetBoundingBox(width, height);
-    } else {
-      ERROR("Pad not found.");
-    }
+    double_t dy{pad->AbsPixeltoY(0) - pad->AbsPixeltoY((int32_t)(text.GetTextSize()))};
+    double_t textSize{dy / (pad->GetY2() - pad->GetY1())};
+    textBox.SetTextSize(textSize);
+    textBox.GetBoundingBox(width, height);
   }
   return {width, height};
 }

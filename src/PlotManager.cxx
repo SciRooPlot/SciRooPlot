@@ -334,12 +334,14 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     }
   }
   PlotPainter painter;
+  bool isInteractiveMode = (outputMode == "interactive");
+  gROOT->SetBatch(!isInteractiveMode);
   shared_ptr<TCanvas> canvas{painter.GeneratePlot(fullPlot, mDataBuffer)};
   if (!canvas) return false;
   LOG("Created \033[1;32m{}\033[0m from group \033[1;33m{}\033[0m", fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? ":" + *fullPlot.GetFigureCategory() : ""));
 
   // if interactive mode is specified, open window instead of saving the plot
-  if (outputMode == "interactive") {
+  if (isInteractiveMode) {
     mPlotLedger[plot.GetUniqueName()] = canvas;
     mPlotViewHistory.push_back(&plot.GetUniqueName());
     uint32_t curPlotIndex{static_cast<uint32_t>(mPlotViewHistory.size() - 1)};

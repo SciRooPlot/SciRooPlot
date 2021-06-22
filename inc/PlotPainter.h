@@ -122,7 +122,7 @@ private:
   void DivideHistosInterpolated(TH1* numerator, TH1* denominator);
   void DivideHistGraphInterpolated(TH1* numerator, TGraph* denominator);
   void DivideGraphHistInterpolated(TGraph* numerator, TH1* denominator);
-  std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text);
+  std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
   void ReplacePlaceholders(string& str, TNamed* data_ptr);
   TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box, TPad* pad);
   float_t GetTextSizePixel(float_t textSizeNDC);
