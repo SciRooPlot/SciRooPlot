@@ -56,7 +56,10 @@ PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr)), mOut
   gErrorIgnoreLevel = kWarning;
 
   // determine OS dependent offset between window and frame
-  TCanvas dummyCanvas("dummyCanvas", "dummyCanvas", 1., 1.);
+  // (GetWindowTopY gives the current coordinates of the window, but SetWindowPosition moves the frame instead of the window)
+  TCanvas dummyCanvas("dummyCanvas", "dummyCanvas", 1, 1);
+  static_cast<TRootCanvas*>(dummyCanvas.GetCanvasImp())->UnmapWindow();
+  dummyCanvas.SetCanvasSize(1, 1);
   dummyCanvas.SetWindowPosition(50, 50);
   mWindowOffsetY = dummyCanvas.GetWindowTopY() - static_cast<TRootCanvas*>(dummyCanvas.GetCanvasImp())->GetY();
 }
