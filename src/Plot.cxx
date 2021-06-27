@@ -88,6 +88,7 @@ Plot::Plot(const ptree& plotTree)
   read_from_tree(plotTree, mPlotDimensions.fixAspectRatio, "fix_aspect_ratio");
   read_from_tree(plotTree, mFill.color, "fill_color");
   read_from_tree(plotTree, mFill.style, "fill_style");
+  read_from_tree(plotTree, mFill.scale, "fill_opacity");
 
   // loop over all pads defined in property tree
   for (auto& pad : plotTree) {
@@ -115,6 +116,7 @@ ptree Plot::GetPropertyTree() const
   put_in_tree(plotTree, mPlotDimensions.fixAspectRatio, "fix_aspect_ratio");
   put_in_tree(plotTree, mFill.color, "fill_color");
   put_in_tree(plotTree, mFill.style, "fill_style");
+  put_in_tree(plotTree, mFill.scale, "fill_opacity");
 
   for (auto& [padID, pad] : mPads) {
     plotTree.put_child("PAD_" + std::to_string(padID), pad.GetPropertyTree());
@@ -166,10 +168,11 @@ uint8_t Plot::GetDataCount() const
  * Set fill for this plot.
  */
 //**************************************************************************************************
-auto Plot::SetFill(int16_t color, int16_t style) -> decltype(*this)
+auto Plot::SetFill(int16_t color, optional<int16_t> style, optional<float_t> opacity) -> decltype(*this)
 {
   mFill.color = color;
   mFill.style = style;
+  mFill.scale = opacity;
   return *this;
 }
 
@@ -180,7 +183,8 @@ auto Plot::SetFill(int16_t color, int16_t style) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::SetTransparent() -> decltype(*this)
 {
-  mFill.style = 4000;
+  mFill.style = 1001;
+  mFill.scale = 0.f;
   return *this;
 }
 
@@ -204,6 +208,7 @@ void Plot::operator+=(const Plot& plot)
 
   if (plot.mFill.color) mFill.color = plot.mFill.color;
   if (plot.mFill.style) mFill.style = plot.mFill.style;
+  if (plot.mFill.scale) mFill.scale = plot.mFill.scale;
 
   for (auto& [padID, pad] : plot.mPads) {
     mPads[padID]; // initializes the pad in case it was not yet defined in this plot
@@ -258,7 +263,7 @@ auto Plot::Pad::SetRefFunc(const string& refFunc) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultTextSize(float_t size) -> decltype(*this)
 {
-  mText.size = size;
+  mText.scale = size;
   return *this;
 }
 
@@ -280,7 +285,7 @@ auto Plot::Pad::SetDefaultTextColor(int16_t color) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultTextFont(int16_t font) -> decltype(*this)
 {
-  mText.font = font;
+  mText.style = font;
   return *this;
 }
 
@@ -445,10 +450,11 @@ auto Plot::Pad::SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption) -
  * Set fill for this pad.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetFill(int16_t color, int16_t style) -> decltype(*this)
+auto Plot::Pad::SetFill(int16_t color, optional<int16_t> style, optional<float_t> opacity) -> decltype(*this)
 {
   mFill.color = color;
   mFill.style = style;
+  mFill.scale = opacity;
   return *this;
 }
 
@@ -459,7 +465,8 @@ auto Plot::Pad::SetFill(int16_t color, int16_t style) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetTransparent() -> decltype(*this)
 {
-  mFill.style = 4000;
+  mFill.style = 1001;
+  mFill.scale = 0.f;
   return *this;
 }
 
@@ -468,10 +475,11 @@ auto Plot::Pad::SetTransparent() -> decltype(*this)
  * Set frame fill properties.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetFillFrame(int16_t color, int16_t style) -> decltype(*this)
+auto Plot::Pad::SetFrameFill(int16_t color, optional<int16_t> style, optional<float_t> opacity) -> decltype(*this)
 {
-  mFrame.fillColor = color;
-  mFrame.fillStyle = style;
+  mFrameFill.color = color;
+  mFrameFill.style = style;
+  mFrameFill.scale = opacity;
   return *this;
 }
 
@@ -480,11 +488,11 @@ auto Plot::Pad::SetFillFrame(int16_t color, int16_t style) -> decltype(*this)
  * Set frame line properties.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetLineFrame(int16_t color, int16_t style, float_t width) -> decltype(*this)
+auto Plot::Pad::SetFrameBorder(int16_t color, optional<int16_t> style, optional<float_t> width) -> decltype(*this)
 {
-  mFrame.lineColor = color;
-  mFrame.lineStyle = style;
-  mFrame.lineWidth = width;
+  mFrameBorder.color = color;
+  mFrameBorder.style = style;
+  mFrameBorder.scale = width;
   return *this;
 }
 
@@ -493,9 +501,10 @@ auto Plot::Pad::SetLineFrame(int16_t color, int16_t style, float_t width) -> dec
  * Set this pad transparent.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetTransparentFrame() -> decltype(*this)
+auto Plot::Pad::SetFrameTransparent() -> decltype(*this)
 {
-  mFrame.fillStyle = 0;
+  mFrameFill.style = 1001;
+  mFrameFill.scale = 0.f;
   return *this;
 }
 
@@ -570,14 +579,16 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mPalette, "palette");
   read_from_tree(padTree, mFill.color, "fill_color");
   read_from_tree(padTree, mFill.style, "fill_style");
-  read_from_tree(padTree, mFrame.fillColor, "frame_fill_color");
-  read_from_tree(padTree, mFrame.fillStyle, "frame_fill_style");
-  read_from_tree(padTree, mFrame.lineColor, "frame_line_color");
-  read_from_tree(padTree, mFrame.lineStyle, "frame_line_style");
-  read_from_tree(padTree, mFrame.lineWidth, "frame_line_width");
-  read_from_tree(padTree, mText.font, "text_font");
+  read_from_tree(padTree, mFill.scale, "fill_opacity");
+  read_from_tree(padTree, mFrameFill.color, "frame_fill_color");
+  read_from_tree(padTree, mFrameFill.style, "frame_fill_style");
+  read_from_tree(padTree, mFrameFill.scale, "frame_fill_opacity");
+  read_from_tree(padTree, mFrameBorder.color, "frame_border_color");
+  read_from_tree(padTree, mFrameBorder.style, "frame_border_style");
+  read_from_tree(padTree, mFrameBorder.scale, "frame_border_width");
+  read_from_tree(padTree, mText.style, "text_font");
   read_from_tree(padTree, mText.color, "text_color");
-  read_from_tree(padTree, mText.size, "text_size");
+  read_from_tree(padTree, mText.scale, "text_size");
   read_from_tree(padTree, mMarkerDefaults.scale, "default_marker_size");
   read_from_tree(padTree, mMarkerDefaults.styles, "default_marker_styles");
   read_from_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
@@ -649,14 +660,16 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mPalette, "palette");
   put_in_tree(padTree, mFill.color, "fill_color");
   put_in_tree(padTree, mFill.style, "fill_style");
-  put_in_tree(padTree, mFrame.fillColor, "frame_fill_color");
-  put_in_tree(padTree, mFrame.fillStyle, "frame_fill_style");
-  put_in_tree(padTree, mFrame.lineColor, "frame_line_color");
-  put_in_tree(padTree, mFrame.lineStyle, "frame_line_style");
-  put_in_tree(padTree, mFrame.lineWidth, "frame_line_width");
-  put_in_tree(padTree, mText.font, "text_font");
+  put_in_tree(padTree, mFill.scale, "fill_opacity");
+  put_in_tree(padTree, mFrameFill.color, "frame_fill_color");
+  put_in_tree(padTree, mFrameFill.style, "frame_fill_style");
+  put_in_tree(padTree, mFrameFill.scale, "frame_fill_opacity");
+  put_in_tree(padTree, mFrameBorder.color, "frame_border_color");
+  put_in_tree(padTree, mFrameBorder.style, "frame_border_style");
+  put_in_tree(padTree, mFrameBorder.scale, "frame_border_width");
+  put_in_tree(padTree, mText.style, "text_font");
   put_in_tree(padTree, mText.color, "text_color");
-  put_in_tree(padTree, mText.size, "text_size");
+  put_in_tree(padTree, mText.scale, "text_size");
   put_in_tree(padTree, mMarkerDefaults.scale, "default_marker_size");
   put_in_tree(padTree, mMarkerDefaults.styles, "default_marker_styles");
   put_in_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
@@ -725,13 +738,15 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mMargins.right) mMargins.right = pad.mMargins.right;
   if (pad.mFill.color) mFill.color = pad.mFill.color;
   if (pad.mFill.style) mFill.style = pad.mFill.style;
-  if (pad.mFrame.fillColor) mFrame.fillColor = pad.mFrame.fillColor;
-  if (pad.mFrame.fillStyle) mFrame.fillStyle = pad.mFrame.fillStyle;
-  if (pad.mFrame.lineColor) mFrame.lineColor = pad.mFrame.lineColor;
-  if (pad.mFrame.lineStyle) mFrame.lineStyle = pad.mFrame.lineStyle;
-  if (pad.mFrame.lineWidth) mFrame.lineWidth = pad.mFrame.lineWidth;
-  if (pad.mText.size) mText.size = pad.mText.size;
-  if (pad.mText.font) mText.font = pad.mText.font;
+  if (pad.mFill.scale) mFill.scale = pad.mFill.scale;
+  if (pad.mFrameFill.color) mFrameFill.color = pad.mFrameFill.color;
+  if (pad.mFrameFill.style) mFrameFill.style = pad.mFrameFill.style;
+  if (pad.mFrameFill.scale) mFrameFill.scale = pad.mFrameFill.scale;
+  if (pad.mFrameBorder.color) mFrameBorder.color = pad.mFrameBorder.color;
+  if (pad.mFrameBorder.style) mFrameBorder.style = pad.mFrameBorder.style;
+  if (pad.mFrameBorder.scale) mFrameBorder.scale = pad.mFrameBorder.scale;
+  if (pad.mText.scale) mText.scale = pad.mText.scale;
+  if (pad.mText.style) mText.style = pad.mText.style;
   if (pad.mText.color) mText.color = pad.mText.color;
   if (pad.mMarkerDefaults.scale) mMarkerDefaults.scale = pad.mMarkerDefaults.scale;
   if (pad.mMarkerDefaults.styles) mMarkerDefaults.styles = pad.mMarkerDefaults.styles;
@@ -1238,7 +1253,7 @@ auto Plot::Pad::Data::SetFill(int16_t color, int16_t style, float_t opacity) -> 
 {
   mFill.color = color;
   mFill.style = style;
-  SetFillOpacity(opacity);
+  mFill.scale = opacity;
   return *this;
 }
 auto Plot::Pad::Data::SetFillColor(int16_t color) -> decltype(*this)
@@ -1253,12 +1268,7 @@ auto Plot::Pad::Data::SetFillStyle(int16_t style) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetFillOpacity(float_t opacity) -> decltype(*this)
 {
-  if (opacity < 0.f || opacity > 1.f) {
-    WARNING(
-      "Illegal value for opacity! It has to be between 0 (transparent) and 1 (fully opaque).");
-  } else {
-    mFill.scale = opacity;
-  }
+  mFill.scale = opacity;
   return *this;
 }
 auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)

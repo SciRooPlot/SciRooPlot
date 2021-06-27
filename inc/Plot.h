@@ -96,7 +96,7 @@ public:
   void SetHeight(int32_t height) { mPlotDimensions.height = height; }
   void SetFixAspectRatio(bool fixAspectRatio = true) { mPlotDimensions.fixAspectRatio = fixAspectRatio; }
 
-  Plot& SetFill(int16_t color, int16_t style = 1001);
+  Plot& SetFill(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> opacity = std::nullopt);
   Plot& SetTransparent();
 
 protected:
@@ -124,6 +124,7 @@ protected:
   const auto& IsFixAspectRatio() const { return mPlotDimensions.fixAspectRatio; }
   const auto& GetFillColor() const { return mFill.color; }
   const auto& GetFillStyle() const { return mFill.style; }
+  const auto& GetFillOpacity() const { return mFill.scale; }
 
   uint8_t GetDataCount() const;
 
@@ -133,10 +134,6 @@ private:
     optional<int32_t> height;
     optional<bool> fixAspectRatio;
   };
-  struct plot_fill_t {
-    optional<int16_t> color;
-    optional<int16_t> style;
-  };
 
   string mName;
   string mFigureGroup;
@@ -145,7 +142,7 @@ private:
   optional<string> mPlotTemplateName;
   dimension_t mPlotDimensions;
 
-  plot_fill_t mFill;
+  layout_t mFill;
 
   map<uint8_t, Pad> mPads;
 };
@@ -212,11 +209,11 @@ public:
   Pad& SetDefaultDrawingOptionGraph(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption);
-  Pad& SetFill(int16_t color, int16_t style = 1001);
+  Pad& SetFill(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> opacity = std::nullopt);
   Pad& SetTransparent();
-  Pad& SetFillFrame(int16_t color, int16_t style = 1001);
-  Pad& SetLineFrame(int16_t color, int16_t style = kSolid, float_t width = 1.f);
-  Pad& SetTransparentFrame();
+  Pad& SetFrameFill(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> opacity = std::nullopt);
+  Pad& SetFrameBorder(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> width = std::nullopt);
+  Pad& SetFrameTransparent();
   Pad& SetRedrawAxes(bool redraw = true);
   Pad& SetRefFunc(const string& refFunc);
 
@@ -244,14 +241,16 @@ protected:
   const auto& GetPalette() const { return mPalette; }
   const auto& GetFillColor() const { return mFill.color; }
   const auto& GetFillStyle() const { return mFill.style; }
-  const auto& GetFillColorFrame() const { return mFrame.fillColor; }
-  const auto& GetFillStyleFrame() const { return mFrame.fillStyle; }
-  const auto& GetLineColorFrame() const { return mFrame.lineColor; }
-  const auto& GetLineStyleFrame() const { return mFrame.lineStyle; }
-  const auto& GetLineWidthFrame() const { return mFrame.lineWidth; }
+  const auto& GetFillOpacity() const { return mFill.scale; }
+  const auto& GetFrameFillColor() const { return mFrameFill.color; }
+  const auto& GetFrameFillStyle() const { return mFrameFill.style; }
+  const auto& GetFrameFillOpacity() const { return mFrameFill.scale; }
+  const auto& GetFrameBorderColor() const { return mFrameBorder.color; }
+  const auto& GetFrameBorderStyle() const { return mFrameBorder.style; }
+  const auto& GetFrameBorderWidth() const { return mFrameBorder.scale; }
   const auto& GetDefaultTextColor() const { return mText.color; }
-  const auto& GetDefaultTextFont() const { return mText.font; }
-  const auto& GetDefaultTextSize() const { return mText.size; }
+  const auto& GetDefaultTextFont() const { return mText.style; }
+  const auto& GetDefaultTextSize() const { return mText.scale; }
   const auto& GetDefaultMarkerSize() const { return mMarkerDefaults.scale; }
   const auto& GetDefaultMarkerStyles() const { return mMarkerDefaults.styles; }
   const auto& GetDefaultMarkerColors() const { return mMarkerDefaults.colors; }
@@ -283,22 +282,6 @@ private:
     optional<float_t> left;
     optional<float_t> right;
   };
-  struct pad_fill_t {
-    optional<int16_t> color;
-    optional<int16_t> style;
-  };
-  struct frame_t {
-    optional<int16_t> fillColor;
-    optional<int16_t> fillStyle;
-    optional<int16_t> lineColor;
-    optional<int16_t> lineStyle;
-    optional<float_t> lineWidth;
-  };
-  struct text_t {
-    optional<int16_t> color;
-    optional<int16_t> font;
-    optional<float_t> size;
-  };
   struct gradient_color_t {
     optional<vector<tuple<float_t, float_t, float_t, float_t>>> rgbEndpoints;
     optional<float_t> alpha;
@@ -320,9 +303,10 @@ private:
   optional<string> mOptions;
   pad_position_t mPosition;
   pad_margin_t mMargins;
-  pad_fill_t mFill;
-  frame_t mFrame;
-  text_t mText;
+  layout_t mFill;
+  layout_t mFrameFill;
+  layout_t mFrameBorder;
+  layout_t mText;
 
   // user defined default data representation
   view_defaults_t mMarkerDefaults;

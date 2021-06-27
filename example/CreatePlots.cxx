@@ -100,6 +100,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
     Plot templatePlot("1d", "TEMPLATES");
     templatePlot.SetDimensions(710, 710, true);
     templatePlot.SetTransparent();
+    templatePlot[0].SetFrameFill(10, 1001);
     templatePlot[0].SetDefaultLineColors(goodColors);
     templatePlot[0].SetDefaultMarkerColors(goodColors);
     templatePlot[0].SetDefaultFillColors(goodColors);
@@ -124,6 +125,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
     Plot templatePlot("1d_ratio", "TEMPLATES");
     templatePlot.SetDimensions(710, 710, true);
     templatePlot.SetTransparent();
+    templatePlot[0].SetFrameFill(10, 1001);
     templatePlot[0].SetDefaultLineColors(goodColors);
     templatePlot[0].SetDefaultMarkerColors(goodColors);
     templatePlot[0].SetDefaultFillColors(goodColors);
@@ -154,6 +156,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
     Plot templatePlot("2d", "TEMPLATES");
     templatePlot.SetDimensions(710, 710, true);
     templatePlot.SetTransparent();
+    templatePlot[0].SetFrameFill(10, 1001);
     templatePlot[0].SetDefaultDrawingOptionHist2d(colz);
     templatePlot[0].SetDefaultTextFont(43);
     templatePlot[0].SetDefaultTextSize(24);

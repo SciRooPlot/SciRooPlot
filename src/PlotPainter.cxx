@@ -99,6 +99,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   // apply user settings for plot
   if (plot.GetFillColor()) canvas_ptr->SetFillColor(*plot.GetFillColor());
   if (plot.GetFillStyle()) canvas_ptr->SetFillStyle(*plot.GetFillStyle());
+  if (plot.GetFillOpacity()) canvas_ptr->SetFillColor(TColor::GetColorTransparent(canvas_ptr->GetFillColor(), *plot.GetFillOpacity()));
+
   if (plot.IsFixAspectRatio()) canvas_ptr->SetFixedAspectRatio(*plot.IsFixAspectRatio());
 
   auto& padDefaults = plot[0];
@@ -130,11 +132,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto& marginRight = get_first(pad.GetMarginRight(), padDefaults.GetMarginRight())) pad_ptr->SetRightMargin(*marginRight);
     if (auto& padFillColor = get_first(pad.GetFillColor(), padDefaults.GetFillColor())) pad_ptr->SetFillColor(*padFillColor);
     if (auto& padFillStyle = get_first(pad.GetFillStyle(), padDefaults.GetFillStyle())) pad_ptr->SetFillStyle(*padFillStyle);
-    if (auto& frameFillColor = get_first(pad.GetFillColorFrame(), padDefaults.GetFillColorFrame())) pad_ptr->SetFrameFillColor(*frameFillColor);
-    if (auto& frameFillStyle = get_first(pad.GetFillStyleFrame(), padDefaults.GetFillStyleFrame())) pad_ptr->SetFrameFillStyle(*frameFillStyle);
-    if (auto& frameLineColor = get_first(pad.GetLineColorFrame(), padDefaults.GetLineColorFrame())) pad_ptr->SetFrameLineColor(*frameLineColor);
-    if (auto& frameLineStyle = get_first(pad.GetLineStyleFrame(), padDefaults.GetLineStyleFrame())) pad_ptr->SetFrameLineStyle(*frameLineStyle);
-    if (auto& frameLineWidth = get_first(pad.GetLineWidthFrame(), padDefaults.GetLineWidthFrame())) pad_ptr->SetFrameLineWidth(*frameLineWidth);
+    if (auto& padFillOpacity = get_first(pad.GetFillOpacity(), padDefaults.GetFillOpacity())) pad_ptr->SetFillColor(TColor::GetColorTransparent(pad_ptr->GetFillColor(), *padFillOpacity));
+    if (auto& frameFillColor = get_first(pad.GetFrameFillColor(), padDefaults.GetFrameFillColor())) pad_ptr->SetFrameFillColor(*frameFillColor);
+    if (auto& frameFillStyle = get_first(pad.GetFrameFillStyle(), padDefaults.GetFrameFillStyle())) pad_ptr->SetFrameFillStyle(*frameFillStyle);
+    if (auto& frameFillOpacity = get_first(pad.GetFrameFillOpacity(), padDefaults.GetFrameFillOpacity())) pad_ptr->SetFrameFillColor(TColor::GetColorTransparent(pad_ptr->GetFrameFillColor(), *frameFillOpacity));
+    if (auto& frameBorderColor = get_first(pad.GetFrameBorderColor(), padDefaults.GetFrameBorderColor())) pad_ptr->SetFrameLineColor(*frameBorderColor);
+    if (auto& frameBorderStyle = get_first(pad.GetFrameBorderStyle(), padDefaults.GetFrameBorderStyle())) pad_ptr->SetFrameLineStyle(*frameBorderStyle);
+    if (auto& frameBorderWidth = get_first(pad.GetFrameBorderWidth(), padDefaults.GetFrameBorderWidth())) pad_ptr->SetFrameLineWidth(*frameBorderWidth);
 
     if (pad.GetDefaultMarkerColorsGradient().rgbEndpoints) {
       auto& gradient = pad.GetDefaultMarkerColorsGradient();
