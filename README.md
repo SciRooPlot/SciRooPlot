@@ -22,8 +22,8 @@ Since this project relies on cxx17 and ROOT has some compatibility issue when so
 You will spot this problem when you try to compile the framework and see errors such as\
 `error: conflicting declaration of template ‘template<class _CharT, class _Traits> using basic_string_view = std::experimental::__ROOT::basic_string_view<_CharT, _Traits>’
 using basic_string_view = ::std::experimental::basic_string_view<_CharT,_Traits>;`\
-This is not an issue for mac users, who usually work with the Clang compiler.\
-In order to fix it, simply compile the ROOT software as follows:
+This is not an issue for mac users, who usually work with the Clang compiler and might also not be a problem when using the latest gcc version.\
+In order to work around this issue, simply compile the ROOT software as follows:
 ```console
 cd ~
 git clone https://github.com/root-project/root
@@ -63,7 +63,7 @@ The PlotManager is the pivot point of the PlottingFramework. In your application
 ```cpp
     #include "PlotManager.h"
 ```
-which will provide you with all the user interfaces you need.
+which will provide all the user interfaces you need.
 In the following you can find some examples illustrating how to use the framework.
 
 Example 1

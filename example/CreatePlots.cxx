@@ -16,6 +16,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "PlotManager.h"
+#include "Logging.h"
+
 using namespace PlottingFramework;
 
 // helper that creates some good looking plot templates you can base your plots on
@@ -41,6 +43,7 @@ int main(int argc, char* argv[])
   if (saveInputDataFiles) {
     plotManager.AddInputDataFiles("measurements", {"../InputFiles/file1.root", "../InputFiles/file2.root"});
     plotManager.AddInputDataFiles("theory", {"../InputFiles/file3.root"});
+    // NB.: in order to allow running your program from everywhere on your computer it is better NOT to use relative paths
     plotManager.DumpInputDataFiles("inputFilesConfig.XML");
   } else {
     plotManager.LoadInputDataFiles("inputFilesConfig.XML");
@@ -72,6 +75,17 @@ int main(int argc, char* argv[])
   //plotManager.SetOutputDirectory("/some/path/on/system/");
   //plotManager.CreatePlots("", "", {}, "pdf");
 
+  /*
+  // in your program you can make use of the logging macros of the framework (requires to include Logging.h)
+  LOG("Hello World.");
+  // the strings and arguments are passed to fmt::format, so you can use all of its formatting features
+  double someNumber = 42.424242424242;
+  LOG("Logging magic number {}.", someNumber);
+  DEBUG("With digits {:.2f}", someNumber);
+  WARNING("my warning");
+  ERROR("my error");
+   */
+  
   return 0;
 }
 
