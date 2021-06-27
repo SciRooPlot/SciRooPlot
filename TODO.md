@@ -35,7 +35,7 @@ Bugs:
 - with graph as numerator in ratio there is some logic problem that axis histo is not there -> seg fault
 
 Not so urgend:
-- add shape objects (arrows)
+- add shape objects (lines, arrows, boxes, ellipses, crowns) - below or above the data?
 - support THStack, TMultiGraph
 - support for setting up TView to have a 3d representations of 2d data
 - add inclination angle setting to text-boxes
