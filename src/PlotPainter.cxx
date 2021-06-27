@@ -555,6 +555,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           if (data->GetTextFormat()) gStyle->SetPaintTextFormat((*data->GetTextFormat()).data());
 
+          // disallow moving around the points of a graph in interacitve mode
+          if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
+            data_ptr->SetEditable(false);
+          }
+
           data_ptr->Draw(drawingOptions.data());
 
           // in case a label was specified for the data, add it to corresponding legend
