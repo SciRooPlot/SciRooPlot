@@ -415,6 +415,11 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     return true;
   }
 
+  bool isGif = false;
+  static string gifName;
+  static string gifFolderName;
+  string gifRepRate = "+50"; // number of centiseconds between frames
+
   string fileEnding;
   if (outputMode == "pdf") {
     fileEnding = ".pdf";
@@ -426,22 +431,42 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     fileEnding = ".eps";
   } else if (outputMode == "svg") {
     fileEnding = ".svg";
+  } else if (str_contains(outputMode, "gif")) {
+    fileEnding = ".gif";
+    isGif = true;
+    if (auto delimPos = outputMode.find("+"); delimPos != string::npos) {
+      gifRepRate = outputMode.substr(delimPos);
+    }
   }
+
   if (fileEnding.empty()) {
     ERROR("No valid output format was specified. Cannot save plot.");
     return true;
   }
 
   string fileName = (mUseUniquePlotNames) ? plot.GetUniqueName() : plot.GetName();
-
   std::replace(fileName.begin(), fileName.end(), '/', '_');
   std::replace(fileName.begin(), fileName.end(), ':', '_');
 
   // create output folders and files
   string folderName = mOutputDirectory + "/" + plot.GetFigureGroup();
   if (plot.GetFigureCategory()) folderName += "/" + *plot.GetFigureCategory();
+  string fullName = folderName + "/" + fileName + fileEnding;
+
+  if (isGif) {
+    if (gifName.empty()) {
+      gSystem->Unlink(fullName.data());
+      LOG("Saving gif {}", fullName);
+      fullName += gifRepRate;
+      gifName = fullName;
+      gifFolderName = folderName;
+    } else {
+      fullName = gifName;
+      folderName = gifFolderName;
+    }
+  }
   gSystem->Exec((string("mkdir -p ") + folderName).data());
-  canvas->SaveAs((folderName + "/" + fileName + fileEnding).data());
+  canvas->SaveAs(fullName.data());
   return true;
 }
 
