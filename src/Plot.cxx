@@ -183,8 +183,8 @@ auto Plot::SetFill(int16_t color, optional<int16_t> style, optional<float_t> opa
 //**************************************************************************************************
 auto Plot::SetTransparent() -> decltype(*this)
 {
-  mFill.style = 1001;
-  mFill.scale = 0.f;
+  mFill.style = 0;
+  mFill.color = 0;
   return *this;
 }
 
@@ -465,8 +465,8 @@ auto Plot::Pad::SetFill(int16_t color, optional<int16_t> style, optional<float_t
 //**************************************************************************************************
 auto Plot::Pad::SetTransparent() -> decltype(*this)
 {
-  mFill.style = 1001;
-  mFill.scale = 0.f;
+  mFill.style = 0;
+  mFill.color = 0;
   return *this;
 }
 
@@ -503,8 +503,8 @@ auto Plot::Pad::SetFrameBorder(int16_t color, optional<int16_t> style, optional<
 //**************************************************************************************************
 auto Plot::Pad::SetFrameTransparent() -> decltype(*this)
 {
-  mFrameFill.style = 1001;
-  mFrameFill.scale = 0.f;
+  mFrameFill.style = 0;
+  mFrameFill.color = 0;
   return *this;
 }
 
