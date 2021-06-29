@@ -33,7 +33,7 @@ namespace PlottingFramework
  * Default constructor.
  */
 //**************************************************************************************************
-Plot::Plot(const string& name, const string& figureGroup, const string& plotTemplateName) : Plot()
+Plot::Plot(const string& name, const string& figureGroup, const optional<string>& plotTemplateName) : Plot()
 {
   if (str_contains(figureGroup, ".")) {
     ERROR("Figure Group must not contain '.'!");
@@ -41,15 +41,14 @@ Plot::Plot(const string& name, const string& figureGroup, const string& plotTemp
   }
   mName = name;
   mFigureGroup = figureGroup;
-  if (plotTemplateName != "") mPlotTemplateName = plotTemplateName;
+  mPlotTemplateName = plotTemplateName;
 
   // in case category was specified via figureGroup:my/category/tree
   if (auto subPathPos = figureGroup.find(":"); subPathPos != string::npos) {
     mFigureGroup = figureGroup.substr(0, subPathPos);
     mFigureCategory = figureGroup.substr(subPathPos + 1);
   }
-
-  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
+  UpdateUniqueName();
 }
 
 //**************************************************************************************************
@@ -57,13 +56,13 @@ Plot::Plot(const string& name, const string& figureGroup, const string& plotTemp
  * Constructor from existing plot.
  */
 //**************************************************************************************************
-Plot::Plot(const Plot& otherPlot, const string& name, const string& figureGroup, const string& figureCategory)
+Plot::Plot(const Plot& otherPlot, const string& name, const string& figureGroup, const optional<string>& figureCategory)
 {
   *this = otherPlot.Clone();
   mName = name;
   mFigureGroup = figureGroup;
-  mFigureCategory = (figureCategory != "") ? optional<string>{figureCategory} : std::nullopt;
-  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
+  mFigureCategory = figureCategory;
+  UpdateUniqueName();
 }
 
 //**************************************************************************************************
@@ -76,12 +75,11 @@ Plot::Plot(const ptree& plotTree)
   try {
     mName = plotTree.get<string>("name");
     mFigureGroup = plotTree.get<string>("figure_group");
-    read_from_tree(plotTree, mFigureCategory, "figure_category");
-    mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
   } catch (...) {
     ERROR("Could not construct data from ptree.");
     std::exit(EXIT_FAILURE);
   }
+  read_from_tree(plotTree, mFigureCategory, "figure_category");
   read_from_tree(plotTree, mPlotTemplateName, "plot_template_name");
   read_from_tree(plotTree, mPlotDimensions.width, "width");
   read_from_tree(plotTree, mPlotDimensions.height, "height");
@@ -97,6 +95,17 @@ Plot::Plot(const ptree& plotTree)
       mPads[padID] = Pad(pad.second);
     }
   }
+  UpdateUniqueName();
+}
+
+//**************************************************************************************************
+/**
+ * Update the unique internal name of the plot based on the current name, figure group and category.
+ */
+//**************************************************************************************************
+void Plot::UpdateUniqueName()
+{
+  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
 }
 
 //**************************************************************************************************
@@ -163,6 +172,39 @@ uint8_t Plot::GetDataCount() const
   return count;
 }
 
+void Plot::SetFigureCategory(const string& figureCategory)
+{
+  if (!figureCategory.empty()) {
+    mFigureCategory = figureCategory;
+    UpdateUniqueName();
+  }
+}
+
+void Plot::SetPlotTemplateName(const string& plotTemplateName)
+{
+  mPlotTemplateName = plotTemplateName;
+}
+
+void Plot::SetDimensions(int32_t width, int32_t height, bool fixAspectRatio)
+{
+  mPlotDimensions = {width, height, fixAspectRatio};
+}
+
+void Plot::SetWidth(int32_t width)
+{
+  mPlotDimensions.width = width;
+}
+
+void Plot::SetHeight(int32_t height)
+{
+  mPlotDimensions.height = height;
+}
+
+void Plot::SetFixAspectRatio(bool fixAspectRatio)
+{
+  mPlotDimensions.fixAspectRatio = fixAspectRatio;
+}
+
 //**************************************************************************************************
 /**
  * Set fill for this plot.
@@ -199,7 +241,6 @@ void Plot::operator+=(const Plot& plot)
   mFigureGroup = plot.mFigureGroup;
   mFigureCategory = plot.mFigureCategory;
   if (plot.mFigureCategory) mFigureCategory = plot.mFigureCategory;
-  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
   mPlotTemplateName = plot.mPlotTemplateName;
 
   if (plot.mPlotDimensions.width) mPlotDimensions.width = plot.mPlotDimensions.width;
@@ -214,6 +255,7 @@ void Plot::operator+=(const Plot& plot)
     mPads[padID]; // initializes the pad in case it was not yet defined in this plot
     mPads[padID] += pad;
   }
+  UpdateUniqueName();
 }
 
 //**************************************************************************************************
@@ -877,13 +919,13 @@ Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
  * Add data to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Data& Plot::Pad::AddData(const string& name, const string& inputIdentifier, const string& label)
+Plot::Pad::Data& Plot::Pad::AddData(const string& name, const string& inputIdentifier, const optional<string>& label)
 {
   mData.push_back(std::make_shared<Data>(name, inputIdentifier, label));
   return *mData.back();
 }
 
-Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const string& label)
+Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const optional<string>& label)
 {
   mData.push_back(std::make_shared<Data>(name, data.GetInputID(), label));
   mData.back()->SetLayout(data);
@@ -895,14 +937,14 @@ Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const 
  * Add ratio to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorInputIdentifier, const string& denominatorName, const string& denominatorInputIdentifier, const string& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorInputIdentifier, const string& denominatorName, const string& denominatorInputIdentifier, const optional<string>& label)
 {
   mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorInputIdentifier,
                                           denominatorName, denominatorInputIdentifier, label));
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
 
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& data, const string& denominatorName, const string& denominatorInputIdentifier, const string& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& data, const string& denominatorName, const string& denominatorInputIdentifier, const optional<string>& label)
 {
   mData.push_back(std::make_shared<Ratio>(numeratorName, data.GetInputID(),
                                           denominatorName, denominatorInputIdentifier, label));
@@ -965,12 +1007,13 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend()
  * Default constructor for Data objects.
  */
 //**************************************************************************************************
-Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const string& legendLabel)
+Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const optional<string>& legendLabel)
   : Data()
 {
   mType = "data";
 
-  if (legendLabel != "") mLegend.label = legendLabel;
+  mLegend.label = legendLabel;
+
   // in case input was specified further via inputIdentifier:some/path/in/file
   auto subPathPos = inputIdentifier.find(":");
   if (subPathPos != string::npos) {
@@ -1345,7 +1388,7 @@ std::string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
  */
 //**************************************************************************************************
 Plot::Pad::Ratio::Ratio(const string& name, const string& inputIdentifier, const string& denomName,
-                        const string& denomInputIdentifier, const string& label)
+                        const string& denomInputIdentifier, const optional<string>& label)
   : Data(name, inputIdentifier, label), mDenomName(denomName),
     mDenomInputIdentifier(denomInputIdentifier), mIsCorrelated(false)
 {

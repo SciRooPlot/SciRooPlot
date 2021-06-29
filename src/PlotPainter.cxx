@@ -188,7 +188,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     }
 
     TH1* axisHist_ptr{nullptr};
-    string drawingOptions = "";
+    string drawingOptions;
     uint16_t dataIndex{};
     for (auto& data : pad.GetData()) {
       if (data->GetDrawingOptions()) drawingOptions += *data->GetDrawingOptions();
@@ -244,8 +244,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
             if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>) {
               if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist>) {
-                string divideOpt = (std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetIsCorrelated()) ? "B"
-                                                                                                          : "";
+                string divideOpt = (std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetIsCorrelated()) ? "B" : "";
                 if (!data_ptr->Divide(data_ptr, denom_data_ptr, 1., 1., divideOpt.data())) {
                   WARNING("Could not divide histograms properly. Trying approximated division via spline interpolation. Errors will not be fully correct!");
                   DivideHistosInterpolated(data_ptr, denom_data_ptr);

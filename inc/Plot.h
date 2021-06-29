@@ -74,27 +74,22 @@ public:
 
   Plot() = default;
   Plot(const ptree& plotTree);
-  Plot(const string& name, const string& figureGroup, const string& plotTemplateName = "");
+  Plot(const string& name, const string& figureGroup, const optional<string>& plotTemplateName = std::nullopt);
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
   Pad& GetPadDefaults() { return mPads[0]; }
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& templatePlot, const Plot& plot);
-  Plot(const Plot& otherPlot, const string& name, const string& figureGroup, const string& figureCategory = "");
+  Plot(const Plot& otherPlot, const string& name, const string& figureGroup, const optional<string>& figureCategory = std::nullopt);
   Plot Clone() const;
 
   // accessors for user
-  void SetFigureCategory(const string& figureCategory)
-  {
-    mFigureCategory = (!figureCategory.empty()) ? optional<string>{figureCategory} : std::nullopt;
-    mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
-  }
-  void SetPlotTemplateName(const string& plotTemplateName) { mPlotTemplateName = plotTemplateName; }
-
-  void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false) { mPlotDimensions = {width, height, fixAspectRatio}; }
-  void SetWidth(int32_t width) { mPlotDimensions.width = width; }
-  void SetHeight(int32_t height) { mPlotDimensions.height = height; }
-  void SetFixAspectRatio(bool fixAspectRatio = true) { mPlotDimensions.fixAspectRatio = fixAspectRatio; }
+  void SetFigureCategory(const string& figureCategory);
+  void SetPlotTemplateName(const string& plotTemplateName);
+  void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false);
+  void SetWidth(int32_t width);
+  void SetHeight(int32_t height);
+  void SetFixAspectRatio(bool fixAspectRatio = true);
 
   Plot& SetFill(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> opacity = std::nullopt);
   Plot& SetTransparent();
@@ -106,7 +101,7 @@ protected:
   void SetFigureGroup(const string& figureGroup)
   {
     mFigureGroup = figureGroup;
-    mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
+    UpdateUniqueName();
   }
 
   // accessors for internal use by manager and painter
@@ -129,6 +124,7 @@ protected:
   uint8_t GetDataCount() const;
 
 private:
+  void UpdateUniqueName();
   struct dimension_t {
     optional<int32_t> width;
     optional<int32_t> height;
@@ -169,14 +165,14 @@ public:
   void operator+=(const Pad& pad);
 
   // User accessors:
-  Data& AddData(const string& name, const string& inputIdentifier, const string& label = "");
-  Data& AddData(const string& name, const Data& dataTemplate, const string& label = "");
+  Data& AddData(const string& name, const string& inputIdentifier, const optional<string>& label = std::nullopt);
+  Data& AddData(const string& name, const Data& dataTemplate, const optional<string>& label = std::nullopt);
 
   Ratio& AddRatio(const string& numeratorName, const string& numeratorInputIdentifier,
                   const string& denominatorName, const string& denominatorInputIdentifier,
-                  const string& label = "");
+                  const optional<string>& label = std::nullopt);
   Ratio& AddRatio(const string& numeratorName, const Data& data, const string& denominatorName,
-                  const string& denominatorInputIdentifier, const string& label = "");
+                  const string& denominatorInputIdentifier, const optional<string>& label = std::nullopt);
 
   TextBox& AddText(double_t xPos, double_t yPos, const string& text);
   TextBox& AddText(const string& text);
@@ -335,7 +331,7 @@ class Plot::Pad::Data
 {
 public:
   Data() = default;
-  Data(const string& name, const string& inputIdentifier, const string& label = "");
+  Data(const string& name, const string& inputIdentifier, const optional<string>& label);
   Data(const ptree& dataTree);
 
   virtual ~Data() = default;
@@ -476,7 +472,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 {
 public:
   Ratio(const string& name, const string& inputIdentifier, const string& denomName,
-        const string& denomInputIdentifier, const string& label);
+        const string& denomInputIdentifier, const optional<string>& label);
   Ratio(const ptree& dataTree);
 
   virtual ~Ratio() = default;
@@ -831,7 +827,7 @@ private:
 class Plot::Pad::LegendBox::LegendEntry
 {
 public:
-  LegendEntry(const optional<string>& label = {}, const optional<string>& refDataName = {}, const optional<string>& drawStyle = {});
+  LegendEntry(const optional<string>& label = std::nullopt, const optional<string>& refDataName = std::nullopt, const optional<string>& drawStyle = std::nullopt);
   LegendEntry(const ptree& legendEntryTree);
 
   LegendEntry& SetLabel(const string& label);
