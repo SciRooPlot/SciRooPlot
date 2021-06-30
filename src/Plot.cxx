@@ -172,6 +172,12 @@ uint8_t Plot::GetDataCount() const
   return count;
 }
 
+void Plot::SetFigureGroup(const string& figureGroup)
+{
+  mFigureGroup = figureGroup;
+  UpdateUniqueName();
+}
+
 void Plot::SetFigureCategory(const string& figureCategory)
 {
   if (!figureCategory.empty()) {
@@ -214,6 +220,24 @@ auto Plot::SetFill(int16_t color, optional<int16_t> style, optional<float_t> opa
 {
   mFill.color = color;
   mFill.style = style;
+  mFill.scale = opacity;
+  return *this;
+}
+
+auto Plot::SetFillColor(int16_t color) -> decltype(*this)
+{
+  mFill.color = color;
+  return *this;
+}
+
+auto Plot::SetFillStyle(int16_t style) -> decltype(*this)
+{
+  mFill.style = style;
+  return *this;
+}
+
+auto Plot::SetFillOpacity(float_t opacity) -> decltype(*this)
+{
   mFill.scale = opacity;
   return *this;
 }
@@ -525,6 +549,24 @@ auto Plot::Pad::SetFrameFill(int16_t color, optional<int16_t> style, optional<fl
   return *this;
 }
 
+auto Plot::Pad::SetFrameFillColor(int16_t color) -> decltype(*this)
+{
+  mFrameFill.color = color;
+  return *this;
+}
+
+auto Plot::Pad::SetFrameFillStyle(int16_t style) -> decltype(*this)
+{
+  mFrameFill.style = style;
+  return *this;
+}
+
+auto Plot::Pad::SetFrameFillOpacity(float_t opacity) -> decltype(*this)
+{
+  mFrameFill.scale = opacity;
+  return *this;
+}
+
 //**************************************************************************************************
 /**
  * Set frame line properties.
@@ -534,6 +576,24 @@ auto Plot::Pad::SetFrameBorder(int16_t color, optional<int16_t> style, optional<
 {
   mFrameBorder.color = color;
   mFrameBorder.style = style;
+  mFrameBorder.scale = width;
+  return *this;
+}
+
+auto Plot::Pad::SetFrameBorderColor(int16_t color) -> decltype(*this)
+{
+  mFrameBorder.color = color;
+  return *this;
+}
+
+auto Plot::Pad::SetFrameBorderStyle(int16_t style) -> decltype(*this)
+{
+  mFrameBorder.style = style;
+  return *this;
+}
+
+auto Plot::Pad::SetFrameBorderWidth(float_t width) -> decltype(*this)
+{
   mFrameBorder.scale = width;
   return *this;
 }

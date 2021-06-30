@@ -92,17 +92,16 @@ public:
   void SetFixAspectRatio(bool fixAspectRatio = true);
 
   Plot& SetFill(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> opacity = std::nullopt);
+  Plot& SetFillColor(int16_t color);
+  Plot& SetFillStyle(int16_t style);
+  Plot& SetFillOpacity(float_t opacity);
   Plot& SetTransparent();
 
 protected:
   friend class PlotManager;
   friend class PlotPainter;
 
-  void SetFigureGroup(const string& figureGroup)
-  {
-    mFigureGroup = figureGroup;
-    UpdateUniqueName();
-  }
+  void SetFigureGroup(const string& figureGroup);
 
   // accessors for internal use by manager and painter
   const auto& GetName() const { return mName; }
@@ -111,7 +110,6 @@ protected:
   const auto& GetPlotTemplateName() const { return mPlotTemplateName; }
   const auto& GetUniqueName() const { return mUniqueName; }
   ptree GetPropertyTree() const;
-
   auto& GetPads() { return mPads; }
 
   const auto& GetHeight() const { return mPlotDimensions.height; }
@@ -124,12 +122,12 @@ protected:
   uint8_t GetDataCount() const;
 
 private:
-  void UpdateUniqueName();
   struct dimension_t {
     optional<int32_t> width;
     optional<int32_t> height;
     optional<bool> fixAspectRatio;
   };
+  void UpdateUniqueName();
 
   string mName;
   string mFigureGroup;
@@ -137,9 +135,7 @@ private:
   string mUniqueName;
   optional<string> mPlotTemplateName;
   dimension_t mPlotDimensions;
-
   layout_t mFill;
-
   map<uint8_t, Pad> mPads;
 };
 
@@ -206,9 +202,18 @@ public:
   Pad& SetDefaultDrawingOptionHist(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption);
   Pad& SetFill(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> opacity = std::nullopt);
+  Pad& SetFillColor(int16_t color);
+  Pad& SetFillStyle(int16_t style);
+  Pad& SetFillOpacity(float_t opacity);
   Pad& SetTransparent();
   Pad& SetFrameFill(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> opacity = std::nullopt);
+  Pad& SetFrameFillColor(int16_t color);
+  Pad& SetFrameFillStyle(int16_t style);
+  Pad& SetFrameFillOpacity(float_t opacity);
   Pad& SetFrameBorder(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> width = std::nullopt);
+  Pad& SetFrameBorderColor(int16_t color);
+  Pad& SetFrameBorderStyle(int16_t style);
+  Pad& SetFrameBorderWidth(float_t width);
   Pad& SetFrameTransparent();
   Pad& SetRedrawAxes(bool redraw = true);
   Pad& SetRefFunc(const string& refFunc);
