@@ -524,6 +524,24 @@ auto Plot::Pad::SetFill(int16_t color, optional<int16_t> style, optional<float_t
   return *this;
 }
 
+auto Plot::Pad::SetFillColor(int16_t color) -> decltype(*this)
+{
+  mFill.color = color;
+  return *this;
+}
+
+auto Plot::Pad::SetFillStyle(int16_t style) -> decltype(*this)
+{
+  mFill.style = style;
+  return *this;
+}
+
+auto Plot::Pad::SetFillOpacity(float_t opacity) -> decltype(*this)
+{
+  mFill.scale = opacity;
+  return *this;
+}
+
 //**************************************************************************************************
 /**
  * Make this pad transparent.
