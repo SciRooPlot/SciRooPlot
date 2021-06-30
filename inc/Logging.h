@@ -20,47 +20,84 @@
 
 #include <fmt/core.h>
 
-#define DEBUG_LVL 2 // < 2: no debug, < 1: no warnings, < 0 no errors
-#define COUT_LVL 2  // < 2: no log,   < 1: no info,     < 0 no print
+#define DISABLE_ANSI_COLORS 0 // 0: colorful console output, 1: no colors in console
+#define USE_BRIGHT_COLORS 1   // 0: normal colors, 1: bright colors
+#define DEBUG_LVL 2           // < 2: no debug, < 1: no warnings, < 0 no errors
+#define COUT_LVL 2            // < 2: no log,   < 1: no info,     < 0 no print
+
+#define _BRIGHTNESS_ "3"
+#if USE_BRIGHT_COLORS == 1
+#undef _BRIGHTNESS_
+#define _BRIGHTNESS_ "9"
+#endif
+
+#define BLACK_ "\033[" _BRIGHTNESS_ "0m"
+#define WHITE_ = "\033[" _BRIGHTNESS_ "7m"
+#define BLUE_ = "\033[" _BRIGHTNESS_ "4m"
+#define GREEN_ "\033[" _BRIGHTNESS_ "2m"
+#define MAGENTA_ = "\033[" _BRIGHTNESS_ "5m"
+#define CYAN_ "\033[" _BRIGHTNESS_ "6m"
+#define YELLOW_ "\033[" _BRIGHTNESS_ "3m"
+#define RED_ "\033[" _BRIGHTNESS_ "1m"
+#define _END "\033[0m"
+
+#if DISABLE_ANSI_COLORS == 1
+#undef BLACK_
+#define BLACK_ ""
+#undef WHITE_
+#define WHITE_ ""
+#undef BLUE_
+#define BLUE_ ""
+#undef GREEN_
+#define GREEN_ ""
+#undef MAGENTA_
+#define MAGENTA_ ""
+#undef CYAN_
+#define CYAN_ ""
+#undef YELLOW_
+#define YELLOW_ ""
+#undef RED_
+#define RED_ ""
+#undef _END
+#define _END ""
+#endif
 
 // some preprocessor macros for logging, printing and debugging
-#define DEBUG(s, ...)                                 \
-  {                                                   \
-    fmt::print(stderr, "\033[1;36m[ DEBU ]\033[0m "); \
-    fmt::print(stderr, s, ##__VA_ARGS__);             \
-    fmt::print(stderr, "\n");                         \
-  }
-#define WARNING(s, ...)                               \
-  {                                                   \
-    fmt::print(stderr, "\033[1;33m[ WARN ]\033[0m "); \
-    fmt::print(stderr, s, ##__VA_ARGS__);             \
-    fmt::print(stderr, "\n");                         \
-  }
-#define ERROR(s, ...)                                 \
-  {                                                   \
-    fmt::print(stderr, "\033[1;31m[ ERR  ]\033[0m "); \
-    fmt::print(stderr, s, ##__VA_ARGS__);             \
-    fmt::print(stderr, "\n");                         \
-  }
-
-#define LOG(s, ...)                           \
-  {                                           \
-    fmt::print("\033[1;32m[ LOG  ]\033[0m "); \
-    fmt::print(s, ##__VA_ARGS__);             \
-    fmt::print("\n");                         \
-  }
-#define INFO(s, ...)                          \
-  {                                           \
-    fmt::print("\033[1;37m[ INFO ]\033[0m "); \
-    fmt::print(s, ##__VA_ARGS__);             \
-    fmt::print("\n");                         \
-  }
-
-#define PRINT(s, ...)                              \
+#define DEBUG(s, ...)                              \
   {                                                \
-    fmt::print(stderr, "\033[1m       |\033[0m "); \
-    fmt::print(s, ##__VA_ARGS__);                  \
-    fmt::print("\n");                              \
+    fmt::print(stderr, CYAN_ "[ DEBU ]" _END " "); \
+    fmt::print(stderr, s, ##__VA_ARGS__);          \
+    fmt::print(stderr, "\n");                      \
+  }
+#define WARNING(s, ...)                              \
+  {                                                  \
+    fmt::print(stderr, YELLOW_ "[ WARN ]" _END " "); \
+    fmt::print(stderr, s, ##__VA_ARGS__);            \
+    fmt::print(stderr, "\n");                        \
+  }
+#define ERROR(s, ...)                         \
+  {                                           \
+    fmt::print(stderr, RED_ "[ ERR  ]" _END); \
+    fmt::print(stderr, s, ##__VA_ARGS__);     \
+    fmt::print(stderr, "\n");                 \
+  }
+#define LOG(s, ...)                         \
+  {                                         \
+    fmt::print(GREEN_ "[ LOG  ]" _END " "); \
+    fmt::print(s, ##__VA_ARGS__);           \
+    fmt::print("\n");                       \
+  }
+#define INFO(s, ...)              \
+  {                               \
+    fmt::print("[ INFO ] ");      \
+    fmt::print(s, ##__VA_ARGS__); \
+    fmt::print("\n");             \
+  }
+#define PRINT(s, ...)                \
+  {                                  \
+    fmt::print(stderr, "       | "); \
+    fmt::print(s, ##__VA_ARGS__);    \
+    fmt::print("\n");                \
   }
 #define PRINT_INLINE(s, ...)      \
   {                               \
@@ -70,11 +107,10 @@
   {                                         \
     PRINT(fmt::format("{:-<{}}", "-", 60)); \
   }
-#define HERE                                                                                    \
-  {                                                                                             \
-    fmt::print("\033[1;33m[ ---> ]\033[0m Line {} in function {} ({})", __LINE__, __FUNCTION__, \
-               __FILE__);                                                                       \
-    fmt::print("\n");                                                                           \
+#define HERE                                                                              \
+  {                                                                                       \
+    fmt::print("[ ---> ] Line {} in function {} ({})", __LINE__, __FUNCTION__, __FILE__); \
+    fmt::print("\n");                                                                     \
   }
 
 // Debug suppression levels

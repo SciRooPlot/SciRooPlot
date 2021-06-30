@@ -346,7 +346,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   gROOT->SetBatch(!isInteractiveMode);
   shared_ptr<TCanvas> canvas{painter.GeneratePlot(fullPlot, mDataBuffer)};
   if (!canvas) return false;
-  LOG("Created \033[1;32m{}\033[0m from group \033[1;33m{}\033[0m", fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? ":" + *fullPlot.GetFigureCategory() : ""));
+  LOG("Created " GREEN_ "{}" _END " from group " YELLOW_ "{}" _END, fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? ":" + *fullPlot.GetFigureCategory() : ""));
 
   // if interactive mode is specified, open window instead of saving the plot
   if (isInteractiveMode) {
@@ -509,15 +509,16 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   // were definitions for all requested plots available?
   if (!plotNames.empty()) {
     for (auto& plotName : plotNames) {
-      WARNING(R"(Could not find plot "{}" in group "{}")", plotName, figureGroup + ((!figureCategory.empty()) ? ":" + figureCategory : ""));
+      WARNING("Could not find plot " GREEN_ "{}" _END " in group " YELLOW_ "{}" _END, plotName, figureGroup + ((!figureCategory.empty()) ? ":" + figureCategory : ""));
     }
   }
 
   if (!FillBuffer()) PrintBufferStatus(true);
+  PrintBufferStatus(false);
   // generate plots
   for (auto plot : selectedPlots) {
     if (!GeneratePlot(*plot, outputMode))
-      ERROR("Plot \033[1;32m{}\033[0m from group \033[1;33m{}\033[0m could not be created.", plot->GetName(), plot->GetFigureGroup());
+      ERROR("Plot " GREEN_ "{}" _END " from group " YELLOW_ "{}" _END " could not be created.", plot->GetName(), plot->GetFigureGroup());
   }
 }
 
@@ -628,14 +629,12 @@ void PlotManager::PrintBufferStatus(bool missingOnly) const
     bool printInputID = true;
     for (auto& [dataName, dataPtr] : buffer) {
       ++nNeededData;
-      string colorStart = (dataPtr) ? "\033[32m" : "\033[31m";
-      string colorEnd = (dataPtr) ? "\033[0m" : "\033[0m";
       bool show = missingOnly ? (dataPtr == nullptr) : true;
       if (dataPtr) ++nAvailableData;
       if (show) {
         if (printInputID) INFO("{}", inputID);
         printInputID = false;
-        INFO(" - {}{}{}", colorStart, dataName, colorEnd);
+        INFO(" - {}{}{}", (dataPtr) ? GREEN_ : RED_, dataName, _END);
       }
     }
   }
@@ -881,7 +880,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
 
       ++nFoundPlots;
       if (isSearchRequest) {
-        INFO(" - \033[1;32m{}\033[0m in group \033[1;33m{}\033[0m", plotName, figureGroup + ((!figureCategory.empty()) ? ":" + figureCategory : ""));
+        INFO(" - " GREEN_ "{}" _END " in group " YELLOW_ "{}" _END, plotName, figureGroup + ((!figureCategory.empty()) ? ":" + figureCategory : ""));
       } else {
         try {
           Plot plot(plotTree.second);

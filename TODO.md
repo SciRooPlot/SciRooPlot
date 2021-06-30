@@ -1,5 +1,4 @@
 Todo:
-- use constants for bash colors and implement colorless fallback (for non-dark console backgrounds)
 - simpler way to create all saved plots specifying only the mode
 - add possibility to read / write multiple plot definition and input config files in app (config of config files??)
 - give warning if selected drawing alias not available for present type of data
