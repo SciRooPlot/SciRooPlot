@@ -514,7 +514,6 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   }
 
   if (!FillBuffer()) PrintBufferStatus(true);
-  PrintBufferStatus(false);
   // generate plots
   for (auto plot : selectedPlots) {
     if (!GeneratePlot(*plot, outputMode))
