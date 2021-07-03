@@ -1,10 +1,10 @@
 Rationale
 ---------
-This piece of software is meant to simplify day-to-day scientific plotting by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
+This program aims to simplify day-to-day scientific plotting by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root).
 It provides an intuitive interface for defining plots and makes it very easy to work with data stored in many different input files.
-An interactive command-line plotting app allows to quickly find and create specific plots from the users pool of plot definitions.
+An interactive command-line plotting app allows to quickly find and create specific plots from the pool of plot definitions.
 
-Everybody is welcome to use this program and contribute new features.
+Everybody is welcome to use this software and contribute new features.
 
 Prerequisites
 -------------
@@ -199,11 +199,11 @@ plotManager.LoadInputDataFiles("/path/to/inputFilesConfig.XML");
   plot[1]['Y'].SetTitle("my y axis title with meaning");
   plot[1]['X'].SetRange(1.4, 2.8).SetTitle("what I am showing on x axis").SetLog();
   // or if you want to modify synchronously the axes of multiple plots (e.g. for 2-panel ratios) you can apply the settings to the default pad
-  plot[0]['X'].SetMaxRange(1.4, 2.8);
+  plot[0]['X'].SetRange(1.4, 2.8);
   // a full list of axis property accessors can be found in the Axis class definition in inc/Plot.h
 
 
-  // finally after plot definition is done we can add it to the manager
+  // finally, after plot definition is done we can add it to the manager
   // at this point the plot object we were modifying is moved to the manager
   // and the plot object remaining in the current scope will be empty
   plotManager.AddPlot(plot);
@@ -254,7 +254,7 @@ plotManager.LoadInputDataFiles("/path/to/inputFilesConfig.XML");
   // with the second argument of the SetProjection() function you can specify the ranges of the other axes prior to the projection
   // this means in the above example the axis 0 of the input data is restricted to bin 5 to 10 and axis 1 is restricted to bin 90 to 100
   // before the histogram is projected on the axis 3
-  // also here one can provide user coordinates instead of bins by setting the  third argument of the function to 'true'
+  // also here one can provide user coordinates instead of bins by setting the third argument of the function to 'true'
 
   // the same can be done also with the numerator and denominator of ratios
   // have a look at inc/Plot.h for the details
@@ -305,7 +305,7 @@ PlotManager plotManager;
 // we can now load this directly into the manager via:
 plotManager.LoadInputDataFiles("/path/to/inputFilesConfig.XML");
 
-// as you know from your personal plotting experience
+// as you know from your own plotting experience
 // there are plenty of settings that have to be applied to generate a beautiful plot
 // most of these settings e.g. the number and alignment of pads, background colors, transparency, etc..
 // stay the same for all (or a group of) your plots and you do not want to
