@@ -75,11 +75,11 @@
     fmt::print(stderr, s, ##__VA_ARGS__);            \
     fmt::print(stderr, "\n");                        \
   }
-#define ERROR(s, ...)                         \
-  {                                           \
-    fmt::print(stderr, RED_ "[ ERR  ]" _END); \
-    fmt::print(stderr, s, ##__VA_ARGS__);     \
-    fmt::print(stderr, "\n");                 \
+#define ERROR(s, ...)                             \
+  {                                               \
+    fmt::print(stderr, RED_ "[ ERR  ]" _END " "); \
+    fmt::print(stderr, s, ##__VA_ARGS__);         \
+    fmt::print(stderr, "\n");                     \
   }
 #define LOG(s, ...)                         \
   {                                         \
