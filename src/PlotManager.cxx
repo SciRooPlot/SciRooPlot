@@ -558,10 +558,14 @@ bool PlotManager::FillBuffer()
       auto fileNamePath = split_string(inputFileName, ':');
       string& fileName = fileNamePath[0];
 
+      if (!std::filesystem::exists(fileName)) {
+        WARNING(R"(Input file "{}" not found.)", fileName);
+        continue;
+      }
       TFile inputFile(fileName.data(), "READ");
       if (inputFile.IsZombie()) {
-        ERROR(R"(Input file "{}" not found.)", fileName);
-        break;
+        WARNING(R"(Cannot open input file "{}".)", fileName);
+        continue;
       }
 
       TObject* folder = &inputFile;
