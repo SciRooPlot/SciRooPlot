@@ -1138,17 +1138,16 @@ bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
   for (int32_t i = 0; i < numerator->GetN(); ++i) {
     if (numerator->GetX()[i] != denominator->GetX()[i]) return false;
   }
-  // now divide
   for (int32_t i = 0; i < numerator->GetN(); ++i) {
-    bool illegalDivision = false;
-    if (denominator->GetY()[i] == 0.) {
+    double num = numerator->GetY()[i];
+    double denom = denominator->GetY()[i];
+    double numErr = numerator->GetEY()[i];
+    double denomErr = denominator->GetEY()[i];
+    if (!denom) {
       ERROR("Dividing by zero!");
-      illegalDivision = true;
     }
-    numerator->GetY()[i] = (illegalDivision) ? 0. : numerator->GetY()[i] / denominator->GetY()[i];
-    numerator->GetEY()[i] = (illegalDivision)
-                              ? 0.
-                              : numerator->GetEY()[i] / denominator->GetY()[i] + denominator->GetEY()[i] * numerator->GetY()[i] / (denominator->GetY()[i] * denominator->GetY()[i]);
+    numerator->GetY()[i] = (denom) ? num / denom : 0.;
+    numerator->GetEY()[i] = (denom) ? std::sqrt(std::pow(1 / denom, 2) * std::pow(numErr, 2) + std::pow(num / std::pow(denom, 2), 2) * std::pow(denomErr, 2)) : 0.;
   }
   return true;
 }
