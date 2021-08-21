@@ -1521,7 +1521,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
   dataTree.put("isCorrelated", mIsCorrelated);
 
   // ugly workaround
-  if (mProjInfo) {
+  if (mProjInfoDenom) {
     put_in_tree(dataTree, std::optional<vector<uint8_t>>{mProjInfoDenom->dims}, "projDenom_dims");
     put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{mProjInfoDenom->ranges}, "projDenom_ranges");
     put_in_tree(dataTree, std::optional<bool>{mProjInfoDenom->isUserCoord}, "projDenom_isUserCoord");

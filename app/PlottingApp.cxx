@@ -55,8 +55,7 @@ int main(int argc, char* argv[])
 
     po::options_description arguments("Positional arguments");
     arguments.add_options()("mode", po::value<string>(), "mode")(
-      "figureGroups", po::value<string>(), "figure group")("plotNames", po::value<string>(), "plot name")("arguments", po::value<vector<string>>(),
-                                                                                                          "arguments");
+      "figureGroups", po::value<string>(), "figure group")("plotNames", po::value<string>(), "plot name")("arguments", po::value<vector<string>>(), "arguments");
 
     po::positional_options_description
       pos; // this needs to be synchronous with the arguments options_description
