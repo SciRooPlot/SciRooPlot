@@ -478,20 +478,19 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
 void PlotManager::CreatePlots(const string& figureGroup, const string& figureCategory,
                               vector<string> plotNames, const string& outputMode)
 {
-  // FIXME: when empty one may still want to only select specific plots also when figure group empty assume we want all
-  map<int32_t, set<int32_t>> requiredData;
-  bool saveAll = (figureGroup.empty());
-  bool saveSpecificPlots = !saveAll && !plotNames.empty();
-  vector<Plot*> selectedPlots;
-
   // first determine which data needs to be loaded
+  vector<Plot*> selectedPlots;
+  map<int32_t, set<int32_t>> requiredData;
+
   for (auto& plot : mPlots) {
-    if (!saveAll && !(plot.GetFigureGroup() == figureGroup && plot.GetFigureCategory() && *plot.GetFigureCategory() == figureCategory)){
+    if (!figureGroup.empty() && !(plot.GetFigureGroup() == figureGroup)) {
+      continue;
+    } else if (!figureCategory.empty() && !(plot.GetFigureCategory() && *plot.GetFigureCategory() == figureCategory)) {
+      continue;
+    } else if (!plotNames.empty() && std::find(plotNames.begin(), plotNames.end(), plot.GetName()) == plotNames.end()) {
       continue;
     }
-    if (saveSpecificPlots && std::find(plotNames.begin(), plotNames.end(), plot.GetName()) == plotNames.end()){
-      continue;
-    }
+
     if (!plotNames.empty()) {
       plotNames.erase(std::remove(plotNames.begin(), plotNames.end(), plot.GetName()), plotNames.end());
     }
