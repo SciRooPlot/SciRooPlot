@@ -38,7 +38,7 @@ enum drawing_options_t : uint8_t {
   line,
   curve,
   band,
-  band_line,
+  band_smooth,
   hist,
   hist_no_borders,
   fit,
