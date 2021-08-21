@@ -67,7 +67,7 @@ const map<drawing_options_t, string> defaultDrawingOptions_Hist{
   {line, "HIST L"},
   {bar, "HIST B"},
   {boxes, "E2"},
-  {band, "E6"},
+  {band, "E5"},
   {band_smooth, "E6"},
   {area, "HIST F"},
   {area_curve, "HIST CF"},
