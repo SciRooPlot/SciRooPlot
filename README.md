@@ -202,6 +202,8 @@ plotManager.LoadInputDataFiles("/path/to/inputFilesConfig.XML");
   plot[0]['X'].SetRange(1.4, 2.8);
   // a full list of axis property accessors can be found in the Axis class definition in inc/Plot.h
 
+  // note that you can define the visible range of the data independent of the pad axis range
+  plot[1].AddData("hist", "inputIdentifierA", "hist with reduced range").SetRangeX(1.5, 2.7);
 
   // finally, after plot definition is done we can add it to the manager
   // at this point the plot object we were modifying is moved to the manager
