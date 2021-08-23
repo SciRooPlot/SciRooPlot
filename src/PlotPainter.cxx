@@ -243,6 +243,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           auto processDenominator = [&](auto&& denom_data_ptr) {
             using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
             if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>) {
+              if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_func>) {
+                data_ptr->Divide(denom_data_ptr);
+              }
               if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist>) {
                 string divideOpt = (std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetIsCorrelated()) ? "B" : "";
                 if (!data_ptr->Divide(data_ptr, denom_data_ptr, 1., 1., divideOpt.data())) {
@@ -550,8 +553,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // do not draw the Z axis a second time!
             std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
 
-            canvas_ptr->cd();
-            pad_ptr->cd();
             if (auto& contours = data->GetContours()) {
               data_ptr->SetContour(contours->size(), contours->data());
               if (axisHist_ptr->GetContour() < contours->size()) axisHist_ptr->SetContour(contours->size(), contours->data());
