@@ -550,6 +550,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // do not draw the Z axis a second time!
             std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
 
+            canvas_ptr->cd();
+            pad_ptr->cd();
             if (auto& contours = data->GetContours()) {
               data_ptr->SetContour(contours->size(), contours->data());
               if (axisHist_ptr->GetContour() < contours->size()) axisHist_ptr->SetContour(contours->size(), contours->data());
