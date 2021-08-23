@@ -347,14 +347,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               data_ptr->Reset("ICE"); // reset integral, contents and errors
               data_ptr->SetMinimum(zMin);
               data_ptr->SetMaximum(zMax);
-
-              // the contours have to be set here since once the number of colors in the palette is fixed we cannot increase it anymore
-              if (auto& contours = data->GetContours()) {
-                data_ptr->SetContour(contours->size(), contours->data());
-              } else if (auto& nContours = data->GetNContours()) {
-                data_ptr->SetContour(*nContours);
-              }
-
               isDrawn = true;
             }
           }
@@ -560,8 +552,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
             if (auto& contours = data->GetContours()) {
               data_ptr->SetContour(contours->size(), contours->data());
+              if (axisHist_ptr->GetContour() < contours->size()) axisHist_ptr->SetContour(contours->size(), contours->data());
             } else if (auto& nContours = data->GetNContours()) {
               data_ptr->SetContour(*nContours);
+              if (axisHist_ptr->GetContour() < nContours) axisHist_ptr->SetContour(*nContours);
             }
           }
           if (data->GetTextFormat()) gStyle->SetPaintTextFormat((*data->GetTextFormat()).data());
