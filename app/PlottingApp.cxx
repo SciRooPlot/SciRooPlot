@@ -38,8 +38,8 @@ int main(int argc, char* argv[])
                           ? expand_path("${__PLOTTING_OUTPUT_DIR}/")
                           : "plotting_output/";
 
-  string inputFilesConfig = configFolder + "inputFiles.XML";
-  string plotDefConfig = configFolder + "plotDefinitions.XML";
+  string inputFiles = configFolder + "inputFiles.XML";
+  string plotDefinitions = configFolder + "plotDefinitions.XML";
 
   string mode;
   string figureGroups;
@@ -49,8 +49,8 @@ int main(int argc, char* argv[])
   try {
     po::options_description options("Configuration options");
     options.add_options()("help", "Show this help message.")(
-      "inputFilesConfig", po::value<string>(),
-      "Location of config file containing the input file paths.")("plotDefConfig", po::value<string>(),
+      "inputFiles", po::value<string>(),
+      "Location of config file containing the input file paths.")("plotDefinitions", po::value<string>(),
                                                                   "Location of config file containing the plot definitions.")("outputFolder", po::value<string>(), "Folder where output files should be saved.");
 
     po::options_description arguments("Positional arguments");
@@ -98,11 +98,11 @@ int main(int argc, char* argv[])
       cout << options << endl;
       return 0;
     }
-    if (vm.count("inputFilesConfig")) {
-      inputFilesConfig = vm["inputFilesConfig"].as<string>();
+    if (vm.count("inputFiles")) {
+      inputFiles = vm["inputFiles"].as<string>();
     }
-    if (vm.count("plotDefConfig")) {
-      plotDefConfig = vm["plotDefConfig"].as<string>();
+    if (vm.count("plotDefinitions")) {
+      plotDefinitions = vm["plotDefinitions"].as<string>();
     }
     if (vm.count("outputFolder")) {
       outputFolder = vm["outputFolder"].as<string>();
@@ -133,12 +133,12 @@ int main(int argc, char* argv[])
   if (mode.empty()) mode = "interactive";
 
   // check if specified input files exist
-  if (!file_exists(expand_path(inputFilesConfig))) {
-    ERROR(R"(File "{}" does not exists! Exiting.)", inputFilesConfig);
+  if (!file_exists(expand_path(inputFiles))) {
+    ERROR(R"(File "{}" does not exists! Exiting.)", inputFiles);
     return 1;
   }
-  if (!file_exists(expand_path(plotDefConfig))) {
-    ERROR(R"(File "{}" does not exists! Exiting.)", plotDefConfig);
+  if (!file_exists(expand_path(plotDefinitions))) {
+    ERROR(R"(File "{}" does not exists! Exiting.)", plotDefinitions);
     return 1;
   }
 
@@ -150,17 +150,16 @@ int main(int argc, char* argv[])
   // create plotting environment
   PlotManager plotManager;
   plotManager.SetOutputDirectory(outputFolder);
-  INFO(R"(Reading plot definitions from "{}".)", plotDefConfig);
 
   vector<string> figureGroupsVector = split_string(figureGroups, ' ');
   vector<string> plotNamesVector = split_string(plotNames, ' ');
   if (mode == "find") {
-    plotManager.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
+    plotManager.ExtractPlotsFromFile(plotDefinitions, figureGroupsVector, plotNamesVector, mode);
     return 0;
   } else if (mode == "browse") { // directly plot histograms from input identifier or file
     string inputIdentifier = figureGroupsVector[0];
     if (!str_contains(inputIdentifier, ".root", true)) {
-      plotManager.LoadInputDataFiles(inputFilesConfig);
+      plotManager.LoadInputDataFiles(inputFiles);
     } else {
       plotManager.AddInputDataFiles("browse", {inputIdentifier});
       inputIdentifier = "browse";
@@ -172,9 +171,8 @@ int main(int argc, char* argv[])
     plotManager.AddPlot(plot);
     plotManager.CreatePlots(inputIdentifier, "", {}, "interactive");
   } else {
-    INFO(R"(Reading input files from "{}".)", inputFilesConfig);
-    plotManager.LoadInputDataFiles(inputFilesConfig);
-    plotManager.ExtractPlotsFromFile(plotDefConfig, figureGroupsVector, plotNamesVector, mode);
+    plotManager.LoadInputDataFiles(inputFiles);
+    plotManager.ExtractPlotsFromFile(plotDefinitions, figureGroupsVector, plotNamesVector, mode);
     return 0;
   }
 }

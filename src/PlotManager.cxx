@@ -184,6 +184,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
   try {
     using boost::property_tree::read_xml;
     read_xml(expand_path(configFileName), inputFileTree);
+    INFO(R"(Reading input files from "{}".)", configFileName);
   } catch (...) {
     ERROR(R"(Cannot load file "{}".)", configFileName);
     return;
@@ -284,6 +285,7 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
   xml_writer_settings<std::string> settings('\t', 1);
   using boost::property_tree::write_xml;
   write_xml(expand_path(plotFileName), plotTree, std::locale(), settings);
+  INFO(R"(Wrote plot definitions to "{}")", plotFileName);
 }
 void PlotManager::DumpPlot(const string& plotFileName, const string& figureGroup,
                            const string& plotName) const
@@ -302,6 +304,7 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
     try {
       using boost::property_tree::read_xml;
       read_xml(expand_path(plotFileName), mPropertyTreeCache[plotFileName]);
+      INFO(R"(Reading plot definitions from "{}".)", plotFileName);
     } catch (...) {
       ERROR(R"(Cannot load file "{}".)", plotFileName);
       std::exit(EXIT_FAILURE);

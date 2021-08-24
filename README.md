@@ -92,10 +92,10 @@ plotManager.AddInputDataFiles("inputIdentifierD", {"/path/to/folder/with/rootfil
 
 // N.B.:
 // you can save these settings to a file via:
-plotManager.DumpInputDataFiles("/path/to/inputFilesConfig.XML");
+plotManager.DumpInputDataFiles("/path/to/inputFiles.XML");
 // this way you can also modify this list of input files manually in the
 // xml file and then read it into your program via
-plotManager.LoadInputDataFiles("/path/to/inputFilesConfig.XML");
+plotManager.LoadInputDataFiles("/path/to/inputFiles.XML");
 
 // now that we know where to look for the data, we can start creating plot(s).
 // the plot will be handed over to the manager after it was created and defined
@@ -303,9 +303,9 @@ using namespace PlottingFramework;
 PlotManager plotManager;
 
 // assuming you saved the list of input root files from example 1 to a xml file via
-// plotManager.DumpInputDataFiles("/path/to/inputFilesConfig.XML");
+// plotManager.DumpInputDataFiles("/path/to/inputFiles.XML");
 // we can now load this directly into the manager via:
-plotManager.LoadInputDataFiles("/path/to/inputFilesConfig.XML");
+plotManager.LoadInputDataFiles("/path/to/inputFiles.XML");
 
 // as you know from your own plotting experience
 // there are plenty of settings that have to be applied to generate a beautiful plot
@@ -532,7 +532,7 @@ Using the App
 The PlottingFramework ships with a builtin plotting application that enables you to quickly create plots from previously saved plot definitions.
 To use this app you need to:
 - source the `.plotrc` script in the main directory of the repository
-- place both the `inputFilesConfig.XML` and `plotDefinitions.XML` (names have to be like this for now) produced by your program in some central config folder
+- place both the `inputFiles.XML` and `plotDefinitions.XML` (names have to be like this for now) produced by your program in some central config folder
 - define the environment variable `__PLOTTING_CONFIG_DIR` to point to this folder
 - define the environment variable `__PLOTTING_OUTPUT_DIR` to the directory where you want to store the created plots (pdf, png, etc.)
 - (optional) define the environment variable `__MY_PLOTS_BUILD_DIR` to the directory where your code that creates the plot definitions resides - then the app will automatically rebuild and execute `./create` (which should be the name of your executable for this to work)

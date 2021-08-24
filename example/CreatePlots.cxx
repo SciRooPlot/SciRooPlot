@@ -44,9 +44,9 @@ int main(int argc, char* argv[])
     plotManager.AddInputDataFiles("measurements", {"../InputFiles/file1.root", "../InputFiles/file2.root"});
     plotManager.AddInputDataFiles("theory", {"../InputFiles/file3.root"});
     // NB.: in order to allow running your program from everywhere on your computer it is better NOT to use relative paths
-    plotManager.DumpInputDataFiles("inputFilesConfig.XML");
+    plotManager.DumpInputDataFiles("inputFiles.XML");
   } else {
-    plotManager.LoadInputDataFiles("inputFilesConfig.XML");
+    plotManager.LoadInputDataFiles("inputFiles.XML");
   }
 
   { // -----------------------------------------------------------------------
@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
   WARNING("my warning");
   ERROR("my error");
    */
-  
+
   return 0;
 }
 
