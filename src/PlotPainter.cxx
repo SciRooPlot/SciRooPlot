@@ -337,11 +337,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (scaleFactor) ScaleGraph(static_cast<TGraph*>(data_ptr), *scaleFactor);
         }
 
-        if (auto maxScale = data->GetScaleMaximum()) {
-          data_ptr->SetMaximum((*maxScale) * data_ptr->GetMaximum());
-        }
         if (auto minScale = data->GetScaleMinimum()) {
           data_ptr->SetMinimum((*minScale) * data_ptr->GetMinimum());
+        }
+        if (auto maxScale = data->GetScaleMaximum()) {
+          data_ptr->SetMaximum((*maxScale) * data_ptr->GetMaximum());
         }
 
         // first data is only used to define the axes
@@ -463,6 +463,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 }
               }
             }
+
+            if (auto minScale = data->GetScaleMinimum()) {
+              axisHist_ptr->SetMinimum((*minScale) * axisHist_ptr->GetMinimum());
+            }
+            if (auto maxScale = data->GetScaleMaximum()) {
+              axisHist_ptr->SetMaximum((*maxScale) * axisHist_ptr->GetMaximum());
+            }
+
             if (textFontTitle) axis_ptr->SetTitleFont(*textFontTitle);
             if (textFontLabel) axis_ptr->SetLabelFont(*textFontLabel);
             if (textColorTitle) axis_ptr->SetTitleColor(*textColorTitle);
