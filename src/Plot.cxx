@@ -1140,6 +1140,8 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mRangeX.max, "rangeX_max");
   read_from_tree(dataTree, mRangeY.min, "rangeY_min");
   read_from_tree(dataTree, mRangeY.max, "rangeY_max");
+  read_from_tree(dataTree, mScaleRange.min, "scale_range_min");
+  read_from_tree(dataTree, mScaleRange.max, "scale_range_max");
   read_from_tree(dataTree, mContours, "contours");
   read_from_tree(dataTree, mNContours, "number_of_contours");
 
@@ -1188,6 +1190,8 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mRangeX.max, "rangeX_max");
   put_in_tree(dataTree, mRangeY.min, "rangeY_min");
   put_in_tree(dataTree, mRangeY.max, "rangeY_max");
+  put_in_tree(dataTree, mScaleRange.min, "scale_range_min");
+  put_in_tree(dataTree, mScaleRange.max, "scale_range_max");
   put_in_tree(dataTree, mContours, "contours");
   put_in_tree(dataTree, mNContours, "number_of_contours");
 
@@ -1216,6 +1220,8 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
   mRangeX.max = dataLayout.mRangeX.max;
   mRangeY.min = dataLayout.mRangeY.min;
   mRangeY.max = dataLayout.mRangeY.max;
+  mScaleRange.min = dataLayout.mScaleRange.min;
+  mScaleRange.max = dataLayout.mScaleRange.max;
   mMarker.color = dataLayout.mMarker.color;
   mMarker.style = dataLayout.mMarker.style;
   mMarker.scale = dataLayout.mMarker.scale;
@@ -1317,6 +1323,16 @@ auto Plot::Pad::Data::UnsetRangeY() -> decltype(*this)
 {
   mRangeY.min = {};
   mRangeY.max = {};
+  return *this;
+}
+auto Plot::Pad::Data::SetScaleMinimum(double_t scale) -> decltype(*this)
+{
+  mScaleRange.min = scale;
+  return *this;
+}
+auto Plot::Pad::Data::SetScaleMaximum(double_t scale) -> decltype(*this)
+{
+  mScaleRange.max = scale;
   return *this;
 }
 auto Plot::Pad::Data::SetColor(int16_t color) -> decltype(*this)

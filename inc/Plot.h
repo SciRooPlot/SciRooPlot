@@ -357,6 +357,8 @@ public:
   virtual Data& SetMaxRangeY(double_t max);
   virtual Data& SetMinRangeY(double_t min);
   virtual Data& UnsetRangeY();
+  virtual Data& SetScaleMinimum(double_t scale);
+  virtual Data& SetScaleMaximum(double_t scale);
   virtual Data& SetLegendLabel(const string& legendLabel);
   virtual Data& SetLegendID(uint8_t legendID);
   virtual Data& SetOptions(const string& options);
@@ -417,6 +419,8 @@ protected:
   const auto& GetMaxRangeX() const { return mRangeX.max; }
   const auto& GetMinRangeY() const { return mRangeY.min; }
   const auto& GetMaxRangeY() const { return mRangeY.max; }
+  const auto& GetScaleMinimum() const { return mScaleRange.min; }
+  const auto& GetScaleMaximum() const { return mScaleRange.max; }
   const bool& GetDefinesFrame() const { return mDefinesFrame; }
   const auto& GetContours() const { return mContours; }
   const auto& GetNContours() const { return mNContours; }
@@ -462,6 +466,7 @@ private:
   layout_t mFill;
   dataRange_t mRangeX;
   dataRange_t mRangeY;
+  dataRange_t mScaleRange;
   modify_t mModify;
 
   optional<vector<double_t>> mContours;
@@ -496,6 +501,8 @@ public:
   Ratio& SetMaxRangeY(double_t max) { return static_cast<decltype(*this)&>(Data::SetMaxRangeY(max)); }
   Ratio& SetMinRangeY(double_t min) { return static_cast<decltype(*this)&>(Data::SetMinRangeY(min)); }
   Ratio& UnsetRangeY() { return static_cast<decltype(*this)&>(Data::UnsetRangeY()); }
+  Ratio& SetScaleMinimum(double_t scale) { return static_cast<decltype(*this)&>(Data::SetScaleMinimum(scale)); }
+  Ratio& SetScaleMaximum(double_t scale) { return static_cast<decltype(*this)&>(Data::SetScaleMaximum(scale)); }
   Ratio& SetLegendLabel(const string& legendLabel) { return static_cast<decltype(*this)&>(Data::SetLegendLabel(legendLabel)); }
   Ratio& SetLegendID(uint8_t legendID) { return static_cast<decltype(*this)&>(Data::SetLegendID(legendID)); }
   Ratio& SetOptions(const string& options) { return static_cast<decltype(*this)&>(Data::SetOptions(options)); }
@@ -503,7 +510,7 @@ public:
   Ratio& UnsetOptions() { return static_cast<decltype(*this)&>(Data::UnsetOptions()); }
   Ratio& SetTextFormat(const string& textFormat) { return static_cast<decltype(*this)&>(Data::SetTextFormat(textFormat)); }
   Ratio& SetNormalize(bool useWidth = false) { return static_cast<decltype(*this)&>(Data::SetNormalize(useWidth)); }
-  Ratio& SetScale(double_t scale) { return static_cast<decltype(*this)&>(Data::SetScaleFactor(scale)); }
+  Ratio& SetScaleFactor(double_t scale) { return static_cast<decltype(*this)&>(Data::SetScaleFactor(scale)); }
   Ratio& SetColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetColor(color)); }
   Ratio& SetMarker(int16_t color, int16_t style, float_t size) { return static_cast<decltype(*this)&>(Data::SetMarker(color, style, size)); }
   Ratio& SetMarkerColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetMarkerColor(color)); }

@@ -337,6 +337,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (scaleFactor) ScaleGraph(static_cast<TGraph*>(data_ptr), *scaleFactor);
         }
 
+        if (auto maxScale = data->GetScaleMaximum()) {
+          data_ptr->SetMaximum((*maxScale) * data_ptr->GetMaximum());
+        }
+        if (auto minScale = data->GetScaleMinimum()) {
+          data_ptr->SetMinimum((*minScale) * data_ptr->GetMinimum());
+        }
+
         // first data is only used to define the axes
         if (dataIndex == 0) {
           bool isDrawn = false;
