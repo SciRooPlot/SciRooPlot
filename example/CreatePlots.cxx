@@ -111,6 +111,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[0].SetDefaultTextSize(24);
     templatePlot[0].SetDefaultMarkerSize(1.);
     templatePlot[0].SetDefaultLineWidth(3.);
+    templatePlot[0].SetDefaultDrawingOptionGraph(points);
     templatePlot[0].SetTransparent();
     templatePlot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
     templatePlot[0]['X'].SetTitleOffset(1.).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks().SetMaxDigits(3);
@@ -136,6 +137,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[0].SetDefaultLineWidth(3.);
     templatePlot[0].SetDefaultTextFont(43);
     templatePlot[0].SetDefaultTextSize(24);
+    templatePlot[0].SetDefaultDrawingOptionGraph(points);
     templatePlot[0].SetTransparent();
     templatePlot[0]['X'].SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3);
     templatePlot[0]['Y'].SetTitleOffset(1.4).SetOppositeTicks().SetMaxDigits(3);
