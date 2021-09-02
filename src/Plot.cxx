@@ -1134,8 +1134,8 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mFill.color, "fill_color");
   read_from_tree(dataTree, mFill.style, "fill_style");
   read_from_tree(dataTree, mFill.scale, "fill_opacity");
-  read_from_tree(dataTree, mModify.scale_factor, "scale_factor");
-  read_from_tree(dataTree, mModify.norm_mode, "norm_mode");
+  read_from_tree(dataTree, mModify.scaleFactor, "scale_factor");
+  read_from_tree(dataTree, mModify.normMode, "norm_mode");
   read_from_tree(dataTree, mRangeX.min, "rangeX_min");
   read_from_tree(dataTree, mRangeX.max, "rangeX_max");
   read_from_tree(dataTree, mRangeY.min, "rangeY_min");
@@ -1184,8 +1184,8 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mFill.color, "fill_color");
   put_in_tree(dataTree, mFill.style, "fill_style");
   put_in_tree(dataTree, mFill.scale, "fill_opacity");
-  put_in_tree(dataTree, mModify.scale_factor, "scale_factor");
-  put_in_tree(dataTree, mModify.norm_mode, "norm_mode");
+  put_in_tree(dataTree, mModify.scaleFactor, "scale_factor");
+  put_in_tree(dataTree, mModify.normMode, "norm_mode");
   put_in_tree(dataTree, mRangeX.min, "rangeX_min");
   put_in_tree(dataTree, mRangeX.max, "rangeX_max");
   put_in_tree(dataTree, mRangeY.min, "rangeY_min");
@@ -1273,12 +1273,12 @@ auto Plot::Pad::Data::SetTextFormat(const string& textFormat) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetScaleFactor(double_t scale) -> decltype(*this)
 {
-  mModify.scale_factor = scale;
+  mModify.scaleFactor = scale;
   return *this;
 }
 auto Plot::Pad::Data::SetNormalize(bool useWidth) -> decltype(*this)
 {
-  mModify.norm_mode = useWidth;
+  mModify.normMode = useWidth;
   return *this;
 }
 auto Plot::Pad::Data::SetRangeX(double_t min, double_t max) -> decltype(*this)

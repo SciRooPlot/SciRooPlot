@@ -413,8 +413,8 @@ protected:
   const auto& GetDrawingOptions() const { return mDrawingOptions; }
   const auto& GetDrawingOptionAlias() const { return mDrawingOptionAlias; }
   const auto& GetTextFormat() const { return mTextFormat; }
-  const auto& GetScaleFactor() const { return mModify.scale_factor; }
-  const auto& GetNormMode() const { return mModify.norm_mode; }
+  const auto& GetScaleFactor() const { return mModify.scaleFactor; }
+  const auto& GetNormMode() const { return mModify.normMode; }
   const auto& GetMinRangeX() const { return mRangeX.min; }
   const auto& GetMaxRangeX() const { return mRangeX.max; }
   const auto& GetMinRangeY() const { return mRangeY.min; }
@@ -445,8 +445,8 @@ private:
   optional<string> mTextFormat;
 
   struct modify_t {
-    optional<uint8_t> norm_mode; // 0: sum over bin contents, 1: with bin width
-    optional<double_t> scale_factor;
+    optional<uint8_t> normMode; // 0: sum over bin contents, 1: with bin width
+    optional<double_t> scaleFactor;
   };
   struct legend_t {
     optional<string> label;
