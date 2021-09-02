@@ -82,7 +82,7 @@ PlotManager::~PlotManager()
 void PlotManager::SavePlotsToFile() const
 {
   if (!mPlotLedger.empty()) {
-    TFile outputFile(mOutputFileName.data(), "RECREATE");
+    TFile outputFile((mOutputDirectory + "/" + mOutputFileName).data(), "RECREATE");
     if (outputFile.IsZombie()) {
       return;
     }

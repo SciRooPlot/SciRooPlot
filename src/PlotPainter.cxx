@@ -73,7 +73,6 @@ namespace PlottingFramework
 //**************************************************************************************************
 unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>>& dataBuffer)
 {
-  gStyle->SetOptStat(0); // this needs to be done before creating the canvas! at later stage it would add to list of primitives in pad...
   bool fail = false;
 
   double_t canvasWidth = plot.GetWidth().value_or(gStyle->GetCanvasDefW());
@@ -362,6 +361,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (!isDrawn) axisHist_ptr->Draw("AXIS");
           axisHist_ptr->Draw("SAME AXIG");
           axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
+          axisHist_ptr->SetStats(false);
 
           // apply axis settings
           for (auto axisLabel : {'X', 'Y', 'Z'}) {
