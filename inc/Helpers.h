@@ -24,7 +24,7 @@
 namespace PlottingFramework
 {
 string expand_path(const string& path);
-vector<string> split_string(const string& argString, char delimiter);
+vector<string> split_string(const string& argString, char delimiter, bool onlyFirst = false);
 bool file_exists(const std::string& name);
 
 inline bool str_contains(const std::string& str, const std::string& substr, bool reverseSearch = false)

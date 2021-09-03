@@ -14,58 +14,45 @@ then
   function plot() { [[ "${1}" == "cd" ]] && { cd ${__PLOTTING_BUILD_DIR}; return 0; } || { { [[ -d ${__MY_PLOTS_BUILD_DIR} ]] && { (cd ${__MY_PLOTS_BUILD_DIR}; make 1>/dev/null || exit 1; [[ ! -z `find './' -name 'create' -mmin +1` ]] || ./create;) || return 1; } || :; }; "${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0; } }
 fi
 
-if [ ! -d "${__PLOTTING_CONFIG_DIR}" ]; then
-  #echo ""; echo ">> Auto-complete script could not find plotting config folder: ${__PLOTTING_CONFIG_DIR}."; echo "";
-  return
-fi
-
 _plot_completions_zsh() {
-
-  local plot_definitions="${__PLOTTING_CONFIG_DIR}/plotDefinitions.XML"
-  local input_identifiers="${__PLOTTING_CONFIG_DIR}/inputFiles.XML"
 
   local modes=('interactive' 'pdf' 'eps' 'svg' 'png' 'gif' 'file' 'find' 'macro')
   local groups
+  local groupsAndCategories
   local names
-  local rootfiles
-  local inputIdentifiers
 
-  while read -r line ; do
-    line="${line#<GROUP::}"
-    line="${line%>}"
-    [[ "${line}" != "TEMPLATES" ]] && groups+=("${line}")
-  done < <(grep -o '<GROUP::.*' $plot_definitions)
+  ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh
+  local AUTOCOMPFILE="${__PLOTTING_FRAMEWORK_DIR}/plots.csv"
+  if [[ ! -f "$AUTOCOMPFILE" ]]; then
+    return
+  fi
 
-  while read -r line ; do
-    line="${line#<}"
-    line="${line%>}"
-    inputIdentifiers+=("${line}")
-  done < <(grep -o '<.*>' $input_identifiers | grep -vE '.*xml.*|.*FILE.*|.*</.*')
+  # first find groups and groups including categories
+  while IFS="," read -r plotName figureGroup figureCategory
+  do
+    groups+=("${figureGroup}")
+    [ -n "$figureCategory" ] && groupsAndCategories+=("${figureGroup}/${figureCategory}")
+  done < $AUTOCOMPFILE
 
   updatePlotNames() {
     local groupAndCat=$1
-    IFS=":" read -r group category <<< "$groupAndCat"
+    IFS="/" read -r group category <<< "$groupAndCat"
     names=()
-    if [[ ! -z "${category}" ]]
-    then
-      while read -r line ; do
-        line="${line#<name>}"
-        line="${line%</name>}"
-        names+=("${line}")
-      done < <(grep -B 1 -A 1 "<figure_group>${group}</figure_group>" $plot_definitions | grep -B 2 "<figure_category>${category}</figure_category>" | grep -vE '.*figure_group.*|^--$' | grep -vE '.*figure_category.*|^--$')
-    else
-      while read -r line ; do
-        line="${line#<name>}"
-        line="${line%</name>}"
-        names+=("${line}")
-      done < <(grep -B 1 "<figure_group>${group}</figure_group>" $plot_definitions | grep -vE '.*figure_group.*|^--$')
-    fi
+    
+    while IFS="," read -r plotName figureGroup figureCategory
+    do
+      if [[ "${group}" == "${figureGroup}" ]]
+      then
+        # TODO: maybe list also matches in sub-categories? -> may require change in framework as well
+        # "${figureGroup}" != "${category}/"*
+        if [[ -n "${category}" && "${category}" != "${figureCategory}" ]]
+        then
+          continue
+        fi
+        names+=("${plotName}")
+      fi
+    done < $AUTOCOMPFILE
   }
-
-  while read -r line ; do
-    rootfiles+=("${line}")
-  done < <(ls -d *.root 2>/dev/null | grep '.*.root')
-
 
   _arguments \
     '1: :->group'\
@@ -75,7 +62,12 @@ _plot_completions_zsh() {
 
   case $state in
     group)
-      _arguments '1:profiles:(${groups})'
+      if [[ "${words[2]}" == *"/"* ]]
+      then
+        _arguments '1:profiles:(${groupsAndCategories})'
+      else
+        _arguments '1:profiles:(${groups})'
+      fi
     ;;
     name)
       if [[ "${words[2]}" == "cd" ]]
@@ -95,55 +87,52 @@ _plot_completions_zsh() {
 }
 
 _plot_completions_bash() {
-  local plot_definitions="${__PLOTTING_CONFIG_DIR}/plotDefinitions.XML"
-  local input_identifiers="${__PLOTTING_CONFIG_DIR}/inputFiles.XML"
 
   local modes=('interactive pdf eps svg png gif file find macro')
   local groups
+  local groupsAndCategories
   local names
-  local rootfiles
-  local inputIdentifiers
 
-  while read -r line ; do
-    line="${line#<GROUP::}"
-    line="${line%>}"
-    [[ "${line}" != "TEMPLATES" ]] && groups+=" ${line}"
-  done < <(grep -o '<GROUP::.*' $plot_definitions)
+  ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh
+  local AUTOCOMPFILE="${__PLOTTING_FRAMEWORK_DIR}/plots.csv"
+  if [[ ! -f "$AUTOCOMPFILE" ]]; then
+    return
+  fi
 
-  while read -r line ; do
-    line="${line#<}"
-    line="${line%>}"
-    inputIdentifiers+=" ${line}"
-  done < <(grep -o '<.*>' $input_identifiers | grep -vE '.*xml.*|.*FILE.*|.*</.*')
+  # first find groups and groups including categories
+  while IFS="," read -r plotName figureGroup figureCategory
+  do
+    groups+=" ${figureGroup}"
+    [ -n "$figureCategory" ] && groupsAndCategories+=" ${figureGroup}/${figureCategory}"
+  done < $AUTOCOMPFILE
 
   updatePlotNames() {
     local groupAndCat=$1
-    IFS=":" read -r group category <<< "${groupAndCat}"
+    IFS="/" read -r group category <<< "$groupAndCat"
     names=()
-    if [[ ! -z "${category}" ]]
-    then
-      while read -r line ; do
-        line="${line#<name>}"
-        line="${line%</name>}"
-        names+=" ${line}"
-      done < <(grep -B 1 -A 1 "<figure_group>${group}</figure_group>" $plot_definitions | grep -B 2 "<figure_category>${category}</figure_category>" | grep -vE '.*figure_group.*|^--$' | grep -vE '.*figure_category.*|^--$')
-    else
-      while read -r line ; do
-        line="${line#<name>}"
-        line="${line%</name>}"
-        names+=" ${line}"
-      done < <(grep -B 1 "<figure_group>${group}</figure_group>" $plot_definitions | grep -vE '.*figure_group.*|^--$')
-    fi
+    
+    while IFS="," read -r plotName figureGroup figureCategory
+    do
+      if [[ "${group}" == "${figureGroup}" ]]
+      then
+        # TODO: maybe list also sub-categories?
+        if [[ -n "${category}" && "${category}" != "${figureCategory}" ]]
+        then
+          continue
+        fi
+        names+=" ${plotName}"
+      fi
+    done < $AUTOCOMPFILE
   }
-
-
-  while read -r line ; do
-    rootfiles+=" ${line}"
-  done < <(ls -d *.root 2>/dev/null | grep '.*.root')
 
   case $COMP_CWORD in
   1)
-    COMPREPLY=( $(compgen -W "${groups}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    if [[ "${COMP_WORDS[COMP_CWORD]}" == *"/"* ]]
+    then
+      COMPREPLY=( $(compgen -W "${groupsAndCategories}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    else
+      COMPREPLY=( $(compgen -W "${groups}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    fi
   ;;
   2)
     if [[ "${COMP_WORDS[COMP_CWORD-1]}" == "cd" ]]
@@ -155,26 +144,7 @@ _plot_completions_bash() {
     fi
   ;;
   3)
-    if [[ "${COMP_WORDS[COMP_CWORD-1]}" == ":" ]]
-    then
-      COMPREPLY=( )
-    else
-      COMPREPLY=( $( compgen -W "${modes}" -- "${COMP_WORDS[COMP_CWORD]}" ) )
-    fi
-  ;;
-  4)
-    if [[ "${COMP_WORDS[COMP_CWORD-2]}" == ":" ]]
-    then
-      leGroup="${COMP_WORDS[COMP_CWORD-3]}${COMP_WORDS[COMP_CWORD-2]}${COMP_WORDS[COMP_CWORD-1]}"
-      updatePlotNames "${leGroup}"
-      COMPREPLY=( $(compgen -W "${names}" -- "${COMP_WORDS[COMP_CWORD]}") )
-    fi
-  ;;
-  5)
-    if [[ "${COMP_WORDS[COMP_CWORD-3]}" == ":" ]]
-    then
-      COMPREPLY=( $( compgen -W "${modes}" -- "${COMP_WORDS[COMP_CWORD]}" ) )
-    fi
+    COMPREPLY=( $( compgen -W "${modes}" -- "${COMP_WORDS[COMP_CWORD]}" ) )
   ;;
   esac
 

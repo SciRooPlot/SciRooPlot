@@ -349,7 +349,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   gROOT->SetBatch(!isInteractiveMode);
   shared_ptr<TCanvas> canvas{painter.GeneratePlot(fullPlot, mDataBuffer)};
   if (!canvas) return false;
-  LOG("Created " GREEN_ "{}" _END " from group " YELLOW_ "{}" _END, fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? ":" + *fullPlot.GetFigureCategory() : ""));
+  LOG("Created " GREEN_ "{}" _END " from group " YELLOW_ "{}" _END, fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? "/" + *fullPlot.GetFigureCategory() : ""));
 
   // if interactive mode is specified, open window instead of saving the plot
   if (isInteractiveMode) {
@@ -831,7 +831,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
     // by default select all groups and all categories
     string group = ".*";
     string category = ".*";
-    vector<string> groupCat = split_string(figureGroupWithCategoryUser, ':');
+    vector<string> groupCat = split_string(figureGroupWithCategoryUser, '/', true);
     if (groupCat.size() > 0 && !groupCat[0].empty()) group = groupCat[0];
     if (groupCat.size() > 1 && !groupCat[1].empty()) category = groupCat[1];
     if (groupCat.size() > 2) {

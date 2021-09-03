@@ -29,13 +29,14 @@ string expand_path(const string& path)
   return expandedPath;
 }
 
-vector<string> split_string(const string& argString, char delimiter)
+vector<string> split_string(const string& argString, char delimiter, bool onlyFirst)
 {
   vector<string> arguments;
   string curArg;
   std::istringstream argStream(argString);
   while (std::getline(argStream, curArg, delimiter)) {
     arguments.push_back(curArg);
+    if(onlyFirst) break;
   }
   return arguments;
 }
