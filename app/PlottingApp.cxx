@@ -41,78 +41,45 @@ int main(int argc, char* argv[])
   string inputFiles = configFolder + "inputFiles.XML";
   string plotDefinitions = configFolder + "plotDefinitions.XML";
 
+  // check if specified input files exist
+  if (!file_exists(expand_path(inputFiles))) {
+    ERROR(R"(File "{}" does not exists! Exiting.)", inputFiles);
+    return 1;
+  }
+  if (!file_exists(expand_path(plotDefinitions))) {
+    ERROR(R"(File "{}" does not exists! Exiting.)", plotDefinitions);
+    return 1;
+  }
+
   string mode;
-  string figureGroups;
+  string figureGroupAndCategory;
   string plotNames;
 
   // handle user inputs
   try {
-    po::options_description options("Configuration options");
-    options.add_options()("help", "Show this help message.")(
-      "inputFiles", po::value<string>(),
-      "Location of config file containing the input file paths.")("plotDefinitions", po::value<string>(),
-                                                                  "Location of config file containing the plot definitions.")("outputFolder", po::value<string>(), "Folder where output files should be saved.");
-
     po::options_description arguments("Positional arguments");
-    arguments.add_options()("mode", po::value<string>(), "mode")(
-      "figureGroups", po::value<string>(), "figure group")("plotNames", po::value<string>(), "plot name")("arguments", po::value<vector<string>>(), "arguments");
+    arguments.add_options()("figureGroupAndCategory", po::value<string>(), "figure group")("plotNames", po::value<string>(), "plot name")("mode", po::value<string>(), "mode");
 
-    po::positional_options_description
-      pos; // this needs to be synchronous with the arguments options_description
-    pos.add("figureGroups", 1);
+    // this needs to be synchronous with the arguments options_description
+    po::positional_options_description pos;
+    pos.add("figureGroupAndCategory", 1);
     pos.add("plotNames", 1);
     pos.add("mode", 1);
-    pos.add("arguments", -1);
 
     po::variables_map vm;
     po::options_description cmdline_options;
-    cmdline_options.add(options).add(arguments);
+    cmdline_options.add(arguments);
     po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(pos).run(), vm);
     po::notify(vm);
 
-    if (vm.count("help")) {
-      PRINT("");
-      PRINT("Usage:");
-      PRINT(
-        "  ./plot "
-        "'<figureGroupRegex[/figureCategoryRegex]>'  '<plotNameRegex>' <find|interactive|pdf|eps|png|macro|file> \n");
-      PRINT("You can use any standard regular expressions like 'begin.*end', 'begin[1,6,7]end', '(apple|banana)', etc.");
-      PRINT("Regular expressions, need to be embraced in single quotes.");
-      PRINT("To enable auto-completion on and global availability,");
-      PRINT("add 'source /plotting/framework/location/.plotrc' to your .bashrc or .bash_aliases.");
-      PRINT(
-        "Locations of the configuration file containing the input file paths and the output "
-        "directory");
-      PRINT(
-        "can be steered via the env variables __PLOTTING_CONFIG_DIR and __PLOTTING_OUTPUT_DIR.");
-      PRINT("Alternatively the following command line options can be used:");
-      PRINT("");
-      cout << options << endl;
-      return 0;
-    }
-    if (vm.count("inputFiles")) {
-      inputFiles = vm["inputFiles"].as<string>();
-    }
-    if (vm.count("plotDefinitions")) {
-      plotDefinitions = vm["plotDefinitions"].as<string>();
-    }
-    if (vm.count("outputFolder")) {
-      outputFolder = vm["outputFolder"].as<string>();
-    }
-    if (vm.count("mode")) {
-      mode = vm["mode"].as<string>();
-    }
-    if (vm.count("figureGroups")) {
-      figureGroups = vm["figureGroups"].as<string>();
+    if (vm.count("figureGroupAndCategory")) {
+      figureGroupAndCategory = vm["figureGroupAndCategory"].as<string>();
     }
     if (vm.count("plotNames")) {
       plotNames = vm["plotNames"].as<string>();
     }
-    if (vm.count("arguments")) {
-      PRINT("Found additional arguments:");
-      for (auto& argument : vm["arguments"].as<vector<string>>()) {
-        PRINT("   {}", argument);
-      }
+    if (vm.count("mode")) {
+      mode = vm["mode"].as<string>();
     }
   } catch (std::exception& e) {
     ERROR(R"(Exception "{}"! Exiting.)", e.what());
@@ -123,16 +90,6 @@ int main(int argc, char* argv[])
   }
 
   if (mode.empty()) mode = "interactive";
-
-  // check if specified input files exist
-  if (!file_exists(expand_path(inputFiles))) {
-    ERROR(R"(File "{}" does not exists! Exiting.)", inputFiles);
-    return 1;
-  }
-  if (!file_exists(expand_path(plotDefinitions))) {
-    ERROR(R"(File "{}" does not exists! Exiting.)", plotDefinitions);
-    return 1;
-  }
 
   if (plotNames.empty()) {
     ERROR("No plots were specified.");
@@ -146,7 +103,7 @@ int main(int argc, char* argv[])
   string group = ".*";
   string category = ".*";
 
-  vector<string> groupCat = split_string(figureGroups, '/', true);
+  vector<string> groupCat = split_string(figureGroupAndCategory, '/', true);
   if (groupCat.size() > 0 && !groupCat[0].empty()) {
     group = groupCat[0];
   }
