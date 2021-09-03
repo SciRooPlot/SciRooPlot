@@ -513,16 +513,20 @@ plotManager.DumpPlots("/path/to/my/plotDefinitions.XML");
 // this file can then be read in by another one of your programs via
 plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML");
 // this extracts all plots defined in the file
-// in case you want to load only certain figure groups:
-plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", {"figureGroup1", "figures", "figureGroup:myCategory"});
-// ... or plots:
-plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", {}, {"invMass", "ptSpec"});
-// the figure group and plot strings can be regular expressions
-// this means you can put "plot.*" and this will add "plot1", "plot123", "plot_adsf", etc.
 
-// instead of the default option "load", which adds these plots to the manager, the mode can also be
-// "find" in order to check only if the specified plots exist (it prints out this info)
-plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", {}, {}, "find");
+// in case you want to load only certain plots:
+plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", "load", "(invMass|ptSpec)");
+plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", "load", "projBin_[1,5,7]");
+plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", "load", "projBin_[1-9]+");
+plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", "load", "peak_.*");
+
+// ... or from specific figureGroups:
+plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", "load", ".*" "figureGroup[1,2]", "myCategory");
+
+// the plot name, figure group or category can be regular expressions
+
+// as an alternative to the option "load" you can also use the modi find|interactive|pdf|eps|png|macro|file
+// just give it a try and see what happens...
 
 // the main reasoning behind the "dump-to-file" feature is that you can then
 // make use of the builtin command-line plotting tool, which can conveniently

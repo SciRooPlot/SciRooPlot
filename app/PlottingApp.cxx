@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
       PRINT(
         "  ./plot "
         "'<figureGroupRegex[/figureCategoryRegex]>'  '<plotNameRegex>' <find|interactive|pdf|eps|png|macro|file> \n");
-      PRINT("You can use any standard regular expressions like 'begin.*end', 'begin[a,b,c]end', '(apple|banana)', etc.");
+      PRINT("You can use any standard regular expressions like 'begin.*end', 'begin[1,6,7]end', '(apple|banana)', etc.");
       PRINT("Regular expressions, need to be embraced in single quotes.");
       PRINT("To enable auto-completion on and global availability,");
       PRINT("add 'source /plotting/framework/location/.plotrc' to your .bashrc or .bash_aliases.");
@@ -142,12 +142,21 @@ int main(int argc, char* argv[])
   // create plotting environment
   PlotManager plotManager;
   plotManager.SetOutputDirectory(outputFolder);
-  if (mode == "find") {
-    plotManager.ExtractPlotsFromFile(plotDefinitions, figureGroups, plotNames, mode);
-    return 0;
-  } else {
-    plotManager.LoadInputDataFiles(inputFiles);
-    plotManager.ExtractPlotsFromFile(plotDefinitions, figureGroups, plotNames, mode);
-    return 0;
+
+  string group = ".*";
+  string category = ".*";
+
+  vector<string> groupCat = split_string(figureGroups, '/', true);
+  if (groupCat.size() > 0 && !groupCat[0].empty()) {
+    group = groupCat[0];
   }
+  if (groupCat.size() > 1 && !groupCat[1].empty()) {
+    category = groupCat[1];
+  }
+
+  if (mode != "find") {
+    plotManager.LoadInputDataFiles(inputFiles);
+  }
+  plotManager.ExtractPlotsFromFile(plotDefinitions, mode, plotNames, group, category);
+  return 0;
 }

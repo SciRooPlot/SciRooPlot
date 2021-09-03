@@ -820,23 +820,19 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs)
  */
 //**************************************************************************************************
 void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
-                                       const string& figureGroupWithCategoryUser,
-                                       const string& plotNameUser, const string& mode)
+                                       const string& mode,
+                                       const string& plotName,
+                                       const string& group,
+                                       const string& category)
 {
   uint32_t nFoundPlots{};
   bool isSearchRequest = (mode == "find") ? true : false;
 
-  // by default select all groups and all categories
-  string group = ".*";
-  string category = ".*";
-  vector<string> groupCat = split_string(figureGroupWithCategoryUser, '/', true);
-  if (groupCat.size() > 0 && !groupCat[0].empty()) group = groupCat[0];
-  if (groupCat.size() > 1 && !groupCat[1].empty()) category = groupCat[1];
   //category += "(/.*)?"; // search also in subcategories FIXME: violates uniqueness of query...
 
   std::regex groupRegex{group};
   std::regex categoryRegex{category};
-  std::regex plotNameRegex{plotNameUser};
+  std::regex plotNameRegex{plotName};
 
   ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
   for (auto& plotGroupTree : inputTree) {
@@ -849,17 +845,17 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
     }
 
     for (auto& plotTree : plotGroupTree.second) {
-      const string& plotName = plotTree.second.get<string>("name");
-      const string& figureGroup = plotTree.second.get<string>("figure_group");
-      optional<string> figureCategoryOpt;
-      read_from_tree(plotTree.second, figureCategoryOpt, "figure_category");
-      string figureCategory = (figureCategoryOpt) ? *figureCategoryOpt : "";
-
       if (isTemplate) {
         Plot plot(plotTree.second);
         AddPlotTemplate(plot);
         continue;
       }
+
+      const string& plotName = plotTree.second.get<string>("name");
+      const string& figureGroup = plotTree.second.get<string>("figure_group");
+      optional<string> figureCategoryOpt;
+      read_from_tree(plotTree.second, figureCategoryOpt, "figure_category");
+      string figureCategory = (figureCategoryOpt) ? *figureCategoryOpt : "";
 
       if (!std::regex_match(figureCategory, categoryRegex) || !std::regex_match(plotName, plotNameRegex)) {
         continue;
