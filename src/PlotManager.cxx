@@ -820,39 +820,32 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs)
  */
 //**************************************************************************************************
 void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
-                                       const vector<string>& figureGroupsWithCategoryUser,
-                                       const vector<string>& plotNamesUser, const string& mode)
+                                       const string& figureGroupWithCategoryUser,
+                                       const string& plotNameUser, const string& mode)
 {
   uint32_t nFoundPlots{};
   bool isSearchRequest = (mode == "find") ? true : false;
-  vector<std::pair<std::regex, std::regex>> groupCategoryRegex;
-  groupCategoryRegex.reserve(figureGroupsWithCategoryUser.size());
-  for (auto& figureGroupWithCategoryUser : figureGroupsWithCategoryUser) {
-    // by default select all groups and all categories
-    string group = ".*";
-    string category = ".*";
-    vector<string> groupCat = split_string(figureGroupWithCategoryUser, '/', true);
-    if (groupCat.size() > 0 && !groupCat[0].empty()) group = groupCat[0];
-    if (groupCat.size() > 1 && !groupCat[1].empty()) category = groupCat[1];
-    //category += "(/.*)?"; // search also in subcategories FIXME: violates uniqueness of query...
-    groupCategoryRegex.push_back(std::make_pair(std::regex(group), std::regex(category)));
-  }
 
-  std::vector<std::regex> plotNamesRegex;
-  plotNamesRegex.reserve(plotNamesUser.size());
-  std::transform(plotNamesUser.begin(), plotNamesUser.end(), std::back_inserter(plotNamesRegex),
-                 [](auto& plotNameUser) { return std::regex(plotNameUser); });
+  // by default select all groups and all categories
+  string group = ".*";
+  string category = ".*";
+  vector<string> groupCat = split_string(figureGroupWithCategoryUser, '/', true);
+  if (groupCat.size() > 0 && !groupCat[0].empty()) group = groupCat[0];
+  if (groupCat.size() > 1 && !groupCat[1].empty()) category = groupCat[1];
+  //category += "(/.*)?"; // search also in subcategories FIXME: violates uniqueness of query...
+
+  std::regex groupRegex{group};
+  std::regex categoryRegex{category};
+  std::regex plotNameRegex{plotNameUser};
 
   ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
   for (auto& plotGroupTree : inputTree) {
     // first filter by group
     string groupIdentifier = plotGroupTree.first.substr(string("GROUP::").size());
     bool isTemplate = (groupIdentifier == "TEMPLATES");
-    if (std::find_if(groupCategoryRegex.begin(), groupCategoryRegex.end(),
-                     [groupIdentifier](std::pair<std::regex, std::regex>& curGroupCatRegex) {
-                       return std::regex_match(groupIdentifier, curGroupCatRegex.first);
-                     }) == groupCategoryRegex.end()) {
-      if (!isTemplate) continue;
+
+    if (!isTemplate && !std::regex_match(groupIdentifier, groupRegex)) {
+      continue;
     }
 
     for (auto& plotTree : plotGroupTree.second) {
@@ -862,24 +855,13 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
       read_from_tree(plotTree.second, figureCategoryOpt, "figure_category");
       string figureCategory = (figureCategoryOpt) ? *figureCategoryOpt : "";
 
-      if (std::find_if(
-            groupCategoryRegex.begin(), groupCategoryRegex.end(),
-            [figureGroup, figureCategory](std::pair<std::regex, std::regex>& curGroupCatRegex) {
-              return std::regex_match(figureGroup, curGroupCatRegex.first) && std::regex_match(figureCategory, curGroupCatRegex.second);
-            }) == groupCategoryRegex.end()) {
-        if (!isTemplate) continue;
-      }
-
-      if (std::find_if(plotNamesRegex.begin(), plotNamesRegex.end(),
-                       [plotName](std::regex& curPlotNameRegex) {
-                         return std::regex_match(plotName, curPlotNameRegex);
-                       }) == plotNamesRegex.end()) {
-        if (!isTemplate) continue;
-      }
-
       if (isTemplate) {
         Plot plot(plotTree.second);
         AddPlotTemplate(plot);
+        continue;
+      }
+
+      if (!std::regex_match(figureCategory, categoryRegex) || !std::regex_match(plotName, plotNameRegex)) {
         continue;
       }
 

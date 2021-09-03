@@ -76,14 +76,8 @@ int main(int argc, char* argv[])
       PRINT(
         "  ./plot "
         "'<figureGroupRegex[/figureCategoryRegex]>'  '<plotNameRegex>' <find|interactive|pdf|eps|png|macro|file> \n");
-      PRINT("You can use any standard regular expressions like 'begin.*end' or 'begin[a,b,c]end'.");
-      PRINT(
-        "Multiple figureGroups and plotNames can be specified separated by blank space: 'plotA "
-        "plotB'.");
-      PRINT(
-        "When using regular expressions or multiple entries, it is required to embrace this in "
-        "quotes.");
-      PRINT("The use of blank spaces in the regular expressions is not supported.");
+      PRINT("You can use any standard regular expressions like 'begin.*end', 'begin[a,b,c]end', '(apple|banana)', etc.");
+      PRINT("Regular expressions, need to be embraced in single quotes.");
       PRINT("To enable auto-completion on and global availability,");
       PRINT("add 'source /plotting/framework/location/.plotrc' to your .bashrc or .bash_aliases.");
       PRINT(
@@ -148,15 +142,12 @@ int main(int argc, char* argv[])
   // create plotting environment
   PlotManager plotManager;
   plotManager.SetOutputDirectory(outputFolder);
-
-  vector<string> figureGroupsVector = split_string(figureGroups, ' ');
-  vector<string> plotNamesVector = split_string(plotNames, ' ');
   if (mode == "find") {
-    plotManager.ExtractPlotsFromFile(plotDefinitions, figureGroupsVector, plotNamesVector, mode);
+    plotManager.ExtractPlotsFromFile(plotDefinitions, figureGroups, plotNames, mode);
     return 0;
   } else {
     plotManager.LoadInputDataFiles(inputFiles);
-    plotManager.ExtractPlotsFromFile(plotDefinitions, figureGroupsVector, plotNamesVector, mode);
+    plotManager.ExtractPlotsFromFile(plotDefinitions, figureGroups, plotNames, mode);
     return 0;
   }
 }

@@ -69,8 +69,8 @@ public:
   // allowed); the mode variable can be "load" to add these plots to the manager, or "find" to check
   // only if the specified plots exist (prints out this info)
   void ExtractPlotsFromFile(const string& plotFileName,
-                            const vector<string>& figureGroupsWithCategoryUser = {},
-                            const vector<string>& plotNamesUser = {}, const string& mode = "load");
+                            const string& figureGroupWithCategoryUser = "",
+                            const string& plotNameUser = "", const string& mode = "load");
 
   // after desired plots were added to the manager they can be created
   // the program then will try to extract the required input data (TH1,TGraph,..) from the specified
