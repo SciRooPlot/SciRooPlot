@@ -75,7 +75,7 @@ int main(int argc, char* argv[])
       PRINT("Usage:");
       PRINT(
         "  ./plot "
-        "'<figureGroupRegex[:figureCategoryRegex]>'  '<plotNameRegex>' <find|interactive|pdf|eps|png|macro|file> \n");
+        "'<figureGroupRegex[/figureCategoryRegex]>'  '<plotNameRegex>' <find|interactive|pdf|eps|png|macro|file> \n");
       PRINT("You can use any standard regular expressions like 'begin.*end' or 'begin[a,b,c]end'.");
       PRINT(
         "Multiple figureGroups and plotNames can be specified separated by blank space: 'plotA "
@@ -83,9 +83,7 @@ int main(int argc, char* argv[])
       PRINT(
         "When using regular expressions or multiple entries, it is required to embrace this in "
         "quotes.");
-      PRINT("The use of blank spaces and colons in the regular expressions is not supported.");
-      PRINT("You can also have a quick look into input identifiers or .root files:");
-      PRINT("  ./plot browse '<inputIdentifier|rootfile[:fileSubPath]>'  '<dataName>'\n");
+      PRINT("The use of blank spaces in the regular expressions is not supported.");
       PRINT("To enable auto-completion on and global availability,");
       PRINT("add 'source /plotting/framework/location/.plotrc' to your .bashrc or .bash_aliases.");
       PRINT(
@@ -156,21 +154,6 @@ int main(int argc, char* argv[])
   if (mode == "find") {
     plotManager.ExtractPlotsFromFile(plotDefinitions, figureGroupsVector, plotNamesVector, mode);
     return 0;
-  } else if (mode == "browse") { // directly plot histograms from input identifier or file
-    string inputIdentifier = figureGroupsVector[0];
-    if (!str_contains(inputIdentifier, ".root", true)) {
-      plotManager.LoadInputDataFiles(inputFiles);
-    } else {
-      plotManager.AddInputDataFiles("browse", {inputIdentifier});
-      inputIdentifier = "browse";
-    }
-    Plot plot("plot", inputIdentifier);
-    for (auto& dataName : plotNamesVector) {
-      plot[1].AddData(dataName, inputIdentifier, "<name>");
-    }
-    plot[1].AddLegend();
-    plotManager.AddPlot(plot);
-    plotManager.CreatePlots(inputIdentifier, "", {}, "interactive");
   } else {
     plotManager.LoadInputDataFiles(inputFiles);
     plotManager.ExtractPlotsFromFile(plotDefinitions, figureGroupsVector, plotNamesVector, mode);

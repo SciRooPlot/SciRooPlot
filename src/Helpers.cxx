@@ -32,12 +32,20 @@ string expand_path(const string& path)
 vector<string> split_string(const string& argString, char delimiter, bool onlyFirst)
 {
   vector<string> arguments;
-  string curArg;
-  std::istringstream argStream(argString);
-  while (std::getline(argStream, curArg, delimiter)) {
-    arguments.push_back(curArg);
-    if(onlyFirst) break;
+  if (onlyFirst) {
+    auto delimiterPos = argString.find(delimiter);
+    arguments.push_back(argString.substr(0, delimiterPos));
+    if (delimiterPos != string::npos) {
+      arguments.push_back(argString.substr(delimiterPos + 1));
+    }
+  } else {
+    string curArg;
+    std::istringstream argStream(argString);
+    while (std::getline(argStream, curArg, delimiter)) {
+      arguments.push_back(curArg);
+    }
   }
+
   return arguments;
 }
 

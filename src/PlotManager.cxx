@@ -514,7 +514,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   // were definitions for all requested plots available?
   if (!plotNames.empty()) {
     for (auto& plotName : plotNames) {
-      WARNING("Could not find plot " GREEN_ "{}" _END " in group " YELLOW_ "{}" _END, plotName, figureGroup + ((!figureCategory.empty()) ? ":" + figureCategory : ""));
+      WARNING("Could not find plot " GREEN_ "{}" _END " in group " YELLOW_ "{}" _END, plotName, figureGroup + ((!figureCategory.empty()) ? "/" + figureCategory : ""));
     }
   }
 
@@ -522,7 +522,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   // generate plots
   for (auto plot : selectedPlots) {
     if (!GeneratePlot(*plot, outputMode))
-      ERROR("Plot " GREEN_ "{}" _END " from group " YELLOW_ "{}" _END " could not be created.", plot->GetName(), plot->GetFigureGroup());
+      ERROR("Plot " GREEN_ "{}" _END " from group " YELLOW_ "{}" _END " could not be created.", plot->GetName(), plot->GetFigureGroup() + ((plot->GetFigureCategory()) ? "/" + *plot->GetFigureCategory() : ""));
   }
 }
 
@@ -834,10 +834,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
     vector<string> groupCat = split_string(figureGroupWithCategoryUser, '/', true);
     if (groupCat.size() > 0 && !groupCat[0].empty()) group = groupCat[0];
     if (groupCat.size() > 1 && !groupCat[1].empty()) category = groupCat[1];
-    if (groupCat.size() > 2) {
-      ERROR(R"(Do not put ":" in your regular expressions! Colons should be used solely to separate figureGroup and figureCategory)");
-      return;
-    }
+    //category += "(/.*)?"; // search also in subcategories FIXME: violates uniqueness of query...
     groupCategoryRegex.push_back(std::make_pair(std::regex(group), std::regex(category)));
   }
 
