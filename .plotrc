@@ -43,9 +43,7 @@ _plot_completions_zsh() {
     do
       if [[ "${group}" == "${figureGroup}" ]]
       then
-        # TODO: maybe list also matches in sub-categories? -> may require change in framework as well
-        # "${figureGroup}" != "${category}/"*
-        if [[ -n "${category}" && "${category}" != "${figureCategory}" ]]
+        if [[ -n "${category}" && ! ( "${category}" == "${figureCategory}" || "${figureCategory}" == "${category}/"* ) ]]
         then
           continue
         fi
@@ -115,8 +113,7 @@ _plot_completions_bash() {
     do
       if [[ "${group}" == "${figureGroup}" ]]
       then
-        # TODO: maybe list also sub-categories?
-        if [[ -n "${category}" && "${category}" != "${figureCategory}" ]]
+        if [[ -n "${category}" && ! ( "${category}" == "${figureCategory}" || "${figureCategory}" == "${category}/"* ) ]]
         then
           continue
         fi

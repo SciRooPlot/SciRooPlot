@@ -828,8 +828,6 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
   uint32_t nFoundPlots{};
   bool isSearchRequest = (mode == "find") ? true : false;
 
-  //category += "(/.*)?"; // search also in subcategories FIXME: violates uniqueness of query...
-
   std::regex groupRegex{group};
   std::regex categoryRegex{category};
   std::regex plotNameRegex{plotName};

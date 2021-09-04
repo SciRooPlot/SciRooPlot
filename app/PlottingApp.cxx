@@ -109,6 +109,7 @@ int main(int argc, char* argv[])
   }
   if (groupCat.size() > 1 && !groupCat[1].empty()) {
     category = groupCat[1];
+    category += "(/.*)?"; // search also in subcategories
   }
 
   if (mode != "find") {
