@@ -449,7 +449,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
 
   string fileName = (mUseUniquePlotNames) ? plot.GetUniqueName() : plot.GetName();
   std::replace(fileName.begin(), fileName.end(), '/', '_');
-  std::replace(fileName.begin(), fileName.end(), ':', '_');
 
   // create output folders and files
   string folderName = mOutputDirectory + "/" + plot.GetFigureGroup();
@@ -826,7 +825,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
                                        const string& category)
 {
   uint32_t nFoundPlots{};
-  bool isSearchRequest = (mode == "find") ? true : false;
+  bool isSearchRequest = (mode == "find");
 
   std::regex groupRegex{group};
   std::regex categoryRegex{category};
@@ -861,7 +860,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
 
       ++nFoundPlots;
       if (isSearchRequest) {
-        INFO(" - " GREEN_ "{}" _END " in group " YELLOW_ "{}" _END, plotName, figureGroup + ((!figureCategory.empty()) ? ":" + figureCategory : ""));
+        INFO(" - " GREEN_ "{}" _END " in group " YELLOW_ "{}" _END, plotName, figureGroup + ((!figureCategory.empty()) ? "/" + figureCategory : ""));
       } else {
         try {
           Plot plot(plotTree.second);
@@ -873,7 +872,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
     }
   }
   if (nFoundPlots == 0) {
-    ERROR("Requested plots are not defined.");
+    ERROR("Found no plots matching the request " GREEN_ "{}" _END " in " YELLOW_ "{}/{}" _END ".", plotName, group, category);
   } else {
     INFO("Found {} plot{} matching the request.", nFoundPlots, (nFoundPlots == 1) ? "" : "s");
   }

@@ -74,7 +74,7 @@ public:
 
   Plot() = default;
   Plot(const ptree& plotTree);
-  Plot(const string& name, const string& figureGroup, const optional<string>& plotTemplateName = std::nullopt);
+  Plot(const string& name, const string& figureGroupAndCategory, const optional<string>& plotTemplateName = std::nullopt);
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
   Pad& GetPadDefaults() { return mPads[0]; }

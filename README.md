@@ -213,7 +213,7 @@ plotManager.LoadInputDataFiles("/path/to/inputFiles.XML");
 
 // we could now add plenty of more plots to the manager....
 { // -----------------------------------------------------------------------
-  //Plot plot("myPlot2", "myFigureGroup:myCategory");
+  //Plot plot("myPlot2", "myFigureGroup/myCategory");
   // ...
   // ...
   // plotManager.AddPlot(plot);
@@ -221,7 +221,7 @@ plotManager.LoadInputDataFiles("/path/to/inputFiles.XML");
 
 // it is also possible to construct a plot based on a copy of another
 { // -----------------------------------------------------------------------
-  Plot plot("myPlot", "myFigureGroup2:my/figure/sub/category");
+  Plot plot("myPlot", "myFigureGroup2/my/figure/sub/category");
   // ...
   plot[1].AddData("folder1/histName2", "inputIdentifierA", "myLabel2");
   //...

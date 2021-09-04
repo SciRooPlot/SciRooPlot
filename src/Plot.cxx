@@ -33,20 +33,20 @@ namespace PlottingFramework
  * Default constructor.
  */
 //**************************************************************************************************
-Plot::Plot(const string& name, const string& figureGroup, const optional<string>& plotTemplateName) : Plot()
+Plot::Plot(const string& name, const string& figureGroupAndCategory, const optional<string>& plotTemplateName) : Plot()
 {
-  if (str_contains(figureGroup, ".")) {
-    ERROR("Figure Group must not contain '.'!");
+  if (str_contains(figureGroupAndCategory, ".")) {
+    ERROR("Figure group must not contain '.'!");
     std::exit(EXIT_FAILURE);
   }
   mName = name;
-  mFigureGroup = figureGroup;
+  mFigureGroup = figureGroupAndCategory;
   mPlotTemplateName = plotTemplateName;
 
-  // in case category was specified via figureGroup:my/category/tree
-  if (auto subPathPos = figureGroup.find(":"); subPathPos != string::npos) {
-    mFigureGroup = figureGroup.substr(0, subPathPos);
-    mFigureCategory = figureGroup.substr(subPathPos + 1);
+  // in case category was specified via figureGroup/my/category/tree
+  if (auto subPathPos = figureGroupAndCategory.find("/"); subPathPos != string::npos) {
+    mFigureGroup = figureGroupAndCategory.substr(0, subPathPos);
+    mFigureCategory = figureGroupAndCategory.substr(subPathPos + 1);
   }
   UpdateUniqueName();
 }
@@ -105,7 +105,7 @@ Plot::Plot(const ptree& plotTree)
 //**************************************************************************************************
 void Plot::UpdateUniqueName()
 {
-  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? ":" + *mFigureCategory : "");
+  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? "/" + *mFigureCategory : "");
 }
 
 //**************************************************************************************************
