@@ -25,7 +25,7 @@ while read -r line ; do
   line="${line#<PLOT::}"
   line="${line%>}"
   line="${line/_IN_/,}"
-  line="${line/:/,}"
+  line="${line/|/,}"
   line="${line//|//}"
   echo $line >> $AUTOCOMPFILE
 done < tmp
