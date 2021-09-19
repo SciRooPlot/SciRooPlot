@@ -21,8 +21,8 @@ _plot_completions_zsh() {
   local groupsAndCategories
   local names
 
-  ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh
   local AUTOCOMPFILE="${__PLOTTING_FRAMEWORK_DIR}/plots.csv"
+  ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh $AUTOCOMPFILE
   if [[ ! -f "$AUTOCOMPFILE" ]]; then
     return
   fi
@@ -91,8 +91,8 @@ _plot_completions_bash() {
   local groupsAndCategories
   local names
 
-  ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh
   local AUTOCOMPFILE="${__PLOTTING_FRAMEWORK_DIR}/plots.csv"
+  ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh $AUTOCOMPFILE
   if [[ ! -f "$AUTOCOMPFILE" ]]; then
     return
   fi
