@@ -3,8 +3,8 @@
 AUTOCOMPFILE=$1
 
 # check if csv file exists and if yes if is newer than the plot definition file
-if [[ -f "$AUTOCOMPFILE" ]]; then
-  if [[ $AUTOCOMPFILE -nt $PLOTDEFFILE ]]; then
+if [[ -f "${AUTOCOMPFILE}" ]]; then
+  if [[ ${AUTOCOMPFILE} -nt ${PLOTDEFFILE} ]]; then
     exit
   fi
 fi
