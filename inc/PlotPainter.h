@@ -76,7 +76,11 @@ const map<drawing_options_t, string> defaultDrawingOptions_Hist{
   {hist_no_borders, "HIST ]["},
   {stars, "*H"},
   {text, "TEXT"},
-  {hbar, "HBAR"},
+  {hbar, "HBAR ]["},
+  {hbar1, "HBAR1"},
+  {hbar2, "HBAR2"},
+  {hbar3, "HBAR3"},
+  {hbar4, "HBAR4"},
 };
 
 const map<drawing_options_t, string> defaultDrawingOptions_Graph{

@@ -52,6 +52,10 @@ enum drawing_options_t : uint8_t {
   text,
   brackets,
   hbar,
+  hbar1,
+  hbar2,
+  hbar3,
+  hbar4,
   // 2d options
   colz,
   surf,
