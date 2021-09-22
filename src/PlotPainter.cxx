@@ -358,7 +358,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             data_ptr->Draw();
             axisHist_ptr = data_ptr->GetHistogram();
           }
-          if (!isDrawn) axisHist_ptr->Draw("AXIS");
+          if (!isDrawn) axisHist_ptr->Draw((drawingOptions + "AXIS").data());
           axisHist_ptr->Draw((drawingOptions + "SAME AXIG").data());
           axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
           axisHist_ptr->SetStats(false);
