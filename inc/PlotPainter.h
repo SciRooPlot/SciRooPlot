@@ -73,7 +73,6 @@ const map<drawing_options_t, string> defaultDrawingOptions_Hist{
   {area_curve, "HIST CF"},
   {area_line, "HIST LF"},
   {hist, "HIST"},
-  {bar, "HIST B"},
   {hist_no_borders, "HIST ]["},
   {stars, "*H"},
   {text, "TEXT"},

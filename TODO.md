@@ -26,6 +26,7 @@ Structural considerations:
 - fix inconsistencies in naming of variables
 
 Bugs:
+- bash does not like '.*' without preceding letters (e.g. 'a_.*' works) -> understand why
 - should one always call Sumw2() before drawing histograms as points?
 - if same histogram is added to plot twice, the name is no longer unique and this results in unwanted behavior for ref data specified in legend entries
 - csv w/o options -> invisible -> TGraphErrors has wrong defaults
