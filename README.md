@@ -545,7 +545,6 @@ To use this app you need to:
 
 Now you can run the command `plot` from everywhere. Regular expressions are supported. To see the available program options run `plot --help`.
 For bash and zsh shells this program provides an auto-completion feature, so you can tab through the available commands, figureGroups and plots.
-The app also has a `browse` option that enables you to directly plot the content of root files without explicitly creating a plot definition.
 
 Recommended Workflow
 --------------------
