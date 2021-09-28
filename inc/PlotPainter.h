@@ -40,17 +40,6 @@ namespace PlottingFramework
 
 // supported input data types
 using data_ptr_t = variant<TH1*, TH2*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF2*, TF1*>;
-using data_ptr_t_1d = variant<TH1*, TGraph*, TProfile*, TF1*>;
-using data_ptr_t_2d = variant<TH2*, TGraph2D*, TProfile2D*, TF2*>;
-using data_ptr_t_hist = variant<TH1*, TH2*, TProfile*, TProfile2D*>;
-using data_ptr_t_hist_1d = variant<TH1*, TProfile*>;
-using data_ptr_t_hist_2d = variant<TH2*, TProfile2D*>;
-using data_ptr_t_graph = variant<TGraph*, TGraph2D*>;
-using data_ptr_t_graph_1d = variant<TGraph*>;
-using data_ptr_t_graph_2d = variant<TGraph2D*>;
-using data_ptr_t_func = variant<TF1*, TF2*>;
-using data_ptr_t_func_1d = variant<TF1*>;
-using data_ptr_t_func_2d = variant<TF2*>;
 
 const map<drawing_options_t, string> defaultDrawingOptions_Hist2d{
   {colz, "COLZ"},

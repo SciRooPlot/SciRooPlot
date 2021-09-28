@@ -191,5 +191,11 @@ T get_first_or(const T& fallback, const optional<T>& property, const Ts&... prop
   }
 }
 
+template <typename T, typename... Ts>
+constexpr bool is_one_of_v()
+{
+  return (... || std::is_same_v<T, Ts>);
+}
+
 } // end namespace PlottingFramework
 #endif /* Helpers_h */

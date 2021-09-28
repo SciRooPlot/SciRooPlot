@@ -65,6 +65,66 @@
 
 namespace PlottingFramework
 {
+//**************************************************************************************************
+/**
+ * Helper functions to introspect the data type.
+ */
+//**************************************************************************************************
+template <typename T>
+constexpr bool is_hist_1d()
+{
+  return is_one_of_v<T, TH1*, TProfile*>();
+}
+template <typename T>
+constexpr bool is_hist_2d()
+{
+  return is_one_of_v<T, TH2*, TProfile2D*>();
+}
+template <typename T>
+constexpr bool is_hist()
+{
+  return is_hist_1d<T>() || is_hist_2d<T>();
+}
+template <typename T>
+constexpr bool is_graph_1d()
+{
+  return is_one_of_v<T, TGraph*>();
+}
+template <typename T>
+constexpr bool is_graph_2d()
+{
+  return is_one_of_v<T, TGraph2D*>();
+}
+template <typename T>
+constexpr bool is_graph()
+{
+  return is_graph_1d<T>() || is_graph_2d<T>();
+}
+template <typename T>
+constexpr bool is_func_1d()
+{
+  return is_one_of_v<T, TF1*>();
+}
+template <typename T>
+constexpr bool is_func_2d()
+{
+  return is_one_of_v<T, TF2*>();
+}
+template <typename T>
+constexpr bool is_func()
+{
+  return is_func_1d<T>() || is_func_2d<T>();
+}
+template <typename T>
+constexpr bool is_1d()
+{
+  return is_hist_1d<T>() || is_graph_1d<T>() || is_func_1d<T>();
+}
+template <typename T>
+constexpr bool is_2d()
+{
+  return is_hist_2d<T>() || is_graph_2d<T>() || is_func_2d<T>();
+}
 
 //**************************************************************************************************
 /**
@@ -195,13 +255,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       // retrieve the actual pointer to the data
       auto processData = [&, padID = padID](auto&& data_ptr) {
         using data_type = std::decay_t<decltype(data_ptr)>;
+
         data_ptr->SetTitle(""); // FIXME: only make this invisible but don't remove useful metadata
 
         optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
         if (!data->GetDrawingOptions()) {
           // FIXME: avoid code duplication here by implementing this in more clever way
-          if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
+          if constexpr (is_hist_2d<data_type>()) {
             if (!defaultDrawingOption) {
               if (pad.GetDefaultDrawingOptionHist2d())
                 defaultDrawingOption = pad.GetDefaultDrawingOptionHist2d();
@@ -212,7 +273,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (defaultDrawingOption && defaultDrawingOptions_Hist2d.find(*defaultDrawingOption) != defaultDrawingOptions_Hist2d.end()) {
               drawingOptions += defaultDrawingOptions_Hist2d.at(*defaultDrawingOption);
             }
-          } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>) {
+          } else if constexpr (is_hist_1d<data_type>()) {
             if (!defaultDrawingOption)
               defaultDrawingOption = (pad.GetDefaultDrawingOptionHist())
                                        ? pad.GetDefaultDrawingOptionHist()
@@ -223,7 +284,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (defaultDrawingOption && defaultDrawingOptions_Hist.find(*defaultDrawingOption) != defaultDrawingOptions_Hist.end()) {
               drawingOptions += defaultDrawingOptions_Hist.at(*defaultDrawingOption);
             }
-          } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
+          } else if constexpr (is_graph_1d<data_type>()) {
             if (!defaultDrawingOption)
               defaultDrawingOption = (pad.GetDefaultDrawingOptionGraph())
                                        ? pad.GetDefaultDrawingOptionGraph()
@@ -241,33 +302,33 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // retrieve the actual pointer to the denominator data
           auto processDenominator = [&](auto&& denom_data_ptr) {
             using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
-            if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>) {
-              if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_func>) {
+            if constexpr (is_hist<data_type>()) {
+              if constexpr (is_func<denom_data_type>()) {
                 data_ptr->Divide(denom_data_ptr);
               }
-              if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist>) {
+              if constexpr (is_hist<denom_data_type>()) {
                 string divideOpt = (std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetIsCorrelated()) ? "B" : "";
                 if (!data_ptr->Divide(data_ptr, denom_data_ptr, 1., 1., divideOpt.data())) {
                   WARNING("Could not divide histograms properly. Trying approximated division via spline interpolation. Errors will not be fully correct!");
                   DivideHistosInterpolated(data_ptr, denom_data_ptr);
                 }
-                if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
+                if constexpr (is_hist_2d<data_type>()) {
                   data_ptr->GetZaxis()->SetTitle("ratio");
-                } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>) {
+                } else if constexpr (is_hist_1d<data_type>()) {
                   data_ptr->GetYaxis()->SetTitle("ratio");
                 }
-              } else if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_graph>) {
+              } else if constexpr (is_graph<denom_data_type>()) {
                 ERROR("Cannot divide histogram by graph.");
                 //DivideHistGraphInterpolated(data_ptr, denom_data_ptr);
               }
-            } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
-              if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_graph_1d>) {
+            } else if constexpr (is_graph_1d<data_type>()) {
+              if constexpr (is_graph_1d<denom_data_type>()) {
                 if (!DivideGraphs(data_ptr, denom_data_ptr)) // first try if exact division is possible
                 {
                   WARNING("In general graphs cannot be divided. Trying approximated division via spline interpolation. Errors will not be fully correct!");
                   DivideGraphsInterpolated(data_ptr, denom_data_ptr);
                 }
-              } else if constexpr (std::is_convertible_v<denom_data_type, data_ptr_t_hist_1d>) {
+              } else if constexpr (is_hist_1d<denom_data_type>()) {
                 ERROR("Cannot divide graph by histogram.");
                 //DivideGraphHistInterpolated(data_ptr, denom_data_ptr);
               }
@@ -289,18 +350,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
         // modify content (FIXME: this should be steered differently)
         // FIXME: probably this should be done after setting ranges but axis ranges depend on scaling!
-        if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_1d>) {
+        if constexpr (is_hist_1d<data_type>()) {
           if (str_contains(drawingOptions, "smooth")) {
             drawingOptions.erase(drawingOptions.find("smooth"), string("smooth").length());
             data_ptr->Smooth();
           }
         }
-        if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>) {
+        if constexpr (is_hist<data_type>()) {
           optional<double_t> scaleFactor;
           string scaleMode{};
 
           if (data->GetNormMode()) {
-            double integral = data_ptr->Integral(); // integral in viewing range
+            double_t integral = data_ptr->Integral(); // integral in viewing range
             if (integral == 0.) {
               ERROR("Cannot normalize histogram because integral is zero.");
             } else {
@@ -313,13 +374,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                         : (*data->GetScaleFactor());
           }
           if (scaleFactor) data_ptr->Scale(*scaleFactor);
-        } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
+        } else if constexpr (is_graph_1d<data_type>()) {
           // FIXME: violating DRY principle...
           optional<double_t> scaleFactor;
           string scaleMode{};
 
           if (data->GetNormMode()) {
-            double integral = data_ptr->Integral(); // integral in viewing range
+            double_t integral = data_ptr->Integral(); // integral in viewing range
             if (integral == 0.) {
               ERROR("Cannot normalize graph because integral is zero.");
             } else {
@@ -339,7 +400,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         // first data is only used to define the axes
         if (dataIndex == 0) {
           bool isDrawn = false;
-          if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
+          if constexpr (is_hist_2d<data_type>()) {
             if (str_contains(drawingOptions, "Z")) {
               data_ptr->Draw(drawingOptions.data()); // z axis is only drawn if specified
               // reset the axis histogram which now owns the z axis, but keep default range
@@ -352,7 +413,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               isDrawn = true;
             }
           }
-          if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist>) {
+          if constexpr (is_hist<data_type>()) {
             axisHist_ptr = data_ptr;
           } else {
             data_ptr->Draw();
@@ -547,16 +608,16 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           double_t rangeMaxY = (data->GetMaxRangeY()) ? *data->GetMaxRangeY()
                                                       : axisHist_ptr->GetYaxis()->GetXmax();
 
-          if constexpr (std::is_convertible_v<data_type, data_ptr_t_func_2d>) {
+          if constexpr (is_func_2d<data_type>()) {
             data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
-          } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_func>) {
+          } else if constexpr (is_func_1d<data_type>()) {
             data_ptr->SetRange(rangeMinX, rangeMaxX);
-          } else if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
+          } else if constexpr (is_graph_1d<data_type>()) {
             SetGraphRange(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX());
           } else {
             data_ptr->GetXaxis()->SetRangeUser(rangeMinX, rangeMaxX);
           }
-          if constexpr (std::is_convertible_v<data_type, data_ptr_t_hist_2d>) {
+          if constexpr (is_hist_2d<data_type>()) {
             data_ptr->GetYaxis()->SetRangeUser(rangeMinY, rangeMaxY);
             // do not draw the Z axis a second time!
             std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
@@ -572,7 +633,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (data->GetTextFormat()) gStyle->SetPaintTextFormat((*data->GetTextFormat()).data());
 
           // disallow moving around the points of a graph in interacitve mode
-          if constexpr (std::is_convertible_v<data_type, data_ptr_t_graph_1d>) {
+          if constexpr (is_graph_1d<data_type>()) {
             data_ptr->SetEditable(false);
           }
 
@@ -1152,10 +1213,10 @@ bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
     if (numerator->GetX()[i] != denominator->GetX()[i]) return false;
   }
   for (int32_t i = 0; i < numerator->GetN(); ++i) {
-    double num = numerator->GetY()[i];
-    double denom = denominator->GetY()[i];
-    double numErr = numerator->GetEY()[i];
-    double denomErr = denominator->GetEY()[i];
+    double_t num = numerator->GetY()[i];
+    double_t denom = denominator->GetY()[i];
+    double_t numErr = numerator->GetEY()[i];
+    double_t denomErr = denominator->GetEY()[i];
     if (!denom) {
       ERROR("Dividing by zero!");
     }
