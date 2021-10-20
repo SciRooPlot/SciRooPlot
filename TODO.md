@@ -22,7 +22,6 @@ Structural considerations:
 - the whole Painter::GeneratePlots() function is just a big mess and needs major rework!
 - decide where data manipulation part should be put (before or after setting ranges?)
 - should smoothing be done before or after division for ratios (or both)??
-- put using... to avoid lengthly if constexpr
 - fix inconsistencies in naming of variables
 
 Bugs:
