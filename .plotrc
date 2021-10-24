@@ -8,7 +8,8 @@ else
   __PLOTTING_FRAMEWORK_DIR="$( cd "$( dirname "${0}"  )" >/dev/null 2>&1 && pwd )"
 fi
 export __PLOTTING_FRAMEWORK_DIR
-export __PLOTTING_BUILD_DIR="${__PLOTTING_FRAMEWORK_DIR}/build"
+__PLOTTING_BUILD_DIR="${__PLOTTING_FRAMEWORK_DIR}/build"
+export __PLOTTING_BUILD_DIR
 if [[ -d "${__PLOTTING_BUILD_DIR}" ]]
 then
   # TODO: turn this one-liner into more readable if-else statemets
