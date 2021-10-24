@@ -40,6 +40,7 @@ _plot_completions_zsh() {
     groups+=("${figureGroup}")
     [ -n "$figureCategory" ] && groupsAndCategories+=("${figureGroup}/${figureCategory}")
   done < $AUTOCOMPFILE
+  unset plotName figureGroup figureCategory
 
   updatePlotNames() {
     local groupAndCat=$1
@@ -110,6 +111,7 @@ _plot_completions_bash() {
     groups+=" ${figureGroup}"
     [ -n "$figureCategory" ] && groupsAndCategories+=" ${figureGroup}/${figureCategory}"
   done < $AUTOCOMPFILE
+  unset plotName figureGroup figureCategory
 
   updatePlotNames() {
     local groupAndCat=$1
