@@ -2,21 +2,17 @@
 
 AUTOCOMPFILE=$1
 
+# TODO: make this work with multiple files
+PLOTDEFFILE=$(${__PLOTTING_BUILD_DIR}/plot-config get plotDefinitions)
+if [[ ! -f "$PLOTDEFFILE" ]]; then
+  exit
+fi
+
 # check if csv file exists and if yes if is newer than the plot definition file
 if [[ -f "${AUTOCOMPFILE}" ]]; then
   if [[ ${AUTOCOMPFILE} -nt ${PLOTDEFFILE} ]]; then
     exit
   fi
-fi
-
-if [ ! -d "${__PLOTTING_CONFIG_DIR}" ]; then
-  exit
-fi
-
-# TODO: make this work with multiple files
-PLOTDEFFILE="${__PLOTTING_CONFIG_DIR}/plotDefinitions.XML"
-if [[ ! -f "$PLOTDEFFILE" ]]; then
-  exit
 fi
 
 cat $PLOTDEFFILE | grep -o "<PLOT::.*>" | grep -vE '.*TEMPLATES.*' > tmp

@@ -21,25 +21,50 @@
 #include "Logging.h"
 
 #include <boost/program_options.hpp>
+#include <boost/property_tree/xml_parser.hpp>
+
 #include "Helpers.h"
 
 using namespace PlottingFramework;
 namespace po = boost::program_options;
 
-// This program is intended to generate plots from plotDefinitions saved in xml files
 int main(int argc, char* argv[])
 {
-  // set default values
-  string configFolder = (gSystem->Getenv("__PLOTTING_CONFIG_DIR"))
-                          ? expand_path("${__PLOTTING_CONFIG_DIR}/")
-                          : "plotting_config/";
 
-  string outputFolder = (gSystem->Getenv("__PLOTTING_OUTPUT_DIR"))
-                          ? expand_path("${__PLOTTING_OUTPUT_DIR}/")
-                          : "plotting_output/";
+  string configFileName = (gSystem->Getenv("__PLOTTING_CONFIG_FILE"))
+                            ? expand_path("${__PLOTTING_CONFIG_FILE}")
+                            : "~/.plotconfig.xml";
+  configFileName = expand_path(configFileName);
 
-  string inputFiles = configFolder + "inputFiles.XML";
-  string plotDefinitions = configFolder + "plotDefinitions.XML";
+  string inputFiles;
+  string plotDefinitions;
+  string outputDir;
+
+  ptree activeConfigTree;
+  if (file_exists(configFileName)) {
+    using boost::property_tree::read_xml;
+    ptree configTree;
+    read_xml(configFileName, configTree, boost::property_tree::xml_parser::trim_whitespace);
+    string activeSettings;
+    if (auto activated = configTree.get_child_optional("activated")) {
+      activeSettings = activated.get().data();
+    }
+    if (auto curConfig = configTree.get_child_optional(activeSettings)) {
+      auto tree = curConfig.get();
+      if (auto property = tree.get_child_optional("plotDefinitions")) {
+        plotDefinitions = property->get_value<string>();
+      }
+      if (auto property = tree.get_child_optional("inputFiles")) {
+        inputFiles = property->get_value<string>();
+      }
+      if (auto property = tree.get_child_optional("outputDir")) {
+        outputDir = property->get_value<string>();
+      }
+    }
+  } else {
+    ERROR("Plotting app was not configured. Please run plot-config ...");
+    return 1;
+  }
 
   // check if specified input files exist
   if (!file_exists(expand_path(inputFiles))) {
@@ -57,19 +82,15 @@ int main(int argc, char* argv[])
 
   // handle user inputs
   try {
-    po::options_description arguments("Positional arguments");
+    po::options_description arguments("positional arguments");
     arguments.add_options()("figureGroupAndCategory", po::value<string>(), "figure group")("plotNames", po::value<string>(), "plot name")("mode", po::value<string>(), "mode");
-
-    // this needs to be synchronous with the arguments options_description
     po::positional_options_description pos;
     pos.add("figureGroupAndCategory", 1);
     pos.add("plotNames", 1);
     pos.add("mode", 1);
 
     po::variables_map vm;
-    po::options_description cmdline_options;
-    cmdline_options.add(arguments);
-    po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(pos).run(), vm);
+    po::store(po::command_line_parser(argc, argv).options(arguments).positional(pos).run(), vm);
     po::notify(vm);
 
     if (vm.count("figureGroupAndCategory")) {
@@ -98,9 +119,9 @@ int main(int argc, char* argv[])
 
   // create plotting environment
   PlotManager plotManager;
-  plotManager.SetOutputDirectory(outputFolder);
+  plotManager.SetOutputDirectory(outputDir);
 
-  string group = ".*";
+  string group = ".+";
   string category = ".*";
 
   vector<string> groupCat = split_string(figureGroupAndCategory, '/', true);

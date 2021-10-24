@@ -8,10 +8,16 @@ else
   __PLOTTING_FRAMEWORK_DIR="$( cd "$( dirname "${0}"  )" >/dev/null 2>&1 && pwd )"
 fi
 export __PLOTTING_FRAMEWORK_DIR
-__PLOTTING_BUILD_DIR="${__PLOTTING_FRAMEWORK_DIR}/build"
+export __PLOTTING_BUILD_DIR="${__PLOTTING_FRAMEWORK_DIR}/build"
 if [[ -d "${__PLOTTING_BUILD_DIR}" ]]
 then
-  function plot() { [[ "${1}" == "cd" ]] && { cd ${__PLOTTING_BUILD_DIR}; return 0; } || { { [[ -d ${__MY_PLOTS_BUILD_DIR} ]] && { (cd ${__MY_PLOTS_BUILD_DIR}; make 1>/dev/null || exit 1; [[ ! -z `find './' -name 'create' -mmin +1` ]] || ./create;) || return 1; } || :; }; "${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0; } }
+  # TODO: turn this one-liner into more readable if-else statemets
+  function plot() { [[ "${1}" == "cd" ]] && { cd ${__PLOTTING_BUILD_DIR}; return 0; } || { { [[ -d $(dirname $(${__PLOTTING_BUILD_DIR}/plot-config get executable)) ]] && { (cd $(dirname $(${__PLOTTING_BUILD_DIR}/plot-config get executable)); make 1>/dev/null || exit 1; [[ ! -z $(find $(${__PLOTTING_BUILD_DIR}/plot-config get executable) -mmin +1) ]] || ./$(basename $(${__PLOTTING_BUILD_DIR}/plot-config get executable));) || return 1; } || :; }; "${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0; } }
+  
+    function plot-config() {
+      "${__PLOTTING_BUILD_DIR}/plot-config" ${1} ${2} ${3} ${4};
+      touch $(${__PLOTTING_BUILD_DIR}/plot-config get plotDefinitions) &> /dev/null
+    }
 fi
 
 _plot_completions_zsh() {
@@ -21,7 +27,7 @@ _plot_completions_zsh() {
   local groupsAndCategories
   local names
 
-  local AUTOCOMPFILE="${__PLOTTING_FRAMEWORK_DIR}/plots.csv"
+  local AUTOCOMPFILE="${__PLOTTING_BUILD_DIR}/plots.csv"
   ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh $AUTOCOMPFILE
   if [[ ! -f "$AUTOCOMPFILE" ]]; then
     return
@@ -91,7 +97,7 @@ _plot_completions_bash() {
   local groupsAndCategories
   local names
 
-  local AUTOCOMPFILE="${__PLOTTING_FRAMEWORK_DIR}/plots.csv"
+  local AUTOCOMPFILE="${__PLOTTING_BUILD_DIR}/plots.csv"
   ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh $AUTOCOMPFILE
   if [[ ! -f "$AUTOCOMPFILE" ]]; then
     return

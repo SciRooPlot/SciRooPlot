@@ -1,6 +1,5 @@
 Todo:
 - simpler way to create all saved plots specifying only the mode
-- add possibility to read / write multiple plot definition and input config files in app (config of config files??)
 - give warning if selected drawing alias not available for present type of data
 - re-check which of the properties that are always stored are actually required to be non-optional
 - check again if box auto placement works correctly (also with multiple boxes)
@@ -34,6 +33,7 @@ Bugs:
 - with graph as numerator in ratio there is some logic problem that axis histo is not there -> seg fault
 
 Not so urgend:
+- support multiple plot definition and input files per plot-config
 - allow SetRange to also specify bin numbers instead of user coordinates
 - add shape objects (lines, arrows, boxes, ellipses, crowns) - below or above the data?
 - support THStack, TMultiGraph

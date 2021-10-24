@@ -83,7 +83,7 @@ PlotManager plotManager;
 // first you need to define the data sources that should be available for your plots
 plotManager.AddInputDataFiles("inputIdentifierA", {"/path/to/file/a.root", "/path/to/file/a2.root"});
 // instead of adding the whole root file, you can also specify a sub-list or sub-folder in the file:
-plotManager.AddInputDataFiles("inputIdentifierB", {"/path/to/file/b.root:my/sub/list/or/dir"});
+plotManager.AddInputDataFiles("inputIdentifierB", {"/path/to/file/b.root:sub/list/or/dir"});
 // the paths may contain any environment variable defined in your shell:
 plotManager.AddInputDataFiles("inputIdentifierC", {"${HOME}/myRootFiles/b2.root"});
 // and it is possible to add all root files within a directory (including sub-directories):
@@ -265,7 +265,7 @@ plotManager.LoadInputDataFiles("/path/to/inputFiles.XML");
 } // -----------------------------------------------------------------------
 
 // to save the plots to disk as pdf you first have to tell the manager where to put them
-plotManager.SetOutputDirectory("/path/to/my/OutputFolder");
+plotManager.SetOutputDirectory("/path/to/OutputFolder");
 // the manager will automatically create subfolders for the figure groups and categories
 // to generate all stored plots as pdf you can call
 plotManager.CreatePlots();
@@ -508,20 +508,20 @@ data_layout_t pp_7TeV
 
 // instead of creating the plots directly as we have done in the previous example,
 // we can also save the plot definitions into another xml file via:
-plotManager.DumpPlots("/path/to/my/plotDefinitions.XML");
+plotManager.DumpPlots("/path/to/plotDefinitions.XML");
 
 // this file can then be read in by another one of your programs via
-plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML");
+plotManager.ExtractPlotsFromFile("/path/to/plotDefinitions.XML");
 // this extracts all plots defined in the file
 
 // in case you want to load only certain plots:
-plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", "load", "(invMass|ptSpec)");
-plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", "load", "projBin_[1,5,7]");
-plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", "load", "projBin_[1-9]+");
-plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", "load", "peak_.*");
+plotManager.ExtractPlotsFromFile("/path/to/plotDefinitions.XML", "load", "(invMass|ptSpec)");
+plotManager.ExtractPlotsFromFile("/path/to/plotDefinitions.XML", "load", "projBin_[1,5,7]");
+plotManager.ExtractPlotsFromFile("/path/to/plotDefinitions.XML", "load", "projBin_[1-9]+");
+plotManager.ExtractPlotsFromFile("/path/to/plotDefinitions.XML", "load", "peak_.*");
 
 // ... or from specific figureGroups:
-plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", "load", ".*" "figureGroup[1,2]", "myCategory");
+plotManager.ExtractPlotsFromFile("/path/to/plotDefinitions.XML", "load", ".*" "figureGroup[1,2]", "myCategory");
 
 // the plot name, figure group or category can be regular expressions
 
@@ -536,27 +536,31 @@ plotManager.ExtractPlotsFromFile("/path/to/my/plotDefinitions.XML", "load", ".*"
 Using the App
 -------------
 The PlottingFramework ships with a builtin plotting application that enables you to quickly create plots from previously saved plot definitions.
-To use this app you need to:
-- source the `.plotrc` script in the main directory of the repository
-- place both the `inputFiles.XML` and `plotDefinitions.XML` (names have to be like this for now) produced by your program in some central config folder
-- define the environment variable `__PLOTTING_CONFIG_DIR` to point to this folder
-- define the environment variable `__PLOTTING_OUTPUT_DIR` to the directory where you want to store the created plots (pdf, png, etc.)
-- (optional) define the environment variable `__MY_PLOTS_BUILD_DIR` to the directory where your code that creates the plot definitions resides - then the app will automatically rebuild and execute `./create` (which should be the name of your executable for this to work)
+To use the application, first source the `.plotrc` script in this repository.
+In order to find the necessary files for creating your plots, the app needs to be configured according to your needs.
+This configuration is done in the following way:
+´´´
+plot-config add <configName> plotDefinitions </path/to/plotDefFile.XML>
+plot-config add <configName> inputFiles </path/to/inputFiles.XML>
+plot-config add <configName> outputDir </path/to/output/dir>
+plot-config add <configName> executable </path/to/executable>
+´´´
+Here ´<configName>´ refers to an arbitrary name you give this group of settings.
+It is possible to add multiple configurations and switch between them via
+```
+plot-config switch <configName>
+```
+This can be useful for instance if you have multiple independent plotting programs which create different plots and need a separate set of input files.
+All settings are saved in ´~/.plotconfig.xml´ (any other file path and name can be specified by setting the environment variable ´__PLOTTING_CONFIG_FILE´).
 
-Now you can run the command `plot` from everywhere. Regular expressions are supported. To see the available program options run `plot --help`.
-For bash and zsh shells this program provides an auto-completion feature, so you can tab through the available commands, figureGroups and plots.
+Once this is set up, you can easily create plots via the command line from everywhere on your computer by typing
+```
+plot <figureGroup> <plotName> <mode>
+```.
+Regular expressions for `<figureGroup>` and `<plotName>` are supported.
+By default, the mode is set to `interactive` (you can leave it out in the command).
+Alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`.
 
-Recommended Workflow
---------------------
-The most convenient way to work with the PlottingFramework is the following:
-
-- you have a program that creates the plot definitions for all your plots (e.g. based on the example provided in the framework)
-- this program will dump your plot definitions into an xml-file by calling `plotManager.DumpPlotDefinitions(...)` at the end
-- this file is stored in the same location as the configuration file that contains the paths to your input data files
-- these files can be read in by the frameworks integrated plotting app (see above) which then can create your plots based on these definitions
-- in order for the app to know where to find the two configuration files, you have to make the environment variable `__PLOTTING_CONFIG_DIR` point to this location
-- then you can easily create plots via the command line from everywhere on your computer by typing `plot figureGroup plotName`
-- saving the plot definitions to a file as an intermediate step enables you to quickly re-create any of your plots without having to run again the program that creates the plot definitions
-- it can however be annoying to first compile and run your user code and then in addition start the app in order to see the changes you made to the plot definitions
-- to simplify this, the command-line plotting app can take care of all these steps for you
-- you only need to define the environment variable `__MY_PLOTS_BUILD_DIR=/path/to/my/plotting/build/folder` then the app will automatically re-build and run your code that creates the plot definitions (in case this is necessary) before creating the plot itself. Please note that this (for now) assumes that the executable that creates your plots is called `./create`.
+For bash and zsh this program provides an auto-completion feature, this means you can tab through the available commands, figureGroups and plots.
+Your `executable` (which creates the plot definitions) specified in the configuration
+will automatically be rebuilt and (if needed) executed before the app generates the requested plot(s).

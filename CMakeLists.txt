@@ -81,3 +81,6 @@ endfunction()
 add_plotting_executable(plot
   SOURCES app/PlottingApp.cxx
 )
+add_plotting_executable(plot-config
+  SOURCES app/PlottingAppConfig.cxx
+)
