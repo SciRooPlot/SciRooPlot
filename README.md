@@ -539,24 +539,24 @@ The PlottingFramework ships with a builtin plotting application that enables you
 To use the application, first source the `.plotrc` script in this repository.
 In order to find the necessary files for creating your plots, the app needs to be configured according to your needs.
 This configuration is done in the following way:
-´´´
+```
 plot-config add <configName> plotDefinitions </path/to/plotDefFile.XML>
 plot-config add <configName> inputFiles </path/to/inputFiles.XML>
 plot-config add <configName> outputDir </path/to/output/dir>
 plot-config add <configName> executable </path/to/executable>
-´´´
-Here ´<configName>´ refers to an arbitrary name you give this group of settings.
+```
+Here `<configName>` refers to an arbitrary name you give this group of settings.
 It is possible to add multiple configurations and switch between them via
 ```
 plot-config switch <configName>
 ```
 This can be useful for instance if you have multiple independent plotting programs which create different plots and need a separate set of input files.
-All settings are saved in ´~/.plotconfig.xml´ (any other file path and name can be specified by setting the environment variable ´__PLOTTING_CONFIG_FILE´).
+All settings are saved in `~/.plotconfig.xml` (any other file path and name can be specified by setting the environment variable `__PLOTTING_CONFIG_FILE`).
 
 Once this is set up, you can easily create plots via the command line from everywhere on your computer by typing
 ```
 plot <figureGroup> <plotName> <mode>
-```.
+```
 Regular expressions for `<figureGroup>` and `<plotName>` are supported.
 By default, the mode is set to `interactive` (you can leave it out in the command).
 Alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`.
