@@ -558,8 +558,10 @@ Once this is set up, you can easily create plots via the command line from every
 plot <figureGroup> <plotName> <mode>
 ```
 Regular expressions for `<figureGroup>` and `<plotName>` are supported.
-By default, the mode is set to `interactive` (you can leave it out in the command).
-Alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`.
+This means you can create multiple plots according to naming patterns. For example `plot paperPlots .+` would generate all plots defined within the figureGroup called paperPlots and `plot test "plot[1,2]"` would create plot1 and plot2 in the figureGroup test. Note that in the second example quotes are needed, since your shell will try to interprete some special characters (in this case `[]`) before they are passed to the plotting program.
+To select only a sub-category within the figureGroup, use `<figureGroup/some/category>`.
+By default, the optional `mode` argument is set to `interactive` and you can leave it out in the command.
+Possible alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`.
 
 For bash and zsh this program provides an auto-completion feature, this means you can tab through the available commands, figureGroups and plots.
 Your `executable` (which creates the plot definitions) specified in the configuration
