@@ -118,6 +118,10 @@ int main(int argc, char* argv[])
     if (activeConfig.empty()) {
       return 1;
     }
+    if (request == "active") {
+      std::cout << activeConfig << std::endl;
+      return 0;
+    }
     if (auto curConfig = configTree.get_child_optional(activeConfig)) {
       if (auto property = curConfig.get().get_child_optional(request)) {
         std::cout << property->get_value<string>() << std::endl;
