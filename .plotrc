@@ -98,7 +98,7 @@ _plot_completions_bash() {
   local groupsAndCategories
   local names
 
-  local AUTOCOMPFILE="${__PLOTTING_BUILD_DIR}/plots.csv"
+  local AUTOCOMPFILE="${__PLOTTING_BUILD_DIR}/plots_$(${__PLOTTING_BUILD_DIR}/plot-config get active).csv"
   ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh $AUTOCOMPFILE
   if [[ ! -f "$AUTOCOMPFILE" ]]; then
     return
