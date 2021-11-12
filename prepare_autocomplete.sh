@@ -15,7 +15,9 @@ if [[ -f "${AUTOCOMPFILE}" ]]; then
   fi
 fi
 
-cat $PLOTDEFFILE | grep -o "<PLOT::.*>" | grep -vE '.*TEMPLATES.*' > tmp
+TMPFILE="${AUTOCOMPFILE}.tmp"
+
+cat $PLOTDEFFILE | grep -o "<PLOT::.*>" | grep -vE '.*TEMPLATES.*' > $TMPFILE
 
 > $AUTOCOMPFILE
 while read -r line ; do
@@ -25,5 +27,5 @@ while read -r line ; do
   line="${line/|/,}"
   line="${line//|//}"
   echo $line >> $AUTOCOMPFILE
-done < tmp
-rm tmp
+done < $TMPFILE
+rm $TMPFILE
