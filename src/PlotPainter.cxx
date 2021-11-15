@@ -319,7 +319,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 }
               } else if constexpr (is_graph<denom_data_type>()) {
                 ERROR("Cannot divide histogram by graph.");
-                //DivideHistGraphInterpolated(data_ptr, denom_data_ptr);
+                // DivideHistGraphInterpolated(data_ptr, denom_data_ptr);
               }
             } else if constexpr (is_graph_1d<data_type>()) {
               if constexpr (is_graph_1d<denom_data_type>()) {
@@ -330,7 +330,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 }
               } else if constexpr (is_hist_1d<denom_data_type>()) {
                 ERROR("Cannot divide graph by histogram.");
-                //DivideGraphHistInterpolated(data_ptr, denom_data_ptr);
+                // DivideGraphHistInterpolated(data_ptr, denom_data_ptr);
               }
             } else {
               ERROR("Unsupported division");
@@ -640,15 +640,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           data_ptr->Draw(drawingOptions.data());
 
           // in case a label was specified for the data, add it to corresponding legend
-          if (data->GetLegendLabel() && !data->GetLegendLabel()->empty()) {
+          auto& legendBoxVector = pad.GetLegendBoxes();
+          if (legendBoxVector.size() && data->GetLegendLabel() && !data->GetLegendLabel()->empty()) {
             // by default place legend entries in first legend
             uint8_t legendID{1u};
             // explicit user choice overrides this
             if (data->GetLegendID()) legendID = *data->GetLegendID();
 
-            auto& boxVector = pad.GetLegendBoxes();
-            if (legendID > 0u && legendID <= boxVector.size()) {
-              boxVector[legendID - 1]->AddEntry(*data->GetLegendLabel(), data_ptr->GetName());
+            if (legendID > 0u && legendID <= legendBoxVector.size()) {
+              legendBoxVector[legendID - 1]->AddEntry(*data->GetLegendLabel(), data_ptr->GetName());
             } else {
               ERROR(R"(Invalid legend label ({}) specified for data "{}" in "{}".)", legendID, data->GetName(), data->GetInputID());
             }
