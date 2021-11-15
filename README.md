@@ -82,7 +82,7 @@ PlotManager plotManager;
 
 // first you need to define the data sources that should be available for your plots
 plotManager.AddInputDataFiles("inputIdentifierA", {"/path/to/file/a.root", "/path/to/file/a2.root"});
-// instead of adding the whole root file, you can also specify a sub-list or sub-folder in the file:
+// instead of adding the whole root file, you can also specify a sub-list or sub-folder within the file:
 plotManager.AddInputDataFiles("inputIdentifierB", {"/path/to/file/b.root:sub/list/or/dir"});
 // the paths may contain any environment variable defined in your shell:
 plotManager.AddInputDataFiles("inputIdentifierC", {"${HOME}/myRootFiles/b2.root"});
@@ -97,8 +97,8 @@ plotManager.DumpInputDataFiles("/path/to/inputFiles.XML");
 // xml file and then read it into your program via
 plotManager.LoadInputDataFiles("/path/to/inputFiles.XML");
 
-// now that we know where to look for the data, we can start creating plot(s).
-// the plot will be handed over to the manager after it was created and defined
+// now that we know where to look for the data, we can start creating plots
+// each plot will be handed over to the manager after it was defined
 { // -----------------------------------------------------------------------
   // create the Plot object
   Plot plot("myPlot1", "myFigureGroup"); // plots are organized in user defined figure groups
@@ -395,7 +395,7 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   plotManager.AddPlotTemplate(templatePlot);
 } // -----------------------------------------------------------------------
 
-// as you have seen, these template plots shall live in a figureGroup called "TEMPLATES"
+// as you have seen, these template plots shall live in a figure group called "TEMPLATES"
 // and have to be added to the manager via plotManager.AddPlotTemplate(templatePlot);
 
 // once this is done, you can define plots based on these templates
@@ -520,7 +520,7 @@ plotManager.ExtractPlotsFromFile("/path/to/plotDefinitions.XML", "load", "projBi
 plotManager.ExtractPlotsFromFile("/path/to/plotDefinitions.XML", "load", "projBin_[1-9]+");
 plotManager.ExtractPlotsFromFile("/path/to/plotDefinitions.XML", "load", "peak_.*");
 
-// ... or from specific figureGroups:
+// ... or from specific figure groups:
 plotManager.ExtractPlotsFromFile("/path/to/plotDefinitions.XML", "load", ".*" "figureGroup[1,2]", "myCategory");
 
 // the plot name, figure group or category can be regular expressions
@@ -558,11 +558,11 @@ Once this is set up, you can easily create plots via the command line from every
 plot <figureGroup> <plotName> <mode>
 ```
 Regular expressions for `<figureGroup>` and `<plotName>` are supported.
-This means you can create multiple plots according to naming patterns. For example `plot paperPlots .+` would generate all plots defined within the figureGroup called paperPlots and `plot test "plot[1,2]"` would create plot1 and plot2 in the figureGroup test. Note that in the second example quotes are needed, since your shell will try to interprete some special characters (in this case `[]`) before they are passed to the plotting program.
-To select only a sub-category within the figureGroup, use `<figureGroup/some/category>`.
+This means you can create multiple plots according to naming patterns. For example `plot paperPlots .+` would generate all plots defined within the figure group called `paperPlots` and `plot test "plot[1,2]"` would create `plot1` and `plot2` from the figure group `test`. Note that in the second example quotes are needed, since your shell will try to interprete some special characters (in this case `[]`) before they are passed to the plotting app.
+To select only a sub-category within the figure group, use `<figureGroup/some/category>`.
 By default, the optional `mode` argument is set to `interactive` and you can leave it out in the command.
 Possible alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`.
 
-For bash and zsh this program provides an auto-completion feature, this means you can tab through the available commands, figureGroups and plots.
+For bash and zsh this program provides an auto-completion feature, this means you can tab through the available commands, figure groups and plot names.
 Your `executable` (which creates the plot definitions) specified in the configuration
 will automatically be rebuilt and (if needed) executed before the app generates the requested plot(s).
