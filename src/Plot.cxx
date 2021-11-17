@@ -1007,6 +1007,7 @@ Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const 
 {
   mData.push_back(std::make_shared<Data>(name, data.GetInputID(), label));
   mData.back()->SetLayout(data);
+  if (!label && data.GetLegendLabel()) mData.back()->SetLegendLabel(*data.GetLegendLabel());
   return *mData.back();
 }
 
