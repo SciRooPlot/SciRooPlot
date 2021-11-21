@@ -1,5 +1,4 @@
 Todo:
-- check again if box auto placement works correctly (also with multiple boxes)
 - check if box auto-size determination considers that legend entries may have different text sizes
 - add again the possiblity to display a legend title
 - make the LegendEntry digest a DataLayout to simplify adding legend properties in a different pad
@@ -28,7 +27,7 @@ Not so urgend:
 - allow SetRange to also specify bin numbers instead of user coordinates
 - add shape objects (lines, arrows, boxes, ellipses, crowns) - below or above the data?
 - support THStack, TMultiGraph
-- support for setting up TView to have a 3d representations of 2d data
+- support for setting up TView to have a 3d representation of 2d data
 - add inclination angle setting to text-boxes
 - support TGraphAsymmErrors and check if TProfile{1,2,3}D would require some extra functionality
 - add division hist/graph, graph/hist

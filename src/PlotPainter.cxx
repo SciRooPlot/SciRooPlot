@@ -895,12 +895,11 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       marginsRight.Draw("SAME");
 
       // find box position that does not collide with any of the drawn objects
-      for (TObject* o : *pad->GetListOfPrimitives()) {
-        foundPosition = pad->PlaceBox(o, totalWidthNDC + 2 * marginX, totalHeightNDC + 2 * marginY, lowerLeftX, lowerLeftY);
-      }
+      foundPosition = pad->PlaceBox(nullptr, totalWidthNDC, totalHeightNDC, lowerLeftX, lowerLeftY);
+      // TODO: this should find most optimal position instead of first match!
       if (foundPosition) {
-        upperLeftX = lowerLeftX + 2 * marginX;
-        upperLeftY = lowerLeftY + totalHeightNDC + 2 * marginY;
+        upperLeftX = lowerLeftX;
+        upperLeftY = lowerLeftY + totalHeightNDC;
       } else {
         WARNING("Could not find enough space to place the {} properly.", (isLegend) ? "legend" : "text");
         // just place legend within axis ranges of pad
