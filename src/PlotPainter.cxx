@@ -270,8 +270,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 defaultDrawingOption = padDefaults.GetDefaultDrawingOptionHist2d();
             }
 
-            if (defaultDrawingOption && defaultDrawingOptions_Hist2d.find(*defaultDrawingOption) != defaultDrawingOptions_Hist2d.end()) {
-              drawingOptions += defaultDrawingOptions_Hist2d.at(*defaultDrawingOption);
+            if (defaultDrawingOption) {
+              if (defaultDrawingOptions_Hist2d.find(*defaultDrawingOption) != defaultDrawingOptions_Hist2d.end()) {
+                drawingOptions += defaultDrawingOptions_Hist2d.at(*defaultDrawingOption);
+              } else if (dataIndex != 0) {
+                ERROR("Default drawing option not defined for 2d histogram ({}).", data_ptr->GetName());
+              }
             }
           } else if constexpr (is_hist_1d<data_type>()) {
             if (!defaultDrawingOption)
@@ -281,8 +285,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                        ? padDefaults.GetDefaultDrawingOptionHist()
                                        : std::nullopt;
 
-            if (defaultDrawingOption && defaultDrawingOptions_Hist.find(*defaultDrawingOption) != defaultDrawingOptions_Hist.end()) {
-              drawingOptions += defaultDrawingOptions_Hist.at(*defaultDrawingOption);
+            if (defaultDrawingOption) {
+              if (defaultDrawingOptions_Hist.find(*defaultDrawingOption) != defaultDrawingOptions_Hist.end()) {
+                drawingOptions += defaultDrawingOptions_Hist.at(*defaultDrawingOption);
+              } else if (dataIndex != 0) {
+                ERROR("Default drawing option not defined for 1d histogram ({}).", data_ptr->GetName());
+              }
             }
           } else if constexpr (is_graph_1d<data_type>()) {
             if (!defaultDrawingOption)
@@ -292,8 +300,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                        ? padDefaults.GetDefaultDrawingOptionGraph()
                                        : std::nullopt;
 
-            if (defaultDrawingOption && defaultDrawingOptions_Graph.find(*defaultDrawingOption) != defaultDrawingOptions_Graph.end()) {
-              drawingOptions += defaultDrawingOptions_Graph.at(*defaultDrawingOption);
+            if (defaultDrawingOption) {
+              if (defaultDrawingOptions_Graph.find(*defaultDrawingOption) != defaultDrawingOptions_Graph.end()) {
+                drawingOptions += defaultDrawingOptions_Graph.at(*defaultDrawingOption);
+              } else if (dataIndex != 0) {
+                ERROR("Default drawing option not defined for graph ({}).", data_ptr->GetName());
+              }
             }
           }
         }

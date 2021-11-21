@@ -1,7 +1,4 @@
 Todo:
-- simpler way to create all saved plots specifying only the mode
-- give warning if selected drawing alias not available for present type of data
-- re-check which of the properties that are always stored are actually required to be non-optional
 - check again if box auto placement works correctly (also with multiple boxes)
 - check if box auto-size determination considers that legend entries may have different text sizes
 - add again the possiblity to display a legend title
@@ -21,16 +18,10 @@ Structural considerations:
 - the whole Painter::GeneratePlots() function is just a big mess and needs major rework!
 - decide where data manipulation part should be put (before or after setting ranges?)
 - should smoothing be done before or after division for ratios (or both)??
-- fix inconsistencies in naming of variables
 
 Bugs:
-- bash does not like '.*' without preceding letters (e.g. 'a_.*' works) -> understand why
-- should one always call Sumw2() before drawing histograms as points?
 - if same histogram is added to plot twice, the name is no longer unique and this results in unwanted behavior for ref data specified in legend entries
 - csv w/o options -> invisible -> TGraphErrors has wrong defaults
-- division graph/hist, hist/graph not implemented yet -> put some printout to inform
-- graphs with asym errors are not supported by any of the division functions
-- with graph as numerator in ratio there is some logic problem that axis histo is not there -> seg fault
 
 Not so urgend:
 - support multiple plot definition and input files per plot-config
@@ -40,3 +31,4 @@ Not so urgend:
 - support for setting up TView to have a 3d representations of 2d data
 - add inclination angle setting to text-boxes
 - support TGraphAsymmErrors and check if TProfile{1,2,3}D would require some extra functionality
+- add division hist/graph, graph/hist
