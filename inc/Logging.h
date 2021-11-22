@@ -32,10 +32,10 @@
 #endif
 
 #define BLACK_ "\033[" _BRIGHTNESS_ "0m"
-#define WHITE_ = "\033[" _BRIGHTNESS_ "7m"
-#define BLUE_ = "\033[" _BRIGHTNESS_ "4m"
+#define WHITE_ "\033[" _BRIGHTNESS_ "7m"
+#define BLUE_ "\033[" _BRIGHTNESS_ "4m"
 #define GREEN_ "\033[" _BRIGHTNESS_ "2m"
-#define MAGENTA_ = "\033[" _BRIGHTNESS_ "5m"
+#define MAGENTA_ "\033[" _BRIGHTNESS_ "5m"
 #define CYAN_ "\033[" _BRIGHTNESS_ "6m"
 #define YELLOW_ "\033[" _BRIGHTNESS_ "3m"
 #define RED_ "\033[" _BRIGHTNESS_ "1m"
@@ -113,7 +113,7 @@
     fmt::print("\n");                                                                     \
   }
 
-// Debug suppression levels
+// debug suppression levels
 #if DEBUG_LVL < 2
 #undef DEBUG
 #define DEBUG(s, ...) ;
@@ -127,7 +127,7 @@
 #define ERROR(s, ...) ;
 #endif
 
-// Output stream suppression levels
+// output stream suppression levels
 #if COUT_LVL < 2
 #undef LOG
 #define LOG(s, ...) ;
