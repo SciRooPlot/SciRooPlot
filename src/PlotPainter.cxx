@@ -374,13 +374,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           string scaleMode{};
 
           if (data->GetNormMode()) {
-            double_t integral = data_ptr->Integral(); // integral in viewing range
+            if (*data->GetNormMode() > 0) scaleMode = "width";
+            double_t integral = data_ptr->Integral(scaleMode.data()); // integral in viewing range
             if (integral == 0.) {
               ERROR("Cannot normalize histogram because integral is zero.");
             } else {
               scaleFactor = 1. / integral;
             }
-            if (*data->GetNormMode() > 0) scaleMode = "width";
           }
           if (data->GetScaleFactor()) {
             scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor())
