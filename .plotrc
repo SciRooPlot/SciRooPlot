@@ -13,6 +13,7 @@ export __PLOTTING_BUILD_DIR
 if [[ -d "${__PLOTTING_BUILD_DIR}" ]]
 then
   # TODO: turn this one-liner into more readable if-else statemets
+  # TODO: it checks only if executable was compiled recently, but not if it was also executed!!!
   function plot() { [[ "${1}" == "cd" ]] && { cd ${__PLOTTING_BUILD_DIR}; return 0; } || { { [[ -d $(dirname $(${__PLOTTING_BUILD_DIR}/plot-config get executable)) ]] && { (cd $(dirname $(${__PLOTTING_BUILD_DIR}/plot-config get executable)); make 1>/dev/null || exit 1; [[ ! -z $(find $(${__PLOTTING_BUILD_DIR}/plot-config get executable) -mmin +1) ]] || ./$(basename $(${__PLOTTING_BUILD_DIR}/plot-config get executable));) || return 1; } || :; }; "${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0; } }
   
     function plot-config() {
