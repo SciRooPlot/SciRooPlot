@@ -12,13 +12,33 @@ __PLOTTING_BUILD_DIR="${__PLOTTING_FRAMEWORK_DIR}/build"
 export __PLOTTING_BUILD_DIR
 if [[ -d "${__PLOTTING_BUILD_DIR}" ]]
 then
-  # TODO: turn this one-liner into more readable if-else statemets
-  # TODO: it checks only if executable was compiled recently, but not if it was also executed!!!
-  function plot() { [[ "${1}" == "cd" ]] && { cd ${__PLOTTING_BUILD_DIR}; return 0; } || { { [[ -d $(dirname $(${__PLOTTING_BUILD_DIR}/plot-config get executable)) ]] && { (cd $(dirname $(${__PLOTTING_BUILD_DIR}/plot-config get executable)); make 1>/dev/null || exit 1; [[ ! -z $(find $(${__PLOTTING_BUILD_DIR}/plot-config get executable) -mmin +1) ]] || ./$(basename $(${__PLOTTING_BUILD_DIR}/plot-config get executable));) || return 1; } || :; }; "${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}; return 0; } }
+  function plot() {
+    if [[ "${1}" == "cd" ]] then
+      cd ${__PLOTTING_BUILD_DIR}
+      return 0
+    fi
+
+    local USER_EXEC=$(${__PLOTTING_BUILD_DIR}/plot-config get executable)
+    local USER_BUILD_DIR=$(dirname ${USER_EXEC})
+    if [[ -d ${USER_BUILD_DIR} ]]
+    then
+      local USER_PLOTDEF=$(${__PLOTTING_BUILD_DIR}/plot-config get plotDefinitions)
+      cd ${USER_BUILD_DIR}
+      make 1>/dev/null || exit 1
+      if [[ ! -f ${USER_PLOTDEF} || -z $(find ${USER_EXEC} -mmin +1) ]]
+      then
+        ${USER_EXEC}
+      fi
+    else
+      return 1
+    fi
+    "${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}
+    return 0
+  }
   
-    function plot-config() {
-      "${__PLOTTING_BUILD_DIR}/plot-config" ${1} ${2} ${3} ${4};
-    }
+  function plot-config() {
+    "${__PLOTTING_BUILD_DIR}/plot-config" ${1} ${2} ${3} ${4}
+  }
 fi
 
 _plot_completions_zsh() {
@@ -30,7 +50,8 @@ _plot_completions_zsh() {
 
   local AUTOCOMPFILE="${__PLOTTING_BUILD_DIR}/plots_$(${__PLOTTING_BUILD_DIR}/plot-config get active).csv"
   ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh $AUTOCOMPFILE
-  if [[ ! -f "$AUTOCOMPFILE" ]]; then
+  if [[ ! -f "$AUTOCOMPFILE" ]]
+  then
     return
   fi
 
@@ -101,7 +122,8 @@ _plot_completions_bash() {
 
   local AUTOCOMPFILE="${__PLOTTING_BUILD_DIR}/plots_$(${__PLOTTING_BUILD_DIR}/plot-config get active).csv"
   ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh $AUTOCOMPFILE
-  if [[ ! -f "$AUTOCOMPFILE" ]]; then
+  if [[ ! -f "$AUTOCOMPFILE" ]]
+  then
     return
   fi
 
