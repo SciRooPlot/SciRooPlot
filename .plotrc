@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # add some global symbols
-if [[ "${BASH_SOURCE[0]}" != "" ]]
-then
+if [[ "${BASH_SOURCE[0]}" != "" ]]; then
   __PLOTTING_FRAMEWORK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 else
   __PLOTTING_FRAMEWORK_DIR="$( cd "$( dirname "${0}"  )" >/dev/null 2>&1 && pwd )"
@@ -10,23 +9,20 @@ fi
 export __PLOTTING_FRAMEWORK_DIR
 __PLOTTING_BUILD_DIR="${__PLOTTING_FRAMEWORK_DIR}/build"
 export __PLOTTING_BUILD_DIR
-if [[ -d "${__PLOTTING_BUILD_DIR}" ]]
-then
+if [[ -d "${__PLOTTING_BUILD_DIR}" ]]; then
   function plot() {
-    if [[ "${1}" == "cd" ]] then
+    if [[ "${1}" == "cd" ]]; then
       cd ${__PLOTTING_BUILD_DIR}
       return 0
     fi
 
     local USER_EXEC=$(${__PLOTTING_BUILD_DIR}/plot-config get executable)
     local USER_BUILD_DIR=$(dirname ${USER_EXEC})
-    if [[ -d ${USER_BUILD_DIR} ]]
-    then
+    if [[ -d ${USER_BUILD_DIR} ]]; then
       local USER_PLOTDEF=$(${__PLOTTING_BUILD_DIR}/plot-config get plotDefinitions)
       cd ${USER_BUILD_DIR}
-      make 1>/dev/null || exit 1
-      if [[ ! -f ${USER_PLOTDEF} || -z $(find ${USER_EXEC} -mmin +1) ]]
-      then
+      make 1> /dev/null || exit 1
+      if [[ ! -f ${USER_PLOTDEF} || -z $(find ${USER_EXEC} -mmin +1) ]]; then
         ${USER_EXEC}
       fi
     else
@@ -50,8 +46,7 @@ _plot_completions_zsh() {
 
   local AUTOCOMPFILE="${__PLOTTING_BUILD_DIR}/plots_$(${__PLOTTING_BUILD_DIR}/plot-config get active).csv"
   ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh $AUTOCOMPFILE
-  if [[ ! -f "$AUTOCOMPFILE" ]]
-  then
+  if [[ ! -f "$AUTOCOMPFILE" ]]; then
     return
   fi
 
@@ -70,10 +65,8 @@ _plot_completions_zsh() {
     
     while IFS="," read -r plotName figureGroup figureCategory
     do
-      if [[ "${group}" == "${figureGroup}" ]]
-      then
-        if [[ -n "${category}" && ! ( "${category}" == "${figureCategory}" || "${figureCategory}" == "${category}/"* ) ]]
-        then
+      if [[ "${group}" == "${figureGroup}" ]]; then
+        if [[ -n "${category}" && ! ( "${category}" == "${figureCategory}" || "${figureCategory}" == "${category}/"* ) ]]; then
           continue
         fi
         names+=("${plotName}")
@@ -89,16 +82,14 @@ _plot_completions_zsh() {
 
   case $state in
     group)
-      if [[ "${words[2]}" == *"/"* ]]
-      then
+      if [[ "${words[2]}" == *"/"* ]]; then
         _arguments '1:profiles:(${groupsAndCategories})'
       else
         _arguments '1:profiles:(${groups})'
       fi
     ;;
     name)
-      if [[ "${words[2]}" == "cd" ]]
-      then
+      if [[ "${words[2]}" == "cd" ]]; then
         _arguments '2:profiles:()'
       else
         updatePlotNames $words[2]
@@ -122,8 +113,7 @@ _plot_completions_bash() {
 
   local AUTOCOMPFILE="${__PLOTTING_BUILD_DIR}/plots_$(${__PLOTTING_BUILD_DIR}/plot-config get active).csv"
   ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh $AUTOCOMPFILE
-  if [[ ! -f "$AUTOCOMPFILE" ]]
-  then
+  if [[ ! -f "$AUTOCOMPFILE" ]]; then
     return
   fi
 
@@ -142,10 +132,8 @@ _plot_completions_bash() {
     
     while IFS="," read -r plotName figureGroup figureCategory
     do
-      if [[ "${group}" == "${figureGroup}" ]]
-      then
-        if [[ -n "${category}" && ! ( "${category}" == "${figureCategory}" || "${figureCategory}" == "${category}/"* ) ]]
-        then
+      if [[ "${group}" == "${figureGroup}" ]]; then
+        if [[ -n "${category}" && ! ( "${category}" == "${figureCategory}" || "${figureCategory}" == "${category}/"* ) ]]; then
           continue
         fi
         names+=" ${plotName}"
@@ -155,16 +143,14 @@ _plot_completions_bash() {
 
   case $COMP_CWORD in
   1)
-    if [[ "${COMP_WORDS[COMP_CWORD]}" == *"/"* ]]
-    then
+    if [[ "${COMP_WORDS[COMP_CWORD]}" == *"/"* ]]; then
       COMPREPLY=( $(compgen -W "${groupsAndCategories}" -- "${COMP_WORDS[COMP_CWORD]}") )
     else
       COMPREPLY=( $(compgen -W "${groups}" -- "${COMP_WORDS[COMP_CWORD]}") )
     fi
   ;;
   2)
-    if [[ "${COMP_WORDS[COMP_CWORD-1]}" == "cd" ]]
-    then
+    if [[ "${COMP_WORDS[COMP_CWORD-1]}" == "cd" ]]; then
       COMPREPLY=( )
     else
       updatePlotNames "${COMP_WORDS[COMP_CWORD-1]}"
