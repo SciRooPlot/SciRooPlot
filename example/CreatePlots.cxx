@@ -135,21 +135,20 @@ void DefinePlotTemplates(PlotManager& plotManager)
     templatePlot[0].SetDefaultLineStyles({kSolid});
     templatePlot[0].SetDefaultMarkerSize(1.);
     templatePlot[0].SetDefaultLineWidth(3.);
+    templatePlot[0].SetDefaultDrawingOptionGraph(points);
     templatePlot[0].SetDefaultTextFont(43);
     templatePlot[0].SetDefaultTextSize(24);
-    templatePlot[0].SetDefaultDrawingOptionGraph(points);
     templatePlot[0].SetTransparent();
-    templatePlot[0]['X'].SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3);
-    templatePlot[0]['Y'].SetTitleOffset(1.4).SetOppositeTicks().SetMaxDigits(3);
+    templatePlot[0]['X'].SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3).SetTitleFont(43).SetTitleSize(34);
+    templatePlot[0]['Y'].SetTitleOffset(1.5).SetOppositeTicks().SetMaxDigits(3).SetTitleFont(43).SetTitleSize(34);
+    templatePlot[1]['X'].SetTitleSize(0.).SetLabelSize(0.);
     templatePlot[1].SetPosition(0., 0.28, 1., 1.);
     templatePlot[1].SetMargins(0.05, 0.0, 0.14, 0.05);
-    templatePlot[1]['X'].SetTitleSize(0.).SetLabelSize(0.);
-    templatePlot[1]['Y'].SetTitleOffset(1.5);
     templatePlot[2].SetPosition(0., 0., 1., 0.28);
     templatePlot[2].SetMargins(0.015, 0.4, 0.14, 0.05);
     templatePlot[2].SetRefFunc("1");
-    templatePlot[2]['X'].SetTickLength(0.06).SetTitleOffset(1.1).SetTitleSize(34).SetOppositeTicks();
-    templatePlot[2]['Y'].SetNumDivisions(305).SetTitleOffset(1.5).SetTitleSize(34).SetTitleCenter();
+    templatePlot[2]['X'].SetTickLength(0.06).SetTitleOffset(1.1);
+    templatePlot[2]['Y'].SetNumDivisions(305).SetTitleCenter();
     plotManager.AddPlotTemplate(templatePlot);
   } // -----------------------------------------------------------------------
 
