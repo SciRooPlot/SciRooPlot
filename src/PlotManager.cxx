@@ -215,8 +215,8 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
 //**************************************************************************************************
 void PlotManager::AddPlot(Plot& plot)
 {
-  if (plot.GetFigureGroup() == "TEMPLATES") {
-    ERROR(R"(You cannot use reserved group name "TEMPLATES"!)");
+  if (plot.GetFigureGroup() == "PLOT_TEMPLATES") {
+    ERROR(R"(You cannot use reserved group name "PLOT_TEMPLATES"!)");
   }
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [plot](Plot& curPlot) mutable {
@@ -235,7 +235,7 @@ void PlotManager::AddPlot(Plot& plot)
 //**************************************************************************************************
 void PlotManager::AddPlotTemplate(Plot& plotTemplate)
 {
-  plotTemplate.SetFigureGroup("TEMPLATES");
+  plotTemplate.SetFigureGroup("PLOT_TEMPLATES");
   mPlotTemplates.erase(std::remove_if(mPlotTemplates.begin(), mPlotTemplates.end(),
                                       [plotTemplate](Plot& curPlotTemplate) mutable {
                                         bool removePlot = curPlotTemplate.GetUniqueName() == plotTemplate.GetUniqueName();
@@ -263,7 +263,7 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
   for (const vector<Plot>& plots : {std::ref(mPlotTemplates), std::ref(mPlots)}) {
     for (const Plot& plot : plots) {
 
-      if (plot.GetFigureGroup() == "TEMPLATES" && usedTemplates.find(plot.GetName()) == usedTemplates.end()) {
+      if (plot.GetFigureGroup() == "PLOT_TEMPLATES" && usedTemplates.find(plot.GetName()) == usedTemplates.end()) {
         continue;
       } else if (!figureGroup.empty()) {
         if (plot.GetFigureGroup() != figureGroup) continue;
@@ -835,7 +835,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
   for (auto& plotGroupTree : inputTree) {
     // first filter by group
     string groupIdentifier = plotGroupTree.first.substr(string("GROUP::").size());
-    bool isTemplate = (groupIdentifier == "TEMPLATES");
+    bool isTemplate = (groupIdentifier == "PLOT_TEMPLATES");
 
     if (!isTemplate && !std::regex_match(groupIdentifier, groupRegex)) {
       continue;

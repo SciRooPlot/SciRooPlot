@@ -68,12 +68,26 @@ int main(int argc, char* argv[])
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
 
-  // create all the plots that were defined in interactive mode
+  // OPTION A:
+  // directly create all the plots that were defined before
   plotManager.CreatePlots("", "", {}, "interactive");
 
-  // create all the plots that were defined as pdf
-  //plotManager.SetOutputDirectory("/some/path/on/system/");
-  //plotManager.CreatePlots("", "", {}, "pdf");
+  // you can also store them as pdf (for more options see README.md)
+  // plotManager.SetOutputDirectory("/some/path/on/system/");
+  // plotManager.CreatePlots("", "", {}, "pdf");
+
+  // OPTION B (recommended way):
+  // dump the plot definitions to file and then use the plotting app to create the plots:
+  plotManager.DumpPlots("plotDefinitions.XML");
+
+  string exampleName = "myPlots";
+  INFO("");
+  INFO("Run once the following commands to configure the plotting app ({} can be replaced by an arbitrary name):", exampleName);
+  INFO("  plot-config add {} plotDefinitions /path/to/plotDefinitions.XML", exampleName);
+  INFO("  plot-config add {} inputFiles /path/to/inputFiles.XML", exampleName);
+  INFO("  plot-config add {} executable /path/to/executable/that/dumps/plots/definitions/create", exampleName);
+  INFO("  plot-config add {} outputDir /where/the/output/plots/should/go", exampleName);
+  INFO("");
 
   /*
   // in your program you can make use of the logging macros of the framework (requires to include Logging.h)
@@ -92,82 +106,84 @@ int main(int argc, char* argv[])
 void DefinePlotTemplates(PlotManager& plotManager)
 {
   vector<int16_t> goodColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1,
-                                kMagenta - 4, kGreen + 3, kOrange + 1, kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7, kMagenta + 1, kPink + 8, kCyan - 6, kMagenta, kRed + 2, kGreen + 2,
-                                kOrange + 2, kMagenta + 2, kYellow + 3, kGray + 2, kBlue + 2, kYellow + 2, kRed, kBlue, kMagenta + 3, kGreen + 4, 28, 8, 15, 17, 12};
+                                kMagenta - 4, kGreen + 3, kOrange + 1,
+                                kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7,
+                                kMagenta + 1, kPink + 8, kCyan - 6,
+                                kMagenta, kRed + 2, kGreen + 2,
+                                kOrange + 2, kMagenta + 2, kYellow + 3,
+                                kGray + 2, kBlue + 2, kYellow + 2,
+                                kRed, kBlue, kMagenta + 3,
+                                kGreen + 4, 28, 8, 15, 17, 12};
 
   { // -----------------------------------------------------------------------
-    // template 1d
-    Plot templatePlot("1d", "TEMPLATES");
-    templatePlot.SetDimensions(710, 710, true);
-    templatePlot.SetTransparent();
-    templatePlot[0].SetFrameFill(10, 1001);
-    templatePlot[0].SetDefaultLineColors(goodColors);
-    templatePlot[0].SetDefaultMarkerColors(goodColors);
-    templatePlot[0].SetDefaultFillColors(goodColors);
-    templatePlot[0].SetDefaultFillStyles({0});
-    templatePlot[0].SetDefaultMarkerStyles({kFullCircle});
-    templatePlot[0].SetDefaultLineStyles({kSolid});
-    templatePlot[0].SetDefaultTextFont(43);
-    templatePlot[0].SetDefaultTextSize(24);
-    templatePlot[0].SetDefaultMarkerSize(1.);
-    templatePlot[0].SetDefaultLineWidth(3.);
-    templatePlot[0].SetDefaultDrawingOptionGraph(points);
-    templatePlot[0].SetTransparent();
-    templatePlot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
-    templatePlot[0]['X'].SetTitleOffset(1.).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks().SetMaxDigits(3);
-    templatePlot[0]['Y'].SetTitleOffset(1.2).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks().SetMaxDigits(3);
-    templatePlot[1].SetPosition(0., 0., 1., 1.);
-    //templatePlot[1].AddText(0.433, 0.98, "my Pad Title").SetTextColor(kRed);
-    plotManager.AddPlotTemplate(templatePlot);
+    Plot plotTemplate("1d", "PLOT_TEMPLATES");
+    plotTemplate.SetDimensions(710, 710, true);
+    plotTemplate.SetTransparent();
+    plotTemplate[0].SetFrameFill(10, 1001);
+    plotTemplate[0].SetDefaultMarkerColors(goodColors);
+    plotTemplate[0].SetDefaultLineColors(goodColors);
+    plotTemplate[0].SetDefaultFillColors(goodColors);
+    plotTemplate[0].SetDefaultFillStyles({0});
+    plotTemplate[0].SetDefaultMarkerStyles({kFullCircle});
+    plotTemplate[0].SetDefaultLineStyles({kSolid});
+    plotTemplate[0].SetDefaultTextFont(43);
+    plotTemplate[0].SetDefaultTextSize(24);
+    plotTemplate[0].SetDefaultMarkerSize(1.);
+    plotTemplate[0].SetDefaultLineWidth(3.);
+    plotTemplate[0].SetDefaultDrawingOptionGraph(points);
+    plotTemplate[0].SetTransparent();
+    plotTemplate[0].SetMargins(0.07, 0.14, 0.12, 0.07);
+    plotTemplate[0]['X'].SetTitleOffset(1.).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks().SetMaxDigits(3);
+    plotTemplate[0]['Y'].SetTitleOffset(1.2).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks().SetMaxDigits(3);
+    plotTemplate[1].SetPosition(0., 0., 1., 1.);
+    plotManager.AddPlotTemplate(plotTemplate);
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
-    // template 1d ratio
-    Plot templatePlot("1d_ratio", "TEMPLATES");
-    templatePlot.SetDimensions(710, 710, true);
-    templatePlot.SetTransparent();
-    templatePlot[0].SetFrameFill(10, 1001);
-    templatePlot[0].SetDefaultLineColors(goodColors);
-    templatePlot[0].SetDefaultMarkerColors(goodColors);
-    templatePlot[0].SetDefaultFillColors(goodColors);
-    templatePlot[0].SetDefaultFillStyles({0});
-    templatePlot[0].SetDefaultMarkerStyles({kFullCircle});
-    templatePlot[0].SetDefaultLineStyles({kSolid});
-    templatePlot[0].SetDefaultMarkerSize(1.);
-    templatePlot[0].SetDefaultLineWidth(3.);
-    templatePlot[0].SetDefaultDrawingOptionGraph(points);
-    templatePlot[0].SetDefaultTextFont(43);
-    templatePlot[0].SetDefaultTextSize(24);
-    templatePlot[0].SetTransparent();
-    templatePlot[0]['X'].SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3).SetTitleFont(43).SetTitleSize(34);
-    templatePlot[0]['Y'].SetTitleOffset(1.5).SetOppositeTicks().SetMaxDigits(3).SetTitleFont(43).SetTitleSize(34);
-    templatePlot[1]['X'].SetTitleSize(0.).SetLabelSize(0.);
-    templatePlot[1].SetPosition(0., 0.28, 1., 1.);
-    templatePlot[1].SetMargins(0.05, 0.0, 0.14, 0.05);
-    templatePlot[2].SetPosition(0., 0., 1., 0.28);
-    templatePlot[2].SetMargins(0.015, 0.4, 0.14, 0.05);
-    templatePlot[2].SetRefFunc("1");
-    templatePlot[2]['X'].SetTickLength(0.06).SetTitleOffset(1.1);
-    templatePlot[2]['Y'].SetNumDivisions(305).SetTitleCenter();
-    plotManager.AddPlotTemplate(templatePlot);
+    Plot plotTemplate("1d_ratio", "PLOT_TEMPLATES");
+    plotTemplate.SetDimensions(710, 710, true);
+    plotTemplate.SetTransparent();
+    plotTemplate[0].SetFrameFill(10, 1001);
+    plotTemplate[0].SetDefaultLineColors(goodColors);
+    plotTemplate[0].SetDefaultMarkerColors(goodColors);
+    plotTemplate[0].SetDefaultFillColors(goodColors);
+    plotTemplate[0].SetDefaultFillStyles({0});
+    plotTemplate[0].SetDefaultMarkerStyles({kFullCircle});
+    plotTemplate[0].SetDefaultLineStyles({kSolid});
+    plotTemplate[0].SetDefaultMarkerSize(1.);
+    plotTemplate[0].SetDefaultLineWidth(3.);
+    plotTemplate[0].SetDefaultDrawingOptionGraph(points);
+    plotTemplate[0].SetDefaultTextFont(43);
+    plotTemplate[0].SetDefaultTextSize(24);
+    plotTemplate[0].SetTransparent();
+    plotTemplate[0]['X'].SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3).SetTitleFont(43).SetTitleSize(34);
+    plotTemplate[0]['Y'].SetTitleOffset(1.5).SetOppositeTicks().SetMaxDigits(3).SetTitleFont(43).SetTitleSize(34);
+    plotTemplate[1]['X'].SetTitleSize(0.).SetLabelSize(0.);
+    plotTemplate[1].SetPosition(0., 0.28, 1., 1.);
+    plotTemplate[1].SetMargins(0.05, 0.0, 0.14, 0.05);
+    plotTemplate[2].SetPosition(0., 0., 1., 0.28);
+    plotTemplate[2].SetMargins(0.015, 0.4, 0.14, 0.05);
+    plotTemplate[2].SetRefFunc("1");
+    plotTemplate[2]['X'].SetTickLength(0.06).SetTitleOffset(1.1);
+    plotTemplate[2]['Y'].SetNumDivisions(305).SetTitleCenter();
+    plotManager.AddPlotTemplate(plotTemplate);
   } // -----------------------------------------------------------------------
 
   { // -----------------------------------------------------------------------
-    // template 2d
-    Plot templatePlot("2d", "TEMPLATES");
-    templatePlot.SetDimensions(710, 710, true);
-    templatePlot.SetTransparent();
-    templatePlot[0].SetFrameFill(10, 1001);
-    templatePlot[0].SetDefaultDrawingOptionHist2d(colz);
-    templatePlot[0].SetDefaultTextFont(43);
-    templatePlot[0].SetDefaultTextSize(24);
-    templatePlot[0].SetTransparent();
-    templatePlot[0].SetMargins(0.12 - 0.05, 0.12 + 0.02, 0.12, 0.12 + 0.06);
-    templatePlot[0]['X'].SetTitleOffset(1.1).SetMaxDigits(3);
-    templatePlot[0]['Y'].SetTitleOffset(1.1).SetMaxDigits(3);
-    templatePlot[0]['Z'].SetTitleOffset(1.6).SetMaxDigits(3);
-    templatePlot[0].SetRedrawAxes();
-    templatePlot[1].SetPosition(0., 0., 1., 1.);
-    plotManager.AddPlotTemplate(templatePlot);
+    Plot plotTemplate("2d", "PLOT_TEMPLATES");
+    plotTemplate.SetDimensions(710, 710, true);
+    plotTemplate.SetTransparent();
+    plotTemplate[0].SetFrameFill(10, 1001);
+    plotTemplate[0].SetDefaultDrawingOptionHist2d(colz);
+    plotTemplate[0].SetDefaultTextFont(43);
+    plotTemplate[0].SetDefaultTextSize(24);
+    plotTemplate[0].SetTransparent();
+    plotTemplate[0].SetMargins(0.12 - 0.05, 0.12 + 0.02, 0.12, 0.12 + 0.06);
+    plotTemplate[0]['X'].SetTitleOffset(1.1).SetMaxDigits(3);
+    plotTemplate[0]['Y'].SetTitleOffset(1.1).SetMaxDigits(3);
+    plotTemplate[0]['Z'].SetTitleOffset(1.6).SetMaxDigits(3);
+    plotTemplate[0].SetRedrawAxes();
+    plotTemplate[1].SetPosition(0., 0., 1., 1.);
+    plotManager.AddPlotTemplate(plotTemplate);
   } // -----------------------------------------------------------------------
 }
