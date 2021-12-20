@@ -47,7 +47,7 @@ _plot_completions_zsh() {
   local names
 
   local AUTOCOMPFILE="${__PLOTTING_BUILD_DIR}/plots_$(${__PLOTTING_BUILD_DIR}/plot-config get active).csv"
-  ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh $AUTOCOMPFILE
+  ${__PLOTTING_FRAMEWORK_DIR}/scripts/prepare_autocomplete.sh $AUTOCOMPFILE
   if [[ ! -f "$AUTOCOMPFILE" ]]; then
     return
   fi
@@ -114,7 +114,7 @@ _plot_completions_bash() {
   local names
 
   local AUTOCOMPFILE="${__PLOTTING_BUILD_DIR}/plots_$(${__PLOTTING_BUILD_DIR}/plot-config get active).csv"
-  ${__PLOTTING_FRAMEWORK_DIR}/prepare_autocomplete.sh $AUTOCOMPFILE
+  ${__PLOTTING_FRAMEWORK_DIR}/scripts/prepare_autocomplete.sh $AUTOCOMPFILE
   if [[ ! -f "$AUTOCOMPFILE" ]]; then
     return
   fi
