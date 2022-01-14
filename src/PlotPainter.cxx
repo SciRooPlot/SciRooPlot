@@ -45,6 +45,7 @@
 #include "TF2.h"
 
 #include "TFrame.h"
+#include "TLine.h"
 #include "TLegendEntry.h"
 #include "TIterator.h"
 #include "TObjArray.h"
@@ -687,7 +688,22 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     bool redrawAxes = (pad.GetRedrawAxes())
                         ? *pad.GetRedrawAxes()
                         : ((padDefaults.GetRedrawAxes()) ? *padDefaults.GetRedrawAxes() : false);
-    if (redrawAxes && axisHist_ptr) axisHist_ptr->Draw("SAME AXIS");
+    if (redrawAxes && axisHist_ptr) {
+      axisHist_ptr->Draw("SAME AXIS");
+      // now also re-draw the lines opposite to the axes
+      TLine line;
+      pad_ptr->GetFrame()->Copy(line);
+      double_t lm = pad_ptr->GetLeftMargin();
+      double_t rm = 1. - pad_ptr->GetRightMargin();
+      double_t tm = 1. - pad_ptr->GetTopMargin();
+      double_t bm = pad_ptr->GetBottomMargin();
+
+      double_t xndc = (rm - lm) * ((pad_ptr->GetUxmax() - pad_ptr->GetUxmin()) / (pad_ptr->GetUxmax() - pad_ptr->GetUxmin())) + lm;
+      double_t yndc = (tm - bm) * ((pad_ptr->GetUymax() - pad_ptr->GetUymin()) / (pad_ptr->GetUymax() - pad_ptr->GetUymin())) + bm;
+
+      line.DrawLineNDC(xndc, bm, xndc, tm);
+      line.DrawLineNDC(lm, yndc, rm, yndc);
+    }
 
     // now place legends, text-boxes and shapes
     uint8_t legendIndex{1u};
