@@ -19,6 +19,7 @@ Structural considerations:
 - should smoothing be done before or after division for ratios (or both)??
 
 Bugs:
+- SetOption(string) does not override SetOption(defaultOption)
 - if same histogram is added to plot twice, the name is no longer unique and this results in unwanted behavior for ref data specified in legend entries
 - csv w/o options -> invisible -> TGraphErrors has wrong defaults
 

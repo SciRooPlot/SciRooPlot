@@ -684,6 +684,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       return nullptr;
     }
 
+    bool redrawAxes = (pad.GetRedrawAxes())
+                        ? *pad.GetRedrawAxes()
+                        : ((padDefaults.GetRedrawAxes()) ? *padDefaults.GetRedrawAxes() : false);
+    if (redrawAxes && axisHist_ptr) axisHist_ptr->Draw("SAME AXIS");
+
     // now place legends, text-boxes and shapes
     uint8_t legendIndex{1u};
     for (auto& box : pad.GetLegendBoxes()) {
@@ -718,11 +723,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         ERROR("Text {} was not added since it is empty.", textIndex);
       }
     }
-
-    bool redrawAxes = (pad.GetRedrawAxes())
-                        ? *pad.GetRedrawAxes()
-                        : ((padDefaults.GetRedrawAxes()) ? *padDefaults.GetRedrawAxes() : false);
-    if (redrawAxes && axisHist_ptr) axisHist_ptr->Draw("SAME AXIS");
 
     pad_ptr->Modified();
     pad_ptr->Update();
