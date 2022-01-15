@@ -689,20 +689,21 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                         ? *pad.GetRedrawAxes()
                         : ((padDefaults.GetRedrawAxes()) ? *padDefaults.GetRedrawAxes() : false);
     if (redrawAxes && axisHist_ptr) {
-      axisHist_ptr->Draw("SAME AXIS");
-      // now also re-draw the lines opposite to the axes
+      // re-draw frame
       TLine line;
       pad_ptr->GetFrame()->Copy(line);
       double_t lm = pad_ptr->GetLeftMargin();
       double_t rm = 1. - pad_ptr->GetRightMargin();
       double_t tm = 1. - pad_ptr->GetTopMargin();
       double_t bm = pad_ptr->GetBottomMargin();
-
-      double_t xndc = (rm - lm) * ((pad_ptr->GetUxmax() - pad_ptr->GetUxmin()) / (pad_ptr->GetUxmax() - pad_ptr->GetUxmin())) + lm;
-      double_t yndc = (tm - bm) * ((pad_ptr->GetUymax() - pad_ptr->GetUymin()) / (pad_ptr->GetUymax() - pad_ptr->GetUymin())) + bm;
-
-      line.DrawLineNDC(xndc, bm, xndc, tm);
-      line.DrawLineNDC(lm, yndc, rm, yndc);
+      double_t xup = (rm - lm) * ((pad_ptr->GetUxmax() - pad_ptr->GetUxmin()) / (pad_ptr->GetUxmax() - pad_ptr->GetUxmin())) + lm;
+      double_t yup = (tm - bm) * ((pad_ptr->GetUymax() - pad_ptr->GetUymin()) / (pad_ptr->GetUymax() - pad_ptr->GetUymin())) + bm;
+      line.DrawLineNDC(xup, bm, xup, tm);
+      line.DrawLineNDC(lm, bm, lm, tm);
+      line.DrawLineNDC(lm, yup, rm, yup);
+      line.DrawLineNDC(lm, bm, rm, bm);
+      // re-draw axes
+      axisHist_ptr->Draw("SAME AXIS");
     }
 
     // now place legends, text-boxes and shapes
