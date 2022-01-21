@@ -594,6 +594,7 @@ public:
   Axis& SetLog(bool isLog = true);
   Axis& SetGrid(bool isGrid = true);
   Axis& SetOppositeTicks(bool isOppositeTicks = true);
+  Axis& SetNoExponent(bool isNoExponent = true);
   Axis& SetTimeFormat(const string& timeFormat);
   Axis& SetTickOrientation(const string& tickOrientation);
 
@@ -628,6 +629,7 @@ protected:
   const auto& GetLog() const { return mIsLog; }
   const auto& GetGrid() const { return mIsGrid; }
   const auto& GetOppositeTicks() const { return mIsOppositeTicks; }
+  const auto& GetNoExponent() const { return mIsNoExponent; }
   const auto& GetTimeFormat() const { return mTimeFormat; }
   const auto& GetTickOrientation() const { return mTickOrientation; }
 
@@ -655,6 +657,7 @@ private:
   optional<bool> mIsLog;
   optional<bool> mIsGrid;
   optional<bool> mIsOppositeTicks;
+  optional<bool> mIsNoExponent;
   optional<string> mTimeFormat;
   optional<string> mTickOrientation;
 

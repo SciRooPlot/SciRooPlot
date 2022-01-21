@@ -218,7 +218,6 @@ void PlotManager::AddPlot(Plot& plot)
   if (plot.GetFigureGroup() == "PLOT_TEMPLATES") {
     ERROR(R"(You cannot use reserved group name "PLOT_TEMPLATES"!)");
   }
-  // TODO: this check does not work + actually all those string comparisons are maybe a bit of an overkill...
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [plot](Plot& curPlot) mutable {
                                 bool removePlot = curPlot.GetUniqueName() == plot.GetUniqueName();

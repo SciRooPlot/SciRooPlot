@@ -507,6 +507,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
                   }
                 }
+                if (axisLayout.GetNoExponent()) {
+                  axis_ptr->SetNoExponent(*axisLayout.GetNoExponent());
+                }
                 if (axisLayout.GetTimeFormat()) {
                   axis_ptr->SetTimeDisplay(1);
                   axis_ptr->SetTimeFormat((*axisLayout.GetTimeFormat()).data());
@@ -1041,6 +1044,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       if (textColor) paveText->SetTextColor(*textColor);
 
       for (auto& line : lines) {
+        // TODO: place text lines in equal distances
         TText* text = paveText->AddText(line.data());
         text->SetTextFont(text_font);
         text->SetTextSize(text_size);

@@ -1622,6 +1622,7 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
   read_from_tree(axisTree, mIsLog, "is_log");
   read_from_tree(axisTree, mIsGrid, "is_grid");
   read_from_tree(axisTree, mIsOppositeTicks, "is_opposite_ticks");
+  read_from_tree(axisTree, mIsNoExponent, "is_no_exponent");
   read_from_tree(axisTree, mTickOrientation, "tick_orientation");
   read_from_tree(axisTree, mTimeFormat, "time_format");
 }
@@ -1655,6 +1656,7 @@ ptree Plot::Pad::Axis::GetPropertyTree() const
   put_in_tree(axisTree, mIsLog, "is_log");
   put_in_tree(axisTree, mIsGrid, "is_grid");
   put_in_tree(axisTree, mIsOppositeTicks, "is_opposite_ticks");
+  put_in_tree(axisTree, mIsNoExponent, "is_no_exponent");
   put_in_tree(axisTree, mTickOrientation, "tick_orientation");
   put_in_tree(axisTree, mTimeFormat, "time_format");
 
@@ -1679,6 +1681,7 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
   if (axis.mIsLog) mIsLog = axis.mIsLog;
   if (axis.mIsGrid) mIsGrid = axis.mIsGrid;
   if (axis.mIsOppositeTicks) mIsOppositeTicks = axis.mIsOppositeTicks;
+  if (axis.mIsNoExponent) mIsNoExponent = axis.mIsNoExponent;
   if (axis.mTitleProperties.font) mTitleProperties.font = axis.mTitleProperties.font;
   if (axis.mTitleProperties.size) mTitleProperties.size = axis.mTitleProperties.size;
   if (axis.mTitleProperties.color) mTitleProperties.color = axis.mTitleProperties.color;
@@ -1808,6 +1811,11 @@ auto Plot::Pad::Axis::SetGrid(bool isGrid) -> decltype(*this)
 auto Plot::Pad::Axis::SetOppositeTicks(bool isOppositeTicks) -> decltype(*this)
 {
   mIsOppositeTicks = isOppositeTicks;
+  return *this;
+}
+auto Plot::Pad::Axis::SetNoExponent(bool isNoExponent) -> decltype(*this)
+{
+  mIsNoExponent = isNoExponent;
   return *this;
 }
 auto Plot::Pad::Axis::SetTimeFormat(const string& timeFormat) -> decltype(*this)
