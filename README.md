@@ -317,7 +317,15 @@ plotManager.LoadInputDataFiles("/path/to/inputFiles.XML");
 // and the properties specified for your final plot will be applied on top of these
 
 // for instance the following will give you some nice default plots:
-vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
+vector<int16_t> goodColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1,
+                              kMagenta - 4, kGreen + 3, kOrange + 1,
+                              kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7,
+                              kMagenta + 1, kPink + 8, kCyan - 6,
+                              kMagenta, kRed + 2, kGreen + 2,
+                              kOrange + 2, kMagenta + 2, kYellow + 3,
+                              kGray + 2, kBlue + 2, kYellow + 2,
+                              kRed, kBlue, kMagenta + 3,
+                              kGreen + 4, 28, 8, 15, 17, 12};
 { // -----------------------------------------------------------------------
   Plot plotTemplate("1d", "PLOT_TEMPLATES");
   plotTemplate.SetDimensions(710, 710, true);
@@ -336,12 +344,11 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   plotTemplate[0].SetDefaultDrawingOptionGraph(points);
   plotTemplate[0].SetTransparent();
   plotTemplate[0].SetMargins(0.07, 0.14, 0.12, 0.07);
-  plotTemplate[0]['X'].SetTitleOffset(1.).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks().SetMaxDigits(3);
-  plotTemplate[0]['Y'].SetTitleOffset(1.2).SetTitleFont(43).SetTitleSize(34).SetOppositeTicks().SetMaxDigits(3);
+  plotTemplate[0]['X'].SetTitleSize(28).SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
+  plotTemplate[0]['Y'].SetTitleSize(28).SetTitleOffset(1.5).SetOppositeTicks().SetMaxDigits(3);
   plotTemplate[1].SetPosition(0., 0., 1., 1.);
   plotManager.AddPlotTemplate(plotTemplate);
 } // -----------------------------------------------------------------------
-
 { // -----------------------------------------------------------------------
   Plot plotTemplate("1d_ratio", "PLOT_TEMPLATES");
   plotTemplate.SetDimensions(710, 710, true);
@@ -359,19 +366,18 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   plotTemplate[0].SetDefaultTextFont(43);
   plotTemplate[0].SetDefaultTextSize(24);
   plotTemplate[0].SetTransparent();
-  plotTemplate[0]['X'].SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3).SetTitleFont(43).SetTitleSize(34);
-  plotTemplate[0]['Y'].SetTitleOffset(1.5).SetOppositeTicks().SetMaxDigits(3).SetTitleFont(43).SetTitleSize(34);
+  plotTemplate[0]['X'].SetTitleSize(28).SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3);
+  plotTemplate[0]['Y'].SetTitleSize(28).SetTitleOffset(1.5).SetOppositeTicks().SetMaxDigits(3);
   plotTemplate[1]['X'].SetTitleSize(0.).SetLabelSize(0.);
   plotTemplate[1].SetPosition(0., 0.28, 1., 1.);
   plotTemplate[1].SetMargins(0.05, 0.0, 0.14, 0.05);
   plotTemplate[2].SetPosition(0., 0., 1., 0.28);
   plotTemplate[2].SetMargins(0.015, 0.4, 0.14, 0.05);
   plotTemplate[2].SetRefFunc("1");
-  plotTemplate[2]['X'].SetTickLength(0.06).SetTitleOffset(1.1);
+  plotTemplate[2]['X'].SetTickLength(0.06).SetNoExponent();
   plotTemplate[2]['Y'].SetNumDivisions(305).SetTitleCenter();
   plotManager.AddPlotTemplate(plotTemplate);
 } // -----------------------------------------------------------------------
-
 { // -----------------------------------------------------------------------
   Plot plotTemplate("2d", "PLOT_TEMPLATES");
   plotTemplate.SetDimensions(710, 710, true);
@@ -381,15 +387,14 @@ vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   plotTemplate[0].SetDefaultTextFont(43);
   plotTemplate[0].SetDefaultTextSize(24);
   plotTemplate[0].SetTransparent();
-  plotTemplate[0].SetMargins(0.12 - 0.05, 0.12 + 0.02, 0.12, 0.12 + 0.06);
-  plotTemplate[0]['X'].SetTitleOffset(1.1).SetMaxDigits(3);
-  plotTemplate[0]['Y'].SetTitleOffset(1.1).SetMaxDigits(3);
-  plotTemplate[0]['Z'].SetTitleOffset(1.6).SetMaxDigits(3);
+  plotTemplate[0].SetMargins(0.07, 0.14, 0.12, 0.18);
+  plotTemplate[0]['X'].SetTitleSize(28).SetTitleOffset(1.2).SetMaxDigits(3);
+  plotTemplate[0]['Y'].SetTitleSize(28).SetTitleOffset(1.2).SetMaxDigits(3);
+  plotTemplate[0]['Z'].SetTitleSize(28).SetTitleOffset(1.6).SetMaxDigits(3);
   plotTemplate[0].SetRedrawAxes();
   plotTemplate[1].SetPosition(0., 0., 1., 1.);
   plotManager.AddPlotTemplate(plotTemplate);
 } // -----------------------------------------------------------------------
-
 // as you have seen, these template plots shall live in a figure group called "PLOT_TEMPLATES"
 // and have to be added to the manager via plotManager.AddPlotTemplate(plotTemplate);
 
