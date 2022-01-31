@@ -370,7 +370,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }
         if constexpr (is_hist<data_type>()) {
-          if (!data_ptr->GetSumw2()) data_ptr->Sumw2();
+          if (!data_ptr->GetSumw2N()) data_ptr->Sumw2();
           optional<double_t> scaleFactor;
           string scaleMode{};
 

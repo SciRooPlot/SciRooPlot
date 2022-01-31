@@ -20,6 +20,7 @@ Structural considerations:
 
 Bugs:
 - SetOption(string) does not override SetOption(defaultOption)
+- set maxrange with log scale may use lower value that is negative by default
 - if same histogram is added to plot twice, the name is no longer unique and this results in unwanted behavior for ref data specified in legend entries
 - csv w/o options -> invisible -> TGraphErrors has wrong defaults
 
