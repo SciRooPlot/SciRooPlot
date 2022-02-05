@@ -1155,7 +1155,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, isUserCoord, "proj_isUserCoord");
 
   if (dims) {
-    mProjInfo = {*dims, *ranges, *isUserCoord};
+    mProjInfo = {*dims, *ranges, isUserCoord};
   }
 }
 
@@ -1200,7 +1200,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   if (mProjInfo) {
     put_in_tree(dataTree, std::optional<vector<uint8_t>>{mProjInfo->dims}, "proj_dims");
     put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{mProjInfo->ranges}, "proj_ranges");
-    put_in_tree(dataTree, std::optional<bool>{mProjInfo->isUserCoord}, "proj_isUserCoord");
+    put_in_tree(dataTree, mProjInfo->isUserCoord, "proj_isUserCoord");
   }
 
   return dataTree;
@@ -1424,17 +1424,17 @@ auto Plot::Pad::Data::SetContours(const int32_t nContours) -> decltype(*this)
   mNContours = nContours;
   return *this;
 }
-auto Plot::Pad::Data::SetProjectionX(double_t startY, double_t endY, bool isUserCoord) -> decltype(*this)
+auto Plot::Pad::Data::SetProjectionX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfo = {{0}, {{1, startY, endY}}, isUserCoord};
   return *this;
 }
-auto Plot::Pad::Data::SetProjectionY(double_t startX, double_t endX, bool isUserCoord) -> decltype(*this)
+auto Plot::Pad::Data::SetProjectionY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
   return *this;
 }
-auto Plot::Pad::Data::SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, bool isUserCoord) -> decltype(*this)
+auto Plot::Pad::Data::SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfo = {dims, ranges, isUserCoord};
   return *this;
@@ -1457,7 +1457,7 @@ std::string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
     for (auto& range : ranges) {
       nameSuffix += "{";
       nameSuffix += std::to_string(std::get<0>(range)) + ":";
-      if (isUserCoord) {
+      if (isUserCoord && *isUserCoord) {
         nameSuffix += std::to_string(std::get<1>(range)) + "," + std::to_string(std::get<2>(range));
       } else {
         nameSuffix += std::to_string(static_cast<int>(std::get<1>(range))) + "," + std::to_string(static_cast<int>(std::get<2>(range)));
@@ -1465,7 +1465,7 @@ std::string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
       nameSuffix += "}";
     }
   }
-  if (isUserCoord) {
+  if (isUserCoord && *isUserCoord) {
     nameSuffix += "_User";
   }
   return nameSuffix;
@@ -1521,7 +1521,7 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   read_from_tree(dataTree, isUserCoord, "projDenom_isUserCoord");
 
   if (dims) {
-    mProjInfoDenom = {*dims, *ranges, *isUserCoord};
+    mProjInfoDenom = {*dims, *ranges, isUserCoord};
   }
 }
 
@@ -1541,7 +1541,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
   if (mProjInfoDenom) {
     put_in_tree(dataTree, std::optional<vector<uint8_t>>{mProjInfoDenom->dims}, "projDenom_dims");
     put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{mProjInfoDenom->ranges}, "projDenom_ranges");
-    put_in_tree(dataTree, std::optional<bool>{mProjInfoDenom->isUserCoord}, "projDenom_isUserCoord");
+    put_in_tree(dataTree, mProjInfoDenom->isUserCoord, "projDenom_isUserCoord");
   }
 
   return dataTree;
@@ -1558,17 +1558,17 @@ auto Plot::Pad::Ratio::SetIsCorrelated(bool isCorrelated) -> decltype(*this)
   return *this;
 }
 
-auto Plot::Pad::Ratio::SetProjectionXDenom(double_t startY, double_t endY, bool isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::SetProjectionXDenom(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfoDenom = {{0}, {{1, startY, endY}}, isUserCoord};
   return *this;
 }
-auto Plot::Pad::Ratio::SetProjectionYDenom(double_t startX, double_t endX, bool isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::SetProjectionYDenom(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfoDenom = {{1}, {{0, startX, endX}}, isUserCoord};
   return *this;
 }
-auto Plot::Pad::Ratio::SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, bool isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfoDenom = {dims, ranges, isUserCoord};
   return *this;
@@ -1908,9 +1908,9 @@ BoxType& Plot::Pad::Box<BoxType>::SetPosition(double_t x, double_t y)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetUserCoordinates(bool userCoordinates)
+BoxType& Plot::Pad::Box<BoxType>::SetUserCoordinates(bool isUserCoord)
 {
-  mPos.isUserCoord = userCoordinates;
+  mPos.isUserCoord = isUserCoord;
   return *GetThis();
 }
 

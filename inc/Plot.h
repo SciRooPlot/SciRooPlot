@@ -389,9 +389,9 @@ public:
   virtual Data& SetContours(const vector<double>& contours);
   virtual Data& SetContours(const int32_t nContours);
 
-  virtual Data& SetProjectionX(double_t startY = 0, double_t endY = -1, bool isUserCoord = false); // for 2d histos
-  virtual Data& SetProjectionY(double_t startX = 0, double_t endX = -1, bool isUserCoord = false); // for 2d histos
-  virtual Data& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, bool isUserCoord = false);
+  virtual Data& SetProjectionX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {}); // for 2d histos
+  virtual Data& SetProjectionY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {}); // for 2d histos
+  virtual Data& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord = {});
 
 protected:
   friend class PlotManager;
@@ -434,7 +434,7 @@ protected:
   struct proj_info_t {
     vector<uint8_t> dims;                                        // dimensions to project on (can be one or two)
     std::vector<std::tuple<uint8_t, double_t, double_t>> ranges; // range restrictions on other dimensions
-    bool isUserCoord{};                                          // wether ranges are specified in user coordinates or as bins
+    std::optional<bool> isUserCoord{};                           // whether ranges are specified in user coordinates or as bins
     std::string GetNameSuffix() const;
   };
 
@@ -533,13 +533,13 @@ public:
   Ratio& SetContours(const vector<double>& contours) { return static_cast<decltype(*this)&>(Data::SetContours(contours)); }
   Ratio& SetContours(const int32_t nContours) { return static_cast<decltype(*this)&>(Data::SetContours(nContours)); }
 
-  Ratio& SetProjectionX(double_t startY = 0, double_t endY = -1, bool isUserCoord = false) { return static_cast<decltype(*this)&>(Data::SetProjectionX(startY, endY, isUserCoord)); }
-  Ratio& SetProjectionY(double_t startX = 0, double_t endX = -1, bool isUserCoord = false) { return static_cast<decltype(*this)&>(Data::SetProjectionY(startX, endX, isUserCoord)); }
-  Ratio& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, bool isUserCoord = false) { return static_cast<decltype(*this)&>(Data::SetProjection(dims, ranges, isUserCoord)); }
+  Ratio& SetProjectionX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjectionX(startY, endY, isUserCoord)); }
+  Ratio& SetProjectionY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjectionY(startX, endX, isUserCoord)); }
+  Ratio& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjection(dims, ranges, isUserCoord)); }
 
-  Ratio& SetProjectionXDenom(double_t startY = 0, double_t endY = -1, bool isUserCoord = false);
-  Ratio& SetProjectionYDenom(double_t startX = 0, double_t endX = -1, bool isUserCoord = false);
-  Ratio& SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, bool isUserCoord = false);
+  Ratio& SetProjectionXDenom(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});
+  Ratio& SetProjectionYDenom(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});
+  Ratio& SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord = {});
 
 protected:
   friend class PlotManager;
@@ -681,7 +681,7 @@ public:
   Box& operator=(Box&& other) = default;
 
   BoxType& SetPosition(double_t x, double_t y);
-  BoxType& SetUserCoordinates(bool userCoordinates = true);
+  BoxType& SetUserCoordinates(bool isUserCoord = true);
   BoxType& SetAutoPlacement();
   BoxType& SetBorder(int16_t color, int16_t style, float_t width);
   BoxType& SetBorderColor(int16_t color);

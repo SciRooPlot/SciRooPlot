@@ -1141,8 +1141,8 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
         ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", static_cast<TNamed*>(obj)->GetName());
         return std::nullopt;
       }
-      int32_t minBin = (projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
-      int32_t maxBin = (projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
+      int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
+      int32_t maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
       histPtr->GetAxis(rangeDim)->SetRange(minBin, maxBin);
     }
     if (projInfo.dims.size() == 2) {
@@ -1162,8 +1162,8 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
         ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", static_cast<TNamed*>(obj)->GetName());
         return std::nullopt;
       }
-      int32_t minBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
-      int32_t maxBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
+      int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
+      int32_t maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
       GetAxis(histPtr, rangeDim)->SetRange(minBin, maxBin);
     }
     if (projInfo.dims.size() == 2) {
@@ -1187,8 +1187,8 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
         ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", static_cast<TNamed*>(obj)->GetName());
         return std::nullopt;
       }
-      minBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
-      maxBin = (projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
+      minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
+      maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
     }
     if (projInfo.dims[0] == 0) {
       return histPtr->ProjectionX("_px", minBin, maxBin);
