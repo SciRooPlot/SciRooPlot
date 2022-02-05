@@ -726,7 +726,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection")) {
         if (traverse) {
           ReadData(obj, dataNames, prefix, suffix, inputID);
-        } else {
+        } else if (removeFromList) {
           removeFromList = false;
           deleteObject = false;
         }
