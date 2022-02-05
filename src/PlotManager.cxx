@@ -712,7 +712,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
         string className = static_cast<TKey*>(obj)->GetClassName();
         curDataName = static_cast<TKey*>(obj)->GetName();
 
-        bool isTraversable = str_contains(className, "TDirectory") || str_contains(className, "TFolder") || str_contains(className, "TList") || str_contains(className, "TObjArray");
+        bool isTraversable = str_contains(className, "TDirectory") || str_contains(className, "TFolder") || str_contains(className, "TList") || str_contains(className, "THashList") || str_contains(className, "TObjArray");
         if ((traverse && isTraversable) || std::find(dataNames.begin(), dataNames.end(), curDataName) != dataNames.end()) {
           obj = static_cast<TKey*>(obj)->ReadObj();
           removeFromList = false;
@@ -724,17 +724,23 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
 
       // in case this object is directory or list, repeat the same for this substructure
       if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection")) {
-        if (traverse) ReadData(obj, dataNames, prefix, suffix, inputID);
+        if (traverse) {
+          ReadData(obj, dataNames, prefix, suffix, inputID);
+        } else {
+          removeFromList = false;
+          deleteObject = false;
+        }
       } else {
         // the key name supersedes the actual data name (in case they are different when written to file via h->Write("myKeyName"))
         if (curDataName.empty()) curDataName = static_cast<TNamed*>(obj)->GetName();
         if (auto it = std::find(dataNames.begin(), dataNames.end(), curDataName); it != dataNames.end()) {
           if (obj->InheritsFrom("TH1")) static_cast<TH1*>(obj)->SetDirectory(0); // demand ownership for histogram
-          // re-name data
+          itemList->Remove(obj);
+          dataNames.erase(it);
           string fullName = prefix + curDataName;
           static_cast<TNamed*>(obj)->SetName((fullName + suffix).data());
-          dataNames.erase(it); // TODO: why not erase-remove?
           mDataBuffer[inputID][fullName].reset(obj);
+          removeFromList = false;
           deleteObject = false;
         }
       }
@@ -742,7 +748,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       // increase iterator before removing objects from collection
       ++iterator;
       if (removeFromList) {
-        if (itemList->Remove(obj) == nullptr) {
+        if (!itemList->Remove(obj)) {
           ERROR(R"(Could not remove item "{}" ({}) from collection "{}".)", static_cast<TNamed*>(obj)->GetName(), static_cast<void*>(obj), itemList->GetName());
         }
       }
