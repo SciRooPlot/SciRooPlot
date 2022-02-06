@@ -513,7 +513,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   double_t curRangeMax = (axisLabel == 'X') ? xmax : ((axisLabel == 'Y') ? ymax : max);
 
                   // avoid lower limit of zero in case of log scale
-                  if ((axisLabel == 'Y') && axisLayout.GetLog() && *axisLayout.GetLog() && !curRangeMin) {
+                  if ((axisLabel == 'Y') && axisLayout.GetLog() && *axisLayout.GetLog() && !curRangeMin && !axisHist_ptr->InheritsFrom(TH2::Class())) {
                     curRangeMin = min;
                   }
 
