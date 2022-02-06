@@ -681,11 +681,11 @@ void PlotManager::PrintLoadedPlots() const
 void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& inputID)
 {
   TCollection* itemList = nullptr;
-  if (folder->InheritsFrom("TDirectory")) {
+  if (folder->InheritsFrom(TDirectory::Class())) {
     itemList = static_cast<TDirectoryFile*>(folder)->GetListOfKeys();
-  } else if (folder->InheritsFrom("TFolder")) {
+  } else if (folder->InheritsFrom(TFolder::Class())) {
     itemList = static_cast<TFolder*>(folder)->GetListOfFolders();
-  } else if (folder->InheritsFrom("TCollection")) {
+  } else if (folder->InheritsFrom(TCollection::Class())) {
     itemList = static_cast<TCollection*>(folder);
   } else {
     ERROR("Data-format not supported.");
@@ -723,7 +723,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       }
 
       // in case this object is directory or list, repeat the same for this substructure
-      if (obj->InheritsFrom("TDirectory") || obj->InheritsFrom("TFolder") || obj->InheritsFrom("TCollection")) {
+      if (obj->InheritsFrom(TDirectory::Class()) || obj->InheritsFrom(TFolder::Class()) || obj->InheritsFrom(TCollection::Class())) {
         if (traverse) {
           ReadData(obj, dataNames, prefix, suffix, inputID);
         } else if (removeFromList) {
@@ -734,7 +734,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
         // the key name supersedes the actual data name (in case they are different when written to file via h->Write("myKeyName"))
         if (curDataName.empty()) curDataName = static_cast<TNamed*>(obj)->GetName();
         if (auto it = std::find(dataNames.begin(), dataNames.end(), curDataName); it != dataNames.end()) {
-          if (obj->InheritsFrom("TH1")) static_cast<TH1*>(obj)->SetDirectory(0); // demand ownership for histogram
+          if (obj->InheritsFrom(TH1::Class())) static_cast<TH1*>(obj)->SetDirectory(0); // demand ownership for histogram
           itemList->Remove(obj);
           dataNames.erase(it);
           string fullName = prefix + curDataName;
@@ -785,17 +785,17 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs)
 {
   if (!folder) return nullptr;
   bool deleteFolder = true;
-  if (folder->InheritsFrom("TFile")) deleteFolder = false;
+  if (folder->InheritsFrom(TFile::Class())) deleteFolder = false;
 
   if (subDirs.empty()) {
-    if (folder->InheritsFrom("TDirectory") || folder->InheritsFrom("TFolder") || folder->InheritsFrom("TCollection")) {
+    if (folder->InheritsFrom(TDirectory::Class()) || folder->InheritsFrom(TFolder::Class()) || folder->InheritsFrom(TCollection::Class())) {
       return folder;
     } else {
       return nullptr;
     }
   }
   TObject* subFolder{nullptr};
-  if (folder->InheritsFrom("TDirectory")) {
+  if (folder->InheritsFrom(TDirectory::Class())) {
     TKey* key = static_cast<TDirectory*>(folder)->FindKey(subDirs[0].data());
     if (key) {
       subFolder = key->ReadObj();
@@ -803,7 +803,7 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs)
       subFolder = static_cast<TDirectory*>(folder)->FindObject(subDirs[0].data());
     }
     deleteFolder = false;
-  } else if (folder->InheritsFrom("TCollection") || folder->InheritsFrom("TFolder")) {
+  } else if (folder->InheritsFrom(TCollection::Class()) || folder->InheritsFrom(TFolder::Class())) {
     subFolder = static_cast<TCollection*>(folder)->FindObject(subDirs[0].data());
     if (subFolder) {
       static_cast<TCollection*>(subFolder)->SetOwner();

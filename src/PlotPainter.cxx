@@ -977,9 +977,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
             std::for_each(drawingOption.begin(), drawingOption.end(),
                           [](char& c) { c = ::toupper(c); });
 
-            if ((data_ptr->InheritsFrom("TF1")) || str_contains(drawingOption, "C") || str_contains(drawingOption, "L") || str_contains(drawingOption, "HIST")) {
+            if ((data_ptr->InheritsFrom(TF1::Class())) || str_contains(drawingOption, "C") || str_contains(drawingOption, "L") || str_contains(drawingOption, "HIST")) {
               drawStyle = "L";
-            } else if (data_ptr->InheritsFrom("TH1") && (str_contains(drawingOption, "HIST") || str_contains(drawingOption, "B")) && static_cast<TH1*>(data_ptr)->GetFillStyle() != 0) {
+            } else if (data_ptr->InheritsFrom(TH1::Class()) && (str_contains(drawingOption, "HIST") || str_contains(drawingOption, "B")) && static_cast<TH1*>(data_ptr)->GetFillStyle() != 0) {
               drawStyle = "F";
             }
           }
