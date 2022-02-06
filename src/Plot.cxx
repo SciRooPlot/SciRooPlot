@@ -814,18 +814,18 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
   put_in_tree(padTree, mRefFunc, "ref_func");
 
-  int dataID = 1;
+  int32_t dataID = 1;
   for (auto& data : mData) {
     padTree.put_child("DATA_" + std::to_string(dataID), data->GetPropertyTree());
     ++dataID;
   }
 
-  int legendBoxID = 1;
+  int32_t legendBoxID = 1;
   for (auto& legendBox : mLegendBoxes) {
     padTree.put_child("LEGEND_" + std::to_string(legendBoxID), legendBox->GetPropertyTree());
     ++legendBoxID;
   }
-  int textBoxID = 1;
+  int32_t textBoxID = 1;
   for (auto& textBox : mTextBoxes) {
     padTree.put_child("TEXT_" + std::to_string(textBoxID), textBox->GetPropertyTree());
     ++textBoxID;

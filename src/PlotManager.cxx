@@ -117,18 +117,29 @@ void PlotManager::ClearDataBuffer()
 
 //**************************************************************************************************
 /**
- * Sets path for output files.
- * @param outputFileName: Path to the output directory
+ * Sets path for output files. Plots wil be stored in hierarchical structure according to figure groups and categories.
  */
 //**************************************************************************************************
 void PlotManager::SetOutputDirectory(const string& path)
 {
   mOutputDirectory = path;
 }
+
+//**************************************************************************************************
+/**
+ * Whether or not to append the figure group and category to the plot name when saved to file.
+ */
+//**************************************************************************************************
 void PlotManager::SetUseUniquePlotNames(bool useUniquePlotNames)
 {
   mUseUniquePlotNames = useUniquePlotNames;
 }
+
+//**************************************************************************************************
+/**
+ * The output file name for saving the plots into one single root file.
+ */
+//**************************************************************************************************
 void PlotManager::SetOutputFileName(const string& fileName)
 {
   mOutputFileName = fileName;
@@ -326,7 +337,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     mPlotLedger.erase(plot.GetUniqueName());
   }
   if (plot.GetFigureGroup().empty()) {
-    ERROR("No figure group was specified.");
+    ERROR(R"(No figure group was specified for plot "{}".)", plot.GetName());
     return false;
   }
   if (outputMode == "file") {
@@ -688,7 +699,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
   } else if (folder->InheritsFrom(TCollection::Class())) {
     itemList = static_cast<TCollection*>(folder);
   } else {
-    ERROR("Data-format not supported.");
+    ERROR("Data-format {} not supported.", folder->ClassName());
     return;
   }
   itemList->SetOwner();
@@ -710,7 +721,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       // read actual object to memory when traversing a directory
       if (obj->IsA() == TKey::Class()) {
         string className = static_cast<TKey*>(obj)->GetClassName();
-        curDataName = static_cast<TKey*>(obj)->GetName();
+        curDataName = obj->GetName();
 
         bool isTraversable = str_contains(className, "TDirectory") || str_contains(className, "TFolder") || str_contains(className, "TList") || str_contains(className, "THashList") || str_contains(className, "TObjArray");
         if ((traverse && isTraversable) || std::find(dataNames.begin(), dataNames.end(), curDataName) != dataNames.end()) {
@@ -732,7 +743,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
         }
       } else {
         // the key name supersedes the actual data name (in case they are different when written to file via h->Write("myKeyName"))
-        if (curDataName.empty()) curDataName = static_cast<TNamed*>(obj)->GetName();
+        if (curDataName.empty()) curDataName = obj->GetName();
         if (auto it = std::find(dataNames.begin(), dataNames.end(), curDataName); it != dataNames.end()) {
           if (obj->InheritsFrom(TH1::Class())) static_cast<TH1*>(obj)->SetDirectory(0); // demand ownership for histogram
           itemList->Remove(obj);
@@ -749,7 +760,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       ++iterator;
       if (removeFromList) {
         if (!itemList->Remove(obj)) {
-          ERROR(R"(Could not remove item "{}" ({}) from collection "{}".)", static_cast<TNamed*>(obj)->GetName(), static_cast<void*>(obj), itemList->GetName());
+          ERROR(R"(Could not remove item "{}" ({}) from collection "{}".)", obj->GetName(), static_cast<void*>(obj), itemList->GetName());
         }
       }
       if (deleteObject) {
