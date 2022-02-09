@@ -202,24 +202,30 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
     if (pad.GetDefaultMarkerColorsGradient().rgbEndpoints) {
       auto& gradient = pad.GetDefaultMarkerColorsGradient();
-      pad.SetDefaultMarkerColors(GenerateGradientColors(get_first_or((int32_t)pad.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
+      int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetMarkerColor(); });
+      pad.SetDefaultMarkerColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     } else if (padDefaults.GetDefaultMarkerColorsGradient().rgbEndpoints) {
       auto& gradient = padDefaults.GetDefaultMarkerColorsGradient();
+      int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetMarkerColor(); });
       padDefaults.SetDefaultMarkerColors(GenerateGradientColors(get_first_or((int32_t)padDefaults.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
     if (pad.GetDefaultLineColorsGradient().rgbEndpoints) {
       auto& gradient = pad.GetDefaultLineColorsGradient();
-      pad.SetDefaultLineColors(GenerateGradientColors(get_first_or((int32_t)pad.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
+      int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetLineColor(); });
+      pad.SetDefaultLineColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     } else if (padDefaults.GetDefaultLineColorsGradient().rgbEndpoints) {
       auto& gradient = padDefaults.GetDefaultLineColorsGradient();
-      padDefaults.SetDefaultLineColors(GenerateGradientColors(get_first_or((int32_t)padDefaults.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
+      int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetLineColor(); });
+      padDefaults.SetDefaultLineColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
     if (pad.GetDefaultFillColorsGradient().rgbEndpoints) {
       auto& gradient = pad.GetDefaultFillColorsGradient();
-      pad.SetDefaultFillColors(GenerateGradientColors(get_first_or((int32_t)pad.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
+      int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetFillColor(); });
+      pad.SetDefaultFillColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     } else if (padDefaults.GetDefaultFillColorsGradient().rgbEndpoints) {
       auto& gradient = padDefaults.GetDefaultFillColorsGradient();
-      padDefaults.SetDefaultFillColors(GenerateGradientColors(get_first_or((int32_t)padDefaults.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
+      int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetFillColor(); });
+      padDefaults.SetDefaultFillColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
     // TODO: color gradient feature can be used for 2d palette as well
     if (auto& palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) gStyle->SetPalette(*palette);
