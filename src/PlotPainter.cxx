@@ -419,6 +419,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
         // first data is only used to define the axes
         if (dataIndex == 0) {
+          double_t nonZeroMin = 0;
           bool isDrawn = false;
           if constexpr (is_hist_2d<data_type>()) {
             if (str_contains(drawingOptions, "Z")) {
@@ -427,6 +428,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               // defined by the data
               double_t zMin = data_ptr->GetMinimum();
               double_t zMax = data_ptr->GetMaximum();
+              nonZeroMin = data_ptr->GetMinimum(0);
               data_ptr->Reset("ICE"); // reset integral, contents and errors
               data_ptr->SetMinimum(zMin);
               data_ptr->SetMaximum(zMax);
@@ -508,26 +510,31 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).data());
                 }
 
-                if (axisLayout.GetMinRange() || axisLayout.GetMaxRange()) {
-                  pad_ptr->Update(); // needed here so current user ranges correct
-                  double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0, min = 0, max = 0;
-                  pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
-                  min = axisHist_ptr->GetMinimum();
-                  max = axisHist_ptr->GetMaximum();
+                pad_ptr->Update(); // needed here so current user ranges correct
+                double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0, min = 0, max = 0;
+                pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
+                min = axisHist_ptr->GetMinimum(); // GetMinimumStored()
+                max = axisHist_ptr->GetMaximum(); // GetMaximumStored()
 
-                  double_t curRangeMin = (axisLabel == 'X') ? xmin : ((axisLabel == 'Y') ? ymin : min);
-                  double_t curRangeMax = (axisLabel == 'X') ? xmax : ((axisLabel == 'Y') ? ymax : max);
+                double_t curRangeMin = (axisLabel == 'X') ? xmin : ((axisLabel == 'Y') ? ymin : min);
+                double_t curRangeMax = (axisLabel == 'X') ? xmax : ((axisLabel == 'Y') ? ymax : max);
 
-                  // avoid lower limit of zero in case of log scale
-                  if ((axisLabel == 'Y') && axisLayout.GetLog() && *axisLayout.GetLog() && !curRangeMin && !axisHist_ptr->InheritsFrom(TH2::Class())) {
-                    curRangeMin = min;
+                // avoid lower limit of zero in case of log scale
+                if (!curRangeMin && axisLayout.GetLog() && *axisLayout.GetLog()) {
+                  if (axisHist_ptr->InheritsFrom(TH2::Class())) {
+                    if (axisLabel == 'Z') {
+                      curRangeMin = nonZeroMin;
+                    }
+                  } else {
+                    if (axisLabel == 'Y') {
+                      curRangeMin = min;
+                    }
                   }
-
-                  double_t rangeMin = (axisLayout.GetMinRange()) ? *axisLayout.GetMinRange() : curRangeMin;
-                  double_t rangeMax = (axisLayout.GetMaxRange()) ? *axisLayout.GetMaxRange() : curRangeMax;
-
-                  axis_ptr->SetRangeUser(rangeMin, rangeMax);
                 }
+
+                double_t rangeMin = (axisLayout.GetMinRange()) ? *axisLayout.GetMinRange() : curRangeMin;
+                double_t rangeMax = (axisLayout.GetMaxRange()) ? *axisLayout.GetMaxRange() : curRangeMax;
+                axis_ptr->SetRangeUser(rangeMin, rangeMax);
 
                 if (axisLayout.GetLog()) {
                   if (axisLabel == 'X') {
