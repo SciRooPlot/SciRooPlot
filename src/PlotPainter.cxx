@@ -419,20 +419,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
         // first data is only used to define the axes
         if (dataIndex == 0) {
-          double_t nonZeroMin = 0;
           bool isDrawn = false;
+          bool requiresReset = false;
           if constexpr (is_hist_2d<data_type>()) {
             if (str_contains(drawingOptions, "Z")) {
               data_ptr->Draw(drawingOptions.data()); // z axis is only drawn if specified
-              // reset the axis histogram which now owns the z axis, but keep default range
-              // defined by the data
-              double_t zMin = data_ptr->GetMinimum();
-              double_t zMax = data_ptr->GetMaximum();
-              nonZeroMin = data_ptr->GetMinimum(0);
-              data_ptr->Reset("ICE"); // reset integral, contents and errors
-              data_ptr->SetMinimum(zMin);
-              data_ptr->SetMaximum(zMax);
               isDrawn = true;
+              requiresReset = true;
             }
           }
           if constexpr (is_hist<data_type>()) {
@@ -513,23 +506,25 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 pad_ptr->Update(); // needed here so current user ranges correct
                 double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0, min = 0, max = 0;
                 pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
-                min = axisHist_ptr->GetMinimum(); // GetMinimumStored()
-                max = axisHist_ptr->GetMaximum(); // GetMaximumStored()
+                axisHist_ptr->GetMinimumAndMaximum(min, max);
+                // DEBUG("({}, {}), ({}, {}), ({}, {})", xmin, xmax, ymin, ymax, min, max);
 
                 double_t curRangeMin = (axisLabel == 'X') ? xmin : ((axisLabel == 'Y') ? ymin : min);
                 double_t curRangeMax = (axisLabel == 'X') ? xmax : ((axisLabel == 'Y') ? ymax : max);
 
                 // avoid lower limit of zero in case of log scale
                 if (!curRangeMin && axisLayout.GetLog() && *axisLayout.GetLog()) {
+                  axisHist_ptr->SetMinimum(-1111);
                   if (axisHist_ptr->InheritsFrom(TH2::Class())) {
                     if (axisLabel == 'Z') {
-                      curRangeMin = nonZeroMin;
+                      curRangeMin = axisHist_ptr->GetMinimum(0.);
                     }
                   } else {
                     if (axisLabel == 'Y') {
-                      curRangeMin = min;
+                      curRangeMin = (min) ? min : axisHist_ptr->GetMinimum(0.);
                     }
                   }
+                  axisHist_ptr->SetMinimum(-1111);
                 }
 
                 double_t rangeMin = (axisLayout.GetMinRange()) ? *axisLayout.GetMinRange() : curRangeMin;
@@ -568,6 +563,16 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (textColorLabel) axis_ptr->SetLabelColor(*textColorLabel);
             if (textSizeTitle) axis_ptr->SetTitleSize(*textSizeTitle);
             if (textSizeLabel) axis_ptr->SetLabelSize(*textSizeLabel);
+          }
+
+          if (requiresReset) {
+            // reset the axis histogram which now owns the z axis, but keep default range
+            // defined by the data
+            double_t zMin = axisHist_ptr->GetMinimum();
+            double_t zMax = axisHist_ptr->GetMaximum();
+            axisHist_ptr->Reset("ICE"); // reset integral, contents and errors
+            axisHist_ptr->SetMinimum(zMin);
+            axisHist_ptr->SetMaximum(zMax);
           }
 
           // right after drawing the axis, put reference line if requested
