@@ -503,32 +503,33 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).data());
                 }
 
+                bool isTH2 = axisHist_ptr->InheritsFrom(TH2::Class());
                 pad_ptr->Update(); // needed here so current user ranges correct
                 double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0, min = 0, max = 0;
                 pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
-                axisHist_ptr->GetMinimumAndMaximum(min, max);
+                min = axisHist_ptr->GetMinimumStored();
+                max = axisHist_ptr->GetMaximumStored();
                 // DEBUG("({}, {}), ({}, {}), ({}, {})", xmin, xmax, ymin, ymax, min, max);
 
-                double_t curRangeMin = (axisLabel == 'X') ? xmin : ((axisLabel == 'Y') ? ymin : min);
-                double_t curRangeMax = (axisLabel == 'X') ? xmax : ((axisLabel == 'Y') ? ymax : max);
+                double_t curRangeMin = (axisLabel == 'X') ? xmin : ((isTH2 && axisLabel == 'Y') ? ymin : min);
+                double_t curRangeMax = (axisLabel == 'X') ? xmax : ((isTH2 && axisLabel == 'Y') ? ymax : max);
 
-                // avoid lower limit of zero in case of log scale
-                if (!curRangeMin && axisLayout.GetLog() && *axisLayout.GetLog()) {
+                if (isTH2 && axisLabel == 'Z' && curRangeMin == -1111 && axisLayout.GetLog() && *axisLayout.GetLog()) {
+                  /*
+                  Work around auto-range feature of ROOT for lower limit of TH2 logz.
+                  It would draw properly the axis histogram, but mess up the ranges
+                  of the actual data drawn into the same axis frame afterwards.
+                  What we lose here is the ROOT feature which optimizes the z ranges
+                  by ignoring values extremely far away from the bulk.
+                  The upside of this however is that one then actually sees that these values exist.
+                   */
                   axisHist_ptr->SetMinimum(-1111);
-                  if (axisHist_ptr->InheritsFrom(TH2::Class())) {
-                    if (axisLabel == 'Z') {
-                      curRangeMin = axisHist_ptr->GetMinimum(0.);
-                    }
-                  } else {
-                    if (axisLabel == 'Y') {
-                      curRangeMin = (min) ? min : axisHist_ptr->GetMinimum(0.);
-                    }
-                  }
-                  axisHist_ptr->SetMinimum(-1111);
+                  curRangeMin = axisHist_ptr->GetMinimum(0.);
                 }
 
                 double_t rangeMin = (axisLayout.GetMinRange()) ? *axisLayout.GetMinRange() : curRangeMin;
                 double_t rangeMax = (axisLayout.GetMaxRange()) ? *axisLayout.GetMaxRange() : curRangeMax;
+
                 axis_ptr->SetRangeUser(rangeMin, rangeMax);
 
                 if (axisLayout.GetLog()) {
