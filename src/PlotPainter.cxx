@@ -510,6 +510,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 min = axisHist_ptr->GetMinimumStored();
                 max = axisHist_ptr->GetMaximumStored();
                 // DEBUG("({}, {}), ({}, {}), ({}, {})", xmin, xmax, ymin, ymax, min, max);
+                if (pad_ptr->GetLogx()) {
+                  xmin = TMath::Power(10, xmin);
+                  xmax = TMath::Power(10, xmax);
+                }
+                if (isTH2 && pad_ptr->GetLogy()) {
+                  ymin = TMath::Power(10, ymin);
+                  ymax = TMath::Power(10, ymax);
+                }
 
                 double_t curRangeMin = (axisLabel == 'X') ? xmin : ((isTH2 && axisLabel == 'Y') ? ymin : min);
                 double_t curRangeMax = (axisLabel == 'X') ? xmax : ((isTH2 && axisLabel == 'Y') ? ymax : max);
