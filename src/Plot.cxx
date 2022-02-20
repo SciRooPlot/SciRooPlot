@@ -941,7 +941,7 @@ Plot::Pad::Axis& Plot::Pad::GetAxis(const char axis)
 {
   const vector<char> allowedAxes = {'X', 'Y', 'Z'};
   if (std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end()) {
-    ERROR(R"(Axis '{}' does not exist! Please use 'X', 'Y' or 'Z'.)", axis);
+    ERROR("Axis '{}' does not exist! Please use 'X', 'Y' or 'Z'.", axis);
     std::exit(EXIT_FAILURE);
   }
   if (mAxes.find(axis) == mAxes.end()) {

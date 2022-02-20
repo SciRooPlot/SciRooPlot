@@ -101,7 +101,7 @@ void PlotManager::SavePlotsToFile() const
       ++nPlots;
     }
     outputFile.Close();
-    INFO(R"(Saved {} plots to file "{}".)", nPlots, mOutputFileName);
+    INFO("Saved {} plots to file {}.", nPlots, mOutputFileName);
   }
 }
 
@@ -153,7 +153,7 @@ void PlotManager::SetOutputFileName(const string& fileName)
 void PlotManager::AddInputDataFiles(const string& inputIdentifier, const vector<string>& inputFilePathList)
 {
   if (mInputFiles.find(inputIdentifier) != mInputFiles.end()) {
-    WARNING(R"(Replacing input identifier "{}".)", inputIdentifier);
+    WARNING("Replacing input identifier {}.", inputIdentifier);
   }
   mInputFiles[inputIdentifier] = inputFilePathList;
 }
@@ -195,9 +195,9 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
   try {
     using boost::property_tree::read_xml;
     read_xml(expand_path(configFileName), inputFileTree);
-    INFO(R"(Reading input files from "{}".)", configFileName);
+    INFO("Reading input files from {}.", configFileName);
   } catch (...) {
-    ERROR(R"(Cannot load file "{}".)", configFileName);
+    ERROR("Cannot load file {}.", configFileName);
     return;
   }
   for (auto& inputPair : inputFileTree) {
@@ -227,12 +227,12 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
 void PlotManager::AddPlot(Plot& plot)
 {
   if (plot.GetFigureGroup() == "PLOT_TEMPLATES") {
-    ERROR(R"(You cannot use reserved group name "PLOT_TEMPLATES"!)");
+    ERROR("You cannot use reserved group name 'PLOT_TEMPLATES'!");
   }
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [plot](Plot& curPlot) mutable {
                                 bool removePlot = curPlot.GetUniqueName() == plot.GetUniqueName();
-                                if (removePlot) WARNING(R"(Plot "{}" in "{}" already exists and will be replaced.)", curPlot.GetName(), curPlot.GetFigureGroup());
+                                if (removePlot) WARNING("Plot {} in {} already exists and will be replaced.", curPlot.GetName(), curPlot.GetFigureGroup());
                                 return removePlot;
                               }),
                mPlots.end());
@@ -250,7 +250,7 @@ void PlotManager::AddPlotTemplate(Plot& plotTemplate)
   mPlotTemplates.erase(std::remove_if(mPlotTemplates.begin(), mPlotTemplates.end(),
                                       [plotTemplate](Plot& curPlotTemplate) mutable {
                                         bool removePlot = curPlotTemplate.GetUniqueName() == plotTemplate.GetUniqueName();
-                                        if (removePlot) WARNING(R"(Plot template "{}" already exists and will be replaced.)", curPlotTemplate.GetName());
+                                        if (removePlot) WARNING("Plot template {} already exists and will be replaced.", curPlotTemplate.GetName());
                                         return removePlot;
                                       }),
                        mPlotTemplates.end());
@@ -296,7 +296,7 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
   xml_writer_settings<std::string> settings('\t', 1);
   using boost::property_tree::write_xml;
   write_xml(expand_path(plotFileName), plotTree, std::locale(), settings);
-  INFO(R"(Wrote plot definitions to "{}".)", plotFileName);
+  INFO("Wrote plot definitions to {}.", plotFileName);
 }
 void PlotManager::DumpPlot(const string& plotFileName, const string& figureGroup,
                            const string& plotName) const
@@ -315,9 +315,9 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
     try {
       using boost::property_tree::read_xml;
       read_xml(expand_path(plotFileName), mPropertyTreeCache[plotFileName]);
-      INFO(R"(Reading plot definitions from "{}".)", plotFileName);
+      INFO("Reading plot definitions from {}.", plotFileName);
     } catch (...) {
-      ERROR(R"(Cannot load file "{}".)", plotFileName);
+      ERROR("Cannot load file {}.", plotFileName);
       std::exit(EXIT_FAILURE);
     }
   }
@@ -333,11 +333,11 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
 {
   // if plot already exists, delete the old one first
   if (mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()) {
-    ERROR(R"(Plot "{}" was already created. Replacing it.)", plot.GetUniqueName());
+    ERROR("Plot {} was already created. Replacing it.", plot.GetUniqueName());
     mPlotLedger.erase(plot.GetUniqueName());
   }
   if (plot.GetFigureGroup().empty()) {
-    ERROR(R"(No figure group was specified for plot "{}".)", plot.GetName());
+    ERROR("No figure group was specified for plot {}.", plot.GetName());
     return false;
   }
   if (outputMode == "file") {
@@ -352,7 +352,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     if (iterator != mPlotTemplates.end()) {
       fullPlot = *iterator + plot;
     } else {
-      WARNING(R"(Could not find plot template named "{}".)", plotTemplateName);
+      WARNING("Could not find plot template named {}.", plotTemplateName);
     }
   }
   PlotPainter painter;
@@ -360,7 +360,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   gROOT->SetBatch(!isInteractiveMode);
   shared_ptr<TCanvas> canvas{painter.GeneratePlot(fullPlot, mDataBuffer)};
   if (!canvas) return false;
-  LOG("Created " GREEN_ "{}" _END " from group " YELLOW_ "{}" _END, fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? "/" + *fullPlot.GetFigureCategory() : ""));
+  LOG("Created " GREEN_ "{}" _END " from group " YELLOW_ "{}" _END ".", fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? "/" + *fullPlot.GetFigureCategory() : ""));
 
   // if interactive mode is specified, open window instead of saving the plot
   if (isInteractiveMode) {
@@ -384,7 +384,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
       bool isValidKey = canvas->GetEvent() == kKeyPress && (canvas->GetEventX() == 'a' || canvas->GetEventX() == 's');
       auto selectedBox = dynamic_cast<TPave*>(canvas->GetSelected());
       if (isClick && selectedBox) {
-        if (!boxClicked) INFO("Current position of {}: ({:.3g}, {:.3g})", selectedBox->GetName(), selectedBox->GetX1NDC(), selectedBox->GetY2NDC());
+        if (!boxClicked) INFO("Current position of {}: ({:.3g}, {:.3g}).", selectedBox->GetName(), selectedBox->GetX1NDC(), selectedBox->GetY2NDC());
         boxClicked = true;
       } else if (isClick || isValidKey) {
         curXpos = canvas->GetWindowTopX();
@@ -420,7 +420,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   }
   auto parentDir = (mOutputDirectory.back() == '/') ? std::filesystem::path(mOutputDirectory).parent_path().parent_path() : std::filesystem::path(mOutputDirectory).parent_path();
   if (!std::filesystem::exists(parentDir)) {
-    ERROR(R"(Parent path "{}" of output directory does not exist.)", parentDir.string());
+    ERROR("Parent path {} of output directory does not exist.", parentDir.string());
     return true;
   }
 
@@ -524,7 +524,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   // were definitions for all requested plots available?
   if (!plotNames.empty()) {
     for (auto& plotName : plotNames) {
-      WARNING("Could not find plot " GREEN_ "{}" _END " in group " YELLOW_ "{}" _END, plotName, figureGroup + ((!figureCategory.empty()) ? "/" + figureCategory : ""));
+      WARNING("Could not find plot " GREEN_ "{}" _END " in group " YELLOW_ "{}" _END ".", plotName, figureGroup + ((!figureCategory.empty()) ? "/" + figureCategory : ""));
     }
   }
 
@@ -574,12 +574,12 @@ bool PlotManager::FillBuffer()
       string& fileName = fileNamePath[0];
 
       if (!std::filesystem::exists(fileName)) {
-        WARNING(R"(Input file "{}" not found.)", fileName);
+        WARNING("Input file {} not found.", fileName);
         continue;
       }
       TFile inputFile(fileName.data(), "READ");
       if (inputFile.IsZombie()) {
-        WARNING(R"(Cannot open input file "{}".)", fileName);
+        WARNING("Cannot open input file {}.", fileName);
         continue;
       }
 
@@ -591,7 +591,7 @@ bool PlotManager::FillBuffer()
         // append sub-specification from input name
         folder = FindSubDirectory(folder, filePath);
         if (!folder) {
-          ERROR(R"(Subdirectory "{}" not found in file "{}".)", fileNamePath[1], fileName);
+          ERROR("Subdirectory {} not found in file {}.", fileNamePath[1], fileName);
           return false;
         }
       }
@@ -760,7 +760,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       ++iterator;
       if (removeFromList) {
         if (!itemList->Remove(obj)) {
-          ERROR(R"(Could not remove item "{}" ({}) from collection "{}".)", obj->GetName(), static_cast<void*>(obj), itemList->GetName());
+          ERROR("Could not remove item {} ({}) from collection {}.", obj->GetName(), static_cast<void*>(obj), itemList->GetName());
         }
       }
       if (deleteObject) {
@@ -883,7 +883,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
           Plot plot(plotTree.second);
           AddPlot(plot);
         } catch (...) {
-          ERROR(R"(Could not generate plot "{}" from XML file.)", plotTree.first);
+          ERROR("Could not generate plot {} from XML file.", plotTree.first);
         }
       }
     }

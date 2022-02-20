@@ -701,7 +701,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (legendID > 0u && legendID <= legendBoxVector.size()) {
               legendBoxVector[legendID - 1]->AddEntry(*data->GetLegendLabel(), data_ptr->GetName());
             } else {
-              ERROR(R"(Invalid legend label ({}) specified for data "{}" in "{}".)", legendID, data->GetName(), data->GetInputID());
+              ERROR("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetInputID());
             }
           }
           pad_ptr->Update(); // adds something to the list of primitives
@@ -862,7 +862,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         if (entry.GetRefDataName()) {
           // FIXME: this gives always the first -> problem when drawing the same histogram twice!
           TNamed* data_ptr = static_cast<TNamed*>(pad->FindObject(entry.GetRefDataName()->data()));
-          if (!data_ptr) ERROR(R"(Object belonging to legend entry "{}" not found.)", line);
+          if (!data_ptr) ERROR("Object belonging to legend entry {} not found.", line);
           ReplacePlaceholders(line, data_ptr);
         }
       }
@@ -1125,14 +1125,14 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const std::optional
         TH1::AddDirectory(addDirStatus);
         return returnPointer;
       } else {
-        ERROR(R"(Projection failed for "{}".)", obj->GetName());
+        ERROR("Projection failed for {}.", obj->GetName());
       }
     } else {
       // TProfile2D is TH2, TH2 is TH1, TProfile is TH1
       if (auto returnPointer = GetDataClone<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1>(obj)) {
         return returnPointer;
       } else {
-        ERROR(R"(Input data "{}" is of unsupported type {}.)", obj->GetName(), obj->ClassName());
+        ERROR("Input data {} is of unsupported type {}.", obj->GetName(), obj->ClassName());
       }
     }
   }
@@ -1159,7 +1159,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
 {
   // only 1d and 2d histograms are valid outputs! (could be extended to 3d if there is a way to plot this)
   if (projInfo.dims.size() == 0 || projInfo.dims.size() > 2) {
-    ERROR(R"(Invalid number of dimensions specified for projection of histogram "{}")", obj->GetName());
+    ERROR("Invalid number of dimensions specified for projection of histogram {}", obj->GetName());
     return std::nullopt;
   }
 
@@ -1172,7 +1172,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     for (auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= histPtr->GetNdimensions()) {
-        ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", obj->GetName());
+        ERROR("Invalid dimension specified for setting ranges of histogram {}", obj->GetName());
         return std::nullopt;
       }
       int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
@@ -1193,7 +1193,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     for (auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 3) {
-        ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", obj->GetName());
+        ERROR("Invalid dimension specified for setting ranges of histogram {}", obj->GetName());
         return std::nullopt;
       }
       int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
@@ -1209,7 +1209,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
   } else if (obj->InheritsFrom(TH2::Class())) {
     TH2* histPtr = static_cast<TH2*>(obj);
     if (projInfo.dims.size() > 1) {
-      ERROR(R"(Invalid dimension specified for projecting histogram "{}")", obj->GetName());
+      ERROR("Invalid dimension specified for projecting histogram {}", obj->GetName());
       return std::nullopt;
     }
     int32_t minBin = 0;
@@ -1218,7 +1218,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     for (auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 2) {
-        ERROR(R"(Invalid dimension specified for setting ranges of histogram "{}")", obj->GetName());
+        ERROR("Invalid dimension specified for setting ranges of histogram {}", obj->GetName());
         return std::nullopt;
       }
       minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
@@ -1229,10 +1229,10 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     } else if (projInfo.dims[0] == 1) {
       return histPtr->ProjectionY("_py", minBin, maxBin);
     } else {
-      ERROR(R"(Invalid dimension specified for projection from "{}" ({}).)", obj->GetName(), obj->ClassName());
+      ERROR("Invalid dimension specified for projection from {} ({}).", obj->GetName(), obj->ClassName());
     }
   } else {
-    ERROR(R"(Cannot do projections for type {} ("{}").)", obj->ClassName(), obj->GetName());
+    ERROR("Cannot do projections for type {} ({}).", obj->ClassName(), obj->GetName());
   }
   return std::nullopt;
 }
@@ -1549,7 +1549,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
           replace_str = fmt::format(format, static_cast<TH1*>(data_ptr)->GetMinimum());
         }
       } catch (...) {
-        ERROR(R"(Incompatible format string in "{}".)", match_str);
+        ERROR("Incompatible format string in {}.", match_str);
         replace_str = match_str;
       }
     }

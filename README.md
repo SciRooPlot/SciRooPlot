@@ -8,9 +8,8 @@ Everybody is welcome to use this software and contribute new features.
 
 Prerequisites
 -------------
-The PlottingFramework depends on the following external software which has to be installed on your system:
+The PlottingFramework depends on the following external software which needs to be installed on your system:
 
-- c++   >= 17
 - cmake >= 3.15
 - fmt   >= 6.1.2
 - boost >= 1.65
