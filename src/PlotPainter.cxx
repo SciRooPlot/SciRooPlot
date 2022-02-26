@@ -1531,7 +1531,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     }
     format = "{:" + format + "}";
 
-    string replace_str;
+    string replace_str = match_str;
     if (str_contains(match_str, "name")) {
       replace_str = data_ptr->GetName();
       replace_str = replace_str.substr(0, replace_str.find(gNameGroupSeparator));
