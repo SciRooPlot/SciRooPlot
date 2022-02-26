@@ -987,8 +987,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       if (textSize) legend->SetTextSize(*textSize);
       if (textFont) legend->SetTextFont(*textFont);
 
+      int32_t i = 0;
       for (auto& entry : box->GetEntries()) {
-        string label = entry.GetLabel() ? *entry.GetLabel() : ""; // FIXME: this is equal to lines[i]
+        string label = lines[i];
         string drawStyle = entry.GetDrawStyle() ? *entry.GetDrawStyle() : "";
 
         // TLegendEntry* curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), drawStyle.data());
@@ -1060,6 +1061,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         if (entry.GetTextColor()) curEntry->SetTextColor(*entry.GetTextColor());
         if (entry.GetTextFont()) curEntry->SetTextFont(*entry.GetTextFont());
         if (entry.GetTextSize()) curEntry->SetTextSize(*entry.GetTextSize());
+        ++i;
       }
 
       if (legend->GetHeader()) {
