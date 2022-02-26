@@ -438,7 +438,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   if (outputMode == "pdf") {
     fileEnding = ".pdf";
   } else if (outputMode == "macro") {
-    fileEnding = ".png";
+    fileEnding = ".C";
   } else if (outputMode == "png") {
     fileEnding = ".png";
   } else if (outputMode == "eps") {
