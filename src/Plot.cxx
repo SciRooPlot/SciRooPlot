@@ -1537,7 +1537,8 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   std::optional<bool> isProfile;
   read_from_tree(dataTree, dims, "projDenom_dims");
   read_from_tree(dataTree, ranges, "projDenom_ranges");
-  read_from_tree(dataTree, isUserCoord, "projDenom_isProfile");
+  read_from_tree(dataTree, isUserCoord, "projDenom_isUserCoord");
+  read_from_tree(dataTree, isProfile, "projDenom_isProfile");
 
   if (dims) {
     mProjInfoDenom = {*dims, *ranges, isUserCoord, isProfile};
