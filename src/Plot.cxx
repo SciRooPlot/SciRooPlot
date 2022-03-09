@@ -1154,7 +1154,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, dims, "proj_dims");
   read_from_tree(dataTree, ranges, "proj_ranges");
   read_from_tree(dataTree, isUserCoord, "proj_isUserCoord");
-  read_from_tree(dataTree, isUserCoord, "proj_isProfile");
+  read_from_tree(dataTree, isProfile, "proj_isProfile");
 
   if (dims) {
     mProjInfo = {*dims, *ranges, isUserCoord, isProfile};
