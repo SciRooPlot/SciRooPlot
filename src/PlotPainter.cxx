@@ -1204,7 +1204,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     }
     if (projInfo.dims.size() == 2) {
       // get string if it is "xy" or "yx" or "zx"...
-      return histPtr->Project3D((GetAxisStr(projInfo.dims[1]) + GetAxisStr(projInfo.dims[0])).data());
+      return static_cast<TH2*>(histPtr->Project3D((GetAxisStr(projInfo.dims[1]) + GetAxisStr(projInfo.dims[0])).data()));
     } else if (projInfo.dims.size() == 1) {
       return histPtr->Project3D(GetAxisStr(projInfo.dims[0]).data());
     }

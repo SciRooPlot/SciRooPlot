@@ -391,7 +391,7 @@ public:
 
   virtual Data& SetProjectionX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {}); // for 2d histos
   virtual Data& SetProjectionY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {}); // for 2d histos
-  virtual Data& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord = {});
+  virtual Data& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
 
 protected:
   friend class PlotManager;
@@ -535,11 +535,11 @@ public:
 
   Ratio& SetProjectionX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjectionX(startY, endY, isUserCoord)); }
   Ratio& SetProjectionY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjectionY(startX, endX, isUserCoord)); }
-  Ratio& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjection(dims, ranges, isUserCoord)); }
+  Ratio& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjection(dims, ranges, isUserCoord)); }
 
   Ratio& SetProjectionXDenom(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});
   Ratio& SetProjectionYDenom(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});
-  Ratio& SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord = {});
+  Ratio& SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
 
 protected:
   friend class PlotManager;
