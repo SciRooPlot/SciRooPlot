@@ -1150,12 +1150,14 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   std::optional<vector<uint8_t>> dims;
   std::optional<vector<std::tuple<uint8_t, double_t, double_t>>> ranges;
   std::optional<bool> isUserCoord;
+  std::optional<bool> isProfile;
   read_from_tree(dataTree, dims, "proj_dims");
   read_from_tree(dataTree, ranges, "proj_ranges");
   read_from_tree(dataTree, isUserCoord, "proj_isUserCoord");
+  read_from_tree(dataTree, isUserCoord, "proj_isProfile");
 
   if (dims) {
-    mProjInfo = {*dims, *ranges, isUserCoord};
+    mProjInfo = {*dims, *ranges, isUserCoord, isProfile};
   }
 }
 
@@ -1201,6 +1203,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
     put_in_tree(dataTree, std::optional<vector<uint8_t>>{mProjInfo->dims}, "proj_dims");
     put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{mProjInfo->ranges}, "proj_ranges");
     put_in_tree(dataTree, mProjInfo->isUserCoord, "proj_isUserCoord");
+    put_in_tree(dataTree, mProjInfo->isProfile, "proj_isProfile");
   }
 
   return dataTree;
@@ -1429,14 +1432,29 @@ auto Plot::Pad::Data::SetProjectionX(double_t startY, double_t endY, optional<bo
   mProjInfo = {{0}, {{1, startY, endY}}, isUserCoord};
   return *this;
 }
+auto Plot::Pad::Data::SetProfileX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfo = {{0}, {{1, startY, endY}}, isUserCoord, true};
+  return *this;
+}
 auto Plot::Pad::Data::SetProjectionY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
   return *this;
 }
+auto Plot::Pad::Data::SetProfileY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
+  return *this;
+}
 auto Plot::Pad::Data::SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfo = {dims, ranges, isUserCoord};
+  return *this;
+}
+auto Plot::Pad::Data::SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfo = {dims, ranges, isUserCoord, true};
   return *this;
 }
 
@@ -1516,12 +1534,13 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   std::optional<vector<uint8_t>> dims;
   std::optional<vector<std::tuple<uint8_t, double_t, double_t>>> ranges;
   std::optional<bool> isUserCoord;
+  std::optional<bool> isProfile;
   read_from_tree(dataTree, dims, "projDenom_dims");
   read_from_tree(dataTree, ranges, "projDenom_ranges");
-  read_from_tree(dataTree, isUserCoord, "projDenom_isUserCoord");
+  read_from_tree(dataTree, isUserCoord, "projDenom_isProfile");
 
   if (dims) {
-    mProjInfoDenom = {*dims, *ranges, isUserCoord};
+    mProjInfoDenom = {*dims, *ranges, isUserCoord, isProfile};
   }
 }
 
@@ -1542,6 +1561,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
     put_in_tree(dataTree, std::optional<vector<uint8_t>>{mProjInfoDenom->dims}, "projDenom_dims");
     put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{mProjInfoDenom->ranges}, "projDenom_ranges");
     put_in_tree(dataTree, mProjInfoDenom->isUserCoord, "projDenom_isUserCoord");
+    put_in_tree(dataTree, mProjInfoDenom->isProfile, "projDenom_isProfile");
   }
 
   return dataTree;
@@ -1563,14 +1583,30 @@ auto Plot::Pad::Ratio::SetProjectionXDenom(double_t startY, double_t endY, optio
   mProjInfoDenom = {{0}, {{1, startY, endY}}, isUserCoord};
   return *this;
 }
+auto Plot::Pad::Ratio::SetProfileXDenom(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfoDenom = {{0}, {{1, startY, endY}}, isUserCoord, true};
+  return *this;
+}
+
 auto Plot::Pad::Ratio::SetProjectionYDenom(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfoDenom = {{1}, {{0, startX, endX}}, isUserCoord};
   return *this;
 }
+auto Plot::Pad::Ratio::SetProfileYDenom(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfoDenom = {{1}, {{0, startX, endX}}, isUserCoord, true};
+  return *this;
+}
 auto Plot::Pad::Ratio::SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfoDenom = {dims, ranges, isUserCoord};
+  return *this;
+}
+auto Plot::Pad::Ratio::SetProfileDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfoDenom = {dims, ranges, isUserCoord, true};
   return *this;
 }
 

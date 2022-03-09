@@ -393,6 +393,10 @@ public:
   virtual Data& SetProjectionY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {}); // for 2d histos
   virtual Data& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
 
+  virtual Data& SetProfileX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});                                     // for 2d histos
+  virtual Data& SetProfileY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});                                     // for 2d histos
+  virtual Data& SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {}); // for 2d & 3d histos
+
 protected:
   friend class PlotManager;
   friend class PlotPainter;
@@ -435,6 +439,7 @@ protected:
     vector<uint8_t> dims;                                        // dimensions to project on (can be one or two)
     std::vector<std::tuple<uint8_t, double_t, double_t>> ranges; // range restrictions on other dimensions
     std::optional<bool> isUserCoord{};                           // whether ranges are specified in user coordinates or as bins
+    std::optional<bool> isProfile{};                             // whether this should be a profile instead of a projection
     std::string GetNameSuffix() const;
   };
 
@@ -540,6 +545,14 @@ public:
   Ratio& SetProjectionXDenom(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});
   Ratio& SetProjectionYDenom(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});
   Ratio& SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
+
+  Ratio& SetProfileX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProfileX(startY, endY, isUserCoord)); }
+  Ratio& SetProfileY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProfileY(startX, endX, isUserCoord)); }
+  Ratio& SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProfile(dims, ranges, isUserCoord)); }
+
+  Ratio& SetProfileXDenom(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});
+  Ratio& SetProfileYDenom(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});
+  Ratio& SetProfileDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
 
 protected:
   friend class PlotManager;

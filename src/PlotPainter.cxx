@@ -1159,13 +1159,14 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
 
 optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::proj_info_t projInfo)
 {
+  const bool isProfile = projInfo.isProfile && *projInfo.isProfile;
   // only 1d and 2d histograms are valid outputs! (could be extended to 3d if there is a way to plot this)
   if (projInfo.dims.size() == 0 || projInfo.dims.size() > 2) {
     ERROR("Invalid number of dimensions specified for projection of histogram {}", obj->GetName());
     return std::nullopt;
   }
 
-  if (obj->InheritsFrom(THnBase::Class())) {
+  if (obj->InheritsFrom(THnBase::Class()) && !isProfile) {
     THnBase* histPtr = static_cast<THnBase*>(obj);
     // first reset all ranges in case this histogram was previously used
     for (int16_t i = 0; i < histPtr->GetNdimensions(); ++i) {
@@ -1204,7 +1205,11 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     }
     if (projInfo.dims.size() == 2) {
       // get string if it is "xy" or "yx" or "zx"...
-      return static_cast<TH2*>(histPtr->Project3D((GetAxisStr(projInfo.dims[1]) + GetAxisStr(projInfo.dims[0])).data()));
+      if (isProfile) {
+        return histPtr->Project3DProfile((GetAxisStr(projInfo.dims[1]) + GetAxisStr(projInfo.dims[0])).data());
+      } else {
+        return static_cast<TH2*>(histPtr->Project3D((GetAxisStr(projInfo.dims[1]) + GetAxisStr(projInfo.dims[0])).data()));
+      }
     } else if (projInfo.dims.size() == 1) {
       return histPtr->Project3D(GetAxisStr(projInfo.dims[0]).data());
     }
@@ -1227,14 +1232,22 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
     }
     if (projInfo.dims[0] == 0) {
-      return histPtr->ProjectionX("_px", minBin, maxBin);
+      if (isProfile) {
+        return histPtr->ProfileX("_px", minBin, maxBin);
+      } else {
+        return histPtr->ProjectionX("_px", minBin, maxBin);
+      }
     } else if (projInfo.dims[0] == 1) {
-      return histPtr->ProjectionY("_py", minBin, maxBin);
+      if (isProfile) {
+        return histPtr->ProfileY("_py", minBin, maxBin);
+      } else {
+        return histPtr->ProjectionY("_py", minBin, maxBin);
+      }
     } else {
-      ERROR("Invalid dimension specified for projection from {} ({}).", obj->GetName(), obj->ClassName());
+      ERROR("Invalid dimension specified for {} from {} ({}).", (isProfile) ? "profile" : "projection", obj->GetName(), obj->ClassName());
     }
   } else {
-    ERROR("Cannot do projections for type {} ({}).", obj->ClassName(), obj->GetName());
+    ERROR("Cannot do {} for type {} ({}).", (isProfile) ? "profiles" : "projections", obj->ClassName(), obj->GetName());
   }
   return std::nullopt;
 }
