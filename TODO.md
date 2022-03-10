@@ -30,5 +30,5 @@ Not so urgend:
 - support THStack, TMultiGraph
 - support for setting up TView to have a 3d representation of 2d data
 - add inclination angle setting to text-boxes
-- support TGraphAsymmErrors and check if TProfile{1,2,3}D would require some extra functionality
+- support TGraphAsymmErrors
 - add division hist/graph, graph/hist

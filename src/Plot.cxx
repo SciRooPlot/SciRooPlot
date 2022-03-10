@@ -1465,7 +1465,7 @@ auto Plot::Pad::Data::SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, dou
 //**************************************************************************************************
 std::string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
 {
-  std::string nameSuffix = "_Proj{";
+  std::string nameSuffix = (isProfile && *isProfile) ? "_Prof{" : "_Proj{";
   for (auto dim : dims) {
     nameSuffix += std::to_string(dim);
   }
