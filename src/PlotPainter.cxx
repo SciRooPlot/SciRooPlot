@@ -1411,7 +1411,7 @@ void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<
     if (min && graph->GetX()[i] < *min) {
       ++pointsToRemoveLow;
     }
-    if (max && graph->GetX()[i] >= *max) {
+    if (max && graph->GetX()[i] > *max) {
       ++pointsToRemoveHigh;
     }
   }
