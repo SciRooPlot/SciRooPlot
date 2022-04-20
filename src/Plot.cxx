@@ -1216,7 +1216,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
 //**************************************************************************************************
 auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
 {
-  // apply all properties related to the appearance of the data
+  // set all properties related to the appearance of the data exactly as specified in the layout
   mDrawingOptions = dataLayout.mDrawingOptions;
   mDrawingOptionAlias = dataLayout.mDrawingOptionAlias;
   mTextFormat = dataLayout.mTextFormat;
@@ -1237,6 +1237,31 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
   mFill.scale = dataLayout.mFill.scale;
   mContours = dataLayout.mContours;
   mNContours = dataLayout.mNContours;
+  return *this;
+}
+auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
+{
+  // apply only the properties of the layout which are set
+  set_if(dataLayout.mDrawingOptions, mDrawingOptions);
+  set_if(dataLayout.mDrawingOptionAlias, mDrawingOptionAlias);
+  set_if(dataLayout.mTextFormat, mTextFormat);
+  set_if(dataLayout.mRangeX.min, mRangeX.min);
+  set_if(dataLayout.mRangeX.max, mRangeX.max);
+  set_if(dataLayout.mRangeY.min, mRangeY.min);
+  set_if(dataLayout.mRangeY.max, mRangeY.max);
+  set_if(dataLayout.mScaleRange.min, mScaleRange.min);
+  set_if(dataLayout.mScaleRange.max, mScaleRange.max);
+  set_if(dataLayout.mMarker.color, mMarker.color);
+  set_if(dataLayout.mMarker.style, mMarker.style);
+  set_if(dataLayout.mMarker.scale, mMarker.scale);
+  set_if(dataLayout.mLine.color, mLine.color);
+  set_if(dataLayout.mLine.style, mLine.style);
+  set_if(dataLayout.mLine.scale, mLine.scale);
+  set_if(dataLayout.mFill.color, mFill.color);
+  set_if(dataLayout.mFill.style, mFill.style);
+  set_if(dataLayout.mFill.scale, mFill.scale);
+  set_if(dataLayout.mContours, mContours);
+  set_if(dataLayout.mNContours, mNContours);
   return *this;
 }
 auto Plot::Pad::Data::SetInputID(const string& inputIdentifier) -> decltype(*this)

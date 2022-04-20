@@ -354,6 +354,7 @@ public:
   const string& GetInputID() const { return mInputIdentifier; }
 
   virtual Data& SetLayout(const Data& dataLayout);
+  virtual Data& ApplyLayout(const Data& dataLayout);
   virtual Data& SetRangeX(double_t min, double_t max);
   virtual Data& SetMaxRangeX(double_t max);
   virtual Data& SetMinRangeX(double_t min);
@@ -503,6 +504,7 @@ public:
 
   Ratio& SetIsCorrelated(bool isCorrelated = true);
   Ratio& SetLayout(const Data& dataLayout) { return static_cast<decltype(*this)&>(Data::SetLayout(dataLayout)); }
+  Ratio& ApplyLayout(const Data& dataLayout) { return static_cast<decltype(*this)&>(Data::ApplyLayout(dataLayout)); }
   Ratio& SetRangeX(double_t min, double_t max) { return static_cast<decltype(*this)&>(Data::SetRangeX(min, max)); }
   Ratio& SetMaxRangeX(double_t max) { return static_cast<decltype(*this)&>(Data::SetMaxRangeX(max)); }
   Ratio& SetMinRangeX(double_t min) { return static_cast<decltype(*this)&>(Data::SetMinRangeX(min)); }
