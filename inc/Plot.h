@@ -22,6 +22,7 @@
 #include "TAttMarker.h"
 #include "TAttLine.h"
 #include "TAttFill.h"
+#include "TCandle.h"
 #include "Rtypes.h"
 
 #include "PlottingFramework.h"
@@ -60,6 +61,13 @@ enum drawing_options_t : uint8_t {
   colz,
   surf,
   cont,
+  candle1,
+  candle2,
+  candle3,
+  candle4,
+  candle5,
+  candle6,
+  candle7,
 };
 
 //**************************************************************************************************
@@ -206,6 +214,8 @@ public:
   Pad& SetDefaultDrawingOptionGraph(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption);
+  Pad& SetDefaultCandleBoxRange(float_t candleOption);
+  Pad& SetDefaultCandleWhiskerRange(float_t candleOption);
   Pad& SetFill(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> opacity = std::nullopt);
   Pad& SetFillColor(int16_t color);
   Pad& SetFillStyle(int16_t style);
@@ -272,6 +282,8 @@ protected:
   const auto& GetDefaultDrawingOptionGraph() const { return mDrawingOptionDefaults.graph; }
   const auto& GetDefaultDrawingOptionHist() const { return mDrawingOptionDefaults.hist; }
   const auto& GetDefaultDrawingOptionHist2d() const { return mDrawingOptionDefaults.hist2d; }
+  const auto& GetDefaultCandleBoxRange() const { return mCandleOptionDefaults.boxRange; }
+  const auto& GetDefaultCandleWhiskerRange() const { return mCandleOptionDefaults.whiskerRange; }
   const auto& GetRedrawAxes() const { return mRedrawAxes; }
   const auto& GetRefFunc() const { return mRefFunc; }
 
@@ -304,6 +316,10 @@ private:
     optional<drawing_options_t> hist;
     optional<drawing_options_t> hist2d;
   };
+  struct candle_defaults_t {
+    optional<double_t> boxRange;
+    optional<double_t> whiskerRange;
+  };
 
   // properties
   optional<string> mOptions;
@@ -319,6 +335,7 @@ private:
   view_defaults_t mLineDefaults;
   view_defaults_t mFillDefaults;
   data_defaults_t mDrawingOptionDefaults;
+  candle_defaults_t mCandleOptionDefaults;
 
   optional<int32_t> mPalette;
 
