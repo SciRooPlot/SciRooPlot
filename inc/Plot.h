@@ -22,6 +22,7 @@
 #include "TAttMarker.h"
 #include "TAttLine.h"
 #include "TAttFill.h"
+#include "TCandle.h"
 #include "Rtypes.h"
 
 #include "PlottingFramework.h"
@@ -60,6 +61,13 @@ enum drawing_options_t : uint8_t {
   colz,
   surf,
   cont,
+  candle1,
+  candle2,
+  candle3,
+  candle4,
+  candle5,
+  candle6,
+  candle7,
 };
 
 //**************************************************************************************************
@@ -206,6 +214,8 @@ public:
   Pad& SetDefaultDrawingOptionGraph(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption);
+  Pad& SetDefaultCandleBoxRange(float_t candleOption);
+  Pad& SetDefaultCandleWhiskerRange(float_t candleOption);
   Pad& SetFill(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> opacity = std::nullopt);
   Pad& SetFillColor(int16_t color);
   Pad& SetFillStyle(int16_t style);
@@ -272,6 +282,8 @@ protected:
   const auto& GetDefaultDrawingOptionGraph() const { return mDrawingOptionDefaults.graph; }
   const auto& GetDefaultDrawingOptionHist() const { return mDrawingOptionDefaults.hist; }
   const auto& GetDefaultDrawingOptionHist2d() const { return mDrawingOptionDefaults.hist2d; }
+  const auto& GetDefaultCandleBoxRange() const { return mCandleOptionDefaults.boxRange; }
+  const auto& GetDefaultCandleWhiskerRange() const { return mCandleOptionDefaults.whiskerRange; }
   const auto& GetRedrawAxes() const { return mRedrawAxes; }
   const auto& GetRefFunc() const { return mRefFunc; }
 
@@ -304,6 +316,10 @@ private:
     optional<drawing_options_t> hist;
     optional<drawing_options_t> hist2d;
   };
+  struct candle_defaults_t {
+    optional<double_t> boxRange;
+    optional<double_t> whiskerRange;
+  };
 
   // properties
   optional<string> mOptions;
@@ -319,6 +335,7 @@ private:
   view_defaults_t mLineDefaults;
   view_defaults_t mFillDefaults;
   data_defaults_t mDrawingOptionDefaults;
+  candle_defaults_t mCandleOptionDefaults;
 
   optional<int32_t> mPalette;
 
@@ -354,6 +371,7 @@ public:
   const string& GetInputID() const { return mInputIdentifier; }
 
   virtual Data& SetLayout(const Data& dataLayout);
+  virtual Data& ApplyLayout(const Data& dataLayout);
   virtual Data& SetRangeX(double_t min, double_t max);
   virtual Data& SetMaxRangeX(double_t max);
   virtual Data& SetMinRangeX(double_t min);
@@ -391,7 +409,11 @@ public:
 
   virtual Data& SetProjectionX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {}); // for 2d histos
   virtual Data& SetProjectionY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {}); // for 2d histos
-  virtual Data& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord = {});
+  virtual Data& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
+
+  virtual Data& SetProfileX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});                                     // for 2d histos
+  virtual Data& SetProfileY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});                                     // for 2d histos
+  virtual Data& SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {}); // for 2d & 3d histos
 
 protected:
   friend class PlotManager;
@@ -435,6 +457,7 @@ protected:
     vector<uint8_t> dims;                                        // dimensions to project on (can be one or two)
     std::vector<std::tuple<uint8_t, double_t, double_t>> ranges; // range restrictions on other dimensions
     std::optional<bool> isUserCoord{};                           // whether ranges are specified in user coordinates or as bins
+    std::optional<bool> isProfile{};                             // whether this should be a profile instead of a projection
     std::string GetNameSuffix() const;
   };
 
@@ -498,10 +521,11 @@ public:
 
   Ratio& SetIsCorrelated(bool isCorrelated = true);
   Ratio& SetLayout(const Data& dataLayout) { return static_cast<decltype(*this)&>(Data::SetLayout(dataLayout)); }
+  Ratio& ApplyLayout(const Data& dataLayout) { return static_cast<decltype(*this)&>(Data::ApplyLayout(dataLayout)); }
   Ratio& SetRangeX(double_t min, double_t max) { return static_cast<decltype(*this)&>(Data::SetRangeX(min, max)); }
   Ratio& SetMaxRangeX(double_t max) { return static_cast<decltype(*this)&>(Data::SetMaxRangeX(max)); }
   Ratio& SetMinRangeX(double_t min) { return static_cast<decltype(*this)&>(Data::SetMinRangeX(min)); }
-  Ratio& UnsetRangeX() { return static_cast<decltype(*this)&>(Data::UnsetRangeY()); }
+  Ratio& UnsetRangeX() { return static_cast<decltype(*this)&>(Data::UnsetRangeX()); }
   Ratio& SetRangeY(double_t min, double_t max) { return static_cast<decltype(*this)&>(Data::SetRangeY(min, max)); }
   Ratio& SetMaxRangeY(double_t max) { return static_cast<decltype(*this)&>(Data::SetMaxRangeY(max)); }
   Ratio& SetMinRangeY(double_t min) { return static_cast<decltype(*this)&>(Data::SetMinRangeY(min)); }
@@ -535,11 +559,19 @@ public:
 
   Ratio& SetProjectionX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjectionX(startY, endY, isUserCoord)); }
   Ratio& SetProjectionY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjectionY(startX, endX, isUserCoord)); }
-  Ratio& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjection(dims, ranges, isUserCoord)); }
+  Ratio& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjection(dims, ranges, isUserCoord)); }
 
   Ratio& SetProjectionXDenom(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});
   Ratio& SetProjectionYDenom(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});
-  Ratio& SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord = {});
+  Ratio& SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
+
+  Ratio& SetProfileX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProfileX(startY, endY, isUserCoord)); }
+  Ratio& SetProfileY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProfileY(startX, endX, isUserCoord)); }
+  Ratio& SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProfile(dims, ranges, isUserCoord)); }
+
+  Ratio& SetProfileXDenom(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});
+  Ratio& SetProfileYDenom(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});
+  Ratio& SetProfileDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
 
 protected:
   friend class PlotManager;

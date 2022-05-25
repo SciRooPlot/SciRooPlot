@@ -513,6 +513,28 @@ auto Plot::Pad::SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption) -
 
 //**************************************************************************************************
 /**
+ * Set default box range option for 2d candle plot.
+ */
+//**************************************************************************************************
+auto Plot::Pad::SetDefaultCandleBoxRange(float_t candleOption) -> decltype(*this)
+{
+  mCandleOptionDefaults.boxRange = candleOption;
+  return *this;
+}
+
+//**************************************************************************************************
+/**
+ * Set default whisker range option for 2d candle plot.
+ */
+//**************************************************************************************************
+auto Plot::Pad::SetDefaultCandleWhiskerRange(float_t candleOption) -> decltype(*this)
+{
+  mCandleOptionDefaults.whiskerRange = candleOption;
+  return *this;
+}
+
+//**************************************************************************************************
+/**
  * Set fill for this pad.
  */
 //**************************************************************************************************
@@ -730,6 +752,8 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
   read_from_tree(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
   read_from_tree(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
+  read_from_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_boxrange");
+  read_from_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
   read_from_tree(padTree, mRefFunc, "ref_func");
 
@@ -811,6 +835,8 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
   put_in_tree(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
   put_in_tree(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
+  put_in_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_boxrange");
+  put_in_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
   put_in_tree(padTree, mRefFunc, "ref_func");
 
@@ -907,6 +933,8 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mDrawingOptionDefaults.graph) mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
   if (pad.mDrawingOptionDefaults.hist) mDrawingOptionDefaults.hist = pad.mDrawingOptionDefaults.hist;
   if (pad.mDrawingOptionDefaults.hist2d) mDrawingOptionDefaults.hist2d = pad.mDrawingOptionDefaults.hist2d;
+  if (pad.mCandleOptionDefaults.boxRange) mCandleOptionDefaults.boxRange = pad.mCandleOptionDefaults.boxRange;
+  if (pad.mCandleOptionDefaults.whiskerRange) mCandleOptionDefaults.whiskerRange = pad.mCandleOptionDefaults.whiskerRange;
   if (pad.mPalette) mPalette = pad.mPalette;
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if (pad.mRefFunc) mRefFunc = pad.mRefFunc;
@@ -1150,12 +1178,14 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   std::optional<vector<uint8_t>> dims;
   std::optional<vector<std::tuple<uint8_t, double_t, double_t>>> ranges;
   std::optional<bool> isUserCoord;
+  std::optional<bool> isProfile;
   read_from_tree(dataTree, dims, "proj_dims");
   read_from_tree(dataTree, ranges, "proj_ranges");
   read_from_tree(dataTree, isUserCoord, "proj_isUserCoord");
+  read_from_tree(dataTree, isProfile, "proj_isProfile");
 
   if (dims) {
-    mProjInfo = {*dims, *ranges, isUserCoord};
+    mProjInfo = {*dims, *ranges, isUserCoord, isProfile};
   }
 }
 
@@ -1201,6 +1231,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
     put_in_tree(dataTree, std::optional<vector<uint8_t>>{mProjInfo->dims}, "proj_dims");
     put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{mProjInfo->ranges}, "proj_ranges");
     put_in_tree(dataTree, mProjInfo->isUserCoord, "proj_isUserCoord");
+    put_in_tree(dataTree, mProjInfo->isProfile, "proj_isProfile");
   }
 
   return dataTree;
@@ -1213,7 +1244,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
 //**************************************************************************************************
 auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
 {
-  // apply all properties related to the appearance of the data
+  // set all properties related to the appearance of the data exactly as specified in the layout
   mDrawingOptions = dataLayout.mDrawingOptions;
   mDrawingOptionAlias = dataLayout.mDrawingOptionAlias;
   mTextFormat = dataLayout.mTextFormat;
@@ -1234,6 +1265,31 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
   mFill.scale = dataLayout.mFill.scale;
   mContours = dataLayout.mContours;
   mNContours = dataLayout.mNContours;
+  return *this;
+}
+auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
+{
+  // apply only the properties of the layout which are set
+  set_if(dataLayout.mDrawingOptions, mDrawingOptions);
+  set_if(dataLayout.mDrawingOptionAlias, mDrawingOptionAlias);
+  set_if(dataLayout.mTextFormat, mTextFormat);
+  set_if(dataLayout.mRangeX.min, mRangeX.min);
+  set_if(dataLayout.mRangeX.max, mRangeX.max);
+  set_if(dataLayout.mRangeY.min, mRangeY.min);
+  set_if(dataLayout.mRangeY.max, mRangeY.max);
+  set_if(dataLayout.mScaleRange.min, mScaleRange.min);
+  set_if(dataLayout.mScaleRange.max, mScaleRange.max);
+  set_if(dataLayout.mMarker.color, mMarker.color);
+  set_if(dataLayout.mMarker.style, mMarker.style);
+  set_if(dataLayout.mMarker.scale, mMarker.scale);
+  set_if(dataLayout.mLine.color, mLine.color);
+  set_if(dataLayout.mLine.style, mLine.style);
+  set_if(dataLayout.mLine.scale, mLine.scale);
+  set_if(dataLayout.mFill.color, mFill.color);
+  set_if(dataLayout.mFill.style, mFill.style);
+  set_if(dataLayout.mFill.scale, mFill.scale);
+  set_if(dataLayout.mContours, mContours);
+  set_if(dataLayout.mNContours, mNContours);
   return *this;
 }
 auto Plot::Pad::Data::SetInputID(const string& inputIdentifier) -> decltype(*this)
@@ -1429,14 +1485,29 @@ auto Plot::Pad::Data::SetProjectionX(double_t startY, double_t endY, optional<bo
   mProjInfo = {{0}, {{1, startY, endY}}, isUserCoord};
   return *this;
 }
+auto Plot::Pad::Data::SetProfileX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfo = {{0}, {{1, startY, endY}}, isUserCoord, true};
+  return *this;
+}
 auto Plot::Pad::Data::SetProjectionY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
   return *this;
 }
+auto Plot::Pad::Data::SetProfileY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
+  return *this;
+}
 auto Plot::Pad::Data::SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfo = {dims, ranges, isUserCoord};
+  return *this;
+}
+auto Plot::Pad::Data::SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfo = {dims, ranges, isUserCoord, true};
   return *this;
 }
 
@@ -1447,7 +1518,7 @@ auto Plot::Pad::Data::SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, 
 //**************************************************************************************************
 std::string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
 {
-  std::string nameSuffix = "_Proj{";
+  std::string nameSuffix = (isProfile && *isProfile) ? "_Prof{" : "_Proj{";
   for (auto dim : dims) {
     nameSuffix += std::to_string(dim);
   }
@@ -1516,12 +1587,14 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   std::optional<vector<uint8_t>> dims;
   std::optional<vector<std::tuple<uint8_t, double_t, double_t>>> ranges;
   std::optional<bool> isUserCoord;
+  std::optional<bool> isProfile;
   read_from_tree(dataTree, dims, "projDenom_dims");
   read_from_tree(dataTree, ranges, "projDenom_ranges");
   read_from_tree(dataTree, isUserCoord, "projDenom_isUserCoord");
+  read_from_tree(dataTree, isProfile, "projDenom_isProfile");
 
   if (dims) {
-    mProjInfoDenom = {*dims, *ranges, isUserCoord};
+    mProjInfoDenom = {*dims, *ranges, isUserCoord, isProfile};
   }
 }
 
@@ -1542,6 +1615,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
     put_in_tree(dataTree, std::optional<vector<uint8_t>>{mProjInfoDenom->dims}, "projDenom_dims");
     put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{mProjInfoDenom->ranges}, "projDenom_ranges");
     put_in_tree(dataTree, mProjInfoDenom->isUserCoord, "projDenom_isUserCoord");
+    put_in_tree(dataTree, mProjInfoDenom->isProfile, "projDenom_isProfile");
   }
 
   return dataTree;
@@ -1563,14 +1637,30 @@ auto Plot::Pad::Ratio::SetProjectionXDenom(double_t startY, double_t endY, optio
   mProjInfoDenom = {{0}, {{1, startY, endY}}, isUserCoord};
   return *this;
 }
+auto Plot::Pad::Ratio::SetProfileXDenom(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfoDenom = {{0}, {{1, startY, endY}}, isUserCoord, true};
+  return *this;
+}
+
 auto Plot::Pad::Ratio::SetProjectionYDenom(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfoDenom = {{1}, {{0, startX, endX}}, isUserCoord};
   return *this;
 }
+auto Plot::Pad::Ratio::SetProfileYDenom(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfoDenom = {{1}, {{0, startX, endX}}, isUserCoord, true};
+  return *this;
+}
 auto Plot::Pad::Ratio::SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfoDenom = {dims, ranges, isUserCoord};
+  return *this;
+}
+auto Plot::Pad::Ratio::SetProfileDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfoDenom = {dims, ranges, isUserCoord, true};
   return *this;
 }
 

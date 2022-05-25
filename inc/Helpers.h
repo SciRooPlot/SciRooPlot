@@ -37,6 +37,14 @@ inline bool str_contains(const std::string& str, const std::string& substr, bool
 }
 
 template <typename T>
+void set_if(const optional<T>& origin, optional<T>& target)
+{
+  if (origin) {
+    target = origin;
+  }
+}
+
+template <typename T>
 struct is_vector : public std::false_type {
 };
 template <typename T, typename A>

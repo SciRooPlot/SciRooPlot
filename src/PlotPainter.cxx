@@ -199,6 +199,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto& frameBorderColor = get_first(pad.GetFrameBorderColor(), padDefaults.GetFrameBorderColor())) pad_ptr->SetFrameLineColor(*frameBorderColor);
     if (auto& frameBorderStyle = get_first(pad.GetFrameBorderStyle(), padDefaults.GetFrameBorderStyle())) pad_ptr->SetFrameLineStyle(*frameBorderStyle);
     if (auto& frameBorderWidth = get_first(pad.GetFrameBorderWidth(), padDefaults.GetFrameBorderWidth())) pad_ptr->SetFrameLineWidth(*frameBorderWidth);
+    if (auto& candleBoxRange = get_first(pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange())) TCandle::SetBoxRange(*candleBoxRange);
+    if (auto& candleWhiskerRange = get_first(pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange())) TCandle::SetWhiskerRange(*candleWhiskerRange);
 
     if (pad.GetDefaultMarkerColorsGradient().rgbEndpoints) {
       auto& gradient = pad.GetDefaultMarkerColorsGradient();
@@ -987,8 +989,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       if (textSize) legend->SetTextSize(*textSize);
       if (textFont) legend->SetTextFont(*textFont);
 
+      int32_t i = 0;
       for (auto& entry : box->GetEntries()) {
-        string label = entry.GetLabel() ? *entry.GetLabel() : ""; // FIXME: this is equal to lines[i]
+        string label = lines[i];
         string drawStyle = entry.GetDrawStyle() ? *entry.GetDrawStyle() : "";
 
         // TLegendEntry* curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), drawStyle.data());
@@ -1060,6 +1063,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         if (entry.GetTextColor()) curEntry->SetTextColor(*entry.GetTextColor());
         if (entry.GetTextFont()) curEntry->SetTextFont(*entry.GetTextFont());
         if (entry.GetTextSize()) curEntry->SetTextSize(*entry.GetTextSize());
+        ++i;
       }
 
       if (legend->GetHeader()) {
@@ -1157,13 +1161,14 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
 
 optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::proj_info_t projInfo)
 {
+  const bool isProfile = projInfo.isProfile && *projInfo.isProfile;
   // only 1d and 2d histograms are valid outputs! (could be extended to 3d if there is a way to plot this)
   if (projInfo.dims.size() == 0 || projInfo.dims.size() > 2) {
     ERROR("Invalid number of dimensions specified for projection of histogram {}", obj->GetName());
     return std::nullopt;
   }
 
-  if (obj->InheritsFrom(THnBase::Class())) {
+  if (obj->InheritsFrom(THnBase::Class()) && !isProfile) {
     THnBase* histPtr = static_cast<THnBase*>(obj);
     // first reset all ranges in case this histogram was previously used
     for (int16_t i = 0; i < histPtr->GetNdimensions(); ++i) {
@@ -1202,7 +1207,11 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     }
     if (projInfo.dims.size() == 2) {
       // get string if it is "xy" or "yx" or "zx"...
-      return histPtr->Project3D((GetAxisStr(projInfo.dims[1]) + GetAxisStr(projInfo.dims[0])).data());
+      if (isProfile) {
+        return histPtr->Project3DProfile((GetAxisStr(projInfo.dims[1]) + GetAxisStr(projInfo.dims[0])).data());
+      } else {
+        return static_cast<TH2*>(histPtr->Project3D((GetAxisStr(projInfo.dims[1]) + GetAxisStr(projInfo.dims[0])).data()));
+      }
     } else if (projInfo.dims.size() == 1) {
       return histPtr->Project3D(GetAxisStr(projInfo.dims[0]).data());
     }
@@ -1225,14 +1234,22 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
     }
     if (projInfo.dims[0] == 0) {
-      return histPtr->ProjectionX("_px", minBin, maxBin);
+      if (isProfile) {
+        return histPtr->ProfileX("_px", minBin, maxBin);
+      } else {
+        return histPtr->ProjectionX("_px", minBin, maxBin);
+      }
     } else if (projInfo.dims[0] == 1) {
-      return histPtr->ProjectionY("_py", minBin, maxBin);
+      if (isProfile) {
+        return histPtr->ProfileY("_py", minBin, maxBin);
+      } else {
+        return histPtr->ProjectionY("_py", minBin, maxBin);
+      }
     } else {
-      ERROR("Invalid dimension specified for projection from {} ({}).", obj->GetName(), obj->ClassName());
+      ERROR("Invalid dimension specified for {} from {} ({}).", (isProfile) ? "profile" : "projection", obj->GetName(), obj->ClassName());
     }
   } else {
-    ERROR("Cannot do projections for type {} ({}).", obj->ClassName(), obj->GetName());
+    ERROR("Cannot do {} for type {} ({}).", (isProfile) ? "profiles" : "projections", obj->ClassName(), obj->GetName());
   }
   return std::nullopt;
 }
@@ -1396,7 +1413,7 @@ void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<
     if (min && graph->GetX()[i] < *min) {
       ++pointsToRemoveLow;
     }
-    if (max && graph->GetX()[i] >= *max) {
+    if (max && graph->GetX()[i] > *max) {
       ++pointsToRemoveHigh;
     }
   }
@@ -1529,7 +1546,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     }
     format = "{:" + format + "}";
 
-    string replace_str;
+    string replace_str = match_str;
     if (str_contains(match_str, "name")) {
       replace_str = data_ptr->GetName();
       replace_str = replace_str.substr(0, replace_str.find(gNameGroupSeparator));
