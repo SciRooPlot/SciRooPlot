@@ -22,6 +22,7 @@
 #include "TAttMarker.h"
 #include "TAttLine.h"
 #include "TAttFill.h"
+#include "TCandle.h"
 #include "Rtypes.h"
 
 #include "PlottingFramework.h"
@@ -281,8 +282,8 @@ protected:
   const auto& GetDefaultDrawingOptionGraph() const { return mDrawingOptionDefaults.graph; }
   const auto& GetDefaultDrawingOptionHist() const { return mDrawingOptionDefaults.hist; }
   const auto& GetDefaultDrawingOptionHist2d() const { return mDrawingOptionDefaults.hist2d; }
-  const auto& GetDefaultCandleBoxRange() const { return mCandleOptionDefaults.boxrange; }
-  const auto& GetDefaultCandleWhiskerRange() const { return mCandleOptionDefaults.whiskerrange; }
+  const auto& GetDefaultCandleBoxRange() const { return mCandleOptionDefaults.boxRange; }
+  const auto& GetDefaultCandleWhiskerRange() const { return mCandleOptionDefaults.whiskerRange; }
   const auto& GetRedrawAxes() const { return mRedrawAxes; }
   const auto& GetRefFunc() const { return mRefFunc; }
 
@@ -316,8 +317,8 @@ private:
     optional<drawing_options_t> hist2d;
   };
   struct candle_defaults_t {
-    optional<double_t> boxrange;
-    optional<double_t> whiskerrange;
+    optional<double_t> boxRange;
+    optional<double_t> whiskerRange;
   };
 
   // properties

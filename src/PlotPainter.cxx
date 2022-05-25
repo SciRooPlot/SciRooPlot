@@ -43,7 +43,6 @@
 #include "TGraphSmooth.h"
 #include "TF1.h"
 #include "TF2.h"
-#include "TCandle.h"
 
 #include "TFrame.h"
 #include "TLine.h"
@@ -783,9 +782,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
     pad_ptr->Modified();
     pad_ptr->Update();
-    // Reset TCanlde range options to their default values after drawing data
-    TCandle::SetBoxRange(0.5);
-    TCandle::SetWhiskerRange(0.75);
   }
 
   canvas_ptr->cd();
