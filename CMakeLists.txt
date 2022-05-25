@@ -12,7 +12,7 @@ if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
 endif()
 
 # The following two lines can be used to force using one specific root installation
-set(ROOTSYS ~/rootbuild)
+set(ROOTSYS ~/root/mybuild)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
 
 set(REQUIRED_ROOT_VERSION 6.16)
