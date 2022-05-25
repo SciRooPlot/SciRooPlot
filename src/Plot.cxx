@@ -513,6 +513,28 @@ auto Plot::Pad::SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption) -
 
 //**************************************************************************************************
 /**
+ * Set default box range option for 2d candle plot.
+ */
+//**************************************************************************************************
+auto Plot::Pad::SetDefaultCandleBoxRange(float_t candleOption) -> decltype(*this)
+{
+  mCandleOptionDefaults.boxrange = candleOption;
+  return *this;
+}
+
+//**************************************************************************************************
+/**
+ * Set default whisker range option for 2d candle plot.
+ */
+//**************************************************************************************************
+auto Plot::Pad::SetDefaultCandleWhiskerRange(float_t candleOption) -> decltype(*this)
+{
+  mCandleOptionDefaults.whiskerrange = candleOption;
+  return *this;
+}
+
+//**************************************************************************************************
+/**
  * Set fill for this pad.
  */
 //**************************************************************************************************
@@ -730,6 +752,8 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
   read_from_tree(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
   read_from_tree(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
+  read_from_tree(padTree, mCandleOptionDefaults.boxrange, "default_candle_option_boxrange");
+  read_from_tree(padTree, mCandleOptionDefaults.whiskerrange, "default_candle_option_whiskerrange");
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
   read_from_tree(padTree, mRefFunc, "ref_func");
 
@@ -811,6 +835,8 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
   put_in_tree(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
   put_in_tree(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
+  put_in_tree(padTree, mCandleOptionDefaults.boxrange, "default_candle_option_boxrange");
+  put_in_tree(padTree, mCandleOptionDefaults.whiskerrange, "default_candle_option_whiskerrange");
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
   put_in_tree(padTree, mRefFunc, "ref_func");
 
@@ -907,6 +933,8 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mDrawingOptionDefaults.graph) mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
   if (pad.mDrawingOptionDefaults.hist) mDrawingOptionDefaults.hist = pad.mDrawingOptionDefaults.hist;
   if (pad.mDrawingOptionDefaults.hist2d) mDrawingOptionDefaults.hist2d = pad.mDrawingOptionDefaults.hist2d;
+  if (pad.mCandleOptionDefaults.boxrange) mCandleOptionDefaults.boxrange = pad.mCandleOptionDefaults.boxrange;
+  if (pad.mCandleOptionDefaults.whiskerrange) mCandleOptionDefaults.whiskerrange = pad.mCandleOptionDefaults.whiskerrange;
   if (pad.mPalette) mPalette = pad.mPalette;
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if (pad.mRefFunc) mRefFunc = pad.mRefFunc;
