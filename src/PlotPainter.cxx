@@ -43,6 +43,7 @@
 #include "TGraphSmooth.h"
 #include "TF1.h"
 #include "TF2.h"
+#include "TCandle.h"
 
 #include "TFrame.h"
 #include "TLine.h"
@@ -199,6 +200,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto& frameBorderColor = get_first(pad.GetFrameBorderColor(), padDefaults.GetFrameBorderColor())) pad_ptr->SetFrameLineColor(*frameBorderColor);
     if (auto& frameBorderStyle = get_first(pad.GetFrameBorderStyle(), padDefaults.GetFrameBorderStyle())) pad_ptr->SetFrameLineStyle(*frameBorderStyle);
     if (auto& frameBorderWidth = get_first(pad.GetFrameBorderWidth(), padDefaults.GetFrameBorderWidth())) pad_ptr->SetFrameLineWidth(*frameBorderWidth);
+    if (auto& candleBoxRange = get_first(pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange())) TCandle::SetBoxRange(*candleBoxRange);
+    if (auto& candleWhiskerRange = get_first(pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange())) TCandle::SetWhiskerRange(*candleWhiskerRange);
 
     if (pad.GetDefaultMarkerColorsGradient().rgbEndpoints) {
       auto& gradient = pad.GetDefaultMarkerColorsGradient();
@@ -780,6 +783,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
     pad_ptr->Modified();
     pad_ptr->Update();
+    // Reset TCanlde range options to their default values after drawing data
+    TCandle::SetBoxRange(0.5);
+    TCandle::SetWhiskerRange(0.75);
   }
 
   canvas_ptr->cd();
