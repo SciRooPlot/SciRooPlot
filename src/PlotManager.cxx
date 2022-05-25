@@ -480,6 +480,9 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   }
   gSystem->Exec((string("mkdir -p ") + folderName).data());
   canvas->SaveAs(fullName.data());
+  // reset TCandle range options to their default values after drawing data
+  TCandle::SetBoxRange(0.5);
+  TCandle::SetWhiskerRange(0.75);
   return true;
 }
 

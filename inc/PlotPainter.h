@@ -46,6 +46,13 @@ const map<drawing_options_t, string> defaultDrawingOptions_Hist2d{
   {surf, "SURF"},
   {cont, "CONT3"},
   {text, "TEXT"},
+  {candle1, "CANDLEX1"},
+  {candle2, "CANDLEX2"},
+  {candle3, "CANDLEX3"},
+  {candle4, "CANDLEX4"},
+  {candle5, "CANDLEX5"},
+  {candle6, "CANDLEX6"},
+  {candle7, "CANDLEX(111101)"},                                                 //no median but mean as line
 };
 
 const map<drawing_options_t, string> defaultDrawingOptions_Hist{
