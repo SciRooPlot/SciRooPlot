@@ -353,6 +353,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 ERROR("Cannot divide graph by histogram.");
                 // DivideGraphHistInterpolated(data_ptr, denom_data_ptr);
               }
+              data_ptr->GetHistogram()->GetYaxis()->SetTitle("ratio");
             } else {
               ERROR("Unsupported division");
             }
