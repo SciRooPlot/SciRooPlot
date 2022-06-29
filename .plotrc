@@ -17,7 +17,7 @@ if [[ -d "${__PLOTTING_BUILD_DIR}" ]]; then
     fi
 
     local USER_EXEC=$(${__PLOTTING_BUILD_DIR}/plot-config get executable)
-    local USER_BUILD_DIR=$(dirname ${USER_EXEC})
+    local USER_BUILD_DIR=$([[ -z ${USER_EXEC} ]] || dirname ${USER_EXEC})
     if [[ -d ${USER_BUILD_DIR} ]]; then
       local USER_PLOTDEF=$(${__PLOTTING_BUILD_DIR}/plot-config get plotDefinitions)
       (
@@ -27,8 +27,6 @@ if [[ -d "${__PLOTTING_BUILD_DIR}" ]]; then
           ${USER_EXEC}
         fi
       ) || return 1
-    else
-      return 1
     fi
     "${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}
     return 0

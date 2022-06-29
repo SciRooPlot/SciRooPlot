@@ -539,12 +539,13 @@ To use the application, first source the `.plotrc` script in this repository.
 In order to find the necessary files for creating your plots, the app needs to be configured according to your needs.
 This configuration is done in the following way:
 ```
-plot-config add <configName> plotDefinitions </path/to/plotDefFile.XML>
 plot-config add <configName> inputFiles </path/to/inputFiles.XML>
-plot-config add <configName> outputDir </path/to/output/dir>
+plot-config add <configName> plotDefinitions </path/to/plotDefFile.XML>
 plot-config add <configName> executable </path/to/executable>
+plot-config add <configName> outputDir </path/to/output/dir>
 ```
 Here `<configName>` refers to an arbitrary name you give this group of settings.
+The first two settings are mandatory, while the rest is optional.
 It is possible to add multiple configurations and switch between them via
 ```
 plot-config switch <configName>
