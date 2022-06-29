@@ -20,15 +20,13 @@
 
 #include <fmt/core.h>
 
-#define DISABLE_ANSI_COLORS 0 // 0: colorful console output, 1: no colors in console
-#define USE_BRIGHT_COLORS 1   // 0: normal colors, 1: bright colors
-#define DEBUG_LVL 2           // < 2: no debug, < 1: no warnings, < 0 no errors
-#define COUT_LVL 2            // < 2: no log,   < 1: no info,     < 0 no print
+#define DEBUG_LVL 2 // < 2: no debug, < 1: no warnings, < 0 no errors
+#define COUT_LVL 2  // < 2: no log,   < 1: no info,     < 0 no print
 
-#define _BRIGHTNESS_ "3"
-#if USE_BRIGHT_COLORS == 1
-#undef _BRIGHTNESS_
 #define _BRIGHTNESS_ "9"
+#ifdef DARK_COLORS
+#undef _BRIGHTNESS_
+#define _BRIGHTNESS_ "3"
 #endif
 
 #define BLACK_ "\033[" _BRIGHTNESS_ "0m"
@@ -41,7 +39,7 @@
 #define RED_ "\033[" _BRIGHTNESS_ "1m"
 #define _END "\033[0m"
 
-#if DISABLE_ANSI_COLORS == 1
+#ifdef DISABLE_COLORS
 #undef BLACK_
 #define BLACK_ ""
 #undef WHITE_

@@ -11,6 +11,16 @@ if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
   set(CXX_FILESYSTEM_LIBRARIES "stdc++fs")
 endif()
 
+option(DISABLE_COLORS "no ANSI colors in console" OFF)
+if(DISABLE_COLORS)
+  message(STATUS "disabling ANSI colors")
+add_compile_definitions(DISABLE_COLORS) # no ANSI colors in console
+endif()
+option(DARK_COLORS "darker color scheme" OFF)
+if(DARK_COLORS)
+  add_compile_definitions(DARK_COLORS)
+endif()
+
 # The following two lines can be used to force using one specific root installation
 set(ROOTSYS ~/root/mybuild)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})

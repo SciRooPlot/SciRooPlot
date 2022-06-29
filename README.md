@@ -41,9 +41,10 @@ In order to use the framework, first you need to compile the library in the foll
     cd PlottingFramework
     mkdir build
     cd build
-    cmake ../
+    cmake ..
     make
 
+To disable console colours in the logging output, use `cmake -D DISABLE_COLORS=ON ..`, or for a darker colour scheme `cmake -D DARK_COLORS=ON ..` instead.
 In case you have doxygen installed, you can also generate a documentation from the comments in the code via:
 
     cd PlottingFramework/doc
