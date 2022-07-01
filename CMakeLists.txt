@@ -22,7 +22,7 @@ if(DARK_COLORS)
 endif()
 
 # The following two lines can be used to force using one specific root installation
-set(ROOTSYS data/mhemmer/rootbuild)
+set(ROOTSYS ~/root/mybuild)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
 
 set(REQUIRED_ROOT_VERSION 6.16)
