@@ -18,10 +18,6 @@ endif()
 ################################################################################
 # User Settings:
 ################################################################################
-# The following two lines can be used to force using one specific root installation
-set(ROOTSYS ~/root/mybuild)
-list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
-
 # in case you are a developer of the PlottingFramework you can trigger compiling its source by swiching this option on
 set(IS_FRAMEWORK_DEV OFF)
 

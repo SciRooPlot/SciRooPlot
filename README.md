@@ -24,15 +24,15 @@ using basic_string_view = ::std::experimental::basic_string_view<_CharT,_Traits>
 This is not an issue for mac users, who usually work with the Clang compiler and might also not be a problem when using the latest gcc version.\
 In order to work around this issue, simply compile the ROOT software as follows:
 ```console
-cd ~
+cd /path/to/software
 git clone https://github.com/root-project/root
 cd root
 mkdir mybuild
 cd mybuild
-cmake -DCMAKE_CXX_STANDARD=17 ..
+cmake -D CMAKE_CXX_STANDARD=17 ..
 make
 ```
-In case you do not want to install ROOT into `~/root/mybuild` you will need to adapt line `set(ROOTSYS ~/root/mybuild)` in the `CMakeLists.txt` file of this project accordingly.
+For the framework to find this custom installation, just add it to the cmake prefix path via `export CMAKE_PREFIX_PATH=/path/to/software/root/mybuild:$CMAKE_PREFIX_PATH`.
 
 Using the Framework
 --------------------
