@@ -22,7 +22,7 @@ if(DARK_COLORS)
 endif()
 
 # The following two lines can be used to force using one specific root installation
-set(ROOTSYS ~/root/mybuild)
+set(ROOTSYS data/mhemmer/rootbuild)
 list(APPEND CMAKE_PREFIX_PATH ${ROOTSYS})
 
 set(REQUIRED_ROOT_VERSION 6.16)
@@ -55,7 +55,6 @@ include(${ROOT_USE_FILE})
 message(STATUS "root  version: ${ROOT_VERSION}")
 find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED COMPONENTS program_options)
 message(STATUS "boost version: ${Boost_VERSION}")
-find_package(fmt)
 find_package(fmt ${REQUIRED_FMT_VERSION} REQUIRED)
 message(STATUS "fmt   version: ${fmt_VERSION}")
 
