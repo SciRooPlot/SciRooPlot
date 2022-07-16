@@ -14,7 +14,7 @@ endif()
 option(DISABLE_COLORS "no ANSI colors in console" OFF)
 if(DISABLE_COLORS)
   message(STATUS "disabling ANSI colors")
-  add_compile_definitions(DISABLE_COLORS) # no ANSI colors in console
+  add_compile_definitions(DISABLE_COLORS)
 endif()
 option(DARK_COLORS "darker color scheme" OFF)
 if(DARK_COLORS)

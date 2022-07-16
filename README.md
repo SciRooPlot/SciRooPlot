@@ -21,7 +21,7 @@ Since this project relies on cxx17 and ROOT has some compatibility issue when so
 You will spot this problem when you try to compile the framework and see errors such as\
 `error: conflicting declaration of template ‘template<class _CharT, class _Traits> using basic_string_view = std::experimental::__ROOT::basic_string_view<_CharT, _Traits>’
 using basic_string_view = ::std::experimental::basic_string_view<_CharT,_Traits>;`\
-This is not an issue for mac users, who usually work with the Clang compiler and might also not be a problem when using the latest gcc version.\
+This is not an issue for mac users, who usually work with the Clang compiler.\
 In order to work around this issue, simply compile the ROOT software as follows:
 ```console
 cd /path/to/software
@@ -32,13 +32,13 @@ cd mybuild
 cmake -D CMAKE_CXX_STANDARD=17 ..
 make
 ```
-For the framework to find this custom installation, just add it to the cmake prefix path via `export CMAKE_PREFIX_PATH=/path/to/software/root/mybuild:$CMAKE_PREFIX_PATH`.
+For the framework to find this custom ROOT installation, just add it to the cmake prefix path via `export CMAKE_PREFIX_PATH=/path/to/software/root/mybuild:$CMAKE_PREFIX_PATH`.
 
 Using the Framework
 --------------------
 In order to use the framework, first you need to compile the library in the following way:
 
-    cd PlottingFramework
+    cd /path/to/PlottingFramework
     mkdir build
     cd build
     cmake ..
@@ -47,7 +47,7 @@ In order to use the framework, first you need to compile the library in the foll
 To disable console colours in the logging output, use `cmake -D DISABLE_COLORS=ON ..`, or for a darker colour scheme `cmake -D DARK_COLORS=ON ..` instead.
 In case you have doxygen installed, you can also generate a documentation from the comments in the code via:
 
-    cd PlottingFramework/doc
+    cd /path/to/PlottingFramework/doc
     doxygen doxygen.conf
     open html/namespace_plotting_framework.html
 
