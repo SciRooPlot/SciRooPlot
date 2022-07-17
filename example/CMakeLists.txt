@@ -68,7 +68,6 @@ else()
   message(STATUS "root  version: ${ROOT_VERSION}")
   find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED COMPONENTS program_options)
   message(STATUS "boost version: ${Boost_VERSION}")
-  find_package(fmt)
   find_package(fmt ${REQUIRED_FMT_VERSION} REQUIRED)
   message(STATUS "fmt   version: ${fmt_VERSION}")
 
