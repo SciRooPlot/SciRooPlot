@@ -1522,13 +1522,12 @@ float_t PlotPainter::GetTextSizePixel(float_t textSizeNDC)
 //**************************************************************************************************
 void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
 {
-  std::regex words_regex("<.*?>");
+  std::regex words_regex("<[name,title,entries,integral,mean,maximum,minimum].*?>");
   auto words_begin = std::sregex_iterator(str.begin(), str.end(), words_regex);
   auto words_end = std::sregex_iterator();
 
   for (std::sregex_iterator match = words_begin; match != words_end; ++match) {
     std::string match_str = match->str();
-
     string format{};
 
     // check if user specified different formatting (e.g. via <mean[%2.6]>)
