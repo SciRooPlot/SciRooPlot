@@ -885,7 +885,6 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     for (auto& length : legendWidthPixelPerColumn) {
       legendWidthPixel += length;
     }
-
     uint32_t markerWidthPixel{};
     if constexpr (isLegend) {
       string markerDummyString = "-+-"; // defines width of marker
@@ -912,6 +911,11 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     } else {
       totalWidthNDC = 2 * marginNDC + legendWidthNDC;
       totalHeightNDC = (nLines + 0.5 * (nLines - 1)) * lineHeightNDC;
+    }
+
+    if (borderWidth && *borderWidth) {
+      totalWidthNDC += *borderWidth * 2 / padWidthPixel;
+      totalHeightNDC += *borderWidth * 2 / padHeightPixel;
     }
 
     if (titleWidthPixel > legendWidthPixel) {
@@ -1490,6 +1494,12 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad
   uint32_t height{};
   int16_t font{text.GetTextFont()};
 
+  bool isBatch = gPad->IsBatch();
+  if (isBatch) {
+    // in batch mode ROOT calculates the bounding LaTex boxes wrongly, therefore disable it for the calculation
+    gROOT->SetBatch(false);
+    gPad->SetBatch(false);
+  }
   if (font % 10 <= 2) {
     text.GetBoundingBox(width, height);
   } else {
@@ -1499,6 +1509,10 @@ std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad
     double_t textSize{dy / (pad->GetY2() - pad->GetY1())};
     textBox.SetTextSize(textSize);
     textBox.GetBoundingBox(width, height);
+  }
+  if (isBatch) {
+    gPad->SetBatch(true);
+    gROOT->SetBatch(true);
   }
   return {width, height};
 }
