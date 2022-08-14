@@ -846,7 +846,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     uint16_t nLines = lines.size();
     if (nLines < 1) return;
 
-    int32_t padWidthPixel = pad->XtoPixel(pad->GetX2()); // looks correct, but why does it work??
+    int32_t padWidthPixel = pad->XtoPixel(pad->GetX2());
     int32_t padHeightPixel = pad->YtoPixel(pad->GetY1());
 
     // determine max width and height of legend entries
@@ -882,8 +882,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       iColumn %= nColumns;
       ++lineID;
     }
-    for (auto& length : legendWidthPixelPerColumn)
+    for (auto& length : legendWidthPixelPerColumn) {
       legendWidthPixel += length;
+    }
 
     uint32_t markerWidthPixel{};
     if constexpr (isLegend) {
@@ -1468,13 +1469,13 @@ void PlotPainter::SmoothHist(TH1* hist, optional<double_t> min, optional<double_
   double_t minRange = hist->GetXaxis()->GetXmin();
   double_t maxRange = hist->GetXaxis()->GetXmax();
 
-  if (min && max)
+  if (min && max) {
     hist->GetXaxis()->SetRangeUser(*min, *max);
-  else if (min && !max)
+  } else if (min && !max) {
     hist->GetXaxis()->SetRangeUser(*min, maxRange);
-  else if (!min && max)
+  } else if (!min && max) {
     hist->GetXaxis()->SetRangeUser(minRange, *max);
-
+  }
   hist->Smooth(100, "R");
 }
 

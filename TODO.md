@@ -1,4 +1,5 @@
 Todo:
+- package registration via cmake: export(PACKAGE PlottingFramework)
 - check if box auto-size determination considers that legend entries may have different text sizes
 - add again the possiblity to display a legend title
 - make the LegendEntry digest a DataLayout to simplify adding legend properties in a different pad
