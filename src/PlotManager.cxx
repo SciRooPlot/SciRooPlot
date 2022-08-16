@@ -902,4 +902,173 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
   }
 }
 
+//****************************************************************************************
+/**
+ * Defines a set of standard plot templates with quadratic axis frame and consistent layout among them.
+ * The following pre-defined layouts are available: 1d, 2d, 1d_ratio and 1d_3panels.
+ * By specifying a screen resolution in dpi, the size of the plot displayed in interactive mode (or when saved as bitmap) can be modified.
+ * For multiple of 72dpi the resulting plot will have the best agreement with the pdf version.
+ */
+//****************************************************************************************
+Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t screenResolution)
+{
+  // info: the PDF backend of ROOT can only create plots with resolution of 72 dpi and maximum sizes defined by the A4 format (20cm x 26cm -> 567px x 737px)
+  int32_t pixelBase = int32_t(std::round(screenResolution * 567. / 72.)); // 567p / 72dpi == 20cm / 2.54in/cm (final pdf size)
+  double_t frameSize = 0.82;                                              // size of (quadratic) axis frame in percentage of pixelBase
+  double_t axisMargin = 0.145;                                            // margins of x and y axes in units relative to pixelBase side length (corresponds to the space in bottom and left of the plot to the axis frame)
+  double_t defaultTextSize = 0.036;                                       // default text size relative to pixelBase
+  double_t axisTitleSize = 0.046;                                         // text size of axis titles relative to pixelBase
+  double_t wideSideScale = 1.3;                                           // for asymmetric plots: scale of the larger side wrt. pixelBase (corresponds to the maximum / optimum of 26cm / 20cm)
+
+  vector<int16_t> goodColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1,
+                                kMagenta - 4, kGreen + 3, kOrange + 1,
+                                kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7,
+                                kMagenta + 1, kPink + 8, kCyan - 6,
+                                kMagenta, kRed + 2, kGreen + 2,
+                                kOrange + 2, kMagenta + 2, kYellow + 3,
+                                kGray + 2, kBlue + 2, kYellow + 2,
+                                kRed, kBlue, kMagenta + 3,
+                                kGreen + 4, 28, 8, 15, 17, 12};
+
+  if (plotTemplateName == "1d") {
+    // -----------------------------------------------------------------------
+    Plot plotTemplate(plotTemplateName, "PLOT_TEMPLATES");
+    plotTemplate.SetDimensions(pixelBase, pixelBase, true);
+    plotTemplate.SetTransparent();
+    plotTemplate[0].SetFrameFill(10, 1001);
+    plotTemplate[0].SetDefaultMarkerColors(goodColors);
+    plotTemplate[0].SetDefaultLineColors(goodColors);
+    plotTemplate[0].SetDefaultFillColors(goodColors);
+    plotTemplate[0].SetDefaultFillStyles({0});
+    plotTemplate[0].SetDefaultMarkerStyles({kFullCircle});
+    plotTemplate[0].SetDefaultLineStyles({kSolid});
+    plotTemplate[0].SetDefaultTextFont(42);
+    plotTemplate[0].SetDefaultTextSize(defaultTextSize);
+    plotTemplate[0].SetDefaultMarkerSize(1.);
+    plotTemplate[0].SetDefaultLineWidth(3.);
+    plotTemplate[0].SetDefaultDrawingOptionGraph(points);
+    plotTemplate[0].SetTransparent();
+    plotTemplate[0].SetMargins(1. - (frameSize + axisMargin), axisMargin, axisMargin, 1. - (frameSize + axisMargin));
+    plotTemplate[0]['X'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
+    plotTemplate[0]['Y'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
+    plotTemplate[1].SetPosition(0., 0., 1., 1.);
+    return plotTemplate;
+  } // -----------------------------------------------------------------------
+
+  if (plotTemplateName == "1d_ratio") {
+    // -----------------------------------------------------------------------
+    Plot plotTemplate(plotTemplateName, "PLOT_TEMPLATES");
+    plotTemplate.SetDimensions(pixelBase, int32_t(std::round(wideSideScale * pixelBase)), true);
+    plotTemplate.SetTransparent();
+    plotTemplate[0].SetFrameFill(10, 1001);
+    plotTemplate[0].SetDefaultMarkerColors(goodColors);
+    plotTemplate[0].SetDefaultLineColors(goodColors);
+    plotTemplate[0].SetDefaultFillColors(goodColors);
+    plotTemplate[0].SetDefaultFillStyles({0});
+    plotTemplate[0].SetDefaultMarkerStyles({kFullCircle});
+    plotTemplate[0].SetDefaultLineStyles({kSolid});
+    plotTemplate[0].SetDefaultMarkerSize(1.);
+    plotTemplate[0].SetDefaultLineWidth(3.);
+    plotTemplate[0].SetDefaultDrawingOptionGraph(points);
+    plotTemplate[0].SetDefaultTextFont(42);
+    plotTemplate[0].SetTransparent();
+    double_t ratioFraction = 1. - (1. - axisMargin) / wideSideScale;
+    plotTemplate[1].SetPosition(0., ratioFraction, 1., 1.);
+    plotTemplate[2].SetPosition(0., 0., 1., ratioFraction);
+    plotTemplate[1].SetMargins(1. - frameSize / (1 - axisMargin), 0., axisMargin, 1. - (frameSize + axisMargin));
+    plotTemplate[2].SetMargins(0., 1. / (wideSideScale * ratioFraction) * axisMargin, axisMargin, 1. - (frameSize + axisMargin));
+    plotTemplate[1].SetDefaultTextSize(1. / (wideSideScale * (1. - ratioFraction)) * defaultTextSize);
+    plotTemplate[2].SetDefaultTextSize(1. / (wideSideScale * ratioFraction) * defaultTextSize);
+    plotTemplate[1]['X'].SetTitleSize(0.).SetLabelSize(0.).SetOppositeTicks().SetNoExponent();
+    plotTemplate[1]['Y'].SetTitleSize(1. / (wideSideScale * (1 - ratioFraction)) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
+    plotTemplate[2]['X'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
+    ;
+    plotTemplate[2]['Y'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
+    plotTemplate[2].SetRefFunc("1");
+    plotTemplate[2]['X'].SetTickLength(0.06);
+    plotTemplate[2]['Y'].SetNumDivisions(305).SetTitleCenter();
+    return plotTemplate;
+  } // -----------------------------------------------------------------------
+
+  if (plotTemplateName == "2d") {
+    // -----------------------------------------------------------------------
+    Plot plotTemplate(plotTemplateName, "PLOT_TEMPLATES");
+    plotTemplate.SetDimensions(int32_t(std::round(wideSideScale * pixelBase)), pixelBase, true);
+    plotTemplate.SetTransparent();
+    plotTemplate[0].SetFrameFill(10, 1001);
+    plotTemplate[0].SetDefaultDrawingOptionHist2d(colz);
+    plotTemplate[0].SetDefaultTextFont(42);
+    plotTemplate[0].SetDefaultTextSize(defaultTextSize);
+    plotTemplate[0].SetTransparent();
+    plotTemplate[0].SetMargins(1. - (frameSize + axisMargin), axisMargin, axisMargin / wideSideScale, 1. - (frameSize + axisMargin) / wideSideScale);
+    plotTemplate[0]['X'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
+    plotTemplate[0]['Y'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
+    plotTemplate[0]['Z'].SetTitleSize(axisTitleSize).SetMaxDigits(3).SetTitleOffset(1.5);
+    plotTemplate[0].SetRedrawAxes();
+    plotTemplate[1].SetPosition(0., 0., 1., 1.);
+    return plotTemplate;
+  } // -----------------------------------------------------------------------
+
+  if (plotTemplateName == "1d_3panels") {
+    // -----------------------------------------------------------------------
+    // extension of the 1d template with adjacing panels
+    // first calculate some quantities for the size conversions
+    double_t totalPixelHeight = pixelBase;
+    double_t leftMarginPixel = std::round(axisMargin * totalPixelHeight);
+    double_t rightMarginPixel = std::round((1 - (frameSize + axisMargin)) * totalPixelHeight);
+    double_t widthFramePixel = totalPixelHeight - leftMarginPixel - rightMarginPixel;
+    double_t totalPixelWidth = 3 * widthFramePixel + leftMarginPixel + rightMarginPixel;
+    // margins
+    double_t leftMarginPad1 = leftMarginPixel / (leftMarginPixel + widthFramePixel);
+    double_t rightMarginPad3 = rightMarginPixel / (rightMarginPixel + widthFramePixel);
+    // positions
+    double_t x1 = (widthFramePixel + leftMarginPixel) / totalPixelWidth;
+    double_t x2 = x1 + widthFramePixel / totalPixelWidth;
+    // text scaling factors (for the second and third pad the text will be calculated wrt. the widht instead of the hight (since it is smaller) and therefore need additional scaling
+    double_t textScalePad2 = totalPixelHeight / widthFramePixel;
+    double_t textScalePad3 = totalPixelHeight / (widthFramePixel + rightMarginPixel);
+    // tick length is specified relative to pad width -> since width is different for the three pads, need adjustments to have consistent lengths between the pads
+    // gauge it to the first pad -> scale by relative width decrease of pad 2 and 3 wrt pad 1
+    double_t tickLengthPad1 = 0.03;
+    double_t totalPixelWidthPad1 = widthFramePixel + leftMarginPixel;
+    double_t tickLengthPad2 = tickLengthPad1 * widthFramePixel / totalPixelWidthPad1;
+    double_t tickLengthPad3 = tickLengthPad1 * (widthFramePixel + rightMarginPixel) / totalPixelWidthPad1;
+
+    Plot plotTemplate(plotTemplateName, "PLOT_TEMPLATES");
+    plotTemplate.SetDimensions(totalPixelWidth, totalPixelHeight, true);
+    plotTemplate.SetTransparent();
+    plotTemplate[0].SetFrameFill(10, 1001);
+    plotTemplate[0].SetDefaultFillStyles({0});
+    plotTemplate[0].SetDefaultMarkerStyles({kFullCircle});
+    plotTemplate[0].SetDefaultLineStyles({kSolid});
+    plotTemplate[0].SetDefaultTextFont(42);
+    plotTemplate[0].SetDefaultTextSize(defaultTextSize);
+    plotTemplate[0].SetDefaultMarkerSize(1.);
+    plotTemplate[0].SetDefaultLineWidth(1); // adjusted to make it look the same in lower pdf resolution
+    plotTemplate[0].SetDefaultDrawingOptionGraph(points);
+    plotTemplate[0].SetTransparent();
+    plotTemplate[1].SetPosition(0., 0., x1, 1.);
+    plotTemplate[2].SetPosition(x1, 0., x2, 1.);
+    plotTemplate[3].SetPosition(x2, 0., 1., 1.);
+    plotTemplate[1].SetMargins(1. - (frameSize + axisMargin), axisMargin, leftMarginPad1, 0.0);
+    plotTemplate[2].SetMargins(1. - (frameSize + axisMargin), axisMargin, 0.0, 0.0);
+    plotTemplate[3].SetMargins(1. - (frameSize + axisMargin), axisMargin, 0.0, rightMarginPad3);
+    plotTemplate[0]['X'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
+    plotTemplate[0]['Y'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
+    plotTemplate[2].SetDefaultTextSize(textScalePad2 * defaultTextSize);
+    plotTemplate[2]['X'].SetTitleSize(textScalePad2 * axisTitleSize);
+    plotTemplate[2]['Y'].SetTitleSize(textScalePad2 * axisTitleSize);
+    plotTemplate[3].SetDefaultTextSize(textScalePad3 * defaultTextSize);
+    plotTemplate[3]['X'].SetTitleSize(textScalePad3 * axisTitleSize);
+    plotTemplate[3]['Y'].SetTitleSize(textScalePad3 * axisTitleSize);
+    plotTemplate[2]['Y'].SetTitle("").SetTitleSize(0.).SetLabelSize(0.);
+    plotTemplate[3]['Y'].SetTitle("").SetTitleSize(0.).SetLabelSize(0.);
+    plotTemplate[2]['X'].SetTickLength(tickLengthPad2);
+    plotTemplate[3]['X'].SetTickLength(tickLengthPad3);
+    return plotTemplate;
+  } // -----------------------------------------------------------------------
+
+  ERROR("Unknown plot template {}.", plotTemplateName);
+  return Plot();
+}
 } // end namespace PlottingFramework

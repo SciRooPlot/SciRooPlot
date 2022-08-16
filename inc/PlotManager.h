@@ -42,6 +42,8 @@ public:
   PlotManager& operator=(const PlotManager& other) = delete;
   PlotManager& operator=(PlotManager&& other) = delete;
 
+  static Plot GetPlotTemplate(const string& plotTemplateName = "1d", double_t screenResolution = 100);
+
   // settings for output
   void SetOutputDirectory(const string& path);
   void SetUseUniquePlotNames(bool useUniquePlotNames = true);          // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
