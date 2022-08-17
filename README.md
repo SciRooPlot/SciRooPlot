@@ -316,21 +316,16 @@ plotManager.LoadInputDataFiles("/path/to/inputFiles.XML");
 // these are just ordinary plots, but you can use their settings as a baseline
 // and the properties specified for your final plot will be applied on top of these
 
-// for instance the following will give you some nice default plots:
-vector<int16_t> goodColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1,
-                              kMagenta - 4, kGreen + 3, kOrange + 1,
-                              kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7,
-                              kMagenta + 1, kPink + 8, kCyan - 6,
-                              kMagenta, kRed + 2, kGreen + 2,
-                              kOrange + 2, kMagenta + 2, kYellow + 3,
-                              kGray + 2, kBlue + 2, kYellow + 2,
-                              kRed, kBlue, kMagenta + 3,
-                              kGreen + 4, 28, 8, 15, 17, 12};
+// these template plots must live in a figure group called "PLOT_TEMPLATES"
+// and need to be added to the manager via plotManager.AddPlotTemplate(plotTemplate);
+
+// for instance the following lines will generate an example template plot:
 { // -----------------------------------------------------------------------
-  Plot plotTemplate("1d", "PLOT_TEMPLATES");
+  Plot plotTemplate("myPlotTemplate", "PLOT_TEMPLATES");
   plotTemplate.SetDimensions(710, 710, true);
   plotTemplate.SetTransparent();
   plotTemplate[0].SetFrameFill(10, 1001);
+  vector<int16_t> goodColors = {kBlack, kBlue + 1, kRed + 1};
   plotTemplate[0].SetDefaultMarkerColors(goodColors);
   plotTemplate[0].SetDefaultLineColors(goodColors);
   plotTemplate[0].SetDefaultFillColors(goodColors);
@@ -349,54 +344,18 @@ vector<int16_t> goodColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1,
   plotTemplate[1].SetPosition(0., 0., 1., 1.);
   plotManager.AddPlotTemplate(plotTemplate);
 } // -----------------------------------------------------------------------
-{ // -----------------------------------------------------------------------
-  Plot plotTemplate("1d_ratio", "PLOT_TEMPLATES");
-  plotTemplate.SetDimensions(710, 710, true);
-  plotTemplate.SetTransparent();
-  plotTemplate[0].SetFrameFill(10, 1001);
-  plotTemplate[0].SetDefaultLineColors(goodColors);
-  plotTemplate[0].SetDefaultMarkerColors(goodColors);
-  plotTemplate[0].SetDefaultFillColors(goodColors);
-  plotTemplate[0].SetDefaultFillStyles({0});
-  plotTemplate[0].SetDefaultMarkerStyles({kFullCircle});
-  plotTemplate[0].SetDefaultLineStyles({kSolid});
-  plotTemplate[0].SetDefaultMarkerSize(1.);
-  plotTemplate[0].SetDefaultLineWidth(3.);
-  plotTemplate[0].SetDefaultDrawingOptionGraph(points);
-  plotTemplate[0].SetDefaultTextFont(43);
-  plotTemplate[0].SetDefaultTextSize(24);
-  plotTemplate[0].SetTransparent();
-  plotTemplate[0]['X'].SetTitleSize(28).SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3);
-  plotTemplate[0]['Y'].SetTitleSize(28).SetTitleOffset(1.5).SetOppositeTicks().SetMaxDigits(3);
-  plotTemplate[1]['X'].SetTitleSize(0.).SetLabelSize(0.);
-  plotTemplate[1].SetPosition(0., 0.28, 1., 1.);
-  plotTemplate[1].SetMargins(0.05, 0.0, 0.14, 0.05);
-  plotTemplate[2].SetPosition(0., 0., 1., 0.28);
-  plotTemplate[2].SetMargins(0.015, 0.4, 0.14, 0.05);
-  plotTemplate[2].SetRefFunc("1");
-  plotTemplate[2]['X'].SetTickLength(0.06).SetNoExponent();
-  plotTemplate[2]['Y'].SetNumDivisions(305).SetTitleCenter();
-  plotManager.AddPlotTemplate(plotTemplate);
-} // -----------------------------------------------------------------------
-{ // -----------------------------------------------------------------------
-  Plot plotTemplate("2d", "PLOT_TEMPLATES");
-  plotTemplate.SetDimensions(710, 710, true);
-  plotTemplate.SetTransparent();
-  plotTemplate[0].SetFrameFill(10, 1001);
-  plotTemplate[0].SetDefaultDrawingOptionHist2d(colz);
-  plotTemplate[0].SetDefaultTextFont(43);
-  plotTemplate[0].SetDefaultTextSize(24);
-  plotTemplate[0].SetTransparent();
-  plotTemplate[0].SetMargins(0.07, 0.14, 0.12, 0.18);
-  plotTemplate[0]['X'].SetTitleSize(28).SetTitleOffset(1.2).SetMaxDigits(3);
-  plotTemplate[0]['Y'].SetTitleSize(28).SetTitleOffset(1.2).SetMaxDigits(3);
-  plotTemplate[0]['Z'].SetTitleSize(28).SetTitleOffset(1.6).SetMaxDigits(3);
-  plotTemplate[0].SetRedrawAxes();
-  plotTemplate[1].SetPosition(0., 0., 1., 1.);
-  plotManager.AddPlotTemplate(plotTemplate);
-} // -----------------------------------------------------------------------
-// as you have seen, these template plots shall live in a figure group called "PLOT_TEMPLATES"
-// and have to be added to the manager via plotManager.AddPlotTemplate(plotTemplate);
+
+// the framework also provides some default layouts that can be used as a starting point (or as inspiration for your own templates)
+// they are defined in PlotManager.cxx and can be obtained with the function PlotManager::GetPlotTemplate()
+plotManager.AddPlotTemplate(PlotManager::GetPlotTemplate("1d"));
+plotManager.AddPlotTemplate(PlotManager::GetPlotTemplate("2d"));
+plotManager.AddPlotTemplate(PlotManager::GetPlotTemplate("1d_ratio"));
+plotManager.AddPlotTemplate(PlotManager::GetPlotTemplate("1d_3panels"));
+
+// modifications to the default templates can be applied in the following way
+auto plotTemplate = PlotManager::GetPlotTemplate("1d");
+plotTemplate[1]['X'].SetColor(kRed);
+plotManager.AddPlotTemplate(plotTemplate);
 
 // once this is done, you can define plots based on these templates
 // by specifying their name as the third argument in the new plots' constructor:
@@ -558,9 +517,12 @@ Once this is set up, you can easily create plots via the command line from every
 ```
 plot <figureGroup> <plotName> <mode>
 ```
-Regular expressions for `<figureGroup>` and `<plotName>` are supported.
-This means you can create multiple plots according to naming patterns. For example `plot paperPlots .+` would generate all plots defined within the figure group called `paperPlots` and `plot test "plot[1,2]"` would create `plot1` and `plot2` from the figure group `test`. Note that in the second example quotes are needed, since your shell will try to interprete some special characters (in this case `[]`) before they are passed to the plotting app.
-To select only a sub-category within the figure group, use `<figureGroup/some/category>`.
+Regular expressions are supported for the options `<figureGroup>` and `<plotName>`.
+This allows to create multiple plots matching the specified pattern in a single request.
+For example `plot paperPlots .+` would generate all plots defined within the figure group called `paperPlots` and `plot thesisFigures 'moneyPlot[1,2]'` creates `moneyPlot1` and `moneyPlot2` from the figure group `thesisFigures`.
+To specify multiple text options one can use `plot analysisQA 'trackProperty_(tight|loose|nominal)CutSetting'`.
+Note that expressions involving special characters (in the previous examples `[]` or `()` and `|`) have to be wrapped in quotes, since otherwise your shell will try to interprete them before they are passed to the plotting app.
+To select only a sub-category within the figure group, use `<figureGroup/some/category>` (for example `plot myFigureGroup/QAPlots controlObservable`).
 By default, the optional `mode` argument is set to `interactive` and you can leave it out in the command.
 Possible alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`.
 

@@ -982,8 +982,8 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[1]['X'].SetTitleSize(0.).SetLabelSize(0.).SetOppositeTicks().SetNoExponent();
     plotTemplate[1]['Y'].SetTitleSize(1. / (wideSideScale * (1 - ratioFraction)) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
     plotTemplate[2]['X'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
-    ;
     plotTemplate[2]['Y'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
+    plotTemplate[2]['Y'].SetTitleOffset(0.6); // FIXME: for some reason the ROOT automatic title offset determination does not work for the lower plot
     plotTemplate[2].SetRefFunc("1");
     plotTemplate[2]['X'].SetTickLength(0.06);
     plotTemplate[2]['Y'].SetNumDivisions(305).SetTitleCenter();
