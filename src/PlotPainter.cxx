@@ -983,7 +983,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     if constexpr (isLegend) {
       TLegend* legend = new TLegend(upperLeftX, upperLeftY - totalHeightNDC,
-                                    upperLeftX + totalWidthNDC, upperLeftY, "", "NDC");
+                                    upperLeftX + totalWidthNDC, upperLeftY, "", "NDC NB");
       legend->SetMargin((2 * marginNDC + markerWidthNDC) / totalWidthNDC);
       legend->SetTextAlign(kHAlignLeft + kVAlignCenter);
       legend->SetNColumns(nColumns);
@@ -1079,7 +1079,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       returnBox = legend;
     } else {
       TPaveText* paveText = new TPaveText(upperLeftX, upperLeftY - totalHeightNDC,
-                                          upperLeftX + totalWidthNDC, upperLeftY, "NDC");
+                                          upperLeftX + totalWidthNDC, upperLeftY, "NDC NB");
       paveText->SetMargin(marginNDC / totalWidthNDC);
       paveText->SetTextAlign(kHAlignLeft + kVAlignCenter);
 

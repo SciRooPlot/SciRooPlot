@@ -357,7 +357,8 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   }
   PlotPainter painter;
   bool isInteractiveMode = (outputMode == "interactive");
-  gROOT->SetBatch(!isInteractiveMode);
+  bool isMacroMode = (outputMode == "macro");
+  gROOT->SetBatch(!isInteractiveMode && !isMacroMode);
   shared_ptr<TCanvas> canvas{painter.GeneratePlot(fullPlot, mDataBuffer)};
   if (!canvas) return false;
   LOG("Created " GREEN_ "{}" _END " from group " YELLOW_ "{}" _END ".", fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? "/" + *fullPlot.GetFigureCategory() : ""));
@@ -437,8 +438,29 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   string fileEnding;
   if (outputMode == "pdf") {
     fileEnding = ".pdf";
-  } else if (outputMode == "macro") {
+  } else if (isMacroMode) {
     fileEnding = ".C";
+
+    // object names are converted to variable names and therefore must not contain '/'
+    // TODO: this should be fixed in ROOT itself as it does not create valid cpp code otherwise
+    std::function<void(TPad*)> cleanNames;
+    cleanNames = [&](TPad* pad) {
+      TIter next(pad->GetListOfPrimitives());
+      TObject* object = nullptr;
+      while ((object = next())) {
+        string saveName = object->GetName();
+        std::replace(saveName.begin(), saveName.end(), '/', '_');
+        static_cast<TNamed*>(object)->SetName(saveName.data());
+        if (object->InheritsFrom(TPad::Class())) {
+          cleanNames(static_cast<TPad*>(object));
+        }
+      }
+    };
+    cleanNames(canvas.get());
+    string saveName = canvas->GetName();
+    std::replace(saveName.begin(), saveName.end(), '/', '_');
+    canvas->SetName(saveName.data());
+
   } else if (outputMode == "png") {
     fileEnding = ".png";
   } else if (outputMode == "eps") {
