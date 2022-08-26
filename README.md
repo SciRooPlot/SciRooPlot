@@ -525,7 +525,7 @@ Note that expressions involving special characters (in the previous examples `[]
 To select only a sub-category within the figure group, use `<figureGroup/some/category>` (for example `plot myFigureGroup/QAPlots controlObservable`).
 By default, the optional `mode` argument is set to `interactive` and you can leave it out in the command.
 Possible alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`.
-If you have a multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..}`) that you want concaternate and to save as a moving gif, you can create it via `plot figureGroup myPlot_bin_.+ gif`.
+If you have a multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..) that you want to concaternate and save as a moving gif, you can create it via `plot figureGroup myPlot_bin_.+ gif`.
 To adjust the time between the frames use for example `plot figureGroup myPlot_bin_.+ gif+4`, where the number is given in tens of milliseconds (i.e. this example will create a gif with a delay of 40ms between the plots).
 
 For bash and zsh this program provides an auto-completion feature, this means you can tab through the available commands, figure groups and plot names.
