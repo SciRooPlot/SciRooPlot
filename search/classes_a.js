@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['textbox_0',['TextBox',['../class_plotting_framework_1_1_plot_1_1_pad_1_1_text_box.html',1,'PlottingFramework::Plot::Pad']]]
+  ['textbox_0',['TextBox',['../classPlottingFramework_1_1Plot_1_1Pad_1_1TextBox.html',1,'PlottingFramework::Plot::Pad']]]
 ];

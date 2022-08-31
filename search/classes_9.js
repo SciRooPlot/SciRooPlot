@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['ratio_0',['Ratio',['../class_plotting_framework_1_1_plot_1_1_pad_1_1_ratio.html',1,'PlottingFramework::Plot::Pad']]]
+  ['ratio_0',['Ratio',['../classPlottingFramework_1_1Plot_1_1Pad_1_1Ratio.html',1,'PlottingFramework::Plot::Pad']]]
 ];

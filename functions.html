@@ -5,13 +5,32 @@
 <meta http-equiv="X-UA-Compatible" content="IE=11"/>
 <meta name="generator" content="Doxygen 1.9.4"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Plotting Framework: Class Members</title>
+<title>PlottingFramework: Class Members</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
+<link href="navtree.css" rel="stylesheet" type="text/css"/>
+<script type="text/javascript" src="resize.js"></script>
+<script type="text/javascript" src="navtreedata.js"></script>
+<script type="text/javascript" src="navtree.js"></script>
 <link href="search/search.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="search/searchdata.js"></script>
 <script type="text/javascript" src="search/search.js"></script>
+<script type="text/javascript">
+/* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
+  $(document).ready(function() { init_search(); });
+/* @license-end */
+</script>
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script type="text/javascript">
+window.MathJax = {
+  options: {
+    ignoreHtmlClass: 'tex2jax_ignore',
+    processHtmlClass: 'tex2jax_process'
+  }
+};
+</script>
+<script type="text/javascript" id="MathJax-script" async="async" src="./mathjax/es5/tex-chtml.js"></script>
 <link href="doxygen.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
@@ -21,9 +40,25 @@
  <tbody>
  <tr id="projectrow">
   <td id="projectalign">
-   <div id="projectname">Plotting Framework
+   <div id="projectname">PlottingFramework
    </div>
+   <div id="projectbrief">Reference Guide</div>
   </td>
+    <td>        <div id="MSearchBox" class="MSearchBoxInactive">
+        <span class="left">
+          <img id="MSearchSelect" src="search/mag_sel.svg"
+               onmouseover="return searchBox.OnSearchSelectShow()"
+               onmouseout="return searchBox.OnSearchSelectHide()"
+               alt=""/>
+          <input type="text" id="MSearchField" value="Search" accesskey="S"
+               onfocus="searchBox.OnSearchFieldFocus(true)" 
+               onblur="searchBox.OnSearchFieldFocus(false)" 
+               onkeyup="searchBox.OnSearchFieldChange(event)"/>
+          </span><span class="right">
+            <a id="MSearchClose" href="javascript:searchBox.CloseResultsWindow()"><img id="MSearchCloseImg" border="0" src="search/close.svg" alt=""/></a>
+          </span>
+        </div>
+</td>
  </tr>
  </tbody>
 </table>
@@ -35,18 +70,23 @@
 var searchBox = new SearchBox("searchBox", "search",'Search','.html');
 /* @license-end */
 </script>
-<script type="text/javascript" src="menudata.js"></script>
-<script type="text/javascript" src="menu.js"></script>
+</div><!-- top -->
+<div id="side-nav" class="ui-resizable side-nav-resizable">
+  <div id="nav-tree">
+    <div id="nav-tree-contents">
+      <div id="nav-sync" class="sync"></div>
+    </div>
+  </div>
+  <div id="splitbar" style="-moz-user-select:none;" 
+       class="ui-resizable-handle">
+  </div>
+</div>
 <script type="text/javascript">
 /* @license magnet:?xt=urn:btih:d3d9a9a6595521f9666a5e94cc830dab83b65699&amp;dn=expat.txt MIT */
-$(function() {
-  initMenu('',true,false,'search.php','Search');
-  $(document).ready(function() { init_search(); });
-});
+$(document).ready(function(){initNavTree('functions.html',''); initResizable(); });
 /* @license-end */
 </script>
-<div id="main-nav"></div>
-</div><!-- top -->
+<div id="doc-content">
 <!-- window showing the filter options -->
 <div id="MSearchSelectWindow"
      onmouseover="return searchBox.OnSearchSelectShow()"
@@ -65,23 +105,26 @@ $(function() {
 <div class="textblock">Here is a list of all class members with links to the classes they belong to:</div>
 
 <h3><a id="index_a" name="index_a"></a>- a -</h3><ul>
-<li>AddData()&#160;:&#160;<a class="el" href="class_plotting_framework_1_1_plot_1_1_pad.html#a2f4c7e68d6bb1dc0f3ea90e3a9a02d84">PlottingFramework::Plot::Pad</a></li>
-<li>AddEntry()&#160;:&#160;<a class="el" href="class_plotting_framework_1_1_plot_1_1_pad_1_1_legend_box.html#ad332fe3bdaabe836ca6efd459e194ba2">PlottingFramework::Plot::Pad::LegendBox</a></li>
-<li>AddInputDataFile()&#160;:&#160;<a class="el" href="class_plotting_framework_1_1_plot_manager.html#ab02eb3f456def14a69901c24004888fd">PlottingFramework::PlotManager</a></li>
-<li>AddInputDataFiles()&#160;:&#160;<a class="el" href="class_plotting_framework_1_1_plot_manager.html#affacff85ee4c5b05e74847d8623a423f">PlottingFramework::PlotManager</a></li>
-<li>AddLegend()&#160;:&#160;<a class="el" href="class_plotting_framework_1_1_plot_1_1_pad.html#afecfa0f6ca9af8a6d2edbfe6674b9fdc">PlottingFramework::Plot::Pad</a></li>
-<li>AddPlot()&#160;:&#160;<a class="el" href="class_plotting_framework_1_1_plot_manager.html#a482e6e0a932a6cd75fdfcba4bf7e0372">PlottingFramework::PlotManager</a></li>
-<li>AddPlotTemplate()&#160;:&#160;<a class="el" href="class_plotting_framework_1_1_plot_manager.html#adea02c9821ddc0a7547c3c2c1782cc2b">PlottingFramework::PlotManager</a></li>
-<li>AddRatio()&#160;:&#160;<a class="el" href="class_plotting_framework_1_1_plot_1_1_pad.html#a7516d270b93b2ca7d9257d7fee46dbcd">PlottingFramework::Plot::Pad</a></li>
-<li>AddText()&#160;:&#160;<a class="el" href="class_plotting_framework_1_1_plot_1_1_pad.html#ac34d89f14f427ba41e69d034a06bc684">PlottingFramework::Plot::Pad</a></li>
-<li>alpha&#160;:&#160;<a class="el" href="struct_plotting_framework_1_1_plot_1_1_pad_1_1gradient__color__t.html#afdb6d8a5af81647ae9a8881234c1749e">PlottingFramework::Plot::Pad::gradient_color_t</a></li>
-<li>ApplyLayout()&#160;:&#160;<a class="el" href="class_plotting_framework_1_1_plot_1_1_pad_1_1_data.html#aa53eb437f19d8c17d5ee6aa3fab3e001">PlottingFramework::Plot::Pad::Data</a>, <a class="el" href="class_plotting_framework_1_1_plot_1_1_pad_1_1_ratio.html#af3e008d10da2a9d2d8e75a5778e39601">PlottingFramework::Plot::Pad::Ratio</a></li>
-<li>Axis()&#160;:&#160;<a class="el" href="class_plotting_framework_1_1_plot_1_1_pad_1_1_axis.html#a744a3809fa9e7ac3a1bd217f8e612958">PlottingFramework::Plot::Pad::Axis</a></li>
+<li>AddData()&#160;:&#160;<a class="el" href="classPlottingFramework_1_1Plot_1_1Pad.html#a2f4c7e68d6bb1dc0f3ea90e3a9a02d84">PlottingFramework::Plot::Pad</a></li>
+<li>AddEntry()&#160;:&#160;<a class="el" href="classPlottingFramework_1_1Plot_1_1Pad_1_1LegendBox.html#ad332fe3bdaabe836ca6efd459e194ba2">PlottingFramework::Plot::Pad::LegendBox</a></li>
+<li>AddInputDataFile()&#160;:&#160;<a class="el" href="classPlottingFramework_1_1PlotManager.html#ab02eb3f456def14a69901c24004888fd">PlottingFramework::PlotManager</a></li>
+<li>AddInputDataFiles()&#160;:&#160;<a class="el" href="classPlottingFramework_1_1PlotManager.html#affacff85ee4c5b05e74847d8623a423f">PlottingFramework::PlotManager</a></li>
+<li>AddLegend()&#160;:&#160;<a class="el" href="classPlottingFramework_1_1Plot_1_1Pad.html#afecfa0f6ca9af8a6d2edbfe6674b9fdc">PlottingFramework::Plot::Pad</a></li>
+<li>AddPlot()&#160;:&#160;<a class="el" href="classPlottingFramework_1_1PlotManager.html#a482e6e0a932a6cd75fdfcba4bf7e0372">PlottingFramework::PlotManager</a></li>
+<li>AddPlotTemplate()&#160;:&#160;<a class="el" href="classPlottingFramework_1_1PlotManager.html#adea02c9821ddc0a7547c3c2c1782cc2b">PlottingFramework::PlotManager</a></li>
+<li>AddRatio()&#160;:&#160;<a class="el" href="classPlottingFramework_1_1Plot_1_1Pad.html#a7516d270b93b2ca7d9257d7fee46dbcd">PlottingFramework::Plot::Pad</a></li>
+<li>AddText()&#160;:&#160;<a class="el" href="classPlottingFramework_1_1Plot_1_1Pad.html#ac34d89f14f427ba41e69d034a06bc684">PlottingFramework::Plot::Pad</a></li>
+<li>alpha&#160;:&#160;<a class="el" href="structPlottingFramework_1_1Plot_1_1Pad_1_1gradient__color__t.html#afdb6d8a5af81647ae9a8881234c1749e">PlottingFramework::Plot::Pad::gradient_color_t</a></li>
+<li>ApplyLayout()&#160;:&#160;<a class="el" href="classPlottingFramework_1_1Plot_1_1Pad_1_1Data.html#aa53eb437f19d8c17d5ee6aa3fab3e001">PlottingFramework::Plot::Pad::Data</a>, <a class="el" href="classPlottingFramework_1_1Plot_1_1Pad_1_1Ratio.html#af3e008d10da2a9d2d8e75a5778e39601">PlottingFramework::Plot::Pad::Ratio</a></li>
+<li>Axis()&#160;:&#160;<a class="el" href="classPlottingFramework_1_1Plot_1_1Pad_1_1Axis.html#a744a3809fa9e7ac3a1bd217f8e612958">PlottingFramework::Plot::Pad::Axis</a></li>
 </ul>
 </div><!-- contents -->
+</div><!-- doc-content -->
 <!-- start footer part -->
-<hr class="footer"/><address class="footer"><small>
-Generated by&#160;<a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.4
-</small></address>
+<div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
+  <ul>
+    <li class="footer">Generated on Wed Aug 31 2022 22:10:52 for PlottingFramework by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.4 </li>
+  </ul>
+</div>
 </body>
 </html>
