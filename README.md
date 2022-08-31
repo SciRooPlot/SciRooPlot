@@ -32,7 +32,6 @@ cd mybuild
 cmake -D CMAKE_CXX_STANDARD=17 ..
 make
 ```
-For the framework to find this custom ROOT installation, just add it to the cmake prefix path via `export CMAKE_PREFIX_PATH=/path/to/software/root/mybuild:$CMAKE_PREFIX_PATH`.
 
 Using the Framework
 --------------------
@@ -44,7 +43,9 @@ In order to use the framework, first you need to compile the library in the foll
     cmake ..
     make
 
-To disable console colours in the logging output, use `cmake -D DISABLE_COLORS=ON ..`, or for a darker colour scheme `cmake -D DARK_COLORS=ON ..` instead.
+To disable console colours in the logging output, use `cmake -D DISABLE_COLORS=ON ..`, or `cmake -D DARK_COLORS=ON ..` for a darker colour scheme.
+The location of a dependency can be specified via the cmake arguments `ROOTSYS`, `FMT_ROOT` and `BOOST_ROOT`, respectively (e.g. `cmake -DROOTSYS=/path/to/software/root/mybuild ..`).
+
 In case you have doxygen installed, you can also generate a documentation from the comments in the code via:
 
     cd /path/to/PlottingFramework/doc

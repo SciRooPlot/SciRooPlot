@@ -46,11 +46,28 @@ set(ADDITIONAL_FILES
 )
 
 # find dependencies
+set(ROOTSYS CACHE STRING "ROOT installation folder")
+if(ROOTSYS)
+  message(STATUS "looking for ROOT installation in ${ROOTSYS}.")
+  list(PREPEND CMAKE_PREFIX_PATH ${ROOTSYS})
+endif()
 find_package(ROOT ${REQUIRED_ROOT_VERSION} CONFIG REQUIRED)
 include(${ROOT_USE_FILE})
 message(STATUS "root  version: ${ROOT_VERSION}")
+
+set(BOOST_ROOT CACHE STRING "boost installation folder")
+if(BOOST_ROOT)
+  message(STATUS "looking for boost installation in ${BOOST_ROOT}.")
+  list(PREPEND CMAKE_PREFIX_PATH ${BOOST_ROOT})
+endif()
 find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED COMPONENTS program_options)
 message(STATUS "boost version: ${Boost_VERSION}")
+
+set(FMT_ROOT CACHE STRING "fmt installation folder")
+if(FMT_ROOT)
+  message(STATUS "looking for fmt installation in ${FMT_ROOT}.")
+  list(PREPEND CMAKE_PREFIX_PATH ${FMT_ROOT})
+endif()
 find_package(fmt ${REQUIRED_FMT_VERSION} REQUIRED)
 message(STATUS "fmt   version: ${fmt_VERSION}")
 
