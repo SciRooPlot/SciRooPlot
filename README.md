@@ -46,11 +46,8 @@ In order to use the framework, first you need to compile the library in the foll
 To disable console colours in the logging output, use `cmake -D DISABLE_COLORS=ON ..`, or `cmake -D DARK_COLORS=ON ..` for a darker colour scheme.
 The location of a dependency can be specified via the cmake arguments `ROOTSYS`, `FMT_ROOT` and `BOOST_ROOT`, respectively (e.g. `cmake -DROOTSYS=/path/to/software/root/mybuild ..`).
 
-In case you have doxygen installed, you can also generate a documentation from the comments in the code via:
-
-    cd /path/to/PlottingFramework/doc
-    doxygen doxygen.conf
-    open html/namespace_plotting_framework.html
+The documentation can be found [here](https://mario-krueger.github.io/PlottingFramework/annotated.html)
+.
 
 After building the library, you can write your own individual plotting programs and link them against the PlottingFramework.
 As a starting point you can copy the `example` folder to some location on your computer and follow the instructions provided in `CreatePlots.cxx`.
