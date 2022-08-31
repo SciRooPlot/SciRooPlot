@@ -73,6 +73,5 @@ set(PLOTTING_FRAMEWORK_DEPENDENCIES
 # define plotting framework lib
 set(PLOTTING_FRAMEWORK_LIB ${PLOTTING_FRAMEWORK_ROOT}/build/libPlottingFramework.so)
 if(APPLE)
-  set(CMAKE_MACOSX_RPATH ON)
   string(REPLACE ".so" ".dylib" PLOTTING_FRAMEWORK_LIB "${PLOTTING_FRAMEWORK_LIB}")
 endif(APPLE)

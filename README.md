@@ -59,6 +59,7 @@ The easiest way to define this is by putting the following line in your .bashrc 
 ```
     source /path/to/PlottingFramework/.plotrc
 ```
+With this you can also just create a bare plotting project via `plot-init myProjectName`.
 
 The PlotManager is the pivot point of the PlottingFramework. In your application you will have to
 ```cpp

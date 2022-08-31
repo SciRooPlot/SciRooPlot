@@ -35,6 +35,20 @@ if [[ -d "${__PLOTTING_BUILD_DIR}" ]]; then
   function plot-config() {
     "${__PLOTTING_BUILD_DIR}/plot-config" ${1} ${2} ${3} ${4}
   }
+  
+  function plot-init() {
+    PROJECT_NAME=${1}
+    if [ -d "$PROJECT_NAME" ]; then
+      echo "Folder ${PROJECT_NAME} already exists. Doing nothing..."
+      return 1
+    fi
+    mkdir ${PROJECT_NAME}
+    mkdir ${PROJECT_NAME}/build
+    cp ${__PLOTTING_FRAMEWORK_DIR}/example/* ${PROJECT_NAME}/
+    echo "Created plotting project ${PROJECT_NAME}."
+    return 0
+}
+
 fi
 
 _plot_completions_zsh() {
