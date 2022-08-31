@@ -1,4 +1,0 @@
-var searchData=
-[
-  ['box_0',['Box',['../class_plotting_framework_1_1_plot_1_1_pad_1_1_box.html#ab82490ffc5ceee2a7ab5986554518253',1,'PlottingFramework::Plot::Pad::Box::Box(const Box &amp;other)=default'],['../class_plotting_framework_1_1_plot_1_1_pad_1_1_box.html#aca2be7687f14366f86703aa66cd0a794',1,'PlottingFramework::Plot::Pad::Box::Box(Box &amp;&amp;)=default'],['../class_plotting_framework_1_1_plot_1_1_pad_1_1_box.html#a3b1a2fcb5503ab49abe66853f5bd11d7',1,'PlottingFramework::Plot::Pad::Box::Box()=default'],['../class_plotting_framework_1_1_plot_1_1_pad_1_1_box.html#a8ef47450605b339753c3a3fb77ac6eab',1,'PlottingFramework::Plot::Pad::Box::Box(double_t xPos, double_t yPos)'],['../class_plotting_framework_1_1_plot_1_1_pad_1_1_box.html#a3a131437ce25600f021d91ebd24ed19b',1,'PlottingFramework::Plot::Pad::Box::Box(const ptree &amp;boxTree)']]]
-];
