@@ -1,4 +1,7 @@
 Todo:
+- plotting app should be able to initialize bare plotting project! `plot init myProject` -> should also automatically register this project in the app
+- installation to arbitrary location should be possible (do not assume /build in the scripts / cmake files)
+- in cmake use find_package doxygen and then create documentation automatically
 - package registration via cmake: export(PACKAGE PlottingFramework)
 - check if box auto-size determination considers that legend entries may have different text sizes
 - add again the possiblity to display a legend title

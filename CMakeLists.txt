@@ -1,33 +1,9 @@
-project(PlottingFramework CXX)
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 set(CMAKE_VERBOSE_MAKEFILE off)
 set(CMAKE_BUILD_TYPE Debug)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-if (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
-  message(STATUS "activating filesystem workaround for old gcc versions")
-  set(CXX_FILESYSTEM_LIBRARIES "stdc++fs")
-endif()
-
-option(DISABLE_COLORS "no ANSI colors in console" OFF)
-if(DISABLE_COLORS)
-  message(STATUS "disabling ANSI colors")
-  add_compile_definitions(DISABLE_COLORS)
-endif()
-option(DARK_COLORS "darker color scheme" OFF)
-if(DARK_COLORS)
-  add_compile_definitions(DARK_COLORS)
-endif()
-
-set(REQUIRED_ROOT_VERSION 6.16)
-set(REQUIRED_BOOST_VERSION 1.65)
-set(REQUIRED_FMT_VERSION 6.1.2)
-set(Boost_USE_MULTITHREADED TRUE)
-if(APPLE)
-  set(CMAKE_MACOSX_RPATH ON)
-endif(APPLE)
+project(PlottingFramework CXX)
+include(cmake/PlottingFrameworkConfig.cmake)
 
 set(MODULE PlottingFramework)
 set(SRCS
@@ -45,48 +21,9 @@ set(ADDITIONAL_FILES
   TODO.md
 )
 
-# find dependencies
-set(ROOTSYS CACHE STRING "ROOT installation folder")
-if(ROOTSYS)
-  message(STATUS "looking for ROOT installation in ${ROOTSYS}.")
-  list(PREPEND CMAKE_PREFIX_PATH ${ROOTSYS})
-endif()
-find_package(ROOT ${REQUIRED_ROOT_VERSION} CONFIG REQUIRED)
-include(${ROOT_USE_FILE})
-message(STATUS "root  version: ${ROOT_VERSION}")
-
-set(BOOST_ROOT CACHE STRING "boost installation folder")
-if(BOOST_ROOT)
-  message(STATUS "looking for boost installation in ${BOOST_ROOT}.")
-  list(PREPEND CMAKE_PREFIX_PATH ${BOOST_ROOT})
-endif()
-find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED COMPONENTS program_options)
-message(STATUS "boost version: ${Boost_VERSION}")
-
-set(FMT_ROOT CACHE STRING "fmt installation folder")
-if(FMT_ROOT)
-  message(STATUS "looking for fmt installation in ${FMT_ROOT}.")
-  list(PREPEND CMAKE_PREFIX_PATH ${FMT_ROOT})
-endif()
-find_package(fmt ${REQUIRED_FMT_VERSION} REQUIRED)
-message(STATUS "fmt   version: ${fmt_VERSION}")
-
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/inc
-  ${Boost_INCLUDE_DIRS}/boost/property_tree
-  ${Boost_INCLUDE_DIRS}/boost/program_options
-)
-
 # create PlottingFramework library
 add_library(${MODULE} SHARED ${SRCS} ${HDRS} ${MODULE_HDR} ${ADDITIONAL_FILES})
-target_link_libraries(${MODULE} PUBLIC
-  ROOT::Gui
-  ROOT::Hist
-  ROOT::Gpad
-  Boost::program_options
-  fmt::fmt
-  ${CXX_FILESYSTEM_LIBRARIES}
-)
+target_link_libraries(${MODULE} PUBLIC ${PLOTTING_FRAMEWORK_DEPENDENCIES})
 
 # helper function to add executables that are linked to the PlottingFramework
 function(add_plotting_executable APP_NAME)
@@ -95,7 +32,7 @@ function(add_plotting_executable APP_NAME)
     message(FATAL_ERROR "Got trailing arguments ${APP_UNPARSED_ARGUMENTS}")
   endif()
   add_executable(${APP_NAME} ${APP_SOURCES} ${APP_ADD_FILES})
-  target_link_libraries(${APP_NAME} PlottingFramework)
+  target_link_libraries(${APP_NAME} PlottingFramework ${PLOTTING_FRAMEWORK_DEPENDENCIES})
   message(STATUS "Creating executable ${APP_NAME} from file(s) ${APP_SOURCES}")
 endfunction()
 
