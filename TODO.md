@@ -1,5 +1,5 @@
 Todo:
-- plotting app should be able to initialize bare plotting project! `plot init myProject` -> should also automatically register this project in the app
+- example should provide / be set up to some good default settings
 - installation to arbitrary location should be possible (do not assume /build in the scripts / cmake files)
 - in cmake use find_package doxygen and then create documentation automatically
 - package registration via cmake: export(PACKAGE PlottingFramework)
