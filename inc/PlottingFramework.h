@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <boost/property_tree/ptree.hpp>
 #include <unordered_map>
+#include <optional>
 
 namespace PlottingFramework
 {
