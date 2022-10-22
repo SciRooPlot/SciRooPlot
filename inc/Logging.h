@@ -20,9 +20,6 @@
 
 #include <fmt/core.h>
 
-#define DEBUG_LVL 2 // < 2: no debug, < 1: no warnings, < 0 no errors
-#define COUT_LVL 2  // < 2: no log,   < 1: no info,     < 0 no print
-
 #define _BRIGHTNESS_ "9"
 #ifdef DARK_COLORS
 #undef _BRIGHTNESS_
@@ -111,30 +108,28 @@
     fmt::print("\n");                                                                     \
   }
 
-// debug suppression levels
-#if DEBUG_LVL < 2
+#ifdef DISABLE_DEBUG
 #undef DEBUG
 #define DEBUG(s, ...) ;
 #endif
-#if DEBUG_LVL < 1
+#ifdef DISABLE_WARNING
 #undef WARNING
 #define WARNING(s, ...) ;
 #endif
-#if DEBUG_LVL < 0
+#ifdef DISABLE_ERROR
 #undef ERROR
 #define ERROR(s, ...) ;
 #endif
 
-// output stream suppression levels
-#if COUT_LVL < 2
+#ifdef DISABLE_LOG
 #undef LOG
 #define LOG(s, ...) ;
 #endif
-#if COUT_LVL < 1
+#ifdef DISABLE_INFO
 #undef INFO
 #define INFO(s, ...) ;
 #endif
-#if COUT_LVL < 0
+#ifdef DISABLE_PRINT
 #undef PRINT
 #define PRINT(s, ...) ;
 #undef PRINT_INLINE
