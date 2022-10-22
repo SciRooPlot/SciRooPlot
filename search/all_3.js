@@ -17,9 +17,8 @@ var searchData=
   ['colors_14',['colors',['../structPlottingFramework_1_1Plot_1_1Pad_1_1view__defaults__t.html#a5d34fa6437f4a1e4bd9adb02e9fee2dd',1,'PlottingFramework::Plot::Pad::view_defaults_t']]],
   ['colz_15',['colz',['../namespacePlottingFramework.html#aedca3c6b537e072eb14a5d133813aa7ca3ce1406b80efb12ed141b624e27b6e91',1,'PlottingFramework']]],
   ['cont_16',['cont',['../namespacePlottingFramework.html#aedca3c6b537e072eb14a5d133813aa7ca166bd437640aeae2ace01d171ffc4d66',1,'PlottingFramework']]],
-  ['cout_5flvl_17',['COUT_LVL',['../Logging_8h.html#a8d57a5721d9c5dcc8b3b12d02e23e2ee',1,'Logging.h']]],
-  ['createplot_18',['CreatePlot',['../classPlottingFramework_1_1PlotManager.html#aaff7e9fb1071ed0f6276a4e448d5c648',1,'PlottingFramework::PlotManager']]],
-  ['createplots_19',['CreatePlots',['../classPlottingFramework_1_1PlotManager.html#ab21bfb0e32ca632e840a7b1ffd5db088',1,'PlottingFramework::PlotManager']]],
-  ['curve_20',['curve',['../namespacePlottingFramework.html#aedca3c6b537e072eb14a5d133813aa7ca667a7fe240ed02c88693201ea18040dc',1,'PlottingFramework']]],
-  ['cyan_5f_21',['CYAN_',['../Logging_8h.html#a073337aa82ac3afd33bc5bd132e906d0',1,'Logging.h']]]
+  ['createplot_17',['CreatePlot',['../classPlottingFramework_1_1PlotManager.html#aaff7e9fb1071ed0f6276a4e448d5c648',1,'PlottingFramework::PlotManager']]],
+  ['createplots_18',['CreatePlots',['../classPlottingFramework_1_1PlotManager.html#ab21bfb0e32ca632e840a7b1ffd5db088',1,'PlottingFramework::PlotManager']]],
+  ['curve_19',['curve',['../namespacePlottingFramework.html#aedca3c6b537e072eb14a5d133813aa7ca667a7fe240ed02c88693201ea18040dc',1,'PlottingFramework']]],
+  ['cyan_5f_20',['CYAN_',['../Logging_8h.html#a073337aa82ac3afd33bc5bd132e906d0',1,'Logging.h']]]
 ];

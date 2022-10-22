@@ -1,7 +1,5 @@
 var NAVTREEINDEX6 =
 {
-"namespacePlottingFramework.html#aedca3c6b537e072eb14a5d133813aa7ca8940c83cf33e4324df76a4b5d36dec23":[0,0,0,6,12],
-"namespacePlottingFramework.html#aedca3c6b537e072eb14a5d133813aa7ca8d3e6cced1fe208a0d8e0cff22b8f35b":[0,0,0,6,26],
 "namespacePlottingFramework.html#aedca3c6b537e072eb14a5d133813aa7ca8f4c0732f642bdb965a908eabf6f9611":[0,0,0,6,29],
 "namespacePlottingFramework.html#aedca3c6b537e072eb14a5d133813aa7ca909c692a0e3e27227b5ea7b907ae3f91":[0,0,0,6,22],
 "namespacePlottingFramework.html#aedca3c6b537e072eb14a5d133813aa7ca93598079d98100b0561497a43ade11d5":[0,0,0,6,8],

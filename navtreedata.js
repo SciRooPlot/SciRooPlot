@@ -60,12 +60,12 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "Helpers_8cxx.html",
-"classPlottingFramework_1_1PlotManager.html#a5f504cde0cb9c657e138ce02d8fbc0b3",
-"classPlottingFramework_1_1Plot_1_1Pad.html#a9be64288e381e87d0ad0efe8fe82b83c",
-"classPlottingFramework_1_1Plot_1_1Pad_1_1Box.html#a1e8b3483350719976f0842d66e2c583c",
-"classPlottingFramework_1_1Plot_1_1Pad_1_1Data.html#ac00a2eb819245ea9c00eadbc6ffdfa1a",
-"classPlottingFramework_1_1Plot_1_1Pad_1_1Ratio.html#a2a0fbd6d33719a06a4fe8efa3e70f92f",
-"namespacePlottingFramework.html#aedca3c6b537e072eb14a5d133813aa7ca8940c83cf33e4324df76a4b5d36dec23"
+"classPlottingFramework_1_1PlotManager.html#a627e64509d73ce831d90cac0e940f974",
+"classPlottingFramework_1_1Plot_1_1Pad.html#a9d4f15ab4cb1fb82748f13c00b3024f0",
+"classPlottingFramework_1_1Plot_1_1Pad_1_1Box.html#a2f2094470d7322ac52ded36ff3737d3c",
+"classPlottingFramework_1_1Plot_1_1Pad_1_1Data.html#ac083d099da415df98d139937729d9c4d",
+"classPlottingFramework_1_1Plot_1_1Pad_1_1Ratio.html#a2b1d626215c8a4230fcbf991a3c2cf16",
+"namespacePlottingFramework.html#aedca3c6b537e072eb14a5d133813aa7ca8f4c0732f642bdb965a908eabf6f9611"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';
