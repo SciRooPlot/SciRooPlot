@@ -1,5 +1,0 @@
-var searchData=
-[
-  ['textbox_0',['TextBox',['../classPlottingFramework_1_1Plot_1_1Pad_1_1TextBox.html#a710a761f5ae879f228b60987b8d5e998',1,'PlottingFramework::Plot::Pad::TextBox::TextBox(const string &amp;text)'],['../classPlottingFramework_1_1Plot_1_1Pad_1_1TextBox.html#a3d79b8b4f3451b4045426d805beed5f7',1,'PlottingFramework::Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const string &amp;text)'],['../classPlottingFramework_1_1Plot_1_1Pad_1_1TextBox.html#aeee1a269543843eed0e9e14d0af78fdb',1,'PlottingFramework::Plot::Pad::TextBox::TextBox(const ptree &amp;textBoxTree)'],['../classPlottingFramework_1_1Plot_1_1Pad_1_1TextBox.html#abae8d1959dd085dee2f070359a3d13ac',1,'PlottingFramework::Plot::Pad::TextBox::TextBox(const TextBox &amp;other)=default'],['../classPlottingFramework_1_1Plot_1_1Pad_1_1TextBox.html#a3a22da0842b4047a8b82eeeb7052371a',1,'PlottingFramework::Plot::Pad::TextBox::TextBox(TextBox &amp;&amp;)=default']]],
-  ['tuple_5fto_5fstring_1',['tuple_to_string',['../namespacePlottingFramework.html#a5c7f12ae97a604bbd7201f5441319afb',1,'PlottingFramework']]]
-];

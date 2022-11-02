@@ -1,7 +1,0 @@
-var searchData=
-[
-  ['text_0',['text',['../namespacePlottingFramework.html#aedca3c6b537e072eb14a5d133813aa7ca519b5248246836c4c98d501a1c883744',1,'PlottingFramework']]],
-  ['textbox_1',['TextBox',['../classPlottingFramework_1_1Plot_1_1Pad_1_1TextBox.html',1,'PlottingFramework::Plot::Pad::TextBox'],['../classPlottingFramework_1_1Plot_1_1Pad_1_1TextBox.html#a710a761f5ae879f228b60987b8d5e998',1,'PlottingFramework::Plot::Pad::TextBox::TextBox(const string &amp;text)'],['../classPlottingFramework_1_1Plot_1_1Pad_1_1TextBox.html#a3d79b8b4f3451b4045426d805beed5f7',1,'PlottingFramework::Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const string &amp;text)'],['../classPlottingFramework_1_1Plot_1_1Pad_1_1TextBox.html#aeee1a269543843eed0e9e14d0af78fdb',1,'PlottingFramework::Plot::Pad::TextBox::TextBox(const ptree &amp;textBoxTree)'],['../classPlottingFramework_1_1Plot_1_1Pad_1_1TextBox.html#abae8d1959dd085dee2f070359a3d13ac',1,'PlottingFramework::Plot::Pad::TextBox::TextBox(const TextBox &amp;other)=default'],['../classPlottingFramework_1_1Plot_1_1Pad_1_1TextBox.html#a3a22da0842b4047a8b82eeeb7052371a',1,'PlottingFramework::Plot::Pad::TextBox::TextBox(TextBox &amp;&amp;)=default']]],
-  ['top_2',['top',['../structPlottingFramework_1_1Plot_1_1Pad_1_1pad__margin__t.html#afd95d89b76a490152cfbad50d5b40870',1,'PlottingFramework::Plot::Pad::pad_margin_t']]],
-  ['tuple_5fto_5fstring_3',['tuple_to_string',['../namespacePlottingFramework.html#a5c7f12ae97a604bbd7201f5441319afb',1,'PlottingFramework']]]
-];

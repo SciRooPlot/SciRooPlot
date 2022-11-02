@@ -1,4 +1,4 @@
 var Plot_8cxx =
 [
-    [ "operator+", "Plot_8cxx.html#ade7847b8b8dc96cbf4bd159550f2ed5b", null ]
+    [ "operator+", "Plot_8cxx.html#a5079dd3c6763db2a09e4fb310bbe35e8", null ]
 ];

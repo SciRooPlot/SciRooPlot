@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['plottingframework_0',['PlottingFramework',['../namespacePlottingFramework.html',1,'']]]
+  ['scirooplot_0',['SciRooPlot',['../namespaceSciRooPlot.html',1,'']]]
 ];

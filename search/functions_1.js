@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['box_0',['Box',['../classPlottingFramework_1_1Plot_1_1Pad_1_1Box.html#ab82490ffc5ceee2a7ab5986554518253',1,'PlottingFramework::Plot::Pad::Box::Box(const Box &amp;other)=default'],['../classPlottingFramework_1_1Plot_1_1Pad_1_1Box.html#aca2be7687f14366f86703aa66cd0a794',1,'PlottingFramework::Plot::Pad::Box::Box(Box &amp;&amp;)=default'],['../classPlottingFramework_1_1Plot_1_1Pad_1_1Box.html#a3b1a2fcb5503ab49abe66853f5bd11d7',1,'PlottingFramework::Plot::Pad::Box::Box()=default'],['../classPlottingFramework_1_1Plot_1_1Pad_1_1Box.html#a8ef47450605b339753c3a3fb77ac6eab',1,'PlottingFramework::Plot::Pad::Box::Box(double_t xPos, double_t yPos)'],['../classPlottingFramework_1_1Plot_1_1Pad_1_1Box.html#a3a131437ce25600f021d91ebd24ed19b',1,'PlottingFramework::Plot::Pad::Box::Box(const ptree &amp;boxTree)']]]
+  ['file_5fexists_0',['file_exists',['../namespaceSciRooPlot.html#a8875359f2b0e7814c801ab1671bc62bc',1,'SciRooPlot']]]
 ];

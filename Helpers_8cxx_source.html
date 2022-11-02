@@ -86,7 +86,7 @@ $(document).ready(function(){initNavTree('Helpers_8cxx_source.html',''); initRes
   <div class="headertitle"><div class="title">Helpers.cxx</div></div>
 </div><!--header-->
 <div class="contents">
-<a href="Helpers_8cxx.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="comment">// PlottingFramework</span></div>
+<a href="Helpers_8cxx.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="comment">// SciRooPlot</span></div>
 <div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="comment">//</span></div>
 <div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="comment">// Copyright (C) 2019-2022  Mario Krüger</span></div>
 <div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="comment">// Contact: mario.kruger@cern.ch</span></div>
@@ -103,13 +103,13 @@ $(document).ready(function(){initNavTree('Helpers_8cxx_source.html',''); initRes
 <div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="comment">// You should have received a copy of the GNU General Public License</span></div>
 <div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="comment">// along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span></div>
 <div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#include &quot;<a class="code" href="Helpers_8h.html">Helpers.h</a>&quot;</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#include &quot;Helpers.h&quot;</span></div>
 <div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &lt;sys/stat.h&gt;</span></div>
 <div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="namespacePlottingFramework.html">   21</a></span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespacePlottingFramework.html">PlottingFramework</a></div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="namespaceSciRooPlot.html">   21</a></span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespaceSciRooPlot.html">SciRooPlot</a></div>
 <div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>{</div>
 <div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno"><a class="line" href="namespacePlottingFramework.html#a1c0f81431f056d6deb6a5afafd8860ed">   24</a></span><span class="keywordtype">string</span> <a class="code hl_function" href="namespacePlottingFramework.html#a1c0f81431f056d6deb6a5afafd8860ed">expand_path</a>(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; path)</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno"><a class="line" href="namespaceSciRooPlot.html#a4fcd2d1cbb3ff608ad11cbcc6a180ff3">   24</a></span><span class="keywordtype">string</span> <a class="code hl_function" href="namespaceSciRooPlot.html#a4fcd2d1cbb3ff608ad11cbcc6a180ff3">expand_path</a>(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; path)</div>
 <div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>{</div>
 <div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>  <span class="keywordtype">char</span>* raw = gSystem-&gt;ExpandPathName(path.data());</div>
 <div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>  <span class="keywordtype">string</span> expandedPath(raw ? raw : <span class="stringliteral">&quot;&quot;</span>);</div>
@@ -117,7 +117,7 @@ $(document).ready(function(){initNavTree('Helpers_8cxx_source.html',''); initRes
 <div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>  <span class="keywordflow">return</span> expandedPath;</div>
 <div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>}</div>
 <div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno"><a class="line" href="namespacePlottingFramework.html#a22bd62ad486207cd6161fd88ac7d3013">   32</a></span>vector&lt;string&gt; <a class="code hl_function" href="namespacePlottingFramework.html#a22bd62ad486207cd6161fd88ac7d3013">split_string</a>(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; argString, <span class="keywordtype">char</span> delimiter, <span class="keywordtype">bool</span> onlyFirst)</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno"><a class="line" href="namespaceSciRooPlot.html#a28df53b1372d394c4c2228ca9e6d0245">   32</a></span>vector&lt;string&gt; <a class="code hl_function" href="namespaceSciRooPlot.html#a28df53b1372d394c4c2228ca9e6d0245">split_string</a>(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; argString, <span class="keywordtype">char</span> delimiter, <span class="keywordtype">bool</span> onlyFirst)</div>
 <div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>{</div>
 <div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>  vector&lt;string&gt; arguments;</div>
 <div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>  <span class="keywordflow">if</span> (onlyFirst) {</div>
@@ -137,25 +137,24 @@ $(document).ready(function(){initNavTree('Helpers_8cxx_source.html',''); initRes
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>  <span class="keywordflow">return</span> arguments;</div>
 <div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>}</div>
 <div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno"><a class="line" href="namespacePlottingFramework.html#a27930211b1989ae3699b139777defd32">   52</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="namespacePlottingFramework.html#a27930211b1989ae3699b139777defd32">file_exists</a>(<span class="keyword">const</span> std::string&amp; name)</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno"><a class="line" href="namespaceSciRooPlot.html#a8875359f2b0e7814c801ab1671bc62bc">   52</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="namespaceSciRooPlot.html#a8875359f2b0e7814c801ab1671bc62bc">file_exists</a>(<span class="keyword">const</span> std::string&amp; name)</div>
 <div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>{</div>
 <div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>  <span class="keyword">struct </span>stat buffer;</div>
 <div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>  <span class="keywordflow">return</span> (stat(name.c_str(), &amp;buffer) == 0);</div>
 <div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>}</div>
 <div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> </div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>} <span class="comment">// end namespace PlottingFramework</span></div>
-<div class="ttc" id="aHelpers_8h_html"><div class="ttname"><a href="Helpers_8h.html">Helpers.h</a></div></div>
-<div class="ttc" id="anamespacePlottingFramework_html"><div class="ttname"><a href="namespacePlottingFramework.html">PlottingFramework</a></div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00021">Helpers.cxx:22</a></div></div>
-<div class="ttc" id="anamespacePlottingFramework_html_a1c0f81431f056d6deb6a5afafd8860ed"><div class="ttname"><a href="namespacePlottingFramework.html#a1c0f81431f056d6deb6a5afafd8860ed">PlottingFramework::expand_path</a></div><div class="ttdeci">string expand_path(const string &amp;path)</div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00024">Helpers.cxx:24</a></div></div>
-<div class="ttc" id="anamespacePlottingFramework_html_a22bd62ad486207cd6161fd88ac7d3013"><div class="ttname"><a href="namespacePlottingFramework.html#a22bd62ad486207cd6161fd88ac7d3013">PlottingFramework::split_string</a></div><div class="ttdeci">vector&lt; string &gt; split_string(const string &amp;argString, char delimiter, bool onlyFirst)</div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00032">Helpers.cxx:32</a></div></div>
-<div class="ttc" id="anamespacePlottingFramework_html_a27930211b1989ae3699b139777defd32"><div class="ttname"><a href="namespacePlottingFramework.html#a27930211b1989ae3699b139777defd32">PlottingFramework::file_exists</a></div><div class="ttdeci">bool file_exists(const std::string &amp;name)</div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00052">Helpers.cxx:52</a></div></div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>} <span class="comment">// end namespace SciRooPlot</span></div>
+<div class="ttc" id="anamespaceSciRooPlot_html"><div class="ttname"><a href="namespaceSciRooPlot.html">SciRooPlot</a></div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00021">Helpers.cxx:22</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a28df53b1372d394c4c2228ca9e6d0245"><div class="ttname"><a href="namespaceSciRooPlot.html#a28df53b1372d394c4c2228ca9e6d0245">SciRooPlot::split_string</a></div><div class="ttdeci">vector&lt; string &gt; split_string(const string &amp;argString, char delimiter, bool onlyFirst)</div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00032">Helpers.cxx:32</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a4fcd2d1cbb3ff608ad11cbcc6a180ff3"><div class="ttname"><a href="namespaceSciRooPlot.html#a4fcd2d1cbb3ff608ad11cbcc6a180ff3">SciRooPlot::expand_path</a></div><div class="ttdeci">string expand_path(const string &amp;path)</div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00024">Helpers.cxx:24</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a8875359f2b0e7814c801ab1671bc62bc"><div class="ttname"><a href="namespaceSciRooPlot.html#a8875359f2b0e7814c801ab1671bc62bc">SciRooPlot::file_exists</a></div><div class="ttdeci">bool file_exists(const std::string &amp;name)</div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00052">Helpers.cxx:52</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="Helpers_8cxx.html">Helpers.cxx</a></li>
-    <li class="footer">Generated on Sat Oct 22 2022 13:58:30 for PlottingFramework by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.4 </li>
+    <li class="footer">Generated on Wed Nov 2 2022 14:50:09 for PlottingFramework by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.4 </li>
   </ul>
 </div>
 </body>
