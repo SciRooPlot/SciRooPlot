@@ -24,7 +24,7 @@
 */
 var NAVTREE =
 [
-  [ "PlottingFramework", "index.html", [
+  [ "SciRooPlot", "index.html", [
     [ "Namespaces", "namespaces.html", [
       [ "Namespace List", "namespaces.html", "namespaces_dup" ],
       [ "Namespace Members", "namespacemembers.html", [
