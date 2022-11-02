@@ -33,9 +33,9 @@ cmake -D CMAKE_CXX_STANDARD=17 ..
 make
 ```
 
-Using the Framework
+Using SciRooPlot
 --------------------
-In order to use the framework, first you need to compile the library in the following way:
+In order to use the SciRooPlot, first you need to compile the library in the following way:
 
     cd /path/to/SciRooPlot
     mkdir build
