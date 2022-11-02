@@ -63,7 +63,7 @@ The PlotManager is the pivot point of the SciRooPlot. In your application you wi
     #include "PlotManager.h"
 ```
 which will provide all the user interfaces you need.
-In the following you can find some examples illustrating how to use the framework.
+In the following you can find some examples illustrating how to use the SciRooPlot.
 
 Example 1
 ---------
