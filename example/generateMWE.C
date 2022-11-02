@@ -1,4 +1,4 @@
-// PlottingFramework
+// SciRooPlot
 //
 // Copyright (C) 2019-2022  Mario Krüger
 // Contact: mario.kruger@cern.ch

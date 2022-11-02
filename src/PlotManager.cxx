@@ -1,4 +1,4 @@
-// PlottingFramework
+// SciRooPlot
 //
 // Copyright (C) 2019-2022  Mario Krüger
 // Contact: mario.kruger@cern.ch
@@ -42,7 +42,7 @@
 #include "TFolder.h"
 #include "TPave.h"
 
-namespace PlottingFramework
+namespace SciRooPlot
 {
 
 //**************************************************************************************************
@@ -1093,4 +1093,4 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
   ERROR("Unknown plot template {}.", plotTemplateName);
   return Plot();
 }
-} // end namespace PlottingFramework
+} // end namespace SciRooPlot

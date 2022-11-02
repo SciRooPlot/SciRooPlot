@@ -1,4 +1,4 @@
-// PlottingFramework
+// SciRooPlot
 //
 // Copyright (C) 2019-2022  Mario Krüger
 // Contact: mario.kruger@cern.ch
@@ -18,14 +18,14 @@
 #include "PlotManager.h"
 #include "Logging.h"
 
-using namespace PlottingFramework;
+using namespace SciRooPlot;
 
 // helper that creates some good looking plot templates you can base your plots on
 void DefinePlotTemplates(PlotManager& plotManager);
 
 // ======= minimal working example ==========
-// 0. source the ".plotrc" script in the main directory of the PlottingFramework repository (best put this also it in your .bashrc, .bash_profile, or similar)
-// 1. copy directory containing this example to some place on your system (outside of the PlottingFramework repository)
+// 0. source the ".plotrc" script in the main directory of the SciRooPlot repository (best put this also it in your .bashrc, .bash_profile, or similar)
+// 1. copy directory containing this example to some place on your system (outside of the SciRooPlot repository)
 // 2. generate files used in this example by running 'root -l generateMWE.C'
 // 3. create build folder in this directory: 'mkdir build; cd build'
 // 4. cmake ../

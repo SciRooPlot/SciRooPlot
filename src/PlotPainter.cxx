@@ -1,4 +1,4 @@
-// PlottingFramework
+// SciRooPlot
 //
 // Copyright (C) 2019-2022  Mario Krüger
 // Contact: mario.kruger@cern.ch
@@ -17,7 +17,7 @@
 
 // framework dependencies
 #include "PlotPainter.h"
-#include "PlottingFramework.h"
+#include "SciRooPlot.h"
 #include "Logging.h"
 #include "Helpers.h"
 
@@ -64,7 +64,7 @@
 #include "TGWindow.h"
 #include "TRootCanvas.h"
 
-namespace PlottingFramework
+namespace SciRooPlot
 {
 //**************************************************************************************************
 /**
@@ -1619,4 +1619,4 @@ vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vecto
   return gradientColors;
 }
 
-} // end namespace PlottingFramework
+} // end namespace SciRooPlot

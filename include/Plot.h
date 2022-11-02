@@ -1,4 +1,4 @@
-// PlottingFramework
+// SciRooPlot
 //
 // Copyright (C) 2019-2022  Mario Krüger
 // Contact: mario.kruger@cern.ch
@@ -25,9 +25,9 @@
 #include "TCandle.h"
 #include "Rtypes.h"
 
-#include "PlottingFramework.h"
+#include "SciRooPlot.h"
 
-namespace PlottingFramework
+namespace SciRooPlot
 {
 
 enum drawing_options_t : uint8_t {
@@ -934,5 +934,5 @@ private:
   layout_t mText;
 };
 
-} // end namespace PlottingFramework
+} // end namespace SciRooPlot
 #endif /* Plot_h */

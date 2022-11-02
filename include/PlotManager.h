@@ -1,4 +1,4 @@
-// PlottingFramework
+// SciRooPlot
 //
 // Copyright (C) 2019-2022  Mario Krüger
 // Contact: mario.kruger@cern.ch
@@ -18,13 +18,13 @@
 #ifndef PlotManager_h
 #define PlotManager_h
 
-#include "PlottingFramework.h"
+#include "SciRooPlot.h"
 #include "Plot.h"
 
 class TApplication;
 class TCanvas;
 
-namespace PlottingFramework
+namespace SciRooPlot
 {
 //**************************************************************************************************
 /**
@@ -116,5 +116,5 @@ private:
   void ReadDataCSV(const string& inputFileName, const string& graphName, const string& inputIdentifier);
 };
 
-} // end namespace PlottingFramework
+} // end namespace SciRooPlot
 #endif /* PlotManager_h */

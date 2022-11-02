@@ -1,4 +1,4 @@
-// PlottingFramework
+// SciRooPlot
 //
 // Copyright (C) 2019-2022  Mario Krüger
 // Contact: mario.kruger@cern.ch
@@ -18,7 +18,7 @@
 #include "Helpers.h"
 #include <sys/stat.h>
 
-namespace PlottingFramework
+namespace SciRooPlot
 {
 
 string expand_path(const string& path)
@@ -55,4 +55,4 @@ bool file_exists(const std::string& name)
   return (stat(name.c_str(), &buffer) == 0);
 }
 
-} // end namespace PlottingFramework
+} // end namespace SciRooPlot

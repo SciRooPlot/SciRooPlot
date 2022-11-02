@@ -1,4 +1,4 @@
-// PlottingFramework
+// SciRooPlot
 //
 // Copyright (C) 2019-2022  Mario Krüger
 // Contact: mario.kruger@cern.ch
@@ -35,7 +35,7 @@ class TObjArray;
 class TPave;
 class TAxis;
 
-namespace PlottingFramework
+namespace SciRooPlot
 {
 
 // supported input data types
@@ -134,5 +134,5 @@ private:
 
   vector<int16_t> GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1., bool savePalette = false);
 };
-} // end namespace PlottingFramework
+} // end namespace SciRooPlot
 #endif /* PlotGenerator_h */

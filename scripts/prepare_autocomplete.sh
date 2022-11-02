@@ -3,7 +3,7 @@
 AUTOCOMPFILE=$1
 
 # TODO: make this work with multiple files
-PLOTDEFFILE=$(${__PLOTTING_BUILD_DIR}/plot-config get plotDefinitions)
+PLOTDEFFILE=$(${__SCIROOPLOT_BUILD_DIR}/plot-config get plotDefinitions)
 if [[ ! -f "$PLOTDEFFILE" ]]; then
   exit
 fi

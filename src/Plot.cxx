@@ -1,4 +1,4 @@
-// PlottingFramework
+// SciRooPlot
 //
 // Copyright (C) 2019-2022  Mario Krüger
 // Contact: mario.kruger@cern.ch
@@ -19,7 +19,7 @@
 #include "Helpers.h"
 #include "Logging.h"
 
-namespace PlottingFramework
+namespace SciRooPlot
 {
 
 //--------------------------------------------------------------------------------------------------
@@ -2556,4 +2556,4 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetTextSiz
 template class Plot::Pad::Box<Plot::Pad::TextBox>;
 template class Plot::Pad::Box<Plot::Pad::LegendBox>;
 //**************************************************************************************************
-} // end namespace PlottingFramework
+} // end namespace SciRooPlot

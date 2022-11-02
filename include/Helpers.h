@@ -1,4 +1,4 @@
-// PlottingFramework
+// SciRooPlot
 //
 // Copyright (C) 2019-2022  Mario Krüger
 // Contact: mario.kruger@cern.ch
@@ -18,10 +18,10 @@
 #ifndef Helpers_h
 #define Helpers_h
 
-#include "PlottingFramework.h"
+#include "SciRooPlot.h"
 #include "TSystem.h"
 
-namespace PlottingFramework
+namespace SciRooPlot
 {
 string expand_path(const string& path);
 vector<string> split_string(const string& argString, char delimiter, bool onlyFirst = false);
@@ -205,5 +205,5 @@ constexpr bool is_one_of_v()
   return (... || std::is_same_v<T, Ts>);
 }
 
-} // end namespace PlottingFramework
+} // end namespace SciRooPlot
 #endif /* Helpers_h */

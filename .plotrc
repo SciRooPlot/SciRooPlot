@@ -2,24 +2,24 @@
 
 # add some global symbols
 if [[ "${BASH_SOURCE[0]}" != "" ]]; then
-  __PLOTTING_FRAMEWORK_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+  __SCIROOPLOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 else
-  __PLOTTING_FRAMEWORK_DIR="$( cd "$( dirname "${0}"  )" >/dev/null 2>&1 && pwd )"
+  __SCIROOPLOT_DIR="$( cd "$( dirname "${0}"  )" >/dev/null 2>&1 && pwd )"
 fi
-export __PLOTTING_FRAMEWORK_DIR
-__PLOTTING_BUILD_DIR="${__PLOTTING_FRAMEWORK_DIR}/build"
-export __PLOTTING_BUILD_DIR
-if [[ -d "${__PLOTTING_BUILD_DIR}" ]]; then
+export __SCIROOPLOT_DIR
+__SCIROOPLOT_BUILD_DIR="${__SCIROOPLOT_DIR}/build"
+export __SCIROOPLOT_BUILD_DIR
+if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
   function plot() {
     if [[ "${1}" == "cd" ]]; then
-      cd ${__PLOTTING_BUILD_DIR}
+      cd ${__SCIROOPLOT_BUILD_DIR}
       return 0
     fi
 
-    local USER_EXEC=$(${__PLOTTING_BUILD_DIR}/plot-config get executable)
+    local USER_EXEC=$(${__SCIROOPLOT_BUILD_DIR}/plot-config get executable)
     local USER_BUILD_DIR=$([[ -z ${USER_EXEC} ]] || dirname ${USER_EXEC})
     if [[ -d ${USER_BUILD_DIR} ]]; then
-      local USER_PLOTDEF=$(${__PLOTTING_BUILD_DIR}/plot-config get plotDefinitions)
+      local USER_PLOTDEF=$(${__SCIROOPLOT_BUILD_DIR}/plot-config get plotDefinitions)
       (
         cd ${USER_BUILD_DIR};
         (make 1> /dev/null) || exit 1
@@ -28,12 +28,12 @@ if [[ -d "${__PLOTTING_BUILD_DIR}" ]]; then
         fi
       ) || return 1
     fi
-    "${__PLOTTING_BUILD_DIR}/plot" ${1} ${2} ${3}
+    "${__SCIROOPLOT_BUILD_DIR}/plot" ${1} ${2} ${3}
     return 0
   }
   
   function plot-config() {
-    "${__PLOTTING_BUILD_DIR}/plot-config" ${1} ${2} ${3} ${4}
+    "${__SCIROOPLOT_BUILD_DIR}/plot-config" ${1} ${2} ${3} ${4}
   }
   
   function plot-init() {
@@ -44,17 +44,17 @@ if [[ -d "${__PLOTTING_BUILD_DIR}" ]]; then
     fi
     mkdir ${PROJECT_NAME}
     mkdir ${PROJECT_NAME}/build
-    cp ${__PLOTTING_FRAMEWORK_DIR}/example/* ${PROJECT_NAME}/
+    cp ${__SCIROOPLOT_DIR}/example/* ${PROJECT_NAME}/
     sed -i.bak "s/MyPlots/${PROJECT_NAME}/" ${PROJECT_NAME}/CMakeLists.txt && rm ${PROJECT_NAME}/CMakeLists.txt.bak
     echo "Created plotting project ${PROJECT_NAME}."
     if [[ "${2}" == "register" ]]; then
       # FIXME: requires that user adjusts the file paths in example...
       echo "Registered this project in plotting app. Use 'plot-config add ${PROJECT_NAME} ...' to change the settings manually."
-      ${__PLOTTING_BUILD_DIR}/plot-config add ${PROJECT_NAME} inputFiles ${PROJECT_NAME}/build/inputFiles.XML
-      ${__PLOTTING_BUILD_DIR}/plot-config add ${PROJECT_NAME} plotDefinitions ${PROJECT_NAME}/build/plotDefFile.XML
-      ${__PLOTTING_BUILD_DIR}/plot-config add ${PROJECT_NAME} executable ${PROJECT_NAME}/build/create
+      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} inputFiles ${PROJECT_NAME}/build/inputFiles.XML
+      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} plotDefinitions ${PROJECT_NAME}/build/plotDefFile.XML
+      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} executable ${PROJECT_NAME}/build/create
       mkdir ${PROJECT_NAME}/build/plots
-      ${__PLOTTING_BUILD_DIR}/plot-config add ${PROJECT_NAME} outputDir ${PROJECT_NAME}/build/plots
+      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} outputDir ${PROJECT_NAME}/build/plots
       echo "Use 'plot-config switch ${PROJECT_NAME}' to activate this project in the app."
     fi
     return 0
@@ -69,8 +69,8 @@ _plot_completions_zsh() {
   local groupsAndCategories
   local names
 
-  local AUTOCOMPFILE="${__PLOTTING_BUILD_DIR}/plots_$(${__PLOTTING_BUILD_DIR}/plot-config get active).csv"
-  ${__PLOTTING_FRAMEWORK_DIR}/scripts/prepare_autocomplete.sh $AUTOCOMPFILE
+  local AUTOCOMPFILE="${__SCIROOPLOT_BUILD_DIR}/plots_$(${__SCIROOPLOT_BUILD_DIR}/plot-config get active).csv"
+  ${__SCIROOPLOT_DIR}/scripts/prepare_autocomplete.sh $AUTOCOMPFILE
   if [[ ! -f "$AUTOCOMPFILE" ]]; then
     return
   fi
@@ -136,8 +136,8 @@ _plot_completions_bash() {
   local groupsAndCategories
   local names
 
-  local AUTOCOMPFILE="${__PLOTTING_BUILD_DIR}/plots_$(${__PLOTTING_BUILD_DIR}/plot-config get active).csv"
-  ${__PLOTTING_FRAMEWORK_DIR}/scripts/prepare_autocomplete.sh $AUTOCOMPFILE
+  local AUTOCOMPFILE="${__SCIROOPLOT_BUILD_DIR}/plots_$(${__SCIROOPLOT_BUILD_DIR}/plot-config get active).csv"
+  ${__SCIROOPLOT_DIR}/scripts/prepare_autocomplete.sh $AUTOCOMPFILE
   if [[ ! -f "$AUTOCOMPFILE" ]]; then
     return
   fi

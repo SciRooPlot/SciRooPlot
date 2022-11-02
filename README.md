@@ -8,7 +8,7 @@ Everybody is welcome to use this software and contribute new features.
 
 Prerequisites
 -------------
-The PlottingFramework depends on the following external software which needs to be installed on your system:
+SciRooPlot depends on the following external software which needs to be installed on your system:
 
 - cmake >= 3.15
 - fmt   >= 6.1.2
@@ -37,7 +37,7 @@ Using the Framework
 --------------------
 In order to use the framework, first you need to compile the library in the following way:
 
-    cd /path/to/PlottingFramework
+    cd /path/to/SciRooPlot
     mkdir build
     cd build
     cmake ..
@@ -46,19 +46,19 @@ In order to use the framework, first you need to compile the library in the foll
 To disable console colours in the logging output, use `cmake -D DISABLE_COLORS=ON ..`, or `cmake -D DARK_COLORS=ON ..` for a darker colour scheme.
 The location of a dependency can be specified via the cmake arguments `ROOTSYS`, `FMT_ROOT` and `BOOST_ROOT`, respectively (e.g. `cmake -DROOTSYS=/path/to/software/root/mybuild ..`).
 
-The documentation can be found [here](https://mario-krueger.github.io/PlottingFramework/annotated.html)
+The documentation can be found [here](https://SciRooPlot.github.io/SciRooPlot/annotated.html)
 .
 
-After building the library, you can write your own individual plotting programs and link them against the PlottingFramework.
+After building the library, you can write your own individual plotting programs and link them against the SciRooPlot.
 As a starting point you can copy the `example` folder to some location on your computer and follow the instructions provided in `CreatePlots.cxx`.
-This example should work out of the box, but it requires to know where the PlottingFramework library is located.
+This example should work out of the box, but it requires to know where the SciRooPlot library is located.
 The easiest way to define this is by putting the following line in your .bashrc or .bash_aliases:
 ```
-    source /path/to/PlottingFramework/.plotrc
+    source /path/to/SciRooPlot/.plotrc
 ```
 With this you can also just create a bare plotting project via `plot-init myProjectName`.
 
-The PlotManager is the pivot point of the PlottingFramework. In your application you will have to
+The PlotManager is the pivot point of the SciRooPlot. In your application you will have to
 ```cpp
     #include "PlotManager.h"
 ```
@@ -74,7 +74,7 @@ Example 1
 //============================================================================
 
 #include "PlotManager.h"
-using namespace PlottingFramework;
+using namespace SciRooPlot;
 
 // the plot manager is the central entity that handles and creates your plots
 PlotManager plotManager;
@@ -297,7 +297,7 @@ Example 2
 //============================================================================
 
 #include "PlotManager.h"
-using namespace PlottingFramework;
+using namespace SciRooPlot;
 
 PlotManager plotManager;
 
@@ -493,7 +493,7 @@ plotManager.ExtractPlotsFromFile("/path/to/plotDefinitions.XML", "load", ".*" "f
 
 Using the App
 -------------
-The PlottingFramework ships with a builtin plotting application that enables you to quickly create plots from previously saved plot definitions.
+The SciRooPlot ships with a builtin plotting application that enables you to quickly create plots from previously saved plot definitions.
 To use the application, first source the `.plotrc` script in this repository.
 In order to find the necessary files for creating your plots, the app needs to be configured according to your needs.
 This configuration is done in the following way:
@@ -510,7 +510,7 @@ It is possible to add multiple configurations and switch between them via
 plot-config switch <configName>
 ```
 This can be useful for instance if you have multiple independent plotting programs which create different plots and need a separate set of input files.
-All settings are saved in `~/.plotconfig.xml` (any other file path and name can be specified by setting the environment variable `__PLOTTING_CONFIG_FILE`).
+All settings are saved in `~/.plotconfig.xml` (any other file path and name can be specified by setting the environment variable `__SCIROOPLOT_CONFIG_FILE`).
 
 Once this is set up, you can easily create plots via the command line from everywhere on your computer by typing
 ```

@@ -1,4 +1,4 @@
-// PlottingFramework
+// SciRooPlot
 //
 // Copyright (C) 2019-2022  Mario Krüger
 // Contact: mario.kruger@cern.ch
@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "PlottingFramework.h"
+#include "SciRooPlot.h"
 #include "PlotManager.h"
 #include "Plot.h"
 #include "Logging.h"
@@ -25,7 +25,7 @@
 
 #include "Helpers.h"
 
-using namespace PlottingFramework;
+using namespace SciRooPlot;
 namespace po = boost::program_options;
 
 int main(int argc, char* argv[])

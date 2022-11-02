@@ -1,4 +1,4 @@
-// PlottingFramework
+// SciRooPlot
 //
 // Copyright (C) 2019-2022  Mario Krüger
 // Contact: mario.kruger@cern.ch
@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef PlottingFramework_h
-#define PlottingFramework_h
+#ifndef SciRooPlot_h
+#define SciRooPlot_h
 
 #include <iostream>
 #include <map>
@@ -28,7 +28,7 @@
 #include <unordered_map>
 #include <optional>
 
-namespace PlottingFramework
+namespace SciRooPlot
 {
 
 // aliases
@@ -49,5 +49,5 @@ using std::vector;
 
 const string gNameGroupSeparator = "_IN_";
 
-} // end namespace PlottingFramework
-#endif /* PlottingFramework_h */
+} // end namespace SciRooPlot
+#endif /* SciRooPlot_h */
