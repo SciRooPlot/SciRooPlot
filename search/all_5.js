@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['plot_2ecxx_0',['Plot.cxx',['../Plot_8cxx.html',1,'']]],
-  ['plotmanager_2ecxx_1',['PlotManager.cxx',['../PlotManager_8cxx.html',1,'']]],
-  ['plotpainter_2ecxx_2',['PlotPainter.cxx',['../PlotPainter_8cxx.html',1,'']]]
+  ['error_0',['ERROR',['../Logging_8h.html#a242f2a57fcdd061a37d210fe161ee034',1,'Logging.h']]],
+  ['expand_5fpath_1',['expand_path',['../namespaceSciRooPlot.html#a4fcd2d1cbb3ff608ad11cbcc6a180ff3',1,'SciRooPlot']]],
+  ['extractplotsfromfile_2',['ExtractPlotsFromFile',['../classSciRooPlot_1_1PlotManager.html#a17c672e5d193ac2f2b0595b88af662d6',1,'SciRooPlot::PlotManager']]]
 ];

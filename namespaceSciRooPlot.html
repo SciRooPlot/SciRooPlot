@@ -84,17 +84,102 @@ $(document).ready(function(){initNavTree('namespaceSciRooPlot.html',''); initRes
 
 <div class="header">
   <div class="summary">
-<a href="#func-members">Functions</a>  </div>
+<a href="#nested-classes">Classes</a> &#124;
+<a href="#typedef-members">Typedefs</a> &#124;
+<a href="#enum-members">Enumerations</a> &#124;
+<a href="#func-members">Functions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle"><div class="title">SciRooPlot Namespace Reference</div></div>
 </div><!--header-->
 <div class="contents">
 <table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="nested-classes" name="nested-classes"></a>
+Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSciRooPlot_1_1is__tuple.html">is_tuple</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><b>is_tuple&lt; std::tuple&lt; T... &gt; &gt;</b></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structSciRooPlot_1_1is__vector.html">is_vector</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><b>is_vector&lt; std::vector&lt; T, A &gt; &gt;</b></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classSciRooPlot_1_1Plot.html">Plot</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Class for internal representation of a plot.  <a href="classSciRooPlot_1_1Plot.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classSciRooPlot_1_1PlotManager.html">PlotManager</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Central manager class.  <a href="classSciRooPlot_1_1PlotManager.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classSciRooPlot_1_1PlotPainter.html">PlotPainter</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Class that contains functionality to generate plots using the ROOT framework.  <a href="classSciRooPlot_1_1PlotPainter.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="typedef-members" name="typedef-members"></a>
+Typedefs</h2></td></tr>
+<tr class="memitem:a2b1d5d53feb66e6cbed94de67b225c9c"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a2b1d5d53feb66e6cbed94de67b225c9c">data_ptr_t</a> = variant&lt; TH1 *, TH2 *, TGraph *, TGraph2D *, TProfile *, TProfile2D *, TF2 *, TF1 * &gt;</td></tr>
+<tr class="separator:a2b1d5d53feb66e6cbed94de67b225c9c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="enum-members" name="enum-members"></a>
+Enumerations</h2></td></tr>
+<tr class="memitem:a78452bf072a3de85c88f5dd073071b80"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80">drawing_options_t</a> : uint8_t { <br />
+&#160;&#160;<a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a36bcc9c2b70ad62bf1c754fd45754e06">points</a> = 0
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a6317eb7baedb0256c8bd7fab5c795474">points_xerr</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a57466ac6c2af08889125737df8d4237e">points_endcaps</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a2dc76da09279882949ec715ed36b5811">points_line</a>
+, <br />
+&#160;&#160;<a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80afa63c8116ad69459390519a5bd34fb80">line</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af5c0c5a37f907d8cedd72ca914316f68">curve</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a7ca13757da78dbdd0d429b992038665f">band</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a870fae797299342939cde6347de11f01">band_smooth</a>
+, <br />
+&#160;&#160;<a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aec44e69f05a6407a72ce270cb2cd7067">hist</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a31ba5d1949fd7ad2c4a7eafe97738abd">hist_no_borders</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a901cb96154785d71be3f45b46051e247">fit</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a37c44c293fecf32339ebdc2440f24d3d">bar</a>
+, <br />
+&#160;&#160;<a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aff04185de9e40518eebacb31ae34b392">area</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a71b90a5be0ef4fee69bb10c1c540d530">area_curve</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a795775f6c2533c10ee966d7cd9aae536">area_line</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a5fc8ff9611c2d11ab72db9c29323a47e">boxes</a>
+, <br />
+&#160;&#160;<a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af45e6651d97e175ca60abee3a4701b60">boxes_only</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ac1afc903194729fbc34e2871a39540e4">stars</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ae1c2f85130b69337c70891d055925c3f">text</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a613d8a1269f2de3251e178741c7b3ecb">brackets</a>
+, <br />
+&#160;&#160;<a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a62835b6c5c5f1a9832f3bfa9dce04bea">hbar</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a9eafc1bcef5d431c9d2b3c1b8337d94a">hbar1</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ae8de3ca7a6ef52f0aaa23544f8c1c2ef">hbar2</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80abdfd3dfdc5e94edab16a9ec251e890ef">hbar3</a>
+, <br />
+&#160;&#160;<a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a173f73690cfae1eff26f17074875bd4c">hbar4</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a796f4ccd13c45ce14222072730da32a4">colz</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ad014d9f5b610c467f533d72d6f3b03b1">surf</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aef7216e46c98fa4bac4a4fa203aaadf0">cont</a>
+, <br />
+&#160;&#160;<a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aa8320a1732f26e521e6e60b3304bb335">candle1</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a68f3e69fa9d6402465b03d96d1ba8cbb">candle2</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ab288075358adbfb5bd81704b9f256494">candle3</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af42dd941c9fc7fc5296e8293ac3aad67">candle4</a>
+, <br />
+&#160;&#160;<a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a0893defa4dfdd7858a709ca8a5f7b9cb">candle5</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a0e3fc47c8c58096be69237c58431891e">candle6</a>
+, <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a6e7fc5a03c5796b7814015234d9fd96b">candle7</a>
+<br />
+ }</td></tr>
+<tr class="separator:a78452bf072a3de85c88f5dd073071b80"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="func-members" name="func-members"></a>
 Functions</h2></td></tr>
 <tr class="memitem:a4fcd2d1cbb3ff608ad11cbcc6a180ff3"><td class="memItemLeft" align="right" valign="top">string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a4fcd2d1cbb3ff608ad11cbcc6a180ff3">expand_path</a> (const string &amp;path)</td></tr>
 <tr class="separator:a4fcd2d1cbb3ff608ad11cbcc6a180ff3"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a8875359f2b0e7814c801ab1671bc62bc"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a8875359f2b0e7814c801ab1671bc62bc">file_exists</a> (const std::string &amp;name)</td></tr>
 <tr class="separator:a8875359f2b0e7814c801ab1671bc62bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a825c488ff4acedd2b1d3a43980986924"><td class="memTemplParams" colspan="2">template&lt;typename T , typename... Ts&gt; </td></tr>
+<tr class="memitem:a825c488ff4acedd2b1d3a43980986924"><td class="memTemplItemLeft" align="right" valign="top">const optional&lt; T &gt; &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a825c488ff4acedd2b1d3a43980986924">get_first</a> (const optional&lt; T &gt; &amp;property, const Ts &amp;... properties)</td></tr>
+<tr class="separator:a825c488ff4acedd2b1d3a43980986924"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1e6776201498216a091b09e4ec95d6a2"><td class="memTemplParams" colspan="2">template&lt;typename T , typename... Ts&gt; </td></tr>
+<tr class="memitem:a1e6776201498216a091b09e4ec95d6a2"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a1e6776201498216a091b09e4ec95d6a2">get_first_or</a> (const T &amp;fallback, const optional&lt; T &gt; &amp;property, const Ts &amp;... properties)</td></tr>
+<tr class="separator:a1e6776201498216a091b09e4ec95d6a2"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab58cfe7208ccc0f21ee42cef893a5b82"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
 <tr class="memitem:ab58cfe7208ccc0f21ee42cef893a5b82"><td class="memTemplItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#ab58cfe7208ccc0f21ee42cef893a5b82">is_1d</a> ()</td></tr>
 <tr class="separator:ab58cfe7208ccc0f21ee42cef893a5b82"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -129,12 +214,126 @@ Functions</h2></td></tr>
 <tr class="memitem:a51e2f98c06aed635271101d752f5977a"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
 <tr class="memitem:a51e2f98c06aed635271101d752f5977a"><td class="memTemplItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a51e2f98c06aed635271101d752f5977a">is_hist_2d</a> ()</td></tr>
 <tr class="separator:a51e2f98c06aed635271101d752f5977a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5079dd3c6763db2a09e4fb310bbe35e8"><td class="memItemLeft" align="right" valign="top">Plot&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a5079dd3c6763db2a09e4fb310bbe35e8">operator+</a> (const Plot &amp;templatePlot, const Plot &amp;plot)</td></tr>
+<tr class="memitem:a66f2d67cac7af3e6a9f6c7a9f183765f"><td class="memTemplParams" colspan="2">template&lt;typename T , typename... Ts&gt; </td></tr>
+<tr class="memitem:a66f2d67cac7af3e6a9f6c7a9f183765f"><td class="memTemplItemLeft" align="right" valign="top">constexpr bool&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a66f2d67cac7af3e6a9f6c7a9f183765f">is_one_of_v</a> ()</td></tr>
+<tr class="separator:a66f2d67cac7af3e6a9f6c7a9f183765f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5079dd3c6763db2a09e4fb310bbe35e8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classSciRooPlot_1_1Plot.html">Plot</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a5079dd3c6763db2a09e4fb310bbe35e8">operator+</a> (const <a class="el" href="classSciRooPlot_1_1Plot.html">Plot</a> &amp;templatePlot, const <a class="el" href="classSciRooPlot_1_1Plot.html">Plot</a> &amp;plot)</td></tr>
 <tr class="memdesc:a5079dd3c6763db2a09e4fb310bbe35e8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Friend function to get the combination of template and actual plot.  <a href="namespaceSciRooPlot.html#a5079dd3c6763db2a09e4fb310bbe35e8">More...</a><br /></td></tr>
 <tr class="separator:a5079dd3c6763db2a09e4fb310bbe35e8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a1cfef347d8393a2b6f936a02e88b060c"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a1cfef347d8393a2b6f936a02e88b060c"><td class="memTemplItemLeft" align="right" valign="top">optional&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a1cfef347d8393a2b6f936a02e88b060c">pick</a> (int32_t i, const optional&lt; vector&lt; T &gt; &gt; &amp;vec)</td></tr>
+<tr class="separator:a1cfef347d8393a2b6f936a02e88b060c"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d9c4f27204f8db7bba289dbefd3b88e"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a5d9c4f27204f8db7bba289dbefd3b88e"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a5d9c4f27204f8db7bba289dbefd3b88e">put_in_tree</a> (ptree &amp;tree, const optional&lt; T &gt; &amp;var, const string &amp;label)</td></tr>
+<tr class="separator:a5d9c4f27204f8db7bba289dbefd3b88e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0b1e0d818414614ae9499b9f79b16809"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a0b1e0d818414614ae9499b9f79b16809"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a0b1e0d818414614ae9499b9f79b16809">read_from_tree</a> (const ptree &amp;tree, optional&lt; T &gt; &amp;var, const string &amp;label)</td></tr>
+<tr class="separator:a0b1e0d818414614ae9499b9f79b16809"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa5fde3ca8f2dd5f8df6567e20a136b10"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
+<tr class="memitem:aa5fde3ca8f2dd5f8df6567e20a136b10"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#aa5fde3ca8f2dd5f8df6567e20a136b10">set_if</a> (const optional&lt; T &gt; &amp;origin, optional&lt; T &gt; &amp;target)</td></tr>
+<tr class="separator:aa5fde3ca8f2dd5f8df6567e20a136b10"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a28df53b1372d394c4c2228ca9e6d0245"><td class="memItemLeft" align="right" valign="top">vector&lt; string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a28df53b1372d394c4c2228ca9e6d0245">split_string</a> (const string &amp;argString, char delimiter, bool onlyFirst)</td></tr>
 <tr class="separator:a28df53b1372d394c4c2228ca9e6d0245"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0a213854b97ffa1cabddd77d924d1325"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a0a213854b97ffa1cabddd77d924d1325">str_contains</a> (const std::string &amp;str, const std::string &amp;substr, bool reverseSearch=false)</td></tr>
+<tr class="separator:a0a213854b97ffa1cabddd77d924d1325"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a74f83d8a672102f0d17dabf4fe43c7d8"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a74f83d8a672102f0d17dabf4fe43c7d8"><td class="memTemplItemLeft" align="right" valign="top">std::tuple&lt; Ts... &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a74f83d8a672102f0d17dabf4fe43c7d8">string_to_tuple</a> (string itemString)</td></tr>
+<tr class="separator:a74f83d8a672102f0d17dabf4fe43c7d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a29b8fc969db827eedec2a97ffc8a738d"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a29b8fc969db827eedec2a97ffc8a738d"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a29b8fc969db827eedec2a97ffc8a738d">string_to_type</a> (const string &amp;str)</td></tr>
+<tr class="separator:a29b8fc969db827eedec2a97ffc8a738d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a08e6d62c5f6ea5a8896e4fdfb00c089b"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a08e6d62c5f6ea5a8896e4fdfb00c089b"><td class="memTemplItemLeft" align="right" valign="top">std::vector&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a08e6d62c5f6ea5a8896e4fdfb00c089b">string_to_vector</a> (string itemString)</td></tr>
+<tr class="separator:a08e6d62c5f6ea5a8896e4fdfb00c089b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a902f0ff5fa3e7a600ceae1e8e77d3414"><td class="memTemplParams" colspan="2">template&lt;typename... Ts&gt; </td></tr>
+<tr class="memitem:a902f0ff5fa3e7a600ceae1e8e77d3414"><td class="memTemplItemLeft" align="right" valign="top">string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a902f0ff5fa3e7a600ceae1e8e77d3414">tuple_to_string</a> (const std::tuple&lt; Ts... &gt; &amp;items)</td></tr>
+<tr class="separator:a902f0ff5fa3e7a600ceae1e8e77d3414"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8cdcce8b0f11807207755460f0bab4da"><td class="memTemplParams" colspan="2">template&lt;typename T &gt; </td></tr>
+<tr class="memitem:a8cdcce8b0f11807207755460f0bab4da"><td class="memTemplItemLeft" align="right" valign="top">string&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a8cdcce8b0f11807207755460f0bab4da">vector_to_string</a> (vector&lt; T &gt; items)</td></tr>
+<tr class="separator:a8cdcce8b0f11807207755460f0bab4da"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:ae5d0bcaf81e6b61805df3e00b862275d"><td class="memItemLeft" align="right" valign="top">const map&lt; <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80">drawing_options_t</a>, string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#ae5d0bcaf81e6b61805df3e00b862275d">defaultDrawingOptions_Graph</a></td></tr>
+<tr class="separator:ae5d0bcaf81e6b61805df3e00b862275d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7796b780a8ae0d4c06b73483cd9494b8"><td class="memItemLeft" align="right" valign="top">const map&lt; <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80">drawing_options_t</a>, string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a7796b780a8ae0d4c06b73483cd9494b8">defaultDrawingOptions_Hist</a></td></tr>
+<tr class="separator:a7796b780a8ae0d4c06b73483cd9494b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6b3c1687ac4cf8c6eca1ca881d554481"><td class="memItemLeft" align="right" valign="top">const map&lt; <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80">drawing_options_t</a>, string &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a6b3c1687ac4cf8c6eca1ca881d554481">defaultDrawingOptions_Hist2d</a></td></tr>
+<tr class="separator:a6b3c1687ac4cf8c6eca1ca881d554481"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a601b3256ab4df5364354af81c86c817d"><td class="memItemLeft" align="right" valign="top">const string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceSciRooPlot.html#a601b3256ab4df5364354af81c86c817d">gNameGroupSeparator</a> = &quot;_IN_&quot;</td></tr>
+<tr class="separator:a601b3256ab4df5364354af81c86c817d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
+<h2 class="groupheader">Typedef Documentation</h2>
+<a id="a2b1d5d53feb66e6cbed94de67b225c9c" name="a2b1d5d53feb66e6cbed94de67b225c9c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a2b1d5d53feb66e6cbed94de67b225c9c">&#9670;&nbsp;</a></span>data_ptr_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">using <a class="el" href="namespaceSciRooPlot.html#a2b1d5d53feb66e6cbed94de67b225c9c">SciRooPlot::data_ptr_t</a> = typedef variant&lt;TH1*, TH2*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF2*, TF1*&gt;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="PlotPainter_8h_source.html#l00042">42</a> of file <a class="el" href="PlotPainter_8h_source.html">PlotPainter.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Enumeration Type Documentation</h2>
+<a id="a78452bf072a3de85c88f5dd073071b80" name="a78452bf072a3de85c88f5dd073071b80"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a78452bf072a3de85c88f5dd073071b80">&#9670;&nbsp;</a></span>drawing_options_t</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">enum <a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80">SciRooPlot::drawing_options_t</a> : uint8_t</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<table class="fieldtable">
+<tr><th colspan="2">Enumerator</th></tr><tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a36bcc9c2b70ad62bf1c754fd45754e06" name="a78452bf072a3de85c88f5dd073071b80a36bcc9c2b70ad62bf1c754fd45754e06"></a>points&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a6317eb7baedb0256c8bd7fab5c795474" name="a78452bf072a3de85c88f5dd073071b80a6317eb7baedb0256c8bd7fab5c795474"></a>points_xerr&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a57466ac6c2af08889125737df8d4237e" name="a78452bf072a3de85c88f5dd073071b80a57466ac6c2af08889125737df8d4237e"></a>points_endcaps&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a2dc76da09279882949ec715ed36b5811" name="a78452bf072a3de85c88f5dd073071b80a2dc76da09279882949ec715ed36b5811"></a>points_line&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80afa63c8116ad69459390519a5bd34fb80" name="a78452bf072a3de85c88f5dd073071b80afa63c8116ad69459390519a5bd34fb80"></a>line&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80af5c0c5a37f907d8cedd72ca914316f68" name="a78452bf072a3de85c88f5dd073071b80af5c0c5a37f907d8cedd72ca914316f68"></a>curve&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a7ca13757da78dbdd0d429b992038665f" name="a78452bf072a3de85c88f5dd073071b80a7ca13757da78dbdd0d429b992038665f"></a>band&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a870fae797299342939cde6347de11f01" name="a78452bf072a3de85c88f5dd073071b80a870fae797299342939cde6347de11f01"></a>band_smooth&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80aec44e69f05a6407a72ce270cb2cd7067" name="a78452bf072a3de85c88f5dd073071b80aec44e69f05a6407a72ce270cb2cd7067"></a>hist&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a31ba5d1949fd7ad2c4a7eafe97738abd" name="a78452bf072a3de85c88f5dd073071b80a31ba5d1949fd7ad2c4a7eafe97738abd"></a>hist_no_borders&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a901cb96154785d71be3f45b46051e247" name="a78452bf072a3de85c88f5dd073071b80a901cb96154785d71be3f45b46051e247"></a>fit&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a37c44c293fecf32339ebdc2440f24d3d" name="a78452bf072a3de85c88f5dd073071b80a37c44c293fecf32339ebdc2440f24d3d"></a>bar&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80aff04185de9e40518eebacb31ae34b392" name="a78452bf072a3de85c88f5dd073071b80aff04185de9e40518eebacb31ae34b392"></a>area&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a71b90a5be0ef4fee69bb10c1c540d530" name="a78452bf072a3de85c88f5dd073071b80a71b90a5be0ef4fee69bb10c1c540d530"></a>area_curve&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a795775f6c2533c10ee966d7cd9aae536" name="a78452bf072a3de85c88f5dd073071b80a795775f6c2533c10ee966d7cd9aae536"></a>area_line&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a5fc8ff9611c2d11ab72db9c29323a47e" name="a78452bf072a3de85c88f5dd073071b80a5fc8ff9611c2d11ab72db9c29323a47e"></a>boxes&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80af45e6651d97e175ca60abee3a4701b60" name="a78452bf072a3de85c88f5dd073071b80af45e6651d97e175ca60abee3a4701b60"></a>boxes_only&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80ac1afc903194729fbc34e2871a39540e4" name="a78452bf072a3de85c88f5dd073071b80ac1afc903194729fbc34e2871a39540e4"></a>stars&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80ae1c2f85130b69337c70891d055925c3f" name="a78452bf072a3de85c88f5dd073071b80ae1c2f85130b69337c70891d055925c3f"></a>text&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a613d8a1269f2de3251e178741c7b3ecb" name="a78452bf072a3de85c88f5dd073071b80a613d8a1269f2de3251e178741c7b3ecb"></a>brackets&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a62835b6c5c5f1a9832f3bfa9dce04bea" name="a78452bf072a3de85c88f5dd073071b80a62835b6c5c5f1a9832f3bfa9dce04bea"></a>hbar&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a9eafc1bcef5d431c9d2b3c1b8337d94a" name="a78452bf072a3de85c88f5dd073071b80a9eafc1bcef5d431c9d2b3c1b8337d94a"></a>hbar1&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80ae8de3ca7a6ef52f0aaa23544f8c1c2ef" name="a78452bf072a3de85c88f5dd073071b80ae8de3ca7a6ef52f0aaa23544f8c1c2ef"></a>hbar2&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80abdfd3dfdc5e94edab16a9ec251e890ef" name="a78452bf072a3de85c88f5dd073071b80abdfd3dfdc5e94edab16a9ec251e890ef"></a>hbar3&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a173f73690cfae1eff26f17074875bd4c" name="a78452bf072a3de85c88f5dd073071b80a173f73690cfae1eff26f17074875bd4c"></a>hbar4&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a796f4ccd13c45ce14222072730da32a4" name="a78452bf072a3de85c88f5dd073071b80a796f4ccd13c45ce14222072730da32a4"></a>colz&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80ad014d9f5b610c467f533d72d6f3b03b1" name="a78452bf072a3de85c88f5dd073071b80ad014d9f5b610c467f533d72d6f3b03b1"></a>surf&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80aef7216e46c98fa4bac4a4fa203aaadf0" name="a78452bf072a3de85c88f5dd073071b80aef7216e46c98fa4bac4a4fa203aaadf0"></a>cont&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80aa8320a1732f26e521e6e60b3304bb335" name="a78452bf072a3de85c88f5dd073071b80aa8320a1732f26e521e6e60b3304bb335"></a>candle1&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a68f3e69fa9d6402465b03d96d1ba8cbb" name="a78452bf072a3de85c88f5dd073071b80a68f3e69fa9d6402465b03d96d1ba8cbb"></a>candle2&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80ab288075358adbfb5bd81704b9f256494" name="a78452bf072a3de85c88f5dd073071b80ab288075358adbfb5bd81704b9f256494"></a>candle3&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80af42dd941c9fc7fc5296e8293ac3aad67" name="a78452bf072a3de85c88f5dd073071b80af42dd941c9fc7fc5296e8293ac3aad67"></a>candle4&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a0893defa4dfdd7858a709ca8a5f7b9cb" name="a78452bf072a3de85c88f5dd073071b80a0893defa4dfdd7858a709ca8a5f7b9cb"></a>candle5&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a0e3fc47c8c58096be69237c58431891e" name="a78452bf072a3de85c88f5dd073071b80a0e3fc47c8c58096be69237c58431891e"></a>candle6&#160;</td><td class="fielddoc"></td></tr>
+<tr><td class="fieldname"><a id="a78452bf072a3de85c88f5dd073071b80a6e7fc5a03c5796b7814015234d9fd96b" name="a78452bf072a3de85c88f5dd073071b80a6e7fc5a03c5796b7814015234d9fd96b"></a>candle7&#160;</td><td class="fielddoc"></td></tr>
+</table>
+
+<p class="definition">Definition at line <a class="el" href="Plot_8h_source.html#l00033">33</a> of file <a class="el" href="Plot_8h_source.html">Plot.h</a>.</p>
+
+</div>
+</div>
 <h2 class="groupheader">Function Documentation</h2>
 <a id="a4fcd2d1cbb3ff608ad11cbcc6a180ff3" name="a4fcd2d1cbb3ff608ad11cbcc6a180ff3"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a4fcd2d1cbb3ff608ad11cbcc6a180ff3">&#9670;&nbsp;</a></span>expand_path()</h2>
@@ -173,6 +372,76 @@ Functions</h2></td></tr>
 </div><div class="memdoc">
 
 <p class="definition">Definition at line <a class="el" href="Helpers_8cxx_source.html#l00052">52</a> of file <a class="el" href="Helpers_8cxx_source.html">Helpers.cxx</a>.</p>
+
+</div>
+</div>
+<a id="a825c488ff4acedd2b1d3a43980986924" name="a825c488ff4acedd2b1d3a43980986924"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a825c488ff4acedd2b1d3a43980986924">&#9670;&nbsp;</a></span>get_first()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T , typename... Ts&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">const optional&lt; T &gt; &amp; SciRooPlot::get_first </td>
+          <td>(</td>
+          <td class="paramtype">const optional&lt; T &gt; &amp;&#160;</td>
+          <td class="paramname"><em>property</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const Ts &amp;...&#160;</td>
+          <td class="paramname"><em>properties</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="Helpers_8h_source.html#l00183">183</a> of file <a class="el" href="Helpers_8h_source.html">Helpers.h</a>.</p>
+
+</div>
+</div>
+<a id="a1e6776201498216a091b09e4ec95d6a2" name="a1e6776201498216a091b09e4ec95d6a2"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1e6776201498216a091b09e4ec95d6a2">&#9670;&nbsp;</a></span>get_first_or()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T , typename... Ts&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">T SciRooPlot::get_first_or </td>
+          <td>(</td>
+          <td class="paramtype">const T &amp;&#160;</td>
+          <td class="paramname"><em>fallback</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const optional&lt; T &gt; &amp;&#160;</td>
+          <td class="paramname"><em>property</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const Ts &amp;...&#160;</td>
+          <td class="paramname"><em>properties</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="Helpers_8h_source.html#l00193">193</a> of file <a class="el" href="Helpers_8h_source.html">Helpers.h</a>.</p>
 
 </div>
 </div>
@@ -497,6 +766,35 @@ template&lt;typename T &gt; </div>
 
 </div>
 </div>
+<a id="a66f2d67cac7af3e6a9f6c7a9f183765f" name="a66f2d67cac7af3e6a9f6c7a9f183765f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a66f2d67cac7af3e6a9f6c7a9f183765f">&#9670;&nbsp;</a></span>is_one_of_v()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T , typename... Ts&gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">constexpr bool SciRooPlot::is_one_of_v </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">constexpr</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="Helpers_8h_source.html#l00203">203</a> of file <a class="el" href="Helpers_8h_source.html">Helpers.h</a>.</p>
+
+</div>
+</div>
 <a id="a5079dd3c6763db2a09e4fb310bbe35e8" name="a5079dd3c6763db2a09e4fb310bbe35e8"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#a5079dd3c6763db2a09e4fb310bbe35e8">&#9670;&nbsp;</a></span>operator+()</h2>
 
@@ -504,15 +802,15 @@ template&lt;typename T &gt; </div>
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">Plot SciRooPlot::operator+ </td>
+          <td class="memname"><a class="el" href="classSciRooPlot_1_1Plot.html">Plot</a> SciRooPlot::operator+ </td>
           <td>(</td>
-          <td class="paramtype">const Plot &amp;&#160;</td>
+          <td class="paramtype">const <a class="el" href="classSciRooPlot_1_1Plot.html">Plot</a> &amp;&#160;</td>
           <td class="paramname"><em>templatePlot</em>, </td>
         </tr>
         <tr>
           <td class="paramkey"></td>
           <td></td>
-          <td class="paramtype">const Plot &amp;&#160;</td>
+          <td class="paramtype">const <a class="el" href="classSciRooPlot_1_1Plot.html">Plot</a> &amp;&#160;</td>
           <td class="paramname"><em>plot</em>&#160;</td>
         </tr>
         <tr>
@@ -526,6 +824,146 @@ template&lt;typename T &gt; </div>
 <p>Friend function to get the combination of template and actual plot. </p>
 
 <p class="definition">Definition at line <a class="el" href="Plot_8cxx_source.html#l00290">290</a> of file <a class="el" href="Plot_8cxx_source.html">Plot.cxx</a>.</p>
+
+</div>
+</div>
+<a id="a1cfef347d8393a2b6f936a02e88b060c" name="a1cfef347d8393a2b6f936a02e88b060c"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a1cfef347d8393a2b6f936a02e88b060c">&#9670;&nbsp;</a></span>pick()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">optional&lt; T &gt; SciRooPlot::pick </td>
+          <td>(</td>
+          <td class="paramtype">int32_t&#160;</td>
+          <td class="paramname"><em>i</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const optional&lt; vector&lt; T &gt; &gt; &amp;&#160;</td>
+          <td class="paramname"><em>vec</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="Helpers_8h_source.html#l00176">176</a> of file <a class="el" href="Helpers_8h_source.html">Helpers.h</a>.</p>
+
+</div>
+</div>
+<a id="a5d9c4f27204f8db7bba289dbefd3b88e" name="a5d9c4f27204f8db7bba289dbefd3b88e"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d9c4f27204f8db7bba289dbefd3b88e">&#9670;&nbsp;</a></span>put_in_tree()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">void SciRooPlot::put_in_tree </td>
+          <td>(</td>
+          <td class="paramtype">ptree &amp;&#160;</td>
+          <td class="paramname"><em>tree</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const optional&lt; T &gt; &amp;&#160;</td>
+          <td class="paramname"><em>var</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const string &amp;&#160;</td>
+          <td class="paramname"><em>label</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="Helpers_8h_source.html#l00146">146</a> of file <a class="el" href="Helpers_8h_source.html">Helpers.h</a>.</p>
+
+</div>
+</div>
+<a id="a0b1e0d818414614ae9499b9f79b16809" name="a0b1e0d818414614ae9499b9f79b16809"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0b1e0d818414614ae9499b9f79b16809">&#9670;&nbsp;</a></span>read_from_tree()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">void SciRooPlot::read_from_tree </td>
+          <td>(</td>
+          <td class="paramtype">const ptree &amp;&#160;</td>
+          <td class="paramname"><em>tree</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">optional&lt; T &gt; &amp;&#160;</td>
+          <td class="paramname"><em>var</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const string &amp;&#160;</td>
+          <td class="paramname"><em>label</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="Helpers_8h_source.html#l00160">160</a> of file <a class="el" href="Helpers_8h_source.html">Helpers.h</a>.</p>
+
+</div>
+</div>
+<a id="aa5fde3ca8f2dd5f8df6567e20a136b10" name="aa5fde3ca8f2dd5f8df6567e20a136b10"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aa5fde3ca8f2dd5f8df6567e20a136b10">&#9670;&nbsp;</a></span>set_if()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">void SciRooPlot::set_if </td>
+          <td>(</td>
+          <td class="paramtype">const optional&lt; T &gt; &amp;&#160;</td>
+          <td class="paramname"><em>origin</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">optional&lt; T &gt; &amp;&#160;</td>
+          <td class="paramname"><em>target</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="Helpers_8h_source.html#l00040">40</a> of file <a class="el" href="Helpers_8h_source.html">Helpers.h</a>.</p>
 
 </div>
 </div>
@@ -565,13 +1003,318 @@ template&lt;typename T &gt; </div>
 
 </div>
 </div>
+<a id="a0a213854b97ffa1cabddd77d924d1325" name="a0a213854b97ffa1cabddd77d924d1325"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0a213854b97ffa1cabddd77d924d1325">&#9670;&nbsp;</a></span>str_contains()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool SciRooPlot::str_contains </td>
+          <td>(</td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>str</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const std::string &amp;&#160;</td>
+          <td class="paramname"><em>substr</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>reverseSearch</em> = <code>false</code>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="Helpers_8h_source.html#l00030">30</a> of file <a class="el" href="Helpers_8h_source.html">Helpers.h</a>.</p>
+
+</div>
+</div>
+<a id="a74f83d8a672102f0d17dabf4fe43c7d8" name="a74f83d8a672102f0d17dabf4fe43c7d8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a74f83d8a672102f0d17dabf4fe43c7d8">&#9670;&nbsp;</a></span>string_to_tuple()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename... Ts&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">std::tuple&lt; Ts... &gt; SciRooPlot::string_to_tuple </td>
+          <td>(</td>
+          <td class="paramtype">string&#160;</td>
+          <td class="paramname"><em>itemString</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="Helpers_8h_source.html#l00099">99</a> of file <a class="el" href="Helpers_8h_source.html">Helpers.h</a>.</p>
+
+</div>
+</div>
+<a id="a29b8fc969db827eedec2a97ffc8a738d" name="a29b8fc969db827eedec2a97ffc8a738d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a29b8fc969db827eedec2a97ffc8a738d">&#9670;&nbsp;</a></span>string_to_type()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">T SciRooPlot::string_to_type </td>
+          <td>(</td>
+          <td class="paramtype">const string &amp;&#160;</td>
+          <td class="paramname"><em>str</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="Helpers_8h_source.html#l00087">87</a> of file <a class="el" href="Helpers_8h_source.html">Helpers.h</a>.</p>
+
+</div>
+</div>
+<a id="a08e6d62c5f6ea5a8896e4fdfb00c089b" name="a08e6d62c5f6ea5a8896e4fdfb00c089b"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a08e6d62c5f6ea5a8896e4fdfb00c089b">&#9670;&nbsp;</a></span>string_to_vector()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">std::vector&lt; T &gt; SciRooPlot::string_to_vector </td>
+          <td>(</td>
+          <td class="paramtype">string&#160;</td>
+          <td class="paramname"><em>itemString</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="Helpers_8h_source.html#l00120">120</a> of file <a class="el" href="Helpers_8h_source.html">Helpers.h</a>.</p>
+
+</div>
+</div>
+<a id="a902f0ff5fa3e7a600ceae1e8e77d3414" name="a902f0ff5fa3e7a600ceae1e8e77d3414"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a902f0ff5fa3e7a600ceae1e8e77d3414">&#9670;&nbsp;</a></span>tuple_to_string()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename... Ts&gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">string SciRooPlot::tuple_to_string </td>
+          <td>(</td>
+          <td class="paramtype">const std::tuple&lt; Ts... &gt; &amp;&#160;</td>
+          <td class="paramname"><em>items</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="Helpers_8h_source.html#l00062">62</a> of file <a class="el" href="Helpers_8h_source.html">Helpers.h</a>.</p>
+
+</div>
+</div>
+<a id="a8cdcce8b0f11807207755460f0bab4da" name="a8cdcce8b0f11807207755460f0bab4da"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a8cdcce8b0f11807207755460f0bab4da">&#9670;&nbsp;</a></span>vector_to_string()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename T &gt; </div>
+      <table class="memname">
+        <tr>
+          <td class="memname">string SciRooPlot::vector_to_string </td>
+          <td>(</td>
+          <td class="paramtype">vector&lt; T &gt;&#160;</td>
+          <td class="paramname"><em>items</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="Helpers_8h_source.html#l00071">71</a> of file <a class="el" href="Helpers_8h_source.html">Helpers.h</a>.</p>
+
+</div>
+</div>
+<h2 class="groupheader">Variable Documentation</h2>
+<a id="ae5d0bcaf81e6b61805df3e00b862275d" name="ae5d0bcaf81e6b61805df3e00b862275d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ae5d0bcaf81e6b61805df3e00b862275d">&#9670;&nbsp;</a></span>defaultDrawingOptions_Graph</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const map&lt;<a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80">drawing_options_t</a>, string&gt; SciRooPlot::defaultDrawingOptions_Graph</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">{</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a36bcc9c2b70ad62bf1c754fd45754e06">points</a>, <span class="stringliteral">&quot;P Z&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a2dc76da09279882949ec715ed36b5811">points_line</a>, <span class="stringliteral">&quot;P Z L&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a57466ac6c2af08889125737df8d4237e">points_endcaps</a>, <span class="stringliteral">&quot;P&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af5c0c5a37f907d8cedd72ca914316f68">curve</a>, <span class="stringliteral">&quot;X C&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80afa63c8116ad69459390519a5bd34fb80">line</a>, <span class="stringliteral">&quot;X L&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a37c44c293fecf32339ebdc2440f24d3d">bar</a>, <span class="stringliteral">&quot;X B&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a5fc8ff9611c2d11ab72db9c29323a47e">boxes</a>, <span class="stringliteral">&quot;P2&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a7ca13757da78dbdd0d429b992038665f">band</a>, <span class="stringliteral">&quot;3&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a870fae797299342939cde6347de11f01">band_smooth</a>, <span class="stringliteral">&quot;4&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aff04185de9e40518eebacb31ae34b392">area</a>, <span class="stringliteral">&quot;X CF&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a795775f6c2533c10ee966d7cd9aae536">area_line</a>, <span class="stringliteral">&quot;X LC&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af45e6651d97e175ca60abee3a4701b60">boxes_only</a>, <span class="stringliteral">&quot;2&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a613d8a1269f2de3251e178741c7b3ecb">brackets</a>, <span class="stringliteral">&quot;[]&quot;</span>},</div>
+<div class="line">}</div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a2dc76da09279882949ec715ed36b5811"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a2dc76da09279882949ec715ed36b5811">SciRooPlot::points_line</a></div><div class="ttdeci">@ points_line</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00038">Plot.h:38</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a36bcc9c2b70ad62bf1c754fd45754e06"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a36bcc9c2b70ad62bf1c754fd45754e06">SciRooPlot::points</a></div><div class="ttdeci">@ points</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00035">Plot.h:35</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a37c44c293fecf32339ebdc2440f24d3d"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a37c44c293fecf32339ebdc2440f24d3d">SciRooPlot::bar</a></div><div class="ttdeci">@ bar</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00046">Plot.h:46</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a57466ac6c2af08889125737df8d4237e"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a57466ac6c2af08889125737df8d4237e">SciRooPlot::points_endcaps</a></div><div class="ttdeci">@ points_endcaps</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00037">Plot.h:37</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a5fc8ff9611c2d11ab72db9c29323a47e"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a5fc8ff9611c2d11ab72db9c29323a47e">SciRooPlot::boxes</a></div><div class="ttdeci">@ boxes</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00050">Plot.h:50</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a613d8a1269f2de3251e178741c7b3ecb"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a613d8a1269f2de3251e178741c7b3ecb">SciRooPlot::brackets</a></div><div class="ttdeci">@ brackets</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00054">Plot.h:54</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a795775f6c2533c10ee966d7cd9aae536"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a795775f6c2533c10ee966d7cd9aae536">SciRooPlot::area_line</a></div><div class="ttdeci">@ area_line</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00049">Plot.h:49</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a7ca13757da78dbdd0d429b992038665f"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a7ca13757da78dbdd0d429b992038665f">SciRooPlot::band</a></div><div class="ttdeci">@ band</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00041">Plot.h:41</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a870fae797299342939cde6347de11f01"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a870fae797299342939cde6347de11f01">SciRooPlot::band_smooth</a></div><div class="ttdeci">@ band_smooth</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00042">Plot.h:42</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80af45e6651d97e175ca60abee3a4701b60"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af45e6651d97e175ca60abee3a4701b60">SciRooPlot::boxes_only</a></div><div class="ttdeci">@ boxes_only</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00051">Plot.h:51</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80af5c0c5a37f907d8cedd72ca914316f68"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af5c0c5a37f907d8cedd72ca914316f68">SciRooPlot::curve</a></div><div class="ttdeci">@ curve</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00040">Plot.h:40</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80afa63c8116ad69459390519a5bd34fb80"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80afa63c8116ad69459390519a5bd34fb80">SciRooPlot::line</a></div><div class="ttdeci">@ line</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00039">Plot.h:39</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80aff04185de9e40518eebacb31ae34b392"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aff04185de9e40518eebacb31ae34b392">SciRooPlot::area</a></div><div class="ttdeci">@ area</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00047">Plot.h:47</a></div></div>
+</div><!-- fragment -->
+<p class="definition">Definition at line <a class="el" href="PlotPainter_8h_source.html#l00083">83</a> of file <a class="el" href="PlotPainter_8h_source.html">PlotPainter.h</a>.</p>
+
+</div>
+</div>
+<a id="a7796b780a8ae0d4c06b73483cd9494b8" name="a7796b780a8ae0d4c06b73483cd9494b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a7796b780a8ae0d4c06b73483cd9494b8">&#9670;&nbsp;</a></span>defaultDrawingOptions_Hist</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const map&lt;<a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80">drawing_options_t</a>, string&gt; SciRooPlot::defaultDrawingOptions_Hist</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">{</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a36bcc9c2b70ad62bf1c754fd45754e06">points</a>, <span class="stringliteral">&quot;X0 EP&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a6317eb7baedb0256c8bd7fab5c795474">points_xerr</a>, <span class="stringliteral">&quot;EP&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a57466ac6c2af08889125737df8d4237e">points_endcaps</a>, <span class="stringliteral">&quot;E1&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af5c0c5a37f907d8cedd72ca914316f68">curve</a>, <span class="stringliteral">&quot;HIST C&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80afa63c8116ad69459390519a5bd34fb80">line</a>, <span class="stringliteral">&quot;HIST L&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a37c44c293fecf32339ebdc2440f24d3d">bar</a>, <span class="stringliteral">&quot;HIST B&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a62835b6c5c5f1a9832f3bfa9dce04bea">hbar</a>, <span class="stringliteral">&quot;HIST HBAR&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a5fc8ff9611c2d11ab72db9c29323a47e">boxes</a>, <span class="stringliteral">&quot;E2&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a7ca13757da78dbdd0d429b992038665f">band</a>, <span class="stringliteral">&quot;E5&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a870fae797299342939cde6347de11f01">band_smooth</a>, <span class="stringliteral">&quot;E6&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aff04185de9e40518eebacb31ae34b392">area</a>, <span class="stringliteral">&quot;HIST F&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a71b90a5be0ef4fee69bb10c1c540d530">area_curve</a>, <span class="stringliteral">&quot;HIST CF&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a795775f6c2533c10ee966d7cd9aae536">area_line</a>, <span class="stringliteral">&quot;HIST LF&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aec44e69f05a6407a72ce270cb2cd7067">hist</a>, <span class="stringliteral">&quot;HIST&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a31ba5d1949fd7ad2c4a7eafe97738abd">hist_no_borders</a>, <span class="stringliteral">&quot;HIST ][&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ac1afc903194729fbc34e2871a39540e4">stars</a>, <span class="stringliteral">&quot;*H&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ae1c2f85130b69337c70891d055925c3f">text</a>, <span class="stringliteral">&quot;TEXT&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a62835b6c5c5f1a9832f3bfa9dce04bea">hbar</a>, <span class="stringliteral">&quot;HBAR ][&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a9eafc1bcef5d431c9d2b3c1b8337d94a">hbar1</a>, <span class="stringliteral">&quot;HBAR1&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ae8de3ca7a6ef52f0aaa23544f8c1c2ef">hbar2</a>, <span class="stringliteral">&quot;HBAR2&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80abdfd3dfdc5e94edab16a9ec251e890ef">hbar3</a>, <span class="stringliteral">&quot;HBAR3&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a173f73690cfae1eff26f17074875bd4c">hbar4</a>, <span class="stringliteral">&quot;HBAR4&quot;</span>},</div>
+<div class="line">}</div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a173f73690cfae1eff26f17074875bd4c"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a173f73690cfae1eff26f17074875bd4c">SciRooPlot::hbar4</a></div><div class="ttdeci">@ hbar4</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00059">Plot.h:59</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a31ba5d1949fd7ad2c4a7eafe97738abd"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a31ba5d1949fd7ad2c4a7eafe97738abd">SciRooPlot::hist_no_borders</a></div><div class="ttdeci">@ hist_no_borders</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00044">Plot.h:44</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a62835b6c5c5f1a9832f3bfa9dce04bea"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a62835b6c5c5f1a9832f3bfa9dce04bea">SciRooPlot::hbar</a></div><div class="ttdeci">@ hbar</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00055">Plot.h:55</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a6317eb7baedb0256c8bd7fab5c795474"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a6317eb7baedb0256c8bd7fab5c795474">SciRooPlot::points_xerr</a></div><div class="ttdeci">@ points_xerr</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00036">Plot.h:36</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a71b90a5be0ef4fee69bb10c1c540d530"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a71b90a5be0ef4fee69bb10c1c540d530">SciRooPlot::area_curve</a></div><div class="ttdeci">@ area_curve</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00048">Plot.h:48</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a9eafc1bcef5d431c9d2b3c1b8337d94a"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a9eafc1bcef5d431c9d2b3c1b8337d94a">SciRooPlot::hbar1</a></div><div class="ttdeci">@ hbar1</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00056">Plot.h:56</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80abdfd3dfdc5e94edab16a9ec251e890ef"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80abdfd3dfdc5e94edab16a9ec251e890ef">SciRooPlot::hbar3</a></div><div class="ttdeci">@ hbar3</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00058">Plot.h:58</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80ac1afc903194729fbc34e2871a39540e4"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ac1afc903194729fbc34e2871a39540e4">SciRooPlot::stars</a></div><div class="ttdeci">@ stars</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00052">Plot.h:52</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80ae1c2f85130b69337c70891d055925c3f"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ae1c2f85130b69337c70891d055925c3f">SciRooPlot::text</a></div><div class="ttdeci">@ text</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00053">Plot.h:53</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80ae8de3ca7a6ef52f0aaa23544f8c1c2ef"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ae8de3ca7a6ef52f0aaa23544f8c1c2ef">SciRooPlot::hbar2</a></div><div class="ttdeci">@ hbar2</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00057">Plot.h:57</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80aec44e69f05a6407a72ce270cb2cd7067"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aec44e69f05a6407a72ce270cb2cd7067">SciRooPlot::hist</a></div><div class="ttdeci">@ hist</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00043">Plot.h:43</a></div></div>
+</div><!-- fragment -->
+<p class="definition">Definition at line <a class="el" href="PlotPainter_8h_source.html#l00058">58</a> of file <a class="el" href="PlotPainter_8h_source.html">PlotPainter.h</a>.</p>
+
+</div>
+</div>
+<a id="a6b3c1687ac4cf8c6eca1ca881d554481" name="a6b3c1687ac4cf8c6eca1ca881d554481"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6b3c1687ac4cf8c6eca1ca881d554481">&#9670;&nbsp;</a></span>defaultDrawingOptions_Hist2d</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const map&lt;<a class="el" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80">drawing_options_t</a>, string&gt; SciRooPlot::defaultDrawingOptions_Hist2d</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<b>Initial value:</b><div class="fragment"><div class="line">{</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a796f4ccd13c45ce14222072730da32a4">colz</a>, <span class="stringliteral">&quot;COLZ&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ad014d9f5b610c467f533d72d6f3b03b1">surf</a>, <span class="stringliteral">&quot;SURF&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aef7216e46c98fa4bac4a4fa203aaadf0">cont</a>, <span class="stringliteral">&quot;CONT3&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ae1c2f85130b69337c70891d055925c3f">text</a>, <span class="stringliteral">&quot;TEXT&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aa8320a1732f26e521e6e60b3304bb335">candle1</a>, <span class="stringliteral">&quot;CANDLEX1&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a68f3e69fa9d6402465b03d96d1ba8cbb">candle2</a>, <span class="stringliteral">&quot;CANDLEX2&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ab288075358adbfb5bd81704b9f256494">candle3</a>, <span class="stringliteral">&quot;CANDLEX3&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af42dd941c9fc7fc5296e8293ac3aad67">candle4</a>, <span class="stringliteral">&quot;CANDLEX4&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a0893defa4dfdd7858a709ca8a5f7b9cb">candle5</a>, <span class="stringliteral">&quot;CANDLEX5&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a0e3fc47c8c58096be69237c58431891e">candle6</a>, <span class="stringliteral">&quot;CANDLEX6&quot;</span>},</div>
+<div class="line">  {<a class="code hl_enumvalue" href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a6e7fc5a03c5796b7814015234d9fd96b">candle7</a>, <span class="stringliteral">&quot;CANDLEX(111101)&quot;</span>}, </div>
+<div class="line">}</div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a0893defa4dfdd7858a709ca8a5f7b9cb"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a0893defa4dfdd7858a709ca8a5f7b9cb">SciRooPlot::candle5</a></div><div class="ttdeci">@ candle5</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00068">Plot.h:68</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a0e3fc47c8c58096be69237c58431891e"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a0e3fc47c8c58096be69237c58431891e">SciRooPlot::candle6</a></div><div class="ttdeci">@ candle6</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00069">Plot.h:69</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a68f3e69fa9d6402465b03d96d1ba8cbb"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a68f3e69fa9d6402465b03d96d1ba8cbb">SciRooPlot::candle2</a></div><div class="ttdeci">@ candle2</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00065">Plot.h:65</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a6e7fc5a03c5796b7814015234d9fd96b"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a6e7fc5a03c5796b7814015234d9fd96b">SciRooPlot::candle7</a></div><div class="ttdeci">@ candle7</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00070">Plot.h:70</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80a796f4ccd13c45ce14222072730da32a4"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80a796f4ccd13c45ce14222072730da32a4">SciRooPlot::colz</a></div><div class="ttdeci">@ colz</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00061">Plot.h:61</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80aa8320a1732f26e521e6e60b3304bb335"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aa8320a1732f26e521e6e60b3304bb335">SciRooPlot::candle1</a></div><div class="ttdeci">@ candle1</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00064">Plot.h:64</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80ab288075358adbfb5bd81704b9f256494"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ab288075358adbfb5bd81704b9f256494">SciRooPlot::candle3</a></div><div class="ttdeci">@ candle3</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00066">Plot.h:66</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80ad014d9f5b610c467f533d72d6f3b03b1"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ad014d9f5b610c467f533d72d6f3b03b1">SciRooPlot::surf</a></div><div class="ttdeci">@ surf</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00062">Plot.h:62</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80aef7216e46c98fa4bac4a4fa203aaadf0"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aef7216e46c98fa4bac4a4fa203aaadf0">SciRooPlot::cont</a></div><div class="ttdeci">@ cont</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00063">Plot.h:63</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a78452bf072a3de85c88f5dd073071b80af42dd941c9fc7fc5296e8293ac3aad67"><div class="ttname"><a href="namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af42dd941c9fc7fc5296e8293ac3aad67">SciRooPlot::candle4</a></div><div class="ttdeci">@ candle4</div><div class="ttdef"><b>Definition:</b> <a href="Plot_8h_source.html#l00067">Plot.h:67</a></div></div>
+</div><!-- fragment -->
+<p class="definition">Definition at line <a class="el" href="PlotPainter_8h_source.html#l00044">44</a> of file <a class="el" href="PlotPainter_8h_source.html">PlotPainter.h</a>.</p>
+
+</div>
+</div>
+<a id="a601b3256ab4df5364354af81c86c817d" name="a601b3256ab4df5364354af81c86c817d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a601b3256ab4df5364354af81c86c817d">&#9670;&nbsp;</a></span>gNameGroupSeparator</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">const string SciRooPlot::gNameGroupSeparator = &quot;_IN_&quot;</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p class="definition">Definition at line <a class="el" href="SciRooPlot_8h_source.html#l00050">50</a> of file <a class="el" href="SciRooPlot_8h_source.html">SciRooPlot.h</a>.</p>
+
+</div>
+</div>
 </div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="namespaceSciRooPlot.html">SciRooPlot</a></li>
-    <li class="footer">Generated on Wed Nov 2 2022 19:39:20 for SciRooPlot by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.4 </li>
+    <li class="footer">Generated on Wed Nov 2 2022 19:52:31 for SciRooPlot by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.4 </li>
   </ul>
 </div>
 </body>
