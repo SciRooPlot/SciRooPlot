@@ -17,7 +17,7 @@
 
 #include "Plot.h"
 #include "Helpers.h"
-#include "Logging.h"
+ #include "Logging.h"
 
 namespace SciRooPlot
 {
