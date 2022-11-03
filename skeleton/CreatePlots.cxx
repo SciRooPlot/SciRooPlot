@@ -91,8 +91,7 @@ int main(int argc, char* argv[])
   return 0;
 }
 
-void DefinePlotTemplates(PlotManager& plotManager)
-{
+void DefinePlotTemplates(PlotManager& plotManager)  {
   // get default layout settings and apply specific modifications on top (if needed)
   // the definition of these default plots can be found in PlotManager.cxx
   {
@@ -117,6 +116,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
     Plot plotTemplate("myOwnLayout", "PLOT_TEMPLATES");
     plotTemplate.SetDimensions(710, 710, true);
     plotTemplate.SetTransparent();
+
     plotTemplate[0].SetFrameFill(10, 1001);
     plotTemplate[0].SetDefaultMarkerColors({kRed, kBlue, kOrange});
     plotTemplate[0].SetDefaultTextFont(43);
@@ -132,7 +132,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
     plotTemplate[1].SetFrameBorderColor(kRed);
     plotTemplate[1].SetFrameBorderWidth(5.);
     plotTemplate[1]['X'].SetColor(kBlue);
-    plotTemplate[1]['Y'].SetColor(kBlue);
+      plotTemplate[1]['Y'].SetColor(kBlue);
     plotManager.AddPlotTemplate(plotTemplate);
   } // -----------------------------------------------------------------------
 }
