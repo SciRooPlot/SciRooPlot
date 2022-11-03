@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
     // plot[1].AddData("h1", "INPUT_REF_NAME", "LABEL_FOR_POSSIBLE_LEGEND");
     // plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
-  
+
   // OPTION A:
   // directly create all the plots that were defined before
   // plotManager.CreatePlots("", "", {}, "interactive");
