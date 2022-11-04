@@ -43,18 +43,21 @@ if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
       return 1
     fi
     mkdir ${PROJECT_NAME}
+    cd ${PROJECT_NAME}
+    PROJECT_PATH=$(pwd)
+    cd ..
     mkdir ${PROJECT_NAME}/build
-    cp ${__SCIROOPLOT_DIR}/example/* ${PROJECT_NAME}/
+    cp ${__SCIROOPLOT_DIR}/skeleton/* ${PROJECT_NAME}/
     sed -i.bak "s/MyPlots/${PROJECT_NAME}/" ${PROJECT_NAME}/CMakeLists.txt && rm ${PROJECT_NAME}/CMakeLists.txt.bak
     echo "Created plotting project ${PROJECT_NAME}."
     if [[ "${2}" == "register" ]]; then
       # FIXME: requires that user adjusts the file paths in example...
       echo "Registered this project in plotting app. Use 'plot-config add ${PROJECT_NAME} ...' to change the settings manually."
-      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} inputFiles ${PROJECT_NAME}/build/inputFiles.XML
-      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} plotDefinitions ${PROJECT_NAME}/build/plotDefFile.XML
-      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} executable ${PROJECT_NAME}/build/create
-      mkdir ${PROJECT_NAME}/build/plots
-      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} outputDir ${PROJECT_NAME}/build/plots
+      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} inputFiles ${PROJECT_PATH}/build/inputFiles.XML
+      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} plotDefinitions ${PROJECT_PATH}/build/plotDefFile.XML
+      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} executable ${PROJECT_PATH}/build/create
+      mkdir ${PROJECT_PATH/build/plots
+      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} outputDir ${PROJECT_PATH}/build/plots
       echo "Use 'plot-config switch ${PROJECT_NAME}' to activate this project in the app."
     fi
     return 0
