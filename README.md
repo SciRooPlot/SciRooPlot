@@ -60,7 +60,10 @@ The easiest way to define this is by putting the following line in your .bashrc 
 ```
     source /path/to/SciRooPlot/.plotrc
 ```
-With this you can also just create a bare plotting project via `plot-init myProjectName`.
+### Creating a new bare project
+With the `.plotrc`sourced (maually or via your `.bashrc`) you can also just create a bare plotting project via `plot-init myProjectName`.
+This will create a new plotting Project called **myProjectName**, which means it will create a new folder relative from your current
+path called **myProjectName** and inside it will be a **CMakeList.txt** and **CreatePlots.cxx**.
 
 The PlotManager is the pivot point of the SciRooPlot. In your application you will have to
 ```cpp
