@@ -15,6 +15,10 @@ SciRooPlot depends on the following external software which needs to be installe
 - boost >= 1.65
 - ROOT  >= 6.16
 
+### Important note for linux users (fmt)
+fmt can come shipped together with GNU Utilities on common linux distros. However, it is better to build fmt from source (see [here](https://fmt.dev/latest/usage.html)) with the BUILD_SHARED_LIBS flag set to
+TRUE.
+
 ### Important note for linux users (gcc compiler):
 Since this project relies on cxx17 and ROOT has some compatibility issue when software using a different cxx standard is linked to it (see [here](https://root.cern/manual/integrate_root_into_my_cmake_project/)
 ), it is necessary that your ROOT installation was also compiled with cxx17.\
