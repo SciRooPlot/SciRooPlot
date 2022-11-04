@@ -56,12 +56,12 @@ if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
       ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} inputFiles ${PROJECT_PATH}/build/inputFiles.XML
       ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} plotDefinitions ${PROJECT_PATH}/build/plotDefFile.XML
       ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} executable ${PROJECT_PATH}/build/create
-      mkdir ${PROJECT_PATH/build/plots
+      mkdir ${PROJECT_PATH}/build/plots
       ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} outputDir ${PROJECT_PATH}/build/plots
       echo "Use 'plot-config switch ${PROJECT_NAME}' to activate this project in the app."
     fi
     return 0
-}
+  }
 
 fi
 
