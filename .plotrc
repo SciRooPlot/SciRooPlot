@@ -37,7 +37,11 @@ if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
     while getopts ":h" option; do
       case $option in
         h) #displays help
-          help-plot-config
+          echo "Configures path to <inputFiles | plotDefinitions | executable | outputDir> via add command or"
+          echo "switches between different plot-configs previously set up via switch command"
+          echo
+          echo "usage: add: plot-config [-h] add <CONFIGNAME> <inputFiles | plotDefinitions | executable | outputDir> <path>"
+          echo "usage: switch: plot-config [-h] switch <CONFIGNAME>"
           return;;
         *) #incorrect option
           echo "Error: Invalid flag"
@@ -53,7 +57,13 @@ if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
     while getopts ":h" option; do
       case $option in
         h) #displays help
-          help-plot-init
+          echo "Initializes a new project called <PROJECT_NAME>." 
+          echo
+          echo "usage: plot-init [-h] <PROJECT_NAME> [<option>=<register>]"
+          echo "options:"
+          echo "option==register    plot-config will automatically be called for the new project.
+                    Default path for XML files, exectuable and plots folder is 
+                    inside the build folder."
           return;;
         *) #incorrect option
           echo "Error: Invalid flag"
@@ -223,22 +233,3 @@ if command -v compdef &> /dev/null; then
 elif command -v complete &> /dev/null; then
   complete -F _plot_completions_bash plot
 fi
-
-
-function help-plot-config() {
-  echo "Configures path to <inputFiles | plotDefinitions | executable | outputDir> via add command or"
-  echo "switches between different plot-configs previously set up via switch command"
-  echo
-  echo "usage: add: plot-config [-h] add <CONFIGNAME> <inputFiles | plotDefinitions | executable | outputDir> <path>"
-  echo "usage: switch: plot-config [-h] switch <CONFIGNAME>"
-}
-
-function help-plot-init() {
-  echo "Initializes a new project called <PROJECT_NAME>." 
-  echo
-  echo "usage: plot-init [-h] <PROJECT_NAME> [<option>=<register>]"
-  echo "options:"
-  echo "option==register    plot-config will automatically be called for the new project.
-                    Default path for XML files, exectuable and plots folder is 
-                    inside the build folder."
-}
