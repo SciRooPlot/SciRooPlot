@@ -49,6 +49,7 @@ if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
     mkdir ${PROJECT_NAME}/build
     cp ${__SCIROOPLOT_DIR}/skeleton/* ${PROJECT_NAME}/
     sed -i.bak "s/MyPlots/${PROJECT_NAME}/" ${PROJECT_NAME}/CMakeLists.txt && rm ${PROJECT_NAME}/CMakeLists.txt.bak
+    sed -i.bak "s/\"myPlots\"/\"${PROJECT_NAME}\"/g" ${PROJECT_PATH}/CreatePlots.cxx && rm ${PROJECT_NAME}/CreatePlots.cxx.bak
     echo "Created plotting project ${PROJECT_NAME}."
     if [[ "${2}" == "register" ]]; then
       # FIXME: requires that user adjusts the file paths in example...
