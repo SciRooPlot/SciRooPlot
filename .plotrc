@@ -33,10 +33,44 @@ if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
   }
   
   function plot-config() {
+    local OPTIND OPTARG
+    while getopts ":h" option; do
+      case $option in
+        h) #displays help
+          echo "Configures path to <inputFiles | plotDefinitions | executable | outputDir> via add command or"
+          echo "switches between different plot-configs previously set up via switch command"
+          echo
+          echo "usage: add: plot-config [-h] add <CONFIGNAME> <inputFiles | plotDefinitions | executable | outputDir> <path>"
+          echo "usage: switch: plot-config [-h] switch <CONFIGNAME>"
+          return;;
+        *) #incorrect option
+          echo "Error: Invalid flag"
+          return;;
+      esac
+    done
+    shift $((OPTIND - 1))
     "${__SCIROOPLOT_BUILD_DIR}/plot-config" ${1} ${2} ${3} ${4}
   }
   
   function plot-init() {
+    local OPTIND OPTARG
+    while getopts ":h" option; do
+      case $option in
+        h) #displays help
+          echo "Initializes a new project called <PROJECT_NAME>." 
+          echo
+          echo "usage: plot-init [-h] <PROJECT_NAME> [<option>=<register>]"
+          echo "options:"
+          echo "option==register    plot-config will automatically be called for the new project.
+                    Default path for XML files, exectuable and plots folder is 
+                    inside the build folder."
+          return;;
+        *) #incorrect option
+          echo "Error: Invalid flag"
+          return;;
+      esac
+    done
+    shift $((OPTIND - 1))
     PROJECT_NAME=${1}
     if [ -d "$PROJECT_NAME" ]; then
       echo "Folder ${PROJECT_NAME} already exists. Doing nothing..."
