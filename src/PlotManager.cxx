@@ -936,11 +936,14 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
 {
   // info: the PDF backend of ROOT can only create plots with resolution of 72 dpi and maximum sizes defined by the A4 format (20cm x 26cm -> 567px x 737px)
   int32_t pixelBase = int32_t(std::round(screenResolution * 567. / 72.)); // 567p / 72dpi == 20cm / 2.54in/cm (final pdf size)
-  double_t frameSize = 0.82;                                              // size of (quadratic) axis frame in percentage of pixelBase
-  double_t axisMargin = 0.145;                                            // margins of x and y axes in units relative to pixelBase side length (corresponds to the space in bottom and left of the plot to the axis frame)
-  double_t defaultTextSize = 0.036;                                       // default text size relative to pixelBase
-  double_t axisTitleSize = 0.046;                                         // text size of axis titles relative to pixelBase
+  double_t frameSize = 0.81;                                              // size of (quadratic) axis frame in percentage of pixelBase
+  double_t axisMargin = 0.16;                                             // margins of x and y axes in units relative to pixelBase side length (corresponds to the space in bottom and left of the plot to the axis frame)
+  double_t defaultTextSize = 0.04;                                        // default text size relative to pixelBase
+  double_t axisTitleSize = 0.05;                                          // text size of axis titles relative to pixelBase
   double_t wideSideScale = 1.3;                                           // for asymmetric plots: scale of the larger side wrt. pixelBase (corresponds to the maximum / optimum of 26cm / 20cm)
+
+  double_t markerSize = 1.4;
+  uint8_t lineWidth = 5;
 
   vector<int16_t> goodColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1,
                                 kMagenta - 4, kGreen + 3, kOrange + 1,
@@ -966,8 +969,8 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[0].SetDefaultLineStyles({kSolid});
     plotTemplate[0].SetDefaultTextFont(42);
     plotTemplate[0].SetDefaultTextSize(defaultTextSize);
-    plotTemplate[0].SetDefaultMarkerSize(1.);
-    plotTemplate[0].SetDefaultLineWidth(3.);
+    plotTemplate[0].SetDefaultMarkerSize(markerSize);
+    plotTemplate[0].SetDefaultLineWidth(lineWidth);
     plotTemplate[0].SetDefaultDrawingOptionGraph(points);
     plotTemplate[0].SetTransparent();
     plotTemplate[0].SetMargins(1. - (frameSize + axisMargin), axisMargin, axisMargin, 1. - (frameSize + axisMargin));
@@ -989,8 +992,8 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[0].SetDefaultFillStyles({0});
     plotTemplate[0].SetDefaultMarkerStyles({kFullCircle});
     plotTemplate[0].SetDefaultLineStyles({kSolid});
-    plotTemplate[0].SetDefaultMarkerSize(1.);
-    plotTemplate[0].SetDefaultLineWidth(3.);
+    plotTemplate[0].SetDefaultMarkerSize(markerSize);
+    plotTemplate[0].SetDefaultLineWidth(lineWidth);
     plotTemplate[0].SetDefaultDrawingOptionGraph(points);
     plotTemplate[0].SetDefaultTextFont(42);
     plotTemplate[0].SetTransparent();
@@ -1021,6 +1024,8 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[0].SetDefaultDrawingOptionHist2d(colz);
     plotTemplate[0].SetDefaultTextFont(42);
     plotTemplate[0].SetDefaultTextSize(defaultTextSize);
+    plotTemplate[0].SetDefaultMarkerSize(markerSize);
+    plotTemplate[0].SetDefaultLineWidth(lineWidth);
     plotTemplate[0].SetTransparent();
     plotTemplate[0].SetMargins(1. - (frameSize + axisMargin), axisMargin, axisMargin / wideSideScale, 1. - (frameSize + axisMargin) / wideSideScale);
     plotTemplate[0]['X'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
@@ -1065,8 +1070,9 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[0].SetDefaultLineStyles({kSolid});
     plotTemplate[0].SetDefaultTextFont(42);
     plotTemplate[0].SetDefaultTextSize(defaultTextSize);
-    plotTemplate[0].SetDefaultMarkerSize(1.);
-    plotTemplate[0].SetDefaultLineWidth(1); // adjusted to make it look the same in lower pdf resolution
+    // plotTemplate[0].SetDefaultLineWidth(1); // adjusted to make it look the same in lower pdf resolution
+    plotTemplate[0].SetDefaultMarkerSize(markerSize);
+    plotTemplate[0].SetDefaultLineWidth(lineWidth);
     plotTemplate[0].SetDefaultDrawingOptionGraph(points);
     plotTemplate[0].SetTransparent();
     plotTemplate[1].SetPosition(0., 0., x1, 1.);
