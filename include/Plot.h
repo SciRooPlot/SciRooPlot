@@ -24,6 +24,7 @@
 #include "TAttFill.h"
 #include "TCandle.h"
 #include "Rtypes.h"
+#include "TColor.h"
 
 #include "SciRooPlot.h"
 
