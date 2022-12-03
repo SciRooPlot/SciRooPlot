@@ -141,6 +141,17 @@ int main(int argc, char* argv[])
   } else if (mode == "reset") {
     configTree.clear();
     activeConfig.clear();
+  } else if (mode == "list") {
+    for (auto& entry : configTree) {
+      string configName = entry.first;
+      if (configName == "activated") continue;
+      if (configName == activeConfig) {
+        PRINT("* {}", configName);
+      } else {
+        PRINT("  {}", configName);
+      }
+    }
+
   } else {
     ERROR("Invalid arguments.");
   }
