@@ -541,6 +541,31 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 double_t rangeMin = (axisLayout.GetMinRange()) ? *axisLayout.GetMinRange() : curRangeMin;
                 double_t rangeMax = (axisLayout.GetMaxRange()) ? *axisLayout.GetMaxRange() : curRangeMax;
 
+                // if user specifies axis range that exceeds the one of the underlying data (for independent variables), extend the axis histogram accordingly
+                if ((axisLabel == 'X') || (isTH2 && axisLabel == 'Y')) {
+                  if ((rangeMin != -1111 && rangeMin < axis_ptr->GetXmin()) || (rangeMax != -1111 && rangeMax > axis_ptr->GetXmax())) {
+                    const int32_t nBins = axis_ptr->GetNbins();
+                    const int32_t nBinEdges = nBins + 1;
+                    vector<double_t> binEdges(nBinEdges);
+
+                    for (int i = 0; i < nBinEdges; ++i) {
+                      if (axis_ptr->GetXbins()->fN) {
+                        binEdges[i] = axis_ptr->GetXbins()->At(i);
+                      } else {
+                        binEdges[i] = axis_ptr->GetXmin() + i * axis_ptr->GetBinWidth(1);
+                      }
+                    }
+                    if (rangeMin < binEdges[0]) {
+                      INFO("Extending lower {}-axis range beyond default histogram limits (from {} to {}).", axisLabel, binEdges[0], rangeMin);
+                      binEdges[0] = rangeMin;
+                    }
+                    if (rangeMax > binEdges[nBinEdges - 1]) {
+                      INFO("Extending upper {}-axis range beyond default histogram limits (from {} to {}).", axisLabel, binEdges[nBinEdges - 1], rangeMax);
+                      binEdges[nBinEdges - 1] = rangeMax;
+                    }
+                    axis_ptr->Set(nBins, binEdges.data());
+                  }
+                }
                 axis_ptr->SetRangeUser(rangeMin, rangeMax);
 
                 if (axisLayout.GetLog()) {
