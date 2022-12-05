@@ -546,24 +546,35 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   if ((rangeMin != -1111 && rangeMin < axis_ptr->GetXmin()) || (rangeMax != -1111 && rangeMax > axis_ptr->GetXmax())) {
                     const int32_t nBins = axis_ptr->GetNbins();
                     const int32_t nBinEdges = nBins + 1;
-                    vector<double_t> binEdges(nBinEdges);
+                    bool extendLow = false;
+                    bool extendUp = false;
 
-                    for (int i = 0; i < nBinEdges; ++i) {
-                      if (axis_ptr->GetXbins()->fN) {
-                        binEdges[i] = axis_ptr->GetXbins()->At(i);
-                      } else {
-                        binEdges[i] = axis_ptr->GetXmin() + i * axis_ptr->GetBinWidth(1);
-                      }
+                    if (rangeMin < axis_ptr->GetXmin()) {
+                      INFO("Extending lower {}-axis range beyond default histogram limits (from {} to {}).", axisLabel, axis_ptr->GetXmin(), rangeMin);
+                      extendLow = true;
                     }
-                    if (rangeMin < binEdges[0]) {
-                      INFO("Extending lower {}-axis range beyond default histogram limits (from {} to {}).", axisLabel, binEdges[0], rangeMin);
+                    if (rangeMax > axis_ptr->GetXmax()) {
+                      INFO("Extending upper {}-axis range beyond default histogram limits (from {} to {}).", axisLabel, axis_ptr->GetXmax(), rangeMax);
+                      extendUp = true;
+                    }
+
+                    vector<double_t> binEdges(nBinEdges + extendLow + extendUp);
+                    if (extendLow) {
                       binEdges[0] = rangeMin;
                     }
-                    if (rangeMax > binEdges[nBinEdges - 1]) {
-                      INFO("Extending upper {}-axis range beyond default histogram limits (from {} to {}).", axisLabel, binEdges[nBinEdges - 1], rangeMax);
-                      binEdges[nBinEdges - 1] = rangeMax;
+                    for (int32_t i = extendLow; i < nBinEdges + extendLow; ++i) {
+                      int32_t originalIndex = i - extendLow;
+                      if (axis_ptr->GetXbins()->fN) {
+                        binEdges[i] = axis_ptr->GetXbins()->At(originalIndex);
+                      } else {
+                        binEdges[i] = axis_ptr->GetXmin() + originalIndex * axis_ptr->GetBinWidth(1);
+                      }
                     }
-                    axis_ptr->Set(nBins, binEdges.data());
+                    if (extendUp) {
+                      binEdges[binEdges.size() - 1] = rangeMax;
+                    }
+                    // memo: this breaks the integrity of the histogram (i.e. number of bins of the contents does not correspond to the number of bins in the axes anymore)
+                    axis_ptr->Set(nBins + extendLow + extendUp, binEdges.data());
                   }
                 }
                 axis_ptr->SetRangeUser(rangeMin, rangeMax);
