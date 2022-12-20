@@ -24,6 +24,7 @@
 // std dependencies
 #include <regex>
 #include <filesystem>
+#include <limits>
 
 // boost dependencies
 #include <boost/property_tree/xml_parser.hpp>
@@ -361,6 +362,11 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   gROOT->SetBatch(!isInteractiveMode && !isMacroMode);
   shared_ptr<TCanvas> canvas{painter.GeneratePlot(fullPlot, mDataBuffer)};
   if (!canvas) return false;
+  if (TColor::GetFreeColorIndex() > std::numeric_limits<int16_t>::max()) {
+    // there is a natural limit to the number of custom colors since ROOT color indices are of type short
+    ERROR("Too many custom colors in one session. Aborting...");
+    std::exit(EXIT_FAILURE);
+  }
   LOG("Created " GREEN_ "{}" _END " from group " YELLOW_ "{}" _END ".", fullPlot.GetName(), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? "/" + *fullPlot.GetFigureCategory() : ""));
 
   // if interactive mode is specified, open window instead of saving the plot
