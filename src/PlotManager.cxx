@@ -1,6 +1,6 @@
 // SciRooPlot
 //
-// Copyright (C) 2019-2022  Mario Krüger
+// Copyright (C) 2019-2023  Mario Krüger
 // Contact: mario.kruger@cern.ch
 // For a full list of contributors please see doc/CONTRIBUTORS.md
 //
