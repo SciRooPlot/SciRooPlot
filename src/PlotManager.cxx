@@ -981,7 +981,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[0].SetTransparent();
     plotTemplate[0].SetMargins(1. - (frameSize + axisMargin), axisMargin, axisMargin, 1. - (frameSize + axisMargin));
     plotTemplate[0]['X'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
-    plotTemplate[0]['Y'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
+    plotTemplate[0]['Y'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
     plotTemplate[1].SetPosition(0., 0., 1., 1.);
     return plotTemplate;
   } // -----------------------------------------------------------------------
@@ -1013,7 +1013,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[1]['X'].SetTitleSize(0.).SetLabelSize(0.).SetOppositeTicks().SetNoExponent();
     plotTemplate[1]['Y'].SetTitleSize(1. / (wideSideScale * (1 - ratioFraction)) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
     plotTemplate[2]['X'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
-    plotTemplate[2]['Y'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
+    plotTemplate[2]['Y'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
     plotTemplate[2]['Y'].SetTitleOffset(0.6); // FIXME: for some reason the ROOT automatic title offset determination does not work for the lower plot
     plotTemplate[2].SetRefFunc("1");
     plotTemplate[2]['X'].SetTickLength(0.06);
@@ -1035,7 +1035,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[0].SetTransparent();
     plotTemplate[0].SetMargins(1. - (frameSize + axisMargin), axisMargin, axisMargin / wideSideScale, 1. - (frameSize + axisMargin) / wideSideScale);
     plotTemplate[0]['X'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
-    plotTemplate[0]['Y'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
+    plotTemplate[0]['Y'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
     plotTemplate[0]['Z'].SetTitleSize(axisTitleSize).SetMaxDigits(3).SetTitleOffset(1.5);
     plotTemplate[0].SetRedrawAxes();
     plotTemplate[1].SetPosition(0., 0., 1., 1.);
@@ -1088,7 +1088,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[2].SetMargins(1. - (frameSize + axisMargin), axisMargin, 0.0, 0.0);
     plotTemplate[3].SetMargins(1. - (frameSize + axisMargin), axisMargin, 0.0, rightMarginPad3);
     plotTemplate[0]['X'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
-    plotTemplate[0]['Y'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
+    plotTemplate[0]['Y'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
     plotTemplate[2].SetDefaultTextSize(textScalePad2 * defaultTextSize);
     plotTemplate[2]['X'].SetTitleSize(textScalePad2 * axisTitleSize);
     plotTemplate[2]['Y'].SetTitleSize(textScalePad2 * axisTitleSize);
