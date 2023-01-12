@@ -1069,7 +1069,7 @@ $(document).ready(function(){initNavTree('PlotManager_8cxx_source.html',''); ini
 <div class="line"><a id="l00981" name="l00981"></a><span class="lineno">  981</span>    plotTemplate[0].<a class="code hl_function" href="classSciRooPlot_1_1Plot.html#ac69b55efa3366dca08e8d94c306e0f5a">SetTransparent</a>();</div>
 <div class="line"><a id="l00982" name="l00982"></a><span class="lineno">  982</span>    plotTemplate[0].SetMargins(1. - (frameSize + axisMargin), axisMargin, axisMargin, 1. - (frameSize + axisMargin));</div>
 <div class="line"><a id="l00983" name="l00983"></a><span class="lineno">  983</span>    plotTemplate[0][<span class="charliteral">&#39;X&#39;</span>].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();</div>
-<div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span>    plotTemplate[0][<span class="charliteral">&#39;Y&#39;</span>].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();</div>
+<div class="line"><a id="l00984" name="l00984"></a><span class="lineno">  984</span>    plotTemplate[0][<span class="charliteral">&#39;Y&#39;</span>].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3);</div>
 <div class="line"><a id="l00985" name="l00985"></a><span class="lineno">  985</span>    plotTemplate[1].SetPosition(0., 0., 1., 1.);</div>
 <div class="line"><a id="l00986" name="l00986"></a><span class="lineno">  986</span>    <span class="keywordflow">return</span> plotTemplate;</div>
 <div class="line"><a id="l00987" name="l00987"></a><span class="lineno">  987</span>  } <span class="comment">// -----------------------------------------------------------------------</span></div>
@@ -1101,7 +1101,7 @@ $(document).ready(function(){initNavTree('PlotManager_8cxx_source.html',''); ini
 <div class="line"><a id="l01013" name="l01013"></a><span class="lineno"> 1013</span>    plotTemplate[1][<span class="charliteral">&#39;X&#39;</span>].SetTitleSize(0.).SetLabelSize(0.).SetOppositeTicks().SetNoExponent();</div>
 <div class="line"><a id="l01014" name="l01014"></a><span class="lineno"> 1014</span>    plotTemplate[1][<span class="charliteral">&#39;Y&#39;</span>].SetTitleSize(1. / (wideSideScale * (1 - ratioFraction)) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);</div>
 <div class="line"><a id="l01015" name="l01015"></a><span class="lineno"> 1015</span>    plotTemplate[2][<span class="charliteral">&#39;X&#39;</span>].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();</div>
-<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"> 1016</span>    plotTemplate[2][<span class="charliteral">&#39;Y&#39;</span>].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();</div>
+<div class="line"><a id="l01016" name="l01016"></a><span class="lineno"> 1016</span>    plotTemplate[2][<span class="charliteral">&#39;Y&#39;</span>].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);</div>
 <div class="line"><a id="l01017" name="l01017"></a><span class="lineno"> 1017</span>    plotTemplate[2][<span class="charliteral">&#39;Y&#39;</span>].SetTitleOffset(0.6); <span class="comment">// FIXME: for some reason the ROOT automatic title offset determination does not work for the lower plot</span></div>
 <div class="line"><a id="l01018" name="l01018"></a><span class="lineno"> 1018</span>    plotTemplate[2].SetRefFunc(<span class="stringliteral">&quot;1&quot;</span>);</div>
 <div class="line"><a id="l01019" name="l01019"></a><span class="lineno"> 1019</span>    plotTemplate[2][<span class="charliteral">&#39;X&#39;</span>].SetTickLength(0.06);</div>
@@ -1123,7 +1123,7 @@ $(document).ready(function(){initNavTree('PlotManager_8cxx_source.html',''); ini
 <div class="line"><a id="l01035" name="l01035"></a><span class="lineno"> 1035</span>    plotTemplate[0].<a class="code hl_function" href="classSciRooPlot_1_1Plot.html#ac69b55efa3366dca08e8d94c306e0f5a">SetTransparent</a>();</div>
 <div class="line"><a id="l01036" name="l01036"></a><span class="lineno"> 1036</span>    plotTemplate[0].SetMargins(1. - (frameSize + axisMargin), axisMargin, axisMargin / wideSideScale, 1. - (frameSize + axisMargin) / wideSideScale);</div>
 <div class="line"><a id="l01037" name="l01037"></a><span class="lineno"> 1037</span>    plotTemplate[0][<span class="charliteral">&#39;X&#39;</span>].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();</div>
-<div class="line"><a id="l01038" name="l01038"></a><span class="lineno"> 1038</span>    plotTemplate[0][<span class="charliteral">&#39;Y&#39;</span>].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();</div>
+<div class="line"><a id="l01038" name="l01038"></a><span class="lineno"> 1038</span>    plotTemplate[0][<span class="charliteral">&#39;Y&#39;</span>].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3);</div>
 <div class="line"><a id="l01039" name="l01039"></a><span class="lineno"> 1039</span>    plotTemplate[0][<span class="charliteral">&#39;Z&#39;</span>].SetTitleSize(axisTitleSize).SetMaxDigits(3).SetTitleOffset(1.5);</div>
 <div class="line"><a id="l01040" name="l01040"></a><span class="lineno"> 1040</span>    plotTemplate[0].SetRedrawAxes();</div>
 <div class="line"><a id="l01041" name="l01041"></a><span class="lineno"> 1041</span>    plotTemplate[1].SetPosition(0., 0., 1., 1.);</div>
@@ -1176,7 +1176,7 @@ $(document).ready(function(){initNavTree('PlotManager_8cxx_source.html',''); ini
 <div class="line"><a id="l01088" name="l01088"></a><span class="lineno"> 1088</span>    plotTemplate[2].SetMargins(1. - (frameSize + axisMargin), axisMargin, 0.0, 0.0);</div>
 <div class="line"><a id="l01089" name="l01089"></a><span class="lineno"> 1089</span>    plotTemplate[3].SetMargins(1. - (frameSize + axisMargin), axisMargin, 0.0, rightMarginPad3);</div>
 <div class="line"><a id="l01090" name="l01090"></a><span class="lineno"> 1090</span>    plotTemplate[0][<span class="charliteral">&#39;X&#39;</span>].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();</div>
-<div class="line"><a id="l01091" name="l01091"></a><span class="lineno"> 1091</span>    plotTemplate[0][<span class="charliteral">&#39;Y&#39;</span>].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();</div>
+<div class="line"><a id="l01091" name="l01091"></a><span class="lineno"> 1091</span>    plotTemplate[0][<span class="charliteral">&#39;Y&#39;</span>].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3);</div>
 <div class="line"><a id="l01092" name="l01092"></a><span class="lineno"> 1092</span>    plotTemplate[2].SetDefaultTextSize(textScalePad2 * defaultTextSize);</div>
 <div class="line"><a id="l01093" name="l01093"></a><span class="lineno"> 1093</span>    plotTemplate[2][<span class="charliteral">&#39;X&#39;</span>].SetTitleSize(textScalePad2 * axisTitleSize);</div>
 <div class="line"><a id="l01094" name="l01094"></a><span class="lineno"> 1094</span>    plotTemplate[2][<span class="charliteral">&#39;Y&#39;</span>].SetTitleSize(textScalePad2 * axisTitleSize);</div>
@@ -1269,7 +1269,7 @@ $(document).ready(function(){initNavTree('PlotManager_8cxx_source.html',''); ini
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="PlotManager_8cxx.html">PlotManager.cxx</a></li>
-    <li class="footer">Generated on Tue Jan 10 2023 10:59:03 for SciRooPlot by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.4 </li>
+    <li class="footer">Generated on Thu Jan 12 2023 12:05:42 for SciRooPlot by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.4 </li>
   </ul>
 </div>
 </body>
