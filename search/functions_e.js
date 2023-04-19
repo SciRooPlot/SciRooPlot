@@ -1,5 +1,5 @@
 var searchData=
 [
   ['textbox_0',['TextBox',['../classSciRooPlot_1_1Plot_1_1Pad_1_1TextBox.html#abf52c7484459ee49cc1f41c38aa91a47',1,'SciRooPlot::Plot::Pad::TextBox::TextBox(const string &amp;text)'],['../classSciRooPlot_1_1Plot_1_1Pad_1_1TextBox.html#a51f71fecedc4a7a8338566692c7687df',1,'SciRooPlot::Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const string &amp;text)'],['../classSciRooPlot_1_1Plot_1_1Pad_1_1TextBox.html#a4fae029dc96025d7994c66d39b9179e7',1,'SciRooPlot::Plot::Pad::TextBox::TextBox(const ptree &amp;textBoxTree)'],['../classSciRooPlot_1_1Plot_1_1Pad_1_1TextBox.html#a042009d30f249d12d8a96ee1840cd9a3',1,'SciRooPlot::Plot::Pad::TextBox::TextBox(const TextBox &amp;other)=default'],['../classSciRooPlot_1_1Plot_1_1Pad_1_1TextBox.html#a43edcb68edb02129937b09a7f55d62fd',1,'SciRooPlot::Plot::Pad::TextBox::TextBox(TextBox &amp;&amp;)=default']]],
-  ['tuple_5fto_5fstring_1',['tuple_to_string',['../namespaceSciRooPlot.html#a902f0ff5fa3e7a600ceae1e8e77d3414',1,'SciRooPlot']]]
+  ['tuple_5fto_5fstring_1',['tuple_to_string',['../namespaceSciRooPlot.html#abf6562f044b9f2114b87bed830a99a7d',1,'SciRooPlot']]]
 ];

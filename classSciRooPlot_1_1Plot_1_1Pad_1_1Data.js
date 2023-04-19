@@ -11,7 +11,7 @@ var classSciRooPlot_1_1Plot_1_1Pad_1_1Data =
     [ "Data", "classSciRooPlot_1_1Plot_1_1Pad_1_1Data.html#af7631d6d8d56def1dffce2147c5e5120", null ],
     [ "Data", "classSciRooPlot_1_1Plot_1_1Pad_1_1Data.html#a69c41d564662bcb85da1ec42bf4f13d8", null ],
     [ "ApplyLayout", "classSciRooPlot_1_1Plot_1_1Pad_1_1Data.html#a6f4d782c9341bb740750ff8663e22197", null ],
-    [ "Clone", "classSciRooPlot_1_1Plot_1_1Pad_1_1Data.html#afc0614d9bf803ee57d798ac5e69cb00d", null ],
+    [ "Clone", "classSciRooPlot_1_1Plot_1_1Pad_1_1Data.html#a86c0fef911a19017f9484874231de97b", null ],
     [ "GetContours", "classSciRooPlot_1_1Plot_1_1Pad_1_1Data.html#ad175e6c57e49d9efc555dd25784f4563", null ],
     [ "GetDefinesFrame", "classSciRooPlot_1_1Plot_1_1Pad_1_1Data.html#a7e3d47ccab65d25b48a9bc0d4084d277", null ],
     [ "GetDrawingOptionAlias", "classSciRooPlot_1_1Plot_1_1Pad_1_1Data.html#af77ad0f6e2aa3b5402c6ba6c00203d56", null ],

@@ -15,10 +15,12 @@ var searchData=
   ['is_5fhist_5f2d_12',['is_hist_2d',['../namespaceSciRooPlot.html#a51e2f98c06aed635271101d752f5977a',1,'SciRooPlot']]],
   ['is_5fone_5fof_5fv_13',['is_one_of_v',['../namespaceSciRooPlot.html#a66f2d67cac7af3e6a9f6c7a9f183765f',1,'SciRooPlot']]],
   ['is_5ftuple_14',['is_tuple',['../structSciRooPlot_1_1is__tuple.html',1,'SciRooPlot']]],
-  ['is_5fvector_15',['is_vector',['../structSciRooPlot_1_1is__vector.html',1,'SciRooPlot']]],
-  ['isautoplacement_16',['IsAutoPlacement',['../classSciRooPlot_1_1Plot_1_1Pad_1_1Box.html#aacc87e19048ef3f46a0633c4e5ceca70',1,'SciRooPlot::Plot::Pad::Box']]],
-  ['isfixaspectratio_17',['IsFixAspectRatio',['../classSciRooPlot_1_1Plot.html#afa6f7273834c008ac03460a913497626',1,'SciRooPlot::Plot']]],
-  ['isprofile_18',['isProfile',['../structSciRooPlot_1_1Plot_1_1Pad_1_1Data_1_1proj__info__t.html#a399bda9c1523a702428d3a3db2efbe16',1,'SciRooPlot::Plot::Pad::Data::proj_info_t']]],
-  ['isusercoord_19',['isUserCoord',['../structSciRooPlot_1_1Plot_1_1Pad_1_1Box_1_1position__t.html#a6c81643d3b6509b24e37453250d53859',1,'SciRooPlot::Plot::Pad::Box::position_t::isUserCoord()'],['../structSciRooPlot_1_1Plot_1_1Pad_1_1Data_1_1proj__info__t.html#a0aefcc1e7f245a4ad3903cbdb8b3417e',1,'SciRooPlot::Plot::Pad::Data::proj_info_t::isUserCoord()']]],
-  ['isusercoordinates_20',['IsUserCoordinates',['../classSciRooPlot_1_1Plot_1_1Pad_1_1Box.html#a38b9d9f513a06308f9cb21dd88289996',1,'SciRooPlot::Plot::Pad::Box']]]
+  ['is_5ftuple_3c_20tuple_3c_20t_2e_2e_2e_20_3e_20_3e_15',['is_tuple&lt; tuple&lt; T... &gt; &gt;',['../structSciRooPlot_1_1is__tuple_3_01tuple_3_01T_8_8_8_01_4_01_4.html',1,'SciRooPlot']]],
+  ['is_5fvector_16',['is_vector',['../structSciRooPlot_1_1is__vector.html',1,'SciRooPlot']]],
+  ['is_5fvector_3c_20vector_3c_20t_2c_20a_20_3e_20_3e_17',['is_vector&lt; vector&lt; T, A &gt; &gt;',['../structSciRooPlot_1_1is__vector_3_01vector_3_01T_00_01A_01_4_01_4.html',1,'SciRooPlot']]],
+  ['isautoplacement_18',['IsAutoPlacement',['../classSciRooPlot_1_1Plot_1_1Pad_1_1Box.html#aacc87e19048ef3f46a0633c4e5ceca70',1,'SciRooPlot::Plot::Pad::Box']]],
+  ['isfixaspectratio_19',['IsFixAspectRatio',['../classSciRooPlot_1_1Plot.html#afa6f7273834c008ac03460a913497626',1,'SciRooPlot::Plot']]],
+  ['isprofile_20',['isProfile',['../structSciRooPlot_1_1Plot_1_1Pad_1_1Data_1_1proj__info__t.html#ab00ed31663ec263fd516909c0f046001',1,'SciRooPlot::Plot::Pad::Data::proj_info_t']]],
+  ['isusercoord_21',['isUserCoord',['../structSciRooPlot_1_1Plot_1_1Pad_1_1Box_1_1position__t.html#a6c81643d3b6509b24e37453250d53859',1,'SciRooPlot::Plot::Pad::Box::position_t::isUserCoord()'],['../structSciRooPlot_1_1Plot_1_1Pad_1_1Data_1_1proj__info__t.html#a859d0320fc02a06a8940fc0e45eb48cb',1,'SciRooPlot::Plot::Pad::Data::proj_info_t::isUserCoord()']]],
+  ['isusercoordinates_22',['IsUserCoordinates',['../classSciRooPlot_1_1Plot_1_1Pad_1_1Box.html#a38b9d9f513a06308f9cb21dd88289996',1,'SciRooPlot::Plot::Pad::Box']]]
 ];

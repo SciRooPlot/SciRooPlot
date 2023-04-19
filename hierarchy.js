@@ -34,6 +34,10 @@ var hierarchy =
     [ "SciRooPlot::PlotPainter", "classSciRooPlot_1_1PlotPainter.html", null ],
     [ "SciRooPlot::Plot::Pad::Box< BoxType >::position_t", "structSciRooPlot_1_1Plot_1_1Pad_1_1Box_1_1position__t.html", null ],
     [ "SciRooPlot::Plot::Pad::Data::proj_info_t", "structSciRooPlot_1_1Plot_1_1Pad_1_1Data_1_1proj__info__t.html", null ],
+    [ "std::true_type", null, [
+      [ "SciRooPlot::is_tuple< tuple< T... > >", "structSciRooPlot_1_1is__tuple_3_01tuple_3_01T_8_8_8_01_4_01_4.html", null ],
+      [ "SciRooPlot::is_vector< vector< T, A > >", "structSciRooPlot_1_1is__vector_3_01vector_3_01T_00_01A_01_4_01_4.html", null ]
+    ] ],
     [ "SciRooPlot::Plot::Pad::view_defaults_t", "structSciRooPlot_1_1Plot_1_1Pad_1_1view__defaults__t.html", null ],
     [ "friend", "classfriend.html", null ]
 ];

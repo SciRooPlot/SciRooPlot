@@ -1,6 +1,6 @@
 var classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox_1_1LegendEntry =
 [
-    [ "LegendEntry", "classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox_1_1LegendEntry.html#a5478aa794eccd2bed03b3936458446b7", null ],
+    [ "LegendEntry", "classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox_1_1LegendEntry.html#a1de4389e5326554604082ceae9256ade", null ],
     [ "LegendEntry", "classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox_1_1LegendEntry.html#abcb2cbe3d2161594dc342412fdbe587c", null ],
     [ "GetDrawStyle", "classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox_1_1LegendEntry.html#a87918cdd9be4cd2344d3f661b2245daf", null ],
     [ "GetFillColor", "classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox_1_1LegendEntry.html#adfc0bc476eeed66f4071c7c520c55caa", null ],

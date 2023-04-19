@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['mapp_0',['mApp',['../classSciRooPlot_1_1PlotManager.html#a329c0c12138e29146fab8ee096ed973c',1,'SciRooPlot::PlotManager']]],
+  ['mapp_0',['mApp',['../classSciRooPlot_1_1PlotManager.html#ae66adf0ffcbb2844a6592ff2a25bf138',1,'SciRooPlot::PlotManager']]],
   ['max_1',['max',['../structSciRooPlot_1_1Plot_1_1Pad_1_1Data_1_1dataRange__t.html#a7118dea7377b20af0ac6e4f723972029',1,'SciRooPlot::Plot::Pad::Data::dataRange_t::max()'],['../structSciRooPlot_1_1Plot_1_1Pad_1_1Axis_1_1axisRange__t.html#a573a3c0242bcf0c044918c576ced88af',1,'SciRooPlot::Plot::Pad::Axis::axisRange_t::max()']]],
   ['maxes_2',['mAxes',['../classSciRooPlot_1_1Plot_1_1Pad.html#ac2fba007d147e2d475f9e195a51b8172',1,'SciRooPlot::Plot::Pad']]],
   ['maxiscolor_3',['mAxisColor',['../classSciRooPlot_1_1Plot_1_1Pad_1_1Axis.html#aa439f22454465c58df2389876d8f465a',1,'SciRooPlot::Plot::Pad::Axis']]],
@@ -8,7 +8,7 @@ var searchData=
   ['mcandleoptiondefaults_5',['mCandleOptionDefaults',['../classSciRooPlot_1_1Plot_1_1Pad.html#a5bcf031749219307d3b30e7923e4dcab',1,'SciRooPlot::Plot::Pad']]],
   ['mcontours_6',['mContours',['../classSciRooPlot_1_1Plot_1_1Pad_1_1Data.html#acfe9b2a012e891ec41c0447b8fde2a7c',1,'SciRooPlot::Plot::Pad::Data']]],
   ['mdata_7',['mData',['../classSciRooPlot_1_1Plot_1_1Pad.html#a1217e4263bfe5729e1ed0f19f53c853a',1,'SciRooPlot::Plot::Pad']]],
-  ['mdatabuffer_8',['mDataBuffer',['../classSciRooPlot_1_1PlotManager.html#a6d318ce4501d685bcb78dcfdc8b4903a',1,'SciRooPlot::PlotManager']]],
+  ['mdatabuffer_8',['mDataBuffer',['../classSciRooPlot_1_1PlotManager.html#adc17b25c0759be8e19558beee4fbc9c7',1,'SciRooPlot::PlotManager']]],
   ['mdefinesframe_9',['mDefinesFrame',['../classSciRooPlot_1_1Plot_1_1Pad_1_1Data.html#aba1d322e9e3d65769a8ba4da2ffad687',1,'SciRooPlot::Plot::Pad::Data']]],
   ['mdenominputidentifier_10',['mDenomInputIdentifier',['../classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio.html#aa8ea68d8c2ba08130021497a8d746e0d',1,'SciRooPlot::Plot::Pad::Ratio']]],
   ['mdenomname_11',['mDenomName',['../classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio.html#a30d6c97a0def569af4b3a6b0e312c96d',1,'SciRooPlot::Plot::Pad::Ratio']]],

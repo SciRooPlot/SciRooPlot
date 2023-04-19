@@ -6,7 +6,7 @@ var classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio =
     [ "Ratio", "classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio.html#a4ca138a50d4746349c138c369656db4e", null ],
     [ "Ratio", "classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio.html#a4aa457182061ce5eb2a79db0049abb49", null ],
     [ "ApplyLayout", "classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio.html#ae654c358bf1e4759d6220a85862b971b", null ],
-    [ "Clone", "classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio.html#add574fe4e1b17867c1c8744c1ac3176e", null ],
+    [ "Clone", "classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio.html#a6d598f5ce8606f527e245463861b05da", null ],
     [ "GetDenomIdentifier", "classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio.html#a0ba09762e00134baa5eb831db48c2f47", null ],
     [ "GetDenomName", "classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio.html#afdb6adac2caf1d1b332bfc2343a82c34", null ],
     [ "GetIsCorrelated", "classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio.html#a7b2b6bb3c2673fe27ad33c97771b69a6", null ],

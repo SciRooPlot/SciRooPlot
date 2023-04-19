@@ -60,12 +60,12 @@ var NAVTREE =
 var NAVTREEINDEX =
 [
 "Helpers_8cxx.html",
-"classSciRooPlot_1_1PlotManager.html#a59e5017b0f6cb4d90dd5e30919712d84",
-"classSciRooPlot_1_1Plot_1_1Pad.html#aa998d7e6631f8c7b6e058b8f5671fddd",
+"classSciRooPlot_1_1PlotManager.html#a5e4ef03c264f2c0417d2982799955209",
+"classSciRooPlot_1_1Plot_1_1Pad.html#aaa7d861d720a9022215e5b628abc39d4",
 "classSciRooPlot_1_1Plot_1_1Pad_1_1Box.html#a38b9d9f513a06308f9cb21dd88289996",
-"classSciRooPlot_1_1Plot_1_1Pad_1_1Data.html#ae4ad322a39623be31b4ea1ea8574e701",
+"classSciRooPlot_1_1Plot_1_1Pad_1_1Data.html#ae1f2625f31a491533256b5b0dc8f8d0e",
 "classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio.html#a204e56cdaff1968f3ea1d24f19ce7f05",
-"namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aef7216e46c98fa4bac4a4fa203aaadf0"
+"namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af42dd941c9fc7fc5296e8293ac3aad67"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';
