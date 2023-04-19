@@ -88,13 +88,13 @@ public:
 
   Plot() = default;
   Plot(const ptree& plotTree);
-  Plot(const string& name, const string& figureGroupAndCategory, const optional<string>& plotTemplateName = std::nullopt);
+  Plot(const string& name, const string& figureGroupAndCategory, const optional<string>& plotTemplateName = nullopt);
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
   Pad& GetPadDefaults() { return mPads[0]; }
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& templatePlot, const Plot& plot);
-  Plot(const Plot& otherPlot, const string& name, const string& figureGroup, const optional<string>& figureCategory = std::nullopt);
+  Plot(const Plot& otherPlot, const string& name, const string& figureGroup, const optional<string>& figureCategory = nullopt);
   Plot Clone() const;
 
   // accessors for user
@@ -105,7 +105,7 @@ public:
   void SetHeight(int32_t height);
   void SetFixAspectRatio(bool fixAspectRatio = true);
 
-  Plot& SetFill(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> opacity = std::nullopt);
+  Plot& SetFill(int16_t color, optional<int16_t> style = nullopt, optional<float_t> opacity = nullopt);
   Plot& SetFillColor(int16_t color);
   Plot& SetFillStyle(int16_t style);
   Plot& SetFillOpacity(float_t opacity);
@@ -175,14 +175,14 @@ public:
   void operator+=(const Pad& pad);
 
   // User accessors:
-  Data& AddData(const string& name, const string& inputIdentifier, const optional<string>& label = std::nullopt);
-  Data& AddData(const string& name, const Data& dataTemplate, const optional<string>& label = std::nullopt);
+  Data& AddData(const string& name, const string& inputIdentifier, const optional<string>& label = nullopt);
+  Data& AddData(const string& name, const Data& dataTemplate, const optional<string>& label = nullopt);
 
   Ratio& AddRatio(const string& numeratorName, const string& numeratorInputIdentifier,
                   const string& denominatorName, const string& denominatorInputIdentifier,
-                  const optional<string>& label = std::nullopt);
+                  const optional<string>& label = nullopt);
   Ratio& AddRatio(const string& numeratorName, const Data& data, const string& denominatorName,
-                  const string& denominatorInputIdentifier, const optional<string>& label = std::nullopt);
+                  const string& denominatorInputIdentifier, const optional<string>& label = nullopt);
 
   TextBox& AddText(double_t xPos, double_t yPos, const string& text);
   TextBox& AddText(const string& text);
@@ -202,31 +202,31 @@ public:
   Pad& SetDefaultTextFont(int16_t font);
   Pad& SetDefaultMarkerSize(float_t size);
   Pad& SetDefaultMarkerColors(const vector<int16_t>& colors);
-  Pad& SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = std::nullopt, optional<int32_t> nColors = std::nullopt);
+  Pad& SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = nullopt, optional<int32_t> nColors = nullopt);
   Pad& SetDefaultMarkerStyles(const vector<int16_t>& styles);
   Pad& SetDefaultLineWidth(float_t width);
   Pad& SetDefaultLineColors(const vector<int16_t>& colors);
-  Pad& SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = std::nullopt, optional<int32_t> nColors = std::nullopt);
+  Pad& SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = nullopt, optional<int32_t> nColors = nullopt);
   Pad& SetDefaultLineStyles(const vector<int16_t>& styles);
   Pad& SetDefaultFillOpacity(float_t opacity);
   Pad& SetDefaultFillColors(const vector<int16_t>& colors);
-  Pad& SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = std::nullopt, optional<int32_t> nColors = std::nullopt);
+  Pad& SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = nullopt, optional<int32_t> nColors = nullopt);
   Pad& SetDefaultFillStyles(const vector<int16_t>& styles);
   Pad& SetDefaultDrawingOptionGraph(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption);
   Pad& SetDefaultCandleBoxRange(float_t candleOption);
   Pad& SetDefaultCandleWhiskerRange(float_t candleOption);
-  Pad& SetFill(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> opacity = std::nullopt);
+  Pad& SetFill(int16_t color, optional<int16_t> style = nullopt, optional<float_t> opacity = nullopt);
   Pad& SetFillColor(int16_t color);
   Pad& SetFillStyle(int16_t style);
   Pad& SetFillOpacity(float_t opacity);
   Pad& SetTransparent();
-  Pad& SetFrameFill(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> opacity = std::nullopt);
+  Pad& SetFrameFill(int16_t color, optional<int16_t> style = nullopt, optional<float_t> opacity = nullopt);
   Pad& SetFrameFillColor(int16_t color);
   Pad& SetFrameFillStyle(int16_t style);
   Pad& SetFrameFillOpacity(float_t opacity);
-  Pad& SetFrameBorder(int16_t color, optional<int16_t> style = std::nullopt, optional<float_t> width = std::nullopt);
+  Pad& SetFrameBorder(int16_t color, optional<int16_t> style = nullopt, optional<float_t> width = nullopt);
   Pad& SetFrameBorderColor(int16_t color);
   Pad& SetFrameBorderStyle(int16_t style);
   Pad& SetFrameBorderWidth(float_t width);
@@ -421,7 +421,7 @@ protected:
   friend class PlotPainter;
   friend class Plot;
 
-  virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Data>(*this); }
+  virtual shared_ptr<Data> Clone() const { return std::make_shared<Data>(*this); }
   virtual ptree GetPropertyTree() const;
   void SetType(const string& type) { mType = type; }
 
@@ -455,11 +455,11 @@ protected:
   const auto& GetProjInfo() const { return mProjInfo; }
 
   struct proj_info_t {
-    vector<uint8_t> dims;                                        // dimensions to project on (can be one or two)
-    std::vector<std::tuple<uint8_t, double_t, double_t>> ranges; // range restrictions on other dimensions
-    std::optional<bool> isUserCoord{};                           // whether ranges are specified in user coordinates or as bins
-    std::optional<bool> isProfile{};                             // whether this should be a profile instead of a projection
-    std::string GetNameSuffix() const;
+    vector<uint8_t> dims;                              // dimensions to project on (can be one or two)
+    vector<tuple<uint8_t, double_t, double_t>> ranges; // range restrictions on other dimensions
+    optional<bool> isUserCoord{};                      // whether ranges are specified in user coordinates or as bins
+    optional<bool> isProfile{};                        // whether this should be a profile instead of a projection
+    string GetNameSuffix() const;
   };
 
 private:
@@ -579,7 +579,7 @@ protected:
   friend class PlotPainter;
   friend class Plot;
 
-  virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Ratio>(*this); }
+  virtual shared_ptr<Data> Clone() const { return std::make_shared<Ratio>(*this); }
 
   ptree GetPropertyTree() const;
   const auto& GetDenomIdentifier() const { return mDenomInputIdentifier; }
@@ -880,7 +880,7 @@ private:
 class Plot::Pad::LegendBox::LegendEntry
 {
 public:
-  LegendEntry(const optional<string>& label = std::nullopt, const optional<string>& refDataName = std::nullopt, const optional<string>& drawStyle = std::nullopt);
+  LegendEntry(const optional<string>& label = nullopt, const optional<string>& refDataName = nullopt, const optional<string>& drawStyle = nullopt);
   LegendEntry(const ptree& legendEntryTree);
 
   LegendEntry& SetLabel(const string& label);

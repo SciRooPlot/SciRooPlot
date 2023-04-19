@@ -180,7 +180,7 @@ void PlotManager::DumpInputDataFiles(const string& configFileName) const
     inputFileTree.put_child(inFileTuple.first, filesOfIdentifier);
   }
   using boost::property_tree::xml_writer_settings;
-  xml_writer_settings<std::string> settings('\t', 1);
+  xml_writer_settings<string> settings('\t', 1);
   using boost::property_tree::write_xml;
   write_xml(expand_path(configFileName), inputFileTree, std::locale(), settings);
 }
@@ -294,7 +294,7 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
     }
   }
   using boost::property_tree::xml_writer_settings;
-  xml_writer_settings<std::string> settings('\t', 1);
+  xml_writer_settings<string> settings('\t', 1);
   using boost::property_tree::write_xml;
   write_xml(expand_path(plotFileName), plotTree, std::locale(), settings);
   INFO("Wrote plot definitions to {}.", plotFileName);

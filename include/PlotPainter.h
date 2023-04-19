@@ -104,10 +104,10 @@ const map<drawing_options_t, string> defaultDrawingOptions_Graph{
 class PlotPainter
 {
 public:
-  unique_ptr<TCanvas> GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>>& dataBuffer);
+  unique_ptr<TCanvas> GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, unique_ptr<TObject>>>& dataBuffer);
 
 private:
-  optional<data_ptr_t> GetDataClone(TObject* obj, const std::optional<Plot::Pad::Data::proj_info_t>& projInfo = std::nullopt);
+  optional<data_ptr_t> GetDataClone(TObject* obj, const optional<Plot::Pad::Data::proj_info_t>& projInfo = nullopt);
   template <typename T>
   optional<data_ptr_t> GetDataClone(TObject* obj);
   template <typename T, typename Next, typename... Rest>
@@ -116,21 +116,21 @@ private:
 
   void SetGraphRange(TGraph* graph, optional<double_t> min, optional<double_t> max);
   void ScaleGraph(TGraph* graph, double_t scale);
-  void SmoothGraph(TGraph* graph, optional<double_t> min = std::nullopt, optional<double_t> = std::nullopt);
-  void SmoothHist(TH1* hist, optional<double_t> min = std::nullopt, optional<double_t> max = std::nullopt);
+  void SmoothGraph(TGraph* graph, optional<double_t> min = nullopt, optional<double_t> = nullopt);
+  void SmoothHist(TH1* hist, optional<double_t> min = nullopt, optional<double_t> max = nullopt);
   bool DivideGraphs(TGraph* numerator, TGraph* denominator);
   void DivideGraphsInterpolated(TGraph* numerator, TGraph* denominator);
   void DivideHistosInterpolated(TH1* numerator, TH1* denominator);
   void DivideHistGraphInterpolated(TH1* numerator, TGraph* denominator);
   void DivideGraphHistInterpolated(TGraph* numerator, TH1* denominator);
-  std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
+  tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
   void ReplacePlaceholders(string& str, TNamed* data_ptr);
   TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box, TPad* pad);
   float_t GetTextSizePixel(float_t textSizeNDC);
 
   template <typename T>
   TAxis* GetAxis(T* histPtr, int16_t i);
-  std::string GetAxisStr(int16_t i);
+  string GetAxisStr(int16_t i);
 
   vector<int16_t> GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1., bool savePalette = false);
 };

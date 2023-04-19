@@ -132,7 +132,7 @@ constexpr bool is_2d()
  * Function to generate the plot.
  */
 //**************************************************************************************************
-unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>>& dataBuffer)
+unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, unique_ptr<TObject>>>& dataBuffer)
 {
   bool fail = false;
 
@@ -292,7 +292,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                        ? pad.GetDefaultDrawingOptionHist()
                                      : (padDefaults.GetDefaultDrawingOptionHist())
                                        ? padDefaults.GetDefaultDrawingOptionHist()
-                                       : std::nullopt;
+                                       : nullopt;
 
             if (defaultDrawingOption) {
               if (defaultDrawingOptions_Hist.find(*defaultDrawingOption) != defaultDrawingOptions_Hist.end()) {
@@ -307,7 +307,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                        ? pad.GetDefaultDrawingOptionGraph()
                                      : (padDefaults.GetDefaultDrawingOptionGraph())
                                        ? padDefaults.GetDefaultDrawingOptionGraph()
-                                       : std::nullopt;
+                                       : nullopt;
 
             if (defaultDrawingOption) {
               if (defaultDrawingOptions_Graph.find(*defaultDrawingOption) != defaultDrawingOptions_Graph.end()) {
@@ -864,8 +864,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       string text{box->GetText()};
       size_t pos{};
       size_t last{};
-      std::string token;
-      while ((pos = text.find(delimiter, last)) != std::string::npos) {
+      string token;
+      while ((pos = text.find(delimiter, last)) != string::npos) {
         token = text.substr(last, pos - last);
         lines.push_back(token);
         last = pos + delimiter.length();
@@ -1158,7 +1158,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
  * Functions to retrieve a copy or projection of the stored data properly casted it to its actual ROOT type.
  */
 //**************************************************************************************************
-optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const std::optional<Plot::Pad::Data::proj_info_t>& projInfo)
+optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot::Pad::Data::proj_info_t>& projInfo)
 {
   if (obj) {
     if (projInfo) {
@@ -1182,7 +1182,7 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const std::optional
       }
     }
   }
-  return std::nullopt;
+  return nullopt;
 }
 
 template <typename T>
@@ -1191,7 +1191,7 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
   if (obj && obj->InheritsFrom(T::Class())) {
     return static_cast<T*>(obj->Clone());
   }
-  return std::nullopt;
+  return nullopt;
 }
 
 template <typename T, typename Next, typename... Rest>
@@ -1207,7 +1207,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
   // only 1d and 2d histograms are valid outputs! (could be extended to 3d if there is a way to plot this)
   if (projInfo.dims.size() == 0 || projInfo.dims.size() > 2) {
     ERROR("Invalid number of dimensions specified for projection of histogram {}", obj->GetName());
-    return std::nullopt;
+    return nullopt;
   }
 
   if (obj->InheritsFrom(THnBase::Class()) && !isProfile) {
@@ -1220,7 +1220,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= histPtr->GetNdimensions()) {
         ERROR("Invalid dimension specified for setting ranges of histogram {}", obj->GetName());
-        return std::nullopt;
+        return nullopt;
       }
       int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
       int32_t maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
@@ -1241,7 +1241,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 3) {
         ERROR("Invalid dimension specified for setting ranges of histogram {}", obj->GetName());
-        return std::nullopt;
+        return nullopt;
       }
       int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
       int32_t maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
@@ -1261,7 +1261,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     TH2* histPtr = static_cast<TH2*>(obj);
     if (projInfo.dims.size() > 1) {
       ERROR("Invalid dimension specified for projecting histogram {}", obj->GetName());
-      return std::nullopt;
+      return nullopt;
     }
     int32_t minBin = 0;
     int32_t maxBin = -1;
@@ -1270,7 +1270,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 2) {
         ERROR("Invalid dimension specified for setting ranges of histogram {}", obj->GetName());
-        return std::nullopt;
+        return nullopt;
       }
       minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
       maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
@@ -1293,7 +1293,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
   } else {
     ERROR("Cannot do {} for type {} ({}).", (isProfile) ? "profiles" : "projections", obj->ClassName(), obj->GetName());
   }
-  return std::nullopt;
+  return nullopt;
 }
 
 template <typename T>
@@ -1311,7 +1311,7 @@ TAxis* PlotPainter::GetAxis(T* histPtr, int16_t i)
   }
 }
 
-std::string PlotPainter::GetAxisStr(int16_t i)
+string PlotPainter::GetAxisStr(int16_t i)
 {
   switch (i) {
     case 0:
@@ -1524,7 +1524,7 @@ void PlotPainter::SmoothHist(TH1* hist, optional<double_t> min, optional<double_
  * Returns actual dimensions in pixel of the text with latex formatting.
  */
 //**************************************************************************************************
-std::tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad* pad)
+tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad* pad)
 {
   uint32_t width{};
   uint32_t height{};
@@ -1647,7 +1647,7 @@ vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vecto
   }
   int16_t firstColorIndex = TColor::CreateGradientColorTable(nPoints, stops.data(), red.data(), green.data(), blue.data(), nColors, alpha);
 
-  std::vector<int16_t> gradientColors(nColors);
+  vector<int16_t> gradientColors(nColors);
   std::iota(gradientColors.begin(), gradientColors.end(), firstColorIndex);
 
   // TColor::CreateGradientColorTable() changes current palette as side effect

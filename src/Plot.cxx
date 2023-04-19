@@ -402,7 +402,7 @@ auto Plot::Pad::SetDefaultMarkerColors(const vector<int16_t>& colors) -> decltyp
 
 auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
-  mMarkerDefaults.colors = std::nullopt;
+  mMarkerDefaults.colors = nullopt;
   mMarkerDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
 }
@@ -421,7 +421,7 @@ auto Plot::Pad::SetDefaultLineColors(const vector<int16_t>& colors) -> decltype(
 
 auto Plot::Pad::SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
-  mLineDefaults.colors = std::nullopt;
+  mLineDefaults.colors = nullopt;
   mLineDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
 }
@@ -440,7 +440,7 @@ auto Plot::Pad::SetDefaultFillColors(const vector<int16_t>& colors) -> decltype(
 
 auto Plot::Pad::SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
-  mFillDefaults.colors = std::nullopt;
+  mFillDefaults.colors = nullopt;
   mFillDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
 }
@@ -904,7 +904,7 @@ void Plot::Pad::operator+=(const Pad& pad)
     mMarkerDefaults.colorGradient.rgbEndpoints = pad.mMarkerDefaults.colorGradient.rgbEndpoints;
     if (pad.mMarkerDefaults.colorGradient.alpha) mMarkerDefaults.colorGradient.alpha = pad.mMarkerDefaults.colorGradient.alpha;
     if (pad.mMarkerDefaults.colorGradient.nColors) mMarkerDefaults.colorGradient.nColors = pad.mMarkerDefaults.colorGradient.nColors;
-    mMarkerDefaults.colors = std::nullopt;
+    mMarkerDefaults.colors = nullopt;
   }
   if (pad.mLineDefaults.scale) mLineDefaults.scale = pad.mLineDefaults.scale;
   if (pad.mLineDefaults.styles) mLineDefaults.styles = pad.mLineDefaults.styles;
@@ -916,7 +916,7 @@ void Plot::Pad::operator+=(const Pad& pad)
     mLineDefaults.colorGradient.rgbEndpoints = pad.mLineDefaults.colorGradient.rgbEndpoints;
     if (pad.mLineDefaults.colorGradient.alpha) mLineDefaults.colorGradient.alpha = pad.mLineDefaults.colorGradient.alpha;
     if (pad.mLineDefaults.colorGradient.nColors) mLineDefaults.colorGradient.nColors = pad.mLineDefaults.colorGradient.nColors;
-    mLineDefaults.colors = std::nullopt;
+    mLineDefaults.colors = nullopt;
   }
   if (pad.mFillDefaults.scale) mFillDefaults.scale = pad.mFillDefaults.scale;
   if (pad.mFillDefaults.styles) mFillDefaults.styles = pad.mFillDefaults.styles;
@@ -928,7 +928,7 @@ void Plot::Pad::operator+=(const Pad& pad)
     mFillDefaults.colorGradient.rgbEndpoints = pad.mFillDefaults.colorGradient.rgbEndpoints;
     if (pad.mFillDefaults.colorGradient.alpha) mFillDefaults.colorGradient.alpha = pad.mFillDefaults.colorGradient.alpha;
     if (pad.mFillDefaults.colorGradient.nColors) mFillDefaults.colorGradient.nColors = pad.mFillDefaults.colorGradient.nColors;
-    mFillDefaults.colors = std::nullopt;
+    mFillDefaults.colors = nullopt;
   }
   if (pad.mDrawingOptionDefaults.graph) mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
   if (pad.mDrawingOptionDefaults.hist) mDrawingOptionDefaults.hist = pad.mDrawingOptionDefaults.hist;
@@ -1175,10 +1175,10 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mNContours, "number_of_contours");
 
   // ugly workaround
-  std::optional<vector<uint8_t>> dims;
-  std::optional<vector<std::tuple<uint8_t, double_t, double_t>>> ranges;
-  std::optional<bool> isUserCoord;
-  std::optional<bool> isProfile;
+  optional<vector<uint8_t>> dims;
+  optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
+  optional<bool> isUserCoord;
+  optional<bool> isProfile;
   read_from_tree(dataTree, dims, "proj_dims");
   read_from_tree(dataTree, ranges, "proj_ranges");
   read_from_tree(dataTree, isUserCoord, "proj_isUserCoord");
@@ -1228,8 +1228,8 @@ ptree Plot::Pad::Data::GetPropertyTree() const
 
   // ugly workaround
   if (mProjInfo) {
-    put_in_tree(dataTree, std::optional<vector<uint8_t>>{mProjInfo->dims}, "proj_dims");
-    put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{mProjInfo->ranges}, "proj_ranges");
+    put_in_tree(dataTree, optional<vector<uint8_t>>{mProjInfo->dims}, "proj_dims");
+    put_in_tree(dataTree, optional<vector<tuple<uint8_t, double_t, double_t>>>{mProjInfo->ranges}, "proj_ranges");
     put_in_tree(dataTree, mProjInfo->isUserCoord, "proj_isUserCoord");
     put_in_tree(dataTree, mProjInfo->isProfile, "proj_isProfile");
   }
@@ -1516,9 +1516,9 @@ auto Plot::Pad::Data::SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, dou
  * Name suffix encoding the details of projections.
  */
 //**************************************************************************************************
-std::string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
+string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
 {
-  std::string nameSuffix = (isProfile && *isProfile) ? "_Prof{" : "_Proj{";
+  string nameSuffix = (isProfile && *isProfile) ? "_Prof{" : "_Proj{";
   for (auto dim : dims) {
     nameSuffix += std::to_string(dim);
   }
@@ -1584,10 +1584,10 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   }
 
   // ugly workaround
-  std::optional<vector<uint8_t>> dims;
-  std::optional<vector<std::tuple<uint8_t, double_t, double_t>>> ranges;
-  std::optional<bool> isUserCoord;
-  std::optional<bool> isProfile;
+  optional<vector<uint8_t>> dims;
+  optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
+  optional<bool> isUserCoord;
+  optional<bool> isProfile;
   read_from_tree(dataTree, dims, "projDenom_dims");
   read_from_tree(dataTree, ranges, "projDenom_ranges");
   read_from_tree(dataTree, isUserCoord, "projDenom_isUserCoord");
@@ -1612,8 +1612,8 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
 
   // ugly workaround
   if (mProjInfoDenom) {
-    put_in_tree(dataTree, std::optional<vector<uint8_t>>{mProjInfoDenom->dims}, "projDenom_dims");
-    put_in_tree(dataTree, std::optional<vector<std::tuple<uint8_t, double_t, double_t>>>{mProjInfoDenom->ranges}, "projDenom_ranges");
+    put_in_tree(dataTree, optional<vector<uint8_t>>{mProjInfoDenom->dims}, "projDenom_dims");
+    put_in_tree(dataTree, optional<vector<tuple<uint8_t, double_t, double_t>>>{mProjInfoDenom->ranges}, "projDenom_ranges");
     put_in_tree(dataTree, mProjInfoDenom->isUserCoord, "projDenom_isUserCoord");
     put_in_tree(dataTree, mProjInfoDenom->isProfile, "projDenom_isProfile");
   }
@@ -2007,8 +2007,8 @@ BoxType& Plot::Pad::Box<BoxType>::SetUserCoordinates(bool isUserCoord)
 template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetAutoPlacement()
 {
-  mPos.x = std::nullopt;
-  mPos.y = std::nullopt;
+  mPos.x = nullopt;
+  mPos.y = nullopt;
   return *GetThis();
 }
 

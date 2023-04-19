@@ -37,6 +37,7 @@ using std::array;
 using std::cout;
 using std::endl;
 using std::map;
+using std::nullopt;
 using std::optional;
 using std::set;
 using std::shared_ptr;

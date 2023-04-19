@@ -25,9 +25,9 @@ namespace SciRooPlot
 {
 string expand_path(const string& path);
 vector<string> split_string(const string& argString, char delimiter, bool onlyFirst = false);
-bool file_exists(const std::string& name);
+bool file_exists(const string& name);
 
-inline bool str_contains(const std::string& str, const std::string& substr, bool reverseSearch = false)
+inline bool str_contains(const string& str, const string& substr, bool reverseSearch = false)
 {
   if (reverseSearch) {
     return (str.rfind(substr) != string::npos);
@@ -48,18 +48,18 @@ template <typename T>
 struct is_vector : public std::false_type {
 };
 template <typename T, typename A>
-struct is_vector<std::vector<T, A>> : public std::true_type {
+struct is_vector<vector<T, A>> : public std::true_type {
 };
 
 template <typename>
 struct is_tuple : std::false_type {
 };
 template <typename... T>
-struct is_tuple<std::tuple<T...>> : std::true_type {
+struct is_tuple<tuple<T...>> : std::true_type {
 };
 
 template <typename... Ts>
-string tuple_to_string(const std::tuple<Ts...>& items)
+string tuple_to_string(const tuple<Ts...>& items)
 {
   string itemString;
   std::apply([&](auto&&... item) { ((itemString += std::to_string(item) + ","), ...); }, items);
@@ -96,7 +96,7 @@ T string_to_type(const string& str)
 }
 
 template <typename... Ts>
-std::tuple<Ts...> string_to_tuple(string itemString)
+tuple<Ts...> string_to_tuple(string itemString)
 {
   // split string
   string curItemStr;
@@ -117,7 +117,7 @@ std::tuple<Ts...> string_to_tuple(string itemString)
 }
 
 template <typename T>
-std::vector<T> string_to_vector(string itemString)
+vector<T> string_to_vector(string itemString)
 {
   // safety in case user put some blank spaces between numbers
   std::remove_if(itemString.begin(), itemString.end(), ::isspace);
@@ -175,7 +175,7 @@ void read_from_tree(const ptree& tree, optional<T>& var, const string& label)
 template <typename T>
 optional<T> pick(int32_t i, const optional<vector<T>>& vec)
 {
-  if (!vec || vec->empty()) return std::nullopt;
+  if (!vec || vec->empty()) return nullopt;
   return optional((*vec)[(i - 1) % vec->size()]);
 }
 
@@ -185,7 +185,7 @@ const optional<T>& get_first(const optional<T>& property, const Ts&... propertie
   for (const auto ptr : {&property, &properties...}) {
     if (*ptr) return *ptr;
   }
-  // if all properties are std::nullopt, simply return reference to the first
+  // if all properties are nullopt, simply return reference to the first
   return property;
 }
 

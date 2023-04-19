@@ -49,7 +49,7 @@ vector<string> split_string(const string& argString, char delimiter, bool onlyFi
   return arguments;
 }
 
-bool file_exists(const std::string& name)
+bool file_exists(const string& name)
 {
   struct stat buffer;
   return (stat(name.c_str(), &buffer) == 0);

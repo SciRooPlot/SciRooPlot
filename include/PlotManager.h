@@ -96,7 +96,7 @@ private:
   ptree& ReadPlotTemplatesFromFile(const string& plotFileName);
   void SavePlotsToFile() const;
 
-  std::unique_ptr<TApplication> mApp;
+  unique_ptr<TApplication> mApp;
   bool mSaveToRootFile{};
   string mOutputFileName;
   map<string, shared_ptr<TCanvas>> mPlotLedger;
@@ -108,7 +108,7 @@ private:
   vector<const string*> mPlotViewHistory;
   int32_t mWindowOffsetY{};
 
-  unordered_map<string, unordered_map<string, std::unique_ptr<TObject>>> mDataBuffer;
+  unordered_map<string, unordered_map<string, unique_ptr<TObject>>> mDataBuffer;
   map<string, vector<string>> mInputFiles; // inputFileIdentifier, inputFilePaths
   void PrintBufferStatus(bool missingOnly = false) const;
   bool FillBuffer();
