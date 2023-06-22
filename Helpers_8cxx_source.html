@@ -86,76 +86,77 @@ $(document).ready(function(){initNavTree('Helpers_8cxx_source.html',''); initRes
   <div class="headertitle"><div class="title">Helpers.cxx</div></div>
 </div><!--header-->
 <div class="contents">
-<a href="Helpers_8cxx.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="comment">// SciRooPlot</span></div>
-<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="comment">//</span></div>
-<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="comment">// Copyright (C) 2019-2023  Mario Krüger</span></div>
-<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="comment">// Contact: mario.kruger@cern.ch</span></div>
-<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="comment">// For a full list of contributors please see doc/CONTRIBUTORS.md</span></div>
-<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="comment">//</span></div>
-<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="comment">// This program is free software: you can redistribute it and/or modify</span></div>
-<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="comment">// it under the terms of the GNU General Public License as published by</span></div>
-<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="comment">// the Free Software Foundation, either version 3 of the License, or</span></div>
-<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="comment">// (at your option) any later version.</span></div>
-<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="comment">// This program is distributed in the hope that it will be useful,</span></div>
-<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="comment">// but WITHOUT ANY WARRANTY; without even the implied warranty of</span></div>
-<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="comment">// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the</span></div>
-<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="comment">// GNU General Public License for more details.</span></div>
-<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="comment">// You should have received a copy of the GNU General Public License</span></div>
-<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="comment">// along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.</span></div>
-<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span> </div>
-<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span><span class="preprocessor">#include &quot;<a class="code" href="Helpers_8h.html">Helpers.h</a>&quot;</span></div>
-<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &lt;sys/stat.h&gt;</span></div>
-<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span> </div>
-<div class="line"><a id="l00021" name="l00021"></a><span class="lineno"><a class="line" href="namespaceSciRooPlot.html">   21</a></span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespaceSciRooPlot.html">SciRooPlot</a></div>
-<div class="line"><a id="l00022" name="l00022"></a><span class="lineno">   22</span>{</div>
-<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span> </div>
-<div class="line"><a id="l00024" name="l00024"></a><span class="lineno"><a class="line" href="namespaceSciRooPlot.html#a4fcd2d1cbb3ff608ad11cbcc6a180ff3">   24</a></span><span class="keywordtype">string</span> <a class="code hl_function" href="namespaceSciRooPlot.html#a4fcd2d1cbb3ff608ad11cbcc6a180ff3">expand_path</a>(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; path)</div>
-<div class="line"><a id="l00025" name="l00025"></a><span class="lineno">   25</span>{</div>
-<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>  <span class="keywordtype">char</span>* raw = gSystem-&gt;ExpandPathName(path.data());</div>
-<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>  <span class="keywordtype">string</span> expandedPath(raw ? raw : <span class="stringliteral">&quot;&quot;</span>);</div>
-<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>  <span class="keyword">delete</span>[] raw;</div>
-<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>  <span class="keywordflow">return</span> expandedPath;</div>
-<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>}</div>
-<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span> </div>
-<div class="line"><a id="l00032" name="l00032"></a><span class="lineno"><a class="line" href="namespaceSciRooPlot.html#a28df53b1372d394c4c2228ca9e6d0245">   32</a></span>vector&lt;string&gt; <a class="code hl_function" href="namespaceSciRooPlot.html#a28df53b1372d394c4c2228ca9e6d0245">split_string</a>(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; argString, <span class="keywordtype">char</span> delimiter, <span class="keywordtype">bool</span> onlyFirst)</div>
-<div class="line"><a id="l00033" name="l00033"></a><span class="lineno">   33</span>{</div>
-<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>  vector&lt;string&gt; arguments;</div>
-<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>  <span class="keywordflow">if</span> (onlyFirst) {</div>
-<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>    <span class="keyword">auto</span> delimiterPos = argString.find(delimiter);</div>
-<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    arguments.push_back(argString.substr(0, delimiterPos));</div>
-<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    <span class="keywordflow">if</span> (delimiterPos != string::npos) {</div>
-<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>      arguments.push_back(argString.substr(delimiterPos + 1));</div>
-<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>    }</div>
-<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>  } <span class="keywordflow">else</span> {</div>
-<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>    <span class="keywordtype">string</span> curArg;</div>
-<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    std::istringstream argStream(argString);</div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    <span class="keywordflow">while</span> (std::getline(argStream, curArg, delimiter)) {</div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>      arguments.push_back(curArg);</div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>    }</div>
-<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>  }</div>
-<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
-<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>  <span class="keywordflow">return</span> arguments;</div>
-<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>}</div>
-<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span> </div>
-<div class="line"><a id="l00052" name="l00052"></a><span class="lineno"><a class="line" href="namespaceSciRooPlot.html#a0bf7aefd8b07541b27258a417f91a150">   52</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="namespaceSciRooPlot.html#a0bf7aefd8b07541b27258a417f91a150">file_exists</a>(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name)</div>
-<div class="line"><a id="l00053" name="l00053"></a><span class="lineno">   53</span>{</div>
-<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>  <span class="keyword">struct </span>stat buffer;</div>
-<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>  <span class="keywordflow">return</span> (stat(name.c_str(), &amp;buffer) == 0);</div>
-<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>}</div>
-<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span> </div>
-<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span>} <span class="comment">// end namespace SciRooPlot</span></div>
+<a href="Helpers_8cxx.html">Go to the documentation of this file.</a><div class="fragment"><div class="line"><a id="l00001" name="l00001"></a><span class="lineno">    1</span><span class="comment">/*</span></div>
+<div class="line"><a id="l00002" name="l00002"></a><span class="lineno">    2</span><span class="comment">********************************************************************************</span></div>
+<div class="line"><a id="l00003" name="l00003"></a><span class="lineno">    3</span><span class="comment">* --------------------------------- SciRooPlot ---------------------------------</span></div>
+<div class="line"><a id="l00004" name="l00004"></a><span class="lineno">    4</span><span class="comment">* Copyright (c) 2019-2023 Mario Krüger</span></div>
+<div class="line"><a id="l00005" name="l00005"></a><span class="lineno">    5</span><span class="comment">* Contact: mario.kruger@cern.ch</span></div>
+<div class="line"><a id="l00006" name="l00006"></a><span class="lineno">    6</span><span class="comment">* For a full list of contributors please see doc/CONTRIBUTORS.md.</span></div>
+<div class="line"><a id="l00007" name="l00007"></a><span class="lineno">    7</span><span class="comment">*</span></div>
+<div class="line"><a id="l00008" name="l00008"></a><span class="lineno">    8</span><span class="comment">* This program is free software: you can redistribute it and/or modify</span></div>
+<div class="line"><a id="l00009" name="l00009"></a><span class="lineno">    9</span><span class="comment">* it under the terms of the GNU General Public License as published by</span></div>
+<div class="line"><a id="l00010" name="l00010"></a><span class="lineno">   10</span><span class="comment">* the Free Software Foundation in version 3 (or later) of the License.</span></div>
+<div class="line"><a id="l00011" name="l00011"></a><span class="lineno">   11</span><span class="comment">* This program is distributed in the hope that it will be useful,</span></div>
+<div class="line"><a id="l00012" name="l00012"></a><span class="lineno">   12</span><span class="comment">* but WITHOUT ANY WARRANTY; without even the implied warranty of</span></div>
+<div class="line"><a id="l00013" name="l00013"></a><span class="lineno">   13</span><span class="comment">* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</span></div>
+<div class="line"><a id="l00014" name="l00014"></a><span class="lineno">   14</span><span class="comment">* See the GNU General Public License for more details.</span></div>
+<div class="line"><a id="l00015" name="l00015"></a><span class="lineno">   15</span><span class="comment">* The GNU General Public License can be found here: &lt;http://www.gnu.org/licenses/&gt;.</span></div>
+<div class="line"><a id="l00016" name="l00016"></a><span class="lineno">   16</span><span class="comment">*******************************************************************************</span></div>
+<div class="line"><a id="l00017" name="l00017"></a><span class="lineno">   17</span><span class="comment">*/</span></div>
+<div class="line"><a id="l00018" name="l00018"></a><span class="lineno">   18</span> </div>
+<div class="line"><a id="l00019" name="l00019"></a><span class="lineno">   19</span><span class="preprocessor">#include &quot;<a class="code" href="Helpers_8h.html">Helpers.h</a>&quot;</span></div>
+<div class="line"><a id="l00020" name="l00020"></a><span class="lineno">   20</span><span class="preprocessor">#include &lt;sys/stat.h&gt;</span></div>
+<div class="line"><a id="l00021" name="l00021"></a><span class="lineno">   21</span> </div>
+<div class="line"><a id="l00022" name="l00022"></a><span class="lineno"><a class="line" href="namespaceSciRooPlot.html">   22</a></span><span class="keyword">namespace </span><a class="code hl_namespace" href="namespaceSciRooPlot.html">SciRooPlot</a></div>
+<div class="line"><a id="l00023" name="l00023"></a><span class="lineno">   23</span>{</div>
+<div class="line"><a id="l00024" name="l00024"></a><span class="lineno">   24</span> </div>
+<div class="line"><a id="l00025" name="l00025"></a><span class="lineno"><a class="line" href="namespaceSciRooPlot.html#a4fcd2d1cbb3ff608ad11cbcc6a180ff3">   25</a></span><span class="keywordtype">string</span> <a class="code hl_function" href="namespaceSciRooPlot.html#a4fcd2d1cbb3ff608ad11cbcc6a180ff3">expand_path</a>(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; path)</div>
+<div class="line"><a id="l00026" name="l00026"></a><span class="lineno">   26</span>{</div>
+<div class="line"><a id="l00027" name="l00027"></a><span class="lineno">   27</span>  <span class="keywordtype">char</span>* raw = gSystem-&gt;ExpandPathName(path.data());</div>
+<div class="line"><a id="l00028" name="l00028"></a><span class="lineno">   28</span>  <span class="keywordtype">string</span> expandedPath(raw ? raw : <span class="stringliteral">&quot;&quot;</span>);</div>
+<div class="line"><a id="l00029" name="l00029"></a><span class="lineno">   29</span>  <span class="keyword">delete</span>[] raw;</div>
+<div class="line"><a id="l00030" name="l00030"></a><span class="lineno">   30</span>  <span class="keywordflow">return</span> expandedPath;</div>
+<div class="line"><a id="l00031" name="l00031"></a><span class="lineno">   31</span>}</div>
+<div class="line"><a id="l00032" name="l00032"></a><span class="lineno">   32</span> </div>
+<div class="line"><a id="l00033" name="l00033"></a><span class="lineno"><a class="line" href="namespaceSciRooPlot.html#a28df53b1372d394c4c2228ca9e6d0245">   33</a></span>vector&lt;string&gt; <a class="code hl_function" href="namespaceSciRooPlot.html#a28df53b1372d394c4c2228ca9e6d0245">split_string</a>(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; argString, <span class="keywordtype">char</span> delimiter, <span class="keywordtype">bool</span> onlyFirst)</div>
+<div class="line"><a id="l00034" name="l00034"></a><span class="lineno">   34</span>{</div>
+<div class="line"><a id="l00035" name="l00035"></a><span class="lineno">   35</span>  vector&lt;string&gt; arguments;</div>
+<div class="line"><a id="l00036" name="l00036"></a><span class="lineno">   36</span>  <span class="keywordflow">if</span> (onlyFirst) {</div>
+<div class="line"><a id="l00037" name="l00037"></a><span class="lineno">   37</span>    <span class="keyword">auto</span> delimiterPos = argString.find(delimiter);</div>
+<div class="line"><a id="l00038" name="l00038"></a><span class="lineno">   38</span>    arguments.push_back(argString.substr(0, delimiterPos));</div>
+<div class="line"><a id="l00039" name="l00039"></a><span class="lineno">   39</span>    <span class="keywordflow">if</span> (delimiterPos != string::npos) {</div>
+<div class="line"><a id="l00040" name="l00040"></a><span class="lineno">   40</span>      arguments.push_back(argString.substr(delimiterPos + 1));</div>
+<div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>    }</div>
+<div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>  } <span class="keywordflow">else</span> {</div>
+<div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span>    <span class="keywordtype">string</span> curArg;</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>    std::istringstream argStream(argString);</div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>    <span class="keywordflow">while</span> (std::getline(argStream, curArg, delimiter)) {</div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>      arguments.push_back(curArg);</div>
+<div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>    }</div>
+<div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span>  }</div>
+<div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span> </div>
+<div class="line"><a id="l00050" name="l00050"></a><span class="lineno">   50</span>  <span class="keywordflow">return</span> arguments;</div>
+<div class="line"><a id="l00051" name="l00051"></a><span class="lineno">   51</span>}</div>
+<div class="line"><a id="l00052" name="l00052"></a><span class="lineno">   52</span> </div>
+<div class="line"><a id="l00053" name="l00053"></a><span class="lineno"><a class="line" href="namespaceSciRooPlot.html#a0bf7aefd8b07541b27258a417f91a150">   53</a></span><span class="keywordtype">bool</span> <a class="code hl_function" href="namespaceSciRooPlot.html#a0bf7aefd8b07541b27258a417f91a150">file_exists</a>(<span class="keyword">const</span> <span class="keywordtype">string</span>&amp; name)</div>
+<div class="line"><a id="l00054" name="l00054"></a><span class="lineno">   54</span>{</div>
+<div class="line"><a id="l00055" name="l00055"></a><span class="lineno">   55</span>  <span class="keyword">struct </span>stat buffer;</div>
+<div class="line"><a id="l00056" name="l00056"></a><span class="lineno">   56</span>  <span class="keywordflow">return</span> (stat(name.c_str(), &amp;buffer) == 0);</div>
+<div class="line"><a id="l00057" name="l00057"></a><span class="lineno">   57</span>}</div>
+<div class="line"><a id="l00058" name="l00058"></a><span class="lineno">   58</span> </div>
+<div class="line"><a id="l00059" name="l00059"></a><span class="lineno">   59</span>} <span class="comment">// end namespace SciRooPlot</span></div>
 <div class="ttc" id="aHelpers_8h_html"><div class="ttname"><a href="Helpers_8h.html">Helpers.h</a></div></div>
-<div class="ttc" id="anamespaceSciRooPlot_html"><div class="ttname"><a href="namespaceSciRooPlot.html">SciRooPlot</a></div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00021">Helpers.cxx:22</a></div></div>
-<div class="ttc" id="anamespaceSciRooPlot_html_a0bf7aefd8b07541b27258a417f91a150"><div class="ttname"><a href="namespaceSciRooPlot.html#a0bf7aefd8b07541b27258a417f91a150">SciRooPlot::file_exists</a></div><div class="ttdeci">bool file_exists(const string &amp;name)</div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00052">Helpers.cxx:52</a></div></div>
-<div class="ttc" id="anamespaceSciRooPlot_html_a28df53b1372d394c4c2228ca9e6d0245"><div class="ttname"><a href="namespaceSciRooPlot.html#a28df53b1372d394c4c2228ca9e6d0245">SciRooPlot::split_string</a></div><div class="ttdeci">vector&lt; string &gt; split_string(const string &amp;argString, char delimiter, bool onlyFirst)</div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00032">Helpers.cxx:32</a></div></div>
-<div class="ttc" id="anamespaceSciRooPlot_html_a4fcd2d1cbb3ff608ad11cbcc6a180ff3"><div class="ttname"><a href="namespaceSciRooPlot.html#a4fcd2d1cbb3ff608ad11cbcc6a180ff3">SciRooPlot::expand_path</a></div><div class="ttdeci">string expand_path(const string &amp;path)</div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00024">Helpers.cxx:24</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html"><div class="ttname"><a href="namespaceSciRooPlot.html">SciRooPlot</a></div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00022">Helpers.cxx:23</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a0bf7aefd8b07541b27258a417f91a150"><div class="ttname"><a href="namespaceSciRooPlot.html#a0bf7aefd8b07541b27258a417f91a150">SciRooPlot::file_exists</a></div><div class="ttdeci">bool file_exists(const string &amp;name)</div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00053">Helpers.cxx:53</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a28df53b1372d394c4c2228ca9e6d0245"><div class="ttname"><a href="namespaceSciRooPlot.html#a28df53b1372d394c4c2228ca9e6d0245">SciRooPlot::split_string</a></div><div class="ttdeci">vector&lt; string &gt; split_string(const string &amp;argString, char delimiter, bool onlyFirst)</div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00033">Helpers.cxx:33</a></div></div>
+<div class="ttc" id="anamespaceSciRooPlot_html_a4fcd2d1cbb3ff608ad11cbcc6a180ff3"><div class="ttname"><a href="namespaceSciRooPlot.html#a4fcd2d1cbb3ff608ad11cbcc6a180ff3">SciRooPlot::expand_path</a></div><div class="ttdeci">string expand_path(const string &amp;path)</div><div class="ttdef"><b>Definition:</b> <a href="Helpers_8cxx_source.html#l00025">Helpers.cxx:25</a></div></div>
 </div><!-- fragment --></div><!-- contents -->
 </div><!-- doc-content -->
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="Helpers_8cxx.html">Helpers.cxx</a></li>
-    <li class="footer">Generated on Wed Apr 19 2023 09:25:12 for SciRooPlot by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.4 </li>
+    <li class="footer">Generated on Thu Jun 22 2023 09:30:03 for SciRooPlot by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.4 </li>
   </ul>
 </div>
 </body>
