@@ -12,7 +12,7 @@ else()
 endif()
 
 list(PREPEND CMAKE_PREFIX_PATH ${SCIROOPLOT_ROOT})
-find_package(SciRooPlot CONFIG REQUIRED)
+find_package(SCIROOPLOT CONFIG REQUIRED)
 
 if(NOT EXISTS "${SCIROOPLOT_LIB}")
   message(FATAL_ERROR "Did not find SciRooPlot in ${SCIROOPLOT_ROOT}. Please source the .plotrc file or specify the correct path via -DSCIROOPLOT_ROOT=/path/to/SciRooPlot.")
