@@ -209,7 +209,7 @@ $(document).ready(function(){initNavTree('Helpers_8h_source.html',''); initResiz
 <div class="line"><a id="l00121" name="l00121"></a><span class="lineno"><a class="line" href="namespaceSciRooPlot.html#a5897c97265f1b24f6da1c2e83257656d">  121</a></span>vector&lt;T&gt; <a class="code hl_function" href="namespaceSciRooPlot.html#a5897c97265f1b24f6da1c2e83257656d">string_to_vector</a>(<span class="keywordtype">string</span> itemString)</div>
 <div class="line"><a id="l00122" name="l00122"></a><span class="lineno">  122</span>{</div>
 <div class="line"><a id="l00123" name="l00123"></a><span class="lineno">  123</span>  <span class="comment">// safety in case user put some blank spaces between numbers</span></div>
-<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>  std::remove_if(itemString.begin(), itemString.end(), ::isspace);</div>
+<div class="line"><a id="l00124" name="l00124"></a><span class="lineno">  124</span>  <span class="keyword">static_cast&lt;</span><span class="keywordtype">void</span><span class="keyword">&gt;</span>(std::remove_if(itemString.begin(), itemString.end(), ::isspace));</div>
 <div class="line"><a id="l00125" name="l00125"></a><span class="lineno">  125</span>  vector&lt;T&gt; items;</div>
 <div class="line"><a id="l00126" name="l00126"></a><span class="lineno">  126</span> </div>
 <div class="line"><a id="l00127" name="l00127"></a><span class="lineno">  127</span>  <span class="keywordtype">string</span> curItemStr;</div>
@@ -322,7 +322,7 @@ $(document).ready(function(){initNavTree('Helpers_8h_source.html',''); initResiz
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_d44c64559bbebec7f509842c48db8b23.html">include</a></li><li class="navelem"><a class="el" href="Helpers_8h.html">Helpers.h</a></li>
-    <li class="footer">Generated on Fri Aug 4 2023 09:33:19 for SciRooPlot by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.4 </li>
+    <li class="footer">Generated on Tue Oct 3 2023 10:14:43 for SciRooPlot by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.4 </li>
   </ul>
 </div>
 </body>
