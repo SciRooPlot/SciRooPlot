@@ -54,6 +54,7 @@ namespace SciRooPlot
 //**************************************************************************************************
 PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr)), mOutputFileName("ResultPlots.root")
 {
+  gROOT->SetWebDisplay("off");
   TQObject::Connect("TGMainFrame", "CloseWindow()", "TApplication", gApplication, "Terminate()");
   gErrorIgnoreLevel = kWarning;
 
