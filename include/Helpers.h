@@ -121,7 +121,7 @@ template <typename T>
 vector<T> string_to_vector(string itemString)
 {
   // safety in case user put some blank spaces between numbers
-  std::remove_if(itemString.begin(), itemString.end(), ::isspace);
+  static_cast<void>(std::remove_if(itemString.begin(), itemString.end(), ::isspace));
   vector<T> items;
 
   string curItemStr;
