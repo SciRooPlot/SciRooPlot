@@ -2287,6 +2287,14 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultDrawStyle(string drawStyle
   return *this;
 }
 
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultColor(int16_t color)
+{
+  mLineDefault.color = color;
+  mMarkerDefault.color = color;
+  mFillDefault.color = color;
+  return *this;
+}
+
 Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineColor(int16_t color)
 {
   mLineDefault.color = color;

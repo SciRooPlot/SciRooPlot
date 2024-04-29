@@ -826,6 +826,7 @@ public:
   LegendBox& SetTitle(const string& title);
   LegendBox& SetNumColumns(uint8_t numColumns);
   LegendBox& SetDefaultDrawStyle(string drawStyle);
+  LegendBox& SetDefaultColor(int16_t color);
   LegendBox& SetDefaultLineColor(int16_t color);
   LegendBox& SetDefaultLineStyle(int16_t style);
   LegendBox& SetDefaultLineWidth(float_t width);

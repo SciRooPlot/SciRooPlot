@@ -1067,26 +1067,38 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           if (auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(fillAttr);
 
           curEntry->SetMarkerColor(markerAttr.GetMarkerColor());
+          if (box->GetDefaultMarkerColor()) {
+            curEntry->SetMarkerColor(*box->GetDefaultMarkerColor());
+          }
           curEntry->SetMarkerStyle(markerAttr.GetMarkerStyle());
+          if (box->GetDefaultMarkerStyle()) {
+            curEntry->SetMarkerStyle(*box->GetDefaultMarkerStyle());
+          }
           curEntry->SetMarkerSize(markerAttr.GetMarkerSize());
-
+          if (box->GetDefaultMarkerSize()) {
+            curEntry->SetMarkerSize(*box->GetDefaultMarkerSize());
+          }
+          curEntry->SetLineColor(lineAttr.GetLineColor());
           if (box->GetDefaultLineColor()) {
             curEntry->SetLineColor(*box->GetDefaultLineColor());
-          } else {
-            curEntry->SetLineColor(lineAttr.GetLineColor());
           }
+          curEntry->SetLineStyle(lineAttr.GetLineStyle());
           if (box->GetDefaultLineStyle()) {
             curEntry->SetLineStyle(*box->GetDefaultLineStyle());
-          } else {
-            curEntry->SetLineStyle(lineAttr.GetLineStyle());
           }
+          curEntry->SetLineWidth(lineAttr.GetLineWidth());
           if (box->GetDefaultLineWidth()) {
             curEntry->SetLineWidth(*box->GetDefaultLineWidth());
-          } else {
-            curEntry->SetLineWidth(lineAttr.GetLineWidth());
           }
           curEntry->SetFillColor(fillAttr.GetFillColor());
+          if (box->GetDefaultFillColor()) {
+            curEntry->SetFillColor(*box->GetDefaultFillColor());
+          }
           curEntry->SetFillStyle(fillAttr.GetFillStyle());
+          if (box->GetDefaultFillStyle()) {
+            curEntry->SetFillStyle(*box->GetDefaultFillStyle());
+          }
+          // TODO: opacity
         } else {
           curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), drawStyle.data());
         }
