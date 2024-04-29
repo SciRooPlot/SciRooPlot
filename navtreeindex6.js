@@ -1,5 +1,7 @@
 var NAVTREEINDEX6 =
 {
+"namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aec44e69f05a6407a72ce270cb2cd7067":[0,0,0,8,8],
+"namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aef7216e46c98fa4bac4a4fa203aaadf0":[0,0,0,8,27],
 "namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af42dd941c9fc7fc5296e8293ac3aad67":[0,0,0,8,31],
 "namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af45e6651d97e175ca60abee3a4701b60":[0,0,0,8,16],
 "namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af5c0c5a37f907d8cedd72ca914316f68":[0,0,0,8,5],

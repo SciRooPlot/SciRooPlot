@@ -26,6 +26,7 @@ var classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox =
     [ "MergeLegendEntries", "classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox.html#a7717f63e5d36ff106e50e77f4be8ff24", null ],
     [ "operator=", "classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox.html#a8c097d15c139a4939c3a18167f4a6753", null ],
     [ "operator=", "classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox.html#a5922fac44e02932283cef730e504a89f", null ],
+    [ "SetDefaultColor", "classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox.html#acb813603b87cb27c1b5113298d614a1b", null ],
     [ "SetDefaultDrawStyle", "classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox.html#a22b54aab93d2c246bcc2368aed415d34", null ],
     [ "SetDefaultFillColor", "classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox.html#a9737576cd2368e603e40ee2a9a0e64d9", null ],
     [ "SetDefaultFillOpacity", "classSciRooPlot_1_1Plot_1_1Pad_1_1LegendBox.html#ac2ba129537990d018667388011a8a63f", null ],

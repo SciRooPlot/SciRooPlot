@@ -64,8 +64,8 @@ var NAVTREEINDEX =
 "classSciRooPlot_1_1Plot_1_1Pad.html#aaa7d861d720a9022215e5b628abc39d4",
 "classSciRooPlot_1_1Plot_1_1Pad_1_1Box.html#a38b9d9f513a06308f9cb21dd88289996",
 "classSciRooPlot_1_1Plot_1_1Pad_1_1Data.html#ae1f2625f31a491533256b5b0dc8f8d0e",
-"classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio.html#a204e56cdaff1968f3ea1d24f19ce7f05",
-"namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80af42dd941c9fc7fc5296e8293ac3aad67"
+"classSciRooPlot_1_1Plot_1_1Pad_1_1Ratio.html#a2034a6421d6abc8ce972ff87b1a05313",
+"namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aec44e69f05a6407a72ce270cb2cd7067"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';
