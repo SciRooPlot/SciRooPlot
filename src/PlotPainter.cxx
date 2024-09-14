@@ -210,7 +210,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     } else if (padDefaults.GetDefaultMarkerColorsGradient().rgbEndpoints) {
       auto& gradient = padDefaults.GetDefaultMarkerColorsGradient();
       int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetMarkerColor(); });
-      padDefaults.SetDefaultMarkerColors(GenerateGradientColors(get_first_or((int32_t)padDefaults.GetData().size(), gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
+      padDefaults.SetDefaultMarkerColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
     if (pad.GetDefaultLineColorsGradient().rgbEndpoints) {
       auto& gradient = pad.GetDefaultLineColorsGradient();
