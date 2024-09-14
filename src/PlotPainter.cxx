@@ -259,6 +259,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     TH1* axisHist_ptr{nullptr};
     string drawingOptions;
     uint16_t dataIndex{};
+    array<uint16_t, 6> defaultSettingIndices = {0};
     for (auto& data : pad.GetData()) {
       if (data->GetDrawingOptions()) drawingOptions += *data->GetDrawingOptions();
       // obtain a copy of the current data
@@ -637,13 +638,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         } else {
           // define data appearance
           if (auto& markerColor = get_first(data->GetMarkerColor(),
-                                            pick(dataIndex, pad.GetDefaultMarkerColors()),
-                                            pick(dataIndex, padDefaults.GetDefaultMarkerColors()))) {
+                                            pick(defaultSettingIndices[0], pad.GetDefaultMarkerColors()),
+                                            pick(defaultSettingIndices[0], padDefaults.GetDefaultMarkerColors()))) {
+            if (!data->GetMarkerColor()) defaultSettingIndices[0]++;
             data_ptr->SetMarkerColor(*markerColor);
           }
           if (auto& markerStyle = get_first(data->GetMarkerStyle(),
-                                            pick(dataIndex, pad.GetDefaultMarkerStyles()),
-                                            pick(dataIndex, padDefaults.GetDefaultMarkerStyles()))) {
+                                            pick(defaultSettingIndices[1], pad.GetDefaultMarkerStyles()),
+                                            pick(defaultSettingIndices[1], padDefaults.GetDefaultMarkerStyles()))) {
+            if (!data->GetMarkerStyle()) defaultSettingIndices[1]++;
             data_ptr->SetMarkerStyle(*markerStyle);
           }
           if (auto& markerSize = get_first(data->GetMarkerSize(),
@@ -652,13 +655,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             data_ptr->SetMarkerSize(*markerSize);
           }
           if (auto& lineColor = get_first(data->GetLineColor(),
-                                          pick(dataIndex, pad.GetDefaultLineColors()),
-                                          pick(dataIndex, padDefaults.GetDefaultLineColors()))) {
+                                          pick(defaultSettingIndices[2], pad.GetDefaultLineColors()),
+                                          pick(defaultSettingIndices[2], padDefaults.GetDefaultLineColors()))) {
+            if (!data->GetLineColor()) defaultSettingIndices[2]++;
             data_ptr->SetLineColor(*lineColor);
           }
           if (auto& lineStyle = get_first(data->GetLineStyle(),
-                                          pick(dataIndex, pad.GetDefaultLineStyles()),
-                                          pick(dataIndex, padDefaults.GetDefaultLineStyles()))) {
+                                          pick(defaultSettingIndices[3], pad.GetDefaultLineStyles()),
+                                          pick(defaultSettingIndices[3], padDefaults.GetDefaultLineStyles()))) {
+            if (!data->GetLineStyle()) defaultSettingIndices[3]++;
             data_ptr->SetLineStyle(*lineStyle);
           }
           if (auto& lineWidth = get_first(data->GetLineWidth(),
@@ -667,13 +672,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             data_ptr->SetLineWidth(*lineWidth);
           }
           if (auto& fillColor = get_first(data->GetFillColor(),
-                                          pick(dataIndex, pad.GetDefaultFillColors()),
-                                          pick(dataIndex, padDefaults.GetDefaultFillColors()))) {
+                                          pick(defaultSettingIndices[4], pad.GetDefaultFillColors()),
+                                          pick(defaultSettingIndices[4], padDefaults.GetDefaultFillColors()))) {
+            if (!data->GetFillColor()) defaultSettingIndices[4]++;
             data_ptr->SetFillColor(*fillColor);
           }
           if (auto& fillStyle = get_first(data->GetFillStyle(),
-                                          pick(dataIndex, pad.GetDefaultFillStyles()),
-                                          pick(dataIndex, padDefaults.GetDefaultFillStyles()))) {
+                                          pick(defaultSettingIndices[5], pad.GetDefaultFillStyles()),
+                                          pick(defaultSettingIndices[5], padDefaults.GetDefaultFillStyles()))) {
+            if (!data->GetFillStyle()) defaultSettingIndices[5]++;
             data_ptr->SetFillStyle(*fillStyle);
           }
           if (auto& fillOpacity = get_first(data->GetFillOpacity(),
