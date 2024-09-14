@@ -203,7 +203,6 @@ var NAVTREEINDEX5 =
 "namespaceSciRooPlot.html#a0b1e0d818414614ae9499b9f79b16809":[0,0,0,28],
 "namespaceSciRooPlot.html#a0bf7aefd8b07541b27258a417f91a150":[0,0,0,10],
 "namespaceSciRooPlot.html#a0db4cda52c4cb31161224b92efc1dca5":[0,0,0,14],
-"namespaceSciRooPlot.html#a1cfef347d8393a2b6f936a02e88b060c":[0,0,0,26],
 "namespaceSciRooPlot.html#a1e6776201498216a091b09e4ec95d6a2":[0,0,0,12],
 "namespaceSciRooPlot.html#a28df53b1372d394c4c2228ca9e6d0245":[0,0,0,30],
 "namespaceSciRooPlot.html#a29b8fc969db827eedec2a97ffc8a738d":[0,0,0,33],
@@ -249,5 +248,6 @@ var NAVTREEINDEX5 =
 "namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ac1afc903194729fbc34e2871a39540e4":[0,0,0,8,17],
 "namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ad014d9f5b610c467f533d72d6f3b03b1":[0,0,0,8,26],
 "namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ae1c2f85130b69337c70891d055925c3f":[0,0,0,8,18],
-"namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ae8de3ca7a6ef52f0aaa23544f8c1c2ef":[0,0,0,8,22]
+"namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80ae8de3ca7a6ef52f0aaa23544f8c1c2ef":[0,0,0,8,22],
+"namespaceSciRooPlot.html#a78452bf072a3de85c88f5dd073071b80aec44e69f05a6407a72ce270cb2cd7067":[0,0,0,8,8]
 };

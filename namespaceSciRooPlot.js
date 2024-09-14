@@ -62,7 +62,7 @@ var namespaceSciRooPlot =
     [ "is_hist_2d", "namespaceSciRooPlot.html#a51e2f98c06aed635271101d752f5977a", null ],
     [ "is_one_of_v", "namespaceSciRooPlot.html#a66f2d67cac7af3e6a9f6c7a9f183765f", null ],
     [ "operator+", "namespaceSciRooPlot.html#a5079dd3c6763db2a09e4fb310bbe35e8", null ],
-    [ "pick", "namespaceSciRooPlot.html#a1cfef347d8393a2b6f936a02e88b060c", null ],
+    [ "pick", "namespaceSciRooPlot.html#aad92dbe0b4211d4bc708e65e2d31f37b", null ],
     [ "put_in_tree", "namespaceSciRooPlot.html#a5d9c4f27204f8db7bba289dbefd3b88e", null ],
     [ "read_from_tree", "namespaceSciRooPlot.html#a0b1e0d818414614ae9499b9f79b16809", null ],
     [ "set_if", "namespaceSciRooPlot.html#aa5fde3ca8f2dd5f8df6567e20a136b10", null ],

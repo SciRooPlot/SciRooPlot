@@ -9,7 +9,7 @@ var Helpers_8h =
     [ "get_first", "Helpers_8h.html#a825c488ff4acedd2b1d3a43980986924", null ],
     [ "get_first_or", "Helpers_8h.html#a1e6776201498216a091b09e4ec95d6a2", null ],
     [ "is_one_of_v", "Helpers_8h.html#a66f2d67cac7af3e6a9f6c7a9f183765f", null ],
-    [ "pick", "Helpers_8h.html#a1cfef347d8393a2b6f936a02e88b060c", null ],
+    [ "pick", "Helpers_8h.html#aad92dbe0b4211d4bc708e65e2d31f37b", null ],
     [ "put_in_tree", "Helpers_8h.html#a5d9c4f27204f8db7bba289dbefd3b88e", null ],
     [ "read_from_tree", "Helpers_8h.html#a0b1e0d818414614ae9499b9f79b16809", null ],
     [ "set_if", "Helpers_8h.html#aa5fde3ca8f2dd5f8df6567e20a136b10", null ],
