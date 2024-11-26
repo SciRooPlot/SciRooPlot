@@ -628,7 +628,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // right after drawing the axis, put reference line if requested
           optional<string> refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
           if (refFunc) {
-            TF1* line = new TF1("line", (*refFunc).data(), data_ptr->GetXaxis()->GetXmin(), data_ptr->GetXaxis()->GetXmax());
+            double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0, min = 0, max = 0;
+            pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
+            if (pad_ptr->GetLogx()) {
+              xmin = TMath::Power(10, xmin);
+              xmax = TMath::Power(10, xmax);
+            }
+            TF1* line = new TF1("line", (*refFunc).data(), xmin, xmax);
             line->SetLineColor(kBlack);
             line->SetLineWidth(2);
             // line->SetLineStyle(9);
@@ -658,7 +664,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                           pick(defaultSettingIndices[2], pad.GetDefaultLineColors()),
                                           pick(defaultSettingIndices[2], padDefaults.GetDefaultLineColors()))) {
             if (!data->GetLineColor()) defaultSettingIndices[2]++;
-            data_ptr->SetLineColor(*lineColor);
+            data_ptr->SetLineColor(*lineColor); // data_ptr->SetLineColorAlpha(*lineColor, 0.5);
           }
           if (auto& lineStyle = get_first(data->GetLineStyle(),
                                           pick(defaultSettingIndices[3], pad.GetDefaultLineStyles()),
@@ -1042,7 +1048,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       int32_t i = 0;
       for (auto& entry : box->GetEntries()) {
         string label = lines[i];
-        string drawStyle = entry.GetDrawStyle() ? *entry.GetDrawStyle() : "";
+
+        // user-defined draw style for single entry or all entries
+        string drawStyle = entry.GetDrawStyle() ? *entry.GetDrawStyle() : ((box->GetDefaultDrawStyle()) ? *box->GetDefaultDrawStyle() : "");
 
         // TLegendEntry* curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), drawStyle.data());
         TLegendEntry* curEntry = nullptr;
@@ -1051,7 +1059,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           // TODO: here we need to check that it exists
 
           if (drawStyle.empty()) {
-            drawStyle = (box->GetDefaultDrawStyle()) ? *box->GetDefaultDrawStyle() : "EP";
+            drawStyle = "EP";
 
             string drawingOption = data_ptr->GetDrawOption();
             std::for_each(drawingOption.begin(), drawingOption.end(),
