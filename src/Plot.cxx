@@ -1,7 +1,7 @@
 /*
 ********************************************************************************
 * --------------------------------- SciRooPlot ---------------------------------
-* Copyright (c) 2019-2024 Mario Krüger
+* Copyright (c) 2019-2025 Mario Krüger
 * Contact: mario.kruger@cern.ch
 * For a full list of contributors please see doc/CONTRIBUTORS.md.
 *
