@@ -702,15 +702,27 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           // data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
 
+          double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0;
+          pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
+          // DEBUG("({}, {}), ({}, {}), ({}, {})", xmin, xmax, ymin, ymax, min, max);
+          if (pad_ptr->GetLogx()) {
+            xmin = TMath::Power(10, xmin);
+            xmax = TMath::Power(10, xmax);
+          }
+          if (pad_ptr->GetLogy()) {
+            ymin = TMath::Power(10, ymin);
+            ymax = TMath::Power(10, ymax);
+          }
+
           double_t rangeMinX = (data->GetMinRangeX()) ? *data->GetMinRangeX()
-                                                      : axisHist_ptr->GetXaxis()->GetXmin();
+                                                      : xmin;
           double_t rangeMaxX = (data->GetMaxRangeX()) ? *data->GetMaxRangeX()
-                                                      : axisHist_ptr->GetXaxis()->GetXmax();
+                                                      : xmax;
 
           double_t rangeMinY = (data->GetMinRangeY()) ? *data->GetMinRangeY()
-                                                      : axisHist_ptr->GetYaxis()->GetXmin();
+                                                      : ymin;
           double_t rangeMaxY = (data->GetMaxRangeY()) ? *data->GetMaxRangeY()
-                                                      : axisHist_ptr->GetYaxis()->GetXmax();
+                                                      : ymax;
 
           if constexpr (is_func_2d<data_type>()) {
             data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);

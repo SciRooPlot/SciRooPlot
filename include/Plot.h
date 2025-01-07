@@ -26,6 +26,7 @@
 #include "TCandle.h"
 #include "Rtypes.h"
 #include "TColor.h"
+#include "TF1.h"
 
 #include "SciRooPlot.h"
 
@@ -178,6 +179,7 @@ public:
   // User accessors:
   Data& AddData(const string& name, const string& inputIdentifier, const optional<string>& label = nullopt);
   Data& AddData(const string& name, const Data& dataTemplate, const optional<string>& label = nullopt);
+  Data& AddFunction(const string& function, const optional<string>& label = nullopt);
 
   Ratio& AddRatio(const string& numeratorName, const string& numeratorInputIdentifier,
                   const string& denominatorName, const string& denominatorInputIdentifier,

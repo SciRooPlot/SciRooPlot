@@ -1,4 +1,6 @@
 Todo:
+- add marker/line transparency
+- replace AddRefFunc with user-defined functions that can be modified
 - example should provide / be set up to some good default settings
 - installation to arbitrary location should be possible (do not assume /build in the scripts / cmake files)
 - in cmake use find_package doxygen and then create documentation automatically
@@ -15,7 +17,6 @@ Feature ideas:
 - maybe it could be useful to also have fixed size boxes
 - generic algorithm to automatically determine optimal axis offsets + avoid overlap with labels
 - fully support csv format (flexible string and delimiter)
-- add user functions and maybe fitting (AddFunction() and AddLine())
 
 Structural considerations:
 - the whole Painter::GeneratePlots() function is just a big mess and needs major rework!

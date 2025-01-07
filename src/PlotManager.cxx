@@ -581,6 +581,14 @@ bool PlotManager::FillBuffer()
     unordered_map<string, vector<string>> requiredData; // subdir, names
     for (auto& [dataName, dataPtr] : buffer) {
       if (dataPtr) continue;
+
+      // generate user-defined functions on-the-fly
+      if (inputID == "USER_FUNCTIONS") {
+        dataPtr.reset(new TF1(dataName.data(), dataName.data()));
+        // TODO: support also TF2
+        continue;
+      }
+
       auto pathPos = dataName.find_last_of("/");
       string path;
       string name = dataName;

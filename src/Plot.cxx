@@ -1042,6 +1042,17 @@ Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const 
 
 //**************************************************************************************************
 /**
+ * Add user-defined function to this pad.
+ */
+//**************************************************************************************************
+Plot::Pad::Data& Plot::Pad::AddFunction(const string& function, const optional<string>& label)
+{
+  mData.push_back(std::make_shared<Data>(function, "USER_FUNCTIONS", label));
+  return *mData.back();
+}
+
+//**************************************************************************************************
+/**
  * Add ratio to this pad.
  */
 //**************************************************************************************************
