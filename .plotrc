@@ -37,11 +37,12 @@ if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
     while getopts ":h" option; do
       case $option in
         h) #displays help
-          echo "Configures path to <inputFiles | plotDefinitions | executable | outputDir> via add command or"
-          echo "switches between different plot-configs previously set up via switch command"
+          echo "The following options are available:"
           echo
-          echo "usage: add: plot-config [-h] add <CONFIGNAME> <inputFiles | plotDefinitions | executable | outputDir> <path>"
-          echo "usage: switch: plot-config [-h] switch <CONFIGNAME>"
+          echo "plot-config add <PROJECT_NAME> <inputFiles | plotDefinitions | executable | outputDir> <PATH>"
+          echo "plot-config switch <PROJECT_NAME>"
+          echo "plot-config remove <PROJECT_NAME>"
+          echo "plot-config list"
           return;;
         *) #incorrect option
           echo "Error: Invalid flag"
@@ -57,13 +58,9 @@ if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
     while getopts ":h" option; do
       case $option in
         h) #displays help
-          echo "Initializes a new project called <PROJECT_NAME>." 
+          echo "Initializes a new project called <PROJECT_NAME> and makes it available to the plotting app with some changable default settings."
           echo
-          echo "usage: plot-init [-h] <PROJECT_NAME> [<option>=<register>]"
-          echo "options:"
-          echo "option==register    plot-config will automatically be called for the new project.
-                    Default path for XML files, exectuable and plots folder is 
-                    inside the build folder."
+          echo "usage: plot-init [-h] <PROJECT_NAME>"
           return;;
         *) #incorrect option
           echo "Error: Invalid flag"
@@ -82,19 +79,18 @@ if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
     cd ..
     mkdir ${PROJECT_NAME}/build
     cp ${__SCIROOPLOT_DIR}/skeleton/* ${PROJECT_NAME}/
-    sed -i.bak "s/MyPlots/${PROJECT_NAME}/" ${PROJECT_NAME}/CMakeLists.txt && rm ${PROJECT_NAME}/CMakeLists.txt.bak
-    sed -i.bak "s/\"myPlots\"/\"${PROJECT_NAME}\"/g" ${PROJECT_PATH}/CreatePlots.cxx && rm ${PROJECT_NAME}/CreatePlots.cxx.bak
-    echo "Created plotting project ${PROJECT_NAME}."
-    if [[ "${2}" == "register" ]]; then
-      # FIXME: requires that user adjusts the file paths in example...
-      echo "Registered this project in plotting app. Use 'plot-config add ${PROJECT_NAME} ...' to change the settings manually."
-      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} inputFiles ${PROJECT_PATH}/build/inputFiles.XML
-      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} plotDefinitions ${PROJECT_PATH}/build/plotDefFile.XML
-      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} executable ${PROJECT_PATH}/build/create
-      mkdir ${PROJECT_PATH}/build/plots
-      ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} outputDir ${PROJECT_PATH}/build/plots
-      echo "Use 'plot-config switch ${PROJECT_NAME}' to activate this project in the app."
-    fi
+    sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" ${PROJECT_NAME}/CMakeLists.txt && rm ${PROJECT_NAME}/CMakeLists.txt.bak
+    sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" ${PROJECT_NAME}/CreatePlots.cxx && rm ${PROJECT_NAME}/CreatePlots.cxx.bak
+    ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} inputFiles ${PROJECT_PATH}/build/inputFiles.XML
+    ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} plotDefinitions ${PROJECT_PATH}/build/plotDefinitions.XML
+    ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} executable ${PROJECT_PATH}/build/create
+    mkdir ${PROJECT_PATH}/build/Plots
+    ${__SCIROOPLOT_BUILD_DIR}/plot-config add ${PROJECT_NAME} outputDir ${PROJECT_PATH}/build/Plots
+    plot-config switch ${PROJECT_NAME}
+    echo "Created plotting project ${PROJECT_NAME} and activated it in the plotting app."
+    echo "Running cmake..."
+    cd ${PROJECT_NAME}/build && cmake ..
+    echo "If cmake succeeded simply modify CreatePlots.cxx according to your needs and use the plotting app."
     return 0
   }
 

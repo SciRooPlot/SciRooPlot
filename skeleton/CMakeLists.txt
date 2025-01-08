@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
-project(MyPlots CXX)
+project(PROJECT_NAME CXX)
 
 set(SCIROOPLOT_ROOT CACHE STRING "path to SciRooPlot base directory")
 if(SCIROOPLOT_ROOT)

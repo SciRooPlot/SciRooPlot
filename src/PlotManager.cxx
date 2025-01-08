@@ -1115,4 +1115,47 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
   ERROR("Unknown plot template {}.", plotTemplateName);
   return Plot();
 }
+
+//****************************************************************************************
+/**
+ * Reads relevant paths from config file.
+ */
+//****************************************************************************************
+tuple<string, string, string> PlotManager::ReadConfig(string configName)
+{
+
+  string configFileName = (gSystem->Getenv("__PLOTTING_CONFIG_FILE"))
+                            ? expand_path("${__PLOTTING_CONFIG_FILE}")
+                            : "~/.plotconfig.xml";
+  configFileName = expand_path(configFileName);
+
+  string inputFiles;
+  string plotDefinitions;
+  string outputDir;
+
+  if (file_exists(configFileName)) {
+    using boost::property_tree::read_xml;
+    ptree configTree;
+    read_xml(configFileName, configTree, boost::property_tree::xml_parser::trim_whitespace);
+    if (configName.empty()) {
+      if (auto activated = configTree.get_child_optional("activated")) {
+        configName = activated.get().data();
+      }
+    }
+    if (auto curConfig = configTree.get_child_optional(configName)) {
+      auto tree = curConfig.get();
+      if (auto property = tree.get_child_optional("plotDefinitions")) {
+        plotDefinitions = expand_path(property->get_value<string>());
+      }
+      if (auto property = tree.get_child_optional("inputFiles")) {
+        inputFiles = expand_path(property->get_value<string>());
+      }
+      if (auto property = tree.get_child_optional("outputDir")) {
+        outputDir = expand_path(property->get_value<string>());
+      }
+    }
+  }
+  return {inputFiles, plotDefinitions, outputDir};
+}
+
 } // end namespace SciRooPlot

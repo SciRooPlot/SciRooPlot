@@ -31,48 +31,14 @@ namespace po = boost::program_options;
 
 int main(int argc, char* argv[])
 {
-
-  string configFileName = (gSystem->Getenv("__PLOTTING_CONFIG_FILE"))
-                            ? expand_path("${__PLOTTING_CONFIG_FILE}")
-                            : "~/.plotconfig.xml";
-  configFileName = expand_path(configFileName);
-
-  string inputFiles;
-  string plotDefinitions;
-  string outputDir;
-
-  ptree activeConfigTree;
-  if (file_exists(configFileName)) {
-    using boost::property_tree::read_xml;
-    ptree configTree;
-    read_xml(configFileName, configTree, boost::property_tree::xml_parser::trim_whitespace);
-    string activeSettings;
-    if (auto activated = configTree.get_child_optional("activated")) {
-      activeSettings = activated.get().data();
-    }
-    if (auto curConfig = configTree.get_child_optional(activeSettings)) {
-      auto tree = curConfig.get();
-      if (auto property = tree.get_child_optional("plotDefinitions")) {
-        plotDefinitions = property->get_value<string>();
-      }
-      if (auto property = tree.get_child_optional("inputFiles")) {
-        inputFiles = property->get_value<string>();
-      }
-      if (auto property = tree.get_child_optional("outputDir")) {
-        outputDir = property->get_value<string>();
-      }
-    }
-  } else {
-    ERROR("Plotting app was not configured. Please run plot-config ...");
-    return 1;
-  }
+  auto [inputFiles, plotDefinitions, outputDir] = PlotManager::ReadConfig();
 
   // check if specified input files exist
-  if (!file_exists(expand_path(inputFiles))) {
+  if (!file_exists(inputFiles)) {
     ERROR(R"(File "{}" does not exists! Exiting.)", inputFiles);
     return 1;
   }
-  if (!file_exists(expand_path(plotDefinitions))) {
+  if (!file_exists(plotDefinitions)) {
     ERROR(R"(File "{}" does not exists! Exiting.)", plotDefinitions);
     return 1;
   }
