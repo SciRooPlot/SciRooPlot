@@ -1158,7 +1158,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
                                           upperLeftX + totalWidthNDC, upperLeftY, "NDC NB");
       paveText->SetMargin(marginNDC / totalWidthNDC);
       paveText->SetTextAlign(kHAlignLeft + kVAlignCenter);
-
+      paveText->SetBorderSize(0);
       paveText->SetTextFont(text_font);
       paveText->SetTextSize(text_size);
       if (textColor) paveText->SetTextColor(*textColor);
