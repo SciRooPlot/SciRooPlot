@@ -7,7 +7,7 @@ else
   __SCIROOPLOT_DIR="$( cd "$( dirname "${0}"  )" >/dev/null 2>&1 && pwd )"
 fi
 export __SCIROOPLOT_DIR
-__SCIROOPLOT_BUILD_DIR="${__SCIROOPLOT_DIR}/build"
+__SCIROOPLOT_BUILD_DIR="${__SCIROOPLOT_DIR}/build" # MEMO: this hard-codes the build destination...
 export __SCIROOPLOT_BUILD_DIR
 if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
   function plot() {

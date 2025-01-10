@@ -64,7 +64,7 @@ set(SciRooPlot_DEP
 )
 
 # define plotting framework lib
-set(SciRooPlot_LIB ${CMAKE_CURRENT_SOURCE_DIR}/build/libSciRooPlot.so)
+set(SciRooPlot_LIB ${CMAKE_CURRENT_BINARY_DIR}/libSciRooPlot.so)
 if(APPLE)
   string(REPLACE ".so" ".dylib" SciRooPlot_LIB "${SciRooPlot_LIB}")
 endif(APPLE)
