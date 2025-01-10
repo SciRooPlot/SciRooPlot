@@ -3,6 +3,8 @@ find_dependency(ROOT)
 find_dependency(Boost COMPONENTS program_options)
 find_dependency(fmt)
 
+include(@SciRooPlot_COMFLAGS@)
+
 set(SciRooPlot_DEP @SciRooPlot_DEP@)
 set(SciRooPlot_INC @SciRooPlot_INC@)
 set(SciRooPlot_LIB @SciRooPlot_LIB@)
