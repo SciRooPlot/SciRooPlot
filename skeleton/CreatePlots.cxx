@@ -32,6 +32,15 @@ void DefineInputIdentifiers(PlotManager& plotManager)
 {
   plotManager.AddInputDataFiles("inputIdentifier1", {"/path/to/file1.root", "/path/to/file2.root"});
   plotManager.AddInputDataFiles("inputIdentifier2", {"/path/to/file3.root", "/path/to/file4.root", "/path/to/file5.root"});
+  /*
+  // IMPORTANT: best use absolute paths so the 'plot' command will work from any location on your computer
+   // you can also use environment variables:
+   if (!gSystem->Getenv("DATASETS_BASE_DIR")) {
+     ERROR("Please specify datasets base dir: export DATASETS_BASE_DIR=/path/to/datasets");
+     return 1;
+   }
+   plotManager.AddInputDataFiles("inputIdentifier1", {"${DATASETS_BASE_DIR}/subfolder/file1.root", "${DATASETS_BASE_DIR}/subfolder2/file2.root"});
+  */
 }
 
 //****************************************************************************************
