@@ -37,7 +37,6 @@ void DefineInputIdentifiers(PlotManager& plotManager)
    // you can also use environment variables:
    if (!gSystem->Getenv("DATASETS_BASE_DIR")) {
      ERROR("Please specify datasets base dir: export DATASETS_BASE_DIR=/path/to/datasets");
-     return 1;
    }
    plotManager.AddInputDataFiles("inputIdentifier1", {"${DATASETS_BASE_DIR}/subfolder/file1.root", "${DATASETS_BASE_DIR}/subfolder2/file2.root"});
   */
