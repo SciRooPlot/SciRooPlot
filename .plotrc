@@ -221,7 +221,33 @@ _plot_completions_bash() {
 }
 
 _plot-config_completions_bash() {
-  # TODO: add bash version
+
+  local generalCommands=('list active base path reset clean')
+  local projectCommands=('init remove switch show executable outputDir')
+
+  local projects
+  
+  local AUTOCOMPFILE="$(${__SCIROOPLOT_BUILD_DIR}/plot-config base)/projects.csv"
+  if [[ -f "$AUTOCOMPFILE" ]]; then
+    while read -r project
+    do
+      projects+=("${project}")
+    done < $AUTOCOMPFILE
+    unset project
+  fi
+
+  case $COMP_CWORD in
+  1)
+    COMPREPLY=( $(compgen -W "${generalCommands}${projectCommands}" -- "${COMP_WORDS[COMP_CWORD]}") )
+  ;;
+  2)
+    if [[ " ${projectCommands[@]} " =~ " ${COMP_WORDS[COMP_CWORD-1]} " ]]; then
+      COMPREPLY=( $(compgen -W "${projects}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    else
+      COMPREPLY=( )
+    fi
+  ;;
+  esac
 }
 
 
