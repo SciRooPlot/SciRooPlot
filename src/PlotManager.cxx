@@ -158,6 +158,12 @@ void PlotManager::AddInputDataFiles(const string& inputIdentifier, const vector<
   if (mInputFiles.find(inputIdentifier) != mInputFiles.end()) {
     WARNING("Replacing input identifier {}.", inputIdentifier);
   }
+  for (auto inputFilePath : inputFilePathList) {
+    if (std::filesystem::path(expand_path(inputFilePath)).is_relative()) {
+      ERROR("The path to an input file must not be relative.");
+      return;
+    }
+  }
   mInputFiles[inputIdentifier] = inputFilePathList;
 }
 void PlotManager::AddInputDataFile(const string& inputIdentifier, const string& inputFilePath)
@@ -181,10 +187,14 @@ void PlotManager::DumpInputDataFiles(const string& configFileName) const
     }
     inputFileTree.put_child(inFileTuple.first, filesOfIdentifier);
   }
+  std::filesystem::path configFile = expand_path(configFileName);
+  if (std::filesystem::create_directories(configFile.parent_path())) {
+    INFO("Created config folder: {}", configFile.parent_path().string());
+  }
   using boost::property_tree::xml_writer_settings;
   xml_writer_settings<string> settings('\t', 1);
   using boost::property_tree::write_xml;
-  write_xml(expand_path(configFileName), inputFileTree, std::locale(), settings);
+  write_xml(expand_path(configFile.string()), inputFileTree, std::locale(), settings);
 }
 
 //**************************************************************************************************
@@ -295,11 +305,15 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
       plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName), plot.GetPropertyTree());
     }
   }
+  std::filesystem::path plotFile = expand_path(plotFileName);
+  if (std::filesystem::create_directories(plotFile.parent_path())) {
+    INFO("Created config folder: {}", plotFile.parent_path().string());
+  }
   using boost::property_tree::xml_writer_settings;
   xml_writer_settings<string> settings('\t', 1);
   using boost::property_tree::write_xml;
-  write_xml(expand_path(plotFileName), plotTree, std::locale(), settings);
-  INFO("Wrote plot definitions to {}.", plotFileName);
+  write_xml(plotFile.string(), plotTree, std::locale(), settings);
+  INFO("Wrote plot definitions to {}.", plotFile.string());
 }
 void PlotManager::DumpPlot(const string& plotFileName, const string& figureGroup,
                            const string& plotName) const
@@ -1121,41 +1135,69 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
  * Reads relevant paths from config file.
  */
 //****************************************************************************************
-tuple<string, string, string> PlotManager::ReadConfig(string configName)
+tuple<string, string, string> PlotManager::GetProjectSettings(string projectName)
 {
+  string configPath = expand_path((gSystem->Getenv("SCIROOPLOT_CONFIG_PATH")) ? "${SCIROOPLOT_CONFIG_PATH}" : "~/.SciRooPlot");
+  if (std::filesystem::path(configPath).is_relative()) {
+    ERROR("SCIROOPLOT_CONFIG_PATH must not be relative.");
+    std::exit(EXIT_FAILURE);
+  }
+  if (configPath.empty()) {
+    ERROR("SCIROOPLOT_CONFIG_PATH must not be empty.");
+    std::exit(EXIT_FAILURE);
+  }
+  string configFileName = configPath + "/projects.xml";
 
-  string configFileName = (gSystem->Getenv("__PLOTTING_CONFIG_FILE"))
-                            ? expand_path("${__PLOTTING_CONFIG_FILE}")
-                            : "~/.plotconfig.xml";
-  configFileName = expand_path(configFileName);
-
-  string inputFiles;
-  string plotDefinitions;
   string outputDir;
-
   if (file_exists(configFileName)) {
     using boost::property_tree::read_xml;
     ptree configTree;
     read_xml(configFileName, configTree, boost::property_tree::xml_parser::trim_whitespace);
-    if (configName.empty()) {
-      if (auto activated = configTree.get_child_optional("activated")) {
-        configName = activated.get().data();
+    if (projectName.empty()) {
+      if (auto active = configTree.get_child_optional("active")) {
+        projectName = active.get().data();
       }
     }
-    if (auto curConfig = configTree.get_child_optional(configName)) {
+    if (auto curConfig = configTree.get_child_optional(projectName)) {
       auto tree = curConfig.get();
-      if (auto property = tree.get_child_optional("plotDefinitions")) {
-        plotDefinitions = expand_path(property->get_value<string>());
-      }
-      if (auto property = tree.get_child_optional("inputFiles")) {
-        inputFiles = expand_path(property->get_value<string>());
-      }
       if (auto property = tree.get_child_optional("outputDir")) {
         outputDir = expand_path(property->get_value<string>());
+        if (outputDir.empty()) {
+          WARNING(R"(Please run "plot-config outputDir {} </path/to/store/output>".)", projectName);
+        }
       }
     }
   }
-  return {inputFiles, plotDefinitions, outputDir};
+  string inputsFile = configPath + "/" + projectName + "/inputs.xml";
+  string plotsFile = configPath + "/" + projectName + "/plots.xml";
+
+  return {inputsFile, plotsFile, outputDir};
 }
+
+//****************************************************************************************
+/**
+ * Saves all required plot definitions and input file locations of the project.
+ */
+//****************************************************************************************
+void PlotManager::SaveProject(const string& projectName)
+{
+  auto [inputsFile, plotsFile, outputDir] = GetProjectSettings(projectName);
+
+  if (std::filesystem::create_directories(std::filesystem::path(inputsFile).parent_path())) {
+    INFO("Created config folder for project {}: {}", projectName, std::filesystem::path(inputsFile).parent_path().string());
+  }
+
+  DumpInputDataFiles(inputsFile);
+  DumpPlots(plotsFile);
+
+  // create a csv file for tab completion
+  std::ofstream tabCompFile;
+  tabCompFile.open(std::filesystem::path(plotsFile).replace_extension("csv").string());
+  for (auto& plot : mPlots) {
+    string line = plot.GetName() + "," + plot.GetFigureGroup() + "," + ((plot.GetFigureCategory()) ? *plot.GetFigureCategory() : "") + "\n";
+    tabCompFile << line;
+  }
+  tabCompFile.close();
+};
 
 } // end namespace SciRooPlot

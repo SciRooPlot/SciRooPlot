@@ -31,7 +31,7 @@ namespace po = boost::program_options;
 
 int main(int argc, char* argv[])
 {
-  auto [inputFiles, plotDefinitions, outputDir] = PlotManager::ReadConfig();
+  auto [inputFiles, plotDefinitions, outputDir] = PlotManager::GetProjectSettings();
 
   // check if specified input files exist
   if (!file_exists(inputFiles)) {

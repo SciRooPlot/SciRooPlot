@@ -12,14 +12,7 @@ int main(int argc, char* argv[])
   DefineInputIdentifiers(plotManager);
   DefinePlotTemplates(plotManager);
   DefinePlots(plotManager);
-
-  auto [inputFiles, plotDefinitions, outputDir] = PlotManager::ReadConfig("PROJECT_NAME");
-  if(inputFiles.empty() || plotDefinitions.empty()){
-    ERROR("Configuration could not be loaded properly.");
-    return 1;
-  }
-  plotManager.DumpInputDataFiles(inputFiles);
-  plotManager.DumpPlots(plotDefinitions);
+  plotManager.SaveProject("PROJECT_NAME");
   return 0;
 }
 
@@ -30,16 +23,8 @@ int main(int argc, char* argv[])
 //****************************************************************************************
 void DefineInputIdentifiers(PlotManager& plotManager)
 {
-  plotManager.AddInputDataFiles("inputIdentifier1", {"/path/to/file1.root", "/path/to/file2.root"});
-  plotManager.AddInputDataFiles("inputIdentifier2", {"/path/to/file3.root", "/path/to/file4.root", "/path/to/file5.root"});
-  /*
-  // IMPORTANT: best use absolute paths so the 'plot' command will work from any location on your computer
-   // you can also use environment variables:
-   if (!gSystem->Getenv("DATASETS_BASE_DIR")) {
-     ERROR("Please specify datasets base dir: export DATASETS_BASE_DIR=/path/to/datasets");
-   }
-   plotManager.AddInputDataFiles("inputIdentifier1", {"${DATASETS_BASE_DIR}/subfolder/file1.root", "${DATASETS_BASE_DIR}/subfolder2/file2.root"});
-  */
+  plotManager.AddInputDataFiles("inputIdentifier1", {"${HOME}/path/to/file1.root", "${HOME}/path/to/file2.root"});
+  plotManager.AddInputDataFiles("inputIdentifier2", {"${HOME}/subdir/file3.root", "${HOME}/file4.root", "${HOME}/file5.root"});
 }
 
 //****************************************************************************************

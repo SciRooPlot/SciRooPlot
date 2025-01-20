@@ -44,7 +44,8 @@ public:
   PlotManager& operator=(PlotManager&& other) = delete;
 
   static Plot GetPlotTemplate(const string& plotTemplateName = "1d", double_t screenResolution = 100);
-  static tuple<string, string, string> ReadConfig(string configName = "");
+  static tuple<string, string, string> GetProjectSettings(string projectName = "");
+  void SaveProject(const string& projectName);
 
   // settings for output
   void SetOutputDirectory(const string& path);
