@@ -119,3 +119,6 @@ write_basic_package_version_file(
 )
 set(CMAKE_EXPORT_PACKAGE_REGISTRY ON)
 export(PACKAGE SciRooPlot)
+
+# generate some root files to play with
+execute_process (COMMAND ${ROOT_EXECUTABLE} -l -q ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generateTestFiles.C)
