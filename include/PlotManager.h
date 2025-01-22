@@ -63,7 +63,7 @@ public:
 
   // add plots or templates for plots to the manager
   void AddPlot(Plot& plot);
-  void AddPlotTemplate(Plot& plotTemplate);
+  void AddPlotTemplate(Plot plotTemplate);
 
   // saving plot definitions to external file (which can e.g. be read by the command-line plotting app included in the framework)
   void DumpPlots(const string& plotFileName, const string& figureGroup = "", const vector<string>& plotNames = {}) const;

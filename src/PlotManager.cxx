@@ -257,7 +257,7 @@ void PlotManager::AddPlot(Plot& plot)
  * Add template for plots, that share some common properties.
  */
 //**************************************************************************************************
-void PlotManager::AddPlotTemplate(Plot& plotTemplate)
+void PlotManager::AddPlotTemplate(Plot plotTemplate)
 {
   plotTemplate.SetFigureGroup("PLOT_TEMPLATES");
   mPlotTemplates.erase(std::remove_if(mPlotTemplates.begin(), mPlotTemplates.end(),

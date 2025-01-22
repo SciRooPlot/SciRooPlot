@@ -91,7 +91,7 @@ set(ADDITIONAL_FILES
 add_library(${MODULE} SHARED ${SRCS} ${HDRS} ${MODULE_HDR} ${ADDITIONAL_FILES})
 target_link_libraries(${MODULE} PUBLIC ${SciRooPlot_DEP})
 
-# helper function to add executables that are linked to the SciRooPlot
+# helper function to add executables that are linked to the SciRooPlot library and its dependencies
 function(add_plotting_executable APP_NAME)
   cmake_parse_arguments(PARSE_ARGV 1 APP "" "" "SOURCES;ADD_FILES")
   if(APP_UNPARSED_ARGUMENTS)
