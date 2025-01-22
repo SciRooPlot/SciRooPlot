@@ -7,8 +7,8 @@ project(PROJECT_NAME CXX)
 find_package(SciRooPlot CONFIG REQUIRED)
 message(STATUS "SciRooPlot version: ${SciRooPlot_VERSION}")
 
-add_plotting_executable(create
-  SOURCES CreatePlots.cxx
+add_plotting_executable(definePlots
+  SOURCES DefinePlots.cxx
 )
 
 # add your more files / include directories if needed

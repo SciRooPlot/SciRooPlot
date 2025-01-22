@@ -47,7 +47,7 @@ if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
       mkdir ${PROJECT_NAME}
       PROJECT_PATH=${WORKDIR}/${PROJECT_NAME}
       mkdir ${PROJECT_PATH}/build
-      cp ${__SCIROOPLOT_DIR}/skeleton/* ${PROJECT_PATH}/
+      cp ${__SCIROOPLOT_DIR}/user/* ${PROJECT_PATH}/
       sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" ${PROJECT_PATH}/CMakeLists.txt && rm -f ${PROJECT_PATH}/CMakeLists.txt.bak
       sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" ${PROJECT_PATH}/CreatePlots.cxx && rm -f ${PROJECT_PATH}/CreatePlots.cxx.bak
       ${__SCIROOPLOT_BUILD_DIR}/plot-config executable ${PROJECT_NAME} ${PROJECT_PATH}/build/create

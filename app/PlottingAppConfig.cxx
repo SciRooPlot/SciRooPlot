@@ -175,6 +175,7 @@ int main(int argc, char* argv[])
       configTree.add_child(setting, configTree.get_child(project));
       configTree.erase(project);
       std::filesystem::rename(std::filesystem::path(configPath + "/" + project), std::filesystem::path(configPath + "/" + setting));
+      PRINT("Renamed project {} to {}. User code should be adjusted accordingly.", project, setting);
       if (activeProject == project) {
         activeProject = setting;
       }
