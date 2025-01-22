@@ -18,7 +18,7 @@ shared_ptr<TH1> getExampleMultDist(int nSamples)
   multDistNBD->SetParameters(1.07815823,0.59482043,4.51789303,1.62701245,16.94642265,3.20841373);
   shared_ptr<TH1> multDist{new TH1D("multDist", "", 70, 0.5, 70.5)};
   multDist->Sumw2();
-  multDist->FillRandom(multDistNBD.get(), nSamples);
+  multDist->FillRandom("NBD", nSamples);
   multDist->Scale(1, "width");
   multDist->GetXaxis()->SetTitle("#it{N}_{ch}");
   multDist->GetYaxis()->SetTitle("events");
@@ -46,7 +46,7 @@ shared_ptr<TH1> getExamplePtSpec(int nSamples)
     6.0, 6.5, 7.0, 8.0, 9.0, 10.0, 11., 12., 13., 14., 15., 16., 18., 20.};
   shared_ptr<TH1> ptSpec{new TH1D("ptSpec", "", ptBins.size()-1, ptBins.data())};
   ptSpec->Sumw2();
-  ptSpec->FillRandom(ptSpecTCM.get(), nSamples);
+  ptSpec->FillRandom("TCM", nSamples);
   ptSpec->Scale(1, "width");
   ptSpec->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
   ptSpec->GetYaxis()->SetTitle("d#it{N}/d#it{p}_{T}");
@@ -54,11 +54,11 @@ shared_ptr<TH1> getExamplePtSpec(int nSamples)
 }
 shared_ptr<TH1> getExampleInvMassDist(int nSamples)
 {
-  shared_ptr<TF1> invMassDistParam{new TF1("invMassDist", "(x<[1])*([0]*(TMath::Exp(-0.5*((x-[1])/[2])^2)+TMath::Exp((x-[1])/[3])*(1.-TMath::Exp(-0.5*((x-[1])/[2])^2))))+(x>=[1])*([0]*(TMath::Exp(-0.5*((x-[1])/[2])^2)+TMath::Exp(-(x-[1])/[4])*(1.-TMath::Exp(-0.5*((x-[1])/[2])^2)))) + (x<[6])*([5]*(TMath::Exp(-0.5*((x-[6])/[7])^2)+TMath::Exp((x-[6])/[8])*(1.-TMath::Exp(-0.5*((x-[6])/[7])^2))))+(x>=[6])*([5]*TMath::Exp(-0.5*((x-[6])/[7])^2))", 0,0.8)};
+  shared_ptr<TF1> invMassDistParam{new TF1("invMassDistParam", "(x<[1])*([0]*(TMath::Exp(-0.5*((x-[1])/[2])^2)+TMath::Exp((x-[1])/[3])*(1.-TMath::Exp(-0.5*((x-[1])/[2])^2))))+(x>=[1])*([0]*(TMath::Exp(-0.5*((x-[1])/[2])^2)+TMath::Exp(-(x-[1])/[4])*(1.-TMath::Exp(-0.5*((x-[1])/[2])^2)))) + (x<[6])*([5]*(TMath::Exp(-0.5*((x-[6])/[7])^2)+TMath::Exp((x-[6])/[8])*(1.-TMath::Exp(-0.5*((x-[6])/[7])^2))))+(x>=[6])*([5]*TMath::Exp(-0.5*((x-[6])/[7])^2))", 0,0.8)};
   invMassDistParam->SetParameters(33294.07,0.1387916,0.01123336,0.01292341,0.02151752,2897.386,0.5596612,0.02439279,0.03186518);
   shared_ptr<TH1> invMassDist{new TH1D("invMassDist", "", 200,0,0.8)};
   invMassDist->Sumw2();
-  invMassDist->FillRandom(invMassDistParam.get(), nSamples);
+  invMassDist->FillRandom("invMassDistParam", nSamples);
   invMassDist->Scale(1, "width");
   invMassDist->GetXaxis()->SetTitle("#it{m}_{#gamma#gamma} (GeV/#it{c}^{2})");
   invMassDist->GetYaxis()->SetTitle("d#it{N}/d#it{m}_{#gamma#gamma}");
