@@ -49,10 +49,10 @@ if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
       mkdir ${PROJECT_PATH}/build
       cp ${__SCIROOPLOT_DIR}/user/* ${PROJECT_PATH}/
       sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" ${PROJECT_PATH}/CMakeLists.txt && rm -f ${PROJECT_PATH}/CMakeLists.txt.bak
-      sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" ${PROJECT_PATH}/CreatePlots.cxx && rm -f ${PROJECT_PATH}/CreatePlots.cxx.bak
-      ${__SCIROOPLOT_BUILD_DIR}/plot-config executable ${PROJECT_NAME} ${PROJECT_PATH}/build/create
+      sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" ${PROJECT_PATH}/DefinePlots.cxx && rm -f ${PROJECT_PATH}/DefinePlots.cxx.bak
+      ${__SCIROOPLOT_BUILD_DIR}/plot-config executable ${PROJECT_NAME} ${PROJECT_PATH}/build/definePlots
       plot-config switch ${PROJECT_NAME}
-      cd ${PROJECT_PATH}/build && cmake -Wno-dev .. 2>&1 > /dev/null && make 2>&1 > /dev/null && ./create
+      cd ${PROJECT_PATH}/build && cmake -Wno-dev .. 2>&1 > /dev/null && make 2>&1 > /dev/null && ./definePlots
       cd ${WORKDIR}
     else
       "${__SCIROOPLOT_BUILD_DIR}/plot-config" ${1} ${2} ${3}
