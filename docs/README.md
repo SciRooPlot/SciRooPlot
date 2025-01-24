@@ -1,4 +1,3 @@
-# SciRooPlot
 ## ℹ️ Overview
 - SciRooPlot is a library that simplifies scientific plotting by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root)
 - It provides an interface to define and organize plots
