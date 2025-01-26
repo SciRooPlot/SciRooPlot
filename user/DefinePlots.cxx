@@ -98,7 +98,7 @@ void DefinePlots(PlotManager& plotManager)
   { // -----------------------------------------------------------------------
     string plotName = "invMassDist";
     Plot plot(plotName, "examples", "1d");
-    plot[1].AddData("invMassDist", "pseudodata").SetScaleFactor(0.00001).SetColor(kBlue+2);
+    plot[1].AddData("invMassDist", "pseudodata").SetScaleFactor(0.00001).SetColor(kBlue + 2);
     plotManager.AddPlot(plot);
   } // -----------------------------------------------------------------------
   { // -----------------------------------------------------------------------
@@ -112,7 +112,7 @@ void DefinePlots(PlotManager& plotManager)
   { // -----------------------------------------------------------------------
     string plotName = "ptSpec";
     Plot plot(plotName, "examples", "1d");
-    plot[1].AddData("ptSpec", "pseudodata").SetColor(kRed+2);
+    plot[1].AddData("ptSpec", "pseudodata").SetColor(kRed + 2);
     plot[1]['X'].SetLog();
     plot[1]['Y'].SetLog();
     plotManager.AddPlot(plot);
