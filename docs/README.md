@@ -21,10 +21,11 @@ SciRooPlot is installed as follows:
     mkdir build && cd build
     cmake .. && make
 ```
-To use the SciRooPlot application the `.plotrc` script has to be sourced (also put this in your .bashrc or .bash_aliases):
+Then put this line in your .bashrc or .bash_aliases (and run it once or start a terminal session):
 ```bash
     source /path/to/SciRooPlot/.plotrc
 ```
+Now you are ready to use SciRooPlot!
 
 ## 🚀 Usage
 
@@ -48,7 +49,7 @@ A list of available projects is shown when typing
 ```bash
 plot-config list
 ```
-by default all internal settings as well as the plot definitions are stored in `~/.SciRooPlot`. If required this can be changed by defining an evnironment variable called `SCIROOPLOT_CONFIG_PATH`.
+By default, all internal settings as well as the plot definitions are stored in `~/.SciRooPlot`. This can be changed by defining an environment variable called `SCIROOPLOT_CONFIG_PATH`.
 
 Generally, each of your plots will belong to a figure group and is accessed by the plotting app as follows:
 ```
@@ -69,7 +70,7 @@ To adjust the time between the frames use for example `plot figureGroup myPlot_b
 
 ## 📖 Commented code examples
 The following example code snippets with comments illustrate how plots are defined within your SciRooPlot user code.
-This is by no means comprehensive, so also have a look at the available setters in the corresponding header files.
+Since these examples are not comprehensive, to see all the functionality of SciRooPlot also have a look at the available setters in the corresponding header files.
 
 ```cpp
 #include "PlotManager.h"
