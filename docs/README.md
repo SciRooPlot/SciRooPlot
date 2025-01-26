@@ -2,7 +2,7 @@
 ## ℹ️ Overview
 - SciRooPlot is a library that simplifies scientific plotting by adding a level of abstraction on top of the mighty [ROOT](https://github.com/root-project/root) data analysis framework
 - It provides an interface to define and organize plots
-- These plot definitions can then be generated with a command-line appplication
+- These plot definitions can then be generated with a command-line application
 
 ## ⬇️ Installation instructions
 SciRooPlot runs on MacOS and Linux. It depends on the following external software which needs to be installed on your system:
@@ -40,7 +40,7 @@ plot examples ptSpec
 The idea is to adjust the code in the file `DefinePlots.cxx` to define your plots.
 The resulting executable will automatically be rebuilt and (if needed) executed before the app generates the requested plot(s).
 
-You may have multiple of such projects in parallel, and can switch between them via:
+You may have multiple such projects in parallel, and can switch between them via:
 ```bash
 plot-config switch <projectName>
 ```
@@ -56,21 +56,21 @@ plot <figureGroup> <plotName> <mode>
 ```
 For bash and zsh this program provides an auto-completion feature, which means you can tab through the available commands, figure groups, and plot names.
 Regular expressions are supported for the options `<figureGroup>` and `<plotName>`.
-This allows to create multiple plots matching the specified pattern in a single request.
+This allows the creation of multiple plots matching the specified pattern in a single request.
 For example `plot paperPlots .+` would generate all plots defined within the figure group called `paperPlots` and `plot thesisFigures 'moneyPlot[1,2]'` creates `moneyPlot1` and `moneyPlot2` from the figure group `thesisFigures`.
 To specify multiple text options one can use `plot analysisQA 'trackProperty_(tight|loose|nominal)CutSetting'`.
-Note that expressions involving special characters (in the previous examples `[]` or `()` and `|`) have to be wrapped in quotes, since otherwise your shell will try to interprete them before they are passed to the plotting app.
+Note that expressions involving special characters (in the previous examples `[]` or `()` and `|`) have to be wrapped in quotes since otherwise your shell will try to interpret them before they are passed to the plotting app.
 To select only a sub-category within the figure group, use `<figureGroup/some/category>` (for example `plot myFigureGroup/QAPlots controlObservable`).
 By default, the optional `mode` argument is set to `interactive` and you can leave it out in the command.
 Possible alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`.
-If you have a multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..) that you want to concaternate and save as a moving gif, you can create it via `plot figureGroup myPlot_bin_.+ gif`.
+If you have multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..) that you want to concatenate and save as a moving gif, you can create it via `plot figureGroup myPlot_bin_.+ gif`.
 To adjust the time between the frames use for example `plot figureGroup myPlot_bin_.+ gif+4`, where the number is given in tens of milliseconds (i.e. this example will create a gif with a delay of 40ms between the plots).
 
 
 ## 📖 Commented code examples
 The following example code snippets with comments illustrate how plots are defined within your SciRooPlot user code.
-For more all possibilities look at the setters available in the header files.
----------
+This is by no means comprehensive, so also have a look at the available setters in the corresponding header files.
+
 ```cpp
 #include "PlotManager.h"
 using namespace SciRooPlot;
