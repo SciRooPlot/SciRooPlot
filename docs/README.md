@@ -3,60 +3,58 @@
 - SciRooPlot is a library that simplifies scientific plotting by adding a level of abstraction on top of the mighty [ROOT](https://github.com/root-project/root) data analysis framework
 - It provides an interface to define and organize plots
 - These plot definitions can then be generated with a command-line appplication
-- This inteded workflow is illustarted here:
-![usage](./Usage.png)
 
 ## ⬇️ Installation instructions
-SciRooPlot depends on the following external software which needs to be installed on your system:
+SciRooPlot runs on MacOS and Linux. It depends on the following external software which needs to be installed on your system:
 
 - cmake >= 3.15
 - fmt   >= 6.1.2
 - boost >= 1.65
 - ROOT  >= 6.16
 
-If those dependencies cannot be installed by a package manager, a description how to build them from source is shown [here](DEPENDENCIES_INSTALL.md).
+If those dependencies cannot be installed by a package manager, a description of how to build them from source is shown [here](DEPENDENCIES_INSTALL.md).
 
+SciRooPlot is installed as follows:
 ```bash
     git clone https://github.com/SciRooPlot/SciRooPlot.git
     cd SciRooPlot
     mkdir build && cd build
     cmake .. && make
 ```
-To use the plotting application, the `.plotrc` script present in this repository needs to be sourced.
-The easiest way to define this is by putting the following line in your .bashrc or .bash_aliases:
+To use the SciRooPlot application the `.plotrc` script has to be sourced (also put this in your .bashrc or .bash_aliases):
 ```bash
     source /path/to/SciRooPlot/.plotrc
 ```
 
 ## 🚀 Usage
-You can initialize a new project by running
+
+A new project is initialized by running:
 ```bash
   plot-config init <projectName>
 ```
-which will create a folder in your current directory with some source code to start with.
-This code / your user code should define the plots.
-If initialization ran through successfully, the default code will already be compiled and allows you to generate you first plot by typing
-```
+This will create a folder in your current directory with some working source code to start with.
+The default code will already be compiled and ready to use, allowing you to generate you first plot simply by typing
+```bash
 plot examples ptSpec
 ```
-in the console.
+The idea is to adjust the code in the file `DefinePlots.cxx` to define your plots.
+The resulting executable will automatically be rebuilt and (if needed) executed before the app generates the requested plot(s).
 
-Idea is that your code in DefinePlots.cxx produces the plot definitions, which are then saved and can be read by this plotting app.
-You may have multiple of such projects in parallel, and can switch between them via
-```
+You may have multiple of such projects in parallel, and can switch between them via:
+```bash
 plot-config switch <projectName>
 ```
 A list of available projects is shown when typing
-```
+```bash
 plot-config list
 ```
 by default all internal settings as well as the plot definitions are stored in `~/.SciRooPlot`. If required this can be changed by defining an evnironment variable called `SCIROOPLOT_CONFIG_PATH`.
 
-How to generate the plot definitions in DefinePlots.cxx is shown later in detail.
-Generally your plots will be grouped into figureGroups and are accessed by the plotting app as follows (which you can run from everywhere on your computer)
+Generally, each of your plots will belong to a figure group and is accessed by the plotting app as follows:
 ```
 plot <figureGroup> <plotName> <mode>
 ```
+For bash and zsh this program provides an auto-completion feature, which means you can tab through the available commands, figure groups, and plot names.
 Regular expressions are supported for the options `<figureGroup>` and `<plotName>`.
 This allows to create multiple plots matching the specified pattern in a single request.
 For example `plot paperPlots .+` would generate all plots defined within the figure group called `paperPlots` and `plot thesisFigures 'moneyPlot[1,2]'` creates `moneyPlot1` and `moneyPlot2` from the figure group `thesisFigures`.
@@ -67,10 +65,6 @@ By default, the optional `mode` argument is set to `interactive` and you can lea
 Possible alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`.
 If you have a multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..) that you want to concaternate and save as a moving gif, you can create it via `plot figureGroup myPlot_bin_.+ gif`.
 To adjust the time between the frames use for example `plot figureGroup myPlot_bin_.+ gif+4`, where the number is given in tens of milliseconds (i.e. this example will create a gif with a delay of 40ms between the plots).
-
-For bash and zsh this program provides an auto-completion feature, this means you can tab through the available commands, figure groups and plot names.
-Your `executable` (which creates the plot definitions) specified in the configuration
-will automatically be rebuilt and (if needed) executed before the app generates the requested plot(s).
 
 
 ## 📖 Commented code examples
