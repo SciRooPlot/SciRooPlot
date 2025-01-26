@@ -1,6 +1,6 @@
-#SciRooPlot
+# SciRooPlot
 ## ℹ️ Overview
-- SciRooPlot is a library that simplifies scientific plotting by adding a level of abstraction on top of the mighty [ROOT data analysis framework](https://github.com/root-project/root)
+- SciRooPlot is a library that simplifies scientific plotting by adding a level of abstraction on top of the mighty [ROOT](https://github.com/root-project/root) data analysis framework
 - It provides an interface to define and organize plots
 - These plot definitions can then be generated with a command-line appplication
 - This inteded workflow is illustarted here:
@@ -8,15 +8,17 @@
 
 ## ⬇️ Installation instructions
 SciRooPlot depends on the following external software which needs to be installed on your system:
+
 - cmake >= 3.15
 - fmt   >= 6.1.2
 - boost >= 1.65
 - ROOT  >= 6.16
-If they are not installed by a package manager, inspiration how to build the dependencies from source and possible caveats and pitfalls can be found [here](INSTALL.md).
 
-After cloning the SciRooPlot repository to some location on your computer you need to compile the library in the following way:
+If those dependencies cannot be installed by a package manager, a description how to build them from source is shown [here](DEPENDENCIES_INSTALL.md).
+
 ```bash
-    cd /path/to/SciRooPlot
+    git clone https://github.com/SciRooPlot/SciRooPlot.git
+    cd SciRooPlot
     mkdir build && cd build
     cmake .. && make
 ```
