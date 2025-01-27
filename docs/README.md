@@ -22,7 +22,7 @@ SciRooPlot is installed as follows:
     cmake .. && make
 ```
 Then put this line in your .bashrc or .bash_aliases (and run it once or start a terminal session):
-```bash
+```
     source /path/to/SciRooPlot/.plotrc
 ```
 Now you are ready to use SciRooPlot!
@@ -30,23 +30,23 @@ Now you are ready to use SciRooPlot!
 ## 🚀 Usage
 
 A new project is initialized by running:
-```bash
+```
   plot-config init <projectName>
 ```
 This will create a folder in your current directory with some working source code to start with.
 The default code will already be compiled and ready to use, allowing you to generate you first plot simply by typing
-```bash
+```
 plot examples ptSpec
 ```
 The idea is to adjust the code in the file `DefinePlots.cxx` to define your plots.
 The resulting executable will automatically be rebuilt and (if needed) executed before the app generates the requested plot(s).
 
 You may have multiple such projects in parallel, and can switch between them via:
-```bash
+```
 plot-config switch <projectName>
 ```
 A list of available projects is shown when typing
-```bash
+```
 plot-config list
 ```
 By default, all internal settings as well as the plot definitions are stored in `~/.SciRooPlot`. This can be changed by defining an environment variable called `SCIROOPLOT_CONFIG_PATH`.
@@ -68,8 +68,8 @@ If you have multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..) that you wan
 To adjust the time between the frames use for example `plot figureGroup myPlot_bin_.+ gif+4`, where the number is given in tens of milliseconds (i.e. this example will create a gif with a delay of 40ms between the plots).
 
 The modes that save files to disk, the plotting app needs to know where to store the output. This can be configured via: 
-```bash
-plot-config outputDir <projectName> /path/to/outpu/folder
+```
+plot-config outputDir <projectName> /path/to/output/folder
 ```
 Within this folder, the files will be organized in subdirectories corresponding to the figure groups and categories.
 
