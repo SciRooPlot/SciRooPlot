@@ -67,6 +67,12 @@ Possible alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `
 If you have multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..) that you want to concatenate and save as a moving gif, you can create it via `plot figureGroup myPlot_bin_.+ gif`.
 To adjust the time between the frames use for example `plot figureGroup myPlot_bin_.+ gif+4`, where the number is given in tens of milliseconds (i.e. this example will create a gif with a delay of 40ms between the plots).
 
+The modes that save files to disk, the plotting app needs to know where to store the output. This can be configured via: 
+```bash
+plot-config outputDir <projectName> /path/to/outpu/folder
+```
+Within this folder, the files will be organized in subdirectories corresponding to the figure groups and categories.
+
 
 ## 📖 Commented code examples
 The following example code snippets with comments illustrate how plots are defined within your SciRooPlot user code.
