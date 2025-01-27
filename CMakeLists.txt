@@ -85,8 +85,7 @@ set(ADDITIONAL_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/cmake/SciRooPlotConfig.cmake
   README.md
   docs/README.md
-  docs/INSTALL.md
-  TODO.md
+  docs/DEPENDENCIES_INSTALL.md
 )
 
 # create SciRooPlot library
