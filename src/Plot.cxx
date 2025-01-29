@@ -1345,9 +1345,9 @@ auto Plot::Pad::Data::SetScaleFactor(double_t scale) -> decltype(*this)
   mModify.scaleFactor = scale;
   return *this;
 }
-auto Plot::Pad::Data::SetNormalize(bool useWidth) -> decltype(*this)
+auto Plot::Pad::Data::SetNormalize(bool multiplyByBinWidth) -> decltype(*this)
 {
-  mModify.normMode = useWidth;
+  mModify.normMode = multiplyByBinWidth;
   return *this;
 }
 auto Plot::Pad::Data::SetRangeX(double_t min, double_t max) -> decltype(*this)
@@ -1595,6 +1595,8 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
     ERROR("Could not construct ratio from ptree.");
   }
 
+  read_from_tree(dataTree, mDivisionNormMode, "divisionNormMode");
+
   // ugly workaround
   optional<vector<uint8_t>> dims;
   optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
@@ -1621,6 +1623,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
   dataTree.put("denomName", mDenomName);
   dataTree.put("denomInputID", mDenomInputIdentifier);
   dataTree.put("isCorrelated", mIsCorrelated);
+  put_in_tree(dataTree, mDivisionNormMode, "divisionNormMode");
 
   // ugly workaround
   if (mProjInfoDenom) {
@@ -1643,7 +1646,11 @@ auto Plot::Pad::Ratio::SetIsCorrelated(bool isCorrelated) -> decltype(*this)
   mIsCorrelated = isCorrelated;
   return *this;
 }
-
+auto Plot::Pad::Ratio::SetDivideNormalized(bool multiplyByBinWidth) -> decltype(*this)
+{
+  mDivisionNormMode = multiplyByBinWidth;
+  return *this;
+}
 auto Plot::Pad::Ratio::SetProjectionXDenom(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfoDenom = {{0}, {{1, startY, endY}}, isUserCoord};

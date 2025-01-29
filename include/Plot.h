@@ -392,7 +392,7 @@ public:
   virtual Data& SetOptions(drawing_options_t optionAlias);
   virtual Data& UnsetOptions();
   virtual Data& SetTextFormat(const string& textFormat);
-  virtual Data& SetNormalize(bool useWidth = false);
+  virtual Data& SetNormalize(bool multiplyByBinWidth = false);
   virtual Data& SetScaleFactor(double_t scale);
   virtual Data& SetColor(int16_t color);
   virtual Data& SetMarker(int16_t color, int16_t style, float_t size);
@@ -524,6 +524,8 @@ public:
   Ratio& operator=(Ratio&& other) = default;
 
   Ratio& SetIsCorrelated(bool isCorrelated = true);
+  Ratio& SetDivideNormalized(bool multiplyByBinWidth = false);
+
   Ratio& SetLayout(const Data& dataLayout) { return static_cast<decltype(*this)&>(Data::SetLayout(dataLayout)); }
   Ratio& ApplyLayout(const Data& dataLayout) { return static_cast<decltype(*this)&>(Data::ApplyLayout(dataLayout)); }
   Ratio& SetRangeX(double_t min, double_t max) { return static_cast<decltype(*this)&>(Data::SetRangeX(min, max)); }
@@ -542,7 +544,7 @@ public:
   Ratio& SetOptions(drawing_options_t optionAlias) { return static_cast<decltype(*this)&>(Data::SetOptions(optionAlias)); }
   Ratio& UnsetOptions() { return static_cast<decltype(*this)&>(Data::UnsetOptions()); }
   Ratio& SetTextFormat(const string& textFormat) { return static_cast<decltype(*this)&>(Data::SetTextFormat(textFormat)); }
-  Ratio& SetNormalize(bool useWidth = false) { return static_cast<decltype(*this)&>(Data::SetNormalize(useWidth)); }
+  Ratio& SetNormalize(bool multiplyByBinWidth = false) { return static_cast<decltype(*this)&>(Data::SetNormalize(multiplyByBinWidth)); }
   Ratio& SetScaleFactor(double_t scale) { return static_cast<decltype(*this)&>(Data::SetScaleFactor(scale)); }
   Ratio& SetColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetColor(color)); }
   Ratio& SetMarker(int16_t color, int16_t style, float_t size) { return static_cast<decltype(*this)&>(Data::SetMarker(color, style, size)); }
@@ -588,6 +590,8 @@ protected:
   const auto& GetDenomIdentifier() const { return mDenomInputIdentifier; }
   const auto& GetDenomName() const { return mDenomName; }
 
+  const auto& GetDivisionNormMode() const { return mDivisionNormMode; }
+
   const bool& GetIsCorrelated() const { return mIsCorrelated; }
   const auto& GetProjInfoDenom() const { return mProjInfoDenom; }
 
@@ -596,6 +600,7 @@ private:
   string mDenomInputIdentifier;
   bool mIsCorrelated{};
   optional<proj_info_t> mProjInfoDenom;
+  optional<bool> mDivisionNormMode; // normalize both numerater and denominator to 0: sum over bin contents, 1: times bin widths
 };
 
 //**************************************************************************************************

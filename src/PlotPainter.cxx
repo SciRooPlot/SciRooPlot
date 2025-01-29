@@ -322,7 +322,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         }
 
         if (data->GetType() == "ratio") {
-          // retrieve the actual pointer to the denominator data
+          auto data_as_ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
           auto processDenominator = [&](auto&& denom_data_ptr) {
             using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
             if constexpr (is_hist<data_type>()) {
@@ -330,7 +330,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 data_ptr->Divide(denom_data_ptr);
               }
               if constexpr (is_hist<denom_data_type>()) {
-                string divideOpt = (std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetIsCorrelated()) ? "B" : "";
+                if (data_as_ratio->GetDivisionNormMode()) {
+                  string scaleMode{};
+                  if (*data_as_ratio->GetDivisionNormMode()) scaleMode = "width";
+                  double_t integralNum = data_ptr->Integral(scaleMode.data());         // integral in viewing range
+                  double_t integralDenom = denom_data_ptr->Integral(scaleMode.data()); // integral in viewing range
+                  if (!integralNum || !integralDenom) {
+                    ERROR("Cannot normalize histogram because integral is zero.");
+                  } else {
+                    data_ptr->Scale(1. / integralNum);
+                    denom_data_ptr->Scale(1. / integralDenom);
+                  }
+                }
+                string divideOpt = (data_as_ratio->GetIsCorrelated()) ? "B" : "";
                 if (!data_ptr->Divide(data_ptr, denom_data_ptr, 1., 1., divideOpt.data())) {
                   WARNING("Could not divide histograms properly. Trying approximated division via spline interpolation. Errors will not be fully correct!");
                   DivideHistosInterpolated(data_ptr, denom_data_ptr);
@@ -362,9 +374,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             delete denom_data_ptr;
           };
 
-          auto data_denom = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          auto rawDenomData = GetDataClone(dataBuffer.at(data_denom->GetDenomIdentifier()).at(data_denom->GetDenomName()).get(), data_denom->GetProjInfoDenom());
-
+          // retrieve the actual pointer to the denominator data
+          auto rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomIdentifier()).at(data_as_ratio->GetDenomName()).get(), data_as_ratio->GetProjInfoDenom());
           if (rawDenomData) {
             std::visit(processDenominator, *rawDenomData);
           } else {
@@ -398,6 +409,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor())
                                         : (*data->GetScaleFactor());
           }
+          // TODO: add option that divides results by width
           if (scaleFactor) data_ptr->Scale(*scaleFactor);
         } else if constexpr (is_graph_1d<data_type>()) {
           // FIXME: violating DRY principle...
