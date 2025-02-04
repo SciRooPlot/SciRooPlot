@@ -102,6 +102,9 @@ int main(int argc, char* argv[])
 
   if (mode != "find") {
     plotManager.LoadInputDataFiles(inputFiles);
+    if (mode != "interactive") {
+      WARNING(R"(Please run "plot-config outputDir <PROJECT_NAME> </path/to/outputDir>" to set the ouptut directory.)");
+    }
   }
   plotManager.ExtractPlotsFromFile(plotDefinitions, mode, plotNames, group, category);
   return 0;
