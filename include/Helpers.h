@@ -16,8 +16,8 @@
 *******************************************************************************
 */
 
-#ifndef Helpers_h
-#define Helpers_h
+#ifndef INCLUDE_HELPERS_H_
+#define INCLUDE_HELPERS_H_
 
 #include "SciRooPlot.h"
 #include "TSystem.h"
@@ -207,4 +207,4 @@ constexpr bool is_one_of_v()
 }
 
 } // end namespace SciRooPlot
-#endif /* Helpers_h */
+#endif  // INCLUDE_HELPERS_H_

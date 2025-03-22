@@ -16,8 +16,8 @@
 *******************************************************************************
 */
 
-#ifndef SciRooPlot_h
-#define SciRooPlot_h
+#ifndef INCLUDE_SCIROOPLOT_H_
+#define INCLUDE_SCIROOPLOT_H_
 
 #include <iostream>
 #include <map>
@@ -52,4 +52,4 @@ using std::vector;
 const string gNameGroupSeparator = "_IN_";
 
 } // end namespace SciRooPlot
-#endif /* SciRooPlot_h */
+#endif  // INCLUDE_SCIROOPLOT_H_

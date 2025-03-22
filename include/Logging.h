@@ -16,8 +16,8 @@
 *******************************************************************************
 */
 
-#ifndef Logging_h
-#define Logging_h
+#ifndef INCLUDE_LOGGING_H_
+#define INCLUDE_LOGGING_H_
 
 #include <fmt/core.h>
 
@@ -143,4 +143,4 @@
     typename decltype(var)::_; \
   }
 
-#endif /* Logging_h */
+#endif  // INCLUDE_LOGGING_H_

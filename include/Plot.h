@@ -16,8 +16,8 @@
 *******************************************************************************
 */
 
-#ifndef Plot_h
-#define Plot_h
+#ifndef INCLUDE_PLOT_H_
+#define INCLUDE_PLOT_H_
 
 // make root style property enums available to user
 #include "TAttMarker.h"
@@ -945,4 +945,4 @@ private:
 };
 
 } // end namespace SciRooPlot
-#endif /* Plot_h */
+#endif  // INCLUDE_PLOT_H_

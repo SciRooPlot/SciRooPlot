@@ -16,8 +16,8 @@
 *******************************************************************************
 */
 
-#ifndef PlotGenerator_h
-#define PlotGenerator_h
+#ifndef INCLUDE_PLOTPAINTER_H_
+#define INCLUDE_PLOTPAINTER_H_
 
 #include "Plot.h"
 class TH1;
@@ -136,4 +136,4 @@ private:
   vector<int16_t> GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1., bool savePalette = false);
 };
 } // end namespace SciRooPlot
-#endif /* PlotGenerator_h */
+#endif  // INCLUDE_PLOTPAINTER_H_

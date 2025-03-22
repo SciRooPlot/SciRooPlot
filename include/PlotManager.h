@@ -16,8 +16,8 @@
 *******************************************************************************
 */
 
-#ifndef PlotManager_h
-#define PlotManager_h
+#ifndef INCLUDE_PLOTMANAGER_H_
+#define INCLUDE_PLOTMANAGER_H_
 
 #include "SciRooPlot.h"
 #include "Plot.h"
@@ -119,4 +119,4 @@ private:
 };
 
 } // end namespace SciRooPlot
-#endif /* PlotManager_h */
+#endif  // INCLUDE_PLOTMANAGER_H_
