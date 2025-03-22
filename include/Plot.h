@@ -84,7 +84,7 @@ enum drawing_options_t : uint8_t {
 //**************************************************************************************************
 class Plot
 {
-public:
+ public:
   class Pad;
   struct layout_t {
     optional<int16_t> color;  // marker_color , line_color, fill_color, text_color
@@ -117,7 +117,7 @@ public:
   Plot& SetFillOpacity(float_t opacity);
   Plot& SetTransparent();
 
-protected:
+ protected:
   friend class PlotManager;
   friend class PlotPainter;
 
@@ -141,7 +141,7 @@ protected:
 
   uint8_t GetDataCount() const;
 
-private:
+ private:
   struct dimension_t {
     optional<int32_t> width;
     optional<int32_t> height;
@@ -166,7 +166,7 @@ private:
 //**************************************************************************************************
 class Plot::Pad
 {
-public:
+ public:
   class Data;
   class Ratio;
   class Axis;
@@ -241,7 +241,7 @@ public:
   Pad& SetRedrawAxes(bool redraw = true);
   Pad& SetRefFunc(const string& refFunc);
 
-protected:
+ protected:
   friend class PlotManager;
   friend class PlotPainter;
   friend class Plot;
@@ -295,7 +295,7 @@ protected:
   const auto& GetRedrawAxes() const { return mRedrawAxes; }
   const auto& GetRefFunc() const { return mRefFunc; }
 
-private:
+ private:
   struct pad_position_t {
     optional<double_t> xlow;
     optional<double_t> ylow;
@@ -364,7 +364,7 @@ private:
 //**************************************************************************************************
 class Plot::Pad::Data
 {
-public:
+ public:
   Data() = default;
   Data(const string& name, const string& inputIdentifier, const optional<string>& label);
   Data(const ptree& dataTree);
@@ -423,7 +423,7 @@ public:
   virtual Data& SetProfileY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});                                      // for 2d histos
   virtual Data& SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});  // for 2d & 3d histos
 
-protected:
+ protected:
   friend class PlotManager;
   friend class PlotPainter;
   friend class Plot;
@@ -469,7 +469,7 @@ protected:
     string GetNameSuffix() const;
   };
 
-private:
+ private:
   bool mDefinesFrame{};
 
   string mType;  // for introspection: "data" or "ratio"
@@ -516,7 +516,7 @@ private:
 //**************************************************************************************************
 class Plot::Pad::Ratio : public Plot::Pad::Data
 {
-public:
+ public:
   Ratio(const string& name, const string& inputIdentifier, const string& denomName,
         const string& denomInputIdentifier, const optional<string>& label);
   Ratio(const ptree& dataTree);
@@ -583,7 +583,7 @@ public:
   Ratio& SetProfileYDenom(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});
   Ratio& SetProfileDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
 
-protected:
+ protected:
   friend class PlotManager;
   friend class PlotPainter;
   friend class Plot;
@@ -599,7 +599,7 @@ protected:
   const bool& GetIsCorrelated() const { return mIsCorrelated; }
   const auto& GetProjInfoDenom() const { return mProjInfoDenom; }
 
-private:
+ private:
   string mDenomName;
   string mDenomInputIdentifier;
   bool mIsCorrelated{};
@@ -614,7 +614,7 @@ private:
 //**************************************************************************************************
 class Plot::Pad::Axis
 {
-public:
+ public:
   Axis() = default;
 
   Axis& SetTitle(const string& title);
@@ -643,7 +643,7 @@ public:
   Axis& SetTimeFormat(const string& timeFormat);
   Axis& SetTickOrientation(const string& tickOrientation);
 
-protected:
+ protected:
   friend class PlotManager;
   friend class PlotPainter;
   friend class Plot;
@@ -678,7 +678,7 @@ protected:
   const auto& GetTimeFormat() const { return mTimeFormat; }
   const auto& GetTickOrientation() const { return mTickOrientation; }
 
-private:
+ private:
   struct axisTextProperties_t {
     optional<int16_t> font;
     optional<float_t> size;
@@ -718,7 +718,7 @@ private:
 template <class BoxType>
 class Plot::Pad::Box
 {
-public:
+ public:
   virtual ~Box() = default;
   Box(const Box& other) = default;
   Box(Box&&) = default;
@@ -743,7 +743,7 @@ public:
   BoxType& SetTransparent();
   BoxType& SetNoBox();
 
-protected:
+ protected:
   ptree GetPropertyTree() const;
 
   double_t GetXPosition() const { return (mPos.x) ? *mPos.x : 0.; }
@@ -761,7 +761,7 @@ protected:
   bool IsUserCoordinates() const { return (mPos.isUserCoord) ? *mPos.isUserCoord : false; }
   bool IsAutoPlacement() const { return (!mPos.x || !mPos.y); }
 
-private:
+ private:
   // allow construction of Box base class only in context actually useful boxes
   friend BoxType;
   Box() = default;
@@ -789,7 +789,7 @@ private:
 //**************************************************************************************************
 class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 {
-public:
+ public:
   TextBox(const string& text);
   TextBox(double_t xPos, double_t yPos, const string& text);
   TextBox(const ptree& textBoxTree);
@@ -802,7 +802,7 @@ public:
 
   TextBox& SetText(const string& text);
 
-protected:
+ protected:
   friend class PlotManager;
   friend class PlotPainter;
   friend class Plot;
@@ -810,7 +810,7 @@ protected:
   ptree GetPropertyTree() const;
   const string& GetText() const { return mText; }
 
-private:
+ private:
   string mText;
 };
 
@@ -821,7 +821,7 @@ private:
 //**************************************************************************************************
 class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 {
-public:
+ public:
   class LegendEntry;
   LegendBox();
   LegendBox(double_t xPos, double_t yPos);
@@ -848,7 +848,7 @@ public:
   LegendBox& SetDefaultFillStyle(int16_t style);
   LegendBox& SetDefaultFillOpacity(float_t opacity);
 
-protected:
+ protected:
   friend class PlotManager;
   friend class PlotPainter;
   friend class Plot;
@@ -871,7 +871,7 @@ protected:
   const auto& GetDefaultFillStyle() const { return mFillDefault.style; }
   const auto& GetDefaultFillOpacity() const { return mFillDefault.scale; }
 
-private:
+ private:
   optional<string> mTitle;
   optional<uint8_t> mNumColumns;
   vector<LegendEntry> mLegendEntries;            // this is transient and will be generated automatically
@@ -892,7 +892,7 @@ private:
 //**************************************************************************************************
 class Plot::Pad::LegendBox::LegendEntry
 {
-public:
+ public:
   LegendEntry(const optional<string>& label = nullopt, const optional<string>& refDataName = nullopt, const optional<string>& drawStyle = nullopt);
   LegendEntry(const ptree& legendEntryTree);
 
@@ -912,7 +912,7 @@ public:
   LegendEntry& SetTextFont(int16_t font);
   LegendEntry& SetTextSize(float_t size);
 
-protected:
+ protected:
   friend class PlotPainter;
   friend class LegendBox;
   void operator+=(const LegendEntry& legendEntry);
@@ -938,7 +938,7 @@ protected:
   const auto& GetTextFont() const { return mText.style; }
   const auto& GetTextSize() const { return mText.scale; }
 
-private:
+ private:
   optional<string> mLabel;
   optional<string> mRefDataName;
   optional<string> mDrawStyle;

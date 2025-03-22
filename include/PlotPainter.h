@@ -110,10 +110,10 @@ const map<drawing_options_t, string> defaultDrawingOptions_Graph{
 //**************************************************************************************************
 class PlotPainter
 {
-public:
+ public:
   unique_ptr<TCanvas> GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, unique_ptr<TObject>>>& dataBuffer);
 
-private:
+ private:
   optional<data_ptr_t> GetDataClone(TObject* obj, const optional<Plot::Pad::Data::proj_info_t>& projInfo = nullopt);
   template <typename T>
   optional<data_ptr_t> GetDataClone(TObject* obj);

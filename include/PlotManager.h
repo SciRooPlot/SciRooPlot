@@ -39,7 +39,7 @@ namespace SciRooPlot
 //**************************************************************************************************
 class PlotManager
 {
-public:
+ public:
   PlotManager();
 
   ~PlotManager();
@@ -97,7 +97,7 @@ public:
                   const string& outputMode = "pdf");
   void PrintLoadedPlots() const;
 
-private:
+ private:
   TObject* FindSubDirectory(TObject* folder, vector<string>& subDirs) const;
   bool GeneratePlot(const Plot& plot, const string& outputMode = "pdf");
   ptree& ReadPlotTemplatesFromFile(const string& plotFileName);
