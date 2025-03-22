@@ -251,7 +251,7 @@ class Plot::Pad
   auto& GetData() { return mData; }
   auto& GetLegendBoxes() { return mLegendBoxes; }
   auto& GetTextBoxes() { return mTextBoxes; }
-  uint8_t GetDataCount() const { return mData.size(); };
+  uint8_t GetDataCount() const { return mData.size(); }
 
   const auto& GetAxes() const { return mAxes; }
   const auto& GetXLow() const { return mPosition.xlow; }

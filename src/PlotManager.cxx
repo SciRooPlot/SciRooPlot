@@ -293,7 +293,6 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
   ptree plotTree;
   for (const vector<Plot>& plots : {std::ref(mPlotTemplates), std::ref(mPlots)}) {
     for (const Plot& plot : plots) {
-
       if (plot.GetFigureGroup() == "PLOT_TEMPLATES" && usedTemplates.find(plot.GetName()) == usedTemplates.end()) {
         continue;
       } else if (!figureGroup.empty()) {
@@ -768,7 +767,6 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
 
   // first match should always be the one in current level; traverse deeper only if not found
   for (bool traverse : {false, true}) {
-
     TIter iterator = itemList->begin();
     TObject* obj{};
     bool deleteObject;
@@ -972,12 +970,12 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
 Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t screenResolution)
 {
   // info: the PDF backend of ROOT can only create plots with resolution of 72 dpi and maximum sizes defined by the A4 format (20cm x 26cm -> 567px x 737px)
-  int32_t pixelBase = int32_t(std::round(screenResolution * 567. / 72.));  // 567p / 72dpi == 20cm / 2.54in/cm (final pdf size)
-  double_t frameSize = 0.81;                                               // size of (quadratic) axis frame in percentage of pixelBase
-  double_t axisMargin = 0.16;                                              // margins of x and y axes in units relative to pixelBase side length (corresponds to the space in bottom and left of the plot to the axis frame)
-  double_t defaultTextSize = 0.04;                                         // default text size relative to pixelBase
-  double_t axisTitleSize = 0.05;                                           // text size of axis titles relative to pixelBase
-  double_t wideSideScale = 1.3;                                            // for asymmetric plots: scale of the larger side wrt. pixelBase (corresponds to the maximum / optimum of 26cm / 20cm)
+  int32_t pixelBase = static_cast<int32_t>(std::round(screenResolution * 567. / 72.));  // 567p / 72dpi == 20cm / 2.54in/cm (final pdf size)
+  double_t frameSize = 0.81;                                                            // size of (quadratic) axis frame in percentage of pixelBase
+  double_t axisMargin = 0.16;                                                           // margins of x and y axes in units relative to pixelBase side length (corresponds to the space in bottom and left of the plot to the axis frame)
+  double_t defaultTextSize = 0.04;                                                      // default text size relative to pixelBase
+  double_t axisTitleSize = 0.05;                                                        // text size of axis titles relative to pixelBase
+  double_t wideSideScale = 1.3;                                                         // for asymmetric plots: scale of the larger side wrt. pixelBase (corresponds to the maximum / optimum of 26cm / 20cm)
 
   double_t markerSize = 1.4;
   uint8_t lineWidth = 5;
@@ -1020,7 +1018,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
   if (plotTemplateName == "1d_ratio") {
     // -----------------------------------------------------------------------
     Plot plotTemplate(plotTemplateName, "PLOT_TEMPLATES");
-    plotTemplate.SetDimensions(pixelBase, int32_t(std::round(wideSideScale * pixelBase)), true);
+    plotTemplate.SetDimensions(pixelBase, static_cast<int32_t>(std::round(wideSideScale * pixelBase)), true);
     plotTemplate.SetTransparent();
     plotTemplate[0].SetFrameFill(10, 1001);
     plotTemplate[0].SetDefaultMarkerColors(goodColors);
@@ -1055,7 +1053,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
   if (plotTemplateName == "2d") {
     // -----------------------------------------------------------------------
     Plot plotTemplate(plotTemplateName, "PLOT_TEMPLATES");
-    plotTemplate.SetDimensions(int32_t(std::round(wideSideScale * pixelBase)), pixelBase, true);
+    plotTemplate.SetDimensions(static_cast<int32_t>(std::round(wideSideScale * pixelBase)), pixelBase, true);
     plotTemplate.SetTransparent();
     plotTemplate[0].SetFrameFill(10, 1001);
     plotTemplate[0].SetDefaultDrawingOptionHist2d(colz);

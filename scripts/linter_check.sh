@@ -1,4 +1,4 @@
-LINTER_CMD="cpplint --filter=-whitespace/line_length,-whitespace/braces,-readability/todo"
+LINTER_CMD="cpplint --filter=-whitespace/indent_namespace,-build/c++17,-whitespace/line_length,-whitespace/braces,-readability/todo"
 
 ${LINTER_CMD} ../include/*.h
 ${LINTER_CMD} ../src/*.cxx

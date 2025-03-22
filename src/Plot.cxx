@@ -905,7 +905,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mMarkerDefaults.colors) {
     mMarkerDefaults.colors = pad.mMarkerDefaults.colors;
     mMarkerDefaults.colorGradient = {};
-  };
+  }
   if (pad.mMarkerDefaults.colorGradient.rgbEndpoints) {
     mMarkerDefaults.colorGradient.rgbEndpoints = pad.mMarkerDefaults.colorGradient.rgbEndpoints;
     if (pad.mMarkerDefaults.colorGradient.alpha) mMarkerDefaults.colorGradient.alpha = pad.mMarkerDefaults.colorGradient.alpha;
@@ -917,7 +917,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mLineDefaults.colors) {
     mLineDefaults.colors = pad.mLineDefaults.colors;
     mLineDefaults.colorGradient = {};
-  };
+  }
   if (pad.mLineDefaults.colorGradient.rgbEndpoints) {
     mLineDefaults.colorGradient.rgbEndpoints = pad.mLineDefaults.colorGradient.rgbEndpoints;
     if (pad.mLineDefaults.colorGradient.alpha) mLineDefaults.colorGradient.alpha = pad.mLineDefaults.colorGradient.alpha;
@@ -929,7 +929,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mFillDefaults.colors) {
     mFillDefaults.colors = pad.mFillDefaults.colors;
     mFillDefaults.colorGradient = {};
-  };
+  }
   if (pad.mFillDefaults.colorGradient.rgbEndpoints) {
     mFillDefaults.colorGradient.rgbEndpoints = pad.mFillDefaults.colorGradient.rgbEndpoints;
     if (pad.mFillDefaults.colorGradient.alpha) mFillDefaults.colorGradient.alpha = pad.mFillDefaults.colorGradient.alpha;

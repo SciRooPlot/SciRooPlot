@@ -186,7 +186,6 @@ int main(int argc, char* argv[])
       ERROR("Cannot rename {} to {}", project, setting);
     }
   } else if (std::count(commandList.begin(), commandList.end(), command)) {
-
     if (setting.empty()) {
       string selectedProject = activeProject;
       if (!project.empty()) {

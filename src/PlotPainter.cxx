@@ -1598,7 +1598,7 @@ tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad* pad
   } else {
     TLatex textBox{text};
     textBox.SetTextFont(font - 1);
-    double_t dy{pad->AbsPixeltoY(0) - pad->AbsPixeltoY((int32_t)(text.GetTextSize()))};
+    double_t dy{pad->AbsPixeltoY(0) - pad->AbsPixeltoY(static_cast<int32_t>(text.GetTextSize()))};
     double_t textSize{dy / (pad->GetY2() - pad->GetY1())};
     textBox.SetTextSize(textSize);
     textBox.GetBoundingBox(width, height);
