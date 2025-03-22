@@ -19,6 +19,11 @@
 #include "Plot.h"
 #include "Helpers.h"
 #include "Logging.h"
+#include <algorithm>
+#include <memory>
+#include <tuple>
+#include <vector>
+#include <string>
 
 namespace SciRooPlot
 {
@@ -277,7 +282,7 @@ void Plot::operator+=(const Plot& plot)
   if (plot.mFill.scale) mFill.scale = plot.mFill.scale;
 
   for (auto& [padID, pad] : plot.mPads) {
-    mPads[padID]; // initializes the pad in case it was not yet defined in this plot
+    mPads[padID];  // initializes the pad in case it was not yet defined in this plot
     mPads[padID] += pad;
   }
   UpdateUniqueName();
@@ -940,7 +945,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if (pad.mRefFunc) mRefFunc = pad.mRefFunc;
   for (auto& [axisLabel, axis] : pad.mAxes) {
-    mAxes[axisLabel]; // default initiialize in case this axis was not yet defined
+    mAxes[axisLabel];  // default initiialize in case this axis was not yet defined
     mAxes[axisLabel] += axis;
   }
   mLegendBoxes.insert(mLegendBoxes.end(), pad.mLegendBoxes.begin(), pad.mLegendBoxes.end());
@@ -948,7 +953,7 @@ void Plot::Pad::operator+=(const Pad& pad)
 
   // due to the way this function is (currently) used, the 'pad' is only a temporary object
   // and therefore we can 'steal' its data by copying the pointers
-  mData = pad.mData; // this does not copy the data (!!)
+  mData = pad.mData;  // this does not copy the data (!!)
 }
 
 //**************************************************************************************************
@@ -2583,4 +2588,4 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetTextSiz
 template class Plot::Pad::Box<Plot::Pad::TextBox>;
 template class Plot::Pad::Box<Plot::Pad::LegendBox>;
 //**************************************************************************************************
-} // end namespace SciRooPlot
+}  // end namespace SciRooPlot

@@ -25,6 +25,11 @@
 // std dependencies
 #include <regex>
 #include <numeric>
+#include <unordered_map>
+#include <memory>
+#include <string>
+#include <tuple>
+#include <vector>
 
 // root dependencies
 #include "TROOT.h"
@@ -166,8 +171,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
   auto& padDefaults = plot[0];
   for (const auto& [padID, dummy] : plot.GetPads()) {
-    if (padID == 0) continue; // pad 0 is used only to define the defaults
-    auto& pad = plot[padID];  // needed because processData lambda cannot capture variable from structured binding ('dummy')
+    if (padID == 0) continue;  // pad 0 is used only to define the defaults
+    auto& pad = plot[padID];   // needed because processData lambda cannot capture variable from structured binding ('dummy')
 
     // Pad placing
     array<double_t, 4> padPos = {0., 0., 1., 1.};
@@ -253,7 +258,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       } else {
         pad.GetData().insert(pad.GetData().begin(), std::make_shared<Plot::Pad::Data>(*pad.GetData()[frameDataID]));
       }
-      pad.GetData()[0]->SetLegendLabel(""); // axis frame should not appear in legend
+      pad.GetData()[0]->SetLegendLabel("");  // axis frame should not appear in legend
     }
 
     TH1* axisHist_ptr{nullptr};
@@ -267,7 +272,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       auto processData = [&, padID = padID](auto&& data_ptr) {
         using data_type = std::decay_t<decltype(data_ptr)>;
 
-        data_ptr->SetTitle(""); // FIXME: only make this invisible but don't remove useful metadata
+        data_ptr->SetTitle("");  // FIXME: only make this invisible but don't remove useful metadata
 
         optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
@@ -333,8 +338,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 if (data_as_ratio->GetDivisionNormMode()) {
                   string scaleMode{};
                   if (*data_as_ratio->GetDivisionNormMode()) scaleMode = "width";
-                  double_t integralNum = data_ptr->Integral(scaleMode.data());         // integral in viewing range
-                  double_t integralDenom = denom_data_ptr->Integral(scaleMode.data()); // integral in viewing range
+                  double_t integralNum = data_ptr->Integral(scaleMode.data());          // integral in viewing range
+                  double_t integralDenom = denom_data_ptr->Integral(scaleMode.data());  // integral in viewing range
                   if (!integralNum || !integralDenom) {
                     ERROR("Cannot normalize histogram because integral is zero.");
                   } else {
@@ -358,7 +363,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             } else if constexpr (is_graph_1d<data_type>()) {
               if constexpr (is_graph_1d<denom_data_type>()) {
-                if (!DivideGraphs(data_ptr, denom_data_ptr)) // first try if exact division is possible
+                if (!DivideGraphs(data_ptr, denom_data_ptr))  // first try if exact division is possible
                 {
                   WARNING("In general graphs cannot be divided. Trying approximated division via spline interpolation. Errors will not be fully correct!");
                   DivideGraphsInterpolated(data_ptr, denom_data_ptr);
@@ -381,7 +386,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           } else {
             fail = true;
           }
-        } // end ratio code
+        }  // end ratio code
 
         // modify content (FIXME: this should be steered differently)
         // FIXME: probably this should be done after setting ranges but axis ranges depend on scaling!
@@ -398,7 +403,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
           if (data->GetNormMode()) {
             if (*data->GetNormMode() > 0) scaleMode = "width";
-            double_t integral = data_ptr->Integral(scaleMode.data()); // integral in viewing range
+            double_t integral = data_ptr->Integral(scaleMode.data());  // integral in viewing range
             if (integral == 0.) {
               ERROR("Cannot normalize histogram because integral is zero.");
             } else {
@@ -417,7 +422,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           string scaleMode{};
 
           if (data->GetNormMode()) {
-            double_t integral = data_ptr->Integral(); // integral in viewing range
+            double_t integral = data_ptr->Integral();  // integral in viewing range
             if (integral == 0.) {
               ERROR("Cannot normalize graph because integral is zero.");
             } else {
@@ -440,7 +445,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           bool requiresReset = false;
           if constexpr (is_hist_2d<data_type>()) {
             if (str_contains(drawingOptions, "Z")) {
-              data_ptr->Draw(drawingOptions.data()); // z axis is only drawn if specified
+              data_ptr->Draw(drawingOptions.data());  // z axis is only drawn if specified
               isDrawn = true;
               requiresReset = true;
             }
@@ -521,7 +526,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 }
 
                 bool isTH2 = axisHist_ptr->InheritsFrom(TH2::Class());
-                pad_ptr->Update(); // needed here so current user ranges correct
+                pad_ptr->Update();  // needed here so current user ranges correct
                 double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0, min = 0, max = 0;
                 pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
                 min = axisHist_ptr->GetMinimumStored();
@@ -632,7 +637,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // defined by the data
             double_t zMin = axisHist_ptr->GetMinimum();
             double_t zMax = axisHist_ptr->GetMaximum();
-            axisHist_ptr->Reset("ICE"); // reset integral, contents and errors
+            axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
             axisHist_ptr->SetMinimum(zMin);
             axisHist_ptr->SetMaximum(zMax);
           }
@@ -676,7 +681,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                           pick(defaultSettingIndices[2], pad.GetDefaultLineColors()),
                                           pick(defaultSettingIndices[2], padDefaults.GetDefaultLineColors()))) {
             if (!data->GetLineColor()) defaultSettingIndices[2]++;
-            data_ptr->SetLineColor(*lineColor); // data_ptr->SetLineColorAlpha(*lineColor, 0.5);
+            data_ptr->SetLineColor(*lineColor);  // data_ptr->SetLineColorAlpha(*lineColor, 0.5);
           }
           if (auto& lineStyle = get_first(data->GetLineStyle(),
                                           pick(defaultSettingIndices[3], pad.GetDefaultLineStyles()),
@@ -710,7 +715,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // now define data ranges
           if (axisHist_ptr->GetMinimum()) {
             // TODO: check if this still works for bar histos
-            data_ptr->SetMinimum(axisHist_ptr->GetMinimum()); // important for correct display of bar diagrams
+            data_ptr->SetMinimum(axisHist_ptr->GetMinimum());  // important for correct display of bar diagrams
           }
           // data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
 
@@ -781,10 +786,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               ERROR("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetInputID());
             }
           }
-          pad_ptr->Update(); // adds something to the list of primitives
+          pad_ptr->Update();  // adds something to the list of primitives
         }
         ++dataIndex;
-        drawingOptions = "SAME "; // next data should be drawn to same pad
+        drawingOptions = "SAME ";  // next data should be drawn to same pad
       };
 
       optional<data_ptr_t> rawData = GetDataClone(dataBuffer.at(data->GetInputID()).at(data->GetName()).get(), data->GetProjInfo());
@@ -793,7 +798,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       } else {
         fail = true;
       }
-    } // end data code
+    }  // end data code
 
     if (fail) {
       return nullptr;
@@ -824,7 +829,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     uint8_t legendIndex{1u};
     for (auto& box : pad.GetLegendBoxes()) {
       string legendName = "LegendBox_" + std::to_string(legendIndex);
-      box->MergeLegendEntries(); // apply individual user settings on top of automatic entries
+      box->MergeLegendEntries();  // apply individual user settings on top of automatic entries
       // apply default text properties of pad to the box
       if (!box->GetTextFont() && textFont) box->SetTextFont(*textFont);
       if (!box->GetTextSize() && textSize) box->SetTextSize(*textSize);
@@ -961,7 +966,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     }
     uint32_t markerWidthPixel{};
     if constexpr (isLegend) {
-      string markerDummyString = "-+-"; // defines width of marker
+      string markerDummyString = "-+-";  // defines width of marker
       TLatex markerDummy(0, 0, markerDummyString.data());
       markerDummy.SetTextFont(text_font);
       markerDummy.SetTextSize(text_size);
@@ -977,7 +982,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     double_t totalWidthNDC{};
     double_t totalHeightNDC{};
     double_t marginNDC{0.01};
-    double_t lineSpacing{0.3}; // fraction of line hight
+    double_t lineSpacing{0.3};  // fraction of line hight
 
     if constexpr (isLegend) {
       totalWidthNDC = 3 * marginNDC + markerWidthNDC + legendWidthNDC;
@@ -1190,12 +1195,12 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       if (borderWidth) {
         returnBox->SetLineWidth(*borderWidth);
       } else {
-        returnBox->SetLineWidth(0); // TODO: steer via pad defaults
+        returnBox->SetLineWidth(0);  // TODO: steer via pad defaults
       }
       if (fillStyle) {
         returnBox->SetFillStyle(*fillStyle);
       } else {
-        returnBox->SetFillStyle(0); // TODO: steer via pad defaults
+        returnBox->SetFillStyle(0);  // TODO: steer via pad defaults
       }
       if (fillColor) returnBox->SetFillColor(*fillColor);
       if (fillOpacity && fillColor) returnBox->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
@@ -1426,7 +1431,7 @@ void PlotPainter::DivideGraphsInterpolated(TGraph* numerator, TGraph* denominato
     double_t newError = 0.;
     if (denomValue) {
       newValue = y[i] / denomValue;
-      newError = ey[i] / denomValue; // Only proxy. Ignoring error of denominator!
+      newError = ey[i] / denomValue;  // Only proxy. Ignoring error of denominator!
     } else {
       ERROR("Dividing by zero!");
     }
@@ -1707,4 +1712,4 @@ vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vecto
   return gradientColors;
 }
 
-} // end namespace SciRooPlot
+}  // end namespace SciRooPlot

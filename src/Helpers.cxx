@@ -18,6 +18,8 @@
 
 #include "Helpers.h"
 #include <sys/stat.h>
+#include <vector>
+#include <string>
 
 namespace SciRooPlot
 {
@@ -56,4 +58,4 @@ bool file_exists(const string& name)
   return (stat(name.c_str(), &buffer) == 0);
 }
 
-} // end namespace SciRooPlot
+}  // end namespace SciRooPlot

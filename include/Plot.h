@@ -29,6 +29,10 @@
 #include "TF1.h"
 
 #include "SciRooPlot.h"
+#include <tuple>
+#include <memory>
+#include <vector>
+#include <string>
 
 namespace SciRooPlot
 {
@@ -83,9 +87,9 @@ class Plot
 public:
   class Pad;
   struct layout_t {
-    optional<int16_t> color; // marker_color , line_color, fill_color, text_color
-    optional<int16_t> style; // marker_style , line_style, fill_style, text_font
-    optional<float_t> scale; // marker_size , line_width, fill_opacity, text_size
+    optional<int16_t> color;  // marker_color , line_color, fill_color, text_color
+    optional<int16_t> style;  // marker_style , line_style, fill_style, text_font
+    optional<float_t> scale;  // marker_size , line_width, fill_opacity, text_size
   };
 
   Plot() = default;
@@ -411,13 +415,13 @@ public:
   virtual Data& SetContours(const vector<double>& contours);
   virtual Data& SetContours(const int32_t nContours);
 
-  virtual Data& SetProjectionX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {}); // for 2d histos
-  virtual Data& SetProjectionY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {}); // for 2d histos
+  virtual Data& SetProjectionX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});  // for 2d histos
+  virtual Data& SetProjectionY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});  // for 2d histos
   virtual Data& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
 
-  virtual Data& SetProfileX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});                                     // for 2d histos
-  virtual Data& SetProfileY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});                                     // for 2d histos
-  virtual Data& SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {}); // for 2d & 3d histos
+  virtual Data& SetProfileX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});                                      // for 2d histos
+  virtual Data& SetProfileY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});                                      // for 2d histos
+  virtual Data& SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});  // for 2d & 3d histos
 
 protected:
   friend class PlotManager;
@@ -458,17 +462,17 @@ protected:
   const auto& GetProjInfo() const { return mProjInfo; }
 
   struct proj_info_t {
-    vector<uint8_t> dims;                              // dimensions to project on (can be one or two)
-    vector<tuple<uint8_t, double_t, double_t>> ranges; // range restrictions on other dimensions
-    optional<bool> isUserCoord{};                      // whether ranges are specified in user coordinates or as bins
-    optional<bool> isProfile{};                        // whether this should be a profile instead of a projection
+    vector<uint8_t> dims;                               // dimensions to project on (can be one or two)
+    vector<tuple<uint8_t, double_t, double_t>> ranges;  // range restrictions on other dimensions
+    optional<bool> isUserCoord{};                       // whether ranges are specified in user coordinates or as bins
+    optional<bool> isProfile{};                         // whether this should be a profile instead of a projection
     string GetNameSuffix() const;
   };
 
 private:
   bool mDefinesFrame{};
 
-  string mType; // for introspection: "data" or "ratio"
+  string mType;  // for introspection: "data" or "ratio"
   string mName;
   string mInputIdentifier;
 
@@ -477,7 +481,7 @@ private:
   optional<string> mTextFormat;
 
   struct modify_t {
-    optional<uint8_t> normMode; // 0: sum over bin contents, 1: with bin width
+    optional<uint8_t> normMode;  // 0: sum over bin contents, 1: with bin width
     optional<double_t> scaleFactor;
   };
   struct legend_t {
@@ -600,7 +604,7 @@ private:
   string mDenomInputIdentifier;
   bool mIsCorrelated{};
   optional<proj_info_t> mProjInfoDenom;
-  optional<bool> mDivisionNormMode; // normalize both numerater and denominator to 0: sum over bin contents, 1: times bin widths
+  optional<bool> mDivisionNormMode;  // normalize both numerater and denominator to 0: sum over bin contents, 1: times bin widths
 };
 
 //**************************************************************************************************
@@ -870,8 +874,8 @@ protected:
 private:
   optional<string> mTitle;
   optional<uint8_t> mNumColumns;
-  vector<LegendEntry> mLegendEntries;           // this is transient and will be generated automatically
-  map<uint8_t, LegendEntry> mLegendEntriesUser; // this is persistent and must be saved
+  vector<LegendEntry> mLegendEntries;            // this is transient and will be generated automatically
+  map<uint8_t, LegendEntry> mLegendEntriesUser;  // this is persistent and must be saved
 
   layout_t mLineDefault;
   layout_t mMarkerDefault;
@@ -893,7 +897,7 @@ public:
   LegendEntry(const ptree& legendEntryTree);
 
   LegendEntry& SetLabel(const string& label);
-  LegendEntry& SetRefData(const string& name, const string& inputIdentifier); // will work only for data drawn in same pad
+  LegendEntry& SetRefData(const string& name, const string& inputIdentifier);  // will work only for data drawn in same pad
   LegendEntry& SetDrawStyle(const string& drawStyle);
   LegendEntry& SetMarkerColor(int16_t color);
   LegendEntry& SetMarkerStyle(int16_t style);
@@ -944,5 +948,5 @@ private:
   layout_t mText;
 };
 
-} // end namespace SciRooPlot
+}  // end namespace SciRooPlot
 #endif  // INCLUDE_PLOT_H_

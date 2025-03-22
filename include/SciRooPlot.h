@@ -25,9 +25,10 @@
 #include <variant>
 #include <cmath>
 #include <cstdint>
-#include <boost/property_tree/ptree.hpp>
 #include <unordered_map>
 #include <optional>
+#include <string>
+#include <boost/property_tree/ptree.hpp>
 
 namespace SciRooPlot
 {
@@ -51,5 +52,5 @@ using std::vector;
 
 const string gNameGroupSeparator = "_IN_";
 
-} // end namespace SciRooPlot
+}  // end namespace SciRooPlot
 #endif  // INCLUDE_SCIROOPLOT_H_

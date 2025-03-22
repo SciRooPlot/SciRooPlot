@@ -111,30 +111,30 @@
 
 #ifdef DISABLE_DEBUG
 #undef DEBUG
-#define DEBUG(s, ...) ;
+#define DEBUG(s, ...)
 #endif
 #ifdef DISABLE_WARNING
 #undef WARNING
-#define WARNING(s, ...) ;
+#define WARNING(s, ...)
 #endif
 #ifdef DISABLE_ERROR
 #undef ERROR
-#define ERROR(s, ...) ;
+#define ERROR(s, ...)
 #endif
 
 #ifdef DISABLE_LOG
 #undef LOG
-#define LOG(s, ...) ;
+#define LOG(s, ...)
 #endif
 #ifdef DISABLE_INFO
 #undef INFO
-#define INFO(s, ...) ;
+#define INFO(s, ...)
 #endif
 #ifdef DISABLE_PRINT
 #undef PRINT
-#define PRINT(s, ...) ;
+#define PRINT(s, ...)
 #undef PRINT_INLINE
-#define PRINT_INLINE(s, ...) ;
+#define PRINT_INLINE(s, ...)
 #endif
 
 // helper macro to quickly introspect deduced type of a variable

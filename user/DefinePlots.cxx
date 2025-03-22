@@ -1,5 +1,6 @@
 #include "PlotManager.h"
 #include "Logging.h"
+#include <string>
 
 using namespace SciRooPlot;
 void DefineInputIdentifiers(PlotManager& plotManager);
@@ -48,7 +49,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
     auto plotTemplate = PlotManager::GetPlotTemplate("2d");
     plotManager.AddPlotTemplate(plotTemplate);
   }
-  { // -----------------------------------------------------------------------
+  {  // -----------------------------------------------------------------------
     Plot plotTemplate("myOwnLayout", "PLOT_TEMPLATES");
     plotTemplate.SetDimensions(710, 710, true);
     plotTemplate.SetTransparent();
@@ -69,7 +70,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
     plotTemplate[1]['X'].SetColor(kBlue);
     plotTemplate[1]['Y'].SetColor(kBlue);
     plotManager.AddPlotTemplate(plotTemplate);
-  } // -----------------------------------------------------------------------
+  }  // -----------------------------------------------------------------------
 }
 
 //****************************************************************************************
@@ -79,7 +80,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
 //****************************************************************************************
 void DefinePlots(PlotManager& plotManager)
 {
-  { // -----------------------------------------------------------------------
+  {  // -----------------------------------------------------------------------
     string plotName = "plot1";
     Plot plot(plotName, "dummyFigures", "1d");
     plot[1].AddData("hist3", "measurements", "gaus");
@@ -87,34 +88,34 @@ void DefinePlots(PlotManager& plotManager)
     plot[1].AddData("hist7", "theory", "prediction");
     plot[1].AddLegend();
     plotManager.AddPlot(plot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
+  }  // -----------------------------------------------------------------------
+  {  // -----------------------------------------------------------------------
     string plotName = "plot2";
     Plot plot(plotName, "dummyFigures", "myOwnLayout");
     plot[1].AddData("dir2/subdir2/hist3", "measurements");
     plot[1].AddData("list1/hist5", "measurements");
     plotManager.AddPlot(plot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
+  }  // -----------------------------------------------------------------------
+  {  // -----------------------------------------------------------------------
     string plotName = "invMassDist";
     Plot plot(plotName, "examples", "1d");
     plot[1].AddData("invMassDist", "pseudodata").SetScaleFactor(0.00001).SetColor(kBlue + 2);
     plotManager.AddPlot(plot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
+  }  // -----------------------------------------------------------------------
+  {  // -----------------------------------------------------------------------
     string plotName = "multDist";
     Plot plot(plotName, "examples", "1d");
     plot[1].AddData("multDist", "pseudodata");
     plot[1].AddText("My Experiment // pp collisions, X TeV");
     plot[1]['Y'].SetLog();
     plotManager.AddPlot(plot);
-  } // -----------------------------------------------------------------------
-  { // -----------------------------------------------------------------------
+  }  // -----------------------------------------------------------------------
+  {  // -----------------------------------------------------------------------
     string plotName = "ptSpec";
     Plot plot(plotName, "examples", "1d");
     plot[1].AddData("ptSpec", "pseudodata").SetColor(kRed + 2);
     plot[1]['X'].SetLog();
     plot[1]['Y'].SetLog();
     plotManager.AddPlot(plot);
-  } // -----------------------------------------------------------------------
+  }  // -----------------------------------------------------------------------
 }

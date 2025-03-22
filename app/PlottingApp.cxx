@@ -21,6 +21,8 @@
 #include "Plot.h"
 #include "Logging.h"
 
+#include <string>
+#include <vector>
 #include <boost/program_options.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
@@ -97,7 +99,7 @@ int main(int argc, char* argv[])
   }
   if (groupCat.size() > 1 && !groupCat[1].empty()) {
     category = groupCat[1];
-    category += "(/.*)?"; // search also in subcategories
+    category += "(/.*)?";  // search also in subcategories
   }
 
   if (mode != "find") {

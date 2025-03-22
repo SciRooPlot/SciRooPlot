@@ -21,6 +21,11 @@
 
 #include "SciRooPlot.h"
 #include "Plot.h"
+#include <tuple>
+#include <memory>
+#include <unordered_map>
+#include <vector>
+#include <string>
 
 class TApplication;
 class TCanvas;
@@ -49,14 +54,14 @@ public:
 
   // settings for output
   void SetOutputDirectory(const string& path);
-  void SetUseUniquePlotNames(bool useUniquePlotNames = true);          // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
-  void SetOutputFileName(const string& fileName = "ResultPlots.root"); // in case canvases should be saved in .root file
+  void SetUseUniquePlotNames(bool useUniquePlotNames = true);           // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
+  void SetOutputFileName(const string& fileName = "ResultPlots.root");  // in case canvases should be saved in .root file
 
   // settings related to the input root files
   void AddInputDataFiles(const string& inputIdentifier, const vector<string>& inputFilePathList);
   void AddInputDataFile(const string& inputIdentifier, const string& inputFilePath);
-  void DumpInputDataFiles(const string& configFileName) const; // save input file paths to config file
-  void LoadInputDataFiles(const string& configFileName);       // load the input file paths from config file
+  void DumpInputDataFiles(const string& configFileName) const;  // save input file paths to config file
+  void LoadInputDataFiles(const string& configFileName);        // load the input file paths from config file
 
   // remove all loaded input data (histograms, graphs, ...) from the manager (usually not needed)
   void ClearDataBuffer();
@@ -111,12 +116,12 @@ private:
   int32_t mWindowOffsetY{};
 
   unordered_map<string, unordered_map<string, unique_ptr<TObject>>> mDataBuffer;
-  map<string, vector<string>> mInputFiles; // inputFileIdentifier, inputFilePaths
+  map<string, vector<string>> mInputFiles;  // inputFileIdentifier, inputFilePaths
   void PrintBufferStatus(bool missingOnly = false) const;
   bool FillBuffer();
   void ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& inputID);
   void ReadDataCSV(const string& inputFileName, const string& graphName, const string& inputIdentifier);
 };
 
-} // end namespace SciRooPlot
+}  // end namespace SciRooPlot
 #endif  // INCLUDE_PLOTMANAGER_H_

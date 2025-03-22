@@ -21,6 +21,9 @@
 
 #include "SciRooPlot.h"
 #include "TSystem.h"
+#include <tuple>
+#include <string>
+#include <vector>
 
 namespace SciRooPlot
 {
@@ -146,10 +149,10 @@ vector<T> string_to_vector(string itemString)
 template <typename T>
 void put_in_tree(ptree& tree, const optional<T>& var, const string& label)
 {
-  if constexpr (is_vector<T>{}) // vectors are stored as comma separated strings
+  if constexpr (is_vector<T>{})  // vectors are stored as comma separated strings
   {
     if (var) tree.put(label, vector_to_string(*var));
-  } else if constexpr (std::is_enum<T>::value) // in case using enum types of the framework
+  } else if constexpr (std::is_enum<T>::value)  // in case using enum types of the framework
   {
     if (var) tree.put(label, static_cast<typename std::underlying_type<T>::type>(*var));
   } else {
@@ -160,11 +163,11 @@ void put_in_tree(ptree& tree, const optional<T>& var, const string& label)
 template <typename T>
 void read_from_tree(const ptree& tree, optional<T>& var, const string& label)
 {
-  if constexpr (is_vector<T>{}) // vectors are stored as comma separated strings
+  if constexpr (is_vector<T>{})  // vectors are stored as comma separated strings
   {
     if (auto tmp = tree.get_optional<string>(label))
       var = string_to_vector<typename T::value_type>(*tmp);
-  } else if constexpr (std::is_enum<T>::value) // in case using enum types of the framework
+  } else if constexpr (std::is_enum<T>::value)  // in case using enum types of the framework
   {
     if (auto tmp = tree.get_optional<typename std::underlying_type<T>::type>(label))
       var = static_cast<T>(*tmp);
@@ -206,5 +209,5 @@ constexpr bool is_one_of_v()
   return (... || std::is_same_v<T, Ts>);
 }
 
-} // end namespace SciRooPlot
+}  // end namespace SciRooPlot
 #endif  // INCLUDE_HELPERS_H_

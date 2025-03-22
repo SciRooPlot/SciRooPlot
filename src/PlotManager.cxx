@@ -26,6 +26,13 @@
 #include <regex>
 #include <filesystem>
 #include <limits>
+#include <unordered_map>
+#include <memory>
+#include <string>
+#include <tuple>
+#include <vector>
+#include <set>
+#include <utility>
 
 // boost dependencies
 #include <boost/property_tree/xml_parser.hpp>
@@ -455,7 +462,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   bool isGif = false;
   static string gifName;
   static string gifFolderName;
-  string gifRepRate = "+50"; // number of centiseconds between frames
+  string gifRepRate = "+50";  // number of centiseconds between frames
 
   string fileEnding;
   if (outputMode == "pdf") {
@@ -592,7 +599,7 @@ bool PlotManager::FillBuffer()
 {
   bool success = true;
   for (auto& [inputID, buffer] : mDataBuffer) {
-    unordered_map<string, vector<string>> requiredData; // subdir, names
+    unordered_map<string, vector<string>> requiredData;  // subdir, names
     for (auto& [dataName, dataPtr] : buffer) {
       if (dataPtr) continue;
 
@@ -772,7 +779,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       deleteObject = true;
       removeFromList = true;
 
-      string curDataName; // name of current key or data
+      string curDataName;  // name of current key or data
       // read actual object to memory when traversing a directory
       if (obj->IsA() == TKey::Class()) {
         string className = static_cast<TKey*>(obj)->GetClassName();
@@ -800,7 +807,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
         // the key name supersedes the actual data name (in case they are different when written to file via h->Write("myKeyName"))
         if (curDataName.empty()) curDataName = obj->GetName();
         if (auto it = std::find(dataNames.begin(), dataNames.end(), curDataName); it != dataNames.end()) {
-          if (obj->InheritsFrom(TH1::Class())) static_cast<TH1*>(obj)->SetDirectory(0); // demand ownership for histogram
+          if (obj->InheritsFrom(TH1::Class())) static_cast<TH1*>(obj)->SetDirectory(0);  // demand ownership for histogram
           itemList->Remove(obj);
           dataNames.erase(it);
           string fullName = prefix + curDataName;
@@ -834,7 +841,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
 void PlotManager::ReadDataCSV(const string& inputFileName, const string& graphName, const string& inputIdentifier)
 {
   // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
-  string delimiter = "\t"; // TODO: this must somehow be user definable
+  string delimiter = "\t";  // TODO: this must somehow be user definable
   string pattern = "%lg %lg %lg %lg";
   TGraphErrors* graph = new TGraphErrors(inputFileName.data(), pattern.data(), delimiter.data());
   string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
@@ -965,12 +972,12 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
 Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t screenResolution)
 {
   // info: the PDF backend of ROOT can only create plots with resolution of 72 dpi and maximum sizes defined by the A4 format (20cm x 26cm -> 567px x 737px)
-  int32_t pixelBase = int32_t(std::round(screenResolution * 567. / 72.)); // 567p / 72dpi == 20cm / 2.54in/cm (final pdf size)
-  double_t frameSize = 0.81;                                              // size of (quadratic) axis frame in percentage of pixelBase
-  double_t axisMargin = 0.16;                                             // margins of x and y axes in units relative to pixelBase side length (corresponds to the space in bottom and left of the plot to the axis frame)
-  double_t defaultTextSize = 0.04;                                        // default text size relative to pixelBase
-  double_t axisTitleSize = 0.05;                                          // text size of axis titles relative to pixelBase
-  double_t wideSideScale = 1.3;                                           // for asymmetric plots: scale of the larger side wrt. pixelBase (corresponds to the maximum / optimum of 26cm / 20cm)
+  int32_t pixelBase = int32_t(std::round(screenResolution * 567. / 72.));  // 567p / 72dpi == 20cm / 2.54in/cm (final pdf size)
+  double_t frameSize = 0.81;                                               // size of (quadratic) axis frame in percentage of pixelBase
+  double_t axisMargin = 0.16;                                              // margins of x and y axes in units relative to pixelBase side length (corresponds to the space in bottom and left of the plot to the axis frame)
+  double_t defaultTextSize = 0.04;                                         // default text size relative to pixelBase
+  double_t axisTitleSize = 0.05;                                           // text size of axis titles relative to pixelBase
+  double_t wideSideScale = 1.3;                                            // for asymmetric plots: scale of the larger side wrt. pixelBase (corresponds to the maximum / optimum of 26cm / 20cm)
 
   double_t markerSize = 1.4;
   uint8_t lineWidth = 5;
@@ -1008,7 +1015,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[0]['Y'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
     plotTemplate[1].SetPosition(0., 0., 1., 1.);
     return plotTemplate;
-  } // -----------------------------------------------------------------------
+  }  // -----------------------------------------------------------------------
 
   if (plotTemplateName == "1d_ratio") {
     // -----------------------------------------------------------------------
@@ -1038,12 +1045,12 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[1]['Y'].SetTitleSize(1. / (wideSideScale * (1 - ratioFraction)) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
     plotTemplate[2]['X'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
     plotTemplate[2]['Y'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
-    plotTemplate[2]['Y'].SetTitleOffset(0.6); // FIXME: for some reason the ROOT automatic title offset determination does not work for the lower plot
+    plotTemplate[2]['Y'].SetTitleOffset(0.6);  // FIXME: for some reason the ROOT automatic title offset determination does not work for the lower plot
     plotTemplate[2].SetRefFunc("1");
     plotTemplate[2]['X'].SetTickLength(0.06);
     plotTemplate[2]['Y'].SetNumDivisions(305).SetTitleCenter();
     return plotTemplate;
-  } // -----------------------------------------------------------------------
+  }  // -----------------------------------------------------------------------
 
   if (plotTemplateName == "2d") {
     // -----------------------------------------------------------------------
@@ -1064,7 +1071,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[0].SetRedrawAxes();
     plotTemplate[1].SetPosition(0., 0., 1., 1.);
     return plotTemplate;
-  } // -----------------------------------------------------------------------
+  }  // -----------------------------------------------------------------------
 
   if (plotTemplateName == "1d_3panels") {
     // -----------------------------------------------------------------------
@@ -1124,7 +1131,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[2]['X'].SetTickLength(tickLengthPad2);
     plotTemplate[3]['X'].SetTickLength(tickLengthPad3);
     return plotTemplate;
-  } // -----------------------------------------------------------------------
+  }  // -----------------------------------------------------------------------
 
   ERROR("Unknown plot template {}.", plotTemplateName);
   return Plot();
@@ -1200,4 +1207,4 @@ void PlotManager::SaveProject(const string& projectName)
   tabCompFile.close();
 };
 
-} // end namespace SciRooPlot
+}  // end namespace SciRooPlot

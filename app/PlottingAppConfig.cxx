@@ -21,6 +21,9 @@
 #include "Plot.h"
 #include "Logging.h"
 
+#include <vector>
+#include <iostream>
+#include <string>
 #include <filesystem>
 #include <boost/program_options.hpp>
 #include <boost/property_tree/xml_parser.hpp>

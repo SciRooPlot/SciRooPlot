@@ -20,6 +20,12 @@
 #define INCLUDE_PLOTPAINTER_H_
 
 #include "Plot.h"
+#include <unordered_map>
+#include <memory>
+#include <string>
+#include <tuple>
+#include <vector>
+
 class TH1;
 class TH2;
 class TGraph;
@@ -53,7 +59,7 @@ const map<drawing_options_t, string> defaultDrawingOptions_Hist2d{
   {candle4, "CANDLEX4"},
   {candle5, "CANDLEX5"},
   {candle6, "CANDLEX6"},
-  {candle7, "CANDLEX(111101)"}, // no median but mean as line
+  {candle7, "CANDLEX(111101)"},  // no median but mean as line
 };
 
 const map<drawing_options_t, string> defaultDrawingOptions_Hist{
@@ -135,5 +141,5 @@ private:
 
   vector<int16_t> GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1., bool savePalette = false);
 };
-} // end namespace SciRooPlot
+}  // end namespace SciRooPlot
 #endif  // INCLUDE_PLOTPAINTER_H_
