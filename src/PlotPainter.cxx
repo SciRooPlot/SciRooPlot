@@ -1663,15 +1663,15 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     } else if (data_ptr->InheritsFrom(TH1::Class())) {
       try {
         if (str_contains(match_str, "entries")) {
-          replace_str = fmt::format(format, static_cast<TH1*>(data_ptr)->GetEntries());
+          replace_str = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetEntries());
         } else if (str_contains(match_str, "integral")) {
-          replace_str = fmt::format(format, static_cast<TH1*>(data_ptr)->Integral());
+          replace_str = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->Integral());
         } else if (str_contains(match_str, "mean")) {
-          replace_str = fmt::format(format, static_cast<TH1*>(data_ptr)->GetMean());
+          replace_str = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMean());
         } else if (str_contains(match_str, "maximum")) {
-          replace_str = fmt::format(format, static_cast<TH1*>(data_ptr)->GetMaximum());
+          replace_str = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMaximum());
         } else if (str_contains(match_str, "minimum")) {
-          replace_str = fmt::format(format, static_cast<TH1*>(data_ptr)->GetMinimum());
+          replace_str = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMinimum());
         }
       } catch (...) {
         ERROR("Incompatible format string in {}.", match_str);
