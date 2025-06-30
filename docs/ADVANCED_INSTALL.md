@@ -41,3 +41,7 @@ export CMAKE_PREFIX_PATH=/path/to/fmt/build:$CMAKE_PREFIX_PATH
 ```
 Alternatively, you can pass this information directly to SciRooPlot via the compiler flag:
 `-DFMT_ROOT=/path/to/fmt/build`
+
+### Autocomplete:
+
+In case the autocompletion does not work, on MacOS you need to run `autoload -U compaudit compinit` prior to sourcing the `.plotrc`.

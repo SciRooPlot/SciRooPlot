@@ -12,7 +12,7 @@ SciRooPlot runs on MacOS and Linux. It depends on the following external softwar
 - boost >= 1.65
 - ROOT  >= 6.16
 
-If those dependencies cannot be installed by a package manager, a description of how to build them from source is shown [here](DEPENDENCIES_INSTALL.md).
+If those dependencies cannot be installed by a package manager, a description of how to build them from source is shown [here](ADVANCED_INSTALL.md).
 
 SciRooPlot is installed as follows:
 ```bash
