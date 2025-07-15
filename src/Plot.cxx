@@ -45,6 +45,13 @@ Plot::Plot(const string& name, const string& figureGroupAndCategory, const optio
     ERROR("Figure group must not contain '.'!");
     std::exit(EXIT_FAILURE);
   }
+  if (str_contains(name, " ") || str_contains(figureGroupAndCategory, " ")) {
+    ERROR("Whitespaces are not allowed in plot or group names!");
+    ERROR("-> Please check '{}' in '{}'!", name, figureGroupAndCategory);
+
+    std::exit(EXIT_FAILURE);
+  }
+
   mName = name;
   mFigureGroup = figureGroupAndCategory;
   mPlotTemplateName = plotTemplateName;
