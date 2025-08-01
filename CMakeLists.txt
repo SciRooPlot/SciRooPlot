@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+include(FetchContent) # allows usage of FetchContent_Declare
 set(CMAKE_VERBOSE_MAKEFILE off)
 set(CMAKE_BUILD_TYPE Debug)
 
@@ -30,23 +31,39 @@ if(ROOTSYS)
 endif()
 find_package(ROOT ${REQUIRED_ROOT_VERSION} CONFIG REQUIRED)
 include(${ROOT_USE_FILE})
-message(STATUS "root  version: ${ROOT_VERSION}")
+message(STATUS "Found ROOT: ${ROOT_DIR} (found suitable version \"${ROOT_VERSION}\", minimum required is \"${REQUIRED_ROOT_VERSION}\")")
 
 set(BOOST_ROOT CACHE STRING "boost installation folder")
 if(BOOST_ROOT)
   message(STATUS "looking for boost installation in ${BOOST_ROOT}.")
   list(PREPEND CMAKE_PREFIX_PATH ${BOOST_ROOT})
 endif()
+cmake_policy(SET CMP0167 OLD)
 find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED COMPONENTS program_options)
 message(STATUS "boost version: ${Boost_VERSION}")
 
-set(FMT_ROOT CACHE STRING "fmt installation folder")
-if(FMT_ROOT)
-  message(STATUS "looking for fmt installation in ${FMT_ROOT}.")
-  list(PREPEND CMAKE_PREFIX_PATH ${FMT_ROOT})
+find_package(fmt ${REQUIRED_FMT_VERSION} CONFIG REQUIRED)
+
+if (NOT fmt_FOUND)
+    message(STATUS "fmt not found via find_package, falling back to FetchContent")
+
+    FetchContent_Declare(
+        fmt
+        DOWNLOAD_EXTRACT_TIMESTAMP OFF
+        URL https://github.com/fmtlib/fmt/releases/download/11.2.0/fmt-11.2.0.zip
+    )
+    FetchContent_GetProperties(fmt)
+    if (NOT fmt_POPULATED)
+        FetchContent_Populate(fmt)
+        add_subdirectory(${fmt_SOURCE_DIR} ${fmt_BINARY_DIR})
+    endif()
 endif()
-find_package(fmt ${REQUIRED_FMT_VERSION} REQUIRED)
-message(STATUS "fmt   version: ${fmt_VERSION}")
+# Handle both find_package and FetchContent
+if (fmt_DIR)
+  message(STATUS "Found fmt: ${fmt_DIR} (found suitable version \"${fmt_VERSION}\", minimum required is \"${REQUIRED_FMT_VERSION}\")")
+else()
+  message(STATUS "Using fmt via FetchContent (version: ${fmt_VERSION})")
+endif()
 
 set(SciRooPlot_COMFLAGS ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompileFlags.cmake)
 include(${SciRooPlot_COMFLAGS})
@@ -89,7 +106,7 @@ set(ADDITIONAL_FILES
 )
 
 # create SciRooPlot library
-add_library(${MODULE} SHARED ${SRCS} ${HDRS} ${MODULE_HDR} ${ADDITIONAL_FILES})
+add_library(${MODULE} SHARED ${SRCS} ${HDRS} ${MODULE_HDR})
 target_link_libraries(${MODULE} PUBLIC ${SciRooPlot_DEP})
 
 # helper function to add executables that are linked to the SciRooPlot library and its dependencies
