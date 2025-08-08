@@ -48,7 +48,6 @@ Plot::Plot(const string& name, const string& figureGroupAndCategory, const optio
   if (str_contains(name, " ") || str_contains(figureGroupAndCategory, " ")) {
     ERROR("Whitespaces are not allowed in plot or group names!");
     ERROR("-> Please check '{}' in '{}'!", name, figureGroupAndCategory);
-
     std::exit(EXIT_FAILURE);
   }
 
@@ -1075,12 +1074,22 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string&
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
 
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& data, const string& denominatorName, const string& denominatorInputIdentifier, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorLayout, const string& denominatorName, const string& denominatorInputIdentifier, const optional<string>& label)
 {
-  mData.push_back(std::make_shared<Ratio>(numeratorName, data.GetInputID(),
+  mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorLayout.GetInputID(),
                                           denominatorName, denominatorInputIdentifier, label));
-  mData.back()->SetLayout(data);
+  mData.back()->SetLayout(numeratorLayout);
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
+}
+
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorLayout, const string& denominatorName, const Data& denominatorLayout, const optional<string>& label)
+{
+  return AddRatio(numeratorName, numeratorLayout, denominatorName, denominatorLayout.GetInputID(), label);
+}
+
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorInputIdentifier, const string& denominatorName, const Data& denominatorLayout, const optional<string>& label)
+{
+  return AddRatio(numeratorName, numeratorInputIdentifier, denominatorName, denominatorLayout.GetInputID(), label);
 }
 
 //**************************************************************************************************

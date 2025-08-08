@@ -188,8 +188,12 @@ class Plot::Pad
   Ratio& AddRatio(const string& numeratorName, const string& numeratorInputIdentifier,
                   const string& denominatorName, const string& denominatorInputIdentifier,
                   const optional<string>& label = nullopt);
-  Ratio& AddRatio(const string& numeratorName, const Data& data, const string& denominatorName,
+  Ratio& AddRatio(const string& numeratorName, const Data& numeratorLayout, const string& denominatorName,
                   const string& denominatorInputIdentifier, const optional<string>& label = nullopt);
+  Ratio& AddRatio(const string& numeratorName, const Data& numeratorLayout, const string& denominatorName,
+                  const Data& denominatorLayout, const optional<string>& label = nullopt);
+  Ratio& AddRatio(const string& numeratorName, const string& numeratorInputIdentifier, const string& denominatorName,
+                  const Data& denominatorLayout, const optional<string>& label = nullopt);
 
   TextBox& AddText(double_t xPos, double_t yPos, const string& text);
   TextBox& AddText(const string& text);
