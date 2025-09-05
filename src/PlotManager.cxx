@@ -1181,6 +1181,17 @@ tuple<string, string, string> PlotManager::GetProjectSettings(string projectName
 
 //****************************************************************************************
 /**
+ * Reads path to inputs file from config file.
+ */
+//****************************************************************************************
+string PlotManager::GetInputsFile(string projectName)
+{
+  auto [inputsFile, plotDefinitionsFile, outputDir] = PlotManager::GetProjectSettings(projectName);
+  return inputsFile;
+}
+
+//****************************************************************************************
+/**
  * Saves all required plot definitions and input file locations of the project.
  */
 //****************************************************************************************

@@ -50,6 +50,7 @@ class PlotManager
 
   static Plot GetPlotTemplate(const string& plotTemplateName = "1d", double_t screenResolution = 100);
   static tuple<string, string, string> GetProjectSettings(string projectName = "");
+  static string GetInputsFile(string projectName = "");
   void SaveProject(const string& projectName);
 
   // settings for output
