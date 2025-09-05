@@ -972,7 +972,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
   // info: the PDF backend of ROOT can only create plots with resolution of 72 dpi and maximum sizes defined by the A4 format (20cm x 26cm -> 567px x 737px)
   int32_t pixelBase = static_cast<int32_t>(std::round(screenResolution * 567. / 72.));  // 567p / 72dpi == 20cm / 2.54in/cm (final pdf size)
   double_t frameSize = 0.81;                                                            // size of (quadratic) axis frame in percentage of pixelBase
-  double_t axisMargin = 0.16;                                                           // margins of x and y axes in units relative to pixelBase side length (corresponds to the space in bottom and left of the plot to the axis frame)
+  double_t axisMargin = 0.15;                                                           // margins of x and y axes in units relative to pixelBase side length (corresponds to the space in bottom and left of the plot to the axis frame)
   double_t defaultTextSize = 0.04;                                                      // default text size relative to pixelBase
   double_t axisTitleSize = 0.05;                                                        // text size of axis titles relative to pixelBase
   double_t wideSideScale = 1.3;                                                         // for asymmetric plots: scale of the larger side wrt. pixelBase (corresponds to the maximum / optimum of 26cm / 20cm)
