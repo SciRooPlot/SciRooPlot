@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
 //****************************************************************************************
 void DefineInputIdentifiers(PlotManager& plotManager)
 {
-  const string inputFolder = "${__SCIROOPLOT_BUILD_DIR}/TestFiles";
+  const string inputFolder = "${SCIROOPLOT_DATA_DIR}/TestFiles";
   plotManager.AddInputDataFiles("measurements", {inputFolder + "/file1.root", inputFolder + "/file2.root"});
   plotManager.AddInputDataFiles("theory", {inputFolder + "/subfolder/file3.root"});
   plotManager.AddInputDataFiles("pseudodata", {inputFolder + "/subfolder/file3.root:pseudodata"});

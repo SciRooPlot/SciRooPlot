@@ -1,30 +1,28 @@
+@PACKAGE_INIT@
+
+# Policy for modern Boost usage
+if(POLICY CMP0167)
+  cmake_policy(SET CMP0167 NEW)
+endif()
+
 include(CMakeFindDependencyMacro)
+
+# Dependencies
 find_dependency(ROOT)
 find_dependency(Boost COMPONENTS program_options)
 find_dependency(fmt)
 
-include(@SciRooPlot_COMFLAGS@)
+# Include the exported targets (installed by install(EXPORT ...))
+include("${CMAKE_CURRENT_LIST_DIR}/SciRooPlotTargets.cmake")
 
-set(SciRooPlot_DEP @SciRooPlot_DEP@)
-set(SciRooPlot_INC @SciRooPlot_INC@)
-set(SciRooPlot_LIB @SciRooPlot_LIB@)
-# find_package also automatically defines SciRooPlot_VERSION and SciRooPlot_DIR
+# Include the helper for downstream projects
+include("${CMAKE_CURRENT_LIST_DIR}/SciRooPlotHelpers.cmake")
 
-include_directories(${SciRooPlot_INC})
-
-####################################################################################################
-# Function to add an executable that is linked to the SciRooPlot and all its dependencies
-####################################################################################################
-function(add_plotting_executable APP_NAME)
-  cmake_parse_arguments(PARSE_ARGV 1 APP "" "" "SOURCES;ADD_FILES")
-  if(APP_UNPARSED_ARGUMENTS)
-    message(FATAL_ERROR "Got trailing arguments ${APP_UNPARSED_ARGUMENTS}")
-  endif()
-  add_executable(${APP_NAME} ${APP_SOURCES} ${APP_ADD_FILES})
-  target_link_libraries(${APP_NAME} PUBLIC
-    ${SciRooPlot_LIB}
-    ${SciRooPlot_DEP}
-  )
-  message(STATUS "Creating executable ${APP_NAME} from file(s) ${APP_SOURCES} including ${APP_ADD_FILE}")
-endfunction()
-####################################################################################################
+# Link against SciRooPlot using the helper function add_plotting_executable:
+#
+#  add_plotting_executable(definePlots
+#    SOURCES
+#      src/DefinePlots.cxx
+#    INCLUDES
+#      include/
+#  )

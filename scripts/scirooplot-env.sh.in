@@ -1,25 +1,21 @@
 #!/bin/bash
 
-# add some global symbols
-if [[ "${BASH_SOURCE[0]}" != "" ]]; then
-  __SCIROOPLOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-else
-  __SCIROOPLOT_DIR="$( cd "$( dirname "${0}"  )" >/dev/null 2>&1 && pwd )"
-fi
-export __SCIROOPLOT_DIR
-__SCIROOPLOT_BUILD_DIR="${__SCIROOPLOT_DIR}/build" # MEMO: this hard-codes the build destination...
-export __SCIROOPLOT_BUILD_DIR
-if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
-  function plot() {
-    if [[ "${1}" == "cd" ]]; then
-      cd ${__SCIROOPLOT_BUILD_DIR}
-      return 0
-    fi
+export SCIROOPLOT_ROOT=@CMAKE_INSTALL_PREFIX@
+export SCIROOPLOT_BIN=${SCIROOPLOT_ROOT}/@CMAKE_INSTALL_BINDIR@
+export SCIROOPLOT_DATA_DIR=${SCIROOPLOT_ROOT}/share/scirooplot
 
-    local USER_EXEC=$(${__SCIROOPLOT_BUILD_DIR}/plot-config executable)
+if [[ -e "${SCIROOPLOT_BIN}/plot" && -e "${SCIROOPLOT_BIN}/plot-config" ]]; then
+  function plot() {
+    local USER_EXEC=$(${SCIROOPLOT_BIN}/plot-config executable)
     local USER_BUILD_DIR=$([[ -z ${USER_EXEC} ]] || dirname ${USER_EXEC})
     if [[ -d ${USER_BUILD_DIR} ]]; then
-      local USER_PLOTDEF="$(${__SCIROOPLOT_BUILD_DIR}/plot-config path)/plots.xml"
+
+      if [[ "${1}" == "cd" ]]; then
+        cd ${USER_BUILD_DIR}
+        return 0
+      fi
+
+      local USER_PLOTDEF="$(${SCIROOPLOT_BIN}/plot-config path)/plots.xml"
       (
         cd ${USER_BUILD_DIR};
         (make -j6 1> /dev/null) || exit 1
@@ -28,7 +24,7 @@ if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
         fi
       ) || return 1
     fi
-    "${__SCIROOPLOT_BUILD_DIR}/plot" ${1} ${2} ${3}
+    "${SCIROOPLOT_BIN}/plot" ${1} ${2} ${3}
     return 0
   }
   
@@ -47,15 +43,15 @@ if [[ -d "${__SCIROOPLOT_BUILD_DIR}" ]]; then
       mkdir ${PROJECT_NAME}
       PROJECT_PATH=${WORKDIR}/${PROJECT_NAME}
       mkdir ${PROJECT_PATH}/build
-      cp ${__SCIROOPLOT_DIR}/user/* ${PROJECT_PATH}/
+      cp ${SCIROOPLOT_DATA_DIR}/user/* ${PROJECT_PATH}/
       sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" ${PROJECT_PATH}/CMakeLists.txt && rm -f ${PROJECT_PATH}/CMakeLists.txt.bak
       sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" ${PROJECT_PATH}/DefinePlots.cxx && rm -f ${PROJECT_PATH}/DefinePlots.cxx.bak
-      ${__SCIROOPLOT_BUILD_DIR}/plot-config executable ${PROJECT_NAME} ${PROJECT_PATH}/build/definePlots
+      ${SCIROOPLOT_BIN}/plot-config executable ${PROJECT_NAME} ${PROJECT_PATH}/build/definePlots
       plot-config switch ${PROJECT_NAME}
       cd ${PROJECT_PATH}/build && cmake -Wno-dev .. 2>&1 > /dev/null && make 2>&1 > /dev/null && ./definePlots
       cd ${WORKDIR}
     else
-      "${__SCIROOPLOT_BUILD_DIR}/plot-config" ${1} ${2} ${3}
+      "${SCIROOPLOT_BIN}/plot-config" ${1} ${2} ${3}
     fi
     return 0
   }
@@ -68,7 +64,7 @@ _plot_completions_zsh() {
   local groupsAndCategories
   local names
   
-  local AUTOCOMPFILE="$(${__SCIROOPLOT_BUILD_DIR}/plot-config path)/plots.csv"
+  local AUTOCOMPFILE="$(${SCIROOPLOT_BIN}/plot-config path)/plots.csv"
   if [[ ! -f "$AUTOCOMPFILE" ]]; then
     return
   fi
@@ -134,7 +130,7 @@ _plot-config_completions_zsh() {
 
   local projects
   
-  local AUTOCOMPFILE="$(${__SCIROOPLOT_BUILD_DIR}/plot-config base)/projects.csv"
+  local AUTOCOMPFILE="$(${SCIROOPLOT_BIN}/plot-config base)/projects.csv"
   if [[ -f "$AUTOCOMPFILE" ]]; then
     while read -r project
     do
@@ -167,7 +163,7 @@ _plot_completions_bash() {
   local groupsAndCategories
   local names
 
-  local AUTOCOMPFILE="$(${__SCIROOPLOT_BUILD_DIR}/plot-config path)/plots.csv"
+  local AUTOCOMPFILE="$(${SCIROOPLOT_BIN}/plot-config path)/plots.csv"
   if [[ ! -f "$AUTOCOMPFILE" ]]; then
     return
   fi
@@ -227,7 +223,7 @@ _plot-config_completions_bash() {
 
   local projects
   
-  local AUTOCOMPFILE="$(${__SCIROOPLOT_BUILD_DIR}/plot-config base)/projects.csv"
+  local AUTOCOMPFILE="$(${SCIROOPLOT_BIN}/plot-config base)/projects.csv"
   if [[ -f "$AUTOCOMPFILE" ]]; then
     while read -r project
     do
@@ -249,7 +245,6 @@ _plot-config_completions_bash() {
   ;;
   esac
 }
-
 
 if command -v compdef &> /dev/null; then
   compdef _plot_completions_zsh plot
