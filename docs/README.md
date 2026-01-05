@@ -21,11 +21,20 @@ SciRooPlot is installed as follows:
     mkdir build && cd build
     cmake .. && make
 ```
-Then put this line in your .bashrc or .bash_aliases (and run it once or start a terminal session):
+To use the app, put this line in your .bashrc or .bash_aliases (and run it once or start a new terminal session):
 ```
-    source /path/to/SciRooPlot/.plotrc
+    source /path/to/SciRooPlot/build/share/scirooplot/scirooplot-env.sh
 ```
-Now you are ready to use SciRooPlot!
+Alternatively, the installation into a custom location is done via:
+```bash
+    cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/install/location && make install
+```
+and the corresponding environment script would then sourced as follows:
+```
+    source /path/to/install/location/share/scirooplot/scirooplot-env.sh
+```
+
+Now you are ready to use SciRooPlot -- Happy plotting!
 
 ## 🚀 Usage
 

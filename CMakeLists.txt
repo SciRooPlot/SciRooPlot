@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(
   SciRooPlot
-  VERSION 1.2.0
+  VERSION 1.2.1
   LANGUAGES CXX
 )
 
@@ -13,9 +13,18 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
+endif()
+
 if(APPLE)
   set(CMAKE_MACOSX_RPATH ON)
 endif()
+
+include(GNUInstallDirs)
+# Match build tree structure to install tree
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 
 # -----------------------
 # Policies
@@ -57,15 +66,24 @@ message(STATUS "fmt   version: ${fmt_VERSION}")
 # ROOT test file generation
 # -----------------------
 execute_process(
-  COMMAND ${ROOT_EXECUTABLE} -l -q
-          ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generateTestFiles.C
+  COMMAND ${ROOT_EXECUTABLE} -l -q ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generateTestFiles.C
+  OUTPUT_VARIABLE root_output # avoids printout
 )
 
 # -----------------------
-# Extract ROOT library directory
+# Common install RPATH
 # -----------------------
-get_target_property(_root_core_location ROOT::Core LOCATION)
-get_filename_component(ROOT_LIBDIR "${_root_core_location}" DIRECTORY)
+if(APPLE)
+  set(SCIROOPLOT_RPATH
+    "@loader_path/../lib"
+    "${ROOT_LIBDIR}"
+  )
+else()
+  set(SCIROOPLOT_RPATH
+    "$ORIGIN/../lib"
+    "${ROOT_LIBDIR}"
+  )
+endif()
 
 # -----------------------
 # GCC < 9 filesystem workaround
@@ -75,19 +93,10 @@ if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
 endif()
 
 # -----------------------
-# Common install RPATH
+# Extract ROOT library directory
 # -----------------------
-if(APPLE)
-  set(SCIROOPLOT_INSTALL_RPATH
-    "@loader_path/../lib"
-    "${ROOT_LIBDIR}"
-  )
-else()
-  set(SCIROOPLOT_INSTALL_RPATH
-    "$ORIGIN/../lib"
-    "${ROOT_LIBDIR}"
-  )
-endif()
+get_target_property(_root_core_location ROOT::Core LOCATION)
+get_filename_component(ROOT_LIBDIR "${_root_core_location}" DIRECTORY)
 
 # -----------------------
 # Library
@@ -120,24 +129,14 @@ target_link_libraries(SciRooPlot
 )
 
 set_target_properties(SciRooPlot PROPERTIES
-  INSTALL_RPATH "${SCIROOPLOT_INSTALL_RPATH}"
+  INSTALL_RPATH "${SCIROOPLOT_RPATH}"
+  BUILD_RPATH "${SCIROOPLOT_RPATH}"
 )
 
 # -----------------------
 # Executables
 # -----------------------
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SciRooPlotHelpers.cmake)
-
-function(add_plotting_executable name)
-  cmake_parse_arguments(APP "" "" "SOURCES" ${ARGN})
-
-  add_executable(${name} ${APP_SOURCES})
-  target_link_libraries(${name} PRIVATE SciRooPlot::SciRooPlot)
-  
-  set_target_properties(${name} PROPERTIES
-    INSTALL_RPATH "${SCIROOPLOT_INSTALL_RPATH}"
-  )  
-endfunction()
 
 add_plotting_executable(plot
   SOURCES app/PlottingApp.cxx
@@ -150,31 +149,15 @@ add_plotting_executable(plot-config
 # -----------------------
 # Install
 # -----------------------
-include(GNUInstallDirs)
-
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-  set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_CURRENT_BINARY_DIR}/install")
-  message(STATUS "No install location specified. Defaulting to 'install' folder in build directory.")
-endif()
-message(STATUS "Install location prefix: ${CMAKE_INSTALL_PREFIX}")
-
-install(
-  TARGETS SciRooPlot plot plot-config
-  EXPORT SciRooPlotTargets
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-
-install(
-  DIRECTORY include/
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  PATTERN ".*" EXCLUDE
-)
-
-# -----------------------
-# Package config
-# -----------------------
 include(CMakePackageConfigHelpers)
+
+if(NOT DEFINED NO_INSTALL)
+  set(NO_INSTALL ${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT} CACHE BOOL "Build-only mode (no install)")
+endif()
+if(NO_INSTALL)
+    set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_CURRENT_BINARY_DIR}")
+    message(STATUS "No install location specified. Defaulting to build directory.")
+endif()
 
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/SciRooPlotConfigVersion.cmake"
@@ -182,49 +165,85 @@ write_basic_package_version_file(
   COMPATIBILITY AnyNewerVersion
 )
 
+# --- Build-tree config ---
 configure_package_config_file(
   cmake/SciRooPlotConfig.cmake
   "${CMAKE_CURRENT_BINARY_DIR}/SciRooPlotConfig.cmake"
-  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SciRooPlot
+  INSTALL_DESTINATION "unused"
+)
+file(
+  COPY "cmake/SciRooPlotHelpers.cmake"
+  DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+)
+export(
+  TARGETS SciRooPlot
+  NAMESPACE SciRooPlot::
+  FILE "${CMAKE_CURRENT_BINARY_DIR}/SciRooPlotTargets.cmake"
+)
+set(SCIROOPLOT_BUILD_DATA_DIR ${CMAKE_CURRENT_BINARY_DIR}/share/scirooplot)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/user ${CMAKE_CURRENT_BINARY_DIR}/TestFiles
+            DESTINATION ${SCIROOPLOT_BUILD_DATA_DIR}
+            PATTERN ".*" EXCLUDE)
+file(REMOVE_RECURSE ${CMAKE_CURRENT_BINARY_DIR}/TestFiles)
+set(SCIROOPLOT_ROOT "${CMAKE_CURRENT_BINARY_DIR}")
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/scripts/scirooplot-env.sh.in
+  ${SCIROOPLOT_BUILD_DATA_DIR}/scirooplot-env.sh
+  @ONLY
 )
 
+# --- Install config ---
+set(INSTALL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/install_stage)
+configure_package_config_file(
+  cmake/SciRooPlotConfig.cmake
+  "${INSTALL_STAGE}/SciRooPlotConfig.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SciRooPlot
+)
 install(
   FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/SciRooPlotConfig.cmake"
+    "${INSTALL_STAGE}/SciRooPlotConfig.cmake"
     "cmake/SciRooPlotHelpers.cmake"
     "${CMAKE_CURRENT_BINARY_DIR}/SciRooPlotConfigVersion.cmake"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SciRooPlot
 )
-
 install(
   EXPORT SciRooPlotTargets
   NAMESPACE SciRooPlot::
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SciRooPlot
 )
-
+set(SCIROOPLOT_INSTALL_DATA_DIR ${CMAKE_INSTALL_DATAROOTDIR}/scirooplot)
 install(
-  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/user
-  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/scirooplot
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/user ${SCIROOPLOT_BUILD_DATA_DIR}/TestFiles
+  DESTINATION ${SCIROOPLOT_INSTALL_DATA_DIR}
   PATTERN ".*" EXCLUDE
 )
-
-install(
-  DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/TestFiles
-  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/scirooplot
-  PATTERN ".*" EXCLUDE
-)
-
+set(SCIROOPLOT_ROOT "${CMAKE_INSTALL_PREFIX}")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/scirooplot-env.sh.in
-  ${CMAKE_CURRENT_BINARY_DIR}/scirooplot-env.sh
+  ${INSTALL_STAGE}/scirooplot-env.sh
   @ONLY
 )
 install(
-  FILES ${CMAKE_CURRENT_BINARY_DIR}/scirooplot-env.sh
+  FILES ${INSTALL_STAGE}/scirooplot-env.sh
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/scirooplot
+)
+install(
+  DIRECTORY include/
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  PATTERN ".*" EXCLUDE
+)
+install(
+  TARGETS SciRooPlot plot plot-config
+  EXPORT SciRooPlotTargets
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 message(STATUS "-----------------------------------------------------------------------------------------")
 message(STATUS "IMPORTANT: run the following line to use SciRooPlot (e.g. add it to .bashrc)")
-message(STATUS "source ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATAROOTDIR}/scirooplot/scirooplot-env.sh")
+if(NO_INSTALL)
+  message(STATUS "source ${SCIROOPLOT_BUILD_DATA_DIR}/scirooplot-env.sh")
+else()
+  message(STATUS "source ${CMAKE_INSTALL_PREFIX}/${SCIROOPLOT_INSTALL_DATA_DIR}/scirooplot-env.sh")
+endif()
 message(STATUS "----------------------------------------------------------------------------------------")
