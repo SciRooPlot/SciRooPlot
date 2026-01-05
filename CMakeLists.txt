@@ -36,7 +36,18 @@ set(REQUIRED_FMT_VERSION 6.1.2)
 
 find_package(ROOT ${REQUIRED_ROOT_VERSION} CONFIG REQUIRED)
 find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED COMPONENTS program_options)
-find_package(fmt ${REQUIRED_FMT_VERSION} REQUIRED)
+find_package(fmt CONFIG QUIET)
+if(NOT (fmt_FOUND AND fmt_VERSION VERSION_GREATER_EQUAL REQUIRED_FMT_VERSION))
+  message(STATUS "fmt not found or too old -- fetching it now")
+  include(FetchContent)
+  FetchContent_Declare(
+    fmt
+    URL https://github.com/fmtlib/fmt/releases/download/11.2.0/fmt-11.2.0.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP OFF
+  )
+  FetchContent_MakeAvailable(fmt)
+  set(fmt_VERSION 11.2.0)
+endif()
 
 message(STATUS "ROOT  version: ${ROOT_VERSION}")
 message(STATUS "Boost version: ${Boost_VERSION}")
