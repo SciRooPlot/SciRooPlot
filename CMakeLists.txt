@@ -239,11 +239,11 @@ install(
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-message(STATUS "-----------------------------------------------------------------------------------------")
-message(STATUS "IMPORTANT: run the following line to use SciRooPlot (e.g. add it to .bashrc)")
+message(STATUS "---------------------------------------------------------------------------------------------")
+message(STATUS "IMPORTANT: To use SciRooPlot you have to put the following line into your .bashrc or .zshrc")
 if(NO_INSTALL)
   message(STATUS "source ${SCIROOPLOT_BUILD_DATA_DIR}/scirooplot-env.sh")
 else()
   message(STATUS "source ${CMAKE_INSTALL_PREFIX}/${SCIROOPLOT_INSTALL_DATA_DIR}/scirooplot-env.sh")
 endif()
-message(STATUS "----------------------------------------------------------------------------------------")
+message(STATUS "---------------------------------------------------------------------------------------------")
