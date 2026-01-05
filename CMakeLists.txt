@@ -6,6 +6,10 @@ project(
   LANGUAGES CXX
 )
 
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+  message(FATAL_ERROR "In-source builds are not allowed. Please run cmake in a separate build directory.")
+endif()
+
 # -----------------------
 # Global project settings
 # -----------------------
