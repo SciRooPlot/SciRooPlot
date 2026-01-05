@@ -27,7 +27,7 @@ To use the app, put this line in your .bashrc or .bash_aliases (and run it once 
 ```
 Alternatively, the installation into a custom location is done via:
 ```bash
-    cmake .. -DCMAKE_INSTALL_PREFIX=/path/to/install/location && make install
+    cmake -DCMAKE_INSTALL_PREFIX=/path/to/install/location .. && make install
 ```
 and the corresponding environment script would then sourced as follows:
 ```
