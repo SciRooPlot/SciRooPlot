@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export SCIROOPLOT_ROOT=@SCIROOPLOT_ROOT@
-export SCIROOPLOT_BIN="${SCIROOPLOT_ROOT}"/@CMAKE_INSTALL_BINDIR@
+export SCIROOPLOT_ROOT="@SCIROOPLOT_ROOT@"
+export SCIROOPLOT_BIN="${SCIROOPLOT_ROOT}/@CMAKE_INSTALL_BINDIR@"
 export SCIROOPLOT_DATA_DIR="${SCIROOPLOT_ROOT}/share/scirooplot"
 
 # enable completion only for interactive shells
