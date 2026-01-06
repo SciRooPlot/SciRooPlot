@@ -1,61 +1,70 @@
 #!/bin/bash
 
 export SCIROOPLOT_ROOT=@SCIROOPLOT_ROOT@
-export SCIROOPLOT_BIN=${SCIROOPLOT_ROOT}/@CMAKE_INSTALL_BINDIR@
-export SCIROOPLOT_DATA_DIR=${SCIROOPLOT_ROOT}/share/scirooplot
+export SCIROOPLOT_BIN="${SCIROOPLOT_ROOT}"/@CMAKE_INSTALL_BINDIR@
+export SCIROOPLOT_DATA_DIR="${SCIROOPLOT_ROOT}/share/scirooplot"
 
-if [[ -e "${SCIROOPLOT_BIN}/plot" && -e "${SCIROOPLOT_BIN}/plot-config" ]]; then
-  function plot() {
-    local USER_EXEC=$(${SCIROOPLOT_BIN}/plot-config executable)
-    local USER_BUILD_DIR=$([[ -z ${USER_EXEC} ]] || dirname ${USER_EXEC})
-    if [[ -d ${USER_BUILD_DIR} ]]; then
+# enable completion only for interactive shells
+case "$-" in
+  *i*) ;;
+  *) return 1 ;;
+esac
 
-      if [[ "${1}" == "cd" ]]; then
-        cd ${USER_BUILD_DIR}
-        return 0
-      fi
-
-      local USER_PLOTDEF="$(${SCIROOPLOT_BIN}/plot-config path)/plots.xml"
-      (
-        cd ${USER_BUILD_DIR};
-        (make -j6 1> /dev/null) || exit 1
-        if [[ ! -f ${USER_PLOTDEF} || -z $(find ${USER_EXEC} -mmin +1) ]]; then
-          ${USER_EXEC}
-        fi
-      ) || return 1
-    fi
-    "${SCIROOPLOT_BIN}/plot" ${1} ${2} ${3}
-    return 0
-  }
-  
-  function plot-config() {
-    if [[ "${1}" == "init" ]]; then
-      PROJECT_NAME=${2}
-      if [ -d "$PROJECT_NAME" ]; then
-        echo "Folder ${PROJECT_NAME} already exists. Doing nothing..."
-        return 1
-      fi
-      if [[ "${PROJECT_NAME}" == "" ]]; then
-        echo "No project name specified. Doing nothing..."
-        return 1
-      fi
-      WORKDIR=$(pwd)
-      mkdir ${PROJECT_NAME}
-      PROJECT_PATH=${WORKDIR}/${PROJECT_NAME}
-      mkdir ${PROJECT_PATH}/build
-      cp ${SCIROOPLOT_DATA_DIR}/user/* ${PROJECT_PATH}/
-      sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" ${PROJECT_PATH}/CMakeLists.txt && rm -f ${PROJECT_PATH}/CMakeLists.txt.bak
-      sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" ${PROJECT_PATH}/DefinePlots.cxx && rm -f ${PROJECT_PATH}/DefinePlots.cxx.bak
-      ${SCIROOPLOT_BIN}/plot-config executable ${PROJECT_NAME} ${PROJECT_PATH}/build/definePlots
-      plot-config switch ${PROJECT_NAME}
-      cd ${PROJECT_PATH}/build && cmake -Wno-dev .. 2>&1 > /dev/null && make 2>&1 > /dev/null && ./definePlots
-      cd ${WORKDIR}
-    else
-      "${SCIROOPLOT_BIN}/plot-config" ${1} ${2} ${3}
-    fi
-    return 0
-  }
+if [[ ! -f "${SCIROOPLOT_BIN}/plot" || ! -f "${SCIROOPLOT_BIN}/plot-config" ]]; then
+    echo "SciRooPlot is not installed. Cannot initialize plotting functions."
+    return 1
 fi
+
+function plot() {
+  local USER_EXEC=$(${SCIROOPLOT_BIN}/plot-config executable)
+  local USER_BUILD_DIR=$([[ -z "${USER_EXEC}" ]] || dirname "${USER_EXEC}")
+  if [[ -d "${USER_BUILD_DIR}" ]]; then
+
+    if [[ "${1}" == "cd" ]]; then
+      cd "${USER_BUILD_DIR}"
+      return 0
+    fi
+
+    local USER_PLOTDEF="$(${SCIROOPLOT_BIN}/plot-config path)/plots.xml"
+    (
+      cd "${USER_BUILD_DIR}";
+      (make -j6 1> /dev/null) || exit 1
+      if [[ ! -f "${USER_PLOTDEF}" || -z "$(find "${USER_EXEC}" -mmin +1)" ]]; then
+        "${USER_EXEC}"
+      fi
+    ) || return 1
+  fi
+  "${SCIROOPLOT_BIN}/plot" "${1}" "${2}" "${3}"
+  return 0
+}
+
+function plot-config() {
+  if [[ "${1}" == "init" ]]; then
+    PROJECT_NAME="${2}"
+    if [ -d "$PROJECT_NAME" ]; then
+      echo "Folder ${PROJECT_NAME} already exists. Doing nothing..."
+      return 1
+    fi
+    if [[ -z "${PROJECT_NAME}" ]]; then
+      echo "No project name specified. Doing nothing..."
+      return 1
+    fi
+    WORKDIR="$(pwd)"
+    mkdir "${PROJECT_NAME}"
+    PROJECT_PATH="${WORKDIR}/${PROJECT_NAME}"
+    mkdir "${PROJECT_PATH}/build"
+    cp -r "${SCIROOPLOT_DATA_DIR}/user/"* "${PROJECT_PATH}/"
+    sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" "${PROJECT_PATH}/CMakeLists.txt" && rm -f "${PROJECT_PATH}/CMakeLists.txt.bak"
+    sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" "${PROJECT_PATH}/DefinePlots.cxx" && rm -f "${PROJECT_PATH}/DefinePlots.cxx.bak"
+    "${SCIROOPLOT_BIN}/plot-config" executable "${PROJECT_NAME}" "${PROJECT_PATH}/build/definePlots"
+    plot-config switch "${PROJECT_NAME}"
+    cd "${PROJECT_PATH}/build" && cmake -Wno-dev .. 2>&1 > /dev/null && make 2>&1 > /dev/null && ./definePlots
+    cd "${WORKDIR}"
+  else
+    "${SCIROOPLOT_BIN}/plot-config" "${1}" "${2}" "${3}"
+  fi
+  return 0
+}
 
 _plot_completions_zsh() {
 
@@ -65,7 +74,7 @@ _plot_completions_zsh() {
   local names
   
   local AUTOCOMPFILE="$(${SCIROOPLOT_BIN}/plot-config path)/plots.csv"
-  if [[ ! -f "$AUTOCOMPFILE" ]]; then
+  if [[ ! -f "${AUTOCOMPFILE}" ]]; then
     return
   fi
 
@@ -73,13 +82,13 @@ _plot_completions_zsh() {
   while IFS="," read -r plotName figureGroup figureCategory
   do
     groups+=("${figureGroup}")
-    [ -n "$figureCategory" ] && groupsAndCategories+=("${figureGroup}/${figureCategory}")
-  done < $AUTOCOMPFILE
+    [ -n "${figureCategory}" ] && groupsAndCategories+=("${figureGroup}/${figureCategory}")
+  done < "${AUTOCOMPFILE}"
   unset plotName figureGroup figureCategory
 
   updatePlotNames() {
-    local groupAndCat=$1
-    IFS="/" read -r group category <<< "$groupAndCat"
+    local groupAndCat="${1}"
+    IFS="/" read -r group category <<< "${groupAndCat}"
     names=()
     
     while IFS="," read -r plotName figureGroup figureCategory
@@ -90,7 +99,7 @@ _plot_completions_zsh() {
         fi
         names+=("${plotName}")
       fi
-    done < $AUTOCOMPFILE
+    done < "${AUTOCOMPFILE}"
   }
 
   _arguments \
@@ -111,7 +120,7 @@ _plot_completions_zsh() {
       if [[ "${words[2]}" == "cd" ]]; then
         _arguments '2:profiles:()'
       else
-        updatePlotNames $words[2]
+        updatePlotNames "${words[2]}"
         _arguments '2:profiles:(${names})'
       fi
     ;;
@@ -123,7 +132,7 @@ _plot_completions_zsh() {
   unset -f updatePlotNames
 }
 
-_plot-config_completions_zsh() {
+_plot_config_completions_zsh() {
 
   local generalCommands=('list' 'active' 'base' 'path' 'reset' 'clean')
   local projectCommands=('init' 'remove' 'switch' 'show' 'executable' 'outputDir')
@@ -131,11 +140,11 @@ _plot-config_completions_zsh() {
   local projects
   
   local AUTOCOMPFILE="$(${SCIROOPLOT_BIN}/plot-config base)/projects.csv"
-  if [[ -f "$AUTOCOMPFILE" ]]; then
+  if [[ -f "${AUTOCOMPFILE}" ]]; then
     while read -r project
     do
       projects+=("${project}")
-    done < $AUTOCOMPFILE
+    done < "${AUTOCOMPFILE}"
     unset project
   fi
 
@@ -144,7 +153,7 @@ _plot-config_completions_zsh() {
     '2: :->project'\
     '3: :->setting'
 
-  case $state in
+  case "${state}" in
     command)
       _arguments '1:profiles:(${generalCommands} ${projectCommands})'
     ;;
@@ -164,7 +173,7 @@ _plot_completions_bash() {
   local names
 
   local AUTOCOMPFILE="$(${SCIROOPLOT_BIN}/plot-config path)/plots.csv"
-  if [[ ! -f "$AUTOCOMPFILE" ]]; then
+  if [[ ! -f "${AUTOCOMPFILE}" ]]; then
     return
   fi
 
@@ -173,12 +182,12 @@ _plot_completions_bash() {
   do
     groups+=" ${figureGroup}"
     [ -n "$figureCategory" ] && groupsAndCategories+=" ${figureGroup}/${figureCategory}"
-  done < $AUTOCOMPFILE
+  done < "${AUTOCOMPFILE}"
   unset plotName figureGroup figureCategory
 
   updatePlotNames() {
-    local groupAndCat=$1
-    IFS="/" read -r group category <<< "$groupAndCat"
+    local groupAndCat="${1}"
+    IFS="/" read -r group category <<< "${groupAndCat}"
     names=()
     
     while IFS="," read -r plotName figureGroup figureCategory
@@ -189,10 +198,10 @@ _plot_completions_bash() {
         fi
         names+=" ${plotName}"
       fi
-    done < $AUTOCOMPFILE
+    done < "${AUTOCOMPFILE}"
   }
 
-  case $COMP_CWORD in
+  case "${COMP_CWORD}" in
   1)
     if [[ "${COMP_WORDS[COMP_CWORD]}" == *"/"* ]]; then
       COMPREPLY=( $(compgen -W "${groupsAndCategories}" -- "${COMP_WORDS[COMP_CWORD]}") )
@@ -216,7 +225,7 @@ _plot_completions_bash() {
   unset -f updatePlotNames
 }
 
-_plot-config_completions_bash() {
+_plot_config_completions_bash() {
 
   local generalCommands=('list active base path reset clean')
   local projectCommands=('init remove switch show executable outputDir')
@@ -224,15 +233,15 @@ _plot-config_completions_bash() {
   local projects
   
   local AUTOCOMPFILE="$(${SCIROOPLOT_BIN}/plot-config base)/projects.csv"
-  if [[ -f "$AUTOCOMPFILE" ]]; then
+  if [[ -f "${AUTOCOMPFILE}" ]]; then
     while read -r project
     do
       projects+=("${project}")
-    done < $AUTOCOMPFILE
+    done < "${AUTOCOMPFILE}"
     unset project
   fi
 
-  case $COMP_CWORD in
+  case "${COMP_CWORD}" in
   1)
     COMPREPLY=( $(compgen -W "${generalCommands}${projectCommands}" -- "${COMP_WORDS[COMP_CWORD]}") )
   ;;
@@ -246,10 +255,32 @@ _plot-config_completions_bash() {
   esac
 }
 
-if command -v compdef &> /dev/null; then
-  compdef _plot_completions_zsh plot
-  compdef _plot-config_completions_zsh plot-config
-elif command -v complete &> /dev/null; then
-  complete -F _plot_completions_bash plot
-  complete -F _plot-config_completions_bash plot-config
+if [ -n "${ZSH_VERSION}" ]; then
+  if ! command -v compinit &> /dev/null; then
+    autoload -U compinit compdef && compinit
+  fi
+  if command -v compdef &> /dev/null; then
+    compdef _plot_completions_zsh plot
+    compdef _plot_config_completions_zsh plot-config
+  fi
+elif [ -n "${BASH_VERSION}" ]; then
+  if ! shopt -q progcomp; then
+    BASH_COMPLETION_PATHS=(
+      "/usr/share/bash-completion/bash_completion"
+      "/etc/bash_completion"
+      "/usr/local/etc/bash_completion"
+      "/opt/homebrew/etc/bash_completion"
+    )
+
+    for bc in "${BASH_COMPLETION_PATHS[@]}"; do
+      if [ -r "${bc}" ]; then
+        source "${bc}"
+        shopt -q progcomp && break
+      fi
+    done
+  fi
+  if shopt -q progcomp; then
+    complete -F _plot_completions_bash plot
+    complete -F _plot_config_completions_bash plot-config
+  fi
 fi
