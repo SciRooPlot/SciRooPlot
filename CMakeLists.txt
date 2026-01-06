@@ -77,6 +77,8 @@ execute_process(
 # -----------------------
 # Common install RPATH
 # -----------------------
+get_target_property(_root_core_location ROOT::Core LOCATION)
+get_filename_component(ROOT_LIBDIR "${_root_core_location}" DIRECTORY)
 if(APPLE)
   set(SCIROOPLOT_RPATH
     "@loader_path/../lib"
@@ -95,12 +97,6 @@ endif()
 if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
   set(FILESYSTEM_LIB stdc++fs)
 endif()
-
-# -----------------------
-# Extract ROOT library directory
-# -----------------------
-get_target_property(_root_core_location ROOT::Core LOCATION)
-get_filename_component(ROOT_LIBDIR "${_root_core_location}" DIRECTORY)
 
 # -----------------------
 # Library
