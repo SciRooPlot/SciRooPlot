@@ -3,6 +3,7 @@
 export SCIROOPLOT_ROOT="@SCIROOPLOT_ROOT@"
 export SCIROOPLOT_BIN="${SCIROOPLOT_ROOT}/@CMAKE_INSTALL_BINDIR@"
 export SCIROOPLOT_DATA_DIR="${SCIROOPLOT_ROOT}/share/scirooplot"
+export SCIROOPLOT_ENV="${SCIROOPLOT_DATA_DIR}/scirooplot-env.sh"
 
 # enable completion only for interactive shells
 case "$-" in
