@@ -29,7 +29,7 @@ function plot() {
     (
       cd "${USER_BUILD_DIR}";
       (make -j6 1> /dev/null) || exit 1
-      if [[ ! -f "${USER_PLOTDEF}" || -z "$(find "${USER_EXEC}" -mmin +1)" ]]; then
+      if [[ ! -f "${USER_PLOTDEF}" || "${USER_EXEC}" -nt "${USER_PLOTDEF}" ]]; then
         "${USER_EXEC}"
       fi
     ) || return 1
