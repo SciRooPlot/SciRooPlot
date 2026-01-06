@@ -214,7 +214,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
   ptree inputFileTree;
   try {
     using boost::property_tree::read_xml;
-    read_xml(expand_path(configFileName), inputFileTree);
+    read_xml(expand_path(configFileName), inputFileTree, boost::property_tree::xml_parser::trim_whitespace);
     INFO("Reading input files from {}.", configFileName);
   } catch (...) {
     ERROR("Cannot load file {}.", configFileName);
@@ -337,7 +337,7 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
   if (mPropertyTreeCache.find(plotFileName) == mPropertyTreeCache.end()) {
     try {
       using boost::property_tree::read_xml;
-      read_xml(expand_path(plotFileName), mPropertyTreeCache[plotFileName]);
+      read_xml(expand_path(plotFileName), mPropertyTreeCache[plotFileName], boost::property_tree::xml_parser::trim_whitespace);
       INFO("Reading plot definitions from {}.", plotFileName);
     } catch (...) {
       ERROR("Cannot load file {}.", plotFileName);
