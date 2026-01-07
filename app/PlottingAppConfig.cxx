@@ -26,7 +26,7 @@
 #include <string>
 #include <filesystem>
 #include <boost/program_options.hpp>
-#include <boost/property_tree/xml_parser.hpp>
+#include <boost/property_tree/info_parser.hpp>
 
 #include "Helpers.h"
 
@@ -44,13 +44,13 @@ int main(int argc, char* argv[])
   if (std::filesystem::create_directories(configPath)) {
     INFO("Created config folder: {}", configPath);
   }
-  string configFileName = configPath + "/projects.xml";
+  string configFileName = configPath + "/projects.info";
 
   ptree configTree;
   string activeProject;
   if (file_exists(configFileName)) {
-    using boost::property_tree::read_xml;
-    read_xml(configFileName, configTree, boost::property_tree::xml_parser::trim_whitespace);
+    using boost::property_tree::read_info;
+    read_info(configFileName, configTree);
     if (auto active = configTree.get_child_optional("active")) {
       activeProject = active.get().data();
     }
@@ -214,10 +214,8 @@ int main(int argc, char* argv[])
   configTree.erase("active");
   configTree.add("active", activeProject);
 
-  using boost::property_tree::xml_writer_settings;
-  xml_writer_settings<std::string> settings('\t', 1);
-  using boost::property_tree::write_xml;
-  write_xml(configFileName, configTree, std::locale(), settings);
+  using boost::property_tree::write_info;
+  write_info(configFileName, configTree);
 
   std::ofstream tabCompFile;
   tabCompFile.open(std::filesystem::path(configFileName).replace_extension("csv").string());

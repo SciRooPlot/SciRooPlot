@@ -35,7 +35,7 @@
 #include <utility>
 
 // boost dependencies
-#include <boost/property_tree/xml_parser.hpp>
+#include <boost/property_tree/info_parser.hpp>
 
 // root dependencies
 #include "TApplication.h"
@@ -198,10 +198,8 @@ void PlotManager::DumpInputDataFiles(const string& configFileName) const
   if (std::filesystem::create_directories(configFile.parent_path())) {
     INFO("Created config folder: {}", configFile.parent_path().string());
   }
-  using boost::property_tree::xml_writer_settings;
-  xml_writer_settings<string> settings('\t', 1);
-  using boost::property_tree::write_xml;
-  write_xml(expand_path(configFile.string()), inputFileTree, std::locale(), settings);
+  using boost::property_tree::write_info;
+  write_info(expand_path(configFile.string()), inputFileTree);
 }
 
 //**************************************************************************************************
@@ -213,8 +211,8 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
 {
   ptree inputFileTree;
   try {
-    using boost::property_tree::read_xml;
-    read_xml(expand_path(configFileName), inputFileTree, boost::property_tree::xml_parser::trim_whitespace);
+    using boost::property_tree::read_info;
+    read_info(expand_path(configFileName), inputFileTree);
     INFO("Reading input files from {}.", configFileName);
   } catch (...) {
     ERROR("Cannot load file {}.", configFileName);
@@ -315,10 +313,8 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
   if (std::filesystem::create_directories(plotFile.parent_path())) {
     INFO("Created config folder: {}", plotFile.parent_path().string());
   }
-  using boost::property_tree::xml_writer_settings;
-  xml_writer_settings<string> settings('\t', 1);
-  using boost::property_tree::write_xml;
-  write_xml(plotFile.string(), plotTree, std::locale(), settings);
+  using boost::property_tree::write_info;
+  write_info(plotFile.string(), plotTree);
   INFO("Wrote plot definitions to {}.", plotFile.string());
 }
 void PlotManager::DumpPlot(const string& plotFileName, const string& figureGroup,
@@ -336,8 +332,8 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
 {
   if (mPropertyTreeCache.find(plotFileName) == mPropertyTreeCache.end()) {
     try {
-      using boost::property_tree::read_xml;
-      read_xml(expand_path(plotFileName), mPropertyTreeCache[plotFileName], boost::property_tree::xml_parser::trim_whitespace);
+      using boost::property_tree::read_info;
+      read_info(expand_path(plotFileName), mPropertyTreeCache[plotFileName]);
       INFO("Reading plot definitions from {}.", plotFileName);
     } catch (...) {
       ERROR("Cannot load file {}.", plotFileName);
@@ -1151,13 +1147,13 @@ tuple<string, string, string> PlotManager::GetProjectSettings(string projectName
     ERROR("SCIROOPLOT_CONFIG_PATH must not be empty.");
     std::exit(EXIT_FAILURE);
   }
-  string configFileName = configPath + "/projects.xml";
+  string configFileName = configPath + "/projects.info";
 
   string outputDir;
   if (file_exists(configFileName)) {
-    using boost::property_tree::read_xml;
+    using boost::property_tree::read_info;
     ptree configTree;
-    read_xml(configFileName, configTree, boost::property_tree::xml_parser::trim_whitespace);
+    read_info(configFileName, configTree);
     if (projectName.empty()) {
       if (auto active = configTree.get_child_optional("active")) {
         projectName = active.get().data();
@@ -1173,8 +1169,8 @@ tuple<string, string, string> PlotManager::GetProjectSettings(string projectName
       }
     }
   }
-  string inputsFile = configPath + "/" + projectName + "/inputs.xml";
-  string plotsFile = configPath + "/" + projectName + "/plots.xml";
+  string inputsFile = configPath + "/" + projectName + "/inputs.info";
+  string plotsFile = configPath + "/" + projectName + "/plots.info";
 
   return {inputsFile, plotsFile, outputDir};
 }

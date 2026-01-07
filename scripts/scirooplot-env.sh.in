@@ -26,7 +26,7 @@ function plot() {
       return 0
     fi
 
-    local USER_PLOTDEF="$(${SCIROOPLOT_BIN}/plot-config path)/plots.xml"
+    local USER_PLOTDEF="$(${SCIROOPLOT_BIN}/plot-config path)/plots.info"
     (
       cd "${USER_BUILD_DIR}";
       (make -j6 1> /dev/null) || exit 1
@@ -84,7 +84,7 @@ _plot_completions_zsh() {
   do
     groups+=("${figureGroup}")
     [ -n "${figureCategory}" ] && groupsAndCategories+=("${figureGroup}/${figureCategory}")
-  done < "${AUTOCOMPFILE}"
+  done < <(LC_ALL=C sort -t',' -k2,3 -u "${AUTOCOMPFILE}")
   unset plotName figureGroup figureCategory
 
   updatePlotNames() {
@@ -94,13 +94,9 @@ _plot_completions_zsh() {
     
     while IFS="," read -r plotName figureGroup figureCategory
     do
-      if [[ "${group}" == "${figureGroup}" ]]; then
-        if [[ -n "${category}" && ! ( "${category}" == "${figureCategory}" || "${figureCategory}" == "${category}/"* ) ]]; then
-          continue
-        fi
-        names+=("${plotName}")
-      fi
-    done < "${AUTOCOMPFILE}"
+      [[ -n "${category}" && "${figureCategory}" != "${category}" && "${figureCategory}" != "${category}/"* ]] && continue
+      names+=("${plotName}")
+    done < <( grep "^.*,${group},${category}" "${AUTOCOMPFILE}" )
   }
 
   _arguments \
@@ -183,7 +179,7 @@ _plot_completions_bash() {
   do
     groups+=" ${figureGroup}"
     [ -n "$figureCategory" ] && groupsAndCategories+=" ${figureGroup}/${figureCategory}"
-  done < "${AUTOCOMPFILE}"
+  done < <(LC_ALL=C sort -t',' -k2,3 -u "${AUTOCOMPFILE}")
   unset plotName figureGroup figureCategory
 
   updatePlotNames() {
@@ -193,13 +189,9 @@ _plot_completions_bash() {
     
     while IFS="," read -r plotName figureGroup figureCategory
     do
-      if [[ "${group}" == "${figureGroup}" ]]; then
-        if [[ -n "${category}" && ! ( "${category}" == "${figureCategory}" || "${figureCategory}" == "${category}/"* ) ]]; then
-          continue
-        fi
-        names+=" ${plotName}"
-      fi
-    done < "${AUTOCOMPFILE}"
+      [[ -n "${category}" && "${figureCategory}" != "${category}" && "${figureCategory}" != "${category}/"* ]] && continue
+      names+=" ${plotName}"
+    done < <( grep "^.*,${group},${category}" "${AUTOCOMPFILE}" )
   }
 
   case "${COMP_CWORD}" in
