@@ -568,11 +568,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     bool extendLow = false;
                     bool extendUp = false;
 
-                    if (rangeMin < axis_ptr->GetXmin()) {
+                    constexpr double_t relTol = 1e-12;
+                    if (!TMath::AreEqualRel(rangeMin, axis_ptr->GetXmin(), relTol) && rangeMin < axis_ptr->GetXmin()) {
                       INFO("Extending lower {}-axis range beyond default histogram limits (from {} to {}).", axisLabel, axis_ptr->GetXmin(), rangeMin);
                       extendLow = true;
                     }
-                    if (rangeMax > axis_ptr->GetXmax()) {
+                    if (!TMath::AreEqualRel(rangeMax, axis_ptr->GetXmax(), relTol) && rangeMax > axis_ptr->GetXmax()) {
                       INFO("Extending upper {}-axis range beyond default histogram limits (from {} to {}).", axisLabel, axis_ptr->GetXmax(), rangeMax);
                       extendUp = true;
                     }
