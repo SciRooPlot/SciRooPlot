@@ -183,30 +183,30 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     }
 
     // get the settings for this pad
-    auto& textFont = get_first(pad.GetDefaultTextFont(), padDefaults.GetDefaultTextFont());
-    auto& textSize = get_first(pad.GetDefaultTextSize(), padDefaults.GetDefaultTextSize());
-    auto& textColor = get_first(pad.GetDefaultTextColor(), padDefaults.GetDefaultTextColor());
+    auto textFont = get_first(pad.GetDefaultTextFont(), padDefaults.GetDefaultTextFont());
+    auto textSize = get_first(pad.GetDefaultTextSize(), padDefaults.GetDefaultTextSize());
+    auto textColor = get_first(pad.GetDefaultTextColor(), padDefaults.GetDefaultTextColor());
 
     canvas_ptr->cd();
     string padName = "Pad_" + std::to_string(padID);
 
     TPad* pad_ptr = new TPad(padName.data(), "", padPos[0], padPos[1], padPos[2], padPos[3]);
 
-    if (auto& marginTop = get_first(pad.GetMarginTop(), padDefaults.GetMarginTop())) pad_ptr->SetTopMargin(*marginTop);
-    if (auto& marginBottom = get_first(pad.GetMarginBottom(), padDefaults.GetMarginBottom())) pad_ptr->SetBottomMargin(*marginBottom);
-    if (auto& marginLeft = get_first(pad.GetMarginLeft(), padDefaults.GetMarginLeft())) pad_ptr->SetLeftMargin(*marginLeft);
-    if (auto& marginRight = get_first(pad.GetMarginRight(), padDefaults.GetMarginRight())) pad_ptr->SetRightMargin(*marginRight);
-    if (auto& padFillColor = get_first(pad.GetFillColor(), padDefaults.GetFillColor())) pad_ptr->SetFillColor(*padFillColor);
-    if (auto& padFillStyle = get_first(pad.GetFillStyle(), padDefaults.GetFillStyle())) pad_ptr->SetFillStyle(*padFillStyle);
-    if (auto& padFillOpacity = get_first(pad.GetFillOpacity(), padDefaults.GetFillOpacity())) pad_ptr->SetFillColor(TColor::GetColorTransparent(pad_ptr->GetFillColor(), *padFillOpacity));
-    if (auto& frameFillColor = get_first(pad.GetFrameFillColor(), padDefaults.GetFrameFillColor())) pad_ptr->SetFrameFillColor(*frameFillColor);
-    if (auto& frameFillStyle = get_first(pad.GetFrameFillStyle(), padDefaults.GetFrameFillStyle())) pad_ptr->SetFrameFillStyle(*frameFillStyle);
-    if (auto& frameFillOpacity = get_first(pad.GetFrameFillOpacity(), padDefaults.GetFrameFillOpacity())) pad_ptr->SetFrameFillColor(TColor::GetColorTransparent(pad_ptr->GetFrameFillColor(), *frameFillOpacity));
-    if (auto& frameBorderColor = get_first(pad.GetFrameBorderColor(), padDefaults.GetFrameBorderColor())) pad_ptr->SetFrameLineColor(*frameBorderColor);
-    if (auto& frameBorderStyle = get_first(pad.GetFrameBorderStyle(), padDefaults.GetFrameBorderStyle())) pad_ptr->SetFrameLineStyle(*frameBorderStyle);
-    if (auto& frameBorderWidth = get_first(pad.GetFrameBorderWidth(), padDefaults.GetFrameBorderWidth())) pad_ptr->SetFrameLineWidth(*frameBorderWidth);
-    if (auto& candleBoxRange = get_first(pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange())) TCandle::SetBoxRange(*candleBoxRange);
-    if (auto& candleWhiskerRange = get_first(pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange())) TCandle::SetWhiskerRange(*candleWhiskerRange);
+    if (auto marginTop = get_first(pad.GetMarginTop(), padDefaults.GetMarginTop())) pad_ptr->SetTopMargin(*marginTop);
+    if (auto marginBottom = get_first(pad.GetMarginBottom(), padDefaults.GetMarginBottom())) pad_ptr->SetBottomMargin(*marginBottom);
+    if (auto marginLeft = get_first(pad.GetMarginLeft(), padDefaults.GetMarginLeft())) pad_ptr->SetLeftMargin(*marginLeft);
+    if (auto marginRight = get_first(pad.GetMarginRight(), padDefaults.GetMarginRight())) pad_ptr->SetRightMargin(*marginRight);
+    if (auto padFillColor = get_first(pad.GetFillColor(), padDefaults.GetFillColor())) pad_ptr->SetFillColor(*padFillColor);
+    if (auto padFillStyle = get_first(pad.GetFillStyle(), padDefaults.GetFillStyle())) pad_ptr->SetFillStyle(*padFillStyle);
+    if (auto padFillOpacity = get_first(pad.GetFillOpacity(), padDefaults.GetFillOpacity())) pad_ptr->SetFillColor(TColor::GetColorTransparent(pad_ptr->GetFillColor(), *padFillOpacity));
+    if (auto frameFillColor = get_first(pad.GetFrameFillColor(), padDefaults.GetFrameFillColor())) pad_ptr->SetFrameFillColor(*frameFillColor);
+    if (auto frameFillStyle = get_first(pad.GetFrameFillStyle(), padDefaults.GetFrameFillStyle())) pad_ptr->SetFrameFillStyle(*frameFillStyle);
+    if (auto frameFillOpacity = get_first(pad.GetFrameFillOpacity(), padDefaults.GetFrameFillOpacity())) pad_ptr->SetFrameFillColor(TColor::GetColorTransparent(pad_ptr->GetFrameFillColor(), *frameFillOpacity));
+    if (auto frameBorderColor = get_first(pad.GetFrameBorderColor(), padDefaults.GetFrameBorderColor())) pad_ptr->SetFrameLineColor(*frameBorderColor);
+    if (auto frameBorderStyle = get_first(pad.GetFrameBorderStyle(), padDefaults.GetFrameBorderStyle())) pad_ptr->SetFrameLineStyle(*frameBorderStyle);
+    if (auto frameBorderWidth = get_first(pad.GetFrameBorderWidth(), padDefaults.GetFrameBorderWidth())) pad_ptr->SetFrameLineWidth(*frameBorderWidth);
+    if (auto candleBoxRange = get_first(pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange())) TCandle::SetBoxRange(*candleBoxRange);
+    if (auto candleWhiskerRange = get_first(pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange())) TCandle::SetWhiskerRange(*candleWhiskerRange);
 
     if (pad.GetDefaultMarkerColorsGradient().rgbEndpoints) {
       auto& gradient = pad.GetDefaultMarkerColorsGradient();
@@ -236,7 +236,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       padDefaults.SetDefaultFillColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
     // TODO: color gradient feature can be used for 2d palette as well
-    if (auto& palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) gStyle->SetPalette(*palette);
+    if (auto palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) gStyle->SetPalette(*palette);
 
     pad_ptr->SetNumber(padID);
     pad_ptr->Draw();
@@ -660,55 +660,55 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           pad_ptr->Update();
         } else {
           // define data appearance
-          if (auto& markerColor = get_first(data->GetMarkerColor(),
-                                            pick(defaultSettingIndices[0], pad.GetDefaultMarkerColors()),
-                                            pick(defaultSettingIndices[0], padDefaults.GetDefaultMarkerColors()))) {
+          if (auto markerColor = get_first(data->GetMarkerColor(),
+                                           pick(defaultSettingIndices[0], pad.GetDefaultMarkerColors()),
+                                           pick(defaultSettingIndices[0], padDefaults.GetDefaultMarkerColors()))) {
             if (!data->GetMarkerColor()) defaultSettingIndices[0]++;
             data_ptr->SetMarkerColor(*markerColor);
           }
-          if (auto& markerStyle = get_first(data->GetMarkerStyle(),
-                                            pick(defaultSettingIndices[1], pad.GetDefaultMarkerStyles()),
-                                            pick(defaultSettingIndices[1], padDefaults.GetDefaultMarkerStyles()))) {
+          if (auto markerStyle = get_first(data->GetMarkerStyle(),
+                                           pick(defaultSettingIndices[1], pad.GetDefaultMarkerStyles()),
+                                           pick(defaultSettingIndices[1], padDefaults.GetDefaultMarkerStyles()))) {
             if (!data->GetMarkerStyle()) defaultSettingIndices[1]++;
             data_ptr->SetMarkerStyle(*markerStyle);
           }
-          if (auto& markerSize = get_first(data->GetMarkerSize(),
-                                           pad.GetDefaultMarkerSize(),
-                                           padDefaults.GetDefaultMarkerSize())) {
+          if (auto markerSize = get_first(data->GetMarkerSize(),
+                                          pad.GetDefaultMarkerSize(),
+                                          padDefaults.GetDefaultMarkerSize())) {
             data_ptr->SetMarkerSize(*markerSize);
           }
-          if (auto& lineColor = get_first(data->GetLineColor(),
-                                          pick(defaultSettingIndices[2], pad.GetDefaultLineColors()),
-                                          pick(defaultSettingIndices[2], padDefaults.GetDefaultLineColors()))) {
+          if (auto lineColor = get_first(data->GetLineColor(),
+                                         pick(defaultSettingIndices[2], pad.GetDefaultLineColors()),
+                                         pick(defaultSettingIndices[2], padDefaults.GetDefaultLineColors()))) {
             if (!data->GetLineColor()) defaultSettingIndices[2]++;
             data_ptr->SetLineColor(*lineColor);  // data_ptr->SetLineColorAlpha(*lineColor, 0.5);
           }
-          if (auto& lineStyle = get_first(data->GetLineStyle(),
-                                          pick(defaultSettingIndices[3], pad.GetDefaultLineStyles()),
-                                          pick(defaultSettingIndices[3], padDefaults.GetDefaultLineStyles()))) {
+          if (auto lineStyle = get_first(data->GetLineStyle(),
+                                         pick(defaultSettingIndices[3], pad.GetDefaultLineStyles()),
+                                         pick(defaultSettingIndices[3], padDefaults.GetDefaultLineStyles()))) {
             if (!data->GetLineStyle()) defaultSettingIndices[3]++;
             data_ptr->SetLineStyle(*lineStyle);
           }
-          if (auto& lineWidth = get_first(data->GetLineWidth(),
-                                          pad.GetDefaultLineWidth(),
-                                          padDefaults.GetDefaultLineWidth())) {
+          if (auto lineWidth = get_first(data->GetLineWidth(),
+                                         pad.GetDefaultLineWidth(),
+                                         padDefaults.GetDefaultLineWidth())) {
             data_ptr->SetLineWidth(*lineWidth);
           }
-          if (auto& fillColor = get_first(data->GetFillColor(),
-                                          pick(defaultSettingIndices[4], pad.GetDefaultFillColors()),
-                                          pick(defaultSettingIndices[4], padDefaults.GetDefaultFillColors()))) {
+          if (auto fillColor = get_first(data->GetFillColor(),
+                                         pick(defaultSettingIndices[4], pad.GetDefaultFillColors()),
+                                         pick(defaultSettingIndices[4], padDefaults.GetDefaultFillColors()))) {
             if (!data->GetFillColor()) defaultSettingIndices[4]++;
             data_ptr->SetFillColor(*fillColor);
           }
-          if (auto& fillStyle = get_first(data->GetFillStyle(),
-                                          pick(defaultSettingIndices[5], pad.GetDefaultFillStyles()),
-                                          pick(defaultSettingIndices[5], padDefaults.GetDefaultFillStyles()))) {
+          if (auto fillStyle = get_first(data->GetFillStyle(),
+                                         pick(defaultSettingIndices[5], pad.GetDefaultFillStyles()),
+                                         pick(defaultSettingIndices[5], padDefaults.GetDefaultFillStyles()))) {
             if (!data->GetFillStyle()) defaultSettingIndices[5]++;
             data_ptr->SetFillStyle(*fillStyle);
           }
-          if (auto& fillOpacity = get_first(data->GetFillOpacity(),
-                                            pad.GetDefaultFillOpacity(),
-                                            padDefaults.GetDefaultFillOpacity())) {
+          if (auto fillOpacity = get_first(data->GetFillOpacity(),
+                                           pad.GetDefaultFillOpacity(),
+                                           padDefaults.GetDefaultFillOpacity())) {
             data_ptr->SetFillColor(TColor::GetColorTransparent(data_ptr->GetFillColor(), *fillOpacity));
           }
 

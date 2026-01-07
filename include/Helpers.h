@@ -182,13 +182,12 @@ optional<T> pick(uint16_t i, const optional<vector<T>>& vec)
 }
 
 template <typename T, typename... Ts>
-const optional<T>& get_first(const optional<T>& property, const Ts&... properties)
+optional<T> get_first(const optional<T>& property, const Ts&... properties)
 {
   for (const auto ptr : {&property, &properties...}) {
     if (*ptr) return *ptr;
   }
-  // if all properties are nullopt, simply return reference to the first
-  return property;
+  return nullopt;
 }
 
 template <typename T, typename... Ts>
