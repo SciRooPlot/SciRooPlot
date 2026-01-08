@@ -1,146 +1,181 @@
-/*
- ******************************************************************************************
- * --------------------------------------- SciRooPlot --------------------------------------
- * Copyright (c) 2019-2026 Mario Krüger
- * Contact: mario.kruger@cern.ch
- * For a full list of contributors please see doc/CONTRIBUTORS.md.
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation in version 3 (or later) of the License.
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * The GNU General Public License can be found here: <http://www.gnu.org/licenses/>.
- ******************************************************************************************
- */
-
 #ifndef INCLUDE_LOGGING_H_
 #define INCLUDE_LOGGING_H_
 
 #include <fmt/core.h>
+#include <fmt/format.h>
+#include <string_view>
 
-#define _BRIGHTNESS_ "9"
-#ifdef DARK_COLORS
-#undef _BRIGHTNESS_
-#define _BRIGHTNESS_ "3"
-#endif
+namespace log
+{
+enum class Color {
+  Black,
+  Red,
+  Green,
+  Yellow,
+  Blue,
+  Magenta,
+  Cyan,
+  White
+};
 
-#define BLACK_ "\033[" _BRIGHTNESS_ "0m"
-#define WHITE_ "\033[" _BRIGHTNESS_ "7m"
-#define BLUE_ "\033[" _BRIGHTNESS_ "4m"
-#define GREEN_ "\033[" _BRIGHTNESS_ "2m"
-#define MAGENTA_ "\033[" _BRIGHTNESS_ "5m"
-#define CYAN_ "\033[" _BRIGHTNESS_ "6m"
-#define YELLOW_ "\033[" _BRIGHTNESS_ "3m"
-#define RED_ "\033[" _BRIGHTNESS_ "1m"
-#define _END "\033[0m"
-
+inline std::string_view begin_color(Color c)
+{
 #ifdef DISABLE_COLORS
-#undef BLACK_
-#define BLACK_ ""
-#undef WHITE_
-#define WHITE_ ""
-#undef BLUE_
-#define BLUE_ ""
-#undef GREEN_
-#define GREEN_ ""
-#undef MAGENTA_
-#define MAGENTA_ ""
-#undef CYAN_
-#define CYAN_ ""
-#undef YELLOW_
-#define YELLOW_ ""
-#undef RED_
-#define RED_ ""
-#undef _END
-#define _END ""
+  return "";
+#else
+#ifdef DARK_COLORS
+  constexpr bool bright = false;
+#else
+  constexpr bool bright = true;
 #endif
+  switch (c) {
+    case Color::Black:
+      return bright ? "\033[90m" : "\033[30m";
+    case Color::Red:
+      return bright ? "\033[91m" : "\033[31m";
+    case Color::Green:
+      return bright ? "\033[92m" : "\033[32m";
+    case Color::Yellow:
+      return bright ? "\033[93m" : "\033[33m";
+    case Color::Blue:
+      return bright ? "\033[94m" : "\033[34m";
+    case Color::Magenta:
+      return bright ? "\033[95m" : "\033[35m";
+    case Color::Cyan:
+      return bright ? "\033[96m" : "\033[36m";
+    case Color::White:
+      return bright ? "\033[97m" : "\033[37m";
+    default:
+      return "\033[0m";
+  }
+#endif
+}
 
-// some preprocessor macros for logging, printing and debugging
-#define DEBUG(s, ...)                              \
-  {                                                \
-    fmt::print(stderr, CYAN_ "[ DEBU ]" _END " "); \
-    fmt::print(stderr, s, ##__VA_ARGS__);          \
-    fmt::print(stderr, "\n");                      \
-  }
-#define WARNING(s, ...)                              \
-  {                                                  \
-    fmt::print(stderr, YELLOW_ "[ WARN ]" _END " "); \
-    fmt::print(stderr, s, ##__VA_ARGS__);            \
-    fmt::print(stderr, "\n");                        \
-  }
-#define ERROR(s, ...)                             \
-  {                                               \
-    fmt::print(stderr, RED_ "[ ERR  ]" _END " "); \
-    fmt::print(stderr, s, ##__VA_ARGS__);         \
-    fmt::print(stderr, "\n");                     \
-  }
-#define LOG(s, ...)                         \
-  {                                         \
-    fmt::print(GREEN_ "[ LOG  ]" _END " "); \
-    fmt::print(s, ##__VA_ARGS__);           \
-    fmt::print("\n");                       \
-  }
-#define INFO(s, ...)              \
-  {                               \
-    fmt::print("[ INFO ] ");      \
-    fmt::print(s, ##__VA_ARGS__); \
-    fmt::print("\n");             \
-  }
-#define PRINT(s, ...)                \
-  {                                  \
-    fmt::print(stderr, "       | "); \
-    fmt::print(s, ##__VA_ARGS__);    \
-    fmt::print("\n");                \
-  }
-#define PRINT_INLINE(s, ...)      \
-  {                               \
-    fmt::print(s, ##__VA_ARGS__); \
-  }
-#define PRINT_SEPARATOR                     \
-  {                                         \
-    PRINT(fmt::format("{:-<{}}", "-", 60)); \
-  }
-#define HERE                                                                              \
-  {                                                                                       \
-    fmt::print("[ ---> ] Line {} in function {} ({})", __LINE__, __FUNCTION__, __FILE__); \
-    fmt::print("\n");                                                                     \
-  }
+inline constexpr std::string_view end_color()
+{
+#ifdef DISABLE_COLORS
+  return "";
+#else
+  return "\033[0m";
+#endif
+}
 
-#ifdef DISABLE_DEBUG
-#undef DEBUG
-#define DEBUG(s, ...)
+template <typename... Args>
+inline void print(std::string_view fmt_str, Args&&... args)
+{
+#ifndef DISABLE_PRINT
+  fmt::print(stderr, "       | ");
+  fmt::print(fmt_str, std::forward<Args>(args)...);
+  fmt::print("\n");
 #endif
-#ifdef DISABLE_WARNING
-#undef WARNING
-#define WARNING(s, ...)
-#endif
-#ifdef DISABLE_ERROR
-#undef ERROR
-#define ERROR(s, ...)
-#endif
+}
 
-#ifdef DISABLE_LOG
-#undef LOG
-#define LOG(s, ...)
+template <typename... Args>
+inline void print_inline(std::string_view fmt_str, Args&&... args)
+{
+#ifndef DISABLE_PRINT
+  fmt::print(fmt_str, std::forward<Args>(args)...);
 #endif
-#ifdef DISABLE_INFO
-#undef INFO
-#define INFO(s, ...)
-#endif
-#ifdef DISABLE_PRINT
-#undef PRINT
-#define PRINT(s, ...)
-#undef PRINT_INLINE
-#define PRINT_INLINE(s, ...)
-#endif
+}
 
-// helper macro to quickly introspect deduced type of a variable
-#define CHECK_TYPE(var)        \
-  {                            \
-    typename decltype(var)::_; \
-  }
+inline void print_separator()
+{
+  log::print("{:-<60}", "-");
+}
+
+template <typename... Args>
+inline void info(std::string_view fmt_str, Args&&... args)
+{
+#ifndef DISABLE_INFO
+  fmt::print("[ INFO ] ");
+  fmt::print(fmt_str, std::forward<Args>(args)...);
+  fmt::print("\n");
+#endif
+}
+
+template <typename... Args>
+inline void log(std::string_view fmt_str, Args&&... args)
+{
+#ifndef DISABLE_LOG
+  fmt::print("{}[ LOG  ]{} ", begin_color(Color::Green), end_color());
+  fmt::print(fmt_str, std::forward<Args>(args)...);
+  fmt::print("\n");
+#endif
+}
+
+template <typename... Args>
+inline void debug(std::string_view fmt_str, Args&&... args)
+{
+#ifndef DISABLE_DEBUG
+  fmt::print(stderr, "{}[ DEBU ]{} ", begin_color(Color::Cyan), end_color());
+  fmt::print(stderr, fmt_str, std::forward<Args>(args)...);
+  fmt::print(stderr, "\n");
+#endif
+}
+
+template <typename... Args>
+inline void warning(std::string_view fmt_str, Args&&... args)
+{
+#ifndef DISABLE_WARNING
+  fmt::print(stderr, "{}[ WARN ]{} ", begin_color(Color::Yellow), end_color());
+  fmt::print(stderr, fmt_str, std::forward<Args>(args)...);
+  fmt::print(stderr, "\n");
+#endif
+}
+
+template <typename... Args>
+inline void error(std::string_view fmt_str, Args&&... args)
+{
+#ifndef DISABLE_ERROR
+  fmt::print(stderr, "{}[ ERR  ]{} ", begin_color(Color::Red), end_color());
+  fmt::print(stderr, fmt_str, std::forward<Args>(args)...);
+  fmt::print(stderr, "\n");
+#endif
+}
+
+template <typename T>
+inline std::string type_name()
+{
+#if defined(__clang__) || defined(__GNUC__)
+  int status = 0;
+  std::unique_ptr<char[], void (*)(void*)> res{
+    abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, &status),
+    std::free};
+  return status == 0 ? res.get() : typeid(T).name();
+#else
+  return typeid(T).name();
+#endif
+}
+
+template <typename T>
+inline void check_type(const T&, std::string_view name = "")
+{
+  fmt::print(stderr, "{}[ TYPE ]{} ", begin_color(Color::Cyan), end_color());
+  fmt::print("Variable {}{}has type {}", name, name.empty() ? "" : " ", type_name<T>());
+  fmt::print("\n");
+}
+
+inline void here(const char* file, const char* function, int line)
+{
+  fmt::print(stderr, "{}[ HERE ]{} ", begin_color(Color::Cyan), end_color());
+  fmt::print("Line {} in function {} ({})\n", line, function, file);
+  fmt::print("\n");
+}
+
+}  // namespace log
+
+// shorthand macros for logging features
+#define DEBUG(...) log::debug(__VA_ARGS__)
+#define WARNING(...) log::warning(__VA_ARGS__)
+#define ERROR(...) log::error(__VA_ARGS__)
+#define LOG(...) log::log(__VA_ARGS__)
+#define INFO(...) log::info(__VA_ARGS__)
+#define PRINT(...) log::print(__VA_ARGS__)
+#define PRINT_INLINE(...) log::print_inline(__VA_ARGS__)
+#define PRINT_SEPARATOR() log::print_separator()
+
+// debug helper macros
+#define HERE() log::here(__FILE__, __FUNCTION__, __LINE__);
+#define CHECK_TYPE(var) log::check_type(var, #var);
 
 #endif  // INCLUDE_LOGGING_H_

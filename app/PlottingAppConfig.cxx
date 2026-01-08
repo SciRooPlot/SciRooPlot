@@ -100,7 +100,7 @@ int main(int argc, char* argv[])
   if (command == "help") {
     PRINT("plot-config (list | active | base | path | reset | clean)");
     PRINT("plot-config (init | remove | switch | show) <PROJECT_NAME>");
-    PRINT("plot-config (executable | outputDir | rename) <PROJECT_NAME> <SETTING>")
+    PRINT("plot-config (executable | outputDir | rename) <PROJECT_NAME> <SETTING>");
   } else if (command == "base") {
     std::cout << configPath << std::endl;
   } else if (command == "path") {

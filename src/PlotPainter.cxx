@@ -646,7 +646,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // right after drawing the axis, put reference line if requested
           optional<string> refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
           if (refFunc) {
-            double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0, min = 0, max = 0;
+            double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0;
             pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
             if (pad_ptr->GetLogx()) {
               xmin = TMath::Power(10, xmin);
@@ -758,7 +758,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
             if (auto& contours = data->GetContours()) {
               data_ptr->SetContour(contours->size(), contours->data());
-              if (axisHist_ptr->GetContour() < contours->size()) axisHist_ptr->SetContour(contours->size(), contours->data());
+              if (axisHist_ptr->GetContour() < static_cast<Int_t>(contours->size())) axisHist_ptr->SetContour(contours->size(), contours->data());
             } else if (auto& nContours = data->GetNContours()) {
               data_ptr->SetContour(*nContours);
               if (axisHist_ptr->GetContour() < nContours) axisHist_ptr->SetContour(*nContours);
