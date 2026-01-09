@@ -17,52 +17,56 @@ if [[ ! -f "${SCIROOPLOT_BIN}/plot" || ! -f "${SCIROOPLOT_BIN}/plot-config" ]]; 
 fi
 
 function plot() {
-  local USER_EXEC=$(${SCIROOPLOT_BIN}/plot-config executable)
-  local USER_BUILD_DIR=$([[ -z "${USER_EXEC}" ]] || dirname "${USER_EXEC}")
-  if [[ -d "${USER_BUILD_DIR}" ]]; then
+  local user_exec=$("${SCIROOPLOT_BIN}/plot-config" "get" "@current" "EXE")
+  local user_build_dir=$([[ -z "${user_exec}" ]] || dirname "${user_exec}")
+  if [[ -d "${user_build_dir}" ]]; then
 
     if [[ "${1}" == "cd" ]]; then
-      cd "${USER_BUILD_DIR}"
+      cd "${user_build_dir}"
       return 0
     fi
 
-    local USER_PLOTDEF="$(${SCIROOPLOT_BIN}/plot-config path)/plots.info"
+    local user_plotdef="$(${SCIROOPLOT_BIN}/plot-config path)/plots.info"
     (
-      cd "${USER_BUILD_DIR}";
+      cd "${user_build_dir}";
       (make -j6 1> /dev/null) || exit 1
-      if [[ ! -f "${USER_PLOTDEF}" || "${USER_EXEC}" -nt "${USER_PLOTDEF}" ]]; then
-        "${USER_EXEC}"
+      if [[ ! -f "${user_plotdef}" || "${user_exec}" -nt "${user_plotdef}" ]]; then
+        "${user_exec}"
       fi
     ) || return 1
   fi
-  "${SCIROOPLOT_BIN}/plot" "${1}" "${2}" "${3}"
+  "${SCIROOPLOT_BIN}/plot" "$@"
   return 0
 }
 
 function plot-config() {
-  if [[ "${1}" == "init" ]]; then
-    PROJECT_NAME="${2}"
-    if [ -d "$PROJECT_NAME" ]; then
-      echo "Folder ${PROJECT_NAME} already exists. Doing nothing..."
+  if [[ "${1}" == "create" ]]; then
+    local project_name="${2}"
+    if [ -d "$project_name" ]; then
+      echo "Folder ${project_name} already exists. Doing nothing..."
       return 1
     fi
-    if [[ -z "${PROJECT_NAME}" ]]; then
+    if [[ -z "${project_name}" ]]; then
       echo "No project name specified. Doing nothing..."
       return 1
     fi
-    WORKDIR="$(pwd)"
-    mkdir "${PROJECT_NAME}"
-    PROJECT_PATH="${WORKDIR}/${PROJECT_NAME}"
-    mkdir "${PROJECT_PATH}/build"
-    cp -r "${SCIROOPLOT_DATA_DIR}/user/"* "${PROJECT_PATH}/"
-    sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" "${PROJECT_PATH}/CMakeLists.txt" && rm -f "${PROJECT_PATH}/CMakeLists.txt.bak"
-    sed -i.bak "s/PROJECT_NAME/${PROJECT_NAME}/" "${PROJECT_PATH}/DefinePlots.cxx" && rm -f "${PROJECT_PATH}/DefinePlots.cxx.bak"
-    "${SCIROOPLOT_BIN}/plot-config" executable "${PROJECT_NAME}" "${PROJECT_PATH}/build/definePlots"
-    plot-config switch "${PROJECT_NAME}"
-    cd "${PROJECT_PATH}/build" && cmake -Wno-dev .. 2>&1 > /dev/null && make 2>&1 > /dev/null && ./definePlots
-    cd "${WORKDIR}"
+    if [[ "${project_name}" == "@current" ]]; then
+      echo "A project cannot be called @current"
+      return 1
+    fi
+    local workdir="$(pwd)"
+    mkdir "${project_name}"
+    local project_path="${workdir}/${project_name}"
+    mkdir "${project_path}/build"
+    cp -r "${SCIROOPLOT_DATA_DIR}/user/"* "${project_path}/"
+    sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/CMakeLists.txt" && rm -f "${project_path}/CMakeLists.txt.bak"
+    sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/DefinePlots.cxx" && rm -f "${project_path}/DefinePlots.cxx.bak"
+    "${SCIROOPLOT_BIN}/plot-config" "set" "${project_name}" "EXE" "${project_path}/build/definePlots"
+    plot-config "select" "${project_name}"
+    cd "${project_path}/build" && cmake -Wno-dev .. 2>&1 > /dev/null && make 2>&1 > /dev/null && ./definePlots
+    cd "${workdir}"
   else
-    "${SCIROOPLOT_BIN}/plot-config" "${1}" "${2}" "${3}"
+    "${SCIROOPLOT_BIN}/plot-config" "$@"
   fi
   return 0
 }
@@ -71,32 +75,33 @@ _plot_completions_zsh() {
 
   local modes=('interactive' 'pdf' 'eps' 'svg' 'png' 'gif' 'file' 'find' 'macro')
   local groups
-  local groupsAndCategories
+  local groups_and_categories
   local names
   
-  local AUTOCOMPFILE="$(${SCIROOPLOT_BIN}/plot-config path)/plots.csv"
-  if [[ ! -f "${AUTOCOMPFILE}" ]]; then
+  local tabcomp_file="$(${SCIROOPLOT_BIN}/plot-config path)/tabcomp.csv"
+  if [[ ! -f "${tabcomp_file}" ]]; then
     return
   fi
 
   # first find groups and groups including categories
+  local plotName figureGroup figureCategory
   while IFS="," read -r plotName figureGroup figureCategory
   do
     groups+=("${figureGroup}")
-    [ -n "${figureCategory}" ] && groupsAndCategories+=("${figureGroup}/${figureCategory}")
-  done < <(LC_ALL=C sort -t',' -k2,3 -u "${AUTOCOMPFILE}")
-  unset plotName figureGroup figureCategory
+    [ -n "${figureCategory}" ] && groups_and_categories+=("${figureGroup}/${figureCategory}")
+  done < <(LC_ALL=C sort -t',' -k2,3 -u "${tabcomp_file}")
 
   updatePlotNames() {
-    local groupAndCat="${1}"
-    IFS="/" read -r group category <<< "${groupAndCat}"
+    local group category
+    IFS="/" read -r group category <<< "${1}"
     names=()
     
+    local plotName figureGroup figureCategory
     while IFS="," read -r plotName figureGroup figureCategory
     do
       [[ -n "${category}" && "${figureCategory}" != "${category}" && "${figureCategory}" != "${category}/"* ]] && continue
       names+=("${plotName}")
-    done < <( grep "^.*,${group},${category}" "${AUTOCOMPFILE}" )
+    done < <( grep "^.*,${group},${category}" "${tabcomp_file}" )
   }
 
   _arguments \
@@ -108,7 +113,7 @@ _plot_completions_zsh() {
   case $state in
     group)
       if [[ "${words[2]}" == *"/"* ]]; then
-        _arguments '1:profiles:(${groupsAndCategories})'
+        _arguments '1:profiles:(${groups_and_categories})'
       else
         _arguments '1:profiles:(${groups})'
       fi
@@ -131,32 +136,39 @@ _plot_completions_zsh() {
 
 _plot_config_completions_zsh() {
 
-  local generalCommands=('list' 'active' 'base' 'path' 'reset' 'clean')
-  local projectCommands=('init' 'remove' 'switch' 'show' 'executable' 'outputDir')
+  local general_commands=('create' 'projects' 'base' 'path' 'reset' 'clean' 'help')
+  local project_commands=('remove' 'select' 'show' 'set' 'get')
+  local project_commands_with_prop=('set' 'get')
+  local properties=('EXE' 'OUT' 'NAME')
 
-  local projects
-  
-  local AUTOCOMPFILE="$(${SCIROOPLOT_BIN}/plot-config base)/projects.csv"
-  if [[ -f "${AUTOCOMPFILE}" ]]; then
+  local projects=("@current")
+  local project_file="$(${SCIROOPLOT_BIN}/plot-config base)/projects.info"
+  if [[ -f "${project_file}" ]]; then
+    local project
     while read -r project
     do
       projects+=("${project}")
-    done < "${AUTOCOMPFILE}"
-    unset project
+    done < <(grep -B1 '{' "${project_file}" | grep -v '{' | grep -v -- '^--$')
   fi
 
   _arguments \
     '1: :->command'\
     '2: :->project'\
-    '3: :->setting'
+    '3: :->property'\
+    '4: :->setting'
 
   case "${state}" in
     command)
-      _arguments '1:profiles:(${generalCommands} ${projectCommands})'
+      _arguments '1:profiles:(${general_commands} ${project_commands})'
     ;;
     project)
-      if [[ " ${projectCommands[@]} " =~ " ${words[2]} " ]]; then
+      if [[ " ${project_commands[@]} " =~ " ${words[2]} " ]]; then
         _arguments '2:profiles:(${projects})'
+      fi
+    ;;
+    property)
+      if [[ " ${project_commands_with_prop[@]} " =~ " ${words[2]} " ]]; then
+        _arguments '3:profiles:(${properties})'
       fi
     ;;
   esac
@@ -166,38 +178,39 @@ _plot_completions_bash() {
 
   local modes=('interactive pdf eps svg png gif file find macro')
   local groups
-  local groupsAndCategories
+  local groups_and_categories
   local names
 
-  local AUTOCOMPFILE="$(${SCIROOPLOT_BIN}/plot-config path)/plots.csv"
-  if [[ ! -f "${AUTOCOMPFILE}" ]]; then
+  local tabcomp_file="$(${SCIROOPLOT_BIN}/plot-config path)/tabcomp.csv"
+  if [[ ! -f "${tabcomp_file}" ]]; then
     return
   fi
 
   # first find groups and groups including categories
+  local plotName figureGroup figureCategory
   while IFS="," read -r plotName figureGroup figureCategory
   do
     groups+=" ${figureGroup}"
-    [ -n "$figureCategory" ] && groupsAndCategories+=" ${figureGroup}/${figureCategory}"
-  done < <(LC_ALL=C sort -t',' -k2,3 -u "${AUTOCOMPFILE}")
-  unset plotName figureGroup figureCategory
+    [ -n "$figureCategory" ] && groups_and_categories+=" ${figureGroup}/${figureCategory}"
+  done < <(LC_ALL=C sort -t',' -k2,3 -u "${tabcomp_file}")
 
   updatePlotNames() {
-    local groupAndCat="${1}"
-    IFS="/" read -r group category <<< "${groupAndCat}"
+    local group category
+    IFS="/" read -r group category <<< "${1}"
     names=()
     
+    local plotName figureGroup figureCategory
     while IFS="," read -r plotName figureGroup figureCategory
     do
       [[ -n "${category}" && "${figureCategory}" != "${category}" && "${figureCategory}" != "${category}/"* ]] && continue
       names+=" ${plotName}"
-    done < <( grep "^.*,${group},${category}" "${AUTOCOMPFILE}" )
+    done < <( grep "^.*,${group},${category}" "${tabcomp_file}" )
   }
 
   case "${COMP_CWORD}" in
   1)
     if [[ "${COMP_WORDS[COMP_CWORD]}" == *"/"* ]]; then
-      COMPREPLY=( $(compgen -W "${groupsAndCategories}" -- "${COMP_WORDS[COMP_CWORD]}") )
+      COMPREPLY=( $(compgen -W "${groups_and_categories}" -- "${COMP_WORDS[COMP_CWORD]}") )
     else
       COMPREPLY=( $(compgen -W "${groups}" -- "${COMP_WORDS[COMP_CWORD]}") )
     fi
@@ -220,27 +233,36 @@ _plot_completions_bash() {
 
 _plot_config_completions_bash() {
 
-  local generalCommands=('list active base path reset clean')
-  local projectCommands=('init remove switch show executable outputDir')
+  local general_commands=('create projects base path reset clean help')
+  local project_commands=('remove select show set get')
+  local project_commands_with_prop=('set get')
+  local properties=('EXE OUT NAME')
 
-  local projects
-  
-  local AUTOCOMPFILE="$(${SCIROOPLOT_BIN}/plot-config base)/projects.csv"
-  if [[ -f "${AUTOCOMPFILE}" ]]; then
+  local projects=("@current")
+
+  local project_file="$(${SCIROOPLOT_BIN}/plot-config base)/projects.info"
+  if [[ -f "${project_file}" ]]; then
+    local project
     while read -r project
     do
-      projects+=("${project}")
-    done < "${AUTOCOMPFILE}"
-    unset project
+      projects+=" ${project}"
+    done < <(grep -B1 '{' "${project_file}" | grep -v '{' | grep -v -- '^--$')
   fi
 
   case "${COMP_CWORD}" in
   1)
-    COMPREPLY=( $(compgen -W "${generalCommands}${projectCommands}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    COMPREPLY=( $(compgen -W "${general_commands} ${project_commands}" -- "${COMP_WORDS[COMP_CWORD]}") )
   ;;
   2)
-    if [[ " ${projectCommands[@]} " =~ " ${COMP_WORDS[COMP_CWORD-1]} " ]]; then
+    if [[ " ${project_commands[@]} " =~ " ${COMP_WORDS[COMP_CWORD-1]} " ]]; then
       COMPREPLY=( $(compgen -W "${projects}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    else
+      COMPREPLY=( )
+    fi
+  ;;
+  3)
+    if [[ " ${project_commands_with_prop[@]} " =~ " ${COMP_WORDS[COMP_CWORD-2]} " ]]; then
+      COMPREPLY=( $(compgen -W "${properties}" -- "${COMP_WORDS[COMP_CWORD]}") )
     else
       COMPREPLY=( )
     fi

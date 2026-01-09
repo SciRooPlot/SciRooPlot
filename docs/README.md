@@ -38,11 +38,11 @@ Now you are ready to use SciRooPlot -- Happy plotting!
 
 ## 🚀 Usage
 
-A new project is initialized by running:
+A new project is created by running:
 ```
-  plot-config init <projectName>
+  plot-config create <projectName>
 ```
-This will create a folder in your current directory with some working source code to start with.
+This will make a folder in your current directory with some working source code to start with.
 The default code will already be compiled and ready to use, allowing you to generate you first plot simply by typing
 ```
 plot examples ptSpec
@@ -52,11 +52,15 @@ The resulting executable will automatically be rebuilt and (if needed) executed 
 
 You may have multiple such projects in parallel, and can switch between them via:
 ```
-plot-config switch <projectName>
+plot-config select <projectName>
 ```
-A list of available projects is shown when typing
+To print the available configuration options run:
 ```
-plot-config list
+plot-config help
+```
+A list of available projects is shown when typing:
+```
+plot-config projects
 ```
 By default, all internal settings as well as the plot definitions are stored in `~/.SciRooPlot`. This can be changed by defining an environment variable called `SCIROOPLOT_CONFIG_PATH`.
 
@@ -78,7 +82,7 @@ To adjust the time between the frames use for example `plot figureGroup myPlot_b
 
 The modes that save files to disk, the plotting app needs to know where to store the output. This can be configured via: 
 ```
-plot-config outputDir <projectName> /path/to/output/folder
+plot-config set <projectName> OUT </path/to/output/folder>
 ```
 Within this folder, the files will be organized in subdirectories corresponding to the figure groups and categories.
 

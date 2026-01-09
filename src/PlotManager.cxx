@@ -1154,16 +1154,16 @@ tuple<string, string, string> PlotManager::GetProjectSettings(string projectName
     ptree configTree;
     read_info(configFileName, configTree);
     if (projectName.empty()) {
-      if (auto active = configTree.get_child_optional("active")) {
+      if (auto active = configTree.get_child_optional("@current")) {
         projectName = active.get().data();
       }
     }
     if (auto curConfig = configTree.get_child_optional(projectName)) {
       auto tree = curConfig.get();
-      if (auto property = tree.get_child_optional("outputDir")) {
+      if (auto property = tree.get_child_optional("OUT")) {
         outputDir = expand_path(property->get_value<string>());
         if (outputDir.empty()) {
-          WARNING(R"(Please run "plot-config outputDir {} </path/to/store/output>".)", projectName);
+          WARNING(R"(Please run "plot-config set {} OUT </path/to/store/output>".)", projectName);
         }
       }
     }
@@ -1203,7 +1203,7 @@ void PlotManager::SaveProject(const string& projectName)
 
   // create a csv file for tab completion
   std::ofstream tabCompFile;
-  tabCompFile.open(std::filesystem::path(plotsFile).replace_extension("csv").string());
+  tabCompFile.open(std::filesystem::path(plotsFile).parent_path() / "tabcomp.csv");
   for (auto& plot : mPlots) {
     string line = plot.GetName() + "," + plot.GetFigureGroup() + "," + ((plot.GetFigureCategory()) ? *plot.GetFigureCategory() : "") + "\n";
     tabCompFile << line;
