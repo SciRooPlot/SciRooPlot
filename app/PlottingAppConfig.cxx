@@ -83,6 +83,15 @@ int main(int argc, char* argv[])
     }
     if (vm.count("project")) {
       project = vm["project"].as<string>();
+      if (project == "@current") {
+        project = activeProject;
+        if (activeProject.empty()) {
+          if (command != "get") {
+            ERROR("No current project selected. Please run plot-config select <PROJECT_NAME>");
+          }
+          return 1;
+        }
+      }
     }
     if (vm.count("property")) {
       property = vm["property"].as<string>();
@@ -113,38 +122,32 @@ int main(int argc, char* argv[])
   } else if (command == "clean") {
     vector<string> inactiveProjects;
     for (auto& entry : configTree) {
-      string project = entry.first;
-      if (project == "@current") continue;
-      if (auto curConfig = configTree.get_child_optional(project)) {
+      if (entry.first == "@current") continue;
+      if (auto curConfig = configTree.get_child_optional(entry.first)) {
         if (auto executable = curConfig.get().get_child_optional("EXE")) {
           if (std::filesystem::exists(std::filesystem::path(executable->get_value<string>()).parent_path())) continue;
-          inactiveProjects.push_back(project);
+          inactiveProjects.push_back(entry.first);
         }
       }
     }
-    for (auto& project : inactiveProjects) {
-      PRINT("- deleting project {}", project);
-      configTree.erase(project);
-      std::filesystem::remove_all(configPath + "/" + project);
-      if (project == activeProject) {
+    for (auto& inactiveProject : inactiveProjects) {
+      PRINT("- deleting project {}", inactiveProject);
+      configTree.erase(inactiveProject);
+      std::filesystem::remove_all(configPath + "/" + inactiveProject);
+      if (inactiveProject == activeProject) {
         activeProject.clear();
       }
     }
   } else if (command == "projects") {
     for (auto& entry : configTree) {
-      string project = entry.first;
-      if (project == "@current") continue;
-      if (project == activeProject) {
-        PRINT("* {}", project);
-      } else {
-        PRINT("  {}", project);
-      }
+      if (entry.first == "@current") continue;
+      PRINT("{}  {}", (entry.first == activeProject) ? "*" : " ", entry.first);
     }
   } else if (command == "remove") {
     if (project.empty()) {
       ERROR("Specify which project to remove.");
       return 1;
-    }  // FIXME: here @current must be handled properly as well!
+    }
     configTree.erase(project);
     std::filesystem::remove_all(configPath + "/" + project);
     if (project == activeProject) {
@@ -162,16 +165,17 @@ int main(int argc, char* argv[])
       return 1;
     }
   } else if (command == "show") {
-    string selectedProject = activeProject;
-    if (!project.empty() && project != "@current") {
-      selectedProject = project;
+    if (project.empty()) {
+      ERROR("Specify a project to show.");
+      return 1;
     }
-    if (auto curConfig = configTree.get_child_optional(selectedProject)) {
-      PRINT("{} NAME: {}", (selectedProject == activeProject) ? "*" : " ", selectedProject);
-      for (auto property : propertyList)
+    if (auto curConfig = configTree.get_child_optional(project)) {
+      PRINT("{} NAME: {}", (project == activeProject) ? "*" : " ", project);
+      for (auto property : propertyList) {
         if (auto entry = curConfig.get().get_child_optional(property)) {
           PRINT("  -{}: {}", property, entry->get_value<string>());
         }
+      }
     }
   } else if ((command == "set") || (command == "get")) {
     if (project.empty()) {
@@ -182,40 +186,37 @@ int main(int argc, char* argv[])
       ERROR("Specify what you want to {}. Options are ({}).", command, fmt::join(propertyList, " | "));
       return 1;
     }
-    string selectedProject = activeProject;
-    if (project != "@current") {
-      selectedProject = project;
-    }
-    if (auto curConfig = configTree.get_child_optional(selectedProject)) {
+    if (auto curConfig = configTree.get_child_optional(project)) {
       if (command == "get") {
         if (auto entry = curConfig.get().get_child_optional(property)) {
           std::cout << entry->get_value<string>() << std::endl;
           return 0;
         } else if (property == "NAME") {
-          std::cout << selectedProject << std::endl;
+          std::cout << project << std::endl;
           return 0;
         }
       } else {
         if (property == "NAME") {
           if (!configTree.get_child_optional(setting)) {
-            configTree.add_child(setting, configTree.get_child(selectedProject));
-            configTree.erase(selectedProject);
-            std::filesystem::rename(std::filesystem::path(configPath + "/" + selectedProject), std::filesystem::path(configPath + "/" + setting));
-            PRINT("Renamed project {} to {}. User code should be adjusted accordingly.", selectedProject, setting);
-            if (activeProject == selectedProject) {
+            configTree.add_child(setting, configTree.get_child(project));
+            configTree.erase(project);
+            std::filesystem::rename(std::filesystem::path(configPath + "/" + project), std::filesystem::path(configPath + "/" + setting));
+            PRINT("Renamed project {} to {}. User code should be adjusted accordingly.", project, setting);
+            if (activeProject == project) {
               activeProject = setting;
             }
           } else {
             ERROR("Cannot rename {} to {}", project, setting);
           }
-        } else {
-          curConfig.get().erase(property);
-          INFO(R"(Updating "{}" in project "{}".)", property, selectedProject);
         }
       }
     }
     if (command == "set" && property != "NAME") {
-      configTree.add(project + "." + property, setting);
+      if (std::filesystem::path(expand_path(setting)).is_relative()) {
+        ERROR("The {} path must not be relative.", property);
+        return 1;
+      }
+      configTree.put(project + "." + property, setting);
       if (activeProject.empty()) {
         activeProject = project;
       }
