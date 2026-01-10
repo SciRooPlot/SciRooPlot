@@ -98,6 +98,10 @@ int main(int argc, char* argv[])
     }
     if (vm.count("setting")) {
       setting = vm["setting"].as<string>();
+      if (property == "NAME" && setting == "@current") {
+        ERROR("A project must not be called @current.");
+        return 1;
+      }
     }
   } catch (std::exception& e) {
     ERROR(R"(Exception "{}"! Exiting.)", e.what());

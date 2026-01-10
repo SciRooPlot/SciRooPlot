@@ -51,7 +51,7 @@ function plot-config() {
       return 1
     fi
     if [[ "${project_name}" == "@current" ]]; then
-      echo "A project cannot be called @current"
+      echo "A project cannot be called @current."
       return 1
     fi
     local workdir="$(pwd)"
@@ -140,9 +140,10 @@ _plot_config_completions_zsh() {
   local project_commands_with_prop=('set' 'get')
   local properties=('EXE' 'OUT' 'NAME')
 
-  local projects=("@current")
+  local projects
   local project_file="$(${SCIROOPLOT_BIN}/plot-config path)/projects.info"
   if [[ -f "${project_file}" ]]; then
+    projects=("@current")
     local project
     while read -r project
     do
@@ -236,11 +237,11 @@ _plot_config_completions_bash() {
   local project_commands=('remove select show path set get')
   local project_commands_with_prop=('set get')
   local properties=('EXE OUT NAME')
-
-  local projects=("@current")
-
+  
+  local projects
   local project_file="$(${SCIROOPLOT_BIN}/plot-config path)/projects.info"
   if [[ -f "${project_file}" ]]; then
+    projects=("@current")
     local project
     while read -r project
     do
