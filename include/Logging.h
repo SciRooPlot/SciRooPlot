@@ -65,7 +65,7 @@ inline void print(std::string_view fmt_str, Args&&... args)
 {
 #ifndef DISABLE_PRINT
   fmt::print(stderr, "       | ");
-  fmt::print(fmt_str, std::forward<Args>(args)...);
+  fmt::print("{}", fmt::vformat(fmt_str, fmt::make_format_args(args...)));
   fmt::print("\n");
 #endif
 }
@@ -74,7 +74,7 @@ template <typename... Args>
 inline void print_inline(std::string_view fmt_str, Args&&... args)
 {
 #ifndef DISABLE_PRINT
-  fmt::print(fmt_str, std::forward<Args>(args)...);
+  fmt::print("{}", fmt::vformat(fmt_str, fmt::make_format_args(args...)));
 #endif
 }
 
@@ -88,7 +88,7 @@ inline void info(std::string_view fmt_str, Args&&... args)
 {
 #ifndef DISABLE_INFO
   fmt::print("[ INFO ] ");
-  fmt::print(fmt_str, std::forward<Args>(args)...);
+  fmt::print("{}", fmt::vformat(fmt_str, fmt::make_format_args(args...)));
   fmt::print("\n");
 #endif
 }
@@ -98,7 +98,7 @@ inline void log(std::string_view fmt_str, Args&&... args)
 {
 #ifndef DISABLE_LOG
   fmt::print("{}[ LOG  ]{} ", begin_color(Color::Green), end_color());
-  fmt::print(fmt_str, std::forward<Args>(args)...);
+  fmt::print("{}", fmt::vformat(fmt_str, fmt::make_format_args(args...)));
   fmt::print("\n");
 #endif
 }
@@ -108,7 +108,7 @@ inline void debug(std::string_view fmt_str, Args&&... args)
 {
 #ifndef DISABLE_DEBUG
   fmt::print(stderr, "{}[ DEBU ]{} ", begin_color(Color::Cyan), end_color());
-  fmt::print(stderr, fmt_str, std::forward<Args>(args)...);
+  fmt::print(stderr, "{}", fmt::vformat(fmt_str, fmt::make_format_args(args...)));
   fmt::print(stderr, "\n");
 #endif
 }
@@ -118,7 +118,7 @@ inline void warning(std::string_view fmt_str, Args&&... args)
 {
 #ifndef DISABLE_WARNING
   fmt::print(stderr, "{}[ WARN ]{} ", begin_color(Color::Yellow), end_color());
-  fmt::print(stderr, fmt_str, std::forward<Args>(args)...);
+  fmt::print(stderr, "{}", fmt::vformat(fmt_str, fmt::make_format_args(args...)));
   fmt::print(stderr, "\n");
 #endif
 }
@@ -128,7 +128,7 @@ inline void error(std::string_view fmt_str, Args&&... args)
 {
 #ifndef DISABLE_ERROR
   fmt::print(stderr, "{}[ ERR  ]{} ", begin_color(Color::Red), end_color());
-  fmt::print(stderr, fmt_str, std::forward<Args>(args)...);
+  fmt::print(stderr, "{}", fmt::vformat(fmt_str, fmt::make_format_args(args...)));
   fmt::print(stderr, "\n");
 #endif
 }
