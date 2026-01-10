@@ -1,5 +1,5 @@
 package: SciRooPlot
-version: "v1.2.1"
+version: "v1.2.2"
 requires:
   - ROOT
   - fmt
@@ -27,6 +27,9 @@ alibuild-generate-module --bin --lib --cmake > "${MODULEFILE}"
 
 cat >> "${MODULEFILE}" <<EoF
 prepend-path ROOT_INCLUDE_PATH \${PKG_ROOT}/include
-source-sh bash "\${PKG_ROOT}/share/scirooplot/scirooplot-env.sh"
+setenv SCIROOPLOT_ROOT \${PKG_ROOT}
+setenv SCIROOPLOT_BIN \${PKG_ROOT}/bin
+setenv SCIROOPLOT_DATA_DIR \${PKG_ROOT}/share/scirooplot
+setenv SCIROOPLOT_ENV \${PKG_ROOT}/share/scirooplot/scirooplot-env.sh
 puts stderr {For SciRooPlot tab completion: source \$SCIROOPLOT_ENV}
 EoF
