@@ -18,7 +18,7 @@ fi
 
 function plot() {
   local user_exec=$("${SCIROOPLOT_BIN}/plot-config" "get" "@current" "EXE")
-  local user_build_dir=$([[ -z "${user_exec}" ]] || dirname "${user_exec}")
+  local user_build_dir=$([[ -n "${user_exec}" ]] && dirname -- "${user_exec}" || echo "")
   if [[ -d "${user_build_dir}" ]]; then
 
     if [[ "${1}" == "cd" ]]; then
@@ -26,7 +26,7 @@ function plot() {
       return 0
     fi
 
-    local user_plotdef="$(${SCIROOPLOT_BIN}/plot-config path)/plots.info"
+    local user_plotdef="$(${SCIROOPLOT_BIN}/plot-config path "@current")/plots.info"
     (
       cd "${user_build_dir}";
       (make -j6 1> /dev/null) || exit 1
@@ -62,7 +62,6 @@ function plot-config() {
     sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/CMakeLists.txt" && rm -f "${project_path}/CMakeLists.txt.bak"
     sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/DefinePlots.cxx" && rm -f "${project_path}/DefinePlots.cxx.bak"
     "${SCIROOPLOT_BIN}/plot-config" "set" "${project_name}" "EXE" "${project_path}/build/definePlots"
-    plot-config "select" "${project_name}"
     cd "${project_path}/build" && cmake -Wno-dev .. 2>&1 > /dev/null && make 2>&1 > /dev/null && ./definePlots
     cd "${workdir}"
   else
@@ -78,7 +77,7 @@ _plot_completions_zsh() {
   local groups_and_categories
   local names
   
-  local tabcomp_file="$(${SCIROOPLOT_BIN}/plot-config path)/tabcomp.csv"
+  local tabcomp_file="$(${SCIROOPLOT_BIN}/plot-config path "@current")/tabcomp.csv"
   if [[ ! -f "${tabcomp_file}" ]]; then
     return
   fi
@@ -136,13 +135,13 @@ _plot_completions_zsh() {
 
 _plot_config_completions_zsh() {
 
-  local general_commands=('create' 'projects' 'base' 'path' 'reset' 'clean' 'help')
-  local project_commands=('remove' 'select' 'show' 'set' 'get')
+  local general_commands=('create' 'projects' 'reset' 'clean' 'help')
+  local project_commands=('remove' 'select' 'show' 'path' 'set' 'get')
   local project_commands_with_prop=('set' 'get')
   local properties=('EXE' 'OUT' 'NAME')
 
   local projects=("@current")
-  local project_file="$(${SCIROOPLOT_BIN}/plot-config base)/projects.info"
+  local project_file="$(${SCIROOPLOT_BIN}/plot-config path)/projects.info"
   if [[ -f "${project_file}" ]]; then
     local project
     while read -r project
@@ -181,7 +180,7 @@ _plot_completions_bash() {
   local groups_and_categories
   local names
 
-  local tabcomp_file="$(${SCIROOPLOT_BIN}/plot-config path)/tabcomp.csv"
+  local tabcomp_file="$(${SCIROOPLOT_BIN}/plot-config path "@current")/tabcomp.csv"
   if [[ ! -f "${tabcomp_file}" ]]; then
     return
   fi
@@ -233,14 +232,14 @@ _plot_completions_bash() {
 
 _plot_config_completions_bash() {
 
-  local general_commands=('create projects base path reset clean help')
-  local project_commands=('remove select show set get')
+  local general_commands=('create projects reset clean help')
+  local project_commands=('remove select show path set get')
   local project_commands_with_prop=('set get')
   local properties=('EXE OUT NAME')
 
   local projects=("@current")
 
-  local project_file="$(${SCIROOPLOT_BIN}/plot-config base)/projects.info"
+  local project_file="$(${SCIROOPLOT_BIN}/plot-config path)/projects.info"
   if [[ -f "${project_file}" ]]; then
     local project
     while read -r project

@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
       if (project == "@current") {
         project = activeProject;
         if (activeProject.empty()) {
-          if (command != "get") {
+          if ((command != "get") && (command != "path")) {
             ERROR("No current project selected. Please run plot-config select <PROJECT_NAME>");
           }
           return 1;
@@ -109,13 +109,12 @@ int main(int argc, char* argv[])
   static const vector<string> propertyList = {"NAME", "EXE", "OUT"};
 
   if (command == "help") {
-    PRINT("plot-config (projects | base | path | reset | clean)");
+    PRINT("plot-config (projects | path | reset | clean)");
     PRINT("plot-config (create | remove | select | show) (<PROJECT_NAME> | @current)");
     PRINT("plot-config (set | get) (<PROJECT_NAME> | @current) (NAME | EXE | OUT) <SETTING>");
-  } else if (command == "base") {
-    std::cout << configPath << std::endl;
   } else if (command == "path") {
-    std::cout << configPath + "/" + activeProject << std::endl;
+    std::cout << configPath << ((project.empty()) ? "" : "/" + project) << std::endl;
+    return 0;
   } else if (command == "reset") {
     configTree.clear();
     activeProject.clear();
