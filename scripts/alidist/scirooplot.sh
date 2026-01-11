@@ -1,9 +1,9 @@
 package: SciRooPlot
-version: "v1.2.2"
+version: "v1.2.3"
 requires:
-  - ROOT
   - fmt
   - boost
+  - ROOT
 build_requires:
   - "GCC-Toolchain:(?!osx)"
   - CMake
