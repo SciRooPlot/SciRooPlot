@@ -94,18 +94,18 @@ class Plot
 
   Plot() = default;
   Plot(const ptree& plotTree);
-  Plot(const string& name, const string& figureGroupAndCategory, const optional<string>& plotTemplateName = nullopt);
+  Plot(const std::string& name, const std::string& figureGroupAndCategory, const optional<std::string>& plotTemplateName = nullopt);
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
   Pad& GetPadDefaults() { return mPads[0]; }
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& templatePlot, const Plot& plot);
-  Plot(const Plot& otherPlot, const string& name, const string& figureGroup, const optional<string>& figureCategory = nullopt);
+  Plot(const Plot& otherPlot, const std::string& name, const std::string& figureGroup, const optional<std::string>& figureCategory = nullopt);
   Plot Clone() const;
 
   // accessors for user
-  void SetFigureCategory(const string& figureCategory);
-  void SetPlotTemplateName(const string& plotTemplateName);
+  void SetFigureCategory(const std::string& figureCategory);
+  void SetPlotTemplateName(const std::string& plotTemplateName);
   void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false);
   void SetWidth(int32_t width);
   void SetHeight(int32_t height);
@@ -121,7 +121,7 @@ class Plot
   friend class PlotManager;
   friend class PlotPainter;
 
-  void SetFigureGroup(const string& figureGroup);
+  void SetFigureGroup(const std::string& figureGroup);
 
   // accessors for internal use by manager and painter
   const auto& GetName() const { return mName; }
@@ -149,11 +149,11 @@ class Plot
   };
   void UpdateUniqueName();
 
-  string mName;
-  string mFigureGroup;
-  optional<string> mFigureCategory;
-  string mUniqueName;
-  optional<string> mPlotTemplateName;
+  std::string mName;
+  std::string mFigureGroup;
+  optional<std::string> mFigureCategory;
+  std::string mUniqueName;
+  optional<std::string> mPlotTemplateName;
   dimension_t mPlotDimensions;
   layout_t mFill;
   map<uint8_t, Pad> mPads;
@@ -181,22 +181,22 @@ class Plot::Pad
   void operator+=(const Pad& pad);
 
   // User accessors:
-  Data& AddData(const string& name, const string& inputIdentifier, const optional<string>& label = nullopt);
-  Data& AddData(const string& name, const Data& dataTemplate, const optional<string>& label = nullopt);
-  Data& AddFunction(const string& function, const optional<string>& label = nullopt);
+  Data& AddData(const std::string& name, const std::string& inputIdentifier, const optional<std::string>& label = nullopt);
+  Data& AddData(const std::string& name, const Data& dataTemplate, const optional<std::string>& label = nullopt);
+  Data& AddFunction(const std::string& function, const optional<std::string>& label = nullopt);
 
-  Ratio& AddRatio(const string& numeratorName, const string& numeratorInputIdentifier,
-                  const string& denominatorName, const string& denominatorInputIdentifier,
-                  const optional<string>& label = nullopt);
-  Ratio& AddRatio(const string& numeratorName, const Data& numeratorLayout, const string& denominatorName,
-                  const string& denominatorInputIdentifier, const optional<string>& label = nullopt);
-  Ratio& AddRatio(const string& numeratorName, const Data& numeratorLayout, const string& denominatorName,
-                  const Data& denominatorLayout, const optional<string>& label = nullopt);
-  Ratio& AddRatio(const string& numeratorName, const string& numeratorInputIdentifier, const string& denominatorName,
-                  const Data& denominatorLayout, const optional<string>& label = nullopt);
+  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorInputIdentifier,
+                  const std::string& denominatorName, const std::string& denominatorInputIdentifier,
+                  const optional<std::string>& label = nullopt);
+  Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorLayout, const std::string& denominatorName,
+                  const std::string& denominatorInputIdentifier, const optional<std::string>& label = nullopt);
+  Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorLayout, const std::string& denominatorName,
+                  const Data& denominatorLayout, const optional<std::string>& label = nullopt);
+  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorInputIdentifier, const std::string& denominatorName,
+                  const Data& denominatorLayout, const optional<std::string>& label = nullopt);
 
-  TextBox& AddText(double_t xPos, double_t yPos, const string& text);
-  TextBox& AddText(const string& text);
+  TextBox& AddText(double_t xPos, double_t yPos, const std::string& text);
+  TextBox& AddText(const std::string& text);
   LegendBox& AddLegend(double_t xPos, double_t yPos);
   LegendBox& AddLegend();
 
@@ -212,17 +212,17 @@ class Plot::Pad
   Pad& SetDefaultTextColor(int16_t color);
   Pad& SetDefaultTextFont(int16_t font);
   Pad& SetDefaultMarkerSize(float_t size);
-  Pad& SetDefaultMarkerColors(const vector<int16_t>& colors);
-  Pad& SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = nullopt, optional<int32_t> nColors = nullopt);
-  Pad& SetDefaultMarkerStyles(const vector<int16_t>& styles);
+  Pad& SetDefaultMarkerColors(const std::vector<int16_t>& colors);
+  Pad& SetDefaultMarkerColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = nullopt, optional<int32_t> nColors = nullopt);
+  Pad& SetDefaultMarkerStyles(const std::vector<int16_t>& styles);
   Pad& SetDefaultLineWidth(float_t width);
-  Pad& SetDefaultLineColors(const vector<int16_t>& colors);
-  Pad& SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = nullopt, optional<int32_t> nColors = nullopt);
-  Pad& SetDefaultLineStyles(const vector<int16_t>& styles);
+  Pad& SetDefaultLineColors(const std::vector<int16_t>& colors);
+  Pad& SetDefaultLineColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = nullopt, optional<int32_t> nColors = nullopt);
+  Pad& SetDefaultLineStyles(const std::vector<int16_t>& styles);
   Pad& SetDefaultFillOpacity(float_t opacity);
-  Pad& SetDefaultFillColors(const vector<int16_t>& colors);
-  Pad& SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = nullopt, optional<int32_t> nColors = nullopt);
-  Pad& SetDefaultFillStyles(const vector<int16_t>& styles);
+  Pad& SetDefaultFillColors(const std::vector<int16_t>& colors);
+  Pad& SetDefaultFillColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha = nullopt, optional<int32_t> nColors = nullopt);
+  Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles);
   Pad& SetDefaultDrawingOptionGraph(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption);
@@ -243,7 +243,7 @@ class Plot::Pad
   Pad& SetFrameBorderWidth(float_t width);
   Pad& SetFrameTransparent();
   Pad& SetRedrawAxes(bool redraw = true);
-  Pad& SetRefFunc(const string& refFunc);
+  Pad& SetRefFunc(const std::string& refFunc);
 
  protected:
   friend class PlotManager;
@@ -313,14 +313,14 @@ class Plot::Pad
     optional<float_t> right;
   };
   struct gradient_color_t {
-    optional<vector<tuple<float_t, float_t, float_t, float_t>>> rgbEndpoints;
+    optional<std::vector<std::tuple<float_t, float_t, float_t, float_t>>> rgbEndpoints;
     optional<float_t> alpha;
     optional<int32_t> nColors;
   };
   struct view_defaults_t {
     optional<float_t> scale;
-    optional<vector<int16_t>> styles;
-    optional<vector<int16_t>> colors;
+    optional<std::vector<int16_t>> styles;
+    optional<std::vector<int16_t>> colors;
     gradient_color_t colorGradient;
   };
   struct data_defaults_t {
@@ -334,7 +334,7 @@ class Plot::Pad
   };
 
   // properties
-  optional<string> mOptions;
+  optional<std::string> mOptions;
   pad_position_t mPosition;
   pad_margin_t mMargins;
   layout_t mFill;
@@ -352,13 +352,13 @@ class Plot::Pad
   optional<int32_t> mPalette;
 
   optional<bool> mRedrawAxes;
-  optional<string> mRefFunc;
+  optional<std::string> mRefFunc;
 
   map<char, Axis> mAxes;
-  vector<shared_ptr<Data>> mData;
+  std::vector<shared_ptr<Data>> mData;
 
-  vector<shared_ptr<LegendBox>> mLegendBoxes;
-  vector<shared_ptr<TextBox>> mTextBoxes;
+  std::vector<shared_ptr<LegendBox>> mLegendBoxes;
+  std::vector<shared_ptr<TextBox>> mTextBoxes;
 };
 
 //**************************************************************************************************
@@ -370,7 +370,7 @@ class Plot::Pad::Data
 {
  public:
   Data() = default;
-  Data(const string& name, const string& inputIdentifier, const optional<string>& label);
+  Data(const std::string& name, const std::string& inputIdentifier, const optional<std::string>& label);
   Data(const ptree& dataTree);
 
   virtual ~Data() = default;
@@ -379,8 +379,8 @@ class Plot::Pad::Data
   Data& operator=(const Data& other) = default;
   Data& operator=(Data&& other) = default;
 
-  Data& SetInputID(const string& inputIdentifier);
-  const string& GetInputID() const { return mInputIdentifier; }
+  Data& SetInputID(const std::string& inputIdentifier);
+  const std::string& GetInputID() const { return mInputIdentifier; }
 
   virtual Data& SetLayout(const Data& dataLayout);
   virtual Data& ApplyLayout(const Data& dataLayout);
@@ -394,12 +394,12 @@ class Plot::Pad::Data
   virtual Data& UnsetRangeY();
   virtual Data& SetScaleMinimum(double_t scale);
   virtual Data& SetScaleMaximum(double_t scale);
-  virtual Data& SetLegendLabel(const string& legendLabel);
+  virtual Data& SetLegendLabel(const std::string& legendLabel);
   virtual Data& SetLegendID(uint8_t legendID);
-  virtual Data& SetOptions(const string& options);
+  virtual Data& SetOptions(const std::string& options);
   virtual Data& SetOptions(drawing_options_t optionAlias);
   virtual Data& UnsetOptions();
-  virtual Data& SetTextFormat(const string& textFormat);
+  virtual Data& SetTextFormat(const std::string& textFormat);
   virtual Data& SetNormalize(bool multiplyByBinWidth = false);
   virtual Data& SetScaleFactor(double_t scale);
   virtual Data& SetColor(int16_t color);
@@ -416,16 +416,16 @@ class Plot::Pad::Data
   virtual Data& SetFillStyle(int16_t style);
   virtual Data& SetFillOpacity(float_t opacity);
   virtual Data& SetDefinesFrame();
-  virtual Data& SetContours(const vector<double>& contours);
+  virtual Data& SetContours(const std::vector<double>& contours);
   virtual Data& SetContours(const int32_t nContours);
 
   virtual Data& SetProjectionX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});  // for 2d histos
   virtual Data& SetProjectionY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});  // for 2d histos
-  virtual Data& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
+  virtual Data& SetProjection(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
 
-  virtual Data& SetProfileX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});                                      // for 2d histos
-  virtual Data& SetProfileY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});                                      // for 2d histos
-  virtual Data& SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});  // for 2d & 3d histos
+  virtual Data& SetProfileX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});                                                     // for 2d histos
+  virtual Data& SetProfileY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});                                                     // for 2d histos
+  virtual Data& SetProfile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});  // for 2d & 3d histos
 
  protected:
   friend class PlotManager;
@@ -434,7 +434,7 @@ class Plot::Pad::Data
 
   virtual shared_ptr<Data> Clone() const { return std::make_shared<Data>(*this); }
   virtual ptree GetPropertyTree() const;
-  void SetType(const string& type) { mType = type; }
+  void SetType(const std::string& type) { mType = type; }
 
   const auto& GetType() const { return mType; }
   const auto& GetName() const { return mName; }
@@ -466,30 +466,30 @@ class Plot::Pad::Data
   const auto& GetProjInfo() const { return mProjInfo; }
 
   struct proj_info_t {
-    vector<uint8_t> dims;                               // dimensions to project on (can be one or two)
-    vector<tuple<uint8_t, double_t, double_t>> ranges;  // range restrictions on other dimensions
-    optional<bool> isUserCoord{};                       // whether ranges are specified in user coordinates or as bins
-    optional<bool> isProfile{};                         // whether this should be a profile instead of a projection
-    string GetNameSuffix() const;
+    std::vector<uint8_t> dims;                                    // dimensions to project on (can be one or two)
+    std::vector<std::tuple<uint8_t, double_t, double_t>> ranges;  // range restrictions on other dimensions
+    optional<bool> isUserCoord{};                                 // whether ranges are specified in user coordinates or as bins
+    optional<bool> isProfile{};                                   // whether this should be a profile instead of a projection
+    std::string GetNameSuffix() const;
   };
 
  private:
   bool mDefinesFrame{};
 
-  string mType;  // for introspection: "data" or "ratio"
-  string mName;
-  string mInputIdentifier;
+  std::string mType;  // for introspection: "data" or "ratio"
+  std::string mName;
+  std::string mInputIdentifier;
 
-  optional<string> mDrawingOptions;
+  optional<std::string> mDrawingOptions;
   optional<drawing_options_t> mDrawingOptionAlias;
-  optional<string> mTextFormat;
+  optional<std::string> mTextFormat;
 
   struct modify_t {
     optional<uint8_t> normMode;  // 0: sum over bin contents, 1: with bin width
     optional<double_t> scaleFactor;
   };
   struct legend_t {
-    optional<string> label;
+    optional<std::string> label;
     optional<uint8_t> identifier;
   };
 
@@ -509,7 +509,7 @@ class Plot::Pad::Data
   dataRange_t mScaleRange;
   modify_t mModify;
 
-  optional<vector<double_t>> mContours;
+  optional<std::vector<double_t>> mContours;
   optional<int32_t> mNContours;
 };
 
@@ -521,8 +521,8 @@ class Plot::Pad::Data
 class Plot::Pad::Ratio : public Plot::Pad::Data
 {
  public:
-  Ratio(const string& name, const string& inputIdentifier, const string& denomName,
-        const string& denomInputIdentifier, const optional<string>& label);
+  Ratio(const std::string& name, const std::string& inputIdentifier, const std::string& denomName,
+        const std::string& denomInputIdentifier, const optional<std::string>& label);
   Ratio(const ptree& dataTree);
 
   virtual ~Ratio() = default;
@@ -546,12 +546,12 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& UnsetRangeY() { return static_cast<decltype(*this)&>(Data::UnsetRangeY()); }
   Ratio& SetScaleMinimum(double_t scale) { return static_cast<decltype(*this)&>(Data::SetScaleMinimum(scale)); }
   Ratio& SetScaleMaximum(double_t scale) { return static_cast<decltype(*this)&>(Data::SetScaleMaximum(scale)); }
-  Ratio& SetLegendLabel(const string& legendLabel) { return static_cast<decltype(*this)&>(Data::SetLegendLabel(legendLabel)); }
+  Ratio& SetLegendLabel(const std::string& legendLabel) { return static_cast<decltype(*this)&>(Data::SetLegendLabel(legendLabel)); }
   Ratio& SetLegendID(uint8_t legendID) { return static_cast<decltype(*this)&>(Data::SetLegendID(legendID)); }
-  Ratio& SetOptions(const string& options) { return static_cast<decltype(*this)&>(Data::SetOptions(options)); }
+  Ratio& SetOptions(const std::string& options) { return static_cast<decltype(*this)&>(Data::SetOptions(options)); }
   Ratio& SetOptions(drawing_options_t optionAlias) { return static_cast<decltype(*this)&>(Data::SetOptions(optionAlias)); }
   Ratio& UnsetOptions() { return static_cast<decltype(*this)&>(Data::UnsetOptions()); }
-  Ratio& SetTextFormat(const string& textFormat) { return static_cast<decltype(*this)&>(Data::SetTextFormat(textFormat)); }
+  Ratio& SetTextFormat(const std::string& textFormat) { return static_cast<decltype(*this)&>(Data::SetTextFormat(textFormat)); }
   Ratio& SetNormalize(bool multiplyByBinWidth = false) { return static_cast<decltype(*this)&>(Data::SetNormalize(multiplyByBinWidth)); }
   Ratio& SetScaleFactor(double_t scale) { return static_cast<decltype(*this)&>(Data::SetScaleFactor(scale)); }
   Ratio& SetColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetColor(color)); }
@@ -568,24 +568,24 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& SetFillStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetFillStyle(style)); }
   Ratio& SetFillOpacity(float_t opacity) { return static_cast<decltype(*this)&>(Data::SetFillOpacity(opacity)); }
   Ratio& SetDefinesFrame() { return static_cast<decltype(*this)&>(Data::SetDefinesFrame()); }
-  Ratio& SetContours(const vector<double>& contours) { return static_cast<decltype(*this)&>(Data::SetContours(contours)); }
+  Ratio& SetContours(const std::vector<double>& contours) { return static_cast<decltype(*this)&>(Data::SetContours(contours)); }
   Ratio& SetContours(const int32_t nContours) { return static_cast<decltype(*this)&>(Data::SetContours(nContours)); }
 
   Ratio& SetProjectionX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjectionX(startY, endY, isUserCoord)); }
   Ratio& SetProjectionY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjectionY(startX, endX, isUserCoord)); }
-  Ratio& SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjection(dims, ranges, isUserCoord)); }
+  Ratio& SetProjection(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjection(dims, ranges, isUserCoord)); }
 
   Ratio& SetProjectionXDenom(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});
   Ratio& SetProjectionYDenom(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});
-  Ratio& SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
+  Ratio& SetProjectionDenom(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
 
   Ratio& SetProfileX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProfileX(startY, endY, isUserCoord)); }
   Ratio& SetProfileY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProfileY(startX, endX, isUserCoord)); }
-  Ratio& SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProfile(dims, ranges, isUserCoord)); }
+  Ratio& SetProfile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProfile(dims, ranges, isUserCoord)); }
 
   Ratio& SetProfileXDenom(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});
   Ratio& SetProfileYDenom(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});
-  Ratio& SetProfileDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
+  Ratio& SetProfileDenom(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
 
  protected:
   friend class PlotManager;
@@ -604,8 +604,8 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   const auto& GetProjInfoDenom() const { return mProjInfoDenom; }
 
  private:
-  string mDenomName;
-  string mDenomInputIdentifier;
+  std::string mDenomName;
+  std::string mDenomInputIdentifier;
   bool mIsCorrelated{};
   optional<proj_info_t> mProjInfoDenom;
   optional<bool> mDivisionNormMode;  // normalize both numerater and denominator to 0: sum over bin contents, 1: times bin widths
@@ -621,7 +621,7 @@ class Plot::Pad::Axis
  public:
   Axis() = default;
 
-  Axis& SetTitle(const string& title);
+  Axis& SetTitle(const std::string& title);
   Axis& SetRange(double_t min, double_t max);
   Axis& SetMaxRange(double_t max);
   Axis& SetMinRange(double_t min);
@@ -644,8 +644,8 @@ class Plot::Pad::Axis
   Axis& SetGrid(bool isGrid = true);
   Axis& SetOppositeTicks(bool isOppositeTicks = true);
   Axis& SetNoExponent(bool isNoExponent = true);
-  Axis& SetTimeFormat(const string& timeFormat);
-  Axis& SetTickOrientation(const string& tickOrientation);
+  Axis& SetTimeFormat(const std::string& timeFormat);
+  Axis& SetTickOrientation(const std::string& tickOrientation);
 
  protected:
   friend class PlotManager;
@@ -697,7 +697,7 @@ class Plot::Pad::Axis
 
   char mName{};
   axisRange_t mRange;
-  optional<string> mTitle;
+  optional<std::string> mTitle;
   optional<int32_t> mNumDivisions;
   optional<int32_t> mMaxDigits;
   optional<float_t> mTickLength;
@@ -707,8 +707,8 @@ class Plot::Pad::Axis
   optional<bool> mIsGrid;
   optional<bool> mIsOppositeTicks;
   optional<bool> mIsNoExponent;
-  optional<string> mTimeFormat;
-  optional<string> mTickOrientation;
+  optional<std::string> mTimeFormat;
+  optional<std::string> mTickOrientation;
 
   axisTextProperties_t mTitleProperties;
   axisTextProperties_t mLabelProperties;
@@ -794,8 +794,8 @@ class Plot::Pad::Box
 class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 {
  public:
-  TextBox(const string& text);
-  TextBox(double_t xPos, double_t yPos, const string& text);
+  TextBox(const std::string& text);
+  TextBox(double_t xPos, double_t yPos, const std::string& text);
   TextBox(const ptree& textBoxTree);
 
   virtual ~TextBox() = default;
@@ -804,7 +804,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
   TextBox& operator=(const TextBox& other) = default;
   TextBox& operator=(TextBox&& other) = default;
 
-  TextBox& SetText(const string& text);
+  TextBox& SetText(const std::string& text);
 
  protected:
   friend class PlotManager;
@@ -812,10 +812,10 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
   friend class Plot;
 
   ptree GetPropertyTree() const;
-  const string& GetText() const { return mText; }
+  const std::string& GetText() const { return mText; }
 
  private:
-  string mText;
+  std::string mText;
 };
 
 //**************************************************************************************************
@@ -838,9 +838,9 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   LegendBox& operator=(LegendBox&& other) = default;
 
   LegendEntry& GetEntry(uint8_t entryID) { return mLegendEntriesUser[entryID]; }
-  LegendBox& SetTitle(const string& title);
+  LegendBox& SetTitle(const std::string& title);
   LegendBox& SetNumColumns(uint8_t numColumns);
-  LegendBox& SetDefaultDrawStyle(string drawStyle);
+  LegendBox& SetDefaultDrawStyle(std::string drawStyle);
   LegendBox& SetDefaultColor(int16_t color);
   LegendBox& SetDefaultLineColor(int16_t color);
   LegendBox& SetDefaultLineStyle(int16_t style);
@@ -859,9 +859,9 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 
   ptree GetPropertyTree() const;
   const optional<uint8_t>& GetNumColumns() const { return mNumColumns; }
-  const optional<string>& GetTitle() const { return mTitle; }
+  const optional<std::string>& GetTitle() const { return mTitle; }
 
-  LegendEntry& AddEntry(const string& name, const string& label);
+  LegendEntry& AddEntry(const std::string& name, const std::string& label);
 
   const auto& GetEntries() const { return mLegendEntries; }
   const auto& GetDefaultDrawStyle() const { return mDrawStyleDefault; }
@@ -876,15 +876,15 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   const auto& GetDefaultFillOpacity() const { return mFillDefault.scale; }
 
  private:
-  optional<string> mTitle;
+  optional<std::string> mTitle;
   optional<uint8_t> mNumColumns;
-  vector<LegendEntry> mLegendEntries;            // this is transient and will be generated automatically
+  std::vector<LegendEntry> mLegendEntries;       // this is transient and will be generated automatically
   map<uint8_t, LegendEntry> mLegendEntriesUser;  // this is persistent and must be saved
 
   layout_t mLineDefault;
   layout_t mMarkerDefault;
   layout_t mFillDefault;
-  optional<string> mDrawStyleDefault;
+  optional<std::string> mDrawStyleDefault;
 
   void MergeLegendEntries();
 };
@@ -897,12 +897,12 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 class Plot::Pad::LegendBox::LegendEntry
 {
  public:
-  LegendEntry(const optional<string>& label = nullopt, const optional<string>& refDataName = nullopt, const optional<string>& drawStyle = nullopt);
+  LegendEntry(const optional<std::string>& label = nullopt, const optional<std::string>& refDataName = nullopt, const optional<std::string>& drawStyle = nullopt);
   LegendEntry(const ptree& legendEntryTree);
 
-  LegendEntry& SetLabel(const string& label);
-  LegendEntry& SetRefData(const string& name, const string& inputIdentifier);  // will work only for data drawn in same pad
-  LegendEntry& SetDrawStyle(const string& drawStyle);
+  LegendEntry& SetLabel(const std::string& label);
+  LegendEntry& SetRefData(const std::string& name, const std::string& inputIdentifier);  // will work only for data drawn in same pad
+  LegendEntry& SetDrawStyle(const std::string& drawStyle);
   LegendEntry& SetMarkerColor(int16_t color);
   LegendEntry& SetMarkerStyle(int16_t style);
   LegendEntry& SetMarkerSize(float_t size);
@@ -943,9 +943,9 @@ class Plot::Pad::LegendBox::LegendEntry
   const auto& GetTextSize() const { return mText.scale; }
 
  private:
-  optional<string> mLabel;
-  optional<string> mRefDataName;
-  optional<string> mDrawStyle;
+  optional<std::string> mLabel;
+  optional<std::string> mRefDataName;
+  optional<std::string> mDrawStyle;
   layout_t mFill;
   layout_t mMarker;
   layout_t mLine;

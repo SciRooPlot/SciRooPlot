@@ -4,8 +4,13 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <string_view>
+#include <memory>
 
-namespace log
+#if defined(__clang__) || defined(__GNUC__)
+#include <cxxabi.h>
+#endif
+
+namespace logger
 {
 enum class Color {
   Black,
@@ -80,7 +85,7 @@ inline void print_inline(std::string_view fmt_str, Args&&... args)
 
 inline void print_separator()
 {
-  log::print("{:-<60}", "-");
+  logger::print("{:-<60}", "-");
 }
 
 template <typename... Args>
@@ -162,20 +167,20 @@ inline void here(const char* file, const char* function, int line)
   fmt::print("\n");
 }
 
-}  // namespace log
+}  // namespace logger
 
 // shorthand macros for logging features
-#define DEBUG(...) log::debug(__VA_ARGS__)
-#define WARNING(...) log::warning(__VA_ARGS__)
-#define ERROR(...) log::error(__VA_ARGS__)
-#define LOG(...) log::log(__VA_ARGS__)
-#define INFO(...) log::info(__VA_ARGS__)
-#define PRINT(...) log::print(__VA_ARGS__)
-#define PRINT_INLINE(...) log::print_inline(__VA_ARGS__)
-#define PRINT_SEPARATOR() log::print_separator()
+#define DEBUG(...) logger::debug(__VA_ARGS__)
+#define WARNING(...) logger::warning(__VA_ARGS__)
+#define ERROR(...) logger::error(__VA_ARGS__)
+#define LOG(...) logger::log(__VA_ARGS__)
+#define INFO(...) logger::info(__VA_ARGS__)
+#define PRINT(...) logger::print(__VA_ARGS__)
+#define PRINT_INLINE(...) logger::print_inline(__VA_ARGS__)
+#define PRINT_SEPARATOR() logger::print_separator()
 
 // debug helper macros
-#define HERE() log::here(__FILE__, __FUNCTION__, __LINE__);
-#define CHECK_TYPE(var) log::check_type(var, #var);
+#define HERE() logger::here(__FILE__, __FUNCTION__, __LINE__);
+#define CHECK_TYPE(var) logger::check_type(var, #var);
 
 #endif  // INCLUDE_LOGGING_H_

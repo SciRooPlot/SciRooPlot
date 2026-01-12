@@ -385,7 +385,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     ERROR("Too many custom colors in one session. Aborting...");
     std::exit(EXIT_FAILURE);
   }
-  LOG("Created {}{}{} from group {}{}{}.", log::begin_color(log::Color::Green), fullPlot.GetName(), log::end_color(), log::begin_color(log::Color::Yellow), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? "/" + *fullPlot.GetFigureCategory() : ""), log::end_color());
+  LOG("Created {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? "/" + *fullPlot.GetFigureCategory() : ""), logger::end_color());
 
   // if interactive mode is specified, open window instead of saving the plot
   if (isInteractiveMode) {
@@ -573,7 +573,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   // were definitions for all requested plots available?
   if (!plotNames.empty()) {
     for (auto& plotName : plotNames) {
-      WARNING("Could not find plot {}{}{} in group {}{}{}.", log::begin_color(log::Color::Green), plotName, log::end_color(), log::begin_color(log::Color::Yellow), figureGroup + ((!figureCategory.empty()) ? "/" + figureCategory : ""), log::end_color());
+      WARNING("Could not find plot {}{}{} in group {}{}{}.", logger::begin_color(logger::Color::Green), plotName, logger::end_color(), logger::begin_color(logger::Color::Yellow), figureGroup + ((!figureCategory.empty()) ? "/" + figureCategory : ""), logger::end_color());
     }
   }
 
@@ -581,7 +581,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   // generate plots
   for (auto plot : selectedPlots) {
     if (!GeneratePlot(*plot, outputMode))
-      ERROR("Plot {}{}{} from group {}{}{} could not be created.", log::begin_color(log::Color::Green), plot->GetName(), log::end_color(), log::begin_color(log::Color::Yellow), plot->GetFigureGroup() + ((plot->GetFigureCategory()) ? "/" + *plot->GetFigureCategory() : ""), log::end_color());
+      ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetFigureGroup() + ((plot->GetFigureCategory()) ? "/" + *plot->GetFigureCategory() : ""), logger::end_color());
   }
 }
 
@@ -709,7 +709,7 @@ void PlotManager::PrintBufferStatus(bool missingOnly) const
       if (show) {
         if (printInputID) INFO("{}", inputID);
         printInputID = false;
-        INFO(" - {}{}{}", (dataPtr) ? log::begin_color(log::Color::Green) : log::begin_color(log::Color::Red), dataName, log::end_color());
+        INFO(" - {}{}{}", (dataPtr) ? logger::begin_color(logger::Color::Green) : logger::begin_color(logger::Color::Red), dataName, logger::end_color());
       }
     }
   }
@@ -932,7 +932,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
 
       ++nFoundPlots;
       if (isSearchRequest) {
-        INFO(" - {}{}{} in group {}{}{}", log::begin_color(log::Color::Green), plotName, log::end_color(), log::begin_color(log::Color::Yellow), figureGroup + ((!figureCategory.empty()) ? "/" + figureCategory : ""), log::end_color());
+        INFO(" - {}{}{} in group {}{}{}", logger::begin_color(logger::Color::Green), plotName, logger::end_color(), logger::begin_color(logger::Color::Yellow), figureGroup + ((!figureCategory.empty()) ? "/" + figureCategory : ""), logger::end_color());
       } else {
         try {
           Plot plot(plotTree.second);
@@ -944,7 +944,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
     }
   }
   if (nFoundPlots == 0) {
-    ERROR("Found no plots matching the request {}{}{} in {}{}/{}{}.", log::begin_color(log::Color::Green), plotName, log::end_color(), log::begin_color(log::Color::Yellow), group, category, log::end_color());
+    ERROR("Found no plots matching the request {}{}{} in {}{}/{}{}.", logger::begin_color(logger::Color::Green), plotName, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, category, logger::end_color());
   } else {
     INFO("Found {} plot{} matching the request.", nFoundPlots, (nFoundPlots == 1) ? "" : "s");
   }
