@@ -39,7 +39,7 @@ namespace SciRooPlot
  * Default constructor.
  */
 //**************************************************************************************************
-Plot::Plot(const string& name, const string& figureGroupAndCategory, const optional<string>& plotTemplateName) : Plot()
+Plot::Plot(const std::string& name, const std::string& figureGroupAndCategory, const optional<std::string>& plotTemplateName) : Plot()
 {
   if (str_contains(figureGroupAndCategory, ".")) {
     ERROR("Figure group must not contain '.'!");
@@ -56,7 +56,7 @@ Plot::Plot(const string& name, const string& figureGroupAndCategory, const optio
   mPlotTemplateName = plotTemplateName;
 
   // in case category was specified via figureGroup/my/category/tree
-  if (auto subPathPos = figureGroupAndCategory.find("/"); subPathPos != string::npos) {
+  if (auto subPathPos = figureGroupAndCategory.find("/"); subPathPos != std::string::npos) {
     mFigureGroup = figureGroupAndCategory.substr(0, subPathPos);
     mFigureCategory = figureGroupAndCategory.substr(subPathPos + 1);
   }
@@ -68,7 +68,7 @@ Plot::Plot(const string& name, const string& figureGroupAndCategory, const optio
  * Constructor from existing plot.
  */
 //**************************************************************************************************
-Plot::Plot(const Plot& otherPlot, const string& name, const string& figureGroup, const optional<string>& figureCategory)
+Plot::Plot(const Plot& otherPlot, const std::string& name, const std::string& figureGroup, const optional<std::string>& figureCategory)
 {
   *this = otherPlot.Clone();
   mName = name;
@@ -85,8 +85,8 @@ Plot::Plot(const Plot& otherPlot, const string& name, const string& figureGroup,
 Plot::Plot(const ptree& plotTree)
 {
   try {
-    mName = plotTree.get<string>("name");
-    mFigureGroup = plotTree.get<string>("figure_group");
+    mName = plotTree.get<std::string>("name");
+    mFigureGroup = plotTree.get<std::string>("figure_group");
   } catch (...) {
     ERROR("Could not construct data from ptree.");
     std::exit(EXIT_FAILURE);
@@ -184,13 +184,13 @@ uint8_t Plot::GetDataCount() const
   return count;
 }
 
-void Plot::SetFigureGroup(const string& figureGroup)
+void Plot::SetFigureGroup(const std::string& figureGroup)
 {
   mFigureGroup = figureGroup;
   UpdateUniqueName();
 }
 
-void Plot::SetFigureCategory(const string& figureCategory)
+void Plot::SetFigureCategory(const std::string& figureCategory)
 {
   if (!figureCategory.empty()) {
     mFigureCategory = figureCategory;
@@ -198,7 +198,7 @@ void Plot::SetFigureCategory(const string& figureCategory)
   }
 }
 
-void Plot::SetPlotTemplateName(const string& plotTemplateName)
+void Plot::SetPlotTemplateName(const std::string& plotTemplateName)
 {
   mPlotTemplateName = plotTemplateName;
 }
@@ -328,7 +328,7 @@ auto Plot::Pad::SetRedrawAxes(bool redraw) -> decltype(*this)
  * Set reference function..
  */
 //**************************************************************************************************
-auto Plot::Pad::SetRefFunc(const string& refFunc) -> decltype(*this)
+auto Plot::Pad::SetRefFunc(const std::string& refFunc) -> decltype(*this)
 {
   mRefFunc = refFunc;
   return *this;
@@ -405,14 +405,14 @@ auto Plot::Pad::SetDefaultFillOpacity(float_t opacity) -> decltype(*this)
  * Set default marker colors.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultMarkerColors(const vector<int16_t>& colors) -> decltype(*this)
+auto Plot::Pad::SetDefaultMarkerColors(const std::vector<int16_t>& colors) -> decltype(*this)
 {
   mMarkerDefaults.colorGradient = {};
   mMarkerDefaults.colors = colors;
   return *this;
 }
 
-auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
+auto Plot::Pad::SetDefaultMarkerColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   mMarkerDefaults.colors = nullopt;
   mMarkerDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
@@ -424,14 +424,14 @@ auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, floa
  * Set default line colors.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultLineColors(const vector<int16_t>& colors) -> decltype(*this)
+auto Plot::Pad::SetDefaultLineColors(const std::vector<int16_t>& colors) -> decltype(*this)
 {
   mLineDefaults.colorGradient = {};
   mLineDefaults.colors = colors;
   return *this;
 }
 
-auto Plot::Pad::SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
+auto Plot::Pad::SetDefaultLineColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   mLineDefaults.colors = nullopt;
   mLineDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
@@ -443,14 +443,14 @@ auto Plot::Pad::SetDefaultLineColors(const vector<tuple<float_t, float_t, float_
  * Set default fill colors.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultFillColors(const vector<int16_t>& colors) -> decltype(*this)
+auto Plot::Pad::SetDefaultFillColors(const std::vector<int16_t>& colors) -> decltype(*this)
 {
   mFillDefaults.colorGradient = {};
   mFillDefaults.colors = colors;
   return *this;
 }
 
-auto Plot::Pad::SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
+auto Plot::Pad::SetDefaultFillColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   mFillDefaults.colors = nullopt;
   mFillDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
@@ -462,7 +462,7 @@ auto Plot::Pad::SetDefaultFillColors(const vector<tuple<float_t, float_t, float_
  * Set default marker styles.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultMarkerStyles(const vector<int16_t>& styles) -> decltype(*this)
+auto Plot::Pad::SetDefaultMarkerStyles(const std::vector<int16_t>& styles) -> decltype(*this)
 {
   mMarkerDefaults.styles = styles;
   return *this;
@@ -473,7 +473,7 @@ auto Plot::Pad::SetDefaultMarkerStyles(const vector<int16_t>& styles) -> decltyp
  * Set default line styles.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultLineStyles(const vector<int16_t>& styles) -> decltype(*this)
+auto Plot::Pad::SetDefaultLineStyles(const std::vector<int16_t>& styles) -> decltype(*this)
 {
   mLineDefaults.styles = styles;
   return *this;
@@ -484,7 +484,7 @@ auto Plot::Pad::SetDefaultLineStyles(const vector<int16_t>& styles) -> decltype(
  * Set default fill styles.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultFillStyles(const vector<int16_t>& styles) -> decltype(*this)
+auto Plot::Pad::SetDefaultFillStyles(const std::vector<int16_t>& styles) -> decltype(*this)
 {
   mFillDefaults.styles = styles;
   return *this;
@@ -772,7 +772,7 @@ Plot::Pad::Pad(const ptree& padTree)
   for (auto& content : padTree) {
     // add data
     if (str_contains(content.first, "DATA")) {
-      string type = content.second.get<string>("type");
+      std::string type = content.second.get<std::string>("type");
       if (type == "data") {
         mData.push_back(std::make_shared<Data>(content.second));
       }
@@ -871,7 +871,7 @@ ptree Plot::Pad::GetPropertyTree() const
 
   for (auto& axis : {'X', 'Y', 'Z'}) {
     if (mAxes.find(axis) != mAxes.end()) {
-      padTree.put_child(string("AXIS_") + axis, mAxes.at(axis).GetPropertyTree());
+      padTree.put_child(std::string("AXIS_") + axis, mAxes.at(axis).GetPropertyTree());
     }
   }
 
@@ -979,7 +979,7 @@ Plot::Pad::Axis& Plot::Pad::operator[](const char axis)
 //**************************************************************************************************
 Plot::Pad::Axis& Plot::Pad::GetAxis(const char axis)
 {
-  const vector<char> allowedAxes = {'X', 'Y', 'Z'};
+  const std::vector<char> allowedAxes = {'X', 'Y', 'Z'};
   if (std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end()) {
     ERROR("Axis '{}' does not exist! Please use 'X', 'Y' or 'Z'.", axis);
     std::exit(EXIT_FAILURE);
@@ -1037,13 +1037,13 @@ Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
  * Add data to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Data& Plot::Pad::AddData(const string& name, const string& inputIdentifier, const optional<string>& label)
+Plot::Pad::Data& Plot::Pad::AddData(const std::string& name, const std::string& inputIdentifier, const optional<std::string>& label)
 {
   mData.push_back(std::make_shared<Data>(name, inputIdentifier, label));
   return *mData.back();
 }
 
-Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const optional<string>& label)
+Plot::Pad::Data& Plot::Pad::AddData(const std::string& name, const Data& data, const optional<std::string>& label)
 {
   mData.push_back(std::make_shared<Data>(name, data.GetInputID(), label));
   mData.back()->SetLayout(data);
@@ -1056,7 +1056,7 @@ Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const 
  * Add user-defined function to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Data& Plot::Pad::AddFunction(const string& function, const optional<string>& label)
+Plot::Pad::Data& Plot::Pad::AddFunction(const std::string& function, const optional<std::string>& label)
 {
   mData.push_back(std::make_shared<Data>(function, "USER_FUNCTIONS", label));
   return *mData.back();
@@ -1067,14 +1067,14 @@ Plot::Pad::Data& Plot::Pad::AddFunction(const string& function, const optional<s
  * Add ratio to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorInputIdentifier, const string& denominatorName, const string& denominatorInputIdentifier, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const std::string& numeratorName, const std::string& numeratorInputIdentifier, const std::string& denominatorName, const std::string& denominatorInputIdentifier, const optional<std::string>& label)
 {
   mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorInputIdentifier,
                                           denominatorName, denominatorInputIdentifier, label));
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
 
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorLayout, const string& denominatorName, const string& denominatorInputIdentifier, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const std::string& numeratorName, const Data& numeratorLayout, const std::string& denominatorName, const std::string& denominatorInputIdentifier, const optional<std::string>& label)
 {
   mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorLayout.GetInputID(),
                                           denominatorName, denominatorInputIdentifier, label));
@@ -1082,12 +1082,12 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& n
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
 
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorLayout, const string& denominatorName, const Data& denominatorLayout, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const std::string& numeratorName, const Data& numeratorLayout, const std::string& denominatorName, const Data& denominatorLayout, const optional<std::string>& label)
 {
   return AddRatio(numeratorName, numeratorLayout, denominatorName, denominatorLayout.GetInputID(), label);
 }
 
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorInputIdentifier, const string& denominatorName, const Data& denominatorLayout, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const std::string& numeratorName, const std::string& numeratorInputIdentifier, const std::string& denominatorName, const Data& denominatorLayout, const optional<std::string>& label)
 {
   return AddRatio(numeratorName, numeratorInputIdentifier, denominatorName, denominatorLayout.GetInputID(), label);
 }
@@ -1097,7 +1097,7 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string&
  * Add text box to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::TextBox& Plot::Pad::AddText(double_t xPos, double_t yPos, const string& text)
+Plot::Pad::TextBox& Plot::Pad::AddText(double_t xPos, double_t yPos, const std::string& text)
 {
   mTextBoxes.push_back(std::make_shared<TextBox>(xPos, yPos, text));
   return *mTextBoxes.back();
@@ -1108,7 +1108,7 @@ Plot::Pad::TextBox& Plot::Pad::AddText(double_t xPos, double_t yPos, const strin
  * Add text box to this pad automatically find a position for it.
  */
 //**************************************************************************************************
-Plot::Pad::TextBox& Plot::Pad::AddText(const string& text)
+Plot::Pad::TextBox& Plot::Pad::AddText(const std::string& text)
 {
   mTextBoxes.push_back(std::make_shared<TextBox>(text));
   return *mTextBoxes.back();
@@ -1147,7 +1147,7 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend()
  * Default constructor for Data objects.
  */
 //**************************************************************************************************
-Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const optional<string>& legendLabel)
+Plot::Pad::Data::Data(const std::string& name, const std::string& inputIdentifier, const optional<std::string>& legendLabel)
   : Data()
 {
   mType = "data";
@@ -1156,7 +1156,7 @@ Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const o
 
   // in case input was specified further via inputIdentifier:some/path/in/file
   auto subPathPos = inputIdentifier.find(":");
-  if (subPathPos != string::npos) {
+  if (subPathPos != std::string::npos) {
     // prepend path to plot name
     mName = inputIdentifier.substr(subPathPos + 1) + "/" + name;
     mInputIdentifier = inputIdentifier.substr(0, subPathPos);
@@ -1174,9 +1174,9 @@ Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const o
 Plot::Pad::Data::Data(const ptree& dataTree) : Data()
 {
   try {
-    mType = dataTree.get<string>("type");
-    mName = dataTree.get<string>("name");
-    mInputIdentifier = dataTree.get<string>("inputIdentifier");
+    mType = dataTree.get<std::string>("type");
+    mName = dataTree.get<std::string>("name");
+    mInputIdentifier = dataTree.get<std::string>("inputIdentifier");
   } catch (...) {
     ERROR("Could not construct data from ptree.");
     std::exit(EXIT_FAILURE);
@@ -1208,8 +1208,8 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mNContours, "number_of_contours");
 
   // ugly workaround
-  optional<vector<uint8_t>> dims;
-  optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
+  optional<std::vector<uint8_t>> dims;
+  optional<std::vector<std::tuple<uint8_t, double_t, double_t>>> ranges;
   optional<bool> isUserCoord;
   optional<bool> isProfile;
   read_from_tree(dataTree, dims, "proj_dims");
@@ -1261,8 +1261,8 @@ ptree Plot::Pad::Data::GetPropertyTree() const
 
   // ugly workaround
   if (mProjInfo) {
-    put_in_tree(dataTree, optional<vector<uint8_t>>{mProjInfo->dims}, "proj_dims");
-    put_in_tree(dataTree, optional<vector<tuple<uint8_t, double_t, double_t>>>{mProjInfo->ranges}, "proj_ranges");
+    put_in_tree(dataTree, optional<std::vector<uint8_t>>{mProjInfo->dims}, "proj_dims");
+    put_in_tree(dataTree, optional<std::vector<std::tuple<uint8_t, double_t, double_t>>>{mProjInfo->ranges}, "proj_ranges");
     put_in_tree(dataTree, mProjInfo->isUserCoord, "proj_isUserCoord");
     put_in_tree(dataTree, mProjInfo->isProfile, "proj_isProfile");
   }
@@ -1325,12 +1325,12 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   set_if(dataLayout.mNContours, mNContours);
   return *this;
 }
-auto Plot::Pad::Data::SetInputID(const string& inputIdentifier) -> decltype(*this)
+auto Plot::Pad::Data::SetInputID(const std::string& inputIdentifier) -> decltype(*this)
 {
   mInputIdentifier = inputIdentifier;
   return *this;
 }
-auto Plot::Pad::Data::SetLegendLabel(const string& legendLabel) -> decltype(*this)
+auto Plot::Pad::Data::SetLegendLabel(const std::string& legendLabel) -> decltype(*this)
 {
   mLegend.label = legendLabel;
   return *this;
@@ -1340,7 +1340,7 @@ auto Plot::Pad::Data::SetLegendID(uint8_t legendID) -> decltype(*this)
   mLegend.identifier = legendID;
   return *this;
 }
-auto Plot::Pad::Data::SetOptions(const string& options) -> decltype(*this)
+auto Plot::Pad::Data::SetOptions(const std::string& options) -> decltype(*this)
 {
   mDrawingOptions = options;
   return *this;
@@ -1356,7 +1356,7 @@ auto Plot::Pad::Data::UnsetOptions() -> decltype(*this)
   mDrawingOptions = {};
   return *this;
 }
-auto Plot::Pad::Data::SetTextFormat(const string& textFormat) -> decltype(*this)
+auto Plot::Pad::Data::SetTextFormat(const std::string& textFormat) -> decltype(*this)
 {
   mTextFormat = textFormat;
   return *this;
@@ -1503,7 +1503,7 @@ auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
   mDefinesFrame = true;
   return *this;
 }
-auto Plot::Pad::Data::SetContours(const vector<double>& contours) -> decltype(*this)
+auto Plot::Pad::Data::SetContours(const std::vector<double>& contours) -> decltype(*this)
 {
   mContours = contours;
   return *this;
@@ -1533,12 +1533,12 @@ auto Plot::Pad::Data::SetProfileY(double_t startX, double_t endX, optional<bool>
   mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
   return *this;
 }
-auto Plot::Pad::Data::SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Data::SetProjection(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfo = {dims, ranges, isUserCoord};
   return *this;
 }
-auto Plot::Pad::Data::SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Data::SetProfile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfo = {dims, ranges, isUserCoord, true};
   return *this;
@@ -1549,9 +1549,9 @@ auto Plot::Pad::Data::SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, dou
  * Name suffix encoding the details of projections.
  */
 //**************************************************************************************************
-string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
+std::string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
 {
-  string nameSuffix = (isProfile && *isProfile) ? "_Prof{" : "_Proj{";
+  std::string nameSuffix = (isProfile && *isProfile) ? "_Prof{" : "_Proj{";
   for (auto dim : dims) {
     nameSuffix += std::to_string(dim);
   }
@@ -1586,15 +1586,15 @@ string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
  * Default constructor.
  */
 //**************************************************************************************************
-Plot::Pad::Ratio::Ratio(const string& name, const string& inputIdentifier, const string& denomName,
-                        const string& denomInputIdentifier, const optional<string>& label)
+Plot::Pad::Ratio::Ratio(const std::string& name, const std::string& inputIdentifier, const std::string& denomName,
+                        const std::string& denomInputIdentifier, const optional<std::string>& label)
   : Data(name, inputIdentifier, label), mDenomName(denomName),
     mDenomInputIdentifier(denomInputIdentifier), mIsCorrelated(false)
 {
   SetType("ratio");
 
   // in case denominator input was specified further via denomInputIdentifier:some/path/in/file
-  if (auto subPathPos = denomInputIdentifier.find(":"); subPathPos != string::npos) {
+  if (auto subPathPos = denomInputIdentifier.find(":"); subPathPos != std::string::npos) {
     // prepend path to plot name
     mDenomName = denomInputIdentifier.substr(subPathPos + 1) + "/" + denomName;
     mDenomInputIdentifier = denomInputIdentifier.substr(0, subPathPos);
@@ -1609,8 +1609,8 @@ Plot::Pad::Ratio::Ratio(const string& name, const string& inputIdentifier, const
 Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
 {
   try {
-    mDenomName = dataTree.get<string>("denomName");
-    mDenomInputIdentifier = dataTree.get<string>("denomInputID");
+    mDenomName = dataTree.get<std::string>("denomName");
+    mDenomInputIdentifier = dataTree.get<std::string>("denomInputID");
     mIsCorrelated = dataTree.get<bool>("isCorrelated");
   } catch (...) {
     ERROR("Could not construct ratio from ptree.");
@@ -1619,8 +1619,8 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   read_from_tree(dataTree, mDivisionNormMode, "divisionNormMode");
 
   // ugly workaround
-  optional<vector<uint8_t>> dims;
-  optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
+  optional<std::vector<uint8_t>> dims;
+  optional<std::vector<std::tuple<uint8_t, double_t, double_t>>> ranges;
   optional<bool> isUserCoord;
   optional<bool> isProfile;
   read_from_tree(dataTree, dims, "projDenom_dims");
@@ -1648,8 +1648,8 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
 
   // ugly workaround
   if (mProjInfoDenom) {
-    put_in_tree(dataTree, optional<vector<uint8_t>>{mProjInfoDenom->dims}, "projDenom_dims");
-    put_in_tree(dataTree, optional<vector<tuple<uint8_t, double_t, double_t>>>{mProjInfoDenom->ranges}, "projDenom_ranges");
+    put_in_tree(dataTree, optional<std::vector<uint8_t>>{mProjInfoDenom->dims}, "projDenom_dims");
+    put_in_tree(dataTree, optional<std::vector<std::tuple<uint8_t, double_t, double_t>>>{mProjInfoDenom->ranges}, "projDenom_ranges");
     put_in_tree(dataTree, mProjInfoDenom->isUserCoord, "projDenom_isUserCoord");
     put_in_tree(dataTree, mProjInfoDenom->isProfile, "projDenom_isProfile");
   }
@@ -1693,12 +1693,12 @@ auto Plot::Pad::Ratio::SetProfileYDenom(double_t startX, double_t endX, optional
   mProjInfoDenom = {{1}, {{0, startX, endX}}, isUserCoord, true};
   return *this;
 }
-auto Plot::Pad::Ratio::SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::SetProjectionDenom(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfoDenom = {dims, ranges, isUserCoord};
   return *this;
 }
-auto Plot::Pad::Ratio::SetProfileDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::SetProfileDenom(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfoDenom = {dims, ranges, isUserCoord, true};
   return *this;
@@ -1831,7 +1831,7 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
  * User accessors to change axis properties.
  */
 //**************************************************************************************************
-auto Plot::Pad::Axis::SetTitle(const string& title) -> decltype(*this)
+auto Plot::Pad::Axis::SetTitle(const std::string& title) -> decltype(*this)
 {
   mTitle = title;
   return *this;
@@ -1948,12 +1948,12 @@ auto Plot::Pad::Axis::SetNoExponent(bool isNoExponent) -> decltype(*this)
   mIsNoExponent = isNoExponent;
   return *this;
 }
-auto Plot::Pad::Axis::SetTimeFormat(const string& timeFormat) -> decltype(*this)
+auto Plot::Pad::Axis::SetTimeFormat(const std::string& timeFormat) -> decltype(*this)
 {
   mTimeFormat = timeFormat;
   return *this;
 }
-auto Plot::Pad::Axis::SetTickOrientation(const string& tickOrientation) -> decltype(*this)
+auto Plot::Pad::Axis::SetTickOrientation(const std::string& tickOrientation) -> decltype(*this)
 {
   mTickOrientation = tickOrientation;
   return *this;
@@ -2168,7 +2168,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetNoBox()
  * TextBox constructor.
  */
 //**************************************************************************************************
-Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const string& text)
+Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const std::string& text)
   : Box(xPos, yPos), mText{text}
 {
 }
@@ -2178,7 +2178,7 @@ Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const string& text)
  * TextBox constructor with automatic placing.
  */
 //**************************************************************************************************
-Plot::Pad::TextBox::TextBox(const string& text) : Box(), mText{text}
+Plot::Pad::TextBox::TextBox(const std::string& text) : Box(), mText{text}
 {
   SetAutoPlacement();
 }
@@ -2191,7 +2191,7 @@ Plot::Pad::TextBox::TextBox(const string& text) : Box(), mText{text}
 Plot::Pad::TextBox::TextBox(const ptree& textBoxTree) : Box(textBoxTree)
 {
   try {
-    mText = textBoxTree.get<string>("text");
+    mText = textBoxTree.get<std::string>("text");
   } catch (...) {
     ERROR("Could not construct text-box from ptree.");
   }
@@ -2214,7 +2214,7 @@ ptree Plot::Pad::TextBox::GetPropertyTree() const
  * Set text displayed in TextBox.
  */
 //**************************************************************************************************
-Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const string& text)
+Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const std::string& text)
 {
   mText = text;
   return *this;
@@ -2308,7 +2308,7 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
  * User accessors for LegendBox properties.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetTitle(const string& title)
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetTitle(const std::string& title)
 {
   mTitle = title;
   return *this;
@@ -2320,7 +2320,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns)
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultDrawStyle(string drawStyle)
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultDrawStyle(std::string drawStyle)
 {
   mDrawStyleDefault = drawStyle;
   return *this;
@@ -2393,7 +2393,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillOpacity(float_t opacit
  * Add entry to LegendBox.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& label, const string& refDataName)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const std::string& label, const std::string& refDataName)
 {
   mLegendEntries.push_back(LegendEntry(label, refDataName));
   return mLegendEntries.back();
@@ -2422,7 +2422,7 @@ void Plot::Pad::LegendBox::MergeLegendEntries()
  * Construct LegendEntry.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendEntry::LegendEntry(const optional<string>& label, const optional<string>& refDataName, const optional<string>& drawStyle)
+Plot::Pad::LegendBox::LegendEntry::LegendEntry(const optional<std::string>& label, const optional<std::string>& refDataName, const optional<std::string>& drawStyle)
 {
   mLabel = label;
   mRefDataName = refDataName;
@@ -2508,19 +2508,19 @@ void Plot::Pad::LegendBox::LegendEntry::operator+=(
  */
 //**************************************************************************************************
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLabel(const string& label)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLabel(const std::string& label)
 {
   mLabel = label;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetRefData(const string& name, const string& inputIdentifier)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetRefData(const std::string& name, const std::string& inputIdentifier)
 {
   mRefDataName = name + gNameGroupSeparator + inputIdentifier;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetDrawStyle(const string& drawStyle)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetDrawStyle(const std::string& drawStyle)
 {
   mDrawStyle = drawStyle;
   return *this;

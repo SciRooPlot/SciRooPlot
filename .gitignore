@@ -6,4 +6,5 @@ misc/*
 XCode/*
 doc/html/*
 doc/latex/*
+.cache/
 TODO.md
