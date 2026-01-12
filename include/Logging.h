@@ -167,7 +167,7 @@ inline void here(const char* file, const char* function, int line)
   fmt::print("\n");
 }
 
-}  // namespace log
+}  // namespace logger
 
 // shorthand macros for logging features
 #define DEBUG(...) logger::debug(__VA_ARGS__)

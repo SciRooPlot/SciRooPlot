@@ -423,8 +423,8 @@ class Plot::Pad::Data
   virtual Data& SetProjectionY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});  // for 2d histos
   virtual Data& SetProjection(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});
 
-  virtual Data& SetProfileX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});                                      // for 2d histos
-  virtual Data& SetProfileY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});                                      // for 2d histos
+  virtual Data& SetProfileX(double_t startY = 0, double_t endY = -1, optional<bool> isUserCoord = {});                                                     // for 2d histos
+  virtual Data& SetProfileY(double_t startX = 0, double_t endX = -1, optional<bool> isUserCoord = {});                                                     // for 2d histos
   virtual Data& SetProfile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, optional<bool> isUserCoord = {});  // for 2d & 3d histos
 
  protected:
@@ -466,10 +466,10 @@ class Plot::Pad::Data
   const auto& GetProjInfo() const { return mProjInfo; }
 
   struct proj_info_t {
-    std::vector<uint8_t> dims;                               // dimensions to project on (can be one or two)
+    std::vector<uint8_t> dims;                                    // dimensions to project on (can be one or two)
     std::vector<std::tuple<uint8_t, double_t, double_t>> ranges;  // range restrictions on other dimensions
-    optional<bool> isUserCoord{};                       // whether ranges are specified in user coordinates or as bins
-    optional<bool> isProfile{};                         // whether this should be a profile instead of a projection
+    optional<bool> isUserCoord{};                                 // whether ranges are specified in user coordinates or as bins
+    optional<bool> isProfile{};                                   // whether this should be a profile instead of a projection
     std::string GetNameSuffix() const;
   };
 
@@ -878,7 +878,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
  private:
   optional<std::string> mTitle;
   optional<uint8_t> mNumColumns;
-  std::vector<LegendEntry> mLegendEntries;            // this is transient and will be generated automatically
+  std::vector<LegendEntry> mLegendEntries;       // this is transient and will be generated automatically
   map<uint8_t, LegendEntry> mLegendEntriesUser;  // this is persistent and must be saved
 
   layout_t mLineDefault;
