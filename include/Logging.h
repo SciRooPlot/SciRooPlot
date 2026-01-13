@@ -35,19 +35,19 @@ inline std::string_view begin_color(Color c)
 #endif
   switch (c) {
     case Color::Black:
-      return bright ? "\033[90m" : "\033[30m";
+      return bright ? "\033[90m" : "\033[38;5;16m";
     case Color::Red:
-      return bright ? "\033[91m" : "\033[31m";
+      return bright ? "\033[91m" : "\033[38;5;160m";
     case Color::Green:
-      return bright ? "\033[92m" : "\033[32m";
+      return bright ? "\033[92m" : "\033[38;5;28m";
     case Color::Yellow:
-      return bright ? "\033[93m" : "\033[33m";
+      return bright ? "\033[93m" : "\033[38;5;136m";
     case Color::Blue:
-      return bright ? "\033[94m" : "\033[34m";
+      return bright ? "\033[94m" : "\033[38;5;25m";
     case Color::Magenta:
-      return bright ? "\033[95m" : "\033[35m";
+      return bright ? "\033[95m" : "\033[38;5;125m";
     case Color::Cyan:
-      return bright ? "\033[96m" : "\033[36m";
+      return bright ? "\033[96m" : "\033[38;5;30m";
     case Color::White:
       return bright ? "\033[97m" : "\033[37m";
     default:
