@@ -1,3 +1,5 @@
+// NOLINT(legal/copyright)
+
 #include "PlotManager.h"
 #include "Logging.h"
 #include <string>
