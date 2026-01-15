@@ -1,0 +1,32 @@
+name: Pre-commit Checks
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      # 3. Install pre-commit
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      # 4. Run pre-commit hooks on all files
+      - name: Run pre-commit hooks
+        run: pre-commit run --all-files
