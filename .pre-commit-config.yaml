@@ -9,7 +9,7 @@ repos:
       - id: end-of-file-fixer
         files: ^(include|src|app|user)/.*\.(c|cc|cpp|cxx|h|hpp)$
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v13.0.1
+    rev: v21.1.8
     hooks:
     - id: clang-format
       files: ^(include|src|app|user)/
