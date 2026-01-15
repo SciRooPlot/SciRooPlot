@@ -1658,7 +1658,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     string replace_str = match_str;
     if (str_contains(match_str, "name")) {
       replace_str = data_ptr->GetName();
-      replace_str = replace_str.substr(0, replace_str.find(gNameGroupSeparator));
+      replace_str = replace_str.substr(0, replace_str.find(":"));
     } else if (str_contains(match_str, "title")) {
       replace_str = data_ptr->GetTitle();
     } else if (data_ptr->InheritsFrom(TH1::Class())) {

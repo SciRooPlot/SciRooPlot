@@ -117,7 +117,7 @@ Plot::Plot(const ptree& plotTree)
 //**************************************************************************************************
 void Plot::UpdateUniqueName()
 {
-  mUniqueName = mName + gNameGroupSeparator + mFigureGroup + ((mFigureCategory) ? "/" + *mFigureCategory : "");
+  mUniqueName = mName + ":" + mFigureGroup + ((mFigureCategory) ? "/" + *mFigureCategory : "");
 }
 
 //**************************************************************************************************
@@ -2516,7 +2516,7 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLabel(c
 
 Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetRefData(const std::string& name, const std::string& inputIdentifier)
 {
-  mRefDataName = name + gNameGroupSeparator + inputIdentifier;
+  mRefDataName = name + ":" + inputIdentifier;
   return *this;
 }
 

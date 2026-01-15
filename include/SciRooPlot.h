@@ -48,8 +48,5 @@ using std::unique_ptr;
 using std::unordered_map;
 using std::variant;
 using std::vector;
-
-constexpr string gNameGroupSeparator = "_IN_";
-
 }  // end namespace SciRooPlot
 #endif  // INCLUDE_SCIROOPLOT_H_

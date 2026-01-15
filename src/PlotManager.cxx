@@ -99,10 +99,9 @@ void PlotManager::SavePlotsToFile() const
     outputFile.cd();
     uint32_t nPlots{0u};
     for (auto& [uniqueName, canvas] : mPlotLedger) {
-      size_t delimiterPos = uniqueName.find(gNameGroupSeparator.data());
+      size_t delimiterPos = uniqueName.find(":");
       string plotName = uniqueName.substr(0, delimiterPos);
-      string subfolder = uniqueName.substr(delimiterPos + gNameGroupSeparator.size());
-      std::replace(subfolder.begin(), subfolder.end(), ':', '/');
+      string subfolder = uniqueName.substr(delimiterPos + 1);
       if (!outputFile.GetDirectory(subfolder.data(), kFALSE, "cd")) {
         outputFile.mkdir(subfolder.data());
       }
@@ -303,10 +302,7 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
           if (!found) continue;
         }
       }
-      string displayedName = plot.GetUniqueName();
-      std::replace(displayedName.begin(), displayedName.end(), '.', '_');
-      std::replace(displayedName.begin(), displayedName.end(), '/', '|');
-      plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName), plot.GetPropertyTree());
+      plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + plot.GetUniqueName()), plot.GetPropertyTree());
     }
   }
   std::filesystem::path plotFile = expand_path(plotFileName);
@@ -505,6 +501,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   }
 
   string fileName = (mUseUniquePlotNames) ? plot.GetUniqueName() : plot.GetName();
+  std::replace(fileName.begin(), fileName.end(), ':', '_');
   std::replace(fileName.begin(), fileName.end(), '/', '_');
 
   // create output folders and files
@@ -660,7 +657,7 @@ bool PlotManager::FillBuffer()
         if (subfolder) {
           // recursively traverse the file and look for input files
           string prefix = (pathStr.empty()) ? "" : pathStr + "/";
-          string suffix = gNameGroupSeparator + inputID;
+          string suffix = ":" + inputID;
           ReadData(subfolder, names, prefix, suffix, inputID);
           // in case a subdirectory was opened, properly delete it
           if (!path.empty() && subfolder != &inputFile) {
@@ -837,7 +834,7 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& graphNa
   string delimiter = "\t";  // TODO: this must somehow be user definable
   string pattern = "%lg %lg %lg %lg";
   TGraphErrors* graph = new TGraphErrors(inputFileName.data(), pattern.data(), delimiter.data());
-  string uniqueName = graphName + gNameGroupSeparator + inputIdentifier;
+  string uniqueName = graphName + ":" + inputIdentifier;
   graph->SetName(uniqueName.data());
   mDataBuffer[inputIdentifier][graphName].reset(graph);
 }
