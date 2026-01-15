@@ -24,7 +24,6 @@
 #include <set>
 #include <variant>
 #include <cmath>
-#include <cstdint>
 #include <unordered_map>
 #include <optional>
 #include <string>
@@ -50,7 +49,7 @@ using std::unordered_map;
 using std::variant;
 using std::vector;
 
-const string gNameGroupSeparator = "_IN_";
+constexpr string gNameGroupSeparator = "_IN_";
 
 }  // end namespace SciRooPlot
 #endif  // INCLUDE_SCIROOPLOT_H_

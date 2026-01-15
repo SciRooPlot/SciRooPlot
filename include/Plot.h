@@ -93,7 +93,7 @@ class Plot
   };
 
   Plot() = default;
-  Plot(const ptree& plotTree);
+  explicit Plot(const ptree& plotTree);
   Plot(const std::string& name, const std::string& figureGroupAndCategory, const optional<std::string>& plotTemplateName = nullopt);
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
@@ -176,7 +176,7 @@ class Plot::Pad
   class LegendBox;
 
   Pad() = default;
-  Pad(const ptree& padTree);
+  explicit Pad(const ptree& padTree);
   Axis& operator[](const char axis);
   void operator+=(const Pad& pad);
 
@@ -371,7 +371,7 @@ class Plot::Pad::Data
  public:
   Data() = default;
   Data(const std::string& name, const std::string& inputIdentifier, const optional<std::string>& label);
-  Data(const ptree& dataTree);
+  explicit Data(const ptree& dataTree);
 
   virtual ~Data() = default;
   Data(const Data& other) = default;
@@ -523,7 +523,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
  public:
   Ratio(const std::string& name, const std::string& inputIdentifier, const std::string& denomName,
         const std::string& denomInputIdentifier, const optional<std::string>& label);
-  Ratio(const ptree& dataTree);
+  explicit Ratio(const ptree& dataTree);
 
   virtual ~Ratio() = default;
   Ratio(const Ratio& other) = default;
@@ -652,8 +652,8 @@ class Plot::Pad::Axis
   friend class PlotPainter;
   friend class Plot;
 
-  Axis(const char axisName);
-  Axis(const ptree& axisTree);
+  explicit Axis(const char axisName);
+  explicit Axis(const ptree& axisTree);
 
   ptree GetPropertyTree() const;
   void operator+=(const Axis& axis);
@@ -770,7 +770,7 @@ class Plot::Pad::Box
   friend BoxType;
   Box() = default;
   Box(double_t xPos, double_t yPos);
-  Box(const ptree& boxTree);
+  explicit Box(const ptree& boxTree);
 
   auto GetThis() { return static_cast<BoxType*>(this); }
 
@@ -794,9 +794,9 @@ class Plot::Pad::Box
 class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 {
  public:
-  TextBox(const std::string& text);
+  explicit TextBox(const std::string& text);
   TextBox(double_t xPos, double_t yPos, const std::string& text);
-  TextBox(const ptree& textBoxTree);
+  explicit TextBox(const ptree& textBoxTree);
 
   virtual ~TextBox() = default;
   TextBox(const TextBox& other) = default;
@@ -829,7 +829,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   class LegendEntry;
   LegendBox();
   LegendBox(double_t xPos, double_t yPos);
-  LegendBox(const ptree& legendBoxTree);
+  explicit LegendBox(const ptree& legendBoxTree);
 
   virtual ~LegendBox() = default;
   LegendBox(const LegendBox& other) = default;
@@ -897,8 +897,8 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 class Plot::Pad::LegendBox::LegendEntry
 {
  public:
-  LegendEntry(const optional<std::string>& label = nullopt, const optional<std::string>& refDataName = nullopt, const optional<std::string>& drawStyle = nullopt);
-  LegendEntry(const ptree& legendEntryTree);
+  explicit LegendEntry(const optional<std::string>& label = nullopt, const optional<std::string>& refDataName = nullopt, const optional<std::string>& drawStyle = nullopt);
+  explicit LegendEntry(const ptree& legendEntryTree);
 
   LegendEntry& SetLabel(const std::string& label);
   LegendEntry& SetRefData(const std::string& name, const std::string& inputIdentifier);  // will work only for data drawn in same pad

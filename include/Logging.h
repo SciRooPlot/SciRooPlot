@@ -1,3 +1,21 @@
+/*
+ ******************************************************************************************
+ * --------------------------------------- SciRooPlot --------------------------------------
+ * Copyright (c) 2019-2026 Mario Krüger
+ * Contact: mario.kruger@cern.ch
+ * For a full list of contributors please see doc/CONTRIBUTORS.md.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation in version 3 (or later) of the License.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ * The GNU General Public License can be found here: <http://www.gnu.org/licenses/>.
+ ******************************************************************************************
+ */
+
 #ifndef INCLUDE_LOGGING_H_
 #define INCLUDE_LOGGING_H_
 
@@ -5,6 +23,8 @@
 #include <fmt/format.h>
 #include <string_view>
 #include <memory>
+#include <utility>
+#include <string>
 
 #if defined(__clang__) || defined(__GNUC__)
 #include <cxxabi.h>
