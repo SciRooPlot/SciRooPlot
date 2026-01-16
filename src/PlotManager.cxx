@@ -302,7 +302,10 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
           if (!found) continue;
         }
       }
-      plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + plot.GetUniqueName()), plot.GetPropertyTree());
+      string displayedName = plot.GetUniqueName();
+      std::replace(displayedName.begin(), displayedName.end(), '.', '_');
+      std::replace(displayedName.begin(), displayedName.end(), '/', '|');
+      plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName), plot.GetPropertyTree());
     }
   }
   std::filesystem::path plotFile = expand_path(plotFileName);
