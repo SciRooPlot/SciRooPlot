@@ -16,7 +16,6 @@
  ******************************************************************************************
  */
 
-#include "SciRooPlot.h"
 #include "PlotManager.h"
 #include "Plot.h"
 #include "Logging.h"
@@ -26,6 +25,9 @@
 #include <boost/program_options.hpp>
 
 #include "Helpers.h"
+
+using std::string;
+using std::vector;
 
 using namespace SciRooPlot;
 namespace po = boost::program_options;

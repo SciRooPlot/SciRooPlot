@@ -19,7 +19,7 @@
 #ifndef INCLUDE_HELPERS_H_
 #define INCLUDE_HELPERS_H_
 
-#include "SciRooPlot.h"
+#include <boost/property_tree/ptree.hpp>
 #include "TSystem.h"
 #include <tuple>
 #include <string>
@@ -27,21 +27,21 @@
 
 namespace SciRooPlot
 {
-string expand_path(const string& path);
-vector<string> split_string(const string& argString, char delimiter, bool onlyFirst = false);
-bool file_exists(const string& name);
+std::string expand_path(const std::string& path);
+std::vector<std::string> split_string(const std::string& argString, char delimiter, bool onlyFirst = false);
+bool file_exists(const std::string& name);
 
-inline bool str_contains(const string& str, const string& substr, bool reverseSearch = false)
+inline bool str_contains(const std::string& str, const std::string& substr, bool reverseSearch = false)
 {
   if (reverseSearch) {
-    return (str.rfind(substr) != string::npos);
+    return (str.rfind(substr) != std::string::npos);
   } else {
-    return (str.find(substr) != string::npos);
+    return (str.find(substr) != std::string::npos);
   }
 }
 
 template <typename T>
-void set_if(const optional<T>& origin, optional<T>& target)
+void set_if(const std::optional<T>& origin, std::optional<T>& target)
 {
   if (origin) {
     target = origin;
@@ -52,29 +52,29 @@ template <typename T>
 struct is_vector : public std::false_type {
 };
 template <typename T, typename A>
-struct is_vector<vector<T, A>> : public std::true_type {
+struct is_vector<std::vector<T, A>> : public std::true_type {
 };
 
 template <typename>
 struct is_tuple : std::false_type {
 };
 template <typename... T>
-struct is_tuple<tuple<T...>> : std::true_type {
+struct is_tuple<std::tuple<T...>> : std::true_type {
 };
 
 template <typename... Ts>
-string tuple_to_string(const tuple<Ts...>& items)
+std::string tuple_to_string(const std::tuple<Ts...>& items)
 {
-  string itemString;
+  std::string itemString;
   std::apply([&](auto&&... item) { ((itemString += std::to_string(item) + ","), ...); }, items);
   itemString.pop_back();
   return itemString;
 }
 
 template <typename T>
-string vector_to_string(vector<T> items)
+std::string vector_to_string(std::vector<T> items)
 {
-  string itemString;
+  std::string itemString;
   for (auto& item : items) {
     if constexpr (is_tuple<T>::value) {
       itemString += tuple_to_string(item);
@@ -88,7 +88,7 @@ string vector_to_string(vector<T> items)
 }
 
 template <typename T>
-T string_to_type(const string& str)
+T string_to_type(const std::string& str)
 {
   if constexpr (std::is_same_v<double_t, T>) {
     return std::stod(str);
@@ -100,12 +100,12 @@ T string_to_type(const string& str)
 }
 
 template <typename... Ts>
-tuple<Ts...> string_to_tuple(string itemString)
+std::tuple<Ts...> string_to_tuple(std::string itemString)
 {
   // split string
-  string curItemStr;
+  std::string curItemStr;
   std::istringstream stream(itemString);
-  string numbers[sizeof...(Ts)];
+  std::string numbers[sizeof...(Ts)];
   uint8_t i = 0;
   while (std::getline(stream, curItemStr, ',')) {
     numbers[i] = curItemStr;
@@ -121,18 +121,18 @@ tuple<Ts...> string_to_tuple(string itemString)
 }
 
 template <typename T>
-vector<T> string_to_vector(string itemString)
+std::vector<T> string_to_vector(std::string itemString)
 {
   // safety in case user put some blank spaces between numbers
   static_cast<void>(std::remove_if(itemString.begin(), itemString.end(), ::isspace));
-  vector<T> items;
+  std::vector<T> items;
 
-  string curItemStr;
+  std::string curItemStr;
   std::istringstream stream(itemString);
   if constexpr (is_tuple<T>::value) {
     while (std::getline(stream, curItemStr, ';')) {
       // ugly hack...
-      if constexpr (std::is_same_v<T, tuple<uint8_t, double_t, double_t>>) {
+      if constexpr (std::is_same_v<T, std::tuple<uint8_t, double_t, double_t>>) {
         items.push_back(string_to_tuple<uint8_t, double_t, double_t>(curItemStr));
       } else {
         items.push_back(string_to_tuple<float_t, float_t, float_t, float_t>(curItemStr));
@@ -147,7 +147,7 @@ vector<T> string_to_vector(string itemString)
 }
 
 template <typename T>
-void put_in_tree(ptree& tree, const optional<T>& var, const string& label)
+void put_in_tree(boost::property_tree::ptree& tree, const std::optional<T>& var, const std::string& label)
 {
   if constexpr (is_vector<T>{})  // vectors are stored as comma separated strings
   {
@@ -160,11 +160,11 @@ void put_in_tree(ptree& tree, const optional<T>& var, const string& label)
 }
 
 template <typename T>
-void read_from_tree(const ptree& tree, optional<T>& var, const string& label)
+void read_from_tree(const boost::property_tree::ptree& tree, std::optional<T>& var, const std::string& label)
 {
   if constexpr (is_vector<T>{})  // vectors are stored as comma separated strings
   {
-    if (auto tmp = tree.get_optional<string>(label))
+    if (auto tmp = tree.get_optional<std::string>(label))
       var = string_to_vector<typename T::value_type>(*tmp);
   } else if constexpr (std::is_enum<T>::value) {  // in case using enum types of the framework
     if (auto tmp = tree.get_optional<typename std::underlying_type<T>::type>(label))
@@ -175,23 +175,23 @@ void read_from_tree(const ptree& tree, optional<T>& var, const string& label)
 }
 
 template <typename T>
-optional<T> pick(uint16_t i, const optional<vector<T>>& vec)
+std::optional<T> pick(uint16_t i, const std::optional<std::vector<T>>& vec)
 {
-  if (!vec || vec->empty()) return nullopt;
-  return optional((*vec)[i % vec->size()]);
+  if (!vec || vec->empty()) return std::nullopt;
+  return std::optional((*vec)[i % vec->size()]);
 }
 
 template <typename T, typename... Ts>
-optional<T> get_first(const optional<T>& property, const Ts&... properties)
+std::optional<T> get_first(const std::optional<T>& property, const Ts&... properties)
 {
   for (const auto ptr : {&property, &properties...}) {
     if (*ptr) return *ptr;
   }
-  return nullopt;
+  return std::nullopt;
 }
 
 template <typename T, typename... Ts>
-T get_first_or(const T& fallback, const optional<T>& property, const Ts&... properties)
+T get_first_or(const T& fallback, const std::optional<T>& property, const Ts&... properties)
 {
   if (const auto& match = get_first(property, properties...)) {
     return *match;

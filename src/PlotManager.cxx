@@ -51,6 +51,16 @@
 #include "TFolder.h"
 #include "TPave.h"
 
+using boost::property_tree::ptree;
+using std::map;
+using std::optional;
+using std::set;
+using std::shared_ptr;
+using std::string;
+using std::tuple;
+using std::unordered_map;
+using std::vector;
+
 namespace SciRooPlot
 {
 
@@ -304,7 +314,6 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
       }
       string displayedName = plot.GetUniqueName();
       std::replace(displayedName.begin(), displayedName.end(), '.', '_');
-      std::replace(displayedName.begin(), displayedName.end(), '/', '|');
       plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName), plot.GetPropertyTree());
     }
   }

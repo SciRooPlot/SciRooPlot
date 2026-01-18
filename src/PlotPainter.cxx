@@ -18,7 +18,6 @@
 
 // framework dependencies
 #include "PlotPainter.h"
-#include "SciRooPlot.h"
 #include "Logging.h"
 #include "Helpers.h"
 
@@ -69,6 +68,17 @@
 #include "TApplication.h"
 #include "TGWindow.h"
 #include "TRootCanvas.h"
+
+using std::array;
+using std::nullopt;
+using std::optional;
+using std::shared_ptr;
+using std::string;
+using std::tuple;
+using std::unique_ptr;
+using std::unordered_map;
+using std::variant;
+using std::vector;
 
 namespace SciRooPlot
 {
@@ -1636,7 +1646,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
   auto words_end = std::sregex_iterator();
 
   for (std::sregex_iterator match = words_begin; match != words_end; ++match) {
-    std::string match_str = match->str();
+    string match_str = match->str();
     string format{};
 
     // check if user specified different formatting (e.g. via <mean[%2.6]>)

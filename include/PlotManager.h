@@ -19,7 +19,6 @@
 #ifndef INCLUDE_PLOTMANAGER_H_
 #define INCLUDE_PLOTMANAGER_H_
 
-#include "SciRooPlot.h"
 #include "Plot.h"
 #include <tuple>
 #include <memory>
@@ -48,21 +47,21 @@ class PlotManager
   PlotManager& operator=(const PlotManager& other) = delete;
   PlotManager& operator=(PlotManager&& other) = delete;
 
-  static Plot GetPlotTemplate(const string& plotTemplateName = "1d", double_t screenResolution = 100);
-  static tuple<string, string, string> GetProjectSettings(string projectName = "");
-  static string GetInputsFile(string projectName = "");
-  void SaveProject(const string& projectName);
+  static Plot GetPlotTemplate(const std::string& plotTemplateName = "1d", double_t screenResolution = 100);
+  static std::tuple<std::string, std::string, std::string> GetProjectSettings(std::string projectName = "");
+  static std::string GetInputsFile(std::string projectName = "");
+  void SaveProject(const std::string& projectName);
 
   // settings for output
-  void SetOutputDirectory(const string& path);
-  void SetUseUniquePlotNames(bool useUniquePlotNames = true);           // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
-  void SetOutputFileName(const string& fileName = "ResultPlots.root");  // in case canvases should be saved in .root file
+  void SetOutputDirectory(const std::string& path);
+  void SetUseUniquePlotNames(bool useUniquePlotNames = true);                // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
+  void SetOutputFileName(const std::string& fileName = "ResultPlots.root");  // in case canvases should be saved in .root file
 
   // settings related to the input root files
-  void AddInputDataFiles(const string& inputIdentifier, const vector<string>& inputFilePathList);
-  void AddInputDataFile(const string& inputIdentifier, const string& inputFilePath);
-  void DumpInputDataFiles(const string& configFileName) const;  // save input file paths to config file
-  void LoadInputDataFiles(const string& configFileName);        // load the input file paths from config file
+  void AddInputDataFiles(const std::string& inputIdentifier, const std::vector<std::string>& inputFilePathList);
+  void AddInputDataFile(const std::string& inputIdentifier, const std::string& inputFilePath);
+  void DumpInputDataFiles(const std::string& configFileName) const;  // save input file paths to config file
+  void LoadInputDataFiles(const std::string& configFileName);        // load the input file paths from config file
 
   // remove all loaded input data (histograms, graphs, ...) from the manager (usually not needed)
   void ClearDataBuffer();
@@ -72,17 +71,17 @@ class PlotManager
   void AddPlotTemplate(Plot plotTemplate);
 
   // saving plot definitions to external file (which can e.g. be read by the command-line plotting app included in the framework)
-  void DumpPlots(const string& plotFileName, const string& figureGroup = "", const vector<string>& plotNames = {}) const;
-  void DumpPlot(const string& plotFileName, const string& figureGroup, const string& plotName) const;
+  void DumpPlots(const std::string& plotFileName, const std::string& figureGroup = "", const std::vector<std::string>& plotNames = {}) const;
+  void DumpPlot(const std::string& plotFileName, const std::string& figureGroup, const std::string& plotName) const;
 
   // read plots from plot definition file created by the above functions (regular expressions are
   // allowed); the mode variable can be "load" to add these plots to the manager, or "find" to check
   // only if the specified plots exist (prints out this info)
-  void ExtractPlotsFromFile(const string& plotFileName,
-                            const string& mode = "load",
-                            const string& plotName = ".*",
-                            const string& group = ".*",
-                            const string& category = ".*");
+  void ExtractPlotsFromFile(const std::string& plotFileName,
+                            const std::string& mode = "load",
+                            const std::string& plotName = ".*",
+                            const std::string& group = ".*",
+                            const std::string& category = ".*");
 
   // after desired plots were added to the manager they can be created
   // the program then will try to extract the required input data (TH1,TGraph,..) from the specified
@@ -92,36 +91,36 @@ class PlotManager
   // (subdirectories are created for the figure groups and categories) "macro": plots are saved as
   // root macros (.C) "file": all plots (canvases) are put in a .root file with a directory
   // structure corresponding to figure groups and categories
-  void CreatePlots(const string& figureGroup = "", const string& figureCategory = "",
-                   vector<string> plotNames = {}, const string& outputMode = "pdf");
-  void CreatePlot(const string& name, const string& figureGroup, const string& figureCategory = "",
-                  const string& outputMode = "pdf");
+  void CreatePlots(const std::string& figureGroup = "", const std::string& figureCategory = "",
+                   std::vector<std::string> plotNames = {}, const std::string& outputMode = "pdf");
+  void CreatePlot(const std::string& name, const std::string& figureGroup, const std::string& figureCategory = "",
+                  const std::string& outputMode = "pdf");
   void PrintLoadedPlots() const;
 
  private:
-  TObject* FindSubDirectory(TObject* folder, vector<string>& subDirs) const;
-  bool GeneratePlot(const Plot& plot, const string& outputMode = "pdf");
-  ptree& ReadPlotTemplatesFromFile(const string& plotFileName);
+  TObject* FindSubDirectory(TObject* folder, std::vector<std::string>& subDirs) const;
+  bool GeneratePlot(const Plot& plot, const std::string& outputMode = "pdf");
+  boost::property_tree::ptree& ReadPlotTemplatesFromFile(const std::string& plotFileName);
   void SavePlotsToFile() const;
 
-  unique_ptr<TApplication> mApp;
+  std::unique_ptr<TApplication> mApp;
   bool mSaveToRootFile{};
-  string mOutputFileName;
-  map<string, shared_ptr<TCanvas>> mPlotLedger;
-  string mOutputDirectory;
+  std::string mOutputFileName;
+  std::map<std::string, std::shared_ptr<TCanvas>> mPlotLedger;
+  std::string mOutputDirectory;
   bool mUseUniquePlotNames{};
-  vector<Plot> mPlots;
-  vector<Plot> mPlotTemplates;
-  map<string, ptree> mPropertyTreeCache;
-  vector<const string*> mPlotViewHistory;
+  std::vector<Plot> mPlots;
+  std::vector<Plot> mPlotTemplates;
+  std::map<std::string, boost::property_tree::ptree> mPropertyTreeCache;
+  std::vector<const std::string*> mPlotViewHistory;
   int32_t mWindowOffsetY{};
 
-  unordered_map<string, unordered_map<string, unique_ptr<TObject>>> mDataBuffer;
-  map<string, vector<string>> mInputFiles;  // inputFileIdentifier, inputFilePaths
+  std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>> mDataBuffer;
+  std::map<std::string, std::vector<std::string>> mInputFiles;  // inputFileIdentifier, inputFilePaths
   void PrintBufferStatus(bool missingOnly = false) const;
   bool FillBuffer();
-  void ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& inputID);
-  void ReadDataCSV(const string& inputFileName, const string& graphName, const string& inputIdentifier);
+  void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& inputID);
+  void ReadDataCSV(const std::string& inputFileName, const std::string& graphName, const std::string& inputIdentifier);
 };
 
 }  // end namespace SciRooPlot

@@ -46,9 +46,9 @@ namespace SciRooPlot
 {
 
 // supported input data types
-using data_ptr_t = variant<TH1*, TH2*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF2*, TF1*>;
+using data_ptr_t = std::variant<TH1*, TH2*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF2*, TF1*>;
 
-const map<drawing_options_t, string> defaultDrawingOptions_Hist2d{
+const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist2d{
   {colz, "COLZ"},
   {surf, "SURF"},
   {cont, "CONT3"},
@@ -62,7 +62,7 @@ const map<drawing_options_t, string> defaultDrawingOptions_Hist2d{
   {candle7, "CANDLEX(111101)"},  // no median but mean as line
 };
 
-const map<drawing_options_t, string> defaultDrawingOptions_Hist{
+const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist{
   {points, "X0 EP"},
   {points_xerr, "EP"},
   {points_endcaps, "E1"},
@@ -87,7 +87,7 @@ const map<drawing_options_t, string> defaultDrawingOptions_Hist{
   {hbar4, "HBAR4"},
 };
 
-const map<drawing_options_t, string> defaultDrawingOptions_Graph{
+const std::map<drawing_options_t, std::string> defaultDrawingOptions_Graph{
   {points, "P Z"},
   {points_line, "P Z L"},
   {points_endcaps, "P"},
@@ -111,35 +111,35 @@ const map<drawing_options_t, string> defaultDrawingOptions_Graph{
 class PlotPainter
 {
  public:
-  unique_ptr<TCanvas> GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, unique_ptr<TObject>>>& dataBuffer);
+  std::unique_ptr<TCanvas> GeneratePlot(Plot& plot, const std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>>& dataBuffer);
 
  private:
-  optional<data_ptr_t> GetDataClone(TObject* obj, const optional<Plot::Pad::Data::proj_info_t>& projInfo = nullopt);
+  std::optional<data_ptr_t> GetDataClone(TObject* obj, const std::optional<Plot::Pad::Data::proj_info_t>& projInfo = std::nullopt);
   template <typename T>
-  optional<data_ptr_t> GetDataClone(TObject* obj);
+  std::optional<data_ptr_t> GetDataClone(TObject* obj);
   template <typename T, typename Next, typename... Rest>
-  optional<data_ptr_t> GetDataClone(TObject* obj);
-  optional<data_ptr_t> GetProjection(TObject* obj, Plot::Pad::Data::proj_info_t projInfo);
+  std::optional<data_ptr_t> GetDataClone(TObject* obj);
+  std::optional<data_ptr_t> GetProjection(TObject* obj, Plot::Pad::Data::proj_info_t projInfo);
 
-  void SetGraphRange(TGraph* graph, optional<double_t> min, optional<double_t> max);
+  void SetGraphRange(TGraph* graph, std::optional<double_t> min, std::optional<double_t> max);
   void ScaleGraph(TGraph* graph, double_t scale);
-  void SmoothGraph(TGraph* graph, optional<double_t> min = nullopt, optional<double_t> = nullopt);
-  void SmoothHist(TH1* hist, optional<double_t> min = nullopt, optional<double_t> max = nullopt);
+  void SmoothGraph(TGraph* graph, std::optional<double_t> min = std::nullopt, std::optional<double_t> = std::nullopt);
+  void SmoothHist(TH1* hist, std::optional<double_t> min = std::nullopt, std::optional<double_t> max = std::nullopt);
   bool DivideGraphs(TGraph* numerator, TGraph* denominator);
   void DivideGraphsInterpolated(TGraph* numerator, TGraph* denominator);
   void DivideHistosInterpolated(TH1* numerator, TH1* denominator);
   void DivideHistGraphInterpolated(TH1* numerator, TGraph* denominator);
   void DivideGraphHistInterpolated(TGraph* numerator, TH1* denominator);
-  tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
-  void ReplacePlaceholders(string& str, TNamed* data_ptr);
-  TPave* GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> box, TPad* pad);
+  std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
+  void ReplacePlaceholders(std::string& str, TNamed* data_ptr);
+  TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, TPad* pad);
   float_t GetTextSizePixel(float_t textSizeNDC);
 
   template <typename T>
   TAxis* GetAxis(T* histPtr, int16_t i);
-  string GetAxisStr(int16_t i);
+  std::string GetAxisStr(int16_t i);
 
-  vector<int16_t> GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1., bool savePalette = false);
+  std::vector<int16_t> GenerateGradientColors(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1., bool savePalette = false);
 };
 }  // end namespace SciRooPlot
 #endif  // INCLUDE_PLOTPAINTER_H_

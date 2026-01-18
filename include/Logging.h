@@ -30,6 +30,8 @@
 #include <cxxabi.h>
 #endif
 
+namespace SciRooPlot
+{
 namespace logger
 {
 enum class Color {
@@ -203,4 +205,5 @@ inline void here(const char* file, const char* function, int line)
 #define HERE() logger::here(__FILE__, __FUNCTION__, __LINE__);
 #define CHECK_TYPE(var) logger::check_type(var, #var);
 
+}  // end namespace SciRooPlot
 #endif  // INCLUDE_LOGGING_H_
