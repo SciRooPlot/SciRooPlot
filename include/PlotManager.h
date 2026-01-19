@@ -21,6 +21,7 @@
 
 #include "Plot.h"
 #include <tuple>
+#include <map>
 #include <memory>
 #include <unordered_map>
 #include <vector>

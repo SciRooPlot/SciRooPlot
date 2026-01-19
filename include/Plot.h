@@ -30,6 +30,7 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <tuple>
+#include <map>
 #include <memory>
 #include <vector>
 #include <string>
