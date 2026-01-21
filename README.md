@@ -20,5 +20,6 @@ SciRooPlot aims to address these day-to-day plotting requirements such that anal
 Ideas, suggestions, and code contributions to this open-source project are very welcome.
 
 ## 📖 Documentation
+To get started, have a look at the [introductory slides](https://cernbox.cern.ch/s/9aCyloRsAd2pAgW).
 A detailed description of how to use SciRooPlot can be found here:
 [https://SciRooPlot.github.io/SciRooPlot/](https://SciRooPlot.github.io/SciRooPlot/)
