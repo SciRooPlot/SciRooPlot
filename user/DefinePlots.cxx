@@ -1,9 +1,8 @@
-// NOLINT(legal/copyright)
-
 #include "PlotManager.h"
 #include "Logging.h"
 #include <string>
 
+using std::string;
 using namespace SciRooPlot;
 void DefineInputIdentifiers(PlotManager& plotManager);
 void DefinePlotTemplates(PlotManager& plotManager);

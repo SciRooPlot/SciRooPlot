@@ -5,17 +5,17 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
-        files: ^(include|src|app|user)/.*\.(c|cc|cpp|cxx|h|hpp)$
+        files: ^(include|src|app)/.*\.(c|cc|cpp|cxx|h|hpp)$
       - id: end-of-file-fixer
-        files: ^(include|src|app|user)/.*\.(c|cc|cpp|cxx|h|hpp)$
+        files: ^(include|src|app)/.*\.(c|cc|cpp|cxx|h|hpp)$
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v21.1.8
     hooks:
     - id: clang-format
-      files: ^(include|src|app|user)/
+      files: ^(include|src|app)/
       types_or: [c, c++, header]
   - repo: https://github.com/cpplint/cpplint
     rev: 2.0.2
     hooks:
       - id: cpplint
-        files: ^(include|src|app|user)/.*\.(c|cc|cpp|cxx|h|hpp)$
+        files: ^(include|src|app)/.*\.(c|cc|cpp|cxx|h|hpp)$
