@@ -34,15 +34,19 @@ namespace po = boost::program_options;
 
 int main(int argc, char* argv[])
 {
-  auto [inputFiles, plotDefinitions, outputDir] = PlotManager::GetProjectSettings();
+  auto [inputsFile, plotsFile, outputDir] = PlotManager::GetProjectSettings();
 
   // check if specified input files exist
-  if (!file_exists(inputFiles)) {
-    ERROR(R"(File "{}" does not exists! Exiting.)", inputFiles);
+  if (inputsFile.empty() || plotsFile.empty()) {
+    ERROR("No plotting project is selected. Exiting.");
     return 1;
   }
-  if (!file_exists(plotDefinitions)) {
-    ERROR(R"(File "{}" does not exists! Exiting.)", plotDefinitions);
+  if (!file_exists(inputsFile)) {
+    ERROR(R"(File "{}" does not exists! Exiting.)", inputsFile);
+    return 1;
+  }
+  if (!file_exists(plotsFile)) {
+    ERROR(R"(File "{}" does not exists! Exiting.)", plotsFile);
     return 1;
   }
 
@@ -104,11 +108,11 @@ int main(int argc, char* argv[])
   }
 
   if (mode != "find") {
-    plotManager.LoadInputDataFiles(inputFiles);
+    plotManager.LoadInputDataFiles(inputsFile);
     if (outputDir.empty() && mode != "interactive") {
       WARNING(R"(Please run "plot-config outputDir <PROJECT_NAME> </path/to/outputDir>" to set the ouptut directory.)");
     }
   }
-  plotManager.ExtractPlotsFromFile(plotDefinitions, mode, plotNames, group, category);
+  plotManager.ExtractPlotsFromFile(plotsFile, mode, plotNames, group, category);
   return 0;
 }

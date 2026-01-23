@@ -1179,7 +1179,10 @@ tuple<string, string, string> PlotManager::GetProjectSettings(string projectName
   }
   string inputsFile = configPath + "/" + projectName + "/inputs.info";
   string plotsFile = configPath + "/" + projectName + "/plots.info";
-
+  if (projectName.empty()) {
+    inputsFile = "";
+    plotsFile = "";
+  }
   return {inputsFile, plotsFile, outputDir};
 }
 
