@@ -40,9 +40,9 @@ Now you are ready to use SciRooPlot -- Happy plotting!
 
 A new project is created by running:
 ```
-  plot-config create <projectName>
+  plot-config create <projectName> [<folderName>]
 ```
-This will make a folder in your current directory with some working source code to start with.
+This will create a directory called `folderName` (or `projectName` if no folder name was specified) in your current directory and provide working setup to start your project.
 The default code will already be compiled and ready to use, allowing you to generate you first plot simply by typing
 ```
 plot examples ptSpec

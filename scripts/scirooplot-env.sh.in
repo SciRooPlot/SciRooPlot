@@ -42,7 +42,10 @@ function plot() {
 function plot-config() {
   if [[ "${1}" == "create" ]]; then
     local project_name="${2}"
-    if [ -d "$project_name" ]; then
+    local folder_name="${project_name}"
+    [ -n "${3}" ] && folder_name="${3}"
+
+    if [ -d "${folder_name}" ]; then
       echo "Folder ${project_name} already exists. Doing nothing..."
       return 1
     fi
@@ -55,8 +58,8 @@ function plot-config() {
       return 1
     fi
     local workdir="$(pwd)"
-    mkdir "${project_name}"
-    local project_path="${workdir}/${project_name}"
+    mkdir "${folder_name}"
+    local project_path="${workdir}/${folder_name}"
     mkdir "${project_path}/build"
     cp -r "${SCIROOPLOT_DATA_DIR}/user/"* "${project_path}/"
     sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/CMakeLists.txt" && rm -f "${project_path}/CMakeLists.txt.bak"
