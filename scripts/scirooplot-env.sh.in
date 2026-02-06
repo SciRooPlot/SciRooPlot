@@ -69,8 +69,9 @@ function plot-config() {
     cd "${curdir}"
   else
     args=("$@")
-    if (( ${#args[@]} >= 4 )) && [[ "${args[4]}" != /* ]]; then
-      args[4]="$(pwd)/${args[4]}"
+    [[ -n "${ZSH_VERSION}" ]] && setopt local_options KSH_ARRAYS
+    if (( ${#args[@]} >= 4 )) && [[ "${args[3]}" != /* ]]; then
+      args[3]="$(pwd)/${args[3]}"
     fi
     "${SCIROOPLOT_BIN}/plot-config" "${args[@]}"
   fi
@@ -176,6 +177,17 @@ _plot_config_completions_zsh() {
     property)
       if [[ " ${project_commands_with_prop[@]} " =~ " ${words[2]} " ]]; then
         _arguments '3:profiles:(${properties})'
+      elif [[ "${words[2]}" == "create" ]]; then
+          _files -/
+      fi
+    ;;
+    setting)
+      if [[ "${words[2]}" == "set" ]]; then
+        if [[ "${words[4]}" == "EXE" ]]; then
+          _files -f
+        elif [[ "${words[4]}" == "OUT" ]]; then
+          _files -/
+        fi
       fi
     ;;
   esac
@@ -270,8 +282,22 @@ _plot_config_completions_bash() {
   3)
     if [[ " ${project_commands_with_prop[@]} " =~ " ${COMP_WORDS[COMP_CWORD-2]} " ]]; then
       COMPREPLY=( $(compgen -W "${properties}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    elif [[ "${COMP_WORDS[COMP_CWORD-2]}" == "create" ]]; then
+      COMPREPLY=( $(compgen -d -- "${COMP_WORDS[COMP_CWORD]}") )
     else
       COMPREPLY=( )
+    fi
+  ;;
+  4)
+    if [[ "${COMP_WORDS[COMP_CWORD-3]}" == "set" ]]; then
+      case "${COMP_WORDS[COMP_CWORD-1]}" in
+        EXE)
+          COMPREPLY=( $(compgen -f -- "${COMP_WORDS[COMP_CWORD]}") )
+        ;;
+        OUT)
+          COMPREPLY=( $(compgen -d -- "${COMP_WORDS[COMP_CWORD]}") )
+        ;;
+      esac
     fi
   ;;
   esac
