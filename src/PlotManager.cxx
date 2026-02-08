@@ -222,7 +222,6 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
   try {
     using boost::property_tree::read_info;
     read_info(expand_path(configFileName), inputFileTree);
-    INFO("Reading input files from {}.", configFileName);
   } catch (...) {
     ERROR("Cannot load file {}.", configFileName);
     return;
@@ -323,7 +322,6 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
   }
   using boost::property_tree::write_info;
   write_info(plotFile.string(), plotTree);
-  INFO("Wrote plot definitions to {}.", plotFile.string());
 }
 void PlotManager::DumpPlot(const string& plotFileName, const string& figureGroup,
                            const string& plotName) const
@@ -342,7 +340,6 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
     try {
       using boost::property_tree::read_info;
       read_info(expand_path(plotFileName), mPropertyTreeCache[plotFileName]);
-      INFO("Reading plot definitions from {}.", plotFileName);
     } catch (...) {
       ERROR("Cannot load file {}.", plotFileName);
       std::exit(EXIT_FAILURE);
