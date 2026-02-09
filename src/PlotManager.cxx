@@ -376,7 +376,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     return false;
   }
   if (outputMode == "file") {
-    // TColor::DefinedColors(1);
     mSaveToRootFile = true;
   }
   Plot fullPlot = plot;
