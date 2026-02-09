@@ -99,6 +99,14 @@ PlotManager::~PlotManager()
  * Save stored plots to .root file.
  */
 //**************************************************************************************************
+bool HasUserColors(shared_ptr<TCanvas> canvas)
+{
+
+  // if (mMaxDefaultColorIndex
+  return false;
+}
+#include "TAttText.h"
+
 void PlotManager::SavePlotsToFile() const
 {
   if (!mPlotLedger.empty()) {
@@ -107,6 +115,17 @@ void PlotManager::SavePlotsToFile() const
       return;
     }
     outputFile.cd();
+    if (auto nUserColors = TColor::GetFreeColorIndex() - mFirstFreeColorIndex) {
+      TCanvas colorCanvas("user_colors", "user defined colors", 800, 200);
+      for (int i = 0; i < nUserColors; i++) {
+        if (gROOT->GetColor(mFirstFreeColorIndex + i)) {
+          TBox* box = new TBox(double(i) / nUserColors, 0, double(i + 1) / nUserColors, 1);
+          box->SetFillColor(mFirstFreeColorIndex + i);
+          box->Draw("same");
+        }
+      }
+      colorCanvas.Write();
+    }
     uint32_t nPlots{0u};
     for (auto& [uniqueName, canvas] : mPlotLedger) {
       size_t delimiterPos = uniqueName.find(":");
@@ -365,6 +384,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     return false;
   }
   if (outputMode == "file") {
+    // TColor::DefinedColors(1);
     mSaveToRootFile = true;
   }
   Plot fullPlot = plot;

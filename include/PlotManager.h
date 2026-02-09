@@ -115,6 +115,7 @@ class PlotManager
   std::map<std::string, boost::property_tree::ptree> mPropertyTreeCache;
   std::vector<const std::string*> mPlotViewHistory;
   int32_t mWindowOffsetY{};
+  int32_t mFirstFreeColorIndex{TColor::GetFreeColorIndex()};
 
   std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>> mDataBuffer;
   std::map<std::string, std::vector<std::string>> mInputFiles;  // inputFileIdentifier, inputFilePaths
