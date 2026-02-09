@@ -109,9 +109,9 @@ void PlotManager::SavePlotsToFile() const
     outputFile.cd();
     if (auto nUserColors = TColor::GetFreeColorIndex() - mFirstFreeColorIndex) {
       TCanvas colorCanvas("user_colors", "user defined colors", 800, 200);
-      for (int i = 0; i < nUserColors; i++) {
+      for (int32_t i = 0; i < nUserColors; i++) {
         if (gROOT->GetColor(mFirstFreeColorIndex + i)) {
-          TBox* box = new TBox(double(i) / nUserColors, 0, double(i + 1) / nUserColors, 1);
+          TBox* box = new TBox(static_cast<double>(i) / nUserColors, 0, static_cast<double>(i + 1) / nUserColors, 1);
           box->SetFillColor(mFirstFreeColorIndex + i);
           box->Draw("same");
         }
