@@ -99,14 +99,6 @@ PlotManager::~PlotManager()
  * Save stored plots to .root file.
  */
 //**************************************************************************************************
-bool HasUserColors(shared_ptr<TCanvas> canvas)
-{
-
-  // if (mMaxDefaultColorIndex
-  return false;
-}
-#include "TAttText.h"
-
 void PlotManager::SavePlotsToFile() const
 {
   if (!mPlotLedger.empty()) {
