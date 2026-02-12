@@ -105,12 +105,15 @@ void generateTestFiles()
   file1.mkdir("dir2/subdir1");
   file1.cd("dir2/subdir1");
 
-  TF1 mygaus("mygaus", "TMath::Gaus(x,3,.5)", 0, 6);
+  TF1 mygaus("mygaus", "1.0/( [1]*sqrt(2*TMath::Pi()) ) * exp(-0.5*((x-[0])/[1])^2 )", -4, 4);
+  mygaus.SetParameters(0.0, 1.0);
+  mygaus.Write();
 
-  TH1F hist2("hist2", "", 100, 0, 6);
+  TH1F hist2("mygausrand", "", 100, -4, 4);
   hist2.FillRandom("mygaus", 10000);
-  hist2.Sumw2();
+  hist2.Scale(1./hist2.Integral("width"));
   hist2.Write();
+  
 
   TF1 mygaus2("mygaus2", "TMath::Gaus(x,4,.8)", 0, 6);
   TH1F hist3("hist3", "", 100, 0, 6);
