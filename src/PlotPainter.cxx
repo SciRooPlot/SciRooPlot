@@ -43,11 +43,13 @@
 #include "TProfile2D.h"
 #include "TGraph.h"
 #include "TGraphErrors.h"
+#include "TGraphAsymmErrors.h"
 #include "TGraph2D.h"
 #include "TGraph2DErrors.h"
 #include "TGraphSmooth.h"
 #include "TF1.h"
 #include "TF2.h"
+#include "TEfficiency.h"
 
 #include "TFrame.h"
 #include "TLine.h"
@@ -1243,7 +1245,7 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
       }
     } else {
       // TProfile2D is TH2, TH2 is TH1, TProfile is TH1
-      if (auto returnPointer = GetDataClone<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1>(obj)) {
+      if (auto returnPointer = GetDataClone<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1, TEfficiency>(obj)) {
         return returnPointer;
       } else {
         ERROR("Input data {} is of unsupported type {}.", obj->GetName(), obj->ClassName());
@@ -1257,7 +1259,17 @@ template <typename T>
 optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
 {
   if (obj && obj->InheritsFrom(T::Class())) {
-    return static_cast<T*>(obj->Clone());
+    if constexpr (std::is_same_v<T, TEfficiency>) {
+      auto teff = static_cast<TEfficiency*>(obj);
+      int dim = teff->GetDimension();
+      if (dim == 1) {
+        return static_cast<TGraph*>(teff->CreateGraph());
+      } else if (dim == 2) {
+        return static_cast<TH2*>(teff->CreateHistogram());
+      }
+    } else {
+      return static_cast<T*>(obj->Clone());
+    }
   }
   return nullopt;
 }
