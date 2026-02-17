@@ -1247,6 +1247,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[0].SetDefaultTextSize(defaultTextSize);
     plotTemplate[0].SetDefaultMarkerSize(markerSize);
     plotTemplate[0].SetDefaultLineWidth(lineWidth);
+    plotTemplate[0].SetDefaultDrawingOptionHist2d(colz);
     plotTemplate[0].SetDefaultDrawingOptionGraph(points);
     plotTemplate[0].SetTransparent();
     plotTemplate[0].SetMargins(1. - (frameSize + axisMargin), axisMargin, axisMargin, 1. - (frameSize + axisMargin));
@@ -1270,6 +1271,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[0].SetDefaultLineStyles({kSolid});
     plotTemplate[0].SetDefaultMarkerSize(markerSize);
     plotTemplate[0].SetDefaultLineWidth(lineWidth);
+    plotTemplate[0].SetDefaultDrawingOptionHist2d(colz);
     plotTemplate[0].SetDefaultDrawingOptionGraph(points);
     plotTemplate[0].SetDefaultTextFont(42);
     plotTemplate[0].SetTransparent();
@@ -1297,7 +1299,14 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate.SetDimensions(static_cast<int32_t>(std::round(wideSideScale * pixelBase)), pixelBase, true);
     plotTemplate.SetTransparent();
     plotTemplate[0].SetFrameFill(10, 1001);
+    plotTemplate[0].SetDefaultMarkerColors(goodColors);
+    plotTemplate[0].SetDefaultLineColors(goodColors);
+    plotTemplate[0].SetDefaultFillColors(goodColors);
+    plotTemplate[0].SetDefaultFillStyles({0});
+    plotTemplate[0].SetDefaultMarkerStyles({kFullCircle});
+    plotTemplate[0].SetDefaultLineStyles({kSolid});
     plotTemplate[0].SetDefaultDrawingOptionHist2d(colz);
+    plotTemplate[0].SetDefaultDrawingOptionGraph(points);
     plotTemplate[0].SetDefaultTextFont(42);
     plotTemplate[0].SetDefaultTextSize(defaultTextSize);
     plotTemplate[0].SetDefaultMarkerSize(markerSize);
@@ -1349,6 +1358,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     // plotTemplate[0].SetDefaultLineWidth(1); // adjusted to make it look the same in lower pdf resolution
     plotTemplate[0].SetDefaultMarkerSize(markerSize);
     plotTemplate[0].SetDefaultLineWidth(lineWidth);
+    plotTemplate[0].SetDefaultDrawingOptionHist2d(colz);
     plotTemplate[0].SetDefaultDrawingOptionGraph(points);
     plotTemplate[0].SetTransparent();
     plotTemplate[1].SetPosition(0., 0., x1, 1.);
