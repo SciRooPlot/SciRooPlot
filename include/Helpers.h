@@ -80,8 +80,13 @@ std::string vector_to_string(std::vector<T> items)
       itemString += tuple_to_string(item);
       if (&item != &items.back()) itemString += ";";
     } else {
-      itemString += std::to_string(item);
-      if (&item != &items.back()) itemString += ",";
+      if constexpr (std::is_same_v<std::string, T>) {
+        itemString += item;
+        if (&item != &items.back()) itemString += ";";
+      } else {
+        itemString += std::to_string(item);
+        if (&item != &items.back()) itemString += ",";
+      }
     }
   }
   return itemString;
@@ -124,15 +129,19 @@ template <typename T>
 std::vector<T> string_to_vector(std::string itemString)
 {
   // safety in case user put some blank spaces between numbers
-  static_cast<void>(std::remove_if(itemString.begin(), itemString.end(), ::isspace));
+  if constexpr (!std::is_same_v<T, std::string>) {
+    static_cast<void>(std::remove_if(itemString.begin(), itemString.end(), ::isspace));
+  }
   std::vector<T> items;
 
   std::string curItemStr;
   std::istringstream stream(itemString);
-  if constexpr (is_tuple<T>::value) {
+  if constexpr (is_tuple<T>::value || std::is_same_v<T, std::string>) {
     while (std::getline(stream, curItemStr, ';')) {
       // ugly hack...
-      if constexpr (std::is_same_v<T, std::tuple<uint8_t, double_t, double_t>>) {
+      if constexpr (std::is_same_v<T, std::string>) {
+        items.push_back(curItemStr);
+      } else if constexpr (std::is_same_v<T, std::tuple<uint8_t, double_t, double_t>>) {
         items.push_back(string_to_tuple<uint8_t, double_t, double_t>(curItemStr));
       } else {
         items.push_back(string_to_tuple<float_t, float_t, float_t, float_t>(curItemStr));

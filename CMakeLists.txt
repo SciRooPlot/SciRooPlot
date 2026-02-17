@@ -130,6 +130,7 @@ target_link_libraries(SciRooPlot
     ROOT::Gui
     ROOT::Hist
     ROOT::Gpad
+    ROOT::ROOTDataFrame
     Boost::program_options
     fmt::fmt
     ${FILESYSTEM_LIB}

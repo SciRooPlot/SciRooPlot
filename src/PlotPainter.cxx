@@ -397,7 +397,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           };
 
           // retrieve the actual pointer to the denominator data
-          auto rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomIdentifier()).at(data_as_ratio->GetDenomName()).get(), data_as_ratio->GetProjInfoDenom());
+          auto rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomIdentifier()).at(data_as_ratio->GetDenomName() + ((data_as_ratio->GetTreeInfoDenom()) ? data_as_ratio->GetTreeInfoDenom()->GetNameSuffix() : "")).get(), data_as_ratio->GetProjInfoDenom());
           if (rawDenomData) {
             std::visit(processDenominator, *rawDenomData);
           } else {
@@ -810,7 +810,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         drawingOptions = "SAME ";  // next data should be drawn to same pad
       };
 
-      optional<data_ptr_t> rawData = GetDataClone(dataBuffer.at(data->GetInputID()).at(data->GetName()).get(), data->GetProjInfo());
+      optional<data_ptr_t> rawData = GetDataClone(dataBuffer.at(data->GetInputID()).at(data->GetName() + ((data->GetTreeInfo()) ? data->GetTreeInfo()->GetNameSuffix() : "")).get(), data->GetProjInfo());
       if (rawData) {
         std::visit(processData, *rawData);
       } else {

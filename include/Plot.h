@@ -428,6 +428,21 @@ class Plot::Pad::Data
   virtual Data& SetProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});                                                     // for 2d histos
   virtual Data& SetProfile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});  // for 2d & 3d histos
 
+  struct tree_dim_t {
+    std::string varExp{};
+    std::vector<double_t> edges{};
+    int32_t nBins{0};
+  };
+  virtual Data& SetTreeProjection(std::vector<tree_dim_t> treeDims, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
+  virtual Data& SetTreeProjection(std::string varExp, int32_t nBins = 32, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
+  virtual Data& SetTreeProjection(std::string varExp1, std::string varExp2, std::pair<int32_t, int32_t> nBins = {32, 32}, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
+
+  virtual Data& SetTreeScatter(std::string varExp1, std::string varExp2, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
+
+  virtual Data& SetTreeProfile(std::vector<tree_dim_t> treeDims, std::string profExp, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
+  virtual Data& SetTreeProfile(std::string varExp, int32_t nBins, std::string profExp, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
+  virtual Data& SetTreeProfile(std::string varExp1, std::string varExp2, std::pair<int32_t, int32_t> nBins, std::string profExp, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
+
  protected:
   friend class PlotManager;
   friend class PlotPainter;
@@ -465,12 +480,22 @@ class Plot::Pad::Data
   const auto& GetContours() const { return mContours; }
   const auto& GetNContours() const { return mNContours; }
   const auto& GetProjInfo() const { return mProjInfo; }
+  const auto& GetTreeInfo() const { return mTreeInfo; }
 
   struct proj_info_t {
     std::vector<uint8_t> dims;                                    // dimensions to project on (can be one or two)
     std::vector<std::tuple<uint8_t, double_t, double_t>> ranges;  // range restrictions on other dimensions
     std::optional<bool> isUserCoord{};                            // whether ranges are specified in user coordinates or as bins
     std::optional<bool> isProfile{};                              // whether this should be a profile instead of a projection
+    std::string GetNameSuffix() const;
+  };
+
+  struct tree_info_t {
+    std::vector<tree_dim_t> treeDims{};
+    std::optional<std::string> filter{};
+    std::optional<std::string> weightExp{};
+    std::optional<int64_t> nEntries{};
+    std::optional<bool> isProfileNoScatter{};
     std::string GetNameSuffix() const;
   };
 
@@ -500,6 +525,7 @@ class Plot::Pad::Data
   };
 
   std::optional<proj_info_t> mProjInfo;
+  std::optional<tree_info_t> mTreeInfo;
 
   legend_t mLegend;
   layout_t mMarker;
@@ -588,6 +614,25 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& SetProfileYDenom(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});
   Ratio& SetProfileDenom(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
 
+  Ratio& SetTreeProjection(std::vector<tree_dim_t> treeDims, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::SetTreeProjection(treeDims, filter, weightExp, nEntries)); }
+  Ratio& SetTreeProjection(std::string varExp, int32_t nBins = 32, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::SetTreeProjection(varExp, nBins, filter, weightExp, nEntries)); }
+  Ratio& SetTreeProjection(std::string varExp1, std::string varExp2, std::pair<int32_t, int32_t> nBins = {32, 32}, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::SetTreeProjection(varExp1, varExp2, nBins, filter, weightExp, nEntries)); }
+
+  Ratio& SetTreeProjectionDenom(std::vector<tree_dim_t> treeDims, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
+  Ratio& SetTreeProjectionDenom(std::string varExp, int32_t nBins = 32, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
+  Ratio& SetTreeProjectionDenom(std::string varExp1, std::string varExp2, std::pair<int32_t, int32_t> nBins = {32, 32}, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
+
+  Ratio& SetTreeScatter(std::string varExp1, std::string varExp2, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::SetTreeScatter(varExp1, varExp2, filter, nEntries)); }
+  Ratio& SetTreeScatterDenom(std::string varExp1, std::string varExp2, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
+
+  Ratio& SetTreeProfile(std::vector<tree_dim_t> treeDims, std::string profExp, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::SetTreeProfile(treeDims, profExp, filter, weightExp, nEntries)); }
+  Ratio& SetTreeProfile(std::string varExp, int32_t nBins, std::string profExp, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::SetTreeProfile(varExp, nBins, profExp, filter, weightExp, nEntries)); }
+  Ratio& SetTreeProfile(std::string varExp1, std::string varExp2, std::pair<int32_t, int32_t> nBins, std::string profExp, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::SetTreeProfile(varExp1, varExp2, nBins, profExp, filter, weightExp, nEntries)); }
+
+  Ratio& SetTreeProfileDenom(std::vector<tree_dim_t> treeDims, std::string profExp, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
+  Ratio& SetTreeProfileDenom(std::string varExp, int32_t nBins, std::string profExp, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
+  Ratio& SetTreeProfileDenom(std::string varExp1, std::string varExp2, std::pair<int32_t, int32_t> nBins, std::string profExp, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
+
  protected:
   friend class PlotManager;
   friend class PlotPainter;
@@ -603,12 +648,14 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 
   const bool& GetIsCorrelated() const { return mIsCorrelated; }
   const auto& GetProjInfoDenom() const { return mProjInfoDenom; }
+  const auto& GetTreeInfoDenom() const { return mTreeInfoDenom; }
 
  private:
   std::string mDenomName;
   std::string mDenomInputIdentifier;
   bool mIsCorrelated{};
   std::optional<proj_info_t> mProjInfoDenom;
+  std::optional<tree_info_t> mTreeInfoDenom;
   std::optional<bool> mDivisionNormMode;  // normalize both numerater and denominator to 0: sum over bin contents, 1: times bin widths
 };
 
