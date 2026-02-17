@@ -583,7 +583,8 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
         mDataBuffer[data->GetInputID()][data->GetName()];
         if (data->GetTreeInfo()) {
           auto& treeInfos = mTreeBuffer[data->GetInputID()][data->GetName()];
-          if (std::find_if(treeInfos.begin(), treeInfos.end(), [&](const auto& treeInfo) { return treeInfo.GetNameSuffix() == (*data->GetTreeInfo()).GetNameSuffix(); }) == treeInfos.end()) {
+          auto iter = std::find_if(treeInfos.begin(), treeInfos.end(), [&](const auto& treeInfo) { return treeInfo.GetNameSuffix() == (*data->GetTreeInfo()).GetNameSuffix(); });
+          if (iter == treeInfos.end()) {
             mTreeBuffer[data->GetInputID()][data->GetName()].push_back(*data->GetTreeInfo());
           }
         }
@@ -592,7 +593,8 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
           mDataBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()];
           if (ratio->GetTreeInfoDenom()) {
             auto& treeInfos = mTreeBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()];
-            if (std::find_if(treeInfos.begin(), treeInfos.end(), [&](const auto& treeInfo) { return treeInfo.GetNameSuffix() == (*data->GetTreeInfo()).GetNameSuffix(); }) == treeInfos.end()) {
+            auto iter = std::find_if(treeInfos.begin(), treeInfos.end(), [&](const auto& treeInfo) { return treeInfo.GetNameSuffix() == (*data->GetTreeInfo()).GetNameSuffix(); });
+            if (iter == treeInfos.end()) {
               mTreeBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()].push_back(*ratio->GetTreeInfoDenom());
             }
           }
@@ -609,7 +611,6 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   }
 
   if (!FillBuffer()) PrintBufferStatus(true);
-  PrintBufferStatus(false);
   // generate plots
   for (auto plot : selectedPlots) {
     if (!GeneratePlot(*plot, outputMode))
@@ -838,7 +839,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
           string fullName = prefix + curDataName;
           if (obj->InheritsFrom(TTree::Class())) {
             TTree* tree = static_cast<TTree*>(obj);
-            mDataBuffer[inputID].erase(fullName);
+            mDataBuffer[inputID][fullName].reset(nullptr);
             // do all requested projections of this tree
             for (auto& treeInfo : mTreeBuffer[inputID][fullName]) {
               string projFullName = fullName + treeInfo.GetNameSuffix();
