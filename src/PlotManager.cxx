@@ -48,6 +48,9 @@
 #include "TCanvas.h"
 #include "TKey.h"
 #include "TH1.h"
+#include "TF1.h"
+#include "TF2.h"
+#include "TF3.h"
 #include "TGraphErrors.h"
 #include "TFolder.h"
 #include "TPave.h"
@@ -633,8 +636,17 @@ bool PlotManager::FillBuffer()
 
       // generate user-defined functions on-the-fly
       if (inputID == "USER_FUNCTIONS") {
-        dataPtr.reset(new TF1(dataName.data(), dataName.data()));
-        // TODO: support also TF2
+        TFormula formula("tmp", dataName.data());
+        int dim = formula.GetNdim();
+        if (dim == 1) {
+          dataPtr.reset(new TF1(dataName.data(), dataName.data()));
+        } else if (dim == 2) {
+          dataPtr.reset(new TF2(dataName.data(), dataName.data()));
+        } else if (dim == 3) {
+          dataPtr.reset(new TF3(dataName.data(), dataName.data()));
+        } else {
+          ERROR("Cannot create function {}.", dataName);
+        }
         continue;
       }
 
