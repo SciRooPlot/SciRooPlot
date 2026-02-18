@@ -860,7 +860,9 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
               string projFullName = fullName + treeInfo.GetNameSuffix();
               try {
                 ROOT::RDataFrame df(*tree);
+                std::cerr.setstate(std::ios_base::failbit);
                 obj = ProcessData(df, fullName, treeInfo, projFullName + suffix);
+                std::cerr.clear();
               } catch (const std::runtime_error&) {
                 ERROR("Invalid query for tree.");
                 obj = nullptr;
@@ -905,7 +907,9 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
     string projName = name + treeInfo.GetNameSuffix();
     TObject* obj = nullptr;
     try {
+      std::cerr.setstate(std::ios_base::failbit);
       obj = ProcessData(df, name, treeInfo, projName + ":" + inputID);
+      std::cerr.clear();
     } catch (const std::runtime_error& e) {
       ERROR("Invalid query for csv table.");
       std::cout << e.what() << std::endl;
@@ -1074,7 +1078,12 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
   }
   auto nEntriesPreFilter = node.Count();
   if (treeInfo.filter) {
-    node = node.Filter(*treeInfo.filter);
+    try {
+      node = node.Filter(*treeInfo.filter);
+    } catch (std::runtime_error) {
+      ERROR("Illegal expression in filter: {}.", *treeInfo.filter);
+      return nullptr;
+    }
     auto nEntriesPostFilter = node.Count();
     if (nEntriesPostFilter && nEntriesPreFilter) {
       INFO("Processing {} entries ({:.2f}%) of {} after filter {}.", (*nEntriesPostFilter), 100. * (*nEntriesPostFilter) / (*nEntriesPreFilter), dfName, *treeInfo.filter);
@@ -1088,7 +1097,17 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
   string histTitle;
   axisID = 1;
   for (auto& treeDim : treeDims) {
-    node = node.Define("SRP_AXIS_" + std::to_string(axisID), treeDim.varExp);
+    string colName = "SRP_AXIS_" + std::to_string(axisID);
+    try {
+      node = node.Define(colName, treeDim.varExp);
+    } catch (std::runtime_error) {
+      ERROR("Illegal expression: {}.", treeDim.varExp);
+      return nullptr;
+    }
+    if (node.GetColumnType(colName).find("string") != string::npos) {
+      ERROR("Variable expression {} is not numeric.", treeDim.varExp);
+      return nullptr;
+    }
     if (treeDim.nBins && treeDim.edges.size() == 2 && !treeDim.edges[0] && !treeDim.edges[1]) {
       // auto-detect bin edges given the data
       auto max = node.Max("SRP_AXIS_" + std::to_string(axisID));
@@ -1118,7 +1137,12 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
   }
 
   if (treeInfo.weightExp) {
-    node = node.Define("SRP_AXIS_W", *treeInfo.weightExp);
+    try {
+      node = node.Define("SRP_AXIS_W", *treeInfo.weightExp);
+    } catch (std::runtime_error) {
+      ERROR("Illegal expression for weights: {}.", *treeInfo.weightExp);
+      return nullptr;
+    }
     hasWegiths = true;
   }
 
