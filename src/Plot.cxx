@@ -1598,38 +1598,38 @@ auto Plot::Pad::Data::SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, dou
   mProjInfo = {dims, ranges, isUserCoord, true};
   return *this;
 }
-auto Plot::Pad::Data::SetTreeProjection(vector<tree_dim_t> treeDims, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Project(vector<tree_dim_t> treeDims, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
 {
   mTreeInfo = {treeDims, filter, weightExp, nEntries};
   return *this;
 }
-auto Plot::Pad::Data::SetTreeProjection(string varExp, int32_t nBins, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Project(string varExp, int32_t nBins, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
 {
   mTreeInfo = {{{varExp, {0, 0}, nBins}}, filter, weightExp, nEntries};
   return *this;
 }
-auto Plot::Pad::Data::SetTreeProjection(string varExp1, string varExp2, pair<int32_t, int32_t> nBins, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Project(string varExp1, string varExp2, pair<int32_t, int32_t> nBins, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
 {
   mTreeInfo = {{{varExp1, {0, 0}, nBins.first}, {varExp2, {0, 0}, nBins.second}}, filter, weightExp, nEntries};
   return *this;
 }
-auto Plot::Pad::Data::SetTreeScatter(string varExp1, string varExp2, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Scatter(string varExp1, string varExp2, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
 {
   mTreeInfo = {{{varExp1}, {varExp2}}, filter, {}, nEntries, false};
   return *this;
 }
-auto Plot::Pad::Data::SetTreeProfile(vector<tree_dim_t> treeDims, std::string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Profile(vector<tree_dim_t> treeDims, std::string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
 {
   treeDims.push_back({profExp});
   mTreeInfo = {treeDims, filter, weightExp, nEntries, true};
   return *this;
 }
-auto Plot::Pad::Data::SetTreeProfile(string varExp, int32_t nBins, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Profile(string varExp, int32_t nBins, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
 {
   mTreeInfo = {{{varExp, {0, 0}, nBins}, {profExp}}, filter, weightExp, nEntries, true};
   return *this;
 }
-auto Plot::Pad::Data::SetTreeProfile(string varExp1, string varExp2, pair<int32_t, int32_t> nBins, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Profile(string varExp1, string varExp2, pair<int32_t, int32_t> nBins, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
 {
   mTreeInfo = {{{varExp1, {0, 0}, nBins.first}, {varExp2, {0, 0}, nBins.second}, {profExp}}, filter, weightExp, nEntries, true};
   return *this;
@@ -1863,38 +1863,38 @@ auto Plot::Pad::Ratio::SetProfileDenom(vector<uint8_t> dims, vector<tuple<uint8_
   mProjInfoDenom = {dims, ranges, isUserCoord, true};
   return *this;
 }
-auto Plot::Pad::Ratio::SetTreeProjectionDenom(vector<tree_dim_t> treeDims, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProjectDenom(vector<tree_dim_t> treeDims, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
 {
   mTreeInfoDenom = {treeDims, filter, weightExp, nEntries};
   return *this;
 }
-auto Plot::Pad::Ratio::SetTreeProjectionDenom(string varExp, int32_t nBins, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProjectDenom(string varExp, int32_t nBins, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
 {
   mTreeInfoDenom = {{{varExp, {0, 0}, nBins}}, filter, weightExp, nEntries};
   return *this;
 }
-auto Plot::Pad::Ratio::SetTreeProjectionDenom(string varExp1, string varExp2, pair<int32_t, int32_t> nBins, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProjectDenom(string varExp1, string varExp2, pair<int32_t, int32_t> nBins, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
 {
   mTreeInfoDenom = {{{varExp1, {0, 0}, nBins.first}, {varExp2, {0, 0}, nBins.second}}, filter, weightExp, nEntries};
   return *this;
 }
-auto Plot::Pad::Ratio::SetTreeScatterDenom(string varExp1, string varExp2, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ScatterDenom(string varExp1, string varExp2, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
 {
   mTreeInfoDenom = {{{varExp1}, {varExp2}}, filter, {}, nEntries, false};
   return *this;
 }
-auto Plot::Pad::Ratio::SetTreeProfileDenom(vector<tree_dim_t> treeDims, std::string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProfileDenom(vector<tree_dim_t> treeDims, std::string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
 {
   treeDims.push_back({profExp});
   mTreeInfoDenom = {treeDims, filter, weightExp, nEntries, true};
   return *this;
 }
-auto Plot::Pad::Ratio::SetTreeProfileDenom(string varExp, int32_t nBins, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProfileDenom(string varExp, int32_t nBins, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
 {
   mTreeInfoDenom = {{{varExp, {0, 0}, nBins}, {profExp}}, filter, weightExp, nEntries, true};
   return *this;
 }
-auto Plot::Pad::Ratio::SetTreeProfileDenom(string varExp1, string varExp2, pair<int32_t, int32_t> nBins, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProfileDenom(string varExp1, string varExp2, pair<int32_t, int32_t> nBins, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
 {
   mTreeInfoDenom = {{{varExp1, {0, 0}, nBins.first}, {varExp2, {0, 0}, nBins.second}, {profExp}}, filter, weightExp, nEntries, true};
   return *this;

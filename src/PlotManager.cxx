@@ -33,6 +33,7 @@
 #include <vector>
 #include <set>
 #include <utility>
+#include <iostream>
 
 // boost dependencies
 #include <boost/property_tree/info_parser.hpp>
