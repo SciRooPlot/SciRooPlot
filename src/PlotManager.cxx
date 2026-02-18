@@ -855,7 +855,12 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
             // do all requested projections of this tree
             for (auto& treeInfo : mTreeBuffer[inputID][fullName]) {
               string projFullName = fullName + treeInfo.GetNameSuffix();
-              obj = ProcessTree(tree, treeInfo, projFullName + suffix);
+              try {
+                obj = ProcessTree(tree, treeInfo, projFullName + suffix);
+              } catch (const std::runtime_error&) {
+                ERROR("Invalid query for tree.");
+                obj = nullptr;
+              }
               mDataBuffer[inputID][projFullName].reset(obj);
             }
             tree->SetDirectory(0);
