@@ -39,6 +39,7 @@
 
 // root dependencies
 #include "ROOT/RDataFrame.hxx"
+#include "ROOT/RCsvDS.hxx"
 #include "TApplication.h"
 #include "TROOT.h"
 #include "TSystem.h"
@@ -76,6 +77,7 @@ namespace SciRooPlot
 //**************************************************************************************************
 PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr)), mOutputFileName("ResultPlots.root")
 {
+  ROOT::EnableImplicitMT();
   gROOT->SetWebDisplay("off");
   TQObject::Connect("TGMainFrame", "CloseWindow()", "TApplication", gApplication, "Terminate()");
   gErrorIgnoreLevel = kWarning;
@@ -664,11 +666,11 @@ bool PlotManager::FillBuffer()
     for (auto& inputFileName : mInputFiles[inputID]) {
       if (requiredData.empty()) break;
       if (str_contains(inputFileName, ".csv", true)) {
-        string graphName = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
-        ReadDataCSV(inputFileName, graphName, inputID);
-        vector<string>& names = requiredData[""];
-        names.erase(std::remove_if(names.begin(), names.end(), [&](auto& name) { return name == graphName; }), names.end());
-        if (names.empty()) requiredData.erase("");
+        string name = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
+        ReadDataCSV(inputFileName, name, inputID);
+        vector<string>& wantedNames = requiredData[""];
+        wantedNames.erase(std::remove_if(wantedNames.begin(), wantedNames.end(), [&](auto& wantedName) { return wantedName == name; }), wantedNames.end());
+        if (wantedNames.empty()) requiredData.erase("");
       }
       if (!str_contains(inputFileName, ".root", true)) continue;
       // check if only a sub-folder in input file should be searched
@@ -856,7 +858,8 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
             for (auto& treeInfo : mTreeBuffer[inputID][fullName]) {
               string projFullName = fullName + treeInfo.GetNameSuffix();
               try {
-                obj = ProcessTree(tree, treeInfo, projFullName + suffix);
+                ROOT::RDataFrame df(*tree);
+                obj = ProcessData(df, fullName, treeInfo, projFullName + suffix);
               } catch (const std::runtime_error&) {
                 ERROR("Invalid query for tree.");
                 obj = nullptr;
@@ -894,15 +897,21 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
  * Read data from csv file.
  */
 //**************************************************************************************************
-void PlotManager::ReadDataCSV(const string& inputFileName, const string& graphName, const string& inputIdentifier)
+void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, const string& inputID)
 {
-  // extract from path the csv file name that will then become graph name TODO: protect this against wrong usage...
-  string delimiter = "\t";  // TODO: this must somehow be user definable
-  string pattern = "%lg %lg %lg %lg";
-  TGraphErrors* graph = new TGraphErrors(inputFileName.data(), pattern.data(), delimiter.data());
-  string uniqueName = graphName + ":" + inputIdentifier;
-  graph->SetName(uniqueName.data());
-  mDataBuffer[inputIdentifier][graphName].reset(graph);
+  ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName);
+  for (auto& treeInfo : mTreeBuffer[inputID][name]) {
+    string projName = name + treeInfo.GetNameSuffix();
+    TObject* obj = nullptr;
+    try {
+      obj = ProcessData(df, name, treeInfo, projName + ":" + inputID);
+    } catch (const std::runtime_error& e) {
+      ERROR("Invalid query for csv table.");
+      std::cout << e.what() << std::endl;
+      obj = nullptr;
+    }
+    mDataBuffer[inputID][projName].reset(obj);
+  }
 }
 
 //**************************************************************************************************
@@ -1019,10 +1028,10 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
 
 //**************************************************************************************************
 /**
- * Process TTree according to the settings stored in treeInfo.
+ * Process RDataFrame according to the settings stored in treeInfo.
  */
 //**************************************************************************************************
-TObject* PlotManager::ProcessTree(TTree* tree, const Plot::Pad::Data::tree_info_t& treeInfo, const string& name) const
+TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, const Plot::Pad::Data::tree_info_t& treeInfo, const string& name) const
 {
   bool isProfile = false;
   bool isScatter = false;
@@ -1035,7 +1044,7 @@ TObject* PlotManager::ProcessTree(TTree* tree, const Plot::Pad::Data::tree_info_
 
   auto treeDims = treeInfo.treeDims;  // make copy here so it can be modified
   if (isProfile && treeDims.size() > 3) {
-    ERROR("Too many dimensions specified for profile of tree {}.", tree->GetName());
+    ERROR("Too many dimensions specified for profile of {}.", dfName);
     return nullptr;
   }
   int32_t axisID = 1;
@@ -1043,12 +1052,12 @@ TObject* PlotManager::ProcessTree(TTree* tree, const Plot::Pad::Data::tree_info_
     if (isProjection || (isProfile && axisID < treeDims.size())) {
       // sanity check for binned axes
       if ((treeDim.nBins && treeDim.edges.size() != 2) || (!treeDim.nBins && treeDim.edges.size() <= 1)) {
-        ERROR("Can't project tree {} due to ill defined binning for {}.", tree->GetName(), treeDim.varExp);
+        ERROR("Can't project tree {} due to ill defined binning for {}.", dfName, treeDim.varExp);
         return nullptr;
       }
       if (!std::is_sorted(treeDim.edges.begin(), treeDim.edges.end())) {
         if (!(treeDim.edges.size() == 2 && !treeDim.edges[0] && !treeDim.edges[1])) {
-          ERROR("Can't project tree {} due to ill defined binning for {}.", tree->GetName(), treeDim.varExp);
+          ERROR("Can't project tree {} due to ill defined binning for {}.", dfName, treeDim.varExp);
           return nullptr;
         }
       }
@@ -1057,8 +1066,6 @@ TObject* PlotManager::ProcessTree(TTree* tree, const Plot::Pad::Data::tree_info_
   }
 
   TObject* obj = nullptr;
-  ROOT::EnableImplicitMT();
-  ROOT::RDataFrame df(*tree);
   ROOT::RDF::RNode node = df;  // working node
 
   if (treeInfo.nEntries) {
@@ -1069,11 +1076,11 @@ TObject* PlotManager::ProcessTree(TTree* tree, const Plot::Pad::Data::tree_info_
     node = node.Filter(*treeInfo.filter);
     auto nEntriesPostFilter = node.Count();
     if (nEntriesPostFilter && nEntriesPreFilter) {
-      INFO("Processing {} entries ({:.2f}%) of tree {} after filter {}.", (*nEntriesPostFilter), 100. * (*nEntriesPostFilter) / (*nEntriesPreFilter), tree->GetName(), *treeInfo.filter);
+      INFO("Processing {} entries ({:.2f}%) of {} after filter {}.", (*nEntriesPostFilter), 100. * (*nEntriesPostFilter) / (*nEntriesPreFilter), dfName, *treeInfo.filter);
     }
   } else {
     if (nEntriesPreFilter) {
-      INFO("Processing {} entries of tree {}.", *nEntriesPreFilter, tree->GetName());
+      INFO("Processing {} entries of {}.", *nEntriesPreFilter, dfName);
     }
   }
 
@@ -1211,7 +1218,7 @@ TObject* PlotManager::ProcessTree(TTree* tree, const Plot::Pad::Data::tree_info_
     // TODO: add HistoND()
     // THnDModel (const char *name, const char *title, int dim, const std::vector< int > &nbins, const std::vector< double > &xmin, const std::vector< double > &xmax)
     // THnDModel (const char *name, const char *title, int dim, const std::vector< int > &nbins, const std::vector< std::vector< double > > &xbins)
-    ERROR("N dimenstional tree projection not supported yet.");
+    ERROR("N dimenstional projection not supported yet.");
   }
   if (obj && obj->InheritsFrom(TH1::Class())) static_cast<TH1*>(obj)->SetDirectory(0);
   return obj;
