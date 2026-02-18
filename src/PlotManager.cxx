@@ -902,7 +902,27 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
 //**************************************************************************************************
 void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, const string& inputID)
 {
-  ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName);
+  char delimiter = ',';
+  std::vector<char> candidates = {',', ';', '\t', '|', ' '};
+  size_t maxCount = 0;
+  std::ifstream file(inputFileName);
+  int32_t count = 0;
+  string line;
+  while (count < 100 && std::getline(file, line)) {
+    for (char c : candidates) {
+      size_t count = std::count(line.begin(), line.end(), c);
+      if (count > maxCount) {
+        maxCount = count;
+        delimiter = c;
+      }
+    }
+    ++count;
+  }
+  if (delimiter != ',') {
+    INFO("Auto-detected csv delimiter '{}' for table {}.", delimiter, name);
+  }
+
+  ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter);
   for (auto& treeInfo : mTreeBuffer[inputID][name]) {
     string projName = name + treeInfo.GetNameSuffix();
     TObject* obj = nullptr;
