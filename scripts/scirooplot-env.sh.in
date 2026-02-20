@@ -47,10 +47,6 @@ function plot-config() {
     if [[ "${project_path}" != /* ]]; then
       project_path="$(pwd)/${project_path}"
     fi
-    if [ -d "${project_path}" ]; then
-      echo "Folder ${project_path} already exists. Doing nothing..."
-      return 1
-    fi
     if [[ -z "${project_name}" ]]; then
       echo "No project name specified. Doing nothing..."
       return 1
@@ -59,11 +55,18 @@ function plot-config() {
       echo "A project cannot be called @current."
       return 1
     fi
+    if [ -d "${project_path}" ]; then
+      echo "Folder ${project_path} already exists. Doing nothing..."
+      return 1
+    fi
     mkdir -p "${project_path}/build"
     cp -r "${SCIROOPLOT_DATA_DIR}/user/"* "${project_path}/"
     sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/CMakeLists.txt" && rm -f "${project_path}/CMakeLists.txt.bak"
     sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/DefinePlots.cxx" && rm -f "${project_path}/DefinePlots.cxx.bak"
     "${SCIROOPLOT_BIN}/plot-config" "set" "${project_name}" "EXE" "${project_path}/build/definePlots"
+    "${SCIROOPLOT_BIN}/plot-config" "set" "${project_name}" "OUT" "${project_path}/output"
+    "${SCIROOPLOT_BIN}/plot-config" "select" "${project_name}"
+    "${SCIROOPLOT_BIN}/plot-config" "show" "${project_name}"
     local curdir="$(pwd)"
     cd "${project_path}/build" && cmake -Wno-dev .. 2>&1 > /dev/null && make 2>&1 > /dev/null && ./definePlots
     cd "${curdir}"

@@ -127,22 +127,31 @@ int main(int argc, char* argv[])
     activeProject.clear();
   } else if (command == "clean") {
     vector<string> inactiveProjects;
+    string firstProject;
     for (auto& entry : configTree) {
       if (entry.first == "@current") continue;
       if (auto curConfig = configTree.get_child_optional(entry.first)) {
         if (auto executable = curConfig.get().get_child_optional("EXE")) {
-          if (std::filesystem::exists(std::filesystem::path(executable->get_value<string>()).parent_path())) continue;
+          if (std::filesystem::exists(std::filesystem::path(executable->get_value<string>()).parent_path())) {
+            if (firstProject.empty()) firstProject = entry.first;
+            continue;
+          }
           inactiveProjects.push_back(entry.first);
         }
       }
     }
+    bool updatedActiveProject = false;
     for (auto& inactiveProject : inactiveProjects) {
       PRINT("- deleting project {}", inactiveProject);
       configTree.erase(inactiveProject);
       std::filesystem::remove_all(configPath + "/" + inactiveProject);
       if (inactiveProject == activeProject) {
-        activeProject.clear();
+        activeProject = firstProject;
+        updatedActiveProject = true;
       }
+    }
+    if (updatedActiveProject) {
+      INFO("Selecting project {}", activeProject);
     }
   } else if (command == "projects") {
     for (auto& entry : configTree) {
@@ -157,7 +166,18 @@ int main(int argc, char* argv[])
     configTree.erase(project);
     std::filesystem::remove_all(configPath + "/" + project);
     if (project == activeProject) {
-      activeProject.clear();
+      string firstProject;
+      for (auto& entry : configTree) {
+        if (entry.first == "@current") continue;
+        if (auto curConfig = configTree.get_child_optional(entry.first)) {
+          firstProject = entry.first;
+          break;
+        }
+      }
+      activeProject = firstProject;
+      if (!activeProject.empty()) {
+        INFO("Selecting project {}", activeProject);
+      }
     }
   } else if (command == "select") {
     if (project.empty()) {
