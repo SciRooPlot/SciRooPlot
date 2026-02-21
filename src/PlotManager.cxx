@@ -1144,7 +1144,16 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     ++axisID;
   }
   if (isScatter) {
-    obj = node.Graph("SRP_AXIS_1", "SRP_AXIS_2")->Clone(name.data());
+    if (treeDims.size() == 2) {
+      obj = node.Graph("SRP_AXIS_1", "SRP_AXIS_2")->Clone(name.data());
+    } else if (treeDims.size() == 4) {
+      obj = node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_4")->Clone(name.data());
+    } else if (treeDims.size() == 6) {
+      obj = node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_5", "SRP_AXIS_6")->Clone(name.data());
+    } else {
+      ERROR("Invalid number of columns for scatter data.");
+      return nullptr;
+    }
     if (obj && obj->InheritsFrom(TGraph::Class())) {
       TGraph* graph = static_cast<TGraph*>(obj);
       graph->SetTitle(histTitle.data());

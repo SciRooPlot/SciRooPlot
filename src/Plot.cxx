@@ -1618,7 +1618,17 @@ auto Plot::Pad::Data::Scatter(string varExp1, string varExp2, optional<string> f
   mTreeInfo = {{{varExp1}, {varExp2}}, filter, {}, nEntries, false};
   return *this;
 }
-auto Plot::Pad::Data::Profile(vector<tree_dim_t> treeDims, std::string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Scatter(string x, string y, string xErr, string yErr, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+{
+  mTreeInfo = {{{x}, {y}, {xErr}, {yErr}}, filter, {}, nEntries, false};
+  return *this;
+}
+auto Plot::Pad::Data::Scatter(string x, string y, string xErrLow, string xErrHigh, string yErrLow, string yErrHigh, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+{
+  mTreeInfo = {{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, filter, {}, nEntries, false};
+  return *this;
+}
+auto Plot::Pad::Data::Profile(vector<tree_dim_t> treeDims, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
 {
   treeDims.push_back({profExp});
   mTreeInfo = {treeDims, filter, weightExp, nEntries, true};

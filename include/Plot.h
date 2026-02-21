@@ -438,7 +438,9 @@ class Plot::Pad::Data
   virtual Data& Project(std::string varExp, int32_t nBins = 32, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
   virtual Data& Project(std::string varExp1, std::string varExp2, std::pair<int32_t, int32_t> nBins = {32, 32}, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
 
-  virtual Data& Scatter(std::string varExp1, std::string varExp2, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
+  virtual Data& Scatter(std::string x, std::string y, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
+  virtual Data& Scatter(std::string x, std::string y, std::string xErr, std::string yErr, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
+  virtual Data& Scatter(std::string x, std::string y, std::string xErrLow, std::string xErrHigh, std::string yErrLow, std::string yErrHigh, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
 
   virtual Data& Profile(std::vector<tree_dim_t> treeDims, std::string profExp, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
   virtual Data& Profile(std::string varExp, int32_t nBins, std::string profExp, std::optional<std::string> filter = {}, std::optional<std::string> weightExp = {}, std::optional<uint64_t> nEntries = {});
