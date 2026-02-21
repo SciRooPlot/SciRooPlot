@@ -1259,11 +1259,53 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       }
     }
   } else {
-    auto histModel = ROOT::RDF::THnDModel();
-    // TODO: add HistoND()
-    // THnDModel (const char *name, const char *title, int dim, const std::vector< int > &nbins, const std::vector< double > &xmin, const std::vector< double > &xmax)
-    // THnDModel (const char *name, const char *title, int dim, const std::vector< int > &nbins, const std::vector< std::vector< double > > &xbins)
-    ERROR("N dimenstional projection not supported yet.");
+    if (isProfile) {
+      ERROR("Too many dimensions for a profile.");
+    } else {
+      auto histModel = ROOT::RDF::THnDModel();
+      bool allFixed = true;
+      vector<int32_t> nBinsVec;
+      vector<double_t> xMinVec;
+      vector<double_t> xMaxVec;
+      for (auto& treeDim : treeDims) {
+        if (!treeDim.nBins) {
+          allFixed = false;
+          nBinsVec.push_back(treeDim.edges.size() - 1);
+        } else {
+          nBinsVec.push_back(treeDim.nBins);
+          xMinVec.push_back(treeDim.edges[0]);
+          xMaxVec.push_back(treeDim.edges[1]);
+        }
+      }
+
+      if (allFixed) {
+        histModel = ROOT::RDF::THnDModel("tmp", histTitle.data(), treeDims.size(), nBinsVec, xMinVec, xMaxVec);
+      } else {
+        vector<vector<double_t>> xBins;
+        for (auto& treeDim : treeDims) {
+          if (treeDim.nBins) {
+            double_t binWidth = (treeDim.edges[1] - treeDim.edges[0]) / treeDim.nBins;
+            vector<double_t> edges = {treeDim.edges[0]};
+            for (int32_t i = 1; i <= treeDim.nBins; ++i) {
+              edges.push_back(treeDim.edges[0] + i * binWidth);
+            }
+            treeDim.edges = edges;
+            treeDim.nBins = 0;
+          }
+          xBins.insert(xBins.end(), treeDim.edges);
+        }
+        histModel = ROOT::RDF::THnDModel("tmp", histTitle.data(), treeDims.size(), nBinsVec, xBins);
+      }
+      vector<string> colNames;
+      axisID = 1;
+      for (auto& treeDim : treeDims) {
+        colNames.push_back("SRP_AXIS_" + std::to_string(axisID));
+      }
+      if (hasWegiths) {
+        colNames.push_back("SRP_AXIS_W");
+      }
+      obj = node.HistoND(histModel, colNames)->Clone(name.data());
+    }
   }
   if (obj && obj->InheritsFrom(TH1::Class())) static_cast<TH1*>(obj)->SetDirectory(0);
   return obj;
