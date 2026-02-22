@@ -430,7 +430,7 @@ class Plot::Pad::Data
   virtual Data& SetProfile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});  // for 2d & 3d histos
 
   struct data_dim_t {
-    std::string varExp{};
+    std::string var{};
     std::vector<double_t> edges{};
     int32_t nBins{0};
   };
@@ -527,8 +527,8 @@ class Plot::Pad::Data
     std::optional<double_t> max;
   };
 
-  std::optional<proj_info_t> mProjInfo;
   std::optional<data_info_t> mDataInfo;
+  std::optional<proj_info_t> mProjInfo;
 
   legend_t mLegend;
   layout_t mMarker;
@@ -657,9 +657,9 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   std::string mDenomName;
   std::string mDenomInputIdentifier;
   bool mIsCorrelated{};
-  std::optional<proj_info_t> mProjInfoDenom;
-  std::optional<data_info_t> mDataInfoDenom;
   std::optional<bool> mDivisionNormMode;  // normalize both numerater and denominator to 0: sum over bin contents, 1: times bin widths
+  std::optional<data_info_t> mDataInfoDenom;
+  std::optional<proj_info_t> mProjInfoDenom;
 };
 
 //**************************************************************************************************

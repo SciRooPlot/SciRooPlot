@@ -1077,12 +1077,12 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     if (isProjection || (isProfile && axisID < dataDims.size())) {
       // sanity check for binned axes
       if ((dataDim.nBins && dataDim.edges.size() != 2) || (!dataDim.nBins && dataDim.edges.size() <= 1)) {
-        ERROR("Can't project tree {} due to ill defined binning for {}.", dfName, dataDim.varExp);
+        ERROR("Can't project tree {} due to ill defined binning for {}.", dfName, dataDim.var);
         return nullptr;
       }
       if (!std::is_sorted(dataDim.edges.begin(), dataDim.edges.end())) {
         if (!(dataDim.edges.size() == 2 && !dataDim.edges[0] && !dataDim.edges[1])) {
-          ERROR("Can't project tree {} due to ill defined binning for {}.", dfName, dataDim.varExp);
+          ERROR("Can't project tree {} due to ill defined binning for {}.", dfName, dataDim.var);
           return nullptr;
         }
       }
@@ -1119,13 +1119,13 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
   for (auto& dataDim : dataDims) {
     string colName = "SRP_AXIS_" + std::to_string(axisID);
     try {
-      node = node.Define(colName, dataDim.varExp);
+      node = node.Define(colName, dataDim.var);
     } catch (std::runtime_error) {
-      ERROR("Illegal expression: {}.", dataDim.varExp);
+      ERROR("Illegal expression: {}.", dataDim.var);
       return nullptr;
     }
     if (node.GetColumnType(colName).find("string") != string::npos) {
-      ERROR("Variable expression {} is not numeric.", dataDim.varExp);
+      ERROR("Variable expression {} is not numeric.", dataDim.var);
       return nullptr;
     }
     if (dataDim.nBins && dataDim.edges.size() == 2 && !dataDim.edges[0] && !dataDim.edges[1]) {
@@ -1137,9 +1137,9 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       dataDim.edges[1] = (*max) * ((*max) > 0 ? (1. + margin) : (1. - margin));
     }
     if (isProfile && axisID == dataDims.size()) {
-      histTitle += ";#LT " + dataDim.varExp + " #GT";
+      histTitle += ";#LT " + dataDim.var + " #GT";
     } else {
-      histTitle += ";" + dataDim.varExp;
+      histTitle += ";" + dataDim.var;
     }
     ++axisID;
   }

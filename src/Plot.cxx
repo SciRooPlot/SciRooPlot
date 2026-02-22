@@ -1216,47 +1216,50 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mContours, "contours");
   read_from_tree(dataTree, mNContours, "number_of_contours");
 
-  // ugly workaround
-  optional<vector<uint8_t>> dims;
-  optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
-  optional<bool> isUserCoord;
-  optional<bool> isProfile;
-  read_from_tree(dataTree, dims, "proj_dims");
-  read_from_tree(dataTree, ranges, "proj_ranges");
-  read_from_tree(dataTree, isUserCoord, "proj_isUserCoord");
-  read_from_tree(dataTree, isProfile, "proj_isProfile");
+  // extract data info
+  {
+    optional<vector<string>> vars;
+    read_from_tree(dataTree, vars, "data_vars");
+    if (vars) {
+      mDataInfo = data_info_t();
+      vector<data_dim_t> dataDims{};
 
-  if (dims) {
-    mProjInfo = {*dims, *ranges, isUserCoord, isProfile};
-  }
+      optional<vector<double_t>> binning;
+      optional<vector<int32_t>> sizes;
+      read_from_tree(dataTree, binning, "data_binning");
+      read_from_tree(dataTree, sizes, "data_binning_sizes");
 
-  optional<vector<string>> varExps;
-  read_from_tree(dataTree, varExps, "data_varExps");
-  if (varExps) {
-    mDataInfo = data_info_t();
-    vector<data_dim_t> dataDims{};
-
-    optional<vector<double_t>> binning;
-    optional<vector<int32_t>> sizes;
-    read_from_tree(dataTree, binning, "data_binning");
-    read_from_tree(dataTree, sizes, "data_binning_sizes");
-
-    if (binning && sizes) {
-      auto lastPos = binning->begin();
-      for (int i = 0; i < varExps->size(); ++i) {
-        auto nextPos = lastPos + (*sizes)[i];
-        vector<double_t> edges(lastPos, nextPos);
-        lastPos = nextPos;
-        int32_t nBins = static_cast<int32_t>(edges.back());
-        edges.pop_back();
-        dataDims.push_back({varExps->at(i), edges, nBins});
+      if (binning && sizes) {
+        auto lastPos = binning->begin();
+        for (int i = 0; i < vars->size(); ++i) {
+          auto nextPos = lastPos + (*sizes)[i];
+          vector<double_t> edges(lastPos, nextPos);
+          lastPos = nextPos;
+          int32_t nBins = static_cast<int32_t>(edges.back());
+          edges.pop_back();
+          dataDims.push_back({vars->at(i), edges, nBins});
+        }
       }
+      mDataInfo->dataDims = dataDims;
+      read_from_tree(dataTree, mDataInfo->filter, "data_filter");
+      read_from_tree(dataTree, mDataInfo->weight, "data_weight");
+      read_from_tree(dataTree, mDataInfo->nEntries, "data_nEntries");
+      read_from_tree(dataTree, mDataInfo->isProfileNoScatter, "data_isProfileNoScatter");
     }
-    mDataInfo->dataDims = dataDims;
-    read_from_tree(dataTree, mDataInfo->filter, "data_filter");
-    read_from_tree(dataTree, mDataInfo->weight, "data_weight");
-    read_from_tree(dataTree, mDataInfo->nEntries, "data_nEntries");
-    read_from_tree(dataTree, mDataInfo->isProfileNoScatter, "data_isProfileNoScatter");
+  }
+  // extract proj info
+  {
+    optional<vector<uint8_t>> dims;
+    optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
+    optional<bool> isUserCoord;
+    optional<bool> isProfile;
+    read_from_tree(dataTree, dims, "proj_dims");
+    read_from_tree(dataTree, ranges, "proj_ranges");
+    read_from_tree(dataTree, isUserCoord, "proj_isUserCoord");
+    read_from_tree(dataTree, isProfile, "proj_isProfile");
+    if (dims) {
+      mProjInfo = {*dims, *ranges, isUserCoord, isProfile};
+    }
   }
 }
 
@@ -1297,30 +1300,29 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mContours, "contours");
   put_in_tree(dataTree, mNContours, "number_of_contours");
 
-  // ugly workaround
-  if (mProjInfo) {
-    put_in_tree(dataTree, optional<vector<uint8_t>>{mProjInfo->dims}, "proj_dims");
-    put_in_tree(dataTree, optional<vector<tuple<uint8_t, double_t, double_t>>>{mProjInfo->ranges}, "proj_ranges");
-    put_in_tree(dataTree, mProjInfo->isUserCoord, "proj_isUserCoord");
-    put_in_tree(dataTree, mProjInfo->isProfile, "proj_isProfile");
-  }
   if (mDataInfo) {
-    vector<string> varExps;
+    vector<string> vars;
     vector<double_t> binning;
     vector<int32_t> sizes;
     for (auto dataDim : mDataInfo->dataDims) {
-      varExps.push_back(dataDim.varExp);
+      vars.push_back(dataDim.var);
       binning.insert(binning.end(), dataDim.edges.begin(), dataDim.edges.end());
       binning.push_back(static_cast<double_t>(dataDim.nBins));
       sizes.push_back(dataDim.edges.size() + 1);
     }
-    put_in_tree(dataTree, optional<vector<string>>{varExps}, "data_varExps");
+    put_in_tree(dataTree, optional<vector<string>>{vars}, "data_vars");
     put_in_tree(dataTree, optional<vector<double_t>>{binning}, "data_binning");
     put_in_tree(dataTree, optional<vector<int32_t>>{sizes}, "data_binning_sizes");
     put_in_tree(dataTree, mDataInfo->filter, "data_filter");
     put_in_tree(dataTree, mDataInfo->weight, "data_weight");
     put_in_tree(dataTree, mDataInfo->nEntries, "data_nEntries");
     put_in_tree(dataTree, mDataInfo->isProfileNoScatter, "data_isProfileNoScatter");
+  }
+  if (mProjInfo) {
+    put_in_tree(dataTree, optional<vector<uint8_t>>{mProjInfo->dims}, "proj_dims");
+    put_in_tree(dataTree, optional<vector<tuple<uint8_t, double_t, double_t>>>{mProjInfo->ranges}, "proj_ranges");
+    put_in_tree(dataTree, mProjInfo->isUserCoord, "proj_isUserCoord");
+    put_in_tree(dataTree, mProjInfo->isProfile, "proj_isProfile");
   }
   return dataTree;
 }
@@ -1686,7 +1688,7 @@ string Plot::Pad::Data::data_info_t::GetNameSuffix() const
 {
   string nameSuffix = "{";
   for (auto& dataDim : dataDims) {
-    nameSuffix += dataDim.varExp;
+    nameSuffix += dataDim.var;
     for (auto& edge : dataDim.edges) {
       nameSuffix += std::to_string(edge);
     }
@@ -1743,47 +1745,50 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
 
   read_from_tree(dataTree, mDivisionNormMode, "divisionNormMode");
 
-  // ugly workaround
-  optional<vector<uint8_t>> dims;
-  optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
-  optional<bool> isUserCoord;
-  optional<bool> isProfile;
-  read_from_tree(dataTree, dims, "projDenom_dims");
-  read_from_tree(dataTree, ranges, "projDenom_ranges");
-  read_from_tree(dataTree, isUserCoord, "projDenom_isUserCoord");
-  read_from_tree(dataTree, isProfile, "projDenom_isProfile");
+  // extract data info
+  {
+    optional<vector<string>> vars;
+    read_from_tree(dataTree, vars, "dataDenom_vars");
+    if (vars) {
+      mDataInfoDenom = data_info_t();
+      vector<data_dim_t> dataDims{};
 
-  if (dims) {
-    mProjInfoDenom = {*dims, *ranges, isUserCoord, isProfile};
-  }
+      optional<vector<double_t>> binning;
+      optional<vector<int32_t>> sizes;
+      read_from_tree(dataTree, binning, "dataDenom_binning");
+      read_from_tree(dataTree, sizes, "dataDenom_binning_sizes");
 
-  optional<vector<string>> varExps;
-  read_from_tree(dataTree, varExps, "dataDenom_varExps");
-  if (varExps) {
-    mDataInfoDenom = data_info_t();
-    vector<data_dim_t> dataDims{};
-
-    optional<vector<double_t>> binning;
-    optional<vector<int32_t>> sizes;
-    read_from_tree(dataTree, binning, "dataDenom_binning");
-    read_from_tree(dataTree, sizes, "dataDenom_binning_sizes");
-
-    if (binning && sizes) {
-      auto lastPos = binning->begin();
-      for (int i = 0; i < varExps->size(); ++i) {
-        auto nextPos = lastPos + (*sizes)[i];
-        vector<double_t> edges(lastPos, nextPos);
-        lastPos = nextPos;
-        int32_t nBins = static_cast<int32_t>(edges.back());
-        edges.pop_back();
-        dataDims.push_back({varExps->at(i), edges, nBins});
+      if (binning && sizes) {
+        auto lastPos = binning->begin();
+        for (int i = 0; i < vars->size(); ++i) {
+          auto nextPos = lastPos + (*sizes)[i];
+          vector<double_t> edges(lastPos, nextPos);
+          lastPos = nextPos;
+          int32_t nBins = static_cast<int32_t>(edges.back());
+          edges.pop_back();
+          dataDims.push_back({vars->at(i), edges, nBins});
+        }
       }
+      mDataInfoDenom->dataDims = dataDims;
+      read_from_tree(dataTree, mDataInfoDenom->filter, "dataDenom_filter");
+      read_from_tree(dataTree, mDataInfoDenom->weight, "dataDenom_weight");
+      read_from_tree(dataTree, mDataInfoDenom->nEntries, "dataDenom_nEntries");
+      read_from_tree(dataTree, mDataInfoDenom->isProfileNoScatter, "dataDenom_isProfileNoScatter");
     }
-    mDataInfoDenom->dataDims = dataDims;
-    read_from_tree(dataTree, mDataInfoDenom->filter, "dataDenom_filter");
-    read_from_tree(dataTree, mDataInfoDenom->weight, "dataDenom_weight");
-    read_from_tree(dataTree, mDataInfoDenom->nEntries, "dataDenom_nEntries");
-    read_from_tree(dataTree, mDataInfoDenom->isProfileNoScatter, "dataDenom_isProfileNoScatter");
+  }
+  // extract proj info
+  {
+    optional<vector<uint8_t>> dims;
+    optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
+    optional<bool> isUserCoord;
+    optional<bool> isProfile;
+    read_from_tree(dataTree, dims, "projDenom_dims");
+    read_from_tree(dataTree, ranges, "projDenom_ranges");
+    read_from_tree(dataTree, isUserCoord, "projDenom_isUserCoord");
+    read_from_tree(dataTree, isProfile, "projDenom_isProfile");
+    if (dims) {
+      mProjInfoDenom = {*dims, *ranges, isUserCoord, isProfile};
+    }
   }
 }
 
@@ -1800,30 +1805,29 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
   dataTree.put("isCorrelated", mIsCorrelated);
   put_in_tree(dataTree, mDivisionNormMode, "divisionNormMode");
 
-  // ugly workaround
-  if (mProjInfoDenom) {
-    put_in_tree(dataTree, optional<vector<uint8_t>>{mProjInfoDenom->dims}, "projDenom_dims");
-    put_in_tree(dataTree, optional<vector<tuple<uint8_t, double_t, double_t>>>{mProjInfoDenom->ranges}, "projDenom_ranges");
-    put_in_tree(dataTree, mProjInfoDenom->isUserCoord, "projDenom_isUserCoord");
-    put_in_tree(dataTree, mProjInfoDenom->isProfile, "projDenom_isProfile");
-  }
   if (mDataInfoDenom) {
-    vector<string> varExps;
+    vector<string> vars;
     vector<double_t> binning;
     vector<int32_t> sizes;
     for (auto& dataDim : mDataInfoDenom->dataDims) {
-      varExps.push_back(dataDim.varExp);
+      vars.push_back(dataDim.var);
       binning.insert(binning.end(), dataDim.edges.begin(), dataDim.edges.end());
       binning.push_back(static_cast<double_t>(dataDim.nBins));
       sizes.push_back(dataDim.edges.size() + 1);
     }
-    put_in_tree(dataTree, optional<vector<string>>{varExps}, "dataDenom_varExps");
+    put_in_tree(dataTree, optional<vector<string>>{vars}, "dataDenom_vars");
     put_in_tree(dataTree, optional<vector<double_t>>{binning}, "dataDenom_binning");
     put_in_tree(dataTree, optional<vector<int32_t>>{sizes}, "dataDenom_binning_sizes");
     put_in_tree(dataTree, mDataInfoDenom->filter, "dataDenom_filter");
     put_in_tree(dataTree, mDataInfoDenom->weight, "dataDenom_weight");
     put_in_tree(dataTree, mDataInfoDenom->nEntries, "dataDenom_nEntries");
     put_in_tree(dataTree, mDataInfoDenom->isProfileNoScatter, "dataDenom_isProfileNoScatter");
+  }
+  if (mProjInfoDenom) {
+    put_in_tree(dataTree, optional<vector<uint8_t>>{mProjInfoDenom->dims}, "projDenom_dims");
+    put_in_tree(dataTree, optional<vector<tuple<uint8_t, double_t, double_t>>>{mProjInfoDenom->ranges}, "projDenom_ranges");
+    put_in_tree(dataTree, mProjInfoDenom->isUserCoord, "projDenom_isUserCoord");
+    put_in_tree(dataTree, mProjInfoDenom->isProfile, "projDenom_isProfile");
   }
   return dataTree;
 }
