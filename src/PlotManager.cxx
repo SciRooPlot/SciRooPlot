@@ -588,20 +588,20 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
       for (auto& data : pad.GetData()) {
         mDataBuffer[data->GetInputID()][data->GetName()];
         if (data->GetTreeInfo()) {
-          auto& treeInfos = mTreeBuffer[data->GetInputID()][data->GetName()];
-          auto iter = std::find_if(treeInfos.begin(), treeInfos.end(), [&](const auto& treeInfo) { return treeInfo.GetNameSuffix() == (*data->GetTreeInfo()).GetNameSuffix(); });
-          if (iter == treeInfos.end()) {
-            mTreeBuffer[data->GetInputID()][data->GetName()].push_back(*data->GetTreeInfo());
+          auto& dataInfos = mDataInfoBuffer[data->GetInputID()][data->GetName()];
+          auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& treeInfo) { return treeInfo.GetNameSuffix() == (*data->GetTreeInfo()).GetNameSuffix(); });
+          if (iter == dataInfos.end()) {
+            mDataInfoBuffer[data->GetInputID()][data->GetName()].push_back(*data->GetTreeInfo());
           }
         }
         if (data->GetType() == "ratio") {
           const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
           mDataBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()];
           if (ratio->GetTreeInfoDenom()) {
-            auto& treeInfos = mTreeBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()];
-            auto iter = std::find_if(treeInfos.begin(), treeInfos.end(), [&](const auto& treeInfo) { return treeInfo.GetNameSuffix() == (*data->GetTreeInfo()).GetNameSuffix(); });
-            if (iter == treeInfos.end()) {
-              mTreeBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()].push_back(*ratio->GetTreeInfoDenom());
+            auto& dataInfos = mDataInfoBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()];
+            auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& treeInfo) { return treeInfo.GetNameSuffix() == (*data->GetTreeInfo()).GetNameSuffix(); });
+            if (iter == dataInfos.end()) {
+              mDataInfoBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()].push_back(*ratio->GetTreeInfoDenom());
             }
           }
         }
@@ -856,7 +856,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
             TTree* tree = static_cast<TTree*>(obj);
             mDataBuffer[inputID][fullName].reset(nullptr);
             // do all requested projections of this tree
-            for (auto& treeInfo : mTreeBuffer[inputID][fullName]) {
+            for (auto& treeInfo : mDataInfoBuffer[inputID][fullName]) {
               string projFullName = fullName + treeInfo.GetNameSuffix();
               try {
                 ROOT::RDataFrame df(*tree);
@@ -923,7 +923,7 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
   }
 
   ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter);
-  for (auto& treeInfo : mTreeBuffer[inputID][name]) {
+  for (auto& treeInfo : mDataInfoBuffer[inputID][name]) {
     string projName = name + treeInfo.GetNameSuffix();
     TObject* obj = nullptr;
     try {
@@ -1056,7 +1056,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
  * Process RDataFrame according to the settings stored in treeInfo.
  */
 //**************************************************************************************************
-TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, const Plot::Pad::Data::tree_info_t& treeInfo, const string& name) const
+TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, const Plot::Pad::Data::data_info_t& treeInfo, const string& name) const
 {
   bool isProfile = false;
   bool isScatter = false;
@@ -1067,22 +1067,22 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
   bool isProjection = (!isProfile && !isScatter);
   bool hasWegiths = false;
 
-  auto treeDims = treeInfo.treeDims;  // make copy here so it can be modified
-  if (isProfile && treeDims.size() > 3) {
+  auto dataDims = treeInfo.dataDims;  // make copy here so it can be modified
+  if (isProfile && dataDims.size() > 3) {
     ERROR("Too many dimensions specified for profile of {}.", dfName);
     return nullptr;
   }
   int32_t axisID = 1;
-  for (auto& treeDim : treeDims) {
-    if (isProjection || (isProfile && axisID < treeDims.size())) {
+  for (auto& dataDim : dataDims) {
+    if (isProjection || (isProfile && axisID < dataDims.size())) {
       // sanity check for binned axes
-      if ((treeDim.nBins && treeDim.edges.size() != 2) || (!treeDim.nBins && treeDim.edges.size() <= 1)) {
-        ERROR("Can't project tree {} due to ill defined binning for {}.", dfName, treeDim.varExp);
+      if ((dataDim.nBins && dataDim.edges.size() != 2) || (!dataDim.nBins && dataDim.edges.size() <= 1)) {
+        ERROR("Can't project tree {} due to ill defined binning for {}.", dfName, dataDim.varExp);
         return nullptr;
       }
-      if (!std::is_sorted(treeDim.edges.begin(), treeDim.edges.end())) {
-        if (!(treeDim.edges.size() == 2 && !treeDim.edges[0] && !treeDim.edges[1])) {
-          ERROR("Can't project tree {} due to ill defined binning for {}.", dfName, treeDim.varExp);
+      if (!std::is_sorted(dataDim.edges.begin(), dataDim.edges.end())) {
+        if (!(dataDim.edges.size() == 2 && !dataDim.edges[0] && !dataDim.edges[1])) {
+          ERROR("Can't project tree {} due to ill defined binning for {}.", dfName, dataDim.varExp);
           return nullptr;
         }
       }
@@ -1116,39 +1116,39 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
 
   string histTitle;
   axisID = 1;
-  for (auto& treeDim : treeDims) {
+  for (auto& dataDim : dataDims) {
     string colName = "SRP_AXIS_" + std::to_string(axisID);
     try {
-      node = node.Define(colName, treeDim.varExp);
+      node = node.Define(colName, dataDim.varExp);
     } catch (std::runtime_error) {
-      ERROR("Illegal expression: {}.", treeDim.varExp);
+      ERROR("Illegal expression: {}.", dataDim.varExp);
       return nullptr;
     }
     if (node.GetColumnType(colName).find("string") != string::npos) {
-      ERROR("Variable expression {} is not numeric.", treeDim.varExp);
+      ERROR("Variable expression {} is not numeric.", dataDim.varExp);
       return nullptr;
     }
-    if (treeDim.nBins && treeDim.edges.size() == 2 && !treeDim.edges[0] && !treeDim.edges[1]) {
+    if (dataDim.nBins && dataDim.edges.size() == 2 && !dataDim.edges[0] && !dataDim.edges[1]) {
       // auto-detect bin edges given the data
       auto max = node.Max("SRP_AXIS_" + std::to_string(axisID));
       auto min = node.Min("SRP_AXIS_" + std::to_string(axisID));
       double margin = 0.01;
-      treeDim.edges[0] = (*min) * ((*min) > 0 ? (1. - margin) : (1. + margin));
-      treeDim.edges[1] = (*max) * ((*max) > 0 ? (1. + margin) : (1. - margin));
+      dataDim.edges[0] = (*min) * ((*min) > 0 ? (1. - margin) : (1. + margin));
+      dataDim.edges[1] = (*max) * ((*max) > 0 ? (1. + margin) : (1. - margin));
     }
-    if (isProfile && axisID == treeDims.size()) {
-      histTitle += ";#LT " + treeDim.varExp + " #GT";
+    if (isProfile && axisID == dataDims.size()) {
+      histTitle += ";#LT " + dataDim.varExp + " #GT";
     } else {
-      histTitle += ";" + treeDim.varExp;
+      histTitle += ";" + dataDim.varExp;
     }
     ++axisID;
   }
   if (isScatter) {
-    if (treeDims.size() == 2) {
+    if (dataDims.size() == 2) {
       obj = node.Graph("SRP_AXIS_1", "SRP_AXIS_2")->Clone(name.data());
-    } else if (treeDims.size() == 4) {
+    } else if (dataDims.size() == 4) {
       obj = node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_4")->Clone(name.data());
-    } else if (treeDims.size() == 6) {
+    } else if (dataDims.size() == 6) {
       obj = node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_5", "SRP_AXIS_6")->Clone(name.data());
     } else {
       ERROR("Invalid number of columns for scatter data.");
@@ -1175,29 +1175,29 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     hasWegiths = true;
   }
 
-  if (treeDims.size() == 1) {
+  if (dataDims.size() == 1) {
     auto histModel = ROOT::RDF::TH1DModel();
-    auto& treeDim1 = treeDims.at(0);
+    auto& dataDim1 = dataDims.at(0);
 
-    if (!treeDim1.nBins) {
-      histModel = ROOT::RDF::TH1DModel("tmp", histTitle.data(), treeDim1.edges.size() - 1, treeDim1.edges.data());
+    if (!dataDim1.nBins) {
+      histModel = ROOT::RDF::TH1DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data());
     } else {
-      histModel = ROOT::RDF::TH1DModel("tmp", histTitle.data(), treeDim1.nBins, treeDim1.edges[0], treeDim1.edges[1]);
+      histModel = ROOT::RDF::TH1DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1]);
     }
     if (hasWegiths) {
       obj = node.Histo1D(histModel, "SRP_AXIS_1", "SRP_AXIS_W")->Clone(name.data());
     } else {
       obj = node.Histo1D(histModel, "SRP_AXIS_1")->Clone(name.data());
     }
-  } else if (treeDims.size() == 2) {
-    auto& treeDim1 = treeDims.at(0);
-    auto& treeDim2 = treeDims.at(1);
+  } else if (dataDims.size() == 2) {
+    auto& dataDim1 = dataDims.at(0);
+    auto& dataDim2 = dataDims.at(1);
     if (isProfile) {
       auto profileModel = ROOT::RDF::TProfile1DModel();
-      if (!treeDim1.nBins) {
-        profileModel = ROOT::RDF::TProfile1DModel("tmp", histTitle.data(), treeDim1.edges.size() - 1, treeDim1.edges.data());
+      if (!dataDim1.nBins) {
+        profileModel = ROOT::RDF::TProfile1DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data());
       } else {
-        profileModel = ROOT::RDF::TProfile1DModel("tmp", histTitle.data(), treeDim1.nBins, treeDim1.edges[0], treeDim1.edges[1]);
+        profileModel = ROOT::RDF::TProfile1DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1]);
       }
       if (hasWegiths) {
         obj = node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W")->Clone(name.data());
@@ -1206,14 +1206,14 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       }
     } else {
       auto histModel = ROOT::RDF::TH2DModel();
-      if (!treeDim1.nBins && !treeDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), treeDim1.edges.size() - 1, treeDim1.edges.data(), treeDim2.edges.size() - 1, treeDim2.edges.data());
-      } else if (treeDim1.nBins && treeDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), treeDim1.nBins, treeDim1.edges[0], treeDim1.edges[1], treeDim2.nBins, treeDim2.edges[0], treeDim2.edges[1]);
-      } else if (treeDim1.nBins && !treeDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), treeDim1.nBins, treeDim1.edges[0], treeDim1.edges[1], treeDim2.edges.size() - 1, treeDim2.edges.data());
-      } else if (!treeDim1.nBins && treeDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), treeDim1.edges.size() - 1, treeDim1.edges.data(), treeDim2.nBins, treeDim2.edges[0], treeDim2.edges[1]);
+      if (!dataDim1.nBins && !dataDim2.nBins) {
+        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data(), dataDim2.edges.size() - 1, dataDim2.edges.data());
+      } else if (dataDim1.nBins && dataDim2.nBins) {
+        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
+      } else if (dataDim1.nBins && !dataDim2.nBins) {
+        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.edges.size() - 1, dataDim2.edges.data());
+      } else if (!dataDim1.nBins && dataDim2.nBins) {
+        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       }
       if (hasWegiths) {
         obj = node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W")->Clone(name.data());
@@ -1221,21 +1221,21 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
         obj = node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2")->Clone(name.data());
       }
     }
-  } else if (treeDims.size() == 3) {
-    auto& treeDim1 = treeDims.at(0);
-    auto& treeDim2 = treeDims.at(1);
-    auto& treeDim3 = treeDims.at(2);
+  } else if (dataDims.size() == 3) {
+    auto& dataDim1 = dataDims.at(0);
+    auto& dataDim2 = dataDims.at(1);
+    auto& dataDim3 = dataDims.at(2);
 
     if (isProfile) {
       auto profileModel = ROOT::RDF::TProfile2DModel();
-      if (!treeDim1.nBins && !treeDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), treeDim1.edges.size() - 1, treeDim1.edges.data(), treeDim2.edges.size() - 1, treeDim2.edges.data());
-      } else if (treeDim1.nBins && treeDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), treeDim1.nBins, treeDim1.edges[0], treeDim1.edges[1], treeDim2.nBins, treeDim2.edges[0], treeDim2.edges[1]);
-      } else if (treeDim1.nBins && !treeDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), treeDim1.nBins, treeDim1.edges[0], treeDim1.edges[1], treeDim2.edges.size() - 1, treeDim2.edges.data());
-      } else if (!treeDim1.nBins && treeDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), treeDim1.edges.size() - 1, treeDim1.edges.data(), treeDim2.nBins, treeDim2.edges[0], treeDim2.edges[1]);
+      if (!dataDim1.nBins && !dataDim2.nBins) {
+        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data(), dataDim2.edges.size() - 1, dataDim2.edges.data());
+      } else if (dataDim1.nBins && dataDim2.nBins) {
+        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
+      } else if (dataDim1.nBins && !dataDim2.nBins) {
+        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.edges.size() - 1, dataDim2.edges.data());
+      } else if (!dataDim1.nBins && dataDim2.nBins) {
+        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       }
       if (hasWegiths) {
         obj = node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W")->Clone(name.data());
@@ -1244,22 +1244,22 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       }
     } else {
       auto histModel = ROOT::RDF::TH3DModel();
-      if (treeDim1.nBins && treeDim2.nBins && treeDim3.nBins) {
-        histModel = ROOT::RDF::TH3DModel("tmp", histTitle.data(), treeDim1.nBins, treeDim1.edges[0], treeDim1.edges[1], treeDim2.nBins, treeDim2.edges[0], treeDim2.edges[1], treeDim3.nBins, treeDim3.edges[0], treeDim3.edges[1]);
+      if (dataDim1.nBins && dataDim2.nBins && dataDim3.nBins) {
+        histModel = ROOT::RDF::TH3DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1], dataDim3.nBins, dataDim3.edges[0], dataDim3.edges[1]);
       } else {
         // first convert all fixed size bins to variable size bining
-        for (auto& treeDim : treeDims) {
-          if (treeDim.nBins) {
-            double_t binWidth = (treeDim.edges[1] - treeDim.edges[0]) / treeDim.nBins;
-            vector<double_t> edges = {treeDim.edges[0]};
-            for (int32_t i = 1; i <= treeDim.nBins; ++i) {
-              edges.push_back(treeDim.edges[0] + i * binWidth);
+        for (auto& dataDim : dataDims) {
+          if (dataDim.nBins) {
+            double_t binWidth = (dataDim.edges[1] - dataDim.edges[0]) / dataDim.nBins;
+            vector<double_t> edges = {dataDim.edges[0]};
+            for (int32_t i = 1; i <= dataDim.nBins; ++i) {
+              edges.push_back(dataDim.edges[0] + i * binWidth);
             }
-            treeDim.edges = edges;
-            treeDim.nBins = 0;
+            dataDim.edges = edges;
+            dataDim.nBins = 0;
           }
         }
-        histModel = ROOT::RDF::TH3DModel("tmp", histTitle.data(), treeDim1.edges.size() - 1, treeDim1.edges.data(), treeDim2.edges.size() - 1, treeDim2.edges.data(), treeDim3.edges.size() - 1, treeDim3.edges.data());
+        histModel = ROOT::RDF::TH3DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data(), dataDim2.edges.size() - 1, dataDim2.edges.data(), dataDim3.edges.size() - 1, dataDim3.edges.data());
       }
       if (hasWegiths) {
         obj = node.Histo3D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W")->Clone(name.data());
@@ -1276,38 +1276,38 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       vector<int32_t> nBinsVec;
       vector<double_t> xMinVec;
       vector<double_t> xMaxVec;
-      for (auto& treeDim : treeDims) {
-        if (!treeDim.nBins) {
+      for (auto& dataDim : dataDims) {
+        if (!dataDim.nBins) {
           allFixed = false;
-          nBinsVec.push_back(treeDim.edges.size() - 1);
+          nBinsVec.push_back(dataDim.edges.size() - 1);
         } else {
-          nBinsVec.push_back(treeDim.nBins);
-          xMinVec.push_back(treeDim.edges[0]);
-          xMaxVec.push_back(treeDim.edges[1]);
+          nBinsVec.push_back(dataDim.nBins);
+          xMinVec.push_back(dataDim.edges[0]);
+          xMaxVec.push_back(dataDim.edges[1]);
         }
       }
 
       if (allFixed) {
-        histModel = ROOT::RDF::THnDModel("tmp", histTitle.data(), treeDims.size(), nBinsVec, xMinVec, xMaxVec);
+        histModel = ROOT::RDF::THnDModel("tmp", histTitle.data(), dataDims.size(), nBinsVec, xMinVec, xMaxVec);
       } else {
         vector<vector<double_t>> xBins;
-        for (auto& treeDim : treeDims) {
-          if (treeDim.nBins) {
-            double_t binWidth = (treeDim.edges[1] - treeDim.edges[0]) / treeDim.nBins;
-            vector<double_t> edges = {treeDim.edges[0]};
-            for (int32_t i = 1; i <= treeDim.nBins; ++i) {
-              edges.push_back(treeDim.edges[0] + i * binWidth);
+        for (auto& dataDim : dataDims) {
+          if (dataDim.nBins) {
+            double_t binWidth = (dataDim.edges[1] - dataDim.edges[0]) / dataDim.nBins;
+            vector<double_t> edges = {dataDim.edges[0]};
+            for (int32_t i = 1; i <= dataDim.nBins; ++i) {
+              edges.push_back(dataDim.edges[0] + i * binWidth);
             }
-            treeDim.edges = edges;
-            treeDim.nBins = 0;
+            dataDim.edges = edges;
+            dataDim.nBins = 0;
           }
-          xBins.insert(xBins.end(), treeDim.edges);
+          xBins.insert(xBins.end(), dataDim.edges);
         }
-        histModel = ROOT::RDF::THnDModel("tmp", histTitle.data(), treeDims.size(), nBinsVec, xBins);
+        histModel = ROOT::RDF::THnDModel("tmp", histTitle.data(), dataDims.size(), nBinsVec, xBins);
       }
       vector<string> colNames;
       axisID = 1;
-      for (auto& treeDim : treeDims) {
+      for (auto& dataDim : dataDims) {
         colNames.push_back("SRP_AXIS_" + std::to_string(axisID));
       }
       if (hasWegiths) {

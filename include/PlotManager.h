@@ -122,13 +122,13 @@ class PlotManager
   int32_t mFirstFreeColorIndex{TColor::GetFreeColorIndex()};
 
   std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>> mDataBuffer;
-  std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Plot::Pad::Data::tree_info_t>>> mTreeBuffer;
+  std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Plot::Pad::Data::data_info_t>>> mDataInfoBuffer;
   std::map<std::string, std::vector<std::string>> mInputFiles;  // inputFileIdentifier, inputFilePaths
   void PrintBufferStatus(bool missingOnly = false) const;
   bool FillBuffer();
   void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& inputID);
   void ReadDataCSV(const std::string& inputFileName, const std::string& name, const std::string& inputID);
-  TObject* ProcessData(ROOT::RDataFrame& df, const std::string& dfName, const Plot::Pad::Data::tree_info_t& treeInfo, const std::string& name) const;
+  TObject* ProcessData(ROOT::RDataFrame& df, const std::string& dfName, const Plot::Pad::Data::data_info_t& treeInfo, const std::string& name) const;
 };
 
 }  // end namespace SciRooPlot
