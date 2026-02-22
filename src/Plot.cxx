@@ -1254,7 +1254,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
     }
     mTreeInfo->treeDims = treeDims;
     read_from_tree(dataTree, mTreeInfo->filter, "tree_filter");
-    read_from_tree(dataTree, mTreeInfo->weightExp, "tree_weightExp");
+    read_from_tree(dataTree, mTreeInfo->weight, "tree_weight");
     read_from_tree(dataTree, mTreeInfo->nEntries, "tree_nEntries");
     read_from_tree(dataTree, mTreeInfo->isProfileNoScatter, "tree_isProfileNoScatter");
   }
@@ -1318,7 +1318,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
     put_in_tree(dataTree, optional<vector<double_t>>{binning}, "tree_binning");
     put_in_tree(dataTree, optional<vector<int32_t>>{sizes}, "tree_binning_sizes");
     put_in_tree(dataTree, mTreeInfo->filter, "tree_filter");
-    put_in_tree(dataTree, mTreeInfo->weightExp, "tree_weightExp");
+    put_in_tree(dataTree, mTreeInfo->weight, "tree_weight");
     put_in_tree(dataTree, mTreeInfo->nEntries, "tree_nEntries");
     put_in_tree(dataTree, mTreeInfo->isProfileNoScatter, "tree_isProfileNoScatter");
   }
@@ -1563,7 +1563,7 @@ auto Plot::Pad::Data::SetContours(const vector<double>& contours) -> decltype(*t
   mContours = contours;
   return *this;
 }
-auto Plot::Pad::Data::SetContours(const int32_t nContours) -> decltype(*this)
+auto Plot::Pad::Data::SetContours(int32_t nContours) -> decltype(*this)
 {
   mNContours = nContours;
   return *this;
@@ -1598,24 +1598,25 @@ auto Plot::Pad::Data::SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, dou
   mProjInfo = {dims, ranges, isUserCoord, true};
   return *this;
 }
-auto Plot::Pad::Data::Project(vector<tree_dim_t> treeDims, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+
+auto Plot::Pad::Data::Project(vector<tree_dim_t> treeDims, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mTreeInfo = {treeDims, filter, weightExp, nEntries};
+  mTreeInfo = {treeDims, filter, weight, nEntries};
   return *this;
 }
-auto Plot::Pad::Data::Project(string varExp, int32_t nBins, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Project(string x, int32_t nBins, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mTreeInfo = {{{varExp, {0, 0}, nBins}}, filter, weightExp, nEntries};
+  mTreeInfo = {{{x, {0, 0}, nBins}}, filter, weight, nEntries};
   return *this;
 }
-auto Plot::Pad::Data::Project(string varExp1, string varExp2, pair<int32_t, int32_t> nBins, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Project(string x, string y, pair<int32_t, int32_t> nBins, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mTreeInfo = {{{varExp1, {0, 0}, nBins.first}, {varExp2, {0, 0}, nBins.second}}, filter, weightExp, nEntries};
+  mTreeInfo = {{{x, {0, 0}, nBins.first}, {y, {0, 0}, nBins.second}}, filter, weight, nEntries};
   return *this;
 }
-auto Plot::Pad::Data::Scatter(string varExp1, string varExp2, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Scatter(string x, string y, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mTreeInfo = {{{varExp1}, {varExp2}}, filter, {}, nEntries, false};
+  mTreeInfo = {{{x}, {y}}, filter, {}, nEntries, false};
   return *this;
 }
 auto Plot::Pad::Data::Scatter(string x, string y, string xErr, string yErr, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
@@ -1628,20 +1629,20 @@ auto Plot::Pad::Data::Scatter(string x, string y, string xErrLow, string xErrHig
   mTreeInfo = {{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, filter, {}, nEntries, false};
   return *this;
 }
-auto Plot::Pad::Data::Profile(vector<tree_dim_t> treeDims, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Profile(vector<tree_dim_t> treeDims, string profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  treeDims.push_back({profExp});
-  mTreeInfo = {treeDims, filter, weightExp, nEntries, true};
+  treeDims.push_back({profile});
+  mTreeInfo = {treeDims, filter, weight, nEntries, true};
   return *this;
 }
-auto Plot::Pad::Data::Profile(string varExp, int32_t nBins, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Profile(string x, int32_t nBins, string profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mTreeInfo = {{{varExp, {0, 0}, nBins}, {profExp}}, filter, weightExp, nEntries, true};
+  mTreeInfo = {{{x, {0, 0}, nBins}, {profile}}, filter, weight, nEntries, true};
   return *this;
 }
-auto Plot::Pad::Data::Profile(string varExp1, string varExp2, pair<int32_t, int32_t> nBins, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Profile(string x, string y, pair<int32_t, int32_t> nBins, string profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mTreeInfo = {{{varExp1, {0, 0}, nBins.first}, {varExp2, {0, 0}, nBins.second}, {profExp}}, filter, weightExp, nEntries, true};
+  mTreeInfo = {{{x, {0, 0}, nBins.first}, {y, {0, 0}, nBins.second}, {profile}}, filter, weight, nEntries, true};
   return *this;
 }
 
@@ -1692,7 +1693,7 @@ string Plot::Pad::Data::tree_info_t::GetNameSuffix() const
     nameSuffix += std::to_string(treeDim.nBins);
   }
   if (filter) nameSuffix += ";" + *filter;
-  if (weightExp) nameSuffix += ";" + *weightExp;
+  if (weight) nameSuffix += ";" + *weight;
   if (nEntries) nameSuffix += ";" + std::to_string(*nEntries);
   if (isProfileNoScatter) nameSuffix += ";" + std::to_string(*isProfileNoScatter);
   nameSuffix += "}";
@@ -1780,7 +1781,7 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
     }
     mTreeInfoDenom->treeDims = treeDims;
     read_from_tree(dataTree, mTreeInfoDenom->filter, "treeDenom_filter");
-    read_from_tree(dataTree, mTreeInfoDenom->weightExp, "treeDenom_weightExp");
+    read_from_tree(dataTree, mTreeInfoDenom->weight, "treeDenom_weight");
     read_from_tree(dataTree, mTreeInfoDenom->nEntries, "treeDenom_nEntries");
     read_from_tree(dataTree, mTreeInfoDenom->isProfileNoScatter, "treeDenom_isProfileNoScatter");
   }
@@ -1820,7 +1821,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
     put_in_tree(dataTree, optional<vector<double_t>>{binning}, "treeDenom_binning");
     put_in_tree(dataTree, optional<vector<int32_t>>{sizes}, "treeDenom_binning_sizes");
     put_in_tree(dataTree, mTreeInfoDenom->filter, "treeDenom_filter");
-    put_in_tree(dataTree, mTreeInfoDenom->weightExp, "treeDenom_weightExp");
+    put_in_tree(dataTree, mTreeInfoDenom->weight, "treeDenom_weight");
     put_in_tree(dataTree, mTreeInfoDenom->nEntries, "treeDenom_nEntries");
     put_in_tree(dataTree, mTreeInfoDenom->isProfileNoScatter, "treeDenom_isProfileNoScatter");
   }
@@ -1873,40 +1874,40 @@ auto Plot::Pad::Ratio::SetProfileDenom(vector<uint8_t> dims, vector<tuple<uint8_
   mProjInfoDenom = {dims, ranges, isUserCoord, true};
   return *this;
 }
-auto Plot::Pad::Ratio::ProjectDenom(vector<tree_dim_t> treeDims, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProjectDenom(vector<tree_dim_t> treeDims, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mTreeInfoDenom = {treeDims, filter, weightExp, nEntries};
+  mTreeInfoDenom = {treeDims, filter, weight, nEntries};
   return *this;
 }
-auto Plot::Pad::Ratio::ProjectDenom(string varExp, int32_t nBins, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProjectDenom(string x, int32_t nBins, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mTreeInfoDenom = {{{varExp, {0, 0}, nBins}}, filter, weightExp, nEntries};
+  mTreeInfoDenom = {{{x, {0, 0}, nBins}}, filter, weight, nEntries};
   return *this;
 }
-auto Plot::Pad::Ratio::ProjectDenom(string varExp1, string varExp2, pair<int32_t, int32_t> nBins, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProjectDenom(string x, string y, pair<int32_t, int32_t> nBins, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mTreeInfoDenom = {{{varExp1, {0, 0}, nBins.first}, {varExp2, {0, 0}, nBins.second}}, filter, weightExp, nEntries};
+  mTreeInfoDenom = {{{x, {0, 0}, nBins.first}, {y, {0, 0}, nBins.second}}, filter, weight, nEntries};
   return *this;
 }
-auto Plot::Pad::Ratio::ScatterDenom(string varExp1, string varExp2, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ScatterDenom(string x, string y, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mTreeInfoDenom = {{{varExp1}, {varExp2}}, filter, {}, nEntries, false};
+  mTreeInfoDenom = {{{x}, {y}}, filter, {}, nEntries, false};
   return *this;
 }
-auto Plot::Pad::Ratio::ProfileDenom(vector<tree_dim_t> treeDims, std::string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProfileDenom(vector<tree_dim_t> treeDims, std::string profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  treeDims.push_back({profExp});
-  mTreeInfoDenom = {treeDims, filter, weightExp, nEntries, true};
+  treeDims.push_back({profile});
+  mTreeInfoDenom = {treeDims, filter, weight, nEntries, true};
   return *this;
 }
-auto Plot::Pad::Ratio::ProfileDenom(string varExp, int32_t nBins, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProfileDenom(string x, int32_t nBins, string profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mTreeInfoDenom = {{{varExp, {0, 0}, nBins}, {profExp}}, filter, weightExp, nEntries, true};
+  mTreeInfoDenom = {{{x, {0, 0}, nBins}, {profile}}, filter, weight, nEntries, true};
   return *this;
 }
-auto Plot::Pad::Ratio::ProfileDenom(string varExp1, string varExp2, pair<int32_t, int32_t> nBins, string profExp, optional<string> filter, optional<string> weightExp, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProfileDenom(string x, string y, pair<int32_t, int32_t> nBins, string profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mTreeInfoDenom = {{{varExp1, {0, 0}, nBins.first}, {varExp2, {0, 0}, nBins.second}, {profExp}}, filter, weightExp, nEntries, true};
+  mTreeInfoDenom = {{{x, {0, 0}, nBins.first}, {y, {0, 0}, nBins.second}, {profile}}, filter, weight, nEntries, true};
   return *this;
 }
 

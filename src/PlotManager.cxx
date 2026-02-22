@@ -1162,14 +1162,14 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     }
   }
   if (!isProfile) {
-    histTitle += (treeInfo.weightExp) ? ";weighted counts" : ";counts";
+    histTitle += (treeInfo.weight) ? ";weighted counts" : ";counts";
   }
 
-  if (treeInfo.weightExp) {
+  if (treeInfo.weight) {
     try {
-      node = node.Define("SRP_AXIS_W", *treeInfo.weightExp);
+      node = node.Define("SRP_AXIS_W", *treeInfo.weight);
     } catch (std::runtime_error) {
-      ERROR("Illegal expression for weights: {}.", *treeInfo.weightExp);
+      ERROR("Illegal expression for weights: {}.", *treeInfo.weight);
       return nullptr;
     }
     hasWegiths = true;
