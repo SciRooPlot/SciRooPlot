@@ -185,13 +185,13 @@ void PlotManager::SetOutputFileName(const string& fileName)
 
 //**************************************************************************************************
 /**
- * Define input file paths for user defined unique inputIdentifier.
+ * Define input file paths for user defined unique inputID.
  */
 //**************************************************************************************************
-void PlotManager::AddInputDataFiles(const string& inputIdentifier, const vector<string>& inputFilePathList)
+void PlotManager::AddInputDataFiles(const string& inputID, const vector<string>& inputFilePathList)
 {
-  if (mInputFiles.find(inputIdentifier) != mInputFiles.end()) {
-    WARNING("Replacing input identifier {}.", inputIdentifier);
+  if (mInputFiles.find(inputID) != mInputFiles.end()) {
+    WARNING("Replacing input identifier {}.", inputID);
   }
   for (auto inputFilePath : inputFilePathList) {
     if (std::filesystem::path(expand_path(inputFilePath)).is_relative()) {
@@ -199,12 +199,12 @@ void PlotManager::AddInputDataFiles(const string& inputIdentifier, const vector<
       return;
     }
   }
-  mInputFiles[inputIdentifier] = inputFilePathList;
+  mInputFiles[inputID] = inputFilePathList;
 }
-void PlotManager::AddInputDataFile(const string& inputIdentifier, const string& inputFilePath)
+void PlotManager::AddInputDataFile(const string& inputID, const string& inputFilePath)
 {
   vector<string> inputFilePathList = {inputFilePath};
-  AddInputDataFiles(inputIdentifier, inputFilePathList);
+  AddInputDataFiles(inputID, inputFilePathList);
 }
 
 //**************************************************************************************************
@@ -246,7 +246,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
     return;
   }
   for (auto& inputPair : inputFileTree) {
-    const string& inputIdentifier = inputPair.first;
+    const string& inputID = inputPair.first;
     set<string> allFileNames;
     for (auto& fileEntry : inputPair.second) {
       string fileOrDirName = expand_path(fileEntry.second.get_value<string>());
@@ -260,7 +260,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
         }
       }
     }
-    AddInputDataFiles(inputIdentifier, {allFileNames.begin(), allFileNames.end()});
+    AddInputDataFiles(inputID, {allFileNames.begin(), allFileNames.end()});
   }
 }
 
@@ -596,12 +596,12 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
         }
         if (data->GetType() == "ratio") {
           const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          mDataBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()];
-          if (ratio->GetDataInfoDenom()) {
-            auto& dataInfos = mDataInfoBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()];
+          mDataBuffer[ratio->GetDenomInputID()][ratio->GetDenomName()];
+          if (ratio->GetDenomDataInfo()) {
+            auto& dataInfos = mDataInfoBuffer[ratio->GetDenomInputID()][ratio->GetDenomName()];
             auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == (*data->GetDataInfo()).GetNameSuffix(); });
             if (iter == dataInfos.end()) {
-              mDataInfoBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()].push_back(*ratio->GetDataInfoDenom());
+              mDataInfoBuffer[ratio->GetDenomInputID()][ratio->GetDenomName()].push_back(*ratio->GetDenomDataInfo());
             }
           }
         }
@@ -1003,10 +1003,10 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
   ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
   for (auto& plotGroupTree : inputTree) {
     // first filter by group
-    string groupIdentifier = plotGroupTree.first.substr(string("GROUP::").size());
-    bool isTemplate = (groupIdentifier == "PLOT_TEMPLATES");
+    string groupID = plotGroupTree.first.substr(string("GROUP::").size());
+    bool isTemplate = (groupID == "PLOT_TEMPLATES");
 
-    if (!isTemplate && !std::regex_match(groupIdentifier, groupRegex)) {
+    if (!isTemplate && !std::regex_match(groupID, groupRegex)) {
       continue;
     }
 

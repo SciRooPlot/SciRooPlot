@@ -399,7 +399,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // retrieve the actual pointer to the denominator data
           optional<data_ptr_t> rawDenomData;
           try {
-            rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomIdentifier()).at(data_as_ratio->GetDenomName() + ((data_as_ratio->GetDataInfoDenom()) ? data_as_ratio->GetDataInfoDenom()->GetNameSuffix() : "")).get(), data_as_ratio->GetProjInfoDenom());
+            rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomInputID()).at(data_as_ratio->GetDenomName() + ((data_as_ratio->GetDenomDataInfo()) ? data_as_ratio->GetDenomDataInfo()->GetNameSuffix() : "")).get(), data_as_ratio->GetDenomProjInfo());
 
           } catch (std::out_of_range&) {
             rawDenomData = nullopt;

@@ -183,18 +183,18 @@ class Plot::Pad
   void operator+=(const Pad& pad);
 
   // User accessors:
-  Data& AddData(const std::string& name, const std::string& inputIdentifier, const std::optional<std::string>& label = std::nullopt);
+  Data& AddData(const std::string& name, const std::string& inputID, const std::optional<std::string>& label = std::nullopt);
   Data& AddData(const std::string& name, const Data& dataTemplate, const std::optional<std::string>& label = std::nullopt);
   Data& AddFunction(const std::string& function, const std::optional<std::string>& label = std::nullopt);
 
-  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorInputIdentifier,
-                  const std::string& denominatorName, const std::string& denominatorInputIdentifier,
+  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorInputID,
+                  const std::string& denominatorName, const std::string& denominatorInputID,
                   const std::optional<std::string>& label = std::nullopt);
   Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorLayout, const std::string& denominatorName,
-                  const std::string& denominatorInputIdentifier, const std::optional<std::string>& label = std::nullopt);
+                  const std::string& denominatorInputID, const std::optional<std::string>& label = std::nullopt);
   Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorLayout, const std::string& denominatorName,
                   const Data& denominatorLayout, const std::optional<std::string>& label = std::nullopt);
-  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorInputIdentifier, const std::string& denominatorName,
+  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorInputID, const std::string& denominatorName,
                   const Data& denominatorLayout, const std::optional<std::string>& label = std::nullopt);
 
   TextBox& AddText(double_t xPos, double_t yPos, const std::string& text);
@@ -372,7 +372,7 @@ class Plot::Pad::Data
 {
  public:
   Data() = default;
-  Data(const std::string& name, const std::string& inputIdentifier, const std::optional<std::string>& label);
+  Data(const std::string& name, const std::string& inputID, const std::optional<std::string>& label);
   explicit Data(const boost::property_tree::ptree& dataTree);
 
   virtual ~Data() = default;
@@ -381,8 +381,8 @@ class Plot::Pad::Data
   Data& operator=(const Data& other) = default;
   Data& operator=(Data&& other) = default;
 
-  Data& SetInputID(const std::string& inputIdentifier);
-  const std::string& GetInputID() const { return mInputIdentifier; }
+  Data& SetInputID(const std::string& inputID);
+  const std::string& GetInputID() const { return mInputID; }
 
   virtual Data& SetLayout(const Data& dataLayout);
   virtual Data& ApplyLayout(const Data& dataLayout);
@@ -460,7 +460,7 @@ class Plot::Pad::Data
   const auto& GetType() const { return mType; }
   const auto& GetName() const { return mName; }
   const auto& GetLegendLabel() const { return mLegend.label; }
-  const auto& GetLegendID() const { return mLegend.identifier; }
+  const auto& GetLegendID() const { return mLegend.id; }
   const auto& GetMarkerColor() const { return mMarker.color; }
   const auto& GetMarkerStyle() const { return mMarker.style; }
   const auto& GetMarkerSize() const { return mMarker.scale; }
@@ -509,7 +509,7 @@ class Plot::Pad::Data
 
   std::string mType;  // for introspection: "data" or "ratio"
   std::string mName;
-  std::string mInputIdentifier;
+  std::string mInputID;
 
   std::optional<std::string> mDrawingOptions;
   std::optional<drawing_options_t> mDrawingOptionAlias;
@@ -521,7 +521,7 @@ class Plot::Pad::Data
   };
   struct legend_t {
     std::optional<std::string> label;
-    std::optional<uint8_t> identifier;
+    std::optional<uint8_t> id;
   };
 
   struct dataRange_t {
@@ -553,8 +553,8 @@ class Plot::Pad::Data
 class Plot::Pad::Ratio : public Plot::Pad::Data
 {
  public:
-  Ratio(const std::string& name, const std::string& inputIdentifier, const std::string& denomName,
-        const std::string& denomInputIdentifier, const std::optional<std::string>& label);
+  Ratio(const std::string& name, const std::string& inputID, const std::string& denomName,
+        const std::string& denomInputID, const std::optional<std::string>& label);
   explicit Ratio(const boost::property_tree::ptree& dataTree);
 
   virtual ~Ratio() = default;
@@ -647,20 +647,20 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 
   virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Ratio>(*this); }
   boost::property_tree::ptree GetPropertyTree() const;
-  const auto& GetDenomIdentifier() const { return mDenomInputIdentifier; }
+  const auto& GetDenomInputID() const { return mDenomInputID; }
   const auto& GetDenomName() const { return mDenomName; }
   const auto& GetDivisionNormMode() const { return mDivisionNormMode; }
   const bool& GetIsCorrelated() const { return mIsCorrelated; }
-  const auto& GetDataInfoDenom() const { return mDataInfoDenom; }
-  const auto& GetProjInfoDenom() const { return mProjInfoDenom; }
+  const auto& GetDenomDataInfo() const { return mDenomDataInfo; }
+  const auto& GetDenomProjInfo() const { return mDenomProjInfo; }
 
  private:
   std::string mDenomName;
-  std::string mDenomInputIdentifier;
+  std::string mDenomInputID;
   bool mIsCorrelated{};
   std::optional<bool> mDivisionNormMode;  // normalize both numerater and denominator to 0: sum over bin contents, 1: times bin widths
-  std::optional<data_info_t> mDataInfoDenom;
-  std::optional<proj_info_t> mProjInfoDenom;
+  std::optional<data_info_t> mDenomDataInfo;
+  std::optional<proj_info_t> mDenomProjInfo;
 };
 
 //**************************************************************************************************
@@ -953,7 +953,7 @@ class Plot::Pad::LegendBox::LegendEntry
   explicit LegendEntry(const boost::property_tree::ptree& legendEntryTree);
 
   LegendEntry& SetLabel(const std::string& label);
-  LegendEntry& SetRefData(const std::string& name, const std::string& inputIdentifier);  // will work only for data drawn in same pad
+  LegendEntry& SetRefData(const std::string& name, const std::string& inputID);  // will work only for data drawn in same pad
   LegendEntry& SetDrawStyle(const std::string& drawStyle);
   LegendEntry& SetMarkerColor(int16_t color);
   LegendEntry& SetMarkerStyle(int16_t style);

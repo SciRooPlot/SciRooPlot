@@ -1046,9 +1046,9 @@ Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
  * Add data to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Data& Plot::Pad::AddData(const string& name, const string& inputIdentifier, const optional<string>& label)
+Plot::Pad::Data& Plot::Pad::AddData(const string& name, const string& inputID, const optional<string>& label)
 {
-  mData.push_back(std::make_shared<Data>(name, inputIdentifier, label));
+  mData.push_back(std::make_shared<Data>(name, inputID, label));
   return *mData.back();
 }
 
@@ -1076,17 +1076,17 @@ Plot::Pad::Data& Plot::Pad::AddFunction(const string& function, const optional<s
  * Add ratio to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorInputIdentifier, const string& denominatorName, const string& denominatorInputIdentifier, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorInputID, const string& denominatorName, const string& denominatorInputID, const optional<string>& label)
 {
-  mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorInputIdentifier,
-                                          denominatorName, denominatorInputIdentifier, label));
+  mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorInputID,
+                                          denominatorName, denominatorInputID, label));
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
 
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorLayout, const string& denominatorName, const string& denominatorInputIdentifier, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorLayout, const string& denominatorName, const string& denominatorInputID, const optional<string>& label)
 {
   mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorLayout.GetInputID(),
-                                          denominatorName, denominatorInputIdentifier, label));
+                                          denominatorName, denominatorInputID, label));
   mData.back()->SetLayout(numeratorLayout);
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
@@ -1096,9 +1096,9 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& n
   return AddRatio(numeratorName, numeratorLayout, denominatorName, denominatorLayout.GetInputID(), label);
 }
 
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorInputIdentifier, const string& denominatorName, const Data& denominatorLayout, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorInputID, const string& denominatorName, const Data& denominatorLayout, const optional<string>& label)
 {
-  return AddRatio(numeratorName, numeratorInputIdentifier, denominatorName, denominatorLayout.GetInputID(), label);
+  return AddRatio(numeratorName, numeratorInputID, denominatorName, denominatorLayout.GetInputID(), label);
 }
 
 //**************************************************************************************************
@@ -1156,22 +1156,22 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend()
  * Default constructor for Data objects.
  */
 //**************************************************************************************************
-Plot::Pad::Data::Data(const string& name, const string& inputIdentifier, const optional<string>& legendLabel)
+Plot::Pad::Data::Data(const string& name, const string& inputID, const optional<string>& legendLabel)
   : Data()
 {
   mType = "data";
 
   mLegend.label = legendLabel;
 
-  // in case input was specified further via inputIdentifier:some/path/in/file
-  auto subPathPos = inputIdentifier.find(":");
+  // in case input was specified further via inputID:some/path/in/file
+  auto subPathPos = inputID.find(":");
   if (subPathPos != string::npos) {
     // prepend path to plot name
-    mName = inputIdentifier.substr(subPathPos + 1) + "/" + name;
-    mInputIdentifier = inputIdentifier.substr(0, subPathPos);
+    mName = inputID.substr(subPathPos + 1) + "/" + name;
+    mInputID = inputID.substr(0, subPathPos);
   } else {
     mName = name;
-    mInputIdentifier = inputIdentifier;
+    mInputID = inputID;
   }
 }
 
@@ -1185,14 +1185,14 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   try {
     mType = dataTree.get<string>("type");
     mName = dataTree.get<string>("name");
-    mInputIdentifier = dataTree.get<string>("inputIdentifier");
+    mInputID = dataTree.get<string>("inputID");
   } catch (...) {
     ERROR("Could not construct data from ptree.");
     std::exit(EXIT_FAILURE);
   }
   if (auto var = dataTree.get_optional<bool>("defines_frame")) mDefinesFrame = *var;
   read_from_tree(dataTree, mLegend.label, "legend_label");
-  read_from_tree(dataTree, mLegend.identifier, "legend_id");
+  read_from_tree(dataTree, mLegend.id, "legend_id");
   read_from_tree(dataTree, mDrawingOptions, "drawing_options");
   read_from_tree(dataTree, mDrawingOptionAlias, "drawing_option_alias");
   read_from_tree(dataTree, mTextFormat, "text_format");
@@ -1273,10 +1273,10 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   ptree dataTree;
   dataTree.put("type", mType);
   dataTree.put("name", mName);
-  dataTree.put("inputIdentifier", mInputIdentifier);
+  dataTree.put("inputID", mInputID);
   if (mDefinesFrame) dataTree.put("defines_frame", mDefinesFrame);
   put_in_tree(dataTree, mLegend.label, "legend_label");
-  put_in_tree(dataTree, mLegend.identifier, "legend_id");
+  put_in_tree(dataTree, mLegend.id, "legend_id");
   put_in_tree(dataTree, mDrawingOptions, "drawing_options");
   put_in_tree(dataTree, mDrawingOptionAlias, "drawing_option_alias");
   put_in_tree(dataTree, mTextFormat, "text_format");
@@ -1382,9 +1382,9 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   set_if(dataLayout.mNContours, mNContours);
   return *this;
 }
-auto Plot::Pad::Data::SetInputID(const string& inputIdentifier) -> decltype(*this)
+auto Plot::Pad::Data::SetInputID(const string& inputID) -> decltype(*this)
 {
-  mInputIdentifier = inputIdentifier;
+  mInputID = inputID;
   return *this;
 }
 auto Plot::Pad::Data::SetLegendLabel(const string& legendLabel) -> decltype(*this)
@@ -1394,7 +1394,7 @@ auto Plot::Pad::Data::SetLegendLabel(const string& legendLabel) -> decltype(*thi
 }
 auto Plot::Pad::Data::SetLegendID(uint8_t legendID) -> decltype(*this)
 {
-  mLegend.identifier = legendID;
+  mLegend.id = legendID;
   return *this;
 }
 auto Plot::Pad::Data::SetOptions(const string& options) -> decltype(*this)
@@ -1712,18 +1712,18 @@ string Plot::Pad::Data::data_info_t::GetNameSuffix() const
  * Default constructor.
  */
 //**************************************************************************************************
-Plot::Pad::Ratio::Ratio(const string& name, const string& inputIdentifier, const string& denomName,
-                        const string& denomInputIdentifier, const optional<string>& label)
-  : Data(name, inputIdentifier, label), mDenomName(denomName),
-    mDenomInputIdentifier(denomInputIdentifier), mIsCorrelated(false)
+Plot::Pad::Ratio::Ratio(const string& name, const string& inputID, const string& denomName,
+                        const string& denomInputID, const optional<string>& label)
+  : Data(name, inputID, label), mDenomName(denomName),
+    mDenomInputID(denomInputID), mIsCorrelated(false)
 {
   SetType("ratio");
 
-  // in case denominator input was specified further via denomInputIdentifier:some/path/in/file
-  if (auto subPathPos = denomInputIdentifier.find(":"); subPathPos != string::npos) {
+  // in case denominator input was specified further via denomInputID:some/path/in/file
+  if (auto subPathPos = denomInputID.find(":"); subPathPos != string::npos) {
     // prepend path to plot name
-    mDenomName = denomInputIdentifier.substr(subPathPos + 1) + "/" + denomName;
-    mDenomInputIdentifier = denomInputIdentifier.substr(0, subPathPos);
+    mDenomName = denomInputID.substr(subPathPos + 1) + "/" + denomName;
+    mDenomInputID = denomInputID.substr(0, subPathPos);
   }
 }
 
@@ -1736,7 +1736,7 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
 {
   try {
     mDenomName = dataTree.get<string>("denomName");
-    mDenomInputIdentifier = dataTree.get<string>("denomInputID");
+    mDenomInputID = dataTree.get<string>("denomInputID");
     mIsCorrelated = dataTree.get<bool>("isCorrelated");
   } catch (...) {
     ERROR("Could not construct ratio from ptree.");
@@ -1747,15 +1747,15 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   // extract data info
   {
     optional<vector<string>> vars;
-    read_from_tree(dataTree, vars, "dataDenom_vars");
+    read_from_tree(dataTree, vars, "denomData_vars");
     if (vars) {
-      mDataInfoDenom = data_info_t();
+      mDenomDataInfo = data_info_t();
       vector<data_dim_t> dataDims{};
 
       optional<vector<double_t>> binning;
       optional<vector<int32_t>> sizes;
-      read_from_tree(dataTree, binning, "dataDenom_binning");
-      read_from_tree(dataTree, sizes, "dataDenom_binning_sizes");
+      read_from_tree(dataTree, binning, "denomData_binning");
+      read_from_tree(dataTree, sizes, "denomData_binning_sizes");
 
       if (binning && sizes) {
         auto lastPos = binning->begin();
@@ -1768,11 +1768,11 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
           dataDims.push_back({vars->at(i), edges, nBins});
         }
       }
-      mDataInfoDenom->dataDims = dataDims;
-      read_from_tree(dataTree, mDataInfoDenom->filter, "dataDenom_filter");
-      read_from_tree(dataTree, mDataInfoDenom->weight, "dataDenom_weight");
-      read_from_tree(dataTree, mDataInfoDenom->nEntries, "dataDenom_nEntries");
-      read_from_tree(dataTree, mDataInfoDenom->isProfileNoScatter, "dataDenom_isProfileNoScatter");
+      mDenomDataInfo->dataDims = dataDims;
+      read_from_tree(dataTree, mDenomDataInfo->filter, "denomData_filter");
+      read_from_tree(dataTree, mDenomDataInfo->weight, "denomData_weight");
+      read_from_tree(dataTree, mDenomDataInfo->nEntries, "denomData_nEntries");
+      read_from_tree(dataTree, mDenomDataInfo->isProfileNoScatter, "denomData_isProfileNoScatter");
     }
   }
   // extract proj info
@@ -1781,12 +1781,12 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
     optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
     optional<bool> isUserCoord;
     optional<bool> isProfile;
-    read_from_tree(dataTree, dims, "projDenom_dims");
-    read_from_tree(dataTree, ranges, "projDenom_ranges");
-    read_from_tree(dataTree, isUserCoord, "projDenom_isUserCoord");
-    read_from_tree(dataTree, isProfile, "projDenom_isProfile");
+    read_from_tree(dataTree, dims, "denomProj_dims");
+    read_from_tree(dataTree, ranges, "denomProj_ranges");
+    read_from_tree(dataTree, isUserCoord, "denomProj_isUserCoord");
+    read_from_tree(dataTree, isProfile, "denomProj_isProfile");
     if (dims) {
-      mProjInfoDenom = {*dims, *ranges, isUserCoord, isProfile};
+      mDenomProjInfo = {*dims, *ranges, isUserCoord, isProfile};
     }
   }
 }
@@ -1800,33 +1800,33 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
 {
   ptree dataTree = Data::GetPropertyTree();
   dataTree.put("denomName", mDenomName);
-  dataTree.put("denomInputID", mDenomInputIdentifier);
+  dataTree.put("denomInputID", mDenomInputID);
   dataTree.put("isCorrelated", mIsCorrelated);
   put_in_tree(dataTree, mDivisionNormMode, "divisionNormMode");
 
-  if (mDataInfoDenom) {
+  if (mDenomDataInfo) {
     vector<string> vars;
     vector<double_t> binning;
     vector<int32_t> sizes;
-    for (auto& dataDim : mDataInfoDenom->dataDims) {
+    for (auto& dataDim : mDenomDataInfo->dataDims) {
       vars.push_back(dataDim.var);
       binning.insert(binning.end(), dataDim.edges.begin(), dataDim.edges.end());
       binning.push_back(static_cast<double_t>(dataDim.nBins));
       sizes.push_back(dataDim.edges.size() + 1);
     }
-    put_in_tree(dataTree, optional<vector<string>>{vars}, "dataDenom_vars");
-    put_in_tree(dataTree, optional<vector<double_t>>{binning}, "dataDenom_binning");
-    put_in_tree(dataTree, optional<vector<int32_t>>{sizes}, "dataDenom_binning_sizes");
-    put_in_tree(dataTree, mDataInfoDenom->filter, "dataDenom_filter");
-    put_in_tree(dataTree, mDataInfoDenom->weight, "dataDenom_weight");
-    put_in_tree(dataTree, mDataInfoDenom->nEntries, "dataDenom_nEntries");
-    put_in_tree(dataTree, mDataInfoDenom->isProfileNoScatter, "dataDenom_isProfileNoScatter");
+    put_in_tree(dataTree, optional<vector<string>>{vars}, "denomData_vars");
+    put_in_tree(dataTree, optional<vector<double_t>>{binning}, "denomData_binning");
+    put_in_tree(dataTree, optional<vector<int32_t>>{sizes}, "denomData_binning_sizes");
+    put_in_tree(dataTree, mDenomDataInfo->filter, "denomData_filter");
+    put_in_tree(dataTree, mDenomDataInfo->weight, "denomData_weight");
+    put_in_tree(dataTree, mDenomDataInfo->nEntries, "denomData_nEntries");
+    put_in_tree(dataTree, mDenomDataInfo->isProfileNoScatter, "denomData_isProfileNoScatter");
   }
-  if (mProjInfoDenom) {
-    put_in_tree(dataTree, optional<vector<uint8_t>>{mProjInfoDenom->dims}, "projDenom_dims");
-    put_in_tree(dataTree, optional<vector<tuple<uint8_t, double_t, double_t>>>{mProjInfoDenom->ranges}, "projDenom_ranges");
-    put_in_tree(dataTree, mProjInfoDenom->isUserCoord, "projDenom_isUserCoord");
-    put_in_tree(dataTree, mProjInfoDenom->isProfile, "projDenom_isProfile");
+  if (mDenomProjInfo) {
+    put_in_tree(dataTree, optional<vector<uint8_t>>{mDenomProjInfo->dims}, "denomProj_dims");
+    put_in_tree(dataTree, optional<vector<tuple<uint8_t, double_t, double_t>>>{mDenomProjInfo->ranges}, "denomProj_ranges");
+    put_in_tree(dataTree, mDenomProjInfo->isUserCoord, "denomProj_isUserCoord");
+    put_in_tree(dataTree, mDenomProjInfo->isProfile, "denomProj_isProfile");
   }
   return dataTree;
 }
@@ -1848,68 +1848,68 @@ auto Plot::Pad::Ratio::SetDivideNormalized(bool multiplyByBinWidth) -> decltype(
 }
 auto Plot::Pad::Ratio::ProjectDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfoDenom = {dims, ranges, isUserCoord};
+  mDenomProjInfo = {dims, ranges, isUserCoord};
   return *this;
 }
 auto Plot::Pad::Ratio::ProjectXDenom(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfoDenom = {{0}, {{1, startY, endY}}, isUserCoord};
+  mDenomProjInfo = {{0}, {{1, startY, endY}}, isUserCoord};
   return *this;
 }
 auto Plot::Pad::Ratio::ProjectYDenom(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfoDenom = {{1}, {{0, startX, endX}}, isUserCoord};
+  mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
   return *this;
 }
 auto Plot::Pad::Ratio::ProfileDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfoDenom = {dims, ranges, isUserCoord, true};
+  mDenomProjInfo = {dims, ranges, isUserCoord, true};
   return *this;
 }
 auto Plot::Pad::Ratio::ProfileXDenom(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfoDenom = {{0}, {{1, startY, endY}}, isUserCoord, true};
+  mDenomProjInfo = {{0}, {{1, startY, endY}}, isUserCoord, true};
   return *this;
 }
 auto Plot::Pad::Ratio::ProfileYDenom(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfoDenom = {{1}, {{0, startX, endX}}, isUserCoord, true};
+  mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
   return *this;
 }
 auto Plot::Pad::Ratio::ProjectDenom(vector<data_dim_t> dataDims, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mDataInfoDenom = {dataDims, filter, weight, nEntries};
+  mDenomDataInfo = {dataDims, filter, weight, nEntries};
   return *this;
 }
 auto Plot::Pad::Ratio::ProjectDenom(string x, int32_t nBins, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mDataInfoDenom = {{{x, {0, 0}, nBins}}, filter, weight, nEntries};
+  mDenomDataInfo = {{{x, {0, 0}, nBins}}, filter, weight, nEntries};
   return *this;
 }
 auto Plot::Pad::Ratio::ProjectDenom(string x, string y, pair<int32_t, int32_t> nBins, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mDataInfoDenom = {{{x, {0, 0}, nBins.first}, {y, {0, 0}, nBins.second}}, filter, weight, nEntries};
+  mDenomDataInfo = {{{x, {0, 0}, nBins.first}, {y, {0, 0}, nBins.second}}, filter, weight, nEntries};
   return *this;
 }
 auto Plot::Pad::Ratio::ScatterDenom(string x, string y, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mDataInfoDenom = {{{x}, {y}}, filter, {}, nEntries, false};
+  mDenomDataInfo = {{{x}, {y}}, filter, {}, nEntries, false};
   return *this;
 }
 auto Plot::Pad::Ratio::ProfileDenom(vector<data_dim_t> dataDims, std::string profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
   dataDims.push_back({profile});
-  mDataInfoDenom = {dataDims, filter, weight, nEntries, true};
+  mDenomDataInfo = {dataDims, filter, weight, nEntries, true};
   return *this;
 }
 auto Plot::Pad::Ratio::ProfileDenom(string x, int32_t nBins, string profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mDataInfoDenom = {{{x, {0, 0}, nBins}, {profile}}, filter, weight, nEntries, true};
+  mDenomDataInfo = {{{x, {0, 0}, nBins}, {profile}}, filter, weight, nEntries, true};
   return *this;
 }
 auto Plot::Pad::Ratio::ProfileDenom(string x, string y, pair<int32_t, int32_t> nBins, string profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
-  mDataInfoDenom = {{{x, {0, 0}, nBins.first}, {y, {0, 0}, nBins.second}, {profile}}, filter, weight, nEntries, true};
+  mDenomDataInfo = {{{x, {0, 0}, nBins.first}, {y, {0, 0}, nBins.second}, {profile}}, filter, weight, nEntries, true};
   return *this;
 }
 
@@ -2723,9 +2723,9 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLabel(c
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetRefData(const string& name, const string& inputIdentifier)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetRefData(const string& name, const string& inputID)
 {
-  mRefDataName = name + ":" + inputIdentifier;
+  mRefDataName = name + ":" + inputID;
   return *this;
 }
 
