@@ -394,16 +394,12 @@ class Plot::Pad::Data
   virtual Data& SetMaxRangeY(double_t max);
   virtual Data& SetMinRangeY(double_t min);
   virtual Data& UnsetRangeY();
-  virtual Data& SetScaleMinimum(double_t scale);
-  virtual Data& SetScaleMaximum(double_t scale);
   virtual Data& SetLegendLabel(const std::string& legendLabel);
   virtual Data& SetLegendID(uint8_t legendID);
   virtual Data& SetOptions(const std::string& options);
   virtual Data& SetOptions(drawing_options_t optionAlias);
   virtual Data& UnsetOptions();
   virtual Data& SetTextFormat(const std::string& textFormat);
-  virtual Data& SetNormalize(bool multiplyByBinWidth = false);
-  virtual Data& SetScaleFactor(double_t scale);
   virtual Data& SetColor(int16_t color);
   virtual Data& SetMarker(int16_t color, int16_t style, float_t size);
   virtual Data& SetMarkerColor(int16_t color);
@@ -421,13 +417,19 @@ class Plot::Pad::Data
   virtual Data& SetContours(const std::vector<double>& contours);
   virtual Data& SetContours(int32_t nContours);
 
-  virtual Data& SetProjectionX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});  // for 2d histos
-  virtual Data& SetProjectionY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});  // for 2d histos
-  virtual Data& SetProjection(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
+  // data modifiers
+  virtual Data& Normalize(bool multiplyByBinWidth = false);
+  virtual Data& Scale(double_t scaleFactor);
+  virtual Data& ScaleMinimum(double_t scaleFactor);
+  virtual Data& ScaleMaximum(double_t scaleFactor);
 
-  virtual Data& SetProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});                                                     // for 2d histos
-  virtual Data& SetProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});                                                     // for 2d histos
-  virtual Data& SetProfile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});  // for 2d & 3d histos
+  virtual Data& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
+  virtual Data& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});  // for 2d histos
+  virtual Data& ProjectY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});  // for 2d histos
+
+  virtual Data& Profile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});  // for 2d & 3d histos
+  virtual Data& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});                                                     // for 2d histos
+  virtual Data& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});                                                     // for 2d histos
 
   struct data_dim_t {
     std::string var{};
@@ -574,16 +576,12 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& SetMaxRangeY(double_t max) { return static_cast<decltype(*this)&>(Data::SetMaxRangeY(max)); }
   Ratio& SetMinRangeY(double_t min) { return static_cast<decltype(*this)&>(Data::SetMinRangeY(min)); }
   Ratio& UnsetRangeY() { return static_cast<decltype(*this)&>(Data::UnsetRangeY()); }
-  Ratio& SetScaleMinimum(double_t scale) { return static_cast<decltype(*this)&>(Data::SetScaleMinimum(scale)); }
-  Ratio& SetScaleMaximum(double_t scale) { return static_cast<decltype(*this)&>(Data::SetScaleMaximum(scale)); }
   Ratio& SetLegendLabel(const std::string& legendLabel) { return static_cast<decltype(*this)&>(Data::SetLegendLabel(legendLabel)); }
   Ratio& SetLegendID(uint8_t legendID) { return static_cast<decltype(*this)&>(Data::SetLegendID(legendID)); }
   Ratio& SetOptions(const std::string& options) { return static_cast<decltype(*this)&>(Data::SetOptions(options)); }
   Ratio& SetOptions(drawing_options_t optionAlias) { return static_cast<decltype(*this)&>(Data::SetOptions(optionAlias)); }
   Ratio& UnsetOptions() { return static_cast<decltype(*this)&>(Data::UnsetOptions()); }
   Ratio& SetTextFormat(const std::string& textFormat) { return static_cast<decltype(*this)&>(Data::SetTextFormat(textFormat)); }
-  Ratio& SetNormalize(bool multiplyByBinWidth = false) { return static_cast<decltype(*this)&>(Data::SetNormalize(multiplyByBinWidth)); }
-  Ratio& SetScaleFactor(double_t scale) { return static_cast<decltype(*this)&>(Data::SetScaleFactor(scale)); }
   Ratio& SetColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetColor(color)); }
   Ratio& SetMarker(int16_t color, int16_t style, float_t size) { return static_cast<decltype(*this)&>(Data::SetMarker(color, style, size)); }
   Ratio& SetMarkerColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetMarkerColor(color)); }
@@ -601,21 +599,27 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& SetContours(const std::vector<double>& contours) { return static_cast<decltype(*this)&>(Data::SetContours(contours)); }
   Ratio& SetContours(int32_t nContours) { return static_cast<decltype(*this)&>(Data::SetContours(nContours)); }
 
-  Ratio& SetProjectionX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjectionX(startY, endY, isUserCoord)); }
-  Ratio& SetProjectionY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjectionY(startX, endX, isUserCoord)); }
-  Ratio& SetProjection(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProjection(dims, ranges, isUserCoord)); }
+  // data modifiers
+  Ratio& Normalize(bool multiplyByBinWidth = false) { return static_cast<decltype(*this)&>(Data::Normalize(multiplyByBinWidth)); }
+  Ratio& Scale(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::Scale(scaleFactor)); }
+  Ratio& ScaleMinimum(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::ScaleMinimum(scaleFactor)); }
+  Ratio& ScaleMaximum(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::ScaleMaximum(scaleFactor)); }
 
-  Ratio& SetProjectionXDenom(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});
-  Ratio& SetProjectionYDenom(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});
-  Ratio& SetProjectionDenom(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
+  Ratio& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::Project(dims, ranges, isUserCoord)); }
+  Ratio& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::ProjectX(startY, endY, isUserCoord)); }
+  Ratio& ProjectY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::ProjectY(startX, endX, isUserCoord)); }
 
-  Ratio& SetProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProfileX(startY, endY, isUserCoord)); }
-  Ratio& SetProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProfileY(startX, endX, isUserCoord)); }
-  Ratio& SetProfile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::SetProfile(dims, ranges, isUserCoord)); }
+  Ratio& ProjectDenom(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
+  Ratio& ProjectXDenom(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});
+  Ratio& ProjectYDenom(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});
 
-  Ratio& SetProfileXDenom(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});
-  Ratio& SetProfileYDenom(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});
-  Ratio& SetProfileDenom(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
+  Ratio& Profile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::Profile(dims, ranges, isUserCoord)); }
+  Ratio& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::ProfileX(startY, endY, isUserCoord)); }
+  Ratio& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::ProfileY(startX, endX, isUserCoord)); }
+
+  Ratio& ProfileDenom(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
+  Ratio& ProfileXDenom(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});
+  Ratio& ProfileYDenom(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});
 
   Ratio& Project(std::vector<data_dim_t> dataDims, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Project(dataDims, filter, weight, nEntries)); }
   Ratio& Project(std::string x, int32_t nBins = 32, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Project(x, nBins, filter, weight, nEntries)); }

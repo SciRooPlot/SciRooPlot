@@ -1418,16 +1418,6 @@ auto Plot::Pad::Data::SetTextFormat(const string& textFormat) -> decltype(*this)
   mTextFormat = textFormat;
   return *this;
 }
-auto Plot::Pad::Data::SetScaleFactor(double_t scale) -> decltype(*this)
-{
-  mModify.scaleFactor = scale;
-  return *this;
-}
-auto Plot::Pad::Data::SetNormalize(bool multiplyByBinWidth) -> decltype(*this)
-{
-  mModify.normMode = multiplyByBinWidth;
-  return *this;
-}
 auto Plot::Pad::Data::SetRangeX(double_t min, double_t max) -> decltype(*this)
 {
   mRangeX.min = min;
@@ -1470,16 +1460,6 @@ auto Plot::Pad::Data::UnsetRangeY() -> decltype(*this)
 {
   mRangeY.min = {};
   mRangeY.max = {};
-  return *this;
-}
-auto Plot::Pad::Data::SetScaleMinimum(double_t scale) -> decltype(*this)
-{
-  mScaleRange.min = scale;
-  return *this;
-}
-auto Plot::Pad::Data::SetScaleMaximum(double_t scale) -> decltype(*this)
-{
-  mScaleRange.max = scale;
   return *this;
 }
 auto Plot::Pad::Data::SetColor(int16_t color) -> decltype(*this)
@@ -1570,37 +1550,56 @@ auto Plot::Pad::Data::SetContours(int32_t nContours) -> decltype(*this)
   mNContours = nContours;
   return *this;
 }
-auto Plot::Pad::Data::SetProjectionX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Data::Normalize(bool multiplyByBinWidth) -> decltype(*this)
 {
-  mProjInfo = {{0}, {{1, startY, endY}}, isUserCoord};
+  mModify.normMode = multiplyByBinWidth;
   return *this;
 }
-auto Plot::Pad::Data::SetProfileX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Data::Scale(double_t scaleFactor) -> decltype(*this)
 {
-  mProjInfo = {{0}, {{1, startY, endY}}, isUserCoord, true};
+  mModify.scaleFactor = scaleFactor;
   return *this;
 }
-auto Plot::Pad::Data::SetProjectionY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Data::ScaleMinimum(double_t scaleFactor) -> decltype(*this)
 {
-  mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
+  mScaleRange.min = scaleFactor;
   return *this;
 }
-auto Plot::Pad::Data::SetProfileY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Data::ScaleMaximum(double_t scaleFactor) -> decltype(*this)
 {
-  mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
+  mScaleRange.max = scaleFactor;
   return *this;
 }
-auto Plot::Pad::Data::SetProjection(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Data::Project(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfo = {dims, ranges, isUserCoord};
   return *this;
 }
-auto Plot::Pad::Data::SetProfile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Data::ProjectX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfo = {{0}, {{1, startY, endY}}, isUserCoord};
+  return *this;
+}
+auto Plot::Pad::Data::ProjectY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
+  return *this;
+}
+auto Plot::Pad::Data::Profile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfo = {dims, ranges, isUserCoord, true};
   return *this;
 }
-
+auto Plot::Pad::Data::ProfileX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfo = {{0}, {{1, startY, endY}}, isUserCoord, true};
+  return *this;
+}
+auto Plot::Pad::Data::ProfileY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
+  return *this;
+}
 auto Plot::Pad::Data::Project(vector<data_dim_t> dataDims, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
   mDataInfo = {dataDims, filter, weight, nEntries};
@@ -1847,35 +1846,34 @@ auto Plot::Pad::Ratio::SetDivideNormalized(bool multiplyByBinWidth) -> decltype(
   mDivisionNormMode = multiplyByBinWidth;
   return *this;
 }
-auto Plot::Pad::Ratio::SetProjectionXDenom(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
-{
-  mProjInfoDenom = {{0}, {{1, startY, endY}}, isUserCoord};
-  return *this;
-}
-auto Plot::Pad::Ratio::SetProfileXDenom(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
-{
-  mProjInfoDenom = {{0}, {{1, startY, endY}}, isUserCoord, true};
-  return *this;
-}
-
-auto Plot::Pad::Ratio::SetProjectionYDenom(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
-{
-  mProjInfoDenom = {{1}, {{0, startX, endX}}, isUserCoord};
-  return *this;
-}
-auto Plot::Pad::Ratio::SetProfileYDenom(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
-{
-  mProjInfoDenom = {{1}, {{0, startX, endX}}, isUserCoord, true};
-  return *this;
-}
-auto Plot::Pad::Ratio::SetProjectionDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::ProjectDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfoDenom = {dims, ranges, isUserCoord};
   return *this;
 }
-auto Plot::Pad::Ratio::SetProfileDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::ProjectXDenom(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfoDenom = {{0}, {{1, startY, endY}}, isUserCoord};
+  return *this;
+}
+auto Plot::Pad::Ratio::ProjectYDenom(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfoDenom = {{1}, {{0, startX, endX}}, isUserCoord};
+  return *this;
+}
+auto Plot::Pad::Ratio::ProfileDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfoDenom = {dims, ranges, isUserCoord, true};
+  return *this;
+}
+auto Plot::Pad::Ratio::ProfileXDenom(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfoDenom = {{0}, {{1, startY, endY}}, isUserCoord, true};
+  return *this;
+}
+auto Plot::Pad::Ratio::ProfileYDenom(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
+{
+  mProjInfoDenom = {{1}, {{0, startX, endX}}, isUserCoord, true};
   return *this;
 }
 auto Plot::Pad::Ratio::ProjectDenom(vector<data_dim_t> dataDims, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
