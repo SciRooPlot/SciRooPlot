@@ -587,21 +587,21 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
     for (auto& [padID, pad] : plot.GetPads()) {
       for (auto& data : pad.GetData()) {
         mDataBuffer[data->GetInputID()][data->GetName()];
-        if (data->GetTreeInfo()) {
+        if (data->GetDataInfo()) {
           auto& dataInfos = mDataInfoBuffer[data->GetInputID()][data->GetName()];
-          auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& treeInfo) { return treeInfo.GetNameSuffix() == (*data->GetTreeInfo()).GetNameSuffix(); });
+          auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == (*data->GetDataInfo()).GetNameSuffix(); });
           if (iter == dataInfos.end()) {
-            mDataInfoBuffer[data->GetInputID()][data->GetName()].push_back(*data->GetTreeInfo());
+            mDataInfoBuffer[data->GetInputID()][data->GetName()].push_back(*data->GetDataInfo());
           }
         }
         if (data->GetType() == "ratio") {
           const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
           mDataBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()];
-          if (ratio->GetTreeInfoDenom()) {
+          if (ratio->GetDataInfoDenom()) {
             auto& dataInfos = mDataInfoBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()];
-            auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& treeInfo) { return treeInfo.GetNameSuffix() == (*data->GetTreeInfo()).GetNameSuffix(); });
+            auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == (*data->GetDataInfo()).GetNameSuffix(); });
             if (iter == dataInfos.end()) {
-              mDataInfoBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()].push_back(*ratio->GetTreeInfoDenom());
+              mDataInfoBuffer[ratio->GetDenomIdentifier()][ratio->GetDenomName()].push_back(*ratio->GetDataInfoDenom());
             }
           }
         }
@@ -856,18 +856,18 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
             TTree* tree = static_cast<TTree*>(obj);
             mDataBuffer[inputID][fullName].reset(nullptr);
             // do all requested projections of this tree
-            for (auto& treeInfo : mDataInfoBuffer[inputID][fullName]) {
-              string projFullName = fullName + treeInfo.GetNameSuffix();
+            for (auto& dataInfo : mDataInfoBuffer[inputID][fullName]) {
+              string dataFullName = fullName + dataInfo.GetNameSuffix();
               try {
                 ROOT::RDataFrame df(*tree);
                 std::cerr.setstate(std::ios_base::failbit);
-                obj = ProcessData(df, fullName, treeInfo, projFullName + suffix);
+                obj = ProcessData(df, fullName, dataInfo, dataFullName + suffix);
                 std::cerr.clear();
               } catch (const std::runtime_error&) {
                 ERROR("Invalid query for tree.");
                 obj = nullptr;
               }
-              mDataBuffer[inputID][projFullName].reset(obj);
+              mDataBuffer[inputID][dataFullName].reset(obj);
             }
             tree->SetDirectory(0);
             delete tree;
@@ -923,19 +923,19 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
   }
 
   ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter);
-  for (auto& treeInfo : mDataInfoBuffer[inputID][name]) {
-    string projName = name + treeInfo.GetNameSuffix();
+  for (auto& dataInfo : mDataInfoBuffer[inputID][name]) {
+    string dataName = name + dataInfo.GetNameSuffix();
     TObject* obj = nullptr;
     try {
       std::cerr.setstate(std::ios_base::failbit);
-      obj = ProcessData(df, name, treeInfo, projName + ":" + inputID);
+      obj = ProcessData(df, name, dataInfo, dataName + ":" + inputID);
       std::cerr.clear();
     } catch (const std::runtime_error& e) {
       ERROR("Invalid query for csv table.");
       std::cout << e.what() << std::endl;
       obj = nullptr;
     }
-    mDataBuffer[inputID][projName].reset(obj);
+    mDataBuffer[inputID][dataName].reset(obj);
   }
 }
 
@@ -1053,21 +1053,21 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
 
 //**************************************************************************************************
 /**
- * Process RDataFrame according to the settings stored in treeInfo.
+ * Process RDataFrame according to the settings stored in dataInfo.
  */
 //**************************************************************************************************
-TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, const Plot::Pad::Data::data_info_t& treeInfo, const string& name) const
+TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, const Plot::Pad::Data::data_info_t& dataInfo, const string& name) const
 {
   bool isProfile = false;
   bool isScatter = false;
-  if (treeInfo.isProfileNoScatter) {
-    isProfile = *treeInfo.isProfileNoScatter;
+  if (dataInfo.isProfileNoScatter) {
+    isProfile = *dataInfo.isProfileNoScatter;
     isScatter = !isProfile;
   }
   bool isProjection = (!isProfile && !isScatter);
   bool hasWegiths = false;
 
-  auto dataDims = treeInfo.dataDims;  // make copy here so it can be modified
+  auto dataDims = dataInfo.dataDims;  // make copy here so it can be modified
   if (isProfile && dataDims.size() > 3) {
     ERROR("Too many dimensions specified for profile of {}.", dfName);
     return nullptr;
@@ -1093,20 +1093,20 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
   TObject* obj = nullptr;
   ROOT::RDF::RNode node = df;  // working node
 
-  if (treeInfo.nEntries) {
-    node = node.Range(*treeInfo.nEntries);
+  if (dataInfo.nEntries) {
+    node = node.Range(*dataInfo.nEntries);
   }
   auto nEntriesPreFilter = node.Count();
-  if (treeInfo.filter) {
+  if (dataInfo.filter) {
     try {
-      node = node.Filter(*treeInfo.filter);
+      node = node.Filter(*dataInfo.filter);
     } catch (std::runtime_error) {
-      ERROR("Illegal expression in filter: {}.", *treeInfo.filter);
+      ERROR("Illegal expression in filter: {}.", *dataInfo.filter);
       return nullptr;
     }
     auto nEntriesPostFilter = node.Count();
     if (nEntriesPostFilter && nEntriesPreFilter) {
-      INFO("Processing {} entries ({:.2f}%) of {} after filter {}.", (*nEntriesPostFilter), 100. * (*nEntriesPostFilter) / (*nEntriesPreFilter), dfName, *treeInfo.filter);
+      INFO("Processing {} entries ({:.2f}%) of {} after filter {}.", (*nEntriesPostFilter), 100. * (*nEntriesPostFilter) / (*nEntriesPreFilter), dfName, *dataInfo.filter);
     }
   } else {
     if (nEntriesPreFilter) {
@@ -1162,14 +1162,14 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     }
   }
   if (!isProfile) {
-    histTitle += (treeInfo.weight) ? ";weighted counts" : ";counts";
+    histTitle += (dataInfo.weight) ? ";weighted counts" : ";counts";
   }
 
-  if (treeInfo.weight) {
+  if (dataInfo.weight) {
     try {
-      node = node.Define("SRP_AXIS_W", *treeInfo.weight);
+      node = node.Define("SRP_AXIS_W", *dataInfo.weight);
     } catch (std::runtime_error) {
-      ERROR("Illegal expression for weights: {}.", *treeInfo.weight);
+      ERROR("Illegal expression for weights: {}.", *dataInfo.weight);
       return nullptr;
     }
     hasWegiths = true;

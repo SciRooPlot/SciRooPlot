@@ -482,8 +482,8 @@ class Plot::Pad::Data
   const bool& GetDefinesFrame() const { return mDefinesFrame; }
   const auto& GetContours() const { return mContours; }
   const auto& GetNContours() const { return mNContours; }
+  const auto& GetDataInfo() const { return mDataInfo; }
   const auto& GetProjInfo() const { return mProjInfo; }
-  const auto& GetTreeInfo() const { return mDataInfo; }
 
   struct proj_info_t {
     std::vector<uint8_t> dims;                                    // dimensions to project on (can be one or two)
@@ -642,16 +642,13 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   friend class Plot;
 
   virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Ratio>(*this); }
-
   boost::property_tree::ptree GetPropertyTree() const;
   const auto& GetDenomIdentifier() const { return mDenomInputIdentifier; }
   const auto& GetDenomName() const { return mDenomName; }
-
   const auto& GetDivisionNormMode() const { return mDivisionNormMode; }
-
   const bool& GetIsCorrelated() const { return mIsCorrelated; }
+  const auto& GetDataInfoDenom() const { return mDataInfoDenom; }
   const auto& GetProjInfoDenom() const { return mProjInfoDenom; }
-  const auto& GetTreeInfoDenom() const { return mDataInfoDenom; }
 
  private:
   std::string mDenomName;
