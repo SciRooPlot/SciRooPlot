@@ -276,6 +276,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         pad.GetData().insert(pad.GetData().begin(), std::make_shared<Plot::Pad::Data>(*pad.GetData()[frameDataID]));
       }
       pad.GetData()[0]->SetLegendLabel("");  // axis frame should not appear in legend
+
+      // put reference function in data vector right after the axis histogram
+      auto refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
+      if (refFunc) {
+        pad.GetData().insert(pad.GetData().begin() + 1, refFunc);
+      }
     }
 
     TH1* axisHist_ptr{nullptr};
@@ -665,22 +671,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
             axisHist_ptr->SetMinimum(zMin);
             axisHist_ptr->SetMaximum(zMax);
-          }
-
-          // right after drawing the axis, put reference line if requested
-          optional<string> refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
-          if (refFunc) {
-            double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0;
-            pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
-            if (pad_ptr->GetLogx()) {
-              xmin = TMath::Power(10, xmin);
-              xmax = TMath::Power(10, xmax);
-            }
-            TF1* line = new TF1("line", (*refFunc).data(), xmin, xmax);
-            line->SetLineColor(kBlack);
-            line->SetLineWidth(2);
-            // line->SetLineStyle(9);
-            line->Draw("SAME");
           }
           pad_ptr->Update();
         } else {

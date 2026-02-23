@@ -197,6 +197,8 @@ class Plot::Pad
   Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorInputID, const std::string& denominatorName,
                   const Data& denominatorLayout, const std::optional<std::string>& label = std::nullopt);
 
+  Data& AddRefFunc(const std::string& refFunc);
+
   TextBox& AddText(double_t xPos, double_t yPos, const std::string& text);
   TextBox& AddText(const std::string& text);
   LegendBox& AddLegend(double_t xPos, double_t yPos);
@@ -245,7 +247,6 @@ class Plot::Pad
   Pad& SetFrameBorderWidth(float_t width);
   Pad& SetFrameTransparent();
   Pad& SetRedrawAxes(bool redraw = true);
-  Pad& SetRefFunc(const std::string& refFunc);
 
  protected:
   friend class PlotManager;
@@ -354,10 +355,10 @@ class Plot::Pad
   std::optional<int32_t> mPalette;
 
   std::optional<bool> mRedrawAxes;
-  std::optional<std::string> mRefFunc;
 
   std::map<char, Axis> mAxes;
   std::vector<std::shared_ptr<Data>> mData;
+  std::shared_ptr<Data> mRefFunc;
 
   std::vector<std::shared_ptr<LegendBox>> mLegendBoxes;
   std::vector<std::shared_ptr<TextBox>> mTextBoxes;

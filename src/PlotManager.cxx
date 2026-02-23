@@ -625,6 +625,18 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
 
     // determine which input data are needed for plots
     for (auto& [padID, pad] : plot.GetPads()) {
+      if (auto& refFunc = pad.GetRefFunc()) {
+        mDataBuffer[refFunc->GetInputID()][refFunc->GetName()];
+      } else {
+        if (plot.GetPlotTemplateName()) {
+          auto it = std::find_if(mPlotTemplates.begin(), mPlotTemplates.end(), [&](auto& plotTemplate) { return *plot.GetPlotTemplateName() == plotTemplate.GetName(); });
+          if (it != mPlotTemplates.end()) {
+            if (auto& refFunc = (*it).GetPad(padID).GetRefFunc()) {
+              mDataBuffer[refFunc->GetInputID()][refFunc->GetName()];
+            }
+          }
+        }
+      }
       for (auto& data : pad.GetData()) {
         mDataBuffer[data->GetInputID()][data->GetName()];
         if (data->GetDataInfo()) {
@@ -681,7 +693,7 @@ bool PlotManager::FillBuffer()
       if (inputID == "USER_FUNCTIONS") {
         TFormula formula("tmp", dataName.data());
         int dim = formula.GetNdim();
-        if (dim == 1) {
+        if (dim <= 1) {
           dataPtr.reset(new TF1(dataName.data(), dataName.data()));
         } else if (dim == 2) {
           dataPtr.reset(new TF2(dataName.data(), dataName.data()));
@@ -1448,7 +1460,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plotTemplate[2]['X'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
     plotTemplate[2]['Y'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
     plotTemplate[2]['Y'].SetTitleOffset(0.6);  // FIXME: for some reason the ROOT automatic title offset determination does not work for the lower plot
-    plotTemplate[2].SetRefFunc("1");
+    plotTemplate[2].AddRefFunc("1").SetColor(kBlack).SetLineWidth(2);
     plotTemplate[2]['X'].SetTickLength(0.06);
     plotTemplate[2]['Y'].SetNumDivisions(305).SetTitleCenter();
     return plotTemplate;

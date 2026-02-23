@@ -334,17 +334,6 @@ auto Plot::Pad::SetRedrawAxes(bool redraw) -> decltype(*this)
 
 //**************************************************************************************************
 /**
- * Set reference function..
- */
-//**************************************************************************************************
-auto Plot::Pad::SetRefFunc(const string& refFunc) -> decltype(*this)
-{
-  mRefFunc = refFunc;
-  return *this;
-}
-
-//**************************************************************************************************
-/**
  * Set text size
  */
 //**************************************************************************************************
@@ -776,7 +765,6 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_boxrange");
   read_from_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
-  read_from_tree(padTree, mRefFunc, "ref_func");
 
   for (auto& content : padTree) {
     // add data
@@ -789,6 +777,10 @@ Plot::Pad::Pad(const ptree& padTree)
         mData.push_back(std::make_shared<Ratio>(content.second));
       }
     }
+    if (str_contains(content.first, "REF_FUNC")) {
+      mRefFunc = std::make_shared<Data>(content.second);
+    }
+
     // add boxes
     if (str_contains(content.first, "LEGEND")) {
       mLegendBoxes.push_back(std::make_shared<LegendBox>(content.second));
@@ -859,12 +851,14 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_boxrange");
   put_in_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
-  put_in_tree(padTree, mRefFunc, "ref_func");
 
   int32_t dataID = 1;
   for (auto& data : mData) {
     padTree.put_child("DATA_" + std::to_string(dataID), data->GetPropertyTree());
     ++dataID;
+  }
+  if (mRefFunc) {
+    padTree.put_child("REF_FUNC", mRefFunc->GetPropertyTree());
   }
 
   int32_t legendBoxID = 1;
@@ -958,7 +952,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mCandleOptionDefaults.whiskerRange) mCandleOptionDefaults.whiskerRange = pad.mCandleOptionDefaults.whiskerRange;
   if (pad.mPalette) mPalette = pad.mPalette;
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
-  if (pad.mRefFunc) mRefFunc = pad.mRefFunc;
+  if (pad.mRefFunc) mRefFunc = pad.mRefFunc;  // this does not copy the data (!!)
   for (auto& [axisLabel, axis] : pad.mAxes) {
     mAxes[axisLabel];  // default initiialize in case this axis was not yet defined
     mAxes[axisLabel] += axis;
@@ -1099,6 +1093,17 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& n
 Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorInputID, const string& denominatorName, const Data& denominatorLayout, const optional<string>& label)
 {
   return AddRatio(numeratorName, numeratorInputID, denominatorName, denominatorLayout.GetInputID(), label);
+}
+
+//**************************************************************************************************
+/**
+ * Add reference function.
+ */
+//**************************************************************************************************
+Plot::Pad::Data& Plot::Pad::AddRefFunc(const string& refFunc)
+{
+  mRefFunc = std::make_shared<Data>(refFunc, "USER_FUNCTIONS", nullopt);
+  return *mRefFunc;
 }
 
 //**************************************************************************************************
