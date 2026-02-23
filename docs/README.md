@@ -76,7 +76,7 @@ To specify multiple text options one can use `plot analysisQA 'trackProperty_(ti
 Note that expressions involving special characters (in the previous examples `[]` or `()` and `|`) have to be wrapped in quotes since otherwise your shell will try to interpret them before they are passed to the plotting app.
 To select only a sub-category within the figure group, use `<figureGroup/some/category>` (for example `plot myFigureGroup/QAPlots controlObservable`).
 By default, the optional `mode` argument is set to `interactive` and you can leave it out in the command.
-Possible alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`.
+Possible alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`, `inputs`.
 If you have multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..) that you want to concatenate and save as a moving gif, you can create it via `plot figureGroup myPlot_bin_.+ gif`.
 To adjust the time between the frames use for example `plot figureGroup myPlot_bin_.+ gif+4`, where the number is given in tens of milliseconds (i.e. this example will create a gif with a delay of 40ms between the plots).
 
@@ -285,7 +285,7 @@ plotManager.AddInputDataFiles("inputIdentifierD", {"/path/to/folder/with/rootfil
 // and the properties specified for your final plot will be applied on top of these
 
 // these template plots must live in a figure group called "PLOT_TEMPLATES"
-// and need to be added to the manager via plotManager.AddPlotTemplate(plotTemplate);
+// and need to be added to the manager via plotManager.AddPlotTemplate(plot);
 
 // for instance the following lines will generate an example template plot:
 { // -----------------------------------------------------------------------

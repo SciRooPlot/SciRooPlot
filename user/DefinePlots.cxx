@@ -39,16 +39,16 @@ void DefineInputIdentifiers(PlotManager& plotManager)
 void DefinePlotTemplates(PlotManager& plotManager)
 {
   {
-    auto plotTemplate = PlotManager::GetPlotTemplate("1d");
-    plotManager.AddPlotTemplate(plotTemplate);
+    Plot plot = PlotManager::GetPlotTemplate("1d");
+    plotManager.AddPlotTemplate(plot);
   }
   {
-    auto plotTemplate = PlotManager::GetPlotTemplate("1d_ratio");
-    plotManager.AddPlotTemplate(plotTemplate);
+    Plot plot = PlotManager::GetPlotTemplate("1d_ratio");
+    plotManager.AddPlotTemplate(plot);
   }
   {
-    auto plotTemplate = PlotManager::GetPlotTemplate("2d");
-    plotManager.AddPlotTemplate(plotTemplate);
+    Plot plot = PlotManager::GetPlotTemplate("2d");
+    plotManager.AddPlotTemplate(plot);
   }
 }
 
@@ -86,7 +86,7 @@ void DefinePlots(PlotManager& plotManager)
   }  // -----------------------------------------------------------------------
   {  // -----------------------------------------------------------------------
     Plot plot("invMassDist", "examples", "1d");
-    plot[1].AddData("invMassDist", "pseudodata").SetScaleFactor(0.00001).SetColor(kBlue + 2);
+    plot[1].AddData("invMassDist", "pseudodata").Scale(0.00001).SetColor(kBlue + 2);
     plotManager.AddPlot(plot);
   }  // -----------------------------------------------------------------------
   {  // -----------------------------------------------------------------------
