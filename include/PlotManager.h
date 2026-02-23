@@ -123,6 +123,7 @@ class PlotManager
   std::vector<const std::string*> mPlotViewHistory;
   int32_t mWindowOffsetY{};
   int32_t mFirstFreeColorIndex{TColor::GetFreeColorIndex()};
+  std::vector<std::string> mTableFileEndings = {".csv", ".dat", ".txt", ".tsv", ".tab"};
 
   std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>> mDataBuffer;
   std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Plot::Pad::Data::data_info_t>>> mDataInfoBuffer;
@@ -132,8 +133,6 @@ class PlotManager
   void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& inputID);
   void ReadDataCSV(const std::string& inputFileName, const std::string& name, const std::string& inputID);
   TObject* ProcessData(ROOT::RDataFrame& df, const std::string& dfName, const Plot::Pad::Data::data_info_t& treeInfo, const std::string& name) const;
-
-  std::vector<std::string> mTableFileEndings = {".csv", ".dat", ".txt", ".tsv", ".tab"};  // allow only 2 letters
 };
 
 }  // end namespace SciRooPlot
