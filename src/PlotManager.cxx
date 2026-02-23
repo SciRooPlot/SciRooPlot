@@ -288,11 +288,11 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
     set<string> allFileNames;
     for (auto& fileEntry : inputPair.second) {
       string fileOrDirName = expand_path(fileEntry.second.get_value<string>());
-      if (str_contains(fileOrDirName, ".root", true) || str_contains(fileOrDirName, ".csv", true)) {
+      if (str_contains(fileOrDirName, ".root", true) || str_contains(fileOrDirName, mTableFileEndings, true)) {
         allFileNames.insert(fileOrDirName);
       } else if (std::filesystem::is_directory(fileOrDirName)) {
         for (auto& file : std::filesystem::recursive_directory_iterator(fileOrDirName)) {
-          if (file.path().extension() == ".root" || file.path().extension() == ".csv") {
+          if (file.path().extension() == ".root" || str_contains(file.path().extension(), mTableFileEndings)) {
             allFileNames.insert(file.path().string());
           }
         }
@@ -706,8 +706,8 @@ bool PlotManager::FillBuffer()
     // open all input files belonging to the current inputID and extract the data
     for (auto& inputFileName : mInputFiles[inputID]) {
       if (requiredData.empty()) break;
-      if (str_contains(inputFileName, ".csv", true)) {
-        string name = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".csv") - inputFileName.rfind('/') - 1);
+      if (str_contains(inputFileName, mTableFileEndings, true)) {
+        string name = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".") - inputFileName.rfind('/') - 1);
         ReadDataCSV(inputFileName, name, inputID);
         vector<string>& wantedNames = requiredData[""];
         wantedNames.erase(std::remove_if(wantedNames.begin(), wantedNames.end(), [&](auto& wantedName) { return wantedName == name; }), wantedNames.end());
@@ -942,6 +942,10 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
 //**************************************************************************************************
 void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, const string& inputID)
 {
+  if (!file_exists(inputFileName)) {
+    ERROR("File {} does not exist.", inputFileName);
+    return;
+  }
   char delimiter = ',';
   std::vector<char> candidates = {',', ';', '\t', '|', ' '};
   size_t maxCount = 0;
@@ -958,9 +962,6 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
     }
     ++count;
   }
-  if (delimiter != ',') {
-    INFO("Auto-detected csv delimiter '{}' for table {}.", delimiter, name);
-  }
 
   ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter);
   for (auto& dataInfo : mDataInfoBuffer[inputID][name]) {
@@ -971,7 +972,7 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
       obj = ProcessData(df, name, dataInfo, dataName + ":" + inputID);
       std::cerr.clear();
     } catch (const std::runtime_error& e) {
-      ERROR("Invalid query for csv table.");
+      ERROR("Invalid query for table {}.", name);
       std::cout << e.what() << std::endl;
       obj = nullptr;
     }

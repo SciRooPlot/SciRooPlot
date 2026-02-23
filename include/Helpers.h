@@ -40,6 +40,14 @@ inline bool str_contains(const std::string& str, const std::string& substr, bool
   }
 }
 
+inline bool str_contains(const std::string& str, const std::vector<std::string>& substrs, bool reverseSearch = false)
+{
+  return std::any_of(substrs.begin(), substrs.end(),
+                     [&](const std::string& substr) {
+                       return str_contains(str, substr, reverseSearch);
+                     });
+}
+
 template <typename T>
 void set_if(const std::optional<T>& origin, std::optional<T>& target)
 {
