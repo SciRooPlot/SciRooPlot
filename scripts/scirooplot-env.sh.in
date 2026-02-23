@@ -83,7 +83,7 @@ function plot-config() {
 
 _plot_completions_zsh() {
 
-  local modes=('interactive' 'pdf' 'eps' 'svg' 'png' 'gif' 'file' 'find' 'macro')
+  local modes=('interactive' 'pdf' 'eps' 'svg' 'png' 'gif' 'file' 'inputs' 'find' 'macro')
   local groups
   local groups_and_categories
   local names
@@ -198,7 +198,7 @@ _plot_config_completions_zsh() {
 
 _plot_completions_bash() {
 
-  local modes=('interactive pdf eps svg png gif file find macro')
+  local modes=('interactive pdf eps svg png gif file inputs find macro')
   local groups
   local groups_and_categories
   local names

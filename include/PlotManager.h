@@ -59,8 +59,8 @@ class PlotManager
 
   // settings for output
   void SetOutputDirectory(const std::string& path);
-  void SetUseUniquePlotNames(bool useUniquePlotNames = true);                // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
-  void SetOutputFileName(const std::string& fileName = "ResultPlots.root");  // in case canvases should be saved in .root file
+  void SetUseUniquePlotNames(bool useUniquePlotNames = true);  // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
+  void SetOutputFileName(const std::string& fileName);         // in case canvases should be saved in .root file
 
   // settings related to the input root files
   void AddInputDataFiles(const std::string& inputIdentifier, const std::vector<std::string>& inputFilePathList);
@@ -107,10 +107,13 @@ class PlotManager
   bool GeneratePlot(const Plot& plot, const std::string& outputMode = "pdf");
   boost::property_tree::ptree& ReadPlotTemplatesFromFile(const std::string& plotFileName);
   void SavePlotsToFile() const;
+  void SaveInputsToFile() const;
 
   std::unique_ptr<TApplication> mApp;
-  bool mSaveToRootFile{};
-  std::string mOutputFileName;
+  bool mSavePlotsToRootFile{};
+  bool mSaveInputsToRootFile{};
+  std::string mPlotsRootFile{"Plots.root"};
+  std::string mInputsRootFile{"Inputs.root"};
   std::map<std::string, std::shared_ptr<TCanvas>> mPlotLedger;
   std::string mOutputDirectory;
   bool mUseUniquePlotNames{};

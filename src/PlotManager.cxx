@@ -76,7 +76,7 @@ namespace SciRooPlot
  * Constructor for PlotManager.
  */
 //**************************************************************************************************
-PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr)), mOutputFileName("ResultPlots.root")
+PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr))
 {
   ROOT::EnableImplicitMT();
   gROOT->SetWebDisplay("off");
@@ -99,7 +99,12 @@ PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr)), mOut
 //**************************************************************************************************
 PlotManager::~PlotManager()
 {
-  if (mSaveToRootFile) SavePlotsToFile();
+  if (mSavePlotsToRootFile) {
+    SavePlotsToFile();
+  }
+  if (mSaveInputsToRootFile) {
+    SaveInputsToFile();
+  }
 }
 
 //**************************************************************************************************
@@ -110,7 +115,7 @@ PlotManager::~PlotManager()
 void PlotManager::SavePlotsToFile() const
 {
   if (!mPlotLedger.empty()) {
-    TFile outputFile((mOutputDirectory + "/" + mOutputFileName).data(), "RECREATE");
+    TFile outputFile((mOutputDirectory + "/" + mPlotsRootFile).data(), "RECREATE");
     if (outputFile.IsZombie()) {
       return;
     }
@@ -139,8 +144,41 @@ void PlotManager::SavePlotsToFile() const
       ++nPlots;
     }
     outputFile.Close();
-    INFO("Saved {} plots to file {}.", nPlots, mOutputFileName);
+    INFO("Saved {} plots to file {}.", nPlots, mPlotsRootFile);
   }
+}
+
+//**************************************************************************************************
+/**
+ * Save buffered input data .root file.
+ */
+//**************************************************************************************************
+void PlotManager::SaveInputsToFile() const
+{
+  TFile outputFile((mOutputDirectory + "/" + mInputsRootFile).data(), "RECREATE");
+  if (outputFile.IsZombie()) {
+    return;
+  }
+  for (auto& [inputID, buffer] : mDataBuffer) {
+    for (auto& [dataName, dataPtr] : buffer) {
+      if (!dataPtr) continue;
+      auto dir = outputFile.mkdir(inputID.data(), "", true);
+      string name = split_string(dataPtr->GetName(), ':')[0];
+      auto tokens = split_string(name, '/');
+      int iToken = 1;
+      for (auto token : tokens) {
+        if (iToken == tokens.size()) {
+          dir->cd();
+          dataPtr->Write(token.data());
+        } else {
+          dir = dir->mkdir(token.data(), "", true);
+        }
+        ++iToken;
+      }
+    }
+  }
+  outputFile.Close();
+  INFO("Saved input data for plots to file {}.", mInputsRootFile);
 }
 
 //**************************************************************************************************
@@ -151,7 +189,7 @@ void PlotManager::SavePlotsToFile() const
 void PlotManager::ClearDataBuffer()
 {
   mDataBuffer.clear();
-};
+}
 
 //**************************************************************************************************
 /**
@@ -180,7 +218,7 @@ void PlotManager::SetUseUniquePlotNames(bool useUniquePlotNames)
 //**************************************************************************************************
 void PlotManager::SetOutputFileName(const string& fileName)
 {
-  mOutputFileName = fileName;
+  mPlotsRootFile = fileName;
 }
 
 //**************************************************************************************************
@@ -383,9 +421,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     ERROR("No figure group was specified for plot {}.", plot.GetName());
     return false;
   }
-  if (outputMode == "file") {
-    mSaveToRootFile = true;
-  }
   Plot fullPlot = plot;
   if (plot.GetPlotTemplateName()) {
     const string& plotTemplateName = *plot.GetPlotTemplateName();
@@ -474,7 +509,12 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   }
 
   if (outputMode == "file") {
+    mSavePlotsToRootFile = true;
     mPlotLedger[plot.GetUniqueName()] = canvas;
+    return true;
+  }
+  if (outputMode == "inputs") {
+    mSaveInputsToRootFile = true;
     return true;
   }
 
