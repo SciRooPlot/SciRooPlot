@@ -717,6 +717,7 @@ bool PlotManager::FillBuffer()
           ERROR("Incompatible number of points.");
         } else {
           dataPtr.reset(new TGraph(x.size(), x.data(), y.data()));
+          static_cast<TGraph*>(dataPtr.get())->SetName(dataName.data());
         }
         continue;
       }
