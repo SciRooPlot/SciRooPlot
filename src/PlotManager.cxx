@@ -703,6 +703,22 @@ bool PlotManager::FillBuffer()
           ERROR("Cannot create function {}.", dataName);
         }
         continue;
+      } else if (inputID == "USER_GRAPHS") {
+        auto strs = split_string(dataName, ';');
+        auto xStrs = split_string(strs[0], ',');
+        auto yStrs = split_string(strs[1], ',');
+        vector<double_t> x;
+        vector<double_t> y;
+        for (int32_t i = 0; i < xStrs.size(); ++i) {
+          x.push_back(std::stod(xStrs[i]));
+          y.push_back(std::stod(yStrs[i]));
+        }
+        if (!x.size() || x.size() != y.size()) {
+          ERROR("Incompatible number of points.");
+        } else {
+          dataPtr.reset(new TGraph(x.size(), x.data(), y.data()));
+        }
+        continue;
       }
 
       auto pathPos = dataName.find_last_of("/");

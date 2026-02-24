@@ -1067,6 +1067,50 @@ Plot::Pad::Data& Plot::Pad::AddFunction(const string& function, const optional<s
 
 //**************************************************************************************************
 /**
+ * Add user-defined points to this pad.
+ */
+//**************************************************************************************************
+Plot::Pad::Data& Plot::Pad::AddPoints(vector<double_t> x, vector<double_t> y, const optional<string>& label)
+{
+  int32_t nPoints = x.size();
+  if (!nPoints || x.size() != y.size()) {
+    ERROR("Illegal arguments for adding points.");
+    std::exit(EXIT_FAILURE);
+  }
+  string xStr;
+  string yStr;
+  for (int32_t i = 0; i < nPoints; ++i) {
+    xStr += std::to_string(x[i]) + ((i == nPoints - 1) ? "" : ",");
+    yStr += std::to_string(y[i]) + ((i == nPoints - 1) ? "" : ",");
+  }
+  mData.push_back(std::make_shared<Data>(xStr + ";" + yStr, "USER_GRAPHS", label));
+  return *mData.back();
+}
+Plot::Pad::Data& Plot::Pad::AddPoints(vector<pair<double_t, double_t>> positions, const optional<string>& label)
+{
+  vector<double_t> x;
+  vector<double_t> y;
+  for (auto [xi, yi] : positions) {
+    x.push_back(xi);
+    y.push_back(yi);
+  }
+  return AddPoints(x, y, label);
+}
+
+//**************************************************************************************************
+/**
+ * Add user-defined line to this pad.
+ */
+//**************************************************************************************************
+Plot::Pad::Data& Plot::Pad::AddLine(pair<double_t, double_t> pos1, pair<double_t, double_t> pos2, const optional<string>& label)
+{
+  auto& data = AddPoints({pos1.first, pos2.first}, {pos1.second, pos2.second}, label);
+  data.SetOptions(line);
+  return data;
+}
+
+//**************************************************************************************************
+/**
  * Add ratio to this pad.
  */
 //**************************************************************************************************

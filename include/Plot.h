@@ -187,6 +187,11 @@ class Plot::Pad
   Data& AddData(const std::string& name, const Data& dataTemplate, const std::optional<std::string>& label = std::nullopt);
   Data& AddFunction(const std::string& function, const std::optional<std::string>& label = std::nullopt);
 
+  Data& AddPoints(std::vector<double_t> x, std::vector<double_t> y, const std::optional<std::string>& label = std::nullopt);
+  Data& AddPoints(std::vector<std::pair<double_t, double_t>> positions, const std::optional<std::string>& label = std::nullopt);
+
+  Data& AddLine(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2, const std::optional<std::string>& label = std::nullopt);
+
   Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorInputID,
                   const std::string& denominatorName, const std::string& denominatorInputID,
                   const std::optional<std::string>& label = std::nullopt);
