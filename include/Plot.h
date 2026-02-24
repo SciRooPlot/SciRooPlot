@@ -197,8 +197,6 @@ class Plot::Pad
   Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorInputID, const std::string& denominatorName,
                   const Data& denominatorLayout, const std::optional<std::string>& label = std::nullopt);
 
-  Data& AddRefFunc(const std::string& refFunc);
-
   TextBox& AddText(double_t xPos, double_t yPos, const std::string& text);
   TextBox& AddText(const std::string& text);
   LegendBox& AddLegend(double_t xPos, double_t yPos);
@@ -208,6 +206,8 @@ class Plot::Pad
   Data& GetData(uint8_t dataID);
   LegendBox& GetLegend(uint8_t legendID);
   TextBox& GetText(uint8_t textID);
+
+  Data& SetRefFunc(const std::string& refFunc);
 
   Pad& SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup);
   Pad& SetMargins(float_t top, float_t bottom, float_t left, float_t right);

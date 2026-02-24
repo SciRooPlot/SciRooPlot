@@ -1100,7 +1100,7 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string&
  * Add reference function.
  */
 //**************************************************************************************************
-Plot::Pad::Data& Plot::Pad::AddRefFunc(const string& refFunc)
+Plot::Pad::Data& Plot::Pad::SetRefFunc(const string& refFunc)
 {
   mRefFunc = std::make_shared<Data>(refFunc, "USER_FUNCTIONS", nullopt);
   return *mRefFunc;
