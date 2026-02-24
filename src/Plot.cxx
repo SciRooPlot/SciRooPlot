@@ -974,7 +974,15 @@ Plot::Pad::Axis& Plot::Pad::operator[](const char axis)
 {
   return GetAxis(axis);
 }
-
+//**************************************************************************************************
+/**
+ * Access operator for data in pad.
+ */
+//**************************************************************************************************
+Plot::Pad::Data& Plot::Pad::operator()(uint8_t dataID)
+{
+  return GetData(dataID);
+}
 //**************************************************************************************************
 /**
  * Access function for pad axis.
@@ -1374,6 +1382,21 @@ ptree Plot::Pad::Data::GetPropertyTree() const
     put_in_tree(dataTree, mProjInfo->isProfile, "proj_isProfile");
   }
   return dataTree;
+}
+
+//**************************************************************************************************
+/**
+ * Reinterprete Data as Ratio.
+ */
+//**************************************************************************************************
+Plot::Pad::Ratio& Plot::Pad::Data::AsRatio()
+{
+  auto* ptr = dynamic_cast<Plot::Pad::Ratio*>(this);
+  if (!ptr) {
+    ERROR("Data {} is no ratio.", mName);
+    std::exit(EXIT_FAILURE);
+  }
+  return *ptr;
 }
 
 //**************************************************************************************************

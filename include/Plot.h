@@ -180,6 +180,7 @@ class Plot::Pad
   Pad() = default;
   explicit Pad(const boost::property_tree::ptree& padTree);
   Axis& operator[](const char axis);
+  Data& operator()(uint8_t dataID);
   void operator+=(const Pad& pad);
 
   // User accessors:
@@ -387,6 +388,7 @@ class Plot::Pad::Data
   Data& operator=(const Data& other) = default;
   Data& operator=(Data&& other) = default;
 
+  Ratio& AsRatio();
   Data& SetInputID(const std::string& inputID);
   const std::string& GetInputID() const { return mInputID; }
 
