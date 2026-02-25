@@ -1968,6 +1968,16 @@ auto Plot::Pad::Ratio::ScatterDenom(string x, string y, optional<string> filter,
   mDenomDataInfo = {{{x}, {y}}, filter, {}, nEntries, false};
   return *this;
 }
+auto Plot::Pad::Ratio::ScatterDenom(string x, string y, string xErr, string yErr, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+{
+  mDenomDataInfo = {{{x}, {y}, {xErr}, {yErr}}, filter, {}, nEntries, false};
+  return *this;
+}
+auto Plot::Pad::Ratio::ScatterDenom(string x, string y, string xErrLow, string xErrHigh, string yErrLow, string yErrHigh, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+{
+  mDenomDataInfo = {{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, filter, {}, nEntries, false};
+  return *this;
+}
 auto Plot::Pad::Ratio::ProfileDenom(vector<data_dim_t> dataDims, std::string profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
 {
   dataDims.push_back({profile});

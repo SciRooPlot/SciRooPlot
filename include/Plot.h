@@ -638,7 +638,12 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& ProjectDenom(std::string x, std::string y, std::pair<int32_t, int32_t> nBins = {32, 32}, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {});
 
   Ratio& Scatter(std::string x, std::string y, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Scatter(x, y, filter, nEntries)); }
+  Ratio& Scatter(std::string x, std::string y, std::string xErr, std::string yErr, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErr, yErr, filter, nEntries)); }
+  Ratio& Scatter(std::string x, std::string y, std::string xErrLow, std::string xErrHigh, std::string yErrLow, std::string yErrHigh, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErrLow, xErrHigh, yErrLow, yErrHigh, filter, nEntries)); }
+
   Ratio& ScatterDenom(std::string x, std::string y, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
+  Ratio& ScatterDenom(std::string x, std::string y, std::string xErr, std::string yErr, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
+  Ratio& ScatterDenom(std::string x, std::string y, std::string xErrLow, std::string xErrHigh, std::string yErrLow, std::string yErrHigh, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
 
   Ratio& Profile(std::vector<data_dim_t> dataDims, std::string profile, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Profile(dataDims, profile, filter, weight, nEntries)); }
   Ratio& Profile(std::string x, int32_t nBins, std::string profile, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Profile(x, nBins, profile, filter, weight, nEntries)); }
