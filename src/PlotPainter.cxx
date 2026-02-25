@@ -1422,6 +1422,15 @@ string PlotPainter::GetAxisStr(int16_t i)
 //**************************************************************************************************
 bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
 {
+  bool hasSymErrors = false;
+  if (numerator->InheritsFrom(TGraphErrors::Class()) && numerator->InheritsFrom(TGraphErrors::Class())) {
+    hasSymErrors = true;
+  }
+  bool hasAsymErrors = false;
+  if (numerator->InheritsFrom(TGraphAsymmErrors::Class()) && numerator->InheritsFrom(TGraphAsymmErrors::Class())) {
+    hasAsymErrors = true;
+  }
+
   // first check if graphs indeed have the same x values
   for (int32_t i = 0; i < numerator->GetN(); ++i) {
     if (numerator->GetX()[i] != denominator->GetX()[i]) return false;
@@ -1429,13 +1438,22 @@ bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
   for (int32_t i = 0; i < numerator->GetN(); ++i) {
     double_t num = numerator->GetY()[i];
     double_t denom = denominator->GetY()[i];
-    double_t numErr = numerator->GetEY()[i];
-    double_t denomErr = denominator->GetEY()[i];
+    double_t numErr = 0.;
+    double_t denomErr = 0.;
+    if (hasSymErrors) {
+      numErr = numerator->GetEY()[i];
+      denomErr = denominator->GetEY()[i];
+    } else if (hasAsymErrors) {
+    }
     if (!denom) {
       ERROR("Dividing by zero!");
     }
     numerator->GetY()[i] = (denom) ? num / denom : 0.;
-    numerator->GetEY()[i] = (denom) ? std::sqrt(std::pow(1 / denom, 2) * std::pow(numErr, 2) + std::pow(num / std::pow(denom, 2), 2) * std::pow(denomErr, 2)) : 0.;
+    if (hasSymErrors) {
+      numerator->GetEY()[i] = (denom) ? std::sqrt(std::pow(1 / denom, 2) * std::pow(numErr, 2) + std::pow(num / std::pow(denom, 2), 2) * std::pow(denomErr, 2)) : 0.;
+    } else if (hasAsymErrors) {
+      // TODO: implement for assym errors as well
+    }
   }
   return true;
 }
