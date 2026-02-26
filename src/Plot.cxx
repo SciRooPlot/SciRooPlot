@@ -2684,9 +2684,9 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillOpacity(float_t opacit
  * Add entry to LegendBox.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& label, const string& refDataName)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& label, uint16_t refDataID)
 {
-  mLegendEntries.push_back(LegendEntry(label, refDataName));
+  mLegendEntries.push_back(LegendEntry(label, refDataID));
   return mLegendEntries.back();
 }
 
@@ -2713,10 +2713,10 @@ void Plot::Pad::LegendBox::MergeLegendEntries()
  * Construct LegendEntry.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendEntry::LegendEntry(const optional<string>& label, const optional<string>& refDataName, const optional<string>& drawStyle)
+Plot::Pad::LegendBox::LegendEntry::LegendEntry(const optional<string>& label, const optional<uint16_t>& refDataID, const optional<string>& drawStyle)
 {
   mLabel = label;
-  mRefDataName = refDataName;
+  mRefDataID = refDataID;
   mDrawStyle = drawStyle;
 }
 
@@ -2728,7 +2728,7 @@ Plot::Pad::LegendBox::LegendEntry::LegendEntry(const optional<string>& label, co
 Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
 {
   read_from_tree(legendEntryTree, mLabel, "label");
-  read_from_tree(legendEntryTree, mRefDataName, "ref_data_name");
+  read_from_tree(legendEntryTree, mRefDataID, "ref_data_id");
   read_from_tree(legendEntryTree, mDrawStyle, "draw_style");
   read_from_tree(legendEntryTree, mFill.color, "fill_color");
   read_from_tree(legendEntryTree, mFill.style, "fill_style");
@@ -2753,7 +2753,7 @@ ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree() const
 {
   ptree legendEntryTree;
   put_in_tree(legendEntryTree, mLabel, "label");
-  put_in_tree(legendEntryTree, mRefDataName, "ref_data_name");
+  put_in_tree(legendEntryTree, mRefDataID, "ref_data_id");
   put_in_tree(legendEntryTree, mDrawStyle, "draw_style");
   put_in_tree(legendEntryTree, mFill.color, "fill_color");
   put_in_tree(legendEntryTree, mFill.style, "fill_style");
@@ -2778,19 +2778,21 @@ ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree() const
 void Plot::Pad::LegendBox::LegendEntry::operator+=(
   const Plot::Pad::LegendBox::LegendEntry& legendEntry)
 {
-  this->mDrawStyle = legendEntry.mDrawStyle;
-  this->mMarker.color = legendEntry.mMarker.color;
-  this->mMarker.scale = legendEntry.mMarker.scale;
-  this->mMarker.style = legendEntry.mMarker.style;
-  this->mLine.color = legendEntry.mLine.color;
-  this->mLine.scale = legendEntry.mLine.scale;
-  this->mLine.style = legendEntry.mLine.style;
-  this->mFill.color = legendEntry.mFill.color;
-  this->mFill.scale = legendEntry.mFill.scale;
-  this->mFill.style = legendEntry.mFill.style;
-  this->mText.color = legendEntry.mText.color;
-  this->mText.scale = legendEntry.mText.scale;
-  this->mText.style = legendEntry.mText.style;
+  if (legendEntry.mDrawStyle) this->mDrawStyle = legendEntry.mDrawStyle;
+  if (legendEntry.mLabel) this->mLabel = legendEntry.mLabel;
+  if (legendEntry.mRefDataID) this->mRefDataID = legendEntry.mRefDataID;
+  if (legendEntry.mMarker.color) this->mMarker.color = legendEntry.mMarker.color;
+  if (legendEntry.mMarker.scale) this->mMarker.scale = legendEntry.mMarker.scale;
+  if (legendEntry.mMarker.style) this->mMarker.style = legendEntry.mMarker.style;
+  if (legendEntry.mLine.color) this->mLine.color = legendEntry.mLine.color;
+  if (legendEntry.mLine.scale) this->mLine.scale = legendEntry.mLine.scale;
+  if (legendEntry.mLine.style) this->mLine.style = legendEntry.mLine.style;
+  if (legendEntry.mFill.color) this->mFill.color = legendEntry.mFill.color;
+  if (legendEntry.mFill.scale) this->mFill.scale = legendEntry.mFill.scale;
+  if (legendEntry.mFill.style) this->mFill.style = legendEntry.mFill.style;
+  if (legendEntry.mText.color) this->mText.color = legendEntry.mText.color;
+  if (legendEntry.mText.scale) this->mText.scale = legendEntry.mText.scale;
+  if (legendEntry.mText.style) this->mText.style = legendEntry.mText.style;
 }
 
 //**************************************************************************************************
@@ -2805,15 +2807,23 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLabel(c
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetRefData(const string& name, const string& inputID)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetRefData(uint16_t refDataID)
 {
-  mRefDataName = name + ":" + inputID;
+  mRefDataID = refDataID;
   return *this;
 }
 
 Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetDrawStyle(const string& drawStyle)
 {
   mDrawStyle = drawStyle;
+  return *this;
+}
+
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetColor(int16_t color)
+{
+  mMarker.color = color;
+  mLine.color = color;
+  mFill.color = color;
   return *this;
 }
 

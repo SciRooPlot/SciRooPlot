@@ -258,6 +258,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     pad_ptr->SetNumber(padID);
     pad_ptr->Draw();
     pad_ptr->cd();
+    bool hasRefFunc = false;
 
     if (pad.GetData().empty()) {
       if (pad.GetLegendBoxes().empty() && pad.GetTextBoxes().empty()) {
@@ -281,6 +282,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       auto refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
       if (refFunc) {
         pad.GetData().insert(pad.GetData().begin() + 1, refFunc);
+        hasRefFunc = true;
       }
     }
 
@@ -785,6 +787,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             data_ptr->SetEditable(false);
           }
 
+          data_ptr->SetName((std::to_string(dataIndex - hasRefFunc) + ":" + data_ptr->GetName()).data());
           data_ptr->Draw(drawingOptions.data());
 
           // in case a label was specified for the data, add it to corresponding legend
@@ -796,7 +799,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (data->GetLegendID()) legendID = *data->GetLegendID();
 
             if (legendID > 0u && legendID <= legendBoxVector.size()) {
-              legendBoxVector[legendID - 1]->AddEntry(*data->GetLegendLabel(), data_ptr->GetName());
+              legendBoxVector[legendID - 1]->AddEntry(*data->GetLegendLabel(), (dataIndex - hasRefFunc));
             } else {
               ERROR("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetInputID());
             }
@@ -962,11 +965,19 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     for (auto& line : lines) {
       if constexpr (isLegend) {
         auto& entry = box->GetEntries()[lineID];
-        if (entry.GetRefDataName()) {
-          // FIXME: this gives always the first -> problem when drawing the same histogram twice!
-          TNamed* data_ptr = static_cast<TNamed*>(pad->FindObject(entry.GetRefDataName()->data()));
-          if (!data_ptr) ERROR("Object belonging to legend entry {} not found.", line);
-          ReplacePlaceholders(line, data_ptr);
+        if (entry.GetRefDataID()) {
+          TObject* data_ptr = nullptr;
+          TIter next(pad->GetListOfPrimitives());
+          while ((data_ptr = next())) {
+            if (TString(data_ptr->GetName()).BeginsWith(std::to_string(*entry.GetRefDataID()).data())) {
+              break;
+            }
+          }
+          if (!data_ptr) {
+            ERROR("Object belonging to legend entry {} not found.", line);
+          } else {
+            ReplacePlaceholders(line, static_cast<TNamed*>(data_ptr));
+          }
         }
       }
 
@@ -1104,9 +1115,17 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
         // TLegendEntry* curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), drawStyle.data());
         TLegendEntry* curEntry = nullptr;
-        if (entry.GetRefDataName()) {
-          TNamed* data_ptr = static_cast<TNamed*>(pad->FindObject(entry.GetRefDataName()->data()));
-          // TODO: here we need to check that it exists
+        if (entry.GetRefDataID()) {
+          TObject* data_ptr = nullptr;
+          TIter next(pad->GetListOfPrimitives());
+          while ((data_ptr = next())) {
+            if (TString(data_ptr->GetName()).BeginsWith(std::to_string(*entry.GetRefDataID()).data())) {
+              break;
+            }
+          }
+          if (!data_ptr) {
+            continue;
+          }
 
           if (drawStyle.empty()) {
             drawStyle = "EP";

@@ -926,7 +926,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   const std::optional<uint8_t>& GetNumColumns() const { return mNumColumns; }
   const std::optional<std::string>& GetTitle() const { return mTitle; }
 
-  LegendEntry& AddEntry(const std::string& name, const std::string& label);
+  LegendEntry& AddEntry(const std::string& label, uint16_t refDataID);
 
   const auto& GetEntries() const { return mLegendEntries; }
   const auto& GetDefaultDrawStyle() const { return mDrawStyleDefault; }
@@ -962,12 +962,13 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 class Plot::Pad::LegendBox::LegendEntry
 {
  public:
-  explicit LegendEntry(const std::optional<std::string>& label = std::nullopt, const std::optional<std::string>& refDataName = std::nullopt, const std::optional<std::string>& drawStyle = std::nullopt);
+  explicit LegendEntry(const std::optional<std::string>& label = std::nullopt, const std::optional<uint16_t>& refDataID = std::nullopt, const std::optional<std::string>& drawStyle = std::nullopt);
   explicit LegendEntry(const boost::property_tree::ptree& legendEntryTree);
 
   LegendEntry& SetLabel(const std::string& label);
-  LegendEntry& SetRefData(const std::string& name, const std::string& inputID);  // will work only for data drawn in same pad
+  LegendEntry& SetRefData(uint16_t refDataID);
   LegendEntry& SetDrawStyle(const std::string& drawStyle);
+  LegendEntry& SetColor(int16_t color);
   LegendEntry& SetMarkerColor(int16_t color);
   LegendEntry& SetMarkerStyle(int16_t style);
   LegendEntry& SetMarkerSize(float_t size);
@@ -987,7 +988,7 @@ class Plot::Pad::LegendBox::LegendEntry
   void operator+=(const LegendEntry& legendEntry);
 
   boost::property_tree::ptree GetPropertyTree() const;
-  const auto& GetRefDataName() const { return mRefDataName; }
+  const auto& GetRefDataID() const { return mRefDataID; }
   const auto& GetLabel() const { return mLabel; }
   const auto& GetDrawStyle() const { return mDrawStyle; }
 
@@ -1009,7 +1010,7 @@ class Plot::Pad::LegendBox::LegendEntry
 
  private:
   std::optional<std::string> mLabel;
-  std::optional<std::string> mRefDataName;
+  std::optional<uint16_t> mRefDataID;
   std::optional<std::string> mDrawStyle;
   layout_t mFill;
   layout_t mMarker;
