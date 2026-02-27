@@ -80,7 +80,6 @@ PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr))
 {
   ROOT::EnableImplicitMT();
   gROOT->SetWebDisplay("off");
-  TQObject::Connect("TGMainFrame", "CloseWindow()", "TApplication", gApplication, "Terminate()");
   gErrorIgnoreLevel = kWarning;
 
   // determine OS dependent offset between window and frame
@@ -439,6 +438,10 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   gROOT->SetBatch(!isInteractiveMode && !isMacroMode);
   shared_ptr<TCanvas> canvas{painter.GeneratePlot(fullPlot, mDataBuffer)};
   if (!canvas) return false;
+  if (auto rc = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) {
+    rc->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+  }
+
   if (TColor::GetFreeColorIndex() > std::numeric_limits<int16_t>::max()) {
     // there is a natural limit to the number of custom colors since ROOT color indices are of type short
     ERROR("Too many custom colors in one session. Aborting...");
@@ -466,6 +469,9 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     while (!gSystem->ProcessEvents() && gROOT->GetSelectedPad()) {
       bool isClick = canvas->GetEvent() == kButton1Double;
       bool isValidKey = canvas->GetEvent() == kKeyPress && (canvas->GetEventX() == 'a' || canvas->GetEventX() == 's');
+      if (canvas->GetEvent() == kKeyPress && (canvas->GetEventX() == 'q')) {
+        gApplication->Terminate();
+      }
       auto selectedBox = dynamic_cast<TPave*>(canvas->GetSelected());
       if (isClick && selectedBox) {
         if (!boxClicked) INFO("Current position of {}: ({:.3g}, {:.3g}).", selectedBox->GetName(), selectedBox->GetX1NDC(), selectedBox->GetY2NDC());
@@ -483,7 +489,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
           if (curPlotIndex == mPlotViewHistory.size() - 1) break;
           ++curPlotIndex;
         } else {
-          if (curPlotIndex == 0) std::exit(EXIT_FAILURE);
+          if (curPlotIndex == 0) std::exit(EXIT_SUCCESS);
           --curPlotIndex;
         }
         static_cast<TRootCanvas*>(canvas->GetCanvasImp())->UnmapWindow();
