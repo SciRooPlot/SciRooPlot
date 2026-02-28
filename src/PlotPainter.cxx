@@ -923,7 +923,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     if constexpr (isLegend) {
       std::for_each(box->GetEntries().begin(), box->GetEntries().end(),
                     [&lines](const auto& entry) {
-                      if (entry.GetLabel()) lines.push_back(*entry.GetLabel());
+                      (entry.GetLabel()) ? lines.push_back(*entry.GetLabel()) : lines.push_back("");
                     });
     } else {
       // split text string to vector

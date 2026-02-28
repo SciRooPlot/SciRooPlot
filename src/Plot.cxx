@@ -2698,12 +2698,13 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& 
 void Plot::Pad::LegendBox::MergeLegendEntries()
 {
   for (auto iter = mLegendEntriesUser.begin(); iter != mLegendEntriesUser.end(); ++iter) {
-    if (auto legendIndex = iter->first; legendIndex == mLegendEntries.size() + 1) {
+    if (auto legendIndex = iter->first; legendIndex >= mLegendEntries.size() + 1) {
+      for (int32_t i = mLegendEntries.size() + 1; i < legendIndex; ++i) {
+        mLegendEntries.push_back(LegendEntry());
+      }
       mLegendEntries.push_back(iter->second);
     } else if (legendIndex > 0 && legendIndex < mLegendEntries.size() + 1) {
       mLegendEntries[legendIndex - 1] += iter->second;
-    } else {
-      ERROR("Invalid index ({}) specified for legend entry!", legendIndex);
     }
   }
 }
