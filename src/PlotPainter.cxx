@@ -1004,6 +1004,15 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       markerDummy.SetTextSize(text_size);
       auto [w, h] = GetTextDimensions(markerDummy, pad);
       markerWidthPixel = w;
+
+      if (auto title = box->GetTitle()) {
+        TLatex textLine(0, 0, (*title).data());
+        textLine.SetTextFont(text_font);
+        textLine.SetTextSize(text_size);
+        auto [width, height] = GetTextDimensions(textLine, pad);
+        titleWidthPixel = width;
+        if (height > lineHeightPixel) lineHeightPixel = height;
+      }
     }
 
     double_t legendWidthNDC = (double_t)legendWidthPixel / padWidthPixel;
@@ -1019,6 +1028,12 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     if constexpr (isLegend) {
       totalWidthNDC = 3 * marginNDC + markerWidthNDC + legendWidthNDC;
       totalHeightNDC = (nLines + lineSpacing * (nLines + 1)) * lineHeightNDC / nColumns;
+      if (box->GetTitle()) {
+        if (titleWidthNDC > totalWidthNDC) {
+          totalWidthNDC = marginNDC + titleWidthNDC;
+        }
+        totalHeightNDC += (1 + lineSpacing) * lineHeightNDC;
+      }
     } else {
       totalWidthNDC = 2 * marginNDC + legendWidthNDC;
       totalHeightNDC = (nLines + 0.5 * (nLines - 1)) * lineHeightNDC;
@@ -1027,10 +1042,6 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     if (borderWidth && *borderWidth) {
       totalWidthNDC += *borderWidth * 2 / padWidthPixel;
       totalHeightNDC += *borderWidth * 2 / padHeightPixel;
-    }
-
-    if (titleWidthPixel > legendWidthPixel) {
-      totalWidthNDC = (0.3333) * markerWidthNDC + titleWidthNDC;
     }
 
     double_t upperLeftX{box->GetXPosition()};
@@ -1093,18 +1104,20 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     }
 
     if constexpr (isLegend) {
-      TLegend* legend = new TLegend(upperLeftX, upperLeftY - totalHeightNDC,
-                                    upperLeftX + totalWidthNDC, upperLeftY, "", "NDC NB");
+      TLegend* legend = new TLegend(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "", "NDC NB");
       legend->SetMargin((2 * marginNDC + markerWidthNDC) / totalWidthNDC);
       legend->SetTextAlign(kHAlignLeft + kVAlignCenter);
       legend->SetNColumns(nColumns);
-
       legend->SetTextFont(text_font);
       legend->SetTextSize(text_size);
-
       if (textColor) legend->SetTextColor(*textColor);
       if (textSize) legend->SetTextSize(*textSize);
       if (textFont) legend->SetTextFont(*textFont);
+
+      if (auto title = box->GetTitle()) {
+        string center = (nColumns > 1) ? "c" : "";
+        legend->SetHeader((*title).data(), center.data());
+      }
 
       int32_t i = 0;
       for (auto& entry : box->GetEntries()) {
@@ -1113,7 +1126,6 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         // user-defined draw style for single entry or all entries
         string drawStyle = entry.GetDrawStyle() ? *entry.GetDrawStyle() : ((box->GetDefaultDrawStyle()) ? *box->GetDefaultDrawStyle() : "");
 
-        // TLegendEntry* curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), drawStyle.data());
         TLegendEntry* curEntry = nullptr;
         if (entry.GetRefDataID()) {
           TObject* data_ptr = nullptr;
@@ -1204,15 +1216,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         if (entry.GetTextSize()) curEntry->SetTextSize(*entry.GetTextSize());
         ++i;
       }
-
-      if (legend->GetHeader()) {
-        static_cast<TLegendEntry*>(legend->GetListOfPrimitives()->At(0))->SetTextFont(text_font);
-        static_cast<TLegendEntry*>(legend->GetListOfPrimitives()->At(0))->SetTextSize(text_size);
-      }
       returnBox = legend;
     } else {
-      TPaveText* paveText = new TPaveText(upperLeftX, upperLeftY - totalHeightNDC,
-                                          upperLeftX + totalWidthNDC, upperLeftY, "NDC NB");
+      TPaveText* paveText = new TPaveText(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "NDC NB");
       paveText->SetMargin(marginNDC / totalWidthNDC);
       paveText->SetTextAlign(kHAlignLeft + kVAlignCenter);
       paveText->SetBorderSize(0);
