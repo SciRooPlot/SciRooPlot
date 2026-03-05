@@ -90,7 +90,7 @@ std::string vector_to_string(std::vector<T> items)
     } else {
       if constexpr (std::is_same_v<std::string, T>) {
         itemString += item;
-        if (&item != &items.back()) itemString += ";";
+        if (&item != &items.back()) itemString += "$";
       } else {
         itemString += std::to_string(item);
         if (&item != &items.back()) itemString += ",";
@@ -144,12 +144,14 @@ std::vector<T> string_to_vector(std::string itemString)
 
   std::string curItemStr;
   std::istringstream stream(itemString);
-  if constexpr (is_tuple<T>::value || std::is_same_v<T, std::string>) {
+  if constexpr (std::is_same_v<T, std::string>) {
+    while (std::getline(stream, curItemStr, '$')) {
+      items.push_back(curItemStr);
+    }
+  } else if constexpr (is_tuple<T>::value) {
     while (std::getline(stream, curItemStr, ';')) {
       // ugly hack...
-      if constexpr (std::is_same_v<T, std::string>) {
-        items.push_back(curItemStr);
-      } else if constexpr (std::is_same_v<T, std::tuple<uint8_t, double_t, double_t>>) {
+      if constexpr (std::is_same_v<T, std::tuple<uint8_t, double_t, double_t>>) {
         items.push_back(string_to_tuple<uint8_t, double_t, double_t>(curItemStr));
       } else {
         items.push_back(string_to_tuple<float_t, float_t, float_t, float_t>(curItemStr));
