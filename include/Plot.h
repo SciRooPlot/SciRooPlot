@@ -896,7 +896,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 {
  public:
   class LegendEntry;
-  LegendBox(const std::optional<std::string>& title = {});
+  explicit LegendBox(const std::optional<std::string>& title = {});
   LegendBox(double_t xPos, double_t yPos, const std::optional<std::string>& title = {});
   explicit LegendBox(const boost::property_tree::ptree& legendBoxTree);
 
