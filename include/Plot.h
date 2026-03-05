@@ -205,8 +205,8 @@ class Plot::Pad
 
   TextBox& AddText(double_t xPos, double_t yPos, const std::string& text);
   TextBox& AddText(const std::string& text);
-  LegendBox& AddLegend(double_t xPos, double_t yPos);
-  LegendBox& AddLegend();
+  LegendBox& AddLegend(double_t xPos, double_t yPos, const std::optional<std::string>& title = {});
+  LegendBox& AddLegend(const std::optional<std::string>& title = {});
 
   Axis& GetAxis(const char axis);
   Data& GetData(uint8_t dataID);
@@ -440,9 +440,9 @@ class Plot::Pad::Data
   virtual Data& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});                                                     // for 2d histos
 
   struct data_dim_t {
-    data_dim_t(const char* _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), nBins(_nBins), edges(_range) {};
-    data_dim_t(const std::string& _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), nBins(_nBins), edges(_range) {};
-    data_dim_t(const std::string& _var, const std::vector<double_t>& _edges) : var(_var), edges(_edges) {};
+    data_dim_t(const char* _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), nBins(_nBins), edges(_range) {}
+    data_dim_t(const std::string& _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), nBins(_nBins), edges(_range) {}
+    data_dim_t(const std::string& _var, const std::vector<double_t>& _edges) : var(_var), edges(_edges) {}
     std::string var{};
     std::vector<double_t> edges{};
     int32_t nBins{0};
@@ -896,8 +896,8 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 {
  public:
   class LegendEntry;
-  LegendBox();
-  LegendBox(double_t xPos, double_t yPos);
+  LegendBox(const std::optional<std::string>& title = {});
+  LegendBox(double_t xPos, double_t yPos, const std::optional<std::string>& title = {});
   explicit LegendBox(const boost::property_tree::ptree& legendBoxTree);
 
   virtual ~LegendBox() = default;

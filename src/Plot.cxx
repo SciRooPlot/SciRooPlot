@@ -1185,9 +1185,9 @@ Plot::Pad::TextBox& Plot::Pad::AddText(const string& text)
  * Add legend box to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox& Plot::Pad::AddLegend(double_t xPos, double_t yPos)
+Plot::Pad::LegendBox& Plot::Pad::AddLegend(double_t xPos, double_t yPos, const std::optional<std::string>& title)
 {
-  mLegendBoxes.push_back(std::make_shared<LegendBox>(xPos, yPos));
+  mLegendBoxes.push_back(std::make_shared<LegendBox>(xPos, yPos, title));
   return *mLegendBoxes.back();
 }
 
@@ -1196,9 +1196,9 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend(double_t xPos, double_t yPos)
  * Add legend box to this pad and automatically find a position for it.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox& Plot::Pad::AddLegend()
+Plot::Pad::LegendBox& Plot::Pad::AddLegend(const std::optional<std::string>& title)
 {
-  mLegendBoxes.push_back(std::make_shared<LegendBox>());
+  mLegendBoxes.push_back(std::make_shared<LegendBox>(title));
   return *mLegendBoxes.back();
 }
 
@@ -2522,8 +2522,8 @@ Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const string& text)
  * LegendBox constructor.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendBox(double_t xPos, double_t yPos)
-  : Box(xPos, yPos), mTitle{}, mNumColumns{}
+Plot::Pad::LegendBox::LegendBox(double_t xPos, double_t yPos, const std::optional<std::string>& title)
+  : Box(xPos, yPos), mTitle{title}, mNumColumns{}
 {
 }
 
@@ -2532,7 +2532,7 @@ Plot::Pad::LegendBox::LegendBox(double_t xPos, double_t yPos)
  * LegendBox constructor with automatic placing.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendBox() : Box(), mTitle{}, mNumColumns{}
+Plot::Pad::LegendBox::LegendBox(const std::optional<std::string>& title) : Box(), mTitle{title}, mNumColumns{}
 {
   SetAutoPlacement();
 }
