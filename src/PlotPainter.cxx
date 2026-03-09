@@ -954,9 +954,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     // determine max width and height of legend entries
     uint8_t iColumn{};
-    double_t legendWidthPixel{};
+    double_t contentWidthPixel{};
     double_t titleWidthPixel{};
-    vector<uint32_t> legendWidthPixelPerColumn(nColumns, 0);
+    vector<uint32_t> contentWidthPixelPerColumn(nColumns, 0);
 
     double_t lineHeightPixel{text_size};
     if (text_font % 10 <= 2) lineHeightPixel = GetTextSizePixel(text_size);
@@ -987,25 +987,24 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       textLine.SetTextSize(text_size);
       auto [width, height] = GetTextDimensions(textLine, pad);
       if (height > lineHeightPixel) lineHeightPixel = height;
-
-      if (width > legendWidthPixelPerColumn[iColumn]) legendWidthPixelPerColumn[iColumn] = width;
+      if (width > contentWidthPixelPerColumn[iColumn]) contentWidthPixelPerColumn[iColumn] = width;
       ++iColumn;
       iColumn %= nColumns;
       ++lineID;
     }
-    for (auto& length : legendWidthPixelPerColumn) {
-      legendWidthPixel += length;
+    for (auto& length : contentWidthPixelPerColumn) {
+      contentWidthPixel += length;
     }
-    uint32_t markerWidthPixel{};
+    uint32_t symbolColWidthPixel{0};
     if constexpr (isLegend) {
       string markerDummyString = "-+-";  // defines width of marker
       TLatex markerDummy(0, 0, markerDummyString.data());
       markerDummy.SetTextFont(text_font);
       markerDummy.SetTextSize(text_size);
       auto [w, h] = GetTextDimensions(markerDummy, pad);
-      markerWidthPixel = w;
+      symbolColWidthPixel = box->GetSymbolColScale().value_or(1.) * w;
 
-      if (auto title = box->GetTitle()) {
+      if (auto& title = box->GetTitle()) {
         TLatex textLine(0, 0, (*title).data());
         textLine.SetTextFont(text_font);
         textLine.SetTextSize(text_size);
@@ -1015,34 +1014,34 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       }
     }
 
-    double_t legendWidthNDC = (double_t)legendWidthPixel / padWidthPixel;
+    double_t contentWidthNDC = (double_t)contentWidthPixel / padWidthPixel;
     double_t lineHeightNDC = (double_t)lineHeightPixel / padHeightPixel;
-    double_t markerWidthNDC = (double_t)markerWidthPixel / padWidthPixel;
+    double_t symbolColWidthNDC = (double_t)symbolColWidthPixel / padWidthPixel;
     double_t titleWidthNDC = (double_t)titleWidthPixel / padWidthPixel;
+    double_t borderWidthNDC = box->GetBorderWidth().value_or(0.) / padWidthPixel;
+    double_t borderHeightNDC = box->GetBorderWidth().value_or(0.) / padHeightPixel;
 
     double_t totalWidthNDC{};
     double_t totalHeightNDC{};
-    double_t marginNDC{0.01};
-    double_t lineSpacing{0.3};  // fraction of line hight
+
+    float_t marginNDC = box->GetMargin().value_or(0.01);
+    float_t lineSpacing = box->GetLineSpacing().value_or(0.3);
+    double_t totalMarginWidthNDC = (0.5 * borderWidthNDC + marginNDC + symbolColWidthNDC);
 
     if constexpr (isLegend) {
-      totalWidthNDC = 3 * marginNDC + markerWidthNDC + legendWidthNDC;
-      totalHeightNDC = (nLines + lineSpacing * (nLines + 1)) * lineHeightNDC / nColumns;
+      totalWidthNDC = borderWidthNDC + 2 * marginNDC + symbolColWidthNDC + contentWidthNDC;
+      totalHeightNDC = (1 + lineSpacing) * nLines * lineHeightNDC / nColumns;
       if (box->GetTitle()) {
         if (titleWidthNDC > totalWidthNDC) {
-          totalWidthNDC = marginNDC + titleWidthNDC;
+          totalWidthNDC = borderWidthNDC + titleWidthNDC + 0.1 * totalMarginWidthNDC;  // root places header at margin/10
         }
         totalHeightNDC += (1 + lineSpacing) * lineHeightNDC;
       }
     } else {
-      totalWidthNDC = 2 * marginNDC + legendWidthNDC;
-      totalHeightNDC = (nLines + 0.5 * (nLines - 1)) * lineHeightNDC;
+      totalWidthNDC = borderWidthNDC + 2 * marginNDC + contentWidthNDC;
+      totalHeightNDC = (1 + lineSpacing) * nLines * lineHeightNDC;
     }
-
-    if (borderWidth && *borderWidth) {
-      totalWidthNDC += *borderWidth * 2 / padWidthPixel;
-      totalHeightNDC += *borderWidth * 2 / padHeightPixel;
-    }
+    double_t relMarginWidth = totalMarginWidthNDC / totalWidthNDC;
 
     double_t upperLeftX{box->GetXPosition()};
     double_t upperLeftY{box->GetYPosition()};
@@ -1105,7 +1104,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     if constexpr (isLegend) {
       TLegend* legend = new TLegend(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "", "NDC NB");
-      legend->SetMargin((2 * marginNDC + markerWidthNDC) / totalWidthNDC);
+      legend->SetMargin(relMarginWidth);
       legend->SetTextAlign(kHAlignLeft + kVAlignCenter);
       legend->SetNColumns(nColumns);
       legend->SetTextFont(text_font);
@@ -1219,15 +1218,14 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       returnBox = legend;
     } else {
       TPaveText* paveText = new TPaveText(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "NDC NB");
-      paveText->SetMargin(marginNDC / totalWidthNDC);
+      paveText->SetMargin(relMarginWidth);
       paveText->SetTextAlign(kHAlignLeft + kVAlignCenter);
-      paveText->SetBorderSize(0);
+      paveText->SetBorderSize(1);
       paveText->SetTextFont(text_font);
       paveText->SetTextSize(text_size);
       if (textColor) paveText->SetTextColor(*textColor);
 
       for (auto& line : lines) {
-        // TODO: place text lines in equal distances
         TText* text = paveText->AddText(line.data());
         text->SetTextFont(text_font);
         text->SetTextSize(text_size);

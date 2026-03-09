@@ -815,6 +815,8 @@ class Plot::Pad::Box
   BoxType& SetFillOpacity(float_t opacity);
   BoxType& SetTransparent();
   BoxType& SetNoBox();
+  BoxType& SetMargin(float_t margin);
+  BoxType& SetLineSpacing(float_t lineSpacing);
 
  protected:
   boost::property_tree::ptree GetPropertyTree() const;
@@ -830,6 +832,8 @@ class Plot::Pad::Box
   auto& GetTextFont() const { return mText.style; }
   auto& GetTextSize() const { return mText.scale; }
   auto& GetTextColor() const { return mText.color; }
+  auto& GetMargin() const { return mMargin; }
+  auto& GetLineSpacing() const { return mLineSpacing; }
 
   bool IsUserCoordinates() const { return (mPos.isUserCoord) ? *mPos.isUserCoord : false; }
   bool IsAutoPlacement() const { return (!mPos.x || !mPos.y); }
@@ -849,6 +853,8 @@ class Plot::Pad::Box
     std::optional<bool> isUserCoord;
   };
 
+  std::optional<float_t> mMargin;
+  std::optional<float_t> mLineSpacing;
   position_t mPos;
   layout_t mText;
   layout_t mBorder;
@@ -920,6 +926,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   LegendBox& SetDefaultFillColor(int16_t color);
   LegendBox& SetDefaultFillStyle(int16_t style);
   LegendBox& SetDefaultFillOpacity(float_t opacity);
+  LegendBox& SetSymbolColScale(float_t scale);
 
  protected:
   friend class PlotManager;
@@ -943,6 +950,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   const auto& GetDefaultFillColor() const { return mFillDefault.color; }
   const auto& GetDefaultFillStyle() const { return mFillDefault.style; }
   const auto& GetDefaultFillOpacity() const { return mFillDefault.scale; }
+  const auto& GetSymbolColScale() const { return mSymbolColScale; }
 
  private:
   std::optional<std::string> mTitle;
@@ -954,6 +962,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   layout_t mMarkerDefault;
   layout_t mFillDefault;
   std::optional<std::string> mDrawStyleDefault;
+  std::optional<float_t> mSymbolColScale;
 
   void MergeLegendEntries();
 };

@@ -2288,6 +2288,8 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
   read_from_tree(boxTree, mText.style, "text_style");
   read_from_tree(boxTree, mText.color, "text_color");
   read_from_tree(boxTree, mText.scale, "text_size");
+  read_from_tree(boxTree, mMargin, "margin");
+  read_from_tree(boxTree, mLineSpacing, "line_spacing");
 }
 
 //**************************************************************************************************
@@ -2311,6 +2313,8 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
   put_in_tree(boxTree, mText.style, "text_style");
   put_in_tree(boxTree, mText.color, "text_color");
   put_in_tree(boxTree, mText.scale, "text_size");
+  put_in_tree(boxTree, mMargin, "margin");
+  put_in_tree(boxTree, mLineSpacing, "line_spacing");
 
   return boxTree;
 };
@@ -2448,6 +2452,20 @@ BoxType& Plot::Pad::Box<BoxType>::SetNoBox()
   return *GetThis();
 }
 
+template <typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetMargin(float_t margin)
+{
+  mMargin = margin;
+  return *GetThis();
+}
+
+template <typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetLineSpacing(float_t lineSpacing)
+{
+  mLineSpacing = lineSpacing;
+  return *GetThis();
+}
+
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 // IMPLEMENTATION class TextBox
@@ -2556,6 +2574,7 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
   read_from_tree(legendBoxTree, mFillDefault.color, "default_fill_color");
   read_from_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
   read_from_tree(legendBoxTree, mFillDefault.scale, "default_fill_opacity");
+  read_from_tree(legendBoxTree, mSymbolColScale, "symbol_col_scale");
 
   for (auto& content : legendBoxTree) {
     if (str_contains(content.first, "ENTRY")) {
@@ -2585,6 +2604,7 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
   put_in_tree(legendBoxTree, mFillDefault.color, "default_fill_color");
   put_in_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
   put_in_tree(legendBoxTree, mFillDefault.scale, "default_fill_opacity");
+  put_in_tree(legendBoxTree, mSymbolColScale, "symbol_col_scale");
 
   for (auto& [legendEntryID, legendEntry] : mLegendEntriesUser) {
     legendBoxTree.put_child("ENTRY_" + std::to_string(legendEntryID),
@@ -2676,6 +2696,11 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillStyle(int16_t style)
 Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillOpacity(float_t opacity)
 {
   mFillDefault.scale = opacity;
+  return *this;
+}
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetSymbolColScale(float_t scale)
+{
+  mSymbolColScale = scale;
   return *this;
 }
 
