@@ -353,13 +353,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
         if (data->GetType() == "ratio") {
           auto data_as_ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
+          bool binomialErrors = data_as_ratio->GetIsCorrelated();
           auto processDenominator = [&](auto&& denom_data_ptr) {
             using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
             if constexpr (is_hist<data_type>()) {
               if constexpr (is_func<denom_data_type>()) {
-                data_ptr->Divide(denom_data_ptr);
-              }
-              if constexpr (is_hist<denom_data_type>()) {
+                Divide(data_ptr, denom_data_ptr, binomialErrors);
+              } else if constexpr (is_hist<denom_data_type>()) {
                 if (data_as_ratio->GetDivisionNormMode()) {
                   string scaleMode{};
                   if (*data_as_ratio->GetDivisionNormMode()) scaleMode = "width";
@@ -372,32 +372,22 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     denom_data_ptr->Scale(1. / integralDenom);
                   }
                 }
-                string divideOpt = (data_as_ratio->GetIsCorrelated()) ? "B" : "";
-                if (!data_ptr->Divide(data_ptr, denom_data_ptr, 1., 1., divideOpt.data())) {
-                  WARNING("Could not divide histograms properly. Trying approximated division via spline interpolation. Errors will not be fully correct!");
-                  DivideHistosInterpolated(data_ptr, denom_data_ptr);
-                }
+                Divide(data_ptr, denom_data_ptr, binomialErrors);
                 if constexpr (is_hist_2d<data_type>()) {
                   data_ptr->GetZaxis()->SetTitle("ratio");
                 } else if constexpr (is_hist_1d<data_type>()) {
                   data_ptr->GetYaxis()->SetTitle("ratio");
                 }
               } else if constexpr (is_hist_1d<data_type>() && is_graph_1d<denom_data_type>()) {
-                DivideHistGraphInterpolated(data_ptr, denom_data_ptr);
+                Divide(data_ptr, denom_data_ptr, binomialErrors);
               }
             } else if constexpr (is_graph_1d<data_type>()) {
-              if constexpr (is_graph_1d<denom_data_type>()) {
-                if (!DivideGraphs(data_ptr, denom_data_ptr))  // first try if exact division is possible
-                {
-                  WARNING("In general graphs cannot be divided. Trying approximated division via spline interpolation. Errors will not be fully correct!");
-                  DivideGraphsInterpolated(data_ptr, denom_data_ptr);
-                }
-              } else if constexpr (is_hist_1d<denom_data_type>()) {
-                DivideGraphHistInterpolated(data_ptr, denom_data_ptr);
+              if constexpr (is_graph_1d<denom_data_type>() || is_hist_1d<denom_data_type>() || is_func_1d<denom_data_type>()) {
+                Divide(data_ptr, denom_data_ptr, binomialErrors);
+                data_ptr->GetHistogram()->GetYaxis()->SetTitle("ratio");
               }
-              data_ptr->GetHistogram()->GetYaxis()->SetTitle("ratio");
             } else {
-              ERROR("Unsupported division");  // TODO: print types of numerator and denominator
+              ERROR("Unsupported division of {} and {}", data_ptr->ClassName(), denom_data_ptr->ClassName());
             }
             delete denom_data_ptr;
           };
@@ -1436,10 +1426,10 @@ string PlotPainter::GetAxisStr(int16_t i)
 
 //**************************************************************************************************
 /**
- * Helper-function dividing two graphs in case the x values of all points are are the same.
+ * Helper-function dividing two graphs.
  */
 //**************************************************************************************************
-bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
+void PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors)
 {
   int32_t numN = numerator->GetN();
   double_t* numX = numerator->GetX();
@@ -1461,13 +1451,72 @@ bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
     denomEyLow = ptr->GetEYlow();
     denomEyHigh = ptr->GetEYhigh();
   }
-  if (denomN < numN) {
-    return false;
+
+  bool doInterpol = false;
+  if (numN > denomN) {
+    doInterpol = true;
+  } else {
+    for (int32_t i = 0; i < numN; ++i) {
+      // check if graphs have the same x values
+      if (numX[i] != denomX[i]) {
+        doInterpol = true;
+        break;
+      }
+    }
   }
-  for (int32_t i = 0; i < numN; ++i) {
-    // check if graphs indeed have the same x values
-    if (numX[i] != denomX[i]) return false;
+
+  bool deleteDenom = false;
+  if (doInterpol) {
+    // spline interpolation requires sorted values
+    if (!denominator->TestBit(TGraph::kIsSortedX)) {
+      denominator = static_cast<TGraph*>(denominator->Clone("tmp"));
+      denominator->Sort();
+      denomX = denominator->GetX();
+      denomY = denominator->GetY();
+      denomEy = denominator->GetEY();
+      if (auto ptr = dynamic_cast<TGraphAsymmErrors*>(denominator)) {
+        denomEyLow = ptr->GetEYlow();
+        denomEyHigh = ptr->GetEYhigh();
+      }
+      deleteDenom = true;
+    }
+
+    // create splines for values and error envelope of denominator
+    double_t denomShiftDown[denomN];
+    double_t denomShiftUp[denomN];
+    for (int32_t i = 0; i < denomN; ++i) {
+      if (denomEy) {
+        denomShiftDown[i] = denomY[i] - denomEy[i];
+        denomShiftUp[i] = denomY[i] + denomEy[i];
+      } else if (numEyLow && numEyHigh) {
+        denomShiftDown[i] = denomY[i] - denomEyLow[i];
+        denomShiftUp[i] = denomY[i] + denomEyHigh[i];
+      }
+    }
+    TSpline3 denSpline("denSpline", denominator);
+    TSpline3 denSplineLow("denSplineLow", denomX, denomShiftDown, denomN);
+    TSpline3 denSplineHigh("denSplineHigh", denomX, denomShiftUp, denomN);
+
+    // create arrays of interpolated points and errors at numerator positions
+    denomY = new double_t[numN];
+    if (denomEy) {
+      denomEy = new double_t[numN];
+    } else if (numEyLow && numEyHigh) {
+      numEyLow = new double_t[numN];
+      numEyHigh = new double_t[numN];
+    }
+    for (int32_t i = 0; i < numN; ++i) {
+      denomY[i] = denSpline.Eval(numX[i]);
+      if (denomEy) {
+        denomEy[i] = std::sqrt(0.5 * (std::pow(denomY[i] - denSplineLow.Eval(numX[i]), 2) + std::pow(denSplineHigh.Eval(numX[i]) - denomY[i], 2)));
+      } else if (denomEyLow && denomEyHigh) {
+        denomEyLow[i] = std::abs(denomY[i] - denSplineLow.Eval(numX[i]));
+        denomEyHigh[i] = std::abs(denSplineHigh.Eval(numX[i]) - denomY[i]);
+      }
+    }
   }
+
+  // compute ratio and errors
   for (int32_t i = 0; i < numN; ++i) {
     if (!denomY[i]) {
       ERROR("Dividing by zero!");
@@ -1476,27 +1525,85 @@ bool PlotPainter::DivideGraphs(TGraph* numerator, TGraph* denominator)
       if (numEyLow) numEyLow[i] = 0.;
       if (numEyHigh) numEyHigh[i] = 0.;
     } else {
-      numY[i] = numY[i] / denomY[i];
       for (auto [errNum, errDenom] : vector<tuple<double_t*, double_t*>>{{numEy, denomEy}, {numEyLow, denomEyHigh}, {numEyHigh, denomEyLow}}) {
         if (errNum && errDenom) {
-          errNum[i] = std::sqrt(std::pow(1. / denomY[i], 2) * std::pow(errNum[i], 2) + std::pow(numY[i] / std::pow(denomY[i], 2), 2) * std::pow(errDenom[i], 2));
+          if (binomialErrors) {
+            // binomial error propagation (as implemented in root)
+            errNum[i] = (numY[i] == denomY[i]) ? 0. : std::sqrt(std::abs(((1. - 2. * numY[i] / denomY[i]) * std::pow(errNum[i], 2) + std::pow(numY[i], 2) * std::pow(errDenom[i], 2) / std::pow(denomY[i], 2)) / std::pow(denomY[i], 2)));
+          } else {
+            // gaussian error propagation
+            errNum[i] = std::sqrt(std::pow(errNum[i] / denomY[i], 2) + std::pow(errDenom[i] * numY[i] / std::pow(denomY[i], 2), 2));
+          }
         }
       }
+      numY[i] = numY[i] / denomY[i];
     }
   }
-  return true;
+  if (doInterpol) {
+    if (denomY) delete denomY;
+    if (denomEy) delete denomEy;
+    if (denomEyLow) delete denomEyLow;
+    if (denomEyHigh) delete denomEyHigh;
+  }
+  if (deleteDenom) {
+    delete denominator;
+  }
 }
-
-//**************************************************************************************************
-/**
- * Helper-function dividing two graphs with interpolated denominator.
- */
-//**************************************************************************************************
-void PlotPainter::DivideGraphsInterpolated(TGraph* numerator, TGraph* denominator)
+void PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialErrors)
 {
-  // FIXME: add spline envelope for error propagation
-  TSpline3 denSpline("denSpline", denominator);
-  int32_t nPoints = numerator->GetN();
+  if (numerator->GetDimension() != 1) {
+    ERROR("Cannot divide higher dimensional histogram by 1D graph.");
+    return;
+  }
+  TGraphErrors numeratorGraph(numerator);
+  Divide(&numeratorGraph, denominator, binomialErrors);
+  numerator->Reset();
+  for (int32_t i = 0; i < numeratorGraph.GetN(); ++i) {
+    numerator->SetBinContent(i + 1, numeratorGraph.GetY()[i]);
+    numerator->SetBinError(i + 1, numeratorGraph.GetEY()[i]);
+  }
+}
+void PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialErrors)
+{
+  if (denominator->GetDimension() != 1) {
+    ERROR("Cannot divide 1D graph by higher dimensional histogram.");
+    return;
+  }
+  TGraphErrors denominatorGraph(denominator);
+  Divide(numerator, &denominatorGraph, binomialErrors);
+}
+void PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
+{
+  if (!numerator->Divide(numerator, denominator, 1., 1., (binomialErrors) ? "B" : "")) {
+    if (numerator->GetDimension() == 1 && denominator->GetDimension() == 1) {
+      TGraphErrors denominatorGraph(denominator);
+      Divide(numerator, &denominatorGraph, binomialErrors);
+    } else if (numerator->GetDimension() == 2 && denominator->GetDimension() == 2) {
+      ERROR("Interpolated division of 2D histograms not yet supported.");
+    } else if (numerator->GetDimension() == 3 && denominator->GetDimension() == 3) {
+      ERROR("Interpolated division of 3D histograms not yet supported.");
+    } else {
+      ERROR("Dividing histograms of incompatible dimensions.");
+    }
+  }
+}
+void PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors)
+{
+  if (denominator->GetNdim() > numerator->GetDimension()) {
+    ERROR("Cannot divide histogram by higher dimensional function.");
+    return;
+  }
+  numerator->Divide(denominator);
+  if (binomialErrors) {
+    WARNING("Binomial errors not supported for division by function.");
+  }
+}
+void PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialErrors)
+{
+  if (denominator->GetNdim() > 1) {
+    ERROR("Cannot divide 1D graph by higher dimensional function.");
+    return;
+  }
   double_t* x = numerator->GetX();
   double_t* y = numerator->GetY();
   double_t* ey = numerator->GetEY();
@@ -1506,61 +1613,20 @@ void PlotPainter::DivideGraphsInterpolated(TGraph* numerator, TGraph* denominato
     eyLow = ptr->GetEYlow();
     eyHigh = ptr->GetEYhigh();
   }
-  for (int32_t i = 0; i < nPoints; ++i) {
-    double_t denomValue = denominator->Eval(x[i], &denSpline);
-    if (!denomValue) {
-      ERROR("Dividing by zero!");
-      y[i] = 0.;
-      if (ey) ey[i] = 0.;
-      if (eyLow) eyLow[i] = 0.;
-      if (eyHigh) eyHigh[i] = 0.;
-    } else {
-      y[i] = y[i] / denomValue;
-      for (double_t* error : {ey, eyLow, eyHigh}) {
-        if (error) {
-          error[i] = error[i] / denomValue;
-        }
-      }
+  for (int32_t i = 0; i < numerator->GetN(); ++i) {
+    double_t denom = denominator->Eval(x[i]);
+    y[i] = (denom) ? y[i] / denom : 0.;
+    if (ey) {
+      ey[i] = (denom) ? ey[i] / denom : 0.;
+    }
+    if (eyLow && eyHigh) {
+      eyLow[i] = (denom) ? eyLow[i] / denom : 0.;
+      eyHigh[i] = (denom) ? eyHigh[i] / denom : 0.;
     }
   }
-}
-
-//**************************************************************************************************
-/**
- * Helper-function dividing hist by graph.
- */
-//**************************************************************************************************
-void PlotPainter::DivideHistGraphInterpolated(TH1* numerator, TGraph* denominator)
-{
-  TGraphErrors numeratorGraph(numerator);
-  DivideGraphsInterpolated(&numeratorGraph, denominator);
-  numerator->Reset();
-  for (int32_t i = 0; i < numeratorGraph.GetN(); ++i) {
-    numerator->SetBinContent(i + 1, numeratorGraph.GetY()[i]);
-    numerator->SetBinError(i + 1, numeratorGraph.GetEY()[i]);
+  if (binomialErrors) {
+    WARNING("Binomial errors not supported division by function.");
   }
-}
-
-//**************************************************************************************************
-/**
- * Helper-function dividing graph by hist.
- */
-//**************************************************************************************************
-void PlotPainter::DivideGraphHistInterpolated(TGraph* numerator, TH1* denominator)
-{
-  TGraphErrors denominatorGraph(denominator);
-  DivideGraphsInterpolated(numerator, &denominatorGraph);
-}
-
-//**************************************************************************************************
-/**
- * Helper-function dividing two 1d histograms with different binning.
- */
-//**************************************************************************************************
-void PlotPainter::DivideHistosInterpolated(TH1* numerator, TH1* denominator)
-{
-  TGraphErrors denominatorGraph(denominator);
-  DivideHistGraphInterpolated(numerator, &denominatorGraph);
 }
 
 //**************************************************************************************************

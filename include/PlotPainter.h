@@ -126,11 +126,14 @@ class PlotPainter
   void ScaleGraph(TGraph* graph, double_t scale);
   void SmoothGraph(TGraph* graph, std::optional<double_t> min = std::nullopt, std::optional<double_t> = std::nullopt);
   void SmoothHist(TH1* hist, std::optional<double_t> min = std::nullopt, std::optional<double_t> max = std::nullopt);
-  bool DivideGraphs(TGraph* numerator, TGraph* denominator);
-  void DivideGraphsInterpolated(TGraph* numerator, TGraph* denominator);
-  void DivideHistosInterpolated(TH1* numerator, TH1* denominator);
-  void DivideHistGraphInterpolated(TH1* numerator, TGraph* denominator);
-  void DivideGraphHistInterpolated(TGraph* numerator, TH1* denominator);
+
+  void Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors = false);
+  void Divide(TH1* numerator, TH1* denominator, bool binomialErrors = false);
+  void Divide(TH1* numerator, TGraph* denominator, bool binomialErrors = false);
+  void Divide(TGraph* numerator, TH1* denominator, bool binomialErrors = false);
+  void Divide(TH1* numerator, TF1* denominator, bool binomialErrors = false);
+  void Divide(TGraph* numerator, TF1* denominator, bool binomialErrors = false);
+
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
   void ReplacePlaceholders(std::string& str, TNamed* data_ptr);
   TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, TPad* pad);
