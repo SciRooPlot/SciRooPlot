@@ -387,7 +387,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 data_ptr->GetHistogram()->GetYaxis()->SetTitle("ratio");
               }
             } else {
-              ERROR("Unsupported division of {} and {}", data_ptr->ClassName(), denom_data_ptr->ClassName());
+              ERROR("Unsupported division of {} and {}.", data_ptr->ClassName(), denom_data_ptr->ClassName());
             }
             delete denom_data_ptr;
           };
@@ -1426,7 +1426,7 @@ string PlotPainter::GetAxisStr(int16_t i)
 
 //**************************************************************************************************
 /**
- * Helper-function dividing two graphs.
+ * Helper-functions for (interpolated) division of various root data types.
  */
 //**************************************************************************************************
 void PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors)
@@ -1453,11 +1453,11 @@ void PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   }
 
   bool doInterpol = false;
-  if (numN > denomN) {
+  if (numN > denomN || (numEy && (denomEyLow && denomEyHigh)) || ((numEyLow && numEyHigh) && denomEy)) {
     doInterpol = true;
   } else {
+    // check if graphs have the same x values
     for (int32_t i = 0; i < numN; ++i) {
-      // check if graphs have the same x values
       if (numX[i] != denomX[i]) {
         doInterpol = true;
         break;
@@ -1482,36 +1482,48 @@ void PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
     }
 
     // create splines for values and error envelope of denominator
-    double_t denomShiftDown[denomN];
-    double_t denomShiftUp[denomN];
+    vector<double_t> denomShiftLow(denomN);
+    vector<double_t> denomShiftHigh(denomN);
+    bool errorlessDenom = false;
     for (int32_t i = 0; i < denomN; ++i) {
       if (denomEy) {
-        denomShiftDown[i] = denomY[i] - denomEy[i];
-        denomShiftUp[i] = denomY[i] + denomEy[i];
-      } else if (numEyLow && numEyHigh) {
-        denomShiftDown[i] = denomY[i] - denomEyLow[i];
-        denomShiftUp[i] = denomY[i] + denomEyHigh[i];
+        denomShiftLow[i] = denomY[i] - denomEy[i];
+        denomShiftHigh[i] = denomY[i] + denomEy[i];
+      } else if (denomEyLow && denomEyHigh) {
+        denomShiftLow[i] = denomY[i] - denomEyLow[i];
+        denomShiftHigh[i] = denomY[i] + denomEyHigh[i];
+      } else {
+        errorlessDenom = true;
+        break;
       }
     }
-    TSpline3 denSpline("denSpline", denominator);
-    TSpline3 denSplineLow("denSplineLow", denomX, denomShiftDown, denomN);
-    TSpline3 denSplineHigh("denSplineHigh", denomX, denomShiftUp, denomN);
+    TSpline3 denomSpline("denomSpline", denominator);
+    TSpline3 denomSplineLow("denomSplineLow", denomX, denomShiftLow.data(), denomN);
+    TSpline3 denomSplineHigh("denomSplineHigh", denomX, denomShiftHigh.data(), denomN);
+
+    // reset denominator pointers
+    denomY = nullptr;
+    denomEy = nullptr;
+    denomEyLow = nullptr;
+    denomEyHigh = nullptr;
 
     // create arrays of interpolated points and errors at numerator positions
     denomY = new double_t[numN];
-    if (denomEy) {
-      denomEy = new double_t[numN];
-    } else if (numEyLow && numEyHigh) {
-      numEyLow = new double_t[numN];
-      numEyHigh = new double_t[numN];
+    if (!errorlessDenom) {
+      if (numEy) {
+        denomEy = new double_t[numN];
+      } else if (numEyLow && numEyHigh) {
+        denomEyLow = new double_t[numN];
+        denomEyHigh = new double_t[numN];
+      }
     }
     for (int32_t i = 0; i < numN; ++i) {
-      denomY[i] = denSpline.Eval(numX[i]);
+      denomY[i] = denomSpline.Eval(numX[i]);
       if (denomEy) {
-        denomEy[i] = std::sqrt(0.5 * (std::pow(denomY[i] - denSplineLow.Eval(numX[i]), 2) + std::pow(denSplineHigh.Eval(numX[i]) - denomY[i], 2)));
+        denomEy[i] = std::sqrt(0.5 * (std::pow(denomY[i] - denomSplineLow.Eval(numX[i]), 2) + std::pow(denomSplineHigh.Eval(numX[i]) - denomY[i], 2)));
       } else if (denomEyLow && denomEyHigh) {
-        denomEyLow[i] = std::abs(denomY[i] - denSplineLow.Eval(numX[i]));
-        denomEyHigh[i] = std::abs(denSplineHigh.Eval(numX[i]) - denomY[i]);
+        denomEyLow[i] = std::abs(denomY[i] - denomSplineLow.Eval(numX[i]));
+        denomEyHigh[i] = std::abs(denomSplineHigh.Eval(numX[i]) - denomY[i]);
       }
     }
   }
@@ -1519,20 +1531,23 @@ void PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   // compute ratio and errors
   for (int32_t i = 0; i < numN; ++i) {
     if (!denomY[i]) {
-      ERROR("Dividing by zero!");
       numY[i] = 0;
       if (numEy) numEy[i] = 0.;
       if (numEyLow) numEyLow[i] = 0.;
       if (numEyHigh) numEyHigh[i] = 0.;
     } else {
       for (auto [errNum, errDenom] : vector<tuple<double_t*, double_t*>>{{numEy, denomEy}, {numEyLow, denomEyHigh}, {numEyHigh, denomEyLow}}) {
-        if (errNum && errDenom) {
-          if (binomialErrors) {
-            // binomial error propagation (as implemented in root)
-            errNum[i] = (numY[i] == denomY[i]) ? 0. : std::sqrt(std::abs(((1. - 2. * numY[i] / denomY[i]) * std::pow(errNum[i], 2) + std::pow(numY[i], 2) * std::pow(errDenom[i], 2) / std::pow(denomY[i], 2)) / std::pow(denomY[i], 2)));
+        if (errNum) {
+          if (errDenom) {
+            if (binomialErrors) {
+              // binomial error propagation (as implemented in root)
+              errNum[i] = (numY[i] == denomY[i]) ? 0. : std::sqrt(std::abs(((1. - 2. * numY[i] / denomY[i]) * std::pow(errNum[i], 2) + std::pow(numY[i], 2) * std::pow(errDenom[i], 2) / std::pow(denomY[i], 2)) / std::pow(denomY[i], 2)));
+            } else {
+              // gaussian error propagation
+              errNum[i] = std::sqrt(std::pow(errNum[i] / denomY[i], 2) + std::pow(errDenom[i] * numY[i] / std::pow(denomY[i], 2), 2));
+            }
           } else {
-            // gaussian error propagation
-            errNum[i] = std::sqrt(std::pow(errNum[i] / denomY[i], 2) + std::pow(errDenom[i] * numY[i] / std::pow(denomY[i], 2), 2));
+            errNum[i] = errNum[i] / denomY[i];
           }
         }
       }
@@ -1618,8 +1633,7 @@ void PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
     y[i] = (denom) ? y[i] / denom : 0.;
     if (ey) {
       ey[i] = (denom) ? ey[i] / denom : 0.;
-    }
-    if (eyLow && eyHigh) {
+    } else if (eyLow && eyHigh) {
       eyLow[i] = (denom) ? eyLow[i] / denom : 0.;
       eyHigh[i] = (denom) ? eyHigh[i] / denom : 0.;
     }
