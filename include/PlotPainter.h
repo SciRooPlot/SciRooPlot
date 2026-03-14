@@ -134,6 +134,7 @@ class PlotPainter
   void Divide(TH1* numerator, TF1* denominator, bool binomialErrors = false);
   void Divide(TGraph* numerator, TF1* denominator, bool binomialErrors = false);
 
+  bool CheckFontSizes(TList* list);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
   void ReplacePlaceholders(std::string& str, TNamed* data_ptr);
   TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, TPad* pad);

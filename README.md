@@ -11,7 +11,7 @@ SciRooPlot is a [ROOT](https://github.com/root-project/root)-based plotting fram
 ## 🎯 Target group
 This software is made for scientists working with ROOT data, who:
 - are tired of the ever-increasing amount of single-purpose plotting macros that accumulate over the years
-- simply want to draw their data without having to deal with technical details and peculiarities of ROOT
+- simply want to draw their data without having to deal with technical details and complexities of ROOT
 - miss an intuitive and straightforward interface to define a plot
 - long for a lasting solution to organize and keep track of the many plots that arise in the course of their work
 - appreciate useful additional plotting functionality that enhances productivity

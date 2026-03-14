@@ -879,7 +879,68 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   canvas_ptr->cd();
   canvas_ptr->Modified();
   canvas_ptr->Update();
+  CheckFontSizes(canvas_ptr->GetListOfPrimitives());
   return canvas_ptr;
+}
+
+//**************************************************************************************************
+/**
+ * Function to warn user if incompatible text font and size were used.
+ */
+//**************************************************************************************************
+bool PlotPainter::CheckFontSizes(TList* list)
+{
+  auto checkCompat = [](int16_t textFont, float_t textSize, TObject* obj) {
+    if (textSize) {
+      if (textFont % 10 <= 2) {
+        if (textSize >= 1.f) {
+          WARNING("Though text font {} implies a relative text size it is set to {} for {}.", textFont, textSize, obj->GetName());
+          return false;
+        }
+      } else {
+        if (textSize <= 1.f) {
+          WARNING("Though text font {} implies a text size in pixel it is set to {} for {}.", textFont, textSize, obj->GetName());
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  if (!list) return false;
+  TIter next(list);
+  TObject* obj = nullptr;
+  bool valid = true;
+  while ((obj = next())) {
+    if (auto pad = dynamic_cast<TPad*>(obj)) {
+      valid = valid && CheckFontSizes(pad->GetListOfPrimitives());
+    }
+    if (auto leg = dynamic_cast<TLegend*>(obj)) {
+      valid = valid && CheckFontSizes(leg->GetListOfPrimitives());
+    }
+    if (auto txt = dynamic_cast<TAttText*>(obj)) {
+      valid = valid && checkCompat(txt->GetTextFont(), txt->GetTextSize(), obj);
+    }
+    if (auto h = dynamic_cast<TH1*>(obj)) {
+      TString name = h->GetName();
+      if (name.BeginsWith("axis_hist")) {
+        if (auto ax = h->GetXaxis()) {
+          valid = valid && checkCompat(ax->GetLabelFont(), ax->GetLabelSize(), ax);
+          valid = valid && checkCompat(ax->GetTitleFont(), ax->GetTitleSize(), ax);
+        }
+        if (auto ax = h->GetYaxis()) {
+          valid = valid && checkCompat(ax->GetLabelFont(), ax->GetLabelSize(), ax);
+          valid = valid && checkCompat(ax->GetTitleFont(), ax->GetTitleSize(), ax);
+        }
+        if (auto ax = h->GetZaxis()) {
+          valid = valid && checkCompat(ax->GetLabelFont(), ax->GetLabelSize(), ax);
+          valid = valid && checkCompat(ax->GetTitleFont(), ax->GetTitleSize(), ax);
+        }
+      }
+    }
+    if (!valid) break;
+  }
+  return valid;
 }
 
 //**************************************************************************************************

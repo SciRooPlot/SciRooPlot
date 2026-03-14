@@ -1118,8 +1118,8 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
   }
   if (nFoundPlots == 0) {
     ERROR("Found no plots matching the request {}{}{} in {}{}/{}{}.", logger::begin_color(logger::Color::Green), plotName, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, category, logger::end_color());
-  } else {
-    INFO("Found {} plot{} matching the request.", nFoundPlots, (nFoundPlots == 1) ? "" : "s");
+  } else if (nFoundPlots > 1) {
+    INFO("Found {} plots matching the request.", nFoundPlots);
   }
   if (!isSearchRequest && mode != "load") {
     // now produce the loaded plots
