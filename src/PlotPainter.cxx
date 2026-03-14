@@ -1599,16 +1599,13 @@ void PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
     } else {
       for (auto [errNum, errDenom] : vector<tuple<double_t*, double_t*>>{{numEy, denomEy}, {numEyLow, denomEyHigh}, {numEyHigh, denomEyLow}}) {
         if (errNum) {
-          if (errDenom) {
-            if (binomialErrors) {
-              // binomial error propagation (as implemented in root)
-              errNum[i] = (numY[i] == denomY[i]) ? 0. : std::sqrt(std::abs(((1. - 2. * numY[i] / denomY[i]) * std::pow(errNum[i], 2) + std::pow(numY[i], 2) * std::pow(errDenom[i], 2) / std::pow(denomY[i], 2)) / std::pow(denomY[i], 2)));
-            } else {
-              // gaussian error propagation
-              errNum[i] = std::sqrt(std::pow(errNum[i] / denomY[i], 2) + std::pow(errDenom[i] * numY[i] / std::pow(denomY[i], 2), 2));
-            }
+          double_t denomError = (errDenom) ? errDenom[i] : 0.;
+          if (binomialErrors) {
+            // binomial error propagation (as implemented in root)
+            errNum[i] = (numY[i] == denomY[i]) ? 0. : std::sqrt(std::abs(((1. - 2. * numY[i] / denomY[i]) * std::pow(errNum[i], 2) + std::pow(numY[i], 2) * std::pow(denomError, 2) / std::pow(denomY[i], 2)) / std::pow(denomY[i], 2)));
           } else {
-            errNum[i] = errNum[i] / denomY[i];
+            // gaussian error propagation
+            errNum[i] = std::sqrt(std::pow(errNum[i] / denomY[i], 2) + std::pow(denomError * numY[i] / std::pow(denomY[i], 2), 2));
           }
         }
       }
