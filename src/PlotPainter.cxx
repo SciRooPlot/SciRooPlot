@@ -297,8 +297,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       auto processData = [&, padID = padID](auto&& data_ptr) {
         using data_type = std::decay_t<decltype(data_ptr)>;
 
-        data_ptr->SetTitle("");  // FIXME: only make this invisible but don't remove useful metadata
-
         optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
         if (!data->GetDrawingOptions()) {
@@ -480,6 +478,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           axisHist_ptr->Draw((drawingOptions + "SAME AXIG").data());
           axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
           axisHist_ptr->SetStats(false);
+          axisHist_ptr->SetTitle("");
+          axisHist_ptr->SetBit(TH1::kNoTitle);
 
           // apply axis settings
           for (auto axisLabel : {'X', 'Y', 'Z'}) {
