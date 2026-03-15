@@ -1012,8 +1012,12 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     uint8_t lineID{};
     for (auto& line : lines) {
+      auto line_text_font = text_font;
+      auto line_text_size = text_size;
       if constexpr (isLegend) {
         auto& entry = box->GetEntries()[lineID];
+        if (entry.GetTextFont()) line_text_font = *entry.GetTextFont();
+        if (entry.GetTextSize()) line_text_size = *entry.GetTextSize();
         if (entry.GetRefDataID()) {
           TObject* data_ptr = nullptr;
           TIter next(pad->GetListOfPrimitives());
@@ -1032,8 +1036,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
       // determine width and height of line to find max width and height (per column)
       TLatex textLine(0, 0, line.data());
-      textLine.SetTextFont(text_font);
-      textLine.SetTextSize(text_size);
+      textLine.SetTextFont(line_text_font);
+      textLine.SetTextSize(line_text_size);
       auto [width, height] = GetTextDimensions(textLine, pad);
       if (height > lineHeightPixel) lineHeightPixel = height;
       if (width > contentWidthPixelPerColumn[iColumn]) contentWidthPixelPerColumn[iColumn] = width;
