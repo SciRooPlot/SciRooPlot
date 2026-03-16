@@ -217,6 +217,7 @@ class Plot::Pad
 
   Pad& SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup);
   Pad& SetMargins(float_t top, float_t bottom, float_t left, float_t right);
+  Pad& SetView(double_t theta, double_t phi);
   Pad& SetPalette(int32_t palette);
   Pad& SetDefaultTextSize(float_t size);
   Pad& SetDefaultTextColor(int16_t color);
@@ -275,6 +276,8 @@ class Plot::Pad
   const auto& GetMarginBottom() const { return mMargins.bottom; }
   const auto& GetMarginLeft() const { return mMargins.left; }
   const auto& GetMarginRight() const { return mMargins.right; }
+  const auto& GetViewTheta() const { return mView.theta; }
+  const auto& GetViewPhi() const { return mView.phi; }
   const auto& GetPalette() const { return mPalette; }
   const auto& GetFillColor() const { return mFill.color; }
   const auto& GetFillStyle() const { return mFill.style; }
@@ -321,6 +324,10 @@ class Plot::Pad
     std::optional<float_t> left;
     std::optional<float_t> right;
   };
+  struct pad_view_t {
+    std::optional<double_t> theta;
+    std::optional<double_t> phi;
+  };
   struct gradient_color_t {
     std::optional<std::vector<std::tuple<float_t, float_t, float_t, float_t>>> rgbEndpoints;
     std::optional<float_t> alpha;
@@ -346,6 +353,7 @@ class Plot::Pad
   std::optional<std::string> mOptions;
   pad_position_t mPosition;
   pad_margin_t mMargins;
+  pad_view_t mView;
   layout_t mFill;
   layout_t mFrameFill;
   layout_t mFrameBorder;

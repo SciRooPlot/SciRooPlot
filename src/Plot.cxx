@@ -714,6 +714,18 @@ auto Plot::Pad::SetMargins(float_t top, float_t bottom, float_t left, float_t ri
 
 //**************************************************************************************************
 /**
+ * Set viewing perspective on pad.
+ */
+//**************************************************************************************************
+auto Plot::Pad::SetView(double_t theta, double_t phi) -> decltype(*this)
+{
+  mView.theta = theta;
+  mView.phi = phi;
+  return *this;
+}
+
+//**************************************************************************************************
+/**
  * Constructor from property tree.
  */
 //**************************************************************************************************
@@ -728,6 +740,8 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mMargins.bottom, "margins_bottom");
   read_from_tree(padTree, mMargins.left, "margins_left");
   read_from_tree(padTree, mMargins.right, "margins_right");
+  read_from_tree(padTree, mView.theta, "view_theta");
+  read_from_tree(padTree, mView.phi, "view_phi");
   read_from_tree(padTree, mPalette, "palette");
   read_from_tree(padTree, mFill.color, "fill_color");
   read_from_tree(padTree, mFill.style, "fill_style");
@@ -814,6 +828,8 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mMargins.bottom, "margins_bottom");
   put_in_tree(padTree, mMargins.left, "margins_left");
   put_in_tree(padTree, mMargins.right, "margins_right");
+  put_in_tree(padTree, mView.theta, "view_theta");
+  put_in_tree(padTree, mView.phi, "view_phi");
   put_in_tree(padTree, mPalette, "palette");
   put_in_tree(padTree, mFill.color, "fill_color");
   put_in_tree(padTree, mFill.style, "fill_style");
@@ -897,6 +913,8 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mMargins.bottom) mMargins.bottom = pad.mMargins.bottom;
   if (pad.mMargins.left) mMargins.left = pad.mMargins.left;
   if (pad.mMargins.right) mMargins.right = pad.mMargins.right;
+  if (pad.mView.theta) mView.theta = pad.mView.theta;
+  if (pad.mView.phi) mView.phi = pad.mView.phi;
   if (pad.mFill.color) mFill.color = pad.mFill.color;
   if (pad.mFill.style) mFill.style = pad.mFill.style;
   if (pad.mFill.scale) mFill.scale = pad.mFill.scale;

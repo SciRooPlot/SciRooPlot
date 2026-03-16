@@ -880,6 +880,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       }
     }
 
+    if (pad.GetViewTheta()) {
+      pad_ptr->SetTheta(*pad.GetViewTheta());
+    }
+    if (pad.GetViewPhi()) {
+      pad_ptr->SetPhi(*pad.GetViewPhi());
+    }
     pad_ptr->Modified();
     pad_ptr->Update();
   }
