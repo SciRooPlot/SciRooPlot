@@ -430,6 +430,7 @@ class Plot::Pad::Data
   virtual Data& Scale(double_t scaleFactor);
   virtual Data& ScaleMinimum(double_t scaleFactor);
   virtual Data& ScaleMaximum(double_t scaleFactor);
+  virtual Data& Smooth(uint16_t nIterSmooth = 1);
 
   virtual Data& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
   virtual Data& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});  // for 2d histos
@@ -498,6 +499,7 @@ class Plot::Pad::Data
   const auto& GetNContours() const { return mNContours; }
   const auto& GetDataInfo() const { return mDataInfo; }
   const auto& GetProjInfo() const { return mProjInfo; }
+  const auto& GetNiterSmooth() const { return mNiterSmooth; }
 
   struct proj_info_t {
     std::vector<uint8_t> dims;                                    // dimensions to project on (can be one or two)
@@ -555,6 +557,7 @@ class Plot::Pad::Data
 
   std::optional<std::vector<double_t>> mContours;
   std::optional<int32_t> mNContours;
+  std::optional<uint16_t> mNiterSmooth;
 };
 
 //**************************************************************************************************
@@ -616,6 +619,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& Scale(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::Scale(scaleFactor)); }
   Ratio& ScaleMinimum(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::ScaleMinimum(scaleFactor)); }
   Ratio& ScaleMaximum(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::ScaleMaximum(scaleFactor)); }
+  Ratio& Smooth(uint16_t nIterSmooth = 1) { return static_cast<decltype(*this)&>(Data::Smooth(nIterSmooth)); }
 
   Ratio& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::Project(dims, ranges, isUserCoord)); }
   Ratio& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::ProjectX(startY, endY, isUserCoord)); }

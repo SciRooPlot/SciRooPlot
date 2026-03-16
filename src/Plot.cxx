@@ -1272,6 +1272,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mScaleRange.max, "scale_range_max");
   read_from_tree(dataTree, mContours, "contours");
   read_from_tree(dataTree, mNContours, "number_of_contours");
+  read_from_tree(dataTree, mNiterSmooth, "nIter_smooth");
 
   // extract data info
   {
@@ -1356,6 +1357,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mScaleRange.max, "scale_range_max");
   put_in_tree(dataTree, mContours, "contours");
   put_in_tree(dataTree, mNContours, "number_of_contours");
+  put_in_tree(dataTree, mNiterSmooth, "nIter_smooth");
 
   if (mDataInfo) {
     vector<string> vars;
@@ -1640,6 +1642,11 @@ auto Plot::Pad::Data::ScaleMinimum(double_t scaleFactor) -> decltype(*this)
 auto Plot::Pad::Data::ScaleMaximum(double_t scaleFactor) -> decltype(*this)
 {
   mScaleRange.max = scaleFactor;
+  return *this;
+}
+auto Plot::Pad::Data::Smooth(uint16_t nIterSmooth) -> decltype(*this)
+{
+  mNiterSmooth = nIterSmooth;
   return *this;
 }
 auto Plot::Pad::Data::Project(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)

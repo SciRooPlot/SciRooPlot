@@ -406,16 +406,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }  // end ratio code
 
-        // modify content (FIXME: this should be steered differently)
-        // FIXME: probably this should be done after setting ranges but axis ranges depend on scaling!
-        if constexpr (is_hist_1d<data_type>()) {
-          if (str_contains(drawingOptions, "smooth")) {
-            drawingOptions.erase(drawingOptions.find("smooth"), string("smooth").length());
-            data_ptr->Smooth();
-          }
-        }
+        // FIXME: violating DRY principle...
         if constexpr (is_hist<data_type>()) {
           if (!data_ptr->GetSumw2N()) data_ptr->Sumw2();
+          // smooth
+          if (data->GetNiterSmooth()) {
+            data_ptr->Smooth(*data->GetNiterSmooth());
+          }
+          // normalize and scale
           optional<double_t> scaleFactor;
           string scaleMode{};
 
@@ -435,7 +433,17 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // TODO: add option that divides results by width
           if (scaleFactor) data_ptr->Scale(*scaleFactor);
         } else if constexpr (is_graph_1d<data_type>()) {
-          // FIXME: violating DRY principle...
+          // smooth
+          if (data->GetNiterSmooth()) {
+            TGraphSmooth smoother;
+            for (uint16_t iter = 0; iter < *data->GetNiterSmooth(); ++iter) {
+              TGraph* smoothGraph = smoother.SmoothSuper(data_ptr);
+              for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
+                data_ptr->GetY()[i] = smoothGraph->GetY()[i];
+              }
+            }
+          }
+          // normalize and scale
           optional<double_t> scaleFactor;
           string scaleMode{};
 
@@ -1746,44 +1754,6 @@ void PlotPainter::ScaleGraph(TGraph* graph, double_t scale)
     graph->GetY()[i] *= scale;
     if (graph->GetEY()) graph->GetEY()[i] *= scale;
   }
-}
-
-//**************************************************************************************************
-/**
- * Smoothes 1d graph in range.
- */
-//**************************************************************************************************
-void PlotPainter::SmoothGraph(TGraph* graph, optional<double_t> min, optional<double_t> max)
-{
-  TGraphSmooth smoother;
-  TGraph* smoothGraph = smoother.SmoothSuper(graph);
-  for (int32_t i{}; i < graph->GetN(); ++i) {
-    double_t curX = graph->GetX()[i];
-    if (min && curX < *min) continue;
-    if (max && curX > *max) continue;
-    graph->GetY()[i] = smoothGraph->GetY()[i];
-  }
-  delete smoothGraph;
-}
-
-//**************************************************************************************************
-/**
- * Smoothes 1d hist in range.
- */
-//**************************************************************************************************
-void PlotPainter::SmoothHist(TH1* hist, optional<double_t> min, optional<double_t> max)
-{
-  double_t minRange = hist->GetXaxis()->GetXmin();
-  double_t maxRange = hist->GetXaxis()->GetXmax();
-
-  if (min && max) {
-    hist->GetXaxis()->SetRangeUser(*min, *max);
-  } else if (min && !max) {
-    hist->GetXaxis()->SetRangeUser(*min, maxRange);
-  } else if (!min && max) {
-    hist->GetXaxis()->SetRangeUser(minRange, *max);
-  }
-  hist->Smooth(100, "R");
 }
 
 //**************************************************************************************************

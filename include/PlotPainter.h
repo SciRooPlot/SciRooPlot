@@ -124,8 +124,6 @@ class PlotPainter
 
   void SetGraphRange(TGraph* graph, std::optional<double_t> min, std::optional<double_t> max);
   void ScaleGraph(TGraph* graph, double_t scale);
-  void SmoothGraph(TGraph* graph, std::optional<double_t> min = std::nullopt, std::optional<double_t> = std::nullopt);
-  void SmoothHist(TH1* hist, std::optional<double_t> min = std::nullopt, std::optional<double_t> max = std::nullopt);
 
   void Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors = false);
   void Divide(TH1* numerator, TH1* denominator, bool binomialErrors = false);
