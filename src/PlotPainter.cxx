@@ -473,12 +473,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           } else {
             axisHist_ptr = data_ptr->GetHistogram();
           }
-          if (axisHist_ptr->GetDimension() < 2) axisHist_ptr->Draw((drawingOptions + "AXIS").data());
+          string drawOptAxis = "AXIS";
+          pad_ptr->Update();
+          if (pad_ptr->GetView()) {
+            drawOptAxis = "";
+          }
+          axisHist_ptr->Draw((drawingOptions + drawOptAxis).data());
           axisHist_ptr->Draw((drawingOptions + "SAME AXIG").data());
           axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
           axisHist_ptr->SetStats(false);
           axisHist_ptr->SetTitle("");
           axisHist_ptr->SetBit(TH1::kNoTitle);
+          bool isTH2 = axisHist_ptr->InheritsFrom(TH2::Class());
 
           // apply axis settings
           for (auto axisLabel : {'X', 'Y', 'Z'}) {
@@ -544,7 +550,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).data());
                 }
 
-                bool isTH2 = axisHist_ptr->InheritsFrom(TH2::Class());
                 pad_ptr->Update();  // needed here so current user ranges correct
                 double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0, min = 0, max = 0;
                 pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
@@ -660,7 +665,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (textSizeLabel) axis_ptr->SetLabelSize(*textSizeLabel);
           }
 
-          if (axisHist_ptr->GetDimension() == 2) {
+          if (isTH2) {
             // reset the axis histogram which now owns the z axis, but keep default range
             // defined by the data
             double_t zMin = axisHist_ptr->GetMinimum();
