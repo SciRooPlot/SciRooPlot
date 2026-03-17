@@ -447,7 +447,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     ERROR("Too many custom colors in one session. Aborting...");
     std::exit(EXIT_FAILURE);
   }
-  LOG("Created {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? "/" + *fullPlot.GetFigureCategory() : ""), logger::end_color());
+  LOG("Created plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? "/" + *fullPlot.GetFigureCategory() : ""), logger::end_color());
 
   // if interactive mode is specified, open window instead of saving the plot
   if (isInteractiveMode) {

@@ -467,20 +467,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
         // first data is only used to define the axes
         if (dataIndex == 0) {
-          bool isDrawn = false;
-          bool requiresReset = false;
-          if constexpr (is_hist_2d<data_type>()) {
-            data_ptr->Draw(drawingOptions.data());  // z axis is only drawn if specified
-            isDrawn = true;
-            requiresReset = true;
-          }
+          data_ptr->Draw(drawingOptions.data());
           if constexpr (is_hist<data_type>()) {
             axisHist_ptr = data_ptr;
           } else {
-            data_ptr->Draw();
             axisHist_ptr = data_ptr->GetHistogram();
           }
-          if (!isDrawn) axisHist_ptr->Draw((drawingOptions + "AXIS").data());
+          if (axisHist_ptr->GetDimension() < 2) axisHist_ptr->Draw((drawingOptions + "AXIS").data());
           axisHist_ptr->Draw((drawingOptions + "SAME AXIG").data());
           axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
           axisHist_ptr->SetStats(false);
@@ -667,7 +660,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (textSizeLabel) axis_ptr->SetLabelSize(*textSizeLabel);
           }
 
-          if (requiresReset) {
+          if (axisHist_ptr->GetDimension() == 2) {
             // reset the axis histogram which now owns the z axis, but keep default range
             // defined by the data
             double_t zMin = axisHist_ptr->GetMinimum();
@@ -678,6 +671,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           pad_ptr->Update();
         } else {
+          // do not draw the Z axis a second time
+          std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
+
           // define data appearance
           if (auto markerColor = get_first(data->GetMarkerColor(),
                                            pick(defaultSettingIndices[0], pad.GetDefaultMarkerColors()),
@@ -784,9 +780,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           if constexpr (is_hist_2d<data_type>()) {
             data_ptr->GetYaxis()->SetRangeUser(rangeMinY, rangeMaxY);
-            // do not draw the Z axis a second time!
-            std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
-
             if (auto& contours = data->GetContours()) {
               data_ptr->SetContour(contours->size(), contours->data());
               if (axisHist_ptr->GetContour() < static_cast<Int_t>(contours->size())) axisHist_ptr->SetContour(contours->size(), contours->data());
