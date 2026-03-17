@@ -470,11 +470,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           bool isDrawn = false;
           bool requiresReset = false;
           if constexpr (is_hist_2d<data_type>()) {
-            if (str_contains(drawingOptions, "Z")) {
-              data_ptr->Draw(drawingOptions.data());  // z axis is only drawn if specified
-              isDrawn = true;
-              requiresReset = true;
-            }
+            data_ptr->Draw(drawingOptions.data());  // z axis is only drawn if specified
+            isDrawn = true;
+            requiresReset = true;
           }
           if constexpr (is_hist<data_type>()) {
             axisHist_ptr = data_ptr;
@@ -559,7 +557,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
                 min = axisHist_ptr->GetMinimumStored();
                 max = axisHist_ptr->GetMaximumStored();
-                // DEBUG("({}, {}), ({}, {}), ({}, {})", xmin, xmax, ymin, ymax, min, max);
+                if (auto view = pad_ptr->GetView()) {
+                  double_t minArr[3];
+                  double_t maxArr[3];
+                  view->GetRange(minArr, maxArr);
+                  xmin = minArr[0];
+                  xmax = maxArr[0];
+                  ymin = minArr[1];
+                  ymax = maxArr[1];
+                }
                 if (pad_ptr->GetLogx()) {
                   xmin = TMath::Power(10, xmin);
                   xmax = TMath::Power(10, xmax);
@@ -589,7 +595,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 double_t rangeMax = (axisLayout.GetMaxRange()) ? *axisLayout.GetMaxRange() : curRangeMax;
 
                 // if user specifies axis range that exceeds the one of the underlying data (for independent variables), extend the axis histogram accordingly
-                if ((axisLabel == 'X') || (isTH2 && axisLabel == 'Y')) {
+                if (!pad_ptr->GetView() && ((axisLabel == 'X') || (isTH2 && axisLabel == 'Y'))) {
                   if ((rangeMin != -1111 && rangeMin < axis_ptr->GetXmin()) || (rangeMax != -1111 && rangeMax > axis_ptr->GetXmax())) {
                     const int32_t nBins = axis_ptr->GetNbins();
                     const int32_t nBinEdges = nBins + 1;
@@ -754,6 +760,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           double_t rangeMaxY = (data->GetMaxRangeY()) ? *data->GetMaxRangeY()
                                                       : ymax;
 
+          // for 3d view ignore individual data ranges and always let it coinside with the axes
+          if (auto view = pad_ptr->GetView()) {
+            double_t minArr[3];
+            double_t maxArr[3];
+            view->GetRange(minArr, maxArr);
+            rangeMinX = minArr[0];
+            rangeMaxX = maxArr[0];
+            rangeMinY = minArr[1];
+            rangeMaxY = maxArr[1];
+            data_ptr->SetMinimum(axisHist_ptr->GetMinimum());
+            data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
+          }
+
           if constexpr (is_func_2d<data_type>()) {
             data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
           } else if constexpr (is_func_1d<data_type>()) {
@@ -827,7 +846,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     bool redrawAxes = (pad.GetRedrawAxes())
                         ? *pad.GetRedrawAxes()
                         : ((padDefaults.GetRedrawAxes()) ? *padDefaults.GetRedrawAxes() : false);
-    if (redrawAxes && axisHist_ptr) {
+    if (redrawAxes && axisHist_ptr && !pad_ptr->GetView()) {
       // re-draw frame
       TLine line;
       pad_ptr->GetFrame()->Copy(line);
