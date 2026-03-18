@@ -86,6 +86,7 @@ plot-config set <projectName> OUT </path/to/output/folder>
 ```
 Within this folder, the files will be organized in subdirectories corresponding to the figure groups and categories.
 
+In interactive mode, one can browse through the requested plots using the keys 's' (right), 'a' (left) and 'q' (quit) or by double-clicking on the right and left side of the plot, respectively.
 
 ## 📖 Commented code examples
 The following example code snippets with comments illustrate how plots are defined within your SciRooPlot user code.
@@ -203,7 +204,7 @@ plotManager.AddInputDataFiles("inputIdentifierD", {"/path/to/folder/with/rootfil
   // by default " // " is used as a delimiter between multiple lines
 
   // pro tip: to determine the perfect position of the legend or text,
-  // you can place it at the desired position in interactive mode (see below)
+  // you can place it at the desired position in interactive mode
   // and double-click on it to print out its current coordinates
     
   // to modify the axis titles, offsets, ranges, etc of a pad, just do the following
@@ -215,6 +216,10 @@ plotManager.AddInputDataFiles("inputIdentifierD", {"/path/to/folder/with/rootfil
 
   // note that you can define the visible range of the data independent of the pad axis range
   plot[1].AddData("hist", "inputIdentifierA", "hist with reduced range").SetRangeX(1.5, 2.7);
+
+  // the added data can be further modified later by accessing it via its index (starting with 1) in the following ways:
+  plot[1].GetData(2).SetColor(kGreen); // A: explicitly use getter
+  plot[1](2).SetColor(kRed);           // B: use the () operator
 
   // finally, after plot definition is done we can add it to the manager
   // at this point the plot object we were modifying is moved to the manager
@@ -432,4 +437,46 @@ data_layout_t pp_7TeV
   plotManager.AddPlot(plot);
 } // -----------------------------------------------------------------------
 
+// it is also possible to process and display tabled data, i.e. root trees or CSV files
+{ // -----------------------------------------------------------------------
+  Plot plot("treePlot", "myTreeExamples", "1d");
+
+  // 1D projection of a tree/table on leaf/column called "pt"
+  plot[1].AddData("mytree", "input").Project1D("pt");
+  // the above automatically infers the axis ranges and uses a default of 100 equidistant bins
+  // it can be modified as follows:
+  plot[1].AddData("mytree", "input").Project1D({"pt", 200}); // 200 equidistant bins
+  plot[1].AddData("mytree", "input").Project1D({"pt", 200, {0.1, 20.}}); // 200 equidistant bins between 0.1 and 20
+  plot[1].AddData("mytree", "input").Project1D({"pt", {0.1, 0.5, 0.9, 1.3, 10., 20.}}); // user defined bin edges
+
+  // this can simply be extended to 2D projections as follows:
+  plot[1].AddData("mytree", "input").Project2D({"pt", {0.1, 0.5, 0.9, 1.3, 10., 20.}}, {"eta", 50}); // user defined bin edges for pt and 50 equidistant bins for eta
+  // NB.: 3D Projections are also possible via the Project() function
+
+  // prior to projecting, the data can be filtered:
+  plot[1].AddData("mytree", "input").Project1D({"pt", 200}, "eta>0"); // 200 equidistant bins in pt filled only with data of positive eta
+
+  // also profiles can be made based on the tree, e.g.:
+  plot[1].AddData("mytree", "input").Profile1D("eta", "pt"); // <pt> vs eta
+  plot[1].AddData("mytree", "input").Profile1D({"eta", 700}, "pt"); // <pt> vs eta in 700 equidistant bins
+  plot[1].AddData("mytree", "input").Profile1D({"eta", 700}, "pt", "abs(pz) < 5"); //  <pt> vs eta in 700 equidistant bins filled for absolute pz values less than 5
+
+  // similarly, 2D profiles can be produced:
+  plot[1].AddData("mytree", "input").Profile2D("eta", "pz", "pt"); // <pt> vs eta and pz
+
+  // scatter plots are also possible:
+  plot[1].AddData("mytree", "input").Scatter("x", "y", "a<10"); // simple scatter of x and y under condition a<10
+  // or the same with errors
+  plot[1].AddData("mytree", "input").Scatter("x", "y", "ex", "ey", "a<10"); // simple scatter of x and y under condition a<10
+
+  // note that all the table column and filter expressions can be any valid cpp code using the column/leaf names of the input data as arguments
+  plot[1].AddData("mytree", "input").Scatter("pow(x,2) + pow(y,2)", "2*sqrt(y)", "abs(a)<10");
+  // this is true not only for the Scatter but also for the Project and Profile functions
+
+
+  // in case the input data comes from a text file called 'myData.csv' with columns 'a' and 'b', it is accessed as follows:
+  plot[1].AddData("myData", "input").Scatter("a", "b"); // i.e. the data name is defined as the file name without the file ending .csv
+
+  plotManager.AddPlot(plot);
+} // -----------------------------------------------------------------------
 ```
