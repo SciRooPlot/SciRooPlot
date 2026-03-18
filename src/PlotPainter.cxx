@@ -752,7 +752,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
           double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0;
           pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
-          // DEBUG("({}, {}), ({}, {}), ({}, {})", xmin, xmax, ymin, ymax, min, max);
           if (pad_ptr->GetLogx()) {
             xmin = TMath::Power(10, xmin);
             xmax = TMath::Power(10, xmax);

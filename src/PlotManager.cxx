@@ -54,6 +54,7 @@
 #include "TF2.h"
 #include "TF3.h"
 #include "TGraphErrors.h"
+#include "TGraph2D.h"
 #include "TFolder.h"
 #include "TPave.h"
 #include "TTree.h"
@@ -923,7 +924,9 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
         // the key name supersedes the actual data name (in case they are different when written to file via h->Write("myKeyName"))
         if (curDataName.empty()) curDataName = obj->GetName();
         if (auto it = std::find(dataNames.begin(), dataNames.end(), curDataName); it != dataNames.end()) {
-          if (obj->InheritsFrom(TH1::Class())) static_cast<TH1*>(obj)->SetDirectory(0);  // demand ownership for histogram
+          // demand ownership for object if required for given type
+          if (obj->InheritsFrom(TH1::Class())) static_cast<TH1*>(obj)->SetDirectory(0);
+          if (obj->InheritsFrom(TGraph2D::Class())) static_cast<TGraph2D*>(obj)->SetDirectory(0);
           itemList->Remove(obj);
           dataNames.erase(it);
           string fullName = prefix + curDataName;
