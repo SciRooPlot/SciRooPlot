@@ -140,9 +140,14 @@ constexpr bool is_func_2d()
   return is_one_of_v<T, TF2*>();
 }
 template <typename T>
+constexpr bool is_func_3d()
+{
+  return is_one_of_v<T, TF3*>();
+}
+template <typename T>
 constexpr bool is_func()
 {
-  return is_func_1d<T>() || is_func_2d<T>();
+  return is_func_1d<T>() || is_func_2d<T>() || is_func_3d<T>();
 }
 template <typename T>
 constexpr bool is_1d()
@@ -153,6 +158,11 @@ template <typename T>
 constexpr bool is_2d()
 {
   return is_hist_2d<T>() || is_graph_2d<T>() || is_func_2d<T>();
+}
+template <typename T>
+constexpr bool is_3d()
+{
+  return is_hist_3d<T>() || is_func_3d<T>();
 }
 
 //**************************************************************************************************
@@ -1372,8 +1382,8 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
         ERROR("Projection failed for {}.", obj->GetName());
       }
     } else {
-      // TProfile2D is TH2, TH2 is TH1, TH3 is TH1, TProfile is TH1
-      if (auto returnPointer = GetDataClone<TProfile2D, TH2, TH3, TProfile, TH1, TGraph2D, TGraph, TF2, TF1, TEfficiency>(obj)) {
+      // TProfile2D is TH2, TH2 is TH1, TH3 is TH1, TProfile is TH1, TF3 is TF2, TF2 is TF1
+      if (auto returnPointer = GetDataClone<TProfile2D, TH2, TH3, TProfile, TH1, TGraph2D, TGraph, TF3, TF2, TF1, TEfficiency>(obj)) {
         return returnPointer;
       } else {
         ERROR("Input data {} is of unsupported type {}.", obj->GetName(), obj->ClassName());
