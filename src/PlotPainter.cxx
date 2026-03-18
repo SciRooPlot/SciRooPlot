@@ -475,7 +475,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           string drawOptAxis = "AXIS";
           pad_ptr->Update();
-          if (pad_ptr->GetView()) {
+          if (pad_ptr->GetView() || is_hist_2d<data_type>()) {
             drawOptAxis = "";
           }
           axisHist_ptr->Draw((drawingOptions + drawOptAxis).data());
@@ -673,6 +673,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
             axisHist_ptr->SetMinimum(zMin);
             axisHist_ptr->SetMaximum(zMax);
+            axisHist_ptr->SetLineWidth(0);
+            axisHist_ptr->SetFillStyle(0);
           }
           pad_ptr->Update();
         } else {
