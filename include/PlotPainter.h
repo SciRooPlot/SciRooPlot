@@ -29,6 +29,7 @@
 
 class TH1;
 class TH2;
+class TH3;
 class TGraph;
 class TGraph2D;
 class TProfile;
@@ -47,7 +48,7 @@ namespace SciRooPlot
 {
 
 // supported input data types
-using data_ptr_t = std::variant<TH1*, TH2*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF2*, TF1*>;
+using data_ptr_t = std::variant<TH1*, TH2*, TH3*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF2*, TF1*>;
 
 const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist2d{
   {box, "BOX"},

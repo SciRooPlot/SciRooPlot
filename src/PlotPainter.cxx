@@ -105,9 +105,14 @@ constexpr bool is_hist_2d()
   return is_one_of_v<T, TH2*, TProfile2D*>();
 }
 template <typename T>
+constexpr bool is_hist_3d()
+{
+  return is_one_of_v<T, TH3*>();
+}
+template <typename T>
 constexpr bool is_hist()
 {
-  return is_hist_1d<T>() || is_hist_2d<T>();
+  return is_hist_1d<T>() || is_hist_2d<T>() || is_hist_3d<T>();
 }
 template <typename T>
 constexpr bool is_graph_1d()
@@ -484,7 +489,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           axisHist_ptr->SetStats(false);
           axisHist_ptr->SetTitle("");
           axisHist_ptr->SetBit(TH1::kNoTitle);
-          bool isTH2 = axisHist_ptr->InheritsFrom(TH2::Class());
+          bool isTHN = axisHist_ptr->InheritsFrom(TH2::Class()) || axisHist_ptr->InheritsFrom(TH3::Class());
 
           // apply axis settings
           for (auto axisLabel : {'X', 'Y', 'Z'}) {
@@ -563,20 +568,24 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   xmax = maxArr[0];
                   ymin = minArr[1];
                   ymax = maxArr[1];
+                  if constexpr (is_hist_3d<data_type>()) {
+                    min = minArr[2];
+                    max = maxArr[2];
+                  }
                 }
                 if (pad_ptr->GetLogx()) {
                   xmin = TMath::Power(10, xmin);
                   xmax = TMath::Power(10, xmax);
                 }
-                if (isTH2 && pad_ptr->GetLogy()) {
+                if (isTHN && pad_ptr->GetLogy()) {
                   ymin = TMath::Power(10, ymin);
                   ymax = TMath::Power(10, ymax);
                 }
 
-                double_t curRangeMin = (axisLabel == 'X') ? xmin : ((isTH2 && axisLabel == 'Y') ? ymin : min);
-                double_t curRangeMax = (axisLabel == 'X') ? xmax : ((isTH2 && axisLabel == 'Y') ? ymax : max);
+                double_t curRangeMin = (axisLabel == 'X') ? xmin : ((isTHN && axisLabel == 'Y') ? ymin : min);
+                double_t curRangeMax = (axisLabel == 'X') ? xmax : ((isTHN && axisLabel == 'Y') ? ymax : max);
 
-                if (isTH2 && axisLabel == 'Z' && curRangeMin == -1111 && axisLayout.GetLog() && *axisLayout.GetLog()) {
+                if (isTHN && axisLabel == 'Z' && curRangeMin == -1111 && axisLayout.GetLog() && *axisLayout.GetLog()) {
                   /*
                   Work around auto-range feature of ROOT for lower limit of TH2 logz.
                   It would draw properly the axis histogram, but mess up the ranges
@@ -593,7 +602,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 double_t rangeMax = (axisLayout.GetMaxRange()) ? *axisLayout.GetMaxRange() : curRangeMax;
 
                 // if user specifies axis range that exceeds the one of the underlying data (for independent variables), extend the axis histogram accordingly
-                if (!pad_ptr->GetView() && ((axisLabel == 'X') || (isTH2 && axisLabel == 'Y'))) {
+                if (!pad_ptr->GetView() && ((axisLabel == 'X') || (isTHN && axisLabel == 'Y'))) {
                   if ((rangeMin != -1111 && rangeMin < axis_ptr->GetXmin()) || (rangeMax != -1111 && rangeMax > axis_ptr->GetXmax())) {
                     const int32_t nBins = axis_ptr->GetNbins();
                     const int32_t nBinEdges = nBins + 1;
@@ -665,14 +674,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (textSizeLabel) axis_ptr->SetLabelSize(*textSizeLabel);
           }
 
-          if (isTH2) {
-            // reset the axis histogram which now owns the z axis, but keep default range
-            // defined by the data
-            double_t zMin = axisHist_ptr->GetMinimum();
-            double_t zMax = axisHist_ptr->GetMaximum();
+          if (isTHN) {
+            // reset the axis histogram which owns the z axis, while eeping default range defined by the data
+            double_t min = axisHist_ptr->GetMinimum();
+            double_t max = axisHist_ptr->GetMaximum();
             axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
-            axisHist_ptr->SetMinimum(zMin);
-            axisHist_ptr->SetMaximum(zMax);
+            axisHist_ptr->SetMinimum(min);
+            axisHist_ptr->SetMaximum(max);
+            axisHist_ptr->SetMarkerSize(0);
             axisHist_ptr->SetLineWidth(0);
             axisHist_ptr->SetFillStyle(0);
           }
@@ -774,6 +783,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             rangeMaxY = maxArr[1];
             data_ptr->SetMinimum(axisHist_ptr->GetMinimum());
             data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
+            if constexpr (is_hist_3d<data_type>()) {
+              data_ptr->GetZaxis()->SetRangeUser(minArr[2], maxArr[2]);
+            }
           }
 
           if constexpr (is_func_2d<data_type>()) {
@@ -785,7 +797,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           } else {
             data_ptr->GetXaxis()->SetRangeUser(rangeMinX, rangeMaxX);
           }
-          if constexpr (is_hist_2d<data_type>()) {
+          if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
             data_ptr->GetYaxis()->SetRangeUser(rangeMinY, rangeMaxY);
             if (auto& contours = data->GetContours()) {
               data_ptr->SetContour(contours->size(), contours->data());
@@ -1361,8 +1373,8 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
         ERROR("Projection failed for {}.", obj->GetName());
       }
     } else {
-      // TProfile2D is TH2, TH2 is TH1, TProfile is TH1
-      if (auto returnPointer = GetDataClone<TProfile2D, TH2, TProfile, TH1, TGraph2D, TGraph, TF2, TF1, TEfficiency>(obj)) {
+      // TProfile2D is TH2, TH2 is TH1, TH3 is TH1, TProfile is TH1
+      if (auto returnPointer = GetDataClone<TProfile2D, TH2, TH3, TProfile, TH1, TGraph2D, TGraph, TF2, TF1, TEfficiency>(obj)) {
         return returnPointer;
       } else {
         ERROR("Input data {} is of unsupported type {}.", obj->GetName(), obj->ClassName());
