@@ -675,11 +675,15 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
     }
   }
 
-  if (!FillBuffer()) PrintBufferStatus(true);
-  // generate plots
-  for (auto plot : selectedPlots) {
-    if (!GeneratePlot(*plot, outputMode))
-      ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetFigureGroup() + ((plot->GetFigureCategory()) ? "/" + *plot->GetFigureCategory() : ""), logger::end_color());
+  try {
+    if (!FillBuffer()) PrintBufferStatus(true);
+    // generate plots
+    for (auto plot : selectedPlots) {
+      if (!GeneratePlot(*plot, outputMode))
+        ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetFigureGroup() + ((plot->GetFigureCategory()) ? "/" + *plot->GetFigureCategory() : ""), logger::end_color());
+    }
+  } catch (...) {
+    ERROR("An unexpected error occurred. The application will now exit.");
   }
 }
 
