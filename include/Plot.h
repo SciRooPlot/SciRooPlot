@@ -743,6 +743,7 @@ class Plot::Pad::Axis
   Axis& SetMinRange(double_t min);
   Axis& SetColor(int16_t color);
   Axis& SetAxisColor(int16_t color);
+  Axis& SetAxisAlpha(float_t alpha);
   Axis& SetNumDivisions(int32_t numDivisions);
   Axis& SetMaxDigits(int32_t maxDigits);
   Axis& SetTickLength(float_t tickLength);
@@ -778,61 +779,56 @@ class Plot::Pad::Axis
 
   const auto& GetMinRange() const { return mRange.min; }
   const auto& GetMaxRange() const { return mRange.max; }
-  const auto& GetTickLength() const { return mTickLength; }
-  const auto& GetNumDivisions() const { return mNumDivisions; }
-  const auto& GetMaxDigits() const { return mMaxDigits; }
-  const auto& GetAxisColor() const { return mAxisColor; }
-  const auto& GetTitle() const { return mTitle; }
-  const auto& GetTitleFont() const { return mTitleProperties.font; }
-  const auto& GetLabelFont() const { return mLabelProperties.font; }
-  const auto& GetTitleSize() const { return mTitleProperties.size; }
-  const auto& GetLabelSize() const { return mLabelProperties.size; }
-  const auto& GetTitleColor() const { return mTitleProperties.color; }
-  const auto& GetLabelColor() const { return mLabelProperties.color; }
-  const auto& GetTitleAlpha() const { return mTitleProperties.alpha; }
-  const auto& GetLabelAlpha() const { return mLabelProperties.alpha; }
-  const auto& GetTitleOffset() const { return mTitleProperties.offset; }
-  const auto& GetLabelOffset() const { return mLabelProperties.offset; }
-  const auto& GetTitleCenter() const { return mTitleProperties.center; }
-  const auto& GetLabelCenter() const { return mLabelProperties.center; }
-  const auto& GetLog() const { return mIsLog; }
-  const auto& GetGrid() const { return mIsGrid; }
-  const auto& GetOppositeTicks() const { return mIsOppositeTicks; }
-  const auto& GetNoExponent() const { return mIsNoExponent; }
-  const auto& GetTimeFormat() const { return mTimeFormat; }
-  const auto& GetTickOrientation() const { return mTickOrientation; }
+  const auto& GetTickLength() const { return mAxisFrame.scale; }
+  const auto& GetNumDivisions() const { return mAxisFrame.style; }
+  const auto& GetMaxDigits() const { return mAxisFrame.maxDigits; }
+  const auto& GetAxisColor() const { return mAxisFrame.color; }
+  const auto& GetAxisAlpha() const { return mAxisFrame.alpha; }
+  const auto& GetTitle() const { return mAxisFrame.title; }
+  const auto& GetTitleFont() const { return mTitleLayout.style; }
+  const auto& GetLabelFont() const { return mLabelLayout.style; }
+  const auto& GetTitleSize() const { return mTitleLayout.scale; }
+  const auto& GetLabelSize() const { return mLabelLayout.scale; }
+  const auto& GetTitleColor() const { return mTitleLayout.color; }
+  const auto& GetLabelColor() const { return mLabelLayout.color; }
+  const auto& GetTitleAlpha() const { return mTitleLayout.alpha; }
+  const auto& GetLabelAlpha() const { return mLabelLayout.alpha; }
+  const auto& GetTitleOffset() const { return mTitleLayout.offset; }
+  const auto& GetLabelOffset() const { return mLabelLayout.offset; }
+  const auto& GetTitleCenter() const { return mTitleLayout.center; }
+  const auto& GetLabelCenter() const { return mLabelLayout.center; }
+  const auto& GetLog() const { return mAxisFrame.isLog; }
+  const auto& GetGrid() const { return mAxisFrame.isGrid; }
+  const auto& GetOppositeTicks() const { return mAxisFrame.isOppositeTicks; }
+  const auto& GetNoExponent() const { return mAxisFrame.isNoExponent; }
+  const auto& GetTimeFormat() const { return mAxisFrame.timeFormat; }
+  const auto& GetTickOrientation() const { return mAxisFrame.tickOrientation; }
 
  private:
-  struct axisTextProperties_t {
-    std::optional<int16_t> font;
-    std::optional<float_t> size;
-    std::optional<int16_t> color;
-    std::optional<float_t> alpha;
+  struct axis_layout_t : layout_t {
     std::optional<float_t> offset;
     std::optional<bool> center;
   };
-  struct axisRange_t {
+  struct axis_range_t {
     std::optional<double_t> min;
     std::optional<double_t> max;
   };
+  struct axis_frame_t : layout_t {
+    std::optional<std::string> title;
+    std::optional<int32_t> maxDigits;
+    std::optional<bool> isLog;
+    std::optional<bool> isGrid;
+    std::optional<bool> isOppositeTicks;
+    std::optional<bool> isNoExponent;
+    std::optional<std::string> timeFormat;
+    std::optional<std::string> tickOrientation;
+  };
 
   char mName{};
-  axisRange_t mRange;
-  std::optional<std::string> mTitle;
-  std::optional<int32_t> mNumDivisions;
-  std::optional<int32_t> mMaxDigits;
-  std::optional<float_t> mTickLength;
-  std::optional<int16_t> mAxisColor;
-
-  std::optional<bool> mIsLog;
-  std::optional<bool> mIsGrid;
-  std::optional<bool> mIsOppositeTicks;
-  std::optional<bool> mIsNoExponent;
-  std::optional<std::string> mTimeFormat;
-  std::optional<std::string> mTickOrientation;
-
-  axisTextProperties_t mTitleProperties;
-  axisTextProperties_t mLabelProperties;
+  axis_frame_t mAxisFrame;
+  axis_layout_t mTitleLayout;
+  axis_layout_t mLabelLayout;
+  axis_range_t mRange;
 };
 
 //**************************************************************************************************

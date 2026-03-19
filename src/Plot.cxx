@@ -2113,31 +2113,32 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
   } catch (...) {
     ERROR("Could not construct axis from ptree.");
   }
-  read_from_tree(axisTree, mTitle, "title");
+  read_from_tree(axisTree, mAxisFrame.title, "title");
   read_from_tree(axisTree, mRange.min, "range_min");
   read_from_tree(axisTree, mRange.max, "range_max");
-  read_from_tree(axisTree, mNumDivisions, "num_divisions");
-  read_from_tree(axisTree, mMaxDigits, "max_digits");
-  read_from_tree(axisTree, mTickLength, "tick_length");
-  read_from_tree(axisTree, mAxisColor, "axis_color");
-  read_from_tree(axisTree, mTitleProperties.font, "title_font");
-  read_from_tree(axisTree, mTitleProperties.size, "title_size");
-  read_from_tree(axisTree, mTitleProperties.color, "title_color");
-  read_from_tree(axisTree, mTitleProperties.alpha, "title_alpha");
-  read_from_tree(axisTree, mTitleProperties.offset, "title_offset");
-  read_from_tree(axisTree, mTitleProperties.center, "title_center");
-  read_from_tree(axisTree, mLabelProperties.font, "label_font");
-  read_from_tree(axisTree, mLabelProperties.size, "label_size");
-  read_from_tree(axisTree, mLabelProperties.color, "label_color");
-  read_from_tree(axisTree, mLabelProperties.alpha, "label_alpha");
-  read_from_tree(axisTree, mLabelProperties.offset, "label_offset");
-  read_from_tree(axisTree, mLabelProperties.center, "label_center");
-  read_from_tree(axisTree, mIsLog, "is_log");
-  read_from_tree(axisTree, mIsGrid, "is_grid");
-  read_from_tree(axisTree, mIsOppositeTicks, "is_opposite_ticks");
-  read_from_tree(axisTree, mIsNoExponent, "is_no_exponent");
-  read_from_tree(axisTree, mTickOrientation, "tick_orientation");
-  read_from_tree(axisTree, mTimeFormat, "time_format");
+  read_from_tree(axisTree, mAxisFrame.style, "num_divisions");
+  read_from_tree(axisTree, mAxisFrame.maxDigits, "max_digits");
+  read_from_tree(axisTree, mAxisFrame.scale, "tick_length");
+  read_from_tree(axisTree, mAxisFrame.color, "axis_color");
+  read_from_tree(axisTree, mAxisFrame.alpha, "axis_alpha");
+  read_from_tree(axisTree, mTitleLayout.style, "title_font");
+  read_from_tree(axisTree, mTitleLayout.scale, "title_size");
+  read_from_tree(axisTree, mTitleLayout.color, "title_color");
+  read_from_tree(axisTree, mTitleLayout.alpha, "title_alpha");
+  read_from_tree(axisTree, mTitleLayout.offset, "title_offset");
+  read_from_tree(axisTree, mTitleLayout.center, "title_center");
+  read_from_tree(axisTree, mLabelLayout.style, "label_font");
+  read_from_tree(axisTree, mLabelLayout.scale, "label_size");
+  read_from_tree(axisTree, mLabelLayout.color, "label_color");
+  read_from_tree(axisTree, mLabelLayout.alpha, "label_alpha");
+  read_from_tree(axisTree, mLabelLayout.offset, "label_offset");
+  read_from_tree(axisTree, mLabelLayout.center, "label_center");
+  read_from_tree(axisTree, mAxisFrame.isLog, "is_log");
+  read_from_tree(axisTree, mAxisFrame.isGrid, "is_grid");
+  read_from_tree(axisTree, mAxisFrame.isOppositeTicks, "is_opposite_ticks");
+  read_from_tree(axisTree, mAxisFrame.isNoExponent, "is_no_exponent");
+  read_from_tree(axisTree, mAxisFrame.tickOrientation, "tick_orientation");
+  read_from_tree(axisTree, mAxisFrame.timeFormat, "time_format");
 }
 
 //**************************************************************************************************
@@ -2149,31 +2150,32 @@ ptree Plot::Pad::Axis::GetPropertyTree() const
 {
   ptree axisTree;
   axisTree.put("name", mName);
-  put_in_tree(axisTree, mTitle, "title");
+  put_in_tree(axisTree, mAxisFrame.title, "title");
   put_in_tree(axisTree, mRange.min, "range_min");
   put_in_tree(axisTree, mRange.max, "range_max");
-  put_in_tree(axisTree, mNumDivisions, "num_divisions");
-  put_in_tree(axisTree, mMaxDigits, "max_digits");
-  put_in_tree(axisTree, mTickLength, "tick_length");
-  put_in_tree(axisTree, mAxisColor, "axis_color");
-  put_in_tree(axisTree, mTitleProperties.font, "title_font");
-  put_in_tree(axisTree, mTitleProperties.size, "title_size");
-  put_in_tree(axisTree, mTitleProperties.color, "title_color");
-  put_in_tree(axisTree, mTitleProperties.alpha, "title_alpha");
-  put_in_tree(axisTree, mTitleProperties.offset, "title_offset");
-  put_in_tree(axisTree, mTitleProperties.center, "title_center");
-  put_in_tree(axisTree, mLabelProperties.font, "label_font");
-  put_in_tree(axisTree, mLabelProperties.size, "label_size");
-  put_in_tree(axisTree, mLabelProperties.color, "label_color");
-  put_in_tree(axisTree, mLabelProperties.alpha, "label_alpha");
-  put_in_tree(axisTree, mLabelProperties.offset, "label_offset");
-  put_in_tree(axisTree, mLabelProperties.center, "label_center");
-  put_in_tree(axisTree, mIsLog, "is_log");
-  put_in_tree(axisTree, mIsGrid, "is_grid");
-  put_in_tree(axisTree, mIsOppositeTicks, "is_opposite_ticks");
-  put_in_tree(axisTree, mIsNoExponent, "is_no_exponent");
-  put_in_tree(axisTree, mTickOrientation, "tick_orientation");
-  put_in_tree(axisTree, mTimeFormat, "time_format");
+  put_in_tree(axisTree, mAxisFrame.style, "num_divisions");
+  put_in_tree(axisTree, mAxisFrame.maxDigits, "max_digits");
+  put_in_tree(axisTree, mAxisFrame.scale, "tick_length");
+  put_in_tree(axisTree, mAxisFrame.color, "axis_color");
+  put_in_tree(axisTree, mAxisFrame.alpha, "axis_alpha");
+  put_in_tree(axisTree, mTitleLayout.style, "title_font");
+  put_in_tree(axisTree, mTitleLayout.scale, "title_size");
+  put_in_tree(axisTree, mTitleLayout.color, "title_color");
+  put_in_tree(axisTree, mTitleLayout.alpha, "title_alpha");
+  put_in_tree(axisTree, mTitleLayout.offset, "title_offset");
+  put_in_tree(axisTree, mTitleLayout.center, "title_center");
+  put_in_tree(axisTree, mLabelLayout.style, "label_font");
+  put_in_tree(axisTree, mLabelLayout.scale, "label_size");
+  put_in_tree(axisTree, mLabelLayout.color, "label_color");
+  put_in_tree(axisTree, mLabelLayout.alpha, "label_alpha");
+  put_in_tree(axisTree, mLabelLayout.offset, "label_offset");
+  put_in_tree(axisTree, mLabelLayout.center, "label_center");
+  put_in_tree(axisTree, mAxisFrame.isLog, "is_log");
+  put_in_tree(axisTree, mAxisFrame.isGrid, "is_grid");
+  put_in_tree(axisTree, mAxisFrame.isOppositeTicks, "is_opposite_ticks");
+  put_in_tree(axisTree, mAxisFrame.isNoExponent, "is_no_exponent");
+  put_in_tree(axisTree, mAxisFrame.tickOrientation, "tick_orientation");
+  put_in_tree(axisTree, mAxisFrame.timeFormat, "time_format");
 
   return axisTree;
 }
@@ -2188,39 +2190,40 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
   mName = axis.mName;
   if (axis.mRange.min) mRange.min = axis.mRange.min;
   if (axis.mRange.max) mRange.max = axis.mRange.max;
-  if (axis.mTitle) mTitle = axis.mTitle;
-  if (axis.mNumDivisions) mNumDivisions = axis.mNumDivisions;
-  if (axis.mMaxDigits) mMaxDigits = axis.mMaxDigits;
-  if (axis.mTickLength) mTickLength = axis.mTickLength;
-  if (axis.mAxisColor) mAxisColor = axis.mAxisColor;
-  if (axis.mIsLog) mIsLog = axis.mIsLog;
-  if (axis.mIsGrid) mIsGrid = axis.mIsGrid;
-  if (axis.mIsOppositeTicks) mIsOppositeTicks = axis.mIsOppositeTicks;
-  if (axis.mIsNoExponent) mIsNoExponent = axis.mIsNoExponent;
-  if (axis.mTitleProperties.font) mTitleProperties.font = axis.mTitleProperties.font;
-  if (axis.mTitleProperties.size) mTitleProperties.size = axis.mTitleProperties.size;
-  if (axis.mTitleProperties.color) mTitleProperties.color = axis.mTitleProperties.color;
-  if (axis.mTitleProperties.alpha) mTitleProperties.alpha = axis.mTitleProperties.alpha;
-  if (axis.mTitleProperties.offset) mTitleProperties.offset = axis.mTitleProperties.offset;
-  if (axis.mTitleProperties.center) mTitleProperties.center = axis.mTitleProperties.center;
-  if (axis.mLabelProperties.font) mLabelProperties.font = axis.mLabelProperties.font;
-  if (axis.mLabelProperties.size) mLabelProperties.size = axis.mLabelProperties.size;
-  if (axis.mLabelProperties.color) mLabelProperties.color = axis.mLabelProperties.color;
-  if (axis.mLabelProperties.alpha) mLabelProperties.alpha = axis.mLabelProperties.alpha;
-  if (axis.mLabelProperties.offset) mLabelProperties.offset = axis.mLabelProperties.offset;
-  if (axis.mLabelProperties.center) mLabelProperties.center = axis.mLabelProperties.center;
-  if (axis.mTimeFormat) mTimeFormat = axis.mTimeFormat;
-  if (axis.mTickOrientation) mTickOrientation = axis.mTickOrientation;
+  if (axis.mAxisFrame.title) mAxisFrame.title = axis.mAxisFrame.title;
+  if (axis.mAxisFrame.style) mAxisFrame.style = axis.mAxisFrame.style;
+  if (axis.mAxisFrame.maxDigits) mAxisFrame.maxDigits = axis.mAxisFrame.maxDigits;
+  if (axis.mAxisFrame.scale) mAxisFrame.scale = axis.mAxisFrame.scale;
+  if (axis.mAxisFrame.color) mAxisFrame.color = axis.mAxisFrame.color;
+  if (axis.mAxisFrame.alpha) mAxisFrame.alpha = axis.mAxisFrame.alpha;
+  if (axis.mAxisFrame.isLog) mAxisFrame.isLog = axis.mAxisFrame.isLog;
+  if (axis.mAxisFrame.isGrid) mAxisFrame.isGrid = axis.mAxisFrame.isGrid;
+  if (axis.mAxisFrame.isOppositeTicks) mAxisFrame.isOppositeTicks = axis.mAxisFrame.isOppositeTicks;
+  if (axis.mAxisFrame.isNoExponent) mAxisFrame.isNoExponent = axis.mAxisFrame.isNoExponent;
+  if (axis.mTitleLayout.style) mTitleLayout.style = axis.mTitleLayout.style;
+  if (axis.mTitleLayout.scale) mTitleLayout.scale = axis.mTitleLayout.scale;
+  if (axis.mTitleLayout.color) mTitleLayout.color = axis.mTitleLayout.color;
+  if (axis.mTitleLayout.alpha) mTitleLayout.alpha = axis.mTitleLayout.alpha;
+  if (axis.mTitleLayout.offset) mTitleLayout.offset = axis.mTitleLayout.offset;
+  if (axis.mTitleLayout.center) mTitleLayout.center = axis.mTitleLayout.center;
+  if (axis.mLabelLayout.style) mLabelLayout.style = axis.mLabelLayout.style;
+  if (axis.mLabelLayout.scale) mLabelLayout.scale = axis.mLabelLayout.scale;
+  if (axis.mLabelLayout.color) mLabelLayout.color = axis.mLabelLayout.color;
+  if (axis.mLabelLayout.alpha) mLabelLayout.alpha = axis.mLabelLayout.alpha;
+  if (axis.mLabelLayout.offset) mLabelLayout.offset = axis.mLabelLayout.offset;
+  if (axis.mLabelLayout.center) mLabelLayout.center = axis.mLabelLayout.center;
+  if (axis.mAxisFrame.timeFormat) mAxisFrame.timeFormat = axis.mAxisFrame.timeFormat;
+  if (axis.mAxisFrame.tickOrientation) mAxisFrame.tickOrientation = axis.mAxisFrame.tickOrientation;
 }
 
 //**************************************************************************************************
 /**
- * User accessors to change axis properties.
+ * User accessors to change axis layout.
  */
 //**************************************************************************************************
 auto Plot::Pad::Axis::SetTitle(const string& title) -> decltype(*this)
 {
-  mTitle = title;
+  mAxisFrame.title = title;
   return *this;
 }
 auto Plot::Pad::Axis::SetRange(double_t min, double_t max) -> decltype(*this)
@@ -2240,119 +2243,124 @@ auto Plot::Pad::Axis::SetMinRange(double_t min) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetColor(int16_t color) -> decltype(*this)
 {
-  mAxisColor = color;
-  mLabelProperties.color = color;
-  mTitleProperties.color = color;
+  mAxisFrame.color = color;
+  mLabelLayout.color = color;
+  mTitleLayout.color = color;
   return *this;
 }
 auto Plot::Pad::Axis::SetAxisColor(int16_t color) -> decltype(*this)
 {
-  mAxisColor = color;
+  mAxisFrame.color = color;
+  return *this;
+}
+auto Plot::Pad::Axis::SetAxisAlpha(float_t alpha) -> decltype(*this)
+{
+  mAxisFrame.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::Axis::SetNumDivisions(int32_t numDivisions) -> decltype(*this)
 {
-  mNumDivisions = numDivisions;
+  mAxisFrame.style = numDivisions;
   return *this;
 }
 auto Plot::Pad::Axis::SetMaxDigits(int32_t maxDigits) -> decltype(*this)
 {
-  mMaxDigits = maxDigits;
+  mAxisFrame.maxDigits = maxDigits;
   return *this;
 }
 auto Plot::Pad::Axis::SetTickLength(float_t tickLength) -> decltype(*this)
 {
-  mTickLength = tickLength;
+  mAxisFrame.scale = tickLength;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleFont(int16_t font) -> decltype(*this)
 {
-  mTitleProperties.font = font;
+  mTitleLayout.style = font;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelFont(int16_t font) -> decltype(*this)
 {
-  mLabelProperties.font = font;
+  mLabelLayout.style = font;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleSize(float_t size) -> decltype(*this)
 {
-  mTitleProperties.size = size;
+  mTitleLayout.scale = size;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelSize(float_t size) -> decltype(*this)
 {
-  mLabelProperties.size = size;
+  mLabelLayout.scale = size;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleColor(int16_t color) -> decltype(*this)
 {
-  mTitleProperties.color = color;
+  mTitleLayout.color = color;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelColor(int16_t color) -> decltype(*this)
 {
-  mLabelProperties.color = color;
+  mLabelLayout.color = color;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleAlpha(float_t alpha) -> decltype(*this)
 {
-  mTitleProperties.alpha = alpha;
+  mTitleLayout.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelAlpha(float_t alpha) -> decltype(*this)
 {
-  mLabelProperties.alpha = alpha;
+  mLabelLayout.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleOffset(float_t offset) -> decltype(*this)
 {
-  mTitleProperties.offset = offset;
+  mTitleLayout.offset = offset;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelOffset(float_t offset) -> decltype(*this)
 {
-  mLabelProperties.offset = offset;
+  mLabelLayout.offset = offset;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleCenter(bool center) -> decltype(*this)
 {
-  mTitleProperties.center = center;
+  mTitleLayout.center = center;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelCenter(bool center) -> decltype(*this)
 {
-  mLabelProperties.center = center;
+  mLabelLayout.center = center;
   return *this;
 }
 auto Plot::Pad::Axis::SetLog(bool isLog) -> decltype(*this)
 {
-  mIsLog = isLog;
+  mAxisFrame.isLog = isLog;
   return *this;
 }
 auto Plot::Pad::Axis::SetGrid(bool isGrid) -> decltype(*this)
 {
-  mIsGrid = isGrid;
+  mAxisFrame.isGrid = isGrid;
   return *this;
 }
 auto Plot::Pad::Axis::SetOppositeTicks(bool isOppositeTicks) -> decltype(*this)
 {
-  mIsOppositeTicks = isOppositeTicks;
+  mAxisFrame.isOppositeTicks = isOppositeTicks;
   return *this;
 }
 auto Plot::Pad::Axis::SetNoExponent(bool isNoExponent) -> decltype(*this)
 {
-  mIsNoExponent = isNoExponent;
+  mAxisFrame.isNoExponent = isNoExponent;
   return *this;
 }
 auto Plot::Pad::Axis::SetTimeFormat(const string& timeFormat) -> decltype(*this)
 {
-  mTimeFormat = timeFormat;
+  mAxisFrame.timeFormat = timeFormat;
   return *this;
 }
 auto Plot::Pad::Axis::SetTickOrientation(const string& tickOrientation) -> decltype(*this)
 {
-  mTickOrientation = tickOrientation;
+  mAxisFrame.tickOrientation = tickOrientation;
   return *this;
 }
 
