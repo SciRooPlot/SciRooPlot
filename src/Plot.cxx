@@ -633,9 +633,10 @@ auto Plot::Pad::SetFrameFillAlpha(float_t alpha) -> decltype(*this)
  * Set frame line properties.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetFrameBorder(int16_t color, optional<int16_t> style, optional<float_t> width) -> decltype(*this)
+auto Plot::Pad::SetFrameBorder(int16_t color, optional<int16_t> style, optional<float_t> width, optional<float_t> alpha) -> decltype(*this)
 {
   mFrameBorder.color = color;
+  mFrameBorder.alpha = alpha;
   mFrameBorder.style = style;
   mFrameBorder.scale = width;
   return *this;
@@ -644,6 +645,12 @@ auto Plot::Pad::SetFrameBorder(int16_t color, optional<int16_t> style, optional<
 auto Plot::Pad::SetFrameBorderColor(int16_t color) -> decltype(*this)
 {
   mFrameBorder.color = color;
+  return *this;
+}
+
+auto Plot::Pad::SetFrameBorderAlpha(float_t alpha) -> decltype(*this)
+{
+  mFrameBorder.alpha = alpha;
   return *this;
 }
 
@@ -761,6 +768,7 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mFrameFill.style, "frame_fill_style");
   read_from_tree(padTree, mFrameFill.alpha, "frame_fill_alpha");
   read_from_tree(padTree, mFrameBorder.color, "frame_border_color");
+  read_from_tree(padTree, mFrameBorder.alpha, "frame_border_alpha");
   read_from_tree(padTree, mFrameBorder.style, "frame_border_style");
   read_from_tree(padTree, mFrameBorder.scale, "frame_border_width");
   read_from_tree(padTree, mText.style, "text_font");
@@ -851,6 +859,7 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mFrameFill.style, "frame_fill_style");
   put_in_tree(padTree, mFrameFill.alpha, "frame_fill_alpha");
   put_in_tree(padTree, mFrameBorder.color, "frame_border_color");
+  put_in_tree(padTree, mFrameBorder.alpha, "frame_border_alpha");
   put_in_tree(padTree, mFrameBorder.style, "frame_border_style");
   put_in_tree(padTree, mFrameBorder.scale, "frame_border_width");
   put_in_tree(padTree, mText.style, "text_font");
@@ -937,6 +946,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mFrameFill.style) mFrameFill.style = pad.mFrameFill.style;
   if (pad.mFrameFill.alpha) mFrameFill.alpha = pad.mFrameFill.alpha;
   if (pad.mFrameBorder.color) mFrameBorder.color = pad.mFrameBorder.color;
+  if (pad.mFrameBorder.alpha) mFrameBorder.alpha = pad.mFrameBorder.alpha;
   if (pad.mFrameBorder.style) mFrameBorder.style = pad.mFrameBorder.style;
   if (pad.mFrameBorder.scale) mFrameBorder.scale = pad.mFrameBorder.scale;
   if (pad.mText.scale) mText.scale = pad.mText.scale;

@@ -235,6 +235,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto frameFillStyle = get_first(pad.GetFrameFillStyle(), padDefaults.GetFrameFillStyle())) pad_ptr->SetFrameFillStyle(*frameFillStyle);
     if (auto frameFillAlpha = get_first(pad.GetFrameFillAlpha(), padDefaults.GetFrameFillAlpha())) pad_ptr->SetFrameFillColor(TColor::GetColorTransparent(pad_ptr->GetFrameFillColor(), *frameFillAlpha));
     if (auto frameBorderColor = get_first(pad.GetFrameBorderColor(), padDefaults.GetFrameBorderColor())) pad_ptr->SetFrameLineColor(*frameBorderColor);
+    if (auto frameBorderAlpha = get_first(pad.GetFrameBorderAlpha(), padDefaults.GetFrameBorderAlpha())) pad_ptr->SetFrameLineColor(TColor::GetColorTransparent(pad_ptr->GetFrameLineColor(), *frameBorderAlpha));
     if (auto frameBorderStyle = get_first(pad.GetFrameBorderStyle(), padDefaults.GetFrameBorderStyle())) pad_ptr->SetFrameLineStyle(*frameBorderStyle);
     if (auto frameBorderWidth = get_first(pad.GetFrameBorderWidth(), padDefaults.GetFrameBorderWidth())) pad_ptr->SetFrameLineWidth(*frameBorderWidth);
     if (auto candleBoxRange = get_first(pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange())) TCandle::SetBoxRange(*candleBoxRange);

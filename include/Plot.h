@@ -268,8 +268,9 @@ class Plot::Pad
   Pad& SetFrameFillColor(int16_t color);
   Pad& SetFrameFillStyle(int16_t style);
   Pad& SetFrameFillAlpha(float_t alpha);
-  Pad& SetFrameBorder(int16_t color, std::optional<int16_t> style = std::nullopt, std::optional<float_t> width = std::nullopt);
+  Pad& SetFrameBorder(int16_t color, std::optional<int16_t> style = std::nullopt, std::optional<float_t> width = std::nullopt, std::optional<float_t> alpha = std::nullopt);
   Pad& SetFrameBorderColor(int16_t color);
+  Pad& SetFrameBorderAlpha(float_t alpha);
   Pad& SetFrameBorderStyle(int16_t style);
   Pad& SetFrameBorderWidth(float_t width);
   Pad& SetFrameTransparent();
@@ -306,6 +307,7 @@ class Plot::Pad
   const auto& GetFrameFillStyle() const { return mFrameFill.style; }
   const auto& GetFrameFillAlpha() const { return mFrameFill.alpha; }
   const auto& GetFrameBorderColor() const { return mFrameBorder.color; }
+  const auto& GetFrameBorderAlpha() const { return mFrameBorder.alpha; }
   const auto& GetFrameBorderStyle() const { return mFrameBorder.style; }
   const auto& GetFrameBorderWidth() const { return mFrameBorder.scale; }
   const auto& GetDefaultTextColor() const { return mText.color; }
