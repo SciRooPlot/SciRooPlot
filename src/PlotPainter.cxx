@@ -218,6 +218,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     auto textFont = get_first(pad.GetDefaultTextFont(), padDefaults.GetDefaultTextFont());
     auto textSize = get_first(pad.GetDefaultTextSize(), padDefaults.GetDefaultTextSize());
     auto textColor = get_first(pad.GetDefaultTextColor(), padDefaults.GetDefaultTextColor());
+    auto textAlpha = get_first(pad.GetDefaultTextAlpha(), padDefaults.GetDefaultTextAlpha());
 
     canvas_ptr->cd();
     string padName = "Pad_" + std::to_string(padID);
@@ -514,11 +515,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (!axis_ptr) continue;
 
             auto textFontTitle = textFont;
-            auto textFontLabel = textFont;
-            auto textColorTitle = textColor;
-            auto textColorLabel = textColor;
             auto textSizeTitle = textSize;
+            auto textColorTitle = textColor;
+            auto textAlphaTitle = textAlpha;
+            auto textFontLabel = textFont;
             auto textSizeLabel = textSize;
+            auto textColorLabel = textColor;
+            auto textAlphaLabel = textAlpha;
 
             // first apply default pad values and then settings for this specific pad
             for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
@@ -531,6 +534,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
                 if (axisLayout.GetTitleColor()) textColorTitle = axisLayout.GetTitleColor();
                 if (axisLayout.GetLabelColor()) textColorLabel = axisLayout.GetLabelColor();
+
+                if (axisLayout.GetTitleAlpha()) textAlphaTitle = axisLayout.GetTitleAlpha();
+                if (axisLayout.GetLabelAlpha()) textAlphaLabel = axisLayout.GetLabelAlpha();
 
                 if (axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
                 if (axisLayout.GetLabelSize()) textSizeLabel = axisLayout.GetLabelSize();
@@ -678,11 +684,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
 
             if (textFontTitle) axis_ptr->SetTitleFont(*textFontTitle);
-            if (textFontLabel) axis_ptr->SetLabelFont(*textFontLabel);
-            if (textColorTitle) axis_ptr->SetTitleColor(*textColorTitle);
-            if (textColorLabel) axis_ptr->SetLabelColor(*textColorLabel);
             if (textSizeTitle) axis_ptr->SetTitleSize(*textSizeTitle);
+            if (textColorTitle) axis_ptr->SetTitleColor(*textColorTitle);
+            if (textAlphaTitle) axis_ptr->SetTitleColor(TColor::GetColorTransparent(axis_ptr->GetTitleColor(), *textAlphaTitle));
+            if (textFontLabel) axis_ptr->SetLabelFont(*textFontLabel);
             if (textSizeLabel) axis_ptr->SetLabelSize(*textSizeLabel);
+            if (textColorLabel) axis_ptr->SetLabelColor(*textColorLabel);
+            if (textAlphaLabel) axis_ptr->SetLabelColor(TColor::GetColorTransparent(axis_ptr->GetLabelColor(), *textAlphaLabel));
           }
 
           if (isTHN) {

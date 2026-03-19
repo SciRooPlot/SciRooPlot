@@ -353,6 +353,11 @@ auto Plot::Pad::SetDefaultTextColor(int16_t color) -> decltype(*this)
   mText.color = color;
   return *this;
 }
+auto Plot::Pad::SetDefaultTextAlpha(float_t alpha) -> decltype(*this)
+{
+  mText.alpha = alpha;
+  return *this;
+}
 
 //**************************************************************************************************
 /**
@@ -773,6 +778,7 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mFrameBorder.scale, "frame_border_width");
   read_from_tree(padTree, mText.style, "text_font");
   read_from_tree(padTree, mText.color, "text_color");
+  read_from_tree(padTree, mText.alpha, "text_alpha");
   read_from_tree(padTree, mText.scale, "text_size");
   read_from_tree(padTree, mMarkerDefaults.alpha, "default_marker_alpha");
   read_from_tree(padTree, mMarkerDefaults.scale, "default_marker_size");
@@ -864,6 +870,7 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mFrameBorder.scale, "frame_border_width");
   put_in_tree(padTree, mText.style, "text_font");
   put_in_tree(padTree, mText.color, "text_color");
+  put_in_tree(padTree, mText.alpha, "text_alpha");
   put_in_tree(padTree, mText.scale, "text_size");
   put_in_tree(padTree, mMarkerDefaults.alpha, "default_marker_alpha");
   put_in_tree(padTree, mMarkerDefaults.scale, "default_marker_size");
@@ -952,6 +959,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mText.scale) mText.scale = pad.mText.scale;
   if (pad.mText.style) mText.style = pad.mText.style;
   if (pad.mText.color) mText.color = pad.mText.color;
+  if (pad.mText.alpha) mText.alpha = pad.mText.alpha;
   if (pad.mMarkerDefaults.alpha) mMarkerDefaults.alpha = pad.mMarkerDefaults.alpha;
   if (pad.mMarkerDefaults.scale) mMarkerDefaults.scale = pad.mMarkerDefaults.scale;
   if (pad.mMarkerDefaults.styles) mMarkerDefaults.styles = pad.mMarkerDefaults.styles;
@@ -2115,11 +2123,13 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
   read_from_tree(axisTree, mTitleProperties.font, "title_font");
   read_from_tree(axisTree, mTitleProperties.size, "title_size");
   read_from_tree(axisTree, mTitleProperties.color, "title_color");
+  read_from_tree(axisTree, mTitleProperties.alpha, "title_alpha");
   read_from_tree(axisTree, mTitleProperties.offset, "title_offset");
   read_from_tree(axisTree, mTitleProperties.center, "title_center");
   read_from_tree(axisTree, mLabelProperties.font, "label_font");
   read_from_tree(axisTree, mLabelProperties.size, "label_size");
   read_from_tree(axisTree, mLabelProperties.color, "label_color");
+  read_from_tree(axisTree, mLabelProperties.alpha, "label_alpha");
   read_from_tree(axisTree, mLabelProperties.offset, "label_offset");
   read_from_tree(axisTree, mLabelProperties.center, "label_center");
   read_from_tree(axisTree, mIsLog, "is_log");
@@ -2149,11 +2159,13 @@ ptree Plot::Pad::Axis::GetPropertyTree() const
   put_in_tree(axisTree, mTitleProperties.font, "title_font");
   put_in_tree(axisTree, mTitleProperties.size, "title_size");
   put_in_tree(axisTree, mTitleProperties.color, "title_color");
+  put_in_tree(axisTree, mTitleProperties.alpha, "title_alpha");
   put_in_tree(axisTree, mTitleProperties.offset, "title_offset");
   put_in_tree(axisTree, mTitleProperties.center, "title_center");
   put_in_tree(axisTree, mLabelProperties.font, "label_font");
   put_in_tree(axisTree, mLabelProperties.size, "label_size");
   put_in_tree(axisTree, mLabelProperties.color, "label_color");
+  put_in_tree(axisTree, mLabelProperties.alpha, "label_alpha");
   put_in_tree(axisTree, mLabelProperties.offset, "label_offset");
   put_in_tree(axisTree, mLabelProperties.center, "label_center");
   put_in_tree(axisTree, mIsLog, "is_log");
@@ -2188,11 +2200,13 @@ void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
   if (axis.mTitleProperties.font) mTitleProperties.font = axis.mTitleProperties.font;
   if (axis.mTitleProperties.size) mTitleProperties.size = axis.mTitleProperties.size;
   if (axis.mTitleProperties.color) mTitleProperties.color = axis.mTitleProperties.color;
+  if (axis.mTitleProperties.alpha) mTitleProperties.alpha = axis.mTitleProperties.alpha;
   if (axis.mTitleProperties.offset) mTitleProperties.offset = axis.mTitleProperties.offset;
   if (axis.mTitleProperties.center) mTitleProperties.center = axis.mTitleProperties.center;
   if (axis.mLabelProperties.font) mLabelProperties.font = axis.mLabelProperties.font;
   if (axis.mLabelProperties.size) mLabelProperties.size = axis.mLabelProperties.size;
   if (axis.mLabelProperties.color) mLabelProperties.color = axis.mLabelProperties.color;
+  if (axis.mLabelProperties.alpha) mLabelProperties.alpha = axis.mLabelProperties.alpha;
   if (axis.mLabelProperties.offset) mLabelProperties.offset = axis.mLabelProperties.offset;
   if (axis.mLabelProperties.center) mLabelProperties.center = axis.mLabelProperties.center;
   if (axis.mTimeFormat) mTimeFormat = axis.mTimeFormat;
@@ -2279,6 +2293,16 @@ auto Plot::Pad::Axis::SetTitleColor(int16_t color) -> decltype(*this)
 auto Plot::Pad::Axis::SetLabelColor(int16_t color) -> decltype(*this)
 {
   mLabelProperties.color = color;
+  return *this;
+}
+auto Plot::Pad::Axis::SetTitleAlpha(float_t alpha) -> decltype(*this)
+{
+  mTitleProperties.alpha = alpha;
+  return *this;
+}
+auto Plot::Pad::Axis::SetLabelAlpha(float_t alpha) -> decltype(*this)
+{
+  mLabelProperties.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleOffset(float_t offset) -> decltype(*this)

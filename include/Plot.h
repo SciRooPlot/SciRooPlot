@@ -239,6 +239,7 @@ class Plot::Pad
   Pad& SetPalette(int32_t palette);
   Pad& SetDefaultTextSize(float_t size);
   Pad& SetDefaultTextColor(int16_t color);
+  Pad& SetDefaultTextAlpha(float_t alpha);
   Pad& SetDefaultTextFont(int16_t font);
   Pad& SetDefaultMarkerAlpha(float_t alpha);
   Pad& SetDefaultMarkerSize(float_t size);
@@ -311,6 +312,7 @@ class Plot::Pad
   const auto& GetFrameBorderStyle() const { return mFrameBorder.style; }
   const auto& GetFrameBorderWidth() const { return mFrameBorder.scale; }
   const auto& GetDefaultTextColor() const { return mText.color; }
+  const auto& GetDefaultTextAlpha() const { return mText.alpha; }
   const auto& GetDefaultTextFont() const { return mText.style; }
   const auto& GetDefaultTextSize() const { return mText.scale; }
   const auto& GetDefaultMarkerSize() const { return mMarkerDefaults.scale; }
@@ -750,6 +752,8 @@ class Plot::Pad::Axis
   Axis& SetLabelSize(float_t size);
   Axis& SetTitleColor(int16_t color);
   Axis& SetLabelColor(int16_t color);
+  Axis& SetTitleAlpha(float_t alpha);
+  Axis& SetLabelAlpha(float_t alpha);
   Axis& SetTitleOffset(float_t offset);
   Axis& SetLabelOffset(float_t offset);
   Axis& SetTitleCenter(bool center = true);
@@ -785,6 +789,8 @@ class Plot::Pad::Axis
   const auto& GetLabelSize() const { return mLabelProperties.size; }
   const auto& GetTitleColor() const { return mTitleProperties.color; }
   const auto& GetLabelColor() const { return mLabelProperties.color; }
+  const auto& GetTitleAlpha() const { return mTitleProperties.alpha; }
+  const auto& GetLabelAlpha() const { return mLabelProperties.alpha; }
   const auto& GetTitleOffset() const { return mTitleProperties.offset; }
   const auto& GetLabelOffset() const { return mLabelProperties.offset; }
   const auto& GetTitleCenter() const { return mTitleProperties.center; }
@@ -801,6 +807,7 @@ class Plot::Pad::Axis
     std::optional<int16_t> font;
     std::optional<float_t> size;
     std::optional<int16_t> color;
+    std::optional<float_t> alpha;
     std::optional<float_t> offset;
     std::optional<bool> center;
   };
