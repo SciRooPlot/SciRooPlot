@@ -969,15 +969,18 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   LegendBox& SetNumColumns(uint8_t numColumns);
   LegendBox& SetDefaultDrawStyle(std::string drawStyle);
   LegendBox& SetDefaultColor(int16_t color);
+  LegendBox& SetDefaultAlpha(float_t alpha);
   LegendBox& SetDefaultLineColor(int16_t color);
+  LegendBox& SetDefaultLineAlpha(float_t alpha);
   LegendBox& SetDefaultLineStyle(int16_t style);
   LegendBox& SetDefaultLineWidth(float_t width);
   LegendBox& SetDefaultMarkerColor(int16_t color);
+  LegendBox& SetDefaultMarkerAlpha(float_t alpha);
   LegendBox& SetDefaultMarkerStyle(int16_t style);
   LegendBox& SetDefaultMarkerSize(float_t size);
   LegendBox& SetDefaultFillColor(int16_t color);
-  LegendBox& SetDefaultFillStyle(int16_t style);
   LegendBox& SetDefaultFillAlpha(float_t alpha);
+  LegendBox& SetDefaultFillStyle(int16_t style);
   LegendBox& SetSymbolColScale(float_t scale);
 
  protected:
@@ -994,14 +997,16 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   const auto& GetEntries() const { return mLegendEntries; }
   const auto& GetDefaultDrawStyle() const { return mDrawStyleDefault; }
   const auto& GetDefaultMarkerColor() const { return mMarkerDefault.color; }
+  const auto& GetDefaultMarkerAlpha() const { return mMarkerDefault.alpha; }
   const auto& GetDefaultMarkerStyle() const { return mMarkerDefault.style; }
   const auto& GetDefaultMarkerSize() const { return mMarkerDefault.scale; }
   const auto& GetDefaultLineColor() const { return mLineDefault.color; }
+  const auto& GetDefaultLineAlpha() const { return mLineDefault.alpha; }
   const auto& GetDefaultLineStyle() const { return mLineDefault.style; }
   const auto& GetDefaultLineWidth() const { return mLineDefault.scale; }
   const auto& GetDefaultFillColor() const { return mFillDefault.color; }
-  const auto& GetDefaultFillStyle() const { return mFillDefault.style; }
   const auto& GetDefaultFillAlpha() const { return mFillDefault.alpha; }
+  const auto& GetDefaultFillStyle() const { return mFillDefault.style; }
   const auto& GetSymbolColScale() const { return mSymbolColScale; }
 
  private:

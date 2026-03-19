@@ -1293,9 +1293,13 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           if (auto ptr = dynamic_cast<TAttLine*>(data_ptr)) ptr->Copy(lineAttr);
           if (auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(fillAttr);
 
+          // override data attributes with default values if requested
           curEntry->SetMarkerColor(markerAttr.GetMarkerColor());
           if (box->GetDefaultMarkerColor()) {
             curEntry->SetMarkerColor(*box->GetDefaultMarkerColor());
+          }
+          if (box->GetDefaultMarkerAlpha()) {
+            curEntry->SetMarkerColor(TColor::GetColorTransparent(curEntry->GetMarkerColor(), *box->GetDefaultMarkerAlpha()));
           }
           curEntry->SetMarkerStyle(markerAttr.GetMarkerStyle());
           if (box->GetDefaultMarkerStyle()) {
@@ -1309,6 +1313,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           if (box->GetDefaultLineColor()) {
             curEntry->SetLineColor(*box->GetDefaultLineColor());
           }
+          if (box->GetDefaultLineAlpha()) {
+            curEntry->SetLineColor(TColor::GetColorTransparent(curEntry->GetLineColor(), *box->GetDefaultLineAlpha()));
+          }
           curEntry->SetLineStyle(lineAttr.GetLineStyle());
           if (box->GetDefaultLineStyle()) {
             curEntry->SetLineStyle(*box->GetDefaultLineStyle());
@@ -1321,11 +1328,13 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           if (box->GetDefaultFillColor()) {
             curEntry->SetFillColor(*box->GetDefaultFillColor());
           }
+          if (box->GetDefaultFillAlpha()) {
+            curEntry->SetFillColor(TColor::GetColorTransparent(curEntry->GetFillColor(), *box->GetDefaultFillAlpha()));
+          }
           curEntry->SetFillStyle(fillAttr.GetFillStyle());
           if (box->GetDefaultFillStyle()) {
             curEntry->SetFillStyle(*box->GetDefaultFillStyle());
           }
-          // TODO: alpha
         } else {
           curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), drawStyle.data());
         }

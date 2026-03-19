@@ -2699,14 +2699,16 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
   read_from_tree(legendBoxTree, mNumColumns, "num_columns");
   read_from_tree(legendBoxTree, mDrawStyleDefault, "default_draw_style");
   read_from_tree(legendBoxTree, mMarkerDefault.color, "default_marker_color");
+  read_from_tree(legendBoxTree, mMarkerDefault.alpha, "default_marker_alpha");
   read_from_tree(legendBoxTree, mMarkerDefault.style, "default_marker_style");
   read_from_tree(legendBoxTree, mMarkerDefault.scale, "default_marker_size");
   read_from_tree(legendBoxTree, mLineDefault.color, "default_line_color");
+  read_from_tree(legendBoxTree, mLineDefault.alpha, "default_line_alpha");
   read_from_tree(legendBoxTree, mLineDefault.style, "default_line_style");
   read_from_tree(legendBoxTree, mLineDefault.scale, "default_line_width");
   read_from_tree(legendBoxTree, mFillDefault.color, "default_fill_color");
-  read_from_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
   read_from_tree(legendBoxTree, mFillDefault.alpha, "default_fill_alpha");
+  read_from_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
   read_from_tree(legendBoxTree, mSymbolColScale, "symbol_col_scale");
 
   for (auto& content : legendBoxTree) {
@@ -2729,14 +2731,16 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
   put_in_tree(legendBoxTree, mNumColumns, "num_columns");
   put_in_tree(legendBoxTree, mDrawStyleDefault, "default_draw_style");
   put_in_tree(legendBoxTree, mMarkerDefault.color, "default_marker_color");
+  put_in_tree(legendBoxTree, mMarkerDefault.alpha, "default_marker_alpha");
   put_in_tree(legendBoxTree, mMarkerDefault.style, "default_marker_style");
   put_in_tree(legendBoxTree, mMarkerDefault.scale, "default_marker_size");
   put_in_tree(legendBoxTree, mLineDefault.color, "default_line_color");
+  put_in_tree(legendBoxTree, mLineDefault.alpha, "default_line_alpha");
   put_in_tree(legendBoxTree, mLineDefault.style, "default_line_style");
   put_in_tree(legendBoxTree, mLineDefault.scale, "default_line_width");
   put_in_tree(legendBoxTree, mFillDefault.color, "default_fill_color");
-  put_in_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
   put_in_tree(legendBoxTree, mFillDefault.alpha, "default_fill_alpha");
+  put_in_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
   put_in_tree(legendBoxTree, mSymbolColScale, "symbol_col_scale");
 
   for (auto& [legendEntryID, legendEntry] : mLegendEntriesUser) {
@@ -2778,9 +2782,23 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultColor(int16_t color)
   return *this;
 }
 
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultAlpha(float_t alpha)
+{
+  mLineDefault.alpha = alpha;
+  mMarkerDefault.alpha = alpha;
+  mFillDefault.alpha = alpha;
+  return *this;
+}
+
 Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineColor(int16_t color)
 {
   mLineDefault.color = color;
+  return *this;
+}
+
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineAlpha(float_t alpha)
+{
+  mLineDefault.alpha = alpha;
   return *this;
 }
 
@@ -2802,6 +2820,12 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultMarkerColor(int16_t color)
   return *this;
 }
 
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultMarkerAlpha(float_t alpha)
+{
+  mMarkerDefault.alpha = alpha;
+  return *this;
+}
+
 Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultMarkerStyle(int16_t style)
 {
   mMarkerDefault.style = style;
@@ -2820,17 +2844,18 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillColor(int16_t color)
   return *this;
 }
 
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillAlpha(float_t alpha)
+{
+  mFillDefault.alpha = alpha;
+  return *this;
+}
+
 Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillStyle(int16_t style)
 {
   mFillDefault.style = style;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillAlpha(float_t alpha)
-{
-  mFillDefault.alpha = alpha;
-  return *this;
-}
 Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetSymbolColScale(float_t scale)
 {
   mSymbolColScale = scale;
