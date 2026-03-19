@@ -114,13 +114,13 @@ class Plot
 
   Plot() = default;
   explicit Plot(const boost::property_tree::ptree& plotTree);
-  Plot(const std::string& name, const std::string& figureGroupAndCategory, const std::optional<std::string>& plotTemplateName = std::nullopt);
+  Plot(const std::string& name, const std::string& figureGroupAndCategory, const std::optional<std::string>& plotTemplateName = {});
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
   Pad& GetPadDefaults() { return mPads[0]; }
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& templatePlot, const Plot& plot);
-  Plot(const Plot& otherPlot, const std::string& name, const std::string& figureGroup, const std::optional<std::string>& figureCategory = std::nullopt);
+  Plot(const Plot& otherPlot, const std::string& name, const std::string& figureGroup, const std::optional<std::string>& figureCategory = {});
   Plot Clone() const;
 
   // accessors for user
@@ -131,7 +131,7 @@ class Plot
   void SetHeight(int32_t height);
   void SetFixAspectRatio(bool fixAspectRatio = true);
 
-  Plot& SetFill(int16_t color, std::optional<int16_t> style = std::nullopt, std::optional<float_t> alpha = std::nullopt);
+  Plot& SetFill(int16_t color, std::optional<int16_t> style = {}, std::optional<float_t> alpha = {});
   Plot& SetFillColor(int16_t color);
   Plot& SetFillStyle(int16_t style);
   Plot& SetFillAlpha(float_t alpha);
@@ -202,24 +202,24 @@ class Plot::Pad
   void operator+=(const Pad& pad);
 
   // User accessors:
-  Data& AddData(const std::string& name, const std::string& inputID, const std::optional<std::string>& label = std::nullopt);
-  Data& AddData(const std::string& name, const Data& dataTemplate, const std::optional<std::string>& label = std::nullopt);
-  Data& AddFunction(const std::string& function, const std::optional<std::string>& label = std::nullopt);
+  Data& AddData(const std::string& name, const std::string& inputID, const std::optional<std::string>& label = {});
+  Data& AddData(const std::string& name, const Data& dataTemplate, const std::optional<std::string>& label = {});
+  Data& AddFunction(const std::string& function, const std::optional<std::string>& label = {});
 
-  Data& AddPoints(std::vector<double_t> x, std::vector<double_t> y, const std::optional<std::string>& label = std::nullopt);
-  Data& AddPoints(std::vector<std::pair<double_t, double_t>> positions, const std::optional<std::string>& label = std::nullopt);
+  Data& AddPoints(std::vector<double_t> x, std::vector<double_t> y, const std::optional<std::string>& label = {});
+  Data& AddPoints(std::vector<std::pair<double_t, double_t>> positions, const std::optional<std::string>& label = {});
 
-  Data& AddLine(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2, const std::optional<std::string>& label = std::nullopt);
+  Data& AddLine(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2, const std::optional<std::string>& label = {});
 
   Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorInputID,
                   const std::string& denominatorName, const std::string& denominatorInputID,
-                  const std::optional<std::string>& label = std::nullopt);
+                  const std::optional<std::string>& label = {});
   Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorLayout, const std::string& denominatorName,
-                  const std::string& denominatorInputID, const std::optional<std::string>& label = std::nullopt);
+                  const std::string& denominatorInputID, const std::optional<std::string>& label = {});
   Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorLayout, const std::string& denominatorName,
-                  const Data& denominatorLayout, const std::optional<std::string>& label = std::nullopt);
+                  const Data& denominatorLayout, const std::optional<std::string>& label = {});
   Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorInputID, const std::string& denominatorName,
-                  const Data& denominatorLayout, const std::optional<std::string>& label = std::nullopt);
+                  const Data& denominatorLayout, const std::optional<std::string>& label = {});
 
   TextBox& AddText(double_t xPos, double_t yPos, const std::string& text);
   TextBox& AddText(const std::string& text);
@@ -243,32 +243,32 @@ class Plot::Pad
   Pad& SetDefaultMarkerAlpha(float_t alpha);
   Pad& SetDefaultMarkerSize(float_t size);
   Pad& SetDefaultMarkerColors(const std::vector<int16_t>& colors);
-  Pad& SetDefaultMarkerColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = std::nullopt, std::optional<int32_t> nColors = std::nullopt);
+  Pad& SetDefaultMarkerColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultMarkerStyles(const std::vector<int16_t>& styles);
   Pad& SetDefaultLineAlpha(float_t alpha);
   Pad& SetDefaultLineWidth(float_t width);
   Pad& SetDefaultLineColors(const std::vector<int16_t>& colors);
-  Pad& SetDefaultLineColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = std::nullopt, std::optional<int32_t> nColors = std::nullopt);
+  Pad& SetDefaultLineColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultLineStyles(const std::vector<int16_t>& styles);
   Pad& SetDefaultFillAlpha(float_t alpha);
   Pad& SetDefaultFillColors(const std::vector<int16_t>& colors);
-  Pad& SetDefaultFillColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = std::nullopt, std::optional<int32_t> nColors = std::nullopt);
+  Pad& SetDefaultFillColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles);
   Pad& SetDefaultDrawingOptionGraph(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist(drawing_options_t drawingOption);
   Pad& SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption);
   Pad& SetDefaultCandleBoxRange(float_t candleOption);
   Pad& SetDefaultCandleWhiskerRange(float_t candleOption);
-  Pad& SetFill(int16_t color, std::optional<int16_t> style = std::nullopt, std::optional<float_t> alpha = std::nullopt);
+  Pad& SetFill(int16_t color, std::optional<int16_t> style = {}, std::optional<float_t> alpha = {});
   Pad& SetFillColor(int16_t color);
   Pad& SetFillStyle(int16_t style);
   Pad& SetFillAlpha(float_t alpha);
   Pad& SetTransparent();
-  Pad& SetFrameFill(int16_t color, std::optional<int16_t> style = std::nullopt, std::optional<float_t> alpha = std::nullopt);
+  Pad& SetFrameFill(int16_t color, std::optional<int16_t> style = {}, std::optional<float_t> alpha = {});
   Pad& SetFrameFillColor(int16_t color);
   Pad& SetFrameFillStyle(int16_t style);
   Pad& SetFrameFillAlpha(float_t alpha);
-  Pad& SetFrameBorder(int16_t color, std::optional<int16_t> style = std::nullopt, std::optional<float_t> width = std::nullopt, std::optional<float_t> alpha = std::nullopt);
+  Pad& SetFrameBorder(int16_t color, std::optional<int16_t> style = {}, std::optional<float_t> width = {}, std::optional<float_t> alpha = {});
   Pad& SetFrameBorderColor(int16_t color);
   Pad& SetFrameBorderAlpha(float_t alpha);
   Pad& SetFrameBorderStyle(int16_t style);
@@ -1020,7 +1020,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 class Plot::Pad::LegendBox::LegendEntry
 {
  public:
-  explicit LegendEntry(const std::optional<std::string>& label = std::nullopt, const std::optional<uint16_t>& refDataID = std::nullopt, const std::optional<std::string>& drawStyle = std::nullopt);
+  explicit LegendEntry(const std::optional<std::string>& label = {}, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& drawStyle = {});
   explicit LegendEntry(const boost::property_tree::ptree& legendEntryTree);
 
   LegendEntry& SetLabel(const std::string& label);
