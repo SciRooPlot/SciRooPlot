@@ -107,7 +107,7 @@ Plot::Plot(const ptree& plotTree)
   read_from_tree(plotTree, mPlotDimensions.fixAspectRatio, "fix_aspect_ratio");
   read_from_tree(plotTree, mFill.color, "fill_color");
   read_from_tree(plotTree, mFill.style, "fill_style");
-  read_from_tree(plotTree, mFill.scale, "fill_opacity");
+  read_from_tree(plotTree, mFill.alpha, "fill_alpha");
 
   // loop over all pads defined in property tree
   for (auto& pad : plotTree) {
@@ -146,7 +146,7 @@ ptree Plot::GetPropertyTree() const
   put_in_tree(plotTree, mPlotDimensions.fixAspectRatio, "fix_aspect_ratio");
   put_in_tree(plotTree, mFill.color, "fill_color");
   put_in_tree(plotTree, mFill.style, "fill_style");
-  put_in_tree(plotTree, mFill.scale, "fill_opacity");
+  put_in_tree(plotTree, mFill.alpha, "fill_alpha");
 
   for (auto& [padID, pad] : mPads) {
     plotTree.put_child("PAD_" + std::to_string(padID), pad.GetPropertyTree());
@@ -237,11 +237,11 @@ void Plot::SetFixAspectRatio(bool fixAspectRatio)
  * Set fill for this plot.
  */
 //**************************************************************************************************
-auto Plot::SetFill(int16_t color, optional<int16_t> style, optional<float_t> opacity) -> decltype(*this)
+auto Plot::SetFill(int16_t color, optional<int16_t> style, optional<float_t> alpha) -> decltype(*this)
 {
   mFill.color = color;
   mFill.style = style;
-  mFill.scale = opacity;
+  mFill.alpha = alpha;
   return *this;
 }
 
@@ -257,9 +257,9 @@ auto Plot::SetFillStyle(int16_t style) -> decltype(*this)
   return *this;
 }
 
-auto Plot::SetFillOpacity(float_t opacity) -> decltype(*this)
+auto Plot::SetFillAlpha(float_t alpha) -> decltype(*this)
 {
-  mFill.scale = opacity;
+  mFill.alpha = alpha;
   return *this;
 }
 
@@ -294,7 +294,7 @@ void Plot::operator+=(const Plot& plot)
 
   if (plot.mFill.color) mFill.color = plot.mFill.color;
   if (plot.mFill.style) mFill.style = plot.mFill.style;
-  if (plot.mFill.scale) mFill.scale = plot.mFill.scale;
+  if (plot.mFill.alpha) mFill.alpha = plot.mFill.alpha;
 
   for (auto& [padID, pad] : plot.mPads) {
     mPads[padID];  // initializes the pad in case it was not yet defined in this plot
@@ -389,12 +389,12 @@ auto Plot::Pad::SetDefaultLineWidth(float_t width) -> decltype(*this)
 
 //**************************************************************************************************
 /**
- * Set default fill opacity for this pad.
+ * Set default fill alpha for this pad.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultFillOpacity(float_t opacity) -> decltype(*this)
+auto Plot::Pad::SetDefaultFillAlpha(float_t alpha) -> decltype(*this)
 {
-  mFillDefaults.scale = opacity;
+  mFillDefaults.alpha = alpha;
   return *this;
 }
 
@@ -548,11 +548,11 @@ auto Plot::Pad::SetDefaultCandleWhiskerRange(float_t candleOption) -> decltype(*
  * Set fill for this pad.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetFill(int16_t color, optional<int16_t> style, optional<float_t> opacity) -> decltype(*this)
+auto Plot::Pad::SetFill(int16_t color, optional<int16_t> style, optional<float_t> alpha) -> decltype(*this)
 {
   mFill.color = color;
   mFill.style = style;
-  mFill.scale = opacity;
+  mFill.alpha = alpha;
   return *this;
 }
 
@@ -568,9 +568,9 @@ auto Plot::Pad::SetFillStyle(int16_t style) -> decltype(*this)
   return *this;
 }
 
-auto Plot::Pad::SetFillOpacity(float_t opacity) -> decltype(*this)
+auto Plot::Pad::SetFillAlpha(float_t alpha) -> decltype(*this)
 {
-  mFill.scale = opacity;
+  mFill.alpha = alpha;
   return *this;
 }
 
@@ -591,11 +591,11 @@ auto Plot::Pad::SetTransparent() -> decltype(*this)
  * Set frame fill properties.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetFrameFill(int16_t color, optional<int16_t> style, optional<float_t> opacity) -> decltype(*this)
+auto Plot::Pad::SetFrameFill(int16_t color, optional<int16_t> style, optional<float_t> alpha) -> decltype(*this)
 {
   mFrameFill.color = color;
   mFrameFill.style = style;
-  mFrameFill.scale = opacity;
+  mFrameFill.alpha = alpha;
   return *this;
 }
 
@@ -611,9 +611,9 @@ auto Plot::Pad::SetFrameFillStyle(int16_t style) -> decltype(*this)
   return *this;
 }
 
-auto Plot::Pad::SetFrameFillOpacity(float_t opacity) -> decltype(*this)
+auto Plot::Pad::SetFrameFillAlpha(float_t alpha) -> decltype(*this)
 {
-  mFrameFill.scale = opacity;
+  mFrameFill.alpha = alpha;
   return *this;
 }
 
@@ -745,10 +745,10 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mPalette, "palette");
   read_from_tree(padTree, mFill.color, "fill_color");
   read_from_tree(padTree, mFill.style, "fill_style");
-  read_from_tree(padTree, mFill.scale, "fill_opacity");
+  read_from_tree(padTree, mFill.alpha, "fill_alpha");
   read_from_tree(padTree, mFrameFill.color, "frame_fill_color");
   read_from_tree(padTree, mFrameFill.style, "frame_fill_style");
-  read_from_tree(padTree, mFrameFill.scale, "frame_fill_opacity");
+  read_from_tree(padTree, mFrameFill.alpha, "frame_fill_alpha");
   read_from_tree(padTree, mFrameBorder.color, "frame_border_color");
   read_from_tree(padTree, mFrameBorder.style, "frame_border_style");
   read_from_tree(padTree, mFrameBorder.scale, "frame_border_width");
@@ -767,7 +767,7 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mLineDefaults.colorGradient.rgbEndpoints, "default_line_colors_gradient_endpoints");
   read_from_tree(padTree, mLineDefaults.colorGradient.alpha, "default_line_colors_gradient_alpha");
   read_from_tree(padTree, mLineDefaults.colorGradient.nColors, "default_line_colors_gradient_nColors");
-  read_from_tree(padTree, mFillDefaults.scale, "default_fill_opacity");
+  read_from_tree(padTree, mFillDefaults.alpha, "default_fill_alpha");
   read_from_tree(padTree, mFillDefaults.styles, "default_fill_styles");
   read_from_tree(padTree, mFillDefaults.colors, "default_fill_colors");
   read_from_tree(padTree, mFillDefaults.colorGradient.rgbEndpoints, "default_fill_colors_gradient_endpoints");
@@ -833,10 +833,10 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mPalette, "palette");
   put_in_tree(padTree, mFill.color, "fill_color");
   put_in_tree(padTree, mFill.style, "fill_style");
-  put_in_tree(padTree, mFill.scale, "fill_opacity");
+  put_in_tree(padTree, mFill.alpha, "fill_alpha");
   put_in_tree(padTree, mFrameFill.color, "frame_fill_color");
   put_in_tree(padTree, mFrameFill.style, "frame_fill_style");
-  put_in_tree(padTree, mFrameFill.scale, "frame_fill_opacity");
+  put_in_tree(padTree, mFrameFill.alpha, "frame_fill_alpha");
   put_in_tree(padTree, mFrameBorder.color, "frame_border_color");
   put_in_tree(padTree, mFrameBorder.style, "frame_border_style");
   put_in_tree(padTree, mFrameBorder.scale, "frame_border_width");
@@ -855,7 +855,7 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mLineDefaults.colorGradient.rgbEndpoints, "default_line_colors_gradient_endpoints");
   put_in_tree(padTree, mLineDefaults.colorGradient.alpha, "default_line_colors_gradient_alpha");
   put_in_tree(padTree, mLineDefaults.colorGradient.nColors, "default_line_colors_gradient_nColors");
-  put_in_tree(padTree, mFillDefaults.scale, "default_fill_opacity");
+  put_in_tree(padTree, mFillDefaults.alpha, "default_fill_alpha");
   put_in_tree(padTree, mFillDefaults.styles, "default_fill_styles");
   put_in_tree(padTree, mFillDefaults.colors, "default_fill_colors");
   put_in_tree(padTree, mFillDefaults.colorGradient.rgbEndpoints, "default_fill_colors_gradient_endpoints");
@@ -917,10 +917,10 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mView.phi) mView.phi = pad.mView.phi;
   if (pad.mFill.color) mFill.color = pad.mFill.color;
   if (pad.mFill.style) mFill.style = pad.mFill.style;
-  if (pad.mFill.scale) mFill.scale = pad.mFill.scale;
+  if (pad.mFill.alpha) mFill.alpha = pad.mFill.alpha;
   if (pad.mFrameFill.color) mFrameFill.color = pad.mFrameFill.color;
   if (pad.mFrameFill.style) mFrameFill.style = pad.mFrameFill.style;
-  if (pad.mFrameFill.scale) mFrameFill.scale = pad.mFrameFill.scale;
+  if (pad.mFrameFill.alpha) mFrameFill.alpha = pad.mFrameFill.alpha;
   if (pad.mFrameBorder.color) mFrameBorder.color = pad.mFrameBorder.color;
   if (pad.mFrameBorder.style) mFrameBorder.style = pad.mFrameBorder.style;
   if (pad.mFrameBorder.scale) mFrameBorder.scale = pad.mFrameBorder.scale;
@@ -1279,7 +1279,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mLine.scale, "line_width");
   read_from_tree(dataTree, mFill.color, "fill_color");
   read_from_tree(dataTree, mFill.style, "fill_style");
-  read_from_tree(dataTree, mFill.scale, "fill_opacity");
+  read_from_tree(dataTree, mFill.alpha, "fill_alpha");
   read_from_tree(dataTree, mModify.scaleFactor, "scale_factor");
   read_from_tree(dataTree, mModify.normMode, "norm_mode");
   read_from_tree(dataTree, mRangeX.min, "rangeX_min");
@@ -1364,7 +1364,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mLine.scale, "line_width");
   put_in_tree(dataTree, mFill.color, "fill_color");
   put_in_tree(dataTree, mFill.style, "fill_style");
-  put_in_tree(dataTree, mFill.scale, "fill_opacity");
+  put_in_tree(dataTree, mFill.alpha, "fill_alpha");
   put_in_tree(dataTree, mModify.scaleFactor, "scale_factor");
   put_in_tree(dataTree, mModify.normMode, "norm_mode");
   put_in_tree(dataTree, mRangeX.min, "rangeX_min");
@@ -1444,7 +1444,7 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
   mLine.scale = dataLayout.mLine.scale;
   mFill.color = dataLayout.mFill.color;
   mFill.style = dataLayout.mFill.style;
-  mFill.scale = dataLayout.mFill.scale;
+  mFill.alpha = dataLayout.mFill.alpha;
   mContours = dataLayout.mContours;
   mNContours = dataLayout.mNContours;
   return *this;
@@ -1469,7 +1469,7 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   set_if(dataLayout.mLine.scale, mLine.scale);
   set_if(dataLayout.mFill.color, mFill.color);
   set_if(dataLayout.mFill.style, mFill.style);
-  set_if(dataLayout.mFill.scale, mFill.scale);
+  set_if(dataLayout.mFill.alpha, mFill.alpha);
   set_if(dataLayout.mContours, mContours);
   set_if(dataLayout.mNContours, mNContours);
   return *this;
@@ -1605,11 +1605,11 @@ auto Plot::Pad::Data::SetLineWidth(float_t width) -> decltype(*this)
   mLine.scale = width;
   return *this;
 }
-auto Plot::Pad::Data::SetFill(int16_t color, int16_t style, float_t opacity) -> decltype(*this)
+auto Plot::Pad::Data::SetFill(int16_t color, int16_t style, float_t alpha) -> decltype(*this)
 {
   mFill.color = color;
   mFill.style = style;
-  mFill.scale = opacity;
+  mFill.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::Data::SetFillColor(int16_t color) -> decltype(*this)
@@ -1622,9 +1622,9 @@ auto Plot::Pad::Data::SetFillStyle(int16_t style) -> decltype(*this)
   mFill.style = style;
   return *this;
 }
-auto Plot::Pad::Data::SetFillOpacity(float_t opacity) -> decltype(*this)
+auto Plot::Pad::Data::SetFillAlpha(float_t alpha) -> decltype(*this)
 {
-  mFill.scale = opacity;
+  mFill.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
@@ -2309,7 +2309,7 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
   read_from_tree(boxTree, mBorder.scale, "border_width");
   read_from_tree(boxTree, mFill.style, "fill_style");
   read_from_tree(boxTree, mFill.color, "fill_color");
-  read_from_tree(boxTree, mFill.scale, "fill_opacity");
+  read_from_tree(boxTree, mFill.alpha, "fill_alpha");
   read_from_tree(boxTree, mText.style, "text_style");
   read_from_tree(boxTree, mText.color, "text_color");
   read_from_tree(boxTree, mText.scale, "text_size");
@@ -2334,7 +2334,7 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
   put_in_tree(boxTree, mBorder.scale, "border_width");
   put_in_tree(boxTree, mFill.style, "fill_style");
   put_in_tree(boxTree, mFill.color, "fill_color");
-  put_in_tree(boxTree, mFill.scale, "fill_opacity");
+  put_in_tree(boxTree, mFill.alpha, "fill_alpha");
   put_in_tree(boxTree, mText.style, "text_style");
   put_in_tree(boxTree, mText.color, "text_color");
   put_in_tree(boxTree, mText.scale, "text_size");
@@ -2433,11 +2433,11 @@ BoxType& Plot::Pad::Box<BoxType>::SetTextSize(float_t size)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetFill(int16_t color, int16_t style, float_t opacity)
+BoxType& Plot::Pad::Box<BoxType>::SetFill(int16_t color, int16_t style, float_t alpha)
 {
   mFill.color = color;
   mFill.style = style;
-  mFill.scale = opacity;
+  mFill.alpha = alpha;
   return *GetThis();
 }
 
@@ -2456,9 +2456,9 @@ BoxType& Plot::Pad::Box<BoxType>::SetFillStyle(int16_t style)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetFillOpacity(float_t opacity)
+BoxType& Plot::Pad::Box<BoxType>::SetFillAlpha(float_t alpha)
 {
-  mFill.scale = opacity;
+  mFill.alpha = alpha;
   return *GetThis();
 }
 
@@ -2598,7 +2598,7 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
   read_from_tree(legendBoxTree, mLineDefault.scale, "default_line_width");
   read_from_tree(legendBoxTree, mFillDefault.color, "default_fill_color");
   read_from_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
-  read_from_tree(legendBoxTree, mFillDefault.scale, "default_fill_opacity");
+  read_from_tree(legendBoxTree, mFillDefault.alpha, "default_fill_alpha");
   read_from_tree(legendBoxTree, mSymbolColScale, "symbol_col_scale");
 
   for (auto& content : legendBoxTree) {
@@ -2628,7 +2628,7 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
   put_in_tree(legendBoxTree, mLineDefault.scale, "default_line_width");
   put_in_tree(legendBoxTree, mFillDefault.color, "default_fill_color");
   put_in_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
-  put_in_tree(legendBoxTree, mFillDefault.scale, "default_fill_opacity");
+  put_in_tree(legendBoxTree, mFillDefault.alpha, "default_fill_alpha");
   put_in_tree(legendBoxTree, mSymbolColScale, "symbol_col_scale");
 
   for (auto& [legendEntryID, legendEntry] : mLegendEntriesUser) {
@@ -2718,9 +2718,9 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillStyle(int16_t style)
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillOpacity(float_t opacity)
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillAlpha(float_t alpha)
 {
-  mFillDefault.scale = opacity;
+  mFillDefault.alpha = alpha;
   return *this;
 }
 Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetSymbolColScale(float_t scale)
@@ -2783,7 +2783,7 @@ Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
   read_from_tree(legendEntryTree, mDrawStyle, "draw_style");
   read_from_tree(legendEntryTree, mFill.color, "fill_color");
   read_from_tree(legendEntryTree, mFill.style, "fill_style");
-  read_from_tree(legendEntryTree, mFill.scale, "fill_opacity");
+  read_from_tree(legendEntryTree, mFill.alpha, "fill_alpha");
   read_from_tree(legendEntryTree, mLine.color, "line_color");
   read_from_tree(legendEntryTree, mLine.style, "line_style");
   read_from_tree(legendEntryTree, mLine.scale, "line_width");
@@ -2808,7 +2808,7 @@ ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree() const
   put_in_tree(legendEntryTree, mDrawStyle, "draw_style");
   put_in_tree(legendEntryTree, mFill.color, "fill_color");
   put_in_tree(legendEntryTree, mFill.style, "fill_style");
-  put_in_tree(legendEntryTree, mFill.scale, "fill_opacity");
+  put_in_tree(legendEntryTree, mFill.alpha, "fill_alpha");
   put_in_tree(legendEntryTree, mLine.color, "line_color");
   put_in_tree(legendEntryTree, mLine.style, "line_style");
   put_in_tree(legendEntryTree, mLine.scale, "line_width");
@@ -2839,7 +2839,7 @@ void Plot::Pad::LegendBox::LegendEntry::operator+=(
   if (legendEntry.mLine.scale) this->mLine.scale = legendEntry.mLine.scale;
   if (legendEntry.mLine.style) this->mLine.style = legendEntry.mLine.style;
   if (legendEntry.mFill.color) this->mFill.color = legendEntry.mFill.color;
-  if (legendEntry.mFill.scale) this->mFill.scale = legendEntry.mFill.scale;
+  if (legendEntry.mFill.alpha) this->mFill.alpha = legendEntry.mFill.alpha;
   if (legendEntry.mFill.style) this->mFill.style = legendEntry.mFill.style;
   if (legendEntry.mText.color) this->mText.color = legendEntry.mText.color;
   if (legendEntry.mText.scale) this->mText.scale = legendEntry.mText.scale;
@@ -2926,10 +2926,9 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetFillSty
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetFillOpacity(
-  float_t opacity)
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetFillAlpha(float_t alpha)
 {
-  mFill.scale = opacity;
+  mFill.alpha = alpha;
   return *this;
 }
 

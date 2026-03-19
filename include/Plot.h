@@ -107,8 +107,9 @@ class Plot
   class Pad;
   struct layout_t {
     std::optional<int16_t> color;  // marker_color , line_color, fill_color, text_color
+    std::optional<float_t> alpha;  // marker_alpha , line_alpha, fill_alpha, text_alpha
     std::optional<int16_t> style;  // marker_style , line_style, fill_style, text_font
-    std::optional<float_t> scale;  // marker_size , line_width, fill_opacity, text_size
+    std::optional<float_t> scale;  // marker_size , line_width, fill_?????, text_size
   };
 
   Plot() = default;
@@ -130,10 +131,10 @@ class Plot
   void SetHeight(int32_t height);
   void SetFixAspectRatio(bool fixAspectRatio = true);
 
-  Plot& SetFill(int16_t color, std::optional<int16_t> style = std::nullopt, std::optional<float_t> opacity = std::nullopt);
+  Plot& SetFill(int16_t color, std::optional<int16_t> style = std::nullopt, std::optional<float_t> alpha = std::nullopt);
   Plot& SetFillColor(int16_t color);
   Plot& SetFillStyle(int16_t style);
-  Plot& SetFillOpacity(float_t opacity);
+  Plot& SetFillAlpha(float_t alpha);
   Plot& SetTransparent();
 
  protected:
@@ -156,7 +157,7 @@ class Plot
   const auto& IsFixAspectRatio() const { return mPlotDimensions.fixAspectRatio; }
   const auto& GetFillColor() const { return mFill.color; }
   const auto& GetFillStyle() const { return mFill.style; }
-  const auto& GetFillOpacity() const { return mFill.scale; }
+  const auto& GetFillAlpha() const { return mFill.alpha; }
 
   uint8_t GetDataCount() const;
 
@@ -247,7 +248,7 @@ class Plot::Pad
   Pad& SetDefaultLineColors(const std::vector<int16_t>& colors);
   Pad& SetDefaultLineColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = std::nullopt, std::optional<int32_t> nColors = std::nullopt);
   Pad& SetDefaultLineStyles(const std::vector<int16_t>& styles);
-  Pad& SetDefaultFillOpacity(float_t opacity);
+  Pad& SetDefaultFillAlpha(float_t alpha);
   Pad& SetDefaultFillColors(const std::vector<int16_t>& colors);
   Pad& SetDefaultFillColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = std::nullopt, std::optional<int32_t> nColors = std::nullopt);
   Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles);
@@ -256,15 +257,15 @@ class Plot::Pad
   Pad& SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption);
   Pad& SetDefaultCandleBoxRange(float_t candleOption);
   Pad& SetDefaultCandleWhiskerRange(float_t candleOption);
-  Pad& SetFill(int16_t color, std::optional<int16_t> style = std::nullopt, std::optional<float_t> opacity = std::nullopt);
+  Pad& SetFill(int16_t color, std::optional<int16_t> style = std::nullopt, std::optional<float_t> alpha = std::nullopt);
   Pad& SetFillColor(int16_t color);
   Pad& SetFillStyle(int16_t style);
-  Pad& SetFillOpacity(float_t opacity);
+  Pad& SetFillAlpha(float_t alpha);
   Pad& SetTransparent();
-  Pad& SetFrameFill(int16_t color, std::optional<int16_t> style = std::nullopt, std::optional<float_t> opacity = std::nullopt);
+  Pad& SetFrameFill(int16_t color, std::optional<int16_t> style = std::nullopt, std::optional<float_t> alpha = std::nullopt);
   Pad& SetFrameFillColor(int16_t color);
   Pad& SetFrameFillStyle(int16_t style);
-  Pad& SetFrameFillOpacity(float_t opacity);
+  Pad& SetFrameFillAlpha(float_t alpha);
   Pad& SetFrameBorder(int16_t color, std::optional<int16_t> style = std::nullopt, std::optional<float_t> width = std::nullopt);
   Pad& SetFrameBorderColor(int16_t color);
   Pad& SetFrameBorderStyle(int16_t style);
@@ -298,10 +299,10 @@ class Plot::Pad
   const auto& GetPalette() const { return mPalette; }
   const auto& GetFillColor() const { return mFill.color; }
   const auto& GetFillStyle() const { return mFill.style; }
-  const auto& GetFillOpacity() const { return mFill.scale; }
+  const auto& GetFillAlpha() const { return mFill.alpha; }
   const auto& GetFrameFillColor() const { return mFrameFill.color; }
   const auto& GetFrameFillStyle() const { return mFrameFill.style; }
-  const auto& GetFrameFillOpacity() const { return mFrameFill.scale; }
+  const auto& GetFrameFillAlpha() const { return mFrameFill.alpha; }
   const auto& GetFrameBorderColor() const { return mFrameBorder.color; }
   const auto& GetFrameBorderStyle() const { return mFrameBorder.style; }
   const auto& GetFrameBorderWidth() const { return mFrameBorder.scale; }
@@ -316,7 +317,7 @@ class Plot::Pad
   const auto& GetDefaultLineColors() const { return mLineDefaults.colors; }
   const auto& GetDefaultLineColorsGradient() const { return mLineDefaults.colorGradient; }
   const auto& GetDefaultLineStyles() const { return mLineDefaults.styles; }
-  const auto& GetDefaultFillOpacity() const { return mFillDefaults.scale; }
+  const auto& GetDefaultFillAlpha() const { return mFillDefaults.alpha; }
   const auto& GetDefaultFillColors() const { return mFillDefaults.colors; }
   const auto& GetDefaultFillColorsGradient() const { return mFillDefaults.colorGradient; }
   const auto& GetDefaultFillStyles() const { return mFillDefaults.styles; }
@@ -352,6 +353,7 @@ class Plot::Pad
   };
   struct view_defaults_t {
     std::optional<float_t> scale;
+    std::optional<float_t> alpha;
     std::optional<std::vector<int16_t>> styles;
     std::optional<std::vector<int16_t>> colors;
     gradient_color_t colorGradient;
@@ -442,10 +444,10 @@ class Plot::Pad::Data
   virtual Data& SetLineColor(int16_t color);
   virtual Data& SetLineStyle(int16_t style);
   virtual Data& SetLineWidth(float_t width);
-  virtual Data& SetFill(int16_t color, int16_t style, float_t opacity = 1.);
+  virtual Data& SetFill(int16_t color, int16_t style, float_t alpha = 1.);
   virtual Data& SetFillColor(int16_t color);
   virtual Data& SetFillStyle(int16_t style);
-  virtual Data& SetFillOpacity(float_t opacity);
+  virtual Data& SetFillAlpha(float_t alpha);
   virtual Data& SetDefinesFrame();
   virtual Data& SetContours(const std::vector<double>& contours);
   virtual Data& SetContours(int32_t nContours);
@@ -507,7 +509,7 @@ class Plot::Pad::Data
   const auto& GetLineWidth() const { return mLine.scale; }
   const auto& GetFillColor() const { return mFill.color; }
   const auto& GetFillStyle() const { return mFill.style; }
-  const auto& GetFillOpacity() const { return mFill.scale; }
+  const auto& GetFillAlpha() const { return mFill.alpha; }
   const auto& GetDrawingOptions() const { return mDrawingOptions; }
   const auto& GetDrawingOptionAlias() const { return mDrawingOptionAlias; }
   const auto& GetTextFormat() const { return mTextFormat; }
@@ -631,10 +633,10 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& SetLineColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetLineColor(color)); }
   Ratio& SetLineStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetLineStyle(style)); }
   Ratio& SetLineWidth(float_t width) { return static_cast<decltype(*this)&>(Data::SetLineWidth(width)); }
-  Ratio& SetFill(int16_t color, int16_t style, float_t opacity = 1.) { return static_cast<decltype(*this)&>(Data::SetFill(color, style, opacity)); }
+  Ratio& SetFill(int16_t color, int16_t style, float_t alpha = 1.) { return static_cast<decltype(*this)&>(Data::SetFill(color, style, alpha)); }
   Ratio& SetFillColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetFillColor(color)); }
   Ratio& SetFillStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetFillStyle(style)); }
-  Ratio& SetFillOpacity(float_t opacity) { return static_cast<decltype(*this)&>(Data::SetFillOpacity(opacity)); }
+  Ratio& SetFillAlpha(float_t alpha) { return static_cast<decltype(*this)&>(Data::SetFillAlpha(alpha)); }
   Ratio& SetDefinesFrame() { return static_cast<decltype(*this)&>(Data::SetDefinesFrame()); }
   Ratio& SetContours(const std::vector<double>& contours) { return static_cast<decltype(*this)&>(Data::SetContours(contours)); }
   Ratio& SetContours(int32_t nContours) { return static_cast<decltype(*this)&>(Data::SetContours(nContours)); }
@@ -838,10 +840,10 @@ class Plot::Pad::Box
   BoxType& SetTextColor(int16_t color);
   BoxType& SetTextFont(int16_t font);
   BoxType& SetTextSize(float_t size);
-  BoxType& SetFill(int16_t color, int16_t style, float_t opacity);
+  BoxType& SetFill(int16_t color, int16_t style, float_t alpha);
   BoxType& SetFillColor(int16_t color);
   BoxType& SetFillStyle(int16_t style);
-  BoxType& SetFillOpacity(float_t opacity);
+  BoxType& SetFillAlpha(float_t alpha);
   BoxType& SetTransparent();
   BoxType& SetNoBox();
   BoxType& SetMargin(float_t margin);
@@ -856,7 +858,7 @@ class Plot::Pad::Box
   auto& GetBorderWidth() const { return mBorder.scale; }
   auto& GetBorderColor() const { return mBorder.color; }
   auto& GetFillStyle() const { return mFill.style; }
-  auto& GetFillOpacity() const { return mFill.scale; }
+  auto& GetFillAlpha() const { return mFill.alpha; }
   auto& GetFillColor() const { return mFill.color; }
   auto& GetTextFont() const { return mText.style; }
   auto& GetTextSize() const { return mText.scale; }
@@ -954,7 +956,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   LegendBox& SetDefaultMarkerSize(float_t size);
   LegendBox& SetDefaultFillColor(int16_t color);
   LegendBox& SetDefaultFillStyle(int16_t style);
-  LegendBox& SetDefaultFillOpacity(float_t opacity);
+  LegendBox& SetDefaultFillAlpha(float_t alpha);
   LegendBox& SetSymbolColScale(float_t scale);
 
  protected:
@@ -978,7 +980,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   const auto& GetDefaultLineWidth() const { return mLineDefault.scale; }
   const auto& GetDefaultFillColor() const { return mFillDefault.color; }
   const auto& GetDefaultFillStyle() const { return mFillDefault.style; }
-  const auto& GetDefaultFillOpacity() const { return mFillDefault.scale; }
+  const auto& GetDefaultFillAlpha() const { return mFillDefault.alpha; }
   const auto& GetSymbolColScale() const { return mSymbolColScale; }
 
  private:
@@ -1019,7 +1021,7 @@ class Plot::Pad::LegendBox::LegendEntry
   LegendEntry& SetLineWidth(float_t width);
   LegendEntry& SetFillColor(int16_t color);
   LegendEntry& SetFillStyle(int16_t style);
-  LegendEntry& SetFillOpacity(float_t opacity);
+  LegendEntry& SetFillAlpha(float_t alpha);
   LegendEntry& SetTextColor(int16_t color);
   LegendEntry& SetTextFont(int16_t font);
   LegendEntry& SetTextSize(float_t size);
@@ -1044,7 +1046,7 @@ class Plot::Pad::LegendBox::LegendEntry
 
   const auto& GetFillColor() const { return mFill.color; }
   const auto& GetFillStyle() const { return mFill.style; }
-  const auto& GetFillOpacity() const { return mFill.scale; }
+  const auto& GetFillAlpha() const { return mFill.alpha; }
 
   const auto& GetTextColor() const { return mText.color; }
   const auto& GetTextFont() const { return mText.style; }

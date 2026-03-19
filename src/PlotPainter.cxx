@@ -197,7 +197,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   // apply user settings for plot
   if (plot.GetFillColor()) canvas_ptr->SetFillColor(*plot.GetFillColor());
   if (plot.GetFillStyle()) canvas_ptr->SetFillStyle(*plot.GetFillStyle());
-  if (plot.GetFillOpacity()) canvas_ptr->SetFillColor(TColor::GetColorTransparent(canvas_ptr->GetFillColor(), *plot.GetFillOpacity()));
+  if (plot.GetFillAlpha()) canvas_ptr->SetFillColor(TColor::GetColorTransparent(canvas_ptr->GetFillColor(), *plot.GetFillAlpha()));
 
   if (plot.IsFixAspectRatio()) canvas_ptr->SetFixedAspectRatio(*plot.IsFixAspectRatio());
 
@@ -230,10 +230,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto marginRight = get_first(pad.GetMarginRight(), padDefaults.GetMarginRight())) pad_ptr->SetRightMargin(*marginRight);
     if (auto padFillColor = get_first(pad.GetFillColor(), padDefaults.GetFillColor())) pad_ptr->SetFillColor(*padFillColor);
     if (auto padFillStyle = get_first(pad.GetFillStyle(), padDefaults.GetFillStyle())) pad_ptr->SetFillStyle(*padFillStyle);
-    if (auto padFillOpacity = get_first(pad.GetFillOpacity(), padDefaults.GetFillOpacity())) pad_ptr->SetFillColor(TColor::GetColorTransparent(pad_ptr->GetFillColor(), *padFillOpacity));
+    if (auto padFillAlpha = get_first(pad.GetFillAlpha(), padDefaults.GetFillAlpha())) pad_ptr->SetFillColor(TColor::GetColorTransparent(pad_ptr->GetFillColor(), *padFillAlpha));
     if (auto frameFillColor = get_first(pad.GetFrameFillColor(), padDefaults.GetFrameFillColor())) pad_ptr->SetFrameFillColor(*frameFillColor);
     if (auto frameFillStyle = get_first(pad.GetFrameFillStyle(), padDefaults.GetFrameFillStyle())) pad_ptr->SetFrameFillStyle(*frameFillStyle);
-    if (auto frameFillOpacity = get_first(pad.GetFrameFillOpacity(), padDefaults.GetFrameFillOpacity())) pad_ptr->SetFrameFillColor(TColor::GetColorTransparent(pad_ptr->GetFrameFillColor(), *frameFillOpacity));
+    if (auto frameFillAlpha = get_first(pad.GetFrameFillAlpha(), padDefaults.GetFrameFillAlpha())) pad_ptr->SetFrameFillColor(TColor::GetColorTransparent(pad_ptr->GetFrameFillColor(), *frameFillAlpha));
     if (auto frameBorderColor = get_first(pad.GetFrameBorderColor(), padDefaults.GetFrameBorderColor())) pad_ptr->SetFrameLineColor(*frameBorderColor);
     if (auto frameBorderStyle = get_first(pad.GetFrameBorderStyle(), padDefaults.GetFrameBorderStyle())) pad_ptr->SetFrameLineStyle(*frameBorderStyle);
     if (auto frameBorderWidth = get_first(pad.GetFrameBorderWidth(), padDefaults.GetFrameBorderWidth())) pad_ptr->SetFrameLineWidth(*frameBorderWidth);
@@ -747,10 +747,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (!data->GetFillStyle()) defaultSettingIndices[5]++;
             data_ptr->SetFillStyle(*fillStyle);
           }
-          if (auto fillOpacity = get_first(data->GetFillOpacity(),
-                                           pad.GetDefaultFillOpacity(),
-                                           padDefaults.GetDefaultFillOpacity())) {
-            data_ptr->SetFillColor(TColor::GetColorTransparent(data_ptr->GetFillColor(), *fillOpacity));
+          if (auto fillAlpha = get_first(data->GetFillAlpha(),
+                                         pad.GetDefaultFillAlpha(),
+                                         padDefaults.GetDefaultFillAlpha())) {
+            data_ptr->SetFillColor(TColor::GetColorTransparent(data_ptr->GetFillColor(), *fillAlpha));
           }
 
           // now define data ranges
@@ -1020,7 +1020,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     auto fillColor{box->GetFillColor()};
     auto fillStyle{box->GetFillStyle()};
-    auto fillOpacity{box->GetFillOpacity()};
+    auto fillAlpha{box->GetFillAlpha()};
 
     vector<string> lines;
     if constexpr (isLegend) {
@@ -1300,7 +1300,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           if (box->GetDefaultFillStyle()) {
             curEntry->SetFillStyle(*box->GetDefaultFillStyle());
           }
-          // TODO: opacity
+          // TODO: alpha
         } else {
           curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), drawStyle.data());
         }
@@ -1315,7 +1315,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
         if (entry.GetFillColor()) curEntry->SetFillColor(*entry.GetFillColor());
         if (entry.GetFillStyle()) curEntry->SetFillStyle(*entry.GetFillStyle());
-        if (entry.GetFillOpacity() && entry.GetFillColor()) curEntry->SetFillColor(TColor::GetColorTransparent(*entry.GetFillColor(), *entry.GetFillOpacity()));
+        if (entry.GetFillAlpha() && entry.GetFillColor()) curEntry->SetFillColor(TColor::GetColorTransparent(*entry.GetFillColor(), *entry.GetFillAlpha()));
 
         if (entry.GetTextColor()) curEntry->SetTextColor(*entry.GetTextColor());
         if (entry.GetTextFont()) curEntry->SetTextFont(*entry.GetTextFont());
@@ -1354,7 +1354,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         returnBox->SetFillStyle(0);  // TODO: steer via pad defaults
       }
       if (fillColor) returnBox->SetFillColor(*fillColor);
-      if (fillOpacity && fillColor) returnBox->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillOpacity));
+      if (fillAlpha && fillColor) returnBox->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillAlpha));
     }
   };
   std::visit(processBox, boxVariant);
