@@ -2890,15 +2890,18 @@ Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
   read_from_tree(legendEntryTree, mRefDataID, "ref_data_id");
   read_from_tree(legendEntryTree, mDrawStyle, "draw_style");
   read_from_tree(legendEntryTree, mFill.color, "fill_color");
-  read_from_tree(legendEntryTree, mFill.style, "fill_style");
   read_from_tree(legendEntryTree, mFill.alpha, "fill_alpha");
+  read_from_tree(legendEntryTree, mFill.style, "fill_style");
   read_from_tree(legendEntryTree, mLine.color, "line_color");
+  read_from_tree(legendEntryTree, mLine.alpha, "line_alpha");
   read_from_tree(legendEntryTree, mLine.style, "line_style");
   read_from_tree(legendEntryTree, mLine.scale, "line_width");
   read_from_tree(legendEntryTree, mMarker.color, "marker_color");
+  read_from_tree(legendEntryTree, mMarker.alpha, "marker_alpha");
   read_from_tree(legendEntryTree, mMarker.style, "marker_style");
   read_from_tree(legendEntryTree, mMarker.scale, "marker_width");
   read_from_tree(legendEntryTree, mText.color, "text_color");
+  read_from_tree(legendEntryTree, mText.alpha, "text_alpha");
   read_from_tree(legendEntryTree, mText.style, "text_font");
   read_from_tree(legendEntryTree, mText.scale, "text_size");
 }
@@ -2918,12 +2921,15 @@ ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree() const
   put_in_tree(legendEntryTree, mFill.style, "fill_style");
   put_in_tree(legendEntryTree, mFill.alpha, "fill_alpha");
   put_in_tree(legendEntryTree, mLine.color, "line_color");
+  put_in_tree(legendEntryTree, mLine.alpha, "line_alpha");
   put_in_tree(legendEntryTree, mLine.style, "line_style");
   put_in_tree(legendEntryTree, mLine.scale, "line_width");
   put_in_tree(legendEntryTree, mMarker.color, "marker_color");
+  put_in_tree(legendEntryTree, mMarker.alpha, "marker_alpha");
   put_in_tree(legendEntryTree, mMarker.style, "marker_style");
   put_in_tree(legendEntryTree, mMarker.scale, "marker_width");
   put_in_tree(legendEntryTree, mText.color, "text_color");
+  put_in_tree(legendEntryTree, mText.alpha, "text_alpha");
   put_in_tree(legendEntryTree, mText.style, "text_font");
   put_in_tree(legendEntryTree, mText.scale, "text_size");
   return legendEntryTree;
@@ -2941,15 +2947,18 @@ void Plot::Pad::LegendBox::LegendEntry::operator+=(
   if (legendEntry.mLabel) this->mLabel = legendEntry.mLabel;
   if (legendEntry.mRefDataID) this->mRefDataID = legendEntry.mRefDataID;
   if (legendEntry.mMarker.color) this->mMarker.color = legendEntry.mMarker.color;
+  if (legendEntry.mMarker.alpha) this->mMarker.alpha = legendEntry.mMarker.alpha;
   if (legendEntry.mMarker.scale) this->mMarker.scale = legendEntry.mMarker.scale;
   if (legendEntry.mMarker.style) this->mMarker.style = legendEntry.mMarker.style;
   if (legendEntry.mLine.color) this->mLine.color = legendEntry.mLine.color;
+  if (legendEntry.mLine.alpha) this->mLine.alpha = legendEntry.mLine.alpha;
   if (legendEntry.mLine.scale) this->mLine.scale = legendEntry.mLine.scale;
   if (legendEntry.mLine.style) this->mLine.style = legendEntry.mLine.style;
   if (legendEntry.mFill.color) this->mFill.color = legendEntry.mFill.color;
   if (legendEntry.mFill.alpha) this->mFill.alpha = legendEntry.mFill.alpha;
   if (legendEntry.mFill.style) this->mFill.style = legendEntry.mFill.style;
   if (legendEntry.mText.color) this->mText.color = legendEntry.mText.color;
+  if (legendEntry.mText.alpha) this->mText.alpha = legendEntry.mText.alpha;
   if (legendEntry.mText.scale) this->mText.scale = legendEntry.mText.scale;
   if (legendEntry.mText.style) this->mText.style = legendEntry.mText.style;
 }
@@ -2986,9 +2995,23 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetColor(i
   return *this;
 }
 
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetAlpha(float_t alpha)
+{
+  mMarker.alpha = alpha;
+  mLine.alpha = alpha;
+  mFill.alpha = alpha;
+  return *this;
+}
+
 Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetMarkerColor(int16_t color)
 {
   mMarker.color = color;
+  return *this;
+}
+
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetMarkerAlpha(float_t alpha)
+{
+  mMarker.alpha = alpha;
   return *this;
 }
 
@@ -3010,6 +3033,12 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLineCol
   return *this;
 }
 
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLineAlpha(float_t alpha)
+{
+  mLine.alpha = alpha;
+  return *this;
+}
+
 Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLineStyle(int16_t style)
 {
   mLine.style = style;
@@ -3028,21 +3057,27 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetFillCol
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetFillStyle(int16_t style)
-{
-  mFill.style = style;
-  return *this;
-}
-
 Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetFillAlpha(float_t alpha)
 {
   mFill.alpha = alpha;
   return *this;
 }
 
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetFillStyle(int16_t style)
+{
+  mFill.style = style;
+  return *this;
+}
+
 Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetTextColor(int16_t color)
 {
   mText.color = color;
+  return *this;
+}
+
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetTextAlpha(float_t alpha)
+{
+  mText.alpha = alpha;
   return *this;
 }
 

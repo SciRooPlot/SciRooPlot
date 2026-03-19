@@ -1331,18 +1331,21 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         }
 
         if (entry.GetMarkerColor()) curEntry->SetMarkerColor(*entry.GetMarkerColor());
+        if (entry.GetMarkerAlpha()) curEntry->SetMarkerColor(TColor::GetColorTransparent(curEntry->GetMarkerColor(), *entry.GetMarkerAlpha()));
         if (entry.GetMarkerStyle()) curEntry->SetMarkerStyle(*entry.GetMarkerStyle());
         if (entry.GetMarkerSize()) curEntry->SetMarkerSize(*entry.GetMarkerSize());
 
         if (entry.GetLineColor()) curEntry->SetLineColor(*entry.GetLineColor());
+        if (entry.GetLineAlpha()) curEntry->SetLineColor(TColor::GetColorTransparent(curEntry->GetLineColor(), *entry.GetLineAlpha()));
         if (entry.GetLineStyle()) curEntry->SetLineStyle(*entry.GetLineStyle());
         if (entry.GetLineWidth()) curEntry->SetLineWidth(*entry.GetLineWidth());
 
         if (entry.GetFillColor()) curEntry->SetFillColor(*entry.GetFillColor());
+        if (entry.GetFillAlpha()) curEntry->SetFillColor(TColor::GetColorTransparent(curEntry->GetFillColor(), *entry.GetFillAlpha()));
         if (entry.GetFillStyle()) curEntry->SetFillStyle(*entry.GetFillStyle());
-        if (entry.GetFillAlpha() && entry.GetFillColor()) curEntry->SetFillColor(TColor::GetColorTransparent(*entry.GetFillColor(), *entry.GetFillAlpha()));
 
         if (entry.GetTextColor()) curEntry->SetTextColor(*entry.GetTextColor());
+        if (entry.GetTextAlpha()) curEntry->SetTextColor(TColor::GetColorTransparent(curEntry->GetTextColor(), *entry.GetTextAlpha()));
         if (entry.GetTextFont()) curEntry->SetTextFont(*entry.GetTextFont());
         if (entry.GetTextSize()) curEntry->SetTextSize(*entry.GetTextSize());
         ++i;

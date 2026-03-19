@@ -1034,16 +1034,20 @@ class Plot::Pad::LegendBox::LegendEntry
   LegendEntry& SetRefData(uint16_t refDataID);
   LegendEntry& SetDrawStyle(const std::string& drawStyle);
   LegendEntry& SetColor(int16_t color);
+  LegendEntry& SetAlpha(float_t alpha);
   LegendEntry& SetMarkerColor(int16_t color);
+  LegendEntry& SetMarkerAlpha(float_t alpha);
   LegendEntry& SetMarkerStyle(int16_t style);
   LegendEntry& SetMarkerSize(float_t size);
   LegendEntry& SetLineColor(int16_t color);
+  LegendEntry& SetLineAlpha(float_t alpha);
   LegendEntry& SetLineStyle(int16_t style);
   LegendEntry& SetLineWidth(float_t width);
   LegendEntry& SetFillColor(int16_t color);
-  LegendEntry& SetFillStyle(int16_t style);
   LegendEntry& SetFillAlpha(float_t alpha);
+  LegendEntry& SetFillStyle(int16_t style);
   LegendEntry& SetTextColor(int16_t color);
+  LegendEntry& SetTextAlpha(float_t alpha);
   LegendEntry& SetTextFont(int16_t font);
   LegendEntry& SetTextSize(float_t size);
 
@@ -1058,18 +1062,21 @@ class Plot::Pad::LegendBox::LegendEntry
   const auto& GetDrawStyle() const { return mDrawStyle; }
 
   const auto& GetMarkerColor() const { return mMarker.color; }
+  const auto& GetMarkerAlpha() const { return mMarker.alpha; }
   const auto& GetMarkerStyle() const { return mMarker.style; }
   const auto& GetMarkerSize() const { return mMarker.scale; }
 
   const auto& GetLineColor() const { return mLine.color; }
+  const auto& GetLineAlpha() const { return mLine.alpha; }
   const auto& GetLineStyle() const { return mLine.style; }
   const auto& GetLineWidth() const { return mLine.scale; }
 
   const auto& GetFillColor() const { return mFill.color; }
-  const auto& GetFillStyle() const { return mFill.style; }
   const auto& GetFillAlpha() const { return mFill.alpha; }
+  const auto& GetFillStyle() const { return mFill.style; }
 
   const auto& GetTextColor() const { return mText.color; }
+  const auto& GetTextAlpha() const { return mText.alpha; }
   const auto& GetTextFont() const { return mText.style; }
   const auto& GetTextSize() const { return mText.scale; }
 
