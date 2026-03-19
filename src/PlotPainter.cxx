@@ -1038,6 +1038,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     auto textSize{box->GetTextSize()};
 
     auto borderColor{box->GetBorderColor()};
+    auto borderAlpha{box->GetBorderAlpha()};
     auto borderStyle{box->GetBorderStyle()};
     auto borderWidth{box->GetBorderWidth()};
 
@@ -1368,6 +1369,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     if (returnBox) {
       if (borderStyle) returnBox->SetLineStyle(*borderStyle);
       if (borderColor) returnBox->SetLineColor(*borderColor);
+      if (borderAlpha) returnBox->SetLineColor(TColor::GetColorTransparent(returnBox->GetLineColor(), *borderAlpha));
       if (borderWidth) {
         returnBox->SetLineWidth(*borderWidth);
       } else {

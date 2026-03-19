@@ -849,8 +849,9 @@ class Plot::Pad::Box
   BoxType& SetPosition(double_t x, double_t y);
   BoxType& SetUserCoordinates(bool isUserCoord = true);
   BoxType& SetAutoPlacement();
-  BoxType& SetBorder(int16_t color, int16_t style, float_t width);
+  BoxType& SetBorder(int16_t color, int16_t style, float_t width, std::optional<float_t> alpha = {});
   BoxType& SetBorderColor(int16_t color);
+  BoxType& SetBorderAlpha(float_t alpha);
   BoxType& SetBorderStyle(int16_t style);
   BoxType& SetBorderWidth(float_t width);
   BoxType& SetText(int16_t color, int16_t font, float_t size, std::optional<float_t> alpha = {});
@@ -875,6 +876,7 @@ class Plot::Pad::Box
   auto& GetBorderStyle() const { return mBorder.style; }
   auto& GetBorderWidth() const { return mBorder.scale; }
   auto& GetBorderColor() const { return mBorder.color; }
+  auto& GetBorderAlpha() const { return mBorder.alpha; }
   auto& GetFillStyle() const { return mFill.style; }
   auto& GetFillAlpha() const { return mFill.alpha; }
   auto& GetFillColor() const { return mFill.color; }

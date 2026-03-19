@@ -2395,6 +2395,7 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
   read_from_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
   read_from_tree(boxTree, mBorder.style, "border_style");
   read_from_tree(boxTree, mBorder.color, "border_color");
+  read_from_tree(boxTree, mBorder.alpha, "border_alpha");
   read_from_tree(boxTree, mBorder.scale, "border_width");
   read_from_tree(boxTree, mFill.style, "fill_style");
   read_from_tree(boxTree, mFill.color, "fill_color");
@@ -2421,6 +2422,7 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
   put_in_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
   put_in_tree(boxTree, mBorder.style, "border_style");
   put_in_tree(boxTree, mBorder.color, "border_color");
+  put_in_tree(boxTree, mBorder.alpha, "border_alpha");
   put_in_tree(boxTree, mBorder.scale, "border_width");
   put_in_tree(boxTree, mFill.style, "fill_style");
   put_in_tree(boxTree, mFill.color, "fill_color");
@@ -2464,7 +2466,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetAutoPlacement()
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetBorder(int16_t color, int16_t style, float_t width)
+BoxType& Plot::Pad::Box<BoxType>::SetBorder(int16_t color, int16_t style, float_t width, optional<float_t> alpha)
 {
   mBorder.color = color;
   mBorder.style = style;
@@ -2476,6 +2478,13 @@ template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetBorderColor(int16_t color)
 {
   mBorder.color = color;
+  return *GetThis();
+}
+
+template <typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetBorderAlpha(float_t alpha)
+{
+  mBorder.alpha = alpha;
   return *GetThis();
 }
 
