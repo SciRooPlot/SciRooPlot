@@ -397,6 +397,16 @@ auto Plot::Pad::SetDefaultFillAlpha(float_t alpha) -> decltype(*this)
   mFillDefaults.alpha = alpha;
   return *this;
 }
+auto Plot::Pad::SetDefaultMarkerAlpha(float_t alpha) -> decltype(*this)
+{
+  mMarkerDefaults.alpha = alpha;
+  return *this;
+}
+auto Plot::Pad::SetDefaultLineAlpha(float_t alpha) -> decltype(*this)
+{
+  mLineDefaults.alpha = alpha;
+  return *this;
+}
 
 //**************************************************************************************************
 /**
@@ -412,6 +422,7 @@ auto Plot::Pad::SetDefaultMarkerColors(const vector<int16_t>& colors) -> decltyp
 
 auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
+  mMarkerDefaults.alpha = nullopt;
   mMarkerDefaults.colors = nullopt;
   mMarkerDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
@@ -755,12 +766,14 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mText.style, "text_font");
   read_from_tree(padTree, mText.color, "text_color");
   read_from_tree(padTree, mText.scale, "text_size");
+  read_from_tree(padTree, mMarkerDefaults.alpha, "default_marker_alpha");
   read_from_tree(padTree, mMarkerDefaults.scale, "default_marker_size");
   read_from_tree(padTree, mMarkerDefaults.styles, "default_marker_styles");
   read_from_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
   read_from_tree(padTree, mMarkerDefaults.colorGradient.rgbEndpoints, "default_marker_colors_gradient_endpoints");
   read_from_tree(padTree, mMarkerDefaults.colorGradient.alpha, "default_marker_colors_gradient_alpha");
   read_from_tree(padTree, mMarkerDefaults.colorGradient.nColors, "default_marker_colors_gradient_nColors");
+  read_from_tree(padTree, mLineDefaults.alpha, "default_line_alpha");
   read_from_tree(padTree, mLineDefaults.scale, "default_line_width");
   read_from_tree(padTree, mLineDefaults.styles, "default_line_styles");
   read_from_tree(padTree, mLineDefaults.colors, "default_line_colors");
@@ -843,12 +856,14 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mText.style, "text_font");
   put_in_tree(padTree, mText.color, "text_color");
   put_in_tree(padTree, mText.scale, "text_size");
+  put_in_tree(padTree, mMarkerDefaults.alpha, "default_marker_alpha");
   put_in_tree(padTree, mMarkerDefaults.scale, "default_marker_size");
   put_in_tree(padTree, mMarkerDefaults.styles, "default_marker_styles");
   put_in_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
   put_in_tree(padTree, mMarkerDefaults.colorGradient.rgbEndpoints, "default_marker_colors_gradient_endpoints");
   put_in_tree(padTree, mMarkerDefaults.colorGradient.alpha, "default_marker_colors_gradient_alpha");
   put_in_tree(padTree, mMarkerDefaults.colorGradient.nColors, "default_marker_colors_gradient_nColors");
+  put_in_tree(padTree, mLineDefaults.alpha, "default_line_alpha");
   put_in_tree(padTree, mLineDefaults.scale, "default_line_width");
   put_in_tree(padTree, mLineDefaults.styles, "default_line_styles");
   put_in_tree(padTree, mLineDefaults.colors, "default_line_colors");
@@ -927,6 +942,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mText.scale) mText.scale = pad.mText.scale;
   if (pad.mText.style) mText.style = pad.mText.style;
   if (pad.mText.color) mText.color = pad.mText.color;
+  if (pad.mMarkerDefaults.alpha) mMarkerDefaults.alpha = pad.mMarkerDefaults.alpha;
   if (pad.mMarkerDefaults.scale) mMarkerDefaults.scale = pad.mMarkerDefaults.scale;
   if (pad.mMarkerDefaults.styles) mMarkerDefaults.styles = pad.mMarkerDefaults.styles;
   if (pad.mMarkerDefaults.colors) {
@@ -938,7 +954,9 @@ void Plot::Pad::operator+=(const Pad& pad)
     if (pad.mMarkerDefaults.colorGradient.alpha) mMarkerDefaults.colorGradient.alpha = pad.mMarkerDefaults.colorGradient.alpha;
     if (pad.mMarkerDefaults.colorGradient.nColors) mMarkerDefaults.colorGradient.nColors = pad.mMarkerDefaults.colorGradient.nColors;
     mMarkerDefaults.colors = nullopt;
+    mMarkerDefaults.alpha = nullopt;
   }
+  if (pad.mLineDefaults.alpha) mLineDefaults.alpha = pad.mLineDefaults.alpha;
   if (pad.mLineDefaults.scale) mLineDefaults.scale = pad.mLineDefaults.scale;
   if (pad.mLineDefaults.styles) mLineDefaults.styles = pad.mLineDefaults.styles;
   if (pad.mLineDefaults.colors) {
@@ -950,8 +968,9 @@ void Plot::Pad::operator+=(const Pad& pad)
     if (pad.mLineDefaults.colorGradient.alpha) mLineDefaults.colorGradient.alpha = pad.mLineDefaults.colorGradient.alpha;
     if (pad.mLineDefaults.colorGradient.nColors) mLineDefaults.colorGradient.nColors = pad.mLineDefaults.colorGradient.nColors;
     mLineDefaults.colors = nullopt;
+    mLineDefaults.alpha = nullopt;
   }
-  if (pad.mFillDefaults.scale) mFillDefaults.scale = pad.mFillDefaults.scale;
+  if (pad.mFillDefaults.alpha) mFillDefaults.alpha = pad.mFillDefaults.alpha;
   if (pad.mFillDefaults.styles) mFillDefaults.styles = pad.mFillDefaults.styles;
   if (pad.mFillDefaults.colors) {
     mFillDefaults.colors = pad.mFillDefaults.colors;
@@ -962,6 +981,7 @@ void Plot::Pad::operator+=(const Pad& pad)
     if (pad.mFillDefaults.colorGradient.alpha) mFillDefaults.colorGradient.alpha = pad.mFillDefaults.colorGradient.alpha;
     if (pad.mFillDefaults.colorGradient.nColors) mFillDefaults.colorGradient.nColors = pad.mFillDefaults.colorGradient.nColors;
     mFillDefaults.colors = nullopt;
+    mFillDefaults.alpha = nullopt;
   }
   if (pad.mDrawingOptionDefaults.graph) mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
   if (pad.mDrawingOptionDefaults.hist) mDrawingOptionDefaults.hist = pad.mDrawingOptionDefaults.hist;
@@ -1272,14 +1292,16 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mDrawingOptionAlias, "drawing_option_alias");
   read_from_tree(dataTree, mTextFormat, "text_format");
   read_from_tree(dataTree, mMarker.color, "marker_color");
+  read_from_tree(dataTree, mMarker.alpha, "marker_alpha");
   read_from_tree(dataTree, mMarker.style, "marker_style");
   read_from_tree(dataTree, mMarker.scale, "marker_size");
   read_from_tree(dataTree, mLine.color, "line_color");
+  read_from_tree(dataTree, mLine.alpha, "line_alpha");
   read_from_tree(dataTree, mLine.style, "line_style");
   read_from_tree(dataTree, mLine.scale, "line_width");
   read_from_tree(dataTree, mFill.color, "fill_color");
-  read_from_tree(dataTree, mFill.style, "fill_style");
   read_from_tree(dataTree, mFill.alpha, "fill_alpha");
+  read_from_tree(dataTree, mFill.style, "fill_style");
   read_from_tree(dataTree, mModify.scaleFactor, "scale_factor");
   read_from_tree(dataTree, mModify.normMode, "norm_mode");
   read_from_tree(dataTree, mRangeX.min, "rangeX_min");
@@ -1357,14 +1379,16 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mDrawingOptionAlias, "drawing_option_alias");
   put_in_tree(dataTree, mTextFormat, "text_format");
   put_in_tree(dataTree, mMarker.color, "marker_color");
+  put_in_tree(dataTree, mMarker.alpha, "marker_alpha");
   put_in_tree(dataTree, mMarker.style, "marker_style");
   put_in_tree(dataTree, mMarker.scale, "marker_size");
   put_in_tree(dataTree, mLine.color, "line_color");
+  put_in_tree(dataTree, mLine.alpha, "line_alpha");
   put_in_tree(dataTree, mLine.style, "line_style");
   put_in_tree(dataTree, mLine.scale, "line_width");
   put_in_tree(dataTree, mFill.color, "fill_color");
-  put_in_tree(dataTree, mFill.style, "fill_style");
   put_in_tree(dataTree, mFill.alpha, "fill_alpha");
+  put_in_tree(dataTree, mFill.style, "fill_style");
   put_in_tree(dataTree, mModify.scaleFactor, "scale_factor");
   put_in_tree(dataTree, mModify.normMode, "norm_mode");
   put_in_tree(dataTree, mRangeX.min, "rangeX_min");
@@ -1437,14 +1461,16 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
   mScaleRange.min = dataLayout.mScaleRange.min;
   mScaleRange.max = dataLayout.mScaleRange.max;
   mMarker.color = dataLayout.mMarker.color;
+  mMarker.alpha = dataLayout.mMarker.alpha;
   mMarker.style = dataLayout.mMarker.style;
   mMarker.scale = dataLayout.mMarker.scale;
   mLine.color = dataLayout.mLine.color;
+  mLine.alpha = dataLayout.mLine.alpha;
   mLine.style = dataLayout.mLine.style;
   mLine.scale = dataLayout.mLine.scale;
   mFill.color = dataLayout.mFill.color;
-  mFill.style = dataLayout.mFill.style;
   mFill.alpha = dataLayout.mFill.alpha;
+  mFill.style = dataLayout.mFill.style;
   mContours = dataLayout.mContours;
   mNContours = dataLayout.mNContours;
   return *this;
@@ -1462,14 +1488,16 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   set_if(dataLayout.mScaleRange.min, mScaleRange.min);
   set_if(dataLayout.mScaleRange.max, mScaleRange.max);
   set_if(dataLayout.mMarker.color, mMarker.color);
+  set_if(dataLayout.mMarker.alpha, mMarker.alpha);
   set_if(dataLayout.mMarker.style, mMarker.style);
   set_if(dataLayout.mMarker.scale, mMarker.scale);
   set_if(dataLayout.mLine.color, mLine.color);
+  set_if(dataLayout.mLine.alpha, mLine.alpha);
   set_if(dataLayout.mLine.style, mLine.style);
   set_if(dataLayout.mLine.scale, mLine.scale);
   set_if(dataLayout.mFill.color, mFill.color);
-  set_if(dataLayout.mFill.style, mFill.style);
   set_if(dataLayout.mFill.alpha, mFill.alpha);
+  set_if(dataLayout.mFill.style, mFill.style);
   set_if(dataLayout.mContours, mContours);
   set_if(dataLayout.mNContours, mNContours);
   return *this;
@@ -1561,9 +1589,17 @@ auto Plot::Pad::Data::SetColor(int16_t color) -> decltype(*this)
   mFill.color = color;
   return *this;
 }
-auto Plot::Pad::Data::SetMarker(int16_t color, int16_t style, float_t size) -> decltype(*this)
+auto Plot::Pad::Data::SetAlpha(float_t alpha) -> decltype(*this)
+{
+  mMarker.alpha = alpha;
+  mLine.alpha = alpha;
+  mFill.alpha = alpha;
+  return *this;
+}
+auto Plot::Pad::Data::SetMarker(int16_t color, int16_t style, float_t size, optional<float_t> alpha) -> decltype(*this)
 {
   mMarker.color = color;
+  mMarker.alpha = alpha;
   mMarker.style = style;
   mMarker.scale = size;
   return *this;
@@ -1571,6 +1607,11 @@ auto Plot::Pad::Data::SetMarker(int16_t color, int16_t style, float_t size) -> d
 auto Plot::Pad::Data::SetMarkerColor(int16_t color) -> decltype(*this)
 {
   mMarker.color = color;
+  return *this;
+}
+auto Plot::Pad::Data::SetMarkerAlpha(float_t alpha) -> decltype(*this)
+{
+  mMarker.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::Data::SetMarkerStyle(int16_t style) -> decltype(*this)
@@ -1583,9 +1624,10 @@ auto Plot::Pad::Data::SetMarkerSize(float_t size) -> decltype(*this)
   mMarker.scale = size;
   return *this;
 }
-auto Plot::Pad::Data::SetLine(int16_t color, int16_t style, float_t width) -> decltype(*this)
+auto Plot::Pad::Data::SetLine(int16_t color, int16_t style, float_t width, optional<float_t> alpha) -> decltype(*this)
 {
   mLine.color = color;
+  mLine.alpha = alpha;
   mLine.style = style;
   mLine.scale = width;
   return *this;
@@ -1593,6 +1635,11 @@ auto Plot::Pad::Data::SetLine(int16_t color, int16_t style, float_t width) -> de
 auto Plot::Pad::Data::SetLineColor(int16_t color) -> decltype(*this)
 {
   mLine.color = color;
+  return *this;
+}
+auto Plot::Pad::Data::SetLineAlpha(float_t alpha) -> decltype(*this)
+{
+  mLine.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::Data::SetLineStyle(int16_t style) -> decltype(*this)
@@ -1605,11 +1652,11 @@ auto Plot::Pad::Data::SetLineWidth(float_t width) -> decltype(*this)
   mLine.scale = width;
   return *this;
 }
-auto Plot::Pad::Data::SetFill(int16_t color, int16_t style, float_t alpha) -> decltype(*this)
+auto Plot::Pad::Data::SetFill(int16_t color, int16_t style, optional<float_t> alpha) -> decltype(*this)
 {
   mFill.color = color;
-  mFill.style = style;
   mFill.alpha = alpha;
+  mFill.style = style;
   return *this;
 }
 auto Plot::Pad::Data::SetFillColor(int16_t color) -> decltype(*this)

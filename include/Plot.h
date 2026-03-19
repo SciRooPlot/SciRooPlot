@@ -240,10 +240,12 @@ class Plot::Pad
   Pad& SetDefaultTextSize(float_t size);
   Pad& SetDefaultTextColor(int16_t color);
   Pad& SetDefaultTextFont(int16_t font);
+  Pad& SetDefaultMarkerAlpha(float_t alpha);
   Pad& SetDefaultMarkerSize(float_t size);
   Pad& SetDefaultMarkerColors(const std::vector<int16_t>& colors);
   Pad& SetDefaultMarkerColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = std::nullopt, std::optional<int32_t> nColors = std::nullopt);
   Pad& SetDefaultMarkerStyles(const std::vector<int16_t>& styles);
+  Pad& SetDefaultLineAlpha(float_t alpha);
   Pad& SetDefaultLineWidth(float_t width);
   Pad& SetDefaultLineColors(const std::vector<int16_t>& colors);
   Pad& SetDefaultLineColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = std::nullopt, std::optional<int32_t> nColors = std::nullopt);
@@ -310,10 +312,12 @@ class Plot::Pad
   const auto& GetDefaultTextFont() const { return mText.style; }
   const auto& GetDefaultTextSize() const { return mText.scale; }
   const auto& GetDefaultMarkerSize() const { return mMarkerDefaults.scale; }
+  const auto& GetDefaultMarkerAlpha() const { return mMarkerDefaults.alpha; }
   const auto& GetDefaultMarkerStyles() const { return mMarkerDefaults.styles; }
   const auto& GetDefaultMarkerColors() const { return mMarkerDefaults.colors; }
   const auto& GetDefaultMarkerColorsGradient() const { return mMarkerDefaults.colorGradient; }
   const auto& GetDefaultLineWidth() const { return mLineDefaults.scale; }
+  const auto& GetDefaultLineAlpha() const { return mLineDefaults.alpha; }
   const auto& GetDefaultLineColors() const { return mLineDefaults.colors; }
   const auto& GetDefaultLineColorsGradient() const { return mLineDefaults.colorGradient; }
   const auto& GetDefaultLineStyles() const { return mLineDefaults.styles; }
@@ -436,15 +440,18 @@ class Plot::Pad::Data
   virtual Data& UnsetOptions();
   virtual Data& SetTextFormat(const std::string& textFormat);
   virtual Data& SetColor(int16_t color);
-  virtual Data& SetMarker(int16_t color, int16_t style, float_t size);
+  virtual Data& SetAlpha(float_t alpha);
+  virtual Data& SetMarker(int16_t color, int16_t style, float_t size, std::optional<float_t> alpha = {});
   virtual Data& SetMarkerColor(int16_t color);
+  virtual Data& SetMarkerAlpha(float_t alpha);
   virtual Data& SetMarkerStyle(int16_t style);
   virtual Data& SetMarkerSize(float_t size);
-  virtual Data& SetLine(int16_t color, int16_t style, float_t width);
+  virtual Data& SetLine(int16_t color, int16_t style, float_t width, std::optional<float_t> alpha = {});
   virtual Data& SetLineColor(int16_t color);
+  virtual Data& SetLineAlpha(float_t alpha);
   virtual Data& SetLineStyle(int16_t style);
   virtual Data& SetLineWidth(float_t width);
-  virtual Data& SetFill(int16_t color, int16_t style, float_t alpha = 1.);
+  virtual Data& SetFill(int16_t color, int16_t style, std::optional<float_t> alpha = {});
   virtual Data& SetFillColor(int16_t color);
   virtual Data& SetFillStyle(int16_t style);
   virtual Data& SetFillAlpha(float_t alpha);
@@ -502,14 +509,16 @@ class Plot::Pad::Data
   const auto& GetLegendLabel() const { return mLegend.label; }
   const auto& GetLegendID() const { return mLegend.id; }
   const auto& GetMarkerColor() const { return mMarker.color; }
+  const auto& GetMarkerAlpha() const { return mMarker.alpha; }
   const auto& GetMarkerStyle() const { return mMarker.style; }
   const auto& GetMarkerSize() const { return mMarker.scale; }
   const auto& GetLineColor() const { return mLine.color; }
+  const auto& GetLineAlpha() const { return mLine.alpha; }
   const auto& GetLineStyle() const { return mLine.style; }
   const auto& GetLineWidth() const { return mLine.scale; }
   const auto& GetFillColor() const { return mFill.color; }
-  const auto& GetFillStyle() const { return mFill.style; }
   const auto& GetFillAlpha() const { return mFill.alpha; }
+  const auto& GetFillStyle() const { return mFill.style; }
   const auto& GetDrawingOptions() const { return mDrawingOptions; }
   const auto& GetDrawingOptionAlias() const { return mDrawingOptionAlias; }
   const auto& GetTextFormat() const { return mTextFormat; }
@@ -625,18 +634,21 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& UnsetOptions() { return static_cast<decltype(*this)&>(Data::UnsetOptions()); }
   Ratio& SetTextFormat(const std::string& textFormat) { return static_cast<decltype(*this)&>(Data::SetTextFormat(textFormat)); }
   Ratio& SetColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetColor(color)); }
-  Ratio& SetMarker(int16_t color, int16_t style, float_t size) { return static_cast<decltype(*this)&>(Data::SetMarker(color, style, size)); }
+  Ratio& SetAlpha(float_t alpha) { return static_cast<decltype(*this)&>(Data::SetAlpha(alpha)); }
+  Ratio& SetMarker(int16_t color, int16_t style, float_t size, std::optional<float_t> alpha = {}) { return static_cast<decltype(*this)&>(Data::SetMarker(color, style, size, alpha)); }
   Ratio& SetMarkerColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetMarkerColor(color)); }
+  Ratio& SetMarkerAlpha(float_t alpha) { return static_cast<decltype(*this)&>(Data::SetMarkerAlpha(alpha)); }
   Ratio& SetMarkerStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetMarkerStyle(style)); }
   Ratio& SetMarkerSize(float_t size) { return static_cast<decltype(*this)&>(Data::SetMarkerSize(size)); }
-  Ratio& SetLine(int16_t color, int16_t style, float_t width) { return static_cast<decltype(*this)&>(Data::SetLine(color, style, width)); }
+  Ratio& SetLine(int16_t color, int16_t style, float_t width, std::optional<float_t> alpha = {}) { return static_cast<decltype(*this)&>(Data::SetLine(color, style, width, alpha)); }
   Ratio& SetLineColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetLineColor(color)); }
+  Ratio& SetLineAlpha(float_t alpha) { return static_cast<decltype(*this)&>(Data::SetLineAlpha(alpha)); }
   Ratio& SetLineStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetLineStyle(style)); }
   Ratio& SetLineWidth(float_t width) { return static_cast<decltype(*this)&>(Data::SetLineWidth(width)); }
-  Ratio& SetFill(int16_t color, int16_t style, float_t alpha = 1.) { return static_cast<decltype(*this)&>(Data::SetFill(color, style, alpha)); }
+  Ratio& SetFill(int16_t color, int16_t style, std::optional<float_t> alpha = {}) { return static_cast<decltype(*this)&>(Data::SetFill(color, style, alpha)); }
   Ratio& SetFillColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetFillColor(color)); }
-  Ratio& SetFillStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetFillStyle(style)); }
   Ratio& SetFillAlpha(float_t alpha) { return static_cast<decltype(*this)&>(Data::SetFillAlpha(alpha)); }
+  Ratio& SetFillStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetFillStyle(style)); }
   Ratio& SetDefinesFrame() { return static_cast<decltype(*this)&>(Data::SetDefinesFrame()); }
   Ratio& SetContours(const std::vector<double>& contours) { return static_cast<decltype(*this)&>(Data::SetContours(contours)); }
   Ratio& SetContours(int32_t nContours) { return static_cast<decltype(*this)&>(Data::SetContours(nContours)); }
