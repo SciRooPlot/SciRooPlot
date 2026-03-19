@@ -914,6 +914,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       if (!box->GetTextFont() && textFont) box->SetTextFont(*textFont);
       if (!box->GetTextSize() && textSize) box->SetTextSize(*textSize);
       if (!box->GetTextColor() && textColor) box->SetTextColor(*textColor);
+      if (!box->GetTextAlpha() && textAlpha) box->SetTextAlpha(*textAlpha);
       TPave* legend = GenerateBox(box, pad_ptr);
       if (legend) {
         legend->SetName(legendName.data());
@@ -930,6 +931,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       if (!box->GetTextFont() && textFont) box->SetTextFont(*textFont);
       if (!box->GetTextSize() && textSize) box->SetTextSize(*textSize);
       if (!box->GetTextColor() && textColor) box->SetTextColor(*textColor);
+      if (!box->GetTextAlpha() && textAlpha) box->SetTextAlpha(*textAlpha);
       TPave* text = GenerateBox(box, pad_ptr);
       if (text) {
         text->SetName(textName.data());
@@ -1031,6 +1033,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     constexpr bool isLegend = std::is_same_v<BoxType, Plot::Pad::LegendBox>;
 
     auto textColor{box->GetTextColor()};
+    auto textAlpha{box->GetTextAlpha()};
     auto textFont{box->GetTextFont()};
     auto textSize{box->GetTextSize()};
 
@@ -1237,6 +1240,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       legend->SetTextFont(text_font);
       legend->SetTextSize(text_size);
       if (textColor) legend->SetTextColor(*textColor);
+      if (textAlpha) legend->SetTextColor(TColor::GetColorTransparent(legend->GetTextColor(), *textAlpha));
       if (textSize) legend->SetTextSize(*textSize);
       if (textFont) legend->SetTextFont(*textFont);
 
@@ -1351,6 +1355,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       paveText->SetTextFont(text_font);
       paveText->SetTextSize(text_size);
       if (textColor) paveText->SetTextColor(*textColor);
+      if (textAlpha) paveText->SetTextColor(TColor::GetColorTransparent(paveText->GetTextColor(), *textAlpha));
 
       for (auto& line : lines) {
         TText* text = paveText->AddText(line.data());

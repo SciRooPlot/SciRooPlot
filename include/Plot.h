@@ -853,8 +853,9 @@ class Plot::Pad::Box
   BoxType& SetBorderColor(int16_t color);
   BoxType& SetBorderStyle(int16_t style);
   BoxType& SetBorderWidth(float_t width);
-  BoxType& SetText(int16_t color, int16_t font, float_t size);
+  BoxType& SetText(int16_t color, int16_t font, float_t size, std::optional<float_t> alpha = {});
   BoxType& SetTextColor(int16_t color);
+  BoxType& SetTextAlpha(float_t alpha);
   BoxType& SetTextFont(int16_t font);
   BoxType& SetTextSize(float_t size);
   BoxType& SetFill(int16_t color, int16_t style, float_t alpha);
@@ -880,6 +881,7 @@ class Plot::Pad::Box
   auto& GetTextFont() const { return mText.style; }
   auto& GetTextSize() const { return mText.scale; }
   auto& GetTextColor() const { return mText.color; }
+  auto& GetTextAlpha() const { return mText.alpha; }
   auto& GetMargin() const { return mMargin; }
   auto& GetLineSpacing() const { return mLineSpacing; }
 

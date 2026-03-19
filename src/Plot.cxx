@@ -2401,6 +2401,7 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
   read_from_tree(boxTree, mFill.alpha, "fill_alpha");
   read_from_tree(boxTree, mText.style, "text_style");
   read_from_tree(boxTree, mText.color, "text_color");
+  read_from_tree(boxTree, mText.alpha, "text_alpha");
   read_from_tree(boxTree, mText.scale, "text_size");
   read_from_tree(boxTree, mMargin, "margin");
   read_from_tree(boxTree, mLineSpacing, "line_spacing");
@@ -2426,6 +2427,7 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
   put_in_tree(boxTree, mFill.alpha, "fill_alpha");
   put_in_tree(boxTree, mText.style, "text_style");
   put_in_tree(boxTree, mText.color, "text_color");
+  put_in_tree(boxTree, mText.alpha, "text_alpha");
   put_in_tree(boxTree, mText.scale, "text_size");
   put_in_tree(boxTree, mMargin, "margin");
   put_in_tree(boxTree, mLineSpacing, "line_spacing");
@@ -2492,9 +2494,10 @@ BoxType& Plot::Pad::Box<BoxType>::SetBorderWidth(float_t width)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetText(int16_t color, int16_t font, float_t size)
+BoxType& Plot::Pad::Box<BoxType>::SetText(int16_t color, int16_t font, float_t size, optional<float_t> alpha)
 {
   mText.color = color;
+  mText.alpha = alpha;
   mText.style = font;
   mText.scale = size;
   return *GetThis();
@@ -2504,6 +2507,13 @@ template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetTextColor(int16_t color)
 {
   mText.color = color;
+  return *GetThis();
+}
+
+template <typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetTextAlpha(float_t alpha)
+{
+  mText.alpha = alpha;
   return *GetThis();
 }
 
