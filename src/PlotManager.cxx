@@ -537,7 +537,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     fileEnding = ".C";
 
     // object names are converted to variable names and therefore must not contain '/'
-    // TODO: this should be fixed in ROOT itself as it does not create valid cpp code otherwise
+    // this should be fixed in ROOT itself as it does not create valid cpp code otherwise
     std::function<void(TPad*)> cleanNames;
     cleanNames = [&](TPad* pad) {
       TIter next(pad->GetListOfPrimitives());
@@ -1489,7 +1489,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plot[1]['Y'].SetTitleSize(1. / (wideSideScale * (1 - ratioFraction)) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
     plot[2]['X'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
     plot[2]['Y'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
-    plot[2]['Y'].SetTitleOffset(0.6);  // FIXME: for some reason the ROOT automatic title offset determination does not work for the lower plot
+    plot[2]['Y'].SetTitleOffset(0.6);  // MEMO: for some reason the ROOT automatic title offset determination does not work for the lower plot
     plot[2].SetRefFunc("1").SetColor(kBlack);
     plot[2]['X'].SetTickLength(0.06);
     plot[2]['Y'].SetNumDivisions(305).SetTitleCenter();

@@ -237,6 +237,7 @@ class Plot::Pad
   Pad& SetMargins(float_t top, float_t bottom, float_t left, float_t right);
   Pad& SetView(double_t theta, double_t phi);
   Pad& SetPalette(int32_t palette);
+  Pad& SetPalette(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultTextSize(float_t size);
   Pad& SetDefaultTextColor(int16_t color);
   Pad& SetDefaultTextAlpha(float_t alpha);
@@ -300,7 +301,8 @@ class Plot::Pad
   const auto& GetMarginRight() const { return mMargins.right; }
   const auto& GetViewTheta() const { return mView.theta; }
   const auto& GetViewPhi() const { return mView.phi; }
-  const auto& GetPalette() const { return mPalette; }
+  const auto& GetPalette() const { return mPalette.index; }
+  const auto& GetPaletteGradient() const { return mPalette.colorGradient; }
   const auto& GetFillColor() const { return mFill.color; }
   const auto& GetFillStyle() const { return mFill.style; }
   const auto& GetFillAlpha() const { return mFill.alpha; }
@@ -366,6 +368,10 @@ class Plot::Pad
     std::optional<std::vector<int16_t>> colors;
     gradient_color_t colorGradient;
   };
+  struct palette_defaults_t {
+    std::optional<int32_t> index;
+    gradient_color_t colorGradient;
+  };
   struct data_defaults_t {
     std::optional<drawing_options_t> graph;
     std::optional<drawing_options_t> hist;
@@ -392,9 +398,7 @@ class Plot::Pad
   view_defaults_t mFillDefaults;
   data_defaults_t mDrawingOptionDefaults;
   candle_defaults_t mCandleOptionDefaults;
-
-  std::optional<int32_t> mPalette;
-
+  palette_defaults_t mPalette;
   std::optional<bool> mRedrawAxes;
 
   std::map<char, Axis> mAxes;

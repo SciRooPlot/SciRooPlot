@@ -702,7 +702,14 @@ auto Plot::Pad::SetFrameTransparent() -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetPalette(int32_t palette) -> decltype(*this)
 {
-  mPalette = palette;
+  mPalette.index = palette;
+  mPalette.colorGradient = {};
+  return *this;
+}
+auto Plot::Pad::SetPalette(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
+{
+  mPalette.index = {};
+  mPalette.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
 }
 
@@ -765,7 +772,10 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mMargins.right, "margins_right");
   read_from_tree(padTree, mView.theta, "view_theta");
   read_from_tree(padTree, mView.phi, "view_phi");
-  read_from_tree(padTree, mPalette, "palette");
+  read_from_tree(padTree, mPalette.index, "palette_index");
+  read_from_tree(padTree, mPalette.colorGradient.rgbEndpoints, "palette_colors_gradient_endpoints");
+  read_from_tree(padTree, mPalette.colorGradient.alpha, "palette_colors_gradient_alpha");
+  read_from_tree(padTree, mPalette.colorGradient.nColors, "palette_colors_gradient_nColors");
   read_from_tree(padTree, mFill.color, "fill_color");
   read_from_tree(padTree, mFill.style, "fill_style");
   read_from_tree(padTree, mFill.alpha, "fill_alpha");
@@ -857,7 +867,10 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mMargins.right, "margins_right");
   put_in_tree(padTree, mView.theta, "view_theta");
   put_in_tree(padTree, mView.phi, "view_phi");
-  put_in_tree(padTree, mPalette, "palette");
+  put_in_tree(padTree, mPalette.index, "palette_index");
+  put_in_tree(padTree, mPalette.colorGradient.rgbEndpoints, "palette_colors_gradient_endpoints");
+  put_in_tree(padTree, mPalette.colorGradient.alpha, "palette_colors_gradient_alpha");
+  put_in_tree(padTree, mPalette.colorGradient.nColors, "palette_colors_gradient_nColors");
   put_in_tree(padTree, mFill.color, "fill_color");
   put_in_tree(padTree, mFill.style, "fill_style");
   put_in_tree(padTree, mFill.alpha, "fill_alpha");
@@ -1006,7 +1019,17 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mDrawingOptionDefaults.hist2d) mDrawingOptionDefaults.hist2d = pad.mDrawingOptionDefaults.hist2d;
   if (pad.mCandleOptionDefaults.boxRange) mCandleOptionDefaults.boxRange = pad.mCandleOptionDefaults.boxRange;
   if (pad.mCandleOptionDefaults.whiskerRange) mCandleOptionDefaults.whiskerRange = pad.mCandleOptionDefaults.whiskerRange;
-  if (pad.mPalette) mPalette = pad.mPalette;
+
+  if (pad.mPalette.colorGradient.rgbEndpoints) {
+    mPalette.colorGradient.rgbEndpoints = pad.mPalette.colorGradient.rgbEndpoints;
+    if (pad.mPalette.colorGradient.alpha) mPalette.colorGradient.alpha = pad.mPalette.colorGradient.alpha;
+    if (pad.mPalette.colorGradient.nColors) mPalette.colorGradient.nColors = pad.mPalette.colorGradient.nColors;
+    mPalette.index = nullopt;
+  }
+  if (pad.mPalette.index) {
+    mPalette.index = pad.mPalette.index;
+    mPalette.colorGradient = {};
+  }
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if (pad.mRefFunc) mRefFunc = pad.mRefFunc;  // this does not copy the data (!!)
   for (auto& [axisLabel, axis] : pad.mAxes) {

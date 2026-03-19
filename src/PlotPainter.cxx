@@ -269,9 +269,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetFillColor(); });
       padDefaults.SetDefaultFillColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
-    // TODO: color gradient feature can be used for 2d palette as well
-    if (auto palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) gStyle->SetPalette(*palette);
-
+    if (pad.GetPaletteGradient().rgbEndpoints) {
+      auto& gradient = pad.GetPaletteGradient();
+      GenerateGradientColors(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha), true);
+    } else if (padDefaults.GetPaletteGradient().rgbEndpoints) {
+      auto& gradient = padDefaults.GetPaletteGradient();
+      GenerateGradientColors(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha), true);
+    } else if (auto palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) {
+      gStyle->SetPalette(*palette);
+    } else {
+      // reset to default to avoid side effects in other plots
+      gStyle->SetPalette(kBird);
+    }
     pad_ptr->SetNumber(padID);
     pad_ptr->Draw();
     pad_ptr->cd();
@@ -317,7 +326,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
         if (!data->GetDrawingOptions()) {
-          // FIXME: avoid code duplication here by implementing this in more clever way
+          // MEMO: avoid code duplication here by implementing this in more clever way
           if constexpr (is_hist_2d<data_type>()) {
             if (!defaultDrawingOption) {
               if (pad.GetDefaultDrawingOptionHist2d())
@@ -423,7 +432,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }  // end ratio code
 
-        // FIXME: violating DRY principle...
+        // MEMO: violating DRY principle...
         if constexpr (is_hist<data_type>()) {
           if (!data_ptr->GetSumw2N()) data_ptr->Sumw2();
           // smooth
@@ -1210,7 +1219,6 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
       // find box position that does not collide with any of the drawn objects
       foundPosition = pad->PlaceBox(nullptr, totalWidthNDC, totalHeightNDC, lowerLeftX, lowerLeftY);
-      // TODO: this should find most optimal position instead of first match!
       if (foundPosition) {
         upperLeftX = lowerLeftX;
         upperLeftY = lowerLeftY + totalHeightNDC;
@@ -1379,21 +1387,15 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     }
 
     if (returnBox) {
+      returnBox->SetLineWidth(0);
+      returnBox->SetFillStyle(0);
       if (borderStyle) returnBox->SetLineStyle(*borderStyle);
       if (borderColor) returnBox->SetLineColor(*borderColor);
       if (borderAlpha) returnBox->SetLineColor(TColor::GetColorTransparent(returnBox->GetLineColor(), *borderAlpha));
-      if (borderWidth) {
-        returnBox->SetLineWidth(*borderWidth);
-      } else {
-        returnBox->SetLineWidth(0);  // TODO: steer via pad defaults
-      }
-      if (fillStyle) {
-        returnBox->SetFillStyle(*fillStyle);
-      } else {
-        returnBox->SetFillStyle(0);  // TODO: steer via pad defaults
-      }
+      if (borderWidth) returnBox->SetLineWidth(*borderWidth);
+      if (fillStyle) returnBox->SetFillStyle(*fillStyle);
       if (fillColor) returnBox->SetFillColor(*fillColor);
-      if (fillAlpha && fillColor) returnBox->SetFillColor(TColor::GetColorTransparent(*fillColor, *fillAlpha));
+      if (fillAlpha) returnBox->SetFillColor(TColor::GetColorTransparent(returnBox->GetFillColor(), *fillAlpha));
     }
   };
   std::visit(processBox, boxVariant);
