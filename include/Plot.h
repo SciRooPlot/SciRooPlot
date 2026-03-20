@@ -468,10 +468,14 @@ class Plot::Pad::Data
   virtual Data& SetContours(int32_t nContours);
 
   // data modifiers
-  virtual Data& Normalize(bool multiplyByBinWidth = false);
+  virtual Data& Normalize(bool scaleBinWidth = false);
   virtual Data& Scale(double_t scaleFactor);
   virtual Data& ScaleMinimum(double_t scaleFactor);
   virtual Data& ScaleMaximum(double_t scaleFactor);
+  virtual Data& DivideBinWidth(bool divideBinWidth = true);
+  virtual Data& RebinX(uint16_t nGroup);
+  virtual Data& RebinY(uint16_t nGroup);
+  virtual Data& RebinXY(uint16_t nGroupX, uint16_t nGroupY);
   virtual Data& Smooth(uint16_t nIterSmooth = 1);
 
   virtual Data& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
@@ -531,7 +535,7 @@ class Plot::Pad::Data
   const auto& GetDrawingOptionAlias() const { return mDrawingOptionAlias; }
   const auto& GetTextFormat() const { return mTextFormat; }
   const auto& GetScaleFactor() const { return mModify.scaleFactor; }
-  const auto& GetNormMode() const { return mModify.normMode; }
+  const auto& GetScaleBinWidthNorm() const { return mModify.scaleBinWidthNorm; }
   const auto& GetMinRangeX() const { return mRangeX.min; }
   const auto& GetMaxRangeX() const { return mRangeX.max; }
   const auto& GetMinRangeY() const { return mRangeY.min; }
@@ -544,6 +548,9 @@ class Plot::Pad::Data
   const auto& GetDataInfo() const { return mDataInfo; }
   const auto& GetProjInfo() const { return mProjInfo; }
   const auto& GetNiterSmooth() const { return mNiterSmooth; }
+  const auto& GetRebinGroupX() const { return mModify.rebinGroupX; }
+  const auto& GetRebinGroupY() const { return mModify.rebinGroupY; }
+  const auto& GetDivideBinWidth() const { return mModify.divideBinWidth; }
 
   struct proj_info_t {
     std::vector<uint8_t> dims;                                    // dimensions to project on (can be one or two)
@@ -574,15 +581,18 @@ class Plot::Pad::Data
   std::optional<std::string> mTextFormat;
 
   struct modify_t {
-    std::optional<uint8_t> normMode;  // 0: sum over bin contents, 1: with bin width
+    std::optional<bool> scaleBinWidthNorm;
     std::optional<double_t> scaleFactor;
+    std::optional<bool> divideBinWidth;
+    std::optional<uint16_t> rebinGroupX;
+    std::optional<uint16_t> rebinGroupY;
   };
   struct legend_t {
     std::optional<std::string> label;
     std::optional<uint8_t> id;
   };
 
-  struct dataRange_t {
+  struct data_range_t {
     std::optional<double_t> min;
     std::optional<double_t> max;
   };
@@ -594,9 +604,9 @@ class Plot::Pad::Data
   layout_t mMarker;
   layout_t mLine;
   layout_t mFill;
-  dataRange_t mRangeX;
-  dataRange_t mRangeY;
-  dataRange_t mScaleRange;
+  data_range_t mRangeX;
+  data_range_t mRangeY;
+  data_range_t mScaleRange;
   modify_t mModify;
 
   std::optional<std::vector<double_t>> mContours;
@@ -623,7 +633,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& operator=(Ratio&& other) = default;
 
   Ratio& SetIsCorrelated(bool isCorrelated = true);
-  Ratio& SetDivideNormalized(bool multiplyByBinWidth = false);
+  Ratio& SetDivideNormalized(bool scaleBinWidth = false);
 
   Ratio& SetLayout(const Data& dataLayout) { return static_cast<decltype(*this)&>(Data::SetLayout(dataLayout)); }
   Ratio& ApplyLayout(const Data& dataLayout) { return static_cast<decltype(*this)&>(Data::ApplyLayout(dataLayout)); }
@@ -662,10 +672,14 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& SetContours(int32_t nContours) { return static_cast<decltype(*this)&>(Data::SetContours(nContours)); }
 
   // data modifiers
-  Ratio& Normalize(bool multiplyByBinWidth = false) { return static_cast<decltype(*this)&>(Data::Normalize(multiplyByBinWidth)); }
+  Ratio& Normalize(bool scaleBinWidth = false) { return static_cast<decltype(*this)&>(Data::Normalize(scaleBinWidth)); }
   Ratio& Scale(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::Scale(scaleFactor)); }
   Ratio& ScaleMinimum(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::ScaleMinimum(scaleFactor)); }
   Ratio& ScaleMaximum(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::ScaleMaximum(scaleFactor)); }
+  Ratio& DivideBinWidth(bool divideBinWidth = true) { return static_cast<decltype(*this)&>(Data::DivideBinWidth(divideBinWidth)); }
+  Ratio& RebinX(uint16_t nGroup) { return static_cast<decltype(*this)&>(Data::RebinX(nGroup)); }
+  Ratio& RebinY(uint16_t nGroup) { return static_cast<decltype(*this)&>(Data::RebinY(nGroup)); }
+  Ratio& RebinXY(uint16_t nGroupX, uint16_t nGroupY) { return static_cast<decltype(*this)&>(Data::RebinXY(nGroupX, nGroupY)); }
   Ratio& Smooth(uint16_t nIterSmooth = 1) { return static_cast<decltype(*this)&>(Data::Smooth(nIterSmooth)); }
 
   Ratio& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::Project(dims, ranges, isUserCoord)); }
@@ -717,7 +731,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   boost::property_tree::ptree GetPropertyTree() const;
   const auto& GetDenomInputID() const { return mDenomInputID; }
   const auto& GetDenomName() const { return mDenomName; }
-  const auto& GetDivisionNormMode() const { return mDivisionNormMode; }
+  const auto& GetScaleBinWidthDivision() const { return mScaleBinWidth; }
   const bool& GetIsCorrelated() const { return mIsCorrelated; }
   const auto& GetDenomDataInfo() const { return mDenomDataInfo; }
   const auto& GetDenomProjInfo() const { return mDenomProjInfo; }
@@ -726,7 +740,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   std::string mDenomName;
   std::string mDenomInputID;
   bool mIsCorrelated{};
-  std::optional<bool> mDivisionNormMode;  // normalize both numerater and denominator to 0: sum over bin contents, 1: times bin widths
+  std::optional<bool> mScaleBinWidth;  // normalize both numerater and denominator with bin widths
   std::optional<data_info_t> mDenomDataInfo;
   std::optional<proj_info_t> mDenomProjInfo;
 };

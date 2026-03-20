@@ -1344,7 +1344,10 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mFill.alpha, "fill_alpha");
   read_from_tree(dataTree, mFill.style, "fill_style");
   read_from_tree(dataTree, mModify.scaleFactor, "scale_factor");
-  read_from_tree(dataTree, mModify.normMode, "norm_mode");
+  read_from_tree(dataTree, mModify.scaleBinWidthNorm, "scale_bin_width_norm");
+  read_from_tree(dataTree, mModify.divideBinWidth, "divide_bin_width");
+  read_from_tree(dataTree, mModify.rebinGroupX, "rebinX");
+  read_from_tree(dataTree, mModify.rebinGroupY, "rebinY");
   read_from_tree(dataTree, mRangeX.min, "rangeX_min");
   read_from_tree(dataTree, mRangeX.max, "rangeX_max");
   read_from_tree(dataTree, mRangeY.min, "rangeY_min");
@@ -1431,7 +1434,10 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mFill.alpha, "fill_alpha");
   put_in_tree(dataTree, mFill.style, "fill_style");
   put_in_tree(dataTree, mModify.scaleFactor, "scale_factor");
-  put_in_tree(dataTree, mModify.normMode, "norm_mode");
+  put_in_tree(dataTree, mModify.scaleBinWidthNorm, "scale_bin_width_norm");
+  put_in_tree(dataTree, mModify.divideBinWidth, "divide_bin_width");
+  put_in_tree(dataTree, mModify.rebinGroupX, "rebinX");
+  put_in_tree(dataTree, mModify.rebinGroupY, "rebinY");
   put_in_tree(dataTree, mRangeX.min, "rangeX_min");
   put_in_tree(dataTree, mRangeX.max, "rangeX_max");
   put_in_tree(dataTree, mRangeY.min, "rangeY_min");
@@ -1730,9 +1736,9 @@ auto Plot::Pad::Data::SetContours(int32_t nContours) -> decltype(*this)
   mNContours = nContours;
   return *this;
 }
-auto Plot::Pad::Data::Normalize(bool multiplyByBinWidth) -> decltype(*this)
+auto Plot::Pad::Data::Normalize(bool scaleBinWidth) -> decltype(*this)
 {
-  mModify.normMode = multiplyByBinWidth;
+  mModify.scaleBinWidthNorm = scaleBinWidth;
   return *this;
 }
 auto Plot::Pad::Data::Scale(double_t scaleFactor) -> decltype(*this)
@@ -1753,6 +1759,27 @@ auto Plot::Pad::Data::ScaleMaximum(double_t scaleFactor) -> decltype(*this)
 auto Plot::Pad::Data::Smooth(uint16_t nIterSmooth) -> decltype(*this)
 {
   mNiterSmooth = nIterSmooth;
+  return *this;
+}
+auto Plot::Pad::Data::DivideBinWidth(bool divideBinWidth) -> decltype(*this)
+{
+  mModify.divideBinWidth = divideBinWidth;
+  return *this;
+}
+auto Plot::Pad::Data::RebinX(uint16_t nGroup) -> decltype(*this)
+{
+  mModify.rebinGroupX = nGroup;
+  return *this;
+}
+auto Plot::Pad::Data::RebinY(uint16_t nGroup) -> decltype(*this)
+{
+  mModify.rebinGroupY = nGroup;
+  return *this;
+}
+auto Plot::Pad::Data::RebinXY(uint16_t nGroupX, uint16_t nGroupY) -> decltype(*this)
+{
+  mModify.rebinGroupX = nGroupX;
+  mModify.rebinGroupY = nGroupY;
   return *this;
 }
 auto Plot::Pad::Data::Project(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
@@ -1927,7 +1954,7 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
     ERROR("Could not construct ratio from ptree.");
   }
 
-  read_from_tree(dataTree, mDivisionNormMode, "divisionNormMode");
+  read_from_tree(dataTree, mScaleBinWidth, "scale_bin_width_norm_division");
 
   // extract data info
   {
@@ -1987,7 +2014,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
   dataTree.put("denomName", mDenomName);
   dataTree.put("denomInputID", mDenomInputID);
   dataTree.put("isCorrelated", mIsCorrelated);
-  put_in_tree(dataTree, mDivisionNormMode, "divisionNormMode");
+  put_in_tree(dataTree, mScaleBinWidth, "scale_bin_width_norm_division");
 
   if (mDenomDataInfo) {
     vector<string> vars;
@@ -2026,9 +2053,9 @@ auto Plot::Pad::Ratio::SetIsCorrelated(bool isCorrelated) -> decltype(*this)
   mIsCorrelated = isCorrelated;
   return *this;
 }
-auto Plot::Pad::Ratio::SetDivideNormalized(bool multiplyByBinWidth) -> decltype(*this)
+auto Plot::Pad::Ratio::SetDivideNormalized(bool scaleBinWidth) -> decltype(*this)
 {
-  mDivisionNormMode = multiplyByBinWidth;
+  mScaleBinWidth = scaleBinWidth;
   return *this;
 }
 auto Plot::Pad::Ratio::ProjectDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)

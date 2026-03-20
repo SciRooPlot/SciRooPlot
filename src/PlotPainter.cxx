@@ -322,6 +322,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       // retrieve the actual pointer to the data
       auto processData = [&, padID = padID](auto&& data_ptr) {
         using data_type = std::decay_t<decltype(data_ptr)>;
+        if (!dataIndex) {
+          gErrorIgnoreLevel = kFatal;
+        } else {
+          gErrorIgnoreLevel = kWarning;
+        }
 
         optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
@@ -384,9 +389,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if constexpr (is_func<denom_data_type>()) {
                 Divide(data_ptr, denom_data_ptr, binomialErrors);
               } else if constexpr (is_hist<denom_data_type>()) {
-                if (data_as_ratio->GetDivisionNormMode()) {
+                if (data_as_ratio->GetScaleBinWidthDivision()) {
                   string scaleMode{};
-                  if (*data_as_ratio->GetDivisionNormMode()) scaleMode = "width";
+                  if (*data_as_ratio->GetScaleBinWidthDivision()) scaleMode = "width";
                   double_t integralNum = data_ptr->Integral(scaleMode.data());          // integral in viewing range
                   double_t integralDenom = denom_data_ptr->Integral(scaleMode.data());  // integral in viewing range
                   if (!integralNum || !integralDenom) {
@@ -432,9 +437,28 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }  // end ratio code
 
-        // MEMO: violating DRY principle...
         if constexpr (is_hist<data_type>()) {
           if (!data_ptr->GetSumw2N()) data_ptr->Sumw2();
+          // rebin
+          if constexpr (is_hist_2d<data_type>()) {
+            if (data->GetRebinGroupX() && data->GetRebinGroupY()) {
+              data_ptr->Rebin2D(*data->GetRebinGroupX(), *data->GetRebinGroupY());
+            } else if (data->GetRebinGroupX()) {
+              data_ptr->RebinX(*data->GetRebinGroupX());
+            } else if (data->GetRebinGroupY()) {
+              data_ptr->RebinY(*data->GetRebinGroupY());
+            }
+          } else {
+            if (data->GetRebinGroupX()) {
+              data_ptr->RebinX(*data->GetRebinGroupX());
+            }
+          }
+          // divide by bin width
+          bool isDensity = data->GetScaleBinWidthNorm() && *data->GetScaleBinWidthNorm();
+          if (data->GetDivideBinWidth() && *data->GetDivideBinWidth()) {
+            data_ptr->Scale(1., "width");
+            isDensity = true;
+          }
           // smooth
           if (data->GetNiterSmooth()) {
             data_ptr->Smooth(*data->GetNiterSmooth());
@@ -442,9 +466,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // normalize and scale
           optional<double_t> scaleFactor;
           string scaleMode{};
-
-          if (data->GetNormMode()) {
-            if (*data->GetNormMode() > 0) scaleMode = "width";
+          if (data->GetScaleBinWidthNorm()) {
+            if (isDensity) scaleMode = "width";
             double_t integral = data_ptr->Integral(scaleMode.data());  // integral in viewing range
             if (integral == 0.) {
               ERROR("Cannot normalize histogram because integral is zero.");
@@ -453,10 +476,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
           }
           if (data->GetScaleFactor()) {
-            scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor())
-                                        : (*data->GetScaleFactor());
+            scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor()) : (*data->GetScaleFactor());
           }
-          // TODO: add option that divides results by width
           if (scaleFactor) data_ptr->Scale(*scaleFactor);
         } else if constexpr (is_graph_1d<data_type>()) {
           // smooth
@@ -472,21 +493,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // normalize and scale
           optional<double_t> scaleFactor;
           string scaleMode{};
-
-          if (data->GetNormMode()) {
+          if (data->GetScaleBinWidthNorm()) {
             double_t integral = data_ptr->Integral();  // integral in viewing range
             if (integral == 0.) {
               ERROR("Cannot normalize graph because integral is zero.");
             } else {
               scaleFactor = 1. / integral;
             }
-            if (*data->GetNormMode() > 0) {
+            if (*data->GetScaleBinWidthNorm()) {
               ERROR("Cannot normalize graph by width.");
             }
           }
           if (data->GetScaleFactor()) {
-            scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor())
-                                        : (*data->GetScaleFactor());
+            scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor()) : (*data->GetScaleFactor());
           }
           if (scaleFactor) ScaleGraph(static_cast<TGraph*>(data_ptr), *scaleFactor);
         }
