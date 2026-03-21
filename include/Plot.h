@@ -648,6 +648,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& SetMaxRangeY(double_t max) { return static_cast<decltype(*this)&>(Data::SetMaxRangeY(max)); }
   Ratio& SetMinRangeY(double_t min) { return static_cast<decltype(*this)&>(Data::SetMinRangeY(min)); }
   Ratio& UnsetRangeY() { return static_cast<decltype(*this)&>(Data::UnsetRangeY()); }
+  Ratio& SetShowOverflowBins(bool showOverflowBins = true) { return static_cast<decltype(*this)&>(Data::SetShowOverflowBins(showOverflowBins)); }
   Ratio& SetLegendLabel(const std::string& legendLabel) { return static_cast<decltype(*this)&>(Data::SetLegendLabel(legendLabel)); }
   Ratio& SetLegendID(uint8_t legendID) { return static_cast<decltype(*this)&>(Data::SetLegendID(legendID)); }
   Ratio& SetOptions(const std::string& options) { return static_cast<decltype(*this)&>(Data::SetOptions(options)); }
