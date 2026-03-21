@@ -441,6 +441,7 @@ class Plot::Pad::Data
   virtual Data& SetMaxRangeY(double_t max);
   virtual Data& SetMinRangeY(double_t min);
   virtual Data& UnsetRangeY();
+  virtual Data& SetShowOverflowBins(bool showOverflowBins = true);
   virtual Data& SetLegendLabel(const std::string& legendLabel);
   virtual Data& SetLegendID(uint8_t legendID);
   virtual Data& SetOptions(const std::string& options);
@@ -551,6 +552,7 @@ class Plot::Pad::Data
   const auto& GetRebinGroupX() const { return mModify.rebinGroupX; }
   const auto& GetRebinGroupY() const { return mModify.rebinGroupY; }
   const auto& GetDivideBinWidth() const { return mModify.divideBinWidth; }
+  const auto& GetShowOverflowBins() const { return mModify.showOverflowBins; }
 
   struct proj_info_t {
     std::vector<uint8_t> dims;                                    // dimensions to project on (can be one or two)
@@ -586,6 +588,7 @@ class Plot::Pad::Data
     std::optional<bool> divideBinWidth;
     std::optional<uint16_t> rebinGroupX;
     std::optional<uint16_t> rebinGroupY;
+    std::optional<bool> showOverflowBins;
   };
   struct legend_t {
     std::optional<std::string> label;

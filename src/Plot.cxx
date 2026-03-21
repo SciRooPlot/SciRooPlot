@@ -1343,6 +1343,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mFill.color, "fill_color");
   read_from_tree(dataTree, mFill.alpha, "fill_alpha");
   read_from_tree(dataTree, mFill.style, "fill_style");
+  read_from_tree(dataTree, mModify.showOverflowBins, "show_overflow_bins");
   read_from_tree(dataTree, mModify.scaleFactor, "scale_factor");
   read_from_tree(dataTree, mModify.scaleBinWidthNorm, "scale_bin_width_norm");
   read_from_tree(dataTree, mModify.divideBinWidth, "divide_bin_width");
@@ -1433,6 +1434,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mFill.color, "fill_color");
   put_in_tree(dataTree, mFill.alpha, "fill_alpha");
   put_in_tree(dataTree, mFill.style, "fill_style");
+  put_in_tree(dataTree, mModify.showOverflowBins, "show_overflow_bins");
   put_in_tree(dataTree, mModify.scaleFactor, "scale_factor");
   put_in_tree(dataTree, mModify.scaleBinWidthNorm, "scale_bin_width_norm");
   put_in_tree(dataTree, mModify.divideBinWidth, "divide_bin_width");
@@ -1627,6 +1629,11 @@ auto Plot::Pad::Data::UnsetRangeY() -> decltype(*this)
 {
   mRangeY.min = {};
   mRangeY.max = {};
+  return *this;
+}
+auto Plot::Pad::Data::SetShowOverflowBins(bool showOverflowBins) -> decltype(*this)
+{
+  mModify.showOverflowBins = showOverflowBins;
   return *this;
 }
 auto Plot::Pad::Data::SetColor(int16_t color) -> decltype(*this)

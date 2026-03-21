@@ -870,7 +870,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if constexpr (is_graph_1d<data_type>()) {
             data_ptr->SetEditable(false);
           }
-
+          if constexpr (is_hist<data_type>()) {
+            if (!(data->GetShowOverflowBins() && *data->GetShowOverflowBins())) {
+              data_ptr->ClearUnderflowAndOverflow();
+            }
+          }
           data_ptr->SetName((std::to_string(dataIndex - hasRefFunc) + ":" + data_ptr->GetName()).data());
           data_ptr->Draw(drawingOptions.data());
 

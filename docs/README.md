@@ -434,6 +434,12 @@ data_layout_t pp_7TeV
   plot[1].AddData("hist4", "inputIdentifierA");
   plot[1].AddData("hist5", "inputIdentifierA");
 
+  // you can also use this feature to define a palette for 2D histograms:
+  plot[1].SetPalette(rainbowColors);
+
+  // NB.: in case of 3D drawing options like LEGO you can also define the perspective on the plot
+  plot[1].SetView(45, 20); // theta=45 and phi=20
+
   plotManager.AddPlot(plot);
 } // -----------------------------------------------------------------------
 
