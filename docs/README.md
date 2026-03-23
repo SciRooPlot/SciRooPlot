@@ -14,7 +14,14 @@ SciRooPlot runs on MacOS and Linux. It depends on the following external softwar
 
 If those dependencies cannot be installed by a package manager, a description of how to build them from source is shown [here](ADVANCED_INSTALL.md).
 
-SciRooPlot is installed as follows:
+SciRooPlot is installed by simply running:
+```bash
+    git clone https://github.com/SciRooPlot/SciRooPlot.git
+    cd SciRooPlot
+    ./scripts/install.sh
+```
+and following the install instructions.
+Alternatively you can do
 ```bash
     git clone https://github.com/SciRooPlot/SciRooPlot.git
     cd SciRooPlot
