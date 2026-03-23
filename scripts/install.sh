@@ -9,8 +9,6 @@ fi
 # move to repo root
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     cd "$(git rev-parse --show-toplevel)"
-else
-    echo "Error: Not in SciRooPlot project root."
 fi
 
 # validate
@@ -40,11 +38,12 @@ fi
 INSTALL_DIR="${BUILD_DIR}"
 CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=${INSTALL_DIR}"
 if [[ "${UPDATE_MODE}" -eq 0 ]]; then
-    echo -n "Press enter for default install location [${INSTALL_DIR}] or specify a different path: "
+    echo "Press enter for default install location [${INSTALL_DIR}]"
+    echo -n "or specify a different path: "
     read USER_INSTALL_DIR
     INSTALL_DIR="${USER_INSTALL_DIR:-$INSTALL_DIR}"
 
-    echo "Choose console color mode:"
+    echo "Choose console text color mode:"
     echo "1) Light (default)"
     echo "2) Dark"
     echo "3) Off"
@@ -69,6 +68,7 @@ fi
 # update
 echo "Updating repository..."
 git pull
+echo
 
 # build
 mkdir -p build
@@ -85,7 +85,6 @@ if [[ -f "${ENV_SCRIPT}" ]]; then
     echo
     echo "Sourcing environment script..."
     source "${ENV_SCRIPT}"
-    echo
     echo "Make sure to add the following line to your ~/.bashrc or ~/.zshrc:"
     echo "source ${ENV_SCRIPT}"
 else
