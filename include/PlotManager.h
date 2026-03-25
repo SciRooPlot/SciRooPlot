@@ -102,6 +102,8 @@ class PlotManager
                   const std::string& outputMode = "pdf");
   void PrintLoadedPlots() const;
 
+  std::vector<std::tuple<std::string, std::string, std::string>> GetAvailableData(const std::string& selection = "");
+  
  private:
   TObject* FindSubDirectory(TObject* folder, std::vector<std::string>& subDirs) const;
   bool GeneratePlot(const Plot& plot, const std::string& outputMode = "pdf");

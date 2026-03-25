@@ -12,8 +12,8 @@ case "$-" in
 esac
 
 if [[ ! -f "${SCIROOPLOT_BIN}/plot" || ! -f "${SCIROOPLOT_BIN}/plot-config" ]]; then
-    echo "SciRooPlot is not installed. Cannot initialize plotting functions."
-    return 1
+  echo "SciRooPlot is not installed. Cannot initialize plotting functions."
+  return 1
 fi
 
 function plot() {
@@ -24,6 +24,22 @@ function plot() {
     if [[ "${1}" == "cd" ]]; then
       cd "${user_build_dir}"
       return 0
+    fi
+
+    if [[ "${1}" == "open" ]]; then
+      if command -v xdg-open >/dev/null 2>&1; then
+        opener="xdg-open"
+      elif command -v gio >/dev/null 2>&1; then
+        opener="gio open"
+      elif command -v open >/dev/null 2>&1; then
+        opener="open"
+      fi
+      if [[ -n "${opener:-}" ]]; then
+        if command -v find >/dev/null 2>&1; then
+          find "${user_build_dir}/.." -maxdepth 2 -type f \( -name '*.cxx' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \) -exec "$opener" {} +
+          return 0
+        fi
+      fi
     fi
 
     local user_plotdef="$(${SCIROOPLOT_BIN}/plot-config path "@current")/plots.info"
@@ -129,7 +145,7 @@ _plot_completions_zsh() {
       fi
     ;;
     name)
-      if [[ "${words[2]}" == "cd" ]]; then
+      if [[ "${words[2]}" == "cd" || "${words[2]}" == "open" ]]; then
         _arguments '2:profiles:()'
       else
         updatePlotNames "${words[2]}"
@@ -238,7 +254,7 @@ _plot_completions_bash() {
     fi
   ;;
   2)
-    if [[ "${COMP_WORDS[COMP_CWORD-1]}" == "cd" ]]; then
+    if [[ "${COMP_WORDS[COMP_CWORD-1]}" == "cd" || "${COMP_WORDS[COMP_CWORD-1]}" == "open" ]]; then
       COMPREPLY=( )
     else
       updatePlotNames "${COMP_WORDS[COMP_CWORD-1]}"

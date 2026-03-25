@@ -1673,4 +1673,72 @@ void PlotManager::SaveProject(const string& projectName)
   tabCompFile.close();
 };
 
+vector<tuple<string, string, string>> PlotManager::GetAvailableData(const string& selection)
+{
+  auto a = split_string(selection, ':');
+  string inputID = a[0];
+  auto filePath = split_string(a[1], '/');
+  // (a.size() > 1)
+  
+  for (auto& inputFileName : mInputFiles[inputID]) {
+    DEBUG("{}", inputFileName);
+    TFile inputFile(inputFileName.data(), "READ");
+    TObject* folder = &inputFile;
+    folder = FindSubDirectory(folder, filePath);
+    //folder->ls();
+    
+    std::function<void(TObject*)> loopData = [&] (TObject* folder){
+      TCollection* itemList = nullptr;
+      if (folder->InheritsFrom(TDirectory::Class())) {
+        itemList = static_cast<TDirectoryFile*>(folder)->GetListOfKeys();
+      } else if (folder->InheritsFrom(TFolder::Class())) {
+        itemList = static_cast<TFolder*>(folder)->GetListOfFolders();
+      } else if (folder->InheritsFrom(TCollection::Class())) {
+        itemList = static_cast<TCollection*>(folder);
+      } else {
+        ERROR("Data format {} not supported.", folder->ClassName());
+        return;
+      }
+      itemList->SetOwner();
+      TIter next(itemList);
+      TObject* obj = nullptr;
+      while ((obj = next())) {
+        if (obj->IsA() == TKey::Class()) {
+          obj = static_cast<TKey*>(obj)->ReadObj();
+        }
+        DEBUG("[{}] {}", obj->ClassName(), obj->GetName());
+      }
+
+    };
+    loopData(folder);
+
+    
+  }
+  return {{}};
+//["TH2D"]["sub/path/in/inputID"]["dataName"]
+}
+
 }  // end namespace SciRooPlot
+
+/*
+ 
+ TFile inputFile(fileName.data(), "READ");
+ if (inputFile.IsZombie()) {
+   WARNING("Cannot open input file {}.", fileName);
+   continue;
+ }
+
+ TObject* folder = &inputFile;
+
+ // find top level entry point for this input file
+ if (fileNamePath.size() > 1) {
+   auto filePath = split_string(fileNamePath[1], '/');
+   // append sub-specification from input name
+   folder = FindSubDirectory(folder, filePath);
+   if (!folder) {
+     ERROR("Subdirectory {} not found in file {}.", fileNamePath[1], fileName);
+     return false;
+   }
+ }
+
+ */
