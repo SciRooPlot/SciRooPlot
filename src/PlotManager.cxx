@@ -1635,7 +1635,7 @@ tuple<string, string, string> PlotManager::GetProjectSettings(string projectName
       if (auto property = tree.get_child_optional("OUT")) {
         outputDir = expand_path(property->get_value<string>());
         if (outputDir.empty()) {
-          WARNING(R"(Please run "plot-config set {} OUT </path/to/store/output>".)", projectName);
+          WARNING(R"(Please run "srp set {} OUT </path/to/store/output>".)", projectName);
         }
       }
     }

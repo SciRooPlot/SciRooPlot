@@ -12,13 +12,13 @@ case "$-" in
   *) return 1 ;;
 esac
 
-if [[ ! -f "${SCIROOPLOT_BIN}/plot" || ! -f "${SCIROOPLOT_BIN}/plot-config" ]]; then
+if [[ ! -f "${SCIROOPLOT_BIN}/plot" || ! -f "${SCIROOPLOT_BIN}/srp" ]]; then
   echo "SciRooPlot is not installed. Cannot initialize plotting functions."
   return 1
 fi
 
 function plot() {
-  local user_exec=$("${SCIROOPLOT_BIN}/plot-config" "get" "@current" "EXE")
+  local user_exec=$("${SCIROOPLOT_BIN}/srp" "get" "@current" "EXE")
   local user_build_dir=$([[ -n "${user_exec}" ]] && dirname -- "${user_exec}" || echo "")
   if [[ -d "${user_build_dir}" ]]; then
 
@@ -43,7 +43,7 @@ function plot() {
       fi
     fi
 
-    local user_plotdef="$(${SCIROOPLOT_BIN}/plot-config path "@current")/plots.info"
+    local user_plotdef="$(${SCIROOPLOT_BIN}/srp path "@current")/plots.info"
     (
       cd "${user_build_dir}";
       (make -j6 1> /dev/null) || exit 1
@@ -56,11 +56,12 @@ function plot() {
   return 0
 }
 
-function plot-config() {
+function srp() {
   if [[ "${1}" == "update" ]]; then
     "${SCIROOPLOT_SOURCE_DIR}/scripts/install.sh" "${2}"
+    source ${SCIROOPLOT_ENV}
   elif [[ "${1}" == "cd" ]]; then
-    cd "${SCIROOPLOT_SOURCE_DIR}"
+    cd "${SCIROOPLOT_SOURCE_DIR}/build"
   elif [[ "${1}" == "create" ]]; then
     local project_name="${2}"
     local project_path="${project_name}"
@@ -84,10 +85,10 @@ function plot-config() {
     cp -r "${SCIROOPLOT_DATA_DIR}/user/"* "${project_path}/"
     sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/CMakeLists.txt" && rm -f "${project_path}/CMakeLists.txt.bak"
     sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/DefinePlots.cxx" && rm -f "${project_path}/DefinePlots.cxx.bak"
-    "${SCIROOPLOT_BIN}/plot-config" "set" "${project_name}" "EXE" "${project_path}/build/definePlots"
-    "${SCIROOPLOT_BIN}/plot-config" "set" "${project_name}" "OUT" "${project_path}/output"
-    "${SCIROOPLOT_BIN}/plot-config" "select" "${project_name}"
-    "${SCIROOPLOT_BIN}/plot-config" "show" "${project_name}"
+    "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "EXE" "${project_path}/build/definePlots"
+    "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "OUT" "${project_path}/output"
+    "${SCIROOPLOT_BIN}/srp" "select" "${project_name}"
+    "${SCIROOPLOT_BIN}/srp" "show" "${project_name}"
     local curdir="$(pwd)"
     cd "${project_path}/build" && cmake -Wno-dev .. 2>&1 > /dev/null && make 2>&1 > /dev/null && ./definePlots
     cd "${curdir}"
@@ -97,7 +98,7 @@ function plot-config() {
     if (( ${#args[@]} >= 4 )) && [[ "${args[3]}" != /* ]]; then
       args[3]="$(pwd)/${args[3]}"
     fi
-    "${SCIROOPLOT_BIN}/plot-config" "${args[@]}"
+    "${SCIROOPLOT_BIN}/srp" "${args[@]}"
   fi
   return 0
 }
@@ -109,7 +110,7 @@ _plot_completions_zsh() {
   local groups_and_categories
   local names
   
-  local tabcomp_file="$(${SCIROOPLOT_BIN}/plot-config path "@current")/tabcomp.csv"
+  local tabcomp_file="$(${SCIROOPLOT_BIN}/srp path "@current")/tabcomp.csv"
   if [[ ! -f "${tabcomp_file}" ]]; then
     return
   fi
@@ -165,7 +166,7 @@ _plot_completions_zsh() {
   unset -f updatePlotNames
 }
 
-_plot_config_completions_zsh() {
+_srp_completions_zsh() {
 
   local general_commands=('update' 'cd' 'create' 'projects' 'reset' 'clean' 'help')
   local project_commands=('remove' 'select' 'show' 'path' 'set' 'get')
@@ -173,7 +174,7 @@ _plot_config_completions_zsh() {
   local properties=('EXE' 'OUT' 'NAME')
 
   local projects
-  local project_file="$(${SCIROOPLOT_BIN}/plot-config path)/projects.info"
+  local project_file="$(${SCIROOPLOT_BIN}/srp path)/projects.info"
   if [[ -f "${project_file}" ]]; then
     projects=("@current")
     local project
@@ -224,7 +225,7 @@ _plot_completions_bash() {
   local groups_and_categories
   local names
 
-  local tabcomp_file="$(${SCIROOPLOT_BIN}/plot-config path "@current")/tabcomp.csv"
+  local tabcomp_file="$(${SCIROOPLOT_BIN}/srp path "@current")/tabcomp.csv"
   if [[ ! -f "${tabcomp_file}" ]]; then
     return
   fi
@@ -274,7 +275,7 @@ _plot_completions_bash() {
   unset -f updatePlotNames
 }
 
-_plot_config_completions_bash() {
+_srp_completions_bash() {
 
   local general_commands=('update cd create projects reset clean help')
   local project_commands=('remove select show path set get')
@@ -282,7 +283,7 @@ _plot_config_completions_bash() {
   local properties=('EXE OUT NAME')
   
   local projects
-  local project_file="$(${SCIROOPLOT_BIN}/plot-config path)/projects.info"
+  local project_file="$(${SCIROOPLOT_BIN}/srp path)/projects.info"
   if [[ -f "${project_file}" ]]; then
     projects=("@current")
     local project
@@ -333,7 +334,7 @@ if [ -n "${ZSH_VERSION}" ]; then
   fi
   if command -v compdef &> /dev/null; then
     compdef _plot_completions_zsh plot
-    compdef _plot_config_completions_zsh plot-config
+    compdef _srp_completions_zsh srp
   fi
 elif [ -n "${BASH_VERSION}" ]; then
   if ! shopt -q progcomp; then
@@ -353,6 +354,6 @@ elif [ -n "${BASH_VERSION}" ]; then
   fi
   if shopt -q progcomp; then
     complete -F _plot_completions_bash plot
-    complete -F _plot_config_completions_bash plot-config
+    complete -F _srp_completions_bash srp
   fi
 fi

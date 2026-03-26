@@ -59,6 +59,7 @@ else
 fi
 
 # update
+echo
 echo "Updating repository..."
 git pull
 echo
@@ -76,8 +77,6 @@ make install >/dev/null 2>&1
 ENV_SCRIPT="${INSTALL_DIR}/share/scirooplot/scirooplot-env.sh"
 if [[ -f "${ENV_SCRIPT}" ]]; then
     echo
-    echo "Sourcing environment script..."
-    source "${ENV_SCRIPT}"
     echo "Make sure to add the following line to your ~/.bashrc or ~/.zshrc:"
     echo "source ${ENV_SCRIPT}"
 else

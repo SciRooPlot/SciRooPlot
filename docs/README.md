@@ -14,32 +14,18 @@ SciRooPlot runs on MacOS and Linux. It depends on the following external softwar
 
 If those dependencies cannot be installed by a package manager, a description of how to build them from source is shown [here](ADVANCED_INSTALL.md).
 
-SciRooPlot is installed by simply running:
+SciRooPlot is installed as follows:
 ```bash
     git clone https://github.com/SciRooPlot/SciRooPlot.git
     cd SciRooPlot
     ./scripts/install.sh
 ```
-and following the install instructions.
-Alternatively you can do
-```bash
-    git clone https://github.com/SciRooPlot/SciRooPlot.git
-    cd SciRooPlot
-    mkdir build && cd build
-    cmake .. && make
-```
 To use the app, put this line in your .bashrc or .bash_aliases (and run it once or start a new terminal session):
 ```
     source /path/to/SciRooPlot/build/share/scirooplot/scirooplot-env.sh
 ```
-Alternatively, the installation into a custom location is done via:
-```bash
-    cmake -DCMAKE_INSTALL_PREFIX=/path/to/install/location .. && make install
-```
-and the corresponding environment script would then sourced as follows:
-```
-    source /path/to/install/location/share/scirooplot/scirooplot-env.sh
-```
+Now the two commands `srp` and `plot` are available.
+N.B.: keep up-to-date by running `srp update` from time to time.
 
 Now you are ready to use SciRooPlot -- Happy plotting!
 
@@ -47,7 +33,7 @@ Now you are ready to use SciRooPlot -- Happy plotting!
 
 A new project is created by running:
 ```
-  plot-config create <projectName> [<folderName>]
+  srp create <projectName> [<folderName>]
 ```
 This will create a directory called `folderName` (or `projectName` if no folder name was specified) in your current directory and provide working setup to start your project.
 The default code will already be compiled and ready to use, allowing you to generate you first plot simply by typing
@@ -59,15 +45,15 @@ The resulting executable will automatically be rebuilt and (if needed) executed 
 
 You may have multiple such projects in parallel, and can switch between them via:
 ```
-plot-config select <projectName>
+srp select <projectName>
 ```
 To print the available configuration options run:
 ```
-plot-config help
+srp help
 ```
 A list of available projects is shown when typing:
 ```
-plot-config projects
+srp projects
 ```
 By default, all internal settings as well as the plot definitions are stored in `~/.SciRooPlot`. This can be changed by defining an environment variable called `SCIROOPLOT_CONFIG_PATH`.
 
@@ -89,7 +75,7 @@ To adjust the time between the frames use for example `plot figureGroup myPlot_b
 
 The modes that save files to disk, the plotting app needs to know where to store the output. This can be configured via: 
 ```
-plot-config set <projectName> OUT </path/to/output/folder>
+srp set <projectName> OUT </path/to/output/folder>
 ```
 Within this folder, the files will be organized in subdirectories corresponding to the figure groups and categories.
 

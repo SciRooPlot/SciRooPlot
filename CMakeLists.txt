@@ -150,7 +150,7 @@ add_plotting_executable(plot
   SOURCES app/PlottingApp.cxx
 )
 
-add_plotting_executable(plot-config
+add_plotting_executable(srp
   SOURCES app/PlottingAppConfig.cxx
 )
 
@@ -241,7 +241,7 @@ install(
   PATTERN ".*" EXCLUDE
 )
 install(
-  TARGETS SciRooPlot plot plot-config
+  TARGETS SciRooPlot plot srp
   EXPORT SciRooPlotTargets
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
