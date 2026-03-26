@@ -1383,11 +1383,14 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
           dataDims.push_back({vars->at(i), nBins, edges});
         }
       }
-      mDataInfo->dataDims = dataDims;
-      read_from_tree(dataTree, mDataInfo->filter, "data_filter");
-      read_from_tree(dataTree, mDataInfo->weight, "data_weight");
-      read_from_tree(dataTree, mDataInfo->nEntries, "data_nEntries");
-      read_from_tree(dataTree, mDataInfo->isProfileNoScatter, "data_isProfileNoScatter");
+      mDataInfo.dataDims = dataDims;
+      read_from_tree(dataTree, mDataInfo.filters, "data_filters");
+      read_from_tree(dataTree, mDataInfo.weight, "data_weight");
+      read_from_tree(dataTree, mDataInfo.entries.min, "data_entryMin");
+      read_from_tree(dataTree, mDataInfo.entries.max, "data_entryMax");
+      read_from_tree(dataTree, mDataInfo.isProfileNoScatter, "data_isProfileNoScatter");
+      read_from_tree(dataTree, mDataInfo.definitions.keys, "data_definitions_keys");
+      read_from_tree(dataTree, mDataInfo.definitions.values, "data_definitions_values");
     }
   }
   // extract proj info
@@ -1450,11 +1453,11 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mNContours, "number_of_contours");
   put_in_tree(dataTree, mNiterSmooth, "nIter_smooth");
 
-  if (mDataInfo) {
+  if (mDataInfo.dataDims.size()) {
     vector<string> vars;
     vector<double_t> binning;
     vector<int32_t> sizes;
-    for (auto dataDim : mDataInfo->dataDims) {
+    for (auto dataDim : mDataInfo.dataDims) {
       vars.push_back(dataDim.var);
       binning.insert(binning.end(), dataDim.edges.begin(), dataDim.edges.end());
       binning.push_back(static_cast<double_t>(dataDim.nBins));
@@ -1463,10 +1466,13 @@ ptree Plot::Pad::Data::GetPropertyTree() const
     put_in_tree(dataTree, optional<vector<string>>{vars}, "data_vars");
     put_in_tree(dataTree, optional<vector<double_t>>{binning}, "data_binning");
     put_in_tree(dataTree, optional<vector<int32_t>>{sizes}, "data_binning_sizes");
-    put_in_tree(dataTree, mDataInfo->filter, "data_filter");
-    put_in_tree(dataTree, mDataInfo->weight, "data_weight");
-    put_in_tree(dataTree, mDataInfo->nEntries, "data_nEntries");
-    put_in_tree(dataTree, mDataInfo->isProfileNoScatter, "data_isProfileNoScatter");
+    put_in_tree(dataTree, mDataInfo.filters, "data_filters");
+    put_in_tree(dataTree, mDataInfo.weight, "data_weight");
+    put_in_tree(dataTree, mDataInfo.entries.min, "data_entryMin");
+    put_in_tree(dataTree, mDataInfo.entries.max, "data_entryMax");
+    put_in_tree(dataTree, mDataInfo.isProfileNoScatter, "data_isProfileNoScatter");
+    put_in_tree(dataTree, mDataInfo.definitions.keys, "data_definitions_keys");
+    put_in_tree(dataTree, mDataInfo.definitions.values, "data_definitions_values");
   }
   if (mProjInfo) {
     put_in_tree(dataTree, optional<vector<uint8_t>>{mProjInfo->dims}, "proj_dims");
@@ -1819,50 +1825,81 @@ auto Plot::Pad::Data::ProfileY(double_t startX, double_t endX, optional<bool> is
   mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
   return *this;
 }
-auto Plot::Pad::Data::Project(vector<data_dim_t> dataDims, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Project(vector<data_dim_t> dataDims, optional<string> weight) -> decltype(*this)
 {
-  mDataInfo = {dataDims, filter, weight, nEntries};
+  mDataInfo.set({dataDims, weight});
   return *this;
 }
-auto Plot::Pad::Data::Project1D(data_dim_t x, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Project1D(data_dim_t x, optional<string> weight) -> decltype(*this)
 {
-  mDataInfo = {{x}, filter, weight, nEntries};
+  mDataInfo.set({{x}, weight});
   return *this;
 }
-auto Plot::Pad::Data::Project2D(data_dim_t x, data_dim_t y, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Project2D(data_dim_t x, data_dim_t y, optional<string> weight) -> decltype(*this)
 {
-  mDataInfo = {{x, y}, filter, weight, nEntries};
+  mDataInfo.set({{x, y}, weight});
   return *this;
 }
-auto Plot::Pad::Data::Scatter(string x, string y, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Scatter(const string& x, const string& y) -> decltype(*this)
 {
-  mDataInfo = {{{x}, {y}}, filter, {}, nEntries, false};
+  mDataInfo.set({{{x}, {y}}, {}, false});
   return *this;
 }
-auto Plot::Pad::Data::Scatter(string x, string y, string xErr, string yErr, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Scatter(const string& x, const string& y, const string& xErr, const string& yErr) -> decltype(*this)
 {
-  mDataInfo = {{{x}, {y}, {xErr}, {yErr}}, filter, {}, nEntries, false};
+  mDataInfo.set({{{x}, {y}, {xErr}, {yErr}}, {}, false});
   return *this;
 }
-auto Plot::Pad::Data::Scatter(string x, string y, string xErrLow, string xErrHigh, string yErrLow, string yErrHigh, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Scatter(const string& x, const string& y, const string& xErrLow, const string& xErrHigh, const string& yErrLow, const string& yErrHigh) -> decltype(*this)
 {
-  mDataInfo = {{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, filter, {}, nEntries, false};
+  mDataInfo.set({{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, {}, false});
   return *this;
 }
-auto Plot::Pad::Data::Profile(vector<data_dim_t> dataDims, const string& profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Profile(vector<data_dim_t> dataDims, const string& profile, optional<string> weight) -> decltype(*this)
 {
   dataDims.push_back({profile});
-  mDataInfo = {dataDims, filter, weight, nEntries, true};
+  mDataInfo.set({dataDims, weight, true});
   return *this;
 }
-auto Plot::Pad::Data::Profile1D(data_dim_t x, const string& profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Profile1D(data_dim_t x, const string& profile, optional<string> weight) -> decltype(*this)
 {
-  mDataInfo = {{x, {profile, {}}}, filter, weight, nEntries, true};
+  mDataInfo.set({{x, {profile, {}}}, weight, true});
   return *this;
 }
-auto Plot::Pad::Data::Profile2D(data_dim_t x, data_dim_t y, const string& profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Profile2D(data_dim_t x, data_dim_t y, const string& profile, optional<string> weight) -> decltype(*this)
 {
-  mDataInfo = {{x, y, {profile, {}}}, filter, weight, nEntries, true};
+  mDataInfo.set({{x, y, {profile, {}}}, weight, true});
+  return *this;
+}
+auto Plot::Pad::Data::Define(const string& key, const string& value) -> decltype(*this)
+{
+  if (mDataInfo.definitions.keys && mDataInfo.definitions.values) {
+    mDataInfo.definitions.keys->push_back(key);
+    mDataInfo.definitions.values->push_back(value);
+  } else {
+    mDataInfo.definitions.keys = {key};
+    mDataInfo.definitions.values = {value};
+  }
+  return *this;
+}
+auto Plot::Pad::Data::Filter(const std::string& filter) -> decltype(*this)
+{
+  if (mDataInfo.filters) {
+    mDataInfo.filters->push_back(filter);
+  } else {
+    mDataInfo.filters = {filter};
+  }
+  return *this;
+}
+auto Plot::Pad::Data::Entries(uint64_t nEntries) -> decltype(*this)
+{
+  mDataInfo.entries.max = nEntries;
+  return *this;
+}
+auto Plot::Pad::Data::Entries(uint64_t entryMin, uint64_t entryMax) -> decltype(*this)
+{
+  mDataInfo.entries.max = entryMin;
+  mDataInfo.entries.max = entryMax;
   return *this;
 }
 
@@ -1904,6 +1941,7 @@ string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
 //**************************************************************************************************
 string Plot::Pad::Data::data_info_t::GetNameSuffix() const
 {
+  if (dataDims.empty()) return "";
   string nameSuffix = "{";
   for (auto& dataDim : dataDims) {
     nameSuffix += dataDim.var;
@@ -1912,9 +1950,19 @@ string Plot::Pad::Data::data_info_t::GetNameSuffix() const
     }
     nameSuffix += std::to_string(dataDim.nBins);
   }
-  if (filter) nameSuffix += ";" + *filter;
+  if (filters) {
+    for (auto& filter : *filters) {
+      nameSuffix += ";" + filter;
+    }
+  }
+  if (definitions.values) {
+    for (auto& def : *definitions.values) {
+      nameSuffix += ";" + def;
+    }
+  }
   if (weight) nameSuffix += ";" + *weight;
-  if (nEntries) nameSuffix += ";" + std::to_string(*nEntries);
+  if (entries.min) nameSuffix += ";" + std::to_string(*entries.min);
+  if (entries.max) nameSuffix += ";" + std::to_string(*entries.max);
   if (isProfileNoScatter) nameSuffix += ";" + std::to_string(*isProfileNoScatter);
   nameSuffix += "}";
   return nameSuffix;
@@ -1987,11 +2035,12 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
           dataDims.push_back({vars->at(i), nBins, edges});
         }
       }
-      mDenomDataInfo->dataDims = dataDims;
-      read_from_tree(dataTree, mDenomDataInfo->filter, "denomData_filter");
-      read_from_tree(dataTree, mDenomDataInfo->weight, "denomData_weight");
-      read_from_tree(dataTree, mDenomDataInfo->nEntries, "denomData_nEntries");
-      read_from_tree(dataTree, mDenomDataInfo->isProfileNoScatter, "denomData_isProfileNoScatter");
+      mDenomDataInfo.dataDims = dataDims;
+      read_from_tree(dataTree, mDenomDataInfo.filters, "denomData_filters");
+      read_from_tree(dataTree, mDenomDataInfo.weight, "denomData_weight");
+      read_from_tree(dataTree, mDenomDataInfo.entries.min, "denomData_entryMin");
+      read_from_tree(dataTree, mDenomDataInfo.entries.max, "denomData_entryMax");
+      read_from_tree(dataTree, mDenomDataInfo.isProfileNoScatter, "denomData_isProfileNoScatter");
     }
   }
   // extract proj info
@@ -2023,11 +2072,11 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
   dataTree.put("isCorrelated", mIsCorrelated);
   put_in_tree(dataTree, mScaleBinWidth, "scale_bin_width_norm_division");
 
-  if (mDenomDataInfo) {
+  if (mDenomDataInfo.dataDims.size()) {
     vector<string> vars;
     vector<double_t> binning;
     vector<int32_t> sizes;
-    for (auto& dataDim : mDenomDataInfo->dataDims) {
+    for (auto& dataDim : mDenomDataInfo.dataDims) {
       vars.push_back(dataDim.var);
       binning.insert(binning.end(), dataDim.edges.begin(), dataDim.edges.end());
       binning.push_back(static_cast<double_t>(dataDim.nBins));
@@ -2036,10 +2085,11 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
     put_in_tree(dataTree, optional<vector<string>>{vars}, "denomData_vars");
     put_in_tree(dataTree, optional<vector<double_t>>{binning}, "denomData_binning");
     put_in_tree(dataTree, optional<vector<int32_t>>{sizes}, "denomData_binning_sizes");
-    put_in_tree(dataTree, mDenomDataInfo->filter, "denomData_filter");
-    put_in_tree(dataTree, mDenomDataInfo->weight, "denomData_weight");
-    put_in_tree(dataTree, mDenomDataInfo->nEntries, "denomData_nEntries");
-    put_in_tree(dataTree, mDenomDataInfo->isProfileNoScatter, "denomData_isProfileNoScatter");
+    put_in_tree(dataTree, mDenomDataInfo.filters, "denomData_filters");
+    put_in_tree(dataTree, mDenomDataInfo.weight, "denomData_weight");
+    put_in_tree(dataTree, mDenomDataInfo.entries.min, "denomData_entryMin");
+    put_in_tree(dataTree, mDenomDataInfo.entries.max, "denomData_entryMax");
+    put_in_tree(dataTree, mDenomDataInfo.isProfileNoScatter, "denomData_isProfileNoScatter");
   }
   if (mDenomProjInfo) {
     put_in_tree(dataTree, optional<vector<uint8_t>>{mDenomProjInfo->dims}, "denomProj_dims");
@@ -2095,50 +2145,81 @@ auto Plot::Pad::Ratio::ProfileYDenom(double_t startX, double_t endX, optional<bo
   mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
   return *this;
 }
-auto Plot::Pad::Ratio::ProjectDenom(vector<data_dim_t> dataDims, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProjectDenom(vector<data_dim_t> dataDims, optional<string> weight) -> decltype(*this)
 {
-  mDenomDataInfo = {dataDims, filter, weight, nEntries};
+  mDenomDataInfo.set({dataDims, weight});
   return *this;
 }
-auto Plot::Pad::Ratio::Project1DDenom(data_dim_t x, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::Project1DDenom(data_dim_t x, optional<string> weight) -> decltype(*this)
 {
-  mDenomDataInfo = {{x}, filter, weight, nEntries};
+  mDenomDataInfo.set({{x}, weight});
   return *this;
 }
-auto Plot::Pad::Ratio::Project2DDenom(data_dim_t x, data_dim_t y, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::Project2DDenom(data_dim_t x, data_dim_t y, optional<string> weight) -> decltype(*this)
 {
-  mDenomDataInfo = {{x, y}, filter, weight, nEntries};
+  mDenomDataInfo.set({{x, y}, weight});
   return *this;
 }
-auto Plot::Pad::Ratio::ScatterDenom(string x, string y, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ScatterDenom(const string& x, const string& y) -> decltype(*this)
 {
-  mDenomDataInfo = {{{x}, {y}}, filter, {}, nEntries, false};
+  mDenomDataInfo.set({{{x}, {y}}, {}, false});
   return *this;
 }
-auto Plot::Pad::Ratio::ScatterDenom(string x, string y, string xErr, string yErr, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ScatterDenom(const string& x, const string& y, const string& xErr, const string& yErr) -> decltype(*this)
 {
-  mDenomDataInfo = {{{x}, {y}, {xErr}, {yErr}}, filter, {}, nEntries, false};
+  mDenomDataInfo.set({{{x}, {y}, {xErr}, {yErr}}, {}, false});
   return *this;
 }
-auto Plot::Pad::Ratio::ScatterDenom(string x, string y, string xErrLow, string xErrHigh, string yErrLow, string yErrHigh, optional<string> filter, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ScatterDenom(const string& x, const string& y, const string& xErrLow, const string& xErrHigh, const string& yErrLow, const string& yErrHigh) -> decltype(*this)
 {
-  mDenomDataInfo = {{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, filter, {}, nEntries, false};
+  mDenomDataInfo.set({{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, {}, false});
   return *this;
 }
-auto Plot::Pad::Ratio::ProfileDenom(vector<data_dim_t> dataDims, const string& profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::ProfileDenom(vector<data_dim_t> dataDims, const string& profile, optional<string> weight) -> decltype(*this)
 {
   dataDims.push_back({profile, {}});
-  mDenomDataInfo = {dataDims, filter, weight, nEntries, true};
+  mDenomDataInfo.set({dataDims, weight, true});
   return *this;
 }
-auto Plot::Pad::Ratio::Profile1DDenom(data_dim_t x, const string& profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::Profile1DDenom(data_dim_t x, const string& profile, optional<string> weight) -> decltype(*this)
 {
-  mDenomDataInfo = {{x, {profile, {}}}, filter, weight, nEntries, true};
+  mDenomDataInfo.set({{x, {profile, {}}}, weight, true});
   return *this;
 }
-auto Plot::Pad::Ratio::Profile2DDenom(data_dim_t x, data_dim_t y, const string& profile, optional<string> filter, optional<string> weight, optional<uint64_t> nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::Profile2DDenom(data_dim_t x, data_dim_t y, const string& profile, optional<string> weight) -> decltype(*this)
 {
-  mDenomDataInfo = {{x, y, {profile, {}}}, filter, weight, nEntries, true};
+  mDenomDataInfo.set({{x, y, {profile, {}}}, weight, true});
+  return *this;
+}
+auto Plot::Pad::Ratio::DefineDenom(const std::string& key, const std::string& value) -> decltype(*this)
+{
+  if (mDenomDataInfo.definitions.keys && mDenomDataInfo.definitions.values) {
+    mDenomDataInfo.definitions.keys->push_back(key);
+    mDenomDataInfo.definitions.values->push_back(value);
+  } else {
+    mDenomDataInfo.definitions.keys = {key};
+    mDenomDataInfo.definitions.values = {value};
+  }
+  return *this;
+}
+auto Plot::Pad::Ratio::FilterDenom(const std::string& filter) -> decltype(*this)
+{
+  if (mDenomDataInfo.filters) {
+    mDenomDataInfo.filters->push_back(filter);
+  } else {
+    mDenomDataInfo.filters = {filter};
+  }
+  return *this;
+}
+auto Plot::Pad::Ratio::EntriesDenom(uint64_t nEntries) -> decltype(*this)
+{
+  mDenomDataInfo.entries.max = nEntries;
+  return *this;
+}
+auto Plot::Pad::Ratio::EntriesDenom(uint64_t entryMin, uint64_t entryMax) -> decltype(*this)
+{
+  mDenomDataInfo.entries.max = entryMin;
+  mDenomDataInfo.entries.max = entryMax;
   return *this;
 }
 

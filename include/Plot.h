@@ -496,17 +496,22 @@ class Plot::Pad::Data
     int32_t nBins{0};
   };
 
-  virtual Data& Project(std::vector<data_dim_t> dataDims, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {});
-  virtual Data& Project1D(data_dim_t x, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {});
-  virtual Data& Project2D(data_dim_t x, data_dim_t y, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {});
+  virtual Data& Project(std::vector<data_dim_t> dataDims, std::optional<std::string> weight = {});
+  virtual Data& Project1D(data_dim_t x, std::optional<std::string> weight = {});
+  virtual Data& Project2D(data_dim_t x, data_dim_t y, std::optional<std::string> weight = {});
 
-  virtual Data& Scatter(std::string x, std::string y, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
-  virtual Data& Scatter(std::string x, std::string y, std::string xErr, std::string yErr, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
-  virtual Data& Scatter(std::string x, std::string y, std::string xErrLow, std::string xErrHigh, std::string yErrLow, std::string yErrHigh, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
+  virtual Data& Scatter(const std::string& x, const std::string& y);
+  virtual Data& Scatter(const std::string& x, const std::string& y, const std::string& xErr, const std::string& yErr);
+  virtual Data& Scatter(const std::string& x, const std::string& y, const std::string& xErrLow, const std::string& xErrHigh, const std::string& yErrLow, const std::string& yErrHigh);
 
-  virtual Data& Profile(std::vector<data_dim_t> dataDims, const std::string& profile, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {});
-  virtual Data& Profile1D(data_dim_t x, const std::string& profile, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {});
-  virtual Data& Profile2D(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {});
+  virtual Data& Profile(std::vector<data_dim_t> dataDims, const std::string& profile, std::optional<std::string> weight = {});
+  virtual Data& Profile1D(data_dim_t x, const std::string& profile, std::optional<std::string> weight = {});
+  virtual Data& Profile2D(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> weight = {});
+
+  virtual Data& Define(const std::string& key, const std::string& value);
+  virtual Data& Filter(const std::string& filter);
+  virtual Data& Entries(uint64_t nEntries);
+  virtual Data& Entries(uint64_t entryMin, uint64_t entryMax);
 
  protected:
   friend class PlotManager;
@@ -564,10 +569,30 @@ class Plot::Pad::Data
 
   struct data_info_t {
     std::vector<data_dim_t> dataDims{};
-    std::optional<std::string> filter{};
     std::optional<std::string> weight{};
-    std::optional<int64_t> nEntries{};
     std::optional<bool> isProfileNoScatter{};
+    struct definitions_t {
+      std::optional<std::vector<std::string>> keys{};
+      std::optional<std::vector<std::string>> values{};
+    };
+    definitions_t definitions;
+    std::optional<std::vector<std::string>> filters{};
+    struct entry_range_t {
+      std::optional<int64_t> min{};
+      std::optional<int64_t> max{};
+    };
+    entry_range_t entries;
+    void set(const data_info_t& other)
+    {
+      dataDims = other.dataDims;
+      weight = other.weight;
+      isProfileNoScatter = other.isProfileNoScatter;
+    }
+    bool singleProc()
+    {
+      // disable multi processing in case scatter (order might be relevant) or range is requested
+      return !isProfileNoScatter.value_or(true) || entries.max.value_or(false);
+    }
     std::string GetNameSuffix() const;
   };
 
@@ -600,7 +625,7 @@ class Plot::Pad::Data
     std::optional<double_t> max;
   };
 
-  std::optional<data_info_t> mDataInfo;
+  data_info_t mDataInfo;
   std::optional<proj_info_t> mProjInfo;
 
   legend_t mLegend;
@@ -702,29 +727,39 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& ProfileXDenom(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});
   Ratio& ProfileYDenom(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});
 
-  Ratio& Project(std::vector<data_dim_t> dataDims, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Project(dataDims, filter, weight, nEntries)); }
-  Ratio& Project1D(data_dim_t x, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Project1D(x, filter, weight, nEntries)); }
-  Ratio& Project2D(data_dim_t x, data_dim_t y, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Project2D(x, y, filter, weight, nEntries)); }
+  Ratio& Project(std::vector<data_dim_t> dataDims, std::optional<std::string> weight = {}) { return static_cast<decltype(*this)&>(Data::Project(dataDims, weight)); }
+  Ratio& Project1D(data_dim_t x, std::optional<std::string> weight = {}) { return static_cast<decltype(*this)&>(Data::Project1D(x, weight)); }
+  Ratio& Project2D(data_dim_t x, data_dim_t y, std::optional<std::string> weight = {}) { return static_cast<decltype(*this)&>(Data::Project2D(x, y, weight)); }
 
-  Ratio& ProjectDenom(std::vector<data_dim_t> dataDims, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {});
-  Ratio& Project1DDenom(data_dim_t x, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {});
-  Ratio& Project2DDenom(data_dim_t x, data_dim_t y, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {});
+  Ratio& ProjectDenom(std::vector<data_dim_t> dataDims, std::optional<std::string> weight = {});
+  Ratio& Project1DDenom(data_dim_t x, std::optional<std::string> weight = {});
+  Ratio& Project2DDenom(data_dim_t x, data_dim_t y, std::optional<std::string> weight = {});
 
-  Ratio& Scatter(std::string x, std::string y, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Scatter(x, y, filter, nEntries)); }
-  Ratio& Scatter(std::string x, std::string y, std::string xErr, std::string yErr, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErr, yErr, filter, nEntries)); }
-  Ratio& Scatter(std::string x, std::string y, std::string xErrLow, std::string xErrHigh, std::string yErrLow, std::string yErrHigh, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErrLow, xErrHigh, yErrLow, yErrHigh, filter, nEntries)); }
+  Ratio& Scatter(const std::string& x, const std::string& y) { return static_cast<decltype(*this)&>(Data::Scatter(x, y)); }
+  Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErr, const std::string& yErr) { return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErr, yErr)); }
+  Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErrLow, const std::string& xErrHigh, const std::string& yErrLow, const std::string& yErrHigh) { return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErrLow, xErrHigh, yErrLow, yErrHigh)); }
 
-  Ratio& ScatterDenom(std::string x, std::string y, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
-  Ratio& ScatterDenom(std::string x, std::string y, std::string xErr, std::string yErr, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
-  Ratio& ScatterDenom(std::string x, std::string y, std::string xErrLow, std::string xErrHigh, std::string yErrLow, std::string yErrHigh, std::optional<std::string> filter = {}, std::optional<uint64_t> nEntries = {});
+  Ratio& ScatterDenom(const std::string& x, const std::string& y);
+  Ratio& ScatterDenom(const std::string& x, const std::string& y, const std::string& xErr, const std::string& yErr);
+  Ratio& ScatterDenom(const std::string& x, const std::string& y, const std::string& xErrLow, const std::string& xErrHigh, const std::string& yErrLow, const std::string& yErrHigh);
 
-  Ratio& Profile(std::vector<data_dim_t> dataDims, const std::string& profile, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Profile(dataDims, profile, filter, weight, nEntries)); }
-  Ratio& Profile1D(data_dim_t x, const std::string& profile, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Profile1D(x, profile, filter, weight, nEntries)); }
-  Ratio& Profile2D(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {}) { return static_cast<decltype(*this)&>(Data::Profile2D(x, y, profile, filter, weight, nEntries)); }
+  Ratio& Profile(std::vector<data_dim_t> dataDims, const std::string& profile, std::optional<std::string> weight = {}) { return static_cast<decltype(*this)&>(Data::Profile(dataDims, profile, weight)); }
+  Ratio& Profile1D(data_dim_t x, const std::string& profile, std::optional<std::string> weight = {}) { return static_cast<decltype(*this)&>(Data::Profile1D(x, profile, weight)); }
+  Ratio& Profile2D(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> weight = {}) { return static_cast<decltype(*this)&>(Data::Profile2D(x, y, profile, weight)); }
 
-  Ratio& ProfileDenom(std::vector<data_dim_t> dataDims, const std::string& profile, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {});
-  Ratio& Profile1DDenom(data_dim_t x, const std::string& profile, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {});
-  Ratio& Profile2DDenom(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> filter = {}, std::optional<std::string> weight = {}, std::optional<uint64_t> nEntries = {});
+  Ratio& ProfileDenom(std::vector<data_dim_t> dataDims, const std::string& profile, std::optional<std::string> weight = {});
+  Ratio& Profile1DDenom(data_dim_t x, const std::string& profile, std::optional<std::string> weight = {});
+  Ratio& Profile2DDenom(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> weight = {});
+
+  Ratio& Define(const std::string& key, const std::string& value) { return static_cast<decltype(*this)&>(Data::Define(key, value)); }
+  Ratio& Filter(const std::string& filter) { return static_cast<decltype(*this)&>(Data::Filter(filter)); }
+  Ratio& Entries(uint64_t nEntries) { return static_cast<decltype(*this)&>(Data::Entries(nEntries)); }
+  Ratio& Entries(uint64_t entryMin, uint64_t entryMax) { return static_cast<decltype(*this)&>(Data::Entries(entryMin, entryMax)); }
+
+  Ratio& DefineDenom(const std::string& key, const std::string& value);
+  Ratio& FilterDenom(const std::string& filter);
+  Ratio& EntriesDenom(uint64_t nEntries);
+  Ratio& EntriesDenom(uint64_t entryMin, uint64_t entryMax);
 
  protected:
   friend class PlotManager;
@@ -745,7 +780,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   std::string mDenomInputID;
   bool mIsCorrelated{};
   std::optional<bool> mScaleBinWidth;  // normalize both numerater and denominator with bin widths
-  std::optional<data_info_t> mDenomDataInfo;
+  data_info_t mDenomDataInfo;
   std::optional<proj_info_t> mDenomProjInfo;
 };
 

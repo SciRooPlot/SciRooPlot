@@ -424,8 +424,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // retrieve the actual pointer to the denominator data
           optional<data_ptr_t> rawDenomData;
           try {
-            rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomInputID()).at(data_as_ratio->GetDenomName() + ((data_as_ratio->GetDenomDataInfo()) ? data_as_ratio->GetDenomDataInfo()->GetNameSuffix() : "")).get(), data_as_ratio->GetDenomProjInfo());
-
+            rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomInputID()).at(data_as_ratio->GetDenomName() + data_as_ratio->GetDenomDataInfo().GetNameSuffix()).get(), data_as_ratio->GetDenomProjInfo());
           } catch (std::out_of_range&) {
             rawDenomData = nullopt;
           }
@@ -900,7 +899,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
       optional<data_ptr_t> rawData;
       try {
-        rawData = GetDataClone(dataBuffer.at(data->GetInputID()).at(data->GetName() + ((data->GetDataInfo()) ? data->GetDataInfo()->GetNameSuffix() : "")).get(), data->GetProjInfo());
+        rawData = GetDataClone(dataBuffer.at(data->GetInputID()).at(data->GetName() + data->GetDataInfo().GetNameSuffix()).get(), data->GetProjInfo());
       } catch (std::out_of_range&) {
         rawData = nullopt;
       }

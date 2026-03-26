@@ -467,25 +467,30 @@ data_layout_t pp_7TeV
   // NB.: 3D Projections are also possible via the Project() function
 
   // prior to projecting, the data can be filtered:
-  plot[1].AddData("mytree", "input").Project1D({"pt", 200}, "eta>0"); // 200 equidistant bins in pt filled only with data of positive eta
+  plot[1].AddData("mytree", "input").Project1D({"pt", 200}).Filter("eta>0"); // 200 equidistant bins in pt filled only with data of positive eta
 
   // also profiles can be made based on the tree, e.g.:
   plot[1].AddData("mytree", "input").Profile1D("eta", "pt"); // <pt> vs eta
   plot[1].AddData("mytree", "input").Profile1D({"eta", 700}, "pt"); // <pt> vs eta in 700 equidistant bins
-  plot[1].AddData("mytree", "input").Profile1D({"eta", 700}, "pt", "abs(pz) < 5"); //  <pt> vs eta in 700 equidistant bins filled for absolute pz values less than 5
+  plot[1].AddData("mytree", "input").Profile1D({"eta", 700}, "pt").Filter("abs(pz) < 5"); //  <pt> vs eta in 700 equidistant bins filled for absolute pz values less than 5
 
   // similarly, 2D profiles can be produced:
   plot[1].AddData("mytree", "input").Profile2D("eta", "pz", "pt"); // <pt> vs eta and pz
 
   // scatter plots are also possible:
-  plot[1].AddData("mytree", "input").Scatter("x", "y", "a<10"); // simple scatter of x and y under condition a<10
+  plot[1].AddData("mytree", "input").Scatter("x", "y").Filter("a<10 && b<=7"); // simple scatter of x and y under condition a<10 and b<=7
   // or the same with errors
-  plot[1].AddData("mytree", "input").Scatter("x", "y", "ex", "ey", "a<10"); // simple scatter of x and y under condition a<10
+  plot[1].AddData("mytree", "input").Scatter("x", "y", "ex", "ey").Filter("a<10").Filter("z==8"); // simple scatter of x and y under condition a<10 and z == 8
 
   // note that all the table column and filter expressions can be any valid cpp code using the column/leaf names of the input data as arguments
-  plot[1].AddData("mytree", "input").Scatter("pow(x,2) + pow(y,2)", "2*sqrt(y)", "abs(a)<10");
+  plot[1].AddData("mytree", "input").Scatter("pow(x,2) + pow(y,2)", "2*sqrt(y)").Filter("abs(a)<10");
   // this is true not only for the Scatter but also for the Project and Profile functions
 
+  plot[1].AddData("mytree", "input").Scatter("x", "y").Entries(100); // select only first 100 entries
+  plot[1].AddData("mytree", "input").Scatter("x", "y").Entries(800, 1200); // select only entries 800 to 1200
+
+  // you may want to define som variables and use them in the expressions and filters
+  plot[1].AddData("mytree", "input").Scatter("r", "z").Define("r", "sqrt(x*x + y*y)").Filter("r*y<10"); // defnine variable r and use it as point x value but only consider data with r*y<10
 
   // in case the input data comes from a text file called 'myData.csv' with columns 'a' and 'b', it is accessed as follows:
   plot[1].AddData("myData", "input").Scatter("a", "b"); // i.e. the data name is defined as the file name without the file ending .csv

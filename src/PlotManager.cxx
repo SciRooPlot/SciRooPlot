@@ -646,21 +646,21 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
       }
       for (auto& data : pad.GetData()) {
         mDataBuffer[data->GetInputID()][data->GetName()];
-        if (data->GetDataInfo()) {
+        if (data->GetDataInfo().dataDims.size()) {
           auto& dataInfos = mDataInfoBuffer[data->GetInputID()][data->GetName()];
-          auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == (*data->GetDataInfo()).GetNameSuffix(); });
+          auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
           if (iter == dataInfos.end()) {
-            mDataInfoBuffer[data->GetInputID()][data->GetName()].push_back(*data->GetDataInfo());
+            mDataInfoBuffer[data->GetInputID()][data->GetName()].push_back(data->GetDataInfo());
           }
         }
         if (data->GetType() == "ratio") {
           const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
           mDataBuffer[ratio->GetDenomInputID()][ratio->GetDenomName()];
-          if (ratio->GetDenomDataInfo()) {
+          if (ratio->GetDenomDataInfo().dataDims.size()) {
             auto& dataInfos = mDataInfoBuffer[ratio->GetDenomInputID()][ratio->GetDenomName()];
-            auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == (*data->GetDataInfo()).GetNameSuffix(); });
+            auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
             if (iter == dataInfos.end()) {
-              mDataInfoBuffer[ratio->GetDenomInputID()][ratio->GetDenomName()].push_back(*ratio->GetDenomDataInfo());
+              mDataInfoBuffer[ratio->GetDenomInputID()][ratio->GetDenomName()].push_back(ratio->GetDenomDataInfo());
             }
           }
         }
@@ -941,9 +941,11 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
             for (auto& dataInfo : mDataInfoBuffer[inputID][fullName]) {
               string dataFullName = fullName + dataInfo.GetNameSuffix();
               try {
-                ROOT::RDataFrame df(*tree);
                 std::cerr.setstate(std::ios_base::failbit);
+                if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
+                ROOT::RDataFrame df(*tree);
                 obj = ProcessData(df, fullName, dataInfo, dataFullName + suffix);
+                if (!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
                 std::cerr.clear();
               } catch (const std::runtime_error&) {
                 ERROR("Invalid query for tree.");
@@ -1004,14 +1006,15 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
     }
     ++count;
   }
-
-  ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter);
   for (auto& dataInfo : mDataInfoBuffer[inputID][name]) {
     string dataName = name + dataInfo.GetNameSuffix();
     TObject* obj = nullptr;
     try {
       std::cerr.setstate(std::ios_base::failbit);
+      if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
+      ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter);
       obj = ProcessData(df, name, dataInfo, dataName + ":" + inputID);
+      if (!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
       std::cerr.clear();
     } catch (const std::runtime_error& e) {
       ERROR("Invalid query for table {}.", name);
@@ -1176,20 +1179,31 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
   TObject* obj = nullptr;
   ROOT::RDF::RNode node = df;  // working node
 
-  if (dataInfo.nEntries) {
-    node = node.Range(*dataInfo.nEntries);
+  if (dataInfo.definitions.keys && dataInfo.definitions.values) {
+    for (int i = 0; i < dataInfo.definitions.keys->size(); ++i) {
+      node = node.Define(dataInfo.definitions.keys->at(i), dataInfo.definitions.values->at(i));
+    }
+  }
+  if (dataInfo.entries.max) {
+    if (dataInfo.entries.min) {
+      node = node.Range(*dataInfo.entries.min, *dataInfo.entries.max);
+    } else {
+      node = node.Range(*dataInfo.entries.max);
+    }
   }
   auto nEntriesPreFilter = node.Count();
-  if (dataInfo.filter) {
-    try {
-      node = node.Filter(*dataInfo.filter);
-    } catch (std::runtime_error) {
-      ERROR("Illegal expression in filter: {}.", *dataInfo.filter);
-      return nullptr;
+  if (dataInfo.filters) {
+    for (int32_t i = 0; i < dataInfo.filters->size(); ++i) {
+      try {
+        node = node.Filter(dataInfo.filters->at(i));
+      } catch (std::runtime_error) {
+        ERROR("Illegal expression in filter: {}.", dataInfo.filters->at(i));
+        return nullptr;
+      }
     }
     auto nEntriesPostFilter = node.Count();
     if (nEntriesPostFilter && nEntriesPreFilter) {
-      INFO("Processing {} entries ({:.2f}%) of {} after filter {}.", (*nEntriesPostFilter), 100. * (*nEntriesPostFilter) / (*nEntriesPreFilter), dfName, *dataInfo.filter);
+      INFO("Processing {} entries ({:.2f}%) of {}.", (*nEntriesPostFilter), 100. * (*nEntriesPostFilter) / (*nEntriesPreFilter), dfName);
     }
   } else {
     if (nEntriesPreFilter) {
@@ -1672,73 +1686,4 @@ void PlotManager::SaveProject(const string& projectName)
   }
   tabCompFile.close();
 };
-
-vector<tuple<string, string, string>> PlotManager::GetAvailableData(const string& selection)
-{
-  auto a = split_string(selection, ':');
-  string inputID = a[0];
-  auto filePath = split_string(a[1], '/');
-  // (a.size() > 1)
-  
-  for (auto& inputFileName : mInputFiles[inputID]) {
-    DEBUG("{}", inputFileName);
-    TFile inputFile(inputFileName.data(), "READ");
-    TObject* folder = &inputFile;
-    folder = FindSubDirectory(folder, filePath);
-    //folder->ls();
-    
-    std::function<void(TObject*)> loopData = [&] (TObject* folder){
-      TCollection* itemList = nullptr;
-      if (folder->InheritsFrom(TDirectory::Class())) {
-        itemList = static_cast<TDirectoryFile*>(folder)->GetListOfKeys();
-      } else if (folder->InheritsFrom(TFolder::Class())) {
-        itemList = static_cast<TFolder*>(folder)->GetListOfFolders();
-      } else if (folder->InheritsFrom(TCollection::Class())) {
-        itemList = static_cast<TCollection*>(folder);
-      } else {
-        ERROR("Data format {} not supported.", folder->ClassName());
-        return;
-      }
-      itemList->SetOwner();
-      TIter next(itemList);
-      TObject* obj = nullptr;
-      while ((obj = next())) {
-        if (obj->IsA() == TKey::Class()) {
-          obj = static_cast<TKey*>(obj)->ReadObj();
-        }
-        DEBUG("[{}] {}", obj->ClassName(), obj->GetName());
-      }
-
-    };
-    loopData(folder);
-
-    
-  }
-  return {{}};
-//["TH2D"]["sub/path/in/inputID"]["dataName"]
-}
-
 }  // end namespace SciRooPlot
-
-/*
- 
- TFile inputFile(fileName.data(), "READ");
- if (inputFile.IsZombie()) {
-   WARNING("Cannot open input file {}.", fileName);
-   continue;
- }
-
- TObject* folder = &inputFile;
-
- // find top level entry point for this input file
- if (fileNamePath.size() > 1) {
-   auto filePath = split_string(fileNamePath[1], '/');
-   // append sub-specification from input name
-   folder = FindSubDirectory(folder, filePath);
-   if (!folder) {
-     ERROR("Subdirectory {} not found in file {}.", fileNamePath[1], fileName);
-     return false;
-   }
- }
-
- */
