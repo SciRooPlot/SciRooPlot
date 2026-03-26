@@ -1637,6 +1637,16 @@ auto Plot::Pad::Data::UnsetRangeY() -> decltype(*this)
   mRangeY.max = {};
   return *this;
 }
+auto Plot::Pad::Data::SetScaleMinimum(double_t scaleFactor) -> decltype(*this)
+{
+  mScaleRange.min = scaleFactor;
+  return *this;
+}
+auto Plot::Pad::Data::SetScaleMaximum(double_t scaleFactor) -> decltype(*this)
+{
+  mScaleRange.max = scaleFactor;
+  return *this;
+}
 auto Plot::Pad::Data::SetShowOverflowBins(bool showOverflowBins) -> decltype(*this)
 {
   mModify.showOverflowBins = showOverflowBins;
@@ -1757,16 +1767,6 @@ auto Plot::Pad::Data::Normalize(bool scaleBinWidth) -> decltype(*this)
 auto Plot::Pad::Data::Scale(double_t scaleFactor) -> decltype(*this)
 {
   mModify.scaleFactor = scaleFactor;
-  return *this;
-}
-auto Plot::Pad::Data::ScaleMinimum(double_t scaleFactor) -> decltype(*this)
-{
-  mScaleRange.min = scaleFactor;
-  return *this;
-}
-auto Plot::Pad::Data::ScaleMaximum(double_t scaleFactor) -> decltype(*this)
-{
-  mScaleRange.max = scaleFactor;
   return *this;
 }
 auto Plot::Pad::Data::Smooth(uint16_t nIterSmooth) -> decltype(*this)
@@ -2115,84 +2115,147 @@ auto Plot::Pad::Ratio::SetDivideNormalized(bool scaleBinWidth) -> decltype(*this
   mScaleBinWidth = scaleBinWidth;
   return *this;
 }
-auto Plot::Pad::Ratio::ProjectDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+//**************************************************************************************************
+/**
+ * Data modifiers that can be applied to either numerator or denominator.
+ */
+//**************************************************************************************************
+auto Plot::Pad::Ratio::Numer() -> decltype(*this)
 {
+  mModMode = Mode::Num;
+  return *this;
+}
+auto Plot::Pad::Ratio::Denom() -> decltype(*this)
+{
+  mModMode = Mode::Den;
+  return *this;
+}
+auto Plot::Pad::Ratio::Project(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+{
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Project(dims, ranges, isUserCoord));
+  }
   mDenomProjInfo = {dims, ranges, isUserCoord};
   return *this;
 }
-auto Plot::Pad::Ratio::ProjectXDenom(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::ProjectX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::ProjectX(startY, endY, isUserCoord));
+  }
   mDenomProjInfo = {{0}, {{1, startY, endY}}, isUserCoord};
   return *this;
 }
-auto Plot::Pad::Ratio::ProjectYDenom(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::ProjectY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::ProjectY(startX, endX, isUserCoord));
+  }
   mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
   return *this;
 }
-auto Plot::Pad::Ratio::ProfileDenom(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::Profile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Profile(dims, ranges, isUserCoord));
+  }
   mDenomProjInfo = {dims, ranges, isUserCoord, true};
   return *this;
 }
-auto Plot::Pad::Ratio::ProfileXDenom(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::ProfileX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::ProfileX(startY, endY, isUserCoord));
+  }
   mDenomProjInfo = {{0}, {{1, startY, endY}}, isUserCoord, true};
   return *this;
 }
-auto Plot::Pad::Ratio::ProfileYDenom(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::ProfileY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::ProfileY(startX, endX, isUserCoord));
+  }
   mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
   return *this;
 }
-auto Plot::Pad::Ratio::ProjectDenom(vector<data_dim_t> dataDims, optional<string> weight) -> decltype(*this)
+auto Plot::Pad::Ratio::Project(vector<data_dim_t> dataDims, optional<string> weight) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Project(dataDims, weight));
+  }
   mDenomDataInfo.set({dataDims, weight});
   return *this;
 }
-auto Plot::Pad::Ratio::Project1DDenom(data_dim_t x, optional<string> weight) -> decltype(*this)
+auto Plot::Pad::Ratio::Project1D(data_dim_t x, optional<string> weight) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Project1D(x, weight));
+  }
   mDenomDataInfo.set({{x}, weight});
   return *this;
 }
-auto Plot::Pad::Ratio::Project2DDenom(data_dim_t x, data_dim_t y, optional<string> weight) -> decltype(*this)
+auto Plot::Pad::Ratio::Project2D(data_dim_t x, data_dim_t y, optional<string> weight) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Project2D(x, y, weight));
+  }
   mDenomDataInfo.set({{x, y}, weight});
   return *this;
 }
-auto Plot::Pad::Ratio::ScatterDenom(const string& x, const string& y) -> decltype(*this)
+auto Plot::Pad::Ratio::Scatter(const string& x, const string& y) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Scatter(x, y));
+  }
   mDenomDataInfo.set({{{x}, {y}}, {}, false});
   return *this;
 }
-auto Plot::Pad::Ratio::ScatterDenom(const string& x, const string& y, const string& xErr, const string& yErr) -> decltype(*this)
+auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& xErr, const string& yErr) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErr, yErr));
+  }
   mDenomDataInfo.set({{{x}, {y}, {xErr}, {yErr}}, {}, false});
   return *this;
 }
-auto Plot::Pad::Ratio::ScatterDenom(const string& x, const string& y, const string& xErrLow, const string& xErrHigh, const string& yErrLow, const string& yErrHigh) -> decltype(*this)
+auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& xErrLow, const string& xErrHigh, const string& yErrLow, const string& yErrHigh) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErrLow, xErrHigh, yErrLow, yErrHigh));
+  }
   mDenomDataInfo.set({{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, {}, false});
   return *this;
 }
-auto Plot::Pad::Ratio::ProfileDenom(vector<data_dim_t> dataDims, const string& profile, optional<string> weight) -> decltype(*this)
+auto Plot::Pad::Ratio::Profile(vector<data_dim_t> dataDims, const string& profile, optional<string> weight) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Profile(dataDims, profile, weight));
+  }
   dataDims.push_back({profile, {}});
   mDenomDataInfo.set({dataDims, weight, true});
   return *this;
 }
-auto Plot::Pad::Ratio::Profile1DDenom(data_dim_t x, const string& profile, optional<string> weight) -> decltype(*this)
+auto Plot::Pad::Ratio::Profile1D(data_dim_t x, const string& profile, optional<string> weight) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Profile1D(x, profile, weight));
+  }
   mDenomDataInfo.set({{x, {profile, {}}}, weight, true});
   return *this;
 }
-auto Plot::Pad::Ratio::Profile2DDenom(data_dim_t x, data_dim_t y, const string& profile, optional<string> weight) -> decltype(*this)
+auto Plot::Pad::Ratio::Profile2D(data_dim_t x, data_dim_t y, const string& profile, optional<string> weight) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Profile2D(x, y, profile, weight));
+  }
   mDenomDataInfo.set({{x, y, {profile, {}}}, weight, true});
   return *this;
 }
-auto Plot::Pad::Ratio::DefineDenom(const std::string& key, const std::string& value) -> decltype(*this)
+auto Plot::Pad::Ratio::Define(const std::string& key, const std::string& value) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Define(key, value));
+  }
   if (mDenomDataInfo.definitions.keys && mDenomDataInfo.definitions.values) {
     mDenomDataInfo.definitions.keys->push_back(key);
     mDenomDataInfo.definitions.values->push_back(value);
@@ -2202,8 +2265,11 @@ auto Plot::Pad::Ratio::DefineDenom(const std::string& key, const std::string& va
   }
   return *this;
 }
-auto Plot::Pad::Ratio::FilterDenom(const std::string& filter) -> decltype(*this)
+auto Plot::Pad::Ratio::Filter(const std::string& filter) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Filter(filter));
+  }
   if (mDenomDataInfo.filters) {
     mDenomDataInfo.filters->push_back(filter);
   } else {
@@ -2211,13 +2277,19 @@ auto Plot::Pad::Ratio::FilterDenom(const std::string& filter) -> decltype(*this)
   }
   return *this;
 }
-auto Plot::Pad::Ratio::EntriesDenom(uint64_t nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::Entries(uint64_t nEntries) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Entries(nEntries));
+  }
   mDenomDataInfo.entries.max = nEntries;
   return *this;
 }
-auto Plot::Pad::Ratio::EntriesDenom(uint64_t entryMin, uint64_t entryMax) -> decltype(*this)
+auto Plot::Pad::Ratio::Entries(uint64_t entryMin, uint64_t entryMax) -> decltype(*this)
 {
+  if (mModMode == Mode::Num) {
+    return static_cast<decltype(*this)&>(Data::Entries(entryMin, entryMax));
+  }
   mDenomDataInfo.entries.max = entryMin;
   mDenomDataInfo.entries.max = entryMax;
   return *this;

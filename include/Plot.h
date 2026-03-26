@@ -441,6 +441,8 @@ class Plot::Pad::Data
   virtual Data& SetMaxRangeY(double_t max);
   virtual Data& SetMinRangeY(double_t min);
   virtual Data& UnsetRangeY();
+  virtual Data& SetScaleMinimum(double_t scaleFactor);
+  virtual Data& SetScaleMaximum(double_t scaleFactor);
   virtual Data& SetShowOverflowBins(bool showOverflowBins = true);
   virtual Data& SetLegendLabel(const std::string& legendLabel);
   virtual Data& SetLegendID(uint8_t legendID);
@@ -471,8 +473,6 @@ class Plot::Pad::Data
   // data modifiers
   virtual Data& Normalize(bool scaleBinWidth = false);
   virtual Data& Scale(double_t scaleFactor);
-  virtual Data& ScaleMinimum(double_t scaleFactor);
-  virtual Data& ScaleMaximum(double_t scaleFactor);
   virtual Data& DivideBinWidth(bool divideBinWidth = true);
   virtual Data& RebinX(uint16_t nGroup);
   virtual Data& RebinY(uint16_t nGroup);
@@ -673,6 +673,8 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& SetMaxRangeY(double_t max) { return static_cast<decltype(*this)&>(Data::SetMaxRangeY(max)); }
   Ratio& SetMinRangeY(double_t min) { return static_cast<decltype(*this)&>(Data::SetMinRangeY(min)); }
   Ratio& UnsetRangeY() { return static_cast<decltype(*this)&>(Data::UnsetRangeY()); }
+  Ratio& SetScaleMinimum(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::SetScaleMinimum(scaleFactor)); }
+  Ratio& SetScaleMaximum(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::SetScaleMaximum(scaleFactor)); }
   Ratio& SetShowOverflowBins(bool showOverflowBins = true) { return static_cast<decltype(*this)&>(Data::SetShowOverflowBins(showOverflowBins)); }
   Ratio& SetLegendLabel(const std::string& legendLabel) { return static_cast<decltype(*this)&>(Data::SetLegendLabel(legendLabel)); }
   Ratio& SetLegendID(uint8_t legendID) { return static_cast<decltype(*this)&>(Data::SetLegendID(legendID)); }
@@ -703,63 +705,39 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   // data modifiers
   Ratio& Normalize(bool scaleBinWidth = false) { return static_cast<decltype(*this)&>(Data::Normalize(scaleBinWidth)); }
   Ratio& Scale(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::Scale(scaleFactor)); }
-  Ratio& ScaleMinimum(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::ScaleMinimum(scaleFactor)); }
-  Ratio& ScaleMaximum(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::ScaleMaximum(scaleFactor)); }
   Ratio& DivideBinWidth(bool divideBinWidth = true) { return static_cast<decltype(*this)&>(Data::DivideBinWidth(divideBinWidth)); }
   Ratio& RebinX(uint16_t nGroup) { return static_cast<decltype(*this)&>(Data::RebinX(nGroup)); }
   Ratio& RebinY(uint16_t nGroup) { return static_cast<decltype(*this)&>(Data::RebinY(nGroup)); }
   Ratio& RebinXY(uint16_t nGroupX, uint16_t nGroupY) { return static_cast<decltype(*this)&>(Data::RebinXY(nGroupX, nGroupY)); }
   Ratio& Smooth(uint16_t nIterSmooth = 1) { return static_cast<decltype(*this)&>(Data::Smooth(nIterSmooth)); }
 
-  Ratio& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::Project(dims, ranges, isUserCoord)); }
-  Ratio& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::ProjectX(startY, endY, isUserCoord)); }
-  Ratio& ProjectY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::ProjectY(startX, endX, isUserCoord)); }
+  Ratio& Numer();  // switch to numerator for follwing modifiers (default)
+  Ratio& Denom();  // switch to denominator for follwing modifiers
 
-  Ratio& ProjectDenom(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
-  Ratio& ProjectXDenom(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});
-  Ratio& ProjectYDenom(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});
+  Ratio& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
+  Ratio& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});
+  Ratio& ProjectY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});
 
-  Ratio& Profile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::Profile(dims, ranges, isUserCoord)); }
-  Ratio& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::ProfileX(startY, endY, isUserCoord)); }
-  Ratio& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {}) { return static_cast<decltype(*this)&>(Data::ProfileY(startX, endX, isUserCoord)); }
+  Ratio& Profile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
+  Ratio& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});
+  Ratio& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});
 
-  Ratio& ProfileDenom(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
-  Ratio& ProfileXDenom(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});
-  Ratio& ProfileYDenom(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});
+  Ratio& Project(std::vector<data_dim_t> dataDims, std::optional<std::string> weight = {});
+  Ratio& Project1D(data_dim_t x, std::optional<std::string> weight = {});
+  Ratio& Project2D(data_dim_t x, data_dim_t y, std::optional<std::string> weight = {});
 
-  Ratio& Project(std::vector<data_dim_t> dataDims, std::optional<std::string> weight = {}) { return static_cast<decltype(*this)&>(Data::Project(dataDims, weight)); }
-  Ratio& Project1D(data_dim_t x, std::optional<std::string> weight = {}) { return static_cast<decltype(*this)&>(Data::Project1D(x, weight)); }
-  Ratio& Project2D(data_dim_t x, data_dim_t y, std::optional<std::string> weight = {}) { return static_cast<decltype(*this)&>(Data::Project2D(x, y, weight)); }
+  Ratio& Scatter(const std::string& x, const std::string& y);
+  Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErr, const std::string& yErr);
+  Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErrLow, const std::string& xErrHigh, const std::string& yErrLow, const std::string& yErrHigh);
 
-  Ratio& ProjectDenom(std::vector<data_dim_t> dataDims, std::optional<std::string> weight = {});
-  Ratio& Project1DDenom(data_dim_t x, std::optional<std::string> weight = {});
-  Ratio& Project2DDenom(data_dim_t x, data_dim_t y, std::optional<std::string> weight = {});
+  Ratio& Profile(std::vector<data_dim_t> dataDims, const std::string& profile, std::optional<std::string> weight = {});
+  Ratio& Profile1D(data_dim_t x, const std::string& profile, std::optional<std::string> weight = {});
+  Ratio& Profile2D(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> weight = {});
 
-  Ratio& Scatter(const std::string& x, const std::string& y) { return static_cast<decltype(*this)&>(Data::Scatter(x, y)); }
-  Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErr, const std::string& yErr) { return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErr, yErr)); }
-  Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErrLow, const std::string& xErrHigh, const std::string& yErrLow, const std::string& yErrHigh) { return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErrLow, xErrHigh, yErrLow, yErrHigh)); }
-
-  Ratio& ScatterDenom(const std::string& x, const std::string& y);
-  Ratio& ScatterDenom(const std::string& x, const std::string& y, const std::string& xErr, const std::string& yErr);
-  Ratio& ScatterDenom(const std::string& x, const std::string& y, const std::string& xErrLow, const std::string& xErrHigh, const std::string& yErrLow, const std::string& yErrHigh);
-
-  Ratio& Profile(std::vector<data_dim_t> dataDims, const std::string& profile, std::optional<std::string> weight = {}) { return static_cast<decltype(*this)&>(Data::Profile(dataDims, profile, weight)); }
-  Ratio& Profile1D(data_dim_t x, const std::string& profile, std::optional<std::string> weight = {}) { return static_cast<decltype(*this)&>(Data::Profile1D(x, profile, weight)); }
-  Ratio& Profile2D(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> weight = {}) { return static_cast<decltype(*this)&>(Data::Profile2D(x, y, profile, weight)); }
-
-  Ratio& ProfileDenom(std::vector<data_dim_t> dataDims, const std::string& profile, std::optional<std::string> weight = {});
-  Ratio& Profile1DDenom(data_dim_t x, const std::string& profile, std::optional<std::string> weight = {});
-  Ratio& Profile2DDenom(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> weight = {});
-
-  Ratio& Define(const std::string& key, const std::string& value) { return static_cast<decltype(*this)&>(Data::Define(key, value)); }
-  Ratio& Filter(const std::string& filter) { return static_cast<decltype(*this)&>(Data::Filter(filter)); }
-  Ratio& Entries(uint64_t nEntries) { return static_cast<decltype(*this)&>(Data::Entries(nEntries)); }
-  Ratio& Entries(uint64_t entryMin, uint64_t entryMax) { return static_cast<decltype(*this)&>(Data::Entries(entryMin, entryMax)); }
-
-  Ratio& DefineDenom(const std::string& key, const std::string& value);
-  Ratio& FilterDenom(const std::string& filter);
-  Ratio& EntriesDenom(uint64_t nEntries);
-  Ratio& EntriesDenom(uint64_t entryMin, uint64_t entryMax);
+  Ratio& Define(const std::string& key, const std::string& value);
+  Ratio& Filter(const std::string& filter);
+  Ratio& Entries(uint64_t nEntries);
+  Ratio& Entries(uint64_t entryMin, uint64_t entryMax);
 
  protected:
   friend class PlotManager;
@@ -776,6 +754,9 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   const auto& GetDenomProjInfo() const { return mDenomProjInfo; }
 
  private:
+  enum class Mode { Num,
+                    Den };
+  Mode mModMode = Mode::Num;
   std::string mDenomName;
   std::string mDenomInputID;
   bool mIsCorrelated{};
