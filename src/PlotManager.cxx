@@ -1254,7 +1254,6 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     if (obj && obj->InheritsFrom(TGraph::Class())) {
       TGraph* graph = static_cast<TGraph*>(obj);
       graph->SetTitle(histTitle.data());
-      graph->Sort();
       return graph;
     }
   }
