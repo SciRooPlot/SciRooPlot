@@ -4,6 +4,7 @@ export SCIROOPLOT_ROOT="@SCIROOPLOT_ROOT@"
 export SCIROOPLOT_BIN="${SCIROOPLOT_ROOT}/@CMAKE_INSTALL_BINDIR@"
 export SCIROOPLOT_DATA_DIR="${SCIROOPLOT_ROOT}/share/scirooplot"
 export SCIROOPLOT_ENV="${SCIROOPLOT_DATA_DIR}/scirooplot-env.sh"
+export SCIROOPLOT_SOURCE_DIR="@CMAKE_CURRENT_BINARY_DIR@/../"
 
 # enable completion only for interactive shells
 case "$-" in
@@ -56,7 +57,11 @@ function plot() {
 }
 
 function plot-config() {
-  if [[ "${1}" == "create" ]]; then
+  if [[ "${1}" == "update" ]]; then
+    "${SCIROOPLOT_SOURCE_DIR}/scripts/install.sh" "${2}"
+  elif [[ "${1}" == "cd" ]]; then
+    cd "${SCIROOPLOT_SOURCE_DIR}"
+  elif [[ "${1}" == "create" ]]; then
     local project_name="${2}"
     local project_path="${project_name}"
     [ -n "${3}" ] && project_path="${3}"
@@ -162,7 +167,7 @@ _plot_completions_zsh() {
 
 _plot_config_completions_zsh() {
 
-  local general_commands=('create' 'projects' 'reset' 'clean' 'help')
+  local general_commands=('update' 'cd' 'create' 'projects' 'reset' 'clean' 'help')
   local project_commands=('remove' 'select' 'show' 'path' 'set' 'get')
   local project_commands_with_prop=('set' 'get')
   local properties=('EXE' 'OUT' 'NAME')
@@ -271,7 +276,7 @@ _plot_completions_bash() {
 
 _plot_config_completions_bash() {
 
-  local general_commands=('create projects reset clean help')
+  local general_commands=('update cd create projects reset clean help')
   local project_commands=('remove select show path set get')
   local project_commands_with_prop=('set get')
   local properties=('EXE OUT NAME')

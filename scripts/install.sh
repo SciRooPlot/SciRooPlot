@@ -5,18 +5,11 @@ if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
     echo "Error: This script must be executed, not sourced."
     return 1 2>/dev/null || exit 1
 fi
-
-# move to repo root
-if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    cd "$(git rev-parse --show-toplevel)"
-fi
-
-# validate
+cd "$(cd -- "$(dirname -- "${BASH_SOURCE[0]:-${(%):-%N}}")" >/dev/null 2>&1 && pwd)/../"
 if [[ ! -f "CMakeLists.txt" ]]; then
-    echo "Error: Not in SciRooPlot project root."
+    echo "Error: Not in SciRooPlot root dir."
     exit 1
 fi
-
 BUILD_DIR="$(pwd)/build"
 CACHE_FILE="${BUILD_DIR}/CMakeCache.txt"
 
