@@ -1,9 +1,14 @@
 #include "PlotManager.h"
 #include "Logging.h"
 #include <string>
+#include <filesystem>
+#define SRC_DIR std::filesystem::absolute(__FILE__).parent_path()
 
 using std::string;
+using std::vector;
 using namespace SciRooPlot;
+using DataLayout = Plot::Pad::Data;
+
 void DefineInputIdentifiers(PlotManager& plotManager);
 void DefinePlotTemplates(PlotManager& plotManager);
 void DefinePlots(PlotManager& plotManager);
@@ -29,6 +34,8 @@ void DefineInputIdentifiers(PlotManager& plotManager)
   plotManager.AddInputDataFiles("measurements", {inputFolder + "/file1.root", inputFolder + "/file2.root"});
   plotManager.AddInputDataFiles("theory", {inputFolder + "/subfolder/file3.root"});
   plotManager.AddInputDataFiles("pseudodata", {inputFolder + "/subfolder/file3.root:pseudodata"});
+  // NB.: path relative to this file:
+  //plotManager.AddInputDataFiles("test", {SRC_DIR / "../rel/path/to/file.root"});
 }
 
 //****************************************************************************************
