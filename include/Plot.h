@@ -663,53 +663,58 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& SetIsCorrelated(bool isCorrelated = true);
   Ratio& SetDivideNormalized(bool scaleBinWidth = false);
 
-  Ratio& SetLayout(const Data& dataLayout) { return static_cast<decltype(*this)&>(Data::SetLayout(dataLayout)); }
-  Ratio& ApplyLayout(const Data& dataLayout) { return static_cast<decltype(*this)&>(Data::ApplyLayout(dataLayout)); }
-  Ratio& SetRangeX(double_t min, double_t max) { return static_cast<decltype(*this)&>(Data::SetRangeX(min, max)); }
-  Ratio& SetMaxRangeX(double_t max) { return static_cast<decltype(*this)&>(Data::SetMaxRangeX(max)); }
-  Ratio& SetMinRangeX(double_t min) { return static_cast<decltype(*this)&>(Data::SetMinRangeX(min)); }
-  Ratio& UnsetRangeX() { return static_cast<decltype(*this)&>(Data::UnsetRangeX()); }
-  Ratio& SetRangeY(double_t min, double_t max) { return static_cast<decltype(*this)&>(Data::SetRangeY(min, max)); }
-  Ratio& SetMaxRangeY(double_t max) { return static_cast<decltype(*this)&>(Data::SetMaxRangeY(max)); }
-  Ratio& SetMinRangeY(double_t min) { return static_cast<decltype(*this)&>(Data::SetMinRangeY(min)); }
-  Ratio& UnsetRangeY() { return static_cast<decltype(*this)&>(Data::UnsetRangeY()); }
-  Ratio& SetScaleMinimum(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::SetScaleMinimum(scaleFactor)); }
-  Ratio& SetScaleMaximum(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::SetScaleMaximum(scaleFactor)); }
-  Ratio& SetShowOverflowBins(bool showOverflowBins = true) { return static_cast<decltype(*this)&>(Data::SetShowOverflowBins(showOverflowBins)); }
-  Ratio& SetLegendLabel(const std::string& legendLabel) { return static_cast<decltype(*this)&>(Data::SetLegendLabel(legendLabel)); }
-  Ratio& SetLegendID(uint8_t legendID) { return static_cast<decltype(*this)&>(Data::SetLegendID(legendID)); }
-  Ratio& SetOptions(const std::string& options) { return static_cast<decltype(*this)&>(Data::SetOptions(options)); }
-  Ratio& SetOptions(drawing_options_t optionAlias) { return static_cast<decltype(*this)&>(Data::SetOptions(optionAlias)); }
-  Ratio& UnsetOptions() { return static_cast<decltype(*this)&>(Data::UnsetOptions()); }
-  Ratio& SetTextFormat(const std::string& textFormat) { return static_cast<decltype(*this)&>(Data::SetTextFormat(textFormat)); }
-  Ratio& SetColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetColor(color)); }
-  Ratio& SetAlpha(float_t alpha) { return static_cast<decltype(*this)&>(Data::SetAlpha(alpha)); }
-  Ratio& SetMarker(int16_t color, int16_t style, float_t size, std::optional<float_t> alpha = {}) { return static_cast<decltype(*this)&>(Data::SetMarker(color, style, size, alpha)); }
-  Ratio& SetMarkerColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetMarkerColor(color)); }
-  Ratio& SetMarkerAlpha(float_t alpha) { return static_cast<decltype(*this)&>(Data::SetMarkerAlpha(alpha)); }
-  Ratio& SetMarkerStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetMarkerStyle(style)); }
-  Ratio& SetMarkerSize(float_t size) { return static_cast<decltype(*this)&>(Data::SetMarkerSize(size)); }
-  Ratio& SetLine(int16_t color, int16_t style, float_t width, std::optional<float_t> alpha = {}) { return static_cast<decltype(*this)&>(Data::SetLine(color, style, width, alpha)); }
-  Ratio& SetLineColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetLineColor(color)); }
-  Ratio& SetLineAlpha(float_t alpha) { return static_cast<decltype(*this)&>(Data::SetLineAlpha(alpha)); }
-  Ratio& SetLineStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetLineStyle(style)); }
-  Ratio& SetLineWidth(float_t width) { return static_cast<decltype(*this)&>(Data::SetLineWidth(width)); }
-  Ratio& SetFill(int16_t color, int16_t style, std::optional<float_t> alpha = {}) { return static_cast<decltype(*this)&>(Data::SetFill(color, style, alpha)); }
-  Ratio& SetFillColor(int16_t color) { return static_cast<decltype(*this)&>(Data::SetFillColor(color)); }
-  Ratio& SetFillAlpha(float_t alpha) { return static_cast<decltype(*this)&>(Data::SetFillAlpha(alpha)); }
-  Ratio& SetFillStyle(int16_t style) { return static_cast<decltype(*this)&>(Data::SetFillStyle(style)); }
-  Ratio& SetDefinesFrame() { return static_cast<decltype(*this)&>(Data::SetDefinesFrame()); }
-  Ratio& SetContours(const std::vector<double>& contours) { return static_cast<decltype(*this)&>(Data::SetContours(contours)); }
-  Ratio& SetContours(int32_t nContours) { return static_cast<decltype(*this)&>(Data::SetContours(nContours)); }
+#define FORWARD_TO_DATA(METHOD)                \
+  template <typename... Args>                  \
+  Ratio& METHOD(Args&&... args)                \
+  {                                            \
+    Data::METHOD(std::forward<Args>(args)...); \
+    return *this;                              \
+  }
+  FORWARD_TO_DATA(SetLayout)
+  FORWARD_TO_DATA(ApplyLayout)
+  FORWARD_TO_DATA(SetRangeX)
+  FORWARD_TO_DATA(SetMaxRangeX)
+  FORWARD_TO_DATA(SetMinRangeX)
+  FORWARD_TO_DATA(UnsetRangeX)
+  FORWARD_TO_DATA(SetRangeY)
+  FORWARD_TO_DATA(SetMaxRangeY)
+  FORWARD_TO_DATA(SetMinRangeY)
+  FORWARD_TO_DATA(UnsetRangeY)
+  FORWARD_TO_DATA(SetScaleMinimum)
+  FORWARD_TO_DATA(SetScaleMaximum)
+  FORWARD_TO_DATA(SetShowOverflowBins)
+  FORWARD_TO_DATA(SetLegendLabel)
+  FORWARD_TO_DATA(SetLegendID)
+  FORWARD_TO_DATA(SetOptions)
+  FORWARD_TO_DATA(UnsetOptions)
+  FORWARD_TO_DATA(SetTextFormat)
+  FORWARD_TO_DATA(SetColor)
+  FORWARD_TO_DATA(SetAlpha)
+  FORWARD_TO_DATA(SetMarker)
+  FORWARD_TO_DATA(SetMarkerColor)
+  FORWARD_TO_DATA(SetMarkerAlpha)
+  FORWARD_TO_DATA(SetMarkerStyle)
+  FORWARD_TO_DATA(SetMarkerSize)
+  FORWARD_TO_DATA(SetLine)
+  FORWARD_TO_DATA(SetLineColor)
+  FORWARD_TO_DATA(SetLineAlpha)
+  FORWARD_TO_DATA(SetLineStyle)
+  FORWARD_TO_DATA(SetLineWidth)
+  FORWARD_TO_DATA(SetFill)
+  FORWARD_TO_DATA(SetFillColor)
+  FORWARD_TO_DATA(SetFillAlpha)
+  FORWARD_TO_DATA(SetFillStyle)
+  FORWARD_TO_DATA(SetDefinesFrame)
+  FORWARD_TO_DATA(SetContours)
 
   // data modifiers
-  Ratio& Normalize(bool scaleBinWidth = false) { return static_cast<decltype(*this)&>(Data::Normalize(scaleBinWidth)); }
-  Ratio& Scale(double_t scaleFactor) { return static_cast<decltype(*this)&>(Data::Scale(scaleFactor)); }
-  Ratio& DivideBinWidth(bool divideBinWidth = true) { return static_cast<decltype(*this)&>(Data::DivideBinWidth(divideBinWidth)); }
-  Ratio& RebinX(uint16_t nGroup) { return static_cast<decltype(*this)&>(Data::RebinX(nGroup)); }
-  Ratio& RebinY(uint16_t nGroup) { return static_cast<decltype(*this)&>(Data::RebinY(nGroup)); }
-  Ratio& RebinXY(uint16_t nGroupX, uint16_t nGroupY) { return static_cast<decltype(*this)&>(Data::RebinXY(nGroupX, nGroupY)); }
-  Ratio& Smooth(uint16_t nIterSmooth = 1) { return static_cast<decltype(*this)&>(Data::Smooth(nIterSmooth)); }
+  FORWARD_TO_DATA(Normalize)
+  FORWARD_TO_DATA(Scale)
+  FORWARD_TO_DATA(DivideBinWidth)
+  FORWARD_TO_DATA(RebinX)
+  FORWARD_TO_DATA(RebinY)
+  FORWARD_TO_DATA(RebinXY)
+  FORWARD_TO_DATA(Smooth)
 
   Ratio& Numer();  // switch to numerator for follwing modifiers (default)
   Ratio& Denom();  // switch to denominator for follwing modifiers
