@@ -1203,6 +1203,13 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       totalWidthNDC = borderWidthNDC + 2 * marginNDC + contentWidthNDC;
       totalHeightNDC = (1 + lineSpacing) * nLines * lineHeightNDC;
     }
+    if (box->GetWidth()) {
+      totalWidthNDC = *box->GetWidth();
+    }
+    if (box->GetHeight()) {
+      totalHeightNDC = *box->GetHeight();
+    }
+
     double_t relMarginWidth = totalMarginWidthNDC / totalWidthNDC;
 
     double_t upperLeftX{box->GetXPosition()};

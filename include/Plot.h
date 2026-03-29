@@ -885,6 +885,7 @@ class Plot::Pad::Box
   Box& operator=(Box&& other) = default;
 
   BoxType& SetPosition(double_t x, double_t y);
+  BoxType& SetSize(double_t width, double_t height);
   BoxType& SetUserCoordinates(bool isUserCoord = true);
   BoxType& SetAutoPlacement();
   BoxType& SetBorder(int16_t color, int16_t style, float_t width, std::optional<float_t> alpha = {});
@@ -911,6 +912,8 @@ class Plot::Pad::Box
 
   double_t GetXPosition() const { return (mPos.x) ? *mPos.x : 0.; }
   double_t GetYPosition() const { return (mPos.y) ? *mPos.y : 0.; }
+  auto& GetWidth() const { return mPos.w; }
+  auto& GetHeight() const { return mPos.h; }
   auto& GetBorderStyle() const { return mBorder.style; }
   auto& GetBorderWidth() const { return mBorder.scale; }
   auto& GetBorderColor() const { return mBorder.color; }
@@ -940,6 +943,8 @@ class Plot::Pad::Box
   struct position_t {
     std::optional<double_t> x;
     std::optional<double_t> y;
+    std::optional<double_t> w;
+    std::optional<double_t> h;
     std::optional<bool> isUserCoord;
   };
 

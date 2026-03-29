@@ -2602,6 +2602,8 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
 {
   read_from_tree(boxTree, mPos.x, "x");
   read_from_tree(boxTree, mPos.y, "y");
+  read_from_tree(boxTree, mPos.w, "w");
+  read_from_tree(boxTree, mPos.h, "h");
   read_from_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
   read_from_tree(boxTree, mBorder.style, "border_style");
   read_from_tree(boxTree, mBorder.color, "border_color");
@@ -2629,6 +2631,8 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
   ptree boxTree;
   put_in_tree(boxTree, mPos.x, "x");
   put_in_tree(boxTree, mPos.y, "y");
+  put_in_tree(boxTree, mPos.w, "w");
+  put_in_tree(boxTree, mPos.h, "h");
   put_in_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
   put_in_tree(boxTree, mBorder.style, "border_style");
   put_in_tree(boxTree, mBorder.color, "border_color");
@@ -2657,6 +2661,14 @@ BoxType& Plot::Pad::Box<BoxType>::SetPosition(double_t x, double_t y)
 {
   mPos.x = x;
   mPos.y = y;
+  return *GetThis();
+}
+
+template <typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetSize(double_t width, double_t height)
+{
+  mPos.w = width;
+  mPos.h = height;
   return *GetThis();
 }
 

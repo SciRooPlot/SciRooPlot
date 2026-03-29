@@ -35,7 +35,7 @@ void DefineInputIdentifiers(PlotManager& plotManager)
   plotManager.AddInputDataFiles("theory", {inputFolder + "/subfolder/file3.root"});
   plotManager.AddInputDataFiles("pseudodata", {inputFolder + "/subfolder/file3.root:pseudodata"});
   // NB.: path relative to this file:
-  //plotManager.AddInputDataFiles("test", {SRC_DIR / "../rel/path/to/file.root"});
+  // plotManager.AddInputDataFiles("test", {SRC_DIR / "../rel/path/to/file.root"});
 }
 
 //****************************************************************************************
