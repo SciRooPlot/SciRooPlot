@@ -1295,6 +1295,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         string drawStyle = entry.GetDrawStyle() ? *entry.GetDrawStyle() : ((box->GetDefaultDrawStyle()) ? *box->GetDefaultDrawStyle() : "");
 
         TLegendEntry* curEntry = nullptr;
+        TAttMarker markerAttr;
+        TAttLine lineAttr;
+        TAttFill fillAttr;
         if (entry.GetRefDataID()) {
           TObject* data_ptr = nullptr;
           TIter next(pad->GetListOfPrimitives());
@@ -1322,58 +1325,54 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           }
           curEntry = legend->AddEntry(data_ptr, label.data(), drawStyle.data());
           curEntry->SetObject(static_cast<TObject*>(nullptr));
-
-          TAttMarker markerAttr;
-          TAttLine lineAttr;
-          TAttFill fillAttr;
           if (auto ptr = dynamic_cast<TAttMarker*>(data_ptr)) ptr->Copy(markerAttr);
           if (auto ptr = dynamic_cast<TAttLine*>(data_ptr)) ptr->Copy(lineAttr);
           if (auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(fillAttr);
-
-          // override data attributes with default values if requested
-          curEntry->SetMarkerColor(markerAttr.GetMarkerColor());
-          if (box->GetDefaultMarkerColor()) {
-            curEntry->SetMarkerColor(*box->GetDefaultMarkerColor());
-          }
-          if (box->GetDefaultMarkerAlpha()) {
-            curEntry->SetMarkerColor(TColor::GetColorTransparent(curEntry->GetMarkerColor(), *box->GetDefaultMarkerAlpha()));
-          }
-          curEntry->SetMarkerStyle(markerAttr.GetMarkerStyle());
-          if (box->GetDefaultMarkerStyle()) {
-            curEntry->SetMarkerStyle(*box->GetDefaultMarkerStyle());
-          }
-          curEntry->SetMarkerSize(markerAttr.GetMarkerSize());
-          if (box->GetDefaultMarkerSize()) {
-            curEntry->SetMarkerSize(*box->GetDefaultMarkerSize());
-          }
-          curEntry->SetLineColor(lineAttr.GetLineColor());
-          if (box->GetDefaultLineColor()) {
-            curEntry->SetLineColor(*box->GetDefaultLineColor());
-          }
-          if (box->GetDefaultLineAlpha()) {
-            curEntry->SetLineColor(TColor::GetColorTransparent(curEntry->GetLineColor(), *box->GetDefaultLineAlpha()));
-          }
-          curEntry->SetLineStyle(lineAttr.GetLineStyle());
-          if (box->GetDefaultLineStyle()) {
-            curEntry->SetLineStyle(*box->GetDefaultLineStyle());
-          }
-          curEntry->SetLineWidth(lineAttr.GetLineWidth());
-          if (box->GetDefaultLineWidth()) {
-            curEntry->SetLineWidth(*box->GetDefaultLineWidth());
-          }
-          curEntry->SetFillColor(fillAttr.GetFillColor());
-          if (box->GetDefaultFillColor()) {
-            curEntry->SetFillColor(*box->GetDefaultFillColor());
-          }
-          if (box->GetDefaultFillAlpha()) {
-            curEntry->SetFillColor(TColor::GetColorTransparent(curEntry->GetFillColor(), *box->GetDefaultFillAlpha()));
-          }
-          curEntry->SetFillStyle(fillAttr.GetFillStyle());
-          if (box->GetDefaultFillStyle()) {
-            curEntry->SetFillStyle(*box->GetDefaultFillStyle());
-          }
         } else {
           curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), drawStyle.data());
+        }
+
+        // override data attributes with default values if requested
+        curEntry->SetMarkerColor(markerAttr.GetMarkerColor());
+        if (box->GetDefaultMarkerColor()) {
+          curEntry->SetMarkerColor(*box->GetDefaultMarkerColor());
+        }
+        if (box->GetDefaultMarkerAlpha()) {
+          curEntry->SetMarkerColor(TColor::GetColorTransparent(curEntry->GetMarkerColor(), *box->GetDefaultMarkerAlpha()));
+        }
+        curEntry->SetMarkerStyle(markerAttr.GetMarkerStyle());
+        if (box->GetDefaultMarkerStyle()) {
+          curEntry->SetMarkerStyle(*box->GetDefaultMarkerStyle());
+        }
+        curEntry->SetMarkerSize(markerAttr.GetMarkerSize());
+        if (box->GetDefaultMarkerSize()) {
+          curEntry->SetMarkerSize(*box->GetDefaultMarkerSize());
+        }
+        curEntry->SetLineColor(lineAttr.GetLineColor());
+        if (box->GetDefaultLineColor()) {
+          curEntry->SetLineColor(*box->GetDefaultLineColor());
+        }
+        if (box->GetDefaultLineAlpha()) {
+          curEntry->SetLineColor(TColor::GetColorTransparent(curEntry->GetLineColor(), *box->GetDefaultLineAlpha()));
+        }
+        curEntry->SetLineStyle(lineAttr.GetLineStyle());
+        if (box->GetDefaultLineStyle()) {
+          curEntry->SetLineStyle(*box->GetDefaultLineStyle());
+        }
+        curEntry->SetLineWidth(lineAttr.GetLineWidth());
+        if (box->GetDefaultLineWidth()) {
+          curEntry->SetLineWidth(*box->GetDefaultLineWidth());
+        }
+        curEntry->SetFillColor(fillAttr.GetFillColor());
+        if (box->GetDefaultFillColor()) {
+          curEntry->SetFillColor(*box->GetDefaultFillColor());
+        }
+        if (box->GetDefaultFillAlpha()) {
+          curEntry->SetFillColor(TColor::GetColorTransparent(curEntry->GetFillColor(), *box->GetDefaultFillAlpha()));
+        }
+        curEntry->SetFillStyle(fillAttr.GetFillStyle());
+        if (box->GetDefaultFillStyle()) {
+          curEntry->SetFillStyle(*box->GetDefaultFillStyle());
         }
 
         if (entry.GetMarkerColor()) curEntry->SetMarkerColor(*entry.GetMarkerColor());
