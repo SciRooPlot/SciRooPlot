@@ -22,7 +22,7 @@ function plot() {
   local user_build_dir=$([[ -n "${user_exec}" ]] && dirname -- "${user_exec}" || echo "")
   if [[ -d "${user_build_dir}" ]]; then
 
-    if [[ "${1}" == "cd" ]]; then
+    if [[ "${1}" == "cd" && -z "${2}" ]]; then
       cd "${user_build_dir}"
       return 0
     fi
@@ -57,10 +57,10 @@ function plot() {
 }
 
 function srp() {
-  if [[ "${1}" == "update" ]]; then
+  if [[ "${1}" == "update" && -z "${2}" ]]; then
     "${SCIROOPLOT_SOURCE_DIR}/scripts/install.sh" "${2}"
     source ${SCIROOPLOT_ENV}
-  elif [[ "${1}" == "cd" ]]; then
+  elif [[ "${1}" == "cd" && -z "${2}" ]]; then
     cd "${SCIROOPLOT_SOURCE_DIR}/build"
   elif [[ "${1}" == "create" ]]; then
     local project_name="${2}"
