@@ -1832,7 +1832,7 @@ auto Plot::Pad::Data::ProfileY(double_t startX, double_t endX, optional<bool> is
   mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
   return *this;
 }
-auto Plot::Pad::Data::Project(vector<data_dim_t> dataDims, optional<string> weight) -> decltype(*this)
+auto Plot::Pad::Data::Project(const vector<data_dim_t>& dataDims, optional<string> weight) -> decltype(*this)
 {
   mDataInfo.set({dataDims, weight});
   return *this;
@@ -1862,10 +1862,10 @@ auto Plot::Pad::Data::Scatter(const string& x, const string& y, const string& xE
   mDataInfo.set({{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, {}, false});
   return *this;
 }
-auto Plot::Pad::Data::Profile(vector<data_dim_t> dataDims, const string& profile, optional<string> weight) -> decltype(*this)
+auto Plot::Pad::Data::Profile(const vector<data_dim_t>& dataDims, const string& profile, optional<string> weight) -> decltype(*this)
 {
-  dataDims.push_back({profile});
   mDataInfo.set({dataDims, weight, true});
+  mDataInfo.dataDims.push_back({profile});
   return *this;
 }
 auto Plot::Pad::Data::Profile1D(data_dim_t x, const string& profile, optional<string> weight) -> decltype(*this)
@@ -2185,7 +2185,7 @@ auto Plot::Pad::Ratio::ProfileY(double_t startX, double_t endX, optional<bool> i
   mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
   return *this;
 }
-auto Plot::Pad::Ratio::Project(vector<data_dim_t> dataDims, optional<string> weight) -> decltype(*this)
+auto Plot::Pad::Ratio::Project(const vector<data_dim_t>& dataDims, optional<string> weight) -> decltype(*this)
 {
   if (mModMode == Mode::Num) {
     return static_cast<decltype(*this)&>(Data::Project(dataDims, weight));
@@ -2233,13 +2233,13 @@ auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& x
   mDenomDataInfo.set({{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, {}, false});
   return *this;
 }
-auto Plot::Pad::Ratio::Profile(vector<data_dim_t> dataDims, const string& profile, optional<string> weight) -> decltype(*this)
+auto Plot::Pad::Ratio::Profile(const vector<data_dim_t>& dataDims, const string& profile, optional<string> weight) -> decltype(*this)
 {
   if (mModMode == Mode::Num) {
     return static_cast<decltype(*this)&>(Data::Profile(dataDims, profile, weight));
   }
-  dataDims.push_back({profile, {}});
   mDenomDataInfo.set({dataDims, weight, true});
+  mDenomDataInfo.dataDims.push_back({profile, {}});
   return *this;
 }
 auto Plot::Pad::Ratio::Profile1D(data_dim_t x, const string& profile, optional<string> weight) -> decltype(*this)

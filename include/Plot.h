@@ -499,7 +499,7 @@ class Plot::Pad::Data
     int32_t nBins{0};
   };
 
-  virtual Data& Project(std::vector<data_dim_t> dataDims, std::optional<std::string> weight = {});
+  virtual Data& Project(const std::vector<data_dim_t>& dataDims, std::optional<std::string> weight = {});
   virtual Data& Project1D(data_dim_t x, std::optional<std::string> weight = {});
   virtual Data& Project2D(data_dim_t x, data_dim_t y, std::optional<std::string> weight = {});
 
@@ -507,7 +507,7 @@ class Plot::Pad::Data
   virtual Data& Scatter(const std::string& x, const std::string& y, const std::string& xErr, const std::string& yErr);
   virtual Data& Scatter(const std::string& x, const std::string& y, const std::string& xErrLow, const std::string& xErrHigh, const std::string& yErrLow, const std::string& yErrHigh);
 
-  virtual Data& Profile(std::vector<data_dim_t> dataDims, const std::string& profile, std::optional<std::string> weight = {});
+  virtual Data& Profile(const std::vector<data_dim_t>& dataDims, const std::string& profile, std::optional<std::string> weight = {});
   virtual Data& Profile1D(data_dim_t x, const std::string& profile, std::optional<std::string> weight = {});
   virtual Data& Profile2D(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> weight = {});
 
@@ -730,7 +730,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});
   Ratio& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});
 
-  Ratio& Project(std::vector<data_dim_t> dataDims, std::optional<std::string> weight = {});
+  Ratio& Project(const std::vector<data_dim_t>& dataDims, std::optional<std::string> weight = {});
   Ratio& Project1D(data_dim_t x, std::optional<std::string> weight = {});
   Ratio& Project2D(data_dim_t x, data_dim_t y, std::optional<std::string> weight = {});
 
@@ -738,7 +738,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErr, const std::string& yErr);
   Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErrLow, const std::string& xErrHigh, const std::string& yErrLow, const std::string& yErrHigh);
 
-  Ratio& Profile(std::vector<data_dim_t> dataDims, const std::string& profile, std::optional<std::string> weight = {});
+  Ratio& Profile(const std::vector<data_dim_t>& dataDims, const std::string& profile, std::optional<std::string> weight = {});
   Ratio& Profile1D(data_dim_t x, const std::string& profile, std::optional<std::string> weight = {});
   Ratio& Profile2D(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> weight = {});
 
