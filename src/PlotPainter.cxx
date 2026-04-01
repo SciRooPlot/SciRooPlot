@@ -735,7 +735,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
 
           if (isTHN) {
-            // reset the axis histogram which owns the z axis, while eeping default range defined by the data
+            // reset the axis histogram which owns the z axis, while keeping default range defined by the data
             double_t min = axisHist_ptr->GetMinimum();
             double_t max = axisHist_ptr->GetMaximum();
             axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
@@ -878,7 +878,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           if (data->GetTextFormat()) gStyle->SetPaintTextFormat((*data->GetTextFormat()).data());
 
-          // disallow moving around the points of a graph in interacitve mode
+          // disallow moving around the points of a graph in interactive mode
           if constexpr (is_graph_1d<data_type>()) {
             data_ptr->SetEditable(false);
           }
@@ -1837,7 +1837,7 @@ void PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
     }
   }
   if (binomialErrors) {
-    WARNING("Binomial errors not supported division by function.");
+    WARNING("Binomial errors not supported for division by function.");
   }
 }
 

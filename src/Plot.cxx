@@ -292,7 +292,6 @@ void Plot::operator+=(const Plot& plot)
   mName = plot.mName;
   mFigureGroup = plot.mFigureGroup;
   mFigureCategory = plot.mFigureCategory;
-  if (plot.mFigureCategory) mFigureCategory = plot.mFigureCategory;
   mPlotTemplateName = plot.mPlotTemplateName;
 
   if (plot.mPlotDimensions.width) mPlotDimensions.width = plot.mPlotDimensions.width;
@@ -1905,7 +1904,7 @@ auto Plot::Pad::Data::Entries(uint64_t nEntries) -> decltype(*this)
 }
 auto Plot::Pad::Data::Entries(uint64_t entryMin, uint64_t entryMax) -> decltype(*this)
 {
-  mDataInfo.entries.max = entryMin;
+  mDataInfo.entries.min = entryMin;
   mDataInfo.entries.max = entryMax;
   return *this;
 }
@@ -2297,7 +2296,7 @@ auto Plot::Pad::Ratio::Entries(uint64_t entryMin, uint64_t entryMax) -> decltype
   if (mModMode == Mode::Num) {
     return static_cast<decltype(*this)&>(Data::Entries(entryMin, entryMax));
   }
-  mDenomDataInfo.entries.max = entryMin;
+  mDenomDataInfo.entries.min = entryMin;
   mDenomDataInfo.entries.max = entryMax;
   return *this;
 }
@@ -2402,7 +2401,7 @@ ptree Plot::Pad::Axis::GetPropertyTree() const
  * Apply all settings from axis on top of this axis.
  */
 //**************************************************************************************************
-void Plot::Pad::Axis::Axis::operator+=(const Axis& axis)
+void Plot::Pad::Axis::operator+=(const Axis& axis)
 {
   mName = axis.mName;
   if (axis.mRange.min) mRange.min = axis.mRange.min;
