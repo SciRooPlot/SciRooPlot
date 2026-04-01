@@ -65,7 +65,6 @@
 #include "TObjectTable.h"
 #include "TExec.h"
 #include "TTimeStamp.h"
-#include "TLatex.h"
 #include "TLegend.h"
 #include "TText.h"
 #include "TPaveText.h"
@@ -939,11 +938,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       double_t rm = 1. - pad_ptr->GetRightMargin();
       double_t tm = 1. - pad_ptr->GetTopMargin();
       double_t bm = pad_ptr->GetBottomMargin();
-      double_t xup = (rm - lm) * ((pad_ptr->GetUxmax() - pad_ptr->GetUxmin()) / (pad_ptr->GetUxmax() - pad_ptr->GetUxmin())) + lm;
-      double_t yup = (tm - bm) * ((pad_ptr->GetUymax() - pad_ptr->GetUymin()) / (pad_ptr->GetUymax() - pad_ptr->GetUymin())) + bm;
-      line.DrawLineNDC(xup, bm, xup, tm);
+      line.DrawLineNDC(rm, bm, rm, tm);
       line.DrawLineNDC(lm, bm, lm, tm);
-      line.DrawLineNDC(lm, yup, rm, yup);
+      line.DrawLineNDC(lm, tm, rm, tm);
       line.DrawLineNDC(lm, bm, rm, bm);
       // re-draw axes
       axisHist_ptr->Draw("SAME AXIS");
