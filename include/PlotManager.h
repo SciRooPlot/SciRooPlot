@@ -74,6 +74,7 @@ class PlotManager
   // add plots or templates for plots to the manager
   void AddPlot(Plot& plot);
   void AddPlotTemplate(Plot plotTemplate);
+  void AddColorPlot(const std::string& plotName, const std::string& figureGroup, const std::vector<int32_t>& colors = {});
 
   // saving plot definitions to external file (which can e.g. be read by the command-line plotting app included in the framework)
   void DumpPlots(const std::string& plotFileName, const std::string& figureGroup = "", const std::vector<std::string>& plotNames = {}) const;

@@ -108,6 +108,7 @@ Plot::Plot(const ptree& plotTree)
   read_from_tree(plotTree, mFill.color, "fill_color");
   read_from_tree(plotTree, mFill.style, "fill_style");
   read_from_tree(plotTree, mFill.alpha, "fill_alpha");
+  read_from_tree(plotTree, mPaintColorWheel, "paint_color_wheel");
 
   // loop over all pads defined in property tree
   for (auto& pad : plotTree) {
@@ -147,6 +148,7 @@ ptree Plot::GetPropertyTree() const
   put_in_tree(plotTree, mFill.color, "fill_color");
   put_in_tree(plotTree, mFill.style, "fill_style");
   put_in_tree(plotTree, mFill.alpha, "fill_alpha");
+  put_in_tree(plotTree, mPaintColorWheel, "paint_color_wheel");
 
   for (auto& [padID, pad] : mPads) {
     plotTree.put_child("PAD_" + std::to_string(padID), pad.GetPropertyTree());
@@ -230,6 +232,11 @@ void Plot::SetHeight(int32_t height)
 void Plot::SetFixAspectRatio(bool fixAspectRatio)
 {
   mPlotDimensions.fixAspectRatio = fixAspectRatio;
+}
+
+void Plot::SetPaintColorWheel(bool paintColorWheel)
+{
+  mPaintColorWheel = paintColorWheel;
 }
 
 //**************************************************************************************************

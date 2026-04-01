@@ -130,6 +130,7 @@ class Plot
   void SetWidth(int32_t width);
   void SetHeight(int32_t height);
   void SetFixAspectRatio(bool fixAspectRatio = true);
+  void SetPaintColorWheel(bool paintColorWheel = true);
 
   Plot& SetFill(int16_t color, std::optional<int16_t> style = {}, std::optional<float_t> alpha = {});
   Plot& SetFillColor(int16_t color);
@@ -158,6 +159,7 @@ class Plot
   const auto& GetFillColor() const { return mFill.color; }
   const auto& GetFillStyle() const { return mFill.style; }
   const auto& GetFillAlpha() const { return mFill.alpha; }
+  const auto& GetPaintColorWheel() { return mPaintColorWheel; }
 
   uint8_t GetDataCount() const;
 
@@ -177,6 +179,7 @@ class Plot
   dimension_t mPlotDimensions;
   layout_t mFill;
   std::map<uint8_t, Pad> mPads;
+  std::optional<bool> mPaintColorWheel;
 };
 
 //**************************************************************************************************

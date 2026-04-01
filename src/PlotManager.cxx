@@ -342,6 +342,52 @@ void PlotManager::AddPlotTemplate(Plot plotTemplate)
 
 //**************************************************************************************************
 /**
+ * Add plot showing the specified colors or root color panel as fallback.
+ */
+//**************************************************************************************************
+void PlotManager::AddColorPlot(const string& plotName, const string& figureGroup, const vector<int32_t>& colors)
+{
+  Plot plot(plotName, figureGroup);
+  plot.SetDimensions(800, 800, true);
+  plot[1].SetPosition(0., 0., 1., 1.);
+  if (colors.empty()) {
+    plot.SetPaintColorWheel();
+  } else {
+    int32_t bestRows = 1;
+    int32_t bestCols = colors.size();
+    double_t bestScore = -1;
+    for (int rows = 1; rows <= colors.size(); ++rows) {
+      int32_t cols = (colors.size() + rows - 1) / rows;
+      double_t cellW = 1.0 / cols;
+      double_t cellH = 1.0 / rows;
+      double_t area = cellW * cellH;
+      double_t aspectPenalty = fabs(cellW - cellH);
+      double_t score = area - 0.3 * aspectPenalty;
+      if (score > bestScore) {
+        bestScore = score;
+        bestRows = rows;
+        bestCols = cols;
+      }
+    }
+    for (int i = 0; i < colors.size(); ++i) {
+      int32_t r = i / bestCols;
+      int32_t c = i % bestCols;
+      double_t x = static_cast<double_t>(c) / bestCols;
+      double_t y = 1.0 - static_cast<double_t>(r) / bestRows;
+      double_t w = 1.0 / bestCols;
+      double_t h = 1.0 / bestRows;
+      plot[1]
+        .AddText(x, y, std::to_string(colors[i]))
+        .SetSize(w, h)
+        .SetFillStyle(1001)
+        .SetFillColor(colors[i]);
+    }
+  }
+  AddPlot(plot);
+}
+
+//**************************************************************************************************
+/**
  * Dump plots to xml file.
  */
 //**************************************************************************************************
