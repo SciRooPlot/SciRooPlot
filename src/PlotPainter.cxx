@@ -1935,7 +1935,7 @@ float_t PlotPainter::GetTextSizePixel(float_t textSizeNDC)
 //**************************************************************************************************
 void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
 {
-  std::regex words_regex("<[name,title,entries,integral,mean,maximum,minimum].*?>");
+  std::regex words_regex("<(name|title|entries|integral|mean|maximum|minimum).*?>");
   auto words_begin = std::sregex_iterator(str.begin(), str.end(), words_regex);
   auto words_end = std::sregex_iterator();
 

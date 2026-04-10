@@ -237,7 +237,7 @@ _plot_completions_bash() {
   while IFS="," read -r plotName figureGroup figureCategory
   do
     groups+=" ${figureGroup}"
-    [ -n "$figureCategory" ] && groups_and_categories+=" ${figureGroup}/${figureCategory}"
+    [ -n "${figureCategory}" ] && groups_and_categories+=" ${figureGroup}/${figureCategory}"
   done < <(LC_ALL=C sort -t',' -k2,3 -u "${tabcomp_file}")
 
   updatePlotNames() {
@@ -291,7 +291,7 @@ _srp_completions_bash() {
     local project
     while read -r project
     do
-      projects+=" ${project}"
+      projects+=("${project}")
     done < <(grep -B1 '{' "${project_file}" | grep -v '{' | grep -v -- '^--$')
   fi
 
@@ -301,7 +301,7 @@ _srp_completions_bash() {
   ;;
   2)
     if [[ " ${project_commands[@]} " =~ " ${COMP_WORDS[COMP_CWORD-1]} " ]]; then
-      COMPREPLY=( $(compgen -W "${projects}" -- "${COMP_WORDS[COMP_CWORD]}") )
+      COMPREPLY=( $(compgen -W "${projects[*]}" -- "${COMP_WORDS[COMP_CWORD]}") )
     else
       COMPREPLY=( )
     fi

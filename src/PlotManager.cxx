@@ -1197,7 +1197,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     isScatter = !isProfile;
   }
   bool isProjection = (!isProfile && !isScatter);
-  bool hasWegiths = false;
+  bool hasWeights = false;
 
   auto dataDims = dataInfo.dataDims;  // make copy here so it can be modified
   if (isProfile && dataDims.size() > 3) {
@@ -1314,7 +1314,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       ERROR("Illegal expression for weights: {}.", *dataInfo.weight);
       return nullptr;
     }
-    hasWegiths = true;
+    hasWeights = true;
   }
 
   if (dataDims.size() == 1) {
@@ -1326,7 +1326,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     } else {
       histModel = ROOT::RDF::TH1DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1]);
     }
-    if (hasWegiths) {
+    if (hasWeights) {
       obj = node.Histo1D(histModel, "SRP_AXIS_1", "SRP_AXIS_W")->Clone(name.data());
     } else {
       obj = node.Histo1D(histModel, "SRP_AXIS_1")->Clone(name.data());
@@ -1341,7 +1341,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       } else {
         profileModel = ROOT::RDF::TProfile1DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1]);
       }
-      if (hasWegiths) {
+      if (hasWeights) {
         obj = node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W")->Clone(name.data());
       } else {
         obj = node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2")->Clone(name.data());
@@ -1357,7 +1357,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       } else if (!dataDim1.nBins && dataDim2.nBins) {
         histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       }
-      if (hasWegiths) {
+      if (hasWeights) {
         obj = node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W")->Clone(name.data());
       } else {
         obj = node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2")->Clone(name.data());
@@ -1379,7 +1379,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       } else if (!dataDim1.nBins && dataDim2.nBins) {
         profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       }
-      if (hasWegiths) {
+      if (hasWeights) {
         obj = node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W")->Clone(name.data());
       } else {
         obj = node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3")->Clone(name.data());
@@ -1403,7 +1403,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
         }
         histModel = ROOT::RDF::TH3DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data(), dataDim2.edges.size() - 1, dataDim2.edges.data(), dataDim3.edges.size() - 1, dataDim3.edges.data());
       }
-      if (hasWegiths) {
+      if (hasWeights) {
         obj = node.Histo3D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W")->Clone(name.data());
       } else {
         obj = node.Histo3D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3")->Clone(name.data());
@@ -1452,7 +1452,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       for (auto& dataDim : dataDims) {
         colNames.push_back("SRP_AXIS_" + std::to_string(axisID));
       }
-      if (hasWegiths) {
+      if (hasWeights) {
         colNames.push_back("SRP_AXIS_W");
       }
       obj = node.HistoND(histModel, colNames)->Clone(name.data());
