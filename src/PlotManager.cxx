@@ -124,9 +124,9 @@ void PlotManager::SavePlotsToFile() const
       TCanvas colorCanvas("user_colors", "user defined colors", 800, 200);
       for (int32_t i = 0; i < nUserColors; i++) {
         if (gROOT->GetColor(mFirstFreeColorIndex + i)) {
-          TBox* box = new TBox(static_cast<double>(i) / nUserColors, 0, static_cast<double>(i + 1) / nUserColors, 1);
-          box->SetFillColor(mFirstFreeColorIndex + i);
-          box->Draw("same");
+          TBox box(static_cast<double>(i) / nUserColors, 0, static_cast<double>(i + 1) / nUserColors, 1);
+          box.SetFillColor(mFirstFreeColorIndex + i);
+          box.Draw("SAME");
         }
       }
       colorCanvas.Write();
@@ -356,7 +356,7 @@ void PlotManager::AddColorPlot(const string& plotName, const string& figureGroup
     int32_t bestRows = 1;
     int32_t bestCols = colors.size();
     double_t bestScore = -1;
-    for (int rows = 1; rows <= colors.size(); ++rows) {
+    for (int32_t rows = 1; rows <= static_cast<int32_t>(colors.size()); ++rows) {
       int32_t cols = (colors.size() + rows - 1) / rows;
       double_t cellW = 1.0 / cols;
       double_t cellH = 1.0 / rows;
@@ -369,7 +369,7 @@ void PlotManager::AddColorPlot(const string& plotName, const string& figureGroup
         bestCols = cols;
       }
     }
-    for (int i = 0; i < colors.size(); ++i) {
+    for (size_t i = 0; i < colors.size(); ++i) {
       int32_t r = i / bestCols;
       int32_t c = i % bestCols;
       double_t x = static_cast<double_t>(c) / bestCols;
@@ -766,7 +766,7 @@ bool PlotManager::FillBuffer()
         auto yStrs = split_string(strs[1], ',');
         vector<double_t> x;
         vector<double_t> y;
-        for (int32_t i = 0; i < xStrs.size(); ++i) {
+        for (size_t i = 0; i < xStrs.size(); ++i) {
           x.push_back(std::stod(xStrs[i]));
           y.push_back(std::stod(yStrs[i]));
         }
@@ -1040,9 +1040,9 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
   std::vector<char> candidates = {',', ';', '\t', '|', ' '};
   size_t maxCount = 0;
   std::ifstream file(inputFileName);
-  int32_t count = 0;
+  int32_t iLine = 0;
   string line;
-  while (count < 100 && std::getline(file, line)) {
+  while (iLine < 100 && std::getline(file, line)) {
     for (char c : candidates) {
       size_t count = std::count(line.begin(), line.end(), c);
       if (count > maxCount) {
@@ -1050,7 +1050,7 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
         delimiter = c;
       }
     }
-    ++count;
+    ++iLine;
   }
   for (auto& dataInfo : mDataInfoBuffer[inputID][name]) {
     string dataName = name + dataInfo.GetNameSuffix();
