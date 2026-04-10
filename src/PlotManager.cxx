@@ -1058,7 +1058,7 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
     try {
       std::cerr.setstate(std::ios_base::failbit);
       if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
-      ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter);
+      ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter, 50000);
       obj = ProcessData(df, name, dataInfo, dataName + ":" + inputID);
       if (!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
       std::cerr.clear();
@@ -1730,5 +1730,5 @@ void PlotManager::SaveProject(const string& projectName)
     tabCompFile << line;
   }
   tabCompFile.close();
-};
+}
 }  // end namespace SciRooPlot
