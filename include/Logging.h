@@ -188,7 +188,14 @@ inline void here(const char* file, const char* function, int line)
   fmt::print("Line {} in function {} ({})\n", line, function, file);
   fmt::print("\n");
 }
-
+inline void suppress_warnings(bool suppress)
+{
+  if (suppress) {
+    std::cerr.setstate(std::ios_base::failbit);
+  } else {
+    std::cerr.clear();
+  }
+}
 }  // namespace logger
 
 // shorthand macros for logging features
@@ -200,6 +207,7 @@ inline void here(const char* file, const char* function, int line)
 #define PRINT(...) logger::print(__VA_ARGS__)
 #define PRINT_INLINE(...) logger::print_inline(__VA_ARGS__)
 #define PRINT_SEPARATOR() logger::print_separator()
+#define SUPPRESS_WARNINGS(...) logger::suppress_warnings(__VA_ARGS__)
 
 // debug helper macros
 #define HERE() logger::here(__FILE__, __FUNCTION__, __LINE__);
