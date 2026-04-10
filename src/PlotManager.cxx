@@ -907,7 +907,7 @@ void PlotManager::PrintLoadedPlots() const
       figureGroup = plot.GetFigureGroup();
       INFO("{}", figureGroup);
     }
-    INFO(" - {}{}", plot.GetName(), (plot.GetFigureCategory()) ? "" : " (" + *plot.GetFigureCategory() + ")");
+    INFO(" - {}{}", plot.GetName(), (plot.GetFigureCategory()) ? " (" + *plot.GetFigureCategory() + ")" : "");
     INFO("     ndata = {}", plot.GetDataCount());
   }
   INFO("{} plots were loaded.", mPlots.size());
@@ -987,12 +987,12 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
             for (auto& dataInfo : mDataInfoBuffer[inputID][fullName]) {
               string dataFullName = fullName + dataInfo.GetNameSuffix();
               try {
-                SUPPRESS_WARNINGS(true);
+                SUPPRESS_STDERR(true);
                 if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
                 ROOT::RDataFrame df(*tree);
                 obj = ProcessData(df, fullName, dataInfo, dataFullName + suffix);
                 if (!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
-                SUPPRESS_WARNINGS(false);
+                SUPPRESS_STDERR(false);
               } catch (const std::runtime_error&) {
                 ERROR("Invalid query for tree.");
                 obj = nullptr;
@@ -1056,12 +1056,12 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
     string dataName = name + dataInfo.GetNameSuffix();
     TObject* obj = nullptr;
     try {
-      SUPPRESS_WARNINGS(true);
+      SUPPRESS_STDERR(true);
       if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
       ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter, 50000);
       obj = ProcessData(df, name, dataInfo, dataName + ":" + inputID);
       if (!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
-      SUPPRESS_WARNINGS(false);
+      SUPPRESS_STDERR(false);
     } catch (const std::runtime_error& e) {
       ERROR("Invalid query for table {}.", name);
       std::cout << e.what() << std::endl;

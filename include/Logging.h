@@ -74,7 +74,7 @@ inline std::string_view begin_color(Color c)
     case Color::White:
       return bright ? "\033[97m" : "\033[37m";
     default:
-      return "\033[0m";
+      return "";
   }
 #endif
 }
@@ -186,10 +186,10 @@ inline void check_type(const T&, std::string_view name = "")
 inline void here(const char* file, const char* function, int line)
 {
   fmt::print(stderr, "{}[ HERE ]{} ", begin_color(Color::Cyan), end_color());
-  fmt::print("Line {} in function {} ({})\n", line, function, file);
+  fmt::print("Line {} in function {} ({})", line, function, file);
   fmt::print("\n");
 }
-inline void suppress_warnings(bool suppress)
+inline void suppress_stderr(bool suppress)
 {
   if (suppress) {
     std::cerr.setstate(std::ios_base::failbit);
@@ -208,7 +208,7 @@ inline void suppress_warnings(bool suppress)
 #define PRINT(...) logger::print(__VA_ARGS__)
 #define PRINT_INLINE(...) logger::print_inline(__VA_ARGS__)
 #define PRINT_SEPARATOR() logger::print_separator()
-#define SUPPRESS_WARNINGS(...) logger::suppress_warnings(__VA_ARGS__)
+#define SUPPRESS_STDERR(...) logger::suppress_stderr(__VA_ARGS__)
 
 // debug helper macros
 #define HERE() logger::here(__FILE__, __FUNCTION__, __LINE__);
