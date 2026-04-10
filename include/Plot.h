@@ -475,6 +475,7 @@ class Plot::Pad::Data
 
   // data modifiers
   virtual Data& Normalize(bool scaleBinWidth = false);
+  virtual Data& NormalizeToMaximum(bool normMaximum = true);
   virtual Data& Scale(double_t scaleFactor);
   virtual Data& DivideBinWidth(bool divideBinWidth = true);
   virtual Data& RebinX(uint16_t nGroup);
@@ -545,6 +546,7 @@ class Plot::Pad::Data
   const auto& GetTextFormat() const { return mTextFormat; }
   const auto& GetScaleFactor() const { return mModify.scaleFactor; }
   const auto& GetScaleBinWidthNorm() const { return mModify.scaleBinWidthNorm; }
+  const auto& GetNormMaximum() const { return mModify.normMaximum; }
   const auto& GetMinRangeX() const { return mRangeX.min; }
   const auto& GetMaxRangeX() const { return mRangeX.max; }
   const auto& GetMinRangeY() const { return mRangeY.min; }
@@ -612,6 +614,7 @@ class Plot::Pad::Data
 
   struct modify_t {
     std::optional<bool> scaleBinWidthNorm;
+    std::optional<bool> normMaximum;
     std::optional<double_t> scaleFactor;
     std::optional<bool> divideBinWidth;
     std::optional<uint16_t> rebinGroupX;
@@ -712,6 +715,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 
   // data modifiers
   FORWARD_TO_DATA(Normalize)
+  FORWARD_TO_DATA(NormalizeToMaximum)
   FORWARD_TO_DATA(Scale)
   FORWARD_TO_DATA(DivideBinWidth)
   FORWARD_TO_DATA(RebinX)

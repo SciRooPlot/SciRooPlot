@@ -1352,6 +1352,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mModify.showOverflowBins, "show_overflow_bins");
   read_from_tree(dataTree, mModify.scaleFactor, "scale_factor");
   read_from_tree(dataTree, mModify.scaleBinWidthNorm, "scale_bin_width_norm");
+  read_from_tree(dataTree, mModify.normMaximum, "norm_to_maximum");
   read_from_tree(dataTree, mModify.divideBinWidth, "divide_bin_width");
   read_from_tree(dataTree, mModify.rebinGroupX, "rebinX");
   read_from_tree(dataTree, mModify.rebinGroupY, "rebinY");
@@ -1446,6 +1447,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mModify.showOverflowBins, "show_overflow_bins");
   put_in_tree(dataTree, mModify.scaleFactor, "scale_factor");
   put_in_tree(dataTree, mModify.scaleBinWidthNorm, "scale_bin_width_norm");
+  put_in_tree(dataTree, mModify.normMaximum, "norm_to_maximum");
   put_in_tree(dataTree, mModify.divideBinWidth, "divide_bin_width");
   put_in_tree(dataTree, mModify.rebinGroupX, "rebinX");
   put_in_tree(dataTree, mModify.rebinGroupY, "rebinY");
@@ -1768,6 +1770,11 @@ auto Plot::Pad::Data::SetContours(int32_t nContours) -> decltype(*this)
 auto Plot::Pad::Data::Normalize(bool scaleBinWidth) -> decltype(*this)
 {
   mModify.scaleBinWidthNorm = scaleBinWidth;
+  return *this;
+}
+auto Plot::Pad::Data::NormalizeToMaximum(bool normMaximum) -> decltype(*this)
+{
+  mModify.normMaximum = normMaximum;
   return *this;
 }
 auto Plot::Pad::Data::Scale(double_t scaleFactor) -> decltype(*this)

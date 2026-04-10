@@ -486,6 +486,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               scaleFactor = 1. / integral;
             }
           }
+          if (data->GetNormMaximum() && *data->GetNormMaximum()) {
+            scaleFactor = 1. / data_ptr->GetMaximum();
+          }
           if (data->GetScaleFactor()) {
             scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor()) : (*data->GetScaleFactor());
           }
