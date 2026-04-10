@@ -121,12 +121,15 @@ void PlotManager::SavePlotsToFile() const
     }
     outputFile.cd();
     if (auto nUserColors = TColor::GetFreeColorIndex() - mFirstFreeColorIndex) {
+      vector<std::unique_ptr<TBox>> colorBoxes;
+      colorBoxes.reserve(nUserColors);
       TCanvas colorCanvas("user_colors", "user defined colors", 800, 200);
       for (int32_t i = 0; i < nUserColors; i++) {
         if (gROOT->GetColor(mFirstFreeColorIndex + i)) {
-          TBox box(static_cast<double>(i) / nUserColors, 0, static_cast<double>(i + 1) / nUserColors, 1);
-          box.SetFillColor(mFirstFreeColorIndex + i);
-          box.Draw("SAME");
+          auto box = std::make_unique<TBox>(static_cast<double>(i) / nUserColors, 0, static_cast<double>(i + 1) / nUserColors, 1);
+          box->SetFillColor(mFirstFreeColorIndex + i);
+          box->Draw("SAME");
+          colorBoxes.push_back(std::move(box));
         }
       }
       colorCanvas.Write();
@@ -1443,7 +1446,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
             dataDim.edges = edges;
             dataDim.nBins = 0;
           }
-          xBins.insert(xBins.end(), dataDim.edges);
+          xBins.push_back(dataDim.edges);
         }
         histModel = ROOT::RDF::THnDModel("tmp", histTitle.data(), dataDims.size(), nBinsVec, xBins);
       }
