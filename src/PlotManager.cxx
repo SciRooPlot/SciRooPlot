@@ -193,7 +193,7 @@ void PlotManager::ClearDataBuffer()
 
 //**************************************************************************************************
 /**
- * Sets path for output files. Plots wil be stored in hierarchical structure according to figure groups and categories.
+ * Sets path for output files. Plots will be stored in hierarchical structure according to figure groups and categories.
  */
 //**************************************************************************************************
 void PlotManager::SetOutputDirectory(const string& path)
@@ -1451,6 +1451,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       axisID = 1;
       for (auto& dataDim : dataDims) {
         colNames.push_back("SRP_AXIS_" + std::to_string(axisID));
+        ++axisID;
       }
       if (hasWeights) {
         colNames.push_back("SRP_AXIS_W");
@@ -1598,7 +1599,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     // positions
     double_t x1 = (widthFramePixel + leftMarginPixel) / totalPixelWidth;
     double_t x2 = x1 + widthFramePixel / totalPixelWidth;
-    // text scaling factors (for the second and third pad the text will be calculated wrt. the widht instead of the hight (since it is smaller) and therefore need additional scaling
+    // text scaling factors (for the second and third pad the text will be calculated wrt. the width instead of the height (since it is smaller) and therefore need additional scaling
     double_t textScalePad2 = totalPixelHeight / widthFramePixel;
     double_t textScalePad3 = totalPixelHeight / (widthFramePixel + rightMarginPixel);
     // tick length is specified relative to pad width -> since width is different for the three pads, need adjustments to have consistent lengths between the pads
