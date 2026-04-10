@@ -28,12 +28,14 @@ function plot() {
     fi
 
     if [[ "${1}" == "open" ]]; then
-      if command -v xdg-open >/dev/null 2>&1; then
+      if command -v open >/dev/null 2>&1; then
+        opener=(open)
+      elif command -v xdg-open >/dev/null 2>&1; then
         opener=(xdg-open)
       elif command -v gio >/dev/null 2>&1; then
         opener=(gio open)
-      elif command -v open >/dev/null 2>&1; then
-        opener=(open)
+      elif command -v wslview >/dev/null 2>&1; then
+        opener=(wslview)
       fi
       if [[ -n "${opener:-}" ]]; then
         if command -v find >/dev/null 2>&1; then
