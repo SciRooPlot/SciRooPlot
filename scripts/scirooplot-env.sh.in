@@ -29,15 +29,15 @@ function plot() {
 
     if [[ "${1}" == "open" ]]; then
       if command -v xdg-open >/dev/null 2>&1; then
-        opener="xdg-open"
+        opener=(xdg-open)
       elif command -v gio >/dev/null 2>&1; then
-        opener="gio open"
+        opener=(gio open)
       elif command -v open >/dev/null 2>&1; then
-        opener="open"
+        opener=(open)
       fi
       if [[ -n "${opener:-}" ]]; then
         if command -v find >/dev/null 2>&1; then
-          find "${user_build_dir}/.." -maxdepth 2 -type f \( -name '*.cxx' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \) -exec "$opener" {} +
+          find "${user_build_dir}/.." -maxdepth 2 -type f \( -name '*.cxx' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \)  -exec "${opener[@]}" {} +
           return 0
         fi
       fi
