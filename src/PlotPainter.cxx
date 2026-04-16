@@ -1791,7 +1791,7 @@ void PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
   if (numerator->GetXaxis()->GetNbins() != denominator->GetXaxis()->GetNbins()) {
     sameBinning = false;
   } else {
-    for (int32_t i = 1; i <= numerator->GetXaxis()->GetNbins(); ++i) {
+    for (int32_t i = 1; i <= numerator->GetXaxis()->GetNbins() + 1; ++i) {
       if (numerator->GetXaxis()->GetBinLowEdge(i) != denominator->GetXaxis()->GetBinLowEdge(i)) {
         sameBinning = false;
       }
@@ -1801,7 +1801,7 @@ void PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
     if (numerator->GetYaxis()->GetNbins() != denominator->GetYaxis()->GetNbins()) {
       sameBinning = false;
     } else {
-      for (int32_t i = 1; i <= numerator->GetYaxis()->GetNbins(); ++i) {
+      for (int32_t i = 1; i <= numerator->GetYaxis()->GetNbins() + 1; ++i) {
         if (numerator->GetYaxis()->GetBinLowEdge(i) != denominator->GetYaxis()->GetBinLowEdge(i)) {
           sameBinning = false;
         }
