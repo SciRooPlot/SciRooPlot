@@ -1787,7 +1787,30 @@ void PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialError
 }
 void PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
 {
-  if (!numerator->Divide(numerator, denominator, 1., 1., (binomialErrors) ? "B" : "")) {
+  bool sameBinning = true;
+  if (numerator->GetXaxis()->GetNbins() != denominator->GetXaxis()->GetNbins()) {
+    sameBinning = false;
+  } else {
+    for (int32_t i = 1; i <= numerator->GetXaxis()->GetNbins(); ++i) {
+      if (numerator->GetXaxis()->GetBinLowEdge(i) != denominator->GetXaxis()->GetBinLowEdge(i)) {
+        sameBinning = false;
+      }
+    }
+  }
+  if (numerator->InheritsFrom(TH2::Class()) && denominator->InheritsFrom(TH2::Class())) {
+    if (numerator->GetYaxis()->GetNbins() != denominator->GetYaxis()->GetNbins()) {
+      sameBinning = false;
+    } else {
+      for (int32_t i = 1; i <= numerator->GetYaxis()->GetNbins(); ++i) {
+        if (numerator->GetYaxis()->GetBinLowEdge(i) != denominator->GetYaxis()->GetBinLowEdge(i)) {
+          sameBinning = false;
+        }
+      }
+    }
+  }
+  if (sameBinning) {
+    numerator->Divide(numerator, denominator, 1., 1., (binomialErrors) ? "B" : "");
+  } else {
     if (numerator->GetDimension() == 1 && denominator->GetDimension() == 1) {
       TGraphErrors denominatorGraph(denominator);
       Divide(numerator, &denominatorGraph, binomialErrors);
