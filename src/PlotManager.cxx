@@ -1616,6 +1616,9 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plot.SetDimensions(totalPixelWidth, totalPixelHeight, true);
     plot.SetTransparent();
     plot[0].SetFrameFill(10, 1001);
+    plot[0].SetDefaultMarkerColors(goodColors);
+    plot[0].SetDefaultLineColors(goodColors);
+    plot[0].SetDefaultFillColors(goodColors);
     plot[0].SetDefaultFillStyles({0});
     plot[0].SetDefaultMarkerStyles({kFullCircle});
     plot[0].SetDefaultLineStyles({kSolid});
