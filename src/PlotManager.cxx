@@ -584,16 +584,20 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     fileEnding = ".pdf";
   } else if (isMacroMode) {
     fileEnding = ".C";
-
     // object names are converted to variable names and therefore must not contain '/'
     // this should be fixed in ROOT itself as it does not create valid cpp code otherwise
     std::function<void(TPad*)> cleanNames;
     cleanNames = [&](TPad* pad) {
+      string saveName = pad->GetName();
+      std::replace(saveName.begin(), saveName.end(), '/', '_');
+      std::replace(saveName.begin(), saveName.end(), ':', '_');
+      pad->SetName(saveName.data());
       TIter next(pad->GetListOfPrimitives());
       TObject* object = nullptr;
       while ((object = next())) {
         string saveName = object->GetName();
         std::replace(saveName.begin(), saveName.end(), '/', '_');
+        std::replace(saveName.begin(), saveName.end(), ':', '_');
         static_cast<TNamed*>(object)->SetName(saveName.data());
         if (object->InheritsFrom(TPad::Class())) {
           cleanNames(static_cast<TPad*>(object));
@@ -601,10 +605,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
       }
     };
     cleanNames(canvas.get());
-    string saveName = canvas->GetName();
-    std::replace(saveName.begin(), saveName.end(), '/', '_');
-    canvas->SetName(saveName.data());
-
   } else if (outputMode == "png") {
     fileEnding = ".png";
   } else if (outputMode == "eps") {
