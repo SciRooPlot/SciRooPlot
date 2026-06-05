@@ -1768,6 +1768,10 @@ void PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialError
     ERROR("Cannot divide higher dimensional histogram by 1D graph.");
     return;
   }
+  if (numerator->GetXaxis()->IsAlphanumeric()) {
+    ERROR("Cannot divide alphanumeric histogram by 1D graph.");
+    return;
+  }
   TGraphErrors numeratorGraph(numerator);
   Divide(&numeratorGraph, denominator, binomialErrors);
   numerator->Reset();
@@ -1782,6 +1786,10 @@ void PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialError
     ERROR("Cannot divide 1D graph by higher dimensional histogram.");
     return;
   }
+  if (denominator->GetXaxis()->IsAlphanumeric()) {
+    ERROR("Cannot divide 1D graph by alphanumeric histogram.");
+    return;
+  }
   TGraphErrors denominatorGraph(denominator);
   Divide(numerator, &denominatorGraph, binomialErrors);
 }
@@ -1791,9 +1799,11 @@ void PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
   if (numerator->GetXaxis()->GetNbins() != denominator->GetXaxis()->GetNbins()) {
     sameBinning = false;
   } else {
-    for (int32_t i = 1; i <= numerator->GetXaxis()->GetNbins() + 1; ++i) {
-      if (numerator->GetXaxis()->GetBinLowEdge(i) != denominator->GetXaxis()->GetBinLowEdge(i)) {
-        sameBinning = false;
+    if (!numerator->GetXaxis()->IsAlphanumeric() && !denominator->GetXaxis()->IsAlphanumeric()) {
+      for (int32_t i = 1; i <= numerator->GetXaxis()->GetNbins() + 1; ++i) {
+        if (numerator->GetXaxis()->GetBinLowEdge(i) != denominator->GetXaxis()->GetBinLowEdge(i)) {
+          sameBinning = false;
+        }
       }
     }
   }
@@ -1801,9 +1811,11 @@ void PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
     if (numerator->GetYaxis()->GetNbins() != denominator->GetYaxis()->GetNbins()) {
       sameBinning = false;
     } else {
-      for (int32_t i = 1; i <= numerator->GetYaxis()->GetNbins() + 1; ++i) {
-        if (numerator->GetYaxis()->GetBinLowEdge(i) != denominator->GetYaxis()->GetBinLowEdge(i)) {
-          sameBinning = false;
+      if (!numerator->GetYaxis()->IsAlphanumeric() && !denominator->GetYaxis()->IsAlphanumeric()) {
+        for (int32_t i = 1; i <= numerator->GetYaxis()->GetNbins() + 1; ++i) {
+          if (numerator->GetYaxis()->GetBinLowEdge(i) != denominator->GetYaxis()->GetBinLowEdge(i)) {
+            sameBinning = false;
+          }
         }
       }
     }
@@ -1811,6 +1823,12 @@ void PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
   if (sameBinning) {
     numerator->Divide(numerator, denominator, 1., 1., (binomialErrors) ? "B" : "");
   } else {
+    for (TAxis* axis : {numerator->GetXaxis(), numerator->GetYaxis(), numerator->GetZaxis(), denominator->GetXaxis(), denominator->GetYaxis(), denominator->GetZaxis()}) {
+      if (axis && axis->IsAlphanumeric()) {
+        ERROR("Cannot do interpolated division for alphanumeric histograms.");
+        return;
+      }
+    }
     if (numerator->GetDimension() == 1 && denominator->GetDimension() == 1) {
       TGraphErrors denominatorGraph(denominator);
       Divide(numerator, &denominatorGraph, binomialErrors);
