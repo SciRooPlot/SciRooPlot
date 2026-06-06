@@ -195,6 +195,15 @@ uint8_t Plot::GetDataCount() const
   return count;
 }
 
+void Plot::Print(const boost::property_tree::ptree& pt)
+{
+  for (const auto& child : pt) {
+    if (!child.second.data().empty()) {
+      std::cout << child.first << ": " << child.second.data() << std::endl;
+    }
+  }
+}
+
 void Plot::SetFigureGroup(const string& figureGroup)
 {
   mFigureGroup = figureGroup;
