@@ -729,8 +729,8 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(RebinXY)
   FORWARD_TO_DATA(Smooth)
 
-  Ratio& Numer();  // switch to numerator for follwing modifiers (default)
-  Ratio& Denom();  // switch to denominator for follwing modifiers
+  Ratio& Numer();  // switch to numerator for following modifiers (default)
+  Ratio& Denom();  // switch to denominator for following modifiers
 
   Ratio& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
   Ratio& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});
@@ -778,7 +778,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   std::string mDenomName;
   std::string mDenomInputID;
   bool mIsCorrelated{};
-  std::optional<bool> mScaleBinWidth;  // normalize both numerater and denominator with bin widths
+  std::optional<bool> mScaleBinWidth;  // normalize both numerator and denominator with bin widths
   data_info_t mDenomDataInfo;
   std::optional<proj_info_t> mDenomProjInfo;
 };

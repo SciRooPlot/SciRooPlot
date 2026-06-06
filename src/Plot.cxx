@@ -2715,6 +2715,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetBorder(int16_t color, int16_t style, float_
   mBorder.color = color;
   mBorder.style = style;
   mBorder.scale = width;
+  mBorder.alpha = alpha;
   return *GetThis();
 }
 
