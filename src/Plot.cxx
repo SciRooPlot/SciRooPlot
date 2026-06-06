@@ -199,7 +199,7 @@ void Plot::Print(const boost::property_tree::ptree& pt)
 {
   for (const auto& child : pt) {
     if (!child.second.data().empty()) {
-      std::cout << child.first << ": " << child.second.data() << std::endl;
+      PRINT("{}: {}", child.first, child.second.data());
     }
   }
 }
