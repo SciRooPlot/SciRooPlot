@@ -756,6 +756,26 @@ auto Plot::Pad::SetMargins(float_t top, float_t bottom, float_t left, float_t ri
   mMargins.right = right;
   return *this;
 }
+auto Plot::Pad::SetTopMargin(float_t top) -> decltype(*this)
+{
+  mMargins.top = top;
+  return *this;
+}
+auto Plot::Pad::SetBottomMargin(float_t bottom) -> decltype(*this)
+{
+  mMargins.bottom = bottom;
+  return *this;
+}
+auto Plot::Pad::SetLeftMargin(float_t left) -> decltype(*this)
+{
+  mMargins.left = left;
+  return *this;
+}
+auto Plot::Pad::SetRightMargin(float_t right) -> decltype(*this)
+{
+  mMargins.right = right;
+  return *this;
+}
 
 //**************************************************************************************************
 /**

@@ -242,6 +242,10 @@ class Plot::Pad
 
   Pad& SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup);
   Pad& SetMargins(float_t top, float_t bottom, float_t left, float_t right);
+  Pad& SetTopMargin(float_t right);
+  Pad& SetBottomMargin(float_t left);
+  Pad& SetRightMargin(float_t right);
+  Pad& SetLeftMargin(float_t left);
   Pad& SetView(double_t theta, double_t phi);
   Pad& SetPalette(int32_t palette);
   Pad& SetPalette(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
