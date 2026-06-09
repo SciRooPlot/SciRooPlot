@@ -195,11 +195,14 @@ uint8_t Plot::GetDataCount() const
   return count;
 }
 
-void Plot::Print(const boost::property_tree::ptree& pt)
+void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
 {
+  if (!name.empty()) {
+    INFO("Settings of {}:", name);
+  }
   for (const auto& child : pt) {
     if (!child.second.data().empty()) {
-      PRINT("{}: {}", child.first, child.second.data());
+      PRINT(" - {}: {}", child.first, child.second.data());
     }
   }
 }

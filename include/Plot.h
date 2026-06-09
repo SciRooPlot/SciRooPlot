@@ -122,7 +122,7 @@ class Plot
   friend Plot operator+(const Plot& templatePlot, const Plot& plot);
   Plot(const Plot& otherPlot, const std::string& name, const std::string& figureGroup, const std::optional<std::string>& figureCategory = {});
   Plot Clone() const;
-  void Print() { Plot::Print(GetPropertyTree()); }
+  void Print() { Plot::Print(GetPropertyTree(), "Plot"); }
 
   // accessors for user
   void SetFigureCategory(const std::string& figureCategory);
@@ -164,7 +164,7 @@ class Plot
 
   uint8_t GetDataCount() const;
 
-  static void Print(const boost::property_tree::ptree& pt);
+  static void Print(const boost::property_tree::ptree& pt, const std::string& name = "");
 
  private:
   struct dimension_t {
@@ -206,7 +206,7 @@ class Plot::Pad
   Axis& operator[](const char axis);
   Data& operator()(uint8_t dataID);
   void operator+=(const Pad& pad);
-  void Print() { Plot::Print(GetPropertyTree()); }
+  void Print() { Plot::Print(GetPropertyTree(), "Pad"); }
 
   // User accessors:
   Data& AddData(const std::string& name, const std::string& inputID, const std::optional<std::string>& label = {});
@@ -437,7 +437,7 @@ class Plot::Pad::Data
   Data(Data&&) = default;
   Data& operator=(const Data& other) = default;
   Data& operator=(Data&& other) = default;
-  void Print() { Plot::Print(GetPropertyTree()); }
+  void Print() { Plot::Print(GetPropertyTree(), "Data"); }
 
   Ratio& AsRatio();
   Data& SetInputID(const std::string& inputID);
@@ -674,7 +674,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio(Ratio&&) = default;
   Ratio& operator=(const Ratio& other) = default;
   Ratio& operator=(Ratio&& other) = default;
-  void Print() { Plot::Print(GetPropertyTree()); }
+  void Print() { Plot::Print(GetPropertyTree(), "Ratio"); }
 
   Ratio& SetIsCorrelated(bool isCorrelated = true);
   Ratio& SetDivideNormalized(bool scaleBinWidth = false);
@@ -796,7 +796,7 @@ class Plot::Pad::Axis
 {
  public:
   Axis() = default;
-  void Print() { Plot::Print(GetPropertyTree()); }
+  void Print() { Plot::Print(GetPropertyTree(), "Axis"); }
 
   Axis& SetTitle(const std::string& title);
   Axis& SetRange(double_t min, double_t max);
@@ -906,7 +906,7 @@ class Plot::Pad::Box
   Box(Box&&) = default;
   Box& operator=(const Box& other) = default;
   Box& operator=(Box&& other) = default;
-  void Print() { Plot::Print(GetPropertyTree()); }
+  void Print() { Plot::Print(GetPropertyTree(), "Box"); }
 
   BoxType& SetPosition(double_t x, double_t y);
   BoxType& SetSize(double_t width, double_t height);
@@ -997,7 +997,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
   TextBox(TextBox&&) = default;
   TextBox& operator=(const TextBox& other) = default;
   TextBox& operator=(TextBox&& other) = default;
-  void Print() { Plot::Print(GetPropertyTree()); }
+  void Print() { Plot::Print(GetPropertyTree(), "TextBox"); }
 
   TextBox& SetText(const std::string& text);
 
@@ -1031,7 +1031,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   LegendBox(LegendBox&&) = default;
   LegendBox& operator=(const LegendBox& other) = default;
   LegendBox& operator=(LegendBox&& other) = default;
-  void Print() { Plot::Print(GetPropertyTree()); }
+  void Print() { Plot::Print(GetPropertyTree(), "LegendBox"); }
 
   LegendEntry& GetEntry(uint8_t entryID) { return mLegendEntriesUser[entryID]; }
   LegendBox& SetTitle(const std::string& title);
@@ -1103,7 +1103,7 @@ class Plot::Pad::LegendBox::LegendEntry
  public:
   explicit LegendEntry(const std::optional<std::string>& label = {}, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& drawStyle = {});
   explicit LegendEntry(const boost::property_tree::ptree& legendEntryTree);
-  void Print() { Plot::Print(GetPropertyTree()); }
+  void Print() { Plot::Print(GetPropertyTree(), "LegendEntry"); }
 
   LegendEntry& SetLabel(const std::string& label);
   LegendEntry& SetRefData(uint16_t refDataID);
