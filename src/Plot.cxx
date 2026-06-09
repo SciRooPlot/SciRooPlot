@@ -197,14 +197,19 @@ uint8_t Plot::GetDataCount() const
 
 void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
 {
-  if (!name.empty()) {
-    INFO("Settings of {}:", name);
-  }
-  for (const auto& child : pt) {
-    if (!child.second.data().empty()) {
-      PRINT(" - {}: {}", child.first, child.second.data());
+  INFO("Settings of {}:", name);
+  auto print_pt = [&](auto&& self, const auto& node, int indent) -> void {
+    for (const auto& child : node) {
+      const std::string pad(indent * 2, ' ');
+      if (!child.second.data().empty()) {
+        PRINT("{}- {}: {}", pad, child.first, child.second.data());
+      } else {
+        PRINT("{}- {}:", pad, child.first);
+        self(self, child.second, indent + 1);
+      }
     }
-  }
+  };
+  print_pt(print_pt, pt, 0);
 }
 
 void Plot::SetFigureGroup(const string& figureGroup)
@@ -1071,7 +1076,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if (pad.mRefFunc) mRefFunc = pad.mRefFunc;  // this does not copy the data (!!)
   for (auto& [axisLabel, axis] : pad.mAxes) {
-    mAxes[axisLabel];  // default initiialize in case this axis was not yet defined
+    mAxes[axisLabel];  // default initialize in case this axis was not yet defined
     mAxes[axisLabel] += axis;
   }
   mLegendBoxes.insert(mLegendBoxes.end(), pad.mLegendBoxes.begin(), pad.mLegendBoxes.end());

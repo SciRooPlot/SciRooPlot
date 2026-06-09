@@ -164,7 +164,7 @@ class Plot
 
   uint8_t GetDataCount() const;
 
-  static void Print(const boost::property_tree::ptree& pt, const std::string& name = "");
+  static void Print(const boost::property_tree::ptree& pt, const std::string& name);
 
  private:
   struct dimension_t {
