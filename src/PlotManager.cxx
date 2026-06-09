@@ -135,7 +135,7 @@ void PlotManager::SavePlotsToFile() const
       colorCanvas.Write();
     }
     uint32_t nPlots{0u};
-    for (auto& [uniqueName, canvas] : mPlotLedger) {
+    for (const auto& [uniqueName, canvas] : mPlotLedger) {
       size_t delimiterPos = uniqueName.find(":");
       string plotName = uniqueName.substr(0, delimiterPos);
       string subfolder = uniqueName.substr(delimiterPos + 1);
@@ -162,8 +162,8 @@ void PlotManager::SaveInputsToFile() const
   if (outputFile.IsZombie()) {
     return;
   }
-  for (auto& [inputID, buffer] : mDataBuffer) {
-    for (auto& [dataName, dataPtr] : buffer) {
+  for (const auto& [inputID, buffer] : mDataBuffer) {
+    for (const auto& [dataName, dataPtr] : buffer) {
       if (!dataPtr) continue;
       auto dir = outputFile.mkdir(inputID.data(), "", true);
       string name = split_string(dataPtr->GetName(), ':')[0];
@@ -256,9 +256,9 @@ void PlotManager::AddInputDataFile(const string& inputID, const string& inputFil
 void PlotManager::DumpInputDataFiles(const string& configFileName) const
 {
   ptree inputFileTree;
-  for (auto& inFileTuple : mInputFiles) {
+  for (const auto& inFileTuple : mInputFiles) {
     ptree filesOfIdentifier;
-    for (auto& fileName : inFileTuple.second) {
+    for (const auto& fileName : inFileTuple.second) {
       filesOfIdentifier.add("FILE", fileName);
     }
     inputFileTree.put_child(inFileTuple.first, filesOfIdentifier);
@@ -286,15 +286,15 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
     ERROR("Cannot load file {}.", configFileName);
     return;
   }
-  for (auto& inputPair : inputFileTree) {
+  for (const auto& inputPair : inputFileTree) {
     const string& inputID = inputPair.first;
     set<string> allFileNames;
-    for (auto& fileEntry : inputPair.second) {
+    for (const auto& fileEntry : inputPair.second) {
       string fileOrDirName = expand_path(fileEntry.second.get_value<string>());
       if (str_contains(fileOrDirName, ".root", true) || str_contains(fileOrDirName, mTableFileEndings, true)) {
         allFileNames.insert(fileOrDirName);
       } else if (std::filesystem::is_directory(fileOrDirName)) {
-        for (auto& file : std::filesystem::recursive_directory_iterator(fileOrDirName)) {
+        for (const auto& file : std::filesystem::recursive_directory_iterator(fileOrDirName)) {
           if (file.path().extension() == ".root" || str_contains(file.path().extension(), mTableFileEndings)) {
             allFileNames.insert(file.path().string());
           }
@@ -411,7 +411,7 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
         if (plot.GetFigureGroup() != figureGroup) continue;
         if (!plotNames.empty()) {
           bool found = false;
-          for (auto& plotName : plotNames) {
+          for (const auto& plotName : plotNames) {
             if (plotName == plot.GetName()) found = true;
           }
           if (!found) continue;
@@ -685,7 +685,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
         mDataBuffer[refFunc->GetInputID()][refFunc->GetName()];
       } else {
         if (plot.GetPlotTemplateName()) {
-          auto it = std::find_if(mPlotTemplates.begin(), mPlotTemplates.end(), [&](auto& plotTemplate) { return *plot.GetPlotTemplateName() == plotTemplate.GetName(); });
+          auto it = std::find_if(mPlotTemplates.begin(), mPlotTemplates.end(), [&](const auto& plotTemplate) { return *plot.GetPlotTemplateName() == plotTemplate.GetName(); });
           if (it != mPlotTemplates.end()) {
             if (auto& refFunc = (*it).GetPad(padID).GetRefFunc()) {
               mDataBuffer[refFunc->GetInputID()][refFunc->GetName()];
@@ -693,7 +693,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
           }
         }
       }
-      for (auto& data : pad.GetData()) {
+      for (const auto& data : pad.GetData()) {
         mDataBuffer[data->GetInputID()][data->GetName()];
         if (data->GetDataInfo().dataDims.size()) {
           auto& dataInfos = mDataInfoBuffer[data->GetInputID()][data->GetName()];
@@ -719,7 +719,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
 
   // were definitions for all requested plots available?
   if (!plotNames.empty()) {
-    for (auto& plotName : plotNames) {
+    for (const auto& plotName : plotNames) {
       WARNING("Could not find plot {}{}{} in group {}{}{}.", logger::begin_color(logger::Color::Green), plotName, logger::end_color(), logger::begin_color(logger::Color::Yellow), figureGroup + ((!figureCategory.empty()) ? "/" + figureCategory : ""), logger::end_color());
     }
   }
@@ -793,13 +793,13 @@ bool PlotManager::FillBuffer()
     }
 
     // open all input files belonging to the current inputID and extract the data
-    for (auto& inputFileName : mInputFiles[inputID]) {
+    for (const auto& inputFileName : mInputFiles[inputID]) {
       if (requiredData.empty()) break;
       if (str_contains(inputFileName, mTableFileEndings, true)) {
         string name = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".") - inputFileName.rfind('/') - 1);
         ReadDataCSV(inputFileName, name, inputID);
         vector<string>& wantedNames = requiredData[""];
-        wantedNames.erase(std::remove_if(wantedNames.begin(), wantedNames.end(), [&](auto& wantedName) { return wantedName == name; }), wantedNames.end());
+        wantedNames.erase(std::remove_if(wantedNames.begin(), wantedNames.end(), [&](const auto& wantedName) { return wantedName == name; }), wantedNames.end());
         if (wantedNames.empty()) requiredData.erase("");
       }
       if (!str_contains(inputFileName, ".root", true)) continue;
@@ -853,7 +853,7 @@ bool PlotManager::FillBuffer()
         folder = nullptr;
       }
 
-      for (auto& pathStr : emptySubDirs) {
+      for (const auto& pathStr : emptySubDirs) {
         requiredData.erase(pathStr);
       }
     }
@@ -877,9 +877,9 @@ void PlotManager::PrintBufferStatus(bool missingOnly) const
   }
   uint32_t nNeededData{};
   uint32_t nAvailableData{};
-  for (auto& [inputID, buffer] : mDataBuffer) {
+  for (const auto& [inputID, buffer] : mDataBuffer) {
     bool printInputID = true;
-    for (auto& [dataName, dataPtr] : buffer) {
+    for (const auto& [dataName, dataPtr] : buffer) {
       ++nNeededData;
       bool show = missingOnly ? (dataPtr == nullptr) : true;
       if (dataPtr) ++nAvailableData;
@@ -905,7 +905,7 @@ void PlotManager::PrintLoadedPlots() const
   INFO("================ Loaded Plots =================");
 
   string figureGroup;
-  for (auto& plot : mPlots) {
+  for (const auto& plot : mPlots) {
     if (figureGroup != plot.GetFigureGroup()) {
       figureGroup = plot.GetFigureGroup();
       INFO("{}", figureGroup);
@@ -1136,7 +1136,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
   std::regex plotNameRegex{plotName};
 
   ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
-  for (auto& plotGroupTree : inputTree) {
+  for (const auto& plotGroupTree : inputTree) {
     // first filter by group
     string groupID = plotGroupTree.first.substr(string("GROUP::").size());
     bool isTemplate = (groupID == "PLOT_TEMPLATES");
@@ -1145,7 +1145,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
       continue;
     }
 
-    for (auto& plotTree : plotGroupTree.second) {
+    for (const auto& plotTree : plotGroupTree.second) {
       if (isTemplate) {
         Plot plot(plotTree.second);
         AddPlotTemplate(plot);
@@ -1732,7 +1732,7 @@ void PlotManager::SaveProject(const string& projectName)
   // create a csv file for tab completion
   std::ofstream tabCompFile;
   tabCompFile.open(std::filesystem::path(plotsFile).parent_path() / "tabcomp.csv");
-  for (auto& plot : mPlots) {
+  for (const auto& plot : mPlots) {
     string line = plot.GetName() + "," + plot.GetFigureGroup() + "," + ((plot.GetFigureCategory()) ? *plot.GetFigureCategory() : "") + "\n";
     tabCompFile << line;
   }

@@ -111,7 +111,7 @@ Plot::Plot(const ptree& plotTree)
   read_from_tree(plotTree, mPaintColorWheel, "paint_color_wheel");
 
   // loop over all pads defined in property tree
-  for (auto& pad : plotTree) {
+  for (const auto& pad : plotTree) {
     if (str_contains(pad.first, "PAD")) {
       uint8_t padID = std::stoi(pad.first.substr(pad.first.find("_") + 1));
       mPads[padID] = Pad(pad.second);
@@ -150,7 +150,7 @@ ptree Plot::GetPropertyTree() const
   put_in_tree(plotTree, mFill.alpha, "fill_alpha");
   put_in_tree(plotTree, mPaintColorWheel, "paint_color_wheel");
 
-  for (auto& [padID, pad] : mPads) {
+  for (const auto& [padID, pad] : mPads) {
     plotTree.put_child("PAD_" + std::to_string(padID), pad.GetPropertyTree());
   }
   return plotTree;
@@ -164,19 +164,19 @@ ptree Plot::GetPropertyTree() const
 Plot Plot::Clone() const
 {
   Plot newPlot(*this);
-  for (auto& [padID, pad] : newPlot.GetPads()) {
+  for (const auto& [padID, pad] : newPlot.GetPads()) {
     std::transform(newPlot[padID].GetData().begin(), newPlot[padID].GetData().end(),
                    newPlot[padID].GetData().begin(),
-                   [](auto& data_ptr) { return data_ptr->Clone(); });
+                   [](const auto& data_ptr) { return data_ptr->Clone(); });
 
     std::transform(newPlot[padID].GetLegendBoxes().begin(), newPlot[padID].GetLegendBoxes().end(),
-                   newPlot[padID].GetLegendBoxes().begin(), [](auto& legend_ptr) {
+                   newPlot[padID].GetLegendBoxes().begin(), [](const auto& legend_ptr) {
                      return std::make_shared<Plot::Pad::LegendBox>(*legend_ptr);
                    });
 
     std::transform(newPlot[padID].GetTextBoxes().begin(), newPlot[padID].GetTextBoxes().end(),
                    newPlot[padID].GetTextBoxes().begin(),
-                   [](auto& text_ptr) { return std::make_shared<Plot::Pad::TextBox>(*text_ptr); });
+                   [](const auto& text_ptr) { return std::make_shared<Plot::Pad::TextBox>(*text_ptr); });
   }
   return newPlot;
 }
@@ -189,7 +189,7 @@ Plot Plot::Clone() const
 uint8_t Plot::GetDataCount() const
 {
   uint8_t count{};
-  for (auto& [padID, pad] : mPads) {
+  for (const auto& [padID, pad] : mPads) {
     count += pad.GetDataCount();
   }
   return count;
@@ -311,7 +311,7 @@ void Plot::operator+=(const Plot& plot)
   if (plot.mFill.style) mFill.style = plot.mFill.style;
   if (plot.mFill.alpha) mFill.alpha = plot.mFill.alpha;
 
-  for (auto& [padID, pad] : plot.mPads) {
+  for (const auto& [padID, pad] : plot.mPads) {
     mPads[padID];  // initializes the pad in case it was not yet defined in this plot
     mPads[padID] += pad;
   }
@@ -852,7 +852,7 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
 
-  for (auto& content : padTree) {
+  for (const auto& content : padTree) {
     // add data
     if (str_contains(content.first, "DATA")) {
       string type = content.second.get<string>("type");
@@ -948,7 +948,7 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
 
   int32_t dataID = 1;
-  for (auto& data : mData) {
+  for (const auto& data : mData) {
     padTree.put_child("DATA_" + std::to_string(dataID), data->GetPropertyTree());
     ++dataID;
   }
@@ -957,17 +957,17 @@ ptree Plot::Pad::GetPropertyTree() const
   }
 
   int32_t legendBoxID = 1;
-  for (auto& legendBox : mLegendBoxes) {
+  for (const auto& legendBox : mLegendBoxes) {
     padTree.put_child("LEGEND_" + std::to_string(legendBoxID), legendBox->GetPropertyTree());
     ++legendBoxID;
   }
   int32_t textBoxID = 1;
-  for (auto& textBox : mTextBoxes) {
+  for (const auto& textBox : mTextBoxes) {
     padTree.put_child("TEXT_" + std::to_string(textBoxID), textBox->GetPropertyTree());
     ++textBoxID;
   }
 
-  for (auto& axis : {'X', 'Y', 'Z'}) {
+  for (const auto& axis : {'X', 'Y', 'Z'}) {
     if (mAxes.find(axis) != mAxes.end()) {
       padTree.put_child(string("AXIS_") + axis, mAxes.at(axis).GetPropertyTree());
     }
@@ -1959,7 +1959,7 @@ string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
   nameSuffix += "}";
   if (!ranges.empty()) {
     nameSuffix += "_Range";
-    for (auto& range : ranges) {
+    for (const auto& range : ranges) {
       nameSuffix += "{";
       nameSuffix += std::to_string(std::get<0>(range)) + ":";
       if (isUserCoord && *isUserCoord) {
@@ -1985,20 +1985,20 @@ string Plot::Pad::Data::data_info_t::GetNameSuffix() const
 {
   if (dataDims.empty()) return "";
   string nameSuffix = "{";
-  for (auto& dataDim : dataDims) {
+  for (const auto& dataDim : dataDims) {
     nameSuffix += dataDim.var;
-    for (auto& edge : dataDim.edges) {
+    for (const auto& edge : dataDim.edges) {
       nameSuffix += std::to_string(edge);
     }
     nameSuffix += std::to_string(dataDim.nBins);
   }
   if (filters) {
-    for (auto& filter : *filters) {
+    for (const auto& filter : *filters) {
       nameSuffix += ";" + filter;
     }
   }
   if (definitions.values) {
-    for (auto& def : *definitions.values) {
+    for (const auto& def : *definitions.values) {
       nameSuffix += ";" + def;
     }
   }
@@ -2118,7 +2118,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
     vector<string> vars;
     vector<double_t> binning;
     vector<int32_t> sizes;
-    for (auto& dataDim : mDenomDataInfo.dataDims) {
+    for (const auto& dataDim : mDenomDataInfo.dataDims) {
       vars.push_back(dataDim.var);
       binning.insert(binning.end(), dataDim.edges.begin(), dataDim.edges.end());
       binning.push_back(static_cast<double_t>(dataDim.nBins));
@@ -2976,7 +2976,7 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
   read_from_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
   read_from_tree(legendBoxTree, mSymbolColScale, "symbol_col_scale");
 
-  for (auto& content : legendBoxTree) {
+  for (const auto& content : legendBoxTree) {
     if (str_contains(content.first, "ENTRY")) {
       uint8_t legendEntryID = std::stoi(content.first.substr(content.first.find("_") + 1));
       mLegendEntriesUser[legendEntryID] = LegendEntry(content.second);
@@ -3008,7 +3008,7 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
   put_in_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
   put_in_tree(legendBoxTree, mSymbolColScale, "symbol_col_scale");
 
-  for (auto& [legendEntryID, legendEntry] : mLegendEntriesUser) {
+  for (const auto& [legendEntryID, legendEntry] : mLegendEntriesUser) {
     legendBoxTree.put_child("ENTRY_" + std::to_string(legendEntryID),
                             legendEntry.GetPropertyTree());
   }

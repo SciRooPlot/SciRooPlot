@@ -255,7 +255,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto candleWhiskerRange = get_first(pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange())) TCandle::SetWhiskerRange(*candleWhiskerRange);
 
     if (pad.GetDefaultMarkerColorsGradient().rgbEndpoints) {
-      auto& gradient = pad.GetDefaultMarkerColorsGradient();
+      const auto& gradient = pad.GetDefaultMarkerColorsGradient();
       int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetMarkerColor(); });
       pad.SetDefaultMarkerColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     } else if (padDefaults.GetDefaultMarkerColorsGradient().rgbEndpoints) {
@@ -264,28 +264,28 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       padDefaults.SetDefaultMarkerColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
     if (pad.GetDefaultLineColorsGradient().rgbEndpoints) {
-      auto& gradient = pad.GetDefaultLineColorsGradient();
+      const auto& gradient = pad.GetDefaultLineColorsGradient();
       int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetLineColor(); });
       pad.SetDefaultLineColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     } else if (padDefaults.GetDefaultLineColorsGradient().rgbEndpoints) {
-      auto& gradient = padDefaults.GetDefaultLineColorsGradient();
+      const auto& gradient = padDefaults.GetDefaultLineColorsGradient();
       int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetLineColor(); });
       padDefaults.SetDefaultLineColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
     if (pad.GetDefaultFillColorsGradient().rgbEndpoints) {
-      auto& gradient = pad.GetDefaultFillColorsGradient();
+      const auto& gradient = pad.GetDefaultFillColorsGradient();
       int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetFillColor(); });
       pad.SetDefaultFillColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     } else if (padDefaults.GetDefaultFillColorsGradient().rgbEndpoints) {
-      auto& gradient = padDefaults.GetDefaultFillColorsGradient();
+      const auto& gradient = padDefaults.GetDefaultFillColorsGradient();
       int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetFillColor(); });
       padDefaults.SetDefaultFillColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
     if (pad.GetPaletteGradient().rgbEndpoints) {
-      auto& gradient = pad.GetPaletteGradient();
+      const auto& gradient = pad.GetPaletteGradient();
       GenerateGradientColors(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha), true);
     } else if (padDefaults.GetPaletteGradient().rgbEndpoints) {
-      auto& gradient = padDefaults.GetPaletteGradient();
+      const auto& gradient = padDefaults.GetPaletteGradient();
       GenerateGradientColors(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha), true);
     } else if (auto palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) {
       gStyle->SetPalette(*palette);
@@ -306,7 +306,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     } else {
       // find data that should define the axis frame
       auto framePos = std::find_if(pad.GetData().begin(), pad.GetData().end(),
-                                   [](auto& curData) { return curData->GetDefinesFrame(); });
+                                   [](const auto& curData) { return curData->GetDefinesFrame(); });
       uint8_t frameDataID = (framePos != pad.GetData().end()) ? framePos - pad.GetData().begin() : 0u;
       // make a copy of data that will serve as axis frame and put it in front of data vector
       if (pad.GetData()[frameDataID]->GetType() == "ratio") {
@@ -328,7 +328,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     string drawingOptions;
     uint16_t dataIndex{};
     array<uint16_t, 6> defaultSettingIndices = {0};
-    for (auto& data : pad.GetData()) {
+    for (const auto& data : pad.GetData()) {
       if (data->GetDrawingOptions()) drawingOptions += *data->GetDrawingOptions();
       // obtain a copy of the current data
       // retrieve the actual pointer to the data
@@ -568,7 +568,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // first apply default pad values and then settings for this specific pad
             for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
               if (curPad.GetAxes().find(axisLabel) != curPad.GetAxes().end()) {
-                auto& axisLayout = curPad[axisLabel];
+                const auto& axisLayout = curPad[axisLabel];
                 if (axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).data());
 
                 if (axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
@@ -870,10 +870,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
             data_ptr->GetYaxis()->SetRangeUser(rangeMinY, rangeMaxY);
-            if (auto& contours = data->GetContours()) {
+            if (const auto& contours = data->GetContours()) {
               data_ptr->SetContour(contours->size(), contours->data());
               if (axisHist_ptr->GetContour() < static_cast<Int_t>(contours->size())) axisHist_ptr->SetContour(contours->size(), contours->data());
-            } else if (auto& nContours = data->GetNContours()) {
+            } else if (const auto& nContours = data->GetNContours()) {
               data_ptr->SetContour(*nContours);
               if (axisHist_ptr->GetContour() < nContours) axisHist_ptr->SetContour(*nContours);
             }
@@ -893,7 +893,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           data_ptr->Draw(drawingOptions.data());
 
           // in case a label was specified for the data, add it to corresponding legend
-          auto& legendBoxVector = pad.GetLegendBoxes();
+          const auto& legendBoxVector = pad.GetLegendBoxes();
           if (legendBoxVector.size() && data->GetLegendLabel() && !data->GetLegendLabel()->empty()) {
             // by default place legend entries in first legend
             uint8_t legendID{1u};
@@ -951,7 +951,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
     // now place legends, text-boxes and shapes
     uint8_t legendIndex{1u};
-    for (auto& box : pad.GetLegendBoxes()) {
+    for (const auto& box : pad.GetLegendBoxes()) {
       string legendName = "LegendBox_" + std::to_string(legendIndex);
       box->MergeLegendEntries();  // apply individual user settings on top of automatic entries
       // apply default text properties of pad to the box
@@ -969,7 +969,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       }
     }
     uint8_t textIndex{1u};
-    for (auto& box : pad.GetTextBoxes()) {
+    for (const auto& box : pad.GetTextBoxes()) {
       string textName = "TextBox_" + std::to_string(textIndex);
       // apply default text properties of pad to the box
       if (!box->GetTextFont() && textFont) box->SetTextFont(*textFont);
@@ -1137,7 +1137,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       auto line_text_font = text_font;
       auto line_text_size = text_size;
       if constexpr (isLegend) {
-        auto& entry = box->GetEntries()[lineID];
+        const auto& entry = box->GetEntries()[lineID];
         if (entry.GetTextFont()) line_text_font = *entry.GetTextFont();
         if (entry.GetTextSize()) line_text_size = *entry.GetTextSize();
         if (entry.GetRefDataID()) {
@@ -1167,7 +1167,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       iColumn %= nColumns;
       ++lineID;
     }
-    for (auto& length : contentWidthPixelPerColumn) {
+    for (const auto& length : contentWidthPixelPerColumn) {
       contentWidthPixel += length;
     }
     uint32_t symbolColWidthPixel{0};
@@ -1179,7 +1179,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       auto [w, h] = GetTextDimensions(markerDummy, pad);
       symbolColWidthPixel = box->GetSymbolColScale().value_or(1.) * w;
 
-      if (auto& title = box->GetTitle()) {
+      if (const auto& title = box->GetTitle()) {
         TLatex textLine(0, 0, (*title).data());
         textLine.SetTextFont(text_font);
         textLine.SetTextSize(text_size);
@@ -1301,7 +1301,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       }
 
       int32_t i = 0;
-      for (auto& entry : box->GetEntries()) {
+      for (const auto& entry : box->GetEntries()) {
         string label = lines[i];
 
         // user-defined draw style for single entry or all entries
@@ -1419,7 +1419,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       if (textColor) paveText->SetTextColor(*textColor);
       if (textAlpha) paveText->SetTextColor(TColor::GetColorTransparent(paveText->GetTextColor(), *textAlpha));
 
-      for (auto& line : lines) {
+      for (const auto& line : lines) {
         TText* text = paveText->AddText(line.data());
         text->SetTextFont(text_font);
         text->SetTextSize(text_size);
@@ -1516,7 +1516,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     for (int16_t i = 0; i < histPtr->GetNdimensions(); ++i) {
       histPtr->GetAxis(i)->SetRange();
     }
-    for (auto& rangeTuple : projInfo.ranges) {
+    for (const auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= histPtr->GetNdimensions()) {
         ERROR("Invalid dimension specified for setting ranges of histogram {}", obj->GetName());
@@ -1537,7 +1537,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     for (int16_t i = 0; i < 3; ++i) {
       GetAxis(histPtr, i)->SetRange();
     }
-    for (auto& rangeTuple : projInfo.ranges) {
+    for (const auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 3) {
         ERROR("Invalid dimension specified for setting ranges of histogram {}", obj->GetName());
@@ -2045,7 +2045,7 @@ vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vecto
   vector<double_t> blue;
   vector<double_t> stops;
 
-  for (auto& rgb : rgbEndpoints) {
+  for (const auto& rgb : rgbEndpoints) {
     red.push_back(std::get<0>(rgb));
     green.push_back(std::get<1>(rgb));
     blue.push_back(std::get<2>(rgb));
