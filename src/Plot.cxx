@@ -1370,6 +1370,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
     std::exit(EXIT_FAILURE);
   }
   if (auto var = dataTree.get_optional<bool>("defines_frame")) mDefinesFrame = *var;
+  if (auto var = dataTree.get_optional<bool>("dont_draw")) mDontDraw = *var;
   read_from_tree(dataTree, mLegend.label, "legend_label");
   read_from_tree(dataTree, mLegend.id, "legend_id");
   read_from_tree(dataTree, mDrawingOptions, "drawing_options");
@@ -1465,6 +1466,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   dataTree.put("name", mName);
   dataTree.put("inputID", mInputID);
   if (mDefinesFrame) dataTree.put("defines_frame", mDefinesFrame);
+  if (mDontDraw) dataTree.put("dont_draw", mDontDraw);
   put_in_tree(dataTree, mLegend.label, "legend_label");
   put_in_tree(dataTree, mLegend.id, "legend_id");
   put_in_tree(dataTree, mDrawingOptions, "drawing_options");
@@ -1789,9 +1791,10 @@ auto Plot::Pad::Data::SetFillAlpha(float_t alpha) -> decltype(*this)
   mFill.alpha = alpha;
   return *this;
 }
-auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
+auto Plot::Pad::Data::SetDefinesFrame(bool dontDraw) -> decltype(*this)
 {
   mDefinesFrame = true;
+  mDontDraw = dontDraw;
   return *this;
 }
 auto Plot::Pad::Data::SetContours(const vector<double>& contours) -> decltype(*this)

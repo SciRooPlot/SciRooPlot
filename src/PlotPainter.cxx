@@ -305,8 +305,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       }
     } else {
       // find data that should define the axis frame
-      auto framePos = std::find_if(pad.GetData().begin(), pad.GetData().end(),
-                                   [](const auto& curData) { return curData->GetDefinesFrame(); });
+      auto framePos = std::find_if(pad.GetData().begin(), pad.GetData().end(), [](const auto& curData) { return curData->GetDefinesFrame(); });
       uint8_t frameDataID = (framePos != pad.GetData().end()) ? framePos - pad.GetData().begin() : 0u;
       // make a copy of data that will serve as axis frame and put it in front of data vector
       if (pad.GetData()[frameDataID]->GetType() == "ratio") {
@@ -748,7 +747,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             axisHist_ptr->SetFillStyle(0);
           }
           pad_ptr->Update();
-        } else {
+        } else if (!data->GetDontDraw()) {
           // do not draw the Z axis a second time
           std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
 

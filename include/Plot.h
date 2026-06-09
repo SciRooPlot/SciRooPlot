@@ -478,7 +478,7 @@ class Plot::Pad::Data
   virtual Data& SetFillColor(int16_t color);
   virtual Data& SetFillStyle(int16_t style);
   virtual Data& SetFillAlpha(float_t alpha);
-  virtual Data& SetDefinesFrame();
+  virtual Data& SetDefinesFrame(bool dontDraw = false);
   virtual Data& SetContours(const std::vector<double>& contours);
   virtual Data& SetContours(int32_t nContours);
 
@@ -563,6 +563,7 @@ class Plot::Pad::Data
   const auto& GetScaleMinimum() const { return mScaleRange.min; }
   const auto& GetScaleMaximum() const { return mScaleRange.max; }
   const bool& GetDefinesFrame() const { return mDefinesFrame; }
+  const bool& GetDontDraw() const { return mDontDraw; }
   const auto& GetContours() const { return mContours; }
   const auto& GetNContours() const { return mNContours; }
   const auto& GetDataInfo() const { return mDataInfo; }
@@ -612,6 +613,7 @@ class Plot::Pad::Data
 
  private:
   bool mDefinesFrame{};
+  bool mDontDraw{};
 
   std::string mType;  // for introspection: "data" or "ratio"
   std::string mName;
