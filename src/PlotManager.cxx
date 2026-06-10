@@ -461,6 +461,10 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
 //**************************************************************************************************
 bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
 {
+  bool isInteractiveMode = (outputMode == "interactive");
+  bool isMacroMode = (outputMode == "macro");
+  bool isPrintMode = (outputMode == "print");
+
   // if plot already exists, delete the old one first
   if (mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()) {
     ERROR("Plot {} was already created. Replacing it.", plot.GetUniqueName());
@@ -482,15 +486,16 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
       WARNING("Could not find plot template named {}.", plotTemplateName);
     }
   }
+  if (isPrintMode) {
+    INFO("Settings of plot {}{}{} from group {}{}{}:", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? "/" + *fullPlot.GetFigureCategory() : ""), logger::end_color());
+    Plot::Print(fullPlot.GetPropertyTree(), "");
+    return true;
+  }
+
   PlotPainter painter;
-  bool isInteractiveMode = (outputMode == "interactive");
-  bool isMacroMode = (outputMode == "macro");
   gROOT->SetBatch(!isInteractiveMode && !isMacroMode);
   shared_ptr<TCanvas> canvas{painter.GeneratePlot(fullPlot, mDataBuffer)};
   if (!canvas) return false;
-  if (auto rc = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) {
-    rc->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
-  }
 
   if (TColor::GetFreeColorIndex() > std::numeric_limits<int16_t>::max()) {
     // there is a natural limit to the number of custom colors since ROOT color indices are of type short
@@ -501,6 +506,9 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
 
   // if interactive mode is specified, open window instead of saving the plot
   if (isInteractiveMode) {
+    if (auto rc = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) {
+      rc->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+    }
     mPlotLedger[plot.GetUniqueName()] = canvas;
     mPlotViewHistory.push_back(&plot.GetUniqueName());
     uint32_t curPlotIndex{static_cast<uint32_t>(mPlotViewHistory.size() - 1)};

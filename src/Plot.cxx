@@ -197,7 +197,9 @@ uint8_t Plot::GetDataCount() const
 
 void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
 {
-  INFO("Settings of {}:", name);
+  if (!name.empty()) {
+    INFO("Settings of {}:", name);
+  }
   auto print_pt = [&](auto&& self, const auto& node, int indent) -> void {
     for (const auto& child : node) {
       const std::string pad(indent * 2, ' ');
