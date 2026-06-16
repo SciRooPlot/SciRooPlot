@@ -35,6 +35,7 @@
 #include <TROOT.h>
 #include <TFolder.h>
 #include <TKey.h>
+#include <TTree.h>
 
 #include "Helpers.h"
 
@@ -339,7 +340,8 @@ void PrintRootFileContents(const string& inputPath)
         itemList = static_cast<TCollection*>(object);
       }
       if (!itemList) {
-        PRINT("{}", path.substr(0, path.rfind('/')));
+        string folder = path.substr(0, path.rfind('/'));
+        if (!folder.empty()) PRINT("{}/", folder);
         PRINT("- [{}] {}", object->ClassName(), object->GetName());
         return;
       }
@@ -357,10 +359,18 @@ void PrintRootFileContents(const string& inputPath)
           loopData(obj, path.empty() ? name : path + "/" + name);
         } else {
           if (!printedPath) {
-            PRINT("{}", path);
+            if (!path.empty()) PRINT("{}/", path);
             printedPath = true;
           }
           PRINT("- [{}] {}", obj->ClassName(), obj->GetName());
+        }
+        if (auto* tree = dynamic_cast<TTree*>(obj)) {
+          TObjArray* branches = tree->GetListOfBranches();
+          TIter bnext(branches);
+          TBranch* br = nullptr;
+          while ((br = static_cast<TBranch*>(bnext()))) {
+            PRINT("  -> {}", br->GetName());
+          }
         }
       }
     };
