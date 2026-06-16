@@ -28,6 +28,14 @@
 #include <boost/property_tree/info_parser.hpp>
 #include <fmt/ranges.h>
 
+#include "TFile.h"
+#include "TBrowser.h"
+#include "TRootBrowser.h"
+#include "TApplication.h"
+#include <TROOT.h>
+#include <TFolder.h>
+#include <TKey.h>
+
 #include "Helpers.h"
 
 using boost::property_tree::ptree;
@@ -36,6 +44,7 @@ using std::vector;
 
 using namespace SciRooPlot;
 namespace po = boost::program_options;
+void PrintRootFileContents(const string& inputPath);
 
 int main(int argc, char* argv[])
 {
@@ -119,6 +128,21 @@ int main(int argc, char* argv[])
     PRINT("srp (projects | path | reset | clean)");
     PRINT("srp (create | remove | select | show) (<PROJECT_NAME> | @current)");
     PRINT("srp (set | get) (<PROJECT_NAME> | @current) (NAME | EXE | OUT) <SETTING>");
+    PRINT("srp (open | print) <FILE_NAME>");
+  } else if (command == "open") {
+    string fileName = project;
+    gROOT->SetBatch(false);
+    TApplication app("SciRooPlot", nullptr, nullptr);
+    TFile* file = TFile::Open(fileName.data());
+    if (!file || file->IsZombie()) return 1;
+    TBrowser* browser = new TBrowser("TBrowser", file, "SciRooPlot", 1200, 1000);
+    if (auto* rb = dynamic_cast<TRootBrowser*>(browser->GetBrowserImp())) {
+      rb->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+    }
+    app.Run();
+  } else if (command == "print") {
+    string fileName = project;
+    PrintRootFileContents(fileName);
   } else if (command == "path") {
     std::cout << configPath << ((project.empty()) ? "" : "/" + project) << std::endl;
     return 0;
@@ -258,4 +282,87 @@ int main(int argc, char* argv[])
   write_info(configFileName, configTree);
 
   return 0;
+}
+
+void PrintRootFileContents(const string& inputPath)
+{
+  string fileName = inputPath;
+  string startPath;
+  if (auto pos = inputPath.find(':'); pos != string::npos) {
+    fileName = inputPath.substr(0, pos);
+    startPath = inputPath.substr(pos + 1);
+  }
+  TFile inputFile(fileName.data(), "READ");
+  if (inputFile.IsZombie()) {
+    ERROR("Could not find file {}.", fileName);
+    return;
+  }
+
+  auto findObject = [](TObject* root, const string& path) -> TObject* {
+    TObject* current = root;
+    size_t pos = 0;
+    while (current && pos < path.size()) {
+      auto next = path.find('/', pos);
+      auto part = path.substr(pos, next == string::npos ? string::npos : next - pos);
+
+      if (current->InheritsFrom(TDirectory::Class())) {
+        current = static_cast<TDirectory*>(current)->Get(part.data());
+      } else if (current->InheritsFrom(TFolder::Class())) {
+        current = static_cast<TFolder*>(current)->GetListOfFolders()->FindObject(part.data());
+      } else if (current->InheritsFrom(TCollection::Class())) {
+        current = static_cast<TCollection*>(current)->FindObject(part.data());
+      } else {
+        return nullptr;
+      }
+      pos = next == string::npos ? path.size() : next + 1;
+    }
+    return current;
+  };
+
+  TObject* root = &inputFile;
+  if (!startPath.empty()) {
+    root = findObject(root, startPath);
+    if (!root) {
+      PRINT("Path not found: {}", startPath);
+      return;
+    }
+  }
+
+  std::function<void(TObject*, const string&)> loopData =
+    [&](TObject* object, const string& path) {
+      TCollection* itemList = nullptr;
+      if (object->InheritsFrom(TDirectory::Class())) {
+        itemList = static_cast<TDirectory*>(object)->GetListOfKeys();
+      } else if (object->InheritsFrom(TFolder::Class())) {
+        itemList = static_cast<TFolder*>(object)->GetListOfFolders();
+      } else if (object->InheritsFrom(TCollection::Class())) {
+        itemList = static_cast<TCollection*>(object);
+      }
+      if (!itemList) {
+        PRINT("{}", path.substr(0, path.rfind('/')));
+        PRINT("- [{}] {}", object->ClassName(), object->GetName());
+        return;
+      }
+      bool printedPath = false;
+      TIter next(itemList);
+      TObject* obj = nullptr;
+      while ((obj = next())) {
+        string name = obj->GetName();
+        if (obj->IsA() == TKey::Class()) {
+          auto* key = static_cast<TKey*>(obj);
+          name = key->GetName();
+          obj = key->ReadObj();
+        }
+        if (obj->InheritsFrom(TDirectory::Class()) || obj->InheritsFrom(TFolder::Class()) || obj->InheritsFrom(TCollection::Class())) {
+          loopData(obj, path.empty() ? name : path + "/" + name);
+        } else {
+          if (!printedPath) {
+            PRINT("{}", path);
+            printedPath = true;
+          }
+          PRINT("- [{}] {}", obj->ClassName(), obj->GetName());
+        }
+      }
+    };
+  loopData(root, startPath);
 }
