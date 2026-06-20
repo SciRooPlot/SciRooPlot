@@ -41,7 +41,8 @@ def DefinePlots(plotManager: PlotManager):
   plot[2].AddRatio("dir2/subdir1/mygausrand", "measurements", "dir2/subdir1/mygaus", "measurements")
   plot[2]['Y'].SetTitle("rand / func")
   plot[2]['X'].SetTitle("my X title")
-  plot[1]['Y'].SetRange(0.04, 0.45); plot[0]['X'].SetRange(-2, 2)
+  plot[1]['Y'].SetRange(0.04, 0.45)
+  plot[0]['X'].SetRange(-2, 2)
   plotManager.AddPlot(plot)
   # -----------------------------------------------------------------------
   plot = Plot("invMassDist", "examples", "1d")

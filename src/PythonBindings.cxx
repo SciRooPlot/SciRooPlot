@@ -25,6 +25,10 @@
 
 #include <math.h>
 #include <optional>
+#include <utility>
+#include <tuple>
+#include <vector>
+#include <string>
 
 #include <TSystem.h>
 #include <TEnum.h>
@@ -50,6 +54,7 @@ using LegendBox = Pad::LegendBox;
 using LegendEntry = LegendBox::LegendEntry;
 constexpr auto ref_int = py::return_value_policy::reference_internal;
 
+void exportDrawingOptions(py::module_& m);
 void exportRootConstants(py::module_& m);
 void exportPlotManager(py::module_& m);
 void exportPlot(py::module_& m);
@@ -82,6 +87,7 @@ PYBIND11_MODULE(SciRooPlot, m)
         pm.CreatePlots(output_mode="pdf")
   )pbdoc";
 
+  exportDrawingOptions(m);
   exportRootConstants(m);
   exportLegendEntry(m);
   exportLegendBox(m);
@@ -92,6 +98,15 @@ PYBIND11_MODULE(SciRooPlot, m)
   exportPad(m);
   exportPlot(m);
   exportPlotManager(m);
+}
+
+void exportDrawingOptions(py::module_& m)
+{
+#define OPT(name, ...) .value(#name, drawing_options_t::name)
+  py::enum_<drawing_options_t>(m, "drawing_options_t")
+    DRAWING_OPTIONS
+      .export_values();
+#undef OPT
 }
 
 void exportRootConstants(py::module_& m)

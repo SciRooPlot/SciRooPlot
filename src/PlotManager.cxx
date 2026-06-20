@@ -1051,9 +1051,9 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
   std::vector<char> candidates = {',', ';', '\t', '|', ' '};
   size_t maxCount = 0;
   std::ifstream file(inputFileName);
-  int32_t iLine = 0;
+  int32_t lineCount = 0;
   string line;
-  while (iLine < 100 && std::getline(file, line)) {
+  while (lineCount < 100 && std::getline(file, line)) {
     for (char c : candidates) {
       size_t count = std::count(line.begin(), line.end(), c);
       if (count > maxCount) {
@@ -1061,7 +1061,7 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
         delimiter = c;
       }
     }
-    ++iLine;
+    ++lineCount;
   }
   for (auto& dataInfo : mDataInfoBuffer[inputID][name]) {
     string dataName = name + dataInfo.GetNameSuffix();
@@ -1495,15 +1495,15 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
   double_t markerSize = 1.4;
   uint8_t lineWidth = 5;
 
-  vector<int16_t> goodColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1,
-                                kMagenta - 4, kGreen + 3, kOrange + 1,
-                                kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7,
-                                kMagenta + 1, kPink + 8, kCyan - 6,
-                                kMagenta, kRed + 2, kGreen + 2,
-                                kOrange + 2, kMagenta + 2, kYellow + 3,
-                                kGray + 2, kBlue + 2, kYellow + 2,
-                                kRed, kBlue, kMagenta + 3,
-                                kGreen + 4, 28, 8, 15, 17, 12};
+  const vector<int16_t> goodColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1,
+                                      kMagenta - 4, kGreen + 3, kOrange + 1,
+                                      kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7,
+                                      kMagenta + 1, kPink + 8, kCyan - 6,
+                                      kMagenta, kRed + 2, kGreen + 2,
+                                      kOrange + 2, kMagenta + 2, kYellow + 3,
+                                      kGray + 2, kBlue + 2, kYellow + 2,
+                                      kRed, kBlue, kMagenta + 3,
+                                      kGreen + 4, 28, 8, 15, 17, 12};
 
   if (plotTemplateName == "1d") {
     // -----------------------------------------------------------------------

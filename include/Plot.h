@@ -38,62 +38,63 @@
 
 namespace SciRooPlot
 {
-
+#define DRAWING_OPTIONS \
+  OPT(points, 0)        \
+  OPT(points_xerr)      \
+  OPT(points_endcaps)   \
+  OPT(points_line)      \
+  OPT(line)             \
+  OPT(curve)            \
+  OPT(band)             \
+  OPT(band_smooth)      \
+  OPT(hist)             \
+  OPT(hist_no_borders)  \
+  OPT(fit)              \
+  OPT(bar)              \
+  OPT(area)             \
+  OPT(area_curve)       \
+  OPT(area_line)        \
+  OPT(boxes)            \
+  OPT(boxes_only)       \
+  OPT(stars)            \
+  OPT(text)             \
+  OPT(brackets)         \
+  OPT(hbar)             \
+  OPT(hbar1)            \
+  OPT(hbar2)            \
+  OPT(hbar3)            \
+  OPT(hbar4)            \
+  OPT(box)              \
+  OPT(box1)             \
+  OPT(colz)             \
+  OPT(legoz)            \
+  OPT(lego)             \
+  OPT(lego_no_borders)  \
+  OPT(surf)             \
+  OPT(surf1)            \
+  OPT(surf1z)           \
+  OPT(surf2)            \
+  OPT(surf2z)           \
+  OPT(surf3)            \
+  OPT(surf3z)           \
+  OPT(surf4)            \
+  OPT(surf7)            \
+  OPT(surf7z)           \
+  OPT(cont)             \
+  OPT(contz)            \
+  OPT(cont1z)           \
+  OPT(cont4z)           \
+  OPT(candle1)          \
+  OPT(candle2)          \
+  OPT(candle3)          \
+  OPT(candle4)          \
+  OPT(candle5)          \
+  OPT(candle6)          \
+  OPT(candle7)
 enum drawing_options_t : uint8_t {
-  // 1d options
-  points = 0,
-  points_xerr,
-  points_endcaps,
-  points_line,
-  line,
-  curve,
-  band,
-  band_smooth,
-  hist,
-  hist_no_borders,
-  fit,
-  bar,
-  area,
-  area_curve,
-  area_line,
-  boxes,
-  boxes_only,
-  stars,
-  text,
-  brackets,
-  hbar,
-  hbar1,
-  hbar2,
-  hbar3,
-  hbar4,
-  // 2d options
-  box,
-  box1,
-  colz,
-  legoz,
-  lego,
-  lego_no_borders,
-  surf,
-  surf1,
-  surf1z,
-  surf2,
-  surf2z,
-  surf3,
-  surf3z,
-  surf4,
-  surf7,
-  surf7z,
-  cont,
-  contz,
-  cont1z,
-  cont4z,
-  candle1,
-  candle2,
-  candle3,
-  candle4,
-  candle5,
-  candle6,
-  candle7,
+#define OPT(name, ...) name,
+  DRAWING_OPTIONS
+#undef OPT
 };
 
 //**************************************************************************************************
