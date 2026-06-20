@@ -36,12 +36,16 @@ A new project is created by running:
   srp create <projectName> [<folderName>]
 ```
 This will create a directory called `folderName` (or `projectName` if no folder name was specified) in your current directory and provide working setup to start your project.
-The default code will already be compiled and ready to use, allowing you to generate you first plot simply by typing
+Alternatively, you can also create a python-based project:
+```
+  srp create-python <projectName> [<folderName>]
+```
+The default code will already be ready to use, allowing you to generate you first plot simply by typing
 ```
 plot examples ptSpec
 ```
-The idea is to adjust the code in the file `DefinePlots.cxx` to define your plots.
-The resulting executable will automatically be rebuilt and (if needed) executed before the app generates the requested plot(s).
+The idea is to adjust the code in the file `DefinePlots.cxx` (or `DefinePlots.py` in case of a python project) to define your plots.
+The resulting executable will automatically be rebuilt (in case of cpp code) and (if needed) executed before the app generates the requested plot(s).
 
 You may have multiple such projects in parallel, and can switch between them via:
 ```

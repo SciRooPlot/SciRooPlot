@@ -1,3 +1,5 @@
+option(BUILD_PYTHON_BINDINGS "build Python bindings" ON)
+
 option(DISABLE_COLORS   "no ANSI colors in console" OFF)
 option(DARK_COLORS      "darker color scheme" OFF)
 option(DISABLE_DEBUG    "disable DEBUG output" OFF)

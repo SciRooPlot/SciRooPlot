@@ -37,6 +37,8 @@ include(GNUInstallDirs)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 
+include(cmake/CompileFlags.cmake)
+
 # -----------------------
 # Policies
 # -----------------------
@@ -82,6 +84,36 @@ execute_process(
 )
 
 # -----------------------
+# Python bindings
+# -----------------------
+if(BUILD_PYTHON_BINDINGS)
+  find_package(Python3 COMPONENTS Interpreter Development)
+  if(NOT Python3_FOUND)
+    message(WARNING "Python not found -- disabling bindings")
+    set(BUILD_PYTHON_BINDINGS OFF CACHE BOOL "" FORCE)
+  else()
+    message(STATUS "Python version: ${Python3_VERSION}")
+    message(STATUS "${Python3_EXECUTABLE}")
+    set(PYBIND11_FINDPYTHON NEW)
+    find_package(pybind11 CONFIG QUIET)
+    if(NOT pybind11_FOUND)
+      message(STATUS "pybind11 not found -- fetching it now")
+      include(FetchContent)
+      FetchContent_Declare(
+        pybind11
+        GIT_REPOSITORY https://github.com/pybind/pybind11.git
+        GIT_TAG v3.0.1
+      )
+      FetchContent_MakeAvailable(pybind11)
+      if(NOT TARGET pybind11::module)
+        message(WARNING "pybind11 not fetched -- disabling bindings")
+        set(BUILD_PYTHON_BINDINGS OFF CACHE BOOL "" FORCE)
+      endif()
+    endif()
+  endif()
+endif()
+
+# -----------------------
 # Common install RPATH
 # -----------------------
 get_target_property(_root_core_location ROOT::Core LOCATION)
@@ -108,8 +140,6 @@ endif()
 # -----------------------
 # Library
 # -----------------------
-include(cmake/CompileFlags.cmake)
-
 add_library(SciRooPlot SHARED
   src/Plot.cxx
   src/PlotManager.cxx
@@ -140,6 +170,20 @@ set_target_properties(SciRooPlot PROPERTIES
   INSTALL_RPATH "${SCIROOPLOT_RPATH}"
   BUILD_RPATH "${SCIROOPLOT_RPATH}"
 )
+set(ALL_TARGETS SciRooPlot)
+
+if(BUILD_PYTHON_BINDINGS)
+  pybind11_add_module(SciRooPlotPython
+    src/PythonBindings.cxx
+  )
+  target_link_libraries(SciRooPlotPython PRIVATE SciRooPlot)
+  set_target_properties(SciRooPlotPython PROPERTIES
+    BUILD_RPATH "${SCIROOPLOT_RPATH}"
+    INSTALL_RPATH "${SCIROOPLOT_RPATH}"
+    OUTPUT_NAME "SciRooPlot"
+  )
+  list(APPEND ALL_TARGETS SciRooPlotPython)
+endif()
 
 # -----------------------
 # Executables
@@ -153,6 +197,7 @@ add_plotting_executable(plot
 add_plotting_executable(srp
   SOURCES app/PlottingAppConfig.cxx
 )
+list(APPEND ALL_TARGETS plot srp)
 
 # -----------------------
 # Install
@@ -241,7 +286,7 @@ install(
   PATTERN ".*" EXCLUDE
 )
 install(
-  TARGETS SciRooPlot plot srp
+  TARGETS ${ALL_TARGETS}
   EXPORT SciRooPlotTargets
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

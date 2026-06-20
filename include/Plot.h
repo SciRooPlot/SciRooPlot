@@ -242,8 +242,8 @@ class Plot::Pad
 
   Pad& SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup);
   Pad& SetMargins(float_t top, float_t bottom, float_t left, float_t right);
-  Pad& SetTopMargin(float_t right);
-  Pad& SetBottomMargin(float_t left);
+  Pad& SetTopMargin(float_t top);
+  Pad& SetBottomMargin(float_t bottom);
   Pad& SetRightMargin(float_t right);
   Pad& SetLeftMargin(float_t left);
   Pad& SetView(double_t theta, double_t phi);
@@ -440,9 +440,9 @@ class Plot::Pad::Data
   void Print() { Plot::Print(GetPropertyTree(), "Data"); }
 
   Ratio& AsRatio();
-  Data& SetInputID(const std::string& inputID);
   const std::string& GetInputID() const { return mInputID; }
 
+  virtual Data& SetInputID(const std::string& inputID);
   virtual Data& SetLayout(const Data& dataLayout);
   virtual Data& ApplyLayout(const Data& dataLayout);
   virtual Data& SetRangeX(double_t min, double_t max);
@@ -688,6 +688,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
     Data::METHOD(std::forward<Args>(args)...); \
     return *this;                              \
   }
+  FORWARD_TO_DATA(SetInputID)
   FORWARD_TO_DATA(SetLayout)
   FORWARD_TO_DATA(ApplyLayout)
   FORWARD_TO_DATA(SetRangeX)

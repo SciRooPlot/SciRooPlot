@@ -2,9 +2,14 @@
 
 export SCIROOPLOT_ROOT="@SCIROOPLOT_ROOT@"
 export SCIROOPLOT_BIN="${SCIROOPLOT_ROOT}/@CMAKE_INSTALL_BINDIR@"
+export SCIROOPLOT_LIB="${SCIROOPLOT_ROOT}/@CMAKE_INSTALL_LIBDIR@"
 export SCIROOPLOT_DATA_DIR="${SCIROOPLOT_ROOT}/share/scirooplot"
 export SCIROOPLOT_ENV="${SCIROOPLOT_DATA_DIR}/scirooplot-env.sh"
 export SCIROOPLOT_SOURCE_DIR="@CMAKE_CURRENT_BINARY_DIR@/../"
+export SCIROOPLOT_PYTHON_EXECUTABLE="@Python3_EXECUTABLE@"
+if [ -n "${SCIROOPLOT_PYTHON_EXECUTABLE:-}" ]; then
+    export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${SCIROOPLOT_LIB}"
+fi
 
 # enable completion only for interactive shells
 case "$-" in
@@ -19,11 +24,13 @@ fi
 
 function plot() {
   local user_exec=$("${SCIROOPLOT_BIN}/srp" "get" "@current" "EXE")
-  local user_build_dir=$([[ -n "${user_exec}" ]] && dirname -- "${user_exec}" || echo "")
-  if [[ -d "${user_build_dir}" ]]; then
+  local isPython=0
+  [[ "$user_exec" == *.py ]] && isPython=1
+  local user_dir=$([[ -n "${user_exec}" ]] && dirname -- "${user_exec}" || echo "")
+  if [[ -d "${user_dir}" ]]; then
 
     if [[ "${1}" == "cd" && -z "${2}" ]]; then
-      cd "${user_build_dir}"
+      cd "${user_dir}"
       return 0
     fi
 
@@ -39,7 +46,11 @@ function plot() {
       fi
       if [[ -n "${opener:-}" ]]; then
         if command -v find >/dev/null 2>&1; then
-          find "${user_build_dir}/.." -maxdepth 2 -type f \( -name '*.cxx' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \)  -exec "${opener[@]}" {} +
+          if (( isPython )); then
+            find "${user_dir}/" -maxdepth 2 -type f \( -name '*.py' \)  -exec "${opener[@]}" {} +
+          else
+            find "${user_dir}/.." -maxdepth 2 -type f \( -name '*.cxx' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \)  -exec "${opener[@]}" {} +
+          fi
           return 0
         fi
       fi
@@ -47,10 +58,24 @@ function plot() {
 
     local user_plotdef="$(${SCIROOPLOT_BIN}/srp path "@current")/plots.info"
     (
-      cd "${user_build_dir}";
-      (make -j6 1> /dev/null) || exit 1
+      cd "${user_dir}";
+      if (( ! isPython )); then
+        (make -j6 1> /dev/null) || exit 1
+      fi
       if [[ ! -f "${user_plotdef}" || "${user_exec}" -nt "${user_plotdef}" ]]; then
-        "${user_exec}"
+        if (( isPython )); then
+          if [ -n "${SCIROOPLOT_PYTHON_EXECUTABLE:-}" ]; then
+            if [ ! -x "${SCIROOPLOT_PYTHON_EXECUTABLE}" ]; then
+              echo "SciRooPlot's Python path is outdated and requires reinstall..."
+              "${SCIROOPLOT_SOURCE_DIR}/scripts/install.sh" --reinstall
+            fi
+            ${SCIROOPLOT_PYTHON_EXECUTABLE} "${user_exec}"
+          else
+              echo "SciRooPlot was not compiled with Python bindings."
+          fi
+        else
+          "${user_exec}"
+        fi
       fi
     ) || return 1
   fi
@@ -64,7 +89,8 @@ function srp() {
     source "${SCIROOPLOT_ENV}"
   elif [[ "${1}" == "cd" && -z "${2}" ]]; then
     cd "${SCIROOPLOT_SOURCE_DIR}/build"
-  elif [[ "${1}" == "create" ]]; then
+  elif [[ "${1}" == "create" || "${1}" == "create-python" ]]; then
+    local isPython=0; [[ "${1}" == *python ]] && isPython=1
     local project_name="${2}"
     local project_path="${project_name}"
     [ -n "${3}" ] && project_path="${3}"
@@ -83,17 +109,26 @@ function srp() {
       echo "Folder ${project_path} already exists. Doing nothing..."
       return 1
     fi
-    mkdir -p "${project_path}/build"
-    cp -r "${SCIROOPLOT_DATA_DIR}/user/"* "${project_path}/"
-    sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/CMakeLists.txt" && rm -f "${project_path}/CMakeLists.txt.bak"
-    sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/DefinePlots.cxx" && rm -f "${project_path}/DefinePlots.cxx.bak"
-    "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "EXE" "${project_path}/build/definePlots"
+
+    mkdir -p "${project_path}"
+    if (( isPython )); then
+      cp "${SCIROOPLOT_DATA_DIR}/user/DefinePlots.py" "${project_path}/"
+      sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/DefinePlots.py" && rm -f "${project_path}/DefinePlots.py.bak"
+      "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "EXE" "${project_path}/DefinePlots.py"
+    else
+      cp "${SCIROOPLOT_DATA_DIR}/user/CMakeLists.txt" "${project_path}/"
+      cp "${SCIROOPLOT_DATA_DIR}/user/DefinePlots.cxx" "${project_path}/"
+      sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/CMakeLists.txt" && rm -f "${project_path}/CMakeLists.txt.bak"
+      sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/DefinePlots.cxx" && rm -f "${project_path}/DefinePlots.cxx.bak"
+      mkdir -p "${project_path}/build"
+      local curdir="$(pwd)"
+      cd "${project_path}/build" && cmake -Wno-dev .. > /dev/null 2>&1 && make > /dev/null 2>&1 && ./definePlots
+      cd "${curdir}"
+      "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "EXE" "${project_path}/build/definePlots"
+    fi
     "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "OUT" "${project_path}/output"
     "${SCIROOPLOT_BIN}/srp" "select" "${project_name}"
     "${SCIROOPLOT_BIN}/srp" "show" "${project_name}"
-    local curdir="$(pwd)"
-    cd "${project_path}/build" && cmake -Wno-dev .. > /dev/null 2>&1 && make > /dev/null 2>&1 && ./definePlots
-    cd "${curdir}"
   else
     args=("$@")
     [[ -n "${ZSH_VERSION}" ]] && setopt local_options KSH_ARRAYS
@@ -170,7 +205,7 @@ _plot_completions_zsh() {
 
 _srp_completions_zsh() {
 
-  local general_commands=('update' 'cd' 'create' 'projects' 'reset' 'clean' 'help')
+  local general_commands=('update' 'cd' 'create' 'create-python' 'projects' 'reset' 'clean' 'help')
   local project_commands=('remove' 'select' 'show' 'path' 'set' 'get')
   local project_commands_with_prop=('set' 'get')
   local properties=('EXE' 'OUT' 'NAME')
@@ -282,7 +317,7 @@ _plot_completions_bash() {
 
 _srp_completions_bash() {
 
-  local general_commands=('update cd create projects reset clean help')
+  local general_commands=('update cd create create-python projects reset clean help')
   local project_commands=('remove select show path set get')
   local project_commands_with_prop=('set get')
   local properties=('EXE OUT NAME')
