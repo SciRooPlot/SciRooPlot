@@ -103,9 +103,7 @@ PYBIND11_MODULE(SciRooPlot, m)
 void exportDrawingOptions(py::module_& m)
 {
 #define OPT(name, ...) .value(#name, drawing_options_t::name)
-  py::enum_<drawing_options_t>(m, "drawing_options_t")
-    DRAWING_OPTIONS
-      .export_values();
+  py::enum_<drawing_options_t>(m, "drawing_options_t") DRAWING_OPTIONS.export_values();
 #undef OPT
 }
 
