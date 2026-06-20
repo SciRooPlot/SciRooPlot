@@ -70,19 +70,19 @@ PYBIND11_MODULE(SciRooPlot, m)
 {
   m.doc() = R"pbdoc(
     SciRooPlot - A command-line plotting app to manage and visualize scientific data
-    
+
     This module provides Python bindings for the SciRooPlot C++ library, allowing
     users to programmatically define and generate publication-ready plots from Python.
-    
+
     Example usage:
         from SciRooPlot import *
-        
+
         pm = PlotManager()
         pm.AddInputDataFiles("input_data", ["/path/to/file.root"])
-        
+
         plot = Plot("my_plot", "figure_group")
         plot[1].AddData("histogram_name", "input_data", "my label")
-        
+
         pm.AddPlot(plot)
         pm.CreatePlots(output_mode="pdf")
   )pbdoc";

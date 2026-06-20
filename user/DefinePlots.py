@@ -46,7 +46,7 @@ def DefinePlots(plotManager: PlotManager):
   plotManager.AddPlot(plot)
   # -----------------------------------------------------------------------
   plot = Plot("invMassDist", "examples", "1d")
-  plot[1].AddData("invMassDist", "pseudodata").Scale(0.00001).SetColor(4)
+  plot[1].AddData("invMassDist", "pseudodata").Scale(0.00001).SetColor(kBlue + 2)
   plotManager.AddPlot(plot)
   # -----------------------------------------------------------------------
   plot = Plot("multDist", "examples", "1d")
@@ -56,7 +56,7 @@ def DefinePlots(plotManager: PlotManager):
   plotManager.AddPlot(plot)
   # -----------------------------------------------------------------------
   plot = Plot("ptSpec", "examples", "1d")
-  plot[1].AddData("ptSpec", "pseudodata").SetColor(2)
+  plot[1].AddData("ptSpec", "pseudodata").SetColor(kRed + 2)
   plot[1]['X'].SetLog()
   plot[1]['Y'].SetLog()
   plotManager.AddPlot(plot)
