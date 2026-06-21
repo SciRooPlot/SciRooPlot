@@ -7,7 +7,7 @@ def DefineInputIdentifiers(plotManager: PlotManager):
   plotManager.AddInputDataFiles("measurements", [inputFolder + "/file1.root", inputFolder + "/file2.root"])
   plotManager.AddInputDataFiles("theory", [inputFolder + "/subfolder/file3.root"])
   plotManager.AddInputDataFiles("pseudodata", [inputFolder + "/subfolder/file3.root:pseudodata"])
-  # plotManager.AddInputDataFiles("test", [str(SRC_DIR + "../rel/path/to/file.root")])
+  # plotManager.AddInputDataFiles("test", [SRC_DIR + "../rel/path/to/file.root"])
 
 def DefinePlotTemplates(plotManager: PlotManager):
   # -----------------------------------------------------------------------

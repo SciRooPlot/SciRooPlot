@@ -90,6 +90,10 @@ PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr))
   dummyCanvas.SetCanvasSize(1, 1);
   dummyCanvas.SetWindowPosition(50, 50);
   mWindowOffsetY = dummyCanvas.GetWindowTopY() - static_cast<TRootCanvas*>(dummyCanvas.GetCanvasImp())->GetY();
+
+  // first store all root data structures added to the manager in the global config directory
+  string configPath = expand_path((gSystem->Getenv("SCIROOPLOT_CONFIG_PATH")) ? "${SCIROOPLOT_CONFIG_PATH}" : "~/.SciRooPlot");
+  gSystem->Setenv("SCIROOPLOT_USER_DATA_DIR", configPath.data());
 }
 
 //**************************************************************************************************
@@ -246,6 +250,35 @@ void PlotManager::AddInputDataFile(const string& inputID, const string& inputFil
 {
   vector<string> inputFilePathList = {inputFilePath};
   AddInputDataFiles(inputID, inputFilePathList);
+}
+
+//**************************************************************************************************
+/**
+ * Define input data for user defined unique inputID.
+ */
+//**************************************************************************************************
+void PlotManager::AddInputData(const string& inputID, const vector<TObject*>& inputDataList)
+{
+  string fileName = "${SCIROOPLOT_USER_DATA_DIR}/UserData.root";
+  string mode = "RECREATE";
+  if (std::filesystem::exists(expand_path(fileName))) {
+    mode = "UPDATE";
+  }
+  TFile file(fileName.data(), mode.data());
+  TDirectory* dir = file.GetDirectory(inputID.data());
+  if (!dir) {
+    dir = file.mkdir(inputID.c_str());
+  }
+  dir->cd();
+  for (auto object : inputDataList) {
+    object->Write();
+  }
+  file.Close();
+
+  if (mInputFiles.find(inputID) != mInputFiles.end()) {
+    WARNING("Replacing input identifier {}.", inputID);
+  }
+  mInputFiles[inputID] = {fileName + ":" + inputID};
 }
 
 //**************************************************************************************************
@@ -1728,10 +1761,18 @@ string PlotManager::GetInputsFile(string projectName)
 //****************************************************************************************
 void PlotManager::SaveProject(const string& projectName)
 {
+  namespace fs = std::filesystem;
   auto [inputsFile, plotsFile, outputDir] = GetProjectSettings(projectName);
 
-  if (std::filesystem::create_directories(std::filesystem::path(inputsFile).parent_path())) {
-    INFO("Created config folder for project {}: {}", projectName, std::filesystem::path(inputsFile).parent_path().string());
+  if (fs::create_directories(fs::path(inputsFile).parent_path())) {
+    INFO("Created config folder for project {}: {}", projectName, fs::path(inputsFile).parent_path().string());
+  }
+
+  // move user data stored in current session to project folder
+  fs::path curUserDataFile = fs::path(inputsFile).parent_path() / "../UserData.root";
+  if (fs::exists(curUserDataFile)) {
+    fs::path userDataFile = fs::path(inputsFile).parent_path() / "UserData.root";
+    fs::rename(curUserDataFile, userDataFile);
   }
 
   DumpInputDataFiles(inputsFile);
@@ -1739,7 +1780,7 @@ void PlotManager::SaveProject(const string& projectName)
 
   // create a csv file for tab completion
   std::ofstream tabCompFile;
-  tabCompFile.open(std::filesystem::path(plotsFile).parent_path() / "tabcomp.csv");
+  tabCompFile.open(fs::path(plotsFile).parent_path() / "tabcomp.csv");
   for (const auto& plot : mPlots) {
     string line = plot.GetName() + "," + plot.GetFigureGroup() + "," + ((plot.GetFigureCategory()) ? *plot.GetFigureCategory() : "") + "\n";
     tabCompFile << line;

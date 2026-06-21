@@ -22,6 +22,7 @@
 
 #include <string>
 #include <vector>
+#include <filesystem>
 #include <boost/program_options.hpp>
 
 #include "Helpers.h"
@@ -94,6 +95,7 @@ int main(int argc, char* argv[])
   // create plotting environment
   PlotManager plotManager;
   plotManager.SetOutputDirectory(outputDir);
+  gSystem->Setenv("SCIROOPLOT_USER_DATA_DIR", std::filesystem::path(inputsFile).parent_path().string().data());
 
   string group = ".+";
   string category = ".*";

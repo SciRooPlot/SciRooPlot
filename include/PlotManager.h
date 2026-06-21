@@ -63,8 +63,10 @@ class PlotManager
   void SetOutputFileName(const std::string& fileName);         // in case canvases should be saved in .root file
 
   // settings related to the input root files
-  void AddInputDataFiles(const std::string& inputIdentifier, const std::vector<std::string>& inputFilePathList);
-  void AddInputDataFile(const std::string& inputIdentifier, const std::string& inputFilePath);
+  void AddInputDataFiles(const std::string& inputID, const std::vector<std::string>& inputFilePathList);
+  void AddInputDataFile(const std::string& inputID, const std::string& inputFilePath);
+  void AddInputData(const std::string& inputID, const std::vector<TObject*>& inputDataList);
+
   void DumpInputDataFiles(const std::string& configFileName) const;  // save input file paths to config file
   void LoadInputDataFiles(const std::string& configFileName);        // load the input file paths from config file
 
