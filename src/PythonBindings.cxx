@@ -29,10 +29,15 @@
 #include <tuple>
 #include <vector>
 #include <string>
+#include <numeric>
 
-#include <TSystem.h>
-#include <TEnum.h>
-#include <TEnumConstant.h>
+#include "TSystem.h"
+#include "TEnum.h"
+#include "TEnumConstant.h"
+#include "TGraphErrors.h"
+#include "TH1.h"
+#include "TH2.h"
+#include "TDirectory.h"
 
 namespace py = pybind11;
 using namespace SciRooPlot;
@@ -56,6 +61,7 @@ constexpr auto ref_int = py::return_value_policy::reference_internal;
 
 void exportDrawingOptions(py::module_& m);
 void exportRootConstants(py::module_& m);
+void exportPythonincDataInterfaces(py::module_& m);
 void exportPlotManager(py::module_& m);
 void exportPlot(py::module_& m);
 void exportPad(py::module_& m);
@@ -89,6 +95,7 @@ PYBIND11_MODULE(SciRooPlot, m)
 
   exportDrawingOptions(m);
   exportRootConstants(m);
+  exportPythonincDataInterfaces(m);
   exportLegendEntry(m);
   exportLegendBox(m);
   exportTextBox(m);
@@ -532,4 +539,99 @@ void exportLegendEntry(py::module_& m)
     .def("SetTextAlpha", &LegendEntry::SetTextAlpha, arg("alpha"), ref_int)
     .def("SetTextFont", &LegendEntry::SetTextFont, arg("font"), ref_int)
     .def("SetTextSize", &LegendEntry::SetTextSize, arg("size"), ref_int);
+}
+
+void exportPythonincDataInterfaces(py::module_& m)
+{
+  auto graph = [](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& xerr, const std::vector<double>& yerr) {
+    const int n = x.size();
+    static py::module_ ROOT = py::module_::import("ROOT");
+    static py::object BindObject = ROOT.attr("BindObject");
+    static py::object TGraphErrorsClass = ROOT.attr("TGraphErrors");
+
+    if (y.size() != n)
+      throw std::runtime_error("x and y must have same length");
+    if (!xerr.empty() && xerr.size() != n)
+      throw std::runtime_error("xerr has wrong size");
+    if (!yerr.empty() && yerr.size() != n)
+      throw std::runtime_error("yerr has wrong size");
+
+    auto* g = new TGraphErrors(n, x.data(), y.data(), xerr.empty() ? nullptr : xerr.data(), yerr.empty() ? nullptr : yerr.data());
+    g->SetName(name.data());
+    return BindObject(reinterpret_cast<std::uintptr_t>(g), TGraphErrorsClass);
+  };
+
+  auto histo = [&](const std::string& name, const std::vector<double>& v, int bins, py::object range) {
+    static py::module_ ROOT = py::module_::import("ROOT");
+    static py::object BindObject = ROOT.attr("BindObject");
+    static py::object TH1DClass = ROOT.attr("TH1D");
+
+    if (v.empty())
+      throw std::runtime_error("empty input");
+
+    double xmin, xmax;
+
+    if (range.is_none()) {
+      auto [minIt, maxIt] = std::minmax_element(v.begin(), v.end());
+      xmin = *minIt;
+      xmax = *maxIt;
+    } else {
+      auto r = range.cast<std::pair<double, double>>();
+      xmin = r.first;
+      xmax = r.second;
+    }
+
+    auto* h = new TH1D(name.data(), "", bins, xmin, xmax);
+
+    for (double x : v)
+      h->Fill(x);
+
+    return BindObject(reinterpret_cast<std::uintptr_t>(h), TH1DClass);
+  };
+
+  auto histo2d = [&](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, py::object bins, py::object range) {
+    static py::module_ ROOT = py::module_::import("ROOT");
+    static py::object BindObject = ROOT.attr("BindObject");
+    static py::object TH2DClass = ROOT.attr("TH2D");
+
+    if (x.size() != y.size())
+      throw std::runtime_error("x and y must have same length");
+
+    int nx = 50, ny = 50;
+    double xmin, xmax, ymin, ymax;
+
+    auto [minxIt, maxxIt] = std::minmax_element(x.begin(), x.end());
+    auto [minyIt, maxyIt] = std::minmax_element(y.begin(), y.end());
+    xmin = *minxIt;
+    xmax = *maxxIt;
+    ymin = *minyIt;
+    ymax = *maxyIt;
+
+    if (!bins.is_none()) {
+      auto b = bins.cast<std::pair<int, int>>();
+      nx = b.first;
+      ny = b.second;
+    }
+
+    if (!range.is_none()) {
+      auto r = range.cast<std::pair<std::pair<double, double>, std::pair<double, double>>>();
+      xmin = r.first.first;
+      xmax = r.first.second;
+      ymin = r.second.first;
+      ymax = r.second.second;
+    }
+
+    auto* h = new TH2D(name.c_str(), "", nx, xmin, xmax, ny, ymin, ymax);
+
+    for (size_t i = 0; i < x.size(); ++i)
+      h->Fill(x[i], y[i]);
+
+    h->SetName(name.c_str());
+
+    return BindObject(reinterpret_cast<std::uintptr_t>(h), TH2DClass);
+  };
+
+  m.def("graph", graph, py::arg("name"), py::arg("x"), py::arg("y"), py::arg("xerr") = std::vector<double>{}, py::arg("yerr") = std::vector<double>{});
+  m.def("histo", histo, py::arg("name"), py::arg("values"), py::arg("bins") = 100, py::arg("range") = py::none());
+  m.def("histo2d", histo2d, py::arg("name"), py::arg("x"), py::arg("y"), py::arg("bins") = py::none(), py::arg("range") = py::none());
 }
