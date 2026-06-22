@@ -235,21 +235,20 @@ void PlotManager::SetOutputFileName(const string& fileName)
 //**************************************************************************************************
 void PlotManager::AddInputDataFiles(const string& inputID, const vector<string>& inputFilePathList)
 {
-  if (mInputFiles.find(inputID) != mInputFiles.end()) {
-    WARNING("Replacing input identifier {}.", inputID);
-  }
   for (auto inputFilePath : inputFilePathList) {
     if (std::filesystem::path(expand_path(inputFilePath)).is_relative()) {
-      ERROR("The path to an input file must not be relative.");
-      return;
+      WARNING("The path to an input file must not be relative. Skipping {}.", inputFilePath);
+      continue;
+    }
+    auto& files = mInputFiles[inputID];
+    if (std::find(files.begin(), files.end(), inputFilePath) == files.end()) {
+      files.push_back(inputFilePath);
     }
   }
-  mInputFiles[inputID] = inputFilePathList;
 }
 void PlotManager::AddInputDataFile(const string& inputID, const string& inputFilePath)
 {
-  vector<string> inputFilePathList = {inputFilePath};
-  AddInputDataFiles(inputID, inputFilePathList);
+  AddInputDataFiles(inputID, {inputFilePath});
 }
 
 //**************************************************************************************************
@@ -274,11 +273,7 @@ void PlotManager::AddInputData(const string& inputID, const vector<TObject*>& in
     object->Write();
   }
   file.Close();
-
-  if (mInputFiles.find(inputID) != mInputFiles.end()) {
-    WARNING("Replacing input identifier {}.", inputID);
-  }
-  mInputFiles[inputID] = {fileName + ":" + inputID};
+  AddInputDataFiles(inputID, {fileName + ":" + inputID});
 }
 
 //**************************************************************************************************
