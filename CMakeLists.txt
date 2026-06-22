@@ -177,6 +177,9 @@ if(BUILD_PYTHON_BINDINGS)
     src/PythonBindings.cxx
   )
   target_link_libraries(SciRooPlotPython PRIVATE SciRooPlot)
+  target_compile_definitions(SciRooPlotPython PRIVATE
+    SCIROOPLOT_ROOT_PYTHON_DIR="${ROOT_LIBRARY_DIR}"
+  )
   set_target_properties(SciRooPlotPython PROPERTIES
     BUILD_RPATH "${SCIROOPLOT_RPATH}"
     INSTALL_RPATH "${SCIROOPLOT_RPATH}"

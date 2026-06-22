@@ -93,6 +93,11 @@ PYBIND11_MODULE(SciRooPlot, m)
         pm.CreatePlots(output_mode="pdf")
   )pbdoc";
 
+  // add path to root lib to be independet of user environment
+  py::module_ sys = py::module_::import("sys");
+  py::list path = sys.attr("path");
+  path.insert(0, SCIROOPLOT_ROOT_PYTHON_DIR);
+
   exportDrawingOptions(m);
   exportRootConstants(m);
   exportPythonincDataInterfaces(m);
