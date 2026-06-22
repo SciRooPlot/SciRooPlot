@@ -19,6 +19,22 @@ This software is made for scientists working with ROOT data, who:
 SciRooPlot aims to address these day-to-day plotting requirements such that analyzers can focus on their science instead of wasting time with plotting technicalities.
 Ideas, suggestions, and code contributions to this open-source project are very welcome.
 
+## 🛠️ Installation
+SciRooPlot requires a working installation of [ROOT](https://github.com/root-project/root).
+
+```bash
+git clone https://github.com/SciRooPlot/SciRooPlot.git
+cd SciRooPlot
+
+./scripts/install.sh
+```
+
+After installation, the installer will print the required environment setup command.
+
+Add this command to your shell startup script (for example `~/.bashrc` or `~/.zshrc`) to load SciRooPlot automatically.
+
+After setup, the commands `srp` and `plot` are available from your terminal.
+
 ## 📖 Documentation
 To get started, have a look at the [introductory slides](https://cernbox.cern.ch/s/9aCyloRsAd2pAgW).
 A detailed description of how to use SciRooPlot can be found here:
