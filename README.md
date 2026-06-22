@@ -13,7 +13,7 @@ This software is made for scientists working with ROOT data, who:
 - are tired of the ever-increasing amount of single-purpose plotting macros that accumulate over the years
 - simply want to draw their data without having to deal with technical details and complexities of ROOT
 - miss an intuitive and straightforward interface to define a plot
-- are looking for a lasting solution to organize and keep track of the many plots that arise in the course of their work
+- are looking for a way to organize and keep track of the many plots that arise in the course of their work
 - appreciate useful additional plotting functionality that enhances productivity
 
 SciRooPlot aims to address these day-to-day plotting requirements such that analyzers can focus on their science instead of wasting time with plotting technicalities.

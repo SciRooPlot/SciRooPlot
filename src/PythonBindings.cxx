@@ -61,7 +61,7 @@ constexpr auto ref_int = py::return_value_policy::reference_internal;
 
 void exportDrawingOptions(py::module_& m);
 void exportRootConstants(py::module_& m);
-void exportPythonincDataInterfaces(py::module_& m);
+void exportPythonDataInterfaces(py::module_& m);
 void exportPlotManager(py::module_& m);
 void exportPlot(py::module_& m);
 void exportPad(py::module_& m);
@@ -100,7 +100,7 @@ PYBIND11_MODULE(SciRooPlot, m)
 
   exportDrawingOptions(m);
   exportRootConstants(m);
-  exportPythonincDataInterfaces(m);
+  exportPythonDataInterfaces(m);
   exportLegendEntry(m);
   exportLegendBox(m);
   exportTextBox(m);
@@ -546,7 +546,7 @@ void exportLegendEntry(py::module_& m)
     .def("SetTextSize", &LegendEntry::SetTextSize, arg("size"), ref_int);
 }
 
-void exportPythonincDataInterfaces(py::module_& m)
+void exportPythonDataInterfaces(py::module_& m)
 {
   auto graph = [](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& xerr, const std::vector<double>& yerr) {
     const int n = x.size();
