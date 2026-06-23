@@ -6,7 +6,9 @@ on:
       - master
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -27,13 +29,38 @@ jobs:
       - name: Install Typst
         uses: typst-community/setup-typst@v4
 
-      - name: Build PDFs
+      - name: Build site
         run: |
-          typst compile docs/slides/slides.typ docs/slides/cpp.pdf --input lang=cpp
-          typst compile docs/slides/slides.typ docs/slides/python.pdf --input lang=python
+          mkdir -p build/slides
+          cp -r docs/* build/
+          typst compile docs/slides/slides.typ build/slides/cpp.pdf --input lang=cpp
+          typst compile docs/slides/slides.typ build/slides/python.pdf --input lang=python
 
-      - name: Commit generated PDFs
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Check output
+        run: |
+          find build -type f | sort
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          commit_message: "Update generated slide PDFs"
-          file_pattern: docs/slides/*.pdf
+          path: build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
