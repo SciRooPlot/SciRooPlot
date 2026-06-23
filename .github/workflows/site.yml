@@ -32,6 +32,8 @@ jobs:
       - name: Build site
         run: |
           sudo gem install bundler jekyll jekyll-theme-cayman
+          cp docs/README.md docs/index.md
+          sed -i '1i---\nlayout: default\ntitle: SciRooPlot\n---\n' docs/index.md
           jekyll build -s docs -d build
           mkdir -p build/slides
           typst compile docs/slides/slides.typ build/slides/cpp.pdf --input lang=cpp
