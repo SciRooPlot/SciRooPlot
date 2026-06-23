@@ -35,6 +35,8 @@ jobs:
           sudo gem install bundler jekyll jekyll-theme-cayman
           cp docs/README.md docs/index.md
           sed -i '1i---\nlayout: default\ntitle: SciRooPlot\n---\n' docs/index.md
+          sed -i 's/ADVANCED_INSTALL\.md/ADVANCED_INSTALL.html/g' docs/index.md
+          sed -i '1i---\nlayout: default\ntitle: SciRooPlot\n---\n' docs/ADVANCED_INSTALL.md
           jekyll build -s docs -d build
           mkdir -p build/slides
           typst compile docs/slides/slides.typ build/slides/cpp.pdf --input lang=cpp
