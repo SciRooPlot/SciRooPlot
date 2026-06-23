@@ -31,7 +31,7 @@ jobs:
 
       - name: Build site
         run: |
-          gem install bundler jekyll
+          sudo gem install bundler jekyll
           jekyll build -s docs -d build
           mkdir -p build/slides
           typst compile docs/slides/slides.typ build/slides/cpp.pdf --input lang=cpp

@@ -1,8 +1,5 @@
 theme: jekyll-theme-cayman
 
-include:
-  - slides
-
 collections:
   docs:
     permalink: "/:collection/:path/"
