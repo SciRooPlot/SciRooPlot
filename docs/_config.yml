@@ -1,13 +1,4 @@
 theme: jekyll-theme-cayman
 
-collections:
-  docs:
-    permalink: "/:collection/:path/"
-    output: true
-
-defaults:
-  - scope:
-      path: _docs
-      type: docs
-    values:
-      layout: docs
+url: "https://scirooplot.github.io"
+baseurl: "/SciRooPlot"
