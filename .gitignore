@@ -8,3 +8,5 @@ doc/html/*
 doc/latex/*
 .cache/
 TODO.md
+CMakeFiles/*
+docs/slides/*.pdf

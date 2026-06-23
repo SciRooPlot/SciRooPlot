@@ -93,7 +93,7 @@ PYBIND11_MODULE(SciRooPlot, m)
         pm.CreatePlots(output_mode="pdf")
   )pbdoc";
 
-  // add path to root lib to be independet of user environment
+  // add path to root lib to be independent of user environment
   py::module_ sys = py::module_::import("sys");
   py::list path = sys.attr("path");
   path.insert(0, SCIROOPLOT_ROOT_PYTHON_DIR);
@@ -549,7 +549,7 @@ void exportLegendEntry(py::module_& m)
 void exportPythonDataInterfaces(py::module_& m)
 {
   auto graph = [](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& xerr, const std::vector<double>& yerr) {
-    const int n = x.size();
+    const auto n = x.size();
     static py::module_ ROOT = py::module_::import("ROOT");
     static py::object BindObject = ROOT.attr("BindObject");
     static py::object TGraphErrorsClass = ROOT.attr("TGraphErrors");

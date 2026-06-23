@@ -1,0 +1,32 @@
+name: Build Slides
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Typst
+        uses: typst-community/setup-typst@v4
+
+      - name: Build PDFs
+        run: |
+          mkdir -p docs/slides
+          typst compile docs/slides/slides.typ docs/slides/cpp.pdf --input lang=cpp
+          typst compile docs/slides/slides.typ docs/slides/python.pdf --input lang=python
+
+      - name: Commit PDFs
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Update generated slide PDFs"
+          file_pattern: docs/slides/*.pdf
