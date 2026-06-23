@@ -1,4 +1,4 @@
-name: Build Pages
+name: Slides
 
 on:
   push:
@@ -6,9 +6,7 @@ on:
       - master
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 jobs:
   build:
@@ -21,39 +19,21 @@ jobs:
       - name: Install Arial font
         run: |
           sudo apt-get update
+          echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | sudo debconf-set-selections
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ttf-mscorefonts-installer
-    
+          sudo fc-cache -f -v
+          fc-match Arial
+
       - name: Install Typst
         uses: typst-community/setup-typst@v4
 
       - name: Build PDFs
         run: |
-          mkdir -p build/slides
-          cp -r docs/* build/
-          typst compile docs/slides/slides.typ build/slides/cpp.pdf --input lang=cpp
-          typst compile docs/slides/slides.typ build/slides/python.pdf --input lang=python
+          typst compile docs/slides/slides.typ docs/slides/cpp.pdf --input lang=cpp
+          typst compile docs/slides/slides.typ docs/slides/python.pdf --input lang=python
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Commit generated PDFs
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          path: build
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    permissions:
-      pages: write
-      id-token: write
-
-    steps:
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+          commit_message: "Update generated slide PDFs"
+          file_pattern: docs/slides/*.pdf
