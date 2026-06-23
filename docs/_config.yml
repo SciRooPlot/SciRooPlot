@@ -1,11 +1,16 @@
 theme: jekyll-theme-cayman
+
+include:
+  - slides
+
 collections:
-    docs:
-      permalink: "/:collection/:path/"
-      output: true
+  docs:
+    permalink: "/:collection/:path/"
+    output: true
+
 defaults:
-    - scope:
-        path: _docs
-        type: docs
-      values:
-        layout: docs
+  - scope:
+      path: _docs
+      type: docs
+    values:
+      layout: docs

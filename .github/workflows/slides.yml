@@ -18,18 +18,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Arial font
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ttf-mscorefonts-installer
+    
       - name: Install Typst
         uses: typst-community/setup-typst@v4
 
       - name: Build PDFs
         run: |
           mkdir -p build/slides
+          cp -r docs/* build/
           typst compile docs/slides/slides.typ build/slides/cpp.pdf --input lang=cpp
           typst compile docs/slides/slides.typ build/slides/python.pdf --input lang=python
-
-      - name: Copy existing website
-        run: |
-          cp -r docs/* build/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -43,13 +45,15 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
 
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     permissions:
       pages: write
       id-token: write
 
-    environment:
-      name: github-pages
-
     steps:
       - name: Deploy
+        id: deployment
         uses: actions/deploy-pages@v4
