@@ -1,19 +1,21 @@
-name: Build Slides
+name: Build Pages
 
 on:
   push:
     branches:
       - master
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install Typst
@@ -21,12 +23,33 @@ jobs:
 
       - name: Build PDFs
         run: |
-          mkdir -p docs/slides
-          typst compile docs/slides/slides.typ docs/slides/cpp.pdf --input lang=cpp
-          typst compile docs/slides/slides.typ docs/slides/python.pdf --input lang=python
+          mkdir -p build/slides
+          typst compile docs/slides/slides.typ build/slides/cpp.pdf --input lang=cpp
+          typst compile docs/slides/slides.typ build/slides/python.pdf --input lang=python
 
-      - name: Commit PDFs
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Copy existing website
+        run: |
+          cp -r docs/* build/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          commit_message: "Update generated slide PDFs"
-          file_pattern: docs/slides/*.pdf
+          path: build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+
+    steps:
+      - name: Deploy
+        uses: actions/deploy-pages@v4
