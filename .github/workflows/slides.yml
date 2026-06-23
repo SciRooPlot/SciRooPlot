@@ -1,4 +1,4 @@
-name: Slides
+name: Build site
 
 on:
   push:
@@ -31,8 +31,9 @@ jobs:
 
       - name: Build site
         run: |
+          gem install bundler jekyll
+          jekyll build -s docs -d build
           mkdir -p build/slides
-          cp -r docs/* build/
           typst compile docs/slides/slides.typ build/slides/cpp.pdf --input lang=cpp
           typst compile docs/slides/slides.typ build/slides/python.pdf --input lang=python
 
