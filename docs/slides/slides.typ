@@ -1,14 +1,72 @@
 #import "@preview/polylux:0.4.0": *
 
+#set document(
+  title: "SciRooPlot Intro",
+)
+#let slide-height = 9in
+#set page(
+  width: 16in,
+  height: slide-height,
+  margin: 0.5in,
+)
+#set text(
+  font: "Arial",
+  size: 18pt,
+)
+#let main-color = rgb("1C94A5")
+#let accent-color = rgb("D4A63A")
+
 #let lang = sys.inputs.lang
+
+#let plot-def-file = {
+  if lang == "python" {
+    [`DefinePlots.py`]
+  } else {
+    [`DefinePlots.cxx`]
+  }
+}
+
+#let create-cmd = {
+  if lang == "python" {
+    [create-python]
+  } else {
+    [create]
+  }
+}
+
+#let feature(title, desc) = rect(
+  radius: 8pt,
+  fill: rgb("#f8fafc"),
+  stroke: 1pt + rgb("#dbe2ea"),
+  inset: 10pt,
+)[
+  *#title*
+
+  #v(0.3em)
+
+  #desc
+]
+
+#let slide-title(title) = {
+  text(
+    fill: main-color,
+    size: 28pt,
+    weight: "bold",
+  )[ = #title ]
+  line(
+    length: 100%,
+    stroke: 3pt + accent-color,
+  )
+  v(0.5em)
+}
 
 #let code-block(cpp, py) = {
   block(
-    fill: rgb("f5f5f5"),
-    stroke: 1pt + rgb("888888"),
-    radius: 8pt,
-    inset: 12pt,
-    width: 100%,
+    fill: rgb("#f8fafc"),
+    stroke: 1pt + rgb("#d0d7de"),
+    radius: 10pt,
+    inset: 14pt,
+    width: 98%,
   )[
     #(if lang == "python" { py } else { cpp })
   ]
@@ -21,9 +79,7 @@
 }
 #let code-slide(title, desc, cpp, py) = {
   slide[
-    #text(fill: blue, size: 30pt)[
-      == #title
-    ]
+    #slide-title(title)
     #columns(
       desc,
       code-block(
@@ -34,32 +90,262 @@
   ]
 }
 
-#set page(
-  width: 16in,
-  height: 9in,
-  margin: 0.5in,
-)
-#set text(
-  font: "Arial",
-  size: 18pt,
-)
+#let prompt = text(fill: main-color, weight: "bold")[\$]
+#let terminal(body) = block(
+  fill: rgb("fafafa"),
+  stroke: 1pt + rgb("d0d7de"),
+  radius: 10pt,
+  inset: 15pt,
+)[
+  #set text(font: "DejaVu Sans Mono", size: 16pt)
+  #body
+]
+
+#let folder-struct = {
+  if lang == "python" {
+    terminal[
+      ```text
+      myProject/
+      ├── DefinePlots.py
+      └── outputs/
+      ```
+    ]
+  } else {
+    terminal[
+      ```text
+      myProject/
+      ├── DefinePlots.cxx
+      └── outputs/
+      ```
+    ]
+  }
+}
+
+#let card(title, color, body) = rect(
+  fill: rgb("fafafa"),
+  stroke: 1pt + rgb("d0d7de"),
+  radius: 10pt,
+  inset: 15pt,
+)[
+  #text(
+    size: 24pt,
+    weight: "bold",
+    fill: color,
+  )[#title]
+  #linebreak()
+  #body
+]
+
 
 #slide[
-  #place(
-    center,
-  )[
-    #text(fill: blue, size: 50pt)[
-      = Getting Started with
-    ]
-  ]
+  #v(5% * slide-height)
+  #line(
+    length: 100%,
+    stroke: 3pt + accent-color,
+  )
   #place(
     center + horizon,
-    image("logo.png", width: 15cm),
+    image("logo.png", width: 22cm),
   )
-  #place(
-    center + bottom,
-    link("https://github.com/SciRooPlot/SciRooPlot")[*GitHub*],
+  #v(76% * slide-height)
+  #line(
+    length: 100%,
+    stroke: 3pt + accent-color,
   )
+]
+
+#slide[
+  #slide-title("A ROOT-based Plot Organizer")
+
+  #grid(
+    columns: (65%, 5%, 30%),
+    [
+      #v(1em)
+      *The ROOT plotting challenge*
+
+      - ROOT is powerful, but everyday plotting often requires substantial boilerplate code.
+      - Similar I/O and styling tasks are repeatedly implemented in different macros.
+      - Often plotting logic becomes intertwined with analysis code, making iteration slow.
+      - Producing figures requires handling files, data types, styling, and other ROOT details.
+
+      *The SciRooPlot approach*
+
+      - Introduces an abstraction layer on top of ROOT.
+      - Provides a common plotting infrastructure and organization.
+      - Lets users describe the desired figure rather than its implementation.
+      - Preserves the familiar ROOT ecosystem and styling conventions.
+      - Enables interactive, project-based plotting workflows.
+
+      *The result*
+
+      - Less code.
+      - Faster iteration.
+      - Better organization.
+      - Familiar ROOT backend.
+    ],
+    [],
+    [
+      #align(center)[
+        #v(2em)
+        #card(
+          "ROOT",
+          black,
+          [
+            ✓ Histograms
+            #linebreak()
+            ✓ Graphs
+            #linebreak()
+            ✓ Functions
+            #linebreak()
+            ✓ Files
+          ],
+        )
+        #v(0.1em)
+        #text(size: 28pt, fill: main-color)[+]
+        #v(0.1em)
+        #card(
+          "SciRooPlot",
+          black,
+          [
+            ✓ Abstract plot specifications
+            #linebreak()
+            ✓ Plot grouping & organization
+            #linebreak()
+            ✓ Interactive plotting
+            #linebreak()
+            ✓ Project-based workflows
+          ],
+        )
+      ]
+    ],
+  )
+]
+
+
+#slide[
+  #slide-title("SciRooPlot Workflow")
+  - Store analysis results in ROOT or CSV files.
+  - Define plot specifications using C++ or Python interface and save them as a SciRooPlot project.
+  - Generate and explore plots interactively via the `plot` command-line tool.
+  - Create and manage projects with the `srp` command-line tool.
+
+  #slide-title("Installation")
+
+  #terminal[
+    #prompt git clone https://github.com/SciRooPlot/SciRooPlot.git
+
+    #prompt cd SciRooPlot
+
+    #prompt ./scripts/install.sh
+  ]
+
+  - The installer prints a command that enables the SciRooPlot environment.
+  - Add it to the shell startup script (e.g. `~/.bashrc` or `~/.zshrc`) to load SciRooPlot automatically in new terminals.
+  - After setup, the `srp` and `plot` command-line tools are available system-wide.
+  - Future updates can be installed with:
+    #terminal[#prompt srp update]
+]
+
+
+#slide[
+  #slide-title("Your First Project")
+
+  #grid(
+    columns: (55%, 45%),
+    gutter: 1cm,
+    [
+      - Initialize a new SciRooPlot project:
+        #terminal[
+          #prompt srp #create-cmd myProject [someDir]
+        ]
+
+      - Creates a project directory (`./someDir` or `./myProject`).
+      - Contains #plot-def-file, where plot specifications are defined.
+
+        #folder-struct
+
+      - Project automatically registerd with SciRooPlot.
+      - Includes working examples based on the bundled datasets.
+
+      - Generate your first plot immediately:
+        #terminal[
+          #prompt plot examples ptSpec
+        ]
+
+      - Plots always stay in sync with #plot-def-file.
+    ],
+    [
+      #card(
+        "Project Management",
+        main-color,
+        [
+          *Select another project*
+          #terminal[
+            #prompt srp select myOtherProject
+          ]
+          *List all projects*
+          #terminal[
+            #prompt srp projects
+          ]
+          *Show help*
+          #terminal[
+            #prompt srp help
+          ]
+
+          *Set output directory*
+          #terminal[
+            #prompt srp set myProject OUT /path/to/output
+          ]
+        ],
+      )
+    ],
+  )
+]
+#slide[
+
+  #slide-title("Using the App")
+
+  - Plots defined in #plot-def-file are organized into *figure groups*.
+
+  - Within a project each plot is identified by *(figure group, plot name)*
+
+    #terminal[
+      #prompt plot \<figureGroup\> \<plotName\> [\<mode\>]
+    ]
+
+  - Tab completion is available for commands, figure groups, and plot names
+
+  - Both \<figureGroup\> and \<plotName\> accept regular expressions
+
+  - enables selecting multiple plots in a single command
+
+  - examples:
+    - `plot paperPlots .+`
+      → generates all plots in figure group `paperPlots`
+
+    - `plot thesisFigures 'moneyPlot[1,2]'`
+      → generates `moneyPlot1` and `moneyPlot2`
+
+    - `plot analysisQA 'trackProperty_(tight|loose|nominal)CutSetting'`
+      → selects multiple matching configurations
+
+  - note: expressions containing special characters (`[]`, `()`, `|`) must be quoted
+    - otherwise the shell may interpret them before passing to the app
+
+  - sub-structure selection is supported via:
+    - `<figureGroup/some/category>`
+    - example: `plot myFigureGroup/QAPlots controlObservable`
+
+  - output mode controls rendering behavior:
+    - default: interactive
+    - alternatives: find, pdf, eps, svg, png, gif, macro, file, inputs
+
+  - batch export and animation:
+    - multiple matching plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`, …) can be combined into a gif
+    - `plot figureGroup myPlot_bin_.+ gif`
+    - frame timing can be adjusted:
+      - `gif+N` → delay in 10 ms steps (e.g. `gif+4` = 40 ms per frame)
+
 ]
 
 #code-slide(
@@ -91,20 +377,24 @@
   [
     ```python
     def main():
-        plotManager = PlotManager()
-        plotManager.AddInputDataFiles("input", ["/path/to/file1.root"])
-        plotManager.AddPlotTemplate(PlotManager.GetPlotTemplate("1d"))
-        # ---------------------------------------------------------------
-        plot = Plot("somePlot", "someGroup", "1d")
-        plot[1].AddData("someData1", "input")
-        plot[1]["X"].SetRange(10.5, 20.1)
-        plot[1]["Y"].SetLog()
-        plotManager.AddPlot(plot)
-        # ---------------------------------------------------------------
-        plotManager.SaveProject("myPlots")
+      plotManager = PlotManager()
+      plotManager.AddInputDataFiles("input", ["/path/to/file1.root"])
+      plotManager.AddPlotTemplate(PlotManager.GetPlotTemplate("1d"))
+      # ---------------------------------------------------------------
+      plot = Plot("somePlot", "someGroup", "1d")
+      plot[1].AddData("someData1", "input")
+      plot[1]["X"].SetRange(10.5, 20.1)
+      plot[1]["Y"].SetLog()
+      plotManager.AddPlot(plot)
+      # ---------------------------------------------------------------
+      plotManager.SaveProject("myPlots")
 
     if __name__ == "__main__":
-        main()
+      main()
     ```
   ],
 )
+
+#slide[
+  = Work in progress...
+]
