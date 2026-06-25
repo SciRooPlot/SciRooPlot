@@ -279,25 +279,47 @@
         "Project Management",
         main-color,
         [
+
           *Select another project*
+          #v(-0.5em)
           #terminal[
             #prompt srp select myOtherProject
           ]
+
           *List all projects*
+          #v(-0.5em)
           #terminal[
             #prompt srp projects
           ]
-          *Show help*
-          #terminal[
-            #prompt srp help
-          ]
 
           *Change output directory* (default is `./output`)
+          #v(-0.5em)
           #terminal[
             #prompt srp set myProject OUT /path/to/output
           ]
         ],
       )
+      #v(-0.5em)
+      #block(
+        fill: rgb("fafafa"),
+        stroke: 1pt + rgb("d0d7de"),
+        radius: 10pt,
+        inset: 10pt,
+        width: 90%,
+      )[
+        *Additional commands:*
+        #v(-0.5em)
+        #table(
+          columns: (50%, 50%),
+          stroke: none,
+          align: (left, horizon),
+          [#prompt srp help], [List available options.],
+          [#prompt srp show \<project\>], [Show project settings.],
+          [#prompt srp remove \<project\>], [Unregister project.],
+          [#prompt srp print \<file\>], [List root file contents.],
+          [#prompt srp open \<file\>], [Open root file.],
+        )
+      ]
     ],
   )
 ]
@@ -329,7 +351,6 @@
           columns: (17%, 83%),
           stroke: none,
           align: (left + horizon, left + horizon),
-          inset: (x: 0.3em, y: 0.3em),
           table.header([*Mode*], [*Description*]),
           table.hline(stroke: 1pt + rgb("d0d7de")),
           [`show`], [Open plots interactively (default mode).],
@@ -340,7 +361,8 @@
           table.hline(stroke: 1pt + rgb("d0d7de")),
           [`macro`], [Generate a ROOT `.C` macros that reproduce the plots.],
           table.hline(stroke: 1pt + rgb("d0d7de")),
-          [`gif`], [Combine matching plots into an animated GIF #linebreak() (`gif+N` sets the frame delay in units of 10 ms).],
+          [`gif`],
+          [Combine matching plots into an animated GIF #linebreak() (`gif+N` sets the frame delay in units of 10 ms).],
           table.hline(stroke: 1pt + rgb("d0d7de")),
           [`file`], [Save all requested plots into a single ROOT file.],
           table.hline(stroke: 1pt + rgb("d0d7de")),
@@ -353,18 +375,23 @@
         "Regular Expressions",
         main-color,
         [
+
           *Select plot names matching pattern*
+          #v(-0.5em)
           #terminal[
             #prompt plot paperPlots \'moneyPlot[1,2]\'
           ]
           NB.: Quotes are only required if regex contains #linebreak() special shell characters like `[]`, `()` and `|`.
 
+
           *Select all plots in a figure group*
+          #v(-0.5em)
           #terminal[
             #prompt plot paperPlots .+
           ]
 
-          *Select plots in groups starting same pattern*
+          *Select plots in groups starting with pattern*
+          #v(-0.5em)
           #terminal[
             #prompt plot pp\_.+ myPlot
           ]
@@ -376,7 +403,7 @@
         stroke: 1pt + rgb("d0d7de"),
         radius: 10pt,
         inset: 10pt,
-        width: 84%
+        width: 84%,
       )[
         *Additional commands:*
         #v(-0.5em)
