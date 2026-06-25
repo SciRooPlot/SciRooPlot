@@ -85,7 +85,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  if (mode.empty()) mode = "interactive";
+  if (mode.empty()) mode = "show";
 
   if (plotNames.empty()) {
     ERROR("No plots were specified.");
@@ -111,7 +111,7 @@ int main(int argc, char* argv[])
 
   if (mode != "find") {
     plotManager.LoadInputDataFiles(inputsFile);
-    if (outputDir.empty() && mode != "interactive") {
+    if (outputDir.empty() && mode != "show") {
       WARNING(R"(Please run "srp set <PROJECT_NAME> OUT </path/to/outputDir>" to set the ouptut directory.)");
     }
   }

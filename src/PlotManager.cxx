@@ -489,7 +489,7 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
 //**************************************************************************************************
 bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
 {
-  bool isInteractiveMode = (outputMode == "interactive");
+  bool isInteractiveMode = (outputMode == "show");
   bool isMacroMode = (outputMode == "macro");
   bool isPrintMode = (outputMode == "print");
 

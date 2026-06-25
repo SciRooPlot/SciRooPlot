@@ -107,7 +107,7 @@
       ```text
       myProject/
       ├── DefinePlots.py
-      └── outputs/
+      └── output/
       ```
     ]
   } else {
@@ -115,7 +115,7 @@
       ```text
       myProject/
       ├── DefinePlots.cxx
-      └── outputs/
+      └── output/
       ```
     ]
   }
@@ -292,7 +292,7 @@
             #prompt srp help
           ]
 
-          *Set output directory*
+          *Change output directory* (default is `./output`)
           #terminal[
             #prompt srp set myProject OUT /path/to/output
           ]
@@ -301,51 +301,95 @@
     ],
   )
 ]
+
 #slide[
-
   #slide-title("Using the App")
+  #grid(
+    columns: (55%, 45%),
+    gutter: 1cm,
+    [
+      - Plots specified in #plot-def-file have a *figure group* and *plot name*.
 
-  - Plots defined in #plot-def-file are organized into *figure groups*.
+      - These identifiers are used to select plots from the command line.
+        #terminal[
+          #prompt plot \<figureGroup\> \<plotName\> [\<mode\>]
+        ]
 
-  - Within a project each plot is identified by *(figure group, plot name)*
+      - Tab completion simplifies browsing through available names.
+      - Both `<figureGroup>` and `<plotName>` support regular expressions.
+      - Multiple plots can be generated with a single command.
 
-    #terminal[
-      #prompt plot \<figureGroup\> \<plotName\> [\<mode\>]
-    ]
+      #block(
+        fill: rgb("fafafa"),
+        stroke: 1pt + rgb("d0d7de"),
+        radius: 10pt,
+        inset: 10pt,
+      )[
+        #table(
+          columns: (17%, 83%),
+          stroke: none,
+          align: (left + horizon, left + horizon),
+          inset: (x: 0.3em, y: 0.3em),
+          table.header([*Mode*], [*Description*]),
+          table.hline(stroke: 1pt + rgb("d0d7de")),
+          [`show`], [Open plots interactively (default mode).],
+          table.hline(stroke: 1pt + rgb("d0d7de")),
+          [`find`], [List plots matching the request.],
+          table.hline(stroke: 1pt + rgb("d0d7de")),
+          [`pdf`, `eps`, `svg`, `png`], [Export plots as graphics files.],
+          table.hline(stroke: 1pt + rgb("d0d7de")),
+          [`macro`], [Generate a ROOT `.C` macros that reproduce the plots.],
+          table.hline(stroke: 1pt + rgb("d0d7de")),
+          [`gif`], [Combine matching plots into an animated GIF #linebreak() (`gif+N` sets the frame delay in units of 10 ms).],
+          table.hline(stroke: 1pt + rgb("d0d7de")),
+          [`file`], [Save all requested plots into a single ROOT file.],
+          table.hline(stroke: 1pt + rgb("d0d7de")),
+          [`inputs`], [Save input data for requested plots into a ROOT file.],
+        )
+      ]
+    ],
+    [
+      #card(
+        "Regular Expressions",
+        main-color,
+        [
+          *Select plot names matching pattern*
+          #terminal[
+            #prompt plot paperPlots \'moneyPlot[1,2]\'
+          ]
+          NB.: Quotes are only required if regex contains #linebreak() special shell characters like `[]`, `()` and `|`.
 
-  - Tab completion is available for commands, figure groups, and plot names
+          *Select all plots in a figure group*
+          #terminal[
+            #prompt plot paperPlots .+
+          ]
 
-  - Both \<figureGroup\> and \<plotName\> accept regular expressions
-
-  - enables selecting multiple plots in a single command
-
-  - examples:
-    - `plot paperPlots .+`
-      → generates all plots in figure group `paperPlots`
-
-    - `plot thesisFigures 'moneyPlot[1,2]'`
-      → generates `moneyPlot1` and `moneyPlot2`
-
-    - `plot analysisQA 'trackProperty_(tight|loose|nominal)CutSetting'`
-      → selects multiple matching configurations
-
-  - note: expressions containing special characters (`[]`, `()`, `|`) must be quoted
-    - otherwise the shell may interpret them before passing to the app
-
-  - sub-structure selection is supported via:
-    - `<figureGroup/some/category>`
-    - example: `plot myFigureGroup/QAPlots controlObservable`
-
-  - output mode controls rendering behavior:
-    - default: interactive
-    - alternatives: find, pdf, eps, svg, png, gif, macro, file, inputs
-
-  - batch export and animation:
-    - multiple matching plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`, …) can be combined into a gif
-    - `plot figureGroup myPlot_bin_.+ gif`
-    - frame timing can be adjusted:
-      - `gif+N` → delay in 10 ms steps (e.g. `gif+4` = 40 ms per frame)
-
+          *Select plots in groups starting same pattern*
+          #terminal[
+            #prompt plot pp\_.+ myPlot
+          ]
+        ],
+      )
+      #v(-0.5em)
+      #block(
+        fill: rgb("fafafa"),
+        stroke: 1pt + rgb("d0d7de"),
+        radius: 10pt,
+        inset: 10pt,
+        width: 84%
+      )[
+        *Additional commands:*
+        #v(-0.5em)
+        #table(
+          columns: (30%, 70%),
+          stroke: none,
+          align: (left, horizon),
+          [#prompt plot cd], [Navigate to project.],
+          [#prompt plot open], [Open code files.],
+        )
+      ]
+    ],
+  )
 ]
 
 #code-slide(
