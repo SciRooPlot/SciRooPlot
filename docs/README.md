@@ -94,16 +94,16 @@ Since these examples are not comprehensive, to see all the functionality of SciR
 using namespace SciRooPlot;
 
 // the plot manager is the central entity that handles your plots
-PlotManager plotManager;
+PlotManager pm;
 
 // first you need to define the data sources that should be available for your plots
-plotManager.AddInputDataFiles("inputIdentifierA", {"/path/to/file/a.root", "/path/to/file/a2.root"});
+pm.AddInput("inputIdentifierA", {"/path/to/file/a.root", "/path/to/file/a2.root"});
 // instead of adding the whole root file, you can also specify a sub-list or sub-folder within the file:
-plotManager.AddInputDataFiles("inputIdentifierB", {"/path/to/file/b.root:sub/list/or/dir"});
+pm.AddInput("inputIdentifierB", {"/path/to/file/b.root:sub/list/or/dir"});
 // the paths may contain any environment variable defined in your shell:
-plotManager.AddInputDataFiles("inputIdentifierC", {"${HOME}/myRootFiles/b2.root"});
+pm.AddInput("inputIdentifierC", {"${HOME}/myRootFiles/b2.root"});
 // and it is possible to add all root files within a directory (including sub-directories):
-plotManager.AddInputDataFiles("inputIdentifierD", {"/path/to/folder/with/rootfiles/"});
+pm.AddInput("inputIdentifierD", {"/path/to/folder/with/rootfiles/"});
 // please note that multiple root files grouped under one inputIdentifier will be treated as one big input file and are traversed in alphabetical order
 
 // now that we know where to look for the data, we can start creating plots
@@ -221,7 +221,7 @@ plotManager.AddInputDataFiles("inputIdentifierD", {"/path/to/folder/with/rootfil
   // finally, after plot definition is done we can add it to the manager
   // at this point the plot object we were modifying is moved to the manager
   // and the plot object remaining in the current scope will be empty
-  plotManager.AddPlot(plot);
+  pm.AddPlot(plot);
 } // -----------------------------------------------------------------------
 
 // we could now add plenty of more plots to the manager....
@@ -229,7 +229,7 @@ plotManager.AddInputDataFiles("inputIdentifierD", {"/path/to/folder/with/rootfil
   //Plot plot("myPlot2", "myFigureGroup/myCategory");
   // ...
   // ...
-  // plotManager.AddPlot(plot);
+  // pm.AddPlot(plot);
 } // -----------------------------------------------------------------------
 
 // it is also possible to construct a plot based on a copy of another
@@ -245,8 +245,8 @@ plotManager.AddInputDataFiles("inputIdentifierD", {"/path/to/folder/with/rootfil
   plot2[1].AddData("graphName1", "inputIdentifierB", "more data");
 
   // now add both to the manager
-  plotManager.AddPlot(plot);
-  plotManager.AddPlot(plot2);
+  pm.AddPlot(plot);
+  pm.AddPlot(plot2);
 } // -----------------------------------------------------------------------
 
 // in case you are dealing with {2,3,n}-dimensional input data, it is also possible
@@ -274,7 +274,7 @@ plotManager.AddInputDataFiles("inputIdentifierD", {"/path/to/folder/with/rootfil
   // the same can be done also with the numerator and denominator of ratios
   // have a look at inc/Plot.h for the details
 
-  plotManager.AddPlot(plot);
+  pm.AddPlot(plot);
 } // -----------------------------------------------------------------------
 
 // as you know from your own plotting experience
@@ -285,47 +285,45 @@ plotManager.AddInputDataFiles("inputIdentifierD", {"/path/to/folder/with/rootfil
 // therefore the framework provides the option to specify plot templates
 // these are just ordinary plots, but you can use their settings as a baseline
 // and the properties specified for your final plot will be applied on top of these
-
-// these template plots must live in a figure group called "PLOT_TEMPLATES"
-// and need to be added to the manager via plotManager.AddPlotTemplate(plot);
+// you have to be added to the manager via pm.AddPlotTemplate(plot);
 
 // for instance the following lines will generate an example template plot:
 { // -----------------------------------------------------------------------
-  Plot plotTemplate("myPlotTemplate", "PLOT_TEMPLATES");
-  plotTemplate.SetDimensions(710, 710, true);
-  plotTemplate.SetTransparent();
-  plotTemplate[0].SetFrameFill(10, 1001);
+  Plot plot("myPlotTemplate", "PLOT_TEMPLATES");
+  plot.SetDimensions(710, 710, true);
+  plot.SetTransparent();
+  plot[0].SetFrameFill(10, 1001);
   vector<int16_t> goodColors = {kBlack, kBlue + 1, kRed + 1};
-  plotTemplate[0].SetDefaultMarkerColors(goodColors);
-  plotTemplate[0].SetDefaultLineColors(goodColors);
-  plotTemplate[0].SetDefaultFillColors(goodColors);
-  plotTemplate[0].SetDefaultFillStyles({0});
-  plotTemplate[0].SetDefaultMarkerStyles({kFullCircle});
-  plotTemplate[0].SetDefaultLineStyles({kSolid});
-  plotTemplate[0].SetDefaultTextFont(43);
-  plotTemplate[0].SetDefaultTextSize(24);
-  plotTemplate[0].SetDefaultMarkerSize(1.);
-  plotTemplate[0].SetDefaultLineWidth(3.);
-  plotTemplate[0].SetDefaultDrawingOptionGraph(points);
-  plotTemplate[0].SetTransparent();
-  plotTemplate[0].SetMargins(0.07, 0.14, 0.12, 0.07);
-  plotTemplate[0]['X'].SetTitleSize(28).SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
-  plotTemplate[0]['Y'].SetTitleSize(28).SetTitleOffset(1.5).SetOppositeTicks().SetMaxDigits(3);
-  plotTemplate[1].SetPosition(0., 0., 1., 1.);
-  plotManager.AddPlotTemplate(plotTemplate);
+  plot[0].SetDefaultMarkerColors(goodColors);
+  plot[0].SetDefaultLineColors(goodColors);
+  plot[0].SetDefaultFillColors(goodColors);
+  plot[0].SetDefaultFillStyles({0});
+  plot[0].SetDefaultMarkerStyles({kFullCircle});
+  plot[0].SetDefaultLineStyles({kSolid});
+  plot[0].SetDefaultTextFont(43);
+  plot[0].SetDefaultTextSize(24);
+  plot[0].SetDefaultMarkerSize(1.);
+  plot[0].SetDefaultLineWidth(3.);
+  plot[0].SetDefaultDrawingOptionGraph(points);
+  plot[0].SetTransparent();
+  plot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
+  plot[0]['X'].SetTitleSize(28).SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
+  plot[0]['Y'].SetTitleSize(28).SetTitleOffset(1.5).SetOppositeTicks().SetMaxDigits(3);
+  plot[1].SetPosition(0., 0., 1., 1.);
+  pm.AddPlotTemplate(plot);
 } // -----------------------------------------------------------------------
 
 // the framework also provides some default layouts that can be used as a starting point (or as inspiration for your own templates)
 // they are defined in PlotManager.cxx and can be obtained with the function PlotManager::GetPlotTemplate()
-plotManager.AddPlotTemplate(PlotManager::GetPlotTemplate("1d"));
-plotManager.AddPlotTemplate(PlotManager::GetPlotTemplate("2d"));
-plotManager.AddPlotTemplate(PlotManager::GetPlotTemplate("1d_ratio"));
-plotManager.AddPlotTemplate(PlotManager::GetPlotTemplate("1d_3panels"));
+pm.AddPlotTemplate(PlotManager::GetPlotTemplate("1d"));
+pm.AddPlotTemplate(PlotManager::GetPlotTemplate("2d"));
+pm.AddPlotTemplate(PlotManager::GetPlotTemplate("1d_ratio"));
+pm.AddPlotTemplate(PlotManager::GetPlotTemplate("1d_3panels"));
 
 // modifications to the default templates can be applied in the following way
 auto plotTemplate = PlotManager::GetPlotTemplate("1d");
 plotTemplate[1]['X'].SetColor(kRed);
-plotManager.AddPlotTemplate(plotTemplate);
+pm.AddPlotTemplate(plotTemplate);
 
 // once this is done, you can define plots based on these templates
 // by specifying their name as the third argument in the new plots' constructor:
@@ -347,7 +345,7 @@ plotManager.AddPlotTemplate(plotTemplate);
 
   plot[0]['X'].SetRange(20, 70).SetTickOrientation("+-");
 
-  plotManager.AddPlot(plot);
+  pm.AddPlot(plot);
 } // -----------------------------------------------------------------------
 // as you can see the plot definition becomes simpler now since we
 // do not have to specify again all of the layout overhead and can focus on the content
@@ -392,7 +390,7 @@ data_layout_t pp_7TeV
   plot[1].AddRatio("graph2", pp_5TeV, "graph3", "inputIdentifierA");
 
   plot[1].AddLegend(0.,0.9);
-  plotManager.AddPlot(plot);
+  pm.AddPlot(plot);
 } // -----------------------------------------------------------------------
 
 { // -----------------------------------------------------------------------
@@ -437,7 +435,7 @@ data_layout_t pp_7TeV
   // NB.: in case of 3D drawing options like LEGO you can also define the perspective on the plot
   plot[1].SetView(45, 20); // theta=45 and phi=20
 
-  plotManager.AddPlot(plot);
+  pm.AddPlot(plot);
 } // -----------------------------------------------------------------------
 
 // it is also possible to process and display tabled data, i.e. root trees or CSV files
@@ -485,6 +483,6 @@ data_layout_t pp_7TeV
   // in case the input data comes from a text file called 'myData.csv' with columns 'a' and 'b', it is accessed as follows:
   plot[1].AddData("myData", "input").Scatter("a", "b"); // i.e. the data name is defined as the file name without the file ending .csv
 
-  plotManager.AddPlot(plot);
+  pm.AddPlot(plot);
 } // -----------------------------------------------------------------------
 ```

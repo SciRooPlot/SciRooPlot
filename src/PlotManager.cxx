@@ -233,7 +233,7 @@ void PlotManager::SetOutputFileName(const string& fileName)
  * Define input file paths for user defined unique inputID.
  */
 //**************************************************************************************************
-void PlotManager::AddInputDataFiles(const string& inputID, const vector<string>& inputFilePathList)
+void PlotManager::AddInput(const string& inputID, const vector<string>& inputFilePathList)
 {
   for (auto inputFilePath : inputFilePathList) {
     if (std::filesystem::path(expand_path(inputFilePath)).is_relative()) {
@@ -246,9 +246,13 @@ void PlotManager::AddInputDataFiles(const string& inputID, const vector<string>&
     }
   }
 }
-void PlotManager::AddInputDataFile(const string& inputID, const string& inputFilePath)
+void PlotManager::AddInput(const string& inputID, const string& inputFilePath)
 {
-  AddInputDataFiles(inputID, {inputFilePath});
+  AddInput(inputID, {inputFilePath});
+}
+void PlotManager::AddInput(const std::string& inputID, std::initializer_list<string> inputFilePaths)
+{
+  AddInput(inputID, std::vector<std::string>(inputFilePaths));
 }
 
 //**************************************************************************************************
@@ -256,7 +260,7 @@ void PlotManager::AddInputDataFile(const string& inputID, const string& inputFil
  * Define input data for user defined unique inputID.
  */
 //**************************************************************************************************
-void PlotManager::AddInputData(const string& inputID, const vector<TObject*>& inputDataList)
+void PlotManager::AddInput(const string& inputID, const vector<TObject*>& inputDataList)
 {
   string fileName = "${SCIROOPLOT_USER_DATA_DIR}/UserData.root";
   string mode = "RECREATE";
@@ -273,7 +277,11 @@ void PlotManager::AddInputData(const string& inputID, const vector<TObject*>& in
     object->Write();
   }
   file.Close();
-  AddInputDataFiles(inputID, {fileName + ":" + inputID});
+  AddInput(inputID, {fileName + ":" + inputID});
+}
+void PlotManager::AddInput(const string& inputID, TObject* inputData)
+{
+  AddInput(inputID, vector<TObject*>{inputData});
 }
 
 //**************************************************************************************************
@@ -329,7 +337,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
         }
       }
     }
-    AddInputDataFiles(inputID, {allFileNames.begin(), allFileNames.end()});
+    AddInput(inputID, vector<string>{allFileNames.begin(), allFileNames.end()});
   }
 }
 

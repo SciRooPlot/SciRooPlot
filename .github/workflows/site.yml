@@ -39,8 +39,8 @@ jobs:
           sed -i '1i---\nlayout: default\ntitle: SciRooPlot\n---\n' docs/ADVANCED_INSTALL.md
           jekyll build -s docs -d build
           mkdir -p build/slides
-          typst compile docs/slides/slides.typ build/slides/SciRooPlot_Intro_cpp.pdf --input lang=cpp
-          typst compile docs/slides/slides.typ build/slides/SciRooPlot_Intro_py.pdf --input lang=python
+          typst compile docs/slides/slides.typ build/slides/SciRooPlot_UserManual_cpp.pdf --input lang=cpp
+          typst compile docs/slides/slides.typ build/slides/SciRooPlot_UserManual_py.pdf --input lang=py
 
       - name: Check output
         run: |

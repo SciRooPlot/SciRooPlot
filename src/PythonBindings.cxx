@@ -84,7 +84,7 @@ PYBIND11_MODULE(SciRooPlot, m)
         from SciRooPlot import *
 
         pm = PlotManager()
-        pm.AddInputDataFiles("input_data", ["/path/to/file.root"])
+        pm.AddInput("input_data", ["/path/to/file.root"])
 
         plot = Plot("my_plot", "figure_group")
         plot[1].AddData("histogram_name", "input_data", "my label")
@@ -137,9 +137,10 @@ void exportPlotManager(py::module_& m)
 {
   py::class_<PlotManager>(m, "PlotManager")
     .def(py::init<>())
-    .def("AddInputDataFiles", overload_cast<const string&, const vector<string>&>(&PlotManager::AddInputDataFiles), arg("inputID"), arg("inputFilePathList"))
-    .def("AddInputDataFile", overload_cast<const string&, const string&>(&PlotManager::AddInputDataFile), arg("inputID"), arg("inputFilePath"))
-    .def("AddInputData", [](PlotManager& self, const std::string& inputID, py::iterable objs) { py::module_ ROOT = py::module_::import("ROOT"); py::object addressof = ROOT.attr("addressof"); std::vector<TObject*> v; for (auto o : objs) v.push_back(reinterpret_cast<TObject*>(addressof(o).cast<std::uintptr_t>())); self.AddInputData(inputID, v); }, py::arg("inputID"), py::arg("inputDataList"))
+    .def("AddInput", overload_cast<const string&, const vector<string>&>(&PlotManager::AddInput), arg("inputID"), arg("inputFilePathList"))
+    .def("AddInput", overload_cast<const string&, const string&>(&PlotManager::AddInput), arg("inputID"), arg("inputFilePath"))
+    .def("AddInput", [](PlotManager& self, const std::string& inputID, py::list objs) { py::module_ ROOT = py::module_::import("ROOT"); py::object addressof = ROOT.attr("addressof"); std::vector<TObject*> v; for (auto o : objs) v.push_back(reinterpret_cast<TObject*>(addressof(o).cast<std::uintptr_t>())); self.AddInput(inputID, v); }, py::arg("inputID"), py::arg("inputDataList"))
+    .def("AddInput", [](PlotManager& self, const std::string& inputID, py::object obj) { py::module_ ROOT = py::module_::import("ROOT"); py::object addressof = ROOT.attr("addressof"); auto ptr = reinterpret_cast<TObject*>(addressof(obj).cast<std::uintptr_t>()); self.AddInput(inputID, ptr); }, py::arg("inputID"), py::arg("inputData"))
     .def("DumpInputDataFiles", &PlotManager::DumpInputDataFiles, arg("configFileName"))
     .def("LoadInputDataFiles", &PlotManager::LoadInputDataFiles, arg("configFileName"))
     .def("AddPlot", &PlotManager::AddPlot, arg("plot"))

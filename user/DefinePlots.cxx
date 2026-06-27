@@ -2,24 +2,24 @@
 #include "Logging.h"
 #include <string>
 #include <filesystem>
-#define SRC_DIR std::filesystem::absolute(__FILE__).parent_path()
+#define SRC_DIR std::filesystem::absolute(__FILE__).parent_path().string() + "/"
 
 using std::string;
 using std::vector;
 using namespace SciRooPlot;
 using DataLayout = Plot::Pad::Data;
 
-void DefineInputIdentifiers(PlotManager& plotManager);
-void DefinePlotTemplates(PlotManager& plotManager);
-void DefinePlots(PlotManager& plotManager);
+void DefineInputIdentifiers(PlotManager& pm);
+void DefinePlotTemplates(PlotManager& pm);
+void DefinePlots(PlotManager& pm);
 
 int main(int argc, char* argv[])
 {
-  PlotManager plotManager;
-  DefineInputIdentifiers(plotManager);
-  DefinePlotTemplates(plotManager);
-  DefinePlots(plotManager);
-  plotManager.SaveProject("PROJECT_NAME");
+  PlotManager pm;
+  DefineInputIdentifiers(pm);
+  DefinePlotTemplates(pm);
+  DefinePlots(pm);
+  pm.SaveProject("PROJECT_NAME");
   return 0;
 }
 
@@ -28,14 +28,14 @@ int main(int argc, char* argv[])
  * Defines the input identifiers.
  */
 //****************************************************************************************
-void DefineInputIdentifiers(PlotManager& plotManager)
+void DefineInputIdentifiers(PlotManager& pm)
 {
   const string inputFolder = "${SCIROOPLOT_DATA_DIR}/TestFiles";
-  plotManager.AddInputDataFiles("measurements", {inputFolder + "/file1.root", inputFolder + "/file2.root"});
-  plotManager.AddInputDataFiles("theory", {inputFolder + "/subfolder/file3.root"});
-  plotManager.AddInputDataFiles("pseudodata", {inputFolder + "/subfolder/file3.root:pseudodata"});
+  pm.AddInput("measurements", {inputFolder + "/file1.root", inputFolder + "/file2.root"});
+  pm.AddInput("theory", inputFolder + "/subfolder/file3.root");
+  pm.AddInput("pseudodata", inputFolder + "/subfolder/file3.root:pseudodata");
   // NB.: path relative to this file:
-  // plotManager.AddInputDataFiles("test", {SRC_DIR / "../rel/path/to/file.root"});
+  // pm.AddInput("test", SRC_DIR + "../rel/path/to/file.root");
 }
 
 //****************************************************************************************
@@ -43,19 +43,19 @@ void DefineInputIdentifiers(PlotManager& plotManager)
  * Defines the plot templates.
  */
 //****************************************************************************************
-void DefinePlotTemplates(PlotManager& plotManager)
+void DefinePlotTemplates(PlotManager& pm)
 {
   {
     Plot plot = PlotManager::GetPlotTemplate("1d");
-    plotManager.AddPlotTemplate(plot);
+    pm.AddPlotTemplate(plot);
   }
   {
     Plot plot = PlotManager::GetPlotTemplate("1d_ratio");
-    plotManager.AddPlotTemplate(plot);
+    pm.AddPlotTemplate(plot);
   }
   {
     Plot plot = PlotManager::GetPlotTemplate("2d");
-    plotManager.AddPlotTemplate(plot);
+    pm.AddPlotTemplate(plot);
   }
 }
 
@@ -64,7 +64,7 @@ void DefinePlotTemplates(PlotManager& plotManager)
  * Defines the plots.
  */
 //****************************************************************************************
-void DefinePlots(PlotManager& plotManager)
+void DefinePlots(PlotManager& pm)
 {
   {  // -----------------------------------------------------------------------
     Plot plot("plot1", "dummyFigures", "1d");
@@ -72,13 +72,13 @@ void DefinePlots(PlotManager& plotManager)
     plot[1].AddData("hist1", "measurements", "anothergaus");
     plot[1].AddData("hist7", "theory", "prediction");
     plot[1].AddLegend();
-    plotManager.AddPlot(plot);
+    pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------
   {  // -----------------------------------------------------------------------
     Plot plot("plot2", "dummyFigures", "1d");
     plot[1].AddData("dir2/subdir2/hist3", "measurements");
     plot[1].AddData("list1/hist5", "measurements");
-    plotManager.AddPlot(plot);
+    pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------
   {  // -----------------------------------------------------------------------
     Plot plot("plot3", "dummyFigures", "1d_ratio");
@@ -89,25 +89,25 @@ void DefinePlots(PlotManager& plotManager)
     plot[2]['X'].SetTitle("my X title");
     plot[1]['Y'].SetRange(0.04, 0.45);
     plot[0]['X'].SetRange(-2, 2);
-    plotManager.AddPlot(plot);
+    pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------
   {  // -----------------------------------------------------------------------
     Plot plot("invMassDist", "examples", "1d");
     plot[1].AddData("invMassDist", "pseudodata").Scale(0.00001).SetColor(kBlue + 2);
-    plotManager.AddPlot(plot);
+    pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------
   {  // -----------------------------------------------------------------------
     Plot plot("multDist", "examples", "1d");
     plot[1].AddData("multDist", "pseudodata");
     plot[1].AddText("My Experiment // pp collisions, X TeV");
     plot[1]['Y'].SetLog();
-    plotManager.AddPlot(plot);
+    pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------
   {  // -----------------------------------------------------------------------
     Plot plot("ptSpec", "examples", "1d");
     plot[1].AddData("ptSpec", "pseudodata").SetColor(kRed + 2);
     plot[1]['X'].SetLog();
     plot[1]['Y'].SetLog();
-    plotManager.AddPlot(plot);
+    pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------
 }
