@@ -254,6 +254,9 @@ class Plot::Pad
   Pad& SetDefaultTextColor(int16_t color);
   Pad& SetDefaultTextAlpha(float_t alpha);
   Pad& SetDefaultTextFont(int16_t font);
+  Pad& SetDefaultAlpha(float_t alpha);
+  Pad& SetDefaultColors(const std::vector<int16_t>& colors);
+  Pad& SetDefaultColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultMarkerAlpha(float_t alpha);
   Pad& SetDefaultMarkerSize(float_t size);
   Pad& SetDefaultMarkerColors(const std::vector<int16_t>& colors);

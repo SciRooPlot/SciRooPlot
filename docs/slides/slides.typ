@@ -122,26 +122,20 @@
     [
       #v(1em)
       *The ROOT plotting challenge*
-
       - ROOT is powerful, but everyday plotting often requires substantial boilerplate code.
+
       - Similar I/O and styling tasks are repeatedly implemented in different macros.
       - Often plotting logic becomes intertwined with analysis code, making iteration slow.
       - Producing figures requires handling files, data types, styling, and other ROOT details.
 
+      #v(2em)
       *The SciRooPlot approach*
-
       - Introduces an abstraction layer on top of ROOT.
+
       - Provides a common plotting infrastructure and organization.
       - Lets users describe the desired figure rather than its implementation.
       - Preserves the familiar ROOT ecosystem and styling conventions.
       - Enables interactive, project-based plotting workflows.
-
-      *The result*
-
-      - Less code.
-      - Faster iteration.
-      - Better organization.
-      - Familiar ROOT backend.
     ],
     [],
     [
@@ -185,8 +179,11 @@
 #slide[
   #slide-title("SciRooPlot Workflow")
   - Store analysis results in ROOT or CSV files.
+
   - Define plot specifications using C++ or Python interface and save them as a SciRooPlot project.
+
   - Generate and explore plots interactively via the `plot` command-line tool.
+
   - Create and manage projects with the `srp` command-line tool.
 
   #slide-title("Installation")
@@ -200,10 +197,12 @@
   ]
 
   - The installer prints a command that enables the SciRooPlot environment.
+
   - Add it to the shell startup script (e.g. `~/.bashrc` or `~/.zshrc`) to load SciRooPlot automatically in new terminals.
+
   - After setup, the `srp` and `plot` command-line tools are available system-wide.
-  - Future updates can be installed with:
-    #terminal[#prompt srp update]
+
+  - Future updates can be installed with: `$ srp update`
 ]
 
 
@@ -238,11 +237,13 @@
         ]
 
       - Creates a project directory (`./someDir` or `./myProject`).
+
       - Contains #plot-def-file, where plot specifications are defined.
 
         #folder-struct
 
       - Project automatically registerd with SciRooPlot.
+
       - Includes working examples based on the bundled datasets.
 
       - Generate your first plot immediately:
@@ -476,7 +477,7 @@
           ```
         ],
       )
-      #v(2em)
+      #v(1em)
       #let link-to-other-doc = {
         [
           This documentation uses the
@@ -587,6 +588,112 @@
   )
 ]
 
+#slide[
+  #slide-title("Plot Layout")
+  #grid(
+    columns: (45%, 50%),
+    gutter: 5%,
+    [
+      - Defining plot templates avoids repeating common layout settings across many plots.
+
+      - Templates are ordinary `Plot` objects registered with the `PlotManager` via `AddPlotTemplate()`.
+
+      - Default settings applied to `plot[0]` automatically affect all pads unless overridden.
+
+      - Several ready-to-use templates (e.g. `1d`, `2d`, `1d_ratio`) are provided with SciRooPlot.
+
+      - Existing templates can be used directly or modified to create custom layouts.
+    ],
+    [
+      #code-block(
+        [
+          ```cpp
+          Plot plot("myLayout", "PLOT_TEMPLATES");
+          plot.SetDimensions(710, 710);
+          plot.SetTransparent();
+
+          plot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
+          plot[0].SetDefaultMarkerSize(1.2).SetDefaultLineWidth(2.);
+          plot[0].SetDefaultTextFont(43).SetDefaultTextSize(24);
+          plot[0].SetDefaultColors({kBlack, kBlue, kRed});
+          plot[0].SetDefaultMarkerStyles({kFullCircle});
+          plot[0].SetDefaultLineStyles({kSolid, kDashed});
+
+          plot[0]['X'].SetTitleSize(28).SetTitleOffset(1.1);
+          plot[0]['Y'].SetTitleSize(28).SetTitleOffset(1.5);
+
+          plot[1].SetPosition(0., 0., 1., 1.);
+
+          pm.AddPlotTemplate(plot);
+          ```
+        ],
+        [
+          ```python
+          plot = Plot("myLayout", "PLOT_TEMPLATES")
+          plot.SetDimensions(710, 710)
+          plot.SetTransparent()
+
+          plot[0].SetMargins(0.07, 0.14, 0.12, 0.07)
+          plot[0].SetDefaultMarkerSize(1.2).SetDefaultLineWidth(2.)
+          plot[0].SetDefaultTextFont(43).SetDefaultTextSize(24)
+          plot[0].SetDefaultColors([kBlack, kBlue, kRed])
+          plot[0].SetDefaultMarkerStyles([kFullCircle])
+          plot[0].SetDefaultLineStyles([kSolid, kDashed])
+
+          plot[0]['X'].SetTitleSize(28).SetTitleOffset(1.1)
+          plot[0]['Y'].SetTitleSize(28).SetTitleOffset(1.5)
+
+          plot[1].SetPosition(0., 0., 1., 1.)
+
+          pm.AddPlotTemplate(plot)
+          ```
+        ],
+      )
+      #code-block(
+        [
+          ```cpp
+          pm.AddPlotTemplate(PlotManager::GetPlotTemplate("1d"));
+          // create new plot on basis of 1d template:
+          Plot plot("myPlot", "myGroup", "1d");
+          ```
+        ],
+        [
+          ```python
+          pm.AddPlotTemplate(PlotManager.GetPlotTemplate("1d"))
+          # create a new plot based on the "1d" template
+          plot = Plot("myPlot", "myGroup", "1d")
+          ```
+        ],
+      )
+    ],
+  )
+]
+
+
+#slide[
+  #slide-title("Data Modifiers")
+  #grid(
+    columns: (50%, 50%),
+    gutter: 0%,
+    [
+
+    ],
+    [
+      #code-block(
+        [
+          ```cpp
+
+          ```
+        ],
+        [
+          ```python
+
+          ```
+        ],
+      )
+    ],
+  )
+]
 
 
 #slide[

@@ -35,5 +35,5 @@ After setup, the commands `srp` and `plot` are available from your terminal.
 
 ## 📖 Documentation
 
-- User manual: [Cpp interface](https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_cpp.pdf) or [Python interface](https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_py.pdf)
+- User manual: [Cpp interface](https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_cpp.pdf), [Python interface](https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_py.pdf)
 - Complementary documentation: [Webpage](https://SciRooPlot.github.io/SciRooPlot/)

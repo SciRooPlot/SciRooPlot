@@ -1531,15 +1531,15 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
   double_t markerSize = 1.4;
   uint8_t lineWidth = 5;
 
-  const vector<int16_t> goodColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1,
-                                      kMagenta - 4, kGreen + 3, kOrange + 1,
-                                      kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7,
-                                      kMagenta + 1, kPink + 8, kCyan - 6,
-                                      kMagenta, kRed + 2, kGreen + 2,
-                                      kOrange + 2, kMagenta + 2, kYellow + 3,
-                                      kGray + 2, kBlue + 2, kYellow + 2,
-                                      kRed, kBlue, kMagenta + 3,
-                                      kGreen + 4, 28, 8, 15, 17, 12};
+  const vector<int16_t> defaultColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1,
+                                         kMagenta - 4, kGreen + 3, kOrange + 1,
+                                         kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7,
+                                         kMagenta + 1, kPink + 8, kCyan - 6,
+                                         kMagenta, kRed + 2, kGreen + 2,
+                                         kOrange + 2, kMagenta + 2, kYellow + 3,
+                                         kGray + 2, kBlue + 2, kYellow + 2,
+                                         kRed, kBlue, kMagenta + 3,
+                                         kGreen + 4, 28, 8, 15, 17, 12};
 
   if (plotTemplateName == "1d") {
     // -----------------------------------------------------------------------
@@ -1547,9 +1547,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plot.SetDimensions(pixelBase, pixelBase, true);
     plot.SetTransparent();
     plot[0].SetFrameFill(10, 1001);
-    plot[0].SetDefaultMarkerColors(goodColors);
-    plot[0].SetDefaultLineColors(goodColors);
-    plot[0].SetDefaultFillColors(goodColors);
+    plot[0].SetDefaultColors(defaultColors);
     plot[0].SetDefaultFillStyles({0});
     plot[0].SetDefaultMarkerStyles({kFullCircle});
     plot[0].SetDefaultLineStyles({kSolid});
@@ -1573,9 +1571,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plot.SetDimensions(pixelBase, static_cast<int32_t>(std::round(wideSideScale * pixelBase)), true);
     plot.SetTransparent();
     plot[0].SetFrameFill(10, 1001);
-    plot[0].SetDefaultMarkerColors(goodColors);
-    plot[0].SetDefaultLineColors(goodColors);
-    plot[0].SetDefaultFillColors(goodColors);
+    plot[0].SetDefaultColors(defaultColors);
     plot[0].SetDefaultFillStyles({0});
     plot[0].SetDefaultMarkerStyles({kFullCircle});
     plot[0].SetDefaultLineStyles({kSolid});
@@ -1609,9 +1605,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plot.SetDimensions(static_cast<int32_t>(std::round(wideSideScale * pixelBase)), pixelBase, true);
     plot.SetTransparent();
     plot[0].SetFrameFill(10, 1001);
-    plot[0].SetDefaultMarkerColors(goodColors);
-    plot[0].SetDefaultLineColors(goodColors);
-    plot[0].SetDefaultFillColors(goodColors);
+    plot[0].SetDefaultColors(defaultColors);
     plot[0].SetDefaultFillStyles({0});
     plot[0].SetDefaultMarkerStyles({kFullCircle});
     plot[0].SetDefaultLineStyles({kSolid});
@@ -1660,9 +1654,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     plot.SetDimensions(totalPixelWidth, totalPixelHeight, true);
     plot.SetTransparent();
     plot[0].SetFrameFill(10, 1001);
-    plot[0].SetDefaultMarkerColors(goodColors);
-    plot[0].SetDefaultLineColors(goodColors);
-    plot[0].SetDefaultFillColors(goodColors);
+    plot[0].SetDefaultColors(defaultColors);
     plot[0].SetDefaultFillStyles({0});
     plot[0].SetDefaultMarkerStyles({kFullCircle});
     plot[0].SetDefaultLineStyles({kSolid});

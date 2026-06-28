@@ -437,6 +437,13 @@ auto Plot::Pad::SetDefaultLineAlpha(float_t alpha) -> decltype(*this)
   mLineDefaults.alpha = alpha;
   return *this;
 }
+auto Plot::Pad::SetDefaultAlpha(float_t alpha) -> decltype(*this)
+{
+  mMarkerDefaults.alpha = alpha;
+  mLineDefaults.alpha = alpha;
+  mFillDefaults.alpha = alpha;
+  return *this;
+}
 
 //**************************************************************************************************
 /**
@@ -452,8 +459,8 @@ auto Plot::Pad::SetDefaultMarkerColors(const vector<int16_t>& colors) -> decltyp
 
 auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
-  mMarkerDefaults.alpha = nullopt;
   mMarkerDefaults.colors = nullopt;
+  mMarkerDefaults.alpha = nullopt;
   mMarkerDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
 }
@@ -473,6 +480,7 @@ auto Plot::Pad::SetDefaultLineColors(const vector<int16_t>& colors) -> decltype(
 auto Plot::Pad::SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   mLineDefaults.colors = nullopt;
+  mLineDefaults.alpha = nullopt;
   mLineDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
 }
@@ -492,6 +500,37 @@ auto Plot::Pad::SetDefaultFillColors(const vector<int16_t>& colors) -> decltype(
 auto Plot::Pad::SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   mFillDefaults.colors = nullopt;
+  mFillDefaults.alpha = nullopt;
+  mFillDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
+  return *this;
+}
+
+//**************************************************************************************************
+/**
+ * Set default colors.
+ */
+//**************************************************************************************************
+auto Plot::Pad::SetDefaultColors(const vector<int16_t>& colors) -> decltype(*this)
+{
+  mMarkerDefaults.colorGradient = {};
+  mMarkerDefaults.colors = colors;
+  mLineDefaults.colorGradient = {};
+  mLineDefaults.colors = colors;
+  mFillDefaults.colorGradient = {};
+  mFillDefaults.colors = colors;
+  return *this;
+}
+
+auto Plot::Pad::SetDefaultColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
+{
+  mMarkerDefaults.colors = nullopt;
+  mMarkerDefaults.alpha = nullopt;
+  mMarkerDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
+  mLineDefaults.colors = nullopt;
+  mLineDefaults.alpha = nullopt;
+  mLineDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
+  mFillDefaults.colors = nullopt;
+  mFillDefaults.alpha = nullopt;
   mFillDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
 }
