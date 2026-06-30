@@ -197,14 +197,13 @@ endif()
 # -----------------------
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SciRooPlotHelpers.cmake)
 
-add_plotting_executable(plot
-  SOURCES app/PlottingApp.cpp
-)
-
 add_plotting_executable(srp
-  SOURCES app/PlottingAppConfig.cpp
+  SOURCES app/SciRooPlotApp.cpp
 )
-list(APPEND ALL_TARGETS plot srp)
+add_plotting_executable(plot
+  SOURCES app/PlotApp.cpp
+)
+list(APPEND ALL_TARGETS srp plot)
 
 # -----------------------
 # Install
