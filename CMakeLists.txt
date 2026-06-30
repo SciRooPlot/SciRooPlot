@@ -141,10 +141,10 @@ endif()
 # Library
 # -----------------------
 add_library(SciRooPlot SHARED
-  src/Plot.cxx
-  src/PlotManager.cxx
-  src/PlotPainter.cxx
-  src/Helpers.cxx
+  src/Plot.cpp
+  src/PlotManager.cpp
+  src/PlotPainter.cpp
+  src/Helpers.cpp
 )
 add_library(SciRooPlot::SciRooPlot ALIAS SciRooPlot)
 scirooplot_apply_compile_flags(SciRooPlot)
@@ -174,7 +174,7 @@ set(ALL_TARGETS SciRooPlot)
 
 if(BUILD_PYTHON_BINDINGS)
   pybind11_add_module(SciRooPlotPython
-    src/PythonBindings.cxx
+    src/PythonBindings.cpp
   )
   target_link_libraries(SciRooPlotPython PRIVATE SciRooPlot)
   target_compile_definitions(SciRooPlotPython PRIVATE
@@ -194,11 +194,11 @@ endif()
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SciRooPlotHelpers.cmake)
 
 add_plotting_executable(plot
-  SOURCES app/PlottingApp.cxx
+  SOURCES app/PlottingApp.cpp
 )
 
 add_plotting_executable(srp
-  SOURCES app/PlottingAppConfig.cxx
+  SOURCES app/PlottingAppConfig.cpp
 )
 list(APPEND ALL_TARGETS plot srp)
 

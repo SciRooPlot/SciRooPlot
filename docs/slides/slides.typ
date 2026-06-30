@@ -19,7 +19,7 @@
   if lang == "py" {
     [`DefinePlots.py`]
   } else {
-    [`DefinePlots.cxx`]
+    [`DefinePlots.cpp`]
   }
 }
 
@@ -217,7 +217,7 @@
       terminal[
         ```text
         myProject/
-        ├── DefinePlots.cxx
+        ├── DefinePlots.cpp
         └── output/
         ```
       ]

@@ -117,9 +117,9 @@ function srp() {
       "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "EXE" "${project_path}/DefinePlots.py"
     else
       cp "${SCIROOPLOT_DATA_DIR}/user/CMakeLists.txt" "${project_path}/"
-      cp "${SCIROOPLOT_DATA_DIR}/user/DefinePlots.cxx" "${project_path}/"
+      cp "${SCIROOPLOT_DATA_DIR}/user/DefinePlots.cpp" "${project_path}/"
       sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/CMakeLists.txt" && rm -f "${project_path}/CMakeLists.txt.bak"
-      sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/DefinePlots.cxx" && rm -f "${project_path}/DefinePlots.cxx.bak"
+      sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/DefinePlots.cpp" && rm -f "${project_path}/DefinePlots.cpp.bak"
       mkdir -p "${project_path}/build"
       local curdir="$(pwd)"
       cd "${project_path}/build" && cmake -Wno-dev .. > /dev/null 2>&1 && make > /dev/null 2>&1 && ./definePlots

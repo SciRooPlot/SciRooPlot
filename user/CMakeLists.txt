@@ -10,15 +10,15 @@ find_package(SciRooPlot CONFIG REQUIRED)
 message(STATUS "SciRooPlot version: ${SciRooPlot_VERSION}")
 
 add_plotting_executable(definePlots
-  SOURCES DefinePlots.cxx
+  SOURCES DefinePlots.cpp
 )
 
 # Link against SciRooPlot using the helper function add_plotting_executable:
 #
 #  add_plotting_executable(definePlots
 #    SOURCES
-#      src/DefinePlots.cxx
-#      src/SomeOtherFile.cxx
+#      src/DefinePlots.cpp
+#      src/SomeOtherFile.cpp
 #    INCLUDES
 #      include/
 #      include2/
