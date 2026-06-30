@@ -244,7 +244,7 @@
 
         #folder-struct
 
-      - Project automatically registerd with SciRooPlot.
+      - Project automatically registered with SciRooPlot.
 
       - Includes working examples based on the bundled datasets.
 

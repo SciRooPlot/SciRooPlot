@@ -43,11 +43,11 @@ int main(int argc, char* argv[])
     return 1;
   }
   if (!file_exists(inputsFile)) {
-    ERROR(R"(File "{}" does not exists! Exiting.)", inputsFile);
+    ERROR(R"(File "{}" does not exist! Exiting.)", inputsFile);
     return 1;
   }
   if (!file_exists(plotsFile)) {
-    ERROR(R"(File "{}" does not exists! Exiting.)", plotsFile);
+    ERROR(R"(File "{}" does not exist! Exiting.)", plotsFile);
     return 1;
   }
 
@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
   if (mode != "find") {
     plotManager.LoadInputDataFiles(inputsFile);
     if (outputDir.empty() && mode != "show") {
-      WARNING(R"(Please run "srp set <PROJECT_NAME> OUT </path/to/outputDir>" to set the ouptut directory.)");
+      WARNING(R"(Please run "srp set <PROJECT_NAME> OUT </path/to/outputDir>" to set the output directory.)");
     }
   }
   plotManager.ExtractPlotsFromFile(plotsFile, mode, plotNames, group, category);
