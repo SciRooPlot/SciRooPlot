@@ -210,7 +210,7 @@ class Plot::Pad
   void Print() { Plot::Print(GetPropertyTree(), "Pad"); }
 
   // User accessors:
-  Data& AddData(const std::string& name, const std::string& inputID, const std::optional<std::string>& label = {});
+  Data& AddData(const std::string& name, const std::string& dataset, const std::optional<std::string>& label = {});
   Data& AddData(const std::string& name, const Data& dataTemplate, const std::optional<std::string>& label = {});
   Data& AddFunction(const std::string& function, const std::optional<std::string>& label = {});
 
@@ -219,14 +219,14 @@ class Plot::Pad
 
   Data& AddLine(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2, const std::optional<std::string>& label = {});
 
-  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorInputID,
-                  const std::string& denominatorName, const std::string& denominatorInputID,
+  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataset,
+                  const std::string& denominatorName, const std::string& denominatorDataset,
                   const std::optional<std::string>& label = {});
   Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorLayout, const std::string& denominatorName,
-                  const std::string& denominatorInputID, const std::optional<std::string>& label = {});
+                  const std::string& denominatorDataset, const std::optional<std::string>& label = {});
   Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorLayout, const std::string& denominatorName,
                   const Data& denominatorLayout, const std::optional<std::string>& label = {});
-  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorInputID, const std::string& denominatorName,
+  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataset, const std::string& denominatorName,
                   const Data& denominatorLayout, const std::optional<std::string>& label = {});
 
   TextBox& AddText(double_t xPos, double_t yPos, const std::string& text);
@@ -433,7 +433,7 @@ class Plot::Pad::Data
 {
  public:
   Data() = default;
-  Data(const std::string& name, const std::string& inputID, const std::optional<std::string>& label);
+  Data(const std::string& name, const std::string& dataset, const std::optional<std::string>& label);
   explicit Data(const boost::property_tree::ptree& dataTree);
 
   virtual ~Data() = default;
@@ -444,9 +444,9 @@ class Plot::Pad::Data
   void Print() { Plot::Print(GetPropertyTree(), "Data"); }
 
   Ratio& AsRatio();
-  const std::string& GetInputID() const { return mInputID; }
+  const std::string& GetDataset() const { return mDataset; }
 
-  virtual Data& SetInputID(const std::string& inputID);
+  virtual Data& SetDataset(const std::string& dataset);
   virtual Data& SetLayout(const Data& dataLayout);
   virtual Data& ApplyLayout(const Data& dataLayout);
   virtual Data& SetRangeX(double_t min, double_t max);
@@ -621,7 +621,7 @@ class Plot::Pad::Data
 
   std::string mType;  // for introspection: "data" or "ratio"
   std::string mName;
-  std::string mInputID;
+  std::string mDataset;
 
   std::optional<std::string> mDrawingOptions;
   std::optional<drawing_options_t> mDrawingOptionAlias;
@@ -671,8 +671,8 @@ class Plot::Pad::Data
 class Plot::Pad::Ratio : public Plot::Pad::Data
 {
  public:
-  Ratio(const std::string& name, const std::string& inputID, const std::string& denomName,
-        const std::string& denomInputID, const std::optional<std::string>& label);
+  Ratio(const std::string& name, const std::string& dataset, const std::string& denomName,
+        const std::string& denomDataset, const std::optional<std::string>& label);
   explicit Ratio(const boost::property_tree::ptree& dataTree);
 
   virtual ~Ratio() = default;
@@ -692,7 +692,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
     Data::METHOD(std::forward<Args>(args)...); \
     return *this;                              \
   }
-  FORWARD_TO_DATA(SetInputID)
+  FORWARD_TO_DATA(SetDataset)
   FORWARD_TO_DATA(SetLayout)
   FORWARD_TO_DATA(ApplyLayout)
   FORWARD_TO_DATA(SetRangeX)
@@ -775,7 +775,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 
   virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Ratio>(*this); }
   boost::property_tree::ptree GetPropertyTree() const;
-  const auto& GetDenomInputID() const { return mDenomInputID; }
+  const auto& GetDenomDataset() const { return mDenomDataset; }
   const auto& GetDenomName() const { return mDenomName; }
   const auto& GetScaleBinWidthDivision() const { return mScaleBinWidth; }
   const bool& GetIsCorrelated() const { return mIsCorrelated; }
@@ -787,7 +787,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
                     Den };
   Mode mModMode = Mode::Num;
   std::string mDenomName;
-  std::string mDenomInputID;
+  std::string mDenomDataset;
   bool mIsCorrelated{};
   std::optional<bool> mScaleBinWidth;  // normalize both numerator and denominator with bin widths
   data_info_t mDenomDataInfo;

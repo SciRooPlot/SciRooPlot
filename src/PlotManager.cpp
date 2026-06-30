@@ -106,8 +106,8 @@ PlotManager::~PlotManager()
   if (mSavePlotsToRootFile) {
     SavePlotsToFile();
   }
-  if (mSaveInputsToRootFile) {
-    SaveInputsToFile();
+  if (mSaveDataToRootFile) {
+    SaveDataToFile();
   }
 }
 
@@ -160,16 +160,16 @@ void PlotManager::SavePlotsToFile() const
  * Save buffered input data .root file.
  */
 //**************************************************************************************************
-void PlotManager::SaveInputsToFile() const
+void PlotManager::SaveDataToFile() const
 {
   TFile outputFile((mOutputDirectory + "/" + mInputsRootFile).data(), "RECREATE");
   if (outputFile.IsZombie()) {
     return;
   }
-  for (const auto& [inputID, buffer] : mDataBuffer) {
+  for (const auto& [dataset, buffer] : mDataBuffer) {
     for (const auto& [dataName, dataPtr] : buffer) {
       if (!dataPtr) continue;
-      auto dir = outputFile.mkdir(inputID.data(), "", true);
+      auto dir = outputFile.mkdir(dataset.data(), "", true);
       string name = split_string(dataPtr->GetName(), ':')[0];
       auto tokens = split_string(name, '/');
       int iToken = 1;
@@ -230,37 +230,37 @@ void PlotManager::SetOutputFileName(const string& fileName)
 
 //**************************************************************************************************
 /**
- * Define input file paths for user defined unique inputID.
+ * Define input file paths for user defined dataset.
  */
 //**************************************************************************************************
-void PlotManager::AddInput(const string& inputID, const vector<string>& inputFilePathList)
+void PlotManager::AddDataset(const string& dataset, const vector<string>& inputFilePathList)
 {
   for (auto inputFilePath : inputFilePathList) {
     if (std::filesystem::path(expand_path(inputFilePath)).is_relative()) {
       WARNING("The path to an input file must not be relative. Skipping {}.", inputFilePath);
       continue;
     }
-    auto& files = mInputFiles[inputID];
+    auto& files = mInputFiles[dataset];
     if (std::find(files.begin(), files.end(), inputFilePath) == files.end()) {
       files.push_back(inputFilePath);
     }
   }
 }
-void PlotManager::AddInput(const string& inputID, const string& inputFilePath)
+void PlotManager::AddDataset(const string& dataset, const string& inputFilePath)
 {
-  AddInput(inputID, {inputFilePath});
+  AddDataset(dataset, {inputFilePath});
 }
-void PlotManager::AddInput(const std::string& inputID, std::initializer_list<string> inputFilePaths)
+void PlotManager::AddDataset(const std::string& dataset, std::initializer_list<string> inputFilePaths)
 {
-  AddInput(inputID, std::vector<std::string>(inputFilePaths));
+  AddDataset(dataset, std::vector<std::string>(inputFilePaths));
 }
 
 //**************************************************************************************************
 /**
- * Define input data for user defined unique inputID.
+ * Define input data for user defined unique dataset.
  */
 //**************************************************************************************************
-void PlotManager::AddInput(const string& inputID, const vector<TObject*>& inputDataList)
+void PlotManager::AddDataset(const string& dataset, const vector<TObject*>& inputDataList)
 {
   string fileName = "${SCIROOPLOT_USER_DATA_DIR}/UserData.root";
   string mode = "RECREATE";
@@ -268,20 +268,20 @@ void PlotManager::AddInput(const string& inputID, const vector<TObject*>& inputD
     mode = "UPDATE";
   }
   TFile file(fileName.data(), mode.data());
-  TDirectory* dir = file.GetDirectory(inputID.data());
+  TDirectory* dir = file.GetDirectory(dataset.data());
   if (!dir) {
-    dir = file.mkdir(inputID.c_str());
+    dir = file.mkdir(dataset.data());
   }
   dir->cd();
   for (auto object : inputDataList) {
     object->Write();
   }
   file.Close();
-  AddInput(inputID, {fileName + ":" + inputID});
+  AddDataset(dataset, {fileName + ":" + dataset});
 }
-void PlotManager::AddInput(const string& inputID, TObject* inputData)
+void PlotManager::AddDataset(const string& dataset, TObject* inputData)
 {
-  AddInput(inputID, vector<TObject*>{inputData});
+  AddDataset(dataset, vector<TObject*>{inputData});
 }
 
 //**************************************************************************************************
@@ -323,7 +323,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
     return;
   }
   for (const auto& inputPair : inputFileTree) {
-    const string& inputID = inputPair.first;
+    const string& dataset = inputPair.first;
     set<string> allFileNames;
     for (const auto& fileEntry : inputPair.second) {
       string fileOrDirName = expand_path(fileEntry.second.get_value<string>());
@@ -337,7 +337,7 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
         }
       }
     }
-    AddInput(inputID, vector<string>{allFileNames.begin(), allFileNames.end()});
+    AddDataset(dataset, vector<string>{allFileNames.begin(), allFileNames.end()});
   }
 }
 
@@ -613,8 +613,8 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     mPlotLedger[plot.GetUniqueName()] = canvas;
     return true;
   }
-  if (outputMode == "inputs") {
-    mSaveInputsToRootFile = true;
+  if (outputMode == "data") {
+    mSaveDataToRootFile = true;
     return true;
   }
 
@@ -726,34 +726,34 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
     // determine which input data are needed for plots
     for (auto& [padID, pad] : plot.GetPads()) {
       if (auto& refFunc = pad.GetRefFunc()) {
-        mDataBuffer[refFunc->GetInputID()][refFunc->GetName()];
+        mDataBuffer[refFunc->GetDataset()][refFunc->GetName()];
       } else {
         if (plot.GetPlotTemplateName()) {
           auto it = std::find_if(mPlotTemplates.begin(), mPlotTemplates.end(), [&](const auto& plotTemplate) { return *plot.GetPlotTemplateName() == plotTemplate.GetName(); });
           if (it != mPlotTemplates.end()) {
             if (auto& refFunc = (*it).GetPad(padID).GetRefFunc()) {
-              mDataBuffer[refFunc->GetInputID()][refFunc->GetName()];
+              mDataBuffer[refFunc->GetDataset()][refFunc->GetName()];
             }
           }
         }
       }
       for (const auto& data : pad.GetData()) {
-        mDataBuffer[data->GetInputID()][data->GetName()];
+        mDataBuffer[data->GetDataset()][data->GetName()];
         if (data->GetDataInfo().dataDims.size()) {
-          auto& dataInfos = mDataInfoBuffer[data->GetInputID()][data->GetName()];
+          auto& dataInfos = mDataInfoBuffer[data->GetDataset()][data->GetName()];
           auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
           if (iter == dataInfos.end()) {
-            mDataInfoBuffer[data->GetInputID()][data->GetName()].push_back(data->GetDataInfo());
+            mDataInfoBuffer[data->GetDataset()][data->GetName()].push_back(data->GetDataInfo());
           }
         }
         if (data->GetType() == "ratio") {
           const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          mDataBuffer[ratio->GetDenomInputID()][ratio->GetDenomName()];
+          mDataBuffer[ratio->GetDenomDataset()][ratio->GetDenomName()];
           if (ratio->GetDenomDataInfo().dataDims.size()) {
-            auto& dataInfos = mDataInfoBuffer[ratio->GetDenomInputID()][ratio->GetDenomName()];
+            auto& dataInfos = mDataInfoBuffer[ratio->GetDenomDataset()][ratio->GetDenomName()];
             auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
             if (iter == dataInfos.end()) {
-              mDataInfoBuffer[ratio->GetDenomInputID()][ratio->GetDenomName()].push_back(ratio->GetDenomDataInfo());
+              mDataInfoBuffer[ratio->GetDenomDataset()][ratio->GetDenomName()].push_back(ratio->GetDenomDataInfo());
             }
           }
         }
@@ -788,13 +788,13 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
 bool PlotManager::FillBuffer()
 {
   bool success = true;
-  for (auto& [inputID, buffer] : mDataBuffer) {
+  for (auto& [dataset, buffer] : mDataBuffer) {
     unordered_map<string, vector<string>> requiredData;  // subdir, names
     for (auto& [dataName, dataPtr] : buffer) {
       if (dataPtr) continue;
 
       // generate user-defined functions on-the-fly
-      if (inputID == "USER_FUNCTIONS") {
+      if (dataset == "USER_FUNCTIONS") {
         TFormula formula("tmp", dataName.data());
         int dim = formula.GetNdim();
         if (dim <= 1) {
@@ -807,7 +807,7 @@ bool PlotManager::FillBuffer()
           ERROR("Cannot create function {}.", dataName);
         }
         continue;
-      } else if (inputID == "USER_GRAPHS") {
+      } else if (dataset == "USER_GRAPHS") {
         auto strs = split_string(dataName, ';');
         auto xStrs = split_string(strs[0], ',');
         auto yStrs = split_string(strs[1], ',');
@@ -836,12 +836,12 @@ bool PlotManager::FillBuffer()
       requiredData[std::move(path)].push_back(std::move(name));
     }
 
-    // open all input files belonging to the current inputID and extract the data
-    for (const auto& inputFileName : mInputFiles[inputID]) {
+    // open all input files belonging to the current dataset and extract the data
+    for (const auto& inputFileName : mInputFiles[dataset]) {
       if (requiredData.empty()) break;
       if (str_contains(inputFileName, mTableFileEndings, true)) {
         string name = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".") - inputFileName.rfind('/') - 1);
-        ReadDataCSV(inputFileName, name, inputID);
+        ReadDataCSV(inputFileName, name, dataset);
         vector<string>& wantedNames = requiredData[""];
         wantedNames.erase(std::remove_if(wantedNames.begin(), wantedNames.end(), [&](const auto& wantedName) { return wantedName == name; }), wantedNames.end());
         if (wantedNames.empty()) requiredData.erase("");
@@ -881,8 +881,8 @@ bool PlotManager::FillBuffer()
         if (subfolder) {
           // recursively traverse the file and look for input files
           string prefix = (pathStr.empty()) ? "" : pathStr + "/";
-          string suffix = ":" + inputID;
-          ReadData(subfolder, names, prefix, suffix, inputID);
+          string suffix = ":" + dataset;
+          ReadData(subfolder, names, prefix, suffix, dataset);
           // in case a subdirectory was opened, properly delete it
           if (!path.empty() && subfolder != &inputFile) {
             delete subfolder;
@@ -921,15 +921,15 @@ void PlotManager::PrintBufferStatus(bool missingOnly) const
   }
   uint32_t nNeededData{};
   uint32_t nAvailableData{};
-  for (const auto& [inputID, buffer] : mDataBuffer) {
-    bool printInputID = true;
+  for (const auto& [dataset, buffer] : mDataBuffer) {
+    bool printDataset = true;
     for (const auto& [dataName, dataPtr] : buffer) {
       ++nNeededData;
       bool show = missingOnly ? (dataPtr == nullptr) : true;
       if (dataPtr) ++nAvailableData;
       if (show) {
-        if (printInputID) INFO("{}", inputID);
-        printInputID = false;
+        if (printDataset) INFO("{}", dataset);
+        printDataset = false;
         INFO(" - {}{}{}", (dataPtr) ? logger::begin_color(logger::Color::Green) : logger::begin_color(logger::Color::Red), dataName, logger::end_color());
       }
     }
@@ -966,7 +966,7 @@ void PlotManager::PrintLoadedPlots() const
  * Recursively reads data from folder / list and adds it to output data array. Found dataNames are removed from the vectors.
  */
 //**************************************************************************************************
-void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& inputID)
+void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& dataset)
 {
   TCollection* itemList = nullptr;
   if (folder->InheritsFrom(TDirectory::Class())) {
@@ -1012,7 +1012,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       // in case this object is directory or list, repeat the same for this substructure
       if (obj->InheritsFrom(TDirectory::Class()) || obj->InheritsFrom(TFolder::Class()) || obj->InheritsFrom(TCollection::Class())) {
         if (traverse) {
-          ReadData(obj, dataNames, prefix, suffix, inputID);
+          ReadData(obj, dataNames, prefix, suffix, dataset);
         } else if (removeFromList) {
           removeFromList = false;
           deleteObject = false;
@@ -1029,9 +1029,9 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
           string fullName = prefix + curDataName;
           if (obj->InheritsFrom(TTree::Class())) {
             TTree* tree = static_cast<TTree*>(obj);
-            mDataBuffer[inputID][fullName].reset(nullptr);
+            mDataBuffer[dataset][fullName].reset(nullptr);
             // do all requested projections of this tree
-            for (auto& dataInfo : mDataInfoBuffer[inputID][fullName]) {
+            for (auto& dataInfo : mDataInfoBuffer[dataset][fullName]) {
               string dataFullName = fullName + dataInfo.GetNameSuffix();
               try {
                 SUPPRESS_STDERR(true);
@@ -1044,13 +1044,13 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
                 ERROR("Invalid query for tree.");
                 obj = nullptr;
               }
-              mDataBuffer[inputID][dataFullName].reset(obj);
+              mDataBuffer[dataset][dataFullName].reset(obj);
             }
             tree->SetDirectory(0);
             delete tree;
           } else {
             static_cast<TNamed*>(obj)->SetName((fullName + suffix).data());
-            mDataBuffer[inputID][fullName].reset(obj);
+            mDataBuffer[dataset][fullName].reset(obj);
           }
           removeFromList = false;
           deleteObject = false;
@@ -1077,7 +1077,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
  * Read data from csv file.
  */
 //**************************************************************************************************
-void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, const string& inputID)
+void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, const string& dataset)
 {
   if (!file_exists(inputFileName)) {
     ERROR("File {} does not exist.", inputFileName);
@@ -1099,14 +1099,14 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
     }
     ++lineCount;
   }
-  for (auto& dataInfo : mDataInfoBuffer[inputID][name]) {
+  for (auto& dataInfo : mDataInfoBuffer[dataset][name]) {
     string dataName = name + dataInfo.GetNameSuffix();
     TObject* obj = nullptr;
     try {
       SUPPRESS_STDERR(true);
       if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
       ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter, 50000);
-      obj = ProcessData(df, name, dataInfo, dataName + ":" + inputID);
+      obj = ProcessData(df, name, dataInfo, dataName + ":" + dataset);
       if (!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
       SUPPRESS_STDERR(false);
     } catch (const std::runtime_error& e) {
@@ -1114,7 +1114,7 @@ void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, c
       std::cout << e.what() << std::endl;
       obj = nullptr;
     }
-    mDataBuffer[inputID][dataName].reset(obj);
+    mDataBuffer[dataset][dataName].reset(obj);
   }
 }
 

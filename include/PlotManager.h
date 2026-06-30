@@ -62,12 +62,12 @@ class PlotManager
   void SetUseUniquePlotNames(bool useUniquePlotNames = true);  // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
   void SetOutputFileName(const std::string& fileName);         // in case canvases should be saved in .root file
 
-  // settings related to the input root files
-  void AddInput(const std::string& inputID, const std::vector<std::string>& inputFilePathList);
-  void AddInput(const std::string& inputID, std::initializer_list<std::string> inputFilePathList);
-  void AddInput(const std::string& inputID, const std::string& inputFilePath);
-  void AddInput(const std::string& inputID, const std::vector<TObject*>& inputDataList);
-  void AddInput(const std::string& inputID, TObject* inputData);
+  // create or append to a dataset.
+  void AddDataset(const std::string& dataset, const std::vector<std::string>& inputFilePathList);
+  void AddDataset(const std::string& dataset, std::initializer_list<std::string> inputFilePathList);
+  void AddDataset(const std::string& dataset, const std::string& inputFilePath);
+  void AddDataset(const std::string& dataset, const std::vector<TObject*>& inputDataList);
+  void AddDataset(const std::string& dataset, TObject* inputData);
 
   void DumpInputDataFiles(const std::string& configFileName) const;  // save input file paths to config file
   void LoadInputDataFiles(const std::string& configFileName);        // load the input file paths from config file
@@ -112,11 +112,11 @@ class PlotManager
   bool GeneratePlot(const Plot& plot, const std::string& outputMode = "pdf");
   boost::property_tree::ptree& ReadPlotTemplatesFromFile(const std::string& plotFileName);
   void SavePlotsToFile() const;
-  void SaveInputsToFile() const;
+  void SaveDataToFile() const;
 
   std::unique_ptr<TApplication> mApp;
   bool mSavePlotsToRootFile{};
-  bool mSaveInputsToRootFile{};
+  bool mSaveDataToRootFile{};
   std::string mPlotsRootFile{"Plots.root"};
   std::string mInputsRootFile{"Inputs.root"};
   std::map<std::string, std::shared_ptr<TCanvas>> mPlotLedger;
@@ -135,8 +135,8 @@ class PlotManager
   std::map<std::string, std::vector<std::string>> mInputFiles;  // inputFileIdentifier, inputFilePaths
   void PrintBufferStatus(bool missingOnly = false) const;
   bool FillBuffer();
-  void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& inputID);
-  void ReadDataCSV(const std::string& inputFileName, const std::string& name, const std::string& inputID);
+  void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataset);
+  void ReadDataCSV(const std::string& inputFileName, const std::string& name, const std::string& dataset);
   TObject* ProcessData(ROOT::RDataFrame& df, const std::string& dfName, const Plot::Pad::Data::data_info_t& treeInfo, const std::string& name) const;
 };
 

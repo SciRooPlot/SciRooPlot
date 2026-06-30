@@ -435,7 +435,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // retrieve the actual pointer to the denominator data
           optional<data_ptr_t> rawDenomData;
           try {
-            rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomInputID()).at(data_as_ratio->GetDenomName() + data_as_ratio->GetDenomDataInfo().GetNameSuffix()).get(), data_as_ratio->GetDenomProjInfo());
+            rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomDataset()).at(data_as_ratio->GetDenomName() + data_as_ratio->GetDenomDataInfo().GetNameSuffix()).get(), data_as_ratio->GetDenomProjInfo());
           } catch (std::out_of_range&) {
             rawDenomData = nullopt;
           }
@@ -902,7 +902,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (legendID > 0u && legendID <= legendBoxVector.size()) {
               legendBoxVector[legendID - 1]->AddEntry(*data->GetLegendLabel(), (dataIndex - hasRefFunc));
             } else {
-              ERROR("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetInputID());
+              ERROR("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetDataset());
             }
           }
           pad_ptr->Update();  // adds something to the list of primitives
@@ -913,7 +913,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
       optional<data_ptr_t> rawData;
       try {
-        rawData = GetDataClone(dataBuffer.at(data->GetInputID()).at(data->GetName() + data->GetDataInfo().GetNameSuffix()).get(), data->GetProjInfo());
+        rawData = GetDataClone(dataBuffer.at(data->GetDataset()).at(data->GetName() + data->GetDataInfo().GetNameSuffix()).get(), data->GetProjInfo());
       } catch (std::out_of_range&) {
         rawData = nullopt;
       }

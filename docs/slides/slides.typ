@@ -347,7 +347,7 @@
           table.hline(stroke: 1pt + rgb("d0d7de")),
           [`file`], [Save all requested plots into a single ROOT file.],
           table.hline(stroke: 1pt + rgb("d0d7de")),
-          [`inputs`], [Save input data for requested plots into a ROOT file.],
+          [`data`], [Save input data for requested plots into a ROOT file.],
         )
       ]
     ],
@@ -445,10 +445,10 @@
           int main(int argc, char* argv[])
           {
             PlotManager pm;
-            pm.AddInput("inputAlias", "/path/to/file.root");
+            pm.AddDataset("datasetName", "/path/to/file.root");
             { // ---------------------------------------------------------
               Plot plot("plotName", "groupName");
-              plot[1].AddData("dataObjectName", "inputAlias", "my label");
+              plot[1].AddData("dataObjectName", "datasetName", "my label");
               plot[1].AddLegend();
               plot[1].AddText("some text");
               plot[1]["X"].SetTitle("x axis title");
@@ -463,10 +463,10 @@
           ```python
           def main():
             pm = PlotManager()
-            pm.AddInput("inputAlias", "/path/to/file.root")
+            pm.AddDataset("datasetName", "/path/to/file.root")
             # -----------------------------------------------------------
             plot = Plot("plotName", "groupName")
-            plot[1].AddData("dataObjectName", "inputAlias", "my label")
+            plot[1].AddData("dataObjectName", "datasetName", "my label")
             plot[1].AddLegend()
             plot[1].AddText("some text")
             plot[1]['X'].SetTitle("x axis title")
@@ -505,7 +505,7 @@
 
 
 #slide[
-  #slide-title("Adding Input Data")
+  #slide-title("Registering Data Sources")
   #grid(
     columns: (42%, 55%),
     gutter: 3%,
@@ -516,7 +516,7 @@
 
       - Shell environment variables (including user-defined ones) are supported and expanded automatically.
 
-      - Multiple files may be registered under the same alias using lists and/or successive `AddInput()` calls.
+      - Multiple files may be registered under the same alias using lists and/or successive `AddDataset()` calls.
 
       - Adding a directory automatically registers all ROOT files it contains, including those in subdirectories.
 
@@ -530,34 +530,34 @@
       #code-block(
         [
           ```cpp
-          pm.AddInput("inputAliasA", "/path/to/file1.root");
+          pm.AddDataset("datasetA", "/path/to/file1.root");
 
-          pm.AddInput("inputAliasB", SRC_DIR + "../rel/path/file2.root");
+          pm.AddDataset("datasetB", SRC_DIR + "../rel/path/file2.root");
 
-          pm.AddInput("inputAliasC", "${HOME}/path/to/file/file3.root");
+          pm.AddDataset("datasetC", "${HOME}/path/to/file/file3.root");
 
-          pm.AddInput("inputAliasD", {"/path/to/file4.root",
+          pm.AddDataset("datasetD", {"/path/to/file4.root",
                                       "/path/to/file5.root"});
 
-          pm.AddInput("inputAliasE", "/path/to/directory/");
+          pm.AddDataset("datasetE", "/path/to/directory/");
 
-          pm.AddInput("inputAliasF", "/path/to/file6.root:dir/or/list");
+          pm.AddDataset("datasetF", "/path/to/file6.root:dir/or/list");
           ```
         ],
         [
           ```python
-          pm.AddInput("inputAliasA", "/path/to/file1.root")
+          pm.AddDataset("datasetA", "/path/to/file1.root")
 
-          pm.AddInput("inputAliasB", SRC_DIR + "../rel/path/file2.root")
+          pm.AddDataset("datasetB", SRC_DIR + "../rel/path/file2.root")
 
-          pm.AddInput("inputAliasC", "${HOME}/path/to/file/file3.root")
+          pm.AddDataset("datasetC", "${HOME}/path/to/file/file3.root")
 
-          pm.AddInput("inputAliasD", ["/path/to/file4.root",
+          pm.AddDataset("datasetD", ["/path/to/file4.root",
                                       "/path/to/file5.root"])
 
-          pm.AddInput("inputAliasE", "/path/to/directory/")
+          pm.AddDataset("datasetE", "/path/to/directory/")
 
-          pm.AddInput("inputAliasF", "/path/to/file6.root:dir/or/list")
+          pm.AddDataset("datasetF", "/path/to/file6.root:dir/or/list")
           ```
         ],
       )
@@ -565,23 +565,23 @@
         [
           ```cpp
           auto myHist = new TH1D("myHist", "", 100, -5, 5);
-          pm.AddInput("inputAliasG", myHist);
+          pm.AddDataset("datasetG", myHist);
 
           auto myGraph = new TGraph();
           myGraph->SetName("myGraph"); // graph needs a name!
           auto myFunc = new TF1("myFunc", "gaus", -5, 5);
-          pm.AddInput("inputAliasG", {myGraph, myFunc});
+          pm.AddDataset("datasetG", {myGraph, myFunc});
           ```
         ],
         [
           ```python
           myHist = ROOT.TH1D("myHist", "", 100, -5, 5)
-          pm.AddInput("inputAliasG", myHist)
+          pm.AddDataset("datasetG", myHist)
 
           myGraph = ROOT.TGraph()
           myGraph.SetName("myGraph")  # graph needs a name!
           myFunc = ROOT.TF1("myFunc", "gaus", -5, 5)
-          pm.AddInput("inputAliasG", [myGraph, myFunc])
+          pm.AddDataset("datasetG", [myGraph, myFunc])
           ```
         ],
       )
@@ -591,7 +591,7 @@
 ]
 
 #slide[
-  #slide-title("Plot Layout")
+  #slide-title("Plot Appearence")
   #grid(
     columns: (45%, 50%),
     gutter: 5%,
@@ -605,6 +605,10 @@
       - Several ready-to-use templates (e.g. `1d`, `2d`, `1d_ratio`) are provided with SciRooPlot.
 
       - Existing templates can be used directly or modified to create custom layouts.
+      
+      - Axis ranges, titles, scales, and other axis properties are configured intuitively through plot[pad]['X'], ['Y'], and ['Z'].
+      
+      - List of accessors of Plot, Pad and Axis in appendix.
     ],
     [
       #code-block(
@@ -657,6 +661,7 @@
           pm.AddPlotTemplate(PlotManager::GetPlotTemplate("1d"));
           // create new plot on basis of 1d template:
           Plot plot("myPlot", "myGroup", "1d");
+          plot[1]['X'].SetRange(0., 10.).SetTitle("x title");
           ```
         ],
         [
@@ -664,8 +669,112 @@
           pm.AddPlotTemplate(PlotManager.GetPlotTemplate("1d"))
           # create a new plot based on the "1d" template
           plot = Plot("myPlot", "myGroup", "1d")
+          plot[1]['X'].SetRange(0., 10.).SetTitle("x title")
           ```
         ],
+      )
+    ],
+  )
+]
+
+
+#slide[
+  #slide-title("Adding Data")
+  #grid(
+    columns: (45%, 50%),
+    gutter: 5%,
+    [
+    - The data-type agnostic `AddData()` function accepts ROOT histograms, graphs, functions, trees, and CSV tables.
+        
+    - Data is identified by name and automatically searched for under the registered input alias across all associated files.
+    
+    - Directory or list paths within ROOT files can be prepended to object names to disambiguate identical names.
+
+    - Data from multiple input aliases can be combined seamlessly within the same plot.
+
+    - By default, the first added object defines the plot frame. This can be overridden via `SetDefinesFrame()`.
+    
+    - Ratios are added analogously via `AddRatio()` and provide additional ratio-specific options.
+        
+    - Supports ratios between many combinations of data types (histograms, graphs and functions), including interpolation for incompatible binning or coordinates.
+
+    - Legend entries are generated automatically and inherit the appearance of the corresponding data by default.
+    
+    ],
+    [
+      #code-block(
+        [
+          ```cpp
+          Plot plot("myPlot", "myGroup", "1d");
+          
+          plot[1].AddData("myGraph", "datasetA", "g");
+          plot[1].AddData("myFunc", "datasetA", "f");
+          plot[1].AddData("path/to/myHist", "datasetB", "h");
+          
+          plot[1].AddData("largerHisto", "datasetB")
+                         .SetDefinesFrame();
+
+          plot[1].AddRatio("numDataName", "datasetA",
+                           "denomDataName", "datasetB",
+                           "r");
+          
+          // generates a legend with entries "g", "h", "f" and "r"
+          plot[1].AddLegend(0.9, 0.1); // rel. (x, y) pos. in pad
+          ```
+        ],
+        [
+
+        ],
+      )
+    ],
+  )
+]
+
+#slide[
+  #slide-title("Data Appearance WIP")
+  #grid(
+    columns: (45%, 50%),
+    gutter: 5%,
+    [
+    - Appearance is configured by chaining setters directly to AddData() or later via plot[1](dataID) or plot[1].GetData(dataID).
+
+    - SetOptions() accepts both predefined drawing styles (e.g. `points`, `curve`, `band`, `line`, `hist`) and native ROOT drawing option strings.
+  
+    - Labels support placeholders such as `<mean>`, `<integral>`, `<entries>`, `<maximum>`, etc., which are expanded automatically from the displayed data.
+    
+    - Reusable DataLayouts can be defined once and applied across many plots to ensure a consistent appearance.
+
+    - Data layouts may also contain the input alias, allowing both the input source and the visual appearance to be reused together.
+    
+    - See the appendix for the complete list of available Data and Ratio setters.
+        
+    ],
+    [
+      #code-block(
+        [
+        ```cpp
+        plot[1].AddData("hist", "datasetA",
+                        "mean = <mean[.2f]>")
+                      .SetOptions(points);
+
+        plot[1].AddData("func", "inputLabelB")
+                        .SetOptions("HIST C");
+
+        // modify later
+        plot[1](2).SetColor(kRed);
+
+        Data dataLayout = Data()
+          .SetDataset("datasetA")
+          .SetOptions(points)
+          .SetMarker(kBlue, kFullCircle, 1.2);
+
+        // reuse appearance (and input alias)
+        plot[1].AddData("graph1", dataLayout);
+        plot[1].AddData("graph2", dataLayout);
+        ```
+        ],[
+        
+]
       )
     ],
   )
