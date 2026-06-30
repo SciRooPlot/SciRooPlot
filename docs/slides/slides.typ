@@ -92,7 +92,7 @@
 #slide[
   #if lang == "py" {
     slide-title(
-      "SciRooPlot User Manual                                 Python Version",
+      "SciRooPlot User Manual                               Python Version",
     )
   } else {
     slide-title(
