@@ -33,12 +33,12 @@ Now you are ready to use SciRooPlot -- Happy plotting!
 
 A new project is created by running:
 ```
-  srp create <projectName> [<folderName>]
+  srp init-cpp <projectName> [<folderName>]
 ```
 This will create a directory called `folderName` (or `projectName` if no folder name was specified) in your current directory and provide working setup to start your project.
 Alternatively, you can also create a python-based project:
 ```
-  srp create-python <projectName> [<folderName>]
+  srp init-py <projectName> [<folderName>]
 ```
 The default code will already be ready to use, allowing you to generate you first plot simply by typing
 ```

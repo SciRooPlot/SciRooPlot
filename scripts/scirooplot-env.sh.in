@@ -89,8 +89,8 @@ function srp() {
     source "${SCIROOPLOT_ENV}"
   elif [[ "${1}" == "cd" && -z "${2}" ]]; then
     cd "${SCIROOPLOT_SOURCE_DIR}/build"
-  elif [[ "${1}" == "create" || "${1}" == "create-python" ]]; then
-    local isPython=0; [[ "${1}" == *python ]] && isPython=1
+  elif [[ "${1}" == "init-cpp" || "${1}" == "init-py" ]]; then
+    local isPython=0; [[ "${1}" == "init-py" ]] && isPython=1
     local project_name="${2}"
     local project_path="${project_name}"
     [ -n "${3}" ] && project_path="${3}"
@@ -205,7 +205,7 @@ _plot_completions_zsh() {
 
 _srp_completions_zsh() {
 
-  local general_commands=('update' 'cd' 'create' 'create-python' 'projects' 'reset' 'clean' 'help')
+  local general_commands=('update' 'cd' 'init-cpp' 'init-py' 'projects' 'reset' 'clean' 'help')
   local project_commands=('remove' 'select' 'show' 'path' 'set' 'get')
   local project_commands_with_prop=('set' 'get')
   local properties=('EXE' 'OUT' 'NAME')
@@ -242,7 +242,7 @@ _srp_completions_zsh() {
     property)
       if [[ " ${project_commands_with_prop[@]} " =~ " ${words[2]} " ]]; then
         _arguments '3:profiles:(${properties})'
-      elif [[ "${words[2]}" == "create" ]]; then
+      elif [[ "${words[2]}" == init-* ]]; then
         _files -/
       fi
     ;;
@@ -317,7 +317,7 @@ _plot_completions_bash() {
 
 _srp_completions_bash() {
 
-  local general_commands=('update cd create create-python projects reset clean help')
+  local general_commands=('update cd init-cpp init-py projects reset clean help')
   local project_commands=('remove select show path set get')
   local project_commands_with_prop=('set get')
   local properties=('EXE OUT NAME')
@@ -356,7 +356,7 @@ _srp_completions_bash() {
   3)
     if [[ " ${project_commands_with_prop[@]} " =~ " ${COMP_WORDS[COMP_CWORD-2]} " ]]; then
       COMPREPLY=( $(compgen -W "${properties}" -- "${COMP_WORDS[COMP_CWORD]}") )
-    elif [[ "${COMP_WORDS[COMP_CWORD-2]}" == "create" ]]; then
+    elif [[ "${COMP_WORDS[COMP_CWORD-2]}" == init-* ]]; then
       COMPREPLY=( $(compgen -d -- "${COMP_WORDS[COMP_CWORD]}") )
     else
       COMPREPLY=( )

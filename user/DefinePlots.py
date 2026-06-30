@@ -61,7 +61,7 @@ def DefinePlots(pm: PlotManager):
   plot[1]['Y'].SetLog()
   pm.AddPlot(plot)
   # -----------------------------------------------------------------------
-  
+
 def main():
   pm = PlotManager()
   DefineInputIdentifiers(pm)

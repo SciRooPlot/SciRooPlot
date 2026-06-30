@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
 
   if (command == "help") {
     PRINT("srp (projects | path | reset | clean)");
-    PRINT("srp (create | remove | select | show) (<PROJECT_NAME> | @current)");
+    PRINT("srp (init-cpp | init-py | remove | select | show) (<PROJECT_NAME> | @current)");
     PRINT("srp (set | get) (<PROJECT_NAME> | @current) (NAME | EXE | OUT) <SETTING>");
     PRINT("srp (open | print) <FILE_NAME>");
   } else if (command == "open") {

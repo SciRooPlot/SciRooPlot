@@ -23,14 +23,6 @@
   }
 }
 
-#let create-cmd = {
-  if lang == "py" {
-    [create-python]
-  } else {
-    [create]
-  }
-}
-
 #let feature(title, desc) = rect(
   radius: 8pt,
   fill: rgb("#f8fafc"),
@@ -98,19 +90,23 @@
 
 
 #slide[
-  #v(5% * slide-height)
-  #line(
-    length: 100%,
-    stroke: 3pt + accent-color,
-  )
+  #if lang == "py" {
+    slide-title(
+      "SciRooPlot User Manual                                 Python Version",
+    )
+  } else {
+    slide-title(
+      "SciRooPlot User Manual                                    C++ Version",
+    )
+  }
   #place(
+    dy: 1cm,
     center + horizon,
     image("logo.png", width: 22cm),
   )
-  #v(76% * slide-height)
-  #line(
-    length: 100%,
-    stroke: 3pt + accent-color,
+  #place(
+    bottom + right,
+    terminal("Scientific Plotting Made Simple"),
   )
 ]
 
@@ -232,9 +228,15 @@
     gutter: 0%,
     [
       - Initialize a new SciRooPlot project:
-        #terminal[
-          #prompt srp #create-cmd myProject [someDir]
+      #if lang == "py" {
+        terminal[
+          #prompt srp init-py myProject [someDir]
         ]
+      } else {
+        terminal[
+          #prompt srp init-cpp myProject [someDir]
+        ]
+      }
 
       - Creates a project directory (`./someDir` or `./myProject`).
 
@@ -482,9 +484,9 @@
         [
           This documentation uses the
           #if lang == "py" {
-            [Python interface. #linebreak() Find the #link("https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_cpp.pdf")[#text(fill: main-color)[C++ version] here].]
+            [Python interface. #linebreak() Find the #link("https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_cpp.pdf")[#text(fill: main-color)[C++ version]] here.]
           } else {
-            [C++ interface. #linebreak() Find the #link("https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_py.pdf")[#text(fill: main-color)[Python version] here].]
+            [C++ interface. #linebreak() Find the #link("https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_py.pdf")[#text(fill: main-color)[Python version]] here.]
           }
         ]
       }
@@ -662,32 +664,6 @@
           pm.AddPlotTemplate(PlotManager.GetPlotTemplate("1d"))
           # create a new plot based on the "1d" template
           plot = Plot("myPlot", "myGroup", "1d")
-          ```
-        ],
-      )
-    ],
-  )
-]
-
-
-#slide[
-  #slide-title("Data Modifiers")
-  #grid(
-    columns: (50%, 50%),
-    gutter: 0%,
-    [
-
-    ],
-    [
-      #code-block(
-        [
-          ```cpp
-
-          ```
-        ],
-        [
-          ```python
-
           ```
         ],
       )
