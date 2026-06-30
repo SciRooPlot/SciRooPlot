@@ -274,6 +274,11 @@ void PlotManager::AddDataset(const string& dataset, const vector<TObject*>& inpu
   }
   dir->cd();
   for (auto object : inputDataList) {
+    string name = object->GetName();
+    if (name.empty()) {
+      WARNING("Cannot add nameless object of type {} to dataset {}", object->ClassName(), dataset);
+      continue;
+    }
     object->Write();
   }
   file.Close();
