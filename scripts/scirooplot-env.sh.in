@@ -60,7 +60,8 @@ function plot() {
     (
       cd "${user_dir}";
       if (( ! isPython )); then
-        (make -j6 1> /dev/null) || exit 1
+        err=$(cmake .. 2>&1 >/dev/null) || { echo "$err"; exit 1; }
+        (make -j6 > /dev/null) || exit 1
       fi
       if [[ ! -f "${user_plotdef}" || "${user_exec}" -nt "${user_plotdef}" ]]; then
         if (( isPython )); then
