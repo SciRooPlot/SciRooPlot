@@ -48,26 +48,26 @@ namespace SciRooPlot
  * Default constructor.
  */
 //**************************************************************************************************
-Plot::Plot(const string& name, const string& figureGroupAndCategory, const optional<string>& plotTemplateName) : Plot()
+Plot::Plot(const string& name, const string& group, const optional<string>& plotTemplateName) : Plot()
 {
-  if (str_contains(figureGroupAndCategory, ".")) {
-    ERROR("Figure group must not contain '.'!");
+  if (str_contains(group, ".")) {
+    ERROR("Group must not contain '.'!");
     std::exit(EXIT_FAILURE);
   }
-  if (str_contains(name, " ") || str_contains(figureGroupAndCategory, " ")) {
+  if (str_contains(name, " ") || str_contains(group, " ")) {
     ERROR("Whitespaces are not allowed in plot or group names!");
-    ERROR("-> Please check '{}' in '{}'!", name, figureGroupAndCategory);
+    ERROR("-> Please check '{}' in '{}'!", name, group);
     std::exit(EXIT_FAILURE);
   }
 
   mName = name;
-  mFigureGroup = figureGroupAndCategory;
+  mGroup = group;
   mPlotTemplateName = plotTemplateName;
 
-  // in case category was specified via figureGroup/my/category/tree
-  if (auto subPathPos = figureGroupAndCategory.find("/"); subPathPos != string::npos) {
-    mFigureGroup = figureGroupAndCategory.substr(0, subPathPos);
-    mFigureCategory = figureGroupAndCategory.substr(subPathPos + 1);
+  // in case subgroup was specified via group/subgroup
+  if (auto subPathPos = group.find("/"); subPathPos != string::npos) {
+    mGroup = group.substr(0, subPathPos);
+    mSubgroup = group.substr(subPathPos + 1);
   }
   UpdateUniqueName();
 }
@@ -77,12 +77,17 @@ Plot::Plot(const string& name, const string& figureGroupAndCategory, const optio
  * Constructor from existing plot.
  */
 //**************************************************************************************************
-Plot::Plot(const Plot& otherPlot, const string& name, const string& figureGroup, const optional<string>& figureCategory)
+Plot::Plot(const Plot& otherPlot, const string& name, const string& group)
 {
   *this = otherPlot.Clone();
   mName = name;
-  mFigureGroup = figureGroup;
-  mFigureCategory = figureCategory;
+  mGroup = group;
+
+  // in case subgroup was specified via group/subgroup
+  if (auto subPathPos = group.find("/"); subPathPos != string::npos) {
+    mGroup = group.substr(0, subPathPos);
+    mSubgroup = group.substr(subPathPos + 1);
+  }
   UpdateUniqueName();
 }
 
@@ -95,12 +100,12 @@ Plot::Plot(const ptree& plotTree)
 {
   try {
     mName = plotTree.get<string>("name");
-    mFigureGroup = plotTree.get<string>("figure_group");
+    mGroup = plotTree.get<string>("group");
   } catch (...) {
     ERROR("Could not construct data from ptree.");
     std::exit(EXIT_FAILURE);
   }
-  read_from_tree(plotTree, mFigureCategory, "figure_category");
+  read_from_tree(plotTree, mSubgroup, "subgroup");
   read_from_tree(plotTree, mPlotTemplateName, "plot_template_name");
   read_from_tree(plotTree, mPlotDimensions.width, "width");
   read_from_tree(plotTree, mPlotDimensions.height, "height");
@@ -122,12 +127,12 @@ Plot::Plot(const ptree& plotTree)
 
 //**************************************************************************************************
 /**
- * Update the unique internal name of the plot based on the current name, figure group and category.
+ * Update the unique internal name of the plot based on the current name, group and subgroup.
  */
 //**************************************************************************************************
 void Plot::UpdateUniqueName()
 {
-  mUniqueName = mName + ":" + mFigureGroup + ((mFigureCategory) ? "/" + *mFigureCategory : "");
+  mUniqueName = mName + ":" + mGroup + ((mSubgroup) ? "/" + *mSubgroup : "");
 }
 
 //**************************************************************************************************
@@ -139,8 +144,8 @@ ptree Plot::GetPropertyTree() const
 {
   ptree plotTree;
   plotTree.put("name", mName);
-  plotTree.put("figure_group", mFigureGroup);
-  put_in_tree(plotTree, mFigureCategory, "figure_category");
+  plotTree.put("group", mGroup);
+  put_in_tree(plotTree, mSubgroup, "subgroup");
   put_in_tree(plotTree, mPlotTemplateName, "plot_template_name");
   put_in_tree(plotTree, mPlotDimensions.width, "width");
   put_in_tree(plotTree, mPlotDimensions.height, "height");
@@ -214,16 +219,22 @@ void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
   print_pt(print_pt, pt, 0);
 }
 
-void Plot::SetFigureGroup(const string& figureGroup)
+void Plot::SetGroup(const string& group)
 {
-  mFigureGroup = figureGroup;
+  mGroup = group;
+
+  // in case subgroup was specified via group/subgroup
+  if (auto subPathPos = group.find("/"); subPathPos != string::npos) {
+    mGroup = group.substr(0, subPathPos);
+    mSubgroup = group.substr(subPathPos + 1);
+  }
   UpdateUniqueName();
 }
 
-void Plot::SetFigureCategory(const string& figureCategory)
+void Plot::SetSubgroup(const string& subgroup)
 {
-  if (!figureCategory.empty()) {
-    mFigureCategory = figureCategory;
+  if (!subgroup.empty()) {
+    mSubgroup = subgroup;
     UpdateUniqueName();
   }
 }
@@ -309,8 +320,8 @@ auto Plot::SetTransparent() -> decltype(*this)
 void Plot::operator+=(const Plot& plot)
 {
   mName = plot.mName;
-  mFigureGroup = plot.mFigureGroup;
-  mFigureCategory = plot.mFigureCategory;
+  mGroup = plot.mGroup;
+  mSubgroup = plot.mSubgroup;
   mPlotTemplateName = plot.mPlotTemplateName;
 
   if (plot.mPlotDimensions.width) mPlotDimensions.width = plot.mPlotDimensions.width;

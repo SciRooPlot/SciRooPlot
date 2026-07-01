@@ -59,8 +59,7 @@ class PlotManager
 
   // settings for output
   void SetOutputDirectory(const std::string& path);
-  void SetUseUniquePlotNames(bool useUniquePlotNames = true);  // if true plot names are set to plotName_IN_figureGroup[.pdf,...]
-  void SetOutputFileName(const std::string& fileName);         // in case canvases should be saved in .root file
+  void SetOutputFileName(const std::string& fileName);  // in case canvases should be saved in .root file
 
   // create or append to a dataset.
   void AddDataset(const std::string& dataset, const std::vector<std::string>& inputFilePathList);
@@ -78,11 +77,11 @@ class PlotManager
   // add plots or templates for plots to the manager
   void AddPlot(Plot& plot);
   void AddPlotTemplate(Plot plotTemplate);
-  void AddColorPlot(const std::string& plotName, const std::string& figureGroup, const std::vector<int32_t>& colors = {});
+  void AddColorPlot(const std::string& plotName, const std::string& group, const std::vector<int32_t>& colors = {});
 
   // saving plot definitions to external file (which can e.g. be read by the command-line plotting app included in the framework)
-  void DumpPlots(const std::string& plotFileName, const std::string& figureGroup = "", const std::vector<std::string>& plotNames = {}) const;
-  void DumpPlot(const std::string& plotFileName, const std::string& figureGroup, const std::string& plotName) const;
+  void DumpPlots(const std::string& plotFileName, const std::string& group = "", const std::vector<std::string>& plotNames = {}) const;
+  void DumpPlot(const std::string& plotFileName, const std::string& group, const std::string& plotName) const;
 
   // read plots from plot definition file created by the above functions (regular expressions are
   // allowed); the mode variable can be "load" to add these plots to the manager, or "find" to check
@@ -91,19 +90,19 @@ class PlotManager
                             const std::string& mode = "load",
                             const std::string& plotName = ".*",
                             const std::string& group = ".*",
-                            const std::string& category = ".*");
+                            const std::string& subgroup = ".*");
 
   // after desired plots were added to the manager they can be created
   // the program then will try to extract the required input data (TH1,TGraph,..) from the specified
   // input files (.root output of your analysis) there are several modes: "interactive": you will be
   // prompted the plot and can scroll through all plots by double clicking on the right side of the
   // canvas "pdf", "png": plots will be stored as such files in the specified output directory
-  // (subdirectories are created for the figure groups and categories) "macro": plots are saved as
+  // (subdirectories are created for the groups and subgroups) "macro": plots are saved as
   // root macros (.C) "file": all plots (canvases) are put in a .root file with a directory
-  // structure corresponding to figure groups and categories
-  void CreatePlots(const std::string& figureGroup = "", const std::string& figureCategory = "",
+  // structure corresponding to groups and subgroups
+  void CreatePlots(const std::string& group = "", const std::string& subgroup = "",
                    std::vector<std::string> plotNames = {}, const std::string& outputMode = "pdf");
-  void CreatePlot(const std::string& name, const std::string& figureGroup, const std::string& figureCategory = "",
+  void CreatePlot(const std::string& name, const std::string& group, const std::string& subgroup = "",
                   const std::string& outputMode = "pdf");
   void PrintLoadedPlots() const;
 
@@ -121,7 +120,6 @@ class PlotManager
   std::string mInputsRootFile{"Inputs.root"};
   std::map<std::string, std::shared_ptr<TCanvas>> mPlotLedger;
   std::string mOutputDirectory;
-  bool mUseUniquePlotNames{};
   std::vector<Plot> mPlots;
   std::vector<Plot> mPlotTemplates;
   std::map<std::string, boost::property_tree::ptree> mPropertyTreeCache;

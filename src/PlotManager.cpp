@@ -200,22 +200,12 @@ void PlotManager::ClearDataBuffer()
 
 //**************************************************************************************************
 /**
- * Sets path for output files. Plots will be stored in hierarchical structure according to figure groups and categories.
+ * Sets path for output files. Plots will be stored in hierarchical structure according to groups and subgroups.
  */
 //**************************************************************************************************
 void PlotManager::SetOutputDirectory(const string& path)
 {
   mOutputDirectory = path;
-}
-
-//**************************************************************************************************
-/**
- * Whether or not to append the figure group and category to the plot name when saved to file.
- */
-//**************************************************************************************************
-void PlotManager::SetUseUniquePlotNames(bool useUniquePlotNames)
-{
-  mUseUniquePlotNames = useUniquePlotNames;
 }
 
 //**************************************************************************************************
@@ -353,13 +343,13 @@ void PlotManager::LoadInputDataFiles(const string& configFileName)
 //**************************************************************************************************
 void PlotManager::AddPlot(Plot& plot)
 {
-  if (plot.GetFigureGroup() == "PLOT_TEMPLATES") {
+  if (plot.GetGroup() == "PLOT_TEMPLATES") {
     ERROR("You cannot use reserved group name 'PLOT_TEMPLATES'!");
   }
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [plot](Plot& curPlot) mutable {
                                 bool removePlot = curPlot.GetUniqueName() == plot.GetUniqueName();
-                                if (removePlot) WARNING("Plot {} in {} already exists and will be replaced.", curPlot.GetName(), curPlot.GetFigureGroup());
+                                if (removePlot) WARNING("Plot {} in {} already exists and will be replaced.", curPlot.GetName(), curPlot.GetGroup());
                                 return removePlot;
                               }),
                mPlots.end());
@@ -373,7 +363,7 @@ void PlotManager::AddPlot(Plot& plot)
 //**************************************************************************************************
 void PlotManager::AddPlotTemplate(Plot plotTemplate)
 {
-  plotTemplate.SetFigureGroup("PLOT_TEMPLATES");
+  plotTemplate.SetGroup("PLOT_TEMPLATES");
   mPlotTemplates.erase(std::remove_if(mPlotTemplates.begin(), mPlotTemplates.end(),
                                       [plotTemplate](Plot& curPlotTemplate) mutable {
                                         bool removePlot = curPlotTemplate.GetUniqueName() == plotTemplate.GetUniqueName();
@@ -389,9 +379,9 @@ void PlotManager::AddPlotTemplate(Plot plotTemplate)
  * Add plot showing the specified colors or root color panel as fallback.
  */
 //**************************************************************************************************
-void PlotManager::AddColorPlot(const string& plotName, const string& figureGroup, const vector<int32_t>& colors)
+void PlotManager::AddColorPlot(const string& plotName, const string& group, const vector<int32_t>& colors)
 {
-  Plot plot(plotName, figureGroup);
+  Plot plot(plotName, group);
   plot.SetDimensions(800, 800, true);
   plot[1].SetPosition(0., 0., 1., 1.);
   if (colors.empty()) {
@@ -432,10 +422,10 @@ void PlotManager::AddColorPlot(const string& plotName, const string& figureGroup
 
 //**************************************************************************************************
 /**
- * Dump plots to xml file.
+ * Dump plots to info file.
  */
 //**************************************************************************************************
-void PlotManager::DumpPlots(const string& plotFileName, const string& figureGroup,
+void PlotManager::DumpPlots(const string& plotFileName, const string& group,
                             const vector<string>& plotNames) const
 {
   set<string> usedTemplates;
@@ -446,10 +436,10 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
   ptree plotTree;
   for (const vector<Plot>& plots : {std::ref(mPlotTemplates), std::ref(mPlots)}) {
     for (const Plot& plot : plots) {
-      if (plot.GetFigureGroup() == "PLOT_TEMPLATES" && usedTemplates.find(plot.GetName()) == usedTemplates.end()) {
+      if (plot.GetGroup() == "PLOT_TEMPLATES" && usedTemplates.find(plot.GetName()) == usedTemplates.end()) {
         continue;
-      } else if (!figureGroup.empty()) {
-        if (plot.GetFigureGroup() != figureGroup) continue;
+      } else if (!group.empty()) {
+        if (plot.GetGroup() != group) continue;
         if (!plotNames.empty()) {
           bool found = false;
           for (const auto& plotName : plotNames) {
@@ -460,7 +450,7 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
       }
       string displayedName = plot.GetUniqueName();
       std::replace(displayedName.begin(), displayedName.end(), '.', '_');
-      plotTree.put_child(("GROUP::" + plot.GetFigureGroup() + ".PLOT::" + displayedName), plot.GetPropertyTree());
+      plotTree.put_child(("GROUP::" + plot.GetGroup() + ".PLOT::" + displayedName), plot.GetPropertyTree());
     }
   }
   std::filesystem::path plotFile = expand_path(plotFileName);
@@ -470,10 +460,10 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& figureGrou
   using boost::property_tree::write_info;
   write_info(plotFile.string(), plotTree);
 }
-void PlotManager::DumpPlot(const string& plotFileName, const string& figureGroup,
+void PlotManager::DumpPlot(const string& plotFileName, const string& group,
                            const string& plotName) const
 {
-  DumpPlots(plotFileName, figureGroup, {plotName});
+  DumpPlots(plotFileName, group, {plotName});
 }
 
 //**************************************************************************************************
@@ -511,8 +501,8 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     ERROR("Plot {} was already created. Replacing it.", plot.GetUniqueName());
     mPlotLedger.erase(plot.GetUniqueName());
   }
-  if (plot.GetFigureGroup().empty()) {
-    ERROR("No figure group was specified for plot {}.", plot.GetName());
+  if (plot.GetGroup().empty()) {
+    ERROR("No group was specified for plot {}.", plot.GetName());
     return false;
   }
   Plot fullPlot = plot;
@@ -528,7 +518,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     }
   }
   if (isPrintMode) {
-    INFO("Settings of plot {}{}{} from group {}{}{}:", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? "/" + *fullPlot.GetFigureCategory() : ""), logger::end_color());
+    INFO("Settings of plot {}{}{} from group {}{}{}:", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetGroup() + ((fullPlot.GetSubgroup()) ? "/" + *fullPlot.GetSubgroup() : ""), logger::end_color());
     Plot::Print(fullPlot.GetPropertyTree(), "");
     return true;
   }
@@ -543,7 +533,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     ERROR("Too many custom colors in one session. Aborting...");
     std::exit(EXIT_FAILURE);
   }
-  LOG("Created plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetFigureGroup() + ((fullPlot.GetFigureCategory()) ? "/" + *fullPlot.GetFigureCategory() : ""), logger::end_color());
+  LOG("Created plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetGroup() + ((fullPlot.GetSubgroup()) ? "/" + *fullPlot.GetSubgroup() : ""), logger::end_color());
 
   // if interactive mode is specified, open window instead of saving the plot
   if (isInteractiveMode) {
@@ -673,13 +663,13 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     return true;
   }
 
-  string fileName = (mUseUniquePlotNames) ? plot.GetUniqueName() : plot.GetName();
+  string fileName = plot.GetName();
   std::replace(fileName.begin(), fileName.end(), ':', '_');
   std::replace(fileName.begin(), fileName.end(), '/', '_');
 
   // create output folders and files
-  string folderName = mOutputDirectory + "/" + plot.GetFigureGroup();
-  if (plot.GetFigureCategory()) folderName += "/" + *plot.GetFigureCategory();
+  string folderName = mOutputDirectory + "/" + plot.GetGroup();
+  if (plot.GetSubgroup()) folderName += "/" + *plot.GetSubgroup();
   string fullName = folderName + "/" + fileName + fileEnding;
 
   if (isGif) {
@@ -707,17 +697,18 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
  * Creates plots.
  */
 //**************************************************************************************************
-void PlotManager::CreatePlots(const string& figureGroup, const string& figureCategory,
+void PlotManager::CreatePlots(const string& group, const string& subgroup,
                               vector<string> plotNames, const string& outputMode)
 {
+  // FIXME: inconsistent use of group and subgroup
   // first determine which data needs to be loaded
   vector<Plot*> selectedPlots;
   map<int32_t, set<int32_t>> requiredData;
 
   for (auto& plot : mPlots) {
-    if (!figureGroup.empty() && !(plot.GetFigureGroup() == figureGroup)) {
+    if (!subgroup.empty() && !(plot.GetGroup() == group)) {
       continue;
-    } else if (!figureCategory.empty() && !(plot.GetFigureCategory() && *plot.GetFigureCategory() == figureCategory)) {
+    } else if (!subgroup.empty() && !(plot.GetSubgroup() && *plot.GetSubgroup() == subgroup)) {
       continue;
     } else if (!plotNames.empty() && std::find(plotNames.begin(), plotNames.end(), plot.GetName()) == plotNames.end()) {
       continue;
@@ -769,7 +760,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
   // were definitions for all requested plots available?
   if (!plotNames.empty()) {
     for (const auto& plotName : plotNames) {
-      WARNING("Could not find plot {}{}{} in group {}{}{}.", logger::begin_color(logger::Color::Green), plotName, logger::end_color(), logger::begin_color(logger::Color::Yellow), figureGroup + ((!figureCategory.empty()) ? "/" + figureCategory : ""), logger::end_color());
+      WARNING("Could not find plot {}{}{} in group {}{}{}.", logger::begin_color(logger::Color::Green), plotName, logger::end_color(), logger::begin_color(logger::Color::Yellow), subgroup + ((!subgroup.empty()) ? "/" + subgroup : ""), logger::end_color());
     }
   }
 
@@ -778,7 +769,7 @@ void PlotManager::CreatePlots(const string& figureGroup, const string& figureCat
     // generate plots
     for (auto plot : selectedPlots) {
       if (!GeneratePlot(*plot, outputMode))
-        ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetFigureGroup() + ((plot->GetFigureCategory()) ? "/" + *plot->GetFigureCategory() : ""), logger::end_color());
+        ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup() + ((plot->GetSubgroup()) ? "/" + *plot->GetSubgroup() : ""), logger::end_color());
     }
   } catch (...) {
     ERROR("An unexpected error occurred. The application will now exit.");
@@ -953,13 +944,13 @@ void PlotManager::PrintLoadedPlots() const
   INFO("===============================================");
   INFO("================ Loaded Plots =================");
 
-  string figureGroup;
+  string group;
   for (const auto& plot : mPlots) {
-    if (figureGroup != plot.GetFigureGroup()) {
-      figureGroup = plot.GetFigureGroup();
-      INFO("{}", figureGroup);
+    if (group != plot.GetGroup()) {
+      group = plot.GetGroup();
+      INFO("{}", group);
     }
-    INFO(" - {}{}", plot.GetName(), (plot.GetFigureCategory()) ? " (" + *plot.GetFigureCategory() + ")" : "");
+    INFO(" - {}{}", plot.GetName(), (plot.GetSubgroup()) ? " (" + *plot.GetSubgroup() + ")" : "");
     INFO("     ndata = {}", plot.GetDataCount());
   }
   INFO("{} plots were loaded.", mPlots.size());
@@ -1175,13 +1166,13 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
                                        const string& mode,
                                        const string& plotName,
                                        const string& group,
-                                       const string& category)
+                                       const string& subgroup)
 {
   uint32_t nFoundPlots{};
   bool isSearchRequest = (mode == "find");
 
   std::regex groupRegex{group};
-  std::regex categoryRegex{category};
+  std::regex subgroupRegex{subgroup};
   std::regex plotNameRegex{plotName};
 
   ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
@@ -1202,18 +1193,18 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
       }
 
       const string& plotName = plotTree.second.get<string>("name");
-      const string& figureGroup = plotTree.second.get<string>("figure_group");
-      optional<string> figureCategoryOpt;
-      read_from_tree(plotTree.second, figureCategoryOpt, "figure_category");
-      string figureCategory = (figureCategoryOpt) ? *figureCategoryOpt : "";
+      const string& group = plotTree.second.get<string>("group");
+      optional<string> subgroupOpt;
+      read_from_tree(plotTree.second, subgroupOpt, "subgroup");
+      string subgroup = (subgroupOpt) ? *subgroupOpt : "";
 
-      if (!std::regex_match(figureCategory, categoryRegex) || !std::regex_match(plotName, plotNameRegex)) {
+      if (!std::regex_match(subgroup, subgroupRegex) || !std::regex_match(plotName, plotNameRegex)) {
         continue;
       }
 
       ++nFoundPlots;
       if (isSearchRequest) {
-        INFO(" - {}{}{} in group {}{}{}", logger::begin_color(logger::Color::Green), plotName, logger::end_color(), logger::begin_color(logger::Color::Yellow), figureGroup + ((!figureCategory.empty()) ? "/" + figureCategory : ""), logger::end_color());
+        INFO(" - {}{}{} in group {}{}{}", logger::begin_color(logger::Color::Green), plotName, logger::end_color(), logger::begin_color(logger::Color::Yellow), group + ((!subgroup.empty()) ? "/" + subgroup : ""), logger::end_color());
       } else {
         try {
           Plot plot(plotTree.second);
@@ -1225,7 +1216,7 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
     }
   }
   if (nFoundPlots == 0) {
-    ERROR("Found no plots matching the request {}{}{} in {}{}/{}{}.", logger::begin_color(logger::Color::Green), plotName, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, category, logger::end_color());
+    ERROR("Found no plots matching the request {}{}{} in {}{}/{}{}.", logger::begin_color(logger::Color::Green), plotName, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, subgroup, logger::end_color());
   } else if (nFoundPlots > 1) {
     INFO("Found {} plots matching the request.", nFoundPlots);
   }
@@ -1782,7 +1773,7 @@ void PlotManager::SaveProject(const string& projectName)
   std::ofstream tabCompFile;
   tabCompFile.open(fs::path(plotsFile).parent_path() / "tabcomp.csv");
   for (const auto& plot : mPlots) {
-    string line = plot.GetName() + "," + plot.GetFigureGroup() + "," + ((plot.GetFigureCategory()) ? *plot.GetFigureCategory() : "") + "\n";
+    string line = plot.GetName() + "," + plot.GetGroup() + "," + ((plot.GetSubgroup()) ? *plot.GetSubgroup() : "") + "\n";
     tabCompFile << line;
   }
   tabCompFile.close();

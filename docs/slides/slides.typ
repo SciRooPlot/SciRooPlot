@@ -230,15 +230,15 @@
       - Initialize a new SciRooPlot project:
         #if lang == "py" {
           terminal[
-            #prompt srp init-py myProject [someDir]
+            #prompt srp init-py \<project\> [\<dir\>]
           ]
         } else {
           terminal[
-            #prompt srp init-cpp myProject [someDir]
+            #prompt srp init-cpp \<project\> [\<dir\>]
           ]
         }
 
-      - Creates a project directory (`./someDir` or `./myProject`).
+      - Creates a project directory (`./<project>` or `./<dir>`).
 
       - Contains #plot-def-file, where plot specifications are defined.
 
@@ -264,7 +264,7 @@
           *Select another project*
           #v(-0.5em)
           #terminal[
-            #prompt srp select myOtherProject
+            #prompt srp select \<project\>
           ]
 
           *List all projects*
@@ -276,7 +276,7 @@
           *Change output directory* (default is `./output`)
           #v(-0.5em)
           #terminal[
-            #prompt srp set myProject OUT /path/to/output
+            #prompt srp set \<project\> OUT \<path\>
           ]
         ],
       )
@@ -311,15 +311,15 @@
     columns: (55%, 40%),
     gutter: 5%,
     [
-      - Plots specified in #plot-def-file have a *figure group* and *plot name*.
+      - Plots specified in #plot-def-file have a unique *name* within a *group*.
 
       - These identifiers are used to select plots from the command line.
         #terminal[
-          #prompt plot \<figureGroup\> \<plotName\> [\<mode\>]
+          #prompt plot \<group\> \<name\> [\<mode\>]
         ]
 
       - Tab completion simplifies browsing through available names.
-      - Both `<figureGroup>` and `<plotName>` support regular expressions.
+      - Both `<group>` and `<name>` support regular expressions.
       - Multiple plots can be generated with a single command.
 
       #block(

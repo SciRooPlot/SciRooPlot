@@ -61,27 +61,27 @@ srp projects
 ```
 By default, all internal settings as well as the plot definitions are stored in `~/.SciRooPlot`. This can be changed by defining an environment variable called `SCIROOPLOT_CONFIG_PATH`.
 
-Generally, each of your plots will belong to a figure group and is accessed by the plotting app as follows:
+Generally, each of your plots will belong to a group and is accessed by the plotting app as follows:
 ```
-plot <figureGroup> <plotName> <mode>
+plot <group> <name> [<mode>]
 ```
-For bash and zsh this program provides an auto-completion feature, which means you can tab through the available commands, figure groups, and plot names.
-Regular expressions are supported for the options `<figureGroup>` and `<plotName>`.
+For bash and zsh this program provides an auto-completion feature, which means you can tab through the available commands, groups, and plot names.
+Regular expressions are supported for the options `<group>` and `<name>`.
 This allows the creation of multiple plots matching the specified pattern in a single request.
-For example `plot paperPlots .+` would generate all plots defined within the figure group called `paperPlots` and `plot thesisFigures 'moneyPlot[1,2]'` creates `moneyPlot1` and `moneyPlot2` from the figure group `thesisFigures`.
+For example `plot paperPlots .+` would generate all plots defined within the group called `paperPlots` and `plot thesisFigures 'moneyPlot[1,2]'` creates `moneyPlot1` and `moneyPlot2` from the group `thesisFigures`.
 To specify multiple text options one can use `plot analysisQA 'trackProperty_(tight|loose|nominal)CutSetting'`.
 Note that expressions involving special characters (in the previous examples `[]` or `()` and `|`) have to be wrapped in quotes since otherwise your shell will try to interpret them before they are passed to the plotting app.
-To select only a sub-category within the figure group, use `<figureGroup/some/category>` (for example `plot myFigureGroup/QAPlots controlObservable`).
+To select only a subgroup within the group, use `<group/some/subgroup>` (for example `plot myGroup/QAPlots controlObservable`).
 By default, the optional `mode` argument is set to `show` and you can leave it out in the command.
 Possible alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`, `data`.
-If you have multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..) that you want to concatenate and save as a moving gif, you can create it via `plot figureGroup myPlot_bin_.+ gif`.
-To adjust the time between the frames use for example `plot figureGroup myPlot_bin_.+ gif+4`, where the number is given in tens of milliseconds (i.e. this example will create a gif with a delay of 40ms between the plots).
+If you have multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..) that you want to concatenate and save as a moving gif, you can create it via `plot myGroup myPlot_bin_.+ gif`.
+To adjust the time between the frames use for example `plot myGroup myPlot_bin_.+ gif+4`, where the number is given in tens of milliseconds (i.e. this example will create a gif with a delay of 40ms between the plots).
 
 The modes that save files to disk, the plotting app needs to know where to store the output. This can be configured via: 
 ```
 srp set <projectName> OUT </path/to/output/folder>
 ```
-Within this folder, the files will be organized in subdirectories corresponding to the figure groups and categories.
+Within this folder, the files will be organized in subdirectories corresponding to the groups and subgroups.
 
 In interactive mode, one can browse through the requested plots using the keys 's' (right), 'a' (left) and 'q' (quit) or by double-clicking on the right and left side of the plot, respectively.
 
@@ -110,9 +110,9 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
 // each plot will be handed over to the manager after it was defined
 { // -----------------------------------------------------------------------
   // create the Plot object
-  Plot plot("myPlot1", "myFigureGroup"); // plots are organized in user defined figure groups
-  // optionally you can also define figure categories (and subcategories) within a figure group
-  plot.SetFigureCategory("QA-Plots/closureTests");
+  Plot plot("myPlot1", "myGroup"); // plots are organized in user defined groups
+  // optionally you can also define subgroups within a group
+  plot.SetSubgroup("QA-Plots/closureTests");
    // you always have to specify height and width of the plot:
   plot.SetDimensions(710, 710);
   plot.SetTransparent(); // for all other settings see the class definition in inc/Plot.h
@@ -226,7 +226,7 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
 
 // we could now add plenty of more plots to the manager....
 { // -----------------------------------------------------------------------
-  //Plot plot("myPlot2", "myFigureGroup/myCategory");
+  //Plot plot("myPlot2", "myGroup/mySubgroup");
   // ...
   // ...
   // pm.AddPlot(plot);
@@ -234,14 +234,14 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
 
 // it is also possible to construct a plot based on a copy of another
 { // -----------------------------------------------------------------------
-  Plot plot("myPlot", "myFigureGroup2/my/figure/sub/category");
+  Plot plot("myPlot", "myGroup2/my/sub/group");
   // ...
   plot[1].AddData("folder1/histName2", "datasetA", "myLabel2");
   //...
 
   // now we want to have exact same plot, but with some additional data points
   // this can be helpful to avoid code duplication
-  Plot plot2(plot, "myPlot2", "myFigureGroup2");
+  Plot plot2(plot, "myPlot2", "myGroup2");
   plot2[1].AddData("graphName1", "datasetB", "more data");
 
   // now add both to the manager
@@ -252,7 +252,7 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
 // in case you are dealing with {2,3,n}-dimensional input data, it is also possible
 // to book only projections of the data for your plot
 { // -----------------------------------------------------------------------
-  Plot plot("myProjectionsIllustration", "myFigureGroup2");
+  Plot plot("myProjectionsIllustration", "myGroup2");
 
   // projection of 2d data on X axis
   plot[1].AddData("my2dhist1", "datasetA").ProjectX();
@@ -328,7 +328,7 @@ pm.AddPlotTemplate(plotTemplate);
 // once this is done, you can define plots based on these templates
 // by specifying their name as the third argument in the new plots' constructor:
 { // -----------------------------------------------------------------------
-  Plot plot("test1d_ratio", "myFigureGroup", "1d_ratio");
+  Plot plot("test1d_ratio", "myGroup", "1d_ratio");
 
   plot[1].AddData("graph2", "datasetA", "5 TeV #Delta = #sqrt{s}")
   .SetMarker(kRed, kFullCircle, 1.2).SetMaxRangeX(40);
@@ -376,7 +376,7 @@ data_layout_t pp_7TeV
 };
 
 { // -----------------------------------------------------------------------
-  Plot plot("test1d", "myFigureGroup", "1d");
+  Plot plot("test1d", "myGroup", "1d");
   plot[1].AddData("graph2", "datasetA").SetLayout(pp_5TeV);
 
   // if the layout defines a dataset
@@ -394,7 +394,7 @@ data_layout_t pp_7TeV
 } // -----------------------------------------------------------------------
 
 { // -----------------------------------------------------------------------
-  Plot plot("testColorGradients", "myFigureGroup", "1d");
+  Plot plot("testColorGradients", "myGroup", "1d");
 
   // some of the data properties (e.g. styles, colors and line widths) we may not want to specify for each of the data separately
   // therefore, as you have already seen in the definitions of the plot templates above, it is possible to define some default settings per pad
