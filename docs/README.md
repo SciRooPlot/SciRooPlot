@@ -33,12 +33,12 @@ Now you are ready to use SciRooPlot -- Happy plotting!
 
 A new project is created by running:
 ```
-  srp init-cpp <projectName> [<folderName>]
+  srp init-cpp <project> [<dir>]
 ```
-This will create a directory called `folderName` (or `projectName` if no folder name was specified) in your current directory and provide working setup to start your project.
+This will create a directory called `dir` (or `project` if no folder name was specified) in your current directory and provide working setup to start your project.
 Alternatively, you can also create a python-based project:
 ```
-  srp init-py <projectName> [<folderName>]
+  srp init-py <project> [<dir>]
 ```
 The default code will already be ready to use, allowing you to generate you first plot simply by typing
 ```
@@ -49,7 +49,7 @@ The resulting executable will automatically be rebuilt (in case of cpp code) and
 
 You may have multiple such projects in parallel, and can switch between them via:
 ```
-srp select <projectName>
+srp select <project>
 ```
 To print the available configuration options run:
 ```
@@ -79,7 +79,7 @@ To adjust the time between the frames use for example `plot myGroup myPlot_bin_.
 
 The modes that save files to disk, the plotting app needs to know where to store the output. This can be configured via: 
 ```
-srp set <projectName> OUT </path/to/output/folder>
+srp set <project> OUT </path/to/output/folder>
 ```
 Within this folder, the files will be organized in subdirectories corresponding to the groups and subgroups.
 

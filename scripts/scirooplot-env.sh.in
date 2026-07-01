@@ -14,12 +14,12 @@ fi
 # enable completion only for interactive shells
 case "$-" in
   *i*) ;;
-  *) return 1 ;;
+  *) return 0 ;;
 esac
 
 if [[ ! -f "${SCIROOPLOT_BIN}/plot" || ! -f "${SCIROOPLOT_BIN}/srp" ]]; then
   echo "SciRooPlot is not installed. Cannot initialize plotting functions."
-  return 1
+  return 0
 fi
 
 function plot() {
