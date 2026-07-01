@@ -9,7 +9,7 @@ def DefineDatasets(pm: PlotManager):
   pm.AddDataset("pseudodata", inputFolder + "/subfolder/file3.root:pseudodata")
   # pm.AddDataset("test", SRC_DIR + "../rel/path/to/file.root")
 
-def DefinePlotTemplates(pm: PlotManager):
+def DefineTemplates(pm: PlotManager):
   # -----------------------------------------------------------------------
   plot = PlotManager.GetPlotTemplate("1d")
   pm.AddPlotTemplate(plot)
@@ -65,7 +65,7 @@ def DefinePlots(pm: PlotManager):
 def main():
   pm = PlotManager()
   DefineDatasets(pm)
-  DefinePlotTemplates(pm)
+  DefineTemplates(pm)
   DefinePlots(pm)
   pm.SaveProject("PROJECT_NAME")
 

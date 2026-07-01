@@ -181,7 +181,7 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
   
   // it is possible to add multiple legends to the plot (as done above) which are then identified by the order they were added
   // in order to express that the label for a specific data should be put in the second legend you can do the following:
-  plot[1].AddData("function1", "datasetA", "my label in second legend").SetLegendID(2);
+  plot[1].AddData("function1", "datasetA", "my label in second legend").SetLegend(2);
 
   // the styles and colors of the respective legend entries are by default based on the data that is represented
   // you can however override this and specify different default settings for the legend
@@ -379,9 +379,9 @@ data_layout_t pp_7TeV
   Plot plot("test1d", "myFigureGroup", "1d");
   plot[1].AddData("graph2", "datasetA").SetLayout(pp_5TeV);
 
-  // if your data layout also contains an input identifier
+  // if the layout defines a dataset
   pp_5TeV.SetDataset("datasetA");
-  // you can add the data and layout in the following way:
+  // you can add data using this layout in the following way:
   plot[1].AddData("graph2", pp_5TeV);
   plot[1].AddData("graph2", pp_7TeV[data]);
   plot[1].AddData("graph2", pp_7TeV[mc]);

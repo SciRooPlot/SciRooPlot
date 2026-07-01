@@ -461,7 +461,7 @@ class Plot::Pad::Data
   virtual Data& SetScaleMaximum(double_t scaleFactor);
   virtual Data& SetShowOverflowBins(bool showOverflowBins = true);
   virtual Data& SetLegendLabel(const std::string& legendLabel);
-  virtual Data& SetLegendID(uint8_t legendID);
+  virtual Data& SetLegend(uint8_t legendID);
   virtual Data& SetOptions(const std::string& options);
   virtual Data& SetOptions(drawing_options_t optionAlias);
   virtual Data& UnsetOptions();
@@ -707,7 +707,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(SetScaleMaximum)
   FORWARD_TO_DATA(SetShowOverflowBins)
   FORWARD_TO_DATA(SetLegendLabel)
-  FORWARD_TO_DATA(SetLegendID)
+  FORWARD_TO_DATA(SetLegend)
   FORWARD_TO_DATA(SetOptions)
   FORWARD_TO_DATA(UnsetOptions)
   FORWARD_TO_DATA(SetTextFormat)

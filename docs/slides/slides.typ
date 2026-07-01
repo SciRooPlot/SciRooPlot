@@ -228,15 +228,15 @@
     gutter: 0%,
     [
       - Initialize a new SciRooPlot project:
-      #if lang == "py" {
-        terminal[
-          #prompt srp init-py myProject [someDir]
-        ]
-      } else {
-        terminal[
-          #prompt srp init-cpp myProject [someDir]
-        ]
-      }
+        #if lang == "py" {
+          terminal[
+            #prompt srp init-py myProject [someDir]
+          ]
+        } else {
+          terminal[
+            #prompt srp init-cpp myProject [someDir]
+          ]
+        }
 
       - Creates a project directory (`./someDir` or `./myProject`).
 
@@ -505,7 +505,7 @@
 
 
 #slide[
-  #slide-title("Registering Data Sources")
+  #slide-title("Registering Datasets")
   #grid(
     columns: (42%, 55%),
     gutter: 3%,
@@ -770,7 +770,7 @@
 
         // reuse appearance (and input alias)
         plot[1].AddData("graph1", dataLayout);
-        plot[1].AddData("graph2", dataLayout);
+        plot[1].AddData("graph2", dataLayout).SetColor(kBlue);
         ```
         ],[
         

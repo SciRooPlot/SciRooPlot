@@ -1655,7 +1655,7 @@ auto Plot::Pad::Data::SetLegendLabel(const string& legendLabel) -> decltype(*thi
   mLegend.label = legendLabel;
   return *this;
 }
-auto Plot::Pad::Data::SetLegendID(uint8_t legendID) -> decltype(*this)
+auto Plot::Pad::Data::SetLegend(uint8_t legendID) -> decltype(*this)
 {
   mLegend.id = legendID;
   return *this;
