@@ -145,7 +145,7 @@ _plot_completions_zsh() {
 
   local modes=('show' 'pdf' 'eps' 'svg' 'png' 'gif' 'file' 'data' 'find' 'macro' 'print')
   local groups
-  local groups_and_categories
+  local groups_with_subgroups
   local names
   
   local tabcomp_file="$(${SCIROOPLOT_BIN}/srp path "@current")/tabcomp.csv"
@@ -153,25 +153,25 @@ _plot_completions_zsh() {
     return
   fi
 
-  # first find groups and groups including categories
-  local plotName figureGroup figureCategory
-  while IFS="," read -r plotName figureGroup figureCategory
+  # first find groups and groups with subgroups
+  local name_in group_in subgroup_in
+  while IFS="," read -r name_in group_in subgroup_in
   do
-    groups+=("${figureGroup}")
-    [ -n "${figureCategory}" ] && groups_and_categories+=("${figureGroup}/${figureCategory}")
+    groups+=("${group_in}")
+    [ -n "${subgroup_in}" ] && groups_with_subgroups+=("${group_in}/${subgroup_in}")
   done < <(LC_ALL=C sort -t',' -k2,3 -u "${tabcomp_file}")
 
   updatePlotNames() {
-    local group category
-    IFS="/" read -r group category <<< "${1}"
+    local group subgroup
+    IFS="/" read -r group subgroup <<< "${1}"
     names=()
     
-    local plotName figureGroup figureCategory
-    while IFS="," read -r plotName figureGroup figureCategory
+    local name_in group_in subgroup_in
+    while IFS="," read -r name_in group_in subgroup_in
     do
-      [[ -n "${category}" && "${figureCategory}" != "${category}" && "${figureCategory}" != "${category}/"* ]] && continue
-      names+=("${plotName}")
-    done < <( grep "^.*,${group},${category}" "${tabcomp_file}" )
+      [[ -n "${subgroup}" && "${subgroup_in}" != "${subgroup}" && "${subgroup_in}" != "${subgroup}/"* ]] && continue
+      names+=("${name_in}")
+    done < <( grep "^.*,${group},${subgroup}" "${tabcomp_file}" )
   }
 
   _arguments \
@@ -183,7 +183,7 @@ _plot_completions_zsh() {
   case $state in
     group)
       if [[ "${words[2]}" == *"/"* ]]; then
-        _arguments '1:profiles:(${groups_and_categories})'
+        _arguments '1:profiles:(${groups_with_subgroups})'
       else
         _arguments '1:profiles:(${groups})'
       fi
@@ -263,7 +263,7 @@ _plot_completions_bash() {
 
   local modes=('show pdf eps svg png gif file data find macro print')
   local groups
-  local groups_and_categories
+  local groups_with_subgroups
   local names
 
   local tabcomp_file="$(${SCIROOPLOT_BIN}/srp path "@current")/tabcomp.csv"
@@ -271,31 +271,31 @@ _plot_completions_bash() {
     return
   fi
 
-  # first find groups and groups including categories
-  local plotName figureGroup figureCategory
-  while IFS="," read -r plotName figureGroup figureCategory
+  # first find groups and groups with subgroups
+  local name_in group_in subgroup_in
+  while IFS="," read -r name_in group_in subgroup_in
   do
-    groups+=" ${figureGroup}"
-    [ -n "${figureCategory}" ] && groups_and_categories+=" ${figureGroup}/${figureCategory}"
+    groups+=" ${group_in}"
+    [ -n "${subgroup_in}" ] && groups_with_subgroups+=" ${group_in}/${subgroup_in}"
   done < <(LC_ALL=C sort -t',' -k2,3 -u "${tabcomp_file}")
 
   updatePlotNames() {
-    local group category
-    IFS="/" read -r group category <<< "${1}"
+    local group subgroup
+    IFS="/" read -r group subgroup <<< "${1}"
     names=()
     
-    local plotName figureGroup figureCategory
-    while IFS="," read -r plotName figureGroup figureCategory
+    local name_in group_in subgroup_in
+    while IFS="," read -r name_in group_in subgroup_in
     do
-      [[ -n "${category}" && "${figureCategory}" != "${category}" && "${figureCategory}" != "${category}/"* ]] && continue
-      names+=" ${plotName}"
-    done < <( grep "^.*,${group},${category}" "${tabcomp_file}" )
+      [[ -n "${subgroup}" && "${subgroup_in}" != "${subgroup}" && "${subgroup_in}" != "${subgroup}/"* ]] && continue
+      names+=" ${name_in}"
+    done < <( grep "^.*,${group},${subgroup}" "${tabcomp_file}" )
   }
 
   case "${COMP_CWORD}" in
   1)
     if [[ "${COMP_WORDS[COMP_CWORD]}" == *"/"* ]]; then
-      COMPREPLY=( $(compgen -W "${groups_and_categories}" -- "${COMP_WORDS[COMP_CWORD]}") )
+      COMPREPLY=( $(compgen -W "${groups_with_subgroups}" -- "${COMP_WORDS[COMP_CWORD]}") )
     else
       COMPREPLY=( $(compgen -W "${groups}" -- "${COMP_WORDS[COMP_CWORD]}") )
     fi
