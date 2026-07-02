@@ -51,28 +51,28 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  string group;
+  string name;
   string mode;
-  string figureGroupAndCategory;
-  string plotNames;
 
   // handle user inputs
   try {
     po::options_description arguments("positional arguments");
-    arguments.add_options()("figureGroupAndCategory", po::value<string>(), "figure group")("plotNames", po::value<string>(), "plot name")("mode", po::value<string>(), "mode");
+    arguments.add_options()("group", po::value<string>(), "group")("name", po::value<string>(), "name")("mode", po::value<string>(), "mode");
     po::positional_options_description pos;
-    pos.add("figureGroupAndCategory", 1);
-    pos.add("plotNames", 1);
+    pos.add("group", 1);
+    pos.add("name", 1);
     pos.add("mode", 1);
 
     po::variables_map vm;
     po::store(po::command_line_parser(argc, argv).options(arguments).positional(pos).run(), vm);
     po::notify(vm);
 
-    if (vm.count("figureGroupAndCategory")) {
-      figureGroupAndCategory = vm["figureGroupAndCategory"].as<string>();
+    if (vm.count("group")) {
+      group = vm["group"].as<string>();
     }
-    if (vm.count("plotNames")) {
-      plotNames = vm["plotNames"].as<string>();
+    if (vm.count("name")) {
+      name = vm["name"].as<string>();
     }
     if (vm.count("mode")) {
       mode = vm["mode"].as<string>();
@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
 
   if (mode.empty()) mode = "show";
 
-  if (plotNames.empty()) {
+  if (group.empty() || name.empty()) {
     ERROR("No plots were specified.");
     return 1;
   }
@@ -97,24 +97,20 @@ int main(int argc, char* argv[])
   plotManager.SetOutputDirectory(outputDir);
   gSystem->Setenv("SCIROOPLOT_USER_DATA_DIR", std::filesystem::path(inputsFile).parent_path().string().data());
 
-  string group = ".+";
-  string category = ".*";
-
-  vector<string> groupCat = split_string(figureGroupAndCategory, '/', true);
-  if (groupCat.size() > 0 && !groupCat[0].empty()) {
-    group = groupCat[0];
-  }
-  if (groupCat.size() > 1 && !groupCat[1].empty()) {
-    category = groupCat[1];
-    category += "(/.*)?";  // search also in subcategories
+  vector<string> split = split_string(group, '/', true);
+  group = split[0];
+  string subgroup = ".*";
+  if (split.size() > 1 && !split[1].empty()) {
+    subgroup = split[1];
+    subgroup += "(/.*)?";  // search also in subgroups
   }
 
   if (mode != "find") {
     plotManager.LoadInputDataFiles(inputsFile);
     if (outputDir.empty() && mode != "show") {
-      WARNING(R"(Please run "srp set <PROJECT_NAME> OUT </path/to/outputDir>" to set the output directory.)");
+      WARNING(R"(Please run "srp set <project> OUT <dir>" to set the output directory.)");
     }
   }
-  plotManager.ExtractPlotsFromFile(plotsFile, mode, plotNames, group, category);
+  plotManager.ExtractPlotsFromFile(plotsFile, mode, name, group, subgroup);
   return 0;
 }
