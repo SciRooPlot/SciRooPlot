@@ -340,7 +340,7 @@
           table.hline(stroke: 1pt + rgb("d0d7de")),
           [`pdf`, `eps`, `svg`, `png`], [Export plots as graphics files.],
           table.hline(stroke: 1pt + rgb("d0d7de")),
-          [`macro`], [Generate a ROOT `.C` macros that reproduce the plots.],
+          [`macro`], [Generate ROOT `.C` macros that reproduce the plots.],
           table.hline(stroke: 1pt + rgb("d0d7de")),
           [`gif`],
           [Combine matching plots into an animated GIF #linebreak() (`gif+N` sets the frame delay in units of 10 ms).],

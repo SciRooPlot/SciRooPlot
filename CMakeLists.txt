@@ -76,14 +76,6 @@ message(STATUS "Boost version: ${Boost_VERSION}")
 message(STATUS "fmt   version: ${fmt_VERSION}")
 
 # -----------------------
-# ROOT test file generation
-# -----------------------
-execute_process(
-  COMMAND ${ROOT_EXECUTABLE} -l -q ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generateTestFiles.C
-  OUTPUT_VARIABLE root_output # avoids printout
-)
-
-# -----------------------
 # Python bindings
 # -----------------------
 if(BUILD_PYTHON_BINDINGS)
@@ -240,10 +232,26 @@ export(
   FILE "${CMAKE_CURRENT_BINARY_DIR}/SciRooPlotTargets.cmake"
 )
 set(SCIROOPLOT_BUILD_DATA_DIR ${CMAKE_CURRENT_BINARY_DIR}/share/scirooplot)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/user ${CMAKE_CURRENT_BINARY_DIR}/TestFiles
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/user
             DESTINATION ${SCIROOPLOT_BUILD_DATA_DIR}
             PATTERN ".*" EXCLUDE)
-file(REMOVE_RECURSE ${CMAKE_CURRENT_BINARY_DIR}/TestFiles)
+
+add_custom_command(
+  OUTPUT ${SCIROOPLOT_BUILD_DATA_DIR}/TestFiles/.generated
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${SCIROOPLOT_BUILD_DATA_DIR}
+  COMMAND ${ROOT_EXECUTABLE} -l -q -b
+          ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generateTestFiles.C
+  COMMAND ${CMAKE_COMMAND} -E touch
+          ${SCIROOPLOT_BUILD_DATA_DIR}/TestFiles/.generated
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generateTestFiles.C
+  WORKING_DIRECTORY ${SCIROOPLOT_BUILD_DATA_DIR}
+  COMMENT "Generating ROOT test files"
+)
+add_custom_target(generate_testfiles ALL
+  DEPENDS ${SCIROOPLOT_BUILD_DATA_DIR}/TestFiles/.generated
+)
+add_dependencies(srp generate_testfiles)
+
 set(SCIROOPLOT_ROOT "${CMAKE_CURRENT_BINARY_DIR}")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/scirooplot-env.sh.in
