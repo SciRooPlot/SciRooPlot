@@ -87,14 +87,18 @@ function plot() {
 function srp() {
   if [[ "${1}" == "update" ]]; then
     if command -v brew >/dev/null 2>&1 \
-      && [[ "$SCIROOPLOT_BIN" == "$(brew --prefix)/"* ]]; then
+      && [[ "${SCIROOPLOT_BIN}" == "$(brew --prefix)/"* ]]; then
       brew upgrade scirooplot
     else
       "${SCIROOPLOT_SOURCE_DIR}/scripts/install.sh" "${2}"
     fi
     source "${SCIROOPLOT_ENV}"
   elif [[ "${1}" == "cd" && -z "${2}" ]]; then
-    cd "${SCIROOPLOT_SOURCE_DIR}/build"
+    if [[ -d "${SCIROOPLOT_SOURCE_DIR}/build" ]]; then
+      cd "${SCIROOPLOT_SOURCE_DIR}/build"
+    else
+      echo "No build directory found."
+    fi
   elif [[ "${1}" == "init-cpp" || "${1}" == "init-py" ]]; then
     local isPython=0; [[ "${1}" == "init-py" ]] && isPython=1
     local project_name="${2}"
