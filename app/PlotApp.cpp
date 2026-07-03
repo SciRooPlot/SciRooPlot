@@ -35,15 +35,15 @@ namespace po = boost::program_options;
 
 int main(int argc, char* argv[])
 {
-  auto [inputsFile, plotsFile, outputDir] = PlotManager::GetProjectSettings();
+  auto [datasetsFile, plotsFile, outputDir] = PlotManager::GetProjectSettings();
 
   // check if specified input files exist
-  if (inputsFile.empty() || plotsFile.empty()) {
+  if (datasetsFile.empty() || plotsFile.empty()) {
     ERROR("No plotting project is selected. Exiting.");
     return 1;
   }
-  if (!file_exists(inputsFile)) {
-    ERROR(R"(File "{}" does not exist! Exiting.)", inputsFile);
+  if (!file_exists(datasetsFile)) {
+    ERROR(R"(File "{}" does not exist! Exiting.)", datasetsFile);
     return 1;
   }
   if (!file_exists(plotsFile)) {
@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
   // create plotting environment
   PlotManager plotManager;
   plotManager.SetOutputDirectory(outputDir);
-  gSystem->Setenv("SCIROOPLOT_USER_DATA_DIR", std::filesystem::path(inputsFile).parent_path().string().data());
+  gSystem->Setenv("SCIROOPLOT_USER_DATA_DIR", std::filesystem::path(datasetsFile).parent_path().string().data());
 
   vector<string> split = split_string(group, '/', true);
   group = split[0];
@@ -105,12 +105,15 @@ int main(int argc, char* argv[])
     subgroup += "(/.*)?";  // search also in subgroups
   }
 
-  if (mode != "find") {
-    plotManager.LoadInputDataFiles(inputsFile);
+  plotManager.LoadPlots(plotsFile, name, group, subgroup);
+  if (mode == "list") {
+    plotManager.ListPlots();
+  } else {
+    plotManager.LoadDatasets(datasetsFile);
     if (outputDir.empty() && mode != "show") {
       WARNING(R"(Please run "srp set <project> OUT <dir>" to set the output directory.)");
     }
+    plotManager.CreatePlots(mode);
   }
-  plotManager.ExtractPlotsFromFile(plotsFile, mode, name, group, subgroup);
   return 0;
 }

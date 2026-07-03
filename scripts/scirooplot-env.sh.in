@@ -152,7 +152,7 @@ function srp() {
 
 _plot_completions_zsh() {
 
-  local modes=('show' 'pdf' 'eps' 'svg' 'png' 'gif' 'file' 'data' 'find' 'macro' 'print')
+  local modes=('show' 'pdf' 'eps' 'svg' 'png' 'gif' 'file' 'data' 'list' 'macro' 'print')
   local groups
   local groups_with_subgroups
   local names
@@ -270,7 +270,7 @@ _srp_completions_zsh() {
 
 _plot_completions_bash() {
 
-  local modes=('show pdf eps svg png gif file data find macro print')
+  local modes=('show pdf eps svg png gif file data list macro print')
   local groups
   local groups_with_subgroups
   local names

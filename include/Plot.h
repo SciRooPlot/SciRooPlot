@@ -527,8 +527,8 @@ class Plot::Pad::Data
 
   virtual Data& Define(const std::string& key, const std::string& value);
   virtual Data& Filter(const std::string& filter);
-  virtual Data& Entries(uint64_t nEntries);
-  virtual Data& Entries(uint64_t entryMin, uint64_t entryMax);
+  virtual Data& Entries(uint32_t nEntries);
+  virtual Data& Entries(uint32_t entryMin, uint32_t entryMax);
 
  protected:
   friend class PlotManager;
@@ -597,8 +597,8 @@ class Plot::Pad::Data
     definitions_t definitions;
     std::optional<std::vector<std::string>> filters{};
     struct entry_range_t {
-      std::optional<int64_t> min{};
-      std::optional<int64_t> max{};
+      std::optional<uint32_t> min{};
+      std::optional<uint32_t> max{};
     };
     entry_range_t entries;
     void set(const data_info_t& other)
@@ -765,8 +765,8 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 
   Ratio& Define(const std::string& key, const std::string& value);
   Ratio& Filter(const std::string& filter);
-  Ratio& Entries(uint64_t nEntries);
-  Ratio& Entries(uint64_t entryMin, uint64_t entryMax);
+  Ratio& Entries(uint32_t nEntries);
+  Ratio& Entries(uint32_t entryMin, uint32_t entryMax);
 
  protected:
   friend class PlotManager;

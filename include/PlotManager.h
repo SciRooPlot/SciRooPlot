@@ -53,11 +53,9 @@ class PlotManager
   PlotManager& operator=(PlotManager&& other) = delete;
 
   static Plot GetPlotTemplate(const std::string& plotTemplateName = "1d", double_t screenResolution = 100);
-  static std::tuple<std::string, std::string, std::string> GetProjectSettings(std::string projectName = "");
-  static std::string GetInputsFile(std::string projectName = "");
+
   void SaveProject(const std::string& projectName);
 
-  // settings for output
   void SetOutputDirectory(const std::string& path);
   void SetOutputFileName(const std::string& fileName);  // in case canvases should be saved in .root file
 
@@ -68,11 +66,8 @@ class PlotManager
   void AddDataset(const std::string& dataset, const std::vector<TObject*>& inputDataList);
   void AddDataset(const std::string& dataset, TObject* inputData);
 
-  void DumpInputDataFiles(const std::string& configFileName) const;  // save input file paths to config file
-  void LoadInputDataFiles(const std::string& configFileName);        // load the input file paths from config file
-
-  // remove all loaded input data (histograms, graphs, ...) from the manager (usually not needed)
-  void ClearDataBuffer();
+  void SaveDatasets(const std::string& configFileName) const;  // save datasets to config file
+  void LoadDatasets(const std::string& configFileName);        // load datasets from config file
 
   // add plots or templates for plots to the manager
   void AddPlot(Plot& plot);
@@ -80,35 +75,22 @@ class PlotManager
   void AddColorPlot(const std::string& plotName, const std::string& group, const std::vector<int32_t>& colors = {});
 
   // saving plot definitions to external file (which can e.g. be read by the command-line plotting app included in the framework)
-  void DumpPlots(const std::string& plotFileName, const std::string& group = "", const std::vector<std::string>& plotNames = {}) const;
-  void DumpPlot(const std::string& plotFileName, const std::string& group, const std::string& plotName) const;
+  void SavePlots(const std::string& plotsFile, const std::string& group = "", const std::vector<std::string>& plotNames = {}) const;
+  void SavePlot(const std::string& plotsFile, const std::string& group, const std::string& plotName) const;
 
-  // read plots from plot definition file created by the above functions (regular expressions are
-  // allowed); the mode variable can be "load" to add these plots to the manager, or "find" to check
-  // only if the specified plots exist (prints out this info)
-  void ExtractPlotsFromFile(const std::string& plotFileName,
-                            const std::string& mode = "load",
-                            const std::string& plotName = ".*",
-                            const std::string& group = ".*",
-                            const std::string& subgroup = ".*");
+  void LoadPlots(const std::string& plotsFile, const std::string& plotName = ".*", const std::string& group = ".*", const std::string& subgroup = ".*");
 
-  // after desired plots were added to the manager they can be created
-  // the program then will try to extract the required input data (TH1,TGraph,..) from the specified
-  // input files (.root output of your analysis) there are several modes: "interactive": you will be
-  // prompted the plot and can scroll through all plots by double clicking on the right side of the
-  // canvas "pdf", "png": plots will be stored as such files in the specified output directory
-  // (subdirectories are created for the groups and subgroups) "macro": plots are saved as
-  // root macros (.C) "file": all plots (canvases) are put in a .root file with a directory
-  // structure corresponding to groups and subgroups
-  void CreatePlots(const std::string& group = "", const std::string& subgroup = "",
-                   std::vector<std::string> plotNames = {}, const std::string& outputMode = "pdf");
-  void CreatePlot(const std::string& name, const std::string& group, const std::string& subgroup = "",
-                  const std::string& outputMode = "pdf");
-  void PrintLoadedPlots() const;
+  void CreatePlots(const std::string& mode = "pdf", const std::string& group = "", const std::string& subgroup = "", std::vector<std::string> plotNames = {});
+
+  void ListPlots() const;
+
+  void ClearDataBuffer();
+  static std::tuple<std::string, std::string, std::string> GetProjectSettings(std::string projectName = "");
+  static std::string GetDatasetsFile(std::string projectName = "");
 
  private:
   TObject* FindSubDirectory(TObject* folder, std::vector<std::string>& subDirs) const;
-  bool GeneratePlot(const Plot& plot, const std::string& outputMode = "pdf");
+  bool GeneratePlot(const Plot& plot, const std::string& mode = "pdf");
   boost::property_tree::ptree& ReadPlotTemplatesFromFile(const std::string& plotFileName);
   void SavePlotsToFile() const;
   void SaveDataToFile() const;

@@ -1254,7 +1254,7 @@ Plot::Pad::Data& Plot::Pad::AddFunction(const string& function, const optional<s
 //**************************************************************************************************
 Plot::Pad::Data& Plot::Pad::AddPoints(vector<double_t> x, vector<double_t> y, const optional<string>& label)
 {
-  int32_t nPoints = x.size();
+  size_t nPoints = x.size();
   if (!nPoints || x.size() != y.size()) {
     ERROR("Illegal arguments for adding points.");
     std::exit(EXIT_FAILURE);
@@ -1560,7 +1560,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
       vars.push_back(dataDim.var);
       binning.insert(binning.end(), dataDim.edges.begin(), dataDim.edges.end());
       binning.push_back(static_cast<double_t>(dataDim.nBins));
-      sizes.push_back(dataDim.edges.size() + 1);
+      sizes.push_back(static_cast<int32_t>(dataDim.edges.size()) + 1);
     }
     put_in_tree(dataTree, optional<vector<string>>{vars}, "data_vars");
     put_in_tree(dataTree, optional<vector<double_t>>{binning}, "data_binning");
@@ -1996,12 +1996,12 @@ auto Plot::Pad::Data::Filter(const std::string& filter) -> decltype(*this)
   }
   return *this;
 }
-auto Plot::Pad::Data::Entries(uint64_t nEntries) -> decltype(*this)
+auto Plot::Pad::Data::Entries(uint32_t nEntries) -> decltype(*this)
 {
   mDataInfo.entries.max = nEntries;
   return *this;
 }
-auto Plot::Pad::Data::Entries(uint64_t entryMin, uint64_t entryMax) -> decltype(*this)
+auto Plot::Pad::Data::Entries(uint32_t entryMin, uint32_t entryMax) -> decltype(*this)
 {
   mDataInfo.entries.min = entryMin;
   mDataInfo.entries.max = entryMax;
@@ -2185,7 +2185,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
       vars.push_back(dataDim.var);
       binning.insert(binning.end(), dataDim.edges.begin(), dataDim.edges.end());
       binning.push_back(static_cast<double_t>(dataDim.nBins));
-      sizes.push_back(dataDim.edges.size() + 1);
+      sizes.push_back(static_cast<int32_t>(dataDim.edges.size()) + 1);
     }
     put_in_tree(dataTree, optional<vector<string>>{vars}, "denomData_vars");
     put_in_tree(dataTree, optional<vector<double_t>>{binning}, "denomData_binning");
@@ -2382,7 +2382,7 @@ auto Plot::Pad::Ratio::Filter(const std::string& filter) -> decltype(*this)
   }
   return *this;
 }
-auto Plot::Pad::Ratio::Entries(uint64_t nEntries) -> decltype(*this)
+auto Plot::Pad::Ratio::Entries(uint32_t nEntries) -> decltype(*this)
 {
   if (mModMode == Mode::Num) {
     return static_cast<decltype(*this)&>(Data::Entries(nEntries));
@@ -2390,7 +2390,7 @@ auto Plot::Pad::Ratio::Entries(uint64_t nEntries) -> decltype(*this)
   mDenomDataInfo.entries.max = nEntries;
   return *this;
 }
-auto Plot::Pad::Ratio::Entries(uint64_t entryMin, uint64_t entryMax) -> decltype(*this)
+auto Plot::Pad::Ratio::Entries(uint32_t entryMin, uint32_t entryMax) -> decltype(*this)
 {
   if (mModMode == Mode::Num) {
     return static_cast<decltype(*this)&>(Data::Entries(entryMin, entryMax));
@@ -3210,7 +3210,7 @@ void Plot::Pad::LegendBox::MergeLegendEntries()
 {
   for (auto iter = mLegendEntriesUser.begin(); iter != mLegendEntriesUser.end(); ++iter) {
     if (auto legendIndex = iter->first; legendIndex >= mLegendEntries.size() + 1) {
-      for (int32_t i = mLegendEntries.size() + 1; i < legendIndex; ++i) {
+      for (size_t i = mLegendEntries.size() + 1; i < legendIndex; ++i) {
         mLegendEntries.push_back(LegendEntry());
       }
       mLegendEntries.push_back(iter->second);

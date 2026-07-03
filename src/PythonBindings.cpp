@@ -90,7 +90,7 @@ PYBIND11_MODULE(SciRooPlot, m)
         plot[1].AddData("histo", "dataset", "my label")
 
         pm.AddPlot(plot)
-        pm.CreatePlots(output_mode="pdf")
+        pm.CreatePlots(mode="pdf")
   )pbdoc";
 
   // add path to root lib to be independent of user environment
@@ -141,24 +141,23 @@ void exportPlotManager(py::module_& m)
     .def("AddDataset", overload_cast<const string&, const string&>(&PlotManager::AddDataset), arg("dataset"), arg("inputFilePath"))
     .def("AddDataset", [](PlotManager& self, const std::string& dataset, py::list objs) { py::module_ ROOT = py::module_::import("ROOT"); py::object addressof = ROOT.attr("addressof"); std::vector<TObject*> v; for (auto o : objs) v.push_back(reinterpret_cast<TObject*>(addressof(o).cast<std::uintptr_t>())); self.AddDataset(dataset, v); }, py::arg("dataset"), py::arg("inputDataList"))
     .def("AddDataset", [](PlotManager& self, const std::string& dataset, py::object obj) { py::module_ ROOT = py::module_::import("ROOT"); py::object addressof = ROOT.attr("addressof"); auto ptr = reinterpret_cast<TObject*>(addressof(obj).cast<std::uintptr_t>()); self.AddDataset(dataset, ptr); }, py::arg("dataset"), py::arg("inputData"))
-    .def("DumpInputDataFiles", &PlotManager::DumpInputDataFiles, arg("configFileName"))
-    .def("LoadInputDataFiles", &PlotManager::LoadInputDataFiles, arg("configFileName"))
+    .def("SaveDatasets", &PlotManager::SaveDatasets, arg("configFileName"))
+    .def("LoadDatasets", &PlotManager::LoadDatasets, arg("configFileName"))
     .def("AddPlot", &PlotManager::AddPlot, arg("plot"))
     .def("AddPlotTemplate", &PlotManager::AddPlotTemplate, arg("plotTemplate"))
     .def("AddColorPlot", &PlotManager::AddColorPlot, arg("plotName"), arg("group"), arg("colors") = vector<int32_t>{})
     .def("ClearDataBuffer", &PlotManager::ClearDataBuffer)
-    .def("PrintLoadedPlots", &PlotManager::PrintLoadedPlots)
-    .def("ExtractPlotsFromFile", &PlotManager::ExtractPlotsFromFile, arg("plotFileName"), arg("mode") = "load", arg("plotName") = ".*", arg("group") = ".*", arg("subgroup") = ".*")
-    .def("CreatePlots", overload_cast<const string&, const string&, vector<string>, const string&>(&PlotManager::CreatePlots), arg("group") = "", arg("subgroup") = "", arg("plotNames") = vector<string>(), arg("outputMode") = "pdf")
-    //.def("CreatePlot", overload_cast<const string&, const string&, const string&, const string&>(&PlotManager::CreatePlot), arg("name"), arg("group"), arg("subgroup") = "", arg("outputMode") = "pdf")
-    .def("DumpPlots", &PlotManager::DumpPlots, arg("plotFileName"), arg("group") = "", arg("plotNames") = vector<string>{})
-    .def("DumpPlot", &PlotManager::DumpPlot, arg("plotFileName"), arg("group"), arg("plotName"))
+    .def("ListPlots", &PlotManager::ListPlots)
+    .def("LoadPlots", &PlotManager::LoadPlots, arg("plotsFile"), arg("plotName") = ".*", arg("group") = ".*", arg("subgroup") = ".*")
+    .def("CreatePlots", &PlotManager::CreatePlots, arg("mode") = "pdf", arg("group") = "", arg("subgroup") = "", arg("plotNames") = vector<string>())
+    .def("SavePlots", &PlotManager::SavePlots, arg("plotsFile"), arg("group") = "", arg("plotNames") = vector<string>{})
+    .def("SavePlot", &PlotManager::SavePlot, arg("plotsFile"), arg("group"), arg("plotName"))
     .def("SetOutputDirectory", &PlotManager::SetOutputDirectory, arg("path"))
     .def("SetOutputFileName", &PlotManager::SetOutputFileName, arg("fileName"))
     .def("SaveProject", &PlotManager::SaveProject, arg("projectName"))
     .def_static("GetPlotTemplate", overload_cast<const string&, double_t>(&PlotManager::GetPlotTemplate), arg("plotTemplateName") = "1d", arg("screenResolution") = 100)
     .def_static("GetProjectSettings", &PlotManager::GetProjectSettings, arg("projectName") = "")
-    .def_static("GetInputsFile", &PlotManager::GetInputsFile, arg("projectName"));
+    .def_static("GetDatasetsFile", &PlotManager::GetDatasetsFile, arg("projectName"));
 }
 
 void exportPlot(py::module_& m)
@@ -334,8 +333,8 @@ void exportData(py::module_& m)
     .def("Scatter", overload_cast<const string&, const string&, const string&, const string&, const string&, const string&>(&Data::Scatter), arg("x"), arg("y"), arg("xErrLow"), arg("xErrHigh"), arg("yErrLow"), arg("yErrHigh"), ref_int)
     .def("Define", &Data::Define, arg("key"), arg("value"), ref_int)
     .def("Filter", &Data::Filter, arg("filter"), ref_int)
-    .def("Entries", overload_cast<uint64_t>(&Data::Entries), arg("nEntries"), ref_int)
-    .def("Entries", overload_cast<uint64_t, uint64_t>(&Data::Entries), arg("entryMin"), arg("entryMax"), ref_int);
+    .def("Entries", overload_cast<uint32_t>(&Data::Entries), arg("nEntries"), ref_int)
+    .def("Entries", overload_cast<uint32_t, uint32_t>(&Data::Entries), arg("entryMin"), arg("entryMax"), ref_int);
 }
 
 void exportRatio(py::module_& m)
@@ -410,8 +409,8 @@ void exportRatio(py::module_& m)
     .def("Scatter", overload_cast<const string&, const string&, const string&, const string&, const string&, const string&>(&Ratio::Scatter), arg("x"), arg("y"), arg("xErrLow"), arg("xErrHigh"), arg("yErrLow"), arg("yErrHigh"), ref_int)
     .def("Define", &Ratio::Define, arg("key"), arg("value"), ref_int)
     .def("Filter", &Ratio::Filter, arg("filter"), ref_int)
-    .def("Entries", overload_cast<uint64_t>(&Ratio::Entries), arg("nEntries"), ref_int)
-    .def("Entries", overload_cast<uint64_t, uint64_t>(&Ratio::Entries), arg("entryMin"), arg("entryMax"), ref_int);
+    .def("Entries", overload_cast<uint32_t>(&Ratio::Entries), arg("nEntries"), ref_int)
+    .def("Entries", overload_cast<uint32_t, uint32_t>(&Ratio::Entries), arg("entryMin"), arg("entryMax"), ref_int);
 }
 
 void exportAxis(py::module_& m)

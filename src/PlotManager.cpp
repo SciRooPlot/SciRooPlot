@@ -281,18 +281,18 @@ void PlotManager::AddDataset(const string& dataset, TObject* inputData)
 
 //**************************************************************************************************
 /**
- * Dump input file identifiers and paths that are currently defined in the manager to a config file.
+ * Save dataset properties currently defined in the manager to a config file.
  */
 //**************************************************************************************************
-void PlotManager::DumpInputDataFiles(const string& configFileName) const
+void PlotManager::SaveDatasets(const string& configFileName) const
 {
   ptree inputFileTree;
   for (const auto& inFileTuple : mInputFiles) {
-    ptree filesOfIdentifier;
+    ptree filesOfDataset;
     for (const auto& fileName : inFileTuple.second) {
-      filesOfIdentifier.add("FILE", fileName);
+      filesOfDataset.add("FILE", fileName);
     }
-    inputFileTree.put_child(inFileTuple.first, filesOfIdentifier);
+    inputFileTree.put_child(inFileTuple.first, filesOfDataset);
   }
   std::filesystem::path configFile = expand_path(configFileName);
   if (std::filesystem::create_directories(configFile.parent_path())) {
@@ -304,10 +304,10 @@ void PlotManager::DumpInputDataFiles(const string& configFileName) const
 
 //**************************************************************************************************
 /**
- * Load input file identifiers and paths from inputFile into manager.
+ * Load dataset properties from config file into manager.
  */
 //**************************************************************************************************
-void PlotManager::LoadInputDataFiles(const string& configFileName)
+void PlotManager::LoadDatasets(const string& configFileName)
 {
   ptree inputFileTree;
   try {
@@ -388,10 +388,10 @@ void PlotManager::AddColorPlot(const string& plotName, const string& group, cons
     plot.SetPaintColorWheel();
   } else {
     int32_t bestRows = 1;
-    int32_t bestCols = colors.size();
+    size_t bestCols = colors.size();
     double_t bestScore = -1;
     for (int32_t rows = 1; rows <= static_cast<int32_t>(colors.size()); ++rows) {
-      int32_t cols = (colors.size() + rows - 1) / rows;
+      size_t cols = (colors.size() + rows - 1) / rows;
       double_t cellW = 1.0 / cols;
       double_t cellH = 1.0 / rows;
       double_t area = cellW * cellH;
@@ -404,8 +404,8 @@ void PlotManager::AddColorPlot(const string& plotName, const string& group, cons
       }
     }
     for (size_t i = 0; i < colors.size(); ++i) {
-      int32_t r = i / bestCols;
-      int32_t c = i % bestCols;
+      size_t r = i / bestCols;
+      size_t c = i % bestCols;
       double_t x = static_cast<double_t>(c) / bestCols;
       double_t y = 1.0 - static_cast<double_t>(r) / bestRows;
       double_t w = 1.0 / bestCols;
@@ -422,10 +422,10 @@ void PlotManager::AddColorPlot(const string& plotName, const string& group, cons
 
 //**************************************************************************************************
 /**
- * Dump plots to info file.
+ * Save plots to info file.
  */
 //**************************************************************************************************
-void PlotManager::DumpPlots(const string& plotFileName, const string& group,
+void PlotManager::SavePlots(const string& plotsFile, const string& group,
                             const vector<string>& plotNames) const
 {
   set<string> usedTemplates;
@@ -453,17 +453,17 @@ void PlotManager::DumpPlots(const string& plotFileName, const string& group,
       plotTree.put_child(("GROUP::" + plot.GetGroup() + ".PLOT::" + displayedName), plot.GetPropertyTree());
     }
   }
-  std::filesystem::path plotFile = expand_path(plotFileName);
-  if (std::filesystem::create_directories(plotFile.parent_path())) {
-    INFO("Created config folder: {}", plotFile.parent_path().string());
+  std::filesystem::path file = expand_path(plotsFile);
+  if (std::filesystem::create_directories(file.parent_path())) {
+    INFO("Created config folder: {}", file.parent_path().string());
   }
   using boost::property_tree::write_info;
-  write_info(plotFile.string(), plotTree);
+  write_info(file.string(), plotTree);
 }
-void PlotManager::DumpPlot(const string& plotFileName, const string& group,
+void PlotManager::SavePlot(const string& plotsFile, const string& group,
                            const string& plotName) const
 {
-  DumpPlots(plotFileName, group, {plotName});
+  SavePlots(plotsFile, group, {plotName});
 }
 
 //**************************************************************************************************
@@ -490,11 +490,11 @@ ptree& PlotManager::ReadPlotTemplatesFromFile(const string& plotFileName)
  * Generates plot based on plot template.
  */
 //**************************************************************************************************
-bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
+bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 {
-  bool isInteractiveMode = (outputMode == "show");
-  bool isMacroMode = (outputMode == "macro");
-  bool isPrintMode = (outputMode == "print");
+  bool isInteractiveMode = (mode == "show");
+  bool isMacroMode = (mode == "macro");
+  bool isPrintMode = (mode == "print");
 
   // if plot already exists, delete the old one first
   if (mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()) {
@@ -603,12 +603,12 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
     return true;
   }
 
-  if (outputMode == "file") {
+  if (mode == "file") {
     mSavePlotsToRootFile = true;
     mPlotLedger[plot.GetUniqueName()] = canvas;
     return true;
   }
-  if (outputMode == "data") {
+  if (mode == "data") {
     mSaveDataToRootFile = true;
     return true;
   }
@@ -619,7 +619,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
   string gifRepRate = "+50";  // number of centiseconds between frames
 
   string fileEnding;
-  if (outputMode == "pdf") {
+  if (mode == "pdf") {
     fileEnding = ".pdf";
   } else if (isMacroMode) {
     fileEnding = ".C";
@@ -644,17 +644,17 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
       }
     };
     cleanNames(canvas.get());
-  } else if (outputMode == "png") {
+  } else if (mode == "png") {
     fileEnding = ".png";
-  } else if (outputMode == "eps") {
+  } else if (mode == "eps") {
     fileEnding = ".eps";
-  } else if (outputMode == "svg") {
+  } else if (mode == "svg") {
     fileEnding = ".svg";
-  } else if (str_contains(outputMode, "gif")) {
+  } else if (str_contains(mode, "gif")) {
     fileEnding = ".gif";
     isGif = true;
-    if (auto delimPos = outputMode.find("+"); delimPos != string::npos) {
-      gifRepRate = outputMode.substr(delimPos);
+    if (auto delimPos = mode.find("+"); delimPos != string::npos) {
+      gifRepRate = mode.substr(delimPos);
     }
   }
 
@@ -697,8 +697,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& outputMode)
  * Creates plots.
  */
 //**************************************************************************************************
-void PlotManager::CreatePlots(const string& group, const string& subgroup,
-                              vector<string> plotNames, const string& outputMode)
+void PlotManager::CreatePlots(const string& mode, const string& group, const string& subgroup, vector<string> plotNames)
 {
   // FIXME: inconsistent use of group and subgroup
   // first determine which data needs to be loaded
@@ -768,7 +767,7 @@ void PlotManager::CreatePlots(const string& group, const string& subgroup,
     if (!FillBuffer()) PrintBufferStatus(true);
     // generate plots
     for (auto plot : selectedPlots) {
-      if (!GeneratePlot(*plot, outputMode))
+      if (!GeneratePlot(*plot, mode))
         ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup() + ((plot->GetSubgroup()) ? "/" + *plot->GetSubgroup() : ""), logger::end_color());
     }
   } catch (...) {
@@ -816,7 +815,7 @@ bool PlotManager::FillBuffer()
         if (!x.size() || x.size() != y.size()) {
           ERROR("Incompatible number of points.");
         } else {
-          dataPtr.reset(new TGraph(x.size(), x.data(), y.data()));
+          dataPtr.reset(new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data()));
           static_cast<TGraph*>(dataPtr.get())->SetName(dataName.data());
         }
         continue;
@@ -939,22 +938,12 @@ void PlotManager::PrintBufferStatus(bool missingOnly) const
  * Show which plots are currently loaded in the framework.
  */
 //**************************************************************************************************
-void PlotManager::PrintLoadedPlots() const
+void PlotManager::ListPlots() const
 {
-  INFO("===============================================");
-  INFO("================ Loaded Plots =================");
-
-  string group;
   for (const auto& plot : mPlots) {
-    if (group != plot.GetGroup()) {
-      group = plot.GetGroup();
-      INFO("{}", group);
-    }
-    INFO(" - {}{}", plot.GetName(), (plot.GetSubgroup()) ? " (" + *plot.GetSubgroup() + ")" : "");
-    INFO("     ndata = {}", plot.GetDataCount());
+    string subgroup = (plot.GetSubgroup()) ? *plot.GetSubgroup() : "";
+    INFO(" - {}{}{} in group {}{}{}", logger::begin_color(logger::Color::Green), plot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot.GetGroup() + ((!subgroup.empty()) ? "/" + subgroup : ""), logger::end_color());
   }
-  INFO("{} plots were loaded.", mPlots.size());
-  INFO("===============================================");
 }
 
 //**************************************************************************************************
@@ -1159,23 +1148,18 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs)
 
 //**************************************************************************************************
 /**
- * Function to find plots in file via regex match of user inputs
+ * Function to load plots from file via regex match
  */
 //**************************************************************************************************
-void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
-                                       const string& mode,
-                                       const string& plotName,
-                                       const string& group,
-                                       const string& subgroup)
+void PlotManager::LoadPlots(const string& plotsFile, const string& plotName, const string& group, const string& subgroup)
 {
   uint32_t nFoundPlots{};
-  bool isSearchRequest = (mode == "find");
 
   std::regex groupRegex{group};
   std::regex subgroupRegex{subgroup};
   std::regex plotNameRegex{plotName};
 
-  ptree& inputTree = ReadPlotTemplatesFromFile(plotFileName);
+  ptree& inputTree = ReadPlotTemplatesFromFile(plotsFile);
   for (const auto& plotGroupTree : inputTree) {
     // first filter by group
     string groupID = plotGroupTree.first.substr(string("GROUP::").size());
@@ -1203,15 +1187,11 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
       }
 
       ++nFoundPlots;
-      if (isSearchRequest) {
-        INFO(" - {}{}{} in group {}{}{}", logger::begin_color(logger::Color::Green), plotName, logger::end_color(), logger::begin_color(logger::Color::Yellow), group + ((!subgroup.empty()) ? "/" + subgroup : ""), logger::end_color());
-      } else {
-        try {
-          Plot plot(plotTree.second);
-          AddPlot(plot);
-        } catch (...) {
-          ERROR("Could not generate plot {} from XML file.", plotTree.first);
-        }
+      try {
+        Plot plot(plotTree.second);
+        AddPlot(plot);
+      } catch (...) {
+        ERROR("Could not load plot {} from file.", plotTree.first);
       }
     }
   }
@@ -1219,10 +1199,6 @@ void PlotManager::ExtractPlotsFromFile(const string& plotFileName,
     ERROR("Found no plots matching the request {}{}{} in {}{}/{}{}.", logger::begin_color(logger::Color::Green), plotName, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, subgroup, logger::end_color());
   } else if (nFoundPlots > 1) {
     INFO("Found {} plots matching the request.", nFoundPlots);
-  }
-  if (!isSearchRequest && mode != "load") {
-    // now produce the loaded plots
-    CreatePlots("", "", {}, mode);
   }
 }
 
@@ -1365,7 +1341,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     auto& dataDim1 = dataDims.at(0);
 
     if (!dataDim1.nBins) {
-      histModel = ROOT::RDF::TH1DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data());
+      histModel = ROOT::RDF::TH1DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data());
     } else {
       histModel = ROOT::RDF::TH1DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1]);
     }
@@ -1380,7 +1356,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     if (isProfile) {
       auto profileModel = ROOT::RDF::TProfile1DModel();
       if (!dataDim1.nBins) {
-        profileModel = ROOT::RDF::TProfile1DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data());
+        profileModel = ROOT::RDF::TProfile1DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data());
       } else {
         profileModel = ROOT::RDF::TProfile1DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1]);
       }
@@ -1392,13 +1368,13 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     } else {
       auto histModel = ROOT::RDF::TH2DModel();
       if (!dataDim1.nBins && !dataDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data(), dataDim2.edges.size() - 1, dataDim2.edges.data());
+        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
       } else if (dataDim1.nBins && dataDim2.nBins) {
         histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       } else if (dataDim1.nBins && !dataDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.edges.size() - 1, dataDim2.edges.data());
+        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
       } else if (!dataDim1.nBins && dataDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
+        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       }
       if (hasWeights) {
         obj = node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W")->Clone(name.data());
@@ -1414,13 +1390,13 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     if (isProfile) {
       auto profileModel = ROOT::RDF::TProfile2DModel();
       if (!dataDim1.nBins && !dataDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data(), dataDim2.edges.size() - 1, dataDim2.edges.data());
+        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
       } else if (dataDim1.nBins && dataDim2.nBins) {
         profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       } else if (dataDim1.nBins && !dataDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.edges.size() - 1, dataDim2.edges.data());
+        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
       } else if (!dataDim1.nBins && dataDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
+        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       }
       if (hasWeights) {
         obj = node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W")->Clone(name.data());
@@ -1444,7 +1420,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
             dataDim.nBins = 0;
           }
         }
-        histModel = ROOT::RDF::TH3DModel("tmp", histTitle.data(), dataDim1.edges.size() - 1, dataDim1.edges.data(), dataDim2.edges.size() - 1, dataDim2.edges.data(), dataDim3.edges.size() - 1, dataDim3.edges.data());
+        histModel = ROOT::RDF::TH3DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data(), static_cast<int32_t>(dataDim3.edges.size()) - 1, dataDim3.edges.data());
       }
       if (hasWeights) {
         obj = node.Histo3D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W")->Clone(name.data());
@@ -1464,7 +1440,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       for (auto& dataDim : dataDims) {
         if (!dataDim.nBins) {
           allFixed = false;
-          nBinsVec.push_back(dataDim.edges.size() - 1);
+          nBinsVec.push_back(static_cast<int32_t>(dataDim.edges.size()) - 1);
         } else {
           nBinsVec.push_back(dataDim.nBins);
           xMinVec.push_back(dataDim.edges[0]);
@@ -1473,7 +1449,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       }
 
       if (allFixed) {
-        histModel = ROOT::RDF::THnDModel("tmp", histTitle.data(), dataDims.size(), nBinsVec, xMinVec, xMaxVec);
+        histModel = ROOT::RDF::THnDModel("tmp", histTitle.data(), static_cast<int32_t>(dataDims.size()), nBinsVec, xMinVec, xMaxVec);
       } else {
         vector<vector<double_t>> xBins;
         for (auto& dataDim : dataDims) {
@@ -1488,7 +1464,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
           }
           xBins.push_back(dataDim.edges);
         }
-        histModel = ROOT::RDF::THnDModel("tmp", histTitle.data(), dataDims.size(), nBinsVec, xBins);
+        histModel = ROOT::RDF::THnDModel("tmp", histTitle.data(), static_cast<int32_t>(dataDims.size()), nBinsVec, xBins);
       }
       vector<string> colNames;
       axisID = 1;
@@ -1725,13 +1701,13 @@ tuple<string, string, string> PlotManager::GetProjectSettings(string projectName
       }
     }
   }
-  string inputsFile = configPath + "/" + projectName + "/inputs.info";
+  string datasetsFile = configPath + "/" + projectName + "/inputs.info";
   string plotsFile = configPath + "/" + projectName + "/plots.info";
   if (projectName.empty()) {
-    inputsFile = "";
+    datasetsFile = "";
     plotsFile = "";
   }
-  return {inputsFile, plotsFile, outputDir};
+  return {datasetsFile, plotsFile, outputDir};
 }
 
 //****************************************************************************************
@@ -1739,10 +1715,10 @@ tuple<string, string, string> PlotManager::GetProjectSettings(string projectName
  * Reads path to inputs file from config file.
  */
 //****************************************************************************************
-string PlotManager::GetInputsFile(string projectName)
+string PlotManager::GetDatasetsFile(string projectName)
 {
-  auto [inputsFile, plotDefinitionsFile, outputDir] = PlotManager::GetProjectSettings(projectName);
-  return inputsFile;
+  auto [datasetsFile, plotsFile, outputDir] = PlotManager::GetProjectSettings(projectName);
+  return datasetsFile;
 }
 
 //****************************************************************************************
@@ -1753,21 +1729,21 @@ string PlotManager::GetInputsFile(string projectName)
 void PlotManager::SaveProject(const string& projectName)
 {
   namespace fs = std::filesystem;
-  auto [inputsFile, plotsFile, outputDir] = GetProjectSettings(projectName);
+  auto [datasetsFile, plotsFile, outputDir] = GetProjectSettings(projectName);
 
-  if (fs::create_directories(fs::path(inputsFile).parent_path())) {
-    INFO("Created config folder for project {}: {}", projectName, fs::path(inputsFile).parent_path().string());
+  if (fs::create_directories(fs::path(datasetsFile).parent_path())) {
+    INFO("Created config folder for project {}: {}", projectName, fs::path(datasetsFile).parent_path().string());
   }
 
   // move user data stored in current session to project folder
-  fs::path curUserDataFile = fs::path(inputsFile).parent_path() / "../UserData.root";
+  fs::path curUserDataFile = fs::path(datasetsFile).parent_path() / "../UserData.root";
   if (fs::exists(curUserDataFile)) {
-    fs::path userDataFile = fs::path(inputsFile).parent_path() / "UserData.root";
+    fs::path userDataFile = fs::path(datasetsFile).parent_path() / "UserData.root";
     fs::rename(curUserDataFile, userDataFile);
   }
 
-  DumpInputDataFiles(inputsFile);
-  DumpPlots(plotsFile);
+  SaveDatasets(datasetsFile);
+  SavePlots(plotsFile);
 
   // create a csv file for tab completion
   std::ofstream tabCompFile;

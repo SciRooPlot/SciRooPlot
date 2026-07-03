@@ -73,7 +73,7 @@ To specify multiple text options one can use `plot analysisQA 'trackProperty_(ti
 Note that expressions involving special characters (in the previous examples `[]` or `()` and `|`) have to be wrapped in quotes since otherwise your shell will try to interpret them before they are passed to the plotting app.
 To select only a subgroup within the group, use `<group/some/subgroup>` (for example `plot myGroup/QAPlots controlObservable`).
 By default, the optional `mode` argument is set to `show` and you can leave it out in the command.
-Possible alternatives are: `find`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`, `data`.
+Possible alternatives are: `list`, `print`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`, `data`.
 If you have multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..) that you want to concatenate and save as a moving gif, you can create it via `plot myGroup myPlot_bin_.+ gif`.
 To adjust the time between the frames use for example `plot myGroup myPlot_bin_.+ gif+4`, where the number is given in tens of milliseconds (i.e. this example will create a gif with a delay of 40ms between the plots).
 

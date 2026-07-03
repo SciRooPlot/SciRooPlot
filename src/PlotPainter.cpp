@@ -256,29 +256,29 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
     if (pad.GetDefaultMarkerColorsGradient().rgbEndpoints) {
       const auto& gradient = pad.GetDefaultMarkerColorsGradient();
-      int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetMarkerColor(); });
+      int32_t nColors = static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetMarkerColor(); }));
       pad.SetDefaultMarkerColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     } else if (padDefaults.GetDefaultMarkerColorsGradient().rgbEndpoints) {
       auto& gradient = padDefaults.GetDefaultMarkerColorsGradient();
-      int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetMarkerColor(); });
+      int32_t nColors = static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetMarkerColor(); }));
       padDefaults.SetDefaultMarkerColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
     if (pad.GetDefaultLineColorsGradient().rgbEndpoints) {
       const auto& gradient = pad.GetDefaultLineColorsGradient();
-      int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetLineColor(); });
+      int32_t nColors = static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetLineColor(); }));
       pad.SetDefaultLineColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     } else if (padDefaults.GetDefaultLineColorsGradient().rgbEndpoints) {
       const auto& gradient = padDefaults.GetDefaultLineColorsGradient();
-      int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetLineColor(); });
+      int32_t nColors = static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetLineColor(); }));
       padDefaults.SetDefaultLineColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
     if (pad.GetDefaultFillColorsGradient().rgbEndpoints) {
       const auto& gradient = pad.GetDefaultFillColorsGradient();
-      int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetFillColor(); });
+      int32_t nColors = static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetFillColor(); }));
       pad.SetDefaultFillColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     } else if (padDefaults.GetDefaultFillColorsGradient().rgbEndpoints) {
       const auto& gradient = padDefaults.GetDefaultFillColorsGradient();
-      int32_t nColors = std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetFillColor(); });
+      int32_t nColors = static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [](auto data) { return !data->GetFillColor(); }));
       padDefaults.SetDefaultFillColors(GenerateGradientColors(get_first_or(nColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
     }
     if (pad.GetPaletteGradient().rgbEndpoints) {
@@ -870,8 +870,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
             data_ptr->GetYaxis()->SetRangeUser(rangeMinY, rangeMaxY);
             if (const auto& contours = data->GetContours()) {
-              data_ptr->SetContour(contours->size(), contours->data());
-              if (axisHist_ptr->GetContour() < static_cast<Int_t>(contours->size())) axisHist_ptr->SetContour(contours->size(), contours->data());
+              data_ptr->SetContour(static_cast<int32_t>(contours->size()), contours->data());
+              if (axisHist_ptr->GetContour() < static_cast<int32_t>(contours->size())) axisHist_ptr->SetContour(static_cast<int32_t>(contours->size()), contours->data());
             } else if (const auto& nContours = data->GetNContours()) {
               data_ptr->SetContour(*nContours);
               if (axisHist_ptr->GetContour() < nContours) axisHist_ptr->SetContour(*nContours);
