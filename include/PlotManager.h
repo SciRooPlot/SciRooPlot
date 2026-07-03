@@ -26,8 +26,8 @@
 #include <unordered_map>
 #include <vector>
 #include <string>
+#include "TApplication.h"
 
-class TApplication;
 class TCanvas;
 namespace ROOT
 {
@@ -46,7 +46,7 @@ class PlotManager
  public:
   PlotManager();
 
-  ~PlotManager();
+  ~PlotManager() = default;
   PlotManager(const PlotManager& other) = delete;
   PlotManager(PlotManager&&) = delete;
   PlotManager& operator=(const PlotManager& other) = delete;
@@ -56,50 +56,39 @@ class PlotManager
 
   void SaveProject(const std::string& projectName);
 
-  void SetOutputDirectory(const std::string& path);
-  void SetOutputFileName(const std::string& fileName);  // in case canvases should be saved in .root file
-
   // create or append to a dataset.
-  void AddDataset(const std::string& dataset, const std::vector<std::string>& inputFilePathList);
-  void AddDataset(const std::string& dataset, std::initializer_list<std::string> inputFilePathList);
-  void AddDataset(const std::string& dataset, const std::string& inputFilePath);
-  void AddDataset(const std::string& dataset, const std::vector<TObject*>& inputDataList);
+  void AddDataset(const std::string& dataset, const std::vector<std::string>& inputFiles);
+  void AddDataset(const std::string& dataset, std::initializer_list<std::string> inputFiles);
+  void AddDataset(const std::string& dataset, const std::string& inputFile);
+  void AddDataset(const std::string& dataset, const std::vector<TObject*>& inputData);
   void AddDataset(const std::string& dataset, TObject* inputData);
 
-  void SaveDatasets(const std::string& configFileName) const;  // save datasets to config file
-  void LoadDatasets(const std::string& configFileName);        // load datasets from config file
+  void SaveDatasets(const std::string& configFile) const;
+  void LoadDatasets(const std::string& configFile);
 
-  // add plots or templates for plots to the manager
   void AddPlot(Plot& plot);
   void AddPlotTemplate(Plot plotTemplate);
   void AddColorPlot(const std::string& plotName, const std::string& group, const std::vector<int32_t>& colors = {});
 
-  // saving plot definitions to external file (which can e.g. be read by the command-line plotting app included in the framework)
   void SavePlots(const std::string& plotsFile, const std::string& group = "", const std::vector<std::string>& plotNames = {}) const;
-  void SavePlot(const std::string& plotsFile, const std::string& group, const std::string& plotName) const;
-
   void LoadPlots(const std::string& plotsFile, const std::string& plotName = ".*", const std::string& group = ".*", const std::string& subgroup = ".*");
+  void ListPlots() const;
 
   void CreatePlots(const std::string& mode = "pdf", const std::string& group = "", const std::string& subgroup = "", std::vector<std::string> plotNames = {});
 
-  void ListPlots() const;
-
-  void ClearDataBuffer();
+  void SetOutputDirectory(const std::string& path);
   static std::tuple<std::string, std::string, std::string> GetProjectSettings(std::string projectName = "");
-  static std::string GetDatasetsFile(std::string projectName = "");
 
  private:
   TObject* FindSubDirectory(TObject* folder, std::vector<std::string>& subDirs) const;
   bool GeneratePlot(const Plot& plot, const std::string& mode = "pdf");
   boost::property_tree::ptree& ReadPlotTemplatesFromFile(const std::string& plotFileName);
-  void SavePlotsToFile() const;
-  void SaveDataToFile() const;
+  void SavePlotsToRootFile() const;
+  void SaveDataToRootFile() const;
 
   std::unique_ptr<TApplication> mApp;
-  bool mSavePlotsToRootFile{};
-  bool mSaveDataToRootFile{};
-  std::string mPlotsRootFile{"Plots.root"};
-  std::string mInputsRootFile{"Inputs.root"};
+  std::string mRootFilePlots{"Plots.root"};
+  std::string mRootFileData{"Data.root"};
   std::map<std::string, std::shared_ptr<TCanvas>> mPlotLedger;
   std::string mOutputDirectory;
   std::vector<Plot> mPlots;

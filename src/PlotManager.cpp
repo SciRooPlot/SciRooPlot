@@ -98,28 +98,13 @@ PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr))
 
 //**************************************************************************************************
 /**
- * Destructor for PlotManager.
- */
-//**************************************************************************************************
-PlotManager::~PlotManager()
-{
-  if (mSavePlotsToRootFile) {
-    SavePlotsToFile();
-  }
-  if (mSaveDataToRootFile) {
-    SaveDataToFile();
-  }
-}
-
-//**************************************************************************************************
-/**
  * Save stored plots to .root file.
  */
 //**************************************************************************************************
-void PlotManager::SavePlotsToFile() const
+void PlotManager::SavePlotsToRootFile() const
 {
   if (!mPlotLedger.empty()) {
-    TFile outputFile((mOutputDirectory + "/" + mPlotsRootFile).data(), "RECREATE");
+    TFile outputFile((mOutputDirectory + "/" + mRootFilePlots).data(), "RECREATE");
     if (outputFile.IsZombie()) {
       return;
     }
@@ -151,18 +136,18 @@ void PlotManager::SavePlotsToFile() const
       ++nPlots;
     }
     outputFile.Close();
-    INFO("Saved {} plots to file {}.", nPlots, mPlotsRootFile);
+    INFO("Saved {} plots to file {}/{}.", nPlots, mOutputDirectory, mRootFilePlots);
   }
 }
 
 //**************************************************************************************************
 /**
- * Save buffered input data .root file.
+ * Save buffered data .root file.
  */
 //**************************************************************************************************
-void PlotManager::SaveDataToFile() const
+void PlotManager::SaveDataToRootFile() const
 {
-  TFile outputFile((mOutputDirectory + "/" + mInputsRootFile).data(), "RECREATE");
+  TFile outputFile((mOutputDirectory + "/" + mRootFileData).data(), "RECREATE");
   if (outputFile.IsZombie()) {
     return;
   }
@@ -185,17 +170,7 @@ void PlotManager::SaveDataToFile() const
     }
   }
   outputFile.Close();
-  INFO("Saved input data for plots to file {}.", mInputsRootFile);
-}
-
-//**************************************************************************************************
-/**
- * Properly delete all loaded root raw data.
- */
-//**************************************************************************************************
-void PlotManager::ClearDataBuffer()
-{
-  mDataBuffer.clear();
+  INFO("Saved data to file {}/{}.", mOutputDirectory, mRootFileData);
 }
 
 //**************************************************************************************************
@@ -210,22 +185,12 @@ void PlotManager::SetOutputDirectory(const string& path)
 
 //**************************************************************************************************
 /**
- * The output file name for saving the plots into one single root file.
- */
-//**************************************************************************************************
-void PlotManager::SetOutputFileName(const string& fileName)
-{
-  mPlotsRootFile = fileName;
-}
-
-//**************************************************************************************************
-/**
  * Define input file paths for user defined dataset.
  */
 //**************************************************************************************************
-void PlotManager::AddDataset(const string& dataset, const vector<string>& inputFilePathList)
+void PlotManager::AddDataset(const string& dataset, const vector<string>& inputFiles)
 {
-  for (auto inputFilePath : inputFilePathList) {
+  for (auto inputFilePath : inputFiles) {
     if (std::filesystem::path(expand_path(inputFilePath)).is_relative()) {
       WARNING("The path to an input file must not be relative. Skipping {}.", inputFilePath);
       continue;
@@ -236,13 +201,13 @@ void PlotManager::AddDataset(const string& dataset, const vector<string>& inputF
     }
   }
 }
-void PlotManager::AddDataset(const string& dataset, const string& inputFilePath)
+void PlotManager::AddDataset(const std::string& dataset, std::initializer_list<string> inputFiles)
 {
-  AddDataset(dataset, {inputFilePath});
+  AddDataset(dataset, std::vector<std::string>(inputFiles));
 }
-void PlotManager::AddDataset(const std::string& dataset, std::initializer_list<string> inputFilePaths)
+void PlotManager::AddDataset(const string& dataset, const string& inputFile)
 {
-  AddDataset(dataset, std::vector<std::string>(inputFilePaths));
+  AddDataset(dataset, {inputFile});
 }
 
 //**************************************************************************************************
@@ -250,7 +215,7 @@ void PlotManager::AddDataset(const std::string& dataset, std::initializer_list<s
  * Define input data for user defined unique dataset.
  */
 //**************************************************************************************************
-void PlotManager::AddDataset(const string& dataset, const vector<TObject*>& inputDataList)
+void PlotManager::AddDataset(const string& dataset, const vector<TObject*>& inputData)
 {
   string fileName = "${SCIROOPLOT_USER_DATA_DIR}/UserData.root";
   string mode = "RECREATE";
@@ -263,7 +228,7 @@ void PlotManager::AddDataset(const string& dataset, const vector<TObject*>& inpu
     dir = file.mkdir(dataset.data());
   }
   dir->cd();
-  for (auto object : inputDataList) {
+  for (auto object : inputData) {
     string name = object->GetName();
     if (name.empty()) {
       WARNING("Cannot add nameless object of type {} to dataset {}", object->ClassName(), dataset);
@@ -284,7 +249,7 @@ void PlotManager::AddDataset(const string& dataset, TObject* inputData)
  * Save dataset properties currently defined in the manager to a config file.
  */
 //**************************************************************************************************
-void PlotManager::SaveDatasets(const string& configFileName) const
+void PlotManager::SaveDatasets(const string& configFile) const
 {
   ptree inputFileTree;
   for (const auto& inFileTuple : mInputFiles) {
@@ -294,12 +259,12 @@ void PlotManager::SaveDatasets(const string& configFileName) const
     }
     inputFileTree.put_child(inFileTuple.first, filesOfDataset);
   }
-  std::filesystem::path configFile = expand_path(configFileName);
-  if (std::filesystem::create_directories(configFile.parent_path())) {
-    INFO("Created config folder: {}", configFile.parent_path().string());
+  std::filesystem::path file = expand_path(configFile);
+  if (std::filesystem::create_directories(file.parent_path())) {
+    INFO("Created config folder: {}", file.parent_path().string());
   }
   using boost::property_tree::write_info;
-  write_info(expand_path(configFile.string()), inputFileTree);
+  write_info(file.string(), inputFileTree);
 }
 
 //**************************************************************************************************
@@ -307,14 +272,14 @@ void PlotManager::SaveDatasets(const string& configFileName) const
  * Load dataset properties from config file into manager.
  */
 //**************************************************************************************************
-void PlotManager::LoadDatasets(const string& configFileName)
+void PlotManager::LoadDatasets(const string& configFile)
 {
   ptree inputFileTree;
   try {
     using boost::property_tree::read_info;
-    read_info(expand_path(configFileName), inputFileTree);
+    read_info(expand_path(configFile), inputFileTree);
   } catch (...) {
-    ERROR("Cannot load file {}.", configFileName);
+    ERROR("Cannot load file {}.", configFile);
     return;
   }
   for (const auto& inputPair : inputFileTree) {
@@ -425,8 +390,7 @@ void PlotManager::AddColorPlot(const string& plotName, const string& group, cons
  * Save plots to info file.
  */
 //**************************************************************************************************
-void PlotManager::SavePlots(const string& plotsFile, const string& group,
-                            const vector<string>& plotNames) const
+void PlotManager::SavePlots(const string& plotsFile, const string& group, const vector<string>& plotNames) const
 {
   set<string> usedTemplates;
   std::for_each(mPlots.begin(), mPlots.end(), [&usedTemplates](auto& plot) {
@@ -459,11 +423,6 @@ void PlotManager::SavePlots(const string& plotsFile, const string& group,
   }
   using boost::property_tree::write_info;
   write_info(file.string(), plotTree);
-}
-void PlotManager::SavePlot(const string& plotsFile, const string& group,
-                           const string& plotName) const
-{
-  SavePlots(plotsFile, group, {plotName});
 }
 
 //**************************************************************************************************
@@ -604,12 +563,10 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   }
 
   if (mode == "file") {
-    mSavePlotsToRootFile = true;
     mPlotLedger[plot.GetUniqueName()] = canvas;
     return true;
   }
   if (mode == "data") {
-    mSaveDataToRootFile = true;
     return true;
   }
 
@@ -699,7 +656,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 //**************************************************************************************************
 void PlotManager::CreatePlots(const string& mode, const string& group, const string& subgroup, vector<string> plotNames)
 {
-  // FIXME: inconsistent use of group and subgroup
   // first determine which data needs to be loaded
   vector<Plot*> selectedPlots;
   map<int32_t, set<int32_t>> requiredData;
@@ -769,6 +725,11 @@ void PlotManager::CreatePlots(const string& mode, const string& group, const str
     for (auto plot : selectedPlots) {
       if (!GeneratePlot(*plot, mode))
         ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup() + ((plot->GetSubgroup()) ? "/" + *plot->GetSubgroup() : ""), logger::end_color());
+    }
+    if (mode == "file") {
+      SavePlotsToRootFile();
+    } else if (mode == "data") {
+      SaveDataToRootFile();
     }
   } catch (...) {
     ERROR("An unexpected error occurred. The application will now exit.");
@@ -1701,24 +1662,13 @@ tuple<string, string, string> PlotManager::GetProjectSettings(string projectName
       }
     }
   }
-  string datasetsFile = configPath + "/" + projectName + "/inputs.info";
+  string datasetsFile = configPath + "/" + projectName + "/datasets.info";
   string plotsFile = configPath + "/" + projectName + "/plots.info";
   if (projectName.empty()) {
     datasetsFile = "";
     plotsFile = "";
   }
   return {datasetsFile, plotsFile, outputDir};
-}
-
-//****************************************************************************************
-/**
- * Reads path to inputs file from config file.
- */
-//****************************************************************************************
-string PlotManager::GetDatasetsFile(string projectName)
-{
-  auto [datasetsFile, plotsFile, outputDir] = PlotManager::GetProjectSettings(projectName);
-  return datasetsFile;
 }
 
 //****************************************************************************************
@@ -1744,6 +1694,10 @@ void PlotManager::SaveProject(const string& projectName)
 
   SaveDatasets(datasetsFile);
   SavePlots(plotsFile);
+
+  if (!mOutputDirectory.empty()) {
+    WARNING("The output directory of a project can only be modified with the srp app.");
+  }
 
   // create a csv file for tab completion
   std::ofstream tabCompFile;
