@@ -387,30 +387,20 @@ void PlotManager::AddColorPlot(const string& name, const string& group, const ve
 
 //**************************************************************************************************
 /**
- * Save plots to info file.
+ * Save plots matching name and group regex to file.
  */
 //**************************************************************************************************
-void PlotManager::SavePlots(const string& file, const string& group, const vector<string>& names) const
+void PlotManager::SavePlots(const string& file, const string& name, const string& group) const
 {
-  set<string> usedTemplates;
-  std::for_each(mPlots.begin(), mPlots.end(), [&usedTemplates](auto& plot) {
-    if (plot.GetPlotTemplateName()) usedTemplates.insert(*plot.GetPlotTemplateName());
-  });
-
   ptree plotTree;
+  std::regex groupRegex{group};
+  std::regex nameRegex{name};
+
   for (const vector<Plot>& plots : {std::ref(mPlotTemplates), std::ref(mPlots)}) {
     for (const Plot& plot : plots) {
-      if (plot.GetGroup() == "PLOT_TEMPLATES" && usedTemplates.find(plot.GetName()) == usedTemplates.end()) {
-        continue;
-      } else if (!group.empty()) {
-        if (plot.GetGroup() != group) continue;
-        if (!names.empty()) {
-          bool found = false;
-          for (const auto& name : names) {
-            if (name == plot.GetName()) found = true;
-          }
-          if (!found) continue;
-        }
+      if (plot.GetGroup() != "PLOT_TEMPLATES") {
+        if (!std::regex_match(plot.GetGroup(), groupRegex)) continue;
+        if (!std::regex_match(plot.GetName(), nameRegex)) continue;
       }
       string displayedName = plot.GetUniqueName();
       std::replace(displayedName.begin(), displayedName.end(), '.', '_');
@@ -423,6 +413,288 @@ void PlotManager::SavePlots(const string& file, const string& group, const vecto
   }
   using boost::property_tree::write_info;
   write_info(filePath.string(), plotTree);
+}
+
+//**************************************************************************************************
+/**
+ * Function to load plots matching name and group regex from file.
+ */
+//**************************************************************************************************
+void PlotManager::LoadPlots(const string& file, const string& name, const string& group)
+{
+  uint32_t nFoundPlots{};
+  std::regex groupRegex{group};
+  std::regex nameRegex{name};
+  ptree fileTree;
+  try {
+    using boost::property_tree::read_info;
+    read_info(expand_path(file), fileTree);
+  } catch (...) {
+    ERROR("Cannot open file {}.", file);
+    std::exit(EXIT_FAILURE);
+  }
+
+  for (const auto& plotTree : fileTree) {
+    const string& curGroup = plotTree.second.get<string>("group");
+    if (curGroup == "PLOT_TEMPLATES") {
+      Plot plot(plotTree.second);
+      AddPlotTemplate(plot);
+      continue;
+    }
+    if (!std::regex_match(curGroup, groupRegex)) continue;
+
+    const string& curName = plotTree.second.get<string>("name");
+    if (!std::regex_match(curName, nameRegex)) continue;
+
+    ++nFoundPlots;
+    try {
+      Plot plot(plotTree.second);
+      AddPlot(plot);
+    } catch (...) {
+      ERROR("Could not load plot {} from file.", plotTree.first);
+    }
+  }
+  if (nFoundPlots == 0) {
+    ERROR("Found no plots matching the request {}{}{} in {}{}{}.", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color());
+  } else if (nFoundPlots > 1) {
+    INFO("Found {} plots matching the request.", nFoundPlots);
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Creates plots matching name and group regex.
+ */
+//**************************************************************************************************
+void PlotManager::CreatePlots(const string& mode, const string& name, const string& group)
+{
+  // first determine which data needs to be loaded
+  vector<Plot*> selectedPlots;
+  map<int32_t, set<int32_t>> requiredData;
+
+  std::regex groupRegex{group};
+  std::regex nameRegex{name};
+
+  for (auto& plot : mPlots) {
+    if (!std::regex_match(plot.GetGroup(), groupRegex)) continue;
+    if (!std::regex_match(plot.GetName(), nameRegex)) continue;
+    selectedPlots.push_back(&plot);
+
+    // determine which input data are needed for plots
+    for (auto& [padID, pad] : plot.GetPads()) {
+      if (auto& refFunc = pad.GetRefFunc()) {
+        mDataBuffer[refFunc->GetDataset()][refFunc->GetName()];
+      } else {
+        if (plot.GetPlotTemplateName()) {
+          auto it = std::find_if(mPlotTemplates.begin(), mPlotTemplates.end(), [&](const auto& plotTemplate) { return *plot.GetPlotTemplateName() == plotTemplate.GetName(); });
+          if (it != mPlotTemplates.end()) {
+            if (auto& refFunc = (*it).GetPad(padID).GetRefFunc()) {
+              mDataBuffer[refFunc->GetDataset()][refFunc->GetName()];
+            }
+          }
+        }
+      }
+      for (const auto& data : pad.GetData()) {
+        mDataBuffer[data->GetDataset()][data->GetName()];
+        if (data->GetDataInfo().dataDims.size()) {
+          auto& dataInfos = mDataInfoBuffer[data->GetDataset()][data->GetName()];
+          auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
+          if (iter == dataInfos.end()) {
+            mDataInfoBuffer[data->GetDataset()][data->GetName()].push_back(data->GetDataInfo());
+          }
+        }
+        if (data->GetType() == "ratio") {
+          const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
+          mDataBuffer[ratio->GetDenomDataset()][ratio->GetDenomName()];
+          if (ratio->GetDenomDataInfo().dataDims.size()) {
+            auto& dataInfos = mDataInfoBuffer[ratio->GetDenomDataset()][ratio->GetDenomName()];
+            auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
+            if (iter == dataInfos.end()) {
+              mDataInfoBuffer[ratio->GetDenomDataset()][ratio->GetDenomName()].push_back(ratio->GetDenomDataInfo());
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (selectedPlots.empty()) {
+    ERROR("No plots were created.");
+  }
+
+  try {
+    if (!FillBuffer()) PrintBufferStatus(true);
+    // generate plots
+    for (auto plot : selectedPlots) {
+      if (!GeneratePlot(*plot, mode))
+        ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
+    }
+    if (mode == "file") {
+      SavePlotsToRootFile();
+    } else if (mode == "data") {
+      SaveDataToRootFile();
+    }
+  } catch (...) {
+    ERROR("An unexpected error occurred. The application will now exit.");
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Fills all the nodes defined in buffer hash map with data read from files.
+ */
+//**************************************************************************************************
+bool PlotManager::FillBuffer()
+{
+  bool success = true;
+  for (auto& [dataset, buffer] : mDataBuffer) {
+    unordered_map<string, vector<string>> requiredData;  // subdir, names
+    for (auto& [dataName, dataPtr] : buffer) {
+      if (dataPtr) continue;
+
+      // generate user-defined functions on-the-fly
+      if (dataset == "USER_FUNCTIONS") {
+        TFormula formula("tmp", dataName.data());
+        int dim = formula.GetNdim();
+        if (dim <= 1) {
+          dataPtr.reset(new TF1(dataName.data(), dataName.data()));
+        } else if (dim == 2) {
+          dataPtr.reset(new TF2(dataName.data(), dataName.data()));
+        } else if (dim == 3) {
+          dataPtr.reset(new TF3(dataName.data(), dataName.data()));
+        } else {
+          ERROR("Cannot create function {}.", dataName);
+        }
+        continue;
+      } else if (dataset == "USER_GRAPHS") {
+        auto strs = split_string(dataName, ';');
+        auto xStrs = split_string(strs[0], ',');
+        auto yStrs = split_string(strs[1], ',');
+        vector<double_t> x;
+        vector<double_t> y;
+        for (size_t i = 0; i < xStrs.size(); ++i) {
+          x.push_back(std::stod(xStrs[i]));
+          y.push_back(std::stod(yStrs[i]));
+        }
+        if (!x.size() || x.size() != y.size()) {
+          ERROR("Incompatible number of points.");
+        } else {
+          dataPtr.reset(new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data()));
+          static_cast<TGraph*>(dataPtr.get())->SetName(dataName.data());
+        }
+        continue;
+      }
+
+      auto pathPos = dataName.find_last_of("/");
+      string path;
+      string name = dataName;
+      if (pathPos != string::npos) {
+        path = name.substr(0, pathPos);
+        name.erase(0, pathPos + 1);
+      }
+      requiredData[std::move(path)].push_back(std::move(name));
+    }
+
+    // open all input files belonging to the current dataset and extract the data
+    for (const auto& inputFileName : mInputFiles[dataset]) {
+      if (requiredData.empty()) break;
+      if (str_contains(inputFileName, mTableFileEndings, true)) {
+        string name = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".") - inputFileName.rfind('/') - 1);
+        ReadDataCSV(inputFileName, name, dataset);
+        vector<string>& wantedNames = requiredData[""];
+        wantedNames.erase(std::remove_if(wantedNames.begin(), wantedNames.end(), [&](const auto& wantedName) { return wantedName == name; }), wantedNames.end());
+        if (wantedNames.empty()) requiredData.erase("");
+      }
+      if (!str_contains(inputFileName, ".root", true)) continue;
+      // check if only a sub-folder in input file should be searched
+      auto fileNamePath = split_string(inputFileName, ':');
+      string& fileName = fileNamePath[0];
+
+      if (!std::filesystem::exists(fileName)) {
+        WARNING("Input file {} not found.", fileName);
+        continue;
+      }
+      TFile inputFile(fileName.data(), "READ");
+      if (inputFile.IsZombie()) {
+        WARNING("Cannot open input file {}.", fileName);
+        continue;
+      }
+
+      TObject* folder = &inputFile;
+
+      // find top level entry point for this input file
+      if (fileNamePath.size() > 1) {
+        auto filePath = split_string(fileNamePath[1], '/');
+        // append sub-specification from input name
+        folder = FindSubDirectory(folder, filePath);
+        if (!folder) {
+          ERROR("Subdirectory {} not found in file {}.", fileNamePath[1], fileName);
+          return false;
+        }
+      }
+
+      vector<string> emptySubDirs;
+      for (auto& [pathStr, names] : requiredData) {
+        auto path = split_string(pathStr, '/');
+        TObject* subfolder = FindSubDirectory(folder, path);
+        if (subfolder) {
+          // recursively traverse the file and look for input files
+          string prefix = (pathStr.empty()) ? "" : pathStr + "/";
+          string suffix = ":" + dataset;
+          ReadData(subfolder, names, prefix, suffix, dataset);
+          // in case a subdirectory was opened, properly delete it
+          if (!path.empty() && subfolder != &inputFile) {
+            delete subfolder;
+            subfolder = nullptr;
+          }
+        }
+        if (names.empty()) emptySubDirs.push_back(pathStr);
+      }
+      // finally also remove top level folder
+      if (folder != &inputFile) {
+        delete folder;
+        folder = nullptr;
+      }
+
+      for (const auto& pathStr : emptySubDirs) {
+        requiredData.erase(pathStr);
+      }
+    }
+    success &= requiredData.empty();
+  }
+  return success;
+}
+
+//**************************************************************************************************
+/**
+ * Show which data could and could not be found.
+ */
+//**************************************************************************************************
+void PlotManager::PrintBufferStatus(bool missingOnly) const
+{
+  INFO("===============================================");
+  if (missingOnly) {
+    INFO("================= Missing Data ================");
+  } else {
+    INFO("================= Data Buffer =================");
+  }
+  uint32_t nNeededData{};
+  uint32_t nAvailableData{};
+  for (const auto& [dataset, buffer] : mDataBuffer) {
+    bool printDataset = true;
+    for (const auto& [dataName, dataPtr] : buffer) {
+      ++nNeededData;
+      bool show = missingOnly ? (dataPtr == nullptr) : true;
+      if (dataPtr) ++nAvailableData;
+      if (show) {
+        if (printDataset) INFO("{}", dataset);
+        printDataset = false;
+        INFO(" - {}{}{}", (dataPtr) ? logger::begin_color(logger::Color::Green) : logger::begin_color(logger::Color::Red), dataName, logger::end_color());
+      }
+    }
+  }
+  INFO("Found {}/{} required input data.", nAvailableData, nNeededData);
+  INFO("===============================================");
 }
 
 //**************************************************************************************************
@@ -627,253 +899,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   TCandle::SetBoxRange(0.5);
   TCandle::SetWhiskerRange(0.75);
   return true;
-}
-
-//**************************************************************************************************
-/**
- * Creates plots.
- */
-//**************************************************************************************************
-void PlotManager::CreatePlots(const string& mode, const string& group, vector<string> names)
-{
-  // first determine which data needs to be loaded
-  vector<Plot*> selectedPlots;
-  map<int32_t, set<int32_t>> requiredData;
-
-  for (auto& plot : mPlots) {
-    if (!group.empty() && !(plot.GetGroup() == group)) {
-      continue;
-    } else if (!names.empty() && std::find(names.begin(), names.end(), plot.GetName()) == names.end()) {
-      continue;
-    }
-
-    if (!names.empty()) {
-      names.erase(std::remove(names.begin(), names.end(), plot.GetName()), names.end());
-    }
-    selectedPlots.push_back(&plot);
-
-    // determine which input data are needed for plots
-    for (auto& [padID, pad] : plot.GetPads()) {
-      if (auto& refFunc = pad.GetRefFunc()) {
-        mDataBuffer[refFunc->GetDataset()][refFunc->GetName()];
-      } else {
-        if (plot.GetPlotTemplateName()) {
-          auto it = std::find_if(mPlotTemplates.begin(), mPlotTemplates.end(), [&](const auto& plotTemplate) { return *plot.GetPlotTemplateName() == plotTemplate.GetName(); });
-          if (it != mPlotTemplates.end()) {
-            if (auto& refFunc = (*it).GetPad(padID).GetRefFunc()) {
-              mDataBuffer[refFunc->GetDataset()][refFunc->GetName()];
-            }
-          }
-        }
-      }
-      for (const auto& data : pad.GetData()) {
-        mDataBuffer[data->GetDataset()][data->GetName()];
-        if (data->GetDataInfo().dataDims.size()) {
-          auto& dataInfos = mDataInfoBuffer[data->GetDataset()][data->GetName()];
-          auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
-          if (iter == dataInfos.end()) {
-            mDataInfoBuffer[data->GetDataset()][data->GetName()].push_back(data->GetDataInfo());
-          }
-        }
-        if (data->GetType() == "ratio") {
-          const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          mDataBuffer[ratio->GetDenomDataset()][ratio->GetDenomName()];
-          if (ratio->GetDenomDataInfo().dataDims.size()) {
-            auto& dataInfos = mDataInfoBuffer[ratio->GetDenomDataset()][ratio->GetDenomName()];
-            auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
-            if (iter == dataInfos.end()) {
-              mDataInfoBuffer[ratio->GetDenomDataset()][ratio->GetDenomName()].push_back(ratio->GetDenomDataInfo());
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // were definitions for all requested plots available?
-  if (!names.empty()) {
-    for (const auto& name : names) {
-      if (group.empty()) {
-        WARNING("Could not find plot {}{}{}.", logger::begin_color(logger::Color::Green), name, logger::end_color());
-      } else {
-        WARNING("Could not find plot {}{}{}.", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color());
-      }
-    }
-  }
-
-  try {
-    if (!FillBuffer()) PrintBufferStatus(true);
-    // generate plots
-    for (auto plot : selectedPlots) {
-      if (!GeneratePlot(*plot, mode))
-        ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
-    }
-    if (mode == "file") {
-      SavePlotsToRootFile();
-    } else if (mode == "data") {
-      SaveDataToRootFile();
-    }
-  } catch (...) {
-    ERROR("An unexpected error occurred. The application will now exit.");
-  }
-}
-
-//**************************************************************************************************
-/**
- * Fills all the nodes defined in buffer hash map with data read from files.
- */
-//**************************************************************************************************
-bool PlotManager::FillBuffer()
-{
-  bool success = true;
-  for (auto& [dataset, buffer] : mDataBuffer) {
-    unordered_map<string, vector<string>> requiredData;  // subdir, names
-    for (auto& [dataName, dataPtr] : buffer) {
-      if (dataPtr) continue;
-
-      // generate user-defined functions on-the-fly
-      if (dataset == "USER_FUNCTIONS") {
-        TFormula formula("tmp", dataName.data());
-        int dim = formula.GetNdim();
-        if (dim <= 1) {
-          dataPtr.reset(new TF1(dataName.data(), dataName.data()));
-        } else if (dim == 2) {
-          dataPtr.reset(new TF2(dataName.data(), dataName.data()));
-        } else if (dim == 3) {
-          dataPtr.reset(new TF3(dataName.data(), dataName.data()));
-        } else {
-          ERROR("Cannot create function {}.", dataName);
-        }
-        continue;
-      } else if (dataset == "USER_GRAPHS") {
-        auto strs = split_string(dataName, ';');
-        auto xStrs = split_string(strs[0], ',');
-        auto yStrs = split_string(strs[1], ',');
-        vector<double_t> x;
-        vector<double_t> y;
-        for (size_t i = 0; i < xStrs.size(); ++i) {
-          x.push_back(std::stod(xStrs[i]));
-          y.push_back(std::stod(yStrs[i]));
-        }
-        if (!x.size() || x.size() != y.size()) {
-          ERROR("Incompatible number of points.");
-        } else {
-          dataPtr.reset(new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data()));
-          static_cast<TGraph*>(dataPtr.get())->SetName(dataName.data());
-        }
-        continue;
-      }
-
-      auto pathPos = dataName.find_last_of("/");
-      string path;
-      string name = dataName;
-      if (pathPos != string::npos) {
-        path = name.substr(0, pathPos);
-        name.erase(0, pathPos + 1);
-      }
-      requiredData[std::move(path)].push_back(std::move(name));
-    }
-
-    // open all input files belonging to the current dataset and extract the data
-    for (const auto& inputFileName : mInputFiles[dataset]) {
-      if (requiredData.empty()) break;
-      if (str_contains(inputFileName, mTableFileEndings, true)) {
-        string name = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".") - inputFileName.rfind('/') - 1);
-        ReadDataCSV(inputFileName, name, dataset);
-        vector<string>& wantedNames = requiredData[""];
-        wantedNames.erase(std::remove_if(wantedNames.begin(), wantedNames.end(), [&](const auto& wantedName) { return wantedName == name; }), wantedNames.end());
-        if (wantedNames.empty()) requiredData.erase("");
-      }
-      if (!str_contains(inputFileName, ".root", true)) continue;
-      // check if only a sub-folder in input file should be searched
-      auto fileNamePath = split_string(inputFileName, ':');
-      string& fileName = fileNamePath[0];
-
-      if (!std::filesystem::exists(fileName)) {
-        WARNING("Input file {} not found.", fileName);
-        continue;
-      }
-      TFile inputFile(fileName.data(), "READ");
-      if (inputFile.IsZombie()) {
-        WARNING("Cannot open input file {}.", fileName);
-        continue;
-      }
-
-      TObject* folder = &inputFile;
-
-      // find top level entry point for this input file
-      if (fileNamePath.size() > 1) {
-        auto filePath = split_string(fileNamePath[1], '/');
-        // append sub-specification from input name
-        folder = FindSubDirectory(folder, filePath);
-        if (!folder) {
-          ERROR("Subdirectory {} not found in file {}.", fileNamePath[1], fileName);
-          return false;
-        }
-      }
-
-      vector<string> emptySubDirs;
-      for (auto& [pathStr, names] : requiredData) {
-        auto path = split_string(pathStr, '/');
-        TObject* subfolder = FindSubDirectory(folder, path);
-        if (subfolder) {
-          // recursively traverse the file and look for input files
-          string prefix = (pathStr.empty()) ? "" : pathStr + "/";
-          string suffix = ":" + dataset;
-          ReadData(subfolder, names, prefix, suffix, dataset);
-          // in case a subdirectory was opened, properly delete it
-          if (!path.empty() && subfolder != &inputFile) {
-            delete subfolder;
-            subfolder = nullptr;
-          }
-        }
-        if (names.empty()) emptySubDirs.push_back(pathStr);
-      }
-      // finally also remove top level folder
-      if (folder != &inputFile) {
-        delete folder;
-        folder = nullptr;
-      }
-
-      for (const auto& pathStr : emptySubDirs) {
-        requiredData.erase(pathStr);
-      }
-    }
-    success &= requiredData.empty();
-  }
-  return success;
-}
-
-//**************************************************************************************************
-/**
- * Show which data could and could not be found.
- */
-//**************************************************************************************************
-void PlotManager::PrintBufferStatus(bool missingOnly) const
-{
-  INFO("===============================================");
-  if (missingOnly) {
-    INFO("================= Missing Data ================");
-  } else {
-    INFO("================= Data Buffer =================");
-  }
-  uint32_t nNeededData{};
-  uint32_t nAvailableData{};
-  for (const auto& [dataset, buffer] : mDataBuffer) {
-    bool printDataset = true;
-    for (const auto& [dataName, dataPtr] : buffer) {
-      ++nNeededData;
-      bool show = missingOnly ? (dataPtr == nullptr) : true;
-      if (dataPtr) ++nAvailableData;
-      if (show) {
-        if (printDataset) INFO("{}", dataset);
-        printDataset = false;
-        INFO(" - {}{}{}", (dataPtr) ? logger::begin_color(logger::Color::Green) : logger::begin_color(logger::Color::Red), dataName, logger::end_color());
-      }
-    }
-  }
-  INFO("Found {}/{} required input data.", nAvailableData, nNeededData);
-  INFO("===============================================");
 }
 
 //**************************************************************************************************
@@ -1086,54 +1111,6 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs)
   if (!subFolder) return nullptr;
   subDirs.erase(subDirs.begin());
   return FindSubDirectory(subFolder, subDirs);
-}
-
-//**************************************************************************************************
-/**
- * Function to load plots from file via regex match
- */
-//**************************************************************************************************
-void PlotManager::LoadPlots(const string& file, const string& group, const string& name)
-{
-  uint32_t nFoundPlots{};
-
-  std::regex groupRegex{group};
-  std::regex nameRegex{name};
-
-  ptree fileTree;
-  try {
-    using boost::property_tree::read_info;
-    read_info(expand_path(file), fileTree);
-  } catch (...) {
-    ERROR("Cannot open file {}.", file);
-    std::exit(EXIT_FAILURE);
-  }
-
-  for (const auto& plotTree : fileTree) {
-    const string& curGroup = plotTree.second.get<string>("group");
-    if (curGroup == "PLOT_TEMPLATES") {
-      Plot plot(plotTree.second);
-      AddPlotTemplate(plot);
-      continue;
-    }
-    if (!std::regex_match(curGroup, groupRegex)) continue;
-
-    const string& curName = plotTree.second.get<string>("name");
-    if (!std::regex_match(curName, nameRegex)) continue;
-
-    ++nFoundPlots;
-    try {
-      Plot plot(plotTree.second);
-      AddPlot(plot);
-    } catch (...) {
-      ERROR("Could not load plot {} from file.", plotTree.first);
-    }
-  }
-  if (nFoundPlots == 0) {
-    ERROR("Found no plots matching the request {}{}{} in {}{}{}.", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color());
-  } else if (nFoundPlots > 1) {
-    INFO("Found {} plots matching the request.", nFoundPlots);
-  }
 }
 
 //**************************************************************************************************

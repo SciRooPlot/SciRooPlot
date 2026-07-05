@@ -70,11 +70,10 @@ class PlotManager
   void AddPlotTemplate(Plot plotTemplate);
   void AddColorPlot(const std::string& name, const std::string& group, const std::vector<int32_t>& colors = {});
 
-  void SavePlots(const std::string& file, const std::string& group = "", const std::vector<std::string>& names = {}) const;
-  void LoadPlots(const std::string& file, const std::string& group = ".*", const std::string& name = ".*");
   void ListPlots() const;
-
-  void CreatePlots(const std::string& mode = "pdf", const std::string& group = "", std::vector<std::string> names = {});
+  void SavePlots(const std::string& file, const std::string& name = ".+", const std::string& group = ".+") const;
+  void LoadPlots(const std::string& file, const std::string& name = ".+", const std::string& group = ".+");
+  void CreatePlots(const std::string& mode = "pdf", const std::string& name = ".+", const std::string& group = ".+");
 
   void SetOutputDirectory(const std::string& path);
   static std::tuple<std::string, std::string, std::string> GetProjectSettings(std::string projectName = "");
