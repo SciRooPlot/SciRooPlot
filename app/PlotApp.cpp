@@ -97,15 +97,8 @@ int main(int argc, char* argv[])
   plotManager.SetOutputDirectory(outputDir);
   gSystem->Setenv("SCIROOPLOT_USER_DATA_DIR", std::filesystem::path(datasetsFile).parent_path().string().data());
 
-  vector<string> split = split_string(group, '/', true);
-  group = split[0];
-  string subgroup = ".*";
-  if (split.size() > 1 && !split[1].empty()) {
-    subgroup = split[1];
-    subgroup += "(/.*)?";  // search also in subgroups
-  }
-
-  plotManager.LoadPlots(plotsFile, name, group, subgroup);
+  group += "(/.*)?";  // search also in subgroups
+  plotManager.LoadPlots(plotsFile, group, name);
   if (mode == "list") {
     plotManager.ListPlots();
   } else {

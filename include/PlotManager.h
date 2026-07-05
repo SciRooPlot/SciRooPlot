@@ -68,13 +68,13 @@ class PlotManager
 
   void AddPlot(Plot& plot);
   void AddPlotTemplate(Plot plotTemplate);
-  void AddColorPlot(const std::string& plotName, const std::string& group, const std::vector<int32_t>& colors = {});
+  void AddColorPlot(const std::string& name, const std::string& group, const std::vector<int32_t>& colors = {});
 
-  void SavePlots(const std::string& plotsFile, const std::string& group = "", const std::vector<std::string>& plotNames = {}) const;
-  void LoadPlots(const std::string& plotsFile, const std::string& plotName = ".*", const std::string& group = ".*", const std::string& subgroup = ".*");
+  void SavePlots(const std::string& file, const std::string& group = "", const std::vector<std::string>& names = {}) const;
+  void LoadPlots(const std::string& file, const std::string& group = ".*", const std::string& name = ".*");
   void ListPlots() const;
 
-  void CreatePlots(const std::string& mode = "pdf", const std::string& group = "", const std::string& subgroup = "", std::vector<std::string> plotNames = {});
+  void CreatePlots(const std::string& mode = "pdf", const std::string& group = "", std::vector<std::string> names = {});
 
   void SetOutputDirectory(const std::string& path);
   static std::tuple<std::string, std::string, std::string> GetProjectSettings(std::string projectName = "");
@@ -82,7 +82,6 @@ class PlotManager
  private:
   TObject* FindSubDirectory(TObject* folder, std::vector<std::string>& subDirs) const;
   bool GeneratePlot(const Plot& plot, const std::string& mode = "pdf");
-  boost::property_tree::ptree& ReadPlotTemplatesFromFile(const std::string& plotFileName);
   void SavePlotsToRootFile() const;
   void SaveDataToRootFile() const;
 

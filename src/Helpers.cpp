@@ -22,6 +22,7 @@
 #include <string>
 
 using std::string;
+using std::tuple;
 using std::vector;
 
 namespace SciRooPlot

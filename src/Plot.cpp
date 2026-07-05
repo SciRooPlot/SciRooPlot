@@ -59,16 +59,9 @@ Plot::Plot(const string& name, const string& group, const optional<string>& plot
     ERROR("-> Please check '{}' in '{}'!", name, group);
     std::exit(EXIT_FAILURE);
   }
-
   mName = name;
   mGroup = group;
   mPlotTemplateName = plotTemplateName;
-
-  // in case subgroup was specified via group/subgroup
-  if (auto subPathPos = group.find("/"); subPathPos != string::npos) {
-    mGroup = group.substr(0, subPathPos);
-    mSubgroup = group.substr(subPathPos + 1);
-  }
   UpdateUniqueName();
 }
 
@@ -82,12 +75,6 @@ Plot::Plot(const Plot& otherPlot, const string& name, const string& group)
   *this = otherPlot.Clone();
   mName = name;
   mGroup = group;
-
-  // in case subgroup was specified via group/subgroup
-  if (auto subPathPos = group.find("/"); subPathPos != string::npos) {
-    mGroup = group.substr(0, subPathPos);
-    mSubgroup = group.substr(subPathPos + 1);
-  }
   UpdateUniqueName();
 }
 
@@ -105,7 +92,6 @@ Plot::Plot(const ptree& plotTree)
     ERROR("Could not construct data from ptree.");
     std::exit(EXIT_FAILURE);
   }
-  read_from_tree(plotTree, mSubgroup, "subgroup");
   read_from_tree(plotTree, mPlotTemplateName, "plot_template_name");
   read_from_tree(plotTree, mPlotDimensions.width, "width");
   read_from_tree(plotTree, mPlotDimensions.height, "height");
@@ -127,12 +113,12 @@ Plot::Plot(const ptree& plotTree)
 
 //**************************************************************************************************
 /**
- * Update the unique internal name of the plot based on the current name, group and subgroup.
+ * Update the unique internal name of the plot based on the current name and group.
  */
 //**************************************************************************************************
 void Plot::UpdateUniqueName()
 {
-  mUniqueName = mName + ":" + mGroup + ((mSubgroup) ? "/" + *mSubgroup : "");
+  mUniqueName = mName + ":" + mGroup;
 }
 
 //**************************************************************************************************
@@ -145,7 +131,6 @@ ptree Plot::GetPropertyTree() const
   ptree plotTree;
   plotTree.put("name", mName);
   plotTree.put("group", mGroup);
-  put_in_tree(plotTree, mSubgroup, "subgroup");
   put_in_tree(plotTree, mPlotTemplateName, "plot_template_name");
   put_in_tree(plotTree, mPlotDimensions.width, "width");
   put_in_tree(plotTree, mPlotDimensions.height, "height");
@@ -221,22 +206,22 @@ void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
 
 void Plot::SetGroup(const string& group)
 {
-  mGroup = group;
-
-  // in case subgroup was specified via group/subgroup
-  if (auto subPathPos = group.find("/"); subPathPos != string::npos) {
-    mGroup = group.substr(0, subPathPos);
-    mSubgroup = group.substr(subPathPos + 1);
+  if (group.empty()) {
+    ERROR("Cannot set empty group.");
+    return;
   }
+  mGroup = group;
   UpdateUniqueName();
 }
 
-void Plot::SetSubgroup(const string& subgroup)
+void Plot::AppendGroup(const string& subgroup)
 {
-  if (!subgroup.empty()) {
-    mSubgroup = subgroup;
-    UpdateUniqueName();
+  if (subgroup.empty()) {
+    ERROR("Cannot append empty subgroup.");
+    return;
   }
+  mGroup = mGroup + "/" + subgroup;
+  UpdateUniqueName();
 }
 
 void Plot::SetPlotTemplateName(const string& plotTemplateName)
@@ -321,7 +306,6 @@ void Plot::operator+=(const Plot& plot)
 {
   mName = plot.mName;
   mGroup = plot.mGroup;
-  mSubgroup = plot.mSubgroup;
   mPlotTemplateName = plot.mPlotTemplateName;
 
   if (plot.mPlotDimensions.width) mPlotDimensions.width = plot.mPlotDimensions.width;

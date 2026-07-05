@@ -153,8 +153,8 @@ function srp() {
 _plot_completions_zsh() {
 
   local modes=('show' 'pdf' 'eps' 'svg' 'png' 'gif' 'file' 'data' 'list' 'macro' 'print')
+  local main_groups
   local groups
-  local groups_with_subgroups
   local names
   
   local tabcomp_file="$(${SCIROOPLOT_BIN}/srp path "@current")/tabcomp.csv"
@@ -162,25 +162,24 @@ _plot_completions_zsh() {
     return
   fi
 
-  # first find groups and groups with subgroups
-  local name_in group_in subgroup_in
-  while IFS="," read -r name_in group_in subgroup_in
+  # find all groups and store main groups separately
+  local name_in group_in
+  while IFS="," read -r name_in group_in
   do
+    main_groups+=("${group_in%%/*}")
     groups+=("${group_in}")
-    [ -n "${subgroup_in}" ] && groups_with_subgroups+=("${group_in}/${subgroup_in}")
-  done < <(LC_ALL=C sort -t',' -k2,3 -u "${tabcomp_file}")
+  done < <(LC_ALL=C sort -t',' -k2,2 -u "${tabcomp_file}")
 
   updatePlotNames() {
-    local group subgroup
-    IFS="/" read -r group subgroup <<< "${1}"
+    local group="${1}"
     names=()
     
-    local name_in group_in subgroup_in
-    while IFS="," read -r name_in group_in subgroup_in
+    local name_in group_in
+    while IFS="," read -r name_in group_in
     do
-      [[ -n "${subgroup}" && "${subgroup_in}" != "${subgroup}" && "${subgroup_in}" != "${subgroup}/"* ]] && continue
+      [[ "${group_in}" != "${group}" && "${group_in}" != "${group}/"* ]] && continue
       names+=("${name_in}")
-    done < <( grep "^.*,${group},${subgroup}" "${tabcomp_file}" )
+    done < <( grep "^.*,${group}" "${tabcomp_file}" )
   }
 
   _arguments \
@@ -192,9 +191,9 @@ _plot_completions_zsh() {
   case $state in
     group)
       if [[ "${words[2]}" == *"/"* ]]; then
-        _arguments '1:profiles:(${groups_with_subgroups})'
-      else
         _arguments '1:profiles:(${groups})'
+      else
+        _arguments '1:profiles:(${main_groups})'
       fi
     ;;
     name)
@@ -271,8 +270,8 @@ _srp_completions_zsh() {
 _plot_completions_bash() {
 
   local modes=('show pdf eps svg png gif file data list macro print')
+  local main_groups
   local groups
-  local groups_with_subgroups
   local names
 
   local tabcomp_file="$(${SCIROOPLOT_BIN}/srp path "@current")/tabcomp.csv"
@@ -280,33 +279,32 @@ _plot_completions_bash() {
     return
   fi
 
-  # first find groups and groups with subgroups
-  local name_in group_in subgroup_in
-  while IFS="," read -r name_in group_in subgroup_in
+  # find all groups and store main groups separately
+  local name_in group_in
+  while IFS="," read -r name_in group_in
   do
+    main_groups+=" ${group_in%%/*}"
     groups+=" ${group_in}"
-    [ -n "${subgroup_in}" ] && groups_with_subgroups+=" ${group_in}/${subgroup_in}"
-  done < <(LC_ALL=C sort -t',' -k2,3 -u "${tabcomp_file}")
+  done < <(LC_ALL=C sort -t',' -k2,2 -u "${tabcomp_file}")
 
   updatePlotNames() {
-    local group subgroup
-    IFS="/" read -r group subgroup <<< "${1}"
+    local group="${1}"
     names=()
     
-    local name_in group_in subgroup_in
-    while IFS="," read -r name_in group_in subgroup_in
+    local name_in group_in
+    while IFS="," read -r name_in group_in
     do
-      [[ -n "${subgroup}" && "${subgroup_in}" != "${subgroup}" && "${subgroup_in}" != "${subgroup}/"* ]] && continue
+      [[ "${group_in}" != "${group}" && "${group_in}" != "${group}/"* ]] && continue
       names+=" ${name_in}"
-    done < <( grep "^.*,${group},${subgroup}" "${tabcomp_file}" )
+    done < <( grep "^.*,${group}" "${tabcomp_file}" )
   }
 
   case "${COMP_CWORD}" in
   1)
     if [[ "${COMP_WORDS[COMP_CWORD]}" == *"/"* ]]; then
-      COMPREPLY=( $(compgen -W "${groups_with_subgroups}" -- "${COMP_WORDS[COMP_CWORD]}") )
-    else
       COMPREPLY=( $(compgen -W "${groups}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    else
+      COMPREPLY=( $(compgen -W "${main_groups}" -- "${COMP_WORDS[COMP_CWORD]}") )
     fi
   ;;
   2)

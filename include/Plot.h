@@ -126,7 +126,7 @@ class Plot
   void Print() { Plot::Print(GetPropertyTree(), "Plot"); }
 
   // accessors for user
-  void SetSubgroup(const std::string& subgroup);
+  void AppendGroup(const std::string& subgroup);
   void SetPlotTemplateName(const std::string& plotTemplateName);
   void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false);
   void SetWidth(int32_t width);
@@ -149,7 +149,6 @@ class Plot
   // accessors for internal use by manager and painter
   const auto& GetName() const { return mName; }
   const auto& GetGroup() const { return mGroup; }
-  const auto& GetSubgroup() const { return mSubgroup; }
   const auto& GetPlotTemplateName() const { return mPlotTemplateName; }
   const auto& GetUniqueName() const { return mUniqueName; }
   boost::property_tree::ptree GetPropertyTree() const;
@@ -177,7 +176,6 @@ class Plot
 
   std::string mName;
   std::string mGroup;
-  std::optional<std::string> mSubgroup;
   std::string mUniqueName;
   std::optional<std::string> mPlotTemplateName;
   dimension_t mPlotDimensions;
