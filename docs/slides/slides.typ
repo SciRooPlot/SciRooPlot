@@ -1,9 +1,8 @@
 #import "@preview/polylux:0.4.0": *
 
-#let slide-height = 9in
 #set page(
   width: 16in,
-  height: slide-height,
+  height: 9in,
   margin: 0.5in,
 )
 #set text(
@@ -336,9 +335,11 @@
           table.hline(stroke: 1pt + rgb("d0d7de")),
           [`show`], [Open plots interactively (default mode).],
           table.hline(stroke: 1pt + rgb("d0d7de")),
-          [`list, print`], [List plots matching the request or print their settings.],
+          [`list, print`],
+          [List plots matching the request or print their settings.],
           table.hline(stroke: 1pt + rgb("d0d7de")),
-          [`pdf`, `eps`,#linebreak()`svg`, `png`], [Export plots as graphics files.],
+          [`pdf`, `eps`,#linebreak()`svg`, `png`],
+          [Export plots as graphics files.],
           table.hline(stroke: 1pt + rgb("d0d7de")),
           [`macro`], [Generate ROOT `.C` macros that reproduce the plots.],
           table.hline(stroke: 1pt + rgb("d0d7de")),
@@ -505,26 +506,27 @@
 
 
 #slide[
-  #slide-title("Registering Datasets")
+  #slide-title("Adding Datasets")
   #grid(
     columns: (42%, 55%),
     gutter: 3%,
     [
-      - Input files are registered with the `PlotManager` under a user-defined alias that is later used to access the data.
+      - A dataset is a collection of input sources with a unique identifier that is later used for the plot definitions.
+
+      - Entire ROOT files or individual subdirectories/lists therein can be registered as input sources.
+
+      - Multiple inputs can be added either via successive `AddDataset()` calls or by passing them as a list.
+
+      - Adding a directory to a dataset registers all ROOT files it contains, including the ones in subdirectories.
 
       - File paths are always absolute, but the `SRC_DIR` helper enables paths relative to #plot-def-file.
 
       - Shell environment variables (including user-defined ones) are supported and expanded automatically.
 
-      - Multiple files may be registered under the same alias using lists and/or successive `AddDataset()` calls.
-
-      - Adding a directory automatically registers all ROOT files it contains, including those in subdirectories.
-
-      - Instead of an entire ROOT file, also individual subdirectories or object lists can be registered.
-
       - Registered files are searched in alphabetical order. Within each file, the directory hierarchy is traversed until the first matching data object is found.
 
-      - In addition to files, transient in-memory ROOT objects can also be registered directly as inputs.
+      - Local ROOT objects can also be directly added.
+
     ],
     [
       #code-block(
@@ -532,16 +534,17 @@
           ```cpp
           pm.AddDataset("datasetA", "/path/to/file1.root");
 
-          pm.AddDataset("datasetB", SRC_DIR + "../rel/path/file2.root");
-
-          pm.AddDataset("datasetC", "${HOME}/path/to/file/file3.root");
+          pm.AddDataset("datasetF", "/path/to/file6.root:dir/or/list");
 
           pm.AddDataset("datasetD", {"/path/to/file4.root",
                                       "/path/to/file5.root"});
 
           pm.AddDataset("datasetE", "/path/to/directory/");
 
-          pm.AddDataset("datasetF", "/path/to/file6.root:dir/or/list");
+          pm.AddDataset("datasetB", SRC_DIR + "../rel/path/file2.root");
+
+          pm.AddDataset("datasetC", "${HOME}/path/to/file/file3.root");
+
           ```
         ],
         [
@@ -591,7 +594,7 @@
 ]
 
 #slide[
-  #slide-title("Plot Appearence")
+  #slide-title("Plot Appearance")
   #grid(
     columns: (45%, 50%),
     gutter: 5%,
@@ -605,9 +608,9 @@
       - Several ready-to-use templates (e.g. `1d`, `2d`, `1d_ratio`) are provided with SciRooPlot.
 
       - Existing templates can be used directly or modified to create custom layouts.
-      
+
       - Axis ranges, titles, scales, and other axis properties are configured intuitively through plot[pad]['X'], ['Y'], and ['Z'].
-      
+
       - List of accessors of Plot, Pad and Axis in appendix.
     ],
     [
@@ -684,42 +687,44 @@
     columns: (45%, 50%),
     gutter: 5%,
     [
-    - The data-type agnostic `AddData()` function accepts ROOT histograms, graphs, functions, trees, and CSV tables.
-        
-    - Data is identified by name and automatically searched for under the registered input alias across all associated files.
-    
-    - Directory or list paths within ROOT files can be prepended to object names to disambiguate identical names.
+      - The data-type agnostic `AddData()` function accepts virtually all ROOT histograms, graphs, profiles, functions and trees.
 
-    - Data from multiple input aliases can be combined seamlessly within the same plot.
+      - Data is identified by name and automatically searched for in the corresponding dataset across all associated files.
 
-    - By default, the first added object defines the plot frame. This can be overridden via `SetDefinesFrame()`.
-    
-    - Ratios are added analogously via `AddRatio()` and provide additional ratio-specific options.
-        
-    - Supports ratios between many combinations of data types (histograms, graphs and functions), including interpolation for incompatible binning or coordinates.
+      - Directory or list paths within ROOT files can be prepended to object names to disambiguate identical names.
 
-    - Legend entries are generated automatically and inherit the appearance of the corresponding data by default.
-    
+      - Data from multiple input aliases can be combined seamlessly within the same plot.
+
+      - By default, the first added object defines the plot frame. This can be overridden via `SetDefinesFrame()`.
+
+      - Ratios are added analogously via `AddRatio()` and support divisions between different data types. If the abscissae or binning differ, the denominator is interpolated.
     ],
     [
+      #card(
+        "Supported types",
+        main-color,
+        [
+          - Histograms (`TH1`, `TH2`, `TH3`, `THn`, `THnSparse`)
+          - Profiles (`TProfile`, `TProfile2D`)
+          - Graphs (`TGraph`, `TGraph2D`)
+          - Functions (`TF1`, `TF2`, `TF3`)
+          - Efficienies (`TEfficiency`)
+          - Trees (`TTree`)
+          - Tables (`.csv`, `.dat`, `.txt`, `.tsv`, `.tab`)
+        ],
+      )
       #code-block(
         [
           ```cpp
-          Plot plot("myPlot", "myGroup", "1d");
-          
-          plot[1].AddData("myGraph", "datasetA", "g");
-          plot[1].AddData("myFunc", "datasetA", "f");
-          plot[1].AddData("path/to/myHist", "datasetB", "h");
-          
+          plot[1].AddData("myGraph", "datasetA");
+          plot[1].AddData("myFunc", "datasetA");
+          plot[1].AddData("path/to/myHist", "datasetB");
+
           plot[1].AddData("largerHisto", "datasetB")
-                         .SetDefinesFrame();
+                          .SetDefinesFrame();
 
           plot[1].AddRatio("numDataName", "datasetA",
-                           "denomDataName", "datasetB",
-                           "r");
-          
-          // generates a legend with entries "g", "h", "f" and "r"
-          plot[1].AddLegend(0.9, 0.1); // rel. (x, y) pos. in pad
+                           "denomDataName", "datasetB");
           ```
         ],
         [
@@ -731,50 +736,245 @@
 ]
 
 #slide[
-  #slide-title("Data Appearance WIP")
+  #slide-title("Data Appearance")
   #grid(
     columns: (45%, 50%),
     gutter: 5%,
     [
-    - Appearance is configured by chaining setters directly to AddData() or later via plot[1](dataID) or plot[1].GetData(dataID).
+      - Data appearance is configured by chaining setters directly to `AddData()` or afterwards by accessing previously added data via `plot[1](n)` (equivalent to `plot[1].GetData(n)`).
 
-    - SetOptions() accepts both predefined drawing styles (e.g. `points`, `curve`, `band`, `line`, `hist`) and native ROOT drawing option strings.
-  
-    - Labels support placeholders such as `<mean>`, `<integral>`, `<entries>`, `<maximum>`, etc., which are expanded automatically from the displayed data.
-    
-    - Reusable DataLayouts can be defined once and applied across many plots to ensure a consistent appearance.
+      - Drawing styles are configured via `SetOptions()`, accepting both native ROOT drawing option strings and predefined aliases (e.g. `points`, `line`, `curve`, `band`, `boxes`, `hist`, `colz`).
 
-    - Data layouts may also contain the input alias, allowing both the input source and the visual appearance to be reused together.
-    
-    - See the appendix for the complete list of available Data and Ratio setters.
-        
+      - Complete `Data` layouts can be defined once and reused across many plots, ensuring a consistent appearance.
+
+      - See the appendix for the complete list of available `Data` and `Ratio` setters.
     ],
     [
       #code-block(
         [
-        ```cpp
-        plot[1].AddData("hist", "datasetA",
-                        "mean = <mean[.2f]>")
-                      .SetOptions(points);
+          ```cpp
+          plot[1].AddData("h", "datasetA").SetOptions("HIST");
+          plot[1].AddData("h", "datasetA").SetOptions(points);
 
-        plot[1].AddData("func", "inputLabelB")
-                        .SetOptions("HIST C");
+          // modify data appearance later
+          plot[1](1).SetColor(kRed);
+          plot[1](2).SetMarkerStyle(kOpenCirlcle);
 
-        // modify later
-        plot[1](2).SetColor(kRed);
+          Data layout = Data()
+            .SetDataset("datasetA")
+            .SetOptions(curve)
+            .SetLineStyle(kDashDotted)
+            .SetLineWidth(4.)
+            .SetLineColor(kOrange);
 
-        Data dataLayout = Data()
-          .SetDataset("datasetA")
-          .SetOptions(points)
-          .SetMarker(kBlue, kFullCircle, 1.2);
+          // reuse appearance (requires dataset to be defined)
+          plot[1].AddData("graph1", layout);
+          plot[1].AddData("graph2", layout).SetColor(kBlue);
 
-        // reuse appearance (and input alias)
-        plot[1].AddData("graph1", dataLayout);
-        plot[1].AddData("graph2", dataLayout).SetColor(kBlue);
-        ```
-        ],[
-        
+          plot[1].AddRatio("h1", layout, "h2", "datasetB");
+          ```
+        ],
+        [
+
+        ],
+      )
+    ],
+  )
 ]
+
+#slide[
+  #slide-title("Default Styles and Color Palettes")
+  #grid(
+    columns: (45%, 50%),
+    gutter: 5%,
+    [
+      - Default colors, marker styles, line styles and other properties can be defined once per pad.
+
+      - Style lists are applied cyclically to newly added data.
+
+      - Continuous color gradients can be generated from arbitrary color endpoints.
+
+      - The same gradients can be used both for automatic styling of many data objects and as palettes for 2D histograms.
+    ],
+    [
+      #code-block(
+        [
+          ```cpp
+          // cyclic default styling
+          vector<int> colors = {kBlue, kRed, kGreen+2};
+          vector<int> styles = {kOpenCircle, kOpenCross};
+          plot[1].SetDefaultMarkerColors(colors);
+          plot[1].SetDefaultMarkerStyles(styles);
+
+          // continuous color gradient
+          vector<tuple<float, float, float, float>> rainbowColors =
+          { {0., 0., 1., 0.},   // blue
+            {0., 1., 1., 0.25}, // cyan
+            {0., 1., 0., 0.50}, // green
+            {1., 1., 0., 0.75}, // yellow
+            {1., 0., 0., 1.}    // red
+          };
+          plot[1].SetDefaultColors(rainbowColors);
+
+          // same gradient as 2D palette
+          plot[1].SetPalette(rainbowColors);
+
+          // as alternative to standard root palettes
+          plot[1].SetPalette(kBird);
+          ```
+        ],
+        [
+
+        ],
+      )
+    ],
+  )
+]
+
+#slide[
+  #slide-title("Legends and Text")
+  #grid(
+    columns: (45%, 50%),
+    gutter: 5%,
+    [
+      - Legend entries are generated automatically and inherit the appearance of the corresponding data by default.
+
+      - Labels support placeholders such as `<mean>`, `<integral>`, `<entries>`, `<maximum>`, which are expanded automatically.
+
+      - Multiple legends can coexist and data can be assigned to specific legends via `SetLegend(n)`.
+
+      - Legend entries can be customized individually.
+
+      - custom legends and legend entries can be made
+
+      - Text can be added also with multiple lines
+    ],
+    [
+      #code-block(
+        [
+          ```cpp
+          plot[1].AddData("h1", "input", "Data");
+          plot[1].AddData("f1", "input", "Fit");
+          plot[1].AddData("g1", "input", "Graph").SetLegend(2);
+
+          // generates a legend with entries "Data", "Fit"
+          plot[1].AddLegend(0.7, 0.8);
+          // generates a second legend with entry "Graph"
+          plot[1].AddLegend(0.2, 0.2);
+
+          plot[1].GetLegend(2)
+                 .GetEntry(1)
+                 .SetLabel("Best fit");
+
+          plot[1].AddLegend(0.9, 0.1); // rel. (x, y) pos. in pad
+
+          plot[1].AddText(0.18, 0.88, "Work in progress");
+          ```
+        ],
+        [
+
+        ],
+      )
+    ],
+  )
+]
+
+#slide[
+  #slide-title("Projecting and Profiling Multidimensional Data")
+  #grid(
+    columns: (50%, 50%),
+    gutter: 0%,
+    [
+      - Existing multidimensional histograms can be projected directly when adding them to a plot.
+
+      - Standard projections (`ProjectX()`, `ProjectY()`, ...) are available for 2D and 3D histograms.
+
+      - Projections can be restricted to selected ranges of the remaining axes using either bin numbers or user coordinates.
+
+      - The generic Project() function supports arbitrary-dimensional histograms and arbitrary projection axes.
+
+      - One- and two-dimensional profiles can be created analogously from multidimensional histograms.
+
+      - The same functionality is available for numerator and denomianator of ratios.
+    ],
+    [
+      #code-block(
+        [
+          ```cpp
+          // Standard projection of a 2D histogram
+          plot[1].AddData("my2DHist", "input")
+                 .ProjectX();
+
+          // Restrict Y before projecting
+          plot[1].AddData("my2DHist", "input")
+                 .ProjectX(20, 80);
+
+          // Generic projection of an N-dimensional histogram
+          plot[1].AddData("myNDHist", "input")
+                 .Project({2, 0}, {{1, 20, 80}, {3, 10, 40}});
+
+          // Profile of a 2D histogram
+          plot[1].AddData("my2DHist", "input")
+                 .ProfileX();
+
+          plot[1].AddData("myNDHist", "input")
+                 .Profile({2}, {{0, 10, 50}});
+          ```
+        ],
+        [
+
+        ],
+      )
+    ],
+  )
+]
+
+
+#slide[
+  #slide-title("Processing Tree and CSV Data")
+  #grid(
+    columns: (50%, 45%),
+    gutter: 5%,
+    [
+      - Tree leaves and CSV columns are accessed through the same interface.
+
+      - Create histogram projections, profiles and scatter plots directly from tabular data.
+
+      - Binning can be inferred automatically or specified explicitly with uniform or custom bin edges.
+
+      - Data can be filtered, derived quantities defined and arbitrary C++ expressions used for projections and selections.
+
+      - Entry ranges can be selected to process only subsets of the input.
+
+      - The same functionality is available for both ROOT trees and CSV tables.
+    ],
+    [
+      #code-block(
+        [
+          ```cpp
+          // Histogram projection
+          plot[1].AddData("myTree", "input")
+                 .Project1D({"pt", 100})
+                 .Filter("eta > 0");
+
+          // Profile
+          plot[1].AddData("myTree", "input")
+                 .Profile1D("eta", "pt");     // <pt> vs eta
+
+          // Scatter plot using arbitrary expressions
+          plot[1].AddData("myTree", "input")
+                 .Define("r", "sqrt(x*x+y*y)")
+                 .Scatter("r", "z")
+                 .Filter("abs(z) < 5");
+
+          // CSV tables are handled identically
+          plot[1].AddData("myData", "input")
+                 .Scatter("a", "b");
+          ```
+        ],
+        [
+
+        ],
       )
     ],
   )

@@ -141,6 +141,7 @@ add_library(SciRooPlot SHARED
   include/PlotManager.h
   include/PlotPainter.h
   include/PlotPainter.h
+  include/Helpers.h
 )
 add_library(SciRooPlot::SciRooPlot ALIAS SciRooPlot)
 scirooplot_apply_compile_flags(SciRooPlot)
@@ -314,3 +315,15 @@ else()
   message(STATUS "source ${CMAKE_INSTALL_PREFIX}/${SCIROOPLOT_INSTALL_DATA_DIR}/scirooplot-env.sh")
 endif()
 message(STATUS "---------------------------------------------------------------------------------------------")
+
+# assoicate the remaining files for IDEs
+add_custom_target(ProjectFiles SOURCES
+    README.md
+    docs/README.md
+    docs/ADVANCED_INSTALL.md
+    docs/slides/slides.typ
+    scripts/generateTestFiles.C
+    scripts/scirooplot-env.sh.in
+    user/DefinePlots.py
+    user/DefinePlots.cpp
+)
