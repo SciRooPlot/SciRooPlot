@@ -706,7 +706,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 {
   bool isInteractiveMode = (mode == "show");
   bool isMacroMode = (mode == "macro");
-  bool isPrintMode = (mode == "print");
 
   // if plot already exists, delete the old one first
   if (mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()) {
@@ -729,7 +728,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
       WARNING("Could not find plot template named {}.", plotTemplateName);
     }
   }
-  if (isPrintMode) {
+  if (mode == "print") {
     INFO("Settings of plot {}{}{} from group {}{}{}:", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetGroup(), logger::end_color());
     Plot::Print(fullPlot.GetPropertyTree(), "");
     return true;
@@ -829,9 +828,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   string gifRepRate = "+50";  // number of centiseconds between frames
 
   string fileEnding;
-  if (mode == "pdf") {
-    fileEnding = ".pdf";
-  } else if (isMacroMode) {
+  if (isMacroMode) {
     fileEnding = ".C";
     // object names are converted to variable names and therefore must not contain '/'
     // this should be fixed in ROOT itself as it does not create valid cpp code otherwise
@@ -854,12 +851,8 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
       }
     };
     cleanNames(canvas.get());
-  } else if (mode == "png") {
-    fileEnding = ".png";
-  } else if (mode == "eps") {
-    fileEnding = ".eps";
-  } else if (mode == "svg") {
-    fileEnding = ".svg";
+  } else if ((mode == "pdf") || (mode == "png") || (mode == "eps") || (mode == "svg") || (mode == "ps") || (mode == "html") || (mode == "json") || (mode == "xml") || (mode == "jpg") || (mode == "root")) {
+    fileEnding = "." + mode;
   } else if (str_contains(mode, "gif")) {
     fileEnding = ".gif";
     isGif = true;
