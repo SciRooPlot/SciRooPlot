@@ -84,7 +84,7 @@ PYBIND11_MODULE(SciRooPlot, m)
         from SciRooPlot import *
 
         pm = PlotManager()
-        pm.AddDataset("dataset", ["/path/to/file.root"])
+        pm.AddDataset("dataset", "/path/to/file.root")
 
         plot = Plot("name", "group")
         plot[1].AddData("histo", "dataset", "my label")
@@ -547,7 +547,7 @@ void exportLegendEntry(py::module_& m)
 void exportPythonDataInterfaces(py::module_& m)
 {
   auto graph = [](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& xerr, const std::vector<double>& yerr) {
-    const auto n = x.size();
+    const auto n = static_cast<int>(x.size());
     static py::module_ ROOT = py::module_::import("ROOT");
     static py::object BindObject = ROOT.attr("BindObject");
     static py::object TGraphErrorsClass = ROOT.attr("TGraphErrors");

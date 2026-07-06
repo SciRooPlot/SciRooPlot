@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
   gSystem->Setenv("SCIROOPLOT_USER_DATA_DIR", std::filesystem::path(datasetsFile).parent_path().string().data());
 
   group += "(/.*)?";  // search also in subgroups
-  plotManager.LoadPlots(plotsFile, group, name);
+  plotManager.LoadPlots(plotsFile, name, group);
   if (mode == "list") {
     plotManager.ListPlots();
   } else {
