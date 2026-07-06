@@ -1004,6 +1004,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
   TextBox& operator=(TextBox&& other) = default;
   void Print() { Plot::Print(GetPropertyTree(), "TextBox"); }
 
+  using Box<TextBox>::SetText;
   TextBox& SetText(const std::string& text);
 
  protected:
