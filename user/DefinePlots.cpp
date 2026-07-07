@@ -10,14 +10,14 @@ using namespace SciRooPlot;
 using Plot::Pad::Data;
 
 void DefineDatasets(PlotManager& pm);
-void DefineTemplates(PlotManager& pm);
+void DefineBasePlots(PlotManager& pm);
 void DefinePlots(PlotManager& pm);
 
 int main(int argc, char* argv[])
 {
   PlotManager pm;
   DefineDatasets(pm);
-  DefineTemplates(pm);
+  DefineBasePlots(pm);
   DefinePlots(pm);
   pm.SaveProject("PROJECT_NAME");
   return 0;
@@ -40,22 +40,22 @@ void DefineDatasets(PlotManager& pm)
 
 //****************************************************************************************
 /**
- * Defines the plot templates.
+ * Defines the base plots.
  */
 //****************************************************************************************
-void DefineTemplates(PlotManager& pm)
+void DefineBasePlots(PlotManager& pm)
 {
   {
-    Plot plot = PlotManager::GetPlotTemplate("1d");
-    pm.AddPlotTemplate(plot);
+    Plot plot = PlotManager::GetBasePlot("1d");
+    pm.AddBasePlot(plot);
   }
   {
-    Plot plot = PlotManager::GetPlotTemplate("1d_ratio");
-    pm.AddPlotTemplate(plot);
+    Plot plot = PlotManager::GetBasePlot("1d_ratio");
+    pm.AddBasePlot(plot);
   }
   {
-    Plot plot = PlotManager::GetPlotTemplate("2d");
-    pm.AddPlotTemplate(plot);
+    Plot plot = PlotManager::GetBasePlot("2d");
+    pm.AddBasePlot(plot);
   }
 }
 

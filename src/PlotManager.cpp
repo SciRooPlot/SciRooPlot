@@ -308,8 +308,8 @@ void PlotManager::LoadDatasets(const string& configFile)
 //**************************************************************************************************
 void PlotManager::AddPlot(Plot& plot)
 {
-  if (plot.GetGroup() == "PLOT_TEMPLATES") {
-    ERROR("You cannot use reserved group name 'PLOT_TEMPLATES'!");
+  if (plot.GetGroup() == "BASE_PLOTS") {
+    ERROR("You cannot use reserved group name 'BASE_PLOTS'!");
   }
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [plot](Plot& curPlot) mutable {
@@ -323,20 +323,20 @@ void PlotManager::AddPlot(Plot& plot)
 
 //**************************************************************************************************
 /**
- * Add template for plots, that share some common properties.
+ * Add base plots that share some common properties.
  */
 //**************************************************************************************************
-void PlotManager::AddPlotTemplate(Plot plotTemplate)
+void PlotManager::AddBasePlot(Plot basePlot)
 {
-  plotTemplate.SetGroup("PLOT_TEMPLATES");
-  mPlotTemplates.erase(std::remove_if(mPlotTemplates.begin(), mPlotTemplates.end(),
-                                      [plotTemplate](Plot& curPlotTemplate) mutable {
-                                        bool removePlot = curPlotTemplate.GetUniqueName() == plotTemplate.GetUniqueName();
-                                        if (removePlot) WARNING("Plot template {} already exists and will be replaced.", curPlotTemplate.GetName());
-                                        return removePlot;
-                                      }),
-                       mPlotTemplates.end());
-  mPlotTemplates.push_back(std::move(plotTemplate));
+  basePlot.SetGroup("BASE_PLOTS");
+  mBasePlots.erase(std::remove_if(mBasePlots.begin(), mBasePlots.end(),
+                                  [basePlot](Plot& curBasePlot) mutable {
+                                    bool removePlot = curBasePlot.GetUniqueName() == basePlot.GetUniqueName();
+                                    if (removePlot) WARNING("Base plot {} already exists and will be replaced.", curBasePlot.GetName());
+                                    return removePlot;
+                                  }),
+                   mBasePlots.end());
+  mBasePlots.push_back(std::move(basePlot));
 }
 
 //**************************************************************************************************
@@ -344,7 +344,7 @@ void PlotManager::AddPlotTemplate(Plot plotTemplate)
  * Add plot showing the specified colors or root color panel as fallback.
  */
 //**************************************************************************************************
-void PlotManager::AddColorPlot(const string& name, const string& group, const vector<int32_t>& colors)
+void PlotManager::AddColorOverview(const string& name, const string& group, const vector<int32_t>& colors)
 {
   Plot plot(name, group);
   plot.SetDimensions(800, 800, true);
@@ -396,9 +396,9 @@ void PlotManager::SavePlots(const string& file, const string& name, const string
   std::regex groupRegex{group};
   std::regex nameRegex{name};
 
-  for (const vector<Plot>& plots : {std::ref(mPlotTemplates), std::ref(mPlots)}) {
+  for (const vector<Plot>& plots : {std::ref(mBasePlots), std::ref(mPlots)}) {
     for (const Plot& plot : plots) {
-      if (plot.GetGroup() != "PLOT_TEMPLATES") {
+      if (plot.GetGroup() != "BASE_PLOTS") {
         if (!std::regex_match(plot.GetGroup(), groupRegex)) continue;
         if (!std::regex_match(plot.GetName(), nameRegex)) continue;
       }
@@ -436,9 +436,9 @@ void PlotManager::LoadPlots(const string& file, const string& name, const string
 
   for (const auto& plotTree : fileTree) {
     const string& curGroup = plotTree.second.get<string>("group");
-    if (curGroup == "PLOT_TEMPLATES") {
+    if (curGroup == "BASE_PLOTS") {
       Plot plot(plotTree.second);
-      AddPlotTemplate(plot);
+      AddBasePlot(plot);
       continue;
     }
     if (!std::regex_match(curGroup, groupRegex)) continue;
@@ -485,9 +485,9 @@ void PlotManager::CreatePlots(const string& mode, const string& name, const stri
       if (auto& refFunc = pad.GetRefFunc()) {
         mDataBuffer[refFunc->GetDataset()][refFunc->GetName()];
       } else {
-        if (plot.GetPlotTemplateName()) {
-          auto it = std::find_if(mPlotTemplates.begin(), mPlotTemplates.end(), [&](const auto& plotTemplate) { return *plot.GetPlotTemplateName() == plotTemplate.GetName(); });
-          if (it != mPlotTemplates.end()) {
+        if (plot.GetBasePlotName()) {
+          auto it = std::find_if(mBasePlots.begin(), mBasePlots.end(), [&](const auto& basePlot) { return *plot.GetBasePlotName() == basePlot.GetName(); });
+          if (it != mBasePlots.end()) {
             if (auto& refFunc = (*it).GetPad(padID).GetRefFunc()) {
               mDataBuffer[refFunc->GetDataset()][refFunc->GetName()];
             }
@@ -699,7 +699,7 @@ void PlotManager::PrintBufferStatus(bool missingOnly) const
 
 //**************************************************************************************************
 /**
- * Generates plot based on plot template.
+ * Generates plot.
  */
 //**************************************************************************************************
 bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
@@ -717,15 +717,15 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     return false;
   }
   Plot fullPlot = plot;
-  if (plot.GetPlotTemplateName()) {
-    const string& plotTemplateName = *plot.GetPlotTemplateName();
+  if (plot.GetBasePlotName()) {
+    const string& basePlotName = *plot.GetBasePlotName();
     auto iterator = std::find_if(
-      mPlotTemplates.begin(), mPlotTemplates.end(),
-      [&](Plot& plotTemplate) { return plotTemplate.GetName() == plotTemplateName; });
-    if (iterator != mPlotTemplates.end()) {
+      mBasePlots.begin(), mBasePlots.end(),
+      [&](Plot& basePlot) { return basePlot.GetName() == basePlotName; });
+    if (iterator != mBasePlots.end()) {
       fullPlot = *iterator + plot;
     } else {
-      WARNING("Could not find plot template named {}.", plotTemplateName);
+      WARNING("Could not find base plot named {}.", basePlotName);
     }
   }
   if (mode == "print") {
@@ -1388,13 +1388,13 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
 
 //****************************************************************************************
 /**
- * Defines a set of standard plot templates with quadratic axis frame and consistent layout among them.
+ * Defines a set of standard base plots with quadratic axis frame and consistent layout among them.
  * The following pre-defined layouts are available: 1d, 2d, 1d_ratio and 1d_3panels.
  * By specifying a screen resolution in dpi, the size of the plot displayed in interactive mode (or when saved as bitmap) can be modified.
  * For multiple of 72dpi the resulting plot will have the best agreement with the pdf version.
  */
 //****************************************************************************************
-Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t screenResolution)
+Plot PlotManager::GetBasePlot(const string& name, double_t screenResolution)
 {
   // info: the PDF backend of ROOT can only create plots with resolution of 72 dpi and maximum sizes defined by the A4 format (20cm x 26cm -> 567px x 737px)
   int32_t pixelBase = static_cast<int32_t>(std::round(screenResolution * 567. / 72.));  // 567p / 72dpi == 20cm / 2.54in/cm (final pdf size)
@@ -1417,9 +1417,9 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
                                          kRed, kBlue, kMagenta + 3,
                                          kGreen + 4, 28, 8, 15, 17, 12};
 
-  if (plotTemplateName == "1d") {
+  if (name == "1d") {
     // -----------------------------------------------------------------------
-    Plot plot(plotTemplateName, "PLOT_TEMPLATES");
+    Plot plot(name, "BASE_PLOTS");
     plot.SetDimensions(pixelBase, pixelBase, true);
     plot.SetTransparent();
     plot[0].SetFrameFill(10, 1001);
@@ -1441,9 +1441,9 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     return plot;
   }  // -----------------------------------------------------------------------
 
-  if (plotTemplateName == "1d_ratio") {
+  if (name == "1d_ratio") {
     // -----------------------------------------------------------------------
-    Plot plot(plotTemplateName, "PLOT_TEMPLATES");
+    Plot plot(name, "BASE_PLOTS");
     plot.SetDimensions(pixelBase, static_cast<int32_t>(std::round(wideSideScale * pixelBase)), true);
     plot.SetTransparent();
     plot[0].SetFrameFill(10, 1001);
@@ -1475,9 +1475,9 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     return plot;
   }  // -----------------------------------------------------------------------
 
-  if (plotTemplateName == "2d") {
+  if (name == "2d") {
     // -----------------------------------------------------------------------
-    Plot plot(plotTemplateName, "PLOT_TEMPLATES");
+    Plot plot(name, "BASE_PLOTS");
     plot.SetDimensions(static_cast<int32_t>(std::round(wideSideScale * pixelBase)), pixelBase, true);
     plot.SetTransparent();
     plot[0].SetFrameFill(10, 1001);
@@ -1501,9 +1501,9 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     return plot;
   }  // -----------------------------------------------------------------------
 
-  if (plotTemplateName == "1d_3panels") {
+  if (name == "1d_3panels") {
     // -----------------------------------------------------------------------
-    // extension of the 1d template with adjacing panels
+    // extension of the 1d base plot with adjacing panels
     // first calculate some quantities for the size conversions
     double_t totalPixelHeight = pixelBase;
     double_t leftMarginPixel = std::round(axisMargin * totalPixelHeight);
@@ -1526,7 +1526,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     double_t tickLengthPad2 = tickLengthPad1 * widthFramePixel / totalPixelWidthPad1;
     double_t tickLengthPad3 = tickLengthPad1 * (widthFramePixel + rightMarginPixel) / totalPixelWidthPad1;
 
-    Plot plot(plotTemplateName, "PLOT_TEMPLATES");
+    Plot plot(name, "BASE_PLOTS");
     plot.SetDimensions(totalPixelWidth, totalPixelHeight, true);
     plot.SetTransparent();
     plot[0].SetFrameFill(10, 1001);
@@ -1563,7 +1563,7 @@ Plot PlotManager::GetPlotTemplate(const string& plotTemplateName, double_t scree
     return plot;
   }  // -----------------------------------------------------------------------
 
-  ERROR("Unknown plot template {}.", plotTemplateName);
+  ERROR("Unknown default base plot {}.", name);
   return Plot();
 }
 

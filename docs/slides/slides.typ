@@ -599,15 +599,15 @@
     columns: (45%, 50%),
     gutter: 5%,
     [
-      - Defining plot templates avoids repeating common layout settings across many plots.
+      - Defining base plots avoids repeating common layout settings across many plots.
 
-      - Templates are ordinary `Plot` objects registered with the `PlotManager` via `AddPlotTemplate()`.
+      - Base plots are ordinary `Plot` objects registered with the `PlotManager` via `AddBasePlot()`.
 
       - Default settings applied to `plot[0]` automatically affect all pads unless overridden.
 
-      - Several ready-to-use templates (e.g. `1d`, `2d`, `1d_ratio`) are provided with SciRooPlot.
+      - Several ready-to-use base plots (e.g. `1d`, `2d`, `1d_ratio`) are provided with SciRooPlot.
 
-      - Existing templates can be used directly or modified to create custom layouts.
+      - Existing base plots can be used directly or modified to create custom layouts.
 
       - Axis ranges, titles, scales, and other axis properties are configured intuitively through plot[pad]['X'], ['Y'], and ['Z'].
 
@@ -617,7 +617,7 @@
       #code-block(
         [
           ```cpp
-          Plot plot("myLayout", "PLOT_TEMPLATES");
+          Plot plot("myLayout", "BASE_PLOTS");
           plot.SetDimensions(710, 710);
           plot.SetTransparent();
 
@@ -633,12 +633,12 @@
 
           plot[1].SetPosition(0., 0., 1., 1.);
 
-          pm.AddPlotTemplate(plot);
+          pm.AddBasePlot(plot);
           ```
         ],
         [
           ```python
-          plot = Plot("myLayout", "PLOT_TEMPLATES")
+          plot = Plot("myLayout", "BASE_PLOTS")
           plot.SetDimensions(710, 710)
           plot.SetTransparent()
 
@@ -654,23 +654,23 @@
 
           plot[1].SetPosition(0., 0., 1., 1.)
 
-          pm.AddPlotTemplate(plot)
+          pm.AddBasePlot(plot)
           ```
         ],
       )
       #code-block(
         [
           ```cpp
-          pm.AddPlotTemplate(PlotManager::GetPlotTemplate("1d"));
-          // create new plot on basis of 1d template:
+          pm.AddBasePlot(PlotManager::GetDefaultBasePlot("1d"));
+          // create new plot on basis of "1d" base plot:
           Plot plot("myPlot", "myGroup", "1d");
           plot[1]['X'].SetRange(0., 10.).SetTitle("x title");
           ```
         ],
         [
           ```python
-          pm.AddPlotTemplate(PlotManager.GetPlotTemplate("1d"))
-          # create a new plot based on the "1d" template
+          pm.AddBasePlot(PlotManager.GetDefaultBasePlot("1d"))
+          # create a new plot based on the "1d" base plot
           plot = Plot("myPlot", "myGroup", "1d")
           plot[1]['X'].SetRange(0., 10.).SetTitle("x title")
           ```

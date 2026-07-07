@@ -48,7 +48,7 @@ namespace SciRooPlot
  * Default constructor.
  */
 //**************************************************************************************************
-Plot::Plot(const string& name, const string& group, const optional<string>& plotTemplateName) : Plot()
+Plot::Plot(const string& name, const string& group, const optional<string>& basePlot) : Plot()
 {
   if (str_contains(group, ".")) {
     ERROR("Group must not contain '.'!");
@@ -61,7 +61,7 @@ Plot::Plot(const string& name, const string& group, const optional<string>& plot
   }
   mName = name;
   mGroup = group;
-  mPlotTemplateName = plotTemplateName;
+  mBasePlot = basePlot;
   UpdateUniqueName();
 }
 
@@ -92,7 +92,7 @@ Plot::Plot(const ptree& plotTree)
     ERROR("Could not construct data from ptree.");
     std::exit(EXIT_FAILURE);
   }
-  read_from_tree(plotTree, mPlotTemplateName, "plot_template_name");
+  read_from_tree(plotTree, mBasePlot, "base_plot");
   read_from_tree(plotTree, mPlotDimensions.width, "width");
   read_from_tree(plotTree, mPlotDimensions.height, "height");
   read_from_tree(plotTree, mPlotDimensions.fixAspectRatio, "fix_aspect_ratio");
@@ -131,7 +131,7 @@ ptree Plot::GetPropertyTree() const
   ptree plotTree;
   plotTree.put("name", mName);
   plotTree.put("group", mGroup);
-  put_in_tree(plotTree, mPlotTemplateName, "plot_template_name");
+  put_in_tree(plotTree, mBasePlot, "base_plot");
   put_in_tree(plotTree, mPlotDimensions.width, "width");
   put_in_tree(plotTree, mPlotDimensions.height, "height");
   put_in_tree(plotTree, mPlotDimensions.fixAspectRatio, "fix_aspect_ratio");
@@ -224,9 +224,9 @@ void Plot::AppendGroup(const string& subgroup)
   UpdateUniqueName();
 }
 
-void Plot::SetPlotTemplateName(const string& plotTemplateName)
+void Plot::SetBasePlot(const string& name)
 {
-  mPlotTemplateName = plotTemplateName;
+  mBasePlot = name;
 }
 
 void Plot::SetDimensions(int32_t width, int32_t height, bool fixAspectRatio)
@@ -306,7 +306,7 @@ void Plot::operator+=(const Plot& plot)
 {
   mName = plot.mName;
   mGroup = plot.mGroup;
-  mPlotTemplateName = plot.mPlotTemplateName;
+  mBasePlot = plot.mBasePlot;
 
   if (plot.mPlotDimensions.width) mPlotDimensions.width = plot.mPlotDimensions.width;
   if (plot.mPlotDimensions.height) mPlotDimensions.height = plot.mPlotDimensions.height;
@@ -325,12 +325,12 @@ void Plot::operator+=(const Plot& plot)
 
 //**************************************************************************************************
 /**
- * Friend function to get the combination of template and actual plot.
+ * Friend function to apply the plot settings on top of a base plot.
  */
 //**************************************************************************************************
-Plot operator+(const Plot& templatePlot, const Plot& plot)
+Plot operator+(const Plot& basePlot, const Plot& plot)
 {
-  Plot combinedPlot = templatePlot;
+  Plot combinedPlot = basePlot;
   combinedPlot += plot;
   return combinedPlot;
 }

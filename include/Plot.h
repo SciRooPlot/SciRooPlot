@@ -115,19 +115,19 @@ class Plot
 
   Plot() = default;
   explicit Plot(const boost::property_tree::ptree& plotTree);
-  Plot(const std::string& name, const std::string& group, const std::optional<std::string>& plotTemplateName = {});
+  Plot(const std::string& name, const std::string& group, const std::optional<std::string>& basePlot = {});
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
   Pad& GetPadDefaults() { return mPads[0]; }
   void operator+=(const Plot& plot);
-  friend Plot operator+(const Plot& templatePlot, const Plot& plot);
+  friend Plot operator+(const Plot& basePlot, const Plot& plot);
   Plot(const Plot& otherPlot, const std::string& name, const std::string& group);
   Plot Clone() const;
   void Print() { Plot::Print(GetPropertyTree(), "Plot"); }
 
   // accessors for user
   void AppendGroup(const std::string& subgroup);
-  void SetPlotTemplateName(const std::string& plotTemplateName);
+  void SetBasePlot(const std::string& name);
   void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false);
   void SetWidth(int32_t width);
   void SetHeight(int32_t height);
@@ -149,7 +149,7 @@ class Plot
   // accessors for internal use by manager and painter
   const auto& GetName() const { return mName; }
   const auto& GetGroup() const { return mGroup; }
-  const auto& GetPlotTemplateName() const { return mPlotTemplateName; }
+  const auto& GetBasePlotName() const { return mBasePlot; }
   const auto& GetUniqueName() const { return mUniqueName; }
   boost::property_tree::ptree GetPropertyTree() const;
   auto& GetPads() { return mPads; }
@@ -177,7 +177,7 @@ class Plot
   std::string mName;
   std::string mGroup;
   std::string mUniqueName;
-  std::optional<std::string> mPlotTemplateName;
+  std::optional<std::string> mBasePlot;
   dimension_t mPlotDimensions;
   layout_t mFill;
   std::map<uint8_t, Pad> mPads;

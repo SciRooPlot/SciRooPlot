@@ -52,7 +52,7 @@ class PlotManager
   PlotManager& operator=(const PlotManager& other) = delete;
   PlotManager& operator=(PlotManager&& other) = delete;
 
-  static Plot GetPlotTemplate(const std::string& plotTemplateName = "1d", double_t screenResolution = 100);
+  static Plot GetBasePlot(const std::string& name = "1d", double_t screenResolution = 100);
 
   void SaveProject(const std::string& projectName);
 
@@ -67,8 +67,8 @@ class PlotManager
   void LoadDatasets(const std::string& configFile);
 
   void AddPlot(Plot& plot);
-  void AddPlotTemplate(Plot plotTemplate);
-  void AddColorPlot(const std::string& name, const std::string& group, const std::vector<int32_t>& colors = {});
+  void AddBasePlot(Plot basePlot);
+  void AddColorOverview(const std::string& name, const std::string& group, const std::vector<int32_t>& colors = {});
 
   void SavePlots(const std::string& file, const std::string& name = ".+", const std::string& group = ".+") const;
   void LoadPlots(const std::string& file, const std::string& name = ".+", const std::string& group = ".+");
@@ -90,7 +90,7 @@ class PlotManager
   std::map<std::string, std::shared_ptr<TCanvas>> mPlotLedger;
   std::string mOutputDirectory;
   std::vector<Plot> mPlots;
-  std::vector<Plot> mPlotTemplates;
+  std::vector<Plot> mBasePlots;
   std::map<std::string, boost::property_tree::ptree> mPropertyTreeCache;
   std::vector<const std::string*> mPlotViewHistory;
   int32_t mWindowOffsetY{};

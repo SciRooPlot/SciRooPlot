@@ -282,14 +282,14 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
 // most of these settings e.g. the number and alignment of pads, background colors, transparency, etc..
 // stay the same for all (or a group of) your plots and you do not want to
 // verbosely specify them again and again for every one of your plots
-// therefore the framework provides the option to specify plot templates
+// therefore the framework provides the option to specify base plots
 // these are just ordinary plots, but you can use their settings as a baseline
 // and the properties specified for your final plot will be applied on top of these
-// you have to be added to the manager via pm.AddPlotTemplate(plot);
+// you have to be added to the manager via pm.AddBasePlot(plot);
 
-// for instance the following lines will generate an example template plot:
+// for instance the following lines will generate an example base plot:
 { // -----------------------------------------------------------------------
-  Plot plot("myPlotTemplate", "PLOT_TEMPLATES");
+  Plot plot("myBasePlot", "BASE_PLOTS");
   plot.SetDimensions(710, 710, true);
   plot.SetTransparent();
   plot[0].SetFrameFill(10, 1001);
@@ -310,22 +310,22 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
   plot[0]['X'].SetTitleSize(28).SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
   plot[0]['Y'].SetTitleSize(28).SetTitleOffset(1.5).SetOppositeTicks().SetMaxDigits(3);
   plot[1].SetPosition(0., 0., 1., 1.);
-  pm.AddPlotTemplate(plot);
+  pm.AddBasePlot(plot);
 } // -----------------------------------------------------------------------
 
-// the framework also provides some default layouts that can be used as a starting point (or as inspiration for your own templates)
-// they are defined in PlotManager.cxx and can be obtained with the function PlotManager::GetPlotTemplate()
-pm.AddPlotTemplate(PlotManager::GetPlotTemplate("1d"));
-pm.AddPlotTemplate(PlotManager::GetPlotTemplate("2d"));
-pm.AddPlotTemplate(PlotManager::GetPlotTemplate("1d_ratio"));
-pm.AddPlotTemplate(PlotManager::GetPlotTemplate("1d_3panels"));
+// the framework also provides some default layouts that can be used as a starting point (or as inspiration for your own base plots)
+// they are defined in PlotManager.cxx and can be obtained with the function PlotManager::GetBasePlot()
+pm.AddBasePlot(PlotManager::GetBasePlot("1d"));
+pm.AddBasePlot(PlotManager::GetBasePlot("2d"));
+pm.AddBasePlot(PlotManager::GetBasePlot("1d_ratio"));
+pm.AddBasePlot(PlotManager::GetBasePlot("1d_3panels"));
 
-// modifications to the default templates can be applied in the following way
-auto plotTemplate = PlotManager::GetPlotTemplate("1d");
-plotTemplate[1]['X'].SetColor(kRed);
-pm.AddPlotTemplate(plotTemplate);
+// modifications to the default base plots can be applied in the following way
+auto basePlot = PlotManager::GetBasePlot("1d");
+basePlot[1]['X'].SetColor(kRed);
+pm.AddBasePlot(basePlot);
 
-// once this is done, you can define plots based on these templates
+// once this is done, you can define plots building up on these base plots
 // by specifying their name as the third argument in the new plots' constructor:
 { // -----------------------------------------------------------------------
   Plot plot("test1d_ratio", "myGroup", "1d_ratio");
@@ -397,7 +397,7 @@ data_layout_t pp_7TeV
   Plot plot("testColorGradients", "myGroup", "1d");
 
   // some of the data properties (e.g. styles, colors and line widths) we may not want to specify for each of the data separately
-  // therefore, as you have already seen in the definitions of the plot templates above, it is possible to define some default settings per pad
+  // therefore, as you have already seen in the definitions of the base plot above, it is possible to define some default settings per pad
   // for instance you can define a list of colors that should be used for drawing the data:
   vector<int16_t> goodColors = {kBlack, kBlue+1, kRed+1, kYellow+1};
   plot[1].SetDefaultMarkerColors(goodColors);
