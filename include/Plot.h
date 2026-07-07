@@ -115,24 +115,24 @@ class Plot
 
   Plot() = default;
   explicit Plot(const boost::property_tree::ptree& plotTree);
-  Plot(const std::string& name, const std::string& group, const std::optional<std::string>& basePlot = {});
+  Plot(const std::string& name, const std::string& group = "", const std::optional<std::string>& basePlot = {});
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
   Pad& GetPadDefaults() { return mPads[0]; }
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& basePlot, const Plot& plot);
-  Plot(const Plot& otherPlot, const std::string& name, const std::string& group);
+  Plot(const Plot& otherPlot, const std::string& name, const std::optional<std::string>& group = {});
   Plot Clone() const;
   void Print() { Plot::Print(GetPropertyTree(), "Plot"); }
 
   // accessors for user
+  void SetGroup(const std::string& group);
   void AppendGroup(const std::string& subgroup);
   void SetBasePlot(const std::string& name);
   void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false);
   void SetWidth(int32_t width);
   void SetHeight(int32_t height);
   void SetFixAspectRatio(bool fixAspectRatio = true);
-  void SetPaintColorWheel(bool paintColorWheel = true);
 
   Plot& SetFill(int16_t color, std::optional<int16_t> style = {}, std::optional<float_t> alpha = {});
   Plot& SetFillColor(int16_t color);
@@ -144,7 +144,7 @@ class Plot
   friend class PlotManager;
   friend class PlotPainter;
 
-  void SetGroup(const std::string& group);
+  void SetPaintColorWheel(bool paintColorWheel = true);
 
   // accessors for internal use by manager and painter
   const auto& GetName() const { return mName; }

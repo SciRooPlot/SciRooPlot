@@ -289,7 +289,7 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
 
 // for instance the following lines will generate an example base plot:
 { // -----------------------------------------------------------------------
-  Plot plot("myBasePlot", "BASE_PLOTS");
+  Plot plot("myBasePlot");
   plot.SetDimensions(710, 710, true);
   plot.SetTransparent();
   plot[0].SetFrameFill(10, 1001);

@@ -70,11 +70,11 @@ Plot::Plot(const string& name, const string& group, const optional<string>& base
  * Constructor from existing plot.
  */
 //**************************************************************************************************
-Plot::Plot(const Plot& otherPlot, const string& name, const string& group)
+Plot::Plot(const Plot& otherPlot, const string& name, const optional<string>& group)
 {
   *this = otherPlot.Clone();
   mName = name;
-  mGroup = group;
+  if (group) mGroup = *group;
   UpdateUniqueName();
 }
 

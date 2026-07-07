@@ -308,8 +308,12 @@ void PlotManager::LoadDatasets(const string& configFile)
 //**************************************************************************************************
 void PlotManager::AddPlot(Plot& plot)
 {
-  if (plot.GetGroup() == "BASE_PLOTS") {
+  if (plot.GetGroup().empty()) {
+    ERROR("Cannot add plot ({}) that does not belong to a group.", plot.GetName());
+    return;
+  } else if (plot.GetGroup() == "BASE_PLOTS") {
     ERROR("You cannot use reserved group name 'BASE_PLOTS'!");
+    return;
   }
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [plot](Plot& curPlot) mutable {
@@ -1419,7 +1423,7 @@ Plot PlotManager::GetBasePlot(const string& name, double_t screenResolution)
 
   if (name == "1d") {
     // -----------------------------------------------------------------------
-    Plot plot(name, "BASE_PLOTS");
+    Plot plot(name);
     plot.SetDimensions(pixelBase, pixelBase, true);
     plot.SetTransparent();
     plot[0].SetFrameFill(10, 1001);
@@ -1443,7 +1447,7 @@ Plot PlotManager::GetBasePlot(const string& name, double_t screenResolution)
 
   if (name == "1d_ratio") {
     // -----------------------------------------------------------------------
-    Plot plot(name, "BASE_PLOTS");
+    Plot plot(name);
     plot.SetDimensions(pixelBase, static_cast<int32_t>(std::round(wideSideScale * pixelBase)), true);
     plot.SetTransparent();
     plot[0].SetFrameFill(10, 1001);
@@ -1477,7 +1481,7 @@ Plot PlotManager::GetBasePlot(const string& name, double_t screenResolution)
 
   if (name == "2d") {
     // -----------------------------------------------------------------------
-    Plot plot(name, "BASE_PLOTS");
+    Plot plot(name);
     plot.SetDimensions(static_cast<int32_t>(std::round(wideSideScale * pixelBase)), pixelBase, true);
     plot.SetTransparent();
     plot[0].SetFrameFill(10, 1001);
@@ -1526,7 +1530,7 @@ Plot PlotManager::GetBasePlot(const string& name, double_t screenResolution)
     double_t tickLengthPad2 = tickLengthPad1 * widthFramePixel / totalPixelWidthPad1;
     double_t tickLengthPad3 = tickLengthPad1 * (widthFramePixel + rightMarginPixel) / totalPixelWidthPad1;
 
-    Plot plot(name, "BASE_PLOTS");
+    Plot plot(name);
     plot.SetDimensions(totalPixelWidth, totalPixelHeight, true);
     plot.SetTransparent();
     plot[0].SetFrameFill(10, 1001);

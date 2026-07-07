@@ -617,7 +617,7 @@
       #code-block(
         [
           ```cpp
-          Plot plot("myLayout", "BASE_PLOTS");
+          Plot plot("myBasePlot");
           plot.SetDimensions(710, 710);
           plot.SetTransparent();
 
@@ -638,7 +638,7 @@
         ],
         [
           ```python
-          plot = Plot("myLayout", "BASE_PLOTS")
+          plot = Plot("myBasePlot")
           plot.SetDimensions(710, 710)
           plot.SetTransparent()
 
