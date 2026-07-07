@@ -1287,22 +1287,22 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string&
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
 
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorLayout, const string& denominatorName, const string& denominatorDataset, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorSettings, const string& denominatorName, const string& denominatorDataset, const optional<string>& label)
 {
-  mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorLayout.GetDataset(),
+  mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorSettings.GetDataset(),
                                           denominatorName, denominatorDataset, label));
-  mData.back()->SetLayout(numeratorLayout);
+  mData.back()->SetLayout(numeratorSettings);
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
 
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorLayout, const string& denominatorName, const Data& denominatorLayout, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorSettings, const string& denominatorName, const Data& denominatorSettings, const optional<string>& label)
 {
-  return AddRatio(numeratorName, numeratorLayout, denominatorName, denominatorLayout.GetDataset(), label);
+  return AddRatio(numeratorName, numeratorSettings, denominatorName, denominatorSettings.GetDataset(), label);
 }
 
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataset, const string& denominatorName, const Data& denominatorLayout, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataset, const string& denominatorName, const Data& denominatorSettings, const optional<string>& label)
 {
-  return AddRatio(numeratorName, numeratorDataset, denominatorName, denominatorLayout.GetDataset(), label);
+  return AddRatio(numeratorName, numeratorDataset, denominatorName, denominatorSettings.GetDataset(), label);
 }
 
 //**************************************************************************************************

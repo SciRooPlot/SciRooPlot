@@ -115,10 +115,9 @@ class Plot
 
   Plot() = default;
   explicit Plot(const boost::property_tree::ptree& plotTree);
-  Plot(const std::string& name, const std::string& group = "", const std::optional<std::string>& basePlot = {});
+  explicit Plot(const std::string& name, const std::string& group = "", const std::optional<std::string>& basePlot = {});
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
-  Pad& GetPadDefaults() { return mPads[0]; }
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& basePlot, const Plot& plot);
   Plot(const Plot& otherPlot, const std::string& name, const std::optional<std::string>& group = {});
@@ -209,7 +208,7 @@ class Plot::Pad
 
   // User accessors:
   Data& AddData(const std::string& name, const std::string& dataset, const std::optional<std::string>& label = {});
-  Data& AddData(const std::string& name, const Data& dataTemplate, const std::optional<std::string>& label = {});
+  Data& AddData(const std::string& name, const Data& settings, const std::optional<std::string>& label = {});
   Data& AddFunction(const std::string& function, const std::optional<std::string>& label = {});
 
   Data& AddPoints(std::vector<double_t> x, std::vector<double_t> y, const std::optional<std::string>& label = {});
@@ -220,12 +219,12 @@ class Plot::Pad
   Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataset,
                   const std::string& denominatorName, const std::string& denominatorDataset,
                   const std::optional<std::string>& label = {});
-  Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorLayout, const std::string& denominatorName,
+  Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorSettings, const std::string& denominatorName,
                   const std::string& denominatorDataset, const std::optional<std::string>& label = {});
-  Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorLayout, const std::string& denominatorName,
-                  const Data& denominatorLayout, const std::optional<std::string>& label = {});
+  Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorSettings, const std::string& denominatorName,
+                  const Data& denominatorSettings, const std::optional<std::string>& label = {});
   Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataset, const std::string& denominatorName,
-                  const Data& denominatorLayout, const std::optional<std::string>& label = {});
+                  const Data& denominatorSettings, const std::optional<std::string>& label = {});
 
   TextBox& AddText(double_t xPos, double_t yPos, const std::string& text);
   TextBox& AddText(const std::string& text);
