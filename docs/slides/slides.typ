@@ -452,7 +452,7 @@
               plot[1].AddData("dataObjectName", "datasetName", "my label");
               plot[1].AddLegend();
               plot[1].AddText("some text");
-              plot[1]["X"].SetTitle("x axis title");
+              plot[1]['X'].SetTitle("x axis title");
               pm.AddPlot(plot);
             } // ---------------------------------------------------------
             pm.SaveProject("myPlots");

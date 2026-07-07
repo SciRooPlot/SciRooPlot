@@ -125,15 +125,14 @@ class Plot
   void Print() { Plot::Print(GetPropertyTree(), "Plot"); }
 
   // accessors for user
-  void SetName(const std::string& name);
-  void SetGroup(const std::string& group);
-  void AppendGroup(const std::string& subgroup);
-  void SetBasePlot(const std::string& name);
-  void SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false);
-  void SetWidth(int32_t width);
-  void SetHeight(int32_t height);
-  void SetFixAspectRatio(bool fixAspectRatio = true);
-
+  Plot& SetName(const std::string& name);
+  Plot& SetGroup(const std::string& group);
+  Plot& AppendGroup(const std::string& subgroup);
+  Plot& SetBasePlot(const std::string& name);
+  Plot& SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false);
+  Plot& SetWidth(int32_t width);
+  Plot& SetHeight(int32_t height);
+  Plot& SetFixAspectRatio(bool fixAspectRatio = true);
   Plot& SetFill(int16_t color, std::optional<int16_t> style = {}, std::optional<float_t> alpha = {});
   Plot& SetFillColor(int16_t color);
   Plot& SetFillStyle(int16_t style);

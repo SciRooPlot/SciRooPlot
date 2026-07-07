@@ -204,55 +204,63 @@ void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
   print_pt(print_pt, pt, 0);
 }
 
-void Plot::SetName(const string& name)
+auto Plot::SetName(const string& name) -> decltype(*this)
 {
   mName = name;
   UpdateUniqueName();
+  return *this;
 }
 
-void Plot::SetGroup(const string& group)
+auto Plot::SetGroup(const string& group) -> decltype(*this)
 {
   if (group.empty()) {
     ERROR("Cannot set empty group.");
-    return;
+    return *this;
   }
   mGroup = group;
   UpdateUniqueName();
+  return *this;
 }
 
-void Plot::AppendGroup(const string& subgroup)
+auto Plot::AppendGroup(const string& subgroup) -> decltype(*this)
 {
   if (subgroup.empty()) {
     ERROR("Cannot append empty subgroup.");
-    return;
+    return *this;
   }
   mGroup = mGroup + "/" + subgroup;
   UpdateUniqueName();
+  return *this;
 }
 
-void Plot::SetBasePlot(const string& name)
+auto Plot::SetBasePlot(const string& name) -> decltype(*this)
 {
   mBasePlot = name;
+  return *this;
 }
 
-void Plot::SetDimensions(int32_t width, int32_t height, bool fixAspectRatio)
+auto Plot::SetDimensions(int32_t width, int32_t height, bool fixAspectRatio) -> decltype(*this)
 {
   mPlotDimensions = {width, height, fixAspectRatio};
+  return *this;
 }
 
-void Plot::SetWidth(int32_t width)
+auto Plot::SetWidth(int32_t width) -> decltype(*this)
 {
   mPlotDimensions.width = width;
+  return *this;
 }
 
-void Plot::SetHeight(int32_t height)
+auto Plot::SetHeight(int32_t height) -> decltype(*this)
 {
   mPlotDimensions.height = height;
+  return *this;
 }
 
-void Plot::SetFixAspectRatio(bool fixAspectRatio)
+auto Plot::SetFixAspectRatio(bool fixAspectRatio) -> decltype(*this)
 {
   mPlotDimensions.fixAspectRatio = fixAspectRatio;
+  return *this;
 }
 
 void Plot::SetPaintColorWheel(bool paintColorWheel)
