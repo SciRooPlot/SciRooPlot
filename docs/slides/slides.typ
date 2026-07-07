@@ -661,7 +661,7 @@
       #code-block(
         [
           ```cpp
-          pm.AddBasePlot(PlotManager::GetDefaultBasePlot("1d"));
+          pm.AddBasePlot(PlotManager::GetBasePlot("1d"));
           // create new plot on basis of "1d" base plot:
           Plot plot("myPlot", "myGroup", "1d");
           plot[1]['X'].SetRange(0., 10.).SetTitle("x title");
@@ -669,7 +669,7 @@
         ],
         [
           ```python
-          pm.AddBasePlot(PlotManager.GetDefaultBasePlot("1d"))
+          pm.AddBasePlot(PlotManager.GetBasePlot("1d"))
           # create a new plot based on the "1d" base plot
           plot = Plot("myPlot", "myGroup", "1d")
           plot[1]['X'].SetRange(0., 10.).SetTitle("x title")
@@ -708,7 +708,7 @@
           - Profiles (`TProfile`, `TProfile2D`)
           - Graphs (`TGraph`, `TGraph2D`)
           - Functions (`TF1`, `TF2`, `TF3`)
-          - Efficienies (`TEfficiency`)
+          - Efficiencies (`TEfficiency`)
           - Trees (`TTree`)
           - Tables (`.csv`, `.dat`, `.txt`, `.tsv`, `.tab`)
         ],
@@ -895,7 +895,7 @@
 
       - One- and two-dimensional profiles can be created analogously from multidimensional histograms.
 
-      - The same functionality is available for numerator and denomianator of ratios.
+      - The same functionality is available for numerator and denominator of ratios.
     ],
     [
       #code-block(
