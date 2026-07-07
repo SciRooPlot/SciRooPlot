@@ -599,12 +599,16 @@ bool PlotManager::FillBuffer()
       requiredData[std::move(path)].push_back(std::move(name));
     }
 
+    if (mInputFiles.find(dataset) == mInputFiles.end()) {
+      success = false;
+      continue;
+    }
     // open all input files belonging to the current dataset and extract the data
     for (const auto& inputFileName : mInputFiles[dataset]) {
       if (requiredData.empty()) break;
       if (str_contains(inputFileName, mTableFileEndings, true)) {
         string name = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".") - inputFileName.rfind('/') - 1);
-        ReadDataCSV(inputFileName, name, dataset);
+        ReadTableData(inputFileName, name, dataset);
         vector<string>& wantedNames = requiredData[""];
         wantedNames.erase(std::remove_if(wantedNames.begin(), wantedNames.end(), [&](const auto& wantedName) { return wantedName == name; }), wantedNames.end());
         if (wantedNames.empty()) requiredData.erase("");
@@ -676,7 +680,6 @@ bool PlotManager::FillBuffer()
 //**************************************************************************************************
 void PlotManager::PrintBufferStatus(bool onlyMissing) const
 {
-  INFO("===============================================");
   if (onlyMissing) {
     INFO("================= Missing Data ================");
   } else {
@@ -691,7 +694,7 @@ void PlotManager::PrintBufferStatus(bool onlyMissing) const
       bool show = onlyMissing ? (dataPtr == nullptr) : true;
       if (dataPtr) ++nAvailableData;
       if (show) {
-        if (printDataset) INFO("{}", dataset);
+        if (printDataset) INFO("{}{}", dataset, (mInputFiles.find(dataset) == mInputFiles.end()) ? " (dataset not found)" : "");
         printDataset = false;
         INFO(" - {}{}{}", (dataPtr) ? logger::begin_color(logger::Color::Green) : logger::begin_color(logger::Color::Red), dataName, logger::end_color());
       }
@@ -1023,10 +1026,10 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
 
 //**************************************************************************************************
 /**
- * Read data from csv file.
+ * Read table data from file.
  */
 //**************************************************************************************************
-void PlotManager::ReadDataCSV(const string& inputFileName, const string& name, const string& dataset)
+void PlotManager::ReadTableData(const string& inputFileName, const string& name, const string& dataset)
 {
   if (!file_exists(inputFileName)) {
     ERROR("File {} does not exist.", inputFileName);
