@@ -219,8 +219,6 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
   plot[1](2).SetColor(kRed);           // B: use the () operator
 
   // finally, after plot definition is done we can add it to the manager
-  // at this point the plot object we were modifying is moved to the manager
-  // and the plot object remaining in the current scope will be empty
   pm.AddPlot(plot);
 } // -----------------------------------------------------------------------
 
@@ -314,14 +312,14 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
 } // -----------------------------------------------------------------------
 
 // the framework also provides some default layouts that can be used as a starting point (or as inspiration for your own base plots)
-// they are defined in PlotManager.cxx and can be obtained with the function PlotManager::GetBasePlot()
-pm.AddBasePlot(PlotManager::GetBasePlot("1d"));
-pm.AddBasePlot(PlotManager::GetBasePlot("2d"));
-pm.AddBasePlot(PlotManager::GetBasePlot("1d_ratio"));
-pm.AddBasePlot(PlotManager::GetBasePlot("1d_3panels"));
+// they are defined in PlotManager.cxx and can be obtained with the function PlotManager::MakeBasePlot()
+pm.AddBasePlot(PlotManager::MakeBasePlot("1d"));
+pm.AddBasePlot(PlotManager::MakeBasePlot("2d"));
+pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
+pm.AddBasePlot(PlotManager::MakeBasePlot("1d_3panels"));
 
 // modifications to the default base plots can be applied in the following way
-auto basePlot = PlotManager::GetBasePlot("1d");
+auto basePlot = PlotManager::MakeBasePlot("1d");
 basePlot[1]['X'].SetColor(kRed);
 pm.AddBasePlot(basePlot);
 

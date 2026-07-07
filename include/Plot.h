@@ -125,6 +125,7 @@ class Plot
   void Print() { Plot::Print(GetPropertyTree(), "Plot"); }
 
   // accessors for user
+  void SetName(const std::string& name);
   void SetGroup(const std::string& group);
   void AppendGroup(const std::string& subgroup);
   void SetBasePlot(const std::string& name);

@@ -661,7 +661,7 @@
       #code-block(
         [
           ```cpp
-          pm.AddBasePlot(PlotManager::GetBasePlot("1d"));
+          pm.AddBasePlot(PlotManager::MakeBasePlot("1d"));
           // create new plot on basis of "1d" base plot:
           Plot plot("myPlot", "myGroup", "1d");
           plot[1]['X'].SetRange(0., 10.).SetTitle("x title");
@@ -669,7 +669,7 @@
         ],
         [
           ```python
-          pm.AddBasePlot(PlotManager.GetBasePlot("1d"))
+          pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
           # create a new plot based on the "1d" base plot
           plot = Plot("myPlot", "myGroup", "1d")
           plot[1]['X'].SetRange(0., 10.).SetTitle("x title")

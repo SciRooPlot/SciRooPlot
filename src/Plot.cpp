@@ -204,6 +204,12 @@ void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
   print_pt(print_pt, pt, 0);
 }
 
+void Plot::SetName(const string& name)
+{
+  mName = name;
+  UpdateUniqueName();
+}
+
 void Plot::SetGroup(const string& group)
 {
   if (group.empty()) {

@@ -103,8 +103,8 @@ PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr))
 //**************************************************************************************************
 void PlotManager::SavePlotsToRootFile() const
 {
-  if (!mPlotLedger.empty()) {
-    TFile outputFile((mOutputDirectory + "/" + mRootFilePlots).data(), "RECREATE");
+  if (!mCanvasRegistry.empty()) {
+    TFile outputFile((mOutputDirectory + "/" + mPlotsRootFile).data(), "RECREATE");
     if (outputFile.IsZombie()) {
       return;
     }
@@ -124,7 +124,7 @@ void PlotManager::SavePlotsToRootFile() const
       colorCanvas.Write();
     }
     uint32_t nPlots{0u};
-    for (const auto& [uniqueName, canvas] : mPlotLedger) {
+    for (const auto& [uniqueName, canvas] : mCanvasRegistry) {
       size_t delimiterPos = uniqueName.find(":");
       string plotName = uniqueName.substr(0, delimiterPos);
       string subfolder = uniqueName.substr(delimiterPos + 1);
@@ -136,7 +136,7 @@ void PlotManager::SavePlotsToRootFile() const
       ++nPlots;
     }
     outputFile.Close();
-    INFO("Saved {} plots to file {}/{}.", nPlots, mOutputDirectory, mRootFilePlots);
+    INFO("Saved {} plots to file {}/{}.", nPlots, mOutputDirectory, mPlotsRootFile);
   }
 }
 
@@ -147,7 +147,7 @@ void PlotManager::SavePlotsToRootFile() const
 //**************************************************************************************************
 void PlotManager::SaveDataToRootFile() const
 {
-  TFile outputFile((mOutputDirectory + "/" + mRootFileData).data(), "RECREATE");
+  TFile outputFile((mOutputDirectory + "/" + mDataRootFile).data(), "RECREATE");
   if (outputFile.IsZombie()) {
     return;
   }
@@ -170,7 +170,7 @@ void PlotManager::SaveDataToRootFile() const
     }
   }
   outputFile.Close();
-  INFO("Saved data to file {}/{}.", mOutputDirectory, mRootFileData);
+  INFO("Saved data to file {}/{}.", mOutputDirectory, mDataRootFile);
 }
 
 //**************************************************************************************************
@@ -249,7 +249,7 @@ void PlotManager::AddDataset(const string& dataset, TObject* inputData)
  * Save dataset properties currently defined in the manager to a config file.
  */
 //**************************************************************************************************
-void PlotManager::SaveDatasets(const string& configFile) const
+void PlotManager::SaveDatasets(const string& datasetFile) const
 {
   ptree inputFileTree;
   for (const auto& inFileTuple : mInputFiles) {
@@ -259,7 +259,7 @@ void PlotManager::SaveDatasets(const string& configFile) const
     }
     inputFileTree.put_child(inFileTuple.first, filesOfDataset);
   }
-  std::filesystem::path file = expand_path(configFile);
+  std::filesystem::path file = expand_path(datasetFile);
   if (std::filesystem::create_directories(file.parent_path())) {
     INFO("Created config folder: {}", file.parent_path().string());
   }
@@ -272,14 +272,14 @@ void PlotManager::SaveDatasets(const string& configFile) const
  * Load dataset properties from config file into manager.
  */
 //**************************************************************************************************
-void PlotManager::LoadDatasets(const string& configFile)
+void PlotManager::LoadDatasets(const string& datasetFile)
 {
   ptree inputFileTree;
   try {
     using boost::property_tree::read_info;
-    read_info(expand_path(configFile), inputFileTree);
+    read_info(expand_path(datasetFile), inputFileTree);
   } catch (...) {
-    ERROR("Cannot load file {}.", configFile);
+    ERROR("Cannot load file {}.", datasetFile);
     return;
   }
   for (const auto& inputPair : inputFileTree) {
@@ -303,10 +303,10 @@ void PlotManager::LoadDatasets(const string& configFile)
 
 //**************************************************************************************************
 /**
- * Add pre-defined plot to the manager. Plot will be moved and no longer accessible from outside the manager.
+ * Add plot to the manager.
  */
 //**************************************************************************************************
-void PlotManager::AddPlot(Plot& plot)
+void PlotManager::AddPlot(Plot plot)
 {
   if (plot.GetGroup().empty()) {
     ERROR("Cannot add plot ({}) that does not belong to a group.", plot.GetName());
@@ -316,7 +316,7 @@ void PlotManager::AddPlot(Plot& plot)
     return;
   }
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
-                              [plot](Plot& curPlot) mutable {
+                              [&plot](const Plot& curPlot) {
                                 bool removePlot = curPlot.GetUniqueName() == plot.GetUniqueName();
                                 if (removePlot) WARNING("Plot {} in {} already exists and will be replaced.", curPlot.GetName(), curPlot.GetGroup());
                                 return removePlot;
@@ -327,14 +327,14 @@ void PlotManager::AddPlot(Plot& plot)
 
 //**************************************************************************************************
 /**
- * Add base plots that share some common properties.
+ * Add base plot to the manager.
  */
 //**************************************************************************************************
 void PlotManager::AddBasePlot(Plot basePlot)
 {
   basePlot.SetGroup("BASE_PLOTS");
   mBasePlots.erase(std::remove_if(mBasePlots.begin(), mBasePlots.end(),
-                                  [basePlot](Plot& curBasePlot) mutable {
+                                  [&basePlot](const Plot& curBasePlot) {
                                     bool removePlot = curBasePlot.GetUniqueName() == basePlot.GetUniqueName();
                                     if (removePlot) WARNING("Base plot {} already exists and will be replaced.", curBasePlot.GetName());
                                     return removePlot;
@@ -394,7 +394,7 @@ void PlotManager::AddColorOverview(const string& name, const string& group, cons
  * Save plots matching name and group regex to file.
  */
 //**************************************************************************************************
-void PlotManager::SavePlots(const string& file, const string& name, const string& group) const
+void PlotManager::SavePlots(const string& plotFile, const string& name, const string& group) const
 {
   ptree plotTree;
   std::regex groupRegex{group};
@@ -411,7 +411,7 @@ void PlotManager::SavePlots(const string& file, const string& name, const string
       plotTree.put_child(displayedName, plot.GetPropertyTree());
     }
   }
-  std::filesystem::path filePath = expand_path(file);
+  std::filesystem::path filePath = expand_path(plotFile);
   if (std::filesystem::create_directories(filePath.parent_path())) {
     INFO("Created config folder: {}", filePath.parent_path().string());
   }
@@ -424,7 +424,7 @@ void PlotManager::SavePlots(const string& file, const string& name, const string
  * Function to load plots matching name and group regex from file.
  */
 //**************************************************************************************************
-void PlotManager::LoadPlots(const string& file, const string& name, const string& group)
+void PlotManager::LoadPlots(const string& plotFile, const string& name, const string& group)
 {
   uint32_t nFoundPlots{};
   std::regex groupRegex{group};
@@ -432,9 +432,9 @@ void PlotManager::LoadPlots(const string& file, const string& name, const string
   ptree fileTree;
   try {
     using boost::property_tree::read_info;
-    read_info(expand_path(file), fileTree);
+    read_info(expand_path(plotFile), fileTree);
   } catch (...) {
-    ERROR("Cannot open file {}.", file);
+    ERROR("Cannot open file {}.", plotFile);
     std::exit(EXIT_FAILURE);
   }
 
@@ -467,10 +467,10 @@ void PlotManager::LoadPlots(const string& file, const string& name, const string
 
 //**************************************************************************************************
 /**
- * Creates plots matching name and group regex.
+ * Generates plots matching name and group regex.
  */
 //**************************************************************************************************
-void PlotManager::CreatePlots(const string& mode, const string& name, const string& group)
+void PlotManager::GeneratePlots(const string& mode, const string& name, const string& group)
 {
   // first determine which data needs to be loaded
   vector<Plot*> selectedPlots;
@@ -674,10 +674,10 @@ bool PlotManager::FillBuffer()
  * Show which data could and could not be found.
  */
 //**************************************************************************************************
-void PlotManager::PrintBufferStatus(bool missingOnly) const
+void PlotManager::PrintBufferStatus(bool onlyMissing) const
 {
   INFO("===============================================");
-  if (missingOnly) {
+  if (onlyMissing) {
     INFO("================= Missing Data ================");
   } else {
     INFO("================= Data Buffer =================");
@@ -688,7 +688,7 @@ void PlotManager::PrintBufferStatus(bool missingOnly) const
     bool printDataset = true;
     for (const auto& [dataName, dataPtr] : buffer) {
       ++nNeededData;
-      bool show = missingOnly ? (dataPtr == nullptr) : true;
+      bool show = onlyMissing ? (dataPtr == nullptr) : true;
       if (dataPtr) ++nAvailableData;
       if (show) {
         if (printDataset) INFO("{}", dataset);
@@ -712,9 +712,9 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   bool isMacroMode = (mode == "macro");
 
   // if plot already exists, delete the old one first
-  if (mPlotLedger.find(plot.GetUniqueName()) != mPlotLedger.end()) {
+  if (mCanvasRegistry.find(plot.GetUniqueName()) != mCanvasRegistry.end()) {
     ERROR("Plot {} was already created. Replacing it.", plot.GetUniqueName());
-    mPlotLedger.erase(plot.GetUniqueName());
+    mCanvasRegistry.erase(plot.GetUniqueName());
   }
   if (plot.GetGroup().empty()) {
     ERROR("No group was specified for plot {}.", plot.GetName());
@@ -755,7 +755,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     if (auto rc = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) {
       rc->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
     }
-    mPlotLedger[plot.GetUniqueName()] = canvas;
+    mCanvasRegistry[plot.GetUniqueName()] = canvas;
     mPlotViewHistory.push_back(&plot.GetUniqueName());
     uint32_t curPlotIndex{static_cast<uint32_t>(mPlotViewHistory.size() - 1)};
 
@@ -763,10 +763,10 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     int32_t curXpos{};
     int32_t curYpos{};
     if (curPlotIndex > 0) {
-      curXpos = mPlotLedger[*mPlotViewHistory[curPlotIndex - 1]]->GetWindowTopX();
-      curYpos = mPlotLedger[*mPlotViewHistory[curPlotIndex - 1]]->GetWindowTopY();
+      curXpos = mCanvasRegistry[*mPlotViewHistory[curPlotIndex - 1]]->GetWindowTopX();
+      curYpos = mCanvasRegistry[*mPlotViewHistory[curPlotIndex - 1]]->GetWindowTopY();
       canvas->SetWindowPosition(curXpos, curYpos - mWindowOffsetY);
-      static_cast<TRootCanvas*>(mPlotLedger[*mPlotViewHistory[curPlotIndex - 1]]->GetCanvasImp())->UnmapWindow();
+      static_cast<TRootCanvas*>(mCanvasRegistry[*mPlotViewHistory[curPlotIndex - 1]]->GetCanvasImp())->UnmapWindow();
     }
     canvas->Show();
     bool boxClicked = false;
@@ -797,7 +797,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
           --curPlotIndex;
         }
         static_cast<TRootCanvas*>(canvas->GetCanvasImp())->UnmapWindow();
-        canvas = mPlotLedger[*mPlotViewHistory[curPlotIndex]];
+        canvas = mCanvasRegistry[*mPlotViewHistory[curPlotIndex]];
         canvas->SetWindowPosition(curXpos, curYpos - mWindowOffsetY);
         canvas->Show();
       } else {
@@ -819,7 +819,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   }
 
   if (mode == "file") {
-    mPlotLedger[plot.GetUniqueName()] = canvas;
+    mCanvasRegistry[plot.GetUniqueName()] = canvas;
     return true;
   }
   if (mode == "data") {
@@ -1398,7 +1398,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
  * For multiple of 72dpi the resulting plot will have the best agreement with the pdf version.
  */
 //****************************************************************************************
-Plot PlotManager::GetBasePlot(const string& name, double_t screenResolution)
+Plot PlotManager::MakeBasePlot(const string& name, double_t screenResolution)
 {
   // info: the PDF backend of ROOT can only create plots with resolution of 72 dpi and maximum sizes defined by the A4 format (20cm x 26cm -> 567px x 737px)
   int32_t pixelBase = static_cast<int32_t>(std::round(screenResolution * 567. / 72.));  // 567p / 72dpi == 20cm / 2.54in/cm (final pdf size)
@@ -1609,13 +1609,13 @@ tuple<string, string, string> PlotManager::GetProjectSettings(string projectName
       }
     }
   }
-  string datasetsFile = configPath + "/" + projectName + "/datasets.info";
-  string plotsFile = configPath + "/" + projectName + "/plots.info";
+  string datasetFile = configPath + "/" + projectName + "/datasets.info";
+  string plotFile = configPath + "/" + projectName + "/plots.info";
   if (projectName.empty()) {
-    datasetsFile = "";
-    plotsFile = "";
+    datasetFile = "";
+    plotFile = "";
   }
-  return {datasetsFile, plotsFile, outputDir};
+  return {datasetFile, plotFile, outputDir};
 }
 
 //****************************************************************************************
@@ -1626,21 +1626,21 @@ tuple<string, string, string> PlotManager::GetProjectSettings(string projectName
 void PlotManager::SaveProject(const string& projectName)
 {
   namespace fs = std::filesystem;
-  auto [datasetsFile, plotsFile, outputDir] = GetProjectSettings(projectName);
+  auto [datasetFile, plotFile, outputDir] = GetProjectSettings(projectName);
 
-  if (fs::create_directories(fs::path(datasetsFile).parent_path())) {
-    INFO("Created config folder for project {}: {}", projectName, fs::path(datasetsFile).parent_path().string());
+  if (fs::create_directories(fs::path(datasetFile).parent_path())) {
+    INFO("Created config folder for project {}: {}", projectName, fs::path(datasetFile).parent_path().string());
   }
 
   // move user data stored in current session to project folder
-  fs::path curUserDataFile = fs::path(datasetsFile).parent_path() / "../UserData.root";
+  fs::path curUserDataFile = fs::path(datasetFile).parent_path() / "../UserData.root";
   if (fs::exists(curUserDataFile)) {
-    fs::path userDataFile = fs::path(datasetsFile).parent_path() / "UserData.root";
+    fs::path userDataFile = fs::path(datasetFile).parent_path() / "UserData.root";
     fs::rename(curUserDataFile, userDataFile);
   }
 
-  SaveDatasets(datasetsFile);
-  SavePlots(plotsFile);
+  SaveDatasets(datasetFile);
+  SavePlots(plotFile);
 
   if (!mOutputDirectory.empty()) {
     WARNING("The output directory of a project can only be modified with the srp app.");
@@ -1648,7 +1648,7 @@ void PlotManager::SaveProject(const string& projectName)
 
   // create a csv file for tab completion
   std::ofstream tabCompFile;
-  tabCompFile.open(fs::path(plotsFile).parent_path() / "tabcomp.csv");
+  tabCompFile.open(fs::path(plotFile).parent_path() / "tabcomp.csv");
   for (const auto& plot : mPlots) {
     string line = plot.GetName() + "," + plot.GetGroup() + "\n";
     tabCompFile << line;

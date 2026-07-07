@@ -11,13 +11,13 @@ def DefineDatasets(pm: PlotManager):
 
 def DefineBasePlots(pm: PlotManager):
   # -----------------------------------------------------------------------
-  plot = PlotManager.GetBasePlot("1d")
+  plot = PlotManager.MakeBasePlot("1d")
   pm.AddBasePlot(plot)
   # -----------------------------------------------------------------------
-  plot = PlotManager.GetBasePlot("1d_ratio")
+  plot = PlotManager.MakeBasePlot("1d_ratio")
   pm.AddBasePlot(plot)
   # -----------------------------------------------------------------------
-  plot = PlotManager.GetBasePlot("2d")
+  plot = PlotManager.MakeBasePlot("2d")
   pm.AddBasePlot(plot)
   # -----------------------------------------------------------------------
 

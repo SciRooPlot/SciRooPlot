@@ -19,7 +19,6 @@
 #ifndef INCLUDE_PLOTMANAGER_H_
 #define INCLUDE_PLOTMANAGER_H_
 
-#include "Plot.h"
 #include <tuple>
 #include <map>
 #include <memory>
@@ -27,6 +26,7 @@
 #include <vector>
 #include <string>
 #include "TApplication.h"
+#include "Plot.h"
 
 class TCanvas;
 namespace ROOT
@@ -52,7 +52,7 @@ class PlotManager
   PlotManager& operator=(const PlotManager& other) = delete;
   PlotManager& operator=(PlotManager&& other) = delete;
 
-  static Plot GetBasePlot(const std::string& name = "1d", double_t screenResolution = 100);
+  static Plot MakeBasePlot(const std::string& name = "1d", double_t screenResolution = 100);
 
   void SaveProject(const std::string& projectName);
 
@@ -63,16 +63,16 @@ class PlotManager
   void AddDataset(const std::string& dataset, const std::vector<TObject*>& inputData);
   void AddDataset(const std::string& dataset, TObject* inputData);
 
-  void SaveDatasets(const std::string& configFile) const;
-  void LoadDatasets(const std::string& configFile);
+  void SaveDatasets(const std::string& datasetFile) const;
+  void LoadDatasets(const std::string& datasetFile);
 
-  void AddPlot(Plot& plot);
+  void AddPlot(Plot plot);
   void AddBasePlot(Plot basePlot);
   void AddColorOverview(const std::string& name, const std::string& group, const std::vector<int32_t>& colors = {});
 
-  void SavePlots(const std::string& file, const std::string& name = ".+", const std::string& group = ".+") const;
-  void LoadPlots(const std::string& file, const std::string& name = ".+", const std::string& group = ".+");
-  void CreatePlots(const std::string& mode = "pdf", const std::string& name = ".+", const std::string& group = ".+");
+  void SavePlots(const std::string& plotFile, const std::string& name = ".+", const std::string& group = ".+") const;
+  void LoadPlots(const std::string& plotFile, const std::string& name = ".+", const std::string& group = ".+");
+  void GeneratePlots(const std::string& mode = "pdf", const std::string& name = ".+", const std::string& group = ".+");
   void ListPlots() const;
 
   void SetOutputDirectory(const std::string& path);
@@ -85,9 +85,9 @@ class PlotManager
   void SaveDataToRootFile() const;
 
   std::unique_ptr<TApplication> mApp;
-  std::string mRootFilePlots{"Plots.root"};
-  std::string mRootFileData{"Data.root"};
-  std::map<std::string, std::shared_ptr<TCanvas>> mPlotLedger;
+  std::string mPlotsRootFile{"Plots.root"};
+  std::string mDataRootFile{"Data.root"};
+  std::map<std::string, std::shared_ptr<TCanvas>> mCanvasRegistry;
   std::string mOutputDirectory;
   std::vector<Plot> mPlots;
   std::vector<Plot> mBasePlots;
@@ -99,8 +99,8 @@ class PlotManager
 
   std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>> mDataBuffer;
   std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Plot::Pad::Data::data_info_t>>> mDataInfoBuffer;
-  std::map<std::string, std::vector<std::string>> mInputFiles;  // inputFileIdentifier, inputFilePaths
-  void PrintBufferStatus(bool missingOnly = false) const;
+  std::map<std::string, std::vector<std::string>> mInputFiles;  // dataset name -> input file paths
+  void PrintBufferStatus(bool onlyMissing = false) const;
   bool FillBuffer();
   void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataset);
   void ReadDataCSV(const std::string& inputFileName, const std::string& name, const std::string& dataset);

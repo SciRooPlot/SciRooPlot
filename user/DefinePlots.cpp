@@ -46,15 +46,15 @@ void DefineDatasets(PlotManager& pm)
 void DefineBasePlots(PlotManager& pm)
 {
   {
-    Plot plot = PlotManager::GetBasePlot("1d");
+    Plot plot = PlotManager::MakeBasePlot("1d");
     pm.AddBasePlot(plot);
   }
   {
-    Plot plot = PlotManager::GetBasePlot("1d_ratio");
+    Plot plot = PlotManager::MakeBasePlot("1d_ratio");
     pm.AddBasePlot(plot);
   }
   {
-    Plot plot = PlotManager::GetBasePlot("2d");
+    Plot plot = PlotManager::MakeBasePlot("2d");
     pm.AddBasePlot(plot);
   }
 }
