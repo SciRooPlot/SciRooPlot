@@ -22,6 +22,7 @@
 
 #include "PlotManager.h"
 #include "Plot.h"
+#include "Logging.h"
 
 #include <math.h>
 #include <optional>
@@ -59,6 +60,7 @@ using LegendBox = Pad::LegendBox;
 using LegendEntry = LegendBox::LegendEntry;
 constexpr auto ref_int = py::return_value_policy::reference_internal;
 
+void exportLogging(py::module_& m);
 void exportDrawingOptions(py::module_& m);
 void exportRootConstants(py::module_& m);
 void exportPythonDataInterfaces(py::module_& m);
@@ -98,6 +100,7 @@ PYBIND11_MODULE(SciRooPlot, m)
   py::list path = sys.attr("path");
   path.insert(0, SCIROOPLOT_ROOT_PYTHON_DIR);
 
+  exportLogging(m);
   exportDrawingOptions(m);
   exportRootConstants(m);
   exportPythonDataInterfaces(m);
@@ -112,6 +115,15 @@ PYBIND11_MODULE(SciRooPlot, m)
   exportPlotManager(m);
 }
 
+void exportLogging(py::module_& m)
+{
+  m.def("PRINT", [](std::string_view s) { logger::print("{}", s); });
+  m.def("INFO", [](std::string_view s) { logger::info("{}", s); });
+  m.def("LOG", [](std::string_view s) { logger::log("{}", s); });
+  m.def("DEBUG", [](std::string_view s) { logger::debug("{}", s); });
+  m.def("WARNING", [](std::string_view s) { logger::warning("{}", s); });
+  m.def("ERROR", [](std::string_view s) { logger::error("{}", s); });
+}
 void exportDrawingOptions(py::module_& m)
 {
 #define OPT(name, ...) .value(#name, drawing_options_t::name)

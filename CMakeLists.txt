@@ -142,6 +142,7 @@ add_library(SciRooPlot SHARED
   include/PlotPainter.h
   include/PlotPainter.h
   include/Helpers.h
+  include/Logging.h
 )
 add_library(SciRooPlot::SciRooPlot ALIAS SciRooPlot)
 scirooplot_apply_compile_flags(SciRooPlot)
