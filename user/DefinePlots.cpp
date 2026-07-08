@@ -66,6 +66,8 @@ void DefineBasePlots(PlotManager& pm)
 //****************************************************************************************
 void DefinePlots(PlotManager& pm)
 {
+  // logging helpers (INFO, DEBUG, WARNING, ERROR, PRINT) can be used as follows:
+  INFO("Welcome to SciRooPlot. Working in directory {}", SRC_DIR);
   {  // -----------------------------------------------------------------------
     Plot plot("plot1", "dummyFigures", "1d");
     plot[1].AddData("hist3", "measurements", "gaus");

@@ -22,6 +22,8 @@ def DefineBasePlots(pm: PlotManager):
   # -----------------------------------------------------------------------
 
 def DefinePlots(pm: PlotManager):
+  # logging helpers (INFO, DEBUG, WARNING, ERROR, PRINT) can be used as follows:
+  INFO("Welcome to SciRooPlot. Working in directory {}".format(SRC_DIR))
   # -----------------------------------------------------------------------
   plot = Plot("plot1", "dummyFigures", "1d")
   plot[1].AddData("hist3", "measurements", "gaus")
