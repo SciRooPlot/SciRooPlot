@@ -157,7 +157,7 @@ void PlotManager::SaveDataToRootFile() const
       auto dir = outputFile.mkdir(dataset.data(), "", true);
       string name = split_string(dataPtr->GetName(), ':')[0];
       auto tokens = split_string(name, '/');
-      int iToken = 1;
+      size_t iToken = 1u;
       for (auto token : tokens) {
         if (iToken == tokens.size()) {
           dir->cd();
@@ -848,12 +848,14 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
       TIter next(pad->GetListOfPrimitives());
       TObject* object = nullptr;
       while ((object = next())) {
-        string saveName = object->GetName();
-        std::replace(saveName.begin(), saveName.end(), '/', '_');
-        std::replace(saveName.begin(), saveName.end(), ':', '_');
-        static_cast<TNamed*>(object)->SetName(saveName.data());
-        if (object->InheritsFrom(TPad::Class())) {
-          cleanNames(static_cast<TPad*>(object));
+        if (object->InheritsFrom(TNamed::Class())) {
+          string saveName = object->GetName();
+          std::replace(saveName.begin(), saveName.end(), '/', '_');
+          std::replace(saveName.begin(), saveName.end(), ':', '_');
+          static_cast<TNamed*>(object)->SetName(saveName.data());
+          if (object->InheritsFrom(TPad::Class())) {
+            cleanNames(static_cast<TPad*>(object));
+          }
         }
       }
     };
