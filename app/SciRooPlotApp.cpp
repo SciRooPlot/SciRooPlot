@@ -49,16 +49,11 @@ void PrintRootFileContents(const string& inputPath);
 
 int main(int argc, char* argv[])
 {
-  string configPath = (gSystem->Getenv("SCIROOPLOT_CONFIG_PATH")) ? "${SCIROOPLOT_CONFIG_PATH}" : "~/.SciRooPlot";
-  configPath = expand_path(configPath);
-  if (std::filesystem::path(configPath).is_relative()) {
-    ERROR("SCIROOPLOT_CONFIG_PATH must not be relative.");
-    return 1;
-  }
+  string configPath = Config::Get().Path();
   if (std::filesystem::create_directories(configPath)) {
     INFO("Created config folder: {}", configPath);
   }
-  string configFileName = configPath + "/projects.info";
+  string configFileName = Config::Get().ProjectsFile();
 
   ptree configTree;
   string activeProject;

@@ -15,11 +15,11 @@ void DefinePlots(PlotManager& pm);
 
 int main(int argc, char* argv[])
 {
-  PlotManager pm;
+  PlotManager pm("PROJECT_NAME");
   DefineDatasets(pm);
   DefineBasePlots(pm);
   DefinePlots(pm);
-  pm.SaveProject("PROJECT_NAME");
+  pm.SaveProject();
   return 0;
 }
 

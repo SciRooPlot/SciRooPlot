@@ -77,11 +77,15 @@ namespace SciRooPlot
  * Constructor for PlotManager.
  */
 //**************************************************************************************************
-PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr))
+PlotManager::PlotManager(const std::string& projectName) : mApp(new TApplication("MainApp", 0, nullptr)), mProjectName(projectName)
 {
   ROOT::EnableImplicitMT();
   gROOT->SetWebDisplay("off");
   gErrorIgnoreLevel = kWarning;
+
+  if (!projectName.empty() && Config::Get().Exists(projectName)) {
+    mOutputDirectory = Config::Get().OutputDir(projectName);
+  }
 
   // determine OS dependent offset between window and frame
   // (GetWindowTopY gives the current coordinates of the window, but SetWindowPosition moves the frame instead of the window)
@@ -90,10 +94,6 @@ PlotManager::PlotManager() : mApp(new TApplication("MainApp", 0, nullptr))
   dummyCanvas.SetCanvasSize(1, 1);
   dummyCanvas.SetWindowPosition(50, 50);
   mWindowOffsetY = dummyCanvas.GetWindowTopY() - static_cast<TRootCanvas*>(dummyCanvas.GetCanvasImp())->GetY();
-
-  // first store all root data structures added to the manager in the global config directory
-  string configPath = expand_path((gSystem->Getenv("SCIROOPLOT_CONFIG_PATH")) ? "${SCIROOPLOT_CONFIG_PATH}" : "~/.SciRooPlot");
-  gSystem->Setenv("SCIROOPLOT_USER_DATA_DIR", configPath.data());
 }
 
 //**************************************************************************************************
@@ -217,11 +217,16 @@ void PlotManager::AddDataset(const string& dataset, const string& inputFile)
 //**************************************************************************************************
 void PlotManager::AddDataset(const string& dataset, const vector<TObject*>& inputData)
 {
-  string fileName = "${SCIROOPLOT_USER_DATA_DIR}/UserData.root";
+  string fileName = (mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName);
+  fileName += "/UserData.root";
   string mode = "RECREATE";
   if (std::filesystem::exists(expand_path(fileName))) {
     mode = "UPDATE";
   }
+  if (!mProjectName.empty()) {
+    std::filesystem::create_directories(Config::Get().ProjectPath(mProjectName));
+  }
+
   TFile file(fileName.data(), mode.data());
   TDirectory* dir = file.GetDirectory(dataset.data());
   if (!dir) {
@@ -249,7 +254,7 @@ void PlotManager::AddDataset(const string& dataset, TObject* inputData)
  * Save dataset properties currently defined in the manager to a config file.
  */
 //**************************************************************************************************
-void PlotManager::SaveDatasets(const string& datasetFile) const
+void PlotManager::SaveDatasets(const optional<string>& file) const
 {
   ptree inputFileTree;
   for (const auto& inFileTuple : mInputFiles) {
@@ -259,12 +264,12 @@ void PlotManager::SaveDatasets(const string& datasetFile) const
     }
     inputFileTree.put_child(inFileTuple.first, filesOfDataset);
   }
-  std::filesystem::path file = expand_path(datasetFile);
-  if (std::filesystem::create_directories(file.parent_path())) {
-    INFO("Created config folder: {}", file.parent_path().string());
+  std::filesystem::path filePath = expand_path((file) ? *file : Config::Get().DatasetsFile(mProjectName));
+  if (std::filesystem::create_directories(filePath.parent_path())) {
+    INFO("Created config folder: {}", filePath.parent_path().string());
   }
   using boost::property_tree::write_info;
-  write_info(file.string(), inputFileTree);
+  write_info(filePath.string(), inputFileTree);
 }
 
 //**************************************************************************************************
@@ -272,14 +277,14 @@ void PlotManager::SaveDatasets(const string& datasetFile) const
  * Load dataset properties from config file into manager.
  */
 //**************************************************************************************************
-void PlotManager::LoadDatasets(const string& datasetFile)
+void PlotManager::LoadDatasets(const optional<string>& file)
 {
   ptree inputFileTree;
   try {
     using boost::property_tree::read_info;
-    read_info(expand_path(datasetFile), inputFileTree);
+    read_info(expand_path((file) ? *file : Config::Get().DatasetsFile(mProjectName)), inputFileTree);
   } catch (...) {
-    ERROR("Cannot load file {}.", datasetFile);
+    ERROR("Cannot load datasets file.");
     return;
   }
   for (const auto& inputPair : inputFileTree) {
@@ -394,7 +399,7 @@ void PlotManager::AddColorOverview(const string& name, const string& group, cons
  * Save plots matching name and group regex to file.
  */
 //**************************************************************************************************
-void PlotManager::SavePlots(const string& plotFile, const string& name, const string& group) const
+void PlotManager::SavePlots(const string& name, const string& group, const optional<string>& file) const
 {
   ptree plotTree;
   std::regex groupRegex{group};
@@ -411,7 +416,11 @@ void PlotManager::SavePlots(const string& plotFile, const string& name, const st
       plotTree.put_child(displayedName, plot.GetPropertyTree());
     }
   }
-  std::filesystem::path filePath = expand_path(plotFile);
+  std::filesystem::path filePath = expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName));
+  if (filePath.empty()) {
+    ERROR("No file path or project specified. Cannot save plots.");
+    return;
+  }
   if (std::filesystem::create_directories(filePath.parent_path())) {
     INFO("Created config folder: {}", filePath.parent_path().string());
   }
@@ -424,7 +433,7 @@ void PlotManager::SavePlots(const string& plotFile, const string& name, const st
  * Function to load plots matching name and group regex from file.
  */
 //**************************************************************************************************
-void PlotManager::LoadPlots(const string& plotFile, const string& name, const string& group)
+void PlotManager::LoadPlots(const string& name, const string& group, const optional<string>& file)
 {
   uint32_t nFoundPlots{};
   std::regex groupRegex{group};
@@ -432,10 +441,10 @@ void PlotManager::LoadPlots(const string& plotFile, const string& name, const st
   ptree fileTree;
   try {
     using boost::property_tree::read_info;
-    read_info(expand_path(plotFile), fileTree);
+    read_info(expand_path(expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName))), fileTree);
   } catch (...) {
-    ERROR("Cannot open file {}.", plotFile);
-    std::exit(EXIT_FAILURE);
+    ERROR("Cannot open plots file.");
+    return;
   }
 
   for (const auto& plotTree : fileTree) {
@@ -599,10 +608,6 @@ bool PlotManager::FillBuffer()
       requiredData[std::move(path)].push_back(std::move(name));
     }
 
-    if (mInputFiles.find(dataset) == mInputFiles.end()) {
-      success = false;
-      continue;
-    }
     // open all input files belonging to the current dataset and extract the data
     for (const auto& inputFileName : mInputFiles[dataset]) {
       if (requiredData.empty()) break;
@@ -1578,82 +1583,31 @@ Plot PlotManager::MakeBasePlot(const string& name, double_t screenResolution)
 
 //****************************************************************************************
 /**
- * Reads relevant paths from config file.
- */
-//****************************************************************************************
-tuple<string, string, string> PlotManager::GetProjectSettings(string projectName)
-{
-  string configPath = expand_path((gSystem->Getenv("SCIROOPLOT_CONFIG_PATH")) ? "${SCIROOPLOT_CONFIG_PATH}" : "~/.SciRooPlot");
-  if (std::filesystem::path(configPath).is_relative()) {
-    ERROR("SCIROOPLOT_CONFIG_PATH must not be relative.");
-    std::exit(EXIT_FAILURE);
-  }
-  if (configPath.empty()) {
-    ERROR("SCIROOPLOT_CONFIG_PATH must not be empty.");
-    std::exit(EXIT_FAILURE);
-  }
-  string configFileName = configPath + "/projects.info";
-
-  string outputDir;
-  if (file_exists(configFileName)) {
-    using boost::property_tree::read_info;
-    ptree configTree;
-    read_info(configFileName, configTree);
-    if (projectName.empty()) {
-      if (auto active = configTree.get_child_optional("@current")) {
-        projectName = active.get().data();
-      }
-    }
-    if (auto curConfig = configTree.get_child_optional(projectName)) {
-      auto tree = curConfig.get();
-      if (auto property = tree.get_child_optional("OUT")) {
-        outputDir = expand_path(property->get_value<string>());
-        if (outputDir.empty()) {
-          WARNING(R"(Please run "srp set {} OUT </path/to/store/output>".)", projectName);
-        }
-      }
-    }
-  }
-  string datasetFile = configPath + "/" + projectName + "/datasets.info";
-  string plotFile = configPath + "/" + projectName + "/plots.info";
-  if (projectName.empty()) {
-    datasetFile = "";
-    plotFile = "";
-  }
-  return {datasetFile, plotFile, outputDir};
-}
-
-//****************************************************************************************
-/**
  * Saves all required plot definitions and input file locations of the project.
  */
 //****************************************************************************************
-void PlotManager::SaveProject(const string& projectName)
+void PlotManager::SaveProject() const
 {
+  if (mProjectName.empty()) {
+    ERROR("Pass name of project to plot manager to save the project.");
+    return;
+  }
   namespace fs = std::filesystem;
-  auto [datasetFile, plotFile, outputDir] = GetProjectSettings(projectName);
 
-  if (fs::create_directories(fs::path(datasetFile).parent_path())) {
-    INFO("Created config folder for project {}: {}", projectName, fs::path(datasetFile).parent_path().string());
+  if (fs::create_directories(Config::Get().ProjectPath(mProjectName))) {
+    INFO("Created config folder for project {}: {}", mProjectName, Config::Get().ProjectPath(mProjectName).string());
   }
 
-  // move user data stored in current session to project folder
-  fs::path curUserDataFile = fs::path(datasetFile).parent_path() / "../UserData.root";
-  if (fs::exists(curUserDataFile)) {
-    fs::path userDataFile = fs::path(datasetFile).parent_path() / "UserData.root";
-    fs::rename(curUserDataFile, userDataFile);
-  }
+  SaveDatasets();
+  SavePlots();
 
-  SaveDatasets(datasetFile);
-  SavePlots(plotFile);
-
-  if (!mOutputDirectory.empty()) {
-    WARNING("The output directory of a project can only be modified with the srp app.");
+  if (!mOutputDirectory.empty() && mOutputDirectory != Config::Get().OutputDir(mProjectName)) {
+    Config::GetMutable().SetOutputDir(mProjectName, mOutputDirectory);
   }
 
   // create a csv file for tab completion
   std::ofstream tabCompFile;
-  tabCompFile.open(fs::path(plotFile).parent_path() / "tabcomp.csv");
+  tabCompFile.open(Config::Get().ProjectPath(mProjectName) / "tabcomp.csv");
   for (const auto& plot : mPlots) {
     string line = plot.GetName() + "," + plot.GetGroup() + "\n";
     tabCompFile << line;

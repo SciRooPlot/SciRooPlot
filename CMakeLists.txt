@@ -37,8 +37,6 @@ include(GNUInstallDirs)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 
-include(cmake/CompileFlags.cmake)
-
 # -----------------------
 # Policies
 # -----------------------
@@ -78,6 +76,7 @@ message(STATUS "fmt   version: ${fmt_VERSION}")
 # -----------------------
 # Python bindings
 # -----------------------
+option(BUILD_PYTHON_BINDINGS "build Python bindings" ON)
 if(BUILD_PYTHON_BINDINGS)
   find_package(Python3 COMPONENTS Interpreter Development)
   if(NOT Python3_FOUND)
@@ -137,15 +136,16 @@ add_library(SciRooPlot SHARED
   src/PlotManager.cpp
   src/PlotPainter.cpp
   src/Helpers.cpp
+  src/Config.cpp
   include/Plot.h
   include/PlotManager.h
   include/PlotPainter.h
   include/PlotPainter.h
   include/Helpers.h
+  include/Config.h
   include/Logging.h
 )
 add_library(SciRooPlot::SciRooPlot ALIAS SciRooPlot)
-scirooplot_apply_compile_flags(SciRooPlot)
 
 target_include_directories(SciRooPlot
   PUBLIC

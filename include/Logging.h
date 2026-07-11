@@ -27,6 +27,8 @@
 #include <string>
 #include <iostream>
 
+#include "Config.h"
+
 #if defined(__clang__) || defined(__GNUC__)
 #include <cxxabi.h>
 #endif
@@ -48,14 +50,10 @@ enum class Color {
 
 inline std::string_view begin_color(Color c)
 {
-#ifdef DISABLE_COLORS
-  return "";
-#else
-#ifdef DARK_COLORS
-  constexpr bool bright = false;
-#else
-  constexpr bool bright = true;
-#endif
+  if (Config::Get().ColorScheme() == Config::ColorMode::off) {
+    return "";
+  }
+  bool bright = Config::Get().ColorScheme() == Config::ColorMode::bright;
   switch (c) {
     case Color::Black:
       return bright ? "\033[90m" : "\033[38;5;16m";
@@ -76,34 +74,32 @@ inline std::string_view begin_color(Color c)
     default:
       return "";
   }
-#endif
 }
 
-inline constexpr std::string_view end_color()
+inline std::string_view end_color()
 {
-#ifdef DISABLE_COLORS
-  return "";
-#else
+  if (Config::Get().ColorScheme() == Config::ColorMode::off) {
+    return "";
+  }
   return "\033[0m";
-#endif
 }
 
 template <typename... Args>
 inline void print(std::string_view fmt_str, Args&&... args)
 {
-#ifndef DISABLE_PRINT
-  fmt::print(stderr, "       | ");
-  fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
-  fmt::print("\n");
-#endif
+  if (Config::Get().Verbosity() >= Config::LogLevel::Info) {
+    fmt::print(stderr, "       | ");
+    fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
+    fmt::print("\n");
+  }
 }
 
 template <typename... Args>
 inline void print_inline(std::string_view fmt_str, Args&&... args)
 {
-#ifndef DISABLE_PRINT
-  fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
-#endif
+  if (Config::Get().Verbosity() >= Config::LogLevel::Info) {
+    fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
+  }
 }
 
 inline void print_separator()
@@ -114,51 +110,51 @@ inline void print_separator()
 template <typename... Args>
 inline void info(std::string_view fmt_str, Args&&... args)
 {
-#ifndef DISABLE_INFO
-  fmt::print("[ INFO ] ");
-  fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
-  fmt::print("\n");
-#endif
+  if (Config::Get().Verbosity() >= Config::LogLevel::Info) {
+    fmt::print("[ INFO ] ");
+    fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
+    fmt::print("\n");
+  }
 }
 
 template <typename... Args>
 inline void log(std::string_view fmt_str, Args&&... args)
 {
-#ifndef DISABLE_LOG
-  fmt::print("{}[ LOG  ]{} ", begin_color(Color::Green), end_color());
-  fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
-  fmt::print("\n");
-#endif
+  if (Config::Get().Verbosity() >= Config::LogLevel::Log) {
+    fmt::print("{}[ LOG  ]{} ", begin_color(Color::Green), end_color());
+    fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
+    fmt::print("\n");
+  }
 }
 
 template <typename... Args>
 inline void debug(std::string_view fmt_str, Args&&... args)
 {
-#ifndef DISABLE_DEBUG
-  fmt::print(stderr, "{}[ DEBU ]{} ", begin_color(Color::Cyan), end_color());
-  fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
-  fmt::print(stderr, "\n");
-#endif
+  if (Config::Get().Verbosity() >= Config::LogLevel::Debug) {
+    fmt::print(stderr, "{}[ DEBU ]{} ", begin_color(Color::Cyan), end_color());
+    fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
+    fmt::print(stderr, "\n");
+  }
 }
 
 template <typename... Args>
 inline void warning(std::string_view fmt_str, Args&&... args)
 {
-#ifndef DISABLE_WARNING
-  fmt::print(stderr, "{}[ WARN ]{} ", begin_color(Color::Yellow), end_color());
-  fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
-  fmt::print(stderr, "\n");
-#endif
+  if (Config::Get().Verbosity() >= Config::LogLevel::Warning) {
+    fmt::print(stderr, "{}[ WARN ]{} ", begin_color(Color::Yellow), end_color());
+    fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
+    fmt::print(stderr, "\n");
+  }
 }
 
 template <typename... Args>
 inline void error(std::string_view fmt_str, Args&&... args)
 {
-#ifndef DISABLE_ERROR
-  fmt::print(stderr, "{}[ ERR  ]{} ", begin_color(Color::Red), end_color());
-  fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
-  fmt::print(stderr, "\n");
-#endif
+  if (Config::Get().Verbosity() >= Config::LogLevel::Error) {
+    fmt::print(stderr, "{}[ ERR  ]{} ", begin_color(Color::Red), end_color());
+    fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
+    fmt::print(stderr, "\n");
+  }
 }
 
 template <typename T>

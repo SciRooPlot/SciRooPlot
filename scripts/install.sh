@@ -35,24 +35,6 @@ if [[ "${UPDATE_MODE}" -eq 0 ]]; then
     echo -n "or specify a different path: "
     read USER_INSTALL_DIR
     INSTALL_DIR="${USER_INSTALL_DIR:-$INSTALL_DIR}"
-
-    echo "Choose console text color mode:"
-    echo "1) Light (default)"
-    echo "2) Dark"
-    echo "3) Off"
-    echo -n "Enter choice [1-3]: "
-    read COLOR_CHOICE
-
-    case "${COLOR_CHOICE}" in
-        2)
-            CMAKE_FLAGS="${CMAKE_FLAGS} -DDARK_COLORS=ON"
-            ;;
-        3)
-            CMAKE_FLAGS="${CMAKE_FLAGS} -DDISABLE_COLORS=ON"
-            ;;
-        *)
-            ;;
-    esac
 else
     echo "Skipping prompts and reusing existing configuration."
     echo "To reconfigure the installation run with argument --reinstall."

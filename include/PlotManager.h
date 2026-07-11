@@ -44,7 +44,7 @@ namespace SciRooPlot
 class PlotManager
 {
  public:
-  PlotManager();
+  explicit PlotManager(const std::string& projectName = "");
 
   ~PlotManager() = default;
   PlotManager(const PlotManager& other) = delete;
@@ -54,7 +54,7 @@ class PlotManager
 
   static Plot MakeBasePlot(const std::string& name = "1d", double_t screenResolution = 100);
 
-  void SaveProject(const std::string& projectName);
+  void SaveProject() const;
 
   // create or append to a dataset.
   void AddDataset(const std::string& dataset, const std::vector<std::string>& inputFiles);
@@ -63,20 +63,19 @@ class PlotManager
   void AddDataset(const std::string& dataset, const std::vector<TObject*>& inputData);
   void AddDataset(const std::string& dataset, TObject* inputData);
 
-  void SaveDatasets(const std::string& datasetFile) const;
-  void LoadDatasets(const std::string& datasetFile);
+  void SaveDatasets(const std::optional<std::string>& file = {}) const;
+  void LoadDatasets(const std::optional<std::string>& file = {});
 
   void AddPlot(Plot plot);
   void AddBasePlot(Plot basePlot);
   void AddColorOverview(const std::string& name, const std::string& group, const std::vector<int32_t>& colors = {});
 
-  void SavePlots(const std::string& plotFile, const std::string& name = ".+", const std::string& group = ".+") const;
-  void LoadPlots(const std::string& plotFile, const std::string& name = ".+", const std::string& group = ".+");
-  void GeneratePlots(const std::string& mode = "pdf", const std::string& name = ".+", const std::string& group = ".+");
+  void SavePlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {}) const;
+  void LoadPlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {});
+  void GeneratePlots(const std::string& mode = "show", const std::string& name = ".+", const std::string& group = ".+");
   void ListPlots() const;
 
   void SetOutputDirectory(const std::string& path);
-  static std::tuple<std::string, std::string, std::string> GetProjectSettings(std::string projectName = "");
 
  private:
   TObject* FindSubDirectory(TObject* folder, std::vector<std::string>& subDirs) const;
@@ -85,6 +84,7 @@ class PlotManager
   void SaveDataToRootFile() const;
 
   std::unique_ptr<TApplication> mApp;
+  std::string mProjectName;
   const std::string mPlotsRootFile{"Plots.root"};
   const std::string mDataRootFile{"Data.root"};
   std::map<std::string, std::shared_ptr<TCanvas>> mCanvasRegistry;

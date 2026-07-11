@@ -65,11 +65,11 @@ def DefinePlots(pm: PlotManager):
   # -----------------------------------------------------------------------
 
 def main():
-  pm = PlotManager()
+  pm = PlotManager("PROJECT_NAME")
   DefineDatasets(pm)
   DefineBasePlots(pm)
   DefinePlots(pm)
-  pm.SaveProject("PROJECT_NAME")
+  pm.SaveProject()
 
 if __name__ == "__main__":
   main()
