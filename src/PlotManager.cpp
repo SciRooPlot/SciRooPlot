@@ -402,8 +402,15 @@ void PlotManager::AddColorOverview(const string& name, const string& group, cons
 void PlotManager::SavePlots(const string& name, const string& group, const optional<string>& file) const
 {
   ptree plotTree;
-  std::regex groupRegex{group};
-  std::regex nameRegex{name};
+  std::regex groupRegex;
+  std::regex nameRegex;
+  try {
+    groupRegex = std::regex{group};
+    nameRegex = std::regex{name};
+  } catch (...) {
+    ERROR("Invalid regular expression.");
+    return;
+  }
 
   for (const vector<Plot>& plots : {std::ref(mBasePlots), std::ref(mPlots)}) {
     for (const Plot& plot : plots) {
@@ -436,8 +443,15 @@ void PlotManager::SavePlots(const string& name, const string& group, const optio
 void PlotManager::LoadPlots(const string& name, const string& group, const optional<string>& file)
 {
   uint32_t nFoundPlots{};
-  std::regex groupRegex{group};
-  std::regex nameRegex{name};
+  std::regex groupRegex;
+  std::regex nameRegex;
+  try {
+    groupRegex = std::regex{group};
+    nameRegex = std::regex{name};
+  } catch (...) {
+    ERROR("Invalid regular expression.");
+    return;
+  }
   ptree fileTree;
   try {
     using boost::property_tree::read_info;
@@ -485,8 +499,15 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
   vector<Plot*> selectedPlots;
   map<int32_t, set<int32_t>> requiredData;
 
-  std::regex groupRegex{group};
-  std::regex nameRegex{name};
+  std::regex groupRegex;
+  std::regex nameRegex;
+  try {
+    groupRegex = std::regex{group};
+    nameRegex = std::regex{name};
+  } catch (...) {
+    ERROR("Invalid regular expression.");
+    return;
+  }
 
   for (auto& plot : mPlots) {
     if (!std::regex_match(plot.GetGroup(), groupRegex)) continue;
