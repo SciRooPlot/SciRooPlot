@@ -20,6 +20,7 @@
 #define INCLUDE_CONFIG_H_
 
 #include <filesystem>
+#include <map>
 #include <boost/property_tree/info_parser.hpp>
 
 namespace SciRooPlot
