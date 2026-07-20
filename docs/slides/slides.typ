@@ -506,18 +506,18 @@
 
 
 #slide[
-  #slide-title("Adding DataSources")
+  #slide-title("Adding Data Sources")
   #grid(
     columns: (42%, 55%),
     gutter: 3%,
     [
-      - A dataSource is a collection of input sources with a unique identifier that is later used for the plot definitions.
+      - A data source is a collection of input sources with a unique identifier that is later used for the plot definitions.
 
       - Entire ROOT files or individual subdirectories/lists therein can be registered as input sources.
 
       - Multiple inputs can be added either via successive `AddDataSource()` calls or by passing them as a list.
 
-      - Adding a directory to a dataSource registers all ROOT files it contains, including the ones in subdirectories.
+      - Adding a directory to a data source registers all ROOT files it contains, including the ones in subdirectories.
 
       - File paths are always absolute, but the `SRC_DIR` helper enables paths relative to #plot-def-file.
 
@@ -532,35 +532,35 @@
       #code-block(
         [
           ```cpp
-          pm.AddDataSource("dataSourceA", "/path/to/file1.root");
+          pm.AddDataSource("sourceA", "/path/to/file1.root");
 
-          pm.AddDataSource("dataSourceF", "/path/to/file6.root:dir/or/list");
+          pm.AddDataSource("sourceF", "/path/to/file6.root:dir/or/list");
 
-          pm.AddDataSource("dataSourceD", {"/path/to/file4.root",
+          pm.AddDataSource("sourceD", {"/path/to/file4.root",
                                       "/path/to/file5.root"});
 
-          pm.AddDataSource("dataSourceE", "/path/to/directory/");
+          pm.AddDataSource("sourceE", "/path/to/directory/");
 
-          pm.AddDataSource("dataSourceB", SRC_DIR + "../rel/path/file2.root");
+          pm.AddDataSource("sourceB", SRC_DIR + "../rel/path/file2.root");
 
-          pm.AddDataSource("dataSourceC", "${HOME}/path/to/file/file3.root");
+          pm.AddDataSource("sourceC", "${HOME}/path/to/file/file3.root");
 
           ```
         ],
         [
           ```python
-          pm.AddDataSource("dataSourceA", "/path/to/file1.root")
+          pm.AddDataSource("sourceA", "/path/to/file1.root")
 
-          pm.AddDataSource("dataSourceB", SRC_DIR + "../rel/path/file2.root")
+          pm.AddDataSource("sourceB", SRC_DIR + "../rel/path/file2.root")
 
-          pm.AddDataSource("dataSourceC", "${HOME}/path/to/file/file3.root")
+          pm.AddDataSource("sourceC", "${HOME}/path/to/file/file3.root")
 
-          pm.AddDataSource("dataSourceD", ["/path/to/file4.root",
+          pm.AddDataSource("sourceD", ["/path/to/file4.root",
                                       "/path/to/file5.root"])
 
-          pm.AddDataSource("dataSourceE", "/path/to/directory/")
+          pm.AddDataSource("sourceE", "/path/to/directory/")
 
-          pm.AddDataSource("dataSourceF", "/path/to/file6.root:dir/or/list")
+          pm.AddDataSource("sourceF", "/path/to/file6.root:dir/or/list")
           ```
         ],
       )
@@ -568,23 +568,23 @@
         [
           ```cpp
           auto myHist = new TH1D("myHist", "", 100, -5, 5);
-          pm.AddDataSource("dataSourceG", myHist);
+          pm.AddDataSource("sourceG", myHist);
 
           auto myGraph = new TGraph();
           myGraph->SetName("myGraph"); // graph needs a name!
           auto myFunc = new TF1("myFunc", "gaus", -5, 5);
-          pm.AddDataSource("dataSourceG", {myGraph, myFunc});
+          pm.AddDataSource("sourceG", {myGraph, myFunc});
           ```
         ],
         [
           ```python
           myHist = ROOT.TH1D("myHist", "", 100, -5, 5)
-          pm.AddDataSource("dataSourceG", myHist)
+          pm.AddDataSource("sourceG", myHist)
 
           myGraph = ROOT.TGraph()
           myGraph.SetName("myGraph")  # graph needs a name!
           myFunc = ROOT.TF1("myFunc", "gaus", -5, 5)
-          pm.AddDataSource("dataSourceG", [myGraph, myFunc])
+          pm.AddDataSource("sourceG", [myGraph, myFunc])
           ```
         ],
       )
@@ -689,7 +689,7 @@
     [
       - The data-type agnostic `AddData()` function accepts virtually all ROOT histograms, graphs, profiles, functions and trees.
 
-      - Data is identified by name and automatically searched for in the corresponding dataSource across all associated files.
+      - Data is identified by name and automatically searched for in the corresponding data source across all associated files.
 
       - Directory or list paths within ROOT files can be prepended to object names to disambiguate identical names.
 
@@ -716,15 +716,15 @@
       #code-block(
         [
           ```cpp
-          plot[1].AddData("myGraph", "dataSourceA");
-          plot[1].AddData("myFunc", "dataSourceA");
-          plot[1].AddData("path/to/myHist", "dataSourceB");
+          plot[1].AddData("myGraph", "sourceA");
+          plot[1].AddData("myFunc", "sourceA");
+          plot[1].AddData("path/to/myHist", "sourceB");
 
-          plot[1].AddData("largerHisto", "dataSourceB")
+          plot[1].AddData("largerHisto", "sourceB")
                           .SetDefinesFrame();
 
-          plot[1].AddRatio("numDataName", "dataSourceA",
-                           "denomDataName", "dataSourceB");
+          plot[1].AddRatio("numDataName", "sourceA",
+                           "denomDataName", "sourceB");
           ```
         ],
         [
@@ -753,25 +753,25 @@
       #code-block(
         [
           ```cpp
-          plot[1].AddData("h", "dataSourceA").SetOptions("HIST");
-          plot[1].AddData("h", "dataSourceA").SetOptions(points);
+          plot[1].AddData("h", "sourceA").SetOptions("HIST");
+          plot[1].AddData("h", "sourceA").SetOptions(points);
 
           // modify data appearance later
           plot[1](1).SetColor(kRed);
           plot[1](2).SetMarkerStyle(kOpenCirlcle);
 
           Data layout = Data()
-            .SetDataSource("dataSourceA")
+            .SetDataSource("sourceA")
             .SetOptions(curve)
             .SetLineStyle(kDashDotted)
             .SetLineWidth(4.)
             .SetLineColor(kOrange);
 
-          // reuse appearance (requires dataSource to be defined)
+          // reuse appearance (requires data source to be defined)
           plot[1].AddData("graph1", layout);
           plot[1].AddData("graph2", layout).SetColor(kBlue);
 
-          plot[1].AddRatio("h1", layout, "h2", "dataSourceB");
+          plot[1].AddRatio("h1", layout, "h2", "sourceB");
           ```
         ],
         [
