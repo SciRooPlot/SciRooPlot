@@ -86,7 +86,7 @@ class Config
 
   struct Project {
     Project() = default;
-    Project(const boost::property_tree::ptree& tree);
+    explicit Project(const boost::property_tree::ptree& tree);
     boost::property_tree::ptree GetTree();
     std::string mExecutable;
     std::string mOutputDir;

@@ -95,7 +95,7 @@ void Config::LoadConfig()
         continue;
       }
       if (project.second.empty()) continue;
-      mProjects.insert_or_assign(project.first, project.second);
+      mProjects.insert_or_assign(project.first, Project(project.second));
     }
   }
 }
