@@ -138,10 +138,10 @@ const std::string Config::PlotsFile(const string& projectName) const
   if (projectName.empty()) return projectName;
   return mPath / projectName / "plots.info";
 }
-const std::string Config::DatasetsFile(const string& projectName) const
+const std::string Config::DataSourcesFile(const string& projectName) const
 {
   if (projectName.empty()) return projectName;
-  return mPath / projectName / "datasets.info";
+  return mPath / projectName / "dataSources.info";
 }
 
 void Config::SetExecutable(const string& projectName, const string& executable)

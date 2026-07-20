@@ -151,10 +151,10 @@ void PlotManager::SaveDataToRootFile() const
   if (outputFile.IsZombie()) {
     return;
   }
-  for (const auto& [dataset, buffer] : mDataBuffer) {
+  for (const auto& [dataSource, buffer] : mDataBuffer) {
     for (const auto& [dataName, dataPtr] : buffer) {
       if (!dataPtr) continue;
-      auto dir = outputFile.mkdir(dataset.data(), "", true);
+      auto dir = outputFile.mkdir(dataSource.data(), "", true);
       string name = split_string(dataPtr->GetName(), ':')[0];
       auto tokens = split_string(name, '/');
       size_t iToken = 1u;
@@ -185,37 +185,37 @@ void PlotManager::SetOutputDirectory(const string& path)
 
 //**************************************************************************************************
 /**
- * Define input file paths for user defined dataset.
+ * Define input file paths for user defined dataSource.
  */
 //**************************************************************************************************
-void PlotManager::AddDataset(const string& dataset, const vector<string>& inputFiles)
+void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputFiles)
 {
   for (auto inputFilePath : inputFiles) {
     if (std::filesystem::path(expand_path(inputFilePath)).is_relative()) {
       WARNING("The path to an input file must not be relative. Skipping {}.", inputFilePath);
       continue;
     }
-    auto& files = mInputFiles[dataset];
+    auto& files = mInputFiles[dataSource];
     if (std::find(files.begin(), files.end(), inputFilePath) == files.end()) {
       files.push_back(inputFilePath);
     }
   }
 }
-void PlotManager::AddDataset(const std::string& dataset, std::initializer_list<string> inputFiles)
+void PlotManager::AddDataSource(const std::string& dataSource, std::initializer_list<string> inputFiles)
 {
-  AddDataset(dataset, std::vector<std::string>(inputFiles));
+  AddDataSource(dataSource, std::vector<std::string>(inputFiles));
 }
-void PlotManager::AddDataset(const string& dataset, const string& inputFile)
+void PlotManager::AddDataSource(const string& dataSource, const string& inputFile)
 {
-  AddDataset(dataset, {inputFile});
+  AddDataSource(dataSource, {inputFile});
 }
 
 //**************************************************************************************************
 /**
- * Define input data for user defined unique dataset.
+ * Define input data for user defined unique dataSource.
  */
 //**************************************************************************************************
-void PlotManager::AddDataset(const string& dataset, const vector<TObject*>& inputData)
+void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>& inputData)
 {
   string fileName = (mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName);
   fileName += "/UserData.root";
@@ -228,43 +228,43 @@ void PlotManager::AddDataset(const string& dataset, const vector<TObject*>& inpu
   }
 
   TFile file(fileName.data(), mode.data());
-  TDirectory* dir = file.GetDirectory(dataset.data());
+  TDirectory* dir = file.GetDirectory(dataSource.data());
   if (!dir) {
-    dir = file.mkdir(dataset.data());
+    dir = file.mkdir(dataSource.data());
   }
   dir->cd();
   for (auto object : inputData) {
     string name = object->GetName();
     if (name.empty()) {
-      WARNING("Cannot add nameless object of type {} to dataset {}", object->ClassName(), dataset);
+      WARNING("Cannot add nameless object of type {} to dataSource {}", object->ClassName(), dataSource);
       continue;
     }
     object->Write();
   }
   file.Close();
-  AddDataset(dataset, {fileName + ":" + dataset});
+  AddDataSource(dataSource, {fileName + ":" + dataSource});
 }
-void PlotManager::AddDataset(const string& dataset, TObject* inputData)
+void PlotManager::AddDataSource(const string& dataSource, TObject* inputData)
 {
-  AddDataset(dataset, vector<TObject*>{inputData});
+  AddDataSource(dataSource, vector<TObject*>{inputData});
 }
 
 //**************************************************************************************************
 /**
- * Save dataset properties currently defined in the manager to a config file.
+ * Save dataSource properties currently defined in the manager to a config file.
  */
 //**************************************************************************************************
-void PlotManager::SaveDatasets(const optional<string>& file) const
+void PlotManager::SaveDataSources(const optional<string>& file) const
 {
   ptree inputFileTree;
   for (const auto& inFileTuple : mInputFiles) {
-    ptree filesOfDataset;
+    ptree filesOfDataSource;
     for (const auto& fileName : inFileTuple.second) {
-      filesOfDataset.add("FILE", fileName);
+      filesOfDataSource.add("FILE", fileName);
     }
-    inputFileTree.put_child(inFileTuple.first, filesOfDataset);
+    inputFileTree.put_child(inFileTuple.first, filesOfDataSource);
   }
-  std::filesystem::path filePath = expand_path((file) ? *file : Config::Get().DatasetsFile(mProjectName));
+  std::filesystem::path filePath = expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName));
   if (std::filesystem::create_directories(filePath.parent_path())) {
     INFO("Created config folder: {}", filePath.parent_path().string());
   }
@@ -274,21 +274,21 @@ void PlotManager::SaveDatasets(const optional<string>& file) const
 
 //**************************************************************************************************
 /**
- * Load dataset properties from config file into manager.
+ * Load dataSource properties from config file into manager.
  */
 //**************************************************************************************************
-void PlotManager::LoadDatasets(const optional<string>& file)
+void PlotManager::LoadDataSources(const optional<string>& file)
 {
   ptree inputFileTree;
   try {
     using boost::property_tree::read_info;
-    read_info(expand_path((file) ? *file : Config::Get().DatasetsFile(mProjectName)), inputFileTree);
+    read_info(expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName)), inputFileTree);
   } catch (...) {
-    ERROR("Cannot load datasets file.");
+    ERROR("Cannot load dataSources file.");
     return;
   }
   for (const auto& inputPair : inputFileTree) {
-    const string& dataset = inputPair.first;
+    const string& dataSource = inputPair.first;
     set<string> allFileNames;
     for (const auto& fileEntry : inputPair.second) {
       string fileOrDirName = expand_path(fileEntry.second.get_value<string>());
@@ -302,7 +302,7 @@ void PlotManager::LoadDatasets(const optional<string>& file)
         }
       }
     }
-    AddDataset(dataset, vector<string>{allFileNames.begin(), allFileNames.end()});
+    AddDataSource(dataSource, vector<string>{allFileNames.begin(), allFileNames.end()});
   }
 }
 
@@ -517,34 +517,34 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
     // determine which input data are needed for plots
     for (auto& [padID, pad] : plot.GetPads()) {
       if (auto& refFunc = pad.GetRefFunc()) {
-        mDataBuffer[refFunc->GetDataset()][refFunc->GetName()];
+        mDataBuffer[refFunc->GetDataSource()][refFunc->GetName()];
       } else {
         if (plot.GetBasePlotName()) {
           auto it = std::find_if(mBasePlots.begin(), mBasePlots.end(), [&](const auto& basePlot) { return *plot.GetBasePlotName() == basePlot.GetName(); });
           if (it != mBasePlots.end()) {
             if (auto& refFunc = (*it).GetPad(padID).GetRefFunc()) {
-              mDataBuffer[refFunc->GetDataset()][refFunc->GetName()];
+              mDataBuffer[refFunc->GetDataSource()][refFunc->GetName()];
             }
           }
         }
       }
       for (const auto& data : pad.GetData()) {
-        mDataBuffer[data->GetDataset()][data->GetName()];
+        mDataBuffer[data->GetDataSource()][data->GetName()];
         if (data->GetDataInfo().dataDims.size()) {
-          auto& dataInfos = mDataInfoBuffer[data->GetDataset()][data->GetName()];
+          auto& dataInfos = mDataInfoBuffer[data->GetDataSource()][data->GetName()];
           auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
           if (iter == dataInfos.end()) {
-            mDataInfoBuffer[data->GetDataset()][data->GetName()].push_back(data->GetDataInfo());
+            mDataInfoBuffer[data->GetDataSource()][data->GetName()].push_back(data->GetDataInfo());
           }
         }
         if (data->GetType() == "ratio") {
           const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          mDataBuffer[ratio->GetDenomDataset()][ratio->GetDenomName()];
+          mDataBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()];
           if (ratio->GetDenomDataInfo().dataDims.size()) {
-            auto& dataInfos = mDataInfoBuffer[ratio->GetDenomDataset()][ratio->GetDenomName()];
+            auto& dataInfos = mDataInfoBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()];
             auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
             if (iter == dataInfos.end()) {
-              mDataInfoBuffer[ratio->GetDenomDataset()][ratio->GetDenomName()].push_back(ratio->GetDenomDataInfo());
+              mDataInfoBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()].push_back(ratio->GetDenomDataInfo());
             }
           }
         }
@@ -581,13 +581,13 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
 bool PlotManager::FillBuffer()
 {
   bool success = true;
-  for (auto& [dataset, buffer] : mDataBuffer) {
+  for (auto& [dataSource, buffer] : mDataBuffer) {
     unordered_map<string, vector<string>> requiredData;  // subdir, names
     for (auto& [dataName, dataPtr] : buffer) {
       if (dataPtr) continue;
 
       // generate user-defined functions on-the-fly
-      if (dataset == "USER_FUNCTIONS") {
+      if (dataSource == "USER_FUNCTIONS") {
         TFormula formula("tmp", dataName.data());
         int dim = formula.GetNdim();
         if (dim <= 1) {
@@ -600,7 +600,7 @@ bool PlotManager::FillBuffer()
           ERROR("Cannot create function {}.", dataName);
         }
         continue;
-      } else if (dataset == "USER_GRAPHS") {
+      } else if (dataSource == "USER_GRAPHS") {
         auto strs = split_string(dataName, ';');
         auto xStrs = split_string(strs[0], ',');
         auto yStrs = split_string(strs[1], ',');
@@ -629,12 +629,12 @@ bool PlotManager::FillBuffer()
       requiredData[std::move(path)].push_back(std::move(name));
     }
 
-    // open all input files belonging to the current dataset and extract the data
-    for (const auto& inputFileName : mInputFiles[dataset]) {
+    // open all input files belonging to the current dataSource and extract the data
+    for (const auto& inputFileName : mInputFiles[dataSource]) {
       if (requiredData.empty()) break;
       if (str_contains(inputFileName, mTableFileEndings, true)) {
         string name = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".") - inputFileName.rfind('/') - 1);
-        ReadTableData(inputFileName, name, dataset);
+        ReadTableData(inputFileName, name, dataSource);
         vector<string>& wantedNames = requiredData[""];
         wantedNames.erase(std::remove_if(wantedNames.begin(), wantedNames.end(), [&](const auto& wantedName) { return wantedName == name; }), wantedNames.end());
         if (wantedNames.empty()) requiredData.erase("");
@@ -674,8 +674,8 @@ bool PlotManager::FillBuffer()
         if (subfolder) {
           // recursively traverse the file and look for input files
           string prefix = (pathStr.empty()) ? "" : pathStr + "/";
-          string suffix = ":" + dataset;
-          ReadData(subfolder, names, prefix, suffix, dataset);
+          string suffix = ":" + dataSource;
+          ReadData(subfolder, names, prefix, suffix, dataSource);
           // in case a subdirectory was opened, properly delete it
           if (!path.empty() && subfolder != &inputFile) {
             delete subfolder;
@@ -713,15 +713,15 @@ void PlotManager::PrintBufferStatus(bool onlyMissing) const
   }
   uint32_t nNeededData{};
   uint32_t nAvailableData{};
-  for (const auto& [dataset, buffer] : mDataBuffer) {
-    bool printDataset = true;
+  for (const auto& [dataSource, buffer] : mDataBuffer) {
+    bool printDataSource = true;
     for (const auto& [dataName, dataPtr] : buffer) {
       ++nNeededData;
       bool show = onlyMissing ? (dataPtr == nullptr) : true;
       if (dataPtr) ++nAvailableData;
       if (show) {
-        if (printDataset) INFO("{}{}", dataset, (mInputFiles.find(dataset) == mInputFiles.end()) ? " (dataset not found)" : "");
-        printDataset = false;
+        if (printDataSource) INFO("{}{}", dataSource, (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (dataSource not found)" : "");
+        printDataSource = false;
         INFO(" - {}{}{}", (dataPtr) ? logger::begin_color(logger::Color::Green) : logger::begin_color(logger::Color::Red), dataName, logger::end_color());
       }
     }
@@ -946,7 +946,7 @@ void PlotManager::ListPlots() const
  * Recursively reads data from folder / list and adds it to output data array. Found dataNames are removed from the vectors.
  */
 //**************************************************************************************************
-void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& dataset)
+void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& dataSource)
 {
   TCollection* itemList = nullptr;
   if (folder->InheritsFrom(TDirectory::Class())) {
@@ -992,7 +992,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       // in case this object is directory or list, repeat the same for this substructure
       if (obj->InheritsFrom(TDirectory::Class()) || obj->InheritsFrom(TFolder::Class()) || obj->InheritsFrom(TCollection::Class())) {
         if (traverse) {
-          ReadData(obj, dataNames, prefix, suffix, dataset);
+          ReadData(obj, dataNames, prefix, suffix, dataSource);
         } else if (removeFromList) {
           removeFromList = false;
           deleteObject = false;
@@ -1009,9 +1009,9 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
           string fullName = prefix + curDataName;
           if (obj->InheritsFrom(TTree::Class())) {
             TTree* tree = static_cast<TTree*>(obj);
-            mDataBuffer[dataset][fullName].reset(nullptr);
+            mDataBuffer[dataSource][fullName].reset(nullptr);
             // do all requested projections of this tree
-            for (auto& dataInfo : mDataInfoBuffer[dataset][fullName]) {
+            for (auto& dataInfo : mDataInfoBuffer[dataSource][fullName]) {
               string dataFullName = fullName + dataInfo.GetNameSuffix();
               try {
                 SUPPRESS_STDERR(true);
@@ -1024,13 +1024,13 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
                 ERROR("Invalid query for tree.");
                 obj = nullptr;
               }
-              mDataBuffer[dataset][dataFullName].reset(obj);
+              mDataBuffer[dataSource][dataFullName].reset(obj);
             }
             tree->SetDirectory(0);
             delete tree;
           } else {
             static_cast<TNamed*>(obj)->SetName((fullName + suffix).data());
-            mDataBuffer[dataset][fullName].reset(obj);
+            mDataBuffer[dataSource][fullName].reset(obj);
           }
           removeFromList = false;
           deleteObject = false;
@@ -1057,7 +1057,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
  * Read table data from file.
  */
 //**************************************************************************************************
-void PlotManager::ReadTableData(const string& inputFileName, const string& name, const string& dataset)
+void PlotManager::ReadTableData(const string& inputFileName, const string& name, const string& dataSource)
 {
   if (!file_exists(inputFileName)) {
     ERROR("File {} does not exist.", inputFileName);
@@ -1079,14 +1079,14 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
     }
     ++lineCount;
   }
-  for (auto& dataInfo : mDataInfoBuffer[dataset][name]) {
+  for (auto& dataInfo : mDataInfoBuffer[dataSource][name]) {
     string dataName = name + dataInfo.GetNameSuffix();
     TObject* obj = nullptr;
     try {
       SUPPRESS_STDERR(true);
       if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
       ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter, 50000);
-      obj = ProcessData(df, name, dataInfo, dataName + ":" + dataset);
+      obj = ProcessData(df, name, dataInfo, dataName + ":" + dataSource);
       if (!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
       SUPPRESS_STDERR(false);
     } catch (const std::runtime_error& e) {
@@ -1094,7 +1094,7 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
       std::cout << e.what() << std::endl;
       obj = nullptr;
     }
-    mDataBuffer[dataset][dataName].reset(obj);
+    mDataBuffer[dataSource][dataName].reset(obj);
   }
 }
 
@@ -1619,7 +1619,7 @@ void PlotManager::SaveProject() const
     INFO("Created config folder for project {}: {}", mProjectName, Config::Get().ProjectPath(mProjectName).string());
   }
 
-  SaveDatasets();
+  SaveDataSources();
   SavePlots();
 
   if (!mOutputDirectory.empty() && mOutputDirectory != Config::Get().OutputDir(mProjectName)) {

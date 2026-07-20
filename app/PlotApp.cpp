@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
   if (mode == "list") {
     pm.ListPlots();
   } else {
-    pm.LoadDatasets();
+    pm.LoadDataSources();
     pm.GeneratePlots(mode);
   }
   return 0;

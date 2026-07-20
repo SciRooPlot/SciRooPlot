@@ -56,15 +56,15 @@ class PlotManager
 
   void SaveProject() const;
 
-  // create or append to a dataset.
-  void AddDataset(const std::string& dataset, const std::vector<std::string>& inputFiles);
-  void AddDataset(const std::string& dataset, std::initializer_list<std::string> inputFiles);
-  void AddDataset(const std::string& dataset, const std::string& inputFile);
-  void AddDataset(const std::string& dataset, const std::vector<TObject*>& inputData);
-  void AddDataset(const std::string& dataset, TObject* inputData);
+  // create or append to a dataSource.
+  void AddDataSource(const std::string& dataSource, const std::vector<std::string>& inputFiles);
+  void AddDataSource(const std::string& dataSource, std::initializer_list<std::string> inputFiles);
+  void AddDataSource(const std::string& dataSource, const std::string& inputFile);
+  void AddDataSource(const std::string& dataSource, const std::vector<TObject*>& inputData);
+  void AddDataSource(const std::string& dataSource, TObject* inputData);
 
-  void SaveDatasets(const std::optional<std::string>& file = {}) const;
-  void LoadDatasets(const std::optional<std::string>& file = {});
+  void SaveDataSources(const std::optional<std::string>& file = {}) const;
+  void LoadDataSources(const std::optional<std::string>& file = {});
 
   void AddPlot(Plot plot);
   void AddBasePlot(Plot basePlot);
@@ -99,11 +99,11 @@ class PlotManager
 
   std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>> mDataBuffer;
   std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Plot::Pad::Data::data_info_t>>> mDataInfoBuffer;
-  std::map<std::string, std::vector<std::string>> mInputFiles;  // dataset name -> input file paths
+  std::map<std::string, std::vector<std::string>> mInputFiles;  // dataSource name -> input file paths
   void PrintBufferStatus(bool onlyMissing = false) const;
   bool FillBuffer();
-  void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataset);
-  void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataset);
+  void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource);
+  void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataSource);
   TObject* ProcessData(ROOT::RDataFrame& df, const std::string& dfName, const Plot::Pad::Data::data_info_t& treeInfo, const std::string& name) const;
 };
 

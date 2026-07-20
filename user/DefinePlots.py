@@ -2,12 +2,12 @@ from SciRooPlot import *
 from pathlib import Path
 SRC_DIR = str(Path(__file__).resolve().parent) + "/"
 
-def DefineDatasets(pm: PlotManager):
+def DefineDataSources(pm: PlotManager):
   inputFolder = "${SCIROOPLOT_DATA_DIR}/TestFiles"
-  pm.AddDataset("measurements", [inputFolder + "/file1.root", inputFolder + "/file2.root"])
-  pm.AddDataset("theory", inputFolder + "/subfolder/file3.root")
-  pm.AddDataset("pseudodata", inputFolder + "/subfolder/file3.root:pseudodata")
-  # pm.AddDataset("test", SRC_DIR + "../rel/path/to/file.root")
+  pm.AddDataSource("measurements", [inputFolder + "/file1.root", inputFolder + "/file2.root"])
+  pm.AddDataSource("theory", inputFolder + "/subfolder/file3.root")
+  pm.AddDataSource("pseudodata", inputFolder + "/subfolder/file3.root:pseudodata")
+  # pm.AddDataSource("test", SRC_DIR + "../rel/path/to/file.root")
 
 def DefineBasePlots(pm: PlotManager):
   # -----------------------------------------------------------------------
@@ -66,7 +66,7 @@ def DefinePlots(pm: PlotManager):
 
 def main():
   pm = PlotManager("PROJECT_NAME")
-  DefineDatasets(pm)
+  DefineDataSources(pm)
   DefineBasePlots(pm)
   DefinePlots(pm)
   pm.SaveProject()

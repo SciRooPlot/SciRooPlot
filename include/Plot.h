@@ -216,14 +216,14 @@ class Plot::Pad
 
   Data& AddLine(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2, const std::optional<std::string>& label = {});
 
-  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataset,
-                  const std::string& denominatorName, const std::string& denominatorDataset,
+  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataSource,
+                  const std::string& denominatorName, const std::string& denominatorDataSource,
                   const std::optional<std::string>& label = {});
   Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorSettings, const std::string& denominatorName,
-                  const std::string& denominatorDataset, const std::optional<std::string>& label = {});
+                  const std::string& denominatorDataSource, const std::optional<std::string>& label = {});
   Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorSettings, const std::string& denominatorName,
                   const Data& denominatorSettings, const std::optional<std::string>& label = {});
-  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataset, const std::string& denominatorName,
+  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName,
                   const Data& denominatorSettings, const std::optional<std::string>& label = {});
 
   TextBox& AddText(double_t xPos, double_t yPos, const std::string& text);
@@ -441,9 +441,9 @@ class Plot::Pad::Data
   void Print() { Plot::Print(GetPropertyTree(), "Data"); }
 
   Ratio& AsRatio();
-  const std::string& GetDataset() const { return mDataset; }
+  const std::string& GetDataSource() const { return mDataSource; }
 
-  virtual Data& SetDataset(const std::string& dataset);
+  virtual Data& SetDataSource(const std::string& dataset);
   virtual Data& SetLayout(const Data& dataLayout);
   virtual Data& ApplyLayout(const Data& dataLayout);
   virtual Data& SetRangeX(double_t min, double_t max);
@@ -618,7 +618,7 @@ class Plot::Pad::Data
 
   std::string mType;  // for introspection: "data" or "ratio"
   std::string mName;
-  std::string mDataset;
+  std::string mDataSource;
 
   std::optional<std::string> mDrawingOptions;
   std::optional<drawing_options_t> mDrawingOptionAlias;
@@ -669,7 +669,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 {
  public:
   Ratio(const std::string& name, const std::string& dataset, const std::string& denomName,
-        const std::string& denomDataset, const std::optional<std::string>& label);
+        const std::string& denomDataSource, const std::optional<std::string>& label);
   explicit Ratio(const boost::property_tree::ptree& dataTree);
 
   virtual ~Ratio() = default;
@@ -689,7 +689,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
     Data::METHOD(std::forward<Args>(args)...); \
     return *this;                              \
   }
-  FORWARD_TO_DATA(SetDataset)
+  FORWARD_TO_DATA(SetDataSource)
   FORWARD_TO_DATA(SetLayout)
   FORWARD_TO_DATA(ApplyLayout)
   FORWARD_TO_DATA(SetRangeX)
@@ -772,7 +772,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 
   virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Ratio>(*this); }
   boost::property_tree::ptree GetPropertyTree() const;
-  const auto& GetDenomDataset() const { return mDenomDataset; }
+  const auto& GetDenomDataSource() const { return mDenomDataSource; }
   const auto& GetDenomName() const { return mDenomName; }
   const auto& GetScaleBinWidthDivision() const { return mScaleBinWidth; }
   const bool& GetIsCorrelated() const { return mIsCorrelated; }
@@ -784,7 +784,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
                     Den };
   Mode mModMode = Mode::Num;
   std::string mDenomName;
-  std::string mDenomDataset;
+  std::string mDenomDataSource;
   bool mIsCorrelated{};
   std::optional<bool> mScaleBinWidth;  // normalize both numerator and denominator with bin widths
   data_info_t mDenomDataInfo;

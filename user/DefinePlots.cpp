@@ -9,14 +9,14 @@ using std::vector;
 using namespace SciRooPlot;
 using Plot::Pad::Data;
 
-void DefineDatasets(PlotManager& pm);
+void DefineDataSources(PlotManager& pm);
 void DefineBasePlots(PlotManager& pm);
 void DefinePlots(PlotManager& pm);
 
 int main(int argc, char* argv[])
 {
   PlotManager pm("PROJECT_NAME");
-  DefineDatasets(pm);
+  DefineDataSources(pm);
   DefineBasePlots(pm);
   DefinePlots(pm);
   pm.SaveProject();
@@ -28,14 +28,14 @@ int main(int argc, char* argv[])
  * Defines the input identifiers.
  */
 //****************************************************************************************
-void DefineDatasets(PlotManager& pm)
+void DefineDataSources(PlotManager& pm)
 {
   const string inputFolder = "${SCIROOPLOT_DATA_DIR}/TestFiles";
-  pm.AddDataset("measurements", {inputFolder + "/file1.root", inputFolder + "/file2.root"});
-  pm.AddDataset("theory", inputFolder + "/subfolder/file3.root");
-  pm.AddDataset("pseudodata", inputFolder + "/subfolder/file3.root:pseudodata");
+  pm.AddDataSource("measurements", {inputFolder + "/file1.root", inputFolder + "/file2.root"});
+  pm.AddDataSource("theory", inputFolder + "/subfolder/file3.root");
+  pm.AddDataSource("pseudodata", inputFolder + "/subfolder/file3.root:pseudodata");
   // NB.: path relative to this file:
-  // pm.AddDataset("test", SRC_DIR + "../rel/path/to/file.root");
+  // pm.AddDataSource("test", SRC_DIR + "../rel/path/to/file.root");
 }
 
 //****************************************************************************************

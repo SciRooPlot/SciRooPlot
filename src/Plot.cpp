@@ -1220,15 +1220,15 @@ Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
  * Add data to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Data& Plot::Pad::AddData(const string& name, const string& dataset, const optional<string>& label)
+Plot::Pad::Data& Plot::Pad::AddData(const string& name, const string& dataSource, const optional<string>& label)
 {
-  mData.push_back(std::make_shared<Data>(name, dataset, label));
+  mData.push_back(std::make_shared<Data>(name, dataSource, label));
   return *mData.back();
 }
 
 Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const optional<string>& label)
 {
-  mData.push_back(std::make_shared<Data>(name, data.GetDataset(), label));
+  mData.push_back(std::make_shared<Data>(name, data.GetDataSource(), label));
   mData.back()->SetLayout(data);
   if (!label && data.GetLegendLabel()) mData.back()->SetLegendLabel(*data.GetLegendLabel());
   return *mData.back();
@@ -1294,29 +1294,29 @@ Plot::Pad::Data& Plot::Pad::AddLine(pair<double_t, double_t> pos1, pair<double_t
  * Add ratio to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataset, const string& denominatorName, const string& denominatorDataset, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataSource, const string& denominatorName, const string& denominatorDataSource, const optional<string>& label)
 {
-  mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorDataset,
-                                          denominatorName, denominatorDataset, label));
+  mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorDataSource,
+                                          denominatorName, denominatorDataSource, label));
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
 
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorSettings, const string& denominatorName, const string& denominatorDataset, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorSettings, const string& denominatorName, const string& denominatorDataSource, const optional<string>& label)
 {
-  mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorSettings.GetDataset(),
-                                          denominatorName, denominatorDataset, label));
+  mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorSettings.GetDataSource(),
+                                          denominatorName, denominatorDataSource, label));
   mData.back()->SetLayout(numeratorSettings);
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
 
 Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorSettings, const string& denominatorName, const Data& denominatorSettings, const optional<string>& label)
 {
-  return AddRatio(numeratorName, numeratorSettings, denominatorName, denominatorSettings.GetDataset(), label);
+  return AddRatio(numeratorName, numeratorSettings, denominatorName, denominatorSettings.GetDataSource(), label);
 }
 
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataset, const string& denominatorName, const Data& denominatorSettings, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataSource, const string& denominatorName, const Data& denominatorSettings, const optional<string>& label)
 {
-  return AddRatio(numeratorName, numeratorDataset, denominatorName, denominatorSettings.GetDataset(), label);
+  return AddRatio(numeratorName, numeratorDataSource, denominatorName, denominatorSettings.GetDataSource(), label);
 }
 
 //**************************************************************************************************
@@ -1385,22 +1385,22 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend(const std::optional<std::string>& tit
  * Default constructor for Data objects.
  */
 //**************************************************************************************************
-Plot::Pad::Data::Data(const string& name, const string& dataset, const optional<string>& legendLabel)
+Plot::Pad::Data::Data(const string& name, const string& dataSource, const optional<string>& legendLabel)
   : Data()
 {
   mType = "data";
 
   mLegend.label = legendLabel;
 
-  // in case input was specified further via dataset:some/path/in/file
-  auto subPathPos = dataset.find(":");
+  // in case input was specified further via dataSource:some/path/in/file
+  auto subPathPos = dataSource.find(":");
   if (subPathPos != string::npos) {
     // prepend path to plot name
-    mName = dataset.substr(subPathPos + 1) + "/" + name;
-    mDataset = dataset.substr(0, subPathPos);
+    mName = dataSource.substr(subPathPos + 1) + "/" + name;
+    mDataSource = dataSource.substr(0, subPathPos);
   } else {
     mName = name;
-    mDataset = dataset;
+    mDataSource = dataSource;
   }
 }
 
@@ -1414,7 +1414,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   try {
     mType = dataTree.get<string>("type");
     mName = dataTree.get<string>("name");
-    mDataset = dataTree.get<string>("dataset");
+    mDataSource = dataTree.get<string>("dataSource");
   } catch (...) {
     ERROR("Could not construct data from ptree.");
     std::exit(EXIT_FAILURE);
@@ -1514,7 +1514,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   ptree dataTree;
   dataTree.put("type", mType);
   dataTree.put("name", mName);
-  dataTree.put("dataset", mDataset);
+  dataTree.put("dataSource", mDataSource);
   if (mDefinesFrame) dataTree.put("defines_frame", mDefinesFrame);
   if (mDontDraw) dataTree.put("dont_draw", mDontDraw);
   put_in_tree(dataTree, mLegend.label, "legend_label");
@@ -1654,9 +1654,9 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   set_if(dataLayout.mNContours, mNContours);
   return *this;
 }
-auto Plot::Pad::Data::SetDataset(const string& dataset) -> decltype(*this)
+auto Plot::Pad::Data::SetDataSource(const string& dataSource) -> decltype(*this)
 {
-  mDataset = dataset;
+  mDataSource = dataSource;
   return *this;
 }
 auto Plot::Pad::Data::SetLegendLabel(const string& legendLabel) -> decltype(*this)
@@ -2082,18 +2082,18 @@ string Plot::Pad::Data::data_info_t::GetNameSuffix() const
  * Default constructor.
  */
 //**************************************************************************************************
-Plot::Pad::Ratio::Ratio(const string& name, const string& dataset, const string& denomName,
-                        const string& denomDataset, const optional<string>& label)
-  : Data(name, dataset, label), mDenomName(denomName),
-    mDenomDataset(denomDataset), mIsCorrelated(false)
+Plot::Pad::Ratio::Ratio(const string& name, const string& dataSource, const string& denomName,
+                        const string& denomDataSource, const optional<string>& label)
+  : Data(name, dataSource, label), mDenomName(denomName),
+    mDenomDataSource(denomDataSource), mIsCorrelated(false)
 {
   SetType("ratio");
 
-  // in case denominator input was specified further via denomDataset:some/path/in/file
-  if (auto subPathPos = denomDataset.find(":"); subPathPos != string::npos) {
+  // in case denominator input was specified further via denomDataSource:some/path/in/file
+  if (auto subPathPos = denomDataSource.find(":"); subPathPos != string::npos) {
     // prepend path to plot name
-    mDenomName = denomDataset.substr(subPathPos + 1) + "/" + denomName;
-    mDenomDataset = denomDataset.substr(0, subPathPos);
+    mDenomName = denomDataSource.substr(subPathPos + 1) + "/" + denomName;
+    mDenomDataSource = denomDataSource.substr(0, subPathPos);
   }
 }
 
@@ -2106,7 +2106,7 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
 {
   try {
     mDenomName = dataTree.get<string>("denomName");
-    mDenomDataset = dataTree.get<string>("denomDataset");
+    mDenomDataSource = dataTree.get<string>("denomDataSource");
     mIsCorrelated = dataTree.get<bool>("isCorrelated");
   } catch (...) {
     ERROR("Could not construct ratio from ptree.");
@@ -2171,7 +2171,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
 {
   ptree dataTree = Data::GetPropertyTree();
   dataTree.put("denomName", mDenomName);
-  dataTree.put("denomDataset", mDenomDataset);
+  dataTree.put("denomDataSource", mDenomDataSource);
   dataTree.put("isCorrelated", mIsCorrelated);
   put_in_tree(dataTree, mScaleBinWidth, "scale_bin_width_norm_division");
 

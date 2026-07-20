@@ -62,7 +62,7 @@ class Config
 
   const std::filesystem::path ProjectPath(const std::string& projectName) const;
   const std::string PlotsFile(const std::string& projectName) const;
-  const std::string DatasetsFile(const std::string& projectName) const;
+  const std::string DataSourcesFile(const std::string& projectName) const;
   const std::string& CurrentProject() const { return mCurrentProject; }
 
   void SetVerbosity(int logLevel) { mLogLevel = logLevel; }

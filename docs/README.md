@@ -97,14 +97,14 @@ using namespace SciRooPlot;
 PlotManager pm;
 
 // first you need to define the data sources that should be available for your plots
-pm.AddDataset("datasetA", {"/path/to/file/a.root", "/path/to/file/a2.root"});
+pm.AddDataSource("dataSourceA", {"/path/to/file/a.root", "/path/to/file/a2.root"});
 // instead of adding the whole root file, you can also specify a sub-list or sub-folder within the file:
-pm.AddDataset("datasetB", {"/path/to/file/b.root:sub/list/or/dir"});
+pm.AddDataSource("dataSourceB", {"/path/to/file/b.root:sub/list/or/dir"});
 // the paths may contain any environment variable defined in your shell:
-pm.AddDataset("datasetC", {"${HOME}/myRootFiles/b2.root"});
+pm.AddDataSource("dataSourceC", {"${HOME}/myRootFiles/b2.root"});
 // and it is possible to add all root files within a directory (including sub-directories):
-pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
-// please note that multiple root files in one dataset will be treated as one big input file and are traversed in alphabetical order
+pm.AddDataSource("dataSourceD", {"/path/to/folder/with/rootfiles/"});
+// please note that multiple root files in one dataSource will be treated as one big input file and are traversed in alphabetical order
 
 // now that we know where to look for the data, we can start creating plots
 // each plot will be handed over to the manager after it was defined
@@ -135,42 +135,42 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
   plot[1].SetDefaultTextSize(24);
 
   // finally we can start adding data to the plot
-  plot[1].AddData("histName1", "datasetA", "myLabel");
-  // this will search for a histogram, graph or function called "histName1" in all files specified for "datasetA"
+  plot[1].AddData("histName1", "dataSourceA", "myLabel");
+  // this will search for a histogram, graph or function called "histName1" in all files specified for "dataSourceA"
   // the algorithm by default recursively traverses the whole directory or list substructure of the files and returns the first match
   // in case of multiple data with the same name, living in different subfolders/lists within the file you can do
-  plot[1].AddData("folder1/histName2", "datasetA", "myLabel2");
-  plot[1].AddData("folder2/histName2", "datasetA", "myLabel3");
+  plot[1].AddData("folder1/histName2", "dataSourceA", "myLabel2");
+  plot[1].AddData("folder2/histName2", "dataSourceA", "myLabel3");
 
   // by default the global coordinate system of the plot is defined by the first data that is added (equivalent to how ROOT does it)
   // however, every so often we want to plot first some data with a small range and on top of it some data with a larger range
   // while allowing the plot to show the full range of the second data
   // this can be achieved by explicitly stating that the second data should be the one that defines the axis frame of the plot:
-  plot[1].AddData("data2", "datasetA").SetDefinesFrame();
+  plot[1].AddData("data2", "dataSourceA").SetDefinesFrame();
 
   // it is possible to specify in the labels that you want to include some meta info of the data that is drawn, e.g.:
-  plot[1].AddData("histName1", "datasetA", "mylabel avg = <mean>");
+  plot[1].AddData("histName1", "dataSourceA", "mylabel avg = <mean>");
   // possible options are: <name>, <title>, <entries>, <integral>, <maximum>, <minimum>, <mean>
   // you can use the standard printf style to specify how these numbers shall be formatted:
-  plot[1].AddData("histName1", "datasetA", "mylabel avg = <mean[.2f]>");
-  plot[1].AddData("histName2", "datasetA", "mylabel sum = <integral[.2e]>");
+  plot[1].AddData("histName1", "dataSourceA", "mylabel avg = <mean[.2f]>");
+  plot[1].AddData("histName2", "dataSourceA", "mylabel sum = <integral[.2e]>");
 
   // now lets add another piece of input data from the second group (this time without adding a label to the legend)
-  plot[1].AddData("histName3", "datasetB");
+  plot[1].AddData("histName3", "dataSourceB");
 
   // you can also simply add the ratio of two input data
-  plot[1].AddRatio("histName3", "datasetB", "histName1", "datasetA", "ratioLabel");
+  plot[1].AddRatio("histName3", "dataSourceB", "histName1", "dataSourceA", "ratioLabel");
   // for incompatible data (e.g. different number of bins or bin limits) the framework will try to use splines to interpolate the data points before dividing
   // in case numerator and denominator are sub-samples of one another bayesian error propagation can be applied:
-  plot[1].AddRatio("histName3", "datasetB", "histName1", "datasetA", "ratioLabel").SetIsCorrelated();
+  plot[1].AddRatio("histName3", "dataSourceB", "histName1", "dataSourceA", "ratioLabel").SetIsCorrelated();
   
 
   // to modify how the data is displayed we can apply the settings via:
-  plot[1].AddData("histName4", "datasetB").SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
+  plot[1].AddData("histName4", "dataSourceB").SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
   // instead of directly using the ROOT drawing option string ("HIST C") you can
   // use pre-defined human readable options like curve, points, points_line, etc
   // (you can find all available options in inc/PlotPainter.h):
-  plot[1].AddData("graphName1", "datasetA").SetOptions(points).SetMarker(kRed, kFullCircle, 1.);
+  plot[1].AddData("graphName1", "dataSourceA").SetOptions(points).SetMarker(kRed, kFullCircle, 1.);
   // all root layout settings can be applied in this manner
   // (see definition of Data class in inc/Plot.h for the list of all accessors)
 
@@ -181,7 +181,7 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
   
   // it is possible to add multiple legends to the plot (as done above) which are then identified by the order they were added
   // in order to express that the label for a specific data should be put in the second legend you can do the following:
-  plot[1].AddData("function1", "datasetA", "my label in second legend").SetLegend(2);
+  plot[1].AddData("function1", "dataSourceA", "my label in second legend").SetLegend(2);
 
   // the styles and colors of the respective legend entries are by default based on the data that is represented
   // you can however override this and specify different default settings for the legend
@@ -212,7 +212,7 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
   // a full list of axis property accessors can be found in the Axis class definition in inc/Plot.h
 
   // note that you can define the visible range of the data independent of the pad axis range
-  plot[1].AddData("hist", "datasetA", "hist with reduced range").SetRangeX(1.5, 2.7);
+  plot[1].AddData("hist", "dataSourceA", "hist with reduced range").SetRangeX(1.5, 2.7);
 
   // the added data can be further modified later by accessing it via its index (starting with 1) in the following ways:
   plot[1].GetData(2).SetColor(kGreen); // A: explicitly use getter
@@ -234,13 +234,13 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
 { // -----------------------------------------------------------------------
   Plot plot("myPlot", "myGroup2/my/sub/group");
   // ...
-  plot[1].AddData("folder1/histName2", "datasetA", "myLabel2");
+  plot[1].AddData("folder1/histName2", "dataSourceA", "myLabel2");
   //...
 
   // now we want to have exact same plot, but with some additional data points
   // this can be helpful to avoid code duplication
   Plot plot2(plot, "myPlot2", "myGroup2");
-  plot2[1].AddData("graphName1", "datasetB", "more data");
+  plot2[1].AddData("graphName1", "dataSourceB", "more data");
 
   // now add both to the manager
   pm.AddPlot(plot);
@@ -253,14 +253,14 @@ pm.AddDataset("datasetD", {"/path/to/folder/with/rootfiles/"});
   Plot plot("myProjectionsIllustration", "myGroup2");
 
   // projection of 2d data on X axis
-  plot[1].AddData("my2dhist1", "datasetA").ProjectX();
+  plot[1].AddData("my2dhist1", "dataSourceA").ProjectX();
   // projection of 2d data on X axis but with restricted Y range:
-  plot[1].AddData("my2dhist2", "datasetA").ProjectX(yBin, yBin);
+  plot[1].AddData("my2dhist2", "dataSourceA").ProjectX(yBin, yBin);
   // the same works also in user coordinates:
-  plot[1].AddData("my2dhist3", "datasetA").ProjectX(yValue, yValue, true);
+  plot[1].AddData("my2dhist3", "dataSourceA").ProjectX(yValue, yValue, true);
 
   // for arbitrary-dimensional data (also the 2d histograms above) you can use the more generic function
-  plot[1].AddData("myNdhist3", "datasetA").Project({3}, { {0, 5, 10},  {1, 90, 100} });
+  plot[1].AddData("myNdhist3", "dataSourceA").Project({3}, { {0, 5, 10},  {1, 90, 100} });
   // here the first argument is a vector of dimensions you want to project on
   // for instance {2,0} would produce a projection of your n-dimensional input histogram where
   // the third original axis will be the new x-axis and the first original axis will be the y axis of your plotted data
@@ -328,13 +328,13 @@ pm.AddBasePlot(basePlot);
 { // -----------------------------------------------------------------------
   Plot plot("test1d_ratio", "myGroup", "1d_ratio");
 
-  plot[1].AddData("graph2", "datasetA", "5 TeV #Delta = #sqrt{s}")
+  plot[1].AddData("graph2", "dataSourceA", "5 TeV #Delta = #sqrt{s}")
   .SetMarker(kRed, kFullCircle, 1.2).SetMaxRangeX(40);
 
-  plot[1].AddData("func3", "datasetB", "ratio")
+  plot[1].AddData("func3", "dataSourceB", "ratio")
   .SetMarker(kBlack, kFullCircle, 1.2).SetMaxRangeX(70);
 
-  plot[2].AddRatio("invMassSpec", "datasetA", "momentUnfolded1", "pp_5TeV", "ratio")
+  plot[2].AddRatio("invMassSpec", "dataSourceA", "momentUnfolded1", "pp_5TeV", "ratio")
   .SetMarker(kRed, kFullCircle, 1.2)
   .SetMaxRangeX(60);
 
@@ -360,13 +360,13 @@ using data_layout_t = map<layoutID, Data>;
 data_layout_t pp_7TeV
 {
   {data, Data()
-    .SetDataset("pp_7TeV")
+    .SetDataSource("pp_7TeV")
     .SetOptions(points)
     .SetMarkerStyle(kFullCircle)
     .SetColor(kBlue+2)
   },
   {mc, Data()
-    .SetDataset("pp_7TeV_MC")
+    .SetDataSource("pp_7TeV_MC")
     .SetOptions(curve)
     .SetLineStyle(kSolid)
     .SetColor(kRed+1)
@@ -375,17 +375,17 @@ data_layout_t pp_7TeV
 
 { // -----------------------------------------------------------------------
   Plot plot("test1d", "myGroup", "1d");
-  plot[1].AddData("graph2", "datasetA").SetLayout(pp_5TeV);
+  plot[1].AddData("graph2", "dataSourceA").SetLayout(pp_5TeV);
 
-  // if the layout defines a dataset
-  pp_5TeV.SetDataset("datasetA");
+  // if the layout defines a dataSource
+  pp_5TeV.SetDataSource("dataSourceA");
   // you can add data using this layout in the following way:
   plot[1].AddData("graph2", pp_5TeV);
   plot[1].AddData("graph2", pp_7TeV[data]);
   plot[1].AddData("graph2", pp_7TeV[mc]);
 
   // and this can be done in a similar manner also for ratios:
-  plot[1].AddRatio("graph2", pp_5TeV, "graph3", "datasetA");
+  plot[1].AddRatio("graph2", pp_5TeV, "graph3", "dataSourceA");
 
   plot[1].AddLegend(0.,0.9);
   pm.AddPlot(plot);
@@ -421,11 +421,11 @@ data_layout_t pp_7TeV
   plot[1].SetDefaultMarkerColors(rainbowColors);
   plot[1].SetDefaultLineColors(rainbowColors);
 
-  plot[1].AddData("hist1", "datasetA");
-  plot[1].AddData("hist2", "datasetA");
-  plot[1].AddData("hist3", "datasetA");
-  plot[1].AddData("hist4", "datasetA");
-  plot[1].AddData("hist5", "datasetA");
+  plot[1].AddData("hist1", "dataSourceA");
+  plot[1].AddData("hist2", "dataSourceA");
+  plot[1].AddData("hist3", "dataSourceA");
+  plot[1].AddData("hist4", "dataSourceA");
+  plot[1].AddData("hist5", "dataSourceA");
 
   // you can also use this feature to define a palette for 2D histograms:
   plot[1].SetPalette(rainbowColors);

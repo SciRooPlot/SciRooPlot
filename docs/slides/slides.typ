@@ -245,7 +245,7 @@
 
       - Project automatically registered with SciRooPlot.
 
-      - Includes working examples based on the bundled datasets.
+      - Includes working examples based on the bundled dataSources.
 
       - Generate your first plot immediately:
         #terminal[
@@ -446,10 +446,10 @@
           int main(int argc, char* argv[])
           {
             PlotManager pm;
-            pm.AddDataset("datasetName", "/path/to/file.root");
+            pm.AddDataSource("dataSource", "/path/to/file.root");
             { // ---------------------------------------------------------
               Plot plot("plotName", "groupName");
-              plot[1].AddData("dataObjectName", "datasetName", "my label");
+              plot[1].AddData("dataObjectName", "dataSource", "my label");
               plot[1].AddLegend();
               plot[1].AddText("some text");
               plot[1]['X'].SetTitle("x axis title");
@@ -464,10 +464,10 @@
           ```python
           def main():
             pm = PlotManager()
-            pm.AddDataset("datasetName", "/path/to/file.root")
+            pm.AddDataSource("dataSource", "/path/to/file.root")
             # -----------------------------------------------------------
             plot = Plot("plotName", "groupName")
-            plot[1].AddData("dataObjectName", "datasetName", "my label")
+            plot[1].AddData("dataObjectName", "dataSource", "my label")
             plot[1].AddLegend()
             plot[1].AddText("some text")
             plot[1]['X'].SetTitle("x axis title")
@@ -506,18 +506,18 @@
 
 
 #slide[
-  #slide-title("Adding Datasets")
+  #slide-title("Adding DataSources")
   #grid(
     columns: (42%, 55%),
     gutter: 3%,
     [
-      - A dataset is a collection of input sources with a unique identifier that is later used for the plot definitions.
+      - A dataSource is a collection of input sources with a unique identifier that is later used for the plot definitions.
 
       - Entire ROOT files or individual subdirectories/lists therein can be registered as input sources.
 
-      - Multiple inputs can be added either via successive `AddDataset()` calls or by passing them as a list.
+      - Multiple inputs can be added either via successive `AddDataSource()` calls or by passing them as a list.
 
-      - Adding a directory to a dataset registers all ROOT files it contains, including the ones in subdirectories.
+      - Adding a directory to a dataSource registers all ROOT files it contains, including the ones in subdirectories.
 
       - File paths are always absolute, but the `SRC_DIR` helper enables paths relative to #plot-def-file.
 
@@ -532,35 +532,35 @@
       #code-block(
         [
           ```cpp
-          pm.AddDataset("datasetA", "/path/to/file1.root");
+          pm.AddDataSource("dataSourceA", "/path/to/file1.root");
 
-          pm.AddDataset("datasetF", "/path/to/file6.root:dir/or/list");
+          pm.AddDataSource("dataSourceF", "/path/to/file6.root:dir/or/list");
 
-          pm.AddDataset("datasetD", {"/path/to/file4.root",
+          pm.AddDataSource("dataSourceD", {"/path/to/file4.root",
                                       "/path/to/file5.root"});
 
-          pm.AddDataset("datasetE", "/path/to/directory/");
+          pm.AddDataSource("dataSourceE", "/path/to/directory/");
 
-          pm.AddDataset("datasetB", SRC_DIR + "../rel/path/file2.root");
+          pm.AddDataSource("dataSourceB", SRC_DIR + "../rel/path/file2.root");
 
-          pm.AddDataset("datasetC", "${HOME}/path/to/file/file3.root");
+          pm.AddDataSource("dataSourceC", "${HOME}/path/to/file/file3.root");
 
           ```
         ],
         [
           ```python
-          pm.AddDataset("datasetA", "/path/to/file1.root")
+          pm.AddDataSource("dataSourceA", "/path/to/file1.root")
 
-          pm.AddDataset("datasetB", SRC_DIR + "../rel/path/file2.root")
+          pm.AddDataSource("dataSourceB", SRC_DIR + "../rel/path/file2.root")
 
-          pm.AddDataset("datasetC", "${HOME}/path/to/file/file3.root")
+          pm.AddDataSource("dataSourceC", "${HOME}/path/to/file/file3.root")
 
-          pm.AddDataset("datasetD", ["/path/to/file4.root",
+          pm.AddDataSource("dataSourceD", ["/path/to/file4.root",
                                       "/path/to/file5.root"])
 
-          pm.AddDataset("datasetE", "/path/to/directory/")
+          pm.AddDataSource("dataSourceE", "/path/to/directory/")
 
-          pm.AddDataset("datasetF", "/path/to/file6.root:dir/or/list")
+          pm.AddDataSource("dataSourceF", "/path/to/file6.root:dir/or/list")
           ```
         ],
       )
@@ -568,23 +568,23 @@
         [
           ```cpp
           auto myHist = new TH1D("myHist", "", 100, -5, 5);
-          pm.AddDataset("datasetG", myHist);
+          pm.AddDataSource("dataSourceG", myHist);
 
           auto myGraph = new TGraph();
           myGraph->SetName("myGraph"); // graph needs a name!
           auto myFunc = new TF1("myFunc", "gaus", -5, 5);
-          pm.AddDataset("datasetG", {myGraph, myFunc});
+          pm.AddDataSource("dataSourceG", {myGraph, myFunc});
           ```
         ],
         [
           ```python
           myHist = ROOT.TH1D("myHist", "", 100, -5, 5)
-          pm.AddDataset("datasetG", myHist)
+          pm.AddDataSource("dataSourceG", myHist)
 
           myGraph = ROOT.TGraph()
           myGraph.SetName("myGraph")  # graph needs a name!
           myFunc = ROOT.TF1("myFunc", "gaus", -5, 5)
-          pm.AddDataset("datasetG", [myGraph, myFunc])
+          pm.AddDataSource("dataSourceG", [myGraph, myFunc])
           ```
         ],
       )
@@ -689,7 +689,7 @@
     [
       - The data-type agnostic `AddData()` function accepts virtually all ROOT histograms, graphs, profiles, functions and trees.
 
-      - Data is identified by name and automatically searched for in the corresponding dataset across all associated files.
+      - Data is identified by name and automatically searched for in the corresponding dataSource across all associated files.
 
       - Directory or list paths within ROOT files can be prepended to object names to disambiguate identical names.
 
@@ -716,15 +716,15 @@
       #code-block(
         [
           ```cpp
-          plot[1].AddData("myGraph", "datasetA");
-          plot[1].AddData("myFunc", "datasetA");
-          plot[1].AddData("path/to/myHist", "datasetB");
+          plot[1].AddData("myGraph", "dataSourceA");
+          plot[1].AddData("myFunc", "dataSourceA");
+          plot[1].AddData("path/to/myHist", "dataSourceB");
 
-          plot[1].AddData("largerHisto", "datasetB")
+          plot[1].AddData("largerHisto", "dataSourceB")
                           .SetDefinesFrame();
 
-          plot[1].AddRatio("numDataName", "datasetA",
-                           "denomDataName", "datasetB");
+          plot[1].AddRatio("numDataName", "dataSourceA",
+                           "denomDataName", "dataSourceB");
           ```
         ],
         [
@@ -753,25 +753,25 @@
       #code-block(
         [
           ```cpp
-          plot[1].AddData("h", "datasetA").SetOptions("HIST");
-          plot[1].AddData("h", "datasetA").SetOptions(points);
+          plot[1].AddData("h", "dataSourceA").SetOptions("HIST");
+          plot[1].AddData("h", "dataSourceA").SetOptions(points);
 
           // modify data appearance later
           plot[1](1).SetColor(kRed);
           plot[1](2).SetMarkerStyle(kOpenCirlcle);
 
           Data layout = Data()
-            .SetDataset("datasetA")
+            .SetDataSource("dataSourceA")
             .SetOptions(curve)
             .SetLineStyle(kDashDotted)
             .SetLineWidth(4.)
             .SetLineColor(kOrange);
 
-          // reuse appearance (requires dataset to be defined)
+          // reuse appearance (requires dataSource to be defined)
           plot[1].AddData("graph1", layout);
           plot[1].AddData("graph2", layout).SetColor(kBlue);
 
-          plot[1].AddRatio("h1", layout, "h2", "datasetB");
+          plot[1].AddRatio("h1", layout, "h2", "dataSourceB");
           ```
         ],
         [
