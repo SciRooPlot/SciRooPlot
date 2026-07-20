@@ -19,6 +19,7 @@
 #ifndef INCLUDE_CONFIG_H_
 #define INCLUDE_CONFIG_H_
 
+#include <string>
 #include <filesystem>
 #include <map>
 #include <boost/property_tree/info_parser.hpp>
@@ -64,13 +65,13 @@ class Config
   const std::string DatasetsFile(const std::string& projectName) const;
   const std::string& CurrentProject() const { return mCurrentProject; }
 
-  void SetVerbosity(int logLevel) { mLogLevel = logLevel; };
-  void SetColorScheme(int colorMode) { mColorMode = colorMode; };
+  void SetVerbosity(int logLevel) { mLogLevel = logLevel; }
+  void SetColorScheme(int colorMode) { mColorMode = colorMode; }
   void SetOutputDir(const std::string& projectName, const std::string& outputDir);
   void SetExecutable(const std::string& projectName, const std::string& executable);
 
  private:
-  Config() { LoadConfig(); };
+  Config() { LoadConfig(); }
   ~Config() { SaveConfig(); }
   static Config& Instance();
   void LoadConfig();
