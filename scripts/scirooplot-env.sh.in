@@ -214,11 +214,13 @@ _plot_completions_zsh() {
 
 _srp_completions_zsh() {
 
-  local general_commands=('update' 'cd' 'init-cpp' 'init-py' 'projects' 'reset' 'clean' 'help')
+  local general_commands=('update' 'cd' 'init-cpp' 'init-py' 'projects' 'reset' 'clean' 'help' 'color' 'verbosity')
   local project_commands=('remove' 'select' 'show' 'path' 'set' 'get')
   local project_commands_with_prop=('set' 'get')
   local properties=('EXE' 'OUT' 'NAME')
   local file_commands=('open' 'print')
+  local color_settings=('bright' 'dark' 'off')
+  local verbosity_settings=('debug' 'log' 'info' 'warning' 'error')
 
   local projects
   local project_file="$(${SCIROOPLOT_BIN}/srp path)/projects.info"
@@ -246,6 +248,10 @@ _srp_completions_zsh() {
         _arguments '2:profiles:(${projects})'
       elif [[ " ${file_commands[@]} " =~ " ${words[2]} " ]]; then
         _files -g '*.root'
+      elif [[ " color " =~ " ${words[2]} " ]]; then
+        _arguments '2:profiles:(${color_settings})'
+      elif [[ " verbosity " =~ " ${words[2]} " ]]; then
+        _arguments '2:profiles:(${verbosity_settings})'
       fi
     ;;
     property)
@@ -325,11 +331,13 @@ _plot_completions_bash() {
 
 _srp_completions_bash() {
 
-  local general_commands=('update cd init-cpp init-py projects reset clean help')
+  local general_commands=('update cd init-cpp init-py projects reset clean help color verbosity')
   local project_commands=('remove select show path set get')
   local project_commands_with_prop=('set get')
   local properties=('EXE OUT NAME')
   local file_commands=('open print')
+  local color_settings=('bright dark off')
+  local verbosity_settings=('debug log info warning error')
 
   local projects
   local project_file="$(${SCIROOPLOT_BIN}/srp path)/projects.info"
@@ -357,6 +365,10 @@ _srp_completions_bash() {
       while IFS= read -r f; do
         [[ "${f}" == *.root ]] && COMPREPLY+=("${f}")
       done < <(compgen -f -- "${cur}")
+    elif [[ " color " =~ " ${COMP_WORDS[COMP_CWORD-1]} " ]]; then
+      COMPREPLY=( $(compgen -W "${color_settings[*]}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    elif [[ " verbosity " =~ " ${COMP_WORDS[COMP_CWORD-1]} " ]]; then
+      COMPREPLY=( $(compgen -W "${verbosity_settings[*]}" -- "${COMP_WORDS[COMP_CWORD]}") )
     else
       COMPREPLY=( )
     fi

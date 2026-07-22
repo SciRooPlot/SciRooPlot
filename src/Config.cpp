@@ -30,6 +30,7 @@ using boost::property_tree::ptree;
 using boost::property_tree::read_info;
 using boost::property_tree::write_info;
 using std::string;
+using std::vector;
 
 namespace SciRooPlot
 {
@@ -127,6 +128,106 @@ bool Config::Exists(const std::string& projectName) const
   return false;
 }
 
+void Config::ListProjects() const
+{
+  for (const auto& [projectName, project] : mProjects) {
+    PRINT("{}  {}", (mCurrentProject == projectName) ? "*" : " ", projectName);
+  }
+}
+
+void Config::Rename(const std::string& projectName, const std::string& newProjectName)
+{
+  auto node = mProjects.extract(projectName);
+  if (!node.empty()) {
+    node.key() = newProjectName;
+    mProjects.erase(newProjectName);
+    mProjects.insert(std::move(node));
+    if (mCurrentProject == projectName) {
+      mCurrentProject = newProjectName;
+    }
+    PRINT("Renamed project {} to {}. User code should be adjusted accordingly.", projectName, newProjectName);
+  }
+}
+
+void Config::Reset()
+{
+  mProjects.clear();
+  mCurrentProject.clear();
+}
+
+void Config::Clean()
+{
+  string firstProject;
+  vector<string> inactiveProjects;
+  for (const auto& [projectName, project] : mProjects) {
+    if (std::filesystem::exists(std::filesystem::path(Executable(projectName)).parent_path())) {
+      if (firstProject.empty()) firstProject = projectName;
+      continue;
+    }
+    inactiveProjects.push_back(projectName);
+  }
+  bool updatedActiveProject = false;
+  for (auto& inactiveProject : inactiveProjects) {
+    PRINT("- deleting project {}", inactiveProject);
+    mProjects.erase(inactiveProject);
+
+    std::filesystem::remove_all(ProjectPath(inactiveProject));
+    if (mCurrentProject == inactiveProject) {
+      mCurrentProject = firstProject;
+      updatedActiveProject = true;
+    }
+  }
+  if (updatedActiveProject) {
+    INFO("Selecting project {}", mCurrentProject);
+  }
+}
+
+void Config::Show(const string& projectNameIn) const
+{
+  for (const auto& [projectName, project] : mProjects) {
+    if (!projectNameIn.empty() && (projectName != projectNameIn)) {
+      continue;
+    }
+    PRINT("{} NAME: {}", (projectName == mCurrentProject) ? "*" : " ", projectName);
+    if (!project.mExecutable.empty()) {
+      PRINT("  -EXE: {}", project.mExecutable);
+    }
+    if (!project.mOutputDir.empty()) {
+      PRINT("  -OUT: {}", project.mOutputDir);
+    }
+  }
+}
+
+void Config::Remove(const string& projectName)
+{
+  if (projectName.empty()) {
+    ERROR("Specify which project to remove.");
+    return;
+  }
+  mProjects.erase(projectName);
+  if (mCurrentProject == projectName) {
+    mCurrentProject.clear();
+    auto it = mProjects.begin();
+    if (it != mProjects.end()) {
+      mCurrentProject = it->first;
+      INFO("Selecting project {}", mCurrentProject);
+    }
+  }
+}
+
+void Config::Select(const string& projectName)
+{
+  if (projectName.empty()) {
+    ERROR("Specify a project to select.");
+    return;
+  }
+  if (mProjects.find(projectName) != mProjects.end()) {
+    mCurrentProject = projectName;
+  } else {
+    ERROR("Cannot find project {}.", projectName);
+  }
+}
+
 const std::filesystem::path Config::ProjectPath(const string& projectName) const
 {
   if (projectName.empty()) return projectName;
@@ -138,6 +239,7 @@ const std::string Config::PlotsFile(const string& projectName) const
   if (projectName.empty()) return projectName;
   return mPath / projectName / "plots.info";
 }
+
 const std::string Config::DataSourcesFile(const string& projectName) const
 {
   if (projectName.empty()) return projectName;
@@ -146,6 +248,10 @@ const std::string Config::DataSourcesFile(const string& projectName) const
 
 void Config::SetExecutable(const string& projectName, const string& executable)
 {
+  if (std::filesystem::path(expand_path(executable)).is_relative()) {
+    ERROR("The path must not be relative.");
+    return;
+  }
   mProjects[projectName].mExecutable = executable;
 }
 
@@ -161,6 +267,10 @@ const string Config::Executable(const string& projectName) const
 
 void Config::SetOutputDir(const string& projectName, const string& outputDir)
 {
+  if (std::filesystem::path(expand_path(outputDir)).is_relative()) {
+    ERROR("The path must not be relative.");
+    return;
+  }
   mProjects[projectName].mOutputDir = outputDir;
 }
 

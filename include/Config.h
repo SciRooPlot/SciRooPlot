@@ -34,12 +34,11 @@ class Config
   static const Config& Get();
 
   enum LogLevel {
-    Off,
-    Log,
-    Info,
-    Warning,
-    Error,
-    Debug,
+    error,
+    warning,
+    info,
+    log,
+    debug,
   };
 
   enum ColorMode {
@@ -56,7 +55,9 @@ class Config
   const std::string& SettingsFile() const { return mSettingsFile; }
 
   bool Exists(const std::string& projectName) const;
+  void ListProjects() const;
 
+  void Show(const std::string& projectName) const;
   const std::string Executable(const std::string& projectName) const;
   const std::string OutputDir(const std::string& projectName) const;
 
@@ -70,6 +71,12 @@ class Config
   void SetOutputDir(const std::string& projectName, const std::string& outputDir);
   void SetExecutable(const std::string& projectName, const std::string& executable);
 
+  void Reset();
+  void Clean();
+  void Remove(const std::string& projectName);
+  void Rename(const std::string& projectName, const std::string& newProjectName);
+  void Select(const std::string& projectName);
+
  private:
   Config() { LoadConfig(); }
   ~Config() { SaveConfig(); }
@@ -78,7 +85,7 @@ class Config
   void SaveConfig();
 
   bool mModified;
-  int mLogLevel{LogLevel::Debug};
+  int mLogLevel{LogLevel::debug};
   int mColorMode{ColorMode::bright};
   std::filesystem::path mPath;
   std::string mProjectsFile;

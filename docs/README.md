@@ -77,13 +77,13 @@ Possible alternatives are: `list`, `print`, `pdf`, `eps`, `svg`, `png`, `gif`, `
 If you have multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..) that you want to concatenate and save as a moving gif, you can create it via `plot myGroup myPlot_bin_.+ gif`.
 To adjust the time between the frames use for example `plot myGroup myPlot_bin_.+ gif+4`, where the number is given in tens of milliseconds (i.e. this example will create a gif with a delay of 40ms between the plots).
 
-The modes that save files to disk, the plotting app needs to know where to store the output. This can be configured via: 
+For the modes that save files to disk, the plotting app needs to know where to store the output. This can be configured via:
 ```
 srp set <project> OUT </path/to/output/folder>
 ```
 Within this folder, the files will be organized in subdirectories corresponding to the groups and subgroups.
 
-In interactive mode, one can browse through the requested plots using the keys 's' (right), 'a' (left) and 'q' (quit) or by double-clicking on the right and left side of the plot, respectively.
+In interactive (`show`) mode, one can browse through the requested plots using the keys 's' (right), 'a' (left) and 'q' (quit) or by double-clicking on the right and left side of the plot, respectively.
 
 ## 📖 Commented code examples
 The following example code snippets with comments illustrate how plots are defined within your SciRooPlot user code.
