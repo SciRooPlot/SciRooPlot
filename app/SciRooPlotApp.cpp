@@ -140,7 +140,9 @@ int main(int argc, char* argv[])
     }
   } else if (command == "verbosity") {
     string logLevel = project;
-    if (logLevel == "log") {
+    if (logLevel == "debug") {
+      Config::GetMutable().SetVerbosity(Config::LogLevel::debug);
+    } else if (logLevel == "log") {
       Config::GetMutable().SetVerbosity(Config::LogLevel::log);
     } else if (logLevel == "info") {
       Config::GetMutable().SetVerbosity(Config::LogLevel::info);
@@ -148,8 +150,8 @@ int main(int argc, char* argv[])
       Config::GetMutable().SetVerbosity(Config::LogLevel::warning);
     } else if (logLevel == "error") {
       Config::GetMutable().SetVerbosity(Config::LogLevel::error);
-    } else if (logLevel == "debug") {
-      Config::GetMutable().SetVerbosity(Config::LogLevel::debug);
+    } else if (logLevel == "silent") {
+      Config::GetMutable().SetVerbosity(Config::LogLevel::silent);
     }
   } else if (command == "path") {
     std::cout << ((project.empty()) ? Config::Get().Path().string() : Config::Get().ProjectPath(project).string()) << std::endl;

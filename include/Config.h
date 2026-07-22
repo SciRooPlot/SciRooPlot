@@ -34,6 +34,7 @@ class Config
   static const Config& Get();
 
   enum LogLevel {
+    silent,
     error,
     warning,
     info,

@@ -220,7 +220,7 @@ _srp_completions_zsh() {
   local properties=('EXE' 'OUT' 'NAME')
   local file_commands=('open' 'print')
   local color_settings=('bright' 'dark' 'off')
-  local verbosity_settings=('debug' 'log' 'info' 'warning' 'error')
+  local verbosity_settings=('debug' 'log' 'info' 'warning' 'error' 'silent')
 
   local projects
   local project_file="$(${SCIROOPLOT_BIN}/srp path)/projects.info"
@@ -337,7 +337,7 @@ _srp_completions_bash() {
   local properties=('EXE OUT NAME')
   local file_commands=('open print')
   local color_settings=('bright dark off')
-  local verbosity_settings=('debug log info warning error')
+  local verbosity_settings=('debug log info warning error silent')
 
   local projects
   local project_file="$(${SCIROOPLOT_BIN}/srp path)/projects.info"
