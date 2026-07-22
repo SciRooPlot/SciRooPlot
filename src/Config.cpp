@@ -19,6 +19,8 @@
 #include <iostream>
 #include <string>
 #include <boost/property_tree/info_parser.hpp>
+#include <utility>
+#include <vector>
 
 #include "TSystem.h"
 

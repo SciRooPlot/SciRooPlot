@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
     app.Run();
   } else if (command == "print") {
     string fileName = project;
-    PrintRootFileContents(project);
+    PrintRootFileContents(fileName);
   } else if (command == "color") {
     string colorSetting = project;
     if (colorSetting == "off") {
