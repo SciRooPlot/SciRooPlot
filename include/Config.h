@@ -59,12 +59,12 @@ class Config
   void ListProjects() const;
 
   void Show(const std::string& projectName) const;
-  const std::string Executable(const std::string& projectName) const;
-  const std::string OutputDir(const std::string& projectName) const;
+  std::string Executable(const std::string& projectName) const;
+  std::string OutputDir(const std::string& projectName) const;
 
-  const std::filesystem::path ProjectPath(const std::string& projectName) const;
-  const std::string PlotsFile(const std::string& projectName) const;
-  const std::string DataSourcesFile(const std::string& projectName) const;
+  std::filesystem::path ProjectPath(const std::string& projectName) const;
+  std::string PlotsFile(const std::string& projectName) const;
+  std::string DataSourcesFile(const std::string& projectName) const;
   const std::string& CurrentProject() const { return mCurrentProject; }
 
   void SetVerbosity(int logLevel) { mLogLevel = logLevel; }

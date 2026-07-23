@@ -51,7 +51,7 @@ namespace SciRooPlot
 // supported input data types
 using data_ptr_t = std::variant<TH1*, TH2*, TH3*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF3*, TF2*, TF1*>;
 
-const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist2d{
+inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist2d{
   {box, "BOX"},
   {box1, "BOX1"},
   {colz, "COLZ"},
@@ -82,7 +82,7 @@ const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist2d{
   {candle7, "CANDLEX(111101)"},  // no median but mean as line
 };
 
-const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist{
+inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist{
   {points, "X0 EP"},
   {points_xerr, "EP"},
   {points_endcaps, "E1"},
@@ -107,7 +107,7 @@ const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist{
   {hbar4, "HBAR4"},
 };
 
-const std::map<drawing_options_t, std::string> defaultDrawingOptions_Graph{
+inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Graph{
   {points, "P Z"},
   {points_line, "P Z L"},
   {points_endcaps, "P"},

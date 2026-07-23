@@ -230,19 +230,19 @@ void Config::Select(const string& projectName)
   }
 }
 
-const std::filesystem::path Config::ProjectPath(const string& projectName) const
+std::filesystem::path Config::ProjectPath(const string& projectName) const
 {
   if (projectName.empty()) return projectName;
   return mPath / projectName;
 }
 
-const std::string Config::PlotsFile(const string& projectName) const
+std::string Config::PlotsFile(const string& projectName) const
 {
   if (projectName.empty()) return projectName;
   return mPath / projectName / "plots.info";
 }
 
-const std::string Config::DataSourcesFile(const string& projectName) const
+std::string Config::DataSourcesFile(const string& projectName) const
 {
   if (projectName.empty()) return projectName;
   return mPath / projectName / "dataSources.info";
@@ -257,7 +257,7 @@ void Config::SetExecutable(const string& projectName, const string& executable)
   mProjects[projectName].mExecutable = executable;
 }
 
-const string Config::Executable(const string& projectName) const
+string Config::Executable(const string& projectName) const
 {
   auto it = mProjects.find(projectName);
   if (it != mProjects.end()) {
@@ -276,7 +276,7 @@ void Config::SetOutputDir(const string& projectName, const string& outputDir)
   mProjects[projectName].mOutputDir = outputDir;
 }
 
-const string Config::OutputDir(const string& projectName) const
+string Config::OutputDir(const string& projectName) const
 {
   auto it = mProjects.find(projectName);
   if (it != mProjects.end()) {
