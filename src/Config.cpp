@@ -141,6 +141,10 @@ void Config::Rename(const std::string& projectName, const std::string& newProjec
 {
   auto node = mProjects.extract(projectName);
   if (!node.empty()) {
+    std::filesystem::path projectPath = ProjectPath(projectName);
+    if (std::filesystem::exists(projectPath)) {
+      std::filesystem::rename(projectPath, projectPath.parent_path() / newProjectName);
+    }
     node.key() = newProjectName;
     mProjects.erase(newProjectName);
     mProjects.insert(std::move(node));

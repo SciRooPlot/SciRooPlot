@@ -142,7 +142,7 @@ function srp() {
   else
     args=("$@")
     [[ -n "${ZSH_VERSION}" ]] && setopt local_options KSH_ARRAYS
-    if (( ${#args[@]} >= 4 )) && [[ "${args[3]}" != /* ]]; then
+    if (( ${#args[@]} >= 4 )) && [[ "${args[2]}" =~ ^(EXE|OUT)$ ]] && [[ "${args[3]}" != /* ]]; then
       args[3]="$(pwd)/${args[3]}"
     fi
     "${SCIROOPLOT_BIN}/srp" "${args[@]}"

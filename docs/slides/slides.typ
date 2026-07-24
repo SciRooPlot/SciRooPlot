@@ -245,7 +245,7 @@
 
       - Project automatically registered with SciRooPlot.
 
-      - Includes working examples based on the bundled dataSources.
+      - Includes working examples using dummy data.
 
       - Generate your first plot immediately:
         #terminal[
@@ -511,7 +511,7 @@
     columns: (42%, 55%),
     gutter: 3%,
     [
-      - A data source is a collection of input sources with a unique identifier that is later used for the plot definitions.
+      - A data source is a collection of input files with a unique identifier that is later used for the plot definitions.
 
       - Entire ROOT files or individual subdirectories/lists therein can be registered as input sources.
 
@@ -541,7 +541,7 @@
 
           pm.AddDataSource("sourceE", "/path/to/directory/");
 
-          pm.AddDataSource("sourceB", SRC_DIR + "../rel/path/file2.root");
+          pm.AddDataSource("sourceB", SRC_DIR + "../path/file2.root");
 
           pm.AddDataSource("sourceC", "${HOME}/path/to/file/file3.root");
 
@@ -551,7 +551,7 @@
           ```python
           pm.AddDataSource("sourceA", "/path/to/file1.root")
 
-          pm.AddDataSource("sourceB", SRC_DIR + "../rel/path/file2.root")
+          pm.AddDataSource("sourceB", SRC_DIR + "../path/file2.root")
 
           pm.AddDataSource("sourceC", "${HOME}/path/to/file/file3.root")
 

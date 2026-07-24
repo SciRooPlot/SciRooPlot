@@ -109,8 +109,9 @@ int main(int argc, char* argv[])
   }
 
   if (command == "help") {
+    PRINT("srp (init-cpp | init-py) (<projectName> | @current) [<dir>]");
     PRINT("srp (projects | path | reset | clean)");
-    PRINT("srp (init-cpp | init-py | remove | select | show) (<projectName> | @current)");
+    PRINT("srp (remove | select | show) (<projectName> | @current)");
     PRINT("srp (set | get) (<projectName> | @current) (NAME | EXE | OUT) <setting>");
     PRINT("srp color (bright | dark | off)");
     PRINT("srp verbosity (debug | log | info | warning | error)");
