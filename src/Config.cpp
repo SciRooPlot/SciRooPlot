@@ -85,6 +85,10 @@ void Config::LoadConfig()
         mColorMode = std::stoi(setting.second.data());
         continue;
       }
+      if (setting.first == "plotMode") {
+        mPlotMode = setting.second.data();
+        continue;
+      }
     }
   }
 
@@ -111,6 +115,7 @@ void Config::SaveConfig()
   ptree settingsTree;
   settingsTree.add("logLevel", mLogLevel);
   settingsTree.add("colorMode", mColorMode);
+  settingsTree.add("plotMode", mPlotMode);
   write_info(SettingsFile(), settingsTree);
 
   // save projects tree

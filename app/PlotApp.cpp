@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  if (mode.empty()) mode = "show";
+  if (mode.empty()) mode = Config::Get().PlotMode();
 
   if (group.empty() || name.empty()) {
     ERROR("No plots were specified.");

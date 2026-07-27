@@ -50,6 +50,7 @@ class Config
 
   int Verbosity() const { return mLogLevel; }
   int ColorScheme() const { return mColorMode; }
+  const std::string& PlotMode() const { return mPlotMode; }
   const std::filesystem::path& Path() const { return mPath; }
 
   const std::string& ProjectsFile() const { return mProjectsFile; }
@@ -70,6 +71,7 @@ class Config
 
   void SetVerbosity(int logLevel) { mLogLevel = logLevel; }
   void SetColorScheme(int colorMode) { mColorMode = colorMode; }
+  void SetPlotMode(const std::string& plotMode) { mPlotMode = plotMode; }
   void SetProperty(const std::string& projectName, const std::string& property, const std::string& value);
   void SetOutputDir(const std::string& projectName, const std::string& outputDir);
   void SetProgram(const std::string& projectName, const std::string& program);
@@ -90,6 +92,7 @@ class Config
   bool mModified;
   int mLogLevel{LogLevel::debug};
   int mColorMode{ColorMode::bright};
+  std::string mPlotMode{"show"};
   std::filesystem::path mPath;
   std::string mProjectsFile;
   std::string mSettingsFile;

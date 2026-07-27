@@ -117,7 +117,6 @@ int main(int argc, char* argv[])
     PRINT("  srp confdir [<project> | @current]");
     PRINT("  srp rename  (<project> | @current) <name>");
     PRINT("  srp remove  (<project> | @current)");
-    PRINT("  srp clean");
     PRINT("-----------------------------------------------------------");
     PRINT("Project initialization:");
     PRINT("  srp add      <project> <program> [<outdir>]");
@@ -133,8 +132,13 @@ int main(int argc, char* argv[])
     PRINT("Settings:");
     PRINT("  srp color     (bright | dark | off)");
     PRINT("  srp verbosity (debug | log | info | warning | error)");
+    PRINT("  srp plotmode  (show | pdf | eps | svg | png | gif | jpg)");
     PRINT("-----------------------------------------------------------");
-    PRINT("Tools:");
+    PRINT("Maintenance:");
+    PRINT("  srp clean");
+    PRINT("  srp update");
+    PRINT("-----------------------------------------------------------");
+    PRINT("File tools:");
     PRINT("  srp open  <file>");
     PRINT("  srp print <file>");
     PRINT("===========================================================");
@@ -176,6 +180,12 @@ int main(int argc, char* argv[])
     } else if (logLevel == "silent") {
       Config::GetMutable().SetVerbosity(Config::LogLevel::silent);
     }
+  } else if (command == "plotmode") {
+    if (project.empty()) {
+      ERROR("Specify default plotmode.");
+      return 1;
+    }
+    Config::GetMutable().SetPlotMode(project);
   } else if (command == "confdir") {
     std::cout << ((project.empty()) ? Config::Get().Path().string() : Config::Get().ProjectPath(project).string()) << std::endl;
     return 0;
