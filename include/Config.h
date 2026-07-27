@@ -59,7 +59,8 @@ class Config
   void ListProjects() const;
 
   void Show(const std::string& projectName) const;
-  std::string Executable(const std::string& projectName) const;
+  std::string Property(const std::string& projectName, const std::string& property) const;
+  std::string Program(const std::string& projectName) const;
   std::string OutputDir(const std::string& projectName) const;
 
   std::filesystem::path ProjectPath(const std::string& projectName) const;
@@ -69,8 +70,9 @@ class Config
 
   void SetVerbosity(int logLevel) { mLogLevel = logLevel; }
   void SetColorScheme(int colorMode) { mColorMode = colorMode; }
+  void SetProperty(const std::string& projectName, const std::string& property, const std::string& value);
   void SetOutputDir(const std::string& projectName, const std::string& outputDir);
-  void SetExecutable(const std::string& projectName, const std::string& executable);
+  void SetProgram(const std::string& projectName, const std::string& program);
 
   void Reset();
   void Clean();
@@ -96,8 +98,8 @@ class Config
     Project() = default;
     explicit Project(const boost::property_tree::ptree& tree);
     boost::property_tree::ptree GetTree();
-    std::string mExecutable;
-    std::string mOutputDir;
+    std::string Property(const std::string& property) const;
+    std::map<std::string, std::string> mProperties;
   };
 
   std::map<std::string, Project> mProjects;

@@ -166,7 +166,7 @@ void Config::Clean()
   string firstProject;
   vector<string> inactiveProjects;
   for (const auto& [projectName, project] : mProjects) {
-    if (std::filesystem::exists(std::filesystem::path(Executable(projectName)).parent_path())) {
+    if (std::filesystem::exists(std::filesystem::path(Program(projectName)).parent_path())) {
       if (firstProject.empty()) firstProject = projectName;
       continue;
     }
@@ -184,7 +184,7 @@ void Config::Clean()
     }
   }
   if (updatedActiveProject) {
-    INFO("Selecting project {}", mCurrentProject);
+    INFO("Selecting project {}.", mCurrentProject);
   }
 }
 
@@ -194,12 +194,11 @@ void Config::Show(const string& projectNameIn) const
     if (!projectNameIn.empty() && (projectName != projectNameIn)) {
       continue;
     }
-    PRINT("{} NAME: {}", (projectName == mCurrentProject) ? "*" : " ", projectName);
-    if (!project.mExecutable.empty()) {
-      PRINT("  -EXE: {}", project.mExecutable);
-    }
-    if (!project.mOutputDir.empty()) {
-      PRINT("  -OUT: {}", project.mOutputDir);
+    PRINT("{} name: {}", (projectName == mCurrentProject) ? "*" : " ", projectName);
+    for (const auto& [property, value] : project.mProperties) {
+      if (!value.empty()) {
+        PRINT("  -{}: {}", property, value);
+      }
     }
   }
 }
@@ -252,21 +251,21 @@ std::string Config::DataSourcesFile(const string& projectName) const
   return mPath / projectName / "dataSources.info";
 }
 
-void Config::SetExecutable(const string& projectName, const string& executable)
+void Config::SetProgram(const string& projectName, const string& program)
 {
-  if (std::filesystem::path(expand_path(executable)).is_relative()) {
+  if (std::filesystem::path(expand_path(program)).is_relative()) {
     ERROR("The path must not be relative.");
     return;
   }
-  mProjects[projectName].mExecutable = executable;
+  mProjects[projectName].mProperties["program"] = program;
 }
 
-string Config::Executable(const string& projectName) const
+string Config::Program(const string& projectName) const
 {
   auto it = mProjects.find(projectName);
   if (it != mProjects.end()) {
     const auto& project = it->second;
-    return project.mExecutable;
+    return project.Property("program");
   }
   return {};
 }
@@ -277,7 +276,31 @@ void Config::SetOutputDir(const string& projectName, const string& outputDir)
     ERROR("The path must not be relative.");
     return;
   }
-  mProjects[projectName].mOutputDir = outputDir;
+  mProjects[projectName].mProperties["outdir"] = outputDir;
+}
+
+string Config::Project::Property(const string& property) const
+{
+  auto it = mProperties.find(property);
+  if (it != mProperties.end()) {
+    return it->second;
+  }
+  return {};
+}
+
+void Config::SetProperty(const string& projectName, const string& property, const string& value)
+{
+  mProjects[projectName].mProperties[property] = value;
+}
+
+string Config::Property(const string& projectName, const string& property) const
+{
+  auto it = mProjects.find(projectName);
+  if (it != mProjects.end()) {
+    const auto& project = it->second;
+    return project.Property(property);
+  }
+  return {};
 }
 
 string Config::OutputDir(const string& projectName) const
@@ -285,29 +308,30 @@ string Config::OutputDir(const string& projectName) const
   auto it = mProjects.find(projectName);
   if (it != mProjects.end()) {
     const auto& project = it->second;
-    return project.mOutputDir;
+    return project.Property("outdir");
   }
   return {};
 }
 
 Config::Project::Project(const ptree& tree)
 {
-  if (auto executable = tree.get_optional<string>("EXE")) {
-    mExecutable = *executable;
-  }
-  if (auto outputDir = tree.get_optional<string>("OUT")) {
-    mOutputDir = *outputDir;
+  for (const auto& [key, child] : tree) {
+    if (!child.empty()) {
+      continue;
+    }
+    if (auto value = child.get_value_optional<std::string>()) {
+      mProperties[key] = *value;
+    }
   }
 }
 
 ptree Config::Project::GetTree()
 {
   ptree tree;
-  if (!mExecutable.empty()) {
-    tree.add("EXE", mExecutable);
-  }
-  if (!mOutputDir.empty()) {
-    tree.add("OUT", mOutputDir);
+  for (const auto& [property, value] : mProperties) {
+    if (!value.empty()) {
+      tree.add(property, mProperties[property]);
+    }
   }
   return tree;
 }

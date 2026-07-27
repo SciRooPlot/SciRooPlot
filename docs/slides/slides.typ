@@ -445,7 +445,7 @@
           ```cpp
           int main(int argc, char* argv[])
           {
-            PlotManager pm;
+            PlotManager pm("myProject");
             pm.AddDataSource("dataSource", "/path/to/file.root");
             { // ---------------------------------------------------------
               Plot plot("plotName", "groupName");
@@ -455,7 +455,7 @@
               plot[1]['X'].SetTitle("x axis title");
               pm.AddPlot(plot);
             } // ---------------------------------------------------------
-            pm.SaveProject("myPlots");
+            pm.SaveProject();
             return 0;
           }
           ```
@@ -463,7 +463,7 @@
         [
           ```python
           def main():
-            pm = PlotManager()
+            pm = PlotManager("myProject")
             pm.AddDataSource("dataSource", "/path/to/file.root")
             # -----------------------------------------------------------
             plot = Plot("plotName", "groupName")
@@ -473,7 +473,7 @@
             plot[1]['X'].SetTitle("x axis title")
             pm.AddPlot(plot)
             # -----------------------------------------------------------
-            pm.SaveProject("myProject")
+            pm.SaveProject()
 
           if __name__ == "__main__":
             main()
@@ -813,7 +813,7 @@
             {0., 1., 0., 0.50}, // green
             {1., 1., 0., 0.75}, // yellow
             {1., 0., 0., 1.}    // red
-          };
+          }; // (r,g,b,pos)
           plot[1].SetDefaultColors(rainbowColors);
 
           // same gradient as 2D palette
@@ -931,12 +931,12 @@
 
 
 #slide[
-  #slide-title("Processing Tree and CSV Data")
+  #slide-title("Processing Tree and Table Data")
   #grid(
     columns: (50%, 45%),
     gutter: 5%,
     [
-      - Tree leaves and CSV columns are accessed through the same interface.
+      - Tree leaves and table columns of csv files are accessed through the same interface.
 
       - Create histogram projections, profiles and scatter plots directly from tabular data.
 

@@ -7,7 +7,7 @@
 using std::string;
 using std::vector;
 using namespace SciRooPlot;
-using Plot::Pad::Data;
+using Data = Plot::Pad::Data;
 
 void DefineDataSources(PlotManager& pm);
 void DefineBasePlots(PlotManager& pm);

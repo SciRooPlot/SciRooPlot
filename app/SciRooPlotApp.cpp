@@ -83,8 +83,8 @@ int main(int argc, char* argv[])
       if (project == "@current") {
         project = Config::Get().CurrentProject();
         if (project.empty()) {
-          if ((command != "get") && (command != "path")) {
-            ERROR("No current project selected. Please run srp select <PROJECT_NAME>");
+          if ((command != "get") && (command != "confdir")) {
+            ERROR("No project selected. Please run srp select <project>.");
           }
           return 1;
         }
@@ -109,13 +109,35 @@ int main(int argc, char* argv[])
   }
 
   if (command == "help") {
-    PRINT("srp (init-cpp | init-py) (<projectName> | @current) [<dir>]");
-    PRINT("srp (projects | path | reset | clean)");
-    PRINT("srp (remove | select | show) (<projectName> | @current)");
-    PRINT("srp (set | get) (<projectName> | @current) (NAME | EXE | OUT) <setting>");
-    PRINT("srp color (bright | dark | off)");
-    PRINT("srp verbosity (debug | log | info | warning | error)");
-    PRINT("srp (open | print) <fileName>");
+    PRINT("===========================================================");
+    PRINT("Project management:");
+    PRINT("  srp projects");
+    PRINT("  srp select  <project>");
+    PRINT("  srp show    [<project> | @current]");
+    PRINT("  srp confdir [<project> | @current]");
+    PRINT("  srp rename  (<project> | @current) <name>");
+    PRINT("  srp remove  (<project> | @current)");
+    PRINT("  srp clean");
+    PRINT("-----------------------------------------------------------");
+    PRINT("Project initialization:");
+    PRINT("  srp add      <project> <program> [<outdir>]");
+    PRINT("  srp init-cpp <project> [<dir>]");
+    PRINT("  srp init-py  <project> [<dir>]");
+    PRINT("-----------------------------------------------------------");
+    PRINT("Project configuration:");
+    PRINT("  srp get   (<project> | @current) <property>");
+    PRINT("  srp set   (<project> | @current) <property> <value>");
+    PRINT("  srp unset (<project> | @current) <property>");
+    PRINT("      property = program | outdir | <user-variable>");
+    PRINT("-----------------------------------------------------------");
+    PRINT("Settings:");
+    PRINT("  srp color     (bright | dark | off)");
+    PRINT("  srp verbosity (debug | log | info | warning | error)");
+    PRINT("-----------------------------------------------------------");
+    PRINT("Tools:");
+    PRINT("  srp open  <file>");
+    PRINT("  srp print <file>");
+    PRINT("===========================================================");
   } else if (command == "open") {
     string fileName = project;
     gROOT->SetBatch(false);
@@ -154,11 +176,15 @@ int main(int argc, char* argv[])
     } else if (logLevel == "silent") {
       Config::GetMutable().SetVerbosity(Config::LogLevel::silent);
     }
-  } else if (command == "path") {
+  } else if (command == "confdir") {
     std::cout << ((project.empty()) ? Config::Get().Path().string() : Config::Get().ProjectPath(project).string()) << std::endl;
     return 0;
-  } else if (command == "reset") {
-    Config::GetMutable().Reset();
+  } else if (command == "rename") {
+    if (setting.empty()) {
+      ERROR("Specify new name for {}.", project);
+      return 1;
+    }
+    Config::GetMutable().Rename(project, setting);
   } else if (command == "clean") {
     Config::GetMutable().Clean();
   } else if (command == "projects") {
@@ -169,37 +195,37 @@ int main(int argc, char* argv[])
     Config::GetMutable().Select(project);
   } else if (command == "show") {
     Config::Get().Show(project);
-  } else if ((command == "set") || (command == "get")) {
+  } else if (command == "add") {
+    if (project.empty()) {
+      ERROR("Specify project name.");
+      return 1;
+    }
+    if (!property.empty()) {
+      Config::GetMutable().SetProgram(project, property);
+      if (!setting.empty()) {
+        Config::GetMutable().SetOutputDir(project, setting);
+      }
+      Config::GetMutable().Select(project);
+      INFO("Selecting project {}.", project);
+    }
+  } else if (command == "get") {
     if (project.empty()) {
       ERROR("Specify project or use @current.");
       return 1;
     }
-    static const vector<string> propertyList = {"NAME", "EXE", "OUT"};
-    if (!std::count(propertyList.begin(), propertyList.end(), property)) {
-      ERROR("Specify what you want to {}. Options are ({}).", command, fmt::join(propertyList, " | "));
+    std::cout << Config::Get().Property(project, property) << std::endl;
+  } else if (command == "unset") {
+    Config::GetMutable().SetProperty(project, property, "");
+  } else if (command == "set") {
+    if (project.empty()) {
+      ERROR("Specify project or use @current.");
       return 1;
     }
-    if (command == "get") {
-      if (property == "NAME") {
-        std::cout << project << std::endl;
-      } else if (property == "EXE") {
-        std::cout << Config::Get().Executable(project) << std::endl;
-      } else if (property == "OUT") {
-        std::cout << Config::Get().OutputDir(project) << std::endl;
-      }
-    } else if (command == "set") {
-      if (setting.empty()) {
-        ERROR("Specify new setting for {}.", project);
-        return 1;
-      }
-      if (property == "NAME") {
-        Config::GetMutable().Rename(project, setting);
-      } else if (property == "EXE") {
-        Config::GetMutable().SetExecutable(project, setting);
-      } else if (property == "OUT") {
-        Config::GetMutable().SetOutputDir(project, setting);
-      }
+    if (setting.empty()) {
+      ERROR("Specify new setting for {}.", project);
+      return 1;
     }
+    Config::GetMutable().SetProperty(project, property, setting);
   } else {
     ERROR("Invalid arguments.");
   }

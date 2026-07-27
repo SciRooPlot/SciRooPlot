@@ -75,6 +75,8 @@ class PlotManager
   void GeneratePlots(const std::string& mode = "show", const std::string& name = ".+", const std::string& group = ".+");
   void ListPlots() const;
 
+  std::string GetProjectProperty(const std::string& property) const;
+
   void SetOutputDirectory(const std::string& path);
 
  private:

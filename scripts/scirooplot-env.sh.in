@@ -23,7 +23,7 @@ if [[ ! -f "${SCIROOPLOT_BIN}/plot" || ! -f "${SCIROOPLOT_BIN}/srp" ]]; then
 fi
 
 function plot() {
-  local user_exec=$("${SCIROOPLOT_BIN}/srp" "get" "@current" "EXE")
+  local user_exec=$("${SCIROOPLOT_BIN}/srp" "get" "@current" "program")
   local isPython=0
   [[ "$user_exec" == *.py ]] && isPython=1
   local user_dir=$([[ -n "${user_exec}" ]] && dirname -- "${user_exec}" || echo "")
@@ -56,7 +56,7 @@ function plot() {
       fi
     fi
 
-    local user_plotdef="$(${SCIROOPLOT_BIN}/srp path "@current")/plots.info"
+    local user_plotdef="$(${SCIROOPLOT_BIN}/srp confdir "@current")/plots.info"
     (
       cd "${user_dir}";
       if (( ! isPython )); then
@@ -124,7 +124,16 @@ function srp() {
     if (( isPython )); then
       cp "${SCIROOPLOT_DATA_DIR}/user/DefinePlots.py" "${project_path}/"
       sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/DefinePlots.py" && rm -f "${project_path}/DefinePlots.py.bak"
-      "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "EXE" "${project_path}/DefinePlots.py"
+      "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "program" "${project_path}/DefinePlots.py"
+      if [ -n "${SCIROOPLOT_PYTHON_EXECUTABLE:-}" ]; then
+        if [ ! -x "${SCIROOPLOT_PYTHON_EXECUTABLE}" ]; then
+          echo "SciRooPlot's Python path is outdated and requires reinstall..."
+          "${SCIROOPLOT_SOURCE_DIR}/scripts/install.sh" --reinstall
+        fi
+        ${SCIROOPLOT_PYTHON_EXECUTABLE} "${project_path}/DefinePlots.py"
+      else
+          echo "SciRooPlot was not compiled with Python bindings."
+      fi
     else
       cp "${SCIROOPLOT_DATA_DIR}/user/CMakeLists.txt" "${project_path}/"
       cp "${SCIROOPLOT_DATA_DIR}/user/DefinePlots.cpp" "${project_path}/"
@@ -134,16 +143,24 @@ function srp() {
       local curdir="$(pwd)"
       cd "${project_path}/build" && cmake -Wno-dev .. > /dev/null 2>&1 && make > /dev/null 2>&1 && ./definePlots
       cd "${curdir}"
-      "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "EXE" "${project_path}/build/definePlots"
+      "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "program" "${project_path}/build/definePlots"
     fi
-    "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "OUT" "${project_path}/output"
+    "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "outdir" "${project_path}/output"
     "${SCIROOPLOT_BIN}/srp" "select" "${project_name}"
     "${SCIROOPLOT_BIN}/srp" "show" "${project_name}"
   else
     args=("$@")
     [[ -n "${ZSH_VERSION}" ]] && setopt local_options KSH_ARRAYS
-    if (( ${#args[@]} >= 4 )) && [[ "${args[2]}" =~ ^(EXE|OUT)$ ]] && [[ "${args[3]}" != /* ]]; then
+    if (( ${#args[@]} >= 4 )) && [[ "${args[2]}" =~ ^(program|outdir)$ ]] && [[ "${args[3]}" != /* ]]; then
       args[3]="$(pwd)/${args[3]}"
+    fi
+    if (( ${#args[@]} >= 1 )) && [[ "${args[0]}" =~ ^(add)$ ]]; then
+      if (( ${#args[@]} >= 3 ))  && [[ "${args[2]}" != /* ]]; then
+        args[2]="$(pwd)/${args[2]}"
+      fi
+      if (( ${#args[@]} >= 4 ))  && [[ "${args[3]}" != /* ]]; then
+        args[3]="$(pwd)/${args[3]}"
+      fi
     fi
     "${SCIROOPLOT_BIN}/srp" "${args[@]}"
   fi
@@ -157,7 +174,7 @@ _plot_completions_zsh() {
   local groups
   local names
   
-  local tabcomp_file="$(${SCIROOPLOT_BIN}/srp path "@current")/tabcomp.csv"
+  local tabcomp_file="$(${SCIROOPLOT_BIN}/srp confdir "@current")/tabcomp.csv"
   if [[ ! -f "${tabcomp_file}" ]]; then
     return
   fi
@@ -214,16 +231,16 @@ _plot_completions_zsh() {
 
 _srp_completions_zsh() {
 
-  local general_commands=('update' 'cd' 'init-cpp' 'init-py' 'projects' 'reset' 'clean' 'help' 'color' 'verbosity')
-  local project_commands=('remove' 'select' 'show' 'path' 'set' 'get')
-  local project_commands_with_prop=('set' 'get')
-  local properties=('EXE' 'OUT' 'NAME')
+  local general_commands=('update' 'cd' 'init-cpp' 'init-py' 'add' 'projects' 'clean' 'help' 'color' 'verbosity')
+  local project_commands=('remove' 'rename' 'select' 'show' 'confdir' 'set' 'unset' 'get')
+  local project_commands_with_prop=('set' 'unset' 'get')
+  local properties=('program' 'outdir')
   local file_commands=('open' 'print')
   local color_settings=('bright' 'dark' 'off')
   local verbosity_settings=('debug' 'log' 'info' 'warning' 'error' 'silent')
 
   local projects
-  local project_file="$(${SCIROOPLOT_BIN}/srp path)/projects.info"
+  local project_file="$(${SCIROOPLOT_BIN}/srp confdir)/projects.info"
   if [[ -f "${project_file}" ]]; then
     projects=("@current")
     local project
@@ -259,13 +276,17 @@ _srp_completions_zsh() {
         _arguments '3:profiles:(${properties})'
       elif [[ "${words[2]}" == init-* ]]; then
         _files -/
+      elif [[ "${words[2]}" == "add" ]]; then
+          _files -f
       fi
     ;;
     setting)
-      if [[ "${words[2]}" == "set" ]]; then
-        if [[ "${words[4]}" == "EXE" ]]; then
+      if [[ "${words[2]}" == "add" ]]; then
+          _files -/
+      elif [[ "${words[2]}" == "set" ]]; then
+        if [[ "${words[4]}" == "program" ]]; then
           _files -f
-        elif [[ "${words[4]}" == "OUT" ]]; then
+        elif [[ "${words[4]}" == "outdir" ]]; then
           _files -/
         fi
       fi
@@ -280,7 +301,7 @@ _plot_completions_bash() {
   local groups
   local names
 
-  local tabcomp_file="$(${SCIROOPLOT_BIN}/srp path "@current")/tabcomp.csv"
+  local tabcomp_file="$(${SCIROOPLOT_BIN}/srp confdir "@current")/tabcomp.csv"
   if [[ ! -f "${tabcomp_file}" ]]; then
     return
   fi
@@ -331,16 +352,16 @@ _plot_completions_bash() {
 
 _srp_completions_bash() {
 
-  local general_commands=('update cd init-cpp init-py projects reset clean help color verbosity')
-  local project_commands=('remove select show path set get')
-  local project_commands_with_prop=('set get')
-  local properties=('EXE OUT NAME')
+  local general_commands=('update cd init-cpp init-py add projects clean help color verbosity')
+  local project_commands=('remove rename select show confdir set unset get')
+  local project_commands_with_prop=('set unset get')
+  local properties=('program outdir')
   local file_commands=('open print')
   local color_settings=('bright dark off')
   local verbosity_settings=('debug log info warning error silent')
 
   local projects
-  local project_file="$(${SCIROOPLOT_BIN}/srp path)/projects.info"
+  local project_file="$(${SCIROOPLOT_BIN}/srp confdir)/projects.info"
   if [[ -f "${project_file}" ]]; then
     projects=("@current")
     local project
@@ -378,17 +399,21 @@ _srp_completions_bash() {
       COMPREPLY=( $(compgen -W "${properties}" -- "${COMP_WORDS[COMP_CWORD]}") )
     elif [[ "${COMP_WORDS[COMP_CWORD-2]}" == init-* ]]; then
       COMPREPLY=( $(compgen -d -- "${COMP_WORDS[COMP_CWORD]}") )
+    elif [[ "${COMP_WORDS[COMP_CWORD-2]}" == "add" ]]; then
+      COMPREPLY=( $(compgen -f -- "${COMP_WORDS[COMP_CWORD]}") )
     else
       COMPREPLY=( )
     fi
   ;;
   4)
-    if [[ "${COMP_WORDS[COMP_CWORD-3]}" == "set" ]]; then
+    if [[ "${COMP_WORDS[COMP_CWORD-3]}" == "add" ]]; then
+      COMPREPLY=( $(compgen -d -- "${COMP_WORDS[COMP_CWORD]}") )
+    elif [[ "${COMP_WORDS[COMP_CWORD-3]}" == "set" ]]; then
       case "${COMP_WORDS[COMP_CWORD-1]}" in
-        EXE)
+        program)
           COMPREPLY=( $(compgen -f -- "${COMP_WORDS[COMP_CWORD]}") )
         ;;
-        OUT)
+        outdir)
           COMPREPLY=( $(compgen -d -- "${COMP_WORDS[COMP_CWORD]}") )
         ;;
       esac

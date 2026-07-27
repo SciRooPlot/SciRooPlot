@@ -1602,6 +1602,15 @@ Plot PlotManager::MakeBasePlot(const string& name, double_t screenResolution)
   return Plot();
 }
 
+string PlotManager::GetProjectProperty(const string& property) const
+{
+  if (mProjectName.empty()) {
+    ERROR("Pass name of project to plot manager to save the project.");
+    return "";
+  }
+  return Config::Get().Property(mProjectName, property);
+}
+
 //****************************************************************************************
 /**
  * Saves all required plot definitions and input file locations of the project.
