@@ -275,7 +275,7 @@
           *Change output directory* (default is `./output`)
           #v(-0.5em)
           #terminal[
-            #prompt srp set \<project\> OUT \<path\>
+            #prompt srp set \<project\> outdir \<path\>
           ]
         ],
       )

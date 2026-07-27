@@ -79,7 +79,7 @@ To adjust the time between the frames use for example `plot myGroup myPlot_bin_.
 
 For the modes that save files to disk, the plotting app needs to know where to store the output. This can be configured via:
 ```
-srp set <project> OUT </path/to/output/folder>
+srp set <project> outdir </path/to/output/folder>
 ```
 Within this folder, the files will be organized in subdirectories corresponding to the groups and subgroups.
 
