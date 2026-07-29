@@ -133,9 +133,12 @@ int main(int argc, char* argv[])
     PRINT("  srp color     (bright | dark | off)");
     PRINT("  srp verbosity (debug | log | info | warning | error)");
     PRINT("  srp plotmode  (show | pdf | eps | svg | png | gif | jpg)");
+    PRINT("  srp matchmode (exact | contains)");
+    PRINT("  srp matchcase (sensitive | insensitive)");
     PRINT("-----------------------------------------------------------");
     PRINT("Maintenance:");
     PRINT("  srp clean");
+    PRINT("  srp reset");
     PRINT("  srp update");
     PRINT("-----------------------------------------------------------");
     PRINT("File tools:");
@@ -186,6 +189,26 @@ int main(int argc, char* argv[])
       return 1;
     }
     Config::GetMutable().SetPlotMode(project);
+  } else if (command == "matchmode") {
+    string matchMode = project;
+    if (matchMode == "exact") {
+      Config::GetMutable().SetMatchContains(false);
+    } else if (matchMode == "contains") {
+      Config::GetMutable().SetMatchContains(true);
+    } else {
+      ERROR("Invalid match mode  (exact | contains).");
+      return 1;
+    }
+  } else if (command == "matchcase") {
+    string matchCase = project;
+    if (matchCase == "sensitive") {
+      Config::GetMutable().SetMatchCaseInsensitive(false);
+    } else if (matchCase == "insensitive") {
+      Config::GetMutable().SetMatchCaseInsensitive(true);
+    } else {
+      ERROR("Invalid case sensistivity option for matching (sensitive | insensitive).");
+      return 1;
+    }
   } else if (command == "confdir") {
     std::cout << ((project.empty()) ? Config::Get().Path().string() : Config::Get().ProjectPath(project).string()) << std::endl;
     return 0;
@@ -197,6 +220,8 @@ int main(int argc, char* argv[])
     Config::GetMutable().Rename(project, setting);
   } else if (command == "clean") {
     Config::GetMutable().Clean();
+  } else if (command == "reset") {
+    Config::GetMutable().Reset();
   } else if (command == "projects") {
     Config::Get().ListProjects();
   } else if (command == "remove") {

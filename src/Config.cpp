@@ -89,6 +89,14 @@ void Config::LoadConfig()
         mPlotMode = setting.second.data();
         continue;
       }
+      if (setting.first == "matchCaseInsensitive") {
+        mMatchCaseInsensitive = std::stoi(setting.second.data());
+        continue;
+      }
+      if (setting.first == "matchContains") {
+        mMatchContains = std::stoi(setting.second.data());
+        continue;
+      }
     }
   }
 
@@ -116,6 +124,8 @@ void Config::SaveConfig()
   settingsTree.add("logLevel", mLogLevel);
   settingsTree.add("colorMode", mColorMode);
   settingsTree.add("plotMode", mPlotMode);
+  settingsTree.add("matchCaseInsensitive", mMatchCaseInsensitive);
+  settingsTree.add("matchContains", mMatchContains);
   write_info(SettingsFile(), settingsTree);
 
   // save projects tree
@@ -339,6 +349,16 @@ ptree Config::Project::GetTree()
     }
   }
   return tree;
+}
+
+void Config::SetMatchCaseInsensitive(bool matchCaseInsensitive)
+{
+  mMatchCaseInsensitive = matchCaseInsensitive;
+}
+
+void Config::SetMatchContains(bool matchCaseInsensitive)
+{
+  mMatchContains = matchCaseInsensitive;
 }
 
 }  // namespace SciRooPlot

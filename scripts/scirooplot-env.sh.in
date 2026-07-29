@@ -231,7 +231,7 @@ _plot_completions_zsh() {
 
 _srp_completions_zsh() {
 
-  local general_commands=('update' 'cd' 'init-cpp' 'init-py' 'add' 'projects' 'clean' 'help' 'color' 'verbosity' 'plotmode')
+  local general_commands=('update' 'cd' 'init-cpp' 'init-py' 'add' 'projects' 'clean' 'reset' 'help' 'color' 'verbosity' 'plotmode' 'matchmode' 'matchcase')
   local project_commands=('remove' 'rename' 'select' 'show' 'confdir' 'set' 'unset' 'get')
   local project_commands_with_prop=('set' 'unset' 'get')
   local properties=('program' 'outdir')
@@ -239,6 +239,8 @@ _srp_completions_zsh() {
   local color_settings=('bright' 'dark' 'off')
   local verbosity_settings=('debug' 'log' 'info' 'warning' 'error' 'silent')
   local plotmodes=('show' 'pdf' 'eps' 'svg' 'png' 'gif' 'file' 'data' 'list' 'macro' 'print' 'ps' 'html' 'json' 'xml' 'jpg' 'root')
+  local matchmode_settings=('exact' 'contains')
+  local matchcase_settings=('sensitive' 'insensitive')
 
   local projects
   local project_file="$(${SCIROOPLOT_BIN}/srp confdir)/projects.info"
@@ -272,6 +274,10 @@ _srp_completions_zsh() {
         _arguments '2:profiles:(${verbosity_settings})'
       elif [[ " plotmode " =~ " ${words[2]} " ]]; then
         _arguments '2:profiles:(${plotmodes})'
+      elif [[ " matchmode " =~ " ${words[2]} " ]]; then
+        _arguments '2:profiles:(${matchmode_settings})'
+      elif [[ " matchcase " =~ " ${words[2]} " ]]; then
+        _arguments '2:profiles:(${matchcase_settings})'
       fi
     ;;
     property)
@@ -355,7 +361,7 @@ _plot_completions_bash() {
 
 _srp_completions_bash() {
 
-  local general_commands=('update cd init-cpp init-py add projects clean help color verbosity plotmode')
+  local general_commands=('update cd init-cpp init-py add projects clean reset help color verbosity plotmode matchmode matchcase')
   local project_commands=('remove rename select show confdir set unset get')
   local project_commands_with_prop=('set unset get')
   local properties=('program outdir')
@@ -363,6 +369,8 @@ _srp_completions_bash() {
   local color_settings=('bright dark off')
   local verbosity_settings=('debug log info warning error silent')
   local plotmodes=('show pdf eps svg png gif file data list macro print ps html json xml jpg root')
+  local matchmode_settings=('exact contains')
+  local matchcase_settings=('sensitive insensitive')
 
   local projects
   local project_file="$(${SCIROOPLOT_BIN}/srp confdir)/projects.info"
@@ -396,6 +404,10 @@ _srp_completions_bash() {
       COMPREPLY=( $(compgen -W "${verbosity_settings[*]}" -- "${COMP_WORDS[COMP_CWORD]}") )
     elif [[ " plotmode " =~ " ${COMP_WORDS[COMP_CWORD-1]} " ]]; then
       COMPREPLY=( $(compgen -W "${plotmodes[*]}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    elif [[ " matchmode " =~ " ${COMP_WORDS[COMP_CWORD-1]} " ]]; then
+      COMPREPLY=( $(compgen -W "${matchmode_settings[*]}" -- "${COMP_WORDS[COMP_CWORD]}") )
+    elif [[ " matchcase " =~ " ${COMP_WORDS[COMP_CWORD-1]} " ]]; then
+      COMPREPLY=( $(compgen -W "${matchcase_settings[*]}" -- "${COMP_WORDS[COMP_CWORD]}") )
     else
       COMPREPLY=( )
     fi

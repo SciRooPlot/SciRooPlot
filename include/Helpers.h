@@ -24,6 +24,7 @@
 #include <tuple>
 #include <string>
 #include <vector>
+#include <regex>
 
 namespace SciRooPlot
 {
@@ -224,6 +225,39 @@ constexpr bool is_one_of_v()
 {
   return (... || std::is_same_v<T, Ts>);
 }
+
+class RegexMatcher
+{
+ public:
+  RegexMatcher(const std::string& pattern, bool contains, bool ignoreCase) : mContains(contains)
+  {
+    try {
+      auto flags = std::regex_constants::ECMAScript;
+      if (ignoreCase) {
+        flags |= std::regex_constants::icase;
+      }
+
+      mRegex = std::regex(pattern, flags);
+      mValid = true;
+    } catch (const std::regex_error&) {
+      mValid = false;
+    }
+  }
+  bool IsValid() const { return mValid; }
+  bool Matches(const std::string& text) const
+  {
+    if (!mValid) return false;
+    if (mContains) {
+      return std::regex_search(text, mRegex);
+    }
+    return std::regex_match(text, mRegex);
+  }
+
+ private:
+  bool mValid = false;
+  bool mContains = false;
+  std::regex mRegex;
+};
 
 }  // end namespace SciRooPlot
 #endif  // INCLUDE_HELPERS_H_

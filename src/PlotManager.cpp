@@ -402,12 +402,9 @@ void PlotManager::AddColorOverview(const string& name, const string& group, cons
 void PlotManager::SavePlots(const string& name, const string& group, const optional<string>& file) const
 {
   ptree plotTree;
-  std::regex groupRegex;
-  std::regex nameRegex;
-  try {
-    groupRegex = std::regex{group};
-    nameRegex = std::regex{name};
-  } catch (...) {
+  RegexMatcher groupRegex(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
+  RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
+  if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
     ERROR("Invalid regular expression.");
     return;
   }
@@ -415,8 +412,8 @@ void PlotManager::SavePlots(const string& name, const string& group, const optio
   for (const vector<Plot>& plots : {std::ref(mBasePlots), std::ref(mPlots)}) {
     for (const Plot& plot : plots) {
       if (plot.GetGroup() != "BASE_PLOTS") {
-        if (!std::regex_match(plot.GetGroup(), groupRegex)) continue;
-        if (!std::regex_match(plot.GetName(), nameRegex)) continue;
+        if (!groupRegex.Matches(plot.GetGroup())) continue;
+        if (!nameRegex.Matches(plot.GetName())) continue;
       }
       string displayedName = plot.GetUniqueName();
       std::replace(displayedName.begin(), displayedName.end(), '.', '_');
@@ -443,15 +440,14 @@ void PlotManager::SavePlots(const string& name, const string& group, const optio
 void PlotManager::LoadPlots(const string& name, const string& group, const optional<string>& file)
 {
   uint32_t nFoundPlots{};
-  std::regex groupRegex;
-  std::regex nameRegex;
-  try {
-    groupRegex = std::regex{group};
-    nameRegex = std::regex{name};
-  } catch (...) {
+
+  RegexMatcher groupRegex(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
+  RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
+  if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
     ERROR("Invalid regular expression.");
     return;
   }
+
   ptree fileTree;
   try {
     using boost::property_tree::read_info;
@@ -468,10 +464,8 @@ void PlotManager::LoadPlots(const string& name, const string& group, const optio
       AddBasePlot(plot);
       continue;
     }
-    if (!std::regex_match(curGroup, groupRegex)) continue;
-
-    const string& curName = plotTree.second.get<string>("name");
-    if (!std::regex_match(curName, nameRegex)) continue;
+    if (!groupRegex.Matches(curGroup)) continue;
+    if (!nameRegex.Matches(plotTree.second.get<string>("name"))) continue;
 
     ++nFoundPlots;
     try {
@@ -499,19 +493,16 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
   vector<Plot*> selectedPlots;
   map<int32_t, set<int32_t>> requiredData;
 
-  std::regex groupRegex;
-  std::regex nameRegex;
-  try {
-    groupRegex = std::regex{group};
-    nameRegex = std::regex{name};
-  } catch (...) {
+  RegexMatcher groupRegex(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
+  RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
+  if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
     ERROR("Invalid regular expression.");
     return;
   }
 
   for (auto& plot : mPlots) {
-    if (!std::regex_match(plot.GetGroup(), groupRegex)) continue;
-    if (!std::regex_match(plot.GetName(), nameRegex)) continue;
+    if (!groupRegex.Matches(plot.GetGroup())) continue;
+    if (!nameRegex.Matches(plot.GetName())) continue;
     selectedPlots.push_back(&plot);
 
     // determine which input data are needed for plots
