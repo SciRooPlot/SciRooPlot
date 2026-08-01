@@ -114,7 +114,6 @@ int main(int argc, char* argv[])
     PRINT("  srp projects");
     PRINT("  srp select  <project>");
     PRINT("  srp show    [<project> | @current]");
-    PRINT("  srp confdir [<project> | @current]");
     PRINT("  srp rename  (<project> | @current) <name>");
     PRINT("  srp remove  (<project> | @current)");
     PRINT("-----------------------------------------------------------");
@@ -129,6 +128,11 @@ int main(int argc, char* argv[])
     PRINT("  srp unset (<project> | @current) <property>");
     PRINT("      property = program | outdir | <user-variable>");
     PRINT("-----------------------------------------------------------");
+    PRINT("Project access:");
+    PRINT("  srp confdir [<project> | @current]");
+    PRINT("  srp cd      (<project> | @current)");
+    PRINT("  srp edit    (<project> | @current)");
+    PRINT("-----------------------------------------------------------");
     PRINT("Settings:");
     PRINT("  srp color     (bright | dark | off)");
     PRINT("  srp verbosity (debug | log | info | warning | error)");
@@ -137,11 +141,11 @@ int main(int argc, char* argv[])
     PRINT("  srp matchcase (sensitive | insensitive)");
     PRINT("-----------------------------------------------------------");
     PRINT("Maintenance:");
+    PRINT("  srp update");
     PRINT("  srp clean");
     PRINT("  srp reset");
-    PRINT("  srp update");
     PRINT("-----------------------------------------------------------");
-    PRINT("File tools:");
+    PRINT("Utilities:");
     PRINT("  srp open  <file>");
     PRINT("  srp print <file>");
     PRINT("===========================================================");

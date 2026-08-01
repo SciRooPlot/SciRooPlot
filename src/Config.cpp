@@ -209,10 +209,10 @@ void Config::Show(const string& projectNameIn) const
     if (!projectNameIn.empty() && (projectName != projectNameIn)) {
       continue;
     }
-    PRINT("{} name: {}", (projectName == mCurrentProject) ? "*" : " ", projectName);
+    PRINT("{} {}", (projectName == mCurrentProject) ? "*" : " ", projectName);
     for (const auto& [property, value] : project.mProperties) {
       if (!value.empty()) {
-        PRINT("  -{}: {}", property, value);
+        PRINT("   - {}: {}", property, value);
       }
     }
   }

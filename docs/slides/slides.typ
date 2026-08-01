@@ -379,24 +379,6 @@
           ]
         ],
       )
-      #v(-0.5em)
-      #block(
-        fill: rgb("fafafa"),
-        stroke: 1pt + rgb("d0d7de"),
-        radius: 10pt,
-        inset: 10pt,
-        width: 84%,
-      )[
-        *Additional commands:*
-        #v(-0.5em)
-        #table(
-          columns: (30%, 70%),
-          stroke: none,
-          align: (left, horizon),
-          [#prompt plot cd], [Navigate to project.],
-          [#prompt plot open], [Open code files.],
-        )
-      ]
     ],
   )
 ]

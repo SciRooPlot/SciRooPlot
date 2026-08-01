@@ -23,39 +23,11 @@ if [[ ! -f "${SCIROOPLOT_BIN}/plot" || ! -f "${SCIROOPLOT_BIN}/srp" ]]; then
 fi
 
 function plot() {
-  local user_exec=$("${SCIROOPLOT_BIN}/srp" "get" "@current" "program")
+  local user_program=$("${SCIROOPLOT_BIN}/srp" "get" "@current" "program")
   local isPython=0
-  [[ "$user_exec" == *.py ]] && isPython=1
-  local user_dir=$([[ -n "${user_exec}" ]] && dirname -- "${user_exec}" || echo "")
+  [[ "$user_program" == *.py ]] && isPython=1
+  local user_dir=$([[ -n "${user_program}" ]] && dirname -- "${user_program}" || echo "")
   if [[ -d "${user_dir}" ]]; then
-
-    if [[ "${1}" == "cd" && -z "${2}" ]]; then
-      cd "${user_dir}"
-      return 0
-    fi
-
-    if [[ "${1}" == "open" ]]; then
-      if command -v open >/dev/null 2>&1; then
-        opener=(open)
-      elif command -v xdg-open >/dev/null 2>&1; then
-        opener=(xdg-open)
-      elif command -v gio >/dev/null 2>&1; then
-        opener=(gio open)
-      elif command -v wslview >/dev/null 2>&1; then
-        opener=(wslview)
-      fi
-      if [[ -n "${opener:-}" ]]; then
-        if command -v find >/dev/null 2>&1; then
-          if (( isPython )); then
-            find "${user_dir}/" -maxdepth 2 -type f \( -name '*.py' \)  -exec "${opener[@]}" {} +
-          else
-            find "${user_dir}/.." -maxdepth 2 -type f \( -name '*.cxx' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \)  -exec "${opener[@]}" {} +
-          fi
-          return 0
-        fi
-      fi
-    fi
-
     local user_plotdef="$(${SCIROOPLOT_BIN}/srp confdir "@current")/plots.info"
     (
       cd "${user_dir}";
@@ -63,19 +35,19 @@ function plot() {
         err=$(cmake .. 2>&1 >/dev/null) || { echo "${err}"; exit 1; }
         (make -j6 > /dev/null) || exit 1
       fi
-      if [[ ! -f "${user_plotdef}" || "${user_exec}" -nt "${user_plotdef}" ]]; then
+      if [[ ! -f "${user_plotdef}" || "${user_program}" -nt "${user_plotdef}" ]]; then
         if (( isPython )); then
           if [ -n "${SCIROOPLOT_PYTHON_EXECUTABLE:-}" ]; then
             if [ ! -x "${SCIROOPLOT_PYTHON_EXECUTABLE}" ]; then
               echo "SciRooPlot's Python path is outdated and requires reinstall..."
               "${SCIROOPLOT_SOURCE_DIR}/scripts/install.sh" --reinstall
             fi
-            ${SCIROOPLOT_PYTHON_EXECUTABLE} "${user_exec}"
+            ${SCIROOPLOT_PYTHON_EXECUTABLE} "${user_program}"
           else
               echo "SciRooPlot was not compiled with Python bindings."
           fi
         else
-          "${user_exec}"
+          "${user_program}"
         fi
       fi
     ) || return 1
@@ -93,11 +65,38 @@ function srp() {
       "${SCIROOPLOT_SOURCE_DIR}/scripts/install.sh" "${2}"
     fi
     source "${SCIROOPLOT_ENV}"
-  elif [[ "${1}" == "cd" && -z "${2}" ]]; then
-    if [[ -d "${SCIROOPLOT_SOURCE_DIR}/build" ]]; then
-      cd "${SCIROOPLOT_SOURCE_DIR}/build"
-    else
-      echo "No build directory found."
+  elif [[ "${1}" == "cd" || "${1}" == "edit" ]]; then
+    local project_name="${2}"
+    local user_program=$("${SCIROOPLOT_BIN}/srp" "get" "${project_name}" "program")
+    local isPython=0
+    [[ "$user_program" == *.py ]] && isPython=1
+    local user_dir=$([[ -n "${user_program}" ]] && dirname -- "${user_program}" || echo "")
+    if [[ -d "${user_dir}" ]]; then
+
+      if [[ "${1}" == "cd" ]]; then
+        cd "${user_dir}"
+        return 0
+      elif [[ "${1}" == "edit" ]]; then
+        if command -v open >/dev/null 2>&1; then
+          opener=(open)
+        elif command -v xdg-open >/dev/null 2>&1; then
+          opener=(xdg-open)
+        elif command -v gio >/dev/null 2>&1; then
+          opener=(gio open)
+        elif command -v wslview >/dev/null 2>&1; then
+          opener=(wslview)
+        fi
+        if [[ -n "${opener:-}" ]]; then
+          if command -v find >/dev/null 2>&1; then
+            if (( isPython )); then
+              find "${user_dir}/" -maxdepth 2 -type f \( -name '*.py' \)  -exec "${opener[@]}" {} +
+            else
+              find "${user_dir}/.." -maxdepth 2 -type f \( -name '*.cxx' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \)  -exec "${opener[@]}" {} +
+            fi
+            return 0
+          fi
+        fi
+      fi
     fi
   elif [[ "${1}" == "init-cpp" || "${1}" == "init-py" ]]; then
     local isPython=0; [[ "${1}" == "init-py" ]] && isPython=1
@@ -214,12 +213,8 @@ _plot_completions_zsh() {
       fi
     ;;
     name)
-      if [[ "${words[2]}" == "cd" || "${words[2]}" == "open" ]]; then
-        _arguments '2:profiles:()'
-      else
-        updatePlotNames "${words[2]}"
-        _arguments '2:profiles:(${names})'
-      fi
+      updatePlotNames "${words[2]}"
+      _arguments '2:profiles:(${names})'
     ;;
     mode)
       _arguments '3:profiles:(${modes})'
@@ -231,8 +226,8 @@ _plot_completions_zsh() {
 
 _srp_completions_zsh() {
 
-  local general_commands=('update' 'cd' 'init-cpp' 'init-py' 'add' 'projects' 'clean' 'reset' 'help' 'color' 'verbosity' 'plotmode' 'matchmode' 'matchcase')
-  local project_commands=('remove' 'rename' 'select' 'show' 'confdir' 'set' 'unset' 'get')
+  local general_commands=('update' 'cd' 'edit' 'init-cpp' 'init-py' 'add' 'projects' 'clean' 'reset' 'help' 'color' 'verbosity' 'plotmode' 'matchmode' 'matchcase')
+  local project_commands=('cd' 'edit' 'remove' 'rename' 'select' 'show' 'confdir' 'set' 'unset' 'get')
   local project_commands_with_prop=('set' 'unset' 'get')
   local properties=('program' 'outdir')
   local file_commands=('open' 'print')
@@ -344,12 +339,8 @@ _plot_completions_bash() {
     fi
   ;;
   2)
-    if [[ "${COMP_WORDS[COMP_CWORD-1]}" == "cd" || "${COMP_WORDS[COMP_CWORD-1]}" == "open" ]]; then
-      COMPREPLY=( )
-    else
-      updatePlotNames "${COMP_WORDS[COMP_CWORD-1]}"
-      COMPREPLY=( $(compgen -W "${names}" -- "${COMP_WORDS[COMP_CWORD]}") )
-    fi
+    updatePlotNames "${COMP_WORDS[COMP_CWORD-1]}"
+    COMPREPLY=( $(compgen -W "${names}" -- "${COMP_WORDS[COMP_CWORD]}") )
   ;;
   3)
     COMPREPLY=( $( compgen -W "${modes}" -- "${COMP_WORDS[COMP_CWORD]}" ) )
@@ -361,8 +352,8 @@ _plot_completions_bash() {
 
 _srp_completions_bash() {
 
-  local general_commands=('update cd init-cpp init-py add projects clean reset help color verbosity plotmode matchmode matchcase')
-  local project_commands=('remove rename select show confdir set unset get')
+  local general_commands=('update cd edit init-cpp init-py add projects clean reset help color verbosity plotmode matchmode matchcase')
+  local project_commands=('cd edit remove rename select show confdir set unset get')
   local project_commands_with_prop=('set unset get')
   local properties=('program outdir')
   local file_commands=('open print')
