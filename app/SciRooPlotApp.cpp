@@ -114,6 +114,7 @@ int main(int argc, char* argv[])
     PRINT("  srp projects");
     PRINT("  srp select  <project>");
     PRINT("  srp show    [<project> | @current]");
+    PRINT("  srp stats   (<project> | @current)");
     PRINT("  srp rename  (<project> | @current) <name>");
     PRINT("  srp remove  (<project> | @current)");
     PRINT("-----------------------------------------------------------");

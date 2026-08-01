@@ -69,7 +69,7 @@ function srp() {
     local project_name="${2}"
     local user_program=$("${SCIROOPLOT_BIN}/srp" "get" "${project_name}" "program")
     local isPython=0
-    [[ "$user_program" == *.py ]] && isPython=1
+    [[ "${user_program}" == *.py ]] && isPython=1
     local user_dir=$([[ -n "${user_program}" ]] && dirname -- "${user_program}" || echo "")
     if [[ -d "${user_dir}" ]]; then
 
@@ -98,6 +98,29 @@ function srp() {
         fi
       fi
     fi
+    elif [[ "${1}" == "stats" ]]; then
+      local project_name="${2}"
+      local project_confdir="$(${SCIROOPLOT_BIN}/srp confdir "${project_name}")"
+      local n_plots=0
+      local n_inputs=0
+      local last_modified="-"
+      local tabcomp_file="${project_confdir}/tabcomp.csv"
+      if [[ -f "${tabcomp_file}" ]]; then
+          n_plots=$(wc -l < "${tabcomp_file}")
+
+          if [[ "$OSTYPE" == darwin* ]]; then
+              last_modified=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M" "${tabcomp_file}")
+          else
+              last_modified=$(stat -c "%y" "${tabcomp_file}" | cut -d'.' -f1)
+          fi
+      fi
+      local datasources_file="${project_confdir}/dataSources.info"
+      if [[ -f "${datasources_file}" ]]; then
+          n_inputs=$(grep -c 'FILE' "${datasources_file}")
+      fi
+      printf "Plots          : %d\n" "${n_plots}"
+      printf "Input files    : %d\n" "${n_inputs}"
+      printf "Last modified  : %s\n" "${last_modified}"
   elif [[ "${1}" == "init-cpp" || "${1}" == "init-py" ]]; then
     local isPython=0; [[ "${1}" == "init-py" ]] && isPython=1
     local project_name="${2}"
@@ -226,8 +249,8 @@ _plot_completions_zsh() {
 
 _srp_completions_zsh() {
 
-  local general_commands=('update' 'cd' 'edit' 'init-cpp' 'init-py' 'add' 'projects' 'clean' 'reset' 'help' 'color' 'verbosity' 'plotmode' 'matchmode' 'matchcase')
-  local project_commands=('cd' 'edit' 'remove' 'rename' 'select' 'show' 'confdir' 'set' 'unset' 'get')
+  local general_commands=('update' 'init-cpp' 'init-py' 'add' 'projects' 'clean' 'reset' 'help' 'color' 'verbosity' 'plotmode' 'matchmode' 'matchcase')
+  local project_commands=('cd' 'edit' 'stats' 'remove' 'rename' 'select' 'show' 'confdir' 'set' 'unset' 'get')
   local project_commands_with_prop=('set' 'unset' 'get')
   local properties=('program' 'outdir')
   local file_commands=('open' 'print')
@@ -352,8 +375,8 @@ _plot_completions_bash() {
 
 _srp_completions_bash() {
 
-  local general_commands=('update cd edit init-cpp init-py add projects clean reset help color verbosity plotmode matchmode matchcase')
-  local project_commands=('cd edit remove rename select show confdir set unset get')
+  local general_commands=('update init-cpp init-py add projects clean reset help color verbosity plotmode matchmode matchcase')
+  local project_commands=('cd edit stats remove rename select show confdir set unset get')
   local project_commands_with_prop=('set unset get')
   local properties=('program outdir')
   local file_commands=('open print')
