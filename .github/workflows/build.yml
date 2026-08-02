@@ -1,0 +1,76 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+jobs:
+  build:
+
+    name: ${{ matrix.os }}
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      ###########################################################
+      # Linux
+      ###########################################################
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: ./.github/scripts/install-linux.sh
+
+      - name: Install ROOT (Linux)
+        if: runner.os == 'Linux'
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: build
+          create-args: >-
+            root
+            -c conda-forge
+          cache-environment: true
+
+      ###########################################################
+      # macOS
+      ###########################################################
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: ./.github/scripts/install-macos.sh
+
+      ###########################################################
+      # Configure
+      ###########################################################
+
+      - name: Configure
+        shell: bash -el {0}
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release
+
+      ###########################################################
+      # Build
+      ###########################################################
+
+      - name: Build
+        shell: bash -el {0}
+        run: |
+          cmake --build build --parallel
