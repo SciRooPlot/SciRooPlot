@@ -46,7 +46,9 @@ endif()
 if(POLICY CMP0167)
     cmake_policy(SET CMP0167 NEW)   # modern Boost usage
 endif()
-
+if(POLICY CMP0219)
+    cmake_policy(SET CMP0219 NEW)
+endif()
 # -----------------------
 # Dependencies
 # -----------------------
