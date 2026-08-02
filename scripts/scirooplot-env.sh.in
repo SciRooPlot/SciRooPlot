@@ -51,26 +51,25 @@ function plot() {
 }
 
 function srp() {
-  if [[ "${1}" == "update" ]]; then
+  if [[ "${1:-}" == "update" ]]; then
     if command -v brew >/dev/null 2>&1 \
       && [[ "${SCIROOPLOT_BIN}" == "$(brew --prefix)/"* ]]; then
       brew upgrade scirooplot
     else
-      "${SCIROOPLOT_SOURCE_DIR}/scripts/install.sh" "${2}"
+      "${SCIROOPLOT_SOURCE_DIR}/scripts/install.sh" "${2:-}"
     fi
     source "${SCIROOPLOT_ENV}"
-  elif [[ "${1}" == "cd" || "${1}" == "edit" ]]; then
-    local project_name="${2}"
+  elif [[ "${1:-}" == "cd" || "${1:-}" == "edit" ]]; then
+    local project_name="${2:-}"
     local user_program=$("${SCIROOPLOT_BIN}/srp" "get" "${project_name}" "program")
     local isPython=0
     [[ "${user_program}" == *.py ]] && isPython=1
     local user_dir=$([[ -n "${user_program}" ]] && dirname -- "${user_program}" || echo "")
     if [[ -d "${user_dir}" ]]; then
-
-      if [[ "${1}" == "cd" ]]; then
+      if [[ "${1:-}" == "cd" ]]; then
         cd "${user_dir}"
         return 0
-      elif [[ "${1}" == "edit" ]]; then
+      elif [[ "${1:-}" == "edit" ]]; then
         if command -v open >/dev/null 2>&1; then
           opener=(open)
         elif command -v xdg-open >/dev/null 2>&1; then
@@ -92,8 +91,8 @@ function srp() {
         fi
       fi
     fi
-    elif [[ "${1}" == "stats" ]]; then
-      local project_name="${2}"
+    elif [[ "${1:-}" == "stats" ]]; then
+      local project_name="${2:-}"
       local project_confdir="$(${SCIROOPLOT_BIN}/srp confdir "${project_name}")"
       local n_plots=0
       local n_inputs=0
@@ -115,11 +114,11 @@ function srp() {
       printf "Plots          : %d\n" "${n_plots}"
       printf "Input files    : %d\n" "${n_inputs}"
       printf "Last modified  : %s\n" "${last_modified}"
-  elif [[ "${1}" == "init-cpp" || "${1}" == "init-py" ]]; then
-    local isPython=0; [[ "${1}" == "init-py" ]] && isPython=1
-    local project_name="${2}"
+  elif [[ "${1:-}" == "init-cpp" || "${1:-}" == "init-py" ]]; then
+    local isPython=0; [[ "${1:-}" == "init-py" ]] && isPython=1
+    local project_name="${2:-}"
     local project_path="${project_name}"
-    [ -n "${3}" ] && project_path="${3}"
+    [ -n "${3:-}" ] && project_path="${3:-}"
     if [[ "${project_path}" != /* ]]; then
       project_path="$(pwd)/${project_path}"
     fi
@@ -210,7 +209,7 @@ _plot_completions_zsh() {
   done < <(LC_ALL=C sort -t',' -k2,2 -u "${tabcomp_file}")
 
   updatePlotNames() {
-    local group="${1}"
+    local group="${1:-}"
     names=()
     
     local name_in group_in
@@ -342,7 +341,7 @@ _plot_completions_bash() {
   done < <(LC_ALL=C sort -t',' -k2,2 -u "${tabcomp_file}")
 
   updatePlotNames() {
-    local group="${1}"
+    local group="${1:-}"
     names=()
     
     local name_in group_in
