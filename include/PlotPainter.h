@@ -20,6 +20,7 @@
 #define INCLUDE_PLOTPAINTER_H_
 
 #include "Plot.h"
+#include <variant>
 #include <unordered_map>
 #include <map>
 #include <memory>
