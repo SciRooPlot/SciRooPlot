@@ -62,6 +62,7 @@ jobs:
             -S . \
             -B build \
             -G Ninja \
+            -DCMAKE_PREFIX_PATH="${CONDA_PREFIX:-}" \
             -DCMAKE_BUILD_TYPE=Release
 
       ###########################################################
