@@ -73,3 +73,21 @@ jobs:
         shell: bash -el {0}
         run: |
           cmake --build build --parallel
+
+      ###########################################################
+      # Install
+      ###########################################################
+
+      - name: Install
+        run: |
+          cmake --install build --prefix install
+
+      ###########################################################
+      # Test
+      ###########################################################
+
+      - name: Integration test
+        env:
+          SRP_TEST_INSTALL: ${{ github.workspace }}/install
+        run: |
+          ./.github/scripts/test-example-project.sh
