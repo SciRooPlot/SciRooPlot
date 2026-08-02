@@ -25,6 +25,8 @@
 #include <string>
 #include <vector>
 #include <regex>
+#include <optional>
+#include <cmath>
 
 namespace SciRooPlot
 {
