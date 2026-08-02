@@ -11,12 +11,6 @@ if [ -n "${SCIROOPLOT_PYTHON_EXECUTABLE:-}" ]; then
     export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${SCIROOPLOT_LIB}"
 fi
 
-# enable completion only for interactive shells
-case "$-" in
-  *i*) ;;
-  *) return 0 ;;
-esac
-
 if [[ ! -f "${SCIROOPLOT_BIN}/plot" || ! -f "${SCIROOPLOT_BIN}/srp" ]]; then
   echo "SciRooPlot is not installed. Cannot initialize plotting functions."
   return 0
@@ -188,6 +182,12 @@ function srp() {
   fi
   return 0
 }
+
+# enable tab completion only for interactive shells
+case "$-" in
+  *i*) ;;
+  *) return 0 ;;
+esac
 
 _plot_completions_zsh() {
 
