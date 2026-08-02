@@ -29,6 +29,7 @@
 #include "TF1.h"
 
 #include <boost/property_tree/ptree.hpp>
+#include <optional>
 #include <tuple>
 #include <map>
 #include <memory>
