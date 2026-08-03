@@ -79,6 +79,7 @@ jobs:
       ###########################################################
 
       - name: Install
+        shell: bash -el {0}
         run: |
           cmake --install build --prefix install
 
@@ -87,6 +88,7 @@ jobs:
       ###########################################################
 
       - name: Integration test
+        shell: bash -el {0}
         env:
           SRP_TEST_INSTALL: ${{ github.workspace }}/install
         run: |
