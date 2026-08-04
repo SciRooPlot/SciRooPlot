@@ -16,7 +16,7 @@ function(add_plotting_executable NAME)
   if(TARGET SciRooPlot)
     get_target_property(_rpath SciRooPlot INSTALL_RPATH)
     if(_rpath)
-      set_target_properties(${NAME} PROPERTIES 
+      set_target_properties(${NAME} PROPERTIES
         INSTALL_RPATH "${_rpath}"
         BUILD_RPATH "${_rpath}"
       )
@@ -26,6 +26,6 @@ function(add_plotting_executable NAME)
       target_include_directories(${NAME} PRIVATE ${_incs})
     endif()
   endif()
-  
+
   message(STATUS "Created executable ${NAME} with sources: ${APP_SOURCES}")
 endfunction()

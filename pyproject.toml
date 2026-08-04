@@ -1,0 +1,4 @@
+[tool.ruff]
+line-length = 300
+[tool.ruff.lint.per-file-ignores]
+"user/DefinePlots.py" = ["F403", "F405"]

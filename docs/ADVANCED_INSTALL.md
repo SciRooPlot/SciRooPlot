@@ -27,7 +27,7 @@ Alternatively, you can pass this information directly to SciRooPlot via the comp
 
 ### Building fmt from source:
 
-One reason you might need to compile fmt from source is that cmake's `find_package(fmt)` picks up a different 
+One reason you might need to compile fmt from source is that cmake's `find_package(fmt)` picks up a different
 fmt that comes with the GNU Utilities on common Linux distributions.
 To avoid this you can compile your own fmt version:
 ```bash

@@ -113,7 +113,7 @@ void generateTestFiles()
   hist2.FillRandom("mygaus", 10000);
   hist2.Scale(1./hist2.Integral("width"));
   hist2.Write();
-  
+
 
   TF1 mygaus2("mygaus2", "TMath::Gaus(x,4,.8)", 0, 6);
   TH1F hist3("hist3", "", 100, 0, 6);
@@ -170,9 +170,9 @@ void generateTestFiles()
   hist8.FillRandom("mysin2", 100000);
   hist8.Sumw2();
   hist8.Write();
-  
 
-  
+
+
   file3.mkdir("pseudodata");
   file3.cd("pseudodata");
 

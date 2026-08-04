@@ -8,7 +8,7 @@ on:
   push:
 
 jobs:
-  pre-commit:
+  code-quality:
     runs-on: ubuntu-latest
 
     steps:

@@ -317,7 +317,7 @@ else()
 endif()
 message(STATUS "---------------------------------------------------------------------------------------------")
 
-# assoicate the remaining files for IDEs
+# associate the remaining files for IDEs
 add_custom_target(ProjectFiles SOURCES
     README.md
     docs/README.md

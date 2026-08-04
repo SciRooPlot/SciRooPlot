@@ -14,7 +14,7 @@ export SCIROOPLOT_DATA_DIR="$(cd -- "$(dirname -- "${SCIROOPLOT_ENV}")" && pwd)"
 export SCIROOPLOT_ROOT="$(cd -- "${SCIROOPLOT_DATA_DIR}/../.." && pwd)"
 export SCIROOPLOT_BIN="${SCIROOPLOT_ROOT}/@CMAKE_INSTALL_BINDIR@"
 export SCIROOPLOT_LIB="${SCIROOPLOT_ROOT}/@CMAKE_INSTALL_LIBDIR@"
-export SCIROOPLOT_SOURCE_DIR="@CMAKE_CURRENT_BINARY_DIR@/../"
+export SCIROOPLOT_SOURCE_DIR="@CMAKE_CURRENT_BINARY_DIR@/.."
 export SCIROOPLOT_PYTHON_EXECUTABLE="@Python3_EXECUTABLE@"
 if [ -n "${SCIROOPLOT_PYTHON_EXECUTABLE:-}" ]; then
     export PYTHONPATH="${PYTHONPATH:+$PYTHONPATH:}${SCIROOPLOT_LIB}"
@@ -203,7 +203,7 @@ _plot_completions_zsh() {
   local main_groups
   local groups
   local names
-  
+
   local tabcomp_file="$(${SCIROOPLOT_BIN}/srp confdir "@current")/tabcomp.csv"
   if [[ ! -f "${tabcomp_file}" ]]; then
     return
@@ -220,7 +220,7 @@ _plot_completions_zsh() {
   updatePlotNames() {
     local group="${1:-}"
     names=()
-    
+
     local name_in group_in
     while IFS="," read -r name_in group_in
     do
@@ -352,7 +352,7 @@ _plot_completions_bash() {
   updatePlotNames() {
     local group="${1:-}"
     names=()
-    
+
     local name_in group_in
     while IFS="," read -r name_in group_in
     do

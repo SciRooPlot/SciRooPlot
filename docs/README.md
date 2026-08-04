@@ -163,7 +163,7 @@ pm.AddDataSource("dataSourceD", {"/path/to/folder/with/rootfiles/"});
   // for incompatible data (e.g. different number of bins or bin limits) the framework will try to use splines to interpolate the data points before dividing
   // in case numerator and denominator are sub-samples of one another bayesian error propagation can be applied:
   plot[1].AddRatio("histName3", "dataSourceB", "histName1", "dataSourceA", "ratioLabel").SetIsCorrelated();
-  
+
 
   // to modify how the data is displayed we can apply the settings via:
   plot[1].AddData("histName4", "dataSourceB").SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
@@ -178,7 +178,7 @@ pm.AddDataSource("dataSourceD", {"/path/to/folder/with/rootfiles/"});
   plot[1].AddLegend(0.5, 0.8);
   // if you leave out the xy pad coordinates, the framework will try to auto-place the legend without overlapping your data or the axes
   plot[1].AddLegend();
-  
+
   // it is possible to add multiple legends to the plot (as done above) which are then identified by the order they were added
   // in order to express that the label for a specific data should be put in the second legend you can do the following:
   plot[1].AddData("function1", "dataSourceA", "my label in second legend").SetLegend(2);
@@ -190,8 +190,8 @@ pm.AddDataSource("dataSourceD", {"/path/to/folder/with/rootfiles/"});
   plot[1].GetLegend(2).GetEntry(1).SetLineColor(kRed);
   // you can also add and modify legends without any automatically generated labels:
   plot[1].AddLegend();
-  plot[1].GetLegend(3).GetEntry(1).SetLabel("my custom lable").SetDrawStyle("L").SetLineColor(kRed);
-  plot[1].GetLegend(3).GetEntry(1).SetLabel("my custom lable 2").SetDrawStyle("EP").SetLineColor(kBlue).SetMarkerColor(kRed);
+  plot[1].GetLegend(3).GetEntry(1).SetLabel("my custom label").SetDrawStyle("L").SetLineColor(kRed);
+  plot[1].GetLegend(3).GetEntry(1).SetLabel("my custom label 2").SetDrawStyle("EP").SetLineColor(kBlue).SetMarkerColor(kRed);
   // (again please have a look at inc/Plot.h for the list of possibilities)
 
   // similar to the legend boxes you can add a text box to your plot
@@ -203,7 +203,7 @@ pm.AddDataSource("dataSourceD", {"/path/to/folder/with/rootfiles/"});
   // pro tip: to determine the perfect position of the legend or text,
   // you can place it at the desired position in interactive mode
   // and double-click on it to print out its current coordinates
-    
+
   // to modify the axis titles, offsets, ranges, etc of a pad, just do the following
   plot[1]['Y'].SetTitle("my y axis title with meaning");
   plot[1]['X'].SetRange(1.4, 2.8).SetTitle("what I am showing on x axis").SetLog();
@@ -349,7 +349,7 @@ pm.AddBasePlot(basePlot);
 // do not have to specify again all of the layout overhead and can focus on the content
 
 // for re-occurring data it can make sense to define a bunch of properties only once
-// and then just re-use this layout for different plots:
+// and then just reuse this layout for different plots:
 using Plot::Pad::Data;
 Data pp_5TeV = Data().SetOptions(curve).SetLineStyle(9).SetColor(kGreen+3);
 
@@ -406,7 +406,7 @@ data_layout_t pp_7TeV
   plot[1].SetDefaultMarkerStyles({kOpenCircle, kOpenCross});
   plot[1].SetDefaultLineStyles({kDashed, kSolid});
 
-  // when drawing a lot of data to the plot, the color vector might become a bit lengthly
+  // when drawing a lot of data to the plot, the color vector might become a bit lengthy
   // in these cases we often want a continuous color spectrum between some color endpoints
   // the following example shows how to generate a continuous rainbow color range that spans from blue, cyan, green and yellow to red
   vector<tuple<float_t, float_t, float_t, float_t>> rainbowColors =
@@ -475,7 +475,7 @@ data_layout_t pp_7TeV
   plot[1].AddData("mytree", "input").Scatter("x", "y").Entries(100); // select only first 100 entries
   plot[1].AddData("mytree", "input").Scatter("x", "y").Entries(800, 1200); // select only entries 800 to 1200
 
-  // you may want to define som variables and use them in the expressions and filters
+  // you may want to define some variables and use them in the expressions and filters
   plot[1].AddData("mytree", "input").Scatter("r", "z").Define("r", "sqrt(x*x + y*y)").Filter("r*y<10"); // defnine variable r and use it as point x value but only consider data with r*y<10
 
   // in case the input data comes from a text file called 'myData.csv' with columns 'a' and 'b', it is accessed as follows:

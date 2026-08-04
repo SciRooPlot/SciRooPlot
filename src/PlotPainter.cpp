@@ -842,7 +842,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           double_t rangeMaxY = (data->GetMaxRangeY()) ? *data->GetMaxRangeY()
                                                       : ymax;
 
-          // for 3d view ignore individual data ranges and always let it coinside with the axes
+          // for 3d view ignore individual data ranges and always let it coincide with the axes
           if (auto view = pad_ptr->GetView()) {
             double_t minArr[3];
             double_t maxArr[3];
