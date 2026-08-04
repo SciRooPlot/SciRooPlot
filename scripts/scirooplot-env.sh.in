@@ -35,7 +35,7 @@ function plot() {
     (
       cd "${user_dir}";
       if (( ! isPython )); then
-        err=$(cmake .. 2>&1 >/dev/null) || { echo "${err}"; exit 1; }
+        err=$(cmake -S .. -B . 2>&1 >/dev/null) || { echo "${err}"; exit 1; }
         (cmake --build . -j6 > /dev/null) || exit 1
       fi
       if [[ ! -f "${user_plotdef}" || "${user_program}" -nt "${user_plotdef}" ]]; then

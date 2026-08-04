@@ -7,6 +7,12 @@ if [ -z "${SRP_TEST_INSTALL:-}" ]; then
     exit 1
 fi
 
+echo "CONDA_PREFIX=$CONDA_PREFIX"
+echo "CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH"
+
+find "$CONDA_PREFIX" -name "VdtConfig.cmake"
+find "$CONDA_PREFIX" -name "ROOTConfig.cmake"
+
 source "${SRP_TEST_INSTALL}/share/scirooplot/scirooplot-env.sh"
 
 WORKDIR=$(mktemp -d)
