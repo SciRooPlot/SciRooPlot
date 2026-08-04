@@ -1101,10 +1101,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       string text{box->GetText()};
       size_t pos{};
       size_t last{};
-      string token;
       while ((pos = text.find(delimiter, last)) != string::npos) {
-        token = text.substr(last, pos - last);
-        lines.push_back(token);
+        lines.push_back(text.substr(last, pos - last));
         last = pos + delimiter.length();
       }
       lines.push_back(text.substr(last));
@@ -1193,13 +1191,13 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     double_t symbolColWidthNDC = (double_t)symbolColWidthPixel / padWidthPixel;
     double_t titleWidthNDC = (double_t)titleWidthPixel / padWidthPixel;
     double_t borderWidthNDC = box->GetBorderWidth().value_or(0.) / padWidthPixel;
-    double_t borderHeightNDC = box->GetBorderWidth().value_or(0.) / padHeightPixel;
+    // double_t borderHeightNDC = box->GetBorderWidth().value_or(0.) / padHeightPixel;
 
     double_t totalWidthNDC{};
     double_t totalHeightNDC{};
 
     float_t marginNDC = box->GetMargin().value_or(0.01);
-    float_t lineSpacing = box->GetLineSpacing().value_or(0.3);
+    double_t lineSpacing = box->GetLineSpacing().value_or(0.3);
     double_t totalMarginWidthNDC = (0.5 * borderWidthNDC + marginNDC + symbolColWidthNDC);
 
     if constexpr (isLegend) {
