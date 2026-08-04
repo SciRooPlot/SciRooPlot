@@ -6,7 +6,9 @@ if [ -z "${SRP_TEST_INSTALL:-}" ]; then
     echo "SRP_TEST_INSTALL is not set"
     exit 1
 fi
-export CMAKE_PREFIX_PATH="${CONDA_PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
+if [ -n "${CONDA_PREFIX:-}" ]; then
+    export CMAKE_PREFIX_PATH="${CONDA_PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
+fi
 source "${SRP_TEST_INSTALL}/share/scirooplot/scirooplot-env.sh"
 
 WORKDIR=$(mktemp -d)

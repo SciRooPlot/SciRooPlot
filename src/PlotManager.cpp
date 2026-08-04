@@ -90,10 +90,12 @@ PlotManager::PlotManager(const std::string& projectName) : mApp(new TApplication
   // determine OS dependent offset between window and frame
   // (GetWindowTopY gives the current coordinates of the window, but SetWindowPosition moves the frame instead of the window)
   TCanvas dummyCanvas("dummyCanvas", "dummyCanvas", 1, 1);
-  static_cast<TRootCanvas*>(dummyCanvas.GetCanvasImp())->UnmapWindow();
-  dummyCanvas.SetCanvasSize(1, 1);
-  dummyCanvas.SetWindowPosition(50, 50);
-  mWindowOffsetY = dummyCanvas.GetWindowTopY() - static_cast<TRootCanvas*>(dummyCanvas.GetCanvasImp())->GetY();
+  if (auto canvasImp = dynamic_cast<TRootCanvas*>(dummyCanvas.GetCanvasImp())) {
+    canvasImp->UnmapWindow();
+    dummyCanvas.SetCanvasSize(1, 1);
+    dummyCanvas.SetWindowPosition(50, 50);
+    mWindowOffsetY = dummyCanvas.GetWindowTopY() - canvasImp->GetY();
+  }
 }
 
 //**************************************************************************************************
