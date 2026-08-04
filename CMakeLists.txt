@@ -256,7 +256,6 @@ add_custom_target(generate_testfiles ALL
 )
 add_dependencies(srp generate_testfiles)
 
-set(SCIROOPLOT_ROOT "${CMAKE_CURRENT_BINARY_DIR}")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/scirooplot-env.sh.in
   ${SCIROOPLOT_BUILD_DATA_DIR}/scirooplot-env.sh
@@ -288,7 +287,6 @@ install(
   DESTINATION ${SCIROOPLOT_INSTALL_DATA_DIR}
   PATTERN ".*" EXCLUDE
 )
-set(SCIROOPLOT_ROOT "${CMAKE_INSTALL_PREFIX}")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/scirooplot-env.sh.in
   ${INSTALL_STAGE}/scirooplot-env.sh

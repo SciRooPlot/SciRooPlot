@@ -1,10 +1,19 @@
-#!/bin/bash
-
-export SCIROOPLOT_ROOT="@SCIROOPLOT_ROOT@"
+(return 0 2>/dev/null) || {
+    echo "The SciRooPlot env script must be sourced."
+    exit 1
+}
+if [ -n "${BASH_VERSION:-}" ]; then
+    export SCIROOPLOT_ENV="${BASH_SOURCE[0]}"
+elif [ -n "${ZSH_VERSION:-}" ]; then
+    export SCIROOPLOT_ENV="${(%):-%x}"
+else
+    echo "Unsupported shell. Please source SciRooPlot env script from bash or zsh."
+    exit 1
+fi
+export SCIROOPLOT_DATA_DIR="$(cd -- "$(dirname -- "${SCIROOPLOT_ENV}")" && pwd)"
+export SCIROOPLOT_ROOT="$(cd -- "${SCIROOPLOT_DATA_DIR}/../.." && pwd)"
 export SCIROOPLOT_BIN="${SCIROOPLOT_ROOT}/@CMAKE_INSTALL_BINDIR@"
 export SCIROOPLOT_LIB="${SCIROOPLOT_ROOT}/@CMAKE_INSTALL_LIBDIR@"
-export SCIROOPLOT_DATA_DIR="${SCIROOPLOT_ROOT}/share/scirooplot"
-export SCIROOPLOT_ENV="${SCIROOPLOT_DATA_DIR}/scirooplot-env.sh"
 export SCIROOPLOT_SOURCE_DIR="@CMAKE_CURRENT_BINARY_DIR@/../"
 export SCIROOPLOT_PYTHON_EXECUTABLE="@Python3_EXECUTABLE@"
 if [ -n "${SCIROOPLOT_PYTHON_EXECUTABLE:-}" ]; then
@@ -27,7 +36,7 @@ function plot() {
       cd "${user_dir}";
       if (( ! isPython )); then
         err=$(cmake .. 2>&1 >/dev/null) || { echo "${err}"; exit 1; }
-        (make -j6 > /dev/null) || exit 1
+        (cmake --build . -j6 > /dev/null) || exit 1
       fi
       if [[ ! -f "${user_plotdef}" || "${user_program}" -nt "${user_plotdef}" ]]; then
         if (( isPython )); then
@@ -156,7 +165,7 @@ function srp() {
       sed -i.bak "s/PROJECT_NAME/${project_name}/" "${project_path}/DefinePlots.cpp" && rm -f "${project_path}/DefinePlots.cpp.bak"
       mkdir -p "${project_path}/build"
       local curdir="$(pwd)"
-      cd "${project_path}/build" && cmake -Wno-dev .. > /dev/null 2>&1 && make > /dev/null 2>&1 && ./definePlots
+      cd "${project_path}/build" && cmake -Wno-dev .. > /dev/null 2>&1 && cmake --build . > /dev/null 2>&1 && ./definePlots
       cd "${curdir}"
       "${SCIROOPLOT_BIN}/srp" "set" "${project_name}" "program" "${project_path}/build/definePlots"
     fi
