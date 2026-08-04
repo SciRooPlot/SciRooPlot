@@ -40,7 +40,6 @@ jobs:
           environment-name: build
           create-args: >-
             root
-            vdt
             -c conda-forge
           cache-environment: true
 
