@@ -7,7 +7,7 @@
 
 # support execution with zsh in case the interpreter is explicitly chosen
 # shellcheck disable=SC2296
-SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]:-${(%):-%N}}")" >/dev/null 2>&1 && pwd)/.."
+SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]:-${(%):-%N}}")/.." >/dev/null 2>&1 && pwd)"
 cd "${SOURCE_DIR}" || exit 1
 
 if [[ ! -f "CMakeLists.txt" ]]; then
@@ -59,8 +59,9 @@ if [[ "${REINSTALL}" -eq 1 ]]; then
     rm -f "${CACHE_FILE}"
 fi
 
+# determine installation prefix
 if [[ -f "${CACHE_FILE}" ]]; then
-    CACHED_PREFIX=$(grep '^CMAKE_INSTALL_PREFIX:PATH=' "${CACHE_FILE}" | cut -d= -f2)
+    CACHED_PREFIX=$(grep -m1 '^CMAKE_INSTALL_PREFIX:PATH=' "${CACHE_FILE}" | cut -d= -f2)
 
     if [[ -z "${CACHED_PREFIX}" ]]; then
         echo "Error: Could not determine existing CMake install prefix."
@@ -78,9 +79,14 @@ if [[ -f "${CACHE_FILE}" ]]; then
     fi
 
     INSTALL_PREFIX="${CACHED_PREFIX}"
-    echo "Reusing existing CMake configuration."
+
+    echo "Existing SciRooPlot installation detected."
+    echo "Updating installation:"
+    echo "  ${INSTALL_PREFIX}"
 else
-    echo "Configuring SciRooPlot..."
+    echo "No existing SciRooPlot installation detected."
+    echo "Installing to:"
+    echo "  ${INSTALL_PREFIX}"
 fi
 
 echo
@@ -102,12 +108,11 @@ if [[ ! -f "${CACHE_FILE}" ]]; then
         -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"
 fi
 
-cmake --build "${BUILD_DIR}"
-cmake --install "${BUILD_DIR}"
+cmake --build "${BUILD_DIR}" >/dev/null 2>&1
+cmake --install "${BUILD_DIR}" >/dev/null 2>&1
 
 ENV_SCRIPT="${INSTALL_PREFIX}/share/scirooplot/scirooplot-env.sh"
 
-echo
 echo "========================================"
 echo "SciRooPlot installation complete."
 echo
@@ -121,7 +126,7 @@ if [[ -f "${ENV_SCRIPT}" ]]; then
     echo "  source ${ENV_SCRIPT}"
     echo
     echo "To enable it automatically in future shells,"
-    echo "add the following line to ~/.bashrc or ~/.zshrc:"
+    echo "add this line to ~/.bashrc or ~/.zshrc:"
     echo
     echo "  source ${ENV_SCRIPT}"
 else

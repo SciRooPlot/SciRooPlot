@@ -65,7 +65,11 @@ function srp() {
       && [[ "${SCIROOPLOT_BIN}" == "$(brew --prefix)/"* ]]; then
       brew upgrade scirooplot
     else
-      "${SCIROOPLOT_SOURCE_DIR}/scripts/install.sh" "${2:-}"
+      if [[ -n "${2:-}" ]]; then
+        "${SCIROOPLOT_SOURCE_DIR}/scripts/install.sh" "$2"
+      else
+        "${SCIROOPLOT_SOURCE_DIR}/scripts/install.sh"
+      fi
     fi
     source "${SCIROOPLOT_ENV}"
   elif [[ "${1:-}" == "cd" || "${1:-}" == "edit" ]]; then
