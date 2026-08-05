@@ -1,4 +1,4 @@
-name: Build site
+name: Documentation
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 jobs:
-  build:
+  build-docs:
     runs-on: ubuntu-latest
 
     steps:
@@ -54,8 +54,8 @@ jobs:
         with:
           path: build
 
-  deploy:
-    needs: build
+  deploy-pages:
+    needs: build-docs
     runs-on: ubuntu-latest
 
     environment:

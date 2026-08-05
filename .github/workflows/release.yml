@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout SciRooPlot
+        uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+
+      - name: Compute SHA256
+        id: sha
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+
+          curl -L \
+            "https://github.com/SciRooPlot/SciRooPlot/archive/refs/tags/v${VERSION}.tar.gz" \
+            -o source.tar.gz
+
+          SHA=$(sha256sum source.tar.gz | cut -d' ' -f1)
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: SciRooPlot/homebrew-scirooplot
+          token: ${{ secrets.HOMEBREW_TOKEN }}
+          path: tap
+
+      - name: Update Homebrew formula
+        run: |
+          cd tap
+
+          sed -i \
+            "s/version \".*\"/version \"${{ steps.sha.outputs.version }}\"/" \
+            Formula/scirooplot.rb
+
+          sed -i \
+            "s/sha256 \".*\"/sha256 \"${{ steps.sha.outputs.sha }}\"/" \
+            Formula/scirooplot.rb
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add Formula/scirooplot.rb
+
+          if git diff --cached --quiet; then
+            echo "Formula already up to date."
+            exit 0
+          fi
+
+          git commit -m "update SciRooPlot to v${{ steps.sha.outputs.version }}"
+          git push
