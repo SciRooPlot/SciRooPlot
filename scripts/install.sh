@@ -5,68 +5,133 @@
     return 1
 }
 
-if [[ -d "${SCIROOPLOT_SOURCE_DIR:-}" ]]; then
-    cd "${SCIROOPLOT_SOURCE_DIR}" || exit 1
-else
-    echo "SciRooPlot source directory not found: ${SCIROOPLOT_SOURCE_DIR:-<unset>}"
-    exit 1
-fi
+# support execution with zsh in case the interpreter is explicitly chosen
+# shellcheck disable=SC2296
+SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]:-${(%):-%N}}")" >/dev/null 2>&1 && pwd)/.."
+cd "${SOURCE_DIR}" || exit 1
+
 if [[ ! -f "CMakeLists.txt" ]]; then
-    echo "Error: Not in SciRooPlot source dir."
+    echo "Error: Not in SciRooPlot source directory."
     exit 1
 fi
 
-BUILD_DIR="$(pwd)/build"
+BUILD_DIR="${SOURCE_DIR}/build"
+DEFAULT_PREFIX="${SOURCE_DIR}/install"
+INSTALL_PREFIX="${DEFAULT_PREFIX}"
 CACHE_FILE="${BUILD_DIR}/CMakeCache.txt"
 
-# auto-enable update mode if cache exists
-UPDATE_MODE=0
-if [[ -f "$CACHE_FILE" ]]; then
-    UPDATE_MODE=1
-    for arg in "$@"; do
-        case "$arg" in
-            --reinstall)
-                rm "$CACHE_FILE"
-                UPDATE_MODE=0
-                ;;
-        esac
-    done
+REINSTALL=0
+PREFIX_SET=0
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --prefix)
+            if [[ -z "${2:-}" || "${2}" == -* ]]; then
+                echo "Error: --prefix requires a directory."
+                exit 1
+            fi
+            INSTALL_PREFIX="$2"
+            PREFIX_SET=1
+            shift 2
+            ;;
+        --reinstall)
+            REINSTALL=1
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: $0 [--prefix <directory>] [--reinstall]"
+            echo
+            echo "Options:"
+            echo "  --prefix <directory>  Set installation prefix (default is <source_dir>/install)"
+            echo "  --reinstall           Reconfigure CMake from scratch"
+            echo "  --help, -h            Show this help message"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--prefix <directory>] [--reinstall]"
+            exit 1
+            ;;
+    esac
+done
+
+if [[ "${REINSTALL}" -eq 1 ]]; then
+    rm -f "${CACHE_FILE}"
 fi
 
-# interactive setup
-INSTALL_DIR="${BUILD_DIR}"
-CMAKE_FLAGS="-DCMAKE_INSTALL_PREFIX=${INSTALL_DIR}"
-if [[ "${UPDATE_MODE}" -eq 0 ]]; then
-    echo "Press enter for default install location [${INSTALL_DIR}]"
-    echo -n "or specify a different path: "
-    read -r USER_INSTALL_DIR
-    INSTALL_DIR="${USER_INSTALL_DIR:-$INSTALL_DIR}"
+if [[ -f "${CACHE_FILE}" ]]; then
+    CACHED_PREFIX=$(grep '^CMAKE_INSTALL_PREFIX:PATH=' "${CACHE_FILE}" | cut -d= -f2)
+
+    if [[ -z "${CACHED_PREFIX}" ]]; then
+        echo "Error: Could not determine existing CMake install prefix."
+        exit 1
+    fi
+
+    if [[ "${PREFIX_SET}" -eq 1 && "${CACHED_PREFIX}" != "${INSTALL_PREFIX}" ]]; then
+        echo "Error: Existing build configuration uses a different install prefix:"
+        echo
+        echo "  Current:   ${CACHED_PREFIX}"
+        echo "  Requested: ${INSTALL_PREFIX}"
+        echo
+        echo "Run with --reinstall to configure with the new prefix."
+        exit 1
+    fi
+
+    INSTALL_PREFIX="${CACHED_PREFIX}"
+    echo "Reusing existing CMake configuration."
 else
-    echo "Skipping prompts and reusing existing configuration."
-    echo "To reconfigure the installation run with argument --reinstall."
+    echo "Configuring SciRooPlot..."
 fi
 
-# update
 echo
-echo "Updating repository..."
-git pull
+echo "Source directory : ${SOURCE_DIR}"
+echo "Build directory  : ${BUILD_DIR}"
+echo "Install prefix   : ${INSTALL_PREFIX}"
 echo
 
-# build
-mkdir -p build
-cd build || exit 1
-if [[ "${UPDATE_MODE}" -eq 0 ]]; then
-    cmake -S .. -B . "${CMAKE_FLAGS}"
-fi
-cmake --build .
-cmake --install . >/dev/null 2>&1
-
-# source env
-ENV_SCRIPT="${INSTALL_DIR}/share/scirooplot/scirooplot-env.sh"
-if [[ -f "${ENV_SCRIPT}" ]]; then
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "Updating repository..."
+    git pull || exit 1
     echo
-    echo "Make sure to add the following line to your ~/.bashrc or ~/.zshrc:"
-    echo "source ${ENV_SCRIPT}"
-else
-    echo "Warning: Environment script not found at ${ENV_SCRIPT}"
 fi
+
+mkdir -p "${BUILD_DIR}"
+
+if [[ ! -f "${CACHE_FILE}" ]]; then
+    cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
+        -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"
+fi
+
+cmake --build "${BUILD_DIR}"
+cmake --install "${BUILD_DIR}"
+
+ENV_SCRIPT="${INSTALL_PREFIX}/share/scirooplot/scirooplot-env.sh"
+
+echo
+echo "========================================"
+echo "SciRooPlot installation complete."
+echo
+echo "Install prefix:"
+echo "  ${INSTALL_PREFIX}"
+echo
+
+if [[ -f "${ENV_SCRIPT}" ]]; then
+    echo "Activate SciRooPlot in the current shell with:"
+    echo
+    echo "  source ${ENV_SCRIPT}"
+    echo
+    echo "To enable it automatically in future shells,"
+    echo "add the following line to ~/.bashrc or ~/.zshrc:"
+    echo
+    echo "  source ${ENV_SCRIPT}"
+else
+    echo "Warning: Environment script not found:"
+    echo "  ${ENV_SCRIPT}"
+fi
+
+echo
+echo "Verify the installation with:"
+echo
+echo "  srp help"
+echo
+echo "========================================"
