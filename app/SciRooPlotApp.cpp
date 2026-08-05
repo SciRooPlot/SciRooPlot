@@ -142,6 +142,7 @@ int main(int argc, char* argv[])
     PRINT("  srp matchcase (sensitive | insensitive)");
     PRINT("-----------------------------------------------------------");
     PRINT("Maintenance:");
+    PRINT("  srp info");
     PRINT("  srp update");
     PRINT("  srp clean");
     PRINT("  srp reset");
@@ -214,6 +215,40 @@ int main(int argc, char* argv[])
       ERROR("Invalid case sensistivity option for matching (sensitive | insensitive).");
       return 1;
     }
+  } else if (command == "info") {
+    auto getenv = [](const char* name) {
+      const char* value = std::getenv(name);
+      return value ? value : "<not set>";
+    };
+    std::cout << "========================================\n";
+    std::cout << "SciRooPlot " << SCIROOPLOT_VERSION << "\n";
+    std::cout << "========================================\n";
+    std::cout << "Installation\n";
+    std::cout << "  Prefix: " << getenv("SCIROOPLOT_ROOT") << "\n";
+    std::cout << "  Binary: " << getenv("SCIROOPLOT_BIN") << "\n";
+    std::cout << "  Library:" << getenv("SCIROOPLOT_LIB") << "\n";
+    auto sourceDir = getenv("SCIROOPLOT_SOURCE_DIR");
+    if (sourceDir) {
+      std::filesystem::path path(sourceDir);
+      if (std::filesystem::exists(path)) {
+        std::cout << "  Source: " << std::filesystem::canonical(path).string() << "\n";
+      } else {
+        std::cout << "  Source: <not available>\n";
+      }
+    }
+    std::cout << "  Env:    " << getenv("SCIROOPLOT_ENV") << "\n";
+
+    std::cout << "\nDependencies\n";
+    std::cout << "  ROOT:   " << SCIROOPLOT_ROOT_PATH
+              << " (version " << SCIROOPLOT_ROOT_VERSION << ")\n";
+    std::cout << "  Python: " << getenv("SCIROOPLOT_PYTHON_EXECUTABLE") << "\n";
+
+    std::cout << "\nBuild\n";
+    std::cout << "  Type:   " << SCIROOPLOT_BUILD_TYPE << "\n";
+    std::cout << "  Commit: " << SCIROOPLOT_GIT_HASH << "\n";
+    std::cout << "  C++:    " << SCIROOPLOT_CXX_COMPILER << "\n";
+
+    std::cout << "========================================\n";
   } else if (command == "confdir") {
     std::cout << ((project.empty()) ? Config::Get().Path().string() : Config::Get().ProjectPath(project).string()) << std::endl;
     return 0;

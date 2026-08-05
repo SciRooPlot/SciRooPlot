@@ -201,6 +201,21 @@ add_plotting_executable(plot
 )
 list(APPEND ALL_TARGETS srp plot)
 
+execute_process(
+    COMMAND git rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+target_compile_definitions(srp PRIVATE
+    SCIROOPLOT_VERSION="${PROJECT_VERSION}"
+    SCIROOPLOT_GIT_HASH="${GIT_HASH}"
+    SCIROOPLOT_ROOT_PATH="${ROOT_DIR}"
+    SCIROOPLOT_ROOT_VERSION="${ROOT_VERSION}"
+    SCIROOPLOT_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
+    SCIROOPLOT_CXX_COMPILER="${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}"
+)
+
 # -----------------------
 # Install
 # -----------------------

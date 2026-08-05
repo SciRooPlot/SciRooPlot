@@ -271,7 +271,7 @@ _plot_completions_zsh() {
 
 _srp_completions_zsh() {
 
-  local general_commands=('update' 'init-cpp' 'init-py' 'add' 'projects' 'clean' 'reset' 'help' 'color' 'verbosity' 'plotmode' 'matchmode' 'matchcase')
+  local general_commands=('info' 'update' 'init-cpp' 'init-py' 'add' 'projects' 'clean' 'reset' 'help' 'color' 'verbosity' 'plotmode' 'matchmode' 'matchcase')
   local project_commands=('cd' 'edit' 'stats' 'remove' 'rename' 'select' 'show' 'confdir' 'set' 'unset' 'get')
   local project_commands_with_prop=('set' 'unset' 'get')
   local properties=('program' 'outdir')
@@ -397,7 +397,7 @@ _plot_completions_bash() {
 
 _srp_completions_bash() {
 
-  local general_commands=('update init-cpp init-py add projects clean reset help color verbosity plotmode matchmode matchcase')
+  local general_commands=('info update init-cpp init-py add projects clean reset help color verbosity plotmode matchmode matchcase')
   local project_commands=('cd edit stats remove rename select show confdir set unset get')
   local project_commands_with_prop=('set unset get')
   local properties=('program outdir')
