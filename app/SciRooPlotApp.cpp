@@ -244,9 +244,9 @@ int main(int argc, char* argv[])
     std::cout << "  Python: " << getenv("SCIROOPLOT_PYTHON_EXECUTABLE") << "\n";
 
     std::cout << "\nBuild\n";
-    std::cout << "  Type:   " << SCIROOPLOT_BUILD_TYPE << "\n";
-    std::cout << "  Commit: " << SCIROOPLOT_GIT_HASH << "\n";
-    std::cout << "  C++:    " << SCIROOPLOT_CXX_COMPILER << "\n";
+    std::cout << "  Type:     " << SCIROOPLOT_BUILD_TYPE << "\n";
+    std::cout << "  Commit:   " << SCIROOPLOT_GIT_DESCRIBE << "\n";
+    std::cout << "  Compiler: " << SCIROOPLOT_CXX_COMPILER << "\n";
 
     std::cout << "========================================\n";
   } else if (command == "confdir") {
