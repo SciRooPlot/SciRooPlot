@@ -35,6 +35,14 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
 
+      - name: Generate Homebrew formula
+        run: |
+          sed \
+            -e "s/@VERSION@/${{ steps.sha.outputs.version }}/g" \
+            -e "s/@SHA256@/${{ steps.sha.outputs.sha }}/g" \
+            packaging/homebrew/scirooplot.rb.in \
+            > scirooplot.rb
+
       - name: Checkout Homebrew tap
         uses: actions/checkout@v4
         with:
@@ -46,13 +54,7 @@ jobs:
         run: |
           cd tap
 
-          sed -i \
-            "s/version \".*\"/version \"${{ steps.sha.outputs.version }}\"/" \
-            Formula/scirooplot.rb
-
-          sed -i \
-            "s/sha256 \".*\"/sha256 \"${{ steps.sha.outputs.sha }}\"/" \
-            Formula/scirooplot.rb
+          cp ../scirooplot.rb Formula/scirooplot.rb
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

@@ -239,7 +239,7 @@ int main(int argc, char* argv[])
     std::cout << "  Env:    " << getenv("SCIROOPLOT_ENV") << "\n";
 
     std::cout << "\nDependencies\n";
-    std::cout << "  ROOT:   " << SCIROOPLOT_ROOT_PATH
+    std::cout << "  ROOT:   " << SCIROOPLOT_ROOT_EXECUTABLE
               << " (version " << SCIROOPLOT_ROOT_VERSION << ")\n";
     std::cout << "  Python: " << getenv("SCIROOPLOT_PYTHON_EXECUTABLE") << "\n";
 

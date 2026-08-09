@@ -1,6 +1,8 @@
 .DS_Store
 build/*
+install/*
 BUILD/*
+INSTALL/*
 config/*
 misc/*
 XCode/*
