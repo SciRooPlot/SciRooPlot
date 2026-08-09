@@ -36,4 +36,4 @@ repos:
     hooks:
       - id: shellcheck
         files: \.sh(\.in)?$
-        exclude: ^scripts/alidist/scirooplot\.sh$
+        exclude: ^packaging/alidist/scirooplot\.sh$
