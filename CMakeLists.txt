@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(
   SciRooPlot
-  VERSION 3.2.0
+  VERSION 3.2.1
   LANGUAGES CXX
 )
 
