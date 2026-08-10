@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(
   SciRooPlot
-  VERSION 3.2.1
+  VERSION 3.2.2
   LANGUAGES CXX
 )
 
@@ -185,7 +185,6 @@ if(BUILD_PYTHON_BINDINGS)
     INSTALL_RPATH "${SCIROOPLOT_RPATH}"
     OUTPUT_NAME "SciRooPlot"
   )
-  list(APPEND ALL_TARGETS SciRooPlotPython)
 endif()
 
 # -----------------------
@@ -271,11 +270,15 @@ add_custom_target(generate_testfiles ALL
 )
 add_dependencies(srp generate_testfiles)
 
+set(SCIROOPLOT_PYTHONPATH_SETUP
+    "export PYTHONPATH=\"\${SCIROOPLOT_LIB}\${PYTHONPATH:+:\$PYTHONPATH}\""
+)
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/scirooplot-env.sh.in
   ${SCIROOPLOT_BUILD_DATA_DIR}/scirooplot-env.sh
   @ONLY
 )
+set(SCIROOPLOT_PYTHONPATH_SETUP "")
 
 # --- Install config ---
 set(INSTALL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/install_stage)
@@ -322,6 +325,12 @@ install(
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+if(BUILD_PYTHON_BINDINGS)
+  install(
+    TARGETS SciRooPlotPython
+    LIBRARY DESTINATION ${Python3_SITEARCH}
+  )
+endif()
 
 message(STATUS "---------------------------------------------------------------------------------------------")
 message(STATUS "IMPORTANT: To use SciRooPlot you have to put the following line into your .bashrc or .zshrc")
