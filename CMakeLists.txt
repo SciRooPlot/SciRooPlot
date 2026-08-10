@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 project(
   SciRooPlot
-  VERSION 3.2.2
+  VERSION 3.2.3
   LANGUAGES CXX
 )
 
@@ -87,6 +87,7 @@ if(BUILD_PYTHON_BINDINGS)
   else()
     message(STATUS "Python version: ${Python3_VERSION}")
     message(STATUS "${Python3_EXECUTABLE}")
+    set(SCIROOPLOT_PYTHON_DIR "${CMAKE_INSTALL_LIBDIR}/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}/site-packages")
     set(PYBIND11_FINDPYTHON NEW)
     find_package(pybind11 CONFIG QUIET)
     if(NOT pybind11_FOUND)
@@ -116,9 +117,17 @@ if(APPLE)
     "@loader_path/../lib"
     "${ROOT_LIBDIR}"
   )
+  set(SCIROOPLOT_PYTHON_RPATH
+    "@loader_path/../.."
+    "${ROOT_LIBDIR}"
+  )
 else()
   set(SCIROOPLOT_RPATH
     "$ORIGIN/../lib"
+    "${ROOT_LIBDIR}"
+  )
+  set(SCIROOPLOT_PYTHON_RPATH
+    "$ORIGIN/../.."
     "${ROOT_LIBDIR}"
   )
 endif()
@@ -141,7 +150,6 @@ add_library(SciRooPlot SHARED
   src/Config.cpp
   include/Plot.h
   include/PlotManager.h
-  include/PlotPainter.h
   include/PlotPainter.h
   include/Helpers.h
   include/Config.h
@@ -182,7 +190,7 @@ if(BUILD_PYTHON_BINDINGS)
   )
   set_target_properties(SciRooPlotPython PROPERTIES
     BUILD_RPATH "${SCIROOPLOT_RPATH}"
-    INSTALL_RPATH "${SCIROOPLOT_RPATH}"
+    INSTALL_RPATH "${SCIROOPLOT_PYTHON_RPATH}"
     OUTPUT_NAME "SciRooPlot"
   )
 endif()
@@ -270,15 +278,12 @@ add_custom_target(generate_testfiles ALL
 )
 add_dependencies(srp generate_testfiles)
 
-set(SCIROOPLOT_PYTHONPATH_SETUP
-    "export PYTHONPATH=\"\${SCIROOPLOT_LIB}\${PYTHONPATH:+:\$PYTHONPATH}\""
-)
+set(SCIROOPLOT_PYTHONPATH_DIR "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/scirooplot-env.sh.in
   ${SCIROOPLOT_BUILD_DATA_DIR}/scirooplot-env.sh
   @ONLY
 )
-set(SCIROOPLOT_PYTHONPATH_SETUP "")
 
 # --- Install config ---
 set(INSTALL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/install_stage)
@@ -305,6 +310,7 @@ install(
   DESTINATION ${SCIROOPLOT_INSTALL_DATA_DIR}
   PATTERN ".*" EXCLUDE
 )
+set(SCIROOPLOT_PYTHONPATH_DIR "${CMAKE_INSTALL_PREFIX}/${SCIROOPLOT_PYTHON_DIR}")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/scripts/scirooplot-env.sh.in
   ${INSTALL_STAGE}/scirooplot-env.sh
@@ -328,7 +334,7 @@ install(
 if(BUILD_PYTHON_BINDINGS)
   install(
     TARGETS SciRooPlotPython
-    LIBRARY DESTINATION ${Python3_SITEARCH}
+    LIBRARY DESTINATION ${SCIROOPLOT_PYTHON_DIR}
   )
 endif()
 
