@@ -228,14 +228,6 @@ target_compile_definitions(srp PRIVATE
 # -----------------------
 include(CMakePackageConfigHelpers)
 
-if(NOT DEFINED NO_INSTALL)
-  set(NO_INSTALL ${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT} CACHE BOOL "Build-only mode (no install)")
-endif()
-if(NO_INSTALL)
-    set_property(CACHE CMAKE_INSTALL_PREFIX PROPERTY VALUE "${CMAKE_CURRENT_BINARY_DIR}")
-    message(STATUS "No install location specified. Defaulting to build directory.")
-endif()
-
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/SciRooPlotConfigVersion.cmake"
   VERSION ${PROJECT_VERSION}
@@ -286,64 +278,73 @@ configure_file(
 )
 
 # --- Install config ---
-set(INSTALL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/install_stage)
-configure_package_config_file(
-  cmake/SciRooPlotConfig.cmake
-  "${INSTALL_STAGE}/SciRooPlotConfig.cmake"
-  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SciRooPlot
-)
-install(
-  FILES
+if(NOT DEFINED SCIROOPLOT_IS_INSTALL)
+  if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(SCIROOPLOT_IS_INSTALL OFF CACHE BOOL "SciRooPlot install mode")
+  else()
+    set(SCIROOPLOT_IS_INSTALL ON CACHE BOOL "SciRooPlot install mode")
+  endif()
+endif()
+if(SCIROOPLOT_IS_INSTALL)
+  set(INSTALL_STAGE ${CMAKE_CURRENT_BINARY_DIR}/install_stage)
+  configure_package_config_file(
+    cmake/SciRooPlotConfig.cmake
     "${INSTALL_STAGE}/SciRooPlotConfig.cmake"
-    "cmake/SciRooPlotHelpers.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/SciRooPlotConfigVersion.cmake"
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SciRooPlot
-)
-install(
-  EXPORT SciRooPlotTargets
-  NAMESPACE SciRooPlot::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SciRooPlot
-)
-set(SCIROOPLOT_INSTALL_DATA_DIR ${CMAKE_INSTALL_DATAROOTDIR}/scirooplot)
-install(
-  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/user ${SCIROOPLOT_BUILD_DATA_DIR}/TestFiles
-  DESTINATION ${SCIROOPLOT_INSTALL_DATA_DIR}
-  PATTERN ".*" EXCLUDE
-)
-set(SCIROOPLOT_PYTHONPATH_DIR "${CMAKE_INSTALL_PREFIX}/${SCIROOPLOT_PYTHON_DIR}")
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/scripts/scirooplot-env.sh.in
-  ${INSTALL_STAGE}/scirooplot-env.sh
-  @ONLY
-)
-install(
-  FILES ${INSTALL_STAGE}/scirooplot-env.sh
-  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/scirooplot
-)
-install(
-  DIRECTORY include/
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  PATTERN ".*" EXCLUDE
-)
-install(
-  TARGETS ${ALL_TARGETS}
-  EXPORT SciRooPlotTargets
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-if(BUILD_PYTHON_BINDINGS)
-  install(
-    TARGETS SciRooPlotPython
-    LIBRARY DESTINATION ${SCIROOPLOT_PYTHON_DIR}
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SciRooPlot
   )
+  install(
+    FILES
+      "${INSTALL_STAGE}/SciRooPlotConfig.cmake"
+      "cmake/SciRooPlotHelpers.cmake"
+      "${CMAKE_CURRENT_BINARY_DIR}/SciRooPlotConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SciRooPlot
+  )
+  install(
+    EXPORT SciRooPlotTargets
+    NAMESPACE SciRooPlot::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/SciRooPlot
+  )
+  set(SCIROOPLOT_INSTALL_DATA_DIR ${CMAKE_INSTALL_DATAROOTDIR}/scirooplot)
+  install(
+    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/user ${SCIROOPLOT_BUILD_DATA_DIR}/TestFiles
+    DESTINATION ${SCIROOPLOT_INSTALL_DATA_DIR}
+    PATTERN ".*" EXCLUDE
+  )
+  set(SCIROOPLOT_PYTHONPATH_DIR "${CMAKE_INSTALL_PREFIX}/${SCIROOPLOT_PYTHON_DIR}")
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/scirooplot-env.sh.in
+    ${INSTALL_STAGE}/scirooplot-env.sh
+    @ONLY
+  )
+  install(
+    FILES ${INSTALL_STAGE}/scirooplot-env.sh
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/scirooplot
+  )
+  install(
+    DIRECTORY include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    PATTERN ".*" EXCLUDE
+  )
+  install(
+    TARGETS ${ALL_TARGETS}
+    EXPORT SciRooPlotTargets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+  if(BUILD_PYTHON_BINDINGS)
+    install(
+      TARGETS SciRooPlotPython
+      LIBRARY DESTINATION ${SCIROOPLOT_PYTHON_DIR}
+    )
+  endif()
 endif()
 
 message(STATUS "---------------------------------------------------------------------------------------------")
 message(STATUS "IMPORTANT: To use SciRooPlot you have to put the following line into your .bashrc or .zshrc")
-if(NO_INSTALL)
-  message(STATUS "source ${SCIROOPLOT_BUILD_DATA_DIR}/scirooplot-env.sh")
-else()
+if(SCIROOPLOT_IS_INSTALL)
   message(STATUS "source ${CMAKE_INSTALL_PREFIX}/${SCIROOPLOT_INSTALL_DATA_DIR}/scirooplot-env.sh")
+else()
+  message(STATUS "source ${SCIROOPLOT_BUILD_DATA_DIR}/scirooplot-env.sh")
 endif()
 message(STATUS "---------------------------------------------------------------------------------------------")
 
