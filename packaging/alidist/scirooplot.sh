@@ -1,5 +1,5 @@
 package: SciRooPlot
-version: "v3.2.3"
+version: "v3.2.4"
 requires:
   - fmt
   - boost
