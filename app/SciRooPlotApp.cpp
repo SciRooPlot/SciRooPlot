@@ -302,7 +302,12 @@ int main(int argc, char* argv[])
     }
     Config::GetMutable().SetProperty(project, property, setting);
   } else {
-    ERROR("Invalid arguments.");
+    const vector<string> shellCommands = {"update", "edit", "cd", "stats", "init-py", "init-cpp"};
+    if (std::find(shellCommands.begin(), shellCommands.end(), command) != shellCommands.end()) {
+      ERROR("Source environment script to use this feature.");
+    } else {
+      ERROR("Invalid arguments.");
+    }
   }
   return 0;
 }
