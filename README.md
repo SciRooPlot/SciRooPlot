@@ -33,15 +33,18 @@ The installer will print a command required to load the SciRooPlot environment.
 Add this command to your shell startup script (for example `~/.bashrc` or `~/.zshrc`) to load SciRooPlot automatically.
 After setup, the commands `srp` and `plot` are available from your terminal.
 
-### Alternative: package installs
+### Alternative: Package Installs
 #### Homebrew
 ```bash
 brew tap SciRooPlot/scirooplot
 brew install SciRooPlot
+source "$(brew --prefix scirooplot)/share/scirooplot/scirooplot-env.sh"
 ```
+
 #### Conda
 ```bash
 conda install -c conda-forge scirooplot
+source "${CONDA_PREFIX}/share/scirooplot/scirooplot-env.sh"
 ```
 
 ## 📖 Documentation
