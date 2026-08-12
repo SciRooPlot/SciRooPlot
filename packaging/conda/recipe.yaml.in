@@ -46,12 +46,12 @@ tests:
       pip_check: true
   - package_contents:
       include:
-        - Plot.h
-        - PlotManager.h
-        - PlotPainter.h
-        - Helpers.h
-        - Config.h
-        - Logging.h
+        - SciRooPlot/Plot.h
+        - SciRooPlot/PlotManager.h
+        - SciRooPlot/PlotPainter.h
+        - SciRooPlot/Helpers.h
+        - SciRooPlot/Config.h
+        - SciRooPlot/Logging.h
       lib:
         - SciRooPlot
 

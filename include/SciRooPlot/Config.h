@@ -16,8 +16,8 @@
  ******************************************************************************************
  */
 
-#ifndef INCLUDE_CONFIG_H_
-#define INCLUDE_CONFIG_H_
+#ifndef INCLUDE_SCIROOPLOT_CONFIG_H_
+#define INCLUDE_SCIROOPLOT_CONFIG_H_
 
 #include <string>
 #include <filesystem>
@@ -117,4 +117,4 @@ class Config
 
 }  // namespace SciRooPlot
 
-#endif  // INCLUDE_CONFIG_H_
+#endif  // INCLUDE_SCIROOPLOT_CONFIG_H_

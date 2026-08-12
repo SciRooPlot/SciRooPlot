@@ -20,9 +20,9 @@
 #include <pybind11/stl.h>
 #include <pybind11/functional.h>
 
-#include "PlotManager.h"
-#include "Plot.h"
-#include "Logging.h"
+#include "SciRooPlot/PlotManager.h"
+#include "SciRooPlot/Plot.h"
+#include "SciRooPlot/Logging.h"
 
 #include <math.h>
 #include <optional>

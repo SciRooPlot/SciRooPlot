@@ -24,9 +24,9 @@
 
 #include "TSystem.h"
 
-#include "Config.h"
-#include "Helpers.h"
-#include "Logging.h"
+#include "SciRooPlot/Config.h"
+#include "SciRooPlot/Helpers.h"
+#include "SciRooPlot/Logging.h"
 
 using boost::property_tree::ptree;
 using boost::property_tree::read_info;

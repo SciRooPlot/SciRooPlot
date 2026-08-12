@@ -90,7 +90,7 @@ The following example code snippets with comments illustrate how plots are defin
 Since these examples are not comprehensive, to see all the functionality of SciRooPlot also have a look at the available setters in the corresponding header files.
 
 ```cpp
-#include "PlotManager.h"
+#include "SciRooPlot/PlotManager.h"
 using namespace SciRooPlot;
 
 // the plot manager is the central entity that handles your plots

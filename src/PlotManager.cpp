@@ -17,10 +17,10 @@
  */
 
 // framework dependencies
-#include "PlotManager.h"
-#include "PlotPainter.h"
-#include "Logging.h"
-#include "Helpers.h"
+#include "SciRooPlot/PlotManager.h"
+#include "SciRooPlot/PlotPainter.h"
+#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Helpers.h"
 
 // std dependencies
 #include <regex>

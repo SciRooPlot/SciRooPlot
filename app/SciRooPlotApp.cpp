@@ -16,9 +16,10 @@
  ******************************************************************************************
  */
 
-#include "PlotManager.h"
-#include "Plot.h"
-#include "Logging.h"
+#include "SciRooPlot/PlotManager.h"
+#include "SciRooPlot/Plot.h"
+#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Helpers.h"
 
 #include <vector>
 #include <iostream>
@@ -36,8 +37,6 @@
 #include <TFolder.h>
 #include <TKey.h>
 #include <TTree.h>
-
-#include "Helpers.h"
 
 using boost::property_tree::ptree;
 using std::string;

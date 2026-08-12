@@ -17,9 +17,9 @@
  */
 
 // framework dependencies
-#include "PlotPainter.h"
-#include "Logging.h"
-#include "Helpers.h"
+#include "SciRooPlot/PlotPainter.h"
+#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Helpers.h"
 
 // std dependencies
 #include <regex>

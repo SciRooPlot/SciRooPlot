@@ -16,8 +16,8 @@
  ******************************************************************************************
  */
 
-#ifndef INCLUDE_HELPERS_H_
-#define INCLUDE_HELPERS_H_
+#ifndef INCLUDE_SCIROOPLOT_HELPERS_H_
+#define INCLUDE_SCIROOPLOT_HELPERS_H_
 
 #include <boost/property_tree/ptree.hpp>
 #include "TSystem.h"
@@ -262,4 +262,4 @@ class RegexMatcher
 };
 
 }  // end namespace SciRooPlot
-#endif  // INCLUDE_HELPERS_H_
+#endif  // INCLUDE_SCIROOPLOT_HELPERS_H_

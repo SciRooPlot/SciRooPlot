@@ -16,8 +16,8 @@
  ******************************************************************************************
  */
 
-#ifndef INCLUDE_LOGGING_H_
-#define INCLUDE_LOGGING_H_
+#ifndef INCLUDE_SCIROOPLOT_LOGGING_H_
+#define INCLUDE_SCIROOPLOT_LOGGING_H_
 
 #include <fmt/core.h>
 #include <fmt/format.h>
@@ -211,4 +211,4 @@ inline void suppress_stderr(bool suppress)
 #define CHECK_TYPE(var) logger::check_type(var, #var);
 
 }  // end namespace SciRooPlot
-#endif  // INCLUDE_LOGGING_H_
+#endif  // INCLUDE_SCIROOPLOT_LOGGING_H_

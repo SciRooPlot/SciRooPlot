@@ -16,7 +16,7 @@
  ******************************************************************************************
  */
 
-#include "Helpers.h"
+#include "SciRooPlot/Helpers.h"
 #include <sys/stat.h>
 #include <vector>
 #include <string>

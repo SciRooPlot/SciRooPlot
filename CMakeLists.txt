@@ -148,12 +148,12 @@ add_library(SciRooPlot SHARED
   src/PlotPainter.cpp
   src/Helpers.cpp
   src/Config.cpp
-  include/Plot.h
-  include/PlotManager.h
-  include/PlotPainter.h
-  include/Helpers.h
-  include/Config.h
-  include/Logging.h
+  include/SciRooPlot/Plot.h
+  include/SciRooPlot/PlotManager.h
+  include/SciRooPlot/PlotPainter.h
+  include/SciRooPlot/Helpers.h
+  include/SciRooPlot/Config.h
+  include/SciRooPlot/Logging.h
 )
 add_library(SciRooPlot::SciRooPlot ALIAS SciRooPlot)
 

@@ -16,8 +16,8 @@
  ******************************************************************************************
  */
 
-#ifndef INCLUDE_PLOT_H_
-#define INCLUDE_PLOT_H_
+#ifndef INCLUDE_SCIROOPLOT_PLOT_H_
+#define INCLUDE_SCIROOPLOT_PLOT_H_
 
 // make root style property enums available to user
 #include "TAttMarker.h"
@@ -1172,4 +1172,4 @@ class Plot::Pad::LegendBox::LegendEntry
 };
 
 }  // end namespace SciRooPlot
-#endif  // INCLUDE_PLOT_H_
+#endif  // INCLUDE_SCIROOPLOT_PLOT_H_

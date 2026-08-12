@@ -16,16 +16,15 @@
  ******************************************************************************************
  */
 
-#include "PlotManager.h"
-#include "Plot.h"
-#include "Logging.h"
+#include "SciRooPlot/PlotManager.h"
+#include "SciRooPlot/Plot.h"
+#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Helpers.h"
 
 #include <string>
 #include <vector>
 #include <filesystem>
 #include <boost/program_options.hpp>
-
-#include "Helpers.h"
 
 using std::string;
 using std::vector;

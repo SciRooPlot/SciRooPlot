@@ -16,9 +16,9 @@
  ******************************************************************************************
  */
 
-#include "Plot.h"
-#include "Helpers.h"
-#include "Logging.h"
+#include "SciRooPlot/Plot.h"
+#include "SciRooPlot/Helpers.h"
+#include "SciRooPlot/Logging.h"
 #include <algorithm>
 #include <memory>
 #include <tuple>

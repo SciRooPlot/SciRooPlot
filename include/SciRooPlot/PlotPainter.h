@@ -16,8 +16,8 @@
  ******************************************************************************************
  */
 
-#ifndef INCLUDE_PLOTPAINTER_H_
-#define INCLUDE_PLOTPAINTER_H_
+#ifndef INCLUDE_SCIROOPLOT_PLOTPAINTER_H_
+#define INCLUDE_SCIROOPLOT_PLOTPAINTER_H_
 
 #include "Plot.h"
 #include <variant>
@@ -165,4 +165,4 @@ class PlotPainter
   std::vector<int16_t> GenerateGradientColors(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1., bool savePalette = false);
 };
 }  // end namespace SciRooPlot
-#endif  // INCLUDE_PLOTPAINTER_H_
+#endif  // INCLUDE_SCIROOPLOT_PLOTPAINTER_H_

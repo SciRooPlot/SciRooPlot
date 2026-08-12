@@ -16,8 +16,8 @@
  ******************************************************************************************
  */
 
-#ifndef INCLUDE_PLOTMANAGER_H_
-#define INCLUDE_PLOTMANAGER_H_
+#ifndef INCLUDE_SCIROOPLOT_PLOTMANAGER_H_
+#define INCLUDE_SCIROOPLOT_PLOTMANAGER_H_
 
 #include <tuple>
 #include <map>
@@ -110,4 +110,4 @@ class PlotManager
 };
 
 }  // end namespace SciRooPlot
-#endif  // INCLUDE_PLOTMANAGER_H_
+#endif  // INCLUDE_SCIROOPLOT_PLOTMANAGER_H_
