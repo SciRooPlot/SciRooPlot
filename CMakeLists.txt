@@ -272,7 +272,7 @@ add_dependencies(srp generate_testfiles)
 
 set(SCIROOPLOT_PYTHONPATH_DIR "${CMAKE_INSTALL_LIBDIR}")
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/scripts/scirooplot-env.sh.in
+  ${CMAKE_CURRENT_SOURCE_DIR}/packaging/scirooplot-env.sh.in
   ${SCIROOPLOT_BUILD_DATA_DIR}/scirooplot-env.sh
   @ONLY
 )
@@ -304,7 +304,7 @@ install(
 )
 set(SCIROOPLOT_PYTHONPATH_DIR "${SCIROOPLOT_PYTHON_DIR}")
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/scripts/scirooplot-env.sh.in
+  ${CMAKE_CURRENT_SOURCE_DIR}/packaging/scirooplot-env.sh.in
   ${INSTALL_STAGE}/scirooplot-env.sh
   @ONLY
 )
@@ -343,7 +343,7 @@ add_custom_target(ProjectFiles SOURCES
     docs/ADVANCED_INSTALL.md
     docs/slides/slides.typ
     scripts/generateTestFiles.C
-    scripts/scirooplot-env.sh.in
+    packaging/scirooplot-env.sh.in
     user/DefinePlots.py
     user/DefinePlots.cpp
 )
