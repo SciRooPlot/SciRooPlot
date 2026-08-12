@@ -272,8 +272,8 @@ add_dependencies(srp generate_testfiles)
 
 set(SCIROOPLOT_PYTHONPATH_DIR "${CMAKE_INSTALL_LIBDIR}")
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/packaging/scirooplot-env.sh.in
-  ${SCIROOPLOT_BUILD_DATA_DIR}/scirooplot-env.sh
+  ${CMAKE_CURRENT_SOURCE_DIR}/packaging/env.sh.in
+  ${SCIROOPLOT_BUILD_DATA_DIR}/env.sh
   @ONLY
 )
 
@@ -304,12 +304,12 @@ install(
 )
 set(SCIROOPLOT_PYTHONPATH_DIR "${SCIROOPLOT_PYTHON_DIR}")
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/packaging/scirooplot-env.sh.in
-  ${INSTALL_STAGE}/scirooplot-env.sh
+  ${CMAKE_CURRENT_SOURCE_DIR}/packaging/env.sh.in
+  ${INSTALL_STAGE}/env.sh
   @ONLY
 )
 install(
-  FILES ${INSTALL_STAGE}/scirooplot-env.sh
+  FILES ${INSTALL_STAGE}/env.sh
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/scirooplot
 )
 install(
@@ -332,7 +332,7 @@ endif()
 install(CODE [[
   message(STATUS "---------------------------------------------------------------------------------------------")
   message(STATUS "IMPORTANT: To use SciRooPlot you have to put the following line into your .bashrc or .zshrc")
-  message(STATUS "source ${CMAKE_INSTALL_PREFIX}/${SCIROOPLOT_INSTALL_DATA_DIR}/scirooplot-env.sh")
+  message(STATUS "source ${CMAKE_INSTALL_PREFIX}/${SCIROOPLOT_INSTALL_DATA_DIR}/env.sh")
   message(STATUS "---------------------------------------------------------------------------------------------")
 ]])
 
@@ -343,7 +343,7 @@ add_custom_target(ProjectFiles SOURCES
     docs/ADVANCED_INSTALL.md
     docs/slides/slides.typ
     scripts/generateTestFiles.C
-    packaging/scirooplot-env.sh.in
+    packaging/env.sh.in
     user/DefinePlots.py
     user/DefinePlots.cpp
 )

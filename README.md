@@ -38,13 +38,13 @@ After setup, the commands `srp` and `plot` are available from your terminal.
 ```bash
 brew tap SciRooPlot/scirooplot
 brew install SciRooPlot
-source "$(brew --prefix scirooplot)/share/scirooplot/scirooplot-env.sh"
+source "$(brew --prefix scirooplot)/share/scirooplot/env.sh"
 ```
 
 #### Conda
 ```bash
 conda install -c conda-forge scirooplot
-source "${CONDA_PREFIX}/share/scirooplot/scirooplot-env.sh"
+source "${CONDA_PREFIX}/share/scirooplot/env.sh"
 ```
 
 ## 📖 Documentation

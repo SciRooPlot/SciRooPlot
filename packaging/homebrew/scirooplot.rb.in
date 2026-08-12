@@ -31,7 +31,7 @@ class Scirooplot < Formula
     <<~EOS
       To activate SciRooPlot (best place it in ~/.zshrc or ~/.bashrc):
 
-        source $(brew --prefix scirooplot)/share/scirooplot/scirooplot-env.sh
+        source $(brew --prefix scirooplot)/share/scirooplot/env.sh
     EOS
   end
 end

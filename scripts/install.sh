@@ -111,7 +111,7 @@ fi
 cmake --build "${BUILD_DIR}" >/dev/null 2>&1
 cmake --install "${BUILD_DIR}" >/dev/null 2>&1
 
-ENV_SCRIPT="${INSTALL_PREFIX}/share/scirooplot/scirooplot-env.sh"
+ENV_SCRIPT="${INSTALL_PREFIX}/share/scirooplot/env.sh"
 
 echo "========================================"
 echo "SciRooPlot installation complete."

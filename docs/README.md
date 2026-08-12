@@ -22,7 +22,7 @@ SciRooPlot is installed as follows:
 ```
 To use the app, put this line in your .bashrc or .bash_aliases (and run it once or start a new terminal session):
 ```
-    source /path/to/SciRooPlot/build/share/scirooplot/scirooplot-env.sh
+    source /path/to/SciRooPlot/build/share/scirooplot/env.sh
 ```
 Now the two commands `srp` and `plot` are available.
 N.B.: keep up-to-date by running `srp update` from time to time.
