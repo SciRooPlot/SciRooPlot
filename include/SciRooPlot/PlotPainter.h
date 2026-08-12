@@ -19,13 +19,14 @@
 #ifndef INCLUDE_SCIROOPLOT_PLOTPAINTER_H_
 #define INCLUDE_SCIROOPLOT_PLOTPAINTER_H_
 
-#include "Plot.h"
-#include <variant>
-#include <unordered_map>
+#include "SciRooPlot/Plot.h"
+
 #include <map>
 #include <memory>
 #include <string>
 #include <tuple>
+#include <unordered_map>
+#include <variant>
 #include <vector>
 
 class TH1;

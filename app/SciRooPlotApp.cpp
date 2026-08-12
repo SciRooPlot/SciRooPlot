@@ -16,27 +16,29 @@
  ******************************************************************************************
  */
 
-#include "SciRooPlot/PlotManager.h"
-#include "SciRooPlot/Plot.h"
-#include "SciRooPlot/Logging.h"
 #include "SciRooPlot/Helpers.h"
+#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Plot.h"
+#include "SciRooPlot/PlotManager.h"
 
-#include <vector>
-#include <iostream>
-#include <string>
-#include <filesystem>
-#include <boost/program_options.hpp>
-#include <boost/property_tree/info_parser.hpp>
-#include <fmt/ranges.h>
-
-#include "TFile.h"
-#include "TBrowser.h"
-#include "TRootBrowser.h"
-#include "TApplication.h"
-#include <TROOT.h>
+#include <TApplication.h>
+#include <TBrowser.h>
+#include <TFile.h>
 #include <TFolder.h>
 #include <TKey.h>
+#include <TROOT.h>
+#include <TRootBrowser.h>
 #include <TTree.h>
+
+#include <boost/program_options.hpp>
+#include <boost/property_tree/info_parser.hpp>
+
+#include <fmt/ranges.h>
+
+#include <filesystem>
+#include <iostream>
+#include <string>
+#include <vector>
 
 using boost::property_tree::ptree;
 using std::string;

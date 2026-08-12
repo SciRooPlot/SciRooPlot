@@ -16,65 +16,62 @@
  ******************************************************************************************
  */
 
-// framework dependencies
 #include "SciRooPlot/PlotPainter.h"
-#include "SciRooPlot/Logging.h"
-#include "SciRooPlot/Helpers.h"
 
-// std dependencies
-#include <regex>
-#include <numeric>
-#include <unordered_map>
+#include "SciRooPlot/Helpers.h"
+#include "SciRooPlot/Logging.h"
+
+#include <TApplication.h>
+#include <TCanvas.h>
+#include <TColorWheel.h>
+#include <TEfficiency.h>
+#include <TExec.h>
+#include <TF1.h>
+#include <TF2.h>
+#include <TF3.h>
+#include <TFrame.h>
+#include <TGWindow.h>
+#include <TGraph.h>
+#include <TGraph2D.h>
+#include <TGraph2DAsymmErrors.h>
+#include <TGraph2DErrors.h>
+#include <TGraphAsymmErrors.h>
+#include <TGraphBentErrors.h>
+#include <TGraphErrors.h>
+#include <TGraphSmooth.h>
+#include <TH1.h>
+#include <TH2.h>
+#include <TH3.h>
+#include <THn.h>
+#include <THnSparse.h>
+#include <TIterator.h>
+#include <TLatex.h>
+#include <TLegend.h>
+#include <TLegendEntry.h>
+#include <TLine.h>
+#include <TObjArray.h>
+#include <TObject.h>
+#include <TObjectTable.h>
+#include <TPaveText.h>
+#include <TProfile.h>
+#include <TProfile2D.h>
+#include <TProfile3D.h>
+#include <TROOT.h>
+#include <TRootCanvas.h>
+#include <TSpline.h>
+#include <TStyle.h>
+#include <TSystem.h>
+#include <TText.h>
+#include <TTimeStamp.h>
+#include <TView.h>
+
 #include <memory>
+#include <numeric>
+#include <regex>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <vector>
-
-// root dependencies
-#include "TROOT.h"
-#include "TSystem.h"
-#include "TStyle.h"
-#include "TCanvas.h"
-#include "TH1.h"
-#include "TH2.h"
-#include "TH3.h"
-#include "THn.h"
-#include "THnSparse.h"
-#include "TProfile.h"
-#include "TProfile2D.h"
-#include "TProfile3D.h"
-#include "TGraph.h"
-#include "TGraphErrors.h"
-#include "TGraphAsymmErrors.h"
-#include "TGraphBentErrors.h"
-#include "TGraph2D.h"
-#include "TGraph2DErrors.h"
-#include "TGraph2DAsymmErrors.h"
-#include "TGraphSmooth.h"
-#include "TF1.h"
-#include "TF2.h"
-#include "TF3.h"
-#include "TEfficiency.h"
-
-#include "TFrame.h"
-#include "TLine.h"
-#include "TLegendEntry.h"
-#include "TIterator.h"
-#include "TObjArray.h"
-#include "TObject.h"
-#include "TObjectTable.h"
-#include "TExec.h"
-#include "TTimeStamp.h"
-#include "TLegend.h"
-#include "TText.h"
-#include "TPaveText.h"
-#include "TLatex.h"
-#include "TSpline.h"
-#include "TView.h"
-#include "TApplication.h"
-#include "TGWindow.h"
-#include "TRootCanvas.h"
-#include "TColorWheel.h"
 
 using std::array;
 using std::nullopt;

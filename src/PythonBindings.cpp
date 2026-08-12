@@ -16,29 +16,29 @@
  ******************************************************************************************
  */
 
+#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Plot.h"
+#include "SciRooPlot/PlotManager.h"
+
+#include <TDirectory.h>
+#include <TEnum.h>
+#include <TEnumConstant.h>
+#include <TGraphErrors.h>
+#include <TH1.h>
+#include <TH2.h>
+#include <TSystem.h>
+
+#include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/functional.h>
-
-#include "SciRooPlot/PlotManager.h"
-#include "SciRooPlot/Plot.h"
-#include "SciRooPlot/Logging.h"
 
 #include <math.h>
-#include <optional>
-#include <utility>
-#include <tuple>
-#include <vector>
-#include <string>
 #include <numeric>
-
-#include "TSystem.h"
-#include "TEnum.h"
-#include "TEnumConstant.h"
-#include "TGraphErrors.h"
-#include "TH1.h"
-#include "TH2.h"
-#include "TDirectory.h"
+#include <optional>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 namespace py = pybind11;
 using namespace SciRooPlot;

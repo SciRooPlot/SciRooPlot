@@ -19,10 +19,11 @@
 #ifndef INCLUDE_SCIROOPLOT_CONFIG_H_
 #define INCLUDE_SCIROOPLOT_CONFIG_H_
 
-#include <string>
+#include <boost/property_tree/info_parser.hpp>
+
 #include <filesystem>
 #include <map>
-#include <boost/property_tree/info_parser.hpp>
+#include <string>
 
 namespace SciRooPlot
 {

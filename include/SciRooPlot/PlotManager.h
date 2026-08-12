@@ -19,14 +19,16 @@
 #ifndef INCLUDE_SCIROOPLOT_PLOTMANAGER_H_
 #define INCLUDE_SCIROOPLOT_PLOTMANAGER_H_
 
-#include <tuple>
+#include "SciRooPlot/Plot.h"
+
+#include <TApplication.h>
+
 #include <map>
 #include <memory>
+#include <string>
+#include <tuple>
 #include <unordered_map>
 #include <vector>
-#include <string>
-#include "TApplication.h"
-#include "Plot.h"
 
 class TCanvas;
 namespace ROOT

@@ -16,17 +16,19 @@
  ******************************************************************************************
  */
 
-#include <iostream>
-#include <string>
-#include <boost/property_tree/info_parser.hpp>
-#include <utility>
-#include <vector>
-
-#include "TSystem.h"
-
 #include "SciRooPlot/Config.h"
+
 #include "SciRooPlot/Helpers.h"
 #include "SciRooPlot/Logging.h"
+
+#include <TSystem.h>
+
+#include <boost/property_tree/info_parser.hpp>
+
+#include <iostream>
+#include <string>
+#include <utility>
+#include <vector>
 
 using boost::property_tree::ptree;
 using boost::property_tree::read_info;

@@ -19,14 +19,16 @@
 #ifndef INCLUDE_SCIROOPLOT_HELPERS_H_
 #define INCLUDE_SCIROOPLOT_HELPERS_H_
 
+#include <TSystem.h>
+
 #include <boost/property_tree/ptree.hpp>
-#include "TSystem.h"
-#include <tuple>
-#include <string>
-#include <vector>
-#include <regex>
-#include <optional>
+
 #include <cmath>
+#include <optional>
+#include <regex>
+#include <string>
+#include <tuple>
+#include <vector>
 
 namespace SciRooPlot
 {

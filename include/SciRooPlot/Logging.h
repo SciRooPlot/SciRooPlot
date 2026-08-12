@@ -19,15 +19,16 @@
 #ifndef INCLUDE_SCIROOPLOT_LOGGING_H_
 #define INCLUDE_SCIROOPLOT_LOGGING_H_
 
+#include "SciRooPlot/Config.h"
+
 #include <fmt/core.h>
 #include <fmt/format.h>
-#include <string_view>
-#include <memory>
-#include <utility>
-#include <string>
-#include <iostream>
 
-#include "Config.h"
+#include <iostream>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <utility>
 
 #if defined(__clang__) || defined(__GNUC__)
 #include <cxxabi.h>

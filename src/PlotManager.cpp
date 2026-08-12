@@ -16,48 +16,45 @@
  ******************************************************************************************
  */
 
-// framework dependencies
 #include "SciRooPlot/PlotManager.h"
-#include "SciRooPlot/PlotPainter.h"
-#include "SciRooPlot/Logging.h"
+
 #include "SciRooPlot/Helpers.h"
+#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/PlotPainter.h"
 
-// std dependencies
-#include <regex>
-#include <filesystem>
-#include <limits>
-#include <unordered_map>
-#include <memory>
-#include <string>
-#include <tuple>
-#include <vector>
-#include <set>
-#include <utility>
-#include <iostream>
+#include <ROOT/RCsvDS.hxx>
+#include <ROOT/RDataFrame.hxx>
+#include <TApplication.h>
+#include <TCanvas.h>
+#include <TError.h>
+#include <TF1.h>
+#include <TF2.h>
+#include <TF3.h>
+#include <TFile.h>
+#include <TFolder.h>
+#include <TGraph2D.h>
+#include <TGraphErrors.h>
+#include <TH1.h>
+#include <TKey.h>
+#include <TPave.h>
+#include <TROOT.h>
+#include <TRootCanvas.h>
+#include <TSystem.h>
+#include <TTree.h>
 
-// boost dependencies
 #include <boost/property_tree/info_parser.hpp>
 
-// root dependencies
-#include "ROOT/RDataFrame.hxx"
-#include "ROOT/RCsvDS.hxx"
-#include "TApplication.h"
-#include "TROOT.h"
-#include "TSystem.h"
-#include "TError.h"
-#include "TFile.h"
-#include "TRootCanvas.h"
-#include "TCanvas.h"
-#include "TKey.h"
-#include "TH1.h"
-#include "TF1.h"
-#include "TF2.h"
-#include "TF3.h"
-#include "TGraphErrors.h"
-#include "TGraph2D.h"
-#include "TFolder.h"
-#include "TPave.h"
-#include "TTree.h"
+#include <filesystem>
+#include <iostream>
+#include <limits>
+#include <memory>
+#include <regex>
+#include <set>
+#include <string>
+#include <tuple>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 
 using boost::property_tree::ptree;
 using std::map;

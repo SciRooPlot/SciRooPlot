@@ -17,9 +17,10 @@
  */
 
 #include "SciRooPlot/Helpers.h"
+
+#include <string>
 #include <sys/stat.h>
 #include <vector>
-#include <string>
 
 using std::string;
 using std::tuple;

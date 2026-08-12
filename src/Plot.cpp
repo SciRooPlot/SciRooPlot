@@ -17,14 +17,16 @@
  */
 
 #include "SciRooPlot/Plot.h"
+
 #include "SciRooPlot/Helpers.h"
 #include "SciRooPlot/Logging.h"
+
 #include <algorithm>
 #include <memory>
-#include <tuple>
-#include <vector>
 #include <string>
+#include <tuple>
 #include <utility>
+#include <vector>
 
 using boost::property_tree::ptree;
 using std::nullopt;

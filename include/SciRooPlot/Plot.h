@@ -20,22 +20,23 @@
 #define INCLUDE_SCIROOPLOT_PLOT_H_
 
 // make root style property enums available to user
-#include "TAttMarker.h"
-#include "TAttLine.h"
-#include "TAttFill.h"
-#include "TCandle.h"
-#include "Rtypes.h"
-#include "TColor.h"
-#include "TF1.h"
+#include <Rtypes.h>
+#include <TAttFill.h>
+#include <TAttLine.h>
+#include <TAttMarker.h>
+#include <TCandle.h>
+#include <TColor.h>
+#include <TF1.h>
 
 #include <boost/property_tree/ptree.hpp>
-#include <optional>
-#include <tuple>
+
 #include <map>
 #include <memory>
-#include <vector>
+#include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
+#include <vector>
 
 namespace SciRooPlot
 {
