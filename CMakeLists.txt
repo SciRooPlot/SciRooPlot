@@ -332,7 +332,7 @@ endif()
 install(CODE [[
   message(STATUS "---------------------------------------------------------------------------------------------")
   message(STATUS "IMPORTANT: To use SciRooPlot you have to put the following line into your .bashrc or .zshrc")
-  message(STATUS "source ${CMAKE_INSTALL_PREFIX}/${SCIROOPLOT_INSTALL_DATA_DIR}/env.sh")
+  message(STATUS "source ${CMAKE_INSTALL_PREFIX}/share/scirooplot/env.sh")
   message(STATUS "---------------------------------------------------------------------------------------------")
 ]])
 
