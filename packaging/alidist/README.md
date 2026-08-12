@@ -1,5 +1,6 @@
 ## Installation with aliBuild
-Put `scirooplot.sh` into the `alidist` folder and install via
+Copy `scirooplot.sh.in` and replace `@VERSION@` with the desired version number.
+Then rename it to `scirooplot.sh`, put it into the `alidist` folder and install via
 ```bash
 aliBuild build SciRooPlot
 ```
