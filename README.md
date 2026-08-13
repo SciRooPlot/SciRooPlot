@@ -43,7 +43,7 @@ source "$(brew --prefix scirooplot)/share/scirooplot/env.sh"
 
 #### Conda
 ```bash
-conda install -c conda-forge scirooplot
+conda install conda-forge::scirooplot
 source "${CONDA_PREFIX}/share/scirooplot/env.sh"
 ```
 
