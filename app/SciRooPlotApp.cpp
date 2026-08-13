@@ -233,8 +233,6 @@ int main(int argc, char* argv[])
       std::filesystem::path path(sourceDir);
       if (std::filesystem::exists(path)) {
         std::cout << "  Source: " << std::filesystem::canonical(path).string() << "\n";
-      } else {
-        std::cout << "  Source: <not available>\n";
       }
     }
     std::cout << "  Env:    " << getenv("SCIROOPLOT_ENV") << "\n";

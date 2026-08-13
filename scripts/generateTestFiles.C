@@ -1,9 +1,9 @@
-#include "TSystem.h"
-#include "TFile.h"
-#include "TMath.h"
-#include "TH1.h"
-#include "TF1.h"
-#include "TGraphErrors.h"
+#include <TSystem.h>
+#include <TFile.h>
+#include <TMath.h>
+#include <TH1.h>
+#include <TF1.h>
+#include <TGraphErrors.h>
 
 shared_ptr<TH1> getExampleMultDist(int nSamples)
 {
