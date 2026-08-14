@@ -64,28 +64,41 @@ if [[ -f "${CACHE_FILE}" ]]; then
     CACHED_PREFIX=$(grep -m1 '^CMAKE_INSTALL_PREFIX:PATH=' "${CACHE_FILE}" | cut -d= -f2)
 
     if [[ -z "${CACHED_PREFIX}" ]]; then
-        echo "Error: Could not determine existing CMake install prefix."
+        echo "Error: Could not determine CMake install prefix."
         exit 1
     fi
 
-    if [[ "${PREFIX_SET}" -eq 1 && "${CACHED_PREFIX}" != "${INSTALL_PREFIX}" ]]; then
-        echo "Error: Existing build configuration uses a different install prefix:"
+    CACHED_ENV_SCRIPT="${CACHED_PREFIX}/share/scirooplot/env.sh"
+
+    if [[ -f "${CACHED_ENV_SCRIPT}" ]]; then
+        # the CMake build has previously been installed.
+        if [[ "${PREFIX_SET}" -eq 1 && "${CACHED_PREFIX}" != "${INSTALL_PREFIX}" ]]; then
+            echo "Error: Existing installation uses a different install prefix:"
+            echo
+            echo "  Current:   ${CACHED_PREFIX}"
+            echo "  Requested: ${INSTALL_PREFIX}"
+            echo
+            echo "Run with --reinstall to configure with the new prefix."
+            exit 1
+        fi
+
+        INSTALL_PREFIX="${CACHED_PREFIX}"
+
+        echo "Existing SciRooPlot installation detected."
+        echo "Updating installation:"
+        echo "  ${INSTALL_PREFIX}"
+    else
+        # there is a CMake build, but it has never been installed.
+        echo "Development build detected."
+        echo "No existing SciRooPlot installation found."
+        echo "Installation prefix from CMake:"
+        echo "  ${CACHED_PREFIX}"
         echo
-        echo "  Current:   ${CACHED_PREFIX}"
-        echo "  Requested: ${INSTALL_PREFIX}"
-        echo
-        echo "Run with --reinstall to configure with the new prefix."
+        echo "Run ./scripts/install.sh to install SciRooPlot."
         exit 1
     fi
-
-    INSTALL_PREFIX="${CACHED_PREFIX}"
-
-    echo "Existing SciRooPlot installation detected."
-    echo "Updating installation:"
-    echo "  ${INSTALL_PREFIX}"
 else
-    echo "No existing SciRooPlot installation detected."
-    echo "Installing to:"
+    echo "Installing SciRooPlot to:"
     echo "  ${INSTALL_PREFIX}"
 fi
 
