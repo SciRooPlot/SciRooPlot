@@ -59,6 +59,7 @@ if [[ "${REINSTALL}" -eq 1 ]]; then
   rm -f "${CACHE_FILE}"
 fi
 
+DO_INSTALL=1
 # determine installation prefix
 if [[ -f "${CACHE_FILE}" ]]; then
   CACHED_PREFIX=$(grep -m1 '^CMAKE_INSTALL_PREFIX:PATH=' "${CACHE_FILE}" | cut -d= -f2)
@@ -91,11 +92,8 @@ if [[ -f "${CACHE_FILE}" ]]; then
     # there is a CMake build, but it has never been installed.
     echo "Development build detected."
     echo "No existing SciRooPlot installation found."
-    echo "Installation prefix from CMake:"
-    echo "  ${CACHED_PREFIX}"
-    echo
-    echo "Run ./scripts/install.sh to install SciRooPlot."
-    exit 1
+    echo "Skipping installation."
+    DO_INSTALL=0
   fi
 else
   echo "Installing SciRooPlot to:"
@@ -105,7 +103,9 @@ fi
 echo
 echo "Source directory : ${SOURCE_DIR}"
 echo "Build directory  : ${BUILD_DIR}"
-echo "Install prefix   : ${INSTALL_PREFIX}"
+if [[ "${DO_INSTALL}" -eq 1 ]]; then
+  echo "Install prefix   : ${INSTALL_PREFIX}"
+fi
 echo
 
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -121,30 +121,40 @@ if [[ ! -f "${CACHE_FILE}" ]]; then
     -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"
 fi
 
-cmake --build "${BUILD_DIR}" >/dev/null 2>&1
-cmake --install "${BUILD_DIR}" >/dev/null 2>&1
-
-ENV_SCRIPT="${INSTALL_PREFIX}/share/scirooplot/env.sh"
+cmake --build "${BUILD_DIR}" || exit 1
+if [[ "${DO_INSTALL}" -eq 1 ]]; then
+  cmake --install "${BUILD_DIR}" >/dev/null 2>&1 || exit 1
+fi
 
 echo "========================================"
-echo "SciRooPlot installation complete."
-echo
-echo "Install prefix:"
-echo "  ${INSTALL_PREFIX}"
-echo
 
-if [[ -f "${ENV_SCRIPT}" ]]; then
-  echo "Activate SciRooPlot in the current shell with:"
+if [[ "${DO_INSTALL}" -eq 1 ]]; then
+  echo "SciRooPlot installation complete."
   echo
-  echo "  source ${ENV_SCRIPT}"
+  echo "Install prefix:"
+  echo "  ${INSTALL_PREFIX}"
   echo
-  echo "To enable it automatically in future shells,"
-  echo "add this line to ~/.bashrc or ~/.zshrc:"
-  echo
-  echo "  source ${ENV_SCRIPT}"
+
+  ENV_SCRIPT="${INSTALL_PREFIX}/share/scirooplot/env.sh"
+
+  if [[ -f "${ENV_SCRIPT}" ]]; then
+    echo "Activate SciRooPlot in the current shell with:"
+    echo
+    echo "  source ${ENV_SCRIPT}"
+    echo
+    echo "To enable it automatically in future shells,"
+    echo "add this line to ~/.bashrc or ~/.zshrc:"
+    echo
+    echo "  source ${ENV_SCRIPT}"
+  fi
 else
-  echo "Warning: Environment script not found:"
-  echo "  ${ENV_SCRIPT}"
+  ENV_SCRIPT="${BUILD_DIR}/share/scirooplot/env.sh"
+
+  echo "SciRooPlot development build updated."
+  echo
+  echo "Activate the development build in the current shell with:"
+  echo
+  echo "  source ${ENV_SCRIPT}"
 fi
 
 echo
