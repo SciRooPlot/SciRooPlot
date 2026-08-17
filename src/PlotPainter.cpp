@@ -217,10 +217,25 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
     // Pad placing
     array<double_t, 4> padPos = {0., 0., 1., 1.};
-    if (!(pad.GetXLow() || pad.GetYLow() || pad.GetXUp() || pad.GetYUp()) || (*pad.GetXLow() > *pad.GetXUp()) || (*pad.GetYLow() > *pad.GetYUp()) || (*pad.GetXLow() < 0) || (*pad.GetXLow() > 1) || (*pad.GetXUp() < 0) || (*pad.GetXUp() > 1) || (*pad.GetYLow() < 0) || (*pad.GetYLow() > 1) || (*pad.GetYUp() < 0) || (*pad.GetYUp() > 1)) {
+
+    auto xLow = pad.GetXLow();
+    auto yLow = pad.GetYLow();
+    auto xUp = pad.GetXUp();
+    auto yUp = pad.GetYUp();
+
+    const bool valid =
+      xLow && yLow && xUp && yUp &&
+      *xLow >= 0 && *xLow <= 1 &&
+      *xUp >= 0 && *xUp <= 1 &&
+      *yLow >= 0 && *yLow <= 1 &&
+      *yUp >= 0 && *yUp <= 1 &&
+      *xLow <= *xUp &&
+      *yLow <= *yUp;
+
+    if (!valid) {
       WARNING("Position of pad {} was not defined properly! Drawing it over whole plot.", padID);
     } else {
-      padPos = {*pad.GetXLow(), *pad.GetYLow(), *pad.GetXUp(), *pad.GetYUp()};
+      padPos = {*xLow, *yLow, *xUp, *yUp};
     }
 
     // get the settings for this pad
@@ -492,7 +507,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         } else if constexpr (is_graph_1d<data_type>()) {
           // smooth
           if (data->GetNiterSmooth()) {
-            TGraphSmooth smoother;
+            TGraphSmooth smoother;  // owns and deletes smoothed graph
             for (uint16_t iter = 0; iter < *data->GetNiterSmooth(); ++iter) {
               TGraph* smoothGraph = smoother.SmoothSuper(data_ptr);
               for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
@@ -1121,7 +1136,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     uint8_t iColumn{};
     double_t contentWidthPixel{};
     double_t titleWidthPixel{};
-    vector<uint32_t> contentWidthPixelPerColumn(nColumns, 0);
+    vector<uint32_t> contentWidthPixelPerColumn(nColumns, 1);
 
     double_t lineHeightPixel{text_size};
     if (text_font % 10 <= 2) lineHeightPixel = GetTextSizePixel(text_size);
@@ -1747,10 +1762,10 @@ void PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
     }
   }
   if (doInterpol) {
-    if (denomY) delete denomY;
-    if (denomEy) delete denomEy;
-    if (denomEyLow) delete denomEyLow;
-    if (denomEyHigh) delete denomEyHigh;
+    if (denomY) delete[] denomY;
+    if (denomEy) delete[] denomEy;
+    if (denomEyLow) delete[] denomEyLow;
+    if (denomEyHigh) delete[] denomEyHigh;
   }
   if (deleteDenom) {
     delete denominator;

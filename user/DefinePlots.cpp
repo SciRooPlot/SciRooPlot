@@ -1,7 +1,8 @@
-#include "SciRooPlot/PlotManager.h"
 #include "SciRooPlot/Logging.h"
-#include <string>
+#include "SciRooPlot/PlotManager.h"
+
 #include <filesystem>
+#include <string>
 #define SRC_DIR std::filesystem::absolute(__FILE__).parent_path().string() + "/"
 
 using std::string;

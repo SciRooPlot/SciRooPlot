@@ -143,7 +143,10 @@ std::vector<T> string_to_vector(std::string itemString)
 {
   // safety in case user put some blank spaces between numbers
   if constexpr (!std::is_same_v<T, std::string>) {
-    static_cast<void>(std::remove_if(itemString.begin(), itemString.end(), ::isspace));
+    itemString.erase(
+      std::remove_if(itemString.begin(), itemString.end(),
+                     [](unsigned char c) { return std::isspace(c); }),
+      itemString.end());
   }
   std::vector<T> items;
 

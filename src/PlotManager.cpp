@@ -532,7 +532,7 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
           mDataBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()];
           if (ratio->GetDenomDataInfo().dataDims.size()) {
             auto& dataInfos = mDataInfoBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()];
-            auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
+            auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == ratio->GetDenomDataInfo().GetNameSuffix(); });
             if (iter == dataInfos.end()) {
               mDataInfoBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()].push_back(ratio->GetDenomDataInfo());
             }
@@ -544,6 +544,7 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
 
   if (selectedPlots.empty()) {
     ERROR("No plots were created.");
+    return;
   }
 
   try {
@@ -592,19 +593,21 @@ bool PlotManager::FillBuffer()
         continue;
       } else if (dataSource == "USER_GRAPHS") {
         auto strs = split_string(dataName, ';');
-        auto xStrs = split_string(strs[0], ',');
-        auto yStrs = split_string(strs[1], ',');
-        vector<double_t> x;
-        vector<double_t> y;
-        for (size_t i = 0; i < xStrs.size(); ++i) {
-          x.push_back(std::stod(xStrs[i]));
-          y.push_back(std::stod(yStrs[i]));
-        }
-        if (!x.size() || x.size() != y.size()) {
-          ERROR("Incompatible number of points.");
-        } else {
-          dataPtr.reset(new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data()));
-          static_cast<TGraph*>(dataPtr.get())->SetName(dataName.data());
+        if (strs.size() == 2) {
+          auto xStrs = split_string(strs[0], ',');
+          auto yStrs = split_string(strs[1], ',');
+          if (!xStrs.size() || xStrs.size() != yStrs.size()) {
+            ERROR("Incompatible number of points.");
+          } else {
+            vector<double_t> x;
+            vector<double_t> y;
+            for (size_t i = 0; i < xStrs.size(); ++i) {
+              x.push_back(std::stod(xStrs[i]));
+              y.push_back(std::stod(yStrs[i]));
+            }
+            dataPtr.reset(new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data()));
+            static_cast<TGraph*>(dataPtr.get())->SetName(dataName.data());
+          }
         }
         continue;
       }
@@ -732,7 +735,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 
   // if plot already exists, delete the old one first
   if (mCanvasRegistry.find(plot.GetUniqueName()) != mCanvasRegistry.end()) {
-    ERROR("Plot {} was already created. Replacing it.", plot.GetUniqueName());
+    WARNING("Plot {} was already created. Replacing it.", plot.GetUniqueName());
     mCanvasRegistry.erase(plot.GetUniqueName());
   }
   if (plot.GetGroup().empty()) {
@@ -829,12 +832,12 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 
   if (mOutputDirectory.empty()) {
     ERROR("No output directory was specified. Cannot save plot.");
-    return true;
+    return false;
   }
   auto parentDir = (mOutputDirectory.back() == '/') ? std::filesystem::path(mOutputDirectory).parent_path().parent_path() : std::filesystem::path(mOutputDirectory).parent_path();
   if (!std::filesystem::exists(parentDir)) {
     ERROR("Parent path {} of output directory does not exist.", parentDir.string());
-    return true;
+    return false;
   }
 
   if (mode == "file") {
@@ -888,7 +891,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 
   if (fileEnding.empty()) {
     ERROR("No valid output format was specified. Cannot save plot.");
-    return true;
+    return false;
   }
 
   string fileName = plot.GetName();
@@ -911,7 +914,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
       folderName = gifFolderName;
     }
   }
-  gSystem->Exec((string("mkdir -p ") + folderName).data());
+  std::filesystem::create_directories(folderName);
   canvas->SaveAs(fullName.data());
   // reset TCandle range options to their default values after drawing data
   TCandle::SetBoxRange(0.5);
@@ -1115,7 +1118,14 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs)
       subFolder = static_cast<TDirectory*>(folder)->FindObject(subDirs[0].data());
     }
     deleteFolder = false;
-  } else if (folder->InheritsFrom(TCollection::Class()) || folder->InheritsFrom(TFolder::Class())) {
+  } else if (folder->InheritsFrom(TFolder::Class())) {
+    subFolder = static_cast<TFolder*>(folder)->FindObject(subDirs[0].data());
+    if (subFolder) {
+      static_cast<TFolder*>(subFolder)->SetOwner();
+      // if subfolder is part of list, remove it first to avoid double deletion
+      static_cast<TFolder*>(folder)->Remove(subFolder);
+    }
+  } else if (folder->InheritsFrom(TCollection::Class())) {
     subFolder = static_cast<TCollection*>(folder)->FindObject(subDirs[0].data());
     if (subFolder) {
       static_cast<TCollection*>(subFolder)->SetOwner();
