@@ -169,6 +169,10 @@ Plot Plot::Clone() const
     std::transform(newPlot[padID].GetTextBoxes().begin(), newPlot[padID].GetTextBoxes().end(),
                    newPlot[padID].GetTextBoxes().begin(),
                    [](const auto& text_ptr) { return std::make_shared<Plot::Pad::TextBox>(*text_ptr); });
+
+    if (newPlot[padID].mRefFunc) {
+      newPlot[padID].mRefFunc = newPlot[padID].mRefFunc->Clone();
+    }
   }
   return newPlot;
 }
@@ -208,6 +212,11 @@ void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
 
 auto Plot::SetName(const string& name) -> decltype(*this)
 {
+  if (str_contains(name, " ")) {
+    ERROR("Whitespaces are not allowed in plot or group names!");
+    ERROR("-> Please check '{}' in '{}'!", name, mGroup);
+    return *this;
+  }
   mName = name;
   UpdateUniqueName();
   return *this;
@@ -219,6 +228,15 @@ auto Plot::SetGroup(const string& group) -> decltype(*this)
     ERROR("Cannot set empty group.");
     return *this;
   }
+  if (str_contains(group, ".")) {
+    ERROR("Group must not contain '.'!");
+    return *this;
+  }
+  if (str_contains(group, " ")) {
+    ERROR("Whitespaces are not allowed in plot or group names!");
+    ERROR("-> Please check '{}' in '{}'!", mName, group);
+    return *this;
+  }
   mGroup = group;
   UpdateUniqueName();
   return *this;
@@ -228,6 +246,15 @@ auto Plot::AppendGroup(const string& subgroup) -> decltype(*this)
 {
   if (subgroup.empty()) {
     ERROR("Cannot append empty subgroup.");
+    return *this;
+  }
+  if (str_contains(subgroup, ".")) {
+    ERROR("Group must not contain '.'!");
+    return *this;
+  }
+  if (str_contains(subgroup, " ")) {
+    ERROR("Whitespaces are not allowed in plot or group names!");
+    ERROR("-> Please check '{}' in '{}/{}'!", mName, mGroup, subgroup);
     return *this;
   }
   mGroup = mGroup + "/" + subgroup;
