@@ -309,28 +309,29 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     pad_ptr->Draw();
     pad_ptr->cd();
     bool hasRefFunc = false;
+    auto drawData = pad.GetData();
 
-    if (pad.GetData().empty()) {
+    if (drawData.empty()) {
       if (pad.GetLegendBoxes().empty() && pad.GetTextBoxes().empty()) {
         WARNING("Nothing to be drawn in pad {}.", padID);
         continue;
       }
     } else {
       // find data that should define the axis frame
-      auto framePos = std::find_if(pad.GetData().begin(), pad.GetData().end(), [](const auto& curData) { return curData->GetDefinesFrame(); });
-      uint8_t frameDataID = (framePos != pad.GetData().end()) ? framePos - pad.GetData().begin() : 0u;
+      auto framePos = std::find_if(drawData.begin(), drawData.end(), [](const auto& curData) { return curData->GetDefinesFrame(); });
+      size_t frameDataID = (framePos != drawData.end()) ? framePos - drawData.begin() : 0u;
       // make a copy of data that will serve as axis frame and put it in front of data vector
-      if (pad.GetData()[frameDataID]->GetType() == "ratio") {
-        pad.GetData().insert(pad.GetData().begin(), std::make_shared<Plot::Pad::Ratio>(*std::dynamic_pointer_cast<Plot::Pad::Ratio>(pad.GetData()[frameDataID])));
+      if (drawData[frameDataID]->GetType() == "ratio") {
+        drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Ratio>(*std::dynamic_pointer_cast<Plot::Pad::Ratio>(drawData[frameDataID])));
       } else {
-        pad.GetData().insert(pad.GetData().begin(), std::make_shared<Plot::Pad::Data>(*pad.GetData()[frameDataID]));
+        drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Data>(*drawData[frameDataID]));
       }
-      pad.GetData()[0]->SetLegendLabel("");  // axis frame should not appear in legend
+      drawData[0]->SetLegendLabel("");  // axis frame should not appear in legend
 
       // put reference function in data vector right after the axis histogram
       auto refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
       if (refFunc) {
-        pad.GetData().insert(pad.GetData().begin() + 1, refFunc);
+        drawData.insert(drawData.begin() + 1, refFunc);
         hasRefFunc = true;
       }
     }
@@ -339,7 +340,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     string drawingOptions;
     uint16_t dataIndex{};
     array<uint16_t, 6> defaultSettingIndices = {0};
-    for (const auto& data : pad.GetData()) {
+    for (const auto& data : drawData) {
       if (data->GetDrawingOptions()) drawingOptions += *data->GetDrawingOptions();
       // obtain a copy of the current data
       // retrieve the actual pointer to the data
