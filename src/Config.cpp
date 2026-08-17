@@ -156,6 +156,14 @@ void Config::ListProjects() const
 
 void Config::Rename(const std::string& projectName, const std::string& newProjectName)
 {
+  if (mProjects.find(projectName) == mProjects.end()) {
+    ERROR("Cannot find project {}.", projectName);
+    return;
+  }
+  if (mProjects.find(newProjectName) != mProjects.end()) {
+    ERROR("Project {} already exists.", newProjectName);
+    return;
+  }
   auto node = mProjects.extract(projectName);
   if (!node.empty()) {
     std::filesystem::path projectPath = ProjectPath(projectName);
@@ -342,12 +350,12 @@ Config::Project::Project(const ptree& tree)
   }
 }
 
-ptree Config::Project::GetTree()
+ptree Config::Project::GetTree() const
 {
   ptree tree;
   for (const auto& [property, value] : mProperties) {
     if (!value.empty()) {
-      tree.add(property, mProperties[property]);
+      tree.add(property, mProperties.at(property));
     }
   }
   return tree;
@@ -358,9 +366,9 @@ void Config::SetMatchCaseInsensitive(bool matchCaseInsensitive)
   mMatchCaseInsensitive = matchCaseInsensitive;
 }
 
-void Config::SetMatchContains(bool matchCaseInsensitive)
+void Config::SetMatchContains(bool matchContains)
 {
-  mMatchContains = matchCaseInsensitive;
+  mMatchContains = matchContains;
 }
 
 }  // namespace SciRooPlot

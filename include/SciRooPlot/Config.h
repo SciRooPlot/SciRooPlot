@@ -107,7 +107,7 @@ class Config
   struct Project {
     Project() = default;
     explicit Project(const boost::property_tree::ptree& tree);
-    boost::property_tree::ptree GetTree();
+    boost::property_tree::ptree GetTree() const;
     std::string Property(const std::string& property) const;
     std::map<std::string, std::string> mProperties;
   };
