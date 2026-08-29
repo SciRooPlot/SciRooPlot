@@ -92,7 +92,7 @@ PYBIND11_MODULE(SciRooPlot, m)
         plot[1].AddData("histo", "dataSource", "my label")
 
         pm.AddPlot(plot)
-        pm.CreatePlots(mode="pdf")
+        pm.GeneratePlots(mode="pdf")
   )pbdoc";
 
   // add path to root lib to be independent of user environment

@@ -59,8 +59,6 @@
     #(if lang == "py" { py } else { cpp })
   ]
 }
-#let columns(left, right) = {}
-
 #let prompt = text(fill: main-color, weight: "bold")[\$]
 #let terminal(body) = block(
   fill: rgb("fafafa"),
@@ -87,19 +85,23 @@
   #body
 ]
 
+#let names(..items) = items.pos().map(i => raw(i)).join(linebreak())
+
 #let api-table(rows) = block(
   fill: rgb("fafafa"),
   stroke: 1pt + rgb("d0d7de"),
   radius: 10pt,
-  inset: 10pt,
+  inset: 0pt,
   width: 100%,
+  clip: true,
 )[
   #set text(size: 13pt)
   #table(
-    columns: (48%, 52%),
+    columns: (44%, 56%),
     stroke: none,
-    inset: (x: 0.3em, y: 0.22em),
-    align: (left + horizon, left + horizon),
+    inset: (x: 0.6em, y: 0.5em),
+    align: (left + top, left + top),
+    fill: (x, y) => if calc.rem(y, 2) == 0 { rgb("eef2f5") } else { white },
     ..rows
   )
 ]
@@ -112,15 +114,16 @@
 
 
 #slide[
-  #if lang == "py" {
-    slide-title(
-      "SciRooPlot User Manual                               Python Version",
-    )
-  } else {
-    slide-title(
-      "SciRooPlot User Manual                                    C++ Version",
-    )
-  }
+  #grid(
+    columns: (1fr, auto),
+    align: (left + horizon, right + horizon),
+    text(fill: main-color, size: 28pt, weight: "bold")[= SciRooPlot User Manual],
+    text(fill: accent-color, size: 20pt, weight: "bold")[
+      #if lang == "py" { "Python Version" } else { "C++ Version" }
+    ],
+  )
+  #line(length: 100%, stroke: 3pt + accent-color)
+  #v(0.5em)
   #place(
     dy: 1cm,
     center + horizon,
@@ -177,7 +180,7 @@
         #v(0.1em)
         #card(
           "SciRooPlot",
-          black,
+          main-color,
           [
             ✓ Abstract plot specifications
             #linebreak()
@@ -610,7 +613,7 @@
 
       - Default settings applied to `plot[0]` automatically affect all pads unless overridden.
 
-      - Several ready-to-use base plots (e.g. `1d`, `2d`, `1d_ratio`) are provided with SciRooPlot.
+      - Several ready-to-use base plots (e.g. `1d`, `2d`, `1d_ratio`, `1d_3panels`) are provided with SciRooPlot.
 
       - Existing base plots can be used directly or modified to create custom layouts.
 
@@ -896,15 +899,13 @@
     [
       - Legend entries are generated automatically and inherit the appearance of the corresponding data by default.
 
-      - Labels support placeholders such as `<mean>`, `<integral>`, `<entries>`, `<maximum>`, which are expanded automatically.
+      - Labels support placeholders such as `<name>`, `<title>`, `<entries>`, `<integral>`, `<maximum>`, `<minimum>`, `<mean>`, expanded automatically -- with optional printf-style formatting, e.g. `<mean[.2f]>`.
 
       - Multiple legends can coexist and data can be assigned to specific legends via `SetLegend(n)`.
 
-      - Legend entries can be customized individually.
+      - Individual entries are looked up via `GetEntry(n)` and customized independently, e.g. to override a label.
 
-      - custom legends and legend entries can be made
-
-      - Text can be added also with multiple lines
+      - Text spanning multiple lines is written as a single string with `" // "` as the line delimiter; `SetLineSpacing()` controls the gap between lines.
     ],
     [
       #code-block(
@@ -926,6 +927,8 @@
           plot[1].AddLegend(0.9, 0.1); // rel. (x, y) pos. in pad
 
           plot[1].AddText(0.18, 0.88, "Work in progress");
+
+          plot[1].AddText("first line // second line");
           ```
         ],
         [
@@ -944,6 +947,8 @@
           plot[1].AddLegend(0.9, 0.1)  # rel. (x, y) pos. in pad
 
           plot[1].AddText(0.18, 0.88, "Work in progress")
+
+          plot[1].AddText("first line // second line")
           ```
         ],
       )
@@ -963,7 +968,7 @@
 
       - Projections can be restricted to selected ranges of the remaining axes using either bin numbers or user coordinates.
 
-      - The generic Project() function supports arbitrary-dimensional histograms and arbitrary projection axes.
+      - The generic `Project()` function supports arbitrary-dimensional histograms and arbitrary projection axes.
 
       - One- and two-dimensional profiles can be created analogously from multidimensional histograms.
 
@@ -1098,7 +1103,7 @@
 
       - Numerator and denominator can be looked up by name and source, or supplied as complete `Data` layouts.
 
-      - Use `SetIsCorrelated()` when numerator and denominator share statistics, so their uncertainties are propagated correctly.
+      - Use `SetIsCorrelated()` when numerator and denominator are sub-samples of one another (e.g. a selection and its parent sample), so Bayesian error propagation is applied instead of treating them as independent.
 
       - `SetDivideNormalized()` normalizes both terms to unity before dividing -- useful for comparing shapes rather than absolute yields.
 
@@ -1180,18 +1185,14 @@
     [
       #api-section("PlotManager", (
         [`PlotManager(projectName = "")`], [Construct a manager for a named project.],
-        [`MakeBasePlot(name = "1d", screenResolution = 100)`], [Static: retrieve a predefined base plot (e.g. `1d`, `2d`, `1d_ratio`).],
+        [`MakeBasePlot(name = "1d", screenResolution = 100)`], [Static: retrieve a predefined base plot (`1d`, `2d`, `1d_ratio`, `1d_3panels`).],
         [`AddDataSource(id, files)`], [Register file(s), a directory, or in-memory ROOT objects under an ID.],
-        [`SaveDataSources(file = {})`], [Write registered data sources to a config file.],
-        [`LoadDataSources(file = {})`], [Load data sources from a config file.],
         [`AddPlot(plot)`], [Register a plot with the manager.],
         [`AddBasePlot(basePlot)`], [Register a reusable base plot layout.],
-        [`AddColorOverview(name, group, colors = {})`], [Create a reference plot showing a color palette.],
         [`SavePlots(name, group, file = {})`], [Write matching plots to a config file.],
         [`LoadPlots(name, group, file = {})`], [Load plots from a config file.],
         [`GeneratePlots(mode, name, group)`], [Generate plots matching the request in the given mode.],
         [`ListPlots()`], [Print all registered plots.],
-        [`GetProjectProperty(property)`], [Read a project configuration property.],
         [`SetOutputDirectory(path)`], [Set the output directory for generated files.],
         [`SaveProject()`], [Persist the current project to disk.],
       ))
@@ -1200,17 +1201,12 @@
       #api-section("Plot", (
         [`Plot(name, group = "", basePlot = {})`], [Create a plot in a figure group, optionally from a base plot.],
         [`plot[padID]` / `GetPad(padID)`], [Access a pad by index.],
-        [`plot += other`], [Append the pads of another plot.],
-        [`plot + other`], [Combine two plots into a new one.],
+        [`plot += other`], [Append the pads of another plot into this one.],
         [`Clone()`], [Create a deep copy of the plot.],
-        [`SetName(name)` / `SetGroup(group)`], [Rename the plot or reassign its figure group.],
-        [`AppendGroup(subgroup)`], [Append a subgroup path to the figure group.],
+        [#names("SetName(name)", "SetGroup(group)", "AppendGroup(subgroup)")], [Rename the plot, reassign its figure group, or append a subgroup path.],
         [`SetBasePlot(name)`], [Apply a base plot layout by name.],
-        [`SetDimensions(width, height, fix = false)`], [Set canvas dimensions.],
-        [`SetWidth(width)` / `SetHeight(height)`], [Set canvas width or height individually.],
-        [`SetFixAspectRatio(fix = true)`], [Keep the aspect ratio fixed when resizing.],
-        [`SetFill(color, style = {}, alpha = {})`], [Configure plot background fill.],
-        [`SetFillColor/Style/Alpha(...)`], [Set an individual background fill property.],
+        [`SetDimensions(width, height, fix = false)`], [Set canvas dimensions (`fix` keeps the aspect ratio).],
+        [#names("SetFill(color, style = {}, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Configure plot background fill, all at once or individually.],
         [`SetTransparent()`], [Make the plot background transparent.],
       ))
     ],
@@ -1218,118 +1214,115 @@
 ]
 
 #slide[
-  #slide-title("Appendix: Pad (1/2) -- Content & Layout")
+  #slide-title("Appendix: Pad (1/2) -- Adding Content")
   #grid(
     columns: (49%, 49%),
     gutter: 2%,
     [
-      #api-section("Adding content", (
+      #api-section("Accessing pad content", (
         [`pad['X']` / `GetAxis(axis)`], [Access an axis object ('X', 'Y', 'Z').],
         [`pad(dataID)` / `GetData(dataID)`], [Access a `Data` object by index.],
-        [`pad += other`], [Merge another pad's content into this one.],
+        [`GetLegend(legendID)` / `GetText(textID)`], [Retrieve a previously added legend or text box.],
+      ))
+    ],
+    [
+      #api-section("Adding content", (
         [`AddData(name, dataset, label = {})`], [Add data looked up by name from a registered source.],
         [`AddData(name, layout, label = {})`], [Add data using a predefined `Data` layout.],
         [`AddFunction(function, label = {})`], [Add a `TF1`-style function expression.],
-        [`AddPoints(x, y, label = {})`], [Add points from separate X/Y arrays.],
-        [`AddPoints(positions, label = {})`], [Add points from (x, y) coordinate pairs.],
+        [`AddPoints(x, y, label = {})`], [Add points from separate X/Y arrays, or (x, y) pairs.],
         [`AddLine(pos1, pos2, label = {})`], [Add a line between two points.],
         [`AddRatio(...)`], [Add a ratio; overloads accept names, sources, or `Data` layouts.],
         [`AddText(xPos, yPos, text)` / `AddText(text)`], [Add a text box, fixed or auto-placed.],
         [`AddLegend(xPos, yPos, title = {})` / `AddLegend(title = {})`], [Add a legend, fixed or auto-placed.],
-        [`GetLegend(legendID)` / `GetText(textID)`], [Retrieve a previously added legend or text box.],
-        [`SetRefFunc(refFunc)`], [Register a reference function for the pad.],
-      ))
-    ],
-    [
-      #api-section("Position & view", (
-        [`SetPosition(xlow, ylow, xup, yup)`], [Set the pad's position within the canvas.],
-        [`SetMargins(top, bottom, left, right)`], [Set all four margins at once.],
-        [`SetTopMargin/BottomMargin/LeftMargin/RightMargin(...)`], [Set an individual margin.],
-        [`SetView(theta, phi)`], [Set the 3D viewing angles.],
-        [`SetPalette(palette)`], [Use a predefined ROOT palette (e.g. `kBird`).],
-        [`SetPalette(rgbEndpoints, alpha = {}, nColors = {})`], [Define a custom colour-gradient palette.],
-        [`SetRedrawAxes(redraw = true)`], [Redraw axes on top of the drawn data.],
-        [`SetFill(color, style = {}, alpha = {})`], [Configure pad background fill.],
-        [`SetFillColor/Style/Alpha(...)`], [Set an individual pad fill property.],
-        [`SetTransparent()`], [Make the pad background transparent.],
-        [`SetFrameFill(color, style = {}, alpha = {})`], [Configure the frame's fill.],
-        [`SetFrameFillColor/Style/Alpha(...)`], [Set an individual frame fill property.],
-        [`SetFrameBorder(color, style = {}, width = {}, alpha = {})`], [Configure the frame's border.],
-        [`SetFrameBorderColor/Alpha/Style/Width(...)`], [Set an individual frame border property.],
-        [`SetFrameTransparent()`], [Make the frame background transparent.],
       ))
     ],
   )
 ]
 
 #slide[
-  #slide-title("Appendix: Pad (2/2) -- Default Styling")
+  #slide-title("Appendix: Pad (2/2) -- Layout & Palette")
   #grid(
     columns: (49%, 49%),
     gutter: 2%,
     [
-      #api-section("Default text, colours & markers", (
-        [`SetDefaultTextSize/Color/Alpha/Font(...)`], [Default text styling applied pad-wide unless overridden.],
-        [`SetDefaultAlpha(alpha)`], [Default transparency for marker, line and fill.],
-        [`SetDefaultColors(colors)`], [Default cyclic colour list applied to new data.],
-        [`SetDefaultColors(rgbEndpoints, alpha = {}, nColors = {})`], [Default colours from a continuous gradient.],
-        [`SetDefaultMarkerAlpha/Size(...)`], [Default marker transparency/size.],
-        [`SetDefaultMarkerColors(colors)` / `(rgbEndpoints, ...)`], [Default cyclic or gradient marker colours.],
-        [`SetDefaultMarkerStyles(styles)`], [Default cyclic marker style list.],
+      #api-section("Position & view", (
+        [`SetPosition(xlow, ylow, xup, yup)`], [Set the pad's position within the canvas.],
+        [`SetMargins(top, bottom, left, right)`], [Set all four margins at once.],
+        [#names("SetTopMargin(top)", "SetBottomMargin(bottom)", "SetLeftMargin(left)", "SetRightMargin(right)")], [Set an individual margin.],
+        [`SetView(theta, phi)`], [Set the 3D viewing angles.],
+        [`SetRedrawAxes(redraw = true)`], [Redraw axes on top of the drawn data.],
       ))
     ],
     [
-      #api-section("Default lines, fills & options", (
-        [`SetDefaultLineAlpha/Width(...)`], [Default line transparency/width.],
-        [`SetDefaultLineColors(colors)` / `(rgbEndpoints, ...)`], [Default cyclic or gradient line colours.],
-        [`SetDefaultLineStyles(styles)`], [Default cyclic line style list.],
-        [`SetDefaultFillAlpha(alpha)`], [Default fill transparency.],
-        [`SetDefaultFillColors(colors)` / `(rgbEndpoints, ...)`], [Default cyclic or gradient fill colours.],
-        [`SetDefaultFillStyles(styles)`], [Default cyclic fill style list.],
-        [`SetDefaultDrawingOptionGraph/Hist/Hist2d(option)`], [Default draw-option alias per data kind.],
-        [`SetDefaultCandleBoxRange/WhiskerRange(option)`], [Default candle-plot box/whisker range.],
+      #api-section("Palette & background", (
+        [`SetPalette(palette)`], [Use a predefined ROOT palette (e.g. `kBird`).],
+        [`SetPalette(rgbEndpoints, alpha = {}, nColors = {})`], [Define a custom colour-gradient palette.],
+        [#names("SetFill(color, style = {}, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Configure pad background fill.],
+        [`SetTransparent()`], [Make the pad background transparent.],
+        [#names("SetFrameFill(color, style = {}, alpha = {})", "SetFrameFillColor(color)", "SetFrameFillStyle(style)", "SetFrameFillAlpha(alpha)")], [Configure the frame's fill.],
+        [#names("SetFrameBorder(color, style = {}, width = {}, alpha = {})", "SetFrameBorderColor(color)", "SetFrameBorderStyle(style)", "SetFrameBorderWidth(width)", "SetFrameBorderAlpha(alpha)")], [Configure the frame's border.],
       ))
     ],
   )
 ]
 
 #slide[
-  #slide-title("Appendix: Axis & Ratio")
+  #slide-title("Appendix: Pad Default Styling")
+  - These set the fallback style applied to newly added data unless overridden per `Data` object -- see the "Default Styles and Color Palettes" slide for usage.
   #grid(
-    columns: (54%, 44%),
+    columns: (49%, 49%),
     gutter: 2%,
     [
-      #api-section("Axis", (
-        [`SetTitle(title)`], [Axis title.],
-        [`SetRange(min, max)` / `SetMinRange` / `SetMaxRange`], [Set the axis range, fully or partially.],
-        [`SetColor(color)`], [Set both axis-line and tick colour.],
-        [`SetAxisColor(color)` / `SetAxisAlpha(alpha)`], [Axis line colour or transparency.],
-        [`SetNumDivisions(n)`], [Number of tick divisions.],
-        [`SetMaxDigits(n)`], [Max digits before scientific notation.],
-        [`SetTickLength(len)`], [Tick length.],
-        [`SetTitleFont/LabelFont(font)`], [Title or label font.],
-        [`SetTitleSize/LabelSize(size)`], [Title or label text size.],
-        [`SetTitleColor/LabelColor(color)`], [Title or label text colour.],
-        [`SetTitleAlpha/LabelAlpha(alpha)`], [Title or label text transparency.],
-        [`SetTitleOffset/LabelOffset(offset)`], [Title or label offset from the axis.],
-        [`SetTitleCenter/LabelCenter(center = true)`], [Center the title or labels.],
-        [`SetLog(isLog = true)`], [Logarithmic axis.],
-        [`SetGrid(isGrid = true)`], [Enable grid lines.],
-        [`SetOppositeTicks(bool = true)`], [Draw ticks on both sides.],
-        [`SetNoExponent(bool = true)`], [Disable exponent notation.],
-        [`SetTimeFormat(fmt)`], [ROOT time-axis format string.],
-        [`SetTickOrientation(mode)`], [Tick orientation.],
+      #api-section("Cyclic defaults (lists)", (
+        [`SetDefaultColors(colors)`], [Cyclic colour list applied to fill/text where relevant.],
+        [`SetDefaultMarkerColors(colors)`], [Cyclic marker colour list.],
+        [`SetDefaultMarkerStyles(styles)`], [Cyclic marker style list.],
+        [`SetDefaultLineColors(colors)`], [Cyclic line colour list.],
+        [`SetDefaultLineStyles(styles)`], [Cyclic line style list.],
+        [`SetDefaultFillColors(colors)`], [Cyclic fill colour list.],
+        [`SetDefaultFillStyles(styles)`], [Cyclic fill style list.],
+        [Any `SetDefault*Colors()` above], [Also accepts `(rgbEndpoints, alpha = {}, nColors = {})` for a continuous gradient instead of a list.],
       ))
     ],
     [
-      #api-section("Ratio", (
-        [`SetIsCorrelated(bool = true)`], [Treat numerator/denominator uncertainties as correlated.],
-        [`SetDivideNormalized(scaleBinWidth = false)`], [Normalize both sides to unity before dividing.],
-        [`Numer()` / `Denom()`], [Switch which side subsequent modifiers apply to (numerator by default).],
-        [`(all Data setters)`], [Every `Data` accessor is also available on `Ratio`, forwarded to the active side.],
+      #api-section("Scalar defaults & draw options", (
+        [#names("SetDefaultTextSize(size)", "SetDefaultTextColor(color)", "SetDefaultTextAlpha(alpha)", "SetDefaultTextFont(font)")], [Default text styling applied pad-wide.],
+        [#names("SetDefaultMarkerAlpha(alpha)", "SetDefaultMarkerSize(size)")], [Default marker transparency/size.],
+        [#names("SetDefaultLineAlpha(alpha)", "SetDefaultLineWidth(width)")], [Default line transparency/width.],
+        [`SetDefaultAlpha(alpha)` / `SetDefaultFillAlpha(alpha)`], [Default transparency for marker+line, or fill.],
+        [#names("SetDefaultDrawingOptionGraph(option)", "SetDefaultDrawingOptionHist(option)", "SetDefaultDrawingOptionHist2d(option)")], [Default draw-option alias per data kind.],
       ))
     ],
   )
+]
+
+#slide[
+  #slide-title("Appendix: Axis")
+  #api-section("Axis", (
+    [`SetTitle(title)`], [Axis title.],
+    [#names("SetRange(min, max)", "SetMinRange(min)", "SetMaxRange(max)")], [Set the axis range, fully or partially.],
+    [`SetColor(color)`], [Set both axis-line and tick colour.],
+    [#names("SetAxisColor(color)", "SetAxisAlpha(alpha)")], [Axis line colour or transparency.],
+    [#names("SetNumDivisions(n)", "SetMaxDigits(n)", "SetTickLength(len)")], [Tick divisions, max digits before scientific notation, and tick length.],
+    [#names("SetTitleFont(font)", "SetLabelFont(font)", "SetTitleSize(size)", "SetLabelSize(size)")], [Title/label font and size.],
+    [#names("SetTitleColor(color)", "SetLabelColor(color)", "SetTitleAlpha(alpha)", "SetLabelAlpha(alpha)")], [Title/label colour and transparency.],
+    [#names("SetTitleOffset(offset)", "SetLabelOffset(offset)")], [Title/label offset from the axis.],
+    [#names("SetTitleCenter(center = true)", "SetLabelCenter(center = true)")], [Center the title or labels.],
+    [#names("SetLog(isLog = true)", "SetGrid(isGrid = true)")], [Logarithmic axis, or grid lines.],
+    [#names("SetOppositeTicks(bool = true)", "SetNoExponent(bool = true)", "SetTickOrientation(mode)")], [Ticks on both sides, disable exponent notation, or set tick orientation (e.g. `"+-"`).],
+    [`SetTimeFormat(fmt)`], [ROOT time-axis format string.],
+  ))
+]
+
+#slide[
+  #slide-title("Appendix: Ratio")
+  - Every `Data` accessor from the next two slides is also available on `Ratio`, forwarded to whichever side (`Numer()`/`Denom()`) is currently active.
+  #api-section("Ratio-specific", (
+    [`SetIsCorrelated(bool = true)`], [Treat numerator/denominator as correlated (e.g. one is a sub-sample of the other) -- applies Bayesian error propagation.],
+    [`SetDivideNormalized(scaleBinWidth = false)`], [Normalize both sides to unity before dividing, to compare shapes rather than absolute yields.],
+    [`Numer()` / `Denom()`], [Switch which side subsequent modifiers apply to (numerator by default).],
+  ))
 ]
 
 #slide[
@@ -1339,68 +1332,58 @@
     gutter: 2%,
     [
       #api-section("Source, range & legend", (
-        [`AsRatio()`], [Reinterpret this `Data` as a `Ratio` (internal use).],
-        [`GetDataSource()`], [Get the associated data-source ID.],
         [`SetDataSource(dataset)`], [Set/override the data-source ID.],
         [`SetLayout(layout)` / `ApplyLayout(layout)`], [Assign or merge in a predefined `Data` layout.],
-        [`SetRangeX/Y(min, max)`], [Set the X or Y display range.],
-        [`SetMinRangeX/Y` / `SetMaxRangeX/Y`], [Set one bound of the X or Y range.],
-        [`UnsetRangeX/Y()`], [Remove a previously set range restriction.],
-        [`SetScaleMinimum/Maximum(scaleFactor)`], [Scale the displayed minimum/maximum.],
+        [#names("SetRangeX(min, max)", "SetRangeY(min, max)")], [Set the X or Y display range.],
+        [`UnsetRangeX()` / `UnsetRangeY()`], [Remove a previously set range restriction.],
+        [#names("SetScaleMinimum(f)", "SetScaleMaximum(f)")], [Scale the displayed minimum/maximum.],
         [`SetShowOverflowBins(bool = true)`], [Include overflow bins in the display.],
         [`SetLegendLabel(label)` / `SetLegend(legendID)`], [Set legend text, or assign to a specific legend.],
-        [`SetOptions(options)` / `SetOptions(alias)`], [Set a ROOT draw-option string or a predefined alias.],
-        [`UnsetOptions()`], [Clear draw options.],
-        [`SetTextFormat(fmt)`], [Set a text-formatting string (for placeholders like `<mean>`).],
+        [`SetOptions(options)` / `SetOptions(alias)`], [Set a ROOT draw-option string or a predefined alias (see the Drawing Option Aliases slide).],
+        [`SetTextFormat(fmt)`], [Printf-style format for label placeholders, e.g. `<mean[.2f]>`.],
       ))
     ],
     [
-      #api-section("Appearance & modifiers", (
+      #api-section("Appearance", (
         [`SetColor(color)` / `SetAlpha(alpha)`], [Set (or fade) marker, line and fill colour together.],
-        [`SetMarker(color, style, size, alpha = {})`], [Configure marker appearance in one call.],
-        [`SetMarkerColor/Alpha/Style/Size(...)`], [Set an individual marker property.],
-        [`SetLine(color, style, width, alpha = {})`], [Configure line appearance in one call.],
-        [`SetLineColor/Alpha/Style/Width(...)`], [Set an individual line property.],
-        [`SetFill(color, style, alpha = {})`], [Configure fill appearance in one call.],
-        [`SetFillColor/Style/Alpha(...)`], [Set an individual fill property.],
+        [#names("SetMarker(color, style, size, alpha = {})", "SetMarkerColor(color)", "SetMarkerStyle(style)", "SetMarkerSize(size)", "SetMarkerAlpha(alpha)")], [Marker appearance, all at once or individually.],
+        [#names("SetLine(color, style, width, alpha = {})", "SetLineColor(color)", "SetLineStyle(style)", "SetLineWidth(width)", "SetLineAlpha(alpha)")], [Line appearance, all at once or individually.],
+        [#names("SetFill(color, style, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Fill appearance, all at once or individually.],
         [`SetDefinesFrame(dontDraw = false)`], [Use this object to define the plot frame.],
         [`SetContours(contours)` / `SetContours(nContours)`], [Set explicit contour levels or their count.],
-        [`Normalize(scaleBinWidth = false)`], [Normalize the integral to unity.],
-        [`NormalizeToMaximum(bool = true)`], [Normalize the maximum to one.],
-        [`Scale(scaleFactor)`], [Scale the object's contents.],
-        [`DivideBinWidth(bool = true)`], [Divide contents by bin width.],
-        [`RebinX/Y(nGroup)` / `RebinXY(nX, nY)`], [Rebin one or both axes.],
-        [`Smooth(nIterSmooth = 1)`], [Apply smoothing.],
       ))
     ],
   )
 ]
 
 #slide[
-  #slide-title("Appendix: Data (2/2) -- Projections & Tree/Table Processing")
+  #slide-title("Appendix: Data (2/2) -- Modifiers & Processing")
   #grid(
     columns: (49%, 49%),
     gutter: 2%,
     [
-      #api-section("Histogram projections & profiles", (
-        [`Project(dims, ranges = {}, isUserCoord = {})`], [Generic N-dimensional histogram projection.],
-        [`ProjectX/ProjectY(start, end, isUserCoord = {})`], [Standard projection of a 2D histogram.],
+      #api-section("Transform existing histograms", (
+        [`Normalize(scaleBinWidth = false)` / `NormalizeToMaximum(bool = true)`], [Normalize the integral or the maximum to one.],
+        [`Scale(scaleFactor)`], [Scale the object's contents.],
+        [`DivideBinWidth(bool = true)`], [Divide contents by bin width.],
+        [`RebinX(n)` / `RebinY(n)` / `RebinXY(nx, ny)`], [Rebin one or both axes.],
+        [`Smooth(nIterSmooth = 1)`], [Apply smoothing.],
+        [`Project(dims, ranges = {}, isUserCoord = {})`], [Generic N-dimensional projection.],
+        [`ProjectX(...)` / `ProjectY(...)`], [Standard projection of a 2D histogram.],
         [`Profile(dims, ranges = {}, isUserCoord = {})`], [Generic multi-dimensional profile.],
-        [`ProfileX/ProfileY(start, end, isUserCoord = {})`], [Standard profile of a 2D histogram.],
+        [`ProfileX(...)` / `ProfileY(...)`], [Standard profile of a 2D histogram.],
       ))
     ],
     [
-      #api-section("Tree & table processing", (
-        [`Project(dataDims, weight = {})`], [Project tree/table columns into an N-D histogram.],
-        [`Project1D(x, weight = {})` / `Project2D(x, y, weight = {})`], [1D or 2D histogram from tree/table data.],
-        [`Profile(dataDims, profile, weight = {})`], [Profile of tree/table data over given dimensions.],
-        [`Profile1D(x, profile, weight = {})` / `Profile2D(x, y, profile, weight = {})`], [1D or 2D profile from tree/table data.],
-        [`Scatter(x, y)`], [Scatter plot from tree/table columns.],
+      #api-section("Tree & table data", (
+        [`Project1D(x, weight = {})` / `Project2D(x, y, weight = {})`], [1D/2D histogram from a column; `x` accepts a name, `(name, nBins)`, `(name, nBins, (min, max))`, or `(name, edges)`.],
+        [`Profile1D(x, profile, weight = {})` / `Profile2D(x, y, profile, weight = {})`], [1D/2D profile of one column over one or two others.],
+        [`Scatter(x, y)`], [Scatter plot from two columns; expressions like `"sqrt(x*x+y*y)"` are valid.],
         [`Scatter(x, y, xErr, yErr)`], [Scatter plot with symmetric errors.],
-        [`Scatter(x, y, xErrLow, xErrHigh, yErrLow, yErrHigh)`], [Scatter plot with asymmetric errors.],
+        [`Scatter(x, y, xLo, xHi, yLo, yHi)`], [Scatter plot with asymmetric errors.],
         [`Define(key, value)`], [Define a derived variable for use in expressions.],
-        [`Filter(filter)`], [Apply a row-selection expression.],
-        [`Entries(nEntries)` / `Entries(min, max)`], [Limit processing to first N entries or a range.],
+        [`Filter(filter)`], [Apply a row-selection expression, e.g. `"eta > 0"`. Chainable.],
+        [`Entries(n)` / `Entries(min, max)`], [Limit processing to the first N entries or a range.],
       ))
     ],
   )
@@ -1412,17 +1395,14 @@
     columns: (33%, 33%, 33%),
     gutter: 1%,
     [
-      #api-section("Box (shared by both)", (
+      #api-section("Box (shared)", (
         [`SetPosition(x, y)` / `SetSize(w, h)`], [Box position or dimensions.],
-        [`SetUserCoordinates(bool = true)`], [Use data coordinates instead of NDC.],
         [`SetAutoPlacement()`], [Let SciRooPlot place the box automatically.],
-        [`SetBorder(color, style, width, alpha = {})`], [Configure the border in one call.],
-        [`SetBorderColor/Alpha/Style/Width(...)`], [Set an individual border property.],
-        [`SetTextColor/Alpha/Font/Size(...)`], [Set an individual text property.],
-        [`SetFill(color, style, alpha)`], [Configure background fill.],
-        [`SetFillColor/Style/Alpha(...)`], [Set an individual fill property.],
+        [#names("SetBorder(color, style, width, alpha = {})", "SetBorderColor(color)", "SetBorderStyle(style)", "SetBorderWidth(width)")], [Border, all at once or individually.],
+        [#names("SetTextColor(color)", "SetTextFont(font)", "SetTextSize(size)", "SetTextAlpha(alpha)")], [Text styling.],
+        [#names("SetFill(color, style, alpha)", "SetFillColor(color)", "SetFillStyle(style)")], [Background fill.],
         [`SetTransparent()` / `SetNoBox()`], [Transparent background, or remove border and fill.],
-        [`SetMargin(margin)` / `SetLineSpacing(spacing)`], [Internal margin, or line/entry spacing.],
+        [`SetMargin(m)` / `SetLineSpacing(s)`], [Internal margin, or spacing between lines/entries.],
       ))
     ],
     [
@@ -1431,13 +1411,9 @@
         [`SetText(text)`], [Set the displayed text content.],
         [`LegendBox(title = {})` / `LegendBox(xPos, yPos, title = {})`], [Create a legend, auto-placed or fixed.],
         [`GetEntry(entryID)`], [Access a legend entry by index.],
-        [`SetTitle(title)`], [Set the legend title.],
-        [`SetNumColumns(n)`], [Number of legend columns.],
+        [`SetTitle(title)` / `SetNumColumns(n)`], [Legend title, or number of columns.],
+        [#names("SetDefaultLineColor(color)", "SetDefaultMarkerColor(color)", "SetDefaultFillColor(color)")], [Default per-kind colour for entries without one.],
         [`SetDefaultDrawStyle(style)`], [Default draw style for entries without one.],
-        [`SetDefaultColor/Alpha(...)`], [Default overall colour/transparency for entries.],
-        [`SetDefaultLineColor/Alpha/Style/Width(...)`], [Default line styling for entries.],
-        [`SetDefaultMarkerColor/Alpha/Style/Size(...)`], [Default marker styling for entries.],
-        [`SetDefaultFillColor/Alpha/Style(...)`], [Default fill styling for entries.],
         [`SetSymbolColScale(scale)`], [Scale the width of the symbol column.],
       ))
     ],
@@ -1445,12 +1421,9 @@
       #api-section("LegendEntry", (
         [`SetLabel(label)`], [Set the entry's label text.],
         [`SetRefData(refDataID)`], [Reference a `Data` object to copy its styling.],
-        [`SetDrawStyle(style)`], [Override the legend draw style.],
+        [`SetDrawStyle(style)`], [Override the legend draw style, e.g. `"L"`, `"EP"`.],
         [`SetColor(color)` / `SetAlpha(alpha)`], [Set overall colour/transparency.],
-        [`SetMarkerColor/Alpha/Style/Size(...)`], [Marker styling for this entry.],
-        [`SetLineColor/Alpha/Style/Width(...)`], [Line styling for this entry.],
-        [`SetFillColor/Alpha/Style(...)`], [Fill styling for this entry.],
-        [`SetTextColor/Alpha/Font/Size(...)`], [Label text styling for this entry.],
+        [#names("SetMarkerColor(color)", "SetLineColor(color)", "SetFillColor(color)", "SetTextColor(color)")], [Per-kind colour override for this entry.],
       ))
     ],
   )

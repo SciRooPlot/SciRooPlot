@@ -112,14 +112,14 @@ pm.AddDataSource("dataSourceD", {"/path/to/folder/with/rootfiles/"});
   // create the Plot object
   Plot plot("myPlot1", "myGroup"); // plots are organized in user defined groups
   // optionally you can also define subgroups within a group
-  plot.SetSubgroup("QA-Plots/closureTests");
+  plot.AppendGroup("QA-Plots/closureTests");
    // you always have to specify height and width of the plot:
   plot.SetDimensions(710, 710);
   plot.SetTransparent(); // for all other settings see the class definition in inc/Plot.h
 
   // a plot consists of multiple pads, which you can access via the [] operator (counting starts at '1'):
   plot[1].SetPosition(0., 0., 1., 1.); // specifies a pad that expands over the whole plot
-  plot[1].SetFillFrame(kRed+2);
+  plot[1].SetFrameFill(kRed+2);
   // ... see definition of Pad class in inc/Plot.h for the list of all accessors
 
   // you can also define default settings for ALL pads of the plot by using the padID=0, e.g.:
