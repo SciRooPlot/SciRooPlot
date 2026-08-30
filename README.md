@@ -23,13 +23,15 @@ ideas, suggestions, documentation improvements, and code contributions.
 Please feel free to open an issue to discuss an idea or submit a pull request.
 
 ## 🛠️ Installation
-SciRooPlot works on Linux and macOS and can be installed in three ways.
+SciRooPlot works on both Linux and macOS.
+It can be installed either via the package managers homebrew and conda, or using the SciRooPlot installer.
+The latter requires that [ROOT](https://github.com/root-project/root) and
+[Boost](https://www.boost.org/) are installed on your system.
 
 After installation, source the provided SciRooPlot environment script to enable all features.
 Once loaded, the `srp` and `plot` commands are available in your terminal.
 
-For convenience, you can add the source command to your shell startup file
-(for example, `~/.bashrc` or `~/.zshrc`) to load SciRooPlot automatically in new shell sessions.
+For convenience, you can add the source command to your shell startup file (for example `~/.bashrc` or `~/.zshrc`) to load SciRooPlot automatically in new shell sessions.
 
 ### Homebrew
 ```bash
@@ -45,14 +47,14 @@ source "${CONDA_PREFIX}/share/scirooplot/env.sh"
 ```
 
 ### Installer
-A working installation of [ROOT](https://github.com/root-project/root) and
-[Boost](https://www.boost.org/) is required.
 ```bash
 git clone https://github.com/SciRooPlot/SciRooPlot.git
 cd SciRooPlot
 ./scripts/install.sh
+source ./install/share/scirooplot/env.sh
 ```
-The installer will print the command needed to load the SciRooPlot environment.
+In your shell startup file you have to use the absolute path to the env script, which the installer will print at the end.
+You can also choose a custom install location via `--prefix <my/install/directory>`.
 
 ## 📖 Documentation
 
