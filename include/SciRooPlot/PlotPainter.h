@@ -102,7 +102,7 @@ inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist
   {hist_no_borders, "HIST ]["},
   {stars, "*H"},
   {text, "TEXT"},
-  {hbar, "HBAR ]["},
+  {hbar_no_borders, "HBAR ]["},
   {hbar1, "HBAR1"},
   {hbar2, "HBAR2"},
   {hbar3, "HBAR3"},

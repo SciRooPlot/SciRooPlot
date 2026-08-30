@@ -94,7 +94,7 @@ class Config
   void LoadConfig();
   void SaveConfig();
 
-  bool mModified;
+  bool mModified{false};
   int mLogLevel{LogLevel::debug};
   int mColorMode{ColorMode::bright};
   std::string mPlotMode{"show"};

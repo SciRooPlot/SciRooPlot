@@ -74,8 +74,11 @@ namespace SciRooPlot
  * Constructor for PlotManager.
  */
 //**************************************************************************************************
-PlotManager::PlotManager(const std::string& projectName) : mApp(new TApplication("MainApp", 0, nullptr)), mProjectName(projectName)
+PlotManager::PlotManager(const std::string& projectName) : mProjectName(projectName)
 {
+  if (!gApplication) {
+    new TApplication("MainApp", 0, nullptr);
+  }
   ROOT::EnableImplicitMT();
   gROOT->SetWebDisplay("off");
   gErrorIgnoreLevel = kWarning;

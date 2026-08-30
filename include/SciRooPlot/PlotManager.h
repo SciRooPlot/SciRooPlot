@@ -87,7 +87,6 @@ class PlotManager
   void SavePlotsToRootFile() const;
   void SaveDataToRootFile() const;
 
-  std::unique_ptr<TApplication> mApp;
   std::string mProjectName;
   const std::string mPlotsRootFile{"Plots.root"};
   const std::string mDataRootFile{"Data.root"};

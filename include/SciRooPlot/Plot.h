@@ -62,6 +62,7 @@ namespace SciRooPlot
   OPT(text)             \
   OPT(brackets)         \
   OPT(hbar)             \
+  OPT(hbar_no_borders)  \
   OPT(hbar1)            \
   OPT(hbar2)            \
   OPT(hbar3)            \

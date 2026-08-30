@@ -605,7 +605,7 @@ void exportLegendEntry(py::module_& m)
 void exportPythonDataInterfaces(py::module_& m)
 {
   auto graph = [](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& xerr, const std::vector<double>& yerr) {
-    const auto n = static_cast<int>(x.size());
+    const auto n = x.size();
     static py::module_ ROOT = py::module_::import("ROOT");
     static py::object BindObject = ROOT.attr("BindObject");
     static py::object TGraphErrorsClass = ROOT.attr("TGraphErrors");
@@ -617,7 +617,7 @@ void exportPythonDataInterfaces(py::module_& m)
     if (!yerr.empty() && yerr.size() != n)
       throw std::runtime_error("yerr has wrong size");
 
-    auto* g = new TGraphErrors(n, x.data(), y.data(), xerr.empty() ? nullptr : xerr.data(), yerr.empty() ? nullptr : yerr.data());
+    auto* g = new TGraphErrors(static_cast<int>(n), x.data(), y.data(), xerr.empty() ? nullptr : xerr.data(), yerr.empty() ? nullptr : yerr.data());
     g->SetName(name.data());
     return BindObject(reinterpret_cast<std::uintptr_t>(g), TGraphErrorsClass);
   };
