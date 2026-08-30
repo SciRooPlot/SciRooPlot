@@ -601,6 +601,58 @@
   )
 ]
 
+#if lang == "py" [
+  #slide[
+    #slide-title("Python Convenience Helpers")
+    #grid(
+      columns: (42%, 55%),
+      gutter: 3%,
+      [
+        - `histo()`, `histo2d()` and `graph()` build ROOT objects straight from plain Python data, without going through PyROOT's own constructors.
+
+        - `histo()` infers the axis range from the data if `range` is omitted; `bins` defaults to 100.
+
+        - `histo2d()` defaults to a 50 x 50 grid if `bins` is omitted; `bins` and `range` are given as `(x, y)` pairs.
+
+        - `graph()` builds a `TGraphErrors`, with optional per-point `xerr`/`yerr`.
+
+        - Inputs can be plain Python lists/tuples or numpy arrays -- anything iterable of numbers works.
+
+        - All three return an object usable directly as `AddDataSource()` input.
+
+        - Mismatched array lengths raise a clear error rather than silently producing bad data.
+      ],
+      [
+        #code-block(
+          [],
+          [
+            ```python
+            # a plain list, a tuple, or a numpy array all work
+            values = np.random.normal(0, 1, 1000)
+
+            myHist = histo("myHist", values, bins=200, range=(0.1, 20.))
+
+            xValues = np.linspace(0., 10., 10)
+            yValues = np.random.rand(10)
+
+            my2DHist = histo2d("my2DHist", xValues, yValues,
+                               bins=(60, 40),
+                               range=((0., 10.), (-5., 5.)))
+
+            xErrors = yErrors = np.full(10, 0.1)
+
+            myGraph = graph("myGraph", xValues, yValues,
+                            xerr=xErrors, yerr=yErrors)
+
+            pm.AddDataSource("sourceH", [myGraph, myHist, my2DHist])
+            ```
+          ],
+        )
+      ],
+    )
+  ]
+]
+
 #slide[
   #slide-title("Plot Appearance")
   #grid(
