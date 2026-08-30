@@ -504,6 +504,7 @@ class Plot::Pad::Data
   virtual Data& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});                                                     // for 2d histos
 
   struct data_dim_t {
+    data_dim_t() = default;
     data_dim_t(const char* _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), edges(_range), nBins(_nBins) {}
     data_dim_t(const std::string& _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), edges(_range), nBins(_nBins) {}
     data_dim_t(const std::string& _var, const std::vector<double_t>& _edges) : var(_var), edges(_edges) {}

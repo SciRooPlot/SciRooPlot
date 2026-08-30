@@ -49,6 +49,7 @@ endif()
 if(POLICY CMP0219)
     cmake_policy(SET CMP0219 NEW)
 endif()
+set(CMAKE_POLICY_DEFAULT_CMP0219 NEW CACHE STRING "" FORCE)
 # -----------------------
 # Dependencies
 # -----------------------

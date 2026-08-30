@@ -74,6 +74,51 @@ void exportTextBox(py::module_& m);
 void exportLegendBox(py::module_& m);
 void exportLegendEntry(py::module_& m);
 
+// custom caster for Data::data_dim_t: accepts "var", (var, nBins), (var, edges), (var, nBins, range)
+namespace pybind11::detail
+{
+template <>
+struct type_caster<Data::data_dim_t> {
+  using T = Data::data_dim_t;
+  PYBIND11_TYPE_CASTER(T, const_name("data_dim_t"));
+
+  bool load(handle src, bool)
+  {
+    namespace py = pybind11;
+    try {
+      if (py::isinstance<py::str>(src)) {
+        value = T(src.cast<std::string>());
+        return true;
+      }
+      if (!py::isinstance<py::sequence>(src)) return false;
+      auto seq = py::reinterpret_borrow<py::sequence>(src);
+      auto var = seq[0].cast<std::string>();
+      if (seq.size() == 1) {
+        value = T(var);
+      } else if (seq.size() == 2) {
+        try {
+          value = T(var, seq[1].cast<int32_t>());
+        } catch (const py::cast_error&) {
+          value = T(var, seq[1].cast<std::vector<double_t>>());
+        }
+      } else if (seq.size() == 3) {
+        value = T(var, seq[1].cast<int32_t>(), seq[2].cast<std::vector<double_t>>());
+      } else {
+        return false;
+      }
+      return true;
+    } catch (const py::cast_error&) {
+      return false;
+    }
+  }
+
+  static handle cast(const T& src, return_value_policy, handle)
+  {
+    return py::make_tuple(src.var, src.nBins, src.edges).release();
+  }
+};
+}  // namespace pybind11::detail
+
 PYBIND11_MODULE(SciRooPlot, m)
 {
   m.doc() = R"pbdoc(
@@ -153,14 +198,14 @@ void exportPlotManager(py::module_& m)
     .def("AddDataSource", overload_cast<const string&, const string&>(&PlotManager::AddDataSource), arg("dataSource"), arg("inputFile"))
     .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::list objs) { py::module_ ROOT = py::module_::import("ROOT"); py::object addressof = ROOT.attr("addressof"); std::vector<TObject*> v; for (auto o : objs) v.push_back(reinterpret_cast<TObject*>(addressof(o).cast<std::uintptr_t>())); self.AddDataSource(dataSource, v); }, py::arg("dataSource"), py::arg("inputData"))
     .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::object obj) { py::module_ ROOT = py::module_::import("ROOT"); py::object addressof = ROOT.attr("addressof"); auto ptr = reinterpret_cast<TObject*>(addressof(obj).cast<std::uintptr_t>()); self.AddDataSource(dataSource, ptr); }, py::arg("dataSource"), py::arg("inputData"))
-    .def("SaveDataSources", &PlotManager::SaveDataSources, arg("file") = vector<string>{})
-    .def("LoadDataSources", &PlotManager::LoadDataSources, arg("file") = vector<string>{})
+    .def("SaveDataSources", &PlotManager::SaveDataSources, arg("file") = py::none())
+    .def("LoadDataSources", &PlotManager::LoadDataSources, arg("file") = py::none())
     .def("AddPlot", &PlotManager::AddPlot, arg("plot"))
     .def("AddBasePlot", &PlotManager::AddBasePlot, arg("basePlot"))
     .def("AddColorOverview", &PlotManager::AddColorOverview, arg("name"), arg("group"), arg("colors") = vector<int32_t>{})
     .def("ListPlots", &PlotManager::ListPlots)
-    .def("LoadPlots", &PlotManager::LoadPlots, arg("name") = ".+", arg("group") = ".+", arg("file") = vector<string>{})
-    .def("SavePlots", &PlotManager::SavePlots, arg("name") = ".+", arg("group") = ".+", arg("file") = vector<string>{})
+    .def("LoadPlots", &PlotManager::LoadPlots, arg("name") = ".+", arg("group") = ".+", arg("file") = py::none())
+    .def("SavePlots", &PlotManager::SavePlots, arg("name") = ".+", arg("group") = ".+", arg("file") = py::none())
     .def("GeneratePlots", &PlotManager::GeneratePlots, arg("mode") = "show", arg("name") = ".+", arg("group") = ".+")
     .def("SetOutputDirectory", &PlotManager::SetOutputDirectory, arg("path"))
     .def("SaveProject", &PlotManager::SaveProject)
@@ -407,10 +452,10 @@ void exportRatio(py::module_& m)
     .def("Profile", overload_cast<vector<uint8_t>, vector<tuple<uint8_t, double_t, double_t>>, optional<bool>>(&Ratio::Profile), arg("dims"), arg("ranges") = vector<tuple<uint8_t, double_t, double_t>>{}, arg("isUserCoord") = nullopt, ref_int)
     .def("ProfileX", &Ratio::ProfileX, arg("startY") = 0, arg("endY") = -1, arg("isUserCoord") = nullopt, ref_int)
     .def("ProfileY", &Ratio::ProfileY, arg("startX") = 0, arg("endX") = -1, arg("isUserCoord") = nullopt, ref_int)
-    .def("Project", overload_cast<const vector<Ratio::data_dim_t>&, optional<string>>(&Ratio::Project), arg("dataDims"), arg("weight") = nullopt, ref_int)
+    .def("Project", overload_cast<const vector<Data::data_dim_t>&, optional<string>>(&Ratio::Project), arg("dataDims"), arg("weight") = nullopt, ref_int)
     .def("Project1D", &Ratio::Project1D, arg("x"), arg("weight") = nullopt, ref_int)
     .def("Project2D", &Ratio::Project2D, arg("x"), arg("y"), arg("weight") = nullopt, ref_int)
-    .def("Profile", overload_cast<const vector<Ratio::data_dim_t>&, const string&, optional<string>>(&Ratio::Profile), arg("dataDims"), arg("profile"), arg("weight") = nullopt, ref_int)
+    .def("Profile", overload_cast<const vector<Data::data_dim_t>&, const string&, optional<string>>(&Ratio::Profile), arg("dataDims"), arg("profile"), arg("weight") = nullopt, ref_int)
     .def("Profile1D", &Ratio::Profile1D, arg("x"), arg("profile"), arg("weight") = nullopt, ref_int)
     .def("Profile2D", &Ratio::Profile2D, arg("x"), arg("y"), arg("profile"), arg("weight") = nullopt, ref_int)
     .def("Scatter", overload_cast<const string&, const string&>(&Ratio::Scatter), arg("x"), arg("y"), ref_int)
