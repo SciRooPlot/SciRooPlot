@@ -2163,6 +2163,8 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
       read_from_tree(dataTree, mDenomDataInfo.entries.min, "denomData_entryMin");
       read_from_tree(dataTree, mDenomDataInfo.entries.max, "denomData_entryMax");
       read_from_tree(dataTree, mDenomDataInfo.isProfileNoScatter, "denomData_isProfileNoScatter");
+      read_from_tree(dataTree, mDenomDataInfo.definitions.keys, "denomData_definitions_keys");
+      read_from_tree(dataTree, mDenomDataInfo.definitions.values, "denomData_definitions_values");
     }
   }
   // extract proj info
@@ -2212,6 +2214,8 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
     put_in_tree(dataTree, mDenomDataInfo.entries.min, "denomData_entryMin");
     put_in_tree(dataTree, mDenomDataInfo.entries.max, "denomData_entryMax");
     put_in_tree(dataTree, mDenomDataInfo.isProfileNoScatter, "denomData_isProfileNoScatter");
+    put_in_tree(dataTree, mDenomDataInfo.definitions.keys, "denomData_definitions_keys");
+    put_in_tree(dataTree, mDenomDataInfo.definitions.values, "denomData_definitions_values");
   }
   if (mDenomProjInfo) {
     put_in_tree(dataTree, optional<vector<uint8_t>>{mDenomProjInfo->dims}, "denomProj_dims");
