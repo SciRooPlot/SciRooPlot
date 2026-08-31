@@ -15,7 +15,7 @@ repos:
     rev: v21.1.8
     hooks:
       - id: clang-format
-        files: ^(include|src|app)/.*\.(c|cc|cpp|cxx|h|hpp)$
+        files: ^(include|src|app|user)/.*\.(c|cc|cpp|cxx|h|hpp)$
 
   - repo: https://github.com/cpplint/cpplint
     rev: 2.0.2
@@ -36,4 +36,4 @@ repos:
     hooks:
       - id: shellcheck
         files: \.sh(\.in)?$
-        exclude: ^packaging/alidist/scirooplot\.sh$
+        exclude: ^packaging/alidist/scirooplot\.sh\.in$

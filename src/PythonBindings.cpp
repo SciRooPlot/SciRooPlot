@@ -197,7 +197,15 @@ void exportPlotManager(py::module_& m)
     .def("AddDataSource", overload_cast<const string&, const vector<string>&>(&PlotManager::AddDataSource), arg("dataSource"), arg("inputFiles"))
     .def("AddDataSource", overload_cast<const string&, const string&>(&PlotManager::AddDataSource), arg("dataSource"), arg("inputFile"))
     .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::list objs) { py::module_ ROOT = py::module_::import("ROOT"); py::object addressof = ROOT.attr("addressof"); std::vector<TObject*> v; for (auto o : objs) v.push_back(reinterpret_cast<TObject*>(addressof(o).cast<std::uintptr_t>())); self.AddDataSource(dataSource, v); }, py::arg("dataSource"), py::arg("inputData"))
-    .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::object obj) { py::module_ ROOT = py::module_::import("ROOT"); py::object addressof = ROOT.attr("addressof"); auto ptr = reinterpret_cast<TObject*>(addressof(obj).cast<std::uintptr_t>()); self.AddDataSource(dataSource, ptr); }, py::arg("dataSource"), py::arg("inputData"))
+    .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::object obj) {
+      static py::module_ ROOT = py::module_::import("ROOT");
+      static py::object TObjectClass = ROOT.attr("TObject");
+      if (!py::isinstance(obj, TObjectClass)) {
+        throw std::invalid_argument("inputData must be a ROOT TObject (e.g. a histogram, graph, or tree).");
+      }
+      py::object addressof = ROOT.attr("addressof");
+      auto ptr = reinterpret_cast<TObject*>(addressof(obj).cast<std::uintptr_t>());
+      self.AddDataSource(dataSource, ptr); }, py::arg("dataSource"), py::arg("inputData"))
     .def("SaveDataSources", &PlotManager::SaveDataSources, arg("file") = py::none())
     .def("LoadDataSources", &PlotManager::LoadDataSources, arg("file") = py::none())
     .def("AddPlot", &PlotManager::AddPlot, arg("plot"))
@@ -216,7 +224,7 @@ void exportPlot(py::module_& m)
 {
   py::class_<Plot>(m, "Plot")
     .def(py::init<const string&, const string&>(), arg("name"), arg("group"))
-    .def(py::init<const string&, const string&, const optional<string>&>(), arg("name") = "", arg("group"), arg("basePlot") = nullopt)
+    .def(py::init<const string&, const string&, const optional<string>&>(), arg("name"), arg("group") = "", arg("basePlot") = nullopt)
     .def(py::init<const Plot&, const std::string&, const optional<string>&>(), py::arg("other"), py::arg("name"), py::arg("group") = nullopt)
     .def("Print", py::overload_cast<>(&Plot::Print, py::const_))
     .def("__getitem__", [](Plot& self, uint8_t padID) -> Pad& { return self[padID]; }, ref_int)
@@ -260,6 +268,7 @@ void exportPad(py::module_& m)
     .def("SetDefaultTextSize", &Pad::SetDefaultTextSize, arg("size"), ref_int)
     .def("SetDefaultTextColor", &Pad::SetDefaultTextColor, arg("color"), ref_int)
     .def("SetDefaultTextAlpha", &Pad::SetDefaultTextAlpha, arg("alpha"), ref_int)
+    .def("SetDefaultTextFont", &Pad::SetDefaultTextFont, arg("font"), ref_int)
     .def("SetDefaultAlpha", &Pad::SetDefaultAlpha, arg("alpha"), ref_int)
     .def("SetDefaultColors", overload_cast<const vector<int16_t>&>(&Pad::SetDefaultColors), arg("colors"), ref_int)
     .def("SetDefaultColors", overload_cast<const vector<tuple<float_t, float_t, float_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetDefaultColors), arg("rgbEndpoints"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
@@ -654,6 +663,9 @@ void exportPythonDataInterfaces(py::module_& m)
     static py::module_ ROOT = py::module_::import("ROOT");
     static py::object BindObject = ROOT.attr("BindObject");
     static py::object TH2DClass = ROOT.attr("TH2D");
+
+    if (x.empty())
+      throw std::runtime_error("empty input");
 
     if (x.size() != y.size())
       throw std::runtime_error("x and y must have same length");

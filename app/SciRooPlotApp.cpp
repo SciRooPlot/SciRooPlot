@@ -229,11 +229,9 @@ int main(int argc, char* argv[])
     std::cout << "  Binary: " << getenv("SCIROOPLOT_BIN") << "\n";
     std::cout << "  Library:" << getenv("SCIROOPLOT_LIB") << "\n";
     auto sourceDir = getenv("SCIROOPLOT_SOURCE_DIR");
-    if (sourceDir) {
-      std::filesystem::path path(sourceDir);
-      if (std::filesystem::exists(path)) {
-        std::cout << "  Source: " << std::filesystem::canonical(path).string() << "\n";
-      }
+    std::filesystem::path path(sourceDir);
+    if (std::filesystem::exists(path)) {
+      std::cout << "  Source: " << std::filesystem::canonical(path).string() << "\n";
     }
     std::cout << "  Env:    " << getenv("SCIROOPLOT_ENV") << "\n";
 
@@ -252,11 +250,15 @@ int main(int argc, char* argv[])
     std::cout << ((project.empty()) ? Config::Get().Path().string() : Config::Get().ProjectPath(project).string()) << std::endl;
     return 0;
   } else if (command == "rename") {
-    if (setting.empty()) {
+    if (project.empty()) {
+      ERROR("Specify project to rename.");
+      return 1;
+    }
+    if (property.empty()) {
       ERROR("Specify new name for {}.", project);
       return 1;
     }
-    Config::GetMutable().Rename(project, setting);
+    Config::GetMutable().Rename(project, property);
   } else if (command == "clean") {
     Config::GetMutable().Clean();
   } else if (command == "reset") {

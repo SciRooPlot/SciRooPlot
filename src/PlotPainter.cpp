@@ -1216,7 +1216,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     if constexpr (isLegend) {
       totalWidthNDC = borderWidthNDC + 2 * marginNDC + symbolColWidthNDC + contentWidthNDC;
-      totalHeightNDC = (1 + lineSpacing) * nLines * lineHeightNDC / nColumns;
+      totalHeightNDC = (1 + lineSpacing) * lineHeightNDC * std::ceil(static_cast<double_t>(nLines) / nColumns);
       if (box->GetTitle()) {
         if (titleWidthNDC > totalWidthNDC) {
           totalWidthNDC = borderWidthNDC + titleWidthNDC + 0.1 * totalMarginWidthNDC;  // root places header at margin/10
@@ -1903,10 +1903,10 @@ void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<
   // sort the points first for the following algorithm to work properly
   graph->Sort();
 
-  int16_t pointsToRemoveHigh{};
-  int16_t pointsToRemoveLow{};
+  int32_t pointsToRemoveHigh{};
+  int32_t pointsToRemoveLow{};
 
-  for (int16_t i = 0; i < graph->GetN(); ++i) {
+  for (int32_t i = 0; i < graph->GetN(); ++i) {
     if (min && graph->GetX()[i] < *min) {
       ++pointsToRemoveLow;
     }
@@ -1915,10 +1915,10 @@ void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<
     }
   }
 
-  for (int16_t i = 0; i < pointsToRemoveHigh; ++i) {
+  for (int32_t i = 0; i < pointsToRemoveHigh; ++i) {
     graph->RemovePoint(graph->GetN() - 1);
   }
-  for (int16_t i = 0; i < pointsToRemoveLow; ++i) {
+  for (int32_t i = 0; i < pointsToRemoveLow; ++i) {
     graph->RemovePoint(0);
   }
 }
