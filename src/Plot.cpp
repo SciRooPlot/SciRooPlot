@@ -355,6 +355,8 @@ void Plot::operator+=(const Plot& plot)
   if (plot.mFill.style) mFill.style = plot.mFill.style;
   if (plot.mFill.alpha) mFill.alpha = plot.mFill.alpha;
 
+  if (plot.mPaintColorWheel) mPaintColorWheel = plot.mPaintColorWheel;
+
   for (const auto& [padID, pad] : plot.mPads) {
     mPads[padID];  // initializes the pad in case it was not yet defined in this plot
     mPads[padID] += pad;
@@ -2739,7 +2741,7 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
   read_from_tree(boxTree, mFill.style, "fill_style");
   read_from_tree(boxTree, mFill.color, "fill_color");
   read_from_tree(boxTree, mFill.alpha, "fill_alpha");
-  read_from_tree(boxTree, mText.style, "text_style");
+  read_from_tree(boxTree, mText.style, "text_font");
   read_from_tree(boxTree, mText.color, "text_color");
   read_from_tree(boxTree, mText.alpha, "text_alpha");
   read_from_tree(boxTree, mText.scale, "text_size");
@@ -2768,7 +2770,7 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
   put_in_tree(boxTree, mFill.style, "fill_style");
   put_in_tree(boxTree, mFill.color, "fill_color");
   put_in_tree(boxTree, mFill.alpha, "fill_alpha");
-  put_in_tree(boxTree, mText.style, "text_style");
+  put_in_tree(boxTree, mText.style, "text_font");
   put_in_tree(boxTree, mText.color, "text_color");
   put_in_tree(boxTree, mText.alpha, "text_alpha");
   put_in_tree(boxTree, mText.scale, "text_size");
@@ -3114,7 +3116,11 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetTitle(const string& title)
 
 Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns)
 {
-  mNumColumns = numColumns;
+  if (numColumns) {
+    mNumColumns = numColumns;
+  } else {
+    ERROR("Legend box cannot have 0 columns.");
+  }
   return *this;
 }
 
@@ -3274,7 +3280,7 @@ Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
   read_from_tree(legendEntryTree, mMarker.color, "marker_color");
   read_from_tree(legendEntryTree, mMarker.alpha, "marker_alpha");
   read_from_tree(legendEntryTree, mMarker.style, "marker_style");
-  read_from_tree(legendEntryTree, mMarker.scale, "marker_width");
+  read_from_tree(legendEntryTree, mMarker.scale, "marker_size");
   read_from_tree(legendEntryTree, mText.color, "text_color");
   read_from_tree(legendEntryTree, mText.alpha, "text_alpha");
   read_from_tree(legendEntryTree, mText.style, "text_font");
@@ -3302,7 +3308,7 @@ ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree() const
   put_in_tree(legendEntryTree, mMarker.color, "marker_color");
   put_in_tree(legendEntryTree, mMarker.alpha, "marker_alpha");
   put_in_tree(legendEntryTree, mMarker.style, "marker_style");
-  put_in_tree(legendEntryTree, mMarker.scale, "marker_width");
+  put_in_tree(legendEntryTree, mMarker.scale, "marker_size");
   put_in_tree(legendEntryTree, mText.color, "text_color");
   put_in_tree(legendEntryTree, mText.alpha, "text_alpha");
   put_in_tree(legendEntryTree, mText.style, "text_font");

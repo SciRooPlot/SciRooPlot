@@ -230,12 +230,17 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
   }
 
   TFile file(fileName.data(), mode.data());
+  if (file.IsZombie()) {
+    ERROR("Could not save ROOT data to data source {}.", dataSource);
+    return;
+  }
   TDirectory* dir = file.GetDirectory(dataSource.data());
   if (!dir) {
     dir = file.mkdir(dataSource.data());
   }
   dir->cd();
   for (auto object : inputData) {
+    if (!object) continue;
     string name = object->GetName();
     if (name.empty()) {
       WARNING("Cannot add nameless object of type {} to dataSource {}", object->ClassName(), dataSource);

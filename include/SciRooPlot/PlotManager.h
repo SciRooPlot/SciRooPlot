@@ -94,7 +94,6 @@ class PlotManager
   std::string mOutputDirectory;
   std::vector<Plot> mPlots;
   std::vector<Plot> mBasePlots;
-  std::map<std::string, boost::property_tree::ptree> mPropertyTreeCache;
   std::vector<const std::string*> mPlotViewHistory;
   int32_t mWindowOffsetY{};
   int32_t mFirstFreeColorIndex{TColor::GetFreeColorIndex()};

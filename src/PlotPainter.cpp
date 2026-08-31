@@ -71,6 +71,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using std::array;
@@ -731,13 +732,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             }
 
-            if (auto minScale = data->GetScaleMinimum()) {
-              axisHist_ptr->SetMinimum((*minScale) * axisHist_ptr->GetMinimum());
-            }
-            if (auto maxScale = data->GetScaleMaximum()) {
-              axisHist_ptr->SetMaximum((*maxScale) * axisHist_ptr->GetMaximum());
-            }
-
             if (textFontTitle) axis_ptr->SetTitleFont(*textFontTitle);
             if (textSizeTitle) axis_ptr->SetTitleSize(*textSizeTitle);
             if (textColorTitle) axis_ptr->SetTitleColor(*textColorTitle);
@@ -746,6 +740,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (textSizeLabel) axis_ptr->SetLabelSize(*textSizeLabel);
             if (textColorLabel) axis_ptr->SetLabelColor(*textColorLabel);
             if (textAlphaLabel) axis_ptr->SetLabelColor(TColor::GetColorTransparent(axis_ptr->GetLabelColor(), *textAlphaLabel));
+          }
+
+          if (auto minScale = data->GetScaleMinimum()) {
+            axisHist_ptr->SetMinimum((*minScale) * axisHist_ptr->GetMinimum());
+          }
+          if (auto maxScale = data->GetScaleMaximum()) {
+            axisHist_ptr->SetMaximum((*maxScale) * axisHist_ptr->GetMaximum());
           }
 
           if (isTHN) {
@@ -1993,21 +1994,24 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
   auto words_begin = std::sregex_iterator(str.begin(), str.end(), words_regex);
   auto words_end = std::sregex_iterator();
 
+  string result;
+  size_t lastEnd = 0;  // offset into the original str, just past the previous match
+
   for (std::sregex_iterator match = words_begin; match != words_end; ++match) {
     string match_str = match->str();
-    string format{};
+    size_t matchPos = match->position();
 
-    // check if user specified different formatting (e.g. via <mean[%2.6]>)
+    // copy the untouched text since the previous match, then compute the replacement
+    result.append(str, lastEnd, matchPos - lastEnd);
+
+    string format{};
     std::regex format_regex("\\[.*?\\]");
     if (auto format_it = std::sregex_iterator(match_str.begin(), match_str.end(), format_regex); format_it != std::sregex_iterator()) {
       format = format_it->str();
       format = format.substr(1, format.size() - 2);
     }
-    // allow printf style and protect against wrong usage
     format.erase(remove(format.begin(), format.end(), '%'), format.end());
     format.erase(remove(format.begin(), format.end(), ' '), format.end());
-
-    // if no valid formatting pattern is given, fall back to 'general' mode
     if (!(str_contains(format, "e") || str_contains(format, "f") || str_contains(format, "g") || str_contains(format, "E") || str_contains(format, "F") || str_contains(format, "G"))) {
       format = format + "g";
     }
@@ -2016,7 +2020,23 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     string replace_str = match_str;
     if (str_contains(match_str, "name")) {
       replace_str = data_ptr->GetName();
-      replace_str = replace_str.substr(0, replace_str.find(":"));
+
+      // strip the numeric "<index>:" prefix PlotPainter adds right before drawing
+      if (auto colonPos = replace_str.find(":"); colonPos != string::npos) {
+        replace_str = replace_str.substr(colonPos + 1);
+      }
+
+      // strip everything from a projection/binning suffix onward; those always start with '{',
+      // sometimes preceded by "_Proj" or "_Prof" (see proj_info_t/data_info_t::GetNameSuffix())
+      if (auto bracePos = replace_str.find('{'); bracePos != string::npos) {
+        for (const string marker : {"_Proj", "_Prof"}) {
+          if (bracePos >= marker.size() && replace_str.compare(bracePos - marker.size(), marker.size(), marker) == 0) {
+            bracePos -= marker.size();
+            break;
+          }
+        }
+        replace_str = replace_str.substr(0, bracePos);
+      }
     } else if (str_contains(match_str, "title")) {
       replace_str = data_ptr->GetTitle();
     } else if (data_ptr->InheritsFrom(TH1::Class())) {
@@ -2037,8 +2057,13 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
         replace_str = match_str;
       }
     }
-    str.replace(str.find(match_str), string(match_str).size(), replace_str);
+
+    result += replace_str;
+    lastEnd = matchPos + match_str.size();
   }
+  result.append(str, lastEnd, string::npos);  // copy whatever remains after the last match
+
+  str = std::move(result);
 }
 
 //**************************************************************************************************
