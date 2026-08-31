@@ -66,30 +66,30 @@ int main(int argc, char* argv[])
     if (vm.count("mode")) {
       mode = vm["mode"].as<string>();
     }
+
+    if (mode.empty()) mode = Config::Get().PlotMode();
+
+    if (group.empty() || name.empty()) {
+      ERROR("No plots were specified.");
+      return 1;
+    }
+
+    // create plotting environment
+    PlotManager pm(Config::Get().CurrentProject());
+    group += "(/.*)?";  // search also in subgroups
+    pm.LoadPlots(name, group);
+    if (mode == "list") {
+      pm.ListPlots();
+    } else {
+      pm.LoadDataSources();
+      pm.GeneratePlots(mode);
+    }
   } catch (std::exception& e) {
     ERROR(R"(Exception "{}"! Exiting.)", e.what());
     return 1;
   } catch (...) {
     ERROR("Exception of unknown type! Exiting.");
     return 1;
-  }
-
-  if (mode.empty()) mode = Config::Get().PlotMode();
-
-  if (group.empty() || name.empty()) {
-    ERROR("No plots were specified.");
-    return 1;
-  }
-
-  // create plotting environment
-  PlotManager pm(Config::Get().CurrentProject());
-  group += "(/.*)?";  // search also in subgroups
-  pm.LoadPlots(name, group);
-  if (mode == "list") {
-    pm.ListPlots();
-  } else {
-    pm.LoadDataSources();
-    pm.GeneratePlots(mode);
   }
   return 0;
 }

@@ -26,6 +26,7 @@
 
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -156,6 +157,24 @@ inline void error(std::string_view fmt_str, Args&&... args)
     fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
     fmt::print(stderr, "\n");
   }
+}
+
+template <typename... Args>
+[[noreturn]] inline void throw_invalid_argument(std::string_view fmt_str, Args&&... args)
+{
+  throw std::invalid_argument(fmt::format(fmt::runtime(fmt_str), std::forward<Args>(args)...));
+}
+
+template <typename... Args>
+[[noreturn]] inline void throw_out_of_range(std::string_view fmt_str, Args&&... args)
+{
+  throw std::out_of_range(fmt::format(fmt::runtime(fmt_str), std::forward<Args>(args)...));
+}
+
+template <typename... Args>
+[[noreturn]] inline void throw_logic_error(std::string_view fmt_str, Args&&... args)
+{
+  throw std::logic_error(fmt::format(fmt::runtime(fmt_str), std::forward<Args>(args)...));
 }
 
 template <typename T>

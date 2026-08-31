@@ -285,8 +285,8 @@ void PlotManager::LoadDataSources(const optional<string>& file)
   try {
     using boost::property_tree::read_info;
     read_info(expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName)), inputFileTree);
-  } catch (...) {
-    ERROR("Cannot load dataSources file.");
+  } catch (const std::exception& e) {
+    ERROR("Cannot load dataSources file: {}", e.what());
     return;
   }
   for (const auto& inputPair : inputFileTree) {
@@ -454,8 +454,8 @@ void PlotManager::LoadPlots(const string& name, const string& group, const optio
   try {
     using boost::property_tree::read_info;
     read_info(expand_path(expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName))), fileTree);
-  } catch (...) {
-    ERROR("Cannot open plots file.");
+  } catch (const std::exception& e) {
+    ERROR("Cannot open plots file: {}", e.what());
     return;
   }
 
@@ -473,8 +473,8 @@ void PlotManager::LoadPlots(const string& name, const string& group, const optio
     try {
       Plot plot(plotTree.second);
       AddPlot(plot);
-    } catch (...) {
-      ERROR("Could not load plot {} from file.", plotTree.first);
+    } catch (const std::exception& e) {
+      ERROR("Could not load plot {} from file: {}", plotTree.first, e.what());
     }
   }
   if (nFoundPlots == 0) {
@@ -562,8 +562,8 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
     } else if (mode == "data") {
       SaveDataToRootFile();
     }
-  } catch (...) {
-    ERROR("An unexpected error occurred. The application will now exit.");
+  } catch (const std::exception& e) {
+    ERROR("An unexpected error occurred: {}", e.what());
   }
 }
 
@@ -770,8 +770,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 
   if (TColor::GetFreeColorIndex() > std::numeric_limits<int16_t>::max()) {
     // there is a natural limit to the number of custom colors since ROOT color indices are of type short
-    ERROR("Too many custom colors in one session. Aborting...");
-    std::exit(EXIT_FAILURE);
+    logger::throw_out_of_range("Too many custom colors in one session. Aborting...");
   }
   LOG("Created plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetGroup(), logger::end_color());
 
@@ -818,7 +817,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
           if (curPlotIndex == mPlotViewHistory.size() - 1) break;
           ++curPlotIndex;
         } else {
-          if (curPlotIndex == 0) std::exit(EXIT_SUCCESS);
+          if (curPlotIndex == 0) break;
           --curPlotIndex;
         }
         static_cast<TRootCanvas*>(canvas->GetCanvasImp())->UnmapWindow();

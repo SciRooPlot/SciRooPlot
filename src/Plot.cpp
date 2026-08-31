@@ -53,13 +53,10 @@ namespace SciRooPlot
 Plot::Plot(const string& name, const string& group, const optional<string>& basePlot) : Plot()
 {
   if (str_contains(group, ".")) {
-    ERROR("Group must not contain '.'!");
-    std::exit(EXIT_FAILURE);
+    logger::throw_invalid_argument("Group must not contain '.'!");
   }
   if (str_contains(name, " ") || str_contains(group, " ")) {
-    ERROR("Whitespaces are not allowed in plot or group names!");
-    ERROR("-> Please check '{}' in '{}'!", name, group);
-    std::exit(EXIT_FAILURE);
+    logger::throw_invalid_argument("Whitespaces are not allowed in plot or group names! Check '{}' in '{}'.", name, group);
   }
   mName = name;
   mGroup = group;
@@ -90,9 +87,8 @@ Plot::Plot(const ptree& plotTree)
   try {
     mName = plotTree.get<string>("name");
     mGroup = plotTree.get<string>("group");
-  } catch (...) {
-    ERROR("Could not construct data from ptree.");
-    std::exit(EXIT_FAILURE);
+  } catch (const std::exception& e) {
+    logger::throw_invalid_argument("Could not construct plot from ptree: {}", e.what());
   }
   read_from_tree(plotTree, mBasePlot, "base_plot");
   read_from_tree(plotTree, mPlotDimensions.width, "width");
@@ -1193,8 +1189,7 @@ Plot::Pad::Axis& Plot::Pad::GetAxis(const char axis)
 {
   const vector<char> allowedAxes = {'X', 'Y', 'Z'};
   if (std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end()) {
-    ERROR("Axis '{}' does not exist! Please use 'X', 'Y' or 'Z'.", axis);
-    std::exit(EXIT_FAILURE);
+    logger::throw_invalid_argument("Axis '{}' does not exist! Please use 'X', 'Y' or 'Z'.", axis);
   }
   if (mAxes.find(axis) == mAxes.end()) {
     mAxes[axis] = Axis(axis);
@@ -1210,8 +1205,7 @@ Plot::Pad::Axis& Plot::Pad::GetAxis(const char axis)
 Plot::Pad::Data& Plot::Pad::GetData(uint8_t dataID)
 {
   if (dataID < 1 || dataID > mData.size()) {
-    ERROR("Data with ID '{}' is not defined! You can access only data that was already added to the pad.", dataID);
-    std::exit(EXIT_FAILURE);
+    logger::throw_out_of_range("Data with ID '{}' is not defined! You can access only data that was already added to the pad.", dataID);
   }
   return *mData[dataID - 1];
 }
@@ -1224,8 +1218,7 @@ Plot::Pad::Data& Plot::Pad::GetData(uint8_t dataID)
 Plot::Pad::LegendBox& Plot::Pad::GetLegend(uint8_t legendID)
 {
   if (legendID < 1 || legendID > mLegendBoxes.size()) {
-    ERROR("Legend with ID {} is not defined! You can access only legends that have already been added to the pad.", legendID);
-    std::exit(EXIT_FAILURE);
+    logger::throw_out_of_range("Legend with ID {} is not defined! You can access only legends that have already been added to the pad.", legendID);
   }
   return *mLegendBoxes[legendID - 1];
 }
@@ -1238,8 +1231,7 @@ Plot::Pad::LegendBox& Plot::Pad::GetLegend(uint8_t legendID)
 Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
 {
   if (textID < 1 || textID > mTextBoxes.size()) {
-    ERROR("Text with ID {} is not defined! You can access only texts that have already been added to the pad.", textID);
-    std::exit(EXIT_FAILURE);
+    logger::throw_out_of_range("Text with ID {} is not defined! You can access only texts that have already been added to the pad.", textID);
   }
   return *mTextBoxes[textID - 1];
 }
@@ -1283,8 +1275,7 @@ Plot::Pad::Data& Plot::Pad::AddPoints(vector<double_t> x, vector<double_t> y, co
 {
   size_t nPoints = x.size();
   if (!nPoints || x.size() != y.size()) {
-    ERROR("Illegal arguments for adding points.");
-    std::exit(EXIT_FAILURE);
+    logger::throw_invalid_argument("Illegal arguments for adding points.");
   }
   string xStr;
   string yStr;
@@ -1444,10 +1435,10 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
     mType = dataTree.get<string>("type");
     mName = dataTree.get<string>("name");
     mDataSource = dataTree.get<string>("dataSource");
-  } catch (...) {
-    ERROR("Could not construct data from ptree.");
-    std::exit(EXIT_FAILURE);
+  } catch (const std::exception& e) {
+    logger::throw_invalid_argument("Could not construct data from ptree: {}", e.what());
   }
+
   if (auto var = dataTree.get_optional<bool>("defines_frame")) mDefinesFrame = *var;
   if (auto var = dataTree.get_optional<bool>("dont_draw")) mDontDraw = *var;
   read_from_tree(dataTree, mLegend.label, "legend_label");
@@ -1618,8 +1609,7 @@ Plot::Pad::Ratio& Plot::Pad::Data::AsRatio()
 {
   auto* ptr = dynamic_cast<Plot::Pad::Ratio*>(this);
   if (!ptr) {
-    ERROR("Data {} is no ratio.", mName);
-    std::exit(EXIT_FAILURE);
+    logger::throw_logic_error("Data {} is no ratio.", mName);
   }
   return *ptr;
 }
@@ -2137,8 +2127,8 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
     mDenomName = dataTree.get<string>("denomName");
     mDenomDataSource = dataTree.get<string>("denomDataSource");
     mIsCorrelated = dataTree.get<bool>("isCorrelated");
-  } catch (...) {
-    ERROR("Could not construct ratio from ptree.");
+  } catch (const std::exception& e) {
+    logger::throw_invalid_argument("Could not construct ratio from ptree: {}", e.what());
   }
 
   read_from_tree(dataTree, mScaleBinWidth, "scale_bin_width_norm_division");
@@ -2452,9 +2442,10 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
 {
   try {
     mName = axisTree.get<char>("name");
-  } catch (...) {
-    ERROR("Could not construct axis from ptree.");
+  } catch (const std::exception& e) {
+    logger::throw_invalid_argument("Could not construct axis from ptree: {}", e.what());
   }
+
   read_from_tree(axisTree, mAxisFrame.title, "title");
   read_from_tree(axisTree, mRange.min, "range_min");
   read_from_tree(axisTree, mRange.max, "range_max");
@@ -2989,8 +2980,8 @@ Plot::Pad::TextBox::TextBox(const ptree& textBoxTree) : Box(textBoxTree)
 {
   try {
     mText = textBoxTree.get<string>("text");
-  } catch (...) {
-    ERROR("Could not construct text-box from ptree.");
+  } catch (const std::exception& e) {
+    logger::throw_invalid_argument("Could not construct text box from ptree: {}", e.what());
   }
 }
 
