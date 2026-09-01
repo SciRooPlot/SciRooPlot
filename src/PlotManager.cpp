@@ -1016,11 +1016,12 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
               string dataFullName = fullName + dataInfo.GetNameSuffix();
               try {
                 SUPPRESS_STDERR(true);
+                auto stderrGuard = make_scope_guard([]() { SUPPRESS_STDERR(false); });
+                bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
                 if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
+                auto mtGuard = make_scope_guard([wasMTEnabled]() { if (wasMTEnabled) ROOT::EnableImplicitMT(); });
                 ROOT::RDataFrame df(*tree);
                 obj = ProcessData(df, fullName, dataInfo, dataFullName + suffix);
-                if (!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
-                SUPPRESS_STDERR(false);
               } catch (const std::runtime_error&) {
                 ERROR("Invalid query for tree.");
                 obj = nullptr;
@@ -1085,11 +1086,12 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
     TObject* obj = nullptr;
     try {
       SUPPRESS_STDERR(true);
+      auto stderrGuard = make_scope_guard([]() { SUPPRESS_STDERR(false); });
+      bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
       if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
+      auto mtGuard = make_scope_guard([wasMTEnabled]() { if (wasMTEnabled) ROOT::EnableImplicitMT(); });
       ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter, 50000);
       obj = ProcessData(df, name, dataInfo, dataName + ":" + dataSource);
-      if (!ROOT::IsImplicitMTEnabled()) ROOT::EnableImplicitMT();
-      SUPPRESS_STDERR(false);
     } catch (const std::runtime_error& e) {
       ERROR("Invalid query for table {}.", name);
       std::cout << e.what() << std::endl;

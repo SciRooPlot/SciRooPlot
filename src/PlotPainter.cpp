@@ -1465,11 +1465,12 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
     if (projInfo) {
       bool addDirStatus = TH1::AddDirectoryStatus();
       TH1::AddDirectory(false);
+      auto addDirGuard = make_scope_guard([addDirStatus]() { TH1::AddDirectory(addDirStatus); });
+
       string name = obj->GetName();
       name += projInfo->GetNameSuffix();
       if (auto returnPointer = GetProjection(obj, *projInfo)) {
         std::visit([&name](auto&& ptr) { ptr->SetName(name.data()); }, *returnPointer);
-        TH1::AddDirectory(addDirStatus);
         return returnPointer;
       } else {
         ERROR("Projection failed for {}.", obj->GetName());

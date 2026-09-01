@@ -29,6 +29,7 @@
 #include <regex>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 namespace SciRooPlot
@@ -266,6 +267,38 @@ class RegexMatcher
   bool mContains = false;
   std::regex mRegex;
 };
+
+template <typename F>
+class ScopeGuard
+{
+ public:
+  explicit ScopeGuard(F onExit) : mOnExit(std::move(onExit)) {}
+  ~ScopeGuard()
+  {
+    if (mActive) mOnExit();
+  }
+
+  ScopeGuard(const ScopeGuard&) = delete;
+  ScopeGuard& operator=(const ScopeGuard&) = delete;
+  ScopeGuard& operator=(ScopeGuard&&) = delete;
+
+  ScopeGuard(ScopeGuard&& other) noexcept : mOnExit(std::move(other.mOnExit)), mActive(other.mActive)
+  {
+    other.mActive = false;
+  }
+
+  void Dismiss() { mActive = false; }
+
+ private:
+  F mOnExit;
+  bool mActive{true};
+};
+
+template <typename F>
+ScopeGuard<std::decay_t<F>> make_scope_guard(F&& onExit)
+{
+  return ScopeGuard<std::decay_t<F>>(std::forward<F>(onExit));
+}
 
 }  // end namespace SciRooPlot
 #endif  // INCLUDE_SCIROOPLOT_HELPERS_H_
