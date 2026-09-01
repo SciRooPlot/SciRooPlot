@@ -754,18 +754,19 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     ERROR("No group was specified for plot {}.", plot.GetName());
     return false;
   }
-  Plot fullPlot = plot;
+  Plot fullPlot;
   if (plot.GetBasePlotName()) {
     const string& basePlotName = *plot.GetBasePlotName();
     auto iterator = std::find_if(
       mBasePlots.begin(), mBasePlots.end(),
       [&](Plot& basePlot) { return basePlot.GetName() == basePlotName; });
     if (iterator != mBasePlots.end()) {
-      fullPlot = *iterator + plot;
+      fullPlot = *iterator;
     } else {
       WARNING("Could not find base plot named {}.", basePlotName);
     }
   }
+  fullPlot += plot;
   if (mode == "print") {
     INFO("Settings of plot {}{}{} from group {}{}{}:", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetGroup(), logger::end_color());
     Plot::Print(fullPlot.GetPropertyTree(), "");

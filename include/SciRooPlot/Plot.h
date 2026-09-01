@@ -204,9 +204,13 @@ class Plot::Pad
 
   Pad() = default;
   explicit Pad(const boost::property_tree::ptree& padTree);
+  Pad(const Pad& other);
+  Pad(Pad&&) = default;
+  Pad& operator=(const Pad& other);
+  Pad& operator=(Pad&&) = default;
+  void operator+=(const Pad& pad);
   Axis& operator[](const char axis);
   Data& operator()(uint8_t dataID);
-  void operator+=(const Pad& pad);
   void Print() const { Plot::Print(GetPropertyTree(), "Pad"); }
 
   // User accessors:
@@ -441,6 +445,7 @@ class Plot::Pad::Data
   Data(Data&&) = default;
   Data& operator=(const Data& other) = default;
   Data& operator=(Data&& other) = default;
+  virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Data>(*this); }
   void Print() const { Plot::Print(GetPropertyTree(), "Data"); }
 
   Ratio& AsRatio();
@@ -536,7 +541,6 @@ class Plot::Pad::Data
   friend class PlotPainter;
   friend class Plot;
 
-  virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Data>(*this); }
   virtual boost::property_tree::ptree GetPropertyTree() const;
   void SetType(const std::string& type) { mType = type; }
 
@@ -681,6 +685,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio(Ratio&&) = default;
   Ratio& operator=(const Ratio& other) = default;
   Ratio& operator=(Ratio&& other) = default;
+  std::shared_ptr<Data> Clone() const override { return std::make_shared<Ratio>(*this); }
   void Print() const { Plot::Print(GetPropertyTree(), "Ratio"); }
 
   Ratio& SetIsCorrelated(bool isCorrelated = true);
@@ -744,38 +749,37 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& Numer();  // switch to numerator for following modifiers (default)
   Ratio& Denom();  // switch to denominator for following modifiers
 
-  Ratio& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
-  Ratio& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});
-  Ratio& ProjectY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});
+  Ratio& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) override;
+  Ratio& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) override;
+  Ratio& ProjectY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {}) override;
 
-  Ratio& Profile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
-  Ratio& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});
-  Ratio& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});
+  Ratio& Profile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) override;
+  Ratio& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) override;
+  Ratio& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {}) override;
 
-  Ratio& Project(const std::vector<data_dim_t>& dataDims, std::optional<std::string> weight = {});
-  Ratio& Project1D(data_dim_t x, std::optional<std::string> weight = {});
-  Ratio& Project2D(data_dim_t x, data_dim_t y, std::optional<std::string> weight = {});
+  Ratio& Project(const std::vector<data_dim_t>& dataDims, std::optional<std::string> weight = {}) override;
+  Ratio& Project1D(data_dim_t x, std::optional<std::string> weight = {}) override;
+  Ratio& Project2D(data_dim_t x, data_dim_t y, std::optional<std::string> weight = {}) override;
 
-  Ratio& Scatter(const std::string& x, const std::string& y);
-  Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErr, const std::string& yErr);
-  Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErrLow, const std::string& xErrHigh, const std::string& yErrLow, const std::string& yErrHigh);
+  Ratio& Scatter(const std::string& x, const std::string& y) override;
+  Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErr, const std::string& yErr) override;
+  Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErrLow, const std::string& xErrHigh, const std::string& yErrLow, const std::string& yErrHigh) override;
 
-  Ratio& Profile(const std::vector<data_dim_t>& dataDims, const std::string& profile, std::optional<std::string> weight = {});
-  Ratio& Profile1D(data_dim_t x, const std::string& profile, std::optional<std::string> weight = {});
-  Ratio& Profile2D(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> weight = {});
+  Ratio& Profile(const std::vector<data_dim_t>& dataDims, const std::string& profile, std::optional<std::string> weight = {}) override;
+  Ratio& Profile1D(data_dim_t x, const std::string& profile, std::optional<std::string> weight = {}) override;
+  Ratio& Profile2D(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> weight = {}) override;
 
-  Ratio& Define(const std::string& key, const std::string& value);
-  Ratio& Filter(const std::string& filter);
-  Ratio& Entries(uint32_t nEntries);
-  Ratio& Entries(uint32_t entryMin, uint32_t entryMax);
+  Ratio& Define(const std::string& key, const std::string& value) override;
+  Ratio& Filter(const std::string& filter) override;
+  Ratio& Entries(uint32_t nEntries) override;
+  Ratio& Entries(uint32_t entryMin, uint32_t entryMax) override;
 
  protected:
   friend class PlotManager;
   friend class PlotPainter;
   friend class Plot;
 
-  virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Ratio>(*this); }
-  boost::property_tree::ptree GetPropertyTree() const;
+  boost::property_tree::ptree GetPropertyTree() const override;
   const auto& GetDenomDataSource() const { return mDenomDataSource; }
   const auto& GetDenomName() const { return mDenomName; }
   const auto& GetScaleBinWidthDivision() const { return mScaleBinWidth; }

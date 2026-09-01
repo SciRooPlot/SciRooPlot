@@ -876,6 +876,48 @@ auto Plot::Pad::SetView(double_t theta, double_t phi) -> decltype(*this)
 
 //**************************************************************************************************
 /**
+ * Constructor from other pad.
+ */
+//**************************************************************************************************
+Plot::Pad::Pad(const Pad& other)
+  : mOptions(other.mOptions), mPosition(other.mPosition), mMargins(other.mMargins), mView(other.mView),
+    mFill(other.mFill), mFrameFill(other.mFrameFill), mFrameBorder(other.mFrameBorder), mText(other.mText),
+    mMarkerDefaults(other.mMarkerDefaults), mLineDefaults(other.mLineDefaults), mFillDefaults(other.mFillDefaults),
+    mDrawingOptionDefaults(other.mDrawingOptionDefaults), mCandleOptionDefaults(other.mCandleOptionDefaults),
+    mPalette(other.mPalette), mRedrawAxes(other.mRedrawAxes), mAxes(other.mAxes)
+{
+  mData.reserve(other.mData.size());
+  for (const auto& data : other.mData) {
+    mData.push_back(data ? data->Clone() : nullptr);
+  }
+  if (other.mRefFunc) mRefFunc = other.mRefFunc->Clone();
+
+  mLegendBoxes.reserve(other.mLegendBoxes.size());
+  for (const auto& legendBox : other.mLegendBoxes) {
+    mLegendBoxes.push_back(legendBox ? std::make_shared<LegendBox>(*legendBox) : nullptr);
+  }
+  mTextBoxes.reserve(other.mTextBoxes.size());
+  for (const auto& textBox : other.mTextBoxes) {
+    mTextBoxes.push_back(textBox ? std::make_shared<TextBox>(*textBox) : nullptr);
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Assignment operator.
+ */
+//**************************************************************************************************
+Plot::Pad& Plot::Pad::operator=(const Pad& other)
+{
+  if (this != &other) {
+    Pad tmp(other);
+    *this = std::move(tmp);
+  }
+  return *this;
+}
+
+//**************************************************************************************************
+/**
  * Constructor from property tree.
  */
 //**************************************************************************************************
@@ -1151,17 +1193,20 @@ void Plot::Pad::operator+=(const Pad& pad)
     mPalette.colorGradient = {};
   }
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
-  if (pad.mRefFunc) mRefFunc = pad.mRefFunc;  // this does not copy the data (!!)
+  if (pad.mRefFunc) mRefFunc = pad.mRefFunc->Clone();
   for (auto& [axisLabel, axis] : pad.mAxes) {
     mAxes[axisLabel];  // default initialize in case this axis was not yet defined
     mAxes[axisLabel] += axis;
   }
-  mLegendBoxes.insert(mLegendBoxes.end(), pad.mLegendBoxes.begin(), pad.mLegendBoxes.end());
-  mTextBoxes.insert(mTextBoxes.end(), pad.mTextBoxes.begin(), pad.mTextBoxes.end());
-
-  // due to the way this function is (currently) used, the 'pad' is only a temporary object
-  // and therefore we can 'steal' its data by copying the pointers
-  mData = pad.mData;  // this does not copy the data (!!)
+  for (const auto& legendBox : pad.mLegendBoxes) {
+    mLegendBoxes.push_back(legendBox ? std::make_shared<LegendBox>(*legendBox) : nullptr);
+  }
+  for (const auto& textBox : pad.mTextBoxes) {
+    mTextBoxes.push_back(textBox ? std::make_shared<TextBox>(*textBox) : nullptr);
+  }
+  for (const auto& data : pad.mData) {
+    mData.push_back(data ? data->Clone() : nullptr);
+  }
 }
 
 //**************************************************************************************************
