@@ -1045,7 +1045,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   LegendBox& operator=(LegendBox&& other) = default;
   void Print() const { Plot::Print(GetPropertyTree(), "LegendBox"); }
 
-  LegendEntry& GetEntry(uint8_t entryID) { return mLegendEntriesUser[entryID]; }
+  LegendEntry& GetEntry(uint8_t entryID);
   LegendBox& SetTitle(const std::string& title);
   LegendBox& SetNumColumns(uint8_t numColumns);
   LegendBox& SetDefaultDrawStyle(std::string drawStyle);

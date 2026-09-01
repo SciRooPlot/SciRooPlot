@@ -3124,6 +3124,14 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
  * User accessors for LegendBox properties.
  */
 //**************************************************************************************************
+Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::GetEntry(uint8_t entryID)
+{
+  if (entryID < 1) {
+    logger::throw_out_of_range("Legend entry index 0 is not allowed.");
+  }
+  return mLegendEntriesUser[entryID];
+}
+
 Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetTitle(const string& title)
 {
   mTitle = title;
