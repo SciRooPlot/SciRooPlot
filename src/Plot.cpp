@@ -52,6 +52,9 @@ namespace SciRooPlot
 //**************************************************************************************************
 Plot::Plot(const string& name, const string& group, const optional<string>& basePlot) : Plot()
 {
+  if (str_contains(name, ".")) {
+    logger::throw_invalid_argument("Plot name must not contain '.'!");
+  }
   if (str_contains(group, ".")) {
     logger::throw_invalid_argument("Group must not contain '.'!");
   }
@@ -179,6 +182,10 @@ void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
 
 auto Plot::SetName(const string& name) -> decltype(*this)
 {
+  if (str_contains(name, ".")) {
+    ERROR("Plot name must not contain '.'!");
+    return *this;
+  }
   if (str_contains(name, " ")) {
     ERROR("Whitespaces are not allowed in plot or group names!");
     ERROR("-> Please check '{}' in '{}'!", name, mGroup);

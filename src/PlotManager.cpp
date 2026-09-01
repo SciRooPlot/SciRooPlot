@@ -422,9 +422,7 @@ void PlotManager::SavePlots(const string& name, const string& group, const optio
         if (!groupRegex.Matches(plot.GetGroup())) continue;
         if (!nameRegex.Matches(plot.GetName())) continue;
       }
-      string displayedName = plot.GetUniqueName();
-      std::replace(displayedName.begin(), displayedName.end(), '.', '_');
-      plotTree.put_child(displayedName, plot.GetPropertyTree());
+      plotTree.put_child(plot.GetUniqueName(), plot.GetPropertyTree());
     }
   }
   std::filesystem::path filePath = expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName));
