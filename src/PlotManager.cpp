@@ -557,10 +557,14 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
 
   try {
     if (!FillBuffer()) PrintBufferStatus(true);
+    mGifName.clear();
     // generate plots
     for (auto plot : selectedPlots) {
       if (!GeneratePlot(*plot, mode))
         ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
+    }
+    if (!mGifName.empty()) {
+      LOG("Saved gif {}", mGifName);
     }
     if (mode == "file") {
       SavePlotsToRootFile();
@@ -856,8 +860,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   }
 
   bool isGif = false;
-  static string gifName;
-  static string gifFolderName;
   string gifRepRate = "+50";  // number of centiseconds between frames
 
   string fileEnding;
@@ -910,16 +912,14 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   string fullName = folderName + "/" + fileName + fileEnding;
 
   if (isGif) {
-    if (gifName.empty()) {
+    if (mGifName.empty()) {
       gSystem->Unlink(fullName.data());
-      LOG("Saving gif {}", fullName);
-      fullName += gifRepRate;
-      gifName = fullName;
-      gifFolderName = folderName;
+      mGifName = fullName;
     } else {
-      fullName = gifName;
-      folderName = gifFolderName;
+      fullName = mGifName;
+      folderName = std::filesystem::path(mGifName).parent_path().string();
     }
+    fullName += gifRepRate;
   }
   std::filesystem::create_directories(folderName);
   canvas->SaveAs(fullName.data());
