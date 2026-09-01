@@ -398,7 +398,7 @@ void PlotManager::AddColorOverview(const string& name, const string& group, cons
         .SetFillColor(colors[i]);
     }
   }
-  AddPlot(plot);
+  AddPlot(std::move(plot));
 }
 
 //**************************************************************************************************
@@ -467,8 +467,8 @@ void PlotManager::LoadPlots(const string& name, const string& group, const optio
   for (const auto& plotTree : fileTree) {
     const string& curGroup = plotTree.second.get<string>("group");
     if (curGroup == "BASE_PLOTS") {
-      Plot plot(plotTree.second);
-      AddBasePlot(plot);
+      Plot basePlot(plotTree.second);
+      AddBasePlot(std::move(basePlot));
       continue;
     }
     if (!groupRegex.Matches(curGroup)) continue;
@@ -477,7 +477,7 @@ void PlotManager::LoadPlots(const string& name, const string& group, const optio
     ++nFoundPlots;
     try {
       Plot plot(plotTree.second);
-      AddPlot(plot);
+      AddPlot(std::move(plot));
     } catch (const std::exception& e) {
       ERROR("Could not load plot {} from file: {}", plotTree.first, e.what());
     }

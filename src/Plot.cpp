@@ -70,8 +70,8 @@ Plot::Plot(const string& name, const string& group, const optional<string>& base
  */
 //**************************************************************************************************
 Plot::Plot(const Plot& otherPlot, const string& name, const optional<string>& group)
+  : Plot(otherPlot)
 {
-  *this = otherPlot.Clone();
   mName = name;
   if (group) mGroup = *group;
   UpdateUniqueName();
@@ -142,35 +142,6 @@ ptree Plot::GetPropertyTree() const
     plotTree.put_child("PAD_" + std::to_string(padID), pad.GetPropertyTree());
   }
   return plotTree;
-}
-
-//**************************************************************************************************
-/**
- * Make a deep copy of the Plot where also data and boxes are copied.
- */
-//**************************************************************************************************
-Plot Plot::Clone() const
-{
-  Plot newPlot(*this);
-  for (const auto& [padID, pad] : newPlot.GetPads()) {
-    std::transform(newPlot[padID].GetData().begin(), newPlot[padID].GetData().end(),
-                   newPlot[padID].GetData().begin(),
-                   [](const auto& data_ptr) { return data_ptr->Clone(); });
-
-    std::transform(newPlot[padID].GetLegendBoxes().begin(), newPlot[padID].GetLegendBoxes().end(),
-                   newPlot[padID].GetLegendBoxes().begin(), [](const auto& legend_ptr) {
-                     return std::make_shared<Plot::Pad::LegendBox>(*legend_ptr);
-                   });
-
-    std::transform(newPlot[padID].GetTextBoxes().begin(), newPlot[padID].GetTextBoxes().end(),
-                   newPlot[padID].GetTextBoxes().begin(),
-                   [](const auto& text_ptr) { return std::make_shared<Plot::Pad::TextBox>(*text_ptr); });
-
-    if (newPlot[padID].mRefFunc) {
-      newPlot[padID].mRefFunc = newPlot[padID].mRefFunc->Clone();
-    }
-  }
-  return newPlot;
 }
 
 //**************************************************************************************************

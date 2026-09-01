@@ -124,7 +124,6 @@ class Plot
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& basePlot, const Plot& plot);
   Plot(const Plot& otherPlot, const std::string& name, const std::optional<std::string>& group = {});
-  Plot Clone() const;
   void Print() const { Plot::Print(GetPropertyTree(), "Plot"); }
 
   // accessors for user
