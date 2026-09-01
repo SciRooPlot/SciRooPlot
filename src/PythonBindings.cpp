@@ -196,7 +196,19 @@ void exportPlotManager(py::module_& m)
     .def(py::init<const string&>(), arg("projectName") = "")
     .def("AddDataSource", overload_cast<const string&, const vector<string>&>(&PlotManager::AddDataSource), arg("dataSource"), arg("inputFiles"))
     .def("AddDataSource", overload_cast<const string&, const string&>(&PlotManager::AddDataSource), arg("dataSource"), arg("inputFile"))
-    .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::list objs) { py::module_ ROOT = py::module_::import("ROOT"); py::object addressof = ROOT.attr("addressof"); std::vector<TObject*> v; for (auto o : objs) v.push_back(reinterpret_cast<TObject*>(addressof(o).cast<std::uintptr_t>())); self.AddDataSource(dataSource, v); }, py::arg("dataSource"), py::arg("inputData"))
+    .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::list objs) {
+      static py::module_ ROOT = py::module_::import("ROOT");
+      static py::object TObjectClass = ROOT.attr("TObject");
+      py::object addressof = ROOT.attr("addressof");
+      std::vector<TObject*> v;
+      v.reserve(objs.size());
+      for (auto o : objs) {
+        if (!py::isinstance(o, TObjectClass)) {
+          throw std::invalid_argument("inputData must contain only ROOT TObjects (e.g. histograms, graphs, or trees).");
+        }
+        v.push_back(reinterpret_cast<TObject*>(addressof(o).cast<std::uintptr_t>()));
+      }
+      self.AddDataSource(dataSource, v); }, py::arg("dataSource"), py::arg("inputData"))
     .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::object obj) {
       static py::module_ ROOT = py::module_::import("ROOT");
       static py::object TObjectClass = ROOT.attr("TObject");
