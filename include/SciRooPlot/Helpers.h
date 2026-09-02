@@ -143,7 +143,7 @@ std::tuple<Ts...> string_to_tuple(std::string itemString)
   std::istringstream stream(itemString);
   std::string numbers[sizeof...(Ts)];
   uint8_t i = 0;
-  while (std::getline(stream, curItemStr, ',')) {
+  while (i < sizeof...(Ts) && std::getline(stream, curItemStr, ',')) {
     numbers[i] = curItemStr;
     ++i;
   }
