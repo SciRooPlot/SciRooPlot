@@ -44,6 +44,7 @@
 
 #include <boost/property_tree/info_parser.hpp>
 
+#include <cctype>
 #include <filesystem>
 #include <iostream>
 #include <limits>
@@ -864,22 +865,22 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   string fileEnding;
   if (isMacroMode) {
     fileEnding = ".C";
-    // object names are converted to variable names and therefore must not contain '/'
-    // this should be fixed in ROOT itself as it does not create valid cpp code otherwise
+    // object names are converted to variable names and therefore must not contain special characters
     std::function<void(TPad*)> cleanNames;
     cleanNames = [&](TPad* pad) {
-      string saveName = pad->GetName();
-      std::replace(saveName.begin(), saveName.end(), '/', '_');
-      std::replace(saveName.begin(), saveName.end(), ':', '_');
-      pad->SetName(saveName.data());
+      auto sanitize = [](string s) {
+        for (auto& c : s) {
+          if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') c = '_';
+        }
+        if (!s.empty() && std::isdigit(static_cast<unsigned char>(s.front()))) s = "_" + s;
+        return s;
+      };
+      pad->SetName(sanitize(pad->GetName()).data());
       TIter next(pad->GetListOfPrimitives());
       TObject* object = nullptr;
       while ((object = next())) {
         if (object->InheritsFrom(TNamed::Class())) {
-          string saveName = object->GetName();
-          std::replace(saveName.begin(), saveName.end(), '/', '_');
-          std::replace(saveName.begin(), saveName.end(), ':', '_');
-          static_cast<TNamed*>(object)->SetName(saveName.data());
+          static_cast<TNamed*>(object)->SetName(sanitize(object->GetName()).data());
           if (object->InheritsFrom(TPad::Class())) {
             cleanNames(static_cast<TPad*>(object));
           }

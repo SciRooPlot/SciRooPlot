@@ -52,14 +52,11 @@ namespace SciRooPlot
 //**************************************************************************************************
 Plot::Plot(const string& name, const string& group, const optional<string>& basePlot) : Plot()
 {
-  if (str_contains(name, ".")) {
-    logger::throw_invalid_argument("Plot name must not contain '.'!");
+  if (str_contains(name, ".") || str_contains(name, ",") || str_contains(name, ":") || str_contains(name, " ")) {
+    logger::throw_invalid_argument("Plot name must not contain '.' ',' ':' or whitespace.");
   }
-  if (str_contains(group, ".")) {
-    logger::throw_invalid_argument("Group must not contain '.'!");
-  }
-  if (str_contains(name, " ") || str_contains(group, " ")) {
-    logger::throw_invalid_argument("Whitespaces are not allowed in plot or group names! Check '{}' in '{}'.", name, group);
+  if (str_contains(group, ".") || str_contains(group, ",") || str_contains(group, ":") || str_contains(group, " ")) {
+    logger::throw_invalid_argument("Group must not contain '.' ',' ':' or whitespace.");
   }
   mName = name;
   mGroup = group;
@@ -182,13 +179,12 @@ void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
 
 auto Plot::SetName(const string& name) -> decltype(*this)
 {
-  if (str_contains(name, ".")) {
-    ERROR("Plot name must not contain '.'!");
+  if (name.empty()) {
+    ERROR("Cannot set empty name.");
     return *this;
   }
-  if (str_contains(name, " ")) {
-    ERROR("Whitespaces are not allowed in plot or group names!");
-    ERROR("-> Please check '{}' in '{}'!", name, mGroup);
+  if (str_contains(name, ".") || str_contains(name, ",") || str_contains(name, ":") || str_contains(name, " ")) {
+    ERROR("Plot name must not contain '.' ',' ':' or whitespace.");
     return *this;
   }
   mName = name;
@@ -202,13 +198,8 @@ auto Plot::SetGroup(const string& group) -> decltype(*this)
     ERROR("Cannot set empty group.");
     return *this;
   }
-  if (str_contains(group, ".")) {
-    ERROR("Group must not contain '.'!");
-    return *this;
-  }
-  if (str_contains(group, " ")) {
-    ERROR("Whitespaces are not allowed in plot or group names!");
-    ERROR("-> Please check '{}' in '{}'!", mName, group);
+  if (str_contains(group, ".") || str_contains(group, ",") || str_contains(group, ":") || str_contains(group, " ")) {
+    ERROR("Group must not contain '.' ',' ':' or whitespace.");
     return *this;
   }
   mGroup = group;
@@ -222,13 +213,8 @@ auto Plot::AppendGroup(const string& subgroup) -> decltype(*this)
     ERROR("Cannot append empty subgroup.");
     return *this;
   }
-  if (str_contains(subgroup, ".")) {
-    ERROR("Group must not contain '.'!");
-    return *this;
-  }
-  if (str_contains(subgroup, " ")) {
-    ERROR("Whitespaces are not allowed in plot or group names!");
-    ERROR("-> Please check '{}' in '{}/{}'!", mName, mGroup, subgroup);
+  if (str_contains(subgroup, ".") || str_contains(subgroup, ",") || str_contains(subgroup, ":") || str_contains(subgroup, " ")) {
+    ERROR("Group must not contain '.' ',' ':' or whitespace.");
     return *this;
   }
   mGroup = mGroup + "/" + subgroup;
