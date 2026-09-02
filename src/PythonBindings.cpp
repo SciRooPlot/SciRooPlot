@@ -625,32 +625,37 @@ void exportLegendEntry(py::module_& m)
 
 void exportPythonDataInterfaces(py::module_& m)
 {
-  auto graph = [](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& xerr, const std::vector<double>& yerr) {
-    const auto n = x.size();
+  auto bind_owned = [](std::uintptr_t addr, const char* className) {
     static py::module_ ROOT = py::module_::import("ROOT");
     static py::object BindObject = ROOT.attr("BindObject");
-    static py::object TGraphErrorsClass = ROOT.attr("TGraphErrors");
+    static py::object SetOwnership = ROOT.attr("SetOwnership");
+    py::object result = BindObject(addr, ROOT.attr(className));
+    SetOwnership(result, true);
+    return result;
+  };
 
-    if (y.size() != n)
+  auto graph = [&bind_owned](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& xerr, const std::vector<double>& yerr) {
+    const auto n = x.size();
+
+    if (y.size() != n) {
       throw std::runtime_error("x and y must have same length");
-    if (!xerr.empty() && xerr.size() != n)
+    }
+    if (!xerr.empty() && xerr.size() != n) {
       throw std::runtime_error("xerr has wrong size");
-    if (!yerr.empty() && yerr.size() != n)
+    }
+    if (!yerr.empty() && yerr.size() != n) {
       throw std::runtime_error("yerr has wrong size");
+    }
 
     auto* g = new TGraphErrors(static_cast<int>(n), x.data(), y.data(), xerr.empty() ? nullptr : xerr.data(), yerr.empty() ? nullptr : yerr.data());
     g->SetName(name.data());
-    return BindObject(reinterpret_cast<std::uintptr_t>(g), TGraphErrorsClass);
+    return bind_owned(reinterpret_cast<std::uintptr_t>(g), "TGraphErrors");
   };
 
   auto histo = [&](const std::string& name, const std::vector<double>& v, int bins, py::object range) {
-    static py::module_ ROOT = py::module_::import("ROOT");
-    static py::object BindObject = ROOT.attr("BindObject");
-    static py::object TH1DClass = ROOT.attr("TH1D");
-
-    if (v.empty())
+    if (v.empty()) {
       throw std::runtime_error("empty input");
-
+    }
     double xmin, xmax;
 
     if (range.is_none()) {
@@ -664,27 +669,22 @@ void exportPythonDataInterfaces(py::module_& m)
     }
 
     auto* h = new TH1D(name.data(), "", bins, xmin, xmax);
-
-    for (double x : v)
+    for (double x : v) {
       h->Fill(x);
-
-    return BindObject(reinterpret_cast<std::uintptr_t>(h), TH1DClass);
+    }
+    return bind_owned(reinterpret_cast<std::uintptr_t>(h), "TH1D");
   };
 
   auto histo2d = [&](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, py::object bins, py::object range) {
-    static py::module_ ROOT = py::module_::import("ROOT");
-    static py::object BindObject = ROOT.attr("BindObject");
-    static py::object TH2DClass = ROOT.attr("TH2D");
-
-    if (x.empty())
+    if (x.empty()) {
       throw std::runtime_error("empty input");
-
-    if (x.size() != y.size())
+    }
+    if (x.size() != y.size()) {
       throw std::runtime_error("x and y must have same length");
+    }
 
     int nx = 50, ny = 50;
     double xmin, xmax, ymin, ymax;
-
     auto [minxIt, maxxIt] = std::minmax_element(x.begin(), x.end());
     auto [minyIt, maxyIt] = std::minmax_element(y.begin(), y.end());
     xmin = *minxIt;
@@ -708,12 +708,12 @@ void exportPythonDataInterfaces(py::module_& m)
 
     auto* h = new TH2D(name.c_str(), "", nx, xmin, xmax, ny, ymin, ymax);
 
-    for (size_t i = 0; i < x.size(); ++i)
+    for (size_t i = 0; i < x.size(); ++i) {
       h->Fill(x[i], y[i]);
+    }
 
     h->SetName(name.c_str());
-
-    return BindObject(reinterpret_cast<std::uintptr_t>(h), TH2DClass);
+    return bind_owned(reinterpret_cast<std::uintptr_t>(h), "TH2D");
   };
 
   m.def("graph", graph, py::arg("name"), py::arg("x"), py::arg("y"), py::arg("xerr") = std::vector<double>{}, py::arg("yerr") = std::vector<double>{});
