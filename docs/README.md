@@ -68,9 +68,8 @@ plot <group> <name> [<mode>]
 For bash and zsh this program provides an auto-completion feature, which means you can tab through the available commands, groups, and plot names.
 Regular expressions are supported for the options `<group>` and `<name>`.
 This allows the creation of multiple plots matching the specified pattern in a single request.
-For example `plot paperPlots .+` would generate all plots defined within the group called `paperPlots` and `plot thesisFigures 'moneyPlot[1,2]'` creates `moneyPlot1` and `moneyPlot2` from the group `thesisFigures`.
-To specify multiple text options one can use `plot analysisQA 'trackProperty_(tight|loose|nominal)CutSetting'`.
-Note that expressions involving special characters (in the previous examples `[]` or `()` and `|`) have to be wrapped in quotes since otherwise your shell will try to interpret them before they are passed to the plotting app.
+For example `plot paperPlots .+` would generate all plots defined within the group called `paperPlots` and `plot thesisFigures moneyPlot[1,2]` creates `moneyPlot1` and `moneyPlot2` from the group `thesisFigures`.
+To specify multiple text options one can use `plot analysisQA trackProperty_(tight|loose|nominal)CutSetting`.
 To select only a subgroup within the group, use `<group/some/subgroup>` (for example `plot myGroup/QAPlots controlObservable`).
 By default, the optional `mode` argument is set to `show` and you can leave it out in the command.
 Possible alternatives are: `list`, `print`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`, `data`.
