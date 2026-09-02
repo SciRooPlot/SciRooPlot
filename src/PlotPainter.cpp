@@ -1462,15 +1462,15 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot::Pad::Data::proj_info_t>& projInfo)
 {
   if (obj) {
-    if (projInfo) {
-      bool addDirStatus = TH1::AddDirectoryStatus();
-      TH1::AddDirectory(false);
-      auto addDirGuard = make_scope_guard([addDirStatus]() { TH1::AddDirectory(addDirStatus); });
+    bool addDirStatus = TH1::AddDirectoryStatus();
+    TH1::AddDirectory(false);
+    auto addDirGuard = make_scope_guard([addDirStatus]() { TH1::AddDirectory(addDirStatus); });
 
+    if (projInfo) {
       string name = obj->GetName();
       name += projInfo->GetNameSuffix();
       if (auto returnPointer = GetProjection(obj, *projInfo)) {
-        std::visit([&name](auto&& ptr) { ptr->SetName(name.data()); }, *returnPointer);
+        std::visit([&name](auto&& ptr) { ptr->SetName(name.data()); ptr->SetBit(kCanDelete); }, *returnPointer);
         return returnPointer;
       } else {
         ERROR("Projection failed for {}.", obj->GetName());
@@ -1478,6 +1478,7 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
     } else {
       // TProfile2D is TH2, TH2 is TH1, TH3 is TH1, TProfile is TH1, TF3 is TF2, TF2 is TF1
       if (auto returnPointer = GetDataClone<TProfile2D, TH2, TH3, TProfile, TH1, TGraph2D, TGraph, TF3, TF2, TF1, TEfficiency>(obj)) {
+        std::visit([](auto&& ptr) { ptr->SetBit(kCanDelete); }, *returnPointer);
         return returnPointer;
       } else {
         ERROR("Input data {} is of unsupported type {}.", obj->GetName(), obj->ClassName());
