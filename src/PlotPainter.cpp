@@ -543,7 +543,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if constexpr (is_hist<data_type>()) {
             axisHist_ptr = data_ptr;
           } else {
-            axisHist_ptr = data_ptr->GetHistogram();
+            axisHist_ptr = static_cast<TH1*>(data_ptr->GetHistogram()->Clone());
+            axisHist_ptr->SetDirectory(nullptr);
+            axisHist_ptr->SetBit(kCanDelete);
           }
           string drawOptAxis = "AXIS";
           pad_ptr->Update();
