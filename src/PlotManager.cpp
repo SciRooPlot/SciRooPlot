@@ -300,7 +300,7 @@ void PlotManager::LoadDataSources(const optional<string>& file)
     set<string> allFileNames;
     for (const auto& fileEntry : inputPair.second) {
       string fileOrDirName = expand_path(fileEntry.second.get_value<string>());
-      if (str_contains(fileOrDirName, ".root", true) || str_contains(fileOrDirName, mTableFileEndings, true)) {
+      if (str_ends_with(fileOrDirName, ".root") || str_ends_with(fileOrDirName, mTableFileEndings)) {
         allFileNames.insert(fileOrDirName);
       } else if (std::filesystem::is_directory(fileOrDirName)) {
         for (const auto& file : std::filesystem::recursive_directory_iterator(fileOrDirName)) {
@@ -639,14 +639,14 @@ bool PlotManager::FillBuffer()
     // open all input files belonging to the current dataSource and extract the data
     for (const auto& inputFileName : mInputFiles[dataSource]) {
       if (requiredData.empty()) break;
-      if (str_contains(inputFileName, mTableFileEndings, true)) {
+      if (str_ends_with(inputFileName, mTableFileEndings)) {
         string name = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".") - inputFileName.rfind('/') - 1);
         ReadTableData(inputFileName, name, dataSource);
         vector<string>& wantedNames = requiredData[""];
         wantedNames.erase(std::remove_if(wantedNames.begin(), wantedNames.end(), [&](const auto& wantedName) { return wantedName == name; }), wantedNames.end());
         if (wantedNames.empty()) requiredData.erase("");
       }
-      if (!str_contains(inputFileName, ".root", true)) continue;
+      if (!str_ends_with(inputFileName, ".root")) continue;
       // check if only a sub-folder in input file should be searched
       auto fileNamePath = split_string(inputFileName, ':');
       string& fileName = fileNamePath[0];

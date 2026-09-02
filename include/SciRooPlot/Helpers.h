@@ -38,21 +38,37 @@ std::string expand_path(const std::string& path);
 std::vector<std::string> split_string(const std::string& argString, char delimiter, bool onlyFirst = false);
 bool file_exists(const std::string& name);
 
-inline bool str_contains(const std::string& str, const std::string& substr, bool reverseSearch = false)
+inline bool str_contains(const std::string& str, const std::string& substr)
 {
-  if (reverseSearch) {
-    return (str.rfind(substr) != std::string::npos);
-  } else {
-    return (str.find(substr) != std::string::npos);
-  }
+  return (str.find(substr) != std::string::npos);
 }
 
-inline bool str_contains(const std::string& str, const std::vector<std::string>& substrs, bool reverseSearch = false)
+inline bool str_contains(const std::string& str, const std::vector<std::string>& substrs)
 {
   return std::any_of(substrs.begin(), substrs.end(),
-                     [&](const std::string& substr) {
-                       return str_contains(str, substr, reverseSearch);
-                     });
+                     [&](const std::string& substr) { return str_contains(str, substr); });
+}
+
+inline bool str_starts_with(const std::string& str, const std::string& prefix)
+{
+  return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+}
+
+inline bool str_starts_with(const std::string& str, const std::vector<std::string>& prefixes)
+{
+  return std::any_of(prefixes.begin(), prefixes.end(),
+                     [&](const std::string& prefix) { return str_starts_with(str, prefix); });
+}
+
+inline bool str_ends_with(const std::string& str, const std::string& suffix)
+{
+  return str.size() >= suffix.size() && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+inline bool str_ends_with(const std::string& str, const std::vector<std::string>& suffixes)
+{
+  return std::any_of(suffixes.begin(), suffixes.end(),
+                     [&](const std::string& suffix) { return str_ends_with(str, suffix); });
 }
 
 template <typename T>
