@@ -94,8 +94,9 @@ class PlotManager
   std::string mOutputDirectory;
   std::vector<Plot> mPlots;
   std::vector<Plot> mBasePlots;
-  std::vector<const std::string*> mPlotViewHistory;
+  std::vector<std::map<std::string, std::shared_ptr<TCanvas>>::iterator> mPlotViewHistory;
   std::string mGifName;
+  bool mExitInteractiveBrowsing{false};
   int32_t mWindowOffsetY{};
   int32_t mFirstFreeColorIndex{TColor::GetFreeColorIndex()};
   const std::vector<std::string> mTableFileEndings = {".csv", ".dat", ".txt", ".tsv", ".tab"};

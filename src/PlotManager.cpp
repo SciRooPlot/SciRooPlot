@@ -557,10 +557,13 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
   try {
     if (!FillBuffer()) PrintBufferStatus(true);
     mGifName.clear();
+    mExitInteractiveBrowsing = false;
     // generate plots
     for (auto plot : selectedPlots) {
-      if (!GeneratePlot(*plot, mode))
+      if (!GeneratePlot(*plot, mode)) {
         ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
+      }
+      if (mExitInteractiveBrowsing) break;
     }
     if (!mGifName.empty()) {
       LOG("Saved gif {}", mGifName);
@@ -744,11 +747,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   bool isInteractiveMode = (mode == "show");
   bool isMacroMode = (mode == "macro");
 
-  // if plot already exists, delete the old one first
-  if (mCanvasRegistry.find(plot.GetUniqueName()) != mCanvasRegistry.end()) {
-    WARNING("Plot {} was already created. Replacing it.", plot.GetUniqueName());
-    mCanvasRegistry.erase(plot.GetUniqueName());
-  }
   if (plot.GetGroup().empty()) {
     ERROR("No group was specified for plot {}.", plot.GetName());
     return false;
@@ -788,18 +786,21 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     if (auto rc = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) {
       rc->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
     }
-    mCanvasRegistry[plot.GetUniqueName()] = canvas;
-    mPlotViewHistory.push_back(&plot.GetUniqueName());
+    auto [registryIt, inserted] = mCanvasRegistry.insert_or_assign(plot.GetUniqueName(), canvas);
+    if (!inserted) {
+      WARNING("Plot {} was already created. Replacing it.", plot.GetUniqueName());
+    }
+    mPlotViewHistory.push_back(registryIt);
     uint32_t curPlotIndex{static_cast<uint32_t>(mPlotViewHistory.size() - 1)};
 
     // move new canvas to position of previous window
     int32_t curXpos{};
     int32_t curYpos{};
     if (curPlotIndex > 0) {
-      curXpos = mCanvasRegistry[*mPlotViewHistory[curPlotIndex - 1]]->GetWindowTopX();
-      curYpos = mCanvasRegistry[*mPlotViewHistory[curPlotIndex - 1]]->GetWindowTopY();
+      curXpos = mPlotViewHistory[curPlotIndex - 1]->second->GetWindowTopX();
+      curYpos = mPlotViewHistory[curPlotIndex - 1]->second->GetWindowTopY();
       canvas->SetWindowPosition(curXpos, curYpos - mWindowOffsetY);
-      static_cast<TRootCanvas*>(mCanvasRegistry[*mPlotViewHistory[curPlotIndex - 1]]->GetCanvasImp())->UnmapWindow();
+      static_cast<TRootCanvas*>(mPlotViewHistory[curPlotIndex - 1]->second->GetCanvasImp())->UnmapWindow();
     }
     canvas->Show();
     bool boxClicked = false;
@@ -826,11 +827,14 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
           if (curPlotIndex == mPlotViewHistory.size() - 1) break;
           ++curPlotIndex;
         } else {
-          if (curPlotIndex == 0) break;
+          if (curPlotIndex == 0) {
+            mExitInteractiveBrowsing = true;
+            break;
+          }
           --curPlotIndex;
         }
         static_cast<TRootCanvas*>(canvas->GetCanvasImp())->UnmapWindow();
-        canvas = mCanvasRegistry[*mPlotViewHistory[curPlotIndex]];
+        canvas = mPlotViewHistory[curPlotIndex]->second;
         canvas->SetWindowPosition(curXpos, curYpos - mWindowOffsetY);
         canvas->Show();
       } else {
