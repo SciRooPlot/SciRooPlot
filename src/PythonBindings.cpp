@@ -626,9 +626,9 @@ void exportLegendEntry(py::module_& m)
 void exportPythonDataInterfaces(py::module_& m)
 {
   auto bind_owned = [](std::uintptr_t addr, const char* className) {
-    static py::module_ ROOT = py::module_::import("ROOT");
-    static py::object BindObject = ROOT.attr("BindObject");
-    static py::object SetOwnership = ROOT.attr("SetOwnership");
+    py::module_ ROOT = py::module_::import("ROOT");
+    py::object BindObject = ROOT.attr("BindObject");
+    py::object SetOwnership = ROOT.attr("SetOwnership");
     py::object result = BindObject(addr, ROOT.attr(className));
     SetOwnership(result, true);
     return result;
@@ -636,7 +636,6 @@ void exportPythonDataInterfaces(py::module_& m)
 
   auto graph = [&bind_owned](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& xerr, const std::vector<double>& yerr) {
     const auto n = x.size();
-
     if (y.size() != n) {
       throw std::runtime_error("x and y must have same length");
     }
@@ -646,7 +645,6 @@ void exportPythonDataInterfaces(py::module_& m)
     if (!yerr.empty() && yerr.size() != n) {
       throw std::runtime_error("yerr has wrong size");
     }
-
     auto* g = new TGraphErrors(static_cast<int>(n), x.data(), y.data(), xerr.empty() ? nullptr : xerr.data(), yerr.empty() ? nullptr : yerr.data());
     g->SetName(name.data());
     return bind_owned(reinterpret_cast<std::uintptr_t>(g), "TGraphErrors");
@@ -657,7 +655,6 @@ void exportPythonDataInterfaces(py::module_& m)
       throw std::runtime_error("empty input");
     }
     double xmin, xmax;
-
     if (range.is_none()) {
       auto [minIt, maxIt] = std::minmax_element(v.begin(), v.end());
       xmin = *minIt;
@@ -667,8 +664,8 @@ void exportPythonDataInterfaces(py::module_& m)
       xmin = r.first;
       xmax = r.second;
     }
-
     auto* h = new TH1D(name.data(), "", bins, xmin, xmax);
+    h->SetDirectory(nullptr);
     for (double x : v) {
       h->Fill(x);
     }
@@ -682,7 +679,6 @@ void exportPythonDataInterfaces(py::module_& m)
     if (x.size() != y.size()) {
       throw std::runtime_error("x and y must have same length");
     }
-
     int nx = 50, ny = 50;
     double xmin, xmax, ymin, ymax;
     auto [minxIt, maxxIt] = std::minmax_element(x.begin(), x.end());
@@ -691,13 +687,11 @@ void exportPythonDataInterfaces(py::module_& m)
     xmax = *maxxIt;
     ymin = *minyIt;
     ymax = *maxyIt;
-
     if (!bins.is_none()) {
       auto b = bins.cast<std::pair<int, int>>();
       nx = b.first;
       ny = b.second;
     }
-
     if (!range.is_none()) {
       auto r = range.cast<std::pair<std::pair<double, double>, std::pair<double, double>>>();
       xmin = r.first.first;
@@ -705,13 +699,11 @@ void exportPythonDataInterfaces(py::module_& m)
       ymin = r.second.first;
       ymax = r.second.second;
     }
-
     auto* h = new TH2D(name.c_str(), "", nx, xmin, xmax, ny, ymin, ymax);
-
+    h->SetDirectory(nullptr);
     for (size_t i = 0; i < x.size(); ++i) {
       h->Fill(x[i], y[i]);
     }
-
     h->SetName(name.c_str());
     return bind_owned(reinterpret_cast<std::uintptr_t>(h), "TH2D");
   };
