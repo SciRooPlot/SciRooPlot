@@ -646,10 +646,10 @@ bool PlotManager::FillBuffer()
         wantedNames.erase(std::remove_if(wantedNames.begin(), wantedNames.end(), [&](const auto& wantedName) { return wantedName == name; }), wantedNames.end());
         if (wantedNames.empty()) requiredData.erase("");
       }
-      if (!str_ends_with(inputFileName, ".root")) continue;
       // check if only a sub-folder in input file should be searched
       auto fileNamePath = split_string(inputFileName, ':');
       string& fileName = fileNamePath[0];
+      if (!str_ends_with(fileName, ".root")) continue;
 
       if (!std::filesystem::exists(fileName)) {
         WARNING("Input file {} not found.", fileName);
