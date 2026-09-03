@@ -310,6 +310,8 @@ void PlotManager::LoadDataSources(const optional<string>& file)
               allFileNames.insert(file.path().string());
             }
           }
+        } else {
+          WARNING("Data source entry {} is neither a recognized file type nor an existing directory. Skipping.", fileOrDirName);
         }
       }
     }
