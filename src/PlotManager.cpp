@@ -966,6 +966,17 @@ void PlotManager::ClearDataBuffer()
 
 //**************************************************************************************************
 /**
+ * Clear the canvas registry of already produced canvae that would all be saved in "file" mode.
+ */
+//**************************************************************************************************
+void PlotManager::ClearCanvasRegistry()
+{
+  mCanvasRegistry.clear();
+  mPlotViewHistory.clear();
+}
+
+//**************************************************************************************************
+/**
  * Recursively reads data from folder / list and adds it to output data array. Found dataNames are removed from the vectors.
  */
 //**************************************************************************************************
