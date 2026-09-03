@@ -299,13 +299,16 @@ void PlotManager::LoadDataSources(const optional<string>& file)
     const string& dataSource = inputPair.first;
     set<string> allFileNames;
     for (const auto& fileEntry : inputPair.second) {
-      string fileOrDirName = expand_path(fileEntry.second.get_value<string>());
+      string fileOrDirName = fileEntry.second.get_value<string>();
       if (str_ends_with(split_string(fileOrDirName, ':')[0], ".root") || str_ends_with(fileOrDirName, mTableFileEndings)) {
         allFileNames.insert(fileOrDirName);
-      } else if (std::filesystem::is_directory(fileOrDirName)) {
-        for (const auto& file : std::filesystem::recursive_directory_iterator(fileOrDirName)) {
-          if (file.path().extension() == ".root" || str_contains(file.path().extension(), mTableFileEndings)) {
-            allFileNames.insert(file.path().string());
+      } else {
+        string path = expand_path(fileOrDirName);
+        if (std::filesystem::is_directory(path)) {
+          for (const auto& file : std::filesystem::recursive_directory_iterator(path)) {
+            if (file.path().extension() == ".root" || str_contains(file.path().extension(), mTableFileEndings)) {
+              allFileNames.insert(file.path().string());
+            }
           }
         }
       }
@@ -637,8 +640,9 @@ bool PlotManager::FillBuffer()
     }
 
     // open all input files belonging to the current dataSource and extract the data
-    for (const auto& inputFileName : mInputFiles[dataSource]) {
+    for (const auto& inputFileNameRaw : mInputFiles[dataSource]) {
       if (requiredData.empty()) break;
+      string inputFileName = expand_path(inputFileNameRaw);
       if (str_ends_with(inputFileName, mTableFileEndings)) {
         string name = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".") - inputFileName.rfind('/') - 1);
         ReadTableData(inputFileName, name, dataSource);
