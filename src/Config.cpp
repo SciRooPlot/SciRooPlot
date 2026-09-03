@@ -93,11 +93,11 @@ void Config::LoadConfig()
         continue;
       }
       if (setting.first == "matchCaseInsensitive") {
-        mMatchCaseInsensitive = std::stoi(setting.second.data());
+        mMatchCaseInsensitive = setting.second.get_value<bool>();
         continue;
       }
       if (setting.first == "matchContains") {
-        mMatchContains = std::stoi(setting.second.data());
+        mMatchContains = setting.second.get_value<bool>();
         continue;
       }
     }

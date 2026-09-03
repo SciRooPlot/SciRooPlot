@@ -98,8 +98,8 @@ class Config
   int mLogLevel{LogLevel::debug};
   int mColorMode{ColorMode::bright};
   std::string mPlotMode{"show"};
-  int mMatchCaseInsensitive{false};
-  int mMatchContains{false};
+  bool mMatchCaseInsensitive{false};
+  bool mMatchContains{false};
   std::filesystem::path mPath;
   std::string mProjectsFile;
   std::string mSettingsFile;
