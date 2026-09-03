@@ -378,10 +378,12 @@ void PrintRootFileContents(const string& inputPath)
       TObject* obj = nullptr;
       while ((obj = next())) {
         string name = obj->GetName();
+        bool ownsObj = false;
         if (obj->IsA() == TKey::Class()) {
           auto* key = static_cast<TKey*>(obj);
           name = key->GetName();
           obj = key->ReadObj();
+          ownsObj = true;
         }
         if (obj->InheritsFrom(TDirectory::Class()) || obj->InheritsFrom(TFolder::Class()) || obj->InheritsFrom(TCollection::Class())) {
           loopData(obj, path.empty() ? name : path + "/" + name);
@@ -400,6 +402,7 @@ void PrintRootFileContents(const string& inputPath)
             PRINT("  -> {}", br->GetName());
           }
         }
+        if (ownsObj) delete obj;
       }
     };
   loopData(root, startPath);
