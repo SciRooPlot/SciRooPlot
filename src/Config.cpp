@@ -25,6 +25,7 @@
 
 #include <boost/property_tree/info_parser.hpp>
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <utility>
@@ -314,7 +315,13 @@ string Config::Project::Property(const string& property) const
 
 void Config::SetProperty(const string& projectName, const string& property, const string& value)
 {
-  mProjects[projectName].mProperties[property] = value;
+  auto& properties = mProjects[projectName].mProperties;
+  properties[property] = value;
+  bool allEmpty = std::all_of(properties.begin(), properties.end(), [](const auto& p) { return p.second.empty(); });
+  if (allEmpty) {
+    INFO("Project {} has no properties left after unsetting '{}'. Removing project.", projectName, property);
+    Remove(projectName);
+  }
 }
 
 string Config::Property(const string& projectName, const string& property) const
