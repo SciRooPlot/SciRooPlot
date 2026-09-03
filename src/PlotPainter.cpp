@@ -2056,8 +2056,8 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
         } else if (str_contains(match_str, "minimum")) {
           replace_str = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMinimum());
         }
-      } catch (...) {
-        ERROR("Incompatible format string in {}.", match_str);
+      } catch (const fmt::format_error& e) {
+        ERROR("Incompatible format string in {}: {}.", match_str, e.what());
         replace_str = match_str;
       }
     }
