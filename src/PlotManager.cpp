@@ -955,6 +955,17 @@ void PlotManager::ListPlots() const
 
 //**************************************************************************************************
 /**
+ * Clear the data loaded for plots of previous GeneratePlots() calls.
+ */
+//**************************************************************************************************
+void PlotManager::ClearDataBuffer()
+{
+  mDataBuffer.clear();
+  mDataInfoBuffer.clear();
+}
+
+//**************************************************************************************************
+/**
  * Recursively reads data from folder / list and adds it to output data array. Found dataNames are removed from the vectors.
  */
 //**************************************************************************************************

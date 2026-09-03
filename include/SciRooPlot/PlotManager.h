@@ -76,6 +76,7 @@ class PlotManager
   void LoadPlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {});
   void GeneratePlots(const std::string& mode = "show", const std::string& name = ".+", const std::string& group = ".+");
   void ListPlots() const;
+  void ClearDataBuffer();
 
   std::string GetProjectProperty(const std::string& property) const;
 
