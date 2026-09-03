@@ -109,16 +109,24 @@ fi
 echo
 
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "Updating repository..."
-  git pull || exit 1
-  echo
+  if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
+    echo "Updating repository..."
+    git pull || exit 1
+    echo
+  else
+    echo "No upstream tracking branch (detached HEAD or local-only branch) -- skipping update."
+    echo
+  fi
 fi
-
 mkdir -p "${BUILD_DIR}"
 
 if [[ ! -f "${CACHE_FILE}" ]]; then
-  cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
-    -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"
+  if ! cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" \
+    -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"; then
+    rm -f "${CACHE_FILE}"
+    echo "Error: CMake configuration failed." >&2
+    exit 1
+  fi
 fi
 
 cmake --build "${BUILD_DIR}" || exit 1
