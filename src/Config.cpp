@@ -76,44 +76,52 @@ void Config::LoadConfig()
 
   // read global settings
   if (file_exists(mSettingsFile)) {
-    ptree settingsTree;
-    read_info(mSettingsFile, settingsTree);
-    for (auto& setting : settingsTree) {
+    try {
+      ptree settingsTree;
+      read_info(mSettingsFile, settingsTree);
+      for (auto& setting : settingsTree) {
 
-      if (setting.first == "logLevel") {
-        mLogLevel = std::stoi(setting.second.data());
-        continue;
+        if (setting.first == "logLevel") {
+          mLogLevel = std::stoi(setting.second.data());
+          continue;
+        }
+        if (setting.first == "colorMode") {
+          mColorMode = std::stoi(setting.second.data());
+          continue;
+        }
+        if (setting.first == "plotMode") {
+          mPlotMode = setting.second.data();
+          continue;
+        }
+        if (setting.first == "matchCaseInsensitive") {
+          mMatchCaseInsensitive = setting.second.get_value<bool>();
+          continue;
+        }
+        if (setting.first == "matchContains") {
+          mMatchContains = setting.second.get_value<bool>();
+          continue;
+        }
       }
-      if (setting.first == "colorMode") {
-        mColorMode = std::stoi(setting.second.data());
-        continue;
-      }
-      if (setting.first == "plotMode") {
-        mPlotMode = setting.second.data();
-        continue;
-      }
-      if (setting.first == "matchCaseInsensitive") {
-        mMatchCaseInsensitive = setting.second.get_value<bool>();
-        continue;
-      }
-      if (setting.first == "matchContains") {
-        mMatchContains = setting.second.get_value<bool>();
-        continue;
-      }
+    } catch (const std::exception& e) {
+      std::cerr << "Cannot load settings file " << mSettingsFile << ": " << e.what() << ". Using default settings." << std::endl;
     }
   }
 
   // read project settings
   if (file_exists(mProjectsFile)) {
-    ptree projectsTree;
-    read_info(mProjectsFile, projectsTree);
-    for (auto& project : projectsTree) {
-      if (project.first == "@current") {
-        mCurrentProject = project.second.data();
-        continue;
+    try {
+      ptree projectsTree;
+      read_info(mProjectsFile, projectsTree);
+      for (auto& project : projectsTree) {
+        if (project.first == "@current") {
+          mCurrentProject = project.second.data();
+          continue;
+        }
+        if (project.second.empty()) continue;
+        mProjects.insert_or_assign(project.first, Project(project.second));
       }
-      if (project.second.empty()) continue;
-      mProjects.insert_or_assign(project.first, Project(project.second));
+    } catch (const std::exception& e) {
+      std::cerr << "Cannot load projects file " << mProjectsFile << ": " << e.what() << ". No projects loaded." << std::endl;
     }
   }
 }
