@@ -1558,8 +1558,8 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
         ERROR("Invalid dimension specified for setting ranges of histogram {}", obj->GetName());
         return nullopt;
       }
-      int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
-      int32_t maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
+      int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int32_t>(std::get<1>(rangeTuple));
+      int32_t maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int32_t>(std::get<2>(rangeTuple));
       GetAxis(histPtr, rangeDim)->SetRange(minBin, maxBin);
     }
     if (projInfo.dims.size() == 2) {
@@ -1578,29 +1578,31 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       ERROR("Invalid dimension specified for projecting histogram {}", obj->GetName());
       return nullopt;
     }
-    int32_t minBin = 0;
-    int32_t maxBin = -1;
-
-    for (auto& rangeTuple : projInfo.ranges) {
+    // first reset all ranges in case this histogram was previously used
+    for (int16_t i = 0; i < 2; ++i) {
+      GetAxis(histPtr, i)->SetRange();
+    }
+    for (const auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 2) {
         ERROR("Invalid dimension specified for setting ranges of histogram {}", obj->GetName());
         return nullopt;
       }
-      minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
-      maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
+      int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int32_t>(std::get<1>(rangeTuple));
+      int32_t maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int32_t>(std::get<2>(rangeTuple));
+      GetAxis(histPtr, rangeDim)->SetRange(minBin, maxBin);
     }
     if (projInfo.dims[0] == 0) {
       if (isProfile) {
-        return histPtr->ProfileX("_px", minBin, maxBin);
+        return histPtr->ProfileX("_px");
       } else {
-        return histPtr->ProjectionX("_px", minBin, maxBin);
+        return histPtr->ProjectionX("_px");
       }
     } else if (projInfo.dims[0] == 1) {
       if (isProfile) {
-        return histPtr->ProfileY("_py", minBin, maxBin);
+        return histPtr->ProfileY("_py");
       } else {
-        return histPtr->ProjectionY("_py", minBin, maxBin);
+        return histPtr->ProjectionY("_py");
       }
     } else {
       ERROR("Invalid dimension specified for {} from {} ({}).", (isProfile) ? "profile" : "projection", obj->GetName(), obj->ClassName());
