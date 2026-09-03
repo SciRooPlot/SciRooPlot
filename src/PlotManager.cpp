@@ -300,7 +300,7 @@ void PlotManager::LoadDataSources(const optional<string>& file)
     set<string> allFileNames;
     for (const auto& fileEntry : inputPair.second) {
       string fileOrDirName = expand_path(fileEntry.second.get_value<string>());
-      if (str_ends_with(fileOrDirName, ".root") || str_ends_with(fileOrDirName, mTableFileEndings)) {
+      if (str_ends_with(split_string(fileOrDirName, ':')[0], ".root") || str_ends_with(fileOrDirName, mTableFileEndings)) {
         allFileNames.insert(fileOrDirName);
       } else if (std::filesystem::is_directory(fileOrDirName)) {
         for (const auto& file : std::filesystem::recursive_directory_iterator(fileOrDirName)) {
