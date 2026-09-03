@@ -19,6 +19,8 @@
 #ifndef INCLUDE_SCIROOPLOT_HELPERS_H_
 #define INCLUDE_SCIROOPLOT_HELPERS_H_
 
+#include "SciRooPlot/Logging.h"
+
 #include <TSystem.h>
 
 #include <boost/property_tree/ptree.hpp>
@@ -146,6 +148,9 @@ std::tuple<Ts...> string_to_tuple(std::string itemString)
   while (i < sizeof...(Ts) && std::getline(stream, curItemStr, ',')) {
     numbers[i] = curItemStr;
     ++i;
+  }
+  if (i != sizeof...(Ts)) {
+    logger::throw_invalid_argument("Expected {} comma-separated values but found {} in '{}'.", sizeof...(Ts), i, itemString);
   }
 
   // ugly hack...
