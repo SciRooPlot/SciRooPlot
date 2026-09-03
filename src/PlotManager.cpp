@@ -469,8 +469,12 @@ void PlotManager::LoadPlots(const string& name, const string& group, const optio
   for (const auto& plotTree : fileTree) {
     const string& curGroup = plotTree.second.get<string>("group");
     if (curGroup == "BASE_PLOTS") {
-      Plot basePlot(plotTree.second);
-      AddBasePlot(std::move(basePlot));
+      try {
+        Plot basePlot(plotTree.second);
+        AddBasePlot(std::move(basePlot));
+      } catch (const std::exception& e) {
+        ERROR("Could not load base plot {} from file: {}", plotTree.first, e.what());
+      }
       continue;
     }
     if (!groupRegex.Matches(curGroup)) continue;

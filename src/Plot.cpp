@@ -1499,8 +1499,17 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
       read_from_tree(dataTree, sizes, "data_binning_sizes");
 
       if (binning && sizes) {
+        if (sizes->size() != vars->size()) {
+          logger::throw_invalid_argument("data_binning_sizes has {} entries, expected {} (one per data_vars entry).", sizes->size(), vars->size());
+        }
         auto lastPos = binning->begin();
-        for (int i = 0; i < vars->size(); ++i) {
+        for (size_t i = 0; i < vars->size(); ++i) {
+          if ((*sizes)[i] < 1) {
+            logger::throw_invalid_argument("data_binning_sizes entry {} must be at least 1.", i);
+          }
+          if (std::distance(lastPos, binning->end()) < static_cast<std::ptrdiff_t>((*sizes)[i])) {
+            logger::throw_invalid_argument("data_binning does not contain enough entries for data_binning_sizes.");
+          }
           auto nextPos = lastPos + (*sizes)[i];
           vector<double_t> edges(lastPos, nextPos);
           lastPos = nextPos;
@@ -1530,6 +1539,9 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
     read_from_tree(dataTree, isUserCoord, "proj_isUserCoord");
     read_from_tree(dataTree, isProfile, "proj_isProfile");
     if (dims) {
+      if (!ranges) {
+        logger::throw_invalid_argument("proj_dims is set but proj_ranges is missing.");
+      }
       mProjInfo = {*dims, *ranges, isUserCoord, isProfile};
     }
   }
@@ -2158,8 +2170,17 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
       read_from_tree(dataTree, sizes, "denomData_binning_sizes");
 
       if (binning && sizes) {
+        if (sizes->size() != vars->size()) {
+          logger::throw_invalid_argument("denomData_binning_sizes has {} entries, expected {} (one per denomData_vars entry).", sizes->size(), vars->size());
+        }
         auto lastPos = binning->begin();
-        for (int i = 0; i < vars->size(); ++i) {
+        for (size_t i = 0; i < vars->size(); ++i) {
+          if ((*sizes)[i] < 1) {
+            logger::throw_invalid_argument("denomData_binning_sizes entry {} must be at least 1.", i);
+          }
+          if (std::distance(lastPos, binning->end()) < static_cast<std::ptrdiff_t>((*sizes)[i])) {
+            logger::throw_invalid_argument("denomData_binning does not contain enough entries for denomData_binning_sizes.");
+          }
           auto nextPos = lastPos + (*sizes)[i];
           vector<double_t> edges(lastPos, nextPos);
           lastPos = nextPos;
@@ -2189,6 +2210,9 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
     read_from_tree(dataTree, isUserCoord, "denomProj_isUserCoord");
     read_from_tree(dataTree, isProfile, "denomProj_isProfile");
     if (dims) {
+      if (!ranges) {
+        logger::throw_invalid_argument("denomProj_dims is set but denomProj_ranges is missing.");
+      }
       mDenomProjInfo = {*dims, *ranges, isUserCoord, isProfile};
     }
   }
