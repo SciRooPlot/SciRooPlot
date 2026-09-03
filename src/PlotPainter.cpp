@@ -1810,30 +1810,20 @@ void PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialError
 }
 void PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
 {
-  bool sameBinning = true;
-  if (numerator->GetXaxis()->GetNbins() != denominator->GetXaxis()->GetNbins()) {
-    sameBinning = false;
-  } else {
-    if (!numerator->GetXaxis()->IsAlphanumeric() && !denominator->GetXaxis()->IsAlphanumeric()) {
-      for (int32_t i = 1; i <= numerator->GetXaxis()->GetNbins() + 1; ++i) {
-        if (numerator->GetXaxis()->GetBinLowEdge(i) != denominator->GetXaxis()->GetBinLowEdge(i)) {
-          sameBinning = false;
-        }
-      }
+  auto sameAxisBinning = [](TAxis* a, TAxis* b) -> bool {
+    if (a->GetNbins() != b->GetNbins()) return false;
+    if (a->IsAlphanumeric() || b->IsAlphanumeric()) return true;
+    for (int32_t i = 1; i <= a->GetNbins() + 1; ++i) {
+      if (a->GetBinLowEdge(i) != b->GetBinLowEdge(i)) return false;
     }
+    return true;
+  };
+  bool sameBinning = sameAxisBinning(numerator->GetXaxis(), denominator->GetXaxis());
+  if (numerator->GetDimension() >= 2 && denominator->GetDimension() >= 2) {
+    sameBinning = sameBinning && sameAxisBinning(numerator->GetYaxis(), denominator->GetYaxis());
   }
-  if (numerator->InheritsFrom(TH2::Class()) && denominator->InheritsFrom(TH2::Class())) {
-    if (numerator->GetYaxis()->GetNbins() != denominator->GetYaxis()->GetNbins()) {
-      sameBinning = false;
-    } else {
-      if (!numerator->GetYaxis()->IsAlphanumeric() && !denominator->GetYaxis()->IsAlphanumeric()) {
-        for (int32_t i = 1; i <= numerator->GetYaxis()->GetNbins() + 1; ++i) {
-          if (numerator->GetYaxis()->GetBinLowEdge(i) != denominator->GetYaxis()->GetBinLowEdge(i)) {
-            sameBinning = false;
-          }
-        }
-      }
-    }
+  if (numerator->GetDimension() >= 3 && denominator->GetDimension() >= 3) {
+    sameBinning = sameBinning && sameAxisBinning(numerator->GetZaxis(), denominator->GetZaxis());
   }
   if (sameBinning) {
     numerator->Divide(numerator, denominator, 1., 1., (binomialErrors) ? "B" : "");

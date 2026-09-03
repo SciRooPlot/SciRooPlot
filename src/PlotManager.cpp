@@ -112,6 +112,7 @@ void PlotManager::SavePlotsToRootFile() const
       return;
     }
     outputFile.cd();
+    // only meaningful if no other PlotManager instance is concurrently allocating colors!
     if (auto nUserColors = TColor::GetFreeColorIndex() - mFirstFreeColorIndex) {
       vector<std::unique_ptr<TBox>> colorBoxes;
       colorBoxes.reserve(nUserColors);
