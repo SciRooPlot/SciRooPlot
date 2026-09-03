@@ -2926,7 +2926,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetTextSize(float_t size)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetFill(int16_t color, int16_t style, float_t alpha)
+BoxType& Plot::Pad::Box<BoxType>::SetFill(int16_t color, int16_t style, optional<float_t> alpha)
 {
   mFill.color = color;
   mFill.style = style;

@@ -933,7 +933,7 @@ class Plot::Pad::Box
   BoxType& SetTextAlpha(float_t alpha);
   BoxType& SetTextFont(int16_t font);
   BoxType& SetTextSize(float_t size);
-  BoxType& SetFill(int16_t color, int16_t style, float_t alpha);
+  BoxType& SetFill(int16_t color, int16_t style, std::optional<float_t> alpha = {});
   BoxType& SetFillColor(int16_t color);
   BoxType& SetFillStyle(int16_t style);
   BoxType& SetFillAlpha(float_t alpha);
