@@ -8,9 +8,9 @@ endif()
 include(CMakeFindDependencyMacro)
 
 # Dependencies
-find_dependency(ROOT)
-find_dependency(Boost COMPONENTS program_options)
-find_dependency(fmt)
+find_dependency(ROOT @REQUIRED_ROOT_VERSION@)
+find_dependency(Boost @REQUIRED_BOOST_VERSION@ COMPONENTS program_options)
+find_dependency(fmt @REQUIRED_FMT_VERSION@)
 
 # Include the exported targets (installed by install(EXPORT ...))
 include("${CMAKE_CURRENT_LIST_DIR}/SciRooPlotTargets.cmake")
