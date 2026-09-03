@@ -291,6 +291,14 @@ int main(int argc, char* argv[])
     }
     std::cout << Config::Get().Property(project, property) << std::endl;
   } else if (command == "unset") {
+    if (project.empty()) {
+      ERROR("Specify project or use @current.");
+      return 1;
+    }
+    if (!Config::Get().Exists(project)) {
+      ERROR("Cannot find project {}.", project);
+      return 1;
+    }
     Config::GetMutable().SetProperty(project, property, "");
   } else if (command == "set") {
     if (project.empty()) {

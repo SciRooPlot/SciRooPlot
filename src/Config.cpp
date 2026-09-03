@@ -323,10 +323,6 @@ string Config::Project::Property(const string& property) const
 
 void Config::SetProperty(const string& projectName, const string& property, const string& value)
 {
-  if (!Exists(projectName)) {
-    ERROR("Cannot find project {}.", projectName);
-    return;
-  }
   auto& properties = mProjects[projectName].mProperties;
   properties[property] = value;
   bool allEmpty = std::all_of(properties.begin(), properties.end(), [](const auto& p) { return p.second.empty(); });
