@@ -42,7 +42,7 @@ jobs:
         with:
           environment-name: build
           create-args: >-
-            root
+            root_base
             -c conda-forge
           cache-environment: true
 
