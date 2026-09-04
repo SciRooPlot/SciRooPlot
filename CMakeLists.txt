@@ -66,6 +66,7 @@ if(NOT (fmt_FOUND AND fmt_VERSION VERSION_GREATER_EQUAL REQUIRED_FMT_VERSION))
   FetchContent_Declare(
     fmt
     URL https://github.com/fmtlib/fmt/releases/download/11.2.0/fmt-11.2.0.zip
+    URL_HASH SHA256=203eb4e8aa0d746c62d8f903df58e0419e3751591bb53ff971096eaa0ebd4ec3
     DOWNLOAD_EXTRACT_TIMESTAMP OFF
   )
   FetchContent_MakeAvailable(fmt)
