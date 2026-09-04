@@ -22,6 +22,7 @@
 #include "SciRooPlot/Logging.h"
 
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -1172,7 +1173,11 @@ void Plot::Pad::operator+=(const Pad& pad)
   for (const auto& data : pad.mData) {
     auto clonedData = data ? data->Clone() : nullptr;
     if (clonedData && clonedData->GetLegendID()) {
-      clonedData->SetLegend(static_cast<uint8_t>(*clonedData->GetLegendID() + legendOffset));
+      size_t shiftedLegendID = *clonedData->GetLegendID() + legendOffset;
+      if (shiftedLegendID > std::numeric_limits<uint8_t>::max()) {
+        logger::throw_out_of_range("Too many legend boxes to merge into a single pad (legend ID {} would exceed the maximum of {}).", shiftedLegendID, std::numeric_limits<uint8_t>::max());
+      }
+      clonedData->SetLegend(static_cast<uint8_t>(shiftedLegendID));
     }
     mData.push_back(clonedData);
   }
