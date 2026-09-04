@@ -1246,7 +1246,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     for (size_t i = 0; i < dataInfo.filters->size(); ++i) {
       try {
         node = node.Filter(dataInfo.filters->at(i));
-      } catch (std::runtime_error) {
+      } catch (const std::runtime_error&) {
         ERROR("Illegal expression in filter: {}.", dataInfo.filters->at(i));
         return nullptr;
       }
@@ -1267,7 +1267,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     string colName = "SRP_AXIS_" + std::to_string(axisID);
     try {
       node = node.Define(colName, dataDim.var);
-    } catch (std::runtime_error) {
+    } catch (const std::runtime_error&) {
       ERROR("Illegal expression: {}.", dataDim.var);
       return nullptr;
     }
@@ -1314,7 +1314,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
   if (dataInfo.weight) {
     try {
       node = node.Define("SRP_AXIS_W", *dataInfo.weight);
-    } catch (std::runtime_error) {
+    } catch (const std::runtime_error&) {
       ERROR("Illegal expression for weights: {}.", *dataInfo.weight);
       return nullptr;
     }

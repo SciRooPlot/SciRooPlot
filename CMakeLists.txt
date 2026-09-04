@@ -143,7 +143,11 @@ endif()
 # -----------------------
 # Compiler warnings
 # -----------------------
+option(SCIROOPLOT_WARNINGS_AS_ERRORS "Treat compiler warnings as errors (used in CI)" OFF)
 add_compile_options(-Wall -Wextra -Wno-missing-field-initializers)
+if(SCIROOPLOT_WARNINGS_AS_ERRORS)
+  add_compile_options(-Werror)
+endif()
 
 # -----------------------
 # Library
