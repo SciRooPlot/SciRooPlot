@@ -26,7 +26,7 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
 
-          curl -L \
+          curl -fL \
             "https://github.com/SciRooPlot/SciRooPlot/archive/refs/tags/v${VERSION}.tar.gz" \
             -o source.tar.gz
 
