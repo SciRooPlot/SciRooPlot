@@ -141,6 +141,11 @@ if(CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
 endif()
 
 # -----------------------
+# Compiler warnings
+# -----------------------
+add_compile_options(-Wall -Wextra -Wno-missing-field-initializers)
+
+# -----------------------
 # Library
 # -----------------------
 add_library(SciRooPlot SHARED

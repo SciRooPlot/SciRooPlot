@@ -1208,7 +1208,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     ERROR("Too many dimensions specified for profile of {}.", dfName);
     return nullptr;
   }
-  int32_t axisID = 1;
+  size_t axisID = 1;
   for (auto& dataDim : dataDims) {
     if (isProjection || (isProfile && axisID < dataDims.size())) {
       // sanity check for binned axes
@@ -1230,7 +1230,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
   ROOT::RDF::RNode node = df;  // working node
 
   if (dataInfo.definitions.keys && dataInfo.definitions.values) {
-    for (int i = 0; i < dataInfo.definitions.keys->size(); ++i) {
+    for (size_t i = 0; i < dataInfo.definitions.keys->size(); ++i) {
       node = node.Define(dataInfo.definitions.keys->at(i), dataInfo.definitions.values->at(i));
     }
   }
@@ -1243,7 +1243,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
   }
   auto nEntriesPreFilter = node.Count();
   if (dataInfo.filters) {
-    for (int32_t i = 0; i < dataInfo.filters->size(); ++i) {
+    for (size_t i = 0; i < dataInfo.filters->size(); ++i) {
       try {
         node = node.Filter(dataInfo.filters->at(i));
       } catch (std::runtime_error) {
@@ -1453,7 +1453,7 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       }
       vector<string> colNames;
       axisID = 1;
-      for (auto& dataDim : dataDims) {
+      for (size_t i = 0; i < dataDims.size(); ++i) {
         colNames.push_back("SRP_AXIS_" + std::to_string(axisID));
         ++axisID;
       }

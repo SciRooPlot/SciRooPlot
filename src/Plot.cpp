@@ -1290,7 +1290,7 @@ Plot::Pad::Data& Plot::Pad::AddPoints(vector<double_t> x, vector<double_t> y, co
   }
   string xStr;
   string yStr;
-  for (int32_t i = 0; i < nPoints; ++i) {
+  for (size_t i = 0; i < nPoints; ++i) {
     xStr += std::to_string(x[i]) + ((i == nPoints - 1) ? "" : ",");
     yStr += std::to_string(y[i]) + ((i == nPoints - 1) ? "" : ",");
   }
