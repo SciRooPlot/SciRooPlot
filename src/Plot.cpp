@@ -1162,6 +1162,7 @@ void Plot::Pad::operator+=(const Pad& pad)
     mAxes[axisLabel];  // default initialize in case this axis was not yet defined
     mAxes[axisLabel] += axis;
   }
+  size_t legendOffset = mLegendBoxes.size();
   for (const auto& legendBox : pad.mLegendBoxes) {
     mLegendBoxes.push_back(legendBox ? std::make_shared<LegendBox>(*legendBox) : nullptr);
   }
@@ -1169,7 +1170,11 @@ void Plot::Pad::operator+=(const Pad& pad)
     mTextBoxes.push_back(textBox ? std::make_shared<TextBox>(*textBox) : nullptr);
   }
   for (const auto& data : pad.mData) {
-    mData.push_back(data ? data->Clone() : nullptr);
+    auto clonedData = data ? data->Clone() : nullptr;
+    if (clonedData && clonedData->GetLegendID()) {
+      clonedData->SetLegend(static_cast<uint8_t>(*clonedData->GetLegendID() + legendOffset));
+    }
+    mData.push_back(clonedData);
   }
 }
 

@@ -318,9 +318,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         continue;
       }
     } else {
-      // find data that should define the axis frame
-      auto framePos = std::find_if(drawData.begin(), drawData.end(), [](const auto& curData) { return curData->GetDefinesFrame(); });
-      size_t frameDataID = (framePos != drawData.end()) ? framePos - drawData.begin() : 0u;
+      // find data that should define the axis frame (selects the most recently added data that wants to define frame)
+      auto framePos = std::find_if(drawData.rbegin(), drawData.rend(), [](const auto& curData) { return curData->GetDefinesFrame(); });
+      size_t frameDataID = (framePos != drawData.rend()) ? static_cast<size_t>((framePos.base() - 1) - drawData.begin()) : 0u;
       // make a copy of data that will serve as axis frame and put it in front of data vector
       if (drawData[frameDataID]->GetType() == "ratio") {
         drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Ratio>(*std::dynamic_pointer_cast<Plot::Pad::Ratio>(drawData[frameDataID])));

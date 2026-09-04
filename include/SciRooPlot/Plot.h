@@ -539,6 +539,7 @@ class Plot::Pad::Data
   friend class PlotManager;
   friend class PlotPainter;
   friend class Plot;
+  friend class Pad;
 
   virtual boost::property_tree::ptree GetPropertyTree() const;
   void SetType(const std::string& type) { mType = type; }
