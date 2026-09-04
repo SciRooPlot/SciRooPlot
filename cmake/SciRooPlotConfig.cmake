@@ -5,6 +5,11 @@ if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
 endif()
 
+# Policy for upper-cased <PackageName>_ROOT variables (e.g. ROOT_ROOT, BOOST_ROOT, FMT_ROOT)
+if(POLICY CMP0144)
+  cmake_policy(SET CMP0144 NEW)
+endif()
+
 include(CMakeFindDependencyMacro)
 
 # Dependencies

@@ -7,7 +7,7 @@
 ## ⬇️ Installation instructions
 SciRooPlot runs on MacOS and Linux. It depends on the following external software which needs to be installed on your system:
 
-- cmake >= 3.24
+- cmake >= 3.27
 - fmt   >= 6.1.2
 - boost >= 1.65
 - ROOT  >= 6.16

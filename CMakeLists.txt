@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.27)
 
 project(
   SciRooPlot
@@ -40,9 +40,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_L
 # -----------------------
 # Policies
 # -----------------------
-if(POLICY CMP0144)
-    cmake_policy(SET CMP0144 NEW)   # uppercase _ROOT variables
-endif()
 if(POLICY CMP0167)
     cmake_policy(SET CMP0167 NEW)   # modern Boost usage
 endif()
