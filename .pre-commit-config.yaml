@@ -36,5 +36,6 @@ repos:
     rev: v0.11.0.1
     hooks:
       - id: shellcheck
+        types: [text]
         files: \.sh(\.in)?$
         exclude: ^packaging/alidist/scirooplot\.sh\.in$
