@@ -4,9 +4,11 @@ requires:
   - fmt
   - boost
   - ROOT
+  - Python
 build_requires:
   - "GCC-Toolchain:(?!osx)"
   - CMake
+  - Python
 source: https://github.com/SciRooPlot/SciRooPlot.git
 ---
 #!/bin/bash -ex
@@ -33,3 +35,8 @@ setenv SCIROOPLOT_DATA_DIR \${PKG_ROOT}/share/scirooplot
 setenv SCIROOPLOT_ENV \${PKG_ROOT}/share/scirooplot/env.sh
 puts stderr {For SciRooPlot tab completion: source \$SCIROOPLOT_ENV}
 EoF
+
+SCIROOPLOT_PYTHON_SITE_DIR=$(cd "${INSTALLROOT}" && compgen -G "lib/python*/site-packages" | head -1)
+if [[ -n "${SCIROOPLOT_PYTHON_SITE_DIR}" ]]; then
+  echo "prepend-path PYTHONPATH \${PKG_ROOT}/${SCIROOPLOT_PYTHON_SITE_DIR}" >> "${MODULEFILE}"
+fi
