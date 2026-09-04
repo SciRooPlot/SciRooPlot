@@ -213,7 +213,7 @@ class Plot::Pad
   void Print() const { Plot::Print(GetPropertyTree(), "Pad"); }
 
   // User accessors:
-  Data& AddData(const std::string& name, const std::string& dataset, const std::optional<std::string>& label = {});
+  Data& AddData(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = {});
   Data& AddData(const std::string& name, const Data& settings, const std::optional<std::string>& label = {});
   Data& AddFunction(const std::string& function, const std::optional<std::string>& label = {});
 
@@ -436,7 +436,7 @@ class Plot::Pad::Data
 {
  public:
   Data() = default;
-  Data(const std::string& name, const std::string& dataset, const std::optional<std::string>& label);
+  Data(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label);
   explicit Data(const boost::property_tree::ptree& dataTree);
 
   virtual ~Data() = default;
@@ -450,7 +450,7 @@ class Plot::Pad::Data
   Ratio& AsRatio();
   const std::string& GetDataSource() const { return mDataSource; }
 
-  virtual Data& SetDataSource(const std::string& dataset);
+  virtual Data& SetDataSource(const std::string& dataSource);
   virtual Data& SetLayout(const Data& dataLayout);
   virtual Data& ApplyLayout(const Data& dataLayout);
   virtual Data& SetRangeX(double_t min, double_t max);
@@ -676,7 +676,7 @@ class Plot::Pad::Data
 class Plot::Pad::Ratio : public Plot::Pad::Data
 {
  public:
-  Ratio(const std::string& name, const std::string& dataset, const std::string& denomName,
+  Ratio(const std::string& name, const std::string& dataSource, const std::string& denomName,
         const std::string& denomDataSource, const std::optional<std::string>& label);
   explicit Ratio(const boost::property_tree::ptree& dataTree);
 

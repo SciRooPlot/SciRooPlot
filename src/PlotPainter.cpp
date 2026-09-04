@@ -1986,24 +1986,24 @@ float_t PlotPainter::GetTextSizePixel(float_t textSizeNDC)
 //**************************************************************************************************
 void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
 {
-  std::regex words_regex("<(name|title|entries|integral|mean|maximum|minimum).*?>");
-  auto words_begin = std::sregex_iterator(str.begin(), str.end(), words_regex);
-  auto words_end = std::sregex_iterator();
+  std::regex wordsRegex("<(name|title|entries|integral|mean|maximum|minimum).*?>");
+  auto wordsBegin = std::sregex_iterator(str.begin(), str.end(), wordsRegex);
+  auto wordsEnd = std::sregex_iterator();
 
   string result;
   size_t lastEnd = 0;  // offset into the original str, just past the previous match
 
-  for (std::sregex_iterator match = words_begin; match != words_end; ++match) {
-    string match_str = match->str();
+  for (std::sregex_iterator match = wordsBegin; match != wordsEnd; ++match) {
+    string matchStr = match->str();
     size_t matchPos = match->position();
 
     // copy the untouched text since the previous match, then compute the replacement
     result.append(str, lastEnd, matchPos - lastEnd);
 
     string format{};
-    std::regex format_regex("\\[.*?\\]");
-    if (auto format_it = std::sregex_iterator(match_str.begin(), match_str.end(), format_regex); format_it != std::sregex_iterator()) {
-      format = format_it->str();
+    std::regex formatRegex("\\[.*?\\]");
+    if (auto formatIt = std::sregex_iterator(matchStr.begin(), matchStr.end(), formatRegex); formatIt != std::sregex_iterator()) {
+      format = formatIt->str();
       format = format.substr(1, format.size() - 2);
     }
     format.erase(remove(format.begin(), format.end(), '%'), format.end());
@@ -2013,49 +2013,49 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     }
     format = "{:" + format + "}";
 
-    string replace_str = match_str;
-    if (str_contains(match_str, "name")) {
-      replace_str = data_ptr->GetName();
+    string replaceStr = matchStr;
+    if (str_contains(matchStr, "name")) {
+      replaceStr = data_ptr->GetName();
 
       // strip the numeric "<index>:" prefix PlotPainter adds right before drawing
-      if (auto colonPos = replace_str.find(":"); colonPos != string::npos) {
-        replace_str = replace_str.substr(colonPos + 1);
+      if (auto colonPos = replaceStr.find(":"); colonPos != string::npos) {
+        replaceStr = replaceStr.substr(colonPos + 1);
       }
 
       // strip everything from a projection/binning suffix onward; those always start with '{',
       // sometimes preceded by "_Proj" or "_Prof" (see proj_info_t/data_info_t::GetNameSuffix())
-      if (auto bracePos = replace_str.find('{'); bracePos != string::npos) {
+      if (auto bracePos = replaceStr.find('{'); bracePos != string::npos) {
         for (const string marker : {"_Proj", "_Prof"}) {
-          if (bracePos >= marker.size() && replace_str.compare(bracePos - marker.size(), marker.size(), marker) == 0) {
+          if (bracePos >= marker.size() && replaceStr.compare(bracePos - marker.size(), marker.size(), marker) == 0) {
             bracePos -= marker.size();
             break;
           }
         }
-        replace_str = replace_str.substr(0, bracePos);
+        replaceStr = replaceStr.substr(0, bracePos);
       }
-    } else if (str_contains(match_str, "title")) {
-      replace_str = data_ptr->GetTitle();
+    } else if (str_contains(matchStr, "title")) {
+      replaceStr = data_ptr->GetTitle();
     } else if (data_ptr->InheritsFrom(TH1::Class())) {
       try {
-        if (str_contains(match_str, "entries")) {
-          replace_str = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetEntries());
-        } else if (str_contains(match_str, "integral")) {
-          replace_str = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->Integral());
-        } else if (str_contains(match_str, "mean")) {
-          replace_str = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMean());
-        } else if (str_contains(match_str, "maximum")) {
-          replace_str = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMaximum());
-        } else if (str_contains(match_str, "minimum")) {
-          replace_str = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMinimum());
+        if (str_contains(matchStr, "entries")) {
+          replaceStr = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetEntries());
+        } else if (str_contains(matchStr, "integral")) {
+          replaceStr = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->Integral());
+        } else if (str_contains(matchStr, "mean")) {
+          replaceStr = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMean());
+        } else if (str_contains(matchStr, "maximum")) {
+          replaceStr = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMaximum());
+        } else if (str_contains(matchStr, "minimum")) {
+          replaceStr = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMinimum());
         }
       } catch (const fmt::format_error& e) {
-        ERROR("Incompatible format string in {}: {}.", match_str, e.what());
-        replace_str = match_str;
+        ERROR("Incompatible format string in {}: {}.", matchStr, e.what());
+        replaceStr = matchStr;
       }
     }
 
-    result += replace_str;
-    lastEnd = matchPos + match_str.size();
+    result += replaceStr;
+    lastEnd = matchPos + matchStr.size();
   }
   result.append(str, lastEnd, string::npos);  // copy whatever remains after the last match
 
