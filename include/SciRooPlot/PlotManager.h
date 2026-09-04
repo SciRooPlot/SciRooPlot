@@ -58,15 +58,15 @@ class PlotManager
 
   void SaveProject() const;
 
-  // create or append to a dataSource.
-  void AddDataSource(const std::string& dataSource, const std::vector<std::string>& inputFiles);
-  void AddDataSource(const std::string& dataSource, std::initializer_list<std::string> inputFiles);
-  void AddDataSource(const std::string& dataSource, const std::string& inputFile);
-  void AddDataSource(const std::string& dataSource, const std::vector<TObject*>& inputData);
-  void AddDataSource(const std::string& dataSource, TObject* inputData);
+  // create or append to a dataSource; replace = true clears existing entries from the dataSource first
+  void AddDataSource(const std::string& dataSource, const std::vector<std::string>& inputFiles, bool replace = false);
+  void AddDataSource(const std::string& dataSource, std::initializer_list<std::string> inputFiles, bool replace = false);
+  void AddDataSource(const std::string& dataSource, const std::string& inputFile, bool replace = false);
+  void AddDataSource(const std::string& dataSource, const std::vector<TObject*>& inputData, bool replace = false);
+  void AddDataSource(const std::string& dataSource, TObject* inputData, bool replace = false);
 
   void SaveDataSources(const std::optional<std::string>& file = {}) const;
-  void LoadDataSources(const std::optional<std::string>& file = {});
+  void LoadDataSources(const std::optional<std::string>& file = {}, bool replace = false);
 
   void AddPlot(Plot plot);
   void AddBasePlot(Plot basePlot);

@@ -192,8 +192,11 @@ void PlotManager::SetOutputDirectory(const string& path)
  * Define input file paths for user defined dataSource.
  */
 //**************************************************************************************************
-void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputFiles)
+void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputFiles, bool replace)
 {
+  if (replace) {
+    mInputFiles.erase(dataSource);
+  }
   for (auto inputFilePath : inputFiles) {
     if (std::filesystem::path(expand_path(inputFilePath)).is_relative()) {
       WARNING("The path to an input file must not be relative. Skipping {}.", inputFilePath);
@@ -205,13 +208,13 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<string>& 
     }
   }
 }
-void PlotManager::AddDataSource(const std::string& dataSource, std::initializer_list<string> inputFiles)
+void PlotManager::AddDataSource(const std::string& dataSource, std::initializer_list<string> inputFiles, bool replace)
 {
-  AddDataSource(dataSource, std::vector<std::string>(inputFiles));
+  AddDataSource(dataSource, std::vector<std::string>(inputFiles), replace);
 }
-void PlotManager::AddDataSource(const string& dataSource, const string& inputFile)
+void PlotManager::AddDataSource(const string& dataSource, const string& inputFile, bool replace)
 {
-  AddDataSource(dataSource, {inputFile});
+  AddDataSource(dataSource, {inputFile}, replace);
 }
 
 //**************************************************************************************************
@@ -219,7 +222,7 @@ void PlotManager::AddDataSource(const string& dataSource, const string& inputFil
  * Define input data for user defined unique dataSource.
  */
 //**************************************************************************************************
-void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>& inputData)
+void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>& inputData, bool replace)
 {
   string fileName = (mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName);
   fileName += "/UserData.root";
@@ -251,11 +254,11 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     object->Write();
   }
   file.Close();
-  AddDataSource(dataSource, {fileName + ":" + dataSource});
+  AddDataSource(dataSource, {fileName + ":" + dataSource}, replace);
 }
-void PlotManager::AddDataSource(const string& dataSource, TObject* inputData)
+void PlotManager::AddDataSource(const string& dataSource, TObject* inputData, bool replace)
 {
-  AddDataSource(dataSource, vector<TObject*>{inputData});
+  AddDataSource(dataSource, vector<TObject*>{inputData}, replace);
 }
 
 //**************************************************************************************************
@@ -286,7 +289,7 @@ void PlotManager::SaveDataSources(const optional<string>& file) const
  * Load dataSource properties from config file into manager.
  */
 //**************************************************************************************************
-void PlotManager::LoadDataSources(const optional<string>& file)
+void PlotManager::LoadDataSources(const optional<string>& file, bool replace)
 {
   ptree inputFileTree;
   try {
@@ -316,7 +319,7 @@ void PlotManager::LoadDataSources(const optional<string>& file)
         }
       }
     }
-    AddDataSource(dataSource, vector<string>{allFileNames.begin(), allFileNames.end()});
+    AddDataSource(dataSource, vector<string>{allFileNames.begin(), allFileNames.end()}, replace);
   }
 }
 

@@ -194,9 +194,9 @@ void exportPlotManager(py::module_& m)
 {
   py::class_<PlotManager>(m, "PlotManager")
     .def(py::init<const string&>(), arg("projectName") = "")
-    .def("AddDataSource", overload_cast<const string&, const vector<string>&>(&PlotManager::AddDataSource), arg("dataSource"), arg("inputFiles"))
-    .def("AddDataSource", overload_cast<const string&, const string&>(&PlotManager::AddDataSource), arg("dataSource"), arg("inputFile"))
-    .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::list objs) {
+    .def("AddDataSource", overload_cast<const string&, const vector<string>&, bool>(&PlotManager::AddDataSource), arg("dataSource"), arg("inputFiles"), arg("replace") = false)
+    .def("AddDataSource", overload_cast<const string&, const string&, bool>(&PlotManager::AddDataSource), arg("dataSource"), arg("inputFile"), arg("replace") = false)
+    .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::list objs, bool replace) {
       static py::module_ ROOT = py::module_::import("ROOT");
       static py::object TObjectClass = ROOT.attr("TObject");
       py::object addressof = ROOT.attr("addressof");
@@ -208,8 +208,8 @@ void exportPlotManager(py::module_& m)
         }
         v.push_back(reinterpret_cast<TObject*>(addressof(o).cast<std::uintptr_t>()));
       }
-      self.AddDataSource(dataSource, v); }, py::arg("dataSource"), py::arg("inputData"))
-    .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::object obj) {
+      self.AddDataSource(dataSource, v, replace); }, py::arg("dataSource"), py::arg("inputData"), py::arg("replace") = false)
+    .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::object obj, bool replace) {
       static py::module_ ROOT = py::module_::import("ROOT");
       static py::object TObjectClass = ROOT.attr("TObject");
       if (!py::isinstance(obj, TObjectClass)) {
@@ -217,9 +217,9 @@ void exportPlotManager(py::module_& m)
       }
       py::object addressof = ROOT.attr("addressof");
       auto ptr = reinterpret_cast<TObject*>(addressof(obj).cast<std::uintptr_t>());
-      self.AddDataSource(dataSource, ptr); }, py::arg("dataSource"), py::arg("inputData"))
+      self.AddDataSource(dataSource, ptr, replace); }, py::arg("dataSource"), py::arg("inputData"), py::arg("replace") = false)
     .def("SaveDataSources", &PlotManager::SaveDataSources, arg("file") = py::none())
-    .def("LoadDataSources", &PlotManager::LoadDataSources, arg("file") = py::none())
+    .def("LoadDataSources", &PlotManager::LoadDataSources, arg("file") = py::none(), arg("replace") = false)
     .def("AddPlot", &PlotManager::AddPlot, arg("plot"))
     .def("AddBasePlot", &PlotManager::AddBasePlot, arg("basePlot"))
     .def("AddColorOverview", &PlotManager::AddColorOverview, arg("name"), arg("group"), arg("colors") = vector<int32_t>{})
