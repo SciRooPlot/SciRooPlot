@@ -70,6 +70,7 @@ Regular expressions are supported for the options `<group>` and `<name>`.
 This allows the creation of multiple plots matching the specified pattern in a single request.
 For example `plot paperPlots .+` would generate all plots defined within the group called `paperPlots` and `plot thesisFigures moneyPlot[1,2]` creates `moneyPlot1` and `moneyPlot2` from the group `thesisFigures`.
 To specify multiple text options one can use `plot analysisQA trackProperty_(tight|loose|nominal)CutSetting`.
+Note: in bash (unlike zsh), patterns containing `(`, `)`, or `|` must be quoted, e.g. `plot analysisQA 'trackProperty_(tight|loose|nominal)CutSetting'` — bash treats those characters as shell syntax rather than pattern text.
 To select only a subgroup within the group, use `<group/some/subgroup>` (for example `plot myGroup/QAPlots controlObservable`).
 By default, the optional `mode` argument is set to `show` and you can leave it out in the command.
 Possible alternatives are: `list`, `print`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`, `data`.

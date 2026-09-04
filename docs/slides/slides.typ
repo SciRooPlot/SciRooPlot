@@ -6,7 +6,7 @@
   margin: 0.5in,
 )
 #set text(
-  font: "Arial",
+  font: ("Arial", "Liberation Sans", "DejaVu Sans"),
   size: 18pt,
 )
 #let main-color = rgb("1C94A5")
@@ -60,24 +60,25 @@
   ]
 }
 #let prompt = text(fill: main-color, weight: "bold")[\$]
-#let terminal(body) = block(
+#let terminal(body, size: 16pt, inset: 15pt) = block(
   fill: rgb("fafafa"),
   stroke: 1pt + rgb("d0d7de"),
   radius: 10pt,
-  inset: 15pt,
+  inset: inset,
 )[
-  #set text(font: "DejaVu Sans Mono", size: 16pt)
+  #set text(font: "DejaVu Sans Mono", size: size)
   #body
 ]
 
-#let card(title, color, body) = rect(
+#let card(title, color, body, width: auto, inset: 15pt, title-size: 24pt) = rect(
   fill: rgb("fafafa"),
   stroke: 1pt + rgb("d0d7de"),
   radius: 10pt,
-  inset: 15pt,
+  inset: inset,
+  width: width,
 )[
   #text(
-    size: 24pt,
+    size: title-size,
     weight: "bold",
     fill: color,
   )[#title]
@@ -87,7 +88,36 @@
 
 #let names(..items) = items.pos().map(i => raw(i)).join(linebreak())
 
-#let api-table(rows) = block(
+#let step(n, title, desc) = rect(
+  fill: rgb(28, 148, 165, 14),
+  stroke: (left: 5pt + accent-color, rest: 1pt + rgb("d0d7de")),
+  radius: 10pt,
+  inset: 20pt,
+  width: 100%,
+)[
+  #align(center)[
+    #box(
+      fill: accent-color,
+      radius: 100%,
+      width: 2.6em,
+      height: 2.6em,
+    )[
+      #align(center + horizon)[
+        #text(size: 26pt, weight: "bold", fill: white)[#n]
+      ]
+    ]
+    #v(0.7em)
+    #text(size: 20pt, weight: "bold", fill: main-color)[#title]
+    #v(0.4em)
+    #text(size: 14.5pt)[#desc]
+  ]
+]
+
+#let flow-arrow = align(center + horizon)[
+  #text(size: 40pt, fill: accent-color, weight: "bold")[→]
+]
+
+#let api-table(rows, col-widths: (44%, 56%), text-size: 13pt) = block(
   fill: rgb("fafafa"),
   stroke: 1pt + rgb("d0d7de"),
   radius: 10pt,
@@ -95,9 +125,9 @@
   width: 100%,
   clip: true,
 )[
-  #set text(size: 13pt)
+  #set text(size: text-size)
   #table(
-    columns: (44%, 56%),
+    columns: col-widths,
     stroke: none,
     inset: (x: 0.6em, y: 0.5em),
     align: (left + top, left + top),
@@ -106,10 +136,10 @@
   )
 ]
 
-#let api-section(title, rows) = [
+#let api-section(title, rows, col-widths: (44%, 56%), text-size: 13pt) = [
   #text(size: 18pt, weight: "bold", fill: main-color)[#title]
   #v(0.3em)
-  #api-table(rows)
+  #api-table(rows, col-widths: col-widths, text-size: text-size)
 ]
 
 
@@ -199,31 +229,85 @@
 
 #slide[
   #slide-title("SciRooPlot Workflow")
-  - Store analysis results in ROOT or CSV files.
+  #v(1fr)
+  #grid(
+    columns: (1fr, 3.2em, 1fr, 3.2em, 1fr, 3.2em, 1fr),
+    align: (top, horizon, top, horizon, top, horizon, top),
+    step("1", "Store", "Keep your analysis results in ROOT or CSV files."),
+    flow-arrow,
+    step("2", "Define", [Describe the plots you want, in C++ or Python.]),
+    flow-arrow,
+    step("3", "Generate", [Browse and export plots with the `plot` command.]),
+    flow-arrow,
+    step("4", "Organize", [Manage projects and settings with `srp`.]),
+  )
+  #v(1fr)
+]
 
-  - Define plot specifications using C++ or Python interface and save them as a SciRooPlot project.
 
-  - Generate and explore plots interactively via the `plot` command-line tool.
-
-  - Create and manage projects with the `srp` command-line tool.
-
+#slide[
   #slide-title("Installation")
+  - Works on Linux and macOS -- pick a package manager, or use the installer if you'd rather build from source.
 
-  #terminal[
-    #prompt git clone https://github.com/SciRooPlot/SciRooPlot.git
+  #v(0.06em)
+  #card(
+    "Homebrew",
+    main-color,
+    [
+      #terminal(size: 11pt, inset: 5pt)[
+        #prompt brew tap SciRooPlot/scirooplot
 
-    #prompt cd SciRooPlot
+        #prompt brew install SciRooPlot
 
-    #prompt ./scripts/install.sh
+        #prompt source "\$(brew -\-prefix scirooplot)/share/scirooplot/env.sh"
+      ]
+    ],
+    width: 100%,
+    inset: 7pt,
+    title-size: 15pt,
+  )
+
+  #v(0.06em)
+  #card(
+    "Conda",
+    main-color,
+    [
+      #terminal(size: 11pt, inset: 5pt)[
+        #prompt conda install conda-forge::scirooplot
+
+        #prompt source "\$\{CONDA_PREFIX\}/share/scirooplot/env.sh"
+      ]
+    ],
+    width: 100%,
+    inset: 7pt,
+    title-size: 15pt,
+  )
+
+  #v(0.06em)
+  #card(
+    "Installer",
+    main-color,
+    [
+      #text(size: 10pt)[Builds SciRooPlot from source -- requires #link("https://github.com/root-project/root")[#text(fill: main-color)[ROOT]] and #link("https://www.boost.org/")[#text(fill: main-color)[Boost]] to already be installed.]
+      #v(0.06em)
+      #terminal(size: 11pt, inset: 5pt)[
+        #prompt git clone https://github.com/SciRooPlot/SciRooPlot.git
+
+        #prompt cd SciRooPlot && ./scripts/install.sh
+
+        #prompt source ./install/share/scirooplot/env.sh
+      ]
+    ],
+    width: 100%,
+    inset: 7pt,
+    title-size: 15pt,
+  )
+
+  #text(size: 14pt)[
+    - Whichever method you pick, sourcing that `env.sh` script is what puts the `srp` and `plot` commands in your terminal -- add the same `source` line to your shell startup file (e.g. `~/.bashrc` or `~/.zshrc`; with the installer, use the absolute path it prints at the end) so it happens automatically in every new shell.
+
+    - Later on, `$ srp update` upgrades SciRooPlot in place, however you installed it.
   ]
-
-  - The installer prints a command that enables the SciRooPlot environment.
-
-  - Add it to the shell startup script (e.g. `~/.bashrc` or `~/.zshrc`) to load SciRooPlot automatically in new terminals.
-
-  - After setup, the `srp` and `plot` command-line tools are available system-wide.
-
-  - Future updates can be installed with: `$ srp update`
 ]
 
 
@@ -384,25 +468,30 @@
         main-color,
         [
 
-          *Select plot names matching pattern*
+          *Match one of a few names*
           #v(-0.5em)
           #terminal[
-            #prompt plot paperPlots \'moneyPlot[1,2]\'
+            #prompt plot paperPlots moneyPlot[1,2]
           ]
-          NB.: Quotes are only required if regex contains #linebreak() special shell characters like `[]`, `()` and `|`.
 
-
-          *Select all plots in a figure group*
+          *Match everything in a group*
           #v(-0.5em)
           #terminal[
             #prompt plot paperPlots .+
           ]
 
-          *Select plots in groups starting with pattern*
+          *Match groups starting with a prefix*
           #v(-0.5em)
           #terminal[
             #prompt plot pp\_.+ myPlot
           ]
+
+          *Combine names with OR*
+          #v(-0.5em)
+          #terminal[
+            #prompt plot paperPlots \'pt(Spec|Mean)\'
+          ]
+          NB.: in `bash`, `()` and `|` are shell syntax, so they still need quotes -- unlike `[]`, which `plot` always handles safely unquoted.
         ],
       )
     ],
@@ -525,7 +614,7 @@
 
       - Multiple inputs can be added either via successive `AddDataSource()` calls or by passing them as a list.
 
-      - Adding a directory to a data source registers all ROOT files it contains, including the ones in subdirectories.
+      - Adding a directory registers every ROOT file inside it, including subdirectories.
 
       - File paths are always absolute, but the `SRC_DIR` helper enables paths relative to #plot-def-file.
 
@@ -610,9 +699,9 @@
       [
         - `histo()`, `histo2d()` and `graph()` build ROOT objects straight from plain Python data, without going through PyROOT's own constructors.
 
-        - `histo()` infers the axis range from the data if `range` is omitted; `bins` defaults to 100.
+        - `histo()` takes `bins` as a plain number and `range` as a `(min, max)` pair; if omitted, `bins` defaults to 100 and `range` is inferred from the data.
 
-        - `histo2d()` defaults to a 50 x 50 grid if `bins` is omitted; `bins` and `range` are given as `(x, y)` pairs.
+        - `histo2d()` takes `bins` and `range` as `(x, y)` pairs; if omitted, `bins` defaults to a 50 x 50 grid and `range` is inferred from the data, just like `histo()`.
 
         - `graph()` builds a `TGraphErrors`, with optional per-point `xerr`/`yerr`.
 
@@ -671,7 +760,7 @@
 
       - Axis ranges, titles, scales, and other axis properties are configured intuitively through plot[pad]['X'], ['Y'], and ['Z'].
 
-      - List of accessors of Plot, Pad and Axis in appendix.
+      - See the #link(<appx-plot>)[#text(fill: main-color)[appendix]] for the full list of `Plot`, `Pad` and `Axis` accessors.
     ],
     [
       #code-block(
@@ -811,13 +900,13 @@
     columns: (45%, 50%),
     gutter: 5%,
     [
-      - Data appearance is configured by chaining setters directly to `AddData()` or afterwards by accessing previously added data via `plot[1](n)` (equivalent to `plot[1].GetData(n)`).
+      - Chain setters directly onto `AddData()`, or adjust the appearance later via `plot[1](n)` -- short for `plot[1].GetData(n)`.
 
       - Drawing styles are configured via `SetOptions()`, accepting both native ROOT drawing option strings and predefined aliases (e.g. `points`, `line`, `curve`, `band`, `boxes`, `hist`, `colz`).
 
       - Complete `Data` layouts can be defined once and reused across many plots, ensuring a consistent appearance.
 
-      - See the appendix for the complete list of available `Data` and `Ratio` setters.
+      - See the #link(<appx-data>)[#text(fill: main-color)[appendix]] for the complete list of available `Data` and `Ratio` setters.
     ],
     [
       #code-block(
@@ -951,13 +1040,15 @@
     [
       - Legend entries are generated automatically and inherit the appearance of the corresponding data by default.
 
-      - Labels support placeholders such as `<name>`, `<title>`, `<entries>`, `<integral>`, `<maximum>`, `<minimum>`, `<mean>`, expanded automatically -- with optional printf-style formatting, e.g. `<mean[.2f]>`.
+      - Labels support placeholders that are expanded automatically, e.g. `<name>`, `<title>`, `<entries>`, `<integral>`, `<maximum>`, `<minimum>`, `<mean>`.
+
+      - Add optional printf-style formatting to a placeholder, e.g. `<mean[.2f]>` for two decimal places.
 
       - Multiple legends can coexist and data can be assigned to specific legends via `SetLegend(n)`.
 
       - Individual entries are looked up via `GetEntry(n)` and customized independently, e.g. to override a label.
 
-      - Text spanning multiple lines is written as a single string with `" // "` as the line delimiter; `SetLineSpacing()` controls the gap between lines.
+      - For multi-line text, join the lines into one string with `" // "` in between; `SetLineSpacing()` sets the gap between them.
     ],
     [
       #code-block(
@@ -1020,7 +1111,7 @@
 
       - Projections can be restricted to selected ranges of the remaining axes using either bin numbers or user coordinates.
 
-      - The generic `Project()` function supports arbitrary-dimensional histograms and arbitrary projection axes.
+      - The generic `Project(dims, ranges)` function supports arbitrary-dimensional histograms: `dims` lists the axes to keep (in order), `ranges` restricts any other axis via `(axis, low, high)` tuples.
 
       - One- and two-dimensional profiles can be created analogously from multidimensional histograms.
 
@@ -1034,18 +1125,21 @@
           plot[1].AddData("my2DHist", "input")
                  .ProjectX();
 
-          // Restrict Y before projecting
+          // Restrict Y to bins/coords [20, 80] before projecting
           plot[1].AddData("my2DHist", "input")
                  .ProjectX(20, 80);
 
-          // Generic projection of an N-dimensional histogram
+          // Generic N-dim projection: keep axes 2 and 0
+          // (in that order); restrict axis 1 to [20, 80]
+          // and axis 3 to [10, 40]
           plot[1].AddData("myNDHist", "input")
                  .Project({2, 0}, {{1, 20, 80}, {3, 10, 40}});
 
-          // Profile of a 2D histogram
+          // Profile of a 2D histogram: <Y> as a function of X
           plot[1].AddData("my2DHist", "input")
                  .ProfileX();
 
+          // Profile keeping axis 2; restrict axis 0 to [10, 50]
           plot[1].AddData("myNDHist", "input")
                  .Profile({2}, {{0, 10, 50}});
           ```
@@ -1055,16 +1149,19 @@
           # Standard projection of a 2D histogram
           plot[1].AddData("my2DHist", "input").ProjectX()
 
-          # Restrict Y before projecting
+          # Restrict Y to bins/coords [20, 80] before projecting
           plot[1].AddData("my2DHist", "input").ProjectX(20, 80)
 
-          # Generic projection of an N-dimensional histogram
+          # Generic N-dim projection: keep axes 2 and 0
+          # (in that order); restrict axis 1 to [20, 80]
+          # and axis 3 to [10, 40]
           plot[1].AddData("myNDHist", "input") \
                  .Project([2, 0], [[1, 20, 80], [3, 10, 40]])
 
-          # Profile of a 2D histogram
+          # Profile of a 2D histogram: <Y> as a function of X
           plot[1].AddData("my2DHist", "input").ProfileX()
 
+          # Profile keeping axis 2; restrict axis 0 to [10, 50]
           plot[1].AddData("myNDHist", "input") \
                  .Profile([2], [[0, 10, 50]])
           ```
@@ -1087,7 +1184,7 @@
 
       - Binning can be inferred automatically or specified explicitly with uniform or custom bin edges.
 
-      - Data can be filtered, derived quantities defined and arbitrary C++ expressions used for projections and selections.
+      - Filter rows, define derived quantities, and use arbitrary ROOT expressions for projections and selections.
 
       - Entry ranges can be selected to process only subsets of the input.
 
@@ -1155,7 +1252,7 @@
 
       - Numerator and denominator can be looked up by name and source, or supplied as complete `Data` layouts.
 
-      - Use `SetIsCorrelated()` when numerator and denominator are sub-samples of one another (e.g. a selection and its parent sample), so Bayesian error propagation is applied instead of treating them as independent.
+      - Use `SetIsCorrelated()` when the numerator is a sub-sample of the denominator (e.g. a selection vs. its parent sample) -- this applies Bayesian error propagation instead of treating the two as independent.
 
       - `SetDivideNormalized()` normalizes both terms to unity before dividing -- useful for comparing shapes rather than absolute yields.
 
@@ -1197,9 +1294,10 @@
 
 #slide[
   #slide-title("Pro Tips")
+  #v(1fr)
   #grid(
-    columns: (48%, 48%),
-    gutter: 4%,
+    columns: (32%, 32%, 32%),
+    gutter: 2%,
     [
       #card(
         "Interactive navigation",
@@ -1222,15 +1320,47 @@
         ],
       )
     ],
+    [
+      #card(
+        "Comparing plots side by side",
+        main-color,
+        [
+          - `plot` opens its picker window and blocks until you quit it -- append `&` to background it, then launch a second `plot` right away.
+
+          - E.g. `plot paperPlots moneyPlot & plot paperPlots ptSpec` opens both windows at once, so you can compare them directly.
+        ],
+      )
+    ],
   )
+  #v(1fr)
 ]
 
 // ============================================================================
 // Appendix: complete accessor reference, generated from PlotManager.h / Plot.h
+// Every signature is written once, in C++ form; when compiled for lang=py
+// the show rule below rewrites `true`/`false`/`{}` to `True`/`False`/`None`
+// wherever they appear in inline code spans, so both manuals stay correct
+// without maintaining two copies of every row.
 // ============================================================================
 
+#show raw.where(block: false): it => {
+  if lang == "py" {
+    let t = it.text
+    t = t.replace("{}", "None")
+    t = t.replace(regex("\btrue\b"), "True")
+    t = t.replace(regex("\bfalse\b"), "False")
+    // Re-implement raw's own default look (DejaVu Sans Mono at 0.8em) rather
+    // than calling raw() again, which would re-trigger this same show rule.
+    text(font: "DejaVu Sans Mono", size: 0.8em, t)
+  } else {
+    it
+  }
+}
+
 #slide[
+  #[]<appx-plot>
   #slide-title("Appendix: PlotManager & Plot")
+  #v(1fr)
   #grid(
     columns: (49%, 49%),
     gutter: 2%,
@@ -1238,13 +1368,15 @@
       #api-section("PlotManager", (
         [`PlotManager(projectName = "")`], [Construct a manager for a named project.],
         [`MakeBasePlot(name = "1d", screenResolution = 100)`], [Static: retrieve a predefined base plot (`1d`, `2d`, `1d_ratio`, `1d_3panels`).],
-        [`AddDataSource(id, files)`], [Register file(s), a directory, or in-memory ROOT objects under an ID.],
+        [`AddDataSource(id, files, replace = false)`], [Register file(s), a directory, or in-memory ROOT objects under an ID (`replace` first clears existing entries for that ID).],
+        [#names("SaveDataSources(file = {})", "LoadDataSources(file = {}, replace = false)")], [Persist or reload registered data sources to/from a config file (defaults to the project's data-sources file).],
         [`AddPlot(plot)`], [Register a plot with the manager.],
         [`AddBasePlot(basePlot)`], [Register a reusable base plot layout.],
         [`SavePlots(name, group, file = {})`], [Write matching plots to a config file.],
         [`LoadPlots(name, group, file = {})`], [Load plots from a config file.],
         [`GeneratePlots(mode, name, group)`], [Generate plots matching the request in the given mode.],
         [`ListPlots()`], [Print all registered plots.],
+        [#names("ClearDataBuffer()", "ClearCanvasRegistry()")], [Free the buffered input data, or clear the cache of already-generated canvases.],
         [`SetOutputDirectory(path)`], [Set the output directory for generated files.],
         [`SaveProject()`], [Persist the current project to disk.],
       ))
@@ -1252,21 +1384,24 @@
     [
       #api-section("Plot", (
         [`Plot(name, group = "", basePlot = {})`], [Create a plot in a figure group, optionally from a base plot.],
+        [`Plot(other, name, group = {})`], [Copy `other` under a new name (and optionally a new group).],
         [`plot[padID]` / `GetPad(padID)`], [Access a pad by index.],
         [`plot += other`], [Append the pads of another plot into this one.],
-        [`Clone()`], [Create a deep copy of the plot.],
         [#names("SetName(name)", "SetGroup(group)", "AppendGroup(subgroup)")], [Rename the plot, reassign its figure group, or append a subgroup path.],
         [`SetBasePlot(name)`], [Apply a base plot layout by name.],
-        [`SetDimensions(width, height, fix = false)`], [Set canvas dimensions (`fix` keeps the aspect ratio).],
+        [`SetDimensions(width, height, fixAspectRatio = false)`], [Set canvas dimensions.],
         [#names("SetFill(color, style = {}, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Configure plot background fill, all at once or individually.],
         [`SetTransparent()`], [Make the plot background transparent.],
       ))
     ],
   )
+  #v(1fr)
 ]
 
 #slide[
-  #slide-title("Appendix: Pad (1/2) -- Adding Content")
+  #[]<appx-pad>
+  #slide-title("Appendix: Pad (1/2) – Adding Content")
+  #v(1fr)
   #grid(
     columns: (49%, 49%),
     gutter: 2%,
@@ -1290,10 +1425,12 @@
       ))
     ],
   )
+  #v(1fr)
 ]
 
 #slide[
-  #slide-title("Appendix: Pad (2/2) -- Layout & Palette")
+  #slide-title("Appendix: Pad (2/2) – Layout & Palette")
+  #v(1fr)
   #grid(
     columns: (49%, 49%),
     gutter: 2%,
@@ -1317,11 +1454,13 @@
       ))
     ],
   )
+  #v(1fr)
 ]
 
 #slide[
   #slide-title("Appendix: Pad Default Styling")
   - These set the fallback style applied to newly added data unless overridden per `Data` object -- see the "Default Styles and Color Palettes" slide for usage.
+  #v(1fr)
   #grid(
     columns: (49%, 49%),
     gutter: 2%,
@@ -1342,43 +1481,62 @@
         [#names("SetDefaultTextSize(size)", "SetDefaultTextColor(color)", "SetDefaultTextAlpha(alpha)", "SetDefaultTextFont(font)")], [Default text styling applied pad-wide.],
         [#names("SetDefaultMarkerAlpha(alpha)", "SetDefaultMarkerSize(size)")], [Default marker transparency/size.],
         [#names("SetDefaultLineAlpha(alpha)", "SetDefaultLineWidth(width)")], [Default line transparency/width.],
-        [`SetDefaultAlpha(alpha)` / `SetDefaultFillAlpha(alpha)`], [Default transparency for marker+line, or fill.],
+        [`SetDefaultAlpha(alpha)`], [Default transparency for marker, line, *and* fill together.],
+        [`SetDefaultFillAlpha(alpha)`], [Default fill transparency only.],
         [#names("SetDefaultDrawingOptionGraph(option)", "SetDefaultDrawingOptionHist(option)", "SetDefaultDrawingOptionHist2d(option)")], [Default draw-option alias per data kind.],
       ))
     ],
   )
+  #v(1fr)
 ]
 
 #slide[
+  #[]<appx-axis>
   #slide-title("Appendix: Axis")
-  #api-section("Axis", (
-    [`SetTitle(title)`], [Axis title.],
-    [#names("SetRange(min, max)", "SetMinRange(min)", "SetMaxRange(max)")], [Set the axis range, fully or partially.],
-    [`SetColor(color)`], [Set both axis-line and tick colour.],
-    [#names("SetAxisColor(color)", "SetAxisAlpha(alpha)")], [Axis line colour or transparency.],
-    [#names("SetNumDivisions(n)", "SetMaxDigits(n)", "SetTickLength(len)")], [Tick divisions, max digits before scientific notation, and tick length.],
-    [#names("SetTitleFont(font)", "SetLabelFont(font)", "SetTitleSize(size)", "SetLabelSize(size)")], [Title/label font and size.],
-    [#names("SetTitleColor(color)", "SetLabelColor(color)", "SetTitleAlpha(alpha)", "SetLabelAlpha(alpha)")], [Title/label colour and transparency.],
-    [#names("SetTitleOffset(offset)", "SetLabelOffset(offset)")], [Title/label offset from the axis.],
-    [#names("SetTitleCenter(center = true)", "SetLabelCenter(center = true)")], [Center the title or labels.],
-    [#names("SetLog(isLog = true)", "SetGrid(isGrid = true)")], [Logarithmic axis, or grid lines.],
-    [#names("SetOppositeTicks(bool = true)", "SetNoExponent(bool = true)", "SetTickOrientation(mode)")], [Ticks on both sides, disable exponent notation, or set tick orientation (e.g. `"+-"`).],
-    [`SetTimeFormat(fmt)`], [ROOT time-axis format string.],
-  ))
+  #v(1fr)
+  #grid(
+    columns: (49%, 49%),
+    gutter: 2%,
+    [
+      #api-section("Range, Ticks & Color", (
+        [`SetTitle(title)`], [Axis title.],
+        [#names("SetRange(min, max)", "SetMinRange(min)", "SetMaxRange(max)")], [Set the axis range, fully or partially.],
+        [`SetColor(color)`], [Set both axis-line and tick colour.],
+        [#names("SetAxisColor(color)", "SetAxisAlpha(alpha)")], [Axis line colour or transparency.],
+        [#names("SetNumDivisions(n)", "SetMaxDigits(n)", "SetTickLength(len)")], [Tick divisions, max digits before scientific notation, and tick length.],
+        [#names("SetLog(isLog = true)", "SetGrid(isGrid = true)")], [Logarithmic axis, or grid lines.],
+      ))
+    ],
+    [
+      #api-section("Title, Label & Display", (
+        [#names("SetTitleFont(font)", "SetLabelFont(font)", "SetTitleSize(size)", "SetLabelSize(size)")], [Title/label font and size.],
+        [#names("SetTitleColor(color)", "SetLabelColor(color)", "SetTitleAlpha(alpha)", "SetLabelAlpha(alpha)")], [Title/label colour and transparency.],
+        [#names("SetTitleOffset(offset)", "SetLabelOffset(offset)")], [Title/label offset from the axis.],
+        [#names("SetTitleCenter(center = true)", "SetLabelCenter(center = true)")], [Center the title or labels.],
+        [#names("SetOppositeTicks(isOppositeTicks = true)", "SetNoExponent(isNoExponent = true)", "SetTickOrientation(mode)")], [Ticks on both sides, disable exponent notation, or set tick orientation (e.g. `"+-"`).],
+        [`SetTimeFormat(fmt)`], [ROOT time-axis format string.],
+      ))
+    ],
+  )
+  #v(1fr)
 ]
 
 #slide[
   #slide-title("Appendix: Ratio")
   - Every `Data` accessor from the next two slides is also available on `Ratio`, forwarded to whichever side (`Numer()`/`Denom()`) is currently active.
+  #v(1fr)
   #api-section("Ratio-specific", (
-    [`SetIsCorrelated(bool = true)`], [Treat numerator/denominator as correlated (e.g. one is a sub-sample of the other) -- applies Bayesian error propagation.],
+    [`SetIsCorrelated(isCorrelated = true)`], [Treat numerator/denominator as correlated (e.g. one is a sub-sample of the other) -- applies Bayesian error propagation.],
     [`SetDivideNormalized(scaleBinWidth = false)`], [Normalize both sides to unity before dividing, to compare shapes rather than absolute yields.],
     [`Numer()` / `Denom()`], [Switch which side subsequent modifiers apply to (numerator by default).],
   ))
+  #v(1fr)
 ]
 
 #slide[
-  #slide-title("Appendix: Data (1/2) -- Source, Range & Appearance")
+  #[]<appx-data>
+  #slide-title("Appendix: Data (1/2) – Source, Range & Appearance")
+  #v(1fr)
   #grid(
     columns: (49%, 49%),
     gutter: 2%,
@@ -1389,9 +1547,9 @@
         [#names("SetRangeX(min, max)", "SetRangeY(min, max)")], [Set the X or Y display range.],
         [`UnsetRangeX()` / `UnsetRangeY()`], [Remove a previously set range restriction.],
         [#names("SetScaleMinimum(f)", "SetScaleMaximum(f)")], [Scale the displayed minimum/maximum.],
-        [`SetShowOverflowBins(bool = true)`], [Include overflow bins in the display.],
+        [`SetShowOverflowBins(showOverflowBins = true)`], [Include overflow bins in the display.],
         [`SetLegendLabel(label)` / `SetLegend(legendID)`], [Set legend text, or assign to a specific legend.],
-        [`SetOptions(options)` / `SetOptions(alias)`], [Set a ROOT draw-option string or a predefined alias (see the Drawing Option Aliases slide).],
+        [`SetOptions(options)` / `SetOptions(alias)`], [Set a ROOT draw-option string, or one of the #link(<appx-drawing-options>)[#text(fill: main-color)[predefined aliases]].],
         [`SetTextFormat(fmt)`], [Printf-style format for label placeholders, e.g. `<mean[.2f]>`.],
       ))
     ],
@@ -1406,18 +1564,20 @@
       ))
     ],
   )
+  #v(1fr)
 ]
 
 #slide[
-  #slide-title("Appendix: Data (2/2) -- Modifiers & Processing")
+  #slide-title("Appendix: Data (2/2) – Modifiers & Processing")
+  #v(1fr)
   #grid(
     columns: (49%, 49%),
     gutter: 2%,
     [
       #api-section("Transform existing histograms", (
-        [`Normalize(scaleBinWidth = false)` / `NormalizeToMaximum(bool = true)`], [Normalize the integral or the maximum to one.],
+        [`Normalize(scaleBinWidth = false)` / `NormalizeToMaximum(normMaximum = true)`], [Normalize the integral or the maximum to one.],
         [`Scale(scaleFactor)`], [Scale the object's contents.],
-        [`DivideBinWidth(bool = true)`], [Divide contents by bin width.],
+        [`DivideBinWidth(divideBinWidth = true)`], [Divide contents by bin width.],
         [`RebinX(n)` / `RebinY(n)` / `RebinXY(nx, ny)`], [Rebin one or both axes.],
         [`Smooth(nIterSmooth = 1)`], [Apply smoothing.],
         [`Project(dims, ranges = {}, isUserCoord = {})`], [Generic N-dimensional projection.],
@@ -1439,35 +1599,42 @@
       ))
     ],
   )
+  #v(1fr)
 ]
 
 #slide[
   #slide-title("Appendix: TextBox, LegendBox & LegendEntry")
+  #v(1fr)
   #grid(
-    columns: (33%, 33%, 33%),
+    columns: (33%, 33%, 32%),
     gutter: 1%,
     [
       #api-section("Box (shared)", (
         [`SetPosition(x, y)` / `SetSize(w, h)`], [Box position or dimensions.],
         [`SetAutoPlacement()`], [Let SciRooPlot place the box automatically.],
+        [`SetUserCoordinates(isUserCoord = true)`], [Interpret position/size as user (data) coordinates instead of relative pad coordinates.],
         [#names("SetBorder(color, style, width, alpha = {})", "SetBorderColor(color)", "SetBorderStyle(style)", "SetBorderWidth(width)")], [Border, all at once or individually.],
-        [#names("SetTextColor(color)", "SetTextFont(font)", "SetTextSize(size)", "SetTextAlpha(alpha)")], [Text styling.],
-        [#names("SetFill(color, style, alpha)", "SetFillColor(color)", "SetFillStyle(style)")], [Background fill.],
+        [#names("SetText(color, font, size, alpha = {})", "SetTextColor(color)", "SetTextFont(font)", "SetTextSize(size)", "SetTextAlpha(alpha)")], [Text styling, all at once or individually.],
+        [#names("SetFill(color, style, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)")], [Background fill.],
         [`SetTransparent()` / `SetNoBox()`], [Transparent background, or remove border and fill.],
         [`SetMargin(m)` / `SetLineSpacing(s)`], [Internal margin, or spacing between lines/entries.],
-      ))
+      ), col-widths: (56%, 44%), text-size: 12pt)
     ],
     [
       #api-section("TextBox & LegendBox", (
-        [`TextBox(text)` / `TextBox(xPos, yPos, text)`], [Create a text box, auto-placed or fixed.],
+        ..(if lang == "cpp" {
+          ([`TextBox(text)` / `TextBox(xPos, yPos, text)`], [Construct directly, auto-placed or fixed (in Python, create via `pad.AddText()` instead).])
+        } else { () }),
         [`SetText(text)`], [Set the displayed text content.],
-        [`LegendBox(title = {})` / `LegendBox(xPos, yPos, title = {})`], [Create a legend, auto-placed or fixed.],
+        ..(if lang == "cpp" {
+          ([`LegendBox(title = {})` / `LegendBox(xPos, yPos, title = {})`], [Construct directly, auto-placed or fixed (in Python, create via `pad.AddLegend()` instead).])
+        } else { () }),
         [`GetEntry(entryID)`], [Access a legend entry by index.],
         [`SetTitle(title)` / `SetNumColumns(n)`], [Legend title, or number of columns.],
         [#names("SetDefaultLineColor(color)", "SetDefaultMarkerColor(color)", "SetDefaultFillColor(color)")], [Default per-kind colour for entries without one.],
         [`SetDefaultDrawStyle(style)`], [Default draw style for entries without one.],
         [`SetSymbolColScale(scale)`], [Scale the width of the symbol column.],
-      ))
+      ), col-widths: (56%, 44%), text-size: 12pt)
     ],
     [
       #api-section("LegendEntry", (
@@ -1476,21 +1643,87 @@
         [`SetDrawStyle(style)`], [Override the legend draw style, e.g. `"L"`, `"EP"`.],
         [`SetColor(color)` / `SetAlpha(alpha)`], [Set overall colour/transparency.],
         [#names("SetMarkerColor(color)", "SetLineColor(color)", "SetFillColor(color)", "SetTextColor(color)")], [Per-kind colour override for this entry.],
-      ))
+      ), col-widths: (56%, 44%), text-size: 12pt)
     ],
   )
+  #v(1fr)
 ]
 
 #slide[
-  #slide-title("Appendix: Drawing Option Aliases")
-  - Pass any of these to `SetOptions()` (or `SetDefaultDrawingOption*()`) instead of a raw ROOT draw-option string.
-  #terminal[
-    #set text(size: 14pt)
-    points, points_xerr, points_endcaps, points_line, line, curve, band, band_smooth,
-    hist, hist_no_borders, fit, bar, area, area_curve, area_line, boxes, boxes_only,
-    stars, text, brackets, hbar, hbar1, hbar2, hbar3, hbar4, box, box1, colz, legoz,
-    lego, lego_no_borders, surf, surf1, surf1z, surf2, surf2z, surf3, surf3z, surf4,
-    surf7, surf7z, cont, contz, cont1z, cont4z, candle1, candle2, candle3, candle4,
-    candle5, candle6, candle7
+  #[]<appx-drawing-options>
+  #slide-title("Appendix: Drawing Options – Histograms & Graphs")
+  - Pass any alias below to `SetOptions()` (or `SetDefaultDrawingOption*()`) instead of a raw ROOT draw-option string -- the table shows the actual ROOT string it expands to for each data kind.
+  #v(1fr)
+  #block(
+    fill: rgb("fafafa"),
+    stroke: 1pt + rgb("d0d7de"),
+    radius: 10pt,
+    inset: 12pt,
+    width: 100%,
+  )[
+    #set text(size: 11.5pt)
+    #table(
+      columns: (13%, 18.5%, 18.5%, 13%, 18.5%, 18.5%),
+      stroke: none,
+      inset: (x: 0.5em, y: 0.28em),
+      align: left + horizon,
+      fill: (x, y) => if calc.rem(y, 2) == 0 { rgb("eef2f5") } else { white },
+      [*Alias*], [*Histograms*], [*Graphs*], [*Alias*], [*Histograms*], [*Graphs*],
+      [`points`], [`X0 EP`], [`P Z`], [`boxes`], [`E2`], [`P2`],
+      [`points_xerr`], [`EP`], [--], [`boxes_only`], [--], [`2`],
+      [`points_endcaps`], [`E1`], [`P`], [`hist`], [`HIST`], [--],
+      [`points_line`], [--], [`P Z L`], [`hist_no_borders`], [`HIST ][`], [--],
+      [`line`], [`HIST L`], [`X L`], [`stars`], [`*H`], [--],
+      [`curve`], [`HIST C`], [`X C`], [`text`], [`TEXT`], [--],
+      [`band`], [`E5`], [`3`], [`brackets`], [--], [`[]`],
+      [`band_smooth`], [`E6`], [`4`], [`hbar`], [`HIST HBAR`], [--],
+      [`bar`], [`HIST B`], [`X B`], [`hbar_no_borders`], [`HBAR ][`], [--],
+      [`area`], [`HIST F`], [`X CF`], [`hbar1`–`hbar4`], [`HBAR1`–`HBAR4`], [--],
+      [`area_curve`], [`HIST CF`], [--], [`fit`], [#text(size: 9.5pt, fill: gray)[no mapping]], [#text(size: 9.5pt, fill: gray)[currently a no-op]],
+      [`area_line`], [`HIST LF`], [`X LC`], [], [], [],
+    )
   ]
+  #v(1fr)
+]
+
+#slide[
+  #slide-title("Appendix: Drawing Options – 2D Histograms")
+  - These aliases apply to 2D data (`TH2`-like histograms): colour maps, surfaces, contours, legos, and candle plots.
+  #v(1fr)
+  #grid(
+    columns: (49%, 49%),
+    gutter: 2%,
+    [
+      #api-table((
+        [`box`], [`BOX`],
+        [`box1`], [`BOX1`],
+        [`colz`], [`COLZ`],
+        [`lego`], [`LEGO1 0`],
+        [`lego_no_borders`], [`LEGO3 0`],
+        [`legoz`], [`LEGO2Z 0`],
+        [`surf`], [`SURF`],
+        [`surf1`], [`SURF1`],
+        [`surf1z`], [`SURF1Z`],
+        [`surf2`], [`SURF2`],
+        [`surf2z`], [`SURF2Z`],
+        [`surf3`], [`SURF3`],
+        [`surf3z`], [`SURF3Z`],
+        [`surf4`], [`SURF4`],
+      ), col-widths: (38%, 62%), text-size: 13pt)
+    ],
+    [
+      #api-table((
+        [`surf7`], [`SURF7`],
+        [`surf7z`], [`SURF7Z`],
+        [`cont`], [`CONT3`],
+        [`contz`], [`CONTZ`],
+        [`cont1z`], [`CONT1Z`],
+        [`cont4z`], [`CONT4Z`],
+        [`text`], [`TEXT`],
+        [`candle1`–`candle6`], [`CANDLEX1`–`CANDLEX6`],
+        [`candle7`], [`CANDLEX(111101)` #text(size: 10pt, fill: gray)[(mean instead of median)]],
+      ), col-widths: (38%, 62%), text-size: 13pt)
+    ],
+  )
+  #v(1fr)
 ]
