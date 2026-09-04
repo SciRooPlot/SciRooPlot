@@ -13,15 +13,15 @@ function(add_plotting_executable NAME)
   endif()
 
   # Set RPATH and includes like the library
-  if(TARGET SciRooPlot)
-    get_target_property(_rpath SciRooPlot INSTALL_RPATH)
+  if(TARGET SciRooPlot::SciRooPlot)
+    get_target_property(_rpath SciRooPlot::SciRooPlot INSTALL_RPATH)
     if(_rpath)
       set_target_properties(${NAME} PROPERTIES
         INSTALL_RPATH "${_rpath}"
         BUILD_RPATH "${_rpath}"
       )
     endif()
-    get_target_property(_incs SciRooPlot INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(_incs SciRooPlot::SciRooPlot INTERFACE_INCLUDE_DIRECTORIES)
     if(_incs)
       target_include_directories(${NAME} PRIVATE ${_incs})
     endif()
