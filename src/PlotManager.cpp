@@ -194,6 +194,10 @@ void PlotManager::SetOutputDirectory(const string& path)
 //**************************************************************************************************
 void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputFiles, bool replace)
 {
+  if (auto illegal = find_illegal_name_char(dataSource)) {
+    ERROR("DataSource '{}' contains illegal character '{}'.", dataSource, *illegal);
+    return;
+  }
   if (replace) {
     mInputFiles.erase(dataSource);
   }
@@ -224,6 +228,10 @@ void PlotManager::AddDataSource(const string& dataSource, const string& inputFil
 //**************************************************************************************************
 void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>& inputData, bool replace)
 {
+  if (auto illegal = find_illegal_name_char(dataSource)) {
+    ERROR("DataSource '{}' contains illegal character '{}'.", dataSource, *illegal);
+    return;
+  }
   string fileName = (mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName);
   fileName += "/UserData.root";
   string mode = "RECREATE";

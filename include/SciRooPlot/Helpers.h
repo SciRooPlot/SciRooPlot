@@ -40,6 +40,16 @@ std::string expand_path(const std::string& path);
 std::vector<std::string> split_string(const std::string& argString, char delimiter, bool onlyFirst = false);
 bool file_exists(const std::string& name);
 
+inline std::optional<char> find_illegal_name_char(const std::string& name, bool allowSlash = false)
+{
+  static constexpr std::string_view kAllowedChars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
+  std::string allowed{kAllowedChars};
+  if (allowSlash) allowed += '/';
+  auto pos = name.find_first_not_of(allowed);
+  return (pos == std::string::npos) ? std::nullopt : std::optional<char>{name[pos]};
+}
+
 inline bool str_contains(const std::string& str, const std::string& substr)
 {
   return (str.find(substr) != std::string::npos);

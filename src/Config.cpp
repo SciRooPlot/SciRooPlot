@@ -169,6 +169,10 @@ void Config::Rename(const std::string& projectName, const std::string& newProjec
     ERROR("Cannot find project {}.", projectName);
     return;
   }
+  if (auto illegal = find_illegal_name_char(newProjectName)) {
+    ERROR("Project name '{}' contains illegal character '{}'.", newProjectName, *illegal);
+    return;
+  }
   if (mProjects.find(newProjectName) != mProjects.end()) {
     ERROR("Project {} already exists.", newProjectName);
     return;
@@ -286,6 +290,10 @@ std::string Config::DataSourcesFile(const string& projectName) const
 
 void Config::SetProgram(const string& projectName, const string& program)
 {
+  if (auto illegal = find_illegal_name_char(projectName)) {
+    ERROR("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
+    return;
+  }
   if (std::filesystem::path(expand_path(program)).is_relative()) {
     ERROR("The path must not be relative.");
     return;
@@ -305,6 +313,10 @@ string Config::Program(const string& projectName) const
 
 void Config::SetOutputDir(const string& projectName, const string& outputDir)
 {
+  if (auto illegal = find_illegal_name_char(projectName)) {
+    ERROR("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
+    return;
+  }
   if (std::filesystem::path(expand_path(outputDir)).is_relative()) {
     ERROR("The path must not be relative.");
     return;
@@ -323,6 +335,14 @@ string Config::Project::Property(const string& property) const
 
 void Config::SetProperty(const string& projectName, const string& property, const string& value)
 {
+  if (auto illegal = find_illegal_name_char(projectName)) {
+    ERROR("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
+    return;
+  }
+  if (auto illegal = find_illegal_name_char(property)) {
+    ERROR("Property '{}' contains illegal character '{}'.", property, *illegal);
+    return;
+  }
   auto& properties = mProjects[projectName].mProperties;
   properties[property] = value;
   bool allEmpty = std::all_of(properties.begin(), properties.end(), [](const auto& p) { return p.second.empty(); });

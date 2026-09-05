@@ -53,11 +53,11 @@ namespace SciRooPlot
 //**************************************************************************************************
 Plot::Plot(const string& name, const string& group, const optional<string>& basePlot) : Plot()
 {
-  if (str_contains(name, ".") || str_contains(name, ",") || str_contains(name, ":") || str_contains(name, " ")) {
-    logger::throw_invalid_argument("Plot name must not contain '.' ',' ':' or whitespace.");
+  if (auto illegal = find_illegal_name_char(name)) {
+    logger::throw_invalid_argument("Plot name '{}' contains illegal character '{}'.", name, *illegal);
   }
-  if (str_contains(group, ".") || str_contains(group, ",") || str_contains(group, ":") || str_contains(group, " ")) {
-    logger::throw_invalid_argument("Group must not contain '.' ',' ':' or whitespace.");
+  if (auto illegal = find_illegal_name_char(group, true)) {
+    logger::throw_invalid_argument("Group '{}' contains illegal character '{}'.", group, *illegal);
   }
   mName = name;
   mGroup = group;
@@ -184,8 +184,8 @@ auto Plot::SetName(const string& name) -> decltype(*this)
     ERROR("Cannot set empty name.");
     return *this;
   }
-  if (str_contains(name, ".") || str_contains(name, ",") || str_contains(name, ":") || str_contains(name, " ")) {
-    ERROR("Plot name must not contain '.' ',' ':' or whitespace.");
+  if (auto illegal = find_illegal_name_char(name, false)) {
+    ERROR("Plot name '{}' contains illegal character '{}'.", name, *illegal);
     return *this;
   }
   mName = name;
@@ -199,8 +199,8 @@ auto Plot::SetGroup(const string& group) -> decltype(*this)
     ERROR("Cannot set empty group.");
     return *this;
   }
-  if (str_contains(group, ".") || str_contains(group, ",") || str_contains(group, ":") || str_contains(group, " ")) {
-    ERROR("Group must not contain '.' ',' ':' or whitespace.");
+  if (auto illegal = find_illegal_name_char(group, true)) {
+    ERROR("Group '{}' contains illegal character '{}'.", group, *illegal);
     return *this;
   }
   mGroup = group;
@@ -214,8 +214,8 @@ auto Plot::AppendGroup(const string& subgroup) -> decltype(*this)
     ERROR("Cannot append empty subgroup.");
     return *this;
   }
-  if (str_contains(subgroup, ".") || str_contains(subgroup, ",") || str_contains(subgroup, ":") || str_contains(subgroup, " ")) {
-    ERROR("Group must not contain '.' ',' ':' or whitespace.");
+  if (auto illegal = find_illegal_name_char(subgroup, true)) {
+    ERROR("Subgroup '{}' contains illegal character '{}'.", subgroup, *illegal);
     return *this;
   }
   mGroup = mGroup + "/" + subgroup;
