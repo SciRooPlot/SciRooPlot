@@ -5,29 +5,34 @@
 - These plot definitions can then be generated with a command-line application
 
 ## ⬇️ Installation instructions
-SciRooPlot runs on MacOS and Linux. It depends on the following external software which needs to be installed on your system:
 
-- cmake >= 3.27
-- fmt   >= 6.1.2
-- boost >= 1.65
-- ROOT  >= 6.16
+SciRooPlot runs on MacOS and Linux. It can be installed either via the package managers Homebrew and Conda, or built from source using the SciRooPlot installer.
+To enable all functions of the app, an environment script has to be sourced. It is best to put the source command into your shell startup script .zshrc or .bashrc (NB.: dont use a relative paths here).
+After setup, the commands `srp` and `plot` are available and you can keep up-to-date by running `srp update` from time to time.
 
-If those dependencies cannot be installed by a package manager, a description of how to build them from source is shown [here](ADVANCED_INSTALL.md).
+### Homebrew
+```bash
+    brew tap SciRooPlot/scirooplot
+    brew install SciRooPlot
+    source "$(brew --prefix scirooplot)/share/scirooplot/env.sh"
+```
 
-SciRooPlot is installed as follows:
+### Conda
+```bash
+    conda install conda-forge::scirooplot
+    source "${CONDA_PREFIX}/share/scirooplot/env.sh"
+```
+
+### Installer
 ```bash
     git clone https://github.com/SciRooPlot/SciRooPlot.git
     cd SciRooPlot
     ./scripts/install.sh
 ```
-To use the app, put this line in your .bashrc or .bash_aliases (and run it once or start a new terminal session):
-```
-    source /path/to/SciRooPlot/build/share/scirooplot/env.sh
-```
-Now the two commands `srp` and `plot` are available.
-N.B.: keep up-to-date by running `srp update` from time to time.
-
-Now you are ready to use SciRooPlot -- Happy plotting!
+The installer requires that [ROOT](https://github.com/root-project/root) and
+[Boost](https://www.boost.org/) are installed on your system.
+These dependencies are best installed using a package manager. Alternatively, they can be build from source, as shown [here](ADVANCED_INSTALL.md).
+Two lightweight dependencies of SciRooPlot (fmt and pybind11) are automatically fetched during install in case they are not present on the system.
 
 ## 🚀 Usage
 
