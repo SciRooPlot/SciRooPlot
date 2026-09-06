@@ -369,7 +369,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (defaultDrawingOptions_Hist2d.find(*defaultDrawingOption) != defaultDrawingOptions_Hist2d.end()) {
                 drawingOptions += defaultDrawingOptions_Hist2d.at(*defaultDrawingOption);
               } else if (dataIndex != 0) {
-                ERROR("Default drawing option not defined for 2d histogram ({}).", data_ptr->GetName());
+                WARNING("Default drawing option not defined for 2d histogram ({}).", data_ptr->GetName());
               }
             }
           } else if constexpr (is_hist_1d<data_type>()) {
@@ -384,7 +384,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (defaultDrawingOptions_Hist.find(*defaultDrawingOption) != defaultDrawingOptions_Hist.end()) {
                 drawingOptions += defaultDrawingOptions_Hist.at(*defaultDrawingOption);
               } else if (dataIndex != 0) {
-                ERROR("Default drawing option not defined for 1d histogram ({}).", data_ptr->GetName());
+                WARNING("Default drawing option not defined for 1d histogram ({}).", data_ptr->GetName());
               }
             }
           } else if constexpr (is_graph_1d<data_type>()) {
@@ -399,7 +399,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (defaultDrawingOptions_Graph.find(*defaultDrawingOption) != defaultDrawingOptions_Graph.end()) {
                 drawingOptions += defaultDrawingOptions_Graph.at(*defaultDrawingOption);
               } else if (dataIndex != 0) {
-                ERROR("Default drawing option not defined for graph ({}).", data_ptr->GetName());
+                WARNING("Default drawing option not defined for graph ({}).", data_ptr->GetName());
               }
             }
           }
@@ -420,7 +420,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   double_t integralNum = data_ptr->Integral(scaleMode.data());          // integral in viewing range
                   double_t integralDenom = denom_data_ptr->Integral(scaleMode.data());  // integral in viewing range
                   if (!integralNum || !integralDenom) {
-                    ERROR("Cannot normalize histogram because integral is zero.");
+                    WARNING("Cannot normalize histogram because integral is zero.");
                   } else {
                     data_ptr->Scale(1. / integralNum);
                     denom_data_ptr->Scale(1. / integralDenom);
@@ -494,7 +494,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (isDensity) scaleMode = "width";
             double_t integral = data_ptr->Integral(scaleMode.data());  // integral in viewing range
             if (integral == 0.) {
-              ERROR("Cannot normalize histogram because integral is zero.");
+              WARNING("Cannot normalize histogram because integral is zero.");
             } else {
               scaleFactor = 1. / integral;
             }
@@ -523,12 +523,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (data->GetScaleBinWidthNorm()) {
             double_t integral = data_ptr->Integral();  // integral in viewing range
             if (integral == 0.) {
-              ERROR("Cannot normalize graph because integral is zero.");
+              WARNING("Cannot normalize graph because integral is zero.");
             } else {
               scaleFactor = 1. / integral;
             }
             if (*data->GetScaleBinWidthNorm()) {
-              ERROR("Cannot normalize graph by width.");
+              WARNING("Cannot normalize graph by width.");
             }
           }
           if (data->GetScaleFactor()) {
@@ -918,7 +918,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (legendID > 0u && legendID <= legendBoxVector.size()) {
               legendBoxVector[legendID - 1]->AddEntry(*data->GetLegendLabel(), (dataIndex - hasRefFunc));
             } else {
-              ERROR("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetDataSource());
+              WARNING("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetDataSource());
             }
           }
           pad_ptr->Update();  // adds something to the list of primitives
@@ -980,7 +980,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         legend->Draw("SAME");
         ++legendIndex;
       } else {
-        ERROR("Legend {} was not added since it is empty.", legendIndex);
+        WARNING("Legend {} was not added since it is empty.", legendIndex);
       }
     }
     uint8_t textIndex{1u};
@@ -997,7 +997,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         text->Draw("SAME");
         ++textIndex;
       } else {
-        ERROR("Text {} was not added since it is empty.", textIndex);
+        WARNING("Text {} was not added since it is empty.", textIndex);
       }
     }
 
@@ -1162,7 +1162,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
             }
           }
           if (!data_ptr) {
-            ERROR("Object belonging to legend entry {} not found.", line);
+            WARNING("Object belonging to legend entry {} not found.", line);
           } else {
             ReplacePlaceholders(line, static_cast<TNamed*>(data_ptr));
           }

@@ -590,7 +590,7 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
         }
       }
       if (nAffectedPlots > 0) {
-        WARNING("{} of {} plots cannot be created due to {} missing data item{}.", nAffectedPlots, selectedPlots.size(), missingItems.size(), (missingItems.size() == 1) ? "" : "s");
+        ERROR("{} of {} plots cannot be created due to {} missing data item{}.", nAffectedPlots, selectedPlots.size(), missingItems.size(), (missingItems.size() == 1) ? "" : "s");
       }
     }
     mGifName.clear();
@@ -607,7 +607,7 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
           for (const auto& [dataSource, name, suffix] : missingData) {
             string line = " - missing " + dataSource + ":" + name;
             if (!suffix.empty()) line += " (projection " + suffix + ")";
-            line += (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (dataSource not found)" : "";
+            line += (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (data source not found)" : "";
             ERROR("{}", line);
           }
         }
