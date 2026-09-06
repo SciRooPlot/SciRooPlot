@@ -576,13 +576,41 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
   }
 
   try {
-    if (!FillBuffer()) PrintBufferStatus(true);
+    if (!FillBuffer()) {
+      // PrintBufferStatus(true);
+      uint32_t nAffectedPlots{};
+      set<std::pair<string, string>> missingItems;  // (dataSource, name+suffix)
+      for (auto plot : selectedPlots) {
+        auto missing = GetMissingData(*plot);
+        if (!missing.empty()) {
+          ++nAffectedPlots;
+          for (const auto& [dataSource, name, suffix] : missing) {
+            missingItems.emplace(dataSource, name + suffix);
+          }
+        }
+      }
+      if (nAffectedPlots > 0) {
+        WARNING("{} of {} plots cannot be created due to {} missing data item{}.", nAffectedPlots, selectedPlots.size(), missingItems.size(), (missingItems.size() == 1) ? "" : "s");
+      }
+    }
     mGifName.clear();
     mExitInteractiveBrowsing = false;
+
     // generate plots
     for (auto plot : selectedPlots) {
       if (!GeneratePlot(*plot, mode)) {
-        ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
+        auto missingData = GetMissingData(*plot);
+        if (missingData.empty()) {
+          ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
+        } else {
+          ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
+          for (const auto& [dataSource, name, suffix] : missingData) {
+            string line = " - missing " + dataSource + ":" + name;
+            if (!suffix.empty()) line += " (projection " + suffix + ")";
+            line += (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (dataSource not found)" : "";
+            ERROR("{}", line);
+          }
+        }
       }
       if (mExitInteractiveBrowsing) break;
     }
@@ -736,9 +764,9 @@ bool PlotManager::FillBuffer()
 void PlotManager::PrintBufferStatus(bool onlyMissing) const
 {
   if (onlyMissing) {
-    INFO("================= Missing Data ================");
+    DEBUG("================= Missing Data ================");
   } else {
-    INFO("================= Data Buffer =================");
+    DEBUG("================= Data Buffer =================");
   }
   uint32_t nNeededData{};
   uint32_t nAvailableData{};
@@ -749,14 +777,53 @@ void PlotManager::PrintBufferStatus(bool onlyMissing) const
       bool show = onlyMissing ? (dataPtr == nullptr) : true;
       if (dataPtr) ++nAvailableData;
       if (show) {
-        if (printDataSource) INFO("{}{}", dataSource, (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (dataSource not found)" : "");
+        if (printDataSource) WARNING("{}{}", dataSource, (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (dataSource not found)" : "");
         printDataSource = false;
-        INFO(" - {}{}{}", (dataPtr) ? logger::begin_color(logger::Color::Green) : logger::begin_color(logger::Color::Red), dataName, logger::end_color());
+        DEBUG(" - {}{}{}", (dataPtr) ? logger::begin_color(logger::Color::Green) : logger::begin_color(logger::Color::Red), dataName, logger::end_color());
       }
     }
   }
-  INFO("Found {}/{} required input data.", nAvailableData, nNeededData);
-  INFO("===============================================");
+  DEBUG("Found {}/{} required input data.", nAvailableData, nNeededData);
+  DEBUG("===============================================");
+}
+
+//**************************************************************************************************
+/**
+ * Determine which of a plot's required data entries are missing from the buffer.
+ */
+//**************************************************************************************************
+vector<std::tuple<string, string, string>> PlotManager::GetMissingData(Plot& plot)
+{
+  vector<std::tuple<string, string, string>> missing;
+  auto checkKey = [&](const string& dataSource, const string& name, const string& suffix) {
+    auto sourceIt = mDataBuffer.find(dataSource);
+    if (sourceIt != mDataBuffer.end()) {
+      auto nameIt = sourceIt->second.find(name + suffix);
+      if (nameIt != sourceIt->second.end() && nameIt->second) return;  // found and not null
+    }
+    missing.emplace_back(dataSource, name, suffix);
+  };
+
+  for (auto& [padID, pad] : plot.GetPads()) {
+    if (auto& refFunc = pad.GetRefFunc()) {
+      checkKey(refFunc->GetDataSource(), refFunc->GetName(), refFunc->GetDataInfo().GetNameSuffix());
+    } else if (plot.GetBasePlotName()) {
+      auto it = std::find_if(mBasePlots.begin(), mBasePlots.end(), [&](const auto& basePlot) { return *plot.GetBasePlotName() == basePlot.GetName(); });
+      if (it != mBasePlots.end()) {
+        if (auto& baseRefFunc = (*it).GetPad(padID).GetRefFunc()) {
+          checkKey(baseRefFunc->GetDataSource(), baseRefFunc->GetName(), baseRefFunc->GetDataInfo().GetNameSuffix());
+        }
+      }
+    }
+    for (const auto& data : pad.GetData()) {
+      checkKey(data->GetDataSource(), data->GetName(), data->GetDataInfo().GetNameSuffix());
+      if (data->GetType() == "ratio") {
+        const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
+        checkKey(ratio->GetDenomDataSource(), ratio->GetDenomName(), ratio->GetDenomDataInfo().GetNameSuffix());
+      }
+    }
+  }
+  return missing;
 }
 
 //**************************************************************************************************
@@ -1069,8 +1136,8 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
                 auto mtGuard = make_scope_guard([wasMTEnabled]() { if (wasMTEnabled) ROOT::EnableImplicitMT(); });
                 ROOT::RDataFrame df(*tree);
                 obj = ProcessData(df, fullName, dataInfo, dataFullName + suffix);
-              } catch (const std::runtime_error&) {
-                ERROR("Invalid query for tree.");
+              } catch (const std::runtime_error& e) {
+                ERROR("Invalid query for tree {}:{} (projection {}): {}", dataSource, fullName, dataInfo.GetNameSuffix(), e.what());
                 obj = nullptr;
               }
               mDataBuffer[dataSource][dataFullName].reset(obj);
@@ -1140,8 +1207,7 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
       ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter, 50000);
       obj = ProcessData(df, name, dataInfo, dataName + ":" + dataSource);
     } catch (const std::runtime_error& e) {
-      ERROR("Invalid query for table {}.", name);
-      std::cout << e.what() << std::endl;
+      ERROR("Invalid query for table {}:{} (projection {}): {}", dataSource, name, dataInfo.GetNameSuffix(), e.what());
       obj = nullptr;
     }
     mDataBuffer[dataSource][dataName].reset(obj);

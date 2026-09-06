@@ -107,6 +107,7 @@ class PlotManager
   std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Plot::Pad::Data::data_info_t>>> mDataInfoBuffer;
   std::map<std::string, std::vector<std::string>> mInputFiles;  // dataSource name -> input file paths
   void PrintBufferStatus(bool onlyMissing = false) const;
+  std::vector<std::tuple<std::string, std::string, std::string>> GetMissingData(Plot& plot);
   bool FillBuffer();
   void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource);
   void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataSource);
