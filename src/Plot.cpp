@@ -3170,7 +3170,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns)
   if (numColumns) {
     mNumColumns = numColumns;
   } else {
-    ERROR("Legend box cannot have 0 columns.");
+    WARNING("Legend box cannot have 0 columns.");
   }
   return *this;
 }

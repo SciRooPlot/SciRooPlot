@@ -849,7 +849,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     if (iterator != mBasePlots.end()) {
       fullPlot = *iterator;
     } else {
-      WARNING("Could not find base plot named {}.", basePlotName);
+      ERROR("Could not find base plot named {}.", basePlotName);
     }
   }
   fullPlot += plot;
@@ -1157,7 +1157,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       ++iterator;
       if (removeFromList) {
         if (!itemList->Remove(obj)) {
-          ERROR("Could not remove item {} ({}) from collection {}.", obj->GetName(), static_cast<void*>(obj), itemList->GetName());
+          WARNING("Could not remove item {} ({}) from collection {}.", obj->GetName(), static_cast<void*>(obj), itemList->GetName());
         }
       }
       if (deleteObject) {
