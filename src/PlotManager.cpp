@@ -184,7 +184,7 @@ void PlotManager::SaveDataToRootFile() const
 //**************************************************************************************************
 void PlotManager::SetOutputDirectory(const string& path)
 {
-  mOutputDirectory = path;
+  mOutputDirectory = expand_path(path);
 }
 
 //**************************************************************************************************

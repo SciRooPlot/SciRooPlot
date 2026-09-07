@@ -368,7 +368,7 @@ string Config::Program(const string& projectName) const
   auto it = mProjects.find(projectName);
   if (it != mProjects.end()) {
     const auto& project = it->second;
-    return project.Property("program");
+    return expand_path(project.Property("program"));
   }
   return {};
 }
@@ -429,7 +429,7 @@ string Config::OutputDir(const string& projectName) const
   auto it = mProjects.find(projectName);
   if (it != mProjects.end()) {
     const auto& project = it->second;
-    return project.Property("outdir");
+    return expand_path(project.Property("outdir"));
   }
   return {};
 }

@@ -282,7 +282,13 @@ int main(int argc, char* argv[])
       ERROR("Specify project or use @current.");
       return 1;
     }
-    std::cout << Config::Get().Property(project, property) << std::endl;
+    if (property == "program") {
+      std::cout << Config::Get().Program(project) << std::endl;
+    } else if (property == "outdir") {
+      std::cout << Config::Get().OutputDir(project) << std::endl;
+    } else {
+      std::cout << Config::Get().Property(project, property) << std::endl;
+    }
   } else if (command == "unset") {
     if (project.empty()) {
       ERROR("Specify project or use @current.");
