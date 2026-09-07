@@ -23,6 +23,7 @@
 
 #include <filesystem>
 #include <map>
+#include <optional>
 #include <string>
 
 namespace SciRooPlot
