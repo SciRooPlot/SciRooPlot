@@ -136,6 +136,7 @@ int main(int argc, char* argv[])
     PRINT("  srp edit    (<project> | @current)");
     PRINT("-----------------------------------------------------------");
     PRINT("Settings:");
+    PRINT("  srp settings");
     PRINT("  srp color     (bright | dark | off)");
     PRINT("  srp verbosity (debug | log | info | warning | error)");
     PRINT("  srp plotmode  (show | pdf | eps | svg | png | gif | jpg)");
@@ -166,29 +167,21 @@ int main(int argc, char* argv[])
   } else if (command == "print") {
     string fileName = project;
     PrintRootFileContents(fileName);
+  } else if (command == "settings") {
+    Config::Get().ShowSettings();
   } else if (command == "color") {
-    string colorSetting = project;
-    if (colorSetting == "off") {
-      Config::GetMutable().SetColorScheme(Config::ColorMode::off);
-    } else if (colorSetting == "dark") {
-      Config::GetMutable().SetColorScheme(Config::ColorMode::dark);
-    } else if (colorSetting == "bright") {
-      Config::GetMutable().SetColorScheme(Config::ColorMode::bright);
+    if (auto colorMode = Config::ParseColorMode(project)) {
+      Config::GetMutable().SetColorScheme(*colorMode);
+    } else {
+      ERROR("Invalid color scheme (bright | dark | off).");
+      return 1;
     }
   } else if (command == "verbosity") {
-    string logLevel = project;
-    if (logLevel == "debug") {
-      Config::GetMutable().SetVerbosity(Config::LogLevel::debug);
-    } else if (logLevel == "log") {
-      Config::GetMutable().SetVerbosity(Config::LogLevel::log);
-    } else if (logLevel == "info") {
-      Config::GetMutable().SetVerbosity(Config::LogLevel::info);
-    } else if (logLevel == "warning") {
-      Config::GetMutable().SetVerbosity(Config::LogLevel::warning);
-    } else if (logLevel == "error") {
-      Config::GetMutable().SetVerbosity(Config::LogLevel::error);
-    } else if (logLevel == "silent") {
-      Config::GetMutable().SetVerbosity(Config::LogLevel::silent);
+    if (auto logLevel = Config::ParseLogLevel(project)) {
+      Config::GetMutable().SetVerbosity(*logLevel);
+    } else {
+      ERROR("Invalid verbosity (debug | log | info | warning | error | silent).");
+      return 1;
     }
   } else if (command == "plotmode") {
     if (project.empty()) {

@@ -42,12 +42,16 @@ class Config
     log,
     debug,
   };
+  static std::string LogLevelName(int level);
+  static std::optional<int> ParseLogLevel(const std::string& name);
 
   enum ColorMode {
     bright,
     dark,
     off,
   };
+  static std::string ColorModeName(int mode);
+  static std::optional<int> ParseColorMode(const std::string& name);
 
   int Verbosity() const { return mLogLevel; }
   int ColorScheme() const { return mColorMode; }
@@ -61,6 +65,7 @@ class Config
 
   bool Exists(const std::string& projectName) const;
   void ListProjects() const;
+  void ShowSettings() const;
 
   void Show(const std::string& projectName) const;
   std::string Property(const std::string& projectName, const std::string& property) const;

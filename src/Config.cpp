@@ -39,6 +39,58 @@ using std::vector;
 
 namespace SciRooPlot
 {
+string Config::LogLevelName(int level)
+{
+  switch (level) {
+    case LogLevel::silent:
+      return "silent";
+    case LogLevel::error:
+      return "error";
+    case LogLevel::warning:
+      return "warning";
+    case LogLevel::info:
+      return "info";
+    case LogLevel::log:
+      return "log";
+    case LogLevel::debug:
+      return "debug";
+    default:
+      return "unknown";
+  }
+}
+
+std::optional<int> Config::ParseLogLevel(const string& name)
+{
+  if (name == "silent") return LogLevel::silent;
+  if (name == "error") return LogLevel::error;
+  if (name == "warning") return LogLevel::warning;
+  if (name == "info") return LogLevel::info;
+  if (name == "log") return LogLevel::log;
+  if (name == "debug") return LogLevel::debug;
+  return std::nullopt;
+}
+
+string Config::ColorModeName(int mode)
+{
+  switch (mode) {
+    case ColorMode::bright:
+      return "bright";
+    case ColorMode::dark:
+      return "dark";
+    case ColorMode::off:
+      return "off";
+    default:
+      return "unknown";
+  }
+}
+
+std::optional<int> Config::ParseColorMode(const string& name)
+{
+  if (name == "bright") return ColorMode::bright;
+  if (name == "dark") return ColorMode::dark;
+  if (name == "off") return ColorMode::off;
+  return std::nullopt;
+}
 
 Config& Config::Instance()
 {
@@ -161,6 +213,16 @@ void Config::ListProjects() const
   for (const auto& [projectName, project] : mProjects) {
     PRINT("{}  {}", (mCurrentProject == projectName) ? "*" : " ", projectName);
   }
+}
+
+void Config::ShowSettings() const
+{
+  PRINT("Verbosity:       {}", LogLevelName(mLogLevel));
+  PRINT("Color:           {}", ColorModeName(mColorMode));
+  PRINT("Plot mode:       {}", mPlotMode);
+  PRINT("Match mode:      {}", mMatchContains ? "contains" : "exact");
+  PRINT("Match case:      {}", mMatchCaseInsensitive ? "insensitive" : "sensitive");
+  PRINT("Current project: {}", mCurrentProject.empty() ? "<none>" : mCurrentProject);
 }
 
 void Config::Rename(const std::string& projectName, const std::string& newProjectName)
