@@ -1486,6 +1486,9 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mModify.divideBinWidth, "divide_bin_width");
   read_from_tree(dataTree, mModify.rebinGroupX, "rebinX");
   read_from_tree(dataTree, mModify.rebinGroupY, "rebinY");
+  read_from_tree(dataTree, mModify.scaleAxisX, "scale_axis_x");
+  read_from_tree(dataTree, mModify.scaleAxisY, "scale_axis_y");
+  read_from_tree(dataTree, mModify.scaleAxisZ, "scale_axis_z");
   read_from_tree(dataTree, mRangeX.min, "rangeX_min");
   read_from_tree(dataTree, mRangeX.max, "rangeX_max");
   read_from_tree(dataTree, mRangeY.min, "rangeY_min");
@@ -1594,6 +1597,9 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mModify.divideBinWidth, "divide_bin_width");
   put_in_tree(dataTree, mModify.rebinGroupX, "rebinX");
   put_in_tree(dataTree, mModify.rebinGroupY, "rebinY");
+  put_in_tree(dataTree, mModify.scaleAxisX, "scale_axis_x");
+  put_in_tree(dataTree, mModify.scaleAxisY, "scale_axis_y");
+  put_in_tree(dataTree, mModify.scaleAxisZ, "scale_axis_z");
   put_in_tree(dataTree, mRangeX.min, "rangeX_min");
   put_in_tree(dataTree, mRangeX.max, "rangeX_max");
   put_in_tree(dataTree, mRangeY.min, "rangeY_min");
@@ -1949,6 +1955,21 @@ auto Plot::Pad::Data::RebinXY(uint16_t nGroupX, uint16_t nGroupY) -> decltype(*t
 {
   mModify.rebinGroupX = nGroupX;
   mModify.rebinGroupY = nGroupY;
+  return *this;
+}
+auto Plot::Pad::Data::ScaleX(double_t scaleFactor) -> decltype(*this)
+{
+  mModify.scaleAxisX = scaleFactor;
+  return *this;
+}
+auto Plot::Pad::Data::ScaleY(double_t scaleFactor) -> decltype(*this)
+{
+  mModify.scaleAxisY = scaleFactor;
+  return *this;
+}
+auto Plot::Pad::Data::ScaleZ(double_t scaleFactor) -> decltype(*this)
+{
+  mModify.scaleAxisZ = scaleFactor;
   return *this;
 }
 auto Plot::Pad::Data::Project(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)

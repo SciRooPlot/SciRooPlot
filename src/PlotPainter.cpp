@@ -461,6 +461,48 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }  // end ratio code
 
+        auto scaleAxis = [&](int16_t axisIndex, const optional<double_t>& factor) {
+          if (!factor) return;
+          if constexpr (is_hist_1d<data_type>()) {
+            if (axisIndex == 1) return;  // y is bin content here - equivalent to Scale()
+          } else if constexpr (is_hist_2d<data_type>()) {
+            if (axisIndex == 2) return;  // z is bin content here - equivalent to Scale()
+          } else if constexpr (is_graph_1d<data_type>()) {
+            if (axisIndex == 1) return;  // same operation as Scale() for a graph
+          } else if constexpr (is_graph_2d<data_type>()) {
+            if (axisIndex == 2) return;  // z is the value Scale() targets for a 2d graph
+          }
+          string axisLetter = GetAxisStr(axisIndex);
+          if (*factor <= 0.) {
+            WARNING("Scale factor for {} axis of {} must be positive, ignoring.", axisLetter, data_ptr->GetName());
+            return;
+          }
+          if constexpr (is_hist_1d<data_type>()) {
+            if (axisIndex == 2) {
+              WARNING("Cannot scale z axis of 1d histogram {} (no such axis).", data_ptr->GetName());
+              return;
+            }
+            ScaleAxis(data_ptr, axisIndex, *factor);
+          } else if constexpr (is_hist_2d<data_type>()) {
+            ScaleAxis(data_ptr, axisIndex, *factor);
+          } else if constexpr (is_hist_3d<data_type>()) {
+            ScaleAxis(data_ptr, axisIndex, *factor);
+          } else if constexpr (is_graph_1d<data_type>()) {
+            if (axisIndex == 2) {
+              WARNING("Cannot scale z axis of graph {} (graphs have no z-axis).", data_ptr->GetName());
+              return;
+            }
+            ScaleGraphAxis(data_ptr, axisIndex, *factor);
+          } else if constexpr (is_graph_2d<data_type>()) {
+            ScaleGraphAxis(data_ptr, axisIndex, *factor);
+          } else {
+            WARNING("Cannot scale {} axis of {} ({}); axis scaling is only supported for histograms and graphs, not functions.", axisLetter, data_ptr->GetName(), data_ptr->ClassName());
+          }
+        };
+        scaleAxis(0, data->GetScaleAxisX());
+        scaleAxis(1, data->GetScaleAxisY());
+        scaleAxis(2, data->GetScaleAxisZ());
+
         if constexpr (is_hist<data_type>()) {
           if (!data_ptr->GetSumw2N()) data_ptr->Sumw2();
           // rebin
@@ -505,6 +547,23 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (data->GetScaleFactor()) {
             scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor()) : (*data->GetScaleFactor());
           }
+          if constexpr (is_hist_1d<data_type>()) {
+            if (auto axisScale = data->GetScaleAxisY()) {
+              if (*axisScale <= 0.) {
+                WARNING("Scale factor for y axis of {} must be positive, ignoring.", data_ptr->GetName());
+              } else {
+                scaleFactor = (scaleFactor) ? (*scaleFactor) * (*axisScale) : (*axisScale);
+              }
+            }
+          } else if constexpr (is_hist_2d<data_type>()) {
+            if (auto axisScale = data->GetScaleAxisZ()) {
+              if (*axisScale <= 0.) {
+                WARNING("Scale factor for z axis of {} must be positive, ignoring.", data_ptr->GetName());
+              } else {
+                scaleFactor = (scaleFactor) ? (*scaleFactor) * (*axisScale) : (*axisScale);
+              }
+            }
+          }
           if (scaleFactor) data_ptr->Scale(*scaleFactor);
         } else if constexpr (is_graph_1d<data_type>()) {
           // smooth
@@ -534,7 +593,24 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (data->GetScaleFactor()) {
             scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor()) : (*data->GetScaleFactor());
           }
-          if (scaleFactor) ScaleGraph(static_cast<TGraph*>(data_ptr), *scaleFactor);
+          if (auto axisScale = data->GetScaleAxisY()) {
+            if (*axisScale <= 0.) {
+              WARNING("Scale factor for y axis of {} must be positive, ignoring.", data_ptr->GetName());
+            } else {
+              scaleFactor = (scaleFactor) ? (*scaleFactor) * (*axisScale) : (*axisScale);
+            }
+          }
+          if (scaleFactor) ScaleGraphAxis(data_ptr, 1, *scaleFactor);
+        } else if constexpr (is_graph_2d<data_type>()) {
+          optional<double_t> scaleFactor = data->GetScaleFactor();
+          if (auto axisScale = data->GetScaleAxisZ()) {
+            if (*axisScale <= 0.) {
+              WARNING("Scale factor for z axis of {} must be positive, ignoring.", data_ptr->GetName());
+            } else {
+              scaleFactor = (scaleFactor) ? (*scaleFactor) * (*axisScale) : (*axisScale);
+            }
+          }
+          if (scaleFactor) ScaleGraphAxis(data_ptr, 2, *scaleFactor);
         }
 
         // first data is only used to define the axes
@@ -1921,14 +1997,84 @@ void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<
 
 //**************************************************************************************************
 /**
- * Scales graph by a constant value.
+ * Scales histogram axis by a constant value.
  */
 //**************************************************************************************************
-void PlotPainter::ScaleGraph(TGraph* graph, double_t scale)
+void PlotPainter::ScaleAxis(TH1* hist, int16_t axisIndex, double_t scaleFactor)
 {
+  TAxis* axis = GetAxis(hist, axisIndex);
+  if (axis->GetXbins()->GetSize() > 0) {
+    // variable bin widths
+    vector<double_t> newBinEdges;
+    auto* edges = axis->GetXbins()->GetArray();
+    newBinEdges.reserve(axis->GetXbins()->GetSize());
+    for (int32_t i = 0; i < axis->GetXbins()->GetSize(); ++i) {
+      newBinEdges.push_back(edges[i] * scaleFactor);
+    }
+    axis->Set(axis->GetNbins(), newBinEdges.data());
+  } else {
+    // fixed bin width
+    axis->Set(axis->GetNbins(), axis->GetXmin() * scaleFactor, axis->GetXmax() * scaleFactor);
+  }
+  hist->ResetStats();
+}
+
+//**************************************************************************************************
+/**
+ * Rescales the point coordinates (and associated errors) of a graph along one axis by a constant factor.
+ */
+//**************************************************************************************************
+void PlotPainter::ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFactor)
+{
+  double_t* values = (axis == 0) ? graph->GetX() : graph->GetY();
+  double_t* errors = (axis == 0) ? graph->GetEX() : graph->GetEY();
   for (int32_t i{}; i < graph->GetN(); ++i) {
-    graph->GetY()[i] *= scale;
-    if (graph->GetEY()) graph->GetEY()[i] *= scale;
+    values[i] *= scaleFactor;
+    if (errors) errors[i] *= scaleFactor;
+  }
+  if (auto* asymmErrors = dynamic_cast<TGraphAsymmErrors*>(graph)) {
+    double_t* errorsLow = (axis == 0) ? asymmErrors->GetEXlow() : asymmErrors->GetEYlow();
+    double_t* errorsHigh = (axis == 0) ? asymmErrors->GetEXhigh() : asymmErrors->GetEYhigh();
+    for (int32_t i{}; i < graph->GetN(); ++i) {
+      errorsLow[i] *= scaleFactor;
+      errorsHigh[i] *= scaleFactor;
+    }
+  }
+}
+
+void PlotPainter::ScaleGraphAxis(TGraph2D* graph, int16_t axis, double_t scaleFactor)
+{
+  double_t* values{};
+  double_t* errors{};
+  double_t* errorsLow{};
+  double_t* errorsHigh{};
+  switch (axis) {
+    case 0:
+      values = graph->GetX();
+      errors = graph->GetEX();
+      errorsLow = graph->GetEXlow();
+      errorsHigh = graph->GetEXhigh();
+      break;
+    case 1:
+      values = graph->GetY();
+      errors = graph->GetEY();
+      errorsLow = graph->GetEYlow();
+      errorsHigh = graph->GetEYhigh();
+      break;
+    case 2:
+      values = graph->GetZ();
+      errors = graph->GetEZ();
+      errorsLow = graph->GetEZlow();
+      errorsHigh = graph->GetEZhigh();
+      break;
+    default:
+      return;
+  }
+  for (int32_t i{}; i < graph->GetN(); ++i) {
+    values[i] *= scaleFactor;
+    if (errors) errors[i] *= scaleFactor;
+    if (errorsLow) errorsLow[i] *= scaleFactor;
+    if (errorsHigh) errorsHigh[i] *= scaleFactor;
   }
 }
 

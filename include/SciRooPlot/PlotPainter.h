@@ -144,7 +144,9 @@ class PlotPainter
   std::optional<data_ptr_t> GetProjection(TObject* obj, Plot::Pad::Data::proj_info_t projInfo);
 
   void SetGraphRange(TGraph* graph, std::optional<double_t> min, std::optional<double_t> max);
-  void ScaleGraph(TGraph* graph, double_t scale);
+  void ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFactor);
+  void ScaleGraphAxis(TGraph2D* graph, int16_t axis, double_t scaleFactor);
+  void ScaleAxis(TH1* hist, int16_t axisIndex, double_t scaleFactor);
 
   void Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors = false);
   void Divide(TH1* numerator, TH1* denominator, bool binomialErrors = false);

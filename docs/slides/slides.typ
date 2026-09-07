@@ -1577,6 +1577,7 @@
       #api-section("Transform existing histograms", (
         [`Normalize(scaleBinWidth = false)` / `NormalizeToMaximum(normMaximum = true)`], [Normalize the integral or the maximum to one.],
         [`Scale(scaleFactor)`], [Scale the object's contents.],
+        [`ScaleX(f)` / `ScaleY(f)` / `ScaleZ(f)`], [Rescale axis values by a constant factor (e.g. unit conversion). Wherever an axis is the quantity `Scale()` already scales (y for 1d histograms and graphs, z for 2d histograms), these are synonyms of `Scale()` rather than a separate operation. Not applicable to functions.],
         [`DivideBinWidth(divideBinWidth = true)`], [Divide contents by bin width.],
         [`RebinX(n)` / `RebinY(n)` / `RebinXY(nx, ny)`], [Rebin one or both axes.],
         [`Smooth(nIterSmooth = 1)`], [Apply smoothing.],

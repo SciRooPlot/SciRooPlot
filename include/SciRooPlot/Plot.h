@@ -498,6 +498,9 @@ class Plot::Pad::Data
   virtual Data& RebinX(uint16_t nGroup);
   virtual Data& RebinY(uint16_t nGroup);
   virtual Data& RebinXY(uint16_t nGroupX, uint16_t nGroupY);
+  virtual Data& ScaleX(double_t scaleFactor);
+  virtual Data& ScaleY(double_t scaleFactor);
+  virtual Data& ScaleZ(double_t scaleFactor);
   virtual Data& Smooth(uint16_t nIterSmooth = 1);
 
   virtual Data& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
@@ -580,6 +583,9 @@ class Plot::Pad::Data
   const auto& GetNiterSmooth() const { return mNiterSmooth; }
   const auto& GetRebinGroupX() const { return mModify.rebinGroupX; }
   const auto& GetRebinGroupY() const { return mModify.rebinGroupY; }
+  const auto& GetScaleAxisX() const { return mModify.scaleAxisX; }
+  const auto& GetScaleAxisY() const { return mModify.scaleAxisY; }
+  const auto& GetScaleAxisZ() const { return mModify.scaleAxisZ; }
   const auto& GetDivideBinWidth() const { return mModify.divideBinWidth; }
   const auto& GetShowOverflowBins() const { return mModify.showOverflowBins; }
 
@@ -639,6 +645,9 @@ class Plot::Pad::Data
     std::optional<bool> divideBinWidth;
     std::optional<uint16_t> rebinGroupX;
     std::optional<uint16_t> rebinGroupY;
+    std::optional<double_t> scaleAxisX;
+    std::optional<double_t> scaleAxisY;
+    std::optional<double_t> scaleAxisZ;
     std::optional<bool> showOverflowBins;
   };
   struct legend_t {
@@ -744,6 +753,9 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(RebinX)
   FORWARD_TO_DATA(RebinY)
   FORWARD_TO_DATA(RebinXY)
+  FORWARD_TO_DATA(ScaleX)
+  FORWARD_TO_DATA(ScaleY)
+  FORWARD_TO_DATA(ScaleZ)
   FORWARD_TO_DATA(Smooth)
 
   Ratio& Numer();  // switch to numerator for following modifiers (default)
