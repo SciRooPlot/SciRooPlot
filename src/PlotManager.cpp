@@ -600,17 +600,13 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
     for (auto plot : selectedPlots) {
       if (!GeneratePlot(*plot, mode)) {
         auto missingData = GetMissingData(*plot);
-        if (missingData.empty()) {
-          ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
-        } else {
-          ERROR("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
-          for (const auto& [dataSource, name, suffix] : missingData) {
-            string line = " - missing " + dataSource + ":" + name;
-            if (!suffix.empty()) line += " (projection " + suffix + ")";
-            line += (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (data source not found)" : "";
-            ERROR("{}", line);
-          }
+        string message = fmt::format("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
+        for (const auto& [dataSource, name, suffix] : missingData) {
+          message += "\n         - missing " + dataSource + ":" + name;
+          if (!suffix.empty()) message += " (projection " + suffix + ")";
+          message += (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (data source not found)" : "";
         }
+        ERROR("{}", message);
       }
       if (mExitInteractiveBrowsing) break;
     }
@@ -702,12 +698,12 @@ bool PlotManager::FillBuffer()
       if (!str_ends_with(fileName, ".root")) continue;
 
       if (!std::filesystem::exists(fileName)) {
-        WARNING("Input file {} not found.", fileName);
+        WARNING("Input file {} not found (data source {}).", fileName, dataSource);
         continue;
       }
       TFile inputFile(fileName.data(), "READ");
       if (inputFile.IsZombie()) {
-        WARNING("Cannot open input file {}.", fileName);
+        WARNING("Cannot open input file {} (data source {}).", fileName, dataSource);
         continue;
       }
 
@@ -777,7 +773,7 @@ void PlotManager::PrintBufferStatus(bool onlyMissing) const
       bool show = onlyMissing ? (dataPtr == nullptr) : true;
       if (dataPtr) ++nAvailableData;
       if (show) {
-        if (printDataSource) WARNING("{}{}", dataSource, (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (dataSource not found)" : "");
+        if (printDataSource) DEBUG("{}{}", dataSource, (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (data source not found)" : "");
         printDataSource = false;
         DEBUG(" - {}{}{}", (dataPtr) ? logger::begin_color(logger::Color::Green) : logger::begin_color(logger::Color::Red), dataName, logger::end_color());
       }

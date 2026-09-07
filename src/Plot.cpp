@@ -161,21 +161,22 @@ uint8_t Plot::GetDataCount() const
 
 void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
 {
-  if (!name.empty()) {
-    INFO("Settings of {}:", name);
-  }
+  string message;
+  if (!name.empty()) message = fmt::format("Settings of {}:", name);
   auto print_pt = [&](auto&& self, const auto& node, int indent) -> void {
     for (const auto& child : node) {
       const std::string pad(indent * 2, ' ');
+      if (!message.empty()) message += "\n         ";
       if (!child.second.data().empty()) {
-        PRINT("{}- {}: {}", pad, child.first, child.second.data());
+        message += fmt::format("{}- {}: {}", pad, child.first, child.second.data());
       } else {
-        PRINT("{}- {}:", pad, child.first);
+        message += fmt::format("{}- {}:", pad, child.first);
         self(self, child.second, indent + 1);
       }
     }
   };
   print_pt(print_pt, pt, 0);
+  if (!message.empty()) INFO("{}", message);
 }
 
 auto Plot::SetName(const string& name) -> decltype(*this)
