@@ -162,6 +162,16 @@ constexpr bool is_3d()
 {
   return is_hist_3d<T>() || is_func_3d<T>();
 }
+template <typename FuncT>
+void CopyFuncAttributes(FuncT* from, FuncT* to)
+{
+  from->TAttLine::Copy(*to);
+  from->TAttFill::Copy(*to);
+  from->TAttMarker::Copy(*to);
+  to->SetTitle(from->GetTitle());
+  to->SetNpx(from->GetNpx());
+  to->SetBit(kCanDelete);
+}
 
 //**************************************************************************************************
 /**
@@ -461,6 +471,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }  // end ratio code
 
+        auto warn = [&](auto&&... args) {
+          if (dataIndex != 0) WARNING(std::forward<decltype(args)>(args)...);
+        };
+        auto warnUnsupported = [&](bool requested, const char* what) {
+          if (requested) warn("{} is not supported for {} ({}), ignoring.", what, data_ptr->GetName(), data_ptr->ClassName());
+        };
+
         auto scaleAxis = [&](int16_t axisIndex, const optional<double_t>& factor) {
           if (!factor) return;
           if constexpr (is_hist_1d<data_type>()) {
@@ -471,15 +488,17 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (axisIndex == 1) return;  // same operation as Scale() for a graph
           } else if constexpr (is_graph_2d<data_type>()) {
             if (axisIndex == 2) return;  // z is the value Scale() targets for a 2d graph
+          } else if constexpr (is_func<data_type>()) {
+            return;
           }
           string axisLetter = GetAxisStr(axisIndex);
           if (*factor <= 0.) {
-            WARNING("Scale factor for {} axis of {} must be positive, ignoring.", axisLetter, data_ptr->GetName());
+            warn("Scale factor for {} axis of {} must be positive, ignoring.", axisLetter, data_ptr->GetName());
             return;
           }
           if constexpr (is_hist_1d<data_type>()) {
             if (axisIndex == 2) {
-              WARNING("Cannot scale z axis of 1d histogram {} (no such axis).", data_ptr->GetName());
+              warn("Cannot scale z axis of 1d histogram {} (no such axis).", data_ptr->GetName());
               return;
             }
             ScaleAxis(data_ptr, axisIndex, *factor);
@@ -489,14 +508,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             ScaleAxis(data_ptr, axisIndex, *factor);
           } else if constexpr (is_graph_1d<data_type>()) {
             if (axisIndex == 2) {
-              WARNING("Cannot scale z axis of graph {} (graphs have no z-axis).", data_ptr->GetName());
+              warn("Cannot scale z axis of graph {} (graphs have no z-axis).", data_ptr->GetName());
               return;
             }
             ScaleGraphAxis(data_ptr, axisIndex, *factor);
           } else if constexpr (is_graph_2d<data_type>()) {
             ScaleGraphAxis(data_ptr, axisIndex, *factor);
-          } else {
-            WARNING("Cannot scale {} axis of {} ({}); axis scaling is only supported for histograms and graphs, not functions.", axisLetter, data_ptr->GetName(), data_ptr->ClassName());
           }
         };
         scaleAxis(0, data->GetScaleAxisX());
@@ -505,7 +522,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
         if constexpr (is_hist<data_type>()) {
           if (!data_ptr->GetSumw2N()) data_ptr->Sumw2();
-          // rebin
           if constexpr (is_hist_2d<data_type>()) {
             if (data->GetRebinGroupX() && data->GetRebinGroupY()) {
               data_ptr->Rebin2D(*data->GetRebinGroupX(), *data->GetRebinGroupY());
@@ -514,29 +530,43 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             } else if (data->GetRebinGroupY()) {
               data_ptr->RebinY(*data->GetRebinGroupY());
             }
+            warnUnsupported(data->GetRebinGroupZ().has_value(), "RebinZ");
+          } else if constexpr (is_hist_3d<data_type>()) {
+            if (data->GetRebinGroupX()) {
+              data_ptr->RebinX(*data->GetRebinGroupX());
+            }
+            if (data->GetRebinGroupY()) {
+              data_ptr->RebinY(*data->GetRebinGroupY());
+            }
+            if (data->GetRebinGroupZ()) {
+              data_ptr->RebinZ(*data->GetRebinGroupZ());
+            }
           } else {
             if (data->GetRebinGroupX()) {
               data_ptr->RebinX(*data->GetRebinGroupX());
             }
+            warnUnsupported(data->GetRebinGroupY().has_value(), "RebinY");
+            warnUnsupported(data->GetRebinGroupZ().has_value(), "RebinZ");
           }
-          // divide by bin width
           bool isDensity = data->GetScaleBinWidthNorm() && *data->GetScaleBinWidthNorm();
           if (data->GetDivideBinWidth() && *data->GetDivideBinWidth()) {
             data_ptr->Scale(1., "width");
             isDensity = true;
           }
-          // smooth
           if (data->GetNiterSmooth()) {
-            data_ptr->Smooth(*data->GetNiterSmooth());
+            if constexpr (is_one_of_v<data_type, TProfile*, TProfile2D*>()) {
+              warn("Smooth is not supported for profile histogram {} (would corrupt its per-bin entry counts), ignoring.", data_ptr->GetName());
+            } else {
+              data_ptr->Smooth(*data->GetNiterSmooth());
+            }
           }
-          // normalize and scale
           optional<double_t> scaleFactor;
           string scaleMode{};
           if (data->GetScaleBinWidthNorm()) {
             if (isDensity) scaleMode = "width";
-            double_t integral = data_ptr->Integral(scaleMode.data());  // integral in viewing range
+            double_t integral = data_ptr->Integral(scaleMode.data());
             if (integral == 0.) {
-              WARNING("Cannot normalize histogram because integral is zero.");
+              warn("Cannot normalize histogram because integral is zero.");
             } else {
               scaleFactor = 1. / integral;
             }
@@ -544,13 +574,17 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (data->GetNormMaximum() && *data->GetNormMaximum()) {
             scaleFactor = 1. / data_ptr->GetMaximum();
           }
-          if (data->GetScaleFactor()) {
-            scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor()) : (*data->GetScaleFactor());
+          if (auto factor = data->GetScaleFactor()) {
+            if (*factor <= 0.) {
+              warn("Scale factor for {} must be positive, ignoring.", data_ptr->GetName());
+            } else {
+              scaleFactor = (scaleFactor) ? (*scaleFactor) * (*factor) : (*factor);
+            }
           }
           if constexpr (is_hist_1d<data_type>()) {
             if (auto axisScale = data->GetScaleAxisY()) {
               if (*axisScale <= 0.) {
-                WARNING("Scale factor for y axis of {} must be positive, ignoring.", data_ptr->GetName());
+                warn("Scale factor for y axis of {} must be positive, ignoring.", data_ptr->GetName());
               } else {
                 scaleFactor = (scaleFactor) ? (*scaleFactor) * (*axisScale) : (*axisScale);
               }
@@ -558,7 +592,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           } else if constexpr (is_hist_2d<data_type>()) {
             if (auto axisScale = data->GetScaleAxisZ()) {
               if (*axisScale <= 0.) {
-                WARNING("Scale factor for z axis of {} must be positive, ignoring.", data_ptr->GetName());
+                warn("Scale factor for z axis of {} must be positive, ignoring.", data_ptr->GetName());
               } else {
                 scaleFactor = (scaleFactor) ? (*scaleFactor) * (*axisScale) : (*axisScale);
               }
@@ -566,9 +600,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           if (scaleFactor) data_ptr->Scale(*scaleFactor);
         } else if constexpr (is_graph_1d<data_type>()) {
-          // smooth
+          warnUnsupported(data->GetRebinGroupX().has_value(), "RebinX");
+          warnUnsupported(data->GetRebinGroupY().has_value(), "RebinY");
+          warnUnsupported(data->GetRebinGroupZ().has_value(), "RebinZ");
+          warnUnsupported(data->GetDivideBinWidth() && *data->GetDivideBinWidth(), "DivideBinWidth");
+          warnUnsupported(data->GetShowOverflowBins().has_value(), "ShowOverflowBins");
           if (data->GetNiterSmooth()) {
-            TGraphSmooth smoother;  // owns and deletes smoothed graph
+            TGraphSmooth smoother;
             for (uint16_t iter = 0; iter < *data->GetNiterSmooth(); ++iter) {
               TGraph* smoothGraph = smoother.SmoothSuper(data_ptr);
               for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
@@ -576,41 +614,148 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             }
           }
-          // normalize and scale
           optional<double_t> scaleFactor;
           string scaleMode{};
           if (data->GetScaleBinWidthNorm()) {
-            double_t integral = data_ptr->Integral();  // integral in viewing range
+            double_t integral = data_ptr->Integral();
             if (integral == 0.) {
-              WARNING("Cannot normalize graph because integral is zero.");
+              warn("Cannot normalize graph because integral is zero.");
             } else {
               scaleFactor = 1. / integral;
             }
             if (*data->GetScaleBinWidthNorm()) {
-              WARNING("Cannot normalize graph by width.");
+              warn("Cannot normalize graph by width.");
             }
           }
-          if (data->GetScaleFactor()) {
-            scaleFactor = (scaleFactor) ? (*scaleFactor) * (*data->GetScaleFactor()) : (*data->GetScaleFactor());
+          if (data->GetNormMaximum() && *data->GetNormMaximum()) {
+            double_t maxY = TMath::MaxElement(data_ptr->GetN(), data_ptr->GetY());
+            if (maxY == 0.) {
+              warn("Cannot normalize graph to maximum because it is zero.");
+            } else {
+              scaleFactor = 1. / maxY;
+            }
+          }
+          if (auto factor = data->GetScaleFactor()) {
+            if (*factor <= 0.) {
+              warn("Scale factor for {} must be positive, ignoring.", data_ptr->GetName());
+            } else {
+              scaleFactor = (scaleFactor) ? (*scaleFactor) * (*factor) : (*factor);
+            }
           }
           if (auto axisScale = data->GetScaleAxisY()) {
             if (*axisScale <= 0.) {
-              WARNING("Scale factor for y axis of {} must be positive, ignoring.", data_ptr->GetName());
+              warn("Scale factor for y axis of {} must be positive, ignoring.", data_ptr->GetName());
             } else {
               scaleFactor = (scaleFactor) ? (*scaleFactor) * (*axisScale) : (*axisScale);
             }
           }
           if (scaleFactor) ScaleGraphAxis(data_ptr, 1, *scaleFactor);
         } else if constexpr (is_graph_2d<data_type>()) {
-          optional<double_t> scaleFactor = data->GetScaleFactor();
+          warnUnsupported(data->GetRebinGroupX().has_value(), "RebinX");
+          warnUnsupported(data->GetRebinGroupY().has_value(), "RebinY");
+          warnUnsupported(data->GetRebinGroupZ().has_value(), "RebinZ");
+          warnUnsupported(data->GetDivideBinWidth() && *data->GetDivideBinWidth(), "DivideBinWidth");
+          warnUnsupported(data->GetNiterSmooth().has_value(), "Smooth");
+          warnUnsupported(data->GetShowOverflowBins().has_value(), "ShowOverflowBins");
+          warnUnsupported(data->GetScaleBinWidthNorm().has_value(), "Normalize");
+          optional<double_t> scaleFactor;
+          if (data->GetNormMaximum() && *data->GetNormMaximum()) {
+            double_t maxZ = TMath::MaxElement(data_ptr->GetN(), data_ptr->GetZ());
+            if (maxZ == 0.) {
+              warn("Cannot normalize graph to maximum because it is zero.");
+            } else {
+              scaleFactor = 1. / maxZ;
+            }
+          }
+          if (auto factor = data->GetScaleFactor()) {
+            if (*factor <= 0.) {
+              warn("Scale factor for {} must be positive, ignoring.", data_ptr->GetName());
+            } else {
+              scaleFactor = (scaleFactor) ? (*scaleFactor) * (*factor) : (*factor);
+            }
+          }
           if (auto axisScale = data->GetScaleAxisZ()) {
             if (*axisScale <= 0.) {
-              WARNING("Scale factor for z axis of {} must be positive, ignoring.", data_ptr->GetName());
+              warn("Scale factor for z axis of {} must be positive, ignoring.", data_ptr->GetName());
             } else {
               scaleFactor = (scaleFactor) ? (*scaleFactor) * (*axisScale) : (*axisScale);
             }
           }
           if (scaleFactor) ScaleGraphAxis(data_ptr, 2, *scaleFactor);
+        } else if constexpr (is_func<data_type>()) {
+          warnUnsupported(data->GetRebinGroupX().has_value(), "RebinX");
+          warnUnsupported(data->GetRebinGroupY().has_value(), "RebinY");
+          warnUnsupported(data->GetRebinGroupZ().has_value(), "RebinZ");
+          warnUnsupported(data->GetDivideBinWidth() && *data->GetDivideBinWidth(), "DivideBinWidth");
+          warnUnsupported(data->GetNiterSmooth().has_value(), "Smooth");
+          warnUnsupported(data->GetNormMaximum() && *data->GetNormMaximum(), "NormalizeToMaximum");
+          warnUnsupported(data->GetScaleBinWidthNorm().has_value(), "Normalize");
+          warnUnsupported(data->GetShowOverflowBins().has_value(), "ShowOverflowBins");
+          if constexpr (is_func_1d<data_type>()) {
+            warnUnsupported(data->GetScaleAxisZ().has_value(), "ScaleZ");
+          }
+          double_t domainFactorX = 1.;
+          if (auto axisScale = data->GetScaleAxisX()) {
+            if (*axisScale <= 0.) {
+              warn("Scale factor for x axis of {} must be positive, ignoring.", data_ptr->GetName());
+            } else {
+              domainFactorX = *axisScale;
+            }
+          }
+          double_t domainFactorY = 1.;
+          if constexpr (is_func_2d<data_type>() || is_func_3d<data_type>()) {
+            if (auto axisScale = data->GetScaleAxisY()) {
+              if (*axisScale <= 0.) {
+                warn("Scale factor for y axis of {} must be positive, ignoring.", data_ptr->GetName());
+              } else {
+                domainFactorY = *axisScale;
+              }
+            }
+          }
+          double_t domainFactorZ = 1.;
+          if constexpr (is_func_3d<data_type>()) {
+            if (auto axisScale = data->GetScaleAxisZ()) {
+              if (*axisScale <= 0.) {
+                warn("Scale factor for z axis of {} must be positive, ignoring.", data_ptr->GetName());
+              } else {
+                domainFactorZ = *axisScale;
+              }
+            }
+          }
+          optional<double_t> contentFactor;
+          if (auto factor = data->GetScaleFactor()) {
+            if (*factor <= 0.) {
+              warn("Scale factor for {} must be positive, ignoring.", data_ptr->GetName());
+            } else {
+              contentFactor = *factor;
+            }
+          }
+          if constexpr (is_func_1d<data_type>()) {
+            if (auto axisScale = data->GetScaleAxisY()) {
+              if (*axisScale <= 0.) {
+                warn("Scale factor for y axis of {} must be positive, ignoring.", data_ptr->GetName());
+              } else {
+                contentFactor = (contentFactor) ? (*contentFactor) * (*axisScale) : (*axisScale);
+              }
+            }
+          } else if constexpr (is_func_2d<data_type>()) {
+            if (auto axisScale = data->GetScaleAxisZ()) {
+              if (*axisScale <= 0.) {
+                warn("Scale factor for z axis of {} must be positive, ignoring.", data_ptr->GetName());
+              } else {
+                contentFactor = (contentFactor) ? (*contentFactor) * (*axisScale) : (*axisScale);
+              }
+            }
+          }
+          if (domainFactorX != 1. || domainFactorY != 1. || domainFactorZ != 1. || contentFactor) {
+            if constexpr (is_func_1d<data_type>()) {
+              data_ptr = ScaleFunc(data_ptr, domainFactorX, contentFactor.value_or(1.));
+            } else if constexpr (is_func_2d<data_type>()) {
+              data_ptr = ScaleFunc(data_ptr, domainFactorX, domainFactorY, contentFactor.value_or(1.));
+            } else if constexpr (is_func_3d<data_type>()) {
+              data_ptr = ScaleFunc(data_ptr, domainFactorX, domainFactorY, domainFactorZ, contentFactor.value_or(1.));
+            }
+          }
         }
 
         // first data is only used to define the axes
@@ -2076,6 +2221,54 @@ void PlotPainter::ScaleGraphAxis(TGraph2D* graph, int16_t axis, double_t scaleFa
     if (errorsLow) errorsLow[i] *= scaleFactor;
     if (errorsHigh) errorsHigh[i] *= scaleFactor;
   }
+}
+
+//**************************************************************************************************
+/**
+ * Rescales functions or function arguments by a constant factor.
+ */
+//**************************************************************************************************
+TF1* PlotPainter::ScaleFunc(TF1* func, double_t domainFactorX, double_t contentFactor)
+{
+  func->AddToGlobalList(false);
+  auto origFunc = std::shared_ptr<TF1>(func);
+  auto* newFunc = new TF1(
+    origFunc->GetName(),
+    [origFunc, domainFactorX, contentFactor](double_t* x, double_t*) { return contentFactor * origFunc->Eval(x[0] / domainFactorX); },
+    origFunc->GetXmin() * domainFactorX, origFunc->GetXmax() * domainFactorX, 0, 1, TF1::EAddToList::kNo);
+  CopyFuncAttributes(origFunc.get(), newFunc);
+  return newFunc;
+}
+
+TF2* PlotPainter::ScaleFunc(TF2* func, double_t domainFactorX, double_t domainFactorY, double_t contentFactor)
+{
+  func->AddToGlobalList(false);
+  auto origFunc = std::shared_ptr<TF2>(func);
+  auto* newFunc = new TF2(
+    origFunc->GetName(),
+    [origFunc, domainFactorX, domainFactorY, contentFactor](double_t* x, double_t*) {
+      return contentFactor * origFunc->Eval(x[0] / domainFactorX, x[1] / domainFactorY);
+    },
+    origFunc->GetXmin() * domainFactorX, origFunc->GetXmax() * domainFactorX,
+    origFunc->GetYmin() * domainFactorY, origFunc->GetYmax() * domainFactorY, 0, 2, TF1::EAddToList::kNo);
+  CopyFuncAttributes(origFunc.get(), newFunc);
+  return newFunc;
+}
+
+TF3* PlotPainter::ScaleFunc(TF3* func, double_t domainFactorX, double_t domainFactorY, double_t domainFactorZ, double_t contentFactor)
+{
+  func->AddToGlobalList(false);
+  auto origFunc = std::shared_ptr<TF3>(func);
+  auto* newFunc = new TF3(
+    origFunc->GetName(),
+    [origFunc, domainFactorX, domainFactorY, domainFactorZ, contentFactor](double_t* x, double_t*) {
+      return contentFactor * origFunc->Eval(x[0] / domainFactorX, x[1] / domainFactorY, x[2] / domainFactorZ);
+    },
+    origFunc->GetXmin() * domainFactorX, origFunc->GetXmax() * domainFactorX,
+    origFunc->GetYmin() * domainFactorY, origFunc->GetYmax() * domainFactorY,
+    origFunc->GetZmin() * domainFactorZ, origFunc->GetZmax() * domainFactorZ, 0, 3, TF1::EAddToList::kNo);
+  CopyFuncAttributes(origFunc.get(), newFunc);
+  return newFunc;
 }
 
 //**************************************************************************************************

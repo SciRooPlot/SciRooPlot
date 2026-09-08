@@ -1577,9 +1577,9 @@
       #api-section("Transform existing histograms", (
         [`Normalize(scaleBinWidth = false)` / `NormalizeToMaximum(normMaximum = true)`], [Normalize the integral or the maximum to one.],
         [`Scale(scaleFactor)`], [Scale the object's contents.],
-        [`ScaleX(f)` / `ScaleY(f)` / `ScaleZ(f)`], [Rescale axis values by a constant factor (e.g. unit conversion). Wherever an axis is the quantity `Scale()` already scales (y for 1d histograms and graphs, z for 2d histograms), these are synonyms of `Scale()` rather than a separate operation. Not applicable to functions.],
+        [`ScaleX(f)` / `ScaleY(f)` / `ScaleZ(f)`], [Rescale axis values by a constant factor (e.g. unit conversion). Wherever an axis is the same quantity that `Scale()` also scales (y for 1d histograms, graphs and functions, z for 2d histograms, graphs and functions), these are synonyms of `Scale()` rather than a separate operation.],
         [`DivideBinWidth(divideBinWidth = true)`], [Divide contents by bin width.],
-        [`RebinX(n)` / `RebinY(n)` / `RebinXY(nx, ny)`], [Rebin one or both axes.],
+        [`RebinX(n)` / `RebinY(n)` / `RebinZ(n)` / `RebinXY(nx, ny)` / `RebinXYZ(nx, ny, nz)`], [Rebin one, several, or all axes (Z only applicable to 3d histograms).],
         [`Smooth(nIterSmooth = 1)`], [Apply smoothing.],
         [`Project(dims, ranges = {}, isUserCoord = {})`], [Generic N-dimensional projection.],
         [`ProjectX(...)` / `ProjectY(...)`], [Standard projection of a 2D histogram.],

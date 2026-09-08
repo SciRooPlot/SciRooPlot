@@ -497,7 +497,9 @@ class Plot::Pad::Data
   virtual Data& DivideBinWidth(bool divideBinWidth = true);
   virtual Data& RebinX(uint16_t nGroup);
   virtual Data& RebinY(uint16_t nGroup);
+  virtual Data& RebinZ(uint16_t nGroup);
   virtual Data& RebinXY(uint16_t nGroupX, uint16_t nGroupY);
+  virtual Data& RebinXYZ(uint16_t nGroupX, uint16_t nGroupY, uint16_t nGroupZ);
   virtual Data& ScaleX(double_t scaleFactor);
   virtual Data& ScaleY(double_t scaleFactor);
   virtual Data& ScaleZ(double_t scaleFactor);
@@ -583,6 +585,7 @@ class Plot::Pad::Data
   const auto& GetNiterSmooth() const { return mNiterSmooth; }
   const auto& GetRebinGroupX() const { return mModify.rebinGroupX; }
   const auto& GetRebinGroupY() const { return mModify.rebinGroupY; }
+  const auto& GetRebinGroupZ() const { return mModify.rebinGroupZ; }
   const auto& GetScaleAxisX() const { return mModify.scaleAxisX; }
   const auto& GetScaleAxisY() const { return mModify.scaleAxisY; }
   const auto& GetScaleAxisZ() const { return mModify.scaleAxisZ; }
@@ -645,6 +648,7 @@ class Plot::Pad::Data
     std::optional<bool> divideBinWidth;
     std::optional<uint16_t> rebinGroupX;
     std::optional<uint16_t> rebinGroupY;
+    std::optional<uint16_t> rebinGroupZ;
     std::optional<double_t> scaleAxisX;
     std::optional<double_t> scaleAxisY;
     std::optional<double_t> scaleAxisZ;
@@ -752,7 +756,9 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(DivideBinWidth)
   FORWARD_TO_DATA(RebinX)
   FORWARD_TO_DATA(RebinY)
+  FORWARD_TO_DATA(RebinZ)
   FORWARD_TO_DATA(RebinXY)
+  FORWARD_TO_DATA(RebinXYZ)
   FORWARD_TO_DATA(ScaleX)
   FORWARD_TO_DATA(ScaleY)
   FORWARD_TO_DATA(ScaleZ)

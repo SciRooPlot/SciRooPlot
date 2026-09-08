@@ -1486,6 +1486,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mModify.divideBinWidth, "divide_bin_width");
   read_from_tree(dataTree, mModify.rebinGroupX, "rebinX");
   read_from_tree(dataTree, mModify.rebinGroupY, "rebinY");
+  read_from_tree(dataTree, mModify.rebinGroupZ, "rebinZ");
   read_from_tree(dataTree, mModify.scaleAxisX, "scale_axis_x");
   read_from_tree(dataTree, mModify.scaleAxisY, "scale_axis_y");
   read_from_tree(dataTree, mModify.scaleAxisZ, "scale_axis_z");
@@ -1597,6 +1598,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mModify.divideBinWidth, "divide_bin_width");
   put_in_tree(dataTree, mModify.rebinGroupX, "rebinX");
   put_in_tree(dataTree, mModify.rebinGroupY, "rebinY");
+  put_in_tree(dataTree, mModify.rebinGroupZ, "rebinZ");
   put_in_tree(dataTree, mModify.scaleAxisX, "scale_axis_x");
   put_in_tree(dataTree, mModify.scaleAxisY, "scale_axis_y");
   put_in_tree(dataTree, mModify.scaleAxisZ, "scale_axis_z");
@@ -1951,10 +1953,22 @@ auto Plot::Pad::Data::RebinY(uint16_t nGroup) -> decltype(*this)
   mModify.rebinGroupY = nGroup;
   return *this;
 }
+auto Plot::Pad::Data::RebinZ(uint16_t nGroup) -> decltype(*this)
+{
+  mModify.rebinGroupZ = nGroup;
+  return *this;
+}
 auto Plot::Pad::Data::RebinXY(uint16_t nGroupX, uint16_t nGroupY) -> decltype(*this)
 {
   mModify.rebinGroupX = nGroupX;
   mModify.rebinGroupY = nGroupY;
+  return *this;
+}
+auto Plot::Pad::Data::RebinXYZ(uint16_t nGroupX, uint16_t nGroupY, uint16_t nGroupZ) -> decltype(*this)
+{
+  mModify.rebinGroupX = nGroupX;
+  mModify.rebinGroupY = nGroupY;
+  mModify.rebinGroupZ = nGroupZ;
   return *this;
 }
 auto Plot::Pad::Data::ScaleX(double_t scaleFactor) -> decltype(*this)

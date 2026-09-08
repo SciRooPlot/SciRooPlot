@@ -147,6 +147,9 @@ class PlotPainter
   void ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFactor);
   void ScaleGraphAxis(TGraph2D* graph, int16_t axis, double_t scaleFactor);
   void ScaleAxis(TH1* hist, int16_t axisIndex, double_t scaleFactor);
+  TF1* ScaleFunc(TF1* func, double_t domainFactorX, double_t contentFactor);
+  TF2* ScaleFunc(TF2* func, double_t domainFactorX, double_t domainFactorY, double_t contentFactor);
+  TF3* ScaleFunc(TF3* func, double_t domainFactorX, double_t domainFactorY, double_t domainFactorZ, double_t contentFactor);
 
   void Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors = false);
   void Divide(TH1* numerator, TH1* denominator, bool binomialErrors = false);
