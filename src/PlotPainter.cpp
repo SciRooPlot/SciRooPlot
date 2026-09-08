@@ -560,6 +560,21 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               data_ptr->Smooth(*data->GetNiterSmooth());
             }
           }
+          if constexpr (is_hist_1d<data_type>()) {
+            if (data->GetCumulative()) {
+              if constexpr (is_one_of_v<data_type, TProfile*>()) {
+                warn("Cumulative is not supported for profile histogram {} (bin content would become invalid), ignoring.", data_ptr->GetName());
+              } else {
+                TH1* cumulativeHist = data_ptr->GetCumulative(*data->GetCumulative());
+                cumulativeHist->SetDirectory(nullptr);
+                cumulativeHist->SetBit(kCanDelete);
+                delete data_ptr;
+                data_ptr = cumulativeHist;
+              }
+            }
+          } else {
+            warnUnsupported(data->GetCumulative().has_value(), "Cumulative");
+          }
           optional<double_t> scaleFactor;
           string scaleMode{};
           if (data->GetScaleBinWidthNorm()) {
@@ -605,6 +620,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           warnUnsupported(data->GetRebinGroupZ().has_value(), "RebinZ");
           warnUnsupported(data->GetDivideBinWidth() && *data->GetDivideBinWidth(), "DivideBinWidth");
           warnUnsupported(data->GetShowOverflowBins().has_value(), "ShowOverflowBins");
+          warnUnsupported(data->GetCumulative().has_value(), "Cumulative");
           if (data->GetNiterSmooth()) {
             TGraphSmooth smoother;
             for (uint16_t iter = 0; iter < *data->GetNiterSmooth(); ++iter) {
@@ -657,6 +673,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           warnUnsupported(data->GetDivideBinWidth() && *data->GetDivideBinWidth(), "DivideBinWidth");
           warnUnsupported(data->GetNiterSmooth().has_value(), "Smooth");
           warnUnsupported(data->GetShowOverflowBins().has_value(), "ShowOverflowBins");
+          warnUnsupported(data->GetCumulative().has_value(), "Cumulative");
           warnUnsupported(data->GetScaleBinWidthNorm().has_value(), "Normalize");
           optional<double_t> scaleFactor;
           if (data->GetNormMaximum() && *data->GetNormMaximum()) {
@@ -691,6 +708,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           warnUnsupported(data->GetNormMaximum() && *data->GetNormMaximum(), "NormalizeToMaximum");
           warnUnsupported(data->GetScaleBinWidthNorm().has_value(), "Normalize");
           warnUnsupported(data->GetShowOverflowBins().has_value(), "ShowOverflowBins");
+          warnUnsupported(data->GetCumulative().has_value(), "Cumulative");
           if constexpr (is_func_1d<data_type>()) {
             warnUnsupported(data->GetScaleAxisZ().has_value(), "ScaleZ");
           }

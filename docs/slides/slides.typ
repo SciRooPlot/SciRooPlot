@@ -1581,6 +1581,7 @@
         [`DivideBinWidth(divideBinWidth = true)`], [Divide contents by bin width.],
         [`RebinX(n)` / `RebinY(n)` / `RebinZ(n)` / `RebinXY(nx, ny)` / `RebinXYZ(nx, ny, nz)`], [Rebin one, several, or all axes (Z only applicable to 3d histograms).],
         [`Smooth(nIterSmooth = 1)`], [Apply smoothing.],
+        [`Cumulative(forward = true)`], [Replace bin content with the running sum (1d histograms only); `forward = false` for the reverse/survival direction.],
         [`Project(dims, ranges = {}, isUserCoord = {})`], [Generic N-dimensional projection.],
         [`ProjectX(...)` / `ProjectY(...)`], [Standard projection of a 2D histogram.],
         [`Profile(dims, ranges = {}, isUserCoord = {})`], [Generic multi-dimensional profile.],

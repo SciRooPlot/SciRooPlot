@@ -1490,6 +1490,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mModify.scaleAxisX, "scale_axis_x");
   read_from_tree(dataTree, mModify.scaleAxisY, "scale_axis_y");
   read_from_tree(dataTree, mModify.scaleAxisZ, "scale_axis_z");
+  read_from_tree(dataTree, mModify.cumulative, "cumulative");
   read_from_tree(dataTree, mRangeX.min, "rangeX_min");
   read_from_tree(dataTree, mRangeX.max, "rangeX_max");
   read_from_tree(dataTree, mRangeY.min, "rangeY_min");
@@ -1602,6 +1603,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mModify.scaleAxisX, "scale_axis_x");
   put_in_tree(dataTree, mModify.scaleAxisY, "scale_axis_y");
   put_in_tree(dataTree, mModify.scaleAxisZ, "scale_axis_z");
+  put_in_tree(dataTree, mModify.cumulative, "cumulative");
   put_in_tree(dataTree, mRangeX.min, "rangeX_min");
   put_in_tree(dataTree, mRangeX.max, "rangeX_max");
   put_in_tree(dataTree, mRangeY.min, "rangeY_min");
@@ -1936,6 +1938,11 @@ auto Plot::Pad::Data::Scale(double_t scaleFactor) -> decltype(*this)
 auto Plot::Pad::Data::Smooth(uint16_t nIterSmooth) -> decltype(*this)
 {
   mNiterSmooth = nIterSmooth;
+  return *this;
+}
+auto Plot::Pad::Data::Cumulative(bool forward) -> decltype(*this)
+{
+  mModify.cumulative = forward;
   return *this;
 }
 auto Plot::Pad::Data::DivideBinWidth(bool divideBinWidth) -> decltype(*this)

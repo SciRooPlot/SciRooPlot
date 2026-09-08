@@ -504,6 +504,7 @@ class Plot::Pad::Data
   virtual Data& ScaleY(double_t scaleFactor);
   virtual Data& ScaleZ(double_t scaleFactor);
   virtual Data& Smooth(uint16_t nIterSmooth = 1);
+  virtual Data& Cumulative(bool forward = true);
 
   virtual Data& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
   virtual Data& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});  // for 2d histos
@@ -591,6 +592,7 @@ class Plot::Pad::Data
   const auto& GetScaleAxisZ() const { return mModify.scaleAxisZ; }
   const auto& GetDivideBinWidth() const { return mModify.divideBinWidth; }
   const auto& GetShowOverflowBins() const { return mModify.showOverflowBins; }
+  const auto& GetCumulative() const { return mModify.cumulative; }
 
   struct proj_info_t {
     std::vector<uint8_t> dims;                                    // dimensions to project on (can be one or two)
@@ -653,6 +655,7 @@ class Plot::Pad::Data
     std::optional<double_t> scaleAxisY;
     std::optional<double_t> scaleAxisZ;
     std::optional<bool> showOverflowBins;
+    std::optional<bool> cumulative;
   };
   struct legend_t {
     std::optional<std::string> label;
@@ -763,6 +766,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(ScaleY)
   FORWARD_TO_DATA(ScaleZ)
   FORWARD_TO_DATA(Smooth)
+  FORWARD_TO_DATA(Cumulative)
 
   Ratio& Numer();  // switch to numerator for following modifiers (default)
   Ratio& Denom();  // switch to denominator for following modifiers
