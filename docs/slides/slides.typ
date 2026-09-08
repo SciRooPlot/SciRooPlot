@@ -142,6 +142,19 @@
   #api-table(rows, col-widths: col-widths, text-size: text-size)
 ]
 
+#show raw.where(block: false): it => {
+  if lang == "py" {
+    let t = it.text
+    t = t.replace("{}", "None")
+    t = t.replace(regex("\btrue\b"), "True")
+    t = t.replace(regex("\bfalse\b"), "False")
+    // Re-implement raw's own default look (DejaVu Sans Mono at 0.8em) rather
+    // than calling raw() again, which would re-trigger this same show rule.
+    text(font: "DejaVu Sans Mono", size: 0.8em, t)
+  } else {
+    it
+  }
+}
 
 #slide[
   #grid(
@@ -1100,6 +1113,70 @@
 ]
 
 #slide[
+  #slide-title("Modifying Data")
+  #grid(
+    columns: (50%, 50%),
+    gutter: 0%,
+    [
+      - `Scale(factor)` multiplies the object's values (`y` for 1D data, `z` for 2D data); `Normalize()` and `NormalizeToMaximum()` pick that factor automatically, from the integral or the peak.
+
+      - Pass `true` to `Normalize()` to normalize as a density, using the bin-width-weighted integral; `DivideBinWidth()` divides content by bin width on its own, without touching the integral.
+
+      - `RebinX()` / `RebinY()` / `RebinZ()` -- and the `RebinXY()` / `RebinXYZ()` shortcuts -- merge neighboring bins along an axis. Histograms only.
+
+      - `Cumulative()` replaces the histogram with its running sum, low to high; pass `false` for a high-to-low sum. 1D histograms only.
+
+      - `Smooth()` applies ROOT's smoothing algorithm, repeated `nIterSmooth` times -- unsupported for profile histograms, since it would corrupt their per-bin entry counts.
+
+      - `ScaleX()` / `ScaleY()` / `ScaleZ()` rescale the axis itself (e.g. a unit conversion).
+    ],
+    [
+      #code-block(
+        [
+          ```cpp
+          // Normalize the integral to 1, merge bin pairs,
+          // and add 30% headroom to the y-axis for a legend
+          plot[1].AddData("h", "sourceA")
+                 .Normalize()
+                 .RebinX(2)
+                 .SetScaleMaximum(1.3);
+
+          // Running sum (low -> high), then convert axis units
+          plot[1].AddData("h2", "sourceA")
+                 .Cumulative()
+                 .ScaleX(1000.);  // e.g. GeV -> MeV
+
+          // dN/dpT-style density: content divided by bin width
+          plot[1].AddData("h3", "sourceA")
+                 .DivideBinWidth();
+          ```
+        ],
+        [
+          ```python
+          # Normalize the integral to 1, merge bin pairs,
+          # and add 30% headroom to the y-axis for a legend
+          plot[1].AddData("h", "sourceA") \
+                 .Normalize() \
+                 .RebinX(2) \
+                 .SetScaleMaximum(1.3)
+
+          # Running sum (low -> high), then convert axis units
+          plot[1].AddData("h2", "sourceA") \
+                 .Cumulative() \
+                 .ScaleX(1000.)  # e.g. GeV -> MeV
+
+          # dN/dpT-style density: content divided by bin width
+          plot[1].AddData("h3", "sourceA") \
+                 .DivideBinWidth()
+          ```
+        ],
+      )
+    ],
+  )
+]
+
+
+#slide[
   #slide-title("Projecting and Profiling Multidimensional Data")
   #grid(
     columns: (50%, 50%),
@@ -1337,25 +1414,9 @@
 
 // ============================================================================
 // Appendix: complete accessor reference, generated from PlotManager.h / Plot.h
-// Every signature is written once, in C++ form; when compiled for lang=py
-// the show rule below rewrites `true`/`false`/`{}` to `True`/`False`/`None`
-// wherever they appear in inline code spans, so both manuals stay correct
-// without maintaining two copies of every row.
+// (C++/Python parity for these signatures is handled by the show rule near
+// the top of this file.)
 // ============================================================================
-
-#show raw.where(block: false): it => {
-  if lang == "py" {
-    let t = it.text
-    t = t.replace("{}", "None")
-    t = t.replace(regex("\btrue\b"), "True")
-    t = t.replace(regex("\bfalse\b"), "False")
-    // Re-implement raw's own default look (DejaVu Sans Mono at 0.8em) rather
-    // than calling raw() again, which would re-trigger this same show rule.
-    text(font: "DejaVu Sans Mono", size: 0.8em, t)
-  } else {
-    it
-  }
-}
 
 #slide[
   #[]<appx-plot>
@@ -1574,21 +1635,26 @@
     columns: (49%, 49%),
     gutter: 2%,
     [
-      #api-section("Transform existing histograms", (
+      #api-section("Transform existing data", (
         [`Normalize(scaleBinWidth = false)` / `NormalizeToMaximum(normMaximum = true)`], [Normalize the integral or the maximum to one.],
         [`Scale(scaleFactor)`], [Scale the object's contents.],
-        [`ScaleX(f)` / `ScaleY(f)` / `ScaleZ(f)`], [Rescale axis values by a constant factor (e.g. unit conversion). Wherever an axis is the same quantity that `Scale()` also scales (y for 1d histograms, graphs and functions, z for 2d histograms, graphs and functions), these are synonyms of `Scale()` rather than a separate operation.],
         [`DivideBinWidth(divideBinWidth = true)`], [Divide contents by bin width.],
-        [`RebinX(n)` / `RebinY(n)` / `RebinZ(n)` / `RebinXY(nx, ny)` / `RebinXYZ(nx, ny, nz)`], [Rebin one, several, or all axes (Z only applicable to 3d histograms).],
+        [`Cumulative(forward = true)`], [Replace with the running sum. 1D histograms only.],
+        [`RebinX(n)` / `RebinY(n)` / `RebinZ(n)`], [Rebin one axis. Histograms only.],
+        [`RebinXY(nx, ny)` / `RebinXYZ(nx, ny, nz)`], [Rebin two or three axes at once.],
         [`Smooth(nIterSmooth = 1)`], [Apply smoothing.],
-        [`Cumulative(forward = true)`], [Replace bin content with the running sum (1d histograms only); `forward = false` for the reverse/survival direction.],
+        [`ScaleX(factor)` / `ScaleY(factor)` / `ScaleZ(factor)`], [Rescale an axis itself (e.g. a unit conversion) -- unlike `Scale()`, which rescales the values.],
+        [`SetScaleMinimum(factor)` / `SetScaleMaximum(factor)`], [Stretch the auto-computed draw range by a factor, without touching the data.],
+      ))
+    ],
+    [
+      #api-section("Projections & profiles", (
         [`Project(dims, ranges = {}, isUserCoord = {})`], [Generic N-dimensional projection.],
         [`ProjectX(...)` / `ProjectY(...)`], [Standard projection of a 2D histogram.],
         [`Profile(dims, ranges = {}, isUserCoord = {})`], [Generic multi-dimensional profile.],
         [`ProfileX(...)` / `ProfileY(...)`], [Standard profile of a 2D histogram.],
-      ))
-    ],
-    [
+      ), text-size: 12pt)
+      #v(0.6em)
       #api-section("Tree & table data", (
         [`Project1D(x, weight = {})` / `Project2D(x, y, weight = {})`], [1D/2D histogram from a column; `x` accepts a name, `(name, nBins)`, `(name, nBins, (min, max))`, or `(name, edges)`.],
         [`Profile1D(x, profile, weight = {})` / `Profile2D(x, y, profile, weight = {})`], [1D/2D profile of one column over one or two others.],
@@ -1598,7 +1664,7 @@
         [`Define(key, value)`], [Define a derived variable for use in expressions.],
         [`Filter(filter)`], [Apply a row-selection expression, e.g. `"eta > 0"`. Chainable.],
         [`Entries(n)` / `Entries(min, max)`], [Limit processing to the first N entries or a range.],
-      ))
+      ), text-size: 12pt)
     ],
   )
   #v(1fr)
