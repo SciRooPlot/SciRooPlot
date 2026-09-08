@@ -45,6 +45,7 @@
 #include <boost/property_tree/info_parser.hpp>
 
 #include <cctype>
+#include <cstdint>
 #include <filesystem>
 #include <iostream>
 #include <limits>
@@ -75,7 +76,8 @@ namespace SciRooPlot
  * Constructor for PlotManager.
  */
 //**************************************************************************************************
-PlotManager::PlotManager(const std::string& projectName) : mProjectName(projectName)
+PlotManager::PlotManager(const std::string& projectName)
+  : mProjectName(projectName), mUserDataFile(((mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName)) / (mProjectName.empty() ? "UserData_" + std::to_string(gSystem->GetPid()) + "_" + std::to_string(reinterpret_cast<std::uintptr_t>(this)) + ".root" : string{"UserData.root"}))
 {
   if (!gApplication) {
     new TApplication("MainApp", 0, nullptr);
@@ -96,6 +98,18 @@ PlotManager::PlotManager(const std::string& projectName) : mProjectName(projectN
     dummyCanvas.SetCanvasSize(1, 1);
     dummyCanvas.SetWindowPosition(50, 50);
     mWindowOffsetY = dummyCanvas.GetWindowTopY() - canvasImp->GetY();
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Destructor for PlotManager.
+ */
+//**************************************************************************************************
+PlotManager::~PlotManager()
+{
+  if (mProjectName.empty() && std::filesystem::exists(mUserDataFile)) {
+    std::filesystem::remove(mUserDataFile);
   }
 }
 
@@ -232,21 +246,18 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     ERROR("DataSource '{}' contains illegal character '{}'.", dataSource, *illegal);
     return;
   }
-  string fileName = (mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName);
-  fileName += "/UserData.root";
-  string mode = "RECREATE";
-  if (std::filesystem::exists(expand_path(fileName))) {
-    mode = "UPDATE";
-  }
+  string mode = mUserDataFileInitialized ? "UPDATE" : "RECREATE";
   if (!mProjectName.empty()) {
     std::filesystem::create_directories(Config::Get().ProjectPath(mProjectName));
   }
 
-  TFile file(fileName.data(), mode.data());
+  TFile file(mUserDataFile.data(), mode.data());
   if (file.IsZombie()) {
     ERROR("Could not save ROOT data to data source {}.", dataSource);
     return;
   }
+  mUserDataFileInitialized = true;
+
   TDirectory* dir = file.GetDirectory(dataSource.data());
   if (!dir) {
     dir = file.mkdir(dataSource.data());
@@ -262,7 +273,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     object->Write();
   }
   file.Close();
-  AddDataSource(dataSource, {fileName + ":" + dataSource}, replace);
+  AddDataSource(dataSource, {mUserDataFile + ":" + dataSource}, replace);
 }
 void PlotManager::AddDataSource(const string& dataSource, TObject* inputData, bool replace)
 {

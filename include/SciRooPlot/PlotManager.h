@@ -48,7 +48,7 @@ class PlotManager
  public:
   explicit PlotManager(const std::string& projectName = "");
 
-  ~PlotManager() = default;
+  ~PlotManager();
   PlotManager(const PlotManager& other) = delete;
   PlotManager(PlotManager&&) = delete;
   PlotManager& operator=(const PlotManager& other) = delete;
@@ -92,6 +92,8 @@ class PlotManager
   std::string mProjectName;
   const std::string mPlotsRootFile{"Plots.root"};
   const std::string mDataRootFile{"Data.root"};
+  const std::string mUserDataFile;
+  bool mUserDataFileInitialized{false};
   std::map<std::string, std::shared_ptr<TCanvas>> mCanvasRegistry;
   std::string mOutputDirectory;
   std::vector<Plot> mPlots;
