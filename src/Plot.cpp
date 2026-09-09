@@ -3075,6 +3075,7 @@ Plot::Pad::TextBox::TextBox(const ptree& textBoxTree) : Box(textBoxTree)
   } catch (const std::exception& e) {
     logger::throw_invalid_argument("Could not construct text box from ptree: {}", e.what());
   }
+  read_from_tree(textBoxTree, mTextAlign, "text_align");
 }
 
 //**************************************************************************************************
@@ -3086,6 +3087,7 @@ ptree Plot::Pad::TextBox::GetPropertyTree() const
 {
   ptree boxTree = Box::GetPropertyTree();
   boxTree.put("text", mText);
+  put_in_tree(boxTree, mTextAlign, "text_align");
   return boxTree;
 };
 
@@ -3097,6 +3099,11 @@ ptree Plot::Pad::TextBox::GetPropertyTree() const
 Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const string& text)
 {
   mText = text;
+  return *this;
+}
+Plot::Pad::TextBox& Plot::Pad::TextBox::SetTextAlign(const string& align)
+{
+  mTextAlign = align;
   return *this;
 }
 

@@ -1664,7 +1664,17 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     } else {
       TPaveText* paveText = new TPaveText(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "NDC NB");
       paveText->SetMargin(relMarginWidth);
-      paveText->SetTextAlign(kHAlignLeft + kVAlignCenter);
+      int16_t hAlign = kHAlignLeft;
+      if (auto align = box->GetTextAlign()) {
+        if (*align == "center") {
+          hAlign = kHAlignCenter;
+        } else if (*align == "right") {
+          hAlign = kHAlignRight;
+        } else if (*align != "left") {
+          WARNING("Unknown text alignment '{}' for text box, using 'left'.", *align);
+        }
+      }
+      paveText->SetTextAlign(hAlign + kVAlignCenter);
       paveText->SetBorderSize(1);
       paveText->SetTextFont(text_font);
       paveText->SetTextSize(text_size);

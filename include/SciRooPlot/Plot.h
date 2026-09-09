@@ -1035,6 +1035,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 
   using Box<TextBox>::SetText;
   TextBox& SetText(const std::string& text);
+  TextBox& SetTextAlign(const std::string& align);  // "left" (default), "center", or "right"
 
  protected:
   friend class PlotManager;
@@ -1043,9 +1044,11 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 
   boost::property_tree::ptree GetPropertyTree() const;
   const std::string& GetText() const { return mText; }
+  const auto& GetTextAlign() const { return mTextAlign; }
 
  private:
   std::string mText;
+  std::optional<std::string> mTextAlign;
 };
 
 //**************************************************************************************************
