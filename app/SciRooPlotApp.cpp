@@ -22,7 +22,10 @@
 #include "SciRooPlot/PlotManager.h"
 
 #include <TApplication.h>
+#include <TBranch.h>
 #include <TBrowser.h>
+#include <TClass.h>
+#include <TDataType.h>
 #include <TFile.h>
 #include <TFolder.h>
 #include <TKey.h>
@@ -406,7 +409,11 @@ void PrintRootFileContents(const string& inputPath)
           TIter bnext(branches);
           TBranch* br = nullptr;
           while ((br = static_cast<TBranch*>(bnext()))) {
-            PRINT("  -> {}", br->GetName());
+            TClass* branchClass = nullptr;
+            EDataType branchType = kOther_t;
+            br->GetExpectedType(branchClass, branchType);
+            string typeName = branchClass ? branchClass->GetName() : TDataType::GetTypeName(branchType);
+            PRINT("  -> {} ({})", br->GetName(), typeName);
           }
         }
         if (ownsObj) delete obj;
