@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   release:
+    if: github.repository == 'SciRooPlot/SciRooPlot'
     runs-on: ubuntu-latest
 
     steps:
