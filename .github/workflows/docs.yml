@@ -16,6 +16,7 @@ concurrency:
 
 jobs:
   build-docs:
+    if: github.repository == 'SciRooPlot/SciRooPlot'
     runs-on: ubuntu-latest
 
     steps:
