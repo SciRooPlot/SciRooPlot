@@ -50,7 +50,7 @@ set(CMAKE_POLICY_DEFAULT_CMP0219 NEW CACHE STRING "" FORCE)
 # -----------------------
 # Dependencies
 # -----------------------
-set(REQUIRED_ROOT_VERSION 6.16)
+set(REQUIRED_ROOT_VERSION 6.28)
 set(REQUIRED_BOOST_VERSION 1.65)
 set(REQUIRED_FMT_VERSION 6.1.2)
 
