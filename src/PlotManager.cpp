@@ -39,6 +39,7 @@
 #include <TPave.h>
 #include <TROOT.h>
 #include <TRootCanvas.h>
+#include <TStyle.h>
 #include <TSystem.h>
 #include <TTree.h>
 
@@ -1022,6 +1023,19 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     fullName += gifRepRate;
   }
   std::filesystem::create_directories(folderName);
+  float_t previousLineScalePS = gStyle->GetLineScalePS();
+  auto lineScaleGuard = make_scope_guard([previousLineScalePS]() { gStyle->SetLineScalePS(previousLineScalePS); });
+  if ((mode == "pdf") || (mode == "eps") || (mode == "ps")) {
+    float_t paperWidthCm{};
+    float_t paperHeightCm{};
+    gStyle->GetPaperSize(paperWidthCm, paperHeightCm);
+    double_t canvasWidthPx = canvas->GetWw();
+    double_t canvasHeightPx = canvas->GetWh();
+    double_t aspectRatio = canvasHeightPx / canvasWidthPx;
+    double_t pageWidthCm = (aspectRatio <= paperHeightCm / paperWidthCm) ? paperWidthCm : paperHeightCm / aspectRatio;
+    double_t pageWidthPt = pageWidthCm / 2.54 * 72.;
+    gStyle->SetLineScalePS(4. * pageWidthPt / canvasWidthPx);
+  }
   canvas->SaveAs(fullName.data());
   // reset TCandle range options to their default values after drawing data
   TCandle::SetBoxRange(0.5);
