@@ -156,6 +156,7 @@
   }
 }
 
+
 #slide[
   #grid(
     columns: (1fr, auto),
@@ -177,6 +178,7 @@
     terminal("Scientific Plotting Made Simple"),
   )
 ]
+
 
 #slide[
   #slide-title("A ROOT-based Plot Organizer")
@@ -613,6 +615,99 @@
   )
 ]
 
+
+
+#slide[
+  #slide-title("Splitting Plots Across Multiple Files")
+  #grid(
+    columns: (42%, 55%),
+    gutter: 3%,
+    [
+      - As #plot-def-file grows, split it into several files -- e.g. one per figure group or data category -- each just a plain function taking a `PlotManager&`.
+
+      #if lang == "cpp" [
+        - Forward-declare the function (or share a header) and call it from `main()`, exactly like `DefineDataSources()` and `DefineBasePlots()` already are.
+
+        - Every file is a separate translation unit -- add it to `CMakeLists.txt`'s `SOURCES` list, or the build won't see it.
+      ] else [
+        - `import` the function from its module and call it, just like any other Python file.
+
+        - Nothing to register -- the script's own folder is already on the import path, so the new module is found automatically.
+      ]
+    ],
+    [
+      #if lang == "cpp" [
+        #terminal(size: 14pt)[
+          ```text
+          myProject/
+          ├── CMakeLists.txt
+          ├── DefinePlots.cpp    main(), calls the below
+          ├── DummyFigures.cpp   DefineDummyFigures()
+          └── ExamplePlots.cpp   DefineExamplePlots()
+          ```
+        ]
+        #v(0.35em)
+        #text(size: 14pt)[
+          #code-block(
+            [
+              ```cpp
+              // DefinePlots.cpp
+              void DefineDummyFigures(PlotManager& pm);
+              void DefineExamplePlots(PlotManager& pm);
+
+              int main() {
+                PlotManager pm("myProject");
+                DefineDummyFigures(pm);
+                DefineExamplePlots(pm);
+                pm.SaveProject();
+              }
+              ```
+            ],
+            [],
+          )
+        ]
+        #v(0.35em)
+        #terminal(size: 14pt)[
+          ```text
+          # CMakeLists.txt
+          add_plotting_executable(definePlots
+            SOURCES
+              DefinePlots.cpp
+              DummyFigures.cpp
+              ExamplePlots.cpp
+          )
+          ```
+        ]
+      ] else [
+        #terminal[
+          ```text
+          myProject/
+          ├── DefinePlots.py     main(), imports the below
+          ├── dummy_figures.py   DefineDummyFigures()
+          └── example_plots.py   DefineExamplePlots()
+          ```
+        ]
+        #v(0.5em)
+        #code-block(
+          [],
+          [
+            ```python
+            # DefinePlots.py
+            from dummy_figures import DefineDummyFigures
+            from example_plots import DefineExamplePlots
+
+            def main():
+                pm = PlotManager("myProject")
+                DefineDummyFigures(pm)
+                DefineExamplePlots(pm)
+                pm.SaveProject()
+            ```
+          ],
+        )
+      ]
+    ],
+  )
+]
 
 
 #slide[
@@ -1057,7 +1152,9 @@
 
       - Add optional printf-style formatting to a placeholder, e.g. `<mean[.2f]>` for two decimal places.
 
-      - Multiple legends can coexist and data can be assigned to specific legends via `SetLegend(n)`.
+      - Multiple legends can coexist -- they're numbered from 1 in the order they're added -- and data can be assigned to a specific one via `SetLegend(n)`, e.g. `SetLegend(2)`.
+
+      - Legends can be added manually at a fixed position, or auto-placed by leaving the position out, just like text boxes.
 
       - Individual entries are looked up via `GetEntry(n)` and customized independently, e.g. to override a label.
 
@@ -1082,6 +1179,8 @@
 
           plot[1].AddLegend(0.9, 0.1); // rel. (x, y) pos. in pad
 
+          plot[1].AddLegend(); // auto-placed, no fixed position given
+
           plot[1].AddText(0.18, 0.88, "Work in progress");
 
           plot[1].AddText("first line // second line");
@@ -1101,6 +1200,8 @@
           plot[1].GetLegend(2).GetEntry(1).SetLabel("Best fit")
 
           plot[1].AddLegend(0.9, 0.1)  # rel. (x, y) pos. in pad
+
+          plot[1].AddLegend()  # auto-placed, no fixed position given
 
           plot[1].AddText(0.18, 0.88, "Work in progress")
 
@@ -1694,7 +1795,7 @@
           ([`TextBox(text)` / `TextBox(xPos, yPos, text)`], [Construct directly, auto-placed or fixed (in Python, create via `pad.AddText()` instead).])
         } else { () }),
         [`SetText(text)`], [Set the displayed text content.],
-        [`SetTextAlign(align)`], [ROOT text alignment code, e.g. `kHAlignCenter + kVAlignTop` (default `kHAlignLeft + kVAlignCenter`); a component you leave out keeps its default.],
+        [`SetTextAlign(align)`], [ROOT alignment code, e.g. `kHAlignCenter + kVAlignTop` (default `kHAlignLeft + kVAlignCenter`).],
         ..(if lang == "cpp" {
           ([`LegendBox(title = {})` / `LegendBox(xPos, yPos, title = {})`], [Construct directly, auto-placed or fixed (in Python, create via `pad.AddLegend()` instead).])
         } else { () }),
