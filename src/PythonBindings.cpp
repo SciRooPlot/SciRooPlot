@@ -179,7 +179,7 @@ void exportDrawingOptions(py::module_& m)
 void exportRootConstants(py::module_& m)
 {
   gSystem->Load("libGraf");
-  for (auto enumName : {"EColor", "ELineStyle", "EMarkerStyle", "EFillStyle", "EColorPalette"}) {
+  for (auto enumName : {"EColor", "ELineStyle", "EMarkerStyle", "EFillStyle", "EColorPalette", "ETextAlign"}) {
     TEnum* e = TEnum::GetEnum(enumName);
     if (!e) continue;
     TIter next(e->GetConstants());

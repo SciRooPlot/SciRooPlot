@@ -24,6 +24,7 @@
 #include <TAttFill.h>
 #include <TAttLine.h>
 #include <TAttMarker.h>
+#include <TAttText.h>
 #include <TCandle.h>
 #include <TColor.h>
 #include <TF1.h>
@@ -1035,7 +1036,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 
   using Box<TextBox>::SetText;
   TextBox& SetText(const std::string& text);
-  TextBox& SetTextAlign(const std::string& align);  // "left" (default), "center", or "right"
+  TextBox& SetTextAlign(int16_t align);
 
  protected:
   friend class PlotManager;
@@ -1048,7 +1049,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 
  private:
   std::string mText;
-  std::optional<std::string> mTextAlign;
+  std::optional<int16_t> mTextAlign;
 };
 
 //**************************************************************************************************

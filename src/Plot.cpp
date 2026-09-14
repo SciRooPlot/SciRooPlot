@@ -21,6 +21,8 @@
 #include "SciRooPlot/Helpers.h"
 #include "SciRooPlot/Logging.h"
 
+#include <TAttText.h>
+
 #include <algorithm>
 #include <limits>
 #include <memory>
@@ -3101,9 +3103,13 @@ Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const string& text)
   mText = text;
   return *this;
 }
-Plot::Pad::TextBox& Plot::Pad::TextBox::SetTextAlign(const string& align)
+Plot::Pad::TextBox& Plot::Pad::TextBox::SetTextAlign(int16_t align)
 {
-  mTextAlign = align;
+  int16_t hAlign = (align / 10) * 10;
+  int16_t vAlign = align % 10;
+  if (!hAlign) hAlign = kHAlignLeft;
+  if (!vAlign) vAlign = kVAlignCenter;
+  mTextAlign = hAlign + vAlign;
   return *this;
 }
 

@@ -1694,7 +1694,7 @@
           ([`TextBox(text)` / `TextBox(xPos, yPos, text)`], [Construct directly, auto-placed or fixed (in Python, create via `pad.AddText()` instead).])
         } else { () }),
         [`SetText(text)`], [Set the displayed text content.],
-        [`SetTextAlign(align)`], [Horizontal text alignment within the box: `"left"` (default), `"center"`, or `"right"`.],
+        [`SetTextAlign(align)`], [ROOT text alignment code, e.g. `kHAlignCenter + kVAlignTop` (default `kHAlignLeft + kVAlignCenter`); a component you leave out keeps its default.],
         ..(if lang == "cpp" {
           ([`LegendBox(title = {})` / `LegendBox(xPos, yPos, title = {})`], [Construct directly, auto-placed or fixed (in Python, create via `pad.AddLegend()` instead).])
         } else { () }),
