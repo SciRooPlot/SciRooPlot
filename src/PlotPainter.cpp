@@ -1161,6 +1161,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
           }
           pad_ptr->Update();  // adds something to the list of primitives
+        } else {
+          delete data_ptr;
         }
         ++dataIndex;
         drawingOptions = "SAME ";  // next data should be drawn to same pad
