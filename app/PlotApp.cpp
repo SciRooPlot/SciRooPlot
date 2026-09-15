@@ -76,9 +76,10 @@ int main(int argc, char* argv[])
 
     // create plotting environment
     PlotManager pm(Config::Get().CurrentProject());
+    string groupRaw = group;
     group = "(?:" + group + ")(?:/.*)?";  // search also in subgroups
     if (!RegexMatcher(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive()).IsValid()) {
-      ERROR("'{}' is not a valid group pattern.", group);
+      ERROR("'{}' is not a valid group pattern.", groupRaw);
       return 1;
     }
     pm.LoadPlots(name, group);

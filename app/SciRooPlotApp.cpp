@@ -272,14 +272,16 @@ int main(int argc, char* argv[])
       ERROR("Specify project name.");
       return 1;
     }
-    if (!property.empty()) {
-      Config::GetMutable().SetProgram(project, property);
-      if (!setting.empty()) {
-        Config::GetMutable().SetOutputDir(project, setting);
-      }
-      Config::GetMutable().Select(project);
-      INFO("Selecting project {}.", project);
+    if (property.empty()) {
+      ERROR("Specify program for project {}.", project);
+      return 1;
     }
+    Config::GetMutable().SetProgram(project, property);
+    if (!setting.empty()) {
+      Config::GetMutable().SetOutputDir(project, setting);
+    }
+    Config::GetMutable().Select(project);
+    INFO("Selecting project {}.", project);
   } else if (command == "get") {
     if (project.empty()) {
       ERROR("Specify project or use @current.");
@@ -301,10 +303,18 @@ int main(int argc, char* argv[])
       ERROR("Cannot find project {}.", project);
       return 1;
     }
+    if (property.empty()) {
+      ERROR("Specify property to unset for {}.", project);
+      return 1;
+    }
     Config::GetMutable().SetProperty(project, property, "");
   } else if (command == "set") {
     if (project.empty()) {
       ERROR("Specify project or use @current.");
+      return 1;
+    }
+    if (property.empty()) {
+      ERROR("Specify property to set for {}.", project);
       return 1;
     }
     if (setting.empty()) {
