@@ -608,6 +608,7 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
     }
     mGifName.clear();
     mExitInteractiveBrowsing = false;
+    mPlotViewHistory.clear();
 
     // generate plots
     for (auto plot : selectedPlots) {
@@ -898,21 +899,17 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     if (auto rc = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) {
       rc->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
     }
-    auto [registryIt, inserted] = mCanvasRegistry.insert_or_assign(plot.GetUniqueName(), canvas);
-    if (!inserted) {
-      WARNING("Plot {} was already created. Replacing it.", plot.GetUniqueName());
-    }
-    mPlotViewHistory.push_back(registryIt);
+    mPlotViewHistory.push_back(canvas);
     uint32_t curPlotIndex{static_cast<uint32_t>(mPlotViewHistory.size() - 1)};
 
     // move new canvas to position of previous window
     int32_t curXpos{};
     int32_t curYpos{};
     if (curPlotIndex > 0) {
-      curXpos = mPlotViewHistory[curPlotIndex - 1]->second->GetWindowTopX();
-      curYpos = mPlotViewHistory[curPlotIndex - 1]->second->GetWindowTopY();
+      curXpos = mPlotViewHistory[curPlotIndex - 1]->GetWindowTopX();
+      curYpos = mPlotViewHistory[curPlotIndex - 1]->GetWindowTopY();
       canvas->SetWindowPosition(curXpos, curYpos - mWindowOffsetY);
-      static_cast<TRootCanvas*>(mPlotViewHistory[curPlotIndex - 1]->second->GetCanvasImp())->UnmapWindow();
+      static_cast<TRootCanvas*>(mPlotViewHistory[curPlotIndex - 1]->GetCanvasImp())->UnmapWindow();
     }
     canvas->Show();
     bool boxClicked = false;
@@ -946,7 +943,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
           --curPlotIndex;
         }
         static_cast<TRootCanvas*>(canvas->GetCanvasImp())->UnmapWindow();
-        canvas = mPlotViewHistory[curPlotIndex]->second;
+        canvas = mPlotViewHistory[curPlotIndex];
         canvas->SetWindowPosition(curXpos, curYpos - mWindowOffsetY);
         canvas->Show();
       } else {
