@@ -22,7 +22,6 @@ repos:
     hooks:
       - id: cpplint
         files: ^(include|src|app|user)/.*\.(c|cc|cpp|cxx|h|hpp)$
-        args: [--filter=-legal/copyright]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.13.0
