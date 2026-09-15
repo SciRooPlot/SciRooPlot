@@ -212,8 +212,8 @@ void exportPlotManager(py::module_& m)
       }
       self.AddDataSource(dataSource, v, replace); }, py::arg("dataSource"), py::arg("inputData"), py::arg("replace") = false)
     .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::object obj, bool replace) {
-      static py::module_ ROOT = py::module_::import("ROOT");
-      static py::object TObjectClass = ROOT.attr("TObject");
+      static py::handle ROOT = py::module_::import("ROOT").release();
+      static py::handle TObjectClass = py::object(ROOT.attr("TObject")).release();
       if (!py::isinstance(obj, TObjectClass)) {
         throw std::invalid_argument("inputData must be a ROOT TObject (e.g. a histogram, graph, or tree).");
       }
