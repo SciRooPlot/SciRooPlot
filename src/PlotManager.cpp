@@ -615,8 +615,8 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
         string message = fmt::format("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
         for (const auto& [dataSource, name, suffix] : missingData) {
           message += "\n         - missing " + dataSource + ":" + name;
-          if (!suffix.empty()) message += " (projection " + suffix + ")";
-          message += (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (data source not found)" : "";
+          if (!suffix.empty()) message += " [projection " + suffix + "]";
+          message += (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (data source not defined)" : "";
         }
         ERROR("{}", message);
       }
@@ -705,7 +705,10 @@ bool PlotManager::FillBuffer()
     }
 
     // open all input files belonging to the current dataSource and extract the data
-    for (const auto& inputFileNameRaw : mInputFiles[dataSource]) {
+    static const vector<string> sEmptyFileList;
+    auto inputFilesIt = mInputFiles.find(dataSource);
+    const vector<string>& inputFileList = (inputFilesIt != mInputFiles.end()) ? inputFilesIt->second : sEmptyFileList;
+    for (const auto& inputFileNameRaw : inputFileList) {
       if (requiredData.empty()) break;
       string inputFileName = expand_path(inputFileNameRaw);
       if (str_ends_with(inputFileName, mTableFileEndings)) {
