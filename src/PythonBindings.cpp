@@ -197,8 +197,9 @@ void exportPlotManager(py::module_& m)
     .def("AddDataSource", overload_cast<const string&, const vector<string>&, bool>(&PlotManager::AddDataSource), arg("dataSource"), arg("inputFiles"), arg("replace") = false)
     .def("AddDataSource", overload_cast<const string&, const string&, bool>(&PlotManager::AddDataSource), arg("dataSource"), arg("inputFile"), arg("replace") = false)
     .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::list objs, bool replace) {
-      static py::module_ ROOT = py::module_::import("ROOT");
-      static py::object TObjectClass = ROOT.attr("TObject");
+      // py::handle, not py::object/py::module_: a static py::object gets decref'd at program exit, possibly after Python has already shut down, which crashes. release() leaks it on purpose instead -- fine since it's a permanent singleton.
+      static py::handle ROOT = py::module_::import("ROOT").release();
+      static py::handle TObjectClass = py::object(ROOT.attr("TObject")).release();
       py::object addressof = ROOT.attr("addressof");
       std::vector<TObject*> v;
       v.reserve(objs.size());
