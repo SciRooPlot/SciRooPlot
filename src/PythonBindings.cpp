@@ -649,7 +649,7 @@ void exportPythonDataInterfaces(py::module_& m)
     return result;
   };
 
-  auto graph = [&bind_owned](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& xerr, const std::vector<double>& yerr) {
+  auto graph = [bind_owned](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& xerr, const std::vector<double>& yerr) {
     const auto n = x.size();
     if (y.size() != n) {
       throw std::runtime_error("x and y must have same length");
@@ -665,7 +665,7 @@ void exportPythonDataInterfaces(py::module_& m)
     return bind_owned(reinterpret_cast<std::uintptr_t>(g), "TGraphErrors");
   };
 
-  auto histo = [&](const std::string& name, const std::vector<double>& v, int bins, py::object range) {
+  auto histo = [bind_owned](const std::string& name, const std::vector<double>& v, int bins, py::object range) {
     if (v.empty()) {
       throw std::runtime_error("empty input");
     }
@@ -687,7 +687,7 @@ void exportPythonDataInterfaces(py::module_& m)
     return bind_owned(reinterpret_cast<std::uintptr_t>(h), "TH1D");
   };
 
-  auto histo2d = [&](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, py::object bins, py::object range) {
+  auto histo2d = [bind_owned](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, py::object bins, py::object range) {
     if (x.empty()) {
       throw std::runtime_error("empty input");
     }
