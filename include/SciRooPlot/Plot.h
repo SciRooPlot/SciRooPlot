@@ -624,10 +624,10 @@ class Plot::Pad::Data
       weight = other.weight;
       isProfileNoScatter = other.isProfileNoScatter;
     }
-    bool singleProc()
+    bool singleProc() const
     {
       // disable multi processing in case scatter (order might be relevant) or range is requested
-      return !isProfileNoScatter.value_or(true) || entries.max.value_or(false);
+      return !isProfileNoScatter.value_or(true) || entries.max.has_value();
     }
     std::string GetNameSuffix() const;
   };
