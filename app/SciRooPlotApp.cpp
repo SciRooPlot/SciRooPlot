@@ -38,7 +38,10 @@
 
 #include <fmt/ranges.h>
 
+#include <algorithm>
+#include <cstdlib>
 #include <filesystem>
+#include <functional>
 #include <iostream>
 #include <string>
 #include <vector>

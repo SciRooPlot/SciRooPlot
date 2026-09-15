@@ -49,6 +49,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <memory>
@@ -801,7 +802,7 @@ void PlotManager::PrintBufferStatus(bool onlyMissing) const
       bool show = onlyMissing ? (dataPtr == nullptr) : true;
       if (dataPtr) ++nAvailableData;
       if (show) {
-        if (printDataSource) DEBUG("{}{}", dataSource, (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (data source not found)" : "");
+        if (printDataSource) DEBUG("{}{}", dataSource, (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (data source not defined)" : "");
         printDataSource = false;
         DEBUG(" - {}{}{}", (dataPtr) ? logger::begin_color(logger::Color::Green) : logger::begin_color(logger::Color::Red), dataName, logger::end_color());
       }

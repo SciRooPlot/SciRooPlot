@@ -24,6 +24,7 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <stdexcept>

@@ -65,6 +65,7 @@
 #include <TTimeStamp.h>
 #include <TView.h>
 
+#include <array>
 #include <memory>
 #include <numeric>
 #include <regex>
