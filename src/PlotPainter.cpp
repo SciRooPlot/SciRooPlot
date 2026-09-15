@@ -1574,6 +1574,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
             }
           }
           if (!data_ptr) {
+            // advance i so lines[] stays aligned with box->GetEntries() for subsequent iterations
+            ++i;
             continue;
           }
 
