@@ -1100,7 +1100,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   const std::optional<uint8_t>& GetNumColumns() const { return mNumColumns; }
   const std::optional<std::string>& GetTitle() const { return mTitle; }
 
-  LegendEntry& AddEntry(const std::string& label, uint16_t refDataID);
+  void AddEntry(const std::string& label, uint16_t refDataID);
 
   const auto& GetEntries() const { return mLegendEntries; }
   const auto& GetDefaultDrawStyle() const { return mDrawStyleDefault; }

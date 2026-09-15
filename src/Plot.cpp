@@ -3339,10 +3339,9 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetSymbolColScale(float_t scale)
  * Add entry to LegendBox.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& label, uint16_t refDataID)
+void Plot::Pad::LegendBox::AddEntry(const string& label, uint16_t refDataID)
 {
   mLegendEntries.push_back(LegendEntry(label, refDataID));
-  return mLegendEntries.back();
 }
 
 //**************************************************************************************************
