@@ -2093,11 +2093,20 @@ auto Plot::Pad::Data::Filter(const std::string& filter) -> decltype(*this)
 }
 auto Plot::Pad::Data::Entries(uint32_t nEntries) -> decltype(*this)
 {
+  if (!nEntries) {
+    ERROR("Entries(0) would select no entries at all; ignoring.");
+    return *this;
+  }
+  mDataInfo.entries.min.reset();
   mDataInfo.entries.max = nEntries;
   return *this;
 }
 auto Plot::Pad::Data::Entries(uint32_t entryMin, uint32_t entryMax) -> decltype(*this)
 {
+  if (entryMax <= entryMin) {
+    ERROR("Entry range [{}, {}) is empty; ignoring.", entryMin, entryMax);
+    return *this;
+  }
   mDataInfo.entries.min = entryMin;
   mDataInfo.entries.max = entryMax;
   return *this;
