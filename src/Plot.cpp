@@ -2866,7 +2866,7 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
   put_in_tree(boxTree, mLineSpacing, "line_spacing");
 
   return boxTree;
-};
+}
 
 //**************************************************************************************************
 /**
@@ -3091,7 +3091,7 @@ ptree Plot::Pad::TextBox::GetPropertyTree() const
   boxTree.put("text", mText);
   put_in_tree(boxTree, mTextAlign, "text_align");
   return boxTree;
-};
+}
 
 //**************************************************************************************************
 /**
@@ -3200,7 +3200,7 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
   }
 
   return legendBoxTree;
-};
+}
 
 //**************************************************************************************************
 /**
@@ -3421,7 +3421,7 @@ ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree() const
   put_in_tree(legendEntryTree, mText.style, "text_font");
   put_in_tree(legendEntryTree, mText.scale, "text_size");
   return legendEntryTree;
-};
+}
 
 //**************************************************************************************************
 /**
