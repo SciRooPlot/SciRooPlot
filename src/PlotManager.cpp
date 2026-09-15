@@ -650,8 +650,19 @@ bool PlotManager::FillBuffer()
 
       // generate user-defined functions on-the-fly
       if (dataSource == "USER_FUNCTIONS") {
-        TFormula formula("tmp", dataName.data());
-        int dim = formula.GetNdim();
+        bool isValid{};
+        int dim{};
+        {
+          auto errGuard = make_scope_guard([lvl = gErrorIgnoreLevel]() { gErrorIgnoreLevel = lvl; });
+          gErrorIgnoreLevel = kFatal;
+          TFormula formula("tmp", dataName.data(), false);
+          isValid = formula.IsValid();
+          dim = formula.GetNdim();
+        }
+        if (!isValid) {
+          ERROR("'{}' is not a valid function expression.", dataName);
+          continue;
+        }
         if (dim <= 1) {
           dataPtr.reset(new TF1(dataName.data(), dataName.data()));
         } else if (dim == 2) {
