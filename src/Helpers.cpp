@@ -18,6 +18,7 @@
 
 #include "SciRooPlot/Helpers.h"
 
+#include <sstream>
 #include <string>
 #include <sys/stat.h>
 #include <vector>

@@ -29,6 +29,7 @@
 #include <cmath>
 #include <optional>
 #include <regex>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <utility>
