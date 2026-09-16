@@ -187,7 +187,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   double_t canvasHeight = plot.GetHeight().value_or(gStyle->GetCanvasDefH());
   // generate canvas with 'invisible' dummy size to avoid annoying popup window
   unique_ptr<TCanvas> canvas_ptr{new TCanvas("SRP_empty_scratch_canvas", plot.GetUniqueName().data(), 1., 1.)};
-  // set actual name after ctor to aviod potential deletion of canvas with same name in root session
+  // set actual name after ctor to avoid potential deletion of canvas with same name in root session
   canvas_ptr->SetName(plot.GetUniqueName().data());
   if (gROOT->IsBatch()) {
     canvas_ptr->SetCanvasSize(canvasWidth, canvasHeight);

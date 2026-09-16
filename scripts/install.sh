@@ -111,7 +111,9 @@ echo
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
     echo "Updating repository..."
-    git pull || exit 1
+    if ! git pull; then
+      echo "Warning: could not update the repository -- building the current checkout." >&2
+    fi
     echo
   else
     echo "No upstream tracking branch (detached HEAD or local-only branch) -- skipping update."
@@ -131,7 +133,7 @@ fi
 
 cmake --build "${BUILD_DIR}" || exit 1
 if [[ "${DO_INSTALL}" -eq 1 ]]; then
-  cmake --install "${BUILD_DIR}" >/dev/null 2>&1 || exit 1
+  cmake --install "${BUILD_DIR}" --parallel >/dev/null 2>&1 || exit 1
 fi
 
 echo "========================================"
