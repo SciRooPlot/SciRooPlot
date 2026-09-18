@@ -131,9 +131,9 @@ if [[ ! -f "${CACHE_FILE}" ]]; then
   fi
 fi
 
-cmake --build "${BUILD_DIR}" || exit 1
+cmake --build "${BUILD_DIR}" --parallel || exit 1
 if [[ "${DO_INSTALL}" -eq 1 ]]; then
-  cmake --install "${BUILD_DIR}" --parallel >/dev/null 2>&1 || exit 1
+  cmake --install "${BUILD_DIR}" >/dev/null || exit 1
 fi
 
 echo "========================================"
