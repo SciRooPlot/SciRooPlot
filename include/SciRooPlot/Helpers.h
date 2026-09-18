@@ -236,6 +236,14 @@ void read_from_tree(const boost::property_tree::ptree& tree, std::optional<T>& v
 }
 
 template <typename T>
+std::optional<T> get_from_tree(const boost::property_tree::ptree& tree, const std::string& label)
+{
+  std::optional<T> var;
+  read_from_tree(tree, var, label);
+  return var;
+}
+
+template <typename T>
 std::optional<T> pick(uint16_t i, const std::optional<std::vector<T>>& vec)
 {
   if (!vec || vec->empty()) return std::nullopt;

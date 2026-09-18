@@ -93,6 +93,12 @@ Plot::Plot(const ptree& plotTree)
   } catch (const std::exception& e) {
     logger::throw_invalid_argument("Could not construct plot from ptree: {}", e.what());
   }
+  if (auto illegal = find_illegal_name_char(mName)) {
+    logger::throw_invalid_argument("Plot name '{}' contains illegal character '{}'.", mName, *illegal);
+  }
+  if (auto illegal = find_illegal_name_char(mGroup, true)) {
+    logger::throw_invalid_argument("Group '{}' contains illegal character '{}'.", mGroup, *illegal);
+  }
   read_from_tree(plotTree, mBasePlot, "base_plot");
   read_from_tree(plotTree, mPlotDimensions.width, "width");
   read_from_tree(plotTree, mPlotDimensions.height, "height");
@@ -1539,8 +1545,10 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
       mDataInfo.dataDims = dataDims;
       read_from_tree(dataTree, mDataInfo.filters, "data_filters");
       read_from_tree(dataTree, mDataInfo.weight, "data_weight");
-      read_from_tree(dataTree, mDataInfo.entries.min, "data_entryMin");
-      read_from_tree(dataTree, mDataInfo.entries.max, "data_entryMax");
+      const auto entryMin = get_from_tree<uint32_t>(dataTree, "data_entryMin");
+      if (const auto entryMax = get_from_tree<uint32_t>(dataTree, "data_entryMax")) {
+        (entryMin) ? Entries(*entryMin, *entryMax) : Entries(*entryMax);
+      }
       read_from_tree(dataTree, mDataInfo.isProfileNoScatter, "data_isProfileNoScatter");
       read_from_tree(dataTree, mDataInfo.definitions.keys, "data_definitions_keys");
       read_from_tree(dataTree, mDataInfo.definitions.values, "data_definitions_values");
@@ -2256,8 +2264,10 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
       mDenomDataInfo.dataDims = dataDims;
       read_from_tree(dataTree, mDenomDataInfo.filters, "denomData_filters");
       read_from_tree(dataTree, mDenomDataInfo.weight, "denomData_weight");
-      read_from_tree(dataTree, mDenomDataInfo.entries.min, "denomData_entryMin");
-      read_from_tree(dataTree, mDenomDataInfo.entries.max, "denomData_entryMax");
+      const auto entryMin = get_from_tree<uint32_t>(dataTree, "denomData_entryMin");
+      if (const auto entryMax = get_from_tree<uint32_t>(dataTree, "denomData_entryMax")) {
+        (entryMin) ? Entries(*entryMin, *entryMax) : Entries(*entryMax);
+      }
       read_from_tree(dataTree, mDenomDataInfo.isProfileNoScatter, "denomData_isProfileNoScatter");
       read_from_tree(dataTree, mDenomDataInfo.definitions.keys, "denomData_definitions_keys");
       read_from_tree(dataTree, mDenomDataInfo.definitions.values, "denomData_definitions_values");
@@ -3156,7 +3166,9 @@ Plot::Pad::LegendBox::LegendBox(const std::optional<std::string>& title) : Box()
 Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
 {
   read_from_tree(legendBoxTree, mTitle, "title");
-  read_from_tree(legendBoxTree, mNumColumns, "num_columns");
+  if (const auto numColumns = get_from_tree<uint8_t>(legendBoxTree, "num_columns")) {
+    SetNumColumns(*numColumns);
+  }
   read_from_tree(legendBoxTree, mDrawStyleDefault, "default_draw_style");
   read_from_tree(legendBoxTree, mMarkerDefault.color, "default_marker_color");
   read_from_tree(legendBoxTree, mMarkerDefault.alpha, "default_marker_alpha");

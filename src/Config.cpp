@@ -134,11 +134,21 @@ void Config::LoadConfig()
       for (auto& setting : settingsTree) {
 
         if (setting.first == "logLevel") {
-          mLogLevel = std::stoi(setting.second.data());
+          const int level = std::stoi(setting.second.data());
+          if (level < LogLevel::silent || level > LogLevel::debug) {
+            std::cerr << "Ignoring out-of-range logLevel " << level << " in " << mSettingsFile << "." << std::endl;
+          } else {
+            mLogLevel = level;
+          }
           continue;
         }
         if (setting.first == "colorMode") {
-          mColorMode = std::stoi(setting.second.data());
+          const int mode = std::stoi(setting.second.data());
+          if (mode < ColorMode::bright || mode > ColorMode::off) {
+            std::cerr << "Ignoring out-of-range colorMode " << mode << " in " << mSettingsFile << "." << std::endl;
+          } else {
+            mColorMode = mode;
+          }
           continue;
         }
         if (setting.first == "plotMode") {
@@ -438,6 +448,14 @@ Config::Project::Project(const ptree& tree)
 {
   for (const auto& [key, child] : tree) {
     if (!child.empty()) {
+      continue;
+    }
+    if (key.empty()) {
+      std::cerr << "Ignoring property with empty name." << std::endl;
+      continue;
+    }
+    if (auto illegal = find_illegal_name_char(key)) {
+      std::cerr << "Ignoring property '" << key << "' with illegal character '" << *illegal << "'." << std::endl;
       continue;
     }
     if (auto value = child.get_value_optional<std::string>()) {
