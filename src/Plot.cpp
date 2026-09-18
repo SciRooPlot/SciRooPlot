@@ -2266,7 +2266,8 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
       read_from_tree(dataTree, mDenomDataInfo.weight, "denomData_weight");
       const auto entryMin = get_from_tree<uint32_t>(dataTree, "denomData_entryMin");
       if (const auto entryMax = get_from_tree<uint32_t>(dataTree, "denomData_entryMax")) {
-        (entryMin) ? Entries(*entryMin, *entryMax) : Entries(*entryMax);
+        (entryMin) ? Denom().Entries(*entryMin, *entryMax) : Denom().Entries(*entryMax);
+        Numer();
       }
       read_from_tree(dataTree, mDenomDataInfo.isProfileNoScatter, "denomData_isProfileNoScatter");
       read_from_tree(dataTree, mDenomDataInfo.definitions.keys, "denomData_definitions_keys");
