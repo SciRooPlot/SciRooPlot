@@ -176,7 +176,12 @@ void PlotManager::SaveDataToRootFile() const
     for (const auto& [dataName, dataPtr] : buffer) {
       if (!dataPtr) continue;
       auto dir = outputFile.mkdir(dataSource.data(), "", true);
-      string name = split_string(dataPtr->GetName(), ':')[0];
+      const string objectName = dataPtr->GetName();
+      if (objectName.empty()) {
+        WARNING("Skipping nameless object of type {} in data source {}.", dataPtr->ClassName(), dataSource);
+        continue;
+      }
+      string name = split_string(objectName, ':', true)[0];
       auto tokens = split_string(name, '/');
       size_t iToken = 1u;
       for (auto token : tokens) {
@@ -326,7 +331,7 @@ void PlotManager::LoadDataSources(const optional<string>& file, bool replace)
     set<string> allFileNames;
     for (const auto& fileEntry : inputPair.second) {
       string fileOrDirName = fileEntry.second.get_value<string>();
-      if (str_ends_with(split_string(fileOrDirName, ':')[0], ".root") || str_ends_with(fileOrDirName, mTableFileEndings)) {
+      if (str_ends_with(split_string(fileOrDirName, ':', true)[0], ".root") || str_ends_with(fileOrDirName, mTableFileEndings)) {
         allFileNames.insert(fileOrDirName);
       } else {
         string path = expand_path(fileOrDirName);
@@ -722,7 +727,7 @@ bool PlotManager::FillBuffer()
         if (wantedNames.empty()) requiredData.erase("");
       }
       // check if only a sub-folder in input file should be searched
-      auto fileNamePath = split_string(inputFileName, ':');
+      auto fileNamePath = split_string(inputFileName, ':', true);
       string& fileName = fileNamePath[0];
       if (!str_ends_with(fileName, ".root")) continue;
 
