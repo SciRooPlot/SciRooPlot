@@ -44,10 +44,10 @@ bool file_exists(const std::string& name);
 inline std::optional<char> find_illegal_name_char(const std::string& name, bool allowSlash = false)
 {
   static constexpr std::string_view kAllowedChars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-";
-  std::string allowed{kAllowedChars};
-  if (allowSlash) allowed += '/';
-  auto pos = name.find_first_not_of(allowed);
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/";
+  const std::string_view allowed =
+    allowSlash ? kAllowedChars : kAllowedChars.substr(0, kAllowedChars.size() - 1);
+  const auto pos = name.find_first_not_of(allowed);
   return (pos == std::string::npos) ? std::nullopt : std::optional<char>{name[pos]};
 }
 
