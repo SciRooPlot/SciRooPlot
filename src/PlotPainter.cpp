@@ -70,6 +70,7 @@
 #include <numeric>
 #include <regex>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -2355,7 +2356,7 @@ float_t PlotPainter::GetTextSizePixel(float_t textSizeNDC)
 //**************************************************************************************************
 void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
 {
-  std::regex wordsRegex("<(name|title|entries|integral|mean|maximum|minimum).*?>");
+  static const std::regex wordsRegex("<(name|title|entries|integral|mean|maximum|minimum).*?>");
   auto wordsBegin = std::sregex_iterator(str.begin(), str.end(), wordsRegex);
   auto wordsEnd = std::sregex_iterator();
 
@@ -2370,7 +2371,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     result.append(str, lastEnd, matchPos - lastEnd);
 
     string format{};
-    std::regex formatRegex("\\[.*?\\]");
+    static const std::regex formatRegex("\\[.*?\\]");
     if (auto formatIt = std::sregex_iterator(matchStr.begin(), matchStr.end(), formatRegex); formatIt != std::sregex_iterator()) {
       format = formatIt->str();
       format = format.substr(1, format.size() - 2);
@@ -2394,7 +2395,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
       // strip everything from a projection/binning suffix onward; those always start with '{',
       // sometimes preceded by "_Proj" or "_Prof" (see proj_info_t/data_info_t::GetNameSuffix())
       if (auto bracePos = replaceStr.find('{'); bracePos != string::npos) {
-        for (const string marker : {"_Proj", "_Prof"}) {
+        for (const std::string_view marker : {"_Proj", "_Prof"}) {
           if (bracePos >= marker.size() && replaceStr.compare(bracePos - marker.size(), marker.size(), marker) == 0) {
             bracePos -= marker.size();
             break;
