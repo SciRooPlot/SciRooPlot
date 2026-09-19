@@ -625,7 +625,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           warnUnsupported(data->GetShowOverflowBins().has_value(), "ShowOverflowBins");
           warnUnsupported(data->GetCumulative().has_value(), "Cumulative");
           if (data->GetNiterSmooth()) {
-            if (data_ptr->GetN() >= 2) {
+            if (data_ptr->GetN() < 4) {
+              warn("Smooth needs at least 4 points, {} has {}; ignoring.", data_ptr->GetName(), data_ptr->GetN());
+            } else {
               data_ptr->Sort();
               TGraphSmooth smoother;
               for (uint16_t iter = 0; iter < *data->GetNiterSmooth(); ++iter) {
@@ -634,8 +636,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   data_ptr->GetY()[i] = smoothGraph->GetY()[i];
                 }
               }
-            } else {
-              warn("Cannot smooth graph with less than 2 points.");
             }
           }
           optional<double_t> scaleFactor;
