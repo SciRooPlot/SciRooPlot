@@ -283,8 +283,16 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
   mUserDataFileInitialized = true;
 
   TDirectory* dir = file.GetDirectory(dataSource.data());
+  if (dir && replace) {
+    file.rmdir(dataSource.data());
+    dir = nullptr;
+  }
   if (!dir) {
     dir = file.mkdir(dataSource.data());
+  }
+  if (!dir) {
+    ERROR("Could not create directory {} in {}.", dataSource, mUserDataFile);
+    return;
   }
   dir->cd();
   for (auto object : inputData) {
@@ -294,7 +302,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
       WARNING("Cannot add nameless object of type {} to dataSource {}", object->ClassName(), dataSource);
       continue;
     }
-    object->Write();
+    object->Write(nullptr, TObject::kWriteDelete);
   }
   file.Close();
   AddDataSource(dataSource, {mUserDataFile + ":" + dataSource}, replace);
