@@ -2119,7 +2119,7 @@ auto Plot::Pad::Data::Scatter(const string& x, const string& y, const string& xE
 auto Plot::Pad::Data::Profile(const vector<data_dim_t>& dataDims, const string& profile, optional<string> weight) -> decltype(*this)
 {
   mDataInfo.set({dataDims, weight, true});
-  mDataInfo.dataDims.push_back({profile});
+  mDataInfo.dataDims.push_back({profile, {}});
   return *this;
 }
 auto Plot::Pad::Data::Profile1D(data_dim_t x, const string& profile, optional<string> weight) -> decltype(*this)
