@@ -214,6 +214,10 @@ add_plotting_executable(srp
 add_plotting_executable(plot
   SOURCES app/PlotApp.cpp
 )
+set_target_properties(srp plot PROPERTIES
+  INSTALL_RPATH "${SCIROOPLOT_RPATH}"
+  BUILD_RPATH "${SCIROOPLOT_RPATH}"
+)
 list(APPEND ALL_TARGETS srp plot)
 
 execute_process(
