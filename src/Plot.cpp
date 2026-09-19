@@ -24,6 +24,7 @@
 #include <TAttText.h>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <memory>
 #include <string>
@@ -41,6 +42,32 @@ using std::vector;
 
 namespace SciRooPlot
 {
+namespace
+{
+//**************************************************************************************************
+/**
+ * Helper that rounds line widths.
+ */
+//**************************************************************************************************
+float_t round_width(float_t width, const char* what)
+{
+  const float_t rounded = std::round(width);
+  if (rounded != width) {
+    WARNING("{} {} is not an integer; ROOT stores line widths as short, using {}.", what, width, rounded);
+  }
+  return rounded;
+}
+optional<float_t> round_width(const optional<float_t>& width, const char* what)
+{
+  if (!width) return nullopt;
+  return round_width(*width, what);
+}
+void read_width_from_tree(const ptree& tree, optional<float_t>& target, const char* key)
+{
+  read_from_tree(tree, target, key);
+  target = round_width(target, key);
+}
+}  // namespace
 
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -423,7 +450,7 @@ auto Plot::Pad::SetDefaultMarkerSize(float_t size) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultLineWidth(float_t width) -> decltype(*this)
 {
-  mLineDefaults.scale = width;
+  mLineDefaults.scale = round_width(width, "default line width");
   return *this;
 }
 
@@ -717,7 +744,7 @@ auto Plot::Pad::SetFrameBorder(int16_t color, optional<int16_t> style, optional<
   mFrameBorder.color = color;
   mFrameBorder.alpha = alpha;
   mFrameBorder.style = style;
-  mFrameBorder.scale = width;
+  mFrameBorder.scale = round_width(width, "frame border width");
   return *this;
 }
 
@@ -741,7 +768,7 @@ auto Plot::Pad::SetFrameBorderStyle(int16_t style) -> decltype(*this)
 
 auto Plot::Pad::SetFrameBorderWidth(float_t width) -> decltype(*this)
 {
-  mFrameBorder.scale = width;
+  mFrameBorder.scale = round_width(width, "frame border width");
   return *this;
 }
 
@@ -921,7 +948,7 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mFrameBorder.color, "frame_border_color");
   read_from_tree(padTree, mFrameBorder.alpha, "frame_border_alpha");
   read_from_tree(padTree, mFrameBorder.style, "frame_border_style");
-  read_from_tree(padTree, mFrameBorder.scale, "frame_border_width");
+  read_width_from_tree(padTree, mFrameBorder.scale, "frame_border_width");
   read_from_tree(padTree, mText.style, "text_font");
   read_from_tree(padTree, mText.color, "text_color");
   read_from_tree(padTree, mText.alpha, "text_alpha");
@@ -934,7 +961,7 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mMarkerDefaults.colorGradient.alpha, "default_marker_colors_gradient_alpha");
   read_from_tree(padTree, mMarkerDefaults.colorGradient.nColors, "default_marker_colors_gradient_nColors");
   read_from_tree(padTree, mLineDefaults.alpha, "default_line_alpha");
-  read_from_tree(padTree, mLineDefaults.scale, "default_line_width");
+  read_width_from_tree(padTree, mLineDefaults.scale, "default_line_width");
   read_from_tree(padTree, mLineDefaults.styles, "default_line_styles");
   read_from_tree(padTree, mLineDefaults.colors, "default_line_colors");
   read_from_tree(padTree, mLineDefaults.colorGradient.rgbEndpoints, "default_line_colors_gradient_endpoints");
@@ -1483,7 +1510,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mLine.color, "line_color");
   read_from_tree(dataTree, mLine.alpha, "line_alpha");
   read_from_tree(dataTree, mLine.style, "line_style");
-  read_from_tree(dataTree, mLine.scale, "line_width");
+  read_width_from_tree(dataTree, mLine.scale, "line_width");
   read_from_tree(dataTree, mFill.color, "fill_color");
   read_from_tree(dataTree, mFill.alpha, "fill_alpha");
   read_from_tree(dataTree, mFill.style, "fill_style");
@@ -1869,7 +1896,7 @@ auto Plot::Pad::Data::SetLine(int16_t color, int16_t style, float_t width, optio
   mLine.color = color;
   mLine.alpha = alpha;
   mLine.style = style;
-  mLine.scale = width;
+  mLine.scale = round_width(width, "line width");
   return *this;
 }
 auto Plot::Pad::Data::SetLineColor(int16_t color) -> decltype(*this)
@@ -1889,7 +1916,7 @@ auto Plot::Pad::Data::SetLineStyle(int16_t style) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetLineWidth(float_t width) -> decltype(*this)
 {
-  mLine.scale = width;
+  mLine.scale = round_width(width, "line width");
   return *this;
 }
 auto Plot::Pad::Data::SetFill(int16_t color, int16_t style, optional<float_t> alpha) -> decltype(*this)
@@ -2845,7 +2872,7 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
   read_from_tree(boxTree, mBorder.style, "border_style");
   read_from_tree(boxTree, mBorder.color, "border_color");
   read_from_tree(boxTree, mBorder.alpha, "border_alpha");
-  read_from_tree(boxTree, mBorder.scale, "border_width");
+  read_width_from_tree(boxTree, mBorder.scale, "border_width");
   read_from_tree(boxTree, mFill.style, "fill_style");
   read_from_tree(boxTree, mFill.color, "fill_color");
   read_from_tree(boxTree, mFill.alpha, "fill_alpha");
@@ -2929,7 +2956,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetBorder(int16_t color, int16_t style, float_
 {
   mBorder.color = color;
   mBorder.style = style;
-  mBorder.scale = width;
+  mBorder.scale = round_width(width, "box border width");
   mBorder.alpha = alpha;
   return *GetThis();
 }
@@ -2958,7 +2985,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetBorderStyle(int16_t style)
 template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetBorderWidth(float_t width)
 {
-  mBorder.scale = width;
+  mBorder.scale = round_width(width, "box border width");
   return *GetThis();
 }
 
@@ -3178,7 +3205,7 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
   read_from_tree(legendBoxTree, mLineDefault.color, "default_line_color");
   read_from_tree(legendBoxTree, mLineDefault.alpha, "default_line_alpha");
   read_from_tree(legendBoxTree, mLineDefault.style, "default_line_style");
-  read_from_tree(legendBoxTree, mLineDefault.scale, "default_line_width");
+  read_width_from_tree(legendBoxTree, mLineDefault.scale, "default_line_width");
   read_from_tree(legendBoxTree, mFillDefault.color, "default_fill_color");
   read_from_tree(legendBoxTree, mFillDefault.alpha, "default_fill_alpha");
   read_from_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
@@ -3295,7 +3322,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineStyle(int16_t style)
 
 Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineWidth(float_t width)
 {
-  mLineDefault.scale = width;
+  mLineDefault.scale = round_width(width, "legend default line width");
   return *this;
 }
 
@@ -3404,7 +3431,7 @@ Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
   read_from_tree(legendEntryTree, mLine.color, "line_color");
   read_from_tree(legendEntryTree, mLine.alpha, "line_alpha");
   read_from_tree(legendEntryTree, mLine.style, "line_style");
-  read_from_tree(legendEntryTree, mLine.scale, "line_width");
+  read_width_from_tree(legendEntryTree, mLine.scale, "line_width");
   read_from_tree(legendEntryTree, mMarker.color, "marker_color");
   read_from_tree(legendEntryTree, mMarker.alpha, "marker_alpha");
   read_from_tree(legendEntryTree, mMarker.style, "marker_style");
@@ -3556,7 +3583,7 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLineSty
 
 Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLineWidth(float_t width)
 {
-  mLine.scale = width;
+  mLine.scale = round_width(width, "legend entry line width");
   return *this;
 }
 
