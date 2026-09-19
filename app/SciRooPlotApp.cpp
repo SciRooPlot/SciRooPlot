@@ -402,6 +402,10 @@ void PrintRootFileContents(const string& inputPath)
           auto* key = static_cast<TKey*>(obj);
           name = key->GetName();
           obj = key->ReadObj();
+          if (!obj) {
+            WARNING("Skipping key {} of type {}; the class is not available.", name, key->GetClassName());
+            continue;
+          }
           ownsObj = true;
         }
         if (obj->InheritsFrom(TDirectory::Class()) || obj->InheritsFrom(TFolder::Class()) || obj->InheritsFrom(TCollection::Class())) {
