@@ -32,8 +32,14 @@ if(APPLE)
   set(CMAKE_MACOSX_RPATH ON)
 endif()
 
+# avoid accidental installs to system's default install directory
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install" CACHE PATH "Install prefix" FORCE)
+  message(STATUS "No install prefix given, defaulting to ${CMAKE_INSTALL_PREFIX}")
+endif()
+
 include(GNUInstallDirs)
-# Match build tree structure to install tree
+# match build tree structure to install tree
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
 
