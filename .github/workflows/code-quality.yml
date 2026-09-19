@@ -4,11 +4,23 @@ permissions:
   contents: read
 
 on:
-  pull_request:
   push:
+    branches:
+      - '**'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
   code-quality:
+
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name != github.repository
+
     runs-on: ubuntu-latest
 
     steps:
