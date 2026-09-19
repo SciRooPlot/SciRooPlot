@@ -1655,7 +1655,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
     vector<string> vars;
     vector<double_t> binning;
     vector<int32_t> sizes;
-    for (auto dataDim : mDataInfo.dataDims) {
+    for (const auto& dataDim : mDataInfo.dataDims) {
       vars.push_back(dataDim.var);
       binning.insert(binning.end(), dataDim.edges.begin(), dataDim.edges.end());
       binning.push_back(static_cast<double_t>(dataDim.nBins));

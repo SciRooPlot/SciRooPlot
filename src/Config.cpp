@@ -203,7 +203,7 @@ void Config::SaveConfig()
 
   // save projects tree
   ptree projectsTree;
-  for (auto [projectName, project] : mProjects) {
+  for (const auto& [projectName, project] : mProjects) {
     projectsTree.put_child(projectName, project.GetTree());
   }
   projectsTree.add("@current", mCurrentProject);

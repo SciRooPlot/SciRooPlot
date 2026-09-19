@@ -184,7 +184,7 @@ void PlotManager::SaveDataToRootFile() const
       string name = split_string(objectName, ':', true)[0];
       auto tokens = split_string(name, '/');
       size_t iToken = 1u;
-      for (auto token : tokens) {
+      for (const auto& token : tokens) {
         if (iToken == tokens.size()) {
           dir->cd();
           dataPtr->Write(token.data());
@@ -223,7 +223,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<string>& 
   if (replace) {
     mInputFiles.erase(dataSource);
   }
-  for (auto inputFilePath : inputFiles) {
+  for (const auto& inputFilePath : inputFiles) {
     if (std::filesystem::path(expand_path(inputFilePath)).is_relative()) {
       WARNING("The path to an input file must not be relative. Skipping {}.", inputFilePath);
       continue;
