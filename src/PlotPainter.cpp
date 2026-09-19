@@ -356,6 +356,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     uint16_t dataIndex{};
     array<uint16_t, 6> defaultSettingIndices = {0};
     for (const auto& data : drawData) {
+      if (fail) break;
       if (data->GetDrawingOptions()) drawingOptions += *data->GetDrawingOptions();
       // obtain a copy of the current data
       // retrieve the actual pointer to the data
@@ -2439,6 +2440,14 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
 //**************************************************************************************************
 vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha, bool savePalette)
 {
+  if (rgbEndpoints.size() < 2) {
+    ERROR("A colour gradient needs at least two endpoints, got {}.", rgbEndpoints.size());
+    return {};
+  }
+  if (nColors < 1) {
+    ERROR("Number of gradient colours must be positive, got {}.", nColors);
+    return {};
+  }
   uint16_t nPoints = rgbEndpoints.size();
 
   vector<double_t> red;
@@ -2453,7 +2462,10 @@ vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vecto
     stops.push_back(std::get<3>(rgb));
   }
   int16_t firstColorIndex = TColor::CreateGradientColorTable(nPoints, stops.data(), red.data(), green.data(), blue.data(), nColors, alpha);
-
+  if (firstColorIndex < 0) {
+    ERROR("Could not create gradient colour table.");
+    return {};
+  }
   vector<int16_t> gradientColors(nColors);
   std::iota(gradientColors.begin(), gradientColors.end(), firstColorIndex);
 

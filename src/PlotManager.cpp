@@ -173,9 +173,13 @@ void PlotManager::SaveDataToRootFile() const
     return;
   }
   for (const auto& [dataSource, buffer] : mDataBuffer) {
+    auto dir = outputFile.mkdir(dataSource.data(), "", true);
+    if (!dir) {
+      ERROR("Could not create directory {} in {}.", dataSource, mDataRootFile);
+      continue;
+    }
     for (const auto& [dataName, dataPtr] : buffer) {
       if (!dataPtr) continue;
-      auto dir = outputFile.mkdir(dataSource.data(), "", true);
       const string objectName = dataPtr->GetName();
       if (objectName.empty()) {
         WARNING("Skipping nameless object of type {} in data source {}.", dataPtr->ClassName(), dataSource);
@@ -190,6 +194,10 @@ void PlotManager::SaveDataToRootFile() const
           dataPtr->Write(token.data());
         } else {
           dir = dir->mkdir(token.data(), "", true);
+          if (!dir) {
+            ERROR("Could not create subdirectory {} for {}.", token, objectName);
+            break;
+          }
         }
         ++iToken;
       }
@@ -216,6 +224,10 @@ void PlotManager::SetOutputDirectory(const string& path)
 //**************************************************************************************************
 void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputFiles, bool replace)
 {
+  if (dataSource.empty()) {
+    ERROR("Specify a name for the data source.");
+    return;
+  }
   if (auto illegal = find_illegal_name_char(dataSource)) {
     ERROR("DataSource '{}' contains illegal character '{}'.", dataSource, *illegal);
     return;
@@ -250,6 +262,10 @@ void PlotManager::AddDataSource(const string& dataSource, const string& inputFil
 //**************************************************************************************************
 void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>& inputData, bool replace)
 {
+  if (dataSource.empty()) {
+    ERROR("Specify a name for the data source.");
+    return;
+  }
   if (auto illegal = find_illegal_name_char(dataSource)) {
     ERROR("DataSource '{}' contains illegal character '{}'.", dataSource, *illegal);
     return;

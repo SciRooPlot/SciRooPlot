@@ -241,6 +241,10 @@ void Config::Rename(const std::string& projectName, const std::string& newProjec
     ERROR("Cannot find project {}.", projectName);
     return;
   }
+  if (newProjectName.empty()) {
+    ERROR("Specify new name for {}.", projectName);
+    return;
+  }
   if (auto illegal = find_illegal_name_char(newProjectName)) {
     ERROR("Project name '{}' contains illegal character '{}'.", newProjectName, *illegal);
     return;
@@ -362,6 +366,10 @@ std::string Config::DataSourcesFile(const string& projectName) const
 
 void Config::SetProgram(const string& projectName, const string& program)
 {
+  if (projectName.empty()) {
+    ERROR("Specify project name.");
+    return;
+  }
   if (auto illegal = find_illegal_name_char(projectName)) {
     ERROR("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
     return;
@@ -385,6 +393,10 @@ string Config::Program(const string& projectName) const
 
 void Config::SetOutputDir(const string& projectName, const string& outputDir)
 {
+  if (projectName.empty()) {
+    ERROR("Specify project name.");
+    return;
+  }
   if (auto illegal = find_illegal_name_char(projectName)) {
     ERROR("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
     return;
@@ -407,6 +419,14 @@ string Config::Project::Property(const string& property) const
 
 void Config::SetProperty(const string& projectName, const string& property, const string& value)
 {
+  if (projectName.empty()) {
+    ERROR("Specify project name.");
+    return;
+  }
+  if (property.empty()) {
+    ERROR("Specify property to set for {}.", projectName);
+    return;
+  }
   if (auto illegal = find_illegal_name_char(projectName)) {
     ERROR("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
     return;
