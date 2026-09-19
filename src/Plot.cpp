@@ -67,6 +67,24 @@ void read_width_from_tree(const ptree& tree, optional<float_t>& target, const ch
   read_from_tree(tree, target, key);
   target = round_width(target, key);
 }
+
+//**************************************************************************************************
+/**
+ * Helper to strip group of misplaced slashes.
+ */
+//**************************************************************************************************
+std::string normalize_group(const std::string& group)
+{
+  std::string normalized;
+  normalized.reserve(group.size());
+  for (char c : group) {
+    if (c == '/' && (normalized.empty() || normalized.back() == '/')) continue;
+    normalized += c;
+  }
+  while (!normalized.empty() && normalized.back() == '/')
+    normalized.pop_back();
+  return normalized;
+}
 }  // namespace
 
 //--------------------------------------------------------------------------------------------------
@@ -82,6 +100,9 @@ void read_width_from_tree(const ptree& tree, optional<float_t>& target, const ch
 //**************************************************************************************************
 Plot::Plot(const string& name, const string& group, const optional<string>& basePlot) : Plot()
 {
+  if (name.empty()) {
+    logger::throw_invalid_argument("Plot name must not be empty.");
+  }
   if (auto illegal = find_illegal_name_char(name)) {
     logger::throw_invalid_argument("Plot name '{}' contains illegal character '{}'.", name, *illegal);
   }
@@ -89,7 +110,7 @@ Plot::Plot(const string& name, const string& group, const optional<string>& base
     logger::throw_invalid_argument("Group '{}' contains illegal character '{}'.", group, *illegal);
   }
   mName = name;
-  mGroup = group;
+  mGroup = normalize_group(group);
   mBasePlot = basePlot;
   UpdateUniqueName();
 }
@@ -120,12 +141,16 @@ Plot::Plot(const ptree& plotTree)
   } catch (const std::exception& e) {
     logger::throw_invalid_argument("Could not construct plot from ptree: {}", e.what());
   }
+  if (mName.empty()) {
+    logger::throw_invalid_argument("Plot name must not be empty.");
+  }
   if (auto illegal = find_illegal_name_char(mName)) {
     logger::throw_invalid_argument("Plot name '{}' contains illegal character '{}'.", mName, *illegal);
   }
   if (auto illegal = find_illegal_name_char(mGroup, true)) {
     logger::throw_invalid_argument("Group '{}' contains illegal character '{}'.", mGroup, *illegal);
   }
+  mGroup = normalize_group(mGroup);
   read_from_tree(plotTree, mBasePlot, "base_plot");
   read_from_tree(plotTree, mPlotDimensions.width, "width");
   read_from_tree(plotTree, mPlotDimensions.height, "height");
@@ -231,15 +256,16 @@ auto Plot::SetName(const string& name) -> decltype(*this)
 
 auto Plot::SetGroup(const string& group) -> decltype(*this)
 {
-  if (group.empty()) {
-    ERROR("Cannot set empty group.");
-    return *this;
-  }
   if (auto illegal = find_illegal_name_char(group, true)) {
     ERROR("Group '{}' contains illegal character '{}'.", group, *illegal);
     return *this;
   }
-  mGroup = group;
+  const string normalized = normalize_group(group);
+  if (normalized.empty()) {
+    ERROR("Cannot set empty group.");
+    return *this;
+  }
+  mGroup = normalized;
   UpdateUniqueName();
   return *this;
 }
@@ -254,7 +280,7 @@ auto Plot::AppendGroup(const string& subgroup) -> decltype(*this)
     ERROR("Subgroup '{}' contains illegal character '{}'.", subgroup, *illegal);
     return *this;
   }
-  mGroup = mGroup + "/" + subgroup;
+  mGroup = normalize_group(mGroup + "/" + subgroup);
   UpdateUniqueName();
   return *this;
 }
