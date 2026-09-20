@@ -82,12 +82,12 @@ int main(int argc, char* argv[])
       ERROR("'{}' is not a valid group pattern.", groupRaw);
       return 1;
     }
-    pm.LoadPlots(name, group);
+    if (!pm.LoadPlots(name, group)) return 1;
     if (mode == "list") {
       pm.ListPlots();
     } else {
       pm.LoadDataSources();
-      pm.GeneratePlots(mode);
+      if (!pm.GeneratePlots(mode)) return 1;
     }
   } catch (std::exception& e) {
     ERROR(R"(Exception "{}"! Exiting.)", e.what());

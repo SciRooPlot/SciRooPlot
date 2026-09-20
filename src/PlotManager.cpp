@@ -503,15 +503,16 @@ void PlotManager::SavePlots(const string& name, const string& group, const optio
  * Function to load plots matching name and group regex from file.
  */
 //**************************************************************************************************
-void PlotManager::LoadPlots(const string& name, const string& group, const optional<string>& file)
+bool PlotManager::LoadPlots(const string& name, const string& group, const optional<string>& file)
 {
-  uint32_t nFoundPlots{};
+  uint32_t nMatched{};
+  uint32_t nLoaded{};
 
   RegexMatcher groupRegex(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
   RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
   if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
     ERROR("Invalid regular expression.");
-    return;
+    return false;
   }
 
   ptree fileTree;
@@ -520,7 +521,7 @@ void PlotManager::LoadPlots(const string& name, const string& group, const optio
     read_info(expand_path(expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName))), fileTree);
   } catch (const std::exception& e) {
     ERROR("Cannot open plots file: {}", e.what());
-    return;
+    return false;
   }
 
   for (const auto& plotTree : fileTree) {
@@ -537,19 +538,23 @@ void PlotManager::LoadPlots(const string& name, const string& group, const optio
     if (!groupRegex.Matches(curGroup)) continue;
     if (!nameRegex.Matches(plotTree.second.get<string>("name"))) continue;
 
-    ++nFoundPlots;
+    ++nMatched;
     try {
       Plot plot(plotTree.second);
       AddPlot(std::move(plot));
+      ++nLoaded;
     } catch (const std::exception& e) {
       ERROR("Could not load plot {} from file: {}", plotTree.first, e.what());
     }
   }
-  if (nFoundPlots == 0) {
+  if (nMatched == 0) {
     ERROR("Found no plots matching the request {}{}{} in {}{}{}.", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color());
-  } else if (nFoundPlots > 1) {
-    INFO("Found {} plots matching the request.", nFoundPlots);
+  } else if (nLoaded == 0) {
+    ERROR("{} plot(s) matched the request but none could be loaded.", nMatched);
+  } else if (nLoaded > 1) {
+    INFO("Found {} plots matching the request.", nLoaded);
   }
+  return nLoaded != 0;
 }
 
 //**************************************************************************************************
@@ -557,7 +562,7 @@ void PlotManager::LoadPlots(const string& name, const string& group, const optio
  * Generates plots matching name and group regex.
  */
 //**************************************************************************************************
-void PlotManager::GeneratePlots(const string& mode, const string& name, const string& group)
+bool PlotManager::GeneratePlots(const string& mode, const string& name, const string& group)
 {
   // first determine which data needs to be loaded
   vector<Plot*> selectedPlots;
@@ -567,7 +572,7 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
   RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
   if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
     ERROR("Invalid regular expression.");
-    return;
+    return false;
   }
 
   for (auto& plot : mPlots) {
@@ -615,7 +620,7 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
 
   if (selectedPlots.empty()) {
     ERROR("No plots were created.");
-    return;
+    return false;
   }
 
   try {
@@ -641,6 +646,7 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
     mPlotViewHistory.clear();
 
     // generate plots
+    bool allCreated = true;
     for (auto plot : selectedPlots) {
       if (!GeneratePlot(*plot, mode)) {
         auto missingData = GetMissingData(*plot);
@@ -651,6 +657,7 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
           message += (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (data source not defined)" : "";
         }
         ERROR("{}", message);
+        allCreated = false;
       }
       if (mExitInteractiveBrowsing) break;
     }
@@ -662,8 +669,10 @@ void PlotManager::GeneratePlots(const string& mode, const string& name, const st
     } else if (mode == "data") {
       SaveDataToRootFile();
     }
+    return allCreated;
   } catch (const std::exception& e) {
     ERROR("An unexpected error occurred: {}", e.what());
+    return false;
   }
 }
 

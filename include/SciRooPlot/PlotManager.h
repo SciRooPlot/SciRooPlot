@@ -73,8 +73,8 @@ class PlotManager
   void AddColorOverview(const std::string& name, const std::string& group, const std::vector<int32_t>& colors = {});
 
   void SavePlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {}) const;
-  void LoadPlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {});
-  void GeneratePlots(const std::string& mode = "show", const std::string& name = ".+", const std::string& group = ".+");
+  bool LoadPlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {});
+  bool GeneratePlots(const std::string& mode = "show", const std::string& name = ".+", const std::string& group = ".+");
   void ListPlots() const;
   void ClearDataBuffer();
   void ClearCanvasRegistry();
