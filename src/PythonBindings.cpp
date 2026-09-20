@@ -93,22 +93,24 @@ struct type_caster<Data::data_dim_t> {
       }
       if (!py::isinstance<py::sequence>(src)) return false;
       auto seq = py::reinterpret_borrow<py::sequence>(src);
+      const auto size = seq.size();
+      if (size < 1 || size > 3) return false;
       auto var = seq[0].cast<std::string>();
-      if (seq.size() == 1) {
+      if (size == 1) {
         value = T(var);
-      } else if (seq.size() == 2) {
+      } else if (size == 2) {
         try {
           value = T(var, seq[1].cast<int32_t>());
         } catch (const py::cast_error&) {
           value = T(var, seq[1].cast<std::vector<double_t>>());
         }
-      } else if (seq.size() == 3) {
-        value = T(var, seq[1].cast<int32_t>(), seq[2].cast<std::vector<double_t>>());
       } else {
-        return false;
+        value = T(var, seq[1].cast<int32_t>(), seq[2].cast<std::vector<double_t>>());
       }
       return true;
     } catch (const py::cast_error&) {
+      return false;
+    } catch (const py::error_already_set&) {
       return false;
     }
   }
