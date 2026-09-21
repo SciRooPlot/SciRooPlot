@@ -56,17 +56,21 @@ void PrintRootFileContents(const string& inputPath);
 
 int main(int argc, char* argv[])
 {
-  string configPath = Config::Get().Path();
-  if (std::filesystem::create_directories(configPath)) {
-    INFO("Created config folder: {}", configPath);
-  }
-
   string command;
   string project;
   string property;
   string setting;
 
   try {
+    string configPath = Config::Get().Path();
+    if (std::filesystem::create_directories(configPath)) {
+      INFO("Created config folder: {}", configPath);
+    }
+    if (configPath.empty()) {
+      ERROR("No usable config path; check SCIROOPLOT_CONFIG_PATH.");
+      return 1;
+    }
+
     po::options_description arguments("positional arguments");
     arguments.add_options()("command", po::value<string>(), "command")("project", po::value<string>(), "project")("property", po::value<string>(), "property")("setting", po::value<string>(), "setting");
     po::positional_options_description pos;
