@@ -276,27 +276,52 @@ void Config::Reset()
 
 void Config::Clean()
 {
+  if (mPath.empty()) {
+    ERROR("No valid config path; refusing to clean.");
+    return;
+  }
   string firstProject;
   vector<string> inactiveProjects;
   for (const auto& [projectName, project] : mProjects) {
-    if (std::filesystem::exists(std::filesystem::path(Program(projectName)).parent_path())) {
-      if (firstProject.empty()) firstProject = projectName;
-      continue;
+    const string rawProgram = project.Property("program");
+    bool isStale = false;
+    if (rawProgram.empty()) {
+      isStale = true;
+    } else {
+      const string program = expand_path(rawProgram);
+      if (program.empty()) {
+        WARNING("Cannot expand program path '{}' of project {}; keeping it.", rawProgram, projectName);
+      } else {
+        isStale = !std::filesystem::exists(std::filesystem::path(program).parent_path());
+      }
     }
-    inactiveProjects.push_back(projectName);
+    if (isStale) {
+      inactiveProjects.push_back(projectName);
+    } else if (firstProject.empty()) {
+      firstProject = projectName;
+    }
   }
   bool updatedActiveProject = false;
-  for (auto& inactiveProject : inactiveProjects) {
+  for (const auto& inactiveProject : inactiveProjects) {
+    const auto projectPath = ProjectPath(inactiveProject);
+    if (!projectPath.is_absolute() || projectPath.parent_path() != mPath) {
+      ERROR("Refusing to delete {} for project {}: not inside the config directory.", projectPath.string(), inactiveProject);
+      continue;
+    }
+    std::error_code ec;
+    std::filesystem::remove_all(projectPath, ec);
+    if (ec) {
+      ERROR("Could not delete {}: {}", projectPath.string(), ec.message());
+      continue;
+    }
     PRINT("- deleting project {}", inactiveProject);
     mProjects.erase(inactiveProject);
-
-    std::filesystem::remove_all(ProjectPath(inactiveProject));
     if (mCurrentProject == inactiveProject) {
       mCurrentProject = firstProject;
       updatedActiveProject = true;
     }
   }
-  if (updatedActiveProject) {
+  if (updatedActiveProject && !mCurrentProject.empty()) {
     INFO("Selecting project {}.", mCurrentProject);
   }
 }
