@@ -237,6 +237,10 @@ void Config::ShowSettings() const
 
 void Config::Rename(const std::string& projectName, const std::string& newProjectName)
 {
+  if (mPath.empty()) {
+    ERROR("No valid config path; cannot rename.");
+    return;
+  }
   if (mProjects.find(projectName) == mProjects.end()) {
     ERROR("Cannot find project {}.", projectName);
     return;
@@ -253,19 +257,29 @@ void Config::Rename(const std::string& projectName, const std::string& newProjec
     ERROR("Project {} already exists.", newProjectName);
     return;
   }
-  auto node = mProjects.extract(projectName);
-  if (!node.empty()) {
-    std::filesystem::path projectPath = ProjectPath(projectName);
-    if (std::filesystem::exists(projectPath)) {
-      std::filesystem::rename(projectPath, projectPath.parent_path() / newProjectName);
-    }
-    node.key() = newProjectName;
-    mProjects.insert(std::move(node));
-    if (mCurrentProject == projectName) {
-      mCurrentProject = newProjectName;
-    }
-    PRINT("Renamed project {} to {}. User code should be adjusted accordingly.", projectName, newProjectName);
+
+  const std::filesystem::path projectPath = ProjectPath(projectName);
+  const std::filesystem::path newProjectPath = ProjectPath(newProjectName);
+  if (std::filesystem::exists(newProjectPath)) {
+    ERROR("Cannot rename {} to {}: {} already exists.", projectName, newProjectName, newProjectPath.string());
+    return;
   }
+  if (std::filesystem::exists(projectPath)) {
+    std::error_code ec;
+    std::filesystem::rename(projectPath, newProjectPath, ec);
+    if (ec) {
+      ERROR("Could not rename {} to {}: {}", projectPath.string(), newProjectPath.string(), ec.message());
+      return;
+    }
+  }
+
+  auto node = mProjects.extract(projectName);
+  node.key() = newProjectName;
+  mProjects.insert(std::move(node));
+  if (mCurrentProject == projectName) {
+    mCurrentProject = newProjectName;
+  }
+  PRINT("Renamed project {} to {}. User code should be adjusted accordingly.", projectName, newProjectName);
 }
 
 void Config::Reset()
