@@ -63,12 +63,12 @@ int main(int argc, char* argv[])
 
   try {
     string configPath = Config::Get().Path();
-    if (std::filesystem::create_directories(configPath)) {
-      INFO("Created config folder: {}", configPath);
-    }
     if (configPath.empty()) {
       ERROR("No usable config path; check SCIROOPLOT_CONFIG_PATH.");
       return 1;
+    }
+    if (std::filesystem::create_directories(configPath)) {
+      INFO("Created config folder: {}", configPath);
     }
 
     po::options_description arguments("positional arguments");
