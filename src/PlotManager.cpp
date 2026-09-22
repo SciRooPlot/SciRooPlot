@@ -1201,8 +1201,8 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
             for (auto& dataInfo : mDataInfoBuffer[dataSource][fullName]) {
               string dataFullName = fullName + dataInfo.GetNameSuffix();
               try {
-                SUPPRESS_STDERR(true);
-                auto stderrGuard = make_scope_guard([]() { SUPPRESS_STDERR(false); });
+                SUPPRESS_CERR(true);
+                auto stderrGuard = make_scope_guard([]() { SUPPRESS_CERR(false); });
                 bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
                 if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
                 auto mtGuard = make_scope_guard([wasMTEnabled]() { if (wasMTEnabled) ROOT::EnableImplicitMT(); });
@@ -1271,8 +1271,8 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
     string dataName = name + dataInfo.GetNameSuffix();
     TObject* obj = nullptr;
     try {
-      SUPPRESS_STDERR(true);
-      auto stderrGuard = make_scope_guard([]() { SUPPRESS_STDERR(false); });
+      SUPPRESS_CERR(true);
+      auto stderrGuard = make_scope_guard([]() { SUPPRESS_CERR(false); });
       bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
       if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
       auto mtGuard = make_scope_guard([wasMTEnabled]() { if (wasMTEnabled) ROOT::EnableImplicitMT(); });

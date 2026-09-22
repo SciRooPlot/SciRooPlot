@@ -355,6 +355,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     string drawingOptions;
     uint16_t dataIndex{};
     array<uint16_t, 6> defaultSettingIndices = {0};
+    const int userErrorLevel = gErrorIgnoreLevel;
+    auto errLevelGuard = make_scope_guard([userErrorLevel]() { gErrorIgnoreLevel = userErrorLevel; });
     for (const auto& data : drawData) {
       if (fail) break;
       if (data->GetDrawingOptions()) drawingOptions += *data->GetDrawingOptions();
@@ -362,12 +364,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       // retrieve the actual pointer to the data
       auto processData = [&, padID = padID](auto&& data_ptr) {
         using data_type = std::decay_t<decltype(data_ptr)>;
-        if (!dataIndex) {
-          gErrorIgnoreLevel = kFatal;
-        } else {
-          gErrorIgnoreLevel = kWarning;
-        }
-
+        gErrorIgnoreLevel = dataIndex ? userErrorLevel : kFatal;
         optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
 
         if (!data->GetDrawingOptions()) {
