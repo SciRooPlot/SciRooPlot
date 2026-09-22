@@ -915,17 +915,17 @@ Plot::Pad::Pad(const Pad& other)
 {
   mData.reserve(other.mData.size());
   for (const auto& data : other.mData) {
-    mData.push_back(data ? data->Clone() : nullptr);
+    mData.push_back(data->Clone());
   }
   if (other.mRefFunc) mRefFunc = other.mRefFunc->Clone();
 
   mLegendBoxes.reserve(other.mLegendBoxes.size());
   for (const auto& legendBox : other.mLegendBoxes) {
-    mLegendBoxes.push_back(legendBox ? std::make_shared<LegendBox>(*legendBox) : nullptr);
+    mLegendBoxes.push_back(std::make_shared<LegendBox>(*legendBox));
   }
   mTextBoxes.reserve(other.mTextBoxes.size());
   for (const auto& textBox : other.mTextBoxes) {
-    mTextBoxes.push_back(textBox ? std::make_shared<TextBox>(*textBox) : nullptr);
+    mTextBoxes.push_back(std::make_shared<TextBox>(*textBox));
   }
 }
 
@@ -1227,13 +1227,13 @@ void Plot::Pad::operator+=(const Pad& pad)
   }
   size_t legendOffset = mLegendBoxes.size();
   for (const auto& legendBox : pad.mLegendBoxes) {
-    mLegendBoxes.push_back(legendBox ? std::make_shared<LegendBox>(*legendBox) : nullptr);
+    mLegendBoxes.push_back(std::make_shared<LegendBox>(*legendBox));
   }
   for (const auto& textBox : pad.mTextBoxes) {
-    mTextBoxes.push_back(textBox ? std::make_shared<TextBox>(*textBox) : nullptr);
+    mTextBoxes.push_back(std::make_shared<TextBox>(*textBox));
   }
   for (const auto& data : pad.mData) {
-    auto clonedData = data ? data->Clone() : nullptr;
+    auto clonedData = data->Clone();
     if (clonedData && clonedData->GetLegendID()) {
       size_t shiftedLegendID = *clonedData->GetLegendID() + legendOffset;
       if (shiftedLegendID > std::numeric_limits<uint8_t>::max()) {
