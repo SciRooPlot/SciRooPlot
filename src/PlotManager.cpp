@@ -26,6 +26,7 @@
 #include <ROOT/RDataFrame.hxx>
 #include <TApplication.h>
 #include <TCanvas.h>
+#include <TClass.h>
 #include <TError.h>
 #include <TF1.h>
 #include <TF2.h>
@@ -1163,12 +1164,25 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       string curDataName;  // name of current key or data
       // read actual object to memory when traversing a directory
       if (obj->IsA() == TKey::Class()) {
-        string className = static_cast<TKey*>(obj)->GetClassName();
-        curDataName = obj->GetName();
+        TKey* key = static_cast<TKey*>(obj);
+        string className = key->GetClassName();
+        curDataName = key->GetName();
 
         bool isTraversable = str_contains(className, "TDirectory") || str_contains(className, "TFolder") || str_contains(className, "TList") || str_contains(className, "THashList") || str_contains(className, "TObjArray");
-        if ((traverse && isTraversable) || std::find(dataNames.begin(), dataNames.end(), curDataName) != dataNames.end()) {
-          obj = static_cast<TKey*>(obj)->ReadObj();
+        const bool isRequested = std::find(dataNames.begin(), dataNames.end(), curDataName) != dataNames.end();
+        if ((traverse && isTraversable) || isRequested) {
+          TClass* keyClass = TClass::GetClass(className.data());
+          if (!keyClass || !keyClass->IsTObject()) {
+            if (isRequested) WARNING("Skipping {} (data source {}): unknown or unsupported class {}.", curDataName, dataSource, className);
+            ++iterator;
+            continue;
+          }
+          obj = key->ReadObj();
+          if (!obj) {
+            if (isRequested) WARNING("Could not read {} of class {} (data source {}); the file may be corrupted.", curDataName, className, dataSource);
+            ++iterator;
+            continue;
+          }
           removeFromList = false;
         } else {
           ++iterator;
