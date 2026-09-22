@@ -2191,9 +2191,9 @@ string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
       nameSuffix += "{";
       nameSuffix += number_to_string(std::get<0>(range)) + ":";
       if (isUserCoord && *isUserCoord) {
-        nameSuffix += number_to_string(std::get<1>(range)) + "," + std::to_string(std::get<2>(range));
+        nameSuffix += number_to_string(std::get<1>(range)) + "," + number_to_string(std::get<2>(range));
       } else {
-        nameSuffix += number_to_string(static_cast<int>(std::get<1>(range))) + "," + std::to_string(static_cast<int>(std::get<2>(range)));
+        nameSuffix += number_to_string(static_cast<int>(std::get<1>(range))) + "," + number_to_string(static_cast<int>(std::get<2>(range)));
       }
       nameSuffix += "}";
     }

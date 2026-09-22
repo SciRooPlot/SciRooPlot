@@ -29,10 +29,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <locale>
 #include <optional>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <type_traits>
