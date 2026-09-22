@@ -1146,6 +1146,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             data_ptr->SetEditable(false);
           }
           if constexpr (is_hist<data_type>()) {
+            data_ptr->SetStats(false);
             if (!(data->GetShowOverflowBins() && *data->GetShowOverflowBins())) {
               data_ptr->ClearUnderflowAndOverflow();
             }
