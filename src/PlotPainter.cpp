@@ -1775,10 +1775,41 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     ERROR("Invalid number of dimensions specified for projection of histogram {}", obj->GetName());
     return nullopt;
   }
+  // store original axis ranges so they can be reset by scope guard
+  struct saved_range_t {
+    TAxis* axis;
+    int32_t first;
+    int32_t last;
+    bool wasRestricted;
+  };
+  std::vector<saved_range_t> savedRanges;
+  auto remember = [&savedRanges](TAxis* axis) {
+    if (axis) savedRanges.push_back({axis, axis->GetFirst(), axis->GetLast(), axis->TestBit(TAxis::kAxisRange)});
+  };
+  if (obj->InheritsFrom(THnBase::Class())) {
+    auto* histPtr = static_cast<THnBase*>(obj);
+    for (int32_t i = 0; i < histPtr->GetNdimensions(); ++i) {
+      remember(histPtr->GetAxis(i));
+    }
+  } else if (obj->InheritsFrom(TH1::Class())) {
+    auto* histPtr = static_cast<TH1*>(obj);
+    for (int16_t i = 0; i < histPtr->GetDimension(); ++i) {
+      remember(GetAxis(histPtr, i));
+    }
+  }
+  auto rangeGuard = make_scope_guard([savedRanges]() {
+    for (const auto& saved : savedRanges) {
+      if (saved.wasRestricted) {
+        saved.axis->SetRange(saved.first, saved.last);
+      } else {
+        saved.axis->SetRange();  // SetRange(1, nBins) would leave kAxisRange set
+      }
+    }
+  });
 
   if (obj->InheritsFrom(THnBase::Class()) && !isProfile) {
     THnBase* histPtr = static_cast<THnBase*>(obj);
-    // first reset all ranges in case this histogram was previously used
+    // first reset all ranges
     for (int16_t i = 0; i < histPtr->GetNdimensions(); ++i) {
       histPtr->GetAxis(i)->SetRange();
     }
@@ -1799,7 +1830,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     }
   } else if (obj->InheritsFrom(TH3::Class())) {
     TH3* histPtr = static_cast<TH3*>(obj);
-    // first reset all ranges in case this histogram was previously used
+    // first reset all ranges
     for (int16_t i = 0; i < 3; ++i) {
       GetAxis(histPtr, i)->SetRange();
     }
@@ -1829,7 +1860,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       ERROR("Invalid dimension specified for projecting histogram {}", obj->GetName());
       return nullopt;
     }
-    // first reset all ranges in case this histogram was previously used
+    // first reset all ranges
     for (int16_t i = 0; i < 2; ++i) {
       GetAxis(histPtr, i)->SetRange();
     }
