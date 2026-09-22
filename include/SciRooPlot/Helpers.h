@@ -25,13 +25,17 @@
 
 #include <boost/property_tree/ptree.hpp>
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <cmath>
+#include <locale>
 #include <optional>
 #include <regex>
 #include <sstream>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -93,6 +97,16 @@ void set_if(const std::optional<T>& origin, std::optional<T>& target)
 }
 
 template <typename T>
+inline std::string number_to_string(const T& value)
+{
+  if constexpr (std::is_floating_point_v<T>) {
+    return fmt::format("{}", value);
+  } else {
+    return std::to_string(value);
+  }
+}
+
+template <typename T>
 struct is_vector : public std::false_type {
 };
 template <typename T, typename A>
@@ -110,7 +124,7 @@ template <typename... Ts>
 std::string tuple_to_string(const std::tuple<Ts...>& items)
 {
   std::string itemString;
-  std::apply([&](auto&&... item) { ((itemString += std::to_string(item) + ","), ...); }, items);
+  std::apply([&](auto&&... item) { ((itemString += number_to_string(item) + ","), ...); }, items);
   itemString.pop_back();
   return itemString;
 }
@@ -128,7 +142,7 @@ std::string vector_to_string(std::vector<T> items)
         itemString += item;
         if (&item != &items.back()) itemString += "$";
       } else {
-        itemString += std::to_string(item);
+        itemString += number_to_string(item);
         if (&item != &items.back()) itemString += ",";
       }
     }
@@ -139,12 +153,22 @@ std::string vector_to_string(std::vector<T> items)
 template <typename T>
 T string_to_type(const std::string& str)
 {
-  if constexpr (std::is_same_v<double_t, T>) {
-    return std::stod(str);
-  } else if constexpr (std::is_same_v<float_t, T>) {
-    return std::stof(str);
+  if constexpr (std::is_floating_point_v<T>) {
+    std::istringstream stream(str);
+    stream.imbue(std::locale::classic());
+    T value{};
+    if (!(stream >> value)) {
+      throw std::invalid_argument("Cannot parse '" + str + "' as a number.");
+    }
+    return value;
   } else {
-    return std::stoi(str);
+    static_assert(sizeof(T) < sizeof(int64_t), "string_to_type: integer type too wide for this parser");
+    const int64_t parsed = std::stoll(str);
+    if (parsed < static_cast<int64_t>(std::numeric_limits<T>::min()) ||
+        parsed > static_cast<int64_t>(std::numeric_limits<T>::max())) {
+      throw std::out_of_range("Value " + str + " is out of range for this field.");
+    }
+    return static_cast<T>(parsed);
   }
 }
 

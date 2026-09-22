@@ -1363,8 +1363,8 @@ Plot::Pad::Data& Plot::Pad::AddPoints(vector<double_t> x, vector<double_t> y, co
   string xStr;
   string yStr;
   for (size_t i = 0; i < nPoints; ++i) {
-    xStr += std::to_string(x[i]) + ((i == nPoints - 1) ? "" : ",");
-    yStr += std::to_string(y[i]) + ((i == nPoints - 1) ? "" : ",");
+    xStr += number_to_string(x[i]) + ((i == nPoints - 1) ? "" : ",");
+    yStr += number_to_string(y[i]) + ((i == nPoints - 1) ? "" : ",");
   }
   mData.push_back(std::make_shared<Data>(xStr + ";" + yStr, "USER_GRAPHS", label));
   return *mData.back();
@@ -2182,18 +2182,18 @@ string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
 {
   string nameSuffix = (isProfile && *isProfile) ? "_Prof{" : "_Proj{";
   for (auto dim : dims) {
-    nameSuffix += std::to_string(dim);
+    nameSuffix += number_to_string(dim);
   }
   nameSuffix += "}";
   if (!ranges.empty()) {
     nameSuffix += "_Range";
     for (const auto& range : ranges) {
       nameSuffix += "{";
-      nameSuffix += std::to_string(std::get<0>(range)) + ":";
+      nameSuffix += number_to_string(std::get<0>(range)) + ":";
       if (isUserCoord && *isUserCoord) {
-        nameSuffix += std::to_string(std::get<1>(range)) + "," + std::to_string(std::get<2>(range));
+        nameSuffix += number_to_string(std::get<1>(range)) + "," + std::to_string(std::get<2>(range));
       } else {
-        nameSuffix += std::to_string(static_cast<int>(std::get<1>(range))) + "," + std::to_string(static_cast<int>(std::get<2>(range)));
+        nameSuffix += number_to_string(static_cast<int>(std::get<1>(range))) + "," + std::to_string(static_cast<int>(std::get<2>(range)));
       }
       nameSuffix += "}";
     }
@@ -2216,9 +2216,9 @@ string Plot::Pad::Data::data_info_t::GetNameSuffix() const
   for (const auto& dataDim : dataDims) {
     nameSuffix += dataDim.var;
     for (const auto& edge : dataDim.edges) {
-      nameSuffix += std::to_string(edge);
+      nameSuffix += number_to_string(edge);
     }
-    nameSuffix += std::to_string(dataDim.nBins);
+    nameSuffix += number_to_string(dataDim.nBins);
   }
   if (filters) {
     for (const auto& filter : *filters) {
@@ -2231,9 +2231,9 @@ string Plot::Pad::Data::data_info_t::GetNameSuffix() const
     }
   }
   if (weight) nameSuffix += ";" + *weight;
-  if (entries.min) nameSuffix += ";" + std::to_string(*entries.min);
-  if (entries.max) nameSuffix += ";" + std::to_string(*entries.max);
-  if (isProfileNoScatter) nameSuffix += ";" + std::to_string(*isProfileNoScatter);
+  if (entries.min) nameSuffix += ";" + number_to_string(*entries.min);
+  if (entries.max) nameSuffix += ";" + number_to_string(*entries.max);
+  if (isProfileNoScatter) nameSuffix += ";" + number_to_string(*isProfileNoScatter);
   nameSuffix += "}";
   return nameSuffix;
 }
