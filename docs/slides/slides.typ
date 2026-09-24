@@ -1432,9 +1432,9 @@
 
       - Use `SetIsCorrelated()` when the numerator is a sub-sample of the denominator (e.g. a selection vs. its parent sample) -- this applies Bayesian error propagation instead of treating the two as independent.
 
-      - `SetDivideNormalized()` normalizes both terms to unity before dividing -- useful for comparing shapes rather than absolute yields.
+      - Modifiers (`RebinX()`, `Scale()`, `Normalize()`, `Smooth()`, `Cumulative()`, ...) act on the ratio itself by default. `Numer()`, `Denom()` and `Both()` switch them to the inputs, applied before dividing; `Result()` switches back.
 
-      - The individual numerator and denominator remain accessible via `Numer()` and `Denom()`, which switch which side subsequent modifiers apply to (numerator by default).
+      - `Both().Normalize()` normalizes both terms to unity before dividing -- useful for comparing shapes rather than absolute yields.
     ],
     [
       #code-block(
@@ -1444,12 +1444,12 @@
                  .SetIsCorrelated();
 
           plot[1].AddRatio("h1", "sourceA", "h2", "sourceB")
-                 .SetDivideNormalized();
+                 .Both().Normalize();
 
-          auto& ratio = plot[1].AddRatio("h1", "sourceA",
-                                          "h2", "sourceB");
-          ratio.Numer().SetColor(kBlue);
-          ratio.Denom().SetColor(kRed);
+          plot[1].AddRatio("h1", "sourceA", "h2", "sourceB")
+                 .Both().RebinX(2)
+                 .Denom().Smooth()
+                 .Result().SetColor(kRed);
           ```
         ],
         [
@@ -1458,11 +1458,12 @@
                  .SetIsCorrelated()
 
           plot[1].AddRatio("h1", "sourceA", "h2", "sourceB") \
-                 .SetDivideNormalized()
+                 .Both().Normalize()
 
-          ratio = plot[1].AddRatio("h1", "sourceA", "h2", "sourceB")
-          ratio.Numer().SetColor(kBlue)
-          ratio.Denom().SetColor(kRed)
+          plot[1].AddRatio("h1", "sourceA", "h2", "sourceB") \
+                 .Both().RebinX(2) \
+                 .Denom().Smooth() \
+                 .Result().SetColor(kRed)
           ```
         ],
       )
@@ -1685,12 +1686,12 @@
 
 #slide[
   #slide-title("Appendix: Ratio")
-  - Every `Data` accessor from the next two slides is also available on `Ratio`, forwarded to whichever side (`Numer()`/`Denom()`) is currently active.
+  - Every `Data` accessor from the next two slides is also available on `Ratio`. Styling and ranges always act on the ratio; data modifiers and data selection follow the active mode.
   #v(1fr)
   #api-section("Ratio-specific", (
     [`SetIsCorrelated(isCorrelated = true)`], [Treat numerator/denominator as correlated (e.g. one is a sub-sample of the other) -- applies Bayesian error propagation.],
-    [`SetDivideNormalized(scaleBinWidth = false)`], [Normalize both sides to unity before dividing, to compare shapes rather than absolute yields.],
-    [`Numer()` / `Denom()`], [Switch which side subsequent modifiers apply to (numerator by default).],
+    [`Numer()` / `Denom()` / `Both()`], [Following modifiers act on the numerator, the denominator, or both, before dividing. Data selection (`Project*`, `Define`, `Filter`, ...) follows the same mode.],
+    [`Result()`], [Following modifiers act on the ratio itself (default). Data selection in this mode goes to the numerator.],
   ))
   #v(1fr)
 ]

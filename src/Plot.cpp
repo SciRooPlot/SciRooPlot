@@ -2293,7 +2293,6 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
     logger::throw_invalid_argument("Could not construct ratio from ptree: {}", e.what());
   }
 
-  read_from_tree(dataTree, mScaleBinWidth, "scale_bin_width_norm_division");
   ReadModify(dataTree, mNumModify, "numer_");
   ReadModify(dataTree, mDenomModify, "denom_");
 
@@ -2373,7 +2372,6 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
   dataTree.put("denomName", mDenomName);
   dataTree.put("denomDataSource", mDenomDataSource);
   dataTree.put("isCorrelated", mIsCorrelated);
-  put_in_tree(dataTree, mScaleBinWidth, "scale_bin_width_norm_division");
   PutModify(dataTree, mNumModify, "numer_");
   PutModify(dataTree, mDenomModify, "denom_");
 
@@ -2417,11 +2415,6 @@ auto Plot::Pad::Ratio::SetIsCorrelated(bool isCorrelated) -> decltype(*this)
   mIsCorrelated = isCorrelated;
   return *this;
 }
-auto Plot::Pad::Ratio::SetDivideNormalized(bool scaleBinWidth) -> decltype(*this)
-{
-  mScaleBinWidth = scaleBinWidth;
-  return *this;
-}
 //**************************************************************************************************
 /**
  * Data modifiers that can be applied to either numerator or denominator.
@@ -2437,6 +2430,11 @@ auto Plot::Pad::Ratio::Denom() -> decltype(*this)
   mModMode = Mode::Den;
   return *this;
 }
+auto Plot::Pad::Ratio::Both() -> decltype(*this)
+{
+  mModMode = Mode::Both;
+  return *this;
+}
 auto Plot::Pad::Ratio::Result() -> decltype(*this)
 {
   mModMode = Mode::Res;
@@ -2445,7 +2443,8 @@ auto Plot::Pad::Ratio::Result() -> decltype(*this)
 auto Plot::Pad::Ratio::Project(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Project(dims, ranges, isUserCoord));
+    Data::Project(dims, ranges, isUserCoord);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomProjInfo = {dims, ranges, isUserCoord};
   return *this;
@@ -2453,7 +2452,8 @@ auto Plot::Pad::Ratio::Project(vector<uint8_t> dims, vector<tuple<uint8_t, doubl
 auto Plot::Pad::Ratio::ProjectX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::ProjectX(startY, endY, isUserCoord));
+    Data::ProjectX(startY, endY, isUserCoord);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomProjInfo = {{0}, {{1, startY, endY}}, isUserCoord};
   return *this;
@@ -2461,7 +2461,8 @@ auto Plot::Pad::Ratio::ProjectX(double_t startY, double_t endY, optional<bool> i
 auto Plot::Pad::Ratio::ProjectY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::ProjectY(startX, endX, isUserCoord));
+    Data::ProjectY(startX, endX, isUserCoord);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
   return *this;
@@ -2469,7 +2470,8 @@ auto Plot::Pad::Ratio::ProjectY(double_t startX, double_t endX, optional<bool> i
 auto Plot::Pad::Ratio::Profile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Profile(dims, ranges, isUserCoord));
+    Data::Profile(dims, ranges, isUserCoord);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomProjInfo = {dims, ranges, isUserCoord, true};
   return *this;
@@ -2477,7 +2479,8 @@ auto Plot::Pad::Ratio::Profile(vector<uint8_t> dims, vector<tuple<uint8_t, doubl
 auto Plot::Pad::Ratio::ProfileX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::ProfileX(startY, endY, isUserCoord));
+    Data::ProfileX(startY, endY, isUserCoord);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomProjInfo = {{0}, {{1, startY, endY}}, isUserCoord, true};
   return *this;
@@ -2485,7 +2488,8 @@ auto Plot::Pad::Ratio::ProfileX(double_t startY, double_t endY, optional<bool> i
 auto Plot::Pad::Ratio::ProfileY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::ProfileY(startX, endX, isUserCoord));
+    Data::ProfileY(startX, endX, isUserCoord);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
   return *this;
@@ -2493,7 +2497,8 @@ auto Plot::Pad::Ratio::ProfileY(double_t startX, double_t endX, optional<bool> i
 auto Plot::Pad::Ratio::Project(const vector<data_dim_t>& dataDims, optional<string> weight) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Project(dataDims, weight));
+    Data::Project(dataDims, weight);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomDataInfo.set({dataDims, weight});
   return *this;
@@ -2501,7 +2506,8 @@ auto Plot::Pad::Ratio::Project(const vector<data_dim_t>& dataDims, optional<stri
 auto Plot::Pad::Ratio::Project1D(data_dim_t x, optional<string> weight) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Project1D(x, weight));
+    Data::Project1D(x, weight);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomDataInfo.set({{x}, weight});
   return *this;
@@ -2509,7 +2515,8 @@ auto Plot::Pad::Ratio::Project1D(data_dim_t x, optional<string> weight) -> declt
 auto Plot::Pad::Ratio::Project2D(data_dim_t x, data_dim_t y, optional<string> weight) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Project2D(x, y, weight));
+    Data::Project2D(x, y, weight);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomDataInfo.set({{x, y}, weight});
   return *this;
@@ -2517,7 +2524,8 @@ auto Plot::Pad::Ratio::Project2D(data_dim_t x, data_dim_t y, optional<string> we
 auto Plot::Pad::Ratio::Scatter(const string& x, const string& y) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Scatter(x, y));
+    Data::Scatter(x, y);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomDataInfo.set({{{x}, {y}}, {}, false});
   return *this;
@@ -2525,7 +2533,8 @@ auto Plot::Pad::Ratio::Scatter(const string& x, const string& y) -> decltype(*th
 auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& xErr, const string& yErr) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErr, yErr));
+    Data::Scatter(x, y, xErr, yErr);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomDataInfo.set({{{x}, {y}, {xErr}, {yErr}}, {}, false});
   return *this;
@@ -2533,7 +2542,8 @@ auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& x
 auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& xErrLow, const string& xErrHigh, const string& yErrLow, const string& yErrHigh) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErrLow, xErrHigh, yErrLow, yErrHigh));
+    Data::Scatter(x, y, xErrLow, xErrHigh, yErrLow, yErrHigh);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomDataInfo.set({{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, {}, false});
   return *this;
@@ -2541,7 +2551,8 @@ auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& x
 auto Plot::Pad::Ratio::Profile(const vector<data_dim_t>& dataDims, const string& profile, optional<string> weight) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Profile(dataDims, profile, weight));
+    Data::Profile(dataDims, profile, weight);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomDataInfo.set({dataDims, weight, true});
   mDenomDataInfo.dataDims.push_back({profile, {}});
@@ -2550,7 +2561,8 @@ auto Plot::Pad::Ratio::Profile(const vector<data_dim_t>& dataDims, const string&
 auto Plot::Pad::Ratio::Profile1D(data_dim_t x, const string& profile, optional<string> weight) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Profile1D(x, profile, weight));
+    Data::Profile1D(x, profile, weight);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomDataInfo.set({{x, {profile, {}}}, weight, true});
   return *this;
@@ -2558,7 +2570,8 @@ auto Plot::Pad::Ratio::Profile1D(data_dim_t x, const string& profile, optional<s
 auto Plot::Pad::Ratio::Profile2D(data_dim_t x, data_dim_t y, const string& profile, optional<string> weight) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Profile2D(x, y, profile, weight));
+    Data::Profile2D(x, y, profile, weight);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomDataInfo.set({{x, y, {profile, {}}}, weight, true});
   return *this;
@@ -2566,7 +2579,8 @@ auto Plot::Pad::Ratio::Profile2D(data_dim_t x, data_dim_t y, const string& profi
 auto Plot::Pad::Ratio::Define(const std::string& key, const std::string& value) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Define(key, value));
+    Data::Define(key, value);
+    if (mModMode != Mode::Both) return *this;
   }
   if (mDenomDataInfo.definitions.keys && mDenomDataInfo.definitions.values) {
     mDenomDataInfo.definitions.keys->push_back(key);
@@ -2580,7 +2594,8 @@ auto Plot::Pad::Ratio::Define(const std::string& key, const std::string& value) 
 auto Plot::Pad::Ratio::Filter(const std::string& filter) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Filter(filter));
+    Data::Filter(filter);
+    if (mModMode != Mode::Both) return *this;
   }
   if (mDenomDataInfo.filters) {
     mDenomDataInfo.filters->push_back(filter);
@@ -2592,7 +2607,8 @@ auto Plot::Pad::Ratio::Filter(const std::string& filter) -> decltype(*this)
 auto Plot::Pad::Ratio::Entries(uint32_t nEntries) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Entries(nEntries));
+    Data::Entries(nEntries);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomDataInfo.entries.max = nEntries;
   return *this;
@@ -2600,7 +2616,8 @@ auto Plot::Pad::Ratio::Entries(uint32_t nEntries) -> decltype(*this)
 auto Plot::Pad::Ratio::Entries(uint32_t entryMin, uint32_t entryMax) -> decltype(*this)
 {
   if (mModMode != Mode::Den) {
-    return static_cast<decltype(*this)&>(Data::Entries(entryMin, entryMax));
+    Data::Entries(entryMin, entryMax);
+    if (mModMode != Mode::Both) return *this;
   }
   mDenomDataInfo.entries.min = entryMin;
   mDenomDataInfo.entries.max = entryMax;

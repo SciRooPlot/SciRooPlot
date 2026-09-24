@@ -711,7 +711,6 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   void Print() const { Plot::Print(GetPropertyTree(), "Ratio"); }
 
   Ratio& SetIsCorrelated(bool isCorrelated = true);
-  Ratio& SetDivideNormalized(bool scaleBinWidth = false);
 
 #define FORWARD_TO_DATA(METHOD)                \
   template <typename... Args>                  \
@@ -760,20 +759,20 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 
 #undef FORWARD_TO_DATA
 
-  // data modifiers: act on the ratio itself (default), or on numerator / denominator before the division
-#define FORWARD_MODIFIER(METHOD)                                          \
-  template <typename... Args>                                             \
-  Ratio& METHOD(Args&&... args)                                           \
-  {                                                                       \
-    if (mModMode == Mode::Res) {                                          \
-      Data::METHOD(std::forward<Args>(args)...);                          \
-    } else {                                                              \
-      auto& target = (mModMode == Mode::Num) ? mNumModify : mDenomModify; \
-      std::swap(Modify(), target);                                        \
-      Data::METHOD(std::forward<Args>(args)...);                          \
-      std::swap(Modify(), target);                                        \
-    }                                                                     \
-    return *this;                                                         \
+  // data modifiers: act on the ratio itself (default), or on numerator and/or denominator before the division
+#define FORWARD_MODIFIER(METHOD)                                                \
+  template <typename... Args>                                                   \
+  Ratio& METHOD(Args... args)                                                   \
+  {                                                                             \
+    auto applyTo = [&](modify_t& target) {                                      \
+      std::swap(Modify(), target);                                              \
+      Data::METHOD(args...);                                                    \
+      std::swap(Modify(), target);                                              \
+    };                                                                          \
+    if (mModMode == Mode::Res) Data::METHOD(args...);                           \
+    if (mModMode == Mode::Num || mModMode == Mode::Both) applyTo(mNumModify);   \
+    if (mModMode == Mode::Den || mModMode == Mode::Both) applyTo(mDenomModify); \
+    return *this;                                                               \
   }
   FORWARD_MODIFIER(Normalize)
   FORWARD_MODIFIER(NormalizeToMaximum)
@@ -793,6 +792,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 
   Ratio& Numer();   // following modifiers act on the numerator, before the division
   Ratio& Denom();   // following modifiers act on the denominator, before the division
+  Ratio& Both();    // following modifiers act on numerator and denominator, before the division
   Ratio& Result();  // following modifiers act on the ratio itself (default)
 
   Ratio& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) override;
@@ -828,7 +828,6 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   boost::property_tree::ptree GetPropertyTree() const override;
   const auto& GetDenomDataSource() const { return mDenomDataSource; }
   const auto& GetDenomName() const { return mDenomName; }
-  const auto& GetScaleBinWidthDivision() const { return mScaleBinWidth; }
   const bool& GetIsCorrelated() const { return mIsCorrelated; }
   const auto& GetDenomDataInfo() const { return mDenomDataInfo; }
   const auto& GetDenomProjInfo() const { return mDenomProjInfo; }
@@ -838,14 +837,14 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
  private:
   enum class Mode { Res,
                     Num,
-                    Den };
+                    Den,
+                    Both };
   Mode mModMode = Mode::Res;
   modify_t mNumModify;
   modify_t mDenomModify;
   std::string mDenomName;
   std::string mDenomDataSource;
   bool mIsCorrelated{};
-  std::optional<bool> mScaleBinWidth;  // normalize both numerator and denominator with bin widths
   data_info_t mDenomDataInfo;
   std::optional<proj_info_t> mDenomProjInfo;
 };

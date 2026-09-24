@@ -760,18 +760,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if constexpr (is_func<denom_data_type>()) {
                 Divide(data_ptr, denom_data_ptr, binomialErrors);
               } else if constexpr (is_hist<denom_data_type>()) {
-                if (data_as_ratio->GetScaleBinWidthDivision()) {
-                  string scaleMode{};
-                  if (*data_as_ratio->GetScaleBinWidthDivision()) scaleMode = "width";
-                  double_t integralNum = data_ptr->Integral(scaleMode.data());          // integral in viewing range
-                  double_t integralDenom = denom_data_ptr->Integral(scaleMode.data());  // integral in viewing range
-                  if (!integralNum || !integralDenom) {
-                    WARNING("Cannot normalize histogram because integral is zero.");
-                  } else {
-                    data_ptr->Scale(1. / integralNum);
-                    denom_data_ptr->Scale(1. / integralDenom);
-                  }
-                }
                 Divide(data_ptr, denom_data_ptr, binomialErrors);
                 if constexpr (is_hist_2d<data_type>()) {
                   data_ptr->GetZaxis()->SetTitle("ratio");
