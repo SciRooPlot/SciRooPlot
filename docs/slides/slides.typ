@@ -1691,7 +1691,7 @@
   #api-section("Ratio-specific", (
     [`SetIsCorrelated(isCorrelated = true)`], [Treat numerator/denominator as correlated (e.g. one is a sub-sample of the other) -- applies Bayesian error propagation.],
     [`Numer()` / `Denom()` / `Both()`], [Following modifiers act on the numerator, the denominator, or both, before dividing. Data selection (`Project*`, `Define`, `Filter`, ...) follows the same mode.],
-    [`Result()`], [Following modifiers act on the ratio itself (default). Data selection in this mode goes to the numerator.],
+    [`Result()`], [Following modifiers act on the ratio itself (default). Data selection cannot act on the ratio: it is interpreted as `Numer()` with a warning.],
   ))
   #v(1fr)
 ]

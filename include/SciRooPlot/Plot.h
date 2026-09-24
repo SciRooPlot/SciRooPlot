@@ -840,6 +840,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
                     Den,
                     Both };
   Mode mModMode = Mode::Res;
+  void ResolveSelectionMode(const char* call);
   modify_t mNumModify;
   modify_t mDenomModify;
   std::string mDenomName;

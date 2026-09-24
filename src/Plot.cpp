@@ -2430,6 +2430,19 @@ auto Plot::Pad::Ratio::Denom() -> decltype(*this)
   mModMode = Mode::Den;
   return *this;
 }
+//**************************************************************************************************
+/**
+ * Data selection (projections, profiles, scatter, define, filter, entries) always acts on the inputs.
+ * In Result mode it is interpreted as Numer() with a warning, and the mode is switched accordingly.
+ */
+//**************************************************************************************************
+void Plot::Pad::Ratio::ResolveSelectionMode(const char* call)
+{
+  if (mModMode != Mode::Res) return;
+  WARNING("Ratio {}: {}() selects input data, it cannot act on the ratio itself; interpreted as Numer().{}(). Write Numer(), Denom() or Both() explicitly.",
+          GetName(), call, call);
+  mModMode = Mode::Num;
+}
 auto Plot::Pad::Ratio::Both() -> decltype(*this)
 {
   mModMode = Mode::Both;
@@ -2442,6 +2455,7 @@ auto Plot::Pad::Ratio::Result() -> decltype(*this)
 }
 auto Plot::Pad::Ratio::Project(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
+  ResolveSelectionMode("Project");
   if (mModMode != Mode::Den) {
     Data::Project(dims, ranges, isUserCoord);
     if (mModMode != Mode::Both) return *this;
@@ -2451,6 +2465,7 @@ auto Plot::Pad::Ratio::Project(vector<uint8_t> dims, vector<tuple<uint8_t, doubl
 }
 auto Plot::Pad::Ratio::ProjectX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
+  ResolveSelectionMode("ProjectX");
   if (mModMode != Mode::Den) {
     Data::ProjectX(startY, endY, isUserCoord);
     if (mModMode != Mode::Both) return *this;
@@ -2460,6 +2475,7 @@ auto Plot::Pad::Ratio::ProjectX(double_t startY, double_t endY, optional<bool> i
 }
 auto Plot::Pad::Ratio::ProjectY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
+  ResolveSelectionMode("ProjectY");
   if (mModMode != Mode::Den) {
     Data::ProjectY(startX, endX, isUserCoord);
     if (mModMode != Mode::Both) return *this;
@@ -2469,6 +2485,7 @@ auto Plot::Pad::Ratio::ProjectY(double_t startX, double_t endX, optional<bool> i
 }
 auto Plot::Pad::Ratio::Profile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
+  ResolveSelectionMode("Profile");
   if (mModMode != Mode::Den) {
     Data::Profile(dims, ranges, isUserCoord);
     if (mModMode != Mode::Both) return *this;
@@ -2478,6 +2495,7 @@ auto Plot::Pad::Ratio::Profile(vector<uint8_t> dims, vector<tuple<uint8_t, doubl
 }
 auto Plot::Pad::Ratio::ProfileX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
+  ResolveSelectionMode("ProfileX");
   if (mModMode != Mode::Den) {
     Data::ProfileX(startY, endY, isUserCoord);
     if (mModMode != Mode::Both) return *this;
@@ -2487,6 +2505,7 @@ auto Plot::Pad::Ratio::ProfileX(double_t startY, double_t endY, optional<bool> i
 }
 auto Plot::Pad::Ratio::ProfileY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
+  ResolveSelectionMode("ProfileY");
   if (mModMode != Mode::Den) {
     Data::ProfileY(startX, endX, isUserCoord);
     if (mModMode != Mode::Both) return *this;
@@ -2496,6 +2515,7 @@ auto Plot::Pad::Ratio::ProfileY(double_t startX, double_t endX, optional<bool> i
 }
 auto Plot::Pad::Ratio::Project(const vector<data_dim_t>& dataDims, optional<string> weight) -> decltype(*this)
 {
+  ResolveSelectionMode("Project");
   if (mModMode != Mode::Den) {
     Data::Project(dataDims, weight);
     if (mModMode != Mode::Both) return *this;
@@ -2505,6 +2525,7 @@ auto Plot::Pad::Ratio::Project(const vector<data_dim_t>& dataDims, optional<stri
 }
 auto Plot::Pad::Ratio::Project1D(data_dim_t x, optional<string> weight) -> decltype(*this)
 {
+  ResolveSelectionMode("Project1D");
   if (mModMode != Mode::Den) {
     Data::Project1D(x, weight);
     if (mModMode != Mode::Both) return *this;
@@ -2514,6 +2535,7 @@ auto Plot::Pad::Ratio::Project1D(data_dim_t x, optional<string> weight) -> declt
 }
 auto Plot::Pad::Ratio::Project2D(data_dim_t x, data_dim_t y, optional<string> weight) -> decltype(*this)
 {
+  ResolveSelectionMode("Project2D");
   if (mModMode != Mode::Den) {
     Data::Project2D(x, y, weight);
     if (mModMode != Mode::Both) return *this;
@@ -2523,6 +2545,7 @@ auto Plot::Pad::Ratio::Project2D(data_dim_t x, data_dim_t y, optional<string> we
 }
 auto Plot::Pad::Ratio::Scatter(const string& x, const string& y) -> decltype(*this)
 {
+  ResolveSelectionMode("Scatter");
   if (mModMode != Mode::Den) {
     Data::Scatter(x, y);
     if (mModMode != Mode::Both) return *this;
@@ -2532,6 +2555,7 @@ auto Plot::Pad::Ratio::Scatter(const string& x, const string& y) -> decltype(*th
 }
 auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& xErr, const string& yErr) -> decltype(*this)
 {
+  ResolveSelectionMode("Scatter");
   if (mModMode != Mode::Den) {
     Data::Scatter(x, y, xErr, yErr);
     if (mModMode != Mode::Both) return *this;
@@ -2541,6 +2565,7 @@ auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& x
 }
 auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& xErrLow, const string& xErrHigh, const string& yErrLow, const string& yErrHigh) -> decltype(*this)
 {
+  ResolveSelectionMode("Scatter");
   if (mModMode != Mode::Den) {
     Data::Scatter(x, y, xErrLow, xErrHigh, yErrLow, yErrHigh);
     if (mModMode != Mode::Both) return *this;
@@ -2550,6 +2575,7 @@ auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& x
 }
 auto Plot::Pad::Ratio::Profile(const vector<data_dim_t>& dataDims, const string& profile, optional<string> weight) -> decltype(*this)
 {
+  ResolveSelectionMode("Profile");
   if (mModMode != Mode::Den) {
     Data::Profile(dataDims, profile, weight);
     if (mModMode != Mode::Both) return *this;
@@ -2560,6 +2586,7 @@ auto Plot::Pad::Ratio::Profile(const vector<data_dim_t>& dataDims, const string&
 }
 auto Plot::Pad::Ratio::Profile1D(data_dim_t x, const string& profile, optional<string> weight) -> decltype(*this)
 {
+  ResolveSelectionMode("Profile1D");
   if (mModMode != Mode::Den) {
     Data::Profile1D(x, profile, weight);
     if (mModMode != Mode::Both) return *this;
@@ -2569,6 +2596,7 @@ auto Plot::Pad::Ratio::Profile1D(data_dim_t x, const string& profile, optional<s
 }
 auto Plot::Pad::Ratio::Profile2D(data_dim_t x, data_dim_t y, const string& profile, optional<string> weight) -> decltype(*this)
 {
+  ResolveSelectionMode("Profile2D");
   if (mModMode != Mode::Den) {
     Data::Profile2D(x, y, profile, weight);
     if (mModMode != Mode::Both) return *this;
@@ -2578,6 +2606,7 @@ auto Plot::Pad::Ratio::Profile2D(data_dim_t x, data_dim_t y, const string& profi
 }
 auto Plot::Pad::Ratio::Define(const std::string& key, const std::string& value) -> decltype(*this)
 {
+  ResolveSelectionMode("Define");
   if (mModMode != Mode::Den) {
     Data::Define(key, value);
     if (mModMode != Mode::Both) return *this;
@@ -2593,6 +2622,7 @@ auto Plot::Pad::Ratio::Define(const std::string& key, const std::string& value) 
 }
 auto Plot::Pad::Ratio::Filter(const std::string& filter) -> decltype(*this)
 {
+  ResolveSelectionMode("Filter");
   if (mModMode != Mode::Den) {
     Data::Filter(filter);
     if (mModMode != Mode::Both) return *this;
@@ -2606,6 +2636,7 @@ auto Plot::Pad::Ratio::Filter(const std::string& filter) -> decltype(*this)
 }
 auto Plot::Pad::Ratio::Entries(uint32_t nEntries) -> decltype(*this)
 {
+  ResolveSelectionMode("Entries");
   if (mModMode != Mode::Den) {
     Data::Entries(nEntries);
     if (mModMode != Mode::Both) return *this;
@@ -2615,6 +2646,7 @@ auto Plot::Pad::Ratio::Entries(uint32_t nEntries) -> decltype(*this)
 }
 auto Plot::Pad::Ratio::Entries(uint32_t entryMin, uint32_t entryMax) -> decltype(*this)
 {
+  ResolveSelectionMode("Entries");
   if (mModMode != Mode::Den) {
     Data::Entries(entryMin, entryMax);
     if (mModMode != Mode::Both) return *this;
