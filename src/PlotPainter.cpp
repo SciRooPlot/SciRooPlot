@@ -562,11 +562,31 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               data_ptr->Smooth(*data->GetNiterSmooth());
             }
           }
+
+          // normalize to the integral before Cumulative, then normalized distribution results in CDF ending at 1
+          if (data->GetScaleBinWidthNorm()) {
+            string scaleMode = (isDensity) ? "width" : "";
+            double_t integral = data_ptr->Integral(scaleMode.data());
+            if (integral == 0.) {
+              warn("Cannot normalize histogram because integral is zero.");
+            } else {
+              data_ptr->Scale(1. / integral);
+            }
+          }
+
           if constexpr (is_hist_1d<data_type>()) {
             if (data->GetCumulative()) {
               if constexpr (is_one_of_v<data_type, TProfile*>()) {
                 warn("Cumulative is not supported for profile histogram {} (bin content would become invalid), ignoring.", data_ptr->GetName());
               } else {
+                if (isDensity) {
+                  // the running sum of a density has to be weighted with the bin widths to yield its integral
+                  for (int32_t i = 1; i <= data_ptr->GetNbinsX(); ++i) {
+                    double_t width = data_ptr->GetBinWidth(i);
+                    data_ptr->SetBinContent(i, data_ptr->GetBinContent(i) * width);
+                    data_ptr->SetBinError(i, data_ptr->GetBinError(i) * width);
+                  }
+                }
                 TH1* cumulativeHist = data_ptr->GetCumulative(*data->GetCumulative());
                 cumulativeHist->SetDirectory(nullptr);
                 cumulativeHist->SetBit(kCanDelete);
@@ -577,17 +597,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           } else {
             warnUnsupported(data->GetCumulative().has_value(), "Cumulative");
           }
+          // remaining factors act on the final shape (NormalizeToMaximum after Cumulative -> CDF ending at 1)
           optional<double_t> scaleFactor;
-          string scaleMode{};
-          if (data->GetScaleBinWidthNorm()) {
-            if (isDensity) scaleMode = "width";
-            double_t integral = data_ptr->Integral(scaleMode.data());
-            if (integral == 0.) {
-              warn("Cannot normalize histogram because integral is zero.");
-            } else {
-              scaleFactor = 1. / integral;
-            }
-          }
           if (data->GetNormMaximum() && *data->GetNormMaximum()) {
             scaleFactor = 1. / data_ptr->GetMaximum();
           }
