@@ -1540,18 +1540,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mFill.color, "fill_color");
   read_from_tree(dataTree, mFill.alpha, "fill_alpha");
   read_from_tree(dataTree, mFill.style, "fill_style");
-  read_from_tree(dataTree, mModify.showOverflowBins, "show_overflow_bins");
-  read_from_tree(dataTree, mModify.scaleFactor, "scale_factor");
-  read_from_tree(dataTree, mModify.scaleBinWidthNorm, "scale_bin_width_norm");
-  read_from_tree(dataTree, mModify.normMaximum, "norm_to_maximum");
-  read_from_tree(dataTree, mModify.divideBinWidth, "divide_bin_width");
-  read_from_tree(dataTree, mModify.rebinGroupX, "rebinX");
-  read_from_tree(dataTree, mModify.rebinGroupY, "rebinY");
-  read_from_tree(dataTree, mModify.rebinGroupZ, "rebinZ");
-  read_from_tree(dataTree, mModify.scaleAxisX, "scale_axis_x");
-  read_from_tree(dataTree, mModify.scaleAxisY, "scale_axis_y");
-  read_from_tree(dataTree, mModify.scaleAxisZ, "scale_axis_z");
-  read_from_tree(dataTree, mModify.cumulative, "cumulative");
+  ReadModify(dataTree, mModify);
   read_from_tree(dataTree, mRangeX.min, "rangeX_min");
   read_from_tree(dataTree, mRangeX.max, "rangeX_max");
   read_from_tree(dataTree, mRangeY.min, "rangeY_min");
@@ -1560,7 +1549,6 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mScaleRange.max, "scale_range_max");
   read_from_tree(dataTree, mContours, "contours");
   read_from_tree(dataTree, mNContours, "number_of_contours");
-  read_from_tree(dataTree, mNiterSmooth, "nIter_smooth");
 
   // extract data info
   {
@@ -1628,6 +1616,44 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
 
 //**************************************************************************************************
 /**
+ * Read / write the data modifiers (optionally with a key prefix, used for ratio numerator and denominator).
+ */
+//**************************************************************************************************
+void Plot::Pad::Data::ReadModify(const ptree& tree, modify_t& modify, const string& prefix)
+{
+  read_from_tree(tree, modify.showOverflowBins, prefix + "show_overflow_bins");
+  read_from_tree(tree, modify.scaleFactor, prefix + "scale_factor");
+  read_from_tree(tree, modify.scaleBinWidthNorm, prefix + "scale_bin_width_norm");
+  read_from_tree(tree, modify.normMaximum, prefix + "norm_to_maximum");
+  read_from_tree(tree, modify.divideBinWidth, prefix + "divide_bin_width");
+  read_from_tree(tree, modify.rebinGroupX, prefix + "rebinX");
+  read_from_tree(tree, modify.rebinGroupY, prefix + "rebinY");
+  read_from_tree(tree, modify.rebinGroupZ, prefix + "rebinZ");
+  read_from_tree(tree, modify.scaleAxisX, prefix + "scale_axis_x");
+  read_from_tree(tree, modify.scaleAxisY, prefix + "scale_axis_y");
+  read_from_tree(tree, modify.scaleAxisZ, prefix + "scale_axis_z");
+  read_from_tree(tree, modify.cumulative, prefix + "cumulative");
+  read_from_tree(tree, modify.nIterSmooth, prefix + "nIter_smooth");
+}
+void Plot::Pad::Data::PutModify(ptree& tree, const modify_t& modify, const string& prefix)
+{
+  put_in_tree(tree, modify.showOverflowBins, prefix + "show_overflow_bins");
+  put_in_tree(tree, modify.scaleFactor, prefix + "scale_factor");
+  put_in_tree(tree, modify.scaleBinWidthNorm, prefix + "scale_bin_width_norm");
+  put_in_tree(tree, modify.normMaximum, prefix + "norm_to_maximum");
+  put_in_tree(tree, modify.divideBinWidth, prefix + "divide_bin_width");
+  put_in_tree(tree, modify.rebinGroupX, prefix + "rebinX");
+  put_in_tree(tree, modify.rebinGroupY, prefix + "rebinY");
+  put_in_tree(tree, modify.rebinGroupZ, prefix + "rebinZ");
+  put_in_tree(tree, modify.scaleAxisX, prefix + "scale_axis_x");
+  put_in_tree(tree, modify.scaleAxisY, prefix + "scale_axis_y");
+  put_in_tree(tree, modify.scaleAxisZ, prefix + "scale_axis_z");
+  put_in_tree(tree, modify.cumulative, prefix + "cumulative");
+  put_in_tree(tree, modify.nIterSmooth, prefix + "nIter_smooth");
+}
+
+//**************************************************************************************************
+/**
  * Generate property tree for this Data object.
  */
 //**************************************************************************************************
@@ -1655,18 +1681,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mFill.color, "fill_color");
   put_in_tree(dataTree, mFill.alpha, "fill_alpha");
   put_in_tree(dataTree, mFill.style, "fill_style");
-  put_in_tree(dataTree, mModify.showOverflowBins, "show_overflow_bins");
-  put_in_tree(dataTree, mModify.scaleFactor, "scale_factor");
-  put_in_tree(dataTree, mModify.scaleBinWidthNorm, "scale_bin_width_norm");
-  put_in_tree(dataTree, mModify.normMaximum, "norm_to_maximum");
-  put_in_tree(dataTree, mModify.divideBinWidth, "divide_bin_width");
-  put_in_tree(dataTree, mModify.rebinGroupX, "rebinX");
-  put_in_tree(dataTree, mModify.rebinGroupY, "rebinY");
-  put_in_tree(dataTree, mModify.rebinGroupZ, "rebinZ");
-  put_in_tree(dataTree, mModify.scaleAxisX, "scale_axis_x");
-  put_in_tree(dataTree, mModify.scaleAxisY, "scale_axis_y");
-  put_in_tree(dataTree, mModify.scaleAxisZ, "scale_axis_z");
-  put_in_tree(dataTree, mModify.cumulative, "cumulative");
+  PutModify(dataTree, mModify);
   put_in_tree(dataTree, mRangeX.min, "rangeX_min");
   put_in_tree(dataTree, mRangeX.max, "rangeX_max");
   put_in_tree(dataTree, mRangeY.min, "rangeY_min");
@@ -1675,7 +1690,6 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mScaleRange.max, "scale_range_max");
   put_in_tree(dataTree, mContours, "contours");
   put_in_tree(dataTree, mNContours, "number_of_contours");
-  put_in_tree(dataTree, mNiterSmooth, "nIter_smooth");
 
   if (mDataInfo.dataDims.size()) {
     vector<string> vars;
@@ -2000,7 +2014,7 @@ auto Plot::Pad::Data::Scale(double_t scaleFactor) -> decltype(*this)
 }
 auto Plot::Pad::Data::Smooth(uint16_t nIterSmooth) -> decltype(*this)
 {
-  mNiterSmooth = nIterSmooth;
+  mModify.nIterSmooth = nIterSmooth;
   return *this;
 }
 auto Plot::Pad::Data::Cumulative(bool forward) -> decltype(*this)
@@ -2280,6 +2294,8 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   }
 
   read_from_tree(dataTree, mScaleBinWidth, "scale_bin_width_norm_division");
+  ReadModify(dataTree, mNumModify, "numer_");
+  ReadModify(dataTree, mDenomModify, "denom_");
 
   // extract data info
   {
@@ -2358,6 +2374,8 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
   dataTree.put("denomDataSource", mDenomDataSource);
   dataTree.put("isCorrelated", mIsCorrelated);
   put_in_tree(dataTree, mScaleBinWidth, "scale_bin_width_norm_division");
+  PutModify(dataTree, mNumModify, "numer_");
+  PutModify(dataTree, mDenomModify, "denom_");
 
   if (mDenomDataInfo.dataDims.size()) {
     vector<string> vars;
@@ -2419,9 +2437,14 @@ auto Plot::Pad::Ratio::Denom() -> decltype(*this)
   mModMode = Mode::Den;
   return *this;
 }
+auto Plot::Pad::Ratio::Result() -> decltype(*this)
+{
+  mModMode = Mode::Res;
+  return *this;
+}
 auto Plot::Pad::Ratio::Project(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Project(dims, ranges, isUserCoord));
   }
   mDenomProjInfo = {dims, ranges, isUserCoord};
@@ -2429,7 +2452,7 @@ auto Plot::Pad::Ratio::Project(vector<uint8_t> dims, vector<tuple<uint8_t, doubl
 }
 auto Plot::Pad::Ratio::ProjectX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::ProjectX(startY, endY, isUserCoord));
   }
   mDenomProjInfo = {{0}, {{1, startY, endY}}, isUserCoord};
@@ -2437,7 +2460,7 @@ auto Plot::Pad::Ratio::ProjectX(double_t startY, double_t endY, optional<bool> i
 }
 auto Plot::Pad::Ratio::ProjectY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::ProjectY(startX, endX, isUserCoord));
   }
   mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
@@ -2445,7 +2468,7 @@ auto Plot::Pad::Ratio::ProjectY(double_t startX, double_t endX, optional<bool> i
 }
 auto Plot::Pad::Ratio::Profile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Profile(dims, ranges, isUserCoord));
   }
   mDenomProjInfo = {dims, ranges, isUserCoord, true};
@@ -2453,7 +2476,7 @@ auto Plot::Pad::Ratio::Profile(vector<uint8_t> dims, vector<tuple<uint8_t, doubl
 }
 auto Plot::Pad::Ratio::ProfileX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::ProfileX(startY, endY, isUserCoord));
   }
   mDenomProjInfo = {{0}, {{1, startY, endY}}, isUserCoord, true};
@@ -2461,7 +2484,7 @@ auto Plot::Pad::Ratio::ProfileX(double_t startY, double_t endY, optional<bool> i
 }
 auto Plot::Pad::Ratio::ProfileY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::ProfileY(startX, endX, isUserCoord));
   }
   mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
@@ -2469,7 +2492,7 @@ auto Plot::Pad::Ratio::ProfileY(double_t startX, double_t endX, optional<bool> i
 }
 auto Plot::Pad::Ratio::Project(const vector<data_dim_t>& dataDims, optional<string> weight) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Project(dataDims, weight));
   }
   mDenomDataInfo.set({dataDims, weight});
@@ -2477,7 +2500,7 @@ auto Plot::Pad::Ratio::Project(const vector<data_dim_t>& dataDims, optional<stri
 }
 auto Plot::Pad::Ratio::Project1D(data_dim_t x, optional<string> weight) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Project1D(x, weight));
   }
   mDenomDataInfo.set({{x}, weight});
@@ -2485,7 +2508,7 @@ auto Plot::Pad::Ratio::Project1D(data_dim_t x, optional<string> weight) -> declt
 }
 auto Plot::Pad::Ratio::Project2D(data_dim_t x, data_dim_t y, optional<string> weight) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Project2D(x, y, weight));
   }
   mDenomDataInfo.set({{x, y}, weight});
@@ -2493,7 +2516,7 @@ auto Plot::Pad::Ratio::Project2D(data_dim_t x, data_dim_t y, optional<string> we
 }
 auto Plot::Pad::Ratio::Scatter(const string& x, const string& y) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Scatter(x, y));
   }
   mDenomDataInfo.set({{{x}, {y}}, {}, false});
@@ -2501,7 +2524,7 @@ auto Plot::Pad::Ratio::Scatter(const string& x, const string& y) -> decltype(*th
 }
 auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& xErr, const string& yErr) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErr, yErr));
   }
   mDenomDataInfo.set({{{x}, {y}, {xErr}, {yErr}}, {}, false});
@@ -2509,7 +2532,7 @@ auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& x
 }
 auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& xErrLow, const string& xErrHigh, const string& yErrLow, const string& yErrHigh) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Scatter(x, y, xErrLow, xErrHigh, yErrLow, yErrHigh));
   }
   mDenomDataInfo.set({{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, {}, false});
@@ -2517,7 +2540,7 @@ auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& x
 }
 auto Plot::Pad::Ratio::Profile(const vector<data_dim_t>& dataDims, const string& profile, optional<string> weight) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Profile(dataDims, profile, weight));
   }
   mDenomDataInfo.set({dataDims, weight, true});
@@ -2526,7 +2549,7 @@ auto Plot::Pad::Ratio::Profile(const vector<data_dim_t>& dataDims, const string&
 }
 auto Plot::Pad::Ratio::Profile1D(data_dim_t x, const string& profile, optional<string> weight) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Profile1D(x, profile, weight));
   }
   mDenomDataInfo.set({{x, {profile, {}}}, weight, true});
@@ -2534,7 +2557,7 @@ auto Plot::Pad::Ratio::Profile1D(data_dim_t x, const string& profile, optional<s
 }
 auto Plot::Pad::Ratio::Profile2D(data_dim_t x, data_dim_t y, const string& profile, optional<string> weight) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Profile2D(x, y, profile, weight));
   }
   mDenomDataInfo.set({{x, y, {profile, {}}}, weight, true});
@@ -2542,7 +2565,7 @@ auto Plot::Pad::Ratio::Profile2D(data_dim_t x, data_dim_t y, const string& profi
 }
 auto Plot::Pad::Ratio::Define(const std::string& key, const std::string& value) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Define(key, value));
   }
   if (mDenomDataInfo.definitions.keys && mDenomDataInfo.definitions.values) {
@@ -2556,7 +2579,7 @@ auto Plot::Pad::Ratio::Define(const std::string& key, const std::string& value) 
 }
 auto Plot::Pad::Ratio::Filter(const std::string& filter) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Filter(filter));
   }
   if (mDenomDataInfo.filters) {
@@ -2568,7 +2591,7 @@ auto Plot::Pad::Ratio::Filter(const std::string& filter) -> decltype(*this)
 }
 auto Plot::Pad::Ratio::Entries(uint32_t nEntries) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Entries(nEntries));
   }
   mDenomDataInfo.entries.max = nEntries;
@@ -2576,7 +2599,7 @@ auto Plot::Pad::Ratio::Entries(uint32_t nEntries) -> decltype(*this)
 }
 auto Plot::Pad::Ratio::Entries(uint32_t entryMin, uint32_t entryMax) -> decltype(*this)
 {
-  if (mModMode == Mode::Num) {
+  if (mModMode != Mode::Den) {
     return static_cast<decltype(*this)&>(Data::Entries(entryMin, entryMax));
   }
   mDenomDataInfo.entries.min = entryMin;

@@ -584,7 +584,7 @@ class Plot::Pad::Data
   const auto& GetNContours() const { return mNContours; }
   const auto& GetDataInfo() const { return mDataInfo; }
   const auto& GetProjInfo() const { return mProjInfo; }
-  const auto& GetNiterSmooth() const { return mNiterSmooth; }
+  const auto& GetNiterSmooth() const { return mModify.nIterSmooth; }
   const auto& GetRebinGroupX() const { return mModify.rebinGroupX; }
   const auto& GetRebinGroupY() const { return mModify.rebinGroupY; }
   const auto& GetRebinGroupZ() const { return mModify.rebinGroupZ; }
@@ -594,6 +594,26 @@ class Plot::Pad::Data
   const auto& GetDivideBinWidth() const { return mModify.divideBinWidth; }
   const auto& GetShowOverflowBins() const { return mModify.showOverflowBins; }
   const auto& GetCumulative() const { return mModify.cumulative; }
+
+  struct modify_t {
+    std::optional<bool> scaleBinWidthNorm;
+    std::optional<bool> normMaximum;
+    std::optional<double_t> scaleFactor;
+    std::optional<bool> divideBinWidth;
+    std::optional<uint16_t> rebinGroupX;
+    std::optional<uint16_t> rebinGroupY;
+    std::optional<uint16_t> rebinGroupZ;
+    std::optional<double_t> scaleAxisX;
+    std::optional<double_t> scaleAxisY;
+    std::optional<double_t> scaleAxisZ;
+    std::optional<bool> showOverflowBins;
+    std::optional<bool> cumulative;
+    std::optional<uint16_t> nIterSmooth;
+  };
+  modify_t& Modify() { return mModify; }
+  const modify_t& Modify() const { return mModify; }
+  static void ReadModify(const boost::property_tree::ptree& tree, modify_t& modify, const std::string& prefix = "");
+  static void PutModify(boost::property_tree::ptree& tree, const modify_t& modify, const std::string& prefix = "");
 
   struct proj_info_t {
     std::vector<uint8_t> dims;                                    // dimensions to project on (can be one or two)
@@ -644,20 +664,6 @@ class Plot::Pad::Data
   std::optional<drawing_options_t> mDrawingOptionAlias;
   std::optional<std::string> mTextFormat;
 
-  struct modify_t {
-    std::optional<bool> scaleBinWidthNorm;
-    std::optional<bool> normMaximum;
-    std::optional<double_t> scaleFactor;
-    std::optional<bool> divideBinWidth;
-    std::optional<uint16_t> rebinGroupX;
-    std::optional<uint16_t> rebinGroupY;
-    std::optional<uint16_t> rebinGroupZ;
-    std::optional<double_t> scaleAxisX;
-    std::optional<double_t> scaleAxisY;
-    std::optional<double_t> scaleAxisZ;
-    std::optional<bool> showOverflowBins;
-    std::optional<bool> cumulative;
-  };
   struct legend_t {
     std::optional<std::string> label;
     std::optional<uint8_t> id;
@@ -682,7 +688,6 @@ class Plot::Pad::Data
 
   std::optional<std::vector<double_t>> mContours;
   std::optional<int32_t> mNContours;
-  std::optional<uint16_t> mNiterSmooth;
 };
 
 //**************************************************************************************************
@@ -753,24 +758,42 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(SetDefinesFrame)
   FORWARD_TO_DATA(SetContours)
 
-  // data modifiers
-  FORWARD_TO_DATA(Normalize)
-  FORWARD_TO_DATA(NormalizeToMaximum)
-  FORWARD_TO_DATA(Scale)
-  FORWARD_TO_DATA(DivideBinWidth)
-  FORWARD_TO_DATA(RebinX)
-  FORWARD_TO_DATA(RebinY)
-  FORWARD_TO_DATA(RebinZ)
-  FORWARD_TO_DATA(RebinXY)
-  FORWARD_TO_DATA(RebinXYZ)
-  FORWARD_TO_DATA(ScaleX)
-  FORWARD_TO_DATA(ScaleY)
-  FORWARD_TO_DATA(ScaleZ)
-  FORWARD_TO_DATA(Smooth)
-  FORWARD_TO_DATA(Cumulative)
+#undef FORWARD_TO_DATA
 
-  Ratio& Numer();  // switch to numerator for following modifiers (default)
-  Ratio& Denom();  // switch to denominator for following modifiers
+  // data modifiers: act on the ratio itself (default), or on numerator / denominator before the division
+#define FORWARD_MODIFIER(METHOD)                                          \
+  template <typename... Args>                                             \
+  Ratio& METHOD(Args&&... args)                                           \
+  {                                                                       \
+    if (mModMode == Mode::Res) {                                          \
+      Data::METHOD(std::forward<Args>(args)...);                          \
+    } else {                                                              \
+      auto& target = (mModMode == Mode::Num) ? mNumModify : mDenomModify; \
+      std::swap(Modify(), target);                                        \
+      Data::METHOD(std::forward<Args>(args)...);                          \
+      std::swap(Modify(), target);                                        \
+    }                                                                     \
+    return *this;                                                         \
+  }
+  FORWARD_MODIFIER(Normalize)
+  FORWARD_MODIFIER(NormalizeToMaximum)
+  FORWARD_MODIFIER(Scale)
+  FORWARD_MODIFIER(DivideBinWidth)
+  FORWARD_MODIFIER(RebinX)
+  FORWARD_MODIFIER(RebinY)
+  FORWARD_MODIFIER(RebinZ)
+  FORWARD_MODIFIER(RebinXY)
+  FORWARD_MODIFIER(RebinXYZ)
+  FORWARD_MODIFIER(ScaleX)
+  FORWARD_MODIFIER(ScaleY)
+  FORWARD_MODIFIER(ScaleZ)
+  FORWARD_MODIFIER(Smooth)
+  FORWARD_MODIFIER(Cumulative)
+#undef FORWARD_MODIFIER
+
+  Ratio& Numer();   // following modifiers act on the numerator, before the division
+  Ratio& Denom();   // following modifiers act on the denominator, before the division
+  Ratio& Result();  // following modifiers act on the ratio itself (default)
 
   Ratio& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) override;
   Ratio& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) override;
@@ -809,11 +832,16 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   const bool& GetIsCorrelated() const { return mIsCorrelated; }
   const auto& GetDenomDataInfo() const { return mDenomDataInfo; }
   const auto& GetDenomProjInfo() const { return mDenomProjInfo; }
+  const auto& GetNumModify() const { return mNumModify; }
+  const auto& GetDenomModify() const { return mDenomModify; }
 
  private:
-  enum class Mode { Num,
+  enum class Mode { Res,
+                    Num,
                     Den };
-  Mode mModMode = Mode::Num;
+  Mode mModMode = Mode::Res;
+  modify_t mNumModify;
+  modify_t mDenomModify;
   std::string mDenomName;
   std::string mDenomDataSource;
   bool mIsCorrelated{};
