@@ -109,7 +109,8 @@ pm.AddDataSource("dataSourceB", {"/path/to/file/b.root:sub/list/or/dir"});
 pm.AddDataSource("dataSourceC", {"${HOME}/myRootFiles/b2.root"});
 // and it is possible to add all root files within a directory (including sub-directories):
 pm.AddDataSource("dataSourceD", {"/path/to/folder/with/rootfiles/"});
-// please note that multiple root files in one dataSource will be treated as one big input file and are traversed in alphabetical order
+// please note that multiple root files in one dataSource will be treated as one big input file and are traversed in the order they were added
+// (the files found in a directory are traversed in alphabetical order); the first file containing the requested object wins
 
 // now that we know where to look for the data, we can start creating plots
 // each plot will be handed over to the manager after it was defined

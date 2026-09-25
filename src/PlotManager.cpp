@@ -46,6 +46,7 @@
 
 #include <boost/property_tree/info_parser.hpp>
 
+#include <algorithm>
 #include <cctype>
 #include <cstdint>
 #include <filesystem>
@@ -352,27 +353,54 @@ void PlotManager::LoadDataSources(const optional<string>& file, bool replace)
     return;
   }
   for (const auto& inputPair : inputFileTree) {
-    const string& dataSource = inputPair.first;
-    set<string> allFileNames;
+    vector<string> entries;  // files and directories, in the order they were added (directories are expanded when reading)
     for (const auto& fileEntry : inputPair.second) {
-      string fileOrDirName = fileEntry.second.get_value<string>();
-      if (str_ends_with(split_string(fileOrDirName, ':', true)[0], ".root") || str_ends_with(fileOrDirName, mTableFileEndings)) {
-        allFileNames.insert(fileOrDirName);
-      } else {
-        string path = expand_path(fileOrDirName);
-        if (std::filesystem::is_directory(path)) {
-          for (const auto& file : std::filesystem::recursive_directory_iterator(path)) {
-            if (file.path().extension() == ".root" || str_contains(file.path().extension(), mTableFileEndings)) {
-              allFileNames.insert(file.path().string());
-            }
-          }
-        } else {
-          WARNING("Data source entry {} is neither a recognized file type nor an existing directory. Skipping.", fileOrDirName);
-        }
+      entries.push_back(fileEntry.second.get_value<string>());
+    }
+    AddDataSource(inputPair.first, entries, replace);
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Resolve the entries of a data source into the list of input files to be searched:
+ * files keep the order in which they were added, directories are replaced by the files they contain
+ * (recursively, in alphabetical order since directory iteration order is unspecified).
+ * Files reached more than once are only kept at their first position.
+ */
+//**************************************************************************************************
+vector<string> PlotManager::ExpandInputFiles(const string& dataSource) const
+{
+  vector<string> inputFiles;
+  auto inputFilesIt = mInputFiles.find(dataSource);
+  if (inputFilesIt == mInputFiles.end()) return inputFiles;
+
+  set<string> seen;
+  auto addFile = [&](const string& fileName) {
+    if (seen.insert(expand_path(fileName)).second) inputFiles.push_back(fileName);
+  };
+  for (const auto& entry : inputFilesIt->second) {
+    if (str_ends_with(split_string(entry, ':', true)[0], ".root") || str_ends_with(entry, mTableFileEndings)) {
+      addFile(entry);
+      continue;
+    }
+    string path = expand_path(entry);
+    if (!std::filesystem::is_directory(path)) {
+      WARNING("Data source entry {} (data source {}) is neither a recognized file type nor an existing directory. Skipping.", entry, dataSource);
+      continue;
+    }
+    vector<string> dirFileNames;
+    for (const auto& file : std::filesystem::recursive_directory_iterator(path)) {
+      if (file.path().extension() == ".root" || str_contains(file.path().extension(), mTableFileEndings)) {
+        dirFileNames.push_back(file.path().string());
       }
     }
-    AddDataSource(dataSource, vector<string>{allFileNames.begin(), allFileNames.end()}, replace);
+    std::sort(dirFileNames.begin(), dirFileNames.end());
+    for (const auto& fileName : dirFileNames) {
+      addFile(fileName);
+    }
   }
+  return inputFiles;
 }
 
 //**************************************************************************************************
@@ -747,10 +775,7 @@ bool PlotManager::FillBuffer()
     }
 
     // open all input files belonging to the current dataSource and extract the data
-    static const vector<string> sEmptyFileList;
-    auto inputFilesIt = mInputFiles.find(dataSource);
-    const vector<string>& inputFileList = (inputFilesIt != mInputFiles.end()) ? inputFilesIt->second : sEmptyFileList;
-    for (const auto& inputFileNameRaw : inputFileList) {
+    for (const auto& inputFileNameRaw : ExpandInputFiles(dataSource)) {
       if (requiredData.empty()) break;
       string inputFileName = expand_path(inputFileNameRaw);
       if (str_ends_with(inputFileName, mTableFileEndings)) {

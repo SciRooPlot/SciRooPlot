@@ -111,6 +111,7 @@ class PlotManager
   void PrintBufferStatus(bool onlyMissing = false) const;
   std::vector<std::tuple<std::string, std::string, std::string>> GetMissingData(Plot& plot);
   bool FillBuffer();
+  std::vector<std::string> ExpandInputFiles(const std::string& dataSource) const;
   void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource);
   void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataSource);
   TObject* ProcessData(ROOT::RDataFrame& df, const std::string& dfName, const Plot::Pad::Data::data_info_t& treeInfo, const std::string& name) const;
