@@ -81,8 +81,12 @@ std::string normalize_group(const std::string& group)
     if (c == '/' && (normalized.empty() || normalized.back() == '/')) continue;
     normalized += c;
   }
-  while (!normalized.empty() && normalized.back() == '/')
+  while (!normalized.empty() && normalized.back() == '/') {
     normalized.pop_back();
+  }
+  if (normalized != group) {
+    WARNING("Group '{}' was changed to '{}' (leading, trailing and repeated slashes are removed).", group, normalized);
+  }
   return normalized;
 }
 }  // namespace
@@ -123,8 +127,19 @@ Plot::Plot(const string& name, const string& group, const optional<string>& base
 Plot::Plot(const Plot& otherPlot, const string& name, const optional<string>& group)
   : Plot(otherPlot)
 {
+  if (name.empty()) {
+    logger::throw_invalid_argument("Plot name must not be empty.");
+  }
+  if (auto illegal = find_illegal_name_char(name)) {
+    logger::throw_invalid_argument("Plot name '{}' contains illegal character '{}'.", name, *illegal);
+  }
+  if (group) {
+    if (auto illegal = find_illegal_name_char(*group, true)) {
+      logger::throw_invalid_argument("Group '{}' contains illegal character '{}'.", *group, *illegal);
+    }
+    mGroup = normalize_group(*group);
+  }
   mName = name;
-  if (group) mGroup = *group;
   UpdateUniqueName();
 }
 
@@ -280,7 +295,12 @@ auto Plot::AppendGroup(const string& subgroup) -> decltype(*this)
     ERROR("Subgroup '{}' contains illegal character '{}'.", subgroup, *illegal);
     return *this;
   }
-  mGroup = normalize_group(mGroup + "/" + subgroup);
+  const string normalizedSubgroup = normalize_group(subgroup);
+  if (normalizedSubgroup.empty()) {
+    ERROR("Cannot append empty subgroup.");
+    return *this;
+  }
+  mGroup = mGroup.empty() ? normalizedSubgroup : mGroup + "/" + normalizedSubgroup;
   UpdateUniqueName();
   return *this;
 }
