@@ -86,8 +86,9 @@ class PlotManager
  private:
   TObject* FindSubDirectory(TObject* folder, std::vector<std::string>& subDirs) const;
   bool GeneratePlot(const Plot& plot, const std::string& mode = "pdf");
-  void SavePlotsToRootFile() const;
-  void SaveDataToRootFile() const;
+  bool SavePlotsToRootFile() const;
+  bool CreateOutputDirectory() const;
+  bool SaveDataToRootFile() const;
 
   std::string mProjectName;
   const std::string mPlotsRootFile{"Plots.root"};

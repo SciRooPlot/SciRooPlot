@@ -123,12 +123,14 @@ PlotManager::~PlotManager()
  * Save stored plots to .root file.
  */
 //**************************************************************************************************
-void PlotManager::SavePlotsToRootFile() const
+bool PlotManager::SavePlotsToRootFile() const
 {
   if (!mCanvasRegistry.empty()) {
+    if (!CreateOutputDirectory()) return false;
     TFile outputFile((mOutputDirectory + "/" + mPlotsRootFile).data(), "RECREATE");
     if (outputFile.IsZombie()) {
-      return;
+      ERROR("Could not create output file {}/{}.", mOutputDirectory, mPlotsRootFile);
+      return false;
     }
     outputFile.cd();
     // only meaningful if no other PlotManager instance is concurrently allocating colors!
@@ -161,6 +163,7 @@ void PlotManager::SavePlotsToRootFile() const
     outputFile.Close();
     INFO("Saved {} plots to file {}/{}.", nPlots, mOutputDirectory, mPlotsRootFile);
   }
+  return true;
 }
 
 //**************************************************************************************************
@@ -168,11 +171,13 @@ void PlotManager::SavePlotsToRootFile() const
  * Save buffered data .root file.
  */
 //**************************************************************************************************
-void PlotManager::SaveDataToRootFile() const
+bool PlotManager::SaveDataToRootFile() const
 {
+  if (!CreateOutputDirectory()) return false;
   TFile outputFile((mOutputDirectory + "/" + mDataRootFile).data(), "RECREATE");
   if (outputFile.IsZombie()) {
-    return;
+    ERROR("Could not create output file {}/{}.", mOutputDirectory, mDataRootFile);
+    return false;
   }
   for (const auto& [dataSource, buffer] : mDataBuffer) {
     auto dir = outputFile.mkdir(dataSource.data(), "", true);
@@ -207,6 +212,33 @@ void PlotManager::SaveDataToRootFile() const
   }
   outputFile.Close();
   INFO("Saved data to file {}/{}.", mOutputDirectory, mDataRootFile);
+  return true;
+}
+
+//**************************************************************************************************
+/**
+ * Create the output directory if needed; like for the other output modes, its parent must already exist.
+ */
+//**************************************************************************************************
+bool PlotManager::CreateOutputDirectory() const
+{
+  if (mOutputDirectory.empty()) {
+    ERROR("No output directory was specified.");
+    return false;
+  }
+  std::filesystem::path outputDir = std::filesystem::path(mOutputDirectory).lexically_normal();
+  if (!outputDir.has_filename()) outputDir = outputDir.parent_path();  // strip trailing slash
+  if (!std::filesystem::exists(outputDir.parent_path())) {
+    ERROR("Parent path {} of output directory does not exist.", outputDir.parent_path().string());
+    return false;
+  }
+  std::error_code ec;
+  std::filesystem::create_directory(outputDir, ec);
+  if (ec) {
+    ERROR("Could not create output directory {}: {}.", outputDir.string(), ec.message());
+    return false;
+  }
+  return true;
 }
 
 //**************************************************************************************************
@@ -693,12 +725,13 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     if (!mGifName.empty()) {
       LOG("Saved gif {}", mGifName);
     }
+    bool saved = true;
     if (mode == "file") {
-      SavePlotsToRootFile();
+      saved = SavePlotsToRootFile();
     } else if (mode == "data") {
-      SaveDataToRootFile();
+      saved = SaveDataToRootFile();
     }
-    return allCreated;
+    return allCreated && saved;
   } catch (const std::exception& e) {
     ERROR("An unexpected error occurred: {}", e.what());
     return false;
