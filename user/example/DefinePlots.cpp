@@ -394,8 +394,8 @@ void DefineDetectorPlots(PlotManager& pm)
     plot[1].AddText(0.259, 0.916, "#pi^{0}");  // text at a fixed position (pad coordinates)
     plot[1].AddText(0.72, 0.32, "#eta");
     plot[1]['X'].SetRange(20., 750.).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})");
-    plot[1]["Y"].SetRange(0., 15e3)
-      pm.AddPlot(plot);
+    plot[1]['Y'].SetRange(0., 15e3);
+    pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
 
   // --------------------------------------------------------------------------------------

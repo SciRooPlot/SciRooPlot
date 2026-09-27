@@ -1,4 +1,7 @@
 [tool.ruff]
 line-length = 300
+[tool.ruff.format]
+# keep 'X' for axes like in C++, so code can be moved between the C++ and Python templates without errors
+quote-style = "preserve"
 [tool.ruff.lint.per-file-ignores]
 "user/*/DefinePlots.py" = ["F403", "F405"]

@@ -32,8 +32,8 @@ def DefinePlots(pm: PlotManager):
     # plot[1].AddRatio("numerator", "myData", "denominator", "myData").SetIsCorrelated()
     plot[1].AddLegend(0.6, 0.9)  # upper left corner in pad coordinates, or AddLegend() to place it automatically
     # plot[1].AddText("My Experiment // 13.6 TeV")
-    plot[1]["X"].SetTitle("#it{x}").SetRange(0.1, 20.0)
-    plot[1]["Y"].SetRange(-0.3, 1.1)  # or e.g. .SetLog()
+    plot[1]['X'].SetTitle("#it{x}").SetRange(0.1, 20.0)
+    plot[1]['Y'].SetRange(-0.3, 1.1)  # or e.g. .SetLog()
     pm.AddPlot(plot)
     # -----------------------------------------------------------------------------------
 
