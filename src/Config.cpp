@@ -284,8 +284,15 @@ void Config::Rename(const std::string& projectName, const std::string& newProjec
 
 void Config::Reset()
 {
-  mProjects.clear();
-  mCurrentProject.clear();
+  if (mPath.empty()) {
+    ERROR("No valid config path; refusing to reset.");
+    return;
+  }
+  for (auto it = mProjects.begin(); it != mProjects.end();) {
+    // a project whose directory cannot be deleted stays registered instead of being orphaned
+    it = DeleteProjectDir(it->first) ? mProjects.erase(it) : std::next(it);
+  }
+  mCurrentProject = mProjects.empty() ? "" : mProjects.begin()->first;
 }
 
 void Config::Clean()
@@ -317,15 +324,7 @@ void Config::Clean()
   }
   bool updatedActiveProject = false;
   for (const auto& inactiveProject : inactiveProjects) {
-    const auto projectPath = ProjectPath(inactiveProject);
-    if (!projectPath.is_absolute() || projectPath.parent_path() != mPath) {
-      ERROR("Refusing to delete {} for project {}: not inside the config directory.", projectPath.string(), inactiveProject);
-      continue;
-    }
-    std::error_code ec;
-    std::filesystem::remove_all(projectPath, ec);
-    if (ec) {
-      ERROR("Could not delete {}: {}", projectPath.string(), ec.message());
+    if (!DeleteProjectDir(inactiveProject)) {
       continue;
     }
     PRINT("- deleting project {}", inactiveProject);
@@ -361,6 +360,17 @@ void Config::Remove(const string& projectName)
     ERROR("Specify which project to remove.");
     return;
   }
+  if (mPath.empty()) {
+    ERROR("No valid config path; refusing to remove.");
+    return;
+  }
+  if (mProjects.find(projectName) == mProjects.end()) {
+    ERROR("Cannot find project {}.", projectName);
+    return;
+  }
+  if (!DeleteProjectDir(projectName)) {
+    return;
+  }
   mProjects.erase(projectName);
   if (mCurrentProject == projectName) {
     mCurrentProject.clear();
@@ -370,6 +380,24 @@ void Config::Remove(const string& projectName)
       INFO("Selecting project {}", mCurrentProject);
     }
   }
+}
+
+bool Config::DeleteProjectDir(const string& projectName) const
+{
+  // deletes only the project's directory in the config path (plots.info, dataSources.info),
+  // never the user code or the output directory
+  const auto projectPath = ProjectPath(projectName);
+  if (!projectPath.is_absolute() || projectPath.parent_path() != mPath) {
+    ERROR("Refusing to delete {} for project {}: not inside the config directory.", projectPath.string(), projectName);
+    return false;
+  }
+  std::error_code ec;
+  std::filesystem::remove_all(projectPath, ec);
+  if (ec) {
+    ERROR("Could not delete {}: {}", projectPath.string(), ec.message());
+    return false;
+  }
+  return true;
 }
 
 void Config::Select(const string& projectName)

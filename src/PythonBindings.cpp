@@ -197,31 +197,43 @@ void exportPlotManager(py::module_& m)
 {
   py::class_<PlotManager>(m, "PlotManager")
     .def(py::init<const string&>(), arg("projectName") = "")
-    .def("AddDataSource", overload_cast<const string&, const vector<string>&, bool>(&PlotManager::AddDataSource), arg("dataSource"), arg("inputFiles"), arg("replace") = false)
-    .def("AddDataSource", overload_cast<const string&, const string&, bool>(&PlotManager::AddDataSource), arg("dataSource"), arg("inputFile"), arg("replace") = false)
-    .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::list objs, bool replace) {
+    // one entry point for file names and ROOT objects: separate overloads let pybind11 try to convert a
+    // ROOT object into a list of strings first, which fails with a TypeError for objects like TGraph
+    .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::object input, bool replace) {
       // py::handle, not py::object/py::module_: a static py::object gets decref'd at program exit, possibly after Python has already shut down, which crashes. release() leaks it on purpose instead -- fine since it's a permanent singleton.
       static py::handle ROOT = py::module_::import("ROOT").release();
       static py::handle TObjectClass = py::object(ROOT.attr("TObject")).release();
-      py::object addressof = ROOT.attr("addressof");
-      std::vector<TObject*> v;
-      v.reserve(objs.size());
-      for (auto o : objs) {
-        if (!py::isinstance(o, TObjectClass)) {
-          throw std::invalid_argument("inputData must contain only ROOT TObjects (e.g. histograms, graphs, or trees).");
+      auto toTObject = [](py::handle obj) {
+        py::object addressof = ROOT.attr("addressof");
+        return reinterpret_cast<TObject*>(addressof(obj).cast<std::uintptr_t>());
+      };
+      if (py::isinstance<py::str>(input)) {
+        self.AddDataSource(dataSource, input.cast<std::string>(), replace);
+      } else if (py::isinstance(input, TObjectClass)) {
+        self.AddDataSource(dataSource, toTObject(input), replace);
+      } else if (py::isinstance<py::list>(input) || py::isinstance<py::tuple>(input)) {
+        std::vector<std::string> files;
+        std::vector<TObject*> objects;
+        for (auto item : input) {
+          if (py::isinstance<py::str>(item)) {
+            files.push_back(item.cast<std::string>());
+          } else if (py::isinstance(item, TObjectClass)) {
+            objects.push_back(toTObject(item));
+          } else {
+            throw py::type_error("inputs must be file names or ROOT TObjects (e.g. histograms, graphs, or trees).");
+          }
         }
-        v.push_back(reinterpret_cast<TObject*>(addressof(o).cast<std::uintptr_t>()));
-      }
-      self.AddDataSource(dataSource, v, replace); }, py::arg("dataSource"), py::arg("inputData"), py::arg("replace") = false)
-    .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::object obj, bool replace) {
-      static py::handle ROOT = py::module_::import("ROOT").release();
-      static py::handle TObjectClass = py::object(ROOT.attr("TObject")).release();
-      if (!py::isinstance(obj, TObjectClass)) {
-        throw std::invalid_argument("inputData must be a ROOT TObject (e.g. a histogram, graph, or tree).");
-      }
-      py::object addressof = ROOT.attr("addressof");
-      auto ptr = reinterpret_cast<TObject*>(addressof(obj).cast<std::uintptr_t>());
-      self.AddDataSource(dataSource, ptr, replace); }, py::arg("dataSource"), py::arg("inputData"), py::arg("replace") = false)
+        if (!files.empty() && !objects.empty()) {
+          throw py::type_error("a data source cannot mix file names and ROOT objects.");
+        }
+        if (!objects.empty()) {
+          self.AddDataSource(dataSource, objects, replace);
+        } else {
+          self.AddDataSource(dataSource, files, replace);
+        }
+      } else {
+        throw py::type_error("inputs must be a file name, a ROOT TObject, or a list of either.");
+      } }, py::arg("dataSource"), py::arg("inputs"), py::arg("replace") = false)
     .def("SaveDataSources", &PlotManager::SaveDataSources, arg("file") = py::none())
     .def("LoadDataSources", &PlotManager::LoadDataSources, arg("file") = py::none(), arg("replace") = false)
     .def("AddPlot", &PlotManager::AddPlot, arg("plot"))

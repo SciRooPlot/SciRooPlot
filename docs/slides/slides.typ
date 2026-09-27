@@ -420,7 +420,7 @@
           align: (left, horizon),
           [#prompt srp help], [List available options.],
           [#prompt srp show \<project\>], [Show project settings.],
-          [#prompt srp remove \<project\>], [Unregister project.],
+          [#prompt srp remove \<project\>], [Unregister project and delete its stored plot definitions (user code and output are kept).],
           [#prompt srp print \<file\>], [List root file contents.],
           [#prompt srp open \<file\>], [Open root file.],
         )

@@ -279,20 +279,20 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/user
 	    PATTERN "__pycache__" EXCLUDE)
 
 add_custom_command(
-  OUTPUT ${SCIROOPLOT_BUILD_DATA_DIR}/TestFiles/.generated
+  OUTPUT ${SCIROOPLOT_BUILD_DATA_DIR}/ExampleData/.generated
   COMMAND ${CMAKE_COMMAND} -E make_directory ${SCIROOPLOT_BUILD_DATA_DIR}
   COMMAND ${ROOT_EXECUTABLE} -l -q -b
-          ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generateTestFiles.C
+          ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generateExampleData.C
   COMMAND ${CMAKE_COMMAND} -E touch
-          ${SCIROOPLOT_BUILD_DATA_DIR}/TestFiles/.generated
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generateTestFiles.C
+          ${SCIROOPLOT_BUILD_DATA_DIR}/ExampleData/.generated
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generateExampleData.C
   WORKING_DIRECTORY ${SCIROOPLOT_BUILD_DATA_DIR}
-  COMMENT "Generating ROOT test files"
+  COMMENT "Generating example data"
 )
-add_custom_target(generate_testfiles ALL
-  DEPENDS ${SCIROOPLOT_BUILD_DATA_DIR}/TestFiles/.generated
+add_custom_target(generate_example_data ALL
+  DEPENDS ${SCIROOPLOT_BUILD_DATA_DIR}/ExampleData/.generated
 )
-add_dependencies(srp generate_testfiles)
+add_dependencies(srp generate_example_data)
 
 set(SCIROOPLOT_PYTHONPATH_DIR "${CMAKE_INSTALL_LIBDIR}")
 configure_file(
@@ -322,7 +322,7 @@ install(
 )
 set(SCIROOPLOT_INSTALL_DATA_DIR ${CMAKE_INSTALL_DATAROOTDIR}/scirooplot)
 install(
-  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/user ${SCIROOPLOT_BUILD_DATA_DIR}/TestFiles
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/user ${SCIROOPLOT_BUILD_DATA_DIR}/ExampleData
   DESTINATION ${SCIROOPLOT_INSTALL_DATA_DIR}
   PATTERN ".*" EXCLUDE
   PATTERN "__pycache__" EXCLUDE
@@ -367,8 +367,10 @@ add_custom_target(ProjectFiles SOURCES
     docs/README.md
     docs/ADVANCED_INSTALL.md
     docs/slides/slides.typ
-    scripts/generateTestFiles.C
+    scripts/generateExampleData.C
     packaging/env.sh.in
-    user/DefinePlots.py
-    user/DefinePlots.cpp
+    user/skeleton/DefinePlots.py
+    user/skeleton/DefinePlots.cpp
+    user/example/DefinePlots.py
+    user/example/DefinePlots.cpp
 )

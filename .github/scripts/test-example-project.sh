@@ -18,19 +18,37 @@ trap 'rm -rf "${WORKDIR}"' EXIT
 echo "Testing in ${WORKDIR}"
 cd "${WORKDIR}"
 
-echo "=== Testing C++ ==="
-# initialize a project and make a plot with cpp user code
-srp init-cpp TestProject_CPP
-plot examples ptSpec pdf
-test -s TestProject_CPP/output/examples/ptSpec.pdf
+echo "=== Testing C++ skeleton ==="
+srp init-cpp Skeleton_CPP
+plot myGroup myFirstPlot pdf
+test -s Skeleton_CPP/output/myGroup/myFirstPlot.pdf
 
+echo "=== Testing Python skeleton ==="
+srp init-py Skeleton_PY
+plot myGroup myFirstPlot pdf
+test -s Skeleton_PY/output/myGroup/myFirstPlot.pdf
+
+echo "=== Testing C++ examples ==="
+srp example-cpp Example_CPP
+plot '.+' '.+' pdf
+test -s Example_CPP/output/higgs/diphoton/massSpectrum.pdf
+
+echo "=== Testing Python examples ==="
+srp example-py Example_PY
+plot '.+' '.+' pdf
+test -s Example_PY/output/higgs/diphoton/massSpectrum.pdf
+
+echo "=== C++ and Python templates must define the same plots ==="
+diff "$(srp confdir Skeleton_CPP)/plots.info" "$(srp confdir Skeleton_PY)/plots.info"
+diff "$(srp confdir Example_CPP)/plots.info" "$(srp confdir Example_PY)/plots.info"
+
+echo "=== remove and reset delete the project directories in the config path ==="
+removed_dir="$(srp confdir Skeleton_PY)"
+srp remove Skeleton_PY
+test ! -e "${removed_dir}"
+test -s Skeleton_PY/DefinePlots.py  # user code is kept
+remaining_dir="$(srp confdir Example_PY)"
 srp reset
-
-echo "=== Testing Python ==="
-# initialize a project and make a plot with python user code
-srp init-py TestProject_PY
-plot examples ptSpec pdf
-test -s TestProject_PY/output/examples/ptSpec.pdf
-
+test ! -e "${remaining_dir}"
 
 echo "SciRooPlot integration test successful"

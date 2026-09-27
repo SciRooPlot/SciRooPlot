@@ -99,6 +99,7 @@ class Config
   static Config& Instance();
   void LoadConfig();
   void SaveConfig();
+  bool DeleteProjectDir(const std::string& projectName) const;
 
   bool mModified{false};
   int mLogLevel{LogLevel::debug};

@@ -126,9 +126,11 @@ int main(int argc, char* argv[])
     PRINT("  srp remove  (<project> | @current)");
     PRINT("-----------------------------------------------------------");
     PRINT("Project initialization:");
-    PRINT("  srp add      <project> <program> [<outdir>]");
-    PRINT("  srp init-cpp <project> [<dir>]");
-    PRINT("  srp init-py  <project> [<dir>]");
+    PRINT("  srp add         <project> <program> [<outdir>]");
+    PRINT("  srp init-cpp    <project> [<dir>]    (minimal skeleton)");
+    PRINT("  srp init-py     <project> [<dir>]");
+    PRINT("  srp example-cpp <project> [<dir>]    (commented examples with example data)");
+    PRINT("  srp example-py  <project> [<dir>]");
     PRINT("-----------------------------------------------------------");
     PRINT("Project configuration:");
     PRINT("  srp get   (<project> | @current) <property>");
@@ -326,7 +328,7 @@ int main(int argc, char* argv[])
     }
     Config::GetMutable().SetProperty(project, property, setting);
   } else {
-    const vector<string> shellCommands = {"update", "edit", "cd", "stats", "init-py", "init-cpp"};
+    const vector<string> shellCommands = {"update", "edit", "cd", "stats", "init-py", "init-cpp", "example-py", "example-cpp"};
     if (std::find(shellCommands.begin(), shellCommands.end(), command) != shellCommands.end()) {
       ERROR("Source environment script to use this feature.");
     } else {

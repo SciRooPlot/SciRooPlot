@@ -65,6 +65,7 @@
 #include <TTimeStamp.h>
 #include <TView.h>
 
+#include <algorithm>
 #include <array>
 #include <memory>
 #include <numeric>
@@ -1515,6 +1516,13 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     }
 
     double_t relMarginWidth = totalMarginWidthNDC / totalWidthNDC;
+    if (isLegend && nColumns > 1 && !box->GetWidth()) {
+      // TLegend splits its width into equal columns and reserves the margin (symbol space) in each of them
+      const double_t maxContentWidthNDC = static_cast<double_t>(*std::max_element(contentWidthPixelPerColumn.begin(), contentWidthPixelPerColumn.end())) / padWidthPixel;
+      const double_t columnWidthNDC = totalMarginWidthNDC + maxContentWidthNDC + marginNDC;
+      totalWidthNDC = std::max(borderWidthNDC + nColumns * columnWidthNDC, totalWidthNDC);
+      relMarginWidth = totalMarginWidthNDC / (totalWidthNDC / nColumns);
+    }
 
     double_t upperLeftX{box->GetXPosition()};
     double_t upperLeftY{box->GetYPosition()};
