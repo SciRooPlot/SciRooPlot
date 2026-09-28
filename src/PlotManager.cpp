@@ -37,6 +37,7 @@
 #include <TGraphErrors.h>
 #include <TH1.h>
 #include <TKey.h>
+#include <TList.h>
 #include <TPave.h>
 #include <TROOT.h>
 #include <TRootCanvas.h>
@@ -467,6 +468,10 @@ void PlotManager::AddPlot(Plot plot)
 //**************************************************************************************************
 void PlotManager::AddBasePlot(Plot basePlot)
 {
+  if (basePlot.GetName().empty()) {
+    ERROR("Cannot add base plot without a name.");
+    return;
+  }
   basePlot.SetGroup("BASE_PLOTS");
   mBasePlots.erase(std::remove_if(mBasePlots.begin(), mBasePlots.end(),
                                   [&basePlot](const Plot& curBasePlot) {
@@ -1078,32 +1083,38 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   bool isGif = false;
   string gifRepRate = "+50";  // number of centiseconds between frames
 
+  // names that become C++ identifiers in macros must not contain special characters
+  auto sanitize = [](string s) {
+    for (auto& c : s) {
+      if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') c = '_';
+    }
+    if (!s.empty() && std::isdigit(static_cast<unsigned char>(s.front()))) s = "_" + s;
+    return s;
+  };
+
   string fileEnding;
   if (isMacroMode) {
     fileEnding = ".C";
-    // object names are converted to variable names and therefore must not contain special characters
-    std::function<void(TPad*)> cleanNames;
-    cleanNames = [&](TPad* pad) {
-      auto sanitize = [](string s) {
-        for (auto& c : s) {
-          if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') c = '_';
-        }
-        if (!s.empty() && std::isdigit(static_cast<unsigned char>(s.front()))) s = "_" + s;
-        return s;
-      };
-      pad->SetName(sanitize(pad->GetName()).data());
-      TIter next(pad->GetListOfPrimitives());
-      TObject* object = nullptr;
-      while ((object = next())) {
-        if (object->InheritsFrom(TNamed::Class())) {
-          static_cast<TNamed*>(object)->SetName(sanitize(object->GetName()).data());
-          if (object->InheritsFrom(TPad::Class())) {
-            cleanNames(static_cast<TPad*>(object));
-          }
+    // ROOT converts the names of all drawn objects to valid variable names, but not the one of the canvas itself
+    canvas->SetName(sanitize(canvas->GetName()).data());
+    // objects drawn twice in a pad (e.g. the axis histogram) are declared twice in the macro for 2D histograms, which does not compile
+    std::function<void(TPad*)> cloneRedrawnHistograms;
+    cloneRedrawnHistograms = [&](TPad* pad) {
+      std::set<TObject*> drawnObjects;
+      int32_t nClones{};
+      for (auto link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+        TObject* object = link->GetObject();
+        if (auto subPad = dynamic_cast<TPad*>(object)) {
+          cloneRedrawnHistograms(subPad);
+        } else if (!drawnObjects.insert(object).second && object->InheritsFrom(TH1::Class())) {
+          auto clone = static_cast<TH1*>(object->Clone((string(object->GetName()) + "_" + std::to_string(++nClones)).data()));
+          clone->SetDirectory(nullptr);
+          clone->SetBit(kCanDelete);
+          link->SetObject(clone);
         }
       }
     };
-    cleanNames(canvas.get());
+    cloneRedrawnHistograms(canvas.get());
   } else if ((mode == "pdf") || (mode == "png") || (mode == "eps") || (mode == "svg") || (mode == "ps") || (mode == "html") || (mode == "json") || (mode == "xml") || (mode == "jpg") || (mode == "root")) {
     fileEnding = "." + mode;
   } else if (str_contains(mode, "gif")) {
@@ -1122,6 +1133,8 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   string fileName = plot.GetName();
   std::replace(fileName.begin(), fileName.end(), ':', '_');
   std::replace(fileName.begin(), fileName.end(), '/', '_');
+  // ROOT names the macro function after the file, so it must be a valid identifier as well
+  if (isMacroMode) fileName = sanitize(fileName);
 
   // create output folders and files
   string folderName = mOutputDirectory + "/" + plot.GetGroup();

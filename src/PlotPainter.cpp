@@ -187,6 +187,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
   double_t canvasWidth = plot.GetWidth().value_or(gStyle->GetCanvasDefW());
   double_t canvasHeight = plot.GetHeight().value_or(gStyle->GetCanvasDefH());
+  if (canvasWidth <= 0 || canvasHeight <= 0) {
+    ERROR("Plot {} has invalid dimensions {}x{}.", plot.GetName(), canvasWidth, canvasHeight);
+    return nullptr;
+  }
   // generate canvas with 'invisible' dummy size to avoid annoying popup window
   unique_ptr<TCanvas> canvas_ptr{new TCanvas("SRP_empty_scratch_canvas", plot.GetUniqueName().data(), 1., 1.)};
   // set actual name after ctor to avoid potential deletion of canvas with same name in root session
@@ -549,7 +553,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // remaining factors act on the final shape (NormalizeToMaximum after Cumulative -> CDF ending at 1)
             optional<double_t> scaleFactor;
             if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
-              scaleFactor = 1. / ptr->GetMaximum();
+              if (double_t maximum = ptr->GetMaximum(); maximum == 0.) {
+                warn("Cannot normalize {} to maximum because it is zero.", ptr->GetName());
+              } else {
+                scaleFactor = 1. / maximum;
+              }
             }
             if (auto factor = mods.GetScaleFactor()) {
               if (*factor <= 0.) {
@@ -614,7 +622,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (ptr->GetN() == 0) {
                 warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
               } else if (double_t maxY = TMath::MaxElement(ptr->GetN(), ptr->GetY()); maxY == 0.) {
-                warn("Cannot normalize graph to maximum because it is zero.");
+                warn("Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
               } else {
                 scaleFactor = 1. / maxY;
               }
@@ -648,7 +656,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (ptr->GetN() == 0) {
                 warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
               } else if (double_t maxZ = TMath::MaxElement(ptr->GetN(), ptr->GetZ()); maxZ == 0.) {
-                warn("Cannot normalize graph to maximum because it is zero.");
+                warn("Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
               } else {
                 scaleFactor = 1. / maxZ;
               }
