@@ -253,7 +253,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       *yLow <= *yUp;
 
     if (!valid) {
-      WARNING("Position of pad {} was not defined properly! Drawing it over whole plot.", padID);
+      // a plot with only one pad and no position for it is drawn over the whole plot by design
+      const bool isSinglePad = std::count_if(plot.GetPads().begin(), plot.GetPads().end(), [](const auto& p) { return p.first != 0; }) == 1;
+      if (!isSinglePad || xLow || yLow || xUp || yUp) {
+        WARNING("Position of pad {} was not defined properly! Drawing it over whole plot.", padID);
+      }
     } else {
       padPos = {*xLow, *yLow, *xUp, *yUp};
     }
@@ -1829,6 +1833,9 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     nDims = static_cast<THnBase*>(obj)->GetNdimensions();
   } else if (obj->InheritsFrom(TH1::Class())) {
     nDims = static_cast<TH1*>(obj)->GetDimension();
+  } else {
+    ERROR("Cannot do {} for type {} ({}).", (isProfile) ? "profiles" : "projections", obj->ClassName(), obj->GetName());
+    return nullopt;
   }
   for (auto dim : projInfo.dims) {
     if (dim >= nDims) {

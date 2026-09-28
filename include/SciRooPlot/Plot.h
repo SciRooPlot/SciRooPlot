@@ -655,6 +655,7 @@ class Plot::Pad::Data
       return !isProfileNoScatter.value_or(true) || entries.max.has_value();
     }
     std::string GetNameSuffix() const;
+    std::string GetDescription() const;  // human readable version of the name suffix
   };
 
  private:

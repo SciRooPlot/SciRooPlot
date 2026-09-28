@@ -58,6 +58,7 @@
 #include <memory>
 #include <regex>
 #include <set>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -76,6 +77,27 @@ using std::vector;
 
 namespace SciRooPlot
 {
+
+//**************************************************************************************************
+/**
+ * Extract the reason for a failed data query: the first compiler error printed by ROOT (if any) or the exception message.
+ */
+//**************************************************************************************************
+namespace
+{
+string GetErrorReason(const std::exception& exception, const string& rootOutput)
+{
+  std::istringstream lines(rootOutput);
+  for (string line; std::getline(lines, line);) {
+    if (auto pos = line.find("error: "); pos != string::npos) {
+      return line.substr(pos + 7);
+    }
+  }
+  string reason = exception.what();
+  reason.erase(0, reason.find_first_not_of(" \n"));
+  return reason.substr(0, reason.find('\n'));
+}
+}  // namespace
 
 //**************************************************************************************************
 /**
@@ -631,6 +653,14 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
 //**************************************************************************************************
 bool PlotManager::GeneratePlots(const string& mode, const string& name, const string& group)
 {
+  const vector<string> validModes{"show", "print", "file", "data", "macro", "pdf", "eps", "ps", "svg", "png", "jpg", "gif", "html", "json", "xml", "root"};
+  if (std::find(validModes.begin(), validModes.end(), mode) == validModes.end() && mode.rfind("gif+", 0) != 0) {
+    string modeList;
+    for (const auto& validMode : validModes)
+      modeList += validMode + ", ";
+    ERROR("Invalid mode '{}' (valid modes: {}gif+<centiseconds>).", mode, modeList);
+    return false;
+  }
   if ((mode == "show" || mode == "macro") && !mHasDisplay) {
     ERROR("Mode '{}' needs a graphical display (is DISPLAY set?).", mode);
     return false;
@@ -667,22 +697,19 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       }
       for (const auto& data : pad.GetData()) {
         mDataBuffer[data->GetDataSource()][data->GetName()];
-        if (data->GetDataInfo().dataDims.size()) {
-          auto& dataInfos = mDataInfoBuffer[data->GetDataSource()][data->GetName()];
-          auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
-          if (iter == dataInfos.end()) {
-            mDataInfoBuffer[data->GetDataSource()][data->GetName()].push_back(data->GetDataInfo());
-          }
+        // also register requests without projection info: trees and tables then report that they cannot be plotted directly
+        auto& dataInfos = mDataInfoBuffer[data->GetDataSource()][data->GetName()];
+        auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
+        if (iter == dataInfos.end()) {
+          dataInfos.push_back(data->GetDataInfo());
         }
         if (data->GetType() == "ratio") {
           const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
           mDataBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()];
-          if (ratio->GetDenomDataInfo().dataDims.size()) {
-            auto& dataInfos = mDataInfoBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()];
-            auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == ratio->GetDenomDataInfo().GetNameSuffix(); });
-            if (iter == dataInfos.end()) {
-              mDataInfoBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()].push_back(ratio->GetDenomDataInfo());
-            }
+          auto& denomDataInfos = mDataInfoBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()];
+          auto iter = std::find_if(denomDataInfos.begin(), denomDataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == ratio->GetDenomDataInfo().GetNameSuffix(); });
+          if (iter == denomDataInfos.end()) {
+            denomDataInfos.push_back(ratio->GetDenomDataInfo());
           }
         }
       }
@@ -703,8 +730,8 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
         auto missing = GetMissingData(*plot);
         if (!missing.empty()) {
           ++nAffectedPlots;
-          for (const auto& [dataSource, name, suffix] : missing) {
-            missingItems.emplace(dataSource, name + suffix);
+          for (const auto& [dataSource, name, dataInfo] : missing) {
+            missingItems.emplace(dataSource, name + dataInfo.GetNameSuffix());
           }
         }
       }
@@ -722,9 +749,9 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       if (!GeneratePlot(*plot, mode)) {
         auto missingData = GetMissingData(*plot);
         string message = fmt::format("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
-        for (const auto& [dataSource, name, suffix] : missingData) {
+        for (const auto& [dataSource, name, dataInfo] : missingData) {
           message += "\n         - missing " + dataSource + ":" + name;
-          if (!suffix.empty()) message += " [projection " + suffix + "]";
+          if (!dataInfo.dataDims.empty()) message += " [" + dataInfo.GetDescription() + "]";
           message += (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (data source not defined)" : "";
         }
         ERROR("{}", message);
@@ -924,34 +951,34 @@ void PlotManager::PrintBufferStatus(bool onlyMissing) const
  * Determine which of a plot's required data entries are missing from the buffer.
  */
 //**************************************************************************************************
-vector<std::tuple<string, string, string>> PlotManager::GetMissingData(Plot& plot)
+vector<std::tuple<string, string, Plot::Pad::Data::data_info_t>> PlotManager::GetMissingData(Plot& plot)
 {
-  vector<std::tuple<string, string, string>> missing;
-  auto checkKey = [&](const string& dataSource, const string& name, const string& suffix) {
+  vector<std::tuple<string, string, Plot::Pad::Data::data_info_t>> missing;
+  auto checkKey = [&](const string& dataSource, const string& name, const Plot::Pad::Data::data_info_t& dataInfo) {
     auto sourceIt = mDataBuffer.find(dataSource);
     if (sourceIt != mDataBuffer.end()) {
-      auto nameIt = sourceIt->second.find(name + suffix);
+      auto nameIt = sourceIt->second.find(name + dataInfo.GetNameSuffix());
       if (nameIt != sourceIt->second.end() && nameIt->second) return;  // found and not null
     }
-    missing.emplace_back(dataSource, name, suffix);
+    missing.emplace_back(dataSource, name, dataInfo);
   };
 
   for (auto& [padID, pad] : plot.GetPads()) {
     if (auto& refFunc = pad.GetRefFunc()) {
-      checkKey(refFunc->GetDataSource(), refFunc->GetName(), refFunc->GetDataInfo().GetNameSuffix());
+      checkKey(refFunc->GetDataSource(), refFunc->GetName(), refFunc->GetDataInfo());
     } else if (plot.GetBasePlotName()) {
       auto it = std::find_if(mBasePlots.begin(), mBasePlots.end(), [&](const auto& basePlot) { return *plot.GetBasePlotName() == basePlot.GetName(); });
       if (it != mBasePlots.end()) {
         if (auto& baseRefFunc = (*it).GetPad(padID).GetRefFunc()) {
-          checkKey(baseRefFunc->GetDataSource(), baseRefFunc->GetName(), baseRefFunc->GetDataInfo().GetNameSuffix());
+          checkKey(baseRefFunc->GetDataSource(), baseRefFunc->GetName(), baseRefFunc->GetDataInfo());
         }
       }
     }
     for (const auto& data : pad.GetData()) {
-      checkKey(data->GetDataSource(), data->GetName(), data->GetDataInfo().GetNameSuffix());
+      checkKey(data->GetDataSource(), data->GetName(), data->GetDataInfo());
       if (data->GetType() == "ratio") {
         const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-        checkKey(ratio->GetDenomDataSource(), ratio->GetDenomName(), ratio->GetDenomDataInfo().GetNameSuffix());
+        checkKey(ratio->GetDenomDataSource(), ratio->GetDenomName(), ratio->GetDenomDataInfo());
       }
     }
   }
@@ -1290,16 +1317,21 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
             // do all requested projections of this tree
             for (auto& dataInfo : mDataInfoBuffer[dataSource][fullName]) {
               string dataFullName = fullName + dataInfo.GetNameSuffix();
+              if (dataInfo.dataDims.empty()) {
+                ERROR("Cannot plot tree {}:{} directly, specify what to extract from it (Project, Profile or Scatter).", dataSource, fullName);
+                continue;
+              }
+              std::ostringstream rootOutput;
               try {
-                SUPPRESS_CERR(true);
-                auto stderrGuard = make_scope_guard([]() { SUPPRESS_CERR(false); });
+                auto* cerrBuffer = std::cerr.rdbuf(rootOutput.rdbuf());  // capture ROOT output, only shown if something goes wrong
+                auto cerrGuard = make_scope_guard([cerrBuffer]() { std::cerr.rdbuf(cerrBuffer); });
                 bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
                 if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
                 auto mtGuard = make_scope_guard([wasMTEnabled]() { if (wasMTEnabled) ROOT::EnableImplicitMT(); });
                 ROOT::RDataFrame df(*tree);
                 obj = ProcessData(df, fullName, dataInfo, dataFullName + suffix);
-              } catch (const std::runtime_error& e) {
-                ERROR("Invalid query for tree {}:{} (projection {}): {}", dataSource, fullName, dataInfo.GetNameSuffix(), e.what());
+              } catch (const std::exception& e) {
+                ERROR("Invalid query for tree {}:{} ({}): {}", dataSource, fullName, dataInfo.GetDescription(), GetErrorReason(e, rootOutput.str()));
                 obj = nullptr;
               }
               mDataBuffer[dataSource][dataFullName].reset(obj);
@@ -1362,17 +1394,26 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
   }
   for (auto& dataInfo : mDataInfoBuffer[dataSource][name]) {
     string dataName = name + dataInfo.GetNameSuffix();
+    if (dataInfo.dataDims.empty()) {
+      ERROR("Cannot plot table {}:{} directly, specify what to extract from it (Project, Profile or Scatter).", dataSource, name);
+      continue;
+    }
     TObject* obj = nullptr;
+    std::ostringstream rootOutput;
     try {
-      SUPPRESS_CERR(true);
-      auto stderrGuard = make_scope_guard([]() { SUPPRESS_CERR(false); });
+      auto* cerrBuffer = std::cerr.rdbuf(rootOutput.rdbuf());  // capture ROOT output, only shown if something goes wrong
+      auto cerrGuard = make_scope_guard([cerrBuffer]() { std::cerr.rdbuf(cerrBuffer); });
       bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
       if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
       auto mtGuard = make_scope_guard([wasMTEnabled]() { if (wasMTEnabled) ROOT::EnableImplicitMT(); });
       ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter, 50000);
       obj = ProcessData(df, name, dataInfo, dataName + ":" + dataSource);
-    } catch (const std::runtime_error& e) {
-      ERROR("Invalid query for table {}:{} (projection {}): {}", dataSource, name, dataInfo.GetNameSuffix(), e.what());
+    } catch (const std::invalid_argument&) {
+      // thrown by the csv reader if a value does not match the column type deduced from the first lines
+      ERROR("Cannot read table {}:{}: it contains a value that does not match the type of its column.", dataSource, name);
+      obj = nullptr;
+    } catch (const std::exception& e) {
+      ERROR("Invalid query for table {}:{} ({}): {}", dataSource, name, dataInfo.GetDescription(), GetErrorReason(e, rootOutput.str()));
       obj = nullptr;
     }
     mDataBuffer[dataSource][dataName].reset(obj);

@@ -2272,6 +2272,34 @@ string Plot::Pad::Data::data_info_t::GetNameSuffix() const
   return nameSuffix;
 }
 
+//**************************************************************************************************
+/**
+ * Human readable description of tree projections (used in messages).
+ */
+//**************************************************************************************************
+string Plot::Pad::Data::data_info_t::GetDescription() const
+{
+  string description = !isProfileNoScatter ? "projection" : (*isProfileNoScatter ? "profile" : "scatter");
+  for (size_t i = 0; i < dataDims.size(); ++i) {
+    description += ((i == 0) ? " of " : ", ") + dataDims[i].var;
+  }
+  if (definitions.keys && definitions.values) {
+    for (size_t i = 0; i < definitions.keys->size() && i < definitions.values->size(); ++i) {
+      description += "; Define " + definitions.keys->at(i) + " = " + definitions.values->at(i);
+    }
+  }
+  if (filters) {
+    for (const auto& filter : *filters) {
+      description += "; Filter " + filter;
+    }
+  }
+  if (weight) description += "; weight " + *weight;
+  if (entries.min || entries.max) {
+    description += "; entries " + (entries.min ? std::to_string(*entries.min) : "") + "-" + (entries.max ? std::to_string(*entries.max) : "");
+  }
+  return description;
+}
+
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 // IMPLEMENTATION class Ratio
