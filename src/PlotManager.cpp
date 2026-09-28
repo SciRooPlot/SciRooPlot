@@ -23,6 +23,7 @@
 #include "SciRooPlot/PlotPainter.h"
 
 #include <ROOT/RCsvDS.hxx>
+#include <ROOT/RDFHelpers.hxx>
 #include <ROOT/RDataFrame.hxx>
 #include <TApplication.h>
 #include <TCanvas.h>
@@ -49,6 +50,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -721,6 +723,18 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     return false;
   }
 
+  size_t nItemsToRead{};
+  set<string> sourcesToRead;
+  for (const auto& [dataSource, buffer] : mDataBuffer) {
+    for (const auto& [dataName, dataPtr] : buffer) {
+      if (dataPtr) continue;
+      ++nItemsToRead;
+      sourcesToRead.insert(dataSource);
+    }
+  }
+  if (nItemsToRead) {
+    INFO("Reading {} data item{} from {} data source{} ...", nItemsToRead, (nItemsToRead == 1) ? "" : "s", sourcesToRead.size(), (sourcesToRead.size() == 1) ? "" : "s");
+  }
   try {
     if (!FillBuffer()) {
       // PrintBufferStatus(true);
@@ -744,6 +758,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     mPlotViewHistory.clear();
 
     // generate plots
+    if (nItemsToRead) INFO("Creating plots ...");
     bool allCreated = true;
     for (auto plot : selectedPlots) {
       if (!GeneratePlot(*plot, mode)) {
@@ -1314,28 +1329,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
           if (obj->InheritsFrom(TTree::Class())) {
             TTree* tree = static_cast<TTree*>(obj);
             mDataBuffer[dataSource][fullName].reset(nullptr);
-            // do all requested projections of this tree
-            for (auto& dataInfo : mDataInfoBuffer[dataSource][fullName]) {
-              string dataFullName = fullName + dataInfo.GetNameSuffix();
-              if (dataInfo.dataDims.empty()) {
-                ERROR("Cannot plot tree {}:{} directly, specify what to extract from it (Project, Profile or Scatter).", dataSource, fullName);
-                continue;
-              }
-              std::ostringstream rootOutput;
-              try {
-                auto* cerrBuffer = std::cerr.rdbuf(rootOutput.rdbuf());  // capture ROOT output, only shown if something goes wrong
-                auto cerrGuard = make_scope_guard([cerrBuffer]() { std::cerr.rdbuf(cerrBuffer); });
-                bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
-                if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
-                auto mtGuard = make_scope_guard([wasMTEnabled]() { if (wasMTEnabled) ROOT::EnableImplicitMT(); });
-                ROOT::RDataFrame df(*tree);
-                obj = ProcessData(df, fullName, dataInfo, dataFullName + suffix);
-              } catch (const std::exception& e) {
-                ERROR("Invalid query for tree {}:{} ({}): {}", dataSource, fullName, dataInfo.GetDescription(), GetErrorReason(e, rootOutput.str()));
-                obj = nullptr;
-              }
-              mDataBuffer[dataSource][dataFullName].reset(obj);
-            }
+            ProcessDataRequests("tree", dataSource, fullName, suffix, [tree]() { return std::make_unique<ROOT::RDataFrame>(*tree); });
             tree->SetDirectory(0);
             delete tree;
           } else if (auto* namedObj = dynamic_cast<TNamed*>(obj)) {
@@ -1392,32 +1386,7 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
     }
     ++lineCount;
   }
-  for (auto& dataInfo : mDataInfoBuffer[dataSource][name]) {
-    string dataName = name + dataInfo.GetNameSuffix();
-    if (dataInfo.dataDims.empty()) {
-      ERROR("Cannot plot table {}:{} directly, specify what to extract from it (Project, Profile or Scatter).", dataSource, name);
-      continue;
-    }
-    TObject* obj = nullptr;
-    std::ostringstream rootOutput;
-    try {
-      auto* cerrBuffer = std::cerr.rdbuf(rootOutput.rdbuf());  // capture ROOT output, only shown if something goes wrong
-      auto cerrGuard = make_scope_guard([cerrBuffer]() { std::cerr.rdbuf(cerrBuffer); });
-      bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
-      if (dataInfo.singleProc()) ROOT::DisableImplicitMT();
-      auto mtGuard = make_scope_guard([wasMTEnabled]() { if (wasMTEnabled) ROOT::EnableImplicitMT(); });
-      ROOT::RDataFrame df = ROOT::RDF::FromCSV(inputFileName, true, delimiter, 50000);
-      obj = ProcessData(df, name, dataInfo, dataName + ":" + dataSource);
-    } catch (const std::invalid_argument&) {
-      // thrown by the csv reader if a value does not match the column type deduced from the first lines
-      ERROR("Cannot read table {}:{}: it contains a value that does not match the type of its column.", dataSource, name);
-      obj = nullptr;
-    } catch (const std::exception& e) {
-      ERROR("Invalid query for table {}:{} ({}): {}", dataSource, name, dataInfo.GetDescription(), GetErrorReason(e, rootOutput.str()));
-      obj = nullptr;
-    }
-    mDataBuffer[dataSource][dataName].reset(obj);
-  }
+  ProcessDataRequests("table", dataSource, name, ":" + dataSource, [&]() { return std::make_unique<ROOT::RDataFrame>(ROOT::RDF::FromCSV(inputFileName, true, delimiter, 50000)); });
 }
 
 //**************************************************************************************************
@@ -1472,45 +1441,66 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs)
 
 //**************************************************************************************************
 /**
- * Process RDataFrame according to the settings stored in dataInfo.
+ * Helpers to process the data requests (projections, profiles, scatter plots) of trees and tables.
+ * All requests of one tree or table are booked on the same data frame so the data is read only once.
  */
 //**************************************************************************************************
-TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, const Plot::Pad::Data::data_info_t& dataInfo, const string& name) const
+namespace
 {
-  bool isProfile = false;
-  bool isScatter = false;
-  if (dataInfo.isProfileNoScatter) {
-    isProfile = *dataInfo.isProfileNoScatter;
-    isScatter = !isProfile;
-  }
-  bool isProjection = (!isProfile && !isScatter);
-  bool hasWeights = false;
+using data_dim_t = Plot::Pad::Data::data_dim_t;
 
-  auto dataDims = dataInfo.dataDims;  // make copy here so it can be modified
-  if (isProfile && dataDims.size() > 3) {
-    ERROR("Too many dimensions specified for profile of {}.", dfName);
-    return nullptr;
+// one request booked on a data frame (template since the type of the request info is only accessible to PlotManager)
+template <typename DataInfo>
+struct data_request_t {
+  const DataInfo* info{};
+  string context;  // e.g. 'tree source:name', used in messages
+  string objName;  // name of the resulting object
+  std::optional<ROOT::RDF::RNode> node;
+  vector<data_dim_t> dims;
+  string histTitle;
+  bool isProfile{};
+  bool isScatter{};
+  bool hasWeights{};
+  std::optional<ROOT::RDF::RResultPtr<ULong64_t>> nEntriesPreFilter;
+  std::optional<ROOT::RDF::RResultPtr<ULong64_t>> nEntriesPostFilter;
+  vector<std::optional<std::pair<ROOT::RDF::RResultPtr<double_t>, ROOT::RDF::RResultPtr<double_t>>>> autoRanges;  // (min, max) per axis
+  std::function<TObject*()> getResult;
+  vector<ROOT::RDF::RResultHandle> handles;
+};
+
+// book everything that is needed before the final result can be booked (defines, filters, entry counts, auto-detection of axis ranges)
+template <typename Request>
+bool PrepareRequest(ROOT::RDF::RNode node, Request& request)
+{
+  const auto& dataInfo = *request.info;
+  if (dataInfo.isProfileNoScatter) {
+    request.isProfile = *dataInfo.isProfileNoScatter;
+    request.isScatter = !request.isProfile;
+  }
+  bool isProjection = (!request.isProfile && !request.isScatter);
+
+  request.dims = dataInfo.dataDims;  // copy since it will be modified
+  if (request.isProfile && request.dims.size() > 3) {
+    ERROR("Too many dimensions specified for profile of {} ({}).", request.context, dataInfo.GetDescription());
+    return false;
   }
   size_t axisID = 1;
-  for (auto& dataDim : dataDims) {
-    if (isProjection || (isProfile && axisID < dataDims.size())) {
+  for (auto& dataDim : request.dims) {
+    if (isProjection || (request.isProfile && axisID < request.dims.size())) {
       // sanity check for binned axes
       if ((dataDim.nBins && dataDim.edges.size() != 2) || (!dataDim.nBins && dataDim.edges.size() <= 1)) {
-        ERROR("Can't project tree {} due to ill defined binning for {}.", dfName, dataDim.var);
-        return nullptr;
+        ERROR("Ill defined binning for {} in {} ({}).", dataDim.var, request.context, dataInfo.GetDescription());
+        return false;
       }
       if (!std::is_sorted(dataDim.edges.begin(), dataDim.edges.end())) {
         if (!(dataDim.edges.size() == 2 && !dataDim.edges[0] && !dataDim.edges[1])) {
-          ERROR("Can't project tree {} due to ill defined binning for {}.", dfName, dataDim.var);
-          return nullptr;
+          ERROR("Ill defined binning for {} in {} ({}).", dataDim.var, request.context, dataInfo.GetDescription());
+          return false;
         }
       }
     }
     ++axisID;
   }
-
-  TObject* obj = nullptr;
-  ROOT::RDF::RNode node = df;  // working node
 
   if (dataInfo.definitions.keys && dataInfo.definitions.values) {
     for (size_t i = 0; i < dataInfo.definitions.keys->size(); ++i) {
@@ -1524,130 +1514,159 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
       node = node.Range(*dataInfo.entries.max);
     }
   }
-  auto nEntriesPreFilter = node.Count();
   if (dataInfo.filters) {
-    for (size_t i = 0; i < dataInfo.filters->size(); ++i) {
+    request.nEntriesPreFilter = node.Count();
+    for (const auto& filter : *dataInfo.filters) {
       try {
-        node = node.Filter(dataInfo.filters->at(i));
+        node = node.Filter(filter);
       } catch (const std::runtime_error&) {
-        ERROR("Illegal expression in filter: {}.", dataInfo.filters->at(i));
-        return nullptr;
+        ERROR("Illegal filter expression {} for {}.", filter, request.context);
+        return false;
       }
     }
-    auto nEntriesPostFilter = node.Count();
-    if (nEntriesPostFilter && nEntriesPreFilter) {
-      INFO("Processing {} entries ({:.2f}%) of {}.", (*nEntriesPostFilter), 100. * (*nEntriesPostFilter) / (*nEntriesPreFilter), dfName);
-    }
-  } else {
-    if (nEntriesPreFilter) {
-      INFO("Processing {} entries of {}.", *nEntriesPreFilter, dfName);
-    }
   }
+  request.nEntriesPostFilter = node.Count();
 
-  string histTitle;
   axisID = 1;
-  for (auto& dataDim : dataDims) {
+  request.autoRanges.resize(request.dims.size());
+  for (auto& dataDim : request.dims) {
     string colName = "SRP_AXIS_" + std::to_string(axisID);
     try {
       node = node.Define(colName, dataDim.var);
     } catch (const std::runtime_error&) {
-      ERROR("Illegal expression: {}.", dataDim.var);
-      return nullptr;
+      ERROR("Illegal expression {} for {}.", dataDim.var, request.context);
+      return false;
     }
     if (node.GetColumnType(colName).find("string") != string::npos) {
-      ERROR("Variable expression {} is not numeric.", dataDim.var);
-      return nullptr;
+      ERROR("Expression {} for {} is not numeric.", dataDim.var, request.context);
+      return false;
     }
-    if (dataDim.nBins && dataDim.edges.size() == 2 && !dataDim.edges[0] && !dataDim.edges[1]) {
+    const bool isBinned = isProjection || (request.isProfile && axisID < request.dims.size());
+    if (isBinned && dataDim.nBins && dataDim.edges.size() == 2 && !dataDim.edges[0] && !dataDim.edges[1]) {
       // auto-detect bin edges given the data
-      auto max = node.Max("SRP_AXIS_" + std::to_string(axisID));
-      auto min = node.Min("SRP_AXIS_" + std::to_string(axisID));
-      double_t margin = 0.01;
-      dataDim.edges[0] = (*min) * ((*min) > 0 ? (1. - margin) : (1. + margin));
-      dataDim.edges[1] = (*max) * ((*max) > 0 ? (1. + margin) : (1. - margin));
+      request.autoRanges[axisID - 1] = std::make_pair(node.Min(colName), node.Max(colName));
     }
-    if (isProfile && axisID == dataDims.size()) {
-      histTitle += ";#LT " + dataDim.var + " #GT";
+    if (request.isProfile && axisID == request.dims.size()) {
+      request.histTitle += ";#LT " + dataDim.var + " #GT";
     } else {
-      histTitle += ";" + dataDim.var;
+      request.histTitle += ";" + dataDim.var;
     }
     ++axisID;
   }
-  if (isScatter) {
-    if (dataDims.size() == 2) {
-      obj = node.Graph("SRP_AXIS_1", "SRP_AXIS_2")->Clone(name.data());
-    } else if (dataDims.size() == 4) {
-      obj = node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_4")->Clone(name.data());
-    } else if (dataDims.size() == 6) {
-      obj = node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_5", "SRP_AXIS_6")->Clone(name.data());
-    } else {
-      ERROR("Invalid number of columns for scatter data.");
-      return nullptr;
-    }
-    if (obj && obj->InheritsFrom(TGraph::Class())) {
-      TGraph* graph = static_cast<TGraph*>(obj);
-      graph->SetTitle(histTitle.data());
-      return graph;
-    }
+  if (!request.isProfile && !request.isScatter) {
+    request.histTitle += (dataInfo.weight) ? ";weighted counts" : ";counts";
   }
-  if (!isProfile) {
-    histTitle += (dataInfo.weight) ? ";weighted counts" : ";counts";
-  }
-
-  if (dataInfo.weight) {
+  if (dataInfo.weight && !request.isScatter) {
     try {
       node = node.Define("SRP_AXIS_W", *dataInfo.weight);
     } catch (const std::runtime_error&) {
-      ERROR("Illegal expression for weights: {}.", *dataInfo.weight);
-      return nullptr;
+      ERROR("Illegal weight expression {} for {}.", *dataInfo.weight, request.context);
+      return false;
     }
-    hasWeights = true;
+    request.hasWeights = true;
+  }
+  request.node = node;
+  return true;
+}
+
+template <typename Request>
+bool NeedsAutoRange(const Request& request)
+{
+  return std::any_of(request.autoRanges.begin(), request.autoRanges.end(), [](const auto& range) { return range.has_value(); });
+}
+
+// store the result of the booked action and its handle
+template <typename Request, typename T>
+void SetResult(Request& request, ROOT::RDF::RResultPtr<T> result)
+{
+  request.handles.emplace_back(result);
+  request.getResult = [result, name = request.objName, title = request.histTitle]() mutable -> TObject* {
+    auto obj = static_cast<T*>(result->Clone(name.data()));
+    if constexpr (std::is_base_of_v<TH1, T>) {
+      obj->SetDirectory(nullptr);
+    } else if constexpr (std::is_base_of_v<TGraph, T>) {
+      obj->SetTitle(title.data());
+    }
+    return obj;
+  };
+}
+
+// book the final result (once the axis ranges are known)
+template <typename Request>
+bool BookRequest(Request& request)
+{
+  auto& node = *request.node;
+  auto& dataDims = request.dims;
+  for (size_t i = 0; i < dataDims.size(); ++i) {
+    if (auto& range = request.autoRanges[i]) {
+      double_t min = *range->first;
+      double_t max = *range->second;
+      double_t margin = 0.01;
+      dataDims[i].edges[0] = min * (min > 0 ? (1. - margin) : (1. + margin));
+      dataDims[i].edges[1] = max * (max > 0 ? (1. + margin) : (1. - margin));
+    }
+  }
+  const char* title = request.histTitle.data();
+
+  if (request.isScatter) {
+    if (dataDims.size() == 2) {
+      SetResult(request, node.Graph("SRP_AXIS_1", "SRP_AXIS_2"));
+    } else if (dataDims.size() == 4) {
+      SetResult(request, node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_4"));
+    } else if (dataDims.size() == 6) {
+      SetResult(request, node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_5", "SRP_AXIS_6"));
+    } else {
+      ERROR("Invalid number of columns for scatter plot of {}.", request.context);
+      return false;
+    }
+    return true;
   }
 
+  const bool hasWeights = request.hasWeights;
   if (dataDims.size() == 1) {
     auto histModel = ROOT::RDF::TH1DModel();
     auto& dataDim1 = dataDims.at(0);
 
     if (!dataDim1.nBins) {
-      histModel = ROOT::RDF::TH1DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data());
+      histModel = ROOT::RDF::TH1DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data());
     } else {
-      histModel = ROOT::RDF::TH1DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1]);
+      histModel = ROOT::RDF::TH1DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1]);
     }
     if (hasWeights) {
-      obj = node.Histo1D(histModel, "SRP_AXIS_1", "SRP_AXIS_W")->Clone(name.data());
+      SetResult(request, node.Histo1D(histModel, "SRP_AXIS_1", "SRP_AXIS_W"));
     } else {
-      obj = node.Histo1D(histModel, "SRP_AXIS_1")->Clone(name.data());
+      SetResult(request, node.Histo1D(histModel, "SRP_AXIS_1"));
     }
   } else if (dataDims.size() == 2) {
     auto& dataDim1 = dataDims.at(0);
     auto& dataDim2 = dataDims.at(1);
-    if (isProfile) {
+    if (request.isProfile) {
       auto profileModel = ROOT::RDF::TProfile1DModel();
       if (!dataDim1.nBins) {
-        profileModel = ROOT::RDF::TProfile1DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data());
+        profileModel = ROOT::RDF::TProfile1DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data());
       } else {
-        profileModel = ROOT::RDF::TProfile1DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1]);
+        profileModel = ROOT::RDF::TProfile1DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1]);
       }
       if (hasWeights) {
-        obj = node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W")->Clone(name.data());
+        SetResult(request, node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W"));
       } else {
-        obj = node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2")->Clone(name.data());
+        SetResult(request, node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2"));
       }
     } else {
       auto histModel = ROOT::RDF::TH2DModel();
       if (!dataDim1.nBins && !dataDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
+        histModel = ROOT::RDF::TH2DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
       } else if (dataDim1.nBins && dataDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
+        histModel = ROOT::RDF::TH2DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       } else if (dataDim1.nBins && !dataDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
+        histModel = ROOT::RDF::TH2DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
       } else if (!dataDim1.nBins && dataDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
+        histModel = ROOT::RDF::TH2DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       }
       if (hasWeights) {
-        obj = node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W")->Clone(name.data());
+        SetResult(request, node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W"));
       } else {
-        obj = node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2")->Clone(name.data());
+        SetResult(request, node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2"));
       }
     }
   } else if (dataDims.size() == 3) {
@@ -1655,26 +1674,26 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
     auto& dataDim2 = dataDims.at(1);
     auto& dataDim3 = dataDims.at(2);
 
-    if (isProfile) {
+    if (request.isProfile) {
       auto profileModel = ROOT::RDF::TProfile2DModel();
       if (!dataDim1.nBins && !dataDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
+        profileModel = ROOT::RDF::TProfile2DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
       } else if (dataDim1.nBins && dataDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
+        profileModel = ROOT::RDF::TProfile2DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       } else if (dataDim1.nBins && !dataDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
+        profileModel = ROOT::RDF::TProfile2DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
       } else if (!dataDim1.nBins && dataDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
+        profileModel = ROOT::RDF::TProfile2DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       }
       if (hasWeights) {
-        obj = node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W")->Clone(name.data());
+        SetResult(request, node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W"));
       } else {
-        obj = node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3")->Clone(name.data());
+        SetResult(request, node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3"));
       }
     } else {
       auto histModel = ROOT::RDF::TH3DModel();
       if (dataDim1.nBins && dataDim2.nBins && dataDim3.nBins) {
-        histModel = ROOT::RDF::TH3DModel("tmp", histTitle.data(), dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1], dataDim3.nBins, dataDim3.edges[0], dataDim3.edges[1]);
+        histModel = ROOT::RDF::TH3DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1], dataDim3.nBins, dataDim3.edges[0], dataDim3.edges[1]);
       } else {
         // first convert all fixed size bins to variable size bining
         for (auto& dataDim : dataDims) {
@@ -1688,66 +1707,188 @@ TObject* PlotManager::ProcessData(ROOT::RDataFrame& df, const string& dfName, co
             dataDim.nBins = 0;
           }
         }
-        histModel = ROOT::RDF::TH3DModel("tmp", histTitle.data(), static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data(), static_cast<int32_t>(dataDim3.edges.size()) - 1, dataDim3.edges.data());
+        histModel = ROOT::RDF::TH3DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data(), static_cast<int32_t>(dataDim3.edges.size()) - 1, dataDim3.edges.data());
       }
       if (hasWeights) {
-        obj = node.Histo3D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W")->Clone(name.data());
+        SetResult(request, node.Histo3D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W"));
       } else {
-        obj = node.Histo3D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3")->Clone(name.data());
+        SetResult(request, node.Histo3D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3"));
       }
     }
   } else {
-    if (isProfile) {
-      ERROR("Too many dimensions for a profile.");
-    } else {
-      auto histModel = ROOT::RDF::THnDModel();
-      bool allFixed = true;
-      vector<int32_t> nBinsVec;
-      vector<double_t> xMinVec;
-      vector<double_t> xMaxVec;
-      for (auto& dataDim : dataDims) {
-        if (!dataDim.nBins) {
-          allFixed = false;
-          nBinsVec.push_back(static_cast<int32_t>(dataDim.edges.size()) - 1);
-        } else {
-          nBinsVec.push_back(dataDim.nBins);
-          xMinVec.push_back(dataDim.edges[0]);
-          xMaxVec.push_back(dataDim.edges[1]);
-        }
-      }
-
-      if (allFixed) {
-        histModel = ROOT::RDF::THnDModel("tmp", histTitle.data(), static_cast<int32_t>(dataDims.size()), nBinsVec, xMinVec, xMaxVec);
-      } else {
-        vector<vector<double_t>> xBins;
-        for (auto& dataDim : dataDims) {
-          if (dataDim.nBins) {
-            double_t binWidth = (dataDim.edges[1] - dataDim.edges[0]) / dataDim.nBins;
-            vector<double_t> edges = {dataDim.edges[0]};
-            for (int32_t i = 1; i <= dataDim.nBins; ++i) {
-              edges.push_back(dataDim.edges[0] + i * binWidth);
-            }
-            dataDim.edges = edges;
-            dataDim.nBins = 0;
-          }
-          xBins.push_back(dataDim.edges);
-        }
-        histModel = ROOT::RDF::THnDModel("tmp", histTitle.data(), static_cast<int32_t>(dataDims.size()), nBinsVec, xBins);
-      }
-      vector<string> colNames;
-      axisID = 1;
-      for (size_t i = 0; i < dataDims.size(); ++i) {
-        colNames.push_back("SRP_AXIS_" + std::to_string(axisID));
-        ++axisID;
-      }
-      if (hasWeights) {
-        colNames.push_back("SRP_AXIS_W");
-      }
-      obj = node.HistoND(histModel, colNames)->Clone(name.data());
+    if (request.isProfile) {
+      ERROR("Too many dimensions for a profile of {}.", request.context);
+      return false;
     }
+    auto histModel = ROOT::RDF::THnDModel();
+    bool allFixed = true;
+    vector<int32_t> nBinsVec;
+    vector<double_t> xMinVec;
+    vector<double_t> xMaxVec;
+    for (auto& dataDim : dataDims) {
+      if (!dataDim.nBins) {
+        allFixed = false;
+        nBinsVec.push_back(static_cast<int32_t>(dataDim.edges.size()) - 1);
+      } else {
+        nBinsVec.push_back(dataDim.nBins);
+        xMinVec.push_back(dataDim.edges[0]);
+        xMaxVec.push_back(dataDim.edges[1]);
+      }
+    }
+
+    if (allFixed) {
+      histModel = ROOT::RDF::THnDModel("tmp", title, static_cast<int32_t>(dataDims.size()), nBinsVec, xMinVec, xMaxVec);
+    } else {
+      vector<vector<double_t>> xBins;
+      for (auto& dataDim : dataDims) {
+        if (dataDim.nBins) {
+          double_t binWidth = (dataDim.edges[1] - dataDim.edges[0]) / dataDim.nBins;
+          vector<double_t> edges = {dataDim.edges[0]};
+          for (int32_t i = 1; i <= dataDim.nBins; ++i) {
+            edges.push_back(dataDim.edges[0] + i * binWidth);
+          }
+          dataDim.edges = edges;
+          dataDim.nBins = 0;
+        }
+        xBins.push_back(dataDim.edges);
+      }
+      histModel = ROOT::RDF::THnDModel("tmp", title, static_cast<int32_t>(dataDims.size()), nBinsVec, xBins);
+    }
+    vector<string> colNames;
+    for (size_t i = 0; i < dataDims.size(); ++i) {
+      colNames.push_back("SRP_AXIS_" + std::to_string(i + 1));
+    }
+    if (hasWeights) {
+      colNames.push_back("SRP_AXIS_W");
+    }
+    SetResult(request, node.HistoND(histModel, colNames));
   }
-  if (obj && obj->InheritsFrom(TH1::Class())) static_cast<TH1*>(obj)->SetDirectory(0);
-  return obj;
+  return true;
+}
+}  // namespace
+
+//**************************************************************************************************
+/**
+ * Process all requests (projections, profiles, scatter plots) of one tree or table.
+ * The requests are booked together, so the data is read in one go (plus one pass for requests that auto-detect their axis ranges).
+ * Requests that must be processed sequentially (scatter plots, entry ranges) share a separate single-threaded pass.
+ */
+//**************************************************************************************************
+void PlotManager::ProcessDataRequests(const string& type, const string& dataSource, const string& name, const string& objNameSuffix,
+                                      const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame)
+{
+  using data_info_t = Plot::Pad::Data::data_info_t;
+  auto start = std::chrono::steady_clock::now();
+  vector<const data_info_t*> parallelInfos;
+  vector<const data_info_t*> sequentialInfos;
+  for (auto& dataInfo : mDataInfoBuffer[dataSource][name]) {
+    if (dataInfo.dataDims.empty()) {
+      ERROR("Cannot plot {} {}:{} directly, specify what to extract from it (Project, Profile or Scatter).", type, dataSource, name);
+      continue;
+    }
+    (dataInfo.singleProc() ? sequentialInfos : parallelInfos).push_back(&dataInfo);
+  }
+  if (parallelInfos.empty() && sequentialInfos.empty()) return;
+
+  optional<ULong64_t> nEntries;
+  uint32_t nPasses{};
+  uint32_t nRequests{};
+  vector<std::pair<const data_info_t*, std::pair<optional<ULong64_t>, ULong64_t>>> entryCounts;  // (entries before filter, after filter)
+
+  // process a group of requests on a common data frame
+  std::function<void(const vector<const data_info_t*>&, bool)> processGroup;
+  processGroup = [&](const vector<const data_info_t*>& infos, bool sequential) {
+    std::ostringstream rootOutput;
+    vector<data_request_t<data_info_t>> requests;  // successfully booked requests
+    try {
+      auto* cerrBuffer = std::cerr.rdbuf(rootOutput.rdbuf());  // capture ROOT output, only shown if something goes wrong
+      auto cerrGuard = make_scope_guard([cerrBuffer]() { std::cerr.rdbuf(cerrBuffer); });
+      bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
+      if (sequential) ROOT::DisableImplicitMT();
+      auto mtGuard = make_scope_guard([wasMTEnabled]() { if (wasMTEnabled) ROOT::EnableImplicitMT(); });
+      auto df = makeDataFrame();
+      auto nEntriesTotal = df->Count();
+      auto passGuard = make_scope_guard([&]() { nPasses += df->GetNRuns(); });
+
+      for (auto info : infos) {
+        data_request_t<data_info_t> request;
+        request.info = info;
+        request.context = fmt::format("{} {}:{}", type, dataSource, name);
+        request.objName = name + info->GetNameSuffix() + objNameSuffix;
+        auto outputStart = static_cast<size_t>(rootOutput.tellp());  // only consider ROOT output caused by this request
+        try {
+          if (PrepareRequest(*df, request)) requests.push_back(std::move(request));
+        } catch (const std::invalid_argument&) {
+          throw;
+        } catch (const std::exception& e) {
+          ERROR("Invalid query for {} {}:{} ({}): {}", type, dataSource, name, info->GetDescription(), GetErrorReason(e, rootOutput.str().substr(outputStart)));
+        }
+      }
+      // a pass to determine the axis ranges is only required if some request wants them to be auto-detected
+      for (auto& request : requests) {
+        if (NeedsAutoRange(request)) {
+          *nEntriesTotal;  // starts the event loop for everything booked so far
+          break;
+        }
+      }
+      vector<ROOT::RDF::RResultHandle> handles;
+      for (auto& request : requests) {
+        if (BookRequest(request)) {
+          for (auto& handle : request.handles)
+            handles.push_back(handle);
+        } else {
+          request.getResult = nullptr;
+        }
+      }
+      handles.emplace_back(nEntriesTotal);
+      vector<ROOT::RDF::RResultHandle> pendingHandles;
+      for (auto& handle : handles) {
+        if (!handle.IsReady()) pendingHandles.push_back(handle);
+      }
+      if (!pendingHandles.empty()) ROOT::RDF::RunGraphs(pendingHandles);
+
+      nEntries = *nEntriesTotal;
+      for (auto& request : requests) {
+        if (!request.getResult) continue;
+        mDataBuffer[dataSource][name + request.info->GetNameSuffix()].reset(request.getResult());
+        optional<ULong64_t> nPreFilter;
+        if (request.nEntriesPreFilter) nPreFilter = **request.nEntriesPreFilter;
+        entryCounts.push_back({request.info, {nPreFilter, **request.nEntriesPostFilter}});
+        ++nRequests;
+      }
+    } catch (const std::invalid_argument&) {
+      // thrown by the csv reader if a value does not match the column type deduced from the first lines
+      ERROR("Cannot read {} {}:{}: it contains a value that does not match the type of its column.", type, dataSource, name);
+    } catch (const std::exception& e) {
+      if (requests.size() > 1) {
+        // an invalid expression only shows up when the event loop starts and then spoils all requests of this data frame: process them one by one
+        for (auto& request : requests) {
+          processGroup({request.info}, sequential);
+        }
+      } else if (requests.size() == 1) {
+        ERROR("Invalid query for {} {}:{} ({}): {}", type, dataSource, name, requests[0].info->GetDescription(), GetErrorReason(e, rootOutput.str()));
+      } else {
+        ERROR("Cannot read {} {}:{}: {}", type, dataSource, name, GetErrorReason(e, rootOutput.str()));
+      }
+    }
+  };
+  if (!parallelInfos.empty()) processGroup(parallelInfos, false);
+  if (!sequentialInfos.empty()) processGroup(sequentialInfos, true);
+  if (!nRequests) return;
+
+  double_t seconds = std::chrono::duration<double_t>(std::chrono::steady_clock::now() - start).count();
+  string message = fmt::format(" - {}:{}  {} entries, {} request{}, {} pass{}, {:.1f} s", dataSource, name, nEntries.value_or(0), nRequests, (nRequests == 1) ? "" : "s", nPasses, (nPasses == 1) ? "" : "es", seconds);
+  /*
+  for (const auto& [info, counts] : entryCounts) {
+    const auto& [nPreFilter, nPostFilter] = counts;
+    message += fmt::format("\n           · {}: {} entries", info->GetDescription(), nPostFilter);
+    if (nPreFilter && *nPreFilter) message += fmt::format(" ({:.1f}%)", 100. * nPostFilter / *nPreFilter);
+  }
+  */
+  INFO("{}", message);
+  for (const auto& [info, counts] : entryCounts) {
+    if (!counts.second) WARNING("No entries selected in {} {}:{} ({}).", type, dataSource, name, info->GetDescription());
+  }
 }
 
 //****************************************************************************************

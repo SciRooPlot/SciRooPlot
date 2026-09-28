@@ -23,6 +23,7 @@
 
 #include <TApplication.h>
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -116,7 +117,8 @@ class PlotManager
   std::vector<std::string> ExpandInputFiles(const std::string& dataSource) const;
   void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource);
   void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataSource);
-  TObject* ProcessData(ROOT::RDataFrame& df, const std::string& dfName, const Plot::Pad::Data::data_info_t& treeInfo, const std::string& name) const;
+  void ProcessDataRequests(const std::string& type, const std::string& dataSource, const std::string& name, const std::string& objNameSuffix,
+                           const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame);
 };
 
 }  // end namespace SciRooPlot

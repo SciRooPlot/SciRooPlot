@@ -2294,8 +2294,8 @@ string Plot::Pad::Data::data_info_t::GetDescription() const
     }
   }
   if (weight) description += "; weight " + *weight;
-  if (entries.min || entries.max) {
-    description += "; entries " + (entries.min ? std::to_string(*entries.min) : "") + "-" + (entries.max ? std::to_string(*entries.max) : "");
+  if (entries.max) {
+    description += (entries.min) ? "; entries " + std::to_string(*entries.min) + "-" + std::to_string(*entries.max) : "; first " + std::to_string(*entries.max) + " entries";
   }
   return description;
 }
