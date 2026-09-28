@@ -99,6 +99,7 @@ PlotManager::PlotManager(const std::string& projectName)
   // (GetWindowTopY gives the current coordinates of the window, but SetWindowPosition moves the frame instead of the window)
   TCanvas dummyCanvas("dummyCanvas", "dummyCanvas", 1, 1);
   if (auto canvasImp = dynamic_cast<TRootCanvas*>(dummyCanvas.GetCanvasImp())) {
+    mHasDisplay = true;
     canvasImp->UnmapWindow();
     dummyCanvas.SetCanvasSize(1, 1);
     dummyCanvas.SetWindowPosition(50, 50);
@@ -625,6 +626,10 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
 //**************************************************************************************************
 bool PlotManager::GeneratePlots(const string& mode, const string& name, const string& group)
 {
+  if ((mode == "show" || mode == "macro") && !mHasDisplay) {
+    ERROR("Mode '{}' needs a graphical display (is DISPLAY set?).", mode);
+    return false;
+  }
   // first determine which data needs to be loaded
   vector<Plot*> selectedPlots;
   map<int32_t, set<int32_t>> requiredData;
@@ -1288,9 +1293,12 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
             }
             tree->SetDirectory(0);
             delete tree;
-          } else {
-            static_cast<TNamed*>(obj)->SetName((fullName + suffix).data());
+          } else if (auto* namedObj = dynamic_cast<TNamed*>(obj)) {
+            namedObj->SetName((fullName + suffix).data());
             mDataBuffer[dataSource][fullName].reset(obj);
+          } else {
+            ERROR("Input data {} (data source {}) is of unsupported type {}.", fullName, dataSource, obj->ClassName());
+            delete obj;
           }
           removeFromList = false;
           deleteObject = false;

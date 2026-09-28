@@ -611,8 +611,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             }
             if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
-              double_t maxY = TMath::MaxElement(ptr->GetN(), ptr->GetY());
-              if (maxY == 0.) {
+              if (ptr->GetN() == 0) {
+                warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
+              } else if (double_t maxY = TMath::MaxElement(ptr->GetN(), ptr->GetY()); maxY == 0.) {
                 warn("Cannot normalize graph to maximum because it is zero.");
               } else {
                 scaleFactor = 1. / maxY;
@@ -644,8 +645,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             warnUnsupported(mods.GetScaleBinWidthNorm().has_value(), "Normalize");
             optional<double_t> scaleFactor;
             if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
-              double_t maxZ = TMath::MaxElement(ptr->GetN(), ptr->GetZ());
-              if (maxZ == 0.) {
+              if (ptr->GetN() == 0) {
+                warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
+              } else if (double_t maxZ = TMath::MaxElement(ptr->GetN(), ptr->GetZ()); maxZ == 0.) {
                 warn("Cannot normalize graph to maximum because it is zero.");
               } else {
                 scaleFactor = 1. / maxZ;
@@ -1759,7 +1761,9 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
     if (projInfo) {
       string name = obj->GetName();
       name += projInfo->GetNameSuffix();
-      if (auto returnPointer = GetProjection(obj, *projInfo)) {
+      auto returnPointer = GetProjection(obj, *projInfo);
+      if (returnPointer &&
+          std::visit([](auto&& ptr) { return ptr != nullptr; }, *returnPointer)) {
         std::visit([&name](auto&& ptr) { ptr->SetName(name.data()); ptr->SetBit(kCanDelete); }, *returnPointer);
         return returnPointer;
       } else {
@@ -1810,6 +1814,22 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
   // only 1d and 2d histograms are valid outputs! (could be extended to 3d if there is a way to plot this)
   if (projInfo.dims.size() == 0 || projInfo.dims.size() > 2) {
     ERROR("Invalid number of dimensions specified for projection of histogram {}", obj->GetName());
+    return nullopt;
+  }
+  int32_t nDims{};
+  if (obj->InheritsFrom(THnBase::Class())) {
+    nDims = static_cast<THnBase*>(obj)->GetNdimensions();
+  } else if (obj->InheritsFrom(TH1::Class())) {
+    nDims = static_cast<TH1*>(obj)->GetDimension();
+  }
+  for (auto dim : projInfo.dims) {
+    if (dim >= nDims) {
+      ERROR("Cannot project {} onto dimension {}: it only has {} dimension{}.", obj->GetName(), dim, nDims, (nDims == 1) ? "" : "s");
+      return nullopt;
+    }
+  }
+  if (projInfo.dims.size() == 2 && projInfo.dims[0] == projInfo.dims[1]) {
+    ERROR("Cannot project {} onto the same dimension twice.", obj->GetName());
     return nullopt;
   }
   // store original axis ranges so they can be reset by scope guard

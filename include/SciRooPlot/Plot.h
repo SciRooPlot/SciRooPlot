@@ -36,6 +36,7 @@
 #include <optional>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -517,7 +518,11 @@ class Plot::Pad::Data
 
   struct data_dim_t {
     data_dim_t() = default;
-    data_dim_t(const char* _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), edges(_range), nBins(_nBins) {}
+    // template instead of plain const char* so a literal 0 will not crash at runtime
+    template <typename Str, typename = std::enable_if_t<std::is_same_v<Str, const char*> || std::is_same_v<Str, char*>>>
+    data_dim_t(Str _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), edges(_range), nBins(_nBins)
+    {
+    }
     data_dim_t(const std::string& _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), edges(_range), nBins(_nBins) {}
     data_dim_t(const std::string& _var, const std::vector<double_t>& _edges) : var(_var), edges(_edges) {}
     std::string var{};
