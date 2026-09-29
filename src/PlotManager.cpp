@@ -615,17 +615,21 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
     return false;
   }
 
+  uint32_t nPlotsInFile{};
+  uint32_t nBasePlotsLoaded{};
   for (const auto& plotTree : fileTree) {
     const string& curGroup = plotTree.second.get<string>("group");
     if (curGroup == "BASE_PLOTS") {
       try {
         Plot basePlot(plotTree.second);
         AddBasePlot(std::move(basePlot));
+        ++nBasePlotsLoaded;
       } catch (const std::exception& e) {
         ERROR("Could not load base plot {} from file: {}", plotTree.first, e.what());
       }
       continue;
     }
+    ++nPlotsInFile;
     if (!groupRegex.Matches(curGroup)) continue;
     if (!nameRegex.Matches(plotTree.second.get<string>("name"))) continue;
 
@@ -637,6 +641,11 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
     } catch (const std::exception& e) {
       ERROR("Could not load plot {} from file: {}", plotTree.first, e.what());
     }
+  }
+  if (nPlotsInFile == 0 && nBasePlotsLoaded > 0) {
+    // file containing only base plots
+    INFO("Loaded {} base plot{}.", nBasePlotsLoaded, (nBasePlotsLoaded == 1) ? "" : "s");
+    return true;
   }
   if (nMatched == 0) {
     ERROR("Found no plots matching the request {}{}{} in {}{}{}.", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color());
@@ -719,7 +728,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   }
 
   if (selectedPlots.empty()) {
-    ERROR("No plots were created.");
+    ERROR("No plots were created: found no plots matching the request {}{}{} in {}{}{}.", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color());
     return false;
   }
 
