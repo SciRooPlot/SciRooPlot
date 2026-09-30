@@ -271,6 +271,10 @@ int main(int argc, char* argv[])
   } else if (command == "select") {
     Config::GetMutable().Select(project);
   } else if (command == "show") {
+    if (!project.empty() && !Config::Get().Exists(project)) {
+      ERROR("Cannot find project {}.", project);
+      return 1;
+    }
     Config::Get().Show(project);
   } else if (command == "add") {
     if (project.empty()) {
