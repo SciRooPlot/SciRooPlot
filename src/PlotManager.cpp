@@ -355,12 +355,16 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     return;
   }
   dir->cd();
+  set<string> addedNames;
   for (auto object : inputData) {
     if (!object) continue;
     string name = object->GetName();
     if (name.empty()) {
       WARNING("Cannot add nameless object of type {} to dataSource {}", object->ClassName(), dataSource);
       continue;
+    }
+    if (!addedNames.insert(name).second) {
+      WARNING("Data source {} receives multiple objects named {}. Only the last one is kept.", dataSource, name);
     }
     object->Write(nullptr, TObject::kWriteDelete);
   }
@@ -2081,10 +2085,15 @@ Plot PlotManager::MakeBasePlot(const string& name, double_t screenResolution)
   return Plot();
 }
 
+//**************************************************************************************************
+/**
+ * Get a project variable (set via 'srp set <project> <property> <value>').
+ */
+//**************************************************************************************************
 string PlotManager::GetProjectProperty(const string& property) const
 {
   if (mProjectName.empty()) {
-    ERROR("Pass name of project to plot manager to save the project.");
+    ERROR("Pass name of project to plot manager to read its property {}.", property);
     return "";
   }
   return Config::Get().Property(mProjectName, property);

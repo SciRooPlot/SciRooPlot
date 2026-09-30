@@ -136,7 +136,7 @@ int main(int argc, char* argv[])
     PRINT("  srp get   (<project> | @current) <property>");
     PRINT("  srp set   (<project> | @current) <property> <value>");
     PRINT("  srp unset (<project> | @current) <property>");
-    PRINT("      property = program | outdir | <user-variable>");
+    PRINT("      property = program | outdir | <user-variable> (read in code via GetProjectProperty)");
     PRINT("-----------------------------------------------------------");
     PRINT("Project access:");
     PRINT("  srp confdir [<project> | @current]");
@@ -281,6 +281,10 @@ int main(int argc, char* argv[])
       ERROR("Specify program for project {}.", project);
       return 1;
     }
+    if (Config::Get().Exists(project)) {
+      ERROR("Project {} already exists. Use srp set {} program <program> to change its program.", project, project);
+      return 1;
+    }
     Config::GetMutable().SetProgram(project, property);
     if (!setting.empty()) {
       Config::GetMutable().SetOutputDir(project, setting);
@@ -316,6 +320,10 @@ int main(int argc, char* argv[])
   } else if (command == "set") {
     if (project.empty()) {
       ERROR("Specify project or use @current.");
+      return 1;
+    }
+    if (!Config::Get().Exists(project)) {
+      ERROR("Cannot find project {}. Use srp add or srp init-cpp/init-py to create it.", project);
       return 1;
     }
     if (property.empty()) {

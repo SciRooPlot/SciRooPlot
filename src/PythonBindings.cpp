@@ -247,6 +247,7 @@ void exportPlotManager(py::module_& m)
     .def("GeneratePlots", &PlotManager::GeneratePlots, arg("mode") = "show", arg("name") = ".+", arg("group") = ".+")
     .def("SetOutputDirectory", &PlotManager::SetOutputDirectory, arg("path"))
     .def("SaveProject", &PlotManager::SaveProject)
+    .def("GetProjectProperty", &PlotManager::GetProjectProperty, arg("property"))
     .def_static("MakeBasePlot", overload_cast<const string&, double_t>(&PlotManager::MakeBasePlot), arg("name") = "1d", arg("screenResolution") = 100);
 }
 

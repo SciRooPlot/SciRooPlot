@@ -420,6 +420,7 @@
           align: (left, horizon),
           [#prompt srp help], [List available options.],
           [#prompt srp show \<project\>], [Show project settings.],
+          [#prompt srp set \<project\> \<var\> \<value\>], [Store a project variable (read via `GetProjectProperty`).],
           [#prompt srp remove \<project\>], [Unregister project and delete its stored plot definitions (user code and output are kept).],
           [#prompt srp print \<file\>], [List root file contents.],
           [#prompt srp open \<file\>], [Open root file.],
@@ -1541,6 +1542,7 @@
         [`ListPlots()`], [Print all registered plots.],
         [#names("ClearDataBuffer()", "ClearCanvasRegistry()")], [Free the buffered input data, or clear the cache of already-generated canvases.],
         [`SetOutputDirectory(path)`], [Set the output directory for generated files.],
+        [`GetProjectProperty(property)`], [Read a project variable set via `srp set <project> <property> <value>`.],
         [`SaveProject()`], [Persist the current project to disk.],
       ))
     ],

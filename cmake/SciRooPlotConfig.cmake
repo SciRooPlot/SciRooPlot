@@ -12,10 +12,10 @@ endif()
 
 include(CMakeFindDependencyMacro)
 
-# Dependencies
-find_dependency(ROOT @REQUIRED_ROOT_VERSION@)
-find_dependency(Boost @REQUIRED_BOOST_VERSION@ COMPONENTS program_options)
-find_dependency(fmt @REQUIRED_FMT_VERSION@)
+# Dependencies (the locations used to build SciRooPlot serve as hints, so they need not be on CMAKE_PREFIX_PATH)
+find_dependency(ROOT @REQUIRED_ROOT_VERSION@ HINTS "@ROOT_DIR@")
+find_dependency(Boost @REQUIRED_BOOST_VERSION@ COMPONENTS program_options HINTS "@Boost_DIR@")
+find_dependency(fmt @REQUIRED_FMT_VERSION@ HINTS "@fmt_DIR@")
 
 # Include the exported targets (installed by install(EXPORT ...))
 include("${CMAKE_CURRENT_LIST_DIR}/SciRooPlotTargets.cmake")

@@ -94,6 +94,15 @@ srp set <project> outdir </path/to/output/folder>
 ```
 Within this folder, the files will be organized in subdirectories corresponding to the groups and subgroups.
 
+Besides `program` and `outdir`, you can store your own project variables (for example the location of your input files on the current machine):
+```
+srp set <project> inputDir </path/to/inputs>
+```
+and read them in your code via `pm.GetProjectProperty("inputDir")` (the plot manager has to be constructed with the project name).
+
+An existing program can be registered as a project via `srp add <project> </path/to/program> [</path/to/output/folder>]`.
+If the program lives in a CMake build directory, it is rebuilt automatically before plotting, just like the projects created by `srp init-cpp`.
+
 In interactive (`show`) mode, one can browse through the requested plots using the keys 's' (right), 'a' (left) and 'q' (quit) or by double-clicking on the right and left side of the plot, respectively.
 
 ## 📖 Commented code examples
