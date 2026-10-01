@@ -1573,12 +1573,23 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       marginsRight.Draw("SAME");
 
       // find box position that does not collide with any of the drawn objects
-      foundPosition = pad->PlaceBox(nullptr, totalWidthNDC, totalHeightNDC, lowerLeftX, lowerLeftY);
+      // (only if the box fits into the frame at all: for boxes larger than the pad, TPad::PlaceBox reads outside of its collision grid)
+      const double_t frameWidthNDC = (pad->GetUxmax() - pad->GetUxmin()) / (pad->GetX2() - pad->GetX1());
+      const double_t frameHeightNDC = (pad->GetUymax() - pad->GetUymin()) / (pad->GetY2() - pad->GetY1());
+      const bool fitsIntoFrame = (totalWidthNDC < frameWidthNDC && totalHeightNDC < frameHeightNDC);
+      if (fitsIntoFrame) {
+        foundPosition = pad->PlaceBox(nullptr, totalWidthNDC, totalHeightNDC, lowerLeftX, lowerLeftY);
+      }
       if (foundPosition) {
         upperLeftX = lowerLeftX;
         upperLeftY = lowerLeftY + totalHeightNDC;
       } else {
-        WARNING("Could not find enough space to place the {} properly.", (isLegend) ? "legend" : "text");
+        if (fitsIntoFrame) {
+          WARNING("Could not find enough space to place the {} properly.", (isLegend) ? "legend" : "text");
+        } else {
+          WARNING("The {} ({:.2f} x {:.2f}) is larger than the frame ({:.2f} x {:.2f}, in units of the pad size): use fewer lines, more columns or a smaller text size.",
+                  (isLegend) ? "legend" : "text", totalWidthNDC, totalHeightNDC, frameWidthNDC, frameHeightNDC);
+        }
         // just place legend within axis ranges of pad
         upperLeftX = (pad->GetUxmin() - pad->GetX1()) / (pad->GetX2() - pad->GetX1()) + (1 + 1 / fractionOfTickLength) * marginX;
         upperLeftY = (pad->GetUymax() - pad->GetY1()) / (pad->GetY2() - pad->GetY1()) - (1 + 1 / fractionOfTickLength) * marginY;
