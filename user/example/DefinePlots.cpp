@@ -134,8 +134,8 @@ void DefineHiggsPlots(PlotManager& pm)
     plot[1].AddData("diphoton/mgg_sigBkgFit", "higgs", "signal + background fit").SetLine(kRed + 1, kSolid, 3.);
     plot[1].AddData("diphoton/mgg_bkgFit", "higgs", "background fit").SetLine(kBlue + 1, kDashed, 3.);
     plot[1].AddText(0.45, 0.9, string(kExperiment) + " // " + kCollisions + ", 140 fb^{-1} // H #rightarrow #gamma#gamma");
-    plot[1].AddLegend(0.45, 0.62);                                                   // upper left corner of the box in pad coordinates
-    plot[2].AddRatio("diphoton/mgg_data", "higgs", "diphoton/mgg_bkgFit", "higgs");  // histogram / function
+    plot[1].AddLegend(0.45, 0.62);                                                       // upper left corner of the box in pad coordinates
+    plot[2].AddRatio({"diphoton/mgg_data", "higgs"}, {"diphoton/mgg_bkgFit", "higgs"});  // histogram / function
     plot[2]['Y'].SetTitle("data / bkg.").SetRange(0.9, 1.15);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
@@ -179,14 +179,14 @@ void DefineHiggsPlots(PlotManager& pm)
 //****************************************************************************************
 void DefineSpectraPlots(PlotManager& pm)
 {
-  // layouts: properties defined once and reused whenever data is added with them
+  // templates: properties defined once, dataStyle("name") gives the data with these properties
   const Data dataStyle = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.);
   const Data mcStyle = Data().SetDataSource("mc").SetOptions(hist).SetLine(kRed + 1, kSolid, 3.);
 
   {  // ---------------------------------------------------------------------------------------
     Plot plot("ptSpectrum", "spectra", "1d");
-    plot[1].AddData("ptSpec", dataStyle, "data");
-    plot[1].AddData("ptSpec", mcStyle, "simulation");
+    plot[1].AddData(dataStyle("ptSpec"), "data");
+    plot[1].AddData(mcStyle("ptSpec"), "simulation");
     plot[1].AddLegend();
     plot[1].AddText(string(kExperiment) + " // " + kCollisions + " // |#eta| < 0.8");
     plot[1]['X'].SetLog();
@@ -196,14 +196,14 @@ void DefineSpectraPlots(PlotManager& pm)
     // a copy of the plot above, extended by a ratio pad
     Plot ratioPlot(plot, "ptSpectrumRatio", "spectra");
     ratioPlot.SetBasePlot("1d_ratio");
-    ratioPlot[2].AddRatio("ptSpec", "data", "ptSpec", "mc");
+    ratioPlot[2].AddRatio({"ptSpec", "data"}, {"ptSpec", "mc"});
     ratioPlot[2]['Y'].SetTitle("data / sim.").SetRange(0.7, 1.3);
     ratioPlot[0]['X'].SetLog().SetRange(0.15, 15.);  // pad 0 holds settings shared by all pads
     pm.AddPlot(ratioPlot);
   }  // -----------------------------------------------------------------------------------
   {  // table columns become a graph; any C++ expression of the columns can be used ---------
     Plot plot("ptSpectrumPublished", "spectra", "1d");
-    plot[1].AddData("ptSpec", dataStyle, "this analysis");
+    plot[1].AddData(dataStyle("ptSpec"), "this analysis");
     plot[1].AddData("ptSpec_published", "published", "published (stat. #oplus syst.)").Scatter("pt", "value", "pt_err", "sqrt(stat*stat + syst*syst)").SetMarker(kAzure + 2, kOpenSquare, 1.6);
     plot[1].AddLegend();
     plot[1]['X'].SetLog();
@@ -212,8 +212,8 @@ void DefineSpectraPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // ---------------------------------------------------------------------------------------
     Plot plot("multiplicity", "spectra", "1d");
-    plot[1].AddData("multDist", dataStyle, "data, #LT#it{N}_{ch}#GT = <mean[.1f]>");
-    plot[1].AddData("multDist", mcStyle, "simulation, #LT#it{N}_{ch}#GT = <mean[.1f]>");
+    plot[1].AddData(dataStyle("multDist"), "data, #LT#it{N}_{ch}#GT = <mean[.1f]>");
+    plot[1].AddData(mcStyle("multDist"), "simulation, #LT#it{N}_{ch}#GT = <mean[.1f]>");
     plot[1].AddLegend();
     plot[1]['X'].SetRange(0., 60.);
     plot[1]['Y'].SetLog();
@@ -236,7 +236,7 @@ void DefineSpectraPlots(PlotManager& pm)
       plot[1].AddData("ptVsMult", "data", label).ProjectY(low, high, true).Normalize();
       if (low > 1) {
         // Numer() / Denom() / Both(): the following settings act on numerator, denominator or both
-        plot[2].AddRatio("ptVsMult", "data", "ptVsMult", "data").Numer().ProjectY(low, high, true).Denom().ProjectY(1, 10, true).Both().Normalize();
+        plot[2].AddRatio({"ptVsMult", "data"}, {"ptVsMult", "data"}).Numer().ProjectY(low, high, true).Denom().ProjectY(1, 10, true).Both().Normalize();
       }
     }
     plot[1].AddLegend();
@@ -246,8 +246,8 @@ void DefineSpectraPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // Cumulative(false) sums from the right: the probability to find at least N_ch particles
     Plot plot("multiplicityCumulative", "spectra", "1d");
-    plot[1].AddData("multDist", dataStyle, "data").Cumulative(false);
-    plot[1].AddData("multDist", mcStyle, "simulation").Cumulative(false);
+    plot[1].AddData(dataStyle("multDist"), "data").Cumulative(false);
+    plot[1].AddData(mcStyle("multDist"), "simulation").Cumulative(false);
     plot[1].AddLegend();
     plot[1]['X'].SetRange(0., 60.);
     plot[1]['Y'].SetLog().SetTitle("#it{P}(#geq #it{N}_{ch})");
@@ -295,7 +295,7 @@ void DefineDetectorPlots(PlotManager& pm)
     plot[1].AddData("hVtxZ", "EventQA_MC", "simulation").Normalize().SetOptions(hist).SetLine(kRed + 1, kSolid, 3.);
     plot[1].AddLegend(0.189, 0.898);
     plot[1]['Y'].SetTitle("normalised counts");
-    plot[2].AddRatio("hVtxZ", "EventQA", "hVtxZ", "EventQA_MC").Both().Normalize();
+    plot[2].AddRatio({"hVtxZ", "EventQA"}, {"hVtxZ", "EventQA_MC"}).Both().Normalize();
     plot[2]['Y'].SetTitle("data / sim.").SetRange(-1., 5.);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
@@ -317,7 +317,7 @@ void DefineDetectorPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // efficiency = reconstructed / generated; SetIsCorrelated() gives binomial errors -----
     Plot plot("trackingEfficiency", "detector/tracking", "1d");
-    plot[1].AddRatio("hPt", "TrackQA_MC", "hPtGen", "TrackQA_MC").SetIsCorrelated();
+    plot[1].AddRatio({"hPt", "TrackQA_MC"}, {"hPtGen", "TrackQA_MC"}).SetIsCorrelated();
     plot[1]['X'].SetLog().SetRange(0.1, 10.);
     plot[1]['Y'].SetTitle("tracking efficiency").SetRange(0., 1.).SetGrid();
     pm.AddPlot(plot);
@@ -403,7 +403,7 @@ void DefineDetectorPlots(PlotManager& pm)
   // --------------------------------------------------------------------------------------
   {  // turn-on curve; Result() switches to settings acting on the ratio itself (here: in %)
     Plot plot("turnOn", "detector/trigger", "1d");
-    plot[1].AddRatio("hLeadingPtTriggered", "TriggerQA", "hLeadingPtAll", "TriggerQA", "data").SetIsCorrelated().Result().Scale(100.);
+    plot[1].AddRatio({"hLeadingPtTriggered", "TriggerQA"}, {"hLeadingPtAll", "TriggerQA"}, "data").SetIsCorrelated().Result().Scale(100.);
     // SetRangeX limits the range in which a data item is drawn
     plot[1].AddFunction("98*0.5*(1+TMath::Erf((x-8)/(sqrt(2)*1.5)))", "erf, #it{p}_{T}^{thr} = 8 GeV/#it{c}").SetRangeX(0., 20.).SetLine(kRed + 1, kSolid, 2.);
     plot[1].AddLegend(0.553, 0.36);
@@ -564,7 +564,7 @@ void DefineHeavyIonPlots(PlotManager& pm)
       const auto& cent = centralities[i];
       auto& pad = plot[i + 1];
       const std::optional<string> label = (i == 0) ? std::optional<string>("Pb-Pb / pp") : std::nullopt;  // one legend entry is enough
-      pad.AddRatio("cent_" + cent + "/ptSpec", "heavyion", "ptSpec", "data", label).Numer().Scale(1. / ncoll.at(cent));
+      pad.AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}, label).Numer().Scale(1. / ncoll.at(cent));
       pad.SetRefFunc("1").SetLine(kGray + 1, kDashed, 2.);
       pad.AddText(0.5, 0.9, cent + "%");
     }
@@ -584,7 +584,7 @@ void DefineHeavyIonPlots(PlotManager& pm)
     for (const auto& cent : centralities) {
       Plot single("raa_" + cent, "heavyion", "1d");
       single.AppendGroup("nuclearModification");
-      single[1].AddRatio("cent_" + cent + "/ptSpec", "heavyion", "ptSpec", "data").Numer().Scale(1. / ncoll.at(cent));
+      single[1].AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}).Numer().Scale(1. / ncoll.at(cent));
       single[1].SetRefFunc("1").SetLine(kGray + 1, kDashed, 2.);
       single[1].AddText(0.5, 0.9, "Pb-Pb " + cent + "%");
       single[1]['X'].SetLog().SetRange(0.15, 10.);

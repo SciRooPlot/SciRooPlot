@@ -216,7 +216,8 @@ class Plot::Pad
 
   // User accessors:
   Data& AddData(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = {});
-  Data& AddData(const std::string& name, const Data& settings, const std::optional<std::string>& label = {});
+  Data& AddData(const Data& data, const std::optional<std::string>& label = {});
+  Data& AddData(const std::string& name, const Data& settings, const std::optional<std::string>& label = {});  // deprecated
   Data& AddFunction(const std::string& function, const std::optional<std::string>& label = {});
 
   Data& AddPoints(std::vector<double_t> x, std::vector<double_t> y, const std::optional<std::string>& label = {});
@@ -224,6 +225,9 @@ class Plot::Pad
 
   Data& AddLine(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2, const std::optional<std::string>& label = {});
 
+  Ratio& AddRatio(const Data& numerator, const Data& denominator, const std::optional<std::string>& label = {});
+  Ratio& AddRatio(const Ratio& ratio, const std::optional<std::string>& label = {});
+  // deprecated:
   Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataSource,
                   const std::string& denominatorName, const std::string& denominatorDataSource,
                   const std::optional<std::string>& label = {});
@@ -360,6 +364,9 @@ class Plot::Pad
   const auto& GetRefFunc() const { return mRefFunc; }
 
  private:
+  Ratio& AddRatioFromNames(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName,
+                           const std::string& denominatorDataSource, const std::optional<std::string>& label);
+
   struct pad_position_t {
     std::optional<double_t> xlow;
     std::optional<double_t> ylow;
@@ -438,7 +445,7 @@ class Plot::Pad::Data
 {
  public:
   Data() = default;
-  Data(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label);
+  Data(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = {});
   explicit Data(const boost::property_tree::ptree& dataTree);
 
   virtual ~Data() = default;
@@ -448,6 +455,9 @@ class Plot::Pad::Data
   Data& operator=(Data&& other) = default;
   virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Data>(*this); }
   void Print() const { Plot::Print(GetPropertyTree(), "Data"); }
+
+  // use this data as template: copy with the given name (and optionally another data source)
+  Data operator()(const std::string& name, const std::optional<std::string>& dataSource = {}) const;
 
   Ratio& AsRatio();
   const std::string& GetDataSource() const { return mDataSource; }
@@ -552,6 +562,7 @@ class Plot::Pad::Data
   friend class PlotPainter;
   friend class Plot;
   friend class Pad;
+  friend class Ratio;
 
   virtual boost::property_tree::ptree GetPropertyTree() const;
   void SetType(const std::string& type) { mType = type; }
@@ -704,6 +715,7 @@ class Plot::Pad::Data
 class Plot::Pad::Ratio : public Plot::Pad::Data
 {
  public:
+  Ratio(const Data& numerator, const Data& denominator);  // inputs from numerator and denominator, appearance from numerator
   Ratio(const std::string& name, const std::string& dataSource, const std::string& denomName,
         const std::string& denomDataSource, const std::optional<std::string>& label);
   explicit Ratio(const boost::property_tree::ptree& dataTree);
@@ -830,6 +842,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   friend class PlotManager;
   friend class PlotPainter;
   friend class Plot;
+  friend class Pad;
 
   boost::property_tree::ptree GetPropertyTree() const override;
   const auto& GetDenomDataSource() const { return mDenomDataSource; }

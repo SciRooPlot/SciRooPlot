@@ -180,10 +180,10 @@ pm.AddDataSource("dataSourceD", {"/path/to/folder/with/rootfiles/"});
   plot[1].AddData("histName3", "dataSourceB");
 
   // you can also simply add the ratio of two input data
-  plot[1].AddRatio("histName3", "dataSourceB", "histName1", "dataSourceA", "ratioLabel");
+  plot[1].AddRatio({"histName3", "dataSourceB"}, {"histName1", "dataSourceA"}, "ratioLabel");
   // for incompatible data (e.g. different number of bins or bin limits) the framework will try to use splines to interpolate the data points before dividing
   // in case numerator and denominator are sub-samples of one another bayesian error propagation can be applied:
-  plot[1].AddRatio("histName3", "dataSourceB", "histName1", "dataSourceA", "ratioLabel").SetIsCorrelated();
+  plot[1].AddRatio({"histName3", "dataSourceB"}, {"histName1", "dataSourceA"}, "ratioLabel").SetIsCorrelated();
 
 
   // to modify how the data is displayed we can apply the settings via:
@@ -355,7 +355,7 @@ pm.AddBasePlot(basePlot);
   plot[1].AddData("func3", "dataSourceB", "ratio")
   .SetMarker(kBlack, kFullCircle, 1.2).SetMaxRangeX(70);
 
-  plot[2].AddRatio("invMassSpec", "dataSourceA", "momentUnfolded1", "pp_5TeV", "ratio")
+  plot[2].AddRatio({"invMassSpec", "dataSourceA"}, {"momentUnfolded1", "pp_5TeV"}, "ratio")
   .SetMarker(kRed, kFullCircle, 1.2)
   .SetMaxRangeX(60);
 
@@ -398,15 +398,19 @@ data_layout_t pp_7TeV
   Plot plot("test1d", "myGroup", "1d");
   plot[1].AddData("graph2", "dataSourceA").SetLayout(pp_5TeV);
 
-  // if the layout defines a dataSource
+  // a Data object can also be used as template: calling it with a name gives the data with all its properties
+  // (appearance, projections, tree queries, modifiers); the data source can be set in the template or passed along
   pp_5TeV.SetDataSource("dataSourceA");
-  // you can add data using this layout in the following way:
-  plot[1].AddData("graph2", pp_5TeV);
-  plot[1].AddData("graph2", pp_7TeV[data]);
-  plot[1].AddData("graph2", pp_7TeV[mc]);
+  plot[1].AddData(pp_5TeV("graph2"));
+  plot[1].AddData(pp_7TeV[data]("graph2"), "data");
+  plot[1].AddData(pp_7TeV[mc]("graph2", "otherMCSource"), "simulation");
+  // simple data objects can be created and modified in place
+  plot[1].AddData(Data("graph2", "dataSourceA").SetColor(kBlue));
 
-  // and this can be done in a similar manner also for ratios:
-  plot[1].AddRatio("graph2", pp_5TeV, "graph3", "dataSourceA");
+  // ratios are built from two such data objects: their projections and modifiers act on numerator and denominator,
+  // the ratio takes the appearance of the numerator (adjust it by chaining setters or ApplyLayout)
+  plot[1].AddRatio(pp_5TeV("graph2"), Data("graph3", "dataSourceA"));
+  plot[1].AddRatio({"graph2", "dataSourceA"}, {"graph3", "dataSourceA"}).SetColor(kRed);  // braces create the data (python: lists)
 
   plot[1].AddLegend(0.,0.9);
   pm.AddPlot(plot);

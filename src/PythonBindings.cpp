@@ -282,6 +282,7 @@ void exportPad(py::module_& m)
   py::class_<Pad>(m, "Pad")
     .def("Print", &Pad::Print)
     .def("AddData", overload_cast<const string&, const string&, const optional<string>&>(&Pad::AddData), arg("name"), arg("dataSource"), arg("label") = nullopt, ref_int)
+    .def("AddData", overload_cast<const Data&, const optional<string>&>(&Pad::AddData), arg("data"), arg("label") = nullopt, ref_int)
     .def("AddData", overload_cast<const string&, const Data&, const optional<string>&>(&Pad::AddData), arg("name"), arg("settings"), arg("label") = nullopt, ref_int)
     .def("AddFunction", &Pad::AddFunction, arg("function"), arg("label") = nullopt, ref_int)
     .def("AddPoints", overload_cast<vector<double_t>, vector<double_t>, const optional<string>&>(&Pad::AddPoints), arg("x"), arg("y"), arg("label") = nullopt, ref_int)
@@ -341,6 +342,8 @@ void exportPad(py::module_& m)
     .def("__getitem__", [](Pad& self, const char axis) -> Axis& { return self[axis]; }, ref_int)
     .def("GetAxis", &Pad::GetAxis, arg("axis"), ref_int)
     .def("AddRatio", overload_cast<const string&, const string&, const string&, const string&, const optional<string>&>(&Pad::AddRatio), arg("numeratorName"), arg("numeratorDataSource"), arg("denominatorName"), arg("denominatorDataSource"), arg("label") = nullopt, ref_int)
+    .def("AddRatio", overload_cast<const Data&, const Data&, const optional<string>&>(&Pad::AddRatio), arg("numerator"), arg("denominator"), arg("label") = nullopt, ref_int)
+    .def("AddRatio", overload_cast<const Ratio&, const optional<string>&>(&Pad::AddRatio), arg("ratio"), arg("label") = nullopt, ref_int)
     .def("AddRatio", overload_cast<const string&, const Data&, const string&, const string&, const optional<string>&>(&Pad::AddRatio), arg("numeratorName"), arg("numeratorSettings"), arg("denominatorName"), arg("denominatorDataSource"), arg("label") = nullopt, ref_int)
     .def("AddRatio", overload_cast<const string&, const Data&, const string&, const Data&, const optional<string>&>(&Pad::AddRatio), arg("numeratorName"), arg("numeratorSettings"), arg("denominatorName"), arg("denominatorSettings"), arg("label") = nullopt, ref_int)
     .def("AddRatio", overload_cast<const string&, const string&, const string&, const Data&, const optional<string>&>(&Pad::AddRatio), arg("numeratorName"), arg("numeratorDataSource"), arg("denominatorName"), arg("denominatorSettings"), arg("label") = nullopt, ref_int)
@@ -359,7 +362,15 @@ void exportData(py::module_& m)
 {
   py::class_<Data>(m, "Data")
     .def(py::init<>())
-    .def(py::init<const string&, const string&, const optional<string>&>(), arg("name"), arg("dataSource"), arg("label") = nullopt)
+    .def(py::init<const string&, const string&>(), arg("name"), arg("dataSource"))
+    .def(py::init([](const py::list& nameAndSource) {
+           if (nameAndSource.size() != 2 || !py::isinstance<py::str>(nameAndSource[0]) || !py::isinstance<py::str>(nameAndSource[1])) {
+             throw py::type_error("Data can only be created from a list [name, dataSource].");
+           }
+           return Data(nameAndSource[0].cast<string>(), nameAndSource[1].cast<string>());
+         }),
+         arg("nameAndSource"))
+    .def("__call__", [](const Data& self, const string& name, const optional<string>& dataSource) { return self(name, dataSource); }, arg("name"), arg("dataSource") = nullopt)
     .def("Print", &Data::Print)
     .def("AsRatio", &Data::AsRatio, ref_int)
     .def("GetDataSource", &Data::GetDataSource)
@@ -435,11 +446,14 @@ void exportData(py::module_& m)
     .def("Filter", &Data::Filter, arg("filter"), ref_int)
     .def("Entries", overload_cast<uint32_t>(&Data::Entries), arg("nEntries"), ref_int)
     .def("Entries", overload_cast<uint32_t, uint32_t>(&Data::Entries), arg("entryMin"), arg("entryMax"), ref_int);
+  // [name, dataSource] lists can be passed wherever data is expected, e.g. AddRatio(["h", "data"], ["h", "mc"])
+  py::implicitly_convertible<py::list, Data>();
 }
 
 void exportRatio(py::module_& m)
 {
   py::class_<Ratio, Data>(m, "Ratio")
+    .def(py::init<const Data&, const Data&>(), arg("numerator"), arg("denominator"))
     .def("Print", &Ratio::Print)
     .def("SetIsCorrelated", &Ratio::SetIsCorrelated, arg("isCorrelated") = true, ref_int)
     .def("GetDataSource", [](const Ratio& self) -> const string& { return self.GetDataSource(); })

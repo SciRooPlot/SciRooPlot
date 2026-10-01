@@ -981,8 +981,8 @@
           plot[1].AddData("largerHisto", "sourceB")
                           .SetDefinesFrame();
 
-          plot[1].AddRatio("numDataName", "sourceA",
-                           "denomDataName", "sourceB");
+          plot[1].AddRatio({"numDataName", "sourceA"},
+                           {"denomDataName", "sourceB"});
           ```
         ],
         [
@@ -994,8 +994,8 @@
           plot[1].AddData("largerHisto", "sourceB") \
                  .SetDefinesFrame()
 
-          plot[1].AddRatio("numDataName", "sourceA",
-                            "denomDataName", "sourceB")
+          plot[1].AddRatio(["numDataName", "sourceA"],
+                           ["denomDataName", "sourceB"])
           ```
         ],
       )
@@ -1013,7 +1013,7 @@
 
       - Drawing styles are configured via `SetOptions()`, accepting both native ROOT drawing option strings and predefined aliases (e.g. `points`, `line`, `curve`, `band`, `boxes`, `hist`, `colz`).
 
-      - Complete `Data` layouts can be defined once and reused across many plots, ensuring a consistent appearance.
+      - A `Data` object can be defined once and reused as template: `layout("name")` gives the data with all its properties (appearance, projections, modifiers), ensuring a consistent appearance.
 
       - See the #link(<appx-data>)[#text(fill: main-color)[appendix]] for the complete list of available `Data` and `Ratio` setters.
     ],
@@ -1035,11 +1035,11 @@
             .SetLineWidth(4.)
             .SetLineColor(kOrange);
 
-          // reuse appearance (requires data source to be defined)
-          plot[1].AddData("graph1", layout);
-          plot[1].AddData("graph2", layout).SetColor(kBlue);
+          // reuse as template: layout("name") gives the data
+          plot[1].AddData(layout("graph1"));
+          plot[1].AddData(layout("graph2"), "label").SetColor(kBlue);
 
-          plot[1].AddRatio("h1", layout, "h2", "sourceB");
+          plot[1].AddRatio(layout("h1"), Data("h2", "sourceB"));
           ```
         ],
         [
@@ -1058,11 +1058,11 @@
               .SetLineWidth(4.)
               .SetLineColor(kOrange))
 
-          # reuse appearance (requires data source to be defined)
-          plot[1].AddData("graph1", layout)
-          plot[1].AddData("graph2", layout).SetColor(kBlue)
+          # reuse as template: layout("name") gives the data
+          plot[1].AddData(layout("graph1"))
+          plot[1].AddData(layout("graph2"), "label").SetColor(kBlue)
 
-          plot[1].AddRatio("h1", layout, "h2", "sourceB")
+          plot[1].AddRatio(layout("h1"), Data("h2", "sourceB"))
           ```
         ],
       )
@@ -1429,7 +1429,7 @@
     [
       - Ratios combine a numerator and a denominator into a single `Ratio` object via `AddRatio()`.
 
-      - Numerator and denominator can be looked up by name and source, or supplied as complete `Data` layouts.
+      - Numerator and denominator are given as `{name, source}` (python: `[name, source]`) or as complete `Data` objects, e.g. from a template (`style("name")`); their projections and modifiers act on the inputs, the ratio takes the appearance of the numerator. A predefined `Ratio(numerator, denominator)` can be added as well.
 
       - Use `SetIsCorrelated()` when the numerator is a sub-sample of the denominator (e.g. a selection vs. its parent sample) -- this applies Bayesian error propagation instead of treating the two as independent.
 
@@ -1441,13 +1441,13 @@
       #code-block(
         [
           ```cpp
-          plot[1].AddRatio("h1", "sourceA", "h2", "sourceB")
+          plot[1].AddRatio({"h1", "sourceA"}, {"h2", "sourceB"})
                  .SetIsCorrelated();
 
-          plot[1].AddRatio("h1", "sourceA", "h2", "sourceB")
+          plot[1].AddRatio({"h1", "sourceA"}, {"h2", "sourceB"})
                  .Both().Normalize();
 
-          plot[1].AddRatio("h1", "sourceA", "h2", "sourceB")
+          plot[1].AddRatio({"h1", "sourceA"}, {"h2", "sourceB"})
                  .Both().RebinX(2)
                  .Denom().Smooth()
                  .Result().SetColor(kRed);
@@ -1455,13 +1455,13 @@
         ],
         [
           ```python
-          plot[1].AddRatio("h1", "sourceA", "h2", "sourceB") \
+          plot[1].AddRatio(["h1", "sourceA"], ["h2", "sourceB"]) \
                  .SetIsCorrelated()
 
-          plot[1].AddRatio("h1", "sourceA", "h2", "sourceB") \
+          plot[1].AddRatio(["h1", "sourceA"], ["h2", "sourceB"]) \
                  .Both().Normalize()
 
-          plot[1].AddRatio("h1", "sourceA", "h2", "sourceB") \
+          plot[1].AddRatio(["h1", "sourceA"], ["h2", "sourceB"]) \
                  .Both().RebinX(2) \
                  .Denom().Smooth() \
                  .Result().SetColor(kRed)
@@ -1580,11 +1580,12 @@
     [
       #api-section("Adding content", (
         [`AddData(name, dataset, label = {})`], [Add data looked up by name from a registered source.],
-        [`AddData(name, layout, label = {})`], [Add data using a predefined `Data` layout.],
+        [`AddData(data, label = {})`], [Add a complete `Data` object, e.g. `Data(name, dataSource)` or `layout(name)`.],
         [`AddFunction(function, label = {})`], [Add a `TF1`-style function expression.],
         [`AddPoints(x, y, label = {})`], [Add points from separate X/Y arrays, or (x, y) pairs.],
         [`AddLine(pos1, pos2, label = {})`], [Add a line between two points.],
-        [`AddRatio(...)`], [Add a ratio; overloads accept names, sources, or `Data` layouts.],
+        [`AddRatio(numerator, denominator, label = {})`], [Add a ratio of two `Data` objects (or `{name, source}`); it takes the appearance of the numerator.],
+        [`AddRatio(ratio, label = {})`], [Add a predefined `Ratio(numerator, denominator)`.],
         [`AddText(xPos, yPos, text)` / `AddText(text)`], [Add a text box, fixed or auto-placed.],
         [`AddLegend(xPos, yPos, title = {})` / `AddLegend(title = {})`], [Add a legend, fixed or auto-placed.],
       ))

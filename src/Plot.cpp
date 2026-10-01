@@ -1350,8 +1350,27 @@ Plot::Pad::Data& Plot::Pad::AddData(const string& name, const string& dataSource
   return *mData.back();
 }
 
+Plot::Pad::Data& Plot::Pad::AddData(const Data& data, const optional<string>& label)
+{
+  if (data.mType == "ratio") {
+    logger::throw_invalid_argument("Cannot add ratio {} via AddData, use AddRatio instead.", data.mName);
+  }
+  if (data.mName.empty() || data.mDataSource.empty()) {
+    logger::throw_invalid_argument("Data needs a name and a data source to be added (name: '{}', data source: '{}').", data.mName, data.mDataSource);
+  }
+  const Data identity(data.mName, data.mDataSource, label);  // resolves 'dataSource:some/path'
+  mData.push_back(std::make_shared<Data>(data));
+  auto& added = *mData.back();
+  added.mType = identity.mType;
+  added.mName = identity.mName;
+  added.mDataSource = identity.mDataSource;
+  if (label) added.mLegend.label = label;
+  return added;
+}
+
 Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const optional<string>& label)
 {
+  WARNING("AddData(\"{}\", settings) is deprecated and only uses the appearance of the settings. Use AddData(settings(\"{}\")) instead.", name, name);
   mData.push_back(std::make_shared<Data>(name, data.GetDataSource(), label));
   mData.back()->SetLayout(data);
   if (!label && data.GetLegendLabel()) mData.back()->SetLegendLabel(*data.GetLegendLabel());
@@ -1417,29 +1436,58 @@ Plot::Pad::Data& Plot::Pad::AddLine(pair<double_t, double_t> pos1, pair<double_t
  * Add ratio to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataSource, const string& denominatorName, const string& denominatorDataSource, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatioFromNames(const string& numeratorName, const string& numeratorDataSource, const string& denominatorName, const string& denominatorDataSource, const optional<string>& label)
 {
   mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorDataSource,
                                           denominatorName, denominatorDataSource, label));
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
 }
 
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataSource, const string& denominatorName, const string& denominatorDataSource, const optional<string>& label)
+{
+  WARNING("AddRatio(\"{}\", \"{}\", \"{}\", \"{}\") is deprecated. Use AddRatio({{\"{}\", \"{}\"}}, {{\"{}\", \"{}\"}}) instead (python: lists instead of braces).",
+          numeratorName, numeratorDataSource, denominatorName, denominatorDataSource, numeratorName, numeratorDataSource, denominatorName, denominatorDataSource);
+  return AddRatioFromNames(numeratorName, numeratorDataSource, denominatorName, denominatorDataSource, label);
+}
+
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const Data& numerator, const Data& denominator, const optional<string>& label)
+{
+  return AddRatio(Ratio(numerator, denominator), label);
+}
+
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const Ratio& ratio, const optional<string>& label)
+{
+  if (ratio.mName.empty() || ratio.mDataSource.empty() || ratio.mDenomName.empty() || ratio.mDenomDataSource.empty()) {
+    logger::throw_invalid_argument("A ratio needs names and data sources for numerator and denominator (numerator: '{}' from '{}', denominator: '{}' from '{}').",
+                                   ratio.mName, ratio.mDataSource, ratio.mDenomName, ratio.mDenomDataSource);
+  }
+  mData.push_back(std::make_shared<Ratio>(ratio));
+  auto& added = *std::dynamic_pointer_cast<Ratio>(mData.back());
+  if (label) added.mLegend.label = label;
+  added.mModMode = Ratio::Mode::Res;  // further modifiers act on the ratio, independent of the selection the ratio object ended with
+  return added;
+}
+
 Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorSettings, const string& denominatorName, const string& denominatorDataSource, const optional<string>& label)
 {
-  mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorSettings.GetDataSource(),
-                                          denominatorName, denominatorDataSource, label));
-  mData.back()->SetLayout(numeratorSettings);
-  return *std::dynamic_pointer_cast<Ratio>(mData.back());
+  WARNING("AddRatio({}, {}) with settings objects is deprecated and only uses their appearance and data source. Use AddRatio(numerator, denominator) with complete data instead, e.g. AddRatio(numSettings(\"{}\"), denSettings(\"{}\")).",
+          numeratorName, denominatorName, numeratorName, denominatorName);
+  auto& ratio = AddRatioFromNames(numeratorName, numeratorSettings.GetDataSource(), denominatorName, denominatorDataSource, label);
+  ratio.SetLayout(numeratorSettings);
+  return ratio;
 }
 
 Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorSettings, const string& denominatorName, const Data& denominatorSettings, const optional<string>& label)
 {
+  // deprecated (warning issued by the called overload)
   return AddRatio(numeratorName, numeratorSettings, denominatorName, denominatorSettings.GetDataSource(), label);
 }
 
 Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataSource, const string& denominatorName, const Data& denominatorSettings, const optional<string>& label)
 {
-  return AddRatio(numeratorName, numeratorDataSource, denominatorName, denominatorSettings.GetDataSource(), label);
+  WARNING("AddRatio({}, {}) with settings objects is deprecated and only uses their appearance and data source. Use AddRatio(numerator, denominator) with complete data instead, e.g. AddRatio(Data(\"{}\", \"{}\"), denSettings(\"{}\")).",
+          numeratorName, denominatorName, numeratorName, numeratorDataSource, denominatorName);
+  return AddRatioFromNames(numeratorName, numeratorDataSource, denominatorName, denominatorSettings.GetDataSource(), label);
 }
 
 //**************************************************************************************************
@@ -1525,6 +1573,20 @@ Plot::Pad::Data::Data(const string& name, const string& dataSource, const option
     mName = name;
     mDataSource = dataSource;
   }
+}
+
+//**************************************************************************************************
+/**
+ * Use this data as template: copy with the given name (and optionally another data source).
+ */
+//**************************************************************************************************
+auto Plot::Pad::Data::operator()(const string& name, const optional<string>& dataSource) const -> Data
+{
+  Data data = *this;
+  data.mType = "data";
+  data.mName = name;
+  if (dataSource) data.mDataSource = *dataSource;
+  return data;
 }
 
 //**************************************************************************************************
@@ -2308,7 +2370,36 @@ string Plot::Pad::Data::data_info_t::GetDescription() const
 
 //**************************************************************************************************
 /**
- * Default constructor.
+ * Constructor from numerator and denominator data: their input selections and modifiers (applied before the division)
+ * are taken over, the ratio takes the appearance of the numerator.
+ */
+//**************************************************************************************************
+Plot::Pad::Ratio::Ratio(const Data& numerator, const Data& denominator)
+  : Ratio(numerator.mName, numerator.mDataSource, denominator.mName, denominator.mDataSource, {})
+{
+  for (const auto& [part, data] : {std::pair{"numerator", &numerator}, std::pair{"denominator", &denominator}}) {
+    if (data->mType == "ratio") {
+      logger::throw_invalid_argument("The {} of a ratio cannot be a ratio ({}).", part, data->mName);
+    }
+    if (data->mName.empty() || data->mDataSource.empty()) {
+      logger::throw_invalid_argument("The {} of a ratio needs a name and a data source (name: '{}', data source: '{}').", part, data->mName, data->mDataSource);
+    }
+  }
+  const Ratio identity = *this;  // names and data sources with resolved 'dataSource:some/path'
+  static_cast<Data&>(*this) = numerator;
+  mType = identity.mType;
+  mName = identity.mName;
+  mDataSource = identity.mDataSource;
+  mNumModify = numerator.mModify;
+  mModify = {};
+  mDenomDataInfo = denominator.mDataInfo;
+  mDenomProjInfo = denominator.mProjInfo;
+  mDenomModify = denominator.mModify;
+}
+
+//**************************************************************************************************
+/**
+ * Constructor from names and data sources of numerator and denominator.
  */
 //**************************************************************************************************
 Plot::Pad::Ratio::Ratio(const string& name, const string& dataSource, const string& denomName,
