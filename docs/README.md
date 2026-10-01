@@ -462,6 +462,8 @@ data_layout_t pp_7TeV
 } // -----------------------------------------------------------------------
 
 // it is also possible to process and display tabled data, i.e. root trees or CSV files
+// unlike other objects, a tree that is found in several files of a data source (e.g. one file per run) is chained:
+// all its parts are processed together (within each file the first match counts, as for all other objects)
 { // -----------------------------------------------------------------------
   Plot plot("treePlot", "myTreeExamples", "1d");
 

@@ -110,7 +110,8 @@ class PlotManager
 
   std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>> mDataBuffer;
   std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Plot::Pad::Data::data_info_t>>> mDataInfoBuffer;
-  std::map<std::string, std::vector<std::string>> mInputFiles;  // dataSource name -> input file paths
+  std::map<std::string, std::vector<std::string>> mInputFiles;                          // dataSource name -> input file paths
+  std::map<std::string, std::vector<std::pair<std::string, std::string>>> mTreeInputs;  // tree name -> (file, path in file) of all its parts within the current data source
   void PrintBufferStatus(bool onlyMissing = false) const;
   std::vector<std::tuple<std::string, std::string, Plot::Pad::Data::data_info_t>> GetMissingData(Plot& plot);
   bool FillBuffer();
@@ -118,7 +119,7 @@ class PlotManager
   void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource);
   void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataSource);
   void ProcessDataRequests(const std::string& type, const std::string& dataSource, const std::string& name, const std::string& objNameSuffix,
-                           const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame);
+                           const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, size_t nFiles = 1);
 };
 
 }  // end namespace SciRooPlot

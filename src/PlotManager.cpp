@@ -27,6 +27,7 @@
 #include <ROOT/RDataFrame.hxx>
 #include <TApplication.h>
 #include <TCanvas.h>
+#include <TChain.h>
 #include <TClass.h>
 #include <TError.h>
 #include <TF1.h>
@@ -874,6 +875,7 @@ bool PlotManager::FillBuffer()
     }
 
     // open all input files belonging to the current dataSource and extract the data
+    mTreeInputs.clear();
     for (const auto& inputFileNameRaw : ExpandInputFiles(dataSource)) {
       if (requiredData.empty()) break;
       string inputFileName = expand_path(inputFileNameRaw);
@@ -938,7 +940,30 @@ bool PlotManager::FillBuffer()
       for (const auto& pathStr : emptySubDirs) {
         requiredData.erase(pathStr);
       }
+      // trees can have parts in further files: keep looking for them
+      for (const auto& [treeName, inputs] : mTreeInputs) {
+        const auto pathPos = treeName.find_last_of('/');
+        auto& names = requiredData[(pathPos == string::npos) ? "" : treeName.substr(0, pathPos)];
+        const string name = treeName.substr(pathPos + 1);
+        if (std::find(names.begin(), names.end(), name) == names.end()) names.push_back(name);
+      }
     }
+    // process the trees found: chained over all files of the data source that contain them
+    for (const auto& [treeName, inputs] : mTreeInputs) {
+      const auto pathPos = treeName.find_last_of('/');
+      const string pathStr = (pathPos == string::npos) ? "" : treeName.substr(0, pathPos);
+      if (auto it = requiredData.find(pathStr); it != requiredData.end()) {
+        auto& names = it->second;
+        names.erase(std::remove(names.begin(), names.end(), treeName.substr(pathPos + 1)), names.end());
+        if (names.empty()) requiredData.erase(it);
+      }
+      auto chain = std::make_shared<TChain>(inputs.front().second.data());
+      for (const auto& [file, treePath] : inputs) {
+        chain->AddFile(file.data(), TTree::kMaxEntries, treePath.data());
+      }
+      ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [chain]() { return std::make_unique<ROOT::RDataFrame>(*chain); }, inputs.size());
+    }
+    mTreeInputs.clear();
     success &= requiredData.empty();
   }
   return success;
@@ -1358,7 +1383,20 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
           if (obj->InheritsFrom(TTree::Class())) {
             TTree* tree = static_cast<TTree*>(obj);
             mDataBuffer[dataSource][fullName].reset(nullptr);
-            ProcessDataRequests("tree", dataSource, fullName, suffix, [tree]() { return std::make_unique<ROOT::RDataFrame>(*tree); });
+            if (TDirectory* dir = tree->GetDirectory(); dir && dir->GetFile() && dir->GetKey(curDataName.data())) {
+              // trees stored in files are chained over all files of the data source (processed once all files are searched)
+              string dirPath = dir->GetPath();  // file.root:/some/folder
+              dirPath.erase(0, dirPath.find(":/") + 2);
+              mTreeInputs[fullName].emplace_back(dir->GetFile()->GetName(), (dirPath.empty() ? "" : dirPath + "/") + curDataName);
+            } else if (mTreeInputs.find(fullName) != mTreeInputs.end()) {
+              WARNING("Ignoring part of tree {} (data source {}) that is stored in a list: it cannot be chained with the parts in other files.", fullName, dataSource);
+            } else {
+              // trees in lists live in memory only, which RDataFrame can process only single-threaded
+              const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
+              ROOT::DisableImplicitMT();
+              auto mtGuard = make_scope_guard([wasMTEnabled]() { if (wasMTEnabled) ROOT::EnableImplicitMT(); });
+              ProcessDataRequests("tree", dataSource, fullName, suffix, [tree]() { return std::make_unique<ROOT::RDataFrame>(*tree); });
+            }
             tree->SetDirectory(0);
             delete tree;
           } else if (auto* namedObj = dynamic_cast<TNamed*>(obj)) {
@@ -1962,7 +2000,7 @@ bool BookRequest(Request& request)
  */
 //**************************************************************************************************
 void PlotManager::ProcessDataRequests(const string& type, const string& dataSource, const string& name, const string& objNameSuffix,
-                                      const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame)
+                                      const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, size_t nFiles)
 {
   using data_info_t = Plot::Pad::Data::data_info_t;
   auto start = std::chrono::steady_clock::now();
@@ -1977,6 +2015,8 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   }
   if (parallelInfos.empty() && sequentialInfos.empty()) return;
 
+  // errors that only show up while reading may come from parts of a chained tree with a different structure
+  const string chainHint = (nFiles > 1) ? fmt::format(" (the tree is chained from {} files of the data source: do all parts have the same columns?)", nFiles) : "";
   optional<ULong64_t> nEntries;
   uint32_t nPasses{};
   uint32_t nRequests{};
@@ -2054,9 +2094,9 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           processGroup({request.info}, sequential);
         }
       } else if (requests.size() == 1) {
-        ERROR("Invalid query for {} {}:{} ({}): {}", type, dataSource, name, requests[0].info->GetDescription(), GetErrorReason(e, rootOutput.str()));
+        ERROR("Invalid query for {} {}:{} ({}): {}{}", type, dataSource, name, requests[0].info->GetDescription(), GetErrorReason(e, rootOutput.str()), chainHint);
       } else {
-        ERROR("Cannot read {} {}:{}: {}", type, dataSource, name, GetErrorReason(e, rootOutput.str()));
+        ERROR("Cannot read {} {}:{}: {}{}", type, dataSource, name, GetErrorReason(e, rootOutput.str()), chainHint);
       }
     }
   };
@@ -2065,7 +2105,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   if (!nRequests) return;
 
   double_t seconds = std::chrono::duration<double_t>(std::chrono::steady_clock::now() - start).count();
-  string message = fmt::format(" - {}:{}  {} entries, {} request{}, {} pass{}, {:.1f} s", dataSource, name, nEntries.value_or(0), nRequests, (nRequests == 1) ? "" : "s", nPasses, (nPasses == 1) ? "" : "es", seconds);
+  string message = fmt::format(" - {}:{}  {} entries{}, {} request{}, {} pass{}, {:.1f} s", dataSource, name, nEntries.value_or(0), (nFiles > 1) ? fmt::format(" from {} files", nFiles) : "", nRequests, (nRequests == 1) ? "" : "s", nPasses, (nPasses == 1) ? "" : "es", seconds);
   /*
   for (const auto& [info, counts] : entryCounts) {
     const auto& [nPreFilter, nPostFilter] = counts;

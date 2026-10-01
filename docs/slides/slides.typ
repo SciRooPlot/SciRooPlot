@@ -729,7 +729,7 @@
 
       - Shell environment variables (including user-defined ones) are supported and expanded automatically.
 
-      - Registered files are searched in the order they were added (files inside an added directory in alphabetical order); the first file containing the requested object wins. Within each file, the directory hierarchy is traversed until the first matching data object is found.
+      - Registered files are searched in the order they were added (files inside an added directory in alphabetical order); the first file containing the requested object wins. Within each file, the directory hierarchy is traversed until the first matching data object is found. Trees are the exception: their parts in all files of the data source are chained.
 
       - Local ROOT objects can also be directly added.
 
