@@ -717,7 +717,7 @@
     columns: (42%, 55%),
     gutter: 3%,
     [
-      - A data source is a collection of input files with a unique identifier that is later used for the plot definitions.
+      - A data source is a collection of inputs (files or folders within files) with a unique identifier that is later used for the plot definitions.
 
       - Entire ROOT files or individual subdirectories/lists therein can be registered as input sources.
 
@@ -729,7 +729,9 @@
 
       - Shell environment variables (including user-defined ones) are supported and expanded automatically.
 
-      - Registered files are searched in the order they were added (files inside an added directory in alphabetical order); the first file containing the requested object wins. Within each file, the directory hierarchy is traversed until the first matching data object is found. Trees are the exception: their parts in all files of the data source are chained.
+      - Wildcards select all matching files and/or folders within the files (e.g. `AO2D_*.root:DF_*`).
+
+      - A data source is one dataset made of its inputs. Within each input the first match counts; trees found in several inputs are chained, other objects come from the first input containing them.
 
       - Local ROOT objects can also be directly added.
 
@@ -751,6 +753,7 @@
 
           pm.AddDataSource("sourceC", "${HOME}/path/to/file/file3.root");
 
+          pm.AddDataSource("sourceG", "/path/to/AO2D_*.root:DF_*");
           ```
         ],
         [
@@ -767,6 +770,8 @@
           pm.AddDataSource("sourceE", "/path/to/directory/")
 
           pm.AddDataSource("sourceF", "/path/to/file6.root:dir/or/list")
+
+          pm.AddDataSource("sourceG", "/path/to/AO2D_*.root:DF_*")
           ```
         ],
       )

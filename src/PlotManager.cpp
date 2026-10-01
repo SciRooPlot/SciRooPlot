@@ -29,6 +29,7 @@
 #include <TCanvas.h>
 #include <TChain.h>
 #include <TClass.h>
+#include <TCollection.h>
 #include <TError.h>
 #include <TF1.h>
 #include <TF2.h>
@@ -54,8 +55,10 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <fnmatch.h>
 #include <fstream>
 #include <functional>
+#include <glob.h>
 #include <iostream>
 #include <iterator>
 #include <limits>
@@ -100,6 +103,29 @@ string GetErrorReason(const std::exception& exception, const string& rootOutput)
   string reason = exception.what();
   reason.erase(0, reason.find_first_not_of(" \n"));
   return reason.substr(0, reason.find('\n'));
+}
+
+// what a chained tree is made of in words, e.g. "3 files" or "412 folders in 3 files" (empty if it has only one input)
+template <typename TreeInputs>
+string DescribeInputs(const TreeInputs& treeInputs)
+{
+  if (treeInputs.size() < 2) return "";
+  auto plural = [](size_t n, const string& word) { return fmt::format("{} {}{}", n, word, (n == 1) ? "" : "s"); };
+  set<string> wholeFiles;
+  set<string> filesWithFolders;
+  size_t nFolders{};
+  for (const auto& treeInput : treeInputs) {
+    if (treeInput.isFolderInput) {
+      ++nFolders;
+      filesWithFolders.insert(treeInput.file);
+    } else {
+      wholeFiles.insert(treeInput.file);
+    }
+  }
+  vector<string> descriptions;
+  if (!wholeFiles.empty()) descriptions.push_back(plural(wholeFiles.size(), "file"));
+  if (nFolders) descriptions.push_back(plural(nFolders, "folder") + " in " + plural(filesWithFolders.size(), "file"));
+  return (descriptions.size() == 1) ? descriptions[0] : descriptions[0] + " and " + descriptions[1];
 }
 }  // namespace
 
@@ -282,10 +308,10 @@ void PlotManager::SetOutputDirectory(const string& path)
 
 //**************************************************************************************************
 /**
- * Define input file paths for user defined dataSource.
+ * Define the inputs of a data source: files, folders within files (file.root:folder), directories or wildcard patterns.
  */
 //**************************************************************************************************
-void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputFiles, bool replace)
+void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputs, bool replace)
 {
   if (dataSource.empty()) {
     ERROR("Specify a name for the data source.");
@@ -296,26 +322,26 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<string>& 
     return;
   }
   if (replace) {
-    mInputFiles.erase(dataSource);
+    mInputs.erase(dataSource);
   }
-  for (const auto& inputFilePath : inputFiles) {
-    if (std::filesystem::path(expand_path(inputFilePath)).is_relative()) {
-      WARNING("The path to an input file must not be relative. Skipping {}.", inputFilePath);
+  for (const auto& input : inputs) {
+    if (std::filesystem::path(expand_path(input)).is_relative()) {
+      WARNING("The path of an input must not be relative. Skipping {}.", input);
       continue;
     }
-    auto& files = mInputFiles[dataSource];
-    if (std::find(files.begin(), files.end(), inputFilePath) == files.end()) {
-      files.push_back(inputFilePath);
+    auto& inputsOfDataSource = mInputs[dataSource];
+    if (std::find(inputsOfDataSource.begin(), inputsOfDataSource.end(), input) == inputsOfDataSource.end()) {
+      inputsOfDataSource.push_back(input);
     }
   }
 }
-void PlotManager::AddDataSource(const std::string& dataSource, std::initializer_list<string> inputFiles, bool replace)
+void PlotManager::AddDataSource(const std::string& dataSource, std::initializer_list<string> inputs, bool replace)
 {
-  AddDataSource(dataSource, std::vector<std::string>(inputFiles), replace);
+  AddDataSource(dataSource, std::vector<std::string>(inputs), replace);
 }
-void PlotManager::AddDataSource(const string& dataSource, const string& inputFile, bool replace)
+void PlotManager::AddDataSource(const string& dataSource, const string& input, bool replace)
 {
-  AddDataSource(dataSource, {inputFile}, replace);
+  AddDataSource(dataSource, {input}, replace);
 }
 
 //**************************************************************************************************
@@ -323,7 +349,7 @@ void PlotManager::AddDataSource(const string& dataSource, const string& inputFil
  * Define input data for user defined unique dataSource.
  */
 //**************************************************************************************************
-void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>& inputData, bool replace)
+void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>& inputs, bool replace)
 {
   if (dataSource.empty()) {
     ERROR("Specify a name for the data source.");
@@ -359,7 +385,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
   }
   dir->cd();
   set<string> addedNames;
-  for (auto object : inputData) {
+  for (auto object : inputs) {
     if (!object) continue;
     string name = object->GetName();
     if (name.empty()) {
@@ -374,9 +400,9 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
   file.Close();
   AddDataSource(dataSource, {mUserDataFile + ":" + dataSource}, replace);
 }
-void PlotManager::AddDataSource(const string& dataSource, TObject* inputData, bool replace)
+void PlotManager::AddDataSource(const string& dataSource, TObject* input, bool replace)
 {
-  AddDataSource(dataSource, vector<TObject*>{inputData}, replace);
+  AddDataSource(dataSource, vector<TObject*>{input}, replace);
 }
 
 //**************************************************************************************************
@@ -386,20 +412,20 @@ void PlotManager::AddDataSource(const string& dataSource, TObject* inputData, bo
 //**************************************************************************************************
 void PlotManager::SaveDataSources(const optional<string>& file) const
 {
-  ptree inputFileTree;
-  for (const auto& inFileTuple : mInputFiles) {
-    ptree filesOfDataSource;
-    for (const auto& fileName : inFileTuple.second) {
-      filesOfDataSource.add("FILE", fileName);
+  ptree dataSourcesTree;
+  for (const auto& [dataSource, inputs] : mInputs) {
+    ptree inputsOfDataSource;
+    for (const auto& input : inputs) {
+      inputsOfDataSource.add("FILE", input);  // key name kept for compatibility with existing projects
     }
-    inputFileTree.put_child(inFileTuple.first, filesOfDataSource);
+    dataSourcesTree.put_child(dataSource, inputsOfDataSource);
   }
   std::filesystem::path filePath = expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName));
   if (std::filesystem::create_directories(filePath.parent_path())) {
     INFO("Created config folder: {}", filePath.parent_path().string());
   }
   using boost::property_tree::write_info;
-  write_info(filePath.string(), inputFileTree);
+  write_info(filePath.string(), dataSourcesTree);
 }
 
 //**************************************************************************************************
@@ -409,50 +435,105 @@ void PlotManager::SaveDataSources(const optional<string>& file) const
 //**************************************************************************************************
 void PlotManager::LoadDataSources(const optional<string>& file, bool replace)
 {
-  ptree inputFileTree;
+  ptree dataSourcesTree;
   try {
     using boost::property_tree::read_info;
-    read_info(expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName)), inputFileTree);
+    read_info(expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName)), dataSourcesTree);
   } catch (const std::exception& e) {
     ERROR("Cannot load dataSources file: {}", e.what());
     return;
   }
-  for (const auto& inputPair : inputFileTree) {
-    vector<string> entries;  // files and directories, in the order they were added (directories are expanded when reading)
-    for (const auto& fileEntry : inputPair.second) {
-      entries.push_back(fileEntry.second.get_value<string>());
+  for (const auto& [dataSource, inputsTree] : dataSourcesTree) {
+    vector<string> inputs;  // as they were added (directories and wildcards are expanded when reading)
+    for (const auto& input : inputsTree) {
+      inputs.push_back(input.second.get_value<string>());
     }
-    AddDataSource(inputPair.first, entries, replace);
+    AddDataSource(dataSource, inputs, replace);
   }
 }
 
 //**************************************************************************************************
 /**
- * Resolve the entries of a data source into the list of input files to be searched:
- * files keep the order in which they were added, directories are replaced by the files they contain
- * (recursively, in alphabetical order since directory iteration order is unspecified).
- * Files reached more than once are only kept at their first position.
+ * Resolve the inputs of a data source as added into the list of inputs to be searched (files or folders within files):
+ * - files keep the order in which they were added, directories are replaced by the files they contain
+ *   (recursively, in alphabetical order since directory iteration order is unspecified),
+ * - wildcards (*, ?, [...]) in file paths are expanded to all matching files (alphabetical order),
+ * - wildcards in the folder after the file name (file.root:DF_*) are expanded to all matching folders (order in the file).
+ * Inputs reached more than once are only kept at their first position.
  */
 //**************************************************************************************************
-vector<string> PlotManager::ExpandInputFiles(const string& dataSource) const
+vector<string> PlotManager::ExpandInputs(const string& dataSource) const
 {
-  vector<string> inputFiles;
-  auto inputFilesIt = mInputFiles.find(dataSource);
-  if (inputFilesIt == mInputFiles.end()) return inputFiles;
+  vector<string> inputs;
+  auto inputsIt = mInputs.find(dataSource);
+  if (inputsIt == mInputs.end()) return inputs;
 
+  auto hasWildcard = [](const string& str) { return str.find_first_of("*?[") != string::npos; };
   set<string> seen;
-  auto addFile = [&](const string& fileName) {
-    if (seen.insert(expand_path(fileName)).second) inputFiles.push_back(fileName);
+  auto addInput = [&](const string& input) {
+    if (seen.insert(expand_path(input)).second) inputs.push_back(input);
   };
-  for (const auto& entry : inputFilesIt->second) {
-    if (str_ends_with(split_string(entry, ':', true)[0], ".root") || str_ends_with(entry, mTableFileEndings)) {
-      addFile(entry);
-      continue;
+
+  // folders matching the (wildcard) path within a root file, e.g. DF_* or run*/sub
+  auto expandFolders = [&](const string& fileName, const string& folderPattern) {
+    vector<string> folders;
+    TFile file(fileName.data(), "READ");
+    if (file.IsZombie()) {
+      WARNING("Cannot open input file {} (data source {}).", fileName, dataSource);
+      return folders;
+    }
+    std::function<void(TDirectory*, const vector<string>&, size_t, const string&)> match;
+    match = [&](TDirectory* dir, const vector<string>& levels, size_t level, const string& path) {
+      if (level == levels.size()) {
+        folders.push_back(path);
+        return;
+      }
+      set<string> visited;  // keys can appear in several cycles
+      for (auto* key : TRangeDynCast<TKey>(dir->GetListOfKeys())) {
+        if (!key || !visited.insert(key->GetName()).second) continue;
+        if (fnmatch(levels[level].data(), key->GetName(), 0) != 0) continue;
+        if (!TClass::GetClass(key->GetClassName()) || !TClass::GetClass(key->GetClassName())->InheritsFrom(TDirectory::Class())) continue;
+        if (auto* subDir = dir->GetDirectory(key->GetName())) {
+          match(subDir, levels, level + 1, path.empty() ? key->GetName() : path + "/" + key->GetName());
+        }
+      }
+    };
+    match(&file, split_string(folderPattern, '/'), 0, "");
+    return folders;
+  };
+
+  std::function<void(const string&)> addEntry;
+  addEntry = [&](const string& entry) {
+    auto fileAndFolder = split_string(entry, ':', true);
+    const string& filePart = fileAndFolder[0];
+    const string folderPart = (fileAndFolder.size() > 1) ? fileAndFolder[1] : "";
+
+    if (hasWildcard(filePart)) {
+      glob_t matches{};
+      const bool found = (glob(expand_path(filePart).data(), 0, nullptr, &matches) == 0);
+      if (!found) WARNING("No files match {} (data source {}).", filePart, dataSource);
+      for (size_t i = 0; found && i < matches.gl_pathc; ++i) {
+        addEntry(string(matches.gl_pathv[i]) + ((fileAndFolder.size() > 1) ? ":" + folderPart : ""));
+      }
+      globfree(&matches);
+      return;
+    }
+    if (str_ends_with(filePart, ".root") || str_ends_with(entry, mTableFileEndings)) {
+      if (hasWildcard(folderPart)) {
+        const auto folders = expandFolders(expand_path(filePart), folderPart);
+        if (folders.empty()) WARNING("No folders match {} in {} (data source {}).", folderPart, filePart, dataSource);
+        for (const auto& folder : folders) {
+          addInput(filePart + ":" + folder);
+        }
+      } else {
+        addInput(entry);
+      }
+      return;
     }
     string path = expand_path(entry);
     if (!std::filesystem::is_directory(path)) {
       WARNING("Data source entry {} (data source {}) is neither a recognized file type nor an existing directory. Skipping.", entry, dataSource);
-      continue;
+      return;
     }
     vector<string> dirFileNames;
     for (const auto& file : std::filesystem::recursive_directory_iterator(path)) {
@@ -462,10 +543,13 @@ vector<string> PlotManager::ExpandInputFiles(const string& dataSource) const
     }
     std::sort(dirFileNames.begin(), dirFileNames.end());
     for (const auto& fileName : dirFileNames) {
-      addFile(fileName);
+      addInput(fileName);
     }
+  };
+  for (const auto& entry : inputsIt->second) {
+    addEntry(entry);
   }
-  return inputFiles;
+  return inputs;
 }
 
 //**************************************************************************************************
@@ -782,7 +866,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
         for (const auto& [dataSource, name, dataInfo] : missingData) {
           message += "\n         - missing " + dataSource + ":" + name;
           if (!dataInfo.dataDims.empty()) message += " [" + dataInfo.GetDescription() + "]";
-          message += (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (data source not defined)" : "";
+          message += (mInputs.find(dataSource) == mInputs.end()) ? " (data source not defined)" : "";
         }
         ERROR("{}", message);
         allCreated = false;
@@ -876,18 +960,19 @@ bool PlotManager::FillBuffer()
 
     // open all input files belonging to the current dataSource and extract the data
     mTreeInputs.clear();
-    for (const auto& inputFileNameRaw : ExpandInputFiles(dataSource)) {
+    for (const auto& inputRaw : ExpandInputs(dataSource)) {
       if (requiredData.empty()) break;
-      string inputFileName = expand_path(inputFileNameRaw);
-      if (str_ends_with(inputFileName, mTableFileEndings)) {
-        string name = inputFileName.substr(inputFileName.rfind('/') + 1, inputFileName.rfind(".") - inputFileName.rfind('/') - 1);
-        ReadTableData(inputFileName, name, dataSource);
+      string input = expand_path(inputRaw);
+      if (str_ends_with(input, mTableFileEndings)) {
+        string name = input.substr(input.rfind('/') + 1, input.rfind(".") - input.rfind('/') - 1);
+        ReadTableData(input, name, dataSource);
         vector<string>& wantedNames = requiredData[""];
         wantedNames.erase(std::remove_if(wantedNames.begin(), wantedNames.end(), [&](const auto& wantedName) { return wantedName == name; }), wantedNames.end());
         if (wantedNames.empty()) requiredData.erase("");
       }
       // check if only a sub-folder in input file should be searched
-      auto fileNamePath = split_string(inputFileName, ':', true);
+      auto fileNamePath = split_string(input, ':', true);
+      mIsFolderInput = (fileNamePath.size() > 1);
       string& fileName = fileNamePath[0];
       if (!str_ends_with(fileName, ".root")) continue;
 
@@ -940,16 +1025,16 @@ bool PlotManager::FillBuffer()
       for (const auto& pathStr : emptySubDirs) {
         requiredData.erase(pathStr);
       }
-      // trees can have parts in further files: keep looking for them
-      for (const auto& [treeName, inputs] : mTreeInputs) {
+      // trees can also be in further inputs: keep looking for them
+      for (const auto& [treeName, treeInputs] : mTreeInputs) {
         const auto pathPos = treeName.find_last_of('/');
         auto& names = requiredData[(pathPos == string::npos) ? "" : treeName.substr(0, pathPos)];
         const string name = treeName.substr(pathPos + 1);
         if (std::find(names.begin(), names.end(), name) == names.end()) names.push_back(name);
       }
     }
-    // process the trees found: chained over all files of the data source that contain them
-    for (const auto& [treeName, inputs] : mTreeInputs) {
+    // process the trees found: chained over all inputs of the data source that contain them
+    for (const auto& [treeName, treeInputs] : mTreeInputs) {
       const auto pathPos = treeName.find_last_of('/');
       const string pathStr = (pathPos == string::npos) ? "" : treeName.substr(0, pathPos);
       if (auto it = requiredData.find(pathStr); it != requiredData.end()) {
@@ -957,11 +1042,11 @@ bool PlotManager::FillBuffer()
         names.erase(std::remove(names.begin(), names.end(), treeName.substr(pathPos + 1)), names.end());
         if (names.empty()) requiredData.erase(it);
       }
-      auto chain = std::make_shared<TChain>(inputs.front().second.data());
-      for (const auto& [file, treePath] : inputs) {
-        chain->AddFile(file.data(), TTree::kMaxEntries, treePath.data());
+      auto chain = std::make_shared<TChain>(treeInputs.front().treePath.data());
+      for (const auto& treeInput : treeInputs) {
+        chain->AddFile(treeInput.file.data(), TTree::kMaxEntries, treeInput.treePath.data());
       }
-      ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [chain]() { return std::make_unique<ROOT::RDataFrame>(*chain); }, inputs.size());
+      ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [chain]() { return std::make_unique<ROOT::RDataFrame>(*chain); }, DescribeInputs(treeInputs));
     }
     mTreeInputs.clear();
     success &= requiredData.empty();
@@ -990,7 +1075,7 @@ void PlotManager::PrintBufferStatus(bool onlyMissing) const
       bool show = onlyMissing ? (dataPtr == nullptr) : true;
       if (dataPtr) ++nAvailableData;
       if (show) {
-        if (printDataSource) DEBUG("{}{}", dataSource, (mInputFiles.find(dataSource) == mInputFiles.end()) ? " (data source not defined)" : "");
+        if (printDataSource) DEBUG("{}{}", dataSource, (mInputs.find(dataSource) == mInputs.end()) ? " (data source not defined)" : "");
         printDataSource = false;
         DEBUG(" - {}{}{}", (dataPtr) ? logger::begin_color(logger::Color::Green) : logger::begin_color(logger::Color::Red), dataName, logger::end_color());
       }
@@ -1387,9 +1472,9 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
               // trees stored in files are chained over all files of the data source (processed once all files are searched)
               string dirPath = dir->GetPath();  // file.root:/some/folder
               dirPath.erase(0, dirPath.find(":/") + 2);
-              mTreeInputs[fullName].emplace_back(dir->GetFile()->GetName(), (dirPath.empty() ? "" : dirPath + "/") + curDataName);
+              mTreeInputs[fullName].push_back({dir->GetFile()->GetName(), (dirPath.empty() ? "" : dirPath + "/") + curDataName, mIsFolderInput});
             } else if (mTreeInputs.find(fullName) != mTreeInputs.end()) {
-              WARNING("Ignoring part of tree {} (data source {}) that is stored in a list: it cannot be chained with the parts in other files.", fullName, dataSource);
+              WARNING("Ignoring tree {} (data source {}) in a list: a tree stored in a list cannot be chained with the same tree in other inputs.", fullName, dataSource);
             } else {
               // trees in lists live in memory only, which RDataFrame can process only single-threaded
               const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
@@ -2000,7 +2085,7 @@ bool BookRequest(Request& request)
  */
 //**************************************************************************************************
 void PlotManager::ProcessDataRequests(const string& type, const string& dataSource, const string& name, const string& objNameSuffix,
-                                      const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, size_t nFiles)
+                                      const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, const string& inputsDescription)
 {
   using data_info_t = Plot::Pad::Data::data_info_t;
   auto start = std::chrono::steady_clock::now();
@@ -2015,8 +2100,8 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   }
   if (parallelInfos.empty() && sequentialInfos.empty()) return;
 
-  // errors that only show up while reading may come from parts of a chained tree with a different structure
-  const string chainHint = (nFiles > 1) ? fmt::format(" (the tree is chained from {} files of the data source: do all parts have the same columns?)", nFiles) : "";
+  // errors that only show up while reading may come from inputs of a chained tree with a different structure
+  const string chainHint = (inputsDescription.empty()) ? "" : fmt::format(" (the tree is chained from {}: do all inputs of the data source have the same columns?)", inputsDescription);
   optional<ULong64_t> nEntries;
   uint32_t nPasses{};
   uint32_t nRequests{};
@@ -2105,7 +2190,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   if (!nRequests) return;
 
   double_t seconds = std::chrono::duration<double_t>(std::chrono::steady_clock::now() - start).count();
-  string message = fmt::format(" - {}:{}  {} entries{}, {} request{}, {} pass{}, {:.1f} s", dataSource, name, nEntries.value_or(0), (nFiles > 1) ? fmt::format(" from {} files", nFiles) : "", nRequests, (nRequests == 1) ? "" : "s", nPasses, (nPasses == 1) ? "" : "es", seconds);
+  string message = fmt::format(" - {}:{}  {} entries{}, {} request{}, {} pass{}, {:.1f} s", dataSource, name, nEntries.value_or(0), (inputsDescription.empty()) ? "" : " from " + inputsDescription, nRequests, (nRequests == 1) ? "" : "s", nPasses, (nPasses == 1) ? "" : "es", seconds);
   /*
   for (const auto& [info, counts] : entryCounts) {
     const auto& [nPreFilter, nPostFilter] = counts;

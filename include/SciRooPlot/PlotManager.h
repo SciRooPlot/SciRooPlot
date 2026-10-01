@@ -60,11 +60,11 @@ class PlotManager
   void SaveProject() const;
 
   // create or append to a dataSource; replace = true clears existing entries from the dataSource first
-  void AddDataSource(const std::string& dataSource, const std::vector<std::string>& inputFiles, bool replace = false);
-  void AddDataSource(const std::string& dataSource, std::initializer_list<std::string> inputFiles, bool replace = false);
-  void AddDataSource(const std::string& dataSource, const std::string& inputFile, bool replace = false);
-  void AddDataSource(const std::string& dataSource, const std::vector<TObject*>& inputData, bool replace = false);
-  void AddDataSource(const std::string& dataSource, TObject* inputData, bool replace = false);
+  void AddDataSource(const std::string& dataSource, const std::vector<std::string>& inputs, bool replace = false);
+  void AddDataSource(const std::string& dataSource, std::initializer_list<std::string> inputs, bool replace = false);
+  void AddDataSource(const std::string& dataSource, const std::string& input, bool replace = false);
+  void AddDataSource(const std::string& dataSource, const std::vector<TObject*>& inputs, bool replace = false);
+  void AddDataSource(const std::string& dataSource, TObject* input, bool replace = false);
 
   void SaveDataSources(const std::optional<std::string>& file = {}) const;
   void LoadDataSources(const std::optional<std::string>& file = {}, bool replace = false);
@@ -110,16 +110,22 @@ class PlotManager
 
   std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>> mDataBuffer;
   std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Plot::Pad::Data::data_info_t>>> mDataInfoBuffer;
-  std::map<std::string, std::vector<std::string>> mInputFiles;                          // dataSource name -> input file paths
-  std::map<std::string, std::vector<std::pair<std::string, std::string>>> mTreeInputs;  // tree name -> (file, path in file) of all its parts within the current data source
+  std::map<std::string, std::vector<std::string>> mInputs;  // dataSource name -> inputs as added (files, file.root:folder, directories, wildcard patterns)
+  struct tree_input_t {
+    std::string file;      // file containing this part of the tree
+    std::string treePath;  // path of the tree within the file
+    bool isFolderInput;    // the input is a folder within the file (file.root:folder) rather than the whole file
+  };
+  std::map<std::string, std::vector<tree_input_t>> mTreeInputs;  // tree name -> where it was found in the inputs of the data source currently read
+  bool mIsFolderInput{};                                         // the input currently read is a folder within a file
   void PrintBufferStatus(bool onlyMissing = false) const;
   std::vector<std::tuple<std::string, std::string, Plot::Pad::Data::data_info_t>> GetMissingData(Plot& plot);
   bool FillBuffer();
-  std::vector<std::string> ExpandInputFiles(const std::string& dataSource) const;
+  std::vector<std::string> ExpandInputs(const std::string& dataSource) const;
   void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource);
   void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataSource);
   void ProcessDataRequests(const std::string& type, const std::string& dataSource, const std::string& name, const std::string& objNameSuffix,
-                           const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, size_t nFiles = 1);
+                           const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, const std::string& inputsDescription = "");
 };
 
 }  // end namespace SciRooPlot

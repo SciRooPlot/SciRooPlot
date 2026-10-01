@@ -124,8 +124,13 @@ pm.AddDataSource("dataSourceB", {"/path/to/file/b.root:sub/list/or/dir"});
 pm.AddDataSource("dataSourceC", {"${HOME}/myRootFiles/b2.root"});
 // and it is possible to add all root files within a directory (including sub-directories):
 pm.AddDataSource("dataSourceD", {"/path/to/folder/with/rootfiles/"});
-// please note that multiple root files in one dataSource will be treated as one big input file and are traversed in the order they were added
-// (the files found in a directory are traversed in alphabetical order); the first file containing the requested object wins
+// wildcards (*, ?, [...]) select all matching files and/or all matching folders within the files, e.g. all time frames of all AO2D files:
+pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
+// a data source is one dataset made of its inputs: files (in the order they were added, files found in a directory or via wildcards
+// in alphabetical order) or folders within files (each folder matching a wildcard is one input, in the order they appear in the file)
+// - within each input, the first match of the requested name counts (the directory structure is traversed recursively)
+// - trees found in several inputs are chained (processed together), all other objects are taken from the first input containing them
+// data that should not be merged (e.g. train and test samples) therefore belongs into separate data sources
 
 // now that we know where to look for the data, we can start creating plots
 // each plot will be handed over to the manager after it was defined
@@ -462,8 +467,7 @@ data_layout_t pp_7TeV
 } // -----------------------------------------------------------------------
 
 // it is also possible to process and display tabled data, i.e. root trees or CSV files
-// unlike other objects, a tree that is found in several files of a data source (e.g. one file per run) is chained:
-// all its parts are processed together (within each file the first match counts, as for all other objects)
+// (a tree found in several inputs of a data source, e.g. one file per run or one folder per time frame, is chained over all of them)
 { // -----------------------------------------------------------------------
   Plot plot("treePlot", "myTreeExamples", "1d");
 
