@@ -1854,6 +1854,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           request.getResult = nullptr;
         }
       }
+      if (handles.empty()) return;
       handles.emplace_back(nEntriesTotal);
       vector<ROOT::RDF::RResultHandle> pendingHandles;
       for (auto& handle : handles) {
