@@ -67,6 +67,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <memory>
 #include <numeric>
 #include <regex>
@@ -827,6 +828,28 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
         applyModifiers(data_ptr, *data);
 
+        // NaN or infinite values (e.g. from a division by zero) spoil the axis ranges and ROOT then draws nothing
+        if constexpr (is_one_of_v<data_type, TH1*, TH2*, TH3*>()) {
+          int32_t nInvalid{};
+          for (int32_t bin = 0; bin < data_ptr->GetNcells(); ++bin) {
+            if (!std::isfinite(data_ptr->GetBinContent(bin)) || !std::isfinite(data_ptr->GetBinError(bin))) {
+              data_ptr->SetBinContent(bin, 0.);
+              data_ptr->SetBinError(bin, 0.);
+              ++nInvalid;
+            }
+          }
+          if (nInvalid) warn("{} has {} bin{} with NaN or infinite values, which are drawn as zero.", data_ptr->GetName(), nInvalid, (nInvalid == 1) ? "" : "s");
+        } else if constexpr (is_graph_1d<data_type>()) {
+          int32_t nInvalid{};
+          for (int32_t i = data_ptr->GetN() - 1; i >= 0; --i) {
+            if (!std::isfinite(data_ptr->GetPointX(i)) || !std::isfinite(data_ptr->GetPointY(i))) {
+              data_ptr->RemovePoint(i);
+              ++nInvalid;
+            }
+          }
+          if (nInvalid) warn("{} has {} point{} with NaN or infinite values, which are not drawn.", data_ptr->GetName(), nInvalid, (nInvalid == 1) ? "" : "s");
+        }
+
         // first data is only used to define the axes
         if (dataIndex == 0) {
           data_ptr->Draw(drawingOptions.data());
@@ -1019,6 +1042,50 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     pad_ptr->SetGridx(*axisLayout.GetGrid());
                   } else if (axisLabel == 'Y') {
                     pad_ptr->SetGridy(*axisLayout.GetGrid());
+                  }
+                }
+              }
+            }
+
+            // a log scale needs a positive range: ROOT otherwise complains and draws nothing (or the data outside of the frame)
+            if (!pad_ptr->GetView()) {
+              const bool isDependentAxis = (axisLabel == ((isTHN) ? 'Z' : 'Y'));
+              const bool isLog = (axisLabel == 'X') ? pad_ptr->GetLogx() : ((axisLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
+              auto disableLog = [&]() {
+                if (axisLabel == 'X')
+                  pad_ptr->SetLogx(false);
+                else if (axisLabel == 'Y')
+                  pad_ptr->SetLogy(false);
+                else
+                  pad_ptr->SetLogz(false);
+              };
+              if (isLog && isDependentAxis) {
+                const double_t maximum = axisHist_ptr->GetMaximum();
+                const double_t minimum = axisHist_ptr->GetMinimum();
+                const double_t positiveMinimum = axisHist_ptr->GetMinimum(0.);  // smallest positive value
+                if (maximum <= 0. || positiveMinimum <= 0. || positiveMinimum > maximum) {
+                  WARNING("Log scale of {} axis in pad {} ignored: the data has no positive values.", axisLabel, padID);
+                  disableLog();
+                } else if (minimum < 0.) {
+                  if (axisHist_ptr->GetMinimumStored() != -1111) {
+                    WARNING("Range of {} axis in pad {} starts at {:.3g} which is not possible for a log scale, starting at {:.3g} instead.", axisLabel, padID, minimum, 0.5 * positiveMinimum);
+                  }
+                  axisHist_ptr->SetMinimum(0.5 * positiveMinimum);
+                }
+              } else if (isLog && !isDependentAxis) {
+                const int32_t firstBin = std::max(axis_ptr->GetFirst(), 1);
+                const int32_t lastBin = std::min(axis_ptr->GetLast(), axis_ptr->GetNbins());
+                if (axis_ptr->GetBinLowEdge(firstBin) < 0.) {  // ROOT itself copes with a range starting at zero
+                  if (axis_ptr->GetBinUpEdge(lastBin) <= 0.) {
+                    WARNING("Log scale of {} axis in pad {} ignored: the axis range has no positive values.", axisLabel, padID);
+                    disableLog();
+                  } else {
+                    int32_t bin = firstBin;
+                    while (axis_ptr->GetBinLowEdge(bin) <= 0.)
+                      ++bin;
+                    const double_t newMin = (bin <= lastBin) ? axis_ptr->GetBinLowEdge(bin) : 1e-3 * axis_ptr->GetBinUpEdge(lastBin);
+                    WARNING("Range of {} axis in pad {} starts at {:.3g} which is not possible for a log scale, starting at {:.3g} instead.", axisLabel, padID, axis_ptr->GetBinLowEdge(firstBin), newMin);
+                    axis_ptr->SetRangeUser(newMin, axis_ptr->GetBinUpEdge(lastBin));
                   }
                 }
               }

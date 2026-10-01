@@ -89,9 +89,9 @@ class Config
 
   void Reset();
   void Clean();
-  void Remove(const std::string& projectName);
-  void Rename(const std::string& projectName, const std::string& newProjectName);
-  void Select(const std::string& projectName);
+  bool Remove(const std::string& projectName);
+  bool Rename(const std::string& projectName, const std::string& newProjectName);
+  bool Select(const std::string& projectName);
 
  private:
   Config() { LoadConfig(); }

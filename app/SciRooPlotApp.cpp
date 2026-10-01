@@ -196,6 +196,13 @@ int main(int argc, char* argv[])
       ERROR("Specify default plotmode.");
       return 1;
     }
+    if (project != "list" && !is_valid_plot_mode(project)) {
+      string modeList;
+      for (const auto& mode : plot_modes())
+        modeList += mode + ", ";
+      ERROR("Invalid plot mode '{}' (valid modes: {}gif+<centiseconds>, list).", project, modeList);
+      return 1;
+    }
     Config::GetMutable().SetPlotMode(project);
   } else if (command == "matchmode") {
     string matchMode = project;
@@ -259,7 +266,7 @@ int main(int argc, char* argv[])
       ERROR("Specify new name for {}.", project);
       return 1;
     }
-    Config::GetMutable().Rename(project, property);
+    if (!Config::GetMutable().Rename(project, property)) return 1;
   } else if (command == "clean") {
     Config::GetMutable().Clean();
   } else if (command == "reset") {
@@ -267,9 +274,9 @@ int main(int argc, char* argv[])
   } else if (command == "projects") {
     Config::Get().ListProjects();
   } else if (command == "remove") {
-    Config::GetMutable().Remove(project);
+    if (!Config::GetMutable().Remove(project)) return 1;
   } else if (command == "select") {
-    Config::GetMutable().Select(project);
+    if (!Config::GetMutable().Select(project)) return 1;
   } else if (command == "show") {
     if (!project.empty() && !Config::Get().Exists(project)) {
       ERROR("Cannot find project {}.", project);

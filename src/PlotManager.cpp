@@ -670,10 +670,9 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
 //**************************************************************************************************
 bool PlotManager::GeneratePlots(const string& mode, const string& name, const string& group)
 {
-  const vector<string> validModes{"show", "print", "file", "data", "macro", "pdf", "eps", "ps", "svg", "png", "jpg", "gif", "html", "json", "xml", "root"};
-  if (std::find(validModes.begin(), validModes.end(), mode) == validModes.end() && mode.rfind("gif+", 0) != 0) {
+  if (!is_valid_plot_mode(mode)) {
     string modeList;
-    for (const auto& validMode : validModes)
+    for (const auto& validMode : plot_modes())
       modeList += validMode + ", ";
     ERROR("Invalid mode '{}' (valid modes: {}gif+<centiseconds>).", mode, modeList);
     return false;
@@ -1057,10 +1056,13 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     // there is a natural limit to the number of custom colors since ROOT color indices are of type short
     logger::throw_out_of_range("Too many custom colors in one session. Aborting...");
   }
-  LOG("Created plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetGroup(), logger::end_color());
+  auto logCreated = [&]() {
+    LOG("Created plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetGroup(), logger::end_color());
+  };
 
   // if interactive mode is specified, open window instead of saving the plot
   if (isInteractiveMode) {
+    logCreated();
     if (auto rc = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) {
       rc->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
     }
@@ -1131,9 +1133,11 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 
   if (mode == "file") {
     mCanvasRegistry[plot.GetUniqueName()] = canvas;
+    logCreated();
     return true;
   }
   if (mode == "data") {
+    logCreated();
     return true;
   }
 
@@ -1207,7 +1211,12 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     }
     fullName += gifRepRate;
   }
-  std::filesystem::create_directories(folderName);
+  std::error_code ec;
+  std::filesystem::create_directories(folderName, ec);
+  if (ec) {
+    ERROR("Could not create output directory {}: {}.", folderName, ec.message());
+    return false;
+  }
   float_t previousLineScalePS = gStyle->GetLineScalePS();
   auto lineScaleGuard = make_scope_guard([previousLineScalePS]() { gStyle->SetLineScalePS(previousLineScalePS); });
   if ((mode == "pdf") || (mode == "eps") || (mode == "ps")) {
@@ -1225,6 +1234,11 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   // reset TCandle range options to their default values after drawing data
   TCandle::SetBoxRange(0.5);
   TCandle::SetWhiskerRange(0.75);
+  if (!isGif && !std::filesystem::is_regular_file(fullName)) {
+    ERROR("Could not write {}.", fullName);
+    return false;
+  }
+  logCreated();
   return true;
 }
 
@@ -1516,6 +1530,24 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
   }
 
   ROOT::RDF::RCsvDS::ROptions options;
+  // ROOT reads numbers in exponent notation without decimal point (e.g. 1e-3) as text: declare such columns as numeric
+  if (lines.size() > 1) {
+    static const std::regex number(R"([+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?)");
+    static const std::regex exponent(R"([+-]?\d+[eE][+-]?\d+)");
+    const auto columnNames = split(lines[0].second, delimiter);
+    for (size_t column = 0; column < columnNames.size(); ++column) {
+      bool allNumbers = true;
+      bool hasExponent = false;
+      for (size_t i = 1; i < lines.size() && allNumbers; ++i) {
+        const string value = trim(split(lines[i].second, delimiter)[column]);
+        allNumbers = std::regex_match(value, number);
+        hasExponent = hasExponent || std::regex_match(value, exponent);
+      }
+      string columnName = trim(columnNames[column]);
+      if (columnName.size() > 1 && columnName.front() == '"' && columnName.back() == '"') columnName = columnName.substr(1, columnName.size() - 2);
+      if (allNumbers && hasExponent && !columnName.empty()) options.fColumnTypes[columnName] = 'D';
+    }
+  }
   options.fDelimiter = delimiter;
   options.fLeftTrim = true;  // as for the checks above: only the line as a whole is trimmed
   options.fRightTrim = true;
@@ -1603,6 +1635,23 @@ struct data_request_t {
   vector<ROOT::RDF::RResultHandle> handles;
 };
 
+// list of the columns available in a data frame, to be appended to messages about invalid expressions
+string AvailableColumns(ROOT::RDF::RNode& node)
+{
+  constexpr size_t kMaxColumns = 30;
+  vector<string> columns;
+  for (const auto& column : node.GetColumnNames()) {
+    if (column.rfind("SRP_", 0) != 0) columns.push_back(column);
+  }
+  std::sort(columns.begin(), columns.end());
+  string list;
+  for (size_t i = 0; i < std::min(columns.size(), kMaxColumns); ++i) {
+    list += ((i) ? ", " : "") + columns[i];
+  }
+  if (columns.size() > kMaxColumns) list += fmt::format(", ... ({} more)", columns.size() - kMaxColumns);
+  return " (available columns: " + list + ")";
+}
+
 // book everything that is needed before the final result can be booked (defines, filters, entry counts, auto-detection of axis ranges)
 template <typename Request>
 bool PrepareRequest(ROOT::RDF::RNode node, Request& request)
@@ -1639,7 +1688,10 @@ bool PrepareRequest(ROOT::RDF::RNode node, Request& request)
 
   if (dataInfo.definitions.keys && dataInfo.definitions.values) {
     for (size_t i = 0; i < dataInfo.definitions.keys->size(); ++i) {
-      node = node.Define(dataInfo.definitions.keys->at(i), dataInfo.definitions.values->at(i));
+      const auto& column = dataInfo.definitions.keys->at(i);
+      const auto& expression = dataInfo.definitions.values->at(i);
+      // an existing column is replaced (e.g. to correct or recalibrate it)
+      node = (node.HasColumn(column)) ? node.Redefine(column, expression) : node.Define(column, expression);
     }
   }
   if (dataInfo.entries.max) {
@@ -1655,7 +1707,7 @@ bool PrepareRequest(ROOT::RDF::RNode node, Request& request)
       try {
         node = node.Filter(filter);
       } catch (const std::runtime_error&) {
-        ERROR("Illegal filter expression {} for {}.", filter, request.context);
+        ERROR("Illegal filter expression {} for {}{}.", filter, request.context, AvailableColumns(node));
         return false;
       }
     }
@@ -1669,7 +1721,7 @@ bool PrepareRequest(ROOT::RDF::RNode node, Request& request)
     try {
       node = node.Define(colName, dataDim.var);
     } catch (const std::runtime_error&) {
-      ERROR("Illegal expression {} for {}.", dataDim.var, request.context);
+      ERROR("Illegal expression {} for {}{}.", dataDim.var, request.context, AvailableColumns(node));
       return false;
     }
     if (node.GetColumnType(colName).find("string") != string::npos) {
@@ -1695,7 +1747,7 @@ bool PrepareRequest(ROOT::RDF::RNode node, Request& request)
     try {
       node = node.Define("SRP_AXIS_W", *dataInfo.weight);
     } catch (const std::runtime_error&) {
-      ERROR("Illegal weight expression {} for {}.", *dataInfo.weight, request.context);
+      ERROR("Illegal weight expression {} for {}{}.", *dataInfo.weight, request.context, AvailableColumns(node));
       return false;
     }
     request.hasWeights = true;

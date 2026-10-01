@@ -235,41 +235,41 @@ void Config::ShowSettings() const
   PRINT("Current project: {}", mCurrentProject.empty() ? "<none>" : mCurrentProject);
 }
 
-void Config::Rename(const std::string& projectName, const std::string& newProjectName)
+bool Config::Rename(const std::string& projectName, const std::string& newProjectName)
 {
   if (mPath.empty()) {
     ERROR("No valid config path; cannot rename.");
-    return;
+    return false;
   }
   if (mProjects.find(projectName) == mProjects.end()) {
     ERROR("Cannot find project {}.", projectName);
-    return;
+    return false;
   }
   if (newProjectName.empty()) {
     ERROR("Specify new name for {}.", projectName);
-    return;
+    return false;
   }
   if (auto illegal = find_illegal_name_char(newProjectName)) {
     ERROR("Project name '{}' contains illegal character '{}'.", newProjectName, *illegal);
-    return;
+    return false;
   }
   if (mProjects.find(newProjectName) != mProjects.end()) {
     ERROR("Project {} already exists.", newProjectName);
-    return;
+    return false;
   }
 
   const std::filesystem::path projectPath = ProjectPath(projectName);
   const std::filesystem::path newProjectPath = ProjectPath(newProjectName);
   if (std::filesystem::exists(newProjectPath)) {
     ERROR("Cannot rename {} to {}: {} already exists.", projectName, newProjectName, newProjectPath.string());
-    return;
+    return false;
   }
   if (std::filesystem::exists(projectPath)) {
     std::error_code ec;
     std::filesystem::rename(projectPath, newProjectPath, ec);
     if (ec) {
       ERROR("Could not rename {} to {}: {}", projectPath.string(), newProjectPath.string(), ec.message());
-      return;
+      return false;
     }
   }
 
@@ -280,6 +280,7 @@ void Config::Rename(const std::string& projectName, const std::string& newProjec
     mCurrentProject = newProjectName;
   }
   PRINT("Renamed project {} to {}. User code should be adjusted accordingly.", projectName, newProjectName);
+  return true;
 }
 
 void Config::Reset()
@@ -354,22 +355,22 @@ void Config::Show(const string& projectNameIn) const
   }
 }
 
-void Config::Remove(const string& projectName)
+bool Config::Remove(const string& projectName)
 {
   if (projectName.empty()) {
     ERROR("Specify which project to remove.");
-    return;
+    return false;
   }
   if (mPath.empty()) {
     ERROR("No valid config path; refusing to remove.");
-    return;
+    return false;
   }
   if (mProjects.find(projectName) == mProjects.end()) {
     ERROR("Cannot find project {}.", projectName);
-    return;
+    return false;
   }
   if (!DeleteProjectDir(projectName)) {
-    return;
+    return false;
   }
   mProjects.erase(projectName);
   if (mCurrentProject == projectName) {
@@ -380,6 +381,7 @@ void Config::Remove(const string& projectName)
       INFO("Selecting project {}", mCurrentProject);
     }
   }
+  return true;
 }
 
 bool Config::DeleteProjectDir(const string& projectName) const
@@ -400,17 +402,18 @@ bool Config::DeleteProjectDir(const string& projectName) const
   return true;
 }
 
-void Config::Select(const string& projectName)
+bool Config::Select(const string& projectName)
 {
   if (projectName.empty()) {
     ERROR("Specify a project to select.");
-    return;
+    return false;
   }
-  if (mProjects.find(projectName) != mProjects.end()) {
-    mCurrentProject = projectName;
-  } else {
+  if (mProjects.find(projectName) == mProjects.end()) {
     ERROR("Cannot find project {}.", projectName);
+    return false;
   }
+  mCurrentProject = projectName;
+  return true;
 }
 
 std::filesystem::path Config::ProjectPath(const string& projectName) const

@@ -47,14 +47,33 @@ std::string expand_path(const std::string& path);
 std::vector<std::string> split_string(const std::string& argString, char delimiter, bool onlyFirst = false);
 bool file_exists(const std::string& name);
 
-inline std::optional<char> find_illegal_name_char(const std::string& name, bool allowSlash = false)
+// output modes of GeneratePlots (in addition: gif+<centiseconds between frames>)
+inline const std::vector<std::string>& plot_modes()
+{
+  static const std::vector<std::string> modes{"show", "print", "file", "data", "macro", "pdf", "eps", "ps", "svg", "png", "jpg", "gif", "html", "json", "xml", "root"};
+  return modes;
+}
+
+inline bool is_valid_plot_mode(const std::string& mode)
+{
+  if (std::find(plot_modes().begin(), plot_modes().end(), mode) != plot_modes().end()) return true;
+  return mode.size() > 4 && mode.rfind("gif+", 0) == 0 && mode.find_first_not_of("0123456789", 4) == std::string::npos;
+}
+
+// returns the first illegal character (for non-ASCII characters the complete UTF-8 sequence, so it can be printed)
+inline std::optional<std::string> find_illegal_name_char(const std::string& name, bool allowSlash = false)
 {
   static constexpr std::string_view kAllowedChars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/";
   const std::string_view allowed =
     allowSlash ? kAllowedChars : kAllowedChars.substr(0, kAllowedChars.size() - 1);
   const auto pos = name.find_first_not_of(allowed);
-  return (pos == std::string::npos) ? std::nullopt : std::optional<char>{name[pos]};
+  if (pos == std::string::npos) return std::nullopt;
+  size_t length = 1;
+  while (static_cast<unsigned char>(name[pos]) >= 0x80 && pos + length < name.size() && (static_cast<unsigned char>(name[pos + length]) & 0xC0) == 0x80) {
+    ++length;  // continuation bytes of a multi-byte UTF-8 character
+  }
+  return name.substr(pos, length);
 }
 
 inline bool str_contains(const std::string& str, const std::string& substr)
