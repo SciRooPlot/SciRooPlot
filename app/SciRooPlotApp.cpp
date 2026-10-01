@@ -140,8 +140,8 @@ int main(int argc, char* argv[])
     PRINT("-----------------------------------------------------------");
     PRINT("Project access:");
     PRINT("  srp confdir [<project> | @current]");
-    PRINT("  srp cd      (<project> | @current)");
-    PRINT("  srp edit    (<project> | @current)");
+    PRINT("  srp cd      [<project> | @current]");
+    PRINT("  srp edit    [<project> | @current]");
     PRINT("-----------------------------------------------------------");
     PRINT("Settings:");
     PRINT("  srp settings");
