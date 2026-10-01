@@ -1445,8 +1445,6 @@ Plot::Pad::Ratio& Plot::Pad::AddRatioFromNames(const string& numeratorName, cons
 
 Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataSource, const string& denominatorName, const string& denominatorDataSource, const optional<string>& label)
 {
-  WARNING("AddRatio(\"{}\", \"{}\", \"{}\", \"{}\") is deprecated. Use AddRatio({{\"{}\", \"{}\"}}, {{\"{}\", \"{}\"}}) instead (python: lists instead of braces).",
-          numeratorName, numeratorDataSource, denominatorName, denominatorDataSource, numeratorName, numeratorDataSource, denominatorName, denominatorDataSource);
   return AddRatioFromNames(numeratorName, numeratorDataSource, denominatorName, denominatorDataSource, label);
 }
 

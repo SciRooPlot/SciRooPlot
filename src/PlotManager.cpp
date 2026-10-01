@@ -416,7 +416,7 @@ void PlotManager::SaveDataSources(const optional<string>& file) const
   for (const auto& [dataSource, inputs] : mInputs) {
     ptree inputsOfDataSource;
     for (const auto& input : inputs) {
-      inputsOfDataSource.add("FILE", input);  // key name kept for compatibility with existing projects
+      inputsOfDataSource.add("INPUT", input);
     }
     dataSourcesTree.put_child(dataSource, inputsOfDataSource);
   }
@@ -832,7 +832,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     }
   }
   if (nItemsToRead) {
-    INFO("Reading {} data item{} from {} data source{} ...", nItemsToRead, (nItemsToRead == 1) ? "" : "s", sourcesToRead.size(), (sourcesToRead.size() == 1) ? "" : "s");
+    INFO("Reading {} data item{} from {} data source{}", nItemsToRead, (nItemsToRead == 1) ? "" : "s", sourcesToRead.size(), (sourcesToRead.size() == 1) ? "" : "s");
   }
   try {
     if (!FillBuffer()) {
@@ -857,7 +857,6 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     mPlotViewHistory.clear();
 
     // generate plots
-    if (nItemsToRead) INFO("Creating plots ...");
     bool allCreated = true;
     for (auto plot : selectedPlots) {
       if (!GeneratePlot(*plot, mode)) {

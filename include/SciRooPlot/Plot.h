@@ -227,10 +227,10 @@ class Plot::Pad
 
   Ratio& AddRatio(const Data& numerator, const Data& denominator, const std::optional<std::string>& label = {});
   Ratio& AddRatio(const Ratio& ratio, const std::optional<std::string>& label = {});
-  // deprecated:
   Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataSource,
                   const std::string& denominatorName, const std::string& denominatorDataSource,
                   const std::optional<std::string>& label = {});
+  // deprecated:
   Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorSettings, const std::string& denominatorName,
                   const std::string& denominatorDataSource, const std::optional<std::string>& label = {});
   Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorSettings, const std::string& denominatorName,
