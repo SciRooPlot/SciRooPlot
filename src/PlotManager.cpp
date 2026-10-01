@@ -206,13 +206,14 @@ bool PlotManager::SaveDataToRootFile() const
     return false;
   }
   for (const auto& [dataSource, buffer] : mDataBuffer) {
-    auto dir = outputFile.mkdir(dataSource.data(), "", true);
-    if (!dir) {
+    TDirectory* sourceDir = outputFile.mkdir(dataSource.data(), "", true);
+    if (!sourceDir) {
       ERROR("Could not create directory {} in {}.", dataSource, mDataRootFile);
       continue;
     }
     for (const auto& [dataName, dataPtr] : buffer) {
       if (!dataPtr) continue;
+      TDirectory* dir = sourceDir;  // each object's path starts at its data source directory
       const string objectName = dataPtr->GetName();
       if (objectName.empty()) {
         WARNING("Skipping nameless object of type {} in data source {}.", dataPtr->ClassName(), dataSource);
