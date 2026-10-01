@@ -56,6 +56,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <memory>
 #include <regex>
@@ -1376,6 +1377,9 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
 //**************************************************************************************************
 /**
  * Read table data from file.
+ * The delimiter is the candidate that splits all lines (incl. header) into the same number of fields.
+ * Lines starting with '#' are treated as comments if the first lines contain any.
+ * Files with a varying number of fields are refused, since ROOT's csv reader cannot handle them.
  */
 //**************************************************************************************************
 void PlotManager::ReadTableData(const string& inputFileName, const string& name, const string& dataSource)
@@ -1384,23 +1388,140 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
     ERROR("File {} does not exist.", inputFileName);
     return;
   }
-  char delimiter = ',';
-  std::vector<char> candidates = {',', ';', '\t', '|', ' '};
-  size_t maxCount = 0;
-  std::ifstream file(inputFileName);
-  int32_t lineCount = 0;
-  string line;
-  while (lineCount < 100 && std::getline(file, line)) {
-    for (char c : candidates) {
-      size_t count = std::count(line.begin(), line.end(), c);
-      if (count > maxCount) {
-        maxCount = count;
-        delimiter = c;
+  auto trim = [](const string& line) {
+    const auto begin = line.find_first_not_of(" \t\r");
+    if (begin == string::npos) return string{};
+    return line.substr(begin, line.find_last_not_of(" \t\r") - begin + 1);
+  };
+  // split a line into fields (delimiters within double quotes do not count)
+  auto split = [](const string& line, char delimiter) {
+    vector<string> fields(1);
+    bool quoted = false;
+    for (char c : line) {
+      if (c == '"') quoted = !quoted;
+      if (c == delimiter && !quoted) {
+        fields.emplace_back();
+      } else {
+        fields.back() += c;
       }
     }
-    ++lineCount;
+    return fields;
+  };
+
+  // first data lines (incl. header) with their line numbers, skipping blank lines and comments
+  std::ifstream file(inputFileName);
+  vector<std::pair<size_t, string>> lines;
+  string line;
+  size_t lineNumber = 0;
+  bool hasComments = false;
+  while (lines.size() < 100 && std::getline(file, line)) {
+    ++lineNumber;
+    line = trim(line);
+    if (line.empty()) continue;
+    if (line[0] == '#') {
+      hasComments = true;
+      continue;
+    }
+    lines.emplace_back(lineNumber, line);
   }
-  ProcessDataRequests("table", dataSource, name, ":" + dataSource, [&]() { return std::make_unique<ROOT::RDataFrame>(ROOT::RDF::FromCSV(inputFileName, true, delimiter, 50000)); });
+  if (lines.empty()) {
+    ERROR("Table {} does not contain any data.", inputFileName);
+    return;
+  }
+
+  // the delimiter must give the same number of fields in all lines, the one giving most fields wins
+  char delimiter = ',';
+  size_t nFields = 1;
+  for (char candidate : {',', ';', '\t', '|', ' '}) {
+    const size_t nHeaderFields = split(lines[0].second, candidate).size();
+    if (nHeaderFields <= nFields) continue;
+    bool consistent = std::all_of(lines.begin(), lines.end(), [&](const auto& entry) { return split(entry.second, candidate).size() == nHeaderFields; });
+    if (consistent) {
+      delimiter = candidate;
+      nFields = nHeaderFields;
+    }
+  }
+  auto delimiterName = [](char c) -> string {
+    if (c == '\t') return "tab";
+    if (c == ' ') return "space";
+    return string("'") + c + "'";
+  };
+  auto describeMismatch = [&](char c, size_t nExpected, size_t badLine, size_t nFound) {
+    return fmt::format("the header has {} fields separated by {}, but line {} has {}", nExpected, delimiterName(c), badLine, nFound);
+  };
+  if (nFields == 1) {
+    // no consistent delimiter: report what goes wrong with the delimiter that is most frequent in the header
+    char guess = ',';
+    size_t maxCount = 0;
+    for (char candidate : {',', ';', '\t', '|', ' '}) {
+      size_t count = split(lines[0].second, candidate).size() - 1;
+      if (count > maxCount) {
+        maxCount = count;
+        guess = candidate;
+      }
+    }
+    if (maxCount) {
+      for (const auto& [number, content] : lines) {
+        const size_t n = split(content, guess).size();
+        if (n == maxCount + 1) continue;
+        string hint;
+        if (guess == ' ' || guess == '\t') {
+          std::istringstream words(content);
+          if (std::distance(std::istream_iterator<string>(words), std::istream_iterator<string>()) == static_cast<std::ptrdiff_t>(maxCount + 1)) {
+            hint = " (columns seem to be aligned with several spaces or tabs; use exactly one delimiter between the values)";
+          }
+        }
+        ERROR("Cannot read table {}: {}{}.", inputFileName, describeMismatch(guess, maxCount + 1, number, n), hint);
+        return;
+      }
+    }
+  }
+
+  // check the remaining lines as well, ROOT's csv reader does not tolerate a varying number of fields
+  auto checkLine = [&](size_t number, const string& content) {
+    const size_t n = split(content, delimiter).size();
+    if (n == nFields) return true;
+    ERROR("Cannot read table {}: {}.", inputFileName, describeMismatch(delimiter, nFields, number, n));
+    return false;
+  };
+  while (std::getline(file, line)) {
+    ++lineNumber;
+    line = trim(line);
+    if (line.empty()) continue;
+    if (line[0] == '#' && hasComments) continue;
+    if (!checkLine(lineNumber, line)) return;
+  }
+
+  // ROOT does not trim the fields: names and values with surrounding spaces end up as such (values as text)
+  if (delimiter != ' ' && delimiter != '\t') {
+    for (const auto& [number, content] : {lines[0], lines[std::min<size_t>(1, lines.size() - 1)]}) {
+      const auto fields = split(content, delimiter);
+      if (std::any_of(fields.begin(), fields.end(),
+                      [&](const string& field) { return field != trim(field); })) {
+        WARNING("Table {} has spaces around its delimiters (line {}), which become part of the column names and values (read as text); remove them.", inputFileName, number);
+        break;
+      }
+    }
+  }
+
+  // numbers with decimal commas cannot be read by ROOT (they end up as text)
+  if (delimiter != ',' && lines.size() > 1) {
+    static const std::regex decimalComma(R"(\s*[+-]?\d+,\d+\s*)");
+    for (const auto& field : split(lines[1].second, delimiter)) {
+      if (std::regex_match(field, decimalComma)) {
+        WARNING("Table {} seems to use decimal commas (e.g. '{}'), which are not read as numbers; use decimal points instead.", inputFileName, trim(field));
+        break;
+      }
+    }
+  }
+
+  ROOT::RDF::RCsvDS::ROptions options;
+  options.fDelimiter = delimiter;
+  options.fLeftTrim = true;  // as for the checks above: only the line as a whole is trimmed
+  options.fRightTrim = true;
+  if (hasComments) options.fComment = '#';
+  options.fLinesChunkSize = 50000;
+  ProcessDataRequests("table", dataSource, name, ":" + dataSource, [&]() { return std::make_unique<ROOT::RDataFrame>(ROOT::RDF::FromCSV(inputFileName, options)); });
 }
 
 //**************************************************************************************************
