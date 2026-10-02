@@ -110,7 +110,8 @@ class PlotManager
 
   std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>> mDataBuffer;
   std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Plot::Pad::Data::data_info_t>>> mDataInfoBuffer;
-  std::map<std::string, std::vector<std::string>> mInputs;  // dataSource name -> inputs as added (files, file.root:folder, directories, wildcard patterns)
+  std::map<std::string, std::vector<std::string>> mInputs;          // dataSource name -> inputs as added (files, file.root:folder, directories, wildcard patterns)
+  std::map<std::string, std::vector<std::string>> mExpandedInputs;  // dataSource name -> its expanded inputs, determined once per GeneratePlots call
   struct tree_input_t {
     std::string file;      // file containing this part of the tree
     std::string treePath;  // path of the tree within the file

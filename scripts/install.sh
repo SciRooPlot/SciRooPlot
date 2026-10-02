@@ -48,7 +48,7 @@ while [[ $# -gt 0 ]]; do
       exit 0
       ;;
     *)
-      echo "Unknown option: $1"
+      echo "Unknown option: $1."
       echo "Usage: $0 [--prefix <directory>] [--reinstall]"
       exit 1
       ;;

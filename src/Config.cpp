@@ -268,7 +268,7 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
     std::error_code ec;
     std::filesystem::rename(projectPath, newProjectPath, ec);
     if (ec) {
-      ERROR("Could not rename {} to {}: {}", projectPath.string(), newProjectPath.string(), ec.message());
+      ERROR("Could not rename {} to {}: {}.", projectPath.string(), newProjectPath.string(), ec.message());
       return false;
     }
   }
@@ -378,7 +378,7 @@ bool Config::Remove(const string& projectName)
     auto it = mProjects.begin();
     if (it != mProjects.end()) {
       mCurrentProject = it->first;
-      INFO("Selecting project {}", mCurrentProject);
+      INFO("Selecting project {}.", mCurrentProject);
     }
   }
   return true;
@@ -396,7 +396,7 @@ bool Config::DeleteProjectDir(const string& projectName) const
   std::error_code ec;
   std::filesystem::remove_all(projectPath, ec);
   if (ec) {
-    ERROR("Could not delete {}: {}", projectPath.string(), ec.message());
+    ERROR("Could not delete {}: {}.", projectPath.string(), ec.message());
     return false;
   }
   return true;

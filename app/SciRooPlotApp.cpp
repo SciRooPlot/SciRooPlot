@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
       return 1;
     }
     if (std::filesystem::create_directories(configPath)) {
-      INFO("Created config folder: {}", configPath);
+      INFO("Created config folder: {}.", configPath);
     }
 
     po::options_description arguments("positional arguments");
@@ -396,7 +396,7 @@ void PrintRootFileContents(const string& inputPath)
   if (!startPath.empty()) {
     root = findObject(root, startPath);
     if (!root) {
-      PRINT("Path not found: {}", startPath);
+      PRINT("Path not found: {}.", startPath);
       return;
     }
   }

@@ -97,12 +97,16 @@ string GetErrorReason(const std::exception& exception, const string& rootOutput)
   std::istringstream lines(rootOutput);
   for (string line; std::getline(lines, line);) {
     if (auto pos = line.find("error: "); pos != string::npos) {
-      return line.substr(pos + 7);
+      string reason = line.substr(pos + 7);
+      if (str_ends_with(reason, ".")) reason.pop_back();
+      return reason;
     }
   }
   string reason = exception.what();
   reason.erase(0, reason.find_first_not_of(" \n"));
-  return reason.substr(0, reason.find('\n'));
+  reason = reason.substr(0, reason.find('\n'));
+  if (str_ends_with(reason, ".")) reason.pop_back();
+  return reason;
 }
 
 // what a chained tree is made of in words, e.g. "3 files" or "412 folders in 3 files" (empty if it has only one input)
@@ -389,7 +393,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     if (!object) continue;
     string name = object->GetName();
     if (name.empty()) {
-      WARNING("Cannot add nameless object of type {} to dataSource {}", object->ClassName(), dataSource);
+      WARNING("Cannot add nameless object of type {} to dataSource {}.", object->ClassName(), dataSource);
       continue;
     }
     if (!addedNames.insert(name).second) {
@@ -422,7 +426,7 @@ void PlotManager::SaveDataSources(const optional<string>& file) const
   }
   std::filesystem::path filePath = expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName));
   if (std::filesystem::create_directories(filePath.parent_path())) {
-    INFO("Created config folder: {}", filePath.parent_path().string());
+    INFO("Created config folder: {}.", filePath.parent_path().string());
   }
   using boost::property_tree::write_info;
   write_info(filePath.string(), dataSourcesTree);
@@ -440,7 +444,7 @@ void PlotManager::LoadDataSources(const optional<string>& file, bool replace)
     using boost::property_tree::read_info;
     read_info(expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName)), dataSourcesTree);
   } catch (const std::exception& e) {
-    ERROR("Cannot load dataSources file: {}", e.what());
+    ERROR("Cannot load dataSources file: {}.", e.what());
     return;
   }
   for (const auto& [dataSource, inputsTree] : dataSourcesTree) {
@@ -563,7 +567,7 @@ void PlotManager::AddPlot(Plot plot)
     ERROR("Cannot add plot ({}) that does not belong to a group.", plot.GetName());
     return;
   } else if (plot.GetGroup() == "BASE_PLOTS") {
-    ERROR("You cannot use reserved group name 'BASE_PLOTS'!");
+    ERROR("You cannot use reserved group name 'BASE_PLOTS'.");
     return;
   }
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
@@ -674,7 +678,7 @@ void PlotManager::SavePlots(const string& name, const string& group, const optio
     return;
   }
   if (std::filesystem::create_directories(filePath.parent_path())) {
-    INFO("Created config folder: {}", filePath.parent_path().string());
+    INFO("Created config folder: {}.", filePath.parent_path().string());
   }
   using boost::property_tree::write_info;
   write_info(filePath.string(), plotTree);
@@ -702,7 +706,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
     using boost::property_tree::read_info;
     read_info(expand_path(expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName))), fileTree);
   } catch (const std::exception& e) {
-    ERROR("Cannot open plots file: {}", e.what());
+    ERROR("Cannot open plots file: {}.", e.what());
     return false;
   }
 
@@ -716,7 +720,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
         AddBasePlot(std::move(basePlot));
         ++nBasePlotsLoaded;
       } catch (const std::exception& e) {
-        ERROR("Could not load base plot {} from file: {}", plotTree.first, e.what());
+        ERROR("Could not load base plot {} from file: {}.", plotTree.first, e.what());
       }
       continue;
     }
@@ -730,7 +734,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
       AddPlot(std::move(plot));
       ++nLoaded;
     } catch (const std::exception& e) {
-      ERROR("Could not load plot {} from file: {}", plotTree.first, e.what());
+      ERROR("Could not load plot {} from file: {}.", plotTree.first, e.what());
     }
   }
   if (nPlotsInFile == 0 && nBasePlotsLoaded > 0) {
@@ -831,8 +835,14 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       sourcesToRead.insert(dataSource);
     }
   }
+  mExpandedInputs.clear();
+  size_t nInputs{};
+  for (const auto& dataSource : sourcesToRead) {
+    nInputs += (mExpandedInputs[dataSource] = ExpandInputs(dataSource)).size();
+  }
   if (nItemsToRead) {
-    INFO("Reading {} data item{} from {} data source{}", nItemsToRead, (nItemsToRead == 1) ? "" : "s", sourcesToRead.size(), (sourcesToRead.size() == 1) ? "" : "s");
+    auto plural = [](size_t n, const string& word) { return fmt::format("{} {}{}", n, word, (n == 1) ? "" : "s"); };
+    INFO("Reading {} from {}{}.", plural(nItemsToRead, "data item"), (nInputs) ? plural(nInputs, "input") + " in " : "", plural(sourcesToRead.size(), "data source"));
   }
   try {
     if (!FillBuffer()) {
@@ -873,7 +883,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       if (mExitInteractiveBrowsing) break;
     }
     if (!mGifName.empty()) {
-      LOG("Saved gif {}", mGifName);
+      LOG("Saved gif {}.", mGifName);
     }
     bool saved = true;
     if (mode == "file") {
@@ -883,7 +893,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     }
     return allCreated && saved;
   } catch (const std::exception& e) {
-    ERROR("An unexpected error occurred: {}", e.what());
+    ERROR("An unexpected error occurred: {}.", e.what());
     return false;
   }
 }
@@ -959,7 +969,8 @@ bool PlotManager::FillBuffer()
 
     // open all input files belonging to the current dataSource and extract the data
     mTreeInputs.clear();
-    for (const auto& inputRaw : ExpandInputs(dataSource)) {
+    auto expandedIt = mExpandedInputs.find(dataSource);
+    for (const auto& inputRaw : (expandedIt != mExpandedInputs.end()) ? expandedIt->second : ExpandInputs(dataSource)) {
       if (requiredData.empty()) break;
       string input = expand_path(inputRaw);
       if (str_ends_with(input, mTableFileEndings)) {
@@ -2132,7 +2143,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
         } catch (const std::invalid_argument&) {
           throw;
         } catch (const std::exception& e) {
-          ERROR("Invalid query for {} {}:{} ({}): {}", type, dataSource, name, info->GetDescription(), GetErrorReason(e, rootOutput.str().substr(outputStart)));
+          ERROR("Invalid query for {} {}:{} ({}): {}.", type, dataSource, name, info->GetDescription(), GetErrorReason(e, rootOutput.str().substr(outputStart)));
         }
       }
       // a pass to determine the axis ranges is only required if some request wants them to be auto-detected
@@ -2178,9 +2189,9 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           processGroup({request.info}, sequential);
         }
       } else if (requests.size() == 1) {
-        ERROR("Invalid query for {} {}:{} ({}): {}{}", type, dataSource, name, requests[0].info->GetDescription(), GetErrorReason(e, rootOutput.str()), chainHint);
+        ERROR("Invalid query for {} {}:{} ({}): {}{}.", type, dataSource, name, requests[0].info->GetDescription(), GetErrorReason(e, rootOutput.str()), chainHint);
       } else {
-        ERROR("Cannot read {} {}:{}: {}{}", type, dataSource, name, GetErrorReason(e, rootOutput.str()), chainHint);
+        ERROR("Cannot read {} {}:{}: {}{}.", type, dataSource, name, GetErrorReason(e, rootOutput.str()), chainHint);
       }
     }
   };
@@ -2189,7 +2200,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   if (!nRequests) return;
 
   double_t seconds = std::chrono::duration<double_t>(std::chrono::steady_clock::now() - start).count();
-  string message = fmt::format(" - {}:{}  {} entries{}, {} request{}, {} pass{}, {:.1f} s", dataSource, name, nEntries.value_or(0), (inputsDescription.empty()) ? "" : " from " + inputsDescription, nRequests, (nRequests == 1) ? "" : "s", nPasses, (nPasses == 1) ? "" : "es", seconds);
+  string message = fmt::format(" - {}:{} {} entries{}, {} request{}, {} pass{}, {:.1f} s", dataSource, name, nEntries.value_or(0), (inputsDescription.empty()) ? "" : " from " + inputsDescription, nRequests, (nRequests == 1) ? "" : "s", nPasses, (nPasses == 1) ? "" : "es", seconds);
   /*
   for (const auto& [info, counts] : entryCounts) {
     const auto& [nPreFilter, nPostFilter] = counts;
@@ -2412,7 +2423,7 @@ void PlotManager::SaveProject() const
   namespace fs = std::filesystem;
 
   if (fs::create_directories(Config::Get().ProjectPath(mProjectName))) {
-    INFO("Created config folder for project {}: {}", mProjectName, Config::Get().ProjectPath(mProjectName).string());
+    INFO("Created config folder for project {}: {}.", mProjectName, Config::Get().ProjectPath(mProjectName).string());
   }
 
   SaveDataSources();
