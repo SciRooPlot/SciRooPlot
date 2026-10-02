@@ -16,7 +16,6 @@
  ******************************************************************************************
  */
 
-#include "SciRooPlot/Helpers.h"
 #include "SciRooPlot/Logging.h"
 #include "SciRooPlot/Plot.h"
 #include "SciRooPlot/PlotManager.h"
@@ -45,6 +44,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+
+#include "Validation.h"
 
 using boost::property_tree::ptree;
 using std::string;

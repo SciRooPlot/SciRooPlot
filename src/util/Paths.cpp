@@ -16,20 +16,17 @@
  ******************************************************************************************
  */
 
-#include "SciRooPlot/Helpers.h"
+#include "util/Paths.h"
 
-#include <sstream>
+#include <TSystem.h>
+
 #include <string>
 #include <sys/stat.h>
-#include <vector>
 
 using std::string;
-using std::tuple;
-using std::vector;
 
-namespace SciRooPlot
+namespace SciRooPlot::util
 {
-
 string expand_path(const string& path)
 {
   char* raw = gSystem->ExpandPathName(path.data());
@@ -38,30 +35,9 @@ string expand_path(const string& path)
   return expandedPath;
 }
 
-vector<string> split_string(const string& argString, char delimiter, bool onlyFirst)
-{
-  vector<string> arguments;
-  if (onlyFirst) {
-    auto delimiterPos = argString.find(delimiter);
-    arguments.push_back(argString.substr(0, delimiterPos));
-    if (delimiterPos != string::npos) {
-      arguments.push_back(argString.substr(delimiterPos + 1));
-    }
-  } else {
-    string curArg;
-    std::istringstream argStream(argString);
-    while (std::getline(argStream, curArg, delimiter)) {
-      arguments.push_back(curArg);
-    }
-  }
-
-  return arguments;
-}
-
 bool file_exists(const string& name)
 {
   struct stat buffer;
   return (stat(name.c_str(), &buffer) == 0);
 }
-
-}  // end namespace SciRooPlot
+}  // end namespace SciRooPlot::util

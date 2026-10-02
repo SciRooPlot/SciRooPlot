@@ -16,65 +16,30 @@
  ******************************************************************************************
  */
 
-#ifndef INCLUDE_SCIROOPLOT_HELPERS_H_
-#define INCLUDE_SCIROOPLOT_HELPERS_H_
+#ifndef SRC_UTIL_STRINGS_H_
+#define SRC_UTIL_STRINGS_H_
 
 #include "SciRooPlot/Logging.h"
-
-#include <TSystem.h>
-
-#include <boost/property_tree/ptree.hpp>
 
 #include <fmt/format.h>
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <locale>
-#include <optional>
-#include <regex>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <tuple>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
-namespace SciRooPlot
+#include "util/TypeTraits.h"
+
+namespace SciRooPlot::util
 {
-std::string expand_path(const std::string& path);
 std::vector<std::string> split_string(const std::string& argString, char delimiter, bool onlyFirst = false);
-bool file_exists(const std::string& name);
-
-// output modes of GeneratePlots (in addition: gif+<centiseconds between frames>)
-inline const std::vector<std::string>& plot_modes()
-{
-  static const std::vector<std::string> modes{"show", "print", "file", "data", "macro", "pdf", "eps", "ps", "svg", "png", "jpg", "gif", "html", "json", "xml", "root"};
-  return modes;
-}
-
-inline bool is_valid_plot_mode(const std::string& mode)
-{
-  if (std::find(plot_modes().begin(), plot_modes().end(), mode) != plot_modes().end()) return true;
-  return mode.size() > 4 && mode.rfind("gif+", 0) == 0 && mode.find_first_not_of("0123456789", 4) == std::string::npos;
-}
-
-// returns the first illegal character (for non-ASCII characters the complete UTF-8 sequence, so it can be printed)
-inline std::optional<std::string> find_illegal_name_char(const std::string& name, bool allowSlash = false)
-{
-  static constexpr std::string_view kAllowedChars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/";
-  const std::string_view allowed =
-    allowSlash ? kAllowedChars : kAllowedChars.substr(0, kAllowedChars.size() - 1);
-  const auto pos = name.find_first_not_of(allowed);
-  if (pos == std::string::npos) return std::nullopt;
-  size_t length = 1;
-  while (static_cast<unsigned char>(name[pos]) >= 0x80 && pos + length < name.size() && (static_cast<unsigned char>(name[pos + length]) & 0xC0) == 0x80) {
-    ++length;  // continuation bytes of a multi-byte UTF-8 character
-  }
-  return name.substr(pos, length);
-}
 
 inline bool str_contains(const std::string& str, const std::string& substr)
 {
@@ -110,14 +75,6 @@ inline bool str_ends_with(const std::string& str, const std::vector<std::string>
 }
 
 template <typename T>
-void set_if(const std::optional<T>& origin, std::optional<T>& target)
-{
-  if (origin) {
-    target = origin;
-  }
-}
-
-template <typename T>
 inline std::string number_to_string(const T& value)
 {
   if constexpr (std::is_floating_point_v<T>) {
@@ -126,20 +83,6 @@ inline std::string number_to_string(const T& value)
     return std::to_string(value);
   }
 }
-
-template <typename T>
-struct is_vector : public std::false_type {
-};
-template <typename T, typename A>
-struct is_vector<std::vector<T, A>> : public std::true_type {
-};
-
-template <typename>
-struct is_tuple : std::false_type {
-};
-template <typename... T>
-struct is_tuple<std::tuple<T...>> : std::true_type {
-};
 
 template <typename... Ts>
 std::string tuple_to_string(const std::tuple<Ts...>& items)
@@ -252,138 +195,5 @@ std::vector<T> string_to_vector(std::string itemString)
   return items;
 }
 
-template <typename T>
-void put_in_tree(boost::property_tree::ptree& tree, const std::optional<T>& var, const std::string& label)
-{
-  if constexpr (is_vector<T>{})  // vectors are stored as comma separated strings
-  {
-    if (var) tree.put(label, vector_to_string(*var));
-  } else if constexpr (std::is_enum<T>::value) {  // in case using enum types of the framework
-    if (var) tree.put(label, static_cast<typename std::underlying_type<T>::type>(*var));
-  } else {
-    if (var) tree.put(label, *var);
-  }
-}
-
-template <typename T>
-void read_from_tree(const boost::property_tree::ptree& tree, std::optional<T>& var, const std::string& label)
-{
-  if constexpr (is_vector<T>{})  // vectors are stored as comma separated strings
-  {
-    if (auto tmp = tree.get_optional<std::string>(label))
-      var = string_to_vector<typename T::value_type>(*tmp);
-  } else if constexpr (std::is_enum<T>::value) {  // in case using enum types of the framework
-    if (auto tmp = tree.get_optional<typename std::underlying_type<T>::type>(label))
-      var = static_cast<T>(*tmp);
-  } else {
-    if (auto tmp = tree.get_optional<T>(label)) var = *tmp;
-  }
-}
-
-template <typename T>
-std::optional<T> get_from_tree(const boost::property_tree::ptree& tree, const std::string& label)
-{
-  std::optional<T> var;
-  read_from_tree(tree, var, label);
-  return var;
-}
-
-template <typename T>
-std::optional<T> pick(uint16_t i, const std::optional<std::vector<T>>& vec)
-{
-  if (!vec || vec->empty()) return std::nullopt;
-  return std::optional((*vec)[i % vec->size()]);
-}
-
-template <typename T, typename... Ts>
-std::optional<T> get_first(const std::optional<T>& property, const Ts&... properties)
-{
-  for (const auto ptr : {&property, &properties...}) {
-    if (*ptr) return *ptr;
-  }
-  return std::nullopt;
-}
-
-template <typename T, typename... Ts>
-T get_first_or(const T& fallback, const std::optional<T>& property, const Ts&... properties)
-{
-  if (const auto& match = get_first(property, properties...)) {
-    return *match;
-  } else {
-    return fallback;
-  }
-}
-
-template <typename T, typename... Ts>
-constexpr bool is_one_of_v()
-{
-  return (... || std::is_same_v<T, Ts>);
-}
-
-class RegexMatcher
-{
- public:
-  RegexMatcher(const std::string& pattern, bool contains, bool ignoreCase) : mContains(contains)
-  {
-    try {
-      auto flags = std::regex_constants::ECMAScript;
-      if (ignoreCase) {
-        flags |= std::regex_constants::icase;
-      }
-
-      mRegex = std::regex(pattern, flags);
-      mValid = true;
-    } catch (const std::regex_error&) {
-      mValid = false;
-    }
-  }
-  bool IsValid() const { return mValid; }
-  bool Matches(const std::string& text) const
-  {
-    if (!mValid) return false;
-    if (mContains) {
-      return std::regex_search(text, mRegex);
-    }
-    return std::regex_match(text, mRegex);
-  }
-
- private:
-  bool mValid = false;
-  bool mContains = false;
-  std::regex mRegex;
-};
-
-template <typename F>
-class ScopeGuard
-{
- public:
-  explicit ScopeGuard(F onExit) : mOnExit(std::move(onExit)) {}
-  ~ScopeGuard()
-  {
-    if (mActive) mOnExit();
-  }
-
-  ScopeGuard(const ScopeGuard&) = delete;
-  ScopeGuard& operator=(const ScopeGuard&) = delete;
-  ScopeGuard& operator=(ScopeGuard&&) = delete;
-
-  ScopeGuard(ScopeGuard&& other) noexcept : mOnExit(std::move(other.mOnExit)), mActive(other.mActive)
-  {
-    other.mActive = false;
-  }
-
-  void Dismiss() { mActive = false; }
-
- private:
-  F mOnExit;
-  bool mActive{true};
-};
-
-template <typename F>
-ScopeGuard<std::decay_t<F>> make_scope_guard(F&& onExit)
-{
-  return ScopeGuard<std::decay_t<F>>(std::forward<F>(onExit));
-}
-
-}  // end namespace SciRooPlot
-#endif  // INCLUDE_SCIROOPLOT_HELPERS_H_
+}  // end namespace SciRooPlot::util
+#endif  // SRC_UTIL_STRINGS_H_

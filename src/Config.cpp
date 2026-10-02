@@ -18,7 +18,6 @@
 
 #include "SciRooPlot/Config.h"
 
-#include "SciRooPlot/Helpers.h"
 #include "SciRooPlot/Logging.h"
 
 #include <TSystem.h>
@@ -31,6 +30,9 @@
 #include <utility>
 #include <vector>
 
+#include "Validation.h"
+#include "util/Paths.h"
+
 using boost::property_tree::ptree;
 using boost::property_tree::read_info;
 using boost::property_tree::write_info;
@@ -39,6 +41,9 @@ using std::vector;
 
 namespace SciRooPlot
 {
+using util::expand_path;
+using util::file_exists;
+
 string Config::LogLevelName(int level)
 {
   switch (level) {

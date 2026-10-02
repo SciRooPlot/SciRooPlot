@@ -160,14 +160,23 @@ add_library(SciRooPlot SHARED
   src/Plot.cpp
   src/PlotManager.cpp
   src/PlotPainter.cpp
-  src/Helpers.cpp
   src/Config.cpp
+  src/util/Strings.cpp
+  src/util/Paths.cpp
   include/SciRooPlot/Plot.h
   include/SciRooPlot/PlotManager.h
-  include/SciRooPlot/PlotPainter.h
-  include/SciRooPlot/Helpers.h
   include/SciRooPlot/Config.h
   include/SciRooPlot/Logging.h
+  src/PlotPainter.h
+  src/DataFrameRequest.h
+  src/Validation.h
+  src/util/Strings.h
+  src/util/Paths.h
+  src/util/PropertyTree.h
+  src/util/Regex.h
+  src/util/ScopeGuard.h
+  src/util/TypeTraits.h
+  src/util/Optional.h
 )
 add_library(SciRooPlot::SciRooPlot ALIAS SciRooPlot)
 
@@ -175,6 +184,8 @@ target_include_directories(SciRooPlot
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_link_libraries(SciRooPlot
@@ -215,10 +226,12 @@ endif()
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SciRooPlotHelpers.cmake)
 
 add_plotting_executable(srp
-  SOURCES app/SciRooPlotApp.cpp
+  SOURCES apps/SciRooPlotApp.cpp
+  INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 add_plotting_executable(plot
-  SOURCES app/PlotApp.cpp
+  SOURCES apps/PlotApp.cpp
+  INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 set_target_properties(srp plot PROPERTIES
   INSTALL_RPATH "${SCIROOPLOT_RPATH}"
@@ -273,7 +286,7 @@ export(
   FILE "${CMAKE_CURRENT_BINARY_DIR}/SciRooPlotTargets.cmake"
 )
 set(SCIROOPLOT_BUILD_DATA_DIR ${CMAKE_CURRENT_BINARY_DIR}/share/scirooplot)
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/user
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/templates
             DESTINATION ${SCIROOPLOT_BUILD_DATA_DIR}
             PATTERN ".*" EXCLUDE
 	    PATTERN "__pycache__" EXCLUDE)
@@ -322,7 +335,7 @@ install(
 )
 set(SCIROOPLOT_INSTALL_DATA_DIR ${CMAKE_INSTALL_DATAROOTDIR}/scirooplot)
 install(
-  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/user ${SCIROOPLOT_BUILD_DATA_DIR}/ExampleData
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/templates ${SCIROOPLOT_BUILD_DATA_DIR}/ExampleData
   DESTINATION ${SCIROOPLOT_INSTALL_DATA_DIR}
   PATTERN ".*" EXCLUDE
   PATTERN "__pycache__" EXCLUDE
@@ -369,8 +382,8 @@ add_custom_target(ProjectFiles SOURCES
     docs/slides/slides.typ
     scripts/generateExampleData.C
     packaging/env.sh.in
-    user/skeleton/DefinePlots.py
-    user/skeleton/DefinePlots.cpp
-    user/example/DefinePlots.py
-    user/example/DefinePlots.cpp
+    templates/skeleton/DefinePlots.py
+    templates/skeleton/DefinePlots.cpp
+    templates/example/DefinePlots.py
+    templates/example/DefinePlots.cpp
 )

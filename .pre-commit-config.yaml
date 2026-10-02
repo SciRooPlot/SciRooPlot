@@ -15,21 +15,21 @@ repos:
     rev: v21.1.8
     hooks:
       - id: clang-format
-        files: ^(include|src|app|user)/.*\.(c|cc|cpp|cxx|h|hpp)$
+        files: ^(include|src|apps|templates)/.*\.(c|cc|cpp|cxx|h|hpp)$
 
   - repo: https://github.com/cpplint/cpplint
     rev: 2.0.2
     hooks:
       - id: cpplint
-        files: ^(include|src|app|user)/.*\.(c|cc|cpp|cxx|h|hpp)$
+        files: ^(include|src|apps|templates)/.*\.(c|cc|cpp|cxx|h|hpp)$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.13.0
     hooks:
       - id: ruff
-        files: ^user/.*\.py$
+        files: ^templates/.*\.py$
       - id: ruff-format
-        files: ^user/.*\.py$
+        files: ^templates/.*\.py$
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.11.0.1

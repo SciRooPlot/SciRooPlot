@@ -16,9 +16,8 @@
  ******************************************************************************************
  */
 
-#include "SciRooPlot/PlotPainter.h"
+#include "PlotPainter.h"
 
-#include "SciRooPlot/Helpers.h"
 #include "SciRooPlot/Logging.h"
 
 #include <TApplication.h>
@@ -78,6 +77,11 @@
 #include <utility>
 #include <vector>
 
+#include "util/Optional.h"
+#include "util/ScopeGuard.h"
+#include "util/Strings.h"
+#include "util/TypeTraits.h"
+
 using std::array;
 using std::nullopt;
 using std::optional;
@@ -91,81 +95,28 @@ using std::vector;
 
 namespace SciRooPlot
 {
+using util::get_first;
+using util::get_first_or;
+using util::is_func;
+using util::is_func_1d;
+using util::is_func_2d;
+using util::is_func_3d;
+using util::is_graph_1d;
+using util::is_graph_2d;
+using util::is_hist;
+using util::is_hist_1d;
+using util::is_hist_2d;
+using util::is_hist_3d;
+using util::is_one_of_v;
+using util::make_scope_guard;
+using util::pick;
+using util::str_contains;
+
 //**************************************************************************************************
 /**
- * Helper functions to introspect the data type.
+ * Helper to copy the attributes of a function.
  */
 //**************************************************************************************************
-template <typename T>
-constexpr bool is_hist_1d()
-{
-  return is_one_of_v<T, TH1*, TProfile*>();
-}
-template <typename T>
-constexpr bool is_hist_2d()
-{
-  return is_one_of_v<T, TH2*, TProfile2D*>();
-}
-template <typename T>
-constexpr bool is_hist_3d()
-{
-  return is_one_of_v<T, TH3*>();
-}
-template <typename T>
-constexpr bool is_hist()
-{
-  return is_hist_1d<T>() || is_hist_2d<T>() || is_hist_3d<T>();
-}
-template <typename T>
-constexpr bool is_graph_1d()
-{
-  return is_one_of_v<T, TGraph*>();
-}
-template <typename T>
-constexpr bool is_graph_2d()
-{
-  return is_one_of_v<T, TGraph2D*>();
-}
-template <typename T>
-constexpr bool is_graph()
-{
-  return is_graph_1d<T>() || is_graph_2d<T>();
-}
-template <typename T>
-constexpr bool is_func_1d()
-{
-  return is_one_of_v<T, TF1*>();
-}
-template <typename T>
-constexpr bool is_func_2d()
-{
-  return is_one_of_v<T, TF2*>();
-}
-template <typename T>
-constexpr bool is_func_3d()
-{
-  return is_one_of_v<T, TF3*>();
-}
-template <typename T>
-constexpr bool is_func()
-{
-  return is_func_1d<T>() || is_func_2d<T>() || is_func_3d<T>();
-}
-template <typename T>
-constexpr bool is_1d()
-{
-  return is_hist_1d<T>() || is_graph_1d<T>() || is_func_1d<T>();
-}
-template <typename T>
-constexpr bool is_2d()
-{
-  return is_hist_2d<T>() || is_graph_2d<T>() || is_func_2d<T>();
-}
-template <typename T>
-constexpr bool is_3d()
-{
-  return is_hist_3d<T>() || is_func_3d<T>();
-}
 template <typename FuncT>
 void CopyFuncAttributes(FuncT* from, FuncT* to)
 {

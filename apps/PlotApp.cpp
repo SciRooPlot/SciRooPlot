@@ -16,7 +16,6 @@
  ******************************************************************************************
  */
 
-#include "SciRooPlot/Helpers.h"
 #include "SciRooPlot/Logging.h"
 #include "SciRooPlot/Plot.h"
 #include "SciRooPlot/PlotManager.h"
@@ -27,10 +26,13 @@
 #include <string>
 #include <vector>
 
+#include "util/Regex.h"
+
 using std::string;
 using std::vector;
 
 using namespace SciRooPlot;
+using SciRooPlot::util::RegexMatcher;
 namespace po = boost::program_options;
 
 int main(int argc, char* argv[])

@@ -177,6 +177,12 @@ class Plot
   };
   void UpdateUniqueName();
 
+  // helpers (also used by the nested classes)
+  static std::string NormalizeGroup(const std::string& group);
+  static float_t RoundWidth(float_t width, const char* what);
+  static std::optional<float_t> RoundWidth(const std::optional<float_t>& width, const char* what);
+  static void ReadWidthFromTree(const boost::property_tree::ptree& tree, std::optional<float_t>& target, const char* key);
+
   std::string mName;
   std::string mGroup;
   std::string mUniqueName;

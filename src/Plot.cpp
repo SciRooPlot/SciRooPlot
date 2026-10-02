@@ -18,7 +18,6 @@
 
 #include "SciRooPlot/Plot.h"
 
-#include "SciRooPlot/Helpers.h"
 #include "SciRooPlot/Logging.h"
 
 #include <TAttText.h>
@@ -32,6 +31,11 @@
 #include <utility>
 #include <vector>
 
+#include "Validation.h"
+#include "util/Optional.h"
+#include "util/PropertyTree.h"
+#include "util/Strings.h"
+
 using boost::property_tree::ptree;
 using std::nullopt;
 using std::optional;
@@ -42,14 +46,25 @@ using std::vector;
 
 namespace SciRooPlot
 {
-namespace
-{
+using util::get_from_tree;
+using util::number_to_string;
+using util::put_in_tree;
+using util::read_from_tree;
+using util::set_if;
+using util::str_contains;
+
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// IMPLEMENTATION class Plot
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+
 //**************************************************************************************************
 /**
  * Helper that rounds line widths.
  */
 //**************************************************************************************************
-float_t round_width(float_t width, const char* what)
+float_t Plot::RoundWidth(float_t width, const char* what)
 {
   const float_t rounded = std::round(width);
   if (rounded != width) {
@@ -57,15 +72,15 @@ float_t round_width(float_t width, const char* what)
   }
   return rounded;
 }
-optional<float_t> round_width(const optional<float_t>& width, const char* what)
+optional<float_t> Plot::RoundWidth(const optional<float_t>& width, const char* what)
 {
   if (!width) return nullopt;
-  return round_width(*width, what);
+  return RoundWidth(*width, what);
 }
-void read_width_from_tree(const ptree& tree, optional<float_t>& target, const char* key)
+void Plot::ReadWidthFromTree(const ptree& tree, optional<float_t>& target, const char* key)
 {
   read_from_tree(tree, target, key);
-  target = round_width(target, key);
+  target = RoundWidth(target, key);
 }
 
 //**************************************************************************************************
@@ -73,9 +88,9 @@ void read_width_from_tree(const ptree& tree, optional<float_t>& target, const ch
  * Helper to strip group of misplaced slashes.
  */
 //**************************************************************************************************
-std::string normalize_group(const std::string& group)
+string Plot::NormalizeGroup(const string& group)
 {
-  std::string normalized;
+  string normalized;
   normalized.reserve(group.size());
   for (char c : group) {
     if (c == '/' && (normalized.empty() || normalized.back() == '/')) continue;
@@ -89,13 +104,6 @@ std::string normalize_group(const std::string& group)
   }
   return normalized;
 }
-}  // namespace
-
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
-// IMPLEMENTATION class Plot
-//--------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------
 
 //**************************************************************************************************
 /**
@@ -114,7 +122,7 @@ Plot::Plot(const string& name, const string& group, const optional<string>& base
     logger::throw_invalid_argument("Group '{}' contains illegal character '{}'.", group, *illegal);
   }
   mName = name;
-  mGroup = normalize_group(group);
+  mGroup = NormalizeGroup(group);
   mBasePlot = basePlot;
   UpdateUniqueName();
 }
@@ -137,7 +145,7 @@ Plot::Plot(const Plot& otherPlot, const string& name, const optional<string>& gr
     if (auto illegal = find_illegal_name_char(*group, true)) {
       logger::throw_invalid_argument("Group '{}' contains illegal character '{}'.", *group, *illegal);
     }
-    mGroup = normalize_group(*group);
+    mGroup = NormalizeGroup(*group);
   }
   mName = name;
   UpdateUniqueName();
@@ -165,7 +173,7 @@ Plot::Plot(const ptree& plotTree)
   if (auto illegal = find_illegal_name_char(mGroup, true)) {
     logger::throw_invalid_argument("Group '{}' contains illegal character '{}'.", mGroup, *illegal);
   }
-  mGroup = normalize_group(mGroup);
+  mGroup = NormalizeGroup(mGroup);
   read_from_tree(plotTree, mBasePlot, "base_plot");
   read_from_tree(plotTree, mPlotDimensions.width, "width");
   read_from_tree(plotTree, mPlotDimensions.height, "height");
@@ -275,7 +283,7 @@ auto Plot::SetGroup(const string& group) -> decltype(*this)
     ERROR("Group '{}' contains illegal character '{}'.", group, *illegal);
     return *this;
   }
-  const string normalized = normalize_group(group);
+  const string normalized = NormalizeGroup(group);
   if (normalized.empty()) {
     ERROR("Cannot set empty group.");
     return *this;
@@ -295,7 +303,7 @@ auto Plot::AppendGroup(const string& subgroup) -> decltype(*this)
     ERROR("Subgroup '{}' contains illegal character '{}'.", subgroup, *illegal);
     return *this;
   }
-  const string normalizedSubgroup = normalize_group(subgroup);
+  const string normalizedSubgroup = NormalizeGroup(subgroup);
   if (normalizedSubgroup.empty()) {
     ERROR("Cannot append empty subgroup.");
     return *this;
@@ -496,7 +504,7 @@ auto Plot::Pad::SetDefaultMarkerSize(float_t size) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultLineWidth(float_t width) -> decltype(*this)
 {
-  mLineDefaults.scale = round_width(width, "default line width");
+  mLineDefaults.scale = RoundWidth(width, "default line width");
   return *this;
 }
 
@@ -790,7 +798,7 @@ auto Plot::Pad::SetFrameBorder(int16_t color, optional<int16_t> style, optional<
   mFrameBorder.color = color;
   mFrameBorder.alpha = alpha;
   mFrameBorder.style = style;
-  mFrameBorder.scale = round_width(width, "frame border width");
+  mFrameBorder.scale = RoundWidth(width, "frame border width");
   return *this;
 }
 
@@ -814,7 +822,7 @@ auto Plot::Pad::SetFrameBorderStyle(int16_t style) -> decltype(*this)
 
 auto Plot::Pad::SetFrameBorderWidth(float_t width) -> decltype(*this)
 {
-  mFrameBorder.scale = round_width(width, "frame border width");
+  mFrameBorder.scale = RoundWidth(width, "frame border width");
   return *this;
 }
 
@@ -994,7 +1002,7 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mFrameBorder.color, "frame_border_color");
   read_from_tree(padTree, mFrameBorder.alpha, "frame_border_alpha");
   read_from_tree(padTree, mFrameBorder.style, "frame_border_style");
-  read_width_from_tree(padTree, mFrameBorder.scale, "frame_border_width");
+  ReadWidthFromTree(padTree, mFrameBorder.scale, "frame_border_width");
   read_from_tree(padTree, mText.style, "text_font");
   read_from_tree(padTree, mText.color, "text_color");
   read_from_tree(padTree, mText.alpha, "text_alpha");
@@ -1007,7 +1015,7 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mMarkerDefaults.colorGradient.alpha, "default_marker_colors_gradient_alpha");
   read_from_tree(padTree, mMarkerDefaults.colorGradient.nColors, "default_marker_colors_gradient_nColors");
   read_from_tree(padTree, mLineDefaults.alpha, "default_line_alpha");
-  read_width_from_tree(padTree, mLineDefaults.scale, "default_line_width");
+  ReadWidthFromTree(padTree, mLineDefaults.scale, "default_line_width");
   read_from_tree(padTree, mLineDefaults.styles, "default_line_styles");
   read_from_tree(padTree, mLineDefaults.colors, "default_line_colors");
   read_from_tree(padTree, mLineDefaults.colorGradient.rgbEndpoints, "default_line_colors_gradient_endpoints");
@@ -1616,7 +1624,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mLine.color, "line_color");
   read_from_tree(dataTree, mLine.alpha, "line_alpha");
   read_from_tree(dataTree, mLine.style, "line_style");
-  read_width_from_tree(dataTree, mLine.scale, "line_width");
+  ReadWidthFromTree(dataTree, mLine.scale, "line_width");
   read_from_tree(dataTree, mFill.color, "fill_color");
   read_from_tree(dataTree, mFill.alpha, "fill_alpha");
   read_from_tree(dataTree, mFill.style, "fill_style");
@@ -2016,7 +2024,7 @@ auto Plot::Pad::Data::SetLine(int16_t color, int16_t style, float_t width, optio
   mLine.color = color;
   mLine.alpha = alpha;
   mLine.style = style;
-  mLine.scale = round_width(width, "line width");
+  mLine.scale = RoundWidth(width, "line width");
   return *this;
 }
 auto Plot::Pad::Data::SetLineColor(int16_t color) -> decltype(*this)
@@ -2036,7 +2044,7 @@ auto Plot::Pad::Data::SetLineStyle(int16_t style) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetLineWidth(float_t width) -> decltype(*this)
 {
-  mLine.scale = round_width(width, "line width");
+  mLine.scale = RoundWidth(width, "line width");
   return *this;
 }
 auto Plot::Pad::Data::SetFill(int16_t color, int16_t style, optional<float_t> alpha) -> decltype(*this)
@@ -3107,7 +3115,7 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
   read_from_tree(boxTree, mBorder.style, "border_style");
   read_from_tree(boxTree, mBorder.color, "border_color");
   read_from_tree(boxTree, mBorder.alpha, "border_alpha");
-  read_width_from_tree(boxTree, mBorder.scale, "border_width");
+  ReadWidthFromTree(boxTree, mBorder.scale, "border_width");
   read_from_tree(boxTree, mFill.style, "fill_style");
   read_from_tree(boxTree, mFill.color, "fill_color");
   read_from_tree(boxTree, mFill.alpha, "fill_alpha");
@@ -3191,7 +3199,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetBorder(int16_t color, int16_t style, float_
 {
   mBorder.color = color;
   mBorder.style = style;
-  mBorder.scale = round_width(width, "box border width");
+  mBorder.scale = RoundWidth(width, "box border width");
   mBorder.alpha = alpha;
   return *GetThis();
 }
@@ -3220,7 +3228,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetBorderStyle(int16_t style)
 template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetBorderWidth(float_t width)
 {
-  mBorder.scale = round_width(width, "box border width");
+  mBorder.scale = RoundWidth(width, "box border width");
   return *GetThis();
 }
 
@@ -3440,7 +3448,7 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
   read_from_tree(legendBoxTree, mLineDefault.color, "default_line_color");
   read_from_tree(legendBoxTree, mLineDefault.alpha, "default_line_alpha");
   read_from_tree(legendBoxTree, mLineDefault.style, "default_line_style");
-  read_width_from_tree(legendBoxTree, mLineDefault.scale, "default_line_width");
+  ReadWidthFromTree(legendBoxTree, mLineDefault.scale, "default_line_width");
   read_from_tree(legendBoxTree, mFillDefault.color, "default_fill_color");
   read_from_tree(legendBoxTree, mFillDefault.alpha, "default_fill_alpha");
   read_from_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
@@ -3557,7 +3565,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineStyle(int16_t style)
 
 Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineWidth(float_t width)
 {
-  mLineDefault.scale = round_width(width, "legend default line width");
+  mLineDefault.scale = RoundWidth(width, "legend default line width");
   return *this;
 }
 
@@ -3666,7 +3674,7 @@ Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
   read_from_tree(legendEntryTree, mLine.color, "line_color");
   read_from_tree(legendEntryTree, mLine.alpha, "line_alpha");
   read_from_tree(legendEntryTree, mLine.style, "line_style");
-  read_width_from_tree(legendEntryTree, mLine.scale, "line_width");
+  ReadWidthFromTree(legendEntryTree, mLine.scale, "line_width");
   read_from_tree(legendEntryTree, mMarker.color, "marker_color");
   read_from_tree(legendEntryTree, mMarker.alpha, "marker_alpha");
   read_from_tree(legendEntryTree, mMarker.style, "marker_style");
@@ -3818,7 +3826,7 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLineSty
 
 Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLineWidth(float_t width)
 {
-  mLine.scale = round_width(width, "legend entry line width");
+  mLine.scale = RoundWidth(width, "legend entry line width");
   return *this;
 }
 
