@@ -109,6 +109,15 @@ string GetErrorReason(const std::exception& exception, const string& rootOutput)
   return reason;
 }
 
+// matches group (including subgroups)
+RegexMatcher GroupMatcher(const string& group)
+{
+  const bool contains = Config::Get().MatchContains();
+  const bool caseInsensitive = Config::Get().MatchCaseInsensitive();
+  if (!RegexMatcher(group, contains, caseInsensitive).IsValid()) return RegexMatcher(group, contains, caseInsensitive);  // stays invalid
+  return RegexMatcher("(?:" + group + ")(?:/.*)?", contains, caseInsensitive);
+}
+
 // what a chained tree is made of in words, e.g. "3 files" or "412 folders in 3 files" (empty if it has only one input)
 template <typename TreeInputs>
 string DescribeInputs(const TreeInputs& treeInputs)
@@ -656,7 +665,7 @@ void PlotManager::AddColorOverview(const string& name, const string& group, cons
 void PlotManager::SavePlots(const string& name, const string& group, const optional<string>& file) const
 {
   ptree plotTree;
-  RegexMatcher groupRegex(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
+  RegexMatcher groupRegex = GroupMatcher(group);
   RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
   if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
     ERROR("Invalid regular expression.");
@@ -694,7 +703,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
   uint32_t nMatched{};
   uint32_t nLoaded{};
 
-  RegexMatcher groupRegex(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
+  RegexMatcher groupRegex = GroupMatcher(group);
   RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
   if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
     ERROR("Invalid regular expression.");
@@ -774,7 +783,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   vector<Plot*> selectedPlots;
   map<int32_t, set<int32_t>> requiredData;
 
-  RegexMatcher groupRegex(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
+  RegexMatcher groupRegex = GroupMatcher(group);
   RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
   if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
     ERROR("Invalid regular expression.");

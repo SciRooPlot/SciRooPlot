@@ -82,7 +82,8 @@ This allows the creation of multiple plots matching the specified pattern in a s
 For example `plot paperPlots .+` would generate all plots defined within the group called `paperPlots` and `plot thesisFigures moneyPlot[1,2]` creates `moneyPlot1` and `moneyPlot2` from the group `thesisFigures`.
 To specify multiple text options one can use `plot analysisQA trackProperty_(tight|loose|nominal)CutSetting`.
 Note: in bash (unlike zsh), patterns containing `(`, `)`, or `|` must be quoted, e.g. `plot analysisQA 'trackProperty_(tight|loose|nominal)CutSetting'` — bash treats those characters as shell syntax rather than pattern text.
-To select only a subgroup within the group, use `<group/some/subgroup>` (for example `plot myGroup/QAPlots controlObservable`).
+A group always includes its subgroups, so `plot myGroup .+` also creates the plots in `myGroup/QAPlots`.
+To select only a subgroup within the group, use `<group/some/subgroup>` (for example `plot myGroup/QAPlots controlObservable`), and to exclude the subgroups, end the group with `$` (for example `plot 'myGroup$' .+`).
 By default, the optional `mode` argument is set to `show` and you can leave it out in the command.
 Possible alternatives are: `list`, `print`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`, `data`.
 If you have multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..) that you want to concatenate and save as a moving gif, you can create it via `plot myGroup myPlot_bin_.+ gif`.

@@ -1543,7 +1543,7 @@
         [`AddBasePlot(basePlot)`], [Register a reusable base plot layout.],
         [`SavePlots(name, group, file = {})`], [Write matching plots to a config file.],
         [`LoadPlots(name, group, file = {})`], [Load plots from a config file.],
-        [`GeneratePlots(mode, name, group)`], [Generate plots matching the request in the given mode.],
+        [`GeneratePlots(mode, name, group)`], [Generate plots matching the request in the given mode (groups include their subgroups, `group$` excludes them).],
         [`ListPlots()`], [Print all registered plots.],
         [#names("ClearDataBuffer()", "ClearCanvasRegistry()")], [Free the buffered input data, or clear the cache of already-generated canvases.],
         [`SetOutputDirectory(path)`], [Set the output directory for generated files.],
