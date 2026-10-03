@@ -102,6 +102,15 @@ enum drawing_options_t : uint8_t {
 #undef OPT
 };
 
+// automatic placement of a legend or text: as close as possible to the corner of the frame where it fits best or to the given corner
+enum box_placement_t : uint8_t {
+  best_corner,
+  top_left,
+  top_right,
+  bottom_right,
+  bottom_left,
+};
+
 //**************************************************************************************************
 /**
  * Class for internal representation of a plot.
@@ -246,8 +255,10 @@ class Plot::Pad
 
   TextBox& AddText(double_t xPos, double_t yPos, const std::string& text);
   TextBox& AddText(const std::string& text);
+  TextBox& AddText(box_placement_t placement, const std::string& text);
   LegendBox& AddLegend(double_t xPos, double_t yPos, const std::optional<std::string>& title = {});
   LegendBox& AddLegend(const std::optional<std::string>& title = {});
+  LegendBox& AddLegend(box_placement_t placement, const std::optional<std::string>& title = {});
 
   Axis& GetAxis(const char axis);
   Data& GetData(uint8_t dataID);
@@ -999,7 +1010,7 @@ class Plot::Pad::Box
   BoxType& SetPosition(double_t x, double_t y);
   BoxType& SetSize(double_t width, double_t height);
   BoxType& SetUserCoordinates(bool isUserCoord = true);
-  BoxType& SetAutoPlacement();
+  BoxType& SetAutoPlacement(box_placement_t placement = best_corner);
   BoxType& SetBorder(int16_t color, int16_t style, float_t width, std::optional<float_t> alpha = {});
   BoxType& SetBorderColor(int16_t color);
   BoxType& SetBorderAlpha(float_t alpha);
@@ -1026,6 +1037,7 @@ class Plot::Pad::Box
   double_t GetYPosition() const { return (mPos.y) ? *mPos.y : 0.; }
   auto& GetWidth() const { return mPos.w; }
   auto& GetHeight() const { return mPos.h; }
+  auto& GetPlacement() const { return mPos.placement; }
   auto& GetBorderStyle() const { return mBorder.style; }
   auto& GetBorderWidth() const { return mBorder.scale; }
   auto& GetBorderColor() const { return mBorder.color; }
@@ -1041,7 +1053,7 @@ class Plot::Pad::Box
   auto& GetLineSpacing() const { return mLineSpacing; }
 
   bool IsUserCoordinates() const { return (mPos.isUserCoord) ? *mPos.isUserCoord : false; }
-  bool IsAutoPlacement() const { return (!mPos.x || !mPos.y); }
+  bool IsAutoPlacement() const { return mPos.placement.has_value(); }
 
  private:
   // allow construction of Box base class only in context actually useful boxes
@@ -1058,6 +1070,7 @@ class Plot::Pad::Box
     std::optional<double_t> w;
     std::optional<double_t> h;
     std::optional<bool> isUserCoord;
+    std::optional<box_placement_t> placement;  // automatic placement (instead of the position given by x and y)
   };
 
   std::optional<float_t> mMargin;

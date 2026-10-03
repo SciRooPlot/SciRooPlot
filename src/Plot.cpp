@@ -1531,6 +1531,16 @@ Plot::Pad::TextBox& Plot::Pad::AddText(const string& text)
 
 //**************************************************************************************************
 /**
+ * Add text box to this pad and automatically find a position for it (close to the given corner of the frame or the one where it fits best).
+ */
+//**************************************************************************************************
+Plot::Pad::TextBox& Plot::Pad::AddText(box_placement_t placement, const string& text)
+{
+  return AddText(text).SetAutoPlacement(placement);
+}
+
+//**************************************************************************************************
+/**
  * Add legend box to this pad.
  */
 //**************************************************************************************************
@@ -1549,6 +1559,16 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend(const std::optional<std::string>& tit
 {
   mLegendBoxes.push_back(std::make_shared<LegendBox>(title));
   return *mLegendBoxes.back();
+}
+
+//**************************************************************************************************
+/**
+ * Add legend box to this pad and automatically find a position for it (close to the given corner of the frame or the one where it fits best).
+ */
+//**************************************************************************************************
+Plot::Pad::LegendBox& Plot::Pad::AddLegend(box_placement_t placement, const std::optional<std::string>& title)
+{
+  return AddLegend(title).SetAutoPlacement(placement);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -3112,6 +3132,7 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
   read_from_tree(boxTree, mPos.w, "w");
   read_from_tree(boxTree, mPos.h, "h");
   read_from_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
+  read_from_tree(boxTree, mPos.placement, "placement");
   read_from_tree(boxTree, mBorder.style, "border_style");
   read_from_tree(boxTree, mBorder.color, "border_color");
   read_from_tree(boxTree, mBorder.alpha, "border_alpha");
@@ -3141,6 +3162,7 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
   put_in_tree(boxTree, mPos.w, "w");
   put_in_tree(boxTree, mPos.h, "h");
   put_in_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
+  put_in_tree(boxTree, mPos.placement, "placement");
   put_in_tree(boxTree, mBorder.style, "border_style");
   put_in_tree(boxTree, mBorder.color, "border_color");
   put_in_tree(boxTree, mBorder.alpha, "border_alpha");
@@ -3168,6 +3190,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetPosition(double_t x, double_t y)
 {
   mPos.x = x;
   mPos.y = y;
+  mPos.placement = nullopt;
   return *GetThis();
 }
 
@@ -3187,10 +3210,11 @@ BoxType& Plot::Pad::Box<BoxType>::SetUserCoordinates(bool isUserCoord)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetAutoPlacement()
+BoxType& Plot::Pad::Box<BoxType>::SetAutoPlacement(box_placement_t placement)
 {
   mPos.x = nullopt;
   mPos.y = nullopt;
+  mPos.placement = placement;
   return *GetThis();
 }
 

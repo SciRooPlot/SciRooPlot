@@ -1162,6 +1162,8 @@
 
       - Legends can be added manually at a fixed position, or auto-placed by leaving the position out, just like text boxes.
 
+      - Auto-placed boxes go as close as possible to the corner of the frame where they fit best (`best_corner`), or to a requested one: `top_left`, `top_right`, `bottom_right` or `bottom_left`.
+
       - Individual entries are looked up via `GetEntry(n)` and customized independently, e.g. to override a label.
 
       - For multi-line text, join the lines into one string with `" // "` in between; `SetLineSpacing()` sets the gap between them.
@@ -1187,6 +1189,8 @@
 
           plot[1].AddLegend(); // auto-placed, no fixed position given
 
+          plot[1].AddLegend(top_right); // auto-placed, close to this corner
+
           plot[1].AddText(0.18, 0.88, "Work in progress");
 
           plot[1].AddText("first line // second line");
@@ -1208,6 +1212,8 @@
           plot[1].AddLegend(0.9, 0.1)  # rel. (x, y) pos. in pad
 
           plot[1].AddLegend()  # auto-placed, no fixed position given
+
+          plot[1].AddLegend(top_right)  # auto-placed, close to this corner
 
           plot[1].AddText(0.18, 0.88, "Work in progress")
 
@@ -1789,7 +1795,7 @@
     [
       #api-section("Box (shared)", (
         [`SetPosition(x, y)` / `SetSize(w, h)`], [Box position or dimensions.],
-        [`SetAutoPlacement()`], [Let SciRooPlot place the box automatically.],
+        [`SetAutoPlacement(placement = best_corner)`], [Let SciRooPlot place the box automatically: close to the corner where it fits best or to a given one (`top_left`, `top_right`, `bottom_right`, `bottom_left`).],
         [`SetUserCoordinates(isUserCoord = true)`], [Interpret position/size as user (data) coordinates instead of relative pad coordinates.],
         [#names("SetBorder(color, style, width, alpha = {})", "SetBorderColor(color)", "SetBorderStyle(style)", "SetBorderWidth(width)")], [Border, all at once or individually.],
         [#names("SetText(color, font, size, alpha = {})", "SetTextColor(color)", "SetTextFont(font)", "SetTextSize(size)", "SetTextAlpha(alpha)")], [Text styling, all at once or individually.],

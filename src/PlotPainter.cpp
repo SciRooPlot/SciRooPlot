@@ -21,6 +21,7 @@
 #include "SciRooPlot/Logging.h"
 
 #include <TApplication.h>
+#include <TBox.h>
 #include <TCanvas.h>
 #include <TColorWheel.h>
 #include <TEfficiency.h>
@@ -41,6 +42,7 @@
 #include <TH1.h>
 #include <TH2.h>
 #include <TH3.h>
+#include <THStack.h>
 #include <THn.h>
 #include <THnSparse.h>
 #include <TIterator.h>
@@ -48,9 +50,11 @@
 #include <TLegend.h>
 #include <TLegendEntry.h>
 #include <TLine.h>
+#include <TMultiGraph.h>
 #include <TObjArray.h>
 #include <TObject.h>
 #include <TObjectTable.h>
+#include <TPave.h>
 #include <TPaveText.h>
 #include <TProfile.h>
 #include <TProfile2D.h>
@@ -1564,60 +1568,54 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       pad->Update();
       double_t lowerLeftX{};
       double_t lowerLeftY{};
-      // minimum distance of box to objects and ticks (in units of tick length)
-      double_t fractionOfTickLength{0.9};
-      double_t marginX = fractionOfTickLength * gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()) / (pad->GetX2() - pad->GetX1());
-      double_t marginY = fractionOfTickLength * gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()) / (pad->GetY2() - pad->GetY1());
       bool foundPosition = false;
 
-      // draw temporary boxes to exclude areas outside of the coordinate system
-      TBox marginsBottom(
-        pad->GetX1(), pad->GetY1(), pad->GetX2(),
-        pad->GetUymin() + gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()));
-      TBox marginsTop(
-        pad->GetX1(),
-        pad->GetUymax() - gStyle->GetTickLength("X") * (pad->GetUymax() - pad->GetUymin()),
-        pad->GetX2(), pad->GetY2());
-      TBox marginsLeft(
-        pad->GetX1(), pad->GetY1(),
-        pad->GetUxmin() + gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()),
-        pad->GetY2());
-      TBox marginsRight(
-        pad->GetUxmax() - gStyle->GetTickLength("Y") * (pad->GetUxmax() - pad->GetUxmin()),
-        pad->GetY1(), pad->GetX2(), pad->GetY2());
-      marginsBottom.Draw("SAME");
-      marginsTop.Draw("SAME");
-      marginsLeft.Draw("SAME");
-      marginsRight.Draw("SAME");
+      // area available for the box: the frame without the ticks of the axes and a small gap (in NDC)
+      constexpr double_t kDistanceToFrame{1.4};  // in units of the tick length
+      TH1* axisHist{};
+      for (auto* obj : *pad->GetListOfPrimitives()) {
+        if (obj->InheritsFrom(TH1::Class()) && TString(obj->GetName()).BeginsWith("axis_hist")) {
+          axisHist = static_cast<TH1*>(obj);
+          break;
+        }
+      }
+      const double_t tickLengthX = (axisHist) ? axisHist->GetXaxis()->GetTickLength() : gStyle->GetTickLength("X");  // ticks on the x axis (vertical)
+      const double_t tickLengthY = (axisHist) ? axisHist->GetYaxis()->GetTickLength() : gStyle->GetTickLength("Y");  // ticks on the y axis (horizontal)
+      const double_t frameX1 = (pad->GetUxmin() - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
+      const double_t frameX2 = (pad->GetUxmax() - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
+      const double_t frameY1 = (pad->GetUymin() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
+      const double_t frameY2 = (pad->GetUymax() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
+      const double_t distanceX = kDistanceToFrame * tickLengthY * (frameX2 - frameX1);
+      const double_t distanceY = kDistanceToFrame * tickLengthX * (frameY2 - frameY1);
+      const std::array<double_t, 4> freeArea{frameX1 + distanceX, frameY1 + distanceY, frameX2 - distanceX, frameY2 - distanceY};
+
+      // the border is drawn centered on the edges of the box, so half of it sticks out on each side
+      const double_t borderX = box->GetBorderWidth().value_or(0.) / padWidthPixel;
+      const double_t borderY = box->GetBorderWidth().value_or(0.) / padHeightPixel;
+      const double_t outerWidthNDC = totalWidthNDC + borderX;
+      const double_t outerHeightNDC = totalHeightNDC + borderY;
 
       // find box position that does not collide with any of the drawn objects
-      // (only if the box fits into the frame at all: for boxes larger than the pad, TPad::PlaceBox reads outside of its collision grid)
-      const double_t frameWidthNDC = (pad->GetUxmax() - pad->GetUxmin()) / (pad->GetX2() - pad->GetX1());
-      const double_t frameHeightNDC = (pad->GetUymax() - pad->GetUymin()) / (pad->GetY2() - pad->GetY1());
-      const bool fitsIntoFrame = (totalWidthNDC < frameWidthNDC && totalHeightNDC < frameHeightNDC);
+      const double_t freeWidthNDC = freeArea[2] - freeArea[0];
+      const double_t freeHeightNDC = freeArea[3] - freeArea[1];
+      const bool fitsIntoFrame = (outerWidthNDC <= freeWidthNDC && outerHeightNDC <= freeHeightNDC);
       if (fitsIntoFrame) {
-        foundPosition = pad->PlaceBox(nullptr, totalWidthNDC, totalHeightNDC, lowerLeftX, lowerLeftY);
+        foundPosition = FindFreeSpace(pad, freeArea, outerWidthNDC, outerHeightNDC, *box->GetPlacement(), lowerLeftX, lowerLeftY);
       }
       if (foundPosition) {
-        upperLeftX = lowerLeftX;
-        upperLeftY = lowerLeftY + totalHeightNDC;
+        upperLeftX = lowerLeftX + 0.5 * borderX;
+        upperLeftY = lowerLeftY + 0.5 * borderY + totalHeightNDC;
       } else {
         if (fitsIntoFrame) {
           WARNING("Could not find enough space to place the {} properly.", (isLegend) ? "legend" : "text");
         } else {
-          WARNING("The {} ({:.2f} x {:.2f}) is larger than the frame ({:.2f} x {:.2f}, in units of the pad size): use fewer lines, more columns or a smaller text size.",
-                  (isLegend) ? "legend" : "text", totalWidthNDC, totalHeightNDC, frameWidthNDC, frameHeightNDC);
+          WARNING("The {} ({:.2f} x {:.2f}) is larger than the space inside the frame ({:.2f} x {:.2f}, in units of the pad size): use fewer lines, more columns or a smaller text size.",
+                  (isLegend) ? "legend" : "text", outerWidthNDC, outerHeightNDC, freeWidthNDC, freeHeightNDC);
         }
-        // just place legend within axis ranges of pad
-        upperLeftX = (pad->GetUxmin() - pad->GetX1()) / (pad->GetX2() - pad->GetX1()) + (1 + 1 / fractionOfTickLength) * marginX;
-        upperLeftY = (pad->GetUymax() - pad->GetY1()) / (pad->GetY2() - pad->GetY1()) - (1 + 1 / fractionOfTickLength) * marginY;
+        // just place it in the top left corner of the frame
+        upperLeftX = freeArea[0] + 0.5 * borderX;
+        upperLeftY = freeArea[3] - 0.5 * borderY;
       }
-      // now remove temporary boxes again
-      pad->GetListOfPrimitives()->Remove(&marginsBottom);
-      pad->GetListOfPrimitives()->Remove(&marginsTop);
-      pad->GetListOfPrimitives()->Remove(&marginsLeft);
-      pad->GetListOfPrimitives()->Remove(&marginsRight);
-      // pad->DrawCollideGrid();
     } else if (box->IsUserCoordinates()) {
       // convert user coordinates to NDC
       pad->Update();
@@ -1785,6 +1783,235 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
   };
   std::visit(processBox, boxVariant);
   return returnBox;
+}
+
+//**************************************************************************************************
+/**
+ * Find a position for a box of the given size (in NDC) within the free area (x1, y1, x2, y2 in NDC) that does not overlap with anything drawn.
+ * Replaces TPad::PlaceBox, which considers all bins of a histogram (also those outside of the visible range),
+ * does not clip to the pad (absurd values like huge error bars then take forever and block the whole pad)
+ * and samples graphs only coarsely.
+ * The box is placed at the free position closest to the given corner of the frame
+ * or (for best_corner) closest to the corner where it fits best.
+ * Returns the lower left corner of the box in NDC.
+ */
+//**************************************************************************************************
+bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY)
+{
+  constexpr int32_t kCellSize = 10;  // grid cell size in pixels (as in TPad::PlaceBox)
+  const int32_t nx = static_cast<int32_t>(pad->GetWw()) / kCellSize;
+  const int32_t ny = static_cast<int32_t>(pad->GetWh()) / kCellSize;
+  if (nx <= 0 || ny <= 0) return false;
+  vector<uint8_t> blocked(static_cast<size_t>(nx) * ny, 0u);  // cells occupied by drawn objects
+
+  // conversion from pad coordinates to (fractional) grid cells
+  const double_t cellsPerX = nx / (pad->GetX2() - pad->GetX1());
+  const double_t cellsPerY = ny / (pad->GetY2() - pad->GetY1());
+  auto cellX = [&](double_t x) { return (x - pad->GetX1()) * cellsPerX; };
+  auto cellY = [&](double_t y) { return (y - pad->GetY1()) * cellsPerY; };
+  // conversion from user coordinates to pad coordinates (on a log axis non-positive values are moved to the pad edge)
+  auto padX = [&](double_t x) { return (!pad->GetLogx()) ? x : ((x > 0.) ? std::log10(x) : pad->GetX1()); };
+  auto padY = [&](double_t y) { return (!pad->GetLogy()) ? y : ((y > 0.) ? std::log10(y) : pad->GetY1()); };
+
+  auto setRect = [&](double_t x1, double_t y1, double_t x2, double_t y2, uint8_t value) {  // in cells, inclusive
+    if (!std::isfinite(x1) || !std::isfinite(y1) || !std::isfinite(x2) || !std::isfinite(y2)) return;
+    if (x1 > x2) std::swap(x1, x2);
+    if (y1 > y2) std::swap(y1, y2);
+    const int32_t i1 = static_cast<int32_t>(std::max(std::floor(x1), 0.));
+    const int32_t i2 = static_cast<int32_t>(std::min(std::floor(x2), nx - 1.));
+    const int32_t j1 = static_cast<int32_t>(std::max(std::floor(y1), 0.));
+    const int32_t j2 = static_cast<int32_t>(std::min(std::floor(y2), ny - 1.));
+    for (int32_t i = i1; i <= i2; ++i) {
+      for (int32_t j = j1; j <= j2; ++j) {
+        blocked[i + static_cast<size_t>(j) * nx] = value;
+      }
+    }
+  };
+  auto markPoint = [&](double_t x, double_t y) { setRect(cellX(x), cellY(y), cellX(x), cellY(y), 1u); };
+  auto markLine = [&](double_t x1, double_t y1, double_t x2, double_t y2) {  // in pad coordinates
+    double_t cx1 = cellX(x1), cy1 = cellY(y1), cx2 = cellX(x2), cy2 = cellY(y2);
+    if (!std::isfinite(cx1) || !std::isfinite(cy1) || !std::isfinite(cx2) || !std::isfinite(cy2)) return;
+    // clip the line to the grid (Liang-Barsky) so lines far outside of the pad cost nothing
+    double_t t0 = 0., t1 = 1.;
+    const double_t dx = cx2 - cx1, dy = cy2 - cy1;
+    for (auto [p, q] : {std::pair{-dx, cx1}, std::pair{dx, nx - cx1}, std::pair{-dy, cy1}, std::pair{dy, ny - cy1}}) {
+      if (p == 0.) {
+        if (q < 0.) return;
+      } else {
+        const double_t t = q / p;
+        if (p < 0.) {
+          t0 = std::max(t0, t);
+        } else {
+          t1 = std::min(t1, t);
+        }
+      }
+    }
+    if (t0 > t1) return;
+    const int32_t nSteps = static_cast<int32_t>(std::ceil(2. * std::max(std::abs(dx), std::abs(dy)) * (t1 - t0))) + 1;
+    for (int32_t step = 0; step <= nSteps; ++step) {
+      const double_t t = t0 + (t1 - t0) * step / nSteps;
+      setRect(cx1 + t * dx, cy1 + t * dy, cx1 + t * dx, cy1 + t * dy, 1u);
+    }
+  };
+
+  auto markHist = [&](TH1* hist) {
+    if (hist->GetDimension() != 1) return;
+    TString option = hist->GetDrawOption();
+    option.ToLower();
+    const bool hasErrors = !option.Contains("hist") && option.Contains("e");
+    const bool hasErrorArea = hasErrors && (option.Contains("e2") || option.Contains("e3") || option.Contains("e4") || option.Contains("e5"));
+    const bool showEmpty = option.Contains("e0");
+    TAxis* axis = hist->GetXaxis();
+    for (int32_t bin = axis->GetFirst(); bin <= axis->GetLast(); ++bin) {  // only the visible range
+      const double_t content = hist->GetBinContent(bin);
+      if (hasErrors && !showEmpty && content == 0.) continue;  // not drawn by ROOT
+      const double_t xLow = padX(axis->GetBinLowEdge(bin));
+      const double_t xUp = padX(axis->GetBinUpEdge(bin));
+      const double_t xCenter = padX(axis->GetBinCenter(bin));
+      const double_t y = padY(content);
+      markLine(xLow, y, xUp, y);
+      markPoint(xCenter, y);
+      if (hasErrorArea) {
+        setRect(cellX(xLow), cellY(padY(content - hist->GetBinErrorLow(bin))), cellX(xUp), cellY(padY(content + hist->GetBinErrorUp(bin))), 1u);
+      } else if (hasErrors) {
+        markLine(xCenter, padY(content - hist->GetBinErrorLow(bin)), xCenter, padY(content + hist->GetBinErrorUp(bin)));
+      } else if (bin < axis->GetLast()) {
+        markLine(xUp, y, xUp, padY(hist->GetBinContent(bin + 1)));  // step to the next bin
+      }
+    }
+  };
+  auto markGraph = [&](TGraph* graph) {
+    TString option = graph->GetDrawOption();
+    option.ToLower();
+    const bool hasErrorBoxes = option.Contains("2") || option.Contains("5");
+    const bool hasErrorBand = option.Contains("3") || option.Contains("4");
+    const int32_t n = graph->GetN();
+    for (int32_t i = 0; i < n; ++i) {
+      const double_t xUser = graph->GetPointX(i), yUser = graph->GetPointY(i);
+      const double_t x = padX(xUser), y = padY(yUser);
+      markPoint(x, y);
+      if (i > 0) markLine(padX(graph->GetPointX(i - 1)), padY(graph->GetPointY(i - 1)), x, y);
+      const double_t exLow = graph->GetErrorXlow(i), exHigh = graph->GetErrorXhigh(i);
+      const double_t eyLow = graph->GetErrorYlow(i), eyHigh = graph->GetErrorYhigh(i);
+      if (hasErrorBoxes) {
+        setRect(cellX(padX(xUser - exLow)), cellY(padY(yUser - eyLow)), cellX(padX(xUser + exHigh)), cellY(padY(yUser + eyHigh)), 1u);
+        continue;
+      }
+      if (exLow > 0. || exHigh > 0.) markLine(padX(xUser - exLow), y, padX(xUser + exHigh), y);
+      if (eyLow > 0. || eyHigh > 0.) markLine(x, padY(yUser - eyLow), x, padY(yUser + eyHigh));
+      if (hasErrorBand && i > 0) {
+        // area between the lower and upper edges of the band from the previous point to this one (column by column)
+        const double_t xPrev = padX(graph->GetPointX(i - 1));
+        const double_t lowPrev = padY(graph->GetPointY(i - 1) - graph->GetErrorYlow(i - 1)), highPrev = padY(graph->GetPointY(i - 1) + graph->GetErrorYhigh(i - 1));
+        const double_t low = padY(yUser - eyLow), high = padY(yUser + eyHigh);
+        const double_t c1 = std::max(std::min(cellX(xPrev), cellX(x)), 0.), c2 = std::min(std::max(cellX(xPrev), cellX(x)), static_cast<double_t>(nx));
+        for (double_t c = std::floor(c1); c <= c2; c += 1.) {
+          const double_t t = (cellX(x) == cellX(xPrev)) ? 0. : (c - cellX(xPrev)) / (cellX(x) - cellX(xPrev));
+          if (t < 0. || t > 1.) continue;
+          setRect(c, cellY(lowPrev + t * (low - lowPrev)), c, cellY(highPrev + t * (high - highPrev)), 1u);
+        }
+      }
+    }
+  };
+  auto markFunc = [&](TF1* func) {
+    if (func->GetNdim() != 1) return;
+    double_t xMin{}, xMax{};
+    func->GetRange(xMin, xMax);
+    const int32_t nPoints = std::max(func->GetNpx(), 2);
+    double_t xPrev{}, yPrev{};
+    for (int32_t i = 0; i < nPoints; ++i) {
+      const double_t xUser = xMin + (xMax - xMin) * i / (nPoints - 1);
+      const double_t x = padX(xUser);
+      const double_t y = padY(func->Eval(xUser));
+      if (i > 0) markLine(xPrev, yPrev, x, y);
+      xPrev = x;
+      yPrev = y;
+    }
+  };
+
+  for (auto* obj : *pad->GetListOfPrimitives()) {
+    if (obj->InheritsFrom(TFrame::Class())) {
+      // only the area within the frame is considered anyway
+      continue;
+    } else if (auto* pave = dynamic_cast<TPave*>(obj)) {
+      // legends and texts placed before (coordinates in NDC)
+      setRect(pave->GetX1NDC() * nx, pave->GetY1NDC() * ny, pave->GetX2NDC() * nx, pave->GetY2NDC() * ny, 1u);
+    } else if (auto* box = dynamic_cast<TBox*>(obj)) {
+      setRect(cellX(box->GetX1()), cellY(box->GetY1()), cellX(box->GetX2()), cellY(box->GetY2()), 1u);
+    } else if (auto* hist = dynamic_cast<TH1*>(obj)) {
+      if (!TString(hist->GetName()).BeginsWith("axis_hist") && !TString(hist->GetName()).Contains("hframe")) markHist(hist);
+    } else if (auto* graph = dynamic_cast<TGraph*>(obj)) {
+      markGraph(graph);
+    } else if (auto* multiGraph = dynamic_cast<TMultiGraph*>(obj)) {
+      for (auto* subGraph : *multiGraph->GetListOfGraphs()) {
+        markGraph(static_cast<TGraph*>(subGraph));
+      }
+    } else if (auto* stack = dynamic_cast<THStack*>(obj)) {
+      for (auto* subHist : *stack->GetHists()) {
+        markHist(static_cast<TH1*>(subHist));
+      }
+    } else if (auto* func = dynamic_cast<TF1*>(obj)) {
+      markFunc(func);
+    }
+  }
+
+  // summed area table to check a whole rectangle at once
+  vector<int32_t> sum(static_cast<size_t>(nx + 1) * (ny + 1), 0);
+  for (int32_t i = 0; i < nx; ++i) {
+    for (int32_t j = 0; j < ny; ++j) {
+      sum[(i + 1) + static_cast<size_t>(j + 1) * (nx + 1)] = blocked[i + static_cast<size_t>(j) * nx] + sum[i + static_cast<size_t>(j + 1) * (nx + 1)] + sum[(i + 1) + static_cast<size_t>(j) * (nx + 1)] - sum[i + static_cast<size_t>(j) * (nx + 1)];
+    }
+  }
+  // whether a box at this position (lower left corner in NDC) overlaps with any cell occupied by drawn objects
+  auto isBlocked = [&](double_t x, double_t y) {
+    const int32_t i1 = std::clamp(static_cast<int32_t>(std::floor(x * nx)), 0, nx);
+    const int32_t i2 = std::clamp(static_cast<int32_t>(std::ceil((x + width) * nx)), 0, nx);
+    const int32_t j1 = std::clamp(static_cast<int32_t>(std::floor(y * ny)), 0, ny);
+    const int32_t j2 = std::clamp(static_cast<int32_t>(std::ceil((y + height) * ny)), 0, ny);
+    auto at = [&](int32_t a, int32_t b) { return sum[a + static_cast<size_t>(b) * (nx + 1)]; };
+    return (at(i2, j2) - at(i1, j2) - at(i2, j1) + at(i1, j1)) != 0;
+  };
+  // candidate positions: both edges of the free area and all cell boundaries in between
+  if (freeArea[2] - width < freeArea[0] || freeArea[3] - height < freeArea[1]) return false;
+  auto candidates = [](double_t min, double_t max, int32_t nCells) {
+    vector<double_t> positions{min};
+    for (int32_t k = static_cast<int32_t>(std::floor(min * nCells)) + 1; k < max * nCells; ++k) {
+      positions.push_back(static_cast<double_t>(k) / nCells);
+    }
+    if (max > min) positions.push_back(max);
+    return positions;
+  };
+  const auto xPositions = candidates(freeArea[0], freeArea[2] - width, nx);
+  const auto yPositions = candidates(freeArea[1], freeArea[3] - height, ny);
+
+  // distance (in pixels) of the box at this position to the given corner of the free area
+  auto distanceToCorner = [&](box_placement_t boxCorner, double_t x, double_t y) {
+    const bool isLeft = (boxCorner == bottom_left || boxCorner == top_left);
+    const bool isBottom = (boxCorner == bottom_left || boxCorner == bottom_right);
+    const double_t dx = ((isLeft) ? x - freeArea[0] : freeArea[2] - (x + width)) * pad->GetWw();
+    const double_t dy = ((isBottom) ? y - freeArea[1] : freeArea[3] - (y + height)) * pad->GetWh();
+    return dx * dx + dy * dy;
+  };
+  // for best_corner the one the box gets closest to is used (in case of a tie in this order of preference)
+  const vector<box_placement_t> corners = (placement == best_corner) ? vector<box_placement_t>{top_left, top_right, bottom_right, bottom_left} : vector<box_placement_t>{placement};
+  bool found = false;
+  double_t minDistance{};
+  size_t minRank{};  // position of the corner in the order of preference
+  for (const double_t x : xPositions) {
+    for (const double_t y : yPositions) {
+      if (isBlocked(x, y)) continue;
+      for (size_t rank = 0; rank < corners.size(); ++rank) {
+        const double_t distance = distanceToCorner(corners[rank], x, y);
+        if (found && (distance > minDistance || (distance == minDistance && rank >= minRank))) continue;
+        found = true;
+        minDistance = distance;
+        minRank = rank;
+        lowerLeftX = x;
+        lowerLeftY = y;
+      }
+    }
+  }
+  return found;
 }
 
 //**************************************************************************************************

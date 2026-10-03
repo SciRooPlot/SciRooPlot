@@ -204,7 +204,10 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // now add a legend containing the labels that were specified when adding the data
   plot[1].AddLegend(0.5, 0.8);
   // if you leave out the xy pad coordinates, the framework will try to auto-place the legend without overlapping your data or the axes
-  plot[1].AddLegend();
+  // (as close as possible to the corner of the frame where it fits best, preferring top left, top right, bottom right, bottom left)
+  plot[1].AddLegend();  // same as plot[1].AddLegend(best_corner);
+  // to place it as close as possible to a specific corner of the frame specify top_left, top_right, bottom_right or bottom_left
+  plot[1].AddLegend(top_right);
 
   // it is possible to add multiple legends to the plot (as done above) which are then identified by the order they were added
   // in order to express that the label for a specific data should be put in the second legend you can do the following:
@@ -223,6 +226,8 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
 
   // similar to the legend boxes you can add a text box to your plot
   plot[1].AddText("my important description spanning // over two lines");
+  // or as close as possible to a corner of the frame
+  plot[1].AddText(top_left, "my important description");
   // or
   plot[1].AddText(0.2, 0.9, "this is // where I // want my text");
   // by default " // " is used as a delimiter between multiple lines
