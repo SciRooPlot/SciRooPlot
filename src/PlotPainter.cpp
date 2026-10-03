@@ -1036,10 +1036,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     disableLog();
                   } else {
                     int32_t bin = firstBin;
-                    while (axis_ptr->GetBinLowEdge(bin) <= 0.)
+                    while (axis_ptr->GetBinLowEdge(bin) <= 0.) {
                       ++bin;
+                    }
+                    // start at the first positive bin edge (ROOT would otherwise draw the bins with negative edges left of the frame)
                     const double_t newMin = (bin <= lastBin) ? axis_ptr->GetBinLowEdge(bin) : 1e-3 * axis_ptr->GetBinUpEdge(lastBin);
-                    WARNING("Range of {} axis in pad {} starts at {:.3g} which is not possible for a log scale, starting at {:.3g} instead.", axisLabel, padID, axis_ptr->GetBinLowEdge(firstBin), newMin);
                     axis_ptr->SetRangeUser(newMin, axis_ptr->GetBinUpEdge(lastBin));
                   }
                 }
