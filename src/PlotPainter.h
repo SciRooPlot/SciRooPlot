@@ -152,12 +152,12 @@ class PlotPainter
   TF2* ScaleFunc(TF2* func, double_t domainFactorX, double_t domainFactorY, double_t contentFactor);
   TF3* ScaleFunc(TF3* func, double_t domainFactorX, double_t domainFactorY, double_t domainFactorZ, double_t contentFactor);
 
-  void Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors = false);
-  void Divide(TH1* numerator, TH1* denominator, bool binomialErrors = false);
-  void Divide(TH1* numerator, TGraph* denominator, bool binomialErrors = false);
-  void Divide(TGraph* numerator, TH1* denominator, bool binomialErrors = false);
-  void Divide(TH1* numerator, TF1* denominator, bool binomialErrors = false);
-  void Divide(TGraph* numerator, TF1* denominator, bool binomialErrors = false);
+  bool Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors = false);
+  bool Divide(TH1* numerator, TH1* denominator, bool binomialErrors = false);
+  bool Divide(TH1* numerator, TGraph* denominator, bool binomialErrors = false);
+  bool Divide(TGraph* numerator, TH1* denominator, bool binomialErrors = false);
+  bool Divide(TH1* numerator, TF1* denominator, bool binomialErrors = false);
+  bool Divide(TGraph* numerator, TF1* denominator, bool binomialErrors = false);
 
   bool CheckFontSizes(TList* list);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
