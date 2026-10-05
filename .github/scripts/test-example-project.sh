@@ -14,6 +14,7 @@ source "${SRP_TEST_INSTALL}/share/scirooplot/env.sh"
 
 WORKDIR=$(mktemp -d)
 trap 'rm -rf "${WORKDIR}"' EXIT
+export SCIROOPLOT_CONFIG_PATH="${WORKDIR}/config"  # keep the user's own projects out of reach of the test (it ends with srp reset)
 
 echo "Testing in ${WORKDIR}"
 cd "${WORKDIR}"
