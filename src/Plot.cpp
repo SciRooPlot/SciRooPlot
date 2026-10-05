@@ -2413,7 +2413,7 @@ string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
 
 //**************************************************************************************************
 /**
- * Name suffix encoding the details of tree projections.
+ * Trees joined to a tree.
  */
 //**************************************************************************************************
 string Plot::Pad::Data::data_info_t::join_t::GetAlias() const
@@ -2447,38 +2447,52 @@ string Plot::Pad::Data::data_info_t::join_t::GetDescription() const
   description += (keys.empty()) ? " (row by row)" : " (by " + join_strings(keys, ", ") + ")";
   return description;
 }
+
+//**************************************************************************************************
+/**
+ * Name suffix encoding the details of tree projections.
+ */
+//**************************************************************************************************
 string Plot::Pad::Data::data_info_t::GetNameSuffix() const
 {
   if (dataDims.empty()) return "";
-  string nameSuffix = "{";
-  for (const auto& dataDim : dataDims) {
-    nameSuffix += dataDim.var;
-    for (const auto& edge : dataDim.edges) {
-      nameSuffix += number_to_string(edge);
+  // every request must get its own name: fields are tagged and separated by ';', the parts of a dimension by ','
+  // (these characters are escaped in the expressions; ':' and '/' are avoided since names are split there in data mode)
+  auto escape = [](const string& str, const string& separators) {
+    string escaped;
+    for (char c : str) {
+      if (c == '\\' || separators.find(c) != string::npos) escaped += '\\';
+      escaped += c;
     }
-    nameSuffix += number_to_string(dataDim.nBins);
+    return escaped;
+  };
+  vector<string> fields;
+  for (const auto& dataDim : dataDims) {
+    string field = "dim=" + escape(dataDim.var, ",;") + "," + number_to_string(dataDim.nBins);
+    for (const auto& edge : dataDim.edges) {
+      field += "," + number_to_string(edge);
+    }
+    fields.push_back(field);
   }
   if (filters) {
     for (const auto& filter : *filters) {
-      nameSuffix += ";" + filter;
+      fields.push_back("filter=" + escape(filter, ";"));
     }
   }
-  if (definitions.values) {
-    for (const auto& def : *definitions.values) {
-      nameSuffix += ";" + def;
+  if (definitions.keys && definitions.values) {
+    for (size_t i = 0; i < definitions.keys->size() && i < definitions.values->size(); ++i) {
+      fields.push_back("define=" + escape(definitions.keys->at(i), "=;") + "=" + escape(definitions.values->at(i), ";"));
     }
   }
   if (joins) {
     for (const auto& join : *joins) {
-      nameSuffix += ";join:" + join.ToString();
+      fields.push_back("join=" + escape(join.ToString(), ";"));
     }
   }
-  if (weight) nameSuffix += ";" + *weight;
-  if (entries.min) nameSuffix += ";" + number_to_string(*entries.min);
-  if (entries.max) nameSuffix += ";" + number_to_string(*entries.max);
-  if (isProfileNoScatter) nameSuffix += ";" + number_to_string(*isProfileNoScatter);
-  nameSuffix += "}";
-  return nameSuffix;
+  if (weight) fields.push_back("weight=" + escape(*weight, ";"));
+  if (entries.max) fields.push_back((entries.min) ? "entries=" + number_to_string(*entries.min) + "-" + number_to_string(*entries.max) : "first=" + number_to_string(*entries.max));
+  if (isProfileNoScatter) fields.push_back(*isProfileNoScatter ? "profile" : "scatter");
+  return "{" + join_strings(fields, ";") + "}";
 }
 
 //**************************************************************************************************
