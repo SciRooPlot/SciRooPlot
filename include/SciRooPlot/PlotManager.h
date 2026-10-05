@@ -26,12 +26,14 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
 
 class TCanvas;
+class TChain;
 namespace ROOT
 {
 class RDataFrame;
@@ -126,7 +128,11 @@ class PlotManager
   void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource);
   void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataSource);
   void ProcessDataRequests(const std::string& type, const std::string& dataSource, const std::string& name, const std::string& objNameSuffix,
-                           const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, const std::string& inputsDescription = "");
+                           const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, const std::string& inputsDescription = "",
+                           const std::optional<std::vector<Plot::Pad::Data::data_info_t::join_t>>& joins = std::nullopt);
+  std::vector<tree_input_t> FindTreeInputs(const std::string& dataSource, const std::string& treeName);
+  std::optional<std::string> AttachJoin(TChain& chain, const std::string& treeName, const std::vector<tree_input_t>& treeInputs,
+                                        const Plot::Pad::Data::data_info_t::join_t& join, std::vector<std::shared_ptr<TChain>>& joinedChains);
 };
 
 }  // end namespace SciRooPlot

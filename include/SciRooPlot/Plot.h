@@ -546,11 +546,12 @@ class Plot::Pad::Data
   struct data_dim_t {
     data_dim_t() = default;
     // template instead of plain const char* so a literal 0 will not crash at runtime
+    // implicit, so a plain variable can be passed: Project1D("pt")
     template <typename Str, typename = std::enable_if_t<std::is_same_v<Str, const char*> || std::is_same_v<Str, char*>>>
-    data_dim_t(Str _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), edges(_range), nBins(_nBins)
+    data_dim_t(Str _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), edges(_range), nBins(_nBins)  // NOLINT(runtime/explicit)
     {
     }
-    data_dim_t(const std::string& _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), edges(_range), nBins(_nBins) {}
+    data_dim_t(const std::string& _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), edges(_range), nBins(_nBins) {}  // NOLINT(runtime/explicit)
     data_dim_t(const std::string& _var, const std::vector<double_t>& _edges) : var(_var), edges(_edges) {}
     std::string var{};
     std::vector<double_t> edges{};
@@ -571,6 +572,20 @@ class Plot::Pad::Data
 
   virtual Data& Define(const std::string& key, const std::string& value);
   virtual Data& Filter(const std::string& filter);
+  // tree to join: "name" (from the data source of the data) or {"name", "dataSource"}
+  struct join_tree_t {
+    // template instead of plain const char* so a literal 0 will not crash at runtime
+    // implicit, so a plain name can be passed: Join("scores")
+    template <typename Str, typename = std::enable_if_t<std::is_same_v<Str, const char*> || std::is_same_v<Str, char*>>>
+    join_tree_t(Str _name) : name(_name)  // NOLINT(runtime/explicit)
+    {
+    }
+    join_tree_t(const std::string& _name) : name(_name) {}  // NOLINT(runtime/explicit)
+    join_tree_t(const std::string& _name, const std::string& _dataSource) : name(_name), dataSource(_dataSource) {}
+    std::string name;
+    std::string dataSource;
+  };
+  virtual Data& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "");
   virtual Data& Entries(uint32_t nEntries);
   virtual Data& Entries(uint32_t entryMin, uint32_t entryMax);
 
@@ -666,6 +681,19 @@ class Plot::Pad::Data
     };
     definitions_t definitions;
     std::optional<std::vector<std::string>> filters{};
+    // further trees whose columns are added to the rows of the tree
+    struct join_t {
+      std::string tree;                 // name of the joined tree (with the same meaning of a path as in the name of the data)
+      std::string dataSource;           // empty: the data source of the tree
+      std::vector<std::string> keys{};  // columns with equal values in matching rows (empty: rows are matched by their number)
+      std::string alias;                // empty: last part of the tree name
+      std::string GetAlias() const;     // prefix of the columns of the joined tree
+      std::string ToString() const;     // stored form: tree|dataSource|key1,key2|alias
+      static join_t FromString(const std::string& str);
+      std::string GetDescription() const;
+      bool operator==(const join_t& other) const { return ToString() == other.ToString(); }
+    };
+    std::optional<std::vector<join_t>> joins{};
     struct entry_range_t {
       std::optional<uint32_t> min{};
       std::optional<uint32_t> max{};
@@ -685,6 +713,9 @@ class Plot::Pad::Data
     std::string GetNameSuffix() const;
     std::string GetDescription() const;  // human readable version of the name suffix
   };
+  static std::optional<std::vector<data_info_t::join_t>> ReadJoins(const boost::property_tree::ptree& tree, const std::string& label);
+  static void PutJoins(boost::property_tree::ptree& tree, const std::optional<std::vector<data_info_t::join_t>>& joins, const std::string& label);
+  static void AddJoin(data_info_t& dataInfo, const std::string& name, const std::string& dataSource, const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias);
 
  private:
   bool mDefinesFrame{};
@@ -852,6 +883,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 
   Ratio& Define(const std::string& key, const std::string& value) override;
   Ratio& Filter(const std::string& filter) override;
+  Ratio& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "") override;
   Ratio& Entries(uint32_t nEntries) override;
   Ratio& Entries(uint32_t entryMin, uint32_t entryMax) override;
 

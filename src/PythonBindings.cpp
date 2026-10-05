@@ -33,6 +33,7 @@
 #include <pybind11/stl.h>
 
 #include <algorithm>
+#include <array>
 #include <math.h>
 #include <numeric>
 #include <optional>
@@ -453,6 +454,8 @@ void exportData(py::module_& m)
     .def("Scatter", overload_cast<const string&, const string&, const string&, const string&, const string&, const string&>(&Data::Scatter), arg("x"), arg("y"), arg("xErrLow"), arg("xErrHigh"), arg("yErrLow"), arg("yErrHigh"), ref_int)
     .def("Define", &Data::Define, arg("key"), arg("value"), ref_int)
     .def("Filter", &Data::Filter, arg("filter"), ref_int)
+    .def("Join", [](Data& self, const string& tree, const vector<string>& keys, const string& alias) -> Data& { return self.Join(tree, keys, alias); }, arg("tree"), arg("keys") = vector<string>{}, arg("alias") = "", ref_int)
+    .def("Join", [](Data& self, const std::array<string, 2>& tree, const vector<string>& keys, const string& alias) -> Data& { return self.Join({tree[0], tree[1]}, keys, alias); }, arg("tree"), arg("keys") = vector<string>{}, arg("alias") = "", ref_int)
     .def("Entries", overload_cast<uint32_t>(&Data::Entries), arg("nEntries"), ref_int)
     .def("Entries", overload_cast<uint32_t, uint32_t>(&Data::Entries), arg("entryMin"), arg("entryMax"), ref_int);
   // [name, dataSource] lists can be passed wherever data is expected, e.g. AddRatio(["h", "data"], ["h", "mc"])
@@ -539,6 +542,8 @@ void exportRatio(py::module_& m)
     .def("Scatter", overload_cast<const string&, const string&, const string&, const string&, const string&, const string&>(&Ratio::Scatter), arg("x"), arg("y"), arg("xErrLow"), arg("xErrHigh"), arg("yErrLow"), arg("yErrHigh"), ref_int)
     .def("Define", &Ratio::Define, arg("key"), arg("value"), ref_int)
     .def("Filter", &Ratio::Filter, arg("filter"), ref_int)
+    .def("Join", [](Ratio& self, const string& tree, const vector<string>& keys, const string& alias) -> Ratio& { return self.Join(tree, keys, alias); }, arg("tree"), arg("keys") = vector<string>{}, arg("alias") = "", ref_int)
+    .def("Join", [](Ratio& self, const std::array<string, 2>& tree, const vector<string>& keys, const string& alias) -> Ratio& { return self.Join({tree[0], tree[1]}, keys, alias); }, arg("tree"), arg("keys") = vector<string>{}, arg("alias") = "", ref_int)
     .def("Entries", overload_cast<uint32_t>(&Ratio::Entries), arg("nEntries"), ref_int)
     .def("Entries", overload_cast<uint32_t, uint32_t>(&Ratio::Entries), arg("entryMin"), arg("entryMax"), ref_int);
 }

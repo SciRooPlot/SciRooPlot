@@ -53,6 +53,18 @@ using util::read_from_tree;
 using util::set_if;
 using util::str_contains;
 
+namespace
+{
+string join_strings(const vector<string>& items, const string& separator)
+{
+  string joined;
+  for (size_t i = 0; i < items.size(); ++i) {
+    joined += ((i) ? separator : "") + items[i];
+  }
+  return joined;
+}
+}  // namespace
+
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 // IMPLEMENTATION class Plot
@@ -1693,6 +1705,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
       }
       mDataInfo.dataDims = dataDims;
       read_from_tree(dataTree, mDataInfo.filters, "data_filters");
+      mDataInfo.joins = ReadJoins(dataTree, "data_joins");
       read_from_tree(dataTree, mDataInfo.weight, "data_weight");
       const auto entryMin = get_from_tree<uint32_t>(dataTree, "data_entryMin");
       if (const auto entryMax = get_from_tree<uint32_t>(dataTree, "data_entryMax")) {
@@ -1813,6 +1826,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
     put_in_tree(dataTree, optional<vector<double_t>>{binning}, "data_binning");
     put_in_tree(dataTree, optional<vector<int32_t>>{sizes}, "data_binning_sizes");
     put_in_tree(dataTree, mDataInfo.filters, "data_filters");
+    PutJoins(dataTree, mDataInfo.joins, "data_joins");
     put_in_tree(dataTree, mDataInfo.weight, "data_weight");
     put_in_tree(dataTree, mDataInfo.entries.min, "data_entryMin");
     put_in_tree(dataTree, mDataInfo.entries.max, "data_entryMax");
@@ -2274,6 +2288,77 @@ auto Plot::Pad::Data::Filter(const std::string& filter) -> decltype(*this)
   }
   return *this;
 }
+// joins are stored in their string form
+auto Plot::Pad::Data::ReadJoins(const ptree& tree, const string& label) -> optional<vector<data_info_t::join_t>>
+{
+  const auto strs = get_from_tree<vector<string>>(tree, label);
+  if (!strs) return nullopt;
+  vector<data_info_t::join_t> joins;
+  for (const auto& str : *strs) {
+    joins.push_back(data_info_t::join_t::FromString(str));
+  }
+  return joins;
+}
+void Plot::Pad::Data::PutJoins(ptree& tree, const optional<vector<data_info_t::join_t>>& joins, const string& label)
+{
+  if (!joins) return;
+  vector<string> strs;
+  for (const auto& join : *joins) {
+    strs.push_back(join.ToString());
+  }
+  put_in_tree(tree, optional<vector<string>>{strs}, label);
+}
+auto Plot::Pad::Data::Join(const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias) -> decltype(*this)
+{
+  AddJoin(mDataInfo, mName, mDataSource, tree, keys, alias);
+  return *this;
+}
+void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const std::string& name, const std::string& dataSource, const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias)
+{
+  // names of columns and aliases are used in expressions
+  auto isIdentifier = [](const std::string& str) {
+    return !str.empty() && !std::isdigit(static_cast<unsigned char>(str[0])) && std::all_of(str.begin(), str.end(), [](unsigned char c) { return std::isalnum(c) || c == '_'; });
+  };
+  if (tree.name.empty() || tree.name.front() == '/' || tree.name.back() == '/' || tree.name.find("//") != std::string::npos) {
+    logger::throw_invalid_argument("Cannot join tree '{}' to {}: invalid tree name.", tree.name, name);
+  }
+  if (auto illegal = find_illegal_name_char(tree.name, true)) {
+    logger::throw_invalid_argument("Cannot join tree '{}' to {}: the name contains illegal character '{}'.", tree.name, name, *illegal);
+  }
+  if (auto illegal = find_illegal_name_char(tree.dataSource)) {
+    logger::throw_invalid_argument("Cannot join tree {} to {}: data source '{}' contains illegal character '{}'.", tree.name, name, tree.dataSource, *illegal);
+  }
+  if (keys.size() > 2) {
+    logger::throw_invalid_argument("Cannot join tree {} to {}: at most two key columns are possible.", tree.name, name);
+  }
+  for (const auto& key : keys) {
+    if (!isIdentifier(key)) logger::throw_invalid_argument("Cannot join tree {} to {}: '{}' is not a column name.", tree.name, name, key);
+  }
+  if (!alias.empty() && !isIdentifier(alias)) {
+    logger::throw_invalid_argument("Cannot join tree {} to {}: alias '{}' must consist of letters, digits and underscores only and must not start with a digit.", tree.name, name, alias);
+  }
+  data_info_t::join_t join{tree.name, (tree.dataSource == dataSource) ? "" : tree.dataSource, keys, alias};
+  if (!isIdentifier(join.GetAlias())) {
+    logger::throw_invalid_argument("Cannot join tree {} to {}: its columns cannot be named {}.column, please specify an alias.", tree.name, name, join.GetAlias());
+  }
+  // the columns of each tree must be distinguishable by their prefix
+  const std::string treeAlias = name.substr(name.find_last_of('/') + 1);
+  auto suggestAlias = [&]() {
+    return fmt::format("Join({}, {{{}}}, \"{}\")", (join.dataSource.empty()) ? "\"" + join.tree + "\"" : fmt::format("{{\"{}\", \"{}\"}}", join.tree, join.dataSource),
+                       (keys.empty()) ? "" : "\"" + join_strings(keys, "\", \"") + "\"", "myAlias");
+  };
+  if (join.GetAlias() == treeAlias) {
+    logger::throw_invalid_argument("Cannot join tree {} to {}: the columns of both would be called {}.column, please specify an alias, e.g. {}.", tree.name, name, treeAlias, suggestAlias());
+  }
+  if (!dataInfo.joins) dataInfo.joins.emplace();
+  for (const auto& other : *dataInfo.joins) {
+    if (other == join) return;
+    if (other.GetAlias() == join.GetAlias()) {
+      logger::throw_invalid_argument("Cannot join tree {} to {}: its columns would be called {}.column like those of the joined tree {}, please specify an alias, e.g. {}.", tree.name, name, join.GetAlias(), other.GetDescription(), suggestAlias());
+    }
+  }
+  dataInfo.joins->push_back(join);
+}
 auto Plot::Pad::Data::Entries(uint32_t nEntries) -> decltype(*this)
 {
   if (!nEntries) {
@@ -2331,6 +2416,37 @@ string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
  * Name suffix encoding the details of tree projections.
  */
 //**************************************************************************************************
+string Plot::Pad::Data::data_info_t::join_t::GetAlias() const
+{
+  return (alias.empty()) ? tree.substr(tree.find_last_of('/') + 1) : alias;
+}
+string Plot::Pad::Data::data_info_t::join_t::ToString() const
+{
+  return tree + "|" + dataSource + "|" + join_strings(keys, ",") + "|" + alias;
+}
+auto Plot::Pad::Data::data_info_t::join_t::FromString(const string& str) -> join_t
+{
+  vector<string> fields(1);
+  for (char c : str) {
+    if (c == '|') {
+      fields.emplace_back();
+    } else {
+      fields.back() += c;
+    }
+  }
+  fields.resize(4);
+  join_t join{fields[0], fields[1], {}, fields[3]};
+  if (!fields[2].empty()) join.keys = util::split_string(fields[2], ',');
+  return join;
+}
+string Plot::Pad::Data::data_info_t::join_t::GetDescription() const
+{
+  string description = tree;
+  if (!dataSource.empty()) description += " from " + dataSource;
+  if (!alias.empty()) description += " as " + alias;
+  description += (keys.empty()) ? " (row by row)" : " (by " + join_strings(keys, ", ") + ")";
+  return description;
+}
 string Plot::Pad::Data::data_info_t::GetNameSuffix() const
 {
   if (dataDims.empty()) return "";
@@ -2350,6 +2466,11 @@ string Plot::Pad::Data::data_info_t::GetNameSuffix() const
   if (definitions.values) {
     for (const auto& def : *definitions.values) {
       nameSuffix += ";" + def;
+    }
+  }
+  if (joins) {
+    for (const auto& join : *joins) {
+      nameSuffix += ";join:" + join.ToString();
     }
   }
   if (weight) nameSuffix += ";" + *weight;
@@ -2379,6 +2500,11 @@ string Plot::Pad::Data::data_info_t::GetDescription() const
   if (filters) {
     for (const auto& filter : *filters) {
       description += "; Filter " + filter;
+    }
+  }
+  if (joins) {
+    for (const auto& join : *joins) {
+      description += "; Join " + join.GetDescription();
     }
   }
   if (weight) description += "; weight " + *weight;
@@ -2496,6 +2622,7 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
       }
       mDenomDataInfo.dataDims = dataDims;
       read_from_tree(dataTree, mDenomDataInfo.filters, "denomData_filters");
+      mDenomDataInfo.joins = ReadJoins(dataTree, "denomData_joins");
       read_from_tree(dataTree, mDenomDataInfo.weight, "denomData_weight");
       const auto entryMin = get_from_tree<uint32_t>(dataTree, "denomData_entryMin");
       if (const auto entryMax = get_from_tree<uint32_t>(dataTree, "denomData_entryMax")) {
@@ -2554,6 +2681,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
     put_in_tree(dataTree, optional<vector<double_t>>{binning}, "denomData_binning");
     put_in_tree(dataTree, optional<vector<int32_t>>{sizes}, "denomData_binning_sizes");
     put_in_tree(dataTree, mDenomDataInfo.filters, "denomData_filters");
+    PutJoins(dataTree, mDenomDataInfo.joins, "denomData_joins");
     put_in_tree(dataTree, mDenomDataInfo.weight, "denomData_weight");
     put_in_tree(dataTree, mDenomDataInfo.entries.min, "denomData_entryMin");
     put_in_tree(dataTree, mDenomDataInfo.entries.max, "denomData_entryMax");
@@ -2797,6 +2925,16 @@ auto Plot::Pad::Ratio::Filter(const std::string& filter) -> decltype(*this)
   } else {
     mDenomDataInfo.filters = {filter};
   }
+  return *this;
+}
+auto Plot::Pad::Ratio::Join(const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias) -> decltype(*this)
+{
+  ResolveSelectionMode("Join");
+  if (mModMode != Mode::Den) {
+    Data::Join(tree, keys, alias);
+    if (mModMode != Mode::Both) return *this;
+  }
+  AddJoin(mDenomDataInfo, mDenomName, mDenomDataSource, tree, keys, alias);
   return *this;
 }
 auto Plot::Pad::Ratio::Entries(uint32_t nEntries) -> decltype(*this)

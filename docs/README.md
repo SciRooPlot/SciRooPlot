@@ -515,6 +515,13 @@ data_layout_t pp_7TeV
   // you may want to define some variables and use them in the expressions and filters
   plot[1].AddData("mytree", "input").Scatter("r", "z").Define("r", "sqrt(x*x + y*y)").Filter("r*y<10"); // defnine variable r and use it as point x value but only consider data with r*y<10
 
+  // columns of further trees can be added to the rows of a tree with Join (they are then available as 'treeName.column' or just 'column' if unique):
+  plot[1].AddData("events", "input").Join("scores").Project1D({"scores.score", 50, {0., 1.}});                        // row by row: tree 'scores' next to 'events' in each input of the data source (same number of rows)
+  plot[1].AddData("reco/events", "input").Join("truth/events", {}, "truth").Project1D({"truth.x - x", 50, {-1., 1.}}); // a tree in another folder (the alias 'truth' is needed since both are called 'events')
+  plot[1].AddData("events", "input").Join({"scores", "otherInput"}).Project1D({"score", 50, {0., 1.}});               // row by row with a tree from another data source (rows matched in the order of the inputs)
+  plot[1].AddData("tracks", "input").Join({"events", "otherInput"}, {"run", "event"}).Profile1D({"centrality", 10, {0., 100.}}, "pt"); // by key: each track gets the columns of the event with the same 'run' and 'event' values
+  // keys: at most two integer columns with the same names in both trees, each key may appear only once in the joined tree, and every row needs a matching row
+
   // in case the input data comes from a text file called 'myData.csv' with columns 'a' and 'b', it is accessed as follows:
   plot[1].AddData("myData", "input").Scatter("a", "b"); // i.e. the data name is defined as the file name without the file ending .csv
 

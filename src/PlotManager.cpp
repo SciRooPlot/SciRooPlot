@@ -38,6 +38,7 @@
 #include <TGraphErrors.h>
 #include <TH1.h>
 #include <TKey.h>
+#include <TLeaf.h>
 #include <TList.h>
 #include <TPave.h>
 #include <TROOT.h>
@@ -45,6 +46,7 @@
 #include <TStyle.h>
 #include <TSystem.h>
 #include <TTree.h>
+#include <TTreeIndex.h>
 
 #include <boost/property_tree/info_parser.hpp>
 
@@ -60,6 +62,7 @@
 #include <iostream>
 #include <iterator>
 #include <limits>
+#include <map>
 #include <memory>
 #include <regex>
 #include <set>
@@ -1037,11 +1040,34 @@ bool PlotManager::FillBuffer()
         names.erase(std::remove(names.begin(), names.end(), treeName.substr(pathPos + 1)), names.end());
         if (names.empty()) requiredData.erase(it);
       }
-      auto chain = std::make_shared<TChain>(treeInputs.front().treePath.data());
-      for (const auto& treeInput : treeInputs) {
-        chain->AddFile(treeInput.file.data(), TTree::kMaxEntries, treeInput.treePath.data());
+      // requests that join the same trees share one chain
+      using join_t = Plot::Pad::Data::data_info_t::join_t;
+      vector<vector<join_t>> joinGroups;
+      for (const auto& dataInfo : mDataInfoBuffer[dataSource][treeName]) {
+        auto joins = dataInfo.joins.value_or(vector<join_t>{});
+        if (std::find(joinGroups.begin(), joinGroups.end(), joins) == joinGroups.end()) joinGroups.push_back(std::move(joins));
       }
-      ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [chain]() { return std::make_unique<ROOT::RDataFrame>(*chain); }, describeInputs(treeInputs));
+      set<string> failedJoins;  // reported already
+      for (const auto& joins : joinGroups) {
+        auto chain = std::make_shared<TChain>(treeInputs.front().treePath.data());
+        for (const auto& treeInput : treeInputs) {
+          chain->AddFile(treeInput.file.data(), TTree::kMaxEntries, treeInput.treePath.data());
+        }
+        vector<shared_ptr<TChain>> joinedChains;
+        bool isJoined = true;
+        for (const auto& join : joins) {
+          if (failedJoins.count(join.ToString())) {
+            isJoined = false;
+          } else if (auto error = AttachJoin(*chain, treeName, treeInputs, join, joinedChains)) {
+            ERROR("Cannot join {} to tree {} (data source {}): {}.", join.GetDescription(), treeName, dataSource, *error);
+            failedJoins.insert(join.ToString());
+            isJoined = false;
+          }
+          if (!isJoined) break;
+        }
+        if (!isJoined) continue;
+        ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [chain, joinedChains]() { return std::make_unique<ROOT::RDataFrame>(*chain); /* joinedChains: keeps the joined trees alive */ }, describeInputs(treeInputs), joins);
+      }
     }
     mTreeInputs.clear();
     success &= requiredData.empty();
@@ -1726,13 +1752,148 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs)
 
 //**************************************************************************************************
 /**
+ * Find a tree in the inputs of a data source (the same way as when reading the data source).
+ */
+//**************************************************************************************************
+vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& dataSource, const string& treeName)
+{
+  vector<tree_input_t> treeInputs;
+  const auto pathPos = treeName.find_last_of('/');
+  const string path = (pathPos == string::npos) ? "" : treeName.substr(0, pathPos);
+  const string name = treeName.substr(pathPos + 1);
+  // first match should be the one in the current folder; traverse deeper only if not found
+  std::function<optional<string>(TDirectory*)> find;
+  find = [&](TDirectory* dir) -> optional<string> {
+    auto isA = [](TKey* key, TClass* cl) {
+      auto* keyClass = TClass::GetClass(key->GetClassName());
+      return keyClass && keyClass->InheritsFrom(cl);
+    };
+    if (auto* key = dir->GetKey(name.data()); key && isA(key, TTree::Class())) {
+      string dirPath = dir->GetPath();  // file.root:/some/folder
+      dirPath.erase(0, dirPath.find(":/") + 2);
+      return (dirPath.empty() ? "" : dirPath + "/") + name;
+    }
+    set<string> visited;  // keys can appear in several cycles
+    for (auto* key : TRangeDynCast<TKey>(dir->GetListOfKeys())) {
+      if (!key || !visited.insert(key->GetName()).second || !isA(key, TDirectory::Class())) continue;
+      if (auto* subDir = dir->GetDirectory(key->GetName())) {
+        if (auto treePath = find(subDir)) return treePath;
+      }
+    }
+    return std::nullopt;
+  };
+  auto expandedIt = mExpandedInputs.find(dataSource);
+  for (const auto& inputRaw : (expandedIt != mExpandedInputs.end()) ? expandedIt->second : ExpandInputs(dataSource)) {
+    const auto fileNamePath = split_string(expand_path(inputRaw), ':', true);
+    const string& fileName = fileNamePath[0];
+    if (!str_ends_with(fileName, ".root") || !std::filesystem::exists(fileName)) continue;
+    TFile file(fileName.data(), "READ");
+    if (file.IsZombie()) continue;
+    TDirectory* dir = &file;
+    if (fileNamePath.size() > 1) dir = dir->GetDirectory(fileNamePath[1].data());
+    if (dir && !path.empty()) dir = dir->GetDirectory(path.data());
+    if (!dir) continue;
+    if (auto treePath = find(dir)) treeInputs.push_back({fileName, *treePath, fileNamePath.size() > 1});
+  }
+  return treeInputs;
+}
+
+//**************************************************************************************************
+/**
+ * Join a tree to a chain: its rows are matched with the rows of the chain either by their number or by the values of key columns.
+ * Returns why this is not possible (if so).
+ */
+//**************************************************************************************************
+optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, const vector<tree_input_t>& treeInputs,
+                                         const Plot::Pad::Data::data_info_t::join_t& join, vector<shared_ptr<TChain>>& joinedChains)
+{
+  std::map<string, std::unique_ptr<TFile>> openFiles;  // each file is opened only once for the following checks
+  auto getTree = [&](const string& fileName, const string& treePath) -> TTree* {
+    auto& file = openFiles[fileName];
+    if (!file) file.reset(TFile::Open(fileName.data(), "READ"));
+    if (!file || file->IsZombie()) return nullptr;
+    return file->Get<TTree>(treePath.data());
+  };
+  auto joinedChain = std::make_shared<TChain>(join.GetAlias().data());
+  const TTree* firstJoinedTree{};
+  if (join.dataSource.empty()) {
+    // taken from each input of the tree: the name of the joined tree starts where the name of the tree starts
+    const auto nLevels = std::count(treeName.begin(), treeName.end(), '/') + 1;
+    for (const auto& treeInput : treeInputs) {
+      string basePath = treeInput.treePath;
+      for (int64_t level = 0; level < nLevels; ++level) {
+        const auto pos = basePath.find_last_of('/');
+        basePath = (pos == string::npos) ? "" : basePath.substr(0, pos);
+      }
+      const string path = (basePath.empty()) ? join.tree : basePath + "/" + join.tree;
+      auto* joinedTree = getTree(treeInput.file, path);
+      if (!joinedTree) return fmt::format("{}:{} does not exist", treeInput.file, path);
+      if (!firstJoinedTree) firstJoinedTree = joinedTree;
+      // without keys the rows of the trees in each input belong together
+      if (join.keys.empty()) {
+        auto* tree = getTree(treeInput.file, treeInput.treePath);
+        const Long64_t nRows = (tree) ? tree->GetEntries() : 0;
+        if (joinedTree->GetEntries() != nRows) return fmt::format("{}:{} has {} rows, {} has {}", treeInput.file, path, joinedTree->GetEntries(), treeInput.treePath, nRows);
+      }
+      joinedChain->AddFile(treeInput.file.data(), TTree::kMaxEntries, path.data());
+    }
+  } else {
+    if (mInputs.find(join.dataSource) == mInputs.end()) return fmt::format("data source {} is not defined", join.dataSource);
+    const auto joinedInputs = FindTreeInputs(join.dataSource, join.tree);
+    if (joinedInputs.empty()) return fmt::format("it was not found in data source {}", join.dataSource);
+    for (const auto& joinedInput : joinedInputs) {
+      joinedChain->AddFile(joinedInput.file.data(), TTree::kMaxEntries, joinedInput.treePath.data());
+    }
+    firstJoinedTree = getTree(joinedInputs.front().file, joinedInputs.front().treePath);
+    // without keys the rows of all inputs are matched in the order of the inputs
+    if (join.keys.empty() && joinedChain->GetEntries() != chain.GetEntries()) {
+      return fmt::format("it has {} rows, {} has {}", joinedChain->GetEntries(), treeName, chain.GetEntries());
+    }
+  }
+  if (!join.keys.empty()) {
+    const TTree* firstTree = getTree(treeInputs.front().file, treeInputs.front().treePath);
+    for (const auto& key : join.keys) {
+      for (const auto* tree : {firstTree, firstJoinedTree}) {
+        auto* leaf = (tree) ? const_cast<TTree*>(tree)->GetLeaf(key.data()) : nullptr;
+        const string treeDescription = (tree == firstTree) ? treeName : join.tree;
+        if (!leaf) return fmt::format("{} has no column {}", treeDescription, key);
+        // the values are compared as integers
+        const string type = leaf->GetTypeName();
+        if (str_contains(type, "Float") || str_contains(type, "Double") || str_contains(type, "float") || str_contains(type, "double")) {
+          return fmt::format("key column {} of {} is of type {}, but keys must be integers", key, treeDescription, type);
+        }
+      }
+    }
+    const auto errorIgnoreLevel = gErrorIgnoreLevel;
+    gErrorIgnoreLevel = kFatal;  // duplicates are reported below
+    auto index = std::make_unique<TTreeIndex>(joinedChain.get(), join.keys[0].data(), (join.keys.size() > 1) ? join.keys[1].data() : "0");
+    gErrorIgnoreLevel = errorIgnoreLevel;
+    if (index->IsZombie()) return "cannot build an index of its keys";
+    // each key may appear only once, otherwise it is undefined which of the rows is matched
+    const Long64_t* major = index->GetIndexValues();
+    const Long64_t* minor = index->GetIndexValuesMinor();
+    for (Long64_t i = 1; i < index->GetN(); ++i) {
+      if (major[i] == major[i - 1] && minor[i] == minor[i - 1]) {
+        return (join.keys.size() > 1) ? fmt::format("{} = {} and {} = {} appears in more than one row", join.keys[0], major[i], join.keys[1], minor[i]) : fmt::format("{} = {} appears in more than one row", join.keys[0], major[i]);
+      }
+    }
+    joinedChain->SetTreeIndex(index.release());  // owned by the chain
+  }
+  chain.AddFriend(joinedChain.get(), join.GetAlias().data());
+  joinedChains.push_back(joinedChain);
+  return std::nullopt;
+}
+
+//**************************************************************************************************
+/**
  * Process all requests (projections, profiles, scatter plots) of one tree or table.
  * The requests are booked together, so the data is read in one go (plus one pass for requests that auto-detect their axis ranges).
  * Requests that must be processed sequentially (scatter plots, entry ranges) share a separate single-threaded pass.
  */
 //**************************************************************************************************
 void PlotManager::ProcessDataRequests(const string& type, const string& dataSource, const string& name, const string& objNameSuffix,
-                                      const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, const string& inputsDescription)
+                                      const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, const string& inputsDescription,
+                                      const optional<vector<Plot::Pad::Data::data_info_t::join_t>>& joins)
 {
   using data_info_t = Plot::Pad::Data::data_info_t;
   auto start = std::chrono::steady_clock::now();
@@ -1757,8 +1918,14 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   vector<const data_info_t*> parallelInfos;
   vector<const data_info_t*> sequentialInfos;
   for (auto& dataInfo : mDataInfoBuffer[dataSource][name]) {
+    // requests with other joins are processed on another data frame
+    if (joins && dataInfo.joins.value_or(vector<Plot::Pad::Data::data_info_t::join_t>{}) != *joins) continue;
     if (dataInfo.dataDims.empty()) {
       ERROR("Cannot plot {} {}:{} directly, specify what to extract from it (Project, Profile or Scatter).", type, dataSource, name);
+      continue;
+    }
+    if (dataInfo.joins && !joins) {
+      ERROR("Cannot join trees to {} {}:{} ({}): only trees stored in files can be joined.", type, dataSource, name, dataInfo.GetDescription());
       continue;
     }
     (dataInfo.singleProc() ? sequentialInfos : parallelInfos).push_back(&dataInfo);
@@ -1767,6 +1934,14 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
 
   // errors that only show up while reading may come from inputs of a chained tree with a different structure
   const string chainHint = (inputsDescription.empty()) ? "" : fmt::format(" (the tree is chained from {}: do all inputs of the data source have the same columns?)", inputsDescription);
+  const bool hasKeyJoins = joins && std::any_of(joins->begin(), joins->end(), [](const auto& join) { return !join.keys.empty(); });
+  auto addHint = [&](string reason) {
+    // rows without a matching row in a tree joined by key have no values for its columns
+    if (auto pos = reason.find("could not retrieve value for column"); hasKeyJoins && pos != string::npos) {
+      return reason.substr(0, reason.find(". You can use", pos)) + " (it has no matching row in the tree joined by key)";
+    }
+    return reason + chainHint;
+  };
   optional<ULong64_t> nEntries;
   uint32_t nPasses{};
   uint32_t nRequests{};
@@ -1837,9 +2012,9 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           processGroup({request.GetInfo()}, sequential);
         }
       } else if (requests.size() == 1) {
-        ERROR("Invalid query for {} {}:{} ({}): {}{}.", type, dataSource, name, requests[0].GetInfo()->GetDescription(), getErrorReason(e, rootOutput.str()), chainHint);
+        ERROR("Invalid query for {} {}:{} ({}): {}.", type, dataSource, name, requests[0].GetInfo()->GetDescription(), addHint(getErrorReason(e, rootOutput.str())));
       } else {
-        ERROR("Cannot read {} {}:{}: {}{}.", type, dataSource, name, getErrorReason(e, rootOutput.str()), chainHint);
+        ERROR("Cannot read {} {}:{}: {}.", type, dataSource, name, addHint(getErrorReason(e, rootOutput.str())));
       }
     }
   };
@@ -1848,7 +2023,13 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   if (!nRequests) return;
 
   double_t seconds = std::chrono::duration<double_t>(std::chrono::steady_clock::now() - start).count();
-  string message = fmt::format(" - {}:{} {} entries{}, {} request{}, {} pass{}, {:.1f} s", dataSource, name, nEntries.value_or(0), (inputsDescription.empty()) ? "" : " from " + inputsDescription, nRequests, (nRequests == 1) ? "" : "s", nPasses, (nPasses == 1) ? "" : "es", seconds);
+  string joinsDescription;
+  if (joins) {
+    for (const auto& join : *joins) {
+      joinsDescription += ((joinsDescription.empty()) ? ", joined " : ", ") + join.GetDescription();
+    }
+  }
+  string message = fmt::format(" - {}:{} {} entries{}{}, {} request{}, {} pass{}, {:.1f} s", dataSource, name, nEntries.value_or(0), (inputsDescription.empty()) ? "" : " from " + inputsDescription, joinsDescription, nRequests, (nRequests == 1) ? "" : "s", nPasses, (nPasses == 1) ? "" : "es", seconds);
   /*
   for (const auto& [info, counts] : entryCounts) {
     const auto& [nPreFilter, nPostFilter] = counts;

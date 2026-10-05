@@ -1779,6 +1779,7 @@
         [`Scatter(x, y, xLo, xHi, yLo, yHi)`], [Scatter plot with asymmetric errors.],
         [`Define(key, value)`], [Define a derived variable for use in expressions.],
         [`Filter(filter)`], [Apply a row-selection expression, e.g. `"eta > 0"`. Chainable.],
+        [`Join(tree, keys, alias)`], [Add the columns of another tree, e.g. `Join("scores")` row by row or `Join({"events", "src"}, {"run", "event"})` by key; columns as `"scores.col"`. Chainable.],
         [`Entries(n)` / `Entries(min, max)`], [Limit processing to the first N entries or a range.],
       ), text-size: 12pt)
     ],
