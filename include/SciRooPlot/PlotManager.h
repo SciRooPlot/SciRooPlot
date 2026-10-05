@@ -33,6 +33,7 @@
 #include <vector>
 
 class TCanvas;
+class TDirectory;
 class TChain;
 namespace ROOT
 {
@@ -119,12 +120,15 @@ class PlotManager
     std::string treePath;  // path of the tree within the file
     bool isFolderInput;    // the input is a folder within the file (file.root:folder) rather than the whole file
   };
-  std::map<std::string, std::vector<tree_input_t>> mTreeInputs;  // tree name -> where it was found in the inputs of the data source currently read
-  bool mIsFolderInput{};                                         // the input currently read is a folder within a file
+  std::map<std::string, std::map<std::string, std::vector<tree_input_t>>> mTreeInputs;  // data source -> tree name -> where it was found in the inputs of the data source currently read
+  bool mIsFolderInput{};                                                                // the input currently read is a folder within a file
   void PrintBufferStatus(bool onlyMissing = false) const;
   std::vector<std::tuple<std::string, std::string, Plot::Pad::Data::data_info_t>> GetMissingData(Plot& plot);
   bool FillBuffer();
   std::vector<std::string> ExpandInputs(const std::string& dataSource) const;
+  bool IsDataSourceDefined(const std::string& dataSource) const;
+  static std::string DataLocation(const std::string& dataSource, const std::string& name);
+  static std::vector<std::string> MatchFolders(TDirectory* topDir, const std::string& pattern);
   void ReadData(TObject* folder, std::vector<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource);
   void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataSource);
   void ProcessDataRequests(const std::string& type, const std::string& dataSource, const std::string& name, const std::string& objNameSuffix,

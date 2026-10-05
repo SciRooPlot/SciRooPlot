@@ -1378,12 +1378,9 @@ Plot::Pad::Data& Plot::Pad::AddData(const Data& data, const optional<string>& la
   if (data.mName.empty() || data.mDataSource.empty()) {
     logger::throw_invalid_argument("Data needs a name and a data source to be added (name: '{}', data source: '{}').", data.mName, data.mDataSource);
   }
-  const Data identity(data.mName, data.mDataSource, label);  // resolves 'dataSource:some/path'
   mData.push_back(std::make_shared<Data>(data));
   auto& added = *mData.back();
-  added.mType = identity.mType;
-  added.mName = identity.mName;
-  added.mDataSource = identity.mDataSource;
+  added.mType = "data";
   if (label) added.mLegend.label = label;
   return added;
 }
@@ -1600,17 +1597,8 @@ Plot::Pad::Data::Data(const string& name, const string& dataSource, const option
   mType = "data";
 
   mLegend.label = legendLabel;
-
-  // in case input was specified further via dataSource:some/path/in/file
-  auto subPathPos = dataSource.find(":");
-  if (subPathPos != string::npos) {
-    // prepend path to plot name
-    mName = dataSource.substr(subPathPos + 1) + "/" + name;
-    mDataSource = dataSource.substr(0, subPathPos);
-  } else {
-    mName = name;
-    mDataSource = dataSource;
-  }
+  mName = name;
+  mDataSource = dataSource;  // can be restricted to a folder (dataSource:some/folder), which stays part of the data source
 }
 
 //**************************************************************************************************
@@ -2325,7 +2313,7 @@ void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const std::string& name, co
   if (auto illegal = find_illegal_name_char(tree.name, true)) {
     logger::throw_invalid_argument("Cannot join tree '{}' to {}: the name contains illegal character '{}'.", tree.name, name, *illegal);
   }
-  if (auto illegal = find_illegal_name_char(tree.dataSource)) {
+  if (auto illegal = find_illegal_name_char(tree.dataSource.substr(0, tree.dataSource.find(':')))) {  // may be restricted to a folder: dataSource:some/folder
     logger::throw_invalid_argument("Cannot join tree {} to {}: data source '{}' contains illegal character '{}'.", tree.name, name, tree.dataSource, *illegal);
   }
   if (keys.size() > 2) {
@@ -2551,11 +2539,8 @@ Plot::Pad::Ratio::Ratio(const Data& numerator, const Data& denominator)
       logger::throw_invalid_argument("The {} of a ratio needs a name and a data source (name: '{}', data source: '{}').", part, data->mName, data->mDataSource);
     }
   }
-  const Ratio identity = *this;  // names and data sources with resolved 'dataSource:some/path'
   static_cast<Data&>(*this) = numerator;
-  mType = identity.mType;
-  mName = identity.mName;
-  mDataSource = identity.mDataSource;
+  SetType("ratio");
   mNumModify = numerator.mModify;
   mModify = {};
   mDenomDataInfo = denominator.mDataInfo;
@@ -2574,13 +2559,6 @@ Plot::Pad::Ratio::Ratio(const string& name, const string& dataSource, const stri
     mDenomDataSource(denomDataSource), mIsCorrelated(false)
 {
   SetType("ratio");
-
-  // in case denominator input was specified further via denomDataSource:some/path/in/file
-  if (auto subPathPos = denomDataSource.find(":"); subPathPos != string::npos) {
-    // prepend path to plot name
-    mDenomName = denomDataSource.substr(subPathPos + 1) + "/" + denomName;
-    mDenomDataSource = denomDataSource.substr(0, subPathPos);
-  }
 }
 
 //**************************************************************************************************
