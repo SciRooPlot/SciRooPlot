@@ -64,6 +64,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -2014,13 +2015,44 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   uint32_t nRequests{};
   vector<std::pair<const data_info_t*, std::pair<optional<ULong64_t>, ULong64_t>>> entryCounts;  // (entries before filter, after filter)
 
+  // captures what ROOT writes to std::cerr
+  class OutputCapture : public std::streambuf
+  {
+   public:
+    string Text()
+    {
+      std::lock_guard<std::mutex> lock(mMutex);
+      return mText;
+    }
+
+   protected:
+    int_type overflow(int_type ch) override
+    {
+      if (!traits_type::eq_int_type(ch, traits_type::eof())) {
+        std::lock_guard<std::mutex> lock(mMutex);
+        mText += traits_type::to_char_type(ch);
+      }
+      return traits_type::not_eof(ch);
+    }
+    std::streamsize xsputn(const char_type* text, std::streamsize count) override
+    {
+      std::lock_guard<std::mutex> lock(mMutex);
+      mText.append(text, static_cast<size_t>(count));
+      return count;
+    }
+
+   private:
+    std::mutex mMutex;
+    string mText;
+  };
+
   // process a group of requests on a common data frame
   std::function<void(const vector<const data_info_t*>&, bool)> processGroup;
   processGroup = [&](const vector<const data_info_t*>& infos, bool sequential) {
-    std::ostringstream rootOutput;
+    OutputCapture rootOutput;
     vector<DataFrameRequest<data_info_t>> requests;  // successfully booked requests
     try {
-      auto* cerrBuffer = std::cerr.rdbuf(rootOutput.rdbuf());  // capture ROOT output, only shown if something goes wrong
+      auto* cerrBuffer = std::cerr.rdbuf(&rootOutput);  // capture ROOT output, only shown if something goes wrong
       auto cerrGuard = make_scope_guard([cerrBuffer]() { std::cerr.rdbuf(cerrBuffer); });
       bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
       if (sequential) ROOT::DisableImplicitMT();
@@ -2048,13 +2080,13 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
 
       for (auto info : infos) {
         DataFrameRequest<data_info_t> request(info, fmt::format("{} {}", type, DataLocation(dataSource, name)), name + info->GetNameSuffix() + objNameSuffix);
-        auto outputStart = static_cast<size_t>(rootOutput.tellp());  // only consider ROOT output caused by this request
+        auto outputStart = rootOutput.Text().size();  // only consider ROOT output caused by this request
         try {
           if (request.Prepare(node)) requests.push_back(std::move(request));
         } catch (const std::invalid_argument&) {
           throw;
         } catch (const std::exception& e) {
-          ERROR("Invalid query for {} {} ({}): {}.", type, DataLocation(dataSource, name), info->GetDescription(), getErrorReason(e, rootOutput.str().substr(outputStart)));
+          ERROR("Invalid query for {} {} ({}): {}.", type, DataLocation(dataSource, name), info->GetDescription(), getErrorReason(e, rootOutput.Text().substr(outputStart)));
         }
       }
       // a pass to determine the axis ranges is only required if some request wants them to be auto-detected
@@ -2097,9 +2129,9 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           processGroup({request.GetInfo()}, sequential);
         }
       } else if (requests.size() == 1) {
-        ERROR("Invalid query for {} {} ({}): {}{}.", type, DataLocation(dataSource, name), requests[0].GetInfo()->GetDescription(), getErrorReason(e, rootOutput.str()), chainHint);
+        ERROR("Invalid query for {} {} ({}): {}{}.", type, DataLocation(dataSource, name), requests[0].GetInfo()->GetDescription(), getErrorReason(e, rootOutput.Text()), chainHint);
       } else {
-        ERROR("Cannot read {} {}: {}{}.", type, DataLocation(dataSource, name), getErrorReason(e, rootOutput.str()), chainHint);
+        ERROR("Cannot read {} {}: {}{}.", type, DataLocation(dataSource, name), getErrorReason(e, rootOutput.Text()), chainHint);
       }
     }
   };
