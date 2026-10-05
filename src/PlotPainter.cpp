@@ -71,6 +71,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <numeric>
 #include <regex>
@@ -807,6 +808,21 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
         // first data is only used to define the axes
         if (dataIndex == 0) {
+          // smallest positive value of the data, needed for a log scale (infinity if there is none);
+          // for graphs taken from the points, since their axis frame is an empty histogram (and drawing it below deletes the graph)
+          optional<double_t> graphPositiveMinimum;
+          if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
+            graphPositiveMinimum = std::numeric_limits<double_t>::infinity();
+            for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
+              double_t value{};
+              if constexpr (is_graph_1d<data_type>()) {
+                value = data_ptr->GetPointY(i);
+              } else {
+                value = data_ptr->GetZ()[i];
+              }
+              if (value > 0.) graphPositiveMinimum = std::min(*graphPositiveMinimum, value);
+            }
+          }
           data_ptr->Draw(drawingOptions.data());
           if constexpr (is_hist<data_type>()) {
             axisHist_ptr = data_ptr;
@@ -1015,16 +1031,17 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   pad_ptr->SetLogz(false);
               };
               if (isLog && isDependentAxis) {
-                const double_t maximum = axisHist_ptr->GetMaximum();
-                const double_t minimum = axisHist_ptr->GetMinimum();
-                const double_t positiveMinimum = axisHist_ptr->GetMinimum(0.);  // smallest positive value
-                if (maximum <= 0. || positiveMinimum <= 0. || positiveMinimum > maximum) {
+                // the smallest positive value is taken from the data itself: GetMinimum(0.) would return the stored minimum (which every graph frame has)
+                double_t positiveMinimum = graphPositiveMinimum.value_or(std::numeric_limits<double_t>::infinity());
+                for (int32_t bin = 0; !graphPositiveMinimum && bin < axisHist_ptr->GetNcells(); ++bin) {
+                  const double_t content = axisHist_ptr->GetBinContent(bin);
+                  if (!axisHist_ptr->IsBinUnderflow(bin) && !axisHist_ptr->IsBinOverflow(bin) && content > 0.) positiveMinimum = std::min(positiveMinimum, content);
+                }
+                if (std::isinf(positiveMinimum)) {
                   WARNING("Log scale of {} axis in pad {} ignored: the data has no positive values.", axisLabel, padID);
                   disableLog();
-                } else if (minimum < 0.) {
-                  if (axisHist_ptr->GetMinimumStored() != -1111) {
-                    WARNING("Range of {} axis in pad {} starts at {:.3g} which is not possible for a log scale, starting at {:.3g} instead.", axisLabel, padID, minimum, 0.5 * positiveMinimum);
-                  }
+                } else if ((axisHist_ptr->GetMinimumStored() != -1111) ? (axisHist_ptr->GetMinimumStored() <= 0.) : (axisHist_ptr->GetMinimum() < 0.)) {
+                  // ROOT cannot draw a log axis from a stored minimum at or below zero or from negative contents (zero contents it skips itself)
                   axisHist_ptr->SetMinimum(0.5 * positiveMinimum);
                 }
               } else if (isLog && !isDependentAxis) {
