@@ -1818,10 +1818,12 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     if (!std::isfinite(x1) || !std::isfinite(y1) || !std::isfinite(x2) || !std::isfinite(y2)) return;
     if (x1 > x2) std::swap(x1, x2);
     if (y1 > y2) std::swap(y1, y2);
-    const int32_t i1 = static_cast<int32_t>(std::max(std::floor(x1), 0.));
-    const int32_t i2 = static_cast<int32_t>(std::min(std::floor(x2), nx - 1.));
-    const int32_t j1 = static_cast<int32_t>(std::max(std::floor(y1), 0.));
-    const int32_t j2 = static_cast<int32_t>(std::min(std::floor(y2), ny - 1.));
+    if (x2 < 0. || y2 < 0. || x1 >= nx || y1 >= ny) return;  // completely outside of the grid
+    // clamp to the grid before casting (values far outside of the pad do not fit into an integer)
+    const int32_t i1 = static_cast<int32_t>(std::floor(std::max(x1, 0.)));
+    const int32_t i2 = static_cast<int32_t>(std::floor(std::min(x2, nx - 1.)));
+    const int32_t j1 = static_cast<int32_t>(std::floor(std::max(y1, 0.)));
+    const int32_t j2 = static_cast<int32_t>(std::floor(std::min(y2, ny - 1.)));
     for (int32_t i = i1; i <= i2; ++i) {
       for (int32_t j = j1; j <= j2; ++j) {
         blocked[i + static_cast<size_t>(j) * nx] = value;
