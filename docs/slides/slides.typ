@@ -303,7 +303,7 @@
     "Installer",
     main-color,
     [
-      #text(size: 10pt)[Builds SciRooPlot from source -- requires #link("https://github.com/root-project/root")[#text(fill: main-color)[ROOT]] and #link("https://www.boost.org/")[#text(fill: main-color)[Boost]] to already be installed.]
+      #text(size: 10pt)[Builds SciRooPlot from source -- requires #link("https://github.com/root-project/root")[#text(fill: main-color)[ROOT]] (6.34 or newer) and #link("https://www.boost.org/")[#text(fill: main-color)[Boost]] to already be installed.]
       #v(0.06em)
       #terminal(size: 11pt, inset: 5pt)[
         #prompt git clone https://github.com/SciRooPlot/SciRooPlot.git
@@ -330,19 +330,21 @@
   #slide-title("Your First Project")
   #let folder-struct = {
     if lang == "py" {
-      terminal[
+      terminal(size: 16pt, inset: 10pt)[
         ```text
         myProject/
-        ├── DefinePlots.py
-        └── output/
+        ├── DefinePlots.py    your plot definitions
+        └── output/           exported plots
         ```
       ]
     } else {
-      terminal[
+      terminal(size: 16pt, inset: 10pt)[
         ```text
         myProject/
-        ├── DefinePlots.cpp
-        └── output/
+        ├── CMakeLists.txt
+        ├── DefinePlots.cpp   your plot definitions
+        ├── build/            compiled program
+        └── output/           exported plots
         ```
       ]
     }
@@ -351,7 +353,7 @@
     columns: (52%, 45%),
     gutter: 3%,
     [
-      - Initialize a new SciRooPlot project:
+      - Create a project with a minimal working setup:
         #if lang == "py" {
           terminal[
             #prompt srp init-py \<project\> [\<dir\>]
@@ -362,72 +364,110 @@
           ]
         }
 
-      - Creates a project directory (`./<project>` or `./<dir>`).
-
-      - Contains #plot-def-file, where plot specifications are defined.
+      - Creates `./<project>` (or `./<dir>`), #if lang == "py" [runs the script] else [builds and runs the program], and registers and selects the project:
 
         #folder-struct
 
-      - Project automatically registered with SciRooPlot.
-
-      - Includes working examples using dummy data.
-
-      - Generate your first plot immediately:
+      - It already contains one plot, so your first plot is just:
         #terminal[
-          #prompt plot examples ptSpec
+          #prompt plot myGroup myFirstPlot
         ]
 
-      - Plots always stay in sync with #plot-def-file.
+      - Define your own plots in #plot-def-file -- `plot` #if lang == "py" [re-runs it] else [rebuilds and re-runs it] automatically whenever it changed.
     ],
     [
       #card(
-        "Project Management",
+        "Learn from the examples",
         main-color,
         width: 100%,
         title-size: 20pt,
         [
           #set text(size: 16pt)
-          *Select another project*
-          #v(-0.6em)
+          A project with many commented example plots and the example data they use -- Higgs searches, spectra, detector performance, jets and heavy ions:
+          #v(-0.3em)
           #terminal(size: 14pt, inset: 10pt)[
-            #prompt srp select \<project\>
+            #if lang == "py" [#prompt srp example-py \<project\> [\<dir\>]] else [#prompt srp example-cpp \<project\> [\<dir\>]]
           ]
           #v(-0.3em)
-          *List all projects*
-          #v(-0.6em)
+          Browse all of its plots, or export a whole group:
+          #v(-0.3em)
           #terminal(size: 14pt, inset: 10pt)[
-            #prompt srp projects
+            #prompt plot \'.+\' \'.+\'
+
+            #prompt plot higgs .+ pdf
           ]
           #v(-0.3em)
-          *Change output directory* (default is `./output`)
-          #v(-0.6em)
-          #terminal(size: 14pt, inset: 10pt)[
-            #prompt srp set \<project\> outdir \<path\>
-          ]
+          To see how something is done, look it up in its #plot-def-file and copy what you need.
         ],
       )
-      #v(-0.4em)
+    ],
+  )
+]
+
+#slide[
+  #slide-title("Managing Projects")
+  #let cmd-table(..rows) = {
+    set text(size: 14pt)
+    table(
+      columns: (auto, 1fr),
+      stroke: none,
+      inset: (x: 0pt, y: 0.3em),
+      column-gutter: 1em,
+      align: left + top,
+      ..rows
+    )
+  }
+  #grid(
+    columns: (49%, 49%),
+    gutter: 2%,
+    [
       #card(
-        "More commands",
+        "Projects",
         main-color,
         width: 100%,
         title-size: 20pt,
-        [
-          #set text(size: 14pt)
-          #table(
-            columns: (auto, 1fr),
-            stroke: none,
-            inset: (x: 0pt, y: 0.3em),
-            column-gutter: 1em,
-            align: left + top,
-            [#prompt `srp help`], [List available options.],
-            [#prompt `srp show <project>`], [Show project settings.],
-            [#prompt `srp set <project> <var> <value>`], [Store a project variable (read via `GetProjectProperty`).],
-            [#prompt `srp remove <project>`], [Unregister the project and delete its stored plot definitions (user code and output are kept).],
-            [#prompt `srp print <file>`], [List ROOT file contents.],
-            [#prompt `srp open <file>`], [Open a ROOT file.],
-          )
-        ],
+        cmd-table(
+          [#prompt `srp projects`], [List all projects (`*` marks the selected one).],
+          [#prompt `srp select <project>`], [Select the project that `plot` works on.],
+          [#prompt `srp show [<project>]`], [Show the properties of one or all projects.],
+          [#prompt `srp add <project> <program> [<outdir>]`], [Register an existing program as project (rebuilt automatically if it lives in a CMake build directory).],
+          [#prompt `srp rename <project> <name>`], [Rename a project (then also adjust the name given to `PlotManager`).],
+          [#prompt `srp remove <project>`], [Unregister the project and delete its stored plot definitions (user code and output are kept).],
+          [#prompt `srp clean`], [Remove all projects whose program folder no longer exists.],
+          [#prompt `srp cd [<project>]`], [Go to the folder of the project's program.],
+          [#prompt `srp edit [<project>]`], [Open the project's source files.],
+        ),
+      )
+      #v(-0.4em)
+      #text(size: 14pt)[Instead of a project name, `@current` refers to the selected project.]
+    ],
+    [
+      #card(
+        "Project properties",
+        main-color,
+        width: 100%,
+        title-size: 20pt,
+        cmd-table(
+          [#prompt `srp set <project> outdir <path>`], [Where exported plots are stored (one subfolder per group).],
+          [#prompt `srp set <project> program <path>`], [The program `plot` runs to update the plot definitions.],
+          [#prompt `srp set <project> <var> <value>`], [Your own variables, e.g. the input path on this machine -- read in code via `pm.GetProjectProperty("<var>")`.],
+          [#prompt `srp get|unset <project> <var>`], [Read or remove a property.],
+        ),
+      )
+      #v(-0.4em)
+      #card(
+        "Settings & tools",
+        main-color,
+        width: 100%,
+        title-size: 20pt,
+        cmd-table(
+          [#prompt `srp settings`], [Show all settings.],
+          [#prompt `srp plotmode <mode>`], [Default mode of `plot` (initially `show`).],
+          [#prompt `srp matchmode exact|contains`], [Patterns must match the whole name, or any part of it.],
+          [#prompt `srp matchcase sensitive|insensitive`], [Case sensitivity of the patterns.],
+          [#prompt `srp print|open <file>`], [List the contents of a ROOT file, or open it in a `TBrowser`.],
+          [#prompt `srp info` / `srp help`], [Show installation details, or all commands.],
+        ),
       )
     ],
   )
@@ -439,7 +479,7 @@
     columns: (55%, 40%),
     gutter: 5%,
     [
-      - Plots specified in #plot-def-file have a unique *name* within a *group*.
+      - Plots specified in #plot-def-file have a unique *name* within a *group*, which can have subgroups (e.g. `higgs/diphoton`).
 
       - These identifiers are used to select plots from the command line.
         #terminal[
@@ -447,8 +487,7 @@
         ]
 
       - Tab completion simplifies browsing through available names.
-      - Both `<group>` and `<name>` support regular expressions.
-      - Multiple plots can be generated with a single command.
+      - `<group>` and `<name>` are regular expressions matching the whole name, so one command can generate many plots.
 
       #block(
         fill: rgb("fafafa"),
@@ -462,13 +501,13 @@
           align: (left + horizon, left + horizon),
           table.header([*Mode*], [*Description*]),
           table.hline(stroke: 1pt + rgb("d0d7de")),
-          [`show`], [Open plots interactively (default mode).],
+          [`show`], [Open plots interactively (default, see `srp plotmode`).],
           table.hline(stroke: 1pt + rgb("d0d7de")),
           [`list, print`],
           [List plots matching the request or print their settings.],
           table.hline(stroke: 1pt + rgb("d0d7de")),
-          [`pdf`, `eps`,#linebreak()`svg`, `png`],
-          [Export plots as graphics files.],
+          [`pdf`, `eps`, `ps`,#linebreak()`svg`, `png`, `jpg`],
+          [Export each plot into `<outdir>/<group>/` (also `root`, `json`, `xml`, `html`).],
           table.hline(stroke: 1pt + rgb("d0d7de")),
           [`macro`], [Generate ROOT `.C` macros that reproduce the plots.],
           table.hline(stroke: 1pt + rgb("d0d7de")),
@@ -485,29 +524,34 @@
       #card(
         "Regular Expressions",
         main-color,
+        width: 100%,
+        title-size: 20pt,
         [
+          #set text(size: 16pt)
 
           *Match one of a few names*
           #v(-0.5em)
-          #terminal[
+          #terminal(size: 14pt, inset: 10pt)[
             #prompt plot paperPlots moneyPlot[1,2]
           ]
 
-          *Match everything in a group*
+          *Match everything in a group and its subgroups*
           #v(-0.5em)
-          #terminal[
+          #terminal(size: 14pt, inset: 10pt)[
             #prompt plot paperPlots .+
           ]
 
-          *Match groups starting with a prefix*
+          *Only a subgroup, or no subgroups*
           #v(-0.5em)
-          #terminal[
-            #prompt plot pp\_.+ myPlot
+          #terminal(size: 14pt, inset: 10pt)[
+            #prompt plot paperPlots/QA .+
+
+            #prompt plot \'paperPlots\$\' .+
           ]
 
           *Combine names with OR*
           #v(-0.5em)
-          #terminal[
+          #terminal(size: 14pt, inset: 10pt)[
             #prompt plot paperPlots \'pt(Spec|Mean)\'
           ]
           NB.: in `bash`, `()` and `|` are shell syntax, so they still need quotes -- unlike `[]`, which `plot` always handles safely unquoted.
@@ -529,7 +573,7 @@
 
       - Data objects within input files are identified by name.
 
-      - Each Plot has a unique name within a figure group
+      - Each Plot has a unique name within a figure group and can build on a base plot layout.
 
       - It consists of one or more Pads (`plot[1]`, `plot[2]`, ..)
 
@@ -560,8 +604,9 @@
           {
             PlotManager pm("myProject");
             pm.AddDataSource("dataSource", "/path/to/file.root");
+            pm.AddBasePlot(PlotManager::MakeBasePlot("1d"));
             { // ---------------------------------------------------------
-              Plot plot("plotName", "groupName");
+              Plot plot("plotName", "groupName", "1d");
               plot[1].AddData("dataObjectName", "dataSource", "my label");
               plot[1].AddLegend();
               plot[1].AddText("some text");
@@ -578,8 +623,9 @@
           def main():
             pm = PlotManager("myProject")
             pm.AddDataSource("dataSource", "/path/to/file.root")
+            pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
             # -----------------------------------------------------------
-            plot = Plot("plotName", "groupName")
+            plot = Plot("plotName", "groupName", "1d")
             plot[1].AddData("dataObjectName", "dataSource", "my label")
             plot[1].AddLegend()
             plot[1].AddText("some text")
@@ -624,42 +670,61 @@
     columns: (42%, 55%),
     gutter: 3%,
     [
-      - As #plot-def-file grows, split it into several files -- e.g. one per figure group or data category -- each just a plain function taking a `PlotManager&`.
+      - As #plot-def-file grows, split it into several files -- e.g. one per figure group -- each holding a plain function that takes the `PlotManager`.
 
       #if lang == "cpp" [
-        - Forward-declare the function (or share a header) and call it from `main()`, exactly like `DefineDataSources()` and `DefineBasePlots()` already are.
+        - Each file includes `SciRooPlot/PlotManager.h`; declare its function in #plot-def-file (or a shared header) and call it from `main()`.
 
         - Every file is a separate translation unit -- add it to `CMakeLists.txt`'s `SOURCES` list, or the build won't see it.
       ] else [
-        - `import` the function from its module and call it, just like any other Python file.
+        - Each module starts with `from SciRooPlot import *`; `import` its function in #plot-def-file and call it from `main()`.
 
         - Nothing to register -- the script's own folder is already on the import path, so the new module is found automatically.
+
+        - `plot` re-runs #plot-def-file only when this file itself changed -- after editing only another module, `touch DefinePlots.py`.
       ]
     ],
     [
       #if lang == "cpp" [
-        #terminal(size: 14pt)[
-          ```text
-          myProject/
-          ├── CMakeLists.txt
-          ├── DefinePlots.cpp    main(), calls the below
-          ├── DummyFigures.cpp   DefineDummyFigures()
-          └── ExamplePlots.cpp   DefineExamplePlots()
-          ```
-        ]
+        #grid(
+          columns: (auto, 1fr),
+          gutter: 3%,
+          terminal[
+            ```text
+            myProject/
+            ├── CMakeLists.txt
+            ├── DefinePlots.cpp
+            ├── HiggsPlots.cpp
+            └── DetectorPlots.cpp
+            ```
+          ],
+          terminal[
+            ```text
+            # CMakeLists.txt
+            add_plotting_executable(definePlots
+              SOURCES
+                DefinePlots.cpp
+                HiggsPlots.cpp
+                DetectorPlots.cpp
+            )
+            ```
+          ],
+        )
         #v(0.35em)
-        #text(size: 14pt)[
+        #[
           #code-block(
             [
               ```cpp
               // DefinePlots.cpp
-              void DefineDummyFigures(PlotManager& pm);
-              void DefineExamplePlots(PlotManager& pm);
+              void DefineHiggsPlots(PlotManager& pm);
+              void DefineDetectorPlots(PlotManager& pm);
 
               int main() {
                 PlotManager pm("myProject");
-                DefineDummyFigures(pm);
-                DefineExamplePlots(pm);
+                DefineDataSources(pm);
+                DefineBasePlots(pm);
+                DefineHiggsPlots(pm);
+                DefineDetectorPlots(pm);
                 pm.SaveProject();
               }
               ```
@@ -667,25 +732,13 @@
             [],
           )
         ]
-        #v(0.35em)
-        #terminal(size: 14pt)[
-          ```text
-          # CMakeLists.txt
-          add_plotting_executable(definePlots
-            SOURCES
-              DefinePlots.cpp
-              DummyFigures.cpp
-              ExamplePlots.cpp
-          )
-          ```
-        ]
       ] else [
         #terminal[
           ```text
           myProject/
           ├── DefinePlots.py     main(), imports the below
-          ├── dummy_figures.py   DefineDummyFigures()
-          └── example_plots.py   DefineExamplePlots()
+          ├── higgs_plots.py     DefineHiggsPlots()
+          └── detector_plots.py  DefineDetectorPlots()
           ```
         ]
         #v(0.5em)
@@ -694,13 +747,15 @@
           [
             ```python
             # DefinePlots.py
-            from dummy_figures import DefineDummyFigures
-            from example_plots import DefineExamplePlots
+            from higgs_plots import DefineHiggsPlots
+            from detector_plots import DefineDetectorPlots
 
             def main():
                 pm = PlotManager("myProject")
-                DefineDummyFigures(pm)
-                DefineExamplePlots(pm)
+                DefineDataSources(pm)
+                DefineBasePlots(pm)
+                DefineHiggsPlots(pm)
+                DefineDetectorPlots(pm)
                 pm.SaveProject()
             ```
           ],
@@ -717,15 +772,15 @@
     columns: (42%, 55%),
     gutter: 3%,
     [
-      - A data source is a collection of inputs -- entire ROOT files or subdirectories/lists therein -- registered under a unique identifier that the plot definitions refer to.
+      - A data source is a collection of inputs -- ROOT files (or folders/lists within them) and tables (`.csv`, ...) -- registered under a unique identifier that the plot definitions refer to.
 
-      - Inputs are added via successive `AddDataSource()` calls or as a list; a directory registers every ROOT file inside it, including subdirectories.
+      - Inputs are added via successive `AddDataSource()` calls or as a list; a directory adds every ROOT and table file inside it, also in subdirectories.
 
       - Wildcards select all matching files and/or folders within the files (e.g. `AO2D_*.root:DF_*`).
 
-      - Paths are absolute, but the `SRC_DIR` helper enables paths relative to #plot-def-file; shell environment variables (also user-defined ones) are expanded automatically.
+      - Paths are absolute, but `SRC_DIR` enables paths relative to #plot-def-file; environment variables are expanded automatically.
 
-      - A data source is one dataset made of its inputs: within each input the first match counts; trees found in several inputs are chained, other objects come from the first input containing them.
+      - Inputs are searched in the order they were added (files from directories or wildcards alphabetically) and the first match counts -- but trees found in several inputs are chained.
 
       - Local ROOT objects can also be directly added.
 
@@ -744,7 +799,6 @@
           pm.AddDataSource("sourceE", "/path/to/directory/");
 
           pm.AddDataSource("sourceB", SRC_DIR + "../path/file2.root");
-
           pm.AddDataSource("sourceC", "${HOME}/path/to/file/file3.root");
 
           pm.AddDataSource("sourceG", "/path/to/AO2D_*.root:DF_*");
@@ -755,7 +809,6 @@
           pm.AddDataSource("sourceA", "/path/to/file1.root")
 
           pm.AddDataSource("sourceB", SRC_DIR + "../path/file2.root")
-
           pm.AddDataSource("sourceC", "${HOME}/path/to/file/file3.root")
 
           pm.AddDataSource("sourceD", ["/path/to/file4.root",
@@ -783,6 +836,7 @@
         ],
         [
           ```python
+          import ROOT
           myHist = ROOT.TH1D("myHist", "", 100, -5, 5)
           pm.AddDataSource("sourceG", myHist)
 
@@ -824,6 +878,8 @@
           [],
           [
             ```python
+            import numpy as np
+
             # a plain list, a tuple, or a numpy array all work
             values = np.random.normal(0, 1, 1000)
 
@@ -1088,8 +1144,8 @@
         [
           ```cpp
           // cyclic default styling
-          vector<int> colors = {kBlue, kRed, kGreen+2};
-          vector<int> styles = {kOpenCircle, kOpenCross};
+          vector<int16_t> colors = {kBlue, kRed, kGreen+2};
+          vector<int16_t> styles = {kOpenCircle, kOpenCross};
           plot[1].SetDefaultMarkerColors(colors);
           plot[1].SetDefaultMarkerStyles(styles);
 
@@ -1283,7 +1339,7 @@
 
       - Standard projections (`ProjectX()`, `ProjectY()`, ...) are available for 2D and 3D histograms.
 
-      - Projections can be restricted to selected ranges of the remaining axes using either bin numbers or user coordinates.
+      - Projections can be restricted to selected ranges of the remaining axes, given as bin numbers or -- with `true` as last argument -- as axis values.
 
       - The generic `Project(dims, ranges)` function supports arbitrary-dimensional histograms: `dims` lists the axes to keep (in order), `ranges` restricts any other axis via `(axis, low, high)` tuples.
 
@@ -1299,7 +1355,7 @@
           plot[1].AddData("my2DHist", "input")
                  .ProjectX();
 
-          // Restrict Y to bins/coords [20, 80] before projecting
+          // Restrict Y to bins 20 to 80 before projecting
           plot[1].AddData("my2DHist", "input")
                  .ProjectX(20, 80);
 
@@ -1323,7 +1379,7 @@
           # Standard projection of a 2D histogram
           plot[1].AddData("my2DHist", "input").ProjectX()
 
-          # Restrict Y to bins/coords [20, 80] before projecting
+          # Restrict Y to bins 20 to 80 before projecting
           plot[1].AddData("my2DHist", "input").ProjectX(20, 80)
 
           # Generic N-dim projection: keep axes 2 and 0
@@ -1352,17 +1408,17 @@
     columns: (50%, 45%),
     gutter: 5%,
     [
-      - Tree leaves and table columns of csv files are accessed through the same interface.
+      - Leaves of ROOT trees and columns of tables (`.csv`, `.txt`, `.dat`, `.tsv`, `.tab`) are accessed through the same interface.
 
       - Create histogram projections, profiles and scatter plots directly from tabular data.
 
       - Binning can be inferred automatically or specified explicitly with uniform or custom bin edges.
 
-      - Filter rows, define derived quantities, and use arbitrary ROOT expressions for projections and selections.
+      - Filter rows, define derived quantities, and use arbitrary C++ expressions of the columns for projections and selections.
+
+      - `Join()` adds the columns of another tree, row by row or matched by up to two integer key columns (rows without a match are skipped).
 
       - Entry ranges can be selected to process only subsets of the input.
-
-      - The same functionality is available for both ROOT trees and CSV tables.
     ],
     [
       #code-block(
@@ -1382,6 +1438,11 @@
                  .Define("r", "sqrt(x*x+y*y)")
                  .Scatter("r", "z")
                  .Filter("abs(z) < 5");
+
+          // Add the event columns to each track (by key)
+          plot[1].AddData("tracks", "input")
+                 .Join("events", {"run", "event"})
+                 .Profile1D("centrality", "pt");
 
           // CSV tables are handled identically
           plot[1].AddData("myData", "input")
@@ -1405,6 +1466,11 @@
                  .Scatter("r", "z") \
                  .Filter("abs(z) < 5")
 
+          # Add the event columns to each track (by key)
+          plot[1].AddData("tracks", "input") \
+                 .Join("events", ["run", "event"]) \
+                 .Profile1D("centrality", "pt")
+
           # CSV tables are handled identically
           plot[1].AddData("myData", "input") \
                  .Scatter("a", "b")
@@ -1426,7 +1492,7 @@
 
       - Numerator and denominator are given as `{name, source}` (python: `[name, source]`) or as complete `Data` objects, e.g. from a template (`style("name")`); their projections and modifiers act on the inputs, the ratio takes the appearance of the numerator. A predefined `Ratio(numerator, denominator)` can be added as well.
 
-      - Use `SetIsCorrelated()` when the numerator is a sub-sample of the denominator (e.g. a selection vs. its parent sample) -- this applies Bayesian error propagation instead of treating the two as independent.
+      - Use `SetIsCorrelated()` when the numerator is a sub-sample of the denominator (e.g. a selection vs. its parent sample) -- this applies binomial error propagation instead of treating the two as independent.
 
       - Modifiers (`RebinX()`, `Scale()`, `Normalize()`, `Smooth()`, `Cumulative()`, ...) act on the ratio itself by default. `Numer()`, `Denom()` and `Both()` switch them to the inputs, applied before dividing; `Result()` switches back.
 
@@ -1481,7 +1547,7 @@
         [
           - In `show` mode, browse through matching plots with `s` (next) and `a` (previous).
 
-          - Press `q` to quit, or double-click the right/left side of the plot window.
+          - Double-clicking the right or left half of the window works too; `q` quits.
         ],
       )
     ],
@@ -1492,7 +1558,7 @@
         width: 100%,
         title-size: 20pt,
         [
-          - Double-clicking on a text box or legend prints its current relative position to the terminal.
+          - Double-clicking on a text box or legend prints the relative position of its upper left corner to the terminal.
 
           - Move the box to where you want it, double-click, then copy the printed coordinates into your #plot-def-file.
         ],
@@ -1505,7 +1571,7 @@
         width: 100%,
         title-size: 20pt,
         [
-          - `plot` opens its picker window and blocks until you quit it -- append `&` to background it, then launch a second `plot` right away.
+          - In `show` mode, `plot` blocks the terminal until you quit it -- append `&` to run it in the background and launch a second `plot` right away.
 
           - E.g. `plot paperPlots moneyPlot & plot paperPlots ptSpec` opens both windows at once, so you can compare them directly.
         ],
@@ -1530,13 +1596,12 @@
       #api-section("PlotManager", (
         [`PlotManager(projectName = "")`], [Construct a manager for a named project.],
         [`MakeBasePlot(name = "1d", screenResolution = 100)`], [Static: retrieve a predefined base plot (`1d`, `2d`, `1d_ratio`, `1d_3panels`).],
-        [`AddDataSource(id, files, replace = false)`], [Register file(s), a directory, or in-memory ROOT objects under an ID (`replace` first clears existing entries for that ID).],
-        [#names("SaveDataSources(file = {})", "LoadDataSources(file = {}, replace = false)")], [Persist or reload registered data sources to/from a config file (defaults to the project's data-sources file).],
-        [`AddPlot(plot)`], [Register a plot with the manager.],
-        [`AddBasePlot(basePlot)`], [Register a reusable base plot layout.],
-        [`SavePlots(name, group, file = {})`], [Write matching plots to a config file.],
-        [`LoadPlots(name, group, file = {})`], [Load plots from a config file.],
-        [`GeneratePlots(mode, name, group)`], [Generate plots matching the request in the given mode (groups include their subgroups, `group$` excludes them).],
+        [`AddDataSource(id, files, replace = false)`], [Register files, directories or in-memory ROOT objects under an ID (`replace`: clear the ID first).],
+        [#names("SaveDataSources(file = {})", "LoadDataSources(file = {}, replace = false)")], [Save or reload the registered data sources (default: the project's file).],
+        [`AddPlot(plot)` / `AddBasePlot(basePlot)`], [Register a plot, or a reusable base plot layout.],
+        [`AddColorOverview(name, group, colors = {})`], [Add a plot showing the ROOT colour wheel, or the given colours with their indices.],
+        [#names("SavePlots(name = \".+\", group = \".+\", file = {})", "LoadPlots(name = \".+\", group = \".+\", file = {})")], [Write matching plots to, or load them from, a config file.],
+        [`GeneratePlots(mode = "show", name = ".+", group = ".+")`], [Generate plots matching the request in the given mode (groups include their subgroups, `group$` excludes them).],
         [`ListPlots()`], [Print all registered plots.],
         [#names("ClearDataBuffer()", "ClearCanvasRegistry()")], [Free the buffered input data, or clear the cache of already-generated canvases.],
         [`SetOutputDirectory(path)`], [Set the output directory for generated files.],
@@ -1552,7 +1617,7 @@
         [`plot += other`], [Append the pads of another plot into this one.],
         [#names("SetName(name)", "SetGroup(group)", "AppendGroup(subgroup)")], [Rename the plot, reassign its figure group, or append a subgroup path.],
         [`SetBasePlot(name)`], [Apply a base plot layout by name.],
-        [`SetDimensions(width, height, fixAspectRatio = false)`], [Set canvas dimensions.],
+        [#names("SetDimensions(width, height, fixAspectRatio = false)", "SetWidth(width)", "SetHeight(height)", "SetFixAspectRatio(fixAspectRatio = true)")], [Set canvas dimensions (in pixels), all at once or individually.],
         [#names("SetFill(color, style = {}, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Configure plot background fill, all at once or individually.],
         [`SetTransparent()`], [Make the plot background transparent.],
       ), text-size: 12pt)
@@ -1572,6 +1637,12 @@
         [`pad(dataID)` / `GetData(dataID)`], [Access a `Data` object by index.],
         [`GetLegend(legendID)` / `GetText(textID)`], [Retrieve a previously added legend or text box.],
       ))
+      #v(0.6em)
+      #api-section("Text, legends & reference lines", (
+        [#names("AddText(xPos, yPos, text)", "AddText(placement, text)", "AddText(text)")], [Add a text box at a fixed position (upper left corner, pad coordinates), close to a given corner, or auto-placed.],
+        [#names("AddLegend(xPos, yPos, title = {})", "AddLegend(placement, title = {})", "AddLegend(title = {})")], [Add a legend, the same ways.],
+        [`SetRefFunc(function)`], [Draw a reference function (e.g. `"1"`) behind the data; returns it for styling.],
+      ))
     ],
     [
       #api-section("Adding content", (
@@ -1582,8 +1653,7 @@
         [`AddLine(pos1, pos2, label = {})`], [Add a line between two points.],
         [`AddRatio(numerator, denominator, label = {})`], [Add a ratio of two `Data` objects (or `{name, source}`); it takes the appearance of the numerator.],
         [`AddRatio(ratio, label = {})`], [Add a predefined `Ratio(numerator, denominator)`.],
-        [`AddText(xPos, yPos, text)` / `AddText(text)`], [Add a text box, fixed or auto-placed.],
-        [`AddLegend(xPos, yPos, title = {})` / `AddLegend(title = {})`], [Add a legend, fixed or auto-placed.],
+        [`AddRatio(numName, numSource, denomName, denomSource, label = {})`], [Shorthand for a ratio of two named data.],
       ))
     ],
   )
@@ -1608,7 +1678,7 @@
         [`SetPalette(palette)`], [Use a predefined ROOT palette (e.g. `kBird`).],
         [`SetPalette(rgbEndpoints, alpha = {}, nColors = {})`], [Define a custom colour-gradient palette.],
         [#names("SetFill(color, style = {}, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Configure pad background fill.],
-        [`SetTransparent()`], [Make the pad background transparent.],
+        [`SetTransparent()` / `SetFrameTransparent()`], [Make the pad, or its frame, transparent.],
         [#names("SetFrameFill(color, style = {}, alpha = {})", "SetFrameFillColor(color)", "SetFrameFillStyle(style)", "SetFrameFillAlpha(alpha)")], [Configure the frame's fill.],
         [#names("SetFrameBorder(color, style = {}, width = {}, alpha = {})", "SetFrameBorderColor(color)", "SetFrameBorderStyle(style)", "SetFrameBorderWidth(width)", "SetFrameBorderAlpha(alpha)")], [Configure the frame's border.],
       ))
@@ -1643,6 +1713,7 @@
         [`SetDefaultAlpha(alpha)`], [Default transparency for marker, line, *and* fill together.],
         [`SetDefaultFillAlpha(alpha)`], [Default fill transparency only.],
         [#names("SetDefaultDrawingOptionGraph(option)", "SetDefaultDrawingOptionHist(option)", "SetDefaultDrawingOptionHist2d(option)")], [Default draw-option alias per data kind.],
+        [#names("SetDefaultCandleBoxRange(range)", "SetDefaultCandleWhiskerRange(range)")], [Box and whisker range of candle plots.],
       ))
     ],
   )
@@ -1682,9 +1753,10 @@
   - Every `Data` accessor from the next two slides is also available on `Ratio`. Styling and ranges always act on the ratio; data modifiers and data selection follow the active mode.
   #v(0.6em)
   #api-section("Ratio-specific", (
-    [`SetIsCorrelated(isCorrelated = true)`], [Treat numerator/denominator as correlated (e.g. one is a sub-sample of the other) -- applies Bayesian error propagation.],
+    [`SetIsCorrelated(isCorrelated = true)`], [Treat numerator/denominator as correlated (e.g. one is a sub-sample of the other) -- applies binomial error propagation.],
     [`Numer()` / `Denom()` / `Both()`], [Following modifiers act on the numerator, the denominator, or both, before dividing. Data selection (`Project*`, `Define`, `Filter`, ...) follows the same mode.],
     [`Result()`], [Following modifiers act on the ratio itself (default). Data selection cannot act on the ratio: it is interpreted as `Numer()` with a warning.],
+    [`AsRatio()`], [Called on data obtained via `pad(n)` / `GetData(n)`: access it as `Ratio`, e.g. `pad(2).AsRatio().SetIsCorrelated()`.],
   ))
 ]
 
@@ -1696,15 +1768,15 @@
     gutter: 2%,
     [
       #api-section("Source, range & legend", (
+        [`template(name, dataSource = {})`], [Use a `Data` object as template: a copy with the given name (and data source).],
         [`SetDataSource(dataset)`], [Set/override the data-source ID.],
-        [`SetLayout(layout)` / `ApplyLayout(layout)`], [Assign or merge in a predefined `Data` layout.],
-        [#names("SetRangeX(min, max)", "SetRangeY(min, max)")], [Set the X or Y display range.],
+        [`SetLayout(layout)` / `ApplyLayout(layout)`], [Take over all properties of a `Data` layout, or only the ones set in it.],
+        [#names("SetRangeX(min, max) / SetRangeY(min, max)", "SetMinRangeX(min) / SetMaxRangeX(max)", "SetMinRangeY(min) / SetMaxRangeY(max)")], [Restrict the range in which the data is drawn, fully or partially.],
         [`UnsetRangeX()` / `UnsetRangeY()`], [Remove a previously set range restriction.],
-        [#names("SetScaleMinimum(f)", "SetScaleMaximum(f)")], [Scale the displayed minimum/maximum.],
         [`SetShowOverflowBins(showOverflowBins = true)`], [Include overflow bins in the display.],
         [`SetLegendLabel(label)` / `SetLegend(legendID)`], [Set legend text, or assign to a specific legend.],
-        [`SetOptions(options)` / `SetOptions(alias)`], [Set a ROOT draw-option string, or one of the #link(<appx-drawing-options>)[#text(fill: main-color)[predefined aliases]].],
-        [`SetTextFormat(fmt)`], [Printf-style format for label placeholders, e.g. `<mean[.2f]>`.],
+        [#names("SetOptions(options) / SetOptions(alias)", "UnsetOptions()")], [Set a ROOT draw-option string or one of the #link(<appx-drawing-options>)[#text(fill: main-color)[predefined aliases]], or remove it.],
+        [`SetTextFormat(fmt)`], [Number format of bin contents drawn with the `TEXT` option, e.g. `".0f"`.],
       ))
     ],
     [
@@ -1713,7 +1785,7 @@
         [#names("SetMarker(color, style, size, alpha = {})", "SetMarkerColor(color)", "SetMarkerStyle(style)", "SetMarkerSize(size)", "SetMarkerAlpha(alpha)")], [Marker appearance, all at once or individually.],
         [#names("SetLine(color, style, width, alpha = {})", "SetLineColor(color)", "SetLineStyle(style)", "SetLineWidth(width)", "SetLineAlpha(alpha)")], [Line appearance, all at once or individually.],
         [#names("SetFill(color, style, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Fill appearance, all at once or individually.],
-        [`SetDefinesFrame(dontDraw = false)`], [Use this object to define the plot frame.],
+        [`SetDefinesFrame(dontDraw = false)`], [Use this object to define the plot frame (`dontDraw`: without drawing it).],
         [`SetContours(contours)` / `SetContours(nContours)`], [Set explicit contour levels or their count.],
       ))
     ],
@@ -1747,14 +1819,14 @@
     ],
     [
       #api-section("Tree & table data", (
-        [`Project1D(x, weight = {})` / `Project2D(x, y, weight = {})`], [1D/2D histogram from a column; `x` accepts a name, `(name, nBins)`, `(name, nBins, (min, max))`, or `(name, edges)`.],
+        [`Project1D(x, weight = {})` / `Project2D(x, y, weight = {})`], [1D/2D histogram from a column; `x` accepts a name, #if lang == "py" [`(name, nBins)`, `(name, nBins, (min, max))`, or `(name, edges)`] else [`{name, nBins}`, `{name, nBins, {min, max}}`, or `{name, edges}`].],
         [`Profile1D(x, profile, weight = {})` / `Profile2D(x, y, profile, weight = {})`], [1D/2D profile of one column over one or two others.],
         [`Scatter(x, y)`], [Scatter plot from two columns; expressions like `"sqrt(x*x+y*y)"` are valid.],
         [`Scatter(x, y, xErr, yErr)`], [Scatter plot with symmetric errors.],
         [`Scatter(x, y, xLo, xHi, yLo, yHi)`], [Scatter plot with asymmetric errors.],
         [`Define(key, value)`], [Define a derived variable for use in expressions.],
         [`Filter(filter)`], [Apply a row-selection expression, e.g. `"eta > 0"`. Chainable.],
-        [`Join(tree, keys, alias)`], [Add the columns of another tree, e.g. `Join("scores")` row by row or `Join({"events", "src"}, {"run", "event"})` by key; columns as `"scores.col"`. Chainable.],
+        [`Join(tree, keys, alias)`], [Add the columns of another tree, e.g. `Join("scores")` row by row or #if lang == "py" [`Join(["events", "src"], ["run", "event"])`] else [`Join({"events", "src"}, {"run", "event"})`] by key (rows without a match are skipped); columns as `"scores.col"`. Chainable.],
         [`Entries(n)` / `Entries(min, max)`], [Limit processing to the first N entries or a range.],
       ), text-size: 12pt)
     ],
@@ -1762,47 +1834,74 @@
 ]
 
 #slide[
-  #slide-title("Appendix: TextBox, LegendBox & LegendEntry")
+  #slide-title("Appendix: Text Boxes & Legends")
   #grid(
-    columns: (38%, 31%, 29%),
-    gutter: 1%,
+    columns: (49%, 49%),
+    gutter: 2%,
     [
-      #api-section("Box (shared)", (
-        [`SetPosition(x, y)` / `SetSize(w, h)`], [Box position or dimensions.],
-        [`SetAutoPlacement(placement = best_corner)`], [Let SciRooPlot place the box automatically: close to the corner where it fits best or to a given one (`top_left`, `top_right`, `bottom_right`, `bottom_left`).],
+      #api-section("Box (shared by TextBox and LegendBox)", (
+        [`SetPosition(x, y)` / `SetSize(w, h)`], [Position of the upper left corner, or dimensions of the box.],
+        [`SetAutoPlacement(placement = best_corner)`], [Let SciRooPlot place the box: as close as possible to the corner of the frame where it fits best, or to a given one (`top_left`, `top_right`, `bottom_right`, `bottom_left`).],
         [`SetUserCoordinates(isUserCoord = true)`], [Interpret position/size as user (data) coordinates instead of relative pad coordinates.],
-        [#names("SetBorder(color, style, width, alpha = {})", "SetBorderColor(color)", "SetBorderStyle(style)", "SetBorderWidth(width)")], [Border, all at once or individually.],
+        [#names("SetBorder(color, style, width, alpha = {})", "SetBorderColor(color)", "SetBorderStyle(style)", "SetBorderWidth(width)", "SetBorderAlpha(alpha)")], [Border, all at once or individually.],
         [#names("SetText(color, font, size, alpha = {})", "SetTextColor(color)", "SetTextFont(font)", "SetTextSize(size)", "SetTextAlpha(alpha)")], [Text styling, all at once or individually.],
-        [#names("SetFill(color, style, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)")], [Background fill.],
+        [#names("SetFill(color, style, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Background fill, all at once or individually.],
         [`SetTransparent()` / `SetNoBox()`], [Transparent background, or remove border and fill.],
         [`SetMargin(m)` / `SetLineSpacing(s)`], [Internal margin, or spacing between lines/entries.],
-      ), col-widths: (52%, 48%), text-size: 11.5pt)
+      ), col-widths: (52%, 48%), text-size: 12pt)
     ],
     [
-      #api-section("TextBox & LegendBox", (
+      #api-section("TextBox", (
         ..(if lang == "cpp" {
-          ([`TextBox(text)` / `TextBox(xPos, yPos, text)`], [Construct directly, auto-placed or fixed (Python: create via `pad.AddText()`).])
+          ([`TextBox(text)` / `TextBox(xPos, yPos, text)`], [Construct directly, auto-placed or fixed.])
         } else { () }),
-        [`SetText(text)`], [Set the displayed text content.],
+        [`SetText(text)`], [Set the displayed text (lines separated by `" // "`).],
         [`SetTextAlign(align)`], [ROOT alignment code, e.g. `kHAlignCenter + kVAlignTop` (default `kHAlignLeft + kVAlignCenter`).],
+      ), col-widths: (52%, 48%), text-size: 12pt)
+      #v(0.6em)
+      #api-section("LegendBox", (
         ..(if lang == "cpp" {
-          ([`LegendBox(title = {})` / `LegendBox(xPos, yPos, title = {})`], [Construct directly, auto-placed or fixed (Python: create via `pad.AddLegend()`).])
+          ([`LegendBox(title = {})` / `LegendBox(xPos, yPos, title = {})`], [Construct directly, auto-placed or fixed.])
         } else { () }),
-        [`GetEntry(entryID)`], [Access a legend entry by index.],
         [`SetTitle(title)` / `SetNumColumns(n)`], [Legend title, or number of columns.],
-        [#names("SetDefaultLineColor(color)", "SetDefaultMarkerColor(color)", "SetDefaultFillColor(color)")], [Default per-kind colour for entries without one.],
-        [`SetDefaultDrawStyle(style)`], [Default draw style for entries without one.],
+        [`GetEntry(entryID)`], [Access an entry by index (starting at 1), see next slide.],
         [`SetSymbolColScale(scale)`], [Scale the width of the symbol column.],
-      ), col-widths: (52%, 48%), text-size: 11.5pt)
+      ), col-widths: (52%, 48%), text-size: 12pt)
+      #if lang == "py" [
+        #v(0.4em)
+        #text(size: 12pt)[In Python, boxes are created via `pad.AddText()` and `pad.AddLegend()`.]
+      ]
+    ],
+  )
+]
+
+#slide[
+  #slide-title("Appendix: Legend Entries")
+  - Legend entries take their marker, line and fill style from the data they belong to. Settings for all entries of a `LegendBox` override this, and settings of a single `LegendEntry` override both.
+  #v(0.6em)
+  #grid(
+    columns: (49%, 49%),
+    gutter: 2%,
+    [
+      #api-section("LegendBox: all entries", (
+        [`SetDefaultDrawStyle(style)`], [Draw style of entries without their own, e.g. `"L"`, `"EP"`, `"F"` (default: chosen from the data).],
+        [`SetDefaultColor(color)` / `SetDefaultAlpha(alpha)`], [Marker, line and fill colour (or transparency) together.],
+        [#names("SetDefaultMarkerColor(color)", "SetDefaultMarkerAlpha(alpha)", "SetDefaultMarkerStyle(style)", "SetDefaultMarkerSize(size)")], [Marker appearance.],
+        [#names("SetDefaultLineColor(color)", "SetDefaultLineAlpha(alpha)", "SetDefaultLineStyle(style)", "SetDefaultLineWidth(width)")], [Line appearance.],
+        [#names("SetDefaultFillColor(color)", "SetDefaultFillAlpha(alpha)", "SetDefaultFillStyle(style)")], [Fill appearance.],
+      ), col-widths: (52%, 48%), text-size: 12pt)
     ],
     [
-      #api-section("LegendEntry", (
+      #api-section("LegendEntry: a single entry", (
         [`SetLabel(label)`], [Set the entry's label text.],
-        [`SetRefData(refDataID)`], [Reference a `Data` object to copy its styling.],
-        [`SetDrawStyle(style)`], [Override the legend draw style, e.g. `"L"`, `"EP"`.],
-        [`SetColor(color)` / `SetAlpha(alpha)`], [Set overall colour/transparency.],
-        [#names("SetMarkerColor(color)", "SetLineColor(color)", "SetFillColor(color)", "SetTextColor(color)")], [Per-kind colour override for this entry.],
-      ), col-widths: (52%, 48%), text-size: 11.5pt)
+        [`SetRefData(refDataID)`], [Take the style from data number `refDataID` of the pad.],
+        [`SetDrawStyle(style)`], [Draw style of this entry, e.g. `"L"`, `"EP"`, `"F"`.],
+        [`SetColor(color)` / `SetAlpha(alpha)`], [Marker, line and fill colour (or transparency) together.],
+        [#names("SetMarkerColor(color)", "SetMarkerAlpha(alpha)", "SetMarkerStyle(style)", "SetMarkerSize(size)")], [Marker appearance.],
+        [#names("SetLineColor(color)", "SetLineAlpha(alpha)", "SetLineStyle(style)", "SetLineWidth(width)")], [Line appearance.],
+        [#names("SetFillColor(color)", "SetFillAlpha(alpha)", "SetFillStyle(style)")], [Fill appearance.],
+        [#names("SetTextColor(color)", "SetTextAlpha(alpha)", "SetTextFont(font)", "SetTextSize(size)")], [Label text appearance.],
+      ), col-widths: (52%, 48%), text-size: 12pt)
     ],
   )
 ]
