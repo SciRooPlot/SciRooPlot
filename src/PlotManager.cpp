@@ -2008,15 +2008,8 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
 
   // errors that only show up while reading may come from inputs of a chained tree with a different structure
   const string chainHint = (inputsDescription.empty()) ? "" : fmt::format(" (the tree is chained from {}: do all inputs of the data source have the same columns?)", inputsDescription);
-  const bool hasKeyJoins = joins && std::any_of(joins->begin(), joins->end(), [](const auto& join) { return !join.keys.empty(); });
-  auto addHint = [&](string reason) {
-    // rows without a matching row in a tree joined by key have no values for its columns
-    if (auto pos = reason.find("could not retrieve value for column"); hasKeyJoins && pos != string::npos) {
-      return reason.substr(0, reason.find(". You can use", pos)) + " (it has no matching row in the tree joined by key)";
-    }
-    return reason + chainHint;
-  };
   optional<ULong64_t> nEntries;
+  optional<ULong64_t> nUnmatched;  // rows skipped since a tree joined by key has no matching row
   uint32_t nPasses{};
   uint32_t nRequests{};
   vector<std::pair<const data_info_t*, std::pair<optional<ULong64_t>, ULong64_t>>> entryCounts;  // (entries before filter, after filter)
@@ -2036,11 +2029,28 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       auto nEntriesTotal = df->Count();
       auto passGuard = make_scope_guard([&]() { nPasses += df->GetNRuns(); });
 
+      // rows without a matching row in a tree joined by key are skipped (its columns have no values for them)
+      ROOT::RDF::RNode node = *df;
+      optional<ROOT::RDF::RResultPtr<ULong64_t>> nMatched;
+      if (joins) {
+        const auto columns = df->GetColumnNames();
+        for (const auto& join : *joins) {
+          if (join.keys.empty()) continue;
+          const string prefix = join.GetAlias() + ".";
+          auto column = std::find_if(columns.begin(), columns.end(), [&](const auto& col) { return col.rfind(prefix, 0) == 0; });
+          if (column != columns.end()) node = node.FilterAvailable(*column);
+        }
+        if (std::any_of(joins->begin(), joins->end(),
+                        [](const auto& join) {
+                          return !join.keys.empty();
+                        })) nMatched = node.Count();
+      }
+
       for (auto info : infos) {
         DataFrameRequest<data_info_t> request(info, fmt::format("{} {}", type, DataLocation(dataSource, name)), name + info->GetNameSuffix() + objNameSuffix);
         auto outputStart = static_cast<size_t>(rootOutput.tellp());  // only consider ROOT output caused by this request
         try {
-          if (request.Prepare(*df)) requests.push_back(std::move(request));
+          if (request.Prepare(node)) requests.push_back(std::move(request));
         } catch (const std::invalid_argument&) {
           throw;
         } catch (const std::exception& e) {
@@ -2070,6 +2080,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       if (!pendingHandles.empty()) ROOT::RDF::RunGraphs(pendingHandles);
 
       nEntries = *nEntriesTotal;
+      if (nMatched && !nUnmatched) nUnmatched = *nEntriesTotal - **nMatched;
       for (auto& request : requests) {
         if (!request.IsBooked()) continue;
         mDataBuffer[dataSource][name + request.GetInfo()->GetNameSuffix()].reset(request.GetResult());
@@ -2086,9 +2097,9 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           processGroup({request.GetInfo()}, sequential);
         }
       } else if (requests.size() == 1) {
-        ERROR("Invalid query for {} {} ({}): {}.", type, DataLocation(dataSource, name), requests[0].GetInfo()->GetDescription(), addHint(getErrorReason(e, rootOutput.str())));
+        ERROR("Invalid query for {} {} ({}): {}{}.", type, DataLocation(dataSource, name), requests[0].GetInfo()->GetDescription(), getErrorReason(e, rootOutput.str()), chainHint);
       } else {
-        ERROR("Cannot read {} {}: {}.", type, DataLocation(dataSource, name), addHint(getErrorReason(e, rootOutput.str())));
+        ERROR("Cannot read {} {}: {}{}.", type, DataLocation(dataSource, name), getErrorReason(e, rootOutput.str()), chainHint);
       }
     }
   };
@@ -2103,6 +2114,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       joinsDescription += ((joinsDescription.empty()) ? ", joined " : ", ") + join.GetDescription();
     }
   }
+  if (nUnmatched && *nUnmatched) joinsDescription += fmt::format(", {} row{} without a match skipped", *nUnmatched, (*nUnmatched == 1) ? "" : "s");
   string message = fmt::format(" - {} {} entries{}{}, {} request{}, {} pass{}, {:.1f} s", DataLocation(dataSource, name), nEntries.value_or(0), (inputsDescription.empty()) ? "" : " from " + inputsDescription, joinsDescription, nRequests, (nRequests == 1) ? "" : "s", nPasses, (nPasses == 1) ? "" : "es", seconds);
   /*
   for (const auto& [info, counts] : entryCounts) {
