@@ -161,21 +161,7 @@ bool PlotManager::SavePlotsToRootFile() const
       return false;
     }
     outputFile.cd();
-    // only meaningful if no other PlotManager instance is concurrently allocating colors!
-    if (auto nUserColors = TColor::GetFreeColorIndex() - mFirstFreeColorIndex) {
-      vector<std::unique_ptr<TBox>> colorBoxes;
-      colorBoxes.reserve(nUserColors);
-      TCanvas colorCanvas("user_colors", "user defined colors", 800, 200);
-      for (int32_t i = 0; i < nUserColors; i++) {
-        if (gROOT->GetColor(mFirstFreeColorIndex + i)) {
-          auto box = std::make_unique<TBox>(static_cast<double>(i) / nUserColors, 0, static_cast<double>(i + 1) / nUserColors, 1);
-          box->SetFillColor(mFirstFreeColorIndex + i);
-          box->Draw("SAME");
-          colorBoxes.push_back(std::move(box));
-        }
-      }
-      colorCanvas.Write();
-    }
+    // the colours a pad uses are defined by its setup TExec; ROOT's own colour list is saved with the first canvas as usual
     uint32_t nPlots{0u};
     for (const auto& [uniqueName, canvas] : mCanvasRegistry) {
       size_t delimiterPos = uniqueName.find(":");
@@ -1528,9 +1514,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     gStyle->SetLineScalePS(4. * pageWidthPt / canvasWidthPx);
   }
   canvas->SaveAs(fullName.data());
-  // reset TCandle range options to their default values after drawing data
-  TCandle::SetBoxRange(0.5);
-  TCandle::SetWhiskerRange(0.75);
   if (!isGif && !std::filesystem::is_regular_file(fullName)) {
     ERROR("Could not write {}.", fullName);
     return false;

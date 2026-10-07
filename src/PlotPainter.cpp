@@ -261,8 +261,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto frameBorderAlpha = get_first(pad.GetFrameBorderAlpha(), padDefaults.GetFrameBorderAlpha())) pad_ptr->SetFrameLineColor(TColor::GetColorTransparent(pad_ptr->GetFrameLineColor(), *frameBorderAlpha));
     if (auto frameBorderStyle = get_first(pad.GetFrameBorderStyle(), padDefaults.GetFrameBorderStyle())) pad_ptr->SetFrameLineStyle(*frameBorderStyle);
     if (auto frameBorderWidth = get_first(pad.GetFrameBorderWidth(), padDefaults.GetFrameBorderWidth())) pad_ptr->SetFrameLineWidth(*frameBorderWidth);
-    if (auto candleBoxRange = get_first(pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange())) TCandle::SetBoxRange(*candleBoxRange);
-    if (auto candleWhiskerRange = get_first(pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange())) TCandle::SetWhiskerRange(*candleWhiskerRange);
+
+    // palette, candle ranges and text format are global state that ROOT reads while painting: they are set by TExec primitives,
+    // which run whenever the pad is painted (also when the canvas is read back from a file) and leave the defaults behind afterwards
+    string padSetup = fmt::format("gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange({}); TCandle::SetWhiskerRange({});",
+                                  get_first_or(0.5, pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange()),
+                                  get_first_or(0.75, pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange()));
 
     // a colour gradient gets one colour per data item that will actually take a colour from the defaults
     auto nDefaultColors = [&pad](auto hasOwnColor) {
@@ -294,20 +298,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     }
     if (pad.GetPaletteGradient().rgbEndpoints) {
       const auto& gradient = pad.GetPaletteGradient();
-      GenerateGradientColors(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha), true);
+      padSetup += GradientPaletteCommand(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
     } else if (padDefaults.GetPaletteGradient().rgbEndpoints) {
       const auto& gradient = padDefaults.GetPaletteGradient();
-      GenerateGradientColors(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha), true);
-    } else if (auto palette = get_first(pad.GetPalette(), padDefaults.GetPalette())) {
-      gStyle->SetPalette(*palette);
+      padSetup += GradientPaletteCommand(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
     } else {
-      // reset to default to avoid side effects in other plots
-      gStyle->SetPalette(kBird);
+      padSetup += fmt::format(" gStyle->SetPalette({});", get_first_or(static_cast<int32_t>(kBird), pad.GetPalette(), padDefaults.GetPalette()));
     }
     pad_ptr->SetNumber(padID);
     pad_ptr->Draw();
     pad_ptr->cd();
     bool hasRefFunc = false;
+    string activeTextFormat = "g";  // set by the pad's setup; changed by TExec primitives in front of items with another format
     auto drawData = pad.GetData();
 
     if (drawData.empty()) {
@@ -1256,7 +1258,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (axisHist_ptr->GetContour() < nContours) axisHist_ptr->SetContour(*nContours);
             }
           }
-          if (data->GetTextFormat()) gStyle->SetPaintTextFormat((*data->GetTextFormat()).data());
+          auto drawExec = [&](const string& name, const string& command) {
+            TExec* exec = new TExec(name.data(), command.data());
+            exec->SetBit(kCanDelete);
+            exec->Draw();
+          };
+          if (const string textFormat = data->GetTextFormat().value_or("g"); textFormat != activeTextFormat) {
+            drawExec("text_format_" + std::to_string(dataIndex), fmt::format("gStyle->SetPaintTextFormat(\"{}\");", textFormat));
+            activeTextFormat = textFormat;
+          }
 
           // disallow moving around the points of a graph in interactive mode
           if constexpr (is_graph_1d<data_type>()) {
@@ -1373,6 +1383,17 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (pad.GetViewPhi()) {
       pad_ptr->SetPhi(*pad.GetViewPhi());
     }
+
+    // the colours of the pad that are not predefined by ROOT are defined by the setup as well, so that a canvas read from a file
+    // in another session paints with them (ROOT itself stores the complete colour list, and only with the first canvas written)
+    std::set<int32_t> customColors;
+    CollectCustomColors(pad_ptr, customColors);
+    padSetup += ColorDefinitionCommand(customColors);
+    // the setup has to be the first primitive of the pad, so that it runs before anything of the pad is painted
+    // (added only now, since drawing the frame histogram without SAME clears the pad)
+    TExec* padSetupExec = new TExec(("setup_pad_" + std::to_string(padID)).data(), padSetup.data());
+    padSetupExec->SetBit(kCanDelete);
+    pad_ptr->GetListOfPrimitives()->AddFirst(padSetupExec);
     pad_ptr->Modified();
     pad_ptr->Update();
   }
@@ -1399,9 +1420,100 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     }
   }
   canvas_ptr->cd();
+  // last primitive of the canvas: restores the global settings after the pads were painted
+  TExec* resetExec = new TExec("reset_globals", fmt::format("gStyle->SetPalette({}); gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange(0.5); TCandle::SetWhiskerRange(0.75);", static_cast<int32_t>(kBird)).data());
+  resetExec->SetBit(kCanDelete);
+  resetExec->Draw();
   canvas_ptr->Modified();
   canvas_ptr->Update();
   return canvas_ptr;
+}
+
+//**************************************************************************************************
+/**
+ * Collects the colour indices used by an object and everything it contains, except the colours predefined by ROOT.
+ */
+//**************************************************************************************************
+void PlotPainter::CollectCustomColors(TObject* obj, std::set<int32_t>& colors)
+{
+  if (!obj) return;
+  auto add = [&colors](int32_t color) {
+    const bool isPredefined = (color >= 0 && color <= 50) || (color >= 300 && color <= kGray + 3);  // basic colours and the colour wheel
+    if (!isPredefined && gROOT->GetColor(color)) colors.insert(color);
+  };
+  auto addList = [&](TList* list) {
+    if (!list) return;
+    TIter next(list);
+    while (TObject* item = next())
+      CollectCustomColors(item, colors);
+  };
+  if (auto line = dynamic_cast<TAttLine*>(obj)) add(line->GetLineColor());
+  if (auto fill = dynamic_cast<TAttFill*>(obj)) add(fill->GetFillColor());
+  if (auto marker = dynamic_cast<TAttMarker*>(obj)) add(marker->GetMarkerColor());
+  if (auto text = dynamic_cast<TAttText*>(obj)) add(text->GetTextColor());
+  if (auto pad = dynamic_cast<TPad*>(obj)) {
+    add(pad->GetFrameFillColor());
+    add(pad->GetFrameLineColor());
+    addList(pad->GetListOfPrimitives());
+  }
+  if (auto hist = dynamic_cast<TH1*>(obj)) {
+    for (TAxis* axis : {hist->GetXaxis(), hist->GetYaxis(), hist->GetZaxis()}) {
+      add(axis->GetAxisColor());
+      add(axis->GetLabelColor());
+      add(axis->GetTitleColor());
+    }
+    addList(hist->GetListOfFunctions());
+  }
+  if (auto graph = dynamic_cast<TGraph*>(obj)) addList(graph->GetListOfFunctions());
+  if (auto multiGraph = dynamic_cast<TMultiGraph*>(obj)) addList(multiGraph->GetListOfGraphs());
+  if (auto stack = dynamic_cast<THStack*>(obj)) addList(stack->GetHists());
+  if (auto legend = dynamic_cast<TLegend*>(obj)) addList(legend->GetListOfPrimitives());
+  if (auto paveText = dynamic_cast<TPaveText*>(obj)) addList(paveText->GetListOfLines());
+}
+
+//**************************************************************************************************
+/**
+ * Interpreter command that defines the given colours by index with the values they have now (an existing colour is updated).
+ */
+//**************************************************************************************************
+string PlotPainter::ColorDefinitionCommand(const std::set<int32_t>& colors)
+{
+  string command;
+  for (const int32_t index : colors) {
+    const TColor* color = gROOT->GetColor(index);
+    if (!color) continue;
+    command += fmt::format(" {{ TColor* c = gROOT->GetColor({idx}); if (c) {{ c->SetRGB({r}, {g}, {b}); c->SetAlpha({a}); }} else {{ new TColor({idx}, {r}, {g}, {b}, \"{name}\", {a}); }} }}",
+                           fmt::arg("idx", index), fmt::arg("r", color->GetRed()), fmt::arg("g", color->GetGreen()), fmt::arg("b", color->GetBlue()), fmt::arg("a", color->GetAlpha()), fmt::arg("name", color->GetName()));
+  }
+  return command;
+}
+
+//**************************************************************************************************
+/**
+ * Interpreter command that sets a colour palette interpolated linearly between the given rgb endpoints (with their stops).
+ * The colours are looked up by value (TColor::GetColor), so repeated execution does not create new colours.
+ */
+//**************************************************************************************************
+string PlotPainter::GradientPaletteCommand(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha)
+{
+  if (rgbEndpoints.size() < 2 || nColors < 1) {
+    ERROR("A colour gradient needs at least two endpoints and one colour (got {} and {}).", rgbEndpoints.size(), nColors);
+    return fmt::format(" gStyle->SetPalette({});", static_cast<int32_t>(kBird));
+  }
+  string red, green, blue, stops;
+  for (const auto& [r, g, b, stop] : rgbEndpoints) {
+    red += fmt::format("{},", r);
+    green += fmt::format("{},", g);
+    blue += fmt::format("{},", b);
+    stops += fmt::format("{},", stop);
+  }
+  return fmt::format(
+    " {{ const Int_t n = {n}; const Double_t s[] = {{{s}}}; const Double_t r[] = {{{r}}}; const Double_t g[] = {{{g}}}; const Double_t b[] = {{{b}}}; Int_t pal[{n}];"
+    " for (Int_t i = 0; i < n; ++i) {{ const Double_t x = (n > 1) ? Double_t(i) / (n - 1) : 0.; Int_t k = 0; while (k < {kmax} && x > s[k + 1]) ++k;"
+    " const Double_t t = (s[k + 1] > s[k]) ? (x - s[k]) / (s[k + 1] - s[k]) : 0.;"
+    " pal[i] = TColor::GetColor(Float_t(r[k] + t * (r[k + 1] - r[k])), Float_t(g[k] + t * (g[k + 1] - g[k])), Float_t(b[k] + t * (b[k + 1] - b[k])), Float_t({a})); }}"
+    " gStyle->SetPalette(n, pal); }}",
+    fmt::arg("n", nColors), fmt::arg("s", stops), fmt::arg("r", red), fmt::arg("g", green), fmt::arg("b", blue), fmt::arg("kmax", rgbEndpoints.size() - 2), fmt::arg("a", alpha));
 }
 
 //**************************************************************************************************
@@ -3006,7 +3118,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
  * Helper to generate nColors between specified rgb endpoints.
  */
 //**************************************************************************************************
-vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha, bool savePalette)
+vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha)
 {
   if (rgbEndpoints.size() < 2) {
     ERROR("A colour gradient needs at least two endpoints, got {}.", rgbEndpoints.size());
@@ -3016,29 +3128,19 @@ vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vecto
     ERROR("Number of gradient colours must be positive, got {}.", nColors);
     return {};
   }
-  uint16_t nPoints = rgbEndpoints.size();
-
-  vector<double_t> red;
-  vector<double_t> green;
-  vector<double_t> blue;
-  vector<double_t> stops;
-
-  for (const auto& rgb : rgbEndpoints) {
-    red.push_back(std::get<0>(rgb));
-    green.push_back(std::get<1>(rgb));
-    blue.push_back(std::get<2>(rgb));
-    stops.push_back(std::get<3>(rgb));
+  // the same interpolation as in GradientPaletteCommand; colours are looked up by value, so identical gradients share them
+  vector<int16_t> gradientColors;
+  gradientColors.reserve(nColors);
+  for (int32_t i = 0; i < nColors; ++i) {
+    const double_t x = (nColors > 1) ? static_cast<double_t>(i) / (nColors - 1) : 0.;
+    size_t k = 0;
+    while (k < rgbEndpoints.size() - 2 && x > std::get<3>(rgbEndpoints[k + 1]))
+      ++k;
+    const auto& [r1, g1, b1, s1] = rgbEndpoints[k];
+    const auto& [r2, g2, b2, s2] = rgbEndpoints[k + 1];
+    const double_t t = (s2 > s1) ? (x - s1) / (s2 - s1) : 0.;
+    gradientColors.push_back(static_cast<int16_t>(TColor::GetColor(static_cast<float_t>(r1 + t * (r2 - r1)), static_cast<float_t>(g1 + t * (g2 - g1)), static_cast<float_t>(b1 + t * (b2 - b1)), alpha)));
   }
-  int16_t firstColorIndex = TColor::CreateGradientColorTable(nPoints, stops.data(), red.data(), green.data(), blue.data(), nColors, alpha);
-  if (firstColorIndex < 0) {
-    ERROR("Could not create gradient colour table.");
-    return {};
-  }
-  vector<int16_t> gradientColors(nColors);
-  std::iota(gradientColors.begin(), gradientColors.end(), firstColorIndex);
-
-  // TColor::CreateGradientColorTable() changes current palette as side effect
-  if (!savePalette) gStyle->SetPalette(kBird);
   return gradientColors;
 }
 

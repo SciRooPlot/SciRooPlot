@@ -178,7 +178,10 @@ class PlotPainter
   TAxis* GetAxis(T* histPtr, int16_t i);
   std::string GetAxisStr(int16_t i);
 
-  std::vector<int16_t> GenerateGradientColors(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1., bool savePalette = false);
+  std::vector<int16_t> GenerateGradientColors(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1.);
+  static void CollectCustomColors(TObject* obj, std::set<int32_t>& colors);
+  static std::string ColorDefinitionCommand(const std::set<int32_t>& colors);
+  static std::string GradientPaletteCommand(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha);
 
   double_t mScale{1.};
   struct StyleSizes {

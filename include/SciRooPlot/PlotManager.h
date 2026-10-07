@@ -114,7 +114,6 @@ class PlotManager
   bool mExitInteractiveBrowsing{false};
   int32_t mWindowOffsetY{};
   bool mHasDisplay{false};  // a graphical display is available (required for modes "show" and "macro")
-  int32_t mFirstFreeColorIndex{TColor::GetFreeColorIndex()};
   const std::vector<std::string> mTableFileEndings = {".csv", ".dat", ".txt", ".tsv", ".tab"};
 
   std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>> mDataBuffer;
