@@ -393,7 +393,7 @@
           Browse all of its plots, or export a whole group:
           #v(-0.3em)
           #terminal(size: 14pt, inset: 10pt)[
-            #prompt plot \'.+\' \'.+\'
+            #prompt plot \'.+\'
 
             #prompt plot higgs .+ pdf
           ]
@@ -483,13 +483,13 @@
     [
       - Plots specified in #plot-def-file have a unique *name* within a *group*, which can have subgroups (e.g. `higgs/diphoton`).
 
-      - These identifiers are used to select plots from the command line.
+      - These identifiers select plots on the command line:
         #terminal[
-          #prompt plot \<group\> \<name\> [\<mode\>]
+          #prompt plot \<group\> [\<name\> [\<mode\>]]
         ]
 
-      - Tab completion simplifies browsing through available names.
-      - `<group>` and `<name>` are regular expressions matching the whole name, so one command can generate many plots.
+      - Tab completion browses the available names.
+      - `<group>` and `<name>` are regular expressions matching the whole name; without `<name>`, the whole group is generated.
 
       #block(
         fill: rgb("fafafa"),
@@ -683,7 +683,7 @@
 
         - Nothing to register -- the script's own folder is already on the import path, so the new module is found automatically.
 
-        - `plot` re-runs #plot-def-file only when this file itself changed -- after editing only another module, `touch DefinePlots.py`.
+        - `plot` re-runs #plot-def-file whenever any `.py` file of the project folder (or its direct subfolders) changed.
       ]
     ],
     [
@@ -914,19 +914,15 @@
     columns: (45%, 50%),
     gutter: 5%,
     [
-      - Defining base plots avoids repeating common layout settings across many plots.
+      - Base plots are ordinary `Plot` objects registered via `AddBasePlot()`, so common layout settings are not repeated in every plot.
 
-      - Base plots are ordinary `Plot` objects registered with the `PlotManager` via `AddBasePlot()`.
-
-      - Default settings applied to `plot[0]` automatically affect all pads unless overridden.
+      - Settings of `plot[0]` apply to all pads unless overridden.
 
       - `PlotManager::MakeBasePlot(name)` provides base plots with consistent layout among them: text, ticks, distances, lines and markers are the same in every panel, so plots of different layouts look alike. The name describes the layout: `<type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]`, e.g. `1d`, `1d_ratio`, `2d`, `1d_wide`, `1d_2x1`, `1d_3x1`, `1d_2x1_ratio`, `1d_2x2`, `2d_2x1`.
 
-      - Other layouts are made with `PanelLayout`: panels in rows (`Panel`, `Gap()`, `Empty()`), lengths in pixels; panels that touch share their axis, pads are numbered row by row. The code of `MakeBasePlot` is the start for your own.
+      - Other layouts are made with `PanelLayout`#if lang == "cpp" [ (`#include "SciRooPlot/PanelLayout.h"`)]: panels in rows (`Panel`, `Gap()`, `Empty()`), lengths in pixels; panels that touch share their axis, pads are numbered row by row. The code of `MakeBasePlot` is the start for your own.
 
-      - Axis ranges, titles, scales, and other axis properties are configured intuitively through plot[pad]['X'], ['Y'], and ['Z'].
-
-      - See the #link(<appx-plot>)[#text(fill: main-color)[appendix]] for the full list of `Plot`, `Pad` and `Axis` accessors.
+      - Axes are configured via `plot[pad]['X']`, `['Y']` and `['Z']`; see the #link(<appx-plot>)[#text(fill: main-color)[appendix]] for all `Plot`, `Pad` and `Axis` accessors.
     ],
     [
       #code-block(
@@ -935,19 +931,13 @@
           Plot plot("myBasePlot");
           plot.SetDimensions(710, 710);
           plot.SetTransparent();
-
           plot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
           plot[0].SetDefaultMarkerSize(1.2).SetDefaultLineWidth(2.);
           plot[0].SetDefaultTextFont(43).SetDefaultTextSize(24);
           plot[0].SetDefaultColors({kBlack, kBlue, kRed});
-          plot[0].SetDefaultMarkerStyles({kFullCircle});
-          plot[0].SetDefaultLineStyles({kSolid, kDashed});
-
           plot[0]['X'].SetTitleSize(28).SetTitleOffset(1.1);
           plot[0]['Y'].SetTitleSize(28).SetTitleOffset(1.5);
-
           plot[1].SetPosition(0., 0., 1., 1.);
-
           pm.AddBasePlot(plot);
           ```
         ],
@@ -956,19 +946,13 @@
           plot = Plot("myBasePlot")
           plot.SetDimensions(710, 710)
           plot.SetTransparent()
-
           plot[0].SetMargins(0.07, 0.14, 0.12, 0.07)
           plot[0].SetDefaultMarkerSize(1.2).SetDefaultLineWidth(2.)
           plot[0].SetDefaultTextFont(43).SetDefaultTextSize(24)
           plot[0].SetDefaultColors([kBlack, kBlue, kRed])
-          plot[0].SetDefaultMarkerStyles([kFullCircle])
-          plot[0].SetDefaultLineStyles([kSolid, kDashed])
-
           plot[0]['X'].SetTitleSize(28).SetTitleOffset(1.1)
           plot[0]['Y'].SetTitleSize(28).SetTitleOffset(1.5)
-
           plot[1].SetPosition(0., 0., 1., 1.)
-
           pm.AddBasePlot(plot)
           ```
         ],
@@ -1621,11 +1605,6 @@
     [
       #api-section("Plot", (
         [`Plot(name, group = "", basePlot = {})`], [Create a plot in a figure group, optionally from a base plot.],
-        [`Plot(name, layout)`], [Base plot from a `PanelLayout`: panels in rows (`Panel(w, h)`, `Gap()`, `Empty()`), lengths in pixels kept equal in every panel.],
-        [`PlotManager::MakeBasePlot(name = "1d")`], [Base plots with consistent layout, named `<type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]` (type `1d` or `2d`), e.g. `1d_ratio`, `2d`, `1d_3x1`, `1d_2x1_ratio`.],
-        [#names("PanelLayout(rows = {{Panel()}})", "PanelLayout(sizes, rows)")], [Arrangement of panels, or the same lengths with other panels.],
-        [#names("SetPanelSize(px)", "SetMargins(top, bottom, left, right)", "SetZAxisMargin(px)", "SetPanelSpacing(px)")], [Layout: standard panel (638), space around the panels (32, 118, 118, 32), for the colour scale (268), between touching panels (0).],
-        [#names("SetTextSize(px)", "SetTitleSize(px)", "SetTickLength(px)", "SetLabelOffset(px)", "SetXTitleOffset(px)", "SetYTitleOffset(px)", "SetZTitleOffset(px)", "SetLineWidth(w)", "SetMarkerSize(s)")], [Layout: text (31.52), axis titles (39.4), ticks (19.15), labels from the axis (3.94), titles from the axis (x 63.04, y automatic, z 122.9), ROOT line width (5) and marker size (1.4).],
         [`Plot(other, name, group = {})`], [Copy `other` under a new name (and optionally a new group).],
         [`plot[padID]` / `GetPad(padID)`], [Access a pad by index.],
         [`plot += other`], [Append the pads of another plot into this one.],
@@ -1634,6 +1613,28 @@
         [#names("SetDimensions(width, height, fixAspectRatio = false)", "SetWidth(width)", "SetHeight(height)", "SetFixAspectRatio(fixAspectRatio = true)")], [Set canvas dimensions (in pixels), all at once or individually.],
         [#names("SetFill(color, style = {}, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Configure plot background fill, all at once or individually.],
         [`SetTransparent()`], [Make the plot background transparent.],
+      ), text-size: 12pt)
+    ],
+  )
+]
+
+#slide[
+  #slide-title("Appendix: Base Plots & PanelLayout")
+  #grid(
+    columns: (49%, 49%),
+    gutter: 2%,
+    [
+      #api-section("Base plots", (
+        [`PlotManager::MakeBasePlot(name = "1d")`], [Base plots with consistent layout, named `<type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]` (type `1d` or `2d`), e.g. `1d_ratio`, `2d`, `1d_3x1`, `1d_2x1_ratio`.],
+        [`Plot(name, layout)`], [Base plot from a `PanelLayout`, its lengths kept equal in every panel.],
+        [#names(if lang == "py" { "PanelLayout(rows = [[Panel()]])" } else { "PanelLayout(rows = {{Panel()}})" }, "PanelLayout(sizes, rows)")], [Panels in rows (top to bottom), or the same lengths with other panels.],
+        [#names("Panel(width = 1, height = 1)", "Panel().ZAxis()", "Gap()", "Empty()")], [A panel (in units of the standard panel), with room for a colour scale; a gap between independent panels; a cell without axes (a pad for texts).],
+      ), text-size: 12pt)
+    ],
+    [
+      #api-section("PanelLayout lengths (pixels of the plot at scale 1)", (
+        [#names("SetPanelSize(px)", "SetMargins(top, bottom, left, right)", "SetZAxisMargin(px)", "SetPanelSpacing(px)")], [Standard panel (638), space around the panels (32, 118, 118, 32), for the colour scale (268), between touching panels (0).],
+        [#names("SetTextSize(px)", "SetTitleSize(px)", "SetTickLength(px)", "SetLabelOffset(px)", "SetXTitleOffset(px)", "SetYTitleOffset(px)", "SetZTitleOffset(px)", "SetLineWidth(w)", "SetMarkerSize(s)")], [Text (31.52), axis titles (39.4), ticks (19.15), labels from the axis (3.94), titles from the axis (x 63.04, y automatic, z 122.9), ROOT line width (5) and marker size (1.4).],
       ), text-size: 12pt)
     ],
   )
@@ -1674,7 +1675,7 @@
 ]
 
 #slide[
-  #slide-title("Appendix: Pad (2/2) – PanelLayout & Palette")
+  #slide-title("Appendix: Pad (2/2) – Position & Palette")
   #grid(
     columns: (49%, 49%),
     gutter: 2%,
