@@ -108,6 +108,8 @@ namespace SciRooPlot
 {
 using util::get_first;
 using util::get_first_or;
+using util::is_2d;
+using util::is_3d;
 using util::is_func;
 using util::is_func_1d;
 using util::is_func_2d;
@@ -1109,8 +1111,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           pad_ptr->Update();
         } else if (!data->GetDontDraw()) {
-          // do not draw the Z axis a second time
-          std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
+          // do not draw the colour scale a second time (only types that have one: for graphs 'Z' means no end caps on the error bars)
+          if constexpr (is_2d<data_type>() || is_3d<data_type>()) {
+            for (char& c : drawingOptions) {
+              if (c == 'Z' || c == 'z') c = ' ';
+            }
+          }
 
           // define data appearance
           if (hasRefFunc && dataIndex == 1) {
