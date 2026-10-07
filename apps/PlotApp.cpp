@@ -71,9 +71,13 @@ int main(int argc, char* argv[])
 
     if (mode.empty()) mode = Config::Get().PlotMode();
 
-    if (group.empty() || name.empty()) {
-      ERROR("No plots were specified.");
+    if (group.empty()) {
+      ERROR("No plot group specified.");
       return 1;
+    }
+    if (name.empty()) {
+      INFO("No plot name specified. Generating all plots within the group.");
+      name = ".+";
     }
 
     // create plotting environment
