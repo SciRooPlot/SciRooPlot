@@ -152,7 +152,7 @@ class PlotPainter
   std::optional<data_ptr_t> GetDataClone(TObject* obj);
   std::optional<data_ptr_t> GetProjection(TObject* obj, Plot::Pad::Data::proj_info_t projInfo);
 
-  void SetGraphRange(TGraph* graph, std::optional<double_t> min, std::optional<double_t> max);
+  static void RemoveGraphPointsOutside(TGraph* graph, std::optional<double_t> minX, std::optional<double_t> maxX, std::optional<double_t> minY, std::optional<double_t> maxY);
   void ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFactor);
   void ScaleGraphAxis(TGraph2D* graph, int16_t axis, double_t scaleFactor);
   void ScaleAxis(TH1* hist, int16_t axisIndex, double_t scaleFactor);

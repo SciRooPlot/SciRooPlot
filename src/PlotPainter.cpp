@@ -1186,12 +1186,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
 
           // now define data ranges
-          if (axisHist_ptr->GetMinimum()) {
-            // TODO: check if this still works for bar histos
-            data_ptr->SetMinimum(axisHist_ptr->GetMinimum());  // important for correct display of bar diagrams
-          }
-          // data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
-
           double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0;
           pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
           if (pad_ptr->GetLogx()) {
@@ -1202,44 +1196,58 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             ymin = TMath::Power(10, ymin);
             ymax = TMath::Power(10, ymax);
           }
-
-          double_t rangeMinX = (data->GetMinRangeX()) ? *data->GetMinRangeX()
-                                                      : xmin;
-          double_t rangeMaxX = (data->GetMaxRangeX()) ? *data->GetMaxRangeX()
-                                                      : xmax;
-
-          double_t rangeMinY = (data->GetMinRangeY()) ? *data->GetMinRangeY()
-                                                      : ymin;
-          double_t rangeMaxY = (data->GetMaxRangeY()) ? *data->GetMaxRangeY()
-                                                      : ymax;
-
-          // for 3d view ignore individual data ranges and always let it coincide with the axes
           if (auto view = pad_ptr->GetView()) {
+            // for 3d view ignore individual data ranges and always let it coincide with the axes
             double_t minArr[3];
             double_t maxArr[3];
             view->GetRange(minArr, maxArr);
-            rangeMinX = minArr[0];
-            rangeMaxX = maxArr[0];
-            rangeMinY = minArr[1];
-            rangeMaxY = maxArr[1];
+            xmin = minArr[0];
+            xmax = maxArr[0];
+            ymin = minArr[1];
+            ymax = maxArr[1];
             data_ptr->SetMinimum(axisHist_ptr->GetMinimum());
             data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
             if constexpr (is_hist_3d<data_type>()) {
               data_ptr->GetZaxis()->SetRangeUser(minArr[2], maxArr[2]);
             }
           }
-
+          const bool hasRangeX = data->GetMinRangeX() || data->GetMaxRangeX();
+          const bool hasRangeY = data->GetMinRangeY() || data->GetMaxRangeY();
+          if constexpr (is_hist_1d<data_type>()) {
+            // ROOT draws the bars and fill areas of a histogram from its own minimum, also in an existing frame: start them at the lower edge of the frame
+            if (!pad_ptr->GetView()) data_ptr->SetMinimum(ymin);
+          }
+          // functions have no range of their own: they span the frame, unless the user limits them
+          // a histogram keeps its own axes (ROOT clips it to the frame); a user range selects its bins like TAxis::SetRangeUser does
+          auto setBinRange = [](TAxis* axis, const optional<double_t>& min, const optional<double_t>& max) {
+            int32_t first = axis->GetFirst();
+            int32_t last = axis->GetLast();
+            if (min) {
+              first = axis->FindFixBin(*min);
+              if (axis->GetBinUpEdge(first) <= *min) ++first;
+            }
+            if (max) {
+              last = axis->FindFixBin(*max);
+              if (axis->GetBinLowEdge(last) >= *max) --last;
+            }
+            axis->SetRange(first, last);
+          };
           if constexpr (is_func_2d<data_type>()) {
-            data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
+            data_ptr->SetRange(data->GetMinRangeX().value_or(xmin), data->GetMinRangeY().value_or(ymin), data->GetMaxRangeX().value_or(xmax), data->GetMaxRangeY().value_or(ymax));
           } else if constexpr (is_func_1d<data_type>()) {
-            data_ptr->SetRange(rangeMinX, rangeMaxX);
+            data_ptr->SetRange(data->GetMinRangeX().value_or(xmin), data->GetMaxRangeX().value_or(xmax));
           } else if constexpr (is_graph_1d<data_type>()) {
-            SetGraphRange(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX());
+            if (!pad_ptr->GetView()) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
           } else {
-            data_ptr->GetXaxis()->SetRangeUser(rangeMinX, rangeMaxX);
+            if (hasRangeX && !pad_ptr->GetView()) setBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
+            if constexpr (is_hist_1d<data_type>()) {
+              // the y axis of a 1d histogram has no bins: as for the frame, its range is the minimum and maximum (ROOT uses them e.g. as baseline of bars)
+              if (data->GetMinRangeY()) data_ptr->SetMinimum(*data->GetMinRangeY());
+              if (data->GetMaxRangeY()) data_ptr->SetMaximum(*data->GetMaxRangeY());
+            }
           }
           if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
-            data_ptr->GetYaxis()->SetRangeUser(rangeMinY, rangeMaxY);
+            if (hasRangeY && !pad_ptr->GetView()) setBinRange(data_ptr->GetYaxis(), data->GetMinRangeY(), data->GetMaxRangeY());
             if (const auto& contours = data->GetContours()) {
               data_ptr->SetContour(static_cast<int32_t>(contours->size()), contours->data());
               if (axisHist_ptr->GetContour() < static_cast<int32_t>(contours->size())) axisHist_ptr->SetContour(static_cast<int32_t>(contours->size()), contours->data());
@@ -2719,31 +2727,16 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
 
 //**************************************************************************************************
 /**
- * Deletes data points of graph beyond cutoff values.
+ * Removes the points of a graph outside of the given x and y limits. The order of the points is kept (it matters for lines).
  */
 //**************************************************************************************************
-void PlotPainter::SetGraphRange(TGraph* graph, optional<double_t> min, optional<double_t> max)
+void PlotPainter::RemoveGraphPointsOutside(TGraph* graph, optional<double_t> minX, optional<double_t> maxX, optional<double_t> minY, optional<double_t> maxY)
 {
-  // sort the points first for the following algorithm to work properly
-  graph->Sort();
-
-  int32_t pointsToRemoveHigh{};
-  int32_t pointsToRemoveLow{};
-
-  for (int32_t i = 0; i < graph->GetN(); ++i) {
-    if (min && graph->GetX()[i] < *min) {
-      ++pointsToRemoveLow;
-    }
-    if (max && graph->GetX()[i] > *max) {
-      ++pointsToRemoveHigh;
-    }
-  }
-
-  for (int32_t i = 0; i < pointsToRemoveHigh; ++i) {
-    graph->RemovePoint(graph->GetN() - 1);
-  }
-  for (int32_t i = 0; i < pointsToRemoveLow; ++i) {
-    graph->RemovePoint(0);
+  if (!minX && !maxX && !minY && !maxY) return;
+  for (int32_t i = graph->GetN() - 1; i >= 0; --i) {  // from the back, so that the indices of the remaining points stay valid
+    const double_t x = graph->GetPointX(i);
+    const double_t y = graph->GetPointY(i);
+    if ((minX && x < *minX) || (maxX && x > *maxX) || (minY && y < *minY) || (maxY && y > *maxY)) graph->RemovePoint(i);
   }
 }
 
