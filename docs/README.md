@@ -111,6 +111,7 @@ The following example code snippets with comments illustrate how plots are defin
 Since these examples are not comprehensive, to see all the functionality of SciRooPlot also have a look at the available setters in the corresponding header files.
 
 ```cpp
+#include "SciRooPlot/PanelLayout.h"
 #include "SciRooPlot/PlotManager.h"
 using namespace SciRooPlot;
 
@@ -343,17 +344,59 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   pm.AddBasePlot(plot);
 } // -----------------------------------------------------------------------
 
-// the framework also provides some default layouts that can be used as a starting point (or as inspiration for your own base plots)
-// they are defined in PlotManager.cxx and can be obtained with the function PlotManager::MakeBasePlot()
-pm.AddBasePlot(PlotManager::MakeBasePlot("1d"));
-pm.AddBasePlot(PlotManager::MakeBasePlot("2d"));
-pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
-pm.AddBasePlot(PlotManager::MakeBasePlot("1d_3panels"));
+// SciRooPlot provides base plots with consistent layout among them: text sizes, tick lengths, distances,
+// line widths and marker sizes are the same in every panel, so that plots of different layouts look alike
+// (on screen, in the pdf and in bitmap files). The name describes the layout:
+//   <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]
+// type 1d (plain panels) or 2d (panels with a colour scale); wide or tall panels (golden ratio); a grid of
+// panels that share their axes (default 1x1); a ratio panel below each panel; gaps between independent panels.
+// Pads are numbered row by row. For example:
+for (const string& name : {"1d", "1d_ratio", "2d", "1d_wide", "1d_2x1", "1d_3x1", "1d_2x1_ratio", "1d_2x2", "2d_2x1"}) {
+  pm.AddBasePlot(PlotManager::MakeBasePlot(name));
+}
 
-// modifications to the default base plots can be applied in the following way
+// modifications to these base plots can be applied in the following way
 auto basePlot = PlotManager::MakeBasePlot("1d");
 basePlot[1]['X'].SetColor(kRed);
 pm.AddBasePlot(basePlot);
+
+// Layouts beyond this rule (e.g. with a cell for texts, or panels of different sizes) are made with PanelLayout.h,
+// as in PlotManager::MakeBasePlot itself: a PanelLayout arranges panels in rows (sizes in units of the standard panel)
+// and carries the lengths of the plot in pixels of the canvas; the plot made from it has these lengths in every panel.
+// Panels that touch share the axis between them, Gap() separates independent panels, Empty() leaves a cell without
+// axes (a pad for texts), Panel().ZAxis() adds room for the colour scale. This is the essence of MakeBasePlot:
+{ // -----------------------------------------------------------------------
+  // the arrangement of the panels, in units of the standard panel (here: 1d_2x1_ratio)
+  vector<vector<Panel>> rows = {{Panel(), Panel()},
+                                {Panel(1, 0.37), Panel(1, 0.37)}};
+
+  // the sizes shared by all base plots, in pixels of the canvas (these are the defaults of PanelLayout)
+  PanelLayout sizes;
+  sizes.SetTextSize(31.52).SetTitleSize(39.4).SetLineWidth(5).SetMarkerSize(1.4);
+
+  // the look shared by all base plots: fonts, colours, markers and axis conventions
+  Plot plot("1d_2x1_ratio", PanelLayout(sizes, rows));
+  plot.SetTransparent();
+  plot[0].SetTransparent();
+  plot[0].SetFrameFill(10, 1001);
+  plot[0].SetDefaultTextFont(42);
+  plot[0].SetDefaultColors({kBlack, kBlue + 1, kRed + 1, kYellow + 1, kMagenta - 4, kGreen + 3, kOrange + 1, /* ... */});
+  plot[0].SetDefaultMarkerStyles({kFullCircle});
+  plot[0].SetDefaultLineStyles({kSolid});
+  plot[0].SetDefaultFillStyles({0});
+  plot[0].SetDefaultDrawingOptionHist2d(colz);
+  plot[0].SetDefaultDrawingOptionGraph(points);
+  plot[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
+  plot[0]['Y'].SetOppositeTicks().SetMaxDigits(3);
+  plot[0]['Z'].SetMaxDigits(3);
+
+  // conventions of the ratio pads (pads 3 and 4: row by row)
+  for (const uint8_t ratioPad : {3, 4}) {
+    plot[ratioPad].SetRefFunc("1");
+    plot[ratioPad]['Y'].SetNumDivisions(305).SetTitleCenter();
+  }
+  pm.AddBasePlot(plot);
+} // -----------------------------------------------------------------------
 
 // once this is done, you can define plots building up on these base plots
 // by specifying their name as the third argument in the new plots' constructor:

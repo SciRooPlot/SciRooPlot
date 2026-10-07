@@ -24,6 +24,8 @@
 #include <array>
 #include <map>
 #include <memory>
+#include <optional>
+#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -134,9 +136,14 @@ inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Grap
 class PlotPainter
 {
  public:
+  // scale: factor for the canvas size and all absolute sizes (line widths, marker sizes, pixel fonts),
+  //        i.e. the plot looks the same at any scale, only with more or less pixels (used on screen and for bitmap files)
+  explicit PlotPainter(double_t scale = 1.) : mScale(scale) {}
   std::unique_ptr<TCanvas> GeneratePlot(Plot& plot, const std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>>& dataBuffer);
 
  private:
+  void ApplyScale(TObject* obj, std::set<TObject*>& done, const std::string& drawOption = "");
+  Width_t ScaleLineWidth(Width_t width) const;
   std::optional<data_ptr_t> GetDataClone(TObject* obj, const std::optional<Plot::Pad::Data::proj_info_t>& projInfo = std::nullopt);
   template <typename T>
   std::optional<data_ptr_t> GetDataClone(TObject* obj);
@@ -171,6 +178,15 @@ class PlotPainter
   std::string GetAxisStr(int16_t i);
 
   std::vector<int16_t> GenerateGradientColors(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1., bool savePalette = false);
+
+  double_t mScale{1.};
+  struct StyleSizes {
+    Width_t lineWidth;
+    int32_t hatchesLineWidth;
+    float_t endErrorSize;
+    std::vector<std::string> lineStyles;
+  };
+  static inline std::optional<StyleSizes> sUnscaledStyle;  // absolute sizes in gStyle before the scale of the last plot was applied
 };
 }  // end namespace SciRooPlot
 #endif  // SRC_PLOTPAINTER_H_

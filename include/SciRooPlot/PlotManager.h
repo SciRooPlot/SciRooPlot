@@ -58,8 +58,6 @@ class PlotManager
   PlotManager& operator=(const PlotManager& other) = delete;
   PlotManager& operator=(PlotManager&& other) = delete;
 
-  static Plot MakeBasePlot(const std::string& name = "1d", double_t screenResolution = 100);
-
   void SaveProject() const;
 
   // create or append to a dataSource; replace = true clears existing entries from the dataSource first
@@ -74,6 +72,14 @@ class PlotManager
 
   void AddPlot(Plot plot);
   void AddBasePlot(Plot basePlot);
+  // Base plots with consistent layout among them: text sizes, tick lengths, distances, line widths and marker sizes are the
+  // same in every panel (see PanelLayout.h), so that plots of different layouts look alike. The name describes the layout:
+  //   <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]
+  // type 1d (plain panels) or 2d (panels with colour scale); wide/tall panels with the golden ratio; a grid of main panels
+  // (default 1x1) that share their axes; a ratio panel below each main panel; gaps between the panels (own axes).
+  // E.g. 1d, 1d_ratio, 2d, 1d_wide, 1d_2x1, 1d_3x1, 1d_2x1_ratio, 1d_2x2, 2d_2x1, 1d_2x1_gap. Pads are numbered row by row.
+  // The code of this function is the reference for defining further layouts with PanelLayout.
+  static Plot MakeBasePlot(const std::string& name = "1d");
   void AddColorOverview(const std::string& name, const std::string& group, const std::vector<int32_t>& colors = {});
 
   void SavePlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {}) const;

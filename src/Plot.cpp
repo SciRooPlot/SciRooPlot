@@ -19,6 +19,7 @@
 #include "SciRooPlot/Plot.h"
 
 #include "SciRooPlot/Logging.h"
+#include "SciRooPlot/PanelLayout.h"
 
 #include <TAttText.h>
 
@@ -137,6 +138,16 @@ Plot::Plot(const string& name, const string& group, const optional<string>& base
   mGroup = NormalizeGroup(group);
   mBasePlot = basePlot;
   UpdateUniqueName();
+}
+
+//**************************************************************************************************
+/**
+ * Constructor of a base plot from a layout.
+ */
+//**************************************************************************************************
+Plot::Plot(const string& name, const PanelLayout& layout) : Plot(name)
+{
+  layout.ApplyTo(*this);
 }
 
 //**************************************************************************************************

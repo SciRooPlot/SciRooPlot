@@ -59,6 +59,8 @@ class Config
   const std::string& PlotMode() const { return mPlotMode; }
   bool MatchCaseInsensitive() const { return mMatchCaseInsensitive; }
   bool MatchContains() const { return mMatchContains; }
+  double ScreenScale() const { return mScreenScale; }
+  double BitmapScale() const { return mBitmapScale; }
   const std::filesystem::path& Path() const { return mPath; }
 
   const std::string& ProjectsFile() const { return mProjectsFile; }
@@ -86,6 +88,8 @@ class Config
   void SetProgram(const std::string& projectName, const std::string& program);
   void SetMatchCaseInsensitive(bool matchCaseInsensitive);
   void SetMatchContains(bool matchContains);
+  void SetScreenScale(double screenScale);
+  void SetBitmapScale(double bitmapScale);
 
   void Reset();
   void Clean();
@@ -107,6 +111,8 @@ class Config
   std::string mPlotMode{"show"};
   bool mMatchCaseInsensitive{false};
   bool mMatchContains{false};
+  double mScreenScale{1.};  // size factor for plots shown on screen
+  double mBitmapScale{1.};  // resolution factor for bitmap files (png, jpg, gif)
   std::filesystem::path mPath;
   std::string mProjectsFile;
   std::string mSettingsFile;

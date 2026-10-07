@@ -75,6 +75,8 @@
 #include <memory>
 #include <numeric>
 #include <regex>
+#include <set>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -142,8 +144,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 {
   bool fail = false;
 
-  double_t canvasWidth = plot.GetWidth().value_or(gStyle->GetCanvasDefW());
-  double_t canvasHeight = plot.GetHeight().value_or(gStyle->GetCanvasDefH());
+  // ROOT reads some absolute sizes from gStyle only at paint time (see end of this function): undo the scale of a previous plot before drawing
+  if (sUnscaledStyle) {
+    gStyle->SetLineWidth(sUnscaledStyle->lineWidth);
+    gStyle->SetHatchesLineWidth(sUnscaledStyle->hatchesLineWidth);
+    gStyle->SetEndErrorSize(sUnscaledStyle->endErrorSize);
+    for (int32_t style = 1; style <= static_cast<int32_t>(sUnscaledStyle->lineStyles.size()); ++style) {
+      gStyle->SetLineStyleString(style, sUnscaledStyle->lineStyles[style - 1].data());
+    }
+    sUnscaledStyle.reset();
+  }
+
+  double_t canvasWidth = std::round(mScale * plot.GetWidth().value_or(gStyle->GetCanvasDefW()));
+  double_t canvasHeight = std::round(mScale * plot.GetHeight().value_or(gStyle->GetCanvasDefH()));
   if (canvasWidth <= 0 || canvasHeight <= 0) {
     ERROR("Plot {} has invalid dimensions {}x{}.", plot.GetName(), canvasWidth, canvasHeight);
     return nullptr;
@@ -1072,6 +1085,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (textSizeLabel) axis_ptr->SetLabelSize(*textSizeLabel);
             if (textColorLabel) axis_ptr->SetLabelColor(*textColorLabel);
             if (textAlphaLabel) axis_ptr->SetLabelColor(TColor::GetColorTransparent(axis_ptr->GetLabelColor(), *textAlphaLabel));
+            // ROOT places a y title with offset 0 automatically next to the widest label, but the gap it leaves is the title size
+            // read as a fraction of the pad width (see TGaxis::PaintAxis), i.e. it grows for pads that are wider than high.
+            // With a pixel font the gap is the title height in every pad, so relative fonts are converted for the automatic placement.
+            if (axisLabel == 'Y' && axis_ptr->GetTitleOffset() == 0.f && axis_ptr->GetTitleFont() % 10 <= 2 && axis_ptr->GetTitleSize() > 0.f && axis_ptr->GetTitleSize() < 1.f) {
+              const double_t padWidthPixel = pad_ptr->GetWw() * pad_ptr->GetAbsWNDC();
+              const double_t padHeightPixel = pad_ptr->GetWh() * pad_ptr->GetAbsHNDC();
+              axis_ptr->SetTitleFont(axis_ptr->GetTitleFont() / 10 * 10 + 3);
+              axis_ptr->SetTitleSize(static_cast<float_t>(axis_ptr->GetTitleSize() * std::min(padWidthPixel, padHeightPixel)));
+            }
           }
 
           if (auto minScale = data->GetScaleMinimum()) {
@@ -1344,11 +1366,99 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     pad_ptr->Update();
   }
 
+  CheckFontSizes(canvas_ptr->GetListOfPrimitives());
+  if (mScale != 1.) {
+    std::set<TObject*> done;
+    ApplyScale(canvas_ptr.get(), done);
+    // axes, hatched fill areas, the ends of error bars and the dashes of line styles are painted with the absolute sizes defined in gStyle
+    sUnscaledStyle = StyleSizes{gStyle->GetLineWidth(), gStyle->GetHatchesLineWidth(), gStyle->GetEndErrorSize(), {}};
+    gStyle->SetLineWidth(ScaleLineWidth(gStyle->GetLineWidth()));
+    gStyle->SetHatchesLineWidth(ScaleLineWidth(static_cast<Width_t>(gStyle->GetHatchesLineWidth())));
+    gStyle->SetEndErrorSize(gStyle->GetEndErrorSize() * mScale);
+    // line styles are lists of dash and gap lengths (see TStyle::SetLineStyleString); styles 2-4 are fixed in the X11 backend and only scale in files
+    for (int32_t style = 1; style < 30; ++style) {
+      const string dashes = gStyle->GetLineStyleString(style);
+      sUnscaledStyle->lineStyles.push_back(dashes);
+      string scaledDashes;
+      std::istringstream stream(dashes);
+      for (int32_t length{}; stream >> length;) {
+        scaledDashes += std::to_string(std::lround(length * mScale)) + " ";
+      }
+      if (!scaledDashes.empty()) gStyle->SetLineStyleString(style, scaledDashes.data());
+    }
+  }
   canvas_ptr->cd();
   canvas_ptr->Modified();
   canvas_ptr->Update();
-  CheckFontSizes(canvas_ptr->GetListOfPrimitives());
   return canvas_ptr;
+}
+
+//**************************************************************************************************
+/**
+ * Scales a line width by the scale factor. ROOT line widths are integers, and graphs encode an
+ * exclusion zone as 100 x zone size + line width (see TGraphPainter); only the line width is scaled.
+ */
+//**************************************************************************************************
+Width_t PlotPainter::ScaleLineWidth(Width_t width) const
+{
+  const int32_t sign = (width < 0) ? -1 : 1;
+  const int32_t exclusionZone = std::abs(width) / 100 * 100;
+  const int32_t lineWidth = std::abs(width) % 100;
+  if (lineWidth == 0) return width;
+  const int32_t scaled = std::clamp(static_cast<int32_t>(std::lround(lineWidth * mScale)), 1, 99);
+  return static_cast<Width_t>(sign * (exclusionZone + scaled));
+}
+
+//**************************************************************************************************
+/**
+ * Scales all absolute sizes of a drawn object (and the objects it contains) by the scale factor:
+ * line widths, marker sizes, border sizes and text sizes of pixel fonts (precision 3).
+ * The draw option of the object is needed for ROOT features that use these sizes for other purposes.
+ * All other sizes are defined relative to the pad and therefore already scale with the canvas.
+ */
+//**************************************************************************************************
+void PlotPainter::ApplyScale(TObject* obj, std::set<TObject*>& done, const std::string& drawOption)
+{
+  if (!obj || !done.insert(obj).second) return;
+  auto applyToList = [&](TCollection* list) {
+    if (!list) return;
+    TIter next(list);
+    while (TObject* entry = next()) {
+      ApplyScale(entry, done, next.GetOption());
+    }
+  };
+  // ROOT moves filled histograms away from the frame by half of the frame line width (integer division) and then also draws their outer
+  // vertical edges (see TGraphPainter::PaintGrapHist): a frame line of width 1 has to stay 1, otherwise these edges would appear
+  auto scaleFrameLineWidth = [&](Width_t width) { return (width <= 1) ? width : ScaleLineWidth(width); };
+  if (auto frame = dynamic_cast<TFrame*>(obj)) {
+    frame->SetLineWidth(scaleFrameLineWidth(frame->GetLineWidth()));
+  } else if (auto line = dynamic_cast<TAttLine*>(obj)) {
+    line->SetLineWidth(ScaleLineWidth(line->GetLineWidth()));
+  }
+  // histograms drawn with option TEXT use their marker size as relative text size of the bin contents (see THistPainter::PaintText)
+  const bool isHistText = dynamic_cast<TH1*>(obj) && TString(drawOption).Contains("TEXT", TString::kIgnoreCase);
+  auto marker = dynamic_cast<TAttMarker*>(obj);
+  if (marker && !isHistText) marker->SetMarkerSize(marker->GetMarkerSize() * mScale);
+  auto text = dynamic_cast<TAttText*>(obj);
+  if (text && text->GetTextFont() % 10 == 3) text->SetTextSize(text->GetTextSize() * mScale);
+  if (auto pave = dynamic_cast<TPave*>(obj)) pave->SetBorderSize(static_cast<Int_t>(std::lround(pave->GetBorderSize() * mScale)));
+  if (auto pad = dynamic_cast<TPad*>(obj)) {
+    pad->SetFrameLineWidth(scaleFrameLineWidth(pad->GetFrameLineWidth()));
+    pad->SetBorderSize(static_cast<Short_t>(std::lround(pad->GetBorderSize() * mScale)));
+    applyToList(pad->GetListOfPrimitives());
+  }
+  if (auto hist = dynamic_cast<TH1*>(obj)) {
+    for (TAxis* axis : {hist->GetXaxis(), hist->GetYaxis(), hist->GetZaxis()}) {
+      if (axis->GetLabelFont() % 10 == 3) axis->SetLabelSize(axis->GetLabelSize() * mScale);
+      if (axis->GetTitleFont() % 10 == 3) axis->SetTitleSize(axis->GetTitleSize() * mScale);
+    }
+    applyToList(hist->GetListOfFunctions());
+  }
+  if (auto graph = dynamic_cast<TGraph*>(obj)) applyToList(graph->GetListOfFunctions());
+  if (auto multiGraph = dynamic_cast<TMultiGraph*>(obj)) applyToList(multiGraph->GetListOfGraphs());
+  if (auto stack = dynamic_cast<THStack*>(obj)) applyToList(stack->GetHists());
+  if (auto legend = dynamic_cast<TLegend*>(obj)) applyToList(legend->GetListOfPrimitives());
+  if (auto paveText = dynamic_cast<TPaveText*>(obj)) applyToList(paveText->GetListOfLines());
 }
 
 //**************************************************************************************************
@@ -1539,7 +1649,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     double_t lineHeightNDC = (double_t)lineHeightPixel / padHeightPixel;
     double_t symbolColWidthNDC = (double_t)symbolColWidthPixel / padWidthPixel;
     double_t titleWidthNDC = (double_t)titleWidthPixel / padWidthPixel;
-    double_t borderWidthNDC = box->GetBorderWidth().value_or(0.) / padWidthPixel;
+    double_t borderWidthNDC = mScale * box->GetBorderWidth().value_or(0.) / padWidthPixel;
     // double_t borderHeightNDC = box->GetBorderWidth().value_or(0.) / padHeightPixel;
 
     double_t totalWidthNDC{};
@@ -1608,8 +1718,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       const std::array<double_t, 4> freeArea{frameX1 + distanceX, frameY1 + distanceY, frameX2 - distanceX, frameY2 - distanceY};
 
       // the border is drawn centered on the edges of the box, so half of it sticks out on each side
-      const double_t borderX = box->GetBorderWidth().value_or(0.) / padWidthPixel;
-      const double_t borderY = box->GetBorderWidth().value_or(0.) / padHeightPixel;
+      const double_t borderX = mScale * box->GetBorderWidth().value_or(0.) / padWidthPixel;
+      const double_t borderY = mScale * box->GetBorderWidth().value_or(0.) / padHeightPixel;
       const double_t outerWidthNDC = totalWidthNDC + borderX;
       const double_t outerHeightNDC = totalHeightNDC + borderY;
 
@@ -1816,9 +1926,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 //**************************************************************************************************
 bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY)
 {
-  constexpr int32_t kCellSize = 10;  // grid cell size in pixels (as in TPad::PlaceBox)
-  const int32_t nx = static_cast<int32_t>(pad->GetWw()) / kCellSize;
-  const int32_t ny = static_cast<int32_t>(pad->GetWh()) / kCellSize;
+  const double_t cellSize = 10. * mScale;  // grid cell size in pixels (as in TPad::PlaceBox), scaled so that boxes are placed the same way at any scale
+  const int32_t nx = static_cast<int32_t>(pad->GetWw() / cellSize);
+  const int32_t ny = static_cast<int32_t>(pad->GetWh() / cellSize);
   if (nx <= 0 || ny <= 0) return false;
   vector<uint8_t> blocked(static_cast<size_t>(nx) * ny, 0u);  // cells occupied by drawn objects
 
@@ -2718,7 +2828,7 @@ tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad* pad
   } else {
     TLatex textBox{text};
     textBox.SetTextFont(font - 1);
-    double_t dy{pad->AbsPixeltoY(0) - pad->AbsPixeltoY(static_cast<int32_t>(text.GetTextSize()))};
+    double_t dy{pad->AbsPixeltoY(0) - pad->AbsPixeltoY(static_cast<int32_t>(text.GetTextSize() * mScale))};
     double_t textSize{dy / (pad->GetY2() - pad->GetY1())};
     textBox.SetTextSize(textSize);
     textBox.GetBoundingBox(width, height);

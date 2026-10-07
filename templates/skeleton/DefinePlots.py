@@ -17,6 +17,9 @@ def DefineDataSources(pm: PlotManager):
 
 
 def DefineBasePlots(pm: PlotManager):
+    """Base plots: layouts that the plots build upon (third argument of the Plot constructor).
+    The name describes the layout: <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap] with type 1d or 2d
+    (see PlotManager::MakeBasePlot for all of them and for how they are made with PanelLayout)."""
     pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
     pm.AddBasePlot(PlotManager.MakeBasePlot("1d_ratio"))
     pm.AddBasePlot(PlotManager.MakeBasePlot("2d"))

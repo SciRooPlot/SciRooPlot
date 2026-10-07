@@ -159,12 +159,14 @@ endif()
 add_library(SciRooPlot SHARED
   src/Plot.cpp
   src/PlotManager.cpp
+  src/PanelLayout.cpp
   src/PlotPainter.cpp
   src/Config.cpp
   src/util/Strings.cpp
   src/util/Paths.cpp
   include/SciRooPlot/Plot.h
   include/SciRooPlot/PlotManager.h
+  include/SciRooPlot/PanelLayout.h
   include/SciRooPlot/Config.h
   include/SciRooPlot/Logging.h
   src/PlotPainter.h

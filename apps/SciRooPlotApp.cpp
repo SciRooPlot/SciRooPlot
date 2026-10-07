@@ -146,11 +146,13 @@ int main(int argc, char* argv[])
     PRINT("-----------------------------------------------------------");
     PRINT("Settings:");
     PRINT("  srp settings");
-    PRINT("  srp color     (bright | dark | off)");
-    PRINT("  srp verbosity (debug | log | info | warning | error)");
-    PRINT("  srp plotmode  (show | pdf | eps | svg | png | gif | jpg)");
-    PRINT("  srp matchmode (exact | contains)");
-    PRINT("  srp matchcase (sensitive | insensitive)");
+    PRINT("  srp color       (bright | dark | off)");
+    PRINT("  srp verbosity   (debug | log | info | warning | error)");
+    PRINT("  srp plotmode    (show | pdf | eps | svg | png | gif | jpg)");
+    PRINT("  srp matchmode   (exact | contains)");
+    PRINT("  srp matchcase   (sensitive | insensitive)");
+    PRINT("  srp screenscale <factor>  (size of plots shown on screen, default 1)");
+    PRINT("  srp bitmapscale <factor>  (resolution of png/jpg/gif files, default 1)");
     PRINT("-----------------------------------------------------------");
     PRINT("Maintenance:");
     PRINT("  srp info");
@@ -224,6 +226,24 @@ int main(int argc, char* argv[])
     } else {
       ERROR("Invalid case sensistivity option for matching (sensitive | insensitive).");
       return 1;
+    }
+  } else if (command == "screenscale" || command == "bitmapscale") {
+    double scale{};
+    try {
+      size_t parsed{};
+      scale = std::stod(project, &parsed);
+      if (parsed != project.size()) scale = 0.;
+    } catch (const std::exception&) {
+      scale = 0.;
+    }
+    if (!(scale > 0.)) {
+      ERROR("Invalid {} '{}' (positive number, e.g. 1.5).", command, project);
+      return 1;
+    }
+    if (command == "screenscale") {
+      Config::GetMutable().SetScreenScale(scale);
+    } else {
+      Config::GetMutable().SetBitmapScale(scale);
     }
   } else if (command == "info") {
     auto getenv = [](const char* name) {

@@ -168,6 +168,15 @@ void Config::LoadConfig()
           mMatchContains = setting.second.get_value<bool>();
           continue;
         }
+        if (setting.first == "screenScale" || setting.first == "bitmapScale") {
+          const double scale = setting.second.get_value<double>();
+          if (!(scale > 0.)) {
+            std::cerr << "Ignoring invalid " << setting.first << " " << scale << " in " << mSettingsFile << "." << std::endl;
+          } else {
+            (setting.first == "screenScale" ? mScreenScale : mBitmapScale) = scale;
+          }
+          continue;
+        }
       }
     } catch (const std::exception& e) {
       std::cerr << "Cannot load settings file " << mSettingsFile << ": " << e.what() << ". Using default settings." << std::endl;
@@ -204,6 +213,8 @@ void Config::SaveConfig()
   settingsTree.add("plotMode", mPlotMode);
   settingsTree.add("matchCaseInsensitive", mMatchCaseInsensitive);
   settingsTree.add("matchContains", mMatchContains);
+  settingsTree.add("screenScale", mScreenScale);
+  settingsTree.add("bitmapScale", mBitmapScale);
   write_info(SettingsFile(), settingsTree);
 
   // save projects tree
@@ -237,6 +248,8 @@ void Config::ShowSettings() const
   PRINT("Plot mode:       {}", mPlotMode);
   PRINT("Match mode:      {}", mMatchContains ? "contains" : "exact");
   PRINT("Match case:      {}", mMatchCaseInsensitive ? "insensitive" : "sensitive");
+  PRINT("Screen scale:    {}", mScreenScale);
+  PRINT("Bitmap scale:    {}", mBitmapScale);
   PRINT("Current project: {}", mCurrentProject.empty() ? "<none>" : mCurrentProject);
 }
 
@@ -578,6 +591,16 @@ void Config::SetMatchCaseInsensitive(bool matchCaseInsensitive)
 void Config::SetMatchContains(bool matchContains)
 {
   mMatchContains = matchContains;
+}
+
+void Config::SetScreenScale(double screenScale)
+{
+  mScreenScale = screenScale;
+}
+
+void Config::SetBitmapScale(double bitmapScale)
+{
+  mBitmapScale = bitmapScale;
 }
 
 }  // namespace SciRooPlot

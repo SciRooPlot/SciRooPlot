@@ -146,6 +146,7 @@
   if lang == "py" {
     let t = it.text
     t = t.replace("{}", "None")
+    t = t.replace("::", ".")
     t = t.replace(regex("\btrue\b"), "True")
     t = t.replace(regex("\bfalse\b"), "False")
     // raw's own 0.8em size is already in effect inside this show rule, so only
@@ -465,6 +466,7 @@
           [#prompt `srp plotmode <mode>`], [Default mode of `plot` (initially `show`).],
           [#prompt `srp matchmode exact|contains`], [Patterns must match the whole name, or any part of it.],
           [#prompt `srp matchcase sensitive|insensitive`], [Case sensitivity of the patterns.],
+          [#prompt `srp screenscale|bitmapscale <factor>`], [Size of plots on screen, or resolution of png/jpg/gif files (initially `1`).],
           [#prompt `srp print|open <file>`], [List the contents of a ROOT file, or open it in a `TBrowser`.],
           [#prompt `srp info` / `srp help`], [Show installation details, or all commands.],
         ),
@@ -918,9 +920,9 @@
 
       - Default settings applied to `plot[0]` automatically affect all pads unless overridden.
 
-      - Several ready-to-use base plots (e.g. `1d`, `2d`, `1d_ratio`, `1d_3panels`) are provided with SciRooPlot.
+      - `PlotManager::MakeBasePlot(name)` provides base plots with consistent layout among them: text, ticks, distances, lines and markers are the same in every panel, so plots of different layouts look alike. The name describes the layout: `<type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]`, e.g. `1d`, `1d_ratio`, `2d`, `1d_wide`, `1d_2x1`, `1d_3x1`, `1d_2x1_ratio`, `1d_2x2`, `2d_2x1`.
 
-      - Existing base plots can be used directly or modified to create custom layouts.
+      - Other layouts are made with `PanelLayout`: panels in rows (`Panel`, `Gap()`, `Empty()`), lengths in pixels; panels that touch share their axis, pads are numbered row by row. The code of `MakeBasePlot` is the start for your own.
 
       - Axis ranges, titles, scales, and other axis properties are configured intuitively through plot[pad]['X'], ['Y'], and ['Z'].
 
@@ -974,18 +976,26 @@
       #code-block(
         [
           ```cpp
-          pm.AddBasePlot(PlotManager::MakeBasePlot("1d"));
-          // create new plot on basis of "1d" base plot:
-          Plot plot("myPlot", "myGroup", "1d");
-          plot[1]['X'].SetRange(0., 10.).SetTitle("x title");
+          pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
+          // create new plot on basis of this base plot:
+          Plot plot("myPlot", "myGroup", "1d_ratio");
+          // an own layout in the same style (see MakeBasePlot):
+          Plot two("2x2_3", PanelLayout({{Panel(), Panel()},
+                                         {Panel(), Empty()}}));
+          two[0].SetDefaultTextFont(42);
+          pm.AddBasePlot(two);
           ```
         ],
         [
           ```python
-          pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
-          # create a new plot based on the "1d" base plot
-          plot = Plot("myPlot", "myGroup", "1d")
-          plot[1]['X'].SetRange(0., 10.).SetTitle("x title")
+          pm.AddBasePlot(PlotManager.MakeBasePlot("1d_ratio"))
+          # create a new plot based on this base plot
+          plot = Plot("myPlot", "myGroup", "1d_ratio")
+          # an own layout in the same style (see MakeBasePlot)
+          two = Plot("2x2_3", PanelLayout([[Panel(), Panel()],
+                                           [Panel(), Empty()]]))
+          two[0].SetDefaultTextFont(42)
+          pm.AddBasePlot(two)
           ```
         ],
       )
@@ -1581,7 +1591,7 @@
 ]
 
 // ============================================================================
-// Appendix: complete accessor reference, generated from PlotManager.h / Plot.h
+// Appendix: complete accessor reference, generated from PlotManager.h / Plot.h / PanelLayout.h
 // (C++/Python parity for these signatures is handled by the show rule near
 // the top of this file.)
 // ============================================================================
@@ -1595,7 +1605,6 @@
     [
       #api-section("PlotManager", (
         [`PlotManager(projectName = "")`], [Construct a manager for a named project.],
-        [`MakeBasePlot(name = "1d", screenResolution = 100)`], [Static: retrieve a predefined base plot (`1d`, `2d`, `1d_ratio`, `1d_3panels`).],
         [`AddDataSource(id, files, replace = false)`], [Register files, directories or in-memory ROOT objects under an ID (`replace`: clear the ID first).],
         [#names("SaveDataSources(file = {})", "LoadDataSources(file = {}, replace = false)")], [Save or reload the registered data sources (default: the project's file).],
         [`AddPlot(plot)` / `AddBasePlot(basePlot)`], [Register a plot, or a reusable base plot layout.],
@@ -1612,6 +1621,11 @@
     [
       #api-section("Plot", (
         [`Plot(name, group = "", basePlot = {})`], [Create a plot in a figure group, optionally from a base plot.],
+        [`Plot(name, layout)`], [Base plot from a `PanelLayout`: panels in rows (`Panel(w, h)`, `Gap()`, `Empty()`), lengths in pixels kept equal in every panel.],
+        [`PlotManager::MakeBasePlot(name = "1d")`], [Base plots with consistent layout, named `<type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]` (type `1d` or `2d`), e.g. `1d_ratio`, `2d`, `1d_3x1`, `1d_2x1_ratio`.],
+        [#names("PanelLayout(rows = {{Panel()}})", "PanelLayout(sizes, rows)")], [Arrangement of panels, or the same lengths with other panels.],
+        [#names("SetPanelSize(px)", "SetMargins(top, bottom, left, right)", "SetZAxisMargin(px)", "SetPanelSpacing(px)")], [Layout: standard panel (638), space around the panels (32, 118, 118, 32), for the colour scale (268), between touching panels (0).],
+        [#names("SetTextSize(px)", "SetTitleSize(px)", "SetTickLength(px)", "SetLabelOffset(px)", "SetXTitleOffset(px)", "SetYTitleOffset(px)", "SetZTitleOffset(px)", "SetLineWidth(w)", "SetMarkerSize(s)")], [Layout: text (31.52), axis titles (39.4), ticks (19.15), labels from the axis (3.94), titles from the axis (x 63.04, y automatic, z 122.9), ROOT line width (5) and marker size (1.4).],
         [`Plot(other, name, group = {})`], [Copy `other` under a new name (and optionally a new group).],
         [`plot[padID]` / `GetPad(padID)`], [Access a pad by index.],
         [`plot += other`], [Append the pads of another plot into this one.],
@@ -1660,7 +1674,7 @@
 ]
 
 #slide[
-  #slide-title("Appendix: Pad (2/2) – Layout & Palette")
+  #slide-title("Appendix: Pad (2/2) – PanelLayout & Palette")
   #grid(
     columns: (49%, 49%),
     gutter: 2%,

@@ -52,22 +52,20 @@ def DefineDataSources(pm: PlotManager):
 
 
 def DefineBasePlots(pm: PlotManager):
-    """Base plots: layouts that the plots build upon (third argument of the Plot constructor)."""
-    pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
-    pm.AddBasePlot(PlotManager.MakeBasePlot("1d_ratio"))  # main pad and a ratio pad
-    pm.AddBasePlot(PlotManager.MakeBasePlot("2d"))  # room for the colour scale
+    """Base plots: layouts that the plots build upon (third argument of the Plot constructor).
+    SciRooPlot provides base plots with consistent layout among them: text sizes, tick lengths, distances, line
+    widths and marker sizes are the same in every panel, so that plots of different layouts look alike.
+    The name describes the layout: <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap], with type 1d (plain
+    panels) or 2d (panels with colour scale), wide or tall panels, a grid of panels sharing their axes, a ratio
+    panel below each panel, or gaps between independent panels. Pads are numbered row by row.
+    The code of PlotManager::MakeBasePlot shows how they are made with PanelLayout, as a start for your own."""
+    for name in ["1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "2d", "2d_2x1"]:
+        pm.AddBasePlot(PlotManager.MakeBasePlot(name))
     # a base plot can be adapted before adding it, e.g. for all 2d plots with a logarithmic z axis
-    plot2dLog = PlotManager.MakeBasePlot("2d")
-    plot2dLog.SetName("2d_logz")
-    plot2dLog[1]['Z'].SetLog()
-    pm.AddBasePlot(plot2dLog)
-    # a wide layout, e.g. for trends vs. run number: same height (and therefore text sizes) as "1d"
-    wide = PlotManager.MakeBasePlot("1d")
-    wide.SetName("wide")
-    wide.SetDimensions(1024, 788, True)  # the PDF is at most 1.3 times wider than high
-    wide[0].SetMargins(0.04, 0.15, 0.13, 0.03)
-    pm.AddBasePlot(wide)
-    pm.AddBasePlot(PlotManager.MakeBasePlot("1d_3panels"))  # three panels side by side
+    logz = PlotManager.MakeBasePlot("2d")
+    logz.SetName("2d_logz")
+    logz[1]['Z'].SetLog()
+    pm.AddBasePlot(logz)
 
 
 def DefineHiggsPlots(pm: PlotManager):
@@ -237,6 +235,15 @@ def DefineDetectorPlots(pm: PlotManager):
     plot[1].SetPalette(kViridis)
     pm.AddPlot(plot)
 
+    # two colour maps side by side: data and simulation
+    plot = Plot("etaPhiDataVsSim", "detector/tracking", "2d_2x1")
+    plot[1].AddData("hEtaPhi", "TrackQA")
+    plot[1].AddText(0.15, 0.9, "data")
+    plot[2].AddData("hEtaPhi", "TrackQA_MC")
+    plot[2].AddText(0.15, 0.9, "simulation")
+    plot[0].SetPalette(kViridis)
+    pm.AddPlot(plot)
+
     # efficiency = reconstructed / generated; SetIsCorrelated() gives binomial errors
     plot = Plot("trackingEfficiency", "detector/tracking", "1d")
     plot[1].AddRatio(["hPt", "TrackQA_MC"], ["hPtGen", "TrackQA_MC"]).SetIsCorrelated()
@@ -329,7 +336,7 @@ def DefineDetectorPlots(pm: PlotManager):
 
     # ---- run-by-run quality assurance -----------------------------------------------------------
     # wide custom base plot; AddLine draws a line between two points in axis coordinates
-    plot = Plot("meanMultiplicityVsRun", "detector/qa", "wide")
+    plot = Plot("meanMultiplicityVsRun", "detector/qa", "1d_wide")
     plot[1].AddData("runQA", "runQA", "run average").Scatter("run", "meanNch", "0.", "meanNch_err")
     plot[1].AddLine((544000.0, 9.6), (544500.0, 9.6), "reference").SetLine(kRed + 1, kDashed, 2.0)
     plot[1].AddLegend(0.718, 0.914)
@@ -441,7 +448,7 @@ def DefineHeavyIonPlots(pm: PlotManager):
     pm.AddPlot(plot)
 
     # R_AA in three panels: Numer().Scale() divides the Pb-Pb yield by <N_coll> -------------------
-    plot = Plot("nuclearModification", "heavyion", "1d_3panels")
+    plot = Plot("nuclearModification", "heavyion", "1d_3x1")
     for i, cent in enumerate(centralities):
         pad = plot[i + 1]
         label = "Pb-Pb / pp" if i == 0 else None  # one legend entry is enough
@@ -488,6 +495,38 @@ def DefineHeavyIonPlots(pm: PlotManager):
         plot[1].AddData("hPtEtaCent", "heavyion", label).Project([0], [(2, low, high)], True).Normalize()
     plot[1].AddLegend()
     plot[1]['Y'].SetLog().SetTitle("normalised counts")
+    pm.AddPlot(plot)
+
+    # two centrality classes side by side, each with the R_AA below: the panels of a row share the y axis,
+    # so their ranges are set on plot[0]; pads are numbered row by row (1, 2 above, 3, 4 below)
+    plot = Plot("spectraAndRaa", "heavyion", "1d_2x1_ratio")
+    for i, cent in enumerate([centralities[0], centralities[2]]):  # 0-10 and 30-50
+        plot[i + 1].AddData("cent_" + cent + "/ptSpec", "heavyion", "Pb-Pb " + cent + "%")
+        plot[i + 1].AddData("ptSpec", "data", "pp #times #LT#it{N}_{coll}#GT").Scale(ncoll[cent]).SetOptions(hist).SetLine(kGray + 2, kDashed, 3.0)
+        plot[i + 1].AddLegend()
+        plot[i + 3].AddRatio(["cent_" + cent + "/ptSpec", "heavyion"], ["ptSpec", "data"]).Numer().Scale(1.0 / ncoll[cent])
+    plot[0]['X'].SetLog().SetRange(0.15, 10.0)
+    plot[1]['Y'].SetLog().SetRange(1e-3, 1e6).SetTitle("d#it{N}/d#it{p}_{T} (GeV/#it{c})^{-1}")
+    plot[2]['Y'].SetLog().SetRange(1e-3, 1e6)
+    plot[3]['Y'].SetRange(0.0, 1.4).SetTitle("#it{R}_{AA}")
+    plot[4]['Y'].SetRange(0.0, 1.4)
+    pm.AddPlot(plot)
+
+    # four centrality classes in a grid with shared axes
+    plot = Plot("ptInCentralityGrid", "heavyion", "1d_2x2")
+    for i, (low, high) in enumerate([(0.0, 9.9), (10.0, 29.9), (30.0, 49.9), (50.0, 79.9)]):
+        plot[i + 1].AddData("hPtEtaCent", "heavyion").Project([0], [(2, low, high)], True).Normalize()
+        plot[i + 1].AddText(0.6, 0.85, f"{int(low)}-{int(high + 0.1)}%")
+    plot[0]['Y'].SetLog().SetRange(1e-6, 1.0).SetTitle("normalised counts")
+    pm.AddPlot(plot)
+
+    # two panels side by side, sharing the y axis
+    plot = Plot("flowCentralVsPeripheral", "heavyion", "1d_2x1")
+    for i, cent in enumerate([centralities[0], centralities[2]]):  # 0-10 and 30-50
+        plot[i + 1].AddData("cent_" + cent + "/v2", "heavyion")
+        plot[i + 1].AddText(0.2, 0.85, "Pb-Pb " + cent + "%")
+    plot[1].AddText(0.2, 0.75, EXPERIMENT + " // #it{v}_{2}{2}")
+    plot[0]['Y'].SetRange(0.0, 0.3).SetTitle("#it{v}_{2}")
     pm.AddPlot(plot)
 
 

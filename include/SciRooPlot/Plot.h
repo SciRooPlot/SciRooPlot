@@ -111,6 +111,8 @@ enum box_placement_t : uint8_t {
   bottom_left,
 };
 
+class PanelLayout;
+
 //**************************************************************************************************
 /**
  * Class for internal representation of a plot.
@@ -130,6 +132,7 @@ class Plot
   Plot() = default;
   explicit Plot(const boost::property_tree::ptree& plotTree);
   explicit Plot(const std::string& name, const std::string& group = "", const std::optional<std::string>& basePlot = {});
+  Plot(const std::string& name, const PanelLayout& layout);  // a base plot with the panels and lengths of the layout (see Layout.h)
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
   void operator+=(const Plot& plot);

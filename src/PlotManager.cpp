@@ -19,6 +19,7 @@
 #include "SciRooPlot/PlotManager.h"
 
 #include "SciRooPlot/Logging.h"
+#include "SciRooPlot/PanelLayout.h"
 
 #include <ROOT/RCsvDS.hxx>
 #include <ROOT/RDFHelpers.hxx>
@@ -588,6 +589,94 @@ void PlotManager::AddPlot(Plot plot)
                               }),
                mPlots.end());
   mPlots.push_back(std::move(plot));
+}
+
+//**************************************************************************************************
+/**
+ * Base plots with consistent layout among them (see PlotManager.h). The name describes the layout:
+ * <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]. The geometry and the sizes come from the PanelLayout
+ * (its defaults are the proportions of the 788 x 788 pixel standard plot), the look is set with the ordinary
+ * plot setters, and the conventions of the ratio pads are added afterwards.
+ */
+//**************************************************************************************************
+Plot PlotManager::MakeBasePlot(const string& name)
+{
+  static const std::regex pattern(R"(^(1d|2d)(?:_(wide|tall))?(?:_([1-9]\d*)x([1-9]\d*))?(_ratio)?(_gap)?$)");
+  std::smatch match;
+  if (!std::regex_match(name, match, pattern)) {
+    ERROR("Unknown base plot {}: the name must follow <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap] with type 1d or 2d (e.g. 1d, 1d_ratio, 2d, 1d_wide, 1d_3x1, 1d_2x1_ratio).", name);
+    return Plot();
+  }
+  const bool zAxis = (match[1] == "2d");
+  const string shape = match[2];
+  const int32_t nCols = match[3].matched ? std::stoi(match[3]) : 1;
+  const int32_t nRows = match[4].matched ? std::stoi(match[4]) : 1;
+  const bool ratio = match[5].matched;
+  const bool gap = match[6].matched;
+  if (nCols * nRows * (ratio ? 2 : 1) > 255) {
+    ERROR("Base plot {} would have more than 255 pads.", name);
+    return Plot();
+  }
+
+  // the arrangement of the panels, in units of the standard panel
+  const double_t golden = 1.618;      // aspect ratio of wide and tall panels
+  const double_t ratioHeight = 0.37;  // height of the ratio panels
+  const double_t width = (shape == "wide") ? golden : 1.;
+  const double_t height = (shape == "tall") ? golden : 1.;
+  vector<vector<Panel>> rows;
+  vector<uint8_t> ratioPads;
+  uint8_t padID = 1;
+  for (int32_t row = 0; row < nRows; ++row) {
+    if (row > 0 && gap) rows.push_back({Gap()});
+    vector<Panel> mainRow;
+    vector<Panel> ratioRow;
+    for (int32_t col = 0; col < nCols; ++col) {
+      if (col > 0 && gap) {
+        mainRow.push_back(Gap());
+        ratioRow.push_back(Gap());
+      }
+      mainRow.push_back(zAxis ? Panel(width, height).ZAxis() : Panel(width, height));
+      ratioRow.push_back(Panel(width, ratioHeight));
+    }
+    rows.push_back(mainRow);
+    padID += nCols;
+    if (ratio) {
+      rows.push_back(ratioRow);
+      for (int32_t col = 0; col < nCols; ++col)
+        ratioPads.push_back(padID++);
+    }
+  }
+
+  // the sizes shared by all base plots, in pixels of the canvas (these are the defaults of PanelLayout)
+  PanelLayout sizes;
+  sizes.SetTextSize(31.52).SetTitleSize(39.4).SetLineWidth(5).SetMarkerSize(1.4);
+
+  // the look shared by all base plots: fonts, colours, markers and axis conventions
+  Plot plot(name, PanelLayout(sizes, rows));
+  plot.SetTransparent();
+  plot[0].SetTransparent();
+  plot[0].SetFrameFill(10, 1001);
+  plot[0].SetDefaultTextFont(42);
+  plot[0].SetDefaultColors({kBlack, kBlue + 1, kRed + 1, kYellow + 1, kMagenta - 4, kGreen + 3, kOrange + 1,
+                            kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7, kMagenta + 1, kPink + 8, kCyan - 6,
+                            kMagenta, kRed + 2, kGreen + 2, kOrange + 2, kMagenta + 2, kYellow + 3,
+                            kGray + 2, kBlue + 2, kYellow + 2, kRed, kBlue, kMagenta + 3, kGreen + 4, 28, 8, 15, 17, 12});
+  plot[0].SetDefaultMarkerStyles({kFullCircle});
+  plot[0].SetDefaultLineStyles({kSolid});
+  plot[0].SetDefaultFillStyles({0});
+  plot[0].SetDefaultDrawingOptionHist2d(colz);
+  plot[0].SetDefaultDrawingOptionGraph(points);
+  plot[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
+  plot[0]['Y'].SetOppositeTicks().SetMaxDigits(3);
+  plot[0]['Z'].SetMaxDigits(3);
+  if (zAxis) plot[0].SetRedrawAxes();
+
+  // conventions of the ratio pads
+  for (const uint8_t ratioPad : ratioPads) {
+    plot[ratioPad].SetRefFunc("1");
+    plot[ratioPad]['Y'].SetNumDivisions(305).SetTitleCenter();
+  }
+  return plot;
 }
 
 //**************************************************************************************************
@@ -1253,7 +1342,9 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     return true;
   }
 
-  PlotPainter painter;
+  // the personal scale settings only change the number of pixels of plots on screen and of bitmap files, vector files do not depend on them
+  const bool isBitmapMode = (mode == "png") || (mode == "jpg") || str_contains(mode, "gif");
+  PlotPainter painter(isInteractiveMode ? Config::Get().ScreenScale() : (isBitmapMode ? Config::Get().BitmapScale() : 1.));
   gROOT->SetBatch(!isInteractiveMode && !isMacroMode);
   shared_ptr<TCanvas> canvas{painter.GeneratePlot(fullPlot, mDataBuffer)};
   if (!canvas) return false;
@@ -2159,187 +2250,6 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   for (const auto& [info, counts] : entryCounts) {
     if (!counts.second) WARNING("No entries selected in {} {} ({}).", type, DataLocation(dataSource, name), info->GetDescription());
   }
-}
-
-//****************************************************************************************
-/**
- * Defines a set of standard base plots with quadratic axis frame and consistent layout among them.
- * The following pre-defined layouts are available: 1d, 2d, 1d_ratio and 1d_3panels.
- * By specifying a screen resolution in dpi, the size of the plot displayed in interactive mode (or when saved as bitmap) can be modified.
- * For multiple of 72dpi the resulting plot will have the best agreement with the pdf version.
- */
-//****************************************************************************************
-Plot PlotManager::MakeBasePlot(const string& name, double_t screenResolution)
-{
-  // info: the PDF backend of ROOT can only create plots with resolution of 72 dpi and maximum sizes defined by the A4 format (20cm x 26cm -> 567px x 737px)
-  int32_t pixelBase = static_cast<int32_t>(std::round(screenResolution * 567. / 72.));  // 567p / 72dpi == 20cm / 2.54in/cm (final pdf size)
-  double_t frameSize = 0.81;                                                            // size of (quadratic) axis frame in percentage of pixelBase
-  double_t axisMargin = 0.15;                                                           // margins of x and y axes in units relative to pixelBase side length (corresponds to the space in bottom and left of the plot to the axis frame)
-  double_t defaultTextSize = 0.04;                                                      // default text size relative to pixelBase
-  double_t axisTitleSize = 0.05;                                                        // text size of axis titles relative to pixelBase
-  double_t wideSideScale = 1.3;                                                         // for asymmetric plots: scale of the larger side wrt. pixelBase (corresponds to the maximum / optimum of 26cm / 20cm)
-
-  double_t markerSize = 1.4;
-  uint8_t lineWidth = 5;
-
-  const vector<int16_t> defaultColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1,
-                                         kMagenta - 4, kGreen + 3, kOrange + 1,
-                                         kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7,
-                                         kMagenta + 1, kPink + 8, kCyan - 6,
-                                         kMagenta, kRed + 2, kGreen + 2,
-                                         kOrange + 2, kMagenta + 2, kYellow + 3,
-                                         kGray + 2, kBlue + 2, kYellow + 2,
-                                         kRed, kBlue, kMagenta + 3,
-                                         kGreen + 4, 28, 8, 15, 17, 12};
-
-  if (name == "1d") {
-    // -----------------------------------------------------------------------
-    Plot plot(name);
-    plot.SetDimensions(pixelBase, pixelBase, true);
-    plot.SetTransparent();
-    plot[0].SetFrameFill(10, 1001);
-    plot[0].SetDefaultColors(defaultColors);
-    plot[0].SetDefaultFillStyles({0});
-    plot[0].SetDefaultMarkerStyles({kFullCircle});
-    plot[0].SetDefaultLineStyles({kSolid});
-    plot[0].SetDefaultTextFont(42);
-    plot[0].SetDefaultTextSize(defaultTextSize);
-    plot[0].SetDefaultMarkerSize(markerSize);
-    plot[0].SetDefaultLineWidth(lineWidth);
-    plot[0].SetDefaultDrawingOptionHist2d(colz);
-    plot[0].SetDefaultDrawingOptionGraph(points);
-    plot[0].SetTransparent();
-    plot[0].SetMargins(1. - (frameSize + axisMargin), axisMargin, axisMargin, 1. - (frameSize + axisMargin));
-    plot[0]['X'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
-    plot[0]['Y'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
-    plot[1].SetPosition(0., 0., 1., 1.);
-    return plot;
-  }  // -----------------------------------------------------------------------
-
-  if (name == "1d_ratio") {
-    // -----------------------------------------------------------------------
-    Plot plot(name);
-    plot.SetDimensions(pixelBase, static_cast<int32_t>(std::round(wideSideScale * pixelBase)), true);
-    plot.SetTransparent();
-    plot[0].SetFrameFill(10, 1001);
-    plot[0].SetDefaultColors(defaultColors);
-    plot[0].SetDefaultFillStyles({0});
-    plot[0].SetDefaultMarkerStyles({kFullCircle});
-    plot[0].SetDefaultLineStyles({kSolid});
-    plot[0].SetDefaultMarkerSize(markerSize);
-    plot[0].SetDefaultLineWidth(lineWidth);
-    plot[0].SetDefaultDrawingOptionHist2d(colz);
-    plot[0].SetDefaultDrawingOptionGraph(points);
-    plot[0].SetDefaultTextFont(42);
-    plot[0].SetTransparent();
-    double_t ratioFraction = 1. - (1. - axisMargin) / wideSideScale;
-    plot[1].SetPosition(0., ratioFraction, 1., 1.);
-    plot[2].SetPosition(0., 0., 1., ratioFraction);
-    plot[1].SetMargins(1. - frameSize / (1 - axisMargin), 0., axisMargin, 1. - (frameSize + axisMargin));
-    plot[2].SetMargins(0., 1. / (wideSideScale * ratioFraction) * axisMargin, axisMargin, 1. - (frameSize + axisMargin));
-    plot[1].SetDefaultTextSize(1. / (wideSideScale * (1. - ratioFraction)) * defaultTextSize);
-    plot[2].SetDefaultTextSize(1. / (wideSideScale * ratioFraction) * defaultTextSize);
-    plot[1]['X'].SetTitleSize(0.).SetLabelSize(0.).SetOppositeTicks().SetNoExponent();
-    plot[1]['Y'].SetTitleSize(1. / (wideSideScale * (1 - ratioFraction)) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
-    plot[2]['X'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
-    plot[2]['Y'].SetTitleSize(1. / (wideSideScale * ratioFraction) * axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
-    plot[2]['Y'].SetTitleOffset(0.6);  // MEMO: for some reason the ROOT automatic title offset determination does not work for the lower plot
-    plot[2].SetRefFunc("1").SetColor(kBlack);
-    plot[2]['X'].SetTickLength(0.06);
-    plot[2]['Y'].SetNumDivisions(305).SetTitleCenter();
-    return plot;
-  }  // -----------------------------------------------------------------------
-
-  if (name == "2d") {
-    // -----------------------------------------------------------------------
-    Plot plot(name);
-    plot.SetDimensions(static_cast<int32_t>(std::round(wideSideScale * pixelBase)), pixelBase, true);
-    plot.SetTransparent();
-    plot[0].SetFrameFill(10, 1001);
-    plot[0].SetDefaultColors(defaultColors);
-    plot[0].SetDefaultFillStyles({0});
-    plot[0].SetDefaultMarkerStyles({kFullCircle});
-    plot[0].SetDefaultLineStyles({kSolid});
-    plot[0].SetDefaultDrawingOptionHist2d(colz);
-    plot[0].SetDefaultDrawingOptionGraph(points);
-    plot[0].SetDefaultTextFont(42);
-    plot[0].SetDefaultTextSize(defaultTextSize);
-    plot[0].SetDefaultMarkerSize(markerSize);
-    plot[0].SetDefaultLineWidth(lineWidth);
-    plot[0].SetTransparent();
-    plot[0].SetMargins(1. - (frameSize + axisMargin), axisMargin, axisMargin / wideSideScale, 1. - (frameSize + axisMargin) / wideSideScale);
-    plot[0]['X'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
-    plot[0]['Y'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
-    plot[0]['Z'].SetTitleSize(axisTitleSize).SetMaxDigits(3).SetTitleOffset(1.5);
-    plot[0].SetRedrawAxes();
-    plot[1].SetPosition(0., 0., 1., 1.);
-    return plot;
-  }  // -----------------------------------------------------------------------
-
-  if (name == "1d_3panels") {
-    // -----------------------------------------------------------------------
-    // extension of the 1d base plot with adjacing panels
-    // first calculate some quantities for the size conversions
-    double_t totalPixelHeight = pixelBase;
-    double_t leftMarginPixel = std::round(axisMargin * totalPixelHeight);
-    double_t rightMarginPixel = std::round((1 - (frameSize + axisMargin)) * totalPixelHeight);
-    double_t widthFramePixel = totalPixelHeight - leftMarginPixel - rightMarginPixel;
-    double_t totalPixelWidth = 3 * widthFramePixel + leftMarginPixel + rightMarginPixel;
-    // margins
-    double_t leftMarginPad1 = leftMarginPixel / (leftMarginPixel + widthFramePixel);
-    double_t rightMarginPad3 = rightMarginPixel / (rightMarginPixel + widthFramePixel);
-    // positions
-    double_t x1 = (widthFramePixel + leftMarginPixel) / totalPixelWidth;
-    double_t x2 = x1 + widthFramePixel / totalPixelWidth;
-    // text scaling factors (for the second and third pad the text will be calculated wrt. the width instead of the height (since it is smaller) and therefore need additional scaling
-    double_t textScalePad2 = totalPixelHeight / widthFramePixel;
-    double_t textScalePad3 = totalPixelHeight / (widthFramePixel + rightMarginPixel);
-    // tick length is specified relative to pad width -> since width is different for the three pads, need adjustments to have consistent lengths between the pads
-    // gauge it to the first pad -> scale by relative width decrease of pad 2 and 3 wrt pad 1
-    double_t tickLengthPad1 = 0.03;
-    double_t totalPixelWidthPad1 = widthFramePixel + leftMarginPixel;
-    double_t tickLengthPad2 = tickLengthPad1 * widthFramePixel / totalPixelWidthPad1;
-    double_t tickLengthPad3 = tickLengthPad1 * (widthFramePixel + rightMarginPixel) / totalPixelWidthPad1;
-
-    Plot plot(name);
-    plot.SetDimensions(totalPixelWidth, totalPixelHeight, true);
-    plot.SetTransparent();
-    plot[0].SetFrameFill(10, 1001);
-    plot[0].SetDefaultColors(defaultColors);
-    plot[0].SetDefaultFillStyles({0});
-    plot[0].SetDefaultMarkerStyles({kFullCircle});
-    plot[0].SetDefaultLineStyles({kSolid});
-    plot[0].SetDefaultTextFont(42);
-    plot[0].SetDefaultTextSize(defaultTextSize);
-    // plot[0].SetDefaultLineWidth(1); // adjusted to make it look the same in lower pdf resolution
-    plot[0].SetDefaultMarkerSize(markerSize);
-    plot[0].SetDefaultLineWidth(lineWidth);
-    plot[0].SetDefaultDrawingOptionHist2d(colz);
-    plot[0].SetDefaultDrawingOptionGraph(points);
-    plot[0].SetTransparent();
-    plot[1].SetPosition(0., 0., x1, 1.);
-    plot[2].SetPosition(x1, 0., x2, 1.);
-    plot[3].SetPosition(x2, 0., 1., 1.);
-    plot[1].SetMargins(1. - (frameSize + axisMargin), axisMargin, leftMarginPad1, 0.0);
-    plot[2].SetMargins(1. - (frameSize + axisMargin), axisMargin, 0.0, 0.0);
-    plot[3].SetMargins(1. - (frameSize + axisMargin), axisMargin, 0.0, rightMarginPad3);
-    plot[0]['X'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
-    plot[0]['Y'].SetTitleSize(axisTitleSize).SetOppositeTicks().SetMaxDigits(3);
-    plot[2].SetDefaultTextSize(textScalePad2 * defaultTextSize);
-    plot[2]['X'].SetTitleSize(textScalePad2 * axisTitleSize);
-    plot[2]['Y'].SetTitleSize(textScalePad2 * axisTitleSize);
-    plot[3].SetDefaultTextSize(textScalePad3 * defaultTextSize);
-    plot[3]['X'].SetTitleSize(textScalePad3 * axisTitleSize);
-    plot[3]['Y'].SetTitleSize(textScalePad3 * axisTitleSize);
-    plot[2]['Y'].SetTitle("").SetTitleSize(0.).SetLabelSize(0.);
-    plot[3]['Y'].SetTitle("").SetTitleSize(0.).SetLabelSize(0.);
-    plot[2]['X'].SetTickLength(tickLengthPad2);
-    plot[3]['X'].SetTickLength(tickLengthPad3);
-    return plot;
-  }  // -----------------------------------------------------------------------
-
-  ERROR("Unknown default base plot {}.", name);
-  return Plot();
 }
 
 //**************************************************************************************************
