@@ -1110,66 +1110,78 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           std::replace(drawingOptions.begin(), drawingOptions.end(), 'Z', ' ');
 
           // define data appearance
-          if (auto markerColor = get_first(data->GetMarkerColor(),
-                                           pick(defaultSettingIndices[0], pad.GetDefaultMarkerColors()),
-                                           pick(defaultSettingIndices[0], padDefaults.GetDefaultMarkerColors()))) {
-            if (!data->GetMarkerColor()) defaultSettingIndices[0]++;
-            data_ptr->SetMarkerColor(*markerColor);
-          }
-          if (auto markerAlpha = get_first(data->GetMarkerAlpha(),
-                                           pad.GetDefaultMarkerAlpha(),
-                                           padDefaults.GetDefaultMarkerAlpha())) {
-            data_ptr->SetMarkerColor(TColor::GetColorTransparent(data_ptr->GetMarkerColor(), *markerAlpha));
-          }
-          if (auto markerStyle = get_first(data->GetMarkerStyle(),
-                                           pick(defaultSettingIndices[1], pad.GetDefaultMarkerStyles()),
-                                           pick(defaultSettingIndices[1], padDefaults.GetDefaultMarkerStyles()))) {
-            if (!data->GetMarkerStyle()) defaultSettingIndices[1]++;
-            data_ptr->SetMarkerStyle(*markerStyle);
-          }
-          if (auto markerSize = get_first(data->GetMarkerSize(),
-                                          pad.GetDefaultMarkerSize(),
-                                          padDefaults.GetDefaultMarkerSize())) {
-            data_ptr->SetMarkerSize(*markerSize);
-          }
-          if (auto lineColor = get_first(data->GetLineColor(),
-                                         pick(defaultSettingIndices[2], pad.GetDefaultLineColors()),
-                                         pick(defaultSettingIndices[2], padDefaults.GetDefaultLineColors()))) {
-            if (!data->GetLineColor()) defaultSettingIndices[2]++;
-            data_ptr->SetLineColor(*lineColor);
-          }
-          if (auto lineAlpha = get_first(data->GetLineAlpha(),
-                                         pad.GetDefaultLineAlpha(),
-                                         padDefaults.GetDefaultLineAlpha())) {
-            data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), *lineAlpha));
-          }
-          if (auto lineStyle = get_first(data->GetLineStyle(),
-                                         pick(defaultSettingIndices[3], pad.GetDefaultLineStyles()),
-                                         pick(defaultSettingIndices[3], padDefaults.GetDefaultLineStyles()))) {
-            if (!data->GetLineStyle()) defaultSettingIndices[3]++;
-            data_ptr->SetLineStyle(*lineStyle);
-          }
-          if (auto lineWidth = get_first(data->GetLineWidth(),
-                                         pad.GetDefaultLineWidth(),
-                                         padDefaults.GetDefaultLineWidth())) {
-            data_ptr->SetLineWidth(*lineWidth);
-          }
-          if (auto fillColor = get_first(data->GetFillColor(),
-                                         pick(defaultSettingIndices[4], pad.GetDefaultFillColors()),
-                                         pick(defaultSettingIndices[4], padDefaults.GetDefaultFillColors()))) {
-            if (!data->GetFillColor()) defaultSettingIndices[4]++;
-            data_ptr->SetFillColor(*fillColor);
-          }
-          if (auto fillAlpha = get_first(data->GetFillAlpha(),
-                                         pad.GetDefaultFillAlpha(),
-                                         padDefaults.GetDefaultFillAlpha())) {
-            data_ptr->SetFillColor(TColor::GetColorTransparent(data_ptr->GetFillColor(), *fillAlpha));
-          }
-          if (auto fillStyle = get_first(data->GetFillStyle(),
-                                         pick(defaultSettingIndices[5], pad.GetDefaultFillStyles()),
-                                         pick(defaultSettingIndices[5], padDefaults.GetDefaultFillStyles()))) {
-            if (!data->GetFillStyle()) defaultSettingIndices[5]++;
-            data_ptr->SetFillStyle(*fillStyle);
+          if (hasRefFunc && dataIndex == 1) {
+            // the reference function is not part of the data: it is a black solid line (unless set) and does not use up entries of the default lists
+            data_ptr->SetLineColor(data->GetLineColor().value_or(kBlack));
+            if (auto lineAlpha = get_first(data->GetLineAlpha(), pad.GetDefaultLineAlpha(), padDefaults.GetDefaultLineAlpha())) {
+              data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), *lineAlpha));
+            }
+            data_ptr->SetLineStyle(data->GetLineStyle().value_or(kSolid));
+            if (auto lineWidth = get_first(data->GetLineWidth(), pad.GetDefaultLineWidth(), padDefaults.GetDefaultLineWidth())) {
+              data_ptr->SetLineWidth(*lineWidth);
+            }
+          } else {
+            if (auto markerColor = get_first(data->GetMarkerColor(),
+                                             pick(defaultSettingIndices[0], pad.GetDefaultMarkerColors()),
+                                             pick(defaultSettingIndices[0], padDefaults.GetDefaultMarkerColors()))) {
+              if (!data->GetMarkerColor()) defaultSettingIndices[0]++;
+              data_ptr->SetMarkerColor(*markerColor);
+            }
+            if (auto markerAlpha = get_first(data->GetMarkerAlpha(),
+                                             pad.GetDefaultMarkerAlpha(),
+                                             padDefaults.GetDefaultMarkerAlpha())) {
+              data_ptr->SetMarkerColor(TColor::GetColorTransparent(data_ptr->GetMarkerColor(), *markerAlpha));
+            }
+            if (auto markerStyle = get_first(data->GetMarkerStyle(),
+                                             pick(defaultSettingIndices[1], pad.GetDefaultMarkerStyles()),
+                                             pick(defaultSettingIndices[1], padDefaults.GetDefaultMarkerStyles()))) {
+              if (!data->GetMarkerStyle()) defaultSettingIndices[1]++;
+              data_ptr->SetMarkerStyle(*markerStyle);
+            }
+            if (auto markerSize = get_first(data->GetMarkerSize(),
+                                            pad.GetDefaultMarkerSize(),
+                                            padDefaults.GetDefaultMarkerSize())) {
+              data_ptr->SetMarkerSize(*markerSize);
+            }
+            if (auto lineColor = get_first(data->GetLineColor(),
+                                           pick(defaultSettingIndices[2], pad.GetDefaultLineColors()),
+                                           pick(defaultSettingIndices[2], padDefaults.GetDefaultLineColors()))) {
+              if (!data->GetLineColor()) defaultSettingIndices[2]++;
+              data_ptr->SetLineColor(*lineColor);
+            }
+            if (auto lineAlpha = get_first(data->GetLineAlpha(),
+                                           pad.GetDefaultLineAlpha(),
+                                           padDefaults.GetDefaultLineAlpha())) {
+              data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), *lineAlpha));
+            }
+            if (auto lineStyle = get_first(data->GetLineStyle(),
+                                           pick(defaultSettingIndices[3], pad.GetDefaultLineStyles()),
+                                           pick(defaultSettingIndices[3], padDefaults.GetDefaultLineStyles()))) {
+              if (!data->GetLineStyle()) defaultSettingIndices[3]++;
+              data_ptr->SetLineStyle(*lineStyle);
+            }
+            if (auto lineWidth = get_first(data->GetLineWidth(),
+                                           pad.GetDefaultLineWidth(),
+                                           padDefaults.GetDefaultLineWidth())) {
+              data_ptr->SetLineWidth(*lineWidth);
+            }
+            if (auto fillColor = get_first(data->GetFillColor(),
+                                           pick(defaultSettingIndices[4], pad.GetDefaultFillColors()),
+                                           pick(defaultSettingIndices[4], padDefaults.GetDefaultFillColors()))) {
+              if (!data->GetFillColor()) defaultSettingIndices[4]++;
+              data_ptr->SetFillColor(*fillColor);
+            }
+            if (auto fillAlpha = get_first(data->GetFillAlpha(),
+                                           pad.GetDefaultFillAlpha(),
+                                           padDefaults.GetDefaultFillAlpha())) {
+              data_ptr->SetFillColor(TColor::GetColorTransparent(data_ptr->GetFillColor(), *fillAlpha));
+            }
+            if (auto fillStyle = get_first(data->GetFillStyle(),
+                                           pick(defaultSettingIndices[5], pad.GetDefaultFillStyles()),
+                                           pick(defaultSettingIndices[5], padDefaults.GetDefaultFillStyles()))) {
+              if (!data->GetFillStyle()) defaultSettingIndices[5]++;
+              data_ptr->SetFillStyle(*fillStyle);
+            }
           }
 
           // now define data ranges
