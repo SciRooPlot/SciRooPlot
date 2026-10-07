@@ -367,8 +367,9 @@ pm.AddBasePlot(basePlot);
 // axes (a pad for texts), Panel().ZAxis() adds room for the colour scale. This is the essence of MakeBasePlot:
 { // -----------------------------------------------------------------------
   // the arrangement of the panels, in units of the standard panel (here: 1d_2x1_ratio)
-  vector<vector<Panel>> rows = {{Panel(), Panel()},
-                                {Panel(1, 0.37), Panel(1, 0.37)}};
+  const vector<Panel> mainRow = {Panel(), Panel()};
+  const vector<Panel> ratioRow = {Panel(1, 0.37), Panel(1, 0.37)};
+  const vector<vector<Panel>> rows = {mainRow, ratioRow};
 
   // the sizes shared by all base plots, in pixels of the canvas (these are the defaults of PanelLayout)
   PanelLayout sizes;
