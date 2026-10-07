@@ -393,7 +393,7 @@ pm.AddBasePlot(basePlot);
 
   // conventions of the ratio pads (pads 3 and 4: row by row)
   for (const uint8_t ratioPad : {3, 4}) {
-    plot[ratioPad].SetRefFunc("1");
+    plot[ratioPad].SetRefFunc("1").SetColor(kBlack);  // explicit colour, so the line does not use up a default colour
     plot[ratioPad]['Y'].SetNumDivisions(305).SetTitleCenter();
   }
   pm.AddBasePlot(plot);

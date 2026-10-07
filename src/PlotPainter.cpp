@@ -40,9 +40,13 @@
 #include <TGraphErrors.h>
 #include <TGraphSmooth.h>
 #include <TH1.h>
+#include <TH1D.h>
 #include <TH2.h>
+#include <TH2D.h>
 #include <TH3.h>
+#include <TH3D.h>
 #include <THStack.h>
+#include <THashList.h>
 #include <THn.h>
 #include <THnSparse.h>
 #include <TIterator.h>
@@ -851,11 +855,51 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           axisHist_ptr->Draw((drawingOptions + drawOptAxis).data());
           axisHist_ptr->Draw((drawingOptions + "SAME AXIG").data());
+          bool isTHN = axisHist_ptr->InheritsFrom(TH2::Class()) || axisHist_ptr->InheritsFrom(TH3::Class());
+
+          // a user range beyond the axes of the frame histogram needs a wider frame, since ROOT shows at most the axis of a histogram:
+          // the frame is replaced by a histogram with extended axes (changing the axis alone would break the bin storage of the histogram)
+          if (!pad_ptr->GetView()) {
+            for (auto axisLabel : {'X', 'Y'}) {
+              if (axisLabel == 'Y' && !isTHN) continue;
+              optional<double_t> userMin;
+              optional<double_t> userMax;
+              for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
+                if (curPad.GetAxes().find(axisLabel) == curPad.GetAxes().end()) continue;
+                if (curPad[axisLabel].GetMinRange()) userMin = curPad[axisLabel].GetMinRange();
+                if (curPad[axisLabel].GetMaxRange()) userMax = curPad[axisLabel].GetMaxRange();
+              }
+              const TAxis* axis = (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis();
+              constexpr double_t relTol = 1e-12;
+              if (userMin && !(*userMin < axis->GetXmin() && !TMath::AreEqualRel(*userMin, axis->GetXmin(), relTol))) userMin.reset();
+              if (userMax && !(*userMax > axis->GetXmax() && !TMath::AreEqualRel(*userMax, axis->GetXmax(), relTol))) userMax.reset();
+              if (!userMin && !userMax) continue;
+              TH1* extended = ExtendFrameAxis(axisHist_ptr, axisLabel, userMin, userMax);
+              // the added empty bins must not change the automatic range of the dependent axis: keep the one of the original frame
+              // (for 1d the range ROOT determined when drawing it, for 2d the extremes of the contents, which define the colour scale below)
+              if (axisHist_ptr->GetMinimumStored() == -1111 && axisHist_ptr->GetMaximumStored() == -1111) {
+                if (isTHN) {
+                  extended->SetMinimum(axisHist_ptr->GetMinimum());
+                  extended->SetMaximum(axisHist_ptr->GetMaximum());
+                } else {
+                  extended->SetMinimum(pad_ptr->GetLogy() ? TMath::Power(10., pad_ptr->GetUymin()) : pad_ptr->GetUymin());
+                  extended->SetMaximum(pad_ptr->GetLogy() ? TMath::Power(10., pad_ptr->GetUymax()) : pad_ptr->GetUymax());
+                }
+              }
+              TList* primitives = pad_ptr->GetListOfPrimitives();
+              while (primitives->Remove(axisHist_ptr)) {
+              }
+              delete axisHist_ptr;
+              axisHist_ptr = extended;
+              axisHist_ptr->Draw(drawingOptions.data());
+              axisHist_ptr->Draw((drawingOptions + drawOptAxis).data());
+              axisHist_ptr->Draw((drawingOptions + "SAME AXIG").data());
+            }
+          }
           axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
           axisHist_ptr->SetStats(false);
           axisHist_ptr->SetTitle("");
           axisHist_ptr->SetBit(TH1::kNoTitle);
-          bool isTHN = axisHist_ptr->InheritsFrom(TH2::Class()) || axisHist_ptr->InheritsFrom(TH3::Class());
 
           // apply axis settings
           for (auto axisLabel : {'X', 'Y', 'Z'}) {
@@ -876,6 +920,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             auto textSizeLabel = textSize;
             auto textColorLabel = textColor;
             auto textAlphaLabel = textAlpha;
+
+            optional<double_t> userRangeMin;
+            optional<double_t> userRangeMax;
 
             // first apply default pad values and then settings for this specific pad
             for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
@@ -927,90 +974,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).data());
                 }
 
-                pad_ptr->Update();  // needed here so current user ranges correct
-                double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0, min = 0, max = 0;
-                pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
-                min = axisHist_ptr->GetMinimumStored();
-                max = axisHist_ptr->GetMaximumStored();
-                if (auto view = pad_ptr->GetView()) {
-                  double_t minArr[3];
-                  double_t maxArr[3];
-                  view->GetRange(minArr, maxArr);
-                  xmin = minArr[0];
-                  xmax = maxArr[0];
-                  ymin = minArr[1];
-                  ymax = maxArr[1];
-                  if constexpr (is_hist_3d<data_type>()) {
-                    min = minArr[2];
-                    max = maxArr[2];
-                  }
-                }
-                if (pad_ptr->GetLogx()) {
-                  xmin = TMath::Power(10, xmin);
-                  xmax = TMath::Power(10, xmax);
-                }
-                if (isTHN && pad_ptr->GetLogy()) {
-                  ymin = TMath::Power(10, ymin);
-                  ymax = TMath::Power(10, ymax);
-                }
-
-                double_t curRangeMin = (axisLabel == 'X') ? xmin : ((isTHN && axisLabel == 'Y') ? ymin : min);
-                double_t curRangeMax = (axisLabel == 'X') ? xmax : ((isTHN && axisLabel == 'Y') ? ymax : max);
-
-                if (isTHN && axisLabel == 'Z' && curRangeMin == -1111 && axisLayout.GetLog() && *axisLayout.GetLog()) {
-                  /*
-                  Work around auto-range feature of ROOT for lower limit of TH2 logz.
-                  It would draw properly the axis histogram, but mess up the ranges
-                  of the actual data drawn into the same axis frame afterwards.
-                  What we lose here is the ROOT feature which optimizes the z ranges
-                  by ignoring values extremely far away from the bulk.
-                  The upside of this however is that one then actually sees that these values exist.
-                   */
-                  axisHist_ptr->SetMinimum(-1111);
-                  curRangeMin = axisHist_ptr->GetMinimum(0.);
-                }
-
-                double_t rangeMin = (axisLayout.GetMinRange()) ? *axisLayout.GetMinRange() : curRangeMin;
-                double_t rangeMax = (axisLayout.GetMaxRange()) ? *axisLayout.GetMaxRange() : curRangeMax;
-
-                // if user specifies axis range that exceeds the one of the underlying data (for independent variables), extend the axis histogram accordingly
-                if (!pad_ptr->GetView() && ((axisLabel == 'X') || (isTHN && axisLabel == 'Y'))) {
-                  if ((rangeMin != -1111 && rangeMin < axis_ptr->GetXmin()) || (rangeMax != -1111 && rangeMax > axis_ptr->GetXmax())) {
-                    const int32_t nBins = axis_ptr->GetNbins();
-                    const int32_t nBinEdges = nBins + 1;
-                    bool extendLow = false;
-                    bool extendUp = false;
-
-                    constexpr double_t relTol = 1e-12;
-                    if (!TMath::AreEqualRel(rangeMin, axis_ptr->GetXmin(), relTol) && rangeMin < axis_ptr->GetXmin()) {
-                      // INFO("Extending lower {}-axis range beyond default histogram limits (from {} to {}).", axisLabel, axis_ptr->GetXmin(), rangeMin);
-                      extendLow = true;
-                    }
-                    if (!TMath::AreEqualRel(rangeMax, axis_ptr->GetXmax(), relTol) && rangeMax > axis_ptr->GetXmax()) {
-                      // INFO("Extending upper {}-axis range beyond default histogram limits (from {} to {}).", axisLabel, axis_ptr->GetXmax(), rangeMax);
-                      extendUp = true;
-                    }
-
-                    vector<double_t> binEdges(nBinEdges + extendLow + extendUp);
-                    if (extendLow) {
-                      binEdges[0] = rangeMin;
-                    }
-                    for (int32_t i = extendLow; i < nBinEdges + extendLow; ++i) {
-                      int32_t originalIndex = i - extendLow;
-                      if (axis_ptr->GetXbins()->fN) {
-                        binEdges[i] = axis_ptr->GetXbins()->At(originalIndex);
-                      } else {
-                        binEdges[i] = axis_ptr->GetXmin() + originalIndex * axis_ptr->GetBinWidth(1);
-                      }
-                    }
-                    if (extendUp) {
-                      binEdges[binEdges.size() - 1] = rangeMax;
-                    }
-                    // memo: this breaks the integrity of the histogram (i.e. number of bins of the contents does not correspond to the number of bins in the axes anymore)
-                    axis_ptr->Set(nBins + extendLow + extendUp, binEdges.data());
-                  }
-                }
-                axis_ptr->SetRangeUser(rangeMin, rangeMax);
+                // the ranges are applied below, once the default and pad-specific settings are merged
+                if (axisLayout.GetMinRange()) userRangeMin = axisLayout.GetMinRange();
+                if (axisLayout.GetMaxRange()) userRangeMax = axisLayout.GetMaxRange();
 
                 if (axisLayout.GetLog()) {
                   if (axisLabel == 'X') {
@@ -1028,6 +994,30 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     pad_ptr->SetGridy(*axisLayout.GetGrid());
                   }
                 }
+              }
+            }
+
+            // ranges are only touched if the user set one: ROOT's bin edges are not exactly reproducible (e.g. 4.000000000000001 instead of 4),
+            // so feeding the drawn range back in through SetRangeUser would add the overflow bin
+            if (userRangeMin || userRangeMax) {
+              const bool isBinnedAxis = (axisLabel == 'X') || (isTHN && axisLabel == 'Y') || (axisHist_ptr->InheritsFrom(TH3::Class()) && axisLabel == 'Z');
+              if (isBinnedAxis) {
+                // bin selection as in TAxis::SetRangeUser, but a side the user did not set keeps its current bin
+                int32_t first = axis_ptr->GetFirst();
+                int32_t last = axis_ptr->GetLast();
+                if (userRangeMin) {
+                  first = axis_ptr->FindFixBin(*userRangeMin);
+                  if (axis_ptr->GetBinUpEdge(first) <= *userRangeMin) ++first;
+                }
+                if (userRangeMax) {
+                  last = axis_ptr->FindFixBin(*userRangeMax);
+                  if (axis_ptr->GetBinLowEdge(last) >= *userRangeMax) --last;
+                }
+                axis_ptr->SetRange(first, last);
+              } else {
+                // the dependent axis (y of 1d, z of 2d) has no bins: its range is the minimum and maximum of the histogram
+                if (userRangeMin) axisHist_ptr->SetMinimum(*userRangeMin);
+                if (userRangeMax) axisHist_ptr->SetMaximum(*userRangeMax);
               }
             }
 
@@ -1459,6 +1449,75 @@ void PlotPainter::ApplyScale(TObject* obj, std::set<TObject*>& done, const std::
   if (auto stack = dynamic_cast<THStack*>(obj)) applyToList(stack->GetHists());
   if (auto legend = dynamic_cast<TLegend*>(obj)) applyToList(legend->GetListOfPrimitives());
   if (auto paveText = dynamic_cast<TPaveText*>(obj)) applyToList(paveText->GetListOfLines());
+}
+
+//**************************************************************************************************
+/**
+ * Returns a copy of the frame histogram with the given axis extended to newMin and / or newMax (bin contents and errors copied).
+ * The lengths of the other axes and the attributes are kept; the result replaces the frame in the pad and has to be drawn by the caller.
+ */
+//**************************************************************************************************
+TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<double_t> newMin, optional<double_t> newMax)
+{
+  const int32_t dim = frame->GetDimension();
+  const int32_t extendedDim = (axisLabel == 'X') ? 0 : 1;
+  const int32_t shift = (newMin) ? 1 : 0;  // bins move up by one if a bin is added below
+  const array<const TAxis*, 3> axes = {frame->GetXaxis(), frame->GetYaxis(), frame->GetZaxis()};
+  array<vector<double_t>, 3> edges;
+  for (int32_t i = 0; i < dim; ++i) {
+    if (i == extendedDim && newMin) edges[i].push_back(*newMin);
+    for (int32_t bin = 1; bin <= axes[i]->GetNbins() + 1; ++bin)
+      edges[i].push_back(axes[i]->GetBinLowEdge(bin));
+    if (i == extendedDim && newMax) edges[i].push_back(*newMax);
+  }
+  TH1* extended{nullptr};
+  if (dim == 1) {
+    extended = new TH1D(frame->GetName(), frame->GetTitle(), edges[0].size() - 1, edges[0].data());
+  } else if (dim == 2) {
+    extended = new TH2D(frame->GetName(), frame->GetTitle(), edges[0].size() - 1, edges[0].data(), edges[1].size() - 1, edges[1].data());
+  } else {
+    extended = new TH3D(frame->GetName(), frame->GetTitle(), edges[0].size() - 1, edges[0].data(), edges[1].size() - 1, edges[1].data(), edges[2].size() - 1, edges[2].data());
+  }
+  extended->SetDirectory(nullptr);
+  extended->SetBit(kCanDelete);
+  const int32_t shiftX = (extendedDim == 0) ? shift : 0;
+  const int32_t shiftY = (extendedDim == 1) ? shift : 0;
+  for (int32_t binZ = 1; binZ <= axes[2]->GetNbins(); ++binZ) {
+    for (int32_t binY = 1; binY <= axes[1]->GetNbins(); ++binY) {
+      for (int32_t binX = 1; binX <= axes[0]->GetNbins(); ++binX) {
+        const int32_t bin = frame->GetBin(binX, binY, binZ);
+        const int32_t newBin = extended->GetBin(binX + shiftX, binY + shiftY, binZ);
+        extended->SetBinContent(newBin, frame->GetBinContent(bin));
+        extended->SetBinError(newBin, frame->GetBinError(bin));
+      }
+    }
+  }
+  extended->SetEntries(frame->GetEntries());
+  extended->SetMinimum(frame->GetMinimumStored());
+  extended->SetMaximum(frame->GetMaximumStored());
+  frame->TAttLine::Copy(*extended);
+  frame->TAttFill::Copy(*extended);
+  frame->TAttMarker::Copy(*extended);
+  // the axes are copied completely (attributes, labels, time format, bits, a selected range) and the extended one gets its new binning
+  const array<TAxis*, 3> newAxes = {extended->GetXaxis(), extended->GetYaxis(), extended->GetZaxis()};
+  for (int32_t i = 0; i < 3; ++i) {
+    const bool hadRange = axes[i]->TestBit(TAxis::kAxisRange);
+    axes[i]->Copy(*newAxes[i]);
+    newAxes[i]->SetParent(extended);
+    if (i != extendedDim) continue;
+    newAxes[i]->Set(edges[i].size() - 1, edges[i].data());
+    if (hadRange) {
+      newAxes[i]->SetRange(axes[i]->GetFirst() + shift, axes[i]->GetLast() + shift);
+    } else {
+      newAxes[i]->SetRange(0, 0);  // full new axis
+    }
+    if (shift && newAxes[i]->GetLabels()) {
+      TIter next(newAxes[i]->GetLabels());
+      while (TObject* label = next())
+        label->SetUniqueID(label->GetUniqueID() + shift);
+    }
+  }
+  return extended;
 }
 
 //**************************************************************************************************

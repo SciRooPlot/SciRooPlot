@@ -673,7 +673,7 @@ Plot PlotManager::MakeBasePlot(const string& name)
 
   // conventions of the ratio pads
   for (const uint8_t ratioPad : ratioPads) {
-    plot[ratioPad].SetRefFunc("1");
+    plot[ratioPad].SetRefFunc("1").SetColor(kBlack);  // explicit colour, so the line does not use up a default colour
     plot[ratioPad]['Y'].SetNumDivisions(305).SetTitleCenter();
   }
   return plot;
