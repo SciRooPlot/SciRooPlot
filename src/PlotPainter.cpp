@@ -339,8 +339,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       *xUp >= 0 && *xUp <= 1 &&
       *yLow >= 0 && *yLow <= 1 &&
       *yUp >= 0 && *yUp <= 1 &&
-      *xLow <= *xUp &&
-      *yLow <= *yUp;
+      *xLow < *xUp &&
+      *yLow < *yUp;
 
     if (!valid) {
       // a plot with only one pad and no position for it is drawn over the whole plot by design
