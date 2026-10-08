@@ -25,8 +25,10 @@
 #include <boost/property_tree/info_parser.hpp>
 
 #include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include <string>
+#include <unistd.h>
 #include <utility>
 #include <vector>
 
@@ -97,16 +99,20 @@ std::optional<int> Config::ParseColorMode(const string& name)
   return std::nullopt;
 }
 
+Config::Config()
+{
+  LoadConfig();
+  std::atexit([] { Instance().Save(); });
+}
 Config& Config::Instance()
 {
-  static Config config;
-  return config;
+  // never destroyed: a destructor would write the files during static destruction, where a failure can neither be reported nor handled
+  static Config* config = new Config();
+  return *config;
 }
 Config& Config::GetMutable()
 {
-  auto& config = Instance();
-  config.mModified = true;
-  return config;
+  return Instance();
 }
 const Config& Config::Get()
 {
@@ -202,9 +208,28 @@ void Config::LoadConfig()
   }
 }
 
-void Config::SaveConfig()
+bool Config::Save()
 {
-  if (!mModified) return;
+  if (!mModified) return true;
+  mModified = false;  // a failed write is reported once and not repeated at exit
+  if (mPath.empty()) {
+    ERROR("No valid config path; cannot save the configuration.");
+    return false;
+  }
+  // write to a temporary file and rename it, so an interrupted write cannot leave a truncated file behind
+  auto write = [](const string& file, const ptree& tree) {
+    const string tmpFile = file + "." + std::to_string(getpid()) + ".tmp";
+    try {
+      write_info(tmpFile, tree);
+      std::filesystem::rename(tmpFile, file);
+    } catch (const std::exception& e) {
+      std::error_code ec;
+      std::filesystem::remove(tmpFile, ec);
+      ERROR("Cannot save the configuration: {}.", e.what());
+      return false;
+    }
+    return true;
+  };
 
   // save settings tree
   ptree settingsTree;
@@ -215,7 +240,7 @@ void Config::SaveConfig()
   settingsTree.add("matchContains", mMatchContains);
   settingsTree.add("screenScale", mScreenScale);
   settingsTree.add("bitmapScale", mBitmapScale);
-  write_info(SettingsFile(), settingsTree);
+  const bool savedSettings = write(SettingsFile(), settingsTree);
 
   // save projects tree
   ptree projectsTree;
@@ -223,7 +248,8 @@ void Config::SaveConfig()
     projectsTree.put_child(projectName, project.GetTree());
   }
   projectsTree.add("@current", mCurrentProject);
-  write_info(ProjectsFile(), projectsTree);
+  const bool savedProjects = write(ProjectsFile(), projectsTree);
+  return savedSettings && savedProjects;
 }
 
 bool Config::Exists(const std::string& projectName) const
@@ -297,6 +323,7 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
   if (mCurrentProject == projectName) {
     mCurrentProject = newProjectName;
   }
+  mModified = true;
   PRINT("Renamed project {} to {}. User code should be adjusted accordingly.", projectName, newProjectName);
   return true;
 }
@@ -312,6 +339,7 @@ void Config::Reset()
     it = DeleteProjectDir(it->first) ? mProjects.erase(it) : std::next(it);
   }
   mCurrentProject = mProjects.empty() ? "" : mProjects.begin()->first;
+  mModified = true;
 }
 
 void Config::Clean()
@@ -348,6 +376,7 @@ void Config::Clean()
     }
     PRINT("- deleting project {}", inactiveProject);
     mProjects.erase(inactiveProject);
+    mModified = true;
     if (mCurrentProject == inactiveProject) {
       mCurrentProject = firstProject;
       updatedActiveProject = true;
@@ -391,6 +420,7 @@ bool Config::Remove(const string& projectName)
     return false;
   }
   mProjects.erase(projectName);
+  mModified = true;
   if (mCurrentProject == projectName) {
     mCurrentProject.clear();
     auto it = mProjects.begin();
@@ -431,6 +461,7 @@ bool Config::Select(const string& projectName)
     return false;
   }
   mCurrentProject = projectName;
+  mModified = true;
   return true;
 }
 
@@ -467,6 +498,7 @@ void Config::SetProgram(const string& projectName, const string& program)
     return;
   }
   mProjects[projectName].mProperties["program"] = program;
+  mModified = true;
 }
 
 string Config::Program(const string& projectName) const
@@ -494,6 +526,7 @@ void Config::SetOutputDir(const string& projectName, const string& outputDir)
     return;
   }
   mProjects[projectName].mProperties["outdir"] = outputDir;
+  mModified = true;
 }
 
 string Config::Project::Property(const string& property) const
@@ -525,6 +558,7 @@ void Config::SetProperty(const string& projectName, const string& property, cons
   }
   auto& properties = mProjects[projectName].mProperties;
   properties[property] = value;
+  mModified = true;
   bool allEmpty = std::all_of(properties.begin(), properties.end(), [](const auto& p) { return p.second.empty(); });
   if (allEmpty) {
     INFO("Project {} has no properties left after unsetting '{}'. Removing project.", projectName, property);
@@ -583,24 +617,46 @@ ptree Config::Project::GetTree() const
   return tree;
 }
 
+void Config::SetVerbosity(int logLevel)
+{
+  mLogLevel = logLevel;
+  mModified = true;
+}
+
+void Config::SetColorScheme(int colorMode)
+{
+  mColorMode = colorMode;
+  mModified = true;
+}
+
+void Config::SetPlotMode(const string& plotMode)
+{
+  mPlotMode = plotMode;
+  mModified = true;
+}
+
 void Config::SetMatchCaseInsensitive(bool matchCaseInsensitive)
 {
   mMatchCaseInsensitive = matchCaseInsensitive;
+  mModified = true;
 }
 
 void Config::SetMatchContains(bool matchContains)
 {
   mMatchContains = matchContains;
+  mModified = true;
 }
 
 void Config::SetScreenScale(double screenScale)
 {
   mScreenScale = screenScale;
+  mModified = true;
 }
 
 void Config::SetBitmapScale(double bitmapScale)
 {
   mBitmapScale = bitmapScale;
+  mModified = true;
 }
 
 }  // namespace SciRooPlot

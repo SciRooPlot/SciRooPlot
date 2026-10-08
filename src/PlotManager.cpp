@@ -2271,6 +2271,7 @@ void PlotManager::SaveProject() const
 
   if (!mOutputDirectory.empty() && mOutputDirectory != Config::Get().OutputDir(mProjectName)) {
     Config::GetMutable().SetOutputDir(mProjectName, mOutputDirectory);
+    Config::GetMutable().Save();
   }
 
   // create a csv file for tab completion

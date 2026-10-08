@@ -80,9 +80,9 @@ class Config
   std::string DataSourcesFile(const std::string& projectName) const;
   const std::string& CurrentProject() const { return mCurrentProject; }
 
-  void SetVerbosity(int logLevel) { mLogLevel = logLevel; }
-  void SetColorScheme(int colorMode) { mColorMode = colorMode; }
-  void SetPlotMode(const std::string& plotMode) { mPlotMode = plotMode; }
+  void SetVerbosity(int logLevel);
+  void SetColorScheme(int colorMode);
+  void SetPlotMode(const std::string& plotMode);
   void SetProperty(const std::string& projectName, const std::string& property, const std::string& value);
   void SetOutputDir(const std::string& projectName, const std::string& outputDir);
   void SetProgram(const std::string& projectName, const std::string& program);
@@ -97,12 +97,12 @@ class Config
   bool Rename(const std::string& projectName, const std::string& newProjectName);
   bool Select(const std::string& projectName);
 
+  bool Save();
+
  private:
-  Config() { LoadConfig(); }
-  ~Config() { SaveConfig(); }
+  Config();
   static Config& Instance();
   void LoadConfig();
-  void SaveConfig();
   bool DeleteProjectDir(const std::string& projectName) const;
 
   bool mModified{false};

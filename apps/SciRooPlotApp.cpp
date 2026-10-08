@@ -375,7 +375,7 @@ int main(int argc, char* argv[])
       ERROR("Invalid arguments.");
     }
   }
-  return 0;
+  return Config::GetMutable().Save() ? 0 : 1;
 }
 
 void PrintRootFileContents(const string& inputPath)
