@@ -197,7 +197,7 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   plot[1].AddData("histName4", "dataSourceB").SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
   // instead of directly using the ROOT drawing option string ("HIST C") you can
   // use pre-defined human readable options like curve, points, points_line, etc
-  // (you can find all available options in src/PlotPainter.h):
+  // (you can find all available options in include/SciRooPlot/Plot.h and their ROOT equivalents in src/PlotPainter.h):
   plot[1].AddData("graphName1", "dataSourceA").SetOptions(points).SetMarker(kRed, kFullCircle, 1.);
   // all root layout settings can be applied in this manner
   // (see definition of Data class in inc/Plot.h for the list of all accessors)

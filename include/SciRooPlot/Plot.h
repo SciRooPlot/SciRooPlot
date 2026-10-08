@@ -42,65 +42,87 @@
 
 namespace SciRooPlot
 {
-#define DRAWING_OPTIONS \
-  OPT(points, 0)        \
-  OPT(points_xerr)      \
-  OPT(points_endcaps)   \
-  OPT(points_line)      \
-  OPT(line)             \
-  OPT(curve)            \
-  OPT(band)             \
-  OPT(band_smooth)      \
-  OPT(hist)             \
-  OPT(hist_no_borders)  \
-  OPT(fit)              \
-  OPT(bar)              \
-  OPT(area)             \
-  OPT(area_curve)       \
-  OPT(area_line)        \
-  OPT(boxes)            \
-  OPT(boxes_only)       \
-  OPT(stars)            \
-  OPT(text)             \
-  OPT(brackets)         \
-  OPT(hbar)             \
-  OPT(hbar_no_borders)  \
-  OPT(hbar1)            \
-  OPT(hbar2)            \
-  OPT(hbar3)            \
-  OPT(hbar4)            \
-  OPT(box)              \
-  OPT(box1)             \
-  OPT(colz)             \
-  OPT(legoz)            \
-  OPT(lego)             \
-  OPT(lego_no_borders)  \
-  OPT(surf)             \
-  OPT(surf1)            \
-  OPT(surf1z)           \
-  OPT(surf2)            \
-  OPT(surf2z)           \
-  OPT(surf3)            \
-  OPT(surf3z)           \
-  OPT(surf4)            \
-  OPT(surf7)            \
-  OPT(surf7z)           \
-  OPT(cont)             \
-  OPT(contz)            \
-  OPT(cont1z)           \
-  OPT(cont4z)           \
-  OPT(candle1)          \
-  OPT(candle2)          \
-  OPT(candle3)          \
-  OPT(candle4)          \
-  OPT(candle5)          \
-  OPT(candle6)          \
-  OPT(candle7)
+// aliases for the drawing options of ROOT: the base word names the appearance, suffixes add one feature each
+// (1d: _xerr also draws the x errors, _endcaps draws end caps on the error bars, _smooth smooths, _nomarkers omits the markers;
+//  2d: _col colours the lines by the contents, _fill fills by the contents, a trailing z also draws the colour axis)
+// an alias that a data type cannot draw is reported and the data is drawn with the default of ROOT
+#define DRAWING_OPTIONS    \
+  OPT(points, 0)           \
+  OPT(points_xerr)         \
+  OPT(points_endcaps)      \
+  OPT(points_xerr_endcaps) \
+  OPT(points_line)         \
+  OPT(points_text)         \
+  OPT(points_arrows)       \
+  OPT(line)                \
+  OPT(curve)               \
+  OPT(hist)                \
+  OPT(hist_open)           \
+  OPT(bars)                \
+  OPT(hbars)               \
+  OPT(area)                \
+  OPT(area_smooth)         \
+  OPT(band)                \
+  OPT(band_smooth)         \
+  OPT(boxes)               \
+  OPT(boxes_nomarkers)     \
+  OPT(brackets)            \
+  OPT(text)                \
+  OPT(col)                 \
+  OPT(colz)                \
+  OPT(box)                 \
+  OPT(lego)                \
+  OPT(lego_col)            \
+  OPT(lego_colz)           \
+  OPT(lego_noborders)      \
+  OPT(surf)                \
+  OPT(surf_col)            \
+  OPT(surf_colz)           \
+  OPT(surf_fill)           \
+  OPT(surf_fillz)          \
+  OPT(surf_contours)       \
+  OPT(surf_shaded)         \
+  OPT(cont)                \
+  OPT(cont_col)            \
+  OPT(cont_colz)           \
+  OPT(cont_fill)           \
+  OPT(cont_fillz)          \
+  OPT(cont_smooth)         \
+  OPT(cont_smoothz)        \
+  OPT(candle)              \
+  OPT(candle_minmax)       \
+  OPT(candle_mean)         \
+  OPT(candle_notched)      \
+  OPT(candle_points)       \
+  OPT(candle_scatter)      \
+  OPT(candle_meanline)     \
+  OPT(violin)              \
+  OPT(violin_minmax)
 enum drawing_options_t : uint8_t {
 #define OPT(name, ...) name,
   DRAWING_OPTIONS
 #undef OPT
 };
+// the aliases are stored by name
+inline std::string drawing_option_name(drawing_options_t option)
+{
+  switch (option) {
+#define OPT(name, ...) \
+  case name:           \
+    return #name;
+    DRAWING_OPTIONS
+#undef OPT
+  }
+  return "";
+}
+inline std::optional<drawing_options_t> drawing_option_from_name(const std::string& name)
+{
+#define OPT(optName, ...) \
+  if (name == #optName) return optName;
+  DRAWING_OPTIONS
+#undef OPT
+  return std::nullopt;
+}
 
 // automatic placement of a legend or text: as close as possible to the corner of the frame where it fits best or to the given corner
 enum box_placement_t : uint8_t {
@@ -194,6 +216,8 @@ class Plot
   static float_t RoundWidth(float_t width, const char* what);
   static std::optional<float_t> RoundWidth(const std::optional<float_t>& width, const char* what);
   static void ReadWidthFromTree(const boost::property_tree::ptree& tree, std::optional<float_t>& target, const char* key);
+  static void ReadDrawingOption(const boost::property_tree::ptree& tree, std::optional<drawing_options_t>& option, const char* key);
+  static void PutDrawingOption(boost::property_tree::ptree& tree, const std::optional<drawing_options_t>& option, const char* key);
 
   std::string mName;
   std::string mGroup;

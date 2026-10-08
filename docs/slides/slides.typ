@@ -1925,7 +1925,8 @@
   #[]<appx-drawing-options>
   #slide-title("Appendix: Drawing Options – Histograms & Graphs")
   - Pass any alias below to `SetOptions()` (or `SetDefaultDrawingOption*()`) instead of a raw ROOT draw-option string -- the table shows the actual ROOT string it expands to for each data kind.
-  #v(0.6em)
+  - The base word names the appearance, suffixes add one feature: `_xerr` also draws the x errors, `_endcaps` draws end caps, `_text` writes the values, `_arrows` ends the error bars with arrows (limits), `_smooth` smooths, `_nomarkers` omits the markers. Every alias works for both kinds: where ROOT has no option for one of them, the data is converted and drawn as the other.
+  #v(0.4em)
   #block(
     fill: rgb("fafafa"),
     stroke: 1pt + rgb("d0d7de"),
@@ -1941,18 +1942,19 @@
       align: left + horizon,
       fill: (x, y) => if calc.rem(y, 2) == 0 { rgb("eef2f5") } else { white },
       [*Alias*], [*Histograms*], [*Graphs*], [*Alias*], [*Histograms*], [*Graphs*],
-      [`points`], [`X0 EP`], [`P Z`], [`boxes`], [`E2`], [`P2`],
-      [`points_xerr`], [`EP`], [`P Z`], [`boxes_only`], [--], [`2`],
-      [`points_endcaps`], [`E1`], [`P`], [`hist`], [`HIST`], [--],
-      [`points_line`], [--], [`P Z L`], [`hist_no_borders`], [`HIST ][`], [--],
-      [`line`], [`HIST L`], [`X L`], [`stars`], [`*H`], [--],
-      [`curve`], [`HIST C`], [`X C`], [`text`], [`TEXT`], [--],
-      [`band`], [`E5`], [`3`], [`brackets`], [--], [`[]`],
-      [`band_smooth`], [`E6`], [`4`], [`hbar`], [`HIST HBAR`], [--],
-      [`bar`], [`HIST B`], [`X B`], [`hbar_no_borders`], [`HBAR ][`], [--],
-      [`area`], [`HIST F`], [`X CF`], [`hbar1`–`hbar4`], [`HBAR1`–`HBAR4`], [--],
-      [`area_curve`], [`HIST CF`], [--], [`fit`], [#text(size: 9.5pt, fill: gray)[no mapping]], [#text(size: 9.5pt, fill: gray)[currently a no-op]],
-      [`area_line`], [`HIST LF`], [`X LC`], [], [], [],
+      [`points`], [`X0 E P`], [`P Z` #text(size: 9.5pt, fill: gray)[(x errors removed)]], [`area`], [`HIST LF2`], [`LF` #text(size: 9.5pt, fill: gray)[(polygon to zero)]],
+      [`points_xerr`], [`E P`], [`P Z`], [`area_smooth`], [`HIST CF`], [as histogram],
+      [`points_endcaps`], [`X0 E1 P`], [`P` #text(size: 9.5pt, fill: gray)[(x errors removed)]], [`band`], [`E5`], [`3`],
+      [`points_xerr_endcaps`], [`E1 P`], [`P`], [`band_smooth`], [`E6`], [`4`],
+      [`points_line`], [as graph], [`P Z L` #text(size: 9.5pt, fill: gray)[(x errors removed)]], [`boxes`], [`E2`], [`P2`],
+      [`points_text`], [`X0 E P` #text(size: 9.5pt, fill: gray)[(+ values)]], [`P Z` #text(size: 9.5pt, fill: gray)[(+ values)]], [`boxes_nomarkers`], [`E2` #text(size: 9.5pt, fill: gray)[(markers removed)]], [`2`],
+      [`points_arrows`], [as graph], [`P Z |>` #text(size: 9.5pt, fill: gray)[(x errors removed)]], [`brackets`], [as graph], [`[]`],
+      [`line`], [`HIST L` #text(size: 9.5pt, fill: gray)[(no fill)]], [`X L`], [`text`], [`HIST TEXT`], [as histogram],
+      [`curve`], [`HIST C` #text(size: 9.5pt, fill: gray)[(no fill)]], [`X C`], [], [], [],
+      [`hist`], [`HIST`], [as histogram], [], [], [],
+      [`hist_open`], [`HIST ][`], [as histogram], [], [], [],
+      [`bars`], [as graph], [`X B`], [], [], [],
+      [`hbars`], [`HIST HBAR`], [as histogram], [], [], [],
     )
   ]
 ]
@@ -1960,40 +1962,39 @@
 #slide[
   #slide-title("Appendix: Drawing Options – 2D Histograms")
   - These aliases apply to 2D data (`TH2`-like histograms): colour maps, surfaces, contours, legos, and candle plots.
-  #v(0.6em)
+  - The base word is the plain style, `_col` colours the lines by the contents, `_fill` fills by the contents, a trailing `z` also draws the colour axis.
+  #v(0.4em)
   #grid(
     columns: (49%, 49%),
     gutter: 2%,
     [
       #api-table((
+        [`col` / `colz`], [`COL` / `COLZ`],
         [`box`], [`BOX`],
-        [`box1`], [`BOX1`],
-        [`colz`], [`COLZ`],
+        [`text`], [`TEXT`],
         [`lego`], [`LEGO1 0`],
-        [`lego_no_borders`], [`LEGO3 0`],
-        [`legoz`], [`LEGO2Z 0`],
+        [`lego_col` / `lego_colz`], [`LEGO2 0` / `LEGO2Z 0`],
+        [`lego_noborders`], [`LEGO3 0`],
         [`surf`], [`SURF`],
-        [`surf1`], [`SURF1`],
-        [`surf1z`], [`SURF1Z`],
-        [`surf2`], [`SURF2`],
-        [`surf2z`], [`SURF2Z`],
-        [`surf3`], [`SURF3`],
-        [`surf3z`], [`SURF3Z`],
-        [`surf4`], [`SURF4`],
-      ), col-widths: (38%, 62%), text-size: 13pt)
+        [`surf_col` / `surf_colz`], [`SURF1` / `SURF1Z`],
+        [`surf_fill` / `surf_fillz`], [`SURF2` / `SURF2Z`],
+        [`surf_contours`], [`SURF3`],
+        [`surf_shaded`], [`SURF4`],
+      ), col-widths: (44%, 56%), text-size: 13pt)
     ],
     [
       #api-table((
-        [`surf7`], [`SURF7`],
-        [`surf7z`], [`SURF7Z`],
         [`cont`], [`CONT3`],
-        [`contz`], [`CONTZ`],
-        [`cont1z`], [`CONT1Z`],
-        [`cont4z`], [`CONT4Z`],
-        [`text`], [`TEXT`],
-        [`candle1`–`candle6`], [`CANDLEX1`–`CANDLEX6`],
-        [`candle7`], [`CANDLEX(111101)` #text(size: 10pt, fill: gray)[(mean instead of median)]],
-      ), col-widths: (38%, 62%), text-size: 13pt)
+        [`cont_col` / `cont_colz`], [`CONT1` / `CONT1Z`],
+        [`cont_fill` / `cont_fillz`], [`CONT0` / `CONTZ`],
+        [`cont_smooth` / `cont_smoothz`], [`CONT4` / `CONT4Z`],
+        [`candle`], [`CANDLEX2` #text(size: 10pt, fill: gray)[(whiskers 1.5 IQR, outliers)]],
+        [`candle_minmax`], [`CANDLEX1` #text(size: 10pt, fill: gray)[(whiskers to extremes, mean)]],
+        [`candle_mean` / `candle_notched`], [`CANDLEX3` / `CANDLEX4`],
+        [`candle_points` / `candle_scatter`], [`CANDLEX5` / `CANDLEX6`],
+        [`candle_meanline`], [`CANDLEX(111101)` #text(size: 10pt, fill: gray)[(mean line instead of median)]],
+        [`violin` / `violin_minmax`], [`VIOLINX2` / `VIOLINX1`],
+      ), col-widths: (44%, 56%), text-size: 13pt)
     ],
   )
 ]

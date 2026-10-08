@@ -199,12 +199,12 @@ def DefineSpectraPlots(pm: PlotManager):
     pm.AddPlot(plot3d)
 
     plotContours = Plot("ptVsMultContours", "spectra/2dViews", "2d_logz")
-    plotContours[1].AddData("ptVsMult", "data").SetOptions(contz).SetContours(12)
+    plotContours[1].AddData("ptVsMult", "data").SetOptions(cont_fillz).SetContours(12)
     plotContours[1].SetPalette(kViridis)  # any ROOT palette, or a custom gradient like the colours above
     pm.AddPlot(plotContours)
 
     plotCandles = Plot("ptVsMultCandles", "spectra/2dViews", "1d")
-    plotCandles[1].AddData("ptVsMult", "data").RebinX(10).SetOptions(candle2)  # one candle per x bin
+    plotCandles[1].AddData("ptVsMult", "data").RebinX(10).SetOptions(candle)  # one candle per x bin
     plotCandles[1]['Y'].SetRange(0.0, 3.0)
     pm.AddPlot(plotCandles)
 

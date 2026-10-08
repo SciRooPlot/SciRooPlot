@@ -120,6 +120,23 @@ string Plot::NormalizeGroup(const string& group)
 
 //**************************************************************************************************
 /**
+ * Drawing option aliases are stored by name.
+ */
+//**************************************************************************************************
+void Plot::ReadDrawingOption(const ptree& tree, optional<drawing_options_t>& option, const char* key)
+{
+  if (auto name = tree.get_optional<string>(key)) {
+    option = drawing_option_from_name(*name);
+    if (!option) WARNING("Unknown drawing option {} is ignored.", *name);
+  }
+}
+void Plot::PutDrawingOption(ptree& tree, const optional<drawing_options_t>& option, const char* key)
+{
+  if (option) tree.put(key, drawing_option_name(*option));
+}
+
+//**************************************************************************************************
+/**
  * Default constructor.
  */
 //**************************************************************************************************
@@ -1050,9 +1067,9 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mFillDefaults.colorGradient.rgbEndpoints, "default_fill_colors_gradient_endpoints");
   read_from_tree(padTree, mFillDefaults.colorGradient.alpha, "default_fill_colors_gradient_alpha");
   read_from_tree(padTree, mFillDefaults.colorGradient.nColors, "default_fill_colors_gradient_nColors");
-  read_from_tree(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
-  read_from_tree(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
-  read_from_tree(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
+  ReadDrawingOption(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
+  ReadDrawingOption(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
+  ReadDrawingOption(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
   read_from_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_boxrange");
   read_from_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
@@ -1145,9 +1162,9 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mFillDefaults.colorGradient.rgbEndpoints, "default_fill_colors_gradient_endpoints");
   put_in_tree(padTree, mFillDefaults.colorGradient.alpha, "default_fill_colors_gradient_alpha");
   put_in_tree(padTree, mFillDefaults.colorGradient.nColors, "default_fill_colors_gradient_nColors");
-  put_in_tree(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
-  put_in_tree(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
-  put_in_tree(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
+  PutDrawingOption(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
+  PutDrawingOption(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
+  PutDrawingOption(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
   put_in_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_boxrange");
   put_in_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
@@ -1646,7 +1663,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mLegend.label, "legend_label");
   read_from_tree(dataTree, mLegend.id, "legend_id");
   read_from_tree(dataTree, mDrawingOptions, "drawing_options");
-  read_from_tree(dataTree, mDrawingOptionAlias, "drawing_option_alias");
+  ReadDrawingOption(dataTree, mDrawingOptionAlias, "drawing_option_alias");
   read_from_tree(dataTree, mTextFormat, "text_format");
   read_from_tree(dataTree, mMarker.color, "marker_color");
   read_from_tree(dataTree, mMarker.alpha, "marker_alpha");
@@ -1788,7 +1805,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mLegend.label, "legend_label");
   put_in_tree(dataTree, mLegend.id, "legend_id");
   put_in_tree(dataTree, mDrawingOptions, "drawing_options");
-  put_in_tree(dataTree, mDrawingOptionAlias, "drawing_option_alias");
+  PutDrawingOption(dataTree, mDrawingOptionAlias, "drawing_option_alias");
   put_in_tree(dataTree, mTextFormat, "text_format");
   put_in_tree(dataTree, mMarker.color, "marker_color");
   put_in_tree(dataTree, mMarker.alpha, "marker_alpha");

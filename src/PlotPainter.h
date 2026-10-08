@@ -56,76 +56,80 @@ namespace SciRooPlot
 // supported input data types
 using data_ptr_t = std::variant<TH1*, TH2*, TH3*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF3*, TF2*, TF1*>;
 
+// ROOT drawing options behind the aliases, per data type (an alias missing here cannot be drawn for that type)
 inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist2d{
-  {box, "BOX"},
-  {box1, "BOX1"},
+  {col, "COL"},
   {colz, "COLZ"},
-  {lego, "LEGO1 0"},
-  {lego_no_borders, "LEGO3 0"},
-  {legoz, "LEGO2Z 0"},
-  {surf, "SURF"},
-  {surf1, "SURF1"},
-  {surf1z, "SURF1Z"},
-  {surf2, "SURF2"},
-  {surf2z, "SURF2Z"},
-  {surf3, "SURF3"},
-  {surf3z, "SURF3Z"},
-  {surf4, "SURF4"},
-  {surf7, "SURF7"},
-  {surf7z, "SURF7Z"},
-  {cont, "CONT3"},
-  {contz, "CONTZ"},
-  {cont1z, "CONT1Z"},
-  {cont4z, "CONT4Z"},
+  {box, "BOX"},
   {text, "TEXT"},
-  {candle1, "CANDLEX1"},
-  {candle2, "CANDLEX2"},
-  {candle3, "CANDLEX3"},
-  {candle4, "CANDLEX4"},
-  {candle5, "CANDLEX5"},
-  {candle6, "CANDLEX6"},
-  {candle7, "CANDLEX(111101)"},  // no median but mean as line
+  {lego, "LEGO1 0"},
+  {lego_col, "LEGO2 0"},
+  {lego_colz, "LEGO2Z 0"},
+  {lego_noborders, "LEGO3 0"},
+  {surf, "SURF"},
+  {surf_col, "SURF1"},
+  {surf_colz, "SURF1Z"},
+  {surf_fill, "SURF2"},
+  {surf_fillz, "SURF2Z"},
+  {surf_contours, "SURF3"},
+  {surf_shaded, "SURF4"},
+  {cont, "CONT3"},
+  {cont_col, "CONT1"},
+  {cont_colz, "CONT1Z"},
+  {cont_fill, "CONT0"},
+  {cont_fillz, "CONTZ"},
+  {cont_smooth, "CONT4"},
+  {cont_smoothz, "CONT4Z"},
+  {candle, "CANDLEX2"},                  // box, median, whiskers up to 1.5 IQR, outliers
+  {candle_minmax, "CANDLEX1"},           // whiskers up to the extreme values, mean as circle
+  {candle_mean, "CANDLEX3"},             // candle with the mean as circle
+  {candle_notched, "CANDLEX4"},          // candle_mean with the uncertainty of the median
+  {candle_points, "CANDLEX5"},           // candle with all points
+  {candle_scatter, "CANDLEX6"},          // candle with all points scattered
+  {candle_meanline, "CANDLEX(111101)"},  // box, mean as line (no median), whiskers up to the extreme values, outliers
+  {violin, "VIOLINX2"},
+  {violin_minmax, "VIOLINX1"},
 };
 
 inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist{
-  {points, "X0 EP"},
-  {points_xerr, "EP"},
-  {points_endcaps, "E1"},
-  {curve, "HIST C"},
+  {points, "X0 E P"},
+  {points_xerr, "E P"},
+  {points_endcaps, "X0 E1 P"},
+  {points_xerr_endcaps, "E1 P"},
+  {points_text, "X0 E P"},  // the values are written above the error bars
   {line, "HIST L"},
-  {bar, "HIST B"},
-  {hbar, "HIST HBAR"},
-  {boxes, "E2"},
+  {curve, "HIST C"},
+  {hist, "HIST"},
+  {hist_open, "HIST ]["},
+  {hbars, "HIST HBAR"},
+  {area, "HIST LF2"},
+  {area_smooth, "HIST CF"},
   {band, "E5"},
   {band_smooth, "E6"},
-  {area, "HIST F"},
-  {area_curve, "HIST CF"},
-  {area_line, "HIST LF"},
-  {hist, "HIST"},
-  {hist_no_borders, "HIST ]["},
-  {stars, "*H"},
-  {text, "TEXT"},
-  {hbar_no_borders, "HBAR ]["},
-  {hbar1, "HBAR1"},
-  {hbar2, "HBAR2"},
-  {hbar3, "HBAR3"},
-  {hbar4, "HBAR4"},
+  {boxes, "E2"},
+  {boxes_nomarkers, "E2"},  // the markers are removed before drawing
+  {text, "HIST TEXT"},
 };
+// aliases missing for one of the 1d types are drawn by converting to the other type (bars: graph bars with gaps, text: histogram with the values)
 
+// the x errors of graphs are removed before drawing for all points aliases without _xerr (as for histograms with X0),
+// and area is drawn as the polygon between the points and zero, with its outline (F alone would close the polygon from the last point to the first)
 inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Graph{
-  {points, "P Z"},  // x errors are removed before drawing (as for histograms)
+  {points, "P Z"},
   {points_xerr, "P Z"},
-  {points_line, "P Z L"},
   {points_endcaps, "P"},
-  {curve, "X C"},
+  {points_xerr_endcaps, "P"},
+  {points_line, "P Z L"},
+  {points_text, "P Z"},  // the values are written above the error bars
+  {points_arrows, "P Z |>"},
   {line, "X L"},
-  {bar, "X B"},
-  {boxes, "P2"},
+  {curve, "X C"},
+  {bars, "X B"},
+  {area, "LF"},
   {band, "3"},
   {band_smooth, "4"},
-  {area, "X CF"},
-  {area_line, "X LC"},
-  {boxes_only, "2"},
+  {boxes, "P2"},
+  {boxes_nomarkers, "2"},
   {brackets, "[]"},
 };
 
@@ -168,9 +172,12 @@ class PlotPainter
   bool Divide(TH1* numerator, TF1* denominator, bool binomialErrors = false);
   bool Divide(TGraph* numerator, TF1* denominator, bool binomialErrors = false);
 
+  static TGraph* ToGraph(TH1* hist);
+  static TH1* ToHist(TGraph* graph, bool warn = true);
   bool CheckFontSizes(TList* list);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
   void ReplacePlaceholders(std::string& str, TNamed* data_ptr);
+  static std::string LegendDrawStyle(TObject* obj, std::string option);
   TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, TPad* pad);
   bool FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY);
   float_t GetTextSizePixel(float_t textSizeNDC);

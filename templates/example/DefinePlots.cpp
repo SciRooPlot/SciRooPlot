@@ -267,12 +267,12 @@ void DefineSpectraPlots(PlotManager& pm)
     pm.AddPlot(plot3d);
 
     Plot plotContours("ptVsMultContours", "spectra/2dViews", "2d_logz");
-    plotContours[1].AddData("ptVsMult", "data").SetOptions(contz).SetContours(12);
+    plotContours[1].AddData("ptVsMult", "data").SetOptions(cont_fillz).SetContours(12);
     plotContours[1].SetPalette(kViridis);  // any ROOT palette, or a custom gradient like the colours above
     pm.AddPlot(plotContours);
 
     Plot plotCandles("ptVsMultCandles", "spectra/2dViews", "1d");
-    plotCandles[1].AddData("ptVsMult", "data").RebinX(10).SetOptions(candle2);  // one candle per x bin
+    plotCandles[1].AddData("ptVsMult", "data").RebinX(10).SetOptions(candle);  // one candle per x bin
     plotCandles[1]['Y'].SetRange(0., 3.);
     pm.AddPlot(plotCandles);
   }  // -----------------------------------------------------------------------------------
