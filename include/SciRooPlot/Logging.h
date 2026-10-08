@@ -90,7 +90,7 @@ template <typename... Args>
 inline void print(std::string_view fmt_str, Args&&... args)
 {
   if (Config::Get().Verbosity() >= Config::LogLevel::info) {
-    fmt::print(stderr, "       | ");
+    fmt::print("       | ");
     fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
     fmt::print("\n");
   }
@@ -194,14 +194,14 @@ inline std::string type_name()
 template <typename T>
 inline void check_type(const T&, std::string_view name = "")
 {
-  fmt::print(stderr, "{}[ TYPE ]{} ", begin_color(Color::Cyan), end_color());
+  fmt::print("{}[ TYPE ]{} ", begin_color(Color::Cyan), end_color());
   fmt::print("Variable {}{}has type {}", name, name.empty() ? "" : " ", type_name<T>());
   fmt::print("\n");
 }
 
 inline void here(const char* file, const char* function, int line)
 {
-  fmt::print(stderr, "{}[ HERE ]{} ", begin_color(Color::Cyan), end_color());
+  fmt::print("{}[ HERE ]{} ", begin_color(Color::Cyan), end_color());
   fmt::print("Line {} in function {} ({})", line, function, file);
   fmt::print("\n");
 }
