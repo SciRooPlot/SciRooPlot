@@ -1118,7 +1118,7 @@ bool PlotManager::FillBuffer()
               // inputs that do not contain the folder of a restricted data source (dataSource:some/folder) are simply not part of it
               if (isRestricted) continue;
               ERROR("Subdirectory {} not found in file {}.", folderPath, fileName);
-              return false;
+              continue;
             }
           }
 
