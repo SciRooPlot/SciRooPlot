@@ -438,6 +438,7 @@ auto Plot::SetTransparent() -> decltype(*this)
 //**************************************************************************************************
 void Plot::operator+=(const Plot& plot)
 {
+  if (this == &plot) logger::throw_invalid_argument("Cannot add plot {} to itself.", GetUniqueName());
   mName = plot.mName;
   mGroup = plot.mGroup;
   mBasePlot = plot.mBasePlot;
@@ -466,6 +467,7 @@ void Plot::operator+=(const Plot& plot)
 //**************************************************************************************************
 Plot operator+(const Plot& basePlot, const Plot& plot)
 {
+  if (&basePlot == &plot) logger::throw_invalid_argument("Cannot add plot {} to itself.", plot.GetUniqueName());
   Plot combinedPlot = basePlot;
   combinedPlot += plot;
   return combinedPlot;
@@ -1205,6 +1207,7 @@ ptree Plot::Pad::GetPropertyTree() const
 //**************************************************************************************************
 void Plot::Pad::operator+=(const Pad& pad)
 {
+  if (this == &pad) logger::throw_invalid_argument("Cannot add a pad to itself.");
   if (pad.mOptions) mOptions = pad.mOptions;
   if (pad.mPosition.xlow) mPosition.xlow = pad.mPosition.xlow;
   if (pad.mPosition.ylow) mPosition.ylow = pad.mPosition.ylow;
