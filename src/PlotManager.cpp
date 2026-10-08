@@ -194,35 +194,30 @@ bool PlotManager::SaveDataToRootFile() const
     return false;
   }
   for (const auto& [dataSource, buffer] : mDataBuffer) {
-    TDirectory* sourceDir = outputFile.mkdir(dataSource.data(), "", true);
+    // the folder of a restricted data source (dataSource:some/folder) becomes subdirectories
+    string sourcePath = dataSource;
+    std::replace(sourcePath.begin(), sourcePath.end(), ':', '/');
+    TDirectory* sourceDir = outputFile.mkdir(sourcePath.data(), "", true);
     if (!sourceDir) {
-      ERROR("Could not create directory {} in {}.", dataSource, mDataRootFile);
+      ERROR("Could not create directory {} in {}.", sourcePath, mDataRootFile);
       continue;
     }
+    const bool isUserDefined = (dataSource == "USER_FUNCTIONS" || dataSource == "USER_GRAPHS");
     for (const auto& [dataName, dataPtr] : buffer) {
       if (!dataPtr) continue;
-      TDirectory* dir = sourceDir;  // each object's path starts at its data source directory
-      const string objectName = dataPtr->GetName();
-      if (objectName.empty()) {
-        WARNING("Skipping nameless object of type {} in data source {}.", dataPtr->ClassName(), dataSource);
-        continue;
-      }
-      string name = split_string(objectName, ':', true)[0];
-      auto tokens = split_string(name, '/');
-      size_t iToken = 1u;
-      for (const auto& token : tokens) {
-        if (iToken == tokens.size()) {
-          dir->cd();
-          dataPtr->Write(token.data());
-        } else {
-          dir = dir->mkdir(token.data(), "", true);
-          if (!dir) {
-            ERROR("Could not create subdirectory {} for {}.", token, objectName);
-            break;
-          }
+      // the name is the path of the data within its source, for tree projections followed by the request {...};
+      // only that path becomes subdirectories, since request expressions and user-defined functions may contain '/' and ':'
+      const size_t pathEnd = (isUserDefined) ? string::npos : dataName.rfind('/', dataName.find('{'));
+      TDirectory* dir = sourceDir;
+      if (pathEnd != string::npos) {
+        dir = sourceDir->mkdir(dataName.substr(0, pathEnd).data(), "", true);
+        if (!dir) {
+          ERROR("Could not create directory {} for {} in {}.", dataName.substr(0, pathEnd), dataName, mDataRootFile);
+          continue;
         }
-        ++iToken;
       }
+      dir->cd();
+      dataPtr->Write(((pathEnd == string::npos) ? dataName : dataName.substr(pathEnd + 1)).data());
     }
   }
   outputFile.Close();
