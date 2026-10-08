@@ -1942,7 +1942,7 @@
       fill: (x, y) => if calc.rem(y, 2) == 0 { rgb("eef2f5") } else { white },
       [*Alias*], [*Histograms*], [*Graphs*], [*Alias*], [*Histograms*], [*Graphs*],
       [`points`], [`X0 EP`], [`P Z`], [`boxes`], [`E2`], [`P2`],
-      [`points_xerr`], [`EP`], [--], [`boxes_only`], [--], [`2`],
+      [`points_xerr`], [`EP`], [`P Z`], [`boxes_only`], [--], [`2`],
       [`points_endcaps`], [`E1`], [`P`], [`hist`], [`HIST`], [--],
       [`points_line`], [--], [`P Z L`], [`hist_no_borders`], [`HIST ][`], [--],
       [`line`], [`HIST L`], [`X L`], [`stars`], [`*H`], [--],

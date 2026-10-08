@@ -113,7 +113,8 @@ inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist
 };
 
 inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Graph{
-  {points, "P Z"},
+  {points, "P Z"},  // x errors are removed before drawing (as for histograms)
+  {points_xerr, "P Z"},
   {points_line, "P Z L"},
   {points_endcaps, "P"},
   {curve, "X C"},

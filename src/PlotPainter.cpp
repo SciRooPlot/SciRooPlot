@@ -354,6 +354,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         using data_type = std::decay_t<decltype(data_ptr)>;
         gErrorIgnoreLevel = dataIndex ? userErrorLevel : kFatal;
         optional<drawing_options_t> defaultDrawingOption = data->GetDrawingOptionAlias();
+        bool hideGraphErrorsX = false;
 
         if (!data->GetDrawingOptions()) {
           // MEMO: avoid code duplication here by implementing this in more clever way
@@ -398,6 +399,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (defaultDrawingOption) {
               if (defaultDrawingOptions_Graph.find(*defaultDrawingOption) != defaultDrawingOptions_Graph.end()) {
                 drawingOptions += defaultDrawingOptions_Graph.at(*defaultDrawingOption);
+                hideGraphErrorsX = (*defaultDrawingOption == points);
               } else if (dataIndex != 0) {
                 WARNING("Default drawing option not defined for graph ({}).", data_ptr->GetName());
               }
@@ -826,6 +828,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
           }
           if (nInvalid) warn("{} has {} point{} with NaN or infinite values, which are not drawn.", data_ptr->GetName(), nInvalid, (nInvalid == 1) ? "" : "s");
+        }
+
+        // as for histograms, x errors are only drawn with points_xerr (ROOT has no drawing option for this, so they are removed from the copy that is drawn)
+        if (hideGraphErrorsX) {
+          if constexpr (is_graph_1d<data_type>()) {
+            for (double_t* ex : {data_ptr->GetEX(), data_ptr->GetEXlow(), data_ptr->GetEXhigh()}) {  // symmetric or asymmetric errors
+              if (ex) std::fill(ex, ex + data_ptr->GetN(), 0.);
+            }
+          }
         }
 
         // first data is only used to define the axes
