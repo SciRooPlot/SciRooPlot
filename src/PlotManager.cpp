@@ -1951,6 +1951,9 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
 optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, const vector<tree_input_t>& treeInputs,
                                          const Plot::Pad::Data::data_info_t::join_t& join, vector<shared_ptr<TChain>>& joinedChains)
 {
+  if (const string treeAlias = treeName.substr(treeName.find_last_of('/') + 1); join.GetAlias() == treeAlias) {
+    return fmt::format("the columns of both would be called {}.column, please specify an alias", treeAlias);
+  }
   std::map<string, std::unique_ptr<TFile>> openFiles;  // each file is opened only once for the following checks
   auto getTree = [&](const string& fileName, const string& treePath) -> TTree* {
     auto& file = openFiles[fileName];

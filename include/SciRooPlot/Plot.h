@@ -742,7 +742,7 @@ class Plot::Pad::Data
   };
   static std::optional<std::vector<data_info_t::join_t>> ReadJoins(const boost::property_tree::ptree& tree, const std::string& label);
   static void PutJoins(boost::property_tree::ptree& tree, const std::optional<std::vector<data_info_t::join_t>>& joins, const std::string& label);
-  static void AddJoin(data_info_t& dataInfo, const std::string& name, const std::string& dataSource, const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias);
+  static void AddJoin(data_info_t& dataInfo, const std::string& name, const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias);
 
  private:
   bool mDefinesFrame{};
