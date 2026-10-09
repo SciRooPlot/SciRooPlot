@@ -25,6 +25,7 @@
 #include <ROOT/RDFHelpers.hxx>
 #include <ROOT/RDataFrame.hxx>
 #include <TApplication.h>
+#include <TBranch.h>
 #include <TCanvas.h>
 #include <TChain.h>
 #include <TClass.h>
@@ -1961,6 +1962,11 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     if (!file || file->IsZombie()) return nullptr;
     return file->Get<TTree>(treePath.data());
   };
+  TTree* firstTree = getTree(treeInputs.front().file, treeInputs.front().treePath);
+  // a branch of the tree with sub-columns (leaflist, split object) named like the alias would make alias.column ambiguous
+  if (auto* branch = (firstTree) ? firstTree->GetBranch(join.GetAlias().data()) : nullptr; branch && (branch->GetNleaves() > 1 || branch->GetListOfBranches()->GetEntries() > 0)) {
+    return fmt::format("{} has a branch {}, please specify a different alias", treeName, join.GetAlias());
+  }
   auto joinedChain = std::make_shared<TChain>(join.GetAlias().data());
   const TTree* firstJoinedTree{};
   if (join.dataSource.empty()) {
@@ -1998,10 +2004,11 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     }
   }
   if (!join.keys.empty()) {
-    const TTree* firstTree = getTree(treeInputs.front().file, treeInputs.front().treePath);
     for (const auto& key : join.keys) {
-      for (const auto* tree : {firstTree, firstJoinedTree}) {
-        auto* leaf = (tree) ? const_cast<TTree*>(tree)->GetLeaf(key.data()) : nullptr;
+      for (const auto* tree : {static_cast<const TTree*>(firstTree), firstJoinedTree}) {
+        // keys are top-level columns with a single value, the join filter addresses the first one as alias.key
+        auto* branch = (tree) ? const_cast<TTree*>(tree)->GetBranch(key.data()) : nullptr;
+        auto* leaf = (branch && branch->GetNleaves() == 1) ? static_cast<TLeaf*>(branch->GetListOfLeaves()->At(0)) : nullptr;
         const string treeDescription = (tree == firstTree) ? treeName : join.tree;
         if (!leaf) return fmt::format("{} has no column {}", treeDescription, key);
         // the values are compared as integers
@@ -2011,16 +2018,24 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
         }
       }
     }
-    const auto errorIgnoreLevel = gErrorIgnoreLevel;
-    gErrorIgnoreLevel = kFatal;  // duplicates are reported below
-    auto index = std::make_unique<TTreeIndex>(joinedChain.get(), join.keys[0].data(), (join.keys.size() > 1) ? join.keys[1].data() : "0");
-    gErrorIgnoreLevel = errorIgnoreLevel;
+    auto index = [&]() {
+      auto errorLevelGuard = make_scope_guard([level = gErrorIgnoreLevel]() { gErrorIgnoreLevel = level; });
+      gErrorIgnoreLevel = kFatal;  // duplicates and keys that are too large are reported below
+      return std::make_unique<TTreeIndex>(joinedChain.get(), join.keys[0].data(), (join.keys.size() > 1) ? join.keys[1].data() : "0");
+    }();
     if (index->IsZombie()) return "cannot build an index of its keys";
-    // each key may appear only once, otherwise it is undefined which of the rows is matched
     const Long64_t* major = index->GetIndexValues();
     const Long64_t* minor = index->GetIndexValuesMinor();
-    for (Long64_t i = 1; i < index->GetN(); ++i) {
-      if (major[i] == major[i - 1] && minor[i] == minor[i - 1]) {
+    // ROOT looks up the keys of the tree as double, which holds integers exactly only below 2^53
+    constexpr Long64_t maxKey = Long64_t{1} << 53;
+    auto isTooLarge = [](Long64_t value) { return value >= maxKey || value <= -maxKey; };
+    for (Long64_t i = 0; i < index->GetN(); ++i) {
+      for (size_t k = 0; k < join.keys.size(); ++k) {
+        const Long64_t value = (k == 0) ? major[i] : minor[i];
+        if (isTooLarge(value)) return fmt::format("{} = {} cannot be matched exactly, keys must be below 2^53", join.keys[k], value);
+      }
+      // each key may appear only once, otherwise it is undefined which of the rows is matched
+      if (i > 0 && major[i] == major[i - 1] && minor[i] == minor[i - 1]) {
         return (join.keys.size() > 1) ? fmt::format("{} = {} and {} = {} appears in more than one row", join.keys[0], major[i], join.keys[1], minor[i]) : fmt::format("{} = {} appears in more than one row", join.keys[0], major[i]);
       }
     }
@@ -2134,27 +2149,26 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       auto passGuard = make_scope_guard([&]() { nPasses += df->GetNRuns(); });
 
       // rows without a matching row in a tree joined by key are skipped (its columns have no values for them)
-      ROOT::RDF::RNode node = *df;
-      optional<ROOT::RDF::RResultPtr<ULong64_t>> nMatched;
+      vector<string> joinKeyColumns;
       if (joins) {
-        const auto columns = df->GetColumnNames();
         for (const auto& join : *joins) {
-          if (join.keys.empty()) continue;
-          const string prefix = join.GetAlias() + ".";
-          auto column = std::find_if(columns.begin(), columns.end(), [&](const auto& col) { return col.rfind(prefix, 0) == 0; });
-          if (column != columns.end()) node = node.FilterAvailable(*column);
+          if (!join.keys.empty()) joinKeyColumns.push_back(join.GetAlias() + "." + join.keys[0]);
         }
-        if (std::any_of(joins->begin(), joins->end(),
-                        [](const auto& join) {
-                          return !join.keys.empty();
-                        })) nMatched = node.Count();
+      }
+      optional<ROOT::RDF::RResultPtr<ULong64_t>> nMatched;
+      if (!joinKeyColumns.empty()) {
+        ROOT::RDF::RNode matched = *df;
+        for (const auto& column : joinKeyColumns) {
+          matched = matched.FilterAvailable(column);
+        }
+        nMatched = matched.Count();
       }
 
       for (auto info : infos) {
         DataFrameRequest<data_info_t> request(info, fmt::format("{} {}", type, DataLocation(dataSource, name)), name + info->GetNameSuffix() + objNameSuffix);
         auto outputStart = rootOutput.Text().size();  // only consider ROOT output caused by this request
         try {
-          if (request.Prepare(node)) requests.push_back(std::move(request));
+          if (request.Prepare(*df, joinKeyColumns)) requests.push_back(std::move(request));
         } catch (const std::invalid_argument&) {
           throw;
         } catch (const std::exception& e) {

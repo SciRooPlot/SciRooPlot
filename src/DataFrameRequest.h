@@ -55,7 +55,7 @@ class DataFrameRequest
  public:
   DataFrameRequest(const DataInfo* info, std::string context, std::string objName) : mInfo(info), mContext(std::move(context)), mObjName(std::move(objName)) {}
 
-  bool Prepare(ROOT::RDF::RNode node);
+  bool Prepare(ROOT::RDF::RNode node, const std::vector<std::string>& requiredColumns = {});
   bool NeedsAutoRange() const;
   bool Book();
 
@@ -109,7 +109,7 @@ std::string DataFrameRequest<DataInfo>::AvailableColumns(ROOT::RDF::RNode& node)
 
 // book everything that is needed before the final result can be booked (defines, filters, entry counts, auto-detection of axis ranges)
 template <typename DataInfo>
-bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node)
+bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vector<std::string>& requiredColumns)
 {
   const auto& dataInfo = *mInfo;
   if (dataInfo.isProfileNoScatter) {
@@ -155,6 +155,10 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node)
     } else {
       node = node.Range(*dataInfo.entries.max);
     }
+  }
+  // rows without values in these columns (no matching row in a tree joined by key) are skipped like filtered rows, after the entry range
+  for (const auto& column : requiredColumns) {
+    node = node.FilterAvailable(column);
   }
   if (dataInfo.filters) {
     mEntriesPreFilter = node.Count();
