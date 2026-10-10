@@ -106,6 +106,10 @@ If the program lives in a CMake build directory, it is rebuilt automatically bef
 
 In interactive (`show`) mode, one can browse through the requested plots using the keys 's' (right), 'a' (left) and 'q' (quit) or by double-clicking on the right and left side of the plot, respectively.
 
+## 🤖 For AI agents
+A condensed description of the workflow, the API and common pitfalls for coding agents is kept as an [agent skill](skill/scirooplot/SKILL.md) (with [reference files](skill/scirooplot/reference/api.md) generated from the headers).
+To use it, copy the folder `docs/skill/scirooplot` of the repository into your agent's skills directory (for Claude Code: `~/.claude/skills/`, for Claude.ai: upload it as a zip), or point your agent to [llms.txt](llms.txt).
+
 ## 📖 Commented code examples
 The following example code snippets with comments illustrate how plots are defined within your SciRooPlot user code.
 Since these examples are not comprehensive, to see all the functionality of SciRooPlot also have a look at the available setters in the corresponding header files.

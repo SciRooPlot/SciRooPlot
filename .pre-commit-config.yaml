@@ -27,9 +27,18 @@ repos:
     rev: v0.13.0
     hooks:
       - id: ruff
-        files: ^templates/.*\.py$
+        files: ^(templates|scripts)/.*\.py$
       - id: ruff-format
-        files: ^templates/.*\.py$
+        files: ^(templates|scripts)/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: api-reference
+        name: api reference up to date
+        entry: python3 scripts/generate-api-reference.py --check
+        language: system
+        pass_filenames: false
+        files: ^(include/SciRooPlot/.*\.h|src/PlotPainter\.h|docs/skill/scirooplot/reference/.*\.md|scripts/generate-api-reference\.py)$
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.11.0.1

@@ -46,6 +46,11 @@ jobs:
           sed -i 's/ADVANCED_INSTALL\.md/ADVANCED_INSTALL.html/g' docs/index.md
           sed -i '1i---\nlayout: default\ntitle: SciRooPlot\n---\n' docs/ADVANCED_INSTALL.md
           jekyll build -s docs -d build
+          # the markdown sources next to the rendered pages, for llms.txt and for agents fetching the skill
+          cp docs/README.md docs/ADVANCED_INSTALL.md docs/llms.txt build/
+          mkdir -p build/skill/scirooplot/reference
+          cp docs/skill/scirooplot/SKILL.md build/skill/scirooplot/
+          cp docs/skill/scirooplot/reference/*.md build/skill/scirooplot/reference/
           mkdir -p build/slides
           typst compile docs/slides/slides.typ build/slides/SciRooPlot_UserManual_cpp.pdf --input lang=cpp
           typst compile docs/slides/slides.typ build/slides/SciRooPlot_UserManual_py.pdf --input lang=py

@@ -1,0 +1,24 @@
+# SciRooPlot
+
+> SciRooPlot is a C++ and Python library on top of ROOT for defining, organizing and generating scientific plots: plots are declared in a small program, stored per project and drawn with the `plot` command line app.
+
+Start with the agent skill: it is the condensed, agent-oriented description of the workflow, the API and the pitfalls. The README is the human walkthrough with commented examples.
+
+## Agent skill
+
+- [SKILL.md](https://scirooplot.github.io/SciRooPlot/skill/scirooplot/SKILL.md): workflow, CLI, API essentials, drawing option aliases, modifiers, ratios, trees, C++ vs Python, pitfalls
+- [API reference](https://scirooplot.github.io/SciRooPlot/skill/scirooplot/reference/api.md): every setter of Plot, Pad, Axis, Data, Ratio, legends, texts, PlotManager, PanelLayout (generated from the headers)
+- [Drawing options](https://scirooplot.github.io/SciRooPlot/skill/scirooplot/reference/drawing-options.md): alias to ROOT option string for each data type
+- [Command line](https://scirooplot.github.io/SciRooPlot/skill/scirooplot/reference/cli.md): `srp` and `plot` commands, modes and configuration files
+
+## Documentation
+
+- [README](https://scirooplot.github.io/SciRooPlot/README.md): installation, usage and the commented example code
+- [Advanced installation](https://scirooplot.github.io/SciRooPlot/ADVANCED_INSTALL.md): building ROOT and Boost from source
+- [Headers](https://github.com/SciRooPlot/SciRooPlot/tree/master/include/SciRooPlot): Plot.h, PlotManager.h, PanelLayout.h — the authoritative interface
+- [Example programs](https://github.com/SciRooPlot/SciRooPlot/tree/master/templates/example): DefinePlots.cpp and DefinePlots.py with example data
+
+## Optional
+
+- [Repository](https://github.com/SciRooPlot/SciRooPlot)
+- [Slides](https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_cpp.pdf): user manual slides (also SciRooPlot_UserManual_py.pdf)
