@@ -2,3 +2,7 @@ theme: jekyll-theme-cayman
 
 url: "https://scirooplot.github.io"
 baseurl: "/SciRooPlot"
+
+# the agent skill is published as raw markdown (copied in the docs workflow); its templates would break Liquid
+exclude:
+  - skill
