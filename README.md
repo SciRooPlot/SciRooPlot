@@ -56,6 +56,10 @@ source ./install/share/scirooplot/env.sh
 In your shell startup file you have to use the absolute path to the env script, which the installer will print at the end.
 You can also choose a custom install location via `--prefix <my/install/directory>`.
 
+### AI agents
+If you work with a coding agent, give it the SciRooPlot skill: download [scirooplot.zip](https://scirooplot.github.io/SciRooPlot/skill/scirooplot.zip) and upload it as a skill (Claude.ai) or unpack it into the agent's skills directory (Claude Code: `~/.claude/skills/`).
+It describes the workflow, the API and common pitfalls in a form agents read reliably; the same content is indexed for web-based agents in [llms.txt](https://scirooplot.github.io/SciRooPlot/llms.txt).
+
 ## 📖 Documentation
 
 - User manual: [Cpp interface](https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_cpp.pdf), [Python interface](https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_py.pdf)
