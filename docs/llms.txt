@@ -11,7 +11,7 @@ Start with the agent skill: it is the condensed, agent-oriented description of t
 - [Drawing options](https://scirooplot.github.io/SciRooPlot/skill/scirooplot/reference/drawing-options.md): alias to ROOT option string for each data type
 - [Command line](https://scirooplot.github.io/SciRooPlot/skill/scirooplot/reference/cli.md): `srp` and `plot` commands, modes and configuration files
 
-- [scirooplot.zip](https://scirooplot.github.io/SciRooPlot/skill/scirooplot.zip): the skill folder as zip, ready to upload or unpack into a skills directory
+- [scirooplot.skill](https://scirooplot.github.io/SciRooPlot/skill/scirooplot.skill): the skill folder as a zip archive, ready to upload or unzip into a skills directory
 
 ## Documentation
 

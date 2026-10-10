@@ -51,7 +51,7 @@ jobs:
           mkdir -p build/skill/scirooplot/reference
           cp docs/skill/scirooplot/SKILL.md build/skill/scirooplot/
           cp docs/skill/scirooplot/reference/*.md build/skill/scirooplot/reference/
-          (cd docs/skill && zip -r ../../build/skill/scirooplot.zip scirooplot)   # ready to upload as a skill
+          (cd docs/skill && zip -r ../../build/skill/scirooplot.skill scirooplot)   # a .skill file is a zip of the skill folder
           mkdir -p build/slides
           typst compile docs/slides/slides.typ build/slides/SciRooPlot_UserManual_cpp.pdf --input lang=cpp
           typst compile docs/slides/slides.typ build/slides/SciRooPlot_UserManual_py.pdf --input lang=py

@@ -108,7 +108,7 @@ In interactive (`show`) mode, one can browse through the requested plots using t
 
 ## 🤖 For AI agents
 A condensed description of the workflow, the API and common pitfalls for coding agents is kept as an [agent skill](skill/scirooplot/SKILL.md) (with [reference files](skill/scirooplot/reference/api.md) generated from the headers).
-To use it, download [scirooplot.zip](skill/scirooplot.zip) and upload it as a skill (Claude.ai) or unpack it into your agent's skills directory (for Claude Code: `~/.claude/skills/`), or point your agent to [llms.txt](llms.txt).
+To use it, download [scirooplot.skill](skill/scirooplot.skill) (a zip of the skill folder) and upload it as a skill (Claude.ai) or unzip it into your agent's skills directory (for Claude Code: `~/.claude/skills/`), or point your agent to [llms.txt](llms.txt).
 
 ## 📖 Commented code examples
 The following example code snippets with comments illustrate how plots are defined within your SciRooPlot user code.
