@@ -114,7 +114,7 @@ class PlotManager
   std::string mGifName;
   bool mExitInteractiveBrowsing{false};
   int32_t mWindowOffsetY{};
-  bool mHasDisplay{false};  // a graphical display is available (required for modes "show" and "macro")
+  std::optional<bool> mHasDisplay;  // a graphical display is available (required for modes "show" and "macro"), determined by the first GeneratePlots
   const std::vector<std::string> mTableFileEndings = {".csv", ".dat", ".txt", ".tsv", ".tab"};
 
   std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>> mDataBuffer;

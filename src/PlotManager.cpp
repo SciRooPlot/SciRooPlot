@@ -115,23 +115,9 @@ PlotManager::PlotManager(const std::string& projectName)
   if (!gApplication) {
     new TApplication("MainApp", 0, nullptr);
   }
-  ROOT::EnableImplicitMT();
-  gROOT->SetWebDisplay("off");
-  gErrorIgnoreLevel = kWarning;
 
   if (!projectName.empty() && Config::Get().Exists(projectName)) {
     mOutputDirectory = Config::Get().OutputDir(projectName);
-  }
-
-  // determine OS dependent offset between window and frame
-  // (GetWindowTopY gives the current coordinates of the window, but SetWindowPosition moves the frame instead of the window)
-  TCanvas dummyCanvas("dummyCanvas", "dummyCanvas", 1, 1);
-  if (auto canvasImp = dynamic_cast<TRootCanvas*>(dummyCanvas.GetCanvasImp())) {
-    mHasDisplay = true;
-    canvasImp->UnmapWindow();
-    dummyCanvas.SetCanvasSize(1, 1);
-    dummyCanvas.SetWindowPosition(50, 50);
-    mWindowOffsetY = dummyCanvas.GetWindowTopY() - canvasImp->GetY();
   }
 }
 
@@ -847,7 +833,33 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     ERROR("Invalid mode '{}' (valid modes: {}gif+<centiseconds>).", mode, modeList);
     return false;
   }
-  if ((mode == "show" || mode == "macro") && !mHasDisplay) {
+  // plotting uses multi-threading, the classic canvas and fewer ROOT messages; the settings of the calling program are restored afterwards
+  const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
+  const bool wasWebDisplay = gROOT->IsWebDisplay();
+  const TString webDisplay = gROOT->GetWebDisplay();
+  auto globalsGuard = make_scope_guard([wasMTEnabled, wasWebDisplay, webDisplay, errorLevel = gErrorIgnoreLevel]() {
+    gErrorIgnoreLevel = errorLevel;
+    if (wasWebDisplay) gROOT->SetWebDisplay(webDisplay.Data());
+    if (!wasMTEnabled) ROOT::DisableImplicitMT();
+  });
+  if (!wasMTEnabled) ROOT::EnableImplicitMT();
+  gROOT->SetWebDisplay("off");
+  gErrorIgnoreLevel = std::max<Int_t>(gErrorIgnoreLevel, kWarning);
+
+  if (!mHasDisplay) {
+    // determine OS dependent offset between window and frame
+    // (GetWindowTopY gives the current coordinates of the window, but SetWindowPosition moves the frame instead of the window)
+    mHasDisplay = false;
+    TCanvas dummyCanvas("dummyCanvas", "dummyCanvas", 1, 1);
+    if (auto canvasImp = dynamic_cast<TRootCanvas*>(dummyCanvas.GetCanvasImp())) {
+      mHasDisplay = true;
+      canvasImp->UnmapWindow();
+      dummyCanvas.SetCanvasSize(1, 1);
+      dummyCanvas.SetWindowPosition(50, 50);
+      mWindowOffsetY = dummyCanvas.GetWindowTopY() - canvasImp->GetY();
+    }
+  }
+  if ((mode == "show" || mode == "macro") && !*mHasDisplay) {
     ERROR("Mode '{}' needs a graphical display (is DISPLAY set?).", mode);
     return false;
   }
@@ -1646,8 +1658,9 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
             } else {
               // trees in lists live in memory only, which RDataFrame can process only single-threaded
               const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
+              const UInt_t nThreads = ROOT::GetThreadPoolSize();
               ROOT::DisableImplicitMT();
-              auto mtGuard = make_scope_guard([wasMTEnabled]() { if (wasMTEnabled) ROOT::EnableImplicitMT(); });
+              auto mtGuard = make_scope_guard([wasMTEnabled, nThreads]() { if (wasMTEnabled) ROOT::EnableImplicitMT(nThreads); });
               ProcessDataRequests("tree", dataSource, fullName, suffix, [tree]() { return std::make_unique<ROOT::RDataFrame>(*tree); });
             }
             tree->SetDirectory(0);
@@ -2143,9 +2156,10 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
     try {
       auto* cerrBuffer = std::cerr.rdbuf(&rootOutput);  // capture ROOT output, only shown if something goes wrong
       auto cerrGuard = make_scope_guard([cerrBuffer]() { std::cerr.rdbuf(cerrBuffer); });
-      bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
+      const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
+      const UInt_t nThreads = ROOT::GetThreadPoolSize();
       if (sequential) ROOT::DisableImplicitMT();
-      auto mtGuard = make_scope_guard([wasMTEnabled]() { if (wasMTEnabled) ROOT::EnableImplicitMT(); });
+      auto mtGuard = make_scope_guard([sequential, wasMTEnabled, nThreads]() { if (sequential && wasMTEnabled) ROOT::EnableImplicitMT(nThreads); });
       auto df = makeDataFrame();
       auto nEntriesTotal = df->Count();
       auto passGuard = make_scope_guard([&]() { nPasses += df->GetNRuns(); });
