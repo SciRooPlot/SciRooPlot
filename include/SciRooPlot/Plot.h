@@ -262,8 +262,8 @@ class Plot::Pad
   Data& AddData(const std::string& name, const Data& settings, const std::optional<std::string>& label = {});  // deprecated
   Data& AddFunction(const std::string& function, const std::optional<std::string>& label = {});
 
-  Data& AddPoints(std::vector<double_t> x, std::vector<double_t> y, const std::optional<std::string>& label = {});
-  Data& AddPoints(std::vector<std::pair<double_t, double_t>> positions, const std::optional<std::string>& label = {});
+  Data& AddPoints(const std::vector<double_t>& x, const std::vector<double_t>& y, const std::optional<std::string>& label = {});
+  Data& AddPoints(const std::vector<std::pair<double_t, double_t>>& positions, const std::optional<std::string>& label = {});
 
   Data& AddLine(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2, const std::optional<std::string>& label = {});
 
@@ -562,13 +562,13 @@ class Plot::Pad::Data
   virtual Data& Smooth(uint16_t nIterSmooth = 1);
   virtual Data& Cumulative(bool forward = true);
 
-  virtual Data& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});
+  virtual Data& Project(const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});
   virtual Data& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});  // for 2d histos
   virtual Data& ProjectY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});  // for 2d histos
 
-  virtual Data& Profile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {});  // for 2d & 3d histos
-  virtual Data& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});                                                     // for 2d histos
-  virtual Data& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});                                                     // for 2d histos
+  virtual Data& Profile(const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});  // for 2d & 3d histos
+  virtual Data& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});                                                                   // for 2d histos
+  virtual Data& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});                                                                   // for 2d histos
 
   struct data_dim_t {
     data_dim_t() = default;
@@ -888,11 +888,11 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& Both();    // following modifiers act on numerator and denominator, before the division
   Ratio& Result();  // following modifiers act on the ratio itself (default)
 
-  Ratio& Project(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) override;
+  Ratio& Project(const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {}) override;
   Ratio& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) override;
   Ratio& ProjectY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {}) override;
 
-  Ratio& Profile(std::vector<uint8_t> dims, std::vector<std::tuple<uint8_t, double_t, double_t>> ranges = {}, std::optional<bool> isUserCoord = {}) override;
+  Ratio& Profile(const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {}) override;
   Ratio& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) override;
   Ratio& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {}) override;
 
@@ -1200,7 +1200,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   LegendEntry& GetEntry(uint8_t entryID);
   LegendBox& SetTitle(const std::string& title);
   LegendBox& SetNumColumns(uint8_t numColumns);
-  LegendBox& SetDefaultDrawStyle(std::string drawStyle);
+  LegendBox& SetDefaultDrawStyle(const std::string& drawStyle);
   LegendBox& SetDefaultColor(int16_t color);
   LegendBox& SetDefaultAlpha(float_t alpha);
   LegendBox& SetDefaultLineColor(int16_t color);

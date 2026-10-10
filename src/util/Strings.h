@@ -94,10 +94,10 @@ std::string tuple_to_string(const std::tuple<Ts...>& items)
 }
 
 template <typename T>
-std::string vector_to_string(std::vector<T> items)
+std::string vector_to_string(const std::vector<T>& items)
 {
   std::string itemString;
-  for (auto& item : items) {
+  for (const auto& item : items) {
     if constexpr (is_tuple<T>::value) {
       itemString += tuple_to_string(item);
       if (&item != &items.back()) itemString += ";";
@@ -137,7 +137,7 @@ T string_to_type(const std::string& str)
 }
 
 template <typename... Ts>
-std::tuple<Ts...> string_to_tuple(std::string itemString)
+std::tuple<Ts...> string_to_tuple(const std::string& itemString)
 {
   // split string
   std::string curItemStr;

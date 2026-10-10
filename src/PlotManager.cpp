@@ -885,7 +885,8 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
         mDataBuffer[data->GetDataSource()][data->GetName()];
         // also register requests without projection info: trees and tables then report that they cannot be plotted directly
         auto& dataInfos = mDataInfoBuffer[data->GetDataSource()][data->GetName()];
-        auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == data->GetDataInfo().GetNameSuffix(); });
+        const string nameSuffix = data->GetDataInfo().GetNameSuffix();
+        auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == nameSuffix; });
         if (iter == dataInfos.end()) {
           dataInfos.push_back(data->GetDataInfo());
         }
@@ -893,7 +894,8 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
           const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
           mDataBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()];
           auto& denomDataInfos = mDataInfoBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()];
-          auto iter = std::find_if(denomDataInfos.begin(), denomDataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == ratio->GetDenomDataInfo().GetNameSuffix(); });
+          const string denomNameSuffix = ratio->GetDenomDataInfo().GetNameSuffix();
+          auto iter = std::find_if(denomDataInfos.begin(), denomDataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == denomNameSuffix; });
           if (iter == denomDataInfos.end()) {
             denomDataInfos.push_back(ratio->GetDenomDataInfo());
           }
@@ -996,7 +998,7 @@ bool PlotManager::FillBuffer()
     sourceGroups[dataSource.substr(0, dataSource.find(':'))].push_back(dataSource);
   }
   for (const auto& [baseSource, dataSources] : sourceGroups) {
-    map<string, unordered_map<string, vector<string>>> requiredData;  // data source -> subdir -> names
+    map<string, unordered_map<string, set<string>>> requiredData;  // data source -> subdir -> names
     for (const auto& dataSource : dataSources) {
       for (auto& [dataName, dataPtr] : mDataBuffer[dataSource]) {
         if (dataPtr) continue;
@@ -1054,7 +1056,7 @@ bool PlotManager::FillBuffer()
           path = name.substr(0, pathPos);
           name.erase(0, pathPos + 1);
         }
-        requiredData[dataSource][std::move(path)].push_back(std::move(name));
+        requiredData[dataSource][std::move(path)].insert(std::move(name));
       }
     }
     auto allFound = [&]() { return std::all_of(requiredData.begin(), requiredData.end(), [](const auto& entry) { return entry.second.empty(); }); };
@@ -1070,8 +1072,8 @@ bool PlotManager::FillBuffer()
         if (auto it = requiredData.find(baseSource); it != requiredData.end()) {
           string name = input.substr(input.rfind('/') + 1, input.rfind(".") - input.rfind('/') - 1);
           ReadTableData(input, name, baseSource);
-          vector<string>& wantedNames = it->second[""];
-          wantedNames.erase(std::remove_if(wantedNames.begin(), wantedNames.end(), [&](const auto& wantedName) { return wantedName == name; }), wantedNames.end());
+          set<string>& wantedNames = it->second[""];
+          wantedNames.erase(name);
           if (wantedNames.empty()) it->second.erase("");
         }
       }
@@ -1149,7 +1151,7 @@ bool PlotManager::FillBuffer()
             const auto pathPos = treeName.find_last_of('/');
             auto& names = required[(pathPos == string::npos) ? "" : treeName.substr(0, pathPos)];
             const string name = treeName.substr(pathPos + 1);
-            if (std::find(names.begin(), names.end(), name) == names.end()) names.push_back(name);
+            names.insert(name);
           }
         }
       }
@@ -1182,7 +1184,7 @@ bool PlotManager::FillBuffer()
         const string pathStr = (pathPos == string::npos) ? "" : treeName.substr(0, pathPos);
         if (auto it = required.find(pathStr); it != required.end()) {
           auto& names = it->second;
-          names.erase(std::remove(names.begin(), names.end(), treeName.substr(pathPos + 1)), names.end());
+          names.erase(treeName.substr(pathPos + 1));
           if (names.empty()) required.erase(it);
         }
         // requests that join the same trees share one chain
@@ -1554,10 +1556,10 @@ void PlotManager::ClearCanvasRegistry()
 
 //**************************************************************************************************
 /**
- * Recursively reads data from folder / list and adds it to output data array. Found dataNames are removed from the vectors.
+ * Recursively reads data from folder / list and adds it to output data array. Found dataNames are removed from the set.
  */
 //**************************************************************************************************
-void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const string& prefix, const string& suffix, const string& dataSource)
+void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string& prefix, const string& suffix, const string& dataSource)
 {
   TCollection* itemList = nullptr;
   if (folder->InheritsFrom(TDirectory::Class())) {
@@ -1592,7 +1594,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
         curDataName = key->GetName();
 
         bool isTraversable = str_contains(className, "TDirectory") || str_contains(className, "TFolder") || str_contains(className, "TList") || str_contains(className, "THashList") || str_contains(className, "TObjArray");
-        const bool isRequested = std::find(dataNames.begin(), dataNames.end(), curDataName) != dataNames.end();
+        const bool isRequested = dataNames.count(curDataName) > 0;
         if ((traverse && isTraversable) || isRequested) {
           TClass* keyClass = TClass::GetClass(className.data());
           if (!keyClass || !keyClass->IsTObject()) {
@@ -1624,7 +1626,7 @@ void PlotManager::ReadData(TObject* folder, vector<string>& dataNames, const str
       } else {
         // the key name supersedes the actual data name (in case they are different when written to file via h->Write("myKeyName"))
         if (curDataName.empty()) curDataName = obj->GetName();
-        if (auto it = std::find(dataNames.begin(), dataNames.end(), curDataName); it != dataNames.end()) {
+        if (auto it = dataNames.find(curDataName); it != dataNames.end()) {
           // demand ownership for object if required for given type
           if (obj->InheritsFrom(TH1::Class())) static_cast<TH1*>(obj)->SetDirectory(0);
           if (obj->InheritsFrom(TGraph2D::Class())) static_cast<TGraph2D*>(obj)->SetDirectory(0);

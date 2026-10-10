@@ -1441,7 +1441,7 @@ Plot::Pad::Data& Plot::Pad::AddFunction(const string& function, const optional<s
  * Add user-defined points to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Data& Plot::Pad::AddPoints(vector<double_t> x, vector<double_t> y, const optional<string>& label)
+Plot::Pad::Data& Plot::Pad::AddPoints(const vector<double_t>& x, const vector<double_t>& y, const optional<string>& label)
 {
   size_t nPoints = x.size();
   if (!nPoints || x.size() != y.size()) {
@@ -1456,7 +1456,7 @@ Plot::Pad::Data& Plot::Pad::AddPoints(vector<double_t> x, vector<double_t> y, co
   mData.push_back(std::make_shared<Data>(xStr + ";" + yStr, "USER_GRAPHS", label));
   return *mData.back();
 }
-Plot::Pad::Data& Plot::Pad::AddPoints(vector<pair<double_t, double_t>> positions, const optional<string>& label)
+Plot::Pad::Data& Plot::Pad::AddPoints(const vector<pair<double_t, double_t>>& positions, const optional<string>& label)
 {
   vector<double_t> x;
   vector<double_t> y;
@@ -2211,7 +2211,7 @@ auto Plot::Pad::Data::ScaleZ(double_t scaleFactor) -> decltype(*this)
   mModify.scaleAxisZ = scaleFactor;
   return *this;
 }
-auto Plot::Pad::Data::Project(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Data::Project(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfo = {dims, ranges, isUserCoord};
   return *this;
@@ -2226,7 +2226,7 @@ auto Plot::Pad::Data::ProjectY(double_t startX, double_t endX, optional<bool> is
   mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
   return *this;
 }
-auto Plot::Pad::Data::Profile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Data::Profile(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   mProjInfo = {dims, ranges, isUserCoord, true};
   return *this;
@@ -2765,7 +2765,7 @@ auto Plot::Pad::Ratio::Result() -> decltype(*this)
   mModMode = Mode::Res;
   return *this;
 }
-auto Plot::Pad::Ratio::Project(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::Project(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   ResolveSelectionMode("Project");
   if (mModMode != Mode::Den) {
@@ -2795,7 +2795,7 @@ auto Plot::Pad::Ratio::ProjectY(double_t startX, double_t endX, optional<bool> i
   mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
   return *this;
 }
-auto Plot::Pad::Ratio::Profile(vector<uint8_t> dims, vector<tuple<uint8_t, double_t, double_t>> ranges, optional<bool> isUserCoord) -> decltype(*this)
+auto Plot::Pad::Ratio::Profile(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   ResolveSelectionMode("Profile");
   if (mModMode != Mode::Den) {
@@ -3704,7 +3704,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns)
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultDrawStyle(string drawStyle)
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultDrawStyle(const string& drawStyle)
 {
   mDrawStyleDefault = drawStyle;
   return *this;
