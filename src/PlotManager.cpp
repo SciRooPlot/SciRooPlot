@@ -1329,6 +1329,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
       fullPlot = *iterator;
     } else {
       ERROR("Could not find base plot named {}.", basePlotName);
+      return false;
     }
   }
   fullPlot += plot;
