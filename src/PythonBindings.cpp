@@ -43,6 +43,8 @@
 #include <utility>
 #include <vector>
 
+#include "util/Binning.h"
+
 namespace py = pybind11;
 using namespace SciRooPlot;
 
@@ -747,8 +749,7 @@ void exportPythonDataInterfaces(py::module_& m)
     double xmin, xmax;
     if (range.is_none()) {
       auto [minIt, maxIt] = std::minmax_element(v.begin(), v.end());
-      xmin = *minIt;
-      xmax = *maxIt;
+      std::tie(xmin, xmax) = util::auto_axis_range(*minIt, *maxIt);
     } else {
       auto r = range.cast<std::pair<double, double>>();
       xmin = r.first;
@@ -773,10 +774,8 @@ void exportPythonDataInterfaces(py::module_& m)
     double xmin, xmax, ymin, ymax;
     auto [minxIt, maxxIt] = std::minmax_element(x.begin(), x.end());
     auto [minyIt, maxyIt] = std::minmax_element(y.begin(), y.end());
-    xmin = *minxIt;
-    xmax = *maxxIt;
-    ymin = *minyIt;
-    ymax = *maxyIt;
+    std::tie(xmin, xmax) = util::auto_axis_range(*minxIt, *maxxIt);
+    std::tie(ymin, ymax) = util::auto_axis_range(*minyIt, *maxyIt);
     if (!bins.is_none()) {
       auto b = bins.cast<std::pair<int, int>>();
       nx = b.first;

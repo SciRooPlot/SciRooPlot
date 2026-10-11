@@ -30,15 +30,19 @@
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <functional>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+#include "util/Binning.h"
 
 namespace SciRooPlot
 {
@@ -85,6 +89,7 @@ class DataFrameRequest
   std::optional<ROOT::RDF::RResultPtr<ULong64_t>> mEntriesPreFilter;
   std::optional<ROOT::RDF::RResultPtr<ULong64_t>> mEntriesPostFilter;
   std::vector<std::optional<std::pair<ROOT::RDF::RResultPtr<double_t>, ROOT::RDF::RResultPtr<double_t>>>> mAutoRanges;  // (min, max) per axis
+  std::vector<bool> mIsIntegerAxis;                                                                                     // the values of the axis are integers
   std::function<TObject*()> mGetResult;
   std::vector<ROOT::RDF::RResultHandle> mHandles;
 };
@@ -175,6 +180,12 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
 
   axisID = 1;
   mAutoRanges.resize(mDims.size());
+  mIsIntegerAxis.resize(mDims.size());
+  auto isIntegerType = [](std::string type) {
+    std::transform(type.begin(), type.end(), type.begin(), [](unsigned char c) { return std::tolower(c); });
+    if (type.find("float") != std::string::npos || type.find("double") != std::string::npos) return false;
+    return type.find("int") != std::string::npos || type.find("long") != std::string::npos || type.find("short") != std::string::npos || type.find("char") != std::string::npos || type.find("bool") != std::string::npos;
+  };
   for (auto& dataDim : mDims) {
     std::string colName = "SRP_AXIS_" + std::to_string(axisID);
     try {
@@ -183,10 +194,12 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
       ERROR("Illegal expression {} for {}{}.", dataDim.var, mContext, AvailableColumns(node));
       return false;
     }
-    if (node.GetColumnType(colName).find("string") != std::string::npos) {
+    const std::string columnType = node.GetColumnType(colName);
+    if (columnType.find("string") != std::string::npos) {
       ERROR("Expression {} for {} is not numeric.", dataDim.var, mContext);
       return false;
     }
+    mIsIntegerAxis[axisID - 1] = isIntegerType(columnType);
     const bool isBinned = isProjection || (mIsProfile && axisID < mDims.size());
     if (isBinned && dataDim.nBins && dataDim.edges.size() == 2 && !dataDim.edges[0] && !dataDim.edges[1]) {
       // auto-detect bin edges given the data
@@ -247,11 +260,13 @@ bool DataFrameRequest<DataInfo>::Book()
   auto& dataDims = mDims;
   for (size_t i = 0; i < dataDims.size(); ++i) {
     if (auto& range = mAutoRanges[i]) {
-      double_t min = *range->first;
-      double_t max = *range->second;
-      double_t margin = 0.01;
-      dataDims[i].edges[0] = min * (min > 0 ? (1. - margin) : (1. + margin));
-      dataDims[i].edges[1] = max * (max > 0 ? (1. + margin) : (1. - margin));
+      const double_t min = *range->first;
+      const double_t max = *range->second;
+      if (mIsIntegerAxis[i] && min <= max) {
+        std::tie(dataDims[i].nBins, dataDims[i].edges[0], dataDims[i].edges[1]) = util::integer_binning(min, max, dataDims[i].nBins);
+      } else {
+        std::tie(dataDims[i].edges[0], dataDims[i].edges[1]) = util::auto_axis_range(min, max);
+      }
     }
   }
   const char* title = mHistTitle.data();

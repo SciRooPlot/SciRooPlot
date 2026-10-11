@@ -179,6 +179,7 @@ add_library(SciRooPlot SHARED
   src/util/ScopeGuard.h
   src/util/TypeTraits.h
   src/util/Optional.h
+  src/util/Binning.h
 )
 add_library(SciRooPlot::SciRooPlot ALIAS SciRooPlot)
 
