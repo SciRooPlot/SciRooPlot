@@ -25,8 +25,8 @@ git clone https://github.com/SciRooPlot/SciRooPlot.git && cd SciRooPlot && ./scr
 Put the `source .../env.sh` line into `.zshrc`/`.bashrc` (absolute path); it provides `srp`, `plot`, the Python module `SciRooPlot` and tab completion.
 
 ```bash
-srp init-cpp <project> [<dir>]      # minimal C++ project (CMake), or init-py for Python
-srp example-cpp <project> [<dir>]   # many commented example plots with example data (also example-py)
+srp init-cpp <project> [<dir>]      # minimal C++ project (CMake), or init-py for Python; contains one plot: `plot myGroup myFirstPlot`
+srp example-cpp <project> [<dir>]   # commented example plots with example data (also example-py), e.g. `plot spectra ptSpectrum`, `plot higgs .+`
 srp add <project> <program> [<outdir>]   # register an existing program
 srp select <project>                # make it the current project
 srp set <project> outdir <dir>      # where files are saved (subfolders per group)
@@ -168,6 +168,40 @@ plot[1].GetLegend(1).GetEntry(1).SetLabel("custom").SetDrawStyle("L").SetLineCol
 plot[1].AddText("line one // line two");  AddText(top_left, "text");  AddText(0.2, 0.9, "text").SetTextSize(20).SetTextAlign(13);
 ```
 Positions are pad coordinates (0–1) of the upper left corner, `.SetUserCoordinates()` switches to axis units. Legend symbols are derived from what is actually drawn; override with `SetDrawStyle`/`SetDefaultDrawStyle`.
+
+## Practices to suggest (this is where SciRooPlot saves work)
+
+**Define appearance once, reuse it everywhere.** A `Data` without a name is a template; calling it with a name gives a data object with all its settings:
+```cpp
+const Data dataStyle = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.);
+const Data mcStyle = Data().SetDataSource("mc").SetOptions(hist).SetLine(kRed + 1, kSolid, 3.);
+plot[1].AddData(dataStyle("ptSpec"), "data");        // name from the template's data source
+plot[1].AddData(mcStyle("ptSpec", "otherMC"), "MC"); // or another data source
+plot[2].AddRatio(dataStyle("ptSpec"), mcStyle("ptSpec"));
+```
+Templates carry everything a `Data` has (options, colours, ranges, modifiers, projections, tree queries), can be kept in a `map` keyed by an enum, and `.SetLayout(tmpl)` / `.ApplyLayout(tmpl)` apply one to an existing data. Put them (and label constants like the experiment name) at file scope of `DefinePlots`.
+
+**Derive plots instead of repeating them.** `Plot variant(plot, "newName", "group")` copies a finished plot; add or change data and axes afterwards (`variant[1](2).SetColor(kRed)`). Generate plot families in loops — over centralities, cuts, runs, detector parts — with the loop variable in the name and group (`"raa_" + cent`, `AppendGroup("nuclearModification")`), so `plot heavyion/nuclearModification .+` makes the whole set.
+
+**Put layout into base plots, not into plots.** Everything that is the same for a class of plots — dimensions, margins, fonts, colour sequence, default drawing options, axis conventions, ratio reference line — belongs into a base plot; the plots then only contain data, titles and ranges. Start from the shipped ones (`MakeBasePlot("1d")`, `"1d_ratio"`, `"2d"`, `"1d_2x1"`, …; modify and `AddBasePlot` under the same or a new name) and keep `plot[0]` for per-plot defaults (`plot[0]['X'].SetRange(...)` acts on all pads).
+
+**Own layouts with PanelLayout** when the grid of panels is not one of the shipped names: panels are placed in rows in units of the standard panel, the sizes (text, ticks, line widths, margins in pixels) are shared, so plots of different layouts look alike in a document:
+```cpp
+PanelLayout sizes;                                            // the defaults; or sizes.SetTextSize(31.52).SetTitleSize(39.4).SetLineWidth(5)
+const vector<vector<Panel>> rows = {{Panel(), Panel()},       // two panels sharing their y axis
+                                    {Panel(1, 0.37), Panel(1, 0.37)}};  // a ratio row below each
+Plot layout("1d_2x1_ratio_mine", PanelLayout(sizes, rows));   // pads numbered row by row: 1 2 / 3 4
+layout.SetTransparent();
+layout[0].SetDefaultTextFont(42).SetDefaultColors({kBlack, kBlue + 1, kRed + 1}).SetDefaultDrawingOptionGraph(points);
+layout[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
+for (uint8_t ratioPad : {3, 4}) layout[ratioPad].SetRefFunc("1");
+pm.AddBasePlot(layout);
+```
+`Gap()` between panels makes them independent (own axes), `Empty()` leaves a cell for text, `Panel(w, h)` scales a panel, `Panel().ZAxis()` reserves room for a colour scale. The source of `PlotManager::MakeBasePlot` is the full worked example.
+
+**Keep inputs out of the code.** Machine-specific paths go into project variables (`srp set <project> inputDir /path`, `pm.GetProjectProperty("inputDir")`) or environment variables in the data source strings (`${HOME}/...`); the data source names stay stable across machines. In-memory objects (a graph computed in the program) are registered with `pm.AddDataSource("glauber", &graph)` and used like file data.
+
+**Let the plot show numbers.** Label placeholders (`"<mean[.2f]>"`, `"<entries>"`, `"<integral[.2e]>"`) and `points_text` save hand-copied values; `AddColorOverview("colors", "overview")` renders the colour sequence with ROOT indices (`plot overview colors`).
 
 ## C++ vs Python
 
