@@ -245,7 +245,9 @@ bool PlotManager::CreateOutputDirectory() const
 //**************************************************************************************************
 void PlotManager::SetOutputDirectory(const string& path)
 {
-  mOutputDirectory = expand_path(path);
+  const string expandedPath = expand_path(path);
+  if (expandedPath.empty() && !path.empty()) return;  // unset environment variable, reported by expand_path
+  mOutputDirectory = expandedPath;
 }
 
 //**************************************************************************************************
@@ -267,7 +269,9 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<string>& 
     mInputs.erase(dataSource);
   }
   for (const auto& input : inputs) {
-    if (std::filesystem::path(expand_path(input)).is_relative()) {
+    const string expandedInput = expand_path(input);
+    if (expandedInput.empty() && !input.empty()) continue;  // unset environment variable, reported by expand_path
+    if (std::filesystem::path(expandedInput).is_relative()) {
       WARNING("The path of an input must not be relative. Skipping {}.", input);
       continue;
     }
@@ -363,6 +367,10 @@ void PlotManager::SaveDataSources(const optional<string>& file) const
     dataSourcesTree.put_child(dataSource, inputsOfDataSource);
   }
   std::filesystem::path filePath = expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName));
+  if (filePath.empty()) {
+    ERROR("No file path or project specified. Cannot save data sources.");
+    return;
+  }
   if (std::filesystem::create_directories(filePath.parent_path())) {
     INFO("Created config folder: {}.", filePath.parent_path().string());
   }

@@ -18,8 +18,10 @@
 
 #include "util/Paths.h"
 
-#include <TSystem.h>
+#include "SciRooPlot/Logging.h"
 
+#include <cctype>
+#include <cstdlib>
 #include <string>
 #include <sys/stat.h>
 
@@ -27,11 +29,49 @@ using std::string;
 
 namespace SciRooPlot::util
 {
+// expands a leading ~ and environment variables ($VAR, ${VAR}) like bash; wildcards are matched where the paths are used
+// returns an empty string if a variable is not set
 string expand_path(const string& path)
 {
-  char* raw = gSystem->ExpandPathName(path.data());
-  string expandedPath(raw ? raw : "");
-  delete[] raw;
+  string expandedPath;
+  size_t pos = 0;
+  if (path == "~" || path.rfind("~/", 0) == 0) {
+    if (const char* home = std::getenv("HOME")) {
+      expandedPath = home;
+      pos = 1;
+    }
+  }
+  while (pos < path.size()) {
+    const size_t dollar = path.find('$', pos);
+    expandedPath += path.substr(pos, dollar - pos);
+    if (dollar == string::npos) break;
+    size_t nameStart = dollar + 1;
+    size_t nameEnd = nameStart;
+    size_t next = 0;
+    if (nameStart < path.size() && path[nameStart] == '{') {
+      nameEnd = path.find('}', ++nameStart);
+      if (nameEnd == string::npos) nameEnd = nameStart;  // unterminated: kept as it is
+      next = nameEnd + 1;
+    } else if (nameStart < path.size() && (std::isalpha(static_cast<unsigned char>(path[nameStart])) || path[nameStart] == '_')) {
+      while (nameEnd < path.size() && (std::isalnum(static_cast<unsigned char>(path[nameEnd])) || path[nameEnd] == '_'))
+        ++nameEnd;
+      next = nameEnd;
+    }
+    if (nameEnd == nameStart) {
+      // no variable name: the $ is part of the path
+      expandedPath += '$';
+      pos = dollar + 1;
+      continue;
+    }
+    const string name = path.substr(nameStart, nameEnd - nameStart);
+    const char* value = std::getenv(name.data());
+    if (!value) {
+      ERROR("Environment variable {} used in path {} is not set.", name, path);
+      return "";
+    }
+    expandedPath += value;
+    pos = next;
+  }
   return expandedPath;
 }
 
