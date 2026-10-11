@@ -1226,9 +1226,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             optional<double_t> scaleFactor;
             string scaleMode{};
             if (mods.GetScaleBinWidthNorm()) {
-              double_t integral = ptr->Integral();
+              // like for histograms the integral is the sum of the values (TGraph::Integral is the area of the closed polygon)
+              const double_t integral = std::accumulate(ptr->GetY(), ptr->GetY() + ptr->GetN(), 0.);
               if (integral == 0.) {
-                warn("Cannot normalize graph because integral is zero.");
+                warn("Cannot normalize graph because the sum of its values is zero.");
               } else {
                 scaleFactor = 1. / integral;
               }
