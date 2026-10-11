@@ -313,17 +313,17 @@ void PanelLayout::ApplyTo(Plot& plot) const
       x1 = std::round(x1);
       y0 = std::round(y0);
       y1 = std::round(y1);
+      if (cell->mEmpty && (x1 <= x0 || y1 <= y0)) {
+        // no pad is created, otherwise it would be drawn over the whole plot for lack of a position
+        WARNING("Layout: the empty cell in row {}, column {} leaves no space for pad {}.", r + 1, c + 1, padID);
+        continue;
+      }
       Plot::Pad& pad = plot[padID];
+      pad.SetPosition(x0 / canvasWidth, 1. - y1 / canvasHeight, x1 / canvasWidth, 1. - y0 / canvasHeight);
       if (cell->mEmpty) {
-        if (x1 <= x0 || y1 <= y0) {
-          WARNING("Layout: the empty cell in row {}, column {} leaves no space for pad {}.", r + 1, c + 1, padID);
-          continue;
-        }
-        pad.SetPosition(x0 / canvasWidth, 1. - y1 / canvasHeight, x1 / canvasWidth, 1. - y0 / canvasHeight);
         pad.SetDefaultTextSize(mTextSize / std::min(x1 - x0, y1 - y0));
         continue;
       }
-      pad.SetPosition(x0 / canvasWidth, 1. - y1 / canvasHeight, x1 / canvasWidth, 1. - y0 / canvasHeight);
 
       // the sizes of a single panel become the defaults of the plot (pad 0), such that they also apply to pads added by the user
       Plot::Pad& target = singlePanel ? plot[0] : pad;
