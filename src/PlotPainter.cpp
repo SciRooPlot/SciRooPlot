@@ -770,11 +770,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // ROOT places a y title with offset 0 automatically next to the widest label, but the gap it leaves is the title size
             // read as a fraction of the pad width (see TGaxis::PaintAxis), i.e. it grows for pads that are wider than high.
             // With a pixel font the gap is the title height in every pad, so relative fonts are converted for the automatic placement.
+            // Pixel sizes are stored unscaled (ApplyScale multiplies them by mScale), while the canvas already has its scaled size.
             if (axisLabel == 'Y' && axis_ptr->GetTitleOffset() == 0.f && axis_ptr->GetTitleFont() % 10 <= 2 && axis_ptr->GetTitleSize() > 0.f && axis_ptr->GetTitleSize() < 1.f) {
               const double_t padWidthPixel = pad_ptr->GetWw() * pad_ptr->GetAbsWNDC();
               const double_t padHeightPixel = pad_ptr->GetWh() * pad_ptr->GetAbsHNDC();
               axis_ptr->SetTitleFont(axis_ptr->GetTitleFont() / 10 * 10 + 3);
-              axis_ptr->SetTitleSize(static_cast<float_t>(axis_ptr->GetTitleSize() * std::min(padWidthPixel, padHeightPixel)));
+              axis_ptr->SetTitleSize(static_cast<float_t>(axis_ptr->GetTitleSize() * std::min(padWidthPixel, padHeightPixel) / mScale));
             }
           }
 
