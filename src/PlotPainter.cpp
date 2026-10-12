@@ -1386,6 +1386,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           auto processDenominator = [&](auto&& denom_data_ptr) {
             using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
             applyModifiers(denom_data_ptr, operandMods(data_as_ratio->GetDenomModify()));
+            auto unsupported = [&]() {
+              ERROR("Unsupported division of {} and {}.", data_ptr->ClassName(), denom_data_ptr->ClassName());
+              fail = true;
+            };
             if constexpr (is_hist<data_type>()) {
               if constexpr (is_func<denom_data_type>()) {
                 if (!Divide(data_ptr, denom_data_ptr, binomialErrors)) fail = true;
@@ -1398,14 +1402,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 }
               } else if constexpr (is_hist_1d<data_type>() && is_graph_1d<denom_data_type>()) {
                 if (!Divide(data_ptr, denom_data_ptr, binomialErrors)) fail = true;
+              } else {
+                unsupported();
               }
             } else if constexpr (is_graph_1d<data_type>()) {
               if constexpr (is_graph_1d<denom_data_type>() || is_hist_1d<denom_data_type>() || is_func_1d<denom_data_type>()) {
                 if (!Divide(data_ptr, denom_data_ptr, binomialErrors)) fail = true;
                 data_ptr->GetHistogram()->GetYaxis()->SetTitle("ratio");
+              } else {
+                unsupported();
               }
             } else {
-              ERROR("Unsupported division of {} and {}.", data_ptr->ClassName(), denom_data_ptr->ClassName());
+              unsupported();
             }
             delete denom_data_ptr;
           };
@@ -2991,8 +2999,7 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
     sameBinning = sameBinning && sameAxisBinning(numerator->GetZaxis(), denominator->GetZaxis());
   }
   if (sameBinning) {
-    numerator->Divide(numerator, denominator, 1., 1., (binomialErrors) ? "B" : "");
-    return true;
+    return numerator->Divide(numerator, denominator, 1., 1., (binomialErrors) ? "B" : "");
   }
   for (TAxis* axis : {numerator->GetXaxis(), numerator->GetYaxis(), numerator->GetZaxis(), denominator->GetXaxis(), denominator->GetYaxis(), denominator->GetZaxis()}) {
     if (axis && axis->IsAlphanumeric()) {
