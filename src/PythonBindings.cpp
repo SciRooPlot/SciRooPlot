@@ -183,13 +183,9 @@ void exportDrawingOptions(py::module_& m)
 #define OPT(name, ...) .value(#name, drawing_options_t::name)
   py::enum_<drawing_options_t>(m, "drawing_options_t") DRAWING_OPTIONS.export_values();
 #undef OPT
-  py::enum_<box_placement_t>(m, "box_placement_t")
-    .value("best_corner", box_placement_t::best_corner)
-    .value("top_left", box_placement_t::top_left)
-    .value("top_right", box_placement_t::top_right)
-    .value("bottom_right", box_placement_t::bottom_right)
-    .value("bottom_left", box_placement_t::bottom_left)
-    .export_values();
+#define PLACEMENT(name) .value(#name, box_placement_t::name)
+  py::enum_<box_placement_t>(m, "box_placement_t") BOX_PLACEMENTS.export_values();
+#undef PLACEMENT
 }
 
 void exportRootConstants(py::module_& m)

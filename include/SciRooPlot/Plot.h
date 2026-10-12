@@ -125,13 +125,37 @@ inline std::optional<drawing_options_t> drawing_option_from_name(const std::stri
 }
 
 // automatic placement of a legend or text: as close as possible to the corner of the frame where it fits best or to the given corner
+#define BOX_PLACEMENTS    \
+  PLACEMENT(best_corner)  \
+  PLACEMENT(top_left)     \
+  PLACEMENT(top_right)    \
+  PLACEMENT(bottom_right) \
+  PLACEMENT(bottom_left)
 enum box_placement_t : uint8_t {
-  best_corner,
-  top_left,
-  top_right,
-  bottom_right,
-  bottom_left,
+#define PLACEMENT(name) name,
+  BOX_PLACEMENTS
+#undef PLACEMENT
 };
+// the placements are stored by name
+inline std::string box_placement_name(box_placement_t placement)
+{
+  switch (placement) {
+#define PLACEMENT(name) \
+  case name:            \
+    return #name;
+    BOX_PLACEMENTS
+#undef PLACEMENT
+  }
+  return "";
+}
+inline std::optional<box_placement_t> box_placement_from_name(const std::string& name)
+{
+#define PLACEMENT(placementName) \
+  if (name == #placementName) return placementName;
+  BOX_PLACEMENTS
+#undef PLACEMENT
+  return std::nullopt;
+}
 
 class PanelLayout;
 

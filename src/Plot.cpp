@@ -3289,7 +3289,10 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
   read_from_tree(boxTree, mPos.w, "w");
   read_from_tree(boxTree, mPos.h, "h");
   read_from_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
-  read_from_tree(boxTree, mPos.placement, "placement");
+  if (auto name = boxTree.get_optional<string>("placement")) {
+    mPos.placement = box_placement_from_name(*name);
+    if (!mPos.placement) WARNING("Unknown box placement {} is ignored.", *name);
+  }
   read_from_tree(boxTree, mBorder.style, "border_style");
   read_from_tree(boxTree, mBorder.color, "border_color");
   read_from_tree(boxTree, mBorder.alpha, "border_alpha");
@@ -3319,7 +3322,7 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
   put_in_tree(boxTree, mPos.w, "w");
   put_in_tree(boxTree, mPos.h, "h");
   put_in_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
-  put_in_tree(boxTree, mPos.placement, "placement");
+  if (mPos.placement) boxTree.put("placement", box_placement_name(*mPos.placement));
   put_in_tree(boxTree, mBorder.style, "border_style");
   put_in_tree(boxTree, mBorder.color, "border_color");
   put_in_tree(boxTree, mBorder.alpha, "border_alpha");
