@@ -180,7 +180,14 @@ bool PlotManager::SaveDataToRootFile() const
     ERROR("Could not create output file {}/{}.", mOutputDirectory, mDataRootFile);
     return false;
   }
-  for (const auto& [dataSource, buffer] : mDataBuffer) {
+  // written in a fixed order (by name), so the same data always gives the same file
+  auto sorted = [](const auto& unorderedMap) {
+    std::map<string, const typename std::decay_t<decltype(unorderedMap)>::mapped_type*> view;
+    for (const auto& [key, value] : unorderedMap)
+      view.emplace(key, &value);
+    return view;
+  };
+  for (const auto& [dataSource, buffer] : sorted(mDataBuffer)) {
     // the folder of a restricted data source (dataSource:some/folder) becomes subdirectories
     string sourcePath = dataSource;
     std::replace(sourcePath.begin(), sourcePath.end(), ':', '/');
@@ -190,8 +197,8 @@ bool PlotManager::SaveDataToRootFile() const
       continue;
     }
     const bool isUserDefined = (dataSource == "USER_FUNCTIONS" || dataSource == "USER_GRAPHS");
-    for (const auto& [dataName, dataPtr] : buffer) {
-      if (!dataPtr) continue;
+    for (const auto& [dataName, dataPtr] : sorted(*buffer)) {
+      if (!*dataPtr) continue;
       // the name is the path of the data within its source, for tree projections followed by the request {...};
       // only that path becomes subdirectories, since request expressions and user-defined functions may contain '/' and ':'
       const size_t pathEnd = (isUserDefined) ? string::npos : dataName.rfind('/', dataName.find('{'));
@@ -204,7 +211,7 @@ bool PlotManager::SaveDataToRootFile() const
         }
       }
       dir->cd();
-      dataPtr->Write(((pathEnd == string::npos) ? dataName : dataName.substr(pathEnd + 1)).data());
+      (*dataPtr)->Write(((pathEnd == string::npos) ? dataName : dataName.substr(pathEnd + 1)).data());
     }
   }
   outputFile.Close();
