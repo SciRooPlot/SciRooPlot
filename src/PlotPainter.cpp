@@ -3454,14 +3454,34 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
         } else if (str_contains(matchStr, "mean")) {
           replaceStr = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMean());
         } else if (str_contains(matchStr, "maximum")) {
-          replaceStr = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMaximum());
+          // from the bins: GetMaximum()/GetMinimum() would return the frame limits stored on the drawn histogram
+          auto* hist = static_cast<TH1*>(data_ptr);
+          replaceStr = fmt::format(fmt::runtime(format), hist->GetBinContent(hist->GetMaximumBin()));
         } else if (str_contains(matchStr, "minimum")) {
-          replaceStr = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMinimum());
+          auto* hist = static_cast<TH1*>(data_ptr);
+          replaceStr = fmt::format(fmt::runtime(format), hist->GetBinContent(hist->GetMinimumBin()));
         }
       } catch (const fmt::format_error& e) {
         logger::error("Incompatible format string in {}: {}.", matchStr, e.what());
         replaceStr = matchStr;
       }
+    } else if (auto* graph = dynamic_cast<TGraph*>(data_ptr); graph && (str_contains(matchStr, "entries") || (graph->GetN() > 0 && !str_contains(matchStr, "integral") && !str_contains(matchStr, "mean")))) {
+      // for graphs only the unambiguous ones: number of points and smallest / largest y value
+      try {
+        if (str_contains(matchStr, "entries")) {
+          replaceStr = fmt::format(fmt::runtime(format), static_cast<double_t>(graph->GetN()));  // as double like the histogram entries, so the same formats apply
+        } else if (str_contains(matchStr, "maximum")) {
+          replaceStr = fmt::format(fmt::runtime(format), TMath::MaxElement(graph->GetN(), graph->GetY()));
+        } else if (str_contains(matchStr, "minimum")) {
+          replaceStr = fmt::format(fmt::runtime(format), TMath::MinElement(graph->GetN(), graph->GetY()));
+        }
+      } catch (const fmt::format_error& e) {
+        logger::error("Incompatible format string in {}: {}.", matchStr, e.what());
+        replaceStr = matchStr;
+      }
+    } else {
+      const string name = data_ptr->GetName();
+      logger::warning("Placeholder {} is not available for {} {}.", matchStr, data_ptr->ClassName(), name.substr(name.find(':') + 1));  // without the "<index>:" prefix
     }
 
     result += replaceStr;

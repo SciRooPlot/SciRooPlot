@@ -183,6 +183,7 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // it is possible to specify in the labels that you want to include some meta info of the data that is drawn, e.g.:
   plot[1].AddData("histName1", "dataSourceA", "mylabel avg = <mean>");
   // possible options are: <name>, <title>, <entries>, <integral>, <maximum>, <minimum>, <mean>
+  // (for graphs: <name>, <title>, <entries> = number of points, <maximum> and <minimum> of the y values)
   // you can use the standard printf style to specify how these numbers shall be formatted:
   plot[1].AddData("histName1", "dataSourceA", "mylabel avg = <mean[.2f]>");
   plot[1].AddData("histName2", "dataSourceA", "mylabel sum = <integral[.2e]>");
