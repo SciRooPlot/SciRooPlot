@@ -2851,7 +2851,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
     }
     // spline interpolation requires sorted values
     if (!denominator->TestBit(TGraph::kIsSortedX)) {
-      denominator = static_cast<TGraph*>(denominator->Clone("tmp"));
+      denominator = static_cast<TGraph*>(denominator->Clone(denominator->GetName()));  // keeps the name for messages
       denominator->Sort();
       denomX = denominator->GetX();
       denomY = denominator->GetY();
@@ -2903,7 +2903,16 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
         denomEyHigh = new double_t[numN];
       }
     }
+    // outside the denominator's range the spline extrapolates: warn with the distance, so the user can judge if that is reasonable
+    const double_t xMin = denomX[0] - std::max(0., denominator->GetErrorXlow(0));
+    const double_t xMax = denomX[denomN - 1] + std::max(0., denominator->GetErrorXhigh(denomN - 1));
+    int32_t nOutside = 0;
+    double_t maxDistance = 0.;
     for (int32_t i = 0; i < numN; ++i) {
+      if (const double_t distance = std::max(xMin - numX[i], numX[i] - xMax); distance > 0.) {
+        ++nOutside;
+        maxDistance = std::max(maxDistance, distance);
+      }
       denomY[i] = denomSpline.Eval(numX[i]);
       if (denomEy) {
         denomEy[i] = std::sqrt(0.5 * (std::pow(denomY[i] - denomSplineLow->Eval(numX[i]), 2) + std::pow(denomSplineHigh->Eval(numX[i]) - denomY[i], 2)));
@@ -2911,6 +2920,9 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
         denomEyLow[i] = std::abs(denomY[i] - denomSplineLow->Eval(numX[i]));
         denomEyHigh[i] = std::abs(denomSplineHigh->Eval(numX[i]) - denomY[i]);
       }
+    }
+    if (nOutside) {
+      WARNING("{} of {} points of {} are outside the range [{}, {}] of {} (up to {} beyond); the denominator is extrapolated there.", nOutside, numN, numerator->GetName(), xMin, xMax, denominator->GetName(), maxDistance);
     }
   }
 
@@ -2959,6 +2971,7 @@ bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialError
     return false;
   }
   TGraphErrors numeratorGraph(numerator);
+  numeratorGraph.SetName(numerator->GetName());  // used in messages
   if (!Divide(&numeratorGraph, denominator, binomialErrors)) return false;
   numerator->Reset();
   for (int32_t i = 0; i < numeratorGraph.GetN(); ++i) {
