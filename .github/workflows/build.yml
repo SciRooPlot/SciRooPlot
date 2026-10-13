@@ -106,4 +106,20 @@ jobs:
         env:
           SRP_TEST_INSTALL: ${{ github.workspace }}/install
         run: |
-          ./.github/scripts/test-example-project.sh
+          if [ "${RUNNER_OS}" = "Linux" ]; then
+            # with a display (a virtual X server), since that is how most users make their plots
+            xvfb-run -a ./.github/scripts/test-example-project.sh
+          else
+            ./.github/scripts/test-example-project.sh
+          fi
+
+      - name: Short test without a display (Linux)
+        if: runner.os == 'Linux'
+        shell: bash -el {0}
+        run: |
+          source "${GITHUB_WORKSPACE}/install/share/scirooplot/env.sh"
+          export SCIROOPLOT_CONFIG_PATH="$(mktemp -d)"
+          cd "$(mktemp -d)"
+          srp init-py Headless
+          plot myGroup myFirstPlot pdf
+          test -s Headless/output/myGroup/myFirstPlot.pdf

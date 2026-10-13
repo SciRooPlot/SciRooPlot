@@ -49,6 +49,7 @@
 #include <TSystem.h>
 #include <TTree.h>
 #include <TTreeIndex.h>
+#include <TVirtualX.h>
 
 #include <boost/property_tree/info_parser.hpp>
 
@@ -910,7 +911,8 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
   const bool wasWebDisplay = gROOT->IsWebDisplay();
   const TString webDisplay = gROOT->GetWebDisplay();
-  auto globalsGuard = make_scope_guard([wasMTEnabled, wasWebDisplay, webDisplay, errorLevel = gErrorIgnoreLevel]() {
+  auto globalsGuard = make_scope_guard([wasMTEnabled, wasWebDisplay, webDisplay, errorLevel = gErrorIgnoreLevel, wasBatch = gROOT->IsBatch()]() {
+    gROOT->SetBatch(wasBatch);
     gErrorIgnoreLevel = errorLevel;
     if (wasWebDisplay) gROOT->SetWebDisplay(webDisplay.Data());
     if (!wasMTEnabled) ROOT::DisableImplicitMT();
@@ -936,6 +938,11 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     logger::error("Mode '{}' needs a graphical display (is DISPLAY set?).", mode);
     return false;
   }
+  // all other modes draw in batch mode, which needs ROOT's batch graphics: once a window was opened (e.g. by the display check above),
+  // gVirtualX is the interface to the display, and since ROOT 6.40 painting a batch canvas through it crashes
+  TVirtualX* const displayGraphics = gVirtualX;
+  if (mode != "show" && mode != "macro") gVirtualX = gGXBatch;
+  auto graphicsGuard = make_scope_guard([displayGraphics]() { gVirtualX = displayGraphics; });
   // first determine which data needs to be loaded
   vector<Plot*> selectedPlots;
   map<int32_t, set<int32_t>> requiredData;

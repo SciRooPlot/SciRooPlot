@@ -38,6 +38,13 @@ plot '.+' '.+' file
 srp print Example_CPP/output/Plots.root:higgs/diphoton | grep '\] massSpectrum$'
 plot '.+' '.+' data
 srp print Example_CPP/output/Data.root:higgs/diphoton | grep '\] mgg_data$'
+if [ -n "${DISPLAY:-}" ]; then
+    # with a display (CI: xvfb-run) the modes above run while ROOT's X11 graphics are active; macro needs a display
+    plot '.+' '.+' png
+    test -s Example_CPP/output/higgs/diphoton/massSpectrum.png
+    plot '.+' '.+' macro
+    test -s Example_CPP/output/higgs/diphoton/massSpectrum.C
+fi
 
 echo "=== Testing Python examples ==="
 srp example-py Example_PY
