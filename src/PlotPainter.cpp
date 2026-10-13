@@ -2018,8 +2018,8 @@ string PlotPainter::LegendDrawStyle(TObject* obj, string option)
     option.erase(pos, token.size());
     return true;
   };
-  for (const char* ignored : {"SAME", "PFC", "PLC", "PMC", "X0", "]["})
-    takeToken(ignored);  // contain the letters checked below but draw nothing
+  for (const char* ignored : {"SAME", "TEXT", "PFC", "PLC", "PMC", "X0", "]["})
+    takeToken(ignored);  // contain the letters checked below but draw nothing of that kind
   auto fill = dynamic_cast<TAttFill*>(obj);
   const bool hasFill = fill && fill->GetFillStyle() != 0 && fill->GetFillColor() != 0;
   auto has = [&option](char c) { return option.find(c) != string::npos; };
@@ -2512,11 +2512,15 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
 
   auto markHist = [&](TH1* hist) {
     if (hist->GetDimension() != 1) return;
+    // error bars as ROOT draws them (the same rule as for the legend entries in LegendDrawStyle): with an E in the option or stored errors,
+    // unless HIST is given; SAME, TEXT etc. contain an E but are no error option
     TString option = hist->GetDrawOption();
-    option.ToLower();
-    const bool hasErrors = !option.Contains("hist") && option.Contains("e");
-    const bool hasErrorArea = hasErrors && (option.Contains("e2") || option.Contains("e3") || option.Contains("e4") || option.Contains("e5"));
-    const bool showEmpty = option.Contains("e0");
+    option.ToUpper();
+    for (const char* ignored : {"SAME", "TEXT", "PFC", "PLC", "PMC", "X0", "]["})
+      option.ReplaceAll(ignored, "");
+    const bool hasErrors = !option.Contains("HIST") && (option.Contains("E") || hist->GetSumw2N() > 0);
+    const bool hasErrorArea = hasErrors && (option.Contains("E2") || option.Contains("E3") || option.Contains("E4") || option.Contains("E5") || option.Contains("E6"));
+    const bool showEmpty = option.Contains("E0");
     TAxis* axis = hist->GetXaxis();
     for (int32_t bin = axis->GetFirst(); bin <= axis->GetLast(); ++bin) {  // only the visible range
       const double_t content = hist->GetBinContent(bin);
