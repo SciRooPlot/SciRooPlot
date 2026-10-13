@@ -2996,11 +2996,12 @@ bool PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialError
 }
 bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
 {
+  // edges are compared with the tolerance of ROOT's own consistency check in TH1::Divide (TH1::CheckBinLimits)
   auto sameAxisBinning = [](TAxis* a, TAxis* b) -> bool {
     if (a->GetNbins() != b->GetNbins()) return false;
     if (a->IsAlphanumeric() || b->IsAlphanumeric()) return true;
     for (int32_t i = 1; i <= a->GetNbins() + 1; ++i) {
-      if (a->GetBinLowEdge(i) != b->GetBinLowEdge(i)) return false;
+      if (!TMath::AreEqualAbs(a->GetBinLowEdge(i), b->GetBinLowEdge(i), a->GetBinWidth(i) * 1e-10)) return false;
     }
     return true;
   };
