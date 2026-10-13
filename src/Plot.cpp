@@ -2365,6 +2365,9 @@ void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const std::string& name, co
   for (const auto& key : keys) {
     if (!isIdentifier(key)) logger::throw_invalid_argument("Cannot join tree {} to {}: '{}' is not a column name.", tree.name, name, key);
   }
+  if (keys.size() == 2 && keys[0] == keys[1]) {
+    logger::throw_invalid_argument("Cannot join tree {} to {}: key column {} is given twice.", tree.name, name, keys[0]);
+  }
   if (!alias.empty() && !isIdentifier(alias)) {
     logger::throw_invalid_argument("Cannot join tree {} to {}: alias '{}' must consist of letters, digits and underscores only and must not start with a digit.", tree.name, name, alias);
   }

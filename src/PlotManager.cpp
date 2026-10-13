@@ -353,6 +353,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     std::filesystem::create_directories(Config::Get().ProjectPath(mProjectName));
   }
 
+  TDirectory::TContext keepCurrentDirectory;  // the calling program's current directory stays as it is
   TFile file(mUserDataFile.data(), mode.data());
   if (file.IsZombie()) {
     logger::error("Could not save ROOT data to data source {}.", dataSource);
@@ -384,6 +385,13 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     if (!addedNames.insert(name).second) {
       logger::warning("Data source {} receives multiple objects named {}. Only the last one is kept.", dataSource, name);
     }
+    // a tree read from a file keeps its entries in that file, writing it would only store the header: store a copy of all entries
+    if (auto* tree = dynamic_cast<TTree*>(object); tree && tree->GetDirectory() && tree->GetDirectory()->GetFile()) {
+      TTree* copy = tree->CloneTree(-1, "fast");  // created in the current directory, i.e. in the data source's directory
+      copy->Write(name.data(), TObject::kWriteDelete);
+      delete copy;
+      continue;
+    }
     object->Write(nullptr, TObject::kWriteDelete);
   }
   file.Close();
@@ -414,7 +422,7 @@ void PlotManager::SaveDataSources(const optional<string>& file) const
     logger::error("No file path or project specified. Cannot save data sources.");
     return;
   }
-  if (std::filesystem::create_directories(filePath.parent_path())) {
+  if (filePath.has_parent_path() && std::filesystem::create_directories(filePath.parent_path())) {
     logger::info("Created config folder: {}.", filePath.parent_path().string());
   }
   using boost::property_tree::write_info;
@@ -623,6 +631,10 @@ void PlotManager::AddPlot(Plot plot)
     logger::error("You cannot use reserved group name 'BASE_PLOTS'.");
     return;
   }
+  // pad 0 only holds the defaults for all pads, nothing added to it is drawn
+  if (auto pad0 = plot.GetPads().find(0); pad0 != plot.GetPads().end() && (!pad0->second.GetData().empty() || !pad0->second.GetLegendBoxes().empty() || !pad0->second.GetTextBoxes().empty())) {
+    logger::warning("Plot {} in {}: data, legends and texts added to pad 0 are not drawn (pad 0 holds the defaults for all pads, the pads are counted from 1).", plot.GetName(), plot.GetGroup());
+  }
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [&plot](const Plot& curPlot) {
                                 bool removePlot = curPlot.GetUniqueName() == plot.GetUniqueName();
@@ -818,7 +830,7 @@ void PlotManager::SavePlots(const string& name, const string& group, const optio
     logger::error("No file path or project specified. Cannot save plots.");
     return;
   }
-  if (std::filesystem::create_directories(filePath.parent_path())) {
+  if (filePath.has_parent_path() && std::filesystem::create_directories(filePath.parent_path())) {
     logger::info("Created config folder: {}.", filePath.parent_path().string());
   }
   using boost::property_tree::write_info;
@@ -958,6 +970,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     if (!groupRegex.Matches(plot.GetGroup())) continue;
     if (!nameRegex.Matches(plot.GetName())) continue;
     selectedPlots.push_back(&plot);
+    if (mode == "print") continue;  // printing the definitions needs no data
 
     // determine which input data are needed for plots
     for (auto& [padID, pad] : plot.GetPads()) {
@@ -999,6 +1012,13 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   if (selectedPlots.empty()) {
     logger::error("No plots were created: found no plots matching the request {}{}{} in {}{}{}.", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color());
     return false;
+  }
+  if (mode == "print") {
+    bool allPrinted = true;
+    for (auto plot : selectedPlots) {
+      allPrinted = GeneratePlot(*plot, mode) && allPrinted;
+    }
+    return allPrinted;
   }
 
   size_t nItemsToRead{};

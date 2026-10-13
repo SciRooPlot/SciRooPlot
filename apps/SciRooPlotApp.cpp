@@ -51,7 +51,7 @@ using std::vector;
 
 using namespace SciRooPlot;
 namespace po = boost::program_options;
-void PrintRootFileContents(const string& inputPath);
+bool PrintRootFileContents(const string& inputPath);
 
 int main(int argc, char* argv[])
 {
@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
     app.Run();
   } else if (command == "print") {
     string fileName = project;
-    PrintRootFileContents(fileName);
+    if (!PrintRootFileContents(fileName)) return 1;
   } else if (command == "settings") {
     Config::Get().ShowSettings();
   } else if (command == "color") {
@@ -324,6 +324,10 @@ int main(int argc, char* argv[])
       logger::error("Specify project or use @current.");
       return 1;
     }
+    if (!Config::Get().Exists(project)) {
+      logger::error("Cannot find project {}.", project);
+      return 1;
+    }
     if (property == "program") {
       std::cout << Config::Get().Program(project) << std::endl;
     } else if (property == "outdir") {
@@ -374,7 +378,7 @@ int main(int argc, char* argv[])
   return Config::GetMutable().Save() ? 0 : 1;
 }
 
-void PrintRootFileContents(const string& inputPath)
+bool PrintRootFileContents(const string& inputPath)
 {
   string fileName = inputPath;
   string startPath;
@@ -385,7 +389,7 @@ void PrintRootFileContents(const string& inputPath)
   TFile inputFile(fileName.data(), "READ");
   if (inputFile.IsZombie()) {
     logger::error("Could not find file {}.", fileName);
-    return;
+    return false;
   }
 
   auto findObject = [](TObject* root, const string& path) -> TObject* {
@@ -414,7 +418,7 @@ void PrintRootFileContents(const string& inputPath)
     root = findObject(root, startPath);
     if (!root) {
       logger::error("Path not found: {}.", startPath);
-      return;
+      return false;
     }
   }
 
@@ -476,4 +480,5 @@ void PrintRootFileContents(const string& inputPath)
       }
     };
   loopData(root, startPath);
+  return true;
 }
