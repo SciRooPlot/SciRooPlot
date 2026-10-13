@@ -17,6 +17,7 @@ Settings:                  srp settings | srp color (bright|dark|off) | srp verb
                            srp matchmode (exact|contains) | srp matchcase (sensitive|insensitive) | srp screenscale <factor> | srp bitmapscale <factor>
 Maintenance:               srp info | srp update | srp clean | srp reset | srp help
 ```
+The verbosity applies to log messages only: output a command is asked for (`srp projects`, `srp settings`, `srp print`, `plot … list`, `plot … print`, `Print()`) is always shown.
 
 Files: `~/.SciRooPlot/` (or `$SCIROOPLOT_CONFIG_PATH/`) holds `settings.info`, `projects.info` (programs, output folders, user variables, current project) and one folder per project with `plots.info` and `dataSources.info` written by `pm.SaveProject()`.
 

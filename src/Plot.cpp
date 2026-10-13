@@ -299,7 +299,7 @@ void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
     }
   };
   print_pt(print_pt, pt, 0);
-  if (!message.empty()) INFO("{}", message);
+  if (!message.empty()) PRINT("{}", message);
 }
 
 auto Plot::SetName(const string& name) -> decltype(*this)

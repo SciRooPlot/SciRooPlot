@@ -86,22 +86,19 @@ inline std::string_view end_color()
   return "\033[0m";
 }
 
+// output the user asked for (command output, listings, settings) is always shown: the verbosity applies to the log messages below
 template <typename... Args>
 inline void print(std::string_view fmt_str, Args&&... args)
 {
-  if (Config::Get().Verbosity() >= Config::LogLevel::info) {
-    fmt::print("       | ");
-    fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
-    fmt::print("\n");
-  }
+  fmt::print("       | ");
+  fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
+  fmt::print("\n");
 }
 
 template <typename... Args>
 inline void print_inline(std::string_view fmt_str, Args&&... args)
 {
-  if (Config::Get().Verbosity() >= Config::LogLevel::info) {
-    fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
-  }
+  fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
 }
 
 inline void print_separator()

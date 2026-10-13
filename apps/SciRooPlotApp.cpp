@@ -415,7 +415,7 @@ void PrintRootFileContents(const string& inputPath)
   if (!startPath.empty()) {
     root = findObject(root, startPath);
     if (!root) {
-      PRINT("Path not found: {}.", startPath);
+      ERROR("Path not found: {}.", startPath);
       return;
     }
   }

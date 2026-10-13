@@ -1388,7 +1388,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   }
   fullPlot += plot;
   if (mode == "print") {
-    INFO("Settings of plot {}{}{} from group {}{}{}:", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetGroup(), logger::end_color());
+    PRINT("Settings of plot {}{}{} from group {}{}{}:", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetGroup(), logger::end_color());
     Plot::Print(fullPlot.GetPropertyTree(), "");
     return true;
   }
@@ -1595,7 +1595,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 void PlotManager::ListPlots() const
 {
   for (const auto& plot : mPlots) {
-    INFO(" - {}{}{} in group {}{}{}", logger::begin_color(logger::Color::Green), plot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot.GetGroup(), logger::end_color());
+    PRINT(" - {}{}{} in group {}{}{}", logger::begin_color(logger::Color::Green), plot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot.GetGroup(), logger::end_color());
   }
 }
 
