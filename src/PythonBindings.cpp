@@ -403,7 +403,7 @@ void exportData(py::module_& m)
 {
   py::class_<Data>(m, "Data")
     .def(py::init<>())
-    .def(py::init<const string&, const string&>(), arg("name"), arg("dataSource"))
+    .def(py::init<const string&, const string&, const optional<string>&>(), arg("name"), arg("dataSource"), arg("label") = nullopt)
     .def(py::init([](const py::list& nameAndSource) {
            if (nameAndSource.size() != 2 || !py::isinstance<py::str>(nameAndSource[0]) || !py::isinstance<py::str>(nameAndSource[1])) {
              throw py::type_error("Data can only be created from a list [name, dataSource].");
@@ -498,6 +498,7 @@ void exportRatio(py::module_& m)
 {
   py::class_<Ratio, Data>(m, "Ratio")
     .def(py::init<const Data&, const Data&>(), arg("numerator"), arg("denominator"))
+    .def(py::init<const string&, const string&, const string&, const string&, const optional<string>&>(), arg("name"), arg("dataSource"), arg("denomName"), arg("denomDataSource"), arg("label"))
     .def("Print", &Ratio::Print)
     .def("SetIsCorrelated", &Ratio::SetIsCorrelated, arg("isCorrelated") = true, ref_int)
     .def("GetDataSource", [](const Ratio& self) -> const string& { return self.GetDataSource(); })
@@ -518,6 +519,7 @@ void exportRatio(py::module_& m)
     .def("SetLegendLabel", [](Ratio& self, const string& s) -> Ratio& { return self.SetLegendLabel(s); }, arg("legendLabel"), ref_int)
     .def("SetLegend", [](Ratio& self, uint8_t id) -> Ratio& { return self.SetLegend(id); }, arg("legendID"), ref_int)
     .def("SetOptions", [](Ratio& self, const string& s) -> Ratio& { return self.SetOptions(s); }, arg("options"), ref_int)
+    .def("SetOptions", [](Ratio& self, drawing_options_t o) -> Ratio& { return self.SetOptions(o); }, arg("optionAlias"), ref_int)
     .def("UnsetOptions", [](Ratio& self) -> Ratio& { return self.UnsetOptions(); }, ref_int)
     .def("SetTextFormat", [](Ratio& self, const string& s) -> Ratio& { return self.SetTextFormat(s); }, arg("textFormat"), ref_int)
     .def("SetShowStats", [](Ratio& self, const string& f, const optional<string>& t) -> Ratio& { return self.SetShowStats(f, t); }, arg("format") = "emr", arg("title") = nullopt, ref_int)
