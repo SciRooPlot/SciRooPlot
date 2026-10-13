@@ -1526,6 +1526,30 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     return false;
   }
 
+  // a histogram drawn more than once in a pad (the axis histogram for the axes and again for the grid) is one object with several
+  // entries in the pad: where the canvas itself is stored, each entry gets its own copy, since a macro would declare the object twice
+  // (for 2D histograms this does not compile) and a canvas read back from a file and deleted without being drawn would delete it twice
+  if (mode == "file" || mode == "macro" || mode == "root" || mode == "xml") {
+    std::function<void(TPad*)> cloneRedrawnHistograms;
+    cloneRedrawnHistograms = [&](TPad* pad) {
+      std::set<TObject*> drawnObjects;
+      int32_t nClones{};
+      for (auto link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+        TObject* object = link->GetObject();
+        if (auto subPad = dynamic_cast<TPad*>(object)) {
+          cloneRedrawnHistograms(subPad);
+        } else if (!drawnObjects.insert(object).second && object->InheritsFrom(TH1::Class())) {
+          auto clone = static_cast<TH1*>(object->Clone((string(object->GetName()) + "_" + std::to_string(++nClones)).data()));
+          clone->SetDirectory(nullptr);
+          clone->SetBit(kCanDelete);
+          clone->SetBit(kCannotPick);  // only repaints axes or grid: a click goes to the objects below it
+          link->SetObject(clone);
+        }
+      }
+    };
+    cloneRedrawnHistograms(canvas.get());
+  }
+
   if (mode == "file") {
     mCanvasRegistry[plot.GetUniqueName()] = canvas;
     logCreated();
@@ -1553,24 +1577,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     fileEnding = ".C";
     // ROOT converts the names of all drawn objects to valid variable names, but not the one of the canvas itself
     canvas->SetName(sanitize(canvas->GetName()).data());
-    // objects drawn twice in a pad (e.g. the axis histogram) are declared twice in the macro for 2D histograms, which does not compile
-    std::function<void(TPad*)> cloneRedrawnHistograms;
-    cloneRedrawnHistograms = [&](TPad* pad) {
-      std::set<TObject*> drawnObjects;
-      int32_t nClones{};
-      for (auto link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
-        TObject* object = link->GetObject();
-        if (auto subPad = dynamic_cast<TPad*>(object)) {
-          cloneRedrawnHistograms(subPad);
-        } else if (!drawnObjects.insert(object).second && object->InheritsFrom(TH1::Class())) {
-          auto clone = static_cast<TH1*>(object->Clone((string(object->GetName()) + "_" + std::to_string(++nClones)).data()));
-          clone->SetDirectory(nullptr);
-          clone->SetBit(kCanDelete);
-          link->SetObject(clone);
-        }
-      }
-    };
-    cloneRedrawnHistograms(canvas.get());
   } else if ((mode == "pdf") || (mode == "png") || (mode == "eps") || (mode == "svg") || (mode == "ps") || (mode == "html") || (mode == "json") || (mode == "xml") || (mode == "jpg") || (mode == "root")) {
     fileEnding = "." + mode;
   } else if (str_contains(mode, "gif")) {
