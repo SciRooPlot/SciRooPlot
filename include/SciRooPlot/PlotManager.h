@@ -93,6 +93,9 @@ class PlotManager
   std::string GetProjectProperty(const std::string& property) const;
 
   void SetOutputDirectory(const std::string& path);
+  // names of the ROOT files written to the output directory in the modes file (plots) and data (input data)
+  void SetPlotsRootFile(const std::string& fileName);
+  void SetDataRootFile(const std::string& fileName);
 
  private:
   TObject* FindSubDirectory(TObject* folder, std::vector<std::string>& subDirs) const;
@@ -102,8 +105,8 @@ class PlotManager
   bool SaveDataToRootFile() const;
 
   std::string mProjectName;
-  const std::string mPlotsRootFile{"Plots.root"};
-  const std::string mDataRootFile{"Data.root"};
+  std::string mPlotsRootFile{"Plots.root"};
+  std::string mDataRootFile{"Data.root"};
   const std::string mUserDataFile;
   bool mUserDataFileInitialized{false};
   std::map<std::string, std::shared_ptr<TCanvas>> mCanvasRegistry;

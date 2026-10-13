@@ -259,6 +259,20 @@ void PlotManager::SetOutputDirectory(const string& path)
 
 //**************************************************************************************************
 /**
+ * Set the names of the ROOT files that the modes file and data write to the output directory (default: Plots.root, Data.root).
+ */
+//**************************************************************************************************
+void PlotManager::SetPlotsRootFile(const string& fileName)
+{
+  mPlotsRootFile = fileName;
+}
+void PlotManager::SetDataRootFile(const string& fileName)
+{
+  mDataRootFile = fileName;
+}
+
+//**************************************************************************************************
+/**
  * Define the inputs of a data source: files, folders within files (file.root:folder), directories or wildcard patterns.
  */
 //**************************************************************************************************

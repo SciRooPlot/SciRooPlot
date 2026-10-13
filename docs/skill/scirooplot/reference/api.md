@@ -28,6 +28,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `void ClearCanvasRegistry()`
 - `std::string GetProjectProperty(const std::string& property)`
 - `void SetOutputDirectory(const std::string& path)`
+- `void SetPlotsRootFile(const std::string& fileName)`
+- `void SetDataRootFile(const std::string& fileName)`
 
 ## Plot
 *plot[padID] gives the Pad (padID 0: defaults for all pads)*

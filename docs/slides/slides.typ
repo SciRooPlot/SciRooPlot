@@ -1598,6 +1598,7 @@
         [`ListPlots()`], [Print all registered plots.],
         [#names("ClearDataBuffer()", "ClearCanvasRegistry()")], [Free the buffered input data, or clear the cache of already-generated canvases.],
         [`SetOutputDirectory(path)`], [Set the output directory for generated files.],
+        [#names("SetPlotsRootFile(fileName)", "SetDataRootFile(fileName)")], [Names of the ROOT files written in the modes `file` and `data` (default: `Plots.root`, `Data.root`).],
         [`GetProjectProperty(property)`], [Read a project variable set via `srp set <project> <property> <value>`.],
         [`SaveProject()`], [Persist the current project to disk.],
       ), text-size: 12pt)

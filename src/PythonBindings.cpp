@@ -255,6 +255,8 @@ void exportPlotManager(py::module_& m)
     .def("SavePlots", &PlotManager::SavePlots, arg("name") = ".+", arg("group") = ".+", arg("file") = py::none())
     .def("GeneratePlots", &PlotManager::GeneratePlots, arg("mode") = "show", arg("name") = ".+", arg("group") = ".+")
     .def("SetOutputDirectory", &PlotManager::SetOutputDirectory, arg("path"))
+    .def("SetPlotsRootFile", &PlotManager::SetPlotsRootFile, arg("fileName"))
+    .def("SetDataRootFile", &PlotManager::SetDataRootFile, arg("fileName"))
     .def("SaveProject", &PlotManager::SaveProject)
     .def("GetProjectProperty", &PlotManager::GetProjectProperty, arg("property"))
     .def_static("MakeBasePlot", &PlotManager::MakeBasePlot, arg("name") = "1d");
