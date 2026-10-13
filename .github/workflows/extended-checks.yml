@@ -54,7 +54,8 @@ jobs:
             -c conda-forge
           cache-environment: true
 
-      # no -Werror: with sanitizers GCC reports false positives in Boost, pybind11 and libstdc++ headers
+      # with sanitizers GCC reports false -Wmaybe-uninitialized, -Warray-bounds and -Wstringop-overread positives in Boost, pybind11 and libstdc++ headers
+      # (GCC recommends against combining sanitizers with -Werror); the regular build checks the warnings
       - name: Configure
         shell: bash -el {0}
         run: |
@@ -64,7 +65,7 @@ jobs:
             -G Ninja \
             -DCMAKE_PREFIX_PATH="${CONDA_PREFIX}" \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined"
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined -Wno-maybe-uninitialized -Wno-array-bounds -Wno-stringop-overread"
 
       - name: Build
         shell: bash -el {0}
@@ -77,7 +78,7 @@ jobs:
           cmake --install build --prefix install
 
       # the sanitizer runtimes are preloaded, since python and the user programs built by the test are not instrumented;
-      # ROOT does not free all its memory at exit, so leak detection is off
+      # leak detection is off here, since it would also run in python and the build tools
       - name: Integration test
         shell: bash -el {0}
         env:
@@ -88,6 +89,23 @@ jobs:
           LD_PRELOAD="$(gcc -print-file-name=libasan.so) $(gcc -print-file-name=libubsan.so)"
           export LD_PRELOAD
           ./.github/scripts/test-example-project.sh
+
+      # only the C++ programs, which are all instrumented here (the user program via CXXFLAGS and LDFLAGS), so nothing is
+      # preloaded: python and the build tools do not free all their memory at exit; ROOT's known leaks are suppressed
+      - name: Leak check
+        shell: bash -el {0}
+        run: |
+          export CXXFLAGS="${CXXFLAGS:-} -fsanitize=address,undefined" LDFLAGS="${LDFLAGS:-} -fsanitize=address,undefined"
+          export CMAKE_PREFIX_PATH="${CONDA_PREFIX}"
+          WORKDIR=$(mktemp -d)
+          export SCIROOPLOT_CONFIG_PATH="${WORKDIR}/config"
+          source install/share/scirooplot/env.sh
+          export ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS="suppressions=$(root-config --etcdir)/lsan-root.supp"
+          cd "${WORKDIR}"
+          srp example-cpp Example
+          for mode in pdf file data; do
+            plot '.+' '.+' "${mode}"
+          done
 
   # all dependencies at the minimum versions required in CMakeLists.txt
   floor:
@@ -119,10 +137,11 @@ jobs:
             -c conda-forge
           cache-environment: true
 
+      # outside the source tree: CMake adds only link directories outside the project to the install RPATH
       - name: Install CMake, pybind11, fmt and Boost
         shell: bash -el {0}
         run: |
-          ./.github/scripts/install-floor.sh floor-deps
+          ./.github/scripts/install-floor.sh "${RUNNER_TEMP}/floor-deps"
 
       # fails if a dependency other than the floor version was picked up
       - name: Configure
@@ -133,7 +152,7 @@ jobs:
             -S . \
             -B build \
             -G Ninja \
-            -DCMAKE_PREFIX_PATH="${PWD}/floor-deps;${CONDA_PREFIX}" \
+            -DCMAKE_PREFIX_PATH="${RUNNER_TEMP}/floor-deps;${CONDA_PREFIX}" \
             -Dpybind11_DIR="$(python -m pybind11 --cmakedir)" \
             -DCMAKE_BUILD_TYPE=Release \
             | tee configure.log

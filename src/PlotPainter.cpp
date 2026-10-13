@@ -1642,6 +1642,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       TPave* legend = GenerateBox(box, pad_ptr);
       if (legend) {
         legend->SetName(legendName.data());
+        legend->SetBit(kCanDelete);  // owned by the pad
         legend->Draw("SAME");
         ++legendIndex;
       } else {
@@ -1659,6 +1660,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       TPave* text = GenerateBox(box, pad_ptr);
       if (text) {
         text->SetName(textName.data());
+        text->SetBit(kCanDelete);  // owned by the pad
         text->Draw("SAME");
         ++textIndex;
       } else {
