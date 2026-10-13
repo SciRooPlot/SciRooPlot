@@ -2018,6 +2018,12 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
   if (auto* branch = (firstTree) ? firstTree->GetBranch(join.GetAlias().data()) : nullptr; branch && (branch->GetNleaves() > 1 || branch->GetListOfBranches()->GetEntries() > 0)) {
     return fmt::format("{} has a branch {}, please specify a different alias", treeName, join.GetAlias());
   }
+  // the entries of a tree written in parallel (multi-threaded Snapshot) are not in their original order: ROOT refuses to match them row by row
+  auto reshuffled = [&](const TTree* tree, const string& description) -> optional<string> {
+    if (!join.keys.empty() || !tree || !tree->TestBit(TTree::kEntriesReshuffled)) return std::nullopt;
+    return fmt::format("the entries of {} were reshuffled when it was written (multi-threaded Snapshot), it can only be joined by key", description);
+  };
+  if (auto error = reshuffled(firstTree, treeName)) return error;
   auto joinedChain = std::make_shared<TChain>(join.GetAlias().data());
   const TTree* firstJoinedTree{};
   if (join.dataSource.empty()) {
@@ -2038,6 +2044,8 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
         auto* tree = getTree(treeInput.file, treeInput.treePath);
         const Long64_t nRows = (tree) ? tree->GetEntries() : 0;
         if (joinedTree->GetEntries() != nRows) return fmt::format("{}:{} has {} rows, {} has {}", treeInput.file, path, joinedTree->GetEntries(), treeInput.treePath, nRows);
+        if (auto error = reshuffled(tree, treeInput.file + ":" + treeInput.treePath)) return error;
+        if (auto error = reshuffled(joinedTree, treeInput.file + ":" + path)) return error;
       }
       joinedChain->AddFile(treeInput.file.data(), TTree::kMaxEntries, path.data());
     }
@@ -2049,6 +2057,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       joinedChain->AddFile(joinedInput.file.data(), TTree::kMaxEntries, joinedInput.treePath.data());
     }
     firstJoinedTree = getTree(joinedInputs.front().file, joinedInputs.front().treePath);
+    if (auto error = reshuffled(firstJoinedTree, join.tree)) return error;
     // without keys the rows of all inputs are matched in the order of the inputs
     if (join.keys.empty() && joinedChain->GetEntries() != chain.GetEntries()) {
       return fmt::format("it has {} rows, {} has {}", joinedChain->GetEntries(), treeName, chain.GetEntries());
