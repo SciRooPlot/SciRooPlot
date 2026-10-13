@@ -18,7 +18,7 @@
 
 #include "SciRooPlot/PlotManager.h"
 
-#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Logger.h"
 #include "SciRooPlot/PanelLayout.h"
 
 #include <ROOT/RCsvDS.hxx>

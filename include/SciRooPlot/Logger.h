@@ -16,8 +16,8 @@
  ******************************************************************************************
  */
 
-#ifndef INCLUDE_SCIROOPLOT_LOGGING_H_
-#define INCLUDE_SCIROOPLOT_LOGGING_H_
+#ifndef INCLUDE_SCIROOPLOT_LOGGER_H_
+#define INCLUDE_SCIROOPLOT_LOGGER_H_
 
 #include "SciRooPlot/Config.h"
 
@@ -209,4 +209,4 @@ inline void here(const char* file, const char* function, int line)
 // #define CHECK_TYPE(var) SciRooPlot::logger::check_type(var, #var);
 
 }  // end namespace SciRooPlot
-#endif  // INCLUDE_SCIROOPLOT_LOGGING_H_
+#endif  // INCLUDE_SCIROOPLOT_LOGGER_H_

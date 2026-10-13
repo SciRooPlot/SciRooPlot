@@ -19,7 +19,7 @@
 #ifndef SRC_DATAFRAMEREQUEST_H_
 #define SRC_DATAFRAMEREQUEST_H_
 
-#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Logger.h"
 #include "SciRooPlot/Plot.h"
 
 #include <ROOT/RDataFrame.hxx>

@@ -19,7 +19,7 @@
 #ifndef SRC_UTIL_STRINGS_H_
 #define SRC_UTIL_STRINGS_H_
 
-#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Logger.h"
 
 #include <fmt/format.h>
 

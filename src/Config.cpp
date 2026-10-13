@@ -18,7 +18,7 @@
 
 #include "SciRooPlot/Config.h"
 
-#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Logger.h"
 
 #include <TSystem.h>
 

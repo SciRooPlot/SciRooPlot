@@ -16,7 +16,7 @@
  ******************************************************************************************
  */
 
-#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Logger.h"
 #include "SciRooPlot/Plot.h"
 #include "SciRooPlot/PlotManager.h"
 

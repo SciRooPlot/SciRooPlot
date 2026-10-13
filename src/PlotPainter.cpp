@@ -18,7 +18,7 @@
 
 #include "PlotPainter.h"
 
-#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Logger.h"
 
 #include <TApplication.h>
 #include <TBox.h>

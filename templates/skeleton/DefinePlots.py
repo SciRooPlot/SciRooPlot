@@ -43,6 +43,9 @@ def DefinePlots(pm: PlotManager):
 
 def main():
     pm = PlotManager("PROJECT_NAME")
+    # own messages in the style of SciRooPlot: logger.print (always shown),
+    # logger.info, logger.log, logger.debug, logger.warning, logger.error (shown depending on `srp verbosity`)
+    # logger.info(f"Defining the plots in {SRC_DIR}")
     DefineDataSources(pm)
     DefineBasePlots(pm)
     DefinePlots(pm)

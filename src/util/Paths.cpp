@@ -18,7 +18,7 @@
 
 #include "util/Paths.h"
 
-#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Logger.h"
 
 #include <cctype>
 #include <cstdlib>

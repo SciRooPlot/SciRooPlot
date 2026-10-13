@@ -1,4 +1,4 @@
-#include "SciRooPlot/Logging.h"
+#include "SciRooPlot/Logger.h"
 #include "SciRooPlot/PlotManager.h"
 
 #include <TGraph.h>
@@ -33,6 +33,9 @@ void DefineHeavyIonPlots(PlotManager& pm);
 int main(int argc, char* argv[])
 {
   PlotManager pm("PROJECT_NAME");
+  // own messages in the style of SciRooPlot (Logger.h): logger::print (always shown),
+  // logger::info, logger::log, logger::debug, logger::warning, logger::error (shown depending on `srp verbosity`)
+  logger::info("Defining the example plots in {}", SRC_DIR);
   DefineDataSources(pm);
   DefineBasePlots(pm);
   DefineHiggsPlots(pm);
