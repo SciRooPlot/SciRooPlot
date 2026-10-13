@@ -3341,25 +3341,31 @@ tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad* pad
   uint32_t height{};
   int16_t font{text.GetTextFont()};
 
+  auto measure = [&]() {
+    if (font % 10 <= 2) {
+      text.GetBoundingBox(width, height);
+    } else {
+      TLatex textBox{text};
+      textBox.SetTextFont(font - 1);
+      double_t dy{pad->AbsPixeltoY(0) - pad->AbsPixeltoY(static_cast<int32_t>(text.GetTextSize() * mScale))};
+      double_t textSize{dy / (pad->GetY2() - pad->GetY1())};
+      textBox.SetTextSize(textSize);
+      textBox.GetBoundingBox(width, height);
+    }
+  };
+
   bool isBatch = gPad->IsBatch();
   if (isBatch) {
     // in batch mode ROOT calculates the bounding LaTex boxes wrongly, therefore disable it for the calculation
     gROOT->SetBatch(false);
     gPad->SetBatch(false);
   }
-  if (font % 10 <= 2) {
-    text.GetBoundingBox(width, height);
-  } else {
-    TLatex textBox{text};
-    textBox.SetTextFont(font - 1);
-    double_t dy{pad->AbsPixeltoY(0) - pad->AbsPixeltoY(static_cast<int32_t>(text.GetTextSize() * mScale))};
-    double_t textSize{dy / (pad->GetY2() - pad->GetY1())};
-    textBox.SetTextSize(textSize);
-    textBox.GetBoundingBox(width, height);
-  }
+  measure();
   if (isBatch) {
     gPad->SetBatch(true);
     gROOT->SetBatch(true);
+    // without a display nothing can be measured outside of batch mode (the width is 0): then the measurement of the batch mode is used
+    if (width == 0) measure();
   }
   return {width, height};
 }
