@@ -483,22 +483,23 @@ std::string Config::DataSourcesFile(const string& projectName) const
   return mPath / projectName / "dataSources.info";
 }
 
-void Config::SetProgram(const string& projectName, const string& program)
+bool Config::SetProgram(const string& projectName, const string& program)
 {
   if (projectName.empty()) {
     ERROR("Specify project name.");
-    return;
+    return false;
   }
   if (auto illegal = find_illegal_name_char(projectName)) {
     ERROR("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
-    return;
+    return false;
   }
   if (std::filesystem::path(expand_path(program)).is_relative()) {
     ERROR("The path must not be relative.");
-    return;
+    return false;
   }
   mProjects[projectName].mProperties["program"] = program;
   mModified = true;
+  return true;
 }
 
 string Config::Program(const string& projectName) const
@@ -511,22 +512,23 @@ string Config::Program(const string& projectName) const
   return {};
 }
 
-void Config::SetOutputDir(const string& projectName, const string& outputDir)
+bool Config::SetOutputDir(const string& projectName, const string& outputDir)
 {
   if (projectName.empty()) {
     ERROR("Specify project name.");
-    return;
+    return false;
   }
   if (auto illegal = find_illegal_name_char(projectName)) {
     ERROR("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
-    return;
+    return false;
   }
   if (std::filesystem::path(expand_path(outputDir)).is_relative()) {
     ERROR("The path must not be relative.");
-    return;
+    return false;
   }
   mProjects[projectName].mProperties["outdir"] = outputDir;
   mModified = true;
+  return true;
 }
 
 string Config::Project::Property(const string& property) const
@@ -538,23 +540,23 @@ string Config::Project::Property(const string& property) const
   return {};
 }
 
-void Config::SetProperty(const string& projectName, const string& property, const string& value)
+bool Config::SetProperty(const string& projectName, const string& property, const string& value)
 {
   if (projectName.empty()) {
     ERROR("Specify project name.");
-    return;
+    return false;
   }
   if (property.empty()) {
     ERROR("Specify property to set for {}.", projectName);
-    return;
+    return false;
   }
   if (auto illegal = find_illegal_name_char(projectName)) {
     ERROR("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
-    return;
+    return false;
   }
   if (auto illegal = find_illegal_name_char(property)) {
     ERROR("Property '{}' contains illegal character '{}'.", property, *illegal);
-    return;
+    return false;
   }
   auto& properties = mProjects[projectName].mProperties;
   properties[property] = value;
@@ -562,8 +564,9 @@ void Config::SetProperty(const string& projectName, const string& property, cons
   bool allEmpty = std::all_of(properties.begin(), properties.end(), [](const auto& p) { return p.second.empty(); });
   if (allEmpty) {
     INFO("Project {} has no properties left after unsetting '{}'. Removing project.", projectName, property);
-    Remove(projectName);
+    return Remove(projectName);
   }
+  return true;
 }
 
 string Config::Property(const string& projectName, const string& property) const

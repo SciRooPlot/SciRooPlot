@@ -317,10 +317,8 @@ int main(int argc, char* argv[])
       ERROR("Project {} already exists. Use srp set {} program <program> to change its program.", project, project);
       return 1;
     }
-    Config::GetMutable().SetProgram(project, property);
-    if (!setting.empty()) {
-      Config::GetMutable().SetOutputDir(project, setting);
-    }
+    if (!Config::GetMutable().SetProgram(project, property)) return 1;
+    if (!setting.empty() && !Config::GetMutable().SetOutputDir(project, setting)) return 1;
     Config::GetMutable().Select(project);
     INFO("Selecting project {}.", project);
   } else if (command == "get") {
@@ -348,7 +346,7 @@ int main(int argc, char* argv[])
       ERROR("Specify property to unset for {}.", project);
       return 1;
     }
-    Config::GetMutable().SetProperty(project, property, "");
+    if (!Config::GetMutable().SetProperty(project, property, "")) return 1;
   } else if (command == "set") {
     if (project.empty()) {
       ERROR("Specify project or use @current.");
@@ -366,7 +364,7 @@ int main(int argc, char* argv[])
       ERROR("Specify new setting for {}.", project);
       return 1;
     }
-    Config::GetMutable().SetProperty(project, property, setting);
+    if (!Config::GetMutable().SetProperty(project, property, setting)) return 1;
   } else {
     const vector<string> shellCommands = {"update", "edit", "cd", "stats", "init-py", "init-cpp", "example-py", "example-cpp"};
     if (std::find(shellCommands.begin(), shellCommands.end(), command) != shellCommands.end()) {

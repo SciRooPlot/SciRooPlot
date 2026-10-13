@@ -83,9 +83,9 @@ class Config
   void SetVerbosity(int logLevel);
   void SetColorScheme(int colorMode);
   void SetPlotMode(const std::string& plotMode);
-  void SetProperty(const std::string& projectName, const std::string& property, const std::string& value);
-  void SetOutputDir(const std::string& projectName, const std::string& outputDir);
-  void SetProgram(const std::string& projectName, const std::string& program);
+  bool SetProperty(const std::string& projectName, const std::string& property, const std::string& value);
+  bool SetOutputDir(const std::string& projectName, const std::string& outputDir);
+  bool SetProgram(const std::string& projectName, const std::string& program);
   void SetMatchCaseInsensitive(bool matchCaseInsensitive);
   void SetMatchContains(bool matchContains);
   void SetScreenScale(double screenScale);
