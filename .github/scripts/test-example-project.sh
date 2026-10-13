@@ -33,6 +33,11 @@ echo "=== Testing C++ examples ==="
 srp example-cpp Example_CPP
 plot '.+' '.+' pdf
 test -s Example_CPP/output/higgs/diphoton/massSpectrum.pdf
+# the canvases and the drawn data written to ROOT files (grep without -q reads the whole listing, so srp is not cut off by pipefail)
+plot '.+' '.+' file
+srp print Example_CPP/output/Plots.root:higgs/diphoton | grep '\] massSpectrum$'
+plot '.+' '.+' data
+srp print Example_CPP/output/Data.root:higgs/diphoton | grep '\] mgg_data$'
 
 echo "=== Testing Python examples ==="
 srp example-py Example_PY
