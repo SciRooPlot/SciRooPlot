@@ -23,9 +23,9 @@ Files: `~/.SciRooPlot/` (or `$SCIROOPLOT_CONFIG_PATH/`) holds `settings.info`, `
 ## `plot` — generate plots
 
 ```
-plot <group> [<name>] [<mode>]
+plot <group> <name> [<mode>]
 ```
-- `group` and `name` are regular expressions matched against the whole group / plot name (`srp matchmode contains` matches substrings). `name` omitted = all plots of the group.
+- `group` and `name` are regular expressions matched against the whole group / plot name (`srp matchmode contains` matches substrings). All plots of a group: `plot myGroup .+`.
 - A group includes its subgroups (`myGroup` also matches `myGroup/QA`); `myGroup$` excludes them; `myGroup/QA` selects a subgroup.
 - Quote patterns containing `(`, `)` or `|` in bash: `plot thesis 'fig_(a|b)' pdf`.
 - Modes: `show` (default; interactive: `s`/`a` next/previous plot, `q` quit, double-click a legend or text to print its coordinates), `list` (names only), `print` (definition), `pdf`, `eps`, `ps`, `svg`, `png`, `jpg`, `gif` and `gif+<centiseconds>` (all matching plots as one animation), `html`, `json`, `xml`, `root`, `macro` (ROOT macro reproducing the plot), `file` (canvases into one ROOT file), `data` (the drawn objects into a ROOT file).

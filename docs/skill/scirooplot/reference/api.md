@@ -36,7 +36,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 
 - `Plot()`
 - `Plot(const std::string& name, const std::string& group = "", const std::optional<std::string>& basePlot = {})`
-- `Plot(const std::string& name, const PanelLayout& layout)` — a base plot with the panels and lengths of the layout (see Layout.h)
+- `Plot(const std::string& name, const PanelLayout& layout)` — a base plot with the panels and lengths of the layout (see PanelLayout.h)
 - `Pad& GetPad(uint8_t padID)`
 - `Plot(const Plot& otherPlot, const std::string& name, const std::optional<std::string>& group = {})`
 - `Plot& SetName(const std::string& name)`

@@ -41,7 +41,6 @@ srp verbosity (debug|log|info|warning|error) ; srp plotmode (show|pdf|png|...) ;
 plot <group> <name> [<mode>]        # group and name are regular expressions (whole match by default)
 plot myGroup .+                     # all plots of myGroup and its subgroups
 plot 'myGroup$' .+                  # without subgroups;  plot myGroup/QA ctrl.*  selects a subgroup
-plot myGroup                        # name omitted = all plots of the group
 plot thesis 'fig_(a|b)' pdf         # quote patterns with ( ) | in bash
 ```
 Modes: `show` (interactive, default: keys `s`/`a` next/previous, `q` quit, double-click a legend to print its coordinates), `list`, `print` (dump definition), `pdf`, `eps`, `ps`, `svg`, `png`, `jpg`, `gif` (`gif+<centiseconds>` animates all matching plots), `html`, `json`, `xml`, `root`, `macro` (ROOT macro), `file` (canvases into a ROOT file), `data` (the drawn data into a ROOT file).
