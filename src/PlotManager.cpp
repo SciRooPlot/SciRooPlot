@@ -150,16 +150,36 @@ bool PlotManager::SavePlotsToRootFile() const
     }
     outputFile.cd();
     // the colours a pad uses are defined by its setup TExec; ROOT's own colour list is saved with the first canvas as usual
+    auto joinPath = [](const string& folder, const string& name) { return (folder.empty()) ? name : folder + "/" + name; };
+    // a ROOT directory cannot hold an object and a subdirectory of the same name: a plot named like a subgroup of its group gets a suffix
+    std::set<string> directories;
+    std::set<string> plotPaths;
+    for (const auto& [uniqueName, canvas] : mCanvasRegistry) {
+      const size_t delimiterPos = uniqueName.find(":");
+      const string subfolder = uniqueName.substr(delimiterPos + 1);
+      plotPaths.insert(joinPath(subfolder, uniqueName.substr(0, delimiterPos)));
+      for (size_t pos = subfolder.find('/');; pos = subfolder.find('/', pos + 1)) {
+        directories.insert(subfolder.substr(0, pos));
+        if (pos == string::npos) break;
+      }
+    }
     uint32_t nPlots{0u};
     for (const auto& [uniqueName, canvas] : mCanvasRegistry) {
       size_t delimiterPos = uniqueName.find(":");
       string plotName = uniqueName.substr(0, delimiterPos);
       string subfolder = uniqueName.substr(delimiterPos + 1);
+      string keyName = plotName;
+      while (directories.count(joinPath(subfolder, keyName)) || (keyName != plotName && plotPaths.count(joinPath(subfolder, keyName)))) {
+        keyName += "_plot";
+      }
+      if (keyName != plotName) {
+        WARNING("Plot {} of group {} is stored as {} in {}, since the group has a subgroup of the same name.", plotName, subfolder, keyName, mPlotsRootFile);
+      }
       if (!outputFile.GetDirectory(subfolder.data(), kFALSE, "cd")) {
         outputFile.mkdir(subfolder.data());
       }
       outputFile.cd(subfolder.data());
-      canvas->Write(plotName.data());
+      canvas->Write(keyName.data());
       ++nPlots;
     }
     outputFile.Close();
