@@ -431,9 +431,10 @@ void PrintRootFileContents(const string& inputPath)
         itemList = static_cast<TCollection*>(object);
       }
       if (!itemList) {
-        string folder = path.substr(0, path.rfind('/'));
-        if (!folder.empty()) PRINT("{}/", folder);
-        PRINT("- [{}] {}", object->ClassName(), object->GetName());
+        // listed by the name under which it is stored, which is the one to access it with (the object's own name can differ)
+        const auto slashPos = path.rfind('/');
+        if (slashPos != string::npos) PRINT("{}/", path.substr(0, slashPos));
+        PRINT("- [{}] {}", object->ClassName(), path.substr((slashPos == string::npos) ? 0 : slashPos + 1));
         return;
       }
       bool printedPath = false;
@@ -459,7 +460,7 @@ void PrintRootFileContents(const string& inputPath)
             if (!path.empty()) PRINT("{}/", path);
             printedPath = true;
           }
-          PRINT("- [{}] {}", obj->ClassName(), obj->GetName());
+          PRINT("- [{}] {}", obj->ClassName(), name);
         }
         if (auto* tree = dynamic_cast<TTree*>(obj)) {
           TObjArray* branches = tree->GetListOfBranches();
