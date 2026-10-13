@@ -2207,9 +2207,9 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           if (!join.keys.empty()) joinKeyColumns.push_back(join.GetAlias() + "." + join.keys[0]);
         }
       }
+      ROOT::RDF::RNode matched = *df;
       optional<ROOT::RDF::RResultPtr<ULong64_t>> nMatched;
       if (!joinKeyColumns.empty()) {
-        ROOT::RDF::RNode matched = *df;
         for (const auto& column : joinKeyColumns) {
           matched = matched.FilterAvailable(column);
         }
@@ -2220,7 +2220,10 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
         DataFrameRequest<data_info_t> request(info, fmt::format("{} {}", type, DataLocation(dataSource, name)), name + info->GetNameSuffix() + objNameSuffix);
         auto outputStart = rootOutput.Text().size();  // only consider ROOT output caused by this request
         try {
-          if (request.Prepare(*df, joinKeyColumns)) requests.push_back(std::move(request));
+          // the requests share the filter on the matching rows (evaluated once per row), except those with an entry range:
+          // their range refers to all rows of the tree, so they apply the filter after it
+          const bool hasEntryRange = info->entries.max.has_value();
+          if (request.Prepare((hasEntryRange) ? ROOT::RDF::RNode(*df) : matched, (hasEntryRange) ? joinKeyColumns : vector<string>{})) requests.push_back(std::move(request));
         } catch (const std::invalid_argument&) {
           throw;
         } catch (const std::exception& e) {
