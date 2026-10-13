@@ -56,9 +56,10 @@ set(CMAKE_POLICY_DEFAULT_CMP0219 NEW CACHE STRING "" FORCE)
 # -----------------------
 # Dependencies
 # -----------------------
-set(REQUIRED_ROOT_VERSION 6.34)
+set(REQUIRED_ROOT_VERSION 6.36.04)
 set(REQUIRED_BOOST_VERSION 1.65)
 set(REQUIRED_FMT_VERSION 8.0.0)
+set(REQUIRED_PYBIND11_VERSION 2.9)
 
 find_package(ROOT ${REQUIRED_ROOT_VERSION} CONFIG REQUIRED)
 find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED COMPONENTS program_options)
@@ -94,9 +95,9 @@ if(BUILD_PYTHON_BINDINGS)
     message(STATUS "${Python3_EXECUTABLE}")
     set(SCIROOPLOT_PYTHON_DIR "${CMAKE_INSTALL_LIBDIR}/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}/site-packages")
     set(PYBIND11_FINDPYTHON NEW)
-    find_package(pybind11 CONFIG QUIET)
+    find_package(pybind11 ${REQUIRED_PYBIND11_VERSION} CONFIG QUIET)
     if(NOT pybind11_FOUND)
-      message(STATUS "pybind11 not found -- fetching it now")
+      message(STATUS "pybind11 not found or too old -- fetching it now")
       include(FetchContent)
       FetchContent_Declare(
         pybind11

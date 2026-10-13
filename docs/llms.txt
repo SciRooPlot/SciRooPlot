@@ -11,12 +11,12 @@ Start with the agent skill: it is the condensed, agent-oriented description of t
 - [Drawing options](https://scirooplot.github.io/SciRooPlot/skill/scirooplot/reference/drawing-options.md): alias to ROOT option string for each data type
 - [Command line](https://scirooplot.github.io/SciRooPlot/skill/scirooplot/reference/cli.md): `srp` and `plot` commands, modes and configuration files
 
-- [scirooplot.skill](https://scirooplot.github.io/SciRooPlot/skill/scirooplot.skill): the skill folder as a zip archive, ready to upload or unzip into a skills directory
+- [scirooplot.skill](https://scirooplot.github.io/SciRooPlot/skill/scirooplot.skill): the skill as a single file, ready to import
 
 ## Documentation
 
 - [README](https://scirooplot.github.io/SciRooPlot/README.md): installation, usage and the commented example code
-- [Advanced installation](https://scirooplot.github.io/SciRooPlot/ADVANCED_INSTALL.md): building ROOT and Boost from source
+- [Advanced installation](https://scirooplot.github.io/SciRooPlot/ADVANCED_INSTALL.md): building ROOT from source
 - [Headers](https://github.com/SciRooPlot/SciRooPlot/tree/master/include/SciRooPlot): Plot.h, PlotManager.h, PanelLayout.h — the authoritative interface
 - [Example programs](https://github.com/SciRooPlot/SciRooPlot/tree/master/templates/example): DefinePlots.cpp and DefinePlots.py with example data
 

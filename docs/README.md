@@ -29,10 +29,10 @@ After setup, the commands `srp` and `plot` are available and you can keep up-to-
     cd SciRooPlot
     ./scripts/install.sh
 ```
-The installer requires that [ROOT](https://github.com/root-project/root) and
+The installer requires that [ROOT](https://github.com/root-project/root) (6.36.04 or newer) and
 [Boost](https://www.boost.org/) are installed on your system.
-These dependencies are best installed using a package manager. Alternatively, they can be build from source, as shown [here](ADVANCED_INSTALL.md).
-Two lightweight dependencies of SciRooPlot (fmt and pybind11) are automatically fetched during install in case they are not present on the system.
+These dependencies are best installed using a package manager. Alternatively, ROOT can be built from source, as shown [here](ADVANCED_INSTALL.md).
+Two lightweight dependencies of SciRooPlot (fmt and pybind11) are automatically fetched during install in case they are not present on the system or too old.
 
 ## 🚀 Usage
 
@@ -108,7 +108,7 @@ In interactive (`show`) mode, one can browse through the requested plots using t
 
 ## 🤖 For AI agents
 A condensed description of the workflow, the API and common pitfalls for coding agents is kept as an [agent skill](skill/scirooplot/SKILL.md) (with [reference files](skill/scirooplot/reference/api.md) generated from the headers).
-To use it, download [scirooplot.skill](skill/scirooplot.skill) (a zip of the skill folder) and upload it as a skill (Claude.ai) or unzip it into your agent's skills directory (for Claude Code: `~/.claude/skills/`), or point your agent to [llms.txt](llms.txt).
+To use it, download [scirooplot.skill](skill/scirooplot.skill) and import it as a skill, or point your agent to [llms.txt](llms.txt).
 
 ## 📖 Commented code examples
 The following example code snippets with comments illustrate how plots are defined within your SciRooPlot user code.

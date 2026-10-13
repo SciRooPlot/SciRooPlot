@@ -304,7 +304,7 @@
     "Installer",
     main-color,
     [
-      #text(size: 10pt)[Builds SciRooPlot from source -- requires #link("https://github.com/root-project/root")[#text(fill: main-color)[ROOT]] (6.34 or newer) and #link("https://www.boost.org/")[#text(fill: main-color)[Boost]] to already be installed.]
+      #text(size: 10pt)[Builds SciRooPlot from source -- requires #link("https://github.com/root-project/root")[#text(fill: main-color)[ROOT]] (6.36.04 or newer) and #link("https://www.boost.org/")[#text(fill: main-color)[Boost]] to already be installed.]
       #v(0.06em)
       #terminal(size: 11pt, inset: 5pt)[
         #prompt git clone https://github.com/SciRooPlot/SciRooPlot.git

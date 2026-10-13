@@ -35,8 +35,6 @@
 #include <boost/program_options.hpp>
 #include <boost/property_tree/info_parser.hpp>
 
-#include <fmt/ranges.h>
-
 #include <algorithm>
 #include <cstdlib>
 #include <filesystem>

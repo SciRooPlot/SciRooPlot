@@ -6,7 +6,7 @@ description: Define, organize and generate ROOT plots with SciRooPlot (C++ or Py
 # SciRooPlot
 
 SciRooPlot is a C++/Python library on top of ROOT that separates *defining* plots from *drawing* them.
-Describes SciRooPlot 3.3 (ROOT >= 6.34). Repository: https://github.com/SciRooPlot/SciRooPlot — docs: https://scirooplot.github.io/SciRooPlot/
+Describes SciRooPlot 3.3 (ROOT >= 6.36.04). Repository: https://github.com/SciRooPlot/SciRooPlot — docs: https://scirooplot.github.io/SciRooPlot/
 
 ## Mental model (read this first)
 
