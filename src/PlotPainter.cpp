@@ -382,7 +382,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     // which run whenever the pad is painted (also when the canvas is read back from a file) and leave the defaults behind afterwards
     string padSetup = fmt::format("gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange({}); TCandle::SetWhiskerRange({});",
                                   get_first_or(0.5, pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange()),
-                                  get_first_or(0.75, pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange()));
+                                  get_first_or(1., pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange()));
 
     // a colour gradient gets one colour per data item that will actually take a colour from the defaults
     auto nDefaultColors = [&pad](auto hasOwnColor) {
@@ -1609,7 +1609,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   }
   canvas_ptr->cd();
   // last primitive of the canvas: restores the global settings after the pads were painted
-  TExec* resetExec = new TExec("reset_globals", fmt::format("gStyle->SetPalette({}); gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange(0.5); TCandle::SetWhiskerRange(0.75);", static_cast<int32_t>(kBird)).data());
+  TExec* resetExec = new TExec("reset_globals", fmt::format("gStyle->SetPalette({}); gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange(0.5); TCandle::SetWhiskerRange(1.);", static_cast<int32_t>(kBird)).data());
   resetExec->SetBit(kCanDelete);
   resetExec->Draw();
   canvas_ptr->Modified();
