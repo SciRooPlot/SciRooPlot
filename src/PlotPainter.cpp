@@ -2345,8 +2345,11 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY)
 {
   const double_t cellSize = 10. * mScale;  // grid cell size in pixels (as in TPad::PlaceBox), scaled so that boxes are placed the same way at any scale
-  const int32_t nx = static_cast<int32_t>(pad->GetWw() / cellSize);
-  const int32_t ny = static_cast<int32_t>(pad->GetWh() / cellSize);
+  // size of the pad in pixels (GetWw and GetWh alone are the size of the whole canvas)
+  const double_t padWidthPixel = pad->GetWw() * pad->GetAbsWNDC();
+  const double_t padHeightPixel = pad->GetWh() * pad->GetAbsHNDC();
+  const int32_t nx = static_cast<int32_t>(padWidthPixel / cellSize);
+  const int32_t ny = static_cast<int32_t>(padHeightPixel / cellSize);
   if (nx <= 0 || ny <= 0) return false;
   vector<uint8_t> blocked(static_cast<size_t>(nx) * ny, 0u);  // cells occupied by drawn objects
 
@@ -2536,8 +2539,8 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   auto distanceToCorner = [&](box_placement_t boxCorner, double_t x, double_t y) {
     const bool isLeft = (boxCorner == bottom_left || boxCorner == top_left);
     const bool isBottom = (boxCorner == bottom_left || boxCorner == bottom_right);
-    const double_t dx = ((isLeft) ? x - freeArea[0] : freeArea[2] - (x + width)) * pad->GetWw();
-    const double_t dy = ((isBottom) ? y - freeArea[1] : freeArea[3] - (y + height)) * pad->GetWh();
+    const double_t dx = ((isLeft) ? x - freeArea[0] : freeArea[2] - (x + width)) * padWidthPixel;
+    const double_t dy = ((isBottom) ? y - freeArea[1] : freeArea[3] - (y + height)) * padHeightPixel;
     return dx * dx + dy * dy;
   };
   // for best_corner the one the box gets closest to is used (in case of a tie in this order of preference)
