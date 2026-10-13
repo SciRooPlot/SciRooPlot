@@ -215,7 +215,7 @@ bool Config::Save()
   if (!mModified) return true;
   mModified = false;  // a failed write is reported once and not repeated at exit
   if (mPath.empty()) {
-    ERROR("No valid config path; cannot save the configuration.");
+    logger::error("No valid config path; cannot save the configuration.");
     return false;
   }
   // write to a temporary file and rename it, so an interrupted write cannot leave a truncated file behind
@@ -227,7 +227,7 @@ bool Config::Save()
     } catch (const std::exception& e) {
       std::error_code ec;
       std::filesystem::remove(tmpFile, ec);
-      ERROR("Cannot save the configuration: {}.", e.what());
+      logger::error("Cannot save the configuration: {}.", e.what());
       return false;
     }
     return true;
@@ -265,56 +265,56 @@ bool Config::Exists(const std::string& projectName) const
 void Config::ListProjects() const
 {
   for (const auto& [projectName, project] : mProjects) {
-    PRINT("{}  {}", (mCurrentProject == projectName) ? "*" : " ", projectName);
+    logger::print("{}  {}", (mCurrentProject == projectName) ? "*" : " ", projectName);
   }
 }
 
 void Config::ShowSettings() const
 {
-  PRINT("Verbosity:       {}", LogLevelName(mLogLevel));
-  PRINT("Color:           {}", ColorModeName(mColorMode));
-  PRINT("Plot mode:       {}", mPlotMode);
-  PRINT("Match mode:      {}", mMatchContains ? "contains" : "exact");
-  PRINT("Match case:      {}", mMatchCaseInsensitive ? "insensitive" : "sensitive");
-  PRINT("Screen scale:    {}", mScreenScale);
-  PRINT("Bitmap scale:    {}", mBitmapScale);
-  PRINT("Current project: {}", mCurrentProject.empty() ? "<none>" : mCurrentProject);
+  logger::print("Verbosity:       {}", LogLevelName(mLogLevel));
+  logger::print("Color:           {}", ColorModeName(mColorMode));
+  logger::print("Plot mode:       {}", mPlotMode);
+  logger::print("Match mode:      {}", mMatchContains ? "contains" : "exact");
+  logger::print("Match case:      {}", mMatchCaseInsensitive ? "insensitive" : "sensitive");
+  logger::print("Screen scale:    {}", mScreenScale);
+  logger::print("Bitmap scale:    {}", mBitmapScale);
+  logger::print("Current project: {}", mCurrentProject.empty() ? "<none>" : mCurrentProject);
 }
 
 bool Config::Rename(const std::string& projectName, const std::string& newProjectName)
 {
   if (mPath.empty()) {
-    ERROR("No valid config path; cannot rename.");
+    logger::error("No valid config path; cannot rename.");
     return false;
   }
   if (mProjects.find(projectName) == mProjects.end()) {
-    ERROR("Cannot find project {}.", projectName);
+    logger::error("Cannot find project {}.", projectName);
     return false;
   }
   if (newProjectName.empty()) {
-    ERROR("Specify new name for {}.", projectName);
+    logger::error("Specify new name for {}.", projectName);
     return false;
   }
   if (auto illegal = find_illegal_name_char(newProjectName)) {
-    ERROR("Project name '{}' contains illegal character '{}'.", newProjectName, *illegal);
+    logger::error("Project name '{}' contains illegal character '{}'.", newProjectName, *illegal);
     return false;
   }
   if (mProjects.find(newProjectName) != mProjects.end()) {
-    ERROR("Project {} already exists.", newProjectName);
+    logger::error("Project {} already exists.", newProjectName);
     return false;
   }
 
   const std::filesystem::path projectPath = ProjectPath(projectName);
   const std::filesystem::path newProjectPath = ProjectPath(newProjectName);
   if (std::filesystem::exists(newProjectPath)) {
-    ERROR("Cannot rename {} to {}: {} already exists.", projectName, newProjectName, newProjectPath.string());
+    logger::error("Cannot rename {} to {}: {} already exists.", projectName, newProjectName, newProjectPath.string());
     return false;
   }
   if (std::filesystem::exists(projectPath)) {
     std::error_code ec;
     std::filesystem::rename(projectPath, newProjectPath, ec);
     if (ec) {
-      ERROR("Could not rename {} to {}: {}.", projectPath.string(), newProjectPath.string(), ec.message());
+      logger::error("Could not rename {} to {}: {}.", projectPath.string(), newProjectPath.string(), ec.message());
       return false;
     }
   }
@@ -326,14 +326,14 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
     mCurrentProject = newProjectName;
   }
   mModified = true;
-  PRINT("Renamed project {} to {}. User code should be adjusted accordingly.", projectName, newProjectName);
+  logger::print("Renamed project {} to {}. User code should be adjusted accordingly.", projectName, newProjectName);
   return true;
 }
 
 void Config::Reset()
 {
   if (mPath.empty()) {
-    ERROR("No valid config path; refusing to reset.");
+    logger::error("No valid config path; refusing to reset.");
     return;
   }
   for (auto it = mProjects.begin(); it != mProjects.end();) {
@@ -347,7 +347,7 @@ void Config::Reset()
 void Config::Clean()
 {
   if (mPath.empty()) {
-    ERROR("No valid config path; refusing to clean.");
+    logger::error("No valid config path; refusing to clean.");
     return;
   }
   string firstProject;
@@ -360,7 +360,7 @@ void Config::Clean()
     } else {
       const string program = expand_path(rawProgram);
       if (program.empty()) {
-        WARNING("Cannot expand program path '{}' of project {}; keeping it.", rawProgram, projectName);
+        logger::warning("Cannot expand program path '{}' of project {}; keeping it.", rawProgram, projectName);
       } else {
         isStale = !std::filesystem::exists(std::filesystem::path(program).parent_path());
       }
@@ -376,7 +376,7 @@ void Config::Clean()
     if (!DeleteProjectDir(inactiveProject)) {
       continue;
     }
-    PRINT("- deleting project {}", inactiveProject);
+    logger::print("- deleting project {}", inactiveProject);
     mProjects.erase(inactiveProject);
     mModified = true;
     if (mCurrentProject == inactiveProject) {
@@ -385,7 +385,7 @@ void Config::Clean()
     }
   }
   if (updatedActiveProject && !mCurrentProject.empty()) {
-    INFO("Selecting project {}.", mCurrentProject);
+    logger::info("Selecting project {}.", mCurrentProject);
   }
 }
 
@@ -395,10 +395,10 @@ void Config::Show(const string& projectNameIn) const
     if (!projectNameIn.empty() && (projectName != projectNameIn)) {
       continue;
     }
-    PRINT("{} {}", (projectName == mCurrentProject) ? "*" : " ", projectName);
+    logger::print("{} {}", (projectName == mCurrentProject) ? "*" : " ", projectName);
     for (const auto& [property, value] : project.mProperties) {
       if (!value.empty()) {
-        PRINT("   - {}: {}", property, value);
+        logger::print("   - {}: {}", property, value);
       }
     }
   }
@@ -407,15 +407,15 @@ void Config::Show(const string& projectNameIn) const
 bool Config::Remove(const string& projectName)
 {
   if (projectName.empty()) {
-    ERROR("Specify which project to remove.");
+    logger::error("Specify which project to remove.");
     return false;
   }
   if (mPath.empty()) {
-    ERROR("No valid config path; refusing to remove.");
+    logger::error("No valid config path; refusing to remove.");
     return false;
   }
   if (mProjects.find(projectName) == mProjects.end()) {
-    ERROR("Cannot find project {}.", projectName);
+    logger::error("Cannot find project {}.", projectName);
     return false;
   }
   if (!DeleteProjectDir(projectName)) {
@@ -428,7 +428,7 @@ bool Config::Remove(const string& projectName)
     auto it = mProjects.begin();
     if (it != mProjects.end()) {
       mCurrentProject = it->first;
-      INFO("Selecting project {}.", mCurrentProject);
+      logger::info("Selecting project {}.", mCurrentProject);
     }
   }
   return true;
@@ -440,13 +440,13 @@ bool Config::DeleteProjectDir(const string& projectName) const
   // never the user code or the output directory
   const auto projectPath = ProjectPath(projectName);
   if (!projectPath.is_absolute() || projectPath.parent_path() != mPath) {
-    ERROR("Refusing to delete {} for project {}: not inside the config directory.", projectPath.string(), projectName);
+    logger::error("Refusing to delete {} for project {}: not inside the config directory.", projectPath.string(), projectName);
     return false;
   }
   std::error_code ec;
   std::filesystem::remove_all(projectPath, ec);
   if (ec) {
-    ERROR("Could not delete {}: {}.", projectPath.string(), ec.message());
+    logger::error("Could not delete {}: {}.", projectPath.string(), ec.message());
     return false;
   }
   return true;
@@ -455,11 +455,11 @@ bool Config::DeleteProjectDir(const string& projectName) const
 bool Config::Select(const string& projectName)
 {
   if (projectName.empty()) {
-    ERROR("Specify a project to select.");
+    logger::error("Specify a project to select.");
     return false;
   }
   if (mProjects.find(projectName) == mProjects.end()) {
-    ERROR("Cannot find project {}.", projectName);
+    logger::error("Cannot find project {}.", projectName);
     return false;
   }
   mCurrentProject = projectName;
@@ -488,15 +488,15 @@ std::string Config::DataSourcesFile(const string& projectName) const
 bool Config::SetProgram(const string& projectName, const string& program)
 {
   if (projectName.empty()) {
-    ERROR("Specify project name.");
+    logger::error("Specify project name.");
     return false;
   }
   if (auto illegal = find_illegal_name_char(projectName)) {
-    ERROR("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
+    logger::error("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
     return false;
   }
   if (std::filesystem::path(expand_path(program)).is_relative()) {
-    ERROR("The path must not be relative.");
+    logger::error("The path must not be relative.");
     return false;
   }
   mProjects[projectName].mProperties["program"] = program;
@@ -517,15 +517,15 @@ string Config::Program(const string& projectName) const
 bool Config::SetOutputDir(const string& projectName, const string& outputDir)
 {
   if (projectName.empty()) {
-    ERROR("Specify project name.");
+    logger::error("Specify project name.");
     return false;
   }
   if (auto illegal = find_illegal_name_char(projectName)) {
-    ERROR("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
+    logger::error("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
     return false;
   }
   if (std::filesystem::path(expand_path(outputDir)).is_relative()) {
-    ERROR("The path must not be relative.");
+    logger::error("The path must not be relative.");
     return false;
   }
   mProjects[projectName].mProperties["outdir"] = outputDir;
@@ -545,19 +545,19 @@ string Config::Project::Property(const string& property) const
 bool Config::SetProperty(const string& projectName, const string& property, const string& value)
 {
   if (projectName.empty()) {
-    ERROR("Specify project name.");
+    logger::error("Specify project name.");
     return false;
   }
   if (property.empty()) {
-    ERROR("Specify property to set for {}.", projectName);
+    logger::error("Specify property to set for {}.", projectName);
     return false;
   }
   if (auto illegal = find_illegal_name_char(projectName)) {
-    ERROR("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
+    logger::error("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
     return false;
   }
   if (auto illegal = find_illegal_name_char(property)) {
-    ERROR("Property '{}' contains illegal character '{}'.", property, *illegal);
+    logger::error("Property '{}' contains illegal character '{}'.", property, *illegal);
     return false;
   }
   auto& properties = mProjects[projectName].mProperties;
@@ -565,7 +565,7 @@ bool Config::SetProperty(const string& projectName, const string& property, cons
   mModified = true;
   bool allEmpty = std::all_of(properties.begin(), properties.end(), [](const auto& p) { return p.second.empty(); });
   if (allEmpty) {
-    INFO("Project {} has no properties left after unsetting '{}'. Removing project.", projectName, property);
+    logger::info("Project {} has no properties left after unsetting '{}'. Removing project.", projectName, property);
     return Remove(projectName);
   }
   return true;

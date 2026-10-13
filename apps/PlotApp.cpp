@@ -38,7 +38,7 @@ namespace po = boost::program_options;
 int main(int argc, char* argv[])
 {
   if (Config::Get().CurrentProject().empty()) {
-    ERROR("No plotting project is selected. Exiting.");
+    logger::error("No plotting project is selected. Exiting.");
     return 1;
   }
 
@@ -72,14 +72,14 @@ int main(int argc, char* argv[])
     if (mode.empty()) mode = Config::Get().PlotMode();
 
     if (group.empty() || name.empty()) {
-      ERROR("Specify the group and the name of the plots: plot <group> <name> [<mode>] (e.g. plot myGroup .+ pdf).");
+      logger::error("Specify the group and the name of the plots: plot <group> <name> [<mode>] (e.g. plot myGroup .+ pdf).");
       return 1;
     }
 
     // create plotting environment
     PlotManager pm(Config::Get().CurrentProject());
     if (!RegexMatcher(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive()).IsValid()) {
-      ERROR("'{}' is not a valid group pattern.", group);
+      logger::error("'{}' is not a valid group pattern.", group);
       return 1;
     }
     if (!pm.LoadPlots(name, group)) return 1;
@@ -90,10 +90,10 @@ int main(int argc, char* argv[])
       if (!pm.GeneratePlots(mode)) return 1;
     }
   } catch (std::exception& e) {
-    ERROR(R"(Exception "{}"! Exiting.)", e.what());
+    logger::error(R"(Exception "{}"! Exiting.)", e.what());
     return 1;
   } catch (...) {
-    ERROR("Exception of unknown type! Exiting.");
+    logger::error("Exception of unknown type! Exiting.");
     return 1;
   }
   return 0;

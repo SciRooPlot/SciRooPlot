@@ -171,12 +171,14 @@ PYBIND11_MODULE(SciRooPlot, m)
 
 void exportLogging(py::module_& m)
 {
-  m.def("PRINT", [](std::string_view s) { logger::print("{}", s); });
-  m.def("INFO", [](std::string_view s) { logger::info("{}", s); });
-  m.def("LOG", [](std::string_view s) { logger::log("{}", s); });
-  m.def("DEBUG", [](std::string_view s) { logger::debug("{}", s); });
-  m.def("WARNING", [](std::string_view s) { logger::warning("{}", s); });
-  m.def("ERROR", [](std::string_view s) { logger::error("{}", s); });
+  // the functions of the logger namespace of C++: SciRooPlot.logger.info("...")
+  auto loggerModule = m.def_submodule("logger", "messages in the style of SciRooPlot, shown depending on the verbosity (print: always)");
+  loggerModule.def("print", [](std::string_view s) { logger::print("{}", s); });
+  loggerModule.def("info", [](std::string_view s) { logger::info("{}", s); });
+  loggerModule.def("log", [](std::string_view s) { logger::log("{}", s); });
+  loggerModule.def("debug", [](std::string_view s) { logger::debug("{}", s); });
+  loggerModule.def("warning", [](std::string_view s) { logger::warning("{}", s); });
+  loggerModule.def("error", [](std::string_view s) { logger::error("{}", s); });
 }
 void exportDrawingOptions(py::module_& m)
 {

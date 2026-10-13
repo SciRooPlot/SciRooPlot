@@ -315,7 +315,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
       y1 = std::round(y1);
       if (cell->mEmpty && (x1 <= x0 || y1 <= y0)) {
         // no pad is created, otherwise it would be drawn over the whole plot for lack of a position
-        WARNING("Layout: the empty cell in row {}, column {} leaves no space for pad {}.", r + 1, c + 1, padID);
+        logger::warning("Layout: the empty cell in row {}, column {} leaves no space for pad {}.", r + 1, c + 1, padID);
         continue;
       }
       Plot::Pad& pad = plot[padID];

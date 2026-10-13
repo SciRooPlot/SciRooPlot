@@ -125,7 +125,7 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
 
   mDims = dataInfo.dataDims;  // copy since it will be modified
   if (mIsProfile && mDims.size() > 3) {
-    ERROR("Too many dimensions specified for profile of {} ({}).", mContext, dataInfo.GetDescription());
+    logger::error("Too many dimensions specified for profile of {} ({}).", mContext, dataInfo.GetDescription());
     return false;
   }
   size_t axisID = 1;
@@ -133,12 +133,12 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     if (isProjection || (mIsProfile && axisID < mDims.size())) {
       // sanity check for binned axes
       if ((dataDim.nBins && dataDim.edges.size() != 2) || (!dataDim.nBins && dataDim.edges.size() <= 1)) {
-        ERROR("Ill defined binning for {} in {} ({}).", dataDim.var, mContext, dataInfo.GetDescription());
+        logger::error("Ill defined binning for {} in {} ({}).", dataDim.var, mContext, dataInfo.GetDescription());
         return false;
       }
       if (!std::is_sorted(dataDim.edges.begin(), dataDim.edges.end())) {
         if (!(dataDim.edges.size() == 2 && !dataDim.edges[0] && !dataDim.edges[1])) {
-          ERROR("Ill defined binning for {} in {} ({}).", dataDim.var, mContext, dataInfo.GetDescription());
+          logger::error("Ill defined binning for {} in {} ({}).", dataDim.var, mContext, dataInfo.GetDescription());
           return false;
         }
       }
@@ -171,7 +171,7 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
       try {
         node = node.Filter(filter);
       } catch (const std::runtime_error&) {
-        ERROR("Illegal filter expression {} for {}{}.", filter, mContext, AvailableColumns(node));
+        logger::error("Illegal filter expression {} for {}{}.", filter, mContext, AvailableColumns(node));
         return false;
       }
     }
@@ -191,12 +191,12 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     try {
       node = node.Define(colName, dataDim.var);
     } catch (const std::runtime_error&) {
-      ERROR("Illegal expression {} for {}{}.", dataDim.var, mContext, AvailableColumns(node));
+      logger::error("Illegal expression {} for {}{}.", dataDim.var, mContext, AvailableColumns(node));
       return false;
     }
     const std::string columnType = node.GetColumnType(colName);
     if (columnType.find("string") != std::string::npos) {
-      ERROR("Expression {} for {} is not numeric.", dataDim.var, mContext);
+      logger::error("Expression {} for {} is not numeric.", dataDim.var, mContext);
       return false;
     }
     mIsIntegerAxis[axisID - 1] = isIntegerType(columnType);
@@ -219,7 +219,7 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     try {
       node = node.Define("SRP_AXIS_W", *dataInfo.weight);
     } catch (const std::runtime_error&) {
-      ERROR("Illegal weight expression {} for {}{}.", *dataInfo.weight, mContext, AvailableColumns(node));
+      logger::error("Illegal weight expression {} for {}{}.", *dataInfo.weight, mContext, AvailableColumns(node));
       return false;
     }
     mHasWeights = true;
@@ -279,7 +279,7 @@ bool DataFrameRequest<DataInfo>::Book()
     } else if (dataDims.size() == 6) {
       SetResult(node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_5", "SRP_AXIS_6"));
     } else {
-      ERROR("Invalid number of columns for scatter plot of {}.", mContext);
+      logger::error("Invalid number of columns for scatter plot of {}.", mContext);
       return false;
     }
     return true;
@@ -380,7 +380,7 @@ bool DataFrameRequest<DataInfo>::Book()
     }
   } else {
     if (mIsProfile) {
-      ERROR("Too many dimensions for a profile of {}.", mContext);
+      logger::error("Too many dimensions for a profile of {}.", mContext);
       return false;
     }
     auto histModel = ROOT::RDF::THnDModel();

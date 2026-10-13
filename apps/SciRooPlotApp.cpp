@@ -65,11 +65,11 @@ int main(int argc, char* argv[])
   try {
     string configPath = Config::Get().Path();
     if (configPath.empty()) {
-      ERROR("No usable config path; check SCIROOPLOT_CONFIG_PATH.");
+      logger::error("No usable config path; check SCIROOPLOT_CONFIG_PATH.");
       return 1;
     }
     if (std::filesystem::create_directories(configPath)) {
-      INFO("Created config folder: {}.", configPath);
+      logger::info("Created config folder: {}.", configPath);
     }
 
     po::options_description arguments("positional arguments");
@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
     if (vm.count("command")) {
       command = vm["command"].as<string>();
     } else {
-      ERROR("Not enough arguments.");
+      logger::error("Not enough arguments.");
       return 1;
     }
     if (vm.count("project")) {
@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
         project = Config::Get().CurrentProject();
         if (project.empty()) {
           if ((command != "get") && (command != "confdir")) {
-            ERROR("No project selected. Please run srp select <project>.");
+            logger::error("No project selected. Please run srp select <project>.");
           }
           return 1;
         }
@@ -109,61 +109,61 @@ int main(int argc, char* argv[])
       setting = vm["setting"].as<string>();
     }
   } catch (std::exception& e) {
-    ERROR(R"(Exception "{}"! Exiting.)", e.what());
+    logger::error(R"(Exception "{}"! Exiting.)", e.what());
     return 1;
   } catch (...) {
-    ERROR("Exception of unknown type! Exiting.");
+    logger::error("Exception of unknown type! Exiting.");
     return 1;
   }
 
   if (command == "help") {
-    PRINT("===========================================================");
-    PRINT("Project management:");
-    PRINT("  srp projects");
-    PRINT("  srp select  <project>");
-    PRINT("  srp show    [<project> | @current]");
-    PRINT("  srp stats   (<project> | @current)");
-    PRINT("  srp rename  (<project> | @current) <name>");
-    PRINT("  srp remove  (<project> | @current)");
-    PRINT("-----------------------------------------------------------");
-    PRINT("Project initialization:");
-    PRINT("  srp add         <project> <program> [<outdir>]");
-    PRINT("  srp init-cpp    <project> [<dir>]    (minimal skeleton)");
-    PRINT("  srp init-py     <project> [<dir>]");
-    PRINT("  srp example-cpp <project> [<dir>]    (commented examples with example data)");
-    PRINT("  srp example-py  <project> [<dir>]");
-    PRINT("-----------------------------------------------------------");
-    PRINT("Project configuration:");
-    PRINT("  srp get   (<project> | @current) <property>");
-    PRINT("  srp set   (<project> | @current) <property> <value>");
-    PRINT("  srp unset (<project> | @current) <property>");
-    PRINT("      property = program | outdir | <user-variable> (read in code via GetProjectProperty)");
-    PRINT("-----------------------------------------------------------");
-    PRINT("Project access:");
-    PRINT("  srp confdir [<project> | @current]");
-    PRINT("  srp cd      [<project> | @current]");
-    PRINT("  srp edit    [<project> | @current]");
-    PRINT("-----------------------------------------------------------");
-    PRINT("Settings:");
-    PRINT("  srp settings");
-    PRINT("  srp color       (bright | dark | off)");
-    PRINT("  srp verbosity   (debug | log | info | warning | error)");
-    PRINT("  srp plotmode    (show | pdf | eps | svg | png | gif | jpg)");
-    PRINT("  srp matchmode   (exact | contains)");
-    PRINT("  srp matchcase   (sensitive | insensitive)");
-    PRINT("  srp screenscale <factor>  (size of plots shown on screen, default 1)");
-    PRINT("  srp bitmapscale <factor>  (resolution of png/jpg/gif files, default 1)");
-    PRINT("-----------------------------------------------------------");
-    PRINT("Maintenance:");
-    PRINT("  srp info");
-    PRINT("  srp update");
-    PRINT("  srp clean");
-    PRINT("  srp reset");
-    PRINT("-----------------------------------------------------------");
-    PRINT("Utilities:");
-    PRINT("  srp open  <file>");
-    PRINT("  srp print <file>");
-    PRINT("===========================================================");
+    logger::print("===========================================================");
+    logger::print("Project management:");
+    logger::print("  srp projects");
+    logger::print("  srp select  <project>");
+    logger::print("  srp show    [<project> | @current]");
+    logger::print("  srp stats   (<project> | @current)");
+    logger::print("  srp rename  (<project> | @current) <name>");
+    logger::print("  srp remove  (<project> | @current)");
+    logger::print("-----------------------------------------------------------");
+    logger::print("Project initialization:");
+    logger::print("  srp add         <project> <program> [<outdir>]");
+    logger::print("  srp init-cpp    <project> [<dir>]    (minimal skeleton)");
+    logger::print("  srp init-py     <project> [<dir>]");
+    logger::print("  srp example-cpp <project> [<dir>]    (commented examples with example data)");
+    logger::print("  srp example-py  <project> [<dir>]");
+    logger::print("-----------------------------------------------------------");
+    logger::print("Project configuration:");
+    logger::print("  srp get   (<project> | @current) <property>");
+    logger::print("  srp set   (<project> | @current) <property> <value>");
+    logger::print("  srp unset (<project> | @current) <property>");
+    logger::print("      property = program | outdir | <user-variable> (read in code via GetProjectProperty)");
+    logger::print("-----------------------------------------------------------");
+    logger::print("Project access:");
+    logger::print("  srp confdir [<project> | @current]");
+    logger::print("  srp cd      [<project> | @current]");
+    logger::print("  srp edit    [<project> | @current]");
+    logger::print("-----------------------------------------------------------");
+    logger::print("Settings:");
+    logger::print("  srp settings");
+    logger::print("  srp color       (bright | dark | off)");
+    logger::print("  srp verbosity   (debug | log | info | warning | error)");
+    logger::print("  srp plotmode    (show | pdf | eps | svg | png | gif | jpg)");
+    logger::print("  srp matchmode   (exact | contains)");
+    logger::print("  srp matchcase   (sensitive | insensitive)");
+    logger::print("  srp screenscale <factor>  (size of plots shown on screen, default 1)");
+    logger::print("  srp bitmapscale <factor>  (resolution of png/jpg/gif files, default 1)");
+    logger::print("-----------------------------------------------------------");
+    logger::print("Maintenance:");
+    logger::print("  srp info");
+    logger::print("  srp update");
+    logger::print("  srp clean");
+    logger::print("  srp reset");
+    logger::print("-----------------------------------------------------------");
+    logger::print("Utilities:");
+    logger::print("  srp open  <file>");
+    logger::print("  srp print <file>");
+    logger::print("===========================================================");
   } else if (command == "open") {
     string fileName = project;
     gROOT->SetBatch(false);
@@ -184,26 +184,26 @@ int main(int argc, char* argv[])
     if (auto colorMode = Config::ParseColorMode(project)) {
       Config::GetMutable().SetColorScheme(*colorMode);
     } else {
-      ERROR("Invalid color scheme (bright | dark | off).");
+      logger::error("Invalid color scheme (bright | dark | off).");
       return 1;
     }
   } else if (command == "verbosity") {
     if (auto logLevel = Config::ParseLogLevel(project)) {
       Config::GetMutable().SetVerbosity(*logLevel);
     } else {
-      ERROR("Invalid verbosity (debug | log | info | warning | error | silent).");
+      logger::error("Invalid verbosity (debug | log | info | warning | error | silent).");
       return 1;
     }
   } else if (command == "plotmode") {
     if (project.empty()) {
-      ERROR("Specify default plotmode.");
+      logger::error("Specify default plotmode.");
       return 1;
     }
     if (project != "list" && !is_valid_plot_mode(project)) {
       string modeList;
       for (const auto& mode : plot_modes())
         modeList += mode + ", ";
-      ERROR("Invalid plot mode '{}' (valid modes: {}gif+<centiseconds>, list).", project, modeList);
+      logger::error("Invalid plot mode '{}' (valid modes: {}gif+<centiseconds>, list).", project, modeList);
       return 1;
     }
     Config::GetMutable().SetPlotMode(project);
@@ -214,7 +214,7 @@ int main(int argc, char* argv[])
     } else if (matchMode == "contains") {
       Config::GetMutable().SetMatchContains(true);
     } else {
-      ERROR("Invalid match mode  (exact | contains).");
+      logger::error("Invalid match mode  (exact | contains).");
       return 1;
     }
   } else if (command == "matchcase") {
@@ -224,7 +224,7 @@ int main(int argc, char* argv[])
     } else if (matchCase == "insensitive") {
       Config::GetMutable().SetMatchCaseInsensitive(true);
     } else {
-      ERROR("Invalid case sensistivity option for matching (sensitive | insensitive).");
+      logger::error("Invalid case sensistivity option for matching (sensitive | insensitive).");
       return 1;
     }
   } else if (command == "screenscale" || command == "bitmapscale") {
@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
       scale = 0.;
     }
     if (!(scale > 0.)) {
-      ERROR("Invalid {} '{}' (positive number, e.g. 1.5).", command, project);
+      logger::error("Invalid {} '{}' (positive number, e.g. 1.5).", command, project);
       return 1;
     }
     if (command == "screenscale") {
@@ -280,11 +280,11 @@ int main(int argc, char* argv[])
     return 0;
   } else if (command == "rename") {
     if (project.empty()) {
-      ERROR("Specify project to rename.");
+      logger::error("Specify project to rename.");
       return 1;
     }
     if (property.empty()) {
-      ERROR("Specify new name for {}.", project);
+      logger::error("Specify new name for {}.", project);
       return 1;
     }
     if (!Config::GetMutable().Rename(project, property)) return 1;
@@ -300,30 +300,30 @@ int main(int argc, char* argv[])
     if (!Config::GetMutable().Select(project)) return 1;
   } else if (command == "show") {
     if (!project.empty() && !Config::Get().Exists(project)) {
-      ERROR("Cannot find project {}.", project);
+      logger::error("Cannot find project {}.", project);
       return 1;
     }
     Config::Get().Show(project);
   } else if (command == "add") {
     if (project.empty()) {
-      ERROR("Specify project name.");
+      logger::error("Specify project name.");
       return 1;
     }
     if (property.empty()) {
-      ERROR("Specify program for project {}.", project);
+      logger::error("Specify program for project {}.", project);
       return 1;
     }
     if (Config::Get().Exists(project)) {
-      ERROR("Project {} already exists. Use srp set {} program <program> to change its program.", project, project);
+      logger::error("Project {} already exists. Use srp set {} program <program> to change its program.", project, project);
       return 1;
     }
     if (!Config::GetMutable().SetProgram(project, property)) return 1;
     if (!setting.empty() && !Config::GetMutable().SetOutputDir(project, setting)) return 1;
     Config::GetMutable().Select(project);
-    INFO("Selecting project {}.", project);
+    logger::info("Selecting project {}.", project);
   } else if (command == "get") {
     if (project.empty()) {
-      ERROR("Specify project or use @current.");
+      logger::error("Specify project or use @current.");
       return 1;
     }
     if (property == "program") {
@@ -335,42 +335,42 @@ int main(int argc, char* argv[])
     }
   } else if (command == "unset") {
     if (project.empty()) {
-      ERROR("Specify project or use @current.");
+      logger::error("Specify project or use @current.");
       return 1;
     }
     if (!Config::Get().Exists(project)) {
-      ERROR("Cannot find project {}.", project);
+      logger::error("Cannot find project {}.", project);
       return 1;
     }
     if (property.empty()) {
-      ERROR("Specify property to unset for {}.", project);
+      logger::error("Specify property to unset for {}.", project);
       return 1;
     }
     if (!Config::GetMutable().SetProperty(project, property, "")) return 1;
   } else if (command == "set") {
     if (project.empty()) {
-      ERROR("Specify project or use @current.");
+      logger::error("Specify project or use @current.");
       return 1;
     }
     if (!Config::Get().Exists(project)) {
-      ERROR("Cannot find project {}. Use srp add or srp init-cpp/init-py to create it.", project);
+      logger::error("Cannot find project {}. Use srp add or srp init-cpp/init-py to create it.", project);
       return 1;
     }
     if (property.empty()) {
-      ERROR("Specify property to set for {}.", project);
+      logger::error("Specify property to set for {}.", project);
       return 1;
     }
     if (setting.empty()) {
-      ERROR("Specify new setting for {}.", project);
+      logger::error("Specify new setting for {}.", project);
       return 1;
     }
     if (!Config::GetMutable().SetProperty(project, property, setting)) return 1;
   } else {
     const vector<string> shellCommands = {"update", "edit", "cd", "stats", "init-py", "init-cpp", "example-py", "example-cpp"};
     if (std::find(shellCommands.begin(), shellCommands.end(), command) != shellCommands.end()) {
-      ERROR("Source environment script to use this feature.");
+      logger::error("Source environment script to use this feature.");
     } else {
-      ERROR("Invalid arguments.");
+      logger::error("Invalid arguments.");
     }
   }
   return Config::GetMutable().Save() ? 0 : 1;
@@ -386,7 +386,7 @@ void PrintRootFileContents(const string& inputPath)
   }
   TFile inputFile(fileName.data(), "READ");
   if (inputFile.IsZombie()) {
-    ERROR("Could not find file {}.", fileName);
+    logger::error("Could not find file {}.", fileName);
     return;
   }
 
@@ -415,7 +415,7 @@ void PrintRootFileContents(const string& inputPath)
   if (!startPath.empty()) {
     root = findObject(root, startPath);
     if (!root) {
-      ERROR("Path not found: {}.", startPath);
+      logger::error("Path not found: {}.", startPath);
       return;
     }
   }
@@ -433,8 +433,8 @@ void PrintRootFileContents(const string& inputPath)
       if (!itemList) {
         // listed by the name under which it is stored, which is the one to access it with (the object's own name can differ)
         const auto slashPos = path.rfind('/');
-        if (slashPos != string::npos) PRINT("{}/", path.substr(0, slashPos));
-        PRINT("- [{}] {}", object->ClassName(), path.substr((slashPos == string::npos) ? 0 : slashPos + 1));
+        if (slashPos != string::npos) logger::print("{}/", path.substr(0, slashPos));
+        logger::print("- [{}] {}", object->ClassName(), path.substr((slashPos == string::npos) ? 0 : slashPos + 1));
         return;
       }
       bool printedPath = false;
@@ -448,7 +448,7 @@ void PrintRootFileContents(const string& inputPath)
           name = key->GetName();
           obj = key->ReadObj();
           if (!obj) {
-            WARNING("Skipping key {} of type {}; the class is not available.", name, key->GetClassName());
+            logger::warning("Skipping key {} of type {}; the class is not available.", name, key->GetClassName());
             continue;
           }
           ownsObj = true;
@@ -457,10 +457,10 @@ void PrintRootFileContents(const string& inputPath)
           loopData(obj, path.empty() ? name : path + "/" + name);
         } else {
           if (!printedPath) {
-            if (!path.empty()) PRINT("{}/", path);
+            if (!path.empty()) logger::print("{}/", path);
             printedPath = true;
           }
-          PRINT("- [{}] {}", obj->ClassName(), name);
+          logger::print("- [{}] {}", obj->ClassName(), name);
         }
         if (auto* tree = dynamic_cast<TTree*>(obj)) {
           TObjArray* branches = tree->GetListOfBranches();
@@ -471,7 +471,7 @@ void PrintRootFileContents(const string& inputPath)
             EDataType branchType = kOther_t;
             br->GetExpectedType(branchClass, branchType);
             string typeName = branchClass ? branchClass->GetName() : TDataType::GetTypeName(branchType);
-            PRINT("  -> {} ({})", br->GetName(), typeName);
+            logger::print("  -> {} ({})", br->GetName(), typeName);
           }
         }
         if (ownsObj) delete obj;

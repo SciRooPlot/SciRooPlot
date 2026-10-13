@@ -81,7 +81,7 @@ float_t Plot::RoundWidth(float_t width, const char* what)
 {
   const float_t rounded = std::round(width);
   if (rounded != width) {
-    WARNING("{} {} is not an integer; ROOT stores line widths as short, using {}.", what, width, rounded);
+    logger::warning("{} {} is not an integer; ROOT stores line widths as short, using {}.", what, width, rounded);
   }
   return rounded;
 }
@@ -113,7 +113,7 @@ string Plot::NormalizeGroup(const string& group)
     normalized.pop_back();
   }
   if (normalized != group) {
-    WARNING("Group '{}' was changed to '{}' (leading, trailing and repeated slashes are removed).", group, normalized);
+    logger::warning("Group '{}' was changed to '{}' (leading, trailing and repeated slashes are removed).", group, normalized);
   }
   return normalized;
 }
@@ -127,7 +127,7 @@ void Plot::ReadDrawingOption(const ptree& tree, optional<drawing_options_t>& opt
 {
   if (auto name = tree.get_optional<string>(key)) {
     option = drawing_option_from_name(*name);
-    if (!option) WARNING("Unknown drawing option {} is ignored.", *name);
+    if (!option) logger::warning("Unknown drawing option {} is ignored.", *name);
   }
 }
 void Plot::PutDrawingOption(ptree& tree, const optional<drawing_options_t>& option, const char* key)
@@ -299,17 +299,17 @@ void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
     }
   };
   print_pt(print_pt, pt, 0);
-  if (!message.empty()) PRINT("{}", message);
+  if (!message.empty()) logger::print("{}", message);
 }
 
 auto Plot::SetName(const string& name) -> decltype(*this)
 {
   if (name.empty()) {
-    ERROR("Cannot set empty name.");
+    logger::error("Cannot set empty name.");
     return *this;
   }
   if (auto illegal = find_illegal_name_char(name, false)) {
-    ERROR("Plot name '{}' contains illegal character '{}'.", name, *illegal);
+    logger::error("Plot name '{}' contains illegal character '{}'.", name, *illegal);
     return *this;
   }
   mName = name;
@@ -320,12 +320,12 @@ auto Plot::SetName(const string& name) -> decltype(*this)
 auto Plot::SetGroup(const string& group) -> decltype(*this)
 {
   if (auto illegal = find_illegal_name_char(group, true)) {
-    ERROR("Group '{}' contains illegal character '{}'.", group, *illegal);
+    logger::error("Group '{}' contains illegal character '{}'.", group, *illegal);
     return *this;
   }
   const string normalized = NormalizeGroup(group);
   if (normalized.empty()) {
-    ERROR("Cannot set empty group.");
+    logger::error("Cannot set empty group.");
     return *this;
   }
   mGroup = normalized;
@@ -336,16 +336,16 @@ auto Plot::SetGroup(const string& group) -> decltype(*this)
 auto Plot::AppendGroup(const string& subgroup) -> decltype(*this)
 {
   if (subgroup.empty()) {
-    ERROR("Cannot append empty subgroup.");
+    logger::error("Cannot append empty subgroup.");
     return *this;
   }
   if (auto illegal = find_illegal_name_char(subgroup, true)) {
-    ERROR("Subgroup '{}' contains illegal character '{}'.", subgroup, *illegal);
+    logger::error("Subgroup '{}' contains illegal character '{}'.", subgroup, *illegal);
     return *this;
   }
   const string normalizedSubgroup = NormalizeGroup(subgroup);
   if (normalizedSubgroup.empty()) {
-    ERROR("Cannot append empty subgroup.");
+    logger::error("Cannot append empty subgroup.");
     return *this;
   }
   mGroup = mGroup.empty() ? normalizedSubgroup : mGroup + "/" + normalizedSubgroup;
@@ -1418,7 +1418,7 @@ Plot::Pad::Data& Plot::Pad::AddData(const Data& data, const optional<string>& la
 
 Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const optional<string>& label)
 {
-  WARNING("AddData(\"{}\", settings) is deprecated and only uses the appearance of the settings. Use AddData(settings(\"{}\")) instead.", name, name);
+  logger::warning("AddData(\"{}\", settings) is deprecated and only uses the appearance of the settings. Use AddData(settings(\"{}\")) instead.", name, name);
   mData.push_back(std::make_shared<Data>(name, data.GetDataSource(), label));
   mData.back()->SetLayout(data);
   if (!label && data.GetLegendLabel()) mData.back()->SetLegendLabel(*data.GetLegendLabel());
@@ -1516,8 +1516,8 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const Ratio& ratio, const optional<string>
 
 Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorSettings, const string& denominatorName, const string& denominatorDataSource, const optional<string>& label)
 {
-  WARNING("AddRatio({}, {}) with settings objects is deprecated and only uses their appearance and data source. Use AddRatio(numerator, denominator) with complete data instead, e.g. AddRatio(numSettings(\"{}\"), denSettings(\"{}\")).",
-          numeratorName, denominatorName, numeratorName, denominatorName);
+  logger::warning("AddRatio({}, {}) with settings objects is deprecated and only uses their appearance and data source. Use AddRatio(numerator, denominator) with complete data instead, e.g. AddRatio(numSettings(\"{}\"), denSettings(\"{}\")).",
+                  numeratorName, denominatorName, numeratorName, denominatorName);
   auto& ratio = AddRatioFromNames(numeratorName, numeratorSettings.GetDataSource(), denominatorName, denominatorDataSource, label);
   ratio.SetLayout(numeratorSettings);
   return ratio;
@@ -1531,8 +1531,8 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& n
 
 Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataSource, const string& denominatorName, const Data& denominatorSettings, const optional<string>& label)
 {
-  WARNING("AddRatio({}, {}) with settings objects is deprecated and only uses their appearance and data source. Use AddRatio(numerator, denominator) with complete data instead, e.g. AddRatio(Data(\"{}\", \"{}\"), denSettings(\"{}\")).",
-          numeratorName, denominatorName, numeratorName, numeratorDataSource, denominatorName);
+  logger::warning("AddRatio({}, {}) with settings objects is deprecated and only uses their appearance and data source. Use AddRatio(numerator, denominator) with complete data instead, e.g. AddRatio(Data(\"{}\", \"{}\"), denSettings(\"{}\")).",
+                  numeratorName, denominatorName, numeratorName, numeratorDataSource, denominatorName);
   return AddRatioFromNames(numeratorName, numeratorDataSource, denominatorName, denominatorSettings.GetDataSource(), label);
 }
 
@@ -2389,7 +2389,7 @@ void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const std::string& name, co
 auto Plot::Pad::Data::Entries(uint32_t nEntries) -> decltype(*this)
 {
   if (!nEntries) {
-    ERROR("Entries(0) would select no entries at all; ignoring.");
+    logger::error("Entries(0) would select no entries at all; ignoring.");
     return *this;
   }
   mDataInfo.entries.min.reset();
@@ -2399,7 +2399,7 @@ auto Plot::Pad::Data::Entries(uint32_t nEntries) -> decltype(*this)
 auto Plot::Pad::Data::Entries(uint32_t entryMin, uint32_t entryMax) -> decltype(*this)
 {
   if (entryMax <= entryMin) {
-    ERROR("Entry range [{}, {}) is empty; ignoring.", entryMin, entryMax);
+    logger::error("Entry range [{}, {}) is empty; ignoring.", entryMin, entryMax);
     return *this;
   }
   mDataInfo.entries.min = entryMin;
@@ -2763,8 +2763,8 @@ auto Plot::Pad::Ratio::Denom() -> decltype(*this)
 void Plot::Pad::Ratio::ResolveSelectionMode(const char* call)
 {
   if (mModMode != Mode::Res) return;
-  WARNING("Ratio {}: {}() selects input data, it cannot act on the ratio itself; interpreted as Numer().{}(). Write Numer(), Denom() or Both() explicitly.",
-          GetName(), call, call);
+  logger::warning("Ratio {}: {}() selects input data, it cannot act on the ratio itself; interpreted as Numer().{}(). Write Numer(), Denom() or Both() explicitly.",
+                  GetName(), call, call);
   mModMode = Mode::Num;
 }
 auto Plot::Pad::Ratio::Both() -> decltype(*this)
@@ -3303,7 +3303,7 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
   read_from_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
   if (auto name = boxTree.get_optional<string>("placement")) {
     mPos.placement = box_placement_from_name(*name);
-    if (!mPos.placement) WARNING("Unknown box placement {} is ignored.", *name);
+    if (!mPos.placement) logger::warning("Unknown box placement {} is ignored.", *name);
   }
   read_from_tree(boxTree, mBorder.style, "border_style");
   read_from_tree(boxTree, mBorder.color, "border_color");
@@ -3714,7 +3714,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns)
   if (numColumns) {
     mNumColumns = numColumns;
   } else {
-    WARNING("Legend box cannot have 0 columns.");
+    logger::warning("Legend box cannot have 0 columns.");
   }
   return *this;
 }

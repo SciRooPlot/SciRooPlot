@@ -66,7 +66,7 @@ string expand_path(const string& path)
     const string name = path.substr(nameStart, nameEnd - nameStart);
     const char* value = std::getenv(name.data());
     if (!value) {
-      ERROR("Environment variable {} used in path {} is not set.", name, path);
+      logger::error("Environment variable {} used in path {} is not set.", name, path);
       return "";
     }
     expandedPath += value;

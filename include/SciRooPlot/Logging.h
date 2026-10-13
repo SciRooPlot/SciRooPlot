@@ -204,19 +204,9 @@ inline void here(const char* file, const char* function, int line)
 }
 }  // namespace logger
 
-// shorthand macros for logging features
-#define DEBUG(...) logger::debug(__VA_ARGS__)
-#define WARNING(...) logger::warning(__VA_ARGS__)
-#define ERROR(...) logger::error(__VA_ARGS__)
-#define LOG(...) logger::log(__VA_ARGS__)
-#define INFO(...) logger::info(__VA_ARGS__)
-#define PRINT(...) logger::print(__VA_ARGS__)
-#define PRINT_INLINE(...) logger::print_inline(__VA_ARGS__)
-#define PRINT_SEPARATOR() logger::print_separator()
-
-// debug helper macros
-#define HERE() logger::here(__FILE__, __FUNCTION__, __LINE__);
-#define CHECK_TYPE(var) logger::check_type(var, #var);
+// debug helpers for development, uncomment to use (macros, since they need the location of the call or the name of the variable)
+// #define HERE() SciRooPlot::logger::here(__FILE__, __FUNCTION__, __LINE__);
+// #define CHECK_TYPE(var) SciRooPlot::logger::check_type(var, #var);
 
 }  // end namespace SciRooPlot
 #endif  // INCLUDE_SCIROOPLOT_LOGGING_H_

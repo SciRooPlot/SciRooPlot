@@ -184,7 +184,7 @@ TH1* PlotPainter::ToHist(TGraph* graph, bool warn)
   graph->Sort();
   const int32_t n = graph->GetN();
   if (n == 0) {
-    if (warn) WARNING("Graph {} cannot be drawn as a histogram (it has no points).", graph->GetName());
+    if (warn) logger::warning("Graph {} cannot be drawn as a histogram (it has no points).", graph->GetName());
     return nullptr;
   }
   // bin edges from the x errors (if the graph has them): the bins of neighbouring points must touch (within precision),
@@ -218,8 +218,8 @@ TH1* PlotPainter::ToHist(TGraph* graph, bool warn)
       edges.push_back(high);
       binOfPoint[i] = static_cast<int32_t>(edges.size()) - 1;
     }
-    if (!hasErrorsX && warn) WARNING("The x errors of graph {} do not define bin edges: it is drawn with bins half way between the points.", graph->GetName());
-    if (hasErrorsX && overlaps && warn) WARNING("The x errors of graph {} overlap: the bin edges are placed in the middle of the overlaps.", graph->GetName());
+    if (!hasErrorsX && warn) logger::warning("The x errors of graph {} do not define bin edges: it is drawn with bins half way between the points.", graph->GetName());
+    if (hasErrorsX && overlaps && warn) logger::warning("The x errors of graph {} overlap: the bin edges are placed in the middle of the overlaps.", graph->GetName());
   }
   if (!hasErrorsX) {
     edges.resize(n + 1);
@@ -234,7 +234,7 @@ TH1* PlotPainter::ToHist(TGraph* graph, bool warn)
         edges[i] = 0.5 * (graph->GetPointX(i - 1) + graph->GetPointX(i));
       }
       if (i > 0 && !(edges[i] > edges[i - 1])) {
-        if (warn) WARNING("Graph {} cannot be drawn as a histogram (it needs points with distinct x values).", graph->GetName());
+        if (warn) logger::warning("Graph {} cannot be drawn as a histogram (it needs points with distinct x values).", graph->GetName());
         return nullptr;
       }
     }
@@ -248,7 +248,7 @@ TH1* PlotPainter::ToHist(TGraph* graph, bool warn)
     hist->SetBinError(binOfPoint[i], 0.5 * (graph->GetErrorYlow(i) + graph->GetErrorYhigh(i)));
     asymmetricErrors |= (graph->GetErrorYlow(i) != graph->GetErrorYhigh(i));
   }
-  if (asymmetricErrors && warn) WARNING("Graph {} has asymmetric y errors: it is drawn with their mean, since histograms have symmetric errors.", graph->GetName());
+  if (asymmetricErrors && warn) logger::warning("Graph {} has asymmetric y errors: it is drawn with their mean, since histograms have symmetric errors.", graph->GetName());
   graph->TAttLine::Copy(*hist);
   graph->TAttFill::Copy(*hist);
   graph->TAttMarker::Copy(*hist);
@@ -280,7 +280,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   double_t canvasWidth = std::round(mScale * plot.GetWidth().value_or(gStyle->GetCanvasDefW()));
   double_t canvasHeight = std::round(mScale * plot.GetHeight().value_or(gStyle->GetCanvasDefH()));
   if (canvasWidth <= 0 || canvasHeight <= 0) {
-    ERROR("Plot {} has invalid dimensions {}x{}.", plot.GetName(), canvasWidth, canvasHeight);
+    logger::error("Plot {} has invalid dimensions {}x{}.", plot.GetName(), canvasWidth, canvasHeight);
     return nullptr;
   }
   // generate canvas with 'invisible' dummy size to avoid annoying popup window
@@ -348,7 +348,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       // a plot with only one pad and no position for it is drawn over the whole plot by design
       const bool isSinglePad = std::count_if(plot.GetPads().begin(), plot.GetPads().end(), [](const auto& p) { return p.first != 0; }) == 1;
       if (!isSinglePad || xLow || yLow || xUp || yUp) {
-        WARNING("Position of pad {} was not defined properly! Drawing it over whole plot.", padID);
+        logger::warning("Position of pad {} was not defined properly! Drawing it over whole plot.", padID);
       }
     } else {
       padPos = {*xLow, *yLow, *xUp, *yUp};
@@ -432,7 +432,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
     if (drawData.empty()) {
       if (pad.GetLegendBoxes().empty() && pad.GetTextBoxes().empty()) {
-        WARNING("Nothing to be drawn in pad {}.", padID);
+        logger::warning("Nothing to be drawn in pad {}.", padID);
         continue;
       }
     } else {
@@ -487,7 +487,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (auto it = (options) ? options->find(*optionAlias) : decltype(options->end()){}; options && it != options->end()) {
             drawingOptions += it->second;
           } else {
-            if (dataIndex != 0) WARNING("Drawing option {} is not available for {} {}, using the default of ROOT.", drawing_option_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), data_ptr->GetName());
+            if (dataIndex != 0) logger::warning("Drawing option {} is not available for {} {}, using the default of ROOT.", drawing_option_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), data_ptr->GetName());
             alias = static_cast<drawing_options_t>(255);
           }
         }
@@ -736,7 +736,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   if (!axisHist_ptr->IsBinUnderflow(bin) && !axisHist_ptr->IsBinOverflow(bin) && content > 0.) positiveMinimum = std::min(positiveMinimum, content);
                 }
                 if (std::isinf(positiveMinimum)) {
-                  WARNING("Log scale of {} axis in pad {} ignored: the data has no positive values.", axisLabel, padID);
+                  logger::warning("Log scale of {} axis in pad {} ignored: the data has no positive values.", axisLabel, padID);
                   disableLog();
                 } else if ((axisHist_ptr->GetMinimumStored() != -1111) ? (axisHist_ptr->GetMinimumStored() <= 0.) : (axisHist_ptr->GetMinimum() < 0.)) {
                   // ROOT cannot draw a log axis from a stored minimum at or below zero or from negative contents (zero contents it skips itself)
@@ -747,7 +747,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 const int32_t lastBin = std::min(axis_ptr->GetLast(), axis_ptr->GetNbins());
                 if (axis_ptr->GetBinLowEdge(firstBin) < 0.) {  // ROOT itself copes with a range starting at zero
                   if (axis_ptr->GetBinUpEdge(lastBin) <= 0.) {
-                    WARNING("Log scale of {} axis in pad {} ignored: the axis range has no positive values.", axisLabel, padID);
+                    logger::warning("Log scale of {} axis in pad {} ignored: the axis range has no positive values.", axisLabel, padID);
                     disableLog();
                   } else {
                     int32_t bin = firstBin;
@@ -983,7 +983,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               data_ptr->ClearUnderflowAndOverflow();
             }
           } else if (data->GetStatsFormat()) {
-            WARNING("Statistics boxes are available only for histograms, not for {}.", data->GetName());
+            logger::warning("Statistics boxes are available only for histograms, not for {}.", data->GetName());
           }
           data_ptr->SetName((std::to_string(dataIndex - hasRefFunc) + ":" + data_ptr->GetName()).data());
           data_ptr->Draw(drawingOptions.data());
@@ -1021,7 +1021,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 stats->SetFillStyle(0);
                 statsBoxes.emplace_back(stats);
               } else {
-                WARNING("ROOT did not create a statistics box for {}.", data->GetName());
+                logger::warning("ROOT did not create a statistics box for {}.", data->GetName());
               }
             }
           }
@@ -1057,7 +1057,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (legendID > 0u && legendID <= legendBoxVector.size()) {
               legendBoxVector[legendID - 1]->AddEntry(*data->GetLegendLabel(), (dataIndex - hasRefFunc));
             } else {
-              WARNING("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetDataSource());
+              logger::warning("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetDataSource());
             }
           }
           pad_ptr->Update();  // adds something to the list of primitives
@@ -1086,7 +1086,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         }
 
         auto warn = [&](auto&&... args) {
-          if (dataIndex != 0) WARNING(std::forward<decltype(args)>(args)...);
+          if (dataIndex != 0) logger::warning(std::forward<decltype(args)>(args)...);
         };
 
         // apply the data modifiers stored in mods to ptr (plain data, ratio inputs and ratio result)
@@ -1432,7 +1432,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
             applyModifiers(denom_data_ptr, operandMods(data_as_ratio->GetDenomModify()));
             auto unsupported = [&]() {
-              ERROR("Unsupported division of {} and {}.", data_ptr->ClassName(), denom_data_ptr->ClassName());
+              logger::error("Unsupported division of {} and {}.", data_ptr->ClassName(), denom_data_ptr->ClassName());
               fail = true;
             };
             if constexpr (is_hist<data_type>()) {
@@ -1529,7 +1529,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               drawItem(hist, optionAlias);
               return;
             }
-            if (dataIndex != 0) WARNING("Drawing option {} is not available for graph {}, using the default of ROOT.", drawing_option_name(*optionAlias), data_ptr->GetName());
+            if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", drawing_option_name(*optionAlias), data_ptr->GetName());
             optionAlias.reset();
           }
         }
@@ -1645,7 +1645,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         legend->Draw("SAME");
         ++legendIndex;
       } else {
-        WARNING("Legend {} was not added since it is empty.", legendIndex);
+        logger::warning("Legend {} was not added since it is empty.", legendIndex);
       }
     }
     uint8_t textIndex{1u};
@@ -1662,7 +1662,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         text->Draw("SAME");
         ++textIndex;
       } else {
-        WARNING("Text {} was not added since it is empty.", textIndex);
+        logger::warning("Text {} was not added since it is empty.", textIndex);
       }
     }
 
@@ -1786,7 +1786,7 @@ string PlotPainter::ColorDefinitionCommand(const std::set<int32_t>& colors)
 string PlotPainter::GradientPaletteCommand(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha)
 {
   if (rgbEndpoints.size() < 2 || nColors < 1) {
-    ERROR("A colour gradient needs at least two endpoints and one colour (got {} and {}).", rgbEndpoints.size(), nColors);
+    logger::error("A colour gradient needs at least two endpoints and one colour (got {} and {}).", rgbEndpoints.size(), nColors);
     return fmt::format(" gStyle->SetPalette({});", static_cast<int32_t>(kBird));
   }
   string red, green, blue, stops;
@@ -1953,12 +1953,12 @@ bool PlotPainter::CheckFontSizes(TList* list)
     if (textSize) {
       if (textFont % 10 <= 2) {
         if (textSize >= 1.f) {
-          WARNING("Though text font {} implies a relative text size it is set to {} for {}.", textFont, textSize, obj->GetName());
+          logger::warning("Though text font {} implies a relative text size it is set to {} for {}.", textFont, textSize, obj->GetName());
           return false;
         }
       } else {
         if (textSize <= 1.f) {
-          WARNING("Though text font {} implies a text size in pixel it is set to {} for {}.", textFont, textSize, obj->GetName());
+          logger::warning("Though text font {} implies a text size in pixel it is set to {} for {}.", textFont, textSize, obj->GetName());
           return false;
         }
       }
@@ -2137,7 +2137,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
             }
           }
           if (!data_ptr) {
-            WARNING("Object belonging to legend entry {} not found.", line);
+            logger::warning("Object belonging to legend entry {} not found.", line);
           } else {
             ReplacePlaceholders(line, static_cast<TNamed*>(data_ptr));
           }
@@ -2426,10 +2426,10 @@ void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, bo
   const bool fitsIntoFrame = (width <= freeWidthNDC && height <= freeHeightNDC);
   if (fitsIntoFrame && FindFreeSpace(pad, freeArea, width, height, placement, lowerLeftX, lowerLeftY)) return;
   if (fitsIntoFrame) {
-    WARNING("Could not find enough space to place the {} properly.", boxType);
+    logger::warning("Could not find enough space to place the {} properly.", boxType);
   } else {
-    WARNING("The {} ({:.2f} x {:.2f}) is larger than the space inside the frame ({:.2f} x {:.2f}, in units of the pad size): use fewer lines, more columns or a smaller text size.",
-            boxType, width, height, freeWidthNDC, freeHeightNDC);
+    logger::warning("The {} ({:.2f} x {:.2f}) is larger than the space inside the frame ({:.2f} x {:.2f}, in units of the pad size): use fewer lines, more columns or a smaller text size.",
+                    boxType, width, height, freeWidthNDC, freeHeightNDC);
   }
   // just place it in the top left corner of the frame
   lowerLeftX = freeArea[0];
@@ -2695,7 +2695,7 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
         std::visit([&name](auto&& ptr) { ptr->SetName(name.data()); ptr->SetBit(kCanDelete); }, *returnPointer);
         return returnPointer;
       } else {
-        ERROR("Projection failed for {}.", obj->GetName());
+        logger::error("Projection failed for {}.", obj->GetName());
       }
     } else {
       // TProfile2D is TH2, TH2 is TH1, TH3 is TH1, TProfile is TH1, TF3 is TF2, TF2 is TF1
@@ -2703,7 +2703,7 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
         std::visit([](auto&& ptr) { ptr->SetBit(kCanDelete); }, *returnPointer);
         return returnPointer;
       } else {
-        ERROR("Input data {} is of unsupported type {}.", obj->GetName(), obj->ClassName());
+        logger::error("Input data {} is of unsupported type {}.", obj->GetName(), obj->ClassName());
       }
     }
   }
@@ -2741,7 +2741,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
   const bool isProfile = projInfo.isProfile && *projInfo.isProfile;
   // only 1d and 2d histograms are valid outputs! (could be extended to 3d if there is a way to plot this)
   if (projInfo.dims.size() == 0 || projInfo.dims.size() > 2) {
-    ERROR("Invalid number of dimensions specified for projection of histogram {}.", obj->GetName());
+    logger::error("Invalid number of dimensions specified for projection of histogram {}.", obj->GetName());
     return nullopt;
   }
   int32_t nDims{};
@@ -2750,17 +2750,17 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
   } else if (obj->InheritsFrom(TH1::Class())) {
     nDims = static_cast<TH1*>(obj)->GetDimension();
   } else {
-    ERROR("Cannot do {} for type {} ({}).", (isProfile) ? "profiles" : "projections", obj->ClassName(), obj->GetName());
+    logger::error("Cannot do {} for type {} ({}).", (isProfile) ? "profiles" : "projections", obj->ClassName(), obj->GetName());
     return nullopt;
   }
   for (auto dim : projInfo.dims) {
     if (dim >= nDims) {
-      ERROR("Cannot project {} onto dimension {}: it only has {} dimension{}.", obj->GetName(), dim, nDims, (nDims == 1) ? "" : "s");
+      logger::error("Cannot project {} onto dimension {}: it only has {} dimension{}.", obj->GetName(), dim, nDims, (nDims == 1) ? "" : "s");
       return nullopt;
     }
   }
   if (projInfo.dims.size() == 2 && projInfo.dims[0] == projInfo.dims[1]) {
-    ERROR("Cannot project {} onto the same dimension twice.", obj->GetName());
+    logger::error("Cannot project {} onto the same dimension twice.", obj->GetName());
     return nullopt;
   }
   // store original axis ranges so they can be reset by scope guard
@@ -2804,7 +2804,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     for (const auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= histPtr->GetNdimensions()) {
-        ERROR("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
+        logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
         return nullopt;
       }
       int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
@@ -2825,7 +2825,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     for (const auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 3) {
-        ERROR("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
+        logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
         return nullopt;
       }
       int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int32_t>(std::get<1>(rangeTuple));
@@ -2845,7 +2845,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
   } else if (obj->InheritsFrom(TH2::Class())) {
     TH2* histPtr = static_cast<TH2*>(obj);
     if (projInfo.dims.size() > 1) {
-      ERROR("Invalid dimension specified for projecting histogram {}.", obj->GetName());
+      logger::error("Invalid dimension specified for projecting histogram {}.", obj->GetName());
       return nullopt;
     }
     // first reset all ranges
@@ -2855,7 +2855,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     for (const auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 2) {
-        ERROR("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
+        logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
         return nullopt;
       }
       int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int32_t>(std::get<1>(rangeTuple));
@@ -2875,10 +2875,10 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
         return histPtr->ProjectionY("_py");
       }
     } else {
-      ERROR("Invalid dimension specified for {} from {} ({}).", (isProfile) ? "profile" : "projection", obj->GetName(), obj->ClassName());
+      logger::error("Invalid dimension specified for {} from {} ({}).", (isProfile) ? "profile" : "projection", obj->GetName(), obj->ClassName());
     }
   } else {
-    ERROR("Cannot do {} for type {} ({}).", (isProfile) ? "profiles" : "projections", obj->ClassName(), obj->GetName());
+    logger::error("Cannot do {} for type {} ({}).", (isProfile) ? "profiles" : "projections", obj->ClassName(), obj->GetName());
   }
   return nullopt;
 }
@@ -2957,7 +2957,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   bool deleteDenom = false;
   if (doInterpol) {
     if (denomN < 2) {
-      ERROR("Cannot interpolate {} for the division: it has {} point{}, at least 2 are needed.", denominator->GetName(), denomN, (denomN == 1) ? "" : "s");
+      logger::error("Cannot interpolate {} for the division: it has {} point{}, at least 2 are needed.", denominator->GetName(), denomN, (denomN == 1) ? "" : "s");
       return false;
     }
     // spline interpolation requires sorted values
@@ -3033,7 +3033,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
       }
     }
     if (nOutside) {
-      WARNING("{} of {} points of {} are outside the range [{}, {}] of {} (up to {} beyond); the denominator is extrapolated there.", nOutside, numN, numerator->GetName(), xMin, xMax, denominator->GetName(), maxDistance);
+      logger::warning("{} of {} points of {} are outside the range [{}, {}] of {} (up to {} beyond); the denominator is extrapolated there.", nOutside, numN, numerator->GetName(), xMin, xMax, denominator->GetName(), maxDistance);
     }
   }
 
@@ -3074,11 +3074,11 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
 bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialErrors)
 {
   if (numerator->GetDimension() != 1) {
-    ERROR("Cannot divide higher dimensional histogram by 1D graph.");
+    logger::error("Cannot divide higher dimensional histogram by 1D graph.");
     return false;
   }
   if (numerator->GetXaxis()->IsAlphanumeric()) {
-    ERROR("Cannot divide alphanumeric histogram by 1D graph.");
+    logger::error("Cannot divide alphanumeric histogram by 1D graph.");
     return false;
   }
   TGraphErrors numeratorGraph(numerator);
@@ -3094,11 +3094,11 @@ bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialError
 bool PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialErrors)
 {
   if (denominator->GetDimension() != 1) {
-    ERROR("Cannot divide 1D graph by higher dimensional histogram.");
+    logger::error("Cannot divide 1D graph by higher dimensional histogram.");
     return false;
   }
   if (denominator->GetXaxis()->IsAlphanumeric()) {
-    ERROR("Cannot divide 1D graph by alphanumeric histogram.");
+    logger::error("Cannot divide 1D graph by alphanumeric histogram.");
     return false;
   }
   TGraphErrors denominatorGraph(denominator);
@@ -3128,7 +3128,7 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
   }
   for (TAxis* axis : {numerator->GetXaxis(), numerator->GetYaxis(), numerator->GetZaxis(), denominator->GetXaxis(), denominator->GetYaxis(), denominator->GetZaxis()}) {
     if (axis && axis->IsAlphanumeric()) {
-      ERROR("Cannot do interpolated division for alphanumeric histograms.");
+      logger::error("Cannot do interpolated division for alphanumeric histograms.");
       return false;
     }
   }
@@ -3137,30 +3137,30 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
     denominatorGraph.SetName(denominator->GetName());  // used in messages
     return Divide(numerator, &denominatorGraph, binomialErrors);
   } else if (numerator->GetDimension() == 2 && denominator->GetDimension() == 2) {
-    ERROR("Interpolated division of 2D histograms not yet supported.");
+    logger::error("Interpolated division of 2D histograms not yet supported.");
   } else if (numerator->GetDimension() == 3 && denominator->GetDimension() == 3) {
-    ERROR("Interpolated division of 3D histograms not yet supported.");
+    logger::error("Interpolated division of 3D histograms not yet supported.");
   } else {
-    ERROR("Dividing histograms of incompatible dimensions.");
+    logger::error("Dividing histograms of incompatible dimensions.");
   }
   return false;
 }
 bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors)
 {
   if (denominator->GetNdim() > numerator->GetDimension()) {
-    ERROR("Cannot divide histogram by higher dimensional function.");
+    logger::error("Cannot divide histogram by higher dimensional function.");
     return false;
   }
   numerator->Divide(denominator);
   if (binomialErrors) {
-    WARNING("Binomial errors not supported for division by function.");
+    logger::warning("Binomial errors not supported for division by function.");
   }
   return true;
 }
 bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialErrors)
 {
   if (denominator->GetNdim() > 1) {
-    ERROR("Cannot divide 1D graph by higher dimensional function.");
+    logger::error("Cannot divide 1D graph by higher dimensional function.");
     return false;
   }
   double_t* x = numerator->GetX();
@@ -3183,7 +3183,7 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
     }
   }
   if (binomialErrors) {
-    WARNING("Binomial errors not supported for division by function.");
+    logger::warning("Binomial errors not supported for division by function.");
   }
   return true;
 }
@@ -3457,7 +3457,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
           replaceStr = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMinimum());
         }
       } catch (const fmt::format_error& e) {
-        ERROR("Incompatible format string in {}: {}.", matchStr, e.what());
+        logger::error("Incompatible format string in {}: {}.", matchStr, e.what());
         replaceStr = matchStr;
       }
     }
@@ -3478,11 +3478,11 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
 vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha)
 {
   if (rgbEndpoints.size() < 2) {
-    ERROR("A colour gradient needs at least two endpoints, got {}.", rgbEndpoints.size());
+    logger::error("A colour gradient needs at least two endpoints, got {}.", rgbEndpoints.size());
     return {};
   }
   if (nColors < 1) {
-    ERROR("Number of gradient colours must be positive, got {}.", nColors);
+    logger::error("Number of gradient colours must be positive, got {}.", nColors);
     return {};
   }
   // the same interpolation as in GradientPaletteCommand; colours are looked up by value, so identical gradients share them
