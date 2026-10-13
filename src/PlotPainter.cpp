@@ -986,6 +986,29 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             logger::warning("Statistics boxes are available only for histograms, not for {}.", data->GetName());
           }
           data_ptr->SetName((std::to_string(dataIndex - hasRefFunc) + ":" + data_ptr->GetName()).data());
+          if constexpr (is_hist<data_type>()) {
+            // an interactive zoom sets its range on all histograms of the pad (and unzooming shows all their bins):
+            // the setup of the pad, which runs at every paint, restores the range of the data
+            string keepRange;
+            if (hasRangeX && !pad_ptr->GetView()) {
+              keepRange += fmt::format(" h->GetXaxis()->SetRange({}, {});", data_ptr->GetXaxis()->GetFirst(), data_ptr->GetXaxis()->GetLast());
+            }
+            if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
+              if (hasRangeY && !pad_ptr->GetView()) {
+                keepRange += fmt::format(" h->GetYaxis()->SetRange({}, {});", data_ptr->GetYaxis()->GetFirst(), data_ptr->GetYaxis()->GetLast());
+              }
+            } else {
+              if (data->GetMinRangeY()) keepRange += fmt::format(" h->SetMinimum({});", *data->GetMinRangeY());
+              if (data->GetMaxRangeY()) keepRange += fmt::format(" h->SetMaximum({});", *data->GetMaxRangeY());
+            }
+            if (!keepRange.empty()) {
+              string name = data_ptr->GetName();
+              for (size_t pos = name.find_first_of("\\\""); pos != string::npos; pos = name.find_first_of("\\\"", pos + 2)) {
+                name.insert(pos, 1, '\\');
+              }
+              padSetup += fmt::format(" if (auto* h = dynamic_cast<TH1*>(gPad->GetPrimitive(\"{}\"))) {{{} }}", name, keepRange);
+            }
+          }
           data_ptr->Draw(drawingOptions.data());
           if constexpr (is_hist<data_type>()) {
             if (showStats) {
