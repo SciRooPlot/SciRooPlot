@@ -127,7 +127,9 @@ void Config::LoadConfig()
     std::cerr << "SCIROOPLOT_CONFIG_PATH must not be empty." << std::endl;
     return;
   }
-  mPath = configPath;
+  // normalized (no trailing slash, '.' or '..'), so that paths derived from it can be compared with it
+  mPath = std::filesystem::path(configPath).lexically_normal();
+  if (!mPath.has_filename() && mPath.has_relative_path()) mPath = mPath.parent_path();
   if (mPath.is_relative()) {
     std::cerr << "SCIROOPLOT_CONFIG_PATH must not be relative." << std::endl;
     mPath = "";
