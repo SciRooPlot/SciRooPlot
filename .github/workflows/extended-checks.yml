@@ -29,29 +29,13 @@ jobs:
             echo "run=false" >> "${GITHUB_OUTPUT}"
           fi
 
-  checks:
+  sanitizers:
     needs: changes
     if: needs.changes.outputs.run == 'true'
 
-    name: ${{ matrix.name }}
+    name: sanitizers
 
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-
-      matrix:
-        include:
-          # AddressSanitizer and UndefinedBehaviorSanitizer with the current ROOT
-          - name: sanitizers
-            root: root_base
-            build_type: RelWithDebInfo
-            cxx_flags: -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined
-          # oldest supported ROOT (REQUIRED_ROOT_VERSION in CMakeLists.txt)
-          - name: ROOT floor
-            root: root_base=6.36.04
-            build_type: Release
-            cxx_flags: ''
 
     steps:
 
@@ -66,7 +50,7 @@ jobs:
         with:
           environment-name: build
           create-args: >-
-            ${{ matrix.root }}
+            root_base
             -c conda-forge
           cache-environment: true
 
@@ -79,8 +63,8 @@ jobs:
             -B build \
             -G Ninja \
             -DCMAKE_PREFIX_PATH="${CONDA_PREFIX}" \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }}"
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined"
 
       - name: Build
         shell: bash -el {0}
@@ -101,8 +85,77 @@ jobs:
           ASAN_OPTIONS: detect_leaks=0
           UBSAN_OPTIONS: print_stacktrace=1
         run: |
-          if [ -n "${{ matrix.cxx_flags }}" ]; then
-            LD_PRELOAD="$(gcc -print-file-name=libasan.so) $(gcc -print-file-name=libubsan.so)"
-            export LD_PRELOAD
-          fi
+          LD_PRELOAD="$(gcc -print-file-name=libasan.so) $(gcc -print-file-name=libubsan.so)"
+          export LD_PRELOAD
+          ./.github/scripts/test-example-project.sh
+
+  # all dependencies at the minimum versions required in CMakeLists.txt
+  floor:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+
+    name: dependency floor
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read ROOT floor
+        id: floor
+        run: |
+          echo "root=$(sed -n 's/^set(REQUIRED_ROOT_VERSION \(.*\))$/\1/p' CMakeLists.txt)" >> "${GITHUB_OUTPUT}"
+
+      # Python 3.10 is the newest Python supported by the pybind11 floor
+      - name: Install ROOT
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: floor
+          create-args: >-
+            root_base=${{ steps.floor.outputs.root }}
+            python=3.10
+            -c conda-forge
+          cache-environment: true
+
+      - name: Install CMake, pybind11, fmt and Boost
+        shell: bash -el {0}
+        run: |
+          ./.github/scripts/install-floor.sh floor-deps
+
+      # fails if a dependency other than the floor version was picked up
+      - name: Configure
+        shell: bash -el {0}
+        run: |
+          set -o pipefail
+          cmake \
+            -S . \
+            -B build \
+            -G Ninja \
+            -DCMAKE_PREFIX_PATH="${PWD}/floor-deps;${CONDA_PREFIX}" \
+            -Dpybind11_DIR="$(python -m pybind11 --cmakedir)" \
+            -DCMAKE_BUILD_TYPE=Release \
+            | tee configure.log
+          for dependency in ROOT BOOST FMT; do
+            required=$(sed -n "s/^set(REQUIRED_${dependency}_VERSION \(.*\))$/\1/p" CMakeLists.txt)
+            grep -iE "^-- ${dependency} +version: ${required//./\\.}(\.0)*$" configure.log
+          done
+          ! grep 'fetching it now' configure.log
+
+      - name: Build
+        shell: bash -el {0}
+        run: |
+          cmake --build build --parallel
+
+      - name: Install
+        shell: bash -el {0}
+        run: |
+          cmake --install build --prefix install
+
+      - name: Integration test
+        shell: bash -el {0}
+        env:
+          SRP_TEST_INSTALL: ${{ github.workspace }}/install
+        run: |
           ./.github/scripts/test-example-project.sh
