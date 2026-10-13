@@ -998,7 +998,7 @@ class Plot::Pad::Axis
   Axis& SetColor(int16_t color);
   Axis& SetAxisColor(int16_t color);
   Axis& SetAxisAlpha(float_t alpha);
-  Axis& SetNumDivisions(int32_t numDivisions);
+  Axis& SetNumDivisions(int16_t numDivisions);
   Axis& SetMaxDigits(int32_t maxDigits);
   Axis& SetTickLength(float_t tickLength);
   Axis& SetTitleFont(int16_t font);

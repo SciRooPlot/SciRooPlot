@@ -3164,7 +3164,7 @@ auto Plot::Pad::Axis::SetAxisAlpha(float_t alpha) -> decltype(*this)
   mAxisFrame.alpha = alpha;
   return *this;
 }
-auto Plot::Pad::Axis::SetNumDivisions(int32_t numDivisions) -> decltype(*this)
+auto Plot::Pad::Axis::SetNumDivisions(int16_t numDivisions) -> decltype(*this)
 {
   mAxisFrame.style = numDivisions;
   return *this;
