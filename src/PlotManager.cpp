@@ -72,6 +72,7 @@
 #include <sstream>
 #include <string>
 #include <tuple>
+#include <unistd.h>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -527,17 +528,35 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
       WARNING("Data source entry {} (data source {}) is neither a recognized file type nor an existing directory. Skipping.", entry, dataSource);
       return;
     }
+    // directories that cannot be read are skipped with a warning: their files are missing then (and reported as such where they are needed)
+    auto isReadable = [](const std::filesystem::path& dir) { return access(dir.c_str(), R_OK | X_OK) == 0; };
+    if (!isReadable(path)) {
+      WARNING("Cannot read directory {} (data source {}). Skipping.", entry, dataSource);
+      return;
+    }
     vector<string> dirFileNames;
-    for (const auto& file : std::filesystem::recursive_directory_iterator(path)) {
+    std::error_code error;
+    std::filesystem::recursive_directory_iterator file(path, std::filesystem::directory_options::skip_permission_denied, error);
+    for (; !error && file != std::filesystem::recursive_directory_iterator(); file.increment(error)) {
       // linked directories are not followed (they could form cycles or contain the same files twice)
-      if (file.is_symlink() && file.is_directory()) {
-        WARNING("Skipping symlinked directory {} (data source {}). Add it as its own entry to include it.", file.path().string(), dataSource);
+      if (file->is_symlink() && file->is_directory()) {
+        WARNING("Skipping symlinked directory {} (data source {}). Add it as its own entry to include it.", file->path().string(), dataSource);
         continue;
       }
-      if (file.path().extension() == ".root" || str_contains(file.path().extension(), mTableFileEndings)) {
-        dirFileNames.push_back(file.path().string());
+      if (file->is_directory()) {
+        if (!isReadable(file->path())) {
+          WARNING("Cannot read directory {} (data source {}). Skipping.", file->path().string(), dataSource);
+          file.disable_recursion_pending();
+        }
+        continue;
+      }
+      if (file->path().extension() == ".root" || str_contains(file->path().extension(), mTableFileEndings)) {
+        dirFileNames.push_back(file->path().string());
       }
     }
+    // any other error ends the walk (the directory iterator cannot continue after it)
+    if (error) WARNING("Could not read all of directory {} (data source {}): {}.", entry, dataSource, error.message());
+    if (dirFileNames.empty()) WARNING("No ROOT or table files found in directory {} (data source {}).", entry, dataSource);
     std::sort(dirFileNames.begin(), dirFileNames.end());
     for (const auto& fileName : dirFileNames) {
       addFile(fileName, "");
