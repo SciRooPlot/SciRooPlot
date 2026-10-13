@@ -515,6 +515,11 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
     }
     vector<string> dirFileNames;
     for (const auto& file : std::filesystem::recursive_directory_iterator(path)) {
+      // linked directories are not followed (they could form cycles or contain the same files twice)
+      if (file.is_symlink() && file.is_directory()) {
+        WARNING("Skipping symlinked directory {} (data source {}). Add it as its own entry to include it.", file.path().string(), dataSource);
+        continue;
+      }
       if (file.path().extension() == ".root" || str_contains(file.path().extension(), mTableFileEndings)) {
         dirFileNames.push_back(file.path().string());
       }
