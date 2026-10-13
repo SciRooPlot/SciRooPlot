@@ -1,0 +1,108 @@
+name: Extended checks
+
+# Slower checks that do not need to run on every push: weekly (skipped if the
+# default branch had no new commit in the last week) and on demand.
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for new commits
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ] || [ -n "$(git log -1 --since='7 days ago' --format=%H)" ]; then
+            echo "run=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "No new commits in the last week -- skipping."
+            echo "run=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+  checks:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+
+    name: ${{ matrix.name }}
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+          # AddressSanitizer and UndefinedBehaviorSanitizer with the current ROOT
+          - name: sanitizers
+            root: root_base
+            build_type: RelWithDebInfo
+            cxx_flags: -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined
+          # oldest supported ROOT (REQUIRED_ROOT_VERSION in CMakeLists.txt)
+          - name: ROOT floor
+            root: root_base=6.36.04
+            build_type: Release
+            cxx_flags: ''
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: ./.github/scripts/install-linux.sh
+
+      - name: Install ROOT
+        uses: mamba-org/setup-micromamba@v2
+        with:
+          environment-name: build
+          create-args: >-
+            ${{ matrix.root }}
+            -c conda-forge
+          cache-environment: true
+
+      # no -Werror: with sanitizers GCC reports false positives in Boost, pybind11 and libstdc++ headers
+      - name: Configure
+        shell: bash -el {0}
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -G Ninja \
+            -DCMAKE_PREFIX_PATH="${CONDA_PREFIX}" \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_CXX_FLAGS="${{ matrix.cxx_flags }}"
+
+      - name: Build
+        shell: bash -el {0}
+        run: |
+          cmake --build build --parallel
+
+      - name: Install
+        shell: bash -el {0}
+        run: |
+          cmake --install build --prefix install
+
+      # the sanitizer runtimes are preloaded, since python and the user programs built by the test are not instrumented;
+      # ROOT does not free all its memory at exit, so leak detection is off
+      - name: Integration test
+        shell: bash -el {0}
+        env:
+          SRP_TEST_INSTALL: ${{ github.workspace }}/install
+          ASAN_OPTIONS: detect_leaks=0
+          UBSAN_OPTIONS: print_stacktrace=1
+        run: |
+          if [ -n "${{ matrix.cxx_flags }}" ]; then
+            LD_PRELOAD="$(gcc -print-file-name=libasan.so) $(gcc -print-file-name=libubsan.so)"
+            export LD_PRELOAD
+          fi
+          ./.github/scripts/test-example-project.sh
