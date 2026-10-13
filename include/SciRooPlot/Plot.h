@@ -550,6 +550,8 @@ class Plot::Pad::Data
   virtual Data& SetOptions(drawing_options_t optionAlias);
   virtual Data& UnsetOptions();
   virtual Data& SetTextFormat(const std::string& textFormat);
+  // statistics box of a histogram: the letters of TStyle::SetOptStat (without 'n'), the title (if given) is its first line
+  virtual Data& SetShowStats(const std::string& format = "emr", const std::optional<std::string>& title = {});
   virtual Data& SetColor(int16_t color);
   virtual Data& SetAlpha(float_t alpha);
   virtual Data& SetMarker(int16_t color, int16_t style, float_t size, std::optional<float_t> alpha = {});
@@ -668,6 +670,8 @@ class Plot::Pad::Data
   const auto& GetDrawingOptions() const { return mDrawingOptions; }
   const auto& GetDrawingOptionAlias() const { return mDrawingOptionAlias; }
   const auto& GetTextFormat() const { return mTextFormat; }
+  const auto& GetStatsFormat() const { return mStats.format; }
+  const auto& GetStatsTitle() const { return mStats.title; }
   const auto& GetScaleFactor() const { return mModify.scaleFactor; }
   const auto& GetScaleBinWidthNorm() const { return mModify.scaleBinWidthNorm; }
   const auto& GetNormMaximum() const { return mModify.normMaximum; }
@@ -780,6 +784,12 @@ class Plot::Pad::Data
   std::optional<drawing_options_t> mDrawingOptionAlias;
   std::optional<std::string> mTextFormat;
 
+  struct stats_t {
+    std::optional<std::string> format;
+    std::optional<std::string> title;
+  };
+  stats_t mStats;
+
   struct legend_t {
     std::optional<std::string> label;
     std::optional<uint8_t> id;
@@ -855,6 +865,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(SetOptions)
   FORWARD_TO_DATA(UnsetOptions)
   FORWARD_TO_DATA(SetTextFormat)
+  FORWARD_TO_DATA(SetShowStats)
   FORWARD_TO_DATA(SetColor)
   FORWARD_TO_DATA(SetAlpha)
   FORWARD_TO_DATA(SetMarker)

@@ -187,6 +187,10 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   plot[1].AddData("histName1", "dataSourceA", "mylabel avg = <mean[.2f]>");
   plot[1].AddData("histName2", "dataSourceA", "mylabel sum = <integral[.2e]>");
 
+  // ROOT's statistics box of a histogram (letters as in TStyle::SetOptStat, here entries, mean and std dev with their errors),
+  // the title is optional (its first line, may contain the placeholders above); the boxes are placed automatically like legends
+  plot[1].AddData("histName1", "dataSourceA").SetShowStats("eMR", "my histogram");
+
   // now lets add another piece of input data from the second group (this time without adding a label to the legend)
   plot[1].AddData("histName3", "dataSourceB");
 

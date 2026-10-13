@@ -59,6 +59,7 @@
 #include <TObject.h>
 #include <TObjectTable.h>
 #include <TPave.h>
+#include <TPaveStats.h>
 #include <TPaveText.h>
 #include <TProfile.h>
 #include <TProfile2D.h>
@@ -71,6 +72,7 @@
 #include <TText.h>
 #include <TTimeStamp.h>
 #include <TView.h>
+#include <TVirtualPad.h>
 
 #include <algorithm>
 #include <array>
@@ -454,6 +456,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     }
 
     TH1* axisHist_ptr{nullptr};
+    vector<unique_ptr<TPaveStats>> statsBoxes;  // filled by ROOT while drawing the data, placed after all data are drawn
     string drawingOptions;
     uint16_t dataIndex{};
     array<uint16_t, 6> defaultSettingIndices = {0};
@@ -971,14 +974,57 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if constexpr (is_graph_1d<data_type>()) {
             data_ptr->SetEditable(false);
           }
+          bool showStats{false};
           if constexpr (is_hist<data_type>()) {
-            data_ptr->SetStats(false);
+            data_ptr->SetStats(false);  // also removes a stats box stored with the input, which shows the numbers of the input instead of the drawn histogram
+            showStats = data->GetStatsFormat() && (!data->GetStatsFormat()->empty() || data->GetStatsTitle());
+            if (showStats && drawingOptions.rfind("SAME", 0) == 0) drawingOptions.insert(4, "S");  // ROOT fills a stats box only with SAMES, not with SAME
             if (!(data->GetShowOverflowBins() && *data->GetShowOverflowBins())) {
               data_ptr->ClearUnderflowAndOverflow();
             }
+          } else if (data->GetStatsFormat()) {
+            WARNING("Statistics boxes are available only for histograms, not for {}.", data->GetName());
           }
           data_ptr->SetName((std::to_string(dataIndex - hasRefFunc) + ":" + data_ptr->GetName()).data());
           data_ptr->Draw(drawingOptions.data());
+          if constexpr (is_hist<data_type>()) {
+            if (showStats) {
+              // ROOT fills the box with the global setting when painting the histogram: the requested one is set for this paint only
+              // (with gPad hidden, since TStyle::SetOptStat would otherwise make all stats boxes of the pad follow the global setting and repaint the pad)
+              auto setOptStat = [](auto mode) {
+                TVirtualPad::TContext noPad(nullptr);
+                gStyle->SetOptStat(mode);
+              };
+              const Int_t userOptStat = gStyle->GetOptStat();
+              setOptStat((*data->GetStatsFormat() + ((data->GetStatsTitle()) ? "n" : "")).data());
+              data_ptr->SetStats(true);
+              pad_ptr->Modified();
+              pad_ptr->Update();
+              setOptStat(userOptStat);
+              // the box becomes a plain object of the pad with fixed content: so it does not depend on the global setting when painted again
+              // and is not refilled from another histogram (the web canvas does so for boxes called "stats")
+              if (auto* stats = dynamic_cast<TPaveStats*>(data_ptr->GetListOfFunctions()->FindObject("stats"))) {
+                data_ptr->GetListOfFunctions()->Remove(stats);
+                stats->SetParent(nullptr);
+                data_ptr->SetStats(false);
+                stats->SetName(("stats_" + std::to_string(dataIndex - hasRefFunc)).data());
+                if (const auto& title = data->GetStatsTitle()) {
+                  string titleText = *title;
+                  ReplacePlaceholders(titleText, data_ptr);
+                  static_cast<TText*>(stats->GetListOfLines()->First())->SetTitle(titleText.data());  // instead of the name of the histogram
+                }
+                stats->SetTextFont(textFont.value_or(43));
+                stats->SetTextSize(textSize.value_or(24.f));
+                stats->SetLineColor(data_ptr->GetLineColor());
+                stats->SetLineWidth(1);
+                stats->SetBorderSize(1);
+                stats->SetFillStyle(0);
+                statsBoxes.emplace_back(stats);
+              } else {
+                WARNING("ROOT did not create a statistics box for {}.", data->GetName());
+              }
+            }
+          }
           if (alias == points_text) {
             // the values are written above the error bars (ROOT draws the bin contents of a histogram only when its errors are not drawn)
             TLatex label;
@@ -1525,6 +1571,62 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       line.DrawLineNDC(lm, bm, rm, bm);
       // re-draw axes
       axisHist_ptr->Draw("SAME AXIS");
+    }
+
+    // statistics boxes, placed before the legends and texts, so that these avoid them
+    for (auto& stats : statsBoxes) {
+      const double_t padWidthPixel = pad_ptr->GetWw() * pad_ptr->GetAbsWNDC();
+      const double_t padHeightPixel = pad_ptr->GetWh() * pad_ptr->GetAbsHNDC();
+      auto textWidth = [&](const TString& text) {
+        TLatex latex(0, 0, text.Data());
+        latex.SetTextFont(stats->GetTextFont());
+        latex.SetTextSize(stats->GetTextSize());
+        return static_cast<double_t>(std::get<0>(GetTextDimensions(latex, pad_ptr)));
+      };
+      // TPaveStats::Paint writes the title centered, "label = value" in two columns (the value right-aligned, '-' as #minus)
+      // and the under- and overflows of 2D histograms ("a | b | c") in three
+      double_t titleWidth{};
+      double_t labelWidth{};
+      double_t valueWidth{};
+      double_t cellWidth{};
+      bool isTitle = (stats->GetOptStat() % 10 != 0);
+      for (auto* line : *stats->GetListOfLines()) {
+        const TString text = line->GetTitle();
+        if (isTitle) {
+          titleWidth = textWidth(text);
+          isTitle = false;
+        } else if (const Ssiz_t pos = text.First('='); pos != kNPOS) {
+          TString value = text(pos + 1, text.Length());
+          value = value.Strip(TString::kBoth);
+          value.ReplaceAll("-", "#minus");
+          labelWidth = std::max(labelWidth, textWidth(text(0, pos)));
+          valueWidth = std::max(valueWidth, textWidth(value));
+        } else {
+          unique_ptr<TObjArray> cells(text.Tokenize("|"));
+          for (auto* cell : *cells) {
+            cellWidth = std::max(cellWidth, textWidth(cell->GetName()));
+          }
+        }
+      }
+      double_t lineHeightPixel{stats->GetTextSize()};
+      if (stats->GetTextFont() % 10 <= 2) lineHeightPixel = GetTextSizePixel(stats->GetTextSize());
+      const double_t lineSpacing{0.3};  // as for legends and texts
+      const double_t contentWidthPixel = std::max({labelWidth + lineHeightPixel + valueWidth, titleWidth, 3. * cellWidth});
+      const double_t widthNDC = contentWidthPixel / (1. - 2. * stats->GetMargin()) / padWidthPixel;  // the margin is a fraction of the box width
+      const double_t heightNDC = (1. + lineSpacing) * lineHeightPixel * stats->GetListOfLines()->GetSize() / padHeightPixel;
+
+      // the border is drawn centered on the edges of the box, so half of it sticks out on each side
+      const double_t borderX = mScale * stats->GetLineWidth() / padWidthPixel;
+      const double_t borderY = mScale * stats->GetLineWidth() / padHeightPixel;
+      double_t lowerLeftX{};
+      double_t lowerLeftY{};
+      FindBoxPosition(pad_ptr, widthNDC + borderX, heightNDC + borderY, best_corner, "statistics box", lowerLeftX, lowerLeftY);
+      stats->SetX1NDC(lowerLeftX + 0.5 * borderX);
+      stats->SetY1NDC(lowerLeftY + 0.5 * borderY);
+      stats->SetX2NDC(lowerLeftX + 0.5 * borderX + widthNDC);
+      stats->SetY2NDC(lowerLeftY + 0.5 * borderY + heightNDC);
+      pad_ptr->cd();
+      stats.release()->Draw();
     }
 
     // now place legends, text-boxes and shapes
@@ -2122,58 +2224,14 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     double_t upperLeftY{box->GetYPosition()};
 
     if (box->IsAutoPlacement()) {
-      pad->cd();
-      pad->Update();
-      double_t lowerLeftX{};
-      double_t lowerLeftY{};
-      bool foundPosition = false;
-
-      // area available for the box: the frame without the ticks of the axes and a small gap (in NDC)
-      constexpr double_t kDistanceToFrame{1.4};  // in units of the tick length
-      TH1* axisHist{};
-      for (auto* obj : *pad->GetListOfPrimitives()) {
-        if (obj->InheritsFrom(TH1::Class()) && TString(obj->GetName()).BeginsWith("axis_hist")) {
-          axisHist = static_cast<TH1*>(obj);
-          break;
-        }
-      }
-      const double_t tickLengthX = (axisHist) ? axisHist->GetXaxis()->GetTickLength() : gStyle->GetTickLength("X");  // ticks on the x axis (vertical)
-      const double_t tickLengthY = (axisHist) ? axisHist->GetYaxis()->GetTickLength() : gStyle->GetTickLength("Y");  // ticks on the y axis (horizontal)
-      const double_t frameX1 = (pad->GetUxmin() - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
-      const double_t frameX2 = (pad->GetUxmax() - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
-      const double_t frameY1 = (pad->GetUymin() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
-      const double_t frameY2 = (pad->GetUymax() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
-      const double_t distanceX = kDistanceToFrame * tickLengthY * (frameX2 - frameX1);
-      const double_t distanceY = kDistanceToFrame * tickLengthX * (frameY2 - frameY1);
-      const std::array<double_t, 4> freeArea{frameX1 + distanceX, frameY1 + distanceY, frameX2 - distanceX, frameY2 - distanceY};
-
       // the border is drawn centered on the edges of the box, so half of it sticks out on each side
       const double_t borderX = mScale * box->GetBorderWidth().value_or(0.) / padWidthPixel;
       const double_t borderY = mScale * box->GetBorderWidth().value_or(0.) / padHeightPixel;
-      const double_t outerWidthNDC = totalWidthNDC + borderX;
-      const double_t outerHeightNDC = totalHeightNDC + borderY;
-
-      // find box position that does not collide with any of the drawn objects
-      const double_t freeWidthNDC = freeArea[2] - freeArea[0];
-      const double_t freeHeightNDC = freeArea[3] - freeArea[1];
-      const bool fitsIntoFrame = (outerWidthNDC <= freeWidthNDC && outerHeightNDC <= freeHeightNDC);
-      if (fitsIntoFrame) {
-        foundPosition = FindFreeSpace(pad, freeArea, outerWidthNDC, outerHeightNDC, *box->GetPlacement(), lowerLeftX, lowerLeftY);
-      }
-      if (foundPosition) {
-        upperLeftX = lowerLeftX + 0.5 * borderX;
-        upperLeftY = lowerLeftY + 0.5 * borderY + totalHeightNDC;
-      } else {
-        if (fitsIntoFrame) {
-          WARNING("Could not find enough space to place the {} properly.", (isLegend) ? "legend" : "text");
-        } else {
-          WARNING("The {} ({:.2f} x {:.2f}) is larger than the space inside the frame ({:.2f} x {:.2f}, in units of the pad size): use fewer lines, more columns or a smaller text size.",
-                  (isLegend) ? "legend" : "text", outerWidthNDC, outerHeightNDC, freeWidthNDC, freeHeightNDC);
-        }
-        // just place it in the top left corner of the frame
-        upperLeftX = freeArea[0] + 0.5 * borderX;
-        upperLeftY = freeArea[3] - 0.5 * borderY;
-      }
+      double_t lowerLeftX{};
+      double_t lowerLeftY{};
+      FindBoxPosition(pad, totalWidthNDC + borderX, totalHeightNDC + borderY, *box->GetPlacement(), (isLegend) ? "legend" : "text", lowerLeftX, lowerLeftY);
+      upperLeftX = lowerLeftX + 0.5 * borderX;
+      upperLeftY = lowerLeftY + 0.5 * borderY + totalHeightNDC;
     } else if (box->IsUserCoordinates()) {
       // convert user coordinates to NDC
       pad->Update();
@@ -2329,6 +2387,53 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
   };
   std::visit(processBox, boxVariant);
   return returnBox;
+}
+
+//**************************************************************************************************
+/**
+ * Position of a box of the given size (in NDC, including its border) that is placed automatically within the frame of the pad.
+ * Without enough free space, the box is placed in the top left corner of the frame (with a warning).
+ * Returns the lower left corner of the box in NDC.
+ */
+//**************************************************************************************************
+void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, box_placement_t placement, const string& boxType, double_t& lowerLeftX, double_t& lowerLeftY)
+{
+  pad->cd();
+  pad->Update();
+
+  // area available for the box: the frame without the ticks of the axes and a small gap (in NDC)
+  constexpr double_t kDistanceToFrame{1.4};  // in units of the tick length
+  TH1* axisHist{};
+  for (auto* obj : *pad->GetListOfPrimitives()) {
+    if (obj->InheritsFrom(TH1::Class()) && TString(obj->GetName()).BeginsWith("axis_hist")) {
+      axisHist = static_cast<TH1*>(obj);
+      break;
+    }
+  }
+  const double_t tickLengthX = (axisHist) ? axisHist->GetXaxis()->GetTickLength() : gStyle->GetTickLength("X");  // ticks on the x axis (vertical)
+  const double_t tickLengthY = (axisHist) ? axisHist->GetYaxis()->GetTickLength() : gStyle->GetTickLength("Y");  // ticks on the y axis (horizontal)
+  const double_t frameX1 = (pad->GetUxmin() - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
+  const double_t frameX2 = (pad->GetUxmax() - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
+  const double_t frameY1 = (pad->GetUymin() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
+  const double_t frameY2 = (pad->GetUymax() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
+  const double_t distanceX = kDistanceToFrame * tickLengthY * (frameX2 - frameX1);
+  const double_t distanceY = kDistanceToFrame * tickLengthX * (frameY2 - frameY1);
+  const std::array<double_t, 4> freeArea{frameX1 + distanceX, frameY1 + distanceY, frameX2 - distanceX, frameY2 - distanceY};
+
+  // find box position that does not collide with any of the drawn objects
+  const double_t freeWidthNDC = freeArea[2] - freeArea[0];
+  const double_t freeHeightNDC = freeArea[3] - freeArea[1];
+  const bool fitsIntoFrame = (width <= freeWidthNDC && height <= freeHeightNDC);
+  if (fitsIntoFrame && FindFreeSpace(pad, freeArea, width, height, placement, lowerLeftX, lowerLeftY)) return;
+  if (fitsIntoFrame) {
+    WARNING("Could not find enough space to place the {} properly.", boxType);
+  } else {
+    WARNING("The {} ({:.2f} x {:.2f}) is larger than the space inside the frame ({:.2f} x {:.2f}, in units of the pad size): use fewer lines, more columns or a smaller text size.",
+            boxType, width, height, freeWidthNDC, freeHeightNDC);
+  }
+  // just place it in the top left corner of the frame
+  lowerLeftX = freeArea[0];
+  lowerLeftY = freeArea[3] - height;
 }
 
 //**************************************************************************************************

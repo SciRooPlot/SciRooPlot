@@ -1668,6 +1668,8 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mDrawingOptions, "drawing_options");
   ReadDrawingOption(dataTree, mDrawingOptionAlias, "drawing_option_alias");
   read_from_tree(dataTree, mTextFormat, "text_format");
+  read_from_tree(dataTree, mStats.format, "stats_format");
+  read_from_tree(dataTree, mStats.title, "stats_title");
   read_from_tree(dataTree, mMarker.color, "marker_color");
   read_from_tree(dataTree, mMarker.alpha, "marker_alpha");
   read_from_tree(dataTree, mMarker.style, "marker_style");
@@ -1810,6 +1812,8 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mDrawingOptions, "drawing_options");
   PutDrawingOption(dataTree, mDrawingOptionAlias, "drawing_option_alias");
   put_in_tree(dataTree, mTextFormat, "text_format");
+  put_in_tree(dataTree, mStats.format, "stats_format");
+  put_in_tree(dataTree, mStats.title, "stats_title");
   put_in_tree(dataTree, mMarker.color, "marker_color");
   put_in_tree(dataTree, mMarker.alpha, "marker_alpha");
   put_in_tree(dataTree, mMarker.style, "marker_style");
@@ -1969,6 +1973,14 @@ auto Plot::Pad::Data::UnsetOptions() -> decltype(*this)
 auto Plot::Pad::Data::SetTextFormat(const string& textFormat) -> decltype(*this)
 {
   mTextFormat = textFormat;
+  return *this;
+}
+auto Plot::Pad::Data::SetShowStats(const string& format, const optional<string>& title) -> decltype(*this)
+{
+  // the first line of the box ('n', which would be the name of the histogram) is shown exactly when there is a title
+  mStats.format = format;
+  mStats.format->erase(std::remove(mStats.format->begin(), mStats.format->end(), 'n'), mStats.format->end());
+  mStats.title = title;
   return *this;
 }
 auto Plot::Pad::Data::SetRangeX(double_t min, double_t max) -> decltype(*this)

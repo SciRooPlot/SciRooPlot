@@ -111,6 +111,7 @@ plot[1].AddData(myTemplate("hist"), "label");               // Data template: Da
 .SetRangeX(a, b).SetMaxRangeX(b).SetRangeY(a, b)             // visible range of this data, independent of the axis
 .SetScaleMinimum(f).SetScaleMaximum(f)                      // widen the automatic axis range
 .SetLegend(2).SetLegendLabel("l").SetDefinesFrame().SetShowOverflowBins().SetContours(n).SetTextFormat("4.2f")
+.SetShowStats("eMR", "title")   // statistics box of a histogram (letters of TStyle::SetOptStat; the optional title is its first line)
 ```
 Labels may contain `<name> <title> <entries> <integral> <maximum> <minimum> <mean>` with printf formats: `"avg = <mean[.2f]>"`. ROOT TLatex syntax works in all texts (`#it{p}_{T}`, `#sqrt{s}`).
 

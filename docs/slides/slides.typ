@@ -1793,6 +1793,7 @@
         [`SetLegendLabel(label)` / `SetLegend(legendID)`], [Set legend text, or assign to a specific legend.],
         [#names("SetOptions(options) / SetOptions(alias)", "UnsetOptions()")], [Set a ROOT draw-option string or one of the #link(<appx-drawing-options>)[#text(fill: main-color)[predefined aliases]], or remove it.],
         [`SetTextFormat(fmt)`], [Number format of bin contents drawn with the `TEXT` option, e.g. `".0f"`.],
+        [`SetShowStats(format = "emr", title = {})`], [Statistics box of a histogram: ROOT's letters (`TStyle::SetOptStat`, e.g. `"eMR"`), the title as its first line.],
       ))
     ],
     [
