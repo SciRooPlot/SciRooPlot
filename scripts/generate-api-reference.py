@@ -53,9 +53,21 @@ def public_section(text: str, declaration: str) -> str:
 
 def methods(section: str, class_name: str):
     result = []
+    # macro definitions (with their continuation lines) and macro invocations like FORWARD_TO_DATA(SetColor)
+    # are not declarations; the methods they generate are covered by the class remark
+    declarations = []
+    inMacro = False
+    for line in section.splitlines():
+        stripped = line.strip()
+        if inMacro or stripped.startswith("#"):
+            inMacro = stripped.endswith("\\")
+            continue
+        if re.fullmatch(r"[A-Z_]+\(\w+\)", stripped) or re.fullmatch(r"(public|protected|private):", stripped):
+            continue
+        declarations.append(line)
     # join declarations that span several lines
     lines = []
-    for line in section.splitlines():
+    for line in declarations:
         if lines and not re.search(r"[;{}]\s*(//.*)?$", lines[-1]) and not lines[-1].strip().startswith("//"):
             lines[-1] = lines[-1].rstrip() + " " + line.strip()
         else:

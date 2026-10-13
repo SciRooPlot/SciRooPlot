@@ -1786,7 +1786,7 @@
       #api-section("Source, range & legend", (
         [`template(name, dataSource = {})`], [Use a `Data` object as template: a copy with the given name (and data source).],
         [`SetDataSource(dataset)`], [Set/override the data-source ID.],
-        [`SetLayout(layout)` / `ApplyLayout(layout)`], [Take over all properties of a `Data` layout, or only the ones set in it.],
+        [`SetLayout(layout)` / `ApplyLayout(layout)`], [Take over the appearance of a `Data` layout (options, ranges, marker, line, fill, contours), or only the parts set in it.],
         [#names("SetRangeX(min, max) / SetRangeY(min, max)", "SetMinRangeX(min) / SetMaxRangeX(max)", "SetMinRangeY(min) / SetMaxRangeY(max)")], [Restrict the range in which the data is drawn, fully or partially.],
         [`UnsetRangeX()` / `UnsetRangeY()`], [Remove a previously set range restriction.],
         [`SetShowOverflowBins(showOverflowBins = true)`], [Include overflow bins in the display.],

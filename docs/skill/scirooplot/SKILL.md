@@ -165,7 +165,7 @@ Column expressions and filters are C++ expressions over the column/leaf names (e
 plot[1].AddLegend();  AddLegend(top_right);  AddLegend(0.5, 0.8[, "title"]);   // corners: best_corner, top_left, top_right, bottom_right, bottom_left
 plot[1].GetLegend(2).SetNumColumns(2).SetDefaultLineWidth(5.).SetNoBox().SetTransparent();
 plot[1].GetLegend(1).GetEntry(1).SetLabel("custom").SetDrawStyle("L").SetLineColor(kRed);   // draw style letters: L line, P marker, F fill, E error bar
-plot[1].AddText("line one // line two");  AddText(top_left, "text");  AddText(0.2, 0.9, "text").SetTextSize(20).SetTextAlign(13);
+plot[1].AddText("line one // line two");  AddText(top_left, "text");  AddText(0.2, 0.9, "text").SetTextFont(43).SetTextSize(20).SetTextAlign(13);   // font 43: size in pixels
 ```
 Positions are pad coordinates (0–1) of the upper left corner, `.SetUserCoordinates()` switches to axis units. Legend symbols are derived from what is actually drawn; override with `SetDrawStyle`/`SetDefaultDrawStyle`.
 
@@ -179,7 +179,7 @@ plot[1].AddData(dataStyle("ptSpec"), "data");        // name from the template's
 plot[1].AddData(mcStyle("ptSpec", "otherMC"), "MC"); // or another data source
 plot[2].AddRatio(dataStyle("ptSpec"), mcStyle("ptSpec"));
 ```
-Templates carry everything a `Data` has (options, colours, ranges, modifiers, projections, tree queries), can be kept in a `map` keyed by an enum, and `.SetLayout(tmpl)` / `.ApplyLayout(tmpl)` apply one to an existing data. Put them (and label constants like the experiment name) at file scope of `DefinePlots`.
+Templates carry everything a `Data` has (options, colours, ranges, modifiers, projections, tree queries) and can be kept in a `map` keyed by an enum. `.SetLayout(tmpl)` / `.ApplyLayout(tmpl)` take over only the appearance of a template (drawing options, text format, ranges, marker, line, fill, contours) on an existing data; `ApplyLayout` only what is set in it. Put them (and label constants like the experiment name) at file scope of `DefinePlots`.
 
 **Derive plots instead of repeating them.** `Plot variant(plot, "newName", "group")` copies a finished plot; add or change data and axes afterwards (`variant[1](2).SetColor(kRed)`). Generate plot families in loops — over centralities, cuts, runs, detector parts — with the loop variable in the name and group (`"raa_" + cent`, `AppendGroup("nuclearModification")`), so `plot heavyion/nuclearModification .+` makes the whole set.
 

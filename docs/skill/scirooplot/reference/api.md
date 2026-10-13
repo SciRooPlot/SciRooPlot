@@ -7,7 +7,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 ## PlotManager
 *central object: data sources, plots, base plots, project files*
 
-- `public: explicit PlotManager(const std::string& projectName = "")`
+- `PlotManager(const std::string& projectName = "")`
 - `void SaveProject()`
 - `void AddDataSource(const std::string& dataSource, const std::vector<std::string>& inputs, bool replace = false)`
 - `void AddDataSource(const std::string& dataSource, std::initializer_list<std::string> inputs, bool replace = false)`
@@ -136,7 +136,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 
 ## Plot::Pad::Axis
 
-- `public: Axis()`
+- `Axis()`
 - `Axis& SetTitle(const std::string& title)`
 - `Axis& SetRange(double_t min, double_t max)`
 - `Axis& SetMaxRange(double_t max)`
@@ -169,7 +169,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 ## Plot::Pad::Data
 *every setter returns the Data, so calls can be chained*
 
-- `public: Data()`
+- `Data()`
 - `Data(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = {})`
 - `Data operator()(const std::string& name, const std::optional<std::string>& dataSource = {})`
 - `Ratio& AsRatio()`
@@ -253,11 +253,10 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 ## Plot::Pad::Ratio
 *has all setters, modifiers and selections of Data (returning the Ratio) plus the following*
 
-- `public: Ratio(const Data& numerator, const Data& denominator)` — inputs from numerator and denominator, appearance from numerator
+- `Ratio(const Data& numerator, const Data& denominator)` — inputs from numerator and denominator, appearance from numerator
 - `Ratio(const std::string& name, const std::string& dataSource, const std::string& denomName, const std::string& denomDataSource, const std::optional<std::string>& label)`
 - `Ratio& SetIsCorrelated(bool isCorrelated = true)`
-- ` FORWARD_TO_DATA(SetDataSource) FORWARD_TO_DATA(SetLayout) FORWARD_TO_DATA(ApplyLayout) FORWARD_TO_DATA(SetRangeX) FORWARD_TO_DATA(SetMaxRangeX) FORWARD_TO_DATA(SetMinRangeX) FORWARD_TO_DATA(UnsetRangeX) FORWARD_TO_DATA(SetRangeY) FORWARD_TO_DATA(SetMaxRangeY) FORWARD_TO_DATA(SetMinRangeY) FORWARD_TO_DATA(UnsetRangeY) FORWARD_TO_DATA(SetScaleMinimum) FORWARD_TO_DATA(SetScaleMaximum) FORWARD_TO_DATA(SetShowOverflowBins) FORWARD_TO_DATA(SetLegendLabel) FORWARD_TO_DATA(SetLegend) FORWARD_TO_DATA(SetOptions) FORWARD_TO_DATA(UnsetOptions) FORWARD_TO_DATA(SetTextFormat) FORWARD_TO_DATA(SetShowStats) FORWARD_TO_DATA(SetColor) FORWARD_TO_DATA(SetAlpha) FORWARD_TO_DATA(SetMarker) FORWARD_TO_DATA(SetMarkerColor) FORWARD_TO_DATA(SetMarkerAlpha) FORWARD_TO_DATA(SetMarkerStyle) FORWARD_TO_DATA(SetMarkerSize) FORWARD_TO_DATA(SetLine) FORWARD_TO_DATA(SetLineColor) FORWARD_TO_DATA(SetLineAlpha) FORWARD_TO_DATA(SetLineStyle) FORWARD_TO_DATA(SetLineWidth) FORWARD_TO_DATA(SetFill) FORWARD_TO_DATA(SetFillColor) FORWARD_TO_DATA(SetFillAlpha) FORWARD_TO_DATA(SetFillStyle) FORWARD_TO_DATA(SetDefinesFrame) FORWARD_TO_DATA(SetContours) #undef FORWARD_TO_DATA // data modifiers: act on the ratio itself (default), or on numerator and/or denominator before the division #define FORWARD_MODIFIER(METHOD) \ template <typename... Args> \ Ratio& METHOD(Args... args) \ { \ auto applyTo = [&](modify_t& target) { \ std::swap(Modify(), target); \ Data::METHOD(args...); \ std::swap(Modify(), target); \ }; \ if (mModMode == Mode::Res) Data::METHOD(args...); \ if (mModMode == Mode::Num || mModMode == Mode::Both) applyTo(mNumModify); \ if (mModMode == Mode::Den || mModMode == Mode::Both) applyTo(mDenomModify)` — data modifiers: act on the ratio itself (default), or on numerator and/or denominator before the division #define FORWARD_MODIFIER(METHOD)                                                \ template <typename... Args>                                                   \ Ratio& METHOD(Args... args)                                                   \ {                                                                             \ auto applyTo = [&](modify_t& target) {                                      \ std::swap(Modify(), target);                                              \ Data::METHOD(args...);                                                    \ std::swap(Modify(), target);                                              \ };                                                                          \ if (mModMode == Mode::Res) Data::METHOD(args...);                           \ if (mModMode == Mode::Num || mModMode == Mode::Both) applyTo(mNumModify);   \ if (mModMode == Mode::Den || mModMode == Mode::Both) applyTo(mDenomModify); \ return *this;                                                               \ }
-- ` FORWARD_MODIFIER(Normalize) FORWARD_MODIFIER(NormalizeToMaximum) FORWARD_MODIFIER(Scale) FORWARD_MODIFIER(DivideBinWidth) FORWARD_MODIFIER(RebinX) FORWARD_MODIFIER(RebinY) FORWARD_MODIFIER(RebinZ) FORWARD_MODIFIER(RebinXY) FORWARD_MODIFIER(RebinXYZ) FORWARD_MODIFIER(ScaleX) FORWARD_MODIFIER(ScaleY) FORWARD_MODIFIER(ScaleZ) FORWARD_MODIFIER(Smooth) FORWARD_MODIFIER(Cumulative) #undef FORWARD_MODIFIER Ratio& Numer()` — following modifiers act on the numerator, before the division
+- `Ratio& Numer()` — following modifiers act on the numerator, before the division
 - `Ratio& Denom()` — following modifiers act on the denominator, before the division
 - `Ratio& Both()` — following modifiers act on numerator and denominator, before the division
 - `Ratio& Result()` — following modifiers act on the ratio itself (default)
@@ -312,7 +311,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 
 ## Plot::Pad::TextBox
 
-- `public: explicit TextBox(const std::string& text)`
+- `TextBox(const std::string& text)`
 - `TextBox(double_t xPos, double_t yPos, const std::string& text)`
 - `TextBox& SetText(const std::string& text)`
 - `TextBox& SetTextAlign(int16_t align)`
@@ -342,7 +341,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 
 ## Plot::Pad::LegendBox::LegendEntry
 
-- `public: explicit LegendEntry(const std::optional<std::string>& label = {}, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& drawStyle = {})`
+- `LegendEntry(const std::optional<std::string>& label = {}, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& drawStyle = {})`
 - `LegendEntry& SetLabel(const std::string& label)`
 - `LegendEntry& SetRefData(uint16_t refDataID)`
 - `LegendEntry& SetDrawStyle(const std::string& drawStyle)`
@@ -367,13 +366,13 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 ## Panel
 *a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes*
 
-- `public: explicit Panel(double_t width = 1., double_t height = 1.)`
+- `Panel(double_t width = 1., double_t height = 1.)`
 - `Panel& ZAxis()` — room for the colour scale to the right of this panel
 
 ## PanelLayout
 *arrangement of panels and the sizes shared by all base plots*
 
-- `public: explicit PanelLayout(std::vector<std::vector<Panel>> rows = {{Panel()}})`
+- `PanelLayout(std::vector<std::vector<Panel>> rows = {{Panel()}})`
 - `PanelLayout(const PanelLayout& sizes, std::vector<std::vector<Panel>> rows)` — same lengths, other panels
 - `PanelLayout& SetPanelSize(double_t pixel)` — 638: axis frame of Panel(1, 1)
 - `PanelLayout& SetMargins(double_t top, double_t bottom, double_t left, double_t right)` — 32, 118, 118, 32: space around the panels (bottom and left hold the labels and titles)

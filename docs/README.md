@@ -230,7 +230,7 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // you can also add and modify legends without any automatically generated labels:
   plot[1].AddLegend();
   plot[1].GetLegend(3).GetEntry(1).SetLabel("my custom label").SetDrawStyle("L").SetLineColor(kRed);
-  plot[1].GetLegend(3).GetEntry(1).SetLabel("my custom label 2").SetDrawStyle("EP").SetLineColor(kBlue).SetMarkerColor(kRed);
+  plot[1].GetLegend(3).GetEntry(2).SetLabel("my custom label 2").SetDrawStyle("EP").SetLineColor(kBlue).SetMarkerColor(kRed);
   // (again please have a look at inc/Plot.h for the list of possibilities)
 
   // similar to the legend boxes you can add a text box to your plot
