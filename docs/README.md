@@ -193,7 +193,7 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // you can also simply add the ratio of two input data
   plot[1].AddRatio({"histName3", "dataSourceB"}, {"histName1", "dataSourceA"}, "ratioLabel");
   // for incompatible data (e.g. different number of bins or bin limits) the framework will try to use splines to interpolate the data points before dividing
-  // in case numerator and denominator are sub-samples of one another bayesian error propagation can be applied:
+  // in case numerator and denominator are sub-samples of one another binomial error propagation can be applied:
   plot[1].AddRatio({"histName3", "dataSourceB"}, {"histName1", "dataSourceA"}, "ratioLabel").SetIsCorrelated();
 
 

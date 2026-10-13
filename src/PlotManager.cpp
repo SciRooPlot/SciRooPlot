@@ -1088,10 +1088,11 @@ bool PlotManager::FillBuffer()
     }
     auto allFound = [&]() { return std::all_of(requiredData.begin(), requiredData.end(), [](const auto& entry) { return entry.second.empty(); }); };
 
+    if (allFound()) continue;  // nothing left to read, e.g. read by a previous GeneratePlots call
+
     // open all input files belonging to the data source and extract the data
     mTreeInputs.clear();
-    auto expandedIt = mExpandedInputs.find(baseSource);
-    for (const auto& inputRaw : (expandedIt != mExpandedInputs.end()) ? expandedIt->second : ExpandInputs(baseSource)) {
+    for (const auto& inputRaw : mExpandedInputs[baseSource]) {
       if (allFound()) break;
       string input = expand_path(inputRaw);
       if (str_ends_with(input, mTableFileEndings)) {

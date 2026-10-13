@@ -800,10 +800,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           pad_ptr->Update();
         } else if (!data->GetDontDraw()) {
           // do not draw the colour scale a second time (only types that have one: for graphs 'Z' means no end caps on the error bars)
+          // the 'Z' is removed, not blanked, so that suffixes stay attached to their option (COLZ2 -> COL2)
           if constexpr (is_2d<data_type>() || is_3d<data_type>()) {
-            for (char& c : drawingOptions) {
-              if (c == 'Z' || c == 'z') c = ' ';
-            }
+            drawingOptions.erase(std::remove_if(drawingOptions.begin(), drawingOptions.end(), [](char c) { return c == 'Z' || c == 'z'; }), drawingOptions.end());
           }
 
           // define data appearance
