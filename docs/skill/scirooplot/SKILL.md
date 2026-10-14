@@ -78,6 +78,7 @@ Python is the same API: `from SciRooPlot import *`, `PlotManager("myProject")`, 
 - `"/path/a.root"` whole file; `"/path/a.root:dir/list"` a directory or TList inside it; `"/path/folder/"` all ROOT files below a directory; wildcards `AO2D_*.root:DF_*` (files and folders inside files); `${HOME}/...` environment variables; `"/path/table.csv"` (data name = file name without `.csv`).
 - Within a data source the first input containing a requested name wins; trees found in several inputs are chained. Train/test samples etc. therefore belong into separate sources.
 - The data name may be a path inside the input: `AddData("folder1/hist", "src")`. Sub-sources are allowed in `AddData` as `"src:folder"` (restricts the search to that folder) — the folder is part of the source, never of the name.
+- Without a path, a name is searched in the folder of the data source first, then in its sub-folders/lists one after the other in stored order, each completely (depth-first); the first match counts. If a name exists more than once, give the path.
 - `AddDataSource(name, TObject*)` or a vector of objects adds in-memory objects.
 
 ## Plot, pads, axes

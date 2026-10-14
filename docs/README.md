@@ -169,8 +169,10 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // finally we can start adding data to the plot
   plot[1].AddData("histName1", "dataSourceA", "myLabel");
   // this will search for a histogram, graph or function called "histName1" in all files specified for "dataSourceA"
-  // the algorithm by default recursively traverses the whole directory or list substructure of the files and returns the first match
-  // in case of multiple data with the same name, living in different subfolders/lists within the file you can do
+  // within an input, the current folder is searched first; if the name is not there, the sub-folders and lists are
+  // searched one after the other in the order they are stored, each one completely (including its own sub-folders)
+  // before the next: e.g. folderA/sub/histName1 is found before folderB/histName1
+  // if a name exists more than once, add the path to choose the one you mean:
   plot[1].AddData("folder1/histName2", "dataSourceA", "myLabel2");
   plot[1].AddData("folder2/histName2", "dataSourceA", "myLabel3");
 

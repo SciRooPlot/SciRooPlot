@@ -854,6 +854,125 @@
   )
 ]
 
+#slide[
+  #slide-title("Finding Data in an Input")
+  #let found(body) = text(fill: accent-color, weight: "bold", body)
+  #let order(n) = text(fill: main-color, weight: "bold")[#n]
+  #grid(
+    columns: (47%, 50%),
+    gutter: 3%,
+    [
+      #terminal(size: 15pt)[
+        #show raw: set text(size: 1.25em)
+        #grid(
+          columns: (auto, 1fr),
+          row-gutter: 0.55em,
+          align: (left, right),
+          raw("file.root"), found(raw("AddData(\"h\", \"src\")")),
+          raw("├─ h"), [#order[1] taken if it exists here],
+          raw("├─ dirA/"), [#order[2] else dirA, completely:],
+          raw("│  ├─ x"), [],
+          raw("│  └─ sub/"), [#order[3] its sub-folder],
+          raw("│     └─ h"), found[← found: dirA/sub/h],
+          raw("└─ dirB/"), [not reached],
+          raw("   └─ h"), [],
+        )
+      ]
+      #v(0.6em)
+      - The current folder is searched first, then its sub-folders and lists one after the other in stored order -- each completely, including its own sub-folders (depth-first). The first match counts, always the same one.
+
+      - A name that exists more than once: give the path, `AddData("dirB/h", "src")`, or restrict the source, `AddData("h", "src:dirB")`.
+
+      - A path always goes through folders and lists: a histogram of the same name does not block it.
+    ],
+    [
+      #card("Names", main-color, title-size: 20pt, width: 100%)[
+        #set text(size: 15pt)
+        Directories: the key name (newest cycle; older cycles of a folder or list are not searched) -- lists and folders: the object name -- maps: the key.
+      ]
+      #v(0.3em)
+      #card("Containers", main-color, title-size: 20pt, width: 100%)[
+        #set text(size: 15pt)
+        Directories, `TList`, `THashList`, `TObjArray`, `TOrdCollection`, `TSortedList`, `THashTable`, `TMap`, `TClonesArray`, `TFolder` and classes derived from them -- nested in any combination.
+      ]
+      #v(0.3em)
+      #card("Data", main-color, title-size: 20pt, width: 100%)[
+        #set text(size: 15pt)
+        Histograms and profiles (1D--3D, `THnSparse` via projections), graphs (incl. `TGraph2D`), `TF1`/`TF2`/`TF3`, `TEfficiency`, trees (chained over all inputs if stored in folders, processed in memory if stored in a list).
+      ]
+      #v(0.3em)
+      #card("Not readable", accent-color, title-size: 20pt, width: 100%)[
+        #set text(size: 15pt)
+        Classes without a loaded dictionary (a warning tells you), objects without a name (e.g. `TObjString`), `THStack` and `TMultiGraph` as input.
+      ]
+    ],
+  )
+]
+
+#slide[
+  #slide-title("Data Sources with Several Inputs")
+  #let found(body) = text(fill: accent-color, weight: "bold", body)
+  #let order(n) = text(fill: main-color, weight: "bold")[#n]
+  #grid(
+    columns: (52%, 45%),
+    gutter: 3%,
+    [
+      #terminal(size: 15pt)[
+        #show raw: set text(size: 1.25em)
+        #raw(if lang == "py" { "AddDataSource(\"src\", [\"a.root\", \"runs/*.root\"])" } else { "AddDataSource(\"src\", {\"a.root\", \"runs/*.root\"})" })
+        #grid(
+          columns: (auto, 1fr),
+          row-gutter: 0.55em,
+          align: (left, right),
+          [#order[1] #raw("a.root")], raw("h, t"),
+          [#order[2] #raw("runs/run1.root")], raw("t"),
+          [#order[3] #raw("runs/run2.root")], raw("h, t"),
+        )
+        #v(0.4em)
+        #grid(
+          columns: (auto, 1fr),
+          row-gutter: 0.55em,
+          align: (left, right),
+          raw("AddData(\"h\", \"src\")"), found[h of 1 (first input)],
+          raw("AddData(\"t\", \"src\")"), found[t of 1+2+3 chained],
+        )
+      ]
+      #v(0.4em)
+      #terminal(size: 15pt)[
+        #show raw: set text(size: 1.25em)
+        #raw("AddDataSource(\"ao2d\", \"AO2D_*.root:DF_*\")")
+        #grid(
+          columns: (auto, 1fr),
+          row-gutter: 0.55em,
+          align: (left, right),
+          [#order[1] #raw("AO2D_1.root:DF_11")], raw("O2track"),
+          [#order[2] #raw("AO2D_1.root:DF_12")], raw("O2track"),
+          [#order[3] #raw("AO2D_2.root:DF_31")], raw("O2track"),
+        )
+        #v(0.4em)
+        #grid(
+          columns: (auto, 1fr),
+          align: (left, right),
+          raw("AddData(\"O2track\", \"ao2d\")"), found[chained over 1+2+3],
+        )
+      ]
+    ],
+    [
+      - The inputs of a data source are searched in the order they were added; files from a directory or a wildcard come alphabetically, folders matching a wildcard (`file.root:DF_*`) in the order they appear in the file -- each folder is an input of its own.
+
+      - Within each input the search works as on the previous slide.
+
+      - Histograms, graphs, functions: the first input containing the name counts.
+
+      - Trees stored in folders: all inputs containing the tree are chained and processed together (e.g. one file per run, one folder per time frame). A tree stored in a list cannot be chained: the first one found is used.
+
+      - `"src:folder"` in `AddData` restricts the search to that folder in each input (wildcards allowed, e.g. `"ao2d:DF_1*"`); inputs without it are skipped.
+
+      - Data that must not be merged (e.g. train and test samples) belongs into separate data sources.
+    ],
+  )
+]
+
 #if lang == "py" [
   #slide[
     #slide-title("Python Convenience Helpers")

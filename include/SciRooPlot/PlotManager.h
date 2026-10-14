@@ -36,6 +36,7 @@
 class TCanvas;
 class TDirectory;
 class TChain;
+class TKey;
 namespace ROOT
 {
 class RDataFrame;
@@ -98,7 +99,6 @@ class PlotManager
   void SetDataRootFile(const std::string& fileName);
 
  private:
-  TObject* FindSubDirectory(TObject* folder, std::vector<std::string>& subDirs) const;
   bool GeneratePlot(const Plot& plot, const std::string& mode = "pdf");
   bool SavePlotsToRootFile() const;
   bool CreateOutputDirectory() const;
@@ -131,6 +131,14 @@ class PlotManager
   };
   std::map<std::string, std::map<std::string, std::vector<tree_input_t>>> mTreeInputs;  // data source -> tree name -> where it was found in the inputs of the data source currently read
   bool mIsFolderInput{};                                                                // the input currently read is a folder within a file
+  struct container_deleter_t {
+    void operator()(TObject* container) const;  // deletes a list or folder read from a file with all objects in it
+  };
+  using read_cache_t = std::map<TKey*, std::unique_ptr<TObject, container_deleter_t>>;  // lists and folders read from the keys of the input file currently read
+  static TObject* FindSubDirectory(TObject* folder, const std::vector<std::string>& subDirs, read_cache_t& readCache);
+  static bool IsContainer(const TClass* cl);
+  static TClass* ReadableClass(TKey* key);
+  static void ForEachItem(TObject* container, const std::function<bool(const std::string&, TObject*)>& func);
   void PrintBufferStatus(bool onlyMissing = false) const;
   std::vector<std::tuple<std::string, std::string, Plot::Pad::Data::data_info_t>> GetMissingData(Plot& plot);
   bool FillBuffer();
@@ -139,7 +147,7 @@ class PlotManager
   bool IsDataSourceDefined(const std::string& dataSource) const;
   static std::string DataLocation(const std::string& dataSource, const std::string& name);
   static std::vector<std::string> MatchFolders(TDirectory* topDir, const std::string& pattern);
-  void ReadData(TObject* folder, std::set<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource);
+  void ReadData(TObject* folder, std::set<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource, read_cache_t& readCache);
   void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataSource);
   void ProcessDataRequests(const std::string& type, const std::string& dataSource, const std::string& name, const std::string& objNameSuffix,
                            const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, const std::string& inputsDescription = "",

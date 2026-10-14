@@ -29,6 +29,7 @@
 #include <TCanvas.h>
 #include <TChain.h>
 #include <TClass.h>
+#include <TClonesArray.h>
 #include <TCollection.h>
 #include <TError.h>
 #include <TF1.h>
@@ -39,11 +40,14 @@
 #include <TGraph2D.h>
 #include <TGraphErrors.h>
 #include <TH1.h>
+#include <THStack.h>
 #include <TKey.h>
 #include <TLeaf.h>
 #include <TList.h>
+#include <TMap.h>
 #include <TPave.h>
 #include <TROOT.h>
+#include <TRefArray.h>
 #include <TRootCanvas.h>
 #include <TStyle.h>
 #include <TSystem.h>
@@ -1226,6 +1230,7 @@ bool PlotManager::FillBuffer()
         logger::warning("Cannot open input file {} (data source {}).", fileName, baseSource);
         continue;
       }
+      read_cache_t readCache;  // lists and folders read from this file, shared by all paths into them (deleted before the file is closed)
 
       for (auto& [dataSource, required] : requiredData) {
         if (required.empty()) continue;
@@ -1245,8 +1250,7 @@ bool PlotManager::FillBuffer()
 
           // find top level entry point for this input file
           if (!folderPath.empty()) {
-            auto filePath = split_string(folderPath, '/');
-            folder = FindSubDirectory(folder, filePath);
+            folder = FindSubDirectory(folder, split_string(folderPath, '/'), readCache);
             if (!folder) {
               // inputs that do not contain the folder of a restricted data source (dataSource:some/folder) are simply not part of it
               if (isRestricted) continue;
@@ -1257,25 +1261,13 @@ bool PlotManager::FillBuffer()
 
           vector<string> emptySubDirs;
           for (auto& [pathStr, names] : required) {
-            auto path = split_string(pathStr, '/');
-            TObject* subfolder = FindSubDirectory(folder, path);
-            if (subfolder) {
+            if (TObject* subfolder = FindSubDirectory(folder, split_string(pathStr, '/'), readCache)) {
               // recursively traverse the file and look for input files
               string prefix = (pathStr.empty()) ? "" : pathStr + "/";
               string suffix = ":" + dataSource;
-              ReadData(subfolder, names, prefix, suffix, dataSource);
-              // in case a subdirectory was opened, properly delete it
-              if (!path.empty() && subfolder != &inputFile) {
-                delete subfolder;
-                subfolder = nullptr;
-              }
+              ReadData(subfolder, names, prefix, suffix, dataSource, readCache);
             }
             if (names.empty()) emptySubDirs.push_back(pathStr);
-          }
-          // finally also remove top level folder
-          if (folder != &inputFile) {
-            delete folder;
-            folder = nullptr;
           }
 
           for (const auto& pathStr : emptySubDirs) {
@@ -1698,127 +1690,192 @@ void PlotManager::ClearCanvasRegistry()
 
 //**************************************************************************************************
 /**
- * Recursively reads data from folder / list and adds it to output data array. Found dataNames are removed from the set.
+ * Directories, folders and collections (lists, arrays, maps, ...) are searched for data; everything else is data.
  */
 //**************************************************************************************************
-void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string& prefix, const string& suffix, const string& dataSource)
+bool PlotManager::IsContainer(const TClass* cl)
 {
-  TCollection* itemList = nullptr;
-  if (folder->InheritsFrom(TDirectory::Class())) {
-    itemList = static_cast<TDirectoryFile*>(folder)->GetListOfKeys();
-  } else if (folder->InheritsFrom(TFolder::Class())) {
-    itemList = static_cast<TFolder*>(folder)->GetListOfFolders();
-  } else if (folder->InheritsFrom(TCollection::Class())) {
-    itemList = static_cast<TCollection*>(folder);
-  } else {
-    logger::error("Data format {} not supported.", folder->ClassName());
-    return;
+  return cl && (cl->InheritsFrom(TDirectory::Class()) || cl->InheritsFrom(TFolder::Class()) || cl->InheritsFrom(TCollection::Class()));
+}
+
+//**************************************************************************************************
+/**
+ * Class of the object behind a key, if it can be read (objects of an emulated class without dictionary cannot be read as TObject).
+ */
+//**************************************************************************************************
+TClass* PlotManager::ReadableClass(TKey* key)
+{
+  TClass* cl = TClass::GetClass(key->GetClassName());
+  return (cl && cl->IsLoaded() && cl->IsTObject()) ? cl : nullptr;
+}
+
+//**************************************************************************************************
+/**
+ * Call func(name, item) for the items of an in-memory folder or collection (values of maps under the name of their key) until it returns true.
+ */
+//**************************************************************************************************
+void PlotManager::ForEachItem(TObject* container, const std::function<bool(const string&, TObject*)>& func)
+{
+  TCollection* items = (dynamic_cast<TFolder*>(container)) ? static_cast<TFolder*>(container)->GetListOfFolders() : dynamic_cast<TCollection*>(container);
+  if (!items) return;
+  for (TObject* item : *items) {
+    if (!item) continue;
+    const string name = item->GetName();
+    if (auto* pair = dynamic_cast<TPair*>(item)) item = pair->Value();  // iterating a map gives its key-value pairs (named by the key)
+    if (item && func(name, item)) return;
   }
-  itemList->SetOwner();
+}
 
-  // first match should always be the one in current level; traverse deeper only if not found
-  for (bool traverse : {false, true}) {
-    TIter iterator = itemList->begin();
-    TObject* obj{};
-    bool deleteObject;
-    bool removeFromList;
+//**************************************************************************************************
+/**
+ * Delete a list or folder read from a file with everything in it. Each object is deleted exactly once, also if it is in several lists
+ * (ROOT restores objects shared by several lists as shared), independent of the ownership settings of the collections.
+ */
+//**************************************************************************************************
+void PlotManager::container_deleter_t::operator()(TObject* container) const
+{
+  vector<TObject*> objects;
+  std::set<TObject*> found;
+  std::function<void(TObject*)> collect = [&](TObject* obj) {
+    if (!found.insert(obj).second) return;
+    objects.push_back(obj);
+    if (dynamic_cast<TClonesArray*>(obj) || dynamic_cast<TRefArray*>(obj)) return;  // own their content in a special way, do not own references
+    if (auto* stack = dynamic_cast<THStack*>(obj)) {
+      // a stack does not delete its histograms
+      if (stack->GetHists()) {
+        for (TObject* hist : *stack->GetHists())
+          collect(hist);
+      }
+      return;
+    }
+    if (auto* map = dynamic_cast<TMap*>(obj)) {
+      for (TObject* item : *map) {
+        if (auto* pair = dynamic_cast<TPair*>(item)) {
+          if (pair->Key()) collect(pair->Key());
+          if (pair->Value()) collect(pair->Value());
+        }
+      }
+      map->SetOwnerKeyValue(false, false);
+      map->Clear();  // deletes the pairs only
+      return;
+    }
+    TCollection* items = (dynamic_cast<TFolder*>(obj)) ? static_cast<TFolder*>(obj)->GetListOfFolders() : dynamic_cast<TCollection*>(obj);
+    if (!items) return;
+    for (TObject* item : *items) {
+      if (item) collect(item);
+    }
+    items->SetOwner(false);
+    items->Clear("nodelete");
+  };
+  collect(container);
+  for (TObject* obj : objects) {
+    delete obj;
+  }
+}
 
-    while (iterator != itemList->end()) {
-      obj = *iterator;
-      deleteObject = true;
-      removeFromList = true;
+//**************************************************************************************************
+/**
+ * Recursively reads data from a directory, folder or collection and adds it to the data buffer. Found dataNames are removed from the set.
+ * The first match is the one in the current level; deeper levels are searched only for names not found there.
+ * Nothing is taken out of the containers searched (data is read from a file key or copied), so they can be searched again for other names.
+ * Lists and folders read from the file are deleted after searching them, unless they are in readCache (then they live as long as the input file).
+ */
+//**************************************************************************************************
+void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string& prefix, const string& suffix, const string& dataSource, read_cache_t& readCache)
+{
+  // store data found (owned: read from a file key, otherwise it belongs to an in-memory container and is copied)
+  auto store = [&](TObject* obj, const string& dataName, bool isOwned) {
+    dataNames.erase(dataName);
+    const string fullName = prefix + dataName;
+    if (auto* tree = dynamic_cast<TTree*>(obj)) {
+      mDataBuffer[dataSource][fullName].reset(nullptr);
+      if (mTreeInputs[dataSource].find(fullName) != mTreeInputs[dataSource].end()) {
+        logger::warning("Ignoring tree {} (data source {}) in a list: a tree stored in a list cannot be chained with the same tree in other inputs.", fullName, dataSource);
+      } else {
+        // trees in lists live in memory only, which RDataFrame can process only single-threaded
+        const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
+        const UInt_t nThreads = ROOT::GetThreadPoolSize();
+        ROOT::DisableImplicitMT();
+        auto mtGuard = make_scope_guard([wasMTEnabled, nThreads]() { if (wasMTEnabled) ROOT::EnableImplicitMT(nThreads); });
+        ProcessDataRequests("tree", dataSource, fullName, suffix, [tree]() { return std::make_unique<ROOT::RDataFrame>(*tree); });
+      }
+      if (isOwned) delete tree;
+      return;
+    }
+    if (!dynamic_cast<TNamed*>(obj)) {
+      logger::error("Input data {} (data source {}) is of unsupported type {}.", fullName, dataSource, obj->ClassName());
+      if (isOwned) delete obj;
+      return;
+    }
+    if (!isOwned && !(obj = obj->Clone())) {
+      logger::error("Could not copy input data {} (data source {}).", fullName, dataSource);
+      return;
+    }
+    // detach from the directory ROOT attached it to (e.g. histograms read from a file or cloned)
+    if (auto addToDirectory = obj->IsA()->GetDirectoryAutoAdd()) addToDirectory(obj, nullptr);
+    static_cast<TNamed*>(obj)->SetName((fullName + suffix).data());
+    mDataBuffer[dataSource][fullName].reset(obj);
+  };
 
-      string curDataName;  // name of current key or data
-      // read actual object to memory when traversing a directory
-      if (obj->IsA() == TKey::Class()) {
-        TKey* key = static_cast<TKey*>(obj);
-        string className = key->GetClassName();
-        curDataName = key->GetName();
-
-        bool isTraversable = str_contains(className, "TDirectory") || str_contains(className, "TFolder") || str_contains(className, "TList") || str_contains(className, "THashList") || str_contains(className, "TObjArray");
-        const bool isRequested = dataNames.count(curDataName) > 0;
-        if ((traverse && isTraversable) || isRequested) {
-          TClass* keyClass = TClass::GetClass(className.data());
-          if (!keyClass || !keyClass->IsTObject()) {
-            if (isRequested) logger::warning("Skipping {} (data source {}): unknown or unsupported class {}.", curDataName, dataSource, className);
-            ++iterator;
-            continue;
+  if (auto* directory = dynamic_cast<TDirectory*>(folder)) {
+    for (bool traverse : {false, true}) {
+      set<string> visited;  // lists and folders can appear in several cycles: only the latest one (first in the keys) is searched
+      for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {
+        if (dataNames.empty()) return;
+        if (!key) continue;
+        const string name = key->GetName();
+        if (!traverse && !dataNames.count(name)) continue;
+        TClass* keyClass = ReadableClass(key);
+        if (traverse) {
+          if (!IsContainer(keyClass) || !visited.insert(name).second) continue;
+          if (keyClass->InheritsFrom(TDirectory::Class())) {
+            // a newer key of the same name (e.g. data) hides the directory from a lookup by name only: then it is looked up with its cycle
+            const bool isLatest = (directory->FindKey(name.data()) == key);
+            if (auto* subDir = directory->GetDirectory(isLatest ? name.data() : fmt::format("{};{}", name, key->GetCycle()).data())) {
+              ReadData(subDir, dataNames, prefix, suffix, dataSource, readCache);
+            }
+          } else if (auto cached = readCache.find(key); cached != readCache.end()) {
+            ReadData(cached->second.get(), dataNames, prefix, suffix, dataSource, readCache);
+          } else if (std::unique_ptr<TObject, container_deleter_t> container{key->ReadObj()}) {
+            ReadData(container.get(), dataNames, prefix, suffix, dataSource, readCache);
           }
-          obj = key->ReadObj();
-          if (!obj) {
-            if (isRequested) logger::warning("Could not read {} of class {} (data source {}); the file may be corrupted.", curDataName, className, dataSource);
-            ++iterator;
-            continue;
-          }
-          removeFromList = false;
-        } else {
-          ++iterator;
           continue;
         }
-      }
-
-      // in case this object is directory or list, repeat the same for this substructure
-      if (obj->InheritsFrom(TDirectory::Class()) || obj->InheritsFrom(TFolder::Class()) || obj->InheritsFrom(TCollection::Class())) {
-        if (traverse) {
-          ReadData(obj, dataNames, prefix, suffix, dataSource);
-        } else if (removeFromList) {
-          removeFromList = false;
-          deleteObject = false;
+        if (IsContainer(keyClass)) continue;
+        if (!keyClass) {
+          logger::warning("Skipping {} (data source {}): unknown or unsupported class {}.", name, dataSource, key->GetClassName());
+          continue;
         }
-      } else {
-        // the key name supersedes the actual data name (in case they are different when written to file via h->Write("myKeyName"))
-        if (curDataName.empty()) curDataName = obj->GetName();
-        if (auto it = dataNames.find(curDataName); it != dataNames.end()) {
-          // demand ownership for object if required for given type
-          if (obj->InheritsFrom(TH1::Class())) static_cast<TH1*>(obj)->SetDirectory(0);
-          if (obj->InheritsFrom(TGraph2D::Class())) static_cast<TGraph2D*>(obj)->SetDirectory(0);
-          itemList->Remove(obj);
-          dataNames.erase(it);
-          string fullName = prefix + curDataName;
-          if (obj->InheritsFrom(TTree::Class())) {
-            TTree* tree = static_cast<TTree*>(obj);
-            mDataBuffer[dataSource][fullName].reset(nullptr);
-            if (TDirectory* dir = tree->GetDirectory(); dir && dir->GetFile() && dir->GetKey(curDataName.data())) {
-              // trees stored in files are chained over all files of the data source (processed once all files are searched)
-              string dirPath = dir->GetPath();  // file.root:/some/folder
-              dirPath.erase(0, dirPath.find(":/") + 2);
-              mTreeInputs[dataSource][fullName].push_back({dir->GetFile()->GetName(), (dirPath.empty() ? "" : dirPath + "/") + curDataName, mIsFolderInput});
-            } else if (mTreeInputs[dataSource].find(fullName) != mTreeInputs[dataSource].end()) {
-              logger::warning("Ignoring tree {} (data source {}) in a list: a tree stored in a list cannot be chained with the same tree in other inputs.", fullName, dataSource);
-            } else {
-              // trees in lists live in memory only, which RDataFrame can process only single-threaded
-              const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
-              const UInt_t nThreads = ROOT::GetThreadPoolSize();
-              ROOT::DisableImplicitMT();
-              auto mtGuard = make_scope_guard([wasMTEnabled, nThreads]() { if (wasMTEnabled) ROOT::EnableImplicitMT(nThreads); });
-              ProcessDataRequests("tree", dataSource, fullName, suffix, [tree]() { return std::make_unique<ROOT::RDataFrame>(*tree); });
-            }
-            tree->SetDirectory(0);
-            delete tree;
-          } else if (auto* namedObj = dynamic_cast<TNamed*>(obj)) {
-            namedObj->SetName((fullName + suffix).data());
-            mDataBuffer[dataSource][fullName].reset(obj);
-          } else {
-            logger::error("Input data {} (data source {}) is of unsupported type {}.", fullName, dataSource, obj->ClassName());
-            delete obj;
-          }
-          removeFromList = false;
-          deleteObject = false;
+        if (keyClass->InheritsFrom(TTree::Class()) && !keyClass->InheritsFrom(TChain::Class())) {
+          // trees stored in files are chained over all files of the data source (processed once all files are searched)
+          dataNames.erase(name);
+          mDataBuffer[dataSource][prefix + name].reset(nullptr);
+          string dirPath = directory->GetPath();  // file.root:/some/folder
+          dirPath.erase(0, dirPath.find(":/") + 2);
+          mTreeInputs[dataSource][prefix + name].push_back({directory->GetFile()->GetName(), (dirPath.empty() ? "" : dirPath + "/") + name, mIsFolderInput});
+          continue;
+        }
+        if (TObject* obj = key->ReadObj()) {
+          store(obj, name, true);
+        } else {
+          logger::warning("Could not read {} of class {} (data source {}); the file may be corrupted.", name, key->GetClassName(), dataSource);
         }
       }
-
-      // increase iterator before removing objects from collection
-      ++iterator;
-      if (removeFromList) {
-        if (!itemList->Remove(obj)) {
-          logger::warning("Could not remove item {} ({}) from collection {}.", obj->GetName(), static_cast<void*>(obj), itemList->GetName());
+    }
+  } else if (IsContainer(folder->IsA())) {
+    for (bool traverse : {false, true}) {
+      ForEachItem(folder, [&](const string& name, TObject* obj) {
+        if (traverse && IsContainer(obj->IsA())) {
+          ReadData(obj, dataNames, prefix, suffix, dataSource, readCache);
+        } else if (!traverse && dataNames.count(name) && !IsContainer(obj->IsA())) {
+          store(obj, name, false);
         }
-      }
-      if (deleteObject) {
-        delete obj;
-      }
+        return dataNames.empty();
+      });
       if (dataNames.empty()) return;
     }
+  } else {
+    logger::error("Data format {} not supported.", folder->ClassName());
   }
 }
 
@@ -1992,52 +2049,38 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
 
 //**************************************************************************************************
 /**
- * Recursively search for sub folder in file.
+ * Find the directory, folder or collection at the path below folder (folder itself for an empty path).
+ * Nothing is taken out of the structure, so further paths can be looked up in it. Directories belong to their file,
+ * lists and folders read from file keys are kept in readCache (shared by all paths into them while the file is read).
  */
 //**************************************************************************************************
-TObject* PlotManager::FindSubDirectory(TObject* folder, vector<string>& subDirs) const
+TObject* PlotManager::FindSubDirectory(TObject* folder, const vector<string>& subDirs, read_cache_t& readCache)
 {
-  if (!folder) return nullptr;
-  bool deleteFolder = true;
-  if (folder->InheritsFrom(TFile::Class())) deleteFolder = false;
-
-  if (subDirs.empty()) {
-    if (folder->InheritsFrom(TDirectory::Class()) || folder->InheritsFrom(TFolder::Class()) || folder->InheritsFrom(TCollection::Class())) {
-      return folder;
+  for (const auto& subDir : subDirs) {
+    TObject* subFolder{nullptr};
+    if (auto* directory = dynamic_cast<TDirectory*>(folder)) {
+      TKey* key = directory->FindKey(subDir.data());
+      TClass* keyClass = (key) ? ReadableClass(key) : nullptr;
+      if (key && !keyClass) {
+        logger::warning("Cannot look into {} in {}: objects of class {} cannot be read (no dictionary loaded or not a TObject).", subDir, directory->GetPath(), key->GetClassName());
+      } else if (keyClass && keyClass->InheritsFrom(TDirectory::Class())) {
+        subFolder = directory->GetDirectory(subDir.data());
+      } else if (IsContainer(keyClass)) {
+        auto& container = readCache[key];
+        if (!container) container.reset(key->ReadObj());
+        subFolder = container.get();
+      }
     } else {
-      return nullptr;
+      // a container of this name (there could also be data of the same name)
+      ForEachItem(folder, [&](const string& name, TObject* item) {
+        if (name == subDir && IsContainer(item->IsA())) subFolder = item;
+        return subFolder != nullptr;
+      });
     }
+    if (!subFolder) return nullptr;
+    folder = subFolder;
   }
-  TObject* subFolder{nullptr};
-  if (folder->InheritsFrom(TDirectory::Class())) {
-    TKey* key = static_cast<TDirectory*>(folder)->FindKey(subDirs[0].data());
-    if (key) {
-      subFolder = key->ReadObj();
-    } else {
-      subFolder = static_cast<TDirectory*>(folder)->FindObject(subDirs[0].data());
-    }
-    deleteFolder = false;
-  } else if (folder->InheritsFrom(TFolder::Class())) {
-    subFolder = static_cast<TFolder*>(folder)->FindObject(subDirs[0].data());
-    if (subFolder) {
-      static_cast<TFolder*>(subFolder)->SetOwner();
-      // if subfolder is part of list, remove it first to avoid double deletion
-      static_cast<TFolder*>(folder)->Remove(subFolder);
-    }
-  } else if (folder->InheritsFrom(TCollection::Class())) {
-    subFolder = static_cast<TCollection*>(folder)->FindObject(subDirs[0].data());
-    if (subFolder) {
-      static_cast<TCollection*>(subFolder)->SetOwner();
-      // if subfolder is part of list, remove it first to avoid double deletion
-      static_cast<TCollection*>(folder)->Remove(subFolder);
-    }
-  }
-  if (deleteFolder) {
-    delete folder;
-  }
-  if (!subFolder) return nullptr;
-  subDirs.erase(subDirs.begin());
-  return FindSubDirectory(subFolder, subDirs);
+  return (folder && IsContainer(folder->IsA())) ? folder : nullptr;
 }
 
 //**************************************************************************************************
