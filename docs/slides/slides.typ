@@ -1386,7 +1386,7 @@
     [
       - `Scale(factor)` multiplies the object's values (`y` for 1D data, `z` for 2D data); `Normalize()` and `NormalizeToMaximum()` pick that factor automatically, from the integral or the peak.
 
-      - Pass `true` to `Normalize()` to normalize as a density, using the bin-width-weighted integral; `DivideBinWidth()` divides content by bin width on its own, without touching the integral.
+      - `DivideBinWidth()` divides the contents by the bin widths; `Density()` does that and normalizes the integral to one (a probability density from counts). For data that already is a density (e.g. dN/dpT) use `Normalize(true)`, which normalizes with the bin-width-weighted integral.
 
       - `RebinX()` / `RebinY()` / `RebinZ()` -- and the `RebinXY()` / `RebinXYZ()` shortcuts -- merge neighboring bins along an axis. Histograms only.
 
@@ -1935,9 +1935,10 @@
     gutter: 2%,
     [
       #api-section("Transform existing data", (
-        [`Normalize(scaleBinWidth = false)` / `NormalizeToMaximum(normMaximum = true)`], [Normalize the integral or the maximum to one.],
+        [`Normalize(isDensity = false)` / `NormalizeToMaximum(normMaximum = true)`], [Normalize the integral or the maximum to one (`isDensity`: the data already is a density).],
         [`Scale(scaleFactor)`], [Scale the object's contents.],
         [`DivideBinWidth(divideBinWidth = true)`], [Divide contents by bin width.],
+        [`Density()`], [Divide by bin width and normalize the integral to one: a probability density from counts.],
         [`Cumulative(forward = true)`], [Replace with the running sum. 1D histograms only.],
         [`RebinX(n)` / `RebinY(n)` / `RebinZ(n)`], [Rebin one axis. Histograms only.],
         [`RebinXY(nx, ny)` / `RebinXYZ(nx, ny, nz)`], [Rebin two or three axes at once.],

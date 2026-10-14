@@ -2164,9 +2164,9 @@ auto Plot::Pad::Data::SetNpx(int32_t nx, optional<int32_t> ny) -> decltype(*this
   mNpy = ny;
   return *this;
 }
-auto Plot::Pad::Data::Normalize(bool scaleBinWidth) -> decltype(*this)
+auto Plot::Pad::Data::Normalize(bool isDensity) -> decltype(*this)
 {
-  mModify.scaleBinWidthNorm = scaleBinWidth;
+  mModify.scaleBinWidthNorm = isDensity;
   return *this;
 }
 auto Plot::Pad::Data::NormalizeToMaximum(bool normMaximum) -> decltype(*this)
@@ -2192,6 +2192,13 @@ auto Plot::Pad::Data::Cumulative(bool forward) -> decltype(*this)
 auto Plot::Pad::Data::DivideBinWidth(bool divideBinWidth) -> decltype(*this)
 {
   mModify.divideBinWidth = divideBinWidth;
+  return *this;
+}
+auto Plot::Pad::Data::Density() -> decltype(*this)
+{
+  // divided by the bin widths, the data is a density: Normalize() then uses the bin-width-weighted integral
+  mModify.divideBinWidth = true;
+  mModify.scaleBinWidthNorm = false;
   return *this;
 }
 auto Plot::Pad::Data::RebinX(uint16_t nGroup) -> decltype(*this)

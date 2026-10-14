@@ -574,10 +574,11 @@ class Plot::Pad::Data
   Data& SetNpx(int32_t nx, std::optional<int32_t> ny = {});
 
   // data modifiers
-  Data& Normalize(bool scaleBinWidth = false);
+  Data& Normalize(bool isDensity = false);
   Data& NormalizeToMaximum(bool normMaximum = true);
   Data& Scale(double_t scaleFactor);
   Data& DivideBinWidth(bool divideBinWidth = true);
+  Data& Density();
   Data& RebinX(uint16_t nGroup);
   Data& RebinY(uint16_t nGroup);
   Data& RebinZ(uint16_t nGroup);
@@ -911,6 +912,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_MODIFIER(NormalizeToMaximum)
   FORWARD_MODIFIER(Scale)
   FORWARD_MODIFIER(DivideBinWidth)
+  FORWARD_MODIFIER(Density)
   FORWARD_MODIFIER(RebinX)
   FORWARD_MODIFIER(RebinY)
   FORWARD_MODIFIER(RebinZ)

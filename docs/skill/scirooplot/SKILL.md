@@ -135,7 +135,8 @@ The suffix always adds one feature (`_xerr`, `_endcaps`, `_smooth`, `_nomarkers`
 
 ## Modifiers (applied in this order, before drawing)
 
-`ScaleX/Y/Z(f)` → `RebinX/Y/Z(n)`, `RebinXY`, `RebinXYZ` → `DivideBinWidth()` → `Smooth(n)` → `Normalize([toBinWidth])` (to integral) → `Cumulative([forward])` → `NormalizeToMaximum()`, `Scale(f)` → then the range cuts `SetRangeX/Y`.
+`ScaleX/Y/Z(f)` → `RebinX/Y/Z(n)`, `RebinXY`, `RebinXYZ` → `DivideBinWidth()` → `Smooth(n)` → `Normalize([isDensity])` (to integral) → `Cumulative([forward])` → `NormalizeToMaximum()`, `Scale(f)` → then the range cuts `SetRangeX/Y`.
+`Density()` = `DivideBinWidth().Normalize()`: a probability density from counts. `Normalize(true)` is only for data that already is a density (e.g. dN/dpT); `Density()` on such data would divide by the bin widths twice.
 So `Normalize().Cumulative()` is a CDF and `Cumulative().NormalizeToMaximum()` ends at 1.
 
 Projections of histograms: `.ProjectX(yMin, yMax[, userCoords])`, `.ProjectY(...)`, `.ProfileX/Y(...)`, generic `.Project({dims}, {{axis, lo, hi}, ...}[, userCoords])` and `.Profile(...)` for n-dimensional inputs (dims in the order they become x, y, z of the result).

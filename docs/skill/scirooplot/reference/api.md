@@ -214,10 +214,11 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& SetContours(const std::vector<double>& contours)`
 - `Data& SetContours(int32_t nContours)`
 - `Data& SetNpx(int32_t nx, std::optional<int32_t> ny = {})`
-- `Data& Normalize(bool scaleBinWidth = false)`
+- `Data& Normalize(bool isDensity = false)`
 - `Data& NormalizeToMaximum(bool normMaximum = true)`
 - `Data& Scale(double_t scaleFactor)`
 - `Data& DivideBinWidth(bool divideBinWidth = true)`
+- `Data& Density()`
 - `Data& RebinX(uint16_t nGroup)`
 - `Data& RebinY(uint16_t nGroup)`
 - `Data& RebinZ(uint16_t nGroup)`
