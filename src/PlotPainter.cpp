@@ -1686,10 +1686,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     for (auto& [stats, statsBox] : statsBoxes) {
       const double_t padWidthPixel = pad_ptr->GetWw() * pad_ptr->GetAbsWNDC();
       const double_t padHeightPixel = pad_ptr->GetWh() * pad_ptr->GetAbsHNDC();
-      auto textWidth = [&](const TString& text) {
+      auto textWidth = [&, textFont = stats->GetTextFont(), textSize = stats->GetTextSize()](const TString& text) {
         TLatex latex(0, 0, text.Data());
-        latex.SetTextFont(stats->GetTextFont());
-        latex.SetTextSize(stats->GetTextSize());
+        latex.SetTextFont(textFont);
+        latex.SetTextSize(textSize);
         return static_cast<double_t>(std::get<0>(GetTextDimensions(latex, pad_ptr)));
       };
       // TPaveStats::Paint writes the title centered, "label = value" in two columns (the value right-aligned, '-' as #minus)
