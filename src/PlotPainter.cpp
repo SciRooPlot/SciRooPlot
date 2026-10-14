@@ -1220,7 +1220,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
             }
             bool isDensity = mods.GetScaleBinWidthNorm() && *mods.GetScaleBinWidthNorm();
-            if (mods.GetDivideBinWidth() && *mods.GetDivideBinWidth()) {
+            if constexpr (is_one_of_v<ptr_type, TProfile*, TProfile2D*>()) {
+              // ROOT does not divide the mean values of a profile by the bin widths
+              warnUnsupported(mods.GetDivideBinWidth() && *mods.GetDivideBinWidth(), "DivideBinWidth");
+            } else if (mods.GetDivideBinWidth() && *mods.GetDivideBinWidth()) {
               ptr->Scale(1., "width");
               isDensity = true;
             }
