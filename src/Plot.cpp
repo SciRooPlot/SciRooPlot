@@ -24,10 +24,12 @@
 #include <TAttText.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <limits>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -2531,8 +2533,9 @@ string Plot::Pad::Data::data_info_t::join_t::GetDescription() const
 string Plot::Pad::Data::data_info_t::GetNameSuffix() const
 {
   if (dataDims.empty()) return "";
-  // every request must get its own name: fields are tagged and separated by ';', the parts of a dimension by ','
-  // (these characters are escaped in the expressions; ':' and '/' are avoided since names are split there in data mode)
+  // every request must get its own name: fields are tagged and separated by '@' (never part of C++ code outside of literals),
+  // the parts of a dimension by ',' (these characters are escaped in the expressions); ';' is avoided since ROOT reads it as
+  // the cycle of a key (Data.root), ':' and '/' since names are split there in data mode
   auto escape = [](const string& str, const string& separators) {
     string escaped;
     for (char c : str) {
@@ -2541,9 +2544,44 @@ string Plot::Pad::Data::data_info_t::GetNameSuffix() const
     }
     return escaped;
   };
+  // C++ code without whitespace that does not separate tokens ("eta > 0" -> "eta>0", but "x and y", "a - -b" stay):
+  // expressions with the same tokens compute the same and get the same name; string and character literals are kept as they are
+  // (';' between statements becomes ',' since ROOT cuts key names at ';')
+  auto compact = [](const string& code) {
+    auto isWord = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; };
+    auto isOperator = [](char c) { return std::string_view("+-*/%<>=!&|^~?:.#").find(c) != std::string_view::npos; };
+    string compacted;
+    char quote{};  // inside a string or character literal
+    bool hadSpace{};
+    for (size_t i = 0; i < code.size(); ++i) {
+      const char c = code[i];
+      if (quote) {
+        compacted += c;
+        if (c == '\\' && i + 1 < code.size()) {
+          compacted += code[++i];
+        } else if (c == quote) {
+          quote = 0;
+        }
+        continue;
+      }
+      if (std::isspace(static_cast<unsigned char>(c))) {
+        hadSpace = !compacted.empty();
+        continue;
+      }
+      if (hadSpace) {
+        const char previous = compacted.back();
+        if ((isWord(previous) && isWord(c)) || (isOperator(previous) && isOperator(c))) compacted += ' ';
+        hadSpace = false;
+      }
+      // a quote after a digit separates digits (1'000'000)
+      if (c == '"' || (c == '\'' && (compacted.empty() || !std::isdigit(static_cast<unsigned char>(compacted.back()))))) quote = c;
+      compacted += (c == ';') ? ',' : c;
+    }
+    return compacted;
+  };
   vector<string> fields;
   for (const auto& dataDim : dataDims) {
-    string field = "dim=" + escape(dataDim.var, ",;") + "," + number_to_string(dataDim.nBins);
+    string field = "dim=" + escape(compact(dataDim.var), ",@") + "," + number_to_string(dataDim.nBins);
     for (const auto& edge : dataDim.edges) {
       field += "," + number_to_string(edge);
     }
@@ -2551,23 +2589,23 @@ string Plot::Pad::Data::data_info_t::GetNameSuffix() const
   }
   if (filters) {
     for (const auto& filter : *filters) {
-      fields.push_back("filter=" + escape(filter, ";"));
+      fields.push_back("filter=" + escape(compact(filter), "@"));
     }
   }
   if (definitions.keys && definitions.values) {
     for (size_t i = 0; i < definitions.keys->size() && i < definitions.values->size(); ++i) {
-      fields.push_back("define=" + escape(definitions.keys->at(i), "=;") + "=" + escape(definitions.values->at(i), ";"));
+      fields.push_back("define=" + escape(compact(definitions.keys->at(i)), "=@") + "=" + escape(compact(definitions.values->at(i)), "@"));
     }
   }
   if (joins) {
     for (const auto& join : *joins) {
-      fields.push_back("join=" + escape(join.ToString(), ";"));
+      fields.push_back("join=" + escape(join.ToString(), "@"));
     }
   }
-  if (weight) fields.push_back("weight=" + escape(*weight, ";"));
+  if (weight) fields.push_back("weight=" + escape(compact(*weight), "@"));
   if (entries.max) fields.push_back((entries.min) ? "entries=" + number_to_string(*entries.min) + "-" + number_to_string(*entries.max) : "first=" + number_to_string(*entries.max));
   if (isProfileNoScatter) fields.push_back(*isProfileNoScatter ? "profile" : "scatter");
-  return "{" + join_strings(fields, ";") + "}";
+  return "{" + join_strings(fields, "@") + "}";
 }
 
 //**************************************************************************************************

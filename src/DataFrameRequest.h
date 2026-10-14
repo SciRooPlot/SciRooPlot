@@ -146,10 +146,52 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     ++axisID;
   }
 
+  // ROOT takes any code containing "return" as the body of a function instead of an expression to be returned: an expression
+  // like "[](double a) { double b = 2 * a; return b; }(pt)" would get the type void, which breaks the event loop of all requests
+  // and the interpreter. Such an expression is given an explicit return statement; code with a statement outside of all braces
+  // (a ';' followed by more code or a statement keyword, e.g. "double b = 2 * pt; return b;") stays a function body.
+  auto toRootCode = [](const std::string& code) {
+    if (code.find("return") == std::string::npos) return code;
+    auto isWord = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; };
+    int32_t depth{};
+    char quote{};  // inside a string or character literal
+    bool hadSemicolon{};
+    for (size_t i = 0; i < code.size(); ++i) {
+      const char c = code[i];
+      if (quote) {
+        if (c == '\\') {
+          ++i;
+        } else if (c == quote) {
+          quote = 0;
+        }
+        continue;
+      }
+      if (c == '"' || (c == '\'' && (i == 0 || !std::isdigit(static_cast<unsigned char>(code[i - 1]))))) {
+        quote = c;
+      } else if (c == '{') {
+        ++depth;
+      } else if (c == '}') {
+        --depth;
+      } else if (!depth && c == ';') {
+        hadSemicolon = true;
+      } else if (!depth && hadSemicolon && !std::isspace(static_cast<unsigned char>(c))) {
+        return code;
+      } else if (!depth && isWord(c) && (i == 0 || !isWord(code[i - 1]))) {
+        size_t end = i;
+        while (end < code.size() && isWord(code[end]))
+          ++end;
+        const std::string word = code.substr(i, end - i);
+        if (word == "return" || word == "if" || word == "for" || word == "while" || word == "do" || word == "switch") return code;
+        i = end - 1;
+      }
+    }
+    return "return " + code + ";";
+  };
+
   if (dataInfo.definitions.keys && dataInfo.definitions.values) {
     for (size_t i = 0; i < dataInfo.definitions.keys->size(); ++i) {
       const auto& column = dataInfo.definitions.keys->at(i);
-      const auto& expression = dataInfo.definitions.values->at(i);
+      const auto expression = toRootCode(dataInfo.definitions.values->at(i));
       // an existing column is replaced (e.g. to correct or recalibrate it)
       node = (node.HasColumn(column)) ? node.Redefine(column, expression) : node.Define(column, expression);
     }
@@ -169,7 +211,7 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     mEntriesPreFilter = node.Count();
     for (const auto& filter : *dataInfo.filters) {
       try {
-        node = node.Filter(filter);
+        node = node.Filter(toRootCode(filter));
       } catch (const std::runtime_error&) {
         logger::error("Illegal filter expression {} for {}{}.", filter, mContext, AvailableColumns(node));
         return false;
@@ -189,7 +231,7 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
   for (auto& dataDim : mDims) {
     std::string colName = "SRP_AXIS_" + std::to_string(axisID);
     try {
-      node = node.Define(colName, dataDim.var);
+      node = node.Define(colName, toRootCode(dataDim.var));
     } catch (const std::runtime_error&) {
       logger::error("Illegal expression {} for {}{}.", dataDim.var, mContext, AvailableColumns(node));
       return false;
@@ -217,7 +259,7 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
   }
   if (dataInfo.weight && !mIsScatter) {
     try {
-      node = node.Define("SRP_AXIS_W", *dataInfo.weight);
+      node = node.Define("SRP_AXIS_W", toRootCode(*dataInfo.weight));
     } catch (const std::runtime_error&) {
       logger::error("Illegal weight expression {} for {}{}.", *dataInfo.weight, mContext, AvailableColumns(node));
       return false;
