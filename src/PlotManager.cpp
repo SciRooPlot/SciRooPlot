@@ -32,6 +32,7 @@
 #include <TClonesArray.h>
 #include <TCollection.h>
 #include <TError.h>
+#include <TExec.h>
 #include <TF1.h>
 #include <TF2.h>
 #include <TF3.h>
@@ -155,7 +156,8 @@ bool PlotManager::SavePlotsToRootFile() const
       return false;
     }
     outputFile.cd();
-    // the colours a pad uses are defined by its setup TExec; ROOT's own colour list is saved with the first canvas as usual
+    // the custom colours a canvas uses are defined by its first TExec, which also reserves the colour indices of all canvases of the file;
+    // ROOT's own colour list is saved with the first canvas as usual
     auto joinPath = [](const string& folder, const string& name) { return (folder.empty()) ? name : folder + "/" + name; };
     // a ROOT directory cannot hold an object and a subdirectory of the same name: a plot named like a subgroup of its group gets a suffix
     std::set<string> directories;
@@ -185,6 +187,7 @@ bool PlotManager::SavePlotsToRootFile() const
         outputFile.mkdir(subfolder.data());
       }
       outputFile.cd(subfolder.data());
+      ReserveColorIndices(canvas.get());
       canvas->Write(keyName.data());
       ++nPlots;
     }
@@ -192,6 +195,32 @@ bool PlotManager::SavePlotsToRootFile() const
     logger::info("Saved {} plots to file {}/{}.", nPlots, mOutputDirectory, mPlotsRootFile);
   }
   return true;
+}
+
+//**************************************************************************************************
+/**
+ * Lets a canvas read back from a file reserve the colour indices of the session that wrote it: all colours it (and every canvas
+ * written before it) uses have indices up to the highest one existing now. The first TExec of the canvas creates a colour at this
+ * index if there is none, so that whatever canvas of the file is drawn first, the colours the reading session creates afterwards
+ * (e.g. for a palette) get higher indices and are not overwritten by the colour definitions of the canvases drawn later.
+ */
+//**************************************************************************************************
+void PlotManager::ReserveColorIndices(TCanvas* canvas)
+{
+  const int32_t highestColor = gROOT->GetListOfColors()->GetLast();
+  const string reservation = fmt::format("if (!gROOT->GetColor({0})) new TColor({0}, 1, 1, 1);", highestColor);
+  auto* colorExec = dynamic_cast<TExec*>(canvas->GetListOfPrimitives()->FindObject("define_colors"));
+  if (!colorExec) {
+    colorExec = new TExec("define_colors", "");
+    colorExec->SetBit(kCanDelete);
+    canvas->GetListOfPrimitives()->AddFirst(colorExec);
+  }
+  const string action = colorExec->GetTitle();
+  if (action.rfind("if (!gROOT->GetColor(", 0) == 0) {
+    colorExec->SetAction((reservation + action.substr(action.find(';') + 1)).data());  // written before: replace the reservation
+  } else {
+    colorExec->SetAction((reservation + action).data());
+  }
 }
 
 //**************************************************************************************************
@@ -1692,6 +1721,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     double_t pageWidthPt = pageWidthCm / 2.54 * 72.;
     gStyle->SetLineScalePS(4. * pageWidthPt / canvasWidthPx);
   }
+  if (mode == "root" || mode == "xml") ReserveColorIndices(canvas.get());
   canvas->SaveAs(fullName.data());
   if (!isGif && !std::filesystem::is_regular_file(fullName)) {
     logger::error("Could not write {}.", fullName);

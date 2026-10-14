@@ -1777,11 +1777,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       pad_ptr->SetPhi(*pad.GetViewPhi());
     }
 
-    // the colours of the pad that are not predefined by ROOT are defined by the setup as well, so that a canvas read from a file
-    // in another session paints with them (ROOT itself stores the complete colour list, and only with the first canvas written)
-    std::set<int32_t> customColors;
-    CollectCustomColors(pad_ptr, customColors);
-    padSetup += ColorDefinitionCommand(customColors);
     // the setup has to be the first primitive of the pad, so that it runs before anything of the pad is painted
     // (added only now, since drawing the frame histogram without SAME clears the pad)
     TExec* padSetupExec = new TExec(("setup_pad_" + std::to_string(padID)).data(), padSetup.data());
@@ -1813,6 +1808,16 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     }
   }
   canvas_ptr->cd();
+  // the colours of the canvas that are not predefined by ROOT are defined by its first primitive, so that a canvas read from a file
+  // in another session paints with them (ROOT itself stores the complete colour list, and only with the first canvas written);
+  // it runs before the setup of any pad, so that the palettes these set take colour indices above them instead of being overwritten
+  std::set<int32_t> customColors;
+  CollectCustomColors(canvas_ptr.get(), customColors);
+  if (!customColors.empty()) {
+    TExec* colorExec = new TExec("define_colors", ColorDefinitionCommand(customColors).data());
+    colorExec->SetBit(kCanDelete);
+    canvas_ptr->GetListOfPrimitives()->AddFirst(colorExec);
+  }
   // last primitive of the canvas: restores the global settings after the pads were painted
   TExec* resetExec = new TExec("reset_globals", fmt::format("gStyle->SetPalette({}); gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange(0.5); TCandle::SetWhiskerRange(1.);", static_cast<int32_t>(kBird)).data());
   resetExec->SetBit(kCanDelete);

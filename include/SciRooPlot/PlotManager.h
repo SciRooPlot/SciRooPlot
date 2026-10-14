@@ -146,6 +146,7 @@ class PlotManager
   std::vector<std::string> ExpandInputs(const std::string& dataSource) const;
   bool IsDataSourceDefined(const std::string& dataSource) const;
   static std::string DataLocation(const std::string& dataSource, const std::string& name);
+  static void ReserveColorIndices(TCanvas* canvas);
   static std::vector<std::string> MatchFolders(TDirectory* topDir, const std::string& pattern);
   void ReadData(TObject* folder, std::set<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource, read_cache_t& readCache);
   static bool PrepareInput(TObject* obj, const std::string& location);
