@@ -1298,7 +1298,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   }
   size_t legendOffset = mLegendBoxes.size();
   for (const auto& legendBox : pad.mLegendBoxes) {
-    // the data of this (base) pad come first: the rows refer to the data of the pad that is put on top
+    // the data of this pad come first: the rows of the added pad refer to its own data
     mLegendBoxes.push_back(std::make_shared<LegendBox>(*legendBox));
     mLegendBoxes.back()->ShiftDataIDs(static_cast<uint16_t>(mData.size()));
   }
@@ -3867,7 +3867,7 @@ void Plot::Pad::LegendBox::AddDataEntry(const string& label, uint16_t dataID, co
 
 //**************************************************************************************************
 /**
- * Shift the data the rows refer to, when the pad is put on top of a base pad whose data come first.
+ * Shift the data the rows refer to, when the pad is added to a pad whose data come first.
  */
 //**************************************************************************************************
 void Plot::Pad::LegendBox::ShiftDataIDs(uint16_t offset)

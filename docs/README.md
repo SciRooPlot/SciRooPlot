@@ -343,6 +343,7 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
 // these are just ordinary plots, but you can use their settings as a baseline
 // and the properties specified for your final plot will be applied on top of these
 // you have to be added to the manager via pm.AddBasePlot(plot);
+// base plots define the layout only: data added to a base plot is ignored (with a warning)
 
 // for instance the following lines will generate an example base plot:
 { // -----------------------------------------------------------------------

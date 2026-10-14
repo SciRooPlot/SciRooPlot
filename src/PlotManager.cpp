@@ -752,6 +752,13 @@ void PlotManager::AddBasePlot(Plot basePlot)
     return;
   }
   basePlot.SetGroup("BASE_PLOTS");
+  // base plots define the layout: their data would never be read (only the data of the plots is), and would define the frame,
+  // take the first default styles and the first data numbers of every plot built on them
+  for (auto& [padID, pad] : basePlot.GetPads()) {
+    if (pad.GetData().empty()) continue;
+    logger::warning("Base plot {} has data in pad {}, which is ignored: data belongs into the plots (shared data e.g. via a loop or a data template).", basePlot.GetName(), padID);
+    pad.GetData().clear();
+  }
   mBasePlots.erase(std::remove_if(mBasePlots.begin(), mBasePlots.end(),
                                   [&basePlot](const Plot& curBasePlot) {
                                     bool removePlot = curBasePlot.GetUniqueName() == basePlot.GetUniqueName();
