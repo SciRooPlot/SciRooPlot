@@ -10,6 +10,7 @@ using std::string;
 using std::vector;
 using namespace SciRooPlot;
 using Data = Plot::Pad::Data;
+using LegendEntry = Plot::Pad::LegendEntry;
 
 // Plots are created with `plot <group> <name> [mode]`, e.g. `plot myGroup myFirstPlot pdf`.
 // A project with many commented examples (and example data) is created with `srp example-cpp <project>`.

@@ -47,7 +47,7 @@ Modes: `show` (interactive, default: keys `s`/`a` next/previous, `q` quit, doubl
 
 ## Program skeleton
 
-C++ (`using namespace SciRooPlot; using Data = Plot::Pad::Data;`):
+C++ (`using namespace SciRooPlot; using Data = Plot::Pad::Data; using LegendEntry = Plot::Pad::LegendEntry;`):
 ```cpp
 #include "SciRooPlot/PlotManager.h"
 using namespace SciRooPlot;
@@ -169,7 +169,9 @@ Column expressions and filters are C++ expressions over the column/leaf names (e
 ```cpp
 plot[1].AddLegend();  AddLegend(top_right);  AddLegend(0.5, 0.8[, "title"]);   // corners: best_corner, top_left, top_right, bottom_right, bottom_left
 plot[1].GetLegend(2).SetNumColumns(2).SetDefaultLineWidth(5.).SetNoBox().SetTransparent();
-plot[1].GetLegend(1).GetEntry(1).SetLabel("custom").SetDrawStyle("L").SetLineColor(kRed);   // draw style letters: L line, P marker, F fill, E error bar
+plot[1].AddData("band", "src", "unc.").SetLegendEntry(LegendEntry().SetDrawStyle("F"));   // style of a data's row (label stays on the data); draw style letters: L line, P marker, F fill, E error bar
+plot[1].GetLegend(1).AddEntry("custom").SetDrawStyle("L").SetLine(kRed, kSolid, 2.);    // row of its own (AddEntry(): empty line); SetRefData(n): symbol of data n
+plot[1].GetLegend(1).AddEntry("#bf{group}").BeforeData(4);   // placed relative to data n of the pad (as in plot[1](n)): AtTop(), BeforeData(n), AfterData(n); default: at the end
 plot[1].AddText("line one // line two");  AddText(top_left, "text");  AddText(0.2, 0.9, "text").SetTextFont(43).SetTextSize(20).SetTextAlign(13);   // font 43: size in pixels
 ```
 Positions are pad coordinates (0–1) of the upper left corner, `.SetUserCoordinates()` switches to axis units. Legend symbols are derived from what is actually drawn; override with `SetDrawStyle`/`SetDefaultDrawStyle`.

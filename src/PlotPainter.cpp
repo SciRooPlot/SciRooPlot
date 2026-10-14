@@ -1107,7 +1107,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (data->GetLegendID()) legendID = *data->GetLegendID();
 
             if (legendID > 0u && legendID <= legendBoxVector.size()) {
-              legendBoxVector[legendID - 1]->AddEntry(*data->GetLegendLabel(), (dataIndex - hasRefFunc));
+              legendBoxVector[legendID - 1]->AddDataEntry(*data->GetLegendLabel(), (dataIndex - hasRefFunc), data->GetLegendEntry());
             } else {
               logger::warning("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetDataSource());
             }
@@ -1735,7 +1735,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     uint8_t legendIndex{1u};
     for (const auto& box : pad.GetLegendBoxes()) {
       string legendName = "LegendBox_" + std::to_string(legendIndex);
-      box->MergeLegendEntries();  // apply individual user settings on top of automatic entries
+      box->MergeLegendEntries(static_cast<uint16_t>(pad.GetData().size()));  // put the rows added by the user between those of the data
       // apply default text properties of pad to the box
       if (!box->GetTextFont() && textFont) box->SetTextFont(*textFont);
       if (!box->GetTextSize() && textSize) box->SetTextSize(*textSize);
@@ -2184,6 +2184,15 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     auto fillStyle{box->GetFillStyle()};
     auto fillAlpha{box->GetFillAlpha()};
 
+    // the drawn data a legend row refers to (named "<number of the data in the pad>:<name>" when drawn)
+    auto findData = [pad](uint16_t dataID) -> TObject* {
+      const string prefix = std::to_string(dataID) + ":";
+      for (TObject* obj : *pad->GetListOfPrimitives()) {
+        if (string(obj->GetName()).rfind(prefix, 0) == 0) return obj;
+      }
+      return nullptr;
+    };
+
     vector<string> lines;
     if constexpr (isLegend) {
       std::for_each(box->GetEntries().begin(), box->GetEntries().end(),
@@ -2233,17 +2242,10 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         if (entry.GetTextFont()) line_text_font = *entry.GetTextFont();
         if (entry.GetTextSize()) line_text_size = *entry.GetTextSize();
         if (entry.GetRefDataID()) {
-          TObject* data_ptr = nullptr;
-          TIter next(pad->GetListOfPrimitives());
-          while ((data_ptr = next())) {
-            if (TString(data_ptr->GetName()).BeginsWith(std::to_string(*entry.GetRefDataID()).data())) {
-              break;
-            }
-          }
-          if (!data_ptr) {
-            logger::warning("Object belonging to legend entry {} not found.", line);
-          } else {
+          if (TObject* data_ptr = findData(*entry.GetRefDataID())) {
             ReplacePlaceholders(line, static_cast<TNamed*>(data_ptr));
+          } else {
+            logger::warning("Legend entry '{}' refers to data {}, which is not drawn in this pad.", line, *entry.GetRefDataID());
           }
         }
       }
@@ -2371,20 +2373,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         TAttMarker markerAttr;
         TAttLine lineAttr;
         TAttFill fillAttr;
-        if (entry.GetRefDataID()) {
-          TObject* data_ptr = nullptr;
-          TIter next(pad->GetListOfPrimitives());
-          while ((data_ptr = next())) {
-            if (TString(data_ptr->GetName()).BeginsWith(std::to_string(*entry.GetRefDataID()).data())) {
-              break;
-            }
-          }
-          if (!data_ptr) {
-            // advance i so lines[] stays aligned with box->GetEntries() for subsequent iterations
-            ++i;
-            continue;
-          }
-
+        TObject* data_ptr = (entry.GetRefDataID()) ? findData(*entry.GetRefDataID()) : nullptr;
+        if (data_ptr) {
           if (drawStyle.empty()) drawStyle = LegendDrawStyle(data_ptr, data_ptr->GetDrawOption());
           curEntry = legend->AddEntry(data_ptr, label.data(), drawStyle.data());
           curEntry->SetObject(static_cast<TObject*>(nullptr));

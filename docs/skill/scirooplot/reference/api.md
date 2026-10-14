@@ -189,6 +189,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& SetShowOverflowBins(bool showOverflowBins = true)`
 - `Data& SetLegendLabel(const std::string& legendLabel)`
 - `Data& SetLegend(uint8_t legendID)`
+- `Data& SetLegendEntry(const LegendEntry& legendEntry)`
 - `Data& SetOptions(const std::string& options)`
 - `Data& SetOptions(drawing_options_t optionAlias)`
 - `Data& UnsetOptions()`
@@ -322,7 +323,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 
 - `LegendBox(const std::optional<std::string>& title = {})`
 - `LegendBox(double_t xPos, double_t yPos, const std::optional<std::string>& title = {})`
-- `LegendEntry& GetEntry(uint8_t entryID)`
+- `LegendEntry& AddEntry(const std::string& label = "")` — a row of its own (with an empty label: an empty line)
 - `LegendBox& SetTitle(const std::string& title)`
 - `LegendBox& SetNumColumns(uint8_t numColumns)`
 - `LegendBox& SetDefaultDrawStyle(const std::string& drawStyle)`
@@ -341,22 +342,29 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `LegendBox& SetDefaultFillStyle(int16_t style)`
 - `LegendBox& SetSymbolColScale(float_t scale)`
 
-## Plot::Pad::LegendBox::LegendEntry
+## Plot::Pad::LegendEntry
+*a legend row: the appearance of the row of a data item (Data::SetLegendEntry) or a row added with LegendBox::AddEntry*
 
 - `LegendEntry(const std::optional<std::string>& label = {}, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& drawStyle = {})`
 - `LegendEntry& SetLabel(const std::string& label)`
 - `LegendEntry& SetRefData(uint16_t refDataID)`
 - `LegendEntry& SetDrawStyle(const std::string& drawStyle)`
+- `LegendEntry& AtTop()`
+- `LegendEntry& BeforeData(uint16_t dataID)`
+- `LegendEntry& AfterData(uint16_t dataID)`
 - `LegendEntry& SetColor(int16_t color)`
 - `LegendEntry& SetAlpha(float_t alpha)`
+- `LegendEntry& SetMarker(int16_t color, int16_t style, float_t size, std::optional<float_t> alpha = {})`
 - `LegendEntry& SetMarkerColor(int16_t color)`
 - `LegendEntry& SetMarkerAlpha(float_t alpha)`
 - `LegendEntry& SetMarkerStyle(int16_t style)`
 - `LegendEntry& SetMarkerSize(float_t size)`
+- `LegendEntry& SetLine(int16_t color, int16_t style, float_t width, std::optional<float_t> alpha = {})`
 - `LegendEntry& SetLineColor(int16_t color)`
 - `LegendEntry& SetLineAlpha(float_t alpha)`
 - `LegendEntry& SetLineStyle(int16_t style)`
 - `LegendEntry& SetLineWidth(float_t width)`
+- `LegendEntry& SetFill(int16_t color, int16_t style, std::optional<float_t> alpha = {})`
 - `LegendEntry& SetFillColor(int16_t color)`
 - `LegendEntry& SetFillAlpha(float_t alpha)`
 - `LegendEntry& SetFillStyle(int16_t style)`

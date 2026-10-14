@@ -228,12 +228,18 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // the styles and colors of the respective legend entries are by default based on the data that is represented
   // you can however override this and specify different default settings for the legend
   plot[1].GetLegend(2).SetDefaultLineWidth(5.);
-  // modifications can also be done per entry:
-  plot[1].GetLegend(2).GetEntry(1).SetLineColor(kRed);
-  // you can also add and modify legends without any automatically generated labels:
-  plot[1].AddLegend();
-  plot[1].GetLegend(3).GetEntry(1).SetLabel("my custom label").SetDrawStyle("L").SetLineColor(kRed);
-  plot[1].GetLegend(3).GetEntry(2).SetLabel("my custom label 2").SetDrawStyle("EP").SetLineColor(kBlue).SetMarkerColor(kRed);
+  // the row of a data item is styled on the data (its label is the one of the data):
+  plot[1].AddData("band", "dataSourceA", "uncertainty").SetLegendEntry(LegendEntry().SetDrawStyle("F"));
+  // rows of their own, e.g. for a legend explaining the symbols and one explaining the colours, or a legend in another pad
+  // (with an empty label: an empty line); SetRefData(n) takes the symbol from data n of the pad
+  auto& legend = plot[1].AddLegend();
+  legend.AddEntry("pp").SetDrawStyle("P").SetMarker(kBlack, kFullCircle, 1.2);
+  legend.AddEntry("Pb-Pb").SetDrawStyle("P").SetMarker(kBlack, kOpenSquare, 1.2);
+  // they come after the rows of the data, or at a place relative to the data of the pad (numbered as in plot[1](n)),
+  // whether or not that data has a row in this legend: a heading belongs to the data below it, a note to the data above it
+  legend.AddEntry("#bf{2024 data}").AtTop();
+  legend.AddEntry("#bf{simulation}").BeforeData(4);
+  legend.AddEntry("(scaled by 10)").AfterData(5);
   // (again please have a look at inc/Plot.h for the list of possibilities)
 
   // similar to the legend boxes you can add a text box to your plot

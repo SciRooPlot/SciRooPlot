@@ -31,6 +31,7 @@
 
 #include <boost/property_tree/ptree.hpp>
 
+#include <deque>
 #include <map>
 #include <memory>
 #include <optional>
@@ -268,6 +269,7 @@ class Plot::Pad
   class Box;
   class TextBox;
   class LegendBox;
+  class LegendEntry;
 
   Pad() = default;
   explicit Pad(const boost::property_tree::ptree& padTree);
@@ -506,6 +508,92 @@ class Plot::Pad
 
 //**************************************************************************************************
 /**
+ * Representation of a legend row: the row of a data item (styled with Data::SetLegendEntry) or a row added with LegendBox::AddEntry.
+ */
+//**************************************************************************************************
+class Plot::Pad::LegendEntry
+{
+ public:
+  explicit LegendEntry(const std::optional<std::string>& label = {}, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& drawStyle = {});
+  explicit LegendEntry(const boost::property_tree::ptree& legendEntryTree);
+  void Print() const { Plot::Print(GetPropertyTree(), "LegendEntry"); }
+
+  LegendEntry& SetLabel(const std::string& label);
+  LegendEntry& SetRefData(uint16_t refDataID);
+  LegendEntry& SetDrawStyle(const std::string& drawStyle);
+  // position of a row added with LegendBox::AddEntry (by default after all other rows), relative to the rows of the data of the pad,
+  // which are in the order of the data (dataID as in plot[padID](dataID)), whether or not that data has a row in this legend
+  LegendEntry& AtTop();
+  LegendEntry& BeforeData(uint16_t dataID);
+  LegendEntry& AfterData(uint16_t dataID);
+  LegendEntry& SetColor(int16_t color);
+  LegendEntry& SetAlpha(float_t alpha);
+  LegendEntry& SetMarker(int16_t color, int16_t style, float_t size, std::optional<float_t> alpha = {});
+  LegendEntry& SetMarkerColor(int16_t color);
+  LegendEntry& SetMarkerAlpha(float_t alpha);
+  LegendEntry& SetMarkerStyle(int16_t style);
+  LegendEntry& SetMarkerSize(float_t size);
+  LegendEntry& SetLine(int16_t color, int16_t style, float_t width, std::optional<float_t> alpha = {});
+  LegendEntry& SetLineColor(int16_t color);
+  LegendEntry& SetLineAlpha(float_t alpha);
+  LegendEntry& SetLineStyle(int16_t style);
+  LegendEntry& SetLineWidth(float_t width);
+  LegendEntry& SetFill(int16_t color, int16_t style, std::optional<float_t> alpha = {});
+  LegendEntry& SetFillColor(int16_t color);
+  LegendEntry& SetFillAlpha(float_t alpha);
+  LegendEntry& SetFillStyle(int16_t style);
+  LegendEntry& SetTextColor(int16_t color);
+  LegendEntry& SetTextAlpha(float_t alpha);
+  LegendEntry& SetTextFont(int16_t font);
+  LegendEntry& SetTextSize(float_t size);
+
+ protected:
+  friend class PlotPainter;
+  friend class LegendBox;
+  friend class Data;
+  enum class position_t : uint8_t { top,
+                                    before,
+                                    after };
+  void operator+=(const LegendEntry& legendEntry);
+
+  boost::property_tree::ptree GetPropertyTree() const;
+  const auto& GetRefDataID() const { return mRefDataID; }
+  const auto& GetLabel() const { return mLabel; }
+  const auto& GetDrawStyle() const { return mDrawStyle; }
+
+  const auto& GetMarkerColor() const { return mMarker.color; }
+  const auto& GetMarkerAlpha() const { return mMarker.alpha; }
+  const auto& GetMarkerStyle() const { return mMarker.style; }
+  const auto& GetMarkerSize() const { return mMarker.scale; }
+
+  const auto& GetLineColor() const { return mLine.color; }
+  const auto& GetLineAlpha() const { return mLine.alpha; }
+  const auto& GetLineStyle() const { return mLine.style; }
+  const auto& GetLineWidth() const { return mLine.scale; }
+
+  const auto& GetFillColor() const { return mFill.color; }
+  const auto& GetFillAlpha() const { return mFill.alpha; }
+  const auto& GetFillStyle() const { return mFill.style; }
+
+  const auto& GetTextColor() const { return mText.color; }
+  const auto& GetTextAlpha() const { return mText.alpha; }
+  const auto& GetTextFont() const { return mText.style; }
+  const auto& GetTextSize() const { return mText.scale; }
+
+ private:
+  std::optional<std::string> mLabel;
+  std::optional<uint16_t> mRefDataID;
+  std::optional<std::string> mDrawStyle;
+  std::optional<position_t> mPosition;
+  uint16_t mPositionDataID{};  // the data the position is relative to (for before and after)
+  layout_t mFill;
+  layout_t mMarker;
+  layout_t mLine;
+  layout_t mText;
+};
+
+//**************************************************************************************************
+/**
  * Representation of drawable data.
  */
 //**************************************************************************************************
@@ -546,6 +634,7 @@ class Plot::Pad::Data
   Data& SetShowOverflowBins(bool showOverflowBins = true);
   Data& SetLegendLabel(const std::string& legendLabel);
   Data& SetLegend(uint8_t legendID);
+  Data& SetLegendEntry(const LegendEntry& legendEntry);
   Data& SetOptions(const std::string& options);
   Data& SetOptions(drawing_options_t optionAlias);
   Data& UnsetOptions();
@@ -658,6 +747,7 @@ class Plot::Pad::Data
   const auto& GetName() const { return mName; }
   const auto& GetLegendLabel() const { return mLegend.label; }
   const auto& GetLegendID() const { return mLegend.id; }
+  const auto& GetLegendEntry() const { return mLegend.entry; }
   const auto& GetMarkerColor() const { return mMarker.color; }
   const auto& GetMarkerAlpha() const { return mMarker.alpha; }
   const auto& GetMarkerStyle() const { return mMarker.style; }
@@ -797,6 +887,7 @@ class Plot::Pad::Data
   struct legend_t {
     std::optional<std::string> label;
     std::optional<uint8_t> id;
+    std::optional<LegendEntry> entry;  // appearance of the row of the data
   };
 
   struct data_range_t {
@@ -868,6 +959,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(SetShowOverflowBins)
   FORWARD_TO_DATA(SetLegendLabel)
   FORWARD_TO_DATA(SetLegend)
+  FORWARD_TO_DATA(SetLegendEntry)
   FORWARD_TO_DATA(SetOptions)
   FORWARD_TO_DATA(UnsetOptions)
   FORWARD_TO_DATA(SetTextFormat)
@@ -1227,7 +1319,6 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 {
  public:
-  class LegendEntry;
   explicit LegendBox(const std::optional<std::string>& title = {});
   LegendBox(double_t xPos, double_t yPos, const std::optional<std::string>& title = {});
   explicit LegendBox(const boost::property_tree::ptree& legendBoxTree);
@@ -1239,7 +1330,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   LegendBox& operator=(LegendBox&& other) = default;
   void Print() const { Plot::Print(GetPropertyTree(), "LegendBox"); }
 
-  LegendEntry& GetEntry(uint8_t entryID);
+  LegendEntry& AddEntry(const std::string& label = "");  // a row of its own (with an empty label: an empty line)
   LegendBox& SetTitle(const std::string& title);
   LegendBox& SetNumColumns(uint8_t numColumns);
   LegendBox& SetDefaultDrawStyle(const std::string& drawStyle);
@@ -1267,7 +1358,8 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   const std::optional<uint8_t>& GetNumColumns() const { return mNumColumns; }
   const std::optional<std::string>& GetTitle() const { return mTitle; }
 
-  void AddEntry(const std::string& label, uint16_t refDataID);
+  void AddDataEntry(const std::string& label, uint16_t dataID, const std::optional<LegendEntry>& appearance);
+  void ShiftDataIDs(uint16_t offset);
 
   const auto& GetEntries() const { return mLegendEntries; }
   const auto& GetDefaultDrawStyle() const { return mDrawStyleDefault; }
@@ -1287,8 +1379,8 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
  private:
   std::optional<std::string> mTitle;
   std::optional<uint8_t> mNumColumns;
-  std::vector<LegendEntry> mLegendEntries;            // this is transient and will be generated automatically
-  std::map<uint8_t, LegendEntry> mLegendEntriesUser;  // this is persistent and must be saved
+  std::vector<LegendEntry> mLegendEntries;     // the rows as drawn, generated when the plot is drawn
+  std::deque<LegendEntry> mLegendEntriesUser;  // the rows added with AddEntry, in the order of the calls (a deque keeps references valid)
 
   layout_t mLineDefault;
   layout_t mMarkerDefault;
@@ -1296,79 +1388,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   std::optional<std::string> mDrawStyleDefault;
   std::optional<float_t> mSymbolColScale;
 
-  void MergeLegendEntries();
-};
-
-//**************************************************************************************************
-/**
- * Representation of a legend box entry.
- */
-//**************************************************************************************************
-class Plot::Pad::LegendBox::LegendEntry
-{
- public:
-  explicit LegendEntry(const std::optional<std::string>& label = {}, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& drawStyle = {});
-  explicit LegendEntry(const boost::property_tree::ptree& legendEntryTree);
-  void Print() const { Plot::Print(GetPropertyTree(), "LegendEntry"); }
-
-  LegendEntry& SetLabel(const std::string& label);
-  LegendEntry& SetRefData(uint16_t refDataID);
-  LegendEntry& SetDrawStyle(const std::string& drawStyle);
-  LegendEntry& SetColor(int16_t color);
-  LegendEntry& SetAlpha(float_t alpha);
-  LegendEntry& SetMarkerColor(int16_t color);
-  LegendEntry& SetMarkerAlpha(float_t alpha);
-  LegendEntry& SetMarkerStyle(int16_t style);
-  LegendEntry& SetMarkerSize(float_t size);
-  LegendEntry& SetLineColor(int16_t color);
-  LegendEntry& SetLineAlpha(float_t alpha);
-  LegendEntry& SetLineStyle(int16_t style);
-  LegendEntry& SetLineWidth(float_t width);
-  LegendEntry& SetFillColor(int16_t color);
-  LegendEntry& SetFillAlpha(float_t alpha);
-  LegendEntry& SetFillStyle(int16_t style);
-  LegendEntry& SetTextColor(int16_t color);
-  LegendEntry& SetTextAlpha(float_t alpha);
-  LegendEntry& SetTextFont(int16_t font);
-  LegendEntry& SetTextSize(float_t size);
-
- protected:
-  friend class PlotPainter;
-  friend class LegendBox;
-  void operator+=(const LegendEntry& legendEntry);
-
-  boost::property_tree::ptree GetPropertyTree() const;
-  const auto& GetRefDataID() const { return mRefDataID; }
-  const auto& GetLabel() const { return mLabel; }
-  const auto& GetDrawStyle() const { return mDrawStyle; }
-
-  const auto& GetMarkerColor() const { return mMarker.color; }
-  const auto& GetMarkerAlpha() const { return mMarker.alpha; }
-  const auto& GetMarkerStyle() const { return mMarker.style; }
-  const auto& GetMarkerSize() const { return mMarker.scale; }
-
-  const auto& GetLineColor() const { return mLine.color; }
-  const auto& GetLineAlpha() const { return mLine.alpha; }
-  const auto& GetLineStyle() const { return mLine.style; }
-  const auto& GetLineWidth() const { return mLine.scale; }
-
-  const auto& GetFillColor() const { return mFill.color; }
-  const auto& GetFillAlpha() const { return mFill.alpha; }
-  const auto& GetFillStyle() const { return mFill.style; }
-
-  const auto& GetTextColor() const { return mText.color; }
-  const auto& GetTextAlpha() const { return mText.alpha; }
-  const auto& GetTextFont() const { return mText.style; }
-  const auto& GetTextSize() const { return mText.scale; }
-
- private:
-  std::optional<std::string> mLabel;
-  std::optional<uint16_t> mRefDataID;
-  std::optional<std::string> mDrawStyle;
-  layout_t mFill;
-  layout_t mMarker;
-  layout_t mLine;
-  layout_t mText;
+  void MergeLegendEntries(uint16_t nData);
 };
 
 }  // end namespace SciRooPlot

@@ -25,7 +25,7 @@ CLASSES = [
     ("Plot.h", "class Plot::Pad::Box", "Plot::Pad::Box<BoxType>", "common to TextBox and LegendBox"),
     ("Plot.h", "class Plot::Pad::TextBox", "Plot::Pad::TextBox", ""),
     ("Plot.h", "class Plot::Pad::LegendBox", "Plot::Pad::LegendBox", ""),
-    ("Plot.h", "class Plot::Pad::LegendBox::LegendEntry", "Plot::Pad::LegendBox::LegendEntry", ""),
+    ("Plot.h", "class Plot::Pad::LegendEntry", "Plot::Pad::LegendEntry", "a legend row: the appearance of the row of a data item (Data::SetLegendEntry) or a row added with LegendBox::AddEntry"),
     ("PanelLayout.h", "class Panel", "Panel", "a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes"),
     ("PanelLayout.h", "class PanelLayout", "PanelLayout", "arrangement of panels and the sizes shared by all base plots"),
 ]
@@ -80,7 +80,7 @@ def methods(section: str, class_name: str):
         if not match:
             continue
         name = match["name"]
-        if name in SKIP_NAMES or name.startswith("Get") and name not in {"GetAxis", "GetData", "GetLegend", "GetText", "GetEntry", "GetProjectProperty", "GetPad"}:
+        if name in SKIP_NAMES or name.startswith("Get") and name not in {"GetAxis", "GetData", "GetLegend", "GetText", "GetProjectProperty", "GetPad"}:
             continue  # plain getters are not part of the user interface
         ret = (match["ret"] or "").strip()
         args = re.sub(r"\s+", " ", match["args"].strip())

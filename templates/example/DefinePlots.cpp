@@ -16,6 +16,7 @@ using std::string;
 using std::vector;
 using namespace SciRooPlot;
 using Data = Plot::Pad::Data;
+using LegendEntry = Plot::Pad::LegendEntry;
 
 void DefineDataSources(PlotManager& pm);
 void DefineBasePlots(PlotManager& pm);
@@ -160,15 +161,13 @@ void DefineHiggsPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // "Brazil plot": uncertainty bands, a reference line, the first data defines the frame
     Plot plot("brazilPlot", "higgs/limits", "1d");
-    plot[1].AddData("limits/band2sigma", "higgs", "expected #pm 2#sigma").SetOptions(band).SetFill(kOrange, 1001).SetLineColor(kOrange);
-    plot[1].AddData("limits/band1sigma", "higgs", "expected #pm 1#sigma").SetOptions(band).SetFill(kGreen + 1, 1001).SetLineColor(kGreen + 1);
+    // legend entries follow the data by default; here the bands should appear as filled boxes
+    plot[1].AddData("limits/band2sigma", "higgs", "expected #pm 2#sigma").SetOptions(band).SetFill(kOrange, 1001).SetLineColor(kOrange).SetLegendEntry(LegendEntry().SetDrawStyle("F"));
+    plot[1].AddData("limits/band1sigma", "higgs", "expected #pm 1#sigma").SetOptions(band).SetFill(kGreen + 1, 1001).SetLineColor(kGreen + 1).SetLegendEntry(LegendEntry().SetDrawStyle("F"));
     plot[1].AddData("limits/expected", "higgs", "expected").SetOptions(line).SetLine(kBlack, kDashed, 3.);
     plot[1].AddData("limits/observed", "higgs", "observed").SetOptions(points_line).SetMarker(kBlack, kFullCircle, 0.8);
     plot[1].SetRefFunc("1").SetLine(kRed + 1, kSolid, 2.);  // SM expectation
-    // legend entries follow the data by default; here the bands should appear as filled boxes
-    auto& legend = plot[1].AddLegend(0.2, 0.9);
-    legend.GetEntry(1).SetDrawStyle("F");
-    legend.GetEntry(2).SetDrawStyle("F");
+    plot[1].AddLegend(0.2, 0.9);
     plot[1]['Y'].SetLog().SetRange(0.08, 20.);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
@@ -580,12 +579,12 @@ void DefineHeavyIonPlots(PlotManager& pm)
     }
     // the published values in the first panel: systematic uncertainties as boxes, statistical as bars,
     // both from the same table; they get their own (second) legend
-    plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high").SetOptions(boxes).SetFill(kOrange - 9, 1001).SetLineColor(kOrange + 1).SetLegend(2);
+    plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high").SetOptions(boxes).SetFill(kOrange - 9, 1001).SetLineColor(kOrange + 1).SetLegend(2).SetLegendEntry(LegendEntry().SetDrawStyle("F"));
     plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetMarker(kOrange + 1, kOpenCircle, 1.2).SetLegend(2);
     plot[1].AddLegend(0.2, 0.3);
-    plot[1].AddLegend(0.2, 0.78).GetEntry(1).SetDrawStyle("F");
-    // pad 3 has no labelled data, so its legend entry 1 belongs to no data: a note on the normalisation
-    plot[3].AddLegend(0.1, 0.3).GetEntry(1).SetLabel("norm. unc. 5%").SetDrawStyle("F").SetFillColor(kGray).SetFillStyle(1001);
+    plot[1].AddLegend(0.2, 0.78);
+    // a legend row that belongs to no data: a note on the normalisation
+    plot[3].AddLegend(0.1, 0.3).AddEntry("norm. unc. 5%").SetDrawStyle("F").SetFill(kGray, 1001);
     plot[0]['X'].SetLog().SetRange(0.15, 10.);
     plot[0]['Y'].SetRange(0., 1.4).SetTitle("#it{R}_{AA}").SetTitleCenter();
     pm.AddPlot(plot);

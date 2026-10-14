@@ -1323,7 +1323,7 @@
 
       - Legends and text boxes go to a fixed position, or are auto-placed when it is left out: as close as possible to the frame corner where they fit best (`best_corner`), or to a requested one (`top_left`, `top_right`, `bottom_right`, `bottom_left`).
 
-      - Individual entries are looked up via `GetEntry(n)` and customized independently, e.g. to override a label.
+      - The row of a data item is styled on the data, `SetLegendEntry(LegendEntry()...)`; `AddEntry(label)` adds a row of its own (no label: an empty line), at the end or placed with `AtTop()`, `BeforeData(n)`, `AfterData(n)`.
 
       - For multi-line text, join the lines into one string with `" // "` in between; `SetLineSpacing()` sets the gap between them.
     ],
@@ -1341,8 +1341,8 @@
           plot[1].AddLegend(0.2, 0.2);
 
           plot[1].GetLegend(2)
-                 .GetEntry(1)
-                 .SetLabel("Best fit");
+                 .AddEntry("Best fit")
+                 .SetDrawStyle("L").SetLine(kRed, kSolid, 2.);
 
           // auto-placed: best-fitting or given corner
           plot[1].AddLegend();
@@ -1363,7 +1363,7 @@
           # legend 2 ("Graph")
           plot[1].AddLegend(0.2, 0.2)
 
-          plot[1].GetLegend(2).GetEntry(1).SetLabel("Best fit")
+          plot[1].GetLegend(2).AddEntry("Best fit").SetDrawStyle("L").SetLine(kRed, kSolid, 2.)
 
           # auto-placed: best-fitting or given corner
           plot[1].AddLegend()
@@ -1910,6 +1910,7 @@
         [`UnsetRangeX()` / `UnsetRangeY()`], [Remove a previously set range restriction.],
         [`SetShowOverflowBins(showOverflowBins = true)`], [Include overflow bins in the display.],
         [`SetLegendLabel(label)` / `SetLegend(legendID)`], [Set legend text, or assign to a specific legend.],
+        [`SetLegendEntry(entry)`], [Appearance of the data's legend row, e.g. `LegendEntry().SetDrawStyle("F")`.],
         [#names("SetOptions(options) / SetOptions(alias)", "UnsetOptions()")], [Set a ROOT draw-option string or one of the #link(<appx-drawing-options>)[#text(fill: main-color)[predefined aliases]], or remove it.],
         [`SetTextFormat(fmt)`], [Number format of bin contents drawn with the `TEXT` option, e.g. `".0f"`.],
         [`SetShowStats(format = "emr", title = {})`], [Statistics box of a histogram: ROOT's letters (`TStyle::SetOptStat`, e.g. `"eMR"`), the title as its first line.],
@@ -2001,7 +2002,7 @@
           ([`LegendBox(title = {})` / `LegendBox(xPos, yPos, title = {})`], [Construct directly, auto-placed or fixed.])
         } else { () }),
         [`SetTitle(title)` / `SetNumColumns(n)`], [Legend title, or number of columns.],
-        [`GetEntry(entryID)`], [Access an entry by index (starting at 1), see next slide.],
+        [`AddEntry(label = "")`], [Add a row of its own (no label: an empty line), see the appendix.],
         [`SetSymbolColScale(scale)`], [Scale the width of the symbol column.],
       ), col-widths: (52%, 48%), text-size: 12pt)
       #if lang == "py" [
@@ -2015,6 +2016,7 @@
 #slide[
   #slide-title("Appendix: Legend Entries")
   - Legend entries take their marker, line and fill style from the data they belong to. Settings for all entries of a `LegendBox` override this, and settings of a single `LegendEntry` override both.
+  - Rows added with `AddEntry` come after the rows of the data, or at the place given relative to the data of the pad (numbered as in `plot[1](n)`), whether or not that data has a row in this legend.
   #v(0.6em)
   #grid(
     columns: (49%, 49%),
@@ -2032,8 +2034,10 @@
       #api-section("LegendEntry: a single entry", (
         [`SetLabel(label)`], [Set the entry's label text.],
         [`SetRefData(refDataID)`], [Take the style from data number `refDataID` of the pad.],
+        [`AtTop()` / `BeforeData(n)` / `AfterData(n)`], [Place a row added with `AddEntry`.],
         [`SetDrawStyle(style)`], [Draw style of this entry, e.g. `"L"`, `"EP"`, `"F"`.],
         [`SetColor(color)` / `SetAlpha(alpha)`], [Marker, line and fill colour (or transparency) together.],
+        [#names("SetMarker(color, style, size)", "SetLine(color, style, width)", "SetFill(color, style)")], [Marker, line or fill at once (optional last argument: alpha).],
         [#names("SetMarkerColor(color)", "SetMarkerAlpha(alpha)", "SetMarkerStyle(style)", "SetMarkerSize(size)")], [Marker appearance.],
         [#names("SetLineColor(color)", "SetLineAlpha(alpha)", "SetLineStyle(style)", "SetLineWidth(width)")], [Line appearance.],
         [#names("SetFillColor(color)", "SetFillAlpha(alpha)", "SetFillStyle(style)")], [Fill appearance.],

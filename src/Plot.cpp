@@ -1298,7 +1298,9 @@ void Plot::Pad::operator+=(const Pad& pad)
   }
   size_t legendOffset = mLegendBoxes.size();
   for (const auto& legendBox : pad.mLegendBoxes) {
+    // the data of this (base) pad come first: the rows refer to the data of the pad that is put on top
     mLegendBoxes.push_back(std::make_shared<LegendBox>(*legendBox));
+    mLegendBoxes.back()->ShiftDataIDs(static_cast<uint16_t>(mData.size()));
   }
   for (const auto& textBox : pad.mTextBoxes) {
     mTextBoxes.push_back(std::make_shared<TextBox>(*textBox));
@@ -1665,6 +1667,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   if (auto var = dataTree.get_optional<bool>("dont_draw")) mDontDraw = *var;
   read_from_tree(dataTree, mLegend.label, "legend_label");
   read_from_tree(dataTree, mLegend.id, "legend_id");
+  if (const auto entryTree = dataTree.get_child_optional("legend_entry")) mLegend.entry = LegendEntry(*entryTree);
   read_from_tree(dataTree, mDrawingOptions, "drawing_options");
   ReadDrawingOption(dataTree, mDrawingOptionAlias, "drawing_option_alias");
   read_from_tree(dataTree, mTextFormat, "text_format");
@@ -1811,6 +1814,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   if (mDontDraw) dataTree.put("dont_draw", mDontDraw);
   put_in_tree(dataTree, mLegend.label, "legend_label");
   put_in_tree(dataTree, mLegend.id, "legend_id");
+  if (mLegend.entry) dataTree.put_child("legend_entry", mLegend.entry->GetPropertyTree());
   put_in_tree(dataTree, mDrawingOptions, "drawing_options");
   PutDrawingOption(dataTree, mDrawingOptionAlias, "drawing_option_alias");
   put_in_tree(dataTree, mTextFormat, "text_format");
@@ -1895,6 +1899,7 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
   mDrawingOptions = dataLayout.mDrawingOptions;
   mDrawingOptionAlias = dataLayout.mDrawingOptionAlias;
   mTextFormat = dataLayout.mTextFormat;
+  mLegend.entry = dataLayout.mLegend.entry;
   mRangeX.min = dataLayout.mRangeX.min;
   mRangeX.max = dataLayout.mRangeX.max;
   mRangeY.min = dataLayout.mRangeY.min;
@@ -1924,6 +1929,7 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   set_if(dataLayout.mDrawingOptions, mDrawingOptions);
   set_if(dataLayout.mDrawingOptionAlias, mDrawingOptionAlias);
   set_if(dataLayout.mTextFormat, mTextFormat);
+  set_if(dataLayout.mLegend.entry, mLegend.entry);
   set_if(dataLayout.mRangeX.min, mRangeX.min);
   set_if(dataLayout.mRangeX.max, mRangeX.max);
   set_if(dataLayout.mRangeY.min, mRangeY.min);
@@ -1960,6 +1966,24 @@ auto Plot::Pad::Data::SetLegendLabel(const string& legendLabel) -> decltype(*thi
 auto Plot::Pad::Data::SetLegend(uint8_t legendID) -> decltype(*this)
 {
   mLegend.id = legendID;
+  return *this;
+}
+auto Plot::Pad::Data::SetLegendEntry(const LegendEntry& legendEntry) -> decltype(*this)
+{
+  // the data decides whether it has a row and what it says, the entry how the row looks
+  mLegend.entry = legendEntry;
+  if (mLegend.entry->mLabel) {
+    logger::warning("The legend entry of {} cannot set its label, use SetLegendLabel.", mName);
+    mLegend.entry->mLabel.reset();
+  }
+  if (mLegend.entry->mRefDataID) {
+    logger::warning("The legend entry of {} cannot refer to other data.", mName);
+    mLegend.entry->mRefDataID.reset();
+  }
+  if (mLegend.entry->mPosition) {
+    logger::warning("The legend entry of {} cannot be placed, it is at the place of the data.", mName);
+    mLegend.entry->mPosition.reset();
+  }
   return *this;
 }
 auto Plot::Pad::Data::SetOptions(const string& options) -> decltype(*this)
@@ -3675,10 +3699,7 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
   read_from_tree(legendBoxTree, mSymbolColScale, "symbol_col_scale");
 
   for (const auto& content : legendBoxTree) {
-    if (str_contains(content.first, "ENTRY")) {
-      uint8_t legendEntryID = std::stoi(content.first.substr(content.first.find("_") + 1));
-      mLegendEntriesUser[legendEntryID] = LegendEntry(content.second);
-    }
+    if (content.first == "ENTRY") mLegendEntriesUser.emplace_back(content.second);
   }
 }
 
@@ -3706,9 +3727,8 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
   put_in_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
   put_in_tree(legendBoxTree, mSymbolColScale, "symbol_col_scale");
 
-  for (const auto& [legendEntryID, legendEntry] : mLegendEntriesUser) {
-    legendBoxTree.put_child("ENTRY_" + std::to_string(legendEntryID),
-                            legendEntry.GetPropertyTree());
+  for (const auto& legendEntry : mLegendEntriesUser) {
+    legendBoxTree.add_child("ENTRY", legendEntry.GetPropertyTree());  // repeated key: the order of the rows is kept
   }
 
   return legendBoxTree;
@@ -3719,12 +3739,9 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
  * User accessors for LegendBox properties.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::GetEntry(uint8_t entryID)
+Plot::Pad::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& label)
 {
-  if (entryID < 1) {
-    logger::throw_out_of_range("Legend entry index 0 is not allowed.");
-  }
-  return mLegendEntriesUser[entryID];
+  return mLegendEntriesUser.emplace_back(label);
 }
 
 Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetTitle(const string& title)
@@ -3839,30 +3856,58 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetSymbolColScale(float_t scale)
 
 //**************************************************************************************************
 /**
- * Add entry to LegendBox.
+ * Add the row of a data item (dataID: its number in the pad), with the appearance the user set for it.
  */
 //**************************************************************************************************
-void Plot::Pad::LegendBox::AddEntry(const string& label, uint16_t refDataID)
+void Plot::Pad::LegendBox::AddDataEntry(const string& label, uint16_t dataID, const optional<LegendEntry>& appearance)
 {
-  mLegendEntries.push_back(LegendEntry(label, refDataID));
+  LegendEntry& entry = mLegendEntries.emplace_back(label, dataID);
+  if (appearance) entry += *appearance;
 }
 
 //**************************************************************************************************
 /**
- * Apply legend entry settings from user to automatically generated legend.
+ * Shift the data the rows refer to, when the pad is put on top of a base pad whose data come first.
  */
 //**************************************************************************************************
-void Plot::Pad::LegendBox::MergeLegendEntries()
+void Plot::Pad::LegendBox::ShiftDataIDs(uint16_t offset)
 {
-  for (auto iter = mLegendEntriesUser.begin(); iter != mLegendEntriesUser.end(); ++iter) {
-    if (auto legendIndex = iter->first; legendIndex >= mLegendEntries.size() + 1) {
-      for (size_t i = mLegendEntries.size() + 1; i < legendIndex; ++i) {
-        mLegendEntries.push_back(LegendEntry());
+  for (auto& entry : mLegendEntriesUser) {
+    if (entry.mRefDataID) *entry.mRefDataID += offset;
+    if (entry.mPosition && entry.mPosition != LegendEntry::position_t::top) entry.mPositionDataID += offset;
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Put the rows added with AddEntry between the rows of the data (nData: number of data in the pad).
+ * The rows of the data are in the order of the data; a row added by the user is at the top, before or after the place of a data item
+ * (whether or not it has a row in this legend) or, by default, at the end. Rows at the same place keep the order in which they were added.
+ */
+//**************************************************************************************************
+void Plot::Pad::LegendBox::MergeLegendEntries(uint16_t nData)
+{
+  constexpr int32_t atEnd = std::numeric_limits<int32_t>::max();
+  vector<std::pair<std::pair<int32_t, int32_t>, LegendEntry>> rows;  // (data the row is at, before/at/after it), row
+  for (const auto& entry : mLegendEntries) {
+    rows.push_back({{*entry.mRefDataID, 1}, entry});
+  }
+  for (const auto& entry : mLegendEntriesUser) {
+    std::pair<int32_t, int32_t> place{atEnd, 0};
+    if (entry.mPosition == LegendEntry::position_t::top) {
+      place = {0, 0};
+    } else if (entry.mPosition) {
+      if (entry.mPositionDataID < 1 || entry.mPositionDataID > nData) {
+        logger::warning("Legend entry '{}' is placed relative to data {}, but the pad has {} data.", entry.mLabel.value_or(""), entry.mPositionDataID, nData);
       }
-      mLegendEntries.push_back(iter->second);
-    } else if (legendIndex > 0 && legendIndex < mLegendEntries.size() + 1) {
-      mLegendEntries[legendIndex - 1] += iter->second;
+      place = {entry.mPositionDataID, (entry.mPosition == LegendEntry::position_t::before) ? 0 : 2};
     }
+    rows.push_back({place, entry});
+  }
+  std::stable_sort(rows.begin(), rows.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+  mLegendEntries.clear();
+  for (auto& [place, entry] : rows) {
+    mLegendEntries.push_back(std::move(entry));
   }
 }
 
@@ -3871,7 +3916,7 @@ void Plot::Pad::LegendBox::MergeLegendEntries()
  * Construct LegendEntry.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendEntry::LegendEntry(const optional<string>& label, const optional<uint16_t>& refDataID, const optional<string>& drawStyle)
+Plot::Pad::LegendEntry::LegendEntry(const optional<string>& label, const optional<uint16_t>& refDataID, const optional<string>& drawStyle)
 {
   mLabel = label;
   mRefDataID = refDataID;
@@ -3883,11 +3928,22 @@ Plot::Pad::LegendBox::LegendEntry::LegendEntry(const optional<string>& label, co
  * Construct LegendEntry from property tree.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
+Plot::Pad::LegendEntry::LegendEntry(const ptree& legendEntryTree)
 {
   read_from_tree(legendEntryTree, mLabel, "label");
   read_from_tree(legendEntryTree, mRefDataID, "ref_data_id");
   read_from_tree(legendEntryTree, mDrawStyle, "draw_style");
+  if (const auto position = get_from_tree<string>(legendEntryTree, "position")) {
+    if (*position == "top") {
+      AtTop();
+    } else if (const auto dataID = get_from_tree<uint16_t>(legendEntryTree, "position_data")) {
+      if (*position == "before") {
+        BeforeData(*dataID);
+      } else {
+        AfterData(*dataID);
+      }
+    }
+  }
   read_from_tree(legendEntryTree, mFill.color, "fill_color");
   read_from_tree(legendEntryTree, mFill.alpha, "fill_alpha");
   read_from_tree(legendEntryTree, mFill.style, "fill_style");
@@ -3910,12 +3966,16 @@ Plot::Pad::LegendBox::LegendEntry::LegendEntry(const ptree& legendEntryTree)
  * Get property tree of LegendEntry.
  */
 //**************************************************************************************************
-ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree() const
+ptree Plot::Pad::LegendEntry::GetPropertyTree() const
 {
   ptree legendEntryTree;
   put_in_tree(legendEntryTree, mLabel, "label");
   put_in_tree(legendEntryTree, mRefDataID, "ref_data_id");
   put_in_tree(legendEntryTree, mDrawStyle, "draw_style");
+  if (mPosition) {
+    legendEntryTree.put("position", (mPosition == position_t::top) ? "top" : ((mPosition == position_t::before) ? "before" : "after"));
+    if (mPosition != position_t::top) legendEntryTree.put("position_data", mPositionDataID);
+  }
   put_in_tree(legendEntryTree, mFill.color, "fill_color");
   put_in_tree(legendEntryTree, mFill.style, "fill_style");
   put_in_tree(legendEntryTree, mFill.alpha, "fill_alpha");
@@ -3939,8 +3999,8 @@ ptree Plot::Pad::LegendBox::LegendEntry::GetPropertyTree() const
  * Apply user defined properties to existing LegendEntry
  */
 //**************************************************************************************************
-void Plot::Pad::LegendBox::LegendEntry::operator+=(
-  const Plot::Pad::LegendBox::LegendEntry& legendEntry)
+void Plot::Pad::LegendEntry::operator+=(
+  const Plot::Pad::LegendEntry& legendEntry)
 {
   if (legendEntry.mDrawStyle) this->mDrawStyle = legendEntry.mDrawStyle;
   if (legendEntry.mLabel) this->mLabel = legendEntry.mLabel;
@@ -3968,25 +4028,46 @@ void Plot::Pad::LegendBox::LegendEntry::operator+=(
  */
 //**************************************************************************************************
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLabel(const string& label)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLabel(const string& label)
 {
   mLabel = label;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetRefData(uint16_t refDataID)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetRefData(uint16_t refDataID)
 {
   mRefDataID = refDataID;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetDrawStyle(const string& drawStyle)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetDrawStyle(const string& drawStyle)
 {
   mDrawStyle = drawStyle;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetColor(int16_t color)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::AtTop()
+{
+  mPosition = position_t::top;
+  mPositionDataID = 0;
+  return *this;
+}
+
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::BeforeData(uint16_t dataID)
+{
+  mPosition = position_t::before;
+  mPositionDataID = dataID;
+  return *this;
+}
+
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::AfterData(uint16_t dataID)
+{
+  mPosition = position_t::after;
+  mPositionDataID = dataID;
+  return *this;
+}
+
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetColor(int16_t color)
 {
   mMarker.color = color;
   mLine.color = color;
@@ -3994,7 +4075,7 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetColor(i
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetAlpha(float_t alpha)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetAlpha(float_t alpha)
 {
   mMarker.alpha = alpha;
   mLine.alpha = alpha;
@@ -4002,91 +4083,117 @@ Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetAlpha(f
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetMarkerColor(int16_t color)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarker(int16_t color, int16_t style, float_t size, optional<float_t> alpha)
+{
+  mMarker.color = color;
+  mMarker.alpha = alpha;
+  mMarker.style = style;
+  mMarker.scale = size;
+  return *this;
+}
+
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarkerColor(int16_t color)
 {
   mMarker.color = color;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetMarkerAlpha(float_t alpha)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarkerAlpha(float_t alpha)
 {
   mMarker.alpha = alpha;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetMarkerStyle(int16_t style)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarkerStyle(int16_t style)
 {
   mMarker.style = style;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetMarkerSize(float_t size)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarkerSize(float_t size)
 {
   mMarker.scale = size;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLineColor(int16_t color)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLine(int16_t color, int16_t style, float_t width, optional<float_t> alpha)
+{
+  mLine.color = color;
+  mLine.alpha = alpha;
+  mLine.style = style;
+  mLine.scale = RoundWidth(width, "legend entry line width");
+  return *this;
+}
+
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLineColor(int16_t color)
 {
   mLine.color = color;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLineAlpha(float_t alpha)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLineAlpha(float_t alpha)
 {
   mLine.alpha = alpha;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLineStyle(int16_t style)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLineStyle(int16_t style)
 {
   mLine.style = style;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetLineWidth(float_t width)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLineWidth(float_t width)
 {
   mLine.scale = RoundWidth(width, "legend entry line width");
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetFillColor(int16_t color)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFill(int16_t color, int16_t style, optional<float_t> alpha)
+{
+  mFill.color = color;
+  mFill.alpha = alpha;
+  mFill.style = style;
+  return *this;
+}
+
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFillColor(int16_t color)
 {
   mFill.color = color;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetFillAlpha(float_t alpha)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFillAlpha(float_t alpha)
 {
   mFill.alpha = alpha;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetFillStyle(int16_t style)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFillStyle(int16_t style)
 {
   mFill.style = style;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetTextColor(int16_t color)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetTextColor(int16_t color)
 {
   mText.color = color;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetTextAlpha(float_t alpha)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetTextAlpha(float_t alpha)
 {
   mText.alpha = alpha;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetTextFont(int16_t font)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetTextFont(int16_t font)
 {
   mText.style = font;
   return *this;
 }
 
-Plot::Pad::LegendBox::LegendEntry& Plot::Pad::LegendBox::LegendEntry::SetTextSize(float_t size)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetTextSize(float_t size)
 {
   mText.scale = size;
   return *this;
