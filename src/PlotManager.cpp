@@ -605,10 +605,12 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
 //**************************************************************************************************
 /**
  * Whether a data source is defined (for one restricted to a folder: dataSource:some/folder, the data source it is part of).
+ * The data sources of functions and points defined in the plots (AddFunction, AddPoints) always are.
  */
 //**************************************************************************************************
 bool PlotManager::IsDataSourceDefined(const string& dataSource) const
 {
+  if (dataSource == "USER_FUNCTIONS" || dataSource == "USER_GRAPHS") return true;
   return mInputs.find(dataSource.substr(0, dataSource.find(':'))) != mInputs.end();
 }
 
