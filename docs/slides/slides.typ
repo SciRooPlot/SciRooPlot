@@ -1392,7 +1392,7 @@
 
       - `Cumulative()` replaces the histogram with its running sum, low to high; pass `false` for a high-to-low sum. 1D histograms only.
 
-      - `Smooth()` applies ROOT's smoothing algorithm, repeated `nIterSmooth` times -- unsupported for profile histograms, since it would corrupt their per-bin entry counts.
+      - `Smooth()` applies ROOT's smoothing algorithm, repeated `nIterSmooth` times. For profiles it smooths the mean values of the filled bins (empty bins have no mean) and keeps their errors.
 
       - `ScaleX()` / `ScaleY()` / `ScaleZ()` rescale the axis itself (e.g. a unit conversion).
     ],

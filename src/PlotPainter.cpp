@@ -1229,7 +1229,51 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
             if (mods.GetNiterSmooth()) {
               if constexpr (is_one_of_v<ptr_type, TProfile*, TProfile2D*>()) {
-                warn("Smooth is not supported for profile histogram {} (would corrupt its per-bin entry counts), ignoring.", ptr->GetName());
+                // ROOT's Smooth would treat the sums stored in a profile as its contents: the mean values are smoothed instead,
+                // over the filled bins only (an empty bin has no mean), keeping the entries and the spread (i.e. the error) of each bin
+                const int32_t nTimes = *mods.GetNiterSmooth();
+                double_t* sums = ptr->GetArray();                     // per bin: sum of weight * y
+                double_t* sumsSquared = ptr->GetSumw2()->GetArray();  // per bin: sum of weight * y^2
+                auto setMean = [&](int32_t bin, double_t newMean) {
+                  const double_t entries = ptr->GetBinEntries(bin);
+                  const double_t mean = sums[bin] / entries;
+                  sums[bin] = newMean * entries;
+                  sumsSquared[bin] += entries * (newMean * newMean - mean * mean);
+                };
+                if constexpr (is_one_of_v<ptr_type, TProfile*>()) {
+                  // the algorithm of TH1::Smooth, applied to the sequence of filled bins
+                  vector<int32_t> bins;
+                  vector<double_t> means;
+                  for (int32_t bin = 1; bin <= ptr->GetNbinsX(); ++bin) {
+                    if (ptr->GetBinEntries(bin) == 0.) continue;
+                    bins.push_back(bin);
+                    means.push_back(ptr->GetBinContent(bin));
+                  }
+                  if (means.size() < 3) {
+                    warn("Smooth needs at least three filled bins in profile histogram {}, ignoring.", ptr->GetName());
+                  } else {
+                    TH1::SmoothArray(static_cast<int32_t>(means.size()), means.data(), nTimes);
+                    for (size_t i = 0; i < bins.size(); ++i) {
+                      setMean(bins[i], means[i]);
+                    }
+                  }
+                } else {
+                  // the kernel of TH2::Smooth, normalized to the filled bins it covers (empty bins do not pull the means towards zero)
+                  unique_ptr<TH2D> means(ptr->ProjectionXY("smoothedMeans", "e"));
+                  means->SetDirectory(nullptr);
+                  means->Sumw2(false);
+                  unique_ptr<TH2D> filled(static_cast<TH2D*>(means->Clone("smoothedFilled")));
+                  filled->SetDirectory(nullptr);
+                  for (int32_t bin = 0; bin < ptr->GetNcells(); ++bin) {
+                    filled->SetBinContent(bin, (ptr->GetBinEntries(bin) == 0.) ? 0. : 1.);
+                  }
+                  means->Smooth(nTimes);
+                  filled->Smooth(nTimes);
+                  for (int32_t bin = 0; bin < ptr->GetNcells(); ++bin) {
+                    if (ptr->GetBinEntries(bin) == 0. || ptr->IsBinUnderflow(bin) || ptr->IsBinOverflow(bin)) continue;
+                    setMean(bin, means->GetBinContent(bin) / filled->GetBinContent(bin));
+                  }
+                }
               } else {
                 ptr->Smooth(*mods.GetNiterSmooth());
               }
