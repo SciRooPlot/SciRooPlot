@@ -1895,15 +1895,18 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
 bool PlotManager::PrepareInput(TObject* obj, const string& location)
 {
   if (auto* func = dynamic_cast<TF1*>(obj); func && func->GetFormula()) {
+    const TString expression = func->GetFormula()->GetExpFormula();
     bool isValid{};
     {
       auto errGuard = make_scope_guard([lvl = gErrorIgnoreLevel]() { gErrorIgnoreLevel = lvl; });
       gErrorIgnoreLevel = kFatal;
-      isValid = TFormula("probe", func->GetFormula()->GetExpFormula(), false).IsValid();
+      // a C++ lambda given as text (TF1 f("f", "[](double* x, double* p) {...}", xmin, xmax, npar)) is compiled as such
+      isValid = (func->GetFormula()->TestBit(TFormula::kLambda)) ? TFormula("probe", expression, func->GetNdim(), func->GetNpar(), false).IsValid()
+                                                                 : TFormula("probe", expression, false).IsValid();
     }
     if (!isValid) {
       logger::error("Function {} cannot be evaluated: its formula '{}' does not compile. If it calls C++ code of your own, declare that code to ROOT's interpreter before generating the plots (gInterpreter->Declare).",
-                    location, func->GetFormula()->GetExpFormula().Data());
+                    location, expression.Data());
     }
     return isValid;
   }
