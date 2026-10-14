@@ -75,7 +75,7 @@ def DefineHiggsPlots(pm: PlotManager):
     plot[1].AddData("diphoton/mgg_data", "higgs", "data")
     plot[1].AddData("diphoton/mgg_sigBkgFit", "higgs", "signal + background fit").SetLine(kRed + 1, kSolid, 3.0)
     plot[1].AddData("diphoton/mgg_bkgFit", "higgs", "background fit").SetLine(kBlue + 1, kDashed, 3.0)
-    plot[1].AddText(0.45, 0.9, EXPERIMENT + " // " + COLLISIONS + ", 140 fb^{-1} // H #rightarrow #gamma#gamma")
+    plot[1].AddText(0.45, 0.9, [EXPERIMENT, COLLISIONS + ", 140 fb^{-1}", "H #rightarrow #gamma#gamma"])
     plot[1].AddLegend(0.45, 0.62)  # upper left corner of the box in pad coordinates
     plot[2].AddRatio(["diphoton/mgg_data", "higgs"], ["diphoton/mgg_bkgFit", "higgs"])  # histogram / function
     plot[2]['Y'].SetTitle("data / bkg.").SetRange(0.9, 1.15)
@@ -93,7 +93,7 @@ def DefineHiggsPlots(pm: PlotManager):
     plot[1].AddData("fourLepton/m4l_sigPlusBkg", "higgs", "background + H(125)").SetOptions(hist).SetLine(kRed + 1, kSolid, 3.0)
     plot[1].AddData("fourLepton/m4l_background", "higgs", "background (Z#rightarrow4l, ZZ*, Z+jets)").SetOptions(hist).SetFill(kAzure - 9, 1001).SetLineColor(kAzure - 9)
     plot[1].AddData("fourLepton/m4l_data", "higgs", "data").SetMarker(kBlack, kFullCircle, 1.2)
-    plot[1].AddText(0.2, 0.9, EXPERIMENT + " // H #rightarrow ZZ* #rightarrow 4l")
+    plot[1].AddText(0.2, 0.9, [EXPERIMENT, "H #rightarrow ZZ* #rightarrow 4l"])
     plot[1].AddLegend(0.2, 0.76)
     plot[1]['Y'].SetRange(0.0, 40.0)
     pm.AddPlot(plot)
@@ -121,7 +121,7 @@ def DefineSpectraPlots(pm: PlotManager):
     plot[1].AddData(dataStyle("ptSpec"), "data")
     plot[1].AddData(mcStyle("ptSpec"), "simulation")
     plot[1].AddLegend()
-    plot[1].AddText(EXPERIMENT + " // " + COLLISIONS + " // |#eta| < 0.8")
+    plot[1].AddText([EXPERIMENT, COLLISIONS, "|#eta| < 0.8"])
     plot[1]['X'].SetLog()
     plot[1]['Y'].SetLog()
     pm.AddPlot(plot)
@@ -381,7 +381,7 @@ def DefineDetectorPlots(pm: PlotManager):
     # time axis: unix time stamps shown as dates
     plot = Plot("integratedLuminosity", "detector/operation", "1d")
     plot[1].AddData("luminosity", "luminosity").Scatter("time", "lumi").SetOptions(points_line)
-    plot[1].AddText(0.2, 0.9, EXPERIMENT + " // " + COLLISIONS + " // 2023")
+    plot[1].AddText(0.2, 0.9, [EXPERIMENT, COLLISIONS, "2023"])
     plot[1]['X'].SetTimeFormat("%b%F1970-01-01 00:00:00").SetNumDivisions(508).SetTitle("")
     plot[1]['Y'].SetTitle("delivered luminosity (fb^{-1})")
     pm.AddPlot(plot)
@@ -523,7 +523,7 @@ def DefineHeavyIonPlots(pm: PlotManager):
     for i, cent in enumerate([centralities[0], centralities[2]]):  # 0-10 and 30-50
         plot[i + 1].AddData("cent_" + cent + "/v2", "heavyion")
         plot[i + 1].AddText(0.2, 0.85, "Pb-Pb " + cent + "%")
-    plot[1].AddText(0.2, 0.75, EXPERIMENT + " // #it{v}_{2}{2}")
+    plot[1].AddText(0.2, 0.75, [EXPERIMENT, "#it{v}_{2}{2}"])
     plot[0]['Y'].SetRange(0.0, 0.3).SetTitle("#it{v}_{2}")
     pm.AddPlot(plot)
 

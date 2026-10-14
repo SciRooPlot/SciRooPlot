@@ -10,7 +10,6 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `PlotManager(const std::string& projectName = "")`
 - `void SaveProject()`
 - `void AddDataSource(const std::string& dataSource, const std::vector<std::string>& inputs, bool replace = false)`
-- `void AddDataSource(const std::string& dataSource, std::initializer_list<std::string> inputs, bool replace = false)`
 - `void AddDataSource(const std::string& dataSource, const std::string& input, bool replace = false)`
 - `void AddDataSource(const std::string& dataSource, const std::vector<TObject*>& inputs, bool replace = false)`
 - `void AddDataSource(const std::string& dataSource, TObject* input, bool replace = false)`
@@ -72,8 +71,11 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorSettings, const std::string& denominatorName, const Data& denominatorSettings, const std::optional<std::string>& label = {})`
 - `Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName, const Data& denominatorSettings, const std::optional<std::string>& label = {})`
 - `TextBox& AddText(double_t xPos, double_t yPos, const std::string& text)`
+- `TextBox& AddText(double_t xPos, double_t yPos, const std::vector<std::string>& lines)`
 - `TextBox& AddText(const std::string& text)`
+- `TextBox& AddText(const std::vector<std::string>& lines)`
 - `TextBox& AddText(box_placement_t placement, const std::string& text)`
+- `TextBox& AddText(box_placement_t placement, const std::vector<std::string>& lines)`
 - `LegendBox& AddLegend(double_t xPos, double_t yPos, const std::optional<std::string>& title = {})`
 - `LegendBox& AddLegend(const std::optional<std::string>& title = {})`
 - `LegendBox& AddLegend(box_placement_t placement, const std::optional<std::string>& title = {})`
@@ -316,8 +318,11 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 ## Plot::Pad::TextBox
 
 - `TextBox(const std::string& text)`
+- `TextBox(const std::vector<std::string>& lines)`
 - `TextBox(double_t xPos, double_t yPos, const std::string& text)`
-- `TextBox& SetText(const std::string& text)`
+- `TextBox(double_t xPos, double_t yPos, const std::vector<std::string>& lines)`
+- `TextBox& SetText(const std::string& text)` — lines separated by newlines
+- `TextBox& SetText(const std::vector<std::string>& lines)`
 - `TextBox& SetTextAlign(int16_t align)`
 
 ## Plot::Pad::StatsBox

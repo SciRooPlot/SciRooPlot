@@ -88,6 +88,8 @@ def methods(section: str, class_name: str):
         short = class_name.split("::")[-1].split("<")[0]
         if "ptree" in args or args in (f"const {short}& other", f"{short}&&") or name.endswith("_t"):
             continue  # internal, copy and move constructors; helper structs are described in TYPES
+        if "initializer_list" in args:
+            continue  # overloads for braced lists; the std::vector overloads cover them
         comment = ""
         if "//" in line:
             comment = line.split("//", 1)[1].strip()

@@ -32,6 +32,7 @@
 #include <boost/property_tree/ptree.hpp>
 
 #include <deque>
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -308,8 +309,15 @@ class Plot::Pad
                   const Data& denominatorSettings, const std::optional<std::string>& label = {});
 
   TextBox& AddText(double_t xPos, double_t yPos, const std::string& text);
+  TextBox& AddText(double_t xPos, double_t yPos, const std::vector<std::string>& lines);
   TextBox& AddText(const std::string& text);
+  TextBox& AddText(const std::vector<std::string>& lines);
   TextBox& AddText(box_placement_t placement, const std::string& text);
+  TextBox& AddText(box_placement_t placement, const std::vector<std::string>& lines);
+  // (for braced lists of lines, which would otherwise be ambiguous with std::string's iterator constructor)
+  TextBox& AddText(double_t xPos, double_t yPos, std::initializer_list<std::string> lines);
+  TextBox& AddText(std::initializer_list<std::string> lines);
+  TextBox& AddText(box_placement_t placement, std::initializer_list<std::string> lines);
   LegendBox& AddLegend(double_t xPos, double_t yPos, const std::optional<std::string>& title = {});
   LegendBox& AddLegend(const std::optional<std::string>& title = {});
   LegendBox& AddLegend(box_placement_t placement, const std::optional<std::string>& title = {});
@@ -1288,7 +1296,9 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 {
  public:
   explicit TextBox(const std::string& text);
+  explicit TextBox(const std::vector<std::string>& lines);
   TextBox(double_t xPos, double_t yPos, const std::string& text);
+  TextBox(double_t xPos, double_t yPos, const std::vector<std::string>& lines);
   explicit TextBox(const boost::property_tree::ptree& textBoxTree);
 
   virtual ~TextBox() = default;
@@ -1299,7 +1309,9 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
   void Print() const { Plot::Print(GetPropertyTree(), "TextBox"); }
 
   using Box<TextBox>::SetText;
-  TextBox& SetText(const std::string& text);
+  TextBox& SetText(const std::string& text);  // lines separated by newlines
+  TextBox& SetText(const std::vector<std::string>& lines);
+  TextBox& SetText(std::initializer_list<std::string> lines);
   TextBox& SetTextAlign(int16_t align);
 
  protected:
@@ -1309,10 +1321,11 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 
   boost::property_tree::ptree GetPropertyTree() const;
   const std::string& GetText() const { return mText; }
+  std::vector<std::string> GetLines() const;
   const auto& GetTextAlign() const { return mTextAlign; }
 
  private:
-  std::string mText;
+  std::string mText;  // lines separated by newlines
   std::optional<int16_t> mTextAlign;
 };
 

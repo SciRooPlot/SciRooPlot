@@ -245,12 +245,13 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // (again please have a look at inc/Plot.h for the list of possibilities)
 
   // similar to the legend boxes you can add a text box to your plot
-  plot[1].AddText("my important description spanning // over two lines");
+  plot[1].AddText({"my important description", "spanning over two lines"});
   // or as close as possible to a corner of the frame
   plot[1].AddText(top_left, "my important description");
   // or
-  plot[1].AddText(0.2, 0.9, "this is // where I // want my text");
-  // by default " // " is used as a delimiter between multiple lines
+  plot[1].AddText(0.2, 0.9, {"this is", "where I", "want my text"});
+  // the lines of a text are given as a list (in Python: ["this is", "where I", "want my text"]) or separated by newlines
+  plot[1].AddText(0.2, 0.9, "this is\nwhere I\nwant my text");
 
   // pro tip: to determine the perfect position of the legend or text,
   // you can place it at the desired position in interactive mode

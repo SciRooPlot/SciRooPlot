@@ -1325,7 +1325,7 @@
 
       - The row of a data item is styled on the data, `SetLegendEntry(LegendEntry()...)`; `AddEntry(label)` adds a row of its own (no label: an empty line), at the end or placed with `AtTop()`, `BeforeData(n)`, `AfterData(n)`.
 
-      - For multi-line text, join the lines into one string with `" // "` in between; `SetLineSpacing()` sets the gap between them.
+      - Multi-line text is given as a list of lines (`{"a", "b"}` / `["a", "b"]`) or as one string with newlines; `SetLineSpacing()` sets the gap between them.
     ],
     [
       #code-block(
@@ -1349,7 +1349,7 @@
           plot[1].AddLegend(top_right);
 
           plot[1].AddText(0.18, 0.88, "Work in progress");
-          plot[1].AddText("first line // second line");
+          plot[1].AddText({"first line", "second line"});
           ```
         ],
         [
@@ -1370,7 +1370,7 @@
           plot[1].AddLegend(top_right)
 
           plot[1].AddText(0.18, 0.88, "Work in progress")
-          plot[1].AddText("first line // second line")
+          plot[1].AddText(["first line", "second line"])
           ```
         ],
       )
@@ -1994,7 +1994,7 @@
         ..(if lang == "cpp" {
           ([`TextBox(text)` / `TextBox(xPos, yPos, text)`], [Construct directly, auto-placed or fixed.])
         } else { () }),
-        [`SetText(text)`], [Set the displayed text (lines separated by `" // "`).],
+        [`SetText(text)`], [Set the displayed text (a list of lines, or one string with newlines).],
         [`SetTextAlign(align)`], [ROOT alignment code, e.g. `kHAlignCenter + kVAlignTop` (default `kHAlignLeft + kVAlignCenter`).],
       ), col-widths: (52%, 48%), text-size: 12pt)
       #v(0.6em)

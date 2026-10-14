@@ -2205,16 +2205,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
                       (entry.GetLabel()) ? lines.push_back(*entry.GetLabel()) : lines.push_back("");
                     });
     } else {
-      // split text string to vector
-      string delimiter{" // "};
-      string text{box->GetText()};
-      size_t pos{};
-      size_t last{};
-      while ((pos = text.find(delimiter, last)) != string::npos) {
-        lines.push_back(text.substr(last, pos - last));
-        last = pos + delimiter.length();
-      }
-      lines.push_back(text.substr(last));
+      lines = box->GetLines();
     }
 
     float_t text_size = textSize.value_or(24.f);

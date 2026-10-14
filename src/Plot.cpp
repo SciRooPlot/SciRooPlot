@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <initializer_list>
 #include <limits>
 #include <memory>
 #include <string>
@@ -1561,6 +1562,15 @@ Plot::Pad::TextBox& Plot::Pad::AddText(double_t xPos, double_t yPos, const strin
   mTextBoxes.push_back(std::make_shared<TextBox>(xPos, yPos, text));
   return *mTextBoxes.back();
 }
+Plot::Pad::TextBox& Plot::Pad::AddText(double_t xPos, double_t yPos, const vector<string>& lines)
+{
+  mTextBoxes.push_back(std::make_shared<TextBox>(xPos, yPos, lines));
+  return *mTextBoxes.back();
+}
+Plot::Pad::TextBox& Plot::Pad::AddText(double_t xPos, double_t yPos, std::initializer_list<string> lines)
+{
+  return AddText(xPos, yPos, vector<string>(lines));
+}
 
 //**************************************************************************************************
 /**
@@ -1572,6 +1582,15 @@ Plot::Pad::TextBox& Plot::Pad::AddText(const string& text)
   mTextBoxes.push_back(std::make_shared<TextBox>(text));
   return *mTextBoxes.back();
 }
+Plot::Pad::TextBox& Plot::Pad::AddText(const vector<string>& lines)
+{
+  mTextBoxes.push_back(std::make_shared<TextBox>(lines));
+  return *mTextBoxes.back();
+}
+Plot::Pad::TextBox& Plot::Pad::AddText(std::initializer_list<string> lines)
+{
+  return AddText(vector<string>(lines));
+}
 
 //**************************************************************************************************
 /**
@@ -1581,6 +1600,14 @@ Plot::Pad::TextBox& Plot::Pad::AddText(const string& text)
 Plot::Pad::TextBox& Plot::Pad::AddText(box_placement_t placement, const string& text)
 {
   return AddText(text).SetAutoPlacement(placement);
+}
+Plot::Pad::TextBox& Plot::Pad::AddText(box_placement_t placement, const vector<string>& lines)
+{
+  return AddText(lines).SetAutoPlacement(placement);
+}
+Plot::Pad::TextBox& Plot::Pad::AddText(box_placement_t placement, std::initializer_list<string> lines)
+{
+  return AddText(placement, vector<string>(lines));
 }
 
 //**************************************************************************************************
@@ -3630,8 +3657,14 @@ BoxType& Plot::Pad::Box<BoxType>::SetLineSpacing(float_t lineSpacing)
  */
 //**************************************************************************************************
 Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const string& text)
-  : Box(xPos, yPos), mText{text}
+  : Box(xPos, yPos)
 {
+  SetText(text);
+}
+Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const vector<string>& lines)
+  : Box(xPos, yPos)
+{
+  SetText(lines);
 }
 
 //**************************************************************************************************
@@ -3639,8 +3672,14 @@ Plot::Pad::TextBox::TextBox(double_t xPos, double_t yPos, const string& text)
  * TextBox constructor with automatic placing.
  */
 //**************************************************************************************************
-Plot::Pad::TextBox::TextBox(const string& text) : Box(), mText{text}
+Plot::Pad::TextBox::TextBox(const string& text) : Box()
 {
+  SetText(text);
+  SetAutoPlacement();
+}
+Plot::Pad::TextBox::TextBox(const vector<string>& lines) : Box()
+{
+  SetText(lines);
   SetAutoPlacement();
 }
 
@@ -3652,7 +3691,7 @@ Plot::Pad::TextBox::TextBox(const string& text) : Box(), mText{text}
 Plot::Pad::TextBox::TextBox(const ptree& textBoxTree) : Box(textBoxTree)
 {
   try {
-    mText = textBoxTree.get<string>("text");
+    SetText(textBoxTree.get<string>("text"));
   } catch (const std::exception& e) {
     logger::throw_invalid_argument("Could not construct text box from ptree: {}", e.what());
   }
@@ -3680,7 +3719,38 @@ ptree Plot::Pad::TextBox::GetPropertyTree() const
 Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const string& text)
 {
   mText = text;
+  // the former line delimiter is still accepted for the time being (not documented, to be removed)
+  for (size_t pos{}; (pos = mText.find(" // ", pos)) != string::npos;)
+    mText.replace(pos, 4, "\n");
   return *this;
+}
+Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const vector<string>& lines)
+{
+  mText.clear();
+  for (size_t i = 0; i < lines.size(); ++i) {
+    if (i) mText += "\n";
+    mText += lines[i];
+  }
+  return *this;
+}
+Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(std::initializer_list<string> lines)
+{
+  return SetText(vector<string>(lines));
+}
+
+//**************************************************************************************************
+/**
+ * The lines of the text.
+ */
+//**************************************************************************************************
+vector<string> Plot::Pad::TextBox::GetLines() const
+{
+  vector<string> lines;
+  size_t last{};
+  for (size_t pos{}; (pos = mText.find('\n', last)) != string::npos; last = pos + 1)
+    lines.push_back(mText.substr(last, pos - last));
+  lines.push_back(mText.substr(last));
+  return lines;
 }
 Plot::Pad::TextBox& Plot::Pad::TextBox::SetTextAlign(int16_t align)
 {
