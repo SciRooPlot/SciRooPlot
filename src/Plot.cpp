@@ -1690,6 +1690,8 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mScaleRange.max, "scale_range_max");
   read_from_tree(dataTree, mContours, "contours");
   read_from_tree(dataTree, mNContours, "number_of_contours");
+  read_from_tree(dataTree, mNpx, "npx");
+  read_from_tree(dataTree, mNpy, "npy");
 
   // extract data info
   {
@@ -1834,6 +1836,8 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mScaleRange.max, "scale_range_max");
   put_in_tree(dataTree, mContours, "contours");
   put_in_tree(dataTree, mNContours, "number_of_contours");
+  put_in_tree(dataTree, mNpx, "npx");
+  put_in_tree(dataTree, mNpy, "npy");
 
   if (mDataInfo.dataDims.size()) {
     vector<string> vars;
@@ -1910,6 +1914,8 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
   mFill.style = dataLayout.mFill.style;
   mContours = dataLayout.mContours;
   mNContours = dataLayout.mNContours;
+  mNpx = dataLayout.mNpx;
+  mNpy = dataLayout.mNpy;
   return *this;
 }
 auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
@@ -1937,6 +1943,8 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   set_if(dataLayout.mFill.style, mFill.style);
   set_if(dataLayout.mContours, mContours);
   set_if(dataLayout.mNContours, mNContours);
+  set_if(dataLayout.mNpx, mNpx);
+  set_if(dataLayout.mNpy, mNpy);
   return *this;
 }
 auto Plot::Pad::Data::SetDataSource(const string& dataSource) -> decltype(*this)
@@ -2148,6 +2156,12 @@ auto Plot::Pad::Data::SetContours(const vector<double>& contours) -> decltype(*t
 auto Plot::Pad::Data::SetContours(int32_t nContours) -> decltype(*this)
 {
   mNContours = nContours;
+  return *this;
+}
+auto Plot::Pad::Data::SetNpx(int32_t nx, optional<int32_t> ny) -> decltype(*this)
+{
+  mNpx = nx;
+  mNpy = ny;
   return *this;
 }
 auto Plot::Pad::Data::Normalize(bool scaleBinWidth) -> decltype(*this)

@@ -104,6 +104,8 @@ Base plots: `PlotManager::MakeBasePlot("<type>[_wide|_tall][_<cols>x<rows>][_rat
 ```cpp
 plot[1].AddData("hist", "src", "label");                    // histogram, graph, function, tree, csv — type is detected
 plot[1].AddFunction("sin(x)/x", "label");  plot[1].AddPoints({x...}, {y...});  plot[1].AddLine({x1,y1}, {x2,y2});
+plot[1].AddFunction("[](double* x, double* p) { return std::exp(-x[0] * x[1]); }");  // C++ lambda as text: x[0..2] set the dimension, no parameters
+// any callable (with captures, also from python): TF1 f("f", callable, xmin, xmax, 0); f.SetNpx(n); pm.AddDataSource("src", &f); then AddData("f", "src")
 plot[1].AddData(myTemplate("hist"), "label");               // Data template: Data().SetOptions(curve).SetColor(kRed) then template("name"[, "src"])
 .SetOptions(points | "HIST C")     // alias (preferred) or raw ROOT option string
 .SetColor(c).SetAlpha(a)           // all of marker, line, fill at once
@@ -111,6 +113,7 @@ plot[1].AddData(myTemplate("hist"), "label");               // Data template: Da
 .SetRangeX(a, b).SetMaxRangeX(b).SetRangeY(a, b)             // visible range of this data, independent of the axis
 .SetScaleMinimum(f).SetScaleMaximum(f)                      // widen the automatic axis range
 .SetLegend(2).SetLegendLabel("l").SetDefinesFrame().SetShowOverflowBins().SetContours(n).SetTextFormat("4.2f")
+.SetNpx(n[, ny])                   // points a function is drawn with (AddFunction: 1000 in 1d; inputs keep their own)
 .SetShowStats("eMR", "title")   // statistics box of a histogram (letters of TStyle::SetOptStat; the optional title is its first line)
 ```
 Labels may contain `<name> <title> <entries> <integral> <maximum> <minimum> <mean>` with printf formats: `"avg = <mean[.2f]>"` (graphs: `<entries>` points, `<maximum>`/`<minimum>` of y). ROOT TLatex syntax works in all texts (`#it{p}_{T}`, `#sqrt{s}`).

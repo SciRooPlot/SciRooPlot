@@ -971,6 +971,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (data->GetMaxRangeY()) data_ptr->SetMaximum(*data->GetMaxRangeY());
             }
           }
+          if constexpr (is_func<data_type>()) {
+            if (data->GetNpx()) data_ptr->SetNpx(*data->GetNpx());
+            if constexpr (is_func_2d<data_type>() || is_func_3d<data_type>()) {
+              if (data->GetNpy()) data_ptr->SetNpy(*data->GetNpy());
+            }
+          } else if (data->GetNpx()) {
+            logger::warning("SetNpx applies only to functions, not to {}.", data->GetName());
+          }
           if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
             if (hasRangeY && !pad_ptr->GetView()) setBinRange(data_ptr->GetYaxis(), data->GetMinRangeY(), data->GetMaxRangeY());
             if (const auto& contours = data->GetContours()) {

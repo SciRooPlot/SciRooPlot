@@ -1144,25 +1144,62 @@ bool PlotManager::FillBuffer()
 
         // generate user-defined functions on-the-fly
         if (dataSource == "USER_FUNCTIONS") {
+          // a function is given as formula ("[0] * sin(x)") or as C++ lambda ("[](double* x, double* p) { return std::sin(x[0]); }"):
+          // a lambda has no parameters that could be set, its dimension is that of the variables it uses (x[0], x[1], x[2])
+          static const std::regex lambdaStart(R"(^\s*\[[^\]]*\]\s*\()");
+          const bool isLambda = std::regex_search(dataName, lambdaStart);
+          int32_t dim{};
+          if (isLambda) {
+            static const std::regex signature(R"(^\s*\[\s*\]\s*\(\s*(?:const\s+)?(?:double|Double_t)\s*\*\s*(\w+)\s*,\s*(?:const\s+)?(?:double|Double_t)\s*\*\s*(\w*)\s*\))");
+            std::smatch names;
+            if (!std::regex_search(dataName, names, signature)) {
+              logger::error("Function '{}' needs the form [](double* x, double* p) {{ ... }}.", dataName);
+              continue;
+            }
+            const string body = names.suffix();
+            const string var = names[1];
+            const std::regex variableUse("\\b" + var + "\\b(\\s*\\[\\s*([0-9]+)\\s*\\])?");
+            bool isIndexed = true;
+            dim = 1;
+            for (auto use = std::sregex_iterator(body.begin(), body.end(), variableUse); use != std::sregex_iterator(); ++use) {
+              isIndexed = isIndexed && (*use)[2].matched;
+              if ((*use)[2].matched) dim = std::max(dim, std::stoi((*use)[2]) + 1);
+            }
+            if (!isIndexed || dim > 3) {
+              logger::error("Function '{}' has to use its variables as {}[0], {}[1] or {}[2].", dataName, var, var, var);
+              continue;
+            }
+            if (const string par = names[2]; !par.empty() && std::regex_search(body, std::regex("\\b" + par + "\\b"))) {
+              logger::error("Function '{}' uses parameters, which cannot be set: write their values into the function.", dataName);
+              continue;
+            }
+          }
           bool isValid{};
-          int dim{};
           {
             auto errGuard = make_scope_guard([lvl = gErrorIgnoreLevel]() { gErrorIgnoreLevel = lvl; });
             gErrorIgnoreLevel = kFatal;
-            TFormula formula("tmp", dataName.data(), false);
-            isValid = formula.IsValid();
-            dim = formula.GetNdim();
+            if (isLambda) {
+              isValid = TFormula("tmp", dataName.data(), dim, 0, false).IsValid();
+            } else {
+              TFormula formula("tmp", dataName.data(), false);
+              isValid = formula.IsValid();
+              dim = formula.GetNdim();
+            }
           }
           if (!isValid) {
             logger::error("'{}' is not a valid function expression.", dataName);
             continue;
           }
+          // the lambda constructors of ROOT take the number of parameters and dimensions
+          constexpr int32_t nPar = 0;
           if (dim <= 1) {
-            dataPtr.reset(new TF1(dataName.data(), dataName.data()));
+            auto* func = (isLambda) ? new TF1(dataName.data(), dataName.data(), 0., 1., nPar, 1) : new TF1(dataName.data(), dataName.data());
+            func->SetNpx(1000);  // drawn across the whole frame, where ROOT's default of 100 points looks angular
+            dataPtr.reset(func);
           } else if (dim == 2) {
-            dataPtr.reset(new TF2(dataName.data(), dataName.data()));
+            dataPtr.reset((isLambda) ? new TF2(dataName.data(), dataName.data(), 0., 1., 0., 1., nPar, 2) : new TF2(dataName.data(), dataName.data()));
           } else if (dim == 3) {
-            dataPtr.reset(new TF3(dataName.data(), dataName.data()));
+            dataPtr.reset((isLambda) ? new TF3(dataName.data(), dataName.data(), 0., 1., 0., 1., 0., 1., nPar, 3) : new TF3(dataName.data(), dataName.data()));
           } else {
             logger::error("Cannot create function {}.", dataName);
           }

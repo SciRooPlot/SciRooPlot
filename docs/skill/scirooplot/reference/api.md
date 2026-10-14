@@ -213,6 +213,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& SetDefinesFrame(bool dontDraw = false)`
 - `Data& SetContours(const std::vector<double>& contours)`
 - `Data& SetContours(int32_t nContours)`
+- `Data& SetNpx(int32_t nx, std::optional<int32_t> ny = {})`
 - `Data& Normalize(bool scaleBinWidth = false)`
 - `Data& NormalizeToMaximum(bool normMaximum = true)`
 - `Data& Scale(double_t scaleFactor)`

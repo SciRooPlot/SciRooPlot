@@ -259,6 +259,14 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // (ranges stored with the input histograms or graphs are ignored, functions from inputs are drawn where they are defined)
   plot[1].AddData("hist", "dataSourceA", "hist with reduced range").SetRangeX(1.5, 2.7);
 
+  // functions defined in the plot: a formula of x, y, z or a C++ lambda given as text, with x[0], x[1], x[2] as variables
+  // (it has no parameters to set: write the values into the text); SetNpx sets the number of points a function is drawn with
+  plot[1].AddFunction("sin(x)/x", "formula");
+  plot[1].AddFunction("[](double* x, double* p) { return (x[0] < 1.) ? 1. : 1. / x[0]; }", "lambda").SetNpx(2000);
+  // any C++ or python callable becomes a function via a data source, written as its values at npx points of its range:
+  // TF1 myFunc("myFunc", [&](double* x, double* p) { return myCalculation(x[0]); }, 0., 10., 0);  myFunc.SetNpx(500);
+  // pm.AddDataSource("myFunctions", &myFunc);  plot[1].AddData("myFunc", "myFunctions");
+
   // the added data can be further modified later by accessing it via its index (starting with 1) in the following ways:
   plot[1].GetData(2).SetColor(kGreen); // A: explicitly use getter
   plot[1](2).SetColor(kRed);           // B: use the () operator

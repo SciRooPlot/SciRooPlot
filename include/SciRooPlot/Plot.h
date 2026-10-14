@@ -571,6 +571,7 @@ class Plot::Pad::Data
   Data& SetDefinesFrame(bool dontDraw = false);
   Data& SetContours(const std::vector<double>& contours);
   Data& SetContours(int32_t nContours);
+  Data& SetNpx(int32_t nx, std::optional<int32_t> ny = {});
 
   // data modifiers
   Data& Normalize(bool scaleBinWidth = false);
@@ -685,6 +686,8 @@ class Plot::Pad::Data
   const bool& GetDontDraw() const { return mDontDraw; }
   const auto& GetContours() const { return mContours; }
   const auto& GetNContours() const { return mNContours; }
+  const auto& GetNpx() const { return mNpx; }
+  const auto& GetNpy() const { return mNpy; }
   const auto& GetDataInfo() const { return mDataInfo; }
   const auto& GetProjInfo() const { return mProjInfo; }
   const auto& GetNiterSmooth() const { return mModify.nIterSmooth; }
@@ -814,6 +817,8 @@ class Plot::Pad::Data
 
   std::optional<std::vector<double_t>> mContours;
   std::optional<int32_t> mNContours;
+  std::optional<int32_t> mNpx;  // points at which a function is evaluated to draw it (along y for 2d functions: mNpy)
+  std::optional<int32_t> mNpy;
 };
 
 //**************************************************************************************************
