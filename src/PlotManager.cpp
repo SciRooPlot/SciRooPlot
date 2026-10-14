@@ -1025,7 +1025,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   set<string> sourcesToRead;
   for (const auto& [dataSource, buffer] : mDataBuffer) {
     for (const auto& [dataName, dataPtr] : buffer) {
-      if (dataPtr) continue;
+      if (IsBuffered(dataSource, dataName)) continue;
       ++nItemsToRead;
       sourcesToRead.insert(dataSource);
     }
@@ -1097,6 +1097,28 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
 
 //**************************************************************************************************
 /**
+ * Whether data is already read (in this or a previous GeneratePlots() call). The results of tree and table requests are
+ * stored under the name with the suffix of the request, while the entry of the name itself stays empty.
+ */
+//**************************************************************************************************
+bool PlotManager::IsBuffered(const string& dataSource, const string& name) const
+{
+  const auto& buffer = mDataBuffer.at(dataSource);
+  if (buffer.at(name)) return true;
+  auto sourceInfos = mDataInfoBuffer.find(dataSource);
+  if (sourceInfos == mDataInfoBuffer.end()) return false;
+  auto infos = sourceInfos->second.find(name);
+  if (infos == sourceInfos->second.end() || infos->second.empty()) return false;
+  return std::all_of(infos->second.begin(), infos->second.end(), [&](const auto& dataInfo) {
+    const string nameSuffix = dataInfo.GetNameSuffix();
+    if (nameSuffix.empty()) return false;
+    auto result = buffer.find(name + nameSuffix);
+    return result != buffer.end() && result->second;
+  });
+}
+
+//**************************************************************************************************
+/**
  * Fills all the nodes defined in buffer hash map with data read from files.
  */
 //**************************************************************************************************
@@ -1113,7 +1135,7 @@ bool PlotManager::FillBuffer()
     map<string, unordered_map<string, set<string>>> requiredData;  // data source -> subdir -> names
     for (const auto& dataSource : dataSources) {
       for (auto& [dataName, dataPtr] : mDataBuffer[dataSource]) {
-        if (dataPtr) continue;
+        if (IsBuffered(dataSource, dataName)) continue;
 
         // generate user-defined functions on-the-fly
         if (dataSource == "USER_FUNCTIONS") {
@@ -2211,7 +2233,12 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
 
   vector<const data_info_t*> parallelInfos;
   vector<const data_info_t*> sequentialInfos;
+  const auto& buffer = mDataBuffer[dataSource];
   for (auto& dataInfo : mDataInfoBuffer[dataSource][name]) {
+    // results of an earlier GeneratePlots() call are kept until ClearDataBuffer(), like all other data
+    if (auto result = buffer.find(name + dataInfo.GetNameSuffix()); result != buffer.end() && result->second) {
+      continue;
+    }
     // requests with other joins are processed on another data frame
     if (joins && dataInfo.joins.value_or(vector<Plot::Pad::Data::data_info_t::join_t>{}) != *joins) continue;
     if (dataInfo.dataDims.empty()) {

@@ -134,6 +134,7 @@ class PlotManager
   void PrintBufferStatus(bool onlyMissing = false) const;
   std::vector<std::tuple<std::string, std::string, Plot::Pad::Data::data_info_t>> GetMissingData(Plot& plot);
   bool FillBuffer();
+  bool IsBuffered(const std::string& dataSource, const std::string& name) const;
   std::vector<std::string> ExpandInputs(const std::string& dataSource) const;
   bool IsDataSourceDefined(const std::string& dataSource) const;
   static std::string DataLocation(const std::string& dataSource, const std::string& name);
