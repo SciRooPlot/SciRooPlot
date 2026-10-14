@@ -456,7 +456,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     }
 
     TH1* axisHist_ptr{nullptr};
-    vector<unique_ptr<TPaveStats>> statsBoxes;  // filled by ROOT while drawing the data, placed after all data are drawn
+    vector<std::pair<unique_ptr<TPaveStats>, std::shared_ptr<const Plot::Pad::StatsBox>>> statsBoxes;  // filled by ROOT while drawing the data, placed after all data are drawn
     string drawingOptions;
     uint16_t dataIndex{};
     array<uint16_t, 6> defaultSettingIndices = {0};
@@ -1065,13 +1065,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   ReplacePlaceholders(titleText, data_ptr);
                   static_cast<TText*>(stats->GetListOfLines()->First())->SetTitle(titleText.data());  // instead of the name of the histogram
                 }
-                stats->SetTextFont(textFont.value_or(43));
-                stats->SetTextSize(textSize.value_or(24.f));
+                // without settings for the box: placed automatically, framed in the line colour of the data
+                auto statsBox = (data->GetStatsBox()) ? data->GetStatsBox() : std::make_shared<const Plot::Pad::StatsBox>();
+                stats->SetTextFont(statsBox->GetTextFont().value_or(textFont.value_or(43)));
+                stats->SetTextSize(statsBox->GetTextSize().value_or(textSize.value_or(24.f)));
+                if (statsBox->GetTextColor()) stats->SetTextColor(*statsBox->GetTextColor());
+                if (statsBox->GetTextAlpha()) stats->SetTextColor(TColor::GetColorTransparent(stats->GetTextColor(), *statsBox->GetTextAlpha()));
                 stats->SetLineColor(data_ptr->GetLineColor());
                 stats->SetLineWidth(1);
                 stats->SetBorderSize(1);
                 stats->SetFillStyle(0);
-                statsBoxes.emplace_back(stats);
+                ApplyBoxStyle(*statsBox, stats);
+                statsBoxes.emplace_back(stats, statsBox);
               } else {
                 logger::warning("ROOT did not create a statistics box for {}.", data->GetName());
               }
@@ -1676,7 +1681,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     }
 
     // statistics boxes, placed before the legends and texts, so that these avoid them
-    for (auto& stats : statsBoxes) {
+    for (auto& [stats, statsBox] : statsBoxes) {
       const double_t padWidthPixel = pad_ptr->GetWw() * pad_ptr->GetAbsWNDC();
       const double_t padHeightPixel = pad_ptr->GetWh() * pad_ptr->GetAbsHNDC();
       auto textWidth = [&](const TString& text) {
@@ -1712,21 +1717,23 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       }
       double_t lineHeightPixel{stats->GetTextSize()};
       if (stats->GetTextFont() % 10 <= 2) lineHeightPixel = GetTextSizePixel(stats->GetTextSize());
-      const double_t lineSpacing{0.3};  // as for legends and texts
+      const double_t lineSpacing = statsBox->GetLineSpacing().value_or(0.3);  // as for legends and texts
       const double_t contentWidthPixel = std::max({labelWidth + lineHeightPixel + valueWidth, titleWidth, 3. * cellWidth});
-      const double_t widthNDC = contentWidthPixel / (1. - 2. * stats->GetMargin()) / padWidthPixel;  // the margin is a fraction of the box width
-      const double_t heightNDC = (1. + lineSpacing) * lineHeightPixel * stats->GetListOfLines()->GetSize() / padHeightPixel;
+      // the margin of TPaveStats is a fraction of the box width, the one set for a box is in NDC (as for legends and texts)
+      double_t widthNDC = (statsBox->GetMargin()) ? contentWidthPixel / padWidthPixel + 2. * *statsBox->GetMargin() : contentWidthPixel / (1. - 2. * stats->GetMargin()) / padWidthPixel;
+      double_t heightNDC = (1. + lineSpacing) * lineHeightPixel * stats->GetListOfLines()->GetSize() / padHeightPixel;
+      if (statsBox->GetWidth()) widthNDC = *statsBox->GetWidth();
+      if (statsBox->GetHeight()) heightNDC = *statsBox->GetHeight();
+      if (statsBox->GetMargin()) stats->SetMargin(*statsBox->GetMargin() / widthNDC);
 
       // the border is drawn centered on the edges of the box, so half of it sticks out on each side
       const double_t borderX = mScale * stats->GetLineWidth() / padWidthPixel;
       const double_t borderY = mScale * stats->GetLineWidth() / padHeightPixel;
-      double_t lowerLeftX{};
-      double_t lowerLeftY{};
-      FindBoxPosition(pad_ptr, widthNDC + borderX, heightNDC + borderY, best_corner, "statistics box", lowerLeftX, lowerLeftY);
-      stats->SetX1NDC(lowerLeftX + 0.5 * borderX);
-      stats->SetY1NDC(lowerLeftY + 0.5 * borderY);
-      stats->SetX2NDC(lowerLeftX + 0.5 * borderX + widthNDC);
-      stats->SetY2NDC(lowerLeftY + 0.5 * borderY + heightNDC);
+      const auto [upperLeftX, upperLeftY] = PlaceBox(*statsBox, pad_ptr, widthNDC, heightNDC, borderX, borderY, "statistics box");
+      stats->SetX1NDC(upperLeftX);
+      stats->SetY1NDC(upperLeftY - heightNDC);
+      stats->SetX2NDC(upperLeftX + widthNDC);
+      stats->SetY2NDC(upperLeftY);
       pad_ptr->cd();
       stats.release()->Draw();
     }
@@ -2180,15 +2187,6 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     auto textFont{box->GetTextFont()};
     auto textSize{box->GetTextSize()};
 
-    auto borderColor{box->GetBorderColor()};
-    auto borderAlpha{box->GetBorderAlpha()};
-    auto borderStyle{box->GetBorderStyle()};
-    auto borderWidth{box->GetBorderWidth()};
-
-    auto fillColor{box->GetFillColor()};
-    auto fillStyle{box->GetFillStyle()};
-    auto fillAlpha{box->GetFillAlpha()};
-
     // the drawn data a legend row refers to (named "<number of the data in the pad>:<name>" when drawn)
     auto findData = [pad](uint16_t dataID) -> TObject* {
       const string prefix = std::to_string(dataID) + ":";
@@ -2331,24 +2329,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       relMarginWidth = totalMarginWidthNDC / (totalWidthNDC / nColumns);
     }
 
-    double_t upperLeftX{box->GetXPosition()};
-    double_t upperLeftY{box->GetYPosition()};
-
-    if (box->IsAutoPlacement()) {
-      // the border is drawn centered on the edges of the box, so half of it sticks out on each side
-      const double_t borderX = mScale * box->GetBorderWidth().value_or(0.) / padWidthPixel;
-      const double_t borderY = mScale * box->GetBorderWidth().value_or(0.) / padHeightPixel;
-      double_t lowerLeftX{};
-      double_t lowerLeftY{};
-      FindBoxPosition(pad, totalWidthNDC + borderX, totalHeightNDC + borderY, *box->GetPlacement(), (isLegend) ? "legend" : "text", lowerLeftX, lowerLeftY);
-      upperLeftX = lowerLeftX + 0.5 * borderX;
-      upperLeftY = lowerLeftY + 0.5 * borderY + totalHeightNDC;
-    } else if (box->IsUserCoordinates()) {
-      // convert user coordinates to NDC
-      pad->Update();
-      upperLeftX = (upperLeftX - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
-      upperLeftY = (upperLeftY - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
-    }
+    const double_t borderX = mScale * box->GetBorderWidth().value_or(0.) / padWidthPixel;
+    const double_t borderY = mScale * box->GetBorderWidth().value_or(0.) / padHeightPixel;
+    const auto [upperLeftX, upperLeftY] = PlaceBox(*box, pad, totalWidthNDC, totalHeightNDC, borderX, borderY, (isLegend) ? "legend" : "text");
 
     if constexpr (isLegend) {
       TLegend* legend = new TLegend(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "", "NDC NB");
@@ -2475,17 +2458,50 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     if (returnBox) {
       returnBox->SetLineWidth(0);
       returnBox->SetFillStyle(0);
-      if (borderStyle) returnBox->SetLineStyle(*borderStyle);
-      if (borderColor) returnBox->SetLineColor(*borderColor);
-      if (borderAlpha) returnBox->SetLineColor(TColor::GetColorTransparent(returnBox->GetLineColor(), *borderAlpha));
-      if (borderWidth) returnBox->SetLineWidth(*borderWidth);
-      if (fillStyle) returnBox->SetFillStyle(*fillStyle);
-      if (fillColor) returnBox->SetFillColor(*fillColor);
-      if (fillAlpha) returnBox->SetFillColor(TColor::GetColorTransparent(returnBox->GetFillColor(), *fillAlpha));
+      ApplyBoxStyle(*box, returnBox);
     }
   };
   std::visit(processBox, boxVariant);
   return returnBox;
+}
+
+//**************************************************************************************************
+/**
+ * Upper left corner (in NDC) of a box of the given size: at the position set for it (converted from user coordinates if requested)
+ * or placed automatically within the frame of the pad (borderX, borderY: width of its border, half of which sticks out on each side).
+ */
+//**************************************************************************************************
+template <typename BoxType>
+std::pair<double_t, double_t> PlotPainter::PlaceBox(const BoxType& box, TPad* pad, double_t widthNDC, double_t heightNDC, double_t borderX, double_t borderY, const string& boxType)
+{
+  if (box.IsAutoPlacement()) {
+    double_t lowerLeftX{};
+    double_t lowerLeftY{};
+    FindBoxPosition(pad, widthNDC + borderX, heightNDC + borderY, *box.GetPlacement(), boxType, lowerLeftX, lowerLeftY);
+    return {lowerLeftX + 0.5 * borderX, lowerLeftY + 0.5 * borderY + heightNDC};
+  }
+  if (box.IsUserCoordinates()) {
+    pad->Update();
+    return {(box.GetXPosition() - pad->GetX1()) / (pad->GetX2() - pad->GetX1()), (box.GetYPosition() - pad->GetY1()) / (pad->GetY2() - pad->GetY1())};
+  }
+  return {box.GetXPosition(), box.GetYPosition()};
+}
+
+//**************************************************************************************************
+/**
+ * Applies the border and fill set for a box (the ones not set keep the values the box has).
+ */
+//**************************************************************************************************
+template <typename BoxType>
+void PlotPainter::ApplyBoxStyle(const BoxType& box, TPave* pave)
+{
+  if (box.GetBorderStyle()) pave->SetLineStyle(*box.GetBorderStyle());
+  if (box.GetBorderColor()) pave->SetLineColor(*box.GetBorderColor());
+  if (box.GetBorderAlpha()) pave->SetLineColor(TColor::GetColorTransparent(pave->GetLineColor(), *box.GetBorderAlpha()));
+  if (box.GetBorderWidth()) pave->SetLineWidth(*box.GetBorderWidth());
+  if (box.GetFillStyle()) pave->SetFillStyle(*box.GetFillStyle());
+  if (box.GetFillColor()) pave->SetFillColor(*box.GetFillColor());
+  if (box.GetFillAlpha()) pave->SetFillColor(TColor::GetColorTransparent(pave->GetFillColor(), *box.GetFillAlpha()));
 }
 
 //**************************************************************************************************

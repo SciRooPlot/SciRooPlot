@@ -1914,6 +1914,7 @@
         [#names("SetOptions(options) / SetOptions(alias)", "UnsetOptions()")], [Set a ROOT draw-option string or one of the #link(<appx-drawing-options>)[#text(fill: main-color)[predefined aliases]], or remove it.],
         [`SetTextFormat(fmt)`], [Number format of bin contents drawn with the `TEXT` option, e.g. `".0f"`.],
         [`SetShowStats(format = "emr", title = {})`], [Statistics box of a histogram: ROOT's letters (`TStyle::SetOptStat`, e.g. `"eMR"`), the title as its first line.],
+        [`SetStatsBox(statsBox)`], [Placement and appearance of the statistics box: a `StatsBox()` with the setters of `Box`.],
       ))
     ],
     [
@@ -1977,7 +1978,7 @@
     columns: (49%, 49%),
     gutter: 2%,
     [
-      #api-section("Box (shared by TextBox and LegendBox)", (
+      #api-section("Box (shared by TextBox, LegendBox and StatsBox)", (
         [`SetPosition(x, y)` / `SetSize(w, h)`], [Position of the upper left corner, or dimensions of the box.],
         [`SetAutoPlacement(placement = best_corner)`], [Let SciRooPlot place the box: as close as possible to the corner of the frame where it fits best, or to a given one (`top_left`, `top_right`, `bottom_right`, `bottom_left`).],
         [`SetUserCoordinates(isUserCoord = true)`], [Interpret position/size as user (data) coordinates instead of relative pad coordinates.],

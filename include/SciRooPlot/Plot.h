@@ -270,6 +270,7 @@ class Plot::Pad
   class TextBox;
   class LegendBox;
   class LegendEntry;
+  class StatsBox;
 
   Pad() = default;
   explicit Pad(const boost::property_tree::ptree& padTree);
@@ -641,6 +642,7 @@ class Plot::Pad::Data
   Data& SetTextFormat(const std::string& textFormat);
   // statistics box of a histogram: the letters of TStyle::SetOptStat (without 'n'), the title (if given) is its first line
   Data& SetShowStats(const std::string& format = "emr", const std::optional<std::string>& title = {});
+  Data& SetStatsBox(const StatsBox& statsBox);
   Data& SetColor(int16_t color);
   Data& SetAlpha(float_t alpha);
   Data& SetMarker(int16_t color, int16_t style, float_t size, std::optional<float_t> alpha = {});
@@ -764,6 +766,7 @@ class Plot::Pad::Data
   const auto& GetTextFormat() const { return mTextFormat; }
   const auto& GetStatsFormat() const { return mStats.format; }
   const auto& GetStatsTitle() const { return mStats.title; }
+  const auto& GetStatsBox() const { return mStats.box; }
   const auto& GetScaleFactor() const { return mModify.scaleFactor; }
   const auto& GetScaleBinWidthNorm() const { return mModify.scaleBinWidthNorm; }
   const auto& GetNormMaximum() const { return mModify.normMaximum; }
@@ -881,6 +884,7 @@ class Plot::Pad::Data
   struct stats_t {
     std::optional<std::string> format;
     std::optional<std::string> title;
+    std::shared_ptr<const StatsBox> box;  // placement and appearance of the box (not changed once set, so copies of the data can share it)
   };
   stats_t mStats;
 
@@ -964,6 +968,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(UnsetOptions)
   FORWARD_TO_DATA(SetTextFormat)
   FORWARD_TO_DATA(SetShowStats)
+  FORWARD_TO_DATA(SetStatsBox)
   FORWARD_TO_DATA(SetColor)
   FORWARD_TO_DATA(SetAlpha)
   FORWARD_TO_DATA(SetMarker)
@@ -1309,6 +1314,25 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
  private:
   std::string mText;
   std::optional<int16_t> mTextAlign;
+};
+
+//**************************************************************************************************
+/**
+ * Placement and appearance of the statistics box of a data item (Data::SetStatsBox), whose content is set with Data::SetShowStats.
+ */
+//**************************************************************************************************
+class Plot::Pad::StatsBox : public Plot::Pad::Box<StatsBox>
+{
+ public:
+  StatsBox();
+  explicit StatsBox(const boost::property_tree::ptree& statsBoxTree);
+  void Print() const { Plot::Print(GetPropertyTree(), "StatsBox"); }
+
+ protected:
+  friend class PlotPainter;
+  friend class Data;
+
+  boost::property_tree::ptree GetPropertyTree() const;
 };
 
 //**************************************************************************************************

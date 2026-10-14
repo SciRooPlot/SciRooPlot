@@ -47,7 +47,7 @@ Modes: `show` (interactive, default: keys `s`/`a` next/previous, `q` quit, doubl
 
 ## Program skeleton
 
-C++ (`using namespace SciRooPlot; using Data = Plot::Pad::Data; using LegendEntry = Plot::Pad::LegendEntry;`):
+C++ (`using namespace SciRooPlot; using Data = Plot::Pad::Data; using LegendEntry = Plot::Pad::LegendEntry; using StatsBox = Plot::Pad::StatsBox;`):
 ```cpp
 #include "SciRooPlot/PlotManager.h"
 using namespace SciRooPlot;
@@ -115,6 +115,7 @@ plot[1].AddData(myTemplate("hist"), "label");               // Data template: Da
 .SetLegend(2).SetLegendLabel("l").SetDefinesFrame().SetShowOverflowBins().SetContours(n).SetTextFormat("4.2f")
 .SetNpx(n[, ny])                   // points a function is drawn with (AddFunction: 1000 in 1d; inputs keep their own)
 .SetShowStats("eMR", "title")   // statistics box of a histogram (letters of TStyle::SetOptStat; the optional title is its first line)
+.SetStatsBox(StatsBox().SetAutoPlacement(top_left).SetFill(kWhite, 1001))   // its placement and appearance: all setters of legend and text boxes
 ```
 Labels may contain `<name> <title> <entries> <integral> <maximum> <minimum> <mean>` with printf formats: `"avg = <mean[.2f]>"` (graphs: `<entries>` points, `<maximum>`/`<minimum>` of y). ROOT TLatex syntax works in all texts (`#it{p}_{T}`, `#sqrt{s}`).
 

@@ -1675,6 +1675,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mTextFormat, "text_format");
   read_from_tree(dataTree, mStats.format, "stats_format");
   read_from_tree(dataTree, mStats.title, "stats_title");
+  if (const auto statsBoxTree = dataTree.get_child_optional("stats_box")) mStats.box = std::make_shared<const StatsBox>(*statsBoxTree);
   read_from_tree(dataTree, mMarker.color, "marker_color");
   read_from_tree(dataTree, mMarker.alpha, "marker_alpha");
   read_from_tree(dataTree, mMarker.style, "marker_style");
@@ -1822,6 +1823,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mTextFormat, "text_format");
   put_in_tree(dataTree, mStats.format, "stats_format");
   put_in_tree(dataTree, mStats.title, "stats_title");
+  if (mStats.box) dataTree.put_child("stats_box", mStats.box->GetPropertyTree());
   put_in_tree(dataTree, mMarker.color, "marker_color");
   put_in_tree(dataTree, mMarker.alpha, "marker_alpha");
   put_in_tree(dataTree, mMarker.style, "marker_style");
@@ -2015,6 +2017,11 @@ auto Plot::Pad::Data::SetShowStats(const string& format, const optional<string>&
   mStats.format = format;
   mStats.format->erase(std::remove(mStats.format->begin(), mStats.format->end(), 'n'), mStats.format->end());
   mStats.title = title;
+  return *this;
+}
+auto Plot::Pad::Data::SetStatsBox(const StatsBox& statsBox) -> decltype(*this)
+{
+  mStats.box = std::make_shared<const StatsBox>(statsBox);
   return *this;
 }
 auto Plot::Pad::Data::SetRangeX(double_t min, double_t max) -> decltype(*this)
@@ -3687,6 +3694,41 @@ Plot::Pad::TextBox& Plot::Pad::TextBox::SetTextAlign(int16_t align)
 
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
+// IMPLEMENTATION class StatsBox
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+
+//**************************************************************************************************
+/**
+ * StatsBox constructor: placed automatically, as without settings.
+ */
+//**************************************************************************************************
+Plot::Pad::StatsBox::StatsBox() : Box()
+{
+  SetAutoPlacement();
+}
+
+//**************************************************************************************************
+/**
+ * StatsBox constructor from property tree.
+ */
+//**************************************************************************************************
+Plot::Pad::StatsBox::StatsBox(const ptree& statsBoxTree) : Box(statsBoxTree)
+{
+}
+
+//**************************************************************************************************
+/**
+ * Get property tree representation of StatsBox.
+ */
+//**************************************************************************************************
+ptree Plot::Pad::StatsBox::GetPropertyTree() const
+{
+  return Box::GetPropertyTree();
+}
+
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 // IMPLEMENTATION class LegendBox
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -4240,6 +4282,7 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetTextSize(float_t size)
 //**************************************************************************************************
 // explicitly instantiate required box templates
 template class Plot::Pad::Box<Plot::Pad::TextBox>;
+template class Plot::Pad::Box<Plot::Pad::StatsBox>;
 template class Plot::Pad::Box<Plot::Pad::LegendBox>;
 //**************************************************************************************************
 }  // end namespace SciRooPlot

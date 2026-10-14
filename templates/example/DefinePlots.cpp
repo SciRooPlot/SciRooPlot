@@ -17,6 +17,7 @@ using std::vector;
 using namespace SciRooPlot;
 using Data = Plot::Pad::Data;
 using LegendEntry = Plot::Pad::LegendEntry;
+using StatsBox = Plot::Pad::StatsBox;
 
 void DefineDataSources(PlotManager& pm);
 void DefineBasePlots(PlotManager& pm);

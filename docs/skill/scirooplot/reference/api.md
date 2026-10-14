@@ -195,6 +195,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& UnsetOptions()`
 - `Data& SetTextFormat(const std::string& textFormat)`
 - `Data& SetShowStats(const std::string& format = "emr", const std::optional<std::string>& title = {})`
+- `Data& SetStatsBox(const StatsBox& statsBox)`
 - `Data& SetColor(int16_t color)`
 - `Data& SetAlpha(float_t alpha)`
 - `Data& SetMarker(int16_t color, int16_t style, float_t size, std::optional<float_t> alpha = {})`
@@ -287,7 +288,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `join_tree_t`: `"tree"` (same data source) or `{"tree", "dataSource"}` (Python: list)
 
 ## Plot::Pad::Box<BoxType>
-*common to TextBox and LegendBox*
+*common to TextBox, LegendBox and StatsBox*
 
 - `BoxType& SetPosition(double_t x, double_t y)`
 - `BoxType& SetSize(double_t width, double_t height)`
@@ -318,6 +319,11 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `TextBox(double_t xPos, double_t yPos, const std::string& text)`
 - `TextBox& SetText(const std::string& text)`
 - `TextBox& SetTextAlign(int16_t align)`
+
+## Plot::Pad::StatsBox
+*placement and appearance of the statistics box of a data item (Data::SetStatsBox); has the setters of Box*
+
+- `StatsBox()`
 
 ## Plot::Pad::LegendBox
 

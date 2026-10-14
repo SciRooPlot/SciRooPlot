@@ -61,6 +61,7 @@ using Data = Pad::Data;
 using Ratio = Pad::Ratio;
 using Axis = Pad::Axis;
 using TextBox = Pad::TextBox;
+using StatsBox = Pad::StatsBox;
 using LegendBox = Pad::LegendBox;
 using LegendEntry = Pad::LegendEntry;
 constexpr auto ref_int = py::return_value_policy::reference_internal;
@@ -77,6 +78,7 @@ void exportAxis(py::module_& m);
 void exportData(py::module_& m);
 void exportRatio(py::module_& m);
 void exportTextBox(py::module_& m);
+void exportStatsBox(py::module_& m);
 void exportLegendBox(py::module_& m);
 void exportLegendEntry(py::module_& m);
 
@@ -160,6 +162,7 @@ PYBIND11_MODULE(SciRooPlot, m)
   exportLegendEntry(m);
   exportLegendBox(m);
   exportTextBox(m);
+  exportStatsBox(m);
   exportData(m);
   exportRatio(m);
   exportAxis(m);
@@ -437,6 +440,7 @@ void exportData(py::module_& m)
     .def("UnsetOptions", &Data::UnsetOptions, ref_int)
     .def("SetTextFormat", &Data::SetTextFormat, arg("textFormat"), ref_int)
     .def("SetShowStats", &Data::SetShowStats, arg("format") = "emr", arg("title") = nullopt, ref_int)
+    .def("SetStatsBox", &Data::SetStatsBox, arg("statsBox"), ref_int)
     .def("SetColor", &Data::SetColor, arg("color"), ref_int)
     .def("SetAlpha", &Data::SetAlpha, arg("alpha"), ref_int)
     .def("SetMarker", &Data::SetMarker, arg("color"), arg("style"), arg("size"), arg("alpha") = nullopt, ref_int)
@@ -527,6 +531,7 @@ void exportRatio(py::module_& m)
     .def("UnsetOptions", [](Ratio& self) -> Ratio& { return self.UnsetOptions(); }, ref_int)
     .def("SetTextFormat", [](Ratio& self, const string& s) -> Ratio& { return self.SetTextFormat(s); }, arg("textFormat"), ref_int)
     .def("SetShowStats", [](Ratio& self, const string& f, const optional<string>& t) -> Ratio& { return self.SetShowStats(f, t); }, arg("format") = "emr", arg("title") = nullopt, ref_int)
+    .def("SetStatsBox", [](Ratio& self, const StatsBox& box) -> Ratio& { return self.SetStatsBox(box); }, arg("statsBox"), ref_int)
     .def("SetColor", [](Ratio& self, int16_t c) -> Ratio& { return self.SetColor(c); }, arg("color"), ref_int)
     .def("SetAlpha", [](Ratio& self, float_t a) -> Ratio& { return self.SetAlpha(a); }, arg("alpha"), ref_int)
     .def("SetMarker", [](Ratio& self, int16_t c, int16_t s, float_t sz, optional<float_t> a) -> Ratio& { return self.SetMarker(c, s, sz, a); }, arg("color"), arg("style"), arg("size"), arg("alpha") = nullopt, ref_int)
@@ -650,6 +655,35 @@ void exportTextBox(py::module_& m)
     .def("SetNoBox", &TextBox::SetNoBox, ref_int)
     .def("SetMargin", &TextBox::SetMargin, arg("margin"), ref_int)
     .def("SetLineSpacing", &TextBox::SetLineSpacing, arg("lineSpacing"), ref_int);
+}
+
+void exportStatsBox(py::module_& m)
+{
+  py::class_<StatsBox>(m, "StatsBox")
+    .def(py::init<>())
+    .def("Print", &StatsBox::Print)
+    .def("SetPosition", &StatsBox::SetPosition, arg("x"), arg("y"), ref_int)
+    .def("SetSize", &StatsBox::SetSize, arg("width"), arg("height"), ref_int)
+    .def("SetUserCoordinates", &StatsBox::SetUserCoordinates, arg("isUserCoord") = true, ref_int)
+    .def("SetAutoPlacement", &StatsBox::SetAutoPlacement, arg("placement") = best_corner, ref_int)
+    .def("SetBorder", &StatsBox::SetBorder, arg("color"), arg("style"), arg("width"), arg("alpha") = nullopt, ref_int)
+    .def("SetBorderColor", &StatsBox::SetBorderColor, arg("color"), ref_int)
+    .def("SetBorderAlpha", &StatsBox::SetBorderAlpha, arg("alpha"), ref_int)
+    .def("SetBorderStyle", &StatsBox::SetBorderStyle, arg("style"), ref_int)
+    .def("SetBorderWidth", &StatsBox::SetBorderWidth, arg("width"), ref_int)
+    .def("SetText", &StatsBox::SetText, arg("color"), arg("font"), arg("size"), arg("alpha") = nullopt, ref_int)
+    .def("SetTextColor", &StatsBox::SetTextColor, arg("color"), ref_int)
+    .def("SetTextAlpha", &StatsBox::SetTextAlpha, arg("alpha"), ref_int)
+    .def("SetTextFont", &StatsBox::SetTextFont, arg("font"), ref_int)
+    .def("SetTextSize", &StatsBox::SetTextSize, arg("size"), ref_int)
+    .def("SetFill", &StatsBox::SetFill, arg("color"), arg("style"), arg("alpha") = nullopt, ref_int)
+    .def("SetFillColor", &StatsBox::SetFillColor, arg("color"), ref_int)
+    .def("SetFillStyle", &StatsBox::SetFillStyle, arg("style"), ref_int)
+    .def("SetFillAlpha", &StatsBox::SetFillAlpha, arg("alpha"), ref_int)
+    .def("SetTransparent", &StatsBox::SetTransparent, ref_int)
+    .def("SetNoBox", &StatsBox::SetNoBox, ref_int)
+    .def("SetMargin", &StatsBox::SetMargin, arg("margin"), ref_int)
+    .def("SetLineSpacing", &StatsBox::SetLineSpacing, arg("lineSpacing"), ref_int);
 }
 
 void exportLegendBox(py::module_& m)

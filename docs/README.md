@@ -193,6 +193,8 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // ROOT's statistics box of a histogram (letters as in TStyle::SetOptStat, here entries, mean and std dev with their errors),
   // the title is optional (its first line, may contain the placeholders above); the boxes are placed automatically like legends
   plot[1].AddData("histName1", "dataSourceA").SetShowStats("eMR", "my histogram");
+  // its placement and appearance can be set like those of legends and texts (by default it is placed automatically)
+  plot[1].AddData("histName2", "dataSourceA").SetShowStats("eM").SetStatsBox(StatsBox().SetAutoPlacement(top_left).SetBorderColor(kGray + 1));
 
   // now lets add another piece of input data from the second group (this time without adding a label to the legend)
   plot[1].AddData("histName3", "dataSourceB");
