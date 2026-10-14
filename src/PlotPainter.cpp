@@ -1117,7 +1117,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               logger::warning("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetDataSource());
             }
           }
-          pad_ptr->Update();  // adds something to the list of primitives
         } else {
           delete data_ptr;
         }
@@ -1660,6 +1659,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (fail) {
       return nullptr;
     }
+    // the placement of the boxes below relies on the painted data (painting creates e.g. the palette of a colour plot):
+    // the pad is updated once for all data, since every update repaints everything drawn so far
+    pad_ptr->Update();
 
     bool redrawAxes = (pad.GetRedrawAxes())
                         ? *pad.GetRedrawAxes()
