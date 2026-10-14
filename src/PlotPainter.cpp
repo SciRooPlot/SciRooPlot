@@ -465,6 +465,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     for (const auto& data : drawData) {
       if (fail) break;
       if (data->GetDrawingOptions()) drawingOptions += *data->GetDrawingOptions();
+      bool isSampledFunc{};  // a function given by C++ code is written as values sampled over its range: it has no values outside of it
       // obtain a copy of the current data
       // retrieve the actual pointer to the data
       // draw the data (its appearance is already final) with the given drawing option alias
@@ -921,7 +922,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // ROOT draws the bars and fill areas of a histogram from its own minimum, also in an existing frame: start them at the lower edge of the frame
             if (!pad_ptr->GetView()) data_ptr->SetMinimum(ymin);
           }
-          // functions have no range of their own: they span the frame, unless the user limits them
           // a histogram keeps its own axes (ROOT clips it to the frame); a user range selects its bins like TAxis::SetRangeUser does
           auto setBinRange = [](TAxis* axis, const optional<double_t>& min, const optional<double_t>& max) {
             int32_t first = axis->GetFirst();
@@ -936,10 +936,31 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
             axis->SetRange(first, last);
           };
+          // a function from an input is drawn where it is defined (its range, within the frame), one given as formula in the plot definition spans the frame;
+          // a user range overrides both, except beyond the range of a sampled function
+          auto funcRange = [&](char axisLabel, double_t frameMin, double_t frameMax, double_t funcMin, double_t funcMax, const optional<double_t>& userMin, const optional<double_t>& userMax) {
+            double_t min = frameMin;
+            double_t max = frameMax;
+            if (data->GetDataSource() != "USER_FUNCTIONS" && funcMin < frameMax && funcMax > frameMin) {
+              min = std::max(min, funcMin);
+              max = std::min(max, funcMax);
+            }
+            if (userMin) min = *userMin;
+            if (userMax) max = *userMax;
+            if (isSampledFunc && (min < funcMin || max > funcMax)) {
+              if (userMin || userMax) logger::warning("Function {} has no values outside of [{:g}, {:g}] in {}: it is stored as values sampled over this range.", data->GetName(), funcMin, funcMax, axisLabel);
+              min = std::max(min, funcMin);
+              max = std::min(max, funcMax);
+            }
+            return std::make_pair(min, max);
+          };
           if constexpr (is_func_2d<data_type>()) {
-            data_ptr->SetRange(data->GetMinRangeX().value_or(xmin), data->GetMinRangeY().value_or(ymin), data->GetMaxRangeX().value_or(xmax), data->GetMaxRangeY().value_or(ymax));
+            auto [rangeMinX, rangeMaxX] = funcRange('x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
+            auto [rangeMinY, rangeMaxY] = funcRange('y', ymin, ymax, data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
+            data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
           } else if constexpr (is_func_1d<data_type>()) {
-            data_ptr->SetRange(data->GetMinRangeX().value_or(xmin), data->GetMaxRangeX().value_or(xmax));
+            auto [rangeMin, rangeMax] = funcRange('x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
+            data_ptr->SetRange(rangeMin, rangeMax);
           } else if constexpr (is_graph_1d<data_type>()) {
             if (!pad_ptr->GetView()) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
           } else {
@@ -1093,6 +1114,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
       auto processData = [&](auto&& data_ptr) {
         using data_type = std::decay_t<decltype(data_ptr)>;
+        if constexpr (is_func<data_type>()) isSampledFunc = !data_ptr->GetFormula();
         gErrorIgnoreLevel = dataIndex ? userErrorLevel : kFatal;
         // the drawing option alias of the data, or the default of the pad for its type
         optional<drawing_options_t> optionAlias = data->GetDrawingOptionAlias();
@@ -1538,6 +1560,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
           }
           if (nInvalid) warn("{} has {} point{} with NaN or infinite values, which are not drawn.", data_ptr->GetName(), nInvalid, (nInvalid == 1) ? "" : "s");
+          // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
+          data_ptr->SetBit(TGraph::kResetHisto);
         }
 
         // histograms and graphs can be drawn with the same aliases: where ROOT has no option for one of them, it is drawn as the other
@@ -2788,44 +2812,23 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     logger::error("Cannot project {} onto the same dimension twice.", obj->GetName());
     return nullopt;
   }
-  // store original axis ranges so they can be reset by scope guard
-  struct saved_range_t {
-    TAxis* axis;
-    int32_t first;
-    int32_t last;
-    bool wasRestricted;
-  };
-  std::vector<saved_range_t> savedRanges;
-  auto remember = [&savedRanges](TAxis* axis) {
-    if (axis) savedRanges.push_back({axis, axis->GetFirst(), axis->GetLast(), axis->TestBit(TAxis::kAxisRange)});
-  };
-  if (obj->InheritsFrom(THnBase::Class())) {
-    auto* histPtr = static_cast<THnBase*>(obj);
-    for (int32_t i = 0; i < histPtr->GetNdimensions(); ++i) {
-      remember(histPtr->GetAxis(i));
-    }
-  } else if (obj->InheritsFrom(TH1::Class())) {
-    auto* histPtr = static_cast<TH1*>(obj);
-    for (int16_t i = 0; i < histPtr->GetDimension(); ++i) {
-      remember(GetAxis(histPtr, i));
-    }
-  }
-  auto rangeGuard = make_scope_guard([savedRanges]() {
-    for (const auto& saved : savedRanges) {
-      if (saved.wasRestricted) {
-        saved.axis->SetRange(saved.first, saved.last);
-      } else {
-        saved.axis->SetRange();  // SetRange(1, nBins) would leave kAxisRange set
+  // the ranges of the projection are set on the input itself (read once for all plots, without ranges of its own): reset them afterwards
+  auto rangeGuard = make_scope_guard([this, obj]() {
+    if (obj->InheritsFrom(THnBase::Class())) {
+      auto* histPtr = static_cast<THnBase*>(obj);
+      for (int32_t i = 0; i < histPtr->GetNdimensions(); ++i) {
+        histPtr->GetAxis(i)->SetRange();
+      }
+    } else {
+      auto* histPtr = static_cast<TH1*>(obj);
+      for (int16_t i = 0; i < histPtr->GetDimension(); ++i) {
+        GetAxis(histPtr, i)->SetRange();
       }
     }
   });
 
   if (obj->InheritsFrom(THnBase::Class()) && !isProfile) {
     THnBase* histPtr = static_cast<THnBase*>(obj);
-    // first reset all ranges
-    for (int16_t i = 0; i < histPtr->GetNdimensions(); ++i) {
-      histPtr->GetAxis(i)->SetRange();
-    }
     for (const auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= histPtr->GetNdimensions()) {
@@ -2843,10 +2846,6 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     }
   } else if (obj->InheritsFrom(TH3::Class())) {
     TH3* histPtr = static_cast<TH3*>(obj);
-    // first reset all ranges
-    for (int16_t i = 0; i < 3; ++i) {
-      GetAxis(histPtr, i)->SetRange();
-    }
     for (const auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
       if (rangeDim >= 3) {
@@ -2872,10 +2871,6 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     if (projInfo.dims.size() > 1) {
       logger::error("Invalid dimension specified for projecting histogram {}.", obj->GetName());
       return nullopt;
-    }
-    // first reset all ranges
-    for (int16_t i = 0; i < 2; ++i) {
-      GetAxis(histPtr, i)->SetRange();
     }
     for (const auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);

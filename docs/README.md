@@ -256,6 +256,7 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // a full list of axis property accessors can be found in the Axis class definition in inc/Plot.h
 
   // note that you can define the visible range of the data independent of the pad axis range
+  // (ranges stored with the input histograms or graphs are ignored, functions from inputs are drawn where they are defined)
   plot[1].AddData("hist", "dataSourceA", "hist with reduced range").SetRangeX(1.5, 2.7);
 
   // the added data can be further modified later by accessing it via its index (starting with 1) in the following ways:

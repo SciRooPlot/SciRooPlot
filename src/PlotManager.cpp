@@ -41,6 +41,7 @@
 #include <TGraphErrors.h>
 #include <TH1.h>
 #include <THStack.h>
+#include <THnBase.h>
 #include <TKey.h>
 #include <TLeaf.h>
 #include <TList.h>
@@ -1813,6 +1814,10 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
     }
     // detach from the directory ROOT attached it to (e.g. histograms read from a file or cloned)
     if (auto addToDirectory = obj->IsA()->GetDirectoryAutoAdd()) addToDirectory(obj, nullptr);
+    if (!PrepareInput(obj, DataLocation(dataSource, fullName))) {
+      delete obj;
+      return;
+    }
     static_cast<TNamed*>(obj)->SetName((fullName + suffix).data());
     mDataBuffer[dataSource][fullName].reset(obj);
   };
@@ -1877,6 +1882,77 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
   } else {
     logger::error("Data format {} not supported.", folder->ClassName());
   }
+}
+
+//**************************************************************************************************
+/**
+ * Prepares an object read from an input for plotting; returns false if it cannot be plotted.
+ * What is drawn is defined by the plot alone: display settings stored with a histogram or graph (axis ranges, minimum and maximum)
+ * are discarded, with a note naming them, since they would otherwise restrict the plot invisibly (SetRangeX/SetRangeY do this explicitly).
+ * A function given by a formula has to compile: one calling C++ code unknown to ROOT's interpreter crashes when it is evaluated.
+ */
+//**************************************************************************************************
+bool PlotManager::PrepareInput(TObject* obj, const string& location)
+{
+  if (auto* func = dynamic_cast<TF1*>(obj); func && func->GetFormula()) {
+    bool isValid{};
+    {
+      auto errGuard = make_scope_guard([lvl = gErrorIgnoreLevel]() { gErrorIgnoreLevel = lvl; });
+      gErrorIgnoreLevel = kFatal;
+      isValid = TFormula("probe", func->GetFormula()->GetExpFormula(), false).IsValid();
+    }
+    if (!isValid) {
+      logger::error("Function {} cannot be evaluated: its formula '{}' does not compile. If it calls C++ code of your own, declare that code to ROOT's interpreter before generating the plots (gInterpreter->Declare).",
+                    location, func->GetFormula()->GetExpFormula().Data());
+    }
+    return isValid;
+  }
+
+  string discarded;
+  auto note = [&discarded](const string& setting) {
+    discarded += (discarded.empty() ? "" : ", ") + setting;
+  };
+  auto resetRange = [&note](TAxis* axis, const string& axisName) {
+    if (axis->GetFirst() > 1 || axis->GetLast() < axis->GetNbins()) {
+      note(fmt::format("{} range [{:g}, {:g}]", axisName, axis->GetBinLowEdge(axis->GetFirst()), axis->GetBinUpEdge(axis->GetLast())));
+    }
+    axis->SetRange();  // SetRange(1, nBins) would leave kAxisRange set
+  };
+  // -1111 is ROOT's value for an unset minimum or maximum
+  auto resetExtremes = [&note](auto* ptr) {
+    if (double_t minimum = ptr->GetMinimum(); minimum != -1111) {
+      note(fmt::format("minimum {:g}", minimum));
+      ptr->SetMinimum();
+    }
+    if (double_t maximum = ptr->GetMaximum(); maximum != -1111) {
+      note(fmt::format("maximum {:g}", maximum));
+      ptr->SetMaximum();
+    }
+  };
+
+  if (auto* hist = dynamic_cast<TH1*>(obj)) {
+    resetRange(hist->GetXaxis(), "x");
+    if (hist->GetDimension() > 1) resetRange(hist->GetYaxis(), "y");
+    if (hist->GetDimension() > 2) resetRange(hist->GetZaxis(), "z");
+    if (hist->GetMinimumStored() != -1111) note(fmt::format("minimum {:g}", hist->GetMinimumStored()));
+    if (hist->GetMaximumStored() != -1111) note(fmt::format("maximum {:g}", hist->GetMaximumStored()));
+    hist->SetMinimum();
+    hist->SetMaximum();
+  } else if (auto* histN = dynamic_cast<THnBase*>(obj)) {
+    for (int32_t i = 0; i < histN->GetNdimensions(); ++i) {
+      resetRange(histN->GetAxis(i), fmt::format("axis {}", i));
+    }
+  } else if (auto* graph = dynamic_cast<TGraph*>(obj)) {
+    // the axis histogram of a graph is stored with it once it was drawn or got axis titles (its limits are recomputed when the graph is drawn)
+    if (graph->GetN() > 0) resetRange(graph->GetHistogram()->GetXaxis(), "x");
+    resetExtremes(graph);
+  } else if (auto* graph2d = dynamic_cast<TGraph2D*>(obj)) {
+    resetExtremes(graph2d);
+  }
+  if (!discarded.empty()) {
+    logger::info("Ignoring the {} stored with {}: the plot definition sets what is drawn (e.g. SetRangeX).", discarded, location);
+  }
+  return true;
 }
 
 //**************************************************************************************************

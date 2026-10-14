@@ -221,6 +221,7 @@ Identical names and chains. Differences:
 - Data not found: check the data source name and that the object name (or path) exists in one of the inputs; `plot ... print` shows the definition, `srp verbosity debug` shows which inputs are opened. For sub-folders use `"src:folder"` or a path in the name, never both for the same folder.
 - A data name appearing twice in a pad gets a unique suffix automatically; refer to data by index (`plot[1](2)`), not by name.
 - Axis ranges live on the pad (`plot[1]['X'].SetRange`), data ranges on the data (`SetRangeX`); the first data (or `SetDefinesFrame`) decides the frame.
+- Ranges, minimum and maximum stored with an input histogram or graph are ignored (an info line names them): set them in the plot definition. Functions from inputs are drawn where they are defined, functions from `AddFunction` span the frame; `SetRangeX` overrides both (a function written from C++ code only has values within its own range).
 - Fill colours are drawn for `hist`/`area`/`band`/`bars`; histograms drawn with `line`/`curve` are not filled even if a fill colour is set by the pad defaults.
 - Rebin/Scale/Normalize on a ratio act on the result — use `.Both().Normalize()` etc. to act on the inputs.
 - In C++ the constructors of `Plot`, `Data`, `PlotManager` are explicit: write `Data("h", "src")`, not `{"h", "src"}` where a `Data` is expected (brace lists are only accepted by `AddRatio`).
