@@ -922,7 +922,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // ROOT draws the bars and fill areas of a histogram from its own minimum, also in an existing frame: start them at the lower edge of the frame
             if (!pad_ptr->GetView()) data_ptr->SetMinimum(ymin);
           }
-          // a histogram keeps its own axes (ROOT clips it to the frame); a user range selects its bins like TAxis::SetRangeUser does
+          // a histogram keeps its own axes; a user range selects its bins like TAxis::SetRangeUser does
           auto setBinRange = [](TAxis* axis, const optional<double_t>& min, const optional<double_t>& max) {
             int32_t first = axis->GetFirst();
             int32_t last = axis->GetLast();
@@ -936,6 +936,30 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
             axis->SetRange(first, last);
           };
+          // ROOT clips only bars and fill areas of a histogram to the frame, not its markers, error bars and curves:
+          // bins outside of the frame are excluded (a bin reaching into the frame stays, as with TAxis::SetRangeUser)
+          auto limitToFrame = [](TAxis* axis, const TAxis* frameAxis) {
+            const double_t frameMin = frameAxis->GetBinLowEdge(frameAxis->GetFirst());
+            const double_t frameMax = frameAxis->GetBinUpEdge(frameAxis->GetLast());
+            constexpr double_t relTol = 1e-9;
+            int32_t first = axis->FindFixBin(frameMin);
+            if (axis->GetBinUpEdge(first) <= frameMin || TMath::AreEqualRel(axis->GetBinUpEdge(first), frameMin, relTol)) ++first;
+            int32_t last = axis->FindFixBin(frameMax);
+            if (axis->GetBinLowEdge(last) >= frameMax || TMath::AreEqualRel(axis->GetBinLowEdge(last), frameMax, relTol)) --last;
+            first = std::max(first, axis->GetFirst());
+            last = std::min(last, axis->GetLast());
+            if (first != axis->GetFirst() || last != axis->GetLast()) axis->SetRange(first, last);
+          };
+          bool cutXAtFrame = true;
+          bool cutYAtFrame = (axisHist_ptr->GetDimension() > 1);  // the y axis of a 1d frame has no bins
+          if constexpr (is_hist_2d<data_type>()) {
+            // candles and violins show the distribution of the contents along one axis: cutting it would change their statistics
+            TString options(drawingOptions);
+            options.ToUpper();
+            if (options.Contains("CANDLE") || options.Contains("VIOLIN")) {
+              ((options.Contains("CANDLEY") || options.Contains("VIOLINY")) ? cutXAtFrame : cutYAtFrame) = false;
+            }
+          }
           // a function from an input is drawn where it is defined (its range, within the frame), one given as formula in the plot definition spans the frame;
           // a user range overrides both, except beyond the range of a sampled function
           auto funcRange = [&](char axisLabel, double_t frameMin, double_t frameMax, double_t funcMin, double_t funcMax, const optional<double_t>& userMin, const optional<double_t>& userMax) {
@@ -964,7 +988,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           } else if constexpr (is_graph_1d<data_type>()) {
             if (!pad_ptr->GetView()) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
           } else {
-            if (hasRangeX && !pad_ptr->GetView()) setBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
+            if (!pad_ptr->GetView()) {
+              if (hasRangeX) setBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
+              if (cutXAtFrame) limitToFrame(data_ptr->GetXaxis(), axisHist_ptr->GetXaxis());
+            }
             if constexpr (is_hist_1d<data_type>()) {
               // the y axis of a 1d histogram has no bins: as for the frame, its range is the minimum and maximum (ROOT uses them e.g. as baseline of bars)
               if (data->GetMinRangeY()) data_ptr->SetMinimum(*data->GetMinRangeY());
@@ -980,7 +1007,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             logger::warning("SetNpx applies only to functions, not to {}.", data->GetName());
           }
           if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
-            if (hasRangeY && !pad_ptr->GetView()) setBinRange(data_ptr->GetYaxis(), data->GetMinRangeY(), data->GetMaxRangeY());
+            if (!pad_ptr->GetView()) {
+              if (hasRangeY) setBinRange(data_ptr->GetYaxis(), data->GetMinRangeY(), data->GetMaxRangeY());
+              if (cutYAtFrame) limitToFrame(data_ptr->GetYaxis(), axisHist_ptr->GetYaxis());
+            }
             if (const auto& contours = data->GetContours()) {
               data_ptr->SetContour(static_cast<int32_t>(contours->size()), contours->data());
               if (axisHist_ptr->GetContour() < static_cast<int32_t>(contours->size())) axisHist_ptr->SetContour(static_cast<int32_t>(contours->size()), contours->data());
