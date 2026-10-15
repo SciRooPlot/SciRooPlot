@@ -794,6 +794,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // reset the axis histogram which owns the z axis, while keeping default range defined by the data
             double_t min = axisHist_ptr->GetMinimum();
             double_t max = axisHist_ptr->GetMaximum();
+            // ROOT draws a log z axis of a histogram without a positive minimum from min(1, 0.001 * maximum),
+            // but for data drawn SAME on a frame with a stored minimum of zero it leaves out the bins of the lowest contents
+            if (pad_ptr->GetLogz() && min <= 0. && max > 0.) min = std::min(1., 0.001 * max);
             axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
             axisHist_ptr->SetMinimum(min);
             axisHist_ptr->SetMaximum(max);
