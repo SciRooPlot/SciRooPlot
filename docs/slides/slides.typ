@@ -8,7 +8,12 @@
 #set text(
   font: ("Arial", "Liberation Sans", "DejaVu Sans"),
   size: 18pt,
+  // fixed top edge of the lines (the cap height of Arial): Arial 2.82 (Microsoft core fonts, used to build the
+  // slides in CI) has no cap height in its OS/2 table, so Typst would use its ascender and every line would get taller
+  top-edge: 0.688em,
 )
+// code keeps the line height of its own font
+#show raw: set text(top-edge: "cap-height")
 #let main-color = rgb("1C94A5")
 #let accent-color = rgb("D4A63A")
 
@@ -1315,17 +1320,17 @@
     columns: (45%, 50%),
     gutter: 5%,
     [
-      - Legend entries are generated automatically and inherit the appearance of the corresponding data by default.
+      - Legend entries are generated automatically and look like their data by default.
 
       - Labels support placeholders that are expanded automatically, e.g. `<name>`, `<title>`, `<entries>`, `<integral>`, `<maximum>`, `<minimum>`, `<mean>`, with optional printf-style formatting, e.g. `<mean[.2f]>`.
 
-      - Multiple legends can coexist -- numbered from 1 in the order they're added -- and data is assigned to a specific one via `SetLegend(n)`, e.g. `SetLegend(2)`.
+      - Several legends can coexist, numbered from 1 in the order they're added; `SetLegend(n)` assigns data to one, e.g. `SetLegend(2)`.
 
-      - Legends and text boxes go to a fixed position, or are auto-placed when it is left out: as close as possible to the frame corner where they fit best (`best_corner`), or to a requested one (`top_left`, `top_right`, `bottom_right`, `bottom_left`).
+      - Legends and text boxes go to a fixed position, or are auto-placed if it is left out: as close as possible to the best-fitting frame corner (`best_corner`) or a requested one (`top_left`, `top_right`, `bottom_right`, `bottom_left`).
 
-      - The row of a data item is styled on the data, `SetLegendEntry(LegendEntry()...)`; `AddEntry(label)` adds a row of its own (no label: an empty line), at the end or placed with `AtTop()`, `BeforeData(n)`, `AfterData(n)`.
+      - `SetLegendEntry(LegendEntry()...)` on the data styles its row; `AddEntry(label)` adds a row of its own (no label: an empty line), at the end or placed with `AtTop()`, `BeforeData(n)`, `AfterData(n)`.
 
-      - Multi-line text is given as a list of lines (`{"a", "b"}` / `["a", "b"]`) or as one string with newlines; `SetLineSpacing()` sets the gap between them.
+      - Multi-line text: a list of lines (#if lang == "py" [`["a", "b"]`] else [`{"a", "b"}`]) or one string with newlines; `SetLineSpacing()` sets the gap.
     ],
     [
       #code-block(
@@ -1908,24 +1913,25 @@
         [`SetLayout(layout)` / `ApplyLayout(layout)`], [Take over the appearance of a `Data` layout (options, ranges, marker, line, fill, contours), or only the parts set in it.],
         [#names("SetRangeX(min, max) / SetRangeY(min, max)", "SetMinRangeX(min) / SetMaxRangeX(max)", "SetMinRangeY(min) / SetMaxRangeY(max)")], [Restrict the range in which the data is drawn, fully or partially.],
         [`UnsetRangeX()` / `UnsetRangeY()`], [Remove a previously set range restriction.],
+        [`SetScaleMinimum(factor)` / `SetScaleMaximum(factor)`], [Stretch the auto-computed draw range by a factor, without touching the data.],
         [`SetShowOverflowBins(showOverflowBins = true)`], [Include overflow bins in the display.],
         [`SetLegendLabel(label)` / `SetLegend(legendID)`], [Set legend text, or assign to a specific legend.],
         [`SetLegendEntry(entry)`], [Appearance of the data's legend row, e.g. `LegendEntry().SetDrawStyle("F")`.],
         [#names("SetOptions(options) / SetOptions(alias)", "UnsetOptions()")], [Set a ROOT draw-option string or one of the #link(<appx-drawing-options>)[#text(fill: main-color)[predefined aliases]], or remove it.],
         [`SetTextFormat(fmt)`], [Number format of bin contents drawn with the `TEXT` option, e.g. `".0f"`.],
-        [`SetShowStats(format = "emr", title = {})`], [Statistics box of a histogram: ROOT's letters (`TStyle::SetOptStat`, e.g. `"eMR"`), the title as its first line.],
-        [`SetStatsBox(statsBox)`], [Placement and appearance of the statistics box: a `StatsBox()` with the setters of `Box`.],
-      ))
+      ), text-size: 12pt)
     ],
     [
-      #api-section("Appearance", (
+      #api-section("Appearance & statistics box", (
         [`SetColor(color)` / `SetAlpha(alpha)`], [Set (or fade) marker, line and fill colour together.],
         [#names("SetMarker(color, style, size, alpha = {})", "SetMarkerColor(color)", "SetMarkerStyle(style)", "SetMarkerSize(size)", "SetMarkerAlpha(alpha)")], [Marker appearance, all at once or individually.],
         [#names("SetLine(color, style, width, alpha = {})", "SetLineColor(color)", "SetLineStyle(style)", "SetLineWidth(width)", "SetLineAlpha(alpha)")], [Line appearance, all at once or individually.],
         [#names("SetFill(color, style, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Fill appearance, all at once or individually.],
         [`SetDefinesFrame(dontDraw = false)`], [Use this object to define the plot frame (`dontDraw`: without drawing it).],
         [`SetContours(contours)` / `SetContours(nContours)`], [Set explicit contour levels or their count.],
-      ))
+        [`SetShowStats(format = "emr", title = {})`], [Statistics box of a histogram: ROOT's letters (`TStyle::SetOptStat`, e.g. `"eMR"`), the title as its first line.],
+        [`SetStatsBox(statsBox)`], [Placement and appearance of the statistics box: a `StatsBox()` with the setters of `Box`.],
+      ), text-size: 12pt)
     ],
   )
 ]
@@ -1946,7 +1952,6 @@
         [`RebinXY(nx, ny)` / `RebinXYZ(nx, ny, nz)`], [Rebin two or three axes at once.],
         [`Smooth(nIterSmooth = 1)`], [Apply smoothing.],
         [`ScaleX(factor)` / `ScaleY(factor)` / `ScaleZ(factor)`], [Rescale an axis itself (e.g. a unit conversion) -- unlike `Scale()`, which rescales the values.],
-        [`SetScaleMinimum(factor)` / `SetScaleMaximum(factor)`], [Stretch the auto-computed draw range by a factor, without touching the data.],
       ), text-size: 12pt)
       #v(0.6em)
       #api-section("Projections & profiles", (
@@ -2003,8 +2008,14 @@
           ([`LegendBox(title = {})` / `LegendBox(xPos, yPos, title = {})`], [Construct directly, auto-placed or fixed.])
         } else { () }),
         [`SetTitle(title)` / `SetNumColumns(n)`], [Legend title, or number of columns.],
-        [`AddEntry(label = "")`], [Add a row of its own (no label: an empty line), see the appendix.],
+        [`AddEntry(label = "")`], [Add a row of its own (no label: an empty line), see the next slide.],
         [`SetSymbolColScale(scale)`], [Scale the width of the symbol column.],
+      ), col-widths: (52%, 48%), text-size: 12pt)
+      #v(0.6em)
+      #api-section("LegendEntry: content and place", (
+        [`SetLabel(label)` / `SetDrawStyle(style)`], [Label text, or draw style of this entry (e.g. `"L"`, `"EP"`, `"F"`).],
+        [`SetRefData(refDataID)`], [Take the style from data number `refDataID` of the pad.],
+        [`AtTop()` / `BeforeData(n)` / `AfterData(n)`], [Place a row added with `AddEntry`.],
       ), col-widths: (52%, 48%), text-size: 12pt)
       #if lang == "py" [
         #v(0.4em)
@@ -2032,11 +2043,7 @@
       ), col-widths: (52%, 48%), text-size: 12pt)
     ],
     [
-      #api-section("LegendEntry: a single entry", (
-        [`SetLabel(label)`], [Set the entry's label text.],
-        [`SetRefData(refDataID)`], [Take the style from data number `refDataID` of the pad.],
-        [`AtTop()` / `BeforeData(n)` / `AfterData(n)`], [Place a row added with `AddEntry`.],
-        [`SetDrawStyle(style)`], [Draw style of this entry, e.g. `"L"`, `"EP"`, `"F"`.],
+      #api-section("LegendEntry: appearance", (
         [`SetColor(color)` / `SetAlpha(alpha)`], [Marker, line and fill colour (or transparency) together.],
         [#names("SetMarker(color, style, size)", "SetLine(color, style, width)", "SetFill(color, style)")], [Marker, line or fill at once (optional last argument: alpha).],
         [#names("SetMarkerColor(color)", "SetMarkerAlpha(alpha)", "SetMarkerStyle(style)", "SetMarkerSize(size)")], [Marker appearance.],
