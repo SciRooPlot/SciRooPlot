@@ -79,6 +79,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <sys/stat.h>
 #include <tuple>
 #include <unistd.h>
 #include <unordered_map>
@@ -537,9 +538,23 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
   if (inputsIt == mInputs.end()) return inputs;
 
   auto hasWildcard = [](const string& str) { return str.find_first_of("*?[") != string::npos; };
-  set<string> seen;
-  auto addInput = [&](const string& input) {
-    if (seen.insert(expand_path(input)).second) inputs.push_back(input);
+  // an input is a file (device and inode, so the same file reached via a symlink, a hard link or "/./" counts once) plus a folder in it;
+  // a file that cannot be found keeps its path as identity (it is reported where it is opened)
+  using InputID = tuple<dev_t, ino_t, string>;
+  map<InputID, string> seen;  // first spelling of each input
+  auto fileID = [](const string& filePart) {
+    struct stat info{};
+    const string path = expand_path(filePart);
+    return (stat(path.data(), &info) == 0) ? InputID{info.st_dev, info.st_ino, ""} : InputID{0, 0, path};
+  };
+  auto addInput = [&](const InputID& file, const string& filePart, const string& folder) {
+    const string input = folder.empty() ? filePart : filePart + ":" + folder;
+    auto [it, isNew] = seen.try_emplace({std::get<0>(file), std::get<1>(file), std::get<2>(file) + ":" + folder}, input);
+    if (isNew) {
+      inputs.push_back(input);
+    } else if (expand_path(it->second) != expand_path(input)) {
+      logger::warning("Skipping input {} of data source {}: same file as input {}.", input, dataSource, it->second);
+    }
   };
 
   // folders matching the (wildcard) path within a root file, e.g. DF_* or run*/sub
@@ -555,15 +570,16 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
   auto addFile = [&](const string& filePart, const string& folderPart) {
     if (!subFolder.empty() && !str_ends_with(filePart, ".root")) return;  // tables have no folders
     const string folderPath = (subFolder.empty() || folderPart.empty()) ? folderPart + subFolder : folderPart + "/" + subFolder;
+    const InputID file = fileID(filePart);
     if (hasWildcard(folderPath)) {
       const auto folders = expandFolders(expand_path(filePart), folderPath);
       // inputs that do not contain the folder of a restricted data source are simply not part of it
       if (folders.empty() && subFolder.empty()) logger::warning("No folders match {} in {} (data source {}).", folderPath, filePart, dataSource);
       for (const auto& folder : folders) {
-        addInput(filePart + ":" + folder);
+        addInput(file, filePart, folder);
       }
     } else {
-      addInput(folderPath.empty() ? filePart : filePart + ":" + folderPath);
+      addInput(file, filePart, folderPath);
     }
   };
 
