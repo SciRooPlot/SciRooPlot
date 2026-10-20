@@ -1230,6 +1230,7 @@ bool PlotManager::FillBuffer()
             }
           }
           bool isValid{};
+          int32_t nParameters{};
           {
             auto errGuard = make_scope_guard([lvl = gErrorIgnoreLevel]() { gErrorIgnoreLevel = lvl; });
             gErrorIgnoreLevel = kFatal;
@@ -1239,10 +1240,16 @@ bool PlotManager::FillBuffer()
               TFormula formula("tmp", dataName.data(), false);
               isValid = formula.IsValid();
               dim = formula.GetNdim();
+              nParameters = formula.GetNpar();
             }
           }
           if (!isValid) {
             logger::error("'{}' is not a valid function expression.", dataName);
+            continue;
+          }
+          // parameters ([0], [a], or those of predefined functions like gaus and pol2) cannot be set and would all be 0
+          if (nParameters > 0) {
+            logger::error("Function '{}' uses parameters, which cannot be set: write their values into the function.", dataName);
             continue;
           }
           // the lambda constructors of ROOT take the number of parameters and dimensions
