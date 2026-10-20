@@ -257,8 +257,8 @@ void DefineSpectraPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // ProjectX(from, to, true): multiplicity of events with a track in a given pT range
     Plot plot("multiplicityForHighPt", "spectra", "1d");
-    plot[1].AddData("ptVsMult", "data", "#it{p}_{T} < 1 GeV/#it{c}").ProjectX(0., 0.99, true).Normalize();
-    plot[1].AddData("ptVsMult", "data", "2 < #it{p}_{T} < 5 GeV/#it{c}").ProjectX(2., 4.99, true).Normalize();
+    plot[1].AddData("ptVsMult", "data", "#it{p}_{T} < 1 GeV/#it{c}").ProjectX(0., 1., true).Normalize();
+    plot[1].AddData("ptVsMult", "data", "2 < #it{p}_{T} < 5 GeV/#it{c}").ProjectX(2., 5., true).Normalize();
     plot[1].AddLegend(0.45, 0.9);
     plot[1]['Y'].SetTitle("normalised counts");
     pm.AddPlot(plot);
@@ -614,9 +614,9 @@ void DefineHeavyIonPlots(PlotManager& pm)
   {  // projections of a THnSparse with ranges on the other axes ---------------------------
     Plot plot("ptInCentralityClasses", "heavyion", "1d");
     // Project({axes to keep}, {{axis, from, to}, ...}, true): the ranges are in axis units;
-    // the upper value lies inside the last bin that should be included
-    for (const auto& [low, high] : vector<std::pair<double, double>>{{0., 9.9}, {40., 49.9}, {80., 99.9}}) {
-      const string label = std::to_string(static_cast<int>(low)) + "-" + std::to_string(static_cast<int>(high + 0.1)) + "%";
+    // a bin is included if the range overlaps it, so from 0 to 10 takes exactly the bins between these edges
+    for (const auto& [low, high] : vector<std::pair<double, double>>{{0., 10.}, {40., 50.}, {80., 100.}}) {
+      const string label = std::to_string(static_cast<int>(low)) + "-" + std::to_string(static_cast<int>(high)) + "%";
       plot[1].AddData("hPtEtaCent", "heavyion", label).Project({0}, {{2, low, high}}, true).Normalize();
     }
     plot[1].AddLegend();
@@ -642,10 +642,10 @@ void DefineHeavyIonPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // four centrality classes in a grid with shared axes -----------------------------------
     Plot plot("ptInCentralityGrid", "heavyion", "1d_2x2");
-    const vector<std::pair<double, double>> classes = {{0., 9.9}, {10., 29.9}, {30., 49.9}, {50., 79.9}};
+    const vector<std::pair<double, double>> classes = {{0., 10.}, {10., 30.}, {30., 50.}, {50., 80.}};
     for (size_t i = 0; i < classes.size(); ++i) {
       const auto& [low, high] = classes[i];
-      const string label = std::to_string(static_cast<int>(low)) + "-" + std::to_string(static_cast<int>(high + 0.1)) + "%";
+      const string label = std::to_string(static_cast<int>(low)) + "-" + std::to_string(static_cast<int>(high)) + "%";
       plot[i + 1].AddData("hPtEtaCent", "heavyion").Project({0}, {{2, low, high}}, true).Normalize();
       plot[i + 1].AddText(0.6, 0.85, label);
     }

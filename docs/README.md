@@ -330,6 +330,7 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // this means in the above example the axis 0 of the input data is restricted to bin 5 to 10 and axis 1 is restricted to bin 90 to 100
   // before the histogram is projected on the axis 3
   // also here one can provide user coordinates instead of bins by setting the third argument of the function to 'true'
+  // in user coordinates every bin overlapping the range is taken: {1, 90., 100.} on bins of width 10 is exactly the bin from 90 to 100
 
   // the same can be done also with the numerator and denominator of ratios
   // have a look at inc/Plot.h for the details

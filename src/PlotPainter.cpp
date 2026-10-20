@@ -2940,6 +2940,22 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       }
     }
   });
+  // in user coordinates the bins are selected as in TAxis::SetRangeUser: a bin is included if the range overlaps it,
+  // so an end on a bin edge does not include the neighbouring bin (FindFixBin, since FindBin would extend an extendable axis);
+  // "on a bin edge" with a tolerance, since ROOT computes the edges of fixed bins (e.g. 3 * 0.1 = 0.30000000000000004)
+  const bool isUserCoord = projInfo.isUserCoord && *projInfo.isUserCoord;
+  auto setRange = [isUserCoord](TAxis* axis, double_t start, double_t end) {
+    if (!isUserCoord) {
+      axis->SetRange(static_cast<int32_t>(start), static_cast<int32_t>(end));
+      return;
+    }
+    constexpr double_t relTol = 1e-9;
+    int32_t first = axis->FindFixBin(start);
+    int32_t last = axis->FindFixBin(end);
+    if (axis->GetBinUpEdge(first) - relTol * axis->GetBinWidth(first) <= start) ++first;
+    if (axis->GetBinLowEdge(last) + relTol * axis->GetBinWidth(last) >= end && last > first) --last;  // a range of zero width keeps the bin containing it
+    axis->SetRange(first, last);
+  };
 
   if (obj->InheritsFrom(THnBase::Class()) && !isProfile) {
     THnBase* histPtr = static_cast<THnBase*>(obj);
@@ -2949,9 +2965,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
         logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
         return nullopt;
       }
-      int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int>(std::get<1>(rangeTuple));
-      int32_t maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? histPtr->GetAxis(rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int>(std::get<2>(rangeTuple));
-      histPtr->GetAxis(rangeDim)->SetRange(minBin, maxBin);
+      setRange(histPtr->GetAxis(rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple));
     }
     if (projInfo.dims.size() == 2) {
       return histPtr->Projection(projInfo.dims[1], projInfo.dims[0]);
@@ -2966,9 +2980,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
         logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
         return nullopt;
       }
-      int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int32_t>(std::get<1>(rangeTuple));
-      int32_t maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int32_t>(std::get<2>(rangeTuple));
-      GetAxis(histPtr, rangeDim)->SetRange(minBin, maxBin);
+      setRange(GetAxis(histPtr, rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple));
     }
     if (projInfo.dims.size() == 2) {
       // get string if it is "xy" or "yx" or "zx"...
@@ -2992,9 +3004,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
         logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
         return nullopt;
       }
-      int32_t minBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<1>(rangeTuple)) : static_cast<int32_t>(std::get<1>(rangeTuple));
-      int32_t maxBin = (projInfo.isUserCoord && *projInfo.isUserCoord) ? GetAxis(histPtr, rangeDim)->FindBin(std::get<2>(rangeTuple)) : static_cast<int32_t>(std::get<2>(rangeTuple));
-      GetAxis(histPtr, rangeDim)->SetRange(minBin, maxBin);
+      setRange(GetAxis(histPtr, rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple));
     }
     if (projInfo.dims[0] == 0) {
       if (isProfile) {
