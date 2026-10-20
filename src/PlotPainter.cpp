@@ -719,7 +719,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   last = axis_ptr->FindFixBin(*userRangeMax);
                   if (axis_ptr->GetBinLowEdge(last) >= *userRangeMax) --last;
                 }
-                axis_ptr->SetRange(first, last);
+                // never the underflow or overflow bin: a range ending at the edge of the axis (e.g. one extended above) gives the overflow bin,
+                // whose low edge ROOT computes as for equal bins, which for variable bins can lie just below the edge (14.999999999999998 for 15)
+                axis_ptr->SetRange(std::max(first, 1), std::min(last, axis_ptr->GetNbins()));
               } else {
                 // the dependent axis (y of 1d, z of 2d) has no bins: its range is the minimum and maximum of the histogram
                 if (userRangeMin) axisHist_ptr->SetMinimum(*userRangeMin);
