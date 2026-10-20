@@ -173,7 +173,7 @@ class PlotPainter
   bool Divide(TH1* numerator, TF1* denominator, bool binomialErrors = false);
   bool Divide(TGraph* numerator, TF1* denominator, bool binomialErrors = false);
 
-  static TGraph* ToGraph(TH1* hist);
+  static TGraph* ToGraph(const TH1* hist);
   static TH1* ToHist(TGraph* graph, bool warn = true);
   bool CheckFontSizes(TList* list);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
@@ -198,6 +198,8 @@ class PlotPainter
   static std::string GradientPaletteCommand(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha);
 
   double_t mScale{1.};
+  // histograms drawn as graphs (by an alias only graphs have), with the graph they are drawn as: their statistics box and placeholders refer to the histogram
+  std::unordered_map<const TObject*, std::unique_ptr<TH1>> mSourceHists;
   struct StyleSizes {
     Width_t lineWidth;
     int32_t hatchesLineWidth;

@@ -148,10 +148,11 @@ void CopyFuncAttributes(FuncT* from, FuncT* to)
 //**************************************************************************************************
 /**
  * Conversions between 1d histograms and graphs, so both can be drawn with the same drawing option aliases.
- * The converted object replaces the original (which is deleted) and keeps its name, title, axis titles and appearance.
+ * The converted object replaces the original and keeps its name, title, axis titles and appearance.
+ * The histogram is kept by the caller (its statistics box and placeholders), the graph is deleted.
  */
 //**************************************************************************************************
-TGraph* PlotPainter::ToGraph(TH1* hist)
+TGraph* PlotPainter::ToGraph(const TH1* hist)
 {
   auto* graph = new TGraphErrors();
   for (int32_t bin = 1; bin <= hist->GetNbinsX(); ++bin) {
@@ -177,7 +178,6 @@ TGraph* PlotPainter::ToGraph(TH1* hist)
   frame->SetMaximum(graph->GetHistogram()->GetMaximum());
   graph->SetHistogram(frame);  // deletes the automatic one
   graph->SetBit(kCanDelete);
-  delete hist;
   return graph;
 }
 TH1* PlotPainter::ToHist(TGraph* graph, bool warn)
@@ -266,6 +266,7 @@ TH1* PlotPainter::ToHist(TGraph* graph, bool warn)
 unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, unique_ptr<TObject>>>& dataBuffer)
 {
   bool fail = false;
+  auto sourceHistsGuard = make_scope_guard([this]() { mSourceHists.clear(); });  // needed until the boxes of the plot are made
 
   // ROOT reads some absolute sizes from gStyle only at paint time (see end of this function): undo the scale of a previous plot before drawing
   if (sUnscaledStyle) {
@@ -1059,21 +1060,34 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             data_ptr->SetEditable(false);
           }
           bool showStats{false};
+          TH1* statsHist{nullptr};  // the drawn histogram, or the one a graph was converted from
           if constexpr (is_hist<data_type>()) {
-            data_ptr->SetStats(false);  // also removes a stats box stored with the input, which shows the numbers of the input instead of the drawn histogram
+            statsHist = data_ptr;
+          } else if constexpr (is_graph_1d<data_type>()) {
+            if (auto source = mSourceHists.find(data_ptr); source != mSourceHists.end()) {
+              statsHist = source->second.get();
+            }
+          }
+          if (statsHist) {
+            statsHist->SetStats(false);  // also removes a stats box stored with the input, which shows the numbers of the input instead of the drawn histogram
             showStats = data->GetStatsFormat() && (!data->GetStatsFormat()->empty() || data->GetStatsTitle());
-            if (showStats && drawingOptions.rfind("SAME", 0) == 0) drawingOptions.insert(4, "S");  // ROOT fills a stats box only with SAMES, not with SAME
+            if constexpr (is_hist<data_type>()) {
+              if (showStats && drawingOptions.rfind("SAME", 0) == 0) drawingOptions.insert(4, "S");  // ROOT fills a stats box only with SAMES, not with SAME
+            }
             if (!(data->GetShowOverflowBins() && *data->GetShowOverflowBins())) {
               // TH2Poly keeps its bins outside the cell array of TH1, whose loop over the global cells would zero the real bins;
               // its overflow regions are never drawn anyway
               bool isPoly{false};
               if constexpr (is_hist_2d<data_type>()) isPoly = data_ptr->InheritsFrom(TH2Poly::Class());
-              if (!isPoly) data_ptr->ClearUnderflowAndOverflow();
+              if (!isPoly) statsHist->ClearUnderflowAndOverflow();
             }
           } else if (data->GetStatsFormat()) {
             logger::warning("Statistics boxes are available only for histograms, not for {}.", data->GetName());
           }
           data_ptr->SetName((std::to_string(dataIndex - hasRefFunc) + ":" + data_ptr->GetName()).data());
+          if constexpr (!is_hist<data_type>()) {
+            if (statsHist) statsHist->SetName(data_ptr->GetName());  // for <name> and the title line of the statistics box
+          }
           if constexpr (is_hist<data_type>()) {
             // an interactive zoom sets its range on all histograms of the pad (and unzooming shows all their bins):
             // the setup of the pad, which runs at every paint, restores the range of the data
@@ -1098,47 +1112,48 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
           }
           data_ptr->Draw(drawingOptions.data());
-          if constexpr (is_hist<data_type>()) {
-            if (showStats) {
-              // ROOT fills the box with the global setting when painting the histogram: the requested one is set for this paint only
-              // (with gPad hidden, since TStyle::SetOptStat would otherwise make all stats boxes of the pad follow the global setting and repaint the pad)
-              auto setOptStat = [](auto mode) {
-                TVirtualPad::TContext noPad(nullptr);
-                gStyle->SetOptStat(mode);
-              };
-              const Int_t userOptStat = gStyle->GetOptStat();
-              setOptStat((*data->GetStatsFormat() + ((data->GetStatsTitle()) ? "n" : "")).data());
-              data_ptr->SetStats(true);
-              pad_ptr->Modified();
-              pad_ptr->Update();
-              setOptStat(userOptStat);
-              // the box becomes a plain object of the pad with fixed content: so it does not depend on the global setting when painted again
-              // and is not refilled from another histogram (the web canvas does so for boxes called "stats")
-              if (auto* stats = dynamic_cast<TPaveStats*>(data_ptr->GetListOfFunctions()->FindObject("stats"))) {
-                data_ptr->GetListOfFunctions()->Remove(stats);
-                stats->SetParent(nullptr);
-                data_ptr->SetStats(false);
-                stats->SetName(("stats_" + std::to_string(dataIndex - hasRefFunc)).data());
-                if (const auto& title = data->GetStatsTitle()) {
-                  string titleText = *title;
-                  ReplacePlaceholders(titleText, data_ptr);
-                  static_cast<TText*>(stats->GetListOfLines()->First())->SetTitle(titleText.data());  // instead of the name of the histogram
-                }
-                // without settings for the box: placed automatically, framed in the line colour of the data
-                auto statsBox = (data->GetStatsBox()) ? data->GetStatsBox() : std::make_shared<const Plot::Pad::StatsBox>();
-                stats->SetTextFont(statsBox->GetTextFont().value_or(textFont.value_or(43)));
-                stats->SetTextSize(statsBox->GetTextSize().value_or(textSize.value_or(24.f)));
-                if (statsBox->GetTextColor()) stats->SetTextColor(*statsBox->GetTextColor());
-                if (statsBox->GetTextAlpha()) stats->SetTextColor(TColor::GetColorTransparent(stats->GetTextColor(), *statsBox->GetTextAlpha()));
-                stats->SetLineColor(data_ptr->GetLineColor());
-                stats->SetLineWidth(1);
-                stats->SetBorderSize(1);
-                stats->SetFillStyle(0);
-                ApplyBoxStyle(*statsBox, stats);
-                statsBoxes.emplace_back(stats, statsBox);
-              } else {
-                logger::warning("ROOT did not create a statistics box for {}.", data->GetName());
+          if (showStats) {
+            // ROOT makes the box when painting a histogram: one drawn as graph is drawn for this paint only
+            if constexpr (!is_hist<data_type>()) statsHist->Draw("HIST SAMES");
+            // ROOT fills the box with the global setting when painting the histogram: the requested one is set for this paint only
+            // (with gPad hidden, since TStyle::SetOptStat would otherwise make all stats boxes of the pad follow the global setting and repaint the pad)
+            auto setOptStat = [](auto mode) {
+              TVirtualPad::TContext noPad(nullptr);
+              gStyle->SetOptStat(mode);
+            };
+            const Int_t userOptStat = gStyle->GetOptStat();
+            setOptStat((*data->GetStatsFormat() + ((data->GetStatsTitle()) ? "n" : "")).data());
+            statsHist->SetStats(true);
+            pad_ptr->Modified();
+            pad_ptr->Update();
+            setOptStat(userOptStat);
+            if constexpr (!is_hist<data_type>()) pad_ptr->GetListOfPrimitives()->Remove(statsHist);
+            // the box becomes a plain object of the pad with fixed content: so it does not depend on the global setting when painted again
+            // and is not refilled from another histogram (the web canvas does so for boxes called "stats")
+            if (auto* stats = dynamic_cast<TPaveStats*>(statsHist->GetListOfFunctions()->FindObject("stats"))) {
+              statsHist->GetListOfFunctions()->Remove(stats);
+              stats->SetParent(nullptr);
+              statsHist->SetStats(false);
+              stats->SetName(("stats_" + std::to_string(dataIndex - hasRefFunc)).data());
+              if (const auto& title = data->GetStatsTitle()) {
+                string titleText = *title;
+                ReplacePlaceholders(titleText, statsHist);
+                static_cast<TText*>(stats->GetListOfLines()->First())->SetTitle(titleText.data());  // instead of the name of the histogram
               }
+              // without settings for the box: placed automatically, framed in the line colour of the data
+              auto statsBox = (data->GetStatsBox()) ? data->GetStatsBox() : std::make_shared<const Plot::Pad::StatsBox>();
+              stats->SetTextFont(statsBox->GetTextFont().value_or(textFont.value_or(43)));
+              stats->SetTextSize(statsBox->GetTextSize().value_or(textSize.value_or(24.f)));
+              if (statsBox->GetTextColor()) stats->SetTextColor(*statsBox->GetTextColor());
+              if (statsBox->GetTextAlpha()) stats->SetTextColor(TColor::GetColorTransparent(stats->GetTextColor(), *statsBox->GetTextAlpha()));
+              stats->SetLineColor(data_ptr->GetLineColor());
+              stats->SetLineWidth(1);
+              stats->SetBorderSize(1);
+              stats->SetFillStyle(0);
+              ApplyBoxStyle(*statsBox, stats);
+              statsBoxes.emplace_back(stats, statsBox);
+            } else {
+              logger::warning("ROOT did not create a statistics box for {}.", data->GetName());
             }
           }
           if (alias == points_text) {
@@ -1685,7 +1700,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         // histograms and graphs can be drawn with the same aliases: where ROOT has no option for one of them, it is drawn as the other
         if constexpr (is_hist_1d<data_type>()) {
           if (optionAlias && !defaultDrawingOptions_Hist.count(*optionAlias) && defaultDrawingOptions_Graph.count(*optionAlias)) {
-            drawItem(ToGraph(data_ptr), optionAlias);
+            TGraph* graph = ToGraph(data_ptr);
+            mSourceHists[graph].reset(data_ptr);
+            drawItem(graph, optionAlias);
             return;
           }
         } else if constexpr (is_graph_1d<data_type>()) {
@@ -2302,6 +2319,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         if (entry.GetTextSize()) line_text_size = *entry.GetTextSize();
         if (entry.GetRefDataID()) {
           if (TObject* data_ptr = findData(*entry.GetRefDataID())) {
+            if (auto source = mSourceHists.find(data_ptr); source != mSourceHists.end()) {
+              data_ptr = source->second.get();  // a histogram drawn as graph
+            }
             ReplacePlaceholders(line, static_cast<TNamed*>(data_ptr));
           } else {
             logger::warning("Legend entry '{}' refers to data {}, which is not drawn in this pad.", line, *entry.GetRefDataID());
