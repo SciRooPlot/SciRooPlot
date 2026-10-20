@@ -1284,13 +1284,17 @@ bool PlotManager::FillBuffer()
       if (allFound()) break;
       string input = expand_path(inputRaw);
       if (str_ends_with(input, mTableFileEndings)) {
-        // tables have no folders: only part of the data source itself
+        // tables have no folders: only part of the data source itself, and only read if requested
+        // (a directory source also contains tables nobody asked for, or text files that are no tables at all)
         if (auto it = requiredData.find(baseSource); it != requiredData.end()) {
-          string name = input.substr(input.rfind('/') + 1, input.rfind(".") - input.rfind('/') - 1);
-          ReadTableData(input, name, baseSource);
-          set<string>& wantedNames = it->second[""];
-          wantedNames.erase(name);
-          if (wantedNames.empty()) it->second.erase("");
+          if (auto wantedIt = it->second.find(""); wantedIt != it->second.end()) {
+            set<string>& wantedNames = wantedIt->second;
+            const string name = input.substr(input.rfind('/') + 1, input.rfind('.') - input.rfind('/') - 1);
+            if (wantedNames.erase(name)) {
+              ReadTableData(input, name, baseSource);
+              if (wantedNames.empty()) it->second.erase(wantedIt);
+            }
+          }
         }
       }
       // check if only a sub-folder in input file should be searched
