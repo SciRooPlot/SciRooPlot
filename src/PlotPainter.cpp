@@ -748,8 +748,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   if (!axisHist_ptr->IsBinUnderflow(bin) && !axisHist_ptr->IsBinOverflow(bin) && content > 0.) positiveMinimum = std::min(positiveMinimum, content);
                 }
                 if (std::isinf(positiveMinimum)) {
-                  logger::warning("Log scale of {} axis in pad {} ignored: the data has no positive values.", axisLabel, padID);
-                  disableLog();
+                  // a positive user range is enough for ROOT (e.g. an empty histogram as frame)
+                  if (!userRangeMin || *userRangeMin <= 0.) {
+                    logger::warning("Log scale of {} axis in pad {} ignored: the data has no positive values.", axisLabel, padID);
+                    disableLog();
+                  }
                 } else if ((axisHist_ptr->GetMinimumStored() != -1111) ? (axisHist_ptr->GetMinimumStored() <= 0.) : (axisHist_ptr->GetMinimum() < 0.)) {
                   // ROOT cannot draw a log axis from a stored minimum at or below zero or from negative contents (zero contents it skips itself)
                   axisHist_ptr->SetMinimum(0.5 * positiveMinimum);
