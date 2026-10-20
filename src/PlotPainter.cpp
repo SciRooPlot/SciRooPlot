@@ -2533,7 +2533,8 @@ std::pair<double_t, double_t> PlotPainter::PlaceBox(const BoxType& box, TPad* pa
   }
   if (box.IsUserCoordinates()) {
     pad->Update();
-    return {(box.GetXPosition() - pad->GetX1()) / (pad->GetX2() - pad->GetX1()), (box.GetYPosition() - pad->GetY1()) / (pad->GetY2() - pad->GetY1())};
+    // pad coordinates are log10 of the axis values on a log axis (XtoPad/YtoPad, as ROOT places objects in user coordinates)
+    return {(pad->XtoPad(box.GetXPosition()) - pad->GetX1()) / (pad->GetX2() - pad->GetX1()), (pad->YtoPad(box.GetYPosition()) - pad->GetY1()) / (pad->GetY2() - pad->GetY1())};
   }
   return {box.GetXPosition(), box.GetYPosition()};
 }
