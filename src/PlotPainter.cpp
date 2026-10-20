@@ -1776,8 +1776,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }
       }
-      double_t lineHeightPixel{stats->GetTextSize()};
-      if (stats->GetTextFont() % 10 <= 2) lineHeightPixel = GetTextSizePixel(stats->GetTextSize());
+      // a pixel size (precision 3) is stored unscaled (ApplyScale multiplies it later), a size relative to the pad already scales with it
+      const double_t lineHeightPixel = (stats->GetTextFont() % 10 <= 2) ? GetTextSizePixel(stats->GetTextSize()) : mScale * stats->GetTextSize();
       const double_t lineSpacing = statsBox->GetLineSpacing().value_or(0.3);  // as for legends and texts
       const double_t contentWidthPixel = std::max({labelWidth + lineHeightPixel + valueWidth, titleWidth, 3. * cellWidth});
       // the margin of TPaveStats is a fraction of the box width, the one set for a box is in NDC (as for legends and texts)
@@ -2289,8 +2289,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     double_t titleWidthPixel{};
     vector<uint32_t> contentWidthPixelPerColumn(nColumns, 1);
 
-    double_t lineHeightPixel{text_size};
-    if (text_font % 10 <= 2) lineHeightPixel = GetTextSizePixel(text_size);
+    // a pixel size (precision 3) is stored unscaled (ApplyScale multiplies it later), a size relative to the pad already scales with it
+    double_t lineHeightPixel = (text_font % 10 <= 2) ? GetTextSizePixel(text_size) : mScale * text_size;
 
     uint8_t lineID{};
     for (auto& line : lines) {
