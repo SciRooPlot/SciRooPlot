@@ -1745,7 +1745,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (redrawAxes && axisHist_ptr && !pad_ptr->GetView()) {
       // re-draw frame
       TLine line;
-      pad_ptr->GetFrame()->Copy(line);
+      pad_ptr->GetFrame()->TAttLine::Copy(line);  // only the line attributes: TFrame::Copy would write a whole TWbox into the TLine
       double_t lm = pad_ptr->GetLeftMargin();
       double_t rm = 1. - pad_ptr->GetRightMargin();
       double_t tm = 1. - pad_ptr->GetTopMargin();
