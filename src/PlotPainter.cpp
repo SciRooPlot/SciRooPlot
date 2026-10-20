@@ -525,12 +525,22 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // smallest positive value of the data, needed for a log scale (infinity if there is none);
           // for graphs taken from the points, since their axis frame is an empty histogram (and drawing it below deletes the graph)
           optional<double_t> graphPositiveMinimum;
+          // the same for the x axis of 1d graphs, from the lower ends of the error bars (from the points where those are not positive)
+          optional<double_t> graphPositiveMinimumX;
           if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
             graphPositiveMinimum = std::numeric_limits<double_t>::infinity();
+            if constexpr (is_graph_1d<data_type>()) graphPositiveMinimumX = std::numeric_limits<double_t>::infinity();
             for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
               double_t value{};
               if constexpr (is_graph_1d<data_type>()) {
                 value = data_ptr->GetPointY(i);
+                const double_t x = data_ptr->GetPointX(i);
+                const double_t xLow = x - std::max(data_ptr->GetErrorXlow(i), 0.);  // -1 for graphs without errors
+                if (xLow > 0.) {
+                  graphPositiveMinimumX = std::min(*graphPositiveMinimumX, xLow);
+                } else if (x > 0.) {
+                  graphPositiveMinimumX = std::min(*graphPositiveMinimumX, x);
+                }
               } else {
                 value = data_ptr->GetZ()[i];
               }
@@ -747,7 +757,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               } else if (isLog && !isDependentAxis) {
                 const int32_t firstBin = std::max(axis_ptr->GetFirst(), 1);
                 const int32_t lastBin = std::min(axis_ptr->GetLast(), axis_ptr->GetNbins());
-                if (axis_ptr->GetBinLowEdge(firstBin) < 0.) {  // ROOT itself copes with a range starting at zero
+                const bool isGraphFrame = (axisLabel == 'X') && graphPositiveMinimumX && !std::isinf(*graphPositiveMinimumX);
+                if (isGraphFrame && axis_ptr->GetBinLowEdge(firstBin) <= 0. && axis_ptr->GetBinUpEdge(lastBin) > 0.) {
+                  // the frame of a graph is an empty histogram with linear bins, whose first positive edge can lie above the smallest points:
+                  // its axis is redefined to start just below them, as ROOT does for a graph drawn on a log x axis (or at a positive minimum set by the user)
+                  const double_t newMin = (userRangeMin && *userRangeMin > 0.) ? *userRangeMin : 0.9 * *graphPositiveMinimumX;
+                  axis_ptr->Set(axis_ptr->GetNbins(), newMin, axis_ptr->GetBinUpEdge(lastBin));
+                  axis_ptr->SetRange();
+                } else if (axis_ptr->GetBinLowEdge(firstBin) < 0.) {  // ROOT itself copes with a range starting at zero
                   if (axis_ptr->GetBinUpEdge(lastBin) <= 0.) {
                     logger::warning("Log scale of {} axis in pad {} ignored: the axis range has no positive values.", axisLabel, padID);
                     disableLog();
