@@ -1034,18 +1034,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
 
     // determine which input data are needed for plots
     for (auto& [padID, pad] : plot.GetPads()) {
-      if (auto& refFunc = pad.GetRefFunc()) {
-        mDataBuffer[refFunc->GetDataSource()][refFunc->GetName()];
-      } else {
-        if (plot.GetBasePlotName()) {
-          auto it = std::find_if(mBasePlots.begin(), mBasePlots.end(), [&](const auto& basePlot) { return *plot.GetBasePlotName() == basePlot.GetName(); });
-          if (it != mBasePlots.end()) {
-            if (auto& refFunc = (*it).GetPad(padID).GetRefFunc()) {
-              mDataBuffer[refFunc->GetDataSource()][refFunc->GetName()];
-            }
-          }
-        }
-      }
+      if (auto refFunc = RefFuncDrawnIn(plot, padID)) mDataBuffer[refFunc->GetDataSource()][refFunc->GetName()];
       for (const auto& data : pad.GetData()) {
         mDataBuffer[data->GetDataSource()][data->GetName()];
         // also register requests without projection info: trees and tables then report that they cannot be plotted directly
@@ -1487,6 +1476,34 @@ void PlotManager::PrintBufferStatus(bool onlyMissing) const
 
 //**************************************************************************************************
 /**
+ * Reference function the painter draws in a pad of a plot, as merged with its base plot in GeneratePlot:
+ * the pad's own, else the one of the base plot's pad, else the one of pad 0 of the plot, else of pad 0 of the base plot.
+ * It is drawn only in pads with data.
+ */
+//**************************************************************************************************
+shared_ptr<Plot::Pad::Data> PlotManager::RefFuncDrawnIn(Plot& plot, uint8_t padID)
+{
+  auto padIt = plot.GetPads().find(padID);
+  if (padID == 0 || padIt == plot.GetPads().end() || padIt->second.GetData().empty()) return nullptr;
+  Plot* basePlot = nullptr;
+  if (plot.GetBasePlotName()) {
+    auto it = std::find_if(mBasePlots.begin(), mBasePlots.end(), [&](const auto& curBasePlot) { return *plot.GetBasePlotName() == curBasePlot.GetName(); });
+    if (it != mBasePlots.end()) basePlot = &*it;
+  }
+  auto refFuncOf = [](Plot* curPlot, uint8_t curPadID) -> shared_ptr<Plot::Pad::Data> {
+    if (!curPlot) return nullptr;
+    auto curPadIt = curPlot->GetPads().find(curPadID);
+    return (curPadIt != curPlot->GetPads().end()) ? curPadIt->second.GetRefFunc() : nullptr;
+  };
+  for (const uint8_t curPadID : {padID, uint8_t{0}}) {
+    if (auto refFunc = refFuncOf(&plot, curPadID)) return refFunc;
+    if (auto refFunc = refFuncOf(basePlot, curPadID)) return refFunc;
+  }
+  return nullptr;
+}
+
+//**************************************************************************************************
+/**
  * Determine which of a plot's required data entries are missing from the buffer.
  */
 //**************************************************************************************************
@@ -1503,16 +1520,7 @@ vector<std::tuple<string, string, Plot::Pad::Data::data_info_t>> PlotManager::Ge
   };
 
   for (auto& [padID, pad] : plot.GetPads()) {
-    if (auto& refFunc = pad.GetRefFunc()) {
-      checkKey(refFunc->GetDataSource(), refFunc->GetName(), refFunc->GetDataInfo());
-    } else if (plot.GetBasePlotName()) {
-      auto it = std::find_if(mBasePlots.begin(), mBasePlots.end(), [&](const auto& basePlot) { return *plot.GetBasePlotName() == basePlot.GetName(); });
-      if (it != mBasePlots.end()) {
-        if (auto& baseRefFunc = (*it).GetPad(padID).GetRefFunc()) {
-          checkKey(baseRefFunc->GetDataSource(), baseRefFunc->GetName(), baseRefFunc->GetDataInfo());
-        }
-      }
-    }
+    if (auto refFunc = RefFuncDrawnIn(plot, padID)) checkKey(refFunc->GetDataSource(), refFunc->GetName(), refFunc->GetDataInfo());
     for (const auto& data : pad.GetData()) {
       checkKey(data->GetDataSource(), data->GetName(), data->GetDataInfo());
       if (data->GetType() == "ratio") {
