@@ -409,26 +409,68 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     logger::error("Could not create directory {} in {}.", dataSource, mUserDataFile);
     return;
   }
-  dir->cd();
-  set<string> addedNames;
-  for (auto object : inputs) {
-    if (!object) continue;
-    string name = object->GetName();
+  // Lists and directories become folders of the data source (a list without a name, for which ROOT reports its class name,
+  // and a file are added item by item), so their items are addressed by path and stored like objects given directly.
+  // Folders of the same name are merged; an object replaces one of the same name in its folder.
+  std::function<void(TObject*, TDirectory*, const string&)> add = [&](TObject* object, TDirectory* target, const string& folder) {
+    const string name = object->GetName();
     if (name.empty()) {
-      logger::warning("Cannot add nameless object of type {} to dataSource {}.", object->ClassName(), dataSource);
-      continue;
+      logger::warning("Cannot add nameless object of type {} to data source {}.", object->ClassName(), dataSource);
+      return;
     }
-    if (!addedNames.insert(name).second) {
-      logger::warning("Data source {} receives multiple objects named {}. Only the last one is kept.", dataSource, name);
+    auto* list = (object->InheritsFrom(TMap::Class())) ? nullptr : dynamic_cast<TCollection*>(object);
+    auto* directory = dynamic_cast<TDirectory*>(object);
+    if (list || directory) {
+      TDirectory* subDir = target;
+      string subFolder = folder;
+      if (!dynamic_cast<TFile*>(object) && !(list && name == object->ClassName())) {
+        subDir = target->GetDirectory(name.data());
+        if (!subDir) subDir = target->mkdir(name.data());
+        if (!subDir) {
+          logger::error("Could not create folder {} in data source {}.", folder + name, dataSource);
+          return;
+        }
+        subFolder += name + "/";
+      }
+      if (list) {
+        for (TObject* item : *list) {
+          if (item) add(item, subDir, subFolder);
+        }
+        return;
+      }
+      // a directory: the objects in memory (possibly newer than what is written), then the latest cycle of each key
+      set<string> added;
+      for (TObject* item : *directory->GetList()) {
+        if (item && added.insert(item->GetName()).second) add(item, subDir, subFolder);
+      }
+      for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {
+        if (!key || directory->FindKey(key->GetName()) != key || !added.insert(key->GetName()).second) continue;
+        if (TClass* keyClass = TClass::GetClass(key->GetClassName()); keyClass && keyClass->InheritsFrom(TDirectory::Class())) {
+          if (auto* keyDir = directory->GetDirectory(key->GetName())) add(keyDir, subDir, subFolder);  // owned by the file
+        } else if (std::unique_ptr<TObject, container_deleter_t> item{key->ReadObj()}) {
+          // read from the file: deleted after writing it (a list with all its items)
+          add(item.get(), subDir, subFolder);
+        } else {
+          logger::warning("Could not read {} of class {} from {} (data source {}).", key->GetName(), key->GetClassName(), directory->GetPath(), dataSource);
+        }
+      }
+      return;
     }
+    if (target->FindKey(name.data())) {
+      logger::warning("Data source {} receives a second object named {}{}: it replaces the first one.", dataSource, folder, name);
+    }
+    target->cd();
     // a tree read from a file keeps its entries in that file, writing it would only store the header: store a copy of all entries
     if (auto* tree = dynamic_cast<TTree*>(object); tree && tree->GetDirectory() && tree->GetDirectory()->GetFile()) {
-      TTree* copy = tree->CloneTree(-1, "fast");  // created in the current directory, i.e. in the data source's directory
+      TTree* copy = tree->CloneTree(-1, "fast");  // created in the current directory, i.e. in the target folder
       copy->Write(name.data(), TObject::kWriteDelete);
       delete copy;
-      continue;
+      return;
     }
-    object->Write(nullptr, TObject::kWriteDelete);
+    object->Write(name.data(), TObject::kSingleKey | TObject::kWriteDelete);  // single key: a map stays one object
+  };
+  for (auto object : inputs) {
+    if (object) add(object, dir, "");
   }
   file.Close();
   AddDataSource(dataSource, {mUserDataFile + ":" + dataSource}, replace);

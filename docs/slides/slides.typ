@@ -789,7 +789,7 @@
 
       - Inputs are searched in the order they were added (files from directories or wildcards alphabetically) and the first match counts -- but trees found in several inputs are chained.
 
-      - Local ROOT objects can also be directly added.
+      - Local ROOT objects can be added directly; lists and TDirectories become folders.
 
     ],
     [
@@ -1713,7 +1713,7 @@
     [
       #api-section("PlotManager", (
         [`PlotManager(projectName = "")`], [Construct a manager for a named project.],
-        [`AddDataSource(id, files, replace = false)`], [Register files, directories or in-memory ROOT objects under an ID (`replace`: clear the ID first).],
+        [`AddDataSource(id, files, replace = false)`], [Register files, directories or ROOT objects (also lists, open files) under an ID (`replace`: clear the ID first).],
         [#names("SaveDataSources(file = {})", "LoadDataSources(file = {}, replace = false)")], [Save or reload the registered data sources (default: the project's file).],
         [`AddPlot(plot)` / `AddBasePlot(basePlot)`], [Register a plot, or a reusable base plot layout.],
         [`AddColorOverview(name, group, colors = {})`], [Add a plot showing the ROOT colour wheel, or the given colours with their indices.],

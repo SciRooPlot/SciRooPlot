@@ -79,7 +79,7 @@ Python is the same API: `from SciRooPlot import *`, `PlotManager("myProject")`, 
 - Within a data source the first input containing a requested name wins; trees found in several inputs are chained. Train/test samples etc. therefore belong into separate sources.
 - The data name may be a path inside the input: `AddData("folder1/hist", "src")`. Sub-sources are allowed in `AddData` as `"src:folder"` (restricts the search to that folder) — the folder is part of the source, never of the name.
 - Without a path, a name is searched in the folder of the data source first, then in its sub-folders/lists one after the other in stored order, each completely (depth-first); the first match counts. If a name exists more than once, give the path.
-- `AddDataSource(name, TObject*)` or a vector of objects adds in-memory objects.
+- `AddDataSource(name, TObject*)` or a vector of objects adds in-memory objects; they are copied into the project, so they may be deleted afterwards. A named list (TList, TObjArray, ...) or a TDirectory becomes a folder of the data source (`AddData("myList/myHist", "src")`, trees inside are copied with all entries); a nameless list (ROOT reports its class name) or an open TFile adds its contents directly. Folders of the same name are merged, an object of an existing name replaces it (with a warning).
 
 ## Plot, pads, axes
 

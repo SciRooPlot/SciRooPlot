@@ -66,6 +66,8 @@ class PlotManager
   void AddDataSource(const std::string& dataSource, const std::vector<std::string>& inputs, bool replace = false);
   void AddDataSource(const std::string& dataSource, std::initializer_list<std::string> inputs, bool replace = false);
   void AddDataSource(const std::string& dataSource, const std::string& input, bool replace = false);
+  // in-memory objects are copied into the project: a named list or a directory becomes a folder of the dataSource,
+  // the contents of a nameless list or of a file are added directly
   void AddDataSource(const std::string& dataSource, const std::vector<TObject*>& inputs, bool replace = false);
   void AddDataSource(const std::string& dataSource, TObject* input, bool replace = false);
 
