@@ -63,6 +63,7 @@
 #include <cctype>
 #include <chrono>
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <fnmatch.h>
 #include <fstream>
@@ -2074,8 +2075,15 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
   string line;
   size_t lineNumber = 0;
   bool hasComments = false;
+  bool hasBom = false;            // Excel's "CSV UTF-8" starts the file with a byte order mark, which ROOT makes part of the first column name
+  bool isBomLineSkipped = false;  // the line with the mark is not data (a comment): ROOT can simply skip it
   while (lines.size() < 100 && std::getline(file, line)) {
     ++lineNumber;
+    if (lineNumber == 1 && line.compare(0, 3, "\xEF\xBB\xBF") == 0) {
+      hasBom = true;
+      line.erase(0, 3);
+      isBomLineSkipped = trim(line).empty() || trim(line)[0] == '#';
+    }
     line = trim(line);
     if (line.empty()) continue;
     if (line[0] == '#') {
@@ -2137,19 +2145,68 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
     }
   }
 
-  // check the remaining lines as well, ROOT's csv reader does not tolerate a varying number of fields
-  auto checkLine = [&](size_t number, const string& content) {
-    const size_t n = split(content, delimiter).size();
-    if (n == nFields) return true;
-    logger::error("Cannot read table {}: {}.", inputFileName, describeMismatch(delimiter, nFields, number, n));
-    return false;
+  // ROOT takes the type of a column from its first value: an integer makes it an integer column, so later decimals are truncated
+  // (0.5 is read as 0) and inf or nan cannot be read, while numbers it does not recognise as such (1e-3, inf, nan) make it a text column.
+  // Such columns are declared as floating point, from all values of the table (checked as long as the type of the column is open).
+  enum class column_kind_t { open,
+                             integer,
+                             text_like,
+                             done };
+  const auto columnNames = split(lines[0].second, delimiter);
+  vector<column_kind_t> columnKinds(columnNames.size(), column_kind_t::open);
+  vector<bool> forceDouble(columnNames.size(), false);
+  auto isInteger = [](const string& value) {
+    const size_t start = (value[0] == '+' || value[0] == '-') ? 1 : 0;
+    return value.size() > start && value.find_first_not_of("0123456789", start) == string::npos;
   };
+  auto isNumber = [](const string& value) {
+    char* end{};
+    std::strtod(value.data(), &end);
+    return end == value.data() + value.size();
+  };
+  auto checkTypes = [&](const vector<string>& fields) {
+    for (size_t column = 0; column < std::min(fields.size(), columnKinds.size()); ++column) {
+      column_kind_t& kind = columnKinds[column];
+      if (kind == column_kind_t::done) continue;
+      const string value = trim(fields[column]);
+      if (value.empty()) continue;  // the type comes from the values that are there
+      if (kind == column_kind_t::open) {
+        // as ROOT: integers and numbers with a decimal point are numeric, everything else text
+        static const std::regex decimal(R"([+-]?(\d+\.\d*|\d*\.\d+)([eE][+-]?\d+)?)");
+        if (isInteger(value)) {
+          kind = column_kind_t::integer;
+        } else if (std::regex_match(value, decimal) || !isNumber(value)) {
+          kind = column_kind_t::done;
+        } else {
+          kind = column_kind_t::text_like;
+          forceDouble[column] = true;
+        }
+      } else if (kind == column_kind_t::integer) {
+        if (!isInteger(value)) {
+          forceDouble[column] = isNumber(value);  // any other value fails with an integer as well as with a floating point type
+          kind = column_kind_t::done;
+        }
+      } else if (!isNumber(value)) {  // text-like numbers: a column with real text stays text
+        forceDouble[column] = false;
+        kind = column_kind_t::done;
+      }
+    }
+  };
+  for (size_t i = 1; i < lines.size(); ++i) {
+    checkTypes(split(lines[i].second, delimiter));
+  }
+  // check the remaining lines as well, ROOT's csv reader does not tolerate a varying number of fields
   while (std::getline(file, line)) {
     ++lineNumber;
     line = trim(line);
     if (line.empty()) continue;
     if (line[0] == '#' && hasComments) continue;
-    if (!checkLine(lineNumber, line)) return;
+    const auto fields = split(line, delimiter);
+    if (fields.size() != nFields) {
+      logger::error("Cannot read table {}: {}.", inputFileName, describeMismatch(delimiter, nFields, lineNumber, fields.size()));
+      return;
+    }
+    checkTypes(fields);
   }
 
   // ROOT does not trim the fields: names and values with surrounding spaces end up as such (values as text)
@@ -2176,22 +2233,20 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
   }
 
   ROOT::RDF::RCsvDS::ROptions options;
-  // ROOT reads numbers in exponent notation without decimal point (e.g. 1e-3) as text: declare such columns as numeric
-  if (lines.size() > 1) {
-    static const std::regex number(R"([+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?)");
-    static const std::regex exponent(R"([+-]?\d+[eE][+-]?\d+)");
-    const auto columnNames = split(lines[0].second, delimiter);
-    for (size_t column = 0; column < columnNames.size(); ++column) {
-      bool allNumbers = true;
-      bool hasExponent = false;
-      for (size_t i = 1; i < lines.size() && allNumbers; ++i) {
-        const string value = trim(split(lines[i].second, delimiter)[column]);
-        allNumbers = std::regex_match(value, number);
-        hasExponent = hasExponent || std::regex_match(value, exponent);
-      }
-      string columnName = trim(columnNames[column]);
-      if (columnName.size() > 1 && columnName.front() == '"' && columnName.back() == '"') columnName = columnName.substr(1, columnName.size() - 2);
-      if (allNumbers && hasExponent && !columnName.empty()) options.fColumnTypes[columnName] = 'D';
+  auto columnName = [&](const string& field) {
+    string name = trim(field);
+    if (name.size() > 1 && name.front() == '"' && name.back() == '"') name = name.substr(1, name.size() - 2);
+    return name;
+  };
+  for (size_t column = 0; column < columnNames.size(); ++column) {
+    const string name = columnName(columnNames[column]);
+    if (forceDouble[column] && !name.empty()) options.fColumnTypes[name] = 'D';
+  }
+  if (isBomLineSkipped) {
+    options.fSkipFirstNLines = 1;
+  } else if (hasBom) {
+    for (const auto& field : columnNames) {
+      options.fColumnNames.push_back(columnName(field));
     }
   }
   options.fDelimiter = delimiter;

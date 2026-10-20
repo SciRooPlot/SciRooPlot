@@ -34,6 +34,7 @@
 #include <cmath>
 #include <cstdint>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -77,6 +78,13 @@ class DataFrameRequest
   template <typename T>
   void SetResult(ROOT::RDF::RResultPtr<T> result);
 
+  // range of the finite values of an axis, and the number of the others (inf, nan), for the automatic binning
+  struct auto_range_t {
+    double_t min{std::numeric_limits<double_t>::infinity()};
+    double_t max{-std::numeric_limits<double_t>::infinity()};
+    ULong64_t nNonFinite{};
+  };
+
   const DataInfo* mInfo{};
   std::string mContext;  // e.g. 'tree source:name', used in messages
   std::string mObjName;  // name of the resulting object
@@ -88,8 +96,8 @@ class DataFrameRequest
   bool mHasWeights{};
   std::optional<ROOT::RDF::RResultPtr<ULong64_t>> mEntriesPreFilter;
   std::optional<ROOT::RDF::RResultPtr<ULong64_t>> mEntriesPostFilter;
-  std::vector<std::optional<std::pair<ROOT::RDF::RResultPtr<double_t>, ROOT::RDF::RResultPtr<double_t>>>> mAutoRanges;  // (min, max) per axis
-  std::vector<bool> mIsIntegerAxis;                                                                                     // the values of the axis are integers
+  std::vector<std::function<auto_range_t()>> mAutoRanges;  // per axis: gives the result of the range pass (empty if the axis has its own range)
+  std::vector<bool> mIsIntegerAxis;                        // the values of the axis are integers
   std::function<TObject*()> mGetResult;
   std::vector<ROOT::RDF::RResultHandle> mHandles;
 };
@@ -245,7 +253,48 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     const bool isBinned = isProjection || (mIsProfile && axisID < mDims.size());
     if (isBinned && dataDim.nBins && dataDim.edges.size() == 2 && !dataDim.edges[0] && !dataDim.edges[1]) {
       // auto-detect bin edges given the data
-      mAutoRanges[axisID - 1] = std::make_pair(node.Min(colName), node.Max(colName));
+      if (mIsIntegerAxis[axisID - 1]) {
+        auto min = node.Min(colName);
+        auto max = node.Max(colName);
+        mAutoRanges[axisID - 1] = [min, max]() mutable { return auto_range_t{*min, *max, 0}; };
+      } else {
+        // a single inf would make the range infinite, a nan makes it depend on the order of the rows (which varies with multi-threading):
+        // the range is taken from the finite values only, the others are counted for a warning
+        auto bookFiniteRange = [&](auto value) {
+          using value_t = decltype(value);
+          auto range = node.Aggregate(
+            [](auto_range_t& acc, value_t v) {
+              if (std::isfinite(v)) {
+                acc.min = std::min<double_t>(acc.min, v);
+                acc.max = std::max<double_t>(acc.max, v);
+              } else {
+                ++acc.nNonFinite;
+              }
+            },
+            [](const auto_range_t& a, const auto_range_t& b) { return auto_range_t{std::min(a.min, b.min), std::max(a.max, b.max), a.nNonFinite + b.nNonFinite}; },
+            colName, auto_range_t{});
+          mAutoRanges[axisID - 1] = [range]() mutable { return *range; };
+        };
+        if (columnType == "double" || columnType == "Double_t") {
+          bookFiniteRange(double_t{});
+        } else if (columnType == "float" || columnType == "Float_t") {
+          bookFiniteRange(float{});
+        } else {
+          // other types (collections such as RVec<float>, long double) with jitted code, the finite values as a column of their own
+          const bool isCollection = columnType.find("RVec") != std::string::npos || columnType.find("vector") != std::string::npos;
+          const std::string finiteName = colName + "_FINITE";
+          const std::string nonFiniteName = colName + "_NONFINITE";
+          // the explicit return is needed, since ROOT takes code containing a return (here the one of the lambda) as a function body
+          auto finiteNode = (isCollection) ? node.Define(finiteName, fmt::format("return ROOT::VecOps::Filter({}, [](double x) {{ return std::isfinite(x); }});", colName))
+                                           : node.Define(finiteName, colName).Filter(fmt::format("std::isfinite({})", finiteName));
+          auto min = finiteNode.Min(finiteName);
+          auto max = finiteNode.Max(finiteName);
+          auto nNonFinite = node.Define(nonFiniteName, (isCollection) ? fmt::format("return static_cast<ULong64_t>(ROOT::VecOps::Sum(!ROOT::VecOps::Map({}, [](double x) {{ return std::isfinite(x); }})));", colName)
+                                                                      : fmt::format("static_cast<ULong64_t>(!std::isfinite({}))", colName))
+                              .Sum<ULong64_t>(nonFiniteName);
+          mAutoRanges[axisID - 1] = [min, max, nNonFinite]() mutable { return auto_range_t{*min, *max, *nNonFinite}; };
+        }
+      }
     }
     if (mIsProfile && axisID == mDims.size()) {
       mHistTitle += ";#LT " + dataDim.var + " #GT";
@@ -274,7 +323,7 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
 template <typename DataInfo>
 bool DataFrameRequest<DataInfo>::NeedsAutoRange() const
 {
-  return std::any_of(mAutoRanges.begin(), mAutoRanges.end(), [](const auto& range) { return range.has_value(); });
+  return std::any_of(mAutoRanges.begin(), mAutoRanges.end(), [](const auto& range) { return static_cast<bool>(range); });
 }
 
 // store the result of the booked action and its handle
@@ -301,9 +350,11 @@ bool DataFrameRequest<DataInfo>::Book()
   auto& node = *mNode;
   auto& dataDims = mDims;
   for (size_t i = 0; i < dataDims.size(); ++i) {
-    if (auto& range = mAutoRanges[i]) {
-      const double_t min = *range->first;
-      const double_t max = *range->second;
+    if (mAutoRanges[i]) {
+      const auto [min, max, nNonFinite] = mAutoRanges[i]();
+      if (nNonFinite) {
+        logger::warning("{} value{} of {} in {} {} not finite (inf or nan): the axis range is determined without {}.", nNonFinite, (nNonFinite > 1) ? "s" : "", dataDims[i].var, mContext, (nNonFinite > 1) ? "are" : "is", (nNonFinite > 1) ? "them" : "it");
+      }
       if (mIsIntegerAxis[i] && min <= max) {
         std::tie(dataDims[i].nBins, dataDims[i].edges[0], dataDims[i].edges[1]) = util::integer_binning(min, max, dataDims[i].nBins);
       } else {
