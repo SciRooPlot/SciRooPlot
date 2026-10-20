@@ -43,6 +43,7 @@
 #include <TH1D.h>
 #include <TH2.h>
 #include <TH2D.h>
+#include <TH2Poly.h>
 #include <TH3.h>
 #include <TH3D.h>
 #include <THStack.h>
@@ -1042,7 +1043,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             showStats = data->GetStatsFormat() && (!data->GetStatsFormat()->empty() || data->GetStatsTitle());
             if (showStats && drawingOptions.rfind("SAME", 0) == 0) drawingOptions.insert(4, "S");  // ROOT fills a stats box only with SAMES, not with SAME
             if (!(data->GetShowOverflowBins() && *data->GetShowOverflowBins())) {
-              data_ptr->ClearUnderflowAndOverflow();
+              // TH2Poly keeps its bins outside the cell array of TH1, whose loop over the global cells would zero the real bins;
+              // its overflow regions are never drawn anyway
+              bool isPoly{false};
+              if constexpr (is_hist_2d<data_type>()) isPoly = data_ptr->InheritsFrom(TH2Poly::Class());
+              if (!isPoly) data_ptr->ClearUnderflowAndOverflow();
             }
           } else if (data->GetStatsFormat()) {
             logger::warning("Statistics boxes are available only for histograms, not for {}.", data->GetName());
