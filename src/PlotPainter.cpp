@@ -2029,7 +2029,11 @@ void PlotPainter::ApplyScale(TObject* obj, std::set<TObject*>& done, const std::
   if (marker && !isHistText) marker->SetMarkerSize(marker->GetMarkerSize() * mScale);
   auto text = dynamic_cast<TAttText*>(obj);
   if (text && text->GetTextFont() % 10 == 3) text->SetTextSize(text->GetTextSize() * mScale);
-  if (auto pave = dynamic_cast<TPave*>(obj)) pave->SetBorderSize(static_cast<Int_t>(std::lround(pave->GetBorderSize() * mScale)));
+  // the border size of a box is no width: 0 means no outline, 1 an outline (its width is the line width scaled above),
+  // from 2 on an outline plus a shadow of that many pixels (see TPave::PaintPave): only the shadow is scaled
+  if (auto pave = dynamic_cast<TPave*>(obj); pave && pave->GetBorderSize() > 1) {
+    pave->SetBorderSize(std::max(2, static_cast<Int_t>(std::lround(pave->GetBorderSize() * mScale))));
+  }
   if (auto pad = dynamic_cast<TPad*>(obj)) {
     pad->SetFrameLineWidth(scaleFrameLineWidth(pad->GetFrameLineWidth()));
     pad->SetBorderSize(static_cast<Short_t>(std::lround(pad->GetBorderSize() * mScale)));
