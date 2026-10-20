@@ -3502,11 +3502,13 @@ tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad* pad
     if (font % 10 <= 2) {
       text.GetBoundingBox(width, height);
     } else {
+      // measured as the same text with a relative size: ROOT converts a relative size to pixels with the smaller of
+      // the pad's width and height (as GetTextSizePixel), so the pixel size is divided by that one
       TLatex textBox{text};
       textBox.SetTextFont(font - 1);
-      double_t dy{pad->AbsPixeltoY(0) - pad->AbsPixeltoY(static_cast<int32_t>(text.GetTextSize() * mScale))};
-      double_t textSize{dy / (pad->GetY2() - pad->GetY1())};
-      textBox.SetTextSize(textSize);
+      const double_t padWidthPixel = pad->XtoPixel(pad->GetX2());
+      const double_t padHeightPixel = pad->YtoPixel(pad->GetY1());
+      textBox.SetTextSize(text.GetTextSize() * mScale / std::min(padWidthPixel, padHeightPixel));
       textBox.GetBoundingBox(width, height);
     }
   };
