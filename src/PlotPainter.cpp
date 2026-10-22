@@ -1165,14 +1165,27 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (textSize) label.SetTextSize(*textSize);
             const string format = "%" + data->GetTextFormat().value_or("g");
             auto drawLabel = [&](double_t x, double_t y, double_t value) { label.DrawLatex(x, y, TString::Format(format.data(), value).Data()); };
+            // only drawn points get a value: the labels, unlike the markers, are not clipped at the frame
+            auto toUser = [](double_t padValue, bool isLog) { return (isLog) ? std::pow(10., padValue) : padValue; };
+            const double_t frameMinX = toUser(pad_ptr->GetUxmin(), pad_ptr->GetLogx());
+            const double_t frameMaxX = toUser(pad_ptr->GetUxmax(), pad_ptr->GetLogx());
+            const double_t frameMinY = toUser(pad_ptr->GetUymin(), pad_ptr->GetLogy());
+            const double_t frameMaxY = toUser(pad_ptr->GetUymax(), pad_ptr->GetLogy());
+            auto inFrame = [&](double_t x, double_t y) { return x >= frameMinX && x <= frameMaxX && y >= frameMinY && y <= frameMaxY; };
             if constexpr (is_hist_1d<data_type>()) {
-              for (int32_t bin = 1; bin <= data_ptr->GetNbinsX(); ++bin) {
-                if (data_ptr->GetBinContent(bin) == 0. && data_ptr->GetBinError(bin) == 0.) continue;
-                drawLabel(data_ptr->GetBinCenter(bin), data_ptr->GetBinContent(bin) + data_ptr->GetBinError(bin), data_ptr->GetBinContent(bin));
+              // the drawn bins (data range, cut at the frame) and the y range of the data (its minimum and maximum)
+              const double_t minY = (data_ptr->GetMinimumStored() != -1111) ? data_ptr->GetMinimumStored() : -std::numeric_limits<double_t>::infinity();
+              const double_t maxY = (data_ptr->GetMaximumStored() != -1111) ? data_ptr->GetMaximumStored() : std::numeric_limits<double_t>::infinity();
+              for (int32_t bin = data_ptr->GetXaxis()->GetFirst(); bin <= data_ptr->GetXaxis()->GetLast(); ++bin) {
+                const double_t content = data_ptr->GetBinContent(bin);
+                if ((content == 0. && data_ptr->GetBinError(bin) == 0.) || content < minY || content > maxY || !inFrame(data_ptr->GetBinCenter(bin), content)) continue;
+                drawLabel(data_ptr->GetBinCenter(bin), content + data_ptr->GetBinError(bin), content);
               }
             } else if constexpr (is_graph_1d<data_type>()) {
+              // points outside the data range are removed already
               for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
-                drawLabel(data_ptr->GetPointX(i), data_ptr->GetPointY(i) + data_ptr->GetErrorYhigh(i), data_ptr->GetPointY(i));
+                if (!inFrame(data_ptr->GetPointX(i), data_ptr->GetPointY(i))) continue;
+                drawLabel(data_ptr->GetPointX(i), data_ptr->GetPointY(i) + std::max(data_ptr->GetErrorYhigh(i), 0.), data_ptr->GetPointY(i));  // -1 for graphs without errors
               }
             }
           }
