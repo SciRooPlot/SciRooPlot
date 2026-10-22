@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
     logger::print("  srp settings");
     logger::print("  srp color       (bright | dark | off)");
     logger::print("  srp verbosity   (debug | log | info | warning | error)");
-    logger::print("  srp plotmode    (show | pdf | eps | svg | png | gif | jpg)");
+    logger::print("  srp plotmode    (show | spread | pdf | eps | svg | png | gif | jpg)");
     logger::print("  srp matchmode   (exact | contains)");
     logger::print("  srp matchcase   (sensitive | insensitive)");
     logger::print("  srp screenscale <factor>  (size of plots shown on screen, default 1)");

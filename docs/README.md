@@ -85,7 +85,7 @@ Note: in bash (unlike zsh), patterns containing `(`, `)`, or `|` must be quoted,
 A group always includes its subgroups, so `plot myGroup .+` also creates the plots in `myGroup/QAPlots`.
 To select only a subgroup within the group, use `<group/some/subgroup>` (for example `plot myGroup/QAPlots controlObservable`), and to exclude the subgroups, end the group with `$` (for example `plot 'myGroup$' .+`).
 By default, the optional `mode` argument is set to `show` and you can leave it out in the command.
-Possible alternatives are: `list`, `print`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`, `data`.
+Possible alternatives are: `spread`, `list`, `print`, `pdf`, `eps`, `svg`, `png`, `gif`, `macro`, `file`, `data`.
 If you have multiple plots (e.g. `myPlot_bin_1`, `myPlot_bin_2`,..) that you want to concatenate and save as a moving gif, you can create it via `plot myGroup myPlot_bin_.+ gif`.
 To adjust the time between the frames use for example `plot myGroup myPlot_bin_.+ gif+4`, where the number is given in tens of milliseconds (i.e. this example will create a gif with a delay of 40ms between the plots).
 
@@ -104,11 +104,15 @@ and read them in your code via `pm.GetProjectProperty("inputDir")` (the plot man
 An existing program can be registered as a project via `srp add <project> </path/to/program> [</path/to/output/folder>]`.
 If the program lives in a CMake build directory, it is rebuilt automatically before plotting, just like the projects created by `srp init-cpp`.
 
-In interactive (`show`) mode, one can browse through the requested plots using the keys 's' (right), 'a' (left) and 'q' (quit) or by double-clicking on the right and left side of the plot, respectively.
+In interactive (`show`) mode, one can browse through the requested plots using the keys 's' (right) and 'a' (left) or by double-clicking on the right and left side of the plot, respectively; after the last plot comes the first one again.
+The key 'd' detaches the current plot: it moves into a window of its own, placed one step to the right and down from the browsing window and kept in front, while the browsing window shows the plot seen before it, as when the top card is taken off a stack (the next plot if there was none); browsing then continues from there, so the detached plot can be compared with any other. On the last plot left in the browsing window, 'd' does nothing.
+In `spread` mode, all requested plots open at once, each in its own window (placed as a cascade, each opening as soon as it is ready).
+In both modes, 'q' closes the window it is pressed in and 'x' closes all of them; the program ends when the last window is closed.
+The keys work in the active window while the mouse pointer is inside it, and also in the terminal `plot` runs in ('s', 'a', 'd', and 'q' or 'x' to close all windows).
 
 ## 🤖 For AI agents
 A condensed description of the workflow, the API and common pitfalls for coding agents is kept as an [agent skill](skill/scirooplot/SKILL.md) (with [reference files](skill/scirooplot/reference/api.md) generated from the headers).
-To use it, download [scirooplot.skill](skill/scirooplot.skill) and import it as a skill, or point your agent to [llms.txt](llms.txt).
+To use it, import [scirooplot.skill](skill/scirooplot.skill) into your agent, or point the agent to [llms.txt](llms.txt).
 
 ## 📖 Commented code examples
 The following example code snippets with comments illustrate how plots are defined within your SciRooPlot user code.

@@ -38,6 +38,7 @@
 #include <TF3.h>
 #include <TFile.h>
 #include <TFolder.h>
+#include <TGClient.h>
 #include <TGraph2D.h>
 #include <TGraphErrors.h>
 #include <TH1.h>
@@ -56,12 +57,15 @@
 #include <TTree.h>
 #include <TTreeIndex.h>
 #include <TVirtualX.h>
+#include <termios.h>
 
 #include <boost/property_tree/info_parser.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <chrono>
+#include <csignal>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
@@ -1048,14 +1052,14 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       mWindowOffsetY = dummyCanvas.GetWindowTopY() - canvasImp->GetY();
     }
   }
-  if ((mode == "show" || mode == "macro") && !*mHasDisplay) {
+  if ((mode == "show" || mode == "spread" || mode == "macro") && !*mHasDisplay) {
     logger::error("Mode '{}' needs a graphical display (is DISPLAY set?).", mode);
     return false;
   }
   // all other modes draw in batch mode, which needs ROOT's batch graphics: once a window was opened (e.g. by the display check above),
   // gVirtualX is the interface to the display, and since ROOT 6.40 painting a batch canvas through it crashes
   TVirtualX* const displayGraphics = gVirtualX;
-  if (mode != "show" && mode != "macro") gVirtualX = gGXBatch;
+  if (mode != "show" && mode != "spread" && mode != "macro") gVirtualX = gGXBatch;
   auto graphicsGuard = make_scope_guard([displayGraphics]() { gVirtualX = displayGraphics; });
   // first determine which data needs to be loaded
   vector<Plot*> selectedPlots;
@@ -1152,23 +1156,56 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     }
     mGifName.clear();
     mExitInteractiveBrowsing = false;
-    mPlotViewHistory.clear();
+    mDetached.reset();
+    mBrowseCanvases.clear();
+    if (mode == "show" || mode == "spread") SetTerminalKeys(true);
+    auto terminalKeysGuard = make_scope_guard([]() { SetTerminalKeys(false); });
 
     // generate plots
     bool allCreated = true;
-    for (auto plot : selectedPlots) {
-      if (!GeneratePlot(*plot, mode)) {
-        auto missingData = GetMissingData(*plot);
-        string message = fmt::format("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
-        for (const auto& [dataSource, name, dataInfo] : missingData) {
-          message += "\n         - missing " + DataLocation(dataSource, name);
-          if (!dataInfo.dataDims.empty()) message += " [" + dataInfo.GetDescription() + "]";
-          message += (!IsDataSourceDefined(dataSource)) ? " (data source not defined)" : "";
-        }
-        logger::error("{}", message);
-        allCreated = false;
+    auto reportFailure = [&](Plot* plot) {
+      auto missingData = GetMissingData(*plot);
+      string message = fmt::format("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
+      for (const auto& [dataSource, name, dataInfo] : missingData) {
+        message += "\n         - missing " + DataLocation(dataSource, name);
+        if (!dataInfo.dataDims.empty()) message += " [" + dataInfo.GetDescription() + "]";
+        message += (!IsDataSourceDefined(dataSource)) ? " (data source not defined)" : "";
       }
-      if (mExitInteractiveBrowsing) break;
+      logger::error("{}", message);
+      allCreated = false;
+    };
+    if (mode == "show") {
+      // plots are made when browsing reaches them (GeneratePlot browses through the ones made and returns when another one is needed)
+      mBrowseCanvases.assign(selectedPlots.size(), nullptr);
+      mBrowseSkip.assign(selectedPlots.size(), false);
+      mBrowseIndex = 0;
+      mBrowseForward = true;
+      mShownIndex.reset();
+      mBrowseHistory.clear();
+      mBrowsePosition.reset();
+      while (!mExitInteractiveBrowsing) {
+        if (!GeneratePlot(*selectedPlots[mBrowseIndex], mode)) {
+          reportFailure(selectedPlots[mBrowseIndex]);
+          mBrowseSkip[mBrowseIndex] = true;  // continue in the direction browsing went
+          auto next = NextBrowseIndex(mBrowseIndex, mBrowseForward);
+          if (!next) break;
+          mBrowseIndex = *next;
+        }
+      }
+    } else {
+      for (auto plot : selectedPlots) {
+        if (!GeneratePlot(*plot, mode)) reportFailure(plot);
+        if (mExitInteractiveBrowsing) break;
+      }
+    }
+    if (mode == "show" || mode == "spread") {
+      ShowDetached();
+      // the browsing window is hidden once browsing has ended, windows kept open stay until the user closes them
+      for (const auto& browsed : mBrowseCanvases) {
+        if (!browsed) continue;
+        if (auto rc = dynamic_cast<TRootCanvas*>(browsed->GetCanvasImp())) rc->UnmapWindow();
+      }
+      WaitForOpenWindows();
     }
     if (!mGifName.empty()) {
       logger::log("Saved gif {}.", mGifName);
@@ -1581,7 +1618,7 @@ vector<std::tuple<string, string, Plot::Pad::Data::data_info_t>> PlotManager::Ge
 //**************************************************************************************************
 bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 {
-  bool isInteractiveMode = (mode == "show");
+  bool isInteractiveMode = (mode == "show" || mode == "spread");
   bool isMacroMode = (mode == "macro");
 
   if (plot.GetGroup().empty()) {
@@ -1626,56 +1663,108 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   // if interactive mode is specified, open window instead of saving the plot
   if (isInteractiveMode) {
     logCreated();
-    if (auto rc = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) {
-      rc->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
-    }
-    mPlotViewHistory.push_back(canvas);
-    uint32_t curPlotIndex{static_cast<uint32_t>(mPlotViewHistory.size() - 1)};
-
-    // move new canvas to position of previous window
-    int32_t curXpos{};
-    int32_t curYpos{};
-    if (curPlotIndex > 0) {
-      curXpos = mPlotViewHistory[curPlotIndex - 1]->GetWindowTopX();
-      curYpos = mPlotViewHistory[curPlotIndex - 1]->GetWindowTopY();
-      canvas->SetWindowPosition(curXpos, curYpos - mWindowOffsetY);
-      static_cast<TRootCanvas*>(mPlotViewHistory[curPlotIndex - 1]->GetCanvasImp())->UnmapWindow();
-    }
-    canvas->Show();
-    bool boxClicked = false;
-    while (!gSystem->ProcessEvents() && gROOT->GetSelectedPad()) {
-      bool isClick = canvas->GetEvent() == kButton1Double;
-      bool isValidKey = canvas->GetEvent() == kKeyPress && (canvas->GetEventX() == 'a' || canvas->GetEventX() == 's');
-      if (canvas->GetEvent() == kKeyPress && (canvas->GetEventX() == 'q')) {
-        gApplication->Terminate();
+    if (mode == "spread") {
+      OpenWindow(canvas);
+      gSystem->ProcessEvents();  // draws the window, and the windows already open react while the next plot is made
+      if (const char terminalKey = TerminalKey(); terminalKey == 'q' || terminalKey == 'x') {
+        for (auto& window : mOpenWindows) {
+          if (!IsClosed(window.canvas.get())) Close(window.canvas.get());
+        }
+        mExitInteractiveBrowsing = true;  // no further plots
       }
+      return true;
+    }
+    KeepOnClose(canvas.get());
+    // the plot is shown in the browsing window (where the previous plot was), which keeps it until browsing moves on
+    size_t current = mBrowseIndex;
+    mBrowseCanvases[current] = canvas;
+    if (mBrowsePosition) {
+      ShowAt(canvas.get(), mBrowsePosition->first, mBrowsePosition->second);
+    } else {
+      canvas->Show();
+    }
+    if (mShownIndex && mBrowseCanvases[*mShownIndex]) static_cast<TRootCanvas*>(mBrowseCanvases[*mShownIndex]->GetCanvasImp())->UnmapWindow();
+    mShownIndex = current;
+    // the plots under the one shown, as on a stack: detaching the plot uncovers the one shown before it
+    auto putOnTop = [this](size_t index) {
+      mBrowseHistory.erase(std::remove(mBrowseHistory.begin(), mBrowseHistory.end(), index), mBrowseHistory.end());
+      mBrowseHistory.push_back(index);
+    };
+    putOnTop(current);
+    ShowDetached();
+    bool boxClicked = false;
+    // an event stays the canvas' current one until the next: the one a canvas has when it is shown again is old (e.g. the key that left it)
+    auto canvasEvent = [](TCanvas* c) { return std::make_tuple(c->GetEvent(), c->GetEventX(), c->GetEventY()); };
+    auto oldEvent = canvasEvent(canvas.get());
+    // browsing moves on to plot target, at mBrowsePosition: shown at once if it was made already, otherwise GeneratePlots makes it (returns true)
+    auto browseTo = [&](size_t target) {
+      mBrowseIndex = target;
+      if (!mBrowseCanvases[target]) return true;
+      if (mShownIndex) static_cast<TRootCanvas*>(canvas->GetCanvasImp())->UnmapWindow();
+      current = target;
+      canvas = mBrowseCanvases[current];
+      ShowAt(canvas.get(), mBrowsePosition->first, mBrowsePosition->second);
+      mShownIndex = current;
+      putOnTop(current);
+      oldEvent = canvasEvent(canvas.get());
+      ShowDetached();
+      return false;
+    };
+    while (!gSystem->ProcessEvents() && gROOT->GetSelectedPad()) {
+      bool closeAll = false;
+      HandleOpenWindows(closeAll);
+      const char terminalKey = TerminalKey();
+      const bool newEvent = (canvasEvent(canvas.get()) != oldEvent);
+      const char windowKey = (newEvent && canvas->GetEvent() == kKeyPress) ? static_cast<char>(canvas->GetEventX()) : 0;
+      const char key = (terminalKey) ? terminalKey : windowKey;
+      if (closeAll || key == 'x' || terminalKey == 'q') {
+        for (auto& window : mOpenWindows) {
+          if (!IsClosed(window.canvas.get())) Close(window.canvas.get());
+        }
+        mExitInteractiveBrowsing = true;
+        break;
+      }
+      if (IsClosed(canvas.get()) || windowKey == 'q') {
+        mExitInteractiveBrowsing = true;
+        break;
+      }
+      bool isClick = newEvent && canvas->GetEvent() == kButton1Double;
+      bool isValidKey = (key == 'a' || key == 's');
+      bool isDetachKey = (key == 'd');
       auto selectedBox = dynamic_cast<TPave*>(canvas->GetSelected());
-      if (isClick && selectedBox) {
+      if (isDetachKey && *NextBrowseIndex(current, true) == current) {
+        oldEvent = canvasEvent(canvas.get());  // the last plot left to browse stays in the browsing window
+      } else if (isDetachKey) {
+        // the plot moves into a window of its own, one step right and down from the browsing window, and is in front;
+        // the browsing window shows the plot shown before it (the next one if there was none). Window managers put the window mapped last in front:
+        // the plot is hidden and shown in its window only after the browsing window shows the other plot (ShowDetached)
+        const int32_t browseX = canvas->GetWindowTopX();
+        const int32_t browseY = canvas->GetWindowTopY();
+        static_cast<TRootCanvas*>(canvas->GetCanvasImp())->UnmapWindow();
+        mDetached = {canvas, {browseX, browseY}};
+        mBrowsePosition = std::make_pair(browseX, browseY);
+        const string uniqueName = canvas->GetTitle();  // <name>:<group>
+        const size_t separator = uniqueName.rfind(':');
+        logger::log("Detached plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), uniqueName.substr(0, separator), logger::end_color(), logger::begin_color(logger::Color::Yellow), uniqueName.substr(separator + 1), logger::end_color());
+        mBrowseSkip[current] = true;  // no longer browsed
+        mBrowseCanvases[current] = nullptr;
+        mShownIndex.reset();
+        mBrowseHistory.pop_back();
+        mBrowseForward = true;
+        if (browseTo((mBrowseHistory.empty()) ? *NextBrowseIndex(current, true) : mBrowseHistory.back())) break;
+      } else if (isClick && selectedBox) {
         if (!boxClicked) logger::info("Current position of {}: ({:.3g}, {:.3g}).", selectedBox->GetName(), selectedBox->GetX1NDC(), selectedBox->GetY2NDC());
         boxClicked = true;
       } else if (isClick || isValidKey) {
-        curXpos = canvas->GetWindowTopX();
-        curYpos = canvas->GetWindowTopY();
-        bool forward = false;
-        if (isValidKey) {
-          forward = (canvas->GetEventX() == 's');
+        // browsing goes round: after the last plot comes the first one, before the first one the last one (plots in between are not made)
+        mBrowseForward = (isValidKey) ? (key == 's') : ((double_t)canvas->GetEventX() / (double_t)canvas->GetWw() > 0.5);
+        auto target = NextBrowseIndex(current, mBrowseForward);
+        if (target && *target != current) {
+          mBrowsePosition = std::make_pair(canvas->GetWindowTopX(), canvas->GetWindowTopY());
+          if (browseTo(*target)) break;
         } else {
-          forward = ((double_t)canvas->GetEventX() / (double_t)canvas->GetWw() > 0.5);
+          oldEvent = canvasEvent(canvas.get());  // a single plot: nothing to change to
         }
-        if (forward) {
-          if (curPlotIndex == mPlotViewHistory.size() - 1) break;
-          ++curPlotIndex;
-        } else {
-          if (curPlotIndex == 0) {
-            mExitInteractiveBrowsing = true;
-            break;
-          }
-          --curPlotIndex;
-        }
-        static_cast<TRootCanvas*>(canvas->GetCanvasImp())->UnmapWindow();
-        canvas = mPlotViewHistory[curPlotIndex];
-        canvas->SetWindowPosition(curXpos, curYpos - mWindowOffsetY);
-        canvas->Show();
       } else {
         boxClicked = false;
       }
@@ -1811,6 +1900,233 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 
 //**************************************************************************************************
 /**
+ * Windows closed by the user are only hidden and marked as closed: the canvases stay owned by SciRooPlot, which deletes them.
+ * (By default ROOT deletes a closed canvas itself.) The mark is the unique ID, which canvases do not use otherwise.
+ */
+//**************************************************************************************************
+void PlotManager::KeepOnClose(TCanvas* canvas)
+{
+  canvas->SetUniqueID(0);
+  if (auto rc = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) {
+    rc->DontCallClose();
+    rc->Connect("CloseWindow()", "TCanvas", canvas, "SetUniqueID(=1)");
+    rc->Connect("CloseWindow()", "TRootCanvas", rc, "UnmapWindow()");
+  }
+}
+bool PlotManager::IsClosed(const TCanvas* canvas)
+{
+  return canvas->GetUniqueID() == 1;
+}
+void PlotManager::Close(TCanvas* canvas)
+{
+  canvas->SetUniqueID(1);
+  if (auto rc = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) rc->UnmapWindow();
+}
+
+//**************************************************************************************************
+/**
+ * Shows a window with the top left corner of its drawing area at the given screen position (as GetWindowTopX/Y give it).
+ * Window managers add a decoration and may place a window by their own rules when it is mapped: the window is moved until it is
+ * where it should be (at most three corrections, waiting at most 0.5 s for the window to be mapped).
+ */
+//**************************************************************************************************
+void PlotManager::ShowAt(TCanvas* canvas, int32_t topX, int32_t topY) const
+{
+  int32_t x = topX;
+  int32_t y = topY - mWindowOffsetY;  // first guess, SetWindowPosition places the window frame
+  canvas->SetWindowPosition(x, y);
+  canvas->Show();
+  auto canvasImp = static_cast<TRootCanvas*>(canvas->GetCanvasImp());
+  for (int32_t i = 0; i < 25 && !canvasImp->IsMapped(); ++i) {
+    gSystem->ProcessEvents();
+    gSystem->Sleep(20);
+  }
+  gSystem->ProcessEvents();
+  for (int32_t correction = 0; correction < 3; ++correction) {
+    const int32_t shownX = canvas->GetWindowTopX();
+    const int32_t shownY = canvas->GetWindowTopY();
+    if (shownX == topX && shownY == topY) break;
+    x += topX - shownX;
+    y += topY - shownY;
+    canvas->SetWindowPosition(x, y);
+    // the window manager moves the window asynchronously: wait until it has (at most 0.2 s)
+    for (int32_t i = 0; i < 10 && canvas->GetWindowTopX() == shownX && canvas->GetWindowTopY() == shownY; ++i) {
+      gSystem->Sleep(20);
+      gSystem->ProcessEvents();
+    }
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Opens a window that stays open until the user closes it. The windows are placed as a cascade, each shifted by one step to the right
+ * and down from where the previous one is, so the titles of the ones below stay visible; the first one is placed in the top left
+ * corner of the screen (as far as the window manager allows, e.g. below a panel), or one step from the window at followTop (the top
+ * left corner of its drawing area, as GetWindowTopX/Y give it). Without cascade, the window is always placed one step from followTop. A window reaching beyond the bottom of the screen starts a new cascade
+ * at the height of the first window (shifted to the right), one beyond the right edge starts at its left edge. The cascade follows
+ * where the windows actually are.
+ */
+//**************************************************************************************************
+void PlotManager::OpenWindow(shared_ptr<TCanvas> canvas, optional<std::pair<int32_t, int32_t>> followTop, bool cascade)
+{
+  KeepOnClose(canvas.get());
+  constexpr int32_t step = 30;
+  auto previous = std::find_if(mOpenWindows.rbegin(), mOpenWindows.rend(), [](const auto& window) { return !IsClosed(window.canvas.get()); });
+  if (cascade && previous != mOpenWindows.rend()) followTop = std::make_pair(previous->canvas->GetWindowTopX(), previous->canvas->GetWindowTopY());
+  if (!followTop) {
+    // the first window goes to the top left corner, where the window manager allows it (e.g. below a panel)
+    canvas->SetWindowPosition(0, 0);
+    canvas->Show();
+    auto event = std::make_tuple(canvas->GetEvent(), canvas->GetEventX(), canvas->GetEventY());
+    mOpenWindows.push_back({std::move(canvas), event});
+    return;
+  }
+  int32_t topX = followTop->first + step;
+  int32_t topY = followTop->second + step;
+  auto first = std::find_if(mOpenWindows.begin(), mOpenWindows.end(), [](const auto& window) { return !IsClosed(window.canvas.get()); });
+  if (first != mOpenWindows.end()) {
+    if (topY + static_cast<int32_t>(canvas->GetWindowHeight()) > static_cast<int32_t>(gClient->GetDisplayHeight())) topY = first->canvas->GetWindowTopY();
+    if (topX + static_cast<int32_t>(canvas->GetWindowWidth()) > static_cast<int32_t>(gClient->GetDisplayWidth())) topX = first->canvas->GetWindowTopX();
+  }
+  ShowAt(canvas.get(), topX, topY);
+  auto event = std::make_tuple(canvas->GetEvent(), canvas->GetEventX(), canvas->GetEventY());  // e.g. the key that detached it
+  mOpenWindows.push_back({std::move(canvas), event});
+}
+
+//**************************************************************************************************
+/**
+ * Shows the plot detached last in its own window, one step right and down from where the browsing window was.
+ */
+//**************************************************************************************************
+void PlotManager::ShowDetached()
+{
+  if (!mDetached) return;
+  auto [canvas, browseTop] = *mDetached;
+  mDetached.reset();
+  OpenWindow(canvas, browseTop, false);
+}
+
+//**************************************************************************************************
+/**
+ * The plot browsing moves on to from plot index (circular, skipping detached plots and those that could not be made).
+ */
+//**************************************************************************************************
+optional<size_t> PlotManager::NextBrowseIndex(size_t index, bool forward) const
+{
+  const size_t nPlots = mBrowseSkip.size();
+  for (size_t step = 1; step <= nPlots; ++step) {
+    const size_t candidate = (forward) ? (index + step) % nPlots : (index + nPlots - step) % nPlots;
+    if (!mBrowseSkip[candidate]) return candidate;
+  }
+  return std::nullopt;
+}
+
+//**************************************************************************************************
+/**
+ * One pass over the events of the windows kept open: reports the position of a double-clicked box, closes a window on the key 'q'
+ * and sets closeAll for the key 'x'. Returns whether any of the windows is still open.
+ */
+//**************************************************************************************************
+bool PlotManager::HandleOpenWindows(bool& closeAll)
+{
+  bool anyOpen = false;
+  for (auto& window : mOpenWindows) {
+    TCanvas* canvas = window.canvas.get();
+    if (IsClosed(canvas)) continue;
+    // an event stays the canvas' current one until the next: each is handled once
+    if (auto event = std::make_tuple(canvas->GetEvent(), canvas->GetEventX(), canvas->GetEventY()); event != window.handledEvent) {
+      window.handledEvent = event;
+      if (canvas->GetEvent() == kKeyPress) {
+        const char key = static_cast<char>(canvas->GetEventX());
+        if (key == 'q') {
+          Close(canvas);
+          continue;
+        }
+        if (key == 'x') closeAll = true;
+      } else if (auto selectedBox = (canvas->GetEvent() == kButton1Double) ? dynamic_cast<TPave*>(canvas->GetSelected()) : nullptr) {
+        logger::info("Current position of {}: ({:.3g}, {:.3g}).", selectedBox->GetName(), selectedBox->GetX1NDC(), selectedBox->GetY2NDC());
+      }
+    }
+    anyOpen = true;
+  }
+  return anyOpen;
+}
+
+//**************************************************************************************************
+/**
+ * Waits until the user has closed all windows kept open ('q' closes one, 'x' all of them).
+ */
+//**************************************************************************************************
+void PlotManager::WaitForOpenWindows()
+{
+  const bool anyOpen = std::any_of(mOpenWindows.begin(), mOpenWindows.end(), [](const auto& window) { return !IsClosed(window.canvas.get()); });
+  if (!anyOpen) {
+    mOpenWindows.clear();
+    return;
+  }
+  logger::info("Waiting until all windows are closed (key q closes one, x all of them; q or x in the terminal closes all).");
+  while (!gSystem->ProcessEvents()) {
+    bool closeAll = false;
+    const char terminalKey = TerminalKey();
+    if (!HandleOpenWindows(closeAll) || closeAll || terminalKey == 'q' || terminalKey == 'x') break;
+    gSystem->Sleep(20);
+  }
+  mOpenWindows.clear();
+}
+
+//**************************************************************************************************
+/**
+ * Keys typed in the terminal steer the windows as well: while windows are open, the terminal delivers single keys without echo.
+ * Only for a terminal of a process in the foreground (a process in the background reading the terminal would be stopped).
+ * The settings are restored when the windows are closed, at exit, and on the signals that end the program (e.g. Ctrl-C).
+ */
+//**************************************************************************************************
+static termios sSavedTerminal{};  // the settings before the keys were switched on (static: the signal handler restores them)
+static bool sTerminalKeysOn{false};
+static std::array<struct sigaction, 4> sSavedSignalActions{};
+static constexpr std::array<int, 4> sTerminatingSignals{SIGINT, SIGTERM, SIGHUP, SIGQUIT};
+void PlotManager::SetTerminalKeys(bool on)
+{
+  if (!on) {
+    if (!sTerminalKeysOn) return;
+    tcsetattr(STDIN_FILENO, TCSANOW, &sSavedTerminal);
+    sTerminalKeysOn = false;
+    for (size_t i = 0; i < sTerminatingSignals.size(); ++i) {
+      sigaction(sTerminatingSignals[i], &sSavedSignalActions[i], nullptr);
+    }
+    return;
+  }
+  if (sTerminalKeysOn || !isatty(STDIN_FILENO) || tcgetpgrp(STDIN_FILENO) != getpgrp() || tcgetattr(STDIN_FILENO, &sSavedTerminal) != 0) return;
+  termios keys = sSavedTerminal;
+  keys.c_lflag &= ~static_cast<tcflag_t>(ICANON | ECHO);
+  keys.c_cc[VMIN] = 0;  // read() returns at once, also without a key
+  keys.c_cc[VTIME] = 0;
+  if (tcsetattr(STDIN_FILENO, TCSANOW, &keys) != 0) return;
+  sTerminalKeysOn = true;
+  static bool atExitRegistered{false};
+  if (!atExitRegistered) {
+    std::atexit([]() { SetTerminalKeys(false); });
+    atExitRegistered = true;
+  }
+  struct sigaction restoreAndEnd{};
+  restoreAndEnd.sa_handler = [](int signal) {
+    tcsetattr(STDIN_FILENO, TCSANOW, &sSavedTerminal);
+    std::signal(signal, SIG_DFL);
+    std::raise(signal);
+  };
+  for (size_t i = 0; i < sTerminatingSignals.size(); ++i) {
+    sigaction(sTerminatingSignals[i], &restoreAndEnd, &sSavedSignalActions[i]);
+  }
+}
+char PlotManager::TerminalKey()
+{
+  char key{};
+  if (!sTerminalKeysOn || tcgetpgrp(STDIN_FILENO) != getpgrp() || read(STDIN_FILENO, &key, 1) != 1) return 0;
+  return key;
+}
+
+//**************************************************************************************************
+/**
  * Show which plots are currently loaded in the framework.
  */
 //**************************************************************************************************
@@ -1840,7 +2156,7 @@ void PlotManager::ClearDataBuffer()
 void PlotManager::ClearCanvasRegistry()
 {
   mCanvasRegistry.clear();
-  mPlotViewHistory.clear();
+  mBrowseCanvases.clear();
 }
 
 //**************************************************************************************************

@@ -30,7 +30,7 @@ namespace SciRooPlot
 // output modes of GeneratePlots (in addition: gif+<centiseconds between frames>)
 inline const std::vector<std::string>& plot_modes()
 {
-  static const std::vector<std::string> modes{"show", "print", "file", "data", "macro", "pdf", "eps", "ps", "svg", "png", "jpg", "gif", "html", "json", "xml", "root"};
+  static const std::vector<std::string> modes{"show", "spread", "print", "file", "data", "macro", "pdf", "eps", "ps", "svg", "png", "jpg", "gif", "html", "json", "xml", "root"};
   return modes;
 }
 

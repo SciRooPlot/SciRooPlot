@@ -31,6 +31,7 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 class TCanvas;
@@ -102,6 +103,17 @@ class PlotManager
 
  private:
   bool GeneratePlot(const Plot& plot, const std::string& mode = "pdf");
+  static void KeepOnClose(TCanvas* canvas);
+  static bool IsClosed(const TCanvas* canvas);
+  void ShowAt(TCanvas* canvas, int32_t topX, int32_t topY) const;
+  static void Close(TCanvas* canvas);
+  void OpenWindow(std::shared_ptr<TCanvas> canvas, std::optional<std::pair<int32_t, int32_t>> followTop = std::nullopt, bool cascade = true);
+  void ShowDetached();
+  std::optional<size_t> NextBrowseIndex(size_t index, bool forward) const;
+  bool HandleOpenWindows(bool& closeAll);
+  void WaitForOpenWindows();
+  static void SetTerminalKeys(bool on);
+  static char TerminalKey();
   bool SavePlotsToRootFile() const;
   bool CreateOutputDirectory() const;
   bool SaveDataToRootFile() const;
@@ -115,11 +127,24 @@ class PlotManager
   std::string mOutputDirectory;
   std::vector<Plot> mPlots;
   std::vector<Plot> mBasePlots;
-  std::vector<std::shared_ptr<TCanvas>> mPlotViewHistory;
+  struct open_window_t {
+    std::shared_ptr<TCanvas> canvas;
+    std::tuple<int32_t, int32_t, int32_t> handledEvent;  // event, x, y: the last event handled (it stays the canvas' current one until the next)
+  };
+  std::vector<open_window_t> mOpenWindows;  // windows open until the user closes them: all plots in mode "spread", plots detached in mode "show"
   std::string mGifName;
   bool mExitInteractiveBrowsing{false};
+  std::optional<std::pair<std::shared_ptr<TCanvas>, std::pair<int32_t, int32_t>>> mDetached;  // in mode "show": plot detached, shown once the browsing window shows another one (with the browsing window's top)
+  // mode "show": the selected plots, made when browsing reaches them
+  std::vector<std::shared_ptr<TCanvas>> mBrowseCanvases;       // per selected plot, null if not made (or detached)
+  std::vector<bool> mBrowseSkip;                               // per selected plot: detached or could not be made
+  size_t mBrowseIndex{};                                       // the plot to show next
+  bool mBrowseForward{true};                                   // the direction browsing went last
+  std::optional<size_t> mShownIndex;                           // the plot in the browsing window
+  std::vector<size_t> mBrowseHistory;                          // the plots shown, the one shown last at the end (each once)
+  std::optional<std::pair<int32_t, int32_t>> mBrowsePosition;  // the top left corner of the browsing window
   int32_t mWindowOffsetY{};
-  std::optional<bool> mHasDisplay;  // a graphical display is available (required for modes "show" and "macro"), determined by the first GeneratePlots
+  std::optional<bool> mHasDisplay;  // a graphical display is available (required for modes "show", "spread" and "macro"), determined by the first GeneratePlots
   const std::vector<std::string> mTableFileEndings = {".csv", ".dat", ".txt", ".tsv", ".tab"};
 
   std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>> mDataBuffer;

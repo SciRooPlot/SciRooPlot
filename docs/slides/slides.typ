@@ -508,7 +508,7 @@
           align: (left + horizon, left + horizon),
           table.header([*Mode*], [*Description*]),
           table.hline(stroke: 1pt + rgb("d0d7de")),
-          [`show`], [Open plots interactively (default, see `srp plotmode`).],
+          [`show`, `spread`], [Show plots one by one (default) or all at once.],
           table.hline(stroke: 1pt + rgb("d0d7de")),
           [`list, print`],
           [List plots matching the request or print their settings.],
@@ -1663,9 +1663,9 @@
         width: 100%,
         title-size: 20pt,
         [
-          - In `show` mode, browse through matching plots with `s` (next) and `a` (previous).
+          - In `show` mode, browse through matching plots with `s` (next) and `a` (previous), in the window or in the terminal.
 
-          - Double-clicking the right or left half of the window works too; `q` quits.
+          - Double-clicking the right or left half of the window works too; `q` closes a window, `x` all.
         ],
       )
     ],
@@ -1689,9 +1689,9 @@
         width: 100%,
         title-size: 20pt,
         [
-          - In `show` mode, `plot` blocks the terminal until you quit it -- append `&` to run it in the background and launch a second `plot` right away.
+          - Press `d` while browsing in `show` mode to move a plot into a window of its own next to the browsing window.
 
-          - E.g. `plot paperPlots moneyPlot & plot paperPlots ptSpec` opens both windows at once, so you can compare them directly.
+          - `plot paperPlots '.+' spread` opens all matching plots at once, each in its own window.
         ],
       )
     ],
