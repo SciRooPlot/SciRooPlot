@@ -576,6 +576,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       auto drawItem = [&, padID = padID](auto data_ptr, optional<drawing_options_t> optionAlias) {
         using data_type = std::decay_t<decltype(data_ptr)>;
         drawing_options_t alias = optionAlias.value_or(static_cast<drawing_options_t>(255));  // 255: no alias
+        if constexpr (is_graph_2d<data_type>() || is_func_2d<data_type>()) {
+          if (!data->GetDrawingOptions()) drawingOptions += "COLZ";  // no aliases for these: coloured like 2d histograms
+        }
         if (optionAlias) {
           const std::map<drawing_options_t, string>* options{};
           const char* typeName{};
@@ -660,7 +663,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           string drawOptAxis = "AXIS";
           pad_ptr->Update();
-          if (pad_ptr->GetView() || is_hist_2d<data_type>()) {
+          // the frame of a 2d histogram, and of a coloured 2d graph or function (drawn from its histogram), also draws the colour axis
+          const bool isColored2d = (is_graph_2d<data_type>() || is_func_2d<data_type>()) && str_contains(drawingOptions, "COL");
+          if (pad_ptr->GetView() || is_hist_2d<data_type>() || isColored2d) {
             drawOptAxis = "";
           }
           axisHist_ptr->Draw((drawingOptions + drawOptAxis).data());
@@ -952,67 +957,70 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               data_ptr->SetLineWidth(*lineWidth);
             }
           } else {
+            // the defaults of the pad apply to what the data does not set, unless the style stored with the input is kept
+            const bool keep = data->GetKeepInputStyle();
+            auto fromPad = [keep](auto value) { return (keep) ? decltype(value){} : value; };
             if (auto markerColor = get_first(data->GetMarkerColor(),
-                                             pick(defaultSettingIndices[0], pad.GetDefaultMarkerColors()),
-                                             pick(defaultSettingIndices[0], padDefaults.GetDefaultMarkerColors()))) {
+                                             fromPad(pick(defaultSettingIndices[0], pad.GetDefaultMarkerColors())),
+                                             fromPad(pick(defaultSettingIndices[0], padDefaults.GetDefaultMarkerColors())))) {
               if (!data->GetMarkerColor()) defaultSettingIndices[0]++;
               data_ptr->SetMarkerColor(*markerColor);
             }
             if (auto markerAlpha = get_first(data->GetMarkerAlpha(),
-                                             pad.GetDefaultMarkerAlpha(),
-                                             padDefaults.GetDefaultMarkerAlpha())) {
+                                             fromPad(pad.GetDefaultMarkerAlpha()),
+                                             fromPad(padDefaults.GetDefaultMarkerAlpha()))) {
               data_ptr->SetMarkerColor(TColor::GetColorTransparent(data_ptr->GetMarkerColor(), *markerAlpha));
             }
             if (auto markerStyle = get_first(data->GetMarkerStyle(),
-                                             pick(defaultSettingIndices[1], pad.GetDefaultMarkerStyles()),
-                                             pick(defaultSettingIndices[1], padDefaults.GetDefaultMarkerStyles()))) {
+                                             fromPad(pick(defaultSettingIndices[1], pad.GetDefaultMarkerStyles())),
+                                             fromPad(pick(defaultSettingIndices[1], padDefaults.GetDefaultMarkerStyles())))) {
               if (!data->GetMarkerStyle()) defaultSettingIndices[1]++;
               data_ptr->SetMarkerStyle(*markerStyle);
             }
             if (auto markerSize = get_first(data->GetMarkerSize(),
-                                            pad.GetDefaultMarkerSize(),
-                                            padDefaults.GetDefaultMarkerSize())) {
+                                            fromPad(pad.GetDefaultMarkerSize()),
+                                            fromPad(padDefaults.GetDefaultMarkerSize()))) {
               data_ptr->SetMarkerSize(*markerSize);
             }
             if constexpr (is_hist_1d<data_type>()) {
               if (alias == boxes_nomarkers) data_ptr->SetMarkerSize(0.);  // E2 always draws the markers
             }
             if (auto lineColor = get_first(data->GetLineColor(),
-                                           pick(defaultSettingIndices[2], pad.GetDefaultLineColors()),
-                                           pick(defaultSettingIndices[2], padDefaults.GetDefaultLineColors()))) {
+                                           fromPad(pick(defaultSettingIndices[2], pad.GetDefaultLineColors())),
+                                           fromPad(pick(defaultSettingIndices[2], padDefaults.GetDefaultLineColors())))) {
               if (!data->GetLineColor()) defaultSettingIndices[2]++;
               data_ptr->SetLineColor(*lineColor);
             }
             if (auto lineAlpha = get_first(data->GetLineAlpha(),
-                                           pad.GetDefaultLineAlpha(),
-                                           padDefaults.GetDefaultLineAlpha())) {
+                                           fromPad(pad.GetDefaultLineAlpha()),
+                                           fromPad(padDefaults.GetDefaultLineAlpha()))) {
               data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), *lineAlpha));
             }
             if (auto lineStyle = get_first(data->GetLineStyle(),
-                                           pick(defaultSettingIndices[3], pad.GetDefaultLineStyles()),
-                                           pick(defaultSettingIndices[3], padDefaults.GetDefaultLineStyles()))) {
+                                           fromPad(pick(defaultSettingIndices[3], pad.GetDefaultLineStyles())),
+                                           fromPad(pick(defaultSettingIndices[3], padDefaults.GetDefaultLineStyles())))) {
               if (!data->GetLineStyle()) defaultSettingIndices[3]++;
               data_ptr->SetLineStyle(*lineStyle);
             }
             if (auto lineWidth = get_first(data->GetLineWidth(),
-                                           pad.GetDefaultLineWidth(),
-                                           padDefaults.GetDefaultLineWidth())) {
+                                           fromPad(pad.GetDefaultLineWidth()),
+                                           fromPad(padDefaults.GetDefaultLineWidth()))) {
               data_ptr->SetLineWidth(*lineWidth);
             }
             if (auto fillColor = get_first(data->GetFillColor(),
-                                           pick(defaultSettingIndices[4], pad.GetDefaultFillColors()),
-                                           pick(defaultSettingIndices[4], padDefaults.GetDefaultFillColors()))) {
+                                           fromPad(pick(defaultSettingIndices[4], pad.GetDefaultFillColors())),
+                                           fromPad(pick(defaultSettingIndices[4], padDefaults.GetDefaultFillColors())))) {
               if (!data->GetFillColor()) defaultSettingIndices[4]++;
               data_ptr->SetFillColor(*fillColor);
             }
             if (auto fillAlpha = get_first(data->GetFillAlpha(),
-                                           pad.GetDefaultFillAlpha(),
-                                           padDefaults.GetDefaultFillAlpha())) {
+                                           fromPad(pad.GetDefaultFillAlpha()),
+                                           fromPad(padDefaults.GetDefaultFillAlpha()))) {
               data_ptr->SetFillColor(TColor::GetColorTransparent(data_ptr->GetFillColor(), *fillAlpha));
             }
             if (auto fillStyle = get_first(data->GetFillStyle(),
-                                           pick(defaultSettingIndices[5], pad.GetDefaultFillStyles()),
-                                           pick(defaultSettingIndices[5], padDefaults.GetDefaultFillStyles()))) {
+                                           fromPad(pick(defaultSettingIndices[5], pad.GetDefaultFillStyles())),
+                                           fromPad(pick(defaultSettingIndices[5], padDefaults.GetDefaultFillStyles())))) {
               if (!data->GetFillStyle()) defaultSettingIndices[5]++;
               data_ptr->SetFillStyle(*fillStyle);
             }
@@ -1218,6 +1226,26 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               hasFilledSteps = true;
             }
           }
+          // ROOT maps the colours of 2d data drawn on top with the range of the frame, which also draws the colour axis:
+          // without a z range set by the user, that range covers all 2d data of the pad (not only the data the frame is made of)
+          if constexpr (is_hist_2d<data_type>() || is_graph_2d<data_type>()) {
+            bool hasUserRangeZ = false;
+            for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(pad)}) {
+              if (curPad.GetAxes().count('Z') && (curPad['Z'].GetMinRange() || curPad['Z'].GetMaxRange())) hasUserRangeZ = true;
+            }
+            if (!hasUserRangeZ && axisHist_ptr->GetDimension() == 2 && !pad_ptr->GetView()) {
+              double_t minimum{}, maximum{};
+              if constexpr (is_hist_2d<data_type>()) {
+                minimum = data_ptr->GetMinimum();
+                maximum = data_ptr->GetMaximum();
+              } else {
+                minimum = data_ptr->GetZmin();
+                maximum = data_ptr->GetZmax();
+              }
+              if (maximum > axisHist_ptr->GetMaximum()) axisHist_ptr->SetMaximum(maximum);
+              if (!pad_ptr->GetLogz() && minimum < axisHist_ptr->GetMinimum()) axisHist_ptr->SetMinimum(minimum);
+            }
+          }
           data_ptr->Draw(drawingOptions.data());
           if (showStats) {
             // ROOT makes the box when painting a histogram: one drawn as graph is drawn for this paint only
@@ -1327,19 +1355,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         using data_type = std::decay_t<decltype(data_ptr)>;
         if constexpr (is_func<data_type>()) isSampledFunc = !data_ptr->GetFormula();
         gErrorIgnoreLevel = dataIndex ? userErrorLevel : kFatal;
-        // the drawing option alias of the data, or the default of the pad for its type
-        optional<drawing_options_t> optionAlias = data->GetDrawingOptionAlias();
-        if (data->GetDrawingOptions()) {
-          optionAlias = nullopt;
-        } else if (!optionAlias) {
-          if constexpr (is_hist_2d<data_type>()) {
-            optionAlias = get_first(pad.GetDefaultDrawingOptionHist2d(), padDefaults.GetDefaultDrawingOptionHist2d());
-          } else if constexpr (is_hist_1d<data_type>()) {
-            optionAlias = get_first(pad.GetDefaultDrawingOptionHist(), padDefaults.GetDefaultDrawingOptionHist());
-          } else if constexpr (is_graph_1d<data_type>()) {
-            optionAlias = get_first(pad.GetDefaultDrawingOptionGraph(), padDefaults.GetDefaultDrawingOptionGraph());
-          }
-        }
+        // the drawing option alias of the data (without one, the rule below decides once the data is final)
+        optional<drawing_options_t> optionAlias = (data->GetDrawingOptions()) ? nullopt : data->GetDrawingOptionAlias();
 
         auto warn = [&](auto&&... args) {
           if (dataIndex != 0) logger::warning(std::forward<decltype(args)>(args)...);
@@ -1872,6 +1889,34 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (nInvalid) warn("{} has {} point{} with NaN or infinite values, which are not drawn.", data_ptr->GetName(), nInvalid, (nInvalid == 1) ? "" : "s");
           // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
           data_ptr->SetBit(TGraph::kResetHisto);
+        }
+
+        // without a drawing option SciRooPlot decides, the same for histograms and graphs: a fill is drawn (hist, for a graph area),
+        // so is a marker set for the data (points; the defaults of the pad always set one), data with errors is a measurement (points),
+        // data without errors a shape (hist, for a graph line); 2d histograms are coloured
+        if (!optionAlias && !data->GetDrawingOptions()) {
+          if constexpr (is_hist_1d<data_type>() || is_graph_1d<data_type>()) {
+            constexpr bool isHist = is_hist_1d<data_type>();
+            // the fill the data will be drawn with: set for the data, else the next default of the pad (unless the style of the input is kept), else the input's
+            auto drawnFill = [&](const auto& dataValue, uint16_t index, const auto& padValues, const auto& defaultValues, int16_t inputValue) -> int16_t {
+              if (dataValue) return *dataValue;
+              if (!data->GetKeepInputStyle()) {
+                if (auto value = get_first(pick(index, padValues), pick(index, defaultValues))) return *value;
+              }
+              return inputValue;
+            };
+            const int16_t fillStyle = drawnFill(data->GetFillStyle(), defaultSettingIndices[5], pad.GetDefaultFillStyles(), padDefaults.GetDefaultFillStyles(), data_ptr->GetFillStyle());
+            const int16_t fillColor = drawnFill(data->GetFillColor(), defaultSettingIndices[4], pad.GetDefaultFillColors(), padDefaults.GetDefaultFillColors(), data_ptr->GetFillColor());
+            if (fillStyle != 0 && fillColor != 0) {
+              optionAlias = (isHist) ? hist : area;
+            } else if (data->GetMarkerStyle() || data->GetMarkerSize() || HasErrors(data_ptr)) {
+              optionAlias = points;
+            } else {
+              optionAlias = (isHist) ? hist : line;
+            }
+          } else if constexpr (is_hist_2d<data_type>()) {
+            optionAlias = colz;
+          }
         }
 
         // the clipped aliases draw a histogram as a graph: ROOT cuts the lines of a graph at the frame, while it moves the bins of a histogram
@@ -2416,6 +2461,29 @@ bool PlotPainter::CheckFontSizes(TList* list)
 
 //**************************************************************************************************
 /**
+ * Whether data has errors as ROOT draws them by default: a histogram with stored errors of which at least one is not zero
+ * (a profile always computes them), a graph with a y error that is not zero.
+ */
+//**************************************************************************************************
+bool PlotPainter::HasErrors(const TObject* obj)
+{
+  if (auto hist = dynamic_cast<const TH1*>(obj)) {
+    if (hist->GetSumw2N() == 0 && !hist->InheritsFrom(TProfile::Class())) return false;
+    for (int32_t bin = 1; bin <= hist->GetNbinsX(); ++bin) {
+      if (hist->GetBinError(bin) != 0.) return true;
+    }
+    return false;
+  }
+  if (auto graph = dynamic_cast<const TGraph*>(obj)) {
+    for (int32_t i = 0; i < graph->GetN(); ++i) {
+      if (graph->GetErrorYlow(i) > 0. || graph->GetErrorYhigh(i) > 0.) return true;
+    }
+  }
+  return false;
+}
+
+//**************************************************************************************************
+/**
  * Determines which of the legend symbols (P marker, L line, F fill, E error bar) show what ROOT actually draws for an object with the given drawing option.
  * (verified with ROOT 6.40: histograms with errors are drawn as markers with error bars unless HIST is given, the E2 boxes always have markers,
  * E3-E6 are fill areas, bars without a fill colour are drawn as lines, graphs draw nothing without P, L, C, B, F or 2-5)
@@ -2438,7 +2506,7 @@ string PlotPainter::LegendDrawStyle(TObject* obj, string option)
 
   if (obj->InheritsFrom(TF1::Class())) return (takeToken("FC") && hasFill) ? "F" : "L";
   if (auto graph = dynamic_cast<TGraph*>(obj)) {
-    const bool hasErrors = (graph->GetEY() || graph->GetEYhigh()) && !has('X');
+    const bool hasErrors = HasErrors(graph) && !has('X');
     string style;
     if (has('2') || has('3') || has('4') || has('5')) {  // error boxes and bands
       style += "F";
@@ -2454,11 +2522,11 @@ string PlotPainter::LegendDrawStyle(TObject* obj, string option)
   if (auto hist = dynamic_cast<TH1*>(obj)) {
     if (hist->InheritsFrom(TH2::Class()) || hist->InheritsFrom(TH3::Class())) return hasFill ? "F" : "L";
     const bool noErrors = takeToken("HIST");
-    // the error bars are drawn when the option asks for them or the histogram has stored errors
-    const bool hasErrors = !noErrors && (has('E') || hist->GetSumw2N() > 0);
-    if (!noErrors && (has('3') || has('4') || has('5') || has('6'))) return "F";  // E3 - E6: fill areas
-    if (!noErrors && has('2')) return "FP";                                       // E2: filled boxes with markers
-    if (hasErrors) return "EP";
+    // the error bars are drawn when the option asks for them or the histogram has errors (as ROOT decides without an option)
+    const bool errorsDrawn = !noErrors && (has('E') || HasErrors(hist));
+    if (!noErrors && (has('3') || has('4') || has('5') || has('6'))) return "F";   // E3 - E6: fill areas
+    if (!noErrors && has('2')) return "FP";                                        // E2: filled boxes with markers
+    if (errorsDrawn) return (HasErrors(hist)) ? "EP" : "P";                        // error bars of zero length are not visible
     if (has('P') && !has('L') && !has('C') && !has('B') && !has('F')) return "P";  // markers only
     return hasFill ? "F" : "L";                                                    // steps, lines or bars (also HIST L and HIST C fill the histogram if it has a fill colour)
   }
@@ -2924,7 +2992,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     option.ToUpper();
     for (const char* ignored : {"SAME", "TEXT", "PFC", "PLC", "PMC", "X0", "]["})
       option.ReplaceAll(ignored, "");
-    const bool hasErrors = !option.Contains("HIST") && (option.Contains("E") || hist->GetSumw2N() > 0);
+    const bool hasErrors = !option.Contains("HIST") && (option.Contains("E") || HasErrors(hist));
     const bool hasErrorArea = hasErrors && (option.Contains("E2") || option.Contains("E3") || option.Contains("E4") || option.Contains("E5") || option.Contains("E6"));
     const bool showEmpty = option.Contains("E0");
     TAxis* axis = hist->GetXaxis();

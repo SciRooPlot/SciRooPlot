@@ -817,8 +817,6 @@ Plot PlotManager::MakeBasePlot(const string& name)
   plot[0].SetDefaultMarkerStyles({kFullCircle});
   plot[0].SetDefaultLineStyles({kSolid});
   plot[0].SetDefaultFillStyles({0});
-  plot[0].SetDefaultDrawingOptionHist2d(colz);
-  plot[0].SetDefaultDrawingOptionGraph(points);
   plot[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
   plot[0]['Y'].SetOppositeTicks().SetMaxDigits(3);
   plot[0]['Z'].SetMaxDigits(3);

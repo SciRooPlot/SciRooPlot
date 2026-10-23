@@ -214,6 +214,9 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   plot[1].AddRatio({"histName3", "dataSourceB"}, {"histName1", "dataSourceA"}, "ratioLabel").SetIsCorrelated();
 
 
+  // without a drawing option the same rule applies to histograms and graphs: data with a fill is drawn filled (hist; graphs: area),
+  // data with a marker style or size set, or with errors, as points (histograms without stored errors have sqrt(N) errors),
+  // other data as hist (graphs: line); 2d histograms, 2d graphs and 2d functions are drawn as colz, with one colour axis covering all 2d data of the pad
   // to modify how the data is displayed we can apply the settings via:
   plot[1].AddData("histName4", "dataSourceB").SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
   // instead of directly using the ROOT drawing option string ("HIST C") you can
@@ -221,6 +224,8 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // (you can find all available options in include/SciRooPlot/Plot.h and their ROOT equivalents in src/PlotPainter.h):
   plot[1].AddData("graphName1", "dataSourceA").SetOptions(points).SetMarker(kRed, kFullCircle, 1.);
   // all root layout settings can be applied in this manner
+  // the line, marker and fill stored with the input object are replaced by the defaults of the pad; to keep them (what the data sets still wins):
+  plot[1].AddData("histName5", "dataSourceB").SetKeepInputStyle();
   // (see definition of Data class in inc/Plot.h for the list of all accessors)
 
   // now add a legend containing the labels that were specified when adding the data
@@ -375,7 +380,6 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   plot[0].SetDefaultTextSize(24);
   plot[0].SetDefaultMarkerSize(1.);
   plot[0].SetDefaultLineWidth(3.);
-  plot[0].SetDefaultDrawingOptionGraph(points);
   plot[0].SetTransparent();
   plot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
   plot[0]['X'].SetTitleSize(28).SetTitleOffset(1.1).SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
@@ -425,8 +429,6 @@ pm.AddBasePlot(basePlot);
   plot[0].SetDefaultMarkerStyles({kFullCircle});
   plot[0].SetDefaultLineStyles({kSolid});
   plot[0].SetDefaultFillStyles({0});
-  plot[0].SetDefaultDrawingOptionHist2d(colz);
-  plot[0].SetDefaultDrawingOptionGraph(points);
   plot[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
   plot[0]['Y'].SetOppositeTicks().SetMaxDigits(3);
   plot[0]['Z'].SetMaxDigits(3);

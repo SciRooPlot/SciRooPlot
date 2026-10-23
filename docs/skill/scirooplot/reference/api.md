@@ -114,9 +114,6 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Pad& SetDefaultFillColors(const std::vector<int16_t>& colors)`
 - `Pad& SetDefaultFillColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {})`
 - `Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles)`
-- `Pad& SetDefaultDrawingOptionGraph(drawing_options_t drawingOption)`
-- `Pad& SetDefaultDrawingOptionHist(drawing_options_t drawingOption)`
-- `Pad& SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption)`
 - `Pad& SetDefaultCandleBoxRange(float_t candleOption)`
 - `Pad& SetDefaultCandleWhiskerRange(float_t candleOption)`
 - `Pad& SetFill(int16_t color, std::optional<int16_t> style = {}, std::optional<float_t> alpha = {})`
@@ -215,6 +212,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& SetFillStyle(int16_t style)`
 - `Data& SetFillAlpha(float_t alpha)`
 - `Data& SetDefinesFrame(bool dontDraw = false)`
+- `Data& SetKeepInputStyle(bool keep = true)` — line, marker and fill stored with the input win over the defaults of the pad
 - `Data& SetContours(const std::vector<double>& contours)`
 - `Data& SetContours(int32_t nContours)`
 - `Data& SetNpx(int32_t nx, std::optional<int32_t> ny = {})`

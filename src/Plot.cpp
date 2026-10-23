@@ -706,39 +706,6 @@ auto Plot::Pad::SetDefaultFillStyles(const vector<int16_t>& styles) -> decltype(
 
 //**************************************************************************************************
 /**
- * Set default drawing option for graphs.
- */
-//**************************************************************************************************
-auto Plot::Pad::SetDefaultDrawingOptionGraph(drawing_options_t drawingOption) -> decltype(*this)
-{
-  mDrawingOptionDefaults.graph = drawingOption;
-  return *this;
-}
-
-//**************************************************************************************************
-/**
- * Set default drawing option for histograms.
- */
-//**************************************************************************************************
-auto Plot::Pad::SetDefaultDrawingOptionHist(drawing_options_t drawingOption) -> decltype(*this)
-{
-  mDrawingOptionDefaults.hist = drawingOption;
-  return *this;
-}
-
-//**************************************************************************************************
-/**
- * Set default drawing option for 2d histograms.
- */
-//**************************************************************************************************
-auto Plot::Pad::SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption) -> decltype(*this)
-{
-  mDrawingOptionDefaults.hist2d = drawingOption;
-  return *this;
-}
-
-//**************************************************************************************************
-/**
  * Set default box range option for 2d candle plot.
  */
 //**************************************************************************************************
@@ -983,7 +950,7 @@ Plot::Pad::Pad(const Pad& other)
   : mOptions(other.mOptions), mPosition(other.mPosition), mMargins(other.mMargins), mView(other.mView),
     mFill(other.mFill), mFrameFill(other.mFrameFill), mFrameBorder(other.mFrameBorder), mText(other.mText),
     mMarkerDefaults(other.mMarkerDefaults), mLineDefaults(other.mLineDefaults), mFillDefaults(other.mFillDefaults),
-    mDrawingOptionDefaults(other.mDrawingOptionDefaults), mCandleOptionDefaults(other.mCandleOptionDefaults),
+    mCandleOptionDefaults(other.mCandleOptionDefaults),
     mPalette(other.mPalette), mRedrawAxes(other.mRedrawAxes), mAxes(other.mAxes)
 {
   mData.reserve(other.mData.size());
@@ -1072,9 +1039,6 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mFillDefaults.colorGradient.rgbEndpoints, "default_fill_colors_gradient_endpoints");
   read_from_tree(padTree, mFillDefaults.colorGradient.alpha, "default_fill_colors_gradient_alpha");
   read_from_tree(padTree, mFillDefaults.colorGradient.nColors, "default_fill_colors_gradient_nColors");
-  ReadDrawingOption(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
-  ReadDrawingOption(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
-  ReadDrawingOption(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
   read_from_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_boxrange");
   read_from_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
@@ -1167,9 +1131,6 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mFillDefaults.colorGradient.rgbEndpoints, "default_fill_colors_gradient_endpoints");
   put_in_tree(padTree, mFillDefaults.colorGradient.alpha, "default_fill_colors_gradient_alpha");
   put_in_tree(padTree, mFillDefaults.colorGradient.nColors, "default_fill_colors_gradient_nColors");
-  PutDrawingOption(padTree, mDrawingOptionDefaults.graph, "default_drawing_option_graph");
-  PutDrawingOption(padTree, mDrawingOptionDefaults.hist, "default_drawing_option_hist");
-  PutDrawingOption(padTree, mDrawingOptionDefaults.hist2d, "default_drawing_option_hist2d");
   put_in_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_boxrange");
   put_in_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
@@ -1277,9 +1238,6 @@ void Plot::Pad::operator+=(const Pad& pad)
     mFillDefaults.colors = nullopt;
     mFillDefaults.alpha = nullopt;
   }
-  if (pad.mDrawingOptionDefaults.graph) mDrawingOptionDefaults.graph = pad.mDrawingOptionDefaults.graph;
-  if (pad.mDrawingOptionDefaults.hist) mDrawingOptionDefaults.hist = pad.mDrawingOptionDefaults.hist;
-  if (pad.mDrawingOptionDefaults.hist2d) mDrawingOptionDefaults.hist2d = pad.mDrawingOptionDefaults.hist2d;
   if (pad.mCandleOptionDefaults.boxRange) mCandleOptionDefaults.boxRange = pad.mCandleOptionDefaults.boxRange;
   if (pad.mCandleOptionDefaults.whiskerRange) mCandleOptionDefaults.whiskerRange = pad.mCandleOptionDefaults.whiskerRange;
 
@@ -1694,6 +1652,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
 
   if (auto var = dataTree.get_optional<bool>("defines_frame")) mDefinesFrame = *var;
   if (auto var = dataTree.get_optional<bool>("dont_draw")) mDontDraw = *var;
+  if (auto var = dataTree.get_optional<bool>("keep_input_style")) mKeepInputStyle = *var;
   read_from_tree(dataTree, mLegend.label, "legend_label");
   read_from_tree(dataTree, mLegend.id, "legend_id");
   if (const auto entryTree = dataTree.get_child_optional("legend_entry")) mLegend.entry = LegendEntry(*entryTree);
@@ -1850,6 +1809,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   dataTree.put("dataSource", mDataSource);
   if (mDefinesFrame) dataTree.put("defines_frame", mDefinesFrame);
   if (mDontDraw) dataTree.put("dont_draw", mDontDraw);
+  if (mKeepInputStyle) dataTree.put("keep_input_style", mKeepInputStyle);
   put_in_tree(dataTree, mLegend.label, "legend_label");
   put_in_tree(dataTree, mLegend.id, "legend_id");
   if (mLegend.entry) dataTree.put_child("legend_entry", mLegend.entry->GetPropertyTree());
@@ -1936,6 +1896,7 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
 {
   // set all properties related to the appearance of the data exactly as specified in the layout
   mDrawingOptions = dataLayout.mDrawingOptions;
+  mKeepInputStyle = dataLayout.mKeepInputStyle;
   mDrawingOptionAlias = dataLayout.mDrawingOptionAlias;
   mTextFormat = dataLayout.mTextFormat;
   mLegend.entry = dataLayout.mLegend.entry;
@@ -1966,6 +1927,7 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
 {
   // apply only the properties of the layout which are set
   set_if(dataLayout.mDrawingOptions, mDrawingOptions);
+  if (dataLayout.mKeepInputStyle) mKeepInputStyle = true;
   set_if(dataLayout.mDrawingOptionAlias, mDrawingOptionAlias);
   set_if(dataLayout.mTextFormat, mTextFormat);
   set_if(dataLayout.mLegend.entry, mLegend.entry);
@@ -2214,6 +2176,11 @@ auto Plot::Pad::Data::SetDefinesFrame(bool dontDraw) -> decltype(*this)
 {
   mDefinesFrame = true;
   mDontDraw = dontDraw;
+  return *this;
+}
+auto Plot::Pad::Data::SetKeepInputStyle(bool keep) -> decltype(*this)
+{
+  mKeepInputStyle = keep;
   return *this;
 }
 auto Plot::Pad::Data::SetContours(const vector<double>& contours) -> decltype(*this)

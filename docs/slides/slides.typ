@@ -1852,7 +1852,6 @@
         [#names("SetDefaultLineAlpha(alpha)", "SetDefaultLineWidth(width)")], [Default line transparency/width.],
         [`SetDefaultAlpha(alpha)`], [Default transparency for marker, line, *and* fill together.],
         [`SetDefaultFillAlpha(alpha)`], [Default fill transparency only.],
-        [#names("SetDefaultDrawingOptionGraph(option)", "SetDefaultDrawingOptionHist(option)", "SetDefaultDrawingOptionHist2d(option)")], [Default draw-option alias per data kind.],
         [#names("SetDefaultCandleBoxRange(range)", "SetDefaultCandleWhiskerRange(range)")], [Box and whisker range of candle plots.],
       ))
     ],
@@ -1927,6 +1926,7 @@
         [#names("SetMarker(color, style, size, alpha = {})", "SetMarkerColor(color)", "SetMarkerStyle(style)", "SetMarkerSize(size)", "SetMarkerAlpha(alpha)")], [Marker appearance, all at once or individually.],
         [#names("SetLine(color, style, width, alpha = {})", "SetLineColor(color)", "SetLineStyle(style)", "SetLineWidth(width)", "SetLineAlpha(alpha)")], [Line appearance, all at once or individually.],
         [#names("SetFill(color, style, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Fill appearance, all at once or individually.],
+        [`SetKeepInputStyle()`], [Keep the input's line, marker and fill.],
         [`SetDefinesFrame(dontDraw = false)`], [Use this object to define the plot frame (`dontDraw`: without drawing it).],
         [`SetContours(contours)` / `SetContours(nContours)`], [Set explicit contour levels or their count.],
         [`SetShowStats(format = "emr", title = {})`], [Statistics box of a histogram: ROOT's letters (`TStyle::SetOptStat`, e.g. `"eMR"`), the title as its first line.],
@@ -2058,7 +2058,7 @@
 #slide[
   #[]<appx-drawing-options>
   #slide-title("Appendix: Drawing Options – Histograms & Graphs")
-  - Pass any alias below to `SetOptions()` (or `SetDefaultDrawingOption*()`) instead of a raw ROOT draw-option string -- the table shows the actual ROOT string it expands to for each data kind.
+  - Pass any alias below to `SetOptions()` instead of a raw ROOT draw-option string -- the table shows the actual ROOT string it expands to for each data kind. Without an option: `hist` with a fill (graphs: `area`), `points` with a marker set or errors, else `hist` (graphs: `line`); 2D: `colz`.
   - The base word names the appearance, suffixes add one feature: `_xerr` also draws the x errors, `_endcaps` draws end caps, `_text` writes the values, `_arrows` ends the error bars with arrows (limits), `_smooth` smooths, `_nomarkers` omits the markers, `_clipped` cuts the line at the frame instead of drawing it along the frame edge. Every alias works for both kinds: where ROOT has no option for one of them, the data is converted and drawn as the other.
   #v(0.4em)
   #block(

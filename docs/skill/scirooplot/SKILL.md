@@ -86,11 +86,10 @@ Python is the same API: `from SciRooPlot import *`, `PlotManager("myProject")`, 
 ```cpp
 Plot plot("name", "group/sub", "basePlot");  Plot copy(plot, "name2", "group2");   // copy keeps everything
 plot.SetDimensions(710, 710[, fixAspect]).SetTransparent().AppendGroup("QA");
-plot[0]...        // defaults for all pads (text font/size, margins, colour lists, drawing options, ref function)
+plot[0]...        // defaults for all pads (text font/size, margins, colour lists, ref function)
 plot[1].SetPosition(x1,y1,x2,y2).SetMargins(t,b,l,r).SetFrameFill(10, 1001).SetPalette(kBird).SetView(theta, phi)
 plot[1].SetDefaultMarkerColors({kBlack, kRed+1}).SetDefaultLineStyles({kSolid, kDashed})   // cycled over the data
 plot[1].SetDefaultColors(rgbGradient)   // {{r,g,b,position},...} with r,g,b,position in [0,1]; also SetPalette(gradient)
-plot[1].SetDefaultDrawingOptionHist(hist).SetDefaultDrawingOptionGraph(points).SetDefaultDrawingOptionHist2d(colz)
 plot[1].SetRefFunc("1");              // reference line/function in a ratio pad (drawn first, black)
 plot[1]['X'].SetTitle("#it{x}").SetRange(a, b).SetLog().SetGrid().SetNumDivisions(305).SetMaxDigits(3).SetNoExponent()
             .SetTitleSize(28).SetTitleOffset(1.1).SetLabelSize(24).SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")
@@ -113,12 +112,14 @@ plot[1].AddData(myTemplate("hist"), "label");               // Data template: Da
 .SetRangeX(a, b).SetMaxRangeX(b).SetRangeY(a, b)             // visible range of this data, independent of the axis
 .SetScaleMinimum(f).SetScaleMaximum(f)                      // widen the automatic axis range
 .SetLegend(2).SetLegendLabel("l").SetDefinesFrame().SetShowOverflowBins().SetContours(n).SetTextFormat("4.2f")
+.SetKeepInputStyle()               // line, marker, fill stored with the input win over the pad defaults (what the data sets still wins)
 .SetNpx(n[, ny])                   // points a function is drawn with (AddFunction: 1000 in 1d; inputs keep their own)
 .SetShowStats("eMR", "title")   // statistics box of a histogram (letters of TStyle::SetOptStat; the optional title is its first line)
 .SetStatsBox(StatsBox().SetAutoPlacement(top_left).SetFill(kWhite, 1001))   // its placement and appearance: all setters of legend and text boxes
 ```
 Labels may contain `<name> <title> <entries> <integral> <maximum> <minimum> <mean>` with printf formats: `"avg = <mean[.2f]>"` (graphs: `<entries>` points, `<maximum>`/`<minimum>` of y; `<integral>`, `<mean>`, `<maximum>`, `<minimum>` cover the drawn range, `<entries>` is the stored total), and from the definition `<source>`, `<projection>` (`x`, `y:x`, `prof. y:x`, weight in parentheses) and `<selection>` (filters joined with `&&`, entries range, projection ranges): `"<name> <selection>"` tells apart requests differing only in the filter. ROOT TLatex syntax works in all texts (`#it{p}_{T}`, `#sqrt{s}`).
 
+Without `SetOptions` the same rule holds for histograms and graphs: a fill set → `hist` (graph: `area`); a marker style or size set on the data, or non-zero errors → `points`; otherwise `hist` (graph: `line`); 2D histograms, graphs and functions → `colz` (one colour axis covering all 2D data of the pad). The legend row follows what is drawn.
 Drawing option aliases (one appearance for every type; histograms and graphs are interchangeable, the data is converted when ROOT lacks the option):
 
 | 1D alias | look | 2D alias | look |
@@ -193,7 +194,7 @@ Templates carry everything a `Data` has (options, colours, ranges, modifiers, pr
 
 **Derive plots instead of repeating them.** `Plot variant(plot, "newName", "group")` copies a finished plot; add or change data and axes afterwards (`variant[1](2).SetColor(kRed)`). Generate plot families in loops — over centralities, cuts, runs, detector parts — with the loop variable in the name and group (`"raa_" + cent`, `AppendGroup("nuclearModification")`), so `plot heavyion/nuclearModification .+` makes the whole set.
 
-**Put layout into base plots, not into plots.** Everything that is the same for a class of plots — dimensions, margins, fonts, colour sequence, default drawing options, axis conventions, ratio reference line — belongs into a base plot; the plots then only contain data, titles and ranges (data in a base plot is ignored with a warning). Start from the shipped ones (`MakeBasePlot("1d")`, `"1d_ratio"`, `"2d"`, `"1d_2x1"`, …; modify and `AddBasePlot` under the same or a new name) and keep `plot[0]` for per-plot defaults (`plot[0]['X'].SetRange(...)` acts on all pads).
+**Put layout into base plots, not into plots.** Everything that is the same for a class of plots — dimensions, margins, fonts, colour sequence, axis conventions, ratio reference line — belongs into a base plot; the plots then only contain data, titles and ranges (data in a base plot is ignored with a warning). Start from the shipped ones (`MakeBasePlot("1d")`, `"1d_ratio"`, `"2d"`, `"1d_2x1"`, …; modify and `AddBasePlot` under the same or a new name) and keep `plot[0]` for per-plot defaults (`plot[0]['X'].SetRange(...)` acts on all pads).
 
 **Own layouts with PanelLayout** when the grid of panels is not one of the shipped names: panels are placed in rows in units of the standard panel, the sizes (text, ticks, line widths, margins in pixels) are shared, so plots of different layouts look alike in a document:
 ```cpp
@@ -202,7 +203,7 @@ const vector<vector<Panel>> rows = {{Panel(), Panel()},       // two panels shar
                                     {Panel(1, 0.37), Panel(1, 0.37)}};  // a ratio row below each
 Plot layout("1d_2x1_ratio_mine", PanelLayout(sizes, rows));   // pads numbered row by row: 1 2 / 3 4
 layout.SetTransparent();
-layout[0].SetDefaultTextFont(42).SetDefaultColors({kBlack, kBlue + 1, kRed + 1}).SetDefaultDrawingOptionGraph(points);
+layout[0].SetDefaultTextFont(42).SetDefaultColors({kBlack, kBlue + 1, kRed + 1});
 layout[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
 for (uint8_t ratioPad : {3, 4}) layout[ratioPad].SetRefFunc("1");
 pm.AddBasePlot(layout);

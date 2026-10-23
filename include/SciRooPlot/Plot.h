@@ -362,9 +362,6 @@ class Plot::Pad
   Pad& SetDefaultFillColors(const std::vector<int16_t>& colors);
   Pad& SetDefaultFillColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles);
-  Pad& SetDefaultDrawingOptionGraph(drawing_options_t drawingOption);
-  Pad& SetDefaultDrawingOptionHist(drawing_options_t drawingOption);
-  Pad& SetDefaultDrawingOptionHist2d(drawing_options_t drawingOption);
   Pad& SetDefaultCandleBoxRange(float_t candleOption);
   Pad& SetDefaultCandleWhiskerRange(float_t candleOption);
   Pad& SetFill(int16_t color, std::optional<int16_t> style = {}, std::optional<float_t> alpha = {});
@@ -437,9 +434,6 @@ class Plot::Pad
   const auto& GetDefaultFillColors() const { return mFillDefaults.colors; }
   const auto& GetDefaultFillColorsGradient() const { return mFillDefaults.colorGradient; }
   const auto& GetDefaultFillStyles() const { return mFillDefaults.styles; }
-  const auto& GetDefaultDrawingOptionGraph() const { return mDrawingOptionDefaults.graph; }
-  const auto& GetDefaultDrawingOptionHist() const { return mDrawingOptionDefaults.hist; }
-  const auto& GetDefaultDrawingOptionHist2d() const { return mDrawingOptionDefaults.hist2d; }
   const auto& GetDefaultCandleBoxRange() const { return mCandleOptionDefaults.boxRange; }
   const auto& GetDefaultCandleWhiskerRange() const { return mCandleOptionDefaults.whiskerRange; }
   const auto& GetRedrawAxes() const { return mRedrawAxes; }
@@ -481,11 +475,6 @@ class Plot::Pad
     std::optional<int32_t> index;
     gradient_color_t colorGradient;
   };
-  struct data_defaults_t {
-    std::optional<drawing_options_t> graph;
-    std::optional<drawing_options_t> hist;
-    std::optional<drawing_options_t> hist2d;
-  };
   struct candle_defaults_t {
     std::optional<double_t> boxRange;
     std::optional<double_t> whiskerRange;
@@ -505,7 +494,6 @@ class Plot::Pad
   view_defaults_t mMarkerDefaults;
   view_defaults_t mLineDefaults;
   view_defaults_t mFillDefaults;
-  data_defaults_t mDrawingOptionDefaults;
   candle_defaults_t mCandleOptionDefaults;
   palette_defaults_t mPalette;
   std::optional<bool> mRedrawAxes;
@@ -671,6 +659,7 @@ class Plot::Pad::Data
   Data& SetFillStyle(int16_t style);
   Data& SetFillAlpha(float_t alpha);
   Data& SetDefinesFrame(bool dontDraw = false);
+  Data& SetKeepInputStyle(bool keep = true);  // line, marker and fill stored with the input win over the defaults of the pad
   Data& SetContours(const std::vector<double>& contours);
   Data& SetContours(int32_t nContours);
   Data& SetNpx(int32_t nx, std::optional<int32_t> ny = {});
@@ -793,6 +782,7 @@ class Plot::Pad::Data
   const auto& GetScaleMinimum() const { return mScaleRange.min; }
   const auto& GetScaleMaximum() const { return mScaleRange.max; }
   const bool& GetDefinesFrame() const { return mDefinesFrame; }
+  const bool& GetKeepInputStyle() const { return mKeepInputStyle; }
   const bool& GetDontDraw() const { return mDontDraw; }
   const auto& GetContours() const { return mContours; }
   const auto& GetNContours() const { return mNContours; }
@@ -892,6 +882,7 @@ class Plot::Pad::Data
  private:
   bool mDefinesFrame{};
   bool mDontDraw{};
+  bool mKeepInputStyle{};
 
   std::string mType;  // for introspection: "data" or "ratio"
   std::string mName;
@@ -1006,6 +997,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(SetFillAlpha)
   FORWARD_TO_DATA(SetFillStyle)
   FORWARD_TO_DATA(SetDefinesFrame)
+  FORWARD_TO_DATA(SetKeepInputStyle)
   FORWARD_TO_DATA(SetContours)
 
 #undef FORWARD_TO_DATA
