@@ -1042,7 +1042,7 @@
 
       - Settings of `plot[0]` apply to all pads unless overridden.
 
-      - `PlotManager::MakeBasePlot(name)` provides base plots with consistent layout among them: text, ticks, distances, lines and markers are the same in every panel, so plots of different layouts look alike. The name describes the layout: `<type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]`, e.g. `1d`, `1d_ratio`, `2d`, `1d_wide`, `1d_2x1`, `1d_3x1`, `1d_2x1_ratio`, `1d_2x2`, `2d_2x1`.
+      - `PlotManager::MakeBasePlot(name)` provides base plots with consistent layout among them: text, ticks, distances, lines and markers are the same in every panel, so plots of different layouts look alike. The name describes the layout: `<type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]`, e.g. `1d`, `1d_ratio`, `2d`, `1d_wide`, `1d_2x1`, `1d_3x1`, `1d_2x1_ratio`, `1d_2x2`, `2d_2x1`. Other sizes: `MakeBasePlot(name, PanelLayout().SetTextSize(24))`.
 
       - Other layouts are made with `PanelLayout`#if lang == "cpp" [ (`#include "SciRooPlot/PanelLayout.h"`)]: panels in rows (`Panel`, `Gap()`, `Empty()`), lengths in pixels; panels that touch share their axis, pads are numbered row by row. The code of `MakeBasePlot` is the start for your own.
 
@@ -1751,6 +1751,7 @@
     [
       #api-section("Base plots", (
         [`PlotManager::MakeBasePlot(name = "1d")`], [Base plots with consistent layout, named `<type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]` (type `1d` or `2d`), e.g. `1d_ratio`, `2d`, `1d_3x1`, `1d_2x1_ratio`.],
+        [`PlotManager::MakeBasePlot(name, sizes)`], [The same with the lengths of the `PanelLayout` `sizes` (text sizes, line width, margins, ...), equal in all panels.],
         [`Plot(name, layout)`], [Base plot from a `PanelLayout`, its lengths kept equal in every panel.],
         [#names(if lang == "py" { "PanelLayout(rows = [[Panel()]])" } else { "PanelLayout(rows = {{Panel()}})" }, "PanelLayout(sizes, rows)")], [Panels in rows (top to bottom), or the same lengths with other panels.],
         [#names("Panel(width = 1, height = 1)", "Panel().ZAxis()", "Gap()", "Empty()")], [A panel (in units of the standard panel), with room for a colour scale; a gap between independent panels; a cell without axes (a pad for texts).],

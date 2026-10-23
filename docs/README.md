@@ -404,6 +404,13 @@ auto basePlot = PlotManager::MakeBasePlot("1d");
 basePlot[1]['X'].SetColor(kRed);
 pm.AddBasePlot(basePlot);
 
+// other text sizes, line widths, margins etc. are given as the lengths of a PanelLayout (in pixels of the plot, see PanelLayout.h);
+// they are converted for every pad, so they stay the same in all panels. Setting a text size on the pads of a base plot
+// afterwards does not do that: each pad holds its own size relative to its dimensions.
+auto smallText = PlotManager::MakeBasePlot("1d_ratio", PanelLayout().SetTextSize(24).SetTitleSize(30));
+smallText.SetName("1d_ratio_small");
+pm.AddBasePlot(smallText);
+
 // Layouts beyond this rule (e.g. with a cell for texts, or panels of different sizes) are made with PanelLayout.h,
 // as in PlotManager::MakeBasePlot itself: a PanelLayout arranges panels in rows (sizes in units of the standard panel)
 // and carries the lengths of the plot in pixels of the canvas; the plot made from it has these lengths in every panel.

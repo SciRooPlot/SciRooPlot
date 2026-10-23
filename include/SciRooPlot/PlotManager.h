@@ -85,6 +85,10 @@ class PlotManager
   // E.g. 1d, 1d_ratio, 2d, 1d_wide, 1d_2x1, 1d_3x1, 1d_2x1_ratio, 1d_2x2, 2d_2x1, 1d_2x1_gap. Pads are numbered row by row.
   // The code of this function is the reference for defining further layouts with PanelLayout.
   static Plot MakeBasePlot(const std::string& name = "1d");
+  // The same base plot with other lengths, taken from sizes (its panels are not used): text and title sizes, tick lengths,
+  // margins, line width and marker size in pixels of the plot, e.g. MakeBasePlot("1d_ratio", PanelLayout().SetTextSize(24).SetTitleSize(30)).
+  // They are converted for every pad, so they stay equal in all panels; changing the text size of single pads afterwards does not.
+  static Plot MakeBasePlot(const std::string& name, const PanelLayout& sizes);
   void AddColorOverview(const std::string& name, const std::string& group, const std::vector<int32_t>& colors = {});
 
   void SavePlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {}) const;

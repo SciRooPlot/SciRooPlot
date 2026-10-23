@@ -748,11 +748,16 @@ void PlotManager::AddPlot(Plot plot)
 /**
  * Base plots with consistent layout among them (see PlotManager.h). The name describes the layout:
  * <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]. The geometry and the sizes come from the PanelLayout
- * (its defaults are the proportions of the 788 x 788 pixel standard plot), the look is set with the ordinary
- * plot setters, and the conventions of the ratio pads are added afterwards.
+ * (its defaults are the proportions of the 788 x 788 pixel standard plot, or the lengths of sizes), the look is set
+ * with the ordinary plot setters, and the conventions of the ratio pads are added afterwards.
  */
 //**************************************************************************************************
 Plot PlotManager::MakeBasePlot(const string& name)
+{
+  return MakeBasePlot(name, PanelLayout());  // the default lengths of PanelLayout are those of the standard plot
+}
+
+Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes)
 {
   static const std::regex pattern(R"(^(1d|2d)(?:_(wide|tall))?(?:_([1-9]\d*)x([1-9]\d*))?(_ratio)?(_gap)?$)");
   std::smatch match;
@@ -800,11 +805,7 @@ Plot PlotManager::MakeBasePlot(const string& name)
     }
   }
 
-  // the sizes shared by all base plots, in pixels of the canvas (these are the defaults of PanelLayout)
-  PanelLayout sizes;
-  sizes.SetTextSize(31.52).SetTitleSize(39.4).SetLineWidth(5).SetMarkerSize(1.4);
-
-  // the look shared by all base plots: fonts, colours, markers and axis conventions
+  // the look shared by all base plots (the lengths, in pixels of the canvas, come from sizes): fonts, colours, markers and axis conventions
   Plot plot(name, PanelLayout(sizes, rows));
   plot.SetTransparent();
   plot[0].SetTransparent();

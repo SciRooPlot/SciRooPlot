@@ -264,7 +264,8 @@ void exportPlotManager(py::module_& m)
     .def("SetDataRootFile", &PlotManager::SetDataRootFile, arg("fileName"))
     .def("SaveProject", &PlotManager::SaveProject)
     .def("GetProjectProperty", &PlotManager::GetProjectProperty, arg("property"))
-    .def_static("MakeBasePlot", &PlotManager::MakeBasePlot, arg("name") = "1d");
+    .def_static("MakeBasePlot", overload_cast<const string&>(&PlotManager::MakeBasePlot), arg("name") = "1d")
+    .def_static("MakeBasePlot", overload_cast<const string&, const PanelLayout&>(&PlotManager::MakeBasePlot), arg("name"), arg("sizes"));
 }
 
 void exportPanelLayout(py::module_& m)
