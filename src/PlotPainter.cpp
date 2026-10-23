@@ -2984,6 +2984,35 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     }
   };
 
+  // a filled polygon (pad coordinates): the cells whose centre row crosses its inside (scanline; the outline is marked separately)
+  auto markPolygon = [&](const vector<std::pair<double_t, double_t>>& points) {
+    if (points.size() < 3) return;
+    double_t yMin = std::numeric_limits<double_t>::infinity(), yMax = -yMin;
+    for (const auto& [x, y] : points) {
+      yMin = std::min(yMin, cellY(y));
+      yMax = std::max(yMax, cellY(y));
+    }
+    if (!std::isfinite(yMin) || !std::isfinite(yMax)) return;
+    vector<double_t> crossings;
+    for (int32_t j = std::max(0, static_cast<int32_t>(std::floor(yMin))); j < std::min(ny, static_cast<int32_t>(std::ceil(yMax)) + 1); ++j) {
+      const double_t yc = j + 0.5;
+      crossings.clear();
+      for (size_t k = 0; k < points.size(); ++k) {
+        const auto& [xa, ya] = points[k];
+        const auto& [xb, yb] = points[(k + 1) % points.size()];
+        const double_t ca = cellY(ya), cb = cellY(yb);
+        if ((ca <= yc && yc < cb) || (cb <= yc && yc < ca)) crossings.push_back(cellX(xa) + (yc - ca) / (cb - ca) * (cellX(xb) - cellX(xa)));
+      }
+      std::sort(crossings.begin(), crossings.end());
+      for (size_t k = 0; k + 1 < crossings.size(); k += 2) {
+        setRect(crossings[k], j, crossings[k + 1], j, 1u);
+      }
+    }
+  };
+  // a filled histogram or curve starts at 0, or at the frame edge if 0 is outside of the frame; on a log axis at the lower frame edge
+  // (TGraphPainter::PaintGrapHist and Smooth)
+  auto fillBaseY = [&]() { return (pad->GetLogy()) ? pad->GetUymin() : std::clamp(0., pad->GetUymin(), pad->GetUymax()); };
+
   auto markHist = [&](TH1* hist) {
     if (hist->GetDimension() != 1) return;
     // error bars as ROOT draws them (the same rule as for the legend entries in LegendDrawStyle): with an E in the option or stored errors,
@@ -2992,10 +3021,48 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     option.ToUpper();
     for (const char* ignored : {"SAME", "TEXT", "PFC", "PLC", "PMC", "X0", "]["})
       option.ReplaceAll(ignored, "");
+    TAxis* axis = hist->GetXaxis();
+    // bar charts (THistPainter::PaintBar and PaintBarH): boxes from the frame edge to the content, also without fill style
+    if (const bool isHorizontal = option.Contains("HBAR"); isHorizontal || option.Contains("BAR")) {
+      for (int32_t bin = axis->GetFirst(); bin <= axis->GetLast(); ++bin) {
+        double_t low = (isHorizontal) ? padY(axis->GetBinLowEdge(bin)) : padX(axis->GetBinLowEdge(bin));
+        const double_t up = (isHorizontal) ? padY(axis->GetBinUpEdge(bin)) : padX(axis->GetBinUpEdge(bin));
+        const double_t width = (up - low) * hist->GetBarWidth();
+        low += hist->GetBarOffset() * (up - low);
+        if (isHorizontal) {
+          setRect(cellX(pad->GetUxmin()), cellY(low), cellX(padX(hist->GetBinContent(bin))), cellY(low + width), 1u);
+        } else {
+          setRect(cellX(low), cellY(pad->GetUymin()), cellX(low + width), cellY(padY(hist->GetBinContent(bin))), 1u);
+        }
+      }
+      return;
+    }
     const bool hasErrors = !option.Contains("HIST") && (option.Contains("E") || HasErrors(hist));
     const bool hasErrorArea = hasErrors && (option.Contains("E2") || option.Contains("E3") || option.Contains("E4") || option.Contains("E5") || option.Contains("E6"));
     const bool showEmpty = option.Contains("E0");
-    TAxis* axis = hist->GetXaxis();
+    // the fill of a histogram drawn as steps, line or curve (THistPainter::PaintHist: a fill colour and style are needed):
+    // steps are filled per bin, a line with option F2 down to the lower frame edge, a smoothed curve down to the base of the fill
+    if (!hasErrors && hist->GetFillColor() != 0 && hist->GetFillStyle() != 0) {
+      const bool isCurve = option.Contains("C");
+      const bool isLineArea = option.Contains("F2");
+      if (isCurve || isLineArea) {
+        const double_t base = (isLineArea) ? pad->GetUymin() : fillBaseY();
+        vector<std::pair<double_t, double_t>> polygon;
+        for (int32_t bin = axis->GetFirst(); bin <= axis->GetLast(); ++bin) {
+          polygon.emplace_back(padX(axis->GetBinCenter(bin)), padY(hist->GetBinContent(bin)));
+        }
+        if (!polygon.empty()) {
+          polygon.emplace_back(polygon.back().first, base);
+          polygon.emplace_back(polygon.front().first, base);
+        }
+        markPolygon(polygon);
+      } else {
+        const double_t base = fillBaseY();
+        for (int32_t bin = axis->GetFirst(); bin <= axis->GetLast(); ++bin) {
+          setRect(cellX(padX(axis->GetBinLowEdge(bin))), cellY(base), cellX(padX(axis->GetBinUpEdge(bin))), cellY(padY(hist->GetBinContent(bin))), 1u);
+        }
+      }
+    }
     for (int32_t bin = axis->GetFirst(); bin <= axis->GetLast(); ++bin) {  // only the visible range
       const double_t content = hist->GetBinContent(bin);
       if (hasErrors && !showEmpty && content == 0.) continue;  // not drawn by ROOT
@@ -3017,9 +3084,28 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   auto markGraph = [&](TGraph* graph) {
     TString option = graph->GetDrawOption();
     option.ToLower();
+    for (const char* ignored : {"same", "pfc", "plc", "pmc"})
+      option.ReplaceAll(ignored, "");
     const bool hasErrorBoxes = option.Contains("2") || option.Contains("5");
     const bool hasErrorBand = option.Contains("3") || option.Contains("4");
     const int32_t n = graph->GetN();
+    if (n > 0 && option.Contains("b")) {
+      // bar chart (TGraphPainter::PaintGraph): boxes of a fraction of the mean point distance around each point, from the base of a fill
+      const auto [xMin, xMax] = std::minmax_element(graph->GetX(), graph->GetX() + n);
+      const double_t halfWidth = 0.5 * (*xMax - *xMin) / n * gStyle->GetBarWidth();
+      for (int32_t i = 0; i < n; ++i) {
+        setRect(cellX(padX(graph->GetPointX(i) - halfWidth)), cellY(fillBaseY()), cellX(padX(graph->GetPointX(i) + halfWidth)), cellY(padY(graph->GetPointY(i))), 1u);
+      }
+    }
+    if (option.Contains("f") && graph->GetFillColor() != 0 && graph->GetFillStyle() != 0) {
+      // filled area: the polygon through the points (closed from the last point back to the first)
+      vector<std::pair<double_t, double_t>> polygon;
+      polygon.reserve(n);
+      for (int32_t i = 0; i < n; ++i) {
+        polygon.emplace_back(padX(graph->GetPointX(i)), padY(graph->GetPointY(i)));
+      }
+      markPolygon(polygon);
+    }
     for (int32_t i = 0; i < n; ++i) {
       const double_t xUser = graph->GetPointX(i), yUser = graph->GetPointY(i);
       const double_t x = padX(xUser), y = padY(yUser);
