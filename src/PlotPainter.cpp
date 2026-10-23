@@ -1822,7 +1822,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             };
             if constexpr (is_hist<data_type>()) {
               if constexpr (is_func<denom_data_type>() || is_hist<denom_data_type>() || (is_hist_1d<data_type>() && is_graph_1d<denom_data_type>())) {
-                if (!Divide(data_ptr, denom_data_ptr, binomialErrors)) fail = true;
+                if (!Divide(data_ptr, denom_data_ptr, binomialErrors, dataIndex != 0)) fail = true;
                 if constexpr (is_hist_2d<data_type>()) {
                   data_ptr->GetZaxis()->SetTitle("ratio");
                 } else if constexpr (is_hist_1d<data_type>()) {
@@ -1833,7 +1833,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             } else if constexpr (is_graph_1d<data_type>()) {
               if constexpr (is_graph_1d<denom_data_type>() || is_hist_1d<denom_data_type>() || is_func_1d<denom_data_type>()) {
-                if (!Divide(data_ptr, denom_data_ptr, binomialErrors)) fail = true;
+                if (!Divide(data_ptr, denom_data_ptr, binomialErrors, dataIndex != 0)) fail = true;
                 data_ptr->GetHistogram()->GetYaxis()->SetTitle("ratio");
               } else {
                 unsupported();
@@ -3517,7 +3517,7 @@ string PlotPainter::GetAxisStr(int16_t i)
  * Return false if the division is not possible.
  */
 //**************************************************************************************************
-bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors)
+bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors, bool verbose)
 {
   int32_t numN = numerator->GetN();
   double_t* numX = numerator->GetX();
@@ -3632,7 +3632,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
       }
     }
     if (nOutside) {
-      logger::warning("{} of {} points of {} are outside the range [{}, {}] of {} (up to {} beyond); the denominator is extrapolated there.", nOutside, numN, numerator->GetName(), xMin, xMax, denominator->GetName(), maxDistance);
+      if (verbose) logger::warning("{} of {} points of {} are outside the range [{}, {}] of {} (up to {} beyond); the denominator is extrapolated there.", nOutside, numN, numerator->GetName(), xMin, xMax, denominator->GetName(), maxDistance);
     }
   }
 
@@ -3670,7 +3670,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   }
   return true;
 }
-bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialErrors)
+bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialErrors, bool verbose)
 {
   if (numerator->GetDimension() != 1) {
     logger::error("Cannot divide higher dimensional histogram by 1D graph.");
@@ -3682,7 +3682,7 @@ bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialError
   }
   TGraphErrors numeratorGraph(numerator);
   numeratorGraph.SetName(numerator->GetName());  // used in messages
-  if (!Divide(&numeratorGraph, denominator, binomialErrors)) return false;
+  if (!Divide(&numeratorGraph, denominator, binomialErrors, verbose)) return false;
   numerator->Reset();
   for (int32_t i = 0; i < numeratorGraph.GetN(); ++i) {
     numerator->SetBinContent(i + 1, numeratorGraph.GetY()[i]);
@@ -3690,7 +3690,7 @@ bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialError
   }
   return true;
 }
-bool PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialErrors)
+bool PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialErrors, bool verbose)
 {
   if (denominator->GetDimension() != 1) {
     logger::error("Cannot divide 1D graph by higher dimensional histogram.");
@@ -3702,9 +3702,9 @@ bool PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialError
   }
   TGraphErrors denominatorGraph(denominator);
   denominatorGraph.SetName(denominator->GetName());  // used in messages
-  return Divide(numerator, &denominatorGraph, binomialErrors);
+  return Divide(numerator, &denominatorGraph, binomialErrors, verbose);
 }
-bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
+bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, bool verbose)
 {
   // edges are compared with the tolerance of ROOT's own consistency check in TH1::Divide (TH1::CheckBinLimits)
   auto sameAxisBinning = [](TAxis* a, TAxis* b) -> bool {
@@ -3734,7 +3734,7 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
   if (numerator->GetDimension() == 1 && denominator->GetDimension() == 1) {
     TGraphErrors denominatorGraph(denominator);
     denominatorGraph.SetName(denominator->GetName());  // used in messages
-    return Divide(numerator, &denominatorGraph, binomialErrors);
+    return Divide(numerator, &denominatorGraph, binomialErrors, verbose);
   } else if (numerator->GetDimension() == 2 && denominator->GetDimension() == 2) {
     logger::error("Interpolated division of 2D histograms not yet supported.");
   } else if (numerator->GetDimension() == 3 && denominator->GetDimension() == 3) {
@@ -3744,19 +3744,19 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors)
   }
   return false;
 }
-bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors)
+bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors, bool verbose)
 {
   if (denominator->GetNdim() > numerator->GetDimension()) {
     logger::error("Cannot divide histogram by higher dimensional function.");
     return false;
   }
   numerator->Divide(denominator);
-  if (binomialErrors) {
+  if (binomialErrors && verbose) {
     logger::warning("Binomial errors not supported for division by function.");
   }
   return true;
 }
-bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialErrors)
+bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialErrors, bool verbose)
 {
   if (denominator->GetNdim() > 1) {
     logger::error("Cannot divide 1D graph by higher dimensional function.");
@@ -3778,7 +3778,7 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
       eyHigh[i] = (denom) ? eyHigh[i] / absDenom : 0.;
     }
   }
-  if (binomialErrors) {
+  if (binomialErrors && verbose) {
     logger::warning("Binomial errors not supported for division by function.");
   }
   return true;

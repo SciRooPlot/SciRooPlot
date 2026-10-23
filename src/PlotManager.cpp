@@ -677,7 +677,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
         }
         continue;
       }
-      if (file->path().extension() == ".root" || str_contains(file->path().extension(), mTableFileEndings)) {
+      if (file->path().extension() == ".root" || str_ends_with(file->path().string(), mTableFileEndings)) {
         dirFileNames.push_back(file->path().string());
       }
     }
@@ -1119,6 +1119,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   size_t nItemsToRead{};
   set<string> sourcesToRead;
   for (const auto& [dataSource, buffer] : mDataBuffer) {
+    if (dataSource == "USER_FUNCTIONS" || dataSource == "USER_GRAPHS") continue;  // defined in the plots, nothing to read
     for (const auto& [dataName, dataPtr] : buffer) {
       if (IsBuffered(dataSource, dataName)) continue;
       ++nItemsToRead;
@@ -1137,8 +1138,9 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     logger::info("Reading {} from {}{}.", plural(nItemsToRead, "data item"), (nInputs) ? plural(nInputs, "input") + " in " : "", plural(sourcesToRead.size(), "data source"));
   }
   try {
-    if (!FillBuffer()) {
-      // PrintBufferStatus(true);
+    FillBuffer();
+    {
+      // the summary counts everything the plots cannot get, whether not found or failed to read (its details come with each plot)
       uint32_t nAffectedPlots{};
       set<std::pair<string, string>> missingItems;  // (dataSource, name+suffix)
       for (auto plot : selectedPlots) {

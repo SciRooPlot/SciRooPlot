@@ -495,7 +495,9 @@ bool Config::SetProgram(const string& projectName, const string& program)
     logger::error("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
     return false;
   }
-  if (std::filesystem::path(expand_path(program)).is_relative()) {
+  const string expandedPath = expand_path(program);
+  if (expandedPath.empty() && !program.empty()) return false;  // unset environment variable, reported by expand_path
+  if (std::filesystem::path(expandedPath).is_relative()) {
     logger::error("The path must not be relative.");
     return false;
   }
@@ -524,7 +526,9 @@ bool Config::SetOutputDir(const string& projectName, const string& outputDir)
     logger::error("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
     return false;
   }
-  if (std::filesystem::path(expand_path(outputDir)).is_relative()) {
+  const string expandedPath = expand_path(outputDir);
+  if (expandedPath.empty() && !outputDir.empty()) return false;  // unset environment variable, reported by expand_path
+  if (std::filesystem::path(expandedPath).is_relative()) {
     logger::error("The path must not be relative.");
     return false;
   }

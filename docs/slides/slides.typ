@@ -1997,17 +1997,11 @@
     ],
     [
       #api-section("TextBox", (
-        ..(if lang == "cpp" {
-          ([`TextBox(text)` / `TextBox(xPos, yPos, text)`], [Construct directly, auto-placed or fixed.])
-        } else { () }),
         [`SetText(text)`], [Set the displayed text (a list of lines, or one string with newlines).],
         [`SetTextAlign(align)`], [ROOT alignment code, e.g. `kHAlignCenter + kVAlignTop` (default `kHAlignLeft + kVAlignCenter`).],
       ), col-widths: (52%, 48%), text-size: 12pt)
       #v(0.6em)
       #api-section("LegendBox", (
-        ..(if lang == "cpp" {
-          ([`LegendBox(title = {})` / `LegendBox(xPos, yPos, title = {})`], [Construct directly, auto-placed or fixed.])
-        } else { () }),
         [`SetTitle(title)` / `SetNumColumns(n)`], [Legend title, or number of columns.],
         [`AddEntry(label = "")`], [Add a row of its own (no label: an empty line), see the next slide.],
         [`SetSymbolColScale(scale)`], [Scale the width of the symbol column.],
