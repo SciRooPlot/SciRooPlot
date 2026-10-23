@@ -316,7 +316,10 @@ int main(int argc, char* argv[])
       return 1;
     }
     if (!Config::GetMutable().SetProgram(project, property)) return 1;
-    if (!setting.empty() && !Config::GetMutable().SetOutputDir(project, setting)) return 1;
+    if (!setting.empty() && !Config::GetMutable().SetOutputDir(project, setting)) {
+      Config::GetMutable().Remove(project);  // otherwise the project would be saved with the program only
+      return 1;
+    }
     Config::GetMutable().Select(project);
     logger::info("Selecting project {}.", project);
   } else if (command == "get") {

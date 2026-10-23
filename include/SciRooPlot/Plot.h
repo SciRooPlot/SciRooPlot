@@ -859,14 +859,10 @@ class Plot::Pad::Data
     struct entry_range_t {
       std::optional<uint32_t> min{};
       std::optional<uint32_t> max{};
+      void Set(std::optional<uint32_t> entryMin, uint32_t entryMax);  // the rules for Entries(), shared by data and ratio denominator
     };
     entry_range_t entries;
-    void set(const data_info_t& other)
-    {
-      dataDims = other.dataDims;
-      weight = other.weight;
-      isProfileNoScatter = other.isProfileNoScatter;
-    }
+    void set(const data_info_t& other);  // adopts the request (dims, weight, kind); throws when no dimensions are given
     bool singleProc() const
     {
       // disable multi processing in case scatter (order might be relevant) or range is requested

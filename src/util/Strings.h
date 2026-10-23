@@ -103,7 +103,11 @@ std::string vector_to_string(const std::vector<T>& items)
       if (&item != &items.back()) itemString += ";";
     } else {
       if constexpr (std::is_same_v<std::string, T>) {
-        itemString += item;
+        // the list separator and the escape character are escaped within the items (e.g. a '$' in a filter expression)
+        for (const char c : item) {
+          if (c == '$' || c == '\\') itemString += '\\';
+          itemString += c;
+        }
         if (&item != &items.back()) itemString += "$";
       } else {
         itemString += number_to_string(item);
@@ -175,7 +179,21 @@ std::vector<T> string_to_vector(std::string itemString)
   std::string curItemStr;
   std::istringstream stream(itemString);
   if constexpr (std::is_same_v<T, std::string>) {
-    while (std::getline(stream, curItemStr, '$')) {
+    if (!itemString.empty()) {
+      bool escaped = false;
+      for (const char c : itemString) {
+        if (escaped) {
+          curItemStr += c;
+          escaped = false;
+        } else if (c == '\\') {
+          escaped = true;
+        } else if (c == '$') {
+          items.push_back(curItemStr);
+          curItemStr.clear();
+        } else {
+          curItemStr += c;
+        }
+      }
       items.push_back(curItemStr);
     }
   } else if constexpr (is_tuple<T>::value) {

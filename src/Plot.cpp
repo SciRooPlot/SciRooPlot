@@ -2295,6 +2295,7 @@ auto Plot::Pad::Data::ScaleZ(double_t scaleFactor) -> decltype(*this)
 }
 auto Plot::Pad::Data::Project(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
+  if (dims.empty()) logger::throw_invalid_argument("Project needs at least one axis to project onto.");
   mProjInfo = {dims, ranges, isUserCoord};
   return *this;
 }
@@ -2310,6 +2311,7 @@ auto Plot::Pad::Data::ProjectY(double_t startX, double_t endX, optional<bool> is
 }
 auto Plot::Pad::Data::Profile(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
+  if (dims.empty()) logger::throw_invalid_argument("Profile needs at least one axis to profile along.");
   mProjInfo = {dims, ranges, isUserCoord, true};
   return *this;
 }
@@ -2322,6 +2324,19 @@ auto Plot::Pad::Data::ProfileY(double_t startX, double_t endX, optional<bool> is
 {
   mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
   return *this;
+}
+void Plot::Pad::Data::data_info_t::set(const data_info_t& other)
+{
+  if (other.dataDims.empty()) {
+    if (other.isProfileNoScatter.value_or(false)) {
+      logger::throw_invalid_argument("Profile needs at least one binned axis besides the profiled variable.");
+    } else {
+      logger::throw_invalid_argument("Project needs at least one dimension.");
+    }
+  }
+  dataDims = other.dataDims;
+  weight = other.weight;
+  isProfileNoScatter = other.isProfileNoScatter;
 }
 auto Plot::Pad::Data::Project(const vector<data_dim_t>& dataDims, optional<string> weight) -> decltype(*this)
 {
@@ -2452,31 +2467,38 @@ void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const std::string& name, co
   };
   if (!dataInfo.joins) dataInfo.joins.emplace();
   for (const auto& other : *dataInfo.joins) {
-    if (other == join) return;
+    if (other == join) {
+      logger::warning("Tree {} is already joined to {}; ignoring the repeated Join.", other.GetDescription(), name);
+      return;
+    }
     if (other.GetAlias() == join.GetAlias()) {
       logger::throw_invalid_argument("Cannot join tree {} to {}: its columns would be called {}.column like those of the joined tree {}, please specify an alias, e.g. {}.", tree.name, name, join.GetAlias(), other.GetDescription(), suggestAlias());
     }
   }
   dataInfo.joins->push_back(join);
 }
+void Plot::Pad::Data::data_info_t::entry_range_t::Set(optional<uint32_t> entryMin, uint32_t entryMax)
+{
+  if (entryMin) {
+    if (entryMax <= *entryMin) {
+      logger::error("Entry range [{}, {}) is empty; ignoring.", *entryMin, entryMax);
+      return;
+    }
+  } else if (!entryMax) {
+    logger::error("Entries(0) would select no entries at all; ignoring.");
+    return;
+  }
+  min = entryMin;
+  max = entryMax;
+}
 auto Plot::Pad::Data::Entries(uint32_t nEntries) -> decltype(*this)
 {
-  if (!nEntries) {
-    logger::error("Entries(0) would select no entries at all; ignoring.");
-    return *this;
-  }
-  mDataInfo.entries.min.reset();
-  mDataInfo.entries.max = nEntries;
+  mDataInfo.entries.Set(nullopt, nEntries);
   return *this;
 }
 auto Plot::Pad::Data::Entries(uint32_t entryMin, uint32_t entryMax) -> decltype(*this)
 {
-  if (entryMax <= entryMin) {
-    logger::error("Entry range [{}, {}) is empty; ignoring.", entryMin, entryMax);
-    return *this;
-  }
-  mDataInfo.entries.min = entryMin;
-  mDataInfo.entries.max = entryMax;
+  mDataInfo.entries.Set(entryMin, entryMax);
   return *this;
 }
 
@@ -2888,6 +2910,7 @@ auto Plot::Pad::Ratio::Result() -> decltype(*this)
 }
 auto Plot::Pad::Ratio::Project(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
+  if (dims.empty()) logger::throw_invalid_argument("Project needs at least one axis to project onto.");
   ResolveSelectionMode("Project");
   if (mModMode != Mode::Den) {
     Data::Project(dims, ranges, isUserCoord);
@@ -2918,6 +2941,7 @@ auto Plot::Pad::Ratio::ProjectY(double_t startX, double_t endX, optional<bool> i
 }
 auto Plot::Pad::Ratio::Profile(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
+  if (dims.empty()) logger::throw_invalid_argument("Profile needs at least one axis to profile along.");
   ResolveSelectionMode("Profile");
   if (mModMode != Mode::Den) {
     Data::Profile(dims, ranges, isUserCoord);
@@ -3084,7 +3108,7 @@ auto Plot::Pad::Ratio::Entries(uint32_t nEntries) -> decltype(*this)
     Data::Entries(nEntries);
     if (mModMode != Mode::Both) return *this;
   }
-  mDenomDataInfo.entries.max = nEntries;
+  mDenomDataInfo.entries.Set(nullopt, nEntries);
   return *this;
 }
 auto Plot::Pad::Ratio::Entries(uint32_t entryMin, uint32_t entryMax) -> decltype(*this)
@@ -3094,8 +3118,7 @@ auto Plot::Pad::Ratio::Entries(uint32_t entryMin, uint32_t entryMax) -> decltype
     Data::Entries(entryMin, entryMax);
     if (mModMode != Mode::Both) return *this;
   }
-  mDenomDataInfo.entries.min = entryMin;
-  mDenomDataInfo.entries.max = entryMax;
+  mDenomDataInfo.entries.Set(entryMin, entryMax);
   return *this;
 }
 

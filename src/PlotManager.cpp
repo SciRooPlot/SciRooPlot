@@ -316,7 +316,8 @@ void PlotManager::SetOutputDirectory(const string& path)
 {
   const string expandedPath = expand_path(path);
   if (expandedPath.empty() && !path.empty()) return;  // unset environment variable, reported by expand_path
-  mOutputDirectory = expandedPath;
+  // a relative path is taken relative to the current directory, so that it can be stored with the project
+  mOutputDirectory = (expandedPath.empty()) ? expandedPath : std::filesystem::absolute(expandedPath).lexically_normal().string();
 }
 
 //**************************************************************************************************
@@ -3045,9 +3046,14 @@ void PlotManager::SaveProject() const
   SaveDataSources();
   SavePlots();
 
-  if (!mOutputDirectory.empty() && mOutputDirectory != Config::Get().OutputDir(mProjectName)) {
-    Config::GetMutable().SetOutputDir(mProjectName, mOutputDirectory);
-    Config::GetMutable().Save();
+  if (!mOutputDirectory.empty()) {
+    if (!Config::Get().Exists(mProjectName)) {
+      // not registered yet (e.g. the program was run before srp add): a project without program would block the registration
+      logger::info("Project {} is not registered yet, the output directory is not stored: srp add {} <program> [<outdir>].", mProjectName, mProjectName);
+    } else if (mOutputDirectory != Config::Get().OutputDir(mProjectName)) {
+      Config::GetMutable().SetOutputDir(mProjectName, mOutputDirectory);
+      Config::GetMutable().Save();
+    }
   }
 
   // create a csv file for tab completion
