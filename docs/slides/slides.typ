@@ -1943,7 +1943,7 @@
     gutter: 2%,
     [
       #api-section("Transform existing data", (
-        [`Normalize(isDensity = false)` / `NormalizeToMaximum(normMaximum = true)`], [Normalize the integral or the maximum to one (`isDensity`: the data already is a density).],
+        [`Normalize(isDensity = false, min, max)` / `NormalizeToMaximum(min, max)`], [Normalize the integral or the maximum to one, optionally within an x range (`isDensity`: the data already is a density).],
         [`Scale(scaleFactor)`], [Scale the object's contents.],
         [`DivideBinWidth(divideBinWidth = true)`], [Divide contents by bin width.],
         [`Density()`], [Divide by bin width and normalize the integral to one: a probability density from counts.],

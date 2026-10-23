@@ -181,6 +181,7 @@ class PlotPainter
   static TGraph* ToClippedGraph(const TH1* hist, drawing_options_t alias, bool logY);
   static double_t ClippedBase(const TGraph* graph, bool logY);
   static void SetBinRange(TAxis* axis, const std::optional<double_t>& min, const std::optional<double_t>& max);
+  static std::pair<int32_t, int32_t> BinRange(const TAxis* axis, const std::optional<double_t>& min, const std::optional<double_t>& max);
   static void LimitToFrame(TAxis* axis, const TAxis* frameAxis);
   bool CheckFontSizes(TList* list);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);

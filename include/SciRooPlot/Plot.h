@@ -676,8 +676,9 @@ class Plot::Pad::Data
   Data& SetNpx(int32_t nx, std::optional<int32_t> ny = {});
 
   // data modifiers
-  Data& Normalize(bool isDensity = false);
-  Data& NormalizeToMaximum(bool normMaximum = true);
+  // the optional range in x restricts the integral or the maximum to the bins reaching into it (points within it for graphs)
+  Data& Normalize(bool isDensity = false, std::optional<double_t> min = {}, std::optional<double_t> max = {});
+  Data& NormalizeToMaximum(std::optional<double_t> min = {}, std::optional<double_t> max = {});
   Data& Scale(double_t scaleFactor);
   Data& DivideBinWidth(bool divideBinWidth = true);
   Data& Density();
@@ -781,6 +782,10 @@ class Plot::Pad::Data
   const auto& GetScaleFactor() const { return mModify.scaleFactor; }
   const auto& GetScaleBinWidthNorm() const { return mModify.scaleBinWidthNorm; }
   const auto& GetNormMaximum() const { return mModify.normMaximum; }
+  const auto& GetNormMin() const { return mModify.normMin; }
+  const auto& GetNormMax() const { return mModify.normMax; }
+  const auto& GetNormMaximumMin() const { return mModify.normMaximumMin; }
+  const auto& GetNormMaximumMax() const { return mModify.normMaximumMax; }
   const auto& GetMinRangeX() const { return mRangeX.min; }
   const auto& GetMaxRangeX() const { return mRangeX.max; }
   const auto& GetMinRangeY() const { return mRangeY.min; }
@@ -809,6 +814,10 @@ class Plot::Pad::Data
   struct modify_t {
     std::optional<bool> scaleBinWidthNorm;
     std::optional<bool> normMaximum;
+    std::optional<double_t> normMin;  // range in x for Normalize
+    std::optional<double_t> normMax;
+    std::optional<double_t> normMaximumMin;  // range in x for NormalizeToMaximum
+    std::optional<double_t> normMaximumMax;
     std::optional<double_t> scaleFactor;
     std::optional<bool> divideBinWidth;
     std::optional<uint16_t> rebinGroupX;

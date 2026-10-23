@@ -152,6 +152,11 @@ void CopyFuncAttributes(FuncT* from, FuncT* to)
 //**************************************************************************************************
 void PlotPainter::SetBinRange(TAxis* axis, const optional<double_t>& min, const optional<double_t>& max)
 {
+  const auto [first, last] = BinRange(axis, min, max);
+  axis->SetRange(first, last);
+}
+std::pair<int32_t, int32_t> PlotPainter::BinRange(const TAxis* axis, const optional<double_t>& min, const optional<double_t>& max)
+{
   int32_t first = axis->GetFirst();
   int32_t last = axis->GetLast();
   if (min) {
@@ -162,7 +167,7 @@ void PlotPainter::SetBinRange(TAxis* axis, const optional<double_t>& min, const 
     last = axis->FindFixBin(*max);
     if (axis->GetBinLowEdge(last) >= *max) --last;
   }
-  axis->SetRange(first, last);
+  return {first, last};
 }
 
 //**************************************************************************************************
@@ -1477,14 +1482,38 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             }
 
+            // Normalize and NormalizeToMaximum within a range in x: the bins reaching into it, as for the drawn range
+            // (the axis range is set for the computation only; nullopt if the range contains no bins)
+            auto inRangeX = [&](const optional<double_t>& min, const optional<double_t>& max, const char* modifier, auto compute) -> optional<double_t> {
+              if (!min && !max) return compute();
+              TAxis* axis = ptr->GetXaxis();
+              auto [first, last] = BinRange(axis, min, max);
+              first = std::max(first, 1);
+              last = std::min(last, axis->GetNbins());
+              if (first > last) {
+                warn("The range of {} for {} contains no bins, ignoring.", modifier, ptr->GetName());
+                return nullopt;
+              }
+              const int32_t oldFirst = axis->GetFirst();
+              const int32_t oldLast = axis->GetLast();
+              const bool hadRange = axis->TestBit(TAxis::kAxisRange);
+              axis->SetRange(first, last);
+              const double_t result = compute();
+              axis->SetRange(oldFirst, oldLast);
+              axis->SetBit(TAxis::kAxisRange, hadRange);
+              return result;
+            };
+
             // normalize to the integral before Cumulative, then normalized distribution results in CDF ending at 1
             if (mods.GetScaleBinWidthNorm()) {
               string scaleMode = (isDensity) ? "width" : "";
-              double_t integral = ptr->Integral(scaleMode.data());
-              if (integral == 0.) {
-                warn("Cannot normalize histogram because integral is zero.");
-              } else {
-                ptr->Scale(1. / integral);
+              const optional<double_t> integral = inRangeX(mods.GetNormMin(), mods.GetNormMax(), "Normalize", [&]() { return ptr->Integral(scaleMode.data()); });
+              if (integral) {
+                if (*integral == 0.) {
+                  warn("Cannot normalize histogram because integral is zero.");
+                } else {
+                  ptr->Scale(1. / *integral);
+                }
               }
             }
 
@@ -1514,10 +1543,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // remaining factors act on the final shape (NormalizeToMaximum after Cumulative -> CDF ending at 1)
             optional<double_t> scaleFactor;
             if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
-              if (double_t maximum = ptr->GetMaximum(); maximum == 0.) {
-                warn("Cannot normalize {} to maximum because it is zero.", ptr->GetName());
-              } else {
-                scaleFactor = 1. / maximum;
+              const optional<double_t> maximum = inRangeX(mods.GetNormMaximumMin(), mods.GetNormMaximumMax(), "NormalizeToMaximum", [&]() { return ptr->GetMaximum(); });
+              if (maximum) {
+                if (*maximum == 0.) {
+                  warn("Cannot normalize {} to maximum because it is zero.", ptr->GetName());
+                } else {
+                  scaleFactor = 1. / *maximum;
+                }
               }
             }
             if (auto factor = mods.GetScaleFactor()) {
@@ -1567,11 +1599,23 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             }
             optional<double_t> scaleFactor;
-            string scaleMode{};
+            // the values of the points within a range in x (all points without a range)
+            auto valuesInRangeX = [&](const optional<double_t>& min, const optional<double_t>& max) {
+              vector<double_t> values;
+              values.reserve(ptr->GetN());
+              for (int32_t i = 0; i < ptr->GetN(); ++i) {
+                if ((min && ptr->GetPointX(i) < *min) || (max && ptr->GetPointX(i) > *max)) continue;
+                values.push_back(ptr->GetPointY(i));
+              }
+              return values;
+            };
             if (mods.GetScaleBinWidthNorm()) {
               // like for histograms the integral is the sum of the values (TGraph::Integral is the area of the closed polygon)
-              const double_t integral = std::accumulate(ptr->GetY(), ptr->GetY() + ptr->GetN(), 0.);
-              if (integral == 0.) {
+              const vector<double_t> values = valuesInRangeX(mods.GetNormMin(), mods.GetNormMax());
+              const double_t integral = std::accumulate(values.begin(), values.end(), 0.);
+              if (values.empty() && ptr->GetN() > 0) {
+                warn("The range of Normalize for {} contains no points, ignoring.", ptr->GetName());
+              } else if (integral == 0.) {
                 warn("Cannot normalize graph because the sum of its values is zero.");
               } else {
                 scaleFactor = 1. / integral;
@@ -1581,9 +1625,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             }
             if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
+              const vector<double_t> values = valuesInRangeX(mods.GetNormMaximumMin(), mods.GetNormMaximumMax());
               if (ptr->GetN() == 0) {
                 warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
-              } else if (double_t maxY = TMath::MaxElement(ptr->GetN(), ptr->GetY()); maxY == 0.) {
+              } else if (values.empty()) {
+                warn("The range of NormalizeToMaximum for {} contains no points, ignoring.", ptr->GetName());
+              } else if (double_t maxY = *std::max_element(values.begin(), values.end()); maxY == 0.) {
                 warn("Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
               } else {
                 scaleFactor = 1. / maxY;
@@ -1615,12 +1662,22 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             warnUnsupported(mods.GetScaleBinWidthNorm().has_value(), "Normalize");
             optional<double_t> scaleFactor;
             if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
+              // the largest value of the points within the range in x (all points without a range)
+              const auto& min = mods.GetNormMaximumMin();
+              const auto& max = mods.GetNormMaximumMax();
+              optional<double_t> maxZ;
+              for (int32_t i = 0; i < ptr->GetN(); ++i) {
+                if ((min && ptr->GetX()[i] < *min) || (max && ptr->GetX()[i] > *max)) continue;
+                maxZ = std::max(maxZ.value_or(ptr->GetZ()[i]), ptr->GetZ()[i]);
+              }
               if (ptr->GetN() == 0) {
                 warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
-              } else if (double_t maxZ = TMath::MaxElement(ptr->GetN(), ptr->GetZ()); maxZ == 0.) {
+              } else if (!maxZ) {
+                warn("The range of NormalizeToMaximum for {} contains no points, ignoring.", ptr->GetName());
+              } else if (*maxZ == 0.) {
                 warn("Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
               } else {
-                scaleFactor = 1. / maxZ;
+                scaleFactor = 1. / *maxZ;
               }
             }
             if (auto factor = mods.GetScaleFactor()) {

@@ -1802,6 +1802,10 @@ void Plot::Pad::Data::ReadModify(const ptree& tree, modify_t& modify, const stri
   read_from_tree(tree, modify.scaleFactor, prefix + "scale_factor");
   read_from_tree(tree, modify.scaleBinWidthNorm, prefix + "scale_bin_width_norm");
   read_from_tree(tree, modify.normMaximum, prefix + "norm_to_maximum");
+  read_from_tree(tree, modify.normMin, prefix + "norm_min");
+  read_from_tree(tree, modify.normMax, prefix + "norm_max");
+  read_from_tree(tree, modify.normMaximumMin, prefix + "norm_to_maximum_min");
+  read_from_tree(tree, modify.normMaximumMax, prefix + "norm_to_maximum_max");
   read_from_tree(tree, modify.divideBinWidth, prefix + "divide_bin_width");
   read_from_tree(tree, modify.rebinGroupX, prefix + "rebinX");
   read_from_tree(tree, modify.rebinGroupY, prefix + "rebinY");
@@ -1818,6 +1822,10 @@ void Plot::Pad::Data::PutModify(ptree& tree, const modify_t& modify, const strin
   put_in_tree(tree, modify.scaleFactor, prefix + "scale_factor");
   put_in_tree(tree, modify.scaleBinWidthNorm, prefix + "scale_bin_width_norm");
   put_in_tree(tree, modify.normMaximum, prefix + "norm_to_maximum");
+  put_in_tree(tree, modify.normMin, prefix + "norm_min");
+  put_in_tree(tree, modify.normMax, prefix + "norm_max");
+  put_in_tree(tree, modify.normMaximumMin, prefix + "norm_to_maximum_min");
+  put_in_tree(tree, modify.normMaximumMax, prefix + "norm_to_maximum_max");
   put_in_tree(tree, modify.divideBinWidth, prefix + "divide_bin_width");
   put_in_tree(tree, modify.rebinGroupX, prefix + "rebinX");
   put_in_tree(tree, modify.rebinGroupY, prefix + "rebinY");
@@ -2224,14 +2232,28 @@ auto Plot::Pad::Data::SetNpx(int32_t nx, optional<int32_t> ny) -> decltype(*this
   mNpy = ny;
   return *this;
 }
-auto Plot::Pad::Data::Normalize(bool isDensity) -> decltype(*this)
+auto Plot::Pad::Data::Normalize(bool isDensity, optional<double_t> min, optional<double_t> max) -> decltype(*this)
 {
+  if (min && max && !(*min < *max)) {
+    logger::warning("Range [{}, {}] of Normalize for {} is empty, ignoring the range.", *min, *max, GetName());
+    min.reset();
+    max.reset();
+  }
   mModify.scaleBinWidthNorm = isDensity;
+  mModify.normMin = min;
+  mModify.normMax = max;
   return *this;
 }
-auto Plot::Pad::Data::NormalizeToMaximum(bool normMaximum) -> decltype(*this)
+auto Plot::Pad::Data::NormalizeToMaximum(optional<double_t> min, optional<double_t> max) -> decltype(*this)
 {
-  mModify.normMaximum = normMaximum;
+  if (min && max && !(*min < *max)) {
+    logger::warning("Range [{}, {}] of NormalizeToMaximum for {} is empty, ignoring the range.", *min, *max, GetName());
+    min.reset();
+    max.reset();
+  }
+  mModify.normMaximum = true;
+  mModify.normMaximumMin = min;
+  mModify.normMaximumMax = max;
   return *this;
 }
 auto Plot::Pad::Data::Scale(double_t scaleFactor) -> decltype(*this)

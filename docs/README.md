@@ -189,6 +189,7 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // it is possible to specify in the labels that you want to include some meta info of the data that is drawn, e.g.:
   plot[1].AddData("histName1", "dataSourceA", "mylabel avg = <mean>");
   // possible options are: <name>, <title>, <entries>, <integral>, <maximum>, <minimum>, <mean>
+  // (the numbers cover the drawn range, <entries> is the stored total)
   // (for graphs: <name>, <title>, <entries> = number of points, <maximum> and <minimum> of the y values)
   // and, from the definition of the data: <source> (data source), <projection> (what is filled, as in TTree::Draw:
   // "x", "y:x", "prof. y:x", weight in parentheses) and <selection> (filters, entries range, ranges of histogram projections),

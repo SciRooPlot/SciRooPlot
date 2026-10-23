@@ -218,8 +218,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& SetContours(const std::vector<double>& contours)`
 - `Data& SetContours(int32_t nContours)`
 - `Data& SetNpx(int32_t nx, std::optional<int32_t> ny = {})`
-- `Data& Normalize(bool isDensity = false)`
-- `Data& NormalizeToMaximum(bool normMaximum = true)`
+- `Data& Normalize(bool isDensity = false, std::optional<double_t> min = {}, std::optional<double_t> max = {})`
+- `Data& NormalizeToMaximum(std::optional<double_t> min = {}, std::optional<double_t> max = {})`
 - `Data& Scale(double_t scaleFactor)`
 - `Data& DivideBinWidth(bool divideBinWidth = true)`
 - `Data& Density()`
