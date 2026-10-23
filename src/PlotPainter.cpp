@@ -848,8 +848,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   if (!axisHist_ptr->IsBinUnderflow(bin) && !axisHist_ptr->IsBinOverflow(bin) && content > 0.) positiveMinimum = std::min(positiveMinimum, content);
                 }
                 if (std::isinf(positiveMinimum)) {
-                  // a positive user range is enough for ROOT (e.g. an empty histogram as frame)
-                  if (!userRangeMin || *userRangeMin <= 0.) {
+                  // a positive user range is enough for ROOT (e.g. an empty histogram as frame), as is a positive minimum stored with a histogram
+                  // that defines the frame (graph frames always have a stored minimum, computed from the points)
+                  const bool hasPositiveMinimum = (userRangeMin && *userRangeMin > 0.) || (!graphPositiveMinimum && axisHist_ptr->GetMinimumStored() > 0.);
+                  if (!hasPositiveMinimum) {
                     logger::warning("Log scale of {} axis in pad {} ignored: the data has no positive values.", axisLabel, padID);
                     disableLog();
                   }
@@ -1873,7 +1875,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
       optional<data_ptr_t> rawData;
       try {
-        rawData = GetDataClone(dataBuffer.at(data->GetDataSource()).at(data->GetName() + data->GetDataInfo().GetNameSuffix()).get(), data->GetProjInfo());
+        // ranges stored with an input are what data marked SetDefinesFrame is there for: they are kept for its copy that draws the frame
+        const bool keepStoredRanges = (dataIndex == 0) && data->GetDefinesFrame() && data->GetType() != "ratio";
+        rawData = GetDataClone(dataBuffer.at(data->GetDataSource()).at(data->GetName() + data->GetDataInfo().GetNameSuffix()).get(), data->GetProjInfo(), keepStoredRanges);
       } catch (std::out_of_range&) {
         rawData = nullopt;
       }
@@ -3024,7 +3028,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
  * Functions to retrieve a copy or projection of the stored data properly casted it to its actual ROOT type.
  */
 //**************************************************************************************************
-optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot::Pad::Data::proj_info_t>& projInfo)
+optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot::Pad::Data::proj_info_t>& projInfo, bool keepStoredRanges)
 {
   if (obj) {
     bool addDirStatus = TH1::AddDirectoryStatus();
@@ -3046,6 +3050,30 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
       // TProfile2D is TH2, TH2 is TH1, TH3 is TH1, TProfile is TH1, TF3 is TF2, TF2 is TF1
       if (auto returnPointer = GetDataClone<TProfile2D, TH2, TH3, TProfile, TH1, TGraph2D, TGraph, TF3, TF2, TF1, TEfficiency>(obj)) {
         std::visit([](auto&& ptr) { ptr->SetBit(kCanDelete); }, *returnPointer);
+        // axis ranges, minimum and maximum stored with the input: except for a frame, the plot definition alone sets what is drawn
+        // (SetRangeX etc.); a discarded range is visible in the plot, since the data is drawn beyond it
+        if (!keepStoredRanges) {
+          std::visit(
+            [](auto* ptr) {
+              using T = std::remove_pointer_t<decltype(ptr)>;
+              if constexpr (std::is_base_of_v<TH1, T>) {
+                ptr->GetXaxis()->SetRange();  // SetRange(1, nBins) would leave kAxisRange set
+                if (ptr->GetDimension() > 1) ptr->GetYaxis()->SetRange();
+                if (ptr->GetDimension() > 2) ptr->GetZaxis()->SetRange();
+                ptr->SetMinimum();
+                ptr->SetMaximum();
+              } else if constexpr (std::is_base_of_v<TGraph, T>) {
+                // the axis histogram of a graph is stored with it once it was drawn or got axis titles (its limits are recomputed when the graph is drawn)
+                if (ptr->GetN() > 0) ptr->GetHistogram()->GetXaxis()->SetRange();
+                ptr->SetMinimum();
+                ptr->SetMaximum();
+              } else if constexpr (std::is_base_of_v<TGraph2D, T>) {
+                ptr->SetMinimum();
+                ptr->SetMaximum();
+              }
+            },
+            *returnPointer);
+        }
         return returnPointer;
       } else {
         logger::error("Input data {} is of unsupported type {}.", obj->GetName(), obj->ClassName());
@@ -3108,17 +3136,42 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     logger::error("Cannot project {} onto the same dimension twice.", obj->GetName());
     return nullopt;
   }
-  // the ranges of the projection are set on the input itself (read once for all plots, without ranges of its own): reset them afterwards
-  auto rangeGuard = make_scope_guard([this, obj]() {
-    if (obj->InheritsFrom(THnBase::Class())) {
-      auto* histPtr = static_cast<THnBase*>(obj);
-      for (int32_t i = 0; i < histPtr->GetNdimensions(); ++i) {
-        histPtr->GetAxis(i)->SetRange();
-      }
-    } else {
-      auto* histPtr = static_cast<TH1*>(obj);
-      for (int16_t i = 0; i < histPtr->GetDimension(); ++i) {
-        GetAxis(histPtr, i)->SetRange();
+  // the ranges of the projection are set on the input itself (read once for all plots): its own ranges are restored afterwards
+  vector<TAxis*> axes;
+  if (obj->InheritsFrom(THnBase::Class())) {
+    auto* histPtr = static_cast<THnBase*>(obj);
+    for (int32_t i = 0; i < histPtr->GetNdimensions(); ++i)
+      axes.push_back(histPtr->GetAxis(i));
+  } else {
+    auto* histPtr = static_cast<TH1*>(obj);
+    for (int16_t i = 0; i < histPtr->GetDimension(); ++i)
+      axes.push_back(GetAxis(histPtr, i));
+  }
+  // a range stored with the input is not applied (as for drawn data, the definition sets the ranges): it is visible in the result
+  // for an axis that is kept, but not for one that is integrated out, so that case is reported
+  vector<std::pair<int32_t, int32_t>> storedRanges;  // (first, last) bin; (0, 0) for none
+  for (size_t i = 0; i < axes.size(); ++i) {
+    TAxis* axis = axes[i];
+    const bool hasRange = axis->TestBit(TAxis::kAxisRange);
+    storedRanges.emplace_back((hasRange) ? std::make_pair(axis->GetFirst(), axis->GetLast()) : std::make_pair(0, 0));
+    if (!hasRange) continue;
+    const bool isRestricted = axis->GetFirst() > 1 || axis->GetLast() < axis->GetNbins();
+    const bool isKept = std::find(projInfo.dims.begin(), projInfo.dims.end(), i) != projInfo.dims.end();
+    // ProjectX() etc. without arguments pass (0, -1), ROOT's "all bins": only a range with start <= end is set by the definition
+    const bool isSetByDefinition = std::any_of(projInfo.ranges.begin(), projInfo.ranges.end(), [i](const auto& range) { return std::get<0>(range) == i && std::get<1>(range) <= std::get<2>(range); });
+    // reported once per plot (the frame of a pad is a second copy of its data)
+    if (isRestricted && !isKept && !isSetByDefinition && mReportedStoredRanges.emplace(obj, i).second) {
+      logger::warning("The range [{:g}, {:g}] stored on axis {} of {} is not applied to its {}: set it in the plot definition if wanted.", axis->GetBinLowEdge(axis->GetFirst()), axis->GetBinUpEdge(axis->GetLast()), i,
+                      obj->GetName(), (isProfile) ? "profile" : "projection");
+    }
+    axis->SetRange();
+  }
+  auto rangeGuard = make_scope_guard([&axes, &storedRanges]() {
+    for (size_t i = 0; i < axes.size(); ++i) {
+      if (storedRanges[i].first == 0 && storedRanges[i].second == 0) {
+        axes[i]->SetRange();
+      } else {
+        axes[i]->SetRange(storedRanges[i].first, storedRanges[i].second);
       }
     }
   });
