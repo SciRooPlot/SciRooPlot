@@ -3310,10 +3310,16 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
     if constexpr (std::is_same_v<T, TEfficiency>) {
       auto teff = static_cast<TEfficiency*>(obj);
       int dim = teff->GetDimension();
+      // a TEfficiency carries ROOT's fill defaults (colour 19, style 1001; TH1 and TGraph start with colour 0) and copies them to the created object:
+      // they are not a fill set by the user, so the default drawing rule must not take them as one (points, not an area, with SetKeepInputStyle())
+      auto dropDefaultFill = [](auto* created) {
+        if (created->GetFillColor() == 19 && created->GetFillStyle() == 1001) created->SetFillStyle(0);
+        return created;
+      };
       if (dim == 1) {
-        return static_cast<TGraph*>(teff->CreateGraph());
+        return static_cast<TGraph*>(dropDefaultFill(teff->CreateGraph()));
       } else if (dim == 2) {
-        return static_cast<TH2*>(teff->CreateHistogram());
+        return static_cast<TH2*>(dropDefaultFill(teff->CreateHistogram()));
       }
     } else {
       return static_cast<T*>(obj->Clone());
