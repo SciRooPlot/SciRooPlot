@@ -1732,7 +1732,7 @@
         [`Plot(name, group = "", basePlot = {})`], [Create a plot in a figure group, optionally from a base plot.],
         [`Plot(other, name, group = {})`], [Copy `other` under a new name (and optionally a new group).],
         [`plot[padID]` / `GetPad(padID)`], [Access a pad by index.],
-        [`plot += other`], [Append the pads of another plot into this one.],
+        [#names("base + plot", "base += plot")], [Put `plot` on top of `base`: its name, group, base plot and every setting it defines win (how base plots are applied).],
         [#names("SetName(name)", "SetGroup(group)", "AppendGroup(subgroup)")], [Rename the plot, reassign its figure group, or append a subgroup path.],
         [`SetBasePlot(name)`], [Apply a base plot layout by name.],
         [#names("SetDimensions(width, height, fixAspectRatio = false)", "SetWidth(width)", "SetHeight(height)", "SetFixAspectRatio(fixAspectRatio = true)")], [Set canvas dimensions (in pixels), all at once or individually.],
