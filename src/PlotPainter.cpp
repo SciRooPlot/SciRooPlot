@@ -266,7 +266,10 @@ TH1* PlotPainter::ToHist(TGraph* graph, bool warn)
 unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, unique_ptr<TObject>>>& dataBuffer)
 {
   bool fail = false;
-  auto sourceHistsGuard = make_scope_guard([this]() { mSourceHists.clear(); });  // needed until the boxes of the plot are made
+  auto sourceHistsGuard = make_scope_guard([this]() {  // needed until the boxes of the plot are made
+    mSourceHists.clear();
+    mDataDefinitions.clear();
+  });
 
   // ROOT reads some absolute sizes from gStyle only at paint time (see end of this function): undo the scale of a previous plot before drawing
   if (sUnscaledStyle) {
@@ -1084,9 +1087,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           } else if (data->GetStatsFormat()) {
             logger::warning("Statistics boxes are available only for histograms, not for {}.", data->GetName());
           }
+          // named as in the plot definition (<name>), without data source, request and projection
           data_ptr->SetName((std::to_string(dataIndex - hasRefFunc) + ":" + data_ptr->GetName()).data());
+          mDataDefinitions[data_ptr] = data;
           if constexpr (!is_hist<data_type>()) {
-            if (statsHist) statsHist->SetName(data_ptr->GetName());  // for <name> and the title line of the statistics box
+            if (statsHist) {
+              statsHist->SetName(data_ptr->GetName());  // for <name> and the title line of the statistics box
+              mDataDefinitions[statsHist] = data;
+            }
           }
           if constexpr (is_hist<data_type>()) {
             // an interactive zoom sets its range on all histograms of the pad (and unzooming shows all their bins):
@@ -3582,7 +3590,7 @@ float_t PlotPainter::GetTextSizePixel(float_t textSizeNDC)
 //**************************************************************************************************
 void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
 {
-  static const std::regex wordsRegex("<(name|title|entries|integral|mean|maximum|minimum).*?>");
+  static const std::regex wordsRegex("<(name|title|source|projection|selection|entries|integral|mean|maximum|minimum).*?>");
   auto wordsBegin = std::sregex_iterator(str.begin(), str.end(), wordsRegex);
   auto wordsEnd = std::sregex_iterator();
 
@@ -3610,24 +3618,68 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     format = "{:" + format + "}";
 
     string replaceStr = matchStr;
-    if (str_contains(matchStr, "name")) {
-      replaceStr = data_ptr->GetName();
-
-      // strip the numeric "<index>:" prefix PlotPainter adds right before drawing
-      if (auto colonPos = replaceStr.find(":"); colonPos != string::npos) {
-        replaceStr = replaceStr.substr(colonPos + 1);
-      }
-
-      // strip everything from a projection/binning suffix onward; those always start with '{',
-      // sometimes preceded by "_Proj" or "_Prof" (see proj_info_t/data_info_t::GetNameSuffix())
-      if (auto bracePos = replaceStr.find('{'); bracePos != string::npos) {
-        for (const std::string_view marker : {"_Proj", "_Prof"}) {
-          if (bracePos >= marker.size() && replaceStr.compare(bracePos - marker.size(), marker.size(), marker) == 0) {
-            bracePos -= marker.size();
-            break;
+    if (str_contains(matchStr, "name") || str_contains(matchStr, "source") || str_contains(matchStr, "projection") || str_contains(matchStr, "selection")) {
+      // from the definition of the data (the drawn object is named "<index>:<name>[<request>]:<data source>[<projection>]"):
+      // its name, data source, what is filled (variables in the notation of TTree::Draw, "y:x") and which entries or bins
+      replaceStr.clear();
+      auto definition = mDataDefinitions.find(data_ptr);
+      if (definition == mDataDefinitions.end()) {
+        // not drawn data: nothing to describe
+      } else if (const auto& data = *definition->second; str_contains(matchStr, "name")) {
+        replaceStr = data.GetName();
+      } else if (str_contains(matchStr, "source")) {
+        if (data.GetDataSource() != "USER_FUNCTIONS" && data.GetDataSource() != "USER_GRAPHS") replaceStr = data.GetDataSource();
+      } else {
+        const auto& dataInfo = data.GetDataInfo();
+        const auto& projInfo = data.GetProjInfo();
+        // axes of the histogram before a projection: the variables of a tree request, else x, y, z and "axis 3", ... (THn)
+        auto axisName = [&](uint8_t axis) -> string {
+          if (axis < dataInfo.dataDims.size()) return dataInfo.dataDims[axis].var;
+          return (axis < 3) ? string(1, static_cast<char>('x' + axis)) : "axis " + std::to_string(axis);
+        };
+        if (str_contains(matchStr, "projection")) {
+          if (projInfo && !projInfo->dims.empty()) {
+            if (projInfo->isProfile && *projInfo->isProfile) replaceStr = "prof. ";
+            for (auto axis = projInfo->dims.rbegin(); axis != projInfo->dims.rend(); ++axis) {
+              replaceStr += ((axis == projInfo->dims.rbegin()) ? "" : ":") + axisName(*axis);
+            }
+          } else if (!dataInfo.dataDims.empty()) {
+            if (dataInfo.isProfileNoScatter && *dataInfo.isProfileNoScatter) replaceStr = "prof. ";
+            const bool isScatter = dataInfo.isProfileNoScatter && !*dataInfo.isProfileNoScatter;
+            const size_t nDims = (isScatter) ? 2 : dataInfo.dataDims.size();  // a scatter: x and y, not their errors
+            for (size_t dim = nDims; dim-- > 0;) {
+              replaceStr += ((dim == nDims - 1) ? "" : ":") + dataInfo.dataDims[dim].var;
+            }
           }
+          if (dataInfo.weight && !replaceStr.empty()) replaceStr += " (" + *dataInfo.weight + ")";
+        } else {
+          auto join = [](const vector<string>& items, const string& separator) {
+            string joined;
+            for (const auto& item : items) {
+              joined += ((joined.empty()) ? "" : separator) + item;
+            }
+            return joined;
+          };
+          vector<string> parts;
+          if (dataInfo.filters) {
+            for (const auto& filter : *dataInfo.filters) {
+              parts.push_back((dataInfo.filters->size() > 1 && str_contains(filter, "||")) ? "(" + filter + ")" : filter);
+            }
+          }
+          if (!parts.empty()) parts = {join(parts, " && ")};
+          if (dataInfo.entries.max) parts.push_back(fmt::format("entries [{}, {})", dataInfo.entries.min.value_or(0), *dataInfo.entries.max));
+          if (projInfo) {
+            for (const auto& [axis, low, high] : projInfo->ranges) {
+              if (high < low) continue;  // all bins (ProfileX() and the like)
+              if (projInfo->isUserCoord && *projInfo->isUserCoord) {
+                parts.push_back(fmt::format("{} < {} < {}", low, axisName(axis), high));
+              } else {
+                parts.push_back(fmt::format("bins {}-{} of {}", static_cast<int32_t>(low), static_cast<int32_t>(high), axisName(axis)));
+              }
+            }
+          }
+          replaceStr = join(parts, ", ");
         }
-        replaceStr = replaceStr.substr(0, bracePos);
       }
     } else if (str_contains(matchStr, "title")) {
       replaceStr = data_ptr->GetTitle();

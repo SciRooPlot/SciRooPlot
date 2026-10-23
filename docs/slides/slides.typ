@@ -1322,7 +1322,7 @@
     [
       - Legend entries are generated automatically and look like their data by default.
 
-      - Labels support placeholders that are expanded automatically, e.g. `<name>`, `<title>`, `<entries>`, `<integral>`, `<maximum>`, `<minimum>`, `<mean>`, with optional printf-style formatting, e.g. `<mean[.2f]>`.
+      - Placeholders in labels: `<name>`, `<title>`, `<entries>`, `<integral>`, `<maximum>`, `<minimum>`, `<mean>` (printf formats: `<mean[.2f]>`), `<source>`, `<projection>`, `<selection>`.
 
       - Several legends can coexist, numbered from 1 in the order they're added; `SetLegend(n)` assigns data to one, e.g. `SetLegend(2)`.
 

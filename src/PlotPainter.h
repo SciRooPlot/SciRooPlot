@@ -200,6 +200,8 @@ class PlotPainter
   double_t mScale{1.};
   // histograms drawn as graphs (by an alias only graphs have), with the graph they are drawn as: their statistics box and placeholders refer to the histogram
   std::unordered_map<const TObject*, std::unique_ptr<TH1>> mSourceHists;
+  // definition of the drawn data (also for the histogram a graph is drawn from): for <name>, <source>, <projection> and <selection>
+  std::unordered_map<const TObject*, std::shared_ptr<const Plot::Pad::Data>> mDataDefinitions;
   struct StyleSizes {
     Width_t lineWidth;
     int32_t hatchesLineWidth;
