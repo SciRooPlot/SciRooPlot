@@ -84,7 +84,7 @@ float_t Plot::RoundWidth(float_t width, const char* what)
 {
   const float_t rounded = std::round(width);
   if (rounded != width) {
-    logger::warning("{} {} is not an integer; ROOT stores line widths as short, using {}.", what, width, rounded);
+    logger::warning("The {} {} is not an integer; ROOT stores line widths as short, using {}.", what, width, rounded);
   }
   return rounded;
 }

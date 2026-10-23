@@ -234,11 +234,11 @@ void exportPlotManager(py::module_& m)
           } else if (py::isinstance(item, TObjectClass)) {
             objects.push_back(toTObject(item));
           } else {
-            throw py::type_error("inputs must be file names or ROOT TObjects (e.g. histograms, graphs, or trees).");
+            throw py::type_error("Inputs must be file names or ROOT TObjects (e.g. histograms, graphs, or trees).");
           }
         }
         if (!files.empty() && !objects.empty()) {
-          throw py::type_error("a data source cannot mix file names and ROOT objects.");
+          throw py::type_error("A data source cannot mix file names and ROOT objects.");
         }
         if (!objects.empty()) {
           self.AddDataSource(dataSource, objects, replace);
@@ -246,7 +246,7 @@ void exportPlotManager(py::module_& m)
           self.AddDataSource(dataSource, files, replace);
         }
       } else {
-        throw py::type_error("inputs must be a file name, a ROOT TObject, or a list of either.");
+        throw py::type_error("Inputs must be a file name, a ROOT TObject, or a list of either.");
       } }, py::arg("dataSource"), py::arg("inputs"), py::arg("replace") = false)
     .def("SaveDataSources", &PlotManager::SaveDataSources, arg("file") = py::none())
     .def("LoadDataSources", &PlotManager::LoadDataSources, arg("file") = py::none(), arg("replace") = false)
@@ -783,13 +783,13 @@ void exportPythonDataInterfaces(py::module_& m)
   auto graph = [bind_owned](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& xerr, const std::vector<double>& yerr) {
     const auto n = x.size();
     if (y.size() != n) {
-      throw std::runtime_error("x and y must have same length");
+      throw std::runtime_error("The x and y values must have the same length.");
     }
     if (!xerr.empty() && xerr.size() != n) {
-      throw std::runtime_error("xerr has wrong size");
+      throw std::runtime_error("The x errors (xerr) must have as many entries as the x values.");
     }
     if (!yerr.empty() && yerr.size() != n) {
-      throw std::runtime_error("yerr has wrong size");
+      throw std::runtime_error("The y errors (yerr) must have as many entries as the y values.");
     }
     auto* g = new TGraphErrors(static_cast<int>(n), x.data(), y.data(), xerr.empty() ? nullptr : xerr.data(), yerr.empty() ? nullptr : yerr.data());
     g->SetName(name.data());
@@ -798,7 +798,7 @@ void exportPythonDataInterfaces(py::module_& m)
 
   auto histo = [bind_owned](const std::string& name, const std::vector<double>& v, int bins, py::object range) {
     if (v.empty()) {
-      throw std::runtime_error("empty input");
+      throw std::runtime_error("No values given.");
     }
     double xmin, xmax;
     if (range.is_none()) {
@@ -819,10 +819,10 @@ void exportPythonDataInterfaces(py::module_& m)
 
   auto histo2d = [bind_owned](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, py::object bins, py::object range) {
     if (x.empty()) {
-      throw std::runtime_error("empty input");
+      throw std::runtime_error("No values given.");
     }
     if (x.size() != y.size()) {
-      throw std::runtime_error("x and y must have same length");
+      throw std::runtime_error("The x and y values must have the same length.");
     }
     int nx = 50, ny = 50;
     double xmin, xmax, ymin, ymax;
