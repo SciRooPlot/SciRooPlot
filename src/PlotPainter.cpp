@@ -663,6 +663,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           string drawOptAxis = "AXIS";
           pad_ptr->Update();
+          if constexpr (is_graph_2d<data_type>()) {
+            // the triangle options (TRI, TRI1, TRI2, TRIW) paint the Delaunay triangulation of the graph, which the copy of its histogram
+            // that draws the frame does not have (ROOT crashes on it): the frame is drawn as an empty lego plot (the same box and axes)
+            static const std::regex triangles("tri[0-9w]?", std::regex::icase);
+            drawingOptions = std::regex_replace(drawingOptions, triangles, "LEGO");
+          }
           // the frame of a 2d histogram, and of a coloured 2d graph or function (drawn from its histogram), also draws the colour axis
           const bool isColored2d = (is_graph_2d<data_type>() || is_func_2d<data_type>()) && str_contains(drawingOptions, "COL");
           if (pad_ptr->GetView() || is_hist_2d<data_type>() || isColored2d) {
