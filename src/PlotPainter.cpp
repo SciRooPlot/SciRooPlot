@@ -983,7 +983,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               data_ptr->SetMarkerSize(*markerSize);
             }
             if constexpr (is_hist_1d<data_type>()) {
-              if (alias == boxes_nomarkers) data_ptr->SetMarkerSize(0.);  // E2 always draws the markers
+              if (alias == boxes_nomarkers || alias == band || alias == band_smooth) data_ptr->SetMarkerSize(0.);  // E2, E5 and E6 always draw the markers
             }
             if (auto lineColor = get_first(data->GetLineColor(),
                                            fromPad(pick(defaultSettingIndices[2], pad.GetDefaultLineColors())),
@@ -1413,6 +1413,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
           if constexpr (is_hist<ptr_type>()) {
             if (!ptr->GetSumw2N()) ptr->Sumw2();
+            // ROOT merges the bins of a labelled axis but keeps the first labels, so the drawn categories are wrong
+            auto warnLabelled = [&](const TAxis* axis, const optional<uint16_t>& group, const char* what) {
+              if (group && axis->GetLabels()) warn("{} on the labelled {} axis of {} mixes up the labels.", what, axis->GetName(), ptr->GetName());
+            };
+            warnLabelled(ptr->GetXaxis(), mods.GetRebinGroupX(), "RebinX");
+            warnLabelled(ptr->GetYaxis(), mods.GetRebinGroupY(), "RebinY");
+            warnLabelled(ptr->GetZaxis(), mods.GetRebinGroupZ(), "RebinZ");
             if constexpr (is_hist_2d<ptr_type>()) {
               if (mods.GetRebinGroupX() && mods.GetRebinGroupY()) {
                 ptr->Rebin2D(*mods.GetRebinGroupX(), *mods.GetRebinGroupY());
@@ -1808,17 +1815,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               fail = true;
             };
             if constexpr (is_hist<data_type>()) {
-              if constexpr (is_func<denom_data_type>()) {
-                if (!Divide(data_ptr, denom_data_ptr, binomialErrors)) fail = true;
-              } else if constexpr (is_hist<denom_data_type>()) {
+              if constexpr (is_func<denom_data_type>() || is_hist<denom_data_type>() || (is_hist_1d<data_type>() && is_graph_1d<denom_data_type>())) {
                 if (!Divide(data_ptr, denom_data_ptr, binomialErrors)) fail = true;
                 if constexpr (is_hist_2d<data_type>()) {
                   data_ptr->GetZaxis()->SetTitle("ratio");
                 } else if constexpr (is_hist_1d<data_type>()) {
                   data_ptr->GetYaxis()->SetTitle("ratio");
                 }
-              } else if constexpr (is_hist_1d<data_type>() && is_graph_1d<denom_data_type>()) {
-                if (!Divide(data_ptr, denom_data_ptr, binomialErrors)) fail = true;
               } else {
                 unsupported();
               }
@@ -3756,20 +3759,17 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
   double_t* x = numerator->GetX();
   double_t* y = numerator->GetY();
   double_t* ey = numerator->GetEY();
-  double_t* eyLow = nullptr;
-  double_t* eyHigh = nullptr;
-  if (auto ptr = dynamic_cast<TGraphAsymmErrors*>(numerator)) {
-    eyLow = ptr->GetEYlow();
-    eyHigh = ptr->GetEYhigh();
-  }
+  double_t* eyLow = numerator->GetEYlow();    // asymmetric and bent errors
+  double_t* eyHigh = numerator->GetEYhigh();  // (nullptr for symmetric errors)
   for (int32_t i = 0; i < numerator->GetN(); ++i) {
-    double_t denom = denominator->Eval(x[i]);
+    const double_t denom = denominator->Eval(x[i]);
+    const double_t absDenom = std::abs(denom);  // errors must stay positive
     y[i] = (denom) ? y[i] / denom : 0.;
     if (ey) {
-      ey[i] = (denom) ? ey[i] / denom : 0.;
+      ey[i] = (denom) ? ey[i] / absDenom : 0.;
     } else if (eyLow && eyHigh) {
-      eyLow[i] = (denom) ? eyLow[i] / denom : 0.;
-      eyHigh[i] = (denom) ? eyHigh[i] / denom : 0.;
+      eyLow[i] = (denom) ? eyLow[i] / absDenom : 0.;
+      eyHigh[i] = (denom) ? eyHigh[i] / absDenom : 0.;
     }
   }
   if (binomialErrors) {
@@ -3826,17 +3826,13 @@ void PlotPainter::ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFact
 {
   double_t* values = (axis == 0) ? graph->GetX() : graph->GetY();
   double_t* errors = (axis == 0) ? graph->GetEX() : graph->GetEY();
+  double_t* errorsLow = (axis == 0) ? graph->GetEXlow() : graph->GetEYlow();     // asymmetric and bent errors
+  double_t* errorsHigh = (axis == 0) ? graph->GetEXhigh() : graph->GetEYhigh();  // (nullptr for symmetric errors)
   for (int32_t i{}; i < graph->GetN(); ++i) {
     values[i] *= scaleFactor;
     if (errors) errors[i] *= scaleFactor;
-  }
-  if (auto* asymmErrors = dynamic_cast<TGraphAsymmErrors*>(graph)) {
-    double_t* errorsLow = (axis == 0) ? asymmErrors->GetEXlow() : asymmErrors->GetEYlow();
-    double_t* errorsHigh = (axis == 0) ? asymmErrors->GetEXhigh() : asymmErrors->GetEYhigh();
-    for (int32_t i{}; i < graph->GetN(); ++i) {
-      errorsLow[i] *= scaleFactor;
-      errorsHigh[i] *= scaleFactor;
-    }
+    if (errorsLow) errorsLow[i] *= scaleFactor;
+    if (errorsHigh) errorsHigh[i] *= scaleFactor;
   }
 }
 
@@ -4008,10 +4004,15 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     }
     format.erase(remove(format.begin(), format.end(), '%'), format.end());
     format.erase(remove(format.begin(), format.end(), ' '), format.end());
-    if (!(str_contains(format, "e") || str_contains(format, "f") || str_contains(format, "g") || str_contains(format, "E") || str_contains(format, "F") || str_contains(format, "G"))) {
+    const bool integerFormat = !format.empty() && (format.back() == 'd' || format.back() == 'i');  // e.g. <entries[d]>
+    if (!integerFormat && !(str_contains(format, "e") || str_contains(format, "f") || str_contains(format, "g") || str_contains(format, "E") || str_contains(format, "F") || str_contains(format, "G"))) {
       format = format + "g";
     }
     format = "{:" + format + "}";
+    auto formatValue = [&](double_t value) {
+      // all placeholders are formatted from a double; integer formats need an integer argument
+      return integerFormat ? fmt::format(fmt::runtime(format), std::llround(value)) : fmt::format(fmt::runtime(format), value);
+    };
 
     string replaceStr = matchStr;
     if (str_contains(matchStr, "name") || str_contains(matchStr, "source") || str_contains(matchStr, "projection") || str_contains(matchStr, "selection")) {
@@ -4082,18 +4083,18 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     } else if (data_ptr->InheritsFrom(TH1::Class())) {
       try {
         if (str_contains(matchStr, "entries")) {
-          replaceStr = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetEntries());
+          replaceStr = formatValue(static_cast<TH1*>(data_ptr)->GetEntries());
         } else if (str_contains(matchStr, "integral")) {
-          replaceStr = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->Integral());
+          replaceStr = formatValue(static_cast<TH1*>(data_ptr)->Integral());
         } else if (str_contains(matchStr, "mean")) {
-          replaceStr = fmt::format(fmt::runtime(format), static_cast<TH1*>(data_ptr)->GetMean());
+          replaceStr = formatValue(static_cast<TH1*>(data_ptr)->GetMean());
         } else if (str_contains(matchStr, "maximum")) {
           // from the bins: GetMaximum()/GetMinimum() would return the frame limits stored on the drawn histogram
           auto* hist = static_cast<TH1*>(data_ptr);
-          replaceStr = fmt::format(fmt::runtime(format), hist->GetBinContent(hist->GetMaximumBin()));
+          replaceStr = formatValue(hist->GetBinContent(hist->GetMaximumBin()));
         } else if (str_contains(matchStr, "minimum")) {
           auto* hist = static_cast<TH1*>(data_ptr);
-          replaceStr = fmt::format(fmt::runtime(format), hist->GetBinContent(hist->GetMinimumBin()));
+          replaceStr = formatValue(hist->GetBinContent(hist->GetMinimumBin()));
         }
       } catch (const fmt::format_error& e) {
         logger::error("Incompatible format string in {}: {}.", matchStr, e.what());
@@ -4103,11 +4104,11 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
       // for graphs only the unambiguous ones: number of points and smallest / largest y value
       try {
         if (str_contains(matchStr, "entries")) {
-          replaceStr = fmt::format(fmt::runtime(format), static_cast<double_t>(graph->GetN()));  // as double like the histogram entries, so the same formats apply
+          replaceStr = formatValue(static_cast<double_t>(graph->GetN()));  // as double like the histogram entries, so the same formats apply
         } else if (str_contains(matchStr, "maximum")) {
-          replaceStr = fmt::format(fmt::runtime(format), TMath::MaxElement(graph->GetN(), graph->GetY()));
+          replaceStr = formatValue(TMath::MaxElement(graph->GetN(), graph->GetY()));
         } else if (str_contains(matchStr, "minimum")) {
-          replaceStr = fmt::format(fmt::runtime(format), TMath::MinElement(graph->GetN(), graph->GetY()));
+          replaceStr = formatValue(TMath::MinElement(graph->GetN(), graph->GetY()));
         }
       } catch (const fmt::format_error& e) {
         logger::error("Incompatible format string in {}: {}.", matchStr, e.what());

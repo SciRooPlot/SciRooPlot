@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -208,6 +209,9 @@ void PanelLayout::ApplyTo(Plot& plot) const
   if (pendingRowGap) logger::throw_invalid_argument("Layout: the last row must contain panels.");
   const size_t nRows = grid.size();
   const size_t nCols = grid.front().size();
+  if (nRows * nCols > std::numeric_limits<uint8_t>::max()) {
+    logger::throw_invalid_argument("Layout: {} cells would exceed the maximum of {} pads.", nRows * nCols, std::numeric_limits<uint8_t>::max());
+  }
 
   // sizes of the columns and rows in pixels (and whether a column has a colour scale)
   vector<double_t> colWidth(nCols, 0.);

@@ -92,7 +92,8 @@ plot[1].SetDefaultMarkerColors({kBlack, kRed+1}).SetDefaultLineStyles({kSolid, k
 plot[1].SetDefaultColors(rgbGradient)   // {{r,g,b,position},...} with r,g,b,position in [0,1]; also SetPalette(gradient)
 plot[1].SetRefFunc("1");              // reference line/function in a ratio pad (drawn first, black)
 plot[1]['X'].SetTitle("#it{x}").SetRange(a, b).SetLog().SetGrid().SetNumDivisions(305).SetMaxDigits(3).SetNoExponent()
-            .SetTitleSize(28).SetTitleOffset(1.1).SetLabelSize(24).SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")
+            .SetTitleFont(43).SetTitleSize(28).SetTitleOffset(1.1).SetLabelFont(43).SetLabelSize(24)   // sizes in pixels only with font 43; with the default font 42 they are fractions of the pad
+            .SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")
 ```
 Pads count from 1; data in a pad from 1 (`plot[1](2)` or `plot[1].GetData(2)` modifies the second data later). The first data drawn defines the axis frame unless another one calls `.SetDefinesFrame()`.
 
@@ -176,7 +177,7 @@ plot[1].GetLegend(2).SetNumColumns(2).SetDefaultLineWidth(5.).SetNoBox().SetTran
 plot[1].AddData("band", "src", "unc.").SetLegendEntry(LegendEntry().SetDrawStyle("F"));   // style of a data's row (label stays on the data); draw style letters: L line, P marker, F fill, E error bar
 plot[1].GetLegend(1).AddEntry("custom").SetDrawStyle("L").SetLine(kRed, kSolid, 2.);    // row of its own (AddEntry(): empty line); SetRefData(n): symbol of data n
 plot[1].GetLegend(1).AddEntry("#bf{group}").BeforeData(4);   // placed relative to data n of the pad (as in plot[1](n)): AtTop(), BeforeData(n), AfterData(n); default: at the end
-plot[1].AddText("line one // line two");  AddText(top_left, "text");  AddText(0.2, 0.9, "text").SetTextFont(43).SetTextSize(20).SetTextAlign(13);   // font 43: size in pixels
+plot[1].AddText({"line one", "line two"});  AddText(top_left, "text");  AddText(0.2, 0.9, "text").SetTextFont(43).SetTextSize(20).SetTextAlign(13);   // font 43: size in pixels
 ```
 Positions are pad coordinates (0–1) of the upper left corner, `.SetUserCoordinates()` switches to axis units. Legend symbols are derived from what is actually drawn; override with `SetDrawStyle`/`SetDefaultDrawStyle`.
 
@@ -235,7 +236,7 @@ Identical names and chains. Differences:
 - Fill colours are drawn for `hist`/`area`/`band`/`bars`; histograms drawn with `line`/`curve` are not filled even if a fill colour is set by the pad defaults.
 - Line widths are whole pixels: ROOT stores them as integers, so a fractional width (`SetLine(c, s, 3.5)`, `SetLineWidth(2.5)`, `SetBorder(c, s, 1.5)`, `SetDefaultLineWidth`, `PanelLayout::SetLineWidth`) is cut to the integer below without a warning. Write whole numbers (`3.`); marker sizes, text sizes and alpha may be fractional.
 - Rebin/Scale/Normalize on a ratio act on the result — use `.Both().Normalize()` etc. to act on the inputs.
-- In C++ the constructors of `Plot`, `Data`, `PlotManager` are explicit: write `Data("h", "src")`, not `{"h", "src"}` where a `Data` is expected (brace lists are only accepted by `AddRatio`).
+- In C++ `AddData({"h", "src"}, "label")` is ambiguous (the brace list also converts to a `std::string`): write `AddData("h", "src", "label")` or `AddData(Data("h", "src"), "label")`. Without a label, `AddData({"h", "src"})` is fine.
 - In bash, quote patterns containing `(`, `)` or `|`.
 - Verify by generating: `plot <group> <name> png` and look at the file, or `plot ... list`. Warnings in the output name the plot and data.
 

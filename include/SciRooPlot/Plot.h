@@ -999,6 +999,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(SetDefinesFrame)
   FORWARD_TO_DATA(SetKeepInputStyle)
   FORWARD_TO_DATA(SetContours)
+  FORWARD_TO_DATA(SetNpx)
 
 #undef FORWARD_TO_DATA
 
