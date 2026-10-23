@@ -48,6 +48,7 @@
 #include <TLeaf.h>
 #include <TList.h>
 #include <TMap.h>
+#include <TNamed.h>
 #include <TPave.h>
 #include <TROOT.h>
 #include <TRefArray.h>
@@ -273,7 +274,16 @@ bool PlotManager::SaveDataToRootFile() const
         }
       }
       dir->cd();
-      (*dataPtr)->Write(((pathEnd == string::npos) ? dataName : dataName.substr(pathEnd + 1)).data());
+      const string keyName = (pathEnd == string::npos) ? dataName : dataName.substr(pathEnd + 1);
+      // the object is written under the key's name as well (its name in memory carries the internal index and data source)
+      if (auto* named = dynamic_cast<TNamed*>(dataPtr->get())) {
+        const string internalName = named->GetName();
+        named->SetName(keyName.data());
+        named->Write(keyName.data());
+        named->SetName(internalName.data());
+      } else {
+        (*dataPtr)->Write(keyName.data());
+      }
     }
   }
   outputFile.Close();
@@ -1373,6 +1383,20 @@ bool PlotManager::FillBuffer()
 
     // open all input files belonging to the data source and extract the data
     mTreeInputs.clear();
+    // consecutive inputs in the same file (e.g. its expanded folders) share one open file: the cache of the lists and folders
+    // read from it is cleared before the file is closed
+    struct open_file_t {
+      std::unique_ptr<TFile> file;
+      string name;
+      read_cache_t readCache;
+      void Close()
+      {
+        readCache.clear();
+        file.reset();
+        name.clear();
+      }
+      ~open_file_t() { Close(); }
+    } openFile;
     for (const auto& inputRaw : mExpandedInputs[baseSource]) {
       if (allFound()) break;
       string input = expand_path(inputRaw);
@@ -1395,16 +1419,22 @@ bool PlotManager::FillBuffer()
       string& fileName = fileNamePath[0];
       if (!str_ends_with(fileName, ".root")) continue;
 
-      if (!std::filesystem::exists(fileName)) {
-        logger::warning("Input file {} not found (data source {}).", fileName, baseSource);
-        continue;
+      if (fileName != openFile.name) {
+        openFile.Close();
+        if (!std::filesystem::exists(fileName)) {
+          logger::warning("Input file {} not found (data source {}).", fileName, baseSource);
+          continue;
+        }
+        openFile.file = std::make_unique<TFile>(fileName.data(), "READ");
+        if (openFile.file->IsZombie()) {
+          logger::warning("Cannot open input file {} (data source {}).", fileName, baseSource);
+          openFile.file.reset();
+          continue;
+        }
+        openFile.name = fileName;
       }
-      TFile inputFile(fileName.data(), "READ");
-      if (inputFile.IsZombie()) {
-        logger::warning("Cannot open input file {} (data source {}).", fileName, baseSource);
-        continue;
-      }
-      read_cache_t readCache;  // lists and folders read from this file, shared by all paths into them (deleted before the file is closed)
+      TFile& inputFile = *openFile.file;
+      read_cache_t& readCache = openFile.readCache;
 
       for (auto& [dataSource, required] : requiredData) {
         if (required.empty()) continue;

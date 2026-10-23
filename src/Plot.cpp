@@ -1205,11 +1205,10 @@ void Plot::Pad::operator+=(const Pad& pad)
     mMarkerDefaults.colorGradient = {};
   }
   if (pad.mMarkerDefaults.colorGradient.rgbEndpoints) {
-    mMarkerDefaults.colorGradient.rgbEndpoints = pad.mMarkerDefaults.colorGradient.rgbEndpoints;
-    if (pad.mMarkerDefaults.colorGradient.alpha) mMarkerDefaults.colorGradient.alpha = pad.mMarkerDefaults.colorGradient.alpha;
-    if (pad.mMarkerDefaults.colorGradient.nColors) mMarkerDefaults.colorGradient.nColors = pad.mMarkerDefaults.colorGradient.nColors;
+    // a gradient replaces the colour list and comes with its own alpha and number of colours; an alpha set on the pad after its gradient is kept
+    mMarkerDefaults.colorGradient = pad.mMarkerDefaults.colorGradient;
     mMarkerDefaults.colors = nullopt;
-    mMarkerDefaults.alpha = nullopt;
+    mMarkerDefaults.alpha = pad.mMarkerDefaults.alpha;
   }
   if (pad.mLineDefaults.alpha) mLineDefaults.alpha = pad.mLineDefaults.alpha;
   if (pad.mLineDefaults.scale) mLineDefaults.scale = pad.mLineDefaults.scale;
@@ -1219,11 +1218,10 @@ void Plot::Pad::operator+=(const Pad& pad)
     mLineDefaults.colorGradient = {};
   }
   if (pad.mLineDefaults.colorGradient.rgbEndpoints) {
-    mLineDefaults.colorGradient.rgbEndpoints = pad.mLineDefaults.colorGradient.rgbEndpoints;
-    if (pad.mLineDefaults.colorGradient.alpha) mLineDefaults.colorGradient.alpha = pad.mLineDefaults.colorGradient.alpha;
-    if (pad.mLineDefaults.colorGradient.nColors) mLineDefaults.colorGradient.nColors = pad.mLineDefaults.colorGradient.nColors;
+    // a gradient replaces the colour list and comes with its own alpha and number of colours; an alpha set on the pad after its gradient is kept
+    mLineDefaults.colorGradient = pad.mLineDefaults.colorGradient;
     mLineDefaults.colors = nullopt;
-    mLineDefaults.alpha = nullopt;
+    mLineDefaults.alpha = pad.mLineDefaults.alpha;
   }
   if (pad.mFillDefaults.alpha) mFillDefaults.alpha = pad.mFillDefaults.alpha;
   if (pad.mFillDefaults.styles) mFillDefaults.styles = pad.mFillDefaults.styles;
@@ -1232,11 +1230,10 @@ void Plot::Pad::operator+=(const Pad& pad)
     mFillDefaults.colorGradient = {};
   }
   if (pad.mFillDefaults.colorGradient.rgbEndpoints) {
-    mFillDefaults.colorGradient.rgbEndpoints = pad.mFillDefaults.colorGradient.rgbEndpoints;
-    if (pad.mFillDefaults.colorGradient.alpha) mFillDefaults.colorGradient.alpha = pad.mFillDefaults.colorGradient.alpha;
-    if (pad.mFillDefaults.colorGradient.nColors) mFillDefaults.colorGradient.nColors = pad.mFillDefaults.colorGradient.nColors;
+    // a gradient replaces the colour list and comes with its own alpha and number of colours; an alpha set on the pad after its gradient is kept
+    mFillDefaults.colorGradient = pad.mFillDefaults.colorGradient;
     mFillDefaults.colors = nullopt;
-    mFillDefaults.alpha = nullopt;
+    mFillDefaults.alpha = pad.mFillDefaults.alpha;
   }
   if (pad.mCandleOptionDefaults.boxRange) mCandleOptionDefaults.boxRange = pad.mCandleOptionDefaults.boxRange;
   if (pad.mCandleOptionDefaults.whiskerRange) mCandleOptionDefaults.whiskerRange = pad.mCandleOptionDefaults.whiskerRange;
