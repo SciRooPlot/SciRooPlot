@@ -58,8 +58,11 @@ namespace SciRooPlot
   OPT(points_arrows)       \
   OPT(line)                \
   OPT(curve)               \
+  OPT(curve_clipped)       \
   OPT(hist)                \
   OPT(hist_open)           \
+  OPT(hist_clipped)        \
+  OPT(hist_open_clipped)   \
   OPT(bars)                \
   OPT(hbars)               \
   OPT(area)                \

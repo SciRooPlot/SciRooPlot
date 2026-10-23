@@ -131,8 +131,9 @@ Drawing option aliases (one appearance for every type; histograms and graphs are
 | `area`, `area_smooth` | filled to zero | `candle`, `candle_minmax`, `candle_mean`, `candle_notched`, `candle_points`, `candle_scatter`, `candle_meanline` | candle plots |
 | `band`, `band_smooth` | filled error band | `violin`, `violin_minmax` | violin plots |
 | `boxes`, `boxes_nomarkers`, `brackets` | error boxes, brackets | | |
+| `hist_clipped`, `hist_open_clipped`, `curve_clipped` | as `hist`, `hist_open`, `curve`, but cut at the frame instead of running along its edge (drawn as graph) | | |
 
-The suffix always adds one feature (`_xerr`, `_endcaps`, `_smooth`, `_nomarkers`; 2D: `_col` lines coloured by content, `_fill` filled, trailing `z` adds the colour axis). An alias a type cannot draw gives a WARNING and ROOT's default.
+The suffix always adds one feature (`_xerr`, `_endcaps`, `_smooth`, `_nomarkers`, `_clipped`; 2D: `_col` lines coloured by content, `_fill` filled, trailing `z` adds the colour axis). An alias a type cannot draw gives a WARNING and ROOT's default.
 
 ## Modifiers (applied in this order, before drawing)
 

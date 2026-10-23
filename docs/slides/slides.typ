@@ -2059,7 +2059,7 @@
   #[]<appx-drawing-options>
   #slide-title("Appendix: Drawing Options – Histograms & Graphs")
   - Pass any alias below to `SetOptions()` (or `SetDefaultDrawingOption*()`) instead of a raw ROOT draw-option string -- the table shows the actual ROOT string it expands to for each data kind.
-  - The base word names the appearance, suffixes add one feature: `_xerr` also draws the x errors, `_endcaps` draws end caps, `_text` writes the values, `_arrows` ends the error bars with arrows (limits), `_smooth` smooths, `_nomarkers` omits the markers. Every alias works for both kinds: where ROOT has no option for one of them, the data is converted and drawn as the other.
+  - The base word names the appearance, suffixes add one feature: `_xerr` also draws the x errors, `_endcaps` draws end caps, `_text` writes the values, `_arrows` ends the error bars with arrows (limits), `_smooth` smooths, `_nomarkers` omits the markers, `_clipped` cuts the line at the frame instead of drawing it along the frame edge. Every alias works for both kinds: where ROOT has no option for one of them, the data is converted and drawn as the other.
   #v(0.4em)
   #block(
     fill: rgb("fafafa"),
@@ -2084,9 +2084,9 @@
       [`points_text`], [`X0 E P` #text(size: 9.5pt, fill: gray)[(+ values)]], [`P Z` #text(size: 9.5pt, fill: gray)[(+ values)]], [`boxes_nomarkers`], [`E2` #text(size: 9.5pt, fill: gray)[(markers removed)]], [`2`],
       [`points_arrows`], [as graph], [`P Z |>` #text(size: 9.5pt, fill: gray)[(x errors removed)]], [`brackets`], [as graph], [`[]`],
       [`line`], [`HIST L` #text(size: 9.5pt, fill: gray)[(no fill)]], [`X L`], [`text`], [`HIST TEXT`], [as histogram],
-      [`curve`], [`HIST C` #text(size: 9.5pt, fill: gray)[(no fill)]], [`X C`], [], [], [],
-      [`hist`], [`HIST`], [as histogram], [], [], [],
-      [`hist_open`], [`HIST ][`], [as histogram], [], [], [],
+      [`curve`], [`HIST C` #text(size: 9.5pt, fill: gray)[(no fill)]], [`X C`], [`curve_clipped`], [as graph #text(size: 9.5pt, fill: gray)[(cut at frame)]], [`X C`],
+      [`hist`], [`HIST`], [as histogram], [`hist_clipped`], [as graph #text(size: 9.5pt, fill: gray)[(cut at frame)]], [as histogram],
+      [`hist_open`], [`HIST ][`], [as histogram], [`hist_open_clipped`], [as graph #text(size: 9.5pt, fill: gray)[(cut at frame)]], [as histogram],
       [`bars`], [as graph], [`X B`], [], [], [],
       [`hbars`], [`HIST HBAR`], [as histogram], [], [], [],
     )

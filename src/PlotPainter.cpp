@@ -147,6 +147,46 @@ void CopyFuncAttributes(FuncT* from, FuncT* to)
 
 //**************************************************************************************************
 /**
+ * Bin range of a histogram axis for a user range: the bins reaching into it, as TAxis::SetRangeUser selects them.
+ */
+//**************************************************************************************************
+void PlotPainter::SetBinRange(TAxis* axis, const optional<double_t>& min, const optional<double_t>& max)
+{
+  int32_t first = axis->GetFirst();
+  int32_t last = axis->GetLast();
+  if (min) {
+    first = axis->FindFixBin(*min);
+    if (axis->GetBinUpEdge(first) <= *min) ++first;
+  }
+  if (max) {
+    last = axis->FindFixBin(*max);
+    if (axis->GetBinLowEdge(last) >= *max) --last;
+  }
+  axis->SetRange(first, last);
+}
+
+//**************************************************************************************************
+/**
+ * Restricts the bin range of a histogram axis to the bins within the frame (a bin reaching into the frame stays, as with TAxis::SetRangeUser):
+ * ROOT clips only bars and fill areas of a histogram to the frame, not its markers, error bars and curves.
+ */
+//**************************************************************************************************
+void PlotPainter::LimitToFrame(TAxis* axis, const TAxis* frameAxis)
+{
+  const double_t frameMin = frameAxis->GetBinLowEdge(frameAxis->GetFirst());
+  const double_t frameMax = frameAxis->GetBinUpEdge(frameAxis->GetLast());
+  constexpr double_t relTol = 1e-9;
+  int32_t first = axis->FindFixBin(frameMin);
+  if (axis->GetBinUpEdge(first) <= frameMin || TMath::AreEqualRel(axis->GetBinUpEdge(first), frameMin, relTol)) ++first;
+  int32_t last = axis->FindFixBin(frameMax);
+  if (axis->GetBinLowEdge(last) >= frameMax || TMath::AreEqualRel(axis->GetBinLowEdge(last), frameMax, relTol)) --last;
+  first = std::max(first, axis->GetFirst());
+  last = std::min(last, axis->GetLast());
+  if (first != axis->GetFirst() || last != axis->GetLast()) axis->SetRange(first, last);
+}
+
+//**************************************************************************************************
+/**
  * Conversions between 1d histograms and graphs, so both can be drawn with the same drawing option aliases.
  * The converted object replaces the original and keeps its name, title, axis titles and appearance.
  * The histogram is kept by the caller (its statistics box and placeholders), the graph is deleted.
@@ -180,6 +220,61 @@ TGraph* PlotPainter::ToGraph(const TH1* hist)
   graph->SetBit(kCanDelete);
   return graph;
 }
+//**************************************************************************************************
+/**
+ * Graph of a 1d histogram for the clipped aliases (only the bins in the range of its x axis):
+ * the steps (two points per bin, at its edges) for hist_clipped and hist_open_clipped, for hist_clipped also the vertical lines at the outer edges,
+ * which go down out of the frame (see ClippedBase); the bin centres for curve_clipped. ROOT cuts the lines of the graph at the frame.
+ */
+//**************************************************************************************************
+TGraph* PlotPainter::ToClippedGraph(const TH1* hist, drawing_options_t alias, bool logY)
+{
+  const TAxis* axis = hist->GetXaxis();
+  vector<double_t> x;
+  vector<double_t> y;
+  for (int32_t bin = axis->GetFirst(); bin <= axis->GetLast(); ++bin) {
+    const double_t content = hist->GetBinContent(bin);
+    if (alias == curve_clipped) {
+      x.push_back(axis->GetBinCenter(bin));
+      y.push_back(content);
+    } else {
+      x.insert(x.end(), {axis->GetBinLowEdge(bin), axis->GetBinUpEdge(bin)});
+      y.insert(y.end(), {content, content});
+    }
+  }
+  auto* graph = new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data());
+  if (alias == hist_clipped && graph->GetN() > 0) {
+    const double_t base = ClippedBase(graph, logY);
+    graph->InsertPointBefore(0, x.front(), base);
+    graph->SetPoint(graph->GetN(), x.back(), base);
+  }
+  graph->SetName(hist->GetName());
+  graph->SetTitle(hist->GetTitle());
+  hist->TAttLine::Copy(*graph);
+  hist->TAttFill::Copy(*graph);
+  hist->TAttMarker::Copy(*graph);
+  graph->SetBit(kCanDelete);
+  return graph;
+}
+
+//**************************************************************************************************
+/**
+ * A y value below any frame that shows the graph: zero on a log axis (ROOT draws a line to a non-positive value down to the edge of the pad),
+ * otherwise far below the smallest point.
+ */
+//**************************************************************************************************
+double_t PlotPainter::ClippedBase(const TGraph* graph, bool logY)
+{
+  if (logY) return 0.;
+  double_t minY = 0.;
+  double_t maxAbsY = 0.;
+  for (int32_t i = 0; i < graph->GetN(); ++i) {
+    minY = std::min(minY, graph->GetPointY(i));
+    maxAbsY = std::max(maxAbsY, std::abs(graph->GetPointY(i)));
+  }
+  return minY - 1e6 * (maxAbsY + 1.);
+}
+
 TH1* PlotPainter::ToHist(TGraph* graph, bool warn)
 {
   graph->Sort();
@@ -951,34 +1046,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // ROOT draws the bars and fill areas of a histogram from its own minimum, also in an existing frame: start them at the lower edge of the frame
             if (!pad_ptr->GetView()) data_ptr->SetMinimum(ymin);
           }
-          // a histogram keeps its own axes; a user range selects its bins like TAxis::SetRangeUser does
-          auto setBinRange = [](TAxis* axis, const optional<double_t>& min, const optional<double_t>& max) {
-            int32_t first = axis->GetFirst();
-            int32_t last = axis->GetLast();
-            if (min) {
-              first = axis->FindFixBin(*min);
-              if (axis->GetBinUpEdge(first) <= *min) ++first;
-            }
-            if (max) {
-              last = axis->FindFixBin(*max);
-              if (axis->GetBinLowEdge(last) >= *max) --last;
-            }
-            axis->SetRange(first, last);
-          };
-          // ROOT clips only bars and fill areas of a histogram to the frame, not its markers, error bars and curves:
-          // bins outside of the frame are excluded (a bin reaching into the frame stays, as with TAxis::SetRangeUser)
-          auto limitToFrame = [](TAxis* axis, const TAxis* frameAxis) {
-            const double_t frameMin = frameAxis->GetBinLowEdge(frameAxis->GetFirst());
-            const double_t frameMax = frameAxis->GetBinUpEdge(frameAxis->GetLast());
-            constexpr double_t relTol = 1e-9;
-            int32_t first = axis->FindFixBin(frameMin);
-            if (axis->GetBinUpEdge(first) <= frameMin || TMath::AreEqualRel(axis->GetBinUpEdge(first), frameMin, relTol)) ++first;
-            int32_t last = axis->FindFixBin(frameMax);
-            if (axis->GetBinLowEdge(last) >= frameMax || TMath::AreEqualRel(axis->GetBinLowEdge(last), frameMax, relTol)) --last;
-            first = std::max(first, axis->GetFirst());
-            last = std::min(last, axis->GetLast());
-            if (first != axis->GetFirst() || last != axis->GetLast()) axis->SetRange(first, last);
-          };
           bool cutXAtFrame = true;
           bool cutYAtFrame = (axisHist_ptr->GetDimension() > 1);  // the y axis of a 1d frame has no bins
           if constexpr (is_hist_2d<data_type>()) {
@@ -1015,11 +1082,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             auto [rangeMin, rangeMax] = funcRange('x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
             data_ptr->SetRange(rangeMin, rangeMax);
           } else if constexpr (is_graph_1d<data_type>()) {
-            if (!pad_ptr->GetView()) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
+            // (histograms converted for a clipped alias got the x range of the data as bins before, the y range does not apply to them)
+            const bool isClippedHist = (alias == hist_clipped || alias == hist_open_clipped || alias == curve_clipped) && mSourceHists.count(data_ptr);
+            if (!pad_ptr->GetView() && !isClippedHist) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
           } else {
             if (!pad_ptr->GetView()) {
-              if (hasRangeX) setBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
-              if (cutXAtFrame) limitToFrame(data_ptr->GetXaxis(), axisHist_ptr->GetXaxis());
+              if (hasRangeX) SetBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
+              if (cutXAtFrame) LimitToFrame(data_ptr->GetXaxis(), axisHist_ptr->GetXaxis());
             }
             if constexpr (is_hist_1d<data_type>()) {
               // the y axis of a 1d histogram has no bins: as for the frame, its range is the minimum and maximum (ROOT uses them e.g. as baseline of bars)
@@ -1037,8 +1106,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
             if (!pad_ptr->GetView()) {
-              if (hasRangeY) setBinRange(data_ptr->GetYaxis(), data->GetMinRangeY(), data->GetMaxRangeY());
-              if (cutYAtFrame) limitToFrame(data_ptr->GetYaxis(), axisHist_ptr->GetYaxis());
+              if (hasRangeY) SetBinRange(data_ptr->GetYaxis(), data->GetMinRangeY(), data->GetMaxRangeY());
+              if (cutYAtFrame) LimitToFrame(data_ptr->GetYaxis(), axisHist_ptr->GetYaxis());
             }
             if (const auto& contours = data->GetContours()) {
               data_ptr->SetContour(static_cast<int32_t>(contours->size()), contours->data());
@@ -1117,6 +1186,29 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 name.insert(pos, 1, '\\');
               }
               padSetup += fmt::format(" if (auto* h = dynamic_cast<TH1*>(gPad->GetPrimitive(\"{}\"))) {{{} }}", name, keepRange);
+            }
+          }
+          bool hasFilledSteps{false};  // a histogram drawn with hist_clipped or hist_open_clipped and a fill: the steps are the outline of the filled areas
+          if constexpr (is_graph_1d<data_type>()) {
+            if ((alias == hist_clipped || alias == hist_open_clipped) && data_ptr->GetFillStyle() != 0 && data_ptr->GetFillColor() != 0 && data_ptr->GetN() > 0) {
+              // the polygon of the steps closed far below the frame: ROOT cuts it at the frame, so each part above the lower edge becomes an area of its own
+              vector<double_t> x(data_ptr->GetX(), data_ptr->GetX() + data_ptr->GetN());
+              vector<double_t> y(data_ptr->GetY(), data_ptr->GetY() + data_ptr->GetN());
+              if (alias == hist_open_clipped) {  // the steps of hist_clipped already go down there at the outer edges
+                const double_t base = ClippedBase(data_ptr, pad_ptr->GetLogy());
+                x.insert(x.begin(), x.front());
+                y.insert(y.begin(), base);
+                x.push_back(x.back());
+                y.push_back(base);
+              }
+              auto* polygon = new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data());
+              polygon->SetName((string("fill_") + data_ptr->GetName()).data());  // not "<number>:...", so legend rows refer to the steps
+              data_ptr->TAttLine::Copy(*polygon);
+              data_ptr->TAttFill::Copy(*polygon);
+              polygon->SetEditable(false);
+              polygon->SetBit(kCanDelete);
+              polygon->Draw("SAME F");
+              hasFilledSteps = true;
             }
           }
           data_ptr->Draw(drawingOptions.data());
@@ -1207,7 +1299,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (data->GetLegendID()) legendID = *data->GetLegendID();
 
             if (legendID > 0u && legendID <= legendBoxVector.size()) {
-              legendBoxVector[legendID - 1]->AddDataEntry(*data->GetLegendLabel(), (dataIndex - hasRefFunc), data->GetLegendEntry());
+              optional<Plot::Pad::LegendEntry> legendEntry = data->GetLegendEntry();
+              if (hasFilledSteps && !(legendEntry && legendEntry->GetDrawStyle())) {  // the row of filled steps shows the fill, as for hist
+                if (!legendEntry) legendEntry.emplace();
+                legendEntry->SetDrawStyle("F");
+              }
+              legendBoxVector[legendID - 1]->AddDataEntry(*data->GetLegendLabel(), (dataIndex - hasRefFunc), legendEntry);
             } else {
               logger::warning("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetDataSource());
             }
@@ -1716,6 +1813,41 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (nInvalid) warn("{} has {} point{} with NaN or infinite values, which are not drawn.", data_ptr->GetName(), nInvalid, (nInvalid == 1) ? "" : "s");
           // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
           data_ptr->SetBit(TGraph::kResetHisto);
+        }
+
+        // the clipped aliases draw a histogram as a graph: ROOT cuts the lines of a graph at the frame, while it moves the bins of a histogram
+        // that lie outside of the frame onto its edge (HIST, and HIST C on a log axis); the axis frame (first data) is the histogram itself
+        auto drawClipped = [&](TH1* histogram, drawing_options_t clippedAlias) {
+          if (dataIndex == 0) {
+            drawItem(histogram, (clippedAlias == curve_clipped) ? curve : ((clippedAlias == hist_clipped) ? hist : hist_open));
+            return;
+          }
+          if (data->GetMinRangeY() || data->GetMaxRangeY()) {
+            logger::warning("The y range of {} is not applied with drawing option {}: it is cut at the frame.", data->GetName(), drawing_option_name(clippedAlias));
+          }
+          if (!pad_ptr->GetView()) {
+            if (data->GetMinRangeX() || data->GetMaxRangeX()) SetBinRange(histogram->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
+            LimitToFrame(histogram->GetXaxis(), axisHist_ptr->GetXaxis());  // the bins of the histogram that are drawn (also for its statistics and placeholders)
+          }
+          TGraph* graph = ToClippedGraph(histogram, clippedAlias, pad_ptr->GetLogy());
+          mSourceHists[graph].reset(histogram);
+          drawItem(graph, clippedAlias);
+        };
+        if (optionAlias && (*optionAlias == hist_clipped || *optionAlias == hist_open_clipped || *optionAlias == curve_clipped)) {
+          if constexpr (is_hist_1d<data_type>()) {
+            drawClipped(data_ptr, *optionAlias);
+            return;
+          } else if constexpr (is_graph_1d<data_type>()) {
+            // a graph is cut at the frame anyway: only the steps need its bins
+            if (*optionAlias != curve_clipped) {
+              if (TH1* histogram = ToHist(data_ptr, dataIndex != 0)) {
+                drawClipped(histogram, *optionAlias);
+                return;
+              }
+              if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", drawing_option_name(*optionAlias), data_ptr->GetName());
+              optionAlias.reset();
+            }
+          }
         }
 
         // histograms and graphs can be drawn with the same aliases: where ROOT has no option for one of them, it is drawn as the other

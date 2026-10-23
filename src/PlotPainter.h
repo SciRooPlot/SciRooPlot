@@ -125,6 +125,9 @@ inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Grap
   {points_arrows, "P Z |>"},
   {line, "X L"},
   {curve, "X C"},
+  {curve_clipped, "X C"},    // histograms drawn as graph through the bin centres (a graph drawn as curve is cut at the frame anyway)
+  {hist_clipped, "L"},       // histograms (also graphs converted to histograms) drawn as their steps
+  {hist_open_clipped, "L"},  // without the vertical lines at the outer edges
   {bars, "X B"},
   {area, "LF"},
   {band, "3"},
@@ -175,6 +178,10 @@ class PlotPainter
 
   static TGraph* ToGraph(const TH1* hist);
   static TH1* ToHist(TGraph* graph, bool warn = true);
+  static TGraph* ToClippedGraph(const TH1* hist, drawing_options_t alias, bool logY);
+  static double_t ClippedBase(const TGraph* graph, bool logY);
+  static void SetBinRange(TAxis* axis, const std::optional<double_t>& min, const std::optional<double_t>& max);
+  static void LimitToFrame(TAxis* axis, const TAxis* frameAxis);
   bool CheckFontSizes(TList* list);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
   void ReplacePlaceholders(std::string& str, TNamed* data_ptr);

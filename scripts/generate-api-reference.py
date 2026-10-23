@@ -172,6 +172,9 @@ def drawing_options(aliases):
         "Appearance details beyond the ROOT string: `points`, `points_endcaps`, `points_line`, `points_text`, `points_arrows` hide the x errors of graphs (as X0 does for histograms);",
         "`points_text` writes the values above the error bars; `boxes_nomarkers` removes the markers; `line`/`curve` of histograms are not filled;",
         "`area` of graphs is the polygon between the points and zero; `candle` is ROOT preset 2 (box, median, whiskers at 1.5 IQR, outliers), `candle_minmax` preset 1 (whiskers to the extremes).",
+        "`hist_clipped`, `hist_open_clipped`, `curve_clipped` draw a histogram as a graph, whose lines ROOT cuts at the frame (`HIST`, and `HIST C` on a log axis,",
+        "move bins outside of the frame onto its edge); with a fill, the steps are the outline of filled areas cut at the lower frame edge;",
+        "a graph is drawn by `hist_clipped`/`hist_open_clipped` as the steps of its bins and by `curve_clipped` like by `curve`; the y range of the data does not apply to histograms (a warning says so).",
         "",
     ]
     return "\n".join(out)
