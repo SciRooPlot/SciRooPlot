@@ -628,8 +628,38 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }
 
+        // a function from an input is drawn where it is defined (its range, within the frame), one given as formula in the plot definition spans the frame;
+        // a user range overrides both, except beyond the range of a sampled function
+        auto funcRange = [&](char axisLabel, double_t frameMin, double_t frameMax, double_t funcMin, double_t funcMax, const optional<double_t>& userMin, const optional<double_t>& userMax) {
+          double_t min = frameMin;
+          double_t max = frameMax;
+          if (data->GetDataSource() != "USER_FUNCTIONS" && funcMin < frameMax && funcMax > frameMin) {
+            min = std::max(min, funcMin);
+            max = std::min(max, funcMax);
+          }
+          if (userMin) min = *userMin;
+          if (userMax) max = *userMax;
+          if (isSampledFunc && (min < funcMin || max > funcMax)) {
+            if (userMin || userMax) logger::warning("Function {} has no values outside of [{:g}, {:g}] in {}: it is stored as values sampled over this range.", data->GetName(), funcMin, funcMax, axisLabel);
+            min = std::max(min, funcMin);
+            max = std::min(max, funcMax);
+          }
+          return std::make_pair(min, max);
+        };
+
         // first data is only used to define the axes
         if (dataIndex == 0) {
+          // a function that defines the frame has no frame to span: it is drawn over its own range (a formula from the plot definition
+          // has ROOT's default range 0 to 1), narrowed or widened by the range the user gave with SetRangeX / SetRangeY
+          if constexpr (is_func_1d<data_type>() || is_func_2d<data_type>()) {
+            auto [rangeMinX, rangeMaxX] = funcRange('x', data_ptr->GetXmin(), data_ptr->GetXmax(), data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
+            if constexpr (is_func_2d<data_type>()) {
+              auto [rangeMinY, rangeMaxY] = funcRange('y', data_ptr->GetYmin(), data_ptr->GetYmax(), data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
+              data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
+            } else {
+              data_ptr->SetRange(rangeMinX, rangeMaxX);
+            }
+          }
           // smallest positive value of the data, needed for a log scale (infinity if there is none);
           // for graphs taken from the points, since their axis frame is an empty histogram (and drawing it below deletes the graph)
           optional<double_t> graphPositiveMinimum;
@@ -687,7 +717,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (axisLabel == 'Y' && !isTHN) continue;
               optional<double_t> userMin;
               optional<double_t> userMax;
+              optional<bool> logY;
               for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
+                if (curPad.GetAxes().count('Y') && curPad['Y'].GetLog()) logY = curPad['Y'].GetLog();
                 if (curPad.GetAxes().find(axisLabel) == curPad.GetAxes().end()) continue;
                 if (curPad[axisLabel].GetMinRange()) userMin = curPad[axisLabel].GetMinRange();
                 if (curPad[axisLabel].GetMaxRange()) userMax = curPad[axisLabel].GetMaxRange();
@@ -697,6 +729,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (userMin && !(*userMin < axis->GetXmin() && !TMath::AreEqualRel(*userMin, axis->GetXmin(), relTol))) userMin.reset();
               if (userMax && !(*userMax > axis->GetXmax() && !TMath::AreEqualRel(*userMax, axis->GetXmax(), relTol))) userMax.reset();
               if (!userMin && !userMax) continue;
+              // the y range of a 1d frame is taken from the pad below, and ROOT computes it differently for a log scale (margins in decades):
+              // the scale is applied first, so the extended frame keeps the log range (one extra paint, only for extended frames with log y)
+              if (!isTHN && logY.value_or(false) && !pad_ptr->GetLogy() && axisHist_ptr->GetMaximum() > 0.) {
+                pad_ptr->SetLogy(true);
+                pad_ptr->Update();
+              }
               TH1* extended = ExtendFrameAxis(axisHist_ptr, axisLabel, userMin, userMax);
               // the added empty bins must not change the automatic range of the dependent axis: keep the one of the original frame
               // (for 1d the range ROOT determined when drawing it, for 2d the extremes of the contents, which define the colour scale below)
@@ -824,7 +862,16 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // so feeding the drawn range back in through SetRangeUser would add the overflow bin
             if (userRangeMin || userRangeMax) {
               const bool isBinnedAxis = (axisLabel == 'X') || (isTHN && axisLabel == 'Y') || (axisHist_ptr->InheritsFrom(TH3::Class()) && axisLabel == 'Z');
-              if (isBinnedAxis) {
+              if (is_graph_1d<data_type>() && axisLabel == 'X') {
+                // the frame of a graph is an empty histogram whose bins mean nothing: its x axis is set to the user values instead of
+                // the edges of the bins containing them (the y range is the minimum and maximum, as for every 1d frame)
+                const double_t min = userRangeMin.value_or(axis_ptr->GetBinLowEdge(std::max(axis_ptr->GetFirst(), 1)));
+                const double_t max = userRangeMax.value_or(axis_ptr->GetBinUpEdge(std::min(axis_ptr->GetLast(), axis_ptr->GetNbins())));
+                if (min < max) {
+                  axis_ptr->Set(axis_ptr->GetNbins(), min, max);
+                  axis_ptr->SetRange();
+                }
+              } else if (isBinnedAxis) {
                 // bin selection as in TAxis::SetRangeUser, but a side the user did not set keeps its current bin
                 int32_t first = axis_ptr->GetFirst();
                 int32_t last = axis_ptr->GetLast();
@@ -873,8 +920,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     logger::warning("Log scale of {} axis in pad {} ignored: the data has no positive values.", axisLabel, padID);
                     disableLog();
                   }
-                } else if ((axisHist_ptr->GetMinimumStored() != -1111) ? (axisHist_ptr->GetMinimumStored() <= 0.) : (axisHist_ptr->GetMinimum() < 0.)) {
-                  // ROOT cannot draw a log axis from a stored minimum at or below zero or from negative contents (zero contents it skips itself)
+                } else if (!isTHN && ((axisHist_ptr->GetMinimumStored() != -1111) ? (axisHist_ptr->GetMinimumStored() <= 0.) : (axisHist_ptr->GetMinimum() < 0.))) {
+                  // ROOT cannot draw a log axis from a stored minimum at or below zero or from negative contents (zero contents it skips itself);
+                  // a 2d frame gets ROOT's floor for log z below, whether its minimum is stored or not
                   axisHist_ptr->SetMinimum(0.5 * positiveMinimum);
                 }
               } else if (isLog && !isDependentAxis) {
@@ -935,8 +983,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // reset the axis histogram which owns the z axis, while keeping default range defined by the data
             double_t min = axisHist_ptr->GetMinimum();
             double_t max = axisHist_ptr->GetMaximum();
-            // ROOT draws a log z axis of a histogram without a positive minimum from min(1, 0.001 * maximum),
-            // but for data drawn SAME on a frame with a stored minimum of zero it leaves out the bins of the lowest contents
+            // ROOT draws a log z axis of a histogram without a positive minimum from min(1, 0.001 * maximum) (THistPainter::PaintInit),
+            // but for data drawn SAME on a frame with a stored minimum of zero it leaves out the bins of the lowest contents.
+            // This floor is ROOT's default on purpose, not a choice of SciRooPlot: the smallest positive content could be used instead, but it
+            // can lie arbitrarily many decades below the maximum and then stretches the colour scale; a plot that needs more sets the Z range.
             if (pad_ptr->GetLogz() && min <= 0. && max > 0.) min = std::min(1., 0.001 * max);
             axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
             axisHist_ptr->SetMinimum(min);
@@ -1079,24 +1129,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               ((options.Contains("CANDLEY") || options.Contains("VIOLINY")) ? cutXAtFrame : cutYAtFrame) = false;
             }
           }
-          // a function from an input is drawn where it is defined (its range, within the frame), one given as formula in the plot definition spans the frame;
-          // a user range overrides both, except beyond the range of a sampled function
-          auto funcRange = [&](char axisLabel, double_t frameMin, double_t frameMax, double_t funcMin, double_t funcMax, const optional<double_t>& userMin, const optional<double_t>& userMax) {
-            double_t min = frameMin;
-            double_t max = frameMax;
-            if (data->GetDataSource() != "USER_FUNCTIONS" && funcMin < frameMax && funcMax > frameMin) {
-              min = std::max(min, funcMin);
-              max = std::min(max, funcMax);
-            }
-            if (userMin) min = *userMin;
-            if (userMax) max = *userMax;
-            if (isSampledFunc && (min < funcMin || max > funcMax)) {
-              if (userMin || userMax) logger::warning("Function {} has no values outside of [{:g}, {:g}] in {}: it is stored as values sampled over this range.", data->GetName(), funcMin, funcMax, axisLabel);
-              min = std::max(min, funcMin);
-              max = std::min(max, funcMax);
-            }
-            return std::make_pair(min, max);
-          };
           if constexpr (is_func_2d<data_type>()) {
             auto [rangeMinX, rangeMaxX] = funcRange('x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
             auto [rangeMinY, rangeMaxY] = funcRange('y', ymin, ymax, data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
