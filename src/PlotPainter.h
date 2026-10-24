@@ -186,6 +186,7 @@ class PlotPainter
   static void LimitToFrame(TAxis* axis, const TAxis* frameAxis);
   bool CheckFontSizes(TList* list);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
+  void HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel);
   void ReplacePlaceholders(std::string& str, TNamed* data_ptr);
   static std::string LegendDrawStyle(TObject* obj, std::string option);
   static bool HasErrors(const TObject* obj);

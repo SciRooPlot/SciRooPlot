@@ -3172,6 +3172,7 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
   read_from_tree(axisTree, mAxisFrame.isGrid, "is_grid");
   read_from_tree(axisTree, mAxisFrame.isOppositeTicks, "is_opposite_ticks");
   read_from_tree(axisTree, mAxisFrame.isNoExponent, "is_no_exponent");
+  read_from_tree(axisTree, mAxisFrame.hideClippedLabels, "hide_clipped_labels");
   read_from_tree(axisTree, mAxisFrame.tickOrientation, "tick_orientation");
   read_from_tree(axisTree, mAxisFrame.timeFormat, "time_format");
 }
@@ -3209,6 +3210,7 @@ ptree Plot::Pad::Axis::GetPropertyTree() const
   put_in_tree(axisTree, mAxisFrame.isGrid, "is_grid");
   put_in_tree(axisTree, mAxisFrame.isOppositeTicks, "is_opposite_ticks");
   put_in_tree(axisTree, mAxisFrame.isNoExponent, "is_no_exponent");
+  put_in_tree(axisTree, mAxisFrame.hideClippedLabels, "hide_clipped_labels");
   put_in_tree(axisTree, mAxisFrame.tickOrientation, "tick_orientation");
   put_in_tree(axisTree, mAxisFrame.timeFormat, "time_format");
 
@@ -3235,6 +3237,7 @@ void Plot::Pad::Axis::operator+=(const Axis& axis)
   if (axis.mAxisFrame.isGrid) mAxisFrame.isGrid = axis.mAxisFrame.isGrid;
   if (axis.mAxisFrame.isOppositeTicks) mAxisFrame.isOppositeTicks = axis.mAxisFrame.isOppositeTicks;
   if (axis.mAxisFrame.isNoExponent) mAxisFrame.isNoExponent = axis.mAxisFrame.isNoExponent;
+  if (axis.mAxisFrame.hideClippedLabels) mAxisFrame.hideClippedLabels = axis.mAxisFrame.hideClippedLabels;
   if (axis.mTitleLayout.style) mTitleLayout.style = axis.mTitleLayout.style;
   if (axis.mTitleLayout.scale) mTitleLayout.scale = axis.mTitleLayout.scale;
   if (axis.mTitleLayout.color) mTitleLayout.color = axis.mTitleLayout.color;
@@ -3386,6 +3389,11 @@ auto Plot::Pad::Axis::SetOppositeTicks(bool isOppositeTicks) -> decltype(*this)
 auto Plot::Pad::Axis::SetNoExponent(bool isNoExponent) -> decltype(*this)
 {
   mAxisFrame.isNoExponent = isNoExponent;
+  return *this;
+}
+auto Plot::Pad::Axis::SetHideClippedLabels(bool hide) -> decltype(*this)
+{
+  mAxisFrame.hideClippedLabels = hide;
   return *this;
 }
 auto Plot::Pad::Axis::SetTimeFormat(const string& timeFormat) -> decltype(*this)

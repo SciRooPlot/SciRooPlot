@@ -1130,6 +1130,7 @@ class Plot::Pad::Axis
   Axis& SetGrid(bool isGrid = true);
   Axis& SetOppositeTicks(bool isOppositeTicks = true);
   Axis& SetNoExponent(bool isNoExponent = true);
+  Axis& SetHideClippedLabels(bool hide = true);  // drop a label whose text would reach beyond the pad (e.g. at the edge shared with a touching pad)
   Axis& SetTimeFormat(const std::string& timeFormat);
   Axis& SetTickOrientation(const std::string& tickOrientation);
 
@@ -1168,6 +1169,7 @@ class Plot::Pad::Axis
   const auto& GetGrid() const { return mAxisFrame.isGrid; }
   const auto& GetOppositeTicks() const { return mAxisFrame.isOppositeTicks; }
   const auto& GetNoExponent() const { return mAxisFrame.isNoExponent; }
+  const auto& GetHideClippedLabels() const { return mAxisFrame.hideClippedLabels; }
   const auto& GetTimeFormat() const { return mAxisFrame.timeFormat; }
   const auto& GetTickOrientation() const { return mAxisFrame.tickOrientation; }
 
@@ -1187,6 +1189,7 @@ class Plot::Pad::Axis
     std::optional<bool> isGrid;
     std::optional<bool> isOppositeTicks;
     std::optional<bool> isNoExponent;
+    std::optional<bool> hideClippedLabels;
     std::optional<std::string> timeFormat;
     std::optional<std::string> tickOrientation;
   };

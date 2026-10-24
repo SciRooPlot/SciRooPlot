@@ -94,6 +94,7 @@ plot[1].SetRefFunc("1");              // reference line/function in a ratio pad 
 plot[1]['X'].SetTitle("#it{x}").SetRange(a, b).SetLog().SetGrid().SetNumDivisions(305).SetMaxDigits(3).SetNoExponent()
             .SetTitleFont(43).SetTitleSize(28).SetTitleOffset(1.1).SetLabelFont(43).SetLabelSize(24)   // sizes in pixels only with font 43; with the default font 42 they are fractions of the pad
             .SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")
+            .SetHideClippedLabels()      // drop a label whose text would reach beyond the pad (top label of a ratio pad at the shared edge)
 ```
 Pads count from 1; data in a pad from 1 (`plot[1](2)` or `plot[1].GetData(2)` modifies the second data later). The first data drawn defines the axis frame unless another one calls `.SetDefinesFrame()`.
 

@@ -276,6 +276,8 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   plot[1]['X'].SetRange(1.4, 2.8).SetTitle("what I am showing on x axis").SetLog();
   // or if you want to modify synchronously the axes of multiple plots (e.g. for 2-panel ratios) you can apply the settings to the default pad
   plot[0]['X'].SetRange(1.4, 2.8);
+  // a label whose text would reach beyond the pad (e.g. the top label of a ratio pad, at the edge shared with the pad above) can be dropped
+  plot[2]['Y'].SetHideClippedLabels();
   // a full list of axis property accessors can be found in the Axis class definition in inc/Plot.h
 
   // note that you can define the visible range of the data independent of the pad axis range

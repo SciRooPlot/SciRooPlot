@@ -626,6 +626,7 @@ void exportAxis(py::module_& m)
     .def("SetGrid", &Axis::SetGrid, arg("isGrid") = true, ref_int)
     .def("SetOppositeTicks", &Axis::SetOppositeTicks, arg("isOppositeTicks") = true, ref_int)
     .def("SetNoExponent", &Axis::SetNoExponent, arg("isNoExponent") = true, ref_int)
+    .def("SetHideClippedLabels", &Axis::SetHideClippedLabels, arg("hide") = true, ref_int)
     .def("SetTimeFormat", &Axis::SetTimeFormat, arg("timeFormat"), ref_int)
     .def("SetTickOrientation", &Axis::SetTickOrientation, arg("tickOrientation"), ref_int);
 }

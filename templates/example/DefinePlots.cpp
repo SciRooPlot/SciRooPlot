@@ -140,7 +140,9 @@ void DefineHiggsPlots(PlotManager& pm)
     plot[1].AddText(0.45, 0.9, {kExperiment, string(kCollisions) + ", 140 fb^{-1}", "H #rightarrow #gamma#gamma"});
     plot[1].AddLegend(0.45, 0.62);                                                       // upper left corner of the box in pad coordinates
     plot[2].AddRatio({"diphoton/mgg_data", "higgs"}, {"diphoton/mgg_bkgFit", "higgs"});  // histogram / function
-    plot[2]['Y'].SetTitle("data / bkg.").SetRange(0.9, 1.15);
+    // SetHideClippedLabels: the labels at the edge shared by the two pads would be cut there
+    plot[1]['Y'].SetHideClippedLabels();
+    plot[2]['Y'].SetTitle("data / bkg.").SetRange(0.9, 1.15).SetHideClippedLabels();
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // normalised shape; <mean> etc. in a label are replaced by properties of the data -----

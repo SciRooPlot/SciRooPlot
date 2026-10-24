@@ -46,6 +46,7 @@
 #include <TH2Poly.h>
 #include <TH3.h>
 #include <TH3D.h>
+#include <THLimitsFinder.h>
 #include <THStack.h>
 #include <THashList.h>
 #include <THn.h>
@@ -2131,6 +2132,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       pad_ptr->SetPhi(*pad.GetViewPhi());
     }
 
+    for (auto axisLabel : {'X', 'Y'}) {
+      bool hide{};
+      for (const Plot::Pad& curPad : {std::cref(padDefaults), std::cref(plot.GetPads()[padID])}) {
+        auto axis = curPad.GetAxes().find(axisLabel);
+        if (axis != curPad.GetAxes().end() && axis->second.GetHideClippedLabels()) hide = *axis->second.GetHideClippedLabels();
+      }
+      if (hide) HideClippedLabels(pad_ptr, (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis(), axisLabel);
+    }
+
     // the setup has to be the first primitive of the pad, so that it runs before anything of the pad is painted
     // (added only now, since drawing the frame histogram without SAME clears the pad)
     TExec* padSetupExec = new TExec(("setup_pad_" + std::to_string(padID)).data(), padSetup.data());
@@ -3971,6 +3981,74 @@ tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad* pad
     textBox.GetBoundingBox(width, height);
   }
   return {width, height};
+}
+
+//**************************************************************************************************
+/**
+ * Hides the labels of an axis whose text would reach beyond the pad (Axis::SetHideClippedLabels), e.g. the top label of a
+ * ratio pad at the edge shared with the pad above. The label positions are those TGaxis will draw (THLimitsFinder::Optimize
+ * for a linear axis with optimized divisions, the decades of a log axis, equidistant for a negative number of divisions).
+ * Called once the pad is updated, so that its ranges are final.
+ */
+//**************************************************************************************************
+void PlotPainter::HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel)
+{
+  if (axis->GetLabelSize() <= 0.f || axis->GetTimeDisplay() || axis->GetLabels()) return;
+  const bool isX = (axisLabel == 'X');
+  const bool isLog = isX ? pad->GetLogx() : pad->GetLogy();
+  const double_t padMin = isX ? pad->GetUxmin() : pad->GetUymin();  // pad coordinates (log10 for a log axis)
+  const double_t padMax = isX ? pad->GetUxmax() : pad->GetUymax();
+  const double_t wmin = isLog ? TMath::Power(10., padMin) : padMin;
+  const double_t wmax = isLog ? TMath::Power(10., padMax) : padMax;
+  if (!(wmax > wmin)) return;
+
+  vector<double_t> labelValues;
+  if (isLog) {
+    for (int32_t decade = static_cast<int32_t>(std::ceil(padMin - 1e-9)); decade <= static_cast<int32_t>(std::floor(padMax + 1e-9)); ++decade) {
+      labelValues.push_back(TMath::Power(10., decade));
+    }
+  } else {
+    const int32_t nDiv = axis->GetNdivisions();
+    const int32_t nPrimary = std::abs(nDiv) % 100;
+    if (nPrimary == 0) return;
+    double_t binLow{wmin}, binHigh{wmax}, binWidth{(wmax - wmin) / nPrimary};
+    int32_t nBins{nPrimary};
+    if (nDiv > 0) THLimitsFinder::Optimize(wmin, wmax, nPrimary, binLow, binHigh, nBins, binWidth, "");
+    if (!(binWidth > 0.)) return;
+    for (int32_t i = 0; i <= nBins; ++i) {
+      labelValues.push_back(binLow + i * binWidth);
+    }
+  }
+
+  // extent of a label around its tick: half its height (y axis) or half its width (x axis), in absolute pixels
+  const double_t padWidthPixel = pad->GetWw() * pad->GetAbsWNDC();
+  const double_t padHeightPixel = pad->GetWh() * pad->GetAbsHNDC();
+  const double_t labelSizePixel = (axis->GetLabelFont() % 10 == 3) ? axis->GetLabelSize() * mScale : axis->GetLabelSize() * std::min(padWidthPixel, padHeightPixel);
+  const double_t padLow = isX ? pad->XtoAbsPixel(pad->GetX1()) : pad->YtoAbsPixel(pad->GetY2());  // pixel rows grow downwards
+  const double_t padHigh = isX ? pad->XtoAbsPixel(pad->GetX2()) : pad->YtoAbsPixel(pad->GetY1());
+  int32_t labelNumber{};  // TGaxis numbers the labels it draws from the low end
+  for (double_t value : labelValues) {
+    if (value < wmin - 1e-9 * (wmax - wmin) || value > wmax + 1e-9 * (wmax - wmin)) continue;
+    ++labelNumber;
+    const double_t padCoord = isLog ? TMath::Log10(value) : value;
+    const double_t tickPixel = isX ? pad->XtoAbsPixel(padCoord) : pad->YtoAbsPixel(padCoord);
+    double_t halfExtent = 0.5 * labelSizePixel;
+    if (isX) {
+      TLatex label(0, 0, fmt::format("{:g}", value).data());
+      label.SetTextFont(axis->GetLabelFont());
+      label.SetTextSize(axis->GetLabelSize());
+      halfExtent = 0.5 * std::get<0>(GetTextDimensions(label, pad));
+    }
+    if (tickPixel - halfExtent < padLow || tickPixel + halfExtent > padHigh) {
+      // a linear axis is addressed by label number: TGaxis matches a value against the label as drawn, i.e. after taking out
+      // the exponent of the axis (500 is drawn as 0.5 next to x10^3); the decades of a log axis are drawn as they are
+      if (isLog) {
+        axis->ChangeLabelByValue(value, -1., 0.);
+      } else {
+        axis->ChangeLabel(labelNumber, -1., 0.);
+      }
+    }
+  }
 }
 
 //**************************************************************************************************
