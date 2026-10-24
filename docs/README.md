@@ -192,8 +192,9 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // (the numbers cover the drawn range, <entries> is the stored total)
   // (for graphs: <name>, <title>, <entries> = number of points, <maximum> and <minimum> of the y values)
   // and, from the definition of the data: <source> (data source), <projection> (what is filled, as in TTree::Draw:
-  // "x", "y:x", "prof. y:x", weight in parentheses) and <selection> (filters, entries range, ranges of histogram projections),
-  // e.g. to tell apart projections of the same tree that differ only in the filter: "<name> <selection>"
+  // "x", "y:x", "prof. y:x", weight in parentheses) and <selection> (filters, entries range, ranges of histogram projections);
+  // histogram projections name the axes by the axis titles of the input, e.g. "0 < centrality < 10" (x, y, z if a title is empty),
+  // tree requests by the variables; e.g. to tell apart projections of the same tree that differ only in the filter: "<name> <selection>"
   // you can use the standard printf style to specify how these numbers shall be formatted:
   plot[1].AddData("histName1", "dataSourceA", "mylabel avg = <mean[.2f]>");
   plot[1].AddData("histName2", "dataSourceA", "mylabel sum = <integral[.2e]>");

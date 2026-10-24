@@ -213,6 +213,8 @@ class PlotPainter
   std::unordered_map<const TObject*, std::unique_ptr<TH1>> mSourceHists;
   // definition of the drawn data (also for the histogram a graph is drawn from): for <name>, <source>, <projection> and <selection>
   std::unordered_map<const TObject*, std::shared_ptr<const Plot::Pad::Data>> mDataDefinitions;
+  // axis titles of the input a projection was made from, keyed by the projection: <projection> and <selection> name the axes by them
+  std::unordered_map<const TObject*, std::vector<std::string>> mProjectionAxisTitles;
   struct StyleSizes {
     Width_t lineWidth;
     int32_t hatchesLineWidth;

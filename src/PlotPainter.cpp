@@ -369,6 +369,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   auto sourceHistsGuard = make_scope_guard([this]() {  // needed until the boxes of the plot are made
     mSourceHists.clear();
     mDataDefinitions.clear();
+    mProjectionAxisTitles.clear();
   });
 
   // ROOT reads some absolute sizes from gStyle only at paint time (see end of this function): undo the scale of a previous plot before drawing
@@ -3262,6 +3263,18 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
       if (returnPointer &&
           std::visit([](auto&& ptr) { return ptr != nullptr; }, *returnPointer)) {
         std::visit([&name](auto&& ptr) { ptr->SetName(name.data()); ptr->SetBit(kCanDelete); }, *returnPointer);
+        // the axis titles of the input, for the <projection> and <selection> placeholders of the projection
+        vector<string> axisTitles;
+        if (obj->InheritsFrom(THnBase::Class())) {
+          auto* histPtr = static_cast<THnBase*>(obj);
+          for (int32_t i = 0; i < histPtr->GetNdimensions(); ++i)
+            axisTitles.emplace_back(histPtr->GetAxis(i)->GetTitle());
+        } else if (obj->InheritsFrom(TH1::Class())) {
+          auto* histPtr = static_cast<TH1*>(obj);
+          for (TAxis* axis : {histPtr->GetXaxis(), histPtr->GetYaxis(), histPtr->GetZaxis()})
+            axisTitles.emplace_back(axis->GetTitle());
+        }
+        mProjectionAxisTitles[std::visit([](auto&& ptr) -> const TObject* { return ptr; }, *returnPointer)] = std::move(axisTitles);
         return returnPointer;
       } else {
         logger::error("Projection failed for {}.", obj->GetName());
@@ -4041,9 +4054,15 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
       } else {
         const auto& dataInfo = data.GetDataInfo();
         const auto& projInfo = data.GetProjInfo();
-        // axes of the histogram before a projection: the variables of a tree request, else x, y, z and "axis 3", ... (THn)
+        // axes of the histogram before a projection: the variables of a tree request, else the axis titles of the input histogram,
+        // and x, y, z and "axis 3", ... (THn) where there is no title
+        auto titles = mProjectionAxisTitles.find(data_ptr);
+        if (auto source = mSourceHists.find(data_ptr); titles == mProjectionAxisTitles.end() && source != mSourceHists.end()) {
+          titles = mProjectionAxisTitles.find(source->second.get());
+        }
         auto axisName = [&](uint8_t axis) -> string {
           if (axis < dataInfo.dataDims.size()) return dataInfo.dataDims[axis].var;
+          if (titles != mProjectionAxisTitles.end() && axis < titles->second.size() && !titles->second[axis].empty()) return titles->second[axis];
           return (axis < 3) ? string(1, static_cast<char>('x' + axis)) : "axis " + std::to_string(axis);
         };
         if (str_contains(matchStr, "projection")) {
@@ -4133,6 +4152,14 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
 
     result += replaceStr;
     lastEnd = matchPos + matchStr.size();
+    // a placeholder that resolves to nothing takes one separating space with it, so "<name> <projection> <selection>" ends without a space
+    if (replaceStr.empty()) {
+      if (!result.empty() && result.back() == ' ' && (lastEnd >= str.size() || str[lastEnd] == ' ')) {
+        result.pop_back();
+      } else if (result.empty() && lastEnd < str.size() && str[lastEnd] == ' ') {
+        ++lastEnd;
+      }
+    }
   }
   result.append(str, lastEnd, string::npos);  // copy whatever remains after the last match
 
