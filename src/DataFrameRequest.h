@@ -367,7 +367,7 @@ void DataFrameRequest<DataInfo>::SetResult(ROOT::RDF::RResultPtr<T> result)
 template <typename DataInfo>
 bool DataFrameRequest<DataInfo>::Book()
 {
-  auto& node = *mNode;
+  ROOT::RDF::RNode& node = *mNode;  // a non-dependent type: the typed actions below need no template keyword (clang)
   auto& dataDims = mDims;
   for (size_t i = 0; i < dataDims.size(); ++i) {
     if (mAutoRanges[i]) {
