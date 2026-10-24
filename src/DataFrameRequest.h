@@ -94,6 +94,7 @@ class DataFrameRequest
   bool mIsProfile{};
   bool mIsScatter{};
   bool mHasWeights{};
+  bool mIsTyped{true};  // all values are stored as double: the actions are booked with their types (not compiled by the interpreter)
   std::optional<ROOT::RDF::RResultPtr<ULong64_t>> mEntriesPreFilter;
   std::optional<ROOT::RDF::RResultPtr<ULong64_t>> mEntriesPostFilter;
   std::vector<std::function<auto_range_t()>> mAutoRanges;  // per axis: gives the result of the range pass (empty if the axis has its own range)
@@ -236,24 +237,44 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     if (type.find("float") != std::string::npos || type.find("double") != std::string::npos) return false;
     return type.find("int") != std::string::npos || type.find("long") != std::string::npos || type.find("short") != std::string::npos || type.find("char") != std::string::npos || type.find("bool") != std::string::npos;
   };
+  // a column holding the value of an expression: a scalar is stored as double, so that the actions below can be booked with their types known
+  // (ROOT compiles an action booked by column names with its interpreter, which takes about half a second per combination of
+  // action and value types; an action with its types given is compiled into the library). The type of the expression itself is read
+  // from a column that nothing evaluates (an unused column costs no time in the event loop). Collections keep their type (see below).
+  auto defineValue = [&](const std::string& colName, const std::string& expression, std::string& columnType) {
+    const std::string typeColumn = colName + "_TYPE";
+    node = node.Define(typeColumn, toRootCode(expression));
+    columnType = node.GetColumnType(typeColumn);
+    const bool isScalar = columnType.find("RVec") == std::string::npos && columnType.find("vector") == std::string::npos && columnType.find("string") == std::string::npos;
+    const std::string code = toRootCode(expression);
+    if (!isScalar) {
+      node = node.Define(colName, code);
+      return false;
+    }
+    // an expression is cast directly, code with a return (a function body) is called as a lambda
+    node = node.Define(colName, (code.find("return") == std::string::npos) ? fmt::format("static_cast<double>({})", code) : fmt::format("return static_cast<double>([&]() {{ {} }}());", code));
+    return true;
+  };
   for (auto& dataDim : mDims) {
     std::string colName = "SRP_AXIS_" + std::to_string(axisID);
+    std::string columnType;
+    bool isDouble{};
     try {
-      node = node.Define(colName, toRootCode(dataDim.var));
+      isDouble = defineValue(colName, dataDim.var, columnType);
     } catch (const std::runtime_error&) {
       logger::error("Illegal expression {} for {}{}.", dataDim.var, mContext, AvailableColumns(node));
       return false;
     }
-    const std::string columnType = node.GetColumnType(colName);
     if (columnType.find("string") != std::string::npos) {
       logger::error("Expression {} for {} is not numeric.", dataDim.var, mContext);
       return false;
     }
     mIsIntegerAxis[axisID - 1] = isIntegerType(columnType);
+    mIsTyped = mIsTyped && isDouble;
     const bool isBinned = isProjection || (mIsProfile && axisID < mDims.size());
     if (isBinned && dataDim.nBins && dataDim.edges.size() == 2 && !dataDim.edges[0] && !dataDim.edges[1]) {
       // auto-detect bin edges given the data
-      if (mIsIntegerAxis[axisID - 1]) {
+      if (mIsIntegerAxis[axisID - 1] && !isDouble) {
         auto min = node.Min(colName);
         auto max = node.Max(colName);
         mAutoRanges[axisID - 1] = [min, max]() mutable { return auto_range_t{*min, *max, 0}; };
@@ -275,12 +296,10 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
             colName, auto_range_t{});
           mAutoRanges[axisID - 1] = [range]() mutable { return *range; };
         };
-        if (columnType == "double" || columnType == "Double_t") {
-          bookFiniteRange(double_t{});
-        } else if (columnType == "float" || columnType == "Float_t") {
-          bookFiniteRange(float{});
+        if (isDouble) {
+          bookFiniteRange(double_t{});  // scalars of any type are stored as double
         } else {
-          // other types (collections such as RVec<float>, long double) with jitted code, the finite values as a column of their own
+          // collections (RVec<float> etc.) with jitted code, the finite values as a column of their own
           const bool isCollection = columnType.find("RVec") != std::string::npos || columnType.find("vector") != std::string::npos;
           const std::string finiteName = colName + "_FINITE";
           const std::string nonFiniteName = colName + "_NONFINITE";
@@ -308,7 +327,8 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
   }
   if (dataInfo.weight && !mIsScatter) {
     try {
-      node = node.Define("SRP_AXIS_W", toRootCode(*dataInfo.weight));
+      std::string columnType;
+      mIsTyped = defineValue("SRP_AXIS_W", *dataInfo.weight, columnType) && mIsTyped;
     } catch (const std::runtime_error&) {
       logger::error("Illegal weight expression {} for {}{}.", *dataInfo.weight, mContext, AvailableColumns(node));
       return false;
@@ -363,14 +383,18 @@ bool DataFrameRequest<DataInfo>::Book()
     }
   }
   const char* title = mHistTitle.data();
+  using D = double_t;
+  const bool typed = mIsTyped;
 
   if (mIsScatter) {
     if (dataDims.size() == 2) {
-      SetResult(node.Graph("SRP_AXIS_1", "SRP_AXIS_2"));
+      SetResult((typed) ? node.Graph<D, D>("SRP_AXIS_1", "SRP_AXIS_2") : node.Graph("SRP_AXIS_1", "SRP_AXIS_2"));
     } else if (dataDims.size() == 4) {
-      SetResult(node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_4"));
+      SetResult((typed) ? node.GraphAsymmErrors<D, D, D, D, D, D>("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_4")
+                        : node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_4"));
     } else if (dataDims.size() == 6) {
-      SetResult(node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_5", "SRP_AXIS_6"));
+      SetResult((typed) ? node.GraphAsymmErrors<D, D, D, D, D, D>("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_5", "SRP_AXIS_6")
+                        : node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_5", "SRP_AXIS_6"));
     } else {
       logger::error("Invalid number of columns for scatter plot of {}.", mContext);
       return false;
@@ -389,9 +413,9 @@ bool DataFrameRequest<DataInfo>::Book()
       histModel = ROOT::RDF::TH1DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1]);
     }
     if (hasWeights) {
-      SetResult(node.Histo1D(histModel, "SRP_AXIS_1", "SRP_AXIS_W"));
+      SetResult((typed) ? node.Histo1D<D, D>(histModel, "SRP_AXIS_1", "SRP_AXIS_W") : node.Histo1D(histModel, "SRP_AXIS_1", "SRP_AXIS_W"));
     } else {
-      SetResult(node.Histo1D(histModel, "SRP_AXIS_1"));
+      SetResult((typed) ? node.Histo1D<D>(histModel, "SRP_AXIS_1") : node.Histo1D(histModel, "SRP_AXIS_1"));
     }
   } else if (dataDims.size() == 2) {
     auto& dataDim1 = dataDims.at(0);
@@ -404,9 +428,9 @@ bool DataFrameRequest<DataInfo>::Book()
         profileModel = ROOT::RDF::TProfile1DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1]);
       }
       if (hasWeights) {
-        SetResult(node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W"));
+        SetResult((typed) ? node.Profile1D<D, D, D>(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W") : node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W"));
       } else {
-        SetResult(node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2"));
+        SetResult((typed) ? node.Profile1D<D, D>(profileModel, "SRP_AXIS_1", "SRP_AXIS_2") : node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2"));
       }
     } else {
       auto histModel = ROOT::RDF::TH2DModel();
@@ -420,9 +444,9 @@ bool DataFrameRequest<DataInfo>::Book()
         histModel = ROOT::RDF::TH2DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       }
       if (hasWeights) {
-        SetResult(node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W"));
+        SetResult((typed) ? node.Histo2D<D, D, D>(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W") : node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W"));
       } else {
-        SetResult(node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2"));
+        SetResult((typed) ? node.Histo2D<D, D>(histModel, "SRP_AXIS_1", "SRP_AXIS_2") : node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2"));
       }
     }
   } else if (dataDims.size() == 3) {
@@ -442,9 +466,9 @@ bool DataFrameRequest<DataInfo>::Book()
         profileModel = ROOT::RDF::TProfile2DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       }
       if (hasWeights) {
-        SetResult(node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W"));
+        SetResult((typed) ? node.Profile2D<D, D, D, D>(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W") : node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W"));
       } else {
-        SetResult(node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3"));
+        SetResult((typed) ? node.Profile2D<D, D, D>(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3") : node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3"));
       }
     } else {
       auto histModel = ROOT::RDF::TH3DModel();
@@ -466,9 +490,9 @@ bool DataFrameRequest<DataInfo>::Book()
         histModel = ROOT::RDF::TH3DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data(), static_cast<int32_t>(dataDim3.edges.size()) - 1, dataDim3.edges.data());
       }
       if (hasWeights) {
-        SetResult(node.Histo3D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W"));
+        SetResult((typed) ? node.Histo3D<D, D, D, D>(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W") : node.Histo3D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W"));
       } else {
-        SetResult(node.Histo3D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3"));
+        SetResult((typed) ? node.Histo3D<D, D, D>(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3") : node.Histo3D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3"));
       }
     }
   } else {
@@ -517,7 +541,23 @@ bool DataFrameRequest<DataInfo>::Book()
     if (hasWeights) {
       colNames.push_back("SRP_AXIS_W");
     }
-    SetResult(node.HistoND(histModel, colNames));
+    // up to 7 columns typed (more dimensions are rare)
+    switch ((typed) ? colNames.size() : 0) {
+      case 4:
+        SetResult(node.HistoND<D, D, D, D>(histModel, colNames));
+        break;
+      case 5:
+        SetResult(node.HistoND<D, D, D, D, D>(histModel, colNames));
+        break;
+      case 6:
+        SetResult(node.HistoND<D, D, D, D, D, D>(histModel, colNames));
+        break;
+      case 7:
+        SetResult(node.HistoND<D, D, D, D, D, D, D>(histModel, colNames));
+        break;
+      default:
+        SetResult(node.HistoND(histModel, colNames));
+    }
   }
   return true;
 }
