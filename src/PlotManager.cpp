@@ -829,8 +829,10 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes)
   plot[0].SetDefaultMarkerStyles({kFullCircle});
   plot[0].SetDefaultLineStyles({kSolid});
   plot[0].SetDefaultFillStyles({0});
-  plot[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
-  plot[0]['Y'].SetOppositeTicks().SetMaxDigits(3);
+  // a label whose text would reach beyond its pad is dropped: at the edge shared by touching pads it would otherwise be cut in half
+  // (a "10" reads as "1"), at the canvas edge cut off (a plot can switch it off per axis with SetHideClippedLabels(false))
+  plot[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent().SetHideClippedLabels();
+  plot[0]['Y'].SetOppositeTicks().SetMaxDigits(3).SetHideClippedLabels();
   plot[0]['Z'].SetMaxDigits(3);
   if (zAxis) plot[0].SetRedrawAxes();
 
@@ -1012,7 +1014,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
     return true;
   }
   if (nMatched == 0) {
-    logger::error("Found no plots matching the request {}{}{} in {}{}{}.", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color());
+    logger::error("Found no plots matching the request {}{}{} in {}{}{} (plot .+ .+ list shows all plots of the project).", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color());
   } else if (nLoaded == 0) {
     logger::error("{} plot(s) matched the request but none could be loaded.", nMatched);
   } else if (nLoaded > 1) {
@@ -1181,7 +1183,11 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       for (const auto& [dataSource, name, dataInfo] : missingData) {
         message += "\n         - missing " + DataLocation(dataSource, name);
         if (!dataInfo.dataDims.empty()) message += " [" + dataInfo.GetDescription() + "]";
-        message += (!IsDataSourceDefined(dataSource)) ? " (data source not defined)" : "";
+        if (!IsDataSourceDefined(dataSource)) {
+          message += " (data source not defined)";
+        } else if (auto it = mNotFoundData.find(dataSource); it != mNotFoundData.end() && it->second.count(name)) {
+          message += " (not found in the inputs of " + dataSource + ")";
+        }
       }
       logger::error("{}", message);
       allCreated = false;
@@ -1267,6 +1273,7 @@ bool PlotManager::FillBuffer()
   bool success = true;
   // data sources restricted to a folder (dataSource:some/folder) are read in the same pass as the data source they are part of,
   // so each input file is opened only once
+  mNotFoundData.clear();
   map<string, vector<string>> sourceGroups;  // data source -> requested data sources that are part of it (itself or restricted to a folder)
   for (const auto& [dataSource, buffer] : mDataBuffer) {
     sourceGroups[dataSource.substr(0, dataSource.find(':'))].push_back(dataSource);
@@ -1549,6 +1556,13 @@ bool PlotManager::FillBuffer()
       }
     }
     mTreeInputs.clear();
+    for (const auto& [dataSource, required] : requiredData) {
+      for (const auto& [path, names] : required) {
+        for (const auto& name : names) {
+          mNotFoundData[dataSource].insert((path.empty()) ? name : path + "/" + name);
+        }
+      }
+    }
     success &= allFound();
   }
   return success;
@@ -1666,7 +1680,9 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     if (iterator != mBasePlots.end()) {
       fullPlot = *iterator;
     } else {
-      logger::error("Could not find base plot named {}.", basePlotName);
+      if (mMissingBasePlots.insert(basePlotName).second) {
+        logger::error("Could not find base plot {}: add it with AddBasePlot(PlotManager::MakeBasePlot(\"{}\")) or define it yourself.", basePlotName, basePlotName);
+      }
       return false;
     }
   }

@@ -55,8 +55,13 @@ int main(int argc, char* argv[])
     pos.add("name", 1);
     pos.add("mode", 1);
 
+    if (argc > 4) {
+      logger::error("Too many arguments: plot <group> <name> [<mode>] (quote regular expressions, e.g. plot myGroup '.+' pdf).");
+      return 1;
+    }
     po::variables_map vm;
-    po::store(po::command_line_parser(argc, argv).options(arguments).positional(pos).run(), vm);
+    // no options, so an argument starting with a dash is an ordinary positional one
+    po::store(po::command_line_parser(argc, argv).options(arguments).positional(pos).style(po::command_line_style::unix_style & ~(po::command_line_style::allow_short | po::command_line_style::allow_long)).run(), vm);
     po::notify(vm);
 
     if (vm.count("group")) {

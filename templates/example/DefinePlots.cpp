@@ -140,9 +140,7 @@ void DefineHiggsPlots(PlotManager& pm)
     plot[1].AddText(0.45, 0.9, {kExperiment, string(kCollisions) + ", 140 fb^{-1}", "H #rightarrow #gamma#gamma"});
     plot[1].AddLegend(0.45, 0.62);                                                       // upper left corner of the box in pad coordinates
     plot[2].AddRatio({"diphoton/mgg_data", "higgs"}, {"diphoton/mgg_bkgFit", "higgs"});  // histogram / function
-    // SetHideClippedLabels: the labels at the edge shared by the two pads would be cut there
-    plot[1]['Y'].SetHideClippedLabels();
-    plot[2]['Y'].SetTitle("data / bkg.").SetRange(0.9, 1.15).SetHideClippedLabels();
+    plot[2]['Y'].SetTitle("data / bkg.").SetRange(0.9, 1.15);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // normalised shape; <mean> etc. in a label are replaced by properties of the data -----
@@ -298,7 +296,8 @@ void DefineDetectorPlots(PlotManager& pm)
     plot[1].AddData("hVtxZ", "EventQA", "data").Normalize();
     plot[1].AddData("hVtxZ", "EventQA_MC", "simulation").Normalize().SetOptions(hist).SetLine(kRed + 1, kSolid, 3.);
     plot[1].AddLegend(0.189, 0.898);
-    plot[1]['Y'].SetTitle("normalised counts");
+    // the first data defines the frame: leave room for the simulation, which peaks higher
+    plot[1]['Y'].SetTitle("normalised counts").SetMaxRange(0.036);
     plot[2].AddRatio({"hVtxZ", "EventQA"}, {"hVtxZ", "EventQA_MC"}).Both().Normalize();
     plot[2]['Y'].SetTitle("data / sim.").SetRange(-1., 5.);
     pm.AddPlot(plot);

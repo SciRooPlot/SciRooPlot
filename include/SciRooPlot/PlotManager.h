@@ -131,6 +131,8 @@ class PlotManager
   std::string mOutputDirectory;
   std::vector<Plot> mPlots;
   std::vector<Plot> mBasePlots;
+  std::set<std::string> mMissingBasePlots;                     // reported once each
+  std::map<std::string, std::set<std::string>> mNotFoundData;  // data source -> names not found in any of its inputs (last reading)
   struct open_window_t {
     std::shared_ptr<TCanvas> canvas;
     std::tuple<int32_t, int32_t, int32_t> handledEvent;  // event, x, y: the last event handled (it stays the canvas' current one until the next)

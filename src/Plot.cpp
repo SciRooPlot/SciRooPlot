@@ -2020,6 +2020,7 @@ auto Plot::Pad::Data::SetStatsBox(const StatsBox& statsBox) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetRangeX(double_t min, double_t max) -> decltype(*this)
 {
+  if (min >= max) logger::warning("Range ({}, {}) of {} in x has min >= max.", min, max, mName);
   mRangeX.min = min;
   mRangeX.max = max;
   return *this;
@@ -2042,6 +2043,7 @@ auto Plot::Pad::Data::UnsetRangeX() -> decltype(*this)
 }
 auto Plot::Pad::Data::SetRangeY(double_t min, double_t max) -> decltype(*this)
 {
+  if (min >= max) logger::warning("Range ({}, {}) of {} in y has min >= max.", min, max, mName);
   mRangeY.min = min;
   mRangeY.max = max;
   return *this;
@@ -2329,6 +2331,14 @@ void Plot::Pad::Data::data_info_t::set(const data_info_t& other)
       logger::throw_invalid_argument("Profile needs at least one binned axis besides the profiled variable.");
     } else {
       logger::throw_invalid_argument("Project needs at least one dimension.");
+    }
+  }
+  // binned axes (all of a projection, all but the profiled one of a profile) need a positive number of bins or explicit edges
+  const size_t nBinned = other.isProfileNoScatter.value_or(true) ? other.dataDims.size() - other.isProfileNoScatter.value_or(false) : 0;
+  for (size_t i = 0; i < nBinned; ++i) {
+    const auto& dim = other.dataDims[i];
+    if (dim.nBins < 0 || (dim.nBins == 0 && dim.edges.size() <= 2)) {
+      logger::throw_invalid_argument("Number of bins for {} must be positive (or give the bin edges).", dim.var);
     }
   }
   dataDims = other.dataDims;
@@ -3266,6 +3276,7 @@ auto Plot::Pad::Axis::SetTitle(const string& title) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetRange(double_t min, double_t max) -> decltype(*this)
 {
+  if (min >= max) logger::warning("Range ({}, {}) of axis {} has min >= max.", min, max, mName);
   mRange = {min, max};
   return *this;
 }

@@ -79,13 +79,14 @@ int main(int argc, char* argv[])
     pos.add("setting", 1);
 
     po::variables_map vm;
-    po::store(po::command_line_parser(argc, argv).options(arguments).positional(pos).run(), vm);
+    // no options, so an argument starting with a dash (e.g. a negative number) is an ordinary positional one
+    po::store(po::command_line_parser(argc, argv).options(arguments).positional(pos).style(po::command_line_style::unix_style & ~(po::command_line_style::allow_short | po::command_line_style::allow_long)).run(), vm);
     po::notify(vm);
 
     if (vm.count("command")) {
       command = vm["command"].as<string>();
     } else {
-      logger::error("Not enough arguments.");
+      logger::error("Not enough arguments (srp help lists the commands).");
       return 1;
     }
     if (vm.count("project")) {
@@ -375,8 +376,9 @@ int main(int argc, char* argv[])
     if (std::find(shellCommands.begin(), shellCommands.end(), command) != shellCommands.end()) {
       logger::error("Source environment script to use this feature.");
     } else {
-      logger::error("Invalid arguments.");
+      logger::error("Unknown command {} (srp help lists the commands).", command);
     }
+    return 1;
   }
   return Config::GetMutable().Save() ? 0 : 1;
 }
