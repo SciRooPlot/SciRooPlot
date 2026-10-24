@@ -3952,37 +3952,23 @@ TF3* PlotPainter::ScaleFunc(TF3* func, double_t domainFactorX, double_t domainFa
 //**************************************************************************************************
 tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad* pad)
 {
+  // measured in the mode the plot is painted in: in batch mode the bounding box is the one of the rendered text
+  // (switching batch mode off for the measurement, with a canvas created in batch mode, gives nothing or, for texts
+  // with drawn parts such as #sqrt, a few pixels of garbage)
   uint32_t width{};
   uint32_t height{};
   int16_t font{text.GetTextFont()};
-
-  auto measure = [&]() {
-    if (font % 10 <= 2) {
-      text.GetBoundingBox(width, height);
-    } else {
-      // measured as the same text with a relative size: ROOT converts a relative size to pixels with the smaller of
-      // the pad's width and height (as GetTextSizePixel), so the pixel size is divided by that one
-      TLatex textBox{text};
-      textBox.SetTextFont(font - 1);
-      const double_t padWidthPixel = pad->XtoPixel(pad->GetX2());
-      const double_t padHeightPixel = pad->YtoPixel(pad->GetY1());
-      textBox.SetTextSize(text.GetTextSize() * mScale / std::min(padWidthPixel, padHeightPixel));
-      textBox.GetBoundingBox(width, height);
-    }
-  };
-
-  bool isBatch = gPad->IsBatch();
-  if (isBatch) {
-    // in batch mode ROOT calculates the bounding LaTex boxes wrongly, therefore disable it for the calculation
-    gROOT->SetBatch(false);
-    gPad->SetBatch(false);
-  }
-  measure();
-  if (isBatch) {
-    gPad->SetBatch(true);
-    gROOT->SetBatch(true);
-    // without a display nothing can be measured outside of batch mode (the width is 0): then the measurement of the batch mode is used
-    if (width == 0) measure();
+  if (font % 10 <= 2) {
+    text.GetBoundingBox(width, height);
+  } else {
+    // measured as the same text with a relative size: ROOT converts a relative size to pixels with the smaller of
+    // the pad's width and height (as GetTextSizePixel), so the pixel size is divided by that one
+    TLatex textBox{text};
+    textBox.SetTextFont(font - 1);
+    const double_t padWidthPixel = pad->XtoPixel(pad->GetX2());
+    const double_t padHeightPixel = pad->YtoPixel(pad->GetY1());
+    textBox.SetTextSize(text.GetTextSize() * mScale / std::min(padWidthPixel, padHeightPixel));
+    textBox.GetBoundingBox(width, height);
   }
   return {width, height};
 }
