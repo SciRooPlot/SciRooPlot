@@ -2101,6 +2101,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         legend->SetName(legendName.data());
         legend->SetBit(kCanDelete);  // owned by the pad
         legend->Draw("SAME");
+        legend->ConvertNDCtoPad();  // ROOT sets the NDC coordinates of a box only when it is painted: the placement of the next boxes needs them
         ++legendIndex;
       } else {
         logger::warning("Legend {} was not added since it is empty.", legendIndex);
@@ -2119,6 +2120,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         text->SetName(textName.data());
         text->SetBit(kCanDelete);  // owned by the pad
         text->Draw("SAME");
+        text->ConvertNDCtoPad();
         ++textIndex;
       } else {
         logger::warning("Text {} was not added since it is empty.", textIndex);
@@ -2147,7 +2149,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     padSetupExec->SetBit(kCanDelete);
     pad_ptr->GetListOfPrimitives()->AddFirst(padSetupExec);
     pad_ptr->Modified();
-    pad_ptr->Update();
   }
 
   CheckFontSizes(canvas_ptr->GetListOfPrimitives());
@@ -2859,7 +2860,6 @@ std::pair<double_t, double_t> PlotPainter::PlaceBox(const BoxType& box, TPad* pa
     return {lowerLeftX + 0.5 * borderX, lowerLeftY + 0.5 * borderY + heightNDC};
   }
   if (box.IsUserCoordinates()) {
-    pad->Update();
     // pad coordinates are log10 of the axis values on a log axis (XtoPad/YtoPad, as ROOT places objects in user coordinates)
     return {(pad->XtoPad(box.GetXPosition()) - pad->GetX1()) / (pad->GetX2() - pad->GetX1()), (pad->YtoPad(box.GetYPosition()) - pad->GetY1()) / (pad->GetY2() - pad->GetY1())};
   }
@@ -2893,7 +2893,6 @@ void PlotPainter::ApplyBoxStyle(const BoxType& box, TPave* pave)
 void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, box_placement_t placement, const string& boxType, double_t& lowerLeftX, double_t& lowerLeftY)
 {
   pad->cd();
-  pad->Update();
 
   // area available for the box: the frame without the ticks of the axes and a small gap (in NDC)
   constexpr double_t kDistanceToFrame{1.4};  // in units of the tick length
