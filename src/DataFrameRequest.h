@@ -242,6 +242,33 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
   // action and value types; an action with its types given is compiled into the library). The type of the expression itself is read
   // from a column that nothing evaluates (an unused column costs no time in the event loop). Collections keep their type (see below).
   auto defineValue = [&](const std::string& colName, const std::string& expression, std::string& columnType) {
+    // a plain column of a basic type is converted with compiled code, so that such requests do not involve the interpreter at all
+    // (its first use in a process costs about half a second, every further compilation a tenth)
+    const bool isIdentifier = !expression.empty() && !std::isdigit(static_cast<unsigned char>(expression[0])) &&
+                              std::all_of(expression.begin(), expression.end(), [](unsigned char c) { return std::isalnum(c) || c == '_'; });
+    if (isIdentifier && node.HasColumn(expression)) {
+      columnType = node.GetColumnType(expression);
+      auto defineTyped = [&](auto value) {
+        using value_t = decltype(value);
+        node = node.Define(colName, [](value_t v) { return static_cast<double>(v); }, {expression});
+        return true;
+      };
+      // ROOT names the types of branches like Float_t, those of defined columns like float
+      if (columnType == "Float_t" || columnType == "float") return defineTyped(float{});
+      if (columnType == "Double_t" || columnType == "double") return defineTyped(double{});
+      if (columnType == "Int_t" || columnType == "int") return defineTyped(int{});
+      if (columnType == "UInt_t" || columnType == "unsigned int") return defineTyped(unsigned{});
+      if (columnType == "Bool_t" || columnType == "bool") return defineTyped(bool{});
+      if (columnType == "Short_t" || columnType == "short") return defineTyped(Short_t{});
+      if (columnType == "UShort_t" || columnType == "unsigned short") return defineTyped(UShort_t{});
+      if (columnType == "Char_t" || columnType == "char") return defineTyped(char{});
+      if (columnType == "UChar_t" || columnType == "unsigned char") return defineTyped(static_cast<unsigned char>(0));
+      if (columnType == "Long64_t" || columnType == "long long") return defineTyped(Long64_t{});
+      if (columnType == "ULong64_t" || columnType == "unsigned long long") return defineTyped(ULong64_t{});
+      if (columnType == "Long_t" || columnType == "long") return defineTyped(Long_t{});
+      if (columnType == "ULong_t" || columnType == "unsigned long") return defineTyped(ULong_t{});
+      // other types (collections, strings, long double, classes) take the general way below
+    }
     const std::string typeColumn = colName + "_TYPE";
     node = node.Define(typeColumn, toRootCode(expression));
     columnType = node.GetColumnType(typeColumn);
