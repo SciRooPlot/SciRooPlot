@@ -1,4 +1,4 @@
-from SciRooPlot import *
+from SciRooPlot import *  # pyright: ignore[reportWildcardImportFromLibrary]
 from pathlib import Path
 
 SRC_DIR = str(Path(__file__).resolve().parent) + "/"
