@@ -8,7 +8,7 @@
 
 SciRooPlot runs on MacOS and Linux. It can be installed either via the package managers Homebrew and Conda, or built from source using the SciRooPlot installer.
 To enable all functions of the app, an environment script has to be sourced. It is best to put the source command into your shell startup script .zshrc or .bashrc (NB.: dont use a relative paths here).
-After setup, the commands `srp` and `plot` are available and you can keep up-to-date by running `srp update` from time to time.
+After setup, the commands `srp` and `plot` are available and you can keep up-to-date by running `srp update` from time to time. What to change in existing plotting code after an update is listed in [api-changes.md](api-changes.md).
 
 ### Homebrew
 ```bash

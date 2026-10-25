@@ -246,4 +246,5 @@ Identical names and chains. Differences:
 - `reference/api.md` — every method of PlotManager, Plot, Pad, Axis, Data, Ratio, legends, texts and PanelLayout with its arguments (generated from the headers).
 - `reference/drawing-options.md` — alias → ROOT option string for each data type (generated).
 - `reference/cli.md` — `srp` and `plot` commands, modes and configuration files.
+- https://scirooplot.github.io/SciRooPlot/api-changes.md — interface changes between versions, with what to change in existing plotting code; read it when user code was written for an older version.
 - https://scirooplot.github.io/SciRooPlot/ — README with the commented example walkthrough; `srp example-cpp` / `srp example-py` create a runnable copy of it with example data.

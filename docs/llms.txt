@@ -17,6 +17,7 @@ Start with the agent skill: it is the condensed, agent-oriented description of t
 
 - [README](https://scirooplot.github.io/SciRooPlot/README.md): installation, usage and the commented example code
 - [Advanced installation](https://scirooplot.github.io/SciRooPlot/ADVANCED_INSTALL.md): building ROOT from source
+- [Interface changes](https://scirooplot.github.io/SciRooPlot/api-changes.md): what changed between versions and how to update existing plotting code
 - [Headers](https://github.com/SciRooPlot/SciRooPlot/tree/master/include/SciRooPlot): Plot.h, PlotManager.h, PanelLayout.h — the authoritative interface
 - [Example programs](https://github.com/SciRooPlot/SciRooPlot/tree/master/templates/example): DefinePlots.cpp and DefinePlots.py with example data
 
