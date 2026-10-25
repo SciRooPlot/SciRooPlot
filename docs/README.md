@@ -477,6 +477,33 @@ pm.AddBasePlot(smallText);
 // as you can see the plot definition becomes simpler now since we
 // do not have to specify again all of the layout overhead and can focus on the content
 
+// text sizes can be changed on three levels: for a class of plots in the base plot (PanelLayout, see above),
+// for one plot per pad or per axis, and for one legend or text box. With the default font 42 a size is a fraction
+// of the pad (the same number is smaller in a smaller pad), with font 43 it is given in pixels of the plot.
+{ // -----------------------------------------------------------------------
+  Plot plot("test1d_sizes", "myGroup", "1d");
+  plot[1].AddData("graph2", "dataSourceA", "5 TeV");
+  plot[1].SetDefaultTextSize(0.05);                           // labels, legends and texts of pad 1 (plot[0]: all pads)
+  plot[1]['Y'].SetTitleSize(0.06).SetLabelSize(0.045);        // one axis
+  plot[1].AddText(0.2, 0.9, "preliminary").SetTextFont(43).SetTextSize(20);   // one box, in pixels
+  plot[1].AddLegend().SetTextSize(0.04);
+  pm.AddPlot(plot);
+} // -----------------------------------------------------------------------
+
+// an inset (e.g. a zoom into a region) is simply an extra pad placed inside the frame of pad 1;
+// positions are fractions of the plot, pads are drawn in the order of their numbers, so the inset
+// covers what lies below it, and since text sizes are fractions of the pad they have to be set for it
+{ // -----------------------------------------------------------------------
+  Plot plot("test1d_inset", "myGroup", "1d");
+  plot[1].AddData("graph2", "dataSourceA", "5 TeV");
+  plot[1].AddLegend(0.2, 0.9);
+  plot[2].SetPosition(0.5, 0.5, 0.88, 0.88).SetMargins(0.05, 0.22, 0.3, 0.05).SetDefaultTextSize(0.09);
+  plot[2].AddData("graph2", "dataSourceA");                   // no label: no legend row
+  plot[2]['X'].SetRange(20, 30).SetNumDivisions(505).SetTitleSize(0.1).SetLabelSize(0.08).SetHideClippedLabels(false);
+  plot[2]['Y'].SetRange(0, 5).SetNoExponent().SetNumDivisions(505).SetTitleSize(0.1).SetLabelSize(0.08).SetTitleOffset(1.4).SetHideClippedLabels(false);
+  pm.AddPlot(plot);
+} // -----------------------------------------------------------------------
+
 // for re-occurring data it can make sense to define a bunch of properties only once
 // and then just reuse this layout for different plots:
 using Plot::Pad::Data;

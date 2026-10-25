@@ -98,6 +98,16 @@ plot[1]['X'].SetTitle("#it{x}").SetRange(a, b).SetLog().SetGrid().SetNumDivision
 ```
 Pads count from 1; data in a pad from 1 (`plot[1](2)` or `plot[1].GetData(2)` modifies the second data later). The first data drawn defines the axis frame unless another one calls `.SetDefinesFrame()`.
 
+Text sizes, three levels: for a whole class of plots change the base plot (`MakeBasePlot("1d", PanelLayout().SetTextSize(24).SetTitleSize(30))`, see below: the only way that keeps all panels consistent); for one plot set the pad (`plot[1].SetDefaultTextSize(s)`: labels, legends and texts of that pad; `plot[0]` for all pads) or the axis (`plot[1]['Y'].SetTitleSize(s).SetLabelSize(s)`); for one box `AddText(...).SetTextSize(s)`, `GetLegend(1).SetTextSize(s)`. With the default font 42 a size is a fraction of the pad, so the same number is smaller in a smaller pad; font 43 (`SetDefaultTextFont(43)`, `SetTitleFont(43)`, `SetTextFont(43)`) takes pixels of the plot.
+
+Inset (a zoom inside the frame): an extra pad placed with `SetPosition` in fractions of the plot; pads are drawn in the order of their numbers, so the inset covers what is below it, and its text sizes are fractions of the small pad:
+```cpp
+plot[2].SetPosition(0.5, 0.5, 0.88, 0.88).SetMargins(0.05, 0.22, 0.3, 0.05).SetDefaultTextSize(0.09);
+plot[2].AddData("diphoton/mgg_data", "higgs");                      // no label: no legend row
+plot[2]['X'].SetRange(120, 130).SetNumDivisions(505).SetTitleSize(0.1).SetLabelSize(0.08).SetHideClippedLabels(false);
+plot[2]['Y'].SetRange(1500, 2600).SetNoExponent().SetNumDivisions(505).SetTitleSize(0.1).SetLabelSize(0.08).SetTitleOffset(1.4).SetHideClippedLabels(false);
+```
+
 Base plots: `PlotManager::MakeBasePlot("<type>[_wide|_tall][_<cols>x<rows>][_ratio][_gap]")` with type `1d` or `2d` (colour scale), e.g. `1d`, `1d_ratio`, `2d`, `1d_wide`, `1d_2x1`, `1d_2x1_ratio`, `1d_2x2`, `2d_2x1`. Pads are numbered row by row; ratio pads follow their panels. Modify and re-add them (`auto bp = PlotManager::MakeBasePlot("1d"); bp[1]['X'].SetColor(kRed); pm.AddBasePlot(bp);`). Other text sizes, line widths or margins go in as the lengths of a `PanelLayout` in pixels: `PlotManager::MakeBasePlot("1d_ratio", PanelLayout().SetTextSize(24).SetTitleSize(30))` keeps them equal in all panels; setting `SetDefaultTextSize` on the pads of a base plot afterwards does not (each pad holds a size relative to its own dimensions, and pad 0 is overridden by them in multi-panel layouts). Or build your own with `PanelLayout` (`Plot plot("name", PanelLayout(sizes, rows))`, panels `Panel(w, h)`, `Gap()`, `Empty()`, `Panel().ZAxis()`).
 
 ## Data: adding, appearance, labels
