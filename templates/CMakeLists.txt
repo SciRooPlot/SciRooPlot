@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.27 FATAL_ERROR)
 
 project(PROJECT_NAME CXX)
 
+# get compile_commands.json for clangd
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 find_package(SciRooPlot CONFIG REQUIRED)
 message(STATUS "SciRooPlot version: ${SciRooPlot_VERSION}")
 
