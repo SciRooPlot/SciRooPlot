@@ -51,6 +51,7 @@ plot myGroup myFirstPlot
 ```
 The idea is to adjust the code in the file `DefinePlots.cpp` (or `DefinePlots.py` in case of a python project) to define your plots.
 The resulting executable will automatically be rebuilt (in case of cpp code) and (if needed) executed before the app generates the requested plot(s).
+For python projects, the installation includes type stubs of the module, so editors show the available methods, their arguments and return types (when the editor runs with the environment of `env.sh`, e.g. started from a shell where it is sourced).
 To get started, or to look up how something is done, create a project that contains many commented example plots together with the example data they use:
 ```
   srp example-cpp <project> [<dir>]

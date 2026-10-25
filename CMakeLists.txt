@@ -230,6 +230,11 @@ if(BUILD_PYTHON_BINDINGS)
     INSTALL_RPATH "${SCIROOPLOT_PYTHON_RPATH}"
     OUTPUT_NAME "SciRooPlot"
   )
+  # type stubs for IDEs and type checkers, next to the module (generated with scripts/generate-python-stubs.py)
+  add_custom_target(SciRooPlotPythonStubs ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
+      ${CMAKE_CURRENT_SOURCE_DIR}/stubs/SciRooPlot-stubs ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/SciRooPlot-stubs
+  )
 endif()
 
 # -----------------------
@@ -377,6 +382,10 @@ if(BUILD_PYTHON_BINDINGS)
   install(
     TARGETS SciRooPlotPython
     LIBRARY DESTINATION ${SCIROOPLOT_PYTHON_DIR}
+  )
+  install(
+    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/stubs/SciRooPlot-stubs
+    DESTINATION ${SCIROOPLOT_PYTHON_DIR}
   )
 endif()
 install(CODE [[

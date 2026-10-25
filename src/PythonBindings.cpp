@@ -88,7 +88,7 @@ namespace pybind11::detail
 template <>
 struct type_caster<Data::data_dim_t> {
   using T = Data::data_dim_t;
-  PYBIND11_TYPE_CASTER(T, const_name("data_dim_t"));
+  PYBIND11_TYPE_CASTER(T, const_name("str | tuple"));
 
   bool load(handle src, bool)
   {
@@ -155,6 +155,7 @@ PYBIND11_MODULE(SciRooPlot, m)
   py::list path = sys.attr("path");
   path.insert(0, SCIROOPLOT_ROOT_PYTHON_DIR);
 
+  // a class is registered before the classes whose signatures use it, so they show its Python name
   exportLogging(m);
   exportDrawingOptions(m);
   exportRootConstants(m);
@@ -167,21 +168,21 @@ PYBIND11_MODULE(SciRooPlot, m)
   exportRatio(m);
   exportAxis(m);
   exportPad(m);
+  exportPanelLayout(m);
   exportPlot(m);
   exportPlotManager(m);
-  exportPanelLayout(m);
 }
 
 void exportLogging(py::module_& m)
 {
   // the functions of the logger namespace of C++: SciRooPlot.logger.info("...")
   auto loggerModule = m.def_submodule("logger", "messages in the style of SciRooPlot, shown depending on the verbosity (print: always)");
-  loggerModule.def("print", [](std::string_view s) { logger::print("{}", s); });
-  loggerModule.def("info", [](std::string_view s) { logger::info("{}", s); });
-  loggerModule.def("log", [](std::string_view s) { logger::log("{}", s); });
-  loggerModule.def("debug", [](std::string_view s) { logger::debug("{}", s); });
-  loggerModule.def("warning", [](std::string_view s) { logger::warning("{}", s); });
-  loggerModule.def("error", [](std::string_view s) { logger::error("{}", s); });
+  loggerModule.def("print", [](std::string_view s) { logger::print("{}", s); }, arg("message"));
+  loggerModule.def("info", [](std::string_view s) { logger::info("{}", s); }, arg("message"));
+  loggerModule.def("log", [](std::string_view s) { logger::log("{}", s); }, arg("message"));
+  loggerModule.def("debug", [](std::string_view s) { logger::debug("{}", s); }, arg("message"));
+  loggerModule.def("warning", [](std::string_view s) { logger::warning("{}", s); }, arg("message"));
+  loggerModule.def("error", [](std::string_view s) { logger::error("{}", s); }, arg("message"));
 }
 void exportDrawingOptions(py::module_& m)
 {
@@ -276,7 +277,7 @@ void exportPanelLayout(py::module_& m)
   m.def("Gap", &Gap, "Separates independent panels: both sides keep their axis labels and titles.");
   m.def("Empty", &Empty, "A cell of the grid without axis frame, its remaining space becomes a pad for texts.");
   py::class_<PanelLayout>(m, "PanelLayout", "Arrangement of panels (rows from top to bottom) and the lengths of the standard plot in pixels.")
-    .def(py::init<vector<vector<Panel>>>(), arg("rows") = vector<vector<Panel>>{{Panel()}})
+    .def(py::init<vector<vector<Panel>>>(), py::arg_v("rows", vector<vector<Panel>>{{Panel()}}, "[[Panel()]]"))
     .def(py::init<const PanelLayout&, vector<vector<Panel>>>(), arg("sizes"), arg("rows"))
     .def("SetPanelSize", &PanelLayout::SetPanelSize, arg("pixel"), ref_int)
     .def("SetMargins", &PanelLayout::SetMargins, arg("top"), arg("bottom"), arg("left"), arg("right"), ref_int)
@@ -417,7 +418,6 @@ void exportData(py::module_& m)
          arg("nameAndSource"))
     .def("__call__", [](const Data& self, const string& name, const optional<string>& dataSource) { return self(name, dataSource); }, arg("name"), arg("dataSource") = nullopt)
     .def("Print", &Data::Print)
-    .def("AsRatio", &Data::AsRatio, ref_int)
     .def("GetDataSource", &Data::GetDataSource)
     .def("SetDataSource", &Data::SetDataSource, arg("dataSource"), ref_int)
     .def("SetLayout", &Data::SetLayout, arg("dataLayout"), ref_int)
@@ -594,6 +594,8 @@ void exportRatio(py::module_& m)
     .def("Join", [](Ratio& self, const std::array<string, 2>& tree, const vector<string>& keys, const string& alias) -> Ratio& { return self.Join({tree[0], tree[1]}, keys, alias); }, arg("tree"), arg("keys") = vector<string>{}, arg("alias") = "", ref_int)
     .def("Entries", overload_cast<uint32_t>(&Ratio::Entries), arg("nEntries"), ref_int)
     .def("Entries", overload_cast<uint32_t, uint32_t>(&Ratio::Entries), arg("entryMin"), arg("entryMax"), ref_int);
+  // only here, after Ratio is registered
+  py::class_<Data>(m.attr("Data")).def("AsRatio", &Data::AsRatio, ref_int);
 }
 
 void exportAxis(py::module_& m)

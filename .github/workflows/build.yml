@@ -97,6 +97,14 @@ jobs:
         run: |
           cmake --install build --prefix install
 
+      - name: Python stubs up to date (Linux)
+        if: runner.os == 'Linux'
+        shell: bash -el {0}
+        run: |
+          python3 -m pip install pybind11-stubgen==3.0.0
+          source "${GITHUB_WORKSPACE}/install/share/scirooplot/env.sh"
+          python3 scripts/generate-python-stubs.py --check
+
       ###########################################################
       # Test
       ###########################################################
