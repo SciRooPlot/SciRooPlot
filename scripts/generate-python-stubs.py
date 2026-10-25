@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates the type stubs of the Python module (stubs/SciRooPlot-stubs) with pybind11-stubgen.
+"""Generates the type stubs of the Python module (python/SciRooPlot-stubs) with pybind11-stubgen.
 
 The stubs give IDEs and type checkers the classes, methods, argument names and return types of the compiled module.
 They are committed to the repository and installed next to the module, so users need no extra package;
@@ -16,7 +16,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OUTPUT = ROOT / "stubs/SciRooPlot-stubs"
+OUTPUT = ROOT / "python/SciRooPlot-stubs"
 FIXED_SIZE = re.compile(r"typing\.Annotated\[(list\[[\w.]+\]), pybind11_stubgen\.typing_ext\.FixedSize\(\d+\)\]")
 DATA_ARGUMENT = re.compile(r"(\w+: )Data(?=[,)])")
 
@@ -43,7 +43,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         stubs = generate(Path(tmp))
     if stubs is None:
-        print("pybind11-stubgen failed: fix the signatures it reports in src/PythonBindings.cpp")
+        print("pybind11-stubgen failed: fix the signatures it reports in python/PythonBindings.cpp")
         return 1
     committed = {str(f.relative_to(OUTPUT)): f.read_text() for f in sorted(OUTPUT.rglob("*.pyi"))} if OUTPUT.exists() else {}
     if check:

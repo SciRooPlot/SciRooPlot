@@ -219,9 +219,10 @@ set(ALL_TARGETS SciRooPlot)
 
 if(BUILD_PYTHON_BINDINGS)
   pybind11_add_module(SciRooPlotPython
-    src/PythonBindings.cpp
+    python/PythonBindings.cpp
   )
   target_link_libraries(SciRooPlotPython PRIVATE SciRooPlot)
+  target_include_directories(SciRooPlotPython PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
   target_compile_definitions(SciRooPlotPython PRIVATE
     SCIROOPLOT_ROOT_PYTHON_DIR="${ROOT_LIBRARY_DIR}"
   )
@@ -233,7 +234,7 @@ if(BUILD_PYTHON_BINDINGS)
   # type stubs for IDEs and type checkers, next to the module (generated with scripts/generate-python-stubs.py)
   add_custom_target(SciRooPlotPythonStubs ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
-      ${CMAKE_CURRENT_SOURCE_DIR}/stubs/SciRooPlot-stubs ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/SciRooPlot-stubs
+      ${CMAKE_CURRENT_SOURCE_DIR}/python/SciRooPlot-stubs ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/SciRooPlot-stubs
   )
 endif()
 
@@ -384,7 +385,7 @@ if(BUILD_PYTHON_BINDINGS)
     LIBRARY DESTINATION ${SCIROOPLOT_PYTHON_DIR}
   )
   install(
-    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/stubs/SciRooPlot-stubs
+    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/python/SciRooPlot-stubs
     DESTINATION ${SCIROOPLOT_PYTHON_DIR}
   )
 endif()
