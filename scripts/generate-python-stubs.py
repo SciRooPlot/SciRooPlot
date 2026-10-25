@@ -9,6 +9,7 @@ usage: scripts/generate-python-stubs.py [--check]
 Needs pybind11-stubgen (pip install pybind11-stubgen) and the built module importable (source env.sh of the build or install).
 """
 
+import difflib
 import re
 import subprocess
 import sys
@@ -51,6 +52,8 @@ def main() -> int:
             return 0
         changed = sorted(name for name in stubs.keys() | committed.keys() if stubs.get(name) != committed.get(name))
         print(f"Python stubs are outdated ({', '.join(changed)}): run scripts/generate-python-stubs.py and commit the result")
+        for name in changed:
+            sys.stdout.writelines(difflib.unified_diff(committed.get(name, "").splitlines(keepends=True), stubs.get(name, "").splitlines(keepends=True), f"committed/{name}", f"generated/{name}"))
         return 1
     for name in committed.keys() - stubs.keys():
         (OUTPUT / name).unlink()

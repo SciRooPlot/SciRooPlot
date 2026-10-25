@@ -53,6 +53,7 @@ jobs:
           environment-name: build
           create-args: >-
             root_base
+            pip
             -c conda-forge
           cache-environment: true
 
