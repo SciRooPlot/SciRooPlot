@@ -1912,7 +1912,7 @@
         [`SetDataSource(dataset)`], [Set/override the data-source ID.],
         [`SetLayout(layout)` / `ApplyLayout(layout)`], [Take over the appearance of a `Data` layout (options, ranges, marker, line, fill, contours), or only the parts set in it.],
         [#names("SetRangeX(min, max) / SetRangeY(min, max)", "SetMinRangeX(min) / SetMaxRangeX(max)", "SetMinRangeY(min) / SetMaxRangeY(max)")], [Restrict the range in which the data is drawn, fully or partially.],
-        [`UnsetRangeX()` / `UnsetRangeY()`], [Remove a previously set range restriction.],
+        [`SetRangeX()` / `SetRangeY()`], [Remove a previously set range restriction.],
         [`SetScaleMinimum(factor)` / `SetScaleMaximum(factor)`], [Stretch the auto-computed draw range by a factor, without touching the data.],
         [`SetShowOverflowBins(showOverflowBins = true)`], [Include overflow bins in the display.],
         [`SetLegendLabel(label)` / `SetLegend(legendID)`], [Set legend text, or assign to a specific legend.],

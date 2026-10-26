@@ -178,13 +178,13 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& SetLayout(const Data& dataLayout)`
 - `Data& ApplyLayout(const Data& dataLayout)`
 - `Data& SetRangeX(double_t min, double_t max)`
+- `Data& SetRangeX()` — no range restriction in x
 - `Data& SetMaxRangeX(double_t max)`
 - `Data& SetMinRangeX(double_t min)`
-- `Data& UnsetRangeX()`
 - `Data& SetRangeY(double_t min, double_t max)`
+- `Data& SetRangeY()` — no range restriction in y
 - `Data& SetMaxRangeY(double_t max)`
 - `Data& SetMinRangeY(double_t min)`
-- `Data& UnsetRangeY()`
 - `Data& SetScaleMinimum(double_t scaleFactor)`
 - `Data& SetScaleMaximum(double_t scaleFactor)`
 - `Data& SetShowOverflowBins(bool showOverflowBins = true)`

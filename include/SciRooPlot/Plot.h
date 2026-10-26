@@ -621,13 +621,13 @@ class Plot::Pad::Data
   Data& SetLayout(const Data& dataLayout);
   Data& ApplyLayout(const Data& dataLayout);
   Data& SetRangeX(double_t min, double_t max);
+  Data& SetRangeX();  // no range restriction in x
   Data& SetMaxRangeX(double_t max);
   Data& SetMinRangeX(double_t min);
-  Data& UnsetRangeX();
   Data& SetRangeY(double_t min, double_t max);
+  Data& SetRangeY();  // no range restriction in y
   Data& SetMaxRangeY(double_t max);
   Data& SetMinRangeY(double_t min);
-  Data& UnsetRangeY();
   Data& SetScaleMinimum(double_t scaleFactor);
   Data& SetScaleMaximum(double_t scaleFactor);
   Data& SetShowOverflowBins(bool showOverflowBins = true);
@@ -959,11 +959,9 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(SetRangeX)
   FORWARD_TO_DATA(SetMaxRangeX)
   FORWARD_TO_DATA(SetMinRangeX)
-  FORWARD_TO_DATA(UnsetRangeX)
   FORWARD_TO_DATA(SetRangeY)
   FORWARD_TO_DATA(SetMaxRangeY)
   FORWARD_TO_DATA(SetMinRangeY)
-  FORWARD_TO_DATA(UnsetRangeY)
   FORWARD_TO_DATA(SetScaleMinimum)
   FORWARD_TO_DATA(SetScaleMaximum)
   FORWARD_TO_DATA(SetShowOverflowBins)

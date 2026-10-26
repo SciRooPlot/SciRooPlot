@@ -2036,7 +2036,7 @@ auto Plot::Pad::Data::SetMaxRangeX(double_t max) -> decltype(*this)
   mRangeX.max = max;
   return *this;
 }
-auto Plot::Pad::Data::UnsetRangeX() -> decltype(*this)
+auto Plot::Pad::Data::SetRangeX() -> decltype(*this)
 {
   mRangeX.min = {};
   mRangeX.max = {};
@@ -2059,7 +2059,7 @@ auto Plot::Pad::Data::SetMaxRangeY(double_t max) -> decltype(*this)
   mRangeY.max = max;
   return *this;
 }
-auto Plot::Pad::Data::UnsetRangeY() -> decltype(*this)
+auto Plot::Pad::Data::SetRangeY() -> decltype(*this)
 {
   mRangeY.min = {};
   mRangeY.max = {};
