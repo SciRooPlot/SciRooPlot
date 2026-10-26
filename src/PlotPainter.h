@@ -58,7 +58,7 @@ namespace SciRooPlot
 using data_ptr_t = std::variant<TH1*, TH2*, TH3*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF3*, TF2*, TF1*>;
 
 // ROOT drawing options behind the aliases, per data type (an alias missing here cannot be drawn for that type)
-inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist2d{
+inline const std::map<draw_option_t, std::string> defaultDrawOptions_Hist2d{
   {col, "COL"},
   {colz, "COLZ"},
   {box, "BOX"},
@@ -92,7 +92,7 @@ inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist
   {violin_minmax, "VIOLINX1"},
 };
 
-inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist{
+inline const std::map<draw_option_t, std::string> defaultDrawOptions_Hist{
   {points, "X0 E P"},
   {points_xerr, "E P"},
   {points_endcaps, "X0 E1 P"},
@@ -115,7 +115,7 @@ inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Hist
 
 // the x errors of graphs are removed before drawing for all points aliases without _xerr (as for histograms with X0),
 // and area is drawn as the polygon between the points and zero, with its outline (F alone would close the polygon from the last point to the first)
-inline const std::map<drawing_options_t, std::string> defaultDrawingOptions_Graph{
+inline const std::map<draw_option_t, std::string> defaultDrawOptions_Graph{
   {points, "P Z"},
   {points_xerr, "P Z"},
   {points_endcaps, "P"},
@@ -179,7 +179,7 @@ class PlotPainter
 
   static TGraph* ToGraph(const TH1* hist);
   static TH1* ToHist(TGraph* graph, bool warn = true);
-  static TGraph* ToClippedGraph(const TH1* hist, drawing_options_t alias, bool logY);
+  static TGraph* ToClippedGraph(const TH1* hist, draw_option_t alias, bool logY);
   static double_t ClippedBase(const TGraph* graph, bool logY);
   static void SetBinRange(TAxis* axis, const std::optional<double_t>& min, const std::optional<double_t>& max);
   static std::pair<int32_t, int32_t> BinRange(const TAxis* axis, const std::optional<double_t>& min, const std::optional<double_t>& max);
@@ -188,7 +188,7 @@ class PlotPainter
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
   void HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel);
   void ReplacePlaceholders(std::string& str, TNamed* data_ptr);
-  static std::string LegendDrawStyle(TObject* obj, std::string option);
+  static std::string LegendSymbolElements(TObject* obj, std::string option);
   static bool HasErrors(const TObject* obj);
   TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, TPad* pad);
   bool FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY);

@@ -67,7 +67,7 @@ using LegendEntry = Pad::LegendEntry;
 constexpr auto ref_int = py::return_value_policy::reference_internal;
 
 void exportLogging(py::module_& m);
-void exportDrawingOptions(py::module_& m);
+void exportDrawOptions(py::module_& m);
 void exportRootConstants(py::module_& m);
 void exportPythonDataInterfaces(py::module_& m);
 void exportPlotManager(py::module_& m);
@@ -157,7 +157,7 @@ PYBIND11_MODULE(SciRooPlot, m)
 
   // a class is registered before the classes whose signatures use it, so they show its Python name
   exportLogging(m);
-  exportDrawingOptions(m);
+  exportDrawOptions(m);
   exportRootConstants(m);
   exportPythonDataInterfaces(m);
   exportLegendEntry(m);
@@ -184,10 +184,10 @@ void exportLogging(py::module_& m)
   loggerModule.def("warning", [](std::string_view s) { logger::warning("{}", s); }, arg("message"));
   loggerModule.def("error", [](std::string_view s) { logger::error("{}", s); }, arg("message"));
 }
-void exportDrawingOptions(py::module_& m)
+void exportDrawOptions(py::module_& m)
 {
-#define OPT(name, ...) .value(#name, drawing_options_t::name)
-  py::enum_<drawing_options_t>(m, "drawing_options_t") DRAWING_OPTIONS.export_values();
+#define OPT(name, ...) .value(#name, draw_option_t::name)
+  py::enum_<draw_option_t>(m, "draw_option_t") DRAW_OPTIONS.export_values();
 #undef OPT
 #define PLACEMENT(name) .value(#name, box_placement_t::name)
   py::enum_<box_placement_t>(m, "box_placement_t") BOX_PLACEMENTS.export_values();
@@ -436,9 +436,9 @@ void exportData(py::module_& m)
     .def("SetLegendLabel", &Data::SetLegendLabel, arg("legendLabel"), ref_int)
     .def("SetLegend", &Data::SetLegend, arg("legendID"), ref_int)
     .def("SetLegendEntry", &Data::SetLegendEntry, arg("legendEntry"), ref_int)
-    .def("SetOptions", overload_cast<const string&>(&Data::SetOptions), arg("options"), ref_int)
-    .def("SetOptions", overload_cast<drawing_options_t>(&Data::SetOptions), arg("optionAlias"), ref_int)
-    .def("UnsetOptions", &Data::UnsetOptions, ref_int)
+    .def("SetDrawOption", overload_cast<const string&>(&Data::SetDrawOption), arg("drawOption"), ref_int)
+    .def("SetDrawOption", overload_cast<draw_option_t>(&Data::SetDrawOption), arg("optionAlias"), ref_int)
+    .def("SetDrawOption", overload_cast<>(&Data::SetDrawOption), ref_int)
     .def("SetTextFormat", &Data::SetTextFormat, arg("textFormat"), ref_int)
     .def("SetShowStats", &Data::SetShowStats, arg("format") = "emr", arg("title") = nullopt, ref_int)
     .def("SetStatsBox", &Data::SetStatsBox, arg("statsBox"), ref_int)
@@ -528,9 +528,9 @@ void exportRatio(py::module_& m)
     .def("SetLegendLabel", [](Ratio& self, const string& s) -> Ratio& { return self.SetLegendLabel(s); }, arg("legendLabel"), ref_int)
     .def("SetLegend", [](Ratio& self, uint8_t id) -> Ratio& { return self.SetLegend(id); }, arg("legendID"), ref_int)
     .def("SetLegendEntry", [](Ratio& self, const LegendEntry& entry) -> Ratio& { return self.SetLegendEntry(entry); }, arg("legendEntry"), ref_int)
-    .def("SetOptions", [](Ratio& self, const string& s) -> Ratio& { return self.SetOptions(s); }, arg("options"), ref_int)
-    .def("SetOptions", [](Ratio& self, drawing_options_t o) -> Ratio& { return self.SetOptions(o); }, arg("optionAlias"), ref_int)
-    .def("UnsetOptions", [](Ratio& self) -> Ratio& { return self.UnsetOptions(); }, ref_int)
+    .def("SetDrawOption", [](Ratio& self, const string& s) -> Ratio& { return self.SetDrawOption(s); }, arg("drawOption"), ref_int)
+    .def("SetDrawOption", [](Ratio& self, draw_option_t o) -> Ratio& { return self.SetDrawOption(o); }, arg("optionAlias"), ref_int)
+    .def("SetDrawOption", [](Ratio& self) -> Ratio& { return self.SetDrawOption(); }, ref_int)
     .def("SetTextFormat", [](Ratio& self, const string& s) -> Ratio& { return self.SetTextFormat(s); }, arg("textFormat"), ref_int)
     .def("SetShowStats", [](Ratio& self, const string& f, const optional<string>& t) -> Ratio& { return self.SetShowStats(f, t); }, arg("format") = "emr", arg("title") = nullopt, ref_int)
     .def("SetStatsBox", [](Ratio& self, const StatsBox& box) -> Ratio& { return self.SetStatsBox(box); }, arg("statsBox"), ref_int)
@@ -700,7 +700,7 @@ void exportLegendBox(py::module_& m)
     .def("AddEntry", &LegendBox::AddEntry, arg("label") = "", ref_int)
     .def("SetTitle", &LegendBox::SetTitle, arg("title"), ref_int)
     .def("SetNumColumns", &LegendBox::SetNumColumns, arg("numColumns"), ref_int)
-    .def("SetDefaultDrawStyle", &LegendBox::SetDefaultDrawStyle, arg("drawStyle"), ref_int)
+    .def("SetDefaultSymbolElements", &LegendBox::SetDefaultSymbolElements, arg("symbolElements"), ref_int)
     .def("SetDefaultColor", &LegendBox::SetDefaultColor, arg("color"), ref_int)
     .def("SetDefaultAlpha", &LegendBox::SetDefaultAlpha, arg("alpha"), ref_int)
     .def("SetDefaultLineColor", &LegendBox::SetDefaultLineColor, arg("color"), ref_int)
@@ -746,7 +746,7 @@ void exportLegendEntry(py::module_& m)
     .def("Print", &LegendEntry::Print)
     .def("SetLabel", &LegendEntry::SetLabel, arg("label"), ref_int)
     .def("SetRefData", &LegendEntry::SetRefData, arg("refDataID"), ref_int)
-    .def("SetDrawStyle", &LegendEntry::SetDrawStyle, arg("drawStyle"), ref_int)
+    .def("SetSymbolElements", &LegendEntry::SetSymbolElements, arg("symbolElements"), ref_int)
     .def("AtTop", &LegendEntry::AtTop, ref_int)
     .def("BeforeData", &LegendEntry::BeforeData, arg("dataID"), ref_int)
     .def("AfterData", &LegendEntry::AfterData, arg("dataID"), ref_int)

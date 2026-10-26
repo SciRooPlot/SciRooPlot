@@ -233,7 +233,7 @@ TGraph* PlotPainter::ToGraph(const TH1* hist)
  * which go down out of the frame (see ClippedBase); the bin centres for curve_clipped. ROOT cuts the lines of the graph at the frame.
  */
 //**************************************************************************************************
-TGraph* PlotPainter::ToClippedGraph(const TH1* hist, drawing_options_t alias, bool logY)
+TGraph* PlotPainter::ToClippedGraph(const TH1* hist, draw_option_t alias, bool logY)
 {
   const TAxis* axis = hist->GetXaxis();
   vector<double_t> x;
@@ -563,42 +563,42 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
     TH1* axisHist_ptr{nullptr};
     vector<std::pair<unique_ptr<TPaveStats>, std::shared_ptr<const Plot::Pad::StatsBox>>> statsBoxes;  // filled by ROOT while drawing the data, placed after all data are drawn
-    string drawingOptions;
+    string drawOption;
     uint16_t dataIndex{};
     array<uint16_t, 6> defaultSettingIndices = {0};
     const int userErrorLevel = gErrorIgnoreLevel;
     auto errLevelGuard = make_scope_guard([userErrorLevel]() { gErrorIgnoreLevel = userErrorLevel; });
     for (const auto& data : drawData) {
       if (fail) break;
-      if (data->GetDrawingOptions()) drawingOptions += *data->GetDrawingOptions();
+      if (data->GetDrawOption()) drawOption += *data->GetDrawOption();
       bool isSampledFunc{};  // a function given by C++ code is written as values sampled over its range: it has no values outside of it
       // obtain a copy of the current data
       // retrieve the actual pointer to the data
       // draw the data (its appearance is already final) with the given drawing option alias
-      auto drawItem = [&, padID = padID](auto data_ptr, optional<drawing_options_t> optionAlias) {
+      auto drawItem = [&, padID = padID](auto data_ptr, optional<draw_option_t> optionAlias) {
         using data_type = std::decay_t<decltype(data_ptr)>;
-        drawing_options_t alias = optionAlias.value_or(static_cast<drawing_options_t>(255));  // 255: no alias
+        draw_option_t alias = optionAlias.value_or(static_cast<draw_option_t>(255));  // 255: no alias
         if constexpr (is_graph_2d<data_type>() || is_func_2d<data_type>()) {
-          if (!data->GetDrawingOptions()) drawingOptions += "COLZ";  // no aliases for these: coloured like 2d histograms
+          if (!data->GetDrawOption()) drawOption += "COLZ";  // no aliases for these: coloured like 2d histograms
         }
         if (optionAlias) {
-          const std::map<drawing_options_t, string>* options{};
+          const std::map<draw_option_t, string>* options{};
           const char* typeName{};
           if constexpr (is_hist_2d<data_type>()) {
-            options = &defaultDrawingOptions_Hist2d;
+            options = &defaultDrawOptions_Hist2d;
             typeName = "2d histogram";
           } else if constexpr (is_hist_1d<data_type>()) {
-            options = &defaultDrawingOptions_Hist;
+            options = &defaultDrawOptions_Hist;
             typeName = "1d histogram";
           } else if constexpr (is_graph_1d<data_type>()) {
-            options = &defaultDrawingOptions_Graph;
+            options = &defaultDrawOptions_Graph;
             typeName = "graph";
           }
           if (auto it = (options) ? options->find(*optionAlias) : decltype(options->end()){}; options && it != options->end()) {
-            drawingOptions += it->second;
+            drawOption += it->second;
           } else {
-            if (dataIndex != 0) logger::warning("Drawing option {} is not available for {} {}, using the default of ROOT.", drawing_option_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), data_ptr->GetName());
-            alias = static_cast<drawing_options_t>(255);
+            if (dataIndex != 0) logger::warning("Drawing option {} is not available for {} {}, using the default of ROOT.", draw_option_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), data_ptr->GetName());
+            alias = static_cast<draw_option_t>(255);
           }
         }
 
@@ -685,7 +685,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (value > 0.) graphPositiveMinimum = std::min(*graphPositiveMinimum, value);
             }
           }
-          data_ptr->Draw(drawingOptions.data());
+          data_ptr->Draw(drawOption.data());
           if constexpr (is_hist<data_type>()) {
             axisHist_ptr = data_ptr;
           } else {
@@ -699,15 +699,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // the triangle options (TRI, TRI1, TRI2, TRIW) paint the Delaunay triangulation of the graph, which the copy of its histogram
             // that draws the frame does not have (ROOT crashes on it): the frame is drawn as an empty lego plot (the same box and axes)
             static const std::regex triangles("tri[0-9w]?", std::regex::icase);
-            drawingOptions = std::regex_replace(drawingOptions, triangles, "LEGO");
+            drawOption = std::regex_replace(drawOption, triangles, "LEGO");
           }
           // the frame of a 2d histogram, and of a coloured 2d graph or function (drawn from its histogram), also draws the colour axis
-          const bool isColored2d = (is_graph_2d<data_type>() || is_func_2d<data_type>()) && str_contains(drawingOptions, "COL");
+          const bool isColored2d = (is_graph_2d<data_type>() || is_func_2d<data_type>()) && str_contains(drawOption, "COL");
           if (pad_ptr->GetView() || is_hist_2d<data_type>() || isColored2d) {
             drawOptAxis = "";
           }
-          axisHist_ptr->Draw((drawingOptions + drawOptAxis).data());
-          axisHist_ptr->Draw((drawingOptions + "SAME AXIG").data());
+          axisHist_ptr->Draw((drawOption + drawOptAxis).data());
+          axisHist_ptr->Draw((drawOption + "SAME AXIG").data());
           bool isTHN = axisHist_ptr->InheritsFrom(TH2::Class()) || axisHist_ptr->InheritsFrom(TH3::Class());
 
           // a user range beyond the axes of the frame histogram needs a wider frame, since ROOT shows at most the axis of a histogram:
@@ -752,9 +752,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
               delete axisHist_ptr;
               axisHist_ptr = extended;
-              axisHist_ptr->Draw(drawingOptions.data());
-              axisHist_ptr->Draw((drawingOptions + drawOptAxis).data());
-              axisHist_ptr->Draw((drawingOptions + "SAME AXIG").data());
+              axisHist_ptr->Draw(drawOption.data());
+              axisHist_ptr->Draw((drawOption + drawOptAxis).data());
+              axisHist_ptr->Draw((drawOption + "SAME AXIG").data());
             }
           }
           axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
@@ -1000,7 +1000,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // do not draw the colour scale a second time (only types that have one: for graphs 'Z' means no end caps on the error bars)
           // the 'Z' is removed, not blanked, so that suffixes stay attached to their option (COLZ2 -> COL2)
           if constexpr (is_2d<data_type>() || is_3d<data_type>()) {
-            drawingOptions.erase(std::remove_if(drawingOptions.begin(), drawingOptions.end(), [](char c) { return c == 'Z' || c == 'z'; }), drawingOptions.end());
+            drawOption.erase(std::remove_if(drawOption.begin(), drawOption.end(), [](char c) { return c == 'Z' || c == 'z'; }), drawOption.end());
           }
 
           // define data appearance
@@ -1123,7 +1123,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           bool cutYAtFrame = (axisHist_ptr->GetDimension() > 1);  // the y axis of a 1d frame has no bins
           if constexpr (is_hist_2d<data_type>()) {
             // candles and violins show the distribution of the contents along one axis: cutting it would change their statistics
-            TString options(drawingOptions);
+            TString options(drawOption);
             options.ToUpper();
             if (options.Contains("CANDLE") || options.Contains("VIOLIN")) {
               ((options.Contains("CANDLEY") || options.Contains("VIOLINY")) ? cutXAtFrame : cutYAtFrame) = false;
@@ -1199,7 +1199,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             statsHist->SetStats(false);  // also removes a stats box stored with the input, which shows the numbers of the input instead of the drawn histogram
             showStats = data->GetStatsFormat() && (!data->GetStatsFormat()->empty() || data->GetStatsTitle());
             if constexpr (is_hist<data_type>()) {
-              if (showStats && drawingOptions.rfind("SAME", 0) == 0) drawingOptions.insert(4, "S");  // ROOT fills a stats box only with SAMES, not with SAME
+              if (showStats && drawOption.rfind("SAME", 0) == 0) drawOption.insert(4, "S");  // ROOT fills a stats box only with SAMES, not with SAME
             }
             if (!(data->GetShowOverflowBins() && *data->GetShowOverflowBins())) {
               // TH2Poly keeps its bins outside the cell array of TH1, whose loop over the global cells would zero the real bins;
@@ -1286,7 +1286,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (!pad_ptr->GetLogz() && minimum < axisHist_ptr->GetMinimum()) axisHist_ptr->SetMinimum(minimum);
             }
           }
-          data_ptr->Draw(drawingOptions.data());
+          data_ptr->Draw(drawOption.data());
           if (showStats) {
             // ROOT makes the box when painting a histogram: one drawn as graph is drawn for this paint only
             if constexpr (!is_hist<data_type>()) statsHist->Draw("HIST SAMES");
@@ -1375,9 +1375,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
             if (legendID > 0u && legendID <= legendBoxVector.size()) {
               optional<Plot::Pad::LegendEntry> legendEntry = data->GetLegendEntry();
-              if (hasFilledSteps && !(legendEntry && legendEntry->GetDrawStyle())) {  // the row of filled steps shows the fill, as for hist
+              if (hasFilledSteps && !(legendEntry && legendEntry->GetSymbolElements())) {  // the row of filled steps shows the fill, as for hist
                 if (!legendEntry) legendEntry.emplace();
-                legendEntry->SetDrawStyle("F");
+                legendEntry->SetSymbolElements("F");
               }
               legendBoxVector[legendID - 1]->AddDataEntry(*data->GetLegendLabel(), (dataIndex - hasRefFunc), legendEntry);
             } else {
@@ -1388,7 +1388,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           delete data_ptr;
         }
         ++dataIndex;
-        drawingOptions = "SAME ";  // next data should be drawn to same pad
+        drawOption = "SAME ";  // next data should be drawn to same pad
       };
 
       auto processData = [&](auto&& data_ptr) {
@@ -1396,7 +1396,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         if constexpr (is_func<data_type>()) isSampledFunc = !data_ptr->GetFormula();
         gErrorIgnoreLevel = dataIndex ? userErrorLevel : kFatal;
         // the drawing option alias of the data (without one, the rule below decides once the data is final)
-        optional<drawing_options_t> optionAlias = (data->GetDrawingOptions()) ? nullopt : data->GetDrawingOptionAlias();
+        optional<draw_option_t> optionAlias = data->GetDrawOptionAlias();
 
         auto warn = [&](auto&&... args) {
           if (dataIndex != 0) logger::warning(std::forward<decltype(args)>(args)...);
@@ -1937,7 +1937,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         // without a drawing option SciRooPlot decides, the same for histograms and graphs: a fill is drawn (hist, for a graph area),
         // so is a marker set for the data (points; the defaults of the pad always set one), data with errors is a measurement (points),
         // data without errors a shape (hist, for a graph line); 2d histograms are coloured
-        if (!optionAlias && !data->GetDrawingOptions()) {
+        if (!optionAlias && !data->GetDrawOption()) {
           if constexpr (is_hist_1d<data_type>() || is_graph_1d<data_type>()) {
             constexpr bool isHist = is_hist_1d<data_type>();
             // the fill the data will be drawn with: set for the data, else the next default of the pad (unless the style of the input is kept), else the input's
@@ -1964,13 +1964,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
         // the clipped aliases draw a histogram as a graph: ROOT cuts the lines of a graph at the frame, while it moves the bins of a histogram
         // that lie outside of the frame onto its edge (HIST, and HIST C on a log axis); the axis frame (first data) is the histogram itself
-        auto drawClipped = [&](TH1* histogram, drawing_options_t clippedAlias) {
+        auto drawClipped = [&](TH1* histogram, draw_option_t clippedAlias) {
           if (dataIndex == 0) {
             drawItem(histogram, (clippedAlias == curve_clipped) ? curve : ((clippedAlias == hist_clipped) ? hist : hist_open));
             return;
           }
           if (data->GetMinRangeY() || data->GetMaxRangeY()) {
-            logger::warning("The y range of {} is not applied with drawing option {}: it is cut at the frame.", data->GetName(), drawing_option_name(clippedAlias));
+            logger::warning("The y range of {} is not applied with drawing option {}: it is cut at the frame.", data->GetName(), draw_option_name(clippedAlias));
           }
           if (!pad_ptr->GetView()) {
             if (data->GetMinRangeX() || data->GetMaxRangeX()) SetBinRange(histogram->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
@@ -1991,7 +1991,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 drawClipped(histogram, *optionAlias);
                 return;
               }
-              if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", drawing_option_name(*optionAlias), data_ptr->GetName());
+              if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), data_ptr->GetName());
               optionAlias.reset();
             }
           }
@@ -1999,19 +1999,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
         // histograms and graphs can be drawn with the same aliases: where ROOT has no option for one of them, it is drawn as the other
         if constexpr (is_hist_1d<data_type>()) {
-          if (optionAlias && !defaultDrawingOptions_Hist.count(*optionAlias) && defaultDrawingOptions_Graph.count(*optionAlias)) {
+          if (optionAlias && !defaultDrawOptions_Hist.count(*optionAlias) && defaultDrawOptions_Graph.count(*optionAlias)) {
             TGraph* graph = ToGraph(data_ptr);
             mSourceHists[graph].reset(data_ptr);
             drawItem(graph, optionAlias);
             return;
           }
         } else if constexpr (is_graph_1d<data_type>()) {
-          if (optionAlias && !defaultDrawingOptions_Graph.count(*optionAlias) && defaultDrawingOptions_Hist.count(*optionAlias)) {
+          if (optionAlias && !defaultDrawOptions_Graph.count(*optionAlias) && defaultDrawOptions_Hist.count(*optionAlias)) {
             if (TH1* hist = ToHist(data_ptr, dataIndex != 0)) {
               drawItem(hist, optionAlias);
               return;
             }
-            if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", drawing_option_name(*optionAlias), data_ptr->GetName());
+            if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), data_ptr->GetName());
             optionAlias.reset();
           }
         }
@@ -2550,7 +2550,7 @@ bool PlotPainter::HasErrors(const TObject* obj)
  * E3-E6 are fill areas, bars without a fill colour are drawn as lines, graphs draw nothing without P, L, C, B, F or 2-5)
  */
 //**************************************************************************************************
-string PlotPainter::LegendDrawStyle(TObject* obj, string option)
+string PlotPainter::LegendSymbolElements(TObject* obj, string option)
 {
   std::transform(option.begin(), option.end(), option.begin(), ::toupper);
   auto takeToken = [&option](const string& token) {
@@ -2773,8 +2773,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       for (const auto& entry : box->GetEntries()) {
         string label = lines[i];
 
-        // user-defined draw style for single entry or all entries
-        string drawStyle = entry.GetDrawStyle() ? *entry.GetDrawStyle() : ((box->GetDefaultDrawStyle()) ? *box->GetDefaultDrawStyle() : "");
+        // user-defined symbol elements for single entry or all entries
+        string symbolElements = entry.GetSymbolElements() ? *entry.GetSymbolElements() : ((box->GetDefaultSymbolElements()) ? *box->GetDefaultSymbolElements() : "");
 
         TLegendEntry* curEntry = nullptr;
         TAttMarker markerAttr;
@@ -2782,14 +2782,14 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         TAttFill fillAttr;
         TObject* data_ptr = (entry.GetRefDataID()) ? findData(*entry.GetRefDataID()) : nullptr;
         if (data_ptr) {
-          if (drawStyle.empty()) drawStyle = LegendDrawStyle(data_ptr, data_ptr->GetDrawOption());
-          curEntry = legend->AddEntry(data_ptr, label.data(), drawStyle.data());
+          if (symbolElements.empty()) symbolElements = LegendSymbolElements(data_ptr, data_ptr->GetDrawOption());
+          curEntry = legend->AddEntry(data_ptr, label.data(), symbolElements.data());
           curEntry->SetObject(static_cast<TObject*>(nullptr));
           if (auto ptr = dynamic_cast<TAttMarker*>(data_ptr)) ptr->Copy(markerAttr);
           if (auto ptr = dynamic_cast<TAttLine*>(data_ptr)) ptr->Copy(lineAttr);
           if (auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(fillAttr);
         } else {
-          curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), drawStyle.data());
+          curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), symbolElements.data());
         }
 
         // override data attributes with default values if requested
@@ -3074,7 +3074,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
 
   auto markHist = [&](TH1* hist) {
     if (hist->GetDimension() != 1) return;
-    // error bars as ROOT draws them (the same rule as for the legend entries in LegendDrawStyle): with an E in the option or stored errors,
+    // error bars as ROOT draws them (the same rule as for the legend entries in LegendSymbolElements): with an E in the option or stored errors,
     // unless HIST is given; SAME, TEXT etc. contain an E but are no error option
     TString option = hist->GetDrawOption();
     option.ToUpper();

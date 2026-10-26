@@ -20,8 +20,8 @@
 from __future__ import annotations
 import typing
 from . import logger
-__all__: list[str] = ['Axis', 'Data', 'Empty', 'Gap', 'LegendBox', 'LegendEntry', 'Pad', 'Panel', 'PanelLayout', 'Plot', 'PlotManager', 'Ratio', 'StatsBox', 'TextBox', 'area', 'area_smooth', 'band', 'band_smooth', 'bars', 'best_corner', 'bottom_left', 'bottom_right', 'box', 'box_placement_t', 'boxes', 'boxes_nomarkers', 'brackets', 'candle', 'candle_mean', 'candle_meanline', 'candle_minmax', 'candle_notched', 'candle_points', 'candle_scatter', 'col', 'colz', 'cont', 'cont_col', 'cont_colz', 'cont_fill', 'cont_fillz', 'cont_smooth', 'cont_smoothz', 'curve', 'curve_clipped', 'drawing_options_t', 'graph', 'hbars', 'hist', 'hist_clipped', 'hist_open', 'hist_open_clipped', 'histo', 'histo2d', 'kAlpine', 'kAquamarine', 'kArmy', 'kAsh', 'kAtlantic', 'kAurora', 'kAvocado', 'kAzure', 'kBeach', 'kBird', 'kBlack', 'kBlackBody', 'kBlue', 'kBlueGreenYellow', 'kBlueRedYellow', 'kBlueYellow', 'kBrown', 'kBrownCyan', 'kCMYK', 'kCandy', 'kCherry', 'kCircle', 'kCividis', 'kCoffee', 'kColorPrintableOnGrey', 'kCool', 'kCopper', 'kCubehelix', 'kCyan', 'kDarkBodyRadiator', 'kDarkRainBow', 'kDarkRainbow', 'kDarkTerrain', 'kDashDotted', 'kDashed', 'kDeepSea', 'kDot', 'kDotted', 'kFAlhambra', 'kFBricks', 'kFCircles', 'kFDashed1', 'kFDashed2', 'kFDiamonds', 'kFDotted1', 'kFDotted2', 'kFDotted3', 'kFEmpty', 'kFFrieze', 'kFHatched1', 'kFHatched3', 'kFHatched4', 'kFMetopes', 'kFMondrian', 'kFPyramids', 'kFScales', 'kFSnowflakes', 'kFSolid', 'kFStars1', 'kFStars2', 'kFTiles', 'kFWaves1', 'kFWaves2', 'kFWicker', 'kFall', 'kFourSquaresPlus', 'kFourSquaresX', 'kFruitPunch', 'kFuchsia', 'kFullCircle', 'kFullCross', 'kFullCrossX', 'kFullDiamond', 'kFullDotLarge', 'kFullDotMedium', 'kFullDotSmall', 'kFullDoubleDiamond', 'kFullFourTrianglesPlus', 'kFullFourTrianglesX', 'kFullSquare', 'kFullStar', 'kFullThreeTriangles', 'kFullTriangleDown', 'kFullTriangleUp', 'kGistEarth', 'kGrape', 'kGray', 'kGreen', 'kGreenBrownTerrain', 'kGreenPink', 'kGreenRedViolet', 'kGreyScale', 'kGreyYellow', 'kHAlignCenter', 'kHAlignLeft', 'kHAlignRight', 'kHatched2', 'kInvertedDarkBodyRadiator', 'kIsland', 'kLake', 'kLightTemperature', 'kLightTerrain', 'kMagenta', 'kMint', 'kMultiply', 'kNeon', 'kOcean', 'kOctagonCross', 'kOpenCircle', 'kOpenCross', 'kOpenCrossX', 'kOpenDiamond', 'kOpenDiamondCross', 'kOpenDoubleDiamond', 'kOpenFourTrianglesPlus', 'kOpenFourTrianglesX', 'kOpenSquare', 'kOpenSquareDiagonal', 'kOpenStar', 'kOpenThreeTriangles', 'kOpenTriangleDown', 'kOpenTriangleUp', 'kOrange', 'kP10Ash', 'kP10Blue', 'kP10Brown', 'kP10Cyan', 'kP10Gray', 'kP10Green', 'kP10Orange', 'kP10Red', 'kP10Violet', 'kP10Yellow', 'kP6Blue', 'kP6Grape', 'kP6Gray', 'kP6Red', 'kP6Violet', 'kP6Yellow', 'kP8Azure', 'kP8Blue', 'kP8Cyan', 'kP8Gray', 'kP8Green', 'kP8Orange', 'kP8Pink', 'kP8Red', 'kPastel', 'kPearl', 'kPigeon', 'kPink', 'kPlum', 'kPlus', 'kRainBow', 'kRainbow', 'kRed', 'kRedBlue', 'kRose', 'kRust', 'kSandyTerrain', 'kSienna', 'kSolar', 'kSolid', 'kSouthWest', 'kSpring', 'kStar', 'kStarryNight', 'kSunset', 'kTeal', 'kTemperatureMap', 'kThermometer', 'kVAlignBottom', 'kVAlignCenter', 'kVAlignTop', 'kValentine', 'kViolet', 'kViridis', 'kVisibleSpectrum', 'kWaterMelon', 'kWhite', 'kYellow', 'lego', 'lego_col', 'lego_colz', 'lego_noborders', 'line', 'logger', 'points', 'points_arrows', 'points_endcaps', 'points_line', 'points_text', 'points_xerr', 'points_xerr_endcaps', 'surf', 'surf_col', 'surf_colz', 'surf_contours', 'surf_fill', 'surf_fillz', 'surf_shaded', 'text', 'top_left', 'top_right', 'violin', 'violin_minmax']
-class drawing_options_t:
+__all__: list[str] = ['Axis', 'Data', 'Empty', 'Gap', 'LegendBox', 'LegendEntry', 'Pad', 'Panel', 'PanelLayout', 'Plot', 'PlotManager', 'Ratio', 'StatsBox', 'TextBox', 'area', 'area_smooth', 'band', 'band_smooth', 'bars', 'best_corner', 'bottom_left', 'bottom_right', 'box', 'box_placement_t', 'boxes', 'boxes_nomarkers', 'brackets', 'candle', 'candle_mean', 'candle_meanline', 'candle_minmax', 'candle_notched', 'candle_points', 'candle_scatter', 'col', 'colz', 'cont', 'cont_col', 'cont_colz', 'cont_fill', 'cont_fillz', 'cont_smooth', 'cont_smoothz', 'curve', 'curve_clipped', 'draw_option_t', 'graph', 'hbars', 'hist', 'hist_clipped', 'hist_open', 'hist_open_clipped', 'histo', 'histo2d', 'kAlpine', 'kAquamarine', 'kArmy', 'kAsh', 'kAtlantic', 'kAurora', 'kAvocado', 'kAzure', 'kBeach', 'kBird', 'kBlack', 'kBlackBody', 'kBlue', 'kBlueGreenYellow', 'kBlueRedYellow', 'kBlueYellow', 'kBrown', 'kBrownCyan', 'kCMYK', 'kCandy', 'kCherry', 'kCircle', 'kCividis', 'kCoffee', 'kColorPrintableOnGrey', 'kCool', 'kCopper', 'kCubehelix', 'kCyan', 'kDarkBodyRadiator', 'kDarkRainBow', 'kDarkRainbow', 'kDarkTerrain', 'kDashDotted', 'kDashed', 'kDeepSea', 'kDot', 'kDotted', 'kFAlhambra', 'kFBricks', 'kFCircles', 'kFDashed1', 'kFDashed2', 'kFDiamonds', 'kFDotted1', 'kFDotted2', 'kFDotted3', 'kFEmpty', 'kFFrieze', 'kFHatched1', 'kFHatched3', 'kFHatched4', 'kFMetopes', 'kFMondrian', 'kFPyramids', 'kFScales', 'kFSnowflakes', 'kFSolid', 'kFStars1', 'kFStars2', 'kFTiles', 'kFWaves1', 'kFWaves2', 'kFWicker', 'kFall', 'kFourSquaresPlus', 'kFourSquaresX', 'kFruitPunch', 'kFuchsia', 'kFullCircle', 'kFullCross', 'kFullCrossX', 'kFullDiamond', 'kFullDotLarge', 'kFullDotMedium', 'kFullDotSmall', 'kFullDoubleDiamond', 'kFullFourTrianglesPlus', 'kFullFourTrianglesX', 'kFullSquare', 'kFullStar', 'kFullThreeTriangles', 'kFullTriangleDown', 'kFullTriangleUp', 'kGistEarth', 'kGrape', 'kGray', 'kGreen', 'kGreenBrownTerrain', 'kGreenPink', 'kGreenRedViolet', 'kGreyScale', 'kGreyYellow', 'kHAlignCenter', 'kHAlignLeft', 'kHAlignRight', 'kHatched2', 'kInvertedDarkBodyRadiator', 'kIsland', 'kLake', 'kLightTemperature', 'kLightTerrain', 'kMagenta', 'kMint', 'kMultiply', 'kNeon', 'kOcean', 'kOctagonCross', 'kOpenCircle', 'kOpenCross', 'kOpenCrossX', 'kOpenDiamond', 'kOpenDiamondCross', 'kOpenDoubleDiamond', 'kOpenFourTrianglesPlus', 'kOpenFourTrianglesX', 'kOpenSquare', 'kOpenSquareDiagonal', 'kOpenStar', 'kOpenThreeTriangles', 'kOpenTriangleDown', 'kOpenTriangleUp', 'kOrange', 'kP10Ash', 'kP10Blue', 'kP10Brown', 'kP10Cyan', 'kP10Gray', 'kP10Green', 'kP10Orange', 'kP10Red', 'kP10Violet', 'kP10Yellow', 'kP6Blue', 'kP6Grape', 'kP6Gray', 'kP6Red', 'kP6Violet', 'kP6Yellow', 'kP8Azure', 'kP8Blue', 'kP8Cyan', 'kP8Gray', 'kP8Green', 'kP8Orange', 'kP8Pink', 'kP8Red', 'kPastel', 'kPearl', 'kPigeon', 'kPink', 'kPlum', 'kPlus', 'kRainBow', 'kRainbow', 'kRed', 'kRedBlue', 'kRose', 'kRust', 'kSandyTerrain', 'kSienna', 'kSolar', 'kSolid', 'kSouthWest', 'kSpring', 'kStar', 'kStarryNight', 'kSunset', 'kTeal', 'kTemperatureMap', 'kThermometer', 'kVAlignBottom', 'kVAlignCenter', 'kVAlignTop', 'kValentine', 'kViolet', 'kViridis', 'kVisibleSpectrum', 'kWaterMelon', 'kWhite', 'kYellow', 'lego', 'lego_col', 'lego_colz', 'lego_noborders', 'line', 'logger', 'points', 'points_arrows', 'points_endcaps', 'points_line', 'points_text', 'points_xerr', 'points_xerr_endcaps', 'surf', 'surf_col', 'surf_colz', 'surf_contours', 'surf_fill', 'surf_fillz', 'surf_shaded', 'text', 'top_left', 'top_right', 'violin', 'violin_minmax']
+class draw_option_t:
     """
     Members:
 
@@ -133,61 +133,61 @@ class drawing_options_t:
 
       violin_minmax
     """
-    __members__: typing.ClassVar[dict[str, drawing_options_t]]
-    area: typing.ClassVar[drawing_options_t]
-    area_smooth: typing.ClassVar[drawing_options_t]
-    band: typing.ClassVar[drawing_options_t]
-    band_smooth: typing.ClassVar[drawing_options_t]
-    bars: typing.ClassVar[drawing_options_t]
-    box: typing.ClassVar[drawing_options_t]
-    boxes: typing.ClassVar[drawing_options_t]
-    boxes_nomarkers: typing.ClassVar[drawing_options_t]
-    brackets: typing.ClassVar[drawing_options_t]
-    candle: typing.ClassVar[drawing_options_t]
-    candle_mean: typing.ClassVar[drawing_options_t]
-    candle_meanline: typing.ClassVar[drawing_options_t]
-    candle_minmax: typing.ClassVar[drawing_options_t]
-    candle_notched: typing.ClassVar[drawing_options_t]
-    candle_points: typing.ClassVar[drawing_options_t]
-    candle_scatter: typing.ClassVar[drawing_options_t]
-    col: typing.ClassVar[drawing_options_t]
-    colz: typing.ClassVar[drawing_options_t]
-    cont: typing.ClassVar[drawing_options_t]
-    cont_col: typing.ClassVar[drawing_options_t]
-    cont_colz: typing.ClassVar[drawing_options_t]
-    cont_fill: typing.ClassVar[drawing_options_t]
-    cont_fillz: typing.ClassVar[drawing_options_t]
-    cont_smooth: typing.ClassVar[drawing_options_t]
-    cont_smoothz: typing.ClassVar[drawing_options_t]
-    curve: typing.ClassVar[drawing_options_t]
-    curve_clipped: typing.ClassVar[drawing_options_t]
-    hbars: typing.ClassVar[drawing_options_t]
-    hist: typing.ClassVar[drawing_options_t]
-    hist_clipped: typing.ClassVar[drawing_options_t]
-    hist_open: typing.ClassVar[drawing_options_t]
-    hist_open_clipped: typing.ClassVar[drawing_options_t]
-    lego: typing.ClassVar[drawing_options_t]
-    lego_col: typing.ClassVar[drawing_options_t]
-    lego_colz: typing.ClassVar[drawing_options_t]
-    lego_noborders: typing.ClassVar[drawing_options_t]
-    line: typing.ClassVar[drawing_options_t]
-    points: typing.ClassVar[drawing_options_t]
-    points_arrows: typing.ClassVar[drawing_options_t]
-    points_endcaps: typing.ClassVar[drawing_options_t]
-    points_line: typing.ClassVar[drawing_options_t]
-    points_text: typing.ClassVar[drawing_options_t]
-    points_xerr: typing.ClassVar[drawing_options_t]
-    points_xerr_endcaps: typing.ClassVar[drawing_options_t]
-    surf: typing.ClassVar[drawing_options_t]
-    surf_col: typing.ClassVar[drawing_options_t]
-    surf_colz: typing.ClassVar[drawing_options_t]
-    surf_contours: typing.ClassVar[drawing_options_t]
-    surf_fill: typing.ClassVar[drawing_options_t]
-    surf_fillz: typing.ClassVar[drawing_options_t]
-    surf_shaded: typing.ClassVar[drawing_options_t]
-    text: typing.ClassVar[drawing_options_t]
-    violin: typing.ClassVar[drawing_options_t]
-    violin_minmax: typing.ClassVar[drawing_options_t]
+    __members__: typing.ClassVar[dict[str, draw_option_t]]
+    area: typing.ClassVar[draw_option_t]
+    area_smooth: typing.ClassVar[draw_option_t]
+    band: typing.ClassVar[draw_option_t]
+    band_smooth: typing.ClassVar[draw_option_t]
+    bars: typing.ClassVar[draw_option_t]
+    box: typing.ClassVar[draw_option_t]
+    boxes: typing.ClassVar[draw_option_t]
+    boxes_nomarkers: typing.ClassVar[draw_option_t]
+    brackets: typing.ClassVar[draw_option_t]
+    candle: typing.ClassVar[draw_option_t]
+    candle_mean: typing.ClassVar[draw_option_t]
+    candle_meanline: typing.ClassVar[draw_option_t]
+    candle_minmax: typing.ClassVar[draw_option_t]
+    candle_notched: typing.ClassVar[draw_option_t]
+    candle_points: typing.ClassVar[draw_option_t]
+    candle_scatter: typing.ClassVar[draw_option_t]
+    col: typing.ClassVar[draw_option_t]
+    colz: typing.ClassVar[draw_option_t]
+    cont: typing.ClassVar[draw_option_t]
+    cont_col: typing.ClassVar[draw_option_t]
+    cont_colz: typing.ClassVar[draw_option_t]
+    cont_fill: typing.ClassVar[draw_option_t]
+    cont_fillz: typing.ClassVar[draw_option_t]
+    cont_smooth: typing.ClassVar[draw_option_t]
+    cont_smoothz: typing.ClassVar[draw_option_t]
+    curve: typing.ClassVar[draw_option_t]
+    curve_clipped: typing.ClassVar[draw_option_t]
+    hbars: typing.ClassVar[draw_option_t]
+    hist: typing.ClassVar[draw_option_t]
+    hist_clipped: typing.ClassVar[draw_option_t]
+    hist_open: typing.ClassVar[draw_option_t]
+    hist_open_clipped: typing.ClassVar[draw_option_t]
+    lego: typing.ClassVar[draw_option_t]
+    lego_col: typing.ClassVar[draw_option_t]
+    lego_colz: typing.ClassVar[draw_option_t]
+    lego_noborders: typing.ClassVar[draw_option_t]
+    line: typing.ClassVar[draw_option_t]
+    points: typing.ClassVar[draw_option_t]
+    points_arrows: typing.ClassVar[draw_option_t]
+    points_endcaps: typing.ClassVar[draw_option_t]
+    points_line: typing.ClassVar[draw_option_t]
+    points_text: typing.ClassVar[draw_option_t]
+    points_xerr: typing.ClassVar[draw_option_t]
+    points_xerr_endcaps: typing.ClassVar[draw_option_t]
+    surf: typing.ClassVar[draw_option_t]
+    surf_col: typing.ClassVar[draw_option_t]
+    surf_colz: typing.ClassVar[draw_option_t]
+    surf_contours: typing.ClassVar[draw_option_t]
+    surf_fill: typing.ClassVar[draw_option_t]
+    surf_fillz: typing.ClassVar[draw_option_t]
+    surf_shaded: typing.ClassVar[draw_option_t]
+    text: typing.ClassVar[draw_option_t]
+    violin: typing.ClassVar[draw_option_t]
+    violin_minmax: typing.ClassVar[draw_option_t]
     def __eq__(self, other: typing.Any) -> bool:
         ...
     def __getstate__(self) -> int:
@@ -273,8 +273,6 @@ class LegendEntry:
         ...
     def SetColor(self, color: int) -> LegendEntry:
         ...
-    def SetDrawStyle(self, drawStyle: str) -> LegendEntry:
-        ...
     def SetFill(self, color: int, style: int, alpha: float | None = None) -> LegendEntry:
         ...
     def SetFillAlpha(self, alpha: float) -> LegendEntry:
@@ -307,6 +305,8 @@ class LegendEntry:
         ...
     def SetRefData(self, refDataID: int) -> LegendEntry:
         ...
+    def SetSymbolElements(self, symbolElements: str) -> LegendEntry:
+        ...
     def SetTextAlpha(self, alpha: float) -> LegendEntry:
         ...
     def SetTextColor(self, color: int) -> LegendEntry:
@@ -338,8 +338,6 @@ class LegendBox:
         ...
     def SetDefaultColor(self, color: int) -> LegendBox:
         ...
-    def SetDefaultDrawStyle(self, drawStyle: str) -> LegendBox:
-        ...
     def SetDefaultFillAlpha(self, alpha: float) -> LegendBox:
         ...
     def SetDefaultFillColor(self, color: int) -> LegendBox:
@@ -361,6 +359,8 @@ class LegendBox:
     def SetDefaultMarkerSize(self, size: float) -> LegendBox:
         ...
     def SetDefaultMarkerStyle(self, style: int) -> LegendBox:
+        ...
+    def SetDefaultSymbolElements(self, symbolElements: str) -> LegendBox:
         ...
     def SetFill(self, color: int, style: int, alpha: float | None = None) -> LegendBox:
         ...
@@ -609,6 +609,15 @@ class Data:
         ...
     def SetDefinesFrame(self, dontDraw: bool = False) -> Data:
         ...
+    @typing.overload
+    def SetDrawOption(self, drawOption: str) -> Data:
+        ...
+    @typing.overload
+    def SetDrawOption(self, optionAlias: draw_option_t) -> Data:
+        ...
+    @typing.overload
+    def SetDrawOption(self) -> Data:
+        ...
     def SetFill(self, color: int, style: int, alpha: float | None = None) -> Data:
         ...
     def SetFillAlpha(self, alpha: float) -> Data:
@@ -657,12 +666,6 @@ class Data:
         ...
     def SetNpx(self, nx: int, ny: int | None = None) -> Data:
         ...
-    @typing.overload
-    def SetOptions(self, options: str) -> Data:
-        ...
-    @typing.overload
-    def SetOptions(self, optionAlias: drawing_options_t) -> Data:
-        ...
     def SetRangeX(self, min: float, max: float) -> Data:
         ...
     def SetRangeY(self, min: float, max: float) -> Data:
@@ -680,8 +683,6 @@ class Data:
     def SetTextFormat(self, textFormat: str) -> Data:
         ...
     def Smooth(self, nIterSmooth: int = 1) -> Data:
-        ...
-    def UnsetOptions(self) -> Data:
         ...
     def UnsetRangeX(self) -> Data:
         ...
@@ -808,6 +809,15 @@ class Ratio(Data):
         ...
     def SetDefinesFrame(self, dontDraw: bool = False) -> Ratio:
         ...
+    @typing.overload
+    def SetDrawOption(self, drawOption: str) -> Ratio:
+        ...
+    @typing.overload
+    def SetDrawOption(self, optionAlias: draw_option_t) -> Ratio:
+        ...
+    @typing.overload
+    def SetDrawOption(self) -> Ratio:
+        ...
     def SetFill(self, color: int, style: int, alpha: float | None = None) -> Ratio:
         ...
     def SetFillAlpha(self, alpha: float) -> Ratio:
@@ -856,12 +866,6 @@ class Ratio(Data):
         ...
     def SetMinRangeY(self, min: float) -> Ratio:
         ...
-    @typing.overload
-    def SetOptions(self, options: str) -> Ratio:
-        ...
-    @typing.overload
-    def SetOptions(self, optionAlias: drawing_options_t) -> Ratio:
-        ...
     def SetRangeX(self, min: float, max: float) -> Ratio:
         ...
     def SetRangeY(self, min: float, max: float) -> Ratio:
@@ -879,8 +883,6 @@ class Ratio(Data):
     def SetTextFormat(self, textFormat: str) -> Ratio:
         ...
     def Smooth(self, nIterSmooth: int = 1) -> Ratio:
-        ...
-    def UnsetOptions(self) -> Ratio:
         ...
     def UnsetRangeX(self) -> Ratio:
         ...
@@ -1292,41 +1294,41 @@ def histo(name: str, values: list[float], bins: int = 100, range: typing.Any = N
     ...
 def histo2d(name: str, x: list[float], y: list[float], bins: typing.Any = None, range: typing.Any = None) -> typing.Any:
     ...
-area: drawing_options_t
-area_smooth: drawing_options_t
-band: drawing_options_t
-band_smooth: drawing_options_t
-bars: drawing_options_t
+area: draw_option_t
+area_smooth: draw_option_t
+band: draw_option_t
+band_smooth: draw_option_t
+bars: draw_option_t
 best_corner: box_placement_t
 bottom_left: box_placement_t
 bottom_right: box_placement_t
-box: drawing_options_t
-boxes: drawing_options_t
-boxes_nomarkers: drawing_options_t
-brackets: drawing_options_t
-candle: drawing_options_t
-candle_mean: drawing_options_t
-candle_meanline: drawing_options_t
-candle_minmax: drawing_options_t
-candle_notched: drawing_options_t
-candle_points: drawing_options_t
-candle_scatter: drawing_options_t
-col: drawing_options_t
-colz: drawing_options_t
-cont: drawing_options_t
-cont_col: drawing_options_t
-cont_colz: drawing_options_t
-cont_fill: drawing_options_t
-cont_fillz: drawing_options_t
-cont_smooth: drawing_options_t
-cont_smoothz: drawing_options_t
-curve: drawing_options_t
-curve_clipped: drawing_options_t
-hbars: drawing_options_t
-hist: drawing_options_t
-hist_clipped: drawing_options_t
-hist_open: drawing_options_t
-hist_open_clipped: drawing_options_t
+box: draw_option_t
+boxes: draw_option_t
+boxes_nomarkers: draw_option_t
+brackets: draw_option_t
+candle: draw_option_t
+candle_mean: draw_option_t
+candle_meanline: draw_option_t
+candle_minmax: draw_option_t
+candle_notched: draw_option_t
+candle_points: draw_option_t
+candle_scatter: draw_option_t
+col: draw_option_t
+colz: draw_option_t
+cont: draw_option_t
+cont_col: draw_option_t
+cont_colz: draw_option_t
+cont_fill: draw_option_t
+cont_fillz: draw_option_t
+cont_smooth: draw_option_t
+cont_smoothz: draw_option_t
+curve: draw_option_t
+curve_clipped: draw_option_t
+hbars: draw_option_t
+hist: draw_option_t
+hist_clipped: draw_option_t
+hist_open: draw_option_t
+hist_open_clipped: draw_option_t
 kAlpine: int = 63
 kAquamarine: int = 64
 kArmy: int = 65
@@ -1508,27 +1510,27 @@ kVisibleSpectrum: int = 107
 kWaterMelon: int = 108
 kWhite: int = 0
 kYellow: int = 400
-lego: drawing_options_t
-lego_col: drawing_options_t
-lego_colz: drawing_options_t
-lego_noborders: drawing_options_t
-line: drawing_options_t
-points: drawing_options_t
-points_arrows: drawing_options_t
-points_endcaps: drawing_options_t
-points_line: drawing_options_t
-points_text: drawing_options_t
-points_xerr: drawing_options_t
-points_xerr_endcaps: drawing_options_t
-surf: drawing_options_t
-surf_col: drawing_options_t
-surf_colz: drawing_options_t
-surf_contours: drawing_options_t
-surf_fill: drawing_options_t
-surf_fillz: drawing_options_t
-surf_shaded: drawing_options_t
-text: drawing_options_t
+lego: draw_option_t
+lego_col: draw_option_t
+lego_colz: draw_option_t
+lego_noborders: draw_option_t
+line: draw_option_t
+points: draw_option_t
+points_arrows: draw_option_t
+points_endcaps: draw_option_t
+points_line: draw_option_t
+points_text: draw_option_t
+points_xerr: draw_option_t
+points_xerr_endcaps: draw_option_t
+surf: draw_option_t
+surf_col: draw_option_t
+surf_colz: draw_option_t
+surf_contours: draw_option_t
+surf_fill: draw_option_t
+surf_fillz: draw_option_t
+surf_shaded: draw_option_t
+text: draw_option_t
 top_left: box_placement_t
 top_right: box_placement_t
-violin: drawing_options_t
-violin_minmax: drawing_options_t
+violin: draw_option_t
+violin_minmax: draw_option_t

@@ -220,11 +220,11 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // data with a marker style or size set, or with errors, as points (histograms without stored errors have sqrt(N) errors),
   // other data as hist (graphs: line); 2d histograms, 2d graphs and 2d functions are drawn as colz, with one colour axis covering all 2d data of the pad
   // to modify how the data is displayed we can apply the settings via:
-  plot[1].AddData("histName4", "dataSourceB").SetOptions("HIST C").SetLine(kGreen+2, kSolid, 3.);
+  plot[1].AddData("histName4", "dataSourceB").SetDrawOption("HIST C").SetLine(kGreen+2, kSolid, 3.);
   // instead of directly using the ROOT drawing option string ("HIST C") you can
   // use pre-defined human readable options like curve, points, points_line, etc
   // (you can find all available options in include/SciRooPlot/Plot.h and their ROOT equivalents in src/PlotPainter.h):
-  plot[1].AddData("graphName1", "dataSourceA").SetOptions(points).SetMarker(kRed, kFullCircle, 1.);
+  plot[1].AddData("graphName1", "dataSourceA").SetDrawOption(points).SetMarker(kRed, kFullCircle, 1.);
   // all root layout settings can be applied in this manner
   // the line, marker and fill stored with the input object are replaced by the defaults of the pad; to keep them (what the data sets still wins):
   plot[1].AddData("histName5", "dataSourceB").SetKeepInputStyle();
@@ -246,12 +246,12 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // you can however override this and specify different default settings for the legend
   plot[1].GetLegend(2).SetDefaultLineWidth(5.);
   // the row of a data item is styled on the data (its label is the one of the data):
-  plot[1].AddData("band", "dataSourceA", "uncertainty").SetLegendEntry(LegendEntry().SetDrawStyle("F"));
+  plot[1].AddData("band", "dataSourceA", "uncertainty").SetLegendEntry(LegendEntry().SetSymbolElements("F"));
   // rows of their own, e.g. for a legend explaining the symbols and one explaining the colours, or a legend in another pad
   // (with an empty label: an empty line); SetRefData(n) takes the symbol from data n of the pad
   auto& legend = plot[1].AddLegend();
-  legend.AddEntry("pp").SetDrawStyle("P").SetMarker(kBlack, kFullCircle, 1.2);
-  legend.AddEntry("Pb-Pb").SetDrawStyle("P").SetMarker(kBlack, kOpenSquare, 1.2);
+  legend.AddEntry("pp").SetSymbolElements("P").SetMarker(kBlack, kFullCircle, 1.2);
+  legend.AddEntry("Pb-Pb").SetSymbolElements("P").SetMarker(kBlack, kOpenSquare, 1.2);
   // they come after the rows of the data, or at a place relative to the data of the pad (numbered as in plot[1](n)),
   // whether or not that data has a row in this legend: a heading belongs to the data below it, a note to the data above it
   legend.AddEntry("#bf{2024 data}").AtTop();
@@ -507,7 +507,7 @@ pm.AddBasePlot(smallText);
 // for re-occurring data it can make sense to define a bunch of properties only once
 // and then just reuse this layout for different plots:
 using Plot::Pad::Data;
-Data pp_5TeV = Data().SetOptions(curve).SetLineStyle(9).SetColor(kGreen+3);
+Data pp_5TeV = Data().SetDrawOption(curve).SetLineStyle(9).SetColor(kGreen+3);
 
 // or if you want to logically group multiple layouts put them in a map:
 enum layoutID : int { data, mc, };
@@ -517,13 +517,13 @@ data_layout_t pp_7TeV
 {
   {data, Data()
     .SetDataSource("pp_7TeV")
-    .SetOptions(points)
+    .SetDrawOption(points)
     .SetMarkerStyle(kFullCircle)
     .SetColor(kBlue+2)
   },
   {mc, Data()
     .SetDataSource("pp_7TeV_MC")
-    .SetOptions(curve)
+    .SetDrawOption(curve)
     .SetLineStyle(kSolid)
     .SetColor(kRed+1)
   },

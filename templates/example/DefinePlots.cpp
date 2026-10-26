@@ -145,15 +145,15 @@ void DefineHiggsPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // normalised shape; <mean> etc. in a label are replaced by properties of the data -----
     Plot plot("signalShape", "higgs/diphoton", "1d");
-    plot[1].AddData("diphoton/mgg_signalMC", "higgs", "simulation, mean = <mean[.2f]> GeV").Normalize().SetOptions(hist).SetColor(kRed + 1);
+    plot[1].AddData("diphoton/mgg_signalMC", "higgs", "simulation, mean = <mean[.2f]> GeV").Normalize().SetDrawOption(hist).SetColor(kRed + 1);
     plot[1].AddLegend(0.18, 0.9);
     plot[1]['Y'].SetTitle("normalised counts").SetRange(0., 0.05);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // expectation as a filled area, data as points ----------------------------------------
     Plot plot("massSpectrum", "higgs/fourLepton", "1d");
-    plot[1].AddData("fourLepton/m4l_sigPlusBkg", "higgs", "background + H(125)").SetOptions(hist).SetLine(kRed + 1, kSolid, 3.);
-    plot[1].AddData("fourLepton/m4l_background", "higgs", "background (Z#rightarrow4l, ZZ*, Z+jets)").SetOptions(hist).SetFill(kAzure - 9, 1001).SetLineColor(kAzure - 9);
+    plot[1].AddData("fourLepton/m4l_sigPlusBkg", "higgs", "background + H(125)").SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.);
+    plot[1].AddData("fourLepton/m4l_background", "higgs", "background (Z#rightarrow4l, ZZ*, Z+jets)").SetDrawOption(hist).SetFill(kAzure - 9, 1001).SetLineColor(kAzure - 9);
     plot[1].AddData("fourLepton/m4l_data", "higgs", "data").SetMarker(kBlack, kFullCircle, 1.2);
     plot[1].AddText(0.2, 0.9, {kExperiment, "H #rightarrow ZZ* #rightarrow 4l"});
     plot[1].AddLegend(0.2, 0.76);
@@ -163,10 +163,10 @@ void DefineHiggsPlots(PlotManager& pm)
   {  // "Brazil plot": uncertainty bands, a reference line, the first data defines the frame
     Plot plot("brazilPlot", "higgs/limits", "1d");
     // legend entries follow the data by default; here the bands should appear as filled boxes
-    plot[1].AddData("limits/band2sigma", "higgs", "expected #pm 2#sigma").SetOptions(band).SetFill(kOrange, 1001).SetLineColor(kOrange).SetLegendEntry(LegendEntry().SetDrawStyle("F"));
-    plot[1].AddData("limits/band1sigma", "higgs", "expected #pm 1#sigma").SetOptions(band).SetFill(kGreen + 1, 1001).SetLineColor(kGreen + 1).SetLegendEntry(LegendEntry().SetDrawStyle("F"));
-    plot[1].AddData("limits/expected", "higgs", "expected").SetOptions(line).SetLine(kBlack, kDashed, 3.);
-    plot[1].AddData("limits/observed", "higgs", "observed").SetOptions(points_line).SetMarker(kBlack, kFullCircle, 0.8);
+    plot[1].AddData("limits/band2sigma", "higgs", "expected #pm 2#sigma").SetDrawOption(band).SetFill(kOrange, 1001).SetLineColor(kOrange).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("limits/band1sigma", "higgs", "expected #pm 1#sigma").SetDrawOption(band).SetFill(kGreen + 1, 1001).SetLineColor(kGreen + 1).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("limits/expected", "higgs", "expected").SetDrawOption(line).SetLine(kBlack, kDashed, 3.);
+    plot[1].AddData("limits/observed", "higgs", "observed").SetDrawOption(points_line).SetMarker(kBlack, kFullCircle, 0.8);
     plot[1].SetRefFunc("1").SetLine(kRed + 1, kSolid, 2.);  // SM expectation
     plot[1].AddLegend(0.2, 0.9);
     plot[1]['Y'].SetLog().SetRange(0.08, 20.);
@@ -183,7 +183,7 @@ void DefineSpectraPlots(PlotManager& pm)
 {
   // templates: properties defined once, dataStyle("name") gives the data with these properties
   const Data dataStyle = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.);
-  const Data mcStyle = Data().SetDataSource("mc").SetOptions(hist).SetLine(kRed + 1, kSolid, 3.);
+  const Data mcStyle = Data().SetDataSource("mc").SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.);
 
   {  // ---------------------------------------------------------------------------------------
     Plot plot("ptSpectrum", "spectra", "1d");
@@ -265,17 +265,17 @@ void DefineSpectraPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // the same 2d histogram shown in 3d, as contours and as candles --------------------
     Plot plot3d("ptVsMultLego", "spectra/2dViews", "2d");
-    plot3d[1].AddData("ptVsMult", "data").RebinXY(4, 2).SetOptions(lego);
+    plot3d[1].AddData("ptVsMult", "data").RebinXY(4, 2).SetDrawOption(lego);
     plot3d[1].SetView(35., 225.);  // viewing angles theta and phi in degrees
     pm.AddPlot(plot3d);
 
     Plot plotContours("ptVsMultContours", "spectra/2dViews", "2d_logz");
-    plotContours[1].AddData("ptVsMult", "data").SetOptions(cont_fillz).SetContours(12);
+    plotContours[1].AddData("ptVsMult", "data").SetDrawOption(cont_fillz).SetContours(12);
     plotContours[1].SetPalette(kViridis);  // any ROOT palette, or a custom gradient like the colours above
     pm.AddPlot(plotContours);
 
     Plot plotCandles("ptVsMultCandles", "spectra/2dViews", "1d");
-    plotCandles[1].AddData("ptVsMult", "data").RebinX(10).SetOptions(candle);  // one candle per x bin
+    plotCandles[1].AddData("ptVsMult", "data").RebinX(10).SetDrawOption(candle);  // one candle per x bin
     plotCandles[1]['Y'].SetRange(0., 3.);
     pm.AddPlot(plotCandles);
   }  // -----------------------------------------------------------------------------------
@@ -294,7 +294,7 @@ void DefineDetectorPlots(PlotManager& pm)
   {  // data vs. simulation; Both() normalises numerator and denominator before dividing
     Plot plot("vertexZ", "detector/events", "1d_ratio");
     plot[1].AddData("hVtxZ", "EventQA", "data").Normalize();
-    plot[1].AddData("hVtxZ", "EventQA_MC", "simulation").Normalize().SetOptions(hist).SetLine(kRed + 1, kSolid, 3.);
+    plot[1].AddData("hVtxZ", "EventQA_MC", "simulation").Normalize().SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.);
     plot[1].AddLegend(0.189, 0.898);
     // the first data defines the frame: leave room for the simulation, which peaks higher
     plot[1]['Y'].SetTitle("normalised counts").SetMaxRange(0.036);
@@ -304,7 +304,7 @@ void DefineDetectorPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // labelled bins, with the bin contents printed on top -------------------------------
     Plot plot("eventSelection", "detector/events", "1d");
-    plot[1].AddData("hEventSelection", "EventQA").SetOptions("HIST TEXT0").SetTextFormat(".0f").SetFill(kAzure - 9, 1001);
+    plot[1].AddData("hEventSelection", "EventQA").SetDrawOption("HIST TEXT0").SetTextFormat(".0f").SetFill(kAzure - 9, 1001);
     plot[1]['Y'].SetRange(0., 1.2e6);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
@@ -340,8 +340,8 @@ void DefineDetectorPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // histograms from a tree: variables, binning and selections are chosen at plot time --
     Plot plot("dcaXY", "detector/tracking", "1d");
-    plot[1].AddData("tracks", "tracks", "primaries").Project1D({"dcaXY", 200, {-1., 1.}}).Filter("isPrimary").SetOptions(hist).SetLine(kBlue + 1, kSolid, 2.);
-    plot[1].AddData("tracks", "tracks", "secondaries").Project1D({"dcaXY", 200, {-1., 1.}}).Filter("!isPrimary").SetOptions(hist).SetLine(kRed + 1, kSolid, 2.);
+    plot[1].AddData("tracks", "tracks", "primaries").Project1D({"dcaXY", 200, {-1., 1.}}).Filter("isPrimary").SetDrawOption(hist).SetLine(kBlue + 1, kSolid, 2.);
+    plot[1].AddData("tracks", "tracks", "secondaries").Project1D({"dcaXY", 200, {-1., 1.}}).Filter("!isPrimary").SetDrawOption(hist).SetLine(kRed + 1, kSolid, 2.);
     plot[1].AddData("tracks", "tracks", "all tracks").Project1D({"dcaXY", 200, {-1., 1.}}).SetMarker(kBlack, kFullCircle, 0.6);
     plot[1].AddLegend(0.62, 0.9);
     plot[1]['X'].SetTitle("DCA_{#it{xy}} (cm)");
@@ -400,7 +400,7 @@ void DefineDetectorPlots(PlotManager& pm)
     Plot plot("diphotonMass", "detector/calorimeter", "1d");
     // ScaleX(1000.) converts the x axis from GeV to MeV; Smooth() reduces fluctuations of the simulation
     plot[1].AddData("hInvMassGG", "CaloQA", "data").ScaleX(1000.);
-    plot[1].AddData("hInvMassGG", "CaloQA_MC", "simulation (smoothed)").ScaleX(1000.).Smooth(2).SetOptions(hist).SetLine(kRed + 1, kSolid, 2.);
+    plot[1].AddData("hInvMassGG", "CaloQA_MC", "simulation (smoothed)").ScaleX(1000.).Smooth(2).SetDrawOption(hist).SetLine(kRed + 1, kSolid, 2.);
     plot[1].AddLegend(0.494, 0.902);
     plot[1].AddText(0.259, 0.916, "#pi^{0}");  // text at a fixed position (pad coordinates)
     plot[1].AddText(0.72, 0.32, "#eta");
@@ -424,7 +424,7 @@ void DefineDetectorPlots(PlotManager& pm)
   {  // shapes compared at their maxima; the overflow bin shows entries beyond the axis range
     Plot plot("pileUp", "detector/events", "1d");
     plot[1].AddData("hNPV", "EventQA", "data").NormalizeToMaximum().SetShowOverflowBins().SetScaleMaximum(1.3);
-    plot[1].AddData("hNPV", "EventQA_MC", "simulation").NormalizeToMaximum().SetShowOverflowBins().SetOptions(hist).SetLine(kRed + 1, kSolid, 3.);
+    plot[1].AddData("hNPV", "EventQA_MC", "simulation").NormalizeToMaximum().SetShowOverflowBins().SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.);
     plot[1].AddLegend(0.194, 0.911);
     plot[1]['Y'].SetTitle("normalised to maximum");
     pm.AddPlot(plot);
@@ -476,9 +476,9 @@ void DefineDetectorPlots(PlotManager& pm)
     Plot plot("systematicsBreakdown", "detector/systematics", "1d");
     plot[1].SetDefaultLineStyles({kDashed, kDotted, kDashDotted, 9});  // 9: long dashes
     for (const string& source : {"tracking", "pid", "material", "normalisation"}) {
-      plot[1].AddData("systematics", "systematics", source).Scatter("pt", source).SetOptions(line);
+      plot[1].AddData("systematics", "systematics", source).Scatter("pt", source).SetDrawOption(line);
     }
-    plot[1].AddData("systematics", "systematics", "total").Scatter("pt", "total").SetOptions(line).SetLine(kBlack, kSolid, 4.);
+    plot[1].AddData("systematics", "systematics", "total").Scatter("pt", "total").SetDrawOption(line).SetLine(kBlack, kSolid, 4.);
     plot[1].AddLegend(0.25, 0.9).SetNumColumns(2);
     plot[1]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})");
     plot[1]['Y'].SetTitle("relative uncertainty (%)").SetRange(0., 12.);
@@ -490,7 +490,7 @@ void DefineDetectorPlots(PlotManager& pm)
   // --------------------------------------------------------------------------------------
   {  // time axis: unix time stamps shown as dates ------------------------------------------
     Plot plot("integratedLuminosity", "detector/operation", "1d");
-    plot[1].AddData("luminosity", "luminosity").Scatter("time", "lumi").SetOptions(points_line);
+    plot[1].AddData("luminosity", "luminosity").Scatter("time", "lumi").SetDrawOption(points_line);
     plot[1].AddText(0.2, 0.9, {kExperiment, kCollisions, "2023"});
     plot[1]['X'].SetTimeFormat("%b%F1970-01-01 00:00:00").SetNumDivisions(508).SetTitle("");
     plot[1]['Y'].SetTitle("delivered luminosity (fb^{-1})");
@@ -507,7 +507,7 @@ void DefineCollisionPlots(PlotManager& pm)
 {
   {  // DivideBinWidth() turns counts in logarithmic bins into a density ---------------------
     Plot plot("massSpectrum", "collisions/dimuon", "1d");
-    plot[1].AddData("mMuMu", "dimuon").DivideBinWidth().SetOptions(hist).SetLine(kAzure + 2, kSolid, 2.);
+    plot[1].AddData("mMuMu", "dimuon").DivideBinWidth().SetDrawOption(hist).SetLine(kAzure + 2, kSolid, 2.);
     plot[1].AddText(0.249, 0.836, "#omega #phi");
     plot[1].AddText(0.378, 0.91, "J/#psi");
     plot[1].AddText(0.477, 0.82, "#psi'");
@@ -581,12 +581,12 @@ void DefineHeavyIonPlots(PlotManager& pm)
     }
     // the published values in the first panel: systematic uncertainties as boxes, statistical as bars,
     // both from the same table; they get their own (second) legend
-    plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high").SetOptions(boxes).SetFill(kOrange - 9, 1001).SetLineColor(kOrange + 1).SetLegend(2).SetLegendEntry(LegendEntry().SetDrawStyle("F"));
+    plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high").SetDrawOption(boxes).SetFill(kOrange - 9, 1001).SetLineColor(kOrange + 1).SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
     plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetMarker(kOrange + 1, kOpenCircle, 1.2).SetLegend(2);
     plot[1].AddLegend(0.2, 0.3);
     plot[1].AddLegend(0.2, 0.78);
     // a legend row that belongs to no data: a note on the normalisation
-    plot[3].AddLegend(0.1, 0.3).AddEntry("norm. unc. 5%").SetDrawStyle("F").SetFill(kGray, 1001);
+    plot[3].AddLegend(0.1, 0.3).AddEntry("norm. unc. 5%").SetSymbolElements("F").SetFill(kGray, 1001);
     plot[0]['X'].SetLog().SetRange(0.15, 10.);
     plot[0]['Y'].SetRange(0., 1.4).SetTitle("#it{R}_{AA}").SetTitleCenter();
     pm.AddPlot(plot);
@@ -630,7 +630,7 @@ void DefineHeavyIonPlots(PlotManager& pm)
     for (size_t i = 0; i < 2; ++i) {
       const string cent = centralities[2 * i];  // 0-10 and 30-50
       plot[i + 1].AddData("cent_" + cent + "/ptSpec", "heavyion", "Pb-Pb " + cent + "%");
-      plot[i + 1].AddData("ptSpec", "data", "pp #times #LT#it{N}_{coll}#GT").Scale(ncoll.at(cent)).SetOptions(hist).SetLine(kGray + 2, kDashed, 3.);
+      plot[i + 1].AddData("ptSpec", "data", "pp #times #LT#it{N}_{coll}#GT").Scale(ncoll.at(cent)).SetDrawOption(hist).SetLine(kGray + 2, kDashed, 3.);
       plot[i + 1].AddLegend();
       plot[i + 3].AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}).Numer().Scale(1. / ncoll.at(cent));
     }

@@ -30,7 +30,7 @@ def DefinePlots(pm: PlotManager):
     plot = Plot("myFirstPlot", "myGroup", "1d")
     plot[1].AddFunction("sin(x)/x", "sin(#it{x})/#it{x}")
     # plot[1].AddData("histName", "myData", "label").SetColor(kRed + 1)
-    # plot[1].AddData("dir/histName", "myData").Normalize().SetOptions(hist)
+    # plot[1].AddData("dir/histName", "myData").Normalize().SetDrawOption(hist)
     # plot[1].AddData("treeName", "myData").Project1D(("pt", 100, [0.0, 10.0])).Filter("abs(eta) < 0.8")
     # plot[1].AddRatio(["numerator", "myData"], ["denominator", "myData"]).SetIsCorrelated()
     plot[1].AddLegend(0.6, 0.9)  # upper left corner in pad coordinates, or AddLegend() to place it automatically

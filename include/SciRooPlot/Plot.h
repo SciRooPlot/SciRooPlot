@@ -48,7 +48,7 @@ namespace SciRooPlot
 // (1d: _xerr also draws the x errors, _endcaps draws end caps on the error bars, _smooth smooths, _nomarkers omits the markers;
 //  2d: _col colours the lines by the contents, _fill fills by the contents, a trailing z also draws the colour axis)
 // an alias that a data type cannot draw is reported and the data is drawn with the default of ROOT
-#define DRAWING_OPTIONS    \
+#define DRAW_OPTIONS       \
   OPT(points, 0)           \
   OPT(points_xerr)         \
   OPT(points_endcaps)      \
@@ -103,28 +103,28 @@ namespace SciRooPlot
   OPT(candle_meanline)     \
   OPT(violin)              \
   OPT(violin_minmax)
-enum drawing_options_t : uint8_t {
+enum draw_option_t : uint8_t {
 #define OPT(name, ...) name,
-  DRAWING_OPTIONS
+  DRAW_OPTIONS
 #undef OPT
 };
 // the aliases are stored by name
-inline std::string drawing_option_name(drawing_options_t option)
+inline std::string draw_option_name(draw_option_t option)
 {
   switch (option) {
 #define OPT(name, ...) \
   case name:           \
     return #name;
-    DRAWING_OPTIONS
+    DRAW_OPTIONS
 #undef OPT
   }
   return "";
 }
-inline std::optional<drawing_options_t> drawing_option_from_name(const std::string& name)
+inline std::optional<draw_option_t> draw_option_from_name(const std::string& name)
 {
 #define OPT(optName, ...) \
   if (name == #optName) return optName;
-  DRAWING_OPTIONS
+  DRAW_OPTIONS
 #undef OPT
   return std::nullopt;
 }
@@ -245,8 +245,8 @@ class Plot
   static float_t RoundWidth(float_t width, const char* what);
   static std::optional<float_t> RoundWidth(const std::optional<float_t>& width, const char* what);
   static void ReadWidthFromTree(const boost::property_tree::ptree& tree, std::optional<float_t>& target, const char* key);
-  static void ReadDrawingOption(const boost::property_tree::ptree& tree, std::optional<drawing_options_t>& option, const char* key);
-  static void PutDrawingOption(boost::property_tree::ptree& tree, const std::optional<drawing_options_t>& option, const char* key);
+  static void ReadDrawOption(const boost::property_tree::ptree& tree, std::optional<draw_option_t>& option, const char* key);
+  static void PutDrawOption(boost::property_tree::ptree& tree, const std::optional<draw_option_t>& option, const char* key);
 
   std::string mName;
   std::string mGroup;
@@ -481,7 +481,6 @@ class Plot::Pad
   };
 
   // properties
-  std::optional<std::string> mOptions;
   pad_position_t mPosition;
   pad_margin_t mMargins;
   pad_view_t mView;
@@ -514,13 +513,13 @@ class Plot::Pad
 class Plot::Pad::LegendEntry
 {
  public:
-  explicit LegendEntry(const std::optional<std::string>& label = {}, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& drawStyle = {});
+  explicit LegendEntry(const std::optional<std::string>& label = {}, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& symbolElements = {});
   explicit LegendEntry(const boost::property_tree::ptree& legendEntryTree);
   void Print() const { Plot::Print(GetPropertyTree(), "LegendEntry"); }
 
   LegendEntry& SetLabel(const std::string& label);
   LegendEntry& SetRefData(uint16_t refDataID);
-  LegendEntry& SetDrawStyle(const std::string& drawStyle);
+  LegendEntry& SetSymbolElements(const std::string& symbolElements);
   // position of a row added with LegendBox::AddEntry (by default after all other rows), relative to the rows of the data of the pad,
   // which are in the order of the data (dataID as in plot[padID](dataID)), whether or not that data has a row in this legend
   LegendEntry& AtTop();
@@ -559,7 +558,7 @@ class Plot::Pad::LegendEntry
   boost::property_tree::ptree GetPropertyTree() const;
   const auto& GetRefDataID() const { return mRefDataID; }
   const auto& GetLabel() const { return mLabel; }
-  const auto& GetDrawStyle() const { return mDrawStyle; }
+  const auto& GetSymbolElements() const { return mSymbolElements; }
 
   const auto& GetMarkerColor() const { return mMarker.color; }
   const auto& GetMarkerAlpha() const { return mMarker.alpha; }
@@ -583,7 +582,7 @@ class Plot::Pad::LegendEntry
  private:
   std::optional<std::string> mLabel;
   std::optional<uint16_t> mRefDataID;
-  std::optional<std::string> mDrawStyle;
+  std::optional<std::string> mSymbolElements;
   std::optional<position_t> mPosition;
   uint16_t mPositionDataID{};  // the data the position is relative to (for before and after)
   layout_t mFill;
@@ -635,9 +634,9 @@ class Plot::Pad::Data
   Data& SetLegendLabel(const std::string& legendLabel);
   Data& SetLegend(uint8_t legendID);
   Data& SetLegendEntry(const LegendEntry& legendEntry);
-  Data& SetOptions(const std::string& options);
-  Data& SetOptions(drawing_options_t optionAlias);
-  Data& UnsetOptions();
+  Data& SetDrawOption(const std::string& drawOption);
+  Data& SetDrawOption(draw_option_t optionAlias);
+  Data& SetDrawOption();
   Data& SetTextFormat(const std::string& textFormat);
   // statistics box of a histogram: the letters of TStyle::SetOptStat (without 'n'), the title (if given) is its first line
   Data& SetShowStats(const std::string& format = "emr", const std::optional<std::string>& title = {});
@@ -762,8 +761,8 @@ class Plot::Pad::Data
   const auto& GetFillColor() const { return mFill.color; }
   const auto& GetFillAlpha() const { return mFill.alpha; }
   const auto& GetFillStyle() const { return mFill.style; }
-  const auto& GetDrawingOptions() const { return mDrawingOptions; }
-  const auto& GetDrawingOptionAlias() const { return mDrawingOptionAlias; }
+  const auto& GetDrawOption() const { return mDrawOption; }
+  const auto& GetDrawOptionAlias() const { return mDrawOptionAlias; }
   const auto& GetTextFormat() const { return mTextFormat; }
   const auto& GetStatsFormat() const { return mStats.format; }
   const auto& GetStatsTitle() const { return mStats.title; }
@@ -884,8 +883,8 @@ class Plot::Pad::Data
   std::string mName;
   std::string mDataSource;
 
-  std::optional<std::string> mDrawingOptions;
-  std::optional<drawing_options_t> mDrawingOptionAlias;
+  std::optional<std::string> mDrawOption;
+  std::optional<draw_option_t> mDrawOptionAlias;
   std::optional<std::string> mTextFormat;
 
   struct stats_t {
@@ -971,8 +970,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(SetLegendLabel)
   FORWARD_TO_DATA(SetLegend)
   FORWARD_TO_DATA(SetLegendEntry)
-  FORWARD_TO_DATA(SetOptions)
-  FORWARD_TO_DATA(UnsetOptions)
+  FORWARD_TO_DATA(SetDrawOption)
   FORWARD_TO_DATA(SetTextFormat)
   FORWARD_TO_DATA(SetShowStats)
   FORWARD_TO_DATA(SetStatsBox)
@@ -1374,7 +1372,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   LegendEntry& AddEntry(const std::string& label = "");  // a row of its own (with an empty label: an empty line)
   LegendBox& SetTitle(const std::string& title);
   LegendBox& SetNumColumns(uint8_t numColumns);
-  LegendBox& SetDefaultDrawStyle(const std::string& drawStyle);
+  LegendBox& SetDefaultSymbolElements(const std::string& symbolElements);
   LegendBox& SetDefaultColor(int16_t color);
   LegendBox& SetDefaultAlpha(float_t alpha);
   LegendBox& SetDefaultLineColor(int16_t color);
@@ -1403,7 +1401,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   void ShiftDataIDs(uint16_t offset);
 
   const auto& GetEntries() const { return mLegendEntries; }
-  const auto& GetDefaultDrawStyle() const { return mDrawStyleDefault; }
+  const auto& GetDefaultSymbolElements() const { return mSymbolElementsDefault; }
   const auto& GetDefaultMarkerColor() const { return mMarkerDefault.color; }
   const auto& GetDefaultMarkerAlpha() const { return mMarkerDefault.alpha; }
   const auto& GetDefaultMarkerStyle() const { return mMarkerDefault.style; }
@@ -1426,7 +1424,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   layout_t mLineDefault;
   layout_t mMarkerDefault;
   layout_t mFillDefault;
-  std::optional<std::string> mDrawStyleDefault;
+  std::optional<std::string> mSymbolElementsDefault;
   std::optional<float_t> mSymbolColScale;
 
   void MergeLegendEntries(uint16_t nData);

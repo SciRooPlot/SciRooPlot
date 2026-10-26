@@ -58,8 +58,8 @@ int main() {
   pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
   {
     Plot plot("spectrum", "paper/pt", "1d_ratio");              // name, group[/subgroup], base plot
-    plot[1].AddData("hPt", "data", "data <mean[.2f]>").SetOptions(points).SetColor(kBlue + 1);
-    plot[1].AddData("hPtMC", "mc", "simulation").SetOptions(curve);
+    plot[1].AddData("hPt", "data", "data <mean[.2f]>").SetDrawOption(points).SetColor(kBlue + 1);
+    plot[1].AddData("hPtMC", "mc", "simulation").SetDrawOption(curve);
     plot[2].AddRatio({"hPt", "data"}, {"hPtMC", "mc"}).SetIsCorrelated();
     plot[1].AddLegend();                                        // auto-placed, or AddLegend(0.6, 0.9) / AddLegend(top_right)
     plot[0]['X'].SetRange(0.5, 20.).SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})");
@@ -117,8 +117,8 @@ plot[1].AddData("hist", "src", "label");                    // histogram, graph,
 plot[1].AddFunction("sin(x)/x", "label");  plot[1].AddPoints({x...}, {y...});  plot[1].AddLine({x1,y1}, {x2,y2});
 plot[1].AddFunction("[](double* x, double* p) { return std::exp(-x[0] * x[1]); }");  // C++ lambda as text: x[0..2] set the dimension, no parameters
 // any callable (with captures, also from python): TF1 f("f", callable, xmin, xmax, 0); f.SetNpx(n); pm.AddDataSource("src", &f); then AddData("f", "src")
-plot[1].AddData(myTemplate("hist"), "label");               // Data template: Data().SetOptions(curve).SetColor(kRed) then template("name"[, "src"])
-.SetOptions(points | "HIST C")     // alias (preferred) or raw ROOT option string
+plot[1].AddData(myTemplate("hist"), "label");               // Data template: Data().SetDrawOption(curve).SetColor(kRed) then template("name"[, "src"])
+.SetDrawOption(points | "HIST C")     // alias (preferred) or raw ROOT option string
 .SetColor(c).SetAlpha(a)           // all of marker, line, fill at once
 .SetMarker(color, style, size).SetLine(color, style, width).SetFill(color, style)  (+ SetMarkerColor, SetLineStyle, ... SetFillAlpha)
 .SetRangeX(a, b).SetMaxRangeX(b).SetRangeY(a, b)             // visible range of this data, independent of the axis
@@ -131,7 +131,7 @@ plot[1].AddData(myTemplate("hist"), "label");               // Data template: Da
 ```
 Labels may contain `<name> <title> <entries> <integral> <maximum> <minimum> <mean>` with printf formats: `"avg = <mean[.2f]>"` (graphs: `<entries>` points, `<maximum>`/`<minimum>` of y; `<integral>`, `<mean>`, `<maximum>`, `<minimum>` cover the drawn range, `<entries>` is the stored total), and from the definition `<source>`, `<projection>` (`x`, `y:x`, `prof. y:x`, weight in parentheses) and `<selection>` (filters joined with `&&`, entries range, projection ranges); histogram projections name the axes by the axis titles of the input (`x`, `y`, `z` where a title is empty), tree requests by the variables; an empty placeholder takes one separating space with it, so `"<name> <projection> <selection>"` never ends in a space. `"<name> <selection>"` tells apart requests differing only in the filter. ROOT TLatex syntax works in all texts (`#it{p}_{T}`, `#sqrt{s}`).
 
-Without `SetOptions` the same rule holds for histograms and graphs: a fill set → `hist` (graph: `area`); a marker style or size set on the data, or non-zero errors → `points`; otherwise `hist` (graph: `line`); 2D histograms, graphs and functions → `colz` (one colour axis covering all 2D data of the pad). The legend row follows what is drawn.
+Without `SetDrawOption` the same rule holds for histograms and graphs: a fill set → `hist` (graph: `area`); a marker style or size set on the data, or non-zero errors → `points`; otherwise `hist` (graph: `line`); 2D histograms, graphs and functions → `colz` (one colour axis covering all 2D data of the pad). The legend row follows what is drawn.
 Drawing option aliases (one appearance for every type; histograms and graphs are interchangeable, the data is converted when ROOT lacks the option):
 
 | 1D alias | look | 2D alias | look |
@@ -185,19 +185,19 @@ Column expressions and filters are C++ expressions over the column/leaf names (e
 ```cpp
 plot[1].AddLegend();  AddLegend(top_right);  AddLegend(0.5, 0.8[, "title"]);   // corners: best_corner, top_left, top_right, bottom_right, bottom_left
 plot[1].GetLegend(2).SetNumColumns(2).SetDefaultLineWidth(5.).SetNoBox().SetTransparent();
-plot[1].AddData("band", "src", "unc.").SetLegendEntry(LegendEntry().SetDrawStyle("F"));   // style of a data's row (label stays on the data); draw style letters: L line, P marker, F fill, E error bar
-plot[1].GetLegend(1).AddEntry("custom").SetDrawStyle("L").SetLine(kRed, kSolid, 2.);    // row of its own (AddEntry(): empty line); SetRefData(n): symbol of data n
+plot[1].AddData("band", "src", "unc.").SetLegendEntry(LegendEntry().SetSymbolElements("F"));   // style of a data's row (label stays on the data); symbol element letters: L line, P marker, F fill, E error bar
+plot[1].GetLegend(1).AddEntry("custom").SetSymbolElements("L").SetLine(kRed, kSolid, 2.);    // row of its own (AddEntry(): empty line); SetRefData(n): symbol of data n
 plot[1].GetLegend(1).AddEntry("#bf{group}").BeforeData(4);   // placed relative to data n of the pad (as in plot[1](n)): AtTop(), BeforeData(n), AfterData(n); default: at the end
 plot[1].AddText({"line one", "line two"});  AddText(top_left, "text");  AddText(0.2, 0.9, "text").SetTextFont(43).SetTextSize(20).SetTextAlign(13);   // font 43: size in pixels
 ```
-Positions are pad coordinates (0–1) of the upper left corner, `.SetUserCoordinates()` switches to axis units. Legend symbols are derived from what is actually drawn; override with `SetDrawStyle`/`SetDefaultDrawStyle`.
+Positions are pad coordinates (0–1) of the upper left corner, `.SetUserCoordinates()` switches to axis units. Legend symbols are derived from what is actually drawn; override with `SetSymbolElements`/`SetDefaultSymbolElements`.
 
 ## Practices to suggest (this is where SciRooPlot saves work)
 
 **Define appearance once, reuse it everywhere.** A `Data` without a name is a template; calling it with a name gives a data object with all its settings:
 ```cpp
 const Data dataStyle = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.);
-const Data mcStyle = Data().SetDataSource("mc").SetOptions(hist).SetLine(kRed + 1, kSolid, 3.);
+const Data mcStyle = Data().SetDataSource("mc").SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.);
 plot[1].AddData(dataStyle("ptSpec"), "data");        // name from the template's data source
 plot[1].AddData(mcStyle("ptSpec", "otherMC"), "MC"); // or another data source
 plot[2].AddRatio(dataStyle("ptSpec"), mcStyle("ptSpec"));

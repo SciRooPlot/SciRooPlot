@@ -126,16 +126,16 @@ string Plot::NormalizeGroup(const string& group)
  * Drawing option aliases are stored by name.
  */
 //**************************************************************************************************
-void Plot::ReadDrawingOption(const ptree& tree, optional<drawing_options_t>& option, const char* key)
+void Plot::ReadDrawOption(const ptree& tree, optional<draw_option_t>& option, const char* key)
 {
   if (auto name = tree.get_optional<string>(key)) {
-    option = drawing_option_from_name(*name);
+    option = draw_option_from_name(*name);
     if (!option) logger::warning("Unknown drawing option {} is ignored.", *name);
   }
 }
-void Plot::PutDrawingOption(ptree& tree, const optional<drawing_options_t>& option, const char* key)
+void Plot::PutDrawOption(ptree& tree, const optional<draw_option_t>& option, const char* key)
 {
-  if (option) tree.put(key, drawing_option_name(*option));
+  if (option) tree.put(key, draw_option_name(*option));
 }
 
 //**************************************************************************************************
@@ -947,7 +947,7 @@ auto Plot::Pad::SetView(double_t theta, double_t phi) -> decltype(*this)
  */
 //**************************************************************************************************
 Plot::Pad::Pad(const Pad& other)
-  : mOptions(other.mOptions), mPosition(other.mPosition), mMargins(other.mMargins), mView(other.mView),
+  : mPosition(other.mPosition), mMargins(other.mMargins), mView(other.mView),
     mFill(other.mFill), mFrameFill(other.mFrameFill), mFrameBorder(other.mFrameBorder), mText(other.mText),
     mMarkerDefaults(other.mMarkerDefaults), mLineDefaults(other.mLineDefaults), mFillDefaults(other.mFillDefaults),
     mCandleOptionDefaults(other.mCandleOptionDefaults),
@@ -990,7 +990,6 @@ Plot::Pad& Plot::Pad::operator=(const Pad& other)
 //**************************************************************************************************
 Plot::Pad::Pad(const ptree& padTree)
 {
-  read_from_tree(padTree, mOptions, "options");
   read_from_tree(padTree, mPosition.xlow, "position_xlow");
   read_from_tree(padTree, mPosition.ylow, "position_ylow");
   read_from_tree(padTree, mPosition.xup, "position_xup");
@@ -1082,7 +1081,6 @@ ptree Plot::Pad::GetPropertyTree() const
 {
   // convert properties of plot to ptree
   ptree padTree;
-  put_in_tree(padTree, mOptions, "options");
   put_in_tree(padTree, mPosition.xlow, "position_xlow");
   put_in_tree(padTree, mPosition.ylow, "position_ylow");
   put_in_tree(padTree, mPosition.xup, "position_xup");
@@ -1172,7 +1170,6 @@ ptree Plot::Pad::GetPropertyTree() const
 void Plot::Pad::operator+=(const Pad& pad)
 {
   if (this == &pad) logger::throw_invalid_argument("Cannot add a pad to itself.");
-  if (pad.mOptions) mOptions = pad.mOptions;
   if (pad.mPosition.xlow) mPosition.xlow = pad.mPosition.xlow;
   if (pad.mPosition.ylow) mPosition.ylow = pad.mPosition.ylow;
   if (pad.mPosition.xup) mPosition.xup = pad.mPosition.xup;
@@ -1435,7 +1432,7 @@ Plot::Pad::Data& Plot::Pad::AddPoints(const vector<pair<double_t, double_t>>& po
 Plot::Pad::Data& Plot::Pad::AddLine(pair<double_t, double_t> pos1, pair<double_t, double_t> pos2, const optional<string>& label)
 {
   auto& data = AddPoints({pos1.first, pos2.first}, {pos1.second, pos2.second}, label);
-  data.SetOptions(line);
+  data.SetDrawOption(line);
   return data;
 }
 
@@ -1653,8 +1650,8 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mLegend.label, "legend_label");
   read_from_tree(dataTree, mLegend.id, "legend_id");
   if (const auto entryTree = dataTree.get_child_optional("legend_entry")) mLegend.entry = LegendEntry(*entryTree);
-  read_from_tree(dataTree, mDrawingOptions, "drawing_options");
-  ReadDrawingOption(dataTree, mDrawingOptionAlias, "drawing_option_alias");
+  read_from_tree(dataTree, mDrawOption, "draw_option");
+  ReadDrawOption(dataTree, mDrawOptionAlias, "draw_option_alias");
   read_from_tree(dataTree, mTextFormat, "text_format");
   read_from_tree(dataTree, mStats.format, "stats_format");
   read_from_tree(dataTree, mStats.title, "stats_title");
@@ -1810,8 +1807,8 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mLegend.label, "legend_label");
   put_in_tree(dataTree, mLegend.id, "legend_id");
   if (mLegend.entry) dataTree.put_child("legend_entry", mLegend.entry->GetPropertyTree());
-  put_in_tree(dataTree, mDrawingOptions, "drawing_options");
-  PutDrawingOption(dataTree, mDrawingOptionAlias, "drawing_option_alias");
+  put_in_tree(dataTree, mDrawOption, "draw_option");
+  PutDrawOption(dataTree, mDrawOptionAlias, "draw_option_alias");
   put_in_tree(dataTree, mTextFormat, "text_format");
   put_in_tree(dataTree, mStats.format, "stats_format");
   put_in_tree(dataTree, mStats.title, "stats_title");
@@ -1892,9 +1889,9 @@ Plot::Pad::Ratio& Plot::Pad::Data::AsRatio()
 auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
 {
   // set all properties related to the appearance of the data exactly as specified in the layout
-  mDrawingOptions = dataLayout.mDrawingOptions;
+  mDrawOption = dataLayout.mDrawOption;
   mKeepInputStyle = dataLayout.mKeepInputStyle;
-  mDrawingOptionAlias = dataLayout.mDrawingOptionAlias;
+  mDrawOptionAlias = dataLayout.mDrawOptionAlias;
   mTextFormat = dataLayout.mTextFormat;
   mLegend.entry = dataLayout.mLegend.entry;
   mRangeX.min = dataLayout.mRangeX.min;
@@ -1923,9 +1920,11 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
 auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
 {
   // apply only the properties of the layout which are set
-  set_if(dataLayout.mDrawingOptions, mDrawingOptions);
+  if (dataLayout.mDrawOption || dataLayout.mDrawOptionAlias) {  // string and alias are one setting: the layout's replaces both
+    mDrawOption = dataLayout.mDrawOption;
+    mDrawOptionAlias = dataLayout.mDrawOptionAlias;
+  }
   if (dataLayout.mKeepInputStyle) mKeepInputStyle = true;
-  set_if(dataLayout.mDrawingOptionAlias, mDrawingOptionAlias);
   set_if(dataLayout.mTextFormat, mTextFormat);
   set_if(dataLayout.mLegend.entry, mLegend.entry);
   set_if(dataLayout.mRangeX.min, mRangeX.min);
@@ -1984,20 +1983,22 @@ auto Plot::Pad::Data::SetLegendEntry(const LegendEntry& legendEntry) -> decltype
   }
   return *this;
 }
-auto Plot::Pad::Data::SetOptions(const string& options) -> decltype(*this)
+auto Plot::Pad::Data::SetDrawOption(const string& drawOption) -> decltype(*this)
 {
-  mDrawingOptions = options;
+  mDrawOption = drawOption;
+  mDrawOptionAlias = {};
   return *this;
 }
-auto Plot::Pad::Data::SetOptions(drawing_options_t optionAlias) -> decltype(*this)
+auto Plot::Pad::Data::SetDrawOption(draw_option_t optionAlias) -> decltype(*this)
 {
-  mDrawingOptionAlias = optionAlias;
+  mDrawOptionAlias = optionAlias;
+  mDrawOption = {};
   return *this;
 }
-auto Plot::Pad::Data::UnsetOptions() -> decltype(*this)
+auto Plot::Pad::Data::SetDrawOption() -> decltype(*this)
 {
-  mDrawingOptionAlias = {};
-  mDrawingOptions = {};
+  mDrawOptionAlias = {};
+  mDrawOption = {};
   return *this;
 }
 auto Plot::Pad::Data::SetTextFormat(const string& textFormat) -> decltype(*this)
@@ -3862,7 +3863,7 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
   if (const auto numColumns = get_from_tree<uint8_t>(legendBoxTree, "num_columns")) {
     SetNumColumns(*numColumns);
   }
-  read_from_tree(legendBoxTree, mDrawStyleDefault, "default_draw_style");
+  read_from_tree(legendBoxTree, mSymbolElementsDefault, "default_symbol_elements");
   read_from_tree(legendBoxTree, mMarkerDefault.color, "default_marker_color");
   read_from_tree(legendBoxTree, mMarkerDefault.alpha, "default_marker_alpha");
   read_from_tree(legendBoxTree, mMarkerDefault.style, "default_marker_style");
@@ -3891,7 +3892,7 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
   ptree legendBoxTree = Box::GetPropertyTree();
   put_in_tree(legendBoxTree, mTitle, "title");
   put_in_tree(legendBoxTree, mNumColumns, "num_columns");
-  put_in_tree(legendBoxTree, mDrawStyleDefault, "default_draw_style");
+  put_in_tree(legendBoxTree, mSymbolElementsDefault, "default_symbol_elements");
   put_in_tree(legendBoxTree, mMarkerDefault.color, "default_marker_color");
   put_in_tree(legendBoxTree, mMarkerDefault.alpha, "default_marker_alpha");
   put_in_tree(legendBoxTree, mMarkerDefault.style, "default_marker_style");
@@ -3938,9 +3939,9 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns)
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultDrawStyle(const string& drawStyle)
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultSymbolElements(const string& symbolElements)
 {
-  mDrawStyleDefault = drawStyle;
+  mSymbolElementsDefault = symbolElements;
   return *this;
 }
 
@@ -4094,11 +4095,11 @@ void Plot::Pad::LegendBox::MergeLegendEntries(uint16_t nData)
  * Construct LegendEntry.
  */
 //**************************************************************************************************
-Plot::Pad::LegendEntry::LegendEntry(const optional<string>& label, const optional<uint16_t>& refDataID, const optional<string>& drawStyle)
+Plot::Pad::LegendEntry::LegendEntry(const optional<string>& label, const optional<uint16_t>& refDataID, const optional<string>& symbolElements)
 {
   mLabel = label;
   mRefDataID = refDataID;
-  mDrawStyle = drawStyle;
+  mSymbolElements = symbolElements;
 }
 
 //**************************************************************************************************
@@ -4110,7 +4111,7 @@ Plot::Pad::LegendEntry::LegendEntry(const ptree& legendEntryTree)
 {
   read_from_tree(legendEntryTree, mLabel, "label");
   read_from_tree(legendEntryTree, mRefDataID, "ref_data_id");
-  read_from_tree(legendEntryTree, mDrawStyle, "draw_style");
+  read_from_tree(legendEntryTree, mSymbolElements, "symbol_elements");
   if (const auto position = get_from_tree<string>(legendEntryTree, "position")) {
     if (*position == "top") {
       AtTop();
@@ -4149,7 +4150,7 @@ ptree Plot::Pad::LegendEntry::GetPropertyTree() const
   ptree legendEntryTree;
   put_in_tree(legendEntryTree, mLabel, "label");
   put_in_tree(legendEntryTree, mRefDataID, "ref_data_id");
-  put_in_tree(legendEntryTree, mDrawStyle, "draw_style");
+  put_in_tree(legendEntryTree, mSymbolElements, "symbol_elements");
   if (mPosition) {
     legendEntryTree.put("position", (mPosition == position_t::top) ? "top" : ((mPosition == position_t::before) ? "before" : "after"));
     if (mPosition != position_t::top) legendEntryTree.put("position_data", mPositionDataID);
@@ -4180,7 +4181,7 @@ ptree Plot::Pad::LegendEntry::GetPropertyTree() const
 void Plot::Pad::LegendEntry::operator+=(
   const Plot::Pad::LegendEntry& legendEntry)
 {
-  if (legendEntry.mDrawStyle) this->mDrawStyle = legendEntry.mDrawStyle;
+  if (legendEntry.mSymbolElements) this->mSymbolElements = legendEntry.mSymbolElements;
   if (legendEntry.mLabel) this->mLabel = legendEntry.mLabel;
   if (legendEntry.mRefDataID) this->mRefDataID = legendEntry.mRefDataID;
   if (legendEntry.mMarker.color) this->mMarker.color = legendEntry.mMarker.color;
@@ -4218,9 +4219,9 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetRefData(uint16_t refDataID)
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetDrawStyle(const string& drawStyle)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetSymbolElements(const string& symbolElements)
 {
-  mDrawStyle = drawStyle;
+  mSymbolElements = symbolElements;
   return *this;
 }
 

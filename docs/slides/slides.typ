@@ -1184,7 +1184,7 @@
     [
       - Chain setters directly onto `AddData()`, or adjust the appearance later via `plot[1](n)` -- short for `plot[1].GetData(n)`.
 
-      - Drawing styles are configured via `SetOptions()`, accepting both native ROOT drawing option strings and predefined aliases (e.g. `points`, `line`, `curve`, `band`, `boxes`, `hist`, `colz`).
+      - Drawing styles are configured via `SetDrawOption()`, accepting both native ROOT drawing option strings and predefined aliases (e.g. `points`, `line`, `curve`, `band`, `boxes`, `hist`, `colz`).
 
       - A `Data` object can be defined once and reused as template: `layout("name")` gives the data with all its properties (appearance, projections, modifiers), ensuring a consistent appearance.
 
@@ -1194,8 +1194,8 @@
       #code-block(
         [
           ```cpp
-          plot[1].AddData("h", "sourceA").SetOptions("HIST");
-          plot[1].AddData("h", "sourceA").SetOptions(points);
+          plot[1].AddData("h", "sourceA").SetDrawOption("HIST");
+          plot[1].AddData("h", "sourceA").SetDrawOption(points);
 
           // modify data appearance later
           plot[1](1).SetColor(kRed);
@@ -1203,7 +1203,7 @@
 
           Data layout = Data()
             .SetDataSource("sourceA")
-            .SetOptions(curve)
+            .SetDrawOption(curve)
             .SetLineStyle(kDashDotted)
             .SetLineWidth(4.)
             .SetLineColor(kOrange);
@@ -1217,8 +1217,8 @@
         ],
         [
           ```python
-          plot[1].AddData("h", "sourceA").SetOptions("HIST")
-          plot[1].AddData("h", "sourceA").SetOptions(points)
+          plot[1].AddData("h", "sourceA").SetDrawOption("HIST")
+          plot[1].AddData("h", "sourceA").SetDrawOption(points)
 
           # modify data appearance later
           plot[1](1).SetColor(kRed)
@@ -1226,7 +1226,7 @@
 
           layout = (Data()
               .SetDataSource("sourceA")
-              .SetOptions(curve)
+              .SetDrawOption(curve)
               .SetLineStyle(kDashDotted)
               .SetLineWidth(4.)
               .SetLineColor(kOrange))
@@ -1347,7 +1347,7 @@
 
           plot[1].GetLegend(2)
                  .AddEntry("Best fit")
-                 .SetDrawStyle("L").SetLine(kRed, kSolid, 2.);
+                 .SetSymbolElements("L").SetLine(kRed, kSolid, 2.);
 
           // auto-placed: best-fitting or given corner
           plot[1].AddLegend();
@@ -1368,7 +1368,7 @@
           # legend 2 ("Graph")
           plot[1].AddLegend(0.2, 0.2)
 
-          plot[1].GetLegend(2).AddEntry("Best fit").SetDrawStyle("L").SetLine(kRed, kSolid, 2.)
+          plot[1].GetLegend(2).AddEntry("Best fit").SetSymbolElements("L").SetLine(kRed, kSolid, 2.)
 
           # auto-placed: best-fitting or given corner
           plot[1].AddLegend()
@@ -1916,8 +1916,8 @@
         [`SetScaleMinimum(factor)` / `SetScaleMaximum(factor)`], [Stretch the auto-computed draw range by a factor, without touching the data.],
         [`SetShowOverflowBins(showOverflowBins = true)`], [Include overflow bins in the display.],
         [`SetLegendLabel(label)` / `SetLegend(legendID)`], [Set legend text, or assign to a specific legend.],
-        [`SetLegendEntry(entry)`], [Appearance of the data's legend row, e.g. `LegendEntry().SetDrawStyle("F")`.],
-        [#names("SetOptions(options) / SetOptions(alias)", "UnsetOptions()")], [Set a ROOT draw-option string or one of the #link(<appx-drawing-options>)[#text(fill: main-color)[predefined aliases]], or remove it.],
+        [`SetLegendEntry(entry)`], [Appearance of the data's legend row, e.g. `LegendEntry().SetSymbolElements("F")`.],
+        [#names("SetDrawOption(option) / SetDrawOption(alias)", "SetDrawOption()")], [Set a ROOT draw-option string or one of the #link(<appx-drawing-options>)[#text(fill: main-color)[predefined aliases]], or remove it.],
         [`SetTextFormat(fmt)`], [Number format of bin contents drawn with the `TEXT` option, e.g. `".0f"`.],
       ), text-size: 12pt)
     ],
@@ -2008,7 +2008,7 @@
       ), col-widths: (52%, 48%), text-size: 12pt)
       #v(0.6em)
       #api-section("LegendEntry: content and place", (
-        [`SetLabel(label)` / `SetDrawStyle(style)`], [Label text, or draw style of this entry (e.g. `"L"`, `"EP"`, `"F"`).],
+        [`SetLabel(label)` / `SetSymbolElements(elements)`], [Label text, or symbol elements of this entry (e.g. `"L"`, `"EP"`, `"F"`).],
         [`SetRefData(refDataID)`], [Take the style from data number `refDataID` of the pad.],
         [`AtTop()` / `BeforeData(n)` / `AfterData(n)`], [Place a row added with `AddEntry`.],
       ), col-widths: (52%, 48%), text-size: 12pt)
@@ -2030,7 +2030,7 @@
     gutter: 2%,
     [
       #api-section("LegendBox: all entries", (
-        [`SetDefaultDrawStyle(style)`], [Draw style of entries without their own, e.g. `"L"`, `"EP"`, `"F"` (default: chosen from the data).],
+        [`SetDefaultSymbolElements(elements)`], [Symbol elements of entries without their own, e.g. `"L"`, `"EP"`, `"F"` (default: chosen from the data).],
         [`SetDefaultColor(color)` / `SetDefaultAlpha(alpha)`], [Marker, line and fill colour (or transparency) together.],
         [#names("SetDefaultMarkerColor(color)", "SetDefaultMarkerAlpha(alpha)", "SetDefaultMarkerStyle(style)", "SetDefaultMarkerSize(size)")], [Marker appearance.],
         [#names("SetDefaultLineColor(color)", "SetDefaultLineAlpha(alpha)", "SetDefaultLineStyle(style)", "SetDefaultLineWidth(width)")], [Line appearance.],
@@ -2053,7 +2053,7 @@
 #slide[
   #[]<appx-drawing-options>
   #slide-title("Appendix: Drawing Options – Histograms & Graphs")
-  - Pass any alias below to `SetOptions()` instead of a raw ROOT draw-option string -- the table shows the actual ROOT string it expands to for each data kind. Without an option: `hist` with a fill (graphs: `area`), `points` with a marker set or errors, else `hist` (graphs: `line`); 2D: `colz`.
+  - Pass any alias below to `SetDrawOption()` instead of a raw ROOT draw-option string -- the table shows the actual ROOT string it expands to for each data kind. Without an option: `hist` with a fill (graphs: `area`), `points` with a marker set or errors, else `hist` (graphs: `line`); 2D: `colz`.
   - The base word names the appearance, suffixes add one feature: `_xerr` also draws the x errors, `_endcaps` draws end caps, `_text` writes the values, `_arrows` ends the error bars with arrows (limits), `_smooth` smooths, `_nomarkers` omits the markers, `_clipped` cuts the line at the frame instead of drawing it along the frame edge. Every alias works for both kinds: where ROOT has no option for one of them, the data is converted and drawn as the other.
   #v(0.4em)
   #block(
