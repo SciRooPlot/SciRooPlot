@@ -194,13 +194,13 @@ Positions are pad coordinates (0–1) of the upper left corner, `.SetUserCoordin
 
 ## Practices to suggest (this is where SciRooPlot saves work)
 
-**Define appearance once, reuse it everywhere.** A `Data` without a name is a template; calling it with a name gives a data object with all its settings:
+**Define appearance once, reuse it everywhere.** Each kind of data (measured points, simulation, model, systematics) should look the same in every figure. A `Data` without a name is a template for one kind; calling it with a name gives a data object with all its settings, so plots only name the data and a change of the template changes every figure:
 ```cpp
-const Data dataStyle = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.);
-const Data mcStyle = Data().SetDataSource("mc").SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.);
-plot[1].AddData(dataStyle("ptSpec"), "data");        // name from the template's data source
-plot[1].AddData(mcStyle("ptSpec", "otherMC"), "MC"); // or another data source
-plot[2].AddRatio(dataStyle("ptSpec"), mcStyle("ptSpec"));
+const Data measured = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.);
+const Data simulated = Data().SetDataSource("mc").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.);
+plot[1].AddData(measured("ptSpec"), "data");               // name from the template's data source
+plot[1].AddData(simulated("ptSpec", "otherMC"), "MC");     // or another data source
+plot[2].AddRatio(measured("ptSpec"), simulated("ptSpec"));
 ```
 Templates carry everything a `Data` has (options, colours, ranges, modifiers, projections, tree queries) and can be kept in a `map` keyed by an enum. `.SetLayout(tmpl)` / `.ApplyLayout(tmpl)` take over only the appearance of a template (drawing options, text format, ranges, marker, line, fill, contours) on an existing data; `ApplyLayout` only what is set in it. Put them (and label constants like the experiment name) at file scope of `DefinePlots`.
 

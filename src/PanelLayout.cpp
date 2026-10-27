@@ -290,6 +290,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
   auto cellAt = [&](size_t r, size_t c) -> const Panel* { return (r < nRows && c < nCols) ? grid[r][c] : nullptr; };
   auto isPanel = [](const Panel* cell) { return cell && !cell->mEmpty; };
   auto isEmpty = [](const Panel* cell) { return cell && cell->mEmpty; };
+  auto rightMargin = [&](size_t col) { return colZAxis[col] ? mZAxisMargin : mMarginRight; };  // room right of a frame for labels or the colour scale
   const bool singlePanel = (nRows == 1 && nCols == 1);
   uint8_t padID = 1;
   for (size_t r = 0; r < nRows; ++r) {
@@ -303,13 +304,13 @@ void PanelLayout::ApplyTo(Plot& plot) const
       // a panel keeps the margin for its labels, and the empty cell gets what the labels of the panels around it do not need
       double_t x0{}, x1{}, y0{}, y1{};
       if (cell->mEmpty) {
-        x0 = (c == 0) ? 0. : (isPanel(left) ? frameRight[c - 1] + mMarginRight : boundaryX[c - 1]);
+        x0 = (c == 0) ? 0. : (isPanel(left) ? frameRight[c - 1] + rightMargin(c - 1) : boundaryX[c - 1]);
         x1 = (c + 1 == nCols) ? canvasWidth : (isPanel(right) ? frameLeft[c + 1] - mMarginLeft : boundaryX[c]);
         y0 = (r == 0) ? 0. : (isPanel(above) ? frameBottom[r - 1] + mMarginBottom : boundaryY[r - 1]);
         y1 = (r + 1 == nRows) ? canvasHeight : (isPanel(below) ? frameTop[r + 1] - mMarginTop : boundaryY[r]);
       } else {
         x0 = (c == 0) ? 0. : (isEmpty(left) ? frameLeft[c] - mMarginLeft : boundaryX[c - 1]);
-        x1 = (c + 1 == nCols) ? canvasWidth : (isEmpty(right) ? frameRight[c] + mMarginRight : boundaryX[c]);
+        x1 = (c + 1 == nCols) ? canvasWidth : (isEmpty(right) ? frameRight[c] + rightMargin(c) : boundaryX[c]);
         y0 = (r == 0) ? 0. : (isEmpty(above) ? frameTop[r] - mMarginTop : boundaryY[r - 1]);
         y1 = (r + 1 == nRows) ? canvasHeight : (isEmpty(below) ? frameBottom[r] + mMarginBottom : boundaryY[r]);
       }

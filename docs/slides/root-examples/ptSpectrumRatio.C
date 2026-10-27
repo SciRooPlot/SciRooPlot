@@ -1,7 +1,7 @@
 // The plot "ptSpectrumRatio" of the SciRooPlot example, written as a plain ROOT macro
 // (no SciRooPlot needed). Run it with:
 //   root -l -b -q 'ptSpectrumRatio.C("<path to ExampleData>")'
-void ptSpectrumRatio(const char* dataDir = "ExampleData")
+void ptSpectrumRatio(const char* dataDir = "ExampleData", const char* output = "ptSpectrumRatio.pdf")
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);
@@ -67,7 +67,7 @@ void ptSpectrumRatio(const char* dataDir = "ExampleData")
   mc->SetLineColor(kRed + 1);
   mc->SetLineWidth(3);
   data->Draw("E X0");
-  mc->Draw("HIST SAME");
+  mc->Draw("HIST ][ SAME");  // without the vertical lines at the outer edges
 
   TLegend legend(0.69, 0.81, 0.95, 0.93);
   legend.SetBorderSize(0);
@@ -105,6 +105,5 @@ void ptSpectrumRatio(const char* dataDir = "ExampleData")
   one.Draw();
   ratio->Draw("E X0 SAME");
 
-  canvas.SaveAs("ptSpectrumRatio.png");
-  canvas.SaveAs("ptSpectrumRatio.pdf");
+  canvas.SaveAs(output);
 }

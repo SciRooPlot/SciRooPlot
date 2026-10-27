@@ -19,6 +19,7 @@
 #ifndef INCLUDE_SCIROOPLOT_PLOTMANAGER_H_
 #define INCLUDE_SCIROOPLOT_PLOTMANAGER_H_
 
+#include "SciRooPlot/PanelLayout.h"
 #include "SciRooPlot/Plot.h"
 
 #include <TApplication.h>

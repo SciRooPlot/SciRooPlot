@@ -13,9 +13,7 @@ What changed for users between released versions of SciRooPlot, and what to chan
 
 Names are given for C++; the Python name is the same unless stated. Saved definitions (`plots.info`, `dataSources.info`) are not converted: after updating, re-run the plotting program of each project once. `plot` re-runs a Python program only if a `.py` file is newer than `plots.info`, so touch the program or delete `plots.info`.
 
-## 3.3.3 → 4.0.0 (planned, current master)
-
-Not released yet; this section shows the net changes of master relative to v3.3.3 and is updated with each change until the release.
+## 3.3.3 → 4.0.0
 
 ### Build, includes and logging
 

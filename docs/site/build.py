@@ -1,0 +1,103 @@
+"""Builds the web page: fills the template with the drawing options, the method list, the changes, the messages, the colours and
+palettes, the example code and the description of the example data, and writes the logos next to it.
+Usage: build.py <folder with palettes.json, examples.json, data.json> <out folder>  (build-site.sh makes those files and runs it)"""
+import html as _html
+import json
+import os
+import re
+import subprocess
+import sys
+
+import numpy as np
+from PIL import Image
+
+SITE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.dirname(os.path.dirname(SITE))
+GEN, OUT = sys.argv[1], sys.argv[2]
+DESC = {
+    "points": "markers with y errors", "points_xerr": "markers with x and y errors", "points_endcaps": "markers, error bars with end caps",
+    "points_xerr_endcaps": "x and y errors with end caps", "points_line": "markers joined by a line", "points_text": "markers with the values written above",
+    "points_arrows": "arrow ends on the error bars, e.g. for limits", "line": "straight segments, no markers", "curve": "smooth curve, no markers",
+    "curve_clipped": "smooth curve cut at the frame", "hist": "steps", "hist_open": "steps without the vertical lines at the ends",
+    "hist_clipped": "steps cut at the frame instead of running along it", "hist_open_clipped": "open steps cut at the frame", "bars": "bars with gaps",
+    "hbars": "horizontal bars", "area": "filled down to zero", "area_smooth": "smooth curve filled to zero", "band": "filled error band",
+    "band_smooth": "smoothed error band", "boxes": "error boxes with markers", "boxes_nomarkers": "error boxes only", "brackets": "brackets at the error ends",
+    "text": "the values written into the plot", "col": "colour map", "colz": "colour map with colour scale", "box": "boxes sized by content",
+    "lego": "3D bars", "lego_col": "3D bars coloured by content", "lego_colz": "coloured 3D bars with colour scale", "lego_noborders": "3D bars without borders",
+    "surf": "wire-frame surface", "surf_col": "surface lines coloured by content", "surf_colz": "coloured surface lines with colour scale",
+    "surf_fill": "filled surface", "surf_fillz": "filled surface with colour scale", "surf_contours": "surface with contours drawn on top",
+    "surf_shaded": "shaded surface", "cont": "contour lines", "cont_col": "contour lines coloured by level", "cont_colz": "coloured contour lines with scale",
+    "cont_fill": "filled contours", "cont_fillz": "filled contours with colour scale", "cont_smooth": "smoothed filled contours",
+    "cont_smoothz": "smoothed contours with colour scale", "candle": "box, median, whiskers at 1.5 IQR, outliers", "candle_minmax": "whiskers to the extremes",
+    "candle_mean": "candle with the mean marked", "candle_notched": "notched candle", "candle_points": "candle with all points",
+    "candle_scatter": "candle with a scatter of the points", "candle_meanline": "candle with mean line", "violin": "distribution per x bin",
+    "violin_minmax": "violin with extremes marked",
+}
+opts = []
+for line in open(f"{REPO}/docs/skill/scirooplot/reference/drawing-options.md"):
+    m = re.match(r"^\| `(\w+)` \| (.*?) \| (.*?) \| (.*?) \|$", line)
+    if m:
+        clean = lambda c: c.strip().strip("`").replace("*", "")
+        opts.append({"alias": m.group(1), "hist": clean(m.group(2)), "graph": clean(m.group(3)), "hist2d": clean(m.group(4)), "desc": DESC.get(m.group(1), "")})
+s = open(f"{SITE}/template.html").read()
+s = s.replace("/*PALETTES*/", open(f"{GEN}/palettes.json").read()).replace("/*COLORS*/", open(f"{SITE}/colors.json").read()).replace("/*EXAMPLES*/", open(f"{GEN}/examples.json").read()).replace("/*OPTIONS*/", json.dumps(opts))
+macros = {}
+for m in ["ptSpectrumRatio", "vertexZ", "ptSpectrumPublished", "pi0PeakVsPt", "trackingEfficiency", "trackSelection", "etaPhiDataVsSim", "nuclearModification", "jetSpectra"]:
+    lines = open(f"{REPO}/docs/slides/root-examples/{m}.C").read().strip().split("\n")
+    while lines and lines[0].startswith("//"):
+        lines.pop(0)
+    macros[m] = "\n".join(lines)
+s = s.replace("/*ROOTMACROS*/", json.dumps(macros))
+api, cur = [], None
+for line in open(f"{REPO}/docs/skill/scirooplot/reference/api.md"):
+    line = line.rstrip("\n")
+    if line.startswith("## "):
+        cur = {"cls": line[3:].strip(), "desc": "", "items": []}; api.append(cur)
+    elif cur and line.startswith("*") and line.endswith("*") and not cur["items"]:
+        cur["desc"] = line.strip("*")
+    elif cur and line.startswith("- `"):
+        m = re.match(r"^- `(.+?)`(?::\s*(.*)|\s+—\s+(.*))?$", line)
+        sig, note = m.group(1), (m.group(2) or m.group(3) or "")
+        note = note.replace("`", "")
+        n = re.search(r"(operator\(\)|operator\[\]|~?\b[A-Za-z_]\w*)\s*\(", sig)
+        name = n.group(1) if n else sig.split(":")[0]
+        cur["items"].append({"name": name, "sig": sig, "note": note})
+s = s.replace("/*API*/", json.dumps(api))
+def inline(t):  # markdown inline → html: `code`, **bold**, *italic*
+    t = _html.escape(t.replace("\\|", "|"), quote=False)
+    t = re.sub(r"`([^`]+)`", r"<code>\1</code>", t)
+    t = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", t)
+    return re.sub(r"(?<![\w*])\*([^*]+)\*(?!\w)", r"<i>\1</i>", t)
+changes, sec, grp, intro = [], None, None, []
+for line in open(f"{REPO}/docs/api-changes.md"):
+    line = line.rstrip("\n")
+    if line.startswith("## "):
+        title = line[3:].strip()
+        sec = {"title": title, "from": title.split(" ")[0], "to": title.split("→")[1].strip(), "note": "", "groups": []}; changes.append(sec); grp = None
+    elif line.startswith("### ") and sec:
+        grp = {"title": line[4:].strip(), "rows": []}; sec["groups"].append(grp)
+    elif line.startswith("| ") and grp is not None:
+        cells = [c.strip() for c in re.split(r"(?<!\\)\|", line)[1:-1]]
+        if len(cells) == 4 and cells[0] != "Old" and not set(cells[0]) <= set("-: "):
+            grp["rows"].append({"old": inline(cells[0]), "new": inline(cells[1]), "kind": cells[2].strip(), "action": inline(cells[3])})
+    elif sec and grp is None and line.strip() and not sec["note"]:
+        sec["note"] = inline(line.strip())
+    elif not sec and line.strip() and not line.startswith("#"):
+        intro.append(inline(line.strip()))
+s = s.replace("/*CHANGES*/", json.dumps({"intro": intro, "sections": changes}))
+s = s.replace("/*MESSAGES*/", subprocess.run([sys.executable, f"{SITE}/extract_messages.py", REPO], capture_output=True, text=True, check=True).stdout)
+s = s.replace("/*MSG_HELP*/", open(f"{SITE}/messages_help.js").read())
+s = s.replace("/*EXDATA*/", open(f"{GEN}/data.json").read())
+s = "<meta charset=\"utf-8\">\n" + s
+open(f"{OUT}/index.html", "w").write(s)
+
+# the logo: the one of the slides, its dark background made transparent for the dark hero area, and a small one for the header
+os.makedirs(f"{OUT}/img/brand", exist_ok=True)
+logo = Image.open(f"{REPO}/docs/slides/logo.png").convert("RGBA")
+logo.resize((126, 96), Image.LANCZOS).save(f"{OUT}/img/brand/logo-small.png", optimize=True)
+a = np.asarray(logo.resize((520, 398), Image.LANCZOS)).astype(float)
+background = np.array([18.5, 25.0, 33.5])
+alpha = np.clip((np.abs(a[..., :3] - background).max(-1) - 10) / 45, 0, 1) * a[..., 3] / 255
+rgb = np.clip(background + (a[..., :3] - background) / np.where(alpha > 0, alpha, 1)[..., None], 0, 255)
+Image.fromarray(np.dstack([rgb, alpha * 255]).round().astype(np.uint8), "RGBA").save(f"{OUT}/img/brand/logo.png", optimize=True)
+print(f"{OUT}/index.html: {len(opts)} drawing options, {len(s) // 1024} kB")

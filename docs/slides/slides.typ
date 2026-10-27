@@ -336,7 +336,12 @@
   while lines.len() > 0 and lines.first().starts-with("//") { lines = lines.slice(1) }
   lines
 }
-#let counted(lines) = lines.filter(l => l.trim() != "" and not l.trim().starts-with("//")).len()
+// lines of code: neither empty nor comments nor the frame of the macro function (its signature and outer braces),
+// which the SciRooPlot side has no counterpart for in the comparison
+#let counted(lines) = lines.filter(l => {
+  let t = l.trim()
+  t != "" and not t.starts-with("//") and not l.starts-with("void ") and l != "{" and l != "}"
+}).len()
 
 #slide[
   #slide-title("An Everyday Example: Spectra and their Ratio")
@@ -350,7 +355,7 @@
   plot[1].AddData("ptSpec", "data", "data")
          .SetMarker(kBlack, kFullCircle, 1.);
   plot[1].AddData("ptSpec", "mc", "simulation")
-         .SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.);
+         .SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.);
   plot[1].AddLegend();
   plot[1].AddText({"Example Experiment",
                    "pp, #sqrt{#it{s}} = 13.6 TeV", "|#eta| < 0.8"});
@@ -371,7 +376,7 @@
   plot[1].AddData("ptSpec", "data", "data") \
          .SetMarker(kBlack, kFullCircle, 1.0)
   plot[1].AddData("ptSpec", "mc", "simulation") \
-         .SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.0)
+         .SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0)
   plot[1].AddLegend()
   plot[1].AddText(["Example Experiment",
                    "pp, #sqrt{#it{s}} = 13.6 TeV", "|#eta| < 0.8"])

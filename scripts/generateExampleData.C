@@ -17,7 +17,7 @@
 //     TriggerQA/output   hLeadingPtAll, hLeadingPtTriggered
 //     TrackQA/output     hEtaPhi, hPt, [mc only: hPtGen, hPtRecVsGen]
 //     PIDQA/output       hTPCdEdxVsP, hTOFBetaVsP
-//     CaloQA/output      hInvMassGG
+//     CaloQA/output      hInvMassGG, hInvMassGGVsPt (TH2: mass vs. pair pT in six pT bins), hInvMassGGVsPtMixed (mixed events)
 //   dimuon.root                       mMuMu: dimuon invariant mass from J/psi to the Z (raw counts, log bins)
 //   jets/jets_R0{2,4,6}.root           jet spectra for three radii (a data source given as a directory)
 //     hJetPt_R02 ... hJetPt_R06, [R04 only: fNLO_R04 (TF1), hJESResponse (TH2)]
@@ -25,6 +25,10 @@
 //     hV0M (centrality estimator), hPtEtaCent (THnSparse: pT, eta, centrality)
 //     cent_0-10/, cent_10-30/, cent_30-50/   ptSpec (per event), v2 (TGraphErrors)
 //   tracks.root                       TTree "tracks": pt, eta, phi, charge, nClustersTPC, dcaXY, isPrimary
+//   decays.root                       TTree "v0s": alpha, qT, pt (V0 candidates for an Armenteros-Podolanski plot)
+//                                     TTree "d0ToK0sPiPi": m2KsPip, m2KsPim, m2PiPi (D0 -> K0S pi+ pi- for a Dalitz plot)
+//   ml.root                           a classifier: score distributions hBDT_{sig,bkg}_{train,test} (same for DNN),
+//                                     ROC curves roc_BDT, roc_DNN (TGraph, the AUC in the title), hFeatureImportance
 //   ptSpec_published.csv              "HEPData" table: pt, pt_err, value, stat, syst
 //   testbeam.csv                      calorimeter test beam: energy, resolution, resolution_err
 //   luminosity.csv                    integrated luminosity per week: time (unix), lumi
@@ -34,11 +38,13 @@
 
 #include <TF1.h>
 #include <TFile.h>
+#include <TGenPhaseSpace.h>
 #include <TGraph.h>
 #include <TGraphErrors.h>
 #include <TGraphAsymmErrors.h>
 #include <TH1D.h>
 #include <TH2D.h>
+#include <TLorentzVector.h>
 #include <THnSparse.h>
 #include <TList.h>
 #include <TMath.h>
@@ -46,8 +52,11 @@
 #include <TSystem.h>
 #include <TTree.h>
 
+#include <algorithm>
 #include <cmath>
+#include <complex>
 #include <fstream>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -424,6 +433,39 @@ void WriteAnalysisResults(bool isMC, TF1& ptFunc)
     for (int i = 0; i < 40000; ++i) invMass->Fill(gRandom->Gaus(0.135, resolution));
     for (int i = 0; i < 10000; ++i) invMass->Fill(gRandom->Gaus(0.548, 2.5 * resolution));
     output.Add(invMass);
+    // the same pairs in bins of their pT: at high pT there are fewer pi0, but the peak gets narrower and stands out a bit more; it moves up with the
+    // calorimeter non-linearity (stronger in data); an own random generator keeps all other example data unchanged
+    TRandom3 random(isMC ? 7 : 8);
+    const std::vector<double> pairPtBins = {1., 1.5, 2., 3., 4., 6., 10.};
+    auto* invMassVsPt = new TH2D("hInvMassGGVsPt", "", 120, 0., 0.3, pairPtBins.size() - 1, pairPtBins.data());
+    invMassVsPt->GetXaxis()->SetTitle("#it{m}_{#gamma#gamma} (GeV/#it{c}^{2})");
+    invMassVsPt->GetYaxis()->SetTitle("pair #it{p}_{T} (GeV/#it{c})");
+    invMassVsPt->GetZaxis()->SetTitle("pairs");
+    // combinatorial background m exp(-m / T) (a sum of two exponentials): falls steeply with pT, its maximum moves up with pT
+    auto combinatorial = [&random](double& mass, double& pairPt) {
+      pairPt = 1. + random.Exp(0.9);
+      mass = (0.035 + 0.02 * pairPt) * (random.Exp(1.) + random.Exp(1.));
+    };
+    double mass{}, pairPt{};
+    for (int i = 0; i < 1500000; ++i) {
+      combinatorial(mass, pairPt);
+      invMassVsPt->Fill(mass, pairPt);
+    }
+    for (int i = 0; i < 300000; ++i) {  // pi0: falls with pT a little slower than the background, resolution improving with pT
+      pairPt = 1. + random.Exp(1.05);
+      const double width = (isMC ? 0.0085 : 0.010) * (0.6 + 0.5 / std::sqrt(pairPt));
+      const double peak = 0.135 * (1. + (isMC ? 0.002 : 0.006) * std::log(pairPt));
+      invMassVsPt->Fill(random.Gaus(peak, width), pairPt);
+    }
+    output.Add(invMassVsPt);
+    // the background estimate from event mixing (photons of different events): the combinatorial shape only, with more pairs
+    auto* invMassVsPtMixed = static_cast<TH2D*>(invMassVsPt->Clone("hInvMassGGVsPtMixed"));
+    invMassVsPtMixed->Reset();
+    for (int i = 0; i < 6000000; ++i) {
+      combinatorial(mass, pairPt);
+      invMassVsPtMixed->Fill(mass, pairPt);
+    }
+    output.Add(invMassVsPtMixed);
     writeTask("CaloQA", output);
   }
 }
@@ -682,6 +724,157 @@ void WriteHeavyIon(TF1& ptPP)
   }
   sparse->Write();
 }
+// --------------------------------------------------------------------------------------------------
+// decays.root
+// --------------------------------------------------------------------------------------------------
+void WriteDecays()
+{
+  TFile file((kFolder + "decays.root").data(), "RECREATE");
+  TRandom3 random(11);  // an own generator keeps all other example data unchanged
+  const double mPi = 0.13957, mProton = 0.938272, mElectron = 0.000511;
+
+  // V0 candidates (two-body decays of neutral particles) for the Armenteros-Podolanski plot: K0S -> pi+ pi-,
+  // Lambda -> p pi-, anti-Lambda -> anti-p pi+, photon conversions gamma -> e+ e-, and random pairs
+  TTree v0s("v0s", "V0 candidates");
+  float alpha{}, qT{}, pt{};
+  v0s.Branch("alpha", &alpha);
+  v0s.Branch("qT", &qT);
+  v0s.Branch("pt", &pt);
+  struct V0Type {
+    double fraction, mass, mPos, mNeg;
+  };
+  const std::vector<V0Type> types = {{0.45, 0.497611, mPi, mPi}, {0.25, 1.115683, mProton, mPi}, {0.18, 1.115683, mPi, mProton}, {0.12, 0., mElectron, mElectron}};
+  for (int i = 0; i < 50000; ++i) {
+    pt = 0.3 + random.Exp(1.2);
+    if (random.Rndm() < 0.12) {  // random pairs
+      alpha = random.Uniform(-1., 1.);
+      qT = random.Exp(0.06);
+      if (qT < 0.25) v0s.Fill();
+      continue;
+    }
+    double r = random.Rndm();
+    size_t type = 0;
+    while (type + 1 < types.size() && r > types[type].fraction) r -= types[type++].fraction;
+    const auto& v0 = types[type];
+    // decay momentum in the rest frame; a conversion has (almost) none
+    const double pStar = (v0.mass > 0.) ? std::sqrt((v0.mass * v0.mass - std::pow(v0.mPos + v0.mNeg, 2)) * (v0.mass * v0.mass - std::pow(v0.mPos - v0.mNeg, 2))) / (2. * v0.mass) : 0.;
+    const double cosTheta = random.Uniform(-1., 1.);
+    if (v0.mass > 0.) {
+      const double energy = std::sqrt(pt * pt + v0.mass * v0.mass), beta = pt / energy, gamma = energy / v0.mass;
+      const double ePos = std::sqrt(pStar * pStar + v0.mPos * v0.mPos), eNeg = std::sqrt(pStar * pStar + v0.mNeg * v0.mNeg);
+      const double pLPos = gamma * (pStar * cosTheta + beta * ePos), pLNeg = gamma * (-pStar * cosTheta + beta * eNeg);
+      alpha = (pLPos - pLNeg) / (pLPos + pLNeg) + random.Gaus(0., 0.01);
+      qT = pStar * std::sqrt(1. - cosTheta * cosTheta) + random.Gaus(0., 0.003);
+    } else {
+      alpha = cosTheta * 0.95 + random.Gaus(0., 0.01);
+      qT = std::abs(random.Gaus(0., 0.004));
+    }
+    v0s.Fill();
+  }
+  v0s.Write();
+
+  // D0 -> K0S pi+ pi- for a Dalitz plot: phase space with the resonances K*(892)- -> K0S pi-, rho(770) -> pi+ pi-
+  // and a little K*(892)+ (doubly Cabibbo suppressed), and a non-resonant part
+  TTree d0("d0ToK0sPiPi", "D0 -> K0S pi+ pi- candidates");
+  float m2KsPip{}, m2KsPim{}, m2PiPi{};
+  d0.Branch("m2KsPip", &m2KsPip);
+  d0.Branch("m2KsPim", &m2KsPim);
+  d0.Branch("m2PiPi", &m2PiPi);
+  const double mD0 = 1.86484, mK0s = 0.497611;
+  TLorentzVector mother(0., 0., 0., mD0);
+  const double masses[3] = {mK0s, mPi, mPi};
+  TGenPhaseSpace phaseSpace;
+  phaseSpace.SetDecay(mother, 3, masses);
+  using cplx = std::complex<double>;
+  auto breitWigner = [](double s, double mass, double width) { return 1. / cplx(mass * mass - s, -mass * width); };
+  auto weight = [&](double sKsPip, double sKsPim, double sPiPi) {
+    const cplx amplitude = cplx(8., 0.) + 1.0 * breitWigner(sKsPim, 0.89166, 0.0508) + std::polar(2.5, 1.2) * breitWigner(sPiPi, 0.77526, 0.1491) +
+                           std::polar(0.12, -0.8) * breitWigner(sKsPip, 0.89166, 0.0508);
+    return std::norm(amplitude);
+  };
+  double maxWeight = 0.;
+  for (int pass = 0; pass < 2; ++pass) {  // the first pass finds the largest weight for the accept-reject of the second
+    int accepted = 0;
+    while (pass == 0 ? accepted++ < 200000 : accepted < 30000) {
+      const double w = phaseSpace.Generate() * 1.;
+      const TLorentzVector kS = *phaseSpace.GetDecay(0), piPlus = *phaseSpace.GetDecay(1), piMinus = *phaseSpace.GetDecay(2);
+      const double sKsPip = (kS + piPlus).M2(), sKsPim = (kS + piMinus).M2(), sPiPi = (piPlus + piMinus).M2();
+      const double total = w * weight(sKsPip, sKsPim, sPiPi);
+      if (pass == 0) {
+        maxWeight = std::max(maxWeight, total);
+      } else if (random.Rndm() * 1.1 * maxWeight < total) {
+        m2KsPip = sKsPip;
+        m2KsPim = sKsPim;
+        m2PiPi = sPiPi;
+        d0.Fill();
+        ++accepted;
+      }
+    }
+  }
+  d0.Write();
+}
+// --------------------------------------------------------------------------------------------------
+// ml.root
+// --------------------------------------------------------------------------------------------------
+void WriteML()
+{
+  TFile file((kFolder + "ml.root").data(), "RECREATE");
+  TRandom3 random(12);  // an own generator keeps all other example data unchanged
+  // classifier scores in [0, 1] of signal and background candidates, for the training and the test sample;
+  // the training sample is separated a little better than the test sample (slight overtraining)
+  auto score = [&random](double mean, double width) { return 1. / (1. + std::exp(-random.Gaus(mean, width))); };
+  struct Classifier {
+    const char* name;
+    double separation;
+  };
+  for (const Classifier& c : {Classifier{"BDT", 1.5}, Classifier{"DNN", 1.8}}) {
+    std::map<std::string, TH1D*> hists;
+    for (const char* cls : {"sig", "bkg"}) {
+      for (const char* sample : {"train", "test"}) {
+        auto* h = new TH1D(Form("h%s_%s_%s", c.name, cls, sample), "", 50, 0., 1.);
+        h->GetXaxis()->SetTitle(Form("%s score", c.name));
+        h->GetYaxis()->SetTitle("candidates");
+        const bool isSignal = std::string(cls) == "sig", isTrain = std::string(sample) == "train";
+        const double mean = (isSignal ? 1. : -1.) * (c.separation + (isTrain ? 0.15 : 0.));
+        for (int i = 0; i < (isSignal ? 20000 : 60000); ++i) h->Fill(score(mean, 1.3));
+        hists[Form("%s_%s", cls, sample)] = h;
+      }
+    }
+    // ROC curve from the test samples: background rejection vs. signal efficiency for every cut on the score;
+    // the area under the curve goes into the title, where a label can show it with <title>
+    const TH1D* sig = hists["sig_test"];
+    const TH1D* bkg = hists["bkg_test"];
+    TGraph roc;
+    double auc = 0., lastEff = 0., lastRej = 1.;
+    for (int bin = sig->GetNbinsX() + 1; bin >= 0; --bin) {
+      const double effSig = sig->Integral(bin, sig->GetNbinsX() + 1) / sig->Integral(0, sig->GetNbinsX() + 1);
+      const double rejBkg = 1. - bkg->Integral(bin, bkg->GetNbinsX() + 1) / bkg->Integral(0, bkg->GetNbinsX() + 1);
+      roc.AddPoint(effSig, rejBkg);
+      auc += (effSig - lastEff) * 0.5 * (rejBkg + lastRej);
+      lastEff = effSig;
+      lastRej = rejBkg;
+    }
+    roc.SetTitle(Form("%s (AUC = %.3f)", c.name, auc));
+    roc.GetXaxis()->SetTitle("signal efficiency");
+    roc.GetYaxis()->SetTitle("background rejection");
+    roc.Write(Form("roc_%s", c.name));
+    for (auto& [key, h] : hists) {
+      h->Write();
+      delete h;
+    }
+  }
+  // importance of the input features of the BDT (labelled bins)
+  const std::vector<std::pair<const char*, double>> features = {
+    {"#it{p}_{T}", 0.24}, {"DCA_{#it{xy}}", 0.19}, {"cos(#theta_{p})", 0.16}, {"#it{L}_{xy}", 0.13}, {"#chi^{2}_{vtx}", 0.1}, {"TPC n#sigma_{#pi}", 0.08}, {"TOF n#sigma_{K}", 0.06}, {"#eta", 0.04}};
+  auto* importance = new TH1D("hFeatureImportance", "", features.size(), 0., features.size());
+  for (size_t i = 0; i < features.size(); ++i) {  // most important on top in a horizontal bar chart
+    importance->GetXaxis()->SetBinLabel(features.size() - i, features[i].first);
+    importance->SetBinContent(features.size() - i, features[i].second);
+  }
+  importance->GetYaxis()->SetTitle("relative importance");
+  importance->Write();
+  delete importance;
+}
 }  // namespace
 
 void generateExampleData()
@@ -703,4 +896,6 @@ void generateExampleData()
   WriteDimuon();
   WriteJets();
   WriteHeavyIon(*ptData);
+  WriteDecays();
+  WriteML();
 }

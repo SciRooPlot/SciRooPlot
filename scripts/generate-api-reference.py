@@ -77,7 +77,7 @@ def methods(section: str, class_name: str):
         stripped = line.strip()
         if not stripped or stripped.startswith(("//", "#", "friend", "using", "template", "class", "struct", "enum")):
             continue
-        match = METHOD.match(line)
+        match = METHOD.match(line.split("//", 1)[0])  # a comment may hold parentheses too
         if not match:
             continue
         name = match["name"]

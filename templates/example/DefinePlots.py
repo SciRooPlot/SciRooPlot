@@ -36,6 +36,8 @@ def DefineDataSources(pm: PlotManager):
     pm.AddDataSource("runQA", inputFolder + "/runQA.csv")
     pm.AddDataSource("systematics", inputFolder + "/systematics.csv")
     pm.AddDataSource("dimuon", inputFolder + "/dimuon.root")
+    pm.AddDataSource("decays", inputFolder + "/decays.root")
+    pm.AddDataSource("ml", inputFolder + "/ml.root")
     # a directory: all files in it (and its subdirectories) form one data source
     pm.AddDataSource("jets", inputFolder + "/jets/")
     # several files: they are searched in the given order, the first file containing an object wins
@@ -59,7 +61,7 @@ def DefineBasePlots(pm: PlotManager):
     panels) or 2d (panels with colour scale), wide or tall panels, a grid of panels sharing their axes, a ratio
     panel below each panel, or gaps between independent panels. Pads are numbered row by row.
     The code of PlotManager::MakeBasePlot shows how they are made with PanelLayout, as a start for your own."""
-    for name in ["1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "2d", "2d_2x1"]:
+    for name in ["1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_3x2_gap", "2d", "2d_2x1"]:
         pm.AddBasePlot(PlotManager.MakeBasePlot(name))
     # a base plot can be adapted before adding it, e.g. for all 2d plots with a logarithmic z axis
     logz = PlotManager.MakeBasePlot("2d")
@@ -113,13 +115,14 @@ def DefineHiggsPlots(pm: PlotManager):
 
 def DefineSpectraPlots(pm: PlotManager):
     """Charged-particle spectra: data vs. simulation, a published reference, 2d data and projections."""
-    # templates: properties defined once, dataStyle("name") gives the data with these properties
-    dataStyle = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.0)
-    mcStyle = Data().SetDataSource("mc").SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.0)
+    # templates: how each kind of data looks, said once; measured("ptSpec") is the data "ptSpec" of the source "data" in this look,
+    # and changing a template here changes every plot that uses it
+    measured = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.0)
+    simulated = Data().SetDataSource("mc").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0)
 
     plot = Plot("ptSpectrum", "spectra", "1d")
-    plot[1].AddData(dataStyle("ptSpec"), "data")
-    plot[1].AddData(mcStyle("ptSpec"), "simulation")
+    plot[1].AddData(measured("ptSpec"), "data")
+    plot[1].AddData(simulated("ptSpec"), "simulation")
     plot[1].AddLegend()
     plot[1].AddText([EXPERIMENT, COLLISIONS, "|#eta| < 0.8"])
     plot[1]['X'].SetLog()
@@ -136,7 +139,7 @@ def DefineSpectraPlots(pm: PlotManager):
 
     # table columns become a graph; any C++ expression of the columns can be used -----------------
     plot = Plot("ptSpectrumPublished", "spectra", "1d")
-    plot[1].AddData(dataStyle("ptSpec"), "this analysis")
+    plot[1].AddData(measured("ptSpec"), "this analysis")
     plot[1].AddData("ptSpec_published", "published", "published (stat. #oplus syst.)").Scatter("pt", "value", "pt_err", "sqrt(stat*stat + syst*syst)").SetMarker(kAzure + 2, kOpenSquare, 1.6)
     plot[1].AddLegend()
     plot[1]['X'].SetLog()
@@ -144,8 +147,8 @@ def DefineSpectraPlots(pm: PlotManager):
     pm.AddPlot(plot)
 
     plot = Plot("multiplicity", "spectra", "1d")
-    plot[1].AddData(dataStyle("multDist"), "data, #LT#it{N}_{ch}#GT = <mean[.1f]>")
-    plot[1].AddData(mcStyle("multDist"), "simulation, #LT#it{N}_{ch}#GT = <mean[.1f]>")
+    plot[1].AddData(measured("multDist"), "data, #LT#it{N}_{ch}#GT = <mean[.1f]>")
+    plot[1].AddData(simulated("multDist"), "simulation, #LT#it{N}_{ch}#GT = <mean[.1f]>")
     plot[1].AddLegend()
     plot[1]['X'].SetRange(0.0, 60.0)
     plot[1]['Y'].SetLog()
@@ -175,8 +178,8 @@ def DefineSpectraPlots(pm: PlotManager):
 
     # Cumulative(False) sums from the right: the probability to find at least N_ch particles ----
     plot = Plot("multiplicityCumulative", "spectra", "1d")
-    plot[1].AddData(dataStyle("multDist"), "data").Cumulative(False)
-    plot[1].AddData(mcStyle("multDist"), "simulation").Cumulative(False)
+    plot[1].AddData(measured("multDist"), "data").Cumulative(False)
+    plot[1].AddData(simulated("multDist"), "simulation").Cumulative(False)
     plot[1].AddLegend()
     plot[1]['X'].SetRange(0.0, 60.0)
     plot[1]['Y'].SetLog().SetTitle("#it{P}(#geq #it{N}_{ch})")
@@ -315,6 +318,20 @@ def DefineDetectorPlots(pm: PlotManager):
     plot[1]['Y'].SetRange(0.0, 15e3)
     pm.AddPlot(plot)
 
+    # the pi0 peak in six bins of pair pT, each panel with its own axes (_gap); ProjectX(from, to, True) takes the mass of the
+    # pairs with pT in [from, to] (axis units); the background from mixed events is scaled to the same-event pairs in the
+    # normalisation region: Normalize(False, 190, 240) normalises both to their integral there (shown as a line)
+    plot = Plot("pi0PeakVsPt", "detector/calorimeter", "1d_3x2_gap")
+    for i, (low, high) in enumerate([(1.0, 1.5), (1.5, 2.0), (2.0, 3.0), (3.0, 4.0), (4.0, 6.0), (6.0, 10.0)]):
+        plot[i + 1].AddData("hInvMassGGVsPtMixed", "CaloQA", "mixed event").ProjectX(low, high, True).ScaleX(1000.0).Normalize(False, 190.0, 240.0).SetDrawOption(hist).SetFill(kAzure - 9, 1001).SetLineColor(kAzure - 9)
+        plot[i + 1].AddData("hInvMassGGVsPt", "CaloQA", "same event").ProjectX(low, high, True).ScaleX(1000.0).Normalize(False, 190.0, 240.0).SetMarker(kBlack, kFullCircle, 1.0).SetDefinesFrame()
+        plot[i + 1].AddLine((190.0, 0.05), (240.0, 0.05), "norm. region").SetLine(kRed + 1, kSolid, 5.0)  # 20 bins: 1/20 each
+        plot[i + 1].AddText(0.6, 0.9, f"{low:g} < #it{{p}}_{{T}} < {high:g} GeV/#it{{c}}")
+    plot[1].AddLegend(0.6, 0.8)  # upper left corner, in pad coordinates like the texts
+    plot[0]['X'].SetRange(60.0, 240.0).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})")
+    plot[0]['Y'].SetTitle("pairs (norm. region = 1)").SetMinRange(0.0)
+    pm.AddPlot(plot)
+
     # ---- trigger and pile-up --------------------------------------------------------------------
     # turn-on curve; Result() switches to settings acting on the ratio itself (here: in %)
     plot = Plot("turnOn", "detector/trigger", "1d")
@@ -420,6 +437,27 @@ def DefineCollisionPlots(pm: PlotManager):
     plot[1].AddData("hJESResponse", "jets", "mean response").ProfileX().SetMarker(kBlack, kFullCircle, 1.0).SetLineColor(kBlack)
     plot[1].AddLegend(0.445, 0.232)
     plot[1]['X'].SetLog()
+    pm.AddPlot(plot)
+
+    # Armenteros-Podolanski plot of V0 candidates from a tree: each two-body decay is an arc, texts in axis units -------
+    plot = Plot("armenteros", "collisions/decays", "2d_logz")
+    plot[1].AddData("v0s", "decays").Project2D(("alpha", 200, [-1.0, 1.0]), ("qT", 125, [0.0, 0.25]))
+    plot[1].AddText(-0.1, 0.235, "K^{0}_{S}").SetUserCoordinates()
+    plot[1].AddText(0.64, 0.05, "#Lambda").SetUserCoordinates()
+    plot[1].AddText(-0.78, 0.05, "#bar{#Lambda}").SetUserCoordinates()
+    plot[1].AddText(0.9, 0.025, "#gamma").SetUserCoordinates()
+    plot[1]['X'].SetTitle("#it{#alpha} = (#it{p}_{L}^{+} #minus #it{p}_{L}^{#minus}) / (#it{p}_{L}^{+} + #it{p}_{L}^{#minus})")
+    plot[1]['Y'].SetTitle("#it{q}_{T} (GeV/#it{c})")
+    plot[1]['Z'].SetTitle("candidates")
+    pm.AddPlot(plot)
+
+    # Dalitz plot of D0 -> K0S pi+ pi-: the K*(892) and rho(770) resonances are bands ----------------------------------
+    plot = Plot("dalitz", "collisions/decays", "2d")
+    plot[1].AddData("d0ToK0sPiPi", "decays").Project2D(("m2KsPip", 70, [0.3, 3.1]), ("m2KsPim", 70, [0.3, 3.1]))
+    plot[1].AddText(top_right, "D^{0} #rightarrow K^{0}_{S}#pi^{+}#pi^{#minus}")
+    plot[1]['X'].SetTitle("#it{m}^{2}(K^{0}_{S}#pi^{+}) (GeV^{2}/#it{c}^{4})")
+    plot[1]['Y'].SetTitle("#it{m}^{2}(K^{0}_{S}#pi^{#minus}) (GeV^{2}/#it{c}^{4})")
+    plot[1]['Z'].SetTitle("candidates")
     pm.AddPlot(plot)
 
 
@@ -529,6 +567,43 @@ def DefineHeavyIonPlots(pm: PlotManager):
     pm.AddPlot(plot)
 
 
+def DefineMLPlots(pm: PlotManager):
+    """Machine learning: classifier scores, cut efficiencies, ROC curves, feature importance."""
+    # score distributions, training sample filled, test sample as points: does the classifier overtrain? ---------------
+    plot = Plot("scoreDistribution", "ml", "1d")
+    plot[1].AddData("hBDT_sig_train", "ml", "signal, train").Normalize().SetDrawOption(hist).SetFill(kAzure - 9, 1001).SetLineColor(kAzure + 2)
+    plot[1].AddData("hBDT_bkg_train", "ml", "background, train").Normalize().SetDrawOption(hist).SetFill(kRed + 1, 3004).SetLineColor(kRed + 1)
+    plot[1].AddData("hBDT_sig_test", "ml", "signal, test").Normalize().SetColor(kAzure + 2).SetMarkerStyle(kFullCircle)
+    plot[1].AddData("hBDT_bkg_test", "ml", "background, test").Normalize().SetColor(kRed + 1).SetMarkerStyle(kFullSquare)
+    plot[1].AddLegend(top_left).SetNumColumns(2)
+    plot[1]['Y'].SetLog().SetRange(1e-4, 1.0).SetTitle("normalised counts")
+    pm.AddPlot(plot)
+
+    # efficiency of a cut on the score: Normalize().Cumulative(False) sums from the right, i.e. the fraction above the cut
+    plot = Plot("efficiencyVsCut", "ml", "1d")
+    plot[1].AddData("hBDT_sig_test", "ml", "signal").Normalize().Cumulative(False).SetDrawOption(line).SetLine(kAzure + 2, kSolid, 3.0)
+    plot[1].AddData("hBDT_bkg_test", "ml", "background").Normalize().Cumulative(False).SetDrawOption(line).SetLine(kRed + 1, kSolid, 3.0)
+    plot[1].AddLegend(bottom_left)
+    plot[1]['X'].SetTitle("cut on the BDT score")
+    plot[1]['Y'].SetLog().SetRange(1e-3, 2.0).SetTitle("efficiency (score > cut)")
+    pm.AddPlot(plot)
+
+    # ROC curves of two classifiers; <title> puts the title of each graph (with its AUC) into the label --------------
+    plot = Plot("rocCurve", "ml", "1d")
+    plot[1].AddData("roc_BDT", "ml", "<title>").SetDrawOption(line).SetLine(kAzure + 2, kSolid, 3.0)
+    plot[1].AddData("roc_DNN", "ml", "<title>").SetDrawOption(line).SetLine(kRed + 1, kSolid, 3.0)
+    plot[1].AddFunction("1 - x", "random guess").SetLine(kGray + 1, kDashed, 2.0)
+    plot[1].AddLegend(bottom_left)
+    plot[1]['X'].SetRange(0.0, 1.0)
+    plot[1]['Y'].SetRange(0.0, 1.05)
+    pm.AddPlot(plot)
+
+    # feature importance as horizontal bars, the labels of the bins on the y axis ---------------------------------------
+    plot = Plot("featureImportance", "ml", "1d")
+    plot[1].AddData("hFeatureImportance", "ml").SetDrawOption(hbars).SetFill(kAzure - 9, 1001).SetLineColor(kAzure + 2)
+    pm.AddPlot(plot)
+
+
 def main():
     pm = PlotManager("PROJECT_NAME")
     # own messages in the style of SciRooPlot: logger.print (always shown),
@@ -541,6 +616,7 @@ def main():
     DefineDetectorPlots(pm)
     DefineCollisionPlots(pm)
     DefineHeavyIonPlots(pm)
+    DefineMLPlots(pm)
     # an overview of the default colours with their ROOT indices (`plot overview colors`)
     pm.AddColorOverview("colors", "overview")
     pm.SaveProject()

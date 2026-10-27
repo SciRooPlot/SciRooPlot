@@ -165,7 +165,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Axis& SetGrid(bool isGrid = true)`
 - `Axis& SetOppositeTicks(bool isOppositeTicks = true)`
 - `Axis& SetNoExponent(bool isNoExponent = true)`
-- `Axis& SetHideClippedLabels(bool hide = true); // drop a label whose text would reach beyond the pad (e.g. at the edge shared with a touching pad)` — drop a label whose text would reach beyond the pad (e.g. at the edge shared with a touching pad); on by default in the base plots, false keeps the labels
+- `Axis& SetHideClippedLabels(bool hide = true)` — drop a label whose text would reach beyond the pad (e.g. at the edge shared with a touching pad); on by default in the base plots, false keeps the labels
 - `Axis& SetTimeFormat(const std::string& timeFormat)`
 - `Axis& SetTickOrientation(const std::string& tickOrientation)`
 
