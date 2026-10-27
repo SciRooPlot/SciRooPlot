@@ -210,8 +210,6 @@ class Plot
   friend class PlotManager;
   friend class PlotPainter;
 
-  void SetPaintColorWheel(bool paintColorWheel = true);
-
   // accessors for internal use by manager and painter
   const auto& GetName() const { return mName; }
   const auto& GetGroup() const { return mGroup; }
@@ -226,7 +224,6 @@ class Plot
   const auto& GetFillColor() const { return mFill.color; }
   const auto& GetFillStyle() const { return mFill.style; }
   const auto& GetFillAlpha() const { return mFill.alpha; }
-  const auto& GetPaintColorWheel() const { return mPaintColorWheel; }
 
   uint8_t GetDataCount() const;
 
@@ -255,7 +252,6 @@ class Plot
   dimension_t mPlotDimensions;
   layout_t mFill;
   std::map<uint8_t, Pad> mPads;
-  std::optional<bool> mPaintColorWheel;
 };
 
 //**************************************************************************************************

@@ -37,6 +37,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 |---|---|---|---|
 | `Data::NormalizeToMaximum(bool normMaximum = true)` | `Data::NormalizeToMaximum(std::optional<double_t> min = {}, std::optional<double_t> max = {})` | signature | Remove the bool argument: `NormalizeToMaximum(true)` still compiles but now means `min = 1.0`, and `NormalizeToMaximum(false)` no longer switches it off. Same for `Ratio`. |
 | `Data::Normalize(bool scaleBinWidth = false)`; Python keyword `scaleBinWidth` | `Data::Normalize(bool isDensity = false, std::optional<double_t> min = {}, std::optional<double_t> max = {})`; Python keyword `isDensity` | signature | Python: rename the keyword to `isDensity=`. |
+| `Plot::SetPaintColorWheel(bool)` | `srp colorwheel [<file>]` | removed | Show the wheel with `srp colorwheel` (or save it to a file) instead of a plot. |
 | `Ratio::SetDivideNormalized(bool scaleBinWidth = false)` | `Ratio::Both().Normalize(isDensity)` | removed | Replace by `.Both().Normalize(<same bool>)` and continue with `.Result()` before modifiers meant for the ratio. |
 | `Pad::SetDefaultDrawingOptionGraph/Hist/Hist2d(drawing_options_t)`, `Pad::GetDefaultDrawingOption*()` | — | removed | Set `SetDrawOption(alias)` on the data where needed (see the default rule below). |
 | `Data::SetDefinesFrame(bool dontDraw = false)` | `Data::SetDefinesFrame()` (the data is drawn); a frame that is not drawn: `Pad::SetFrame(name, dataSource)` or `Pad::SetFrame(const Data&)`, or no input at all (X and Y ranges of a pad without data) | signature | Replace `AddData(…).SetDefinesFrame(true)` by `plot[i].SetFrame(…)`, or drop the dummy input and set `plot[i]['X'].SetRange(…)` and `['Y'].SetRange(…)`. Same for `Ratio`. |
@@ -65,6 +66,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `points`, `points_endcaps`, `points_line` drew the x errors of graphs and histograms | x errors only with `points_xerr` and `points_xerr_endcaps` | default | Use the `_xerr` aliases where x errors are wanted. |
 | The `Z` option letter was removed for all but the first item, so graphs got end caps | `Z` removed only for 2d/3d types; graph error bars have no end caps | default | Use `points_endcaps` for end caps. |
 | `band`, `band_smooth` on histograms also drew markers | No markers | default | Use `boxes` if you want markers. |
+| `AddColorOverview(name, group)` without colours drew ROOT's colour wheel; cells labelled by index | The colours of the base plots; cells labelled by name and index | default | `srp colorwheel` for the wheel. |
 | Base plots showed axis labels cut at the pad edge | `MakeBasePlot` sets `SetHideClippedLabels()` on X and Y | default | `plot[0]['X'].SetHideClippedLabels(false)` (same for Y) restores them. |
 | A reference function without colour (`SetRefFunc("1")`) took the first default colour, so data started at the second | Reference functions are black and solid unless set and take no default colour | default | Set data colours explicitly if you relied on the shift. |
 | Candle whisker range: ROOT's default for the first plot, 0.75 for later plots in the same run | Always 1.0 unless set | default | `SetDefaultCandleWhiskerRange(0.75)` restores it. |
@@ -123,6 +125,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `srp init-cpp`, `srp init-py` copied the full example | Copy a minimal skeleton; `srp example-cpp`, `srp example-py` copy the commented example with example data; both fail if the project exists | CLI | Use `srp example-cpp`/`example-py` for the old content. |
 | `plot` ran `cmake -S .. -B .` and a build on every call; Python programs were re-run only if the main file changed | Builds only if `CMakeCache.txt` is next to the program; Python is re-run if any `.py` file (up to two levels deep) is newer | CLI | Keep the C++ program in its CMake build directory. |
 | `srp edit`, `srp cd` without a project: error | Use the current project | CLI | none |
+| – | `srp colorwheel [<file>]`: ROOT's colour wheel in a window, or saved to a file | CLI | none |
 
 ## 3.2.4 → 3.3.3
 

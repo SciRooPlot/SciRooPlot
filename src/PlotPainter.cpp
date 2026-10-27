@@ -23,7 +23,6 @@
 #include <TApplication.h>
 #include <TBox.h>
 #include <TCanvas.h>
-#include <TColorWheel.h>
 #include <TEfficiency.h>
 #include <TExec.h>
 #include <TF1.h>
@@ -416,18 +415,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   if (plot.GetFillAlpha()) canvas_ptr->SetFillColor(TColor::GetColorTransparent(canvas_ptr->GetFillColor(), *plot.GetFillAlpha()));
 
   if (plot.IsFixAspectRatio()) canvas_ptr->SetFixedAspectRatio(*plot.IsFixAspectRatio());
-
-  if (plot.GetPaintColorWheel() && *plot.GetPaintColorWheel()) {
-    auto fillColor = canvas_ptr->GetFillColor();
-    auto fillStyle = canvas_ptr->GetFillStyle();
-    auto wheel = new TColorWheel();
-    wheel->SetCanvas(canvas_ptr.get());
-    wheel->Draw();
-    canvas_ptr->SetFillStyle(fillStyle);
-    canvas_ptr->SetFillColor(fillColor);
-    canvas_ptr->Update();
-    return canvas_ptr;
-  }
 
   auto& padDefaults = plot[0];
   for (const auto& [padID, dummy] : plot.GetPads()) {

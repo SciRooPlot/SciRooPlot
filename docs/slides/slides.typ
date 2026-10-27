@@ -649,6 +649,7 @@
           [#prompt `srp matchcase sensitive|insensitive`], [Case sensitivity of the patterns.],
           [#prompt `srp screenscale|bitmapscale <factor>`], [Size of plots on screen, or resolution of png/jpg/gif files (initially `1`).],
           [#prompt `srp print|open <file>`], [List the contents of a ROOT file, or open it in a `TBrowser`.],
+          [#prompt `srp colorwheel [<file>]`], [ROOT's colour wheel; the status bar names the colour under the mouse (with a file: saved).],
           [#prompt `srp info` / `srp help`], [Show installation details, or all commands.],
         ),
       )
@@ -1941,7 +1942,7 @@
         [`AddDataSource(id, files, replace = false)`], [Register files, directories or ROOT objects (also lists, open files) under an ID (`replace`: clear the ID first).],
         [#names("SaveDataSources(file = {})", "LoadDataSources(file = {}, replace = false)")], [Save or reload the registered data sources (default: the project's file).],
         [`AddPlot(plot)` / `AddBasePlot(basePlot)`], [Register a plot, or a reusable base plot layout.],
-        [`AddColorOverview(name, group, colors = {})`], [Add a plot showing the ROOT colour wheel, or the given colours with their indices.],
+        [`AddColorOverview(name, group, colors = {})`], [Add a plot showing the given colours (default: those of the base plots) with names and indices.],
         [#names("SavePlots(name = \".+\", group = \".+\", file = {})", "LoadPlots(name = \".+\", group = \".+\", file = {})")], [Write matching plots to, or load them from, a config file.],
         [`GeneratePlots(mode = "show", name = ".+", group = ".+")`], [Generate plots matching the request in the given mode (groups include their subgroups, `group$` excludes them).],
         [`ListPlots()`], [Print all registered plots.],

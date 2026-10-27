@@ -23,13 +23,16 @@
 #include <TApplication.h>
 #include <TBranch.h>
 #include <TBrowser.h>
+#include <TCanvas.h>
 #include <TClass.h>
+#include <TColorWheel.h>
 #include <TDataType.h>
 #include <TFile.h>
 #include <TFolder.h>
 #include <TKey.h>
 #include <TROOT.h>
 #include <TRootBrowser.h>
+#include <TRootCanvas.h>
 #include <TTree.h>
 
 #include <boost/program_options.hpp>
@@ -40,6 +43,7 @@
 #include <filesystem>
 #include <functional>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -146,7 +150,7 @@ int main(int argc, char* argv[])
     logger::print("Settings:");
     logger::print("  srp settings");
     logger::print("  srp color       (bright | dark | off)");
-    logger::print("  srp verbosity   (debug | log | info | warning | error)");
+    logger::print("  srp verbosity   (debug | log | info | warning | error | silent)");
     logger::print("  srp plotmode    (show | spread | pdf | eps | svg | png | gif | jpg)");
     logger::print("  srp matchmode   (exact | contains)");
     logger::print("  srp matchcase   (sensitive | insensitive)");
@@ -162,6 +166,7 @@ int main(int argc, char* argv[])
     logger::print("Utilities:");
     logger::print("  srp open  <file>");
     logger::print("  srp print <file>");
+    logger::print("  srp colorwheel [<file>]  (ROOT's colours with their names; saved to the file if one is given)");
     logger::print("===========================================================");
   } else if (command == "open") {
     string fileName = project;
@@ -174,6 +179,28 @@ int main(int argc, char* argv[])
       rb->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
     }
     app.Run();
+  } else if (command == "colorwheel") {
+    const string fileName = project;  // optional: save the wheel instead of showing it
+    gROOT->SetBatch(!fileName.empty());
+    std::optional<TApplication> app;
+    if (fileName.empty()) app.emplace("SciRooPlot", nullptr, nullptr);
+    auto* canvas = new TCanvas("colorwheel", "ROOT colour wheel", 800, 800);
+    auto* wheel = new TColorWheel();
+    wheel->SetCanvas(canvas);
+    wheel->Draw();
+    canvas->SetFillColor(kWhite);  // instead of the background colour TColorWheel gives the canvas
+    canvas->SetFillStyle(1001);
+    canvas->Update();
+    if (!fileName.empty()) {
+      canvas->SetCanvasSize(800, 800);  // the drawing area, without the window frame
+      canvas->SaveAs(fileName.data());
+      return 0;
+    }
+    canvas->ToggleEventStatus();  // the status bar names the colour under the mouse
+    if (auto* imp = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) {
+      imp->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+    }
+    app->Run();
   } else if (command == "print") {
     string fileName = project;
     if (!PrintRootFileContents(fileName)) return 1;

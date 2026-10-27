@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
   DefineCollisionPlots(pm);
   DefineHeavyIonPlots(pm);
   DefineMLPlots(pm);
-  // an overview of the default colours with their ROOT indices (`plot overview colors`)
+  // the default colours of the base plots with their names and indices (`plot overview colors`; `srp colorwheel` shows all)
   pm.AddColorOverview("colors", "overview");
   pm.SaveProject();
   return 0;

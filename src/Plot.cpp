@@ -224,7 +224,6 @@ Plot::Plot(const ptree& plotTree)
   read_from_tree(plotTree, mFill.color, "fill_color");
   read_from_tree(plotTree, mFill.style, "fill_style");
   read_from_tree(plotTree, mFill.alpha, "fill_alpha");
-  read_from_tree(plotTree, mPaintColorWheel, "paint_color_wheel");
 
   // loop over all pads defined in property tree
   for (const auto& pad : plotTree) {
@@ -263,7 +262,6 @@ ptree Plot::GetPropertyTree() const
   put_in_tree(plotTree, mFill.color, "fill_color");
   put_in_tree(plotTree, mFill.style, "fill_style");
   put_in_tree(plotTree, mFill.alpha, "fill_alpha");
-  put_in_tree(plotTree, mPaintColorWheel, "paint_color_wheel");
 
   for (const auto& [padID, pad] : mPads) {
     plotTree.put_child("PAD_" + std::to_string(padID), pad.GetPropertyTree());
@@ -386,11 +384,6 @@ auto Plot::SetFixAspectRatio(bool fixAspectRatio) -> decltype(*this)
   return *this;
 }
 
-void Plot::SetPaintColorWheel(bool paintColorWheel)
-{
-  mPaintColorWheel = paintColorWheel;
-}
-
 //**************************************************************************************************
 /**
  * Set fill for this plot.
@@ -453,8 +446,6 @@ void Plot::operator+=(const Plot& plot)
   if (plot.mFill.color) mFill.color = plot.mFill.color;
   if (plot.mFill.style) mFill.style = plot.mFill.style;
   if (plot.mFill.alpha) mFill.alpha = plot.mFill.alpha;
-
-  if (plot.mPaintColorWheel) mPaintColorWheel = plot.mPaintColorWheel;
 
   for (const auto& [padID, pad] : plot.mPads) {
     mPads[padID];  // initializes the pad in case it was not yet defined in this plot

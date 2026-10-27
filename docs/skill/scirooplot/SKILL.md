@@ -32,7 +32,7 @@ srp select <project>                # make it the current project
 srp set <project> outdir <dir>      # where files are saved (subfolders per group)
 srp set <project> <key> <value>     # own variables, read in code via pm.GetProjectProperty("<key>")
 srp projects | srp show | srp settings | srp help
-srp verbosity (debug|log|info|warning|error) ; srp plotmode (show|pdf|png|...) ; srp matchmode (exact|contains)
+srp verbosity (debug|log|info|warning|error|silent) ; srp plotmode (show|pdf|png|...) ; srp matchmode (exact|contains)
 ```
 
 ## The `plot` app
@@ -224,7 +224,7 @@ pm.AddBasePlot(layout);
 
 **Keep inputs out of the code.** Machine-specific paths go into project variables (`srp set <project> inputDir /path`, `pm.GetProjectProperty("inputDir")`) or environment variables in the data source strings (`${HOME}/...`); the data source names stay stable across machines. In-memory objects (a graph computed in the program) are registered with `pm.AddDataSource("glauber", &graph)` and used like file data.
 
-**Let the plot show numbers.** Label placeholders (`"<mean[.2f]>"`, `"<entries>"`, `"<integral[.2e]>"`) and `points_text` save hand-copied values; `AddColorOverview("colors", "overview")` renders the colour sequence with ROOT indices (`plot overview colors`).
+**Let the plot show numbers.** Label placeholders (`"<mean[.2f]>"`, `"<entries>"`, `"<integral[.2e]>"`) and `points_text` save hand-copied values; `AddColorOverview("colors", "overview")` renders the colour sequence of the base plots with names and indices (`plot overview colors`), `srp colorwheel` shows all of ROOT's named colours.
 
 ## C++ vs Python
 

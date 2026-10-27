@@ -31,6 +31,7 @@
 #include <TClass.h>
 #include <TClonesArray.h>
 #include <TCollection.h>
+#include <TColor.h>
 #include <TError.h>
 #include <TExec.h>
 #include <TF1.h>
@@ -118,6 +119,15 @@ using util::RegexMatcher;
 using util::split_string;
 using util::str_contains;
 using util::str_ends_with;
+
+namespace
+{
+// the colour the n-th data item of a pad gets in the shipped base plots (also shown by AddColorOverview)
+const vector<int16_t> kDefaultColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1, kMagenta - 4, kGreen + 3, kOrange + 1,
+                                        kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7, kMagenta + 1, kPink + 8, kCyan - 6,
+                                        kMagenta, kRed + 2, kGreen + 2, kOrange + 2, kMagenta + 2, kYellow + 3,
+                                        kGray + 2, kBlue + 2, kYellow + 2, kRed, kBlue, kMagenta + 3, kGreen + 4, 28, 8, 15, 17, 12};
+}  // namespace
 
 //**************************************************************************************************
 /**
@@ -822,10 +832,7 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes)
   plot[0].SetTransparent();
   plot[0].SetFrameFill(10, 1001);
   plot[0].SetDefaultTextFont(42);
-  plot[0].SetDefaultColors({kBlack, kBlue + 1, kRed + 1, kYellow + 1, kMagenta - 4, kGreen + 3, kOrange + 1,
-                            kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7, kMagenta + 1, kPink + 8, kCyan - 6,
-                            kMagenta, kRed + 2, kGreen + 2, kOrange + 2, kMagenta + 2, kYellow + 3,
-                            kGray + 2, kBlue + 2, kYellow + 2, kRed, kBlue, kMagenta + 3, kGreen + 4, 28, 8, 15, 17, 12});
+  plot[0].SetDefaultColors(kDefaultColors);
   plot[0].SetDefaultMarkerStyles({kFullCircle});
   plot[0].SetDefaultLineStyles({kSolid});
   plot[0].SetDefaultFillStyles({0});
@@ -876,46 +883,53 @@ void PlotManager::AddBasePlot(Plot basePlot)
 
 //**************************************************************************************************
 /**
- * Add plot showing the specified colors or root color panel as fallback.
+ * Add a plot showing the given colours, by default those the base plots give to their data, each with its name and index.
  */
 //**************************************************************************************************
 void PlotManager::AddColorOverview(const string& name, const string& group, const vector<int32_t>& colors)
 {
+  const vector<int32_t> shown = colors.empty() ? vector<int32_t>(kDefaultColors.begin(), kDefaultColors.end()) : colors;
   Plot plot(name, group);
   plot.SetDimensions(800, 800, true);
   plot[1].SetPosition(0., 0., 1., 1.);
-  if (colors.empty()) {
-    plot.SetPaintColorWheel();
-  } else {
-    int32_t bestRows = 1;
-    size_t bestCols = colors.size();
-    double_t bestScore = -1;
-    for (int32_t rows = 1; rows <= static_cast<int32_t>(colors.size()); ++rows) {
-      size_t cols = (colors.size() + rows - 1) / rows;
-      double_t cellW = 1.0 / cols;
-      double_t cellH = 1.0 / rows;
-      double_t area = cellW * cellH;
-      double_t aspectPenalty = fabs(cellW - cellH);
-      double_t score = area - 0.3 * aspectPenalty;
-      if (score > bestScore) {
-        bestScore = score;
-        bestRows = rows;
-        bestCols = cols;
-      }
+  int32_t bestRows = 1;
+  size_t bestCols = shown.size();
+  double_t bestScore = -1;
+  for (int32_t rows = 1; rows <= static_cast<int32_t>(shown.size()); ++rows) {
+    size_t cols = (shown.size() + rows - 1) / rows;
+    double_t cellW = 1.0 / cols;
+    double_t cellH = 1.0 / rows;
+    double_t area = cellW * cellH;
+    double_t aspectPenalty = fabs(cellW - cellH);
+    double_t score = area - 0.3 * aspectPenalty;
+    if (score > bestScore) {
+      bestScore = score;
+      bestRows = rows;
+      bestCols = cols;
     }
-    for (size_t i = 0; i < colors.size(); ++i) {
-      size_t r = i / bestCols;
-      size_t c = i % bestCols;
-      double_t x = static_cast<double_t>(c) / bestCols;
-      double_t y = 1.0 - static_cast<double_t>(r) / bestRows;
-      double_t w = 1.0 / bestCols;
-      double_t h = 1.0 / bestRows;
-      plot[1]
-        .AddText(x, y, std::to_string(colors[i]))
-        .SetSize(w, h)
-        .SetFillStyle(1001)
-        .SetFillColor(colors[i]);
+  }
+  for (size_t i = 0; i < shown.size(); ++i) {
+    size_t r = i / bestCols;
+    size_t c = i % bestCols;
+    double_t x = static_cast<double_t>(c) / bestCols;
+    double_t y = 1.0 - static_cast<double_t>(r) / bestRows;
+    double_t w = 1.0 / bestCols;
+    double_t h = 1.0 / bestRows;
+    // ROOT names the colours of its wheel (kRed+1) and calls 0 and 1 white and black; the others are known by their index only
+    string label = std::to_string(shown[i]);
+    float_t red{}, green{}, blue{};
+    if (const TColor* color = gROOT->GetColor(shown[i])) {
+      string colorName = (shown[i] == kWhite) ? "kWhite" : ((shown[i] == kBlack) ? "kBlack" : color->GetName());
+      if (colorName.rfind('k', 0) == 0) label = fmt::format("#splitline{{{}}}{{{}}}", colorName, shown[i]);
+      color->GetRGB(red, green, blue);
     }
+    const bool dark = 0.299 * red + 0.587 * green + 0.114 * blue < 0.5;
+    plot[1]
+      .AddText(x, y, label)
+      .SetSize(w, h)
+      .SetFillStyle(1001)
+      .SetFillColor(shown[i])
+      .SetTextColor(dark ? kWhite : kBlack);
   }
   AddPlot(std::move(plot));
 }
