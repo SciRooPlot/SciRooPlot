@@ -1,21 +1,54 @@
 #import "@preview/polylux:0.4.0": *
 
+// ---- palette -----------------------------------------------------------------------------------------------
+#let ink = rgb("16233A")         // titles and dark surfaces
+#let main-color = rgb("1C94A5")  // teal of the logo: links, prompts, highlights
+#let accent-color = rgb("E0A526") // amber: one accent per slide (title bar, step numbers)
+#let paper = rgb("FBFAF7")       // page background
+#let muted = rgb("6B7686")       // secondary text
+#let hairline = rgb("DCE1E7")
+#let tint = rgb("EEF6F7")        // light teal surface
+
+// ---- navigation: the part of the manual each slide belongs to ----------------------------------------------
+#let parts = ("Setting Up", "Defining Plots", "Building Plots", "Processing Data", "Reference")
+// a divider slide places a part marker; the header shows the last marker on or before its page
+#let part-marker(title) = [#metadata(title)<part>]
+
 #set page(
   width: 16in,
   height: 9in,
   margin: 0.5in,
+  fill: paper,
+  header-ascent: 34%,
+  header: context {
+    let n = counter(page).get().first()
+    let total = counter(page).final().first()
+    if n > 1 {
+      set text(size: 11pt, fill: muted, top-edge: "cap-height")
+      let part = query(<part>).filter(m => m.location().page() <= n)
+      grid(
+        columns: (1fr, 1.6in, auto),
+        column-gutter: 12pt,
+        align: horizon,
+        [#text(weight: "bold", fill: main-color)[SciRooPlot] #h(0.4em) · #h(0.4em) #(if part.len() > 0 { part.last().value } else { "Introduction" })],
+        box(width: 100%, height: 3pt, radius: 1.5pt, fill: hairline, place(box(width: 100% * n / total, height: 3pt, radius: 1.5pt, fill: main-color))),
+        [#n / #total],
+      )
+    }
+  },
 )
 #set text(
   font: ("Arial", "Liberation Sans", "DejaVu Sans"),
   size: 18pt,
+  fill: rgb("1F2933"),
   // fixed top edge of the lines (the cap height of Arial): Arial 2.82 (Microsoft core fonts, used to build the
   // slides in CI) has no cap height in its OS/2 table, so Typst would use its ascender and every line would get taller
   top-edge: 0.688em,
 )
+#set list(marker: text(fill: main-color)[•])
+#show strong: set text(fill: ink)
 // code keeps the line height of its own font
 #show raw: set text(top-edge: "cap-height")
-#let main-color = rgb("1C94A5")
-#let accent-color = rgb("D4A63A")
 
 #let lang = sys.inputs.lang
 
@@ -29,8 +62,8 @@
 
 #let feature(title, desc) = rect(
   radius: 8pt,
-  fill: rgb("#f8fafc"),
-  stroke: 1pt + rgb("#dbe2ea"),
+  fill: white,
+  stroke: 1pt + hairline,
   inset: 10pt,
 )[
   *#title*
@@ -42,42 +75,102 @@
 
 #let slide-title(title) = {
   text(
-    fill: main-color,
+    fill: ink,
     size: 28pt,
     weight: "bold",
   )[ = #title ]
-  line(
-    length: 100%,
-    stroke: 3pt + accent-color,
-  )
+  // zero height like the stroke of a line, so the content area of the slides is unchanged
+  box(width: 100%, height: 0pt, {
+    place(horizon, line(length: 100%, stroke: 1pt + hairline))
+    place(horizon, line(length: 2.2in, stroke: (paint: accent-color, thickness: 4pt, cap: "round")))
+  })
   v(0.5em)
 }
 
+// one-sentence take-home message of a slide
+#let key-idea(body, label: "Key idea") = block(
+  fill: tint,
+  stroke: (left: 4pt + main-color),
+  radius: (right: 8pt),
+  inset: (x: 14pt, y: 10pt),
+  width: 100%,
+)[#text(weight: "bold", fill: main-color)[#label] #h(0.6em) #body]
+
+// the parts of the manual as a row of chips, the current one highlighted
+#let roadmap(current) = grid(
+  columns: parts.len(),
+  column-gutter: 10pt,
+  ..parts.enumerate().map(((i, p)) => {
+    let on = i + 1 == current
+    box(
+      width: 100%,
+      fill: if on { ink } else { white },
+      stroke: 1pt + if on { ink } else { hairline },
+      radius: 8pt,
+      inset: (x: 12pt, y: 10pt),
+    )[
+      #text(size: 15pt, weight: "bold", fill: if on { accent-color } else { muted })[#(i + 1)]
+      #h(0.4em)
+      #text(size: 15pt, weight: "bold", fill: if on { white } else { muted })[#p]
+    ]
+  })
+)
+
+// divider slide opening part n of the manual: what it is about and what the reader will be able to do afterwards
+#let section-slide(title, n, blurb, goals) = slide[
+  #part-marker(title)
+  #v(1fr)
+  #grid(
+    columns: (3.4in, 1fr),
+    align: (left + horizon, left + horizon),
+    text(size: 150pt, weight: "bold", fill: accent-color)[#n],
+    [
+      #text(size: 44pt, weight: "bold", fill: ink)[#title]
+      #v(0.2em)
+      #text(size: 22pt, fill: muted)[#blurb]
+    ],
+  )
+  #v(0.8em)
+  #block(inset: (left: 3.4in))[
+    #text(size: 16pt, weight: "bold", fill: main-color)[AFTER THIS PART YOU CAN]
+    #v(0.2em)
+    #set text(size: 19pt)
+    #for g in goals [ #text(fill: accent-color)[✓] #h(0.3em) #g \ ]
+  ]
+  #v(1fr)
+  #roadmap(n)
+]
+
 #let code-block(cpp, py) = {
   block(
-    fill: rgb("#f8fafc"),
-    stroke: 1pt + rgb("#d0d7de"),
+    fill: white,
+    stroke: 1pt + hairline,
     radius: 10pt,
     inset: 14pt,
     width: 98%,
   )[
+    #place(top + right, dx: 6pt, dy: -6pt, box(fill: tint, radius: 4pt, inset: (x: 6pt, y: 3pt),
+      text(size: 10pt, weight: "bold", fill: main-color, top-edge: "cap-height")[#(if lang == "py" { "Python" } else { "C++" })]))
     #(if lang == "py" { py } else { cpp })
   ]
 }
 #let prompt = text(fill: main-color, weight: "bold")[\$]
-#let terminal(body, size: 16pt, inset: 15pt) = block(
-  fill: rgb("fafafa"),
-  stroke: 1pt + rgb("d0d7de"),
+#let terminal(body, size: 16pt, inset: 15pt, width: auto) = block(
+  width: width,
+  fill: rgb("F3F5F8"),
+  stroke: 1pt + hairline,
   radius: 10pt,
   inset: inset,
 )[
   #set text(font: "DejaVu Sans Mono", size: size)
+  // straight quotes, so that commands can be copied from the slides
+  #set smartquote(enabled: false)
   #body
 ]
 
 #let card(title, color, body, width: auto, inset: 15pt, title-size: 24pt) = rect(
-  fill: rgb("fafafa"),
-  stroke: 1pt + rgb("d0d7de"),
+  fill: white,
+  stroke: 1pt + hairline,
   radius: 10pt,
   inset: inset,
   width: width,
@@ -94,25 +187,15 @@
 #let names(..items) = items.pos().map(i => raw(i)).join(linebreak())
 
 #let step(n, title, desc) = rect(
-  fill: rgb(28, 148, 165, 14),
-  stroke: (left: 5pt + accent-color, rest: 1pt + rgb("d0d7de")),
+  fill: white,
+  stroke: (top: 5pt + accent-color, rest: 1pt + hairline),
   radius: 10pt,
   inset: 20pt,
   width: 100%,
 )[
+  // no step number: the arrows give the order, and numbers are reserved for the parts of the manual
   #align(center)[
-    #box(
-      fill: accent-color,
-      radius: 100%,
-      width: 2.6em,
-      height: 2.6em,
-    )[
-      #align(center + horizon)[
-        #text(size: 26pt, weight: "bold", fill: white)[#n]
-      ]
-    ]
-    #v(0.7em)
-    #text(size: 20pt, weight: "bold", fill: main-color)[#title]
+    #text(size: 24pt, weight: "bold", fill: ink)[#title]
     #v(0.4em)
     #text(size: 14.5pt)[#desc]
   ]
@@ -123,8 +206,8 @@
 ]
 
 #let api-table(rows, col-widths: (44%, 56%), text-size: 13pt) = block(
-  fill: rgb("fafafa"),
-  stroke: 1pt + rgb("d0d7de"),
+  fill: white,
+  stroke: 1pt + hairline,
   radius: 10pt,
   inset: 0pt,
   width: 100%,
@@ -136,13 +219,13 @@
     stroke: none,
     inset: (x: 0.6em, y: 0.5em),
     align: (left + top, left + top),
-    fill: (x, y) => if calc.rem(y, 2) == 0 { rgb("eef2f5") } else { white },
+    fill: (x, y) => if calc.rem(y, 2) == 0 { tint } else { white },
     ..rows
   )
 ]
 
 #let api-section(title, rows, col-widths: (44%, 56%), text-size: 13pt) = [
-  #text(size: 18pt, weight: "bold", fill: main-color)[#title]
+  #box(width: 9pt, height: 9pt, fill: accent-color, radius: 2pt) #h(0.3em) #text(size: 18pt, weight: "bold", fill: ink)[#title]
   #v(0.3em)
   #api-table(rows, col-widths: col-widths, text-size: text-size)
 ]
@@ -163,25 +246,23 @@
 }
 
 
-#slide[
+// background = the dark of the logo, so the logo sits seamlessly on the page
+#page(fill: rgb("141A24"), margin: 0.8in)[
   #grid(
-    columns: (1fr, auto),
-    align: (left + horizon, right + horizon),
-    text(fill: main-color, size: 28pt, weight: "bold")[= SciRooPlot User Manual],
-    text(fill: accent-color, size: 20pt, weight: "bold")[
-      #if lang == "py" { "Python Version" } else { "C++ Version" }
+    columns: (1fr, 6.2in),
+    column-gutter: 0.4in,
+    align: (left + horizon, center + horizon),
+    [
+      #stack(spacing: 24pt, ..("SciRooPlot", "User Manual").map(t => text(size: 66pt, weight: "bold", fill: white, t)))
+      #v(0.4em)
+      #box(width: 2.2in, height: 5pt, fill: accent-color, radius: 2.5pt)
+      #v(0.6em)
+      #text(size: 26pt, fill: rgb("B8C2D0"))[Scientific plotting made simple: \ describe your figures, let ROOT draw them.]
+      #v(1.6em)
+      #box(fill: main-color, radius: 6pt, inset: (x: 14pt, y: 9pt),
+        text(size: 18pt, weight: "bold", fill: white)[#if lang == "py" { "Python Version" } else { "C++ Version" }])
     ],
-  )
-  #line(length: 100%, stroke: 3pt + accent-color)
-  #v(0.5em)
-  #place(
-    dy: 1cm,
-    center + horizon,
-    image("logo.png", width: 22cm),
-  )
-  #place(
-    bottom + right,
-    terminal("Scientific Plotting Made Simple"),
+    image("logo.png", width: 6in),
   )
 ]
 
@@ -248,6 +329,108 @@
 ]
 
 
+// the same plot written as a plain ROOT macro (root-examples/), shown next to its SciRooPlot definition
+#let root-macro-lines = {
+  let lines = read("root-examples/ptSpectrumRatio.C").trim().split("\n")
+  // skip the comment block at the top of the file
+  while lines.len() > 0 and lines.first().starts-with("//") { lines = lines.slice(1) }
+  lines
+}
+#let counted(lines) = lines.filter(l => l.trim() != "" and not l.trim().starts-with("//")).len()
+
+#slide[
+  #slide-title("An Everyday Example: Spectra and their Ratio")
+  #let srp-cpp = ```cpp
+  PlotManager pm("myProject");
+  pm.AddDataSource("data", "~/data/spectra.root:data");
+  pm.AddDataSource("mc", "~/data/spectra.root:mc");
+  pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
+
+  Plot plot("ptSpectrumRatio", "spectra", "1d_ratio");
+  plot[1].AddData("ptSpec", "data", "data")
+         .SetMarker(kBlack, kFullCircle, 1.);
+  plot[1].AddData("ptSpec", "mc", "simulation")
+         .SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.);
+  plot[1].AddLegend();
+  plot[1].AddText({"Example Experiment",
+                   "pp, #sqrt{#it{s}} = 13.6 TeV", "|#eta| < 0.8"});
+  plot[1]['Y'].SetLog();
+  plot[2].AddRatio({"ptSpec", "data"}, {"ptSpec", "mc"});
+  plot[2]['Y'].SetTitle("data / sim.").SetRange(0.7, 1.3);
+  plot[0]['X'].SetLog().SetRange(0.15, 15.);
+  pm.AddPlot(plot);
+  pm.SaveProject();
+  ```
+  #let srp-py = ```python
+  pm = PlotManager("myProject")
+  pm.AddDataSource("data", "~/data/spectra.root:data")
+  pm.AddDataSource("mc", "~/data/spectra.root:mc")
+  pm.AddBasePlot(PlotManager.MakeBasePlot("1d_ratio"))
+
+  plot = Plot("ptSpectrumRatio", "spectra", "1d_ratio")
+  plot[1].AddData("ptSpec", "data", "data") \
+         .SetMarker(kBlack, kFullCircle, 1.0)
+  plot[1].AddData("ptSpec", "mc", "simulation") \
+         .SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.0)
+  plot[1].AddLegend()
+  plot[1].AddText(["Example Experiment",
+                   "pp, #sqrt{#it{s}} = 13.6 TeV", "|#eta| < 0.8"])
+  plot[1]['Y'].SetLog()
+  plot[2].AddRatio(["ptSpec", "data"], ["ptSpec", "mc"])
+  plot[2]['Y'].SetTitle("data / sim.").SetRange(0.7, 1.3)
+  plot[0]['X'].SetLog().SetRange(0.15, 15.0)
+  pm.AddPlot(plot)
+  pm.SaveProject()
+  ```
+  #let srp-code = if lang == "py" { srp-py } else { srp-cpp }
+  #let lines = root-macro-lines
+  // split the macro into two columns at the empty line closest to its middle
+  #let cut = {
+    let empty = range(lines.len()).filter(i => lines.at(i).trim() == "")
+    empty.sorted(key: i => calc.abs(i - lines.len() / 2)).first()
+  }
+  #let macro-col(part) = raw(part.join("\n"), lang: "cpp", block: true)
+  #grid(
+    columns: (8.7in, 1fr),
+    column-gutter: 0.3in,
+    [
+      #card(
+        [Plain ROOT #h(1fr) #text(size: 14pt, weight: "regular", fill: muted)[#counted(lines) lines]],
+        ink,
+        width: 100%,
+        title-size: 20pt,
+      )[
+        #set text(size: 7pt)
+        #grid(columns: (1fr, 1fr), column-gutter: 14pt, macro-col(lines.slice(0, cut)), macro-col(lines.slice(cut + 1)))
+      ]
+    ],
+    [
+      #card(
+        [SciRooPlot #h(1fr) #text(size: 14pt, weight: "regular", fill: muted)[#counted(srp-code.text.split("\n")) lines]],
+        main-color,
+        width: 100%,
+        title-size: 20pt,
+      )[
+        #set text(size: 9.5pt)
+        #srp-code
+        #v(-0.3em)
+        #text(size: 13pt)[#prompt `plot spectra ptSpectrumRatio pdf`]
+      ]
+      #v(-0.2em)
+      #grid(
+        columns: (1fr, 1fr),
+        column-gutter: 10pt,
+        align: center,
+        image("root-examples/ptSpectrumRatio_root.png", height: 1.5in),
+        image("root-examples/ptSpectrumRatio_scirooplot.png", height: 1.5in),
+        text(size: 12pt, fill: muted)[plain ROOT], text(size: 12pt, fill: muted)[SciRooPlot],
+      )
+      #v(-0.2em)
+      #key-idea[#set text(size: 13pt); Same plot, without file handling, pads, margins, text sizes and box placement.]
+    ],
+  )
+]
+
 #slide[
   #slide-title("SciRooPlot Workflow")
   #v(1fr)
@@ -263,72 +446,59 @@
     step("4", "Organize", [Manage projects and settings with `srp`.]),
   )
   #v(1fr)
+  #key-idea[You describe _what_ a figure shows, once. SciRooPlot finds the data, draws it with ROOT, and keeps every plot of your project in one place.]
 ]
 
 
+#section-slide("Setting Up", 1, [Install SciRooPlot and get a first plot on screen.], (
+  [install it with conda, homebrew or from source,],
+  [create a project and run your first plot,],
+  [switch between projects and use the `plot` app.],
+))
+
 #slide[
   #slide-title("Installation")
-  - Works on Linux and macOS -- pick a package manager, or use the installer if you'd rather build from source.
-
-  #v(0.06em)
-  #card(
-    "Homebrew",
-    main-color,
-    [
-      #terminal(size: 11pt, inset: 5pt)[
-        #prompt brew tap SciRooPlot/scirooplot
-
-        #prompt brew install SciRooPlot
-
-        #prompt source "\$(brew -\-prefix scirooplot)/share/scirooplot/env.sh"
-      ]
-    ],
-    width: 100%,
-    inset: 7pt,
-    title-size: 15pt,
-  )
-
-  #v(0.06em)
-  #card(
-    "Conda",
-    main-color,
-    [
-      #terminal(size: 11pt, inset: 5pt)[
-        #prompt conda install conda-forge::scirooplot
-
-        #prompt source "\$\{CONDA_PREFIX\}/share/scirooplot/env.sh"
-      ]
-    ],
-    width: 100%,
-    inset: 7pt,
-    title-size: 15pt,
-  )
-
-  #v(0.06em)
-  #card(
-    "Installer",
-    main-color,
-    [
-      #text(size: 10pt)[Builds SciRooPlot from source -- requires #link("https://github.com/root-project/root")[#text(fill: main-color)[ROOT]] (6.36.04 or newer) and #link("https://www.boost.org/")[#text(fill: main-color)[Boost]] to already be installed.]
-      #v(0.06em)
-      #terminal(size: 11pt, inset: 5pt)[
-        #prompt git clone https://github.com/SciRooPlot/SciRooPlot.git
-
-        #prompt cd SciRooPlot && ./scripts/install.sh
-
-        #prompt source ./install/share/scirooplot/env.sh
-      ]
-    ],
-    width: 100%,
-    inset: 7pt,
-    title-size: 15pt,
-  )
-
-  #text(size: 14pt)[
-    - Whichever method you pick, sourcing that `env.sh` script is what puts the `srp` and `plot` commands in your terminal -- add the same `source` line to your shell startup file (e.g. `~/.bashrc` or `~/.zshrc`; with the installer, use the absolute path it prints at the end) so it happens automatically in every new shell.
-
-    - Later on, `$ srp update` upgrades SciRooPlot in place, however you installed it.
+  // one way of installing per row: name and when to pick it on the left, the commands on the right
+  #let route(n, name, desc, commands) = rect(width: 100%, fill: white, stroke: 1pt + hairline, radius: 10pt, inset: 16pt)[
+    #grid(
+      columns: (3.9in, 1fr),
+      column-gutter: 0.3in,
+      align: (left + horizon, left + horizon),
+      [
+        #box(fill: accent-color, radius: 100%, width: 1.6em, height: 1.6em, align(center + horizon, text(size: 15pt, weight: "bold", fill: white)[#n]))
+        #h(0.3em)
+        #text(size: 22pt, weight: "bold", fill: ink)[#name]
+        #v(-0.4em)
+        #text(size: 15pt, fill: muted)[#desc]
+      ],
+      terminal(size: 13pt, inset: 12pt, width: 100%, commands),
+    )
   ]
+  #text(size: 20pt)[Pick *one* of three ways -- each gives you the `srp` and `plot` commands. Linux and macOS.]
+  #v(1fr)
+  #stack(spacing: 14pt,
+  route("A", "Homebrew", [The prebuilt package \ from the SciRooPlot tap.])[
+    #prompt brew tap SciRooPlot/scirooplot \
+    #prompt brew install SciRooPlot \
+    #prompt source "\$(brew -\-prefix scirooplot)/share/scirooplot/env.sh"
+  ],
+  route("B", "Conda", [The conda-forge package, \ into the active environment.])[
+    #prompt conda install conda-forge::scirooplot \
+    #prompt source "\$\{CONDA_PREFIX\}/share/scirooplot/env.sh"
+  ],
+  route("C", "From source", [Needs #link("https://github.com/root-project/root")[#text(fill: main-color)[ROOT]] (6.36.04 or newer) \ and #link("https://www.boost.org/")[#text(fill: main-color)[Boost]] installed already.])[
+    #prompt git clone https://github.com/SciRooPlot/SciRooPlot.git \
+    #prompt cd SciRooPlot && ./scripts/install.sh \
+    #prompt source ./install/share/scirooplot/env.sh
+  ],
+  )
+  #v(1fr)
+  #grid(
+    columns: (1fr, 1fr),
+    column-gutter: 0.3in,
+    key-idea(label: "In every shell")[#set text(size: 15pt); The last line of each way, `source …/env.sh`, adds `srp` and `plot` to the shell. Put it into `~/.bashrc` or `~/.zshrc` (from source: the absolute path the installer prints) to have them in every new shell.],
+    key-idea(label: "Updates")[#set text(size: 15pt); Later on, `srp update` upgrades SciRooPlot in place, whichever way you installed it.],
+  )
 ]
 
 
@@ -395,10 +565,10 @@
             #if lang == "py" [#prompt srp example-py \<project\> [\<dir\>]] else [#prompt srp example-cpp \<project\> [\<dir\>]]
           ]
           #v(-0.3em)
-          Browse all of its plots, or export a whole group:
+          Browse its Higgs plots, or export them all as pdf (`.+` stands for any name):
           #v(-0.3em)
           #terminal(size: 14pt, inset: 10pt)[
-            #prompt plot \'.+\'
+            #prompt plot higgs .+
 
             #prompt plot higgs .+ pdf
           ]
@@ -442,6 +612,7 @@
           [#prompt `srp clean`], [Remove all projects whose program folder no longer exists.],
           [#prompt `srp cd [<project>]`], [Go to the folder of the project's program.],
           [#prompt `srp edit [<project>]`], [Open the project's source files.],
+          [#prompt `srp stats <project>`], [Number of plots and inputs, and when the definitions were last saved.],
         ),
       )
       #v(-0.4em)
@@ -490,11 +661,11 @@
 
       - These identifiers select plots on the command line:
         #terminal[
-          #prompt plot \<group\> [\<name\> [\<mode\>]]
+          #prompt plot \<group\> \<name\> [\<mode\>]
         ]
 
       - Tab completion browses the available names.
-      - `<group>` and `<name>` are regular expressions matching the whole name; without `<name>`, the whole group is generated.
+      - `<group>` and `<name>` are regular expressions matching the whole name; without `<mode>`, the default mode (`srp plotmode`) is used.
 
       #block(
         fill: rgb("fafafa"),
@@ -536,10 +707,12 @@
         [
           #set text(size: 16pt)
 
-          *Match one of a few names*
+          *One of a few names, or a plot and its variants*
           #v(-0.5em)
           #terminal(size: 14pt, inset: 10pt)[
-            #prompt plot paperPlots moneyPlot[1,2]
+            #prompt plot paperPlots moneyPlot[12]
+
+            #prompt plot paperPlots moneyPlot.\*
           ]
 
           *Match everything in a group and its subgroups*
@@ -553,7 +726,7 @@
           #terminal(size: 14pt, inset: 10pt)[
             #prompt plot paperPlots/QA .+
 
-            #prompt plot \'paperPlots\$\' .+
+            #prompt plot paperPlots\$ .+
           ]
 
           *Combine names with OR*
@@ -561,12 +734,18 @@
           #terminal(size: 14pt, inset: 10pt)[
             #prompt plot paperPlots \'pt(Spec|Mean)\'
           ]
-          NB.: in `bash`, `()` and `|` are shell syntax, so they still need quotes -- unlike `[]`, which `plot` always handles safely unquoted.
+          Quote a pattern containing `()` or `|`, which are shell syntax; `[]`, `*` and a final `$` need no quotes.
         ],
       )
     ],
   )
 ]
+
+#section-slide("Defining Plots", 2, [Tell SciRooPlot where your data lives and which plots to make.], (
+  [read the structure of a plot definition file,],
+  [split many plots across several files,],
+  [point plots to data in ROOT and CSV files.],
+))
 
 #slide[
   #slide-title("General Code Structure")
@@ -1032,6 +1211,12 @@
   ]
 ]
 
+#section-slide("Building Plots", 3, [Put data on a plot and make it look the way you want.], (
+  [choose a base plot and fill its pads,],
+  [style data with colours, markers and palettes,],
+  [add legends and text boxes.],
+))
+
 #slide[
   #slide-title("Plot Appearance")
   #grid(
@@ -1383,6 +1568,12 @@
   )
 ]
 
+#section-slide("Processing Data", 4, [Transform data on the fly instead of in your analysis code.], (
+  [normalize, rebin and scale histograms,],
+  [project multidimensional data and read trees and tables,],
+  [build ratios and use the interactive tricks.],
+))
+
 #slide[
   #slide-title("Modifying Data")
   #grid(
@@ -1487,9 +1678,10 @@
           plot[1].AddData("my2DHist", "input")
                  .ProfileX();
 
-          // Profile keeping axis 2; restrict axis 0 to [10, 50]
+          // Profile keeping axis 2; axis 0 to bins [10, 50]
+          // (false: bins; one range alone needs it in C++)
           plot[1].AddData("myNDHist", "input")
-                 .Profile({2}, {{0, 10, 50}});
+                 .Profile({2}, {{0, 10, 50}}, false);
           ```
         ],
         [
@@ -1509,7 +1701,7 @@
           # Profile of a 2D histogram: <Y> as a function of X
           plot[1].AddData("my2DHist", "input").ProfileX()
 
-          # Profile keeping axis 2; restrict axis 0 to [10, 50]
+          # Profile keeping axis 2; axis 0 to bins [10, 50]
           plot[1].AddData("myNDHist", "input") \
                  .Profile([2], [[0, 10, 50]])
           ```
@@ -1651,51 +1843,74 @@
   )
 ]
 
-#slide[
-  #slide-title("Pro Tips")
-  #grid(
-    columns: (32%, 32%, 32%),
-    gutter: 2%,
-    [
-      #card(
-        "Interactive navigation",
-        main-color,
-        width: 100%,
-        title-size: 20pt,
-        [
-          - In `show` mode, browse through matching plots with `s` (next) and `a` (previous), in the window or in the terminal.
-
-          - Double-clicking the right or left half of the window works too; `q` closes a window, `x` all.
-        ],
-      )
-    ],
-    [
-      #card(
-        "Positioning text & legends",
-        main-color,
-        width: 100%,
-        title-size: 20pt,
-        [
-          - Double-clicking on a text box or legend prints the relative position of its upper left corner to the terminal.
-
-          - Move the box to where you want it, double-click, then copy the printed coordinates into your #plot-def-file.
-        ],
-      )
-    ],
-    [
-      #card(
-        "Comparing plots side by side",
-        main-color,
-        width: 100%,
-        title-size: 20pt,
-        [
-          - Press `d` while browsing in `show` mode to move a plot into a window of its own next to the browsing window.
-
-          - `plot paperPlots '.+' spread` opens all matching plots at once, each in its own window.
-        ],
-      )
-    ],
+// tips as cards of equal size, three per row
+#let tip-grid(..tips) = layout(size => {
+  let gap = 0.3in
+  let width = (size.width - 2 * gap) / 3
+  let bodies = tips.pos().map(((title, body)) => [
+    #text(size: 20pt, weight: "bold", fill: main-color)[#title]
+    #v(0.2em)
+    #body
+  ])
+  let inset = 18pt
+  let height = calc.max(..bodies.map(b => measure(block(width: width - 2 * inset, b)).height)) + 2 * inset
+  grid(
+    columns: (width,) * 3,
+    gutter: gap,
+    ..bodies.map(b => rect(width: width, height: height, inset: inset, radius: 10pt, fill: white, stroke: 1pt + hairline, b)),
   )
+})
+
+#slide[
+  #slide-title("Pro Tips: In the Plot Window")
+  #v(1fr)
+  #tip-grid(
+    ([Browse through plots], [
+      - In `show` mode, browse through the matching plots with `s` (next) and `a` (previous), in the window or in the terminal.
+      - Double-clicking the right or left half of the window works too; `q` closes a window, `x` all.
+    ]),
+    ([Place text and legends by hand], [
+      - Double-click a text box or legend: the position of its upper left corner is printed to the terminal.
+      - Drag the box to where you want it, double-click, and copy the printed coordinates into your #plot-def-file.
+    ]),
+    ([Compare plots side by side], [
+      - Press `d` while browsing in `show` mode to move the current plot into a window of its own next to the browsing window.
+      - `plot paperPlots .+ spread` opens all matching plots at once, each in its own window.
+    ]),
+  )
+  #v(1fr)
+]
+
+#slide[
+  #slide-title("Pro Tips: Workflow")
+  #v(1fr)
+  #tip-grid(
+    ([Edit, save, plot], [
+      - No build step of your own: before plotting, `plot` rebuilds and re-runs your program when its sources changed.
+      - So the loop is: change #plot-def-file, run the same `plot` command again.
+    ]),
+    ([Variants of a plot], [
+      - Copy a finished plot and change only what differs: #if lang == "py" [`ratioPlot = Plot(plot, "ptSpectrumRatio")`] else [`Plot ratioPlot(plot, "ptSpectrumRatio")`], then e.g. `ratioPlot.SetBasePlot("1d_ratio")`.
+      - In a loop this gives a whole family, e.g. one plot per multiplicity class.
+    ]),
+    ([Animate a series], [
+      - Mode `gif` turns all matching plots into one animation, e.g. a spectrum per multiplicity class.
+      - `plot spectra/classes .+ gif+80` shows each frame for 0.8 s.
+    ]),
+    ([Same code on every machine], [
+      - Keep machine-specific paths out of the code: `srp set @current dataDir /data/run3` once on each machine.
+      - The code reads it with `pm.GetProjectProperty("dataDir")` and builds the input paths from it.
+    ]),
+    ([Share with ROOT-only colleagues], [
+      - `macro` writes a ROOT macro (`.C`) per plot that redraws it without SciRooPlot.
+      - `file` collects the canvases in one ROOT file, `data` the input objects of the plots.
+    ]),
+    ([When a plot looks wrong], [
+      - `plot <group> <name> print` prints the full definition of a plot, merged with its base plot.
+      - `srp verbosity debug` shows in detail what SciRooPlot reads and does.
+    ]),
+  )
+  #v(1fr)
 ]
 
 // ============================================================================
@@ -1703,6 +1918,11 @@
 // (C++/Python parity for these signatures is handled by the show rule near
 // the top of this file.)
 // ============================================================================
+
+#section-slide("Reference", 5, [Every setting on one page per class: look things up while you work.], (
+  [find any setter of a class quickly,],
+  [see which drawing option alias gives which ROOT option.],
+))
 
 #slide[
   #[]<appx-plot>
@@ -2069,7 +2289,7 @@
       stroke: none,
       inset: (x: 0.5em, y: 0.28em),
       align: left + horizon,
-      fill: (x, y) => if calc.rem(y, 2) == 0 { rgb("eef2f5") } else { white },
+      fill: (x, y) => if calc.rem(y, 2) == 0 { tint } else { white },
       [*Alias*], [*Histograms*], [*Graphs*], [*Alias*], [*Histograms*], [*Graphs*],
       [`points`], [`X0 E P`], [`P Z` #text(size: 9.5pt, fill: gray)[(x errors removed)]], [`area`], [`HIST LF2`], [`LF` #text(size: 9.5pt, fill: gray)[(polygon to zero)]],
       [`points_xerr`], [`E P`], [`P Z`], [`area_smooth`], [`HIST CF`], [as histogram],
