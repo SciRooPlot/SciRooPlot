@@ -788,7 +788,7 @@ figure.plot figcaption { color: #5b6b80 }
     <p class="muted" style="font-size:var(--step--1)">Without any option: data with a fill is drawn as <code>hist</code> (graphs: <code>area</code>), data with markers set or with errors as <code>points</code>, everything else as <code>hist</code> (graphs: <code>line</code>), 2D data as <code>colz</code>.</p>
   </div>
   <div class="filters" role="group" aria-label="Data type">
-    <button class="chip" data-kind="hist" aria-pressed="true">1D histogram</button><button class="chip" data-kind="graph">Graph</button><button class="chip" data-kind="hist2d">2D histogram</button>
+    <button class="chip" data-kind="hist" aria-pressed="true">1D histogram</button><button class="chip" data-kind="graph">Graph</button><button class="chip" data-kind="func">Function</button><button class="chip" data-kind="hist2d">2D histogram</button><button class="chip" data-kind="graph2d">2D graph</button><button class="chip" data-kind="func2d">2D function</button>
   </div>
   <div class="grid" id="optgrid"></div>
 </section>
@@ -1885,7 +1885,7 @@ function searchIndex() {
     { kind: "Page", label: "ROOT vs SciRooPlot", sub: "plain ROOT macros next to the same figures in SciRooPlot", text: "vs root versus comparison compare macro migrate migration from root", go: "#from-root" },
     { kind: "Page", label: "Examples", sub: "the example project, plot by plot", text: "examples example gallery project plots", go: "#examples" },
     { kind: "Page", label: "Example input files", sub: "what is inside the files the examples read", text: "data input files example data browse root file contents tree", go: "#data" },
-    { kind: "Page", label: "Drawing options", sub: "every alias drawn for histograms, graphs and 2D histograms", text: "drawing options draw option alias aliases gallery", go: "#options" },
+    { kind: "Page", label: "Drawing options", sub: "every alias drawn for histograms, graphs, functions and their 2D versions", text: "drawing options draw option alias aliases gallery", go: "#options" },
     { kind: "Page", label: "Installation", sub: "Homebrew, conda or from source", text: "install installation setup homebrew brew conda source build requirements", go: "#install" },
     { kind: "Page", label: "Updating from an older version", sub: "what changed and what to do", text: "update updating upgrade changes changelog migration version breaking", go: "#updating" },
     { kind: "Page", label: "Reference", sub: "topics by task and every method", text: "reference documentation api methods topics manual", go: "#reference" }];
@@ -1900,7 +1900,7 @@ function searchIndex() {
   PALETTES.forEach(pl => items.push({ kind: "Palette", label: pl[0], sub: "colour scale for 2D plots", text: pl[0].toLowerCase(), palette: pl[0] }));
   REF.forEach(r => items.push({ kind: "Topic", label: r.t, text: (r.t + " " + r.body.replace(/<[^>]+>/g, " ") + " " + (REFSNIP[r.id] ? REFSNIP[r.id].py : "")).toLowerCase(), go: "#ref-" + r.id }));
   Object.entries(METHODS).forEach(([n, ms]) => items.push({ kind: "Method", label: n.startsWith("operator") || ms.every(m => !m.sig.includes("(")) ? n : n + "()", sub: [...new Set(ms.map(m => CLASS_LABEL[m.cls]))].join(", "), text: (n + " " + ms.map(m => m.note).join(" ")).toLowerCase(), go: "#" + clsId(ms[0].cls), method: n }));
-  OPTIONS.forEach(o => items.push({ kind: "Draw option", label: o.alias, sub: o.desc, text: (o.alias + " " + o.desc + " " + o.hist + " " + o.graph + " " + o.hist2d).toLowerCase(), go: "#options", option: o }));
+  OPTIONS.forEach(o => items.push({ kind: "Draw option", label: o.alias, sub: o.desc, text: (o.alias + " " + o.desc + " " + o.hist + " " + o.graph + " " + o.func + " " + o.hist2d + " " + o.graph2d + " " + o.func2d).toLowerCase(), go: "#options", option: o }));
   Object.keys(EXAMPLES).forEach(k => items.push({ kind: "Example", label: k.split("/").pop(), sub: k.split("/").slice(0, -1).join("/"), text: (k + " " + EXAMPLES[k].py.slice(0, 400)).toLowerCase(), example: k }));
   Object.entries(T).forEach(([k, v]) => items.push({ kind: "Term", label: v[0], sub: v[1].slice(0, 70) + "…", text: (k + " " + v[0] + " " + v[1]).toLowerCase(), term: k }));
   Object.keys(COLORS).forEach(c => items.push({ kind: "Colour", label: c, text: c.toLowerCase(), color: c }));
@@ -1922,7 +1922,7 @@ function openHit(it) {
   if (it.term) { setTimeout(() => showPop(document.getElementById("sq"), it.term), 0); return }
   if (it.color) { location.hash = "styles"; setTimeout(() => labPick(it.color), 50); return }
   if (it.step !== undefined) { cur = it.step; location.hash = "tour"; renderSteps(); return }
-  if (it.option) { optKind = ["hist", "graph", "hist2d"].find(k => it.option[k] && it.option[k] !== "\u2013") || "hist"; renderOptions(); location.hash = "options";
+  if (it.option) { optKind = ["hist", "graph", "func", "hist2d", "graph2d", "func2d"].find(k => it.option[k] && it.option[k] !== "\u2013") || "hist"; renderOptions(); location.hash = "options";
     setTimeout(() => { const c = document.querySelector(`#optgrid [data-alias="${it.option.alias}"]`); if (c) { c.scrollIntoView({ block: "center" }); c.classList.add("flash"); setTimeout(() => c.classList.remove("flash"), 1600) } }, 60); return }
   if (it.palette) { location.hash = "styles"; PAL.tab = "root"; PAL.name = it.palette; setTimeout(() => { document.querySelectorAll("[data-paltab]").forEach(b => b.setAttribute("aria-pressed", b.dataset.paltab === "root")); document.getElementById("palroot").hidden = false; document.getElementById("palown").hidden = true; palRender(); document.querySelector(".pal-wrap").scrollIntoView({ block: "start" }) }, 60); return }
   if (it.method) { pendingMethod = it.method }

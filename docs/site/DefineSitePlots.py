@@ -1,6 +1,8 @@
 from SciRooPlot import *  # pyright: ignore[reportWildcardImportFromLibrary]
 import random
 
+import ROOT
+
 # Plots shown on the web page: the steps of the tour and one small plot per drawing option alias.
 # Rendered by build-site.sh with `plot '.+' '.+' png`.
 
@@ -13,6 +15,10 @@ ALIASES_2D = ["col", "colz", "box", "text", "lego", "lego_col", "lego_colz", "le
               "surf_fill", "surf_fillz", "surf_contours", "surf_shaded", "cont", "cont_col", "cont_colz", "cont_fill", "cont_fillz",
               "cont_smooth", "cont_smoothz", "candle", "candle_minmax", "candle_mean", "candle_notched", "candle_points",
               "candle_scatter", "candle_meanline", "violin", "violin_minmax"]
+ALIASES_FUNC = ["points", "line", "curve", "area", "area_smooth"]
+ALIASES_2D_FUNC = [a for a in ALIASES_2D if a not in ("box", "text") and not a.startswith(("candle", "violin"))]
+ALIASES_2D_GRAPH = ALIASES_2D_FUNC + ["triangles", "triangles_wire", "triangles_col", "triangles_colz", "triangles_fill", "triangles_fillz",
+                                      "points", "points_col", "points_colz", "line"]
 
 
 def DefineTour(pm: PlotManager):
@@ -92,6 +98,36 @@ def DefineGallery(pm: PlotManager):
         else:
             data.RebinXY(10, 6) if alias in ("text", "box") else data.RebinXY(4, 3)
         if alias.startswith(("lego", "surf")):
+            plot[1].SetView(35.0, 225.0)
+        plot[1]['X'].SetTitle("")
+        plot[1]['Y'].SetTitle("")
+        pm.AddPlot(plot)
+    for alias in ALIASES_FUNC:
+        plot = Plot(alias, "gallery/func", "1d")
+        plot[1].AddFunction("sin(x)/x").SetRangeX(0.5, 15.0).SetDrawOption(globals()[alias]).SetColor(kAzure + 2).SetFill(kAzure + 2, 1001).SetFillAlpha(0.35)
+        plot[1]['X'].SetRange(0.5, 15.0).SetTitle("")
+        plot[1]['Y'].SetRange(-0.3, 1.1).SetTitle("")
+        pm.AddPlot(plot)
+    # a 2d graph: points scattered over a peak
+    graph2d = ROOT.TGraph2D(150)
+    graph2d.SetName("g2d")
+    for i in range(150):
+        px, py = rng.uniform(-2.0, 2.0), rng.uniform(-2.0, 2.0)
+        graph2d.SetPoint(i, px, py, 10.0 * (2.718281828 ** (-(px * px + py * py) / 2.0)))
+    pm.AddDataSource("graph2d", graph2d)
+    is3d = ("lego", "surf", "triangles", "points", "line")
+    for alias in ALIASES_2D_GRAPH:
+        plot = Plot(alias, "gallery/graph2d", "2d")
+        plot[1].AddData("g2d", "graph2d").SetDrawOption(globals()[alias])
+        if alias.startswith(is3d):
+            plot[1].SetView(35.0, 225.0)
+        plot[1]['X'].SetTitle("")
+        plot[1]['Y'].SetTitle("")
+        pm.AddPlot(plot)
+    for alias in ALIASES_2D_FUNC:
+        plot = Plot(alias, "gallery/func2d", "2d")
+        plot[1].AddFunction("exp(-(x*x+y*y)/2)").SetRangeX(-2.0, 2.0).SetRangeY(-2.0, 2.0).SetDrawOption(globals()[alias])
+        if alias.startswith(is3d):
             plot[1].SetView(35.0, 225.0)
         plot[1]['X'].SetTitle("")
         plot[1]['Y'].SetTitle("")

@@ -56,6 +56,8 @@ namespace SciRooPlot
   OPT(points_line)         \
   OPT(points_text)         \
   OPT(points_arrows)       \
+  OPT(points_col)          \
+  OPT(points_colz)         \
   OPT(line)                \
   OPT(curve)               \
   OPT(curve_clipped)       \
@@ -87,6 +89,12 @@ namespace SciRooPlot
   OPT(surf_fillz)          \
   OPT(surf_contours)       \
   OPT(surf_shaded)         \
+  OPT(triangles)           \
+  OPT(triangles_wire)      \
+  OPT(triangles_col)       \
+  OPT(triangles_colz)      \
+  OPT(triangles_fill)      \
+  OPT(triangles_fillz)     \
   OPT(cont)                \
   OPT(cont_col)            \
   OPT(cont_colz)           \

@@ -147,6 +147,7 @@ Drawing option aliases (one appearance for every type; histograms and graphs are
 | `hist_clipped`, `hist_open_clipped`, `curve_clipped` | as `hist`, `hist_open`, `curve`, but cut at the frame instead of running along its edge (drawn as graph) | | |
 
 The suffix always adds one feature (`_xerr`, `_endcaps`, `_smooth`, `_nomarkers`, `_clipped`; 2D: `_col` lines coloured by content, `_fill` filled, trailing `z` adds the colour axis). An alias a type cannot draw gives a WARNING and ROOT's default.
+Functions (`TF1`): `points`, `line`, `curve`, `area`, `area_smooth` (a fill colours the area between curve and zero; `line`/`curve` drop it). 2D functions and 2D graphs: the `col`, `lego`, `surf`, `cont` aliases (no `box`, `text`, candles). 2D graphs only, drawn in 3D: `triangles`, `triangles_wire`, `triangles_col(z)`, `triangles_fill(z)` (Delaunay triangles), `points`, `points_col(z)` (markers coloured by z; error bars for TGraph2DErrors), `line`; such data must be the first in its pad or follow 3D data (lego, surf).
 
 ## Modifiers (applied in this order, before drawing)
 

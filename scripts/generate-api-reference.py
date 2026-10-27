@@ -144,7 +144,7 @@ def drawing_options(aliases):
     """alias -> ROOT option string per data type, from the maps in src/PlotPainter.h"""
     text = (ROOT / "src/PlotPainter.h").read_text()
     maps = {}
-    for name in ("Hist", "Graph", "Hist2d"):
+    for name in ("Hist", "Graph", "Func", "Hist2d", "Graph2d", "Func2d"):
         block = text[text.index(f"defaultDrawOptions_{name}{{") :]
         block = block[: block.index("};")]
         maps[name] = {alias: option for alias, option in re.findall(r"\{(\w+), \"([^\"]*)\"\}", block)}
@@ -158,21 +158,26 @@ def drawing_options(aliases):
         "Without a drawing option the same rule applies to histograms and graphs: data with a fill is drawn as `hist` (graphs: `area`),",
         "data with a marker style or size set or with non-zero errors as `points`, other data as `hist` (graphs: `line`); 2D histograms, graphs and functions as `colz`.",
         "",
-        "| alias | 1D histogram | graph | 2D histogram |",
-        "|---|---|---|---|",
+        "| alias | 1D histogram | graph | function | 2D histogram | 2D graph | 2D function |",
+        "|---|---|---|---|---|---|---|",
     ]
     for alias in aliases:
-        h, g, h2 = maps["Hist"].get(alias), maps["Graph"].get(alias), maps["Hist2d"].get(alias)
+        h, g = maps["Hist"].get(alias), maps["Graph"].get(alias)
+        others = [maps[name].get(alias) for name in ("Func", "Hist2d", "Graph2d", "Func2d")]
         if h is None and g is not None:
             h = "*as graph*"
         elif g is None and h is not None:
             g = "*as histogram*"
-        cells = [f"`{o}`" if o and not o.startswith("*") else (o or "–") for o in (h, g, h2)]
+        cells = [f"`{o}`" if o and not o.startswith("*") else (o or "–") for o in (h, g, *others)]
         out.append(f"| `{alias}` | {' | '.join(cells)} |")
     out += [
         "",
         "Appearance details beyond the ROOT string: `points`, `points_endcaps`, `points_line`, `points_text`, `points_arrows` hide the x errors of graphs (as X0 does for histograms);",
-        "`points_text` writes the values above the error bars; `boxes_nomarkers` removes the markers; `line`/`curve` of histograms are not filled;",
+        "`points_text` writes the values above the error bars; `boxes_nomarkers` removes the markers; `line`/`curve` of histograms and functions are not filled;",
+        "a function is drawn from its values at `SetNpx` points: with a fill set, `area`/`area_smooth` (and ROOT's own options) fill the area between the curve and zero;",
+        "2D graphs and 2D functions are drawn from a histogram interpolated (sampled) on a grid, so `box`, `text`, candles and violins are left out;",
+        "the triangle and points aliases of 2D graphs (and `line`, the polyline through the points) are drawn in 3D: as the first data of a pad they get an empty lego frame,",
+        "later data needs such a 3D frame (otherwise a WARNING and the data is not drawn); `points` of a graph with errors also draws the error bars;",
         "`area` of graphs is the polygon between the points and zero; `candle` is ROOT preset 2 (box, median, whiskers at 1.5 IQR, outliers), `candle_minmax` preset 1 (whiskers to the extremes).",
         "`hist_clipped`, `hist_open_clipped`, `curve_clipped` draw a histogram as a graph, whose lines ROOT cuts at the frame (`HIST`, and `HIST C` on a log axis,",
         "move bins outside of the frame onto its edge); with a fill, the steps are the outline of filled areas cut at the lower frame edge;",

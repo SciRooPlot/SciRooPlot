@@ -600,8 +600,16 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         using data_type = std::decay_t<decltype(data_ptr)>;
         draw_option_t alias = optionAlias.value_or(static_cast<draw_option_t>(255));  // 255: no alias
         if constexpr (is_graph_2d<data_type>() || is_func_2d<data_type>()) {
-          if (!data->GetDrawOption()) drawOption += "COLZ";  // no aliases for these: coloured like 2d histograms
+          if (!data->GetDrawOption() && !optionAlias) drawOption += "COLZ";  // without an option coloured like 2d histograms
         }
+        // the options of 2d graphs that paint the Delaunay triangles (TRI...) or the points (P except POL, SPH and PSR, LINE, ERR) in 3d,
+        // as TGraph2D::Paint decides it
+        auto paints3dGraph = [](const string& option, bool& triangles, bool& points) {
+          TString lower(option);
+          lower.ToLower();
+          triangles = lower.Contains("tri");
+          points = (lower.Contains("p") && !lower.Contains("pol") && !lower.Contains("sph") && !lower.Contains("psr")) || lower.Contains("line") || lower.Contains("err");
+        };
         if (optionAlias) {
           const std::map<draw_option_t, string>* options{};
           const char* typeName{};
@@ -614,6 +622,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           } else if constexpr (is_graph_1d<data_type>()) {
             options = &defaultDrawOptions_Graph;
             typeName = "graph";
+          } else if constexpr (is_graph_2d<data_type>()) {
+            options = &defaultDrawOptions_Graph2d;
+            typeName = "2d graph";
+          } else if constexpr (is_func_1d<data_type>()) {
+            options = &defaultDrawOptions_Func;
+            typeName = "function";
+          } else if constexpr (is_func_2d<data_type>()) {
+            options = &defaultDrawOptions_Func2d;
+            typeName = "2d function";
           }
           if (auto it = (options) ? options->find(*optionAlias) : decltype(options->end()){}; options && it != options->end()) {
             drawOption += it->second;
@@ -624,6 +641,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         }
 
         // appearances that ROOT has no drawing option for are prepared on the copy that is drawn
+        if constexpr (is_graph_2d<data_type>()) {
+          // the points of a 2d graph with errors are drawn with their error bars (as the points of 1d data)
+          if ((alias == points || alias == points_col || alias == points_colz) && (data_ptr->InheritsFrom(TGraph2DErrors::Class()) || data_ptr->InheritsFrom(TGraph2DAsymmErrors::Class()))) drawOption += " ERR";
+        }
         if constexpr (is_graph_1d<data_type>()) {
           if (alias == points || alias == points_endcaps || alias == points_line || alias == points_text || alias == points_arrows) {
             // x errors are only drawn with the _xerr aliases (as for histograms with X0)
@@ -686,6 +707,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           optional<double_t> graphPositiveMinimum;
           // the same for the x axis of 1d graphs, from the lower ends of the error bars (from the points where those are not positive)
           optional<double_t> graphPositiveMinimumX;
+          // the range of the points of a 2d graph in z, including their errors
+          std::pair<double_t, double_t> graphRangeZ{};
+          if constexpr (is_graph_2d<data_type>()) graphRangeZ = {data_ptr->GetZminE(), data_ptr->GetZmaxE()};
           if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
             graphPositiveMinimum = std::numeric_limits<double_t>::infinity();
             if constexpr (is_graph_1d<data_type>()) graphPositiveMinimumX = std::numeric_limits<double_t>::infinity();
@@ -717,10 +741,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           string drawOptAxis = "AXIS";
           pad_ptr->Update();
           if constexpr (is_graph_2d<data_type>()) {
-            // the triangle options (TRI, TRI1, TRI2, TRIW) paint the Delaunay triangulation of the graph, which the copy of its histogram
-            // that draws the frame does not have (ROOT crashes on it): the frame is drawn as an empty lego plot (the same box and axes)
-            static const std::regex triangles("tri[0-9w]?", std::regex::icase);
-            drawOption = std::regex_replace(drawOption, triangles, "LEGO");
+            // the options that paint the triangles or the points of the graph in 3d (the rule of TGraph2D::Paint: TRI..., P except POL, SPH
+            // and PSR, LINE, ERR) need the Delaunay triangulation, which the copy of its histogram that draws the frame does not have
+            // (ROOT crashes on TRI and draws P as a flat map): the frame is drawn as an empty lego plot (the same box and axes),
+            // with the colour axis if the option asks for one
+            bool triangles{}, points{};
+            paints3dGraph(drawOption, triangles, points);
+            if (triangles || points) drawOption = (TString(drawOption).Contains("z", TString::kIgnoreCase)) ? "LEGOZ" : "LEGO";
           }
           // the frame of a 2d histogram, and of a coloured 2d graph or function (drawn from its histogram), also draws the colour axis
           const bool isColored2d = (is_graph_2d<data_type>() || is_func_2d<data_type>()) && str_contains(drawOption, "COL");
@@ -1008,6 +1035,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // but for data drawn SAME on a frame with a stored minimum of zero it leaves out the bins of the lowest contents.
             // This floor is ROOT's default on purpose, not a choice of SciRooPlot: the smallest positive content could be used instead, but it
             // can lie arbitrarily many decades below the maximum and then stretches the colour scale; a plot that needs more sets the Z range.
+            if constexpr (is_graph_2d<data_type>()) {
+              // the interpolated histogram of a graph can stay below its highest point (and above its lowest one): the z range includes the
+              // points (with their errors), as ROOT's own range of the graph (TGraph2D::GetHistogram), unless the user set that end
+              optional<double_t> userMinZ, userMaxZ;
+              for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
+                if (!curPad.GetAxes().count('Z')) continue;
+                if (curPad['Z'].GetMinRange()) userMinZ = curPad['Z'].GetMinRange();
+                if (curPad['Z'].GetMaxRange()) userMaxZ = curPad['Z'].GetMaxRange();
+              }
+              if (!userMinZ) min = std::min(min, graphRangeZ.first);
+              if (!userMaxZ) max = std::max(max, graphRangeZ.second);
+            }
             if (pad_ptr->GetLogz() && min <= 0. && max > 0.) min = std::min(1., 0.001 * max);
             axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
             axisHist_ptr->SetMinimum(min);
@@ -1018,6 +1057,17 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           pad_ptr->Update();
         } else {
+          if constexpr (is_graph_2d<data_type>()) {
+            bool triangles{}, points{};
+            paints3dGraph(drawOption, triangles, points);
+            if ((triangles || points) && !pad_ptr->GetView()) {
+              logger::warning("Data {} is drawn in 3d ({}) and needs a 3d frame: the first data of the pad drawn in 3d (e.g. lego, surf, triangles or points). It is not drawn.", data->GetName(), (optionAlias) ? draw_option_name(*optionAlias) : drawOption);
+              delete data_ptr;
+              ++dataIndex;  // the next data keeps its number
+              drawOption = "SAME ";
+              return;
+            }
+          }
           // do not draw the colour scale a second time (only types that have one: for graphs 'Z' means no end caps on the error bars)
           // the 'Z' is removed, not blanked, so that suffixes stay attached to their option (COLZ2 -> COL2)
           if constexpr (is_2d<data_type>() || is_3d<data_type>()) {
@@ -1103,8 +1153,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (!data->GetFillStyle()) defaultSettingIndices[5]++;
               data_ptr->SetFillStyle(*fillStyle);
             }
-            if constexpr (is_hist_1d<data_type>()) {
-              if (alias == line || alias == curve) data_ptr->SetFillStyle(0);  // HIST L and HIST C would also fill the histogram
+            if constexpr (is_hist_1d<data_type>() || is_func_1d<data_type>()) {
+              if (alias == line || alias == curve) data_ptr->SetFillStyle(0);  // HIST L and HIST C would also fill the histogram, L and C the area below a function
             }
           }
 
@@ -1306,6 +1356,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (maximum > axisHist_ptr->GetMaximum()) axisHist_ptr->SetMaximum(maximum);
               if (!pad_ptr->GetLogz() && minimum < axisHist_ptr->GetMinimum()) axisHist_ptr->SetMinimum(minimum);
             }
+          }
+          if constexpr (is_graph_2d<data_type>()) {
+            // the points are painted from an empty histogram of the graph, unless it already has one: then its contents (interpolated e.g.
+            // by SetMinimum above) are painted as well, as colours behind PCOL: the contents are cleared
+            bool triangles{}, points{};
+            paints3dGraph(drawOption, triangles, points);
+            if (points && !triangles) data_ptr->GetHistogram()->Reset("ICE");  // not its functions: they hold the triangulation
           }
           data_ptr->Draw(drawOption.data());
           if (showStats) {
@@ -2585,7 +2642,12 @@ string PlotPainter::LegendSymbolElements(TObject* obj, string option)
   const bool hasFill = fill && fill->GetFillStyle() != 0 && fill->GetFillColor() != 0;
   auto has = [&option](char c) { return option.find(c) != string::npos; };
 
-  if (obj->InheritsFrom(TF1::Class())) return (takeToken("FC") && hasFill) ? "F" : "L";
+  if (obj->InheritsFrom(TF2::Class())) return (takeToken("FC") && hasFill) ? "F" : "L";
+  if (obj->InheritsFrom(TF1::Class())) {
+    // a function is drawn with markers at its sampling points with P, otherwise as a curve that a fill colours down to zero
+    if (has('P')) return "P";
+    return (hasFill) ? "F" : "L";
+  }
   if (auto graph = dynamic_cast<TGraph*>(obj)) {
     const bool hasErrors = HasErrors(graph) && !has('X');
     string style;

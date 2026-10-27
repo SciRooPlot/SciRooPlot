@@ -26,7 +26,9 @@ DESC = {
     "lego": "3D bars", "lego_col": "3D bars coloured by content", "lego_colz": "coloured 3D bars with colour scale", "lego_noborders": "3D bars without borders",
     "surf": "wire-frame surface", "surf_col": "surface lines coloured by content", "surf_colz": "coloured surface lines with colour scale",
     "surf_fill": "filled surface", "surf_fillz": "filled surface with colour scale", "surf_contours": "surface with contours drawn on top",
-    "surf_shaded": "shaded surface", "cont": "contour lines", "cont_col": "contour lines coloured by level", "cont_colz": "coloured contour lines with scale",
+    "surf_shaded": "shaded surface", "triangles": "Delaunay triangles as filled surface", "triangles_wire": "Delaunay triangles as wire frame",
+    "triangles_col": "triangles coloured by z, with edges", "triangles_colz": "coloured triangles with colour scale", "triangles_fill": "triangles coloured by z, no edges",
+    "triangles_fillz": "coloured triangles without edges, with colour scale", "points_col": "3D markers coloured by z", "points_colz": "coloured 3D markers with colour scale", "cont": "contour lines", "cont_col": "contour lines coloured by level", "cont_colz": "coloured contour lines with scale",
     "cont_fill": "filled contours", "cont_fillz": "filled contours with colour scale", "cont_smooth": "smoothed filled contours",
     "cont_smoothz": "smoothed contours with colour scale", "candle": "box, median, whiskers at 1.5 IQR, outliers", "candle_minmax": "whiskers to the extremes",
     "candle_mean": "candle with the mean marked", "candle_notched": "notched candle", "candle_points": "candle with all points",
@@ -35,10 +37,11 @@ DESC = {
 }
 opts = []
 for line in open(f"{REPO}/docs/skill/scirooplot/reference/drawing-options.md"):
-    m = re.match(r"^\| `(\w+)` \| (.*?) \| (.*?) \| (.*?) \|$", line)
+    m = re.match(r"^\| `(\w+)` \| (.*?) \| (.*?) \| (.*?) \| (.*?) \| (.*?) \| (.*?) \|$", line)
     if m:
         clean = lambda c: c.strip().strip("`").replace("*", "")
-        opts.append({"alias": m.group(1), "hist": clean(m.group(2)), "graph": clean(m.group(3)), "hist2d": clean(m.group(4)), "desc": DESC.get(m.group(1), "")})
+        kinds = ["hist", "graph", "func", "hist2d", "graph2d", "func2d"]
+        opts.append({"alias": m.group(1), **{k: clean(m.group(i + 2)) for i, k in enumerate(kinds)}, "desc": DESC.get(m.group(1), "")})
 s = open(f"{SITE}/template.html").read()
 s = s.replace("/*PALETTES*/", open(f"{GEN}/palettes.json").read()).replace("/*COLORS*/", open(f"{SITE}/colors.json").read()).replace("/*EXAMPLES*/", open(f"{GEN}/examples.json").read()).replace("/*OPTIONS*/", json.dumps(opts))
 macros = {}

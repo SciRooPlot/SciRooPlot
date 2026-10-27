@@ -2353,3 +2353,19 @@
     ],
   )
 ]
+
+#slide[
+  #slide-title("Appendix: Drawing Options – Functions and 2D Graphs")
+  - Functions (`TF1`) are drawn from their values at `SetNpx` points: `points` (`P`), `line` (`L`), `curve` (`C`), `area` (`L`), `area_smooth` (`C`). With a fill set, the area between the curve and zero is filled (`line` and `curve` drop the fill).
+  - 2D graphs and 2D functions take the colour map, lego, surface and contour aliases of 2D histograms (drawn from an interpolated grid, so no `box`, `text`, candles or violins).
+  - Only 2D graphs have their points and Delaunay triangles, drawn in 3D: as the first data of a pad they get an empty lego frame, later data needs such a 3D frame.
+  #v(0.4em)
+  #api-table((
+    [`triangles` / `triangles_wire`], [`TRI` #text(size: 10pt, fill: gray)[(filled with the fill colour)] / `TRIW`],
+    [`triangles_col` / `triangles_colz`], [`TRI1` / `TRI1Z` #text(size: 10pt, fill: gray)[(coloured by z, with edges)]],
+    [`triangles_fill` / `triangles_fillz`], [`TRI2` / `TRI2Z` #text(size: 10pt, fill: gray)[(coloured by z)]],
+    [`points`], [`P` #text(size: 10pt, fill: gray)[(+ `ERR` for graphs with errors)]],
+    [`points_col` / `points_colz`], [`PCOL` / `PCOLZ` #text(size: 10pt, fill: gray)[(markers coloured by z)]],
+    [`line`], [`LINE` #text(size: 10pt, fill: gray)[(polyline through the points)]],
+  ), col-widths: (40%, 60%), text-size: 13pt)
+]

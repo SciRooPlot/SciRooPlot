@@ -111,6 +111,14 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Hist{
   {boxes_nomarkers, "E2"},  // the markers are removed before drawing
   {text, "HIST TEXT"},
 };
+// functions are sampled at SetNpx points and drawn like a histogram of them: a fill set for them fills the area between the curve and zero
+inline const std::map<draw_option_t, std::string> defaultDrawOptions_Func{
+  {points, "P"},
+  {line, "L"},
+  {curve, "C"},
+  {area, "L"},
+  {area_smooth, "C"},
+};
 // aliases missing for one of the 1d types are drawn by converting to the other type (bars: graph bars with gaps, text: histogram with the values)
 
 // the x errors of graphs are removed before drawing for all points aliases without _xerr (as for histograms with X0),
@@ -135,6 +143,66 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Graph{
   {boxes, "P2"},
   {boxes_nomarkers, "2"},
   {brackets, "[]"},
+};
+
+// 2d graphs and 2d functions are drawn from a histogram interpolated (or sampled) on a grid, as 2d histograms; box and text would show
+// the grid instead of the data, candles and violins a distribution that does not exist. Only graphs have their points and triangles:
+// the Delaunay triangles as a filled surface (with the data's fill colour), as wire frame, or coloured by z, and the points as markers
+// (points_col: coloured by z), all in 3d
+inline const std::map<draw_option_t, std::string> defaultDrawOptions_Graph2d{
+  {col, "COL"},
+  {colz, "COLZ"},
+  {lego, "LEGO1 0"},
+  {lego_col, "LEGO2 0"},
+  {lego_colz, "LEGO2Z 0"},
+  {lego_noborders, "LEGO3 0"},
+  {surf, "SURF"},
+  {surf_col, "SURF1"},
+  {surf_colz, "SURF1Z"},
+  {surf_fill, "SURF2"},
+  {surf_fillz, "SURF2Z"},
+  {surf_contours, "SURF3"},
+  {surf_shaded, "SURF4"},
+  {cont, "CONT3"},
+  {cont_col, "CONT1"},
+  {cont_colz, "CONT1Z"},
+  {cont_fill, "CONT0"},
+  {cont_fillz, "CONTZ"},
+  {cont_smooth, "CONT4"},
+  {cont_smoothz, "CONT4Z"},
+  {triangles, "TRI"},
+  {triangles_wire, "TRIW"},
+  {triangles_col, "TRI1"},
+  {triangles_colz, "TRI1Z"},
+  {triangles_fill, "TRI2"},
+  {triangles_fillz, "TRI2Z"},
+  {points, "P"},
+  {points_col, "PCOL"},
+  {points_colz, "PCOLZ"},
+  {line, "LINE"},
+};
+
+inline const std::map<draw_option_t, std::string> defaultDrawOptions_Func2d{
+  {col, "COL"},
+  {colz, "COLZ"},
+  {lego, "LEGO1 0"},
+  {lego_col, "LEGO2 0"},
+  {lego_colz, "LEGO2Z 0"},
+  {lego_noborders, "LEGO3 0"},
+  {surf, "SURF"},
+  {surf_col, "SURF1"},
+  {surf_colz, "SURF1Z"},
+  {surf_fill, "SURF2"},
+  {surf_fillz, "SURF2Z"},
+  {surf_contours, "SURF3"},
+  {surf_shaded, "SURF4"},
+  {cont, "CONT3"},
+  {cont_col, "CONT1"},
+  {cont_colz, "CONT1Z"},
+  {cont_fill, "CONT0"},
+  {cont_fillz, "CONTZ"},
+  {cont_smooth, "CONT4"},
+  {cont_smoothz, "CONT4Z"},
 };
 
 //**************************************************************************************************
