@@ -36,7 +36,7 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       ###########################################################
       # Linux
@@ -48,7 +48,7 @@ jobs:
 
       - name: Install ROOT (Linux)
         if: runner.os == 'Linux'
-        uses: mamba-org/setup-micromamba@v2
+        uses: mamba-org/setup-micromamba@v3
         with:
           environment-name: build
           create-args: >-

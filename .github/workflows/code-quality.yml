@@ -25,7 +25,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+
+      # pre-commit/action is unmaintained and still pins the Node 20 actions/cache@v4: run its steps directly
+      - name: Install pre-commit
+        run: python -m pip install pre-commit
+
+      - name: Cache pre-commit hooks
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
       - name: Run pre-commit
-        uses: pre-commit/action@v3.0.1
+        run: pre-commit run --show-diff-on-failure --color=always --all-files

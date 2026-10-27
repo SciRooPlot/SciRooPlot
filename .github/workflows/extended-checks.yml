@@ -17,7 +17,7 @@ jobs:
       run: ${{ steps.check.outputs.run }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check for new commits
         id: check
@@ -40,13 +40,13 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install dependencies
         run: ./.github/scripts/install-linux.sh
 
       - name: Install ROOT
-        uses: mamba-org/setup-micromamba@v2
+        uses: mamba-org/setup-micromamba@v3
         with:
           environment-name: build
           create-args: >-
@@ -119,7 +119,7 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Read ROOT floor
         id: floor
@@ -128,7 +128,7 @@ jobs:
 
       # Python 3.10 is the newest Python supported by the pybind11 floor
       - name: Install ROOT
-        uses: mamba-org/setup-micromamba@v2
+        uses: mamba-org/setup-micromamba@v3
         with:
           environment-name: floor
           create-args: >-
