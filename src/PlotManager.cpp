@@ -765,20 +765,28 @@ void PlotManager::AddPlot(Plot plot)
   mPlots.push_back(std::move(plot));
 }
 
+BasePlotShape& BasePlotShape::SetAspectRatio(double_t ratio)
+{
+  mAspectRatio = ratio;
+  return *this;
+}
+
+BasePlotShape& BasePlotShape::SetRatioHeight(double_t height)
+{
+  mRatioHeight = height;
+  return *this;
+}
+
 //**************************************************************************************************
 /**
  * Base plots with consistent layout among them (see PlotManager.h). The name describes the layout:
  * <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]. The geometry and the sizes come from the PanelLayout
- * (its defaults are the proportions of the 788 x 788 pixel standard plot, or the lengths of sizes), the look is set
- * with the ordinary plot setters, and the conventions of the ratio pads are added afterwards.
+ * (its defaults are the proportions of the 788 x 788 pixel standard plot, or the lengths of sizes; the proportions of
+ * wide, tall and ratio panels come from shape), the look is set with the ordinary plot setters, and the conventions
+ * of the ratio pads are added afterwards.
  */
 //**************************************************************************************************
-Plot PlotManager::MakeBasePlot(const string& name)
-{
-  return MakeBasePlot(name, PanelLayout());  // the default lengths of PanelLayout are those of the standard plot
-}
-
-Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes)
+Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, const BasePlotShape& shape)
 {
   static const std::regex pattern(R"(^(1d|2d)(?:_(wide|tall))?(?:_([1-9]\d*)x([1-9]\d*))?(_ratio)?(_gap)?$)");
   std::smatch match;
@@ -787,7 +795,7 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes)
     return Plot();
   }
   const bool zAxis = (match[1] == "2d");
-  const string shape = match[2];
+  const string form = match[2];
   const int32_t nCols = match[3].matched ? std::stoi(match[3]) : 1;
   const int32_t nRows = match[4].matched ? std::stoi(match[4]) : 1;
   const bool ratio = match[5].matched;
@@ -798,10 +806,8 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes)
   }
 
   // the arrangement of the panels, in units of the standard panel
-  const double_t golden = 1.618;      // aspect ratio of wide and tall panels
-  const double_t ratioHeight = 0.37;  // height of the ratio panels
-  const double_t width = (shape == "wide") ? golden : 1.;
-  const double_t height = (shape == "tall") ? golden : 1.;
+  const double_t width = (form == "wide") ? shape.mAspectRatio : 1.;
+  const double_t height = (form == "tall") ? shape.mAspectRatio : 1.;
   vector<vector<Panel>> rows;
   vector<uint8_t> ratioPads;
   uint8_t padID = 1;
@@ -815,7 +821,7 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes)
         ratioRow.push_back(Gap());
       }
       mainRow.push_back(zAxis ? Panel(width, height).ZAxis() : Panel(width, height));
-      ratioRow.push_back(Panel(width, ratioHeight));
+      ratioRow.push_back(Panel(width, shape.mRatioHeight));
     }
     rows.push_back(mainRow);
     padID += nCols;

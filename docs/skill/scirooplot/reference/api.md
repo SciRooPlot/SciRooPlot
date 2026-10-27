@@ -17,8 +17,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `void LoadDataSources(const std::optional<std::string>& file = {}, bool replace = false)`
 - `void AddPlot(Plot plot)`
 - `void AddBasePlot(Plot basePlot)`
-- `Plot MakeBasePlot(const std::string& name = "1d")`
-- `Plot MakeBasePlot(const std::string& name, const PanelLayout& sizes)`
+- `Plot MakeBasePlot(const std::string& name = "1d", const PanelLayout& sizes = PanelLayout(), const BasePlotShape& shape = BasePlotShape())`
 - `void AddColorOverview(const std::string& name, const std::string& group, const std::vector<int32_t>& colors = {})`
 - `void SavePlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {})`
 - `bool LoadPlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {})`
@@ -162,6 +161,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Axis& SetOppositeTicks(bool isOppositeTicks = true)`
 - `Axis& SetNoExponent(bool isNoExponent = true)`
 - `Axis& SetHideClippedLabels(bool hide = true)` — drop a label whose text would reach beyond the pad (e.g. at the edge shared with a touching pad); on by default in the base plots, false keeps the labels
+- `Axis& SetColorScaleOffset(float_t offset)` — Z axis: distance of the colour scale from the frame, fraction of the pad width (ROOT: 0.005)
+- `Axis& SetColorScaleWidth(float_t width)` — Z axis: width of the colour scale, fraction of the pad width (ROOT: 0.045)
 - `Axis& SetTimeFormat(const std::string& timeFormat)`
 - `Axis& SetTickOrientation(const std::string& tickOrientation)`
 
@@ -383,10 +384,11 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `LegendEntry& SetTextSize(float_t size)`
 
 ## Panel
-*a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes*
+*a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes, `Empty(width, height)` one with a size of its own*
 
 - `Panel(double_t width = 1., double_t height = 1.)`
 - `Panel& ZAxis()` — room for the colour scale to the right of this panel
+- `Panel& Span(uint8_t columns, uint8_t rows = 1)`
 
 ## PanelLayout
 *arrangement of panels and the sizes shared by all base plots*
@@ -396,6 +398,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `PanelLayout& SetPanelSize(double_t pixel)` — 638: axis frame of Panel(1, 1)
 - `PanelLayout& SetMargins(double_t top, double_t bottom, double_t left, double_t right)` — 32, 118, 118, 32: space around the panels (bottom and left hold the labels and titles)
 - `PanelLayout& SetZAxisMargin(double_t pixel)` — 268: right margin of a panel with colour scale
+- `PanelLayout& SetZAxisOffset(double_t pixel)` — 5.12: distance of the colour scale from the frame
+- `PanelLayout& SetZAxisWidth(double_t pixel)` — 46.08: width of the colour scale
 - `PanelLayout& SetPanelSpacing(double_t pixel)` — 0: space between touching panels (their axes stay shared)
 - `PanelLayout& SetTextSize(double_t pixel)` — 31.52: axis labels, legends and texts
 - `PanelLayout& SetTitleSize(double_t pixel)` — 39.4: axis titles
@@ -406,6 +410,12 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `PanelLayout& SetZTitleOffset(double_t pixel)` — 122.9: distance of the z title from the axis
 - `PanelLayout& SetLineWidth(float_t width)` — 5 (ROOT line width in pixel)
 - `PanelLayout& SetMarkerSize(float_t size)` — 1.4 (ROOT marker size, 1 = 8 pixel)
+
+## BasePlotShape
+*proportions of the panels of PlotManager::MakeBasePlot*
+
+- `BasePlotShape& SetAspectRatio(double_t ratio)` — 1.618: width / height of _wide panels, height / width of _tall ones
+- `BasePlotShape& SetRatioHeight(double_t height)` — 0.37: height of the ratio panels (the same under every kind of panel)
 
 ## Enumerations
 

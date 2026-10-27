@@ -20,6 +20,7 @@
 #define INCLUDE_SCIROOPLOT_PANELLAYOUT_H_
 
 #include <cmath>
+#include <cstdint>
 #include <vector>
 
 namespace SciRooPlot
@@ -28,7 +29,7 @@ class Plot;
 
 //**************************************************************************************************
 /**
- * One axis frame of a layout. Sizes are given in units of the standard panel (see Layout::SetPanelSize).
+ * One axis frame of a layout. Sizes are given in units of the standard panel (see PanelLayout::SetPanelSize).
  */
 //**************************************************************************************************
 class Panel
@@ -36,13 +37,21 @@ class Panel
  public:
   explicit Panel(double_t width = 1., double_t height = 1.);
   Panel& ZAxis();  // room for the colour scale to the right of this panel
+  // The cell covers several columns and/or rows of the grid (as colspan and rowspan in an HTML table): it is listed once,
+  // in the row where it starts, and the rows below leave out the positions it covers. In a direction it spans, its size
+  // follows from the columns or rows it covers (including what lies between them) and the size given here is not used.
+  Panel& Span(uint8_t columns, uint8_t rows = 1);
 
  private:
   friend class PanelLayout;
   friend Panel Gap();
   friend Panel Empty();
+  friend Panel Empty(double_t width, double_t height);
   double_t mWidth{1.};
   double_t mHeight{1.};
+  uint8_t mColumns{1};
+  uint8_t mRows{1};
+  bool mSized{true};  // the size takes part in defining the widths of the columns and heights of the rows
   bool mZAxis{false};
   bool mGap{false};
   bool mEmpty{false};
@@ -55,6 +64,9 @@ Panel Gap();
 // A cell of the grid without axis frame: it keeps the size of its row and column, the neighbouring panels
 // show their axes towards it and the remaining space becomes a pad (numbered like the panels) for texts.
 Panel Empty();
+// An empty cell with a size of its own, for rows or columns without panels, e.g. a strip for a common legend:
+// {Empty(1, 0.25).Span(3)} above three panels.
+Panel Empty(double_t width, double_t height);
 
 //**************************************************************************************************
 /**
@@ -62,6 +74,7 @@ Panel Empty();
  * standard plot. All lengths are pixels of the plot at scale 1 (see srp screenscale and srp bitmapscale);
  * a plot made from a layout has them in every panel, so that plots of different layouts look the same.
  * Panels that touch share the axis between them and their inner labels and titles are hidden.
+ * All panels of a column share the width, all panels of a row the height (cells spanning several columns or rows excepted).
  * The pads of the resulting plot are numbered in reading order, gaps have no pad.
  * Lengths are floating-point pixels of the canvas (the unit of ROOT's line widths and pixel fonts), the defaults are
  * the proportions of the standard 788 x 788 pixel plot: text 0.04 x 788 = 31.52 pixel, axis titles 0.05 x 788 = 39.4, ...
@@ -78,6 +91,8 @@ class PanelLayout
   PanelLayout& SetPanelSize(double_t pixel);                                              // 638: axis frame of Panel(1, 1)
   PanelLayout& SetMargins(double_t top, double_t bottom, double_t left, double_t right);  // 32, 118, 118, 32: space around the panels (bottom and left hold the labels and titles)
   PanelLayout& SetZAxisMargin(double_t pixel);                                            // 268: right margin of a panel with colour scale
+  PanelLayout& SetZAxisOffset(double_t pixel);                                            // 5.12: distance of the colour scale from the frame
+  PanelLayout& SetZAxisWidth(double_t pixel);                                             // 46.08: width of the colour scale
   PanelLayout& SetPanelSpacing(double_t pixel);                                           // 0: space between touching panels (their axes stay shared)
   PanelLayout& SetTextSize(double_t pixel);                                               // 31.52: axis labels, legends and texts
   PanelLayout& SetTitleSize(double_t pixel);                                              // 39.4: axis titles
@@ -100,6 +115,8 @@ class PanelLayout
   double_t mMarginLeft{118.};
   double_t mMarginRight{32.};
   double_t mZAxisMargin{268.};
+  double_t mZAxisOffset{5.12};  // ROOT's colour scale of a 1024 pixel wide pad: 0.005 and 0.045 of the pad width
+  double_t mZAxisWidth{46.08};
   double_t mPanelSpacing{0.};
   double_t mTextSize{31.52};
   double_t mTitleSize{39.4};

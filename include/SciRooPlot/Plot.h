@@ -1130,6 +1130,8 @@ class Plot::Pad::Axis
   Axis& SetOppositeTicks(bool isOppositeTicks = true);
   Axis& SetNoExponent(bool isNoExponent = true);
   Axis& SetHideClippedLabels(bool hide = true);  // drop a label whose text would reach beyond the pad (e.g. at the edge shared with a touching pad); on by default in the base plots, false keeps the labels
+  Axis& SetColorScaleOffset(float_t offset);     // Z axis: distance of the colour scale from the frame, fraction of the pad width (ROOT: 0.005)
+  Axis& SetColorScaleWidth(float_t width);       // Z axis: width of the colour scale, fraction of the pad width (ROOT: 0.045)
   Axis& SetTimeFormat(const std::string& timeFormat);
   Axis& SetTickOrientation(const std::string& tickOrientation);
 
@@ -1169,6 +1171,8 @@ class Plot::Pad::Axis
   const auto& GetOppositeTicks() const { return mAxisFrame.isOppositeTicks; }
   const auto& GetNoExponent() const { return mAxisFrame.isNoExponent; }
   const auto& GetHideClippedLabels() const { return mAxisFrame.hideClippedLabels; }
+  const auto& GetColorScaleOffset() const { return mAxisFrame.colorScaleOffset; }
+  const auto& GetColorScaleWidth() const { return mAxisFrame.colorScaleWidth; }
   const auto& GetTimeFormat() const { return mAxisFrame.timeFormat; }
   const auto& GetTickOrientation() const { return mAxisFrame.tickOrientation; }
 
@@ -1189,6 +1193,8 @@ class Plot::Pad::Axis
     std::optional<bool> isOppositeTicks;
     std::optional<bool> isNoExponent;
     std::optional<bool> hideClippedLabels;
+    std::optional<float_t> colorScaleOffset;
+    std::optional<float_t> colorScaleWidth;
     std::optional<std::string> timeFormat;
     std::optional<std::string> tickOrientation;
   };

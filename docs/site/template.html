@@ -428,6 +428,7 @@ table.cmd code { white-space: nowrap }
 .lb-sizes label.lb-changed span { color: var(--teal); font-weight: 700 }
 .laybuilder input[type=number], .laybuilder input[type=text] { font: inherit; font-size: 0.85rem; background: var(--paper); color: var(--text); border: 1px solid var(--hairline); border-radius: 6px; padding: 2px 6px }
 .lb-pad { cursor: pointer }
+.lb-controls .row .lb-chk input[type=number] { width: 4.8em }
 .lb-pad:hover > rect:first-child { fill: rgba(28, 148, 165, 0.08) }
 .lb-err { color: #b3261e; margin: 0; font-size: 0.85rem }
 .lb-out { display: grid; gap: 10px; justify-items: start; min-width: 0 }
@@ -1520,14 +1521,17 @@ const REF = [
 <p>Take a shipped one, change what should hold for all plots built on it, and add it under a new name (or the same name, to replace it). Text sizes, line widths and margins go in as the lengths of a <code>PanelLayout</code>, in pixels; that keeps them equal in all panels, which setting <code>SetDefaultTextSize</code> on single pads would not.</p>
 <div class="code"><pre data-snip="baseplots"></pre></div>
 <h3>Your own layout</h3>
-<p>When the grid you need has no name (panels of different widths, an empty cell for a long legend, a ratio panel under only one column), write the rows yourself, or let the <a href="#layouts">layout designer</a> write them: change the grid there and copy the code. These are the pieces it uses:</p>
+<p>When the grid you need has no name (panels of different widths, an empty cell for a long legend, a strip for a common legend above all panels, a wide panel above two narrow ones), write the rows yourself, or let the <a href="#layouts">layout designer</a> write them: change the grid there and copy the code. These are the pieces it uses:</p>
 <div class="tablewrap"><table><thead><tr><th>Piece</th><th>Meaning</th></tr></thead><tbody>
 <tr><td><code>Panel()</code></td><td>a panel of the standard size (638 × 638 pixels of frame)</td></tr>
 <tr><td><code>Panel(w, h)</code></td><td>scaled: <code>Panel(1.618, 1)</code> is wide, <code>Panel(1, 0.37)</code> the height of a ratio panel; all panels of a column share the width, all panels of a row the height</td></tr>
 <tr><td><code>Panel().ZAxis()</code></td><td>leaves room for a colour scale on the right</td></tr>
 <tr><td><code>Gap()</code></td><td>between panels of a row, or as a row of its own: the neighbours get their own axes and labels instead of sharing them</td></tr>
 <tr><td><code>Empty()</code></td><td>a cell without axes, e.g. for a legend or text</td></tr>
+<tr><td><code>Empty(w, h)</code></td><td>an empty cell with a size of its own, for a row or column without panels</td></tr>
+<tr><td><code>.Span(columns, rows)</code></td><td>the cell covers several columns and rows; it is listed once, in the row where it starts, and the rows below leave its place out: <code>[[Empty(1, 0.2).Span(3)], [Panel(), Panel(), Panel()]]</code> puts a legend strip above three panels</td></tr>
 </tbody></table></div>
+<p>The proportions of the shipped names can be changed too: <code>MakeBasePlot("1d_wide_ratio", PanelLayout(), BasePlotShape().SetAspectRatio(1.333).SetRatioHeight(0.25))</code> gives wide panels of 4 : 3 and thinner ratio panels (default 1.618 and 0.37).</p>
 <p class="small muted">Pads are numbered in reading order, row by row; <code>Empty()</code> cells get a number too (a pad without a frame, e.g. for a legend), gaps get none. <code>PlotManager::MakeBasePlot</code> in the sources builds every shipped layout this way.</p>` },
   { id: "text", g: "layout", t: "Text sizes and insets", body: `<p>Three levels: for a class of plots, the <code>PanelLayout</code> of the base plot (the only way that keeps all panels equal); for one plot, the pad or the axis; for one box, the box itself. With the default font 42 a size is a fraction of the pad, so the same number is smaller in a smaller pad; font 43 takes pixels.</p>
 <div class="code"><pre data-snip="text"></pre></div>
@@ -2333,16 +2337,25 @@ function teaserShow(i) { // the figures of one comparison; wide multi-panel figu
   a.src = `img/compare/${id}_root.png`; b.src = srpImage(CMP.find(c => c.id === id)) }
 
 /* the geometry of PanelLayout::ApplyTo: canvas size, pads and axis frames in canvas pixels (x from the left, y from the top) */
-const PL_DEFAULTS = { panel: 638, top: 32, bottom: 118, left: 118, right: 32, z: 268, spacing: 0, text: 31.52, title: 39.4, tick: 19.15, labelOff: 3.94, xTitleOff: 63.04, yTitleOff: 0, zTitleOff: 122.9, lw: 5, ms: 1.4 };
-// G: { cols: [{ w, z, gapAfter }], rows: [{ h, ratio, gapAfter }], empty: Set of "r,c" }
+const PL_DEFAULTS = { panel: 638, top: 32, bottom: 118, left: 118, right: 32, z: 268, zOff: 5.12, zWidth: 46.08, spacing: 0, text: 31.52, title: 39.4, tick: 19.15, labelOff: 3.94, xTitleOff: 63.04, yTitleOff: 0, zTitleOff: 122.9, lw: 5, ms: 1.4 };
+// G: { cols: [{ w, z, gapAfter }], rows: [{ h, ratio, gapAfter }], empty: Set of "r,c", span: Map "r,c" -> [columns, rows] }
+function gridCells(G) { // the cells in reading order (as listed in PanelLayout) and the cell covering every position
+  const nC = G.cols.length, nR = G.rows.length, owner = [...Array(nR)].map(() => Array(nC).fill(-1)), cells = [];
+  for (let r = 0; r < nR; r++) for (let c = 0; c < nC; c++) {
+    if (owner[r][c] >= 0) continue;
+    const key = r + "," + c, [cs, rs] = G.span.get(key) || [1, 1], i = cells.length;
+    cells.push({ key, r, c, r1: r + rs - 1, c1: c + cs - 1, empty: G.empty.has(key) });
+    for (let rr = r; rr <= r + rs - 1; rr++) for (let cc = c; cc <= c + cs - 1; cc++) owner[rr][cc] = i }
+  return { cells, owner } }
 function panelGeometry(G, S) {
-  const nC = G.cols.length, nR = G.rows.length, isEmpty = (r, c) => G.empty.has(r + "," + c);
-  for (let c = 0; c < nC; c++) if (G.rows.every((_, r) => isEmpty(r, c))) return { error: `Column ${c + 1} contains only empty cells.` };
-  for (let r = 0; r < nR; r++) if (G.cols.every((_, c) => isEmpty(r, c))) return { error: `Row ${r + 1} contains only empty cells.` };
-  if (nR * nC > 255) return { error: "More than 255 pads." };
+  const nC = G.cols.length, nR = G.rows.length, { cells, owner } = gridCells(G);
+  if (cells.every(k => k.empty)) return { error: "The grid has no panel." };
+  for (let c = 0; c < nC; c++) if (!cells.some(k => k.c === c && k.c1 === c)) return { error: `Column ${c + 1} has no width: every cell in it spans further columns.` };
+  for (let r = 0; r < nR; r++) if (!cells.some(k => k.r === r && k.r1 === r)) return { error: `Row ${r + 1} has no height: every cell in it spans further rows.` };
+  if (cells.length > 255) return { error: "More than 255 pads." };
   const colW = G.cols.map(c => c.w * S.panel), rowH = G.rows.map(r => r.h * S.panel);
-  const colZ = G.cols.map((c, i) => c.z && G.rows.some((row, r) => !row.ratio && !isEmpty(r, i)));  // ZAxis() is written on the panels of rows that are not ratio rows
-  const colSep = G.cols.slice(0, -1).map((c, i) => colZ[i] ? [S.z, S.left, false] : c.gapAfter ? [S.right, S.left, false] : [S.spacing / 2, S.spacing / 2, true]);
+  const colZ = G.cols.map((c, i) => c.z && cells.some(k => k.c1 === i && !k.empty && !G.rows[k.r].ratio));  // ZAxis() is written on the panels of rows that are not ratio rows
+  const colSep = G.cols.slice(0, -1).map((c, i) => c.gapAfter ? [S.right, S.left, false] : colZ[i] ? [S.z, S.left, false] : [S.spacing / 2, S.spacing / 2, true]);
   const rowSep = G.rows.slice(0, -1).map(r => r.gapAfter ? [S.bottom, S.top, false] : [S.spacing / 2, S.spacing / 2, true]);
   const edges = (lowMargin, sizes, seps, highMargin) => {
     const low = [], high = [], boundary = []; let pos = lowMargin;
@@ -2350,47 +2363,52 @@ function panelGeometry(G, S) {
       if (i + 1 < sizes.length) { boundary.push(Math.round(pos + seps[i][0])); pos += seps[i][0] + seps[i][1] } });
     return { low, high, boundary, total: Math.round(pos + highMargin) } };
   const X = edges(S.left, colW, colSep, colZ[nC - 1] ? S.z : S.right), Y = edges(S.top, rowH, rowSep, S.bottom);
-  const width = X.total, height = Y.total, pads = [], warnings = [];
-  const cell = (r, c) => (r >= 0 && r < nR && c >= 0 && c < nC) ? (isEmpty(r, c) ? "e" : "p") : null;
-  let id = 1;
-  for (let r = 0; r < nR; r++) for (let c = 0; c < nC; c++, id++) {
-    const empty = isEmpty(r, c), L = cell(r, c - 1), R = cell(r, c + 1), A = cell(r - 1, c), B = cell(r + 1, c);
+  const width = X.total, height = Y.total, pads = [], warnings = [], rm = c => colZ[c] ? S.z : S.right;
+  const none = { p: false, e: false }, side = (r0, r1, c0, c1) => { // which kinds of cells touch a side of a cell
+    const t = { p: false, e: false }; for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) t[cells[owner[r][c]].empty ? "e" : "p"] = true; return t };
+  cells.forEach(({ key, r, c, r1, c1, empty }, i) => {
+    const id = i + 1, L = c > 0 ? side(r, r1, c - 1, c - 1) : none, R = c1 + 1 < nC ? side(r, r1, c1 + 1, c1 + 1) : none,
+      A = r > 0 ? side(r - 1, r - 1, c, c1) : none, B = r1 + 1 < nR ? side(r1 + 1, r1 + 1, c, c1) : none;
     let x0, x1, y0, y1;
     if (empty) {
-      x0 = c === 0 ? 0 : L === "p" ? X.high[c - 1] + (colZ[c - 1] ? S.z : S.right) : X.boundary[c - 1];
-      x1 = c + 1 === nC ? width : R === "p" ? X.low[c + 1] - S.left : X.boundary[c];
-      y0 = r === 0 ? 0 : A === "p" ? Y.high[r - 1] + S.bottom : Y.boundary[r - 1];
-      y1 = r + 1 === nR ? height : B === "p" ? Y.low[r + 1] - S.top : Y.boundary[r];
+      x0 = c === 0 ? 0 : L.p ? X.high[c - 1] + rm(c - 1) : X.boundary[c - 1];
+      x1 = c1 + 1 === nC ? width : R.p ? X.low[c1 + 1] - S.left : X.boundary[c1];
+      y0 = r === 0 ? 0 : A.p ? Y.high[r - 1] + S.bottom : Y.boundary[r - 1];
+      y1 = r1 + 1 === nR ? height : B.p ? Y.low[r1 + 1] - S.top : Y.boundary[r1];
     } else {
-      x0 = c === 0 ? 0 : L === "e" ? X.low[c] - S.left : X.boundary[c - 1];
-      x1 = c + 1 === nC ? width : R === "e" ? X.high[c] + (colZ[c] ? S.z : S.right) : X.boundary[c];
-      y0 = r === 0 ? 0 : A === "e" ? Y.low[r] - S.top : Y.boundary[r - 1];
-      y1 = r + 1 === nR ? height : B === "e" ? Y.high[r] + S.bottom : Y.boundary[r];
+      x0 = c === 0 ? 0 : !L.p ? X.low[c] - S.left : X.boundary[c - 1];
+      x1 = c1 + 1 === nC ? width : !R.p ? X.high[c1] + rm(c1) : X.boundary[c1];
+      y0 = r === 0 ? 0 : !A.p ? Y.low[r] - S.top : Y.boundary[r - 1];
+      y1 = r1 + 1 === nR ? height : !B.p ? Y.high[r1] + S.bottom : Y.boundary[r1];
     }
     [x0, x1, y0, y1] = [x0, x1, y0, y1].map(Math.round);
-    if (empty && (x1 <= x0 || y1 <= y0)) { warnings.push(`The empty cell in row ${r + 1}, column ${c + 1} leaves no space for pad ${id}.`); continue }
-    const pad = { id, r, c, x0, x1, y0, y1, empty, ratio: G.rows[r].ratio };
-    if (!empty) Object.assign(pad, { fl: X.low[c], fr: X.high[c], ft: Y.low[r], fb: Y.high[r], z: colZ[c] && !G.rows[r].ratio,
-      sharedLeft: L === "p" && colSep[c - 1][2], sharedBelow: B === "p" && rowSep[r][2] });
-    pads.push(pad) }
+    if (empty && (x1 <= x0 || y1 <= y0)) { warnings.push(`The empty cell in row ${r + 1}, column ${c + 1} leaves no space for pad ${id}.`); return }
+    const pad = { id, key, r, c, r1, c1, x0, x1, y0, y1, empty, ratio: G.rows[r].ratio };
+    if (!empty) Object.assign(pad, { fl: X.low[c], fr: X.high[c1], ft: Y.low[r], fb: Y.high[r1], z: colZ[c1] && !G.rows[r].ratio,
+      sharedLeft: L.p && colSep[c - 1][2], sharedBelow: B.p && rowSep[r1][2] });
+    pads.push(pad) });
   return { width, height, pads, warnings } }
 /* ---------------- base plot designer: presets of MakeBasePlot, a grid of panels and the lengths of PanelLayout, drawn to scale */
 const SIZE_FIELDS = [ // key, setter, label, step
   ["canvas", "Canvas", [["panel", "SetPanelSize", "Panel size", 1], ["top", "", "Margin top", 1], ["bottom", "", "Margin bottom", 1], ["left", "", "Margin left", 1], ["right", "", "Margin right", 1],
-    ["z", "SetZAxisMargin", "Margin for a colour scale", 1], ["spacing", "SetPanelSpacing", "Space between touching panels", 1]]],
+    ["z", "SetZAxisMargin", "Margin for a colour scale", 1], ["zOff", "SetZAxisOffset", "Colour scale to frame", 0.5], ["zWidth", "SetZAxisWidth", "Colour scale width", 0.5],
+    ["spacing", "SetPanelSpacing", "Space between touching panels", 1]]],
   ["text", "Text", [["text", "SetTextSize", "Labels, legends, texts", 0.5], ["title", "SetTitleSize", "Axis titles", 0.5], ["labelOff", "SetLabelOffset", "Labels to axis", 0.5],
     ["xTitleOff", "SetXTitleOffset", "x title to axis", 0.5], ["yTitleOff", "SetYTitleOffset", "y title to axis (0: next to the labels)", 0.5], ["zTitleOff", "SetZTitleOffset", "z title to colour scale", 0.5]]],
   ["lines", "Ticks, lines, markers", [["tick", "SetTickLength", "Tick length", 0.5], ["lw", "SetLineWidth", "Line width", 1], ["ms", "SetMarkerSize", "Marker size (1 = 8 pixels)", 0.1]]]];
-const LAY = { type: "1d", shape: "", cols: 1, rows: 1, ratio: true, gap: false, full: false, name: "", custom: false, S: { ...PL_DEFAULTS }, G: null };
+const SHAPE_DEFAULTS = { aspect: 1.618, ratioH: 0.37 };  // BasePlotShape: aspect ratio of wide and tall panels, height of ratio panels
+const LAY = { type: "1d", shape: "", cols: 1, rows: 1, ratio: true, gap: false, full: false, name: "", custom: false, sel: null, S: { ...PL_DEFAULTS }, ...SHAPE_DEFAULTS, G: null };
 function presetName() {
   return LAY.type + (LAY.shape ? "_" + LAY.shape : "") + (LAY.cols > 1 || LAY.rows > 1 ? `_${LAY.cols}x${LAY.rows}` : "") + (LAY.ratio ? "_ratio" : "") + (LAY.gap ? "_gap" : "") }
 function presetGrid() { // the arrangement PlotManager::MakeBasePlot makes for the preset
-  const w = LAY.shape === "wide" ? 1.618 : 1, h = LAY.shape === "tall" ? 1.618 : 1, rows = [];
-  for (let r = 0; r < LAY.rows; r++) { rows.push({ h, ratio: false, gapAfter: false }); if (LAY.ratio) rows.push({ h: 0.37, ratio: true, gapAfter: false });
+  const w = LAY.shape === "wide" ? LAY.aspect : 1, h = LAY.shape === "tall" ? LAY.aspect : 1, rows = [];
+  for (let r = 0; r < LAY.rows; r++) { rows.push({ h, ratio: false, gapAfter: false }); if (LAY.ratio) rows.push({ h: LAY.ratioH, ratio: true, gapAfter: false });
     rows[rows.length - 1].gapAfter = LAY.gap && r < LAY.rows - 1 }
-  return { cols: Array.from({ length: LAY.cols }, (_, c) => ({ w, z: LAY.type === "2d", gapAfter: LAY.gap && c < LAY.cols - 1 })), rows, empty: new Set() } }
+  return { cols: Array.from({ length: LAY.cols }, (_, c) => ({ w, z: LAY.type === "2d", gapAfter: LAY.gap && c < LAY.cols - 1 })), rows, empty: new Set(), span: new Map() } }
 const sizesChanged = () => Object.keys(PL_DEFAULTS).filter(k => +LAY.S[k] !== PL_DEFAULTS[k]);
-const layName = () => LAY.name.trim() || (LAY.custom ? "myLayout" : presetName() + (sizesChanged().length ? "_mine" : ""));
+const shapeSetters = () => [LAY.shape && LAY.aspect !== SHAPE_DEFAULTS.aspect ? `SetAspectRatio(${fmt(LAY.aspect)})` : "",  // only what the preset uses
+  LAY.ratio && LAY.ratioH !== SHAPE_DEFAULTS.ratioH ? `SetRatioHeight(${fmt(LAY.ratioH)})` : ""].filter(Boolean);
+const layName = () => LAY.name.trim() || (LAY.custom ? "myLayout" : presetName() + (sizesChanged().length || shapeSetters().length ? "_mine" : ""));
 
 /* ---- the code for the current design */
 function fmt(v) { return String(+(+v).toFixed(3)) }
@@ -2406,20 +2424,27 @@ function layoutCode(py) {
   const sizesExpr = "PanelLayout()" + (setters.length > 2 ? setters.map(s => `\n    .${s}`).join("") : setters.map(s => "." + s).join(""));
   const v = py ? "" : "auto ";
   if (!LAY.custom && !LAY.full) {
-    if (!setters.length && !LAY.name.trim()) L.push(py ? `pm.AddBasePlot(PlotManager.MakeBasePlot("${name}"))` : `pm.AddBasePlot(PlotManager::MakeBasePlot("${name}"));`);
+    const shape = shapeSetters(), shapeExpr = "BasePlotShape()" + shape.map(x => "." + x).join("");
+    if (!setters.length && !shape.length && !LAY.name.trim()) L.push(py ? `pm.AddBasePlot(PlotManager.MakeBasePlot("${name}"))` : `pm.AddBasePlot(PlotManager::MakeBasePlot("${name}"));`);
     else {
       if (setters.length) L.push(py ? `sizes = ${setters.length > 2 ? "(" + sizesExpr + ")" : sizesExpr}` : `const PanelLayout sizes = ${sizesExpr};`);
-      L.push(`${v}base = PlotManager${py ? "." : "::"}MakeBasePlot("${presetName()}"${setters.length ? ", sizes" : ""})${end}`, `base.SetName("${name}")${end}`, py ? "pm.AddBasePlot(base)" : "pm.AddBasePlot(base);");
+      const args = py ? (setters.length ? ", sizes" : "") + (shape.length ? `, shape=${shapeExpr}` : "")
+        : setters.length || shape.length ? `, ${setters.length ? "sizes" : "PanelLayout()"}${shape.length ? ", " + shapeExpr : ""}` : "";
+      L.push(`${v}base = PlotManager${py ? "." : "::"}MakeBasePlot("${presetName()}"${args})${end}`, `base.SetName("${name}")${end}`, py ? "pm.AddBasePlot(base)" : "pm.AddBasePlot(base);");
     }
   } else {
-    // the rows of the layout
-    const cell = (r, c) => {
-      if (G.empty.has(r + "," + c)) return "Empty()";
-      const w = G.cols[c].w, h = G.rows[r].h, args = w === 1 && h === 1 ? "" : `${fmt(w)}, ${fmt(h)}`;
-      return `Panel(${args})` + (G.cols[c].z && !G.rows[r].ratio ? ".ZAxis()" : "") };
+    // the rows of the layout: a cell spanning several columns or rows is listed once, in the row where it starts;
+    // in a direction it spans its size is not used (written as 1), an empty cell gets a size where its column or row needs one
+    const { cells } = gridCells(G), nC = G.cols.length;
+    const ownW = c => cells.some(k => k.c === c && k.c1 === c && !k.empty), ownH = r => cells.some(k => k.r === r && k.r1 === r && !k.empty);
+    const cell = k => {
+      const cs = k.c1 - k.c + 1, rs = k.r1 - k.r + 1, w = cs > 1 ? 1 : G.cols[k.c].w, h = rs > 1 ? 1 : G.rows[k.r].h;
+      const span = cs > 1 || rs > 1 ? `.Span(${cs}${rs > 1 ? ", " + rs : ""})` : "";
+      if (k.empty) return ((cs === 1 && !ownW(k.c)) || (rs === 1 && !ownH(k.r)) ? `Empty(${fmt(w)}, ${fmt(h)})` : "Empty()") + span;
+      return `Panel(${w === 1 && h === 1 ? "" : `${fmt(w)}, ${fmt(h)}`})` + span + (G.cols[k.c1].z && !G.rows[k.r].ratio ? ".ZAxis()" : "") };
     const rows = [];
     G.rows.forEach((row, r) => {
-      rows.push(G.cols.map((col, c) => cell(r, c) + (col.gapAfter && c < G.cols.length - 1 ? ", Gap()" : "")).join(", "));
+      rows.push(cells.filter(k => k.r === r).map(k => cell(k) + (k.c1 < nC - 1 && G.cols[k.c1].gapAfter ? ", Gap()" : "")).join(", "));
       if (row.gapAfter && r < G.rows.length - 1) rows.push("Gap()") });
     const open = py ? "[" : "{", close = py ? "]" : "}";
     if (py) L.push(`rows = [${rows.map(r => `[${r}]`).join(",\n        ")}]`);
@@ -2457,12 +2482,13 @@ function layoutSVG(g, S, maxW, maxH) {
   const out = [`<rect x="0" y="0" width="${T(g.width)}" height="${T(g.height)}" fill="#fff" stroke="var(--hairline)"/>`];
   const txt = (x, y, size, t, extra = "") => `<text x="${T(x)}" y="${T(y)}" font-size="${T(size)}" ${font} fill="#000" ${extra}>${t}</text>`;
   for (const p of g.pads) {
+    const selected = LAY.sel === p.key ? `<rect x="${T(p.x0) + 1}" y="${T(p.y0) + 1}" width="${Math.max(0, T(p.x1 - p.x0) - 2)}" height="${Math.max(0, T(p.y1 - p.y0) - 2)}" fill="none" stroke="var(--amber)" stroke-width="3" rx="3"/>` : "";
     if (p.empty) {
-      out.push(`<rect x="${T(p.x0) + 3}" y="${T(p.y0) + 3}" width="${Math.max(0, T(p.x1 - p.x0) - 6)}" height="${Math.max(0, T(p.y1 - p.y0) - 6)}" fill="none" stroke="var(--teal)" stroke-dasharray="4 3" rx="4"/>`,
-        `<text x="${T((p.x0 + p.x1) / 2)}" y="${T((p.y0 + p.y1) / 2)}" text-anchor="middle" dominant-baseline="central" font-family="var(--sans)" font-size="12" fill="var(--teal)" font-weight="700">${p.id} (empty)</text>`);
+      out.push(`<g data-cell="${p.key}" class="lb-pad"><rect x="${T(p.x0)}" y="${T(p.y0)}" width="${T(p.x1 - p.x0)}" height="${T(p.y1 - p.y0)}" fill="transparent"/>`, `<rect x="${T(p.x0) + 3}" y="${T(p.y0) + 3}" width="${Math.max(0, T(p.x1 - p.x0) - 6)}" height="${Math.max(0, T(p.y1 - p.y0) - 6)}" fill="none" stroke="var(--teal)" stroke-dasharray="4 3" rx="4"/>`,
+        `<text x="${T((p.x0 + p.x1) / 2)}" y="${T((p.y0 + p.y1) / 2)}" text-anchor="middle" dominant-baseline="central" font-family="var(--sans)" font-size="12" fill="var(--teal)" font-weight="700">${p.id} (empty)</text>`, selected, "</g>");
       continue }
     const { fl, fr, ft, fb } = p, fw = fr - fl, fh = fb - ft, padW = p.x1 - p.x0, tick = S.tick;
-    out.push(`<g data-pad="${p.id}" data-cell="${p.r},${p.c}" class="lb-pad"><rect x="${T(p.x0)}" y="${T(p.y0)}" width="${T(padW)}" height="${T(p.y1 - p.y0)}" fill="transparent"/>`);
+    out.push(`<g data-pad="${p.id}" data-cell="${p.key}" class="lb-pad"><rect x="${T(p.x0)}" y="${T(p.y0)}" width="${T(padW)}" height="${T(p.y1 - p.y0)}" fill="transparent"/>`);
     out.push(`<rect x="${T(fl)}" y="${T(ft)}" width="${T(fw)}" height="${T(fh)}" fill="#fff" stroke="#000" stroke-width="${Math.max(0.6, 2 * s)}"/>`);
     // ticks (opposite ticks on, as in the shipped base plots) and labels
     const nx = 5, ny = p.ratio ? 3 : 5, tk = [];
@@ -2470,14 +2496,14 @@ function layoutSVG(g, S, maxW, maxH) {
     for (let i = 0; i <= ny * 2; i++) { const y = fb - fh * i / (ny * 2), l = i % 2 ? tick / 2 : tick; tk.push(`M${T(fl)} ${T(y)}h${T(l)}M${T(fr)} ${T(y)}h${-T(l)}`) }
     out.push(`<path d="${tk.join("")}" stroke="#000" stroke-width="${Math.max(0.5, 1.5 * s)}" fill="none"/>`);
     if (!p.sharedBelow) {
-      for (let i = 0; i <= nx; i++) { const t = String(i * 2); if (i === nx && p.c < LAY.G.cols.length - 1 && !LAY.G.cols[p.c].gapAfter && !LAY.G.cols[p.c].z) continue;
+      for (let i = 0; i <= nx; i++) { const t = String(i * 2); if (i === nx && p.c1 < LAY.G.cols.length - 1 && !LAY.G.cols[p.c1].gapAfter && !LAY.G.cols[p.c1].z) continue;
         out.push(txt(fl + fw * i / nx, fb + S.labelOff + 0.86 * S.text, S.text, t, `text-anchor="middle"`)) }
       out.push(txt(fr, fb + S.xTitleOff + 0.36 * S.title, S.title, "x title", `text-anchor="end"`)) }
     const yl = p.ratio ? ["0.5", "1", "1.5"] : ["0", "20", "40", "60", "80", "100"], ystep = p.ratio ? fh / 3 : fh / 5;
     let widest = 0;
     if (!p.sharedLeft) {
       yl.forEach((t, i) => { const y = p.ratio ? fb - ystep * (i + 0.5) * 1 : fb - ystep * i; widest = Math.max(widest, textW(t, S.text));
-        if (!(i === 0 && !p.ratio && p.r < LAY.G.rows.length - 1 && !LAY.G.rows[p.r].gapAfter)) out.push(txt(fl - S.labelOff - 0.2 * S.text, y + 0.36 * S.text, S.text, t, `text-anchor="end"`)) });
+        if (!(i === 0 && !p.ratio && p.r1 < LAY.G.rows.length - 1 && !LAY.G.rows[p.r1].gapAfter)) out.push(txt(fl - S.labelOff - 0.2 * S.text, y + 0.36 * S.text, S.text, t, `text-anchor="end"`)) });
       const yx = S.yTitleOff > 0 ? fl - S.yTitleOff : fl - S.labelOff - 0.2 * S.text - widest - 0.62 * S.title;
       const ty = p.ratio ? (ft + fb) / 2 : ft;
       out.push(`<text transform="translate(${T(yx)} ${T(ty)}) rotate(-90)" font-size="${T(S.title)}" ${font} fill="#000" text-anchor="${p.ratio ? "middle" : "end"}" dominant-baseline="central">${p.ratio ? "ratio" : "y title"}</text>`) }
@@ -2490,16 +2516,38 @@ function layoutSVG(g, S, maxW, maxH) {
       const lx = p.x0 + 0.5 * padW, ly = p.y0 + 0.12 * (p.y1 - p.y0);
       out.push(`<circle cx="${T(lx + 0.6 * S.text)}" cy="${T(ly)}" r="${Math.max(0.6, 4 * S.ms * s)}" fill="#000"/>`, txt(lx + 1.6 * S.text, ly + 0.36 * S.text, S.text, "data"),
         `<path d="M${T(lx)} ${T(ly + 1.3 * S.text)}h${T(1.2 * S.text)}" stroke="#1f3cbf" stroke-width="${Math.max(0.5, S.lw * s)}"/>`, txt(lx + 1.6 * S.text, ly + 1.66 * S.text, S.text, "model")) }
-    if (p.z) { // colour scale: ROOT puts it 0.005 of the pad width right of the frame, 0.05 wide
-      const bx = fr + 0.005 * padW, bw = 0.05 * padW;
+    if (p.z) { // colour scale: distance and width in pixels as set in PanelLayout (ROOT alone scales them with the pad width)
+      const bx = fr + S.zOff, bw = S.zWidth;
       out.push(`<rect x="${T(bx)}" y="${T(ft)}" width="${T(bw)}" height="${T(fh)}" fill="url(#zgrad)"/>`);
       ["0", "1", "2", "3", "4"].forEach((t, i) => out.push(txt(bx + bw + S.labelOff + 0.2 * S.text, fb - fh * i / 4 + 0.36 * S.text, S.text, t)));
       out.push(`<text transform="translate(${T(bx + bw + S.zTitleOff)} ${T(ft)}) rotate(-90)" font-size="${T(S.title)}" ${font} fill="#000" text-anchor="end" dominant-baseline="central">z title</text>`) }
-    out.push(`<text x="${T(fl + fw / 2)}" y="${T(ft + fh / 2)}" text-anchor="middle" dominant-baseline="central" font-family="var(--sans)" font-weight="700" font-size="${Math.min(22, Math.max(10, fh * s / 4))}" fill="${p.ratio ? "var(--muted)" : "var(--teal)"}" opacity="0.8">${p.id}</text></g>`) }
+    out.push(`<text x="${T(fl + fw / 2)}" y="${T(ft + fh / 2)}" text-anchor="middle" dominant-baseline="central" font-family="var(--sans)" font-weight="700" font-size="${Math.min(22, Math.max(10, fh * s / 4))}" fill="${p.ratio ? "var(--muted)" : "var(--teal)"}" opacity="0.8">${p.id}</text>${selected}</g>`) }
   return `<svg viewBox="-2 -2 ${T(g.width) + 4} ${T(g.height) + 4}" width="${T(g.width) + 4}" height="${T(g.height) + 4}" role="img" aria-label="Pads of ${layName()}" style="max-width:100%;height:auto">
     <defs><linearGradient id="zgrad" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#352a87"/><stop offset="0.5" stop-color="#26a69a"/><stop offset="1" stop-color="#f9fb0e"/></linearGradient></defs>${out.join("")}</svg>` }
 
 /* ---- the controls */
+function clipSpans(G) { // after removing a column or row: drop the cells that started there, shorten those that reached into it
+  const nC = G.cols.length, nR = G.rows.length;
+  for (const [key, [cs, rs]] of [...G.span]) { const [r, c] = key.split(",").map(Number);
+    if (r >= nR || c >= nC) { G.span.delete(key); continue }
+    const span = [Math.min(cs, nC - c), Math.min(rs, nR - r)]; if (span[0] === 1 && span[1] === 1) G.span.delete(key); else G.span.set(key, span) }
+  if (LAY.sel && !gridCells(G).cells.some(k => k.key === LAY.sel)) LAY.sel = null }
+function spanAllowed(G, key, cs, rs) { // the new block stays in the grid and swallows only cells that span nothing themselves
+  const [r, c] = key.split(",").map(Number);
+  if (cs < 1 || rs < 1 || c + cs > G.cols.length || r + rs > G.rows.length) return false;
+  return gridCells(G).cells.every(k => k.key === key || k.r > r + rs - 1 || k.r1 < r || k.c > c + cs - 1 || k.c1 < c || (k.r === k.r1 && k.c === k.c1)) }
+function setSpan(G, key, cs, rs) {
+  if (!spanAllowed(G, key, cs, rs)) return;
+  const [r, c] = key.split(",").map(Number);
+  for (let rr = r; rr < r + rs; rr++) for (let cc = c; cc < c + cs; cc++) if (rr !== r || cc !== c) G.empty.delete(rr + "," + cc);  // swallowed cells
+  if (cs === 1 && rs === 1) G.span.delete(key); else G.span.set(key, [cs, rs]) }
+function cellTools(g) { // what can be done with the selected cell
+  const G = LAY.G, p = LAY.sel && g.pads && g.pads.find(q => q.key === LAY.sel);
+  if (!p) return `<p class="small muted">Click a pad to change it: empty cell, or spanning further columns and rows.</p>`;
+  const cs = p.c1 - p.c + 1, rs = p.r1 - p.r + 1, b = (op, label, ok) => `<button class="chip" data-cellop="${op}" ${ok ? "" : "disabled"}>${label}</button>`;
+  return `<div class="lb-line"><span class="lb-l">Pad ${p.id}</span>${b("empty", p.empty ? "make it a panel" : "make it empty", true)}
+    ${b("right", "wider →", spanAllowed(G, p.key, cs + 1, rs))}${b("left", "← narrower", cs > 1)}${b("down", "taller ↓", spanAllowed(G, p.key, cs, rs + 1))}${b("up", "↑ shorter", rs > 1)}
+    <span class="small muted">${cs > 1 || rs > 1 ? `spans ${cs} × ${rs} cells` : ""}</span></div>` }
 function renderLayout() {
   const host = document.getElementById("laybuilder"); if (!host) return;
   if (!LAY.G) LAY.G = presetGrid();
@@ -2515,15 +2563,15 @@ function renderLayout() {
   host.innerHTML = `<div class="lb-controls">
       <h4>Start from a shipped one</h4>
       <div class="row"><span class="lb-l">Type</span>${opt("type", "1d", "1d")}${opt("type", "2d", "2d, with colour scale")}</div>
-      <div class="row"><span class="lb-l">Shape</span>${opt("shape", "", "square")}${opt("shape", "wide", "wide")}${opt("shape", "tall", "tall")}</div>
+      <div class="row"><span class="lb-l">Shape</span>${opt("shape", "", "square")}${opt("shape", "wide", "wide")}${opt("shape", "tall", "tall")}${LAY.shape && !LAY.custom ? `<label class="lb-chk">aspect ${num('data-shape="aspect"', LAY.aspect, 0.05, 0.1, "aspect ratio of wide and tall panels")}</label>` : ""}</div>
       <div class="row"><span class="lb-l">Columns</span>${[1, 2, 3, 4].map(n => opt("cols", n, n)).join("")}</div>
-      <div class="row"><span class="lb-l">Rows</span>${[1, 2, 3].map(n => opt("rows", n, n)).join("")}</div>
-      <div class="row"><span class="lb-l">Ratio panel</span>${opt("ratio", true, "below each")}${opt("ratio", false, "none")}</div>
+      <div class="row"><span class="lb-l">Rows</span>${[1, 2, 3, 4].map(n => opt("rows", n, n)).join("")}</div>
+      <div class="row"><span class="lb-l">Ratio panel</span>${opt("ratio", true, "below each")}${opt("ratio", false, "none")}${LAY.ratio && !LAY.custom ? `<label class="lb-chk">height ${num('data-shape="ratioH"', LAY.ratioH, 0.01, 0.05, "height of the ratio panels")}</label>` : ""}</div>
       <div class="row"><span class="lb-l">Panels</span>${opt("gap", false, "touching, shared axes")}${opt("gap", true, "apart, own axes")}</div>
       <details class="lb-more" ${LAY.custom ? "open" : ""}><summary>Change the grid</summary>
-        <p class="small muted">Sizes in units of the standard panel. Click a pad in the drawing to turn it into an empty cell (for a long legend or a text) and back.</p>
+        <p class="small muted">Sizes in units of the standard panel. Click a pad in the drawing to select it: make it an empty cell (for a long legend or a text) or let it span further columns or rows.</p>
         ${colsUI}<div class="lb-line"><button class="chip" data-grid="addcol">+ column</button><button class="chip" data-grid="delcol" ${G.cols.length < 2 ? "disabled" : ""}>− column</button></div>
-        ${rowsUI}<div class="lb-line"><button class="chip" data-grid="addrow">+ row</button><button class="chip" data-grid="addratio">+ ratio row</button><button class="chip" data-grid="delrow" ${G.rows.length < 2 ? "disabled" : ""}>− row</button></div>
+        ${rowsUI}<div class="lb-line"><button class="chip" data-grid="addrow">+ row</button><button class="chip" data-grid="addratio">+ ratio row</button><button class="chip" data-grid="delrow" ${G.rows.length < 2 ? "disabled" : ""}>− row</button><button class="chip" data-grid="strip">+ legend strip on top</button></div>
       </details>
       <details class="lb-more" ${sizesChanged().length ? "open" : ""}><summary>Change text sizes, margins, lines</summary>
         <p class="small muted">Pixels of the canvas, the same in every panel. Changed values are marked.</p>
@@ -2534,6 +2582,7 @@ function renderLayout() {
     <div class="lb-out">
       <div class="lb-name"><code>"${layName()}"</code>${info}</div>
       ${g.error ? "" : layoutSVG(g, S, 460, 420)}
+      ${cellTools(g)}
       ${g.warnings && g.warnings.length ? `<p class="lb-err">${g.warnings.join(" ")}</p>` : ""}
       ${LAY.custom ? "" : `<div class="filters"><button class="chip" data-full="false" aria-pressed="${!LAY.full}">Short</button><button class="chip" data-full="true" aria-pressed="${LAY.full}">Written out as PanelLayout</button></div>`}
       <div class="code"><pre id="laycode"></pre></div>
@@ -2544,7 +2593,7 @@ function renderLayout() {
     renderLayout(); if (key) { const n = host.querySelector(key); if (n) { n.focus(); if (n.type === "text") n.setSelectionRange(n.value.length, n.value.length) } } };
   host.querySelectorAll("[data-lay]").forEach(b => b.onclick = () => {
     const k = b.dataset.lay, v = b.dataset.val; LAY[k] = (k === "cols" || k === "rows") ? +v : (k === "ratio" || k === "gap") ? v === "true" : v;
-    LAY.custom = false; LAY.G = presetGrid(); rerender() });
+    LAY.custom = false; LAY.sel = null; LAY.G = presetGrid(); rerender() });
   host.querySelectorAll("[data-full]").forEach(b => b.onclick = () => { LAY.full = b.dataset.full === "true"; rerender() });
   const custom = () => { LAY.custom = true };
   host.querySelectorAll("[data-colw]").forEach(i => i.onchange = () => { if (+i.value > 0) { G.cols[+i.dataset.colw].w = +i.value; custom() } rerender() });
@@ -2552,26 +2601,29 @@ function renderLayout() {
   host.querySelectorAll("[data-colz]").forEach(i => i.onchange = () => { G.cols[+i.dataset.colz].z = i.checked; custom(); rerender() });
   host.querySelectorAll("[data-colgap]").forEach(i => i.onchange = () => { G.cols[+i.dataset.colgap].gapAfter = i.checked; custom(); rerender() });
   host.querySelectorAll("[data-rowgap]").forEach(i => i.onchange = () => { G.rows[+i.dataset.rowgap].gapAfter = i.checked; custom(); rerender() });
-  host.querySelectorAll("[data-rowratio]").forEach(i => i.onchange = () => { const r = G.rows[+i.dataset.rowratio]; r.ratio = i.checked; r.h = i.checked ? 0.37 : 1; custom(); rerender() });
+  host.querySelectorAll("[data-rowratio]").forEach(i => i.onchange = () => { const r = G.rows[+i.dataset.rowratio]; r.ratio = i.checked; r.h = i.checked ? LAY.ratioH : 1; custom(); rerender() });
   host.querySelectorAll("[data-size]").forEach(i => i.onchange = () => { if (i.value !== "" && +i.value >= 0) S[i.dataset.size] = +i.value; rerender() });
   host.querySelectorAll("[data-grid]").forEach(b => b.onclick = () => {
     const a = b.dataset.grid;
     if (a === "resetsizes") { LAY.S = { ...PL_DEFAULTS }; rerender(); return }
     const shift = (dr, dc, at) => { const e = new Set(); G.empty.forEach(k => { const [r, c] = k.split(",").map(Number); if (dr && r === at) return; if (dc && c === at) return; e.add(`${r - (dr && r > at ? 1 : 0)},${c - (dc && c > at ? 1 : 0)}`) }); G.empty = e };
+    if (a === "strip") { // a row of one empty cell above the grid, for a legend or a text shared by all panels
+      const moved = k => { const [r, c] = k.split(",").map(Number); return `${r + 1},${c}` };
+      G.empty = new Set([...G.empty].map(moved)); G.span = new Map([...G.span].map(([k, v]) => [moved(k), v]));
+      G.rows.unshift({ h: 0.2, ratio: false, gapAfter: false }); G.empty.add("0,0"); if (G.cols.length > 1) G.span.set("0,0", [G.cols.length, 1]); LAY.sel = "0,0" }
     if (a === "addcol") { const last = G.cols[G.cols.length - 1]; last.gapAfter = G.cols.length > 1 && G.cols[0].gapAfter; G.cols.push({ w: last.w, z: last.z, gapAfter: false }) }
     if (a === "delcol") { G.cols.pop(); shift(0, 1, G.cols.length); G.cols[G.cols.length - 1].gapAfter = false }
-    if (a === "addrow" || a === "addratio") G.rows.push({ h: a === "addratio" ? 0.37 : 1, ratio: a === "addratio", gapAfter: false });
+    if (a === "addrow" || a === "addratio") G.rows.push({ h: a === "addratio" ? LAY.ratioH : 1, ratio: a === "addratio", gapAfter: false });
     if (a === "delrow") { G.rows.pop(); shift(1, 0, G.rows.length); G.rows[G.rows.length - 1].gapAfter = false }
-    custom(); rerender() });
-  host.querySelectorAll(".lb-pad").forEach(p => p.onclick = () => { G.empty.add(p.dataset.cell); custom(); rerender() });
+    clipSpans(G); custom(); rerender() });
+  host.querySelectorAll(".lb-pad").forEach(p => p.onclick = () => { LAY.sel = LAY.sel === p.dataset.cell ? null : p.dataset.cell; rerender() });
   host.querySelectorAll("svg text").forEach(t => t.style.pointerEvents = "none");
-  host.querySelectorAll("svg rect[stroke-dasharray]").forEach(r => { r.style.cursor = "pointer" });
-  const svg = host.querySelector("svg");
-  if (svg) svg.addEventListener("click", e => { // clicking an empty cell makes it a panel again
-    if (e.target.closest(".lb-pad")) return;
-    const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const q = pt.matrixTransform(svg.getScreenCTM().inverse()), sc = Math.min(460 / g.width, 420 / g.height);
-    const hit = g.pads.find(p => p.empty && q.x >= p.x0 * sc && q.x <= p.x1 * sc && q.y >= p.y0 * sc && q.y <= p.y1 * sc);
-    if (hit) { G.empty.delete(hit.r + "," + hit.c); rerender() } });
+  host.querySelectorAll("[data-shape]").forEach(i => i.onchange = () => { if (+i.value > 0) { LAY[i.dataset.shape] = +i.value; LAY.G = presetGrid() } rerender() });
+  host.querySelectorAll("[data-cellop]").forEach(b => b.onclick = () => {
+    const key = LAY.sel, [cs, rs] = G.span.get(key) || [1, 1], op = b.dataset.cellop;
+    if (op === "empty") { if (G.empty.has(key)) G.empty.delete(key); else G.empty.add(key) }
+    else { const [dc, dr] = { right: [1, 0], left: [-1, 0], down: [0, 1], up: [0, -1] }[op]; setSpan(G, key, cs + dc, rs + dr) }
+    custom(); rerender() });
   const nm = document.getElementById("lbname"); nm.oninput = () => { LAY.name = nm.value.replace(/[^\w-]/g, ""); fill(document.getElementById("laycode"), layoutCode(lang === "py"), lang); host.querySelector(".lb-name code").textContent = `"${layName()}"` } }
 
 /* ---------------- updating: docs/api-changes.md as a filterable list */

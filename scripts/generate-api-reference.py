@@ -27,8 +27,9 @@ CLASSES = [
     ("Plot.h", "class Plot::Pad::StatsBox", "Plot::Pad::StatsBox", "placement and appearance of the statistics box of a data item (Data::SetStatsBox); has the setters of Box"),
     ("Plot.h", "class Plot::Pad::LegendBox", "Plot::Pad::LegendBox", ""),
     ("Plot.h", "class Plot::Pad::LegendEntry", "Plot::Pad::LegendEntry", "a legend row: the appearance of the row of a data item (Data::SetLegendEntry) or a row added with LegendBox::AddEntry"),
-    ("PanelLayout.h", "class Panel", "Panel", "a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes"),
+    ("PanelLayout.h", "class Panel", "Panel", "a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes, `Empty(width, height)` one with a size of its own"),
     ("PanelLayout.h", "class PanelLayout", "PanelLayout", "arrangement of panels and the sizes shared by all base plots"),
+    ("PlotManager.h", "class BasePlotShape", "BasePlotShape", "proportions of the panels of PlotManager::MakeBasePlot"),
 ]
 
 METHOD = re.compile(r"^\s*(?:virtual\s+|static\s+|explicit\s+)*(?:(?P<ret>[\w:<>&\*,\s]+?)\s+)?(?P<name>\w+)\((?P<args>.*)\)\s*(?:const\s*)?(?:override\s*)?(?:=\s*default\s*)?(?:\{.*\}|;)")

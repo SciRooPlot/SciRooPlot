@@ -265,23 +265,26 @@ void exportPlotManager(py::module_& m)
     .def("SetDataRootFile", &PlotManager::SetDataRootFile, arg("fileName"))
     .def("SaveProject", &PlotManager::SaveProject)
     .def("GetProjectProperty", &PlotManager::GetProjectProperty, arg("property"))
-    .def_static("MakeBasePlot", overload_cast<const string&>(&PlotManager::MakeBasePlot), arg("name") = "1d")
-    .def_static("MakeBasePlot", overload_cast<const string&, const PanelLayout&>(&PlotManager::MakeBasePlot), arg("name"), arg("sizes"));
+    .def_static("MakeBasePlot", &PlotManager::MakeBasePlot, arg("name") = "1d", py::arg_v("sizes", PanelLayout(), "PanelLayout()"), py::arg_v("shape", BasePlotShape(), "BasePlotShape()"));
 }
 
 void exportPanelLayout(py::module_& m)
 {
   py::class_<Panel>(m, "Panel", "One axis frame of a layout, sizes in units of the standard panel.")
     .def(py::init<double_t, double_t>(), arg("width") = 1., arg("height") = 1.)
-    .def("ZAxis", &Panel::ZAxis, ref_int);
+    .def("ZAxis", &Panel::ZAxis, ref_int)
+    .def("Span", &Panel::Span, arg("columns"), arg("rows") = 1, ref_int);
   m.def("Gap", &Gap, "Separates independent panels: both sides keep their axis labels and titles.");
-  m.def("Empty", &Empty, "A cell of the grid without axis frame, its remaining space becomes a pad for texts.");
+  m.def("Empty", py::overload_cast<>(&Empty), "A cell of the grid without axis frame, its remaining space becomes a pad for texts.");
+  m.def("Empty", py::overload_cast<double_t, double_t>(&Empty), arg("width"), arg("height"), "An empty cell with a size of its own, e.g. a strip for a common legend.");
   py::class_<PanelLayout>(m, "PanelLayout", "Arrangement of panels (rows from top to bottom) and the lengths of the standard plot in pixels.")
     .def(py::init<vector<vector<Panel>>>(), py::arg_v("rows", vector<vector<Panel>>{{Panel()}}, "[[Panel()]]"))
     .def(py::init<const PanelLayout&, vector<vector<Panel>>>(), arg("sizes"), arg("rows"))
     .def("SetPanelSize", &PanelLayout::SetPanelSize, arg("pixel"), ref_int)
     .def("SetMargins", &PanelLayout::SetMargins, arg("top"), arg("bottom"), arg("left"), arg("right"), ref_int)
     .def("SetZAxisMargin", &PanelLayout::SetZAxisMargin, arg("pixel"), ref_int)
+    .def("SetZAxisOffset", &PanelLayout::SetZAxisOffset, arg("pixel"), ref_int)
+    .def("SetZAxisWidth", &PanelLayout::SetZAxisWidth, arg("pixel"), ref_int)
     .def("SetPanelSpacing", &PanelLayout::SetPanelSpacing, arg("pixel"), ref_int)
     .def("SetTextSize", &PanelLayout::SetTextSize, arg("pixel"), ref_int)
     .def("SetTitleSize", &PanelLayout::SetTitleSize, arg("pixel"), ref_int)
@@ -292,6 +295,10 @@ void exportPanelLayout(py::module_& m)
     .def("SetZTitleOffset", &PanelLayout::SetZTitleOffset, arg("pixel"), ref_int)
     .def("SetLineWidth", &PanelLayout::SetLineWidth, arg("width"), ref_int)
     .def("SetMarkerSize", &PanelLayout::SetMarkerSize, arg("size"), ref_int);
+  py::class_<BasePlotShape>(m, "BasePlotShape", "Proportions of the panels of PlotManager.MakeBasePlot, in units of the standard panel.")
+    .def(py::init<>())
+    .def("SetAspectRatio", &BasePlotShape::SetAspectRatio, arg("ratio"), ref_int)
+    .def("SetRatioHeight", &BasePlotShape::SetRatioHeight, arg("height"), ref_int);
 }
 
 void exportPlot(py::module_& m)
@@ -627,6 +634,8 @@ void exportAxis(py::module_& m)
     .def("SetOppositeTicks", &Axis::SetOppositeTicks, arg("isOppositeTicks") = true, ref_int)
     .def("SetNoExponent", &Axis::SetNoExponent, arg("isNoExponent") = true, ref_int)
     .def("SetHideClippedLabels", &Axis::SetHideClippedLabels, arg("hide") = true, ref_int)
+    .def("SetColorScaleOffset", &Axis::SetColorScaleOffset, arg("offset"), ref_int)
+    .def("SetColorScaleWidth", &Axis::SetColorScaleWidth, arg("width"), ref_int)
     .def("SetTimeFormat", &Axis::SetTimeFormat, arg("timeFormat"), ref_int)
     .def("SetTickOrientation", &Axis::SetTickOrientation, arg("tickOrientation"), ref_int);
 }

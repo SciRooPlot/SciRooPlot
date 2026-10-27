@@ -2118,6 +2118,28 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     // the pad is updated once for all data, since every update repaints everything drawn so far
     pad_ptr->Update();
 
+    // the colour scale ROOT made while painting starts 0.005 of the pad width right of the frame and is 0.045 wide: other values
+    // (Axis::SetColorScaleOffset/SetColorScaleWidth, which the base plots set from pixels) move it before the boxes are placed
+    optional<float_t> scaleOffset;
+    optional<float_t> scaleWidth;
+    for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(pad)}) {
+      if (curPad.GetAxes().find('Z') == curPad.GetAxes().end()) continue;
+      if (curPad['Z'].GetColorScaleOffset()) scaleOffset = curPad['Z'].GetColorScaleOffset();
+      if (curPad['Z'].GetColorScaleWidth()) scaleWidth = curPad['Z'].GetColorScaleWidth();
+    }
+    if (scaleOffset || scaleWidth) {
+      for (TObject* primitive : *pad_ptr->GetListOfPrimitives()) {
+        auto* hist = dynamic_cast<TH1*>(primitive);
+        TObject* found = (hist) ? hist->GetListOfFunctions()->FindObject("palette") : nullptr;
+        if (!found || !found->InheritsFrom("TPaletteAxis") || pad_ptr->GetView()) continue;
+        auto* palette = static_cast<TPave*>(found);  // TPaletteAxis lives in libHistPainter, which is not linked: its TPave part is enough
+        const double_t x1 = 1. - pad_ptr->GetRightMargin() + scaleOffset.value_or(0.005f);
+        palette->SetX1NDC(x1);
+        palette->SetX2NDC(x1 + scaleWidth.value_or(0.045f));
+        palette->ConvertNDCtoPad();
+      }
+    }
+
     bool redrawAxes = (pad.GetRedrawAxes())
                         ? *pad.GetRedrawAxes()
                         : ((padDefaults.GetRedrawAxes()) ? *padDefaults.GetRedrawAxes() : false);
@@ -2133,8 +2155,17 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       line.DrawLineNDC(lm, bm, lm, tm);
       line.DrawLineNDC(lm, tm, rm, tm);
       line.DrawLineNDC(lm, bm, rm, bm);
-      // re-draw axes
-      axisHist_ptr->Draw("SAME AXIS");
+      // re-draw axes; for a frame with colour scale with a copy without it, since ROOT removes the colour scale of a histogram painted
+      // without Z (THistPainter::PaintTable) and makes a new one at the default position with the next paint
+      TObject* palette = axisHist_ptr->GetListOfFunctions()->FindObject("palette");
+      TH1* axes = axisHist_ptr;
+      if (palette) {
+        axes = static_cast<TH1*>(axisHist_ptr->Clone());
+        axes->SetDirectory(nullptr);
+        axes->SetBit(kCanDelete);
+        delete axes->GetListOfFunctions()->Remove(axes->GetListOfFunctions()->FindObject("palette"));
+      }
+      axes->Draw("SAME AXIS");
     }
 
     // legends and texts: the ones with a given position before the statistics boxes, the automatically placed ones after them,

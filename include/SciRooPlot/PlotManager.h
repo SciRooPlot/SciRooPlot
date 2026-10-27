@@ -48,6 +48,23 @@ namespace SciRooPlot
 {
 //**************************************************************************************************
 /**
+ * Proportions of the panels that PlotManager::MakeBasePlot arranges, in units of the standard panel.
+ */
+//**************************************************************************************************
+class BasePlotShape
+{
+ public:
+  BasePlotShape& SetAspectRatio(double_t ratio);   // 1.618: width / height of _wide panels, height / width of _tall ones
+  BasePlotShape& SetRatioHeight(double_t height);  // 0.37: height of the ratio panels (the same under every kind of panel)
+
+ private:
+  friend class PlotManager;
+  double_t mAspectRatio{1.618};
+  double_t mRatioHeight{0.37};
+};
+
+//**************************************************************************************************
+/**
  * Central manager class.
  */
 //**************************************************************************************************
@@ -81,15 +98,15 @@ class PlotManager
   // Base plots with consistent layout among them: text sizes, tick lengths, distances, line widths and marker sizes are the
   // same in every panel (see PanelLayout.h), so that plots of different layouts look alike. The name describes the layout:
   //   <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]
-  // type 1d (plain panels) or 2d (panels with colour scale); wide/tall panels with the golden ratio; a grid of main panels
+  // type 1d (plain panels) or 2d (panels with colour scale); wide/tall panels (golden ratio unless shape says otherwise); a grid of main panels
   // (default 1x1) that share their axes; a ratio panel below each main panel; gaps between the panels (own axes).
   // E.g. 1d, 1d_ratio, 2d, 1d_wide, 1d_2x1, 1d_3x1, 1d_2x1_ratio, 1d_2x2, 2d_2x1, 1d_2x1_gap. Pads are numbered row by row.
   // The code of this function is the reference for defining further layouts with PanelLayout.
-  static Plot MakeBasePlot(const std::string& name = "1d");
-  // The same base plot with other lengths, taken from sizes (its panels are not used): text and title sizes, tick lengths,
-  // margins, line width and marker size in pixels of the plot, e.g. MakeBasePlot("1d_ratio", PanelLayout().SetTextSize(24).SetTitleSize(30)).
+  // Other lengths are taken from sizes (its panels are not used): text and title sizes, tick lengths, margins, line width and
+  // marker size in pixels of the plot, e.g. MakeBasePlot("1d_ratio", PanelLayout().SetTextSize(24).SetTitleSize(30)).
   // They are converted for every pad, so they stay equal in all panels; changing the text size of single pads afterwards does not.
-  static Plot MakeBasePlot(const std::string& name, const PanelLayout& sizes);
+  // Other proportions are taken from shape, e.g. MakeBasePlot("1d_wide_ratio", PanelLayout(), BasePlotShape().SetAspectRatio(4. / 3.).SetRatioHeight(0.3)).
+  static Plot MakeBasePlot(const std::string& name = "1d", const PanelLayout& sizes = PanelLayout(), const BasePlotShape& shape = BasePlotShape());
   void AddColorOverview(const std::string& name, const std::string& group, const std::vector<int32_t>& colors = {});
 
   void SavePlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {}) const;

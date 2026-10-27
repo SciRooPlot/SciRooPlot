@@ -3193,6 +3193,8 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
   read_from_tree(axisTree, mAxisFrame.isOppositeTicks, "is_opposite_ticks");
   read_from_tree(axisTree, mAxisFrame.isNoExponent, "is_no_exponent");
   read_from_tree(axisTree, mAxisFrame.hideClippedLabels, "hide_clipped_labels");
+  read_from_tree(axisTree, mAxisFrame.colorScaleOffset, "color_scale_offset");
+  read_from_tree(axisTree, mAxisFrame.colorScaleWidth, "color_scale_width");
   read_from_tree(axisTree, mAxisFrame.tickOrientation, "tick_orientation");
   read_from_tree(axisTree, mAxisFrame.timeFormat, "time_format");
 }
@@ -3231,6 +3233,8 @@ ptree Plot::Pad::Axis::GetPropertyTree() const
   put_in_tree(axisTree, mAxisFrame.isOppositeTicks, "is_opposite_ticks");
   put_in_tree(axisTree, mAxisFrame.isNoExponent, "is_no_exponent");
   put_in_tree(axisTree, mAxisFrame.hideClippedLabels, "hide_clipped_labels");
+  put_in_tree(axisTree, mAxisFrame.colorScaleOffset, "color_scale_offset");
+  put_in_tree(axisTree, mAxisFrame.colorScaleWidth, "color_scale_width");
   put_in_tree(axisTree, mAxisFrame.tickOrientation, "tick_orientation");
   put_in_tree(axisTree, mAxisFrame.timeFormat, "time_format");
 
@@ -3258,6 +3262,8 @@ void Plot::Pad::Axis::operator+=(const Axis& axis)
   if (axis.mAxisFrame.isOppositeTicks) mAxisFrame.isOppositeTicks = axis.mAxisFrame.isOppositeTicks;
   if (axis.mAxisFrame.isNoExponent) mAxisFrame.isNoExponent = axis.mAxisFrame.isNoExponent;
   if (axis.mAxisFrame.hideClippedLabels) mAxisFrame.hideClippedLabels = axis.mAxisFrame.hideClippedLabels;
+  if (axis.mAxisFrame.colorScaleOffset) mAxisFrame.colorScaleOffset = axis.mAxisFrame.colorScaleOffset;
+  if (axis.mAxisFrame.colorScaleWidth) mAxisFrame.colorScaleWidth = axis.mAxisFrame.colorScaleWidth;
   if (axis.mTitleLayout.style) mTitleLayout.style = axis.mTitleLayout.style;
   if (axis.mTitleLayout.scale) mTitleLayout.scale = axis.mTitleLayout.scale;
   if (axis.mTitleLayout.color) mTitleLayout.color = axis.mTitleLayout.color;
@@ -3415,6 +3421,16 @@ auto Plot::Pad::Axis::SetNoExponent(bool isNoExponent) -> decltype(*this)
 auto Plot::Pad::Axis::SetHideClippedLabels(bool hide) -> decltype(*this)
 {
   mAxisFrame.hideClippedLabels = hide;
+  return *this;
+}
+auto Plot::Pad::Axis::SetColorScaleOffset(float_t offset) -> decltype(*this)
+{
+  mAxisFrame.colorScaleOffset = offset;
+  return *this;
+}
+auto Plot::Pad::Axis::SetColorScaleWidth(float_t width) -> decltype(*this)
+{
+  mAxisFrame.colorScaleWidth = width;
   return *this;
 }
 auto Plot::Pad::Axis::SetTimeFormat(const string& timeFormat) -> decltype(*this)
