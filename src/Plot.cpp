@@ -2346,6 +2346,14 @@ auto Plot::Pad::Data::ProfileY(double_t startX, double_t endX, optional<bool> is
   mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
   return *this;
 }
+auto Plot::Pad::Data::Project(std::initializer_list<uint8_t> dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
+{
+  return Project(vector<uint8_t>(dims), ranges, isUserCoord);
+}
+auto Plot::Pad::Data::Profile(std::initializer_list<uint8_t> dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
+{
+  return Profile(vector<uint8_t>(dims), ranges, isUserCoord);
+}
 void Plot::Pad::Data::data_info_t::set(const data_info_t& other)
 {
   if (other.dataDims.empty()) {
@@ -2366,6 +2374,10 @@ void Plot::Pad::Data::data_info_t::set(const data_info_t& other)
   dataDims = other.dataDims;
   weight = other.weight;
   isProfileNoScatter = other.isProfileNoScatter;
+}
+auto Plot::Pad::Data::Project(std::initializer_list<data_dim_t> dataDims, optional<string> weight) -> decltype(*this)
+{
+  return Project(vector<data_dim_t>(dataDims), weight);
 }
 auto Plot::Pad::Data::Project(const vector<data_dim_t>& dataDims, optional<string> weight) -> decltype(*this)
 {
@@ -2998,6 +3010,18 @@ auto Plot::Pad::Ratio::ProfileY(double_t startX, double_t endX, optional<bool> i
   }
   mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
   return *this;
+}
+auto Plot::Pad::Ratio::Project(std::initializer_list<uint8_t> dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
+{
+  return Project(vector<uint8_t>(dims), ranges, isUserCoord);
+}
+auto Plot::Pad::Ratio::Profile(std::initializer_list<uint8_t> dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
+{
+  return Profile(vector<uint8_t>(dims), ranges, isUserCoord);
+}
+auto Plot::Pad::Ratio::Project(std::initializer_list<data_dim_t> dataDims, optional<string> weight) -> decltype(*this)
+{
+  return Project(vector<data_dim_t>(dataDims), weight);
 }
 auto Plot::Pad::Ratio::Project(const vector<data_dim_t>& dataDims, optional<string> weight) -> decltype(*this)
 {

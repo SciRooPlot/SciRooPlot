@@ -688,6 +688,9 @@ class Plot::Pad::Data
   virtual Data& Profile(const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});  // for 2d & 3d histos
   virtual Data& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});                                                                   // for 2d histos
   virtual Data& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});                                                                   // for 2d histos
+  // (for braced lists of axes like Project({2}, {{0, 10, 50}}), which would otherwise be ambiguous with the tree overloads)
+  Data& Project(std::initializer_list<uint8_t> dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});
+  Data& Profile(std::initializer_list<uint8_t> dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});
 
   struct data_dim_t {
     data_dim_t() = default;
@@ -705,6 +708,8 @@ class Plot::Pad::Data
   };
 
   virtual Data& Project(const std::vector<data_dim_t>& dataDims, std::optional<std::string> weight = {});
+  // (for braced lists of columns like Project({"x", "y"}), which would otherwise be ambiguous with the histogram overload)
+  Data& Project(std::initializer_list<data_dim_t> dataDims, std::optional<std::string> weight = {});
   virtual Data& Project1D(data_dim_t x, std::optional<std::string> weight = {});
   virtual Data& Project2D(data_dim_t x, data_dim_t y, std::optional<std::string> weight = {});
 
@@ -1037,8 +1042,11 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& Profile(const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {}) override;
   Ratio& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) override;
   Ratio& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {}) override;
+  Ratio& Project(std::initializer_list<uint8_t> dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});
+  Ratio& Profile(std::initializer_list<uint8_t> dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});
 
   Ratio& Project(const std::vector<data_dim_t>& dataDims, std::optional<std::string> weight = {}) override;
+  Ratio& Project(std::initializer_list<data_dim_t> dataDims, std::optional<std::string> weight = {});
   Ratio& Project1D(data_dim_t x, std::optional<std::string> weight = {}) override;
   Ratio& Project2D(data_dim_t x, data_dim_t y, std::optional<std::string> weight = {}) override;
 

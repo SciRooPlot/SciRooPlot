@@ -1685,9 +1685,8 @@
                  .ProfileX();
 
           // Profile keeping axis 2; axis 0 to bins [10, 50]
-          // (false: bins; one range alone needs it in C++)
           plot[1].AddData("myNDHist", "input")
-                 .Profile({2}, {{0, 10, 50}}, false);
+                 .Profile({2}, {{0, 10, 50}});
           ```
         ],
         [
