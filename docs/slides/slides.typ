@@ -287,6 +287,7 @@
 
       - Provides a common plotting infrastructure and organization.
       - Lets users describe the desired figure rather than its implementation.
+      - Finds data by name in any number of files, folders and lists -- no file handling in the plot code.
       - Preserves the familiar ROOT ecosystem and styling conventions.
       - Enables interactive, project-based plotting workflows.
     ],
@@ -1313,7 +1314,7 @@
 
       - Directory or list paths within ROOT files can be prepended to object names to disambiguate identical names.
 
-      - Data from multiple input aliases can be combined seamlessly within the same plot.
+      - Data from any number of data sources can be combined seamlessly within the same plot.
 
       - By default, the first added object defines the plot frame. This can be overridden via `SetDefinesFrame()`.
 

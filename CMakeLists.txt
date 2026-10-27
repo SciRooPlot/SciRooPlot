@@ -399,8 +399,6 @@ install(CODE [[
 # associate the remaining files for IDEs
 add_custom_target(ProjectFiles SOURCES
     README.md
-    docs/README.md
-    docs/ADVANCED_INSTALL.md
     docs/slides/slides.typ
     scripts/generateExampleData.C
     packaging/env.sh.in

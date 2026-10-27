@@ -2,7 +2,7 @@
 
 > SciRooPlot is a C++ and Python library on top of ROOT for defining, organizing and generating scientific plots: plots are declared in a small program, stored per project and drawn with the `plot` command line app.
 
-Start with the agent skill: it is the condensed, agent-oriented description of the workflow, the API and the pitfalls. The README is the human walkthrough with commented examples.
+Start with the agent skill: it is the condensed, agent-oriented description of the workflow, the API and the pitfalls. The web page is the documentation for humans: a guided tour, the reference and the example plots with their code.
 
 ## Agent skill
 
@@ -15,8 +15,7 @@ Start with the agent skill: it is the condensed, agent-oriented description of t
 
 ## Documentation
 
-- [README](https://scirooplot.github.io/SciRooPlot/README.md): installation, usage and the commented example code
-- [Advanced installation](https://scirooplot.github.io/SciRooPlot/ADVANCED_INSTALL.md): building ROOT from source
+- [Web page](https://scirooplot.github.io/SciRooPlot/): installation (also building ROOT from source), tour, reference and example plots
 - [Interface changes](https://scirooplot.github.io/SciRooPlot/api-changes.md): what changed between versions and how to update existing plotting code
 - [Headers](https://github.com/SciRooPlot/SciRooPlot/tree/master/include/SciRooPlot): Plot.h, PlotManager.h, PanelLayout.h — the authoritative interface
 - [Example programs](https://github.com/SciRooPlot/SciRooPlot/tree/master/templates/example): DefinePlots.cpp and DefinePlots.py with example data

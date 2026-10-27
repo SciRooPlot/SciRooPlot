@@ -565,7 +565,7 @@ figure.plot figcaption { color: #5b6b80 }
     <div class="reads"><h3>Reads what your analysis writes</h3>
       <div class="chips-static"><span>TH1</span><span>TH2</span><span>TH3</span><span>TProfile</span><span>TProfile2D</span><span>THn</span><span>THnSparse</span><span>TH2Poly</span><span>TGraph</span><span>TGraphErrors</span><span>TGraphAsymmErrors</span><span>TGraphBentErrors</span><span>TGraph2D</span><span>TEfficiency</span><span>TF1</span><span>TF2</span><span>TF3</span><span>TTree</span><span>CSV and text tables</span></div>
       <p class="small muted">Wherever they are stored: directories, <code>TList</code>s and folders at any depth, many files at once, or objects your program makes. <a href="#ref-sources">Data sources and finding data</a></p></div>
-    <p class="key"><b>Key idea</b>You describe <i>what</i> a figure shows, once. SciRooPlot finds the data, draws it with ROOT, and keeps every plot of your project in one place.</p>
+    <p class="key"><b>Key idea</b>You describe <i>what</i> a figure shows, once. SciRooPlot finds the data by name, in one file or in hundreds, draws it with ROOT, and keeps every plot of your project in one place.</p>
   </div>
 
   <div class="teaser">
@@ -855,6 +855,12 @@ figure.plot figcaption { color: #5b6b80 }
     <p class="key"><b>Updates</b>Later on, <code>srp update</code> upgrades SciRooPlot in place, whichever way you installed it.</p>
   </div>
   <div style="display:grid;gap:12px">
+    <h2 class="title">Building ROOT yourself</h2>
+    <p>For the installer, ROOT 6.36.04 or newer has to be installed. If your package manager does not provide it, build it from source (this takes a while) and source its <code>thisroot.sh</code>, also in <code>~/.bashrc</code> or <code>~/.zshrc</code>: the installer then finds it.</p>
+    <div class="code"><pre data-shell="root"></pre></div>
+    <p class="small muted">SciRooPlot and your plotting projects are compiled with the C++ standard ROOT was built with. The two small dependencies fmt and pybind11 are fetched during the installation if they are missing or too old. <code>./scripts/install.sh --prefix &lt;dir&gt;</code> installs somewhere else than <code>SciRooPlot/install</code>. Building with CMake directly instead of the installer, <code>-DROOT_DIR=$HOME/root/cmake</code> points to ROOT and <code>-DCMAKE_DISABLE_FIND_PACKAGE_fmt=ON</code> uses the fetched fmt even if one is installed.</p>
+  </div>
+  <div style="display:grid;gap:12px">
     <h2 class="title">With an AI coding agent</h2>
     <p>SciRooPlot ships an agent skill: a condensed description of the workflow, the API and the common pitfalls, with the method reference generated from the headers. Import <a href="https://scirooplot.github.io/SciRooPlot/skill/scirooplot.skill">scirooplot.skill</a> into your agent as a skill, or point the agent to <a href="https://scirooplot.github.io/SciRooPlot/llms.txt">llms.txt</a>. The skill's text is readable too: <a href="https://scirooplot.github.io/SciRooPlot/skill/scirooplot/SKILL.md">SKILL.md</a>.</p>
   </div>
@@ -887,7 +893,7 @@ figure.plot figcaption { color: #5b6b80 }
     <a href="https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_py.pdf">User manual (Python)</a>
     <a href="https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_cpp.pdf">User manual (C++)</a>
     <a href="https://scirooplot.github.io/SciRooPlot/api-changes.html">Interface changes</a>
-    <a href="https://scirooplot.github.io/SciRooPlot/ADVANCED_INSTALL.html">Building ROOT from source</a>
+    <a href="#install">Installation</a>
     <a href="#ref-agents">For AI agents: skill and llms.txt</a>
   </div>
 </footer>
@@ -1120,6 +1126,7 @@ pm.AddPlot(plot)`,
 pm.AddPlot(plot);` },
   { title: "Compare with simulation", img: "img/tour/style.png", alt: "Data points with a dotted magenta simulation line",
     text: `<p>Add the simulated spectrum from a second source and give both a look. Colours, line and marker styles are ROOT constants: hover or tap them in the code.</p>
+<p>Here both sources are folders of the same file. A source can just as well be another file, every file of a directory or a wildcard like <code>run_*.root</code>: the plot code stays the same (<a href="#ref-sources">data sources</a>).</p>
 <div class="basics"><b>Reading the style setters</b><code>SetLine(kMagenta + 2, kDotted, 3.0)</code> means colour, line style, line width. <code>kMagenta + 2</code> is a darker magenta, <code>kDotted</code> a dotted line. <code>SetMarker(kBlack, kFullCircle, 1.0)</code> is colour, marker shape, size. Try other values in <a href="#styles">Colours &amp; styles</a>.</div>
 <p><code>SetDrawOption(hist_open)</code> draws the simulation as steps instead of points, without vertical lines at its outer edges (<code>hist</code> closes them down to the axis). The <a href="#options">drawing options</a> page shows all of them.</p>`,
     py: `pm.AddDataSource("data", "\${SCIROOPLOT_DATA_DIR}/ExampleData/spectra.root:data")
@@ -1679,7 +1686,8 @@ plot[1]['X'].SetTitle("#it{x}").SetRange(1.4, 2.8).SetLog().SetGrid().SetNumDivi
 plot[1]['Y'].SetMaxDigits(3).SetNoExponent().SetTitleOffset(1.1).SetTitleCenter()
 plot[1]['Z'].SetLog()
 plot[1]['X'].SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")
-plot[1].SetView(35.0, 225.0)                          # viewing angles of 3D drawings`, cpp: `Plot plot("name", "group/sub", "1d_ratio");
+plot[1].SetView(35.0, 225.0)                          # viewing angles of 3D drawings
+variant = Plot(plot, "name_variant", "group/other")   # a copy under a new name (and group), to add more to it`, cpp: `Plot plot("name", "group/sub", "1d_ratio");
 plot.SetDimensions(710, 710).SetTransparent().AppendGroup("QA");
 plot[0].SetDefaultMarkerColors({kBlack, kRed + 1});   // defaults for all pads, cycled over the data
 plot[1].SetMargins(0.07, 0.14, 0.12, 0.07).SetFrameFill(kGray, 1001, 0.2);
@@ -1688,7 +1696,8 @@ plot[1]['X'].SetTitle("#it{x}").SetRange(1.4, 2.8).SetLog().SetGrid().SetNumDivi
 plot[1]['Y'].SetMaxDigits(3).SetNoExponent().SetTitleOffset(1.1).SetTitleCenter();
 plot[1]['Z'].SetLog();
 plot[1]['X'].SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M");
-plot[1].SetView(35., 225.);                           // viewing angles of 3D drawings` },
+plot[1].SetView(35., 225.);                           // viewing angles of 3D drawings
+Plot variant(plot, "name_variant", "group/other");    // a copy under a new name (and group), to add more to it` },
   baseplots: { py: `logz = PlotManager.MakeBasePlot("2d")                 # start from a shipped one
 logz.SetName("2d_logz")
 logz[1]['Z'].SetLog()                                  # every plot on "2d_logz" gets a log colour scale
@@ -2597,7 +2606,12 @@ source "$(brew --prefix scirooplot)/share/scirooplot/env.sh"`,
 source "\${CONDA_PREFIX}/share/scirooplot/env.sh"`,
   src: `git clone https://github.com/SciRooPlot/SciRooPlot.git
 cd SciRooPlot && ./scripts/install.sh
-source ./install/share/scirooplot/env.sh` };
+source ./install/share/scirooplot/env.sh`,
+  root: `git clone --branch v6-40-04 --depth 1 https://github.com/root-project/root.git root_src
+cmake -S root_src -B root_build -DCMAKE_INSTALL_PREFIX=$HOME/root
+cmake --build root_build --parallel
+cmake --install root_build
+source $HOME/root/bin/thisroot.sh` };
 function renderInstall() { document.querySelectorAll("pre[data-shell]").forEach(p => {
   const t = SHELL[p.dataset.shell]; p.innerHTML = t.split("\n").map(l => `<span class="ln"><span style="color:var(--teal);font-weight:700">$ </span>${esc(l)}</span>`).join(""); p.dataset.plain = t }) }
 
