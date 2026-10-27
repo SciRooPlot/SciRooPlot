@@ -129,6 +129,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `plot` ran `cmake -S .. -B .` and a build on every call; Python programs were re-run only if the main file changed | Builds only if `CMakeCache.txt` is next to the program; Python is re-run if any `.py` file (up to two levels deep) is newer | CLI | Keep the C++ program in its CMake build directory. |
 | `srp edit`, `srp cd` without a project: error | Use the current project | CLI | none |
 | – | `srp colorwheel [<file>]`: ROOT's colour wheel in a window, or saved to a file | CLI | none |
+| – | `srp out [<project>]`: opens the output folder of the project (default: the current one) in the file manager | CLI | none |
 
 ## 3.2.4 → 3.3.3
 

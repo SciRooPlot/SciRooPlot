@@ -95,6 +95,7 @@ For the modes that save files to disk, the plotting app needs to know where to s
 srp set <project> outdir </path/to/output/folder>
 ```
 Within this folder, the files will be organized in subdirectories corresponding to the groups and subgroups.
+`srp out [<project>]` opens the output folder of the project (by default the current one) in your file manager.
 
 Besides `program` and `outdir`, you can store your own project variables (for example the location of your input files on the current machine):
 ```

@@ -615,8 +615,7 @@
           [#prompt `srp rename <project> <name>`], [Rename a project (then also adjust the name given to `PlotManager`).],
           [#prompt `srp remove <project>`], [Unregister the project and delete its stored plot definitions (user code and output are kept).],
           [#prompt `srp clean`], [Remove all projects whose program folder no longer exists.],
-          [#prompt `srp cd [<project>]`], [Go to the folder of the project's program.],
-          [#prompt `srp edit [<project>]`], [Open the project's source files.],
+          [#prompt `srp cd|edit|out [<project>]`], [Go to the folder of the project's program, open its source files, or open its output folder.],
           [#prompt `srp stats <project>`], [Number of plots and inputs, and when the definitions were last saved.],
         ),
       )
@@ -632,7 +631,7 @@
         cmd-table(
           [#prompt `srp set <project> outdir <path>`], [Where exported plots are stored (one subfolder per group).],
           [#prompt `srp set <project> program <path>`], [The program `plot` runs to update the plot definitions.],
-          [#prompt `srp set <project> <var> <value>`], [Your own variables, e.g. the input path on this machine -- read in code via `pm.GetProjectProperty("<var>")`.],
+          [#prompt `srp set <project> <var> <value>`], [Your own variables, e.g. the input path on this machine, read via `pm.GetProjectProperty("<var>")`.],
           [#prompt `srp get|unset <project> <var>`], [Read or remove a property.],
         ),
       )
@@ -643,14 +642,13 @@
         width: 100%,
         title-size: 20pt,
         cmd-table(
-          [#prompt `srp settings`], [Show all settings.],
           [#prompt `srp plotmode <mode>`], [Default mode of `plot` (initially `show`).],
-          [#prompt `srp matchmode exact|contains`], [Patterns must match the whole name, or any part of it.],
+          [#prompt `srp matchmode exact|contains`], [Match whole names or any part.],
           [#prompt `srp matchcase sensitive|insensitive`], [Case sensitivity of the patterns.],
           [#prompt `srp screenscale|bitmapscale <factor>`], [Size of plots on screen, or resolution of png/jpg/gif files (initially `1`).],
           [#prompt `srp print|open <file>`], [List the contents of a ROOT file, or open it in a `TBrowser`.],
-          [#prompt `srp colorwheel [<file>]`], [ROOT's colour wheel; the status bar names the colour under the mouse (with a file: saved).],
-          [#prompt `srp info` / `srp help`], [Show installation details, or all commands.],
+          [#prompt `srp colorwheel [<file>]`], [ROOT's colours and their names (or saved to a file).],
+          [#prompt `srp settings|info|help`], [Settings, installation, all commands.],
         ),
       )
     ],

@@ -146,6 +146,7 @@ int main(int argc, char* argv[])
     logger::print("  srp confdir [<project> | @current]");
     logger::print("  srp cd      [<project> | @current]");
     logger::print("  srp edit    [<project> | @current]");
+    logger::print("  srp out     [<project> | @current]  (opens the output folder)");
     logger::print("-----------------------------------------------------------");
     logger::print("Settings:");
     logger::print("  srp settings");
@@ -399,7 +400,7 @@ int main(int argc, char* argv[])
     }
     if (!Config::GetMutable().SetProperty(project, property, setting)) return 1;
   } else {
-    const vector<string> shellCommands = {"update", "edit", "cd", "stats", "init-py", "init-cpp", "example-py", "example-cpp"};
+    const vector<string> shellCommands = {"update", "edit", "cd", "out", "stats", "init-py", "init-cpp", "example-py", "example-cpp"};
     if (std::find(shellCommands.begin(), shellCommands.end(), command) != shellCommands.end()) {
       logger::error("Source environment script to use this feature.");
     } else {

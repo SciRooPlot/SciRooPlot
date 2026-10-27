@@ -1382,7 +1382,7 @@ const REF = [
 <tr><td>See which project is selected and what it uses</td><td><code>srp show</code>: program, output folder, variables; <code>srp stats @current</code>: number of plots and inputs</td></tr>
 <tr><td>Change where its plots go</td><td><code>srp set @current outdir ~/thesis/figures</code> (<code>@current</code> is the selected project)</td></tr>
 <tr><td>Store a path for the code</td><td><code>srp set @current inputDir /data/2024</code>, read with <code>pm.GetProjectProperty("inputDir")</code></td></tr>
-<tr><td>Go to its folder, open its program</td><td><code>srp cd</code>, <code>srp edit</code></td></tr>
+<tr><td>Go to its folder, open its program or its output folder</td><td><code>srp cd</code>, <code>srp edit</code>, <code>srp out</code></td></tr>
 <tr><td>Rename or forget it</td><td><code>srp rename thesis phd</code>, <code>srp remove talk</code> (your program and plots stay; only the registration goes)</td></tr>
 <tr><td>Where the definitions are stored</td><td><code>srp confdir @current</code>: the folder with the saved plots and data sources of the project</td></tr>
 </tbody></table></div>
@@ -1415,7 +1415,7 @@ const REF = [
 <tr><td>See and switch projects</td><td><code>srp projects</code>, <code>srp select &lt;project&gt;</code>, <code>srp show</code> (program, output folder, variables)</td></tr>
 <tr><td>Set where files go</td><td><code>srp set &lt;project&gt; outdir &lt;dir&gt;</code></td></tr>
 <tr><td>Store a path for your code</td><td><code>srp set &lt;project&gt; inputDir &lt;dir&gt;</code>, read with <code>pm.GetProjectProperty("inputDir")</code></td></tr>
-<tr><td>Open the project</td><td><code>srp cd</code> (its folder), <code>srp edit</code> (its program)</td></tr>
+<tr><td>Open the project</td><td><code>srp cd</code> (its folder), <code>srp edit</code> (its program), <code>srp out</code> (its output folder, in the file manager)</td></tr>
 <tr><td>Fewer or more messages</td><td><code>srp verbosity warning</code> … <code>debug</code></td></tr>
 <tr><td>Change defaults</td><td><code>srp plotmode pdf</code>, <code>srp matchmode contains</code>, <code>srp screenscale 0.8</code> (window size), <code>srp bitmapscale 2</code> (PNG resolution), <code>srp settings</code> (all); what each one does: <a href="#ref-settings">Settings</a></td></tr>
 <tr><td>Look into a ROOT file</td><td><code>srp print &lt;file&gt;</code> (its contents in the terminal), <code>srp open &lt;file&gt;</code> (ROOT's browser)</td></tr>
