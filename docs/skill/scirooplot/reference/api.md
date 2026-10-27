@@ -60,7 +60,6 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& operator()(uint8_t dataID)`
 - `Data& AddData(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = {})`
 - `Data& AddData(const Data& data, const std::optional<std::string>& label = {})`
-- `Data& AddData(const std::string& name, const Data& settings, const std::optional<std::string>& label = {})` — deprecated
 - `Data& AddFunction(const std::string& function, const std::optional<std::string>& label = {})`
 - `Data& AddPoints(const std::vector<double_t>& x, const std::vector<double_t>& y, const std::optional<std::string>& label = {})`
 - `Data& AddPoints(const std::vector<std::pair<double_t, double_t>>& positions, const std::optional<std::string>& label = {})`
@@ -68,9 +67,6 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Ratio& AddRatio(const Data& numerator, const Data& denominator, const std::optional<std::string>& label = {})`
 - `Ratio& AddRatio(const Ratio& ratio, const std::optional<std::string>& label = {})`
 - `Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName, const std::string& denominatorDataSource, const std::optional<std::string>& label = {})`
-- `Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorSettings, const std::string& denominatorName, const std::string& denominatorDataSource, const std::optional<std::string>& label = {})`
-- `Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorSettings, const std::string& denominatorName, const Data& denominatorSettings, const std::optional<std::string>& label = {})`
-- `Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName, const Data& denominatorSettings, const std::optional<std::string>& label = {})`
 - `TextBox& AddText(double_t xPos, double_t yPos, const std::string& text)`
 - `TextBox& AddText(double_t xPos, double_t yPos, const std::vector<std::string>& lines)`
 - `TextBox& AddText(const std::string& text)`

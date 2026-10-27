@@ -1372,15 +1372,6 @@ Plot::Pad::Data& Plot::Pad::AddData(const Data& data, const optional<string>& la
   return added;
 }
 
-Plot::Pad::Data& Plot::Pad::AddData(const string& name, const Data& data, const optional<string>& label)
-{
-  logger::warning("AddData(\"{}\", settings) is deprecated and only uses the appearance of the settings. Use AddData(settings(\"{}\")) instead.", name, name);
-  mData.push_back(std::make_shared<Data>(name, data.GetDataSource(), label));
-  mData.back()->SetLayout(data);
-  if (!label && data.GetLegendLabel()) mData.back()->SetLegendLabel(*data.GetLegendLabel());
-  return *mData.back();
-}
-
 //**************************************************************************************************
 /**
  * Add user-defined function to this pad.
@@ -1440,16 +1431,11 @@ Plot::Pad::Data& Plot::Pad::AddLine(pair<double_t, double_t> pos1, pair<double_t
  * Add ratio to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Ratio& Plot::Pad::AddRatioFromNames(const string& numeratorName, const string& numeratorDataSource, const string& denominatorName, const string& denominatorDataSource, const optional<string>& label)
+Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataSource, const string& denominatorName, const string& denominatorDataSource, const optional<string>& label)
 {
   mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorDataSource,
                                           denominatorName, denominatorDataSource, label));
   return *std::dynamic_pointer_cast<Ratio>(mData.back());
-}
-
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataSource, const string& denominatorName, const string& denominatorDataSource, const optional<string>& label)
-{
-  return AddRatioFromNames(numeratorName, numeratorDataSource, denominatorName, denominatorDataSource, label);
 }
 
 Plot::Pad::Ratio& Plot::Pad::AddRatio(const Data& numerator, const Data& denominator, const optional<string>& label)
@@ -1468,28 +1454,6 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const Ratio& ratio, const optional<string>
   if (label) added.mLegend.label = label;
   added.mModMode = Ratio::Mode::Res;  // further modifiers act on the ratio, independent of the selection the ratio object ended with
   return added;
-}
-
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorSettings, const string& denominatorName, const string& denominatorDataSource, const optional<string>& label)
-{
-  logger::warning("AddRatio({}, {}) with settings objects is deprecated and only uses their appearance and data source. Use AddRatio(numerator, denominator) with complete data instead, e.g. AddRatio(numSettings(\"{}\"), denSettings(\"{}\")).",
-                  numeratorName, denominatorName, numeratorName, denominatorName);
-  auto& ratio = AddRatioFromNames(numeratorName, numeratorSettings.GetDataSource(), denominatorName, denominatorDataSource, label);
-  ratio.SetLayout(numeratorSettings);
-  return ratio;
-}
-
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const Data& numeratorSettings, const string& denominatorName, const Data& denominatorSettings, const optional<string>& label)
-{
-  // deprecated (warning issued by the called overload)
-  return AddRatio(numeratorName, numeratorSettings, denominatorName, denominatorSettings.GetDataSource(), label);
-}
-
-Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataSource, const string& denominatorName, const Data& denominatorSettings, const optional<string>& label)
-{
-  logger::warning("AddRatio({}, {}) with settings objects is deprecated and only uses their appearance and data source. Use AddRatio(numerator, denominator) with complete data instead, e.g. AddRatio(Data(\"{}\", \"{}\"), denSettings(\"{}\")).",
-                  numeratorName, denominatorName, numeratorName, numeratorDataSource, denominatorName);
-  return AddRatioFromNames(numeratorName, numeratorDataSource, denominatorName, denominatorSettings.GetDataSource(), label);
 }
 
 //**************************************************************************************************
@@ -3793,9 +3757,6 @@ ptree Plot::Pad::TextBox::GetPropertyTree() const
 Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const string& text)
 {
   mText = text;
-  // the former line delimiter is still accepted for the time being (not documented, to be removed)
-  for (size_t pos{}; (pos = mText.find(" // ", pos)) != string::npos;)
-    mText.replace(pos, 4, "\n");
   return *this;
 }
 Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const vector<string>& lines)

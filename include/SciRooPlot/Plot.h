@@ -286,7 +286,6 @@ class Plot::Pad
   // User accessors:
   Data& AddData(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = {});
   Data& AddData(const Data& data, const std::optional<std::string>& label = {});
-  Data& AddData(const std::string& name, const Data& settings, const std::optional<std::string>& label = {});  // deprecated
   Data& AddFunction(const std::string& function, const std::optional<std::string>& label = {});
 
   Data& AddPoints(const std::vector<double_t>& x, const std::vector<double_t>& y, const std::optional<std::string>& label = {});
@@ -299,13 +298,6 @@ class Plot::Pad
   Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataSource,
                   const std::string& denominatorName, const std::string& denominatorDataSource,
                   const std::optional<std::string>& label = {});
-  // deprecated:
-  Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorSettings, const std::string& denominatorName,
-                  const std::string& denominatorDataSource, const std::optional<std::string>& label = {});
-  Ratio& AddRatio(const std::string& numeratorName, const Data& numeratorSettings, const std::string& denominatorName,
-                  const Data& denominatorSettings, const std::optional<std::string>& label = {});
-  Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName,
-                  const Data& denominatorSettings, const std::optional<std::string>& label = {});
 
   TextBox& AddText(double_t xPos, double_t yPos, const std::string& text);
   TextBox& AddText(double_t xPos, double_t yPos, const std::vector<std::string>& lines);
@@ -439,9 +431,6 @@ class Plot::Pad
   const auto& GetFrame() const { return mFrame; }
 
  private:
-  Ratio& AddRatioFromNames(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName,
-                           const std::string& denominatorDataSource, const std::optional<std::string>& label);
-
   struct pad_position_t {
     std::optional<double_t> xlow;
     std::optional<double_t> ylow;
