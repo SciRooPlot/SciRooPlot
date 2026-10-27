@@ -742,8 +742,8 @@ void PlotManager::AddPlot(Plot plot)
     return;
   }
   // pad 0 only holds the defaults for all pads, nothing added to it is drawn
-  if (auto pad0 = plot.GetPads().find(0); pad0 != plot.GetPads().end() && (!pad0->second.GetData().empty() || !pad0->second.GetLegendBoxes().empty() || !pad0->second.GetTextBoxes().empty())) {
-    logger::warning("Plot {} in {}: data, legends and texts added to pad 0 are not drawn (pad 0 holds the defaults for all pads, the pads are counted from 1).", plot.GetName(), plot.GetGroup());
+  if (auto pad0 = plot.GetPads().find(0); pad0 != plot.GetPads().end() && (!pad0->second.GetData().empty() || pad0->second.GetFrame() || !pad0->second.GetLegendBoxes().empty() || !pad0->second.GetTextBoxes().empty())) {
+    logger::warning("Plot {} in {}: data, frames, legends and texts added to pad 0 are not drawn (pad 0 holds the defaults for all pads, the pads are counted from 1).", plot.GetName(), plot.GetGroup());
   }
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [&plot](const Plot& curPlot) {
@@ -859,9 +859,10 @@ void PlotManager::AddBasePlot(Plot basePlot)
   // base plots define the layout: their data would never be read (only the data of the plots is), and would define the frame,
   // take the first default styles and the first data numbers of every plot built on them
   for (auto& [padID, pad] : basePlot.GetPads()) {
-    if (pad.GetData().empty()) continue;
-    logger::warning("Base plot {} has data in pad {}, which is ignored: data belongs into the plots (shared data e.g. via a loop or a data template).", basePlot.GetName(), padID);
+    if (pad.GetData().empty() && !pad.GetFrame()) continue;
+    logger::warning("Base plot {} has data or a frame in pad {}, which is ignored: data belongs into the plots (shared data e.g. via a loop or a data template).", basePlot.GetName(), padID);
     pad.GetData().clear();
+    pad.mFrame.reset();
   }
   mBasePlots.erase(std::remove_if(mBasePlots.begin(), mBasePlots.end(),
                                   [&basePlot](const Plot& curBasePlot) {
@@ -1093,7 +1094,9 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     // determine which input data are needed for plots
     for (auto& [padID, pad] : plot.GetPads()) {
       if (auto refFunc = RefFuncDrawnIn(plot, padID)) mDataBuffer[refFunc->GetDataSource()][refFunc->GetName()];
-      for (const auto& data : pad.GetData()) {
+      auto padData = pad.GetData();
+      if (padID != 0 && pad.GetFrame()) padData.push_back(pad.GetFrame());  // the frame of a pad is read like its data (pad 0 is not drawn)
+      for (const auto& data : padData) {
         mDataBuffer[data->GetDataSource()][data->GetName()];
         // also register requests without projection info: trees and tables then report that they cannot be plotted directly
         auto& dataInfos = mDataInfoBuffer[data->GetDataSource()][data->GetName()];
@@ -1646,6 +1649,9 @@ vector<std::tuple<string, string, Plot::Pad::Data::data_info_t>> PlotManager::Ge
 
   for (auto& [padID, pad] : plot.GetPads()) {
     if (auto refFunc = RefFuncDrawnIn(plot, padID)) checkKey(refFunc->GetDataSource(), refFunc->GetName(), refFunc->GetDataInfo());
+    if (padID != 0 && pad.GetFrame()) {
+      checkKey(pad.GetFrame()->GetDataSource(), pad.GetFrame()->GetName(), pad.GetFrame()->GetDataInfo());
+    }
     for (const auto& data : pad.GetData()) {
       checkKey(data->GetDataSource(), data->GetName(), data->GetDataInfo());
       if (data->GetType() == "ratio") {

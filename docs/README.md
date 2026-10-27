@@ -186,6 +186,9 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // while allowing the plot to show the full range of the second data
   // this can be achieved by explicitly stating that the second data should be the one that defines the axis frame of the plot:
   plot[1].AddData("data2", "dataSourceA").SetDefinesFrame();
+  // an input that should only give the frame without being drawn (e.g. for bin labels or a binning) is set on the pad,
+  // e.g. plot[1].SetFrame("frameHist", "dataSourceA"); it has no number, colour or legend row and wins over SetDefinesFrame()
+  // a pad without any data needs no such input: its X and Y ranges (see below) give an empty frame
 
   // it is possible to specify in the labels that you want to include some meta info of the data that is drawn, e.g.:
   plot[1].AddData("histName1", "dataSourceA", "mylabel avg = <mean>");
@@ -282,7 +285,7 @@ pm.AddDataSource("dataSourceE", {"/path/to/AO2D_*.root:DF_*"});
   // a full list of axis property accessors can be found in the Axis class definition in inc/Plot.h
 
   // note that you can define the visible range of the data independent of the pad axis range
-  // (ranges stored with the input histograms or graphs are ignored, except for data marked with SetDefinesFrame(), whose stored
+  // (ranges stored with the input histograms or graphs are ignored, except for data marked with SetDefinesFrame() and the frame set with SetFrame(), whose stored
   //  axis ranges, minimum and maximum define the frame; functions from inputs are drawn where they are defined)
   plot[1].AddData("hist", "dataSourceA", "hist with reduced range").SetRangeX(1.5, 2.7);
 

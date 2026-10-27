@@ -2003,6 +2003,7 @@
         [#names("AddText(xPos, yPos, text)", "AddText(placement, text)", "AddText(text)")], [Add a text box at a fixed position (upper left corner, pad coordinates), close to a given corner, or auto-placed.],
         [#names("AddLegend(xPos, yPos, title = {})", "AddLegend(placement, title = {})", "AddLegend(title = {})")], [Add a legend, the same ways.],
         [`SetRefFunc(function)`], [Draw a reference function (e.g. `"1"`) behind the data; returns it for styling.],
+        [`SetFrame(name, dataset)`], [Take the frame from an input that is not drawn.],
       ))
     ],
     [
@@ -2148,7 +2149,7 @@
         [#names("SetLine(color, style, width, alpha = {})", "SetLineColor(color)", "SetLineStyle(style)", "SetLineWidth(width)", "SetLineAlpha(alpha)")], [Line appearance, all at once or individually.],
         [#names("SetFill(color, style, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Fill appearance, all at once or individually.],
         [`SetKeepInputStyle()`], [Keep the input's line, marker and fill.],
-        [`SetDefinesFrame(dontDraw = false)`], [Use this object to define the plot frame (`dontDraw`: without drawing it).],
+        [`SetDefinesFrame()`], [Use this object to define the plot frame.],
         [`SetContours(contours)` / `SetContours(nContours)`], [Set explicit contour levels or their count.],
         [`SetShowStats(format = "emr", title = {})`], [Statistics box of a histogram: ROOT's letters (`TStyle::SetOptStat`, e.g. `"eMR"`), the title as its first line.],
         [`SetStatsBox(statsBox)`], [Placement and appearance of the statistics box: a `StatsBox()` with the setters of `Box`.],

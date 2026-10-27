@@ -958,6 +958,7 @@ Plot::Pad::Pad(const Pad& other)
     mData.push_back(data->Clone());
   }
   if (other.mRefFunc) mRefFunc = other.mRefFunc->Clone();
+  if (other.mFrame) mFrame = other.mFrame->Clone();
 
   mLegendBoxes.reserve(other.mLegendBoxes.size());
   for (const auto& legendBox : other.mLegendBoxes) {
@@ -1056,6 +1057,9 @@ Plot::Pad::Pad(const ptree& padTree)
     if (str_contains(content.first, "REF_FUNC")) {
       mRefFunc = std::make_shared<Data>(content.second);
     }
+    if (content.first == "FRAME") {
+      mFrame = std::make_shared<Data>(content.second);
+    }
 
     // add boxes
     if (str_contains(content.first, "LEGEND")) {
@@ -1140,6 +1144,9 @@ ptree Plot::Pad::GetPropertyTree() const
   }
   if (mRefFunc) {
     padTree.put_child("REF_FUNC", mRefFunc->GetPropertyTree());
+  }
+  if (mFrame) {
+    padTree.put_child("FRAME", mFrame->GetPropertyTree());
   }
 
   int32_t legendBoxID = 1;
@@ -1247,6 +1254,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   }
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if (pad.mRefFunc) mRefFunc = pad.mRefFunc->Clone();
+  if (pad.mFrame) mFrame = pad.mFrame->Clone();
   for (auto& [axisLabel, axis] : pad.mAxes) {
     mAxes[axisLabel];  // default initialize in case this axis was not yet defined
     mAxes[axisLabel] += axis;
@@ -1506,6 +1514,31 @@ Plot::Pad::Data& Plot::Pad::SetRefFunc(const string& refFunc)
 
 //**************************************************************************************************
 /**
+ * Set the input that defines the axis frame of this pad without being drawn (e.g. for labelled bins or a given binning).
+ */
+//**************************************************************************************************
+Plot::Pad::Data& Plot::Pad::SetFrame(const string& name, const string& dataSource)
+{
+  mFrame = std::make_shared<Data>(name, dataSource, nullopt);
+  return *mFrame;
+}
+
+Plot::Pad::Data& Plot::Pad::SetFrame(const Data& data)
+{
+  if (data.mType == "ratio") {
+    logger::throw_invalid_argument("A ratio ({}) cannot be the frame of a pad.", data.mName);
+  }
+  if (data.mName.empty() || data.mDataSource.empty()) {
+    logger::throw_invalid_argument("The frame needs a name and a data source (name: '{}', data source: '{}').", data.mName, data.mDataSource);
+  }
+  mFrame = std::make_shared<Data>(data);
+  mFrame->mType = "data";
+  mFrame->mLegend.label = nullopt;
+  return *mFrame;
+}
+
+//**************************************************************************************************
+/**
  * Add text box to this pad.
  */
 //**************************************************************************************************
@@ -1645,7 +1678,6 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   }
 
   if (auto var = dataTree.get_optional<bool>("defines_frame")) mDefinesFrame = *var;
-  if (auto var = dataTree.get_optional<bool>("dont_draw")) mDontDraw = *var;
   if (auto var = dataTree.get_optional<bool>("keep_input_style")) mKeepInputStyle = *var;
   read_from_tree(dataTree, mLegend.label, "legend_label");
   read_from_tree(dataTree, mLegend.id, "legend_id");
@@ -1802,7 +1834,6 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   dataTree.put("name", mName);
   dataTree.put("dataSource", mDataSource);
   if (mDefinesFrame) dataTree.put("defines_frame", mDefinesFrame);
-  if (mDontDraw) dataTree.put("dont_draw", mDontDraw);
   if (mKeepInputStyle) dataTree.put("keep_input_style", mKeepInputStyle);
   put_in_tree(dataTree, mLegend.label, "legend_label");
   put_in_tree(dataTree, mLegend.id, "legend_id");
@@ -2172,10 +2203,9 @@ auto Plot::Pad::Data::SetFillAlpha(float_t alpha) -> decltype(*this)
   mFill.alpha = alpha;
   return *this;
 }
-auto Plot::Pad::Data::SetDefinesFrame(bool dontDraw) -> decltype(*this)
+auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
 {
   mDefinesFrame = true;
-  mDontDraw = dontDraw;
   return *this;
 }
 auto Plot::Pad::Data::SetKeepInputStyle(bool keep) -> decltype(*this)

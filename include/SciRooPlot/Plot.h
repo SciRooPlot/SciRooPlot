@@ -331,6 +331,8 @@ class Plot::Pad
   TextBox& GetText(uint8_t textID);
 
   Data& SetRefFunc(const std::string& refFunc);
+  Data& SetFrame(const std::string& name, const std::string& dataSource);  // input that only defines the axis frame (not drawn, not numbered)
+  Data& SetFrame(const Data& data);
 
   Pad& SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup);
   Pad& SetMargins(float_t top, float_t bottom, float_t left, float_t right);
@@ -438,6 +440,7 @@ class Plot::Pad
   const auto& GetDefaultCandleWhiskerRange() const { return mCandleOptionDefaults.whiskerRange; }
   const auto& GetRedrawAxes() const { return mRedrawAxes; }
   const auto& GetRefFunc() const { return mRefFunc; }
+  const auto& GetFrame() const { return mFrame; }
 
  private:
   Ratio& AddRatioFromNames(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName,
@@ -500,6 +503,7 @@ class Plot::Pad
   std::map<char, Axis> mAxes;
   std::vector<std::shared_ptr<Data>> mData;
   std::shared_ptr<Data> mRefFunc;
+  std::shared_ptr<Data> mFrame;
 
   std::vector<std::shared_ptr<LegendBox>> mLegendBoxes;
   std::vector<std::shared_ptr<TextBox>> mTextBoxes;
@@ -657,7 +661,7 @@ class Plot::Pad::Data
   Data& SetFillColor(int16_t color);
   Data& SetFillStyle(int16_t style);
   Data& SetFillAlpha(float_t alpha);
-  Data& SetDefinesFrame(bool dontDraw = false);
+  Data& SetDefinesFrame();                    // this data (drawn as usual) defines the axis frame; the last one in a pad wins
   Data& SetKeepInputStyle(bool keep = true);  // line, marker and fill stored with the input win over the defaults of the pad
   Data& SetContours(const std::vector<double>& contours);
   Data& SetContours(int32_t nContours);
@@ -782,7 +786,6 @@ class Plot::Pad::Data
   const auto& GetScaleMaximum() const { return mScaleRange.max; }
   const bool& GetDefinesFrame() const { return mDefinesFrame; }
   const bool& GetKeepInputStyle() const { return mKeepInputStyle; }
-  const bool& GetDontDraw() const { return mDontDraw; }
   const auto& GetContours() const { return mContours; }
   const auto& GetNContours() const { return mNContours; }
   const auto& GetNpx() const { return mNpx; }
@@ -876,7 +879,6 @@ class Plot::Pad::Data
 
  private:
   bool mDefinesFrame{};
-  bool mDontDraw{};
   bool mKeepInputStyle{};
 
   std::string mType;  // for introspection: "data" or "ratio"

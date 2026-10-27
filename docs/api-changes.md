@@ -41,6 +41,7 @@ Not released yet; this section shows the net changes of master relative to v3.3.
 | `Data::Normalize(bool scaleBinWidth = false)`; Python keyword `scaleBinWidth` | `Data::Normalize(bool isDensity = false, std::optional<double_t> min = {}, std::optional<double_t> max = {})`; Python keyword `isDensity` | signature | Python: rename the keyword to `isDensity=`. |
 | `Ratio::SetDivideNormalized(bool scaleBinWidth = false)` | `Ratio::Both().Normalize(isDensity)` | removed | Replace by `.Both().Normalize(<same bool>)` and continue with `.Result()` before modifiers meant for the ratio. |
 | `Pad::SetDefaultDrawingOptionGraph/Hist/Hist2d(drawing_options_t)`, `Pad::GetDefaultDrawingOption*()` | — | removed | Set `SetDrawOption(alias)` on the data where needed (see the default rule below). |
+| `Data::SetDefinesFrame(bool dontDraw = false)` | `Data::SetDefinesFrame()` (the data is drawn); a frame that is not drawn: `Pad::SetFrame(name, dataSource)` or `Pad::SetFrame(const Data&)`, or no input at all (X and Y ranges of a pad without data) | signature | Replace `AddData(…).SetDefinesFrame(true)` by `plot[i].SetFrame(…)`, or drop the dummy input and set `plot[i]['X'].SetRange(…)` and `['Y'].SetRange(…)`. Same for `Ratio`. |
 | `Data::UnsetRangeX()`, `Data::UnsetRangeY()` | `Data::SetRangeX()`, `Data::SetRangeY()` (no arguments) | renamed | Replace the calls. Same for `Ratio`. |
 | `Plot::Pad::LegendBox::LegendEntry` | `Plot::Pad::LegendEntry` | renamed | Update the qualified type name. |
 | `Data::SetOptions(const std::string&)`, `Data::SetOptions(drawing_options_t)`, `Data::UnsetOptions()`, enum `drawing_options_t`; Python keyword `options` | `Data::SetDrawOption(const std::string&)`, `Data::SetDrawOption(draw_option_t)`, `Data::SetDrawOption()` (no argument: unset), enum `draw_option_t`; Python keyword `drawOption` | renamed | Replace the names; `UnsetOptions()` becomes `SetDrawOption()`. Same for `Ratio`. |
@@ -84,6 +85,7 @@ Not released yet; this section shows the net changes of master relative to v3.3.
 | Legend symbol `EP` by default (`L` for C/L/HIST options) | Derived from what is drawn (filled → `F`, markers without errors → `P`, …) | behaviour | `SetLegendEntry(LegendEntry().SetSymbolElements(...))` forces the symbol. |
 | Data added to a base plot was drawn | Ignored with a warning | behaviour | Move the data into the plots. |
 | A plot whose base plot is missing was drawn without it | Not generated | behaviour | Register every base plot your plots use. |
+| A pad without data showed nothing ("Nothing to be drawn") | With X and Y ranges set, it shows an empty frame spanning them (a 2d frame if Z has a range too) | behaviour | none. |
 | Colour gradients counted data that is not drawn | Only data that takes a default colour counts | behaviour | none (gradient steps may shift). |
 | Non-integer line widths were truncated by ROOT | Rounded, with a warning | behaviour | Pass integer widths. |
 | The `PlotManager` constructor left implicit multi-threading on and `gErrorIgnoreLevel = kWarning` for the rest of the program | Set only during `GeneratePlots` and restored afterwards | behaviour | Call `ROOT::EnableImplicitMT()` yourself if your code relied on it. |
@@ -105,6 +107,7 @@ Not released yet; this section shows the net changes of master relative to v3.3.
 | Old | New | Kind | Action |
 |---|---|---|---|
 | `plots.info`: aliases stored as numbers, `default_drawing_option_*`, `ENTRY_<n>` legend rows, ratio key `scale_bin_width_norm_division`, text alignment as a string | Aliases and placements by name, legend rows as repeated `ENTRY`, ratio modifiers with `numer_`/`denom_` prefixes; old keys are ignored with warnings | file format | Re-run the plotting program. |
+| `plots.info` data key `dont_draw` | Pad key `FRAME` (a data entry); `dont_draw` is ignored | file format | Re-run the plotting program. |
 | `plots.info` keys `drawing_options`, `drawing_option_alias`, `draw_style`, `default_draw_style`, pad key `options` | `draw_option`, `draw_option_alias`, `symbol_elements`, `default_symbol_elements`; the old keys are ignored | file format | Re-run the plotting program. |
 | `dataSources.info` entries with key `FILE` | Written with key `INPUT`, inputs kept as given and in order | file format | none (re-run to rewrite; `srp stats` counts only `INPUT`). |
 | `Data.root` (`data` mode): names split at `:` and `/`, old suffixes of tree requests, unsorted | Only the data path becomes directories (a `src:dir` source adds subdirectories), new request suffixes (`{dim=…@…}`), sorted | file format | Update scripts that read `Data.root` keys. |

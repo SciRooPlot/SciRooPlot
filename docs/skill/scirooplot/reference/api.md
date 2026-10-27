@@ -85,6 +85,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `LegendBox& GetLegend(uint8_t legendID)`
 - `TextBox& GetText(uint8_t textID)`
 - `Data& SetRefFunc(const std::string& refFunc)`
+- `Data& SetFrame(const std::string& name, const std::string& dataSource)` — input that only defines the axis frame (not drawn, not numbered)
+- `Data& SetFrame(const Data& data)`
 - `Pad& SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup)`
 - `Pad& SetMargins(float_t top, float_t bottom, float_t left, float_t right)`
 - `Pad& SetTopMargin(float_t top)`
@@ -213,7 +215,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& SetFillColor(int16_t color)`
 - `Data& SetFillStyle(int16_t style)`
 - `Data& SetFillAlpha(float_t alpha)`
-- `Data& SetDefinesFrame(bool dontDraw = false)`
+- `Data& SetDefinesFrame()` — this data (drawn as usual) defines the axis frame; the last one in a pad wins
 - `Data& SetKeepInputStyle(bool keep = true)` — line, marker and fill stored with the input win over the defaults of the pad
 - `Data& SetContours(const std::vector<double>& contours)`
 - `Data& SetContours(int32_t nContours)`

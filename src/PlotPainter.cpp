@@ -495,7 +495,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
     // a colour gradient gets one colour per data item that will actually take a colour from the defaults
     auto nDefaultColors = [&pad](auto hasOwnColor) {
-      return static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [&](const auto& data) { return !data->GetDontDraw() && !hasOwnColor(*data); }));
+      return static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [&](const auto& data) { return !hasOwnColor(*data); }));
     };
     const int32_t nMarkerColors = nDefaultColors([](const auto& data) { return data.GetMarkerColor().has_value(); });
     const int32_t nLineColors = nDefaultColors([](const auto& data) { return data.GetLineColor().has_value(); });
@@ -535,13 +535,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     bool hasRefFunc = false;
     string activeTextFormat = "g";  // set by the pad's setup; changed by TExec primitives in front of items with another format
     auto drawData = pad.GetData();
+    const bool hasData = !drawData.empty();
+    unique_ptr<TH1> emptyFrame;  // frame made from the axis ranges of a pad without data and frame input
 
-    if (drawData.empty()) {
-      if (pad.GetLegendBoxes().empty() && pad.GetTextBoxes().empty()) {
-        logger::warning("Nothing to be drawn in pad {}.", padID);
-        continue;
+    if (pad.GetFrame()) {
+      // the frame input of the pad is drawn only as frame (in front of the data, with the ranges stored with it, like data that defines the frame)
+      const bool dataDefinesFrame = std::any_of(drawData.begin(), drawData.end(), [](const auto& curData) { return curData->GetDefinesFrame(); });
+      if (dataDefinesFrame) {
+        logger::warning("Pad {} has a frame ({}), data marked SetDefinesFrame() does not define it.", padID, pad.GetFrame()->GetName());
       }
-    } else {
+      drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Data>(*pad.GetFrame()));
+      drawData[0]->SetDefinesFrame();
+    } else if (hasData) {
       // find data that should define the axis frame (selects the most recently added data that wants to define frame)
       auto framePos = std::find_if(drawData.rbegin(), drawData.rend(), [](const auto& curData) { return curData->GetDefinesFrame(); });
       size_t frameDataID = (framePos != drawData.rend()) ? static_cast<size_t>((framePos.base() - 1) - drawData.begin()) : 0u;
@@ -551,8 +556,37 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       } else {
         drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Data>(*drawData[frameDataID]));
       }
-      drawData[0]->SetLegendLabel("");  // axis frame should not appear in legend
+    } else {
+      // without data and frame input the frame is an empty histogram with one bin spanning the x range (and y range for 2d, if z has a range);
+      // the ranges of the pad are applied to it as to any frame
+      auto range = [&](char axisLabel) {
+        optional<double_t> min;
+        optional<double_t> max;
+        for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(pad)}) {
+          if (curPad.GetAxes().find(axisLabel) == curPad.GetAxes().end()) continue;
+          if (curPad[axisLabel].GetMinRange()) min = curPad[axisLabel].GetMinRange();
+          if (curPad[axisLabel].GetMaxRange()) max = curPad[axisLabel].GetMaxRange();
+        }
+        return (min && max && *min < *max) ? optional<std::pair<double_t, double_t>>{{*min, *max}} : nullopt;
+      };
+      auto rangeX = range('X');
+      auto rangeY = range('Y');
+      if (rangeX && rangeY) {
+        if (range('Z')) {
+          emptyFrame = std::make_unique<TH2D>("frame", "", 1, rangeX->first, rangeX->second, 1, rangeY->first, rangeY->second);
+        } else {
+          emptyFrame = std::make_unique<TH1D>("frame", "", 1, rangeX->first, rangeX->second);
+        }
+        emptyFrame->SetDirectory(nullptr);
+        drawData.push_back(std::make_shared<Plot::Pad::Data>("frame", "EMPTY_FRAME", nullopt));
+      } else if (pad.GetLegendBoxes().empty() && pad.GetTextBoxes().empty()) {
+        logger::warning("Nothing to be drawn in pad {}: it has no data, no frame and no{}{} range for an empty frame.", padID, (rangeX) ? "" : " X", (rangeY) ? "" : " Y");
+        continue;
+      }
+    }
+    if (!drawData.empty()) drawData[0]->SetLegendLabel("");  // axis frame should not appear in legend
 
+    if (hasData) {
       // put reference function in data vector right after the axis histogram
       auto refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
       if (refFunc) {
@@ -996,7 +1030,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             axisHist_ptr->SetFillStyle(0);
           }
           pad_ptr->Update();
-        } else if (!data->GetDontDraw()) {
+        } else {
           // do not draw the colour scale a second time (only types that have one: for graphs 'Z' means no end caps on the error bars)
           // the 'Z' is removed, not blanked, so that suffixes stay attached to their option (COLZ2 -> COL2)
           if constexpr (is_2d<data_type>() || is_3d<data_type>()) {
@@ -1384,8 +1418,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               logger::warning("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetDataSource());
             }
           }
-        } else {
-          delete data_ptr;
         }
         ++dataIndex;
         drawOption = "SAME ";  // next data should be drawn to same pad
@@ -2022,7 +2054,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       try {
         // ranges stored with an input are what data marked SetDefinesFrame is there for: they are kept for its copy that draws the frame
         const bool keepStoredRanges = (dataIndex == 0) && data->GetDefinesFrame() && data->GetType() != "ratio";
-        rawData = GetDataClone(dataBuffer.at(data->GetDataSource()).at(data->GetName() + data->GetDataInfo().GetNameSuffix()).get(), data->GetProjInfo(), keepStoredRanges);
+        TObject* input = (dataIndex == 0 && emptyFrame) ? emptyFrame.get() : dataBuffer.at(data->GetDataSource()).at(data->GetName() + data->GetDataInfo().GetNameSuffix()).get();
+        rawData = GetDataClone(input, data->GetProjInfo(), keepStoredRanges);
       } catch (std::out_of_range&) {
         rawData = nullopt;
       }
