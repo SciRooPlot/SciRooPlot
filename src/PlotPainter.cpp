@@ -2275,11 +2275,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
     placeBoxes(false);
 
-    if (pad.GetViewTheta()) {
-      pad_ptr->SetTheta(*pad.GetViewTheta());
+    // viewing angles of 3D drawings: the pad's own, else those of pad 0
+    if (auto theta = get_first(pad.GetViewTheta(), padDefaults.GetViewTheta())) {
+      pad_ptr->SetTheta(*theta);
     }
-    if (pad.GetViewPhi()) {
-      pad_ptr->SetPhi(*pad.GetViewPhi());
+    if (auto phi = get_first(pad.GetViewPhi(), padDefaults.GetViewPhi())) {
+      pad_ptr->SetPhi(*phi);
     }
 
     for (auto axisLabel : {'X', 'Y'}) {

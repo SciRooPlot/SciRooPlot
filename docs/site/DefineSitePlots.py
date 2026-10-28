@@ -19,6 +19,7 @@ ALIASES_FUNC = ["points", "line", "curve", "area", "area_smooth"]
 ALIASES_2D_FUNC = [a for a in ALIASES_2D if a not in ("box", "text") and not a.startswith(("candle", "violin"))]
 ALIASES_2D_GRAPH = ALIASES_2D_FUNC + ["triangles", "triangles_wire", "triangles_col", "triangles_colz", "triangles_fill", "triangles_fillz",
                                       "points", "points_col", "points_colz", "line"]
+VIEWS = [(30, 30), (35, 225), (60, 30), (10, 300)]  # (theta, phi) of the viewing angle demo; keep in sync with VIEW_ANGLES in template.html
 
 
 def DefineTour(pm: PlotManager):
@@ -99,6 +100,14 @@ def DefineGallery(pm: PlotManager):
             data.RebinXY(10, 6) if alias in ("text", "box") else data.RebinXY(4, 3)
         if alias.startswith(("lego", "surf")):
             plot[1].SetView(35.0, 225.0)
+        plot[1]['X'].SetTitle("")
+        plot[1]['Y'].SetTitle("")
+        pm.AddPlot(plot)
+    # the viewing angles of 3D drawings (Pad::SetView), shown below the 2D tabs of the gallery
+    for theta, phi in VIEWS:
+        plot = Plot(f"view_{theta}_{phi}", "gallery/view", "2d_logz")
+        plot[1].AddData("ptVsMult", "data").RebinXY(4, 3).SetDrawOption(lego_col)
+        plot[1].SetView(float(theta), float(phi))
         plot[1]['X'].SetTitle("")
         plot[1]['Y'].SetTitle("")
         pm.AddPlot(plot)

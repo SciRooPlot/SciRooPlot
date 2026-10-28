@@ -404,6 +404,9 @@ table.cmd code { white-space: nowrap }
 .apicls li code { background: none; padding: 0; font-size: 0.78rem; white-space: pre-wrap; word-break: break-word }
 .apicls li .note { font-size: 0.82rem; color: var(--muted) }
 #optgrid .card.flash { box-shadow: 0 0 0 3px var(--amber) }
+.optview { display: grid; gap: 8px; margin-top: 8px }
+.optview h3 { margin: 0 }
+.optview p { margin: 0; max-width: 75ch }
 .apicls li.flash { background: var(--tint); box-shadow: inset 3px 0 0 var(--amber) }
 #apiq { font: inherit; padding: 7px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--panel); color: var(--text); width: min(100%, 420px) }
 
@@ -792,6 +795,11 @@ figure.plot figcaption { color: #5b6b80 }
     <button class="chip" data-kind="hist" aria-pressed="true">1D histogram</button><button class="chip" data-kind="graph">Graph</button><button class="chip" data-kind="func">Function</button><button class="chip" data-kind="hist2d">2D histogram</button><button class="chip" data-kind="graph2d">2D graph</button><button class="chip" data-kind="func2d">2D function</button>
   </div>
   <div class="grid" id="optgrid"></div>
+  <div id="optview" class="optview" hidden>
+    <h3>Viewing angles of 3D drawings</h3>
+    <p>The <code>lego</code>, <code>surf</code>, triangle and 3D point drawings are seen from the angles of the pad, <code>plot[1].SetView(theta, phi)</code> in degrees: <i>theta</i> is the height of the eye above the x-y plane, <i>phi</i> the rotation around the z axis. ROOT starts from 30° and 30°, the gallery above uses 35° and 225°. Set on <code>plot[0]</code>, the angles hold for all pads of the plot.</p>
+    <div class="grid" id="optviews"></div>
+  </div>
 </section>
 
 <!-- ======================================================== EXAMPLES -->
@@ -1319,13 +1327,17 @@ function labPick(key) { const c = colorOf(key); if (c) { lab.color = cname(c); d
 
 /* ---------------- drawing options */
 let optKind = "hist";
+const VIEW_ANGLES = [[30, 30], [35, 225], [60, 30], [10, 300]];  // the plots of docs/site/DefineSitePlots.py (VIEWS)
 function renderOptions() {
   const g = document.getElementById("optgrid");
   g.innerHTML = OPTIONS.filter(o => o[optKind] && o[optKind] !== "\u2013").map(o => {
     const root = o[optKind], conv = /^as /.test(root);
     return `<div class="card" tabindex="0" data-alias="${o.alias}"><span class="plot"><img loading="lazy" src="img/gallery/${optKind}/${o.alias}.png" alt="${o.alias} drawn for a ${optKind}" width="380" height="380"></span>
       <b>${o.alias}</b><span class="root">${conv ? `<i>${root}</i>` : `ROOT: "${esc(root)}"`}</span><small>${o.desc}</small></div>` }).join("");
-  document.querySelectorAll("[data-kind]").forEach(b => b.setAttribute("aria-pressed", b.dataset.kind === optKind)) }
+  document.querySelectorAll("[data-kind]").forEach(b => b.setAttribute("aria-pressed", b.dataset.kind === optKind));
+  const views = document.getElementById("optview"); views.hidden = !/2d$/.test(optKind);
+  document.getElementById("optviews").innerHTML = VIEW_ANGLES.map(([theta, phi]) => `<div class="card"><span class="plot"><img loading="lazy" src="img/gallery/view/view_${theta}_${phi}.png" alt="lego plot seen from theta ${theta}, phi ${phi}" width="380" height="380"></span>
+      <b>SetView(${theta}, ${phi})</b><small>${theta === 30 && phi === 30 ? "ROOT's default" : theta === 35 && phi === 225 ? "the gallery's angles" : theta > 45 ? "from high above" : "from low at the side"}</small></div>`).join("") }
 document.querySelectorAll("[data-kind]").forEach(b => b.onclick = () => { optKind = b.dataset.kind; renderOptions() });
 
 /* ---------------- examples */
@@ -1690,7 +1702,7 @@ plot[1]['X'].SetTitle("#it{x}").SetRange(1.4, 2.8).SetLog().SetGrid().SetNumDivi
 plot[1]['Y'].SetMaxDigits(3).SetNoExponent().SetTitleOffset(1.1).SetTitleCenter()
 plot[1]['Z'].SetLog()
 plot[1]['X'].SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")
-plot[1].SetView(35.0, 225.0)                          # viewing angles of 3D drawings
+plot[1].SetView(35.0, 225.0)                          # 3D drawings: theta above the x-y plane, phi around z, degrees
 variant = Plot(plot, "name_variant", "group/other")   # a copy under a new name (and group), to add more to it`, cpp: `Plot plot("name", "group/sub", "1d_ratio");
 plot.SetDimensions(710, 710).SetTransparent().AppendGroup("QA");
 plot[0].SetDefaultMarkerColors({kBlack, kRed + 1});   // defaults for all pads, cycled over the data
@@ -1700,7 +1712,7 @@ plot[1]['X'].SetTitle("#it{x}").SetRange(1.4, 2.8).SetLog().SetGrid().SetNumDivi
 plot[1]['Y'].SetMaxDigits(3).SetNoExponent().SetTitleOffset(1.1).SetTitleCenter();
 plot[1]['Z'].SetLog();
 plot[1]['X'].SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M");
-plot[1].SetView(35., 225.);                           // viewing angles of 3D drawings
+plot[1].SetView(35., 225.);                           // 3D drawings: theta above the x-y plane, phi around z, degrees
 Plot variant(plot, "name_variant", "group/other");    // a copy under a new name (and group), to add more to it` },
   baseplots: { py: `logz = PlotManager.MakeBasePlot("2d")                 # start from a shipped one
 logz.SetName("2d_logz")
@@ -1836,7 +1848,7 @@ for (std::string cent : {"0-10", "10-30", "30-50"}) {  // a family: plot heavyio
 /* every method: API = [{cls, desc, items: [{name, sig, note}]}], generated from reference/api.md */
 const CLASS_LABEL = { "PlotManager": "PlotManager", "Plot": "Plot", "Plot::Pad": "Pad", "Plot::Pad::Axis": "Axis", "Plot::Pad::Data": "Data",
   "Plot::Pad::Ratio": "Ratio", "Plot::Pad::Box<BoxType>": "Boxes (legends, texts, stats)", "Plot::Pad::TextBox": "TextBox", "Plot::Pad::StatsBox": "StatsBox",
-  "Plot::Pad::LegendBox": "LegendBox", "Plot::Pad::LegendEntry": "LegendEntry", "Panel": "Panel", "PanelLayout": "PanelLayout", "Enumerations": "Enumerations" };
+  "Plot::Pad::LegendBox": "LegendBox", "Plot::Pad::LegendEntry": "LegendEntry", "Panel": "Panel", "PanelLayout": "PanelLayout", "BasePlotShape": "BasePlotShape", "Enumerations": "Enumerations" };
 const clsId = c => "api-" + CLASS_LABEL[c].split(" ")[0].toLowerCase();
 const METHODS = {};   // name -> [{cls, sig, note}]
 API.forEach(c => c.items.forEach(m => (METHODS[m.name] = METHODS[m.name] || []).push({ cls: c.cls, sig: m.sig, note: m.note })));

@@ -87,7 +87,7 @@ Python is the same API: `from SciRooPlot import *`, `PlotManager("myProject")`, 
 Plot plot("name", "group/sub", "basePlot");  Plot copy(plot, "name2", "group2");   // copy keeps everything
 plot.SetDimensions(710, 710[, fixAspect]).SetTransparent().AppendGroup("QA");
 plot[0]...        // defaults for all pads (text font/size, margins, colour lists, ref function)
-plot[1].SetPosition(x1,y1,x2,y2).SetMargins(t,b,l,r).SetFrameFill(10, 1001).SetPalette(kBird).SetView(theta, phi)
+plot[1].SetPosition(x1,y1,x2,y2).SetMargins(t,b,l,r).SetFrameFill(10, 1001).SetPalette(kBird).SetView(theta, phi)   // 3D view in degrees (ROOT: 30, 30)
 plot[1].SetDefaultMarkerColors({kBlack, kRed+1}).SetDefaultLineStyles({kSolid, kDashed})   // cycled over the data
 plot[1].SetDefaultColors(rgbGradient)   // {{r,g,b,position},...} with r,g,b,position in [0,1]; also SetPalette(gradient)
 plot[1].SetRefFunc("1");              // reference line/function in a ratio pad (drawn first, black)
