@@ -29,6 +29,16 @@
 //                                     TTree "d0ToK0sPiPi": m2KsPip, m2KsPim, m2PiPi (D0 -> K0S pi+ pi- for a Dalitz plot)
 //   ml.root                           a classifier: score distributions hBDT_{sig,bkg}_{train,test} (same for DNN),
 //                                     ROC curves roc_BDT, roc_DNN (TGraph, the AUC in the title), hFeatureImportance
+//   medical.root                      ion beams in water and a treatment plan
+//     depthDose/   proton_100MeV, proton_150MeV, proton_200MeV, carbon_280MeVu (dose vs. depth, % of the maximum)
+//     plan/        doseMap (TH2: dose of a two-field proton plan in a transverse slice, % of the prescribed dose)
+//   atomic.root                       collinear laser spectroscopy: hScan (counts vs. laser frequency offset over
+//                                     the hyperfine structure of an isotope), fitScan (TF1, four Voigt lines)
+//   accelerator.root                  a beam line: hBeamSpot (TH2: transverse beam profile at a screen),
+//                                     TTree "beam": x, xp (horizontal phase space), rmsEllipse (TGraph, the emittance in the title)
+//   co2.csv                           monthly atmospheric CO2: year (decimal), co2, deseasonalized
+//   stars.csv                         a star catalogue for a Hertzsprung-Russell diagram: bv (colour index), logL
+//   spikes.csv                        spike times of a neuron in 40 trials around a stimulus: trial, time (ms)
 //   ptSpec_published.csv              "HEPData" table: pt, pt_err, value, stat, syst
 //   testbeam.csv                      calorimeter test beam: energy, resolution, resolution_err
 //   luminosity.csv                    integrated luminosity per week: time (unix), lumi
@@ -875,6 +885,193 @@ void WriteML()
   importance->Write();
   delete importance;
 }
+
+void WriteMedical()
+{
+  TFile file((kFolder + "medical.root").data(), "RECREATE");
+  TRandom3 random(13);  // an own generator keeps all other example data unchanged
+  file.mkdir("depthDose")->cd();
+  // depth-dose curve of an ion beam in water: the stopping power at residual range r grows as r^(1/p - 1) (Bragg-Kleeman rule,
+  // p = 1.77, range = 0.022 mm x (E/MeV per nucleon)^1.77, a third of it for carbon ions), averaged over the straggling of
+  // the range; nuclear reactions remove about 1% of the ions per cm, those of carbon leave lighter fragments beyond the peak
+  auto depthDose = [&random](const char* name, double range, double straggling, double fragments) {
+    TH1D h(name, "", 300, 0., 300.);
+    h.GetXaxis()->SetTitle("depth in water (mm)");
+    h.GetYaxis()->SetTitle("relative dose (%)");
+    constexpr double p = 1.77;
+    constexpr int kSteps = 400;
+    for (int bin = 1; bin <= h.GetNbinsX(); ++bin) {
+      const double z = h.GetBinCenter(bin);
+      double dose = 0.;
+      for (int k = 0; k < kSteps; ++k) {  // Gaussian range straggling, in equal steps of its cumulative distribution
+        const double residual = range + straggling * TMath::NormQuantile((k + 0.5) / kSteps) - z;
+        if (residual > 0.5) dose += std::pow(residual, 1. / p - 1.) * (1. - 0.001 * z);  // half a bin keeps the peak finite
+      }
+      h.SetBinContent(bin, dose / kSteps);
+    }
+    h.Scale(100. / h.GetMaximum());
+    for (int bin = 1; bin <= h.GetNbinsX(); ++bin) {
+      const double z = h.GetBinCenter(bin);
+      double dose = h.GetBinContent(bin) + fragments * std::exp(-(z - range) / 80.) * 0.5 * (1. + TMath::Erf((z - range) / straggling));
+      dose *= random.Gaus(1., 0.004);  // statistical fluctuations of the simulation
+      h.SetBinContent(bin, dose);
+      h.SetBinError(bin, 0.004 * dose);
+    }
+    h.Write();
+  };
+  auto range = [](double energyPerNucleon) { return 0.022 * std::pow(energyPerNucleon, 1.77); };              // protons, mm
+  auto straggling = [](double rangeMM) { return std::hypot(0.12 * std::pow(rangeMM / 10., 0.935), 1.); };  // and 1 mm energy spread
+  for (int energy : {100, 150, 200}) {
+    depthDose(Form("proton_%dMeV", energy), range(energy), straggling(range(energy)), 0.);
+  }
+  const double carbonRange = range(280.) / 3.;
+  depthDose("carbon_280MeVu", carbonRange, std::hypot(0.12 * std::pow(carbonRange / 10., 0.935) / std::sqrt(12.), 0.5), 9.);
+
+  // dose of a two-field proton plan in a transverse slice: each field covers the target (an ellipse) with half the prescribed
+  // dose, enters with half of that in front of the target and stops behind it, without exit dose
+  file.mkdir("plan")->cd();
+  TH2D doseMap("doseMap", "", 100, -100., 100., 100, -100., 100.);
+  doseMap.GetXaxis()->SetTitle("#it{x} (mm)");
+  doseMap.GetYaxis()->SetTitle("#it{y} (mm)");
+  doseMap.GetZaxis()->SetTitle("dose (% of prescribed)");
+  constexpr double x0 = 10., y0 = -5., a = 32., b = 24.;  // target centre and half axes, mm
+  constexpr double edge = 3.5;                           // width of the dose fall-off, mm
+  auto step = [](double u) { return 0.5 * (1. + TMath::Erf(u)); };
+  // one field along the depth d (lateral position l) through an ellipse of half axes along (ad) and across (al) the beam
+  auto field = [&step](double d, double l, double d0, double l0, double ad, double al) {
+    const double lateral = step((al - std::abs(l - l0)) / edge);
+    const double half = ad * std::sqrt(std::max(0., 1. - std::pow((l - l0) / al, 2.)));
+    const double entrance = 0.5 + 0.5 * step((d - (d0 - half)) / edge);  // plateau in front of the target, full dose inside it
+    return 50. * lateral * entrance * step(((d0 + half) - d) / edge);   // no dose behind the distal edge
+  };
+  for (int ix = 1; ix <= doseMap.GetNbinsX(); ++ix) {
+    for (int iy = 1; iy <= doseMap.GetNbinsY(); ++iy) {
+      const double x = doseMap.GetXaxis()->GetBinCenter(ix), y = doseMap.GetYaxis()->GetBinCenter(iy);
+      const double dose = field(x, y, x0, y0, a, b)      // field 1 from the left, along x
+                          + field(-y, x, -y0, x0, b, a);  // field 2 from the top, along -y
+      if (dose > 1.) doseMap.SetBinContent(ix, iy, dose * random.Gaus(1., 0.005));  // below 1% nothing is scored
+    }
+  }
+  doseMap.Write();
+}
+
+void WriteAtomic()
+{
+  TFile file((kFolder + "atomic.root").data(), "RECREATE");
+  TRandom3 random(14);  // an own generator keeps all other example data unchanged
+  // collinear laser spectroscopy: fluorescence counts while the laser frequency is scanned over four hyperfine components
+  // (Voigt profiles: Doppler and natural width), on a flat background of scattered laser light
+  const char* lines = "[0] + [1]*(0.55*TMath::Voigt(x+1820.-[2],[3],[4]) + 0.35*TMath::Voigt(x+1240.-[2],[3],[4])"
+                      " + TMath::Voigt(x-610.-[2],[3],[4]) + 0.6*TMath::Voigt(x-1390.-[2],[3],[4]))";
+  TF1 truth("truth", lines, -3000., 3000.);
+  truth.SetParameters(40., 60000., 12., 38., 22.);  // background, line strength, centroid shift (MHz), Doppler sigma, natural FWHM
+  TH1D scan("hScan", "", 300, -3000., 3000.);
+  scan.GetXaxis()->SetTitle("laser frequency offset (MHz)");
+  scan.GetYaxis()->SetTitle("counts per 20 MHz");
+  for (int bin = 1; bin <= scan.GetNbinsX(); ++bin) {
+    const double counts = random.Poisson(truth.Eval(scan.GetBinCenter(bin)));
+    scan.SetBinContent(bin, counts);
+    scan.SetBinError(bin, std::sqrt(std::max(counts, 1.)));
+  }
+  scan.Write();
+  TF1 fit("fitScan", lines, -3000., 3000.);
+  fit.SetParameters(35., 50000., 0., 30., 15.);
+  scan.Fit(&fit, "Q0N");
+  fit.SetNpx(2000);
+  fit.Write();
+}
+
+void WriteAccelerator()
+{
+  TFile file((kFolder + "accelerator.root").data(), "RECREATE");
+  TRandom3 random(15);  // an own generator keeps all other example data unchanged
+  // transverse beam profile on a screen: a flat Gaussian core with a faint halo around it
+  TH2D spot("hBeamSpot", "", 120, -6., 6., 120, -6., 6.);
+  spot.GetXaxis()->SetTitle("#it{x} (mm)");
+  spot.GetYaxis()->SetTitle("#it{y} (mm)");
+  spot.GetZaxis()->SetTitle("intensity (a.u.)");
+  for (int i = 0; i < 400000; ++i) {
+    const bool halo = random.Uniform() < 0.05;
+    spot.Fill(random.Gaus(0.3, halo ? 3.0 : 1.4), random.Gaus(-0.2, halo ? 1.6 : 0.7));
+  }
+  spot.Write();
+  // horizontal phase space of the particles of a bunch, from the Twiss parameters alpha, beta and the emittance:
+  // x = sqrt(eps beta) u, x' = sqrt(eps / beta) (v - alpha u) with u, v standard normal
+  constexpr double alpha = -1.2, beta = 8., emittance = 0.5;  // beta in mm/mrad (= m), emittance in mm mrad
+  TTree tree("beam", "particles of a bunch");
+  double x{}, xp{};
+  tree.Branch("x", &x);
+  tree.Branch("xp", &xp);
+  double sxx = 0., spp = 0., sxp = 0.;
+  constexpr int kParticles = 30000;
+  for (int i = 0; i < kParticles; ++i) {
+    const double u = random.Gaus(), v = random.Gaus();
+    x = std::sqrt(emittance * beta) * u;
+    xp = std::sqrt(emittance / beta) * (v - alpha * u);
+    sxx += x * x;
+    spp += xp * xp;
+    sxp += x * xp;
+    tree.Fill();
+  }
+  tree.Write();
+  // the rms ellipse gamma x^2 + 2 alpha x x' + beta x'^2 = eps, with the emittance measured from the particles in its title
+  const double measured = std::sqrt(sxx * spp - sxp * sxp) / kParticles;
+  TGraph ellipse;
+  for (int i = 0; i <= 200; ++i) {
+    const double t = 2. * TMath::Pi() * i / 200.;
+    ellipse.AddPoint(std::sqrt(emittance * beta) * std::cos(t), -std::sqrt(emittance / beta) * (alpha * std::cos(t) + std::sin(t)));
+  }
+  ellipse.SetTitle(Form("%.3f", measured));
+  ellipse.Write("rmsEllipse");
+}
+
+void WriteOtherFields()
+{
+  TRandom3 random(16);  // an own generator keeps all other example data unchanged
+  {  // monthly atmospheric CO2 since 1960: a growing trend with a seasonal cycle (maximum in May)
+    std::ofstream table(kFolder + "co2.csv");
+    table << "year,co2,deseasonalized\n";
+    for (int year = 1960; year <= 2025; ++year) {
+      for (int month = 1; month <= 12; ++month) {
+        const double t = year - 1960 + (month - 0.5) / 12.;
+        const double trend = 316. + 0.8 * t + 0.0125 * t * t + random.Gaus(0., 0.15);
+        const double co2 = trend + 3. * std::sin(2. * TMath::Pi() * (month - 2.) / 12.) + random.Gaus(0., 0.3);
+        table << year + (month - 0.5) / 12. << "," << co2 << "," << trend << "\n";
+      }
+    }
+  }
+  {  // a star catalogue: main sequence, red giants with their clump and white dwarfs, as colour index B-V and luminosity
+    std::ofstream table(kFolder + "stars.csv");
+    table << "bv,logL\n";
+    for (int i = 0; i < 15000; ++i) {
+      const double kind = random.Uniform();
+      double bv{}, logL{};
+      if (kind < 0.80) {  // main sequence: more cool than hot stars
+        bv = -0.25 + 2.05 * std::pow(random.Uniform(), 0.6);
+        logL = -3.1 * (bv - 0.65) + random.Gaus(0., 0.25);
+      } else if (kind < 0.97) {  // red giant branch, and the red clump at B-V ~ 1, log L ~ 1.7
+        const bool clump = random.Uniform() < 0.4;
+        bv = clump ? random.Gaus(1.0, 0.05) : random.Uniform(0.85, 1.7);
+        logL = clump ? random.Gaus(1.7, 0.08) : 0.6 + 2.2 * (bv - 0.85) + random.Gaus(0., 0.15);
+      } else {  // white dwarfs: hot but faint
+        bv = random.Uniform(-0.25, 0.6);
+        logL = -2.6 - 1.5 * bv + random.Gaus(0., 0.2);
+      }
+      table << bv << "," << logL << "\n";
+    }
+  }
+  {  // spike times of a neuron in 40 trials: 8 Hz spontaneous rate, a burst of 60 Hz after the stimulus at 0 ms that decays
+    std::ofstream table(kFolder + "spikes.csv");
+    table << "trial,time\n";
+    auto rate = [](double t) { return 8. + ((t > 30.) ? 70. * std::exp(-(t - 30.) / 120.) : 0.); };  // Hz, t in ms
+    for (int trial = 1; trial <= 40; ++trial) {
+      for (double t = -500.; t < 1000.;) {  // Poisson process by thinning: candidates at the maximum rate
+        t += random.Exp(1000. / 78.);
+        if (t < 1000. && random.Uniform() < rate(t) / 78.) table << trial << "," << t << "\n";
+      }
+    }
+  }
+}
 }  // namespace
 
 void generateExampleData()
@@ -898,4 +1095,8 @@ void generateExampleData()
   WriteHeavyIon(*ptData);
   WriteDecays();
   WriteML();
+  WriteMedical();
+  WriteAtomic();
+  WriteAccelerator();
+  WriteOtherFields();
 }

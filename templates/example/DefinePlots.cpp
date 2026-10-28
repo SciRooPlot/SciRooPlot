@@ -28,6 +28,10 @@ void DefineDetectorPlots(PlotManager& pm);
 void DefineCollisionPlots(PlotManager& pm);
 void DefineHeavyIonPlots(PlotManager& pm);
 void DefineMLPlots(PlotManager& pm);
+void DefineMedicalPlots(PlotManager& pm);
+void DefineAtomicPlots(PlotManager& pm);
+void DefineAcceleratorPlots(PlotManager& pm);
+void DefineOtherSciencePlots(PlotManager& pm);
 void DefineAnimations(PlotManager& pm);
 
 // The plots below are organised in groups and subgroups (higgs/diphoton, detector/pid, ...).
@@ -49,6 +53,10 @@ int main(int argc, char* argv[])
   DefineCollisionPlots(pm);
   DefineHeavyIonPlots(pm);
   DefineMLPlots(pm);
+  DefineMedicalPlots(pm);
+  DefineAtomicPlots(pm);
+  DefineAcceleratorPlots(pm);
+  DefineOtherSciencePlots(pm);
   DefineAnimations(pm);
   // the default colours of the base plots with their names and indices (`plot overview colors`; `srp colorwheel` shows all)
   pm.AddColorOverview("colors", "overview");
@@ -90,6 +98,12 @@ void DefineDataSources(PlotManager& pm)
   pm.AddDataSource("dimuon", inputFolder + "/dimuon.root");
   pm.AddDataSource("decays", inputFolder + "/decays.root");
   pm.AddDataSource("ml", inputFolder + "/ml.root");
+  pm.AddDataSource("medical", inputFolder + "/medical.root");
+  pm.AddDataSource("atomic", inputFolder + "/atomic.root");
+  pm.AddDataSource("accelerator", inputFolder + "/accelerator.root");
+  pm.AddDataSource("co2", inputFolder + "/co2.csv");
+  pm.AddDataSource("stars", inputFolder + "/stars.csv");
+  pm.AddDataSource("spikes", inputFolder + "/spikes.csv");
   // a directory: all files in it (and its subdirectories) form one data source
   pm.AddDataSource("jets", inputFolder + "/jets/");
   // several files: they are searched in the given order, the first file containing an object wins
@@ -122,7 +136,7 @@ void DefineDataSources(PlotManager& pm)
 //****************************************************************************************
 void DefineBasePlots(PlotManager& pm)
 {
-  for (const string& name : {"1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_3x2_gap", "2d", "2d_2x1"}) {
+  for (const string& name : {"1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1"}) {
     pm.AddBasePlot(PlotManager::MakeBasePlot(name));
   }
   // a base plot can be adapted before adding it, e.g. for all 2d plots with a logarithmic z axis
@@ -750,6 +764,132 @@ void DefineMLPlots(PlotManager& pm)
   {  // feature importance as horizontal bars, the labels of the bins on the y axis
     Plot plot("featureImportance", "ml", "1d");
     plot[1].AddData("hFeatureImportance", "ml").SetDrawOption(hbars).SetFill(kAzure - 9, 1001).SetLineColor(kAzure + 2);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+}
+
+//**************************************************************************************************
+// Medical physics: depth-dose curves of ion beams in water and the dose of a treatment plan
+//**************************************************************************************************
+void DefineMedicalPlots(PlotManager& pm)
+{
+  {  // the Bragg peak moves deeper with the energy of the protons: one colour per energy from a gradient
+    Plot plot("braggPeaks", "medical", "1d");
+    const vector<int> energies = {100, 150, 200};
+    plot[0].SetDefaultColors({{0.1, 0.3, 0.8, 0.}, {0.8, 0.1, 0.1, 1.}}, {}, energies.size());
+    for (const int energy : energies) {
+      plot[1].AddData("depthDose/proton_" + std::to_string(energy) + "MeV", "medical", std::to_string(energy) + " MeV").SetDrawOption(curve);
+    }
+    plot[1].AddLegend(0.38, 0.93, "protons in water");
+    plot[1]['Y'].SetRange(0., 150.);  // room for the legend above the peaks
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // protons and carbon ions of the same range: the carbon peak is sharper, its fragments deposit dose behind it
+    Plot plot("protonVsCarbon", "medical", "1d");
+    plot[1].AddData("depthDose/proton_150MeV", "medical", "protons, 150 MeV").SetDrawOption(curve).SetColor(kAzure + 2);
+    plot[1].AddData("depthDose/carbon_280MeVu", "medical", "^{12}C, 280 MeV/#it{u}").SetDrawOption(curve).SetColor(kRed + 1);
+    plot[1].AddLegend(0.2, 0.85);
+    plot[1]['Y'].SetLog().SetRange(1., 300.);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // dose map of a two-field plan with isodose lines on top: the same histogram drawn twice
+    Plot plot("treatmentPlan", "medical", "2d");
+    plot[1].AddData("plan/doseMap", "medical").SetDrawOption(colz);
+    plot[1].AddData("plan/doseMap", "medical").SetDrawOption(cont).SetContours({20., 50., 80., 95.}).SetLine(kBlack, kSolid, 2.);
+    plot[1].SetPalette(kTemperatureMap);
+    plot[1].AddText(0.15, 0.3, "isodose lines 20, 50, 80, 95%");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+}
+
+//**************************************************************************************************
+// Atomic physics: a laser spectroscopy scan over a hyperfine structure, with its fit
+//**************************************************************************************************
+void DefineAtomicPlots(PlotManager& pm)
+{
+  {  // the fit stored with the data, and the data divided by it below
+    Plot plot("hyperfineScan", "atomic", "1d_ratio");
+    plot[1].AddData("hScan", "atomic", "data");
+    plot[1].AddData("fitScan", "atomic", "fit: 4 Voigt profiles").SetLine(kRed + 1, kSolid, 3.);
+    plot[1].AddLegend(0.2, 0.85);
+    plot[1].AddText(0.2, 0.7, {"laser spectroscopy", "hyperfine structure of ^{A}X"});
+    plot[1]['Y'].SetRange(0., 850.);  // room for the texts above the lines
+    plot[2].AddRatio({"hScan", "atomic"}, {"fitScan", "atomic"});
+    plot[2]['Y'].SetTitle("data / fit").SetRange(0.5, 1.5);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+}
+
+//**************************************************************************************************
+// Accelerator physics: the profile of a beam and its phase space
+//**************************************************************************************************
+void DefineAcceleratorPlots(PlotManager& pm)
+{
+  {  // a beam profile with its projections in panels of their own: an own layout, the projections sharing the axes
+    // of the map; PanelLayout arranges the panels, the look of the shipped base plots is set as in MakeBasePlot
+    Plot profileLayout("profileWithProjections", PanelLayout({{Panel(1., 0.4), Empty()},
+                                                              {Panel(), Panel(0.4, 1.)}}));
+    profileLayout.SetTransparent();
+    profileLayout[0].SetTransparent().SetFrameFill(10, 1001).SetDefaultTextFont(42).SetDefaultMarkerStyles({kFullCircle});
+    profileLayout[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent().SetHideClippedLabels();
+    profileLayout[0]['Y'].SetOppositeTicks().SetMaxDigits(3).SetHideClippedLabels();
+    pm.AddBasePlot(profileLayout);
+    Plot plot("beamProfile", "accelerator", "profileWithProjections");  // pads: 1 above, 2 the empty cell, 3 the map, 4 right
+    plot[3].AddData("hBeamSpot", "accelerator").SetDrawOption(col);
+    plot[3].SetPalette(kViridis);
+    plot[1].AddData("hBeamSpot", "accelerator").ProjectX().NormalizeToMaximum().SetDrawOption(hist).SetFill(kAzure - 9, 1001).SetLineColor(kAzure + 2);
+    plot[4].AddData("hBeamSpot", "accelerator").ProjectY().NormalizeToMaximum().SetDrawOption(hbars).SetFill(kAzure - 9, 1001).SetLineColor(kAzure + 2);
+    plot[2].AddText(0.05, 0.8, {"screen 3", "#sigma_{#it{x}} = 1.4 mm", "#sigma_{#it{y}} = 0.7 mm"});
+    plot[1]['Y'].SetRange(0., 1.1).SetTitle("");
+    plot[4]['X'].SetTitle("");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the particles of a bunch in horizontal phase space, with the rms ellipse (the emittance in its title)
+    Plot plot("phaseSpace", "accelerator", "2d_logz");
+    plot[1].AddData("beam", "accelerator").Project2D({"x", 80, {-8., 8.}}, {"xp", 80, {-2., 2.}});
+    plot[1].AddData("rmsEllipse", "accelerator", "rms ellipse, #varepsilon = <title> mm mrad").SetDrawOption(line).SetLine(kRed + 1, kSolid, 3.);
+    plot[1].AddLegend(0.15, 0.92);
+    plot[1]['X'].SetTitle("#it{x} (mm)");
+    plot[1]['Y'].SetTitle("#it{x}' (mrad)");
+    plot[1]['Z'].SetTitle("particles");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+}
+
+//**************************************************************************************************
+// Beyond physics: tables (CSV) from climate science, astronomy and neuroscience
+//**************************************************************************************************
+void DefineOtherSciencePlots(PlotManager& pm)
+{
+  {  // monthly CO2 with its seasonal cycle, and the trend without it
+    Plot plot("co2", "climate", "1d_wide");
+    plot[1].AddData("co2", "co2", "monthly mean").Scatter("year", "co2").SetDrawOption(line).SetLine(kAzure + 2, kSolid, 2.);
+    plot[1].AddData("co2", "co2", "seasonal cycle removed").Scatter("year", "deseasonalized").SetDrawOption(line).SetLine(kBlack, kSolid, 3.);
+    plot[1].AddLegend(0.15, 0.85);
+    plot[1]['X'].SetRange(1960., 2030.).SetTitle("year");
+    plot[1]['Y'].SetTitle("CO_{2} (ppm)");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // a Hertzsprung-Russell diagram: the density of 15000 stars of a catalogue
+    Plot plot("hertzsprungRussell", "astronomy", "2d_logz");
+    plot[1].AddData("stars", "stars").Project2D({"bv", 100, {-0.4, 2.}}, {"logL", 100, {-4., 4.}});
+    // texts placed in the units of the axes
+    plot[1].AddText(0.1, 3.3, "main sequence").SetUserCoordinates();
+    plot[1].AddText(1.1, 3.3, "red giants").SetUserCoordinates();
+    plot[1].AddText(0.65, -3.25, "white dwarfs").SetUserCoordinates();
+    plot[1]['X'].SetTitle("colour index #it{B}#minus#it{V} (mag)");
+    plot[1]['Y'].SetTitle("log_{10}(#it{L} / #it{L}_{#odot})");
+    plot[1]['Z'].SetTitle("stars");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // a spike raster of 40 trials and the firing rate below it: the neuron answers the stimulus at 0 ms
+    Plot plot("spikeRaster", "neuroscience", "1d_wide_1x2");
+    plot[1].AddData("spikes", "spikes").Scatter("time", "trial").SetDrawOption(points).SetMarker(kBlack, kFullDotLarge, 1.);
+    plot[1]['Y'].SetRange(0., 41.).SetTitle("trial");
+    // 40 trials and 50 ms bins: the counts times 1 / (40 x 0.05 s) are spikes per second
+    plot[2].AddData("spikes", "spikes").Project1D({"time", 30, {-500., 1000.}}).Scale(0.5).SetDrawOption(hist).SetFill(kAzure - 9, 1001).SetLineColor(kAzure + 2);
+    plot[2]['Y'].SetTitle("rate (spikes/s)");
+    plot[0]['X'].SetRange(-500., 1000.).SetTitle("time after stimulus (ms)");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
 }
