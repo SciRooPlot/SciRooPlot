@@ -1006,7 +1006,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (textColorTitle) axis_ptr->SetTitleColor(textColorTitle->ToIndex());
             if (textAlphaTitle) axis_ptr->SetTitleColor(TColor::GetColorTransparent(axis_ptr->GetTitleColor(), *textAlphaTitle));
             if (textFontLabel) axis_ptr->SetLabelFont(*textFontLabel);
-            if (textSizeLabel) axis_ptr->SetLabelSize(*textSizeLabel);
+            if (textSizeLabel) {
+              // TGaxis::PaintAxis draws the alphanumeric bin labels of an x or y axis with a relative font at 0.66666 of the label size:
+              // compensate, so the size set is the size drawn (the z labels of a palette are painted without this factor)
+              const bool shrunkByRoot = axisLabel != 'Z' && axis_ptr->GetLabels() && axis_ptr->GetLabelFont() % 10 != 3;
+              axis_ptr->SetLabelSize(shrunkByRoot ? *textSizeLabel / 0.66666f : *textSizeLabel);
+            }
             if (textColorLabel) axis_ptr->SetLabelColor(textColorLabel->ToIndex());
             if (textAlphaLabel) axis_ptr->SetLabelColor(TColor::GetColorTransparent(axis_ptr->GetLabelColor(), *textAlphaLabel));
             // ROOT places a y title with offset 0 automatically next to the widest label, but the gap it leaves is the title size
