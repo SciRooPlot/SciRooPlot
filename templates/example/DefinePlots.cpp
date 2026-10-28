@@ -31,6 +31,11 @@ void DefineMLPlots(PlotManager& pm);
 void DefineMedicalPlots(PlotManager& pm);
 void DefineAtomicPlots(PlotManager& pm);
 void DefineAcceleratorPlots(PlotManager& pm);
+void DefineNuclearPlots(PlotManager& pm);
+void DefineSearchPlots(PlotManager& pm);
+void DefineNeutronStarPlots(PlotManager& pm);
+void DefineBiophysicsPlots(PlotManager& pm);
+void DefineTheoryPlots(PlotManager& pm);
 void DefineOtherSciencePlots(PlotManager& pm);
 void DefineAnimations(PlotManager& pm);
 
@@ -56,6 +61,11 @@ int main(int argc, char* argv[])
   DefineMedicalPlots(pm);
   DefineAtomicPlots(pm);
   DefineAcceleratorPlots(pm);
+  DefineNuclearPlots(pm);
+  DefineSearchPlots(pm);
+  DefineNeutronStarPlots(pm);
+  DefineBiophysicsPlots(pm);
+  DefineTheoryPlots(pm);
   DefineOtherSciencePlots(pm);
   DefineAnimations(pm);
   // the default colours of the base plots with their names and indices (`plot overview colors`; `srp colorwheel` shows all)
@@ -104,6 +114,12 @@ void DefineDataSources(PlotManager& pm)
   pm.AddDataSource("co2", inputFolder + "/co2.csv");
   pm.AddDataSource("stars", inputFolder + "/stars.csv");
   pm.AddDataSource("spikes", inputFolder + "/spikes.csv");
+  pm.AddDataSource("nuclear", inputFolder + "/nuclear.root");
+  pm.AddDataSource("neutrino", inputFolder + "/neutrino.root");
+  pm.AddDataSource("searches", inputFolder + "/searches.root");
+  pm.AddDataSource("neutronstars", inputFolder + "/neutronstars.root");
+  pm.AddDataSource("biophysics", inputFolder + "/biophysics.root");
+  pm.AddDataSource("theory", inputFolder + "/theory.root");
   // a directory: all files in it (and its subdirectories) form one data source
   pm.AddDataSource("jets", inputFolder + "/jets/");
   // several files: they are searched in the given order, the first file containing an object wins
@@ -136,7 +152,7 @@ void DefineDataSources(PlotManager& pm)
 //****************************************************************************************
 void DefineBasePlots(PlotManager& pm)
 {
-  for (const string& name : {"1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1"}) {
+  for (const string& name : {"1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_3x1_gap", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1", "2d_2x2"}) {
     pm.AddBasePlot(PlotManager::MakeBasePlot(name));
   }
   // a base plot can be adapted before adding it, e.g. for all 2d plots with a logarithmic z axis
@@ -725,6 +741,78 @@ void DefineHeavyIonPlots(PlotManager& pm)
     plot[0]['Y'].SetRange(0., 0.3).SetTitle("#it{v}_{2}");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
+  const vector<std::tuple<string, string, int, int>> hadrons = {{"pi", "#pi^{#pm}", kRed + 1, kFullCircle}, {"K", "K^{#pm}", kGreen + 2, kFullSquare}, {"p", "p+#bar{p}", kAzure + 2, kFullTriangleUp}};
+  {  // identified particles: lighter ones flow more at low pT (mass ordering), baryons more at intermediate pT
+    Plot plot("flowIdentified", "heavyion", "1d");
+    for (const auto& [name, label, color, marker] : hadrons) {
+      plot[1].AddData("flow/v2_" + name, "heavyion", label).SetMarker(color, marker, 1.4).SetLineColor(color);
+    }
+    plot[1].AddLegend(0.2, 0.9, "Pb-Pb 30-40%, #it{v}_{2}{SP}");
+    plot[1]['X'].SetRange(0., 6.).SetTitle("#it{p}_{T} (GeV/#it{c})");
+    plot[1]['Y'].SetRange(0., 0.32).SetTitle("#it{v}_{2}");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the same per constituent quark against the kinetic energy per quark: one common curve
+    Plot plot("quarkScaling", "heavyion", "1d");
+    for (const auto& [name, label, color, marker] : hadrons) {
+      plot[1].AddData("flow/v2ncq_" + name, "heavyion", label).SetMarker(color, marker, 1.4).SetLineColor(color);
+    }
+    plot[1].AddLegend(0.2, 0.9, "Pb-Pb 30-40%");
+    plot[1]['X'].SetRange(0., 2.8).SetTitle("(#it{m}_{T} #minus #it{m}) / #it{n}_{q} (GeV/#it{c}^{2})");
+    plot[1]['Y'].SetRange(0., 0.12).SetTitle("#it{v}_{2} / #it{n}_{q}");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // flow harmonics against centrality, the class widths as x errors
+    Plot plot("flowHarmonics", "heavyion", "1d");
+    for (const auto& [n, color] : vector<std::pair<int, int>>{{2, kRed + 1}, {3, kAzure + 2}, {4, kGreen + 2}}) {
+      const string harmonic = std::to_string(n);
+      plot[1].AddData("flow/v" + harmonic, "heavyion", "#it{v}_{" + harmonic + "}{2}").SetDrawOption(points_xerr).SetColor(color);
+    }
+    plot[1].AddLegend(0.2, 0.9, "Pb-Pb, |#Delta#eta| > 1");
+    plot[1]['X'].SetRange(0., 70.).SetTitle("centrality (%)");
+    plot[1]['Y'].SetRange(0., 0.14).SetTitle("#it{v}_{#it{n}}");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // mean pT against multiplicity for collision systems and energies: one marker style per system
+    Plot plot("meanPtVsNch", "heavyion", "1d");
+    const vector<std::tuple<string, string, int, int>> systems = {
+      {"pp_900GeV", "pp, 0.9 TeV", kAzure - 4, kFullCircle}, {"pp_7TeV", "pp, 7 TeV", kAzure + 2, kFullCircle}, {"pp_13TeV", "pp, 13 TeV", kBlue + 3, kFullCircle}, {"pPb_5TeV", "p-Pb, 5.02 TeV", kGreen + 2, kFullSquare}, {"PbPb_5TeV", "Pb-Pb, 5.02 TeV", kRed + 1, kFullTriangleUp}};
+    for (const auto& [name, label, color, marker] : systems) {
+      plot[1].AddData("meanPt/" + name, "heavyion", label).SetMarker(color, marker, 1.1).SetLineColor(color);
+    }
+    plot[1].AddLegend(0.18, 0.92);
+    plot[1]['X'].SetRange(0., 100.).SetTitle("#it{N}_{ch}");
+    plot[1]['Y'].SetRange(0.4, 1.15).SetTitle("#LT#it{p}_{T}#GT (GeV/#it{c})");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {                                                            // two-particle correlations in high-multiplicity events: the jet peak cut off by the z range to show the ridge
+    Plot plot("ridge", "heavyion/correlations", "1d_3dview");  // the base plot of the lego animation below
+    plot[1].AddData("correlations/ridge", "heavyion").SetDrawOption(surf_col);
+    plot[1].SetView(40., 135.);
+    plot[1].SetPalette(kViridis);
+    plot[1]['Z'].SetRange(0.985, 1.03).SetTitle("");  // the jet peak reaches 1.15; a 3D z title runs into the labels
+    plot[1].AddText(0.05, 0.95, "pairs per trigger (a.u.)");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the long-range part projected on Delta phi, with the Fourier fit stored with the data
+    Plot plot("longRange", "heavyion/correlations", "1d");
+    plot[1].AddData("correlations/ridge", "heavyion", "2 < #Delta#eta < 4").ProjectX(2., 4., true).SetColor(kBlack);
+    plot[1].AddData("correlations/fourier_longRange", "heavyion", "<title>").SetLine(kRed + 1, kSolid, 2.);
+    plot[1].AddLegend(0.2, 0.92);
+    plot[1]['Y'].SetTitle("pairs per trigger (a.u.)").SetRange(7.92, 8.2);  // room for the legend
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // femtoscopy: the width of the Bose-Einstein peak measures the size of the source, larger for central collisions
+    Plot plot("femtoscopy", "heavyion/correlations", "1d");
+    for (const auto& [centrality, color] : vector<std::pair<string, int>>{{"0-5", kRed + 1}, {"20-30", kGreen + 2}, {"50-60", kAzure + 2}}) {
+      plot[1].AddData("femtoscopy/cf_" + centrality, "heavyion", centrality + "%").SetColor(color);
+      plot[1].AddData("femtoscopy/fit_" + centrality, "heavyion", "<title>").SetLine(color, kSolid, 2.);
+    }
+    plot[1].AddLegend(0.4, 0.92, "#pi^{#pm}#pi^{#pm}, Pb-Pb").SetNumColumns(2);
+    plot[1]['X'].SetRange(0., 0.2).SetTitle("#it{q}_{inv} (GeV/#it{c})");
+    plot[1]['Y'].SetRange(0.85, 1.65).SetTitle("#it{C}(#it{q}_{inv})");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
 }
 
 //**************************************************************************************************
@@ -803,7 +891,7 @@ void DefineMedicalPlots(PlotManager& pm)
 }
 
 //**************************************************************************************************
-// Atomic physics: a laser spectroscopy scan over a hyperfine structure, with its fit
+// Atomic physics: laser spectroscopy, strong-field ionisation, hydrogen orbitals and the photoelectric effect
 //**************************************************************************************************
 void DefineAtomicPlots(PlotManager& pm)
 {
@@ -816,6 +904,143 @@ void DefineAtomicPlots(PlotManager& pm)
     plot[1]['Y'].SetRange(0., 850.);  // room for the texts above the lines
     plot[2].AddRatio({"hScan", "atomic"}, {"fitScan", "atomic"});
     plot[2]['Y'].SetTitle("data / fit").SetRange(0.5, 1.5);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // Doppler-free spectroscopy: the pump burns narrow dips into the Doppler profile, the ratio shows them alone
+    Plot plot("saturatedAbsorption", "atomic", "1d_ratio");
+    plot[1].AddData("laser/probeOnly", "atomic", "probe only").SetDrawOption(line).SetLine(kGray + 2, kSolid, 2.);
+    plot[1].AddData("laser/withPump", "atomic", "probe with pump").SetDrawOption(line).SetLine(kRed + 1, kSolid, 2.);
+    plot[1].AddLegend(0.2, 0.3, "^{87}Rb D_{2}, #it{F} = 2 #rightarrow #it{F}'");
+    plot[1]['Y'].SetTitle("probe transmission");
+    plot[2].AddRatio({"laser/withPump", "atomic"}, {"laser/probeOnly", "atomic"}).SetDrawOption(line).SetLine(kRed + 1, kSolid, 2.);
+    // the lines (F') and the strongest crossover, halfway between F' = 2 and 3, centred above their peaks
+    for (const auto& [x, label] : vector<std::pair<double, string>>{{-95., "1"}, {-22., "2"}, {115., "c"}, {245., "3"}}) {
+      plot[2].AddText(x, 1.43, label).SetUserCoordinates();
+    }
+    plot[2].AddText(0.2, 0.85, "c: crossover 2-3");
+    plot[2]['Y'].SetTitle("ratio").SetRange(0.97, 1.45);
+    plot[0]['X'].SetRange(-700., 700.).SetTitle("detuning from #it{F}' = 2 (MHz)");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // Rabi oscillations: measured points and the expectation in the same colour, one colour per detuning
+    Plot plot("rabiOscillations", "atomic", "1d");
+    for (const auto& [detuning, color] : vector<std::pair<int, int>>{{0, kAzure + 2}, {1, kRed + 1}, {2, kGreen + 2}}) {
+      const string tag = std::to_string(detuning) + "MHz";
+      plot[1].AddData("laser/rabi_" + tag, "atomic", "#Delta/2#pi = " + std::to_string(detuning) + " MHz").SetColor(color);
+      plot[1].AddData("laser/theory_" + tag, "atomic").SetLine(color, kSolid, 2.);  // no label: no legend entry
+    }
+    plot[1].AddLegend(0.65, 0.92, "#Omega/2#pi = 1 MHz");
+    plot[1]['X'].SetTitle("pulse duration (#mus)");
+    plot[1]['Y'].SetTitle("excited-state population").SetRange(0., 1.3);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // photoelectron spectra of xenon at three peak intensities: the ATI peaks move down with the ponderomotive energy
+    // and low orders close, the Freeman resonances (Rydberg states shifted into resonance during the pulse) stay
+    Plot plot("freemanResonances", "atomic", "1d");
+    const vector<int> intensities = {1, 2, 4};
+    plot[0].SetDefaultColors({{0.1, 0.3, 0.8, 0.}, {0.8, 0.1, 0.1, 1.}}, {}, intensities.size());
+    for (const int intensity : intensities) {
+      const string i = std::to_string(intensity);
+      plot[1].AddData("strongField/xenon_" + i + "e13", "atomic", i + " #times 10^{13} W/cm^{2}").SetDrawOption(hist);
+    }
+    plot[1].AddText(0.6, 3.e5, "4f").SetUserCoordinates();  // the first-order Freeman peaks of two states
+    plot[1].AddText(0.93, 3.e5, "5f").SetUserCoordinates();
+    plot[1].AddLegend(0.5, 0.92, "Xe, 800 nm");
+    plot[1]['X'].SetRange(0., 5.);
+    plot[1]['Y'].SetLog().SetRange(1., 1.e7);  // room for the legend above the peaks
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // above-threshold ionisation at high intensity: direct electrons up to 2 U_p, rescattered ones up to 10 U_p
+    Plot plot("atiPlateau", "atomic", "1d");
+    plot[1].AddData("strongField/argon_1e14", "atomic", "Ar, 800 nm, 10^{14} W/cm^{2}").SetDrawOption(hist).SetColor(kAzure + 2);
+    plot[1].AddLine({11.9, 1.}, {11.9, 1.e6}, "2#it{U}_{p}").SetLine(kGray + 2, kDashed, 2.);
+    plot[1].AddLine({59.7, 1.}, {59.7, 1.e6}, "10#it{U}_{p}").SetLine(kRed + 1, kDashed, 2.);
+    plot[1].AddText(1., 1.e7, "direct").SetUserCoordinates();
+    plot[1].AddText(28., 5.e3, "rescattered").SetUserCoordinates();
+    plot[1].AddLegend(0.55, 0.9);
+    plot[1]['Y'].SetLog().SetRange(1., 1.e8);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // a velocity-map image: the momentum slice of the photoelectrons, the laser polarised along z
+    Plot plot("vmiImage", "atomic", "2d_logz");
+    plot[1].AddData("strongField/vmi", "atomic").Project2D({"px", 140, {-0.7, 0.7}}, {"pz", 140, {-0.7, 0.7}});
+    plot[1]['X'].SetTitle("#it{p}_{#it{x}} (a.u.)");
+    plot[1]['Y'].SetTitle("#it{p}_{#it{z}} (a.u.)");
+    plot[1]['Z'].SetTitle("electrons");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the angular distribution of two ATI rings from the same image: energy and angle defined from the momenta, a ring
+    // selected by its energy; the Legendre fits (their beta parameters in the titles) in the colour of their ring
+    Plot plot("angularDistributions", "atomic", "1d");
+    const vector<std::tuple<string, string, string, int>> rings = {{"1st ATI ring", "energy > 0.8 && energy < 1.2", "fitRing1", kAzure + 2},
+                                                                   {"2nd ATI ring", "energy > 2.3 && energy < 2.8", "fitRing2", kRed + 1}};
+    for (const auto& [label, ring, fit, color] : rings) {
+      plot[1].AddData("strongField/vmi", "atomic", label).Define("energy", "13.6055 * (px * px + pz * pz)").Define("cosTheta", "pz / sqrt(px * px + pz * pz)").Project1D({"cosTheta", 40, {-1., 1.}}).Filter(ring).SetColor(color);
+      plot[1].AddData("strongField/" + fit, "atomic", "<title>").SetLine(color, kSolid, 2.);
+    }
+    plot[1].AddLegend(0.2, 0.92);
+    plot[1]['X'].SetTitle("cos #theta");
+    plot[1]['Y'].SetTitle("electrons").SetRange(0., 4500.);  // room for the legend
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // four orbitals of hydrogen in a grid of maps sharing their axes, each with its own colour scale
+    Plot plot("orbitals", "atomic", "2d_2x2");
+    const vector<std::pair<string, string>> orbitals = {{"psi_2pz", "2p_{z}"}, {"psi_3pz", "3p_{z}"}, {"psi_3dz2", "3d_{z^{2}}"}, {"psi_3dxz", "3d_{xz}"}};
+    for (size_t i = 0; i < orbitals.size(); ++i) {
+      const uint8_t pad = i + 1;
+      plot[pad].AddData("orbitals/" + orbitals[i].first, "atomic").SetDrawOption(colz);
+      plot[pad].AddText(0.15, 0.88, orbitals[i].second).SetTextColor(kWhite);
+    }
+    plot[0].SetPalette(kViridis);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // radial probability densities in independent panels, one per shell; one colour per angular momentum
+    Plot plot("radialDensities", "atomic", "1d_3x1_gap");
+    const std::map<char, int> colors = {{'s', kBlack}, {'p', kAzure + 2}, {'d', kRed + 1}};
+    for (const uint8_t n : {1, 2, 3}) {
+      for (const char orbital : string("spd").substr(0, n)) {
+        const string state = std::to_string(n) + orbital;
+        plot[n].AddData("orbitals/radial_" + state, "atomic", state).SetLine(colors.at(orbital), kSolid, 3.);
+      }
+      plot[n].AddLegend(0.6, 0.9);
+      plot[n]['X'].SetRange(0., 10. * n).SetTitle("#it{r} (#it{a}_{0})");
+      plot[n]['Y'].SetTitle("#it{r}^{2}|#it{R}_{#it{nl}}|^{2} (#it{a}_{0}^{-1})").SetRange(0., 0.65 / n);
+    }
+    plot[1].AddText(0.6, 0.6, "hydrogen");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // Millikan's measurement of Planck's constant: the slope of the stopping voltage against the frequency is h/e
+    Plot plot("millikan", "atomic", "1d");
+    plot[1].AddData("photoeffect/stoppingVoltage", "atomic", "Hg lines, Cs cathode").SetColor(kBlack);
+    plot[1].AddData("photoeffect/fitStopping", "atomic", "<title>").SetLine(kRed + 1, kSolid, 2.);
+    plot[1].AddLine({4., 0.}, {9., 0.}).SetLine(kGray + 1, kDashed, 1.);
+    plot[1].AddLegend(0.2, 0.9);
+    plot[1]['X'].SetRange(4., 9.).SetTitle("frequency #nu (10^{14} Hz)");
+    plot[1]['Y'].SetRange(-0.4, 2.).SetTitle("stopping voltage (V)");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // photocurrent against the voltage: each colour of light sets in at its own stopping voltage
+    Plot plot("photocurrent", "atomic", "1d");
+    for (const auto& [wavelength, color] : vector<std::pair<int, int>>{{365, kViolet + 1}, {436, kAzure + 2}, {546, kGreen + 2}}) {
+      const string w = std::to_string(wavelength);
+      plot[1].AddData("photoeffect/current_" + w + "nm", "atomic", w + " nm").SetColor(color);
+    }
+    plot[1].AddLegend(0.2, 0.9, "Hg lamp");
+    plot[1]['X'].SetTitle("voltage #it{U} (V)");
+    plot[1]['Y'].SetTitle("photocurrent (nA)").SetRange(0., 15.);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // how photons are absorbed in lead: photoeffect with its absorption edges, Compton scattering, pair production
+    Plot plot("photonAttenuation", "atomic", "1d");
+    plot[1].AddData("photoeffect/lead_total", "atomic", "total").SetDrawOption(line).SetLine(kBlack, kSolid, 3.);
+    plot[1].AddData("photoeffect/lead_photo", "atomic", "photoeffect").SetDrawOption(line).SetLine(kRed + 1, kSolid, 2.);
+    plot[1].AddData("photoeffect/lead_compton", "atomic", "Compton scattering").SetDrawOption(line).SetLine(kAzure + 2, kSolid, 2.);
+    plot[1].AddData("photoeffect/lead_pair", "atomic", "pair production").SetDrawOption(line).SetLine(kGreen + 2, kSolid, 2.);
+    plot[1].AddText(0.075, 18., "K edge").SetUserCoordinates();
+    plot[1].AddText(0.0115, 350., "L edges").SetUserCoordinates();
+    plot[1].AddLegend(0.55, 0.9, "lead");
+    plot[1]['X'].SetLog().SetRange(0.01, 100.).SetTitle("photon energy (MeV)");
+    plot[1]['Y'].SetLog().SetRange(1.e-3, 1.e3).SetTitle("#mu/#rho (cm^{2}/g)");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
 }
@@ -852,6 +1077,310 @@ void DefineAcceleratorPlots(PlotManager& pm)
     plot[1]['X'].SetTitle("#it{x} (mm)");
     plot[1]['Y'].SetTitle("#it{x}' (mrad)");
     plot[1]['Z'].SetTitle("particles");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+}
+
+//**************************************************************************************************
+// Nuclear and neutrino physics: beta decay spectra, the neutrino mass at the tritium endpoint, reactor neutrino oscillations
+//**************************************************************************************************
+void DefineNuclearPlots(PlotManager& pm)
+{
+  {  // the tritium beta spectrum
+    Plot plot("tritiumSpectrum", "nuclear", "1d");
+    plot[1].AddData("betaDecay/tritium", "nuclear", "^{3}H #rightarrow ^{3}He e^{#minus} #bar{#nu}_{e}").SetDrawOption(hist).SetColor(kAzure + 2);
+    plot[1].AddLegend(0.45, 0.9);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // Kurie plot: a straight line for an allowed decay, crossing zero at the endpoint (from the fit, in its title)
+    Plot plot("kuriePlot", "nuclear", "1d");
+    plot[1].AddData("betaDecay/kurie", "nuclear", "tritium").SetColor(kBlack);
+    plot[1].AddData("betaDecay/kurieFit", "nuclear", "<title>").SetLine(kRed + 1, kSolid, 2.);
+    plot[1].AddLegend(0.45, 0.9);
+    plot[1]['X'].SetRange(0., 19.5).SetTitle("electron kinetic energy (keV)");
+    plot[1]['Y'].SetRange(0., 1.2).SetTitle("#sqrt{#it{N} / (#it{F} #it{p} #it{E})} (a.u.)");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the last eV of the spectrum: a neutrino mass moves the endpoint and bends the spectrum before it
+    Plot plot("tritiumEndpoint", "nuclear", "1d");
+    const vector<std::pair<string, string>> masses = {{"0eV", "0"}, {"05eV", "0.5"}, {"1eV", "1"}};
+    plot[0].SetDefaultColors({{0.1, 0.3, 0.8, 0.}, {0.8, 0.1, 0.1, 1.}}, {}, masses.size());
+    for (const auto& [name, mass] : masses) {
+      plot[1].AddData("betaDecay/endpoint_" + name, "nuclear", "#it{m}_{#nu} = " + mass + " eV").SetLineWidth(3.);  // colour from the gradient
+    }
+    plot[1].AddLegend(0.55, 0.9);
+    plot[1]['X'].SetRange(-3., 0.5).SetTitle("#it{E} #minus #it{E}_{0} (eV)");
+    plot[1]['Y'].SetRange(0., 10.).SetTitle("rate (a.u.)");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // electrons and positrons from the same nucleus: the Coulomb field slows one and pushes the other
+    Plot plot("copperBeta", "nuclear", "1d");
+    plot[1].AddData("betaDecay/cu64_betaMinus", "nuclear", "#beta^{#minus}: ^{64}Cu #rightarrow ^{64}Zn").SetDrawOption(line).SetLine(kAzure + 2, kSolid, 3.);
+    plot[1].AddData("betaDecay/cu64_betaPlus", "nuclear", "#beta^{+}: ^{64}Cu #rightarrow ^{64}Ni").SetDrawOption(line).SetLine(kRed + 1, kSolid, 3.);
+    plot[1].AddLegend(0.5, 0.9);
+    plot[1]['X'].SetRange(0., 700.).SetTitle("kinetic energy (keV)");
+    plot[1]['Y'].SetRange(0., 3.5).SetTitle("d#it{N}/d#it{T} (MeV^{#minus1})");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // reactor antineutrinos disappear and come back with L/E: the oscillation, washed out by the spread of distances
+    Plot plot("reactorOscillation", "neutrino", "1d");
+    plot[1].AddData("survival", "neutrino", "data #minus background").SetDrawOption(points_xerr).SetColor(kBlack);
+    plot[1].AddData("expectation", "neutrino", "oscillation, best fit").SetDrawOption(line).SetLine(kRed + 1, kSolid, 2.);
+    plot[1].AddLine({15., 1.}, {105., 1.}, "no oscillation").SetLine(kGray + 2, kDashed, 2.);
+    plot[1].AddLegend(0.45, 0.92);
+    plot[1]['X'].SetRange(15., 105.).SetTitle("#it{L}_{0} / #it{E}_{#bar{#nu}_{e}} (km/MeV)");
+    plot[1]['Y'].SetRange(0., 1.4).SetTitle("survival probability");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the allowed region of the oscillation parameters: Delta chi2 as colour, its 1, 2, 3 sigma contours on top
+    Plot plot("oscillationParameters", "neutrino", "2d");
+    plot[1].AddData("deltaChi2", "neutrino").SetDrawOption(colz);
+    plot[1].AddData("deltaChi2", "neutrino").SetDrawOption(cont).SetContours({2.30, 6.18, 11.83}).SetLine(kWhite, kSolid, 2.);
+    plot[1].AddData("bestFit", "neutrino").SetMarker(kWhite, kFullStar, 2.5);
+    plot[1].AddText(0.15, 0.92, "contours: 1#sigma, 2#sigma, 3#sigma").SetTextColor(kWhite);
+    plot[1].SetPalette(kViridis);
+    plot[1]['Z'].SetRange(0., 30.);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+}
+
+//**************************************************************************************************
+// Searches: exclusion limits on dark matter and on top squarks
+//**************************************************************************************************
+void DefineSearchPlots(PlotManager& pm)
+{
+  {  // limits of three experiments, the expectation of the newest with its bands, the neutrino fog beneath
+    Plot plot("darkMatterLimits", "searches/darkMatter", "1d");
+    plot[1].AddData("darkMatter/neutrinoFog", "searches", "neutrino fog").SetDrawOption(band).SetFill(kGray, 1001).SetLineColor(kGray).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("darkMatter/expected_A_2sigma", "searches", "expected A #pm 2#sigma").SetDrawOption(band).SetFill(kOrange, 1001).SetLineColor(kOrange).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("darkMatter/expected_A_1sigma", "searches", "expected A #pm 1#sigma").SetDrawOption(band).SetFill(kGreen + 1, 1001).SetLineColor(kGreen + 1).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"limit_A", "experiment A (2025)", kBlack}, {"limit_B", "experiment B (2020)", kAzure + 2}, {"limit_C", "experiment C, low threshold", kRed + 1}}) {
+      plot[1].AddData("darkMatter/" + name, "searches", label).SetDrawOption(line).SetLine(color, kSolid, 3.);
+    }
+    plot[1].AddLegend(0.45, 0.92, "90% CL upper limits");
+    plot[1]['X'].SetLog().SetRange(1., 1.e4).SetTitle("WIMP mass (GeV/#it{c}^{2})");
+    plot[1]['Y'].SetLog().SetRange(1.e-50, 1.e-38).SetTitle("#sigma_{SI} (cm^{2})");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the mass plane of a top-squark search: the upper limit as colour, the excluded region as contours
+    Plot plot("stopExclusion", "searches/stop", "2d_logz");
+    plot[1].AddData("stop/upperLimit", "searches").SetDrawOption(colz);
+    plot[1].AddData("stop/expected", "searches", "expected #pm 1#sigma_{exp}").SetDrawOption(line).SetLine(kRed + 1, kDashed, 3.);
+    for (const string variation : {"expected_up", "expected_down"}) {
+      plot[1].AddData("stop/" + variation, "searches").SetDrawOption(line).SetLine(kRed + 1, kDashed, 1.);
+    }
+    plot[1].AddData("stop/observed", "searches", "observed #pm 1#sigma_{theory}").SetDrawOption(line).SetLine(kBlack, kSolid, 3.);
+    for (const string variation : {"observed_theoryUp", "observed_theoryDown"}) {
+      plot[1].AddData("stop/" + variation, "searches").SetDrawOption(line).SetLine(kBlack, kSolid, 1.);
+    }
+    plot[1].AddLine({200., 7.}, {993., 800.}, "#it{m}_{#tilde{t}} = #it{m}_{t} + #it{m}_{#tilde{#chi}^{0}_{1}}").SetLine(kGray + 2, kDotted, 2.);
+    plot[1].AddLegend(0.17, 0.92, "#tilde{t}#tilde{t}, #tilde{t} #rightarrow t #tilde{#chi}^{0}_{1}");
+    plot[1]['Z'].SetTitle("95% CL upper limit on #sigma (pb)");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+}
+
+//**************************************************************************************************
+// Neutron stars: equations of state, masses and radii, and a merger seen in gravitational waves and light
+//**************************************************************************************************
+void DefineNeutronStarPlots(PlotManager& pm)
+{
+  const vector<std::pair<string, int>> eos = {{"soft", kAzure + 2}, {"medium", kGreen + 2}, {"stiff", kRed + 1}};
+  {  // three equations of state, pressure against energy density
+    Plot plot("equationOfState", "neutronStars", "1d");
+    for (const auto& [name, color] : eos) {
+      plot[1].AddData("structure/eos_" + name, "neutronstars", name).SetDrawOption(line).SetLine(color, kSolid, 3.);
+    }
+    plot[1].AddLegend(0.2, 0.9, "polytropes");
+    plot[1]['X'].SetLog().SetRange(60., 2000.).SetTitle("energy density #varepsilon (MeV/fm^{3})");
+    plot[1]['Y'].SetLog().SetTitle("pressure #it{p} (MeV/fm^{3})");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the mass-radius relations they give, against measurements: a heavy pulsar rules out the soft one
+    Plot plot("massRadius", "neutronStars", "1d");
+    plot[1].AddData("structure/pulsar_J0740", "neutronstars", "J0740 mass").SetDrawOption(band).SetFill(kGray, 1001).SetLineColor(kGray).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    for (const auto& [name, color] : eos) {
+      plot[1].AddData("structure/massRadius_" + name, "neutronstars", name).SetDrawOption(line).SetLine(color, kSolid, 3.);
+    }
+    plot[1].AddData("structure/nicer_J0030", "neutronstars", "NICER J0030").SetDrawOption(line).SetLine(kViolet + 1, kSolid, 2.);
+    plot[1].AddData("structure/nicer_J0740", "neutronstars", "NICER J0740").SetDrawOption(line).SetLine(kOrange + 7, kSolid, 2.);
+    plot[1].AddLegend(0.18, 0.92).SetNumColumns(2);
+    plot[1]['X'].SetRange(8., 16.).SetTitle("radius (km)");
+    plot[1]['Y'].SetRange(0., 3.6).SetTitle("mass (#it{M}_{#odot})");  // room for the legend
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the chirp of the last tenth of a second before the merger: detector data and the template found in it
+    Plot plot("gwStrain", "neutronStars/merger", "1d_wide");
+    plot[1].AddData("merger/strain", "neutronstars", "data (whitened)").SetDrawOption(line).SetLine(kGray + 1, kSolid, 1.);
+    plot[1].AddData("merger/template", "neutronstars", "template, #it{M}_{c} = 1.19 #it{M}_{#odot}").SetDrawOption(line).SetLine(kRed + 1, kSolid, 2.);
+    plot[1].AddLegend(0.15, 0.92);
+    plot[1]['X'].SetRange(-0.1, 0.01).SetTitle("time from merger (s)");
+    plot[1]['Y'].SetRange(-2.5, 3.5).SetTitle("strain (a.u.)");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the same as a time-frequency map: the frequency sweeps up to the merger
+    Plot plot("gwSpectrogram", "neutronStars/merger", "2d");
+    plot[1].AddData("merger/spectrogram", "neutronstars").SetDrawOption(colz);
+    plot[1].SetPalette(kViridis);
+    plot[1]['Y'].SetLog();
+    plot[1]['Z'].SetRange(0., 25.);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the kilonova: the light of the radioactive ejecta, a fast blue and a slow red part
+    Plot plot("kilonova", "neutronStars/merger", "1d");
+    plot[1].AddData("merger/bolometric", "neutronstars", "bolometric").SetMarker(kBlack, kFullCircle, 1.2).SetLineColor(kBlack);
+    plot[1].AddData("merger/model_blue", "neutronstars", "lanthanide-poor ejecta").SetLine(kAzure + 2, kSolid, 2.);
+    plot[1].AddData("merger/model_red", "neutronstars", "lanthanide-rich ejecta").SetLine(kRed + 1, kSolid, 2.);
+    plot[1].AddData("merger/model_total", "neutronstars", "sum").SetLine(kGray + 2, kSolid, 3.);
+    plot[1].AddLegend(0.45, 0.92);
+    plot[1]['X'].SetLog().SetRange(0.2, 20.).SetTitle("time after merger (days)");
+    plot[1]['Y'].SetLog().SetRange(0.1, 1000.).SetTitle("luminosity (10^{40} erg/s)");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+}
+
+//**************************************************************************************************
+// Biophysics: protein structure, single-molecule mechanics and spectroscopy, enzyme kinetics, ion channels
+//**************************************************************************************************
+void DefineBiophysicsPlots(PlotManager& pm)
+{
+  {  // the Ramachandran plot: where the backbone angles of proteins cluster
+    Plot plot("ramachandran", "biophysics", "2d_logz");
+    plot[1].AddData("dihedrals", "biophysics").Project2D({"phi", 120, {-180., 180.}}, {"psi", 120, {-180., 180.}});
+    plot[1].AddText(-95., -15., "#alpha_{R}").SetUserCoordinates().SetTextColor(kWhite);
+    plot[1].AddText(-150., 175., "#beta").SetUserCoordinates().SetTextColor(kWhite);
+    plot[1].AddText(80., 30., "#alpha_{L}").SetUserCoordinates();
+    plot[1].SetPalette(kViridis);
+    plot[1]['X'].SetTitle("#varphi (deg)");
+    plot[1]['Y'].SetTitle("#psi (deg)");
+    plot[1]['Z'].SetTitle("residues");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // stretching a DNA molecule: entropic elasticity, then the overstretching plateau at 65 pN
+    Plot plot("dnaStretching", "biophysics", "1d");
+    plot[1].AddData("forceExtension", "biophysics", "#lambda-DNA, optical tweezers").SetColor(kBlack);
+    plot[1].AddData("wormLikeChain", "biophysics", "worm-like chain, #it{P} = 50 nm").SetDrawOption(line).SetLine(kRed + 1, kSolid, 2.);
+    plot[1].AddLine({16.4, 0.}, {16.4, 100.}, "contour length").SetLine(kGray + 2, kDashed, 2.);
+    plot[1].AddLegend(0.2, 0.92);
+    plot[1]['X'].SetRange(0., 32.).SetTitle("extension (#mum)");
+    plot[1]['Y'].SetRange(0., 120.).SetTitle("force (pN)");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // single-molecule FRET: folded and unfolded molecules as two peaks, the fractions from the fit
+    Plot plot("fretEfficiency", "biophysics", "1d");
+    plot[1].AddData("fretEfficiency", "biophysics", "molecules").SetDrawOption(hist).SetLine(kGray + 2, kSolid, 2.);
+    // the two states of the fit as filled areas under the curve of the whole fit
+    plot[1].AddData("fretUnfolded", "biophysics", "unfolded, <title>").SetDrawOption(area).SetFill(kAzure + 2, 1001, 0.35).SetLineColor(kAzure + 2).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("fretFolded", "biophysics", "folded, <title>").SetDrawOption(area).SetFill(kRed + 1, 1001, 0.35).SetLineColor(kRed + 1).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("fretFit", "biophysics", "fit, with donor-only peak").SetLine(kBlack, kSolid, 2.);
+    plot[1].AddLegend(0.2, 0.92);
+    plot[1]['Y'].SetRange(0., 1300.);  // room for the legend
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // enzyme kinetics: a competitive inhibitor raises K_M and leaves the maximal rate
+    Plot plot("michaelisMenten", "biophysics", "1d");
+    for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"noInhibitor", "without inhibitor", kAzure + 2}, {"inhibitor", "with inhibitor", kRed + 1}}) {
+      plot[1].AddData("rate_" + name, "biophysics", label).SetColor(color);
+      plot[1].AddData("fit_" + name, "biophysics", "<title>").SetLine(color, kSolid, 2.);
+    }
+    plot[1].AddLegend(0.2, 0.92);
+    plot[1]['X'].SetLog().SetRange(0.5, 1000.).SetTitle("substrate concentration (#muM)");
+    plot[1]['Y'].SetRange(0., 15.).SetTitle("initial rate (#muM/s)");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // a single ion channel opening and closing
+    Plot plot("ionChannel", "biophysics", "1d_wide");
+    plot[1].AddData("current", "biophysics").SetDrawOption(line).SetLine(kAzure + 2, kSolid, 1.);
+    plot[1].AddText(0.15, 0.3, "open");
+    plot[1].AddText(0.15, 0.85, "closed");
+    plot[1]['X'].SetRange(0., 300.).SetTitle("time (ms)");
+    plot[1]['Y'].SetRange(-8., 2.5).SetTitle("current (pA)");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // its open times in logarithmic bins: one exponential is one peak at its time constant
+    Plot plot("dwellTimes", "biophysics", "1d");
+    plot[1].AddData("openDwellTimes", "biophysics", "open times").SetColor(kAzure + 2);
+    plot[1].AddData("fit_openDwellTimes", "biophysics", "<title>").SetLine(kRed + 1, kSolid, 2.);
+    plot[1].AddLegend(0.2, 0.92);
+    plot[1]['X'].SetLog();
+    plot[1]['Y'].SetRange(0., 400.);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+}
+
+//**************************************************************************************************
+// Theory: QCD (running coupling, parton distributions, lattice thermodynamics), chaos, critical phenomena
+//**************************************************************************************************
+void DefineTheoryPlots(PlotManager& pm)
+{
+  {  // asymptotic freedom: the strong coupling falls with the scale
+    Plot plot("runningCoupling", "theory", "1d");
+    plot[1].AddData("alphaS", "theory", "2-loop QCD, #alpha_{s}(#it{m}_{Z}) = 0.118").SetDrawOption(band).SetFill(kOrange - 9, 1001).SetLineColor(kOrange + 1).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("alphaS_measurements", "theory", "measurements").SetColor(kBlack);
+    plot[1].AddLegend(0.3, 0.92);
+    plot[1]['X'].SetLog().SetRange(1., 3000.).SetTitle("#it{Q} (GeV)");
+    plot[1]['Y'].SetRange(0.05, 0.45).SetTitle("#alpha_{s}(#it{Q})");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // what is inside a proton: parton distributions with their uncertainty bands
+    Plot plot("partonDistributions", "theory", "1d");
+    for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"uv", "#it{x}#it{u}_{v}", kRed + 1}, {"dv", "#it{x}#it{d}_{v}", kAzure + 2}, {"g", "#it{x}#it{g} / 10", kGreen + 2}, {"sea", "#it{x}#it{S} / 10", kViolet + 1}}) {
+      plot[1].AddData("pdf_" + name, "theory", label).SetDrawOption(band).SetFill(color, 1001, 0.4).SetLineColor(color).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    }
+    plot[1].AddLegend(0.2, 0.92, "#it{Q}^{2} = 10 GeV^{2}");
+    plot[1]['X'].SetLog().SetRange(1e-4, 1.).SetTitle("#it{x}");
+    plot[1]['Y'].SetRange(0., 1.2).SetTitle("#it{x}#it{f}(#it{x}, #it{Q}^{2})");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // QCD matter from the lattice: the crossover from hadrons to quarks and gluons
+    Plot plot("latticeQCD", "theory", "1d");
+    plot[1].AddData("crossover", "theory", "#it{T}_{c}").SetDrawOption(boxes_nomarkers).SetFill(kGray, 1001).SetLineColor(kGray).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"energy", "#varepsilon/#it{T}^{4}", kRed + 1}, {"entropy", "3#it{s}/4#it{T}^{3}", kAzure + 2}, {"3p", "3#it{p}/#it{T}^{4}", kGreen + 2}}) {
+      plot[1].AddData("lattice_" + name, "theory", label).SetDrawOption(band).SetFill(color, 1001, 0.6).SetLineColor(color).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    }
+    plot[1].AddLine({130., 15.62}, {410., 15.62}, "Stefan-Boltzmann limit").SetLine(kBlack, kDashed, 2.);
+    plot[1].AddLegend(0.55, 0.45);
+    plot[1]['X'].SetRange(130., 410.).SetTitle("#it{T} (MeV)");
+    plot[1]['Y'].SetRange(0., 17.);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the logistic map: period doubling into chaos, with windows of order
+    Plot plot("bifurcation", "theory", "2d_logz");
+    plot[1].AddData("bifurcation", "theory").SetDrawOption(col);
+    plot[1].SetPalette(kInvertedDarkBodyRadiator);  // light where rarely visited, dark on the stable orbits
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // its Lyapunov exponent: positive where nearby orbits separate
+    Plot plot("lyapunov", "theory", "1d_wide");
+    plot[1].AddData("lyapunov", "theory").SetDrawOption(line).SetLine(kAzure + 2, kSolid, 1.);
+    plot[1].SetRefFunc("0").SetLine(kGray + 1, kDashed, 2.);
+    plot[1]['X'].SetRange(2.8, 4.).SetTitle("#it{r}");
+    plot[1]['Y'].SetRange(-2.5, 1.).SetTitle("Lyapunov exponent #lambda");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  const vector<int> sizes = {8, 16, 32, 64};
+  {  // the 2D Ising model: Binder cumulants of all lattice sizes cross at the critical temperature
+    Plot plot("binderCumulant", "theory", "1d");
+    plot[0].SetDefaultColors({{0.1, 0.3, 0.8, 0.}, {0.8, 0.1, 0.1, 1.}}, {}, sizes.size());
+    for (const int size : sizes) {
+      plot[1].AddData("binder_L" + std::to_string(size), "theory", "#it{L} = " + std::to_string(size)).SetDrawOption(points_line);
+    }
+    plot[1].AddLine({2.269, 0.}, {2.269, 0.7}, "#it{T}_{c} (Onsager)").SetLine(kGray + 2, kDashed, 2.);
+    plot[1].AddLegend(0.18, 0.5);
+    plot[1]['X'].SetTitle("#it{T} (#it{J}/#it{k}_{B})");
+    plot[1]['Y'].SetRange(0., 0.9).SetTitle("#it{U}_{4} = 1 #minus #LT#it{m}^{4}#GT / 3#LT#it{m}^{2}#GT^{2}");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the magnetisation of finite lattices approaches the exact solution
+    Plot plot("isingMagnetisation", "theory", "1d");
+    plot[0].SetDefaultColors({{0.1, 0.3, 0.8, 0.}, {0.8, 0.1, 0.1, 1.}}, {}, sizes.size() + 1);
+    for (const int size : sizes) {
+      plot[1].AddData("magnetisation_L" + std::to_string(size), "theory", "#it{L} = " + std::to_string(size));
+    }
+    plot[1].AddData("onsager", "theory", "Onsager, #it{L} #rightarrow #infty").SetLine(kBlack, kSolid, 3.);
+    plot[1].AddLegend(0.6, 0.92);
+    plot[1]['X'].SetRange(1.5, 3.5).SetTitle("#it{T} (#it{J}/#it{k}_{B})");
+    plot[1]['Y'].SetRange(0., 1.2).SetTitle("#LT|#it{m}|#GT");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
 }
