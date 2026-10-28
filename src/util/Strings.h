@@ -79,8 +79,12 @@ inline std::string number_to_string(const T& value)
 {
   if constexpr (std::is_floating_point_v<T>) {
     return fmt::format("{}", value);
-  } else {
+  } else if constexpr (std::is_arithmetic_v<T>) {
     return std::to_string(value);
+  } else {  // a class with a stream operator (e.g. color_t)
+    std::ostringstream stream;
+    stream << value;
+    return stream.str();
   }
 }
 
@@ -127,6 +131,13 @@ T string_to_type(const std::string& str)
     T value{};
     if (!(stream >> value)) {
       throw std::invalid_argument("Cannot parse '" + str + "' as a number.");
+    }
+    return value;
+  } else if constexpr (!std::is_arithmetic_v<T>) {  // a class with a stream operator (e.g. color_t)
+    std::istringstream stream(str);
+    T value{};
+    if (!(stream >> value)) {
+      throw std::invalid_argument("Cannot parse '" + str + "'.");
     }
     return value;
   } else {

@@ -410,7 +410,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   canvas_ptr->SetMargin(0., 0., 0., 0.);
 
   // apply user settings for plot
-  if (plot.GetFillColor()) canvas_ptr->SetFillColor(*plot.GetFillColor());
+  if (plot.GetFillColor()) canvas_ptr->SetFillColor(plot.GetFillColor()->ToIndex());
   if (plot.GetFillStyle()) canvas_ptr->SetFillStyle(*plot.GetFillStyle());
   if (plot.GetFillAlpha()) canvas_ptr->SetFillColor(TColor::GetColorTransparent(canvas_ptr->GetFillColor(), *plot.GetFillAlpha()));
 
@@ -463,13 +463,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (auto marginBottom = get_first(pad.GetMarginBottom(), padDefaults.GetMarginBottom())) pad_ptr->SetBottomMargin(*marginBottom);
     if (auto marginLeft = get_first(pad.GetMarginLeft(), padDefaults.GetMarginLeft())) pad_ptr->SetLeftMargin(*marginLeft);
     if (auto marginRight = get_first(pad.GetMarginRight(), padDefaults.GetMarginRight())) pad_ptr->SetRightMargin(*marginRight);
-    if (auto padFillColor = get_first(pad.GetFillColor(), padDefaults.GetFillColor())) pad_ptr->SetFillColor(*padFillColor);
+    if (auto padFillColor = get_first(pad.GetFillColor(), padDefaults.GetFillColor())) pad_ptr->SetFillColor(padFillColor->ToIndex());
     if (auto padFillStyle = get_first(pad.GetFillStyle(), padDefaults.GetFillStyle())) pad_ptr->SetFillStyle(*padFillStyle);
     if (auto padFillAlpha = get_first(pad.GetFillAlpha(), padDefaults.GetFillAlpha())) pad_ptr->SetFillColor(TColor::GetColorTransparent(pad_ptr->GetFillColor(), *padFillAlpha));
-    if (auto frameFillColor = get_first(pad.GetFrameFillColor(), padDefaults.GetFrameFillColor())) pad_ptr->SetFrameFillColor(*frameFillColor);
+    if (auto frameFillColor = get_first(pad.GetFrameFillColor(), padDefaults.GetFrameFillColor())) pad_ptr->SetFrameFillColor(frameFillColor->ToIndex());
     if (auto frameFillStyle = get_first(pad.GetFrameFillStyle(), padDefaults.GetFrameFillStyle())) pad_ptr->SetFrameFillStyle(*frameFillStyle);
     if (auto frameFillAlpha = get_first(pad.GetFrameFillAlpha(), padDefaults.GetFrameFillAlpha())) pad_ptr->SetFrameFillColor(TColor::GetColorTransparent(pad_ptr->GetFrameFillColor(), *frameFillAlpha));
-    if (auto frameBorderColor = get_first(pad.GetFrameBorderColor(), padDefaults.GetFrameBorderColor())) pad_ptr->SetFrameLineColor(*frameBorderColor);
+    if (auto frameBorderColor = get_first(pad.GetFrameBorderColor(), padDefaults.GetFrameBorderColor())) pad_ptr->SetFrameLineColor(frameBorderColor->ToIndex());
     if (auto frameBorderAlpha = get_first(pad.GetFrameBorderAlpha(), padDefaults.GetFrameBorderAlpha())) pad_ptr->SetFrameLineColor(TColor::GetColorTransparent(pad_ptr->GetFrameLineColor(), *frameBorderAlpha));
     if (auto frameBorderStyle = get_first(pad.GetFrameBorderStyle(), padDefaults.GetFrameBorderStyle())) pad_ptr->SetFrameLineStyle(*frameBorderStyle);
     if (auto frameBorderWidth = get_first(pad.GetFrameBorderWidth(), padDefaults.GetFrameBorderWidth())) pad_ptr->SetFrameLineWidth(*frameBorderWidth);
@@ -490,7 +490,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     // a gradient is generated only if a data item takes colours from it, or if its number of colours is given explicitly
     auto applyGradient = [this](const auto& gradient, int32_t nTaking, auto&& setColors) {
       if (nTaking == 0 && !gradient.nColors) return;
-      setColors(GenerateGradientColors(get_first_or(nTaking, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha)));
+      const vector<int16_t> indices = GenerateGradientColors(get_first_or(nTaking, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
+      setColors(vector<color_t>(indices.begin(), indices.end()));
     };
     if (pad.GetDefaultMarkerColorsGradient().rgbEndpoints) {
       applyGradient(pad.GetDefaultMarkerColorsGradient(), nMarkerColors, [&](const auto& colors) { pad.SetDefaultMarkerColors(colors); });
@@ -854,7 +855,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 if (axisLayout.GetTitleCenter()) axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
                 if (axisLayout.GetLabelCenter()) axis_ptr->CenterLabels(*axisLayout.GetLabelCenter());
 
-                if (axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(*axisLayout.GetAxisColor());
+                if (axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(axisLayout.GetAxisColor()->ToIndex());
                 if (axisLayout.GetAxisAlpha()) axis_ptr->SetAxisColor(TColor::GetColorTransparent(axis_ptr->GetAxisColor(), *axisLayout.GetAxisAlpha()));
 
                 if (axisLayout.GetTitleOffset()) axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
@@ -1002,11 +1003,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
             if (textFontTitle) axis_ptr->SetTitleFont(*textFontTitle);
             if (textSizeTitle) axis_ptr->SetTitleSize(*textSizeTitle);
-            if (textColorTitle) axis_ptr->SetTitleColor(*textColorTitle);
+            if (textColorTitle) axis_ptr->SetTitleColor(textColorTitle->ToIndex());
             if (textAlphaTitle) axis_ptr->SetTitleColor(TColor::GetColorTransparent(axis_ptr->GetTitleColor(), *textAlphaTitle));
             if (textFontLabel) axis_ptr->SetLabelFont(*textFontLabel);
             if (textSizeLabel) axis_ptr->SetLabelSize(*textSizeLabel);
-            if (textColorLabel) axis_ptr->SetLabelColor(*textColorLabel);
+            if (textColorLabel) axis_ptr->SetLabelColor(textColorLabel->ToIndex());
             if (textAlphaLabel) axis_ptr->SetLabelColor(TColor::GetColorTransparent(axis_ptr->GetLabelColor(), *textAlphaLabel));
             // ROOT places a y title with offset 0 automatically next to the widest label, but the gap it leaves is the title size
             // read as a fraction of the pad width (see TGaxis::PaintAxis), i.e. it grows for pads that are wider than high.
@@ -1077,7 +1078,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // define data appearance
           if (hasRefFunc && dataIndex == 1) {
             // the reference function is not part of the data: it is a black solid line (unless set) and does not use up entries of the default lists
-            data_ptr->SetLineColor(data->GetLineColor().value_or(kBlack));
+            data_ptr->SetLineColor(data->GetLineColor().value_or(kBlack).ToIndex());
             if (auto lineAlpha = get_first(data->GetLineAlpha(), pad.GetDefaultLineAlpha(), padDefaults.GetDefaultLineAlpha())) {
               data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), *lineAlpha));
             }
@@ -1093,7 +1094,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                              fromPad(pick(defaultSettingIndices[0], pad.GetDefaultMarkerColors())),
                                              fromPad(pick(defaultSettingIndices[0], padDefaults.GetDefaultMarkerColors())))) {
               if (!data->GetMarkerColor()) defaultSettingIndices[0]++;
-              data_ptr->SetMarkerColor(*markerColor);
+              data_ptr->SetMarkerColor(markerColor->ToIndex());
             }
             if (auto markerAlpha = get_first(data->GetMarkerAlpha(),
                                              fromPad(pad.GetDefaultMarkerAlpha()),
@@ -1118,7 +1119,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                            fromPad(pick(defaultSettingIndices[2], pad.GetDefaultLineColors())),
                                            fromPad(pick(defaultSettingIndices[2], padDefaults.GetDefaultLineColors())))) {
               if (!data->GetLineColor()) defaultSettingIndices[2]++;
-              data_ptr->SetLineColor(*lineColor);
+              data_ptr->SetLineColor(lineColor->ToIndex());
             }
             if (auto lineAlpha = get_first(data->GetLineAlpha(),
                                            fromPad(pad.GetDefaultLineAlpha()),
@@ -1140,7 +1141,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                            fromPad(pick(defaultSettingIndices[4], pad.GetDefaultFillColors())),
                                            fromPad(pick(defaultSettingIndices[4], padDefaults.GetDefaultFillColors())))) {
               if (!data->GetFillColor()) defaultSettingIndices[4]++;
-              data_ptr->SetFillColor(*fillColor);
+              data_ptr->SetFillColor(fillColor->ToIndex());
             }
             if (auto fillAlpha = get_first(data->GetFillAlpha(),
                                            fromPad(pad.GetDefaultFillAlpha()),
@@ -1397,7 +1398,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               auto statsBox = (data->GetStatsBox()) ? data->GetStatsBox() : std::make_shared<const Plot::Pad::StatsBox>();
               stats->SetTextFont(statsBox->GetTextFont().value_or(textFont.value_or(43)));
               stats->SetTextSize(statsBox->GetTextSize().value_or(textSize.value_or(24.f)));
-              if (statsBox->GetTextColor()) stats->SetTextColor(*statsBox->GetTextColor());
+              if (statsBox->GetTextColor()) stats->SetTextColor(statsBox->GetTextColor()->ToIndex());
               if (statsBox->GetTextAlpha()) stats->SetTextColor(TColor::GetColorTransparent(stats->GetTextColor(), *statsBox->GetTextAlpha()));
               stats->SetLineColor(data_ptr->GetLineColor());
               stats->SetLineWidth(1);
@@ -2017,7 +2018,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if constexpr (is_hist_1d<data_type>() || is_graph_1d<data_type>()) {
             constexpr bool isHist = is_hist_1d<data_type>();
             // the fill the data will be drawn with: set for the data, else the next default of the pad (unless the style of the input is kept), else the input's
-            auto drawnFill = [&](const auto& dataValue, uint16_t index, const auto& padValues, const auto& defaultValues, int16_t inputValue) -> int16_t {
+            auto drawnFill = [&](const auto& dataValue, uint16_t index, const auto& padValues, const auto& defaultValues, int16_t inputValue) -> std::decay_t<decltype(*dataValue)> {
               if (dataValue) return *dataValue;
               if (!data->GetKeepInputStyle()) {
                 if (auto value = get_first(pick(index, padValues), pick(index, defaultValues))) return *value;
@@ -2025,7 +2026,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               return inputValue;
             };
             const int16_t fillStyle = drawnFill(data->GetFillStyle(), defaultSettingIndices[5], pad.GetDefaultFillStyles(), padDefaults.GetDefaultFillStyles(), data_ptr->GetFillStyle());
-            const int16_t fillColor = drawnFill(data->GetFillColor(), defaultSettingIndices[4], pad.GetDefaultFillColors(), padDefaults.GetDefaultFillColors(), data_ptr->GetFillColor());
+            const color_t fillColor = drawnFill(data->GetFillColor(), defaultSettingIndices[4], pad.GetDefaultFillColors(), padDefaults.GetDefaultFillColors(), data_ptr->GetFillColor());
             if (fillStyle != 0 && fillColor != 0) {
               optionAlias = (isHist) ? hist : area;
             } else if (data->GetMarkerStyle() || data->GetMarkerSize() || HasErrors(data_ptr)) {
@@ -2873,7 +2874,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       legend->SetNColumns(nColumns);
       legend->SetTextFont(text_font);
       legend->SetTextSize(text_size);
-      if (textColor) legend->SetTextColor(*textColor);
+      if (textColor) legend->SetTextColor(textColor->ToIndex());
       if (textAlpha) legend->SetTextColor(TColor::GetColorTransparent(legend->GetTextColor(), *textAlpha));
       if (textSize) legend->SetTextSize(*textSize);
       if (textFont) legend->SetTextFont(*textFont);
@@ -2909,7 +2910,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         // override data attributes with default values if requested
         curEntry->SetMarkerColor(markerAttr.GetMarkerColor());
         if (box->GetDefaultMarkerColor()) {
-          curEntry->SetMarkerColor(*box->GetDefaultMarkerColor());
+          curEntry->SetMarkerColor(box->GetDefaultMarkerColor()->ToIndex());
         }
         if (box->GetDefaultMarkerAlpha()) {
           curEntry->SetMarkerColor(TColor::GetColorTransparent(curEntry->GetMarkerColor(), *box->GetDefaultMarkerAlpha()));
@@ -2924,7 +2925,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         }
         curEntry->SetLineColor(lineAttr.GetLineColor());
         if (box->GetDefaultLineColor()) {
-          curEntry->SetLineColor(*box->GetDefaultLineColor());
+          curEntry->SetLineColor(box->GetDefaultLineColor()->ToIndex());
         }
         if (box->GetDefaultLineAlpha()) {
           curEntry->SetLineColor(TColor::GetColorTransparent(curEntry->GetLineColor(), *box->GetDefaultLineAlpha()));
@@ -2939,7 +2940,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         }
         curEntry->SetFillColor(fillAttr.GetFillColor());
         if (box->GetDefaultFillColor()) {
-          curEntry->SetFillColor(*box->GetDefaultFillColor());
+          curEntry->SetFillColor(box->GetDefaultFillColor()->ToIndex());
         }
         if (box->GetDefaultFillAlpha()) {
           curEntry->SetFillColor(TColor::GetColorTransparent(curEntry->GetFillColor(), *box->GetDefaultFillAlpha()));
@@ -2949,21 +2950,21 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           curEntry->SetFillStyle(*box->GetDefaultFillStyle());
         }
 
-        if (entry.GetMarkerColor()) curEntry->SetMarkerColor(*entry.GetMarkerColor());
+        if (entry.GetMarkerColor()) curEntry->SetMarkerColor(entry.GetMarkerColor()->ToIndex());
         if (entry.GetMarkerAlpha()) curEntry->SetMarkerColor(TColor::GetColorTransparent(curEntry->GetMarkerColor(), *entry.GetMarkerAlpha()));
         if (entry.GetMarkerStyle()) curEntry->SetMarkerStyle(*entry.GetMarkerStyle());
         if (entry.GetMarkerSize()) curEntry->SetMarkerSize(*entry.GetMarkerSize());
 
-        if (entry.GetLineColor()) curEntry->SetLineColor(*entry.GetLineColor());
+        if (entry.GetLineColor()) curEntry->SetLineColor(entry.GetLineColor()->ToIndex());
         if (entry.GetLineAlpha()) curEntry->SetLineColor(TColor::GetColorTransparent(curEntry->GetLineColor(), *entry.GetLineAlpha()));
         if (entry.GetLineStyle()) curEntry->SetLineStyle(*entry.GetLineStyle());
         if (entry.GetLineWidth()) curEntry->SetLineWidth(*entry.GetLineWidth());
 
-        if (entry.GetFillColor()) curEntry->SetFillColor(*entry.GetFillColor());
+        if (entry.GetFillColor()) curEntry->SetFillColor(entry.GetFillColor()->ToIndex());
         if (entry.GetFillAlpha()) curEntry->SetFillColor(TColor::GetColorTransparent(curEntry->GetFillColor(), *entry.GetFillAlpha()));
         if (entry.GetFillStyle()) curEntry->SetFillStyle(*entry.GetFillStyle());
 
-        if (entry.GetTextColor()) curEntry->SetTextColor(*entry.GetTextColor());
+        if (entry.GetTextColor()) curEntry->SetTextColor(entry.GetTextColor()->ToIndex());
         if (entry.GetTextAlpha()) curEntry->SetTextColor(TColor::GetColorTransparent(curEntry->GetTextColor(), *entry.GetTextAlpha()));
         if (entry.GetTextFont()) curEntry->SetTextFont(*entry.GetTextFont());
         if (entry.GetTextSize()) curEntry->SetTextSize(*entry.GetTextSize());
@@ -2977,7 +2978,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       paveText->SetBorderSize(1);
       paveText->SetTextFont(text_font);
       paveText->SetTextSize(text_size);
-      if (textColor) paveText->SetTextColor(*textColor);
+      if (textColor) paveText->SetTextColor(textColor->ToIndex());
       if (textAlpha) paveText->SetTextColor(TColor::GetColorTransparent(paveText->GetTextColor(), *textAlpha));
 
       for (const auto& line : lines) {
@@ -3029,11 +3030,11 @@ template <typename BoxType>
 void PlotPainter::ApplyBoxStyle(const BoxType& box, TPave* pave)
 {
   if (box.GetBorderStyle()) pave->SetLineStyle(*box.GetBorderStyle());
-  if (box.GetBorderColor()) pave->SetLineColor(*box.GetBorderColor());
+  if (box.GetBorderColor()) pave->SetLineColor(box.GetBorderColor()->ToIndex());
   if (box.GetBorderAlpha()) pave->SetLineColor(TColor::GetColorTransparent(pave->GetLineColor(), *box.GetBorderAlpha()));
   if (box.GetBorderWidth()) pave->SetLineWidth(*box.GetBorderWidth());
   if (box.GetFillStyle()) pave->SetFillStyle(*box.GetFillStyle());
-  if (box.GetFillColor()) pave->SetFillColor(*box.GetFillColor());
+  if (box.GetFillColor()) pave->SetFillColor(box.GetFillColor()->ToIndex());
   if (box.GetFillAlpha()) pave->SetFillColor(TColor::GetColorTransparent(pave->GetFillColor(), *box.GetFillAlpha()));
 }
 

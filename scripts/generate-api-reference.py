@@ -38,6 +38,7 @@ SKIP_NAMES = {"Print", "GetPropertyTree", "GetTree", "SetTree", "operator=", "Cl
 TYPES = {
     "data_dim_t": '`"var"` (100 automatic bins), `{"var", nBins}`, `{"var", nBins, {min, max}}` or `{"var", {edges...}}` (Python: tuples)',
     "join_tree_t": '`"tree"` (same data source) or `{"tree", "dataSource"}` (Python: list)',
+    "color_t": 'a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters',
 }
 
 

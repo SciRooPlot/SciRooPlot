@@ -1652,6 +1652,7 @@ plot[1](2).SetColor(kGreen + 2);                // change data 2 of the pad late
   appearance: { py: `plot[1].AddData("h", "src").SetDrawOption(points)             # alias, see Draw options
 plot[1].AddData("h", "src").SetDrawOption("E1")               # or a raw ROOT option string
 plot[1].AddData("h", "src").SetColor(kRed + 1).SetAlpha(0.5)  # marker, line and fill at once
+plot[1].AddData("h", "src").SetColor("#1f77b4")               # any colour: "#rrggbb" or (r, g, b) from 0 to 1
 plot[1].AddData("g", "src").SetMarker(kBlue + 1, kFullSquare, 1.2).SetLine(kBlue + 1, kDashed, 2.0)
 plot[1].AddData("b", "src").SetDrawOption(band).SetFill(kAzure - 9, 1001)
 plot[1].AddData("h", "src").SetKeepInputStyle()               # keep line, marker, fill of the input
@@ -1662,6 +1663,7 @@ plot[1].AddData("h", "src").SetShowOverflowBins()             # under- and overf
 pm.AddColorOverview("colors", "overview")                     # plot overview colors: the colour sequence`, cpp: `plot[1].AddData("h", "src").SetDrawOption(points);            // alias, see Draw options
 plot[1].AddData("h", "src").SetDrawOption("E1");              // or a raw ROOT option string
 plot[1].AddData("h", "src").SetColor(kRed + 1).SetAlpha(0.5); // marker, line and fill at once
+plot[1].AddData("h", "src").SetColor("#1f77b4");              // any colour: "#rrggbb" or {r, g, b} from 0 to 1
 plot[1].AddData("g", "src").SetMarker(kBlue + 1, kFullSquare, 1.2).SetLine(kBlue + 1, kDashed, 2.);
 plot[1].AddData("b", "src").SetDrawOption(band).SetFill(kAzure - 9, 1001);
 plot[1].AddData("h", "src").SetKeepInputStyle();              // keep line, marker, fill of the input
@@ -2788,10 +2790,10 @@ function palRender() {
     document.getElementById("palfacts").innerHTML = `<span><b>${p[0]}</b> = palette ${p[1]}${p[0] === "kBird" ? ", the default of the base plots" : ""}${["kViridis", "kCividis"].includes(p[0]) ? ", made to stay readable for colour-blind viewers and in grey print" : ""}</span>`;
     fill(document.getElementById("palcode"), `plot[0].SetPalette(${p[0]})${end}   ${py ? "#" : "//"} all pads; plot[1].SetPalette(…) for one`, lang) }
   else {
-    const g = PAL.stops.slice().sort((a, b) => a[1] - b[1]).map(([h, p]) => { const c = hexRGB(h); return `${py ? "(" : "{"}${c.map(f).join(", ")}, ${f(p)}${py ? ")" : "}"}` }).join(", ");
+    const g = PAL.stops.slice().sort((a, b) => a[1] - b[1]).map(([h, p]) => `${py ? "(" : "{"}"${h}", ${f(p)}${py ? ")" : "}"}`).join(", ");
     const grad = py ? `[${g}]` : `{${g}}`;
-    document.getElementById("palfacts").innerHTML = `<span>Each colour is <b>(red, green, blue, position)</b>, all from 0 to 1. The same gradient can colour a 2D plot (top) or give each curve in a pad its own colour (bottom, ${PAL.n} curves).</span>`;
-    fill(document.getElementById("palcode"), `${py ? "gradient = " : "const std::vector<std::tuple<float_t, float_t, float_t, float_t>> gradient = "}${grad}${end}
+    document.getElementById("palfacts").innerHTML = `<span>Each stop is <b>(colour, position)</b>, the position from 0 to 1; a colour can also be a ROOT colour (<code>kRed + 1</code>) or (red, green, blue) from 0 to 1. The same gradient can colour a 2D plot (top) or give each curve in a pad its own colour (bottom, ${PAL.n} curves).</span>`;
+    fill(document.getElementById("palcode"), `${py ? "gradient = " : "const std::vector<std::pair<color_t, float_t>> gradient = "}${grad}${end}
 plot[1].SetPalette(gradient)${end}         ${py ? "#" : "//"} as the colour scale of a 2D plot
 plot[1].SetDefaultColors(gradient)${end}   ${py ? "#" : "//"} one colour per curve, spread over the gradient`, lang) }
   document.querySelectorAll("#palroot .palsw").forEach(b => b.setAttribute("aria-pressed", b.dataset.pal === PAL.name)) }

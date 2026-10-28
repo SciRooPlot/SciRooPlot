@@ -127,6 +127,42 @@ struct type_caster<Data::data_dim_t> {
     return py::make_tuple(src.var, src.nBins, src.edges).release();
   }
 };
+
+// custom caster for color_t: a ROOT colour index (kRed + 1), "#rrggbb" or (r, g, b) with components from 0 to 1
+template <>
+struct type_caster<color_t> {
+  PYBIND11_TYPE_CASTER(color_t, const_name("int | str | tuple[float, float, float]"));
+
+  bool load(handle src, bool)
+  {
+    namespace py = pybind11;
+    // an invalid hex string or out-of-range components throw (a ValueError with the reason) instead of failing the match
+    if (py::isinstance<py::str>(src)) {
+      value = color_t(src.cast<std::string>());
+      return true;
+    }
+    try {
+      if (py::isinstance<py::int_>(src) && !py::isinstance<py::bool_>(src)) {
+        value = color_t(src.cast<int16_t>());
+        return true;
+      }
+      if (!py::isinstance<py::sequence>(src)) return false;
+      auto seq = py::reinterpret_borrow<py::sequence>(src);
+      if (seq.size() != 3) return false;
+      const std::array<double_t, 3> rgb{seq[0].cast<double_t>(), seq[1].cast<double_t>(), seq[2].cast<double_t>()};
+      value = color_t(rgb[0], rgb[1], rgb[2]);
+      return true;
+    } catch (const py::cast_error&) {
+      return false;
+    }
+  }
+
+  static handle cast(const color_t& src, return_value_policy, handle)
+  {
+    if (auto index = src.GetIndex()) return py::int_(*index).release();
+    return py::str(src.ToString()).release();
+  }
+};
 }  // namespace pybind11::detail
 
 PYBIND11_MODULE(SciRooPlot, m)
@@ -347,26 +383,31 @@ void exportPad(py::module_& m)
     .def("SetView", &Pad::SetView, arg("theta"), arg("phi"), ref_int)
     .def("SetPalette", overload_cast<int32_t>(&Pad::SetPalette), arg("palette"), ref_int)
     .def("SetPalette", overload_cast<const vector<tuple<float_t, float_t, float_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetPalette), arg("rgbEndpoints"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
+    .def("SetPalette", overload_cast<const vector<pair<color_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetPalette), arg("gradient"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
     .def("SetDefaultTextSize", &Pad::SetDefaultTextSize, arg("size"), ref_int)
     .def("SetDefaultTextColor", &Pad::SetDefaultTextColor, arg("color"), ref_int)
     .def("SetDefaultTextAlpha", &Pad::SetDefaultTextAlpha, arg("alpha"), ref_int)
     .def("SetDefaultTextFont", &Pad::SetDefaultTextFont, arg("font"), ref_int)
     .def("SetDefaultAlpha", &Pad::SetDefaultAlpha, arg("alpha"), ref_int)
-    .def("SetDefaultColors", overload_cast<const vector<int16_t>&>(&Pad::SetDefaultColors), arg("colors"), ref_int)
+    .def("SetDefaultColors", overload_cast<const vector<color_t>&>(&Pad::SetDefaultColors), arg("colors"), ref_int)
     .def("SetDefaultColors", overload_cast<const vector<tuple<float_t, float_t, float_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetDefaultColors), arg("rgbEndpoints"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
+    .def("SetDefaultColors", overload_cast<const vector<pair<color_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetDefaultColors), arg("gradient"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
     .def("SetDefaultMarkerAlpha", &Pad::SetDefaultMarkerAlpha, arg("alpha"), ref_int)
     .def("SetDefaultMarkerSize", &Pad::SetDefaultMarkerSize, arg("size"), ref_int)
-    .def("SetDefaultMarkerColors", overload_cast<const vector<int16_t>&>(&Pad::SetDefaultMarkerColors), arg("colors"), ref_int)
+    .def("SetDefaultMarkerColors", overload_cast<const vector<color_t>&>(&Pad::SetDefaultMarkerColors), arg("colors"), ref_int)
     .def("SetDefaultMarkerColors", overload_cast<const vector<tuple<float_t, float_t, float_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetDefaultMarkerColors), arg("rgbEndpoints"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
+    .def("SetDefaultMarkerColors", overload_cast<const vector<pair<color_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetDefaultMarkerColors), arg("gradient"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
     .def("SetDefaultMarkerStyles", &Pad::SetDefaultMarkerStyles, arg("styles"), ref_int)
     .def("SetDefaultLineAlpha", &Pad::SetDefaultLineAlpha, arg("alpha"), ref_int)
     .def("SetDefaultLineWidth", &Pad::SetDefaultLineWidth, arg("width"), ref_int)
-    .def("SetDefaultLineColors", overload_cast<const vector<int16_t>&>(&Pad::SetDefaultLineColors), arg("colors"), ref_int)
+    .def("SetDefaultLineColors", overload_cast<const vector<color_t>&>(&Pad::SetDefaultLineColors), arg("colors"), ref_int)
     .def("SetDefaultLineColors", overload_cast<const vector<tuple<float_t, float_t, float_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetDefaultLineColors), arg("rgbEndpoints"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
+    .def("SetDefaultLineColors", overload_cast<const vector<pair<color_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetDefaultLineColors), arg("gradient"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
     .def("SetDefaultLineStyles", &Pad::SetDefaultLineStyles, arg("styles"), ref_int)
     .def("SetDefaultFillAlpha", &Pad::SetDefaultFillAlpha, arg("alpha"), ref_int)
-    .def("SetDefaultFillColors", overload_cast<const vector<int16_t>&>(&Pad::SetDefaultFillColors), arg("colors"), ref_int)
+    .def("SetDefaultFillColors", overload_cast<const vector<color_t>&>(&Pad::SetDefaultFillColors), arg("colors"), ref_int)
     .def("SetDefaultFillColors", overload_cast<const vector<tuple<float_t, float_t, float_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetDefaultFillColors), arg("rgbEndpoints"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
+    .def("SetDefaultFillColors", overload_cast<const vector<pair<color_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetDefaultFillColors), arg("gradient"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
     .def("SetDefaultFillStyles", &Pad::SetDefaultFillStyles, arg("styles"), ref_int)
     .def("SetDefaultCandleBoxRange", &Pad::SetDefaultCandleBoxRange, arg("candleOption"), ref_int)
     .def("SetDefaultCandleWhiskerRange", &Pad::SetDefaultCandleWhiskerRange, arg("candleOption"), ref_int)
@@ -539,20 +580,20 @@ void exportRatio(py::module_& m)
     .def("SetTextFormat", [](Ratio& self, const string& s) -> Ratio& { return self.SetTextFormat(s); }, arg("textFormat"), ref_int)
     .def("SetShowStats", [](Ratio& self, const string& f, const optional<string>& t) -> Ratio& { return self.SetShowStats(f, t); }, arg("format") = "emr", arg("title") = nullopt, ref_int)
     .def("SetStatsBox", [](Ratio& self, const StatsBox& box) -> Ratio& { return self.SetStatsBox(box); }, arg("statsBox"), ref_int)
-    .def("SetColor", [](Ratio& self, int16_t c) -> Ratio& { return self.SetColor(c); }, arg("color"), ref_int)
+    .def("SetColor", [](Ratio& self, color_t c) -> Ratio& { return self.SetColor(c); }, arg("color"), ref_int)
     .def("SetAlpha", [](Ratio& self, float_t a) -> Ratio& { return self.SetAlpha(a); }, arg("alpha"), ref_int)
-    .def("SetMarker", [](Ratio& self, int16_t c, int16_t s, float_t sz, optional<float_t> a) -> Ratio& { return self.SetMarker(c, s, sz, a); }, arg("color"), arg("style"), arg("size"), arg("alpha") = nullopt, ref_int)
-    .def("SetMarkerColor", [](Ratio& self, int16_t c) -> Ratio& { return self.SetMarkerColor(c); }, arg("color"), ref_int)
+    .def("SetMarker", [](Ratio& self, color_t c, int16_t s, float_t sz, optional<float_t> a) -> Ratio& { return self.SetMarker(c, s, sz, a); }, arg("color"), arg("style"), arg("size"), arg("alpha") = nullopt, ref_int)
+    .def("SetMarkerColor", [](Ratio& self, color_t c) -> Ratio& { return self.SetMarkerColor(c); }, arg("color"), ref_int)
     .def("SetMarkerAlpha", [](Ratio& self, float_t a) -> Ratio& { return self.SetMarkerAlpha(a); }, arg("alpha"), ref_int)
     .def("SetMarkerStyle", [](Ratio& self, int16_t s) -> Ratio& { return self.SetMarkerStyle(s); }, arg("style"), ref_int)
     .def("SetMarkerSize", [](Ratio& self, float_t s) -> Ratio& { return self.SetMarkerSize(s); }, arg("size"), ref_int)
-    .def("SetLine", [](Ratio& self, int16_t c, int16_t s, float_t w, optional<float_t> a) -> Ratio& { return self.SetLine(c, s, w, a); }, arg("color"), arg("style"), arg("width"), arg("alpha") = nullopt, ref_int)
-    .def("SetLineColor", [](Ratio& self, int16_t c) -> Ratio& { return self.SetLineColor(c); }, arg("color"), ref_int)
+    .def("SetLine", [](Ratio& self, color_t c, int16_t s, float_t w, optional<float_t> a) -> Ratio& { return self.SetLine(c, s, w, a); }, arg("color"), arg("style"), arg("width"), arg("alpha") = nullopt, ref_int)
+    .def("SetLineColor", [](Ratio& self, color_t c) -> Ratio& { return self.SetLineColor(c); }, arg("color"), ref_int)
     .def("SetLineAlpha", [](Ratio& self, float_t a) -> Ratio& { return self.SetLineAlpha(a); }, arg("alpha"), ref_int)
     .def("SetLineStyle", [](Ratio& self, int16_t s) -> Ratio& { return self.SetLineStyle(s); }, arg("style"), ref_int)
     .def("SetLineWidth", [](Ratio& self, float_t w) -> Ratio& { return self.SetLineWidth(w); }, arg("width"), ref_int)
-    .def("SetFill", [](Ratio& self, int16_t c, int16_t s, optional<float_t> a) -> Ratio& { return self.SetFill(c, s, a); }, arg("color"), arg("style"), arg("alpha") = nullopt, ref_int)
-    .def("SetFillColor", [](Ratio& self, int16_t c) -> Ratio& { return self.SetFillColor(c); }, arg("color"), ref_int)
+    .def("SetFill", [](Ratio& self, color_t c, int16_t s, optional<float_t> a) -> Ratio& { return self.SetFill(c, s, a); }, arg("color"), arg("style"), arg("alpha") = nullopt, ref_int)
+    .def("SetFillColor", [](Ratio& self, color_t c) -> Ratio& { return self.SetFillColor(c); }, arg("color"), ref_int)
     .def("SetFillStyle", [](Ratio& self, int16_t s) -> Ratio& { return self.SetFillStyle(s); }, arg("style"), ref_int)
     .def("SetFillAlpha", [](Ratio& self, float_t a) -> Ratio& { return self.SetFillAlpha(a); }, arg("alpha"), ref_int)
     .def("SetDefinesFrame", [](Ratio& self) -> Ratio& { return self.SetDefinesFrame(); }, ref_int)
@@ -656,7 +697,7 @@ void exportTextBox(py::module_& m)
     .def("SetBorderAlpha", &TextBox::SetBorderAlpha, arg("alpha"), ref_int)
     .def("SetBorderStyle", &TextBox::SetBorderStyle, arg("style"), ref_int)
     .def("SetBorderWidth", &TextBox::SetBorderWidth, arg("width"), ref_int)
-    .def("SetText", overload_cast<int16_t, int16_t, float_t, optional<float_t>>(&TextBox::SetText), arg("color"), arg("font"), arg("size"), arg("alpha") = nullopt, ref_int)
+    .def("SetText", overload_cast<color_t, int16_t, float_t, optional<float_t>>(&TextBox::SetText), arg("color"), arg("font"), arg("size"), arg("alpha") = nullopt, ref_int)
     .def("SetTextColor", &TextBox::SetTextColor, arg("color"), ref_int)
     .def("SetTextAlpha", &TextBox::SetTextAlpha, arg("alpha"), ref_int)
     .def("SetTextFont", &TextBox::SetTextFont, arg("font"), ref_int)

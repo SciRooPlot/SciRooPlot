@@ -89,7 +89,8 @@ plot.SetDimensions(710, 710[, fixAspect]).SetTransparent().AppendGroup("QA");
 plot[0]...        // defaults for all pads (text font/size, margins, colour lists, ref function)
 plot[1].SetPosition(x1,y1,x2,y2).SetMargins(t,b,l,r).SetFrameFill(10, 1001).SetPalette(kBird).SetView(theta, phi)   // 3D view in degrees (ROOT: 30, 30)
 plot[1].SetDefaultMarkerColors({kBlack, kRed+1}).SetDefaultLineStyles({kSolid, kDashed})   // cycled over the data
-plot[1].SetDefaultColors(rgbGradient)   // {{r,g,b,position},...} with r,g,b,position in [0,1]; also SetPalette(gradient)
+// every colour argument takes a ROOT colour (kRed + 1), "#rrggbb" or {r, g, b} from 0 to 1 (Python: a tuple); transparency only with the alpha setters
+plot[1].SetDefaultColors(gradient)   // {{"#000080", 0.}, {kRed, 0.5}, {{1., 1., 0.}, 1.}}: (colour, position) or {r,g,b,position}, all in [0,1]; also SetPalette(gradient)
 plot[1].SetRefFunc("1");              // reference line/function in a ratio pad (drawn first, black)
 plot[1]['X'].SetTitle("#it{x}").SetRange(a, b).SetLog().SetGrid().SetNumDivisions(305).SetMaxDigits(3).SetNoExponent()
             .SetTitleFont(43).SetTitleSize(28).SetTitleOffset(1.1).SetLabelFont(43).SetLabelSize(24)   // sizes in pixels only with font 43; with the default font 42 they are fractions of the pad
@@ -231,7 +232,7 @@ pm.AddBasePlot(layout);
 
 Identical names and chains. Differences:
 - `from SciRooPlot import *` exports everything: classes, the drawing option aliases (`points`, `colz`, …), `box_placement_t` corners and ROOT's colour/style constants (`kRed`, `kFullCircle`, `kDashed`, `kBird`, …), so `kRed + 1` works.
-- Braces become tuples/lists: `Project1D(("pt", 200, [0.1, 20.0]))`, `Project1D(("pt", [0.1, 0.5, 1.0]))`, `AddRatio(["num", "src"], ["den", "src"])`, `Join(["events", "otherSource"], ["run", "event"])`, colour lists `[kBlack, kRed + 1]`, gradients `[(0., 0., 1., 0.), (1., 0., 0., 1.)]`.
+- Braces become tuples/lists: `Project1D(("pt", 200, [0.1, 20.0]))`, `Project1D(("pt", [0.1, 0.5, 1.0]))`, `AddRatio(["num", "src"], ["den", "src"])`, `Join(["events", "otherSource"], ["run", "event"])`, colour lists `[kBlack, "#1f77b4", (0.2, 0.6, 0.3)]`, gradients `[("#0000ff", 0.), (kRed, 1.)]` or `[(0., 0., 1., 0.), (1., 0., 0., 1.)]`.
 - A list `["name", "src"]` is accepted wherever a `Data` is expected (the Python form of the C++ braces); templates are called the same way: `tmpl("name", "src")`.
 - Optional arguments may be left out as in C++; `std::optional` values are `None` when unset.
 - No `SRC_DIR` macro: use `Path(__file__).resolve().parent`. The program is plain Python; `plot` runs it with the interpreter from the environment script.

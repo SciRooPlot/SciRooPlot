@@ -22,13 +22,17 @@
 #include "SciRooPlot/PanelLayout.h"
 
 #include <TAttText.h>
+#include <TColor.h>
+#include <TROOT.h>
 
 #include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <initializer_list>
+#include <istream>
 #include <limits>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -68,6 +72,96 @@ string join_strings(const vector<string>& items, const string& separator)
   return joined;
 }
 }  // namespace
+
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// IMPLEMENTATION class color_t
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+
+//**************************************************************************************************
+/**
+ * Colour from "#rrggbb" (hexadecimal digits, upper or lower case).
+ */
+//**************************************************************************************************
+color_t::color_t(const string& hex) : mIndex(nullopt)
+{
+  const bool valid = (hex.size() == 7 && hex[0] == '#' && std::all_of(hex.begin() + 1, hex.end(), [](unsigned char c) { return std::isxdigit(c); }));
+  if (!valid) logger::throw_invalid_argument("Colour '{}' is not valid: give a ROOT colour (e.g. kRed + 1), \"#rrggbb\" or {{r, g, b}} with components from 0 to 1.", hex);
+  for (size_t i = 0; i < 3; ++i) {
+    mRGB[i] = static_cast<uint8_t>(std::stoi(hex.substr(1 + 2 * i, 2), nullptr, 16));
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Colour from its red, green and blue components (from 0 to 1), stored with the 8 bits per component that ROOT uses.
+ */
+//**************************************************************************************************
+color_t::color_t(double_t red, double_t green, double_t blue) : mIndex(nullopt)
+{
+  const std::array<double_t, 3> components{red, green, blue};
+  for (size_t i = 0; i < 3; ++i) {
+    if (!(components[i] >= 0. && components[i] <= 1.)) {
+      logger::throw_invalid_argument("Colour {{{}, {}, {}}} is not valid: the components go from 0 to 1.", red, green, blue);
+    }
+    mRGB[i] = static_cast<uint8_t>(std::lround(components[i] * 255.));
+  }
+}
+
+//**************************************************************************************************
+/**
+ * The colour as stored in the plot definitions: the index as number, an rgb colour as "#rrggbb".
+ */
+//**************************************************************************************************
+string color_t::ToString() const
+{
+  if (mIndex) return std::to_string(*mIndex);
+  return fmt::format("#{:02x}{:02x}{:02x}", mRGB[0], mRGB[1], mRGB[2]);
+}
+
+//**************************************************************************************************
+/**
+ * Index of the colour for ROOT: an rgb colour gets the index of an existing ROOT colour with the same components or of a new one.
+ */
+//**************************************************************************************************
+int16_t color_t::ToIndex() const
+{
+  if (mIndex) return *mIndex;
+  return static_cast<int16_t>(TColor::GetColor(static_cast<Int_t>(mRGB[0]), static_cast<Int_t>(mRGB[1]), static_cast<Int_t>(mRGB[2])));
+}
+
+//**************************************************************************************************
+/**
+ * Red, green and blue from 0 to 1; for an index those of the ROOT colour.
+ */
+//**************************************************************************************************
+std::array<float_t, 3> color_t::ToFractions() const
+{
+  if (mIndex) {
+    const TColor* color = gROOT->GetColor(*mIndex);
+    if (!color) logger::throw_invalid_argument("Colour index {} is not defined in ROOT.", *mIndex);
+    return {color->GetRed(), color->GetGreen(), color->GetBlue()};
+  }
+  return {mRGB[0] / 255.f, mRGB[1] / 255.f, mRGB[2] / 255.f};
+}
+
+std::ostream& operator<<(std::ostream& stream, const color_t& color)
+{
+  return stream << color.ToString();
+}
+
+std::istream& operator>>(std::istream& stream, color_t& color)
+{
+  string token;
+  if (!(stream >> token)) return stream;
+  try {
+    color = (token[0] == '#') ? color_t(token) : color_t(util::string_to_type<int16_t>(token));
+  } catch (const std::exception&) {
+    stream.setstate(std::ios::failbit);
+  }
+  return stream;
+}
 
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -389,7 +483,7 @@ auto Plot::SetFixAspectRatio(bool fixAspectRatio) -> decltype(*this)
  * Set fill for this plot.
  */
 //**************************************************************************************************
-auto Plot::SetFill(int16_t color, optional<int16_t> style, optional<float_t> alpha) -> decltype(*this)
+auto Plot::SetFill(color_t color, optional<int16_t> style, optional<float_t> alpha) -> decltype(*this)
 {
   mFill.color = color;
   mFill.style = style;
@@ -397,7 +491,7 @@ auto Plot::SetFill(int16_t color, optional<int16_t> style, optional<float_t> alp
   return *this;
 }
 
-auto Plot::SetFillColor(int16_t color) -> decltype(*this)
+auto Plot::SetFillColor(color_t color) -> decltype(*this)
 {
   mFill.color = color;
   return *this;
@@ -500,7 +594,7 @@ auto Plot::Pad::SetDefaultTextSize(float_t size) -> decltype(*this)
  * Set text color
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultTextColor(int16_t color) -> decltype(*this)
+auto Plot::Pad::SetDefaultTextColor(color_t color) -> decltype(*this)
 {
   mText.color = color;
   return *this;
@@ -574,10 +668,26 @@ auto Plot::Pad::SetDefaultAlpha(float_t alpha) -> decltype(*this)
 
 //**************************************************************************************************
 /**
+ * The (r, g, b, position) stops of a gradient given as (colour, position): an index is replaced by the components of its ROOT colour.
+ */
+//**************************************************************************************************
+vector<tuple<float_t, float_t, float_t, float_t>> Plot::Pad::GradientEndpoints(const vector<pair<color_t, float_t>>& gradient)
+{
+  vector<tuple<float_t, float_t, float_t, float_t>> endpoints;
+  endpoints.reserve(gradient.size());
+  for (const auto& [color, position] : gradient) {
+    const auto [red, green, blue] = color.ToFractions();
+    endpoints.emplace_back(red, green, blue, position);
+  }
+  return endpoints;
+}
+
+//**************************************************************************************************
+/**
  * Set default marker colors.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultMarkerColors(const vector<int16_t>& colors) -> decltype(*this)
+auto Plot::Pad::SetDefaultMarkerColors(const vector<color_t>& colors) -> decltype(*this)
 {
   mMarkerDefaults.colorGradient = {};
   mMarkerDefaults.colors = colors;
@@ -591,13 +701,17 @@ auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, floa
   mMarkerDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
 }
+auto Plot::Pad::SetDefaultMarkerColors(const vector<pair<color_t, float_t>>& gradient, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
+{
+  return SetDefaultMarkerColors(GradientEndpoints(gradient), alpha, nColors);
+}
 
 //**************************************************************************************************
 /**
  * Set default line colors.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultLineColors(const vector<int16_t>& colors) -> decltype(*this)
+auto Plot::Pad::SetDefaultLineColors(const vector<color_t>& colors) -> decltype(*this)
 {
   mLineDefaults.colorGradient = {};
   mLineDefaults.colors = colors;
@@ -611,13 +725,17 @@ auto Plot::Pad::SetDefaultLineColors(const vector<tuple<float_t, float_t, float_
   mLineDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
 }
+auto Plot::Pad::SetDefaultLineColors(const vector<pair<color_t, float_t>>& gradient, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
+{
+  return SetDefaultLineColors(GradientEndpoints(gradient), alpha, nColors);
+}
 
 //**************************************************************************************************
 /**
  * Set default fill colors.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultFillColors(const vector<int16_t>& colors) -> decltype(*this)
+auto Plot::Pad::SetDefaultFillColors(const vector<color_t>& colors) -> decltype(*this)
 {
   mFillDefaults.colorGradient = {};
   mFillDefaults.colors = colors;
@@ -631,13 +749,17 @@ auto Plot::Pad::SetDefaultFillColors(const vector<tuple<float_t, float_t, float_
   mFillDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
 }
+auto Plot::Pad::SetDefaultFillColors(const vector<pair<color_t, float_t>>& gradient, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
+{
+  return SetDefaultFillColors(GradientEndpoints(gradient), alpha, nColors);
+}
 
 //**************************************************************************************************
 /**
  * Set default colors.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultColors(const vector<int16_t>& colors) -> decltype(*this)
+auto Plot::Pad::SetDefaultColors(const vector<color_t>& colors) -> decltype(*this)
 {
   mMarkerDefaults.colorGradient = {};
   mMarkerDefaults.colors = colors;
@@ -660,6 +782,10 @@ auto Plot::Pad::SetDefaultColors(const vector<tuple<float_t, float_t, float_t, f
   mFillDefaults.alpha = nullopt;
   mFillDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
+}
+auto Plot::Pad::SetDefaultColors(const vector<pair<color_t, float_t>>& gradient, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
+{
+  return SetDefaultColors(GradientEndpoints(gradient), alpha, nColors);
 }
 
 //**************************************************************************************************
@@ -722,7 +848,7 @@ auto Plot::Pad::SetDefaultCandleWhiskerRange(float_t candleOption) -> decltype(*
  * Set fill for this pad.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetFill(int16_t color, optional<int16_t> style, optional<float_t> alpha) -> decltype(*this)
+auto Plot::Pad::SetFill(color_t color, optional<int16_t> style, optional<float_t> alpha) -> decltype(*this)
 {
   mFill.color = color;
   mFill.style = style;
@@ -730,7 +856,7 @@ auto Plot::Pad::SetFill(int16_t color, optional<int16_t> style, optional<float_t
   return *this;
 }
 
-auto Plot::Pad::SetFillColor(int16_t color) -> decltype(*this)
+auto Plot::Pad::SetFillColor(color_t color) -> decltype(*this)
 {
   mFill.color = color;
   return *this;
@@ -765,7 +891,7 @@ auto Plot::Pad::SetTransparent() -> decltype(*this)
  * Set frame fill properties.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetFrameFill(int16_t color, optional<int16_t> style, optional<float_t> alpha) -> decltype(*this)
+auto Plot::Pad::SetFrameFill(color_t color, optional<int16_t> style, optional<float_t> alpha) -> decltype(*this)
 {
   mFrameFill.color = color;
   mFrameFill.style = style;
@@ -773,7 +899,7 @@ auto Plot::Pad::SetFrameFill(int16_t color, optional<int16_t> style, optional<fl
   return *this;
 }
 
-auto Plot::Pad::SetFrameFillColor(int16_t color) -> decltype(*this)
+auto Plot::Pad::SetFrameFillColor(color_t color) -> decltype(*this)
 {
   mFrameFill.color = color;
   return *this;
@@ -796,7 +922,7 @@ auto Plot::Pad::SetFrameFillAlpha(float_t alpha) -> decltype(*this)
  * Set frame line properties.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetFrameBorder(int16_t color, optional<int16_t> style, optional<float_t> width, optional<float_t> alpha) -> decltype(*this)
+auto Plot::Pad::SetFrameBorder(color_t color, optional<int16_t> style, optional<float_t> width, optional<float_t> alpha) -> decltype(*this)
 {
   mFrameBorder.color = color;
   mFrameBorder.alpha = alpha;
@@ -805,7 +931,7 @@ auto Plot::Pad::SetFrameBorder(int16_t color, optional<int16_t> style, optional<
   return *this;
 }
 
-auto Plot::Pad::SetFrameBorderColor(int16_t color) -> decltype(*this)
+auto Plot::Pad::SetFrameBorderColor(color_t color) -> decltype(*this)
 {
   mFrameBorder.color = color;
   return *this;
@@ -869,6 +995,10 @@ auto Plot::Pad::SetPalette(const vector<tuple<float_t, float_t, float_t, float_t
   mPalette.index = {};
   mPalette.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
+}
+auto Plot::Pad::SetPalette(const vector<pair<color_t, float_t>>& gradient, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
+{
+  return SetPalette(GradientEndpoints(gradient), alpha, nColors);
 }
 
 //**************************************************************************************************
@@ -2066,7 +2196,7 @@ auto Plot::Pad::Data::SetShowOverflowBins(bool showOverflowBins) -> decltype(*th
   mModify.showOverflowBins = showOverflowBins;
   return *this;
 }
-auto Plot::Pad::Data::SetColor(int16_t color) -> decltype(*this)
+auto Plot::Pad::Data::SetColor(color_t color) -> decltype(*this)
 {
   mMarker.color = color;
   mLine.color = color;
@@ -2080,7 +2210,7 @@ auto Plot::Pad::Data::SetAlpha(float_t alpha) -> decltype(*this)
   mFill.alpha = alpha;
   return *this;
 }
-auto Plot::Pad::Data::SetMarker(int16_t color, int16_t style, float_t size, optional<float_t> alpha) -> decltype(*this)
+auto Plot::Pad::Data::SetMarker(color_t color, int16_t style, float_t size, optional<float_t> alpha) -> decltype(*this)
 {
   mMarker.color = color;
   mMarker.alpha = alpha;
@@ -2088,7 +2218,7 @@ auto Plot::Pad::Data::SetMarker(int16_t color, int16_t style, float_t size, opti
   mMarker.scale = size;
   return *this;
 }
-auto Plot::Pad::Data::SetMarkerColor(int16_t color) -> decltype(*this)
+auto Plot::Pad::Data::SetMarkerColor(color_t color) -> decltype(*this)
 {
   mMarker.color = color;
   return *this;
@@ -2108,7 +2238,7 @@ auto Plot::Pad::Data::SetMarkerSize(float_t size) -> decltype(*this)
   mMarker.scale = size;
   return *this;
 }
-auto Plot::Pad::Data::SetLine(int16_t color, int16_t style, float_t width, optional<float_t> alpha) -> decltype(*this)
+auto Plot::Pad::Data::SetLine(color_t color, int16_t style, float_t width, optional<float_t> alpha) -> decltype(*this)
 {
   mLine.color = color;
   mLine.alpha = alpha;
@@ -2116,7 +2246,7 @@ auto Plot::Pad::Data::SetLine(int16_t color, int16_t style, float_t width, optio
   mLine.scale = RoundWidth(width, "line width");
   return *this;
 }
-auto Plot::Pad::Data::SetLineColor(int16_t color) -> decltype(*this)
+auto Plot::Pad::Data::SetLineColor(color_t color) -> decltype(*this)
 {
   mLine.color = color;
   return *this;
@@ -2136,14 +2266,14 @@ auto Plot::Pad::Data::SetLineWidth(float_t width) -> decltype(*this)
   mLine.scale = RoundWidth(width, "line width");
   return *this;
 }
-auto Plot::Pad::Data::SetFill(int16_t color, int16_t style, optional<float_t> alpha) -> decltype(*this)
+auto Plot::Pad::Data::SetFill(color_t color, int16_t style, optional<float_t> alpha) -> decltype(*this)
 {
   mFill.color = color;
   mFill.alpha = alpha;
   mFill.style = style;
   return *this;
 }
-auto Plot::Pad::Data::SetFillColor(int16_t color) -> decltype(*this)
+auto Plot::Pad::Data::SetFillColor(color_t color) -> decltype(*this)
 {
   mFill.color = color;
   return *this;
@@ -3306,14 +3436,14 @@ auto Plot::Pad::Axis::SetMinRange(double_t min) -> decltype(*this)
   mRange.min = min;
   return *this;
 }
-auto Plot::Pad::Axis::SetColor(int16_t color) -> decltype(*this)
+auto Plot::Pad::Axis::SetColor(color_t color) -> decltype(*this)
 {
   mAxisFrame.color = color;
   mLabelLayout.color = color;
   mTitleLayout.color = color;
   return *this;
 }
-auto Plot::Pad::Axis::SetAxisColor(int16_t color) -> decltype(*this)
+auto Plot::Pad::Axis::SetAxisColor(color_t color) -> decltype(*this)
 {
   mAxisFrame.color = color;
   return *this;
@@ -3358,12 +3488,12 @@ auto Plot::Pad::Axis::SetLabelSize(float_t size) -> decltype(*this)
   mLabelLayout.scale = size;
   return *this;
 }
-auto Plot::Pad::Axis::SetTitleColor(int16_t color) -> decltype(*this)
+auto Plot::Pad::Axis::SetTitleColor(color_t color) -> decltype(*this)
 {
   mTitleLayout.color = color;
   return *this;
 }
-auto Plot::Pad::Axis::SetLabelColor(int16_t color) -> decltype(*this)
+auto Plot::Pad::Axis::SetLabelColor(color_t color) -> decltype(*this)
 {
   mLabelLayout.color = color;
   return *this;
@@ -3565,7 +3695,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetAutoPlacement(box_placement_t placement)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetBorder(int16_t color, int16_t style, float_t width, optional<float_t> alpha)
+BoxType& Plot::Pad::Box<BoxType>::SetBorder(color_t color, int16_t style, float_t width, optional<float_t> alpha)
 {
   mBorder.color = color;
   mBorder.style = style;
@@ -3575,7 +3705,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetBorder(int16_t color, int16_t style, float_
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetBorderColor(int16_t color)
+BoxType& Plot::Pad::Box<BoxType>::SetBorderColor(color_t color)
 {
   mBorder.color = color;
   return *GetThis();
@@ -3603,7 +3733,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetBorderWidth(float_t width)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetText(int16_t color, int16_t font, float_t size, optional<float_t> alpha)
+BoxType& Plot::Pad::Box<BoxType>::SetText(color_t color, int16_t font, float_t size, optional<float_t> alpha)
 {
   mText.color = color;
   mText.alpha = alpha;
@@ -3613,7 +3743,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetText(int16_t color, int16_t font, float_t s
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetTextColor(int16_t color)
+BoxType& Plot::Pad::Box<BoxType>::SetTextColor(color_t color)
 {
   mText.color = color;
   return *GetThis();
@@ -3641,7 +3771,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetTextSize(float_t size)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetFill(int16_t color, int16_t style, optional<float_t> alpha)
+BoxType& Plot::Pad::Box<BoxType>::SetFill(color_t color, int16_t style, optional<float_t> alpha)
 {
   mFill.color = color;
   mFill.style = style;
@@ -3650,7 +3780,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetFill(int16_t color, int16_t style, optional
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetFillColor(int16_t color)
+BoxType& Plot::Pad::Box<BoxType>::SetFillColor(color_t color)
 {
   mFill.color = color;
   return *GetThis();
@@ -3967,7 +4097,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultSymbolElements(const strin
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultColor(int16_t color)
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultColor(color_t color)
 {
   mLineDefault.color = color;
   mMarkerDefault.color = color;
@@ -3983,7 +4113,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultAlpha(float_t alpha)
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineColor(int16_t color)
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineColor(color_t color)
 {
   mLineDefault.color = color;
   return *this;
@@ -4007,7 +4137,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineWidth(float_t width)
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultMarkerColor(int16_t color)
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultMarkerColor(color_t color)
 {
   mMarkerDefault.color = color;
   return *this;
@@ -4031,7 +4161,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultMarkerSize(float_t size)
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillColor(int16_t color)
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillColor(color_t color)
 {
   mFillDefault.color = color;
   return *this;
@@ -4268,7 +4398,7 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::AfterData(uint16_t dataID)
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetColor(int16_t color)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetColor(color_t color)
 {
   mMarker.color = color;
   mLine.color = color;
@@ -4284,7 +4414,7 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetAlpha(float_t alpha)
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarker(int16_t color, int16_t style, float_t size, optional<float_t> alpha)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarker(color_t color, int16_t style, float_t size, optional<float_t> alpha)
 {
   mMarker.color = color;
   mMarker.alpha = alpha;
@@ -4293,7 +4423,7 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarker(int16_t color, int16_t
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarkerColor(int16_t color)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarkerColor(color_t color)
 {
   mMarker.color = color;
   return *this;
@@ -4317,7 +4447,7 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarkerSize(float_t size)
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLine(int16_t color, int16_t style, float_t width, optional<float_t> alpha)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLine(color_t color, int16_t style, float_t width, optional<float_t> alpha)
 {
   mLine.color = color;
   mLine.alpha = alpha;
@@ -4326,7 +4456,7 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLine(int16_t color, int16_t s
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLineColor(int16_t color)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLineColor(color_t color)
 {
   mLine.color = color;
   return *this;
@@ -4350,7 +4480,7 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLineWidth(float_t width)
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFill(int16_t color, int16_t style, optional<float_t> alpha)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFill(color_t color, int16_t style, optional<float_t> alpha)
 {
   mFill.color = color;
   mFill.alpha = alpha;
@@ -4358,7 +4488,7 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFill(int16_t color, int16_t s
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFillColor(int16_t color)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFillColor(color_t color)
 {
   mFill.color = color;
   return *this;
@@ -4376,7 +4506,7 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFillStyle(int16_t style)
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetTextColor(int16_t color)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetTextColor(color_t color)
 {
   mText.color = color;
   return *this;
