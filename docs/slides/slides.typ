@@ -1169,19 +1169,17 @@
       columns: (42%, 55%),
       gutter: 3%,
       [
-        - `histo()`, `histo2d()` and `graph()` build ROOT objects straight from plain Python data, without going through PyROOT's own constructors.
+        - `histo()`, `histo2d()`, `graph()` and `table()` build ROOT objects straight from Python data: lists, numpy arrays, pandas columns.
 
-        - `histo()` takes `bins` as a plain number and `range` as a `(min, max)` pair; if omitted, `bins` defaults to 100 and `range` is inferred from the data.
+        - `histo()` works like `numpy.histogram`: `bins` is a number (default 100, `range` from the data if not given) or the bin edges; optional `weights`.
 
-        - `histo2d()` takes `bins` and `range` as `(x, y)` pairs; if omitted, `bins` defaults to a 50 x 50 grid and `range` is inferred from the data, just like `histo()`.
+        - `histo2d()` works like `numpy.histogram2d`: `bins` is one number, `(nx, ny)` or `(x edges, y edges)` (default 50 x 50), `range` is `((x0, x1), (y0, y1))`.
 
-        - `graph()` builds a `TGraphErrors`, with optional per-point `xerr`/`yerr`.
+        - `graph()` builds a `TGraphErrors`, with optional `xerr`/`yerr`.
 
-        - Inputs can be plain Python lists/tuples or numpy arrays -- anything iterable of numbers works.
+        - `table()` turns a pandas DataFrame, a dict of arrays or a 2D array with `columns=[...]` into a tree, so `Project1D()`, `Filter()` and `Define()` work on it.
 
-        - All three return an object usable directly as `AddDataSource()` input.
-
-        - Mismatched array lengths raise a clear error rather than silently producing bad data.
+        - All of them can be passed to `AddDataSource()` directly; mismatched lengths raise an error.
       ],
       [
         #code-block(
@@ -1189,25 +1187,28 @@
           [
             ```python
             import numpy as np
+            import pandas as pd
 
-            # a plain list, a tuple, or a numpy array all work
             values = np.random.normal(0, 1, 1000)
-
-            myHist = histo("myHist", values, bins=200, range=(0.1, 20.))
+            weights = np.random.uniform(0.5, 1.5, 1000)
+            myHist = histo("myHist", values, bins=200,
+                           range=(-5., 5.), weights=weights)
 
             xValues = np.linspace(0., 10., 10)
             yValues = np.random.rand(10)
-
             my2DHist = histo2d("my2DHist", xValues, yValues,
                                bins=(60, 40),
                                range=((0., 10.), (-5., 5.)))
 
             xErrors = yErrors = np.full(10, 0.1)
-
             myGraph = graph("myGraph", xValues, yValues,
                             xerr=xErrors, yerr=yErrors)
 
-            pm.AddDataSource("sourceH", [myGraph, myHist, my2DHist])
+            df = pd.DataFrame({"pt": values ** 2, "det": "TPC"})
+            myTable = table("tracks", df)
+
+            pm.AddDataSource("sourceH",
+                             [myGraph, myHist, my2DHist, myTable])
             ```
           ],
         )

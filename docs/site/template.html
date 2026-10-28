@@ -1520,11 +1520,12 @@ const REF = [
 <tr><td>Same name again</td><td>replaces the object, with a warning; folders of the same name are merged</td></tr>
 </tbody></table></div>
 <h3>Python helpers: ROOT objects from plain numbers</h3>
-<p>Lists, tuples or numpy arrays become ROOT objects without PyROOT constructors:</p>
+<p>Lists, tuples, numpy arrays and pandas columns become ROOT objects without PyROOT constructors:</p>
 <div class="tablewrap"><table class="cmd"><tbody>
-<tr><td><code>histo(name, values, bins=100, range=None)</code></td><td>fills a <code>TH1D</code> with the values; without a range it is taken from the data</td></tr>
-<tr><td><code>histo2d(name, x, y, bins=(50, 50), range=None)</code></td><td>fills a <code>TH2D</code> with the pairs; <code>range=((x0, x1), (y0, y1))</code></td></tr>
-<tr><td><code>graph(name, x, y, xerr=[], yerr=[])</code></td><td>a <code>TGraphErrors</code> through the points</td></tr>
+<tr><td><code>histo(name, values, bins=100, range=None, weights=None)</code></td><td>fills a <code>TH1D</code>, like <code>numpy.histogram</code>: <code>bins</code> is a number (without a range it is taken from the data) or the bin edges</td></tr>
+<tr><td><code>histo2d(name, x, y, bins=None, range=None, weights=None)</code></td><td>fills a <code>TH2D</code> with the pairs, like <code>numpy.histogram2d</code>: <code>bins</code> is a number, <code>(nx, ny)</code> or <code>(x edges, y edges)</code> (default 50 x 50); <code>range=((x0, x1), (y0, y1))</code></td></tr>
+<tr><td><code>graph(name, x, y, xerr=None, yerr=None)</code></td><td>a <code>TGraphErrors</code> through the points</td></tr>
+<tr><td><code>table(name, data, columns=None)</code></td><td>a tree from a pandas DataFrame, a dict of arrays, a numpy structured array, or a 2D array (rows × columns) with <code>columns=[names]</code>, for <code>Project1D</code>, <code>Filter</code> and <code>Define</code>; numbers and bools keep their type, strings become <code>std::string</code>, other columns are skipped with a warning</td></tr>
 </tbody></table></div>
 <p class="small muted">Arrays of different length raise an error instead of giving a wrong object. In C++, create the ROOT objects as usual and pass their address.</p>` },
   { id: "adding", g: "data", t: "Adding data, functions and the frame", body: `<div class="code"><pre data-snip="adding"></pre></div>

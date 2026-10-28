@@ -51,6 +51,7 @@ def DefineDataSources(pm: PlotManager):
     # pm.AddDataSource("folder", "/path/to/folder/")                      # all files in a directory
     # pm.AddDataSource("local", SRC_DIR + "../rel/path/to/file.root")     # relative to this file
     # pm.AddDataSource("numbers", histo("myHist", [1.2, 3.4, 2.2]))       # histograms can be made in-memory, too
+    # pm.AddDataSource("frame", table("events", df))                      # and trees from a pandas DataFrame or a dict of arrays
 
 
 def DefineBasePlots(pm: PlotManager):

@@ -28,19 +28,27 @@
 #include <TH1.h>
 #include <TH2.h>
 #include <TSystem.h>
+#include <TTree.h>
 
 #include <pybind11/functional.h>
+#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
 #include <algorithm>
+#include <any>
 #include <array>
+#include <deque>
+#include <functional>
 #include <math.h>
+#include <memory>
 #include <numeric>
 #include <optional>
+#include <set>
 #include <string>
 #include <tuple>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "util/Binning.h"
@@ -829,78 +837,326 @@ void exportPythonDataInterfaces(py::module_& m)
     return result;
   };
 
-  auto graph = [bind_owned](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& xerr, const std::vector<double>& yerr) {
+  // the numbers of an argument: a numpy array is read in place (any numeric type), any other sequence is converted;
+  // numpy is only used when the program has loaded it, so plain lists work without numpy installed
+  struct Values {
+    py::array_t<double, py::array::c_style | py::array::forcecast> array;
+    vector<double> list;
+    const double* data() const { return array ? array.data() : list.data(); }
+    size_t size() const { return array ? static_cast<size_t>(array.size()) : list.size(); }
+  };
+  auto values = [](py::handle input, const string& what) {
+    Values v;
+    if (py::module_::import("sys").attr("modules").contains("numpy")) {
+      v.array = py::array_t<double, py::array::c_style | py::array::forcecast>::ensure(input);
+      if (!v.array || v.array.ndim() != 1) {
+        throw py::type_error("The " + what + " must be a one-dimensional sequence of numbers.");
+      }
+    } else {
+      try {
+        v.list = input.cast<vector<double>>();
+      } catch (const py::cast_error&) {
+        throw py::type_error("The " + what + " must be a sequence of numbers.");
+      }
+    }
+    return v;
+  };
+
+  auto weightsFor = [values](py::handle weights, size_t n) -> optional<Values> {
+    if (weights.is_none()) return nullopt;
+    Values w = values(weights, "weights");
+    if (w.size() != n) {
+      throw py::value_error("The weights must have as many entries as the values.");
+    }
+    return w;
+  };
+
+  // bins as for numpy.histogram: a number of bins or the bin edges
+  auto binning = [values](py::handle bins, const string& what) -> std::variant<int32_t, vector<double>> {
+    if (py::isinstance<py::sequence>(bins) && !py::isinstance<py::str>(bins)) {
+      const Values v = values(bins, what);
+      vector<double> edges(v.data(), v.data() + v.size());
+      if (edges.size() < 2 || std::adjacent_find(edges.begin(), edges.end(), std::greater_equal<>()) != edges.end()) {
+        throw py::value_error("The " + what + " must be at least two increasing bin edges.");
+      }
+      return edges;
+    }
+    int32_t n = 0;
+    try {
+      n = bins.cast<int32_t>();
+    } catch (const py::cast_error&) {
+      throw py::type_error("The " + what + " must be a number of bins or a sequence of bin edges.");
+    }
+    if (n < 1) {
+      throw py::value_error("The " + what + " must be at least 1.");
+    }
+    return n;
+  };
+
+  // the range of a number of bins: as given, or from the values
+  auto rangeFor = [](const optional<pair<double, double>>& range, const Values& v, const string& what) {
+    if (range) {
+      if (!(range->first < range->second)) {
+        throw py::value_error("The " + what + " range must have a lower end below the upper end.");
+      }
+      return *range;
+    }
+    if (v.size() == 0) {
+      throw py::value_error("No " + what + " values to take the range from: give a range or bin edges.");
+    }
+    auto [minIt, maxIt] = std::minmax_element(v.data(), v.data() + v.size());
+    return util::auto_axis_range(*minIt, *maxIt);
+  };
+
+  auto graph = [bind_owned, values](const string& name, py::object xValues, py::object yValues, py::object xErrors, py::object yErrors) {
+    const Values x = values(xValues, "x values");
+    const Values y = values(yValues, "y values");
     const auto n = x.size();
     if (y.size() != n) {
-      throw std::runtime_error("The x and y values must have the same length.");
+      throw py::value_error("The x and y values must have the same length.");
     }
-    if (!xerr.empty() && xerr.size() != n) {
-      throw std::runtime_error("The x errors (xerr) must have as many entries as the x values.");
-    }
-    if (!yerr.empty() && yerr.size() != n) {
-      throw std::runtime_error("The y errors (yerr) must have as many entries as the y values.");
-    }
-    auto* g = new TGraphErrors(static_cast<int>(n), x.data(), y.data(), xerr.empty() ? nullptr : xerr.data(), yerr.empty() ? nullptr : yerr.data());
+    auto errors = [&](py::handle e, const string& what) -> optional<Values> {
+      if (e.is_none()) return nullopt;
+      Values v = values(e, what);
+      if (v.size() != n) {
+        throw py::value_error("The " + what + " must have as many entries as the points.");
+      }
+      return v;
+    };
+    const auto xerr = errors(xErrors, "x errors (xerr)");
+    const auto yerr = errors(yErrors, "y errors (yerr)");
+    auto* g = new TGraphErrors(static_cast<int>(n), x.data(), y.data(), xerr ? xerr->data() : nullptr, yerr ? yerr->data() : nullptr);
     g->SetName(name.data());
     return bind_owned(reinterpret_cast<std::uintptr_t>(g), "TGraphErrors");
   };
 
-  auto histo = [bind_owned](const std::string& name, const std::vector<double>& v, int bins, py::object range) {
-    if (v.empty()) {
-      throw std::runtime_error("No values given.");
-    }
-    double xmin, xmax;
-    if (range.is_none()) {
-      auto [minIt, maxIt] = std::minmax_element(v.begin(), v.end());
-      std::tie(xmin, xmax) = util::auto_axis_range(*minIt, *maxIt);
+  auto histo = [=](const string& name, py::object xValues, py::object bins, py::object range, py::object weights) {
+    const Values x = values(xValues, "values");
+    const auto w = weightsFor(weights, x.size());
+    const auto spec = binning(bins, "bins");
+    TH1D* h = nullptr;
+    if (const auto* edges = std::get_if<vector<double>>(&spec)) {
+      if (!range.is_none()) logger::warning("Histogram {}: the range is not used, since bin edges are given.", name);
+      h = new TH1D(name.data(), "", static_cast<int>(edges->size()) - 1, edges->data());
     } else {
-      auto r = range.cast<std::pair<double, double>>();
-      xmin = r.first;
-      xmax = r.second;
+      const auto [min, max] = rangeFor(range.is_none() ? nullopt : optional(range.cast<pair<double, double>>()), x, "x");
+      h = new TH1D(name.data(), "", std::get<int32_t>(spec), min, max);
     }
-    auto* h = new TH1D(name.data(), "", bins, xmin, xmax);
     h->SetDirectory(nullptr);
-    for (double x : v) {
-      h->Fill(x);
-    }
+    if (w) h->Sumw2();
+    if (x.size()) h->FillN(static_cast<int>(x.size()), x.data(), w ? w->data() : nullptr);
     return bind_owned(reinterpret_cast<std::uintptr_t>(h), "TH1D");
   };
 
-  auto histo2d = [bind_owned](const std::string& name, const std::vector<double>& x, const std::vector<double>& y, py::object bins, py::object range) {
-    if (x.empty()) {
-      throw std::runtime_error("No values given.");
-    }
+  auto histo2d = [=](const string& name, py::object xValues, py::object yValues, py::object bins, py::object range, py::object weights) {
+    const Values x = values(xValues, "x values");
+    const Values y = values(yValues, "y values");
     if (x.size() != y.size()) {
-      throw std::runtime_error("The x and y values must have the same length.");
+      throw py::value_error("The x and y values must have the same length.");
     }
-    int nx = 50, ny = 50;
-    double xmin, xmax, ymin, ymax;
-    auto [minxIt, maxxIt] = std::minmax_element(x.begin(), x.end());
-    auto [minyIt, maxyIt] = std::minmax_element(y.begin(), y.end());
-    std::tie(xmin, xmax) = util::auto_axis_range(*minxIt, *maxxIt);
-    std::tie(ymin, ymax) = util::auto_axis_range(*minyIt, *maxyIt);
+    const auto w = weightsFor(weights, x.size());
+    // bins: 50 x 50 by default, one number for both axes, or one entry per axis (a number of bins or the edges)
+    py::object binsX = py::int_(50);
+    py::object binsY = py::int_(50);
     if (!bins.is_none()) {
-      auto b = bins.cast<std::pair<int, int>>();
-      nx = b.first;
-      ny = b.second;
+      if (py::isinstance<py::sequence>(bins) && !py::isinstance<py::str>(bins)) {
+        auto perAxis = py::reinterpret_borrow<py::sequence>(bins);
+        if (perAxis.size() != 2) {
+          throw py::value_error("The bins must be a number, (nx, ny) or (x edges, y edges).");
+        }
+        binsX = perAxis[0];
+        binsY = perAxis[1];
+      } else {
+        binsX = binsY = bins;
+      }
     }
+    optional<pair<double, double>> rangeX, rangeY;
     if (!range.is_none()) {
-      auto r = range.cast<std::pair<std::pair<double, double>, std::pair<double, double>>>();
-      xmin = r.first.first;
-      xmax = r.first.second;
-      ymin = r.second.first;
-      ymax = r.second.second;
+      std::tie(rangeX, rangeY) = range.cast<pair<pair<double, double>, pair<double, double>>>();
     }
-    auto* h = new TH2D(name.c_str(), "", nx, xmin, xmax, ny, ymin, ymax);
+    const auto specX = binning(binsX, "x bins");
+    const auto specY = binning(binsY, "y bins");
+    TH2D* h = nullptr;
+    if (std::holds_alternative<int32_t>(specX) && std::holds_alternative<int32_t>(specY)) {
+      const auto [xMin, xMax] = rangeFor(rangeX, x, "x");
+      const auto [yMin, yMax] = rangeFor(rangeY, y, "y");
+      h = new TH2D(name.data(), "", std::get<int32_t>(specX), xMin, xMax, std::get<int32_t>(specY), yMin, yMax);
+    } else {
+      // an axis given by a number of bins gets evenly spaced edges
+      auto edgesOf = [&](const std::variant<int32_t, vector<double>>& spec, const optional<pair<double, double>>& axisRange, const Values& v, const string& axis) {
+        if (const auto* edges = std::get_if<vector<double>>(&spec)) {
+          if (axisRange) logger::warning("Histogram {}: the {} range is not used, since {} bin edges are given.", name, axis, axis);
+          return *edges;
+        }
+        const auto [min, max] = rangeFor(axisRange, v, axis);
+        const int32_t n = std::get<int32_t>(spec);
+        vector<double> edges(n + 1);
+        for (int32_t i = 0; i <= n; ++i) {
+          edges[i] = min + (max - min) * i / n;
+        }
+        return edges;
+      };
+      const vector<double> edgesX = edgesOf(specX, rangeX, x, "x");
+      const vector<double> edgesY = edgesOf(specY, rangeY, y, "y");
+      h = new TH2D(name.data(), "", static_cast<int>(edgesX.size()) - 1, edgesX.data(), static_cast<int>(edgesY.size()) - 1, edgesY.data());
+    }
     h->SetDirectory(nullptr);
-    for (size_t i = 0; i < x.size(); ++i) {
-      h->Fill(x[i], y[i]);
-    }
-    h->SetName(name.c_str());
+    if (w) h->Sumw2();
+    if (x.size()) h->FillN(static_cast<int>(x.size()), x.data(), y.data(), w ? w->data() : nullptr);
     return bind_owned(reinterpret_cast<std::uintptr_t>(h), "TH2D");
   };
 
-  m.def("graph", graph, py::arg("name"), py::arg("x"), py::arg("y"), py::arg("xerr") = std::vector<double>{}, py::arg("yerr") = std::vector<double>{});
-  m.def("histo", histo, py::arg("name"), py::arg("values"), py::arg("bins") = 100, py::arg("range") = py::none());
-  m.def("histo2d", histo2d, py::arg("name"), py::arg("x"), py::arg("y"), py::arg("bins") = py::none(), py::arg("range") = py::none());
+  // a table as a tree, from a dict of arrays, a numpy structured array or a pandas DataFrame (anything with columns and item access),
+  // or from a 2D array (rows x columns, as pandas reads it) with the names given in columns:
+  // numbers and bools keep their type, strings become std::string branches, other columns are skipped with a warning
+  auto table = [bind_owned](const string& name, py::object data, py::object columnNames) {
+    py::module_ np;
+    try {
+      np = py::module_::import("numpy");
+    } catch (const py::error_already_set&) {
+      throw std::runtime_error("table() needs numpy.");
+    }
+    vector<pair<string, py::array>> columns;
+    auto add = [&](py::handle key, py::handle column) {
+      columns.emplace_back(py::str(key).cast<string>(), np.attr("asarray")(column).cast<py::array>());
+    };
+    const bool isDict = py::isinstance<py::dict>(data);
+    const bool isStructured = py::hasattr(data, "dtype") && py::hasattr(data.attr("dtype"), "names") && !data.attr("dtype").attr("names").is_none();
+    const bool isFrame = py::hasattr(data, "columns");
+    if (!columnNames.is_none()) {
+      if (isDict || isStructured || isFrame) {
+        throw py::type_error("columns= names the columns of an array without names; a dict, DataFrame or structured array has its own.");
+      }
+      vector<string> names;
+      try {
+        names = columnNames.cast<vector<string>>();
+      } catch (const py::cast_error&) {
+        throw py::type_error("columns= must be a list of names.");
+      }
+      auto matrix = np.attr("asarray")(data).cast<py::array>();
+      if (matrix.ndim() == 1 && names.size() == 1) {
+        columns.emplace_back(names[0], matrix);
+      } else if (matrix.ndim() != 2) {
+        throw py::value_error("columns= needs a 2D array (rows x columns), or a 1D array and one name.");
+      } else if (static_cast<size_t>(matrix.shape(1)) != names.size()) {
+        throw py::value_error("The array has " + std::to_string(matrix.shape(1)) + " columns, but " + std::to_string(names.size()) + " names are given.");
+      } else {
+        py::object byColumn = matrix.attr("T");
+        for (size_t i = 0; i < names.size(); ++i) {
+          add(py::str(names[i]), byColumn[py::int_(i)]);
+        }
+      }
+    } else if (isDict) {
+      for (auto [key, column] : py::reinterpret_borrow<py::dict>(data))
+        add(key, column);
+    } else if (isStructured) {
+      for (auto key : data.attr("dtype").attr("names"))
+        add(key, data[key]);
+    } else if (isFrame) {
+      for (auto key : data.attr("columns"))
+        add(key, data[key]);
+    } else {
+      throw py::type_error("A table must be a dict of arrays, a numpy structured array or a pandas DataFrame, or a 2D array with columns=[names].");
+    }
+
+    auto tree = std::make_unique<TTree>(name.data(), "");
+    tree->SetDirectory(nullptr);
+    std::deque<std::any> buffers;  // what the branches read when filling (a deque keeps the addresses)
+    vector<std::function<void(py::ssize_t)>> setters;
+    std::set<string> names;
+    py::ssize_t nRows = -1;
+    auto skip = [&](const string& column, const string& reason) {
+      logger::warning("Table {}: column '{}' is skipped ({}).", name, column, reason);
+    };
+    for (auto& [column, array] : columns) {
+      if (column.empty() || column.find_first_of("/[]:") != string::npos) {
+        skip(column, "a branch name cannot be empty or contain / [ ] :");
+        continue;
+      }
+      if (!names.insert(column).second) {
+        skip(column, "a column of the same name comes first");
+        continue;
+      }
+      if (array.ndim() != 1) {
+        skip(column, "only one value per row is supported");
+        continue;
+      }
+      if (nRows < 0) {
+        nRows = array.shape(0);
+      } else if (array.shape(0) != nRows) {
+        throw py::value_error("All columns of a table must have the same length.");
+      }
+      auto numeric = [&](auto zero, const char* leafType) {
+        using T = decltype(zero);
+        auto typed = py::array_t<T, py::array::forcecast>::ensure(array);
+        auto& buffer = std::any_cast<T&>(buffers.emplace_back(zero));
+        tree->Branch(column.data(), &buffer, (column + "/" + leafType).data());
+        setters.emplace_back([view = typed.template unchecked<1>(), typed, &buffer](py::ssize_t i) { buffer = view(i); });
+      };
+      // kind and size read from Python: older pybind11 reads them from the descriptor struct, whose layout changed with numpy 2
+      const char kind = array.dtype().attr("kind").cast<string>()[0];
+      const auto bytes = array.dtype().attr("itemsize").cast<int32_t>();
+      if (kind == 'f' && bytes == 8) {
+        numeric(double_t{}, "D");
+      } else if (kind == 'f' && bytes <= 4) {
+        numeric(float_t{}, "F");
+      } else if (kind == 'i' && bytes == 1) {
+        numeric(int8_t{}, "B");
+      } else if (kind == 'i' && bytes == 2) {
+        numeric(int16_t{}, "S");
+      } else if (kind == 'i' && bytes == 4) {
+        numeric(int32_t{}, "I");
+      } else if (kind == 'i' && bytes == 8) {
+        numeric(int64_t{}, "L");
+      } else if (kind == 'u' && bytes == 1) {
+        numeric(uint8_t{}, "b");
+      } else if (kind == 'u' && bytes == 2) {
+        numeric(uint16_t{}, "s");
+      } else if (kind == 'u' && bytes == 4) {
+        numeric(uint32_t{}, "i");
+      } else if (kind == 'u' && bytes == 8) {
+        numeric(uint64_t{}, "l");
+      } else if (kind == 'b') {
+        numeric(bool{}, "O");
+      } else if (kind == 'U' || kind == 'S' || kind == 'O') {
+        py::list items = array.attr("tolist")();
+        const bool strings = std::all_of(items.begin(), items.end(), [](py::handle item) { return py::isinstance<py::str>(item) || py::isinstance<py::bytes>(item); });
+        if (!strings) {
+          skip(column, "its values are neither numbers of one type nor all strings; convert it, e.g. with astype()");
+          continue;
+        }
+        auto& buffer = std::any_cast<string&>(buffers.emplace_back(string{}));
+        tree->Branch(column.data(), &buffer);
+        setters.emplace_back([items, &buffer](py::ssize_t i) { buffer = items[static_cast<size_t>(i)].cast<string>(); });
+      } else {
+        skip(column, "its type " + py::str(array.dtype()).cast<string>() + " is not supported");
+      }
+    }
+    if (setters.empty()) {
+      throw py::value_error("Table " + name + " has no column that can be stored.");
+    }
+    for (py::ssize_t i = 0; i < nRows; ++i) {
+      for (auto& set : setters)
+        set(i);
+      tree->Fill();
+    }
+    tree->ResetBranchAddresses();  // the buffers end here
+    return bind_owned(reinterpret_cast<std::uintptr_t>(tree.release()), "TTree");
+  };
+
+  m.def("graph", graph, "A TGraphErrors through the points (x, y), with optional errors, like matplotlib's errorbar.",
+        py::arg("name"), py::arg("x"), py::arg("y"), py::arg("xerr") = py::none(), py::arg("yerr") = py::none());
+  m.def("histo", histo,
+        "A TH1D filled with the values, like numpy.histogram: bins is a number (with the range taken from the values if not given) or the bin edges; "
+        "with weights the errors come from the sum of the squared weights.",
+        py::arg("name"), py::arg("values"), py::arg("bins") = 100, py::arg("range") = py::none(), py::arg("weights") = py::none());
+  m.def("histo2d", histo2d,
+        "A TH2D filled with the pairs (x, y), like numpy.histogram2d: bins is one number for both axes, (nx, ny) or (x edges, y edges), "
+        "where a number and edges can be mixed; range is ((x0, x1), (y0, y1)); optional weights.",
+        py::arg("name"), py::arg("x"), py::arg("y"), py::arg("bins") = py::none(), py::arg("range") = py::none(), py::arg("weights") = py::none());
+  m.def("table", table,
+        "A tree with one branch per column of a dict of arrays, a numpy structured array or a pandas DataFrame, or of a 2D array (rows x columns) "
+        "with the names in columns, to be used with Project1D, Filter, Define: "
+        "numbers and bools keep their type, strings become std::string, other columns are skipped with a warning.",
+        py::arg("name"), py::arg("data"), py::arg("columns") = py::none());
 }
