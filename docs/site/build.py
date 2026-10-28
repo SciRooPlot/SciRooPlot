@@ -9,7 +9,7 @@ import subprocess
 import sys
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 SITE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(SITE))
@@ -103,4 +103,15 @@ background = np.array([18.5, 25.0, 33.5])
 alpha = np.clip((np.abs(a[..., :3] - background).max(-1) - 10) / 45, 0, 1) * a[..., 3] / 255
 rgb = np.clip(background + (a[..., :3] - background) / np.where(alpha > 0, alpha, 1)[..., None], 0, 255)
 Image.fromarray(np.dstack([rgb, alpha * 255]).round().astype(np.uint8), "RGBA").save(f"{OUT}/img/brand/logo.png", optimize=True)
+# the icon of the browser tab (and of a bookmark on a phone's home screen): the bars and the wave of the logo without the name,
+# which is unreadable at 32 pixels, on a rounded tile of the logo's dark colour, so it stands out on light and dark tab bars
+emblem = logo.crop((235, 125, 1295, 640))
+for size, name in ((32, "favicon.png"), (180, "apple-touch-icon.png")):
+    s = 4 * size  # drawn larger and scaled down: smooth corners
+    tile = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    ImageDraw.Draw(tile).rounded_rectangle((0, 0, s - 1, s - 1), radius=s // 5, fill=(18, 25, 33, 255))
+    w = round(0.92 * s)
+    h = round(emblem.height * w / emblem.width)
+    tile.alpha_composite(emblem.resize((w, h), Image.LANCZOS), ((s - w) // 2, (s - h) // 2))
+    tile.resize((size, size), Image.LANCZOS).save(f"{OUT}/img/brand/{name}", optimize=True)
 print(f"{OUT}/index.html: {len(opts)} drawing options, {len(s) // 1024} kB")
