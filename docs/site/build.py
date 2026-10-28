@@ -107,11 +107,11 @@ Image.fromarray(np.dstack([rgb, alpha * 255]).round().astype(np.uint8), "RGBA").
 # which is unreadable at 32 pixels, on a rounded tile of the logo's dark colour, so it stands out on light and dark tab bars
 emblem = logo.crop((235, 125, 1295, 640))
 for size, name in ((32, "favicon.png"), (180, "apple-touch-icon.png")):
-    s = 4 * size  # drawn larger and scaled down: smooth corners
-    tile = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    ImageDraw.Draw(tile).rounded_rectangle((0, 0, s - 1, s - 1), radius=s // 5, fill=(18, 25, 33, 255))
-    w = round(0.92 * s)
+    drawn = 4 * size  # drawn larger and scaled down: smooth corners
+    tile = Image.new("RGBA", (drawn, drawn), (0, 0, 0, 0))
+    ImageDraw.Draw(tile).rounded_rectangle((0, 0, drawn - 1, drawn - 1), radius=drawn // 5, fill=(18, 25, 33, 255))
+    w = round(0.92 * drawn)
     h = round(emblem.height * w / emblem.width)
-    tile.alpha_composite(emblem.resize((w, h), Image.LANCZOS), ((s - w) // 2, (s - h) // 2))
+    tile.alpha_composite(emblem.resize((w, h), Image.LANCZOS), ((drawn - w) // 2, (drawn - h) // 2))
     tile.resize((size, size), Image.LANCZOS).save(f"{OUT}/img/brand/{name}", optimize=True)
 print(f"{OUT}/index.html: {len(opts)} drawing options, {len(s) // 1024} kB")
