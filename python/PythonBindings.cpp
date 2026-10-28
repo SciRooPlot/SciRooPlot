@@ -1068,7 +1068,9 @@ void exportPythonDataInterfaces(py::module_& m)
     auto skip = [&](const string& column, const string& reason) {
       logger::warning("Table {}: column '{}' is skipped ({}).", name, column, reason);
     };
-    for (auto& [column, array] : columns) {
+    for (auto& entry : columns) {
+      const auto& column = entry.first;  // plain references: lambdas cannot capture structured bindings in C++17
+      const auto& array = entry.second;
       if (column.empty() || column.find_first_of("/[]:") != string::npos) {
         skip(column, "a branch name cannot be empty or contain / [ ] :");
         continue;
