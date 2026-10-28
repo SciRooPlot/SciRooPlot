@@ -290,6 +290,7 @@ html, body { overflow-x: clip }
 .palsw[aria-pressed="true"] { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal) }
 .stops { display: grid; gap: 6px }
 .stop { display: flex; gap: 10px; align-items: center }
+#cpick { width: 38px; height: 26px; border: 1px solid var(--hairline); border-radius: 6px; padding: 0; background: none }
 .stop input[type=color] { width: 38px; height: 26px; border: 1px solid var(--hairline); border-radius: 6px; padding: 0; background: none }
 .stop b { min-width: 1.2em; color: var(--muted); font-size: 0.8rem; text-align: right }
 .stop output { font-family: var(--mono); font-size: 0.8rem; min-width: 3em }
@@ -657,9 +658,9 @@ figure.plot figcaption { color: #5b6b80 }
     <div style="display:grid;gap:16px;min-width:0">
       <fieldset>
         <legend>Colour</legend>
-        <div class="row"><label for="cname">Look up</label><input id="cname" type="text" value="kMagenta + 2" spellcheck="false" aria-describedby="cmsg"><span id="cmsg" class="muted"></span></div>
+        <div class="row"><label for="cname">Look up</label><input id="cname" type="text" value="kMagenta + 2" spellcheck="false" aria-describedby="cmsg"><label>or pick any colour <input id="cpick" type="color" value="#cc00cc" aria-label="pick any colour"></label><span id="cmsg" class="muted"></span></div>
         <div class="wheel" id="wheel"></div>
-        <p class="small muted">This is ROOT's whole colour wheel. Its uneven shape is ROOT's own: the six primary colours go from −10 to +4, the six mixed ones (<code>kOrange</code> … <code>kPink</code>) from −9 to +10, and there are four greys. ROOT's older numbered colours (e.g. 28, a brown) work as numbers too. <code>srp colorwheel</code> shows the wheel as ROOT draws it, naming the colour under the mouse; <code>AddColorOverview</code> with a list of colours draws your own as a plot.</p>
+        <p class="small muted">This is ROOT's whole colour wheel. Its uneven shape is ROOT's own: the six primary colours go from −10 to +4, the six mixed ones (<code>kOrange</code> … <code>kPink</code>) from −9 to +10, and there are four greys. ROOT's older numbered colours (e.g. 28, a brown) work as numbers too. Any other colour works as <code>"#rrggbb"</code> or as red, green and blue from 0 to 1, <code>(0.12, 0.47, 0.71)</code>: pick it with the colour field (most browsers offer a pipette there) or type it into <i>Look up</i>. <code>srp colorwheel</code> shows the wheel as ROOT draws it, naming the colour under the mouse; <code>AddColorOverview</code> with a list of colours draws your own as a plot.</p>
       </fieldset>
       <fieldset>
         <legend>Line style</legend>
@@ -1235,6 +1236,19 @@ function renderSteps() {
 
 /* ---------------- style lab */
 const lab = { color: "kMagenta + 2", line: 3, marker: 20, fill: 1001 };
+// a colour of the lab: a ROOT colour (name or index), "#rrggbb" or (r, g, b) / {r, g, b} from 0 to 1
+function labColorOf(text) {
+  const c = colorOf(text); if (c) return { hex: c.hex, root: c };
+  const s = String(text).trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(s)) return { hex: s.toLowerCase() };
+  const m = s.match(/^[({]?\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*[)}]?$/);
+  if (m) { const v = m.slice(1, 4).map(Number); if (v.every(x => x >= 0 && x <= 1)) return { hex: "#" + v.map(x => Math.round(x * 255).toString(16).padStart(2, "0")).join(""), rgb: v } }
+  return null }
+// the colour of ROOT's wheel closest to a hex colour (distance in rgb)
+function nearestRoot(hex) {
+  const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), t = rgb(hex); let best = null, bd = Infinity;
+  for (const [b, c] of Object.entries(COLORS)) for (const [o, h] of Object.entries(c.s)) { const d = rgb(h).reduce((a, x, i) => a + (x - t[i]) ** 2, 0); if (d < bd) { bd = d; best = { base: b, off: +o, hex: h } } }
+  return best }
 function markerSVG(n, x, y, r, col, sw = 1.2) { // r: radius of marker size 1 in drawing units
   const fixed = { 1: 0.5, 6: 1.1, 7: 1.8 }[n]; if (fixed) return `<circle cx="${x}" cy="${y}" r="${fixed * Math.max(1, r / 4)}" fill="${col}"/>`;
   return (MK[n] || []).map(([kind, d, filled]) => {
@@ -1258,7 +1272,7 @@ function fillDefs(id, n, col, alpha, bit = 1.5, unit = 1) {
 const fillName = n => { const f = FILLS.find(x => x[0] === n); return f ? (f[1] || "") : "" };
 const fillCode = n => fillName(n) || String(n);
 function labRender() {
-  const c = colorOf(lab.color) || colorOf("kMagenta + 2"), col = c.hex, lw = +document.getElementById("lw").value, ms = +document.getElementById("ms").value, fa = +document.getElementById("fa").value;
+  const lc = labColorOf(lab.color) || labColorOf("kMagenta + 2"), col = lc.hex, lw = +document.getElementById("lw").value, ms = +document.getElementById("ms").value, fa = +document.getElementById("fa").value;
   document.getElementById("lwo").textContent = lw; document.getElementById("mso").textContent = ms; document.getElementById("fao").textContent = fa;
   const L = LINES.find(l => l[0] === lab.line), dash = L[2] ? L[2].split(" ").map(v => v * Math.max(0.5, lw / 2.5)).join(" ") : "";
   // a falling spectrum with a band, on a little ROOT-like frame
@@ -1274,13 +1288,16 @@ function labRender() {
     <text x="318" y="242" text-anchor="end" font-family="Arial, sans-serif" font-size="13" fill="#000">x</text>`;
   const M = MARKERS.find(m => m[0] === lab.marker), Ln = L[1] || String(L[0]);
   const num = v => lang === "py" ? (Number.isInteger(v) ? v.toFixed(1) : String(v)) : (Number.isInteger(v) ? v + "." : String(v)), end = lang === "py" ? "" : ";";
-  const cn = cname(c);
+  // a ROOT colour by its name, any other as "#rrggbb" or as the (r, g, b) the user typed
+  const cn = lc.root ? cname(lc.root) : lc.rgb ? (lang === "py" ? `(${lc.rgb.join(", ")})` : `{${lc.rgb.join(", ")}}`) : `"${lc.hex}"`;
+  document.getElementById("cpick").value = col;
   fill(document.getElementById("labcode"), `plot[1].AddData("hist", "src", "label")
     .SetLine(${cn}, ${Ln}, ${num(lw)})
     .SetMarker(${cn}, ${M[1] || M[0]}, ${num(ms)})
     .SetFill(${cn}, ${fillCode(lab.fill)})
     .SetFillAlpha(${fa})${end}`, lang);
-  document.getElementById("facts").innerHTML = `<span><b>${cn}</b> = colour ${c.index}, ${col}</span><span><b>${Ln}</b> = line style ${L[0]}</span><span><b>${M[1] || M[0]}</b> = marker style ${M[0]}${[1, 6, 7].includes(M[0]) ? " (fixed size, ignores the marker size)" : ""}</span><span><b>${fillCode(lab.fill)}</b> = fill style ${lab.fill}${lab.fill > 3100 ? ` (hatches: spacing ${Math.floor(lab.fill / 100) % 10}, angles ${[HATCH_J[Math.floor(lab.fill / 10) % 10], HATCH_K[lab.fill % 10]].filter(a => a !== undefined).join("° and ") || "none"}${[HATCH_J[Math.floor(lab.fill / 10) % 10], HATCH_K[lab.fill % 10]].some(a => a !== undefined) ? "°" : ""})` : ""}</span>`;
+  const near = lc.root ? null : nearestRoot(col);
+  document.getElementById("facts").innerHTML = `<span>${lc.root ? `<b>${cn}</b> = colour ${lc.root.index}, ${col}` : `<b>${col}</b>: an own colour, ROOT gets an index for it when the plot is drawn (closest on ROOT's wheel: <code>${cname(near)}</code>)`}</span><span><b>${Ln}</b> = line style ${L[0]}</span><span><b>${M[1] || M[0]}</b> = marker style ${M[0]}${[1, 6, 7].includes(M[0]) ? " (fixed size, ignores the marker size)" : ""}</span><span><b>${fillCode(lab.fill)}</b> = fill style ${lab.fill}${lab.fill > 3100 ? ` (hatches: spacing ${Math.floor(lab.fill / 100) % 10}, angles ${[HATCH_J[Math.floor(lab.fill / 10) % 10], HATCH_K[lab.fill % 10]].filter(a => a !== undefined).join("° and ") || "none"}${[HATCH_J[Math.floor(lab.fill / 10) % 10], HATCH_K[lab.fill % 10]].some(a => a !== undefined) ? "°" : ""})` : ""}</span>`;
   document.querySelectorAll("#wheel button").forEach(b => b.setAttribute("aria-pressed", b.dataset.c === cn));
   document.querySelectorAll("#lines .chip").forEach(b => b.setAttribute("aria-pressed", +b.dataset.v === lab.line));
   document.querySelectorAll("#markers .tile").forEach(b => b.setAttribute("aria-pressed", +b.dataset.v === lab.marker));
@@ -1295,7 +1312,9 @@ function labInit() {
       h += `<button style="background:${hex}${hex === "#ffffff" ? ";box-shadow:inset 0 0 0 1px var(--rule)" : ""}" data-c="${n}" title="${n}" aria-label="${n}"></button>` } }
   w.innerHTML = h;
   w.onclick = e => { const b = e.target.closest("button"); if (b) { lab.color = b.dataset.c; document.getElementById("cname").value = b.dataset.c; document.getElementById("cmsg").textContent = ""; labRender() } };
-  document.getElementById("cname").oninput = e => { const c = colorOf(e.target.value); document.getElementById("cmsg").textContent = c ? "" : "Not a colour of ROOT's wheel. Try kAzure - 9 or 857."; if (c) { lab.color = cname(c); labRender() } };
+  document.getElementById("cname").oninput = e => { const c = labColorOf(e.target.value); document.getElementById("cmsg").textContent = c ? "" : "Not a colour. Try kAzure - 9, 857, #1f77b4 or (0.12, 0.47, 0.71)."; if (c) { lab.color = c.root ? cname(c.root) : e.target.value.trim(); labRender() } };
+  document.getElementById("cpick").oninput = e => { const near = nearestRoot(e.target.value);  // a colour of ROOT's wheel keeps its name
+    lab.color = (near.hex === e.target.value) ? cname(near) : e.target.value; document.getElementById("cname").value = lab.color; document.getElementById("cmsg").textContent = ""; labRender() };
   const chip = (v, svg, label) => `<button class="chip" data-v="${v}">${svg}<span>${label}</span></button>`;
   document.getElementById("lines").innerHTML = LINES.map(l => chip(l[0], `<svg width="40" height="10" aria-hidden="true"><path d="M0 5H40" stroke="currentColor" stroke-width="2" stroke-dasharray="${l[2] ? l[2].split(" ").map(v => v * 0.5).join(" ") : ""}"/></svg>`, l[1] ? `${l[1]} (${l[0]})` : l[0])).join("");
   const tile = (v, svg, label, title) => `<button class="tile" data-v="${v}" title="${title}" aria-label="${title}">${svg}<span>${label}</span></button>`;
