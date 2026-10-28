@@ -1021,13 +1021,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
           }
 
-          if (auto minScale = data->GetScaleMinimum()) {
-            axisHist_ptr->SetMinimum((*minScale) * axisHist_ptr->GetMinimum());
-          }
-          if (auto maxScale = data->GetScaleMaximum()) {
-            axisHist_ptr->SetMaximum((*maxScale) * axisHist_ptr->GetMaximum());
-          }
-
           if (isTHN) {
             // reset the axis histogram which owns the z axis, while keeping default range defined by the data
             double_t min = axisHist_ptr->GetMinimum();
@@ -2115,6 +2108,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (fail) {
       return nullptr;
     }
+    if (axisHist_ptr && !pad_ptr->GetView()) AddAxisRoom(pad_ptr, axisHist_ptr, padDefaults, pad, padID, (hasRefFunc) ? drawData[1].get() : nullptr, padSetup);
     // the placement of the boxes below relies on the painted data (painting creates e.g. the palette of a colour plot):
     // the pad is updated once for all data, since every update repaints everything drawn so far
     pad_ptr->Update();
@@ -2340,6 +2334,340 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   canvas_ptr->Modified();
   canvas_ptr->Update();
   return canvas_ptr;
+}
+
+//**************************************************************************************************
+/**
+ * Room beyond the drawn data (Axis::SetRoomAboveMax/SetRoomBelowMin), applied once all data of a pad are drawn and before the pad is painted:
+ * the frame gets the range in which the requested fraction of it stays free beyond the data (in decades on a log axis).
+ * The room is free of all data of the pad: along a binned axis (x, y of 2d) everything the data would show without the frame (histograms
+ * within their own data range, all points of graphs), along the value axis (y of 1d, z of 2d) all values within the final ranges of the
+ * binned axes, which are set first; error bars count where ROOT counts them for its automatic range (histograms drawn with E, graphs).
+ * Histograms, cut at the frame while they were drawn, are cut at the new one. The reference function is a guide, not data, and functions
+ * given as formula span the frame: neither counts, both are stretched to a new frame. Functions from inputs and histograms drawn with a
+ * clipped alias count as drawn (within the automatic frame).
+ */
+//**************************************************************************************************
+void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefaults, const Plot::Pad& padSettings, uint8_t padID, const Plot::Pad::Data* refFunc, string& padSetup)
+{
+  const bool is2d = frame->GetDimension() > 1;
+  const char valueAxis = (is2d) ? 'Z' : 'Y';
+  struct room_t {
+    char axisLabel;
+    optional<double_t> below;
+    optional<double_t> above;
+  };
+  vector<room_t> rooms;  // in the order X, Y, Z: the binned axes before the value axis
+  for (char axisLabel : {'X', 'Y', 'Z'}) {
+    room_t room{axisLabel, {}, {}};
+    optional<double_t> userMin, userMax;
+    for (const Plot::Pad& curPad : {std::cref(padDefaults), std::cref(padSettings)}) {  // settings of the pad override those of pad 0
+      auto axis = curPad.GetAxes().find(axisLabel);
+      if (axis == curPad.GetAxes().end()) continue;
+      if (axis->second.GetRoomBelowMin()) room.below = axis->second.GetRoomBelowMin();
+      if (axis->second.GetRoomAboveMax()) room.above = axis->second.GetRoomAboveMax();
+      if (axis->second.GetMinRange()) userMin = axis->second.GetMinRange();
+      if (axis->second.GetMaxRange()) userMax = axis->second.GetMaxRange();
+    }
+    if (!room.below && !room.above) continue;
+    if (axisLabel == 'Z' && !is2d) {
+      logger::warning("Room on the Z axis of pad {} ignored: the pad has no z axis.", padID);
+      continue;
+    }
+    if (room.below && userMin) {
+      logger::warning("Room below the minimum of the {} axis of pad {} ignored: its minimum is set explicitly.", axisLabel, padID);
+      room.below.reset();
+    }
+    if (room.above && userMax) {
+      logger::warning("Room above the maximum of the {} axis of pad {} ignored: its maximum is set explicitly.", axisLabel, padID);
+      room.above.reset();
+    }
+    if (!room.below && !room.above) continue;
+    if (room.below.value_or(0.) + room.above.value_or(0.) >= 1.) {
+      logger::warning("Room on the {} axis of pad {} ignored: room below and above add up to {:g} of the frame.", axisLabel, padID, room.below.value_or(0.) + room.above.value_or(0.));
+      continue;
+    }
+    if (axisLabel != valueAxis && ((axisLabel == 'X') ? frame->GetXaxis() : frame->GetYaxis())->GetLabels()) {
+      logger::warning("Room on the {} axis of pad {} ignored: an axis with bin labels cannot be widened.", axisLabel, padID);
+      continue;
+    }
+    rooms.push_back(room);
+  }
+  if (rooms.empty()) return;
+
+  auto isLogAxis = [pad](char axisLabel) { return (axisLabel == 'X') ? pad->GetLogx() : ((axisLabel == 'Y') ? pad->GetLogy() : pad->GetLogz()); };
+  // the ranges drawn so far: those of the frame, painted when it was set up (data drawn on top do not change them)
+  double_t xMin{}, yMin{}, xMax{}, yMax{};
+  pad->GetRangeAxis(xMin, yMin, xMax, yMax);
+  if (pad->GetLogx()) {
+    xMin = TMath::Power(10., xMin);
+    xMax = TMath::Power(10., xMax);
+  }
+  if (pad->GetLogy()) {
+    yMin = TMath::Power(10., yMin);
+    yMax = TMath::Power(10., yMax);
+  }
+  // functions given as formula in the plot definition span the frame along the axes without a range of their own
+  auto spansFrame = [](const Plot::Pad::Data& data, char axisLabel) {
+    if (data.GetDataSource() != "USER_FUNCTIONS") return false;
+    return (axisLabel == 'X') ? !data.GetMinRangeX() && !data.GetMaxRangeX() : !data.GetMinRangeY() && !data.GetMaxRangeY();
+  };
+
+  // extent of the drawn data along an axis
+  auto dataExtent = [&](char axisLabel) -> optional<std::pair<double_t, double_t>> {
+    const bool isLog = isLogAxis(axisLabel);
+    double_t lowest = std::numeric_limits<double_t>::infinity();
+    double_t highest = -std::numeric_limits<double_t>::infinity();
+    auto add = [&](double_t low, double_t value, double_t high) {
+      if (!std::isfinite(value)) return;
+      if (isLog) {
+        if (value <= 0.) return;  // not drawn on a log axis
+        if (low <= 0.) low = value;
+      }
+      lowest = std::min(lowest, low);
+      highest = std::max(highest, high);
+    };
+    auto inX = [&](double_t low, double_t up) { return up >= xMin && low <= xMax; };
+    auto inY = [&](double_t low, double_t up) { return up >= yMin && low <= yMax; };
+    auto addHist1d = [&](const TH1* hist, bool withErrors) {
+      const TAxis* xAxis = hist->GetXaxis();
+      for (int32_t bin = xAxis->GetFirst(); bin <= xAxis->GetLast(); ++bin) {
+        const double_t low = xAxis->GetBinLowEdge(bin);
+        const double_t up = xAxis->GetBinUpEdge(bin);
+        if (axisLabel == 'X') {
+          add(low, xAxis->GetBinCenter(bin), up);
+        } else if (inX(low, up)) {
+          const double_t content = hist->GetBinContent(bin);
+          const double_t error = (withErrors) ? hist->GetBinError(bin) : 0.;
+          add(content - error, content, content + error);
+        }
+      }
+    };
+    TIter next(pad->GetListOfPrimitives());
+    while (TObject* obj = next()) {
+      auto definition = mDataDefinitions.find(obj);
+      if (obj == frame || definition == mDataDefinitions.end() || definition->second.get() == refFunc) continue;
+      const Plot::Pad::Data& data = *definition->second;
+      if (auto* hist = dynamic_cast<TH1*>(obj)) {
+        if (hist->GetDimension() == 1) {
+          TString option = next.GetOption();
+          option.ToUpper();
+          option.ReplaceAll("SAME", "");
+          option.ReplaceAll("TEXT", "");
+          if (axisLabel != 'Z') addHist1d(hist, option.Contains("E"));
+        } else if (auto* poly = dynamic_cast<TH2Poly*>(hist)) {
+          for (TObject* binObj : *poly->GetBins()) {
+            auto* bin = static_cast<TH2PolyBin*>(binObj);
+            if (axisLabel == 'X') {
+              add(bin->GetXMin(), 0.5 * (bin->GetXMin() + bin->GetXMax()), bin->GetXMax());
+            } else if (axisLabel == 'Y') {
+              add(bin->GetYMin(), 0.5 * (bin->GetYMin() + bin->GetYMax()), bin->GetYMax());
+            } else if (inX(bin->GetXMin(), bin->GetXMax()) && inY(bin->GetYMin(), bin->GetYMax())) {
+              add(bin->GetContent(), bin->GetContent(), bin->GetContent());
+            }
+          }
+        } else if (hist->GetDimension() == 2) {
+          const TAxis* xAxis = hist->GetXaxis();
+          const TAxis* yAxis = hist->GetYaxis();
+          if (axisLabel == 'X') {
+            add(xAxis->GetBinLowEdge(xAxis->GetFirst()), xAxis->GetBinCenter(xAxis->GetFirst()), xAxis->GetBinUpEdge(xAxis->GetLast()));
+          } else if (axisLabel == 'Y') {
+            add(yAxis->GetBinLowEdge(yAxis->GetFirst()), yAxis->GetBinCenter(yAxis->GetFirst()), yAxis->GetBinUpEdge(yAxis->GetLast()));
+          } else {
+            for (int32_t binX = xAxis->GetFirst(); binX <= xAxis->GetLast(); ++binX) {
+              if (!inX(xAxis->GetBinLowEdge(binX), xAxis->GetBinUpEdge(binX))) continue;
+              for (int32_t binY = yAxis->GetFirst(); binY <= yAxis->GetLast(); ++binY) {
+                if (!inY(yAxis->GetBinLowEdge(binY), yAxis->GetBinUpEdge(binY))) continue;
+                const double_t content = hist->GetBinContent(binX, binY);
+                add(content, content, content);
+              }
+            }
+          }
+        }
+      } else if (auto* graph = dynamic_cast<TGraph*>(obj)) {
+        // a histogram drawn with a clipped alias is a graph of steps down to far below the frame: its bins count
+        if (auto source = mSourceHists.find(obj); source != mSourceHists.end() && graph->IsA() == TGraph::Class()) {
+          if (axisLabel != 'Z') addHist1d(source->second.get(), false);
+          continue;
+        }
+        for (int32_t i = 0; i < graph->GetN(); ++i) {
+          const double_t x = graph->GetPointX(i);
+          const double_t y = graph->GetPointY(i);
+          if (axisLabel == 'X') {
+            add(x - std::max(graph->GetErrorXlow(i), 0.), x, x + std::max(graph->GetErrorXhigh(i), 0.));  // -1 for graphs without errors
+          } else if (axisLabel == 'Y' && (is2d || inX(x, x))) {
+            // y of a 2d pad is binned (all points), y of a 1d pad the value axis (points within the x range)
+            add(y - std::max(graph->GetErrorYlow(i), 0.), y, y + std::max(graph->GetErrorYhigh(i), 0.));
+          }
+        }
+      } else if (auto* graph2d = dynamic_cast<TGraph2D*>(obj)) {
+        for (int32_t i = 0; i < graph2d->GetN(); ++i) {
+          const double_t x = graph2d->GetX()[i];
+          const double_t y = graph2d->GetY()[i];
+          const double_t z = graph2d->GetZ()[i];
+          if (axisLabel == 'X') {
+            add(x, x, x);
+          } else if (axisLabel == 'Y') {
+            add(y, y, y);
+          } else if (axisLabel == 'Z' && inX(x, x) && inY(y, y)) {
+            const double_t error = std::max(graph2d->GetErrorZ(i), 0.);  // -1 for graphs without errors
+            add(z - error, z, z + error);
+          }
+        }
+      } else if (auto* func = dynamic_cast<TF1*>(obj)) {
+        const double_t from = std::max(func->GetXmin(), xMin);
+        const double_t to = std::min(func->GetXmax(), xMax);
+        if (func->GetNdim() == 1) {
+          if (axisLabel == 'X') {
+            if (!spansFrame(data, 'X')) add(func->GetXmin(), 0.5 * (func->GetXmin() + func->GetXmax()), func->GetXmax());
+          } else if (axisLabel == 'Y') {
+            const int32_t nPoints = std::max(func->GetNpx(), 2);
+            for (int32_t i = 0; i < nPoints && from < to; ++i) {
+              const double_t value = func->Eval(from + (to - from) * i / (nPoints - 1));
+              add(value, value, value);
+            }
+          }
+        } else if (auto* func2d = dynamic_cast<TF2*>(func); func2d && func->GetNdim() == 2) {
+          if (axisLabel == 'X') {
+            if (!spansFrame(data, 'X')) add(func2d->GetXmin(), 0.5 * (func2d->GetXmin() + func2d->GetXmax()), func2d->GetXmax());
+          } else if (axisLabel == 'Y') {
+            if (!spansFrame(data, 'Y')) add(func2d->GetYmin(), 0.5 * (func2d->GetYmin() + func2d->GetYmax()), func2d->GetYmax());
+          } else {
+            const double_t fromY = std::max(func2d->GetYmin(), yMin);
+            const double_t toY = std::min(func2d->GetYmax(), yMax);
+            const int32_t nX = std::max(func2d->GetNpx(), 2);
+            const int32_t nY = std::max(func2d->GetNpy(), 2);
+            for (int32_t i = 0; i < nX && from < to; ++i) {
+              for (int32_t j = 0; j < nY && fromY < toY; ++j) {
+                const double_t value = func2d->Eval(from + (to - from) * i / (nX - 1), fromY + (toY - fromY) * j / (nY - 1));
+                add(value, value, value);
+              }
+            }
+          }
+        }
+      }
+    }
+    if (lowest > highest) return {};
+    return std::make_pair(lowest, highest);
+  };
+
+  // the histograms of the pad were cut at the frame along its binned axes: for the extent they get back their own data range,
+  // and afterwards they are cut at the frame again, whether it changed or not (candles and violins are not cut along their distribution)
+  auto dataHists = [&](char axisLabel) {
+    vector<std::pair<TH1*, const Plot::Pad::Data*>> hists;
+    TIter next(pad->GetListOfPrimitives());
+    while (TObject* obj = next()) {
+      auto* hist = dynamic_cast<TH1*>(obj);
+      auto definition = mDataDefinitions.find(obj);
+      if (!hist || hist == frame || definition == mDataDefinitions.end() || (axisLabel == 'Y' && hist->GetDimension() < 2)) continue;
+      TString option = next.GetOption();
+      option.ToUpper();
+      const bool isCandle = option.Contains("CANDLE") || option.Contains("VIOLIN");
+      if (isCandle && ((option.Contains("CANDLEY") || option.Contains("VIOLINY")) == (axisLabel == 'X'))) continue;
+      hists.emplace_back(hist, definition->second.get());
+    }
+    return hists;
+  };
+
+  for (const auto& room : rooms) {
+    const char axisLabel = room.axisLabel;
+    const bool isBinned = (axisLabel != valueAxis);
+    const auto cutHists = (isBinned) ? dataHists(axisLabel) : vector<std::pair<TH1*, const Plot::Pad::Data*>>{};
+    for (auto& [hist, data] : cutHists) {
+      TAxis* histAxis = (axisLabel == 'X') ? hist->GetXaxis() : hist->GetYaxis();
+      histAxis->SetRange();
+      if (axisLabel == 'X') {
+        SetBinRange(histAxis, data->GetMinRangeX(), data->GetMaxRangeX());
+      } else {
+        SetBinRange(histAxis, data->GetMinRangeY(), data->GetMaxRangeY());
+      }
+    }
+    auto cutAtFrame = make_scope_guard([&, axisLabel]() {
+      for (auto& [hist, data] : cutHists) {
+        TAxis* histAxis = (axisLabel == 'X') ? hist->GetXaxis() : hist->GetYaxis();
+        LimitToFrame(histAxis, (axisLabel == 'X') ? frame->GetXaxis() : frame->GetYaxis());
+        // the setup of the pad restores the range of data with a range of its own after an interactive zoom: with the range cut at this frame
+        const bool hasRange = (axisLabel == 'X') ? (data->GetMinRangeX() || data->GetMaxRangeX()) : (data->GetMinRangeY() || data->GetMaxRangeY());
+        if (!hasRange) continue;
+        string name = hist->GetName();
+        for (size_t pos = name.find_first_of("\\\""); pos != string::npos; pos = name.find_first_of("\\\"", pos + 2)) {
+          name.insert(pos, 1, '\\');
+        }
+        padSetup += fmt::format(" if (auto* h = dynamic_cast<TH1*>(gPad->GetPrimitive(\"{}\"))) {{ h->Get{}axis()->SetRange({}, {}); }}", name, axisLabel, histAxis->GetFirst(), histAxis->GetLast());
+      }
+    });
+    const auto extent = dataExtent(axisLabel);
+    if (!extent) continue;  // nothing drawn to leave room around
+    const bool isLog = isLogAxis(axisLabel);
+    auto toFrame = [isLog](double_t value) { return (isLog) ? std::log10(value) : value; };
+    auto fromFrame = [isLog](double_t value) { return (isLog) ? TMath::Power(10., value) : value; };
+    const double_t curMin = (axisLabel == 'X') ? xMin : ((axisLabel == 'Y') ? yMin : frame->GetMinimum());
+    const double_t curMax = (axisLabel == 'X') ? xMax : ((axisLabel == 'Y') ? yMax : frame->GetMaximum());
+    if (isLog && !(curMin > 0. && curMax > 0.)) continue;
+
+    // the data take up the rest of the frame: (max - dataMax) = above * (max - min), (dataMin - min) = below * (max - min);
+    // a side without room keeps its value
+    const double_t dataMin = toFrame(extent->first);
+    const double_t dataMax = toFrame(extent->second);
+    double_t frameMin = toFrame(curMin);
+    double_t frameMax = toFrame(curMax);
+    if (room.below && room.above) {
+      const double_t length = (dataMax - dataMin) / (1. - *room.below - *room.above);
+      frameMin = dataMin - *room.below * length;
+      frameMax = dataMax + *room.above * length;
+    } else if (room.above) {
+      frameMax = (dataMax - *room.above * frameMin) / (1. - *room.above);
+    } else {
+      frameMin = (dataMin - *room.below * frameMax) / (1. - *room.below);
+    }
+    if (!(frameMin < frameMax)) {
+      logger::warning("Room on the {} axis of pad {} ignored: the drawn data leave no valid range.", axisLabel, padID);
+      continue;
+    }
+    const double_t newMin = fromFrame(frameMin);
+    const double_t newMax = fromFrame(frameMax);
+
+    if (axisLabel == valueAxis) {
+      if (!is2d) {
+        // 1d histograms are drawn from the lower edge of the frame (their stored minimum): it moves along
+        for (TObject* obj : *pad->GetListOfPrimitives()) {
+          auto* hist = dynamic_cast<TH1*>(obj);
+          if (hist && hist != frame && hist->GetDimension() == 1 && TMath::AreEqualRel(hist->GetMinimumStored(), curMin, 1e-9)) hist->SetMinimum(newMin);
+        }
+        yMin = newMin;
+        yMax = newMax;
+      }
+      frame->SetMinimum(newMin);
+      frame->SetMaximum(newMax);
+      continue;
+    }
+    // a binned axis: the contents of the frame only matter for the automatic range of a 1d frame, which is kept as drawn;
+    // its bins are then replaced by bins spanning the new range (data drawn on top are placed by the coordinates of the pad, not by these bins)
+    if (!is2d) {
+      if (frame->GetMinimumStored() == -1111) frame->SetMinimum(yMin);
+      if (frame->GetMaximumStored() == -1111) frame->SetMaximum(yMax);
+    }
+    TAxis* axis = (axisLabel == 'X') ? frame->GetXaxis() : frame->GetYaxis();
+    axis->Set(axis->GetNbins(), newMin, newMax);
+    axis->SetRange();
+    ((axisLabel == 'X') ? xMin : yMin) = newMin;
+    ((axisLabel == 'X') ? xMax : yMax) = newMax;
+    for (TObject* obj : *pad->GetListOfPrimitives()) {
+      auto* func = dynamic_cast<TF1*>(obj);
+      auto definition = mDataDefinitions.find(obj);
+      if (!func || definition == mDataDefinitions.end()) continue;
+      if (definition->second.get() != refFunc && !spansFrame(*definition->second, axisLabel)) continue;
+      if (func->GetNdim() == 1 && axisLabel == 'X') {
+        func->SetRange(newMin, newMax);
+      } else if (auto* func2d = dynamic_cast<TF2*>(func); func2d && func->GetNdim() == 2) {
+        double_t x1{}, y1{}, x2{}, y2{};
+        func2d->GetRange(x1, y1, x2, y2);
+        ((axisLabel == 'X') ? x1 : y1) = newMin;
+        ((axisLabel == 'X') ? x2 : y2) = newMax;
+        func2d->SetRange(x1, y1, x2, y2);
+      }
+    }
+  }
 }
 
 //**************************************************************************************************

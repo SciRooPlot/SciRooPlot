@@ -145,6 +145,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Axis& SetRange(double_t min, double_t max)`
 - `Axis& SetMaxRange(double_t max)`
 - `Axis& SetMinRange(double_t min)`
+- `Axis& SetRoomAboveMax(double_t frameFraction)` — fraction of the frame kept free above everything drawn in the pad (0.3: the data end 30 % below the top)
+- `Axis& SetRoomBelowMin(double_t frameFraction)` — fraction of the frame kept free below everything drawn in the pad
 - `Axis& SetColor(color_t color)`
 - `Axis& SetAxisColor(color_t color)`
 - `Axis& SetAxisAlpha(float_t alpha)`
@@ -192,8 +194,6 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& SetRangeY()` — no range restriction in y
 - `Data& SetMaxRangeY(double_t max)`
 - `Data& SetMinRangeY(double_t min)`
-- `Data& SetScaleMinimum(double_t scaleFactor)`
-- `Data& SetScaleMaximum(double_t scaleFactor)`
 - `Data& SetShowOverflowBins(bool showOverflowBins = true)`
 - `Data& SetLegendLabel(const std::string& legendLabel)`
 - `Data& SetLegend(uint8_t legendID)`

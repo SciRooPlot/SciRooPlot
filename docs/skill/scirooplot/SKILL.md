@@ -96,6 +96,8 @@ plot[1]['X'].SetTitle("#it{x}").SetRange(a, b).SetLog().SetGrid().SetNumDivision
             .SetTitleFont(43).SetTitleSize(28).SetTitleOffset(1.1).SetLabelFont(43).SetLabelSize(24)   // sizes in pixels only with font 43; with the default font 42 they are fractions of the pad
             .SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")
             .SetHideClippedLabels(false) // the base plots drop a label whose text would reach beyond the pad (top label of a ratio pad at the shared edge); false keeps it
+plot[1]['Y'].SetRoomAboveMax(0.3).SetRoomBelowMin(0.1)    // 30 % / 10 % of the frame free beyond everything drawn in the pad (any axis; error bars
+                                                         // where ROOT counts them; log axes in decades); an explicit SetMinRange/SetMaxRange wins on its side
 ```
 Pads count from 1; data in a pad from 1 (`plot[1](2)` or `plot[1].GetData(2)` modifies the second data later). The first data drawn defines the axis frame unless another one calls `.SetDefinesFrame()`; an input that should only give the frame (bin labels, a binning) is set with `plot[1].SetFrame("name", "source")`: it is not drawn and not numbered. A pad without data needs no dummy input: its X and Y ranges (`plot[1]['X'].SetRange(0., 10.)`) give an empty frame.
 
@@ -123,7 +125,6 @@ plot[1].AddData(myTemplate("hist"), "label");               // Data template: Da
 .SetColor(c).SetAlpha(a)           // all of marker, line, fill at once
 .SetMarker(color, style, size).SetLine(color, style, width).SetFill(color, style)  (+ SetMarkerColor, SetLineStyle, ... SetFillAlpha)
 .SetRangeX(a, b).SetMaxRangeX(b).SetRangeY(a, b)             // visible range of this data, independent of the axis
-.SetScaleMinimum(f).SetScaleMaximum(f)                      // widen the automatic axis range
 .SetLegend(2).SetLegendLabel("l").SetDefinesFrame().SetShowOverflowBins().SetContours(n).SetTextFormat("4.2f")
 .SetKeepInputStyle()               // line, marker, fill stored with the input win over the pad defaults (what the data sets still wins)
 .SetNpx(n[, ny])                   // points a function is drawn with (AddFunction: 1000 in 1d; inputs keep their own)

@@ -449,10 +449,10 @@ void DefineDetectorPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // shapes compared at their maxima; the overflow bin shows entries beyond the axis range
     Plot plot("pileUp", "detector/events", "1d");
-    plot[1].AddData("hNPV", "EventQA", "data").NormalizeToMaximum().SetShowOverflowBins().SetScaleMaximum(1.3);
+    plot[1].AddData("hNPV", "EventQA", "data").NormalizeToMaximum().SetShowOverflowBins();
     plot[1].AddData("hNPV", "EventQA_MC", "simulation").NormalizeToMaximum().SetShowOverflowBins().SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.);
     plot[1].AddLegend(0.194, 0.911);
-    plot[1]['Y'].SetTitle("normalised to maximum");
+    plot[1]['Y'].SetTitle("normalised to maximum").SetRoomAboveMax(0.25);  // a quarter of the frame free above the data for the legend
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
 

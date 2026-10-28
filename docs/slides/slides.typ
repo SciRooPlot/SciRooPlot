@@ -1601,12 +1601,12 @@
       #code-block(
         [
           ```cpp
-          // Normalize the integral to 1, merge bin pairs,
-          // and add 30% headroom to the y-axis for a legend
+          // Normalize the integral to 1, merge bin pairs
           plot[1].AddData("h", "sourceA")
                  .Normalize()
-                 .RebinX(2)
-                 .SetScaleMaximum(1.3);
+                 .RebinX(2);
+          // 30% of the frame free above the data (legend)
+          plot[1]['Y'].SetRoomAboveMax(0.3);
 
           // Running sum (low -> high), then convert axis units
           plot[1].AddData("h2", "sourceA")
@@ -1620,12 +1620,12 @@
         ],
         [
           ```python
-          # Normalize the integral to 1, merge bin pairs,
-          # and add 30% headroom to the y-axis for a legend
+          # Normalize the integral to 1, merge bin pairs
           plot[1].AddData("h", "sourceA") \
                  .Normalize() \
-                 .RebinX(2) \
-                 .SetScaleMaximum(1.3)
+                 .RebinX(2)
+          # 30% of the frame free above the data (legend)
+          plot[1]['Y'].SetRoomAboveMax(0.3)
 
           # Running sum (low -> high), then convert axis units
           plot[1].AddData("h2", "sourceA") \
@@ -2094,6 +2094,7 @@
       #api-section("Range, Ticks & Color", (
         [`SetTitle(title)`], [Axis title.],
         [#names("SetRange(min, max)", "SetMinRange(min)", "SetMaxRange(max)")], [Set the axis range, fully or partially.],
+        [#names("SetRoomAboveMax(frameFraction)", "SetRoomBelowMin(frameFraction)")], [Keep this fraction of the frame free beyond the drawn data (e.g. for a legend).],
         [`SetColor(color)`], [Set both axis-line and tick colour.],
         [#names("SetAxisColor(color)", "SetAxisAlpha(alpha)")], [Axis line colour or transparency.],
         [#names("SetNumDivisions(n)", "SetMaxDigits(n)", "SetTickLength(len)")], [Tick divisions, max digits before scientific notation, and tick length.],
@@ -2138,7 +2139,6 @@
         [`SetLayout(layout)` / `ApplyLayout(layout)`], [Take over the appearance of a `Data` layout (options, ranges, marker, line, fill, contours), or only the parts set in it.],
         [#names("SetRangeX(min, max) / SetRangeY(min, max)", "SetMinRangeX(min) / SetMaxRangeX(max)", "SetMinRangeY(min) / SetMaxRangeY(max)")], [Restrict the range in which the data is drawn, fully or partially.],
         [`SetRangeX()` / `SetRangeY()`], [Remove a previously set range restriction.],
-        [`SetScaleMinimum(factor)` / `SetScaleMaximum(factor)`], [Stretch the auto-computed draw range by a factor, without touching the data.],
         [`SetShowOverflowBins(showOverflowBins = true)`], [Include overflow bins in the display.],
         [`SetLegendLabel(label)` / `SetLegend(legendID)`], [Set legend text, or assign to a specific legend.],
         [`SetLegendEntry(entry)`], [Appearance of the data's legend row, e.g. `LegendEntry().SetSymbolElements("F")`.],

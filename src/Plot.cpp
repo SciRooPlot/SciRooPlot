@@ -1789,8 +1789,6 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mRangeX.max, "rangeX_max");
   read_from_tree(dataTree, mRangeY.min, "rangeY_min");
   read_from_tree(dataTree, mRangeY.max, "rangeY_max");
-  read_from_tree(dataTree, mScaleRange.min, "scale_range_min");
-  read_from_tree(dataTree, mScaleRange.max, "scale_range_max");
   read_from_tree(dataTree, mContours, "contours");
   read_from_tree(dataTree, mNContours, "number_of_contours");
   read_from_tree(dataTree, mNpx, "npx");
@@ -1945,8 +1943,6 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mRangeX.max, "rangeX_max");
   put_in_tree(dataTree, mRangeY.min, "rangeY_min");
   put_in_tree(dataTree, mRangeY.max, "rangeY_max");
-  put_in_tree(dataTree, mScaleRange.min, "scale_range_min");
-  put_in_tree(dataTree, mScaleRange.max, "scale_range_max");
   put_in_tree(dataTree, mContours, "contours");
   put_in_tree(dataTree, mNContours, "number_of_contours");
   put_in_tree(dataTree, mNpx, "npx");
@@ -2014,8 +2010,6 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
   mRangeX.max = dataLayout.mRangeX.max;
   mRangeY.min = dataLayout.mRangeY.min;
   mRangeY.max = dataLayout.mRangeY.max;
-  mScaleRange.min = dataLayout.mScaleRange.min;
-  mScaleRange.max = dataLayout.mScaleRange.max;
   mMarker.color = dataLayout.mMarker.color;
   mMarker.alpha = dataLayout.mMarker.alpha;
   mMarker.style = dataLayout.mMarker.style;
@@ -2047,8 +2041,6 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   set_if(dataLayout.mRangeX.max, mRangeX.max);
   set_if(dataLayout.mRangeY.min, mRangeY.min);
   set_if(dataLayout.mRangeY.max, mRangeY.max);
-  set_if(dataLayout.mScaleRange.min, mScaleRange.min);
-  set_if(dataLayout.mScaleRange.max, mScaleRange.max);
   set_if(dataLayout.mMarker.color, mMarker.color);
   set_if(dataLayout.mMarker.alpha, mMarker.alpha);
   set_if(dataLayout.mMarker.style, mMarker.style);
@@ -2179,16 +2171,6 @@ auto Plot::Pad::Data::SetRangeY() -> decltype(*this)
 {
   mRangeY.min = {};
   mRangeY.max = {};
-  return *this;
-}
-auto Plot::Pad::Data::SetScaleMinimum(double_t scaleFactor) -> decltype(*this)
-{
-  mScaleRange.min = scaleFactor;
-  return *this;
-}
-auto Plot::Pad::Data::SetScaleMaximum(double_t scaleFactor) -> decltype(*this)
-{
-  mScaleRange.max = scaleFactor;
   return *this;
 }
 auto Plot::Pad::Data::SetShowOverflowBins(bool showOverflowBins) -> decltype(*this)
@@ -3301,6 +3283,8 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
   read_from_tree(axisTree, mAxisFrame.title, "title");
   read_from_tree(axisTree, mRange.min, "range_min");
   read_from_tree(axisTree, mRange.max, "range_max");
+  read_from_tree(axisTree, mRoom.belowMin, "room_below_min");
+  read_from_tree(axisTree, mRoom.aboveMax, "room_above_max");
   read_from_tree(axisTree, mAxisFrame.style, "num_divisions");
   read_from_tree(axisTree, mAxisFrame.maxDigits, "max_digits");
   read_from_tree(axisTree, mAxisFrame.scale, "tick_length");
@@ -3341,6 +3325,8 @@ ptree Plot::Pad::Axis::GetPropertyTree() const
   put_in_tree(axisTree, mAxisFrame.title, "title");
   put_in_tree(axisTree, mRange.min, "range_min");
   put_in_tree(axisTree, mRange.max, "range_max");
+  put_in_tree(axisTree, mRoom.belowMin, "room_below_min");
+  put_in_tree(axisTree, mRoom.aboveMax, "room_above_max");
   put_in_tree(axisTree, mAxisFrame.style, "num_divisions");
   put_in_tree(axisTree, mAxisFrame.maxDigits, "max_digits");
   put_in_tree(axisTree, mAxisFrame.scale, "tick_length");
@@ -3381,6 +3367,8 @@ void Plot::Pad::Axis::operator+=(const Axis& axis)
   mName = axis.mName;
   if (axis.mRange.min) mRange.min = axis.mRange.min;
   if (axis.mRange.max) mRange.max = axis.mRange.max;
+  if (axis.mRoom.belowMin) mRoom.belowMin = axis.mRoom.belowMin;
+  if (axis.mRoom.aboveMax) mRoom.aboveMax = axis.mRoom.aboveMax;
   if (axis.mAxisFrame.title) mAxisFrame.title = axis.mAxisFrame.title;
   if (axis.mAxisFrame.style) mAxisFrame.style = axis.mAxisFrame.style;
   if (axis.mAxisFrame.maxDigits) mAxisFrame.maxDigits = axis.mAxisFrame.maxDigits;
@@ -3434,6 +3422,24 @@ auto Plot::Pad::Axis::SetMaxRange(double_t max) -> decltype(*this)
 auto Plot::Pad::Axis::SetMinRange(double_t min) -> decltype(*this)
 {
   mRange.min = min;
+  return *this;
+}
+auto Plot::Pad::Axis::SetRoomAboveMax(double_t frameFraction) -> decltype(*this)
+{
+  if (!(frameFraction >= 0. && frameFraction < 1.)) {
+    logger::warning("Room above the maximum of axis {} ignored: {} is not a fraction of the frame in [0, 1).", mName, frameFraction);
+    return *this;
+  }
+  mRoom.aboveMax = frameFraction;
+  return *this;
+}
+auto Plot::Pad::Axis::SetRoomBelowMin(double_t frameFraction) -> decltype(*this)
+{
+  if (!(frameFraction >= 0. && frameFraction < 1.)) {
+    logger::warning("Room below the minimum of axis {} ignored: {} is not a fraction of the frame in [0, 1).", mName, frameFraction);
+    return *this;
+  }
+  mRoom.belowMin = frameFraction;
   return *this;
 }
 auto Plot::Pad::Axis::SetColor(color_t color) -> decltype(*this)

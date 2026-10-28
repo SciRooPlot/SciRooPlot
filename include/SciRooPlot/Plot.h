@@ -672,8 +672,6 @@ class Plot::Pad::Data
   Data& SetRangeY();  // no range restriction in y
   Data& SetMaxRangeY(double_t max);
   Data& SetMinRangeY(double_t min);
-  Data& SetScaleMinimum(double_t scaleFactor);
-  Data& SetScaleMaximum(double_t scaleFactor);
   Data& SetShowOverflowBins(bool showOverflowBins = true);
   Data& SetLegendLabel(const std::string& legendLabel);
   Data& SetLegend(uint8_t legendID);
@@ -827,8 +825,6 @@ class Plot::Pad::Data
   const auto& GetMaxRangeX() const { return mRangeX.max; }
   const auto& GetMinRangeY() const { return mRangeY.min; }
   const auto& GetMaxRangeY() const { return mRangeY.max; }
-  const auto& GetScaleMinimum() const { return mScaleRange.min; }
-  const auto& GetScaleMaximum() const { return mScaleRange.max; }
   const bool& GetDefinesFrame() const { return mDefinesFrame; }
   const bool& GetKeepInputStyle() const { return mKeepInputStyle; }
   const auto& GetContours() const { return mContours; }
@@ -961,7 +957,6 @@ class Plot::Pad::Data
   layout_t mFill;
   data_range_t mRangeX;
   data_range_t mRangeY;
-  data_range_t mScaleRange;
   modify_t mModify;
 
   std::optional<std::vector<double_t>> mContours;
@@ -1009,8 +1004,6 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(SetRangeY)
   FORWARD_TO_DATA(SetMaxRangeY)
   FORWARD_TO_DATA(SetMinRangeY)
-  FORWARD_TO_DATA(SetScaleMinimum)
-  FORWARD_TO_DATA(SetScaleMaximum)
   FORWARD_TO_DATA(SetShowOverflowBins)
   FORWARD_TO_DATA(SetLegendLabel)
   FORWARD_TO_DATA(SetLegend)
@@ -1154,6 +1147,8 @@ class Plot::Pad::Axis
   Axis& SetRange(double_t min, double_t max);
   Axis& SetMaxRange(double_t max);
   Axis& SetMinRange(double_t min);
+  Axis& SetRoomAboveMax(double_t frameFraction);  // fraction of the frame kept free above everything drawn in the pad (0.3: the data end 30 % below the top)
+  Axis& SetRoomBelowMin(double_t frameFraction);  // fraction of the frame kept free below everything drawn in the pad
   Axis& SetColor(color_t color);
   Axis& SetAxisColor(color_t color);
   Axis& SetAxisAlpha(float_t alpha);
@@ -1195,6 +1190,8 @@ class Plot::Pad::Axis
 
   const auto& GetMinRange() const { return mRange.min; }
   const auto& GetMaxRange() const { return mRange.max; }
+  const auto& GetRoomAboveMax() const { return mRoom.aboveMax; }
+  const auto& GetRoomBelowMin() const { return mRoom.belowMin; }
   const auto& GetTickLength() const { return mAxisFrame.scale; }
   const auto& GetNumDivisions() const { return mAxisFrame.style; }
   const auto& GetMaxDigits() const { return mAxisFrame.maxDigits; }
@@ -1232,6 +1229,10 @@ class Plot::Pad::Axis
     std::optional<double_t> min;
     std::optional<double_t> max;
   };
+  struct axis_room_t {
+    std::optional<double_t> belowMin;
+    std::optional<double_t> aboveMax;
+  };
   struct axis_frame_t : layout_t {
     std::optional<std::string> title;
     std::optional<int32_t> maxDigits;
@@ -1251,6 +1252,7 @@ class Plot::Pad::Axis
   axis_layout_t mTitleLayout;
   axis_layout_t mLabelLayout;
   axis_range_t mRange;
+  axis_room_t mRoom;
 };
 
 //**************************************************************************************************

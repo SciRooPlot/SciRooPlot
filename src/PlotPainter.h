@@ -219,6 +219,7 @@ class PlotPainter
   std::unique_ptr<TCanvas> GeneratePlot(Plot& plot, const std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>>& dataBuffer);
 
  private:
+  void AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefaults, const Plot::Pad& padSettings, uint8_t padID, const Plot::Pad::Data* refFunc, std::string& padSetup);
   void ApplyScale(TObject* obj, std::set<TObject*>& done, const std::string& drawOption = "");
   Width_t ScaleLineWidth(Width_t width) const;
   static TH1* ExtendFrameAxis(const TH1* frame, char axisLabel, std::optional<double_t> newMin, std::optional<double_t> newMax);
