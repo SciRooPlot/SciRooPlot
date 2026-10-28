@@ -95,7 +95,7 @@ html[data-level="beginner"] .expert-only { display: none !important }
 .term { font: inherit; font-weight: 600; background: none; border: 0; padding: 0 2px; margin: 0 -2px; color: var(--term); cursor: help; border-radius: 4px }
 .term:hover, .term:focus-visible { background: var(--tint); outline: none }
 html[data-level="expert"] .term { color: inherit; font-weight: inherit }
-#pop { position: absolute; z-index: 40; max-width: min(340px, calc(100vw - 32px)); background: var(--panel); color: var(--text);
+#pop { position: absolute; inset: auto; margin: 0; z-index: 40; max-width: min(340px, calc(100vw - 32px)); background: var(--panel); color: var(--text);
   border: 1px solid var(--hairline); border-top: 4px solid var(--amber); border-radius: 10px; padding: 12px 14px; box-shadow: 0 10px 30px rgba(10, 20, 40, 0.18); font-size: 0.875rem; line-height: 1.5 }
 #pop h4 { margin: 0 0 4px; font-family: var(--mono); font-size: 0.95rem; color: var(--ink) }
 #pop .sw { display: inline-block; width: 1.1em; height: 1.1em; border-radius: 3px; vertical-align: -0.2em; border: 1px solid var(--hairline); margin-right: 6px }
@@ -1015,7 +1015,7 @@ figure.plot figcaption { color: #5b6b80 }
   </div>
 </footer>
 
-<div id="pop" role="dialog" aria-live="polite" hidden></div>
+<div id="pop" role="dialog" aria-live="polite" popover="manual" hidden></div>
 
 <script>
 const COLORS = /*COLORS*/;
@@ -1085,11 +1085,18 @@ const pop = document.getElementById("pop"); let popFor = null;
 function showPop(el, key) {
   const e = explainK(key); if (!e) return;
   pop.innerHTML = `<h4>${e[0]}</h4><div>${e[1]}</div>` + (e[2] ? `<a href="#styles" data-lab="${key}">Try it in Colours &amp; styles</a>` : "");
-  pop.hidden = false; popFor = el;
+  placePop(el) }
+/* the pop lives in the top layer (popover) so it lies above the open example dialog; inside the dialog, as everything outside a modal dialog is inert */
+function placePop(el) {
+  const d = document.getElementById("exdlg"), host = d.open ? d : document.body;
+  if (pop.parentNode !== host) host.append(pop);
+  if (pop.matches(":popover-open")) pop.hidePopover();
+  pop.hidden = false; pop.showPopover(); popFor = el;
   const r = el.getBoundingClientRect(), w = pop.offsetWidth;
   pop.style.left = Math.max(8, Math.min(window.scrollX + r.left, window.scrollX + document.documentElement.clientWidth - w - 8)) + "px";
   pop.style.top = (window.scrollY + r.bottom + 8) + "px" }
 document.addEventListener("click", ev => {
+  if (ev.target.closest("#pop a")) document.getElementById("exdlg").close();
   const f = ev.target.closest(".t-f");
   if (f) { ev.preventDefault(); if (popFor === f && !pop.hidden) { pop.hidden = true; popFor = null } else if (!showMethod(f, f.textContent)) pop.hidden = true; return }
   const jm = ev.target.closest("[data-method]"); if (jm) pendingMethod = jm.dataset.method;
@@ -1509,6 +1516,7 @@ function openExample(k) { exOpen = k; const parts = k.split("/"), name = parts.p
   const d = document.getElementById("exdlg"); if (!d.open) d.showModal() }
 document.getElementById("exclose").onclick = () => document.getElementById("exdlg").close();
 document.getElementById("exdlg").addEventListener("click", e => { if (e.target.id === "exdlg") e.target.close() });
+document.getElementById("exdlg").addEventListener("close", () => { pop.hidden = true; popFor = null });
 
 /* ---------------- reference: topics (the content of the skill, by task) and every method (generated from api.md) */
 const REF_GROUPS = [["basics", "Getting around"], ["data", "Data"], ["layout", "Layout"], ["help", "Help"]];
@@ -2020,10 +2028,7 @@ function showMethod(el, name) {
   pop.innerHTML = `<h4>${esc(name)}</h4>` + Object.entries(byCls).map(([c, list]) => `<div class="small muted" style="margin-top:6px">${CLASS_LABEL[c]}</div>` +
     list.slice(0, 4).map(m => `<div style="font-family:var(--mono);font-size:0.76rem;margin-top:2px">${sigHTML(m.sig)}</div>${m.note ? `<div class="small">${esc(m.note)}</div>` : ""}`).join("")).join("") +
     `<a href="#${clsId(ms[0].cls)}" data-method="${esc(name)}">All methods of ${CLASS_LABEL[ms[0].cls]}</a>`;
-  pop.hidden = false; popFor = el;
-  const r = el.getBoundingClientRect(), w = pop.offsetWidth;
-  pop.style.left = Math.max(8, Math.min(window.scrollX + r.left, window.scrollX + document.documentElement.clientWidth - w - 8)) + "px";
-  pop.style.top = (window.scrollY + r.bottom + 8) + "px";
+  placePop(el);
   return true }
 
 function glueTerms() { // a full stop or comma after a term stays on its line
