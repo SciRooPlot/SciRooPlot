@@ -129,6 +129,7 @@ uses = {}
 for plot_key, plot in read_info(f"{CFG}/plots.info"):
     plot_name = plot_key.replace(":", " in ")
     name, group = plot_key.split(":", 1)
+    plot_ref = group if group.startswith("animations/") else f"{group}/{name}"  # an animation is one example, not one per frame
 
     def scan(items):
         for key, value in items:
@@ -136,7 +137,7 @@ for plot_key, plot in read_info(f"{CFG}/plots.info"):
                 d = dict((k, v) for k, v in value if not isinstance(v, list))
                 for nk, sk in (("name", "dataSource"), ("denomName", "denomDataSource")):
                     if d.get(nk) and d.get(sk):
-                        uses.setdefault((d[sk], d[nk]), set()).add(f"{group}/{name}")
+                        uses.setdefault((d[sk], d[nk]), set()).add(plot_ref)
                 scan(value)
     scan(plot)
 

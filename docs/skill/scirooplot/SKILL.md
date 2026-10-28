@@ -43,7 +43,7 @@ plot myGroup .+                     # all plots of myGroup and its subgroups
 plot 'myGroup$' .+                  # without subgroups;  plot myGroup/QA ctrl.*  selects a subgroup
 plot thesis 'fig_(a|b)' pdf         # quote patterns with ( ) | in bash
 ```
-Modes: `show` (interactive, default: keys `s`/`a` next/previous (circular), `d` moves the current plot into a window of its own, `q` closes a window, `x` all; the keys also work in the terminal, where `q` closes all; double-click a legend to print its coordinates), `spread` (all matching plots at once, one window each), `list`, `print` (dump definition), `pdf`, `eps`, `ps`, `svg`, `png`, `jpg`, `gif` (`gif+<centiseconds>` animates all matching plots), `html`, `json`, `xml`, `root`, `macro` (ROOT macro), `file` (canvases into a ROOT file), `data` (the drawn data into a ROOT file).
+Modes: `show` (interactive, default: keys `s`/`a` next/previous (circular), `d` moves the current plot into a window of its own, `q` closes a window, `x` all; the keys also work in the terminal, where `q` closes all; double-click a legend to print its coordinates), `spread` (all matching plots at once, one window each), `list`, `print` (dump definition), `pdf`, `eps`, `ps`, `svg`, `png`, `jpg`, `gif` (`gif+<centiseconds>` animates all matching plots, in the order they were defined: one plot per frame in a group of its own, e.g. a loop over `SetView` angles or multiplicity classes, see the example group `animations`), `html`, `json`, `xml`, `root`, `macro` (ROOT macro), `file` (canvases into a ROOT file), `data` (the drawn data into a ROOT file).
 
 ## Program skeleton
 

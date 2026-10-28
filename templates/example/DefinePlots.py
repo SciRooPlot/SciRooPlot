@@ -604,6 +604,37 @@ def DefineMLPlots(pm: PlotManager):
     pm.AddPlot(plot)
 
 
+def DefineAnimations(pm: PlotManager):
+    """Animations: one plot per frame, in a group of its own; mode gif writes all plots it is given as one animated gif."""
+    # a camera flight around a lego plot: the same plot seen from 36 angles ---------------------------------------------
+    # plot animations/legoRotation '.+' gif+8 makes them one gif, 8 centiseconds per frame
+    # the axes change sides while the view turns, so the base plot leaves the same room on both sides
+    view3d = PlotManager.MakeBasePlot("1d", PanelLayout().SetMargins(60.0, 150.0, 190.0, 190.0))
+    view3d.SetName("1d_3dview")
+    pm.AddBasePlot(view3d)
+    for phi in range(5, 360, 10):  # never looking exactly along an axis, where its labels would pile up
+        plot = Plot(f"phi{phi}", "animations/legoRotation", "1d_3dview")
+        plot[1].AddData("ptVsMult", "data").RebinXY(4, 2).SetDrawOption(lego_col)
+        plot[1].SetView(35.0, phi)
+        plot[1]['Z'].SetLog()
+        pm.AddPlot(plot)
+
+    # the spectrum class by class, against all classes together: it gets harder with the multiplicity ---------------
+    # plot animations/multiplicityClasses '.+' gif+60 makes them one gif, 0.6 s per frame
+    for low in range(1, 60, 4):
+        high = low + 3
+        plot = Plot(f"nch{low}", "animations/multiplicityClasses", "1d_ratio")
+        plot[1].AddData("ptVsMult", "data", f"{low} #leq #it{{N}}_{{ch}} #leq {high}").ProjectY(low, high, True).Normalize().SetColor(kRed + 1)
+        plot[1].AddData("ptVsMult", "data", "all #it{N}_{ch}").ProjectY(1, 60, True).Normalize().SetDrawOption(hist_open).SetLine(kBlack, kSolid, 3.0)
+        plot[1].AddLegend(0.5, 0.88)
+        plot[1].AddText(0.2, 0.3, [EXPERIMENT, COLLISIONS])
+        plot[1]['Y'].SetLog().SetRange(1e-5, 1.0).SetTitle("normalised counts")
+        plot[2].AddRatio(["ptVsMult", "data"], ["ptVsMult", "data"]).Numer().ProjectY(low, high, True).Denom().ProjectY(1, 60, True).Both().Normalize().SetColor(kRed + 1)
+        plot[2]['Y'].SetRange(0.0, 4.0).SetTitle("class / all")
+        plot[0]['X'].SetRange(0.0, 4.0)  # fixed ranges: the frames differ only in the data
+        pm.AddPlot(plot)
+
+
 def main():
     pm = PlotManager("PROJECT_NAME")
     # own messages in the style of SciRooPlot: logger.print (always shown),
@@ -617,6 +648,7 @@ def main():
     DefineCollisionPlots(pm)
     DefineHeavyIonPlots(pm)
     DefineMLPlots(pm)
+    DefineAnimations(pm)
     # the default colours of the base plots with their names and indices (`plot overview colors`; `srp colorwheel` shows all)
     pm.AddColorOverview("colors", "overview")
     pm.SaveProject()

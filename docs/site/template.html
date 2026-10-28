@@ -1342,6 +1342,7 @@ document.querySelectorAll("[data-kind]").forEach(b => b.onclick = () => { optKin
 
 /* ---------------- examples */
 let exGroup = "all";
+const exImage = k => `img/ex/${k}.${EXAMPLES[k].gif ? "gif" : "png"}`;  // an animation is shown as the gif made from its frames
 // features an example shows, found in its code, with the reference topic that explains them
 const EX_TAGS = [
   ["ratio", "ratio", /AddRatio\(|_ratio"/, "ratios"], ["panels", "several panels", /_\d+x\d+|PanelLayout\(/, "baseplots"],
@@ -1365,13 +1366,13 @@ function renderExamples() {
   document.querySelectorAll("[data-tag]").forEach(b => b.onclick = () => { const id = b.dataset.tag; if (!id) exTagSel.clear(); else if (exTagSel.has(id)) exTagSel.delete(id); else exTagSel.add(id); renderExamples() });
   document.getElementById("exgrid").innerHTML = shown.length ? shown.map(k => {
     const parts = k.split("/"), name = parts.pop();
-    return `<button class="card" data-ex="${k}"><span class="plot"><img loading="lazy" src="img/ex/${k}.png" alt="${name}"></span><b>${name}</b><small>${parts.join("/")}</small></button>` }).join("")
+    return `<button class="card" data-ex="${k}"><span class="plot"><img loading="lazy" src="${exImage(k)}" alt="${name}"></span><b>${name}</b><small>${parts.join("/")}${EXAMPLES[k].gif ? " · animation" : ""}</small></button>` }).join("")
     : `<p class="muted">No example in this group shows all of these. Clear a feature or pick another group.</p>`;
   document.querySelectorAll("[data-ex]").forEach(b => b.onclick = () => openExample(b.dataset.ex)) }
 let exOpen = null;
 function openExample(k) { exOpen = k; const parts = k.split("/"), name = parts.pop(), grp = parts.join("/");
-  document.getElementById("exttl").textContent = name; document.getElementById("eximg").src = `img/ex/${k}.png`; document.getElementById("eximg").alt = name;
-  document.getElementById("excmd").innerHTML = `<span class="p">$ </span>plot ${grp} ${name}`;
+  document.getElementById("exttl").textContent = name; document.getElementById("eximg").src = exImage(k); document.getElementById("eximg").alt = name;
+  document.getElementById("excmd").innerHTML = `<span class="p">$ </span>` + (EXAMPLES[k].gif ? `plot ${k} '.+' ${EXAMPLES[k].gif}` : `plot ${grp} ${name}`);
   const ins = []; EXDATA.files.forEach(f => { const visit = ns => ns.forEach(x => { if (x.use && x.use.some(u => u.plots.includes(k))) ins.push([f.f, x.p, x.n]); if (x.ch) visit(x.ch) });
     if (f.k === "table") { if (f.use && f.use.some(u => u.plots.includes(k))) ins.push([f.f, "", f.f]) } else visit(f.ch) });
   const tg = exTags(k); document.getElementById("exinputs").innerHTML = ins.length ? `<span class="small muted">Input data:</span> ` + ins.map(([fl, p, nm]) => `<a href="#data" data-din="${esc(fl)}|${esc(p)}">${esc(nm)}</a>`).join(" · ") : "";
@@ -1415,7 +1416,7 @@ const REF = [
 <tr><td><code>plot higgs .+</code></td><td>every plot of the group <code>higgs</code> and its subgroups</td></tr>
 <tr><td><code>plot 'higgs$' .+</code></td><td>only the plots directly in <code>higgs</code>, not in its subgroups</td></tr>
 <tr><td><code>plot thesis 'fig_(a|b)' pdf</code></td><td><code>fig_a</code> and <code>fig_b</code> as PDF files (quote patterns with <code>( ) |</code> in bash)</td></tr>
-<tr><td><code>plot scan frame_.+ gif+4</code></td><td>all frames as one animation, 40 ms per frame</td></tr>
+<tr><td><code>plot animations/legoRotation '.+' gif+8</code></td><td>all matching plots as one animation, 80 ms per frame, in the order they were defined: one plot per frame, e.g. in a loop (<a href="#examples">examples</a>, group animations)</td></tr>
 <tr><td><code>plot higgs .+ list</code></td><td>the names of the matching plots, without drawing</td></tr>
 </tbody></table></div>
 <h3>Output modes</h3>

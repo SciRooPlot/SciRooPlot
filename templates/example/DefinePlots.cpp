@@ -28,6 +28,7 @@ void DefineDetectorPlots(PlotManager& pm);
 void DefineCollisionPlots(PlotManager& pm);
 void DefineHeavyIonPlots(PlotManager& pm);
 void DefineMLPlots(PlotManager& pm);
+void DefineAnimations(PlotManager& pm);
 
 // The plots below are organised in groups and subgroups (higgs/diphoton, detector/pid, ...).
 // Each plot is produced with `plot <group> <name> [mode]`, where group and name are regular expressions:
@@ -48,6 +49,7 @@ int main(int argc, char* argv[])
   DefineCollisionPlots(pm);
   DefineHeavyIonPlots(pm);
   DefineMLPlots(pm);
+  DefineAnimations(pm);
   // the default colours of the base plots with their names and indices (`plot overview colors`; `srp colorwheel` shows all)
   pm.AddColorOverview("colors", "overview");
   pm.SaveProject();
@@ -749,5 +751,43 @@ void DefineMLPlots(PlotManager& pm)
     Plot plot("featureImportance", "ml", "1d");
     plot[1].AddData("hFeatureImportance", "ml").SetDrawOption(hbars).SetFill(kAzure - 9, 1001).SetLineColor(kAzure + 2);
     pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+}
+
+//**************************************************************************************************
+// Animations: one plot per frame, in a group of its own; mode gif writes all plots it is given as one animated gif
+//**************************************************************************************************
+void DefineAnimations(PlotManager& pm)
+{
+  {  // a camera flight around a lego plot: the same plot seen from 36 angles ---------------
+    // plot animations/legoRotation '.+' gif+8 makes them one gif, 8 centiseconds per frame
+    // the axes change sides while the view turns, so the base plot leaves the same room on both sides
+    auto view3d = PlotManager::MakeBasePlot("1d", PanelLayout().SetMargins(60., 150., 190., 190.));
+    view3d.SetName("1d_3dview");
+    pm.AddBasePlot(view3d);
+    for (int phi = 5; phi < 360; phi += 10) {  // never looking exactly along an axis, where its labels would pile up
+      Plot plot("phi" + std::to_string(phi), "animations/legoRotation", "1d_3dview");
+      plot[1].AddData("ptVsMult", "data").RebinXY(4, 2).SetDrawOption(lego_col);
+      plot[1].SetView(35., phi);
+      plot[1]['Z'].SetLog();
+      pm.AddPlot(plot);
+    }
+  }  // -----------------------------------------------------------------------------------
+  {  // the spectrum class by class, against all classes together: it gets harder with the multiplicity
+    // plot animations/multiplicityClasses '.+' gif+60 makes them one gif, 0.6 s per frame
+    for (int low = 1; low < 60; low += 4) {
+      const int high = low + 3;
+      Plot plot("nch" + std::to_string(low), "animations/multiplicityClasses", "1d_ratio");
+      const string label = std::to_string(low) + " #leq #it{N}_{ch} #leq " + std::to_string(high);
+      plot[1].AddData("ptVsMult", "data", label).ProjectY(low, high, true).Normalize().SetColor(kRed + 1);
+      plot[1].AddData("ptVsMult", "data", "all #it{N}_{ch}").ProjectY(1, 60, true).Normalize().SetDrawOption(hist_open).SetLine(kBlack, kSolid, 3.);
+      plot[1].AddLegend(0.5, 0.88);
+      plot[1].AddText(0.2, 0.3, {kExperiment, kCollisions});
+      plot[1]['Y'].SetLog().SetRange(1e-5, 1.).SetTitle("normalised counts");
+      plot[2].AddRatio({"ptVsMult", "data"}, {"ptVsMult", "data"}).Numer().ProjectY(low, high, true).Denom().ProjectY(1, 60, true).Both().Normalize().SetColor(kRed + 1);
+      plot[2]['Y'].SetRange(0., 4.).SetTitle("class / all");
+      plot[0]['X'].SetRange(0., 4.);  // fixed ranges: the frames differ only in the data
+      pm.AddPlot(plot);
+    }
   }  // -----------------------------------------------------------------------------------
 }
