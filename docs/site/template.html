@@ -1435,7 +1435,7 @@ const REF = [
 <tr><td><code>plot higgs .+</code></td><td>every plot of the group <code>higgs</code> and its subgroups</td></tr>
 <tr><td><code>plot 'higgs$' .+</code></td><td>only the plots directly in <code>higgs</code>, not in its subgroups</td></tr>
 <tr><td><code>plot thesis 'fig_(a|b)' pdf</code></td><td><code>fig_a</code> and <code>fig_b</code> as PDF files (quote patterns with <code>( ) |</code> in bash)</td></tr>
-<tr><td><code>plot animations/legoRotation '.+' gif+8</code></td><td>all matching plots as one animation, 80 ms per frame, in the order they were defined: one plot per frame, e.g. in a loop (<a href="#examples">examples</a>, group animations)</td></tr>
+<tr><td><code>plot animations/legoRotation '.+' gif+8++</code></td><td>all matching plots as one animation, 80 ms per frame, in the order they were defined; <code>gif+8</code> plays it once, <code>gif+8++</code> endlessly, <code>gif+8++3</code> three times (ROOT's spelling for the last frame of a gif). One plot per frame, e.g. in a loop (<a href="#examples">examples</a>, group animations)</td></tr>
 <tr><td><code>plot higgs .+ list</code></td><td>the names of the matching plots, without drawing</td></tr>
 </tbody></table></div>
 <h3>Output modes</h3>

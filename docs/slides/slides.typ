@@ -695,7 +695,7 @@
           [`macro`], [Generate ROOT `.C` macros that reproduce the plots.],
           table.hline(stroke: 1pt + rgb("d0d7de")),
           [`gif`],
-          [Combine matching plots into an animated GIF #linebreak() (`gif+N` sets the frame delay in units of 10 ms).],
+          [Combine matching plots into an animated GIF #linebreak() (`gif+N`: frame delay in units of 10 ms; `gif+N++` loops).],
           table.hline(stroke: 1pt + rgb("d0d7de")),
           [`file`], [Save all requested plots into a single ROOT file.],
           table.hline(stroke: 1pt + rgb("d0d7de")),
@@ -1899,7 +1899,7 @@
     ]),
     ([Animate a series], [
       - Mode `gif` turns all matching plots into one animation, e.g. a spectrum per multiplicity class.
-      - `plot spectra/classes .+ gif+80` shows each frame for 0.8 s.
+      - `plot spectra/classes .+ gif+80` shows each frame for 0.8 s, `gif+80++` loops.
     ]),
     ([Same code on every machine], [
       - Keep machine-specific paths out of the code: `srp set @current dataDir /data/run3` once on each machine.

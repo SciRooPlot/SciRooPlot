@@ -230,7 +230,7 @@ int main(int argc, char* argv[])
       string modeList;
       for (const auto& mode : plot_modes())
         modeList += mode + ", ";
-      logger::error("Invalid plot mode '{}' (valid modes: {}gif+<centiseconds>, list).", project, modeList);
+      logger::error("Invalid plot mode '{}' (valid modes: {}gif+<centiseconds>[++[<repeats>]], list).", project, modeList);
       return 1;
     }
     Config::GetMutable().SetPlotMode(project);

@@ -21,13 +21,14 @@
 
 #include <algorithm>
 #include <optional>
+#include <regex>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace SciRooPlot
 {
-// output modes of GeneratePlots (in addition: gif+<centiseconds between frames>)
+// output modes of GeneratePlots (in addition: gif+<centiseconds between frames>[++[<repeats>]])
 inline const std::vector<std::string>& plot_modes()
 {
   static const std::vector<std::string> modes{"show", "spread", "print", "file", "data", "macro", "pdf", "eps", "ps", "svg", "png", "jpg", "gif", "html", "json", "xml", "root"};
@@ -37,7 +38,9 @@ inline const std::vector<std::string>& plot_modes()
 inline bool is_valid_plot_mode(const std::string& mode)
 {
   if (std::find(plot_modes().begin(), plot_modes().end(), mode) != plot_modes().end()) return true;
-  return mode.size() > 4 && mode.rfind("gif+", 0) == 0 && mode.find_first_not_of("0123456789", 4) == std::string::npos;
+  // an animation: gif+<centiseconds>, played once, or with ++ looping endlessly, with ++<repeats> that many times
+  static const std::regex gifMode(R"(gif\+\d+(\+\+\d*)?)");
+  return std::regex_match(mode, gifMode);
 }
 
 // returns the first illegal character (for non-ASCII characters the complete UTF-8 sequence, so it can be printed)

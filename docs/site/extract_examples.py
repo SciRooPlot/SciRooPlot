@@ -9,7 +9,7 @@ import textwrap
 NAME = re.compile(r'Plot(?:\s+\w+)?\s*\(\s*(?:\w+\s*,\s*)?"([^"]+)"\s*,\s*"([^"]+)"')
 # an animation: frames named in a loop, in a subgroup of animations/, with the command making the gif in a comment
 ANIM = re.compile(r'Plot(?:\s+\w+)?\s*\([^;\n]*?,\s*"(animations/[^"]+)"')
-GIF = re.compile(r"plot (animations/\S+) '\.\+' (gif\+\d+)")
+GIF = re.compile(r"plot (animations/\S+) '\.\+' (gif\+\d+(?:\+\+\d*)?)")
 
 
 def snippets(path, lang):

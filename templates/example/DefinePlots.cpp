@@ -760,7 +760,7 @@ void DefineMLPlots(PlotManager& pm)
 void DefineAnimations(PlotManager& pm)
 {
   {  // a camera flight around a lego plot: the same plot seen from 36 angles ---------------
-    // plot animations/legoRotation '.+' gif+8 makes them one gif, 8 centiseconds per frame
+    // plot animations/legoRotation '.+' gif+8++ makes them one gif, 8 centiseconds per frame, looping endlessly
     // the axes change sides while the view turns, so the base plot leaves the same room on both sides
     auto view3d = PlotManager::MakeBasePlot("1d", PanelLayout().SetMargins(60., 150., 190., 190.));
     view3d.SetName("1d_3dview");
@@ -774,7 +774,7 @@ void DefineAnimations(PlotManager& pm)
     }
   }  // -----------------------------------------------------------------------------------
   {  // the spectrum class by class, against all classes together: it gets harder with the multiplicity
-    // plot animations/multiplicityClasses '.+' gif+60 makes them one gif, 0.6 s per frame
+    // plot animations/multiplicityClasses '.+' gif+60++ makes them one gif, 0.6 s per frame, looping endlessly
     for (int low = 1; low < 60; low += 4) {
       const int high = low + 3;
       Plot plot("nch" + std::to_string(low), "animations/multiplicityClasses", "1d_ratio");

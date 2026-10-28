@@ -1055,7 +1055,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     string modeList;
     for (const auto& validMode : plot_modes())
       modeList += validMode + ", ";
-    logger::error("Invalid mode '{}' (valid modes: {}gif+<centiseconds>).", mode, modeList);
+    logger::error("Invalid mode '{}' (valid modes: {}gif+<centiseconds>[++[<repeats>]]).", mode, modeList);
     return false;
   }
   // plotting uses multi-threading, the classic canvas and fewer ROOT messages; the settings of the calling program are restored afterwards
@@ -1192,6 +1192,13 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       }
     }
     mGifName.clear();
+    // the last frame of a gif is the last plot that can be made (its file name tells ROOT how the animation repeats)
+    mGifLastFrame = nullptr;
+    if (str_contains(mode, "gif")) {
+      for (auto plot : selectedPlots) {
+        if (GetMissingData(*plot).empty()) mGifLastFrame = plot;
+      }
+    }
     mExitInteractiveBrowsing = false;
     mDetached.reset();
     mBrowseCanvases.clear();
@@ -1892,7 +1899,8 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   }
 
   bool isGif = false;
-  string gifRepRate = "+50";  // number of centiseconds between frames
+  string frameSuffix = "+50";      // ROOT's syntax for a frame of an animated gif: +<centiseconds it is shown>
+  string lastFrameSuffix = "+50";  // the last frame: +NN plays the animation once, ++NN++ loops endlessly, +NN++RR repeats it RR times
 
   // names that become C++ identifiers in macros must not contain special characters
   auto sanitize = [](string s) {
@@ -1913,8 +1921,15 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   } else if (str_contains(mode, "gif")) {
     fileEnding = ".gif";
     isGif = true;
-    if (auto delimPos = mode.find("+"); delimPos != string::npos) {
-      gifRepRate = mode.substr(delimPos);
+    if (mode.size() > 4) {  // gif+<centiseconds>[++[<repeats>]], checked by is_valid_plot_mode
+      const size_t loopPos = mode.find("++");
+      const string delay = mode.substr(4, (loopPos == string::npos) ? string::npos : loopPos - 4);
+      frameSuffix = "+" + delay;
+      lastFrameSuffix = frameSuffix;
+      if (loopPos != string::npos) {
+        const string repeats = mode.substr(loopPos + 2);
+        lastFrameSuffix = repeats.empty() ? "++" + delay + "++" : "+" + delay + "++" + repeats;
+      }
     }
   }
 
@@ -1941,7 +1956,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
       fullName = mGifName;
       folderName = std::filesystem::path(mGifName).parent_path().string();
     }
-    fullName += gifRepRate;
+    fullName += (&plot == mGifLastFrame) ? lastFrameSuffix : frameSuffix;
   }
   std::error_code ec;
   std::filesystem::create_directories(folderName, ec);

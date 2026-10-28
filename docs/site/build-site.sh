@@ -23,7 +23,7 @@ srp example-py ex
 srp select ex
 plot '.+' '.+' png
 # an animation of the example is one gif made from the frames in its group, with the mode its code names in a comment
-grep -o "plot animations/[A-Za-z0-9_]* '\.+' gif+[0-9]*" "${REPO}/templates/example/DefinePlots.py" | while read -r _ animGroup _ gifMode; do
+grep -o "plot animations/[A-Za-z0-9_]* '\.+' gif+[0-9]*\(++[0-9]*\)\?" "${REPO}/templates/example/DefinePlots.py" | while read -r _ animGroup _ gifMode; do
   plot "${animGroup}" '.+' "${gifMode}" </dev/null
   gifs=(ex/output/"${animGroup}"/*.gif)
   mv "${gifs[0]}" "ex/output/${animGroup}.gif"
