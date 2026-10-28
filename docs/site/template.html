@@ -577,7 +577,7 @@ figure.plot figcaption { color: #5b6b80 }
       <div class="box"><h3>Organize</h3><p>Manage projects and settings with <code>srp</code>.</p></div>
     </div>
     <div class="reads"><h3>Reads what your analysis writes</h3>
-      <div class="chips-static"><span>TH1</span><span>TH2</span><span>TH3</span><span>TProfile</span><span>TProfile2D</span><span>THn</span><span>THnSparse</span><span>TH2Poly</span><span>TGraph</span><span>TGraphErrors</span><span>TGraphAsymmErrors</span><span>TGraphBentErrors</span><span>TGraph2D</span><span>TEfficiency</span><span>TF1</span><span>TF2</span><span>TF3</span><span>TTree</span><span>CSV and text tables</span></div>
+      <div class="chips-static"><span>TH1</span><span>TH2</span><span>TH3</span><span>TProfile</span><span>TProfile2D</span><span>THn</span><span>THnSparse</span><span>TH2Poly</span><span>TGraph</span><span>TGraphErrors</span><span>TGraphAsymmErrors</span><span>TGraphBentErrors</span><span>TGraph2D</span><span>TEfficiency</span><span>TF1</span><span>TF2</span><span>TF3</span><span>TTree</span><span>RNTuple</span><span>CSV and text tables</span></div>
       <p class="small muted">Wherever they are stored: directories, <code>TList</code>s and folders at any depth, many files at once, or objects your program makes. <a href="#ref-sources">Data sources and finding data</a></p></div>
     <p class="key"><b>Key idea</b>You describe <i>what</i> a figure shows, once. SciRooPlot finds the data by name, in one file or in hundreds, draws it with ROOT, and keeps every plot of your project in one place.</p>
   </div>
@@ -734,7 +734,7 @@ figure.plot figcaption { color: #5b6b80 }
     <div class="code"><pre data-np="store"></pre><span class="tag">at the end of your analysis</span></div>
     <p>In the plotting program only the data source changes: it now names the folder, and each file is a table in it, called like the file. Curves are selected from the tables when the plot is drawn: <code>Project1D</code> and <code>Filter</code> as before, <code>Scatter</code> for a curve from two columns.</p>
     <div class="code"><pre data-np="files"></pre><span class="tag">DefinePlots.py, reading the files</span></div>
-    <p class="key"><b>Big tables</b>Millions of rows are faster from a ROOT file than from a CSV. <a href="https://uproot.readthedocs.io">uproot</a> (pip, no ROOT needed) writes one; create the tree with <code>mktree</code> and explicit types, since <code>f["events"] = df</code> writes ROOT's newer RNTuple format, which SciRooPlot does not read yet. Text columns come out as character arrays there: keep them as numbers or booleans, or in a CSV. <code>f["sig"] = np.histogram(…)</code> stores a histogram.</p>
+    <p class="key"><b>Big tables</b>Millions of rows are faster from a ROOT file than from a CSV. <a href="https://uproot.readthedocs.io">uproot</a> (pip, no ROOT needed) writes one: <code>f["events"] = df</code> stores the DataFrame as a table (an RNTuple, ROOT's new format for tables), text columns included, and the plotting program reads it under the same name as the CSV. <code>f["sig"] = np.histogram(…)</code> stores a histogram.</p>
     <div class="code"><pre data-np="uproot"></pre><span class="tag">optional: a ROOT file with uproot</span></div>
   </div>
 
@@ -1043,7 +1043,7 @@ const T = {
   TH1: ["Histogram (TH1, TH2)", "Counts of entries in bins, e.g. how many particles had a momentum between 1 and 2 GeV. TH1 is one-dimensional, TH2 counts in a grid of x and y bins. Each bin has a content and an error."],
   TGraph: ["Graph (TGraph)", "A list of points (x, y), optionally with error bars. Measured values with uncertainties are often stored as graphs."],
   TF1: ["Function (TF1)", "A mathematical function such as a fit result. In SciRooPlot you can also write one as text: AddFunction(\"sin(x)/x\")."],
-  TTree: ["Tree (TTree)", "ROOT's table format: one row per event or particle, one column per quantity. SciRooPlot fills histograms from trees for you (Project1D, Filter), as it does for CSV tables."],
+  TTree: ["Tree (TTree)", "ROOT's table format: one row per event or particle, one column per quantity. SciRooPlot fills histograms from trees for you (Project1D, Filter), as it does for CSV tables. Its successor RNTuple is read the same way."],
   rootfile: [".root file", "ROOT's file format. It holds histograms, graphs and trees in folders, like a small file system. Open one with `root -l file.root` and `new TBrowser` to look inside."],
   datasource: ["Data source", "A short name for one or more input files, e.g. \"data\" for /path/to/run2024.root. Plots refer to data by its name inside the file plus the data source."],
   pad: ["Pad", "One drawing area inside a plot, with its own axes. A plot with a ratio panel has two pads: plot[1] on top, plot[2] below. plot[0] holds settings for all pads."],
@@ -1604,14 +1604,14 @@ const REF = [
 <tr><td><a href="https://scirooplot.github.io/SciRooPlot/skill/scirooplot/SKILL.md">SKILL.md</a></td><td>the skill as text, readable for people as well</td></tr>
 </tbody></table></div>
 <p>When an agent adapts code written for an older version, point it to <a href="#updating">Updating</a> (the same list as <code>api-changes.md</code>).</p>` },
-  { id: "sources", g: "data", t: "Data sources and finding data", body: `<p>A data source is one data set made of its inputs. Within it, the first input containing a requested name wins; trees found in several inputs are chained. Train and test samples therefore belong into separate sources.</p>
+  { id: "sources", g: "data", t: "Data sources and finding data", body: `<p>A data source is one data set made of its inputs. Within it, the first input containing a requested name wins; trees and RNTuples found in several inputs are chained. Train and test samples therefore belong into separate sources.</p>
 <div class="code"><pre data-snip="sources"></pre></div>
 <h3>What it reads</h3>
 <div class="tablewrap"><table><tbody><tr><td>Histograms</td><td><code>TH1</code>, <code>TH2</code>, <code>TH3</code>, <code>TProfile</code>, <code>TProfile2D</code>, <code>TH2Poly</code>; <code>THn</code> and <code>THnSparse</code> through projections</td></tr>
 <tr><td>Graphs</td><td><code>TGraph</code>, <code>TGraphErrors</code>, <code>TGraphAsymmErrors</code>, <code>TGraphBentErrors</code>, <code>TGraph2D</code> (with errors)</td></tr>
 <tr><td>Functions</td><td><code>TF1</code>, <code>TF2</code>, <code>TF3</code>, or a formula written in the definition</td></tr>
 <tr><td>Efficiencies</td><td><code>TEfficiency</code></td></tr>
-<tr><td>Trees and tables</td><td><code>TTree</code> (chained over all inputs) and text tables <code>.csv</code> <code>.tsv</code> <code>.txt</code> <code>.dat</code> <code>.tab</code>: histograms, profiles and graphs are filled from their columns</td></tr>
+<tr><td>Trees and tables</td><td><code>TTree</code> and <code>RNTuple</code> (chained over all inputs) and text tables <code>.csv</code> <code>.tsv</code> <code>.txt</code> <code>.dat</code> <code>.tab</code>: histograms, profiles and graphs are filled from their columns</td></tr>
 <tr><td>Where it can sit</td><td>ROOT files, in directories, <code>TList</code>s and folders at any depth; whole folders of files and wildcards; objects made in your own program (<a href="#ref-memory">Data made in your program</a>)</td></tr></tbody></table></div>
 <div class="dg find" role="img" aria-label="How a name is found: inputs in order, inside a file the current level first, then each folder completely">
   <div class="dg-src"><b>data source "data"</b><ol><li><code>a.root</code></li><li><code>b.root</code></li><li><code>more/*.root</code></li></ol><p>Inputs are tried in this order; the first one that has the name wins. A tree found in several inputs is chained over all of them.</p></div>
@@ -1659,7 +1659,7 @@ const REF = [
 <div class="code"><pre data-snip="modifiers"></pre></div>
 <p><code>Density()</code> is <code>DivideBinWidth().Normalize()</code>: a probability density from counts; <code>Normalize(True)</code> is for data that already is a density. <code>Normalize().Cumulative()</code> gives a CDF, <code>Cumulative().NormalizeToMaximum()</code> ends at 1.</p>` },
   { id: "ratios", g: "data", t: "Ratios", body: `<div class="code"><pre data-snip="ratios"></pre></div><p class="small muted">Where the modifiers act on a ratio: <a href="#ref-modifiers">Modifiers and projections</a>.</p><p>Incompatible binnings are divided via spline interpolation. Settings on the ratio itself act on the result; write <code>Numer()</code>, <code>Denom()</code> or <code>Both()</code> before modifiers that belong to the inputs.</p>` },
-  { id: "trees", g: "data", t: "Trees and tables", body: `<div class="code"><pre data-snip="trees"></pre></div><p>Expressions and filters are C++ over the column names, evaluated with RDataFrame when the plot is drawn. Without explicit bins, 100 bins over the observed range are used. CSV and other text tables work the same way.</p>` },
+  { id: "trees", g: "data", t: "Trees and tables", body: `<div class="code"><pre data-snip="trees"></pre></div><p>Expressions and filters are C++ over the column names, evaluated with RDataFrame when the plot is drawn. Without explicit bins, 100 bins over the observed range are used. CSV and other text tables work the same way, and so do RNTuples, ROOT's newer format for tables (written e.g. by uproot); RNTuples cannot be joined, and ROOT chains them only when they have the same path in every file.</p>` },
   { id: "plots", g: "layout", t: "Plots, pads and axes", body: `<div class="code"><pre data-snip="plots"></pre></div>
 <p>Axis ranges belong to the pad (<code>plot[1]['X'].SetRange</code>), visible data ranges to the data (<code>SetRangeX</code>). Ranges stored with input histograms are ignored, except for the data that defines the frame.</p>` },
   { id: "baseplots", g: "layout", t: "Base plots and own layouts", body: `<p>A base plot is the layout a plot is drawn on: canvas size, the arrangement of the pads, margins, fonts, text sizes and the colour sequence. You name it as the third argument of <code>Plot</code>; the plot itself then only holds data, titles and ranges. All shipped base plots share the same text sizes, tick lengths and line widths, so figures with different layouts look alike side by side in a paper or thesis.</p>
@@ -2993,8 +2993,7 @@ function initMessages() {
 const NP = Object.assign(/*NUMPY*/, { uproot: `import uproot
 
 with uproot.recreate(results + "events.root") as f:  # instead of events.csv
-    f.mktree("events", {"label": "int64", "isTest": "bool", "score": "float64", "pt": "float64", "weight": "float64"})
-    f["events"].extend({"label": df.label, "isTest": df.split == "test", "score": df.score, "pt": df.pt, "weight": df.weight})
+    f["events"] = df
     f["sig"] = np.histogram(df.score[df.label == 1], bins=25, range=(0.0, 1.0))` });
 const NP_FIGS = [
   ["scores", "Histograms", "Score distributions", "Two histograms made with <code>histo</code> like <code>np.histogram</code>, normalised like <code>density=True</code>. The error bars belong to the histograms and follow the normalisation."],

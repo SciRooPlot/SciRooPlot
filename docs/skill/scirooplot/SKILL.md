@@ -76,7 +76,7 @@ Python is the same API: `from SciRooPlot import *`, `PlotManager("myProject")`, 
 
 `pm.AddDataSource(name, input | [inputs])` — a data source is one data set made of its inputs:
 - `"/path/a.root"` whole file; `"/path/a.root:dir/list"` a directory or TList inside it; `"/path/folder/"` all ROOT files below a directory; wildcards `AO2D_*.root:DF_*` (files and folders inside files); `${HOME}/...` environment variables; `"/path/table.csv"` (data name = file name without `.csv`).
-- Within a data source the first input containing a requested name wins; trees found in several inputs are chained. Train/test samples etc. therefore belong into separate sources.
+- Within a data source the first input containing a requested name wins; trees and RNTuples found in several inputs are chained. Train/test samples etc. therefore belong into separate sources.
 - The data name may be a path inside the input: `AddData("folder1/hist", "src")`. Sub-sources are allowed in `AddData` as `"src:folder"` (restricts the search to that folder) — the folder is part of the source, never of the name.
 - Without a path, a name is searched in the folder of the data source first, then in its sub-folders/lists one after the other in stored order, each completely (depth-first); the first match counts. If a name exists more than once, give the path.
 - `AddDataSource(name, TObject*)` or a vector of objects adds in-memory objects; they are copied into the project, so they may be deleted afterwards. A named list (TList, TObjArray, ...) or a TDirectory becomes a folder of the data source (`AddData("myList/myHist", "src")`, trees inside are copied with all entries); a nameless list (ROOT reports its class name) or an open TFile adds its contents directly. Folders of the same name are merged, an object of an existing name replaces it (with a warning).
@@ -169,7 +169,7 @@ plot[2].AddRatio(...).Both().Normalize().Result().SetColor(kRed);            // 
 ```
 Incompatible binnings are divided via spline interpolation. Modifiers and data selections on the ratio itself (`Result()` mode) are usually meaningless for Rebin/Project etc. and warn — write them explicitly with `Numer()`, `Denom()` or `Both()`.
 
-## Trees and tables (ROOT trees, CSV)
+## Trees and tables (TTree, RNTuple, CSV)
 
 ```cpp
 .Project1D("pt")                                  // 100 automatic bins; {"pt", 200}, {"pt", 200, {0.1, 20.}}, {"pt", {edges...}}
@@ -181,7 +181,7 @@ Incompatible binnings are divided via spline interpolation. Modifiers and data s
 .Join("truth/events", {}, "truth")               // tree in another folder, with alias
 .Join({"events", "otherSource"}, {"run", "event"})   // from another data source, matched by up to two integer keys
 ```
-Column expressions and filters are C++ expressions over the column/leaf names (evaluated with RDataFrame when the plot is generated). Without explicit bins, 100 bins over the observed range are used.
+Column expressions and filters are C++ expressions over the column/leaf names (evaluated with RDataFrame when the plot is generated). Without explicit bins, 100 bins over the observed range are used. RNTuples (ROOT's newer table format, e.g. written by uproot's `f["t"] = df`) work like trees, but cannot be joined and are chained only when they have the same path in every file.
 
 ## Legends and texts
 

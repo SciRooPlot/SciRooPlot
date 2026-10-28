@@ -85,6 +85,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <sys/stat.h>
 #include <tuple>
 #include <unistd.h>
@@ -472,6 +473,10 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
         if (!key || directory->FindKey(key->GetName()) != key || !added.insert(key->GetName()).second) continue;
         if (TClass* keyClass = TClass::GetClass(key->GetClassName()); keyClass && keyClass->InheritsFrom(TDirectory::Class())) {
           if (auto* keyDir = directory->GetDirectory(key->GetName())) add(keyDir, subDir, subFolder);  // owned by the file
+        } else if (!ReadableClass(key)) {
+          // ReadObj would return an object that is no TObject (e.g. an RNTuple, whose data stays in its file anyway)
+          logger::warning("Cannot add {} of class {} from {} (data source {}): {}.", key->GetName(), key->GetClassName(), directory->GetPath(), dataSource,
+                          (std::string_view(key->GetClassName()) == "ROOT::RNTuple") ? "give the file by its path to read an RNTuple" : "only TObjects whose class is known can be added");
         } else if (std::unique_ptr<TObject, container_deleter_t> item{key->ReadObj()}) {
           // read from the file: deleted after writing it (a list with all its items)
           add(item.get(), subDir, subFolder);
@@ -1562,6 +1567,33 @@ bool PlotManager::FillBuffer()
           auto joins = dataInfo.joins.value_or(vector<join_t>{});
           if (std::find(joinGroups.begin(), joinGroups.end(), joins) == joinGroups.end()) joinGroups.push_back(std::move(joins));
         }
+        // RNTuples are read by RDataFrame from their files directly; ROOT can chain them only under the same path and cannot join them
+        const bool isRNTuple = treeInputs.front().isRNTuple;
+        const bool isMixed = std::any_of(treeInputs.begin(), treeInputs.end(), [isRNTuple](const tree_input_t& treeInput) { return treeInput.isRNTuple != isRNTuple; });
+        if (isMixed) {
+          logger::error("Cannot read {}: it is a TTree in some inputs and an RNTuple in others.", DataLocation(dataSource, treeName));
+          continue;
+        }
+        if (isRNTuple) {
+          const string& ntuplePath = treeInputs.front().treePath;
+          auto other = std::find_if(treeInputs.begin(), treeInputs.end(), [&ntuplePath](const tree_input_t& treeInput) { return treeInput.treePath != ntuplePath; });
+          if (other != treeInputs.end()) {
+            logger::error("Cannot read RNTuple {}: ROOT chains RNTuples only under the same path, but it is {} in {} and {} in {}.", DataLocation(dataSource, treeName),
+                          ntuplePath, treeInputs.front().file, other->treePath, other->file);
+            continue;
+          }
+          vector<string> files;
+          for (const auto& treeInput : treeInputs)
+            files.push_back(treeInput.file);
+          for (const auto& joins : joinGroups) {
+            if (!joins.empty()) {
+              logger::error("Cannot join {} to RNTuple {}: ROOT cannot join RNTuples.", joins.front().GetDescription(), DataLocation(dataSource, treeName));
+              continue;
+            }
+            ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [ntuplePath, files]() { return std::make_unique<ROOT::RDataFrame>(ntuplePath, files); }, describeInputs(treeInputs), joins);
+          }
+          continue;
+        }
         set<string> failedJoins;  // reported already
         for (const auto& joins : joinGroups) {
           auto chain = std::make_shared<TChain>(treeInputs.front().treePath.data());
@@ -2406,17 +2438,19 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
           continue;
         }
         if (IsContainer(keyClass)) continue;
-        if (!keyClass) {
+        // an RNTuple is no TObject: it has no readable class, but RDataFrame reads it like a tree
+        const bool isRNTuple = !keyClass && std::string_view(key->GetClassName()) == "ROOT::RNTuple";
+        if (!keyClass && !isRNTuple) {
           logger::warning("Skipping {} (data source {}): unknown or unsupported class {}.", name, dataSource, key->GetClassName());
           continue;
         }
-        if (keyClass->InheritsFrom(TTree::Class()) && !keyClass->InheritsFrom(TChain::Class())) {
+        if (isRNTuple || (keyClass->InheritsFrom(TTree::Class()) && !keyClass->InheritsFrom(TChain::Class()))) {
           // trees stored in files are chained over all files of the data source (processed once all files are searched)
           dataNames.erase(name);
           mDataBuffer[dataSource][prefix + name].reset(nullptr);
           string dirPath = directory->GetPath();  // file.root:/some/folder
           dirPath.erase(0, dirPath.find(":/") + 2);
-          mTreeInputs[dataSource][prefix + name].push_back({directory->GetFile()->GetName(), (dirPath.empty() ? "" : dirPath + "/") + name, mIsFolderInput});
+          mTreeInputs[dataSource][prefix + name].push_back({directory->GetFile()->GetName(), (dirPath.empty() ? "" : dirPath + "/") + name, mIsFolderInput, isRNTuple});
           continue;
         }
         if (TObject* obj = key->ReadObj()) {
@@ -2774,7 +2808,7 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
     if (fileNamePath.size() > 1) dir = dir->GetDirectory(fileNamePath[1].data());
     if (dir && !path.empty()) dir = dir->GetDirectory(path.data());
     if (!dir) continue;
-    if (auto treePath = find(dir)) treeInputs.push_back({fileName, *treePath, fileNamePath.size() > 1});
+    if (auto treePath = find(dir)) treeInputs.push_back({fileName, *treePath, fileNamePath.size() > 1, false});
   }
   return treeInputs;
 }

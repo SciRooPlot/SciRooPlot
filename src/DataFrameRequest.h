@@ -267,6 +267,15 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
       if (columnType == "ULong64_t" || columnType == "unsigned long long") return defineTyped(ULong64_t{});
       if (columnType == "Long_t" || columnType == "long") return defineTyped(Long_t{});
       if (columnType == "ULong_t" || columnType == "unsigned long") return defineTyped(ULong_t{});
+      // RNTuple fields have fixed-width types
+      if (columnType == "std::int32_t") return defineTyped(std::int32_t{});
+      if (columnType == "std::uint32_t") return defineTyped(std::uint32_t{});
+      if (columnType == "std::int64_t") return defineTyped(std::int64_t{});
+      if (columnType == "std::uint64_t") return defineTyped(std::uint64_t{});
+      if (columnType == "std::int16_t") return defineTyped(std::int16_t{});
+      if (columnType == "std::uint16_t") return defineTyped(std::uint16_t{});
+      if (columnType == "std::int8_t") return defineTyped(std::int8_t{});
+      if (columnType == "std::uint8_t") return defineTyped(std::uint8_t{});
       // other types (collections, strings, long double, classes) take the general way below
     }
     const std::string typeColumn = colName + "_TYPE";

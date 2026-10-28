@@ -180,6 +180,7 @@ class PlotManager
     std::string file;      // file containing this part of the tree
     std::string treePath;  // path of the tree within the file
     bool isFolderInput;    // the input is a folder within the file (file.root:folder) rather than the whole file
+    bool isRNTuple;        // stored as an RNTuple (ROOT's columnar successor of TTree) rather than as a TTree
   };
   std::map<std::string, std::map<std::string, std::vector<tree_input_t>>> mTreeInputs;  // data source -> tree name -> where it was found in the inputs of the data source currently read
   bool mIsFolderInput{};                                                                // the input currently read is a folder within a file

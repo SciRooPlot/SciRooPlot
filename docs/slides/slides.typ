@@ -971,7 +971,7 @@
 
       - Paths are absolute, but `SRC_DIR` enables paths relative to #plot-def-file; environment variables are expanded automatically.
 
-      - Inputs are searched in the order they were added (files from directories or wildcards alphabetically) and the first match counts -- but trees found in several inputs are chained.
+      - Inputs are searched in the order they were added (files from directories or wildcards alphabetically) and the first match counts -- but trees and RNTuples found in several inputs are chained.
 
       - Local ROOT objects can be added directly; lists and TDirectories become folders.
 
@@ -1087,7 +1087,7 @@
       #v(0.3em)
       #card("Data", main-color, title-size: 20pt, width: 100%)[
         #set text(size: 15pt)
-        Histograms and profiles (1D--3D, `THnSparse` via projections), graphs (incl. `TGraph2D`), `TF1`/`TF2`/`TF3`, `TEfficiency`, trees (chained over all inputs if stored in folders, processed in memory if stored in a list).
+        Histograms and profiles (1D--3D, `THnSparse` via projections), graphs (incl. `TGraph2D`), `TF1`/`TF2`/`TF3`, `TEfficiency`, trees and RNTuples (chained over all inputs if stored in folders; trees in a list are processed in memory).
       ]
       #v(0.3em)
       #card("Not readable", accent-color, title-size: 20pt, width: 100%)[
@@ -1153,7 +1153,7 @@
 
       - Histograms, graphs, functions: the first input containing the name counts.
 
-      - Trees stored in folders: all inputs containing the tree are chained and processed together (e.g. one file per run, one folder per time frame). A tree stored in a list cannot be chained: the first one found is used.
+      - Trees stored in folders: all inputs containing the tree are chained and processed together (e.g. one file per run, one folder per time frame). A tree stored in a list cannot be chained: the first one found is used. RNTuples are chained only if their path is the same in every input.
 
       - `"src:folder"` in `AddData` restricts the search to that folder in each input (wildcards allowed, e.g. `"ao2d:DF_1*"`); inputs without it are skipped.
 
@@ -1331,7 +1331,7 @@
           - Graphs (`TGraph`, `TGraph2D`)
           - Functions (`TF1`, `TF2`, `TF3`)
           - Efficiencies (`TEfficiency`)
-          - Trees (`TTree`)
+          - Trees (`TTree`, `RNTuple`)
           - Tables (`.csv`, `.dat`, `.txt`, `.tsv`, `.tab`)
         ],
       )
@@ -1723,7 +1723,7 @@
     columns: (50%, 45%),
     gutter: 5%,
     [
-      - Leaves of ROOT trees and columns of tables (`.csv`, `.txt`, `.dat`, `.tsv`, `.tab`) are accessed through the same interface.
+      - Leaves of ROOT trees, fields of RNTuples and columns of tables (`.csv`, `.txt`, `.dat`, `.tsv`, `.tab`) are accessed through the same interface.
 
       - Create histogram projections, profiles and scatter plots directly from tabular data.
 
