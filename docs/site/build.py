@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import sys
+import textwrap
 
 import numpy as np
 from PIL import Image, ImageDraw
@@ -88,6 +89,18 @@ for line in open(f"{REPO}/docs/api-changes.md"):
     elif not sec and line.strip() and not line.startswith("#"):
         intro.append(inline(line.strip()))
 s = s.replace("/*CHANGES*/", json.dumps({"intro": intro, "sections": changes}))
+def blocks(path):  # the blocks between "# ---- <id>" and the next "# ----" marker of a file, dedented
+    out, cur = {}, None
+    for line in open(path):
+        m = re.match(r"^\s*# ----(?: (\w+))?\s*$", line)
+        if m:
+            cur = m.group(1)
+            if cur:
+                out[cur] = []
+        elif cur:
+            out[cur].append(line)
+    return {k: textwrap.dedent("".join(v)).strip("\n") for k, v in out.items()}
+s = s.replace("/*NUMPY*/", json.dumps({**blocks(f"{SITE}/numpy/DefinePlots.py"), **blocks(f"{SITE}/numpy/FromFiles.py")}))
 s = s.replace("/*MESSAGES*/", subprocess.run([sys.executable, f"{SITE}/extract_messages.py", REPO], capture_output=True, text=True, check=True).stdout)
 s = s.replace("/*MSG_HELP*/", open(f"{SITE}/messages_help.js").read())
 s = s.replace("/*EXDATA*/", open(f"{GEN}/data.json").read())

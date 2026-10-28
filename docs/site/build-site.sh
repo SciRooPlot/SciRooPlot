@@ -2,7 +2,7 @@
 # Builds the web page into <out folder>: renders its plots with an installed SciRooPlot (the tour, the drawing option gallery,
 # the example project), records the terminal demo, runs the plain ROOT macros of docs/slides/root-examples, extracts the
 # example code, the palettes and the example data, and fills the template (build.py).
-# usage: docs/site/build-site.sh <out folder>   (with env.sh of the installed SciRooPlot sourced; needs python3 with numpy and Pillow
+# usage: docs/site/build-site.sh <out folder>   (with env.sh of the installed SciRooPlot sourced; needs python3 with numpy, pandas and Pillow
 # and the tools of record-demo.sh)
 set -euo pipefail
 SITE=$(cd "$(dirname "$0")" && pwd)
@@ -41,6 +41,19 @@ srp select site
 plot '.+' '.+' png
 cp -r site-out/tour "${OUT}/img/tour"
 cp -r site-out/gallery "${OUT}/img/gallery"
+
+# the page for numpy and pandas users: its plots made from arrays in memory, and the same results written to files and read
+# back (those plots are not shown: drawing them checks that the code of the page works)
+srp add numpy "${SITE}/numpy/DefinePlots.py" "${WORK}/numpy-out"
+srp select numpy
+plot ml '.+' png
+cp -r numpy-out/ml "${OUT}/img/numpy"
+export NUMPY_RESULTS="${WORK}/numpy-results"
+mkdir -p "${NUMPY_RESULTS}"
+srp add numpyfiles "${SITE}/numpy/FromFiles.py" "${WORK}/numpy-files-out"
+srp select numpyfiles
+plot files '.+' png
+ls numpy-files-out/files/{overtraining,roc,learning}.png >/dev/null
 
 # the plain ROOT macros the vs. ROOT page compares with (the SciRooPlot side shows the example plots)
 for macro in "${REPO}"/docs/slides/root-examples/*.C; do

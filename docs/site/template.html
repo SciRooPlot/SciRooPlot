@@ -76,6 +76,12 @@ nav.views a[aria-current="page"] { color: #ffffff; background: #16233a; border-c
 
 main { padding-block: 0 80px }
 section.view { display: grid; gap: 44px; padding-top: 36px }
+.npteaser { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px }
+.npteaser button { font: inherit; text-align: left; background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 8px; cursor: pointer; display: grid; gap: 6px; align-content: start; color: var(--text) }
+.npteaser button:hover, .npteaser button:focus-visible { border-color: var(--teal) }
+.npteaser img { width: 100%; height: 190px; object-fit: contain; background: #fff; border-radius: 6px }
+.npteaser span { font-size: 0.85rem; font-weight: 700 }
+@media (max-width: 760px) { .npteaser { grid-template-columns: repeat(2, minmax(0, 1fr)) } .npteaser img { height: 140px } }
 .lede { font-size: 1.2rem; color: var(--muted); max-width: 62ch }
 
 /* level switching: one source, two depths */
@@ -125,7 +131,7 @@ html, body { overflow-x: clip }
 .hero .tag-line { font-size: 1.45rem; color: var(--hero-muted); line-height: 1.35 }
 @media (min-width: 761px) { .hero .tag-line span { display: block; white-space: nowrap } .hero .tag-line span:first-child { color: var(--hero-text, #fff); margin-bottom: 4px } }
 .hero .logo-big { justify-self: center; width: min(440px, 100%); height: auto }
-.paths { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 30px }
+.paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 30px }
 .path { text-align: left; font: inherit; color: var(--hero-fg); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16); border-top: 4px solid var(--amber); border-radius: 10px; padding: 14px 16px; cursor: pointer; display: grid; gap: 4px; align-content: start }
 .path:hover { background: rgba(255, 255, 255, 0.11) }
 .path strong { font-size: 1.05rem }
@@ -535,6 +541,7 @@ figure.plot figcaption { color: #5b6b80 }
         <div class="paths">
           <button class="path" data-go="tour" data-set-level="beginner"><strong>I'm new to ROOT</strong><span>A guided tour from an empty project to a spectrum with a ratio panel, with every ROOT term explained.</span></button>
           <button class="path" data-go="from-root" data-set-level="expert"><strong>I already use ROOT</strong><span>The same plot as a ROOT macro and in SciRooPlot, side by side.</span></button>
+          <button class="path" data-go="numpy" data-set-level="beginner"><strong>I work with numpy and pandas</strong><span>Your arrays and DataFrames as publication figures: histograms, ROC curves, panel grids, ratios and fits.</span></button>
           <button class="path" data-go="install"><strong>Just install it</strong><span>Homebrew, conda or from source, on macOS and Linux.</span></button>
         </div>
       </div>
@@ -646,6 +653,104 @@ figure.plot figcaption { color: #5b6b80 }
       </tbody>
     </table></div>
     <p>Everything you know stays valid: colours, markers, line styles, TLatex, raw draw-option strings, and the canvases in the output. <code>plot … macro</code> even writes a ROOT macro per plot that redraws it without SciRooPlot.</p>
+  </div>
+</section>
+
+<!-- ======================================================== FROM NUMPY AND PANDAS -->
+<section class="view wrap" id="v-numpy" hidden>
+  <div style="display:grid;gap:12px">
+    <h2 class="title">Coming from numpy and pandas</h2>
+    <p class="lede">You have arrays, DataFrames, maybe a model from scikit-learn. You want figures that look like they belong in one paper, every single one, and that you can redraw in a second when a co-author asks for another label. Here is how your data becomes such figures: first straight from memory, then the way SciRooPlot is meant to be used.</p>
+    <p class="basics"><b>What is ROOT?</b>The data analysis framework of particle physics. SciRooPlot draws with it, so its plots are the ones you see in physics papers. You don't need to learn ROOT for this page: everything here is plain Python, and the few ROOT words you meet are explained at the end.</p>
+  </div>
+
+  <div class="npteaser" aria-label="Figures on this page">
+    <button data-np-jump="2"><img src="img/numpy/overtraining.png" alt="Overtraining check" width="788" height="788"><span>Train vs. test from a DataFrame</span></button>
+    <button data-np-jump="4"><img src="img/numpy/ptBins.png" alt="A grid of four panels" width="1426" height="1426"><span>A grid of panels</span></button>
+    <button data-np-jump="5"><img src="img/numpy/reweighted.png" alt="Weighted histograms with a ratio panel" width="788" height="1024"><span>Weights and a ratio panel</span></button>
+    <button data-np-jump="3"><img src="img/numpy/features.png" alt="A 2D histogram" width="1024" height="788"><span>2D histogram</span></button>
+  </div>
+
+  <div style="display:grid;gap:14px">
+    <h2 class="title">Sounds familiar?</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th style="width:44%">With matplotlib you…</th><th>With SciRooPlot…</th></tr></thead>
+      <tbody>
+        <tr><td>tune font sizes figure by figure, and the 2×2 grid or the plot with a ratio panel still looks different from the single plot next to it in the paper</td><td>pick a base plot: <code>"1d"</code>, <code>"1d_ratio"</code>, <code>"1d_2x2"</code>, <code>"2d"</code>… Text sizes, ticks and line widths are the same in every panel of every layout.</td></tr>
+        <tr><td>add <code>np.sqrt(counts)</code> error bars by hand, and get them wrong with weights or after <code>density=True</code></td><td>histograms carry their errors: √N, or the sum of the squared weights with <code>weights=</code>, kept right through normalising, rebinning and ratios.</td></tr>
+        <tr><td>build a ratio or residual panel with <code>gridspec</code>, shared axes and your own error propagation</td><td><code>plot[2].AddRatio(data, model)</code> in the ratio pad of a <code>_ratio</code> base plot: one line, errors propagated.</td></tr>
+        <tr><td>slice the DataFrame again for every curve of every figure</td><td>hand it over once with <code>table("events", df)</code>; each curve is a <code>Filter('label == 1 &amp;&amp; pt &gt; 2')</code> on it, run when the plot is drawn.</td></tr>
+        <tr><td>move the legend around until it covers nothing</td><td><code>AddLegend()</code> finds a free corner; <code>SetRoomAboveMax(0.3)</code> keeps space free above the data.</td></tr>
+        <tr><td>call <code>savefig</code> for every figure and format, and re-run the notebook from the top when you come back to it months later</td><td><code>plot ml .+ pdf</code> writes all plots of a group. Every plot has a name: <code>plot ml roc</code> opens it in a window from any folder, <kbd>Tab</kbd> completes the names.</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div style="display:grid;gap:14px">
+    <h2 class="title">1. Your arrays, straight in</h2>
+    <p>The helpers <code>histo</code>, <code>histo2d</code>, <code>graph</code> and <code>table</code> take numpy arrays, lists and pandas columns as they are, with the arguments you know from numpy. What they make is stored with your project, so the plots can be drawn again later without your program.</p>
+    <div class="code"><pre data-np="sources"></pre><span class="tag">DefinePlots.py, in DefineDataSources</span></div>
+    <p>A data source is a named set of data that plots refer to; this one, <code>ml</code>, holds what the helpers made. The arrays themselves are ordinary numpy and pandas, toy data standing in for yours:</p>
+    <details class="fair"><summary>The data part of the program</summary><div class="code" style="margin-top:10px"><pre data-np="data"></pre><span class="tag">DefinePlots.py, at the top</span></div></details>
+  </div>
+
+  <div style="display:grid;gap:14px">
+    <h2 class="title">Eight figures you make every week</h2>
+    <p>Each plot is a few lines in <code>DefinePlots</code>, using the data source above. Pick one:</p>
+    <div class="filters" id="nptabs" role="group" aria-label="Figure"></div>
+    <div class="step" id="npbody"></div>
+    <p class="key"><b>Try it</b>Make a Python project and put the parts above into its <code>DefinePlots.py</code>: the data part at the top, the data source into <code>DefineDataSources</code>, the plots into <code>DefinePlots</code>. Then draw a plot by its group and name, or all of them: <span class="term-line" style="display:block;margin-top:8px"><span class="p">$ </span>srp init-py ml<br><span class="p">$ </span>plot ml roc<br><span class="p">$ </span>plot ml .+ pdf</span></p>
+  </div>
+
+  <div style="display:grid;gap:14px">
+    <h2 class="title">What you know, and what it is called here</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th style="width:44%">You know</th><th>In SciRooPlot</th></tr></thead>
+      <tbody>
+        <tr><td><code>np.histogram(x, bins, range, weights=w)</code>, <code>plt.hist</code></td><td><code>histo("name", x, bins, range, weights=w)</code>: <code>bins</code> a number or the edges</td></tr>
+        <tr><td><code>np.histogram2d</code>, <code>plt.hist2d</code></td><td><code>histo2d("name", x, y, bins, range, weights=w)</code></td></tr>
+        <tr><td><code>plt.plot(x, y)</code>, <code>plt.errorbar(x, y, yerr)</code></td><td><code>graph("name", x, y, xerr=…, yerr=…)</code></td></tr>
+        <tr><td>a DataFrame and boolean masks</td><td><code>table("name", df)</code>, then <code>Project1D(("pt", 50, [0.0, 10.0])).Filter("label == 1")</code> per curve; a 2D array with <code>columns=["a", "b"]</code></td></tr>
+        <tr><td><code>density=True</code></td><td><code>.Normalize(True)</code>; <code>.Normalize()</code> scales the integral to 1</td></tr>
+        <tr><td><code>plt.subplots(2, 2)</code>, a residual panel</td><td>the base plots <code>"1d_2x2"</code>, <code>"1d_ratio"</code>; pads are <code>plot[1]</code>, <code>plot[2]</code>…, <code>plot[0]</code> sets all of them</td></tr>
+        <tr><td><code>ax.set_yscale("log")</code>, <code>ax.set_xlim(a, b)</code>, <code>ax.set_xlabel</code></td><td><code>plot[1]['Y'].SetLog()</code>, <code>['X'].SetRange(a, b)</code>, <code>['X'].SetTitle("…")</code></td></tr>
+        <tr><td><code>color="#d62728"</code>, <code>ls="--"</code>, <code>lw=2</code></td><td><code>.SetColor("#d62728")</code> or ROOT's <code>kRed + 1</code>; <code>.SetLine(kRed + 1, kDashed, 2.0)</code></td></tr>
+        <tr><td><code>ax.legend()</code></td><td><code>plot[1].AddLegend()</code>; the labels are the third argument of <code>AddData</code></td></tr>
+        <tr><td><code>fig.savefig("roc.pdf")</code></td><td><code>plot ml roc pdf</code> in the terminal (or <code>png</code>, <code>svg</code>, <code>eps</code>…)</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <div style="display:grid;gap:14px">
+    <h2 class="title">2. Your results in files: SciRooPlot as it is meant to be used</h2>
+    <p>In memory, the data is made by the same program as the plots, so every change to a plot runs your computation again. For a quick figure that is fine. For a paper, a thesis or a running analysis, split the two:</p>
+    <ul style="margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:74ch">
+      <li>your analysis or notebook <b>writes its results once</b>, as tables or histograms;</li>
+      <li>the plotting program <b>only reads them</b>: changing a title or a colour never runs the analysis again, and <code>plot</code> redraws any figure in a second;</li>
+      <li>the same files feed every plot, every talk and the thesis, and a colleague with the files and your <code>DefinePlots.py</code> gets exactly your figures;</li>
+      <li>big data stays on disk: tables are read when a plot needs them, a selection runs over millions of rows, and many files of one data set are read as one.</li>
+    </ul>
+    <p>Storing is one line per result with pandas. SciRooPlot reads CSV and other text tables directly:</p>
+    <div class="code"><pre data-np="store"></pre><span class="tag">at the end of your analysis</span></div>
+    <p>In the plotting program only the data source changes: it now names the folder, and each file is a table in it, called like the file. Curves are selected from the tables when the plot is drawn: <code>Project1D</code> and <code>Filter</code> as before, <code>Scatter</code> for a curve from two columns.</p>
+    <div class="code"><pre data-np="files"></pre><span class="tag">DefinePlots.py, reading the files</span></div>
+    <p class="key"><b>Big tables</b>Millions of rows are faster from a ROOT file than from a CSV. <a href="https://uproot.readthedocs.io">uproot</a> (pip, no ROOT needed) writes one; create the tree with <code>mktree</code> and explicit types, since <code>f["events"] = df</code> writes ROOT's newer RNTuple format, which SciRooPlot does not read yet. Text columns come out as character arrays there: keep them as numbers or booleans, or in a CSV. <code>f["sig"] = np.histogram(…)</code> stores a histogram.</p>
+    <div class="code"><pre data-np="uproot"></pre><span class="tag">optional: a ROOT file with uproot</span></div>
+  </div>
+
+  <div style="display:grid;gap:14px">
+    <h2 class="title">ROOT words you will meet</h2>
+    <div class="tablewrap"><table>
+      <tbody>
+        <tr><td style="width:30%"><code>kRed + 1</code>, <code>kAzure + 2</code></td><td>ROOT's named colours and their shades; <code>"#d62728"</code> and <code>(0.84, 0.15, 0.16)</code> work everywhere too. <a href="#styles">See them all</a>.</td></tr>
+        <tr><td><code>kFullCircle</code>, <code>kDashed</code></td><td>marker shapes and line styles, like matplotlib's <code>marker="o"</code> and <code>ls="--"</code>. <a href="#styles">Styles</a></td></tr>
+        <tr><td><code>"#it{p}_{T}"</code></td><td>text formatting: ROOT writes <code>#</code> where LaTeX writes a backslash (<code>#sqrt{s}</code>, <code>#alpha</code>), and <code>_{}</code>, <code>^{}</code> as in LaTeX, without dollar signs.</td></tr>
+        <tr><td><code>hist</code>, <code>points</code>, <code>colz</code></td><td>draw options: steps like <code>plt.step</code>, markers with error bars like <code>plt.errorbar</code>, a colour map with its scale. Without one, SciRooPlot picks a sensible one. <a href="#options">All of them, drawn</a></td></tr>
+        <tr><td>tree, table</td><td>ROOT's name for a table with one row per entry; CSV files and <code>table()</code> are read the same way.</td></tr>
+        <tr><td>pad, base plot</td><td>a pad is one panel with its axes (matplotlib's <code>Axes</code>); the base plot is the figure layout with its pads, sizes and fonts.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="stepnav"><a class="btn primary" href="#install">Install SciRooPlot</a><a class="btn" href="#ref-memory">Reference: data made in your program</a><a class="btn" href="#ref-trees">Trees and tables</a><a class="btn" href="#examples">More examples</a></div>
   </div>
 </section>
 
@@ -1511,7 +1616,7 @@ const REF = [
     <p class="small muted">A path (<code>"CaloQA/output/hMult"</code>) goes straight there; give one when a name exists more than once. Of several cycles of a key, the newest is read.</p></div>
 </div>
 <p class="small muted">If a name exists more than once, give the path: <code>AddData("folder1/hist", "src")</code>. A folder belongs either to the data source (<code>"file.root:folder"</code>) or to the name (<code>"folder/hist"</code>), not to both.</p>` },
-  { id: "memory", g: "data", t: "Data made in your program", body: `<p>Not everything comes from a file: a Glauber calculation, a fit result, numbers from a paper, a quick histogram of values you just computed. Give such objects to a data source and use them like file data, by name.</p>
+  { id: "memory", g: "data", t: "Data made in your program", body: `<p>Not everything comes from a file: a Glauber calculation, a fit result, numbers from a paper, a quick histogram of values you just computed. Give such objects to a data source and use them like file data, by name. Working with numpy and pandas? <a href="#numpy">Coming from numpy and pandas</a> shows the helpers on eight everyday figures.</p>
 <div class="code"><pre data-snip="memory"></pre></div>
 <div class="tablewrap"><table><tbody>
 <tr><td>What you can add</td><td>any ROOT object SciRooPlot reads (histograms, graphs, functions, trees, …), also several at once as a list; in Python also objects made with PyROOT</td></tr>
@@ -1932,6 +2037,7 @@ function searchIndex() {
     { kind: "Page", label: "Cheat sheet to print", sub: "the most used calls and commands on one page", text: "cheat sheet cheatsheet print overview summary one page commands calls", go: "#cheatsheet" },
     { kind: "Page", label: "Styles: colours, lines, markers, fills", sub: "every ROOT style constant with a preview", text: "styles colours colors line styles markers marker fill styles patterns hatches hatched transparency alpha kfsolid palette palettes gradient colour blind", go: "#styles" },
     { kind: "Page", label: "Tour: your first spectrum", sub: "from an empty project to a spectrum with a ratio panel", text: "tour tutorial getting started first steps beginner introduction", go: "#tour" },
+    { kind: "Page", label: "Coming from numpy and pandas", sub: "your arrays and DataFrames as figures, in memory or from files", text: "numpy pandas scikit-learn sklearn matplotlib python arrays array dataframe np.histogram histogram2d hist2d errorbar roc curve machine learning ml overtraining learning curve loss fit residuals weights csv uproot table subplots", go: "#numpy" },
     { kind: "Page", label: "ROOT vs SciRooPlot", sub: "plain ROOT macros next to the same figures in SciRooPlot", text: "vs root versus comparison compare macro migrate migration from root", go: "#from-root" },
     { kind: "Page", label: "Examples", sub: "the example project, plot by plot", text: "examples example gallery project plots", go: "#examples" },
     { kind: "Page", label: "Example input files", sub: "what is inside the files the examples read", text: "data input files example data browse root file contents tree", go: "#data" },
@@ -2877,8 +2983,41 @@ function initMessages() {
   const areas = [...new Set(MESSAGES.map(m => m.a))];
   document.getElementById("msgall").innerHTML = areas.map(a => `<h3>${a}</h3>` + MESSAGES.filter(m => m.a === a).map(msgHTML).join("")).join("") }
 
+/* ---------------- coming from numpy and pandas */
+// the code blocks come from docs/site/numpy/*.py (build.py), so the page shows what made its plots; the uproot block is not run by the build
+const NP = Object.assign(/*NUMPY*/, { uproot: `import uproot
+
+with uproot.recreate(results + "events.root") as f:  # instead of events.csv
+    f.mktree("events", {"label": "int64", "isTest": "bool", "score": "float64", "pt": "float64", "weight": "float64"})
+    f["events"].extend({"label": df.label, "isTest": df.split == "test", "score": df.score, "pt": df.pt, "weight": df.weight})
+    f["sig"] = np.histogram(df.score[df.label == 1], bins=25, range=(0.0, 1.0))` });
+const NP_FIGS = [
+  ["scores", "Histograms", "Score distributions", "Two histograms made with <code>histo</code> like <code>np.histogram</code>, normalised like <code>density=True</code>. The error bars belong to the histograms and follow the normalisation."],
+  ["roc", "ROC curve", "A ROC curve", "<code>graph</code> turns two arrays into a curve; <code>AddLine</code> draws the diagonal of a random guess. The legend goes where you ask, here the lower right corner."],
+  ["overtraining", "Train vs. test", "Overtraining check, selected from the DataFrame", "The DataFrame went in once with <code>table</code>. Each curve fills a histogram of one column with <code>Project1D</code> and picks its rows with <code>Filter</code>, a condition over the column names; four curves are one loop. Filled areas and points come from the drawing option and the fill."],
+  ["features", "2D histogram", "Two features against each other", "<code>histo2d</code> like <code>np.histogram2d</code>. The <code>2d</code> base plot keeps room for the colour scale, and <code>['Z'].SetLog()</code> makes it logarithmic."],
+  ["ptBins", "Grid of panels", "The same distributions in four ranges", "Like <code>plt.subplots(2, 2, sharex=True, sharey=True)</code>, with nothing to adjust: the panels touch, share their axes and keep the text sizes of a single plot. Settings on <code>plot[0]</code> hold for all four."],
+  ["reweighted", "Weights and ratio", "Weighted simulation compared with data", "<code>weights=</code> and variable bin edges as in numpy, a logarithmic axis, and the data/simulation ratio below with propagated errors. <code>Both()</code> normalises numerator and denominator before dividing."],
+  ["fit", "Fit with residuals", "A fit over the data, residuals below", "The fit result goes in as a formula and is drawn with <code>AddFunction</code>; the lower panel divides the data by it."],
+  ["learning", "Training history", "Loss curves", "The training history logged by Keras, PyTorch Lightning or scikit-learn, as two curves."]];
+const NP_SIZE = { features: [1024, 788], fit: [788, 1024], reweighted: [788, 1024], ptBins: [1426, 1426] };
+let npCur = 0;
+function npRender() {
+  document.getElementById("nptabs").innerHTML = NP_FIGS.map((f, i) => `<button class="chip" data-np-fig="${i}" aria-pressed="${i === npCur}">${f[1]}</button>`).join("");
+  document.querySelectorAll("[data-np-fig]").forEach(b => b.onclick = () => { npCur = +b.dataset.npFig; npRender() });
+  const [id, , title, text] = NP_FIGS[npCur], [w, h] = NP_SIZE[id] || [788, 788];
+  document.getElementById("npbody").innerHTML = `<div class="text"><h3>${title}</h3><p>${text}</p>
+      <div class="code"><pre id="npcode"></pre><span class="tag">DefinePlots.py, in DefinePlots</span></div></div>
+    <div class="side"><figure class="plot" style="margin:0"><img src="img/numpy/${id}.png" alt="${title}" width="${w}" height="${h}" loading="lazy"></figure><p class="cap">plot ml ${id}</p></div>`;
+  fill(document.getElementById("npcode"), NP[id], "py");
+  glueTerms() }
+function npInit() {
+  document.querySelectorAll("pre[data-np]").forEach(p => fill(p, NP[p.dataset.np], "py"));
+  document.querySelectorAll("[data-np-jump]").forEach(b => b.onclick = () => { npCur = +b.dataset.npJump; npRender(); document.getElementById("nptabs").scrollIntoView({ block: "start" }) });
+  npRender() }
+
 /* ---------------- views */
-const VIEWS = ["start", "tour", "from-root", "styles", "layouts", "options", "cheatsheet", "examples", "data", "reference", "install", "updating"];
+const VIEWS = ["start", "tour", "from-root", "numpy", "styles", "layouts", "options", "cheatsheet", "examples", "data", "reference", "install", "updating"];
 function route() {
   const h = location.hash.slice(1);
   const sub = /^(ref|api)-/.test(h) ? h : null;                    // a topic or a class of the reference
@@ -2907,6 +3046,6 @@ sq.addEventListener("keydown", e => {
   if (e.key === "Enter" && hits[Math.max(0, i)]) { e.preventDefault(); openHit(IDX[+hits[Math.max(0, i)].dataset.i]) }
   if (e.key === "Escape") { document.getElementById("sres").hidden = true; sq.blur() } });
 document.addEventListener("keydown", e => { if (e.key === "/" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); sq.focus() } });
-renderRef(); renderUpdating(); labInit(); renderOptions(); renderExamples(); renderInstall();
+renderRef(); renderUpdating(); labInit(); renderOptions(); renderExamples(); renderInstall(); npInit();
 setLevel(level); setLang(lang); route();
 </script>

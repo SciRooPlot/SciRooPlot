@@ -58,6 +58,7 @@ jobs:
             root_base
             pip
             numpy
+            pandas
             pillow
             -c conda-forge
           cache-environment: true
