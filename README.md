@@ -65,4 +65,4 @@ The file describes the workflow, the API and common pitfalls; the same content i
 Start at the **[SciRooPlot website](https://scirooplot.github.io/SciRooPlot/)**: a guided tour for newcomers, the full reference for experienced users and example plots with their code.
 
 - User manual (slides): [C++ interface](https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_cpp.pdf) · [Python interface](https://scirooplot.github.io/SciRooPlot/slides/SciRooPlot_UserManual_py.pdf)
-- Updating existing code to a new version: [interface changes](https://scirooplot.github.io/SciRooPlot/api-changes.html)
+- Updating existing code to a new version: [interface changes](https://scirooplot.github.io/SciRooPlot/#updating)

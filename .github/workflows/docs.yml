@@ -77,14 +77,9 @@ jobs:
           source install/share/scirooplot/env.sh
           ./docs/site/build-site.sh build
 
-      - name: Build site
+      - name: Add markdown sources, skill and slides
         run: |
-          sudo gem install bundler jekyll jekyll-theme-cayman
-          sed -i '1i---\nlayout: default\ntitle: SciRooPlot\n---\n' docs/api-changes.md
-          jekyll build -s docs -d build-jekyll
-          cp build-jekyll/api-changes.html build/
-          cp -r build-jekyll/assets build/   # the stylesheet of this page
-          # the markdown sources next to the rendered pages, for llms.txt and for agents fetching the skill
+          # the markdown sources next to the web page, for llms.txt and for agents fetching the skill
           cp docs/api-changes.md docs/llms.txt build/
           mkdir -p build/skill/scirooplot/reference
           cp docs/skill/scirooplot/SKILL.md build/skill/scirooplot/
