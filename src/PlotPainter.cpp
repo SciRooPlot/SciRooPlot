@@ -21,6 +21,7 @@
 #include "SciRooPlot/Logger.h"
 
 #include <TApplication.h>
+#include <TAttMarker.h>
 #include <TBox.h>
 #include <TCanvas.h>
 #include <TEfficiency.h>
@@ -377,6 +378,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     gStyle->SetLineWidth(sUnscaledStyle->lineWidth);
     gStyle->SetHatchesLineWidth(sUnscaledStyle->hatchesLineWidth);
     gStyle->SetEndErrorSize(sUnscaledStyle->endErrorSize);
+    gStyle->SetGridStyle(sUnscaledStyle->gridStyle);
     for (int32_t style = 1; style <= static_cast<int32_t>(sUnscaledStyle->lineStyles.size()); ++style) {
       gStyle->SetLineStyleString(style, sUnscaledStyle->lineStyles[style - 1].data());
     }
@@ -2301,15 +2303,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   }
 
   CheckFontSizes(canvas_ptr->GetListOfPrimitives());
-  if (mScale != 1.) {
-    std::set<TObject*> done;
-    ApplyScale(canvas_ptr.get(), done);
+  if (mScale != 1. || mOnScreen) {
     // axes, hatched fill areas, the ends of error bars and the dashes of line styles are painted with the absolute sizes defined in gStyle
-    sUnscaledStyle = StyleSizes{gStyle->GetLineWidth(), gStyle->GetHatchesLineWidth(), gStyle->GetEndErrorSize(), {}};
+    sUnscaledStyle = StyleSizes{gStyle->GetLineWidth(), gStyle->GetHatchesLineWidth(), gStyle->GetEndErrorSize(), gStyle->GetGridStyle(), {}};
     gStyle->SetLineWidth(ScaleLineWidth(gStyle->GetLineWidth()));
     gStyle->SetHatchesLineWidth(ScaleLineWidth(static_cast<Width_t>(gStyle->GetHatchesLineWidth())));
     gStyle->SetEndErrorSize(gStyle->GetEndErrorSize() * mScale);
-    // line styles are lists of dash and gap lengths (see TStyle::SetLineStyleString); styles 2-4 are fixed in the X11 backend and only scale in files
+    // line styles are lists of dash and gap lengths (see TStyle::SetLineStyleString)
     for (int32_t style = 1; style < 30; ++style) {
       const string dashes = gStyle->GetLineStyleString(style);
       sUnscaledStyle->lineStyles.push_back(dashes);
@@ -2320,6 +2320,21 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       }
       if (!scaledDashes.empty()) gStyle->SetLineStyleString(style, scaledDashes.data());
     }
+    // the X11 backend draws styles 2-4 with fixed dash patterns instead of these strings (the strings at scale 1, but never scaled):
+    // on screen they are drawn with free user-defined styles (the highest ones without a string) that carry the strings of 2-4
+    mScreenDashStyles = {};
+    if (mOnScreen) {
+      size_t next{};
+      for (int32_t style = 29; style > 4 && next < mScreenDashStyles.size(); --style) {
+        if (sUnscaledStyle->lineStyles[style - 1].find_first_not_of(' ') != string::npos) continue;  // unset styles hold blanks
+        mScreenDashStyles[next] = static_cast<Style_t>(style);
+        gStyle->SetLineStyleString(style, gStyle->GetLineStyleString(static_cast<int32_t>(next) + 2));
+        ++next;
+      }
+      gStyle->SetGridStyle(ScreenLineStyle(gStyle->GetGridStyle()));
+    }
+    std::set<TObject*> done;
+    ApplyScale(canvas_ptr.get(), done);
   }
   canvas_ptr->cd();
   // the colours of the canvas that are not predefined by ROOT are defined by its first primitive, so that a canvas read from a file
@@ -2780,6 +2795,39 @@ Width_t PlotPainter::ScaleLineWidth(Width_t width) const
 
 //**************************************************************************************************
 /**
+ * Scales the outline width of a marker by the scale factor. ROOT has no line width for markers: the markers with an outline
+ * (open markers, +, x, * and alike) encode it in the style number, as 50 + i + 18 x (width - 2) for the i-th of the 18 styles
+ * with an outline (see TAttMarker::GetMarkerLineWidth); filled markers are returned unchanged.
+ */
+//**************************************************************************************************
+Style_t PlotPainter::ScaleMarkerStyle(Style_t style) const
+{
+  if (mScale == 1.) return style;
+  constexpr int32_t firstEncoded = 50;
+  constexpr int32_t nOutlineStyles = 18;
+  const Style_t base = TAttMarker::GetMarkerStyleBase(style);
+  for (int32_t i = 0; i < nOutlineStyles; ++i) {
+    if (TAttMarker::GetMarkerStyleBase(static_cast<Style_t>(firstEncoded + i)) != base) continue;
+    const int32_t width = std::max(1, static_cast<int32_t>(std::lround(TAttMarker::GetMarkerLineWidth(style) * mScale)));
+    return (width == 1) ? base : static_cast<Style_t>(firstEncoded + i + nOutlineStyles * (width - 2));
+  }
+  return style;
+}
+
+//**************************************************************************************************
+/**
+ * On screen, the user-defined style that stands in for line style 2, 3 or 4 (see GeneratePlot); every other style is returned unchanged.
+ */
+//**************************************************************************************************
+Style_t PlotPainter::ScreenLineStyle(Style_t style) const
+{
+  if (style < 2 || style > 4) return style;
+  const Style_t screenStyle = mScreenDashStyles[style - 2];
+  return (screenStyle) ? screenStyle : style;
+}
+
+//**************************************************************************************************
+/**
  * Scales all absolute sizes of a drawn object (and the objects it contains) by the scale factor:
  * line widths, marker sizes, border sizes and text sizes of pixel fonts (precision 3).
  * The draw option of the object is needed for ROOT features that use these sizes for other purposes.
@@ -2804,10 +2852,14 @@ void PlotPainter::ApplyScale(TObject* obj, std::set<TObject*>& done, const std::
   } else if (auto line = dynamic_cast<TAttLine*>(obj)) {
     line->SetLineWidth(ScaleLineWidth(line->GetLineWidth()));
   }
+  if (auto line = dynamic_cast<TAttLine*>(obj)) line->SetLineStyle(ScreenLineStyle(line->GetLineStyle()));
   // histograms drawn with option TEXT use their marker size as relative text size of the bin contents (see THistPainter::PaintText)
   const bool isHistText = dynamic_cast<TH1*>(obj) && TString(drawOption).Contains("TEXT", TString::kIgnoreCase);
   auto marker = dynamic_cast<TAttMarker*>(obj);
-  if (marker && !isHistText) marker->SetMarkerSize(marker->GetMarkerSize() * mScale);
+  if (marker && !isHistText) {
+    marker->SetMarkerSize(marker->GetMarkerSize() * mScale);
+    marker->SetMarkerStyle(ScaleMarkerStyle(marker->GetMarkerStyle()));
+  }
   auto text = dynamic_cast<TAttText*>(obj);
   if (text && text->GetTextFont() % 10 == 3) text->SetTextSize(text->GetTextSize() * mScale);
   // the border size of a box is no width: 0 means no outline, 1 an outline (its width is the line width scaled above),
@@ -2817,6 +2869,7 @@ void PlotPainter::ApplyScale(TObject* obj, std::set<TObject*>& done, const std::
   }
   if (auto pad = dynamic_cast<TPad*>(obj)) {
     pad->SetFrameLineWidth(scaleFrameLineWidth(pad->GetFrameLineWidth()));
+    pad->SetFrameLineStyle(ScreenLineStyle(pad->GetFrameLineStyle()));
     pad->SetBorderSize(static_cast<Short_t>(std::lround(pad->GetBorderSize() * mScale)));
     applyToList(pad->GetListOfPrimitives());
   }

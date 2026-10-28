@@ -215,13 +215,16 @@ class PlotPainter
  public:
   // scale: factor for the canvas size and all absolute sizes (line widths, marker sizes, pixel fonts),
   //        i.e. the plot looks the same at any scale, only with more or less pixels (used on screen and for bitmap files)
-  explicit PlotPainter(double_t scale = 1.) : mScale(scale) {}
+  // onScreen: the canvas is shown in a window, whose X11 backend has fixed dash patterns for line styles 2-4
+  explicit PlotPainter(double_t scale = 1., bool onScreen = false) : mScale(scale), mOnScreen(onScreen) {}
   std::unique_ptr<TCanvas> GeneratePlot(Plot& plot, const std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>>& dataBuffer);
 
  private:
   void AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefaults, const Plot::Pad& padSettings, uint8_t padID, const Plot::Pad::Data* refFunc, std::string& padSetup);
   void ApplyScale(TObject* obj, std::set<TObject*>& done, const std::string& drawOption = "");
   Width_t ScaleLineWidth(Width_t width) const;
+  Style_t ScaleMarkerStyle(Style_t style) const;
+  Style_t ScreenLineStyle(Style_t style) const;
   static TH1* ExtendFrameAxis(const TH1* frame, char axisLabel, std::optional<double_t> newMin, std::optional<double_t> newMax);
   std::optional<data_ptr_t> GetDataClone(TObject* obj, const std::optional<Plot::Pad::Data::proj_info_t>& projInfo = std::nullopt, bool keepStoredRanges = false);
   template <typename T>
@@ -278,6 +281,9 @@ class PlotPainter
   static std::string GradientPaletteCommand(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha);
 
   double_t mScale{1.};
+  bool mOnScreen{};
+  // on screen: the free user-defined line styles that stand in for styles 2-4 (their dash strings from gStyle), 0 if there is none
+  std::array<Style_t, 3> mScreenDashStyles{};
   std::set<std::pair<const TObject*, size_t>> mReportedStoredRanges;  // input axes whose stored range a projection of this plot does not apply (reported once)
   // histograms drawn as graphs (by an alias only graphs have), with the graph they are drawn as: their statistics box and placeholders refer to the histogram
   std::unordered_map<const TObject*, std::unique_ptr<TH1>> mSourceHists;
@@ -289,6 +295,7 @@ class PlotPainter
     Width_t lineWidth;
     int32_t hatchesLineWidth;
     float_t endErrorSize;
+    Style_t gridStyle;
     std::vector<std::string> lineStyles;
   };
   static inline std::optional<StyleSizes> sUnscaledStyle;  // absolute sizes in gStyle before the scale of the last plot was applied

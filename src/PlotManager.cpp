@@ -1728,7 +1728,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 
   // the personal scale settings only change the number of pixels of plots on screen and of bitmap files, vector files do not depend on them
   const bool isBitmapMode = (mode == "png") || (mode == "jpg") || str_contains(mode, "gif");
-  PlotPainter painter(isInteractiveMode ? Config::Get().ScreenScale() : (isBitmapMode ? Config::Get().BitmapScale() : 1.));
+  PlotPainter painter(isInteractiveMode ? Config::Get().ScreenScale() : (isBitmapMode ? Config::Get().BitmapScale() : 1.), isInteractiveMode);
   gROOT->SetBatch(!isInteractiveMode && !isMacroMode);
   shared_ptr<TCanvas> canvas{painter.GeneratePlot(fullPlot, mDataBuffer)};
   if (!canvas) return false;
