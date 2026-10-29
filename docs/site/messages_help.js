@@ -30,7 +30,7 @@ const MSG_HELP = [
   ["implies a text size in pixel", "Font 43 takes sizes in pixels, but a fraction like 0.04 was set: the text becomes invisible.", "Use pixel sizes (e.g. 31) with font 43, or fractions with the default font 42."],
   ["implies a relative text size", "Font 42 takes sizes as a fraction of the pad, but a pixel size like 31 was set.", "Use fractions (e.g. 0.05) with font 42, or switch to font 43."],
   ["needs a graphical display", "<code>show</code> and the interactive modes open a window, but there is no display (e.g. an ssh session without X forwarding).", "Log in with <code>ssh -X</code>, or write files: <code>plot g name pdf</code>."],
-  ["has data or a frame in pad", "Data was added to a base plot; base plots only hold the layout.", "Add the data in the plots; share it with a loop or a data template (see <a href=\"#ref-templates\">Styles you reuse</a>)."],
+  ["has data or a frame in pad", "Data was added to a base plot; base plots only hold the layout.", "Add the data in the plots; share it with a loop or a data template (see <a href=\"#ref-templates\">Templates</a>)."],
   ["stored on axis … of … is not applied", "Ranges stored with an input histogram are ignored, so the same input looks the same everywhere.", "Set the range in the definition (<code>plot[1]['X'].SetRange</code>), or mark the data <code>SetDefinesFrame()</code>."],
   ["receives a second object named", "Two inputs of a data source contain an object of the same name; the later one wins.", "Use separate data sources, or address the object by its path."],
   ["same file as input", "The same file is listed twice in one data source.", "Remove the duplicate; it is read once."],

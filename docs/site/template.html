@@ -541,10 +541,10 @@ figure.plot figcaption { color: #5b6b80 }
         <h1>SciRooPlot</h1>
         <p class="tag-line"><span>Plotting with ROOT, for C++ and Python.</span> <span>Publication-ready figures in a few lines,</span> <span>all plots of a project in one place.</span></p>
         <div class="paths">
-          <button class="path" data-go="tour" data-set-level="beginner"><strong>I'm new to ROOT</strong><span>A guided tour from an empty project to a spectrum with a ratio panel, with every ROOT term explained.</span></button>
-          <button class="path" data-go="from-root" data-set-level="expert"><strong>I already use ROOT</strong><span>The same plot as a ROOT macro and in SciRooPlot, side by side.</span></button>
-          <button class="path" data-go="numpy" data-set-level="beginner"><strong>I work with numpy and pandas</strong><span>Your arrays and DataFrames as publication figures: histograms, ROC curves, panel grids, ratios and fits.</span></button>
-          <button class="path" data-go="install"><strong>Just install it</strong><span>Homebrew, conda or from source, on macOS and Linux.</span></button>
+          <button class="path" data-go="tour" data-set-level="beginner"><strong>New to ROOT</strong><span>A guided tour from an empty project to a spectrum with a ratio panel, with every ROOT term explained.</span></button>
+          <button class="path" data-go="from-root" data-set-level="expert"><strong>Coming from ROOT</strong><span>The same plot as a ROOT macro and in SciRooPlot, side by side.</span></button>
+          <button class="path" data-go="numpy" data-set-level="beginner"><strong>Coming from numpy and pandas</strong><span>Arrays and DataFrames as publication figures: histograms, ROC curves, panel grids, ratios and fits.</span></button>
+          <button class="path" data-go="install"><strong>Installation</strong><span>Homebrew, conda or from source, on macOS and Linux.</span></button>
         </div>
       </div>
       <img class="logo-big" src="img/brand/logo.png" alt="SciRooPlot logo" width="520" height="398">
@@ -554,8 +554,8 @@ figure.plot figcaption { color: #5b6b80 }
   <div class="demo">
     <figure><img src="img/demo.gif" alt="A terminal session: typing plot sp and pressing tab completes the group spectra, two more tabs list its plots, ptSpectrum is completed and its plot opens in a window. Then plot spectra multiplicity.* matches three plots, and the key s browses from one to the next." width="960" height="540" loading="eager"></figure>
     <div class="side">
-      <h2 class="title">Tab, tab, enter</h2>
-      <p>Every plot of your project is one command away. <kbd>Tab</kbd> completes groups and plot names in bash and zsh, and the plot opens in a window. Group and name are regular expressions: one command can pick several plots, and <kbd>s</kbd> and <kbd>a</kbd> browse through them.</p>
+      <h2 class="title">Plots from the command line</h2>
+      <p>Each plot of a project is drawn with one command. <kbd>Tab</kbd> completes groups and plot names in bash and zsh, and the plot opens in a window. Group and name are regular expressions: one command can pick several plots, and <kbd>s</kbd> and <kbd>a</kbd> browse through them.</p>
       <div class="term-line"><span class="p">$ </span>plot spectra ptSpectrum<br><span class="p">$ </span>plot spectra multiplicity.*<br><span class="p">$ </span>plot spectra .+ pdf</div>
     </div>
   </div>
@@ -602,7 +602,7 @@ figure.plot figcaption { color: #5b6b80 }
 <section class="view wrap" id="v-tour" hidden>
   <div style="display:grid;gap:12px">
     <h2 class="title">Tour: your first spectrum</h2>
-    <p class="lede">Short steps from an empty project to a published-style figure. Every step adds a few lines (highlighted) and shows the plot they produce. The data ships with SciRooPlot, so you can type along.</p>
+    <p class="lede">Short steps from an empty project to a publication-quality figure. Every step adds a few lines (highlighted) and shows the plot they produce. The data ships with SciRooPlot, so you can type along.</p>
   </div>
   <div class="tour">
     <div class="steps" id="steps" role="list"></div>
@@ -631,7 +631,7 @@ figure.plot figcaption { color: #5b6b80 }
         </div>
         <details class="fair"><summary>How the comparison is kept fair</summary>
           <ul>
-            <li>Both sides make the same figure from the same files; the SciRooPlot side is complete and produces it byte for byte.</li>
+            <li>Both sides make the same figure from the same files; the SciRooPlot code shown is the complete definition of the figure.</li>
             <li>The ROOT macros are written the way a ROOT user would: one output file, one check that the inputs were found, no helper libraries.</li>
             <li>Lines are counted without empty lines, comments and the frame of the macro function, the same way on both sides.</li>
             <li>Most of the ROOT lines go into matching the look: margins, pixel text sizes, tick lengths. A group style file can take part of that, but it still has to be written and kept in sync once.</li>
@@ -662,8 +662,8 @@ figure.plot figcaption { color: #5b6b80 }
 <section class="view wrap" id="v-numpy" hidden>
   <div style="display:grid;gap:12px">
     <h2 class="title">Coming from numpy and pandas</h2>
-    <p class="lede">You have arrays, DataFrames, maybe a model from scikit-learn. You want figures that look like they belong in one paper, every single one, and that you can redraw in a second when a co-author asks for another label. Here is how your data becomes such figures: first straight from memory, then the way SciRooPlot is meant to be used.</p>
-    <p class="basics"><b>What is ROOT?</b>The data analysis framework of particle physics. SciRooPlot draws with it, so its plots are the ones you see in physics papers. You don't need to learn ROOT for this page: everything here is plain Python, and the few ROOT words you meet are explained at the end.</p>
+    <p class="lede">This page is for analyses in Python with numpy, pandas or scikit-learn. It shows how to make consistent figures from arrays and DataFrames: first directly from memory, then from result files, which is the recommended setup for a paper or thesis.</p>
+    <p class="basics"><b>What is ROOT?</b>The data analysis framework of particle physics. SciRooPlot draws with it, and its look is the familiar one of physics papers. This page needs no ROOT knowledge: the code is plain Python, and the few ROOT terms it uses are explained at the end.</p>
   </div>
 
   <div class="npteaser" aria-label="Figures on this page">
@@ -674,22 +674,22 @@ figure.plot figcaption { color: #5b6b80 }
   </div>
 
   <div style="display:grid;gap:14px">
-    <h2 class="title">Sounds familiar?</h2>
+    <h2 class="title">Compared with matplotlib</h2>
     <div class="tablewrap"><table>
       <thead><tr><th style="width:44%">With matplotlib you…</th><th>With SciRooPlot…</th></tr></thead>
       <tbody>
         <tr><td>tune font sizes figure by figure, and the 2×2 grid or the plot with a ratio panel still looks different from the single plot next to it in the paper</td><td>pick a base plot: <code>"1d"</code>, <code>"1d_ratio"</code>, <code>"1d_2x2"</code>, <code>"2d"</code>… Text sizes, ticks and line widths are the same in every panel of every layout.</td></tr>
-        <tr><td>add <code>np.sqrt(counts)</code> error bars by hand, and get them wrong with weights or after <code>density=True</code></td><td>histograms carry their errors: √N, or the sum of the squared weights with <code>weights=</code>, kept right through normalising, rebinning and ratios.</td></tr>
+        <tr><td>compute error bars yourself, e.g. <code>np.sqrt(counts)</code>, and adapt them for weights and for <code>density=True</code></td><td>histograms carry their errors: √N, or the sum of the squared weights with <code>weights=</code>, kept right through normalising, rebinning and ratios.</td></tr>
         <tr><td>build a ratio or residual panel with <code>gridspec</code>, shared axes and your own error propagation</td><td><code>plot[2].AddRatio(data, model)</code> in the ratio pad of a <code>_ratio</code> base plot: one line, errors propagated.</td></tr>
-        <tr><td>slice the DataFrame again for every curve of every figure</td><td>hand it over once with <code>table("events", df)</code>; each curve is a <code>Filter('label == 1 &amp;&amp; pt &gt; 2')</code> on it, run when the plot is drawn.</td></tr>
-        <tr><td>move the legend around until it covers nothing</td><td><code>AddLegend()</code> finds a free corner; <code>SetRoomAboveMax(0.3)</code> keeps space free above the data.</td></tr>
-        <tr><td>call <code>savefig</code> for every figure and format, and re-run the notebook from the top when you come back to it months later</td><td><code>plot ml .+ pdf</code> writes all plots of a group. Every plot has a name: <code>plot ml roc</code> opens it in a window from any folder, <kbd>Tab</kbd> completes the names.</td></tr>
+        <tr><td>select the rows of the DataFrame for each curve in each figure</td><td>hand it over once with <code>table("events", df)</code>; each curve is a <code>Filter('label == 1 &amp;&amp; pt &gt; 2')</code> on it, run when the plot is drawn.</td></tr>
+        <tr><td>position legends per figure, or rely on <code>loc="best"</code></td><td><code>AddLegend()</code> finds a free corner; <code>SetRoomAboveMax(0.3)</code> keeps space free above the data.</td></tr>
+        <tr><td>call <code>savefig</code> for every figure and format, and re-run the notebook to recreate a figure</td><td><code>plot ml .+ pdf</code> writes all plots of a group. Every plot has a name: <code>plot ml roc</code> opens it in a window from any folder, <kbd>Tab</kbd> completes the names.</td></tr>
       </tbody>
     </table></div>
   </div>
 
   <div style="display:grid;gap:14px">
-    <h2 class="title">1. Your arrays, straight in</h2>
+    <h2 class="title">1. Arrays from memory</h2>
     <p>The helpers <code>histo</code>, <code>histo2d</code>, <code>graph</code> and <code>table</code> take numpy arrays, lists and pandas columns as they are, with the arguments you know from numpy. What they make is stored with your project, so the plots can be drawn again later without your program.</p>
     <div class="code"><pre data-np="sources"></pre><span class="tag">DefinePlots.py, in DefineDataSources</span></div>
     <p>A data source is a named set of data that plots refer to; this one, <code>ml</code>, holds what the helpers made. The arrays themselves are ordinary numpy and pandas, toy data standing in for yours:</p>
@@ -697,7 +697,7 @@ figure.plot figcaption { color: #5b6b80 }
   </div>
 
   <div style="display:grid;gap:14px">
-    <h2 class="title">Eight figures you make every week</h2>
+    <h2 class="title">Common figures</h2>
     <p>Each plot is a few lines in <code>DefinePlots</code>, using the data source above. Pick one:</p>
     <div class="filters" id="nptabs" role="group" aria-label="Figure"></div>
     <div class="step" id="npbody"></div>
@@ -724,7 +724,7 @@ figure.plot figcaption { color: #5b6b80 }
   </div>
 
   <div style="display:grid;gap:14px">
-    <h2 class="title">2. Your results in files: SciRooPlot as it is meant to be used</h2>
+    <h2 class="title">2. Results stored in files</h2>
     <p>In memory, the data is made by the same program as the plots, so every change to a plot runs your computation again. For a quick figure that is fine. For a paper, a thesis or a running analysis, split the two:</p>
     <ul style="margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:74ch">
       <li>your analysis or notebook <b>writes its results once</b>, as tables or histograms;</li>
@@ -741,13 +741,13 @@ figure.plot figcaption { color: #5b6b80 }
   </div>
 
   <div style="display:grid;gap:14px">
-    <h2 class="title">ROOT words you will meet</h2>
+    <h2 class="title">ROOT terms used here</h2>
     <div class="tablewrap"><table>
       <tbody>
         <tr><td style="width:30%"><code>kRed + 1</code>, <code>kAzure + 2</code></td><td>ROOT's named colours and their shades; <code>"#d62728"</code> and <code>(0.84, 0.15, 0.16)</code> work everywhere too. <a href="#styles">See them all</a>.</td></tr>
         <tr><td><code>kFullCircle</code>, <code>kDashed</code></td><td>marker shapes and line styles, like matplotlib's <code>marker="o"</code> and <code>ls="--"</code>. <a href="#styles">Styles</a></td></tr>
         <tr><td><code>"#it{p}_{T}"</code></td><td>text formatting: ROOT writes <code>#</code> where LaTeX writes a backslash (<code>#sqrt{s}</code>, <code>#alpha</code>), and <code>_{}</code>, <code>^{}</code> as in LaTeX, without dollar signs.</td></tr>
-        <tr><td><code>hist</code>, <code>points</code>, <code>colz</code></td><td>draw options: steps like <code>plt.step</code>, markers with error bars like <code>plt.errorbar</code>, a colour map with its scale. Without one, SciRooPlot picks a sensible one. <a href="#options">All of them, drawn</a></td></tr>
+        <tr><td><code>hist</code>, <code>points</code>, <code>colz</code></td><td>draw options: steps like <code>plt.step</code>, markers with error bars like <code>plt.errorbar</code>, a colour map with its scale. Without one, SciRooPlot chooses one from the data type. <a href="#options">All of them, drawn</a></td></tr>
         <tr><td>tree, table</td><td>ROOT's name for a table with one row per entry; CSV files and <code>table()</code> are read the same way.</td></tr>
         <tr><td>pad, base plot</td><td>a pad is one panel with its axes (matplotlib's <code>Axes</code>); the base plot is the figure layout with its pads, sizes and fonts.</td></tr>
       </tbody>
@@ -1219,7 +1219,7 @@ const STEPS = [
 <p>Plots go into its function <code>DefinePlots</code> (in Python indented inside it), data sources into <code>DefineDataSources</code>. Add the lines shown here and draw the new plot by its group and name:</p>
 <div class="term-line"><span class="p">$ </span>plot tour function</div>
 <p>Every plot has a <b>name</b>, a <button class="term" data-term="group">group</button> and a <button class="term" data-term="baseplot">base plot</button>. <code>plot[1]</code> is its first <button class="term" data-term="pad">pad</button>; everything you add to it is drawn there. Each setter returns the object again, so settings are chained with dots.</p>
-<p class="basics"><b>Texts look odd?</b><code>#it{x}</code> is ROOT's way of writing an italic x. ROOT uses <button class="term" data-term="latex">#</button> where LaTeX uses a backslash.</p>`,
+<p class="basics"><b>Text formatting</b><code>#it{x}</code> is ROOT's way of writing an italic x. ROOT uses <button class="term" data-term="latex">#</button> where LaTeX uses a backslash.</p>`,
     py: `+ plot = Plot("function", "tour", "1d")
 + plot[1].AddFunction("sin(x)/x", "sin(#it{x})/#it{x}")
 + plot[1].AddLegend()
@@ -1235,7 +1235,7 @@ const STEPS = [
   { title: "Data from a file", img: "img/tour/data.png", alt: "A transverse momentum spectrum on linear axes, almost all points crowded at the left",
     text: `<p>Real data comes from <button class="term" data-term="rootfile">.root files</button>. Give the file a short name with <code>AddDataSource</code>, then add a histogram by its name inside the file. SciRooPlot searches all folders of the file for it.</p>
 <p class="basics"><b>What is in the file?</b>Here a <button class="term" data-term="TH1">histogram</button> called <code>ptSpec</code>: how many particles were measured per bin of transverse momentum p<sub>T</sub>, per event. The example data is installed with SciRooPlot.</p>
-<p>The result is correct but hard to read: the spectrum falls by six orders of magnitude, so on a linear axis almost everything sits in the corner. We fix that in step 4.</p>`,
+<p>The result is correct but hard to read: the spectrum falls by six orders of magnitude, so on a linear axis almost everything sits in the corner. Step 4 fixes that.</p>`,
     py: `+ pm.AddDataSource("data", "\${SCIROOPLOT_DATA_DIR}/ExampleData/spectra.root:data")
 
 + plot = Plot("data", "tour", "1d")
@@ -1281,7 +1281,7 @@ plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(k
 + plot[1]['Y'].SetLog();
 pm.AddPlot(plot);` },
   { title: "Legend and text", img: "img/tour/legend.png", alt: "The spectrum with a legend top right and experiment text bottom left",
-    text: `<p>The third argument of <code>AddData</code> was a label all along. <code>AddLegend()</code> collects the labels into a box and finds a corner where it covers no data; <code>AddText</code> does the same for free text.</p>
+    text: `<p>The third argument of <code>AddData</code> is the label. <code>AddLegend()</code> collects the labels into a box and finds a corner where it covers no data; <code>AddText</code> does the same for free text.</p>
 <p class="expert-only">Explicit positions: <code>AddLegend(0.6, 0.9)</code> is the upper left corner in pad coordinates, <code>AddLegend(top_right)</code> a preferred corner. In <code>show</code> mode, double-click a box to print its current coordinates.</p>`,
     py: `plot = Plot("legend", "tour", "1d")
 plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0)
@@ -1323,7 +1323,7 @@ plot[1].AddText({"My Experiment", "pp, #sqrt{#it{s}} = 13.6 TeV"});
 + plot[2]['Y'].SetTitle("data / sim.").SetRange(0.7, 1.3);
 + plot[0]['X'].SetLog().SetRange(0.15, 15.0).SetTitle("#it{p}_{T} (GeV/#it{c})");
 pm.AddPlot(plot);` },
-  { title: "Files for your thesis", img: null,
+  { title: "Writing files", img: null,
     text: `<p>All plots of the tour are now part of your project. Make them all at once, in any format. Files go into the project's output folder, one subfolder per group.</p>
 <div class="term-line"><span class="p">$ </span>srp set tour outdir ~/thesis/figures<br><span class="p">$ </span>plot tour .+ pdf<br><span class="p">$ </span>plot tour '(axes|ratio)' png</div>
 <p class="basics"><b>The patterns</b><code>.+</code> and <code>(axes|ratio)</code> are <button class="term" data-term="regex">regular expressions</button>. In bash, quote patterns that contain brackets or <code>|</code>.</p>
@@ -1603,7 +1603,7 @@ const REF = [
 <tr><td><a href="https://scirooplot.github.io/SciRooPlot/skill/scirooplot/SKILL.md">SKILL.md</a></td><td>the skill as text, readable for people as well</td></tr>
 </tbody></table></div>
 <p>When an agent adapts code written for an older version, point it to <a href="#updating">Updating</a> (the same list as <code>api-changes.md</code>).</p>` },
-  { id: "sources", g: "data", t: "Data sources and finding data", body: `<p>A data source is one data set made of its inputs. Within it, the first input containing a requested name wins; trees and RNTuples found in several inputs are chained. Train and test samples therefore belong into separate sources.</p>
+  { id: "sources", g: "data", t: "Data sources and finding data", body: `<p>A data source is one data set made of its inputs. Within it, the first input containing a requested name wins; trees and RNTuples found in several inputs are chained. Train and test samples therefore belong in separate sources.</p>
 <div class="code"><pre data-snip="sources"></pre></div>
 <h3>What it reads</h3>
 <div class="tablewrap"><table><tbody><tr><td>Histograms</td><td><code>TH1</code>, <code>TH2</code>, <code>TH3</code>, <code>TProfile</code>, <code>TProfile2D</code>, <code>TH2Poly</code>; <code>THn</code> and <code>THnSparse</code> through projections</td></tr>
@@ -1623,7 +1623,7 @@ const REF = [
     <p class="small muted">A path (<code>"CaloQA/output/hMult"</code>) goes straight there; give one when a name exists more than once. Of several cycles of a key, the newest is read.</p></div>
 </div>
 <p class="small muted">If a name exists more than once, give the path: <code>AddData("folder1/hist", "src")</code>. A folder belongs either to the data source (<code>"file.root:folder"</code>) or to the name (<code>"folder/hist"</code>), not to both.</p>` },
-  { id: "memory", g: "data", t: "Data made in your program", body: `<p>Not everything comes from a file: a Glauber calculation, a fit result, numbers from a paper, a quick histogram of values you just computed. Give such objects to a data source and use them like file data, by name. Working with numpy and pandas? <a href="#numpy">Coming from numpy and pandas</a> shows the helpers on eight everyday figures.</p>
+  { id: "memory", g: "data", t: "Data made in your program", body: `<p>Not everything comes from a file: a Glauber calculation, a fit result, numbers from a paper, a quick histogram of values you just computed. Give such objects to a data source and use them like file data, by name. For numpy and pandas, <a href="#numpy">Coming from numpy and pandas</a> shows the helpers with eight common figures.</p>
 <div class="code"><pre data-snip="memory"></pre></div>
 <div class="tablewrap"><table><tbody>
 <tr><td>What you can add</td><td>any ROOT object SciRooPlot reads (histograms, graphs, functions, trees, …), also several at once as a list; in Python also objects made with PyROOT</td></tr>
@@ -2160,7 +2160,7 @@ plot[0]['X'].SetLog().SetRange(0.15, 15.0);
 pm.AddPlot(plot);
 pm.SaveProject();` },
   { id: "vertexZ", tab: "Inputs in lists, two files", title: "Data and simulation from analysis output: lists inside directories, in two files",
-    blurb: "Each file holds a TList \"output\" in the directory \"EventQA\". In ROOT you open each file, walk to the list and fish the histogram out; SciRooPlot searches the whole file for the name, folders and lists included.",
+    blurb: "Each file holds a TList \"output\" in the directory \"EventQA\". In ROOT you open each file, walk to the list and retrieve the histogram; SciRooPlot searches the whole file for the name, folders and lists included.",
     cmd: "plot detector/events vertexZ pdf",
     py: `pm = PlotManager("myProject")
 pm.AddDataSource("EventQA", "\${SCIROOPLOT_DATA_DIR}/ExampleData/AnalysisResults_data.root")    # hVtxZ is found inside
@@ -2770,7 +2770,7 @@ function renderLayout() {
         <div class="lb-cols" id="lbcols" style="${LAY.cvd ? `filter:url(#cvd-${LAY.cvd})` : ""}">${LAY.colors.slice(0, LAY.allColors ? undefined : 12).map((c, i) => `<label><b>${i + 1}</b><input type="color" class="lb-pick" data-colpick="${i}" value="${colorHex(c)}" aria-label="pick colour ${i + 1}"><input type="text" data-colname="${i}" value="${c}" spellcheck="false" aria-label="colour ${i + 1}" class="${colorOk(c) ? "" : "bad"}"></label>`).join("")}</div>
         <div class="lb-line">${LAY.colors.length > 12 ? `<button class="chip" data-colop="all">${LAY.allColors ? "only the first 12" : `all ${LAY.colors.length}`}</button>` : ""}<button class="chip" data-colop="add">+ colour</button><button class="chip" data-colop="del" ${LAY.colors.length < 2 ? "disabled" : ""}>− colour</button><button class="chip" data-colop="reset" ${colorsChanged() ? "" : "disabled"}>Back to the defaults</button></div>
         <div class="lb-line"><span class="lb-l">Seen as</span><span class="seg" role="group" aria-label="Show the colours as seen with colour vision deficiency">${[["", "normal"], ["p", "red-blind"], ["d", "green-blind"], ["t", "blue-blind"]].map(([k, t]) => `<button data-lcvd="${k}" aria-pressed="${LAY.cvd === k}">${t}</button>`).join("")}</span></div>
-        <p class="small muted">About one man in twelve sees red and green poorly: check that neighbouring colours stay apart.</p>
+        <p class="small muted">About 8 % of men have a red-green colour vision deficiency: check that neighbouring colours remain distinguishable.</p>
       </details>
       ${hasRatio() ? `<details class="lb-more lb-ref" ${refChanged() ? "open" : ""}><summary>Line in the ratio pads</summary>
         <p class="small muted">A function of <i>x</i> drawn behind the data: <code>1</code> for a ratio, <code>0</code> for a difference or a pull. A plot can change it in one pad with <code>SetRefFunc</code>, or remove it with <code>SetRefFunc("")</code>.</p>
@@ -3067,10 +3067,10 @@ with uproot.recreate(results + "events.root") as f:  # instead of events.csv
     f["sig"] = np.histogram(df.score[df.label == 1], bins=25, range=(0.0, 1.0))` });
 const NP_FIGS = [
   ["scores", "Histograms", "Score distributions", "Two histograms made with <code>histo</code> like <code>np.histogram</code>, normalised like <code>density=True</code>. The error bars belong to the histograms and follow the normalisation."],
-  ["roc", "ROC curve", "A ROC curve", "<code>graph</code> turns two arrays into a curve; <code>AddLine</code> draws the diagonal of a random guess. The legend goes where you ask, here the lower right corner."],
+  ["roc", "ROC curve", "A ROC curve", "<code>graph</code> turns two arrays into a curve; <code>AddLine</code> draws the diagonal of a random guess. The legend is placed explicitly, here in the lower right corner."],
   ["overtraining", "Train vs. test", "Overtraining check, selected from the DataFrame", "The DataFrame went in once with <code>table</code>. Each curve fills a histogram of one column with <code>Project1D</code> and picks its rows with <code>Filter</code>, a condition over the column names; four curves are one loop. Filled areas and points come from the drawing option and the fill."],
   ["features", "2D histogram", "Two features against each other", "<code>histo2d</code> like <code>np.histogram2d</code>. The <code>2d</code> base plot keeps room for the colour scale, and <code>['Z'].SetLog()</code> makes it logarithmic."],
-  ["ptBins", "Grid of panels", "The same distributions in four ranges", "Like <code>plt.subplots(2, 2, sharex=True, sharey=True)</code>, with nothing to adjust: the panels touch, share their axes and keep the text sizes of a single plot. Settings on <code>plot[0]</code> hold for all four."],
+  ["ptBins", "Grid of panels", "The same distributions in four ranges", "Like <code>plt.subplots(2, 2, sharex=True, sharey=True)</code>: the panels touch, share their axes and keep the text sizes of a single plot. Settings on <code>plot[0]</code> hold for all four."],
   ["reweighted", "Weights and ratio", "Weighted simulation compared with data", "<code>weights=</code> and variable bin edges as in numpy, a logarithmic axis, and the data/simulation ratio below with propagated errors. <code>Both()</code> normalises numerator and denominator before dividing."],
   ["fit", "Fit with residuals", "A fit over the data, residuals below", "The fit result goes in as a formula and is drawn with <code>AddFunction</code>; the lower panel divides the data by it."],
   ["learning", "Training history", "Loss curves", "The training history logged by Keras, PyTorch Lightning or scikit-learn, as two curves."]];
