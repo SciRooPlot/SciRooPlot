@@ -2901,7 +2901,10 @@ function renderLayout() {
   host.querySelectorAll(".lb-pad").forEach(p => { p.onclick = () => { LAY.sel = LAY.sel === p.dataset.cell ? null : p.dataset.cell; rerender() };
     p.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); p.onclick() } } });
   host.querySelectorAll("svg text").forEach(t => t.style.pointerEvents = "none");
-  host.querySelectorAll("[data-shape]").forEach(i => i.onchange = () => { if (+i.value > 0) { LAY[i.dataset.shape] = +i.value; LAY.G = presetGrid() } rerender() });
+  host.querySelectorAll("[data-shape]").forEach(i => i.onchange = () => { const v = +i.value; if (v > 0) { LAY[i.dataset.shape] = v;
+    if (i.dataset.shape === "aspect" && v <= 1) {  // a wide panel narrower than high is a tall one (and the other way round), one as wide as high a square
+      LAY.shape = v === 1 ? "" : LAY.shape === "wide" ? "tall" : "wide"; LAY.aspect = v === 1 ? SHAPE_DEFAULTS.aspect : +fmt(1 / v) }
+    LAY.G = presetGrid() } rerender() });
   host.querySelectorAll("[data-cellop]").forEach(b => b.onclick = () => {
     const key = LAY.sel, [cs, rs] = G.span.get(key) || [1, 1], op = b.dataset.cellop;
     if (op === "empty") { if (G.empty.has(key)) G.empty.delete(key); else G.empty.add(key) }
