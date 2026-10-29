@@ -650,7 +650,7 @@ figure.plot figcaption { color: #5b6b80 }
         <tr><td>size a <code>TCanvas</code>, divide <code>TPad</code>s, tune margins and text sizes per pad</td><td>pick a base plot: <code>"1d"</code>, <code>"1d_ratio"</code>, <code>"1d_2x2"</code>, <code>"2d"</code>… Text sizes, ticks and line widths are equal in every panel.</td></tr>
         <tr><td>call <code>Draw("E1 SAME")</code> in the right order, different strings for TH1 and TGraph</td><td>add data in drawing order with one alias for both types: <code>SetDrawOption(points_endcaps)</code>. Raw strings still work: <code>SetDrawOption("E1")</code>.</td></tr>
         <tr><td>place a <code>TLegend</code> by trial and error, <code>AddEntry(h, "", "lp")</code></td><td><code>AddLegend()</code> finds a free corner; symbols follow what is drawn. Double-click a box in <code>show</code> mode to print its coordinates.</td></tr>
-        <tr><td><code>tree-&gt;Draw("pt&gt;&gt;h(100,0,10)", "abs(eta)&lt;0.8")</code></td><td><code>AddData("tracks", "src").Project1D({"pt", 100, {0., 10.}}).Filter("abs(eta) &lt; 0.8")</code>, run with RDataFrame; CSV tables work the same way.</td></tr>
+        <tr><td><code>tree-&gt;Draw("pt&gt;&gt;h(100,0,10)", "abs(eta)&lt;0.8")</code></td><td><code>AddData("tracks", "src").Project1D({"pt", 100, {0.0, 10.0}}).Filter("abs(eta) &lt; 0.8")</code>, run with RDataFrame; CSV tables work the same way.</td></tr>
         <tr><td>one macro per figure, <code>SaveAs</code> for every format, re-run after each change</td><td><code>plot paper .+ pdf</code> makes them all; changed sources are rebuilt and re-run automatically.</td></tr>
       </tbody>
     </table></div>
@@ -1161,11 +1161,11 @@ int main() {
   pm.AddDataSource("mc", "/path/mc.root");
   pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
   Plot plot("ptSpectrum", "spectra", "1d_ratio");
-  plot[1].AddData("hPt", "data", "data").SetMarker(kBlack, kFullCircle, 1.);
-  plot[1].AddData("hPt", "mc", "simulation").SetLine(kRed + 1, kSolid, 3.).SetDrawOption(hist_open);
+  plot[1].AddData("hPt", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
+  plot[1].AddData("hPt", "mc", "simulation").SetLine(kRed + 1, kSolid, 3.0).SetDrawOption(hist_open);
   plot[1].AddLegend(0.6, 0.9);
   plot[2].AddRatio({"hPt", "data"}, {"hPt", "mc"});
-  plot[0]['X'].SetRange(0., 10.).SetTitle("#it{p}_{T} (GeV/#it{c})");
+  plot[0]['X'].SetRange(0.0, 10.0).SetTitle("#it{p}_{T} (GeV/#it{c})");
   plot[1]['Y'].SetLog();
   pm.AddPlot(plot);
   pm.SaveProject();
@@ -1233,7 +1233,7 @@ const STEPS = [
     cpp: `+ Plot plot("function", "tour", "1d");
 + plot[1].AddFunction("sin(x)/x", "sin(#it{x})/#it{x}");
 + plot[1].AddLegend();
-+ plot[1]['X'].SetTitle("#it{x}").SetRange(0.1, 20.);
++ plot[1]['X'].SetTitle("#it{x}").SetRange(0.1, 20.0);
 + plot[1]['Y'].SetRange(-0.3, 1.1);
 + pm.AddPlot(plot);` },
   { title: "Data from a file", img: "img/tour/data.png", alt: "A transverse momentum spectrum on linear axes, almost all points crowded at the left",
@@ -1266,8 +1266,8 @@ pm.AddPlot(plot)`,
 + pm.AddDataSource("mc", "\${SCIROOPLOT_DATA_DIR}/ExampleData/spectra.root:mc");
 
 Plot plot("style", "tour", "1d");
-+ plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.);
-+ plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.);
++ plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
++ plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0);
 pm.AddPlot(plot);` },
   { title: "Logarithmic axes", img: "img/tour/axes.png", alt: "The same spectrum on logarithmic axes, data and simulation clearly visible",
     text: `<p>Axes are addressed with <code>['X']</code>, <code>['Y']</code> and <code>['Z']</code>. With <button class="term" data-term="log">logarithmic</button> axes the whole spectrum becomes visible, and the axis title tells the reader what is shown.</p>
@@ -1279,8 +1279,8 @@ plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(k
 + plot[1]['Y'].SetLog()
 pm.AddPlot(plot)`,
     cpp: `Plot plot("axes", "tour", "1d");
-plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.);
-plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.);
+plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
+plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0);
 + plot[1]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})");
 + plot[1]['Y'].SetLog();
 pm.AddPlot(plot);` },
@@ -1296,8 +1296,8 @@ plot[1]['Y'].SetLog()
 + plot[1].AddText(["My Experiment", "pp, #sqrt{#it{s}} = 13.6 TeV"])
 pm.AddPlot(plot)`,
     cpp: `Plot plot("legend", "tour", "1d");
-plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.);
-plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.);
+plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
+plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0);
 plot[1]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})");
 plot[1]['Y'].SetLog();
 + plot[1].AddLegend();
@@ -1318,14 +1318,14 @@ plot[1].AddText(["My Experiment", "pp, #sqrt{#it{s}} = 13.6 TeV"])
 + plot[0]['X'].SetLog().SetRange(0.15, 15.0).SetTitle("#it{p}_{T} (GeV/#it{c})")
 pm.AddPlot(plot)`,
     cpp: `+ Plot plot("ratio", "tour", "1d_ratio");
-plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.);
-plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.);
+plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
+plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0);
 plot[1]['Y'].SetLog();
 plot[1].AddLegend();
 plot[1].AddText({"My Experiment", "pp, #sqrt{#it{s}} = 13.6 TeV"});
 + plot[2].AddRatio({"ptSpec", "data"}, {"ptSpec", "mc"});
 + plot[2]['Y'].SetTitle("data / sim.").SetRange(0.7, 1.3);
-+ plot[0]['X'].SetLog().SetRange(0.15, 15.).SetTitle("#it{p}_{T} (GeV/#it{c})");
++ plot[0]['X'].SetLog().SetRange(0.15, 15.0).SetTitle("#it{p}_{T} (GeV/#it{c})");
 pm.AddPlot(plot);` },
   { title: "Files for your thesis", img: null,
     text: `<p>All plots of the tour are now part of your project. Make them all at once, in any format. Files go into the project's output folder, one subfolder per group.</p>
@@ -1403,7 +1403,7 @@ function labRender() {
     ${xs.map((x, i) => `<path d="M${x} ${ys[i] - 9}V${ys[i] + 9}" stroke="${col}" stroke-width="1.2"/>` + markerSVG(lab.marker, x, ys[i], 3.6 * ms, col, 1)).join("")}
     <text x="318" y="242" text-anchor="end" font-family="Arial, sans-serif" font-size="13" fill="#000">x</text>`;
   const M = MARKERS.find(m => m[0] === lab.marker), Ln = L[1] || String(L[0]);
-  const num = v => lang === "py" ? (Number.isInteger(v) ? v.toFixed(1) : String(v)) : (Number.isInteger(v) ? v + "." : String(v)), end = lang === "py" ? "" : ";";
+  const num = v => Number.isInteger(v) ? v.toFixed(1) : String(v), end = lang === "py" ? "" : ";";
   // a ROOT colour by its name, any other as "#rrggbb" or as the (r, g, b) the user typed
   const cn = lc.root ? cname(lc.root) : lc.rgb ? (lang === "py" ? `(${lc.rgb.join(", ")})` : `{${lc.rgb.join(", ")}}`) : `"${lc.hex}"`;
   document.getElementById("cpick").value = col;
@@ -1703,7 +1703,7 @@ const REF = [
   { id: "cppy", g: "help", t: "C++ and Python", body: `<p>The names and chains are identical. The differences:</p>
 <div class="tablewrap"><table><thead><tr><th>C++</th><th>Python</th></tr></thead><tbody>
 <tr><td><code>using namespace SciRooPlot;</code></td><td><code>from SciRooPlot import *</code> (also the aliases, corners and ROOT constants such as <code>kRed</code>)</td></tr>
-<tr><td><code>{"pt", 200, {0.1, 20.}}</code></td><td><code>("pt", 200, [0.1, 20.0])</code></td></tr>
+<tr><td><code>{"pt", 200, {0.1, 20.0}}</code></td><td><code>("pt", 200, [0.1, 20.0])</code></td></tr>
 <tr><td><code>AddRatio({"num", "src"}, {"den", "src"})</code></td><td><code>AddRatio(["num", "src"], ["den", "src"])</code>: a list works wherever a <code>Data</code> is expected</td></tr>
 <tr><td><code>{kBlack, kRed + 1}</code></td><td><code>[kBlack, kRed + 1]</code></td></tr>
 <tr><td>optional arguments left out</td><td>left out, or <code>None</code></td></tr>
@@ -1735,9 +1735,9 @@ pm.AddDataSource("calc", [glauber, masses])              # several objects in on
 
 plot = Plot("ncollVsCentrality", "heavyion", "1d")
 plot[1].AddData("ncoll", "calc", "Glauber").SetDrawOption(points_line)
-pm.AddPlot(plot)`, cpp: `TGraph glauber(3, std::vector<double>{5., 20., 40.}.data(), std::vector<double>{1500., 750., 260.}.data());
+pm.AddPlot(plot)`, cpp: `TGraph glauber(3, std::vector<double>{5.0, 20.0, 40.0}.data(), std::vector<double>{1500.0, 750.0, 260.0}.data());
 glauber.SetName("ncoll");
-TH1D masses("mass", "", 60, 115., 135.);
+TH1D masses("mass", "", 60, 115.0, 135.0);
 // ... fill masses
 pm.AddDataSource("calc", std::vector<TObject*>{&glauber, &masses});  // copied: may go out of scope afterwards
 
@@ -1772,7 +1772,7 @@ pm.AddDataSource("table", "/path/results.csv");              // data name: resul
   adding: { py: `plot[1].AddData("hist", "src", "label")         # histogram, graph, function, tree or table
 plot[1].AddData("folder/hist", "src")           # a path inside the input; no label: no legend row
 plot[1].AddFunction("sin(x)/x", "formula")
-plot[1].AddFunction("[](double* x, double* p) { return x[0] < 1. ? 1. : 1. / x[0]; }", "C++ lambda").SetNpx(2000)
+plot[1].AddFunction("[](double* x, double* p) { return x[0] < 1.0 ? 1.0 : 1.0 / x[0]; }", "C++ lambda").SetNpx(2000)
 plot[1].AddPoints([1.0, 2.0, 3.0], [0.5, 0.7, 0.6], "points")
 plot[1].AddLine((0.0, 1.0), (10.0, 1.0))
 plot[1].SetFrame("frameHist", "src")            # an input that only defines the frame
@@ -1780,9 +1780,9 @@ plot[1].AddData("wide", "src").SetDefinesFrame()  # or: this data sets the frame
 plot[1](2).SetColor(kGreen + 2)                 # change data 2 of the pad later`, cpp: `plot[1].AddData("hist", "src", "label");        // histogram, graph, function, tree or table
 plot[1].AddData("folder/hist", "src");          // a path inside the input; no label: no legend row
 plot[1].AddFunction("sin(x)/x", "formula");
-plot[1].AddFunction("[](double* x, double* p) { return x[0] < 1. ? 1. : 1. / x[0]; }", "C++ lambda").SetNpx(2000);
-plot[1].AddPoints({1., 2., 3.}, {0.5, 0.7, 0.6}, "points");
-plot[1].AddLine({0., 1.}, {10., 1.});
+plot[1].AddFunction("[](double* x, double* p) { return x[0] < 1.0 ? 1.0 : 1.0 / x[0]; }", "C++ lambda").SetNpx(2000);
+plot[1].AddPoints({1.0, 2.0, 3.0}, {0.5, 0.7, 0.6}, "points");
+plot[1].AddLine({0.0, 1.0}, {10.0, 1.0});
 plot[1].SetFrame("frameHist", "src");           // an input that only defines the frame
 plot[1].AddData("wide", "src").SetDefinesFrame(); // or: this data sets the frame
 plot[1](2).SetColor(kGreen + 2);                // change data 2 of the pad later` },
@@ -1801,7 +1801,7 @@ pm.AddColorOverview("colors", "overview")                     # plot overview co
 plot[1].AddData("h", "src").SetDrawOption("E1");              // or a raw ROOT option string
 plot[1].AddData("h", "src").SetColor(kRed + 1).SetAlpha(0.5); // marker, line and fill at once
 plot[1].AddData("h", "src").SetColor("#1f77b4");              // any colour: "#rrggbb" or {r, g, b} from 0 to 1
-plot[1].AddData("g", "src").SetMarker(kBlue + 1, kFullSquare, 1.2).SetLine(kBlue + 1, kDashed, 2.);
+plot[1].AddData("g", "src").SetMarker(kBlue + 1, kFullSquare, 1.2).SetLine(kBlue + 1, kDashed, 2.0);
 plot[1].AddData("b", "src").SetDrawOption(band).SetFill(kAzure - 9, 1001);
 plot[1].AddData("h", "src").SetKeepInputStyle();              // keep line, marker, fill of the input
 plot[1].AddData("h2", "src").SetDrawOption(cont_fillz).SetContours(12);
@@ -1829,10 +1829,10 @@ plot[1].AddData("h2", "src").RebinXY(4, 2).ProjectX(0.0, 1.0, True)`, cpp: `plot
 plot[1].AddData("h", "src").Density();                      // counts → probability density
 plot[1].AddData("h", "src").Normalize(false, 0.6, 0.9);     // integral taken only in that range
 plot[1].AddData("h", "src").Cumulative(false);              // summed from the right
-plot[1].AddData("h", "src").ScaleX(1000.).Scale(0.5);
+plot[1].AddData("h", "src").ScaleX(1000.0).Scale(0.5);
 plot[1].AddData("h2", "src").ProjectY(10, 20, true);        // y for x in [10, 20] (axis units)
 plot[1].AddData("h2", "src").ProfileX();
-plot[1].AddData("h2", "src").RebinXY(4, 2).ProjectX(0., 1., true);` },
+plot[1].AddData("h2", "src").RebinXY(4, 2).ProjectX(0.0, 1.0, true);` },
   plots: { py: `plot = Plot("name", "group/sub", "1d_ratio")
 plot.SetDimensions(710, 710).SetTransparent().AppendGroup("QA")
 plot[0].SetDefaultMarkerColors([kBlack, kRed + 1])   # defaults for all pads, cycled over the data
@@ -1852,7 +1852,7 @@ plot[1]['X'].SetTitle("#it{x}").SetRange(1.4, 2.8).SetLog().SetGrid().SetNumDivi
 plot[1]['Y'].SetMaxDigits(3).SetNoExponent().SetTitleOffset(1.1).SetTitleCenter();
 plot[1]['Z'].SetLog();
 plot[1]['X'].SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M");
-plot[1].SetView(35., 225.);                           // 3D drawings: theta above the x-y plane, phi around z, degrees
+plot[1].SetView(35.0, 225.0);                         // 3D drawings: theta above the x-y plane, phi around z, degrees
 Plot variant(plot, "name_variant", "group/other");    // a copy under a new name (and group), to add more to it` },
   baseplots: { py: `logz = PlotManager.MakeBasePlot("2d")                 # start from a shipped one
 logz.SetName("2d_logz")
@@ -1894,7 +1894,7 @@ plot[1].AddData("tracks", "src").Project2D(("pt", 50), ("eta", 50))
 plot[1].AddData("tracks", "src").Profile1D(("eta", 70), "pt")          # <pt> vs eta
 plot[1].AddData("table", "src").Scatter("x", "y", "ex", "ey")          # graph from columns
 plot[1].AddData("events", "src").Define("r", "sqrt(x*x + y*y)").Project1D("r").Entries(1000)
-plot[1].AddData("events", "src").Join("scores").Project1D("scores.value")`, cpp: `plot[1].AddData("tracks", "src").Project1D({"pt", 100, {0., 10.}}).Filter("abs(eta) < 0.8");
+plot[1].AddData("events", "src").Join("scores").Project1D("scores.value")`, cpp: `plot[1].AddData("tracks", "src").Project1D({"pt", 100, {0.0, 10.0}}).Filter("abs(eta) < 0.8");
 plot[1].AddData("tracks", "src").Project2D({"pt", 50}, {"eta", 50});
 plot[1].AddData("tracks", "src").Profile1D({"eta", 70}, "pt");         // <pt> vs eta
 plot[1].AddData("table", "src").Scatter("x", "y", "ex", "ey");         // graph from columns
@@ -1927,12 +1927,12 @@ eta = Plot("etaSpectrum", "spectra", "1d")
 eta[1].AddData("etaSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0)
 eta[1].AddData("etaSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0)
 # ... and so on in every plot`, cpp: `Plot spectrum("ptSpectrum", "spectra", "1d_ratio");
-spectrum[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.);
-spectrum[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.);
+spectrum[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
+spectrum[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0);
 
 Plot eta("etaSpectrum", "spectra", "1d");
-eta[1].AddData("etaSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.);
-eta[1].AddData("etaSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.);
+eta[1].AddData("etaSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
+eta[1].AddData("etaSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0);
 // ... and so on in every plot` },
   tmpl_after: { py: `# once, at the top of the file
 measured = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.0)
@@ -1946,8 +1946,8 @@ spectrum[2].AddRatio(measured("ptSpec"), simulated("ptSpec"))
 eta = Plot("etaSpectrum", "spectra", "1d")
 eta[1].AddData(measured("etaSpec"), "data")
 eta[1].AddData(simulated("etaSpec"), "simulation")`, cpp: `// once, at the top of the file
-const Data measured = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.);
-const Data simulated = Data().SetDataSource("mc").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.);
+const Data measured = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.0);
+const Data simulated = Data().SetDataSource("mc").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0);
 
 Plot spectrum("ptSpectrum", "spectra", "1d_ratio");
 spectrum[1].AddData(measured("ptSpec"), "data");
@@ -1974,7 +1974,7 @@ plot[1].AddData(measured("ptSpec"), "data");
 pm.AddPlot(plot);
 
 Plot variant(plot, "ptSpectrumZoom", "spectra");     // a copy, then change what differs
-variant[1]['X'].SetRange(1., 5.);
+variant[1]['X'].SetRange(1.0, 5.0);
 variant.SetBasePlot("1d_ratio");                     // same content, other layout
 pm.AddPlot(variant);
 
@@ -2150,16 +2150,16 @@ pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
 
 Plot plot("ptSpectrumRatio", "spectra", "1d_ratio");
 plot[1].AddData("ptSpec", "data", "data")
-       .SetMarker(kBlack, kFullCircle, 1.);
+       .SetMarker(kBlack, kFullCircle, 1.0);
 plot[1].AddData("ptSpec", "mc", "simulation")
-       .SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.);
+       .SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0);
 plot[1].AddLegend();
 plot[1].AddText({"Example Experiment",
                  "pp, #sqrt{#it{s}} = 13.6 TeV", "|#eta| < 0.8"});
 plot[1]['Y'].SetLog();
 plot[2].AddRatio({"ptSpec", "data"}, {"ptSpec", "mc"});
 plot[2]['Y'].SetTitle("data / sim.").SetRange(0.7, 1.3);
-plot[0]['X'].SetLog().SetRange(0.15, 15.);
+plot[0]['X'].SetLog().SetRange(0.15, 15.0);
 pm.AddPlot(plot);
 pm.SaveProject();` },
   { id: "vertexZ", tab: "Inputs in lists, two files", title: "Data and simulation from analysis output: lists inside directories, in two files",
@@ -2188,11 +2188,11 @@ pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
 Plot plot("vertexZ", "detector/events", "1d_ratio");
 plot[1].AddData("hVtxZ", "EventQA", "data").Normalize();
 plot[1].AddData("hVtxZ", "EventQA_MC", "simulation").Normalize()
-       .SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.);
+       .SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.0);
 plot[1].AddLegend(0.189, 0.898);
 plot[1]['Y'].SetTitle("normalised counts").SetMaxRange(0.036);
 plot[2].AddRatio({"hVtxZ", "EventQA"}, {"hVtxZ", "EventQA_MC"}).Both().Normalize();
-plot[2]['Y'].SetTitle("data / sim.").SetRange(-1., 5.);
+plot[2]['Y'].SetTitle("data / sim.").SetRange(-1.0, 5.0);
 pm.AddPlot(plot);
 pm.SaveProject();` },
   { id: "ptSpectrumPublished", tab: "ROOT file and a CSV table", title: "Your measurement next to published values from a CSV table",
@@ -2219,7 +2219,7 @@ pm.AddDataSource("published", "\${SCIROOPLOT_DATA_DIR}/ExampleData/ptSpec_publis
 pm.AddBasePlot(PlotManager::MakeBasePlot("1d"));
 
 Plot plot("ptSpectrumPublished", "spectra", "1d");
-plot[1].AddData("ptSpec", "data", "this analysis").SetMarker(kBlack, kFullCircle, 1.);
+plot[1].AddData("ptSpec", "data", "this analysis").SetMarker(kBlack, kFullCircle, 1.0);
 plot[1].AddData("ptSpec_published", "published", "published (stat. #oplus syst.)")
        .Scatter("pt", "value", "pt_err", "sqrt(stat*stat + syst*syst)")
        .SetMarker(kAzure + 2, kOpenSquare, 1.6);
@@ -2256,22 +2256,22 @@ pm.AddDataSource("CaloQA", "\${SCIROOPLOT_DATA_DIR}/ExampleData/AnalysisResults_
 pm.AddBasePlot(PlotManager::MakeBasePlot("1d_3x2_gap"));
 
 Plot plot("pi0PeakVsPt", "detector/calorimeter", "1d_3x2_gap");
-const std::vector<std::pair<double, double>> ptBins = {{1., 1.5}, {1.5, 2.}, {2., 3.}, {3., 4.}, {4., 6.}, {6., 10.}};
+const std::vector<std::pair<double, double>> ptBins = {{1.0, 1.5}, {1.5, 2.0}, {2.0, 3.0}, {3.0, 4.0}, {4.0, 6.0}, {6.0, 10.0}};
 for (size_t i = 0; i < ptBins.size(); ++i) {
   const auto& [low, high] = ptBins[i];
   auto& pad = plot[i + 1];
   pad.AddData("hInvMassGGVsPtMixed", "CaloQA", "mixed event")
-     .ProjectX(low, high, true).ScaleX(1000.).Normalize(false, 190., 240.)
+     .ProjectX(low, high, true).ScaleX(1000.0).Normalize(false, 190.0, 240.0)
      .SetDrawOption(hist).SetFill(kAzure - 9, 1001).SetLineColor(kAzure - 9);
   pad.AddData("hInvMassGGVsPt", "CaloQA", "same event")
-     .ProjectX(low, high, true).ScaleX(1000.).Normalize(false, 190., 240.)
-     .SetMarker(kBlack, kFullCircle, 1.).SetDefinesFrame();
-  pad.AddLine({190., 0.05}, {240., 0.05}, "norm. region").SetLine(kRed + 1, kSolid, 5.);
+     .ProjectX(low, high, true).ScaleX(1000.0).Normalize(false, 190.0, 240.0)
+     .SetMarker(kBlack, kFullCircle, 1.0).SetDefinesFrame();
+  pad.AddLine({190.0, 0.05}, {240.0, 0.05}, "norm. region").SetLine(kRed + 1, kSolid, 5.0);
   pad.AddText(0.6, 0.9, Form("%g < #it{p}_{T} < %g GeV/#it{c}", low, high));
 }
 plot[1].AddLegend(0.6, 0.8);
-plot[0]['X'].SetRange(60., 240.).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})");
-plot[0]['Y'].SetTitle("pairs (norm. region = 1)").SetMinRange(0.);
+plot[0]['X'].SetRange(60.0, 240.0).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})");
+plot[0]['Y'].SetTitle("pairs (norm. region = 1)").SetMinRange(0.0);
 pm.AddPlot(plot);
 pm.SaveProject();` },
   { id: "trackingEfficiency", tab: "Efficiency, binomial errors", title: "A tracking efficiency: reconstructed over generated, with binomial errors",
@@ -2293,8 +2293,8 @@ pm.AddBasePlot(PlotManager::MakeBasePlot("1d"));
 
 Plot plot("trackingEfficiency", "detector/tracking", "1d");
 plot[1].AddRatio({"hPt", "TrackQA_MC"}, {"hPtGen", "TrackQA_MC"}).SetIsCorrelated();
-plot[1]['X'].SetLog().SetRange(0.1, 10.);
-plot[1]['Y'].SetTitle("tracking efficiency").SetRange(0., 1.).SetGrid();
+plot[1]['X'].SetLog().SetRange(0.1, 10.0);
+plot[1]['Y'].SetTitle("tracking efficiency").SetRange(0.0, 1.0).SetGrid();
 pm.AddPlot(plot);
 pm.SaveProject();` },
   { id: "trackSelection", tab: "Tree with cuts", title: "Histograms filled from a tree, with and without track cuts",
@@ -2390,14 +2390,14 @@ pm.AddDataSource("data", "\${SCIROOPLOT_DATA_DIR}/ExampleData/spectra.root:data"
 pm.AddBasePlot(PlotManager::MakeBasePlot("1d_3x1"));
 
 const std::vector<std::string> centralities = {"0-10", "10-30", "30-50"};
-std::map<std::string, double> ncoll = {{"0-10", 1500.}, {"10-30", 750.}, {"30-50", 260.}};
+std::map<std::string, double> ncoll = {{"0-10", 1500.0}, {"10-30", 750.0}, {"30-50", 260.0}};
 Plot plot("nuclearModification", "heavyion", "1d_3x1");
 for (size_t i = 0; i < centralities.size(); ++i) {
   const std::string& cent = centralities[i];
   auto& pad = plot[i + 1];
   const std::optional<std::string> label = (i == 0) ? std::optional<std::string>("Pb-Pb / pp") : std::nullopt;
-  pad.AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}, label).Numer().Scale(1. / ncoll[cent]);
-  pad.SetRefFunc("1").SetLine(kGray + 1, kDashed, 2.);
+  pad.AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}, label).Numer().Scale(1.0 / ncoll[cent]);
+  pad.SetRefFunc("1").SetLine(kGray + 1, kDashed, 2.0);
   pad.AddText(0.5, 0.9, cent + "%");
 }
 plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high")
@@ -2406,8 +2406,8 @@ plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "
 plot[1].AddLegend(0.2, 0.3);
 plot[1].AddLegend(0.2, 0.78);
 plot[3].AddLegend(0.1, 0.3).AddEntry("norm. unc. 5%").SetSymbolElements("F").SetFill(kGray, 1001);
-plot[0]['X'].SetLog().SetRange(0.15, 10.);
-plot[0]['Y'].SetRange(0., 1.4).SetTitle("#it{R}_{AA}").SetTitleCenter();
+plot[0]['X'].SetLog().SetRange(0.15, 10.0);
+plot[0]['Y'].SetRange(0.0, 1.4).SetTitle("#it{R}_{AA}").SetTitleCenter();
 pm.AddPlot(plot);
 pm.SaveProject();` },
   { id: "jetSpectra", tab: "A directory of files", title: "Jet spectra from one file per jet radius, with a theory curve",
@@ -2436,7 +2436,7 @@ const Data jetStyle = Data().SetMarkerStyle(kFullSquare).SetMarkerSize(1.2);
 for (const auto& [tag, label] : std::vector<std::pair<std::string, std::string>>{{"R02", "#it{R} = 0.2"}, {"R04", "#it{R} = 0.4"}, {"R06", "#it{R} = 0.6"}}) {
   plot[1].AddData("hJetPt_" + tag, "jets", label).ApplyLayout(jetStyle).RebinX(2);
 }
-plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kGray + 2, kDashed, 2.);
+plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kGray + 2, kDashed, 2.0);
 plot[1].AddLegend(0.212, 0.454, "anti-#it{k}_{T} jets, |#eta| < 0.5");
 plot[1]['X'].SetLog();
 plot[1]['Y'].SetLog();

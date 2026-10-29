@@ -30,7 +30,7 @@ void etaPhiDataVsSim(const char* dataDir = "ExampleData", const char* output = "
   std::vector<TObject*> keep;  // pads and texts must live until the canvas is saved
   for (int i = 0; i < 2; ++i) {
     canvas.cd();
-    auto pad = new TPad(Form("pad%d", i), "", 0.5 * i, 0., 0.5 * (i + 1), 1.);
+    auto pad = new TPad(Form("pad%d", i), "", 0.5 * i, 0.0, 0.5 * (i + 1), 1.0);
     keep.push_back(pad);
     pad->SetMargin(0.1152, 0.2617, 0.15, 0.04);
     pad->SetTicks(1, 1);

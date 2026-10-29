@@ -20,7 +20,7 @@ void trackingEfficiency(const char* dataDir = "ExampleData", const char* output 
   // binomial errors: the reconstructed tracks are a subset of the generated ones
   auto efficiency = static_cast<TH1*>(rec->Clone("efficiency"));
   efficiency->SetDirectory(nullptr);
-  efficiency->Divide(rec, gen, 1., 1., "B");
+  efficiency->Divide(rec, gen, 1.0, 1.0, "B");
 
   TCanvas canvas("canvas", "trackingEfficiency");
   canvas.SetCanvasSize(788, 788);
@@ -34,13 +34,13 @@ void trackingEfficiency(const char* dataDir = "ExampleData", const char* output 
     axis->SetTitleFont(43);
     axis->SetTitleSize(39);
   }
-  efficiency->GetXaxis()->SetRangeUser(0.1, 10.);
+  efficiency->GetXaxis()->SetRangeUser(0.1, 10.0);
   efficiency->GetXaxis()->SetNoExponent();
   efficiency->GetXaxis()->SetTitleOffset(1.2);
   efficiency->GetYaxis()->SetTitle("tracking efficiency");
   efficiency->GetYaxis()->SetTitleOffset(1.45);
-  efficiency->SetMinimum(0.);
-  efficiency->SetMaximum(1.);
+  efficiency->SetMinimum(0.0);
+  efficiency->SetMaximum(1.0);
   efficiency->SetMarkerStyle(kFullCircle);
   efficiency->SetMarkerColor(kBlack);
   efficiency->SetLineColor(kBlack);

@@ -354,16 +354,16 @@
 
   Plot plot("ptSpectrumRatio", "spectra", "1d_ratio");
   plot[1].AddData("ptSpec", "data", "data")
-         .SetMarker(kBlack, kFullCircle, 1.);
+         .SetMarker(kBlack, kFullCircle, 1.0);
   plot[1].AddData("ptSpec", "mc", "simulation")
-         .SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.);
+         .SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0);
   plot[1].AddLegend();
   plot[1].AddText({"Example Experiment",
                    "pp, #sqrt{#it{s}} = 13.6 TeV", "|#eta| < 0.8"});
   plot[1]['Y'].SetLog();
   plot[2].AddRatio({"ptSpec", "data"}, {"ptSpec", "mc"});
   plot[2]['Y'].SetTitle("data / sim.").SetRange(0.7, 1.3);
-  plot[0]['X'].SetLog().SetRange(0.15, 15.);
+  plot[0]['X'].SetLog().SetRange(0.15, 15.0);
   pm.AddPlot(plot);
   pm.SaveProject();
   ```
@@ -1192,13 +1192,13 @@
             values = np.random.normal(0, 1, 1000)
             weights = np.random.uniform(0.5, 1.5, 1000)
             myHist = histo("myHist", values, bins=200,
-                           range=(-5., 5.), weights=weights)
+                           range=(-5.0, 5.0), weights=weights)
 
-            xValues = np.linspace(0., 10., 10)
+            xValues = np.linspace(0.0, 10.0, 10)
             yValues = np.random.rand(10)
             my2DHist = histo2d("my2DHist", xValues, yValues,
                                bins=(60, 40),
-                               range=((0., 10.), (-5., 5.)))
+                               range=((0.0, 10.0), (-5.0, 5.0)))
 
             xErrors = yErrors = np.full(10, 0.1)
             myGraph = graph("myGraph", xValues, yValues,
@@ -1247,12 +1247,12 @@
           plot.SetDimensions(710, 710);
           plot.SetTransparent();
           plot[0].SetMargins(0.07, 0.14, 0.12, 0.07);
-          plot[0].SetDefaultMarkerSize(1.2).SetDefaultLineWidth(2.);
+          plot[0].SetDefaultMarkerSize(1.2).SetDefaultLineWidth(2.0);
           plot[0].SetDefaultTextFont(43).SetDefaultTextSize(24);
           plot[0].SetDefaultColors({kBlack, kBlue, kRed});
           plot[0]['X'].SetTitleSize(28).SetTitleOffset(1.1);
           plot[0]['Y'].SetTitleSize(28).SetTitleOffset(1.5);
-          plot[1].SetPosition(0., 0., 1., 1.);
+          plot[1].SetPosition(0.0, 0.0, 1.0, 1.0);
           pm.AddBasePlot(plot);
           ```
         ],
@@ -1262,12 +1262,12 @@
           plot.SetDimensions(710, 710)
           plot.SetTransparent()
           plot[0].SetMargins(0.07, 0.14, 0.12, 0.07)
-          plot[0].SetDefaultMarkerSize(1.2).SetDefaultLineWidth(2.)
+          plot[0].SetDefaultMarkerSize(1.2).SetDefaultLineWidth(2.0)
           plot[0].SetDefaultTextFont(43).SetDefaultTextSize(24)
           plot[0].SetDefaultColors([kBlack, kBlue, kRed])
           plot[0]['X'].SetTitleSize(28).SetTitleOffset(1.1)
           plot[0]['Y'].SetTitleSize(28).SetTitleOffset(1.5)
-          plot[1].SetPosition(0., 0., 1., 1.)
+          plot[1].SetPosition(0.0, 0.0, 1.0, 1.0)
           pm.AddBasePlot(plot)
           ```
         ],
@@ -1396,7 +1396,7 @@
             .SetDataSource("sourceA")
             .SetDrawOption(curve)
             .SetLineStyle(kDashDotted)
-            .SetLineWidth(4.)
+            .SetLineWidth(4.0)
             .SetLineColor(kOrange);
 
           // reuse as template: layout("name") gives the data
@@ -1419,7 +1419,7 @@
               .SetDataSource("sourceA")
               .SetDrawOption(curve)
               .SetLineStyle(kDashDotted)
-              .SetLineWidth(4.)
+              .SetLineWidth(4.0)
               .SetLineColor(kOrange))
 
           # reuse as template: layout("name") gives the data
@@ -1460,11 +1460,11 @@
 
           // continuous color gradient
           vector<tuple<float, float, float, float>> rainbowColors =
-          { {0., 0., 1., 0.},   // blue
-            {0., 1., 1., 0.25}, // cyan
-            {0., 1., 0., 0.50}, // green
-            {1., 1., 0., 0.75}, // yellow
-            {1., 0., 0., 1.}    // red
+          { {0.0, 0.0, 1.0, 0.0},   // blue
+            {0.0, 1.0, 1.0, 0.25},  // cyan
+            {0.0, 1.0, 0.0, 0.5},   // green
+            {1.0, 1.0, 0.0, 0.75},  // yellow
+            {1.0, 0.0, 0.0, 1.0}    // red
           }; // (r,g,b,pos)
           plot[1].SetDefaultColors(rainbowColors);
 
@@ -1485,11 +1485,11 @@
 
           # continuous color gradient
           rainbowColors = [
-              (0., 0., 1., 0.),    # blue
-              (0., 1., 1., 0.25),  # cyan
-              (0., 1., 0., 0.50),  # green
-              (1., 1., 0., 0.75),  # yellow
-              (1., 0., 0., 1.),    # red
+              (0.0, 0.0, 1.0, 0.0),   # blue
+              (0.0, 1.0, 1.0, 0.25),  # cyan
+              (0.0, 1.0, 0.0, 0.5),   # green
+              (1.0, 1.0, 0.0, 0.75),  # yellow
+              (1.0, 0.0, 0.0, 1.0),   # red
           ]  # (r, g, b, pos)
           plot[1].SetDefaultColors(rainbowColors)
 
@@ -1538,7 +1538,7 @@
 
           plot[1].GetLegend(2)
                  .AddEntry("Best fit")
-                 .SetSymbolElements("L").SetLine(kRed, kSolid, 2.);
+                 .SetSymbolElements("L").SetLine(kRed, kSolid, 2.0);
 
           // auto-placed: best-fitting or given corner
           plot[1].AddLegend();
@@ -1559,7 +1559,7 @@
           # legend 2 ("Graph")
           plot[1].AddLegend(0.2, 0.2)
 
-          plot[1].GetLegend(2).AddEntry("Best fit").SetSymbolElements("L").SetLine(kRed, kSolid, 2.)
+          plot[1].GetLegend(2).AddEntry("Best fit").SetSymbolElements("L").SetLine(kRed, kSolid, 2.0)
 
           # auto-placed: best-fitting or given corner
           plot[1].AddLegend()
@@ -1612,7 +1612,7 @@
           // Running sum (low -> high), then convert axis units
           plot[1].AddData("h2", "sourceA")
                  .Cumulative()
-                 .ScaleX(1000.);  // e.g. GeV -> MeV
+                 .ScaleX(1000.0);  // e.g. GeV -> MeV
 
           // dN/dpT-style density: content divided by bin width
           plot[1].AddData("h3", "sourceA")
@@ -1631,7 +1631,7 @@
           # Running sum (low -> high), then convert axis units
           plot[1].AddData("h2", "sourceA") \
                  .Cumulative() \
-                 .ScaleX(1000.)  # e.g. GeV -> MeV
+                 .ScaleX(1000.0)  # e.g. GeV -> MeV
 
           # dN/dpT-style density: content divided by bin width
           plot[1].AddData("h3", "sourceA") \

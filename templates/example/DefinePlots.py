@@ -321,7 +321,7 @@ def DefineDetectorPlots(pm: PlotManager):
     pm.AddPlot(plot)
 
     plot = Plot("diphotonMass", "detector/calorimeter", "1d")
-    # ScaleX(1000.) converts the x axis from GeV to MeV; Smooth() reduces fluctuations of the simulation
+    # ScaleX(1000.0) converts the x axis from GeV to MeV; Smooth() reduces fluctuations of the simulation
     plot[1].AddData("hInvMassGG", "CaloQA", "data").ScaleX(1000.0)
     plot[1].AddData("hInvMassGG", "CaloQA_MC", "simulation (smoothed)").ScaleX(1000.0).Smooth(2).SetDrawOption(hist).SetLine(kRed + 1, kSolid, 2.0)
     plot[1].AddLegend(0.494, 0.902)

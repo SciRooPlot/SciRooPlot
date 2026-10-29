@@ -26,8 +26,8 @@ void ptSpectrumRatio(const char* dataDir = "ExampleData", const char* output = "
   TCanvas canvas("canvas", "ptSpectrumRatio");
   canvas.SetCanvasSize(788, 1024);
   const double split = 0.3457;
-  TPad top("top", "", 0., split, 1., 1.);
-  TPad bottom("bottom", "", 0., 0., 1., split);
+  TPad top("top", "", 0.0, split, 1.0, 1.0);
+  TPad bottom("bottom", "", 0.0, 0.0, 1.0, split);
   for (auto pad : {&top, &bottom}) {
     pad->SetLeftMargin(0.15);
     pad->SetRightMargin(0.04);
@@ -37,9 +37,9 @@ void ptSpectrumRatio(const char* dataDir = "ExampleData", const char* output = "
     pad->Draw();
   }
   top.SetTopMargin(0.048);
-  top.SetBottomMargin(0.);
+  top.SetBottomMargin(0.0);
   top.SetLogy();
-  bottom.SetTopMargin(0.);
+  bottom.SetTopMargin(0.0);
   bottom.SetBottomMargin(0.333);
 
   auto style = [](TH1* hist, double tickX, double tickY) {
@@ -49,7 +49,7 @@ void ptSpectrumRatio(const char* dataDir = "ExampleData", const char* output = "
       axis->SetTitleFont(43);
       axis->SetTitleSize(39);
     }
-    hist->GetXaxis()->SetRangeUser(0.15, 15.);
+    hist->GetXaxis()->SetRangeUser(0.15, 15.0);
     hist->GetXaxis()->SetNoExponent();
     hist->GetXaxis()->SetTickLength(tickX);
     hist->GetYaxis()->SetTickLength(tickY);
@@ -100,7 +100,7 @@ void ptSpectrumRatio(const char* dataDir = "ExampleData", const char* output = "
   ratio->SetLineColor(kBlack);
   ratio->SetLineWidth(5);
   ratio->Draw("E X0");
-  TLine one(0.15, 1., 15., 1.);
+  TLine one(0.15, 1.0, 15.0, 1.0);
   one.SetLineWidth(4);
   one.Draw();
   ratio->Draw("E X0 SAME");

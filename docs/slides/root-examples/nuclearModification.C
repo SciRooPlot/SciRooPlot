@@ -15,7 +15,7 @@ void nuclearModification(const char* dataDir = "ExampleData", const char* output
     Error("nuclearModification", "data/ptSpec not found in %s/spectra.root", dataDir);
     return;
   }
-  const std::vector<std::pair<std::string, double>> centralities = {{"0-10", 1500.}, {"10-30", 750.}, {"30-50", 260.}};  // <N_coll>
+  const std::vector<std::pair<std::string, double>> centralities = {{"0-10", 1500.0}, {"10-30", 750.0}, {"30-50", 260.0}};  // <N_coll>
   TTree table;
   if (table.ReadFile(Form("%s/raa_published.csv", dataDir), "", ',') <= 0) {
     Error("nuclearModification", "cannot read %s/raa_published.csv", dataDir);
@@ -33,19 +33,19 @@ void nuclearModification(const char* dataDir = "ExampleData", const char* output
   for (Long64_t i = 0; i < table.GetEntries(); ++i) {
     table.GetEntry(i);
     syst.AddPointError(pt, raa, ptErr, ptErr, systLow, systHigh);
-    statistical.AddPointError(pt, raa, 0., stat);
+    statistical.AddPointError(pt, raa, 0.0, stat);
   }
 
   // three pads of equal frame width that share the y axis: only the first one has room for its labels
   TCanvas canvas("canvas", "nuclearModification");
   canvas.SetCanvasSize(2064, 788);
-  const double edges[4] = {0., 756., 1394., 2064.};
+  const double edges[4] = {0.0, 756.0, 1394.0, 2064.0};
   std::vector<TObject*> keep;  // pads, histograms, lines, texts and legends must live until the canvas is saved
   for (size_t i = 0; i < centralities.size(); ++i) {
     canvas.cd();
-    auto pad = new TPad(Form("pad%zu", i), "", edges[i] / 2064., 0., edges[i + 1] / 2064., 1.);
+    auto pad = new TPad(Form("pad%zu", i), "", edges[i] / 2064.0, 0.0, edges[i + 1] / 2064.0, 1.0);
     keep.push_back(pad);
-    pad->SetMargin(i == 0 ? 118. / 756. : 0., i == 2 ? 32. / 670. : 0., 0.15, 0.04);
+    pad->SetMargin(i == 0 ? 118.0 / 756.0 : 0.0, i == 2 ? 32.0 / 670.0 : 0.0, 0.15, 0.04);
     pad->SetTicks(1, 1);
     pad->SetLogx();
     pad->Draw();
@@ -60,16 +60,16 @@ void nuclearModification(const char* dataDir = "ExampleData", const char* output
     auto ratio = static_cast<TH1*>(pbpb->Clone(Form("raa%zu", i)));
     ratio->SetDirectory(nullptr);
     keep.push_back(ratio);
-    ratio->Scale(1. / ncoll);
+    ratio->Scale(1.0 / ncoll);
     ratio->Divide(pp);
-    const double width = (edges[i + 1] - edges[i]) / 2064.;  // pixel sizes per pad: same look in all three
+    const double width = (edges[i + 1] - edges[i]) / 2064.0;  // pixel sizes per pad: same look in all three
     for (auto axis : {ratio->GetXaxis(), ratio->GetYaxis()}) {
       axis->SetLabelFont(43);
       axis->SetLabelSize(i == 0 || axis == ratio->GetXaxis() ? 31 : 0);
       axis->SetTitleFont(43);
       axis->SetTitleSize(39);
     }
-    ratio->GetXaxis()->SetRangeUser(0.15, 10.);
+    ratio->GetXaxis()->SetRangeUser(0.15, 10.0);
     ratio->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
     ratio->GetXaxis()->SetTitleOffset(1.2);
     ratio->GetXaxis()->SetNoExponent();
@@ -78,7 +78,7 @@ void nuclearModification(const char* dataDir = "ExampleData", const char* output
     ratio->GetYaxis()->CenterTitle();
     ratio->GetYaxis()->SetTitleOffset(1.45);
     ratio->GetYaxis()->SetTickLength(0.03 * 0.38 / width);
-    ratio->SetMinimum(0.);
+    ratio->SetMinimum(0.0);
     ratio->SetMaximum(1.4);
     ratio->SetMarkerStyle(kFullCircle);
     ratio->SetMarkerColor(kBlack);
@@ -86,7 +86,7 @@ void nuclearModification(const char* dataDir = "ExampleData", const char* output
     ratio->SetLineWidth(4);
     ratio->Draw("E X0");
 
-    auto one = new TLine(0.15, 1., 10., 1.);
+    auto one = new TLine(0.15, 1.0, 10.0, 1.0);
     keep.push_back(one);
     one->SetLineColor(kGray + 1);
     one->SetLineStyle(kDashed);
@@ -126,7 +126,7 @@ void nuclearModification(const char* dataDir = "ExampleData", const char* output
       }
     }
     if (i == 2) {
-      auto box = new TH1D("normBox", "", 1, 0., 1.);  // a legend row needs an object with the fill
+      auto box = new TH1D("normBox", "", 1, 0.0, 1.0);  // a legend row needs an object with the fill
       keep.push_back(box);
       box->SetFillColor(kGray);
       auto note = new TLegend(0.1, 0.22, 0.6, 0.3);

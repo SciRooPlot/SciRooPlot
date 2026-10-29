@@ -25,8 +25,8 @@ void vertexZ(const char* dataDir = "ExampleData", const char* output = "vertexZ.
   if (!data || !mc) return;
 
   // normalise both, then divide
-  data->Scale(1. / data->Integral());
-  mc->Scale(1. / mc->Integral());
+  data->Scale(1.0 / data->Integral());
+  mc->Scale(1.0 / mc->Integral());
   auto ratio = static_cast<TH1*>(data->Clone("ratio"));
   ratio->Divide(mc);
 
@@ -34,8 +34,8 @@ void vertexZ(const char* dataDir = "ExampleData", const char* output = "vertexZ.
   TCanvas canvas("canvas", "vertexZ");
   canvas.SetCanvasSize(788, 1024);
   const double split = 0.3457;
-  TPad top("top", "", 0., split, 1., 1.);
-  TPad bottom("bottom", "", 0., 0., 1., split);
+  TPad top("top", "", 0.0, split, 1.0, 1.0);
+  TPad bottom("bottom", "", 0.0, 0.0, 1.0, split);
   for (auto pad : {&top, &bottom}) {
     pad->SetLeftMargin(0.15);
     pad->SetRightMargin(0.04);
@@ -44,8 +44,8 @@ void vertexZ(const char* dataDir = "ExampleData", const char* output = "vertexZ.
     pad->Draw();
   }
   top.SetTopMargin(0.048);
-  top.SetBottomMargin(0.);
-  bottom.SetTopMargin(0.);
+  top.SetBottomMargin(0.0);
+  bottom.SetTopMargin(0.0);
   bottom.SetBottomMargin(0.333);
 
   auto style = [](TH1* hist, double tickX, double tickY) {
@@ -66,7 +66,7 @@ void vertexZ(const char* dataDir = "ExampleData", const char* output = "vertexZ.
   data->GetYaxis()->SetTitle("normalised counts");
   data->GetYaxis()->SetTitleOffset(1.45);
   data->SetMaximum(0.036);
-  data->SetMinimum(0.);
+  data->SetMinimum(0.0);
   data->SetMarkerStyle(kFullCircle);
   data->SetMarkerColor(kBlack);
   data->SetLineColor(kBlack);
@@ -92,14 +92,14 @@ void vertexZ(const char* dataDir = "ExampleData", const char* output = "vertexZ.
   ratio->GetYaxis()->SetTitle("data / sim.");
   ratio->GetYaxis()->CenterTitle();
   ratio->GetYaxis()->SetTitleOffset(1.45);
-  ratio->GetYaxis()->SetRangeUser(-1., 5.);
+  ratio->GetYaxis()->SetRangeUser(-1.0, 5.0);
   ratio->GetYaxis()->SetNdivisions(305);
   ratio->SetMarkerStyle(kFullCircle);
   ratio->SetMarkerColor(kBlack);
   ratio->SetLineColor(kBlack);
   ratio->SetLineWidth(4);
   ratio->Draw("E X0");
-  TLine one(ratio->GetXaxis()->GetXmin(), 1., ratio->GetXaxis()->GetXmax(), 1.);
+  TLine one(ratio->GetXaxis()->GetXmin(), 1.0, ratio->GetXaxis()->GetXmax(), 1.0);
   one.SetLineWidth(4);
   one.Draw();
   ratio->Draw("E X0 SAME");

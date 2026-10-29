@@ -19,24 +19,24 @@ void pi0PeakVsPt(const char* dataDir = "ExampleData", const char* output = "pi0P
   }
 
   // mass in a pT bin, in MeV, normalised to its integral in the normalisation region
-  const double normLow = 190., normHigh = 240.;
+  const double normLow = 190.0, normHigh = 240.0;
   auto project = [&](TH2* hist, double low, double high, const char* name) {
     const int first = hist->GetYaxis()->FindFixBin(low);
     const int last = hist->GetYaxis()->FindFixBin(high) - 1;  // high is the lower edge of the next bin
     auto proj = hist->ProjectionX(name, first, last);
     proj->SetDirectory(nullptr);
-    proj->GetXaxis()->Set(proj->GetNbinsX(), 1000. * proj->GetXaxis()->GetXmin(), 1000. * proj->GetXaxis()->GetXmax());
+    proj->GetXaxis()->Set(proj->GetNbinsX(), 1000.0 * proj->GetXaxis()->GetXmin(), 1000.0 * proj->GetXaxis()->GetXmax());
     const int normFirst = proj->GetXaxis()->FindFixBin(normLow);
     const int normLast = proj->GetXaxis()->FindFixBin(normHigh) - 1;
-    proj->Scale(1. / proj->Integral(normFirst, normLast));
+    proj->Scale(1.0 / proj->Integral(normFirst, normLast));
     return proj;
   };
 
   // canvas with 3 x 2 pads of the same size, each with its own axes
   TCanvas canvas("canvas", "pi0PeakVsPt");
   canvas.SetCanvasSize(3 * 788, 2 * 788);
-  canvas.Divide(3, 2, 0., 0.);
-  const std::vector<std::pair<double, double>> ptBins = {{1., 1.5}, {1.5, 2.}, {2., 3.}, {3., 4.}, {4., 6.}, {6., 10.}};
+  canvas.Divide(3, 2, 0.0, 0.0);
+  const std::vector<std::pair<double, double>> ptBins = {{1.0, 1.5}, {1.5, 2.0}, {2.0, 3.0}, {3.0, 4.0}, {4.0, 6.0}, {6.0, 10.0}};
   std::vector<TObject*> keep;  // histograms, lines and texts must live until the canvas is saved
   for (int i = 0; i < 6; ++i) {
     auto pad = canvas.cd(i + 1);
@@ -55,13 +55,13 @@ void pi0PeakVsPt(const char* dataDir = "ExampleData", const char* output = "pi0P
       axis->SetTitleSize(39);
       axis->SetTickLength(0.03);
     }
-    same->GetXaxis()->SetRangeUser(60., 240.);
+    same->GetXaxis()->SetRangeUser(60.0, 240.0);
     same->GetXaxis()->SetNdivisions(503);
     same->GetXaxis()->SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})");
     same->GetXaxis()->SetTitleOffset(1.2);
     same->GetYaxis()->SetTitle("pairs (norm. region = 1)");
     same->GetYaxis()->SetTitleOffset(1.45);
-    same->SetMinimum(0.);
+    same->SetMinimum(0.0);
     same->SetMarkerStyle(kFullCircle);
     same->SetMarkerColor(kBlack);
     same->SetLineColor(kBlack);

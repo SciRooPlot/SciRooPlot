@@ -42,11 +42,11 @@ void DefinePlots(PlotManager& pm)
     plot[1].AddFunction("sin(x)/x", "sin(#it{x})/#it{x}");
     // plot[1].AddData("histName", "myData", "label").SetColor(kRed + 1);
     // plot[1].AddData("dir/histName", "myData").Normalize().SetDrawOption(hist);
-    // plot[1].AddData("treeName", "myData").Project1D({"pt", 100, {0., 10.}}).Filter("abs(eta) < 0.8");
+    // plot[1].AddData("treeName", "myData").Project1D({"pt", 100, {0.0, 10.0}}).Filter("abs(eta) < 0.8");
     // plot[1].AddRatio({"numerator", "myData"}, {"denominator", "myData"}).SetIsCorrelated();
     plot[1].AddLegend(0.6, 0.9);  // upper left corner in pad coordinates, or AddLegend() to place it automatically
     // plot[1].AddText({"My Experiment", "13.6 TeV"});
-    plot[1]['X'].SetTitle("#it{x}").SetRange(0.1, 20.);
+    plot[1]['X'].SetTitle("#it{x}").SetRange(0.1, 20.0);
     plot[1]['Y'].SetRange(-0.3, 1.1);  // or e.g. .SetLog()
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------

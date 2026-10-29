@@ -39,7 +39,7 @@ void trackSelection(const char* dataDir = "ExampleData", const char* output = "t
   all.GetXaxis()->SetNoExponent();
   all.GetYaxis()->SetTitle("tracks");
   all.GetYaxis()->SetTitleOffset(1.45);
-  all.SetMinimum(30.);
+  all.SetMinimum(30.0);
   all.SetMaximum(2.e4);
   int color = 0;
   for (auto hist : {&all, &selected}) {
