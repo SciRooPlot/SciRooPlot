@@ -344,9 +344,11 @@ dialog::backdrop { background: rgba(8, 14, 26, 0.55) }
 
 /* reference */
 .ref { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 36px; align-items: start }
-.toc { position: sticky; top: 76px; display: grid; gap: 2px; font-size: 0.875rem }
-.toc a { text-decoration: none; color: var(--muted); padding: 4px 8px; border-radius: 6px }
+/* the topic list scrolls on its own, so every topic stays reachable wherever the text is */
+.toc { position: sticky; top: 76px; max-height: calc(100vh - 92px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; display: grid; align-content: start; gap: 2px; font-size: 0.875rem; padding-right: 4px }
+.toc a { text-decoration: none; color: var(--muted); padding: 4px 8px; border-radius: 6px; border-left: 3px solid transparent }
 .toc a:hover { color: var(--ink); background: var(--grid) }
+.toc a[aria-current="location"] { color: var(--ink); font-weight: 700; background: var(--tint); border-left-color: var(--amber) }
 .toc input { font: inherit; padding: 6px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--panel); color: var(--text); margin-bottom: 8px; width: 100% }
 .refsec { display: grid; gap: 14px; padding-bottom: 28px; scroll-margin-top: 80px }
 .refsec h2 { font-size: 1.45rem }
@@ -479,7 +481,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px }
   .hero .logo-big { width: min(300px, 80%); order: -1 }
   .steps, .toc, .step .side, .preview { position: static }
   .steps { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; padding-bottom: 4px }
-  .toc { display: flex; flex-wrap: wrap }
+  .toc { display: flex; flex-wrap: wrap; max-height: none; overflow: visible }
   .toc input { flex-basis: 100% }
   .flow { grid-template-columns: minmax(0, 1fr) }
   .flow .arrow { transform: rotate(90deg); justify-self: center }
@@ -2020,6 +2022,27 @@ function renderRef() {
     pendingMethod = b.dataset.n; if (location.hash === "#" + b.dataset.gl) route(); else location.hash = b.dataset.gl };
   document.getElementById("apiq").oninput = e => renderAPI(e.target.value);
   renderAPI("") ; renderLayout(); initMessages() }
+
+/* the topic list marks the section being read and keeps it in view */
+let tocFrame = 0;
+function tocSpy() {
+  tocFrame = 0;
+  const toc = document.getElementById("toc"); if (!toc.offsetParent) return;
+  // at the end of the page the last sections never reach the top: then the lowest one in view counts
+  const line = innerHeight + scrollY >= document.documentElement.scrollHeight - 2 ? innerHeight - 120 : 100;
+  let cur = null;
+  for (const a of toc.querySelectorAll("a")) {
+    const t = document.getElementById(a.hash.slice(1));
+    if (t && t.offsetParent && t.getBoundingClientRect().top <= line) cur = a; }
+  const old = toc.querySelector('[aria-current="location"]'); if (cur === old) return;
+  if (old) old.removeAttribute("aria-current");
+  if (!cur) return;
+  cur.setAttribute("aria-current", "location");
+  if (toc.scrollHeight > toc.clientHeight) { // only the list scrolls, never the page
+    const top = cur.getBoundingClientRect().top - toc.getBoundingClientRect().top + toc.scrollTop, h = toc.clientHeight;
+    if (top < toc.scrollTop + 24 || top > toc.scrollTop + h - 48) toc.scrollTop = top - h / 3 } }
+addEventListener("scroll", () => { if (!tocFrame) tocFrame = requestAnimationFrame(tocSpy) }, { passive: true });
+addEventListener("hashchange", () => requestAnimationFrame(tocSpy));
 
 /* clicking a method name in code shows its signatures */
 function showMethod(el, name) {
