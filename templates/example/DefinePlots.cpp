@@ -1465,7 +1465,7 @@ void DefineTheoryPlots(PlotManager& pm)
     for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"uv", "#it{x}#it{u}_{v}", kRed + 1}, {"dv", "#it{x}#it{d}_{v}", kAzure + 2}, {"g", "#it{x}#it{g} / 10", kGreen + 2}, {"sea", "#it{x}#it{S} / 10", kViolet + 1}}) {
       plot[1].AddData("pdf_" + name, "theory", label).SetDrawOption(band).SetFill(1001, color, 0.4).SetLineColor(color).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
     }
-    plot[1].AddLegend(0.2, 0.92, "#it{Q}^{2} = 10 GeV^{2}");
+    plot[1].AddLegend(0.6, 0.92, "#it{Q}^{2} = 10 GeV^{2}");
     plot[1]['X'].SetLog().SetRange(1e-4, 1.0).SetTitle("#it{x}");
     plot[1]['Y'].SetRange(0.0, 1.2).SetTitle("#it{x}#it{f}(#it{x}, #it{Q}^{2})");
     pm.AddPlot(plot);
