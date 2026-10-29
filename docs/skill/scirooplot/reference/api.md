@@ -80,7 +80,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& GetData(uint8_t dataID)`
 - `LegendBox& GetLegend(uint8_t legendID)`
 - `TextBox& GetText(uint8_t textID)`
-- `Data& SetRefFunc(const std::string& refFunc)`
+- `Data& SetRefFunc(const std::string& refFunc)` — "": no reference function, also not the one of the base plot or of pad 0
 - `Data& SetFrame(const std::string& name, const std::string& dataSource)` — input that only defines the axis frame (not drawn, not numbered)
 - `Data& SetFrame(const Data& data)`
 - `Pad& SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup)`

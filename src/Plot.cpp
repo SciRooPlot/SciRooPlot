@@ -1588,7 +1588,7 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const Ratio& ratio, const optional<string>
 
 //**************************************************************************************************
 /**
- * Add reference function.
+ * Add reference function. An empty one means none: it hides the reference function of the base plot or of pad 0.
  */
 //**************************************************************************************************
 Plot::Pad::Data& Plot::Pad::SetRefFunc(const string& refFunc)

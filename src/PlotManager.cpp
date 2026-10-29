@@ -1665,7 +1665,7 @@ void PlotManager::PrintBufferStatus(bool onlyMissing) const
 /**
  * Reference function the painter draws in a pad of a plot, as merged with its base plot in GeneratePlot:
  * the pad's own, else the one of the base plot's pad, else the one of pad 0 of the plot, else of pad 0 of the base plot.
- * It is drawn only in pads with data.
+ * It is drawn only in pads with data. An empty one (SetRefFunc("")) means none and hides those further down the list.
  */
 //**************************************************************************************************
 shared_ptr<Plot::Pad::Data> PlotManager::RefFuncDrawnIn(Plot& plot, uint8_t padID)
@@ -1683,8 +1683,8 @@ shared_ptr<Plot::Pad::Data> PlotManager::RefFuncDrawnIn(Plot& plot, uint8_t padI
     return (curPadIt != curPlot->GetPads().end()) ? curPadIt->second.GetRefFunc() : nullptr;
   };
   for (const uint8_t curPadID : {padID, uint8_t{0}}) {
-    if (auto refFunc = refFuncOf(&plot, curPadID)) return refFunc;
-    if (auto refFunc = refFuncOf(basePlot, curPadID)) return refFunc;
+    if (auto refFunc = refFuncOf(&plot, curPadID)) return refFunc->GetName().empty() ? nullptr : refFunc;
+    if (auto refFunc = refFuncOf(basePlot, curPadID)) return refFunc->GetName().empty() ? nullptr : refFunc;
   }
   return nullptr;
 }

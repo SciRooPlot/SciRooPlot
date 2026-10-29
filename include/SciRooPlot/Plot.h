@@ -366,7 +366,7 @@ class Plot::Pad
   LegendBox& GetLegend(uint8_t legendID);
   TextBox& GetText(uint8_t textID);
 
-  Data& SetRefFunc(const std::string& refFunc);
+  Data& SetRefFunc(const std::string& refFunc);                            // "": no reference function, also not the one of the base plot or of pad 0
   Data& SetFrame(const std::string& name, const std::string& dataSource);  // input that only defines the axis frame (not drawn, not numbered)
   Data& SetFrame(const Data& data);
 

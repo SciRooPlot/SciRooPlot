@@ -579,7 +579,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (hasData) {
       // put reference function in data vector right after the axis histogram
       auto refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
-      if (refFunc) {
+      if (refFunc && !refFunc->GetName().empty()) {  // an empty one: no reference function
         drawData.insert(drawData.begin() + 1, refFunc);
         hasRefFunc = true;
       }

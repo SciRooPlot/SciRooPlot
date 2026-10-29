@@ -91,7 +91,7 @@ plot[1].SetPosition(x1,y1,x2,y2).SetMargins(t,b,l,r).SetFrameFill(10, 1001).SetP
 plot[1].SetDefaultMarkerColors({kBlack, kRed+1}).SetDefaultLineStyles({kSolid, kDashed})   // cycled over the data
 // every colour argument takes a ROOT colour (kRed + 1), "#rrggbb" or {r, g, b} from 0 to 1 (Python: a tuple); transparency only with the alpha setters
 plot[1].SetDefaultColors(gradient)   // {{"#000080", 0.0}, {kRed, 0.5}, {{1.0, 1.0, 0.0}, 1.0}}: (colour, position) or {r,g,b,position}, all in [0,1]; also SetPalette(gradient)
-plot[1].SetRefFunc("1");              // reference line/function in a ratio pad (drawn first, black)
+plot[1].SetRefFunc("1");              // reference line/function in a ratio pad (drawn first, black); SetRefFunc("") removes the one of the base plot
 plot[1]['X'].SetTitle("#it{x}").SetRange(a, b).SetLog().SetGrid().SetNumDivisions(305).SetMaxDigits(3).SetNoExponent()
             .SetTitleFont(43).SetTitleSize(28).SetTitleOffset(1.1).SetLabelFont(43).SetLabelSize(24)   // sizes in pixels only with font 43; with the default font 42 they are fractions of the pad
             .SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")

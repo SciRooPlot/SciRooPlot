@@ -311,11 +311,12 @@ html, body { overflow-x: clip }
 @media (max-width: 760px) { .palout { grid-template-columns: minmax(0, 1fr) } }
 #palmap { width: 100%; height: auto; background: #fff; border: 1px solid var(--hairline); border-radius: 8px }
 .cvd { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 0.85rem }
-.seq-wrap { margin-top: 24px; display: grid; gap: 8px }
-.seq-wrap h3 { margin: 0 }
-.seq { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 14px }
-.seq div { display: flex; align-items: center; gap: 8px; font-size: 0.82rem }
-.seq b { color: var(--muted); min-width: 1.4em; text-align: right; font-weight: 700 }
+.lb-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; margin: 8px 0 }
+.lb-cols label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem }
+.lb-cols b { color: var(--muted); min-width: 1.4em; text-align: right; font-weight: 700 }
+.lb-cols input[type=text], .lb-ref input[type=text] { font: inherit; font-family: var(--mono); font-size: 0.78rem; width: 8.5em; padding: 2px 6px; border: 1px solid var(--hairline); border-radius: 6px; background: var(--panel); color: var(--text) }
+.lb-cols input.bad, .lb-ref input.bad { border-color: #c0392b }
+input.lb-pick { width: 26px; height: 22px; padding: 0; border: 1px solid var(--hairline); border-radius: 4px; background: none; cursor: pointer; flex: none }
 .hatch { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 10px; font-size: 0.85rem }
 .hatch select { font: inherit; background: var(--panel); color: var(--text); border: 1px solid var(--hairline); border-radius: 6px; padding: 2px 4px }
 .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 0.875rem }
@@ -501,7 +502,6 @@ figure.plot figcaption { color: #5b6b80 }
 .wheel button { box-shadow: inset 0 0 0 1px rgba(22, 35, 58, 0.18) }
 .palsw small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 #palmap { shape-rendering: crispEdges }
-.seq svg { background: #fff; border-radius: 4px; border: 1px solid var(--hairline) }
 .filters.tags { position: relative; padding-left: 3.6em }
 .filters.tags > .lb-l { position: absolute; left: 0; top: 5px }
 .grid.ex .card .plot { aspect-ratio: 1; display: block; position: relative; background: #fff; overflow: hidden }
@@ -803,11 +803,7 @@ figure.plot figcaption { color: #5b6b80 }
       <div class="cvd"><span class="lb-l">Seen as</span><span class="seg" role="group" aria-label="Show the colours as seen with colour vision deficiency"><button data-cvd="" aria-pressed="true">normal</button><button data-cvd="p" aria-pressed="false">red-blind</button><button data-cvd="d" aria-pressed="false">green-blind</button><button data-cvd="t" aria-pressed="false">blue-blind</button></span></div>
     </div>
   </div>
-  <div class="seq-wrap">
-    <h2 class="title">The default colours of the base plots</h2>
-    <p class="small muted">The <i>n</i>-th data item in a pad gets the <i>n</i>-th colour, unless you set one. About one man in twelve sees red and green poorly: switch the view above to check that your colours stay apart.</p>
-    <div class="seq" id="seq"></div>
-  </div>
+  <p class="small muted">Data without a colour of its own takes the next one of the base plot's colour list: see and change that list in <a href="#layouts">Layouts</a>.</p>
   <div class="pal-wrap">
     <h2 class="title">Colour scales and gradients</h2>
     <p class="basics"><b>What a palette is</b>A 2D histogram shows its values as colours, read off the colour scale next to the frame. The colours come from a <i>palette</i>: ROOT ships about sixty, SciRooPlot's base plots use <code>kBird</code>. You can also make your own gradient, as a palette or as the colours of several curves.</p>
@@ -1449,12 +1445,13 @@ function labInit() {
   document.getElementById("markers").onclick = e => { const b = e.target.closest(".tile"); if (b) { lab.marker = +b.dataset.v; labRender() } };
   document.getElementById("fills").onclick = e => { const b = e.target.closest(".tile"); if (b) { lab.fill = +b.dataset.v; labRender() } };
   ["lw", "ms", "fa"].forEach(id => document.getElementById(id).oninput = labRender);
-  document.getElementById("seq").innerHTML = DEFAULT_COLORS.map((n, i) => { const c = colorOf(n); return c ? `<div><b>${i + 1}</b><svg width="44" height="14" aria-hidden="true"><path d="M2 7H42" stroke="${c.hex}" stroke-width="3"/><circle cx="22" cy="7" r="4.5" fill="${c.hex}"/></svg><span class="t-k" data-k>${n}</span></div>` : "" }).join("");
   document.querySelectorAll("[data-cvd]").forEach(b => b.onclick = () => {
     document.querySelectorAll("[data-cvd]").forEach(x => x.setAttribute("aria-pressed", x === b));
-    ["pv", "wheel", "seq", "palmap", "palroot"].forEach(id => document.getElementById(id).style.filter = b.dataset.cvd ? `url(#cvd-${b.dataset.cvd})` : "") });
+    ["pv", "wheel", "palmap", "palroot"].forEach(id => document.getElementById(id).style.filter = b.dataset.cvd ? `url(#cvd-${b.dataset.cvd})` : "") });
   labRender(); palInit() }
-const DEFAULT_COLORS = ["kBlack", "kBlue + 1", "kRed + 1", "kYellow + 1", "kMagenta - 4", "kGreen + 3", "kOrange + 1", "kViolet - 3", "kCyan + 2", "kPink + 3", "kTeal - 7", "kMagenta + 1"]; // first entries of SetDefaultColors in PlotManager::MakeBasePlot
+const DEFAULT_COLORS = ["kBlack", "kBlue + 1", "kRed + 1", "kYellow + 1", "kMagenta - 4", "kGreen + 3", "kOrange + 1", "kViolet - 3", "kCyan + 2", "kPink + 3", "kTeal - 7",
+  "kMagenta + 1", "kPink + 8", "kCyan - 6", "kMagenta", "kRed + 2", "kGreen + 2", "kOrange + 2", "kMagenta + 2", "kYellow + 3",
+  "kGray + 2", "kBlue + 2", "kYellow + 2", "kRed", "kBlue", "kMagenta + 3", "kGreen + 4", "28", "8", "15", "17", "12"]; // kDefaultColors of PlotManager::MakeBasePlot
 function labPick(key) { const c = colorOf(key); if (c) { lab.color = cname(c); document.getElementById("cname").value = lab.color }
   const m = MARKERS.find(x => x[1] === key); if (m) lab.marker = m[0];
   const l = LINES.find(x => x[1] === key); if (l) lab.line = l[0];
@@ -2568,7 +2565,9 @@ const SIZE_FIELDS = [ // key, setter, label, step
     ["xTitleOff", "SetXTitleOffset", "x title to axis", 0.5], ["yTitleOff", "SetYTitleOffset", "y title to axis (0: next to the labels)", 0.5], ["zTitleOff", "SetZTitleOffset", "z title to colour scale", 0.5]]],
   ["lines", "Ticks, lines, markers", [["tick", "SetTickLength", "Tick length", 0.5], ["lw", "SetLineWidth", "Line width", 1], ["ms", "SetMarkerSize", "Marker size (1 = 8 pixels)", 0.1]]]];
 const SHAPE_DEFAULTS = { aspect: 1.618, ratioH: 0.37 };  // BasePlotShape: aspect ratio of wide and tall panels, height of ratio panels
-const LAY = { type: "1d", shape: "", cols: 1, rows: 1, ratio: true, gap: false, full: false, name: "", custom: false, sel: null, S: { ...PL_DEFAULTS }, ...SHAPE_DEFAULTS, G: null };
+const REF_DEFAULTS = { on: true, f: "1", color: "kBlack", style: 1 };  // the line MakeBasePlot puts into ratio pads: SetRefFunc("1"), drawn black and solid
+const LAY = { type: "1d", shape: "", cols: 1, rows: 1, ratio: true, gap: false, full: false, name: "", custom: false, sel: null, S: { ...PL_DEFAULTS }, ...SHAPE_DEFAULTS, G: null,
+  colors: [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS }, cvd: "", allColors: false };
 function presetName() {
   return LAY.type + (LAY.shape ? "_" + LAY.shape : "") + (LAY.cols > 1 || LAY.rows > 1 ? `_${LAY.cols}x${LAY.rows}` : "") + (LAY.ratio ? "_ratio" : "") + (LAY.gap ? "_gap" : "") }
 function presetGrid() { // the arrangement PlotManager::MakeBasePlot makes for the preset
@@ -2579,7 +2578,15 @@ function presetGrid() { // the arrangement PlotManager::MakeBasePlot makes for t
 const sizesChanged = () => Object.keys(PL_DEFAULTS).filter(k => +LAY.S[k] !== PL_DEFAULTS[k]);
 const shapeSetters = () => [LAY.shape && LAY.aspect !== SHAPE_DEFAULTS.aspect ? `SetAspectRatio(${fmt(LAY.aspect)})` : "",  // only what the preset uses
   LAY.ratio && LAY.ratioH !== SHAPE_DEFAULTS.ratioH ? `SetRatioHeight(${fmt(LAY.ratioH)})` : ""].filter(Boolean);
-const layName = () => LAY.name.trim() || (LAY.custom ? "myLayout" : presetName() + (sizesChanged().length || shapeSetters().length ? "_mine" : ""));
+const colorsChanged = () => LAY.colors.join("|") !== DEFAULT_COLORS.join("|");
+const refChanged = () => Object.keys(REF_DEFAULTS).some(k => LAY.ref[k] !== REF_DEFAULTS[k]);
+const hasRatio = () => LAY.G.rows.some(r => r.ratio);
+const looksChanged = () => colorsChanged() || (hasRatio() && refChanged());
+const layName = () => LAY.name.trim() || (LAY.custom ? "myLayout" : presetName() + (sizesChanged().length || shapeSetters().length || looksChanged() ? "_mine" : ""));
+const colorOk = c => /^#[0-9a-fA-F]{6}$/.test(c) || !!colorOf(c);
+const colorLit = c => c.startsWith("#") ? `"${c.toLowerCase()}"` : c;  // a ROOT colour as it is, rgb as a string
+const colorHex = c => c.startsWith("#") ? c.toLowerCase() : (colorOf(c) || { hex: "#000000" }).hex;
+const LINE_STYLES = [[1, "kSolid", "solid", ""], [2, "kDashed", "dashed", "6 4"], [3, "kDotted", "dotted", "1.5 3"]];
 
 /* ---- the code for the current design */
 function fmt(v) { return String(+(+v).toFixed(3)) }
@@ -2594,14 +2601,25 @@ function layoutCode(py) {
   SIZE_FIELDS.forEach(([, , fields]) => fields.forEach(([k, setter]) => { if (setter && changed.includes(k)) setters.push(`${setter}(${fmt(S[k])})`) }));
   const sizesExpr = "PanelLayout()" + (setters.length > 2 ? setters.map(s => `\n    .${s}`).join("") : setters.map(s => "." + s).join(""));
   const v = py ? "" : "auto ";
+  const open = py ? "[" : "{", close = py ? "]" : "}";
+  const colorList = indent => { const lines = []; for (let i = 0; i < LAY.colors.length; i += 6) lines.push(LAY.colors.slice(i, i + 6).map(colorLit).join(", "));
+    return open + lines.join(",\n" + " ".repeat(indent + 1)) + close };
+  const ref = LAY.ref, refStyle = (ref.color !== "kBlack" ? `.SetLineColor(${colorLit(ref.color)})` : "") + (ref.style !== 1 ? `.SetLineStyle(${LINE_STYLES.find(x => x[0] === ref.style)[1]})` : "");
+  const refCall = (pv) => ref.on ? `${pv}.SetRefFunc("${ref.f}")${refStyle}` : `${pv}.SetRefFunc("")`;
+  const forRatios = (pv, body) => ratios.length === 1 ? body.map(b => b.replace(/PAD/g, ratios[0]) + end) :
+    py ? [`for pad in [${ratios.join(", ")}]:`, ...body.map(b => "    " + b.replace(/PAD/g, "pad"))]
+      : [`for (const uint8_t pad : {${ratios.join(", ")}}) {`, ...body.map(b => "  " + b.replace(/PAD/g, "pad") + ";"), "}"];
   if (!LAY.custom && !LAY.full) {
     const shape = shapeSetters(), shapeExpr = "BasePlotShape()" + shape.map(x => "." + x).join("");
-    if (!setters.length && !shape.length && !LAY.name.trim()) L.push(py ? `pm.AddBasePlot(PlotManager.MakeBasePlot("${name}"))` : `pm.AddBasePlot(PlotManager::MakeBasePlot("${name}"));`);
+    if (!setters.length && !shape.length && !looksChanged() && !LAY.name.trim()) L.push(py ? `pm.AddBasePlot(PlotManager.MakeBasePlot("${name}"))` : `pm.AddBasePlot(PlotManager::MakeBasePlot("${name}"));`);
     else {
       if (setters.length) L.push(py ? `sizes = ${setters.length > 2 ? "(" + sizesExpr + ")" : sizesExpr}` : `const PanelLayout sizes = ${sizesExpr};`);
       const args = py ? (setters.length ? ", sizes" : "") + (shape.length ? `, shape=${shapeExpr}` : "")
         : setters.length || shape.length ? `, ${setters.length ? "sizes" : "PanelLayout()"}${shape.length ? ", " + shapeExpr : ""}` : "";
-      L.push(`${v}base = PlotManager${py ? "." : "::"}MakeBasePlot("${presetName()}"${args})${end}`, `base.SetName("${name}")${end}`, py ? "pm.AddBasePlot(base)" : "pm.AddBasePlot(base);");
+      L.push(`${v}base = PlotManager${py ? "." : "::"}MakeBasePlot("${presetName()}"${args})${end}`, `base.SetName("${name}")${end}`);
+      if (colorsChanged()) L.push(`base[0].SetDefaultColors(${colorList(25)})${end}`);
+      if (ratios.length && refChanged()) L.push(...forRatios("base", [refCall("base[PAD]")]));
+      L.push(py ? "pm.AddBasePlot(base)" : "pm.AddBasePlot(base);");
     }
   } else {
     // the rows of the layout: a cell spanning several columns or rows is listed once, in the row where it starts;
@@ -2617,23 +2635,19 @@ function layoutCode(py) {
     G.rows.forEach((row, r) => {
       rows.push(cells.filter(k => k.r === r).map(k => cell(k) + (k.c1 < nC - 1 && G.cols[k.c1].gapAfter ? ", Gap()" : "")).join(", "));
       if (row.gapAfter && r < G.rows.length - 1) rows.push("Gap()") });
-    const open = py ? "[" : "{", close = py ? "]" : "}";
     if (py) L.push(`rows = [${rows.map(r => `[${r}]`).join(",\n        ")}]`);
     else L.push(`const std::vector<std::vector<Panel>> rows = {${rows.map(r => `{${r}}`).join(",\n                                              ")}};`);
     if (setters.length) L.push(py ? `sizes = ${setters.length > 2 ? "(" + sizesExpr + ")" : sizesExpr}` : `const PanelLayout sizes = ${sizesExpr};`);
     L.push(py ? `layout = Plot("${name}", PanelLayout(${setters.length ? "sizes, " : ""}rows))` : `Plot layout("${name}", PanelLayout(${setters.length ? "sizes, " : ""}rows));`);
     L.push(`${cm} the look of the shipped base plots`, `layout.SetTransparent()${end}`, `layout[0].SetTransparent().SetFrameFill(10, 1001).SetDefaultTextFont(42)${end}`,
-      `layout[0].SetDefaultColors(${open}kBlack, kBlue + 1, kRed + 1, kYellow + 1, kMagenta - 4, kGreen + 3, kOrange + 1, kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7,
-                            kMagenta + 1, kPink + 8, kCyan - 6, kMagenta, kRed + 2, kGreen + 2, kOrange + 2, kMagenta + 2, kYellow + 3,
-                            kGray + 2, kBlue + 2, kYellow + 2, kRed, kBlue, kMagenta + 3, kGreen + 4, 28, 8, 15, 17, 12${close})${end}`,
+      `layout[0].SetDefaultColors(${colorList(27)})${end}`,
       `layout[0].SetDefaultMarkerStyles(${open}kFullCircle${close}).SetDefaultLineStyles(${open}kSolid${close}).SetDefaultFillStyles(${open}0${close})${end}`,
       `layout[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent().SetHideClippedLabels()${end}`,
       `layout[0]['Y'].SetOppositeTicks().SetMaxDigits(3).SetHideClippedLabels()${end}`, `layout[0]['Z'].SetMaxDigits(3)${end}`);
     if (G.cols.some(c => c.z)) L.push(`layout[0].SetRedrawAxes()${end}`);
     if (ratios.length) {
-      L.push(`${cm} ratio pads: a line at 1, few divisions, centred title`);
-      L.push(py ? `for pad in [${ratios.join(", ")}]:\n    layout[pad].SetRefFunc("1")\n    layout[pad]['Y'].SetNumDivisions(305).SetTitleCenter()`
-        : `for (const uint8_t pad : {${ratios.join(", ")}}) {\n  layout[pad].SetRefFunc("1");\n  layout[pad]['Y'].SetNumDivisions(305).SetTitleCenter();\n}`) }
+      L.push(`${cm} ratio pads: ${ref.on ? `a line at ${ref.f}, ` : ""}few divisions, centred title`);
+      L.push(...forRatios("layout", [...(ref.on ? [refCall("layout[PAD]")] : []), "layout[PAD]['Y'].SetNumDivisions(305).SetTitleCenter()"])) }
     L.push(py ? "pm.AddBasePlot(layout)" : "pm.AddBasePlot(layout);");
   }
   // a plot on it
@@ -2670,7 +2684,8 @@ function layoutSVG(g, S, maxW, maxH) {
       for (let i = 0; i <= nx; i++) { const t = String(i * 2); if (i === nx && p.c1 < LAY.G.cols.length - 1 && !LAY.G.cols[p.c1].gapAfter && !LAY.G.cols[p.c1].z) continue;
         out.push(txt(fl + fw * i / nx, fb + S.labelOff + 0.86 * S.text, S.text, t, `text-anchor="middle"`)) }
       out.push(txt(fr, fb + S.xTitleOff + 0.36 * S.title, S.title, "x title", `text-anchor="end"`)) }
-    const yl = p.ratio ? ["0.5", "1", "1.5"] : ["0", "20", "40", "60", "80", "100"], ystep = p.ratio ? fh / 3 : fh / 5;
+    const rc = isFinite(+LAY.ref.f) && LAY.ref.f.trim() !== "" ? +LAY.ref.f : 1, rl = v => String(+v.toFixed(2));  // the ratio axis centred on the line
+    const yl = p.ratio ? [rl(rc - 0.5), rl(rc), rl(rc + 0.5)] : ["0", "20", "40", "60", "80", "100"], ystep = p.ratio ? fh / 3 : fh / 5;
     let widest = 0;
     if (!p.sharedLeft) {
       yl.forEach((t, i) => { const y = p.ratio ? fb - ystep * (i + 0.5) * 1 : fb - ystep * i; widest = Math.max(widest, textW(t, S.text));
@@ -2678,15 +2693,17 @@ function layoutSVG(g, S, maxW, maxH) {
       const yx = S.yTitleOff > 0 ? fl - S.yTitleOff : fl - S.labelOff - 0.2 * S.text - widest - 0.62 * S.title;
       const ty = p.ratio ? (ft + fb) / 2 : ft;
       out.push(`<text transform="translate(${T(yx)} ${T(ty)}) rotate(-90)" font-size="${T(S.title)}" ${font} fill="#000" text-anchor="${p.ratio ? "middle" : "end"}" dominant-baseline="central">${p.ratio ? "ratio" : "y title"}</text>`) }
-    if (p.ratio) out.push(`<path d="M${T(fl)} ${T(fb - fh / 2)}H${T(fr)}" stroke="#000" stroke-width="${Math.max(0.6, S.lw * s)}"/>`);
+    if (p.ratio && LAY.ref.on) { const dash = LINE_STYLES.find(x => x[0] === LAY.ref.style)[3], w = Math.max(0.6, S.lw * s);
+      out.push(`<path d="M${T(fl)} ${T(fb - fh / 2)}H${T(fr)}" stroke="${colorOk(LAY.ref.color) ? colorHex(LAY.ref.color) : "#000"}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash.split(" ").map(d => +(d * w).toFixed(2)).join(" ")}"` : ""}/>`) }
     // a curve with markers and a legend in the first panel: line width and marker size
-    if (p.id === g.pads.find(q => !q.empty && !q.ratio)?.id && !p.z) {
+    if (p.id === g.pads.find(q => !q.empty && !q.ratio)?.id && !p.z) { // the first two data in the first two colours of the list
+      const c1 = colorHex(LAY.colors[0]), c2 = colorHex(LAY.colors[1] || LAY.colors[0]);
       const pts = [...Array(7)].map((_, i) => [fl + fw * (0.12 + i * 0.13), fb - fh * (0.18 + 0.55 * Math.exp(-i / 2.2))]);
-      out.push(`<path d="${pts.map((q, i) => `${i ? "L" : "M"}${T(q[0])} ${T(q[1])}`).join("")}" stroke="#1f3cbf" stroke-width="${Math.max(0.5, S.lw * s)}" fill="none"/>`);
-      pts.forEach(q => out.push(`<circle cx="${T(q[0])}" cy="${T(q[1] + fh * 0.06)}" r="${Math.max(0.6, 4 * S.ms * s)}" fill="#000"/>`));
+      out.push(`<path d="${pts.map((q, i) => `${i ? "L" : "M"}${T(q[0])} ${T(q[1])}`).join("")}" stroke="${c2}" stroke-width="${Math.max(0.5, S.lw * s)}" fill="none"/>`);
+      pts.forEach(q => out.push(`<circle cx="${T(q[0])}" cy="${T(q[1] + fh * 0.06)}" r="${Math.max(0.6, 4 * S.ms * s)}" fill="${c1}"/>`));
       const lx = p.x0 + 0.5 * padW, ly = p.y0 + 0.12 * (p.y1 - p.y0);
-      out.push(`<circle cx="${T(lx + 0.6 * S.text)}" cy="${T(ly)}" r="${Math.max(0.6, 4 * S.ms * s)}" fill="#000"/>`, txt(lx + 1.6 * S.text, ly + 0.36 * S.text, S.text, "data"),
-        `<path d="M${T(lx)} ${T(ly + 1.3 * S.text)}h${T(1.2 * S.text)}" stroke="#1f3cbf" stroke-width="${Math.max(0.5, S.lw * s)}"/>`, txt(lx + 1.6 * S.text, ly + 1.66 * S.text, S.text, "model")) }
+      out.push(`<circle cx="${T(lx + 0.6 * S.text)}" cy="${T(ly)}" r="${Math.max(0.6, 4 * S.ms * s)}" fill="${c1}"/>`, txt(lx + 1.6 * S.text, ly + 0.36 * S.text, S.text, "data"),
+        `<path d="M${T(lx)} ${T(ly + 1.3 * S.text)}h${T(1.2 * S.text)}" stroke="${c2}" stroke-width="${Math.max(0.5, S.lw * s)}"/>`, txt(lx + 1.6 * S.text, ly + 1.66 * S.text, S.text, "model")) }
     if (p.z) { // colour scale: distance and width in pixels as set in PanelLayout (ROOT alone scales them with the pad width)
       const bx = fr + S.zOff, bw = S.zWidth;
       out.push(`<rect x="${T(bx)}" y="${T(ft)}" width="${T(bw)}" height="${T(fh)}" fill="url(#zgrad)"/>`);
@@ -2748,6 +2765,19 @@ function renderLayout() {
         <p class="small muted">Pixels of the canvas, the same in every panel. Changed values are marked.</p>
         ${sizesUI}<div class="lb-line"><button class="chip" data-grid="resetsizes" ${sizesChanged().length ? "" : "disabled"}>Back to the defaults</button></div>
       </details>
+      <details class="lb-more" ${colorsChanged() ? "open" : ""}><summary>Colours of the data</summary>
+        <p class="small muted">The <i>n</i>-th data in a pad gets the <i>n</i>-th colour, unless it sets one. Type a ROOT colour (<code>kRed + 1</code>, <code>632</code>) or <code>#rrggbb</code>, or pick one.</p>
+        <div class="lb-cols" id="lbcols" style="${LAY.cvd ? `filter:url(#cvd-${LAY.cvd})` : ""}">${LAY.colors.slice(0, LAY.allColors ? undefined : 12).map((c, i) => `<label><b>${i + 1}</b><input type="color" class="lb-pick" data-colpick="${i}" value="${colorHex(c)}" aria-label="pick colour ${i + 1}"><input type="text" data-colname="${i}" value="${c}" spellcheck="false" aria-label="colour ${i + 1}" class="${colorOk(c) ? "" : "bad"}"></label>`).join("")}</div>
+        <div class="lb-line">${LAY.colors.length > 12 ? `<button class="chip" data-colop="all">${LAY.allColors ? "only the first 12" : `all ${LAY.colors.length}`}</button>` : ""}<button class="chip" data-colop="add">+ colour</button><button class="chip" data-colop="del" ${LAY.colors.length < 2 ? "disabled" : ""}>− colour</button><button class="chip" data-colop="reset" ${colorsChanged() ? "" : "disabled"}>Back to the defaults</button></div>
+        <div class="lb-line"><span class="lb-l">Seen as</span><span class="seg" role="group" aria-label="Show the colours as seen with colour vision deficiency">${[["", "normal"], ["p", "red-blind"], ["d", "green-blind"], ["t", "blue-blind"]].map(([k, t]) => `<button data-lcvd="${k}" aria-pressed="${LAY.cvd === k}">${t}</button>`).join("")}</span></div>
+        <p class="small muted">About one man in twelve sees red and green poorly: check that neighbouring colours stay apart.</p>
+      </details>
+      ${hasRatio() ? `<details class="lb-more lb-ref" ${refChanged() ? "open" : ""}><summary>Line in the ratio pads</summary>
+        <p class="small muted">A function of <i>x</i> drawn behind the data: <code>1</code> for a ratio, <code>0</code> for a difference or a pull. A plot can change it in one pad with <code>SetRefFunc</code>, or remove it with <code>SetRefFunc("")</code>.</p>
+        <div class="lb-line"><span class="lb-l">Line</span><button class="chip" data-refon="true" aria-pressed="${LAY.ref.on}">at</button><input type="text" data-reff value="${LAY.ref.f.replace(/"/g, "&quot;")}" spellcheck="false" aria-label="reference function" class="${LAY.ref.f.trim() ? "" : "bad"}"><button class="chip" data-refon="false" aria-pressed="${!LAY.ref.on}">none</button></div>
+        ${LAY.ref.on ? `<div class="lb-line"><span class="lb-l">Style</span>${LINE_STYLES.map(([n, , t]) => `<button class="chip" data-refstyle="${n}" aria-pressed="${LAY.ref.style === n}">${t}</button>`).join("")}<input type="color" class="lb-pick" data-refpick value="${colorHex(LAY.ref.color)}" aria-label="pick the colour of the line"><input type="text" data-refcolor value="${LAY.ref.color}" spellcheck="false" aria-label="colour of the line" class="${colorOk(LAY.ref.color) ? "" : "bad"}"></div>` : ""}
+        <div class="lb-line"><button class="chip" data-refop="reset" ${refChanged() ? "" : "disabled"}>Back to the default</button></div>
+      </details>` : ""}
       <div class="row"><label for="lbname" class="lb-l">Name</label><input id="lbname" type="text" spellcheck="false" placeholder="${layName()}" value="${LAY.name.replace(/"/g, "&quot;")}"></div>
     </div>
     <div class="lb-out">
@@ -2795,6 +2825,23 @@ function renderLayout() {
     if (op === "empty") { if (G.empty.has(key)) G.empty.delete(key); else G.empty.add(key) }
     else { const [dc, dr] = { right: [1, 0], left: [-1, 0], down: [0, 1], up: [0, -1] }[op]; setSpan(G, key, cs + dc, rs + dr) }
     custom(); rerender() });
+  // colours and the ratio line: a bad name is marked and kept out of the code until it is a colour
+  host.querySelectorAll("[data-colname]").forEach(i => i.onchange = () => { const c = i.value.trim(); if (!colorOk(c)) { i.classList.add("bad"); return }
+    LAY.colors[+i.dataset.colname] = c.startsWith("#") ? c.toLowerCase() : c; rerender() });
+  host.querySelectorAll("[data-colpick]").forEach(i => i.onchange = () => { LAY.colors[+i.dataset.colpick] = i.value.toLowerCase(); rerender() });
+  host.querySelectorAll("[data-colop]").forEach(b => b.onclick = () => { const op = b.dataset.colop;
+    if (op === "all") LAY.allColors = !LAY.allColors;
+    if (op === "add") { LAY.colors.push(DEFAULT_COLORS[LAY.colors.length % DEFAULT_COLORS.length]); if (LAY.colors.length > 12) LAY.allColors = true }
+    if (op === "del") LAY.colors.pop();
+    if (op === "reset") LAY.colors = [...DEFAULT_COLORS];
+    rerender() });
+  host.querySelectorAll("[data-lcvd]").forEach(b => b.onclick = () => { LAY.cvd = b.dataset.lcvd; rerender() });
+  host.querySelectorAll("[data-refon]").forEach(b => b.onclick = () => { LAY.ref.on = b.dataset.refon === "true"; rerender() });
+  host.querySelectorAll("[data-reff]").forEach(i => i.onchange = () => { const f = i.value.trim().replace(/"/g, ""); if (!f) { i.classList.add("bad"); return } LAY.ref.f = f; rerender() });
+  host.querySelectorAll("[data-refstyle]").forEach(b => b.onclick = () => { LAY.ref.style = +b.dataset.refstyle; rerender() });
+  host.querySelectorAll("[data-refcolor]").forEach(i => i.onchange = () => { const c = i.value.trim(); if (!colorOk(c)) { i.classList.add("bad"); return } LAY.ref.color = c.startsWith("#") ? c.toLowerCase() : c; rerender() });
+  host.querySelectorAll("[data-refpick]").forEach(i => i.onchange = () => { LAY.ref.color = i.value.toLowerCase(); rerender() });
+  host.querySelectorAll("[data-refop]").forEach(b => b.onclick = () => { LAY.ref = { ...REF_DEFAULTS }; rerender() });
   const nm = document.getElementById("lbname"); nm.oninput = () => { LAY.name = nm.value.replace(/[^\w-]/g, ""); fill(document.getElementById("laycode"), layoutCode(lang === "py"), lang); host.querySelector(".lb-name code").textContent = `"${layName()}"` } }
 
 /* ---------------- updating: docs/api-changes.md as a filterable list */
