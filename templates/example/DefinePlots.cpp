@@ -807,6 +807,14 @@ void DefineHeavyIonPlots(PlotManager& pm)
     plot[1]['Y'].SetRange(0.0, 0.14).SetTitle("#it{v}_{#it{n}}");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
+  {  // the yield around the second-order event plane in polar coordinates (angle phi - Psi2, radius pT): each pT ring relative
+    // to its mean, so the elliptic modulation of the flow shows how it grows with pT
+    Plot plot("azimuthalMap", "heavyion", "2d");
+    plot[1].AddData("flow/azimuthalMap", "heavyion").SetDrawOption(colz_polar);
+    plot[1].AddText(0.02, 0.985, {"Pb-Pb, 30-40%", "angle: #varphi - #Psi_{2}"});  // in the corner beside the disc
+    plot[1]['Z'].SetRange(0.5, 1.5).SetTitle("yield / mean of the ring");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
   {  // mean pT against the multiplicity for ten collision systems: all start alike, pp rises steeply, p-Pb follows and flattens,
     // A-A rises least; over the full multiplicity range on a logarithmic axis, and the low multiplicities on a linear one
     const vector<std::tuple<string, string, string>> systems = {
@@ -1075,6 +1083,18 @@ void DefineAtomicPlots(PlotManager& pm)
     plot[1].AddLegend(0.2, 0.92);
     plot[1]['X'].SetTitle("cos #theta");
     plot[1]['Y'].SetTitle("electrons").SetRange(0.0, 4500.0);  // room for the legend
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // photoelectron angular distributions, the light polarised along the angle 0: the cos^2 dipole of He 1s (beta = 2) and the
+    // rounder Ar 3p; the inputs are polar graphs, drawn on a polar grid in place of the axes (x the angle, y the radius)
+    Plot plot("photoelectronAngles", "atomic", "1d");
+    for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"he1s", "He 1s, #beta = 2", kAzure + 2}, {"ar3p", "Ar 3p, #beta = 0.88", kRed + 1}}) {
+      plot[1].AddData("angular/" + name + "_model", "atomic").SetDrawOption(line).SetLine(kSolid, 2.0, color);
+      plot[1].AddData("angular/" + name, "atomic", label).SetDrawOption(points).SetColor(color).SetDefinesFrame();
+    }
+    plot[1].AddLegend(0.02, 0.985);  // in the corner above the grid, which fills the pad
+    plot[1].AddText(bottom_left, "1 + #beta #it{P}_{2}(cos #theta)");
+    plot[1]['Y'].SetRange(0.0, 3.3);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // four orbitals of hydrogen in a grid of maps sharing their axes, each with its own colour scale

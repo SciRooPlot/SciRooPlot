@@ -99,6 +99,7 @@
 #include <TGraph.h>
 #include <TGraphErrors.h>
 #include <TGraphAsymmErrors.h>
+#include <TGraphPolar.h>
 #include <TH1D.h>
 #include <TH2D.h>
 #include <TLorentzVector.h>
@@ -1323,6 +1324,38 @@ void WriteLaserSpectroscopy(TFile& file)
   }
 }
 
+// photoelectron angular distributions with linearly polarised light (polarisation at angle 0): dsigma/dOmega in units of sigma/4pi is
+// 1 + beta P2(cos theta), for He 1s (s -> p, beta = 2 at any photon energy: a pure cos^2 dipole) and Ar 3p at 21.2 eV (beta = 0.88),
+// as polar graphs (angle in radians, radius the cross section): measured points every 15 degrees and the curve of the distribution
+void WritePhotoelectronAngles(TFile& file)
+{
+  TRandom3 random(31);  // an own generator keeps all other example data unchanged
+  file.mkdir("angular")->cd();
+  auto distribution = [](double beta, double theta) {
+    const double c = std::cos(theta);
+    return 1. + beta * 0.5 * (3. * c * c - 1.);
+  };
+  for (const auto& [name, beta] : std::vector<std::pair<std::string, double>>{{"he1s", 2.}, {"ar3p", 0.88}}) {
+    constexpr int kPoints = 24;
+    TGraphPolar measured(kPoints);
+    for (int i = 0; i < kPoints; ++i) {
+      const double theta = i * TMath::TwoPi() / kPoints;
+      const double value = distribution(beta, theta);
+      const double error = 0.04 + 0.03 * value;  // statistics plus a flat part from the background subtraction
+      measured.SetPoint(i, theta, std::max(0., value + random.Gaus(0., error)));
+      measured.SetPointError(i, 0., error);
+    }
+    measured.Write(name.data());
+    constexpr int kCurve = 361;  // closed: the last point is the first
+    TGraphPolar curve(kCurve);
+    for (int i = 0; i < kCurve; ++i) {
+      const double theta = i * TMath::TwoPi() / (kCurve - 1);
+      curve.SetPoint(i, theta, distribution(beta, theta));
+    }
+    curve.Write((name + "_model").data());
+  }
+}
+
 void WriteAtomic()
 {
   TFile file((kFolder + "atomic.root").data(), "RECREATE");
@@ -1352,6 +1385,7 @@ void WriteAtomic()
   WriteOrbitals(file);
   WritePhotoeffect(file);
   WriteLaserSpectroscopy(file);
+  WritePhotoelectronAngles(file);
 }
 
 void WriteAccelerator()
@@ -1516,6 +1550,26 @@ void WriteFlowAndMeanPt()
       }
       meanPt.Write(system.name);
     }
+  }
+  {  // charged particles in Pb-Pb 30-40% around the second-order event plane, angle phi - Psi2 against pT: in each pT ring the yield
+    // relative to its mean, 1 + 2 v2(pT) cos(2 (phi - Psi2)) with v2 rising to about 0.2 at 3 GeV/c (more events at low pT)
+    TRandom3 ringRandom(32);  // an own generator keeps the data above unchanged
+    file.cd("flow");
+    auto v2 = [](double pt) { return 0.21 * pt * pt / (pt * pt + 1.1) * (1. - 0.06 * pt); };
+    TH2D map("azimuthalMap", "", 36, 0., TMath::TwoPi(), 16, 0., 4.);
+    map.GetXaxis()->SetTitle("#varphi - #Psi_{2}");
+    map.GetYaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+    for (int ring = 1; ring <= map.GetNbinsY(); ++ring) {
+      const double pt = map.GetYaxis()->GetBinCenter(ring);
+      const double perBin = 4.e7 * std::exp(-1.6 * pt) / map.GetNbinsX();
+      for (int bin = 1; bin <= map.GetNbinsX(); ++bin) {
+        const double phi = map.GetXaxis()->GetBinCenter(bin);
+        const double counts = ringRandom.Poisson(perBin * (1. + 2. * v2(pt) * std::cos(2. * phi)));
+        map.SetBinContent(bin, ring, counts / perBin);
+        map.SetBinError(bin, ring, std::sqrt(counts) / perBin);
+      }
+    }
+    map.Write();
   }
 }
 

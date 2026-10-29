@@ -1482,7 +1482,8 @@ const exImage = k => `img/ex/${k}.${EXAMPLES[k].gif ? "gif" : "png"}`;  // an an
 // features an example shows, found in its code, with the reference topic that explains them
 const EX_TAGS = [
   ["ratio", "ratio", /AddRatio\(|_ratio"/, "ratios"], ["panels", "several panels", /_\d+x\d+|PanelLayout\(/, "baseplots"],
-  ["2d", "2D", /"2d|Project2D|Profile2D|colz|lego|surf|cont_|candle|violin/, "appearance"], ["tree", "tree", /Project1D|Project2D|Profile1D|Profile2D|\.Project\(|Filter\(|Define\(/, "trees"],
+  ["2d", "2D", /"2d|Project2D|Profile2D|colz|lego|surf|cont_|candle|violin/, "appearance"], ["polar", "polar", /_polar\b|polar graph/, "appearance"],
+  ["tree", "tree", /Project1D|Project2D|Profile1D|Profile2D|\.Project\(|Filter\(|Define\(/, "trees"],
   ["table", "table (CSV)", /Scatter\(/, "trees"], ["modifiers", "modifiers", /Normalize|Rebin|\.Scale\(|ScaleX|Cumulative|DivideBinWidth|Smooth/, "modifiers"],
   ["projection", "projection", /ProjectX|ProjectY|ProfileX/, "modifiers"], ["uncertainty", "uncertainties", /\bboxes\b|\bband\b|brackets|SetIsCorrelated/, "appearance"],
   ["function", "functions, lines and shapes", /AddFunction|AddLine|AddArrow|AddVerticalLine|AddHorizontalLine|AddRegion|AddEllipse|SetRefFunc/, "adding"], ["numbers", "numbers in labels", /"[^"]*<(mean|entries|integral|name|title|rms|max|min)[^"]*"/, "labels"],

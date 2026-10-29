@@ -33,6 +33,7 @@
 #include <TF3.h>
 #include <TFrame.h>
 #include <TGWindow.h>
+#include <TGaxis.h>
 #include <TGraph.h>
 #include <TGraph2D.h>
 #include <TGraph2DAsymmErrors.h>
@@ -40,6 +41,8 @@
 #include <TGraphAsymmErrors.h>
 #include <TGraphBentErrors.h>
 #include <TGraphErrors.h>
+#include <TGraphPolar.h>
+#include <TGraphPolargram.h>
 #include <TGraphSmooth.h>
 #include <TH1.h>
 #include <TH1D.h>
@@ -590,6 +593,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     }
 
     TH1* axisHist_ptr{nullptr};
+    // the frame of a flat polar drawing: a disc in a square frame without cartesian axes, measured by a radial axis
+    bool polarFrame{};
+    // the polar grid of a pad with polar graphs, drawn instead of a cartesian frame, and the axis settings of such a pad (not drawn)
+    TGraphPolargram* polargram{nullptr};
+    unique_ptr<TH1> polarAxisHist;
     vector<std::pair<unique_ptr<TPaveStats>, std::shared_ptr<const Plot::Pad::StatsBox>>> statsBoxes;  // filled by ROOT while drawing the data, placed after all data are drawn
     string drawOption;
     uint16_t dataIndex{};
@@ -616,6 +624,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           lower.ToLower();
           triangles = lower.Contains("tri");
           points = (lower.Contains("p") && !lower.Contains("pol") && !lower.Contains("sph") && !lower.Contains("psr")) || lower.Contains("line") || lower.Contains("err");
+        };
+        // a flat polar drawing (COL with POL, see THistPainter::PaintColorLevels): x is the angle, y the radius of a disc filling the frame,
+        // each cell a TCrown outlined with the line attributes of the data
+        auto isFlatPolar = [](const string& option) {
+          TString upper(option);
+          upper.ToUpper();
+          return upper.Contains("POL") && upper.Contains("COL") && !upper.Contains("LEGO") && !upper.Contains("SURF");
         };
         if (optionAlias) {
           const std::map<draw_option_t, string>* options{};
@@ -653,6 +668,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if ((alias == points || alias == points_col || alias == points_colz) && (data_ptr->InheritsFrom(TGraph2DErrors::Class()) || data_ptr->InheritsFrom(TGraph2DAsymmErrors::Class()))) drawOption += " ERR";
         }
         if constexpr (is_graph_1d<data_type>()) {
+          // a polar graph draws its error bars only with E (TGraphPainter::PaintGraphPolar), the other graphs with every points alias
+          const bool pointsAlias = alias == points || alias == points_xerr || alias == points_endcaps || alias == points_xerr_endcaps || alias == points_line || alias == points_text || alias == points_arrows;
+          if (pointsAlias && data_ptr->InheritsFrom(TGraphPolar::Class())) drawOption += " E";
           if (alias == points || alias == points_endcaps || alias == points_line || alias == points_text || alias == points_arrows) {
             // x errors are only drawn with the _xerr aliases (as for histograms with X0)
             for (double_t* ex : {data_ptr->GetEX(), data_ptr->GetEXlow(), data_ptr->GetEXhigh()}) {  // symmetric or asymmetric errors
@@ -737,13 +755,56 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (value > 0.) graphPositiveMinimum = std::min(*graphPositiveMinimum, value);
             }
           }
-          data_ptr->Draw(drawOption.data());
-          if constexpr (is_hist<data_type>()) {
-            axisHist_ptr = data_ptr;
-          } else {
-            axisHist_ptr = static_cast<TH1*>(data_ptr->GetHistogram()->Clone());
-            axisHist_ptr->SetDirectory(nullptr);
-            axisHist_ptr->SetBit(kCanDelete);
+          if constexpr (is_2d<data_type>()) polarFrame = isFlatPolar(drawOption);
+          if (polarFrame) {
+            // the disc is round only in a square frame: the margins of the longer side grow, both by the same amount
+            const double_t padWidth = pad_ptr->GetWw() * pad_ptr->GetAbsWNDC();
+            const double_t padHeight = pad_ptr->GetWh() * pad_ptr->GetAbsHNDC();
+            const double_t frameWidth = padWidth * (1. - pad_ptr->GetLeftMargin() - pad_ptr->GetRightMargin());
+            const double_t frameHeight = padHeight * (1. - pad_ptr->GetTopMargin() - pad_ptr->GetBottomMargin());
+            if (frameWidth > frameHeight) {
+              const double_t extra = 0.5 * (frameWidth - frameHeight) / padWidth;
+              pad_ptr->SetLeftMargin(pad_ptr->GetLeftMargin() + extra);
+              pad_ptr->SetRightMargin(pad_ptr->GetRightMargin() + extra);
+            } else {
+              const double_t extra = 0.5 * (frameHeight - frameWidth) / padHeight;
+              pad_ptr->SetTopMargin(pad_ptr->GetTopMargin() + extra);
+              pad_ptr->SetBottomMargin(pad_ptr->GetBottomMargin() + extra);
+            }
+            // the cartesian axes and the frame box measure nothing on the disc: option A leaves out the axes (the radial axis follows the data),
+            // the box ROOT paints in any case (THistPainter::PaintFrame) has no line
+            drawOption += " A";
+            pad_ptr->SetFrameLineWidth(0);
+          }
+          // a polar graph is drawn into a polar grid (TGraphPolargram) that ROOT makes from the points of the first polar graph painted
+          // in a pad and that the later ones use (TGraphPainter::PaintGraphPolar): here it is made from the frame data instead of a
+          // cartesian frame, and takes the ranges and labels of the axes below; the histogram of the graph only holds those axis settings
+          if constexpr (is_graph_1d<data_type>()) {
+            if (data_ptr->InheritsFrom(TGraphPolar::Class())) {
+              polargram = static_cast<TGraphPolar*>(data_ptr)->CreatePolargram("");
+              axisHist_ptr = static_cast<TH1*>(data_ptr->GetHistogram()->Clone());
+              axisHist_ptr->SetDirectory(nullptr);
+              polarAxisHist.reset(axisHist_ptr);
+              delete data_ptr;
+              if (!polargram) {
+                logger::error("Polar graph {} has no points to make the polar grid of pad {} from.", data->GetName(), padID);
+                fail = true;
+                return;
+              }
+              polargram->SetBit(kCanDelete);
+              polargram->Draw();
+              padSetup += " gStyle->SetOptTitle(0);";  // otherwise each polar graph paints its title as a box at the top
+            }
+          }
+          if (!polargram) {
+            data_ptr->Draw(drawOption.data());
+            if constexpr (is_hist<data_type>()) {
+              axisHist_ptr = data_ptr;
+            } else {
+              axisHist_ptr = static_cast<TH1*>(data_ptr->GetHistogram()->Clone());
+              axisHist_ptr->SetDirectory(nullptr);
+              axisHist_ptr->SetBit(kCanDelete);
+            }
           }
           string drawOptAxis = "AXIS";
           pad_ptr->Update();
@@ -761,13 +822,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (pad_ptr->GetView() || is_hist_2d<data_type>() || isColored2d) {
             drawOptAxis = "";
           }
-          axisHist_ptr->Draw((drawOption + drawOptAxis).data());
-          axisHist_ptr->Draw((drawOption + "SAME AXIG").data());
+          if (!polargram) {
+            axisHist_ptr->Draw((drawOption + drawOptAxis).data());
+            axisHist_ptr->Draw((drawOption + "SAME AXIG").data());
+          }
           bool isTHN = axisHist_ptr->InheritsFrom(TH2::Class()) || axisHist_ptr->InheritsFrom(TH3::Class());
 
           // a user range beyond the axes of the frame histogram needs a wider frame, since ROOT shows at most the axis of a histogram:
           // the frame is replaced by a histogram with extended axes (changing the axis alone would break the bin storage of the histogram)
-          if (!pad_ptr->GetView()) {
+          if (!pad_ptr->GetView() && !polargram) {
             for (auto axisLabel : {'X', 'Y'}) {
               if (axisLabel == 'Y' && !isTHN) continue;
               optional<double_t> userMin;
@@ -1032,6 +1095,44 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
           }
 
+          if (polargram) {
+            // the polar grid as the axes of the pad set it: x is the angle, y the radius; ranges and divisions only where the user set them
+            // (otherwise ROOT's from the points), labels as those of the axes
+            optional<double_t> minAngle, maxAngle, minRadius, maxRadius;
+            optional<int16_t> divAngle, divRadius;
+            for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
+              for (auto [axisLabel, min, max, div] : {std::make_tuple('X', &minAngle, &maxAngle, &divAngle), std::make_tuple('Y', &minRadius, &maxRadius, &divRadius)}) {
+                if (!curPad.GetAxes().count(axisLabel)) continue;
+                if (curPad[axisLabel].GetMinRange()) *min = curPad[axisLabel].GetMinRange();
+                if (curPad[axisLabel].GetMaxRange()) *max = curPad[axisLabel].GetMaxRange();
+                if (curPad[axisLabel].GetNumDivisions()) *div = curPad[axisLabel].GetNumDivisions();
+              }
+            }
+            if (minAngle || maxAngle) {
+              // the labels in units of pi assume a full turn (TGraphPolargram::PaintPolarDivisions): kept for one, values otherwise
+              const double_t tMin = minAngle.value_or(polargram->GetTMin());
+              const double_t tMax = maxAngle.value_or(polargram->GetTMax());
+              if (tMin == 0. && TMath::AreEqualRel(tMax, TMath::TwoPi(), 1e-9)) {
+                polargram->ChangeRangePolar(tMin, tMax);
+              } else {
+                polargram->SetRangePolar(tMin, tMax);
+              }
+            }
+            if (minRadius || maxRadius) polargram->SetRangeRadial(minRadius.value_or(polargram->GetRMin()), maxRadius.value_or(polargram->GetRMax()));
+            if (divAngle) polargram->SetNdivPolar(*divAngle);
+            // the radius runs over half of the pad: half of ROOT's divisions of an axis spanning it (8 are crowded with the label size of the axes)
+            polargram->SetNdivRadial(divRadius.value_or(505));
+            const TAxis* angle = axisHist_ptr->GetXaxis();
+            const TAxis* radius = axisHist_ptr->GetYaxis();
+            polargram->SetPolarLabelFont(angle->GetLabelFont());
+            polargram->SetPolarLabelSize(angle->GetLabelSize());
+            polargram->SetPolarLabelColor(angle->GetLabelColor());
+            polargram->SetRadialLabelFont(radius->GetLabelFont());
+            polargram->SetRadialLabelSize(radius->GetLabelSize());
+            polargram->SetRadialLabelColor(radius->GetLabelColor());
+            polargram->SetLineColor(radius->GetAxisColor());
+          }
+
           if (isTHN) {
             // reset the axis histogram which owns the z axis, while keeping default range defined by the data
             double_t min = axisHist_ptr->GetMinimum();
@@ -1136,9 +1237,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (!data->GetLineStyle()) defaultSettingIndices[3]++;
               data_ptr->SetLineStyle(*lineStyle);
             }
-            if (auto lineWidth = get_first(data->GetLineWidth(),
-                                           fromPad(pad.GetDefaultLineWidth()),
-                                           fromPad(padDefaults.GetDefaultLineWidth()))) {
+            // the cells of a flat polar drawing are outlined with the line width: only a width the data sets itself outlines them (colz has no outlines)
+            if (!data->GetLineWidth() && isFlatPolar(drawOption)) {
+              data_ptr->SetLineWidth(0);
+              data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), 0.f));  // pdf draws width 0 as a hairline
+            } else if (auto lineWidth = get_first(data->GetLineWidth(),
+                                                  fromPad(pad.GetDefaultLineWidth()),
+                                                  fromPad(padDefaults.GetDefaultLineWidth()))) {
               data_ptr->SetLineWidth(*lineWidth);
             }
             if (auto fillColor = get_first(data->GetFillColor(),
@@ -2119,7 +2224,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (fail) {
       return nullptr;
     }
-    if (axisHist_ptr && !pad_ptr->GetView()) AddAxisRoom(pad_ptr, axisHist_ptr, padDefaults, pad, padID, (hasRefFunc) ? drawData[1].get() : nullptr, padSetup);
+    if (axisHist_ptr && !pad_ptr->GetView() && !polarFrame && !polargram) AddAxisRoom(pad_ptr, axisHist_ptr, padDefaults, pad, padID, (hasRefFunc) ? drawData[1].get() : nullptr, padSetup);
     // the placement of the boxes below relies on the painted data (painting creates e.g. the palette of a colour plot):
     // the pad is updated once for all data, since every update repaints everything drawn so far
     pad_ptr->Update();
@@ -2149,7 +2254,29 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     bool redrawAxes = (pad.GetRedrawAxes())
                         ? *pad.GetRedrawAxes()
                         : ((padDefaults.GetRedrawAxes()) ? *padDefaults.GetRedrawAxes() : false);
-    if (redrawAxes && axisHist_ptr && !pad_ptr->GetView()) {
+    if (polarFrame) {
+      // the radial axis of a flat polar drawing: below the disc, from the centre to the right edge (the radius is measured from the centre),
+      // with the attributes and the title of the y axis
+      TAxis* yAxis = axisHist_ptr->GetYaxis();
+      const bool logRadius = pad_ptr->GetLogy();
+      auto value = [logRadius](double_t u) { return (logRadius) ? std::pow(10., u) : u; };
+      // half of ROOT's divisions of an axis spanning the frame, unless the user set them: the radius runs over half of it
+      optional<int16_t> divisions;
+      for (const Plot::Pad& curPad : {std::cref(padDefaults), std::cref(pad)}) {
+        if (curPad.GetAxes().count('Y') && curPad.GetAxes().at('Y').GetNumDivisions()) divisions = curPad.GetAxes().at('Y').GetNumDivisions();
+      }
+      auto* radial = new TGaxis(0.5 * (pad_ptr->GetUxmin() + pad_ptr->GetUxmax()), pad_ptr->GetUymin(), pad_ptr->GetUxmax(), pad_ptr->GetUymin(),
+                                value(pad_ptr->GetUymin()), value(pad_ptr->GetUymax()), divisions.value_or(505), (logRadius) ? "G" : "");
+      radial->ImportAxisAttributes(yAxis);
+      // the title font is the text font of the TGaxis, which ImportAxisAttributes leaves at its default (its text size is unused: set
+      // to the title size, so that font and size agree)
+      radial->SetTitleFont(yAxis->GetTitleFont());
+      radial->SetTitleSize(yAxis->GetTitleSize());
+      radial->SetTextSize(yAxis->GetTitleSize());
+      radial->SetName("radial_axis");
+      radial->SetBit(kCanDelete);
+      radial->Draw();
+    } else if (redrawAxes && axisHist_ptr && !pad_ptr->GetView() && !polargram) {
       // re-draw frame
       TLine line;
       pad_ptr->GetFrame()->TAttLine::Copy(line);  // only the line attributes: TFrame::Copy would write a whole TWbox into the TLine
@@ -2175,9 +2302,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     }
 
     // shapes need the final frame: behind the data right after the frame histogram, the others after the data (and before the boxes, which avoid them)
-    const bool canDrawShapes = axisHist_ptr && !pad_ptr->GetView();
+    const bool canDrawShapes = axisHist_ptr && !pad_ptr->GetView() && !polargram;
     if (!pad.GetShapes().empty() && !canDrawShapes) {
-      logger::warning("The shapes of pad {} are not drawn: they need an axis frame without a 3D view.", padID);
+      logger::warning("The shapes of pad {} are not drawn: they need a cartesian axis frame (no 3D view, no polar graphs).", padID);
     } else if (!pad.GetShapes().empty()) {
       DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::behind_data, axisHist_ptr, padID);
       DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::after_data, nullptr, padID);
@@ -2308,7 +2435,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         auto axis = curPad.GetAxes().find(axisLabel);
         if (axis != curPad.GetAxes().end() && axis->second.GetHideClippedLabels()) hide = *axis->second.GetHideClippedLabels();
       }
-      if (hide && axisHist_ptr) HideClippedLabels(pad_ptr, (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis(), axisLabel);
+      if (hide && axisHist_ptr && !polarFrame && !polargram) HideClippedLabels(pad_ptr, (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis(), axisLabel);
     }
 
     // the setup has to be the first primitive of the pad, so that it runs before anything of the pad is painted
@@ -2365,7 +2492,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     canvas_ptr->GetListOfPrimitives()->AddFirst(colorExec);
   }
   // last primitive of the canvas: restores the global settings after the pads were painted
-  TExec* resetExec = new TExec("reset_globals", fmt::format("gStyle->SetPalette({}); gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange(0.5); TCandle::SetWhiskerRange(1.);", static_cast<int32_t>(kBird)).data());
+  TExec* resetExec = new TExec("reset_globals", fmt::format("gStyle->SetPalette({}); gStyle->SetPaintTextFormat(\"g\"); gStyle->SetOptTitle(1); TCandle::SetBoxRange(0.5); TCandle::SetWhiskerRange(1.);", static_cast<int32_t>(kBird)).data());
   resetExec->SetBit(kCanDelete);
   resetExec->Draw();
   canvas_ptr->Modified();
@@ -2896,6 +3023,14 @@ void PlotPainter::ApplyScale(TObject* obj, std::set<TObject*>& done, const std::
       if (axis->GetTitleFont() % 10 == 3) axis->SetTitleSize(axis->GetTitleSize() * mScale);
     }
     applyToList(hist->GetListOfFunctions());
+  }
+  if (auto gaxis = dynamic_cast<TGaxis*>(obj)) {  // e.g. the radial axis of a polar drawing: label and title size are its own members
+    if (gaxis->GetLabelFont() % 10 == 3) gaxis->SetLabelSize(gaxis->GetLabelSize() * mScale);
+    if (gaxis->GetTextFont() % 10 == 3) gaxis->SetTitleSize(gaxis->GetTitleSize() * mScale);
+  }
+  if (auto grid = dynamic_cast<TGraphPolargram*>(obj)) {  // the polar grid of polar graphs: the label sizes are its own members
+    if (grid->GetPolarLabelFont() % 10 == 3) grid->SetPolarLabelSize(grid->GetPolarLabelSize() * mScale);
+    if (grid->GetRadialLabelFont() % 10 == 3) grid->SetRadialLabelSize(grid->GetRadialLabelSize() * mScale);
   }
   if (auto graph = dynamic_cast<TGraph*>(obj)) applyToList(graph->GetListOfFunctions());
   if (auto multiGraph = dynamic_cast<TMultiGraph*>(obj)) applyToList(multiGraph->GetListOfGraphs());
@@ -3862,8 +3997,8 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       }
     }
   };
-  auto markGraph = [&](TGraph* graph) {
-    TString option = graph->GetDrawOption();
+  auto markGraph = [&](TGraph* graph, const TObject* drawn = nullptr) {  // drawn: the object in the pad whose drawing option applies, if not the graph
+    TString option = (drawn ? drawn : graph)->GetDrawOption();
     option.ToLower();
     for (const char* ignored : {"same", "pfc", "plc", "pmc"})
       option.ReplaceAll(ignored, "");
@@ -3965,6 +4100,13 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       if (ellipse->GetFillStyle() != 0) markPolygon(points);
     } else if (auto* hist = dynamic_cast<TH1*>(obj)) {
       if (!TString(hist->GetName()).BeginsWith("axis_hist") && !TString(hist->GetName()).Contains("hframe")) markHist(hist);
+    } else if (auto* polar = dynamic_cast<TGraphPolar*>(obj)) {
+      // its points in the coordinates of the pad, as painting placed them on the polar grid
+      TGraph painted(polar->GetN(), polar->GetXpol(), polar->GetYpol());
+      polar->TAttLine::Copy(painted);
+      polar->TAttFill::Copy(painted);
+      polar->TAttMarker::Copy(painted);
+      markGraph(&painted, polar);
     } else if (auto* graph = dynamic_cast<TGraph*>(obj)) {
       markGraph(graph);
     } else if (auto* multiGraph = dynamic_cast<TMultiGraph*>(obj)) {

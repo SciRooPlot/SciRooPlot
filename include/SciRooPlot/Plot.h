@@ -92,6 +92,12 @@ namespace SciRooPlot
   OPT(surf_fillz)          \
   OPT(surf_contours)       \
   OPT(surf_shaded)         \
+  OPT(col_polar)           \
+  OPT(colz_polar)          \
+  OPT(lego_polar)          \
+  OPT(lego_col_polar)      \
+  OPT(surf_polar)          \
+  OPT(surf_col_polar)      \
   OPT(triangles)           \
   OPT(triangles_wire)      \
   OPT(triangles_col)       \

@@ -49,6 +49,12 @@ data with a marker style or size set or with non-zero errors as `points`, other 
 | `surf_fillz` | – | – | – | `SURF2Z` | `SURF2Z` | `SURF2Z` |
 | `surf_contours` | – | – | – | `SURF3` | `SURF3` | `SURF3` |
 | `surf_shaded` | – | – | – | `SURF4` | `SURF4` | `SURF4` |
+| `col_polar` | – | – | – | `COL POL` | `COL POL` | `COL POL` |
+| `colz_polar` | – | – | – | `COLZ POL` | `COLZ POL` | `COLZ POL` |
+| `lego_polar` | – | – | – | `LEGO1 0 POL` | `LEGO1 0 POL` | `LEGO1 0 POL` |
+| `lego_col_polar` | – | – | – | `LEGO2 0 POL` | `LEGO2 0 POL` | `LEGO2 0 POL` |
+| `surf_polar` | – | – | – | `SURF POL` | `SURF POL` | `SURF POL` |
+| `surf_col_polar` | – | – | – | `SURF1 POL` | `SURF1 POL` | `SURF1 POL` |
 | `triangles` | – | – | – | – | `TRI` | – |
 | `triangles_wire` | – | – | – | – | `TRIW` | – |
 | `triangles_col` | – | – | – | – | `TRI1` | – |
@@ -82,3 +88,8 @@ later data needs such a 3D frame (otherwise a WARNING and the data is not drawn)
 `hist_clipped`, `hist_open_clipped`, `curve_clipped` draw a histogram as a graph, whose lines ROOT cuts at the frame (`HIST`, and `HIST C` on a log axis,
 move bins outside of the frame onto its edge); with a fill, the steps are the outline of filled areas cut at the lower frame edge;
 a graph is drawn by `hist_clipped`/`hist_open_clipped` as the steps of its bins and by `curve_clipped` like by `curve`; the y range of the data does not apply to histograms (a warning says so).
+The `_polar` aliases draw x as the angle (the x range is one full turn, 0 on the right, counter-clockwise) and y as the radius: `col_polar`/`colz_polar` fill a disc
+in a square frame (the margins of the longer side grow) without the cartesian axes, measured by a radial axis below it with the title of y; their cells have no outline
+unless the data sets a line width; `lego_polar`, `lego_col_polar`, `surf_polar`, `surf_col_polar` are drawn on a disc in 3D (`SetView` turns it).
+A polar graph (TGraphPolar: x the angle in radians, y the radius) is drawn on a polar grid instead of a cartesian frame. The grid fills the pad (a square base plot keeps it round)
+and takes the label fonts, sizes and colours of the x (angle) and y (radius) axes and the ranges and divisions set on them; the points aliases draw its error bars; shapes are not drawn there.

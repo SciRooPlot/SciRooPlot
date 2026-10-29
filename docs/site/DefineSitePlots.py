@@ -12,13 +12,15 @@ ALIASES_1D = ["points", "points_xerr", "points_endcaps", "points_xerr_endcaps", 
               "line", "curve", "curve_clipped", "hist", "hist_open", "hist_clipped", "hist_open_clipped", "bars", "hbars",
               "area", "area_smooth", "band", "band_smooth", "boxes", "boxes_nomarkers", "brackets", "text"]
 ALIASES_2D = ["col", "colz", "box", "text", "lego", "lego_col", "lego_colz", "lego_noborders", "surf", "surf_col", "surf_colz",
-              "surf_fill", "surf_fillz", "surf_contours", "surf_shaded", "cont", "cont_col", "cont_colz", "cont_fill", "cont_fillz",
+              "surf_fill", "surf_fillz", "surf_contours", "surf_shaded", "col_polar", "colz_polar", "lego_polar", "lego_col_polar",
+              "surf_polar", "surf_col_polar", "cont", "cont_col", "cont_colz", "cont_fill", "cont_fillz",
               "cont_smooth", "cont_smoothz", "candle", "candle_minmax", "candle_mean", "candle_notched", "candle_points",
               "candle_scatter", "candle_meanline", "violin", "violin_minmax"]
 ALIASES_FUNC = ["points", "line", "curve", "area", "area_smooth"]
 ALIASES_2D_FUNC = [a for a in ALIASES_2D if a not in ("box", "text") and not a.startswith(("candle", "violin"))]
 ALIASES_2D_GRAPH = ALIASES_2D_FUNC + ["triangles", "triangles_wire", "triangles_col", "triangles_colz", "triangles_fill", "triangles_fillz",
                                       "points", "points_col", "points_colz", "line"]
+POLAR_FUNC = "(1+0.6*cos(2*x))*exp(-(y-1.5)*(y-1.5))"  # x the angle, y the radius: two lobes on a ring
 VIEWS = [(30, 30), (35, 225), (60, 30), (10, 300)]  # (theta, phi) of the viewing angle demo; keep in sync with VIEW_ANGLES in template.html
 
 
@@ -92,19 +94,26 @@ def DefineGallery(pm: PlotManager):
                 else:
                     plot[1]['Y'].SetRange(2.5, 6.0)
             pm.AddPlot(plot)
+    pm.AddDataSource("heavyion", EXAMPLE + "/heavyion.root")
     for alias in ALIASES_2D:
         candle = alias.startswith(("candle", "violin"))
-        plot = Plot(alias, "gallery/hist2d", "1d" if candle else "2d_logz")
-        data = plot[1].AddData("ptVsMult", "data").SetDrawOption(globals()[alias])
+        polar = alias.endswith("_polar")
+        plot = Plot(alias, "gallery/hist2d", "1d" if candle else "2d" if polar else "2d_logz")
+        if polar:  # the azimuthal map of the example project: angle phi - Psi2, radius pT
+            data = plot[1].AddData("flow/azimuthalMap", "heavyion").SetDrawOption(globals()[alias])
+        else:
+            data = plot[1].AddData("ptVsMult", "data").SetDrawOption(globals()[alias])
         if candle:
             data.RebinX(10)
             plot[1]['Y'].SetRange(0.0, 3.0)
-        else:
+        elif not polar:
             data.RebinXY(10, 6) if alias in ("text", "box") else data.RebinXY(4, 3)
         if alias.startswith(("lego", "surf")):
             plot[1].SetView(35.0, 225.0)
             data.SetLineWidth(1.0)  # thin edges: thick ones darken a 3D view
             plot[1]['Z'].SetTitle("")  # a 3D z title runs out of the pad
+            if polar:
+                plot[1]['Z'].SetRange(0.6, 1.4)  # the yields relative to their ring: the modulation, not bars from zero
         plot[1]['X'].SetTitle("")
         plot[1]['Y'].SetTitle("")
         pm.AddPlot(plot)
@@ -120,11 +129,21 @@ def DefineGallery(pm: PlotManager):
     for i in range(150):
         px, py = rng.uniform(-2.0, 2.0), rng.uniform(-2.0, 2.0)
         graph2d.SetPoint(i, px, py, 10.0 * (2.718281828 ** (-(px * px + py * py) / 2.0)))
+    # the same kind of points in polar coordinates (x the angle, y the radius), for the polar aliases
+    polarFunc = ROOT.TF2("polarFunc", POLAR_FUNC, 0.0, 2.0 * ROOT.TMath.Pi(), 0.0, 3.0)
+    graph2dPolar = ROOT.TGraph2D()
+    graph2dPolar.SetName("g2dPolar")
+    for i in range(25):  # a grid including both ends of the angle: the interpolation does not wrap around
+        for j in range(13):
+            angle, radius = i * 2.0 * ROOT.TMath.Pi() / 24, j * 0.25
+            graph2dPolar.AddPoint(angle, radius, polarFunc.Eval(angle, radius))
     pm.AddDataSource("graph2d", graph2d)
+    pm.AddDataSource("graph2dPolar", graph2dPolar)
     is3d = ("lego", "surf", "triangles", "points", "line")
     for alias in ALIASES_2D_GRAPH:
         plot = Plot(alias, "gallery/graph2d", "2d")
-        data = plot[1].AddData("g2d", "graph2d").SetDrawOption(globals()[alias])
+        data = plot[1].AddData("g2dPolar", "graph2dPolar") if alias.endswith("_polar") else plot[1].AddData("g2d", "graph2d")
+        data.SetDrawOption(globals()[alias])
         if alias.startswith(is3d):
             plot[1].SetView(35.0, 225.0)
             data.SetLineWidth(1.0)
@@ -133,7 +152,10 @@ def DefineGallery(pm: PlotManager):
         pm.AddPlot(plot)
     for alias in ALIASES_2D_FUNC:
         plot = Plot(alias, "gallery/func2d", "2d")
-        data = plot[1].AddFunction("exp(-(x*x+y*y)/2)").SetRangeX(-2.0, 2.0).SetRangeY(-2.0, 2.0).SetDrawOption(globals()[alias])
+        if alias.endswith("_polar"):
+            data = plot[1].AddFunction(POLAR_FUNC).SetRangeX(0.0, 2.0 * ROOT.TMath.Pi()).SetRangeY(0.0, 3.0).SetDrawOption(globals()[alias])
+        else:
+            data = plot[1].AddFunction("exp(-(x*x+y*y)/2)").SetRangeX(-2.0, 2.0).SetRangeY(-2.0, 2.0).SetDrawOption(globals()[alias])
         if alias.startswith(is3d):
             plot[1].SetView(35.0, 225.0)
             data.SetLineWidth(1.0)

@@ -149,11 +149,12 @@ Drawing option aliases (one appearance for every type; histograms and graphs are
 | `hist`, `hist_open`, `bars`, `hbars` | steps, open steps, bars with gaps, horizontal bars | `cont`, `cont_col(z)`, `cont_fill(z)`, `cont_smooth(z)` | contours |
 | `area`, `area_smooth` | filled to zero | `candle`, `candle_minmax`, `candle_mean`, `candle_notched`, `candle_points`, `candle_scatter`, `candle_meanline` | candle plots |
 | `band`, `band_smooth` | filled error band | `violin`, `violin_minmax` | violin plots |
-| `boxes`, `boxes_nomarkers`, `brackets` | error boxes, brackets | | |
+| `boxes`, `boxes_nomarkers`, `brackets` | error boxes, brackets | `col_polar`, `colz_polar`, `lego_polar`, `lego_col_polar`, `surf_polar`, `surf_col_polar` | polar coordinates (x angle, y radius) |
 | `hist_clipped`, `hist_open_clipped`, `curve_clipped` | as `hist`, `hist_open`, `curve`, but cut at the frame instead of running along its edge (drawn as graph) | | |
 
 The suffix always adds one feature (`_xerr`, `_endcaps`, `_smooth`, `_nomarkers`, `_clipped`; 2D: `_col` lines coloured by content, `_fill` filled, trailing `z` adds the colour axis). An alias a type cannot draw gives a WARNING and ROOT's default.
 Functions (`TF1`): `points`, `line`, `curve`, `area`, `area_smooth` (a fill colours the area between curve and zero; `line`/`curve` drop it). 2D functions and 2D graphs: the `col`, `lego`, `surf`, `cont` aliases (no `box`, `text`, candles). 2D graphs only, drawn in 3D: `triangles`, `triangles_wire`, `triangles_col(z)`, `triangles_fill(z)` (Delaunay triangles), `points`, `points_col(z)` (markers coloured by z; error bars for TGraph2DErrors), `line`; such data must be the first in its pad or follow 3D data (lego, surf).
+Polar: the `_polar` aliases take x as the angle (one full turn) and y as the radius; `col_polar`/`colz_polar` draw a round disc in a square frame with a radial axis below it (no cartesian axes, no cell outlines unless a line width is set). Polar graphs (`TGraphPolar`, angle in radians) are drawn on a polar grid filling the pad (use a square base plot such as `1d`); x/y ranges, divisions and label styles apply to angle/radius; shapes are not drawn in such a pad.
 
 ## Modifiers (applied in this order, before drawing)
 

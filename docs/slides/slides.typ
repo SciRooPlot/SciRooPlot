@@ -2369,3 +2369,17 @@
     [`line`], [`LINE` #text(size: 10pt, fill: gray)[(polyline through the points)]],
   ), col-widths: (40%, 60%), text-size: 13pt)
 ]
+
+#slide[
+  #slide-title("Appendix: Drawing Options – Polar Coordinates")
+  - 2D histograms, graphs and functions: x is the angle (its range is one full turn, 0 on the right, counter-clockwise), y the radius.
+  - The colour maps fill a disc in a square frame, measured by a radial axis below it instead of the cartesian axes; their cells have no outline unless the data sets a line width.
+  #v(0.4em)
+  #api-table((
+    [`col_polar` / `colz_polar`], [`COL POL` / `COLZ POL`],
+    [`lego_polar` / `lego_col_polar`], [`LEGO1 0 POL` / `LEGO2 0 POL`],
+    [`surf_polar` / `surf_col_polar`], [`SURF POL` / `SURF1 POL`],
+  ), col-widths: (40%, 60%), text-size: 13pt)
+  #v(0.4em)
+  - Polar graphs (`TGraphPolar`: angle in radians, radius) are drawn on a polar grid that fills the pad, so a square base plot such as `1d` keeps it round. The settings of the x and y axes (ranges, divisions, label font, size and colour) apply to angle and radius; the points aliases also draw the error bars.
+]
