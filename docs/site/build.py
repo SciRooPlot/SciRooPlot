@@ -44,7 +44,12 @@ for line in open(f"{REPO}/docs/skill/scirooplot/reference/drawing-options.md"):
         kinds = ["hist", "graph", "func", "hist2d", "graph2d", "func2d"]
         opts.append({"alias": m.group(1), **{k: clean(m.group(i + 2)) for i, k in enumerate(kinds)}, "desc": DESC.get(m.group(1), "")})
 s = open(f"{SITE}/template.html").read()
-s = s.replace("/*PALETTES*/", open(f"{GEN}/palettes.json").read()).replace("/*COLORS*/", open(f"{SITE}/colors.json").read()).replace("/*EXAMPLES*/", open(f"{GEN}/examples.json").read()).replace("/*OPTIONS*/", json.dumps(opts))
+examples = open(f"{GEN}/examples.json").read()
+# every example card shows the plot its code makes (img/ex/<group>/<name>, as exImage in the template)
+noImage = [k for k, e in json.loads(examples).items() if not os.path.isfile(f"{OUT}/img/ex/{k}.{'gif' if 'gif' in e else 'png'}")]
+if noImage:
+    sys.exit(f"no plot in {OUT}/img/ex for the examples: {', '.join(noImage)}")
+s = s.replace("/*PALETTES*/", open(f"{GEN}/palettes.json").read()).replace("/*COLORS*/", open(f"{SITE}/colors.json").read()).replace("/*EXAMPLES*/", examples).replace("/*OPTIONS*/", json.dumps(opts))
 macros = {}
 for m in ["ptSpectrumRatio", "vertexZ", "ptSpectrumPublished", "pi0PeakVsPt", "trackingEfficiency", "trackSelection", "etaPhiDataVsSim", "nuclearModification", "jetSpectra"]:
     lines = open(f"{REPO}/docs/slides/root-examples/{m}.C").read().strip().split("\n")

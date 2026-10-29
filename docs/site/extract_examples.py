@@ -6,7 +6,9 @@ import re
 import sys
 import textwrap
 
-NAME = re.compile(r'Plot(?:\s+\w+)?\s*\(\s*(?:\w+\s*,\s*)?"([^"]+)"\s*,\s*"([^"]+)"')
+# Plot(name, group, ...) or the copy Plot(plot, name, group): the first argument is a variable only for a copy, or for a name
+# taken from a loop over a family of plots, Plot(name, group, base plot), which is shown as its first plot
+NAME = re.compile(r'Plot(?:\s+\w+)?\s*\(\s*(?:(\w+)\s*,\s*)?"([^"]+)"\s*,\s*"([^"]+)"')
 # an animation: frames named in a loop, in a subgroup of animations/, with the command making the gif in a comment
 ANIM = re.compile(r'Plot(?:\s+\w+)?\s*\([^;\n]*?,\s*"(animations/[^"]+)"')
 GIF = re.compile(r"plot (animations/\S+) '\.\+' (gif\+\d+(?:\+\+\d*)?)")
@@ -27,7 +29,8 @@ def snippets(path, lang):
         if "pm.AddPlot(" in s:
             code = "\n".join(seg)
             anim, m = ANIM.search(code), NAME.search(code)
-            key = anim.group(1) if anim else f"{m.group(2)}/{m.group(1)}" if m else None
+            loop = m and m.group(1) and re.search(rf'\bfor\b[^\n]*\b{m.group(1)}\b[^\n]*?"([^"]+)"', code[: m.start()])
+            key = anim.group(1) if anim else f"{m.group(2)}/{loop.group(1)}" if loop else f"{m.group(3)}/{m.group(2)}" if m else None
             if key:
                 body = list(seg)
                 while body and (not body[0].strip() or body[0].lstrip().startswith("}")):  # the end of the block before
