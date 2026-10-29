@@ -25,6 +25,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -77,6 +78,22 @@ Panel Empty(double_t width, double_t height)
   Panel empty(width, height);
   empty.mEmpty = true;
   return empty;
+}
+
+Panel ZAxis()
+{
+  Panel cell;
+  cell.mScaleCell = true;
+  cell.mSized = false;
+  return cell;
+}
+
+Panel ZAxis(uint8_t padID)
+{
+  if (padID == 0) logger::throw_invalid_argument("ZAxis(padID): the pads are counted from 1.");
+  Panel cell = ZAxis();
+  cell.mScaleOf = padID;
+  return cell;
 }
 
 PanelLayout::PanelLayout(vector<vector<Panel>> rows) : mRows(std::move(rows)) {}
@@ -179,6 +196,12 @@ PanelLayout& PanelLayout::SetMarkerSize(float_t size)
   return *this;
 }
 
+PanelLayout& PanelLayout::SetCommonTitles(bool common)
+{
+  mCommonTitles = common;
+  return *this;
+}
+
 //**************************************************************************************************
 /**
  * Computes the canvas size and the pads of the plot from the arrangement and the lengths of the layout.
@@ -277,12 +300,26 @@ void PanelLayout::ApplyTo(Plot& plot) const
     logger::throw_invalid_argument("Layout: {} cells would exceed the maximum of {} pads.", cells.size(), std::numeric_limits<uint8_t>::max());
   }
 
-  // sizes of the columns and rows in pixels, from the cells that cover a single one (and whether a column has a colour scale)
+  // sizes of the columns and rows in pixels, from the cells that cover a single one (and whether a column has a colour scale,
+  // of its panels or as ZAxis() cells: these have the width of the room of a colour scale)
   vector<double_t> colWidth(nCols, 0.);
   vector<double_t> rowHeight(nRows, 0.);
   vector<bool> colZAxis(nCols, false);
+  vector<bool> colScale(nCols, false);
+  for (const auto& [cell, r, c] : cells) {
+    if (cell->mScaleCell) {
+      if (cell->mColumns > 1) logger::throw_invalid_argument("Layout: a ZAxis() cell spans one column (row {}, column {}).", r + 1, c + 1);
+      colScale[c] = true;
+      colWidth[c] = mZAxisMargin;
+    }
+  }
   for (const auto& [cell, r, c] : cells) {
     if (cell->mZAxis) colZAxis[c + cell->mColumns - 1] = true;
+    if (!cell->mEmpty && !cell->mScaleCell) {
+      for (size_t cc = c; cc < c + cell->mColumns; ++cc) {
+        if (colScale[cc]) logger::throw_invalid_argument("Layout: column {} holds a ZAxis() cell and a panel.", cc + 1);
+      }
+    }
     if (!cell->mSized) continue;
     if (cell->mColumns == 1) {
       const double_t width = cell->mWidth * mPanelSize;
@@ -320,6 +357,10 @@ void PanelLayout::ApplyTo(Plot& plot) const
   for (size_t c = 0; c + 1 < nCols; ++c) {
     if (gapAfterColumn[c] == 1) {
       colSep[c] = Separation{mMarginRight, mMarginLeft, false};
+    } else if (colScale[c + 1]) {
+      colSep[c] = Separation{0., 0., false};  // the cell of a colour scale holds its room: it starts at the frames on its left
+    } else if (colScale[c]) {
+      colSep[c] = Separation{0., mMarginLeft, false};
     } else if (colZAxis[c]) {
       colSep[c] = Separation{mZAxisMargin, mMarginLeft, false};
     } else {
@@ -347,7 +388,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
   };
   vector<double_t> frameLeft, frameRight, boundaryX;
   vector<double_t> frameTop, frameBottom, boundaryY;
-  const double_t canvasWidth = edges(mMarginLeft, colWidth, colSep, colZAxis.back() ? mZAxisMargin : mMarginRight, frameLeft, frameRight, boundaryX);
+  const double_t canvasWidth = edges(mMarginLeft, colWidth, colSep, colScale.back() ? 0. : (colZAxis.back() ? mZAxisMargin : mMarginRight), frameLeft, frameRight, boundaryX);
   const double_t canvasHeight = edges(mMarginTop, rowHeight, rowSep, mMarginBottom, frameTop, frameBottom, boundaryY);
   plot.SetDimensions(static_cast<int32_t>(canvasWidth), static_cast<int32_t>(canvasHeight), true);
 
@@ -355,12 +396,14 @@ void PanelLayout::ApplyTo(Plot& plot) const
   struct Neighbours {
     bool panel{};  // a panel touches this side
     bool empty{};  // an empty cell touches this side
+    bool scale{};  // a ZAxis() cell touches this side
   };
   auto neighbours = [&](size_t r0, size_t r1, size_t c0, size_t c1) {  // the cells covering the given block of positions
     Neighbours side;
     for (size_t r = r0; r <= r1; ++r) {
       for (size_t c = c0; c <= c1; ++c) {
-        (cells[owner[r][c]].panel->mEmpty ? side.empty : side.panel) = true;
+        const Panel* other = cells[owner[r][c]].panel;
+        (other->mScaleCell ? side.scale : (other->mEmpty ? side.empty : side.panel)) = true;
       }
     }
     return side;
@@ -379,14 +422,19 @@ void PanelLayout::ApplyTo(Plot& plot) const
     // a pad reaches to the canvas edge on the outside and to the boundary towards its neighbours; next to empty cells only
     // a panel keeps the margin for its labels, and an empty cell gets what the labels of the panels around it do not need
     double_t x0{}, x1{}, y0{}, y1{};
-    if (cell->mEmpty) {
+    if (cell->mScaleCell) {
+      x0 = frameLeft[c0];
+      x1 = frameRight[c1];
+      y0 = (r0 == 0) ? 0. : (!above.panel ? frameTop[r0] - mMarginTop : boundaryY[r0 - 1]);
+      y1 = (r1 + 1 == nRows) ? canvasHeight : (!below.panel ? frameBottom[r1] + mMarginBottom : boundaryY[r1]);
+    } else if (cell->mEmpty) {
       x0 = (c0 == 0) ? 0. : (left.panel ? frameRight[c0 - 1] + rightMargin(c0 - 1) : boundaryX[c0 - 1]);
       x1 = (c1 + 1 == nCols) ? canvasWidth : (right.panel ? frameLeft[c1 + 1] - mMarginLeft : boundaryX[c1]);
       y0 = (r0 == 0) ? 0. : (above.panel ? frameBottom[r0 - 1] + mMarginBottom : boundaryY[r0 - 1]);
       y1 = (r1 + 1 == nRows) ? canvasHeight : (below.panel ? frameTop[r1 + 1] - mMarginTop : boundaryY[r1]);
     } else {
-      x0 = (c0 == 0) ? 0. : (!left.panel ? frameLeft[c0] - mMarginLeft : boundaryX[c0 - 1]);
-      x1 = (c1 + 1 == nCols) ? canvasWidth : (!right.panel ? frameRight[c1] + rightMargin(c1) : boundaryX[c1]);
+      x0 = (c0 == 0) ? 0. : (!left.panel && !left.scale ? frameLeft[c0] - mMarginLeft : boundaryX[c0 - 1]);
+      x1 = (c1 + 1 == nCols) ? canvasWidth : (!right.panel && !right.scale ? frameRight[c1] + rightMargin(c1) : boundaryX[c1]);
       y0 = (r0 == 0) ? 0. : (!above.panel ? frameTop[r0] - mMarginTop : boundaryY[r0 - 1]);
       y1 = (r1 + 1 == nRows) ? canvasHeight : (!below.panel ? frameBottom[r1] + mMarginBottom : boundaryY[r1]);
     }
@@ -401,6 +449,27 @@ void PanelLayout::ApplyTo(Plot& plot) const
     }
     Plot::Pad& pad = plot[padID];
     pad.SetPosition(x0 / canvasWidth, 1. - y1 / canvasHeight, x1 / canvasWidth, 1. - y0 / canvasHeight);
+    if (cell->mScaleCell) {
+      // the scale is drawn along the frames it belongs to (the vertical margins) at the distance of the scale of a panel from its frame
+      const double_t width = x1 - x0;
+      const double_t height = y1 - y0;
+      const double_t minSide = std::min(width, height);
+      uint8_t scaleOf = cell->mScaleOf;
+      if (scaleOf == 0 && c0 > 0) {
+        const auto leftCell = static_cast<size_t>(owner[r0][c0 - 1]);
+        if (!cells[leftCell].panel->mEmpty && !cells[leftCell].panel->mScaleCell) scaleOf = static_cast<uint8_t>(leftCell + 1);
+      }
+      pad.mColorScaleOf = scaleOf;  // 0: no panel to show (warned when drawn)
+      pad.SetMargins((frameTop[r0] - y0) / height, (y1 - frameBottom[r1]) / height, 0.f, 0.f);
+      pad.SetDefaultTextSize(mTextSize / minSide);
+      pad['Z']
+        .SetTitleSize(mTitleSize / minSide)
+        .SetTitleOffset(mZTitleOffset * minSide / (1.6 * mTitleSize * width))
+        .SetLabelOffset(0.005 * (mMarginLeft + mPanelSize + mZAxisMargin) / width)  // ROOT's 0.005 of the standard pad with a colour scale
+        .SetColorScaleOffset(static_cast<float_t>(mZAxisOffset / width))
+        .SetColorScaleWidth(static_cast<float_t>(mZAxisWidth / width));
+      continue;
+    }
     if (cell->mEmpty) {
       pad.mIsEmptyCell = true;
       pad.SetDefaultTextSize(mTextSize / std::min(x1 - x0, y1 - y0));
@@ -436,9 +505,98 @@ void PanelLayout::ApplyTo(Plot& plot) const
     // axes shared with a touching panel: labels and title are only shown once (a label next to a panel would run into its frame)
     if (left.panel && colSep[c0 - 1].shared) pad['Y'].SetTitleSize(0.).SetLabelSize(0.);
     if (below.panel && rowSep[r1].shared) pad['X'].SetTitleSize(0.).SetLabelSize(0.);
+    // touching panels of another length share no axis (see below), but the labels between them are hidden all the same
+    auto otherLength = [&](size_t r, size_t c, bool sameRows) {
+      const auto& [other, rr, cc] = cells[owner[r][c]];
+      return !other->mEmpty && !other->mScaleCell && (sameRows ? (rr != r0 || other->mRows != cell->mRows) : (cc != c0 || other->mColumns != cell->mColumns));
+    };
+    bool unsharedLeft{}, unsharedBelow{};
+    for (size_t r = r0; left.panel && colSep[c0 - 1].shared && r <= r1; ++r)
+      unsharedLeft = unsharedLeft || otherLength(r, c0 - 1, true);
+    for (size_t c = c0; below.panel && rowSep[r1].shared && c <= c1; ++c)
+      unsharedBelow = unsharedBelow || otherLength(r1 + 1, c, false);
+    if (unsharedLeft || unsharedBelow) {
+      logger::warning("Layout: pad {} touches a panel of another {} {}: their {} axes cannot be shared, yet the labels between them are hidden. Separate them with a Gap().",
+                      padID, unsharedBelow ? "width" : "height", unsharedBelow ? "below it" : "left of it", unsharedBelow ? "x" : "y");
+    }
   }
   plot[0].SetDefaultLineWidth(mLineWidth);
   plot[0].SetDefaultMarkerSize(mMarkerSize);
+
+  // touching panels share their axes: x within a column (panels touching above or below), y within a row (touching left or right);
+  // and the outer title of a row (x) or column (y) of touching panels is drawn once: groups of the panels showing that title
+  // (the x title of a panel without a touching panel below, the y title of one without a touching panel on its left)
+  auto isPanel = [&](int32_t index) { return !cells[index].panel->mEmpty && !cells[index].panel->mScaleCell; };
+  auto groupsOf = [&](auto&& joined) {  // the connected panels, joined(a, b) for neighbouring cells a and b
+    vector<size_t> root(cells.size());
+    for (size_t i = 0; i < root.size(); ++i)
+      root[i] = i;
+    auto find = [&](size_t i) {
+      while (root[i] != i)
+        i = root[i] = root[root[i]];
+      return i;
+    };
+    for (size_t r = 0; r < nRows; ++r) {
+      for (size_t c = 0; c < nCols; ++c) {
+        const int32_t a = owner[r][c];
+        if (r + 1 < nRows && owner[r + 1][c] != a && isPanel(a) && isPanel(owner[r + 1][c]) && joined(a, owner[r + 1][c], false)) root[find(a)] = find(owner[r + 1][c]);
+        if (c + 1 < nCols && owner[r][c + 1] != a && isPanel(a) && isPanel(owner[r][c + 1]) && joined(a, owner[r][c + 1], true)) root[find(a)] = find(owner[r][c + 1]);
+      }
+    }
+    std::map<size_t, vector<uint8_t>> groups;
+    for (size_t i = 0; i < cells.size(); ++i) {
+      if (isPanel(static_cast<int32_t>(i))) groups[find(i)].push_back(static_cast<uint8_t>(i + 1));
+    }
+    vector<vector<uint8_t>> result;
+    for (auto& [first, pads] : groups) {
+      if (pads.size() > 1) result.push_back(std::move(pads));
+    }
+    return result;
+  };
+  auto bottomRow = [&](int32_t index) { return cells[index].row + cells[index].panel->mRows - 1; };
+  auto touchesBelow = [&](int32_t index) {
+    const size_t r1 = bottomRow(index);
+    if (r1 + 1 >= nRows || !rowSep[r1].shared) return false;
+    for (size_t c = cells[index].col; c < cells[index].col + cells[index].panel->mColumns; ++c) {
+      if (isPanel(owner[r1 + 1][c])) return true;
+    }
+    return false;
+  };
+  auto touchesLeft = [&](int32_t index) {
+    const size_t c0 = cells[index].col;
+    if (c0 == 0 || !colSep[c0 - 1].shared) return false;
+    for (size_t r = cells[index].row; r <= bottomRow(index); ++r) {
+      if (isPanel(owner[r][c0 - 1])) return true;
+    }
+    return false;
+  };
+  auto shared = [&](int32_t b, bool horizontal) {  // the separation in front of cell b (right of or below its neighbour)
+    return horizontal ? colSep[cells[b].col - 1].shared : rowSep[cells[b].row - 1].shared;
+  };
+  // only panels of the same width share x (the same height y): a panel spanning two columns has another scale than the narrow ones
+  auto sameColumns = [&](int32_t a, int32_t b) { return cells[a].col == cells[b].col && cells[a].panel->mColumns == cells[b].panel->mColumns; };
+  auto sameRows = [&](int32_t a, int32_t b) { return cells[a].row == cells[b].row && cells[a].panel->mRows == cells[b].panel->mRows; };
+  auto columns = groupsOf([&](int32_t a, int32_t b, bool horizontal) { return !horizontal && shared(b, horizontal) && sameColumns(a, b); });
+  auto rows = groupsOf([&](int32_t a, int32_t b, bool horizontal) { return horizontal && shared(b, horizontal) && sameRows(a, b); });
+  for (auto& pads : columns) {
+    plot.mSharedAxes.push_back({'X', std::move(pads), true});
+  }
+  for (auto& pads : rows) {
+    plot.mSharedAxes.push_back({'Y', std::move(pads), true});
+  }
+  if (!mCommonTitles) return;
+  auto titleRows = groupsOf([&](int32_t a, int32_t b, bool horizontal) {
+    return horizontal && shared(b, horizontal) && !touchesBelow(a) && !touchesBelow(b) && bottomRow(a) == bottomRow(b);
+  });
+  auto titleColumns = groupsOf([&](int32_t a, int32_t b, bool horizontal) {
+    return !horizontal && shared(b, horizontal) && !touchesLeft(a) && !touchesLeft(b) && cells[a].col == cells[b].col;
+  });
+  for (auto& pads : titleRows) {
+    plot.mCommonTitles.emplace_back('X', std::move(pads));
+  }
+  for (auto& pads : titleColumns) {
+    plot.mCommonTitles.emplace_back('Y', std::move(pads));
+  }
 }
 
 }  // namespace SciRooPlot

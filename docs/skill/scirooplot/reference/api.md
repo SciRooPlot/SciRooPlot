@@ -47,6 +47,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Plot& SetHeight(int32_t height)`
 - `Plot& SetFixAspectRatio(bool fixAspectRatio = true)`
 - `Plot& SetTransparent()`
+- `Plot& ShareAxis(char axis, const std::vector<uint8_t>& pads)`
 
 ## Plot::Pad
 *pad[axis] gives the Axis ('X', 'Y', 'Z'); pad(dataID) the Data (counting from 1); also has the fill setters*
@@ -316,6 +317,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `LegendBox(const std::optional<std::string>& title = {})`
 - `LegendBox(double_t xPos, double_t yPos, const std::optional<std::string>& title = {})`
 - `LegendEntry& AddEntry(const std::string& label = "")` — a row of its own (with an empty label: an empty line)
+- `LegendEntry& AddDataEntry(uint8_t padID, uint16_t dataID)`
 - `LegendBox& SetTitle(const std::string& title)`
 - `LegendBox& SetNumColumns(uint8_t numColumns)`
 - `LegendBox& SetDefaultSymbolElements(const std::string& symbolElements)`
@@ -410,10 +412,10 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
 
 ## Panel
-*a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes, `Empty(width, height)` one with a size of its own*
+*a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes, `Empty(width, height)` one with a size of its own, `ZAxis()` (or `ZAxis(padID)`) a cell holding one colour scale for the panels sharing the z axis with the panel left of it (or with pad padID)*
 
 - `Panel(double_t width = 1., double_t height = 1.)`
-- `Panel& ZAxis()` — room for the colour scale to the right of this panel
+- `Panel& ZAxis()` — room for the colour scale of this panel to its right
 - `Panel& Span(uint8_t columns, uint8_t rows = 1)`
 
 ## PanelLayout
@@ -436,6 +438,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `PanelLayout& SetZTitleOffset(double_t pixel)` — 122.9: distance of the z title from the axis
 - `PanelLayout& SetLineWidth(float_t width)` — 5 (ROOT line width in pixel)
 - `PanelLayout& SetMarkerSize(float_t size)` — 1.4 (ROOT marker size, 1 = 8 pixel)
+- `PanelLayout& SetCommonTitles(bool common = true)` — true: one title for a row (column) of touching panels showing the same one
 
 ## BasePlotShape
 *proportions of the panels of PlotManager::MakeBasePlot*

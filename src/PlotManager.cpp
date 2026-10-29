@@ -55,6 +55,7 @@
 #include <TLine.h>
 #include <TList.h>
 #include <TMap.h>
+#include <TMath.h>
 #include <TNamed.h>
 #include <TPave.h>
 #include <TPaveText.h>
@@ -814,16 +815,23 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, con
   const int32_t nRows = match[4].matched ? std::stoi(match[4]) : 1;
   const bool ratio = match[5].matched;
   const bool gap = match[6].matched;
+  if (zAxis && ratio) {
+    logger::error("Unknown base plot {}: ratio panels exist only for 1d base plots.", name);
+    return Plot();
+  }
   if (nCols * nRows * (ratio ? 2 : 1) > 255) {
     logger::error("Base plot {} would have more than 255 pads.", name);
     return Plot();
   }
 
-  // the arrangement of the panels, in units of the standard panel
+  // the arrangement of the panels, in units of the standard panel; a grid of 2d panels touching each other shares one colour scale,
+  // in a cell right of the first row spanning all rows (its pad follows the panels of the first row)
   const double_t width = (form == "wide") ? shape.mAspectRatio : 1.;
   const double_t height = (form == "tall") ? shape.mAspectRatio : 1.;
+  const bool sharedScale = zAxis && nCols * nRows > 1 && !gap;
   vector<vector<Panel>> rows;
   vector<uint8_t> ratioPads;
+  vector<uint8_t> panelPads;
   uint8_t padID = 1;
   for (int32_t row = 0; row < nRows; ++row) {
     if (row > 0 && gap) rows.push_back({Gap()});
@@ -834,11 +842,15 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, con
         mainRow.push_back(Gap());
         ratioRow.push_back(Gap());
       }
-      mainRow.push_back(zAxis ? Panel(width, height).ZAxis() : Panel(width, height));
+      mainRow.push_back((zAxis && !sharedScale) ? Panel(width, height).ZAxis() : Panel(width, height));
       ratioRow.push_back(Panel(width, shape.mRatioHeight));
+      panelPads.push_back(padID++);
+    }
+    if (sharedScale && row == 0) {
+      mainRow.push_back(ZAxis().Span(1, static_cast<uint8_t>(nRows)));
+      ++padID;
     }
     rows.push_back(mainRow);
-    padID += nCols;
     if (ratio) {
       rows.push_back(ratioRow);
       for (int32_t col = 0; col < nCols; ++col)
@@ -862,6 +874,7 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, con
   plot[0]['Y'].SetOppositeTicks().SetMaxDigits(3).SetHideClippedLabels();
   plot[0]['Z'].SetMaxDigits(3);
   if (zAxis) plot[0].SetRedrawAxes();
+  if (sharedScale) plot.mSharedAxes.push_back({'Z', panelPads, true});  // part of the layout, like the axes of touching panels
 
   // conventions of the ratio pads
   for (const uint8_t ratioPad : ratioPads) {
@@ -1771,7 +1784,96 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   const bool isBitmapMode = (mode == "png") || (mode == "jpg") || str_contains(mode, "gif");
   PlotPainter painter(isInteractiveMode ? Config::Get().ScreenScale() : (isBitmapMode ? Config::Get().BitmapScale() : 1.), isInteractiveMode);
   gROOT->SetBatch(!isInteractiveMode && !isMacroMode);
-  shared_ptr<TCanvas> canvas{painter.GeneratePlot(fullPlot, mDataBuffer)};
+  shared_ptr<TCanvas> canvas;
+  const auto sharedAxes = fullPlot.GetSharedAxes();
+  if (sharedAxes.empty()) {
+    canvas.reset(painter.GeneratePlot(fullPlot, mDataBuffer).release());
+  } else {
+    // pads sharing an axis: a log scale, time format or range set in one of them (else in pad 0) holds for all of them
+    std::map<char, vector<vector<uint8_t>>> groups;
+    for (const auto& [axisLabel, axisGroups] : sharedAxes) {
+      for (const auto& group : axisGroups) {
+        groups[axisLabel].push_back(group.pads);
+        auto common = [&](const char* what, auto get, auto set) {
+          std::optional<std::decay_t<decltype(*get(std::declval<const Plot::Pad::Axis&>()))>> value;
+          for (uint8_t padID : group.pads) {
+            const auto& axes = fullPlot[padID].GetAxes();
+            auto axis = axes.find(axisLabel);
+            if (axis == axes.end() || !get(axis->second)) continue;
+            if (!value) {
+              value = get(axis->second);
+            } else if (*value != *get(axis->second)) {
+              logger::warning("Plot {}: the pads sharing the {} axis with pad {} set different {}: the one of pad {} is used.", fullPlot.GetName(), axisLabel, padID, what, group.pads.front());
+            }
+          }
+          if (!value) return;
+          for (uint8_t padID : group.pads) {
+            set(fullPlot[padID][axisLabel], *value);
+          }
+        };
+        common("log scales", [](const Plot::Pad::Axis& axis) { return axis.GetLog(); }, [](Plot::Pad::Axis& axis, bool isLog) { axis.SetLog(isLog); });
+        common("time formats", [](const Plot::Pad::Axis& axis) { return axis.GetTimeFormat(); }, [](Plot::Pad::Axis& axis, const string& format) { axis.SetTimeFormat(format); });
+        common("minima", [](const Plot::Pad::Axis& axis) { return axis.GetMinRange(); }, [](Plot::Pad::Axis& axis, double_t min) { axis.SetMinRange(min); });
+        common("maxima", [](const Plot::Pad::Axis& axis) { return axis.GetMaxRange(); }, [](Plot::Pad::Axis& axis, double_t max) { axis.SetMaxRange(max); });
+      }
+    }
+    painter.SetSharedAxes(groups);
+    // the automatic ranges: the union of the ranges the pads get on their own (with their room), known after a first paint;
+    // the plot is painted again only if a pad got another range than the union
+    Plot firstPlot = fullPlot;  // painting changes the plot (e.g. the legend rows of the data)
+    std::unique_ptr<TCanvas> firstCanvas = painter.GeneratePlot(firstPlot, mDataBuffer);
+    if (!firstCanvas) return false;
+    const auto ranges = painter.GetFrameRanges();
+    std::set<std::pair<uint8_t, char>> commonRanges;
+    bool paintAgain{};
+    for (const auto& [axisLabel, axisGroups] : sharedAxes) {
+      for (const auto& group : axisGroups) {
+        vector<uint8_t> members;
+        double_t min = std::numeric_limits<double_t>::infinity();
+        double_t max = -min;
+        for (uint8_t padID : group.pads) {
+          auto range = ranges.find({padID, axisLabel});
+          if (range == ranges.end()) {
+            if (!group.fromLayout && fullPlot.GetPads().count(padID)) {
+              logger::warning("Plot {}: pad {} is left out of the pads sharing the {} axis: {}.", fullPlot.GetName(), padID, axisLabel,
+                              (axisLabel == 'Z') ? "it draws no 2d histogram, graph or function (or a polar one)" : "it has no flat axis frame (a 3D view or a polar drawing)");
+            }
+            continue;
+          }
+          members.push_back(padID);
+          min = std::min(min, range->second.first);
+          max = std::max(max, range->second.second);
+        }
+        if (members.size() < 2) continue;
+        for (uint8_t padID : members) {
+          const auto& [padMin, padMax] = ranges.at({padID, axisLabel});
+          if (!TMath::AreEqualRel(padMin, min, 1e-9) || !TMath::AreEqualRel(padMax, max, 1e-9)) paintAgain = true;
+          Plot::Pad::Axis& axis = fullPlot[padID][axisLabel];
+          const auto& defaults = fullPlot[0].GetAxes();
+          const bool defaultMin = defaults.count(axisLabel) && defaults.at(axisLabel).GetMinRange();
+          const bool defaultMax = defaults.count(axisLabel) && defaults.at(axisLabel).GetMaxRange();
+          if (!axis.GetMinRange() && !defaultMin) axis.SetMinRange(min);
+          if (!axis.GetMaxRange() && !defaultMax) axis.SetMaxRange(max);
+          commonRanges.insert({padID, axisLabel});
+        }
+      }
+    }
+    if (!paintAgain) {
+      canvas.reset(firstCanvas.release());
+    } else {
+      // the messages of the first paint are not repeated
+      firstCanvas.reset();
+      painter.SetSharedAxes(groups, commonRanges);
+      const int32_t errorLevel = gErrorIgnoreLevel;
+      gErrorIgnoreLevel = std::max(errorLevel, static_cast<int32_t>(kError));
+      logger::muted() = true;
+      auto unmute = make_scope_guard([errorLevel]() {
+        logger::muted() = false;
+        gErrorIgnoreLevel = errorLevel;
+      });
+      canvas.reset(painter.GeneratePlot(fullPlot, mDataBuffer).release());
+    }
+  }
   if (!canvas) return false;
 
   if (TColor::GetFreeColorIndex() > std::numeric_limits<int16_t>::max()) {

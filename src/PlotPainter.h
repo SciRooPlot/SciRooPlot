@@ -237,6 +237,16 @@ class PlotPainter
   explicit PlotPainter(double_t scale = 1., bool onScreen = false) : mScale(scale), mOnScreen(onScreen) {}
   std::unique_ptr<TCanvas> GeneratePlot(Plot& plot, const std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>>& dataBuffer);
 
+  // axes shared between pads (Plot::ShareAxis): the groups, and the axes of pads whose range is the common one of their group
+  // (set explicitly in the plot by the caller: they get no further room, which the common range includes already)
+  void SetSharedAxes(std::map<char, std::vector<std::vector<uint8_t>>> groups, std::set<std::pair<uint8_t, char>> commonRanges = {})
+  {
+    mSharedAxes = std::move(groups);
+    mCommonRanges = std::move(commonRanges);
+  }
+  // the ranges of the frames as drawn (x and y of flat frames, z of 2d frames), keyed by pad and axis
+  const std::map<std::pair<uint8_t, char>, std::pair<double_t, double_t>>& GetFrameRanges() const { return mFrameRanges; }
+
  private:
   void AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefaults, const Plot::Pad& padSettings, uint8_t padID, const Plot::Pad::Data* refFunc, std::string& padSetup);
   void ApplyScale(TObject* obj, std::set<TObject*>& done, const std::string& drawOption = "");
@@ -277,6 +287,10 @@ class PlotPainter
   bool CheckFontSizes(TList* list);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
   void HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel);
+  static std::vector<double_t> LabelValues(TPad* pad, const TAxis* axis, char axisLabel);
+  double_t MaxLabelWidth(TPad* pad, const TAxis* axis, char axisLabel);
+  void DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID);
+  void DrawCommonTitle(TCanvas* canvas, char axisLabel, const std::vector<uint8_t>& pads, size_t index);
   void ReplacePlaceholders(std::string& str, TNamed* data_ptr);
   static std::string LegendSymbolElements(TObject* obj, std::string option);
   static bool HasErrors(const TObject* obj);
@@ -301,6 +315,12 @@ class PlotPainter
 
   double_t mScale{1.};
   bool mOnScreen{};
+  std::map<char, std::vector<std::vector<uint8_t>>> mSharedAxes;
+  std::set<std::pair<uint8_t, char>> mCommonRanges;
+  std::map<std::pair<uint8_t, char>, std::pair<double_t, double_t>> mFrameRanges;
+  std::map<uint8_t, TH1*> mFrameHists;  // the frame histograms of the flat frames (owned by their pads)
+  std::map<uint8_t, TH1*> mScaleHists;  // the frame histograms with a z axis, also in 3D views (owned by their pads)
+  std::set<uint8_t> mScalesInCells;     // pads whose colour scale a ZAxis() cell shows instead of the pad
   // on screen: the free user-defined line styles that stand in for styles 2-4 (their dash strings from gStyle), 0 if there is none
   std::array<Style_t, 3> mScreenDashStyles{};
   std::set<std::pair<const TObject*, size_t>> mReportedStoredRanges;  // input axes whose stored range a projection of this plot does not apply (reported once)

@@ -36,7 +36,7 @@ class Panel
 {
  public:
   explicit Panel(double_t width = 1., double_t height = 1.);
-  Panel& ZAxis();  // room for the colour scale to the right of this panel
+  Panel& ZAxis();  // room for the colour scale of this panel to its right
   // The cell covers several columns and/or rows of the grid (as colspan and rowspan in an HTML table): it is listed once,
   // in the row where it starts, and the rows below leave out the positions it covers. In a direction it spans, its size
   // follows from the columns or rows it covers (including what lies between them) and the size given here is not used.
@@ -47,6 +47,8 @@ class Panel
   friend Panel Gap();
   friend Panel Empty();
   friend Panel Empty(double_t width, double_t height);
+  friend Panel ZAxis();
+  friend Panel ZAxis(uint8_t padID);
   double_t mWidth{1.};
   double_t mHeight{1.};
   uint8_t mColumns{1};
@@ -55,6 +57,8 @@ class Panel
   bool mZAxis{false};
   bool mGap{false};
   bool mEmpty{false};
+  bool mScaleCell{false};
+  uint8_t mScaleOf{};  // 0: the panel to the left
 };
 
 // Separates independent panels: both sides keep their axis labels and titles.
@@ -68,12 +72,19 @@ Panel Empty();
 // {Empty(1, 0.25).Span(3)} above three panels.
 Panel Empty(double_t width, double_t height);
 
+// A cell holding the colour scale of a group of panels sharing the z axis (Plot::ShareAxis('Z', ...)): the group of the panel to its
+// left, or of the panel with the given pad number. Its panels then lose their own colour scales. The cell is as wide as the room
+// of the colour scale of Panel().ZAxis() (SetZAxisMargin, its scale placed by SetZAxisOffset and SetZAxisWidth) and may span rows.
+Panel ZAxis();
+Panel ZAxis(uint8_t padID);
+
 //**************************************************************************************************
 /**
  * Arrangement of panels (rows from top to bottom, panels from left to right) and the lengths of the
  * standard plot. All lengths are pixels of the plot at scale 1 (see srp screenscale and srp bitmapscale);
  * a plot made from a layout has them in every panel, so that plots of different layouts look the same.
- * Panels that touch share the axis between them and their inner labels and titles are hidden.
+ * Panels that touch share the axis between them (Plot::ShareAxis: x within a column, y within a row) and their inner labels and
+ * titles are hidden; the outer title of a row (x) or column (y) of touching panels is drawn once for all of them (SetCommonTitles).
  * All panels of a column share the width, all panels of a row the height (cells spanning several columns or rows excepted).
  * The pads of the resulting plot are numbered in reading order, gaps have no pad.
  * Lengths are floating-point pixels of the canvas (the unit of ROOT's line widths and pixel fonts), the defaults are
@@ -103,6 +114,7 @@ class PanelLayout
   PanelLayout& SetZTitleOffset(double_t pixel);                                           // 122.9: distance of the z title from the axis
   PanelLayout& SetLineWidth(float_t width);                                               // 5 (ROOT line width in pixel)
   PanelLayout& SetMarkerSize(float_t size);                                               // 1.4 (ROOT marker size, 1 = 8 pixel)
+  PanelLayout& SetCommonTitles(bool common = true);                                       // true: one title for a row (column) of touching panels showing the same one
 
  private:
   friend class Plot;
@@ -127,6 +139,7 @@ class PanelLayout
   double_t mZTitleOffset{122.9};
   float_t mLineWidth{5.};
   float_t mMarkerSize{1.4};
+  bool mCommonTitles{true};
 };
 
 }  // namespace SciRooPlot

@@ -106,10 +106,17 @@ inline void print_separator()
   logger::print("{:-<60}", "-");
 }
 
+// while set, infos and warnings are not printed (e.g. while a plot is painted a second time: the first paint gave them already)
+inline bool& muted()
+{
+  static bool isMuted{};
+  return isMuted;
+}
+
 template <typename... Args>
 inline void info(std::string_view fmt_str, Args&&... args)
 {
-  if (Config::Get().Verbosity() >= Config::LogLevel::info) {
+  if (!muted() && Config::Get().Verbosity() >= Config::LogLevel::info) {
     fmt::print("[ INFO ] ");
     fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
     fmt::print("\n");
@@ -139,7 +146,7 @@ inline void debug(std::string_view fmt_str, Args&&... args)
 template <typename... Args>
 inline void warning(std::string_view fmt_str, Args&&... args)
 {
-  if (Config::Get().Verbosity() >= Config::LogLevel::warning) {
+  if (!muted() && Config::Get().Verbosity() >= Config::LogLevel::warning) {
     fmt::print(stderr, "{}[ WARN ]{} ", begin_color(Color::Yellow), end_color());
     fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
     fmt::print(stderr, "\n");

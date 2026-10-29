@@ -361,10 +361,17 @@ class Plot : public FillSetters<Plot>
   Plot& SetHeight(int32_t height);
   Plot& SetFixAspectRatio(bool fixAspectRatio = true);
   Plot& SetTransparent();
+  // The pads share the scale of the axis ('X', 'Y' or 'Z'): its range, log scale and time format. A setting of one of them made in a pad
+  // of the group or in pad 0 holds for the whole group; without a range, the group gets the union of the automatic ranges of its pads.
+  // Touching panels of a layout share their axes already (x per column, y per row). A pad listed again leaves its earlier group,
+  // a single pad leaves its group, an empty list undoes all groups of the axis (also those of the layout).
+  // 3D views (lego, surfaces) share only z, polar drawings nothing: they are left out of the other groups.
+  Plot& ShareAxis(char axis, const std::vector<uint8_t>& pads);
 
  protected:
   friend class PlotManager;
   friend class PlotPainter;
+  friend class PanelLayout;
 
   // accessors for internal use by manager and painter
   const auto& GetName() const { return mName; }
@@ -378,6 +385,14 @@ class Plot : public FillSetters<Plot>
   const auto& GetWidth() const { return mPlotDimensions.width; }
   const auto& IsFixAspectRatio() const { return mPlotDimensions.fixAspectRatio; }
   uint8_t GetDataCount() const;
+  // the groups of pads sharing an axis, as the layout and ShareAxis declared them (groups of at least two pads)
+  struct shared_group_t {
+    std::vector<uint8_t> pads;
+    bool fromLayout{};
+  };
+  std::map<char, std::vector<shared_group_t>> GetSharedAxes() const;
+  // rows (X) and columns (Y) of touching panels whose axis title is drawn once for all of them
+  const auto& GetCommonTitles() const { return mCommonTitles; }
 
   static void Print(const boost::property_tree::ptree& pt, const std::string& name);
 
@@ -408,6 +423,13 @@ class Plot : public FillSetters<Plot>
   std::optional<std::string> mBasePlot;
   dimension_t mPlotDimensions;
   std::map<uint8_t, Pad> mPads;
+  struct shared_axis_t {
+    char axis{};
+    std::vector<uint8_t> pads;  // empty: undoes the groups of the axis declared before
+    bool fromLayout{};          // declared by the layout (touching panels) or the base plot, not with ShareAxis
+  };
+  std::vector<shared_axis_t> mSharedAxes;                            // in the order of the declarations: a later one wins
+  std::vector<std::pair<char, std::vector<uint8_t>>> mCommonTitles;  // declared by the layout
 };
 
 //**************************************************************************************************
@@ -597,6 +619,7 @@ class Plot::Pad : public FillSetters<Pad>
   const auto& GetDefaultCandleWhiskerRange() const { return mCandleOptionDefaults.whiskerRange; }
   const auto& GetRedrawAxes() const { return mRedrawAxes; }
   bool GetIsEmptyCell() const { return mIsEmptyCell; }
+  const auto& GetColorScaleOf() const { return mColorScaleOf; }
   const auto& GetRefFunc() const { return mRefFunc; }
   const auto& GetFrame() const { return mFrame; }
 
@@ -653,7 +676,8 @@ class Plot::Pad : public FillSetters<Pad>
   candle_defaults_t mCandleOptionDefaults;
   palette_defaults_t mPalette;
   std::optional<bool> mRedrawAxes;
-  bool mIsEmptyCell{};  // an Empty() cell of a PanelLayout: room for a legend or a text, nothing to warn about when left blank
+  bool mIsEmptyCell{};                   // an Empty() cell of a PanelLayout: room for a legend or a text, nothing to warn about when left blank
+  std::optional<uint8_t> mColorScaleOf;  // a ZAxis() cell of a PanelLayout: shows the colour scale of the z group of this pad
 
   std::map<char, Axis> mAxes;
   std::vector<std::shared_ptr<Data>> mData;
@@ -699,12 +723,14 @@ class Plot::Pad::LegendEntry : public MarkerSetters<LegendEntry>, public LineSet
 
   boost::property_tree::ptree GetPropertyTree() const;
   const auto& GetRefDataID() const { return mRefDataID; }
+  const auto& GetRefPadID() const { return mRefPadID; }
   const auto& GetLabel() const { return mLabel; }
   const auto& GetSymbolElements() const { return mSymbolElements; }
 
  private:
   std::optional<std::string> mLabel;
   std::optional<uint16_t> mRefDataID;
+  std::optional<uint8_t> mRefPadID;  // the data of the row is drawn in another pad
   std::optional<std::string> mSymbolElements;
   std::optional<position_t> mPosition;
   uint16_t mPositionDataID{};  // the data the position is relative to (for before and after)
@@ -1523,6 +1549,8 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   void Print() const { Plot::Print(GetPropertyTree(), "LegendBox"); }
 
   LegendEntry& AddEntry(const std::string& label = "");  // a row of its own (with an empty label: an empty line)
+  // a row for data drawn in another pad (dataID as in plot[padID](dataID)), with its symbol, style and legend label
+  LegendEntry& AddDataEntry(uint8_t padID, uint16_t dataID);
   LegendBox& SetTitle(const std::string& title);
   LegendBox& SetNumColumns(uint8_t numColumns);
   LegendBox& SetDefaultSymbolElements(const std::string& symbolElements);
@@ -1550,7 +1578,8 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   const std::optional<uint8_t>& GetNumColumns() const { return mNumColumns; }
   const std::optional<std::string>& GetTitle() const { return mTitle; }
 
-  void AddDataEntry(const std::string& label, uint16_t dataID, const std::optional<LegendEntry>& appearance);
+  void AddDataRow(const std::string& label, uint16_t dataID, const std::optional<LegendEntry>& appearance);
+  bool HasForeignRows() const;  // rows for data of other pads: the legend is made once all pads are drawn
   void ShiftDataIDs(uint16_t offset);
 
   const auto& GetEntries() const { return mLegendEntries; }

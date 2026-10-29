@@ -953,12 +953,14 @@ def DefineAtomicPlots(pm: PlotManager):
     plot[1]['Y'].SetRange(0.0, 3.3)
     pm.AddPlot(plot)
 
-    # four orbitals of hydrogen in a grid of maps sharing their axes, each with its own colour scale ------------------
+    # four orbitals of hydrogen in a grid of maps sharing their axes and one colour scale (pad 3 is the scale) -----------
     plot = Plot("orbitals", "atomic", "2d_2x2")
-    for pad, (name, label) in enumerate([("psi_2pz", "2p_{z}"), ("psi_3pz", "3p_{z}"), ("psi_3dz2", "3d_{z^{2}}"), ("psi_3dxz", "3d_{xz}")], 1):
+    for pad, (name, label) in zip([1, 2, 4, 5], [("psi_2pz", "2p_{z}"), ("psi_3pz", "3p_{z}"), ("psi_3dz2", "3d_{z^{2}}"), ("psi_3dxz", "3d_{xz}")]):
         plot[pad].AddData(f"orbitals/{name}", "atomic").SetDrawOption(colz)
         plot[pad].AddText(0.15, 0.88, label).SetTextColor(kWhite)
     plot[0].SetPalette(kViridis)
+    plot[0]['Z'].SetLog().SetRange(0.005, 6.0)  # the densities of the shells differ by an order of magnitude
+    plot[0].SetFrameFill(1001, kBlack)  # behind the cells below the range
     pm.AddPlot(plot)
 
     # radial probability densities in independent panels, one per shell; one colour per angular momentum -------------
@@ -1317,7 +1319,7 @@ def DefineElectronicsPlots(pm: PlotManager):
     for pad, (column, label) in enumerate([("thresholdUntuned", "before tuning"), ("threshold", "after tuning")], 1):
         plot[pad].AddData("pixelChip/pixels", "electronics").Filter("!masked").Project2D(("col", 128, [-0.5, 127.5]), ("row", 64, [-0.5, 63.5]), column)
         plot[pad].AddText(0.15, 0.9, label).SetTextColor(kWhite)
-    plot[2].AddText(93.0, 8.0, ["masked", "double column"]).SetUserCoordinates().SetTextColor(kWhite)
+    plot[2].AddText(86.0, 8.0, ["masked", "double column"]).SetUserCoordinates().SetTextColor(kWhite)
     plot[2].AddArrow((100.0, 12.0), (89.0, 24.0)).SetLine(kSolid, 2.0, kWhite).SetFill(1001, 10).SetArrowSize(0.02).SetOnTop()  # 10: white (0 leaves the head open)
     plot[0].SetPalette(kViridis)
     plot[0]['X'].SetTitle("column")

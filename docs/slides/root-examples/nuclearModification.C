@@ -1,5 +1,5 @@
 // The plot "nuclearModification" of the SciRooPlot example (heavyion), written as a plain ROOT macro
-// (no SciRooPlot needed): R_AA in three touching panels, with published values from a CSV table in the first.
+// (no SciRooPlot needed): R_AA in three touching panels, with published values from a CSV table in the first, and one x title for the row.
 // Run it with:
 //   root -l -b -q 'nuclearModification.C("<path to ExampleData>")'
 void nuclearModification(const char* dataDir = "ExampleData", const char* output = "nuclearModification.pdf")
@@ -70,7 +70,7 @@ void nuclearModification(const char* dataDir = "ExampleData", const char* output
       axis->SetTitleSize(39);
     }
     ratio->GetXaxis()->SetRangeUser(0.15, 10.0);
-    ratio->GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
+    ratio->GetXaxis()->SetTitle(i == 2 ? "#it{p}_{T} (GeV/#it{c})" : "");  // one x title, at the end of the row
     ratio->GetXaxis()->SetTitleOffset(1.2);
     ratio->GetXaxis()->SetNoExponent();
     ratio->GetXaxis()->SetTickLength(0.03 / width * 0.38);

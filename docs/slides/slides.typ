@@ -1961,6 +1961,7 @@
         [#names("SetName(name)", "SetGroup(group)", "AppendGroup(subgroup)")], [Rename the plot, reassign its figure group, or append a subgroup path.],
         [`SetBasePlot(name)`], [Apply a base plot layout by name.],
         [#names("SetDimensions(width, height, fixAspectRatio = false)", "SetWidth(width)", "SetHeight(height)", "SetFixAspectRatio(fixAspectRatio = true)")], [Set canvas dimensions (in pixels), all at once or individually.],
+        [`ShareAxis(axis, pads)`], [The pads share range, log scale and time format of the axis (touching panels do by default).],
         [#names("SetFill(style, color, alpha = 1)", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Configure plot background fill, all at once or individually.],
         [`SetTransparent()`], [Make the plot background transparent.],
       ), text-size: 12pt)
@@ -1979,7 +1980,7 @@
         [`PlotManager::MakeBasePlot(name, sizes)`], [The same with the lengths of the `PanelLayout` `sizes` (text sizes, line width, margins, ...), equal in all panels.],
         [`Plot(name, layout)`], [Base plot from a `PanelLayout`, its lengths kept equal in every panel.],
         [#names(if lang == "py" { "PanelLayout(rows = [[Panel()]])" } else { "PanelLayout(rows = {{Panel()}})" }, "PanelLayout(sizes, rows)")], [Panels in rows (top to bottom), or the same lengths with other panels.],
-        [#names("Panel(width = 1, height = 1)", "Panel().ZAxis()", "Gap()", "Empty()")], [A panel (in units of the standard panel), with room for a colour scale; a gap between independent panels; a cell without axes (a pad for texts).],
+        [#names("Panel(width = 1, height = 1)", "Panel().ZAxis()", "ZAxis()", "Gap()", "Empty()")], [A panel (in units of the standard panel), with room for a colour scale; a cell with one colour scale for the panels sharing z; a gap between independent panels; a cell without axes (a pad for texts).],
       ), text-size: 12pt)
     ],
     [
@@ -2231,7 +2232,7 @@
       #v(0.6em)
       #api-section("LegendBox", (
         [`SetTitle(title)` / `SetNumColumns(n)`], [Legend title, or number of columns.],
-        [`AddEntry(label = "")`], [Add a row of its own (no label: an empty line), see the next slide.],
+        [#names("AddEntry(label = \"\")", "AddDataEntry(padID, dataID)")], [Add a row of its own (no label: an empty line), see the next slide; or the row of data of another pad.],
         [`SetSymbolColScale(scale)`], [Scale the width of the symbol column.],
       ), col-widths: (52%, 48%), text-size: 12pt)
       #v(0.6em)

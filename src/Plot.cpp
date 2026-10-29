@@ -31,8 +31,10 @@
 #include <initializer_list>
 #include <istream>
 #include <limits>
+#include <map>
 #include <memory>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -564,10 +566,22 @@ Plot::Plot(const ptree& plotTree)
   ReadFill(plotTree);
 
   // loop over all pads defined in property tree
-  for (const auto& pad : plotTree) {
-    if (str_contains(pad.first, "PAD")) {
-      uint8_t padID = std::stoi(pad.first.substr(pad.first.find("_") + 1));
-      mPads[padID] = Pad(pad.second);
+  auto readPads = [](const string& list) {
+    vector<uint8_t> pads;
+    std::istringstream stream(list);
+    for (int32_t padID{}; stream >> padID;) {
+      pads.push_back(static_cast<uint8_t>(padID));
+    }
+    return pads;
+  };
+  for (const auto& [key, child] : plotTree) {
+    if (key.rfind("PAD_", 0) == 0) {
+      uint8_t padID = std::stoi(key.substr(4));
+      mPads[padID] = Pad(child);
+    } else if (key.rfind("SHARED_AXIS_", 0) == 0) {
+      mSharedAxes.push_back({child.get<char>("axis"), readPads(child.get<string>("pads", "")), child.get<bool>("layout", false)});
+    } else if (key.rfind("COMMON_TITLE_", 0) == 0) {
+      mCommonTitles.emplace_back(child.get<char>("axis"), readPads(child.get<string>("pads", "")));
     }
   }
   UpdateUniqueName();
@@ -602,7 +616,88 @@ ptree Plot::GetPropertyTree() const
   for (const auto& [padID, pad] : mPads) {
     plotTree.put_child("PAD_" + std::to_string(padID), pad.GetPropertyTree());
   }
+  auto writePads = [](const vector<uint8_t>& pads) {
+    string list;
+    for (uint8_t padID : pads) {
+      list += (list.empty() ? "" : " ") + std::to_string(padID);
+    }
+    return list;
+  };
+  for (size_t i = 0; i < mSharedAxes.size(); ++i) {
+    ptree group;
+    group.put("axis", mSharedAxes[i].axis);
+    group.put("pads", writePads(mSharedAxes[i].pads));
+    if (mSharedAxes[i].fromLayout) group.put("layout", true);
+    plotTree.put_child("SHARED_AXIS_" + std::to_string(i + 1), group);
+  }
+  for (size_t i = 0; i < mCommonTitles.size(); ++i) {
+    ptree group;
+    group.put("axis", mCommonTitles[i].first);
+    group.put("pads", writePads(mCommonTitles[i].second));
+    plotTree.put_child("COMMON_TITLE_" + std::to_string(i + 1), group);
+  }
   return plotTree;
+}
+
+//**************************************************************************************************
+/**
+ * Pads sharing the scale of an axis (see Plot.h).
+ */
+//**************************************************************************************************
+auto Plot::ShareAxis(char axis, const vector<uint8_t>& pads) -> decltype(*this)
+{
+  axis = static_cast<char>(std::toupper(static_cast<unsigned char>(axis)));
+  if (axis != 'X' && axis != 'Y' && axis != 'Z') {
+    logger::warning("Plot {}: ShareAxis needs the axis 'X', 'Y' or 'Z' (got '{}').", mName, axis);
+    return *this;
+  }
+  vector<uint8_t> group;
+  for (uint8_t padID : pads) {
+    if (padID == 0) {
+      logger::warning("Plot {}: pad 0 cannot share the {} axis (it holds the defaults of all pads, the pads are counted from 1).", mName, axis);
+    } else if (std::find(group.begin(), group.end(), padID) == group.end()) {
+      group.push_back(padID);
+    }
+  }
+  if (group.empty() && !pads.empty()) return *this;
+  mSharedAxes.push_back({axis, group, false});
+  return *this;
+}
+
+//**************************************************************************************************
+/**
+ * The groups of pads sharing an axis: the declarations in their order, a pad listed again leaves its earlier group
+ * (a warning if both groups were declared with ShareAxis: the touching panels of the layout are meant to be regrouped).
+ */
+//**************************************************************************************************
+std::map<char, vector<Plot::shared_group_t>> Plot::GetSharedAxes() const
+{
+  std::map<char, vector<std::pair<vector<uint8_t>, bool>>> declared;  // per axis: the groups, whether the layout declared them
+  for (const auto& [axis, pads, fromLayout] : mSharedAxes) {
+    auto& groups = declared[axis];
+    if (pads.empty()) {
+      groups.clear();
+      continue;
+    }
+    for (uint8_t padID : pads) {
+      for (auto& [members, layoutGroup] : groups) {
+        auto member = std::find(members.begin(), members.end(), padID);
+        if (member == members.end()) continue;
+        if (!layoutGroup && !fromLayout && members.size() > 1) {
+          logger::warning("Plot {}: pad {} is listed in two groups sharing the {} axis, the later one is used.", mName, padID, axis);
+        }
+        members.erase(member);
+      }
+    }
+    groups.emplace_back(pads, fromLayout);
+  }
+  std::map<char, vector<shared_group_t>> result;
+  for (const auto& [axis, groups] : declared) {
+    for (const auto& [members, layoutGroup] : groups) {
+      if (members.size() > 1) result[axis].push_back({members, layoutGroup});
+    }
+  }
+  return result;
 }
 
 //**************************************************************************************************
@@ -754,6 +849,8 @@ void Plot::operator+=(const Plot& plot)
     mPads[padID];  // initializes the pad in case it was not yet defined in this plot
     mPads[padID] += pad;
   }
+  mSharedAxes.insert(mSharedAxes.end(), plot.mSharedAxes.begin(), plot.mSharedAxes.end());  // later declarations win
+  mCommonTitles.insert(mCommonTitles.end(), plot.mCommonTitles.begin(), plot.mCommonTitles.end());
   UpdateUniqueName();
 }
 
@@ -1250,7 +1347,7 @@ Plot::Pad::Pad(const Pad& other)
     mFrameFill(other.mFrameFill), mFrameBorder(other.mFrameBorder), mText(other.mText),
     mMarkerDefaults(other.mMarkerDefaults), mLineDefaults(other.mLineDefaults), mFillDefaults(other.mFillDefaults),
     mCandleOptionDefaults(other.mCandleOptionDefaults),
-    mPalette(other.mPalette), mRedrawAxes(other.mRedrawAxes), mIsEmptyCell(other.mIsEmptyCell), mAxes(other.mAxes)
+    mPalette(other.mPalette), mRedrawAxes(other.mRedrawAxes), mIsEmptyCell(other.mIsEmptyCell), mColorScaleOf(other.mColorScaleOf), mAxes(other.mAxes)
 {
   mData.reserve(other.mData.size());
   for (const auto& data : other.mData) {
@@ -1344,6 +1441,7 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
   mIsEmptyCell = padTree.get<bool>("empty_cell", false);
+  read_from_tree(padTree, mColorScaleOf, "color_scale_of");
 
   for (const auto& content : padTree) {
     // add data
@@ -1440,6 +1538,7 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
   if (mIsEmptyCell) padTree.put("empty_cell", true);
+  put_in_tree(padTree, mColorScaleOf, "color_scale_of");
 
   int32_t dataID = 1;
   for (const auto& data : mData) {
@@ -1553,6 +1652,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   }
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if (pad.mIsEmptyCell) mIsEmptyCell = true;
+  if (pad.mColorScaleOf) mColorScaleOf = pad.mColorScaleOf;
   if (pad.mRefFunc) mRefFunc = pad.mRefFunc->Clone();
   if (pad.mFrame) mFrame = pad.mFrame->Clone();
   for (auto& [axisLabel, axis] : pad.mAxes) {
@@ -4095,6 +4195,18 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& label)
   return mLegendEntriesUser.emplace_back(label);
 }
 
+Plot::Pad::LegendEntry& Plot::Pad::LegendBox::AddDataEntry(uint8_t padID, uint16_t dataID)
+{
+  LegendEntry& entry = mLegendEntriesUser.emplace_back(nullopt, dataID);
+  entry.mRefPadID = padID;
+  return entry;
+}
+
+bool Plot::Pad::LegendBox::HasForeignRows() const
+{
+  return std::any_of(mLegendEntriesUser.begin(), mLegendEntriesUser.end(), [](const LegendEntry& entry) { return entry.mRefPadID.has_value(); });
+}
+
 Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetTitle(const string& title)
 {
   mTitle = title;
@@ -4210,7 +4322,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetSymbolColScale(float_t scale)
  * Add the row of a data item (dataID: its number in the pad), with the appearance the user set for it.
  */
 //**************************************************************************************************
-void Plot::Pad::LegendBox::AddDataEntry(const string& label, uint16_t dataID, const optional<LegendEntry>& appearance)
+void Plot::Pad::LegendBox::AddDataRow(const string& label, uint16_t dataID, const optional<LegendEntry>& appearance)
 {
   LegendEntry& entry = mLegendEntries.emplace_back(label, dataID);
   if (appearance) entry += *appearance;
@@ -4224,7 +4336,7 @@ void Plot::Pad::LegendBox::AddDataEntry(const string& label, uint16_t dataID, co
 void Plot::Pad::LegendBox::ShiftDataIDs(uint16_t offset)
 {
   for (auto& entry : mLegendEntriesUser) {
-    if (entry.mRefDataID) *entry.mRefDataID += offset;
+    if (entry.mRefDataID && !entry.mRefPadID) *entry.mRefDataID += offset;  // rows for the data of another pad keep their number
     if (entry.mPosition && entry.mPosition != LegendEntry::position_t::top) entry.mPositionDataID += offset;
   }
 }
@@ -4283,6 +4395,7 @@ Plot::Pad::LegendEntry::LegendEntry(const ptree& legendEntryTree)
 {
   read_from_tree(legendEntryTree, mLabel, "label");
   read_from_tree(legendEntryTree, mRefDataID, "ref_data_id");
+  read_from_tree(legendEntryTree, mRefPadID, "ref_pad_id");
   read_from_tree(legendEntryTree, mSymbolElements, "symbol_elements");
   if (const auto position = get_from_tree<string>(legendEntryTree, "position")) {
     if (*position == "top") {
@@ -4311,6 +4424,7 @@ ptree Plot::Pad::LegendEntry::GetPropertyTree() const
   ptree legendEntryTree;
   put_in_tree(legendEntryTree, mLabel, "label");
   put_in_tree(legendEntryTree, mRefDataID, "ref_data_id");
+  put_in_tree(legendEntryTree, mRefPadID, "ref_pad_id");
   put_in_tree(legendEntryTree, mSymbolElements, "symbol_elements");
   if (mPosition) {
     legendEntryTree.put("position", (mPosition == position_t::top) ? "top" : ((mPosition == position_t::before) ? "before" : "after"));
@@ -4334,6 +4448,7 @@ void Plot::Pad::LegendEntry::operator+=(
   if (legendEntry.mSymbolElements) this->mSymbolElements = legendEntry.mSymbolElements;
   if (legendEntry.mLabel) this->mLabel = legendEntry.mLabel;
   if (legendEntry.mRefDataID) this->mRefDataID = legendEntry.mRefDataID;
+  if (legendEntry.mRefPadID) this->mRefPadID = legendEntry.mRefPadID;
   mMarker.Update(legendEntry.mMarker);
   mLine.Update(legendEntry.mLine);
   mFill.Update(legendEntry.mFill);

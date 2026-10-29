@@ -324,6 +324,8 @@ void exportPanelLayout(py::module_& m)
   m.def("Gap", &Gap, "Separates independent panels: both sides keep their axis labels and titles.");
   m.def("Empty", py::overload_cast<>(&Empty), "A cell of the grid without axis frame, its remaining space becomes a pad for texts.");
   m.def("Empty", py::overload_cast<double_t, double_t>(&Empty), arg("width"), arg("height"), "An empty cell with a size of its own, e.g. a strip for a common legend.");
+  m.def("ZAxis", py::overload_cast<>(&ZAxis), "A cell holding the colour scale of the z group of the panel to its left.");
+  m.def("ZAxis", py::overload_cast<uint8_t>(&ZAxis), arg("padID"), "A cell holding the colour scale of the z group of the given pad.");
   py::class_<PanelLayout>(m, "PanelLayout", "Arrangement of panels (rows from top to bottom) and the lengths of the standard plot in pixels.")
     .def(py::init<vector<vector<Panel>>>(), py::arg_v("rows", vector<vector<Panel>>{{Panel()}}, "[[Panel()]]"))
     .def(py::init<const PanelLayout&, vector<vector<Panel>>>(), arg("sizes"), arg("rows"))
@@ -341,7 +343,8 @@ void exportPanelLayout(py::module_& m)
     .def("SetYTitleOffset", &PanelLayout::SetYTitleOffset, arg("pixel"), ref_int)
     .def("SetZTitleOffset", &PanelLayout::SetZTitleOffset, arg("pixel"), ref_int)
     .def("SetLineWidth", &PanelLayout::SetLineWidth, arg("width"), ref_int)
-    .def("SetMarkerSize", &PanelLayout::SetMarkerSize, arg("size"), ref_int);
+    .def("SetMarkerSize", &PanelLayout::SetMarkerSize, arg("size"), ref_int)
+    .def("SetCommonTitles", &PanelLayout::SetCommonTitles, arg("common") = true, ref_int);
   py::class_<BasePlotShape>(m, "BasePlotShape", "Proportions of the panels of PlotManager.MakeBasePlot, in units of the standard panel.")
     .def(py::init<>())
     .def("SetAspectRatio", &BasePlotShape::SetAspectRatio, arg("ratio"), ref_int)
@@ -420,7 +423,8 @@ void exportPlot(py::module_& m)
     .def("SetDimensions", &Plot::SetDimensions, arg("width"), arg("height"), arg("fixAspectRatio") = false, ref_int)
     .def("SetWidth", &Plot::SetWidth, arg("width"), ref_int)
     .def("SetHeight", &Plot::SetHeight, arg("height"), ref_int)
-    .def("SetFixAspectRatio", &Plot::SetFixAspectRatio, arg("fixAspectRatio") = true, ref_int);
+    .def("SetFixAspectRatio", &Plot::SetFixAspectRatio, arg("fixAspectRatio") = true, ref_int)
+    .def("ShareAxis", &Plot::ShareAxis, arg("axis"), arg("pads"), ref_int);
   defFillSetters(plot);
   plot
     .def("SetTransparent", &Plot::SetTransparent, ref_int);
@@ -782,6 +786,7 @@ void exportLegendBox(py::module_& m)
   legendBox
     .def("Print", &LegendBox::Print)
     .def("AddEntry", &LegendBox::AddEntry, arg("label") = "", ref_int)
+    .def("AddDataEntry", &LegendBox::AddDataEntry, arg("padID"), arg("dataID"), ref_int)
     .def("SetTitle", &LegendBox::SetTitle, arg("title"), ref_int)
     .def("SetNumColumns", &LegendBox::SetNumColumns, arg("numColumns"), ref_int)
     .def("SetDefaultSymbolElements", &LegendBox::SetDefaultSymbolElements, arg("symbolElements"), ref_int)

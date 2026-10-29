@@ -61,6 +61,7 @@
 #include <TLegend.h>
 #include <TLegendEntry.h>
 #include <TLine.h>
+#include <TList.h>
 #include <TMultiGraph.h>
 #include <TObjArray.h>
 #include <TObject.h>
@@ -426,9 +427,25 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
   auto& padDefaults = plot[0];
   if (!padDefaults.GetShapes().empty()) logger::warning("The shapes of pad 0 are not drawn: pad 0 only holds the defaults of the pads.");
+  mFrameRanges.clear();
+  mFrameHists.clear();
+  mScaleHists.clear();
+  // the panels of a z group whose colour scale a ZAxis() cell shows draw none of their own
+  mScalesInCells.clear();
+  for (const auto& [padID, pad] : plot.GetPads()) {
+    if (padID == 0 || !pad.GetColorScaleOf()) continue;
+    for (const auto& group : mSharedAxes['Z']) {
+      if (std::find(group.begin(), group.end(), *pad.GetColorScaleOf()) != group.end()) mScalesInCells.insert(group.begin(), group.end());
+    }
+  }
   for (const auto& [padID, dummy] : plot.GetPads()) {
     if (padID == 0) continue;  // pad 0 is used only to define the defaults
     auto& pad = plot[padID];   // needed because processData lambda cannot capture variable from structured binding ('dummy')
+    if (pad.GetColorScaleOf()) {
+      // a ZAxis() cell is drawn once all panels are drawn (see DrawColorScaleCell)
+      if (!pad.GetData().empty() || pad.GetFrame()) logger::warning("Pad {} is the cell of a colour scale: its data is not drawn.", padID);
+      continue;
+    }
 
     // Pad placing
     array<double_t, 4> padPos = {0., 0., 1., 1.};
@@ -1662,7 +1679,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 if (!legendEntry) legendEntry.emplace();
                 legendEntry->SetSymbolElements("F");
               }
-              legendBoxVector[legendID - 1]->AddDataEntry(*data->GetLegendLabel(), (dataIndex - hasRefFunc), legendEntry);
+              legendBoxVector[legendID - 1]->AddDataRow(*data->GetLegendLabel(), (dataIndex - hasRefFunc), legendEntry);
             } else {
               logger::warning("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetDataSource());
             }
@@ -2319,10 +2336,30 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (fail) {
       return nullptr;
     }
-    if (axisHist_ptr && !pad_ptr->GetView() && !polarFrame && !polargram) AddAxisRoom(pad_ptr, axisHist_ptr, padDefaults, pad, padID, (hasRefFunc) ? drawData[1].get() : nullptr, padSetup);
+    const bool flatFrame = axisHist_ptr && !pad_ptr->GetView() && !polarFrame && !polargram;
+    if (flatFrame) AddAxisRoom(pad_ptr, axisHist_ptr, padDefaults, pad, padID, (hasRefFunc) ? drawData[1].get() : nullptr, padSetup);
+    if (mScalesInCells.count(padID)) {
+      // the colour scale of the pad is shown by a ZAxis() cell: the drawing options lose their Z (ROOT then removes the scale it made)
+      static const std::regex withScale("(COL|CONT[0-9]?|LEGO[0-9]?|SURF[0-9]?|TRI[0-9]?)Z", std::regex::icase);
+      for (TObjLink* link = pad_ptr->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+        link->SetOption(std::regex_replace(string(link->GetOption()), withScale, "$1").data());
+      }
+    }
     // the placement of the boxes below relies on the painted data (painting creates e.g. the palette of a colour plot):
     // the pad is updated once for all data, since every update repaints everything drawn so far
     pad_ptr->Update();
+    if (flatFrame) {
+      // the ranges as drawn, for the axes shared with other pads (pad coordinates of a log axis are decades)
+      auto value = [](double_t padCoord, bool isLog) { return (isLog) ? TMath::Power(10., padCoord) : padCoord; };
+      mFrameRanges[{padID, 'X'}] = {value(pad_ptr->GetUxmin(), pad_ptr->GetLogx()), value(pad_ptr->GetUxmax(), pad_ptr->GetLogx())};
+      mFrameRanges[{padID, 'Y'}] = {value(pad_ptr->GetUymin(), pad_ptr->GetLogy()), value(pad_ptr->GetUymax(), pad_ptr->GetLogy())};
+      mFrameHists[padID] = axisHist_ptr;
+    }
+    // the z range of a 2d frame is its minimum and maximum, also in a 3D view (x and y of a view are projected, not shared)
+    if (axisHist_ptr && axisHist_ptr->GetDimension() == 2 && !polarFrame && !polargram) {
+      mFrameRanges[{padID, 'Z'}] = {axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum()};
+      mScaleHists[padID] = axisHist_ptr;
+    }
 
     // the colour scale ROOT made while painting starts 0.005 of the pad width right of the frame and is 0.045 wide: other values
     // (Axis::SetColorScaleOffset/SetColorScaleWidth, which the base plots set from pixels) move it before the boxes are placed
@@ -2412,7 +2449,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       uint8_t legendIndex{};
       for (const auto& box : pad.GetLegendBoxes()) {
         ++legendIndex;
-        if (box->IsAutoPlacement() == fixedPositions) continue;
+        if (box->IsAutoPlacement() == fixedPositions || box->HasForeignRows()) continue;  // a legend with rows of other pads comes once all are drawn
         string legendName = "LegendBox_" + std::to_string(legendIndex);
         box->MergeLegendEntries(static_cast<uint16_t>(pad.GetData().size()));  // put the rows added by the user between those of the data
         // apply default text properties of pad to the box
@@ -2542,6 +2579,69 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     pad_ptr->Modified();
   }
 
+  // what needs all pads drawn: the cells of colour scales, legends with rows for data of other pads, and the titles drawn once for
+  // a row or column of touching panels
+  for (const auto& [padID, pad] : plot.GetPads()) {
+    if (padID > 0 && pad.GetColorScaleOf()) DrawColorScaleCell(canvas_ptr.get(), plot, padID);
+  }
+  for (auto& [padID, pad] : plot.GetPads()) {
+    if (padID == 0) continue;
+    auto* pad_ptr = dynamic_cast<TPad*>(canvas_ptr->GetPrimitive(("Pad_" + std::to_string(padID)).data()));
+    uint8_t legendIndex{};
+    for (const auto& box : pad.GetLegendBoxes()) {
+      ++legendIndex;
+      if (!box->HasForeignRows() || !pad_ptr) continue;
+      box->MergeLegendEntries(static_cast<uint16_t>(pad.GetData().size()));
+      // a row for the data of another pad takes the legend label and the row style of that data, unless the row sets its own
+      auto& rows = box->mLegendEntries;
+      for (auto row = rows.begin(); row != rows.end();) {
+        if (!row->GetRefPadID()) {
+          ++row;
+          continue;
+        }
+        const uint8_t refPad = *row->GetRefPadID();
+        const uint16_t refData = row->GetRefDataID().value_or(0);
+        auto source = plot.GetPads().find(refPad);
+        if (refPad == 0 || source == plot.GetPads().end() || refData < 1 || refData > source->second.GetData().size()) {
+          logger::warning("Legend {} of pad {}: the row for data {} of pad {} is left out, the plot has no such data.", legendIndex, padID, refData, refPad);
+          row = rows.erase(row);
+          continue;
+        }
+        const auto& data = *source->second.GetData()[refData - 1];
+        Plot::Pad::LegendEntry merged = data.GetLegendEntry().value_or(Plot::Pad::LegendEntry{});
+        merged += *row;
+        if (!merged.mLabel) merged.mLabel = data.GetLegendLabel().value_or("");
+        *row = merged;
+        ++row;
+      }
+      if (!box->GetTextFont()) {
+        if (auto font = get_first(pad.GetDefaultTextFont(), plot[0].GetDefaultTextFont())) box->SetTextFont(*font);
+      }
+      if (!box->GetTextSize()) {
+        if (auto size = get_first(pad.GetDefaultTextSize(), plot[0].GetDefaultTextSize())) box->SetTextSize(*size);
+      }
+      if (!box->GetTextColor()) {
+        if (auto color = get_first(pad.GetDefaultTextColor(), plot[0].GetDefaultTextColor())) box->SetTextColor(*color);
+      }
+      if (!box->GetTextAlpha()) {
+        if (auto alpha = get_first(pad.GetDefaultTextAlpha(), plot[0].GetDefaultTextAlpha())) box->SetTextAlpha(*alpha);
+      }
+      pad_ptr->cd();
+      if (TPave* legend = GenerateBox(box, pad_ptr)) {
+        legend->SetName(("LegendBox_" + std::to_string(legendIndex)).data());
+        legend->SetUniqueID((box->IsUserCoordinates()) ? 1u : 0u);
+        legend->SetBit(kCanDelete);
+        legend->Draw("SAME");
+        legend->ConvertNDCtoPad();
+      } else {
+        logger::warning("Legend {} was not added since it is empty.", legendIndex);
+      }
+    }
+  }
+  for (size_t i = 0; i < plot.GetCommonTitles().size(); ++i) {
+    DrawCommonTitle(canvas_ptr.get(), plot.GetCommonTitles()[i].first, plot.GetCommonTitles()[i].second, i + 1);
+  }
+
   CheckFontSizes(canvas_ptr->GetListOfPrimitives());
   if (mScale != 1. || mOnScreen) {
     // axes, hatched fill areas, the ends of error bars and the dashes of line styles are painted with the absolute sizes defined in gStyle
@@ -2619,6 +2719,7 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
   };
   vector<room_t> rooms;  // in the order X, Y, Z: the binned axes before the value axis
   for (char axisLabel : {'X', 'Y', 'Z'}) {
+    if (mCommonRanges.count({padID, axisLabel})) continue;  // the common range of a shared axis includes the room of its pads
     room_t room{axisLabel, {}, {}};
     optional<double_t> userMin, userMax;
     for (const Plot::Pad& curPad : {std::cref(padDefaults), std::cref(padSettings)}) {  // settings of the pad override those of pad 0
@@ -3565,14 +3666,18 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     auto textFont{box->GetTextFont()};
     auto textSize{box->GetTextSize()};
 
-    // the drawn data a legend row refers to (named "<number of the data in the pad>:<name>" when drawn)
-    auto findData = [pad](uint16_t dataID) -> TObject* {
+    // the drawn data a legend row refers to (named "<number of the data in the pad>:<name>" when drawn), in this pad or in another one
+    // (with the option it is drawn with, which TObject::GetDrawOption finds only in the current pad)
+    auto findDrawn = [pad](uint16_t dataID, const optional<uint8_t>& padID) -> std::pair<TObject*, string> {
+      TPad* source = (padID) ? dynamic_cast<TPad*>(pad->GetCanvas()->GetPrimitive(("Pad_" + std::to_string(*padID)).data())) : pad;
+      if (!source) return {nullptr, ""};
       const string prefix = std::to_string(dataID) + ":";
-      for (TObject* obj : *pad->GetListOfPrimitives()) {
-        if (string(obj->GetName()).rfind(prefix, 0) == 0) return obj;
+      for (TObjLink* link = source->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+        if (string(link->GetObject()->GetName()).rfind(prefix, 0) == 0) return {link->GetObject(), link->GetOption()};
       }
-      return nullptr;
+      return {nullptr, ""};
     };
+    auto findData = [&findDrawn](uint16_t dataID, const optional<uint8_t>& padID) { return findDrawn(dataID, padID).first; };
 
     vector<string> lines;
     if constexpr (isLegend) {
@@ -3614,13 +3719,13 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         if (entry.GetTextFont()) line_text_font = *entry.GetTextFont();
         if (entry.GetTextSize()) line_text_size = *entry.GetTextSize();
         if (entry.GetRefDataID()) {
-          if (TObject* data_ptr = findData(*entry.GetRefDataID())) {
+          if (TObject* data_ptr = findData(*entry.GetRefDataID(), entry.GetRefPadID())) {
             if (auto source = mSourceHists.find(data_ptr); source != mSourceHists.end()) {
               data_ptr = source->second.get();  // a histogram drawn as graph
             }
             ReplacePlaceholders(line, static_cast<TNamed*>(data_ptr));
           } else {
-            logger::warning("Legend entry '{}' refers to data {}, which is not drawn in this pad.", line, *entry.GetRefDataID());
+            logger::warning("Legend entry '{}' refers to data {}, which is not drawn in {}.", line, *entry.GetRefDataID(), (entry.GetRefPadID()) ? "pad " + std::to_string(*entry.GetRefPadID()) : "this pad");
           }
         }
       }
@@ -3733,9 +3838,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         TAttMarker markerAttr;
         TAttLine lineAttr;
         TAttFill fillAttr;
-        TObject* data_ptr = (entry.GetRefDataID()) ? findData(*entry.GetRefDataID()) : nullptr;
+        const auto [data_ptr, drawnWith] = (entry.GetRefDataID()) ? findDrawn(*entry.GetRefDataID(), entry.GetRefPadID()) : std::pair<TObject*, string>{nullptr, ""};
         if (data_ptr) {
-          if (symbolElements.empty()) symbolElements = LegendSymbolElements(data_ptr, data_ptr->GetDrawOption());
+          if (symbolElements.empty()) symbolElements = LegendSymbolElements(data_ptr, drawnWith);
           curEntry = legend->AddEntry(data_ptr, label.data(), symbolElements.data());
           curEntry->SetObject(static_cast<TObject*>(nullptr));
           if (auto ptr = dynamic_cast<TAttMarker*>(data_ptr)) ptr->Copy(markerAttr);
@@ -5019,32 +5124,9 @@ void PlotPainter::HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel)
   if (axis->GetLabelSize() <= 0.f || axis->GetTimeDisplay() || axis->GetLabels()) return;
   const bool isX = (axisLabel == 'X');
   const bool isLog = isX ? pad->GetLogx() : pad->GetLogy();
-  const double_t padMin = isX ? pad->GetUxmin() : pad->GetUymin();  // pad coordinates (log10 for a log axis)
-  const double_t padMax = isX ? pad->GetUxmax() : pad->GetUymax();
-  const double_t wmin = isLog ? TMath::Power(10., padMin) : padMin;
-  const double_t wmax = isLog ? TMath::Power(10., padMax) : padMax;
-  if (!(wmax > wmin)) return;
-
-  vector<double_t> labelValues;
-  if (isLog) {
-    for (int32_t decade = static_cast<int32_t>(std::ceil(padMin - 1e-9)); decade <= static_cast<int32_t>(std::floor(padMax + 1e-9)); ++decade) {
-      labelValues.push_back(TMath::Power(10., decade));
-    }
-  } else {
-    const int32_t nDiv = axis->GetNdivisions();
-    int32_t nPrimary = std::abs(nDiv) % 100;
-    // THistPainter::PaintAxis scales the primary divisions of an x axis whose setting carries a max digits part (> 1000) with
-    // the width of the pad relative to the canvas, so that a narrow pad gets fewer labels
-    if (isX && nDiv > 1000) nPrimary = static_cast<int32_t>(static_cast<float>(std::max(1, nPrimary)) * pad->GetAbsWNDC());
-    if (nPrimary == 0) return;
-    double_t binLow{wmin}, binHigh{wmax}, binWidth{(wmax - wmin) / nPrimary};
-    int32_t nBins{nPrimary};
-    if (nDiv > 0 && nPrimary > 1) THLimitsFinder::Optimize(wmin, wmax, nPrimary, binLow, binHigh, nBins, binWidth, "");  // TGaxis: no optimisation for a single division
-    if (!(binWidth > 0.)) return;
-    for (int32_t i = 0; i <= nBins; ++i) {
-      labelValues.push_back(binLow + i * binWidth);
-    }
-  }
+  const double_t wmin = isLog ? TMath::Power(10., isX ? pad->GetUxmin() : pad->GetUymin()) : (isX ? pad->GetUxmin() : pad->GetUymin());
+  const double_t wmax = isLog ? TMath::Power(10., isX ? pad->GetUxmax() : pad->GetUymax()) : (isX ? pad->GetUxmax() : pad->GetUymax());
+  const vector<double_t> labelValues = LabelValues(pad, axis, axisLabel);
 
   // extent of a label around its tick: half its height (y axis) or half its width (x axis), in absolute pixels
   const double_t padWidthPixel = pad->GetWw() * pad->GetAbsWNDC();
@@ -5074,6 +5156,276 @@ void PlotPainter::HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel)
         axis->ChangeLabel(labelNumber, -1., 0.);
       }
     }
+  }
+}
+
+//**************************************************************************************************
+/**
+ * The values TGaxis writes labels at along the x or y axis of a pad (the decades of a log axis), as far as they can be told
+ * without painting: the primary divisions optimised as by TGaxis.
+ */
+//**************************************************************************************************
+vector<double_t> PlotPainter::LabelValues(TPad* pad, const TAxis* axis, char axisLabel)
+{
+  const bool isX = (axisLabel == 'X');
+  const bool isLog = isX ? pad->GetLogx() : pad->GetLogy();
+  const double_t padMin = isX ? pad->GetUxmin() : pad->GetUymin();  // pad coordinates (log10 for a log axis)
+  const double_t padMax = isX ? pad->GetUxmax() : pad->GetUymax();
+  const double_t wmin = isLog ? TMath::Power(10., padMin) : padMin;
+  const double_t wmax = isLog ? TMath::Power(10., padMax) : padMax;
+  vector<double_t> labelValues;
+  if (!(wmax > wmin)) return labelValues;
+  if (isLog) {
+    for (int32_t decade = static_cast<int32_t>(std::ceil(padMin - 1e-9)); decade <= static_cast<int32_t>(std::floor(padMax + 1e-9)); ++decade) {
+      labelValues.push_back(TMath::Power(10., decade));
+    }
+    return labelValues;
+  }
+  const int32_t nDiv = axis->GetNdivisions();
+  int32_t nPrimary = std::abs(nDiv) % 100;
+  // THistPainter::PaintAxis scales the primary divisions of an x axis whose setting carries a max digits part (> 1000) with
+  // the width of the pad relative to the canvas, so that a narrow pad gets fewer labels
+  if (isX && nDiv > 1000) nPrimary = static_cast<int32_t>(static_cast<float>(std::max(1, nPrimary)) * pad->GetAbsWNDC());
+  if (nPrimary == 0) return labelValues;
+  double_t binLow{wmin}, binHigh{wmax}, binWidth{(wmax - wmin) / nPrimary};
+  int32_t nBins{nPrimary};
+  if (nDiv > 0 && nPrimary > 1) {  // TGaxis: no optimisation for a single division
+    THLimitsFinder::Optimize(wmin, wmax, nPrimary, binLow, binHigh, nBins, binWidth, "");
+    // the labels lie within the axis; if at most one is left, TGaxis divides the axis as it is (from its minimum, without optimisation)
+    const double_t epsilon = 1e-9 * (wmax - wmin);
+    if (wmin - binLow > epsilon) {
+      binLow += binWidth;
+      --nBins;
+    }
+    if (binHigh - wmax > epsilon) {
+      binHigh -= binWidth;
+      --nBins;
+    }
+    if (nBins < 1) {
+      binLow = wmin;
+      binWidth = (wmax - wmin) / nPrimary;
+      nBins = nPrimary;
+    }
+  }
+  if (!(binWidth > 0.)) return labelValues;
+  for (int32_t i = 0; i <= nBins; ++i) {
+    labelValues.push_back(binLow + i * binWidth);
+  }
+  return labelValues;
+}
+
+//**************************************************************************************************
+/**
+ * Width in pixels of the widest label of the y axis of a pad, as needed for the automatic placement of its title (TGaxis puts a
+ * title with offset 0 next to the widest label): the labels as TGaxis writes them in the usual cases, decades of a log axis as
+ * 1, 10 and 10^{n}, values beyond the maximum number of digits with the common power of ten taken out. Labels of the pad that
+ * HideClippedLabels dropped still count, as they do for TGaxis.
+ */
+//**************************************************************************************************
+double_t PlotPainter::MaxLabelWidth(TPad* pad, const TAxis* axis, char axisLabel)
+{
+  if (axis->GetLabelSize() <= 0.f) return 0.;
+  pad->cd();  // texts are measured in the current pad
+  const bool isLog = (axisLabel == 'X') ? pad->GetLogx() : pad->GetLogy();
+  vector<double_t> values = LabelValues(pad, axis, axisLabel);
+  double_t largest{};
+  for (double_t value : values) {
+    largest = std::max(largest, std::abs(value));
+  }
+  const int32_t maxDigits = (axis->GetNdivisions() / 1000000 > 0) ? axis->GetNdivisions() / 1000000 : TGaxis::GetMaxDigits();
+  double_t factor = 1.;
+  if (!isLog && !axis->GetNoExponent() && largest >= TMath::Power(10., maxDigits)) factor = TMath::Power(10., 3. * std::floor(std::log10(largest) / 3.));
+  double_t width{};
+  for (double_t value : values) {
+    string text;
+    if (isLog) {
+      const auto decade = static_cast<int32_t>(std::lround(std::log10(value)));
+      text = (decade == 0) ? "1" : ((decade == 1) ? "10" : fmt::format("10^{{{}}}", decade));
+    } else {
+      const double_t shown = value / factor;
+      text = fmt::format("{:g}", (std::abs(shown) < 1e-9 * largest / factor) ? 0. : shown);
+    }
+    TLatex label(0, 0, TString(text).ReplaceAll("-", "#minus").Data());  // as TGaxis writes a minus sign
+    label.SetTextFont(axis->GetLabelFont());
+    label.SetTextSize(axis->GetLabelSize());
+    width = std::max(width, static_cast<double_t>(std::get<0>(GetTextDimensions(label, pad))));
+  }
+  return width;
+}
+
+//**************************************************************************************************
+/**
+ * Draws a ZAxis() cell of a layout: the colour scale of the z group of the panel it shows, a copy of the scale of the first panel
+ * of the group (its range, contours, palette and log setting, which the group shares), along the frames the cell spans.
+ */
+//**************************************************************************************************
+void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
+{
+  Plot::Pad& cell = plot[padID];
+  const uint8_t shown = *cell.GetColorScaleOf();
+  const vector<uint8_t>* group{nullptr};
+  for (const auto& members : mSharedAxes['Z']) {
+    if (std::find(members.begin(), members.end(), shown) != members.end()) group = &members;
+  }
+  if (shown == 0 || !group) {
+    logger::warning("The colour scale cell (pad {}) stays empty: {}.", padID,
+                    (shown == 0) ? "no panel left of it, name one with ZAxis(padID)" : fmt::format("pad {} shares no z axis, add a group with ShareAxis('Z', pads)", shown));
+    return;
+  }
+  TPad* memberPad{nullptr};
+  TH1* source{nullptr};
+  for (uint8_t member : *group) {
+    auto frame = mScaleHists.find(member);
+    if (frame == mScaleHists.end()) continue;
+    memberPad = dynamic_cast<TPad*>(canvas->GetPrimitive(("Pad_" + std::to_string(member)).data()));
+    source = frame->second;
+    if (memberPad) break;
+  }
+  if (!memberPad) {
+    logger::warning("The colour scale cell (pad {}) stays empty: no panel of the z group of pad {} draws a 2d histogram, graph or function.", padID, shown);
+    return;
+  }
+  const Plot::Pad& defaults = plot[0];
+  canvas->cd();
+  auto* cellPad = new TPad(("Pad_" + std::to_string(padID)).data(), "", cell.GetXLow().value_or(0.), cell.GetYLow().value_or(0.), cell.GetXUp().value_or(1.), cell.GetYUp().value_or(1.));
+  cellPad->SetNumber(padID);
+  cellPad->SetFillStyle(0);
+  cellPad->SetFrameFillStyle(0);
+  cellPad->SetFrameLineColor(TColor::GetColorTransparent(kBlack, 0.f));
+  cellPad->SetFrameLineWidth(0);
+  cellPad->SetTopMargin(get_first_or(0.1f, cell.GetMarginTop(), defaults.GetMarginTop()));
+  cellPad->SetBottomMargin(get_first_or(0.1f, cell.GetMarginBottom(), defaults.GetMarginBottom()));
+  // a frame of one pixel at the left edge (ROOT needs one to draw the histogram the scale belongs to)
+  const double_t cellWidthPixel = canvas->GetWw() * cellPad->GetAbsWNDC();
+  cellPad->SetLeftMargin(0.);
+  cellPad->SetRightMargin(1. - 1. / std::max(cellWidthPixel, 2.));
+  cellPad->SetLogz(memberPad->GetLogz());
+  cellPad->Draw();
+  cellPad->cd();
+  if (auto* setup = dynamic_cast<TExec*>(memberPad->GetListOfPrimitives()->FindObject(("setup_pad_" + std::to_string(memberPad->GetNumber())).data()))) {
+    auto* cellSetup = new TExec(("setup_pad_" + std::to_string(padID)).data(), setup->GetTitle());
+    cellSetup->SetBit(kCanDelete);
+    cellSetup->Draw();
+    cellSetup->Exec();
+  }
+  // the histogram of the scale has no cells to paint: its x axis lies beyond the frame (only its z axis is shown)
+  auto* scale = static_cast<TH1*>(source->Clone(fmt::format("color_scale_pad_{}", padID).data()));
+  scale->SetDirectory(nullptr);
+  scale->SetBit(kCanDelete);
+  delete scale->GetListOfFunctions()->Remove(scale->GetListOfFunctions()->FindObject("palette"));
+  scale->GetXaxis()->Set(scale->GetNbinsX(), 1e300, 2e300);
+  for (TAxis* axis : {scale->GetXaxis(), scale->GetYaxis()}) {
+    axis->SetLabelSize(0.f);
+    axis->SetTickLength(0.f);
+    axis->SetTitle("");
+    axis->SetAxisColor(TColor::GetColorTransparent(kBlack, 0.f));
+  }
+  // the sizes of the scale are those of the cell (relative to its pad), unless the panel has pixel fonts
+  TAxis* zAxis = scale->GetZaxis();
+  optional<float_t> titleSize, labelSize, titleOffset, labelOffset, scaleOffset, scaleWidth;
+  for (const Plot::Pad& curPad : {std::cref(defaults), std::cref(cell)}) {
+    auto axis = curPad.GetAxes().find('Z');
+    if (axis == curPad.GetAxes().end()) continue;
+    if (axis->second.GetTitleSize()) titleSize = axis->second.GetTitleSize();
+    if (axis->second.GetLabelSize()) labelSize = axis->second.GetLabelSize();
+    if (axis->second.GetTitleOffset()) titleOffset = axis->second.GetTitleOffset();
+    if (axis->second.GetLabelOffset()) labelOffset = axis->second.GetLabelOffset();
+    if (axis->second.GetColorScaleOffset()) scaleOffset = axis->second.GetColorScaleOffset();
+    if (axis->second.GetColorScaleWidth()) scaleWidth = axis->second.GetColorScaleWidth();
+  }
+  if (!labelSize) labelSize = get_first(cell.GetDefaultTextSize(), defaults.GetDefaultTextSize());
+  if (zAxis->GetTitleFont() % 10 != 3) {
+    if (titleSize) zAxis->SetTitleSize(*titleSize);
+    if (titleOffset) zAxis->SetTitleOffset(*titleOffset);
+  }
+  if (zAxis->GetLabelFont() % 10 != 3) {
+    if (labelSize) zAxis->SetLabelSize(*labelSize);
+    if (labelOffset) zAxis->SetLabelOffset(*labelOffset);
+  }
+  scale->Draw("COLZ");
+  cellPad->Update();
+  if (auto* palette = dynamic_cast<TPave*>(scale->GetListOfFunctions()->FindObject("palette"))) {
+    palette->SetX1NDC(scaleOffset.value_or(0.005f));
+    palette->SetX2NDC(scaleOffset.value_or(0.005f) + scaleWidth.value_or(0.045f));
+    palette->ConvertNDCtoPad();
+  }
+  cellPad->Modified();
+}
+
+//**************************************************************************************************
+/**
+ * Draws the title of the x axis (y axis) once for a row (column) of touching panels, if all of them show the same one: along the
+ * frames of all of them, aligned as TGaxis aligns the title of one axis (at its end, centred with SetTitleCenter) and at the
+ * distance TGaxis keeps from the axis. The titles of the panels themselves are removed.
+ */
+//**************************************************************************************************
+void PlotPainter::DrawCommonTitle(TCanvas* canvas, char axisLabel, const vector<uint8_t>& pads, size_t index)
+{
+  const bool isX = (axisLabel == 'X');
+  vector<std::pair<TPad*, TAxis*>> members;
+  for (uint8_t padID : pads) {
+    auto frame = mFrameHists.find(padID);
+    auto* pad = dynamic_cast<TPad*>(canvas->GetPrimitive(("Pad_" + std::to_string(padID)).data()));
+    if (frame == mFrameHists.end() || !pad) return;  // a panel without flat frame: every panel keeps its title
+    members.emplace_back(pad, isX ? frame->second->GetXaxis() : frame->second->GetYaxis());
+  }
+  const string title = members.front().second->GetTitle();
+  for (const auto& [pad, axis] : members) {
+    if (title.empty() || title != axis->GetTitle() || axis->GetTitleSize() <= 0.f) return;  // panels with titles of their own keep them
+  }
+  // the frames of the members in NDC of the canvas, and the distance of the title from the axis in pixels (see TGaxis::PaintAxis)
+  double_t low = 1., high = 0., axisPosition = 1.;
+  double_t distance{};
+  for (const auto& [pad, axis] : members) {
+    const double_t x0 = pad->GetAbsXlowNDC() + pad->GetLeftMargin() * pad->GetAbsWNDC();
+    const double_t x1 = pad->GetAbsXlowNDC() + (1. - pad->GetRightMargin()) * pad->GetAbsWNDC();
+    const double_t y0 = pad->GetAbsYlowNDC() + pad->GetBottomMargin() * pad->GetAbsHNDC();
+    const double_t y1 = pad->GetAbsYlowNDC() + (1. - pad->GetTopMargin()) * pad->GetAbsHNDC();
+    low = std::min(low, isX ? x0 : y0);
+    high = std::max(high, isX ? x1 : y1);
+    axisPosition = std::min(axisPosition, isX ? y0 : x0);
+    const double_t padWidthPixel = canvas->GetWw() * pad->GetAbsWNDC();
+    const double_t padHeightPixel = canvas->GetWh() * pad->GetAbsHNDC();
+    const bool pixelFont = axis->GetTitleFont() % 10 == 3;
+    const double_t charHeight = pixelFont ? axis->GetTitleSize() * mScale : axis->GetTitleSize() * (isX ? padHeightPixel : padWidthPixel);
+    double_t offset = axis->GetTitleOffset();
+    if (isX) {
+      if (offset == 0.) offset = gStyle->GetTitleOffset("X");
+      distance = std::max(distance, 1.6 * charHeight * offset);
+    } else if (offset == 0.) {
+      distance = std::max(distance, charHeight + MaxLabelWidth(pad, axis, axisLabel));
+    } else {
+      distance = std::max(distance, 1.6 * charHeight * offset);
+    }
+  }
+  TAxis* first = members.front().second;
+  TPad* firstPad = members.front().first;
+  const bool center = first->TestBit(TAxis::kCenterTitle);
+  const double_t along = center ? 0.5 * (low + high) : high;
+  const double_t canvasWidthPixel = canvas->GetWw();
+  const double_t canvasHeightPixel = canvas->GetWh();
+  const double_t across = isX ? axisPosition - distance / canvasHeightPixel : axisPosition - distance / canvasWidthPixel;
+  auto* text = new TLatex(isX ? along : across, isX ? across : along, title.data());
+  text->SetName(fmt::format("common_title_{}_{}", axisLabel, index).data());
+  text->SetNDC();
+  // as a pixel font (unscaled, see ApplyScale), so that the size does not depend on the canvas
+  const double_t sizePixel = (first->GetTitleFont() % 10 == 3) ? first->GetTitleSize() : first->GetTitleSize() * std::min(canvas->GetWw() * firstPad->GetAbsWNDC(), canvas->GetWh() * firstPad->GetAbsHNDC()) / mScale;
+  text->SetTextFont(first->GetTitleFont() / 10 * 10 + 3);
+  text->SetTextSize(static_cast<float_t>(sizePixel));
+  text->SetTextColor(first->GetTitleColor());
+  text->SetTextAlign(center ? 22 : 32);
+  if (!isX) text->SetTextAngle(90.);
+  text->SetBit(kCanDelete);
+  canvas->cd();
+  text->Draw();
+  // the panels lose their own titles (also the copies of their frames that redraw the axes)
+  for (const auto& [pad, axis] : members) {
+    const string frameName = "axis_hist_pad_" + std::to_string(pad->GetNumber());
+    for (TObject* primitive : *pad->GetListOfPrimitives()) {
+      auto* hist = dynamic_cast<TH1*>(primitive);
+      if (hist && frameName == hist->GetName()) (isX ? hist->GetXaxis() : hist->GetYaxis())->SetTitle("");
+    }
+    pad->Modified();
   }
 }
 
