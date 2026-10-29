@@ -1348,8 +1348,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               TString upper(drawOption);
               upper.ToUpper();
               if (hasRangeX || hasRangeY) logger::warning("The range of {} does not apply to a map projection, which must cover the range of the frame: set the range on the pad instead.", data->GetName());
-              // the other projections keep both coordinates in degrees, ROOT's Mercator gives the latitude as ln tan(pi / 4 + b / 2)
-              if (upper.Contains("MERCATOR")) logger::warning("{} is drawn with MERCATOR, whose latitude ROOT gives in units of ln tan(pi / 4 + b / 2) instead of degrees: it does not fit into the frame. Use AITOFF, MOLLWEIDE, SINUSOIDAL or PARABOLIC.", data->GetName());
               if (upper.Contains("COL")) logger::warning("{}: ROOT paints COL with a map projection twice, unprojected below the projected map. For a colour scale add Z to the projection alone.", data->GetName());
             }
             if (!pad_ptr->GetView() || projected) {
@@ -1514,7 +1512,17 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             paints3dGraph(drawOption, triangles, points);
             if (points && !triangles) data_ptr->GetHistogram()->Reset("ICE");  // not its functions: they hold the triangulation
           }
-          data_ptr->Draw(drawOption.data());
+          if (projected) {
+            // ROOT projects the range of a map only when it is painted without SAME (THistPainter::RecalculateRange): drawn SAME, a map
+            // that does not cover the whole sphere is painted over its unprojected range into the projected frame (too small, the frame
+            // showing around it). Added to the pad without SAME (Draw would clear the pad), it takes the projected range of the frame.
+            TString option(drawOption);
+            option.ReplaceAll("SAMES", "").ReplaceAll("SAME", "");
+            data_ptr->SetBit(TH1::kNoTitle);
+            data_ptr->AppendPad(option.Data());
+          } else {
+            data_ptr->Draw(drawOption.data());
+          }
           if (showStats) {
             // ROOT makes the box when painting a histogram: one drawn as graph is drawn for this paint only
             if constexpr (!is_hist<data_type>()) statsHist->Draw("HIST SAMES");

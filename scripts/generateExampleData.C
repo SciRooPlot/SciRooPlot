@@ -25,9 +25,10 @@
 //     hV0M (centrality estimator), hPtEtaCent (THnSparse: pT, eta, centrality)
 //     cent_0-10/, cent_10-30/, cent_30-50/   ptSpec (per event), v2 (TGraphErrors)
 //     flow/        v2_{pi,K,p} (v2 vs. pT, 30-40%), v2ncq_{pi,K,p} (v2/n_q vs. KET/n_q), v2, v3, v4 (vs. centrality)
-//     meanPt/      pp_{2.76,5,7,8,13}TeV, pPb_{5,8.16}TeV, XeXe_5.44TeV, PbPb_{2.76,5}TeV (TGraphErrors: mean pT vs. N_ch)
+//     meanPt/      pp_{2.76,5,7,8,13}TeV, pPb_{5,8.16}TeV, XeXe_5.44TeV, PbPb_{2.76,5}TeV (TGraphErrors: mean pT vs. N_ch), <system>_syst
 //     correlations/ ridge (TH2: pair yield vs. Delta phi, Delta eta), fourier_longRange (TF1, V_2Delta in the title)
-//     femtoscopy/  cf_{0-5,20-30,50-60} (TGraphErrors: pion correlation functions), fit_... (TF1, the radius in the title)
+//     femtoscopy/  cf_{0-5,20-30,50-60} (TGraphErrors: pion correlation functions), fit_... (TF1, the radius in the title),
+//                  photons_cf (TH1: photon pairs in central Pb-Pb), photons_fit (TF1, radius and lambda in the title)
 //   tracks.root                       TTree "tracks": pt, eta, phi, charge, nClustersTPC, dcaXY, isPrimary
 //   decays.root                       TTree "v0s": alpha, qT, pt (V0 candidates for an Armenteros-Podolanski plot)
 //                                     TTree "d0ToK0sPiPi": m2KsPip, m2KsPim, m2PiPi (D0 -> K0S pi+ pi- for a Dalitz plot)
@@ -55,11 +56,13 @@
 //   searches.root                     exclusion limits
 //     darkMatter/  limit_{A,B,C} (TGraph), expected_A_{1,2}sigma (TGraphAsymmErrors), neutrinoFog (TGraphAsymmErrors)
 //     stop/        upperLimit (TH2), observed, observed_theory{Up,Down}, expected, expected_{up,down} (TGraph contours)
-//     dijet/       spectrum (TH1, log bins), fit (TF1, chi2/ndf in the title), significance (TH1), excitedQuark (TF1)
+//     dijet/       spectrum (TH1, log bins), fit (TF1, chi2/ndf in the title), significance (TH1), sigPlusBkg_{3,5}TeV (TGraph: fit
+//                  plus an excited quark), significance_{3,5}TeV (TH1: the significance of that signal per bin)
 //   astronomy.root                    rotation/ measured (TGraphErrors), bulge, disk, halo, total (TGraph: galaxy rotation curve)
 //                                     cmb/      measured (TGraphErrors), model (TGraph: CMB temperature power spectrum)
 //   trigger.root                      muon trigger efficiencies: eta_2023, eta_2024 (TEfficiency), etaPhi_2023 (2D TEfficiency)
 //   timeline.root                     TTree "diphoton": mass, lumi (diphoton candidates with the luminosity at which they came)
+//   tpc.root                          TTree "clusters": x, y, z, t0 (clusters in the pad rows of a TPC, continuous readout, t0 in us)
 //   clustering.root                   TTree "points": x, y, cluster (from a Gaussian mixture fit), clusterMap (TH2: cluster per cell),
 //                                     ellipse_{1,2,3} (TGraph: 2 sigma of each fitted component), centres (TGraph)
 //   mdn.root                          a mixture density network for the electron pT resolution (bremsstrahlung tail):
@@ -77,6 +80,14 @@
 //   theory.root                       alphaS (TGraphAsymmErrors band), alphaS_measurements; pdf_{uv,dv,g,sea} (bands);
 //                                     lattice_{3p,energy,entropy} (bands), crossover; bifurcation (TH2F), lyapunov (TGraph);
 //                                     binder_L{8,16,32,64}, magnetisation_L{8,16,32,64} (TGraphErrors), onsager (TF1)
+//   electronics.root                  a hybrid pixel chip, its analogue front end and its data link
+//     pixelChip/   scan_{A,B,C} (TGraphAsymmErrors: threshold scans, threshold and noise in the title), fit_{A,B,C} (TF1),
+//                  TTree "pixels": col, row, thresholdUntuned, threshold, noise, trim, masked (128 x 64 pixels before and
+//                  after tuning), fitTuned (TF1, sigma in the title)
+//     frontEnd/    pulse_{2,5,10}ke (TGraph: shaper output), gain_{25,100}ns, phase_{25,100}ns (TGraph: frequency response),
+//                  gainModel_..., phaseModel_... (TGraph: ideal CR-RC^2 shaper)
+//     link/        eye_{1..10}m (TH2F: eye diagrams of a 2.56 Gb/s link after 1 to 10 m of cable)
+//     antenna/     broadside, steered30 (TGraphPolar: radiation patterns of a patch array), ..._model (TGraphPolar)
 //   co2.csv                           monthly atmospheric CO2: year (decimal), co2, deseasonalized
 //   stars.csv                         a star catalogue for a Hertzsprung-Russell diagram: bv (colour index), logL
 //   spikes.csv                        spike times of a neuron in 40 trials around a stimulus: trial, time (ms)
@@ -91,6 +102,7 @@
 //   runQA.csv                         run-by-run QA: run, meanNch, meanNch_err
 //   systematics.csv                   relative systematic uncertainties vs. pT per source
 
+#include <Math/ProbFuncMathCore.h>
 #include <TEfficiency.h>
 #include <TError.h>
 #include <TF1.h>
@@ -1409,18 +1421,19 @@ void WriteAccelerator()
   // x = sqrt(eps beta) u, x' = sqrt(eps / beta) (v - alpha u) with u, v standard normal
   constexpr double alpha = -1.2, beta = 8., emittance = 0.5;  // beta in mm/mrad (= m), emittance in mm mrad
   TTree tree("beam", "particles of a bunch");
-  double x{}, xp{};
-  tree.Branch("x", &x);
-  tree.Branch("xp", &xp);
+  float xStored{}, xpStored{};
+  tree.Branch("x", &xStored);
+  tree.Branch("xp", &xpStored);
   double sxx = 0., spp = 0., sxp = 0.;
   constexpr int kParticles = 30000;
   for (int i = 0; i < kParticles; ++i) {
     const double u = random.Gaus(), v = random.Gaus();
-    x = std::sqrt(emittance * beta) * u;
-    xp = std::sqrt(emittance / beta) * (v - alpha * u);
+    const double x = std::sqrt(emittance * beta) * u, xp = std::sqrt(emittance / beta) * (v - alpha * u);
     sxx += x * x;
     spp += xp * xp;
     sxp += x * xp;
+    xStored = static_cast<float>(x);
+    xpStored = static_cast<float>(xp);
     tree.Fill();
   }
   tree.Write();
@@ -1526,14 +1539,19 @@ void WriteFlowAndMeanPt()
   }
   file.mkdir("meanPt")->cd();
   {  // mean pT against the charged-particle multiplicity for pp at five energies, p-Pb at two, Xe-Xe and Pb-Pb at two: all start
-    // alike; pp rises steeply, p-Pb follows pp and then flattens, and in A-A collisions, where many independent nucleon-nucleon
-    // collisions add up, the rise is weakest and grows slowly up to the most central collisions
-    auto pp = [](double slope) { return [slope](double n) { return 0.49 + slope * (std::pow(n, 0.4) - 1.); }; };
-    auto pPb = [](double slope, double bend) {
-      return [slope, bend](double n) { return 0.49 + slope * (std::pow(n, 0.4) - 1.) - bend * std::pow(std::pow(n, 0.4) - 1., 2.); };
+    // alike and stay flat for the first few particles; pp then rises ever more steeply (in log N_ch), p-Pb follows pp and bends
+    // away from it above some ten particles, and in A-A collisions, where many independent nucleon-nucleon collisions add up, the
+    // mean pT rises in a step up to about 50 particles and then grows slowly up to the most central collisions; each system as
+    // points with their statistical uncertainties and as a band of the systematic ones (_syst)
+    auto pp = [](double scale) { return [scale](double n) { return 0.49 + scale * 0.0098 * std::pow(std::log(n), 2.53); }; };
+    auto pPb = [](double scale, double bend) {
+      return [scale, bend](double n) { return 0.49 + scale * 0.0098 * std::pow(std::log(n), 2.53) / (1. + std::pow(n / bend, 1.48)); };
     };
-    auto aa = [](double scale) {
-      return [scale](double n) { return 0.49 + scale * (0.025 * (1. - std::exp(-std::log(n) / 1.2)) + 0.029 * std::log(n)); };
+    auto aa = [](double step, double slope) {
+      return [step, slope](double n) {
+        const double x = std::log(n);
+        return 0.49 + step / (1. + std::exp(-(x - 2.4) / 0.45)) + slope * 0.5 * std::log1p(std::exp((x - 3.5) / 0.5));
+      };
     };
     struct System {
       const char* name;
@@ -1541,17 +1559,19 @@ void WriteFlowAndMeanPt()
       std::function<double(double)> meanPt;
     };
     const std::vector<System> systems = {
-      {"PbPb_5TeV", 2800., aa(1.)},       {"PbPb_2.76TeV", 2000., aa(0.88)}, {"XeXe_5.44TeV", 1500., aa(1.07)},
-      {"pPb_8.16TeV", 140., pPb(0.081, 0.0034)}, {"pPb_5TeV", 120., pPb(0.08, 0.0044)}, {"pp_13TeV", 75., pp(0.082)},
-      {"pp_8TeV", 65., pp(0.08)},         {"pp_7TeV", 60., pp(0.079)},       {"pp_5TeV", 55., pp(0.077)},
-      {"pp_2.76TeV", 45., pp(0.074)}};
+      {"PbPb_5TeV", 3000., aa(0.15, 0.02)},   {"PbPb_2.76TeV", 1900., aa(0.145, 0.017)}, {"XeXe_5.44TeV", 1500., aa(0.155, 0.021)},
+      {"pPb_8.16TeV", 110., pPb(1., 175.)},   {"pPb_5TeV", 110., pPb(1., 156.)},          {"pp_13TeV", 75., pp(1.)},
+      {"pp_8TeV", 65., pp(0.98)},             {"pp_7TeV", 60., pp(0.97)},                 {"pp_5TeV", 55., pp(0.95)},
+      {"pp_2.76TeV", 45., pp(0.92)}};
     for (const auto& system : systems) {
-      TGraphErrors meanPt;
-      for (double n = 1.; n <= system.maxNch; n = (n < 20.) ? n + 1. : std::round(n * 1.06)) {
-        const double error = 0.002 + 0.0005 * std::log(n);  // fewer events at the highest multiplicities
-        meanPt.AddPointError(n, system.meanPt(n) + random.Gaus(0., 0.3 * error), 0., error);
+      TGraphErrors meanPt, syst;
+      for (double n = 1.; n <= system.maxNch; n = (n < 100.) ? n + 1. : std::round(n * 1.02)) {
+        const double value = system.meanPt(n), error = 0.001 + 0.0004 * std::log(n);  // fewer events at the highest multiplicities
+        meanPt.AddPointError(n, value + random.Gaus(0., 0.3 * error), 0., error);
+        syst.AddPointError(n, value, 0., 0.012 * value);
       }
       meanPt.Write(system.name);
+      syst.Write(Form("%s_syst", system.name));
     }
   }
   {  // charged particles in Pb-Pb 30-40% around the second-order event plane, angle phi - Psi2 against pT: in each pT ring the yield
@@ -1798,8 +1818,8 @@ void WriteSearches()
       return expected(mStop, mLsp) * std::exp(0.15 * std::sin(mStop / 140. + phases[0]) + 0.1 * std::sin(mLsp / 90. + phases[1]) + 0.05 * std::sin((mStop + mLsp) / 60. + phases[2]));
     };
     TH2D upperLimit("upperLimit", "", 60, 200., 1400., 40, 0., 800.);
-    upperLimit.GetXaxis()->SetTitle("#it{m}_{#tilde{t}} (GeV)");
-    upperLimit.GetYaxis()->SetTitle("#it{m}_{#tilde{#chi}^{0}_{1}} (GeV)");
+    upperLimit.GetXaxis()->SetTitle("#it{m}(#tilde{t}) (GeV)");
+    upperLimit.GetYaxis()->SetTitle("#it{m}(#tilde{#chi}^{0}_{1}) (GeV)");
     upperLimit.GetZaxis()->SetTitle("95% CL upper limit on #sigma (pb)");
     for (int ix = 1; ix <= upperLimit.GetNbinsX(); ++ix) {
       for (int iy = 1; iy <= upperLimit.GetNbinsY(); ++iy) {
@@ -1871,10 +1891,24 @@ void WriteSearches()
       if (counts > 0.) significance.SetBinContent(i, (counts - expected) / std::sqrt(expected));
     }
     significance.Write();
-    TF1 excitedQuark("excitedQuark", "[0]*TMath::Gaus(x, [1], [2], true)", 1.5, 8.);  // 60 events, 7% resolution
-    excitedQuark.SetParameters(60., 5., 0.35);
-    excitedQuark.SetNpx(500);
-    excitedQuark.Write();
+    // excited quarks of 3 and 5 TeV at about the sensitivity of the search (Gaussian peaks, 7% resolution): the fit plus each
+    // signal over three sigma of the peak (sigPlusBkg_<mass>TeV), and the significance each would give in each bin (significance_<mass>TeV)
+    for (const auto& [mass, events] : std::vector<std::pair<int, double>>{{3, 450.}, {5, 35.}}) {
+      const double sigma = 0.07 * mass;
+      TGraph sigPlusBkg;
+      for (int i = 0; i <= 300; ++i) {
+        const double x = mass - 3. * sigma + i * 6. * sigma / 300.;
+        sigPlusBkg.AddPoint(x, fit.Eval(x) + events * TMath::Gaus(x, mass, sigma, true));
+      }
+      sigPlusBkg.Write(Form("sigPlusBkg_%dTeV", mass));
+      TH1D expectedSignificance(Form("significance_%dTeV", mass), "", edges.size() - 1, edges.data());
+      for (int i = 1; i <= spectrum.GetNbinsX(); ++i) {
+        const double low = spectrum.GetBinLowEdge(i), high = spectrum.GetBinLowEdge(i + 1);
+        const double signal = events * (ROOT::Math::normal_cdf(high, sigma, mass) - ROOT::Math::normal_cdf(low, sigma, mass));
+        expectedSignificance.SetBinContent(i, signal / std::sqrt(fit.Integral(low, high)));
+      }
+      expectedSignificance.Write();
+    }
   }
 }
 
@@ -2055,6 +2089,27 @@ void WriteCorrelations()
       fit.SetNpx(400);
       fit.Write();
     }
+  }
+  {  // photon pairs in central Pb-Pb collisions: most photons come from pi0 decays, so the Bose-Einstein enhancement of the direct
+    // photons is diluted to lambda = 1/2 (N_direct / N_all)^2, a few 10^-3 (1/2: the two polarisations of a photon); the two photons
+    // of one pi0 have q_inv = m_pi0, a peak widened by the energy resolution; same-event over mixed-event pairs, whose number grows
+    // as q^2, so the errors are largest where the signal is; the fit of the enhancement at small q gives the radius
+    constexpr double kLambda = 0.0045, kRadius = 6.;  // fm
+    TH1D cf("photons_cf", "", 100, 0., 0.2);
+    for (int bin = 1; bin <= cf.GetNbinsX(); ++bin) {
+      const double q = cf.GetBinCenter(bin);
+      const double truth = 1. + kLambda * std::exp(-kRadius * kRadius * q * q / 0.038930) + 0.12 * std::exp(-0.5 * std::pow((q - 0.135) / 0.008, 2.));
+      const double error = std::sqrt(2. * truth / (6e7 * std::pow(q / 0.2, 2.)));  // same- and mixed-event pairs
+      cf.SetBinContent(bin, truth + random.Gaus(0., error));
+      cf.SetBinError(bin, error);
+    }
+    cf.Write();
+    TF1 fit("photons_fit", "[0]*(1 + [1]*exp(-[2]*[2]*x*x/0.038930))", 0., 0.09);  // q in GeV, R in fm
+    fit.SetParameters(1., 0.003, 5.);
+    cf.Fit(&fit, "Q0NR");
+    fit.SetTitle(Form("#it{R}_{inv} = %.1f #pm %.1f fm, #lambda = (%.1f #pm %.1f) #times 10^{-3}", fit.GetParameter(2), fit.GetParError(2), 1e3 * fit.GetParameter(1), 1e3 * fit.GetParError(1)));
+    fit.SetNpx(400);
+    fit.Write();
   }
 }
 
@@ -2579,7 +2634,7 @@ void WriteClimate()
       const double hole = 1.3 * std::exp(-std::pow((x + 38.) / 13., 2.) - std::pow((y - 55.) / 6., 2.));
       const double ocean = 0.75 * arctic * southernOcean - hole, land = 1.35 * arctic;
       const double fraction = std::min(1., landFraction.GetBinContent(i, j));
-      warming.SetBinContent(i, j, ocean + fraction * (land - ocean) + random.Gaus(0., 0.08));
+      warming.SetBinContent(i, j, ocean + fraction * (land - ocean) + random.Gaus(0., 0.04));
     }
   }
   warming.Write();
@@ -2622,7 +2677,7 @@ void WriteTimeline()
   TFile file((kFolder + "timeline.root").data(), "RECREATE");
   TRandom3 random(28);
   TTree tree("diphoton", "diphoton candidates");
-  double mass{}, lumi{};
+  float mass{}, lumi{};
   tree.Branch("mass", &mass);
   tree.Branch("lumi", &lumi);
   constexpr double kSlope = 22.;  // GeV
@@ -2630,13 +2685,68 @@ void WriteTimeline()
   for (int i = 0; i < kBackground + kSignal; ++i) {
     if (i < kBackground) {
       do {
-        mass = 100. + random.Exp(kSlope);
-      } while (mass >= 160.);
+        mass = static_cast<float>(100. + random.Exp(kSlope));
+      } while (mass >= 160.f);
     } else {
-      mass = random.Gaus(125., 1.7);
+      mass = static_cast<float>(random.Gaus(125., 1.7));
     }
-    lumi = random.Uniform(140.);
+    lumi = static_cast<float>(random.Uniform(140.));
     tree.Fill();
+  }
+  tree.Write();
+}
+
+// the clusters of a TPC read out continuously, with GEM readout chambers: collisions at random times
+// (50 kHz), each with its charged tracks (helices in a solenoid field of 0.5 T) through the drift volume (|z| < 250 cm); each end
+// plate has 18 sectors of 20 deg, each with an inner chamber (63 pad rows of 7.5 mm from 84.85 cm) and an outer one of three
+// stacks (34 rows of 10 mm from 134.7 cm, 30 of 12 mm from 170.8 cm, 25 of 15 mm from 208.9 cm), the pad rows straight lines across
+// the sector at these distances from the beam; a track leaves a cluster where it crosses the centre of a pad row (looping tracks
+// twice). The ionisation electrons drift to the end plate of their half (2.58 cm/us, 97 us over the full length), so that a track
+// shows up with its collision and disappears piece by piece, the part nearest to the end plate first
+void WriteTPC()
+{
+  TFile file((kFolder + "tpc.root").data(), "RECREATE");
+  TRandom3 random(34);  // an own generator keeps all other example data unchanged
+  TTree tree("clusters", "TPC clusters");
+  float x{}, y{}, z{}, t0{};
+  tree.Branch("x", &x);
+  tree.Branch("y", &y);
+  tree.Branch("z", &z);
+  tree.Branch("t0", &t0);
+  std::vector<double> rows;  // distances of the pad row centres from the beam, cm
+  for (const auto& [start, nRows, length] : std::vector<std::tuple<double, int, double>>{{84.85, 63, 0.75}, {134.7, 34, 1.}, {170.8, 30, 1.2}, {208.9, 25, 1.5}}) {
+    for (int row = 0; row < nRows; ++row) rows.push_back(start + (row + 0.5) * length);
+  }
+  constexpr double kOuter = 246.4, kLength = 250., kStep = 0.2;  // cm; kStep: along the track
+  for (double time = -110. + random.Exp(20.); time < 200.; time += random.Exp(20.)) {  // collision times in us, 50 kHz (the frames end at 190 us)
+    t0 = static_cast<float>(time);
+    const double vertexZ = random.Gaus(0., 6.);
+    for (int track = random.Poisson(40.); track > 0; --track) {
+      const double pt = 0.15 + random.Exp(0.45), eta = random.Uniform(-0.9, 0.9), phi0 = random.Uniform(0., TMath::TwoPi());
+      const double charge = random.Uniform() < 0.5 ? -1. : 1.;
+      const double radius = pt / (0.3 * 0.5) * 100.;  // of the helix in cm: pT / (0.3 B), B in T, pT in GeV
+      double lastX = 0., lastY = 0., lastRow = 0.;
+      for (double s = kStep; s < TMath::Pi() * radius; s += kStep) {  // path length in the transverse plane, up to half a turn
+        const double phi = phi0 - charge * s / radius;
+        const double px = radius / charge * (std::sin(phi0) - std::sin(phi)), py = radius / charge * (std::cos(phi) - std::cos(phi0));
+        const double pz = vertexZ + s * std::sinh(eta);
+        // the distance from the beam along the middle of the sector the track is in
+        const double middle = (std::floor(std::atan2(py, px) / TMath::DegToRad() / 20.) + 0.5) * 20. * TMath::DegToRad();
+        const double toRow = px * std::cos(middle) + py * std::sin(middle);
+        if (toRow > kOuter || std::abs(pz) > kLength) break;  // the track leaves the drift volume
+        for (const double row : rows) {  // a pad row crossed in this step, outwards or (looping) inwards
+          if ((lastRow < row) == (toRow < row) || random.Uniform() > 0.95) continue;  // not crossed, or no cluster found
+          const double f = (row - lastRow) / (toRow - lastRow);
+          x = static_cast<float>(lastX + f * (px - lastX) + random.Gaus(0., 0.08));
+          y = static_cast<float>(lastY + f * (py - lastY) + random.Gaus(0., 0.08));
+          z = static_cast<float>(pz - (1. - f) * kStep * std::sinh(eta));
+          tree.Fill();
+        }
+        lastX = px;
+        lastY = py;
+        lastRow = toRow;
+      }
+    }
   }
   tree.Write();
 }
@@ -2758,10 +2868,11 @@ void WriteMixtureDensity()
     }
     return d * v * std::pow(random.Uniform(), 1. / shape);
   };
-  TTree tree("electrons", "electrons: pT_gen and the relative pT deviation");
+  TTree tree("electrons", "electrons: pT_gen and the relative pT deviation");  // every second electron of the fit, as floats
+  float ptGenStored{}, deltaPtStored{};
+  tree.Branch("ptGen", &ptGenStored);
+  tree.Branch("deltaPt", &deltaPtStored);
   double ptGen{}, deltaPt{};
-  tree.Branch("ptGen", &ptGen);
-  tree.Branch("deltaPt", &deltaPt);
   constexpr size_t kElectrons = 600000;
   std::vector<std::pair<double, double>> sample;
   while (sample.size() < kElectrons) {
@@ -2772,7 +2883,11 @@ void WriteMixtureDensity()
     // multiple scattering (constant) and the curvature measurement (proportional to pT)
     const double resolution = std::sqrt(std::pow(0.01, 2.) + std::pow(0.0015 * ptGen, 2.));
     deltaPt = std::exp(-lnKept) * (1. + random.Gaus(0., resolution)) - 1.;
-    tree.Fill();
+    if (sample.size() % 2 == 0) {
+      ptGenStored = static_cast<float>(ptGen);
+      deltaPtStored = static_cast<float>(deltaPt);
+      tree.Fill();
+    }
     sample.emplace_back(ptGen, deltaPt);
   }
   tree.Write();
@@ -2842,6 +2957,193 @@ void WriteMixtureDensity()
   total.Write("slice_total");
 }
 
+// electronics: the characterisation of a hybrid pixel chip (threshold scans and tuning), the pulse shapes and the frequency response
+// of its analogue front end (a charge-sensitive amplifier with a CR-RC^2 shaper), and eye diagrams of its serial data link
+void WriteElectronics()
+{
+  TFile file((kFolder + "electronics.root").data(), "RECREATE");
+  TRandom3 random(33);  // an own generator keeps all other example data unchanged
+  file.mkdir("pixelChip")->cd();
+  {  // threshold scans: 50 charge injections per step into three pixels, the hit efficiency with Clopper-Pearson intervals and an
+    // erf fit, whose mean is the threshold and whose width the noise of the pixel (both in the title of the graph, for the legend)
+    constexpr int kInjections = 50;
+    for (const auto& [name, threshold, noise] : std::vector<std::tuple<const char*, double, double>>{{"A", 880., 60.}, {"B", 1000., 75.}, {"C", 1150., 110.}}) {
+      TGraphAsymmErrors scan;
+      for (double charge = 0.; charge <= 2000.; charge += 50.) {
+        int hits = 0;
+        for (int i = 0; i < kInjections; ++i) hits += (charge + random.Gaus(0., noise) > threshold);
+        const double efficiency = static_cast<double>(hits) / kInjections;
+        const int point = scan.GetN();
+        scan.AddPoint(charge, efficiency);
+        scan.SetPointError(point, 0., 0., efficiency - TEfficiency::ClopperPearson(kInjections, hits, 0.683, false), TEfficiency::ClopperPearson(kInjections, hits, 0.683, true) - efficiency);
+      }
+      TF1 fit(Form("fit_%s", name), "0.5*(1+TMath::Erf((x-[0])/(sqrt(2)*[1])))", 0., 2000.);
+      fit.SetParameters(1000., 80.);
+      scan.Fit(&fit, "Q0N");
+      scan.SetTitle(Form("%.0f e^{#minus}, noise %.0f e^{#minus}", fit.GetParameter(0), fit.GetParameter(1)));
+      scan.Write(Form("scan_%s", name));
+      fit.SetNpx(500);
+      fit.Write();
+    }
+  }
+  {  // the thresholds of all 128 x 64 pixels before and after tuning: before, all 4-bit trim DACs are at 7; the threshold varies from pixel
+    // to pixel, between the double columns (which share their biasing) and over the rows, as the supply voltage drops with the
+    // distance from the periphery at row 0; the trim DAC of each pixel is then set to bring it closest to the target of 1000 e,
+    // in steps of about 40 e, and pixels beyond the reach of the DAC stay off the target (the tails); the noisy double
+    // column 86-87 and a few single pixels are masked
+    TTree tree("pixels", "pixel matrix");
+    int col{}, row{}, trim{};
+    float thresholdUntuned{}, threshold{}, noise{};
+    bool masked{};
+    tree.Branch("col", &col);
+    tree.Branch("row", &row);
+    tree.Branch("thresholdUntuned", &thresholdUntuned);
+    tree.Branch("threshold", &threshold);
+    tree.Branch("noise", &noise);
+    tree.Branch("trim", &trim);
+    tree.Branch("masked", &masked);
+    TH1D tuned("tuned", "", 140, 400., 1800.);  // the binning of the plot thresholdTuning, so that the fit is per bin
+    std::array<double, 64> doubleColumnOffset{};
+    for (auto& offset : doubleColumnOffset) offset = random.Gaus(0., 30.);
+    for (col = 0; col < 128; ++col) {
+      for (row = 0; row < 64; ++row) {
+        const double distance = row / 63.;
+        thresholdUntuned = static_cast<float>(900. + 250. * distance * (2. - distance) + doubleColumnOffset[col / 2] + random.Gaus(0., 90.));
+        const double step = 40. * random.Gaus(1., 0.08);  // the trim steps differ from pixel to pixel
+        trim = std::clamp(static_cast<int>(std::lround(7. + (thresholdUntuned - 1000.) / 40.)), 0, 15);
+        threshold = static_cast<float>(thresholdUntuned - (trim - 7) * step + random.Gaus(0., 5.));  // and the precision of the scan
+        noise = static_cast<float>(std::max(30., random.Gaus(75., 8.)));
+        masked = (col / 2 == 43) || random.Uniform() < 0.003;
+        if (!masked) tuned.Fill(threshold);
+        tree.Fill();
+      }
+    }
+    tree.Write();
+    TF1 fit("fitTuned", "gaus", 850., 1150.);
+    tuned.Fit(&fit, "Q0NR");
+    fit.SetTitle(Form("Gaussian, #sigma = %.0f e^{#minus}", fit.GetParameter(2)));
+    fit.SetRange(400., 1800.);
+    fit.SetNpx(1000);
+    fit.Write();
+  }
+  file.mkdir("frontEnd")->cd();
+  {  // the shaper output on an oscilloscope (0.5 ns samples, 1.5 mV noise) for three injected charges: a CR-RC^2 pulse peaking at
+    // 50 ns with 25 mV per 1000 e; a larger pulse crosses a fixed threshold earlier (time walk) and stays above it longer (time over threshold)
+    constexpr double kPeaking = 50., kGain = 25.;  // ns, mV per ke
+    for (const int charge : {2, 5, 10}) {
+      TGraph pulse;
+      for (int i = 0; i <= 640; ++i) {
+        const double t = -20. + 0.5 * i, x = t / kPeaking;
+        pulse.AddPoint(t, (t > 0. ? kGain * charge * x * x * std::exp(2. * (1. - x)) : 0.) + random.Gaus(0., 1.5));
+      }
+      pulse.Write(Form("pulse_%dke", charge));
+    }
+  }
+  {  // the frequency response of the shaper at two peaking times, measured with a network analyser (frequency in MHz): gain normalised to its maximum,
+    // and phase; the ideal CR-RC^2 response H = s tau / (1 + s tau)^3 (tau = peaking time / 2) as model, while the measurement
+    // also has the pole of the preamplifier at 300 MHz
+    for (const int peaking : {25, 100}) {
+      const double tau = 0.5e-9 * peaking;
+      auto response = [tau](double frequency, bool withPreamp) {
+        const std::complex<double> s(0., 2. * TMath::Pi() * 1e6 * frequency);
+        std::complex<double> h = s * tau / std::pow(1. + s * tau, 3.) / (1. / std::sqrt(2.) / std::pow(1.5, 1.5));
+        if (withPreamp) h /= 1. + s / (2. * TMath::Pi() * 3e8);
+        return std::make_pair(20. * std::log10(std::abs(h)), std::arg(h) * TMath::RadToDeg() - (std::arg(h) > TMath::PiOver2() ? 360. : 0.));
+      };
+      TGraph gain, phase, gainModel, phaseModel;
+      for (int i = 0; i <= 50; ++i) {
+        const double frequency = 0.01 * std::pow(10., i / 10.);
+        const auto [db, degrees] = response(frequency, true);
+        gain.AddPoint(frequency, db + random.Gaus(0., 0.15));
+        phase.AddPoint(frequency, degrees + random.Gaus(0., 1.));
+      }
+      for (int i = 0; i <= 500; ++i) {
+        const double frequency = 0.01 * std::pow(10., i / 100.);
+        const auto [db, degrees] = response(frequency, false);
+        gainModel.AddPoint(frequency, db);
+        phaseModel.AddPoint(frequency, degrees);
+      }
+      gain.Write(Form("gain_%dns", peaking));
+      phase.Write(Form("phase_%dns", peaking));
+      gainModel.Write(Form("gainModel_%dns", peaking));
+      phaseModel.Write(Form("phaseModel_%dns", peaking));
+    }
+  }
+  file.mkdir("link")->cd();
+  {  // eye diagrams of the 2.56 Gb/s data link (NRZ, +-200 mV, PRBS7 pattern) at the end of copper cables of 1 to 10 m: the cable
+    // is a low-pass filter (two stages, whose time constant grows with the length), so a bit leaks into the next ones (inter-symbol
+    // interference) and the eye closes; random jitter of 6 ps on every edge and 4 mV noise; the waveform is cut into pieces of
+    // 2 unit intervals (UI = 390.6 ps), each sample appears at its phase in the first and the second UI; the delay of the cable
+    // is taken out, so that the eye crosses at 0 and 1
+    constexpr double kUI = 1. / 2.56;  // ns
+    constexpr int kSteps = 256, kKeep = 4;  // simulation steps per UI, every 4th is a sample
+    std::vector<int> bits;
+    for (int state = 0x7f; bits.size() < 127 * 30;) {  // PRBS7: x^7 + x^6 + 1
+      const int bit = ((state >> 6) ^ (state >> 5)) & 1;
+      state = ((state << 1) | bit) & 0x7f;
+      bits.push_back(bit);
+    }
+    for (int length = 1; length <= 10; ++length) {
+      TH2F eye(Form("eye_%dm", length), "", 128, -0.5, 1.5, 120, -300., 300.);
+      eye.GetXaxis()->SetTitle("time (UI)");
+      eye.GetYaxis()->SetTitle("differential voltage (mV)");
+      eye.GetZaxis()->SetTitle("samples");
+      const double tau = 0.015 + 0.0115 * length;  // ns, per filter stage
+      const double decay = std::exp(-kUI / kSteps / tau);
+      std::vector<double> jitter(bits.size());  // of the edge at the start of each bit, in UI
+      for (auto& shift : jitter) shift = random.Gaus(0., 0.006 / kUI);
+      double stage1 = -200., stage2 = -200.;
+      for (size_t i = 1; i + 1 < bits.size(); ++i) {
+        for (int k = 0; k < kSteps; ++k) {
+          const double phase = (k + 0.5) / kSteps;  // within the bit, from its nominal start
+          const int level = (phase < jitter[i]) ? bits[i - 1] : (phase - 1. >= jitter[i + 1]) ? bits[i + 1] : bits[i];
+          const double input = level ? 200. : -200.;
+          stage1 = input + (stage1 - input) * decay;
+          stage2 = stage1 + (stage2 - stage1) * decay;
+          if (i > 20 && k % kKeep == kKeep / 2) {
+            const double delayed = phase - 1.68 * tau / kUI;  // the delay of the two filter stages to half the step
+            const double u = delayed - std::floor(delayed + 0.5);  // in [-0.5, 0.5)
+            const double voltage = stage2 + random.Gaus(0., 4.);
+            eye.Fill(u, voltage);
+            eye.Fill(u + 1., voltage);
+          }
+        }
+      }
+      eye.Write();
+    }
+  }
+  file.mkdir("antenna")->cd();
+  {  // the radiation pattern of an array of four patch antennas half a wavelength apart: the field of the array factor times the
+    // pattern of one patch (cos theta to the front, a tenth to the back), normalised to its maximum; fed in phase the main lobe
+    // points to the front, with phase steps it is steered by 30 deg (the side lobes grow); measured every 5 deg (TGraphPolar); the
+    // front of the array is stored at the angle pi/2 (up), so that the lobes stay clear of the radial labels along the angle 0
+    auto pattern = [](double theta, double steer) {
+      const double psi = TMath::Pi() * (std::sin(theta) - std::sin(steer));
+      const double array = std::abs(std::sin(0.5 * psi)) < 1e-12 ? 1. : std::abs(std::sin(2. * psi) / (4. * std::sin(0.5 * psi)));
+      return array * std::max(std::cos(theta), 0.1);
+    };
+    auto up = [](double theta) { return std::fmod(2.5 * TMath::Pi() - theta, TMath::TwoPi()); };  // the stored angle, in [0, 2 pi)
+    for (const auto& [name, steer] : std::vector<std::pair<std::string, double>>{{"broadside", 0.}, {"steered30", 30. * TMath::DegToRad()}}) {
+      constexpr int kPoints = 72, kCurve = 721;
+      double maximum = 0.;
+      for (int i = 0; i < kCurve; ++i) maximum = std::max(maximum, pattern(i * TMath::TwoPi() / (kCurve - 1), steer));
+      TGraphPolar measured(kPoints);
+      for (int i = 0; i < kPoints; ++i) {
+        const double theta = i * TMath::TwoPi() / kPoints, value = pattern(theta, steer) / maximum;
+        measured.SetPoint(i, up(theta), std::max(0., value * random.Gaus(1., 0.04) + random.Gaus(0., 0.01)));
+        measured.SetPointError(i, 0., 0.01 + 0.04 * value);
+      }
+      measured.Write(name.data());
+      TGraphPolar curve(kCurve);  // closed: the last point is the first
+      for (int i = 0; i < kCurve; ++i) {
+        const double theta = i * TMath::TwoPi() / (kCurve - 1);
+        curve.SetPoint(i, up(theta), pattern(theta, steer) / maximum);
+      }
+      curve.Write((name + "_model").data());
+    }
+  }
+}
+
 }  // namespace
 
 void generateExampleData()
@@ -2859,6 +3161,7 @@ void generateExampleData()
   WriteAnalysisResults(false, *ptData);
   WriteAnalysisResults(true, *ptMC);
   WriteTracks(*ptData);
+  WriteTPC();
   WriteTables(*ptData);
   WriteDimuon();
   WriteJets();
@@ -2884,4 +3187,5 @@ void generateExampleData()
   WriteTimeline();
   WriteClustering();
   WriteMixtureDensity();
+  WriteElectronics();
 }

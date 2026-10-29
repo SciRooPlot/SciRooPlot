@@ -1,5 +1,6 @@
 from SciRooPlot import *  # pyright: ignore[reportWildcardImportFromLibrary]
 from pathlib import Path
+import math
 
 SRC_DIR = str(Path(__file__).resolve().parent) + "/"
 
@@ -53,6 +54,7 @@ def DefineDataSources(pm: PlotManager):
     pm.AddDataSource("astronomy", inputFolder + "/astronomy.root")
     pm.AddDataSource("trigger", inputFolder + "/trigger.root")
     pm.AddDataSource("timeline", inputFolder + "/timeline.root")
+    pm.AddDataSource("tpc", inputFolder + "/tpc.root")
     pm.AddDataSource("temperature", inputFolder + "/temperature.csv")
     pm.AddDataSource("warming", inputFolder + "/warming.csv")
     pm.AddDataSource("climate", inputFolder + "/climate.root")
@@ -60,13 +62,19 @@ def DefineDataSources(pm: PlotManager):
     pm.AddDataSource("tuning", inputFolder + "/tuning.csv")
     pm.AddDataSource("clustering", inputFolder + "/clustering.root")
     pm.AddDataSource("mdn", inputFolder + "/mdn.root")
+    pm.AddDataSource("electronics", inputFolder + "/electronics.root")
     # a directory: all files in it (and its subdirectories) form one data source
     pm.AddDataSource("jets", inputFolder + "/jets/")
     # several files: they are searched in the given order, the first file containing an object wins
     pm.AddDataSource("heavyion", [inputFolder + "/heavyion.root", inputFolder + "/raa_published.csv"])
     # in-memory objects created in this program are stored with the project
-    # mean number of binary nucleon-nucleon collisions per centrality class (illustrative Glauber values)
-    pm.AddDataSource("glauber", graph("ncoll", [5.0, 20.0, 40.0], [1500.0, 750.0, 260.0]))
+    # mean numbers of participating nucleons and of binary nucleon-nucleon collisions in Pb-Pb collisions per centrality class
+    # (illustrative Glauber values; x errors: half the width of the class), two graphs in one data source
+    centre = [2.5, 7.5, 15.0, 25.0, 35.0, 45.0, 55.0, 65.0, 75.0, 85.0]
+    halfWidth = [2.5, 2.5, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0]
+    nPart = [383.0, 331.0, 262.0, 188.0, 131.0, 87.0, 54.0, 31.0, 16.0, 7.0]
+    nColl = [1762.0, 1380.0, 978.0, 600.0, 346.0, 186.0, 91.0, 40.0, 15.0, 5.0]
+    pm.AddDataSource("glauber", [graph("npart", centre, nPart, halfWidth), graph("ncoll", centre, nColl, halfWidth)])
 
     # more options:
     # pm.AddDataSource("merged", ["/path/to/a.root", "/path/to/b.root"])  # several files, first match wins
@@ -84,15 +92,15 @@ def DefineBasePlots(pm: PlotManager):
     panels) or 2d (panels with colour scale), wide or tall panels, a grid of panels sharing their axes, a ratio
     panel below each panel, or gaps between independent panels. Pads are numbered row by row.
     The code of PlotManager::MakeBasePlot shows how they are made with PanelLayout, as a start for your own."""
-    for name in ["1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_3x1_gap", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1", "2d_2x2"]:
+    for name in ["1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_2x1_gap", "1d_3x1_gap", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1", "2d_2x2"]:
         pm.AddBasePlot(PlotManager.MakeBasePlot(name))
     # a base plot can be adapted before adding it, e.g. for all 2d plots with a logarithmic z axis
     logz = PlotManager.MakeBasePlot("2d")
     logz.SetName("2d_logz")
     logz[1]['Z'].SetLog()
     pm.AddBasePlot(logz)
-    # and other proportions: a frame twice as wide as high for maps of the whole sphere
-    worldMap = PlotManager.MakeBasePlot("2d_wide", PanelLayout(), BasePlotShape().SetAspectRatio(2.0))
+    # and other proportions: a frame twice as wide as high for maps of the whole sphere, with small margins (a map has no axes)
+    worldMap = PlotManager.MakeBasePlot("2d_wide", PanelLayout().SetMargins(32.0, 32.0, 32.0, 32.0), BasePlotShape().SetAspectRatio(2.0))
     worldMap.SetName("2d_map")
     pm.AddBasePlot(worldMap)
 
@@ -526,11 +534,19 @@ def DefineHeavyIonPlots(pm: PlotManager):
     plot[1]['Y'].SetLog()
     pm.AddPlot(plot)
 
-    # the in-memory graph defined with the data sources ------------------------------------------
+    # the in-memory graphs defined with the data sources: N_coll grows faster than N_part towards central collisions, so hard
+    # processes (scaling with N_coll) gain on soft ones (scaling with N_part); the classes of the R_AA plots below shaded (labels: centrality in %) -
     plot = Plot("ncoll", "heavyion", "1d")
-    plot[1].AddData("ncoll", "glauber").SetMarker(kFullDiamond, 2.0, kRed + 1)
-    plot[1]['X'].SetRange(0.0, 60.0).SetTitle("centrality (%)")
-    plot[1]['Y'].SetRange(0.0, 1800.0).SetTitle("#LT#it{N}_{coll}#GT")
+    for low, high in [(0.0, 10.0), (30.0, 50.0)]:  # every other class, so that the three can be told apart
+        plot[1].AddRegionX(low, high).SetFill(1001, kGray, 0.5).SetBehindData()
+    for x, cent in [(1.0, "0-10"), (15.0, "10-30"), (35.0, "30-50")]:
+        plot[1].AddText(x, 4.0, cent).SetUserCoordinates()
+    plot[1].AddData("ncoll", "glauber", "#LT#it{N}_{coll}#GT").SetDrawOption(points_xerr).SetMarker(kFullCircle, 1.4, kRed + 1).SetLineColor(kRed + 1)
+    plot[1].AddData("npart", "glauber", "#LT#it{N}_{part}#GT").SetDrawOption(points_xerr).SetMarker(kFullSquare, 1.3, kAzure + 2).SetLineColor(kAzure + 2)
+    plot[1].AddText(0.55, 0.92, ["Pb-Pb, #sqrt{#it{s}_{NN}} = 5.02 TeV", "Glauber model"])
+    plot[1].AddLegend(0.72, 0.78)
+    plot[1]['X'].SetRange(0.0, 90.0).SetTitle("centrality (%)")
+    plot[1]['Y'].SetLog().SetRange(2.0, 8000.0).SetTitle("nucleons or collisions")
     pm.AddPlot(plot)
 
     # R_AA in three panels: Numer().Scale() divides the Pb-Pb yield by <N_coll> -------------------
@@ -652,8 +668,10 @@ def DefineHeavyIonPlots(pm: PlotManager):
     plot[1]['Z'].SetRange(0.5, 1.5).SetTitle("yield / mean of the ring")
     pm.AddPlot(plot)
 
-    # mean pT against the multiplicity for ten collision systems: all start alike, pp rises steeply, p-Pb follows and flattens,
-    # A-A rises least; over the full multiplicity range on a logarithmic axis, and the low multiplicities on a linear one ----------
+    # mean pT against the multiplicity for ten collision systems: all start alike, pp rises steeply, p-Pb follows and bends away,
+    # A-A rises in a step and then slowly; the systematic uncertainties as bands behind the points, one colour per system for both;
+    # A-A and p-Pb in the first legend, pp in the second (SetLegend), with larger markers than in the plot ---------------------
+    plot = Plot("meanPtVsNch", "heavyion", "1d")
     systems = [
         ("PbPb_5TeV", "Pb-Pb, 5.02 TeV", "#2b7bab"),
         ("PbPb_2.76TeV", "Pb-Pb, 2.76 TeV", "#4fb3f0"),
@@ -666,15 +684,16 @@ def DefineHeavyIonPlots(pm: PlotManager):
         ("pp_5TeV", "pp, 5.02 TeV", "#1f9e89"),
         ("pp_2.76TeV", "pp, 2.76 TeV", "#1d6b1d"),
     ]
-    for name, logX in [("meanPtVsNch", True), ("meanPtVsNchLow", False)]:
-        plot = Plot(name, "heavyion", "1d")
-        for system, label, color in systems:
-            plot[1].AddData(f"meanPt/{system}", "heavyion", label).SetMarkerStyle(kFullCircle).SetMarkerSize(0.9).SetColor(color)
-        plot[1].AddText(0.18, 0.93, ["charged particles", "|#eta| < 0.8, 0.15 < #it{p}_{T} < 10 GeV/#it{c}"])
-        plot[1].AddLegend(0.18, 0.8).SetNumColumns(2)
-        plot[1]['X'].SetLog(logX).SetRange(0.6 if logX else 0.0, 4000.0 if logX else 100.0).SetTitle("#it{N}_{ch}")
-        plot[1]['Y'].SetRange(0.35, 1.4).SetTitle("#LT#it{p}_{T}#GT (GeV/#it{c})")
-        pm.AddPlot(plot)
+    for system, label, color in systems:
+        plot[1].AddData(f"meanPt/{system}_syst", "heavyion").SetDrawOption(band).SetFill(1001, color, 0.3).SetLine(kSolid, 0.0, color)
+    for system, label, color in systems:
+        plot[1].AddData(f"meanPt/{system}", "heavyion", label).SetMarker(kFullCircle, 0.6, color).SetLineColor(color).SetLegend(2 if system.startswith("pp") else 1)
+    plot[1].AddText(0.18, 0.93, [f"{EXPERIMENT}, charged particles", "|#eta| < 0.8, 0.15 GeV/#it{c} < #it{p}_{T} < 10 GeV/#it{c}"])
+    plot[1].AddLegend(0.18, 0.8).SetDefaultMarkerSize(1.2)
+    plot[1].AddLegend(0.65, 0.45).SetDefaultMarkerSize(1.2)
+    plot[1]['X'].SetLog().SetRange(0.6, 4000.0).SetTitle("#it{N}_{ch}")
+    plot[1]['Y'].SetRange(0.38, 1.08).SetTitle("#LT#it{p}_{T}#GT (GeV/#it{c})")
+    pm.AddPlot(plot)
 
     # two-particle correlations in high-multiplicity events: the jet peak cut off by the z range to show the ridge ----
     plot = Plot("ridge", "heavyion/correlations", "1d_3dview")  # the base plot of the lego animation below
@@ -703,6 +722,24 @@ def DefineHeavyIonPlots(pm: PlotManager):
     plot[1].AddLegend(0.32, 0.92, "#pi^{#pm}#pi^{#pm}, Pb-Pb").SetNumColumns(2)
     plot[1]['X'].SetRange(0.0, 0.2).SetTitle("#it{q}_{inv} (GeV/#it{c})")
     plot[1]['Y'].SetRange(0.85, 1.65).SetTitle("#it{C}(#it{q}_{inv})")
+    pm.AddPlot(plot)
+
+    # the same for direct photons: the Bose-Einstein enhancement is a few 10^-3, as most photons come from pi0 decays, whose
+    # two photons make the peak at the pi0 mass; the full range, and the small q_inv with the fit, each panel with its own axes --
+    plot = Plot("photonHBT", "heavyion/correlations", "1d_2x1_gap")
+    for pad in [1, 2]:
+        plot[pad].AddHorizontalLine(1.0).SetLine(kDashed, 1.0, kGray + 1).SetBehindData()
+        plot[pad].AddData("femtoscopy/photons_cf", "heavyion", "same / mixed events").SetMarker(kFullCircle, 0.8, kBlack)
+        plot[pad].AddData("femtoscopy/photons_fit", "heavyion", "<title>").SetLine(kSolid, 2.0, kRed + 1)
+    plot[1].AddText(0.13, 1.13, "#pi^{0} #rightarrow #gamma#gamma").SetUserCoordinates()
+    plot[1].AddText(0.2, 0.92, ["#gamma#gamma, Pb-Pb 0-10%", "0.1 < #it{k}_{T} < 0.3 GeV/#it{c}"])
+    plot[1]['X'].SetRange(0.0, 0.2)
+    plot[1]['Y'].SetRange(0.98, 1.16)
+    plot[2].AddLegend(0.2, 0.92)
+    plot[2]['X'].SetRange(0.0, 0.08)
+    plot[2]['Y'].SetRange(0.99, 1.025).SetNumDivisions(504)  # room for the legend; labels with few digits leave room for the title
+    plot[0]['X'].SetTitle("#it{q}_{inv} (GeV/#it{c})")
+    plot[0]['Y'].SetTitle("#it{C}(#it{q}_{inv})").SetTitleCenter()  # at the end of the axis it would run off the top of the pad
     pm.AddPlot(plot)
 
 
@@ -1103,8 +1140,10 @@ def DefineSearchPlots(pm: PlotManager):
     plot[1].AddData("stop/observed", "searches", "observed #pm 1#sigma_{theory}").SetDrawOption(line).SetLine(kSolid, 3.0, kBlack)
     for variation in ["observed_theoryUp", "observed_theoryDown"]:
         plot[1].AddData(f"stop/{variation}", "searches").SetDrawOption(line).SetLine(kSolid, 1.0, kBlack)
-    plot[1].AddPoints([200.0, 993.0], [7.0, 800.0], "#it{m}_{#tilde{t}} = #it{m}_{t} + #it{m}_{#tilde{#chi}^{0}_{1}}").SetDrawOption(line).SetLine(kDotted, 2.0, kGray + 2)
-    plot[1].AddLegend(0.17, 0.92, "#tilde{t}#tilde{t}, #tilde{t} #rightarrow t #tilde{#chi}^{0}_{1}")
+    plot[1].AddPoints([200.0, 993.0], [7.0, 800.0], "#it{m}(#tilde{t}) = #it{m}(t) + #it{m}(#tilde{#chi}^{0}_{1})").SetDrawOption(line).SetLine(kDotted, 2.0, kGray + 2)
+    plot[1].AddText(0.17, 0.95, "#tilde{t} #tilde{t}*, #tilde{t} #rightarrow t #tilde{#chi}^{0}_{1}")
+    plot[1].AddLegend(0.17, 0.89).SetNumColumns(2)
+    plot[1]['Y'].SetRoomAboveMax(0.25).SetNoExponent().SetTitleOffset(1.2)  # a quarter of the frame free above the data, for the legend; labels with four digits
     plot[1]['Z'].SetTitle("95% CL upper limit on #sigma (pb)").SetRange(3.0e-3, 0.1)
     pm.AddPlot(plot)
 
@@ -1112,13 +1151,16 @@ def DefineSearchPlots(pm: PlotManager):
     plot = Plot("dijetMass", "searches/resonance", "1d_ratio")
     plot[1].AddData("dijet/spectrum", "searches", "data").SetMarker(kFullCircle, 0.9, kBlack)
     plot[1].AddData("dijet/fit", "searches", "<title>").SetLine(kSolid, 2.0, kRed + 1)
-    plot[1].AddData("dijet/excitedQuark", "searches", "excited quark, 5 TeV").SetRangeX(3.8, 6.2).SetLine(kSolid, 2.0, kAzure + 2)
+    plot[2].AddData("dijet/significance", "searches").SetRangeX(1.5, 6.5).SetDrawOption(hist).SetFill(1001, kRed - 9).SetLineColor(kRed + 1)  # empty bins above
+    # what a signal would look like: excited quarks of two masses on top of the fit, and below the significance each would give
+    for mass, color in [(3, kAzure + 2), (5, kGreen + 2)]:
+        plot[1].AddData(f"dijet/sigPlusBkg_{mass}TeV", "searches", f"fit + excited quark, {mass} TeV").SetDrawOption(line).SetLine(kSolid, 3.0, color)
+        plot[2].AddData(f"dijet/significance_{mass}TeV", "searches").SetRangeX(0.79 * mass, 1.21 * mass).SetDrawOption(hist).SetLine(kSolid, 3.0, color)  # 3 sigma
     plot[1].AddText(0.45, 0.9, [EXPERIMENT, COLLISIONS + ", 140 fb^{-1}", "|#it{y}*| < 0.6"])
     plot[1].AddLegend(0.45, 0.68)
-    plot[1]['Y'].SetLog().SetRange(0.05, 1.0e7)
-    plot[2].AddData("dijet/significance", "searches").SetDrawOption(hist).SetFill(1001, kRed - 9).SetLineColor(kRed + 1)
+    plot[1]['Y'].SetLog().SetRange(0.2, 1.0e7)
     plot[2].SetRefFunc("0")
-    plot[2]['Y'].SetRange(-3.5, 3.5).SetTitle("signif.")
+    plot[2]['Y'].SetRange(-3.5, 4.5).SetTitle("signif.")
     plot[0]['X'].SetRange(1.5, 7.0)
     pm.AddPlot(plot)
 
@@ -1241,6 +1283,103 @@ def DefineBiophysicsPlots(pm: PlotManager):
     pm.AddPlot(plot)
 
 
+def DefineElectronicsPlots(pm: PlotManager):
+    """Electronics: threshold scans and tuning of a pixel chip, pulse shapes and frequency response of its front end, eye diagrams of its data link."""
+    # threshold scans: the hit efficiency while the injected charge rises, one colour per pixel for the points and their erf fit -----
+    plot = Plot("sCurves", "electronics/pixelChip", "1d")
+    for pixel, color in [("A", kAzure + 2), ("B", kBlack), ("C", kRed + 1)]:
+        plot[1].AddData(f"pixelChip/scan_{pixel}", "electronics", f"pixel {pixel}: <title>").SetColor(color)
+        plot[1].AddData(f"pixelChip/fit_{pixel}", "electronics").SetLine(kSolid, 2.0, color)  # no label: no legend row
+    plot[1].AddLegend(0.2, 0.92, "threshold and noise, 50 injections per charge")
+    plot[1]['X'].SetRange(0.0, 2000.0).SetNumDivisions(505).SetTitle("injected charge (e^{#minus})")
+    plot[1]['Y'].SetRange(0.0, 1.45).SetTitle("hit efficiency")  # room for the legend above the plateau
+    pm.AddPlot(plot)
+
+    # the thresholds of all pixels before and after tuning the trim DAC of each pixel; masked pixels left out ---------------
+    plot = Plot("thresholdTuning", "electronics/pixelChip", "1d")
+    plot[1].AddData("pixelChip/pixels", "electronics", "before tuning").Filter("!masked").Project1D(("thresholdUntuned", 140, [400.0, 1800.0])).SetDrawOption(hist).SetFill(1001, kGray).SetLineColor(kGray + 1)
+    plot[1].AddData("pixelChip/pixels", "electronics", "after tuning").Filter("!masked").Project1D(("threshold", 140, [400.0, 1800.0])).SetDrawOption(hist).SetLine(kSolid, 2.0, kAzure + 2)
+    plot[1].AddData("pixelChip/fitTuned", "electronics", "<title>").SetLine(kDashed, 2.0, kRed + 1)
+    plot[1].AddVerticalLine(1000.0).SetLine(kDotted, 2.0, kGray + 2).SetBehindData()
+    plot[1].AddText(0.2, 0.92, ["128 #times 64 pixels", "target 1000 e^{#minus}"])
+    plot[1].AddLegend(0.58, 0.92)
+    plot[1]['X'].SetTitle("threshold (e^{#minus})")
+    plot[1]['Y'].SetLog().SetRange(0.5, 2.0e4).SetTitle("pixels per 10 e^{#minus}")  # room for the legend above the peak
+    pm.AddPlot(plot)
+
+    # the same as maps of the matrix sharing one colour scale: a weight puts the threshold into the cell of its pixel; the
+    # gradient over the rows (the supply voltage drops with the distance from the periphery) is tuned away ------------------
+    plot = Plot("thresholdMaps", "electronics/pixelChip", "2d_2x1")
+    for pad, (column, label) in enumerate([("thresholdUntuned", "before tuning"), ("threshold", "after tuning")], 1):
+        plot[pad].AddData("pixelChip/pixels", "electronics").Filter("!masked").Project2D(("col", 128, [-0.5, 127.5]), ("row", 64, [-0.5, 63.5]), column)
+        plot[pad].AddText(0.15, 0.9, label).SetTextColor(kWhite)
+    plot[2].AddText(93.0, 8.0, ["masked", "double column"]).SetUserCoordinates().SetTextColor(kWhite)
+    plot[2].AddArrow((100.0, 12.0), (89.0, 24.0)).SetLine(kSolid, 2.0, kWhite).SetFill(1001, 10).SetArrowSize(0.02).SetOnTop()  # 10: white (0 leaves the head open)
+    plot[0].SetPalette(kViridis)
+    plot[0]['X'].SetTitle("column")
+    plot[0]['Y'].SetTitle("row")
+    plot[0]['Z'].SetRange(600.0, 1500.0).SetNoExponent().SetTitle("threshold (e^{#minus})")
+    pm.AddPlot(plot)
+
+    # the shaper output for three charges: the larger pulse crosses the threshold earlier (time walk) and stays above it
+    # longer (time over threshold); arrows and lines are shapes: no data, no legend rows ------------------------------------
+    plot = Plot("pulseShapes", "electronics/frontEnd", "1d")
+    for charge, color in [(2, kAzure + 2), (5, kGreen + 2), (10, kRed + 1)]:
+        plot[1].AddData(f"frontEnd/pulse_{charge}ke", "electronics", f"{charge}000 e^{{#minus}}").SetDrawOption(line).SetLine(kSolid, 2.0, color)
+    plot[1].AddHorizontalLine(25.0).SetLine(kDashed, 2.0, kGray + 2).SetBehindData()
+    plot[1].AddText(172.0, 52.0, "threshold").SetUserCoordinates()
+    # where the smallest and the largest pulse cross the threshold
+    plot[1].AddLine((19.0, 25.0), (19.0, 60.0)).SetLine(kDotted, 2.0, kAzure + 2)
+    plot[1].AddLine((6.6, 60.0), (6.6, -30.0)).SetLine(kDotted, 2.0, kRed + 1)
+    plot[1].AddLine((168.2, 25.0), (168.2, -30.0)).SetLine(kDotted, 2.0, kRed + 1)
+    plot[1].AddArrow((6.6, 55.0), (19.0, 55.0)).SetArrowHead("<|>").SetLine(kSolid, 2.0, kBlack).SetFill(1001, kBlack).SetArrowSize(0.012)
+    plot[1].AddText(22.0, 70.0, "time walk").SetUserCoordinates()
+    plot[1].AddArrow((6.6, -20.0), (168.2, -20.0)).SetArrowHead("<|>").SetLine(kSolid, 2.0, kRed + 1).SetFill(1001, kRed + 1).SetArrowSize(0.012)
+    plot[1].AddText(50.0, -28.0, "time over threshold").SetUserCoordinates()
+    plot[1].AddLegend(0.6, 0.92, "injected charge")
+    plot[1]['X'].SetRange(-10.0, 220.0).SetTitle("time (ns)")
+    plot[1]['Y'].SetRange(-60.0, 300.0).SetTitle("shaper output (mV)")
+    pm.AddPlot(plot)
+
+    # a Bode plot: gain and phase of the shaper at two peaking times, in two panels sharing the logarithmic frequency axis; the
+    # measurement leaves the ideal CR-RC^2 response at high frequencies, where the preamplifier has its pole --------------------
+    plot = Plot("bodePlot", "electronics/frontEnd", "1d_wide_1x2")
+    for peaking, color in [(25, kAzure + 2), (100, kRed + 1)]:
+        plot[1].AddData(f"frontEnd/gain_{peaking}ns", "electronics", f"peaking time {peaking} ns").SetMarker(kFullCircle, 0.8, color)
+        plot[1].AddData(f"frontEnd/gainModel_{peaking}ns", "electronics").SetDrawOption(line).SetLine(kSolid, 2.0, color)
+        plot[2].AddData(f"frontEnd/phase_{peaking}ns", "electronics").SetMarker(kFullCircle, 0.8, color)
+        plot[2].AddData(f"frontEnd/phaseModel_{peaking}ns", "electronics").SetDrawOption(line).SetLine(kSolid, 2.0, color)
+    plot[1].AddHorizontalLine(-3.0).SetLine(kDashed, 1.0, kGray + 2).SetBehindData()
+    plot[1].AddLegend(0.33, 0.33, "points: measured, lines: ideal CR-RC^{2}")
+    plot[1]['Y'].SetRange(-95.0, 10.0).SetTitle("gain (dB)")
+    plot[2]['Y'].SetRange(-290.0, 120.0).SetNumDivisions(505).SetTitle("phase (deg)")
+    plot[0]['X'].SetLog().SetRange(0.01, 1000.0).SetTitle("frequency (MHz)")
+    pm.AddPlot(plot)
+
+    # an eye diagram: the waveform of a serial link cut into pieces of two bits, laid on top of each other; the receiver needs
+    # the eye open around the mask (a polygon in the units of the axes) --------------------------------------------------------
+    plot = Plot("eyeDiagram", "electronics/link", "2d_logz")
+    plot[1].AddData("link/eye_3m", "electronics").SetDrawOption(colz)
+    plot[1].AddPolygon([(0.3, 0.0), (0.4, 80.0), (0.6, 80.0), (0.7, 0.0), (0.6, -80.0), (0.4, -80.0)]).SetFill(3354, kRed - 4).SetLine(kSolid, 3.0, kRed - 4)
+    plot[1].AddText(0.15, 0.92, "2.56 Gb/s, PRBS7, 3 m cable").SetTextColor(kWhite)
+    plot[1].SetFrameFill(1001, kBlack)  # dark like the screen of an oscilloscope
+    plot[1].SetPalette(kBird)
+    plot[1]['X'].SetNumDivisions(505)
+    plot[1]['Z'].SetRange(1.0, 2.0e3)
+    pm.AddPlot(plot)
+
+    # the radiation pattern of an array of four patch antennas, fed in phase and steered by 30 deg with phase steps: polar graphs
+    # drawn on a polar grid in place of the axes (x the angle, the front of the array up, y the field strength) ----------------
+    plot = Plot("antennaPattern", "electronics/antenna", "1d")
+    for name, label, color in [("broadside", "in phase", kAzure + 2), ("steered30", "steered by 30#circ", kRed + 1)]:
+        plot[1].AddData(f"antenna/{name}_model", "electronics").SetDrawOption(line).SetLine(kSolid, 2.0, color)
+        plot[1].AddData(f"antenna/{name}", "electronics", label).SetDrawOption(points).SetMarker(kFullCircle, 0.7, color).SetLineColor(color).SetDefinesFrame()
+    plot[1].AddLegend(0.02, 0.985).SetDefaultMarkerSize(1.2)  # in the corner above the grid, which fills the pad
+    plot[1].AddText(bottom_left, ["4 patches, #lambda/2 apart", "relative field strength"])
+    plot[1]['Y'].SetRange(0.0, 1.1)
+    pm.AddPlot(plot)
+
+
 def DefineTheoryPlots(pm: PlotManager):
     """Theory: QCD (running coupling, parton distributions, lattice thermodynamics), chaos, critical phenomena."""
     # asymptotic freedom: the strong coupling falls with the scale ---------------------------------------------------
@@ -1346,9 +1485,10 @@ def DefineOtherSciencePlots(pm: PlotManager):
     plot = Plot("warmingMap", "climate", "2d_map")
     plot[1].AddData("warmingMap", "climate").SetDrawOption("MOLLWEIDE Z")
     plot[1].SetPalette(kTemperatureMap)
-    plot[1].AddText(0.03, 0.95, "2015-2024")
-    plot[1]['X'].SetTitle("").SetLabelSize(0.0).SetAxisAlpha(0.0)
-    plot[1]['Y'].SetTitle("").SetLabelSize(0.0).SetAxisAlpha(0.0)
+    plot[1].AddText(0.03, 0.95, "2015-2024")  # in the corner beside the map
+    # no axes: without ticks and in white, as ROOT draws transparent lines opaque in png
+    plot[1]['X'].SetTitle("").SetLabelSize(0.0).SetTickLength(0.0).SetAxisColor(kWhite)
+    plot[1]['Y'].SetTitle("").SetLabelSize(0.0).SetTickLength(0.0).SetAxisColor(kWhite)
     plot[1]['Z'].SetRange(-3.0, 3.0)
     pm.AddPlot(plot)
 
@@ -1389,8 +1529,9 @@ def DefineOtherSciencePlots(pm: PlotManager):
     plot = Plot("gammaRaySky", "astronomy", "2d_map")
     plot[1].AddData("sky/gammaRays", "astronomy").SetDrawOption("AITOFF Z")
     plot[1].AddText(0.03, 0.95, "#it{E} > 1 GeV")
-    plot[1]['X'].SetTitle("").SetLabelSize(0.0).SetAxisAlpha(0.0)
-    plot[1]['Y'].SetTitle("").SetLabelSize(0.0).SetAxisAlpha(0.0)
+    # no axes: without ticks and in white, as ROOT draws transparent lines opaque in png
+    plot[1]['X'].SetTitle("").SetLabelSize(0.0).SetTickLength(0.0).SetAxisColor(kWhite)
+    plot[1]['Y'].SetTitle("").SetLabelSize(0.0).SetTickLength(0.0).SetAxisColor(kWhite)
     plot[1]['Z'].SetLog()
     pm.AddPlot(plot)
 
@@ -1440,6 +1581,55 @@ def DefineAnimations(pm: PlotManager):
         plot[1]['Z'].SetLog().SetTitleOffset(1.5)
         pm.AddPlot(plot)
 
+    # a TPC read out continuously, in end view and side view: tracks appear with their collision and disappear as their
+    # electrons drift to the endcaps (2.58 cm/us, the drifted position from a Define); Profile2D colours the cells by the mean age
+    # of their clusters, so that each collision has its own colour
+    # plot animations/tpcDrift '.+' gif+20++ makes them one gif, 0.2 s per frame (10 us of drift), looping endlessly
+    for time in range(0, 200, 10):
+        plot = Plot(f"t{time:03d}us", "animations/tpcDrift", "2d_2x1")
+        for pad, (horizontal, title) in enumerate([("x", "#it{x} (cm)"), ("zNow", "#it{z} (cm)")], 1):
+            plot[pad].AddData("clusters", "tpc").Define("age", f"{time} - t0").Define("zNow", "z + (z > 0 ? 2.58 : -2.58) * age").Filter("age >= 0 && abs(zNow) < 250").Profile2D((horizontal, 250, [-250.0, 250.0]), ("y", 250, [-250.0, 250.0]), "age")
+            plot[pad].SetFrameFill(1001, kBlack)
+            plot[pad]['X'].SetTitle(title)
+        for r in [84.85, 246.4]:  # the readout chambers: 18 sectors of 20 deg between these radii
+            plot[1].AddEllipse((0.0, 0.0), r, r).SetLine(kSolid, 1.0, kGray + 1).SetFillStyle(0).SetBehindData()
+        for sector in range(18):
+            phi = sector * 20.0 * math.pi / 180.0
+            plot[1].AddLine((84.85 * math.cos(phi), 84.85 * math.sin(phi)), (246.4 * math.cos(phi), 246.4 * math.sin(phi))).SetLine(kSolid, 1.0, kGray + 1).SetBehindData()
+        plot[2].AddVerticalLine(0.0).SetLine(kDashed, 1.0, kGray + 1).SetBehindData()  # the central electrode: the drift starts here
+        plot[1].AddText(0.15, 0.92, "end view").SetTextColor(kWhite)
+        plot[2].AddText(0.15, 0.92, ["side view", f"#it{{t}} = {time} #mus"]).SetTextColor(kWhite)
+        plot[0].SetPalette(kRainBow)
+        plot[0]['Y'].SetTitle("#it{y} (cm)")
+        plot[0]['Z'].SetRange(0.0, 97.0).SetTitle("time since the collision (#mus)")  # fixed: the frames differ only in the data
+        pm.AddPlot(plot)
+
+    # the same in one sector: sector 0 (0 to 20 deg, z > 0) in its own coordinates, across the sector and along the radius,
+    # binned in the pad rows of its chambers (variable bin edges, the gaps between the chambers empty) and in 6 mm across;
+    # the inner chamber and the three stacks of the outer chamber are black polygons behind the data, the rest of the frame stays clear
+    # plot animations/tpcSector '.+' gif+20++ makes them one gif, 0.2 s per frame (10 us of drift), looping endlessly
+    pm.AddBasePlot(PlotManager.MakeBasePlot("2d_tall"))
+    tan10 = math.tan(10.0 * math.pi / 180.0)  # half the opening angle of a sector
+    chambers = [(84.85, 63, 0.75), (134.7, 34, 1.0), (170.8, 30, 1.2), (208.9, 25, 1.5)]  # first radius (cm), pad rows, row length (cm)
+    rowEdges = []
+    for start, nRows, length in chambers:
+        rowEdges += [start + row * length for row in range(nRows + 1)]
+    for time in range(0, 200, 10):
+        plot = Plot(f"t{time:03d}us", "animations/tpcSector", "2d_tall")
+        clusters = plot[1].AddData("clusters", "tpc").Define("age", f"{time} - t0").Define("zNow", "z + 2.58 * age").Filter("age >= 0 && z > 0 && zNow < 250")
+        clusters.Define("phi", "atan2(y, x)").Filter("phi >= 0 && phi < 20 * TMath::DegToRad()")  # in the sector
+        clusters.Define("radial", "hypot(x, y) * cos(phi - 10 * TMath::DegToRad())").Define("across", "hypot(x, y) * sin(phi - 10 * TMath::DegToRad())")
+        clusters.Profile2D(("across", 150, [-45.0, 45.0]), ("radial", rowEdges), "age")
+        for start, nRows, length in chambers:
+            low, high = start, start + nRows * length
+            plot[1].AddPolygon([(-tan10 * low, low), (tan10 * low, low), (tan10 * high, high), (-tan10 * high, high)]).SetFill(1001, kBlack).SetLineColor(kBlack).SetBehindData()
+        plot[1].AddText(0.13, 0.3, ["TPC", "sector 0", f"#it{{t}} = {time} #mus"])
+        plot[1].SetPalette(kRainBow)
+        plot[1]['X'].SetTitle("across the sector (cm)")
+        plot[1]['Y'].SetRange(80.0, 250.0).SetTitle("radius (cm)")
+        plot[1]['Z'].SetRange(0.0, 97.0).SetTitle("time since the collision (#mus)")
+        pm.AddPlot(plot)
+
     # the spectrum class by class, against all classes together: it gets harder with the multiplicity ---------------
     # plot animations/multiplicityClasses '.+' gif+60++ makes them one gif, 0.6 s per frame, looping endlessly
     for low in range(1, 60, 4):
@@ -1469,6 +1659,19 @@ def DefineAnimations(pm: PlotManager):
         plot[1]['Y'].SetRange(0.0, 6500.0).SetTitle("events / GeV")
         pm.AddPlot(plot)
 
+    # the eye of a serial link closing with the length of the cable: the cable smears each bit into the next ones -------------
+    # plot animations/eyeClosing '.+' gif+50++ makes them one gif, 0.5 s per frame, looping endlessly
+    for length in range(1, 11):
+        plot = Plot(f"cable{length:02d}m", "animations/eyeClosing", "2d_logz")
+        plot[1].AddData(f"link/eye_{length}m", "electronics").SetDrawOption(colz)
+        plot[1].AddPolygon([(0.3, 0.0), (0.4, 80.0), (0.6, 80.0), (0.7, 0.0), (0.6, -80.0), (0.4, -80.0)]).SetFill(3354, kRed - 4).SetLine(kSolid, 3.0, kRed - 4)
+        plot[1].AddText(0.15, 0.92, f"2.56 Gb/s, PRBS7, {length} m cable").SetTextColor(kWhite)
+        plot[1].SetFrameFill(1001, kBlack)
+        plot[1].SetPalette(kBird)
+        plot[1]['X'].SetNumDivisions(505)
+        plot[1]['Z'].SetRange(1.0, 2.0e3)  # fixed: the frames differ only in the data
+        pm.AddPlot(plot)
+
 
 def main():
     pm = PlotManager("PROJECT_NAME")
@@ -1490,6 +1693,7 @@ def main():
     DefineSearchPlots(pm)
     DefineNeutronStarPlots(pm)
     DefineBiophysicsPlots(pm)
+    DefineElectronicsPlots(pm)
     DefineTheoryPlots(pm)
     DefineOtherSciencePlots(pm)
     DefineAnimations(pm)
