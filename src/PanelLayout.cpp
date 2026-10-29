@@ -402,6 +402,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
     Plot::Pad& pad = plot[padID];
     pad.SetPosition(x0 / canvasWidth, 1. - y1 / canvasHeight, x1 / canvasWidth, 1. - y0 / canvasHeight);
     if (cell->mEmpty) {
+      pad.mIsEmptyCell = true;
       pad.SetDefaultTextSize(mTextSize / std::min(x1 - x0, y1 - y0));
       continue;
     }

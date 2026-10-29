@@ -1250,7 +1250,7 @@ Plot::Pad::Pad(const Pad& other)
     mFrameFill(other.mFrameFill), mFrameBorder(other.mFrameBorder), mText(other.mText),
     mMarkerDefaults(other.mMarkerDefaults), mLineDefaults(other.mLineDefaults), mFillDefaults(other.mFillDefaults),
     mCandleOptionDefaults(other.mCandleOptionDefaults),
-    mPalette(other.mPalette), mRedrawAxes(other.mRedrawAxes), mAxes(other.mAxes)
+    mPalette(other.mPalette), mRedrawAxes(other.mRedrawAxes), mIsEmptyCell(other.mIsEmptyCell), mAxes(other.mAxes)
 {
   mData.reserve(other.mData.size());
   for (const auto& data : other.mData) {
@@ -1343,6 +1343,7 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_boxrange");
   read_from_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
+  mIsEmptyCell = padTree.get<bool>("empty_cell", false);
 
   for (const auto& content : padTree) {
     // add data
@@ -1438,6 +1439,7 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_boxrange");
   put_in_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
+  if (mIsEmptyCell) padTree.put("empty_cell", true);
 
   int32_t dataID = 1;
   for (const auto& data : mData) {
@@ -1550,6 +1552,7 @@ void Plot::Pad::operator+=(const Pad& pad)
     mPalette.colorGradient = {};
   }
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
+  if (pad.mIsEmptyCell) mIsEmptyCell = true;
   if (pad.mRefFunc) mRefFunc = pad.mRefFunc->Clone();
   if (pad.mFrame) mFrame = pad.mFrame->Clone();
   for (auto& [axisLabel, axis] : pad.mAxes) {

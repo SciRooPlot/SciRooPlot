@@ -576,7 +576,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         }
         emptyFrame->SetDirectory(nullptr);
         drawData.push_back(std::make_shared<Plot::Pad::Data>("frame", "EMPTY_FRAME", nullopt));
-      } else if (pad.GetLegendBoxes().empty() && pad.GetTextBoxes().empty()) {
+      } else if (pad.GetLegendBoxes().empty() && pad.GetTextBoxes().empty() && !pad.GetIsEmptyCell()) {
         logger::warning("Nothing to be drawn in pad {}: it has no data, no frame and no{}{} range for an empty frame.", padID, (rangeX) ? "" : " X", (rangeY) ? "" : " Y");
         continue;
       }

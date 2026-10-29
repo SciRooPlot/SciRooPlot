@@ -544,6 +544,7 @@ class Plot::Pad : public FillSetters<Pad>
   friend class PlotManager;
   friend class PlotPainter;
   friend class Plot;
+  friend class PanelLayout;
 
   boost::property_tree::ptree GetPropertyTree() const;
 
@@ -595,6 +596,7 @@ class Plot::Pad : public FillSetters<Pad>
   const auto& GetDefaultCandleBoxRange() const { return mCandleOptionDefaults.boxRange; }
   const auto& GetDefaultCandleWhiskerRange() const { return mCandleOptionDefaults.whiskerRange; }
   const auto& GetRedrawAxes() const { return mRedrawAxes; }
+  bool GetIsEmptyCell() const { return mIsEmptyCell; }
   const auto& GetRefFunc() const { return mRefFunc; }
   const auto& GetFrame() const { return mFrame; }
 
@@ -651,6 +653,7 @@ class Plot::Pad : public FillSetters<Pad>
   candle_defaults_t mCandleOptionDefaults;
   palette_defaults_t mPalette;
   std::optional<bool> mRedrawAxes;
+  bool mIsEmptyCell{};  // an Empty() cell of a PanelLayout: room for a legend or a text, nothing to warn about when left blank
 
   std::map<char, Axis> mAxes;
   std::vector<std::shared_ptr<Data>> mData;

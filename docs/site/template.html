@@ -33,7 +33,7 @@
 
 * { box-sizing: border-box }
 [hidden] { display: none !important }
-body { background: var(--paper); color: var(--text); font-family: var(--sans); font-size: 1rem; line-height: 1.55;
+body { margin: 0; background: var(--paper); color: var(--text); font-family: var(--sans); font-size: 1rem; line-height: 1.55;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--panel) }
 a { color: var(--teal) }
@@ -125,6 +125,7 @@ html[data-level="expert"] .term { color: inherit; font-weight: inherit }
 .hero { background: var(--hero); color: var(--hero-fg); width: 100vw; margin-left: calc(50% - 50vw);
   padding: 56px max(16px, env(safe-area-inset-right, 0px)) 56px max(16px, env(safe-area-inset-left, 0px)) }
 html, body { overflow-x: clip }
+@media (max-width: 700px) { .hero .logo-big { display: none } }  /* the header already shows logo and name */
 #v-start { padding-top: 0 }
 .hero .wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 40px; align-items: center }
 .hero h1 { color: var(--hero-fg); margin-bottom: 14px }
@@ -454,6 +455,11 @@ table.cmd code { white-space: nowrap }
 .lb-name { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap }
 .lb-name code { font-size: 1.05rem; color: var(--ink) }
 @media (max-width: 960px) { .laybuilder { grid-template-columns: minmax(0, 1fr) } }
+.laybuilder.big { grid-template-columns: minmax(0, 1fr) }
+.laybuilder.big .lb-out { order: -1 }  /* the larger drawing above the controls */
+.lb-pad:focus { outline: none }
+.lb-pad:focus-visible > rect:first-child { fill: rgba(28, 148, 165, 0.12); stroke: var(--teal); stroke-width: 2 }
+@media (max-width: 600px) { .lb-controls .row > .lb-l:first-child { flex-basis: 100% } .lb-controls .row { gap: 8px } }
 /* updating */
 .upsec { display: grid; gap: 10px }
 .uphead { margin: 8px 0 0; font-size: 0.95rem; color: var(--ink) }
@@ -520,7 +526,7 @@ figure.plot figcaption { color: #5b6b80 }
   <div class="wrap">
     <a class="logo" href="#start"><img src="img/brand/logo-small.png" alt="" width="126" height="96"><span class="wordmark">Sci<span>Roo</span>Plot</span></a>
     <nav class="views" aria-label="Sections">
-      <a href="#tour">Tour</a><a href="#from-root">vs. ROOT</a><a href="#styles">Styles</a><a href="#layouts">Layouts</a>
+      <a href="#tour">Tour</a><a href="#from-root">vs. ROOT</a><a href="#numpy">numpy</a><a href="#styles">Styles</a><a href="#layouts">Layouts</a>
       <a href="#options">Draw options</a><a href="#examples">Examples</a><a href="#reference">Reference</a><a href="#install">Install</a><a href="#updating">Updating</a>
     </nav>
     <div class="search" role="search">
@@ -841,7 +847,7 @@ figure.plot figcaption { color: #5b6b80 }
   <div class="lay-notes">
     <div><h3>One look for all your figures</h3><p>All shipped base plots share text sizes, tick lengths and line widths, so a single panel and a 3 × 2 grid look alike side by side in a paper. To change them everywhere, give your lengths to every layout you use, under the shipped names: all your plots follow without touching them.</p>
       <div class="code"><pre data-code="housestyle"></pre></div></div>
-    <div><h3>Change one detail</h3><p>Everything that should hold for all plots on a layout can be set on the base plot itself, e.g. an axis colour or a reference line, and stored under a new name.</p>
+    <div><h3>Change one detail</h3><p>Everything that should hold for all plots on a layout can be set on the base plot itself, e.g. a logarithmic colour scale, and stored under a new name. Lengths such as text sizes go in as a <code>PanelLayout</code>, for one layout only.</p>
       <div class="code"><pre data-snip="baseplots"></pre></div>
       <p class="small muted">Pieces of a grid and more details: <a href="#ref-baseplots">Reference, Base plots and own layouts</a>.</p></div>
   </div>
@@ -895,7 +901,7 @@ figure.plot figcaption { color: #5b6b80 }
 <!-- ======================================================== DRAWING OPTIONS -->
 <section class="view wrap" id="v-options" hidden>
   <div style="display:grid;gap:12px">
-    <h2 class="title">Drawing options</h2>
+    <h2 class="title">Draw options</h2>
     <p class="lede">An alias like <code>band</code> or <code>points_endcaps</code> means the same look for histograms and graphs. SciRooPlot translates it to the ROOT option of the data type, and converts the data where ROOT has no matching option.</p>
     <p class="basics"><b>What a drawing option is</b>ROOT draws the same histogram as markers with error bars, as steps, as a filled area or as a smooth curve, depending on a short option string such as <code>"E1"</code> or <code>"HIST C"</code>. The strings differ between <button class="term" data-term="TH1">histograms</button> and <button class="term" data-term="TGraph">graphs</button> and are hard to remember; the aliases are readable names for them.</p>
     <p class="muted" style="font-size:var(--step--1)">Without any option: data with a fill is drawn as <code>hist</code> (graphs: <code>area</code>), data with markers set or with errors as <code>points</code>, everything else as <code>hist</code> (graphs: <code>line</code>), 2D data as <code>colz</code>.</p>
@@ -1027,6 +1033,9 @@ const OPTIONS = /*OPTIONS*/;
 const ROOT_MACROS = /*ROOTMACROS*/;
 const CHANGES = /*CHANGES*/;
 const API = /*API*/;
+
+// the name of a group of the example project as words: heavyion → heavy ion, neutronStars → neutron stars
+const groupLabel = g => ({ ml: "machine learning", heavyion: "heavy ion" })[g] || g.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 
 /* ---------------- state: level and language, remembered per viewer */
 const store = { get(k) { try { return localStorage.getItem(k) } catch (e) { return null } }, set(k, v) { try { localStorage.setItem(k, v) } catch (e) {} } };
@@ -1169,12 +1178,16 @@ int main() {
   pm.AddPlot(plot);
   pm.SaveProject();
 }` },
-  housestyle: { py: `sizes = PanelLayout().SetTextSize(26).SetTitleSize(32).SetLineWidth(3)
+  housestyle: { py: `sizes = (PanelLayout().SetTextSize(26).SetTitleSize(32)
+         .SetLineWidth(3))
+# under the shipped names: replaces the shipped ones
 for name in ["1d", "1d_ratio", "2d", "1d_2x1", "1d_3x2_gap"]:
-    pm.AddBasePlot(PlotManager.MakeBasePlot(name, sizes))   # replaces the shipped one`,
-    cpp: `const PanelLayout sizes = PanelLayout().SetTextSize(26).SetTitleSize(32).SetLineWidth(3);
+    pm.AddBasePlot(PlotManager.MakeBasePlot(name, sizes))`,
+    cpp: `const PanelLayout sizes = PanelLayout().SetTextSize(26).SetTitleSize(32)
+                            .SetLineWidth(3);
+// under the shipped names: replaces the shipped ones
 for (const std::string name : {"1d", "1d_ratio", "2d", "1d_2x1", "1d_3x2_gap"}) {
-  pm.AddBasePlot(PlotManager::MakeBasePlot(name, sizes));   // replaces the shipped one
+  pm.AddBasePlot(PlotManager::MakeBasePlot(name, sizes));
 }` },
   skeleton: { py: `from SciRooPlot import *
 
@@ -1225,13 +1238,13 @@ const STEPS = [
 <p class="basics"><b>Text formatting</b><code>#it{x}</code> is ROOT's way of writing an italic x. ROOT uses <button class="term" data-term="latex">#</button> where LaTeX uses a backslash.</p>`,
     py: `+ plot = Plot("function", "tour", "1d")
 + plot[1].AddFunction("sin(x)/x", "sin(#it{x})/#it{x}")
-+ plot[1].AddLegend()
++ plot[1].AddLegend(top_right)
 + plot[1]['X'].SetTitle("#it{x}").SetRange(0.1, 20.0)
 + plot[1]['Y'].SetRange(-0.3, 1.1)
 + pm.AddPlot(plot)`,
     cpp: `+ Plot plot("function", "tour", "1d");
 + plot[1].AddFunction("sin(x)/x", "sin(#it{x})/#it{x}");
-+ plot[1].AddLegend();
++ plot[1].AddLegend(top_right);
 + plot[1]['X'].SetTitle("#it{x}").SetRange(0.1, 20.0);
 + plot[1]['Y'].SetRange(-0.3, 1.1);
 + pm.AddPlot(plot);` },
@@ -1492,7 +1505,7 @@ const exTags = k => EX_TAGS.filter(([, , re]) => re.test(EXAMPLES[k].py)).map(x 
 let exTagSel = new Set();
 function renderExamples() {
   const groups = ["all", ...new Set(Object.keys(EXAMPLES).map(k => k.split("/")[0]))];
-  document.getElementById("exfilters").innerHTML = groups.map(g => `<button class="chip" data-g="${g}" aria-pressed="${g === exGroup}">${g === "all" ? "All" : g}</button>`).join("");
+  document.getElementById("exfilters").innerHTML = groups.map(g => `<button class="chip" data-g="${g}" aria-pressed="${g === exGroup}">${g === "all" ? "All" : groupLabel(g)}</button>`).join("");
   document.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { exGroup = b.dataset.g; renderExamples() });
   const keys = Object.keys(EXAMPLES).filter(k => exGroup === "all" || k.startsWith(exGroup + "/"));
   const shown = keys.filter(k => { const tg = exTags(k); return [...exTagSel].every(x => tg.includes(x)) });
@@ -1862,16 +1875,18 @@ plot[1]['Z'].SetLog();
 plot[1]['X'].SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M");
 plot[1].SetView(35.0, 225.0);                         // 3D drawings: theta above the x-y plane, phi around z, degrees
 Plot variant(plot, "name_variant", "group/other");    // a copy under a new name (and group), to add more to it` },
-  baseplots: { py: `logz = PlotManager.MakeBasePlot("2d")                 # start from a shipped one
+  baseplots: { py: `# start from a shipped one; every plot on "2d_logz" gets a log colour scale
+logz = PlotManager.MakeBasePlot("2d")
 logz.SetName("2d_logz")
-logz[1]['Z'].SetLog()                                  # every plot on "2d_logz" gets a log colour scale
+logz[1]['Z'].SetLog()
 pm.AddBasePlot(logz)
 
 # smaller text and thinner lines, the same in every panel
 sizes = PanelLayout().SetTextSize(24).SetTitleSize(30).SetLineWidth(3)
-pm.AddBasePlot(PlotManager.MakeBasePlot("1d_ratio", sizes))`, cpp: `Plot logz = PlotManager::MakeBasePlot("2d");          // start from a shipped one
+pm.AddBasePlot(PlotManager.MakeBasePlot("1d_ratio", sizes))`, cpp: `// start from a shipped one; every plot on "2d_logz" gets a log colour scale
+Plot logz = PlotManager::MakeBasePlot("2d");
 logz.SetName("2d_logz");
-logz[1]['Z'].SetLog();                                 // every plot on "2d_logz" gets a log colour scale
+logz[1]['Z'].SetLog();
 pm.AddBasePlot(logz);
 
 // smaller text and thinner lines, the same in every panel
@@ -2079,7 +2094,7 @@ function searchIndex() {
     { kind: "Page", label: "ROOT vs SciRooPlot", sub: "plain ROOT macros next to the same figures in SciRooPlot", text: "vs root versus comparison compare macro migrate migration from root", go: "#from-root" },
     { kind: "Page", label: "Examples", sub: "the example project, plot by plot", text: "examples example gallery project plots", go: "#examples" },
     { kind: "Page", label: "Example input files", sub: "what is inside the files the examples read", text: "data input files example data browse root file contents tree", go: "#data" },
-    { kind: "Page", label: "Drawing options", sub: "every alias drawn for histograms, graphs, functions and their 2D versions", text: "drawing options draw option alias aliases gallery", go: "#options" },
+    { kind: "Page", label: "Draw options", sub: "every alias drawn for histograms, graphs, functions and their 2D versions", text: "draw options drawing options draw option setdrawoption alias aliases gallery", go: "#options" },
     { kind: "Page", label: "Installation", sub: "Homebrew, conda or from source", text: "install installation setup homebrew brew conda source build requirements", go: "#install" },
     { kind: "Page", label: "Updating from an older version", sub: "what changed and what to do", text: "update updating upgrade changes changelog migration version breaking", go: "#updating" },
     { kind: "Page", label: "Reference", sub: "topics by task and every method", text: "reference documentation api methods topics manual", go: "#reference" }];
@@ -2105,7 +2120,9 @@ function runSearch(q) {
   const out = document.getElementById("sres"); q = q.trim().toLowerCase();
   if (!q) { out.hidden = true; return }
   IDX = IDX || searchIndex();
-  const score = it => { const l = it.label.toLowerCase(); return l === q || l === q + "()" ? 0 : l.startsWith(q) ? 1 : l.includes(q) ? 2 : it.text.includes(q) ? 3 : 9 };
+  const words = q.split(/\s+/);
+  const score = it => { const l = it.label.toLowerCase(); return l === q || l === q + "()" ? 0 : l.startsWith(q) ? 1 : l.includes(q) ? 2 : it.text.includes(q) ? 3
+    : words.length > 1 && words.every(w => l.includes(w) || it.text.includes(w)) ? 4 : 9 };  // several words: each anywhere in the entry
   const hits = IDX.map(it => [score(it), it]).filter(([s]) => s < 9).sort((a, b) => a[0] - b[0] || ["Page", "Topic", "From ROOT", "Method", "Draw option", "Palette", "Tour", "Example", "Term", "Colour"].indexOf(a[1].kind) - ["Page", "Topic", "From ROOT", "Method", "Draw option", "Palette", "Tour", "Example", "Term", "Colour"].indexOf(b[1].kind)).slice(0, 12);
   out.innerHTML = hits.length ? hits.map(([, it], i) => `<button class="hit" data-i="${IDX.indexOf(it)}"${i === 0 ? ' aria-selected="true"' : ""}><span class="kind">${it.kind}</span><b>${esc(it.label)}</b>${it.sub ? `<small>${esc(it.sub)}</small>` : ""}</button>`).join("")
     : `<p class="small muted" style="padding:10px 12px">Nothing found for “${esc(q)}”. Try a method name, a ROOT constant or a word like legend.</p>`;
@@ -2580,7 +2597,29 @@ const SIZE_FIELDS = [ // key, setter, label, step
 const SHAPE_DEFAULTS = { aspect: 1.618, ratioH: 0.37 };  // BasePlotShape: aspect ratio of wide and tall panels, height of ratio panels
 const REF_DEFAULTS = { on: true, f: "1", color: "kBlack", style: 1 };  // the line MakeBasePlot puts into ratio pads: SetRefFunc("1"), drawn black and solid
 const LAY = { type: "1d", shape: "", cols: 1, rows: 1, ratio: true, gap: false, full: false, name: "", custom: false, sel: null, S: { ...PL_DEFAULTS }, ...SHAPE_DEFAULTS, G: null,
-  colors: [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS }, cvd: "", allColors: false, open: {} };  // open: the folded sections the reader opened or closed
+  colors: [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS }, cvd: "", allColors: false, open: {}, big: false, undo: null };  // open: the folded sections the reader opened or closed
+// the design as a short text: kept in this browser and put into a link; a change of the designer can make an old link invalid, it is then ignored
+function layState() {
+  const G = LAY.G, d = { t: LAY.type, s: LAY.shape, c: LAY.cols, r: LAY.rows, q: LAY.ratio, g: LAY.gap, f: LAY.full, n: LAY.name, a: LAY.aspect, h: LAY.ratioH };
+  const S = Object.fromEntries(Object.keys(PL_DEFAULTS).filter(k => +LAY.S[k] !== PL_DEFAULTS[k]).map(k => [k, +LAY.S[k]])); if (Object.keys(S).length) d.S = S;
+  if (colorsChanged()) d.k = LAY.colors;
+  if (refChanged()) d.e = LAY.ref;
+  if (LAY.custom) d.G = { cols: G.cols, rows: G.rows, empty: [...G.empty], span: [...G.span] };
+  return btoa(unescape(encodeURIComponent(JSON.stringify(d)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") }
+function layApply(code) {
+  try {
+    const d = JSON.parse(decodeURIComponent(escape(atob(code.replace(/-/g, "+").replace(/_/g, "/"))))), n = v => Number.isInteger(v) && v >= 1 && v <= 16;
+    if (!["1d", "2d"].includes(d.t) || !["", "wide", "tall"].includes(d.s) || !n(d.c) || !n(d.r)) return false;
+    const G = d.G && { cols: d.G.cols, rows: d.G.rows, empty: new Set(d.G.empty), span: new Map(d.G.span) };
+    if (G) { if (!G.cols.length || !G.rows.length || !G.cols.every(c => +c.w > 0) || !G.rows.every(r => +r.h > 0)) return false; panelGeometry(G, PL_DEFAULTS) }  // throws if malformed
+    Object.assign(LAY, { type: d.t, shape: d.s, cols: d.c, rows: d.r, ratio: !!d.q, gap: !!d.g, full: !!d.f, name: String(d.n || ""), aspect: +d.a || SHAPE_DEFAULTS.aspect, ratioH: +d.h || SHAPE_DEFAULTS.ratioH,
+      S: { ...PL_DEFAULTS, ...Object.fromEntries(Object.entries(d.S || {}).filter(([k, v]) => k in PL_DEFAULTS && isFinite(v))) },
+      colors: Array.isArray(d.k) && d.k.length && d.k.every(colorOk) ? d.k : [...DEFAULT_COLORS], ref: d.e ? { ...REF_DEFAULTS, ...d.e } : { ...REF_DEFAULTS }, custom: !!d.G, sel: null, undo: null });
+    LAY.G = G || presetGrid();
+    return true;
+  } catch (e) { return false } }
+function layReset() { Object.assign(LAY, { type: "1d", shape: "", cols: 1, rows: 1, ratio: true, gap: false, full: false, name: "", custom: false, sel: null, S: { ...PL_DEFAULTS }, ...SHAPE_DEFAULTS,
+  colors: [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS }, undo: null }); LAY.G = presetGrid() }
 function presetName() {
   return LAY.type + (LAY.shape ? "_" + LAY.shape : "") + (LAY.cols > 1 || LAY.rows > 1 ? `_${LAY.cols}x${LAY.rows}` : "") + (LAY.ratio ? "_ratio" : "") + (LAY.gap ? "_gap" : "") }
 function presetGrid() { // the arrangement PlotManager::MakeBasePlot makes for the preset
@@ -2672,11 +2711,13 @@ function layoutCode(py) {
     L.push(py ? "pm.AddBasePlot(layout)" : "pm.AddBasePlot(layout);");
   }
   // a plot on it
-  L.push("", py ? `plot = Plot("myPlot", "myGroup", "${name}")` : `Plot plot("myPlot", "myGroup", "${name}");`,
-    `${cm} panels: ${panels.map(p => `plot[${p}]`).join(", ")}${ratios.length ? `; ratio pads: ${ratios.map(p => `plot[${p}]`).join(", ")}` : ""}${empties.length ? `; empty: ${empties.map(p => `plot[${p}]`).join(", ")}` : ""}`,
-    `plot[${panels[0] || g.pads.find(p => !p.empty).id}].AddData("hist", "src", "label")${end}`);
-  if (ratios.length) L.push(`plot[${ratios[0]}].AddRatio(${py ? '["num", "src"], ["den", "src"]' : '{"num", "src"}, {"den", "src"}'})${end}`);
-  if (empties.length) L.push(`plot[${empties[0]}].AddText(0.1, 0.9, "text or legend in the empty cell")${end}`);
+  // a plot on it: something in every pad (a pad left blank is warned about), the same lines for the pads of one kind
+  const forPads = (pads, line) => pads.length === 1 ? [line.replace(/PAD/g, pads[0]) + end] :
+    py ? [`for pad in [${pads.join(", ")}]:`, "    " + line.replace(/PAD/g, "pad")] : [`for (const uint8_t pad : {${pads.join(", ")}}) {`, "  " + line.replace(/PAD/g, "pad") + ";", "}"];
+  L.push("", py ? `plot = Plot("myPlot", "myGroup", "${name}")` : `Plot plot("myPlot", "myGroup", "${name}");`);
+  if (panels.length) L.push(...forPads(panels, `plot[PAD].AddData("hist", "src", "label")`));
+  if (ratios.length) L.push(...forPads(ratios, `plot[PAD].AddRatio(${py ? '["num", "src"], ["den", "src"]' : '{"num", "src"}, {"den", "src"}'})`));
+  if (empties.length) L.push(`plot[${empties[0]}].AddText(0.1, 0.9, "text or legend in the empty cell")${end}${empties.length > 1 ? `   ${cm} empty cells may also stay blank` : ""}`);
   if (g.pads.filter(p => !p.empty).length > 1) L.push(`plot[0]['X'].SetRange(0.0, 10.0)${end}   ${cm} pad 0: settings for all pads`);
   L.push(py ? "pm.AddPlot(plot)" : "pm.AddPlot(plot);");
   return L.join("\n") }
@@ -2690,11 +2731,11 @@ function layoutSVG(g, S, maxW, maxH) {
   for (const p of g.pads) {
     const selected = LAY.sel === p.key ? `<rect x="${T(p.x0) + 1}" y="${T(p.y0) + 1}" width="${Math.max(0, T(p.x1 - p.x0) - 2)}" height="${Math.max(0, T(p.y1 - p.y0) - 2)}" fill="none" stroke="var(--amber)" stroke-width="3" rx="3"/>` : "";
     if (p.empty) {
-      out.push(`<g data-cell="${p.key}" class="lb-pad"><rect x="${T(p.x0)}" y="${T(p.y0)}" width="${T(p.x1 - p.x0)}" height="${T(p.y1 - p.y0)}" fill="transparent"/>`, `<rect x="${T(p.x0) + 3}" y="${T(p.y0) + 3}" width="${Math.max(0, T(p.x1 - p.x0) - 6)}" height="${Math.max(0, T(p.y1 - p.y0) - 6)}" fill="none" stroke="var(--teal)" stroke-dasharray="4 3" rx="4"/>`,
+      out.push(`<g data-cell="${p.key}" class="lb-pad" tabindex="0" role="button" aria-pressed="${LAY.sel === p.key}" aria-label="pad ${p.id}, empty cell"><rect x="${T(p.x0)}" y="${T(p.y0)}" width="${T(p.x1 - p.x0)}" height="${T(p.y1 - p.y0)}" fill="transparent"/>`, `<rect x="${T(p.x0) + 3}" y="${T(p.y0) + 3}" width="${Math.max(0, T(p.x1 - p.x0) - 6)}" height="${Math.max(0, T(p.y1 - p.y0) - 6)}" fill="none" stroke="var(--teal)" stroke-dasharray="4 3" rx="4"/>`,
         `<text x="${T((p.x0 + p.x1) / 2)}" y="${T((p.y0 + p.y1) / 2)}" text-anchor="middle" dominant-baseline="central" font-family="var(--sans)" font-size="12" fill="var(--teal)" font-weight="700">${p.id} (empty)</text>`, selected, "</g>");
       continue }
     const { fl, fr, ft, fb } = p, fw = fr - fl, fh = fb - ft, padW = p.x1 - p.x0, tick = S.tick;
-    out.push(`<g data-pad="${p.id}" data-cell="${p.key}" class="lb-pad"><rect x="${T(p.x0)}" y="${T(p.y0)}" width="${T(padW)}" height="${T(p.y1 - p.y0)}" fill="transparent"/>`);
+    out.push(`<g data-pad="${p.id}" data-cell="${p.key}" class="lb-pad" tabindex="0" role="button" aria-pressed="${LAY.sel === p.key}" aria-label="pad ${p.id}${p.ratio ? ", ratio pad" : ""}"><rect x="${T(p.x0)}" y="${T(p.y0)}" width="${T(padW)}" height="${T(p.y1 - p.y0)}" fill="transparent"/>`);
     out.push(`<rect x="${T(fl)}" y="${T(ft)}" width="${T(fw)}" height="${T(fh)}" fill="#fff" stroke="#000" stroke-width="${Math.max(0.6, 2 * s)}"/>`);
     // ticks (opposite ticks on, as in the shipped base plots) and labels
     const nx = 5, ny = p.ratio ? 3 : 5, tk = [];
@@ -2753,14 +2794,19 @@ function setSpan(G, key, cs, rs) {
   if (cs === 1 && rs === 1) G.span.delete(key); else G.span.set(key, [cs, rs]) }
 function cellTools(g) { // what can be done with the selected cell
   const G = LAY.G, p = LAY.sel && g.pads && g.pads.find(q => q.key === LAY.sel);
-  if (!p) return `<p class="small muted">Click a pad to change it: empty cell, or spanning further columns and rows.</p>`;
+  if (!p) return `<p class="small muted">Click a pad (or Tab to it and press Enter) to change it: empty cell, or spanning further columns and rows.</p>`;
   const cs = p.c1 - p.c + 1, rs = p.r1 - p.r + 1, b = (op, label, ok) => `<button class="chip" data-cellop="${op}" ${ok ? "" : "disabled"}>${label}</button>`;
   return `<div class="lb-line"><span class="lb-l">Pad ${p.id}</span>${b("empty", p.empty ? "make it a panel" : "make it empty", true)}
     ${b("right", "wider →", spanAllowed(G, p.key, cs + 1, rs))}${b("left", "← narrower", cs > 1)}${b("down", "taller ↓", spanAllowed(G, p.key, cs, rs + 1))}${b("up", "↑ shorter", rs > 1)}
     <span class="small muted">${cs > 1 || rs > 1 ? `spans ${cs} × ${rs} cells` : ""}</span></div>` }
 function renderLayout() {
   const host = document.getElementById("laybuilder"); if (!host) return;
-  if (!LAY.G) LAY.G = presetGrid();
+  if (!LAY.G) { const link = new URLSearchParams(location.search).get("layout"), kept = store.get("srp-layout");  // a shared link, else the design of the last visit
+    if (!(link && layApply(link)) && !(kept && layApply(kept))) layReset() }
+  host.classList.toggle("big", LAY.big);
+  const previewSize = () => { // the drawing fills its column (or the whole builder when larger), up to a height that still shows the code below
+    const w = host.clientWidth - 32, oneColumn = LAY.big || matchMedia("(max-width: 960px)").matches;
+    return [Math.max(280, oneColumn ? w : w * 1.1 / 2 - 10), LAY.big ? Math.max(420, 0.8 * innerHeight) : 520] };
   const G = LAY.G, S = LAY.S, g = panelGeometry(G, S);
   const more = (k, changed) => `data-more="${k}" ${LAY.open[k] ?? changed ? "open" : ""}`;  // a section stays as the reader left it, else it is open when changed
   const pick = (attr, c, label) => LAY.cvd ? `<span class="lb-pick" style="background:${shownHex(c)};cursor:default" title="${label} as seen: pick colours with “normal”"></span>`  // a picker shows the real colour only
@@ -2774,11 +2820,11 @@ function renderLayout() {
     `<label class="${+S[k] !== PL_DEFAULTS[k] ? "lb-changed" : ""}"><span>${label}</span>${num(`data-size="${k}"`, S[k], step, 0, label)}</label>`).join("")}</div>`).join("");
   const info = g.error ? `<p class="lb-err">${g.error}</p>` : `<span class="small muted">${g.width} × ${g.height} pixels, ${g.pads.length} pad${g.pads.length > 1 ? "s" : ""}</span>`;
   host.innerHTML = `<div class="lb-controls">
-      <h4>Start from a shipped one</h4>
+      <div class="lb-name"><h4>Start from a shipped one</h4>${LAY.undo && !LAY.custom ? `<button class="chip" data-layop="undo">↶ back to your own grid</button>` : ""}</div>
       <div class="row"><span class="lb-l">Type</span>${opt("type", "1d", "1d")}${opt("type", "2d", "2d, with colour scale")}</div>
       <div class="row"><span class="lb-l">Shape</span>${opt("shape", "", "square")}${opt("shape", "wide", "wide")}${opt("shape", "tall", "tall")}${LAY.shape && !LAY.custom ? `<label class="lb-chk">aspect ${num('data-shape="aspect"', LAY.aspect, 0.05, 0.1, "aspect ratio of wide and tall panels")}</label>` : ""}</div>
-      <div class="row"><span class="lb-l">Columns</span>${[1, 2, 3, 4].map(n => opt("cols", n, n)).join("")}</div>
-      <div class="row"><span class="lb-l">Rows</span>${[1, 2, 3, 4].map(n => opt("rows", n, n)).join("")}</div>
+      <div class="row"><span class="lb-l">Columns</span>${[1, 2, 3, 4, 5, 6].map(n => opt("cols", n, n)).join("")}</div>
+      <div class="row"><span class="lb-l">Rows</span>${[1, 2, 3, 4, 5, 6].map(n => opt("rows", n, n)).join("")}</div>
       <div class="row"><span class="lb-l">Ratio panel</span>${opt("ratio", true, "below each")}${opt("ratio", false, "none")}${LAY.ratio && !LAY.custom ? `<label class="lb-chk">height ${num('data-shape="ratioH"', LAY.ratioH, 0.01, 0.05, "height of the ratio panels")}</label>` : ""}</div>
       <div class="row"><span class="lb-l">Panels</span>${opt("gap", false, "touching, shared axes")}${opt("gap", true, "apart, own axes")}</div>
       <details class="lb-more" ${more("grid", LAY.custom)}><summary>Change the grid</summary>
@@ -2807,7 +2853,8 @@ function renderLayout() {
     </div>
     <div class="lb-out">
       <div class="lb-name"><code>"${layName()}"</code>${info}</div>
-      ${g.error ? "" : layoutSVG(g, S, 460, 420)}
+      ${g.error ? "" : layoutSVG(g, S, ...previewSize())}
+      <div class="lb-line"><button class="chip" data-layop="big" aria-pressed="${LAY.big}">${LAY.big ? "Smaller drawing" : "Larger drawing"}</button><button class="chip" data-layop="link">Copy a link to this design</button><button class="chip" data-layop="reset">Start over</button></div>
       ${cellTools(g)}
       ${g.warnings && g.warnings.length ? `<p class="lb-err">${g.warnings.join(" ")}</p>` : ""}
       ${LAY.custom ? "" : `<div class="filters"><button class="chip" data-full="false" aria-pressed="${!LAY.full}">Short</button><button class="chip" data-full="true" aria-pressed="${LAY.full}">Written out as PanelLayout</button></div>`}
@@ -2815,13 +2862,22 @@ function renderLayout() {
       <p class="small muted">Drawn to scale from the same rules as <code>PanelLayout</code>; the text is drawn with a similar font.</p>
     </div>`;
   fill(document.getElementById("laycode"), layoutCode(lang === "py"), lang);
-  const rerender = () => { const a = document.activeElement, key = a && a.matches("input") ? [...a.attributes].filter(x => x.name.startsWith("data-") || x.name === "id").map(x => `[${x.name}="${x.value}"]`).join("") : null;
+  store.set("srp-layout", layState());
+  const rerender = () => { const a = document.activeElement, key = a && a.matches("input, [data-cell]") ? [...a.attributes].filter(x => x.name.startsWith("data-") || x.name === "id").map(x => `[${x.name}="${x.value}"]`).join("") : null;
     renderLayout(); if (key) { const n = host.querySelector(key); if (n) { n.focus(); if (n.type === "text") n.setSelectionRange(n.value.length, n.value.length) } } };
   host.querySelectorAll("[data-lay]").forEach(b => b.onclick = () => {
-    const k = b.dataset.lay, v = b.dataset.val; LAY[k] = (k === "cols" || k === "rows") ? +v : (k === "ratio" || k === "gap") ? v === "true" : v;
+    const k = b.dataset.lay, v = b.dataset.val; if (LAY.custom) LAY.undo = layState();  // a click on a preset replaces the own grid: it can be brought back
+    LAY[k] = (k === "cols" || k === "rows") ? +v : (k === "ratio" || k === "gap") ? v === "true" : v;
     LAY.custom = false; LAY.sel = null; LAY.G = presetGrid(); rerender() });
+  host.querySelectorAll("[data-layop]").forEach(b => b.onclick = () => { const op = b.dataset.layop;
+    if (op === "undo") layApply(LAY.undo);
+    if (op === "reset") layReset();
+    if (op === "big") LAY.big = !LAY.big;
+    if (op === "link") { const url = location.origin + location.pathname + "?layout=" + layState() + "#layouts", done = t => { b.textContent = t; setTimeout(() => { b.textContent = "Copy a link to this design" }, 1500) };
+      (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => done("Link copied"), () => { prompt("Link to this design:", url) }); return }
+    rerender() });
   host.querySelectorAll("[data-full]").forEach(b => b.onclick = () => { LAY.full = b.dataset.full === "true"; rerender() });
-  const custom = () => { LAY.custom = true };
+  const custom = () => { LAY.custom = true; LAY.undo = null };
   host.querySelectorAll("[data-colw]").forEach(i => i.onchange = () => { if (+i.value > 0) { G.cols[+i.dataset.colw].w = +i.value; custom() } rerender() });
   host.querySelectorAll("[data-rowh]").forEach(i => i.onchange = () => { if (+i.value > 0) { G.rows[+i.dataset.rowh].h = +i.value; custom() } rerender() });
   host.querySelectorAll("[data-colz]").forEach(i => i.onchange = () => { G.cols[+i.dataset.colz].z = i.checked; custom(); rerender() });
@@ -2842,7 +2898,8 @@ function renderLayout() {
     if (a === "addrow" || a === "addratio") G.rows.push({ h: a === "addratio" ? LAY.ratioH : 1, ratio: a === "addratio", gapAfter: false });
     if (a === "delrow") { G.rows.pop(); shift(1, 0, G.rows.length); G.rows[G.rows.length - 1].gapAfter = false }
     clipSpans(G); custom(); rerender() });
-  host.querySelectorAll(".lb-pad").forEach(p => p.onclick = () => { LAY.sel = LAY.sel === p.dataset.cell ? null : p.dataset.cell; rerender() });
+  host.querySelectorAll(".lb-pad").forEach(p => { p.onclick = () => { LAY.sel = LAY.sel === p.dataset.cell ? null : p.dataset.cell; rerender() };
+    p.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); p.onclick() } } });
   host.querySelectorAll("svg text").forEach(t => t.style.pointerEvents = "none");
   host.querySelectorAll("[data-shape]").forEach(i => i.onchange = () => { if (+i.value > 0) { LAY[i.dataset.shape] = +i.value; LAY.G = presetGrid() } rerender() });
   host.querySelectorAll("[data-cellop]").forEach(b => b.onclick = () => {
@@ -3127,6 +3184,7 @@ function route() {
   document.querySelectorAll("nav.views a").forEach(a => { if (a.getAttribute("href") === "#" + navV) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current") });
   document.querySelectorAll("[data-seg]").forEach(a => a.setAttribute("aria-current", a.dataset.seg === v ? "page" : "false"));
   if (v === "data") renderData();
+  if (v === "layouts") renderLayout();  // the drawing is sized to its column, which has no width while the view is hidden
   setTimeout(() => document.querySelectorAll(":not(pre) > code:not(.nw)").forEach(c => { if (c.textContent.length <= 40) c.classList.add("nw") }), 0);  // short code is not broken across lines
   setTimeout(glueTerms, 0);
   pop.hidden = true;
@@ -3134,6 +3192,8 @@ function route() {
     const el = document.getElementById(sub); if (el) setTimeout(() => { el.scrollIntoView({ block: "start" }); focusMethod() }, 0) }
   else window.scrollTo(0, 0) }
 window.addEventListener("hashchange", route);
+let layResize = 0;
+addEventListener("resize", () => { clearTimeout(layResize); layResize = setTimeout(() => { if (!document.getElementById("v-layouts").hidden) renderLayout() }, 150) });
 document.querySelectorAll("[data-go]").forEach(b => b.onclick = () => { if (b.dataset.setLevel) setLevel(b.dataset.setLevel); location.hash = b.dataset.go });
 
 const sq = document.getElementById("sq");

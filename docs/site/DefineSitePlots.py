@@ -30,7 +30,7 @@ def DefineTour(pm: PlotManager):
 
     plot = Plot("function", "tour", "1d")
     plot[1].AddFunction("sin(x)/x", "sin(#it{x})/#it{x}")
-    plot[1].AddLegend()
+    plot[1].AddLegend(top_right)
     plot[1]['X'].SetTitle("#it{x}").SetRange(0.1, 20.0)
     plot[1]['Y'].SetRange(-0.3, 1.1)
     pm.AddPlot(plot)
