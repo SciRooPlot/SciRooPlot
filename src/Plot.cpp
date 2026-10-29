@@ -1267,6 +1267,10 @@ Plot::Pad::Pad(const Pad& other)
   for (const auto& textBox : other.mTextBoxes) {
     mTextBoxes.push_back(std::make_shared<TextBox>(*textBox));
   }
+  mShapes.reserve(other.mShapes.size());
+  for (const auto& shape : other.mShapes) {
+    mShapes.push_back(std::make_shared<Shape>(*shape));
+  }
 }
 
 //**************************************************************************************************
@@ -1365,6 +1369,9 @@ Plot::Pad::Pad(const ptree& padTree)
     if (str_contains(content.first, "TEXT")) {
       mTextBoxes.push_back(std::make_shared<TextBox>(content.second));
     }
+    if (str_contains(content.first, "SHAPE")) {
+      mShapes.push_back(std::make_shared<Shape>(content.second));
+    }
     // add axes
     if (str_contains(content.first, "AXIS")) {
       char axis = content.second.get<char>("name");
@@ -1453,6 +1460,11 @@ ptree Plot::Pad::GetPropertyTree() const
   for (const auto& textBox : mTextBoxes) {
     padTree.put_child("TEXT_" + std::to_string(textBoxID), textBox->GetPropertyTree());
     ++textBoxID;
+  }
+  int32_t shapeID = 1;
+  for (const auto& shape : mShapes) {
+    padTree.put_child("SHAPE_" + std::to_string(shapeID), shape->GetPropertyTree());
+    ++shapeID;
   }
 
   for (const auto& axis : {'X', 'Y', 'Z'}) {
@@ -1553,6 +1565,9 @@ void Plot::Pad::operator+=(const Pad& pad)
   for (const auto& textBox : pad.mTextBoxes) {
     mTextBoxes.push_back(std::make_shared<TextBox>(*textBox));
   }
+  for (const auto& shape : pad.mShapes) {
+    mShapes.push_back(std::make_shared<Shape>(*shape));
+  }
   for (const auto& data : pad.mData) {
     auto clonedData = data->Clone();
     if (clonedData && clonedData->GetLegendID()) {
@@ -1639,6 +1654,13 @@ Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
   }
   return *mTextBoxes[textID - 1];
 }
+Plot::Pad::Shape& Plot::Pad::GetShape(uint8_t shapeID)
+{
+  if (shapeID < 1 || shapeID > mShapes.size()) {
+    logger::throw_out_of_range("Shape with ID {} is not defined! You can access only shapes that have already been added to the pad.", shapeID);
+  }
+  return *mShapes[shapeID - 1];
+}
 
 //**************************************************************************************************
 /**
@@ -1710,14 +1732,60 @@ Plot::Pad::Data& Plot::Pad::AddPoints(const vector<pair<double_t, double_t>>& po
 
 //**************************************************************************************************
 /**
- * Add user-defined line to this pad.
+ * Add shapes (not data) to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::Data& Plot::Pad::AddLine(pair<double_t, double_t> pos1, pair<double_t, double_t> pos2, const optional<string>& label)
+Plot::Pad::Shape& Plot::Pad::AddLine(pair<double_t, double_t> pos1, pair<double_t, double_t> pos2)
 {
-  auto& data = AddPoints({pos1.first, pos2.first}, {pos1.second, pos2.second}, label);
-  data.SetDrawOption(line);
-  return data;
+  mShapes.push_back(std::shared_ptr<Shape>(new Shape(Shape::kind_t::line, {pos1.first, pos1.second, pos2.first, pos2.second})));
+  return *mShapes.back();
+}
+Plot::Pad::Shape& Plot::Pad::AddArrow(pair<double_t, double_t> pos1, pair<double_t, double_t> pos2)
+{
+  mShapes.push_back(std::shared_ptr<Shape>(new Shape(Shape::kind_t::arrow, {pos1.first, pos1.second, pos2.first, pos2.second})));
+  return *mShapes.back();
+}
+Plot::Pad::Shape& Plot::Pad::AddVerticalLine(double_t x)
+{
+  mShapes.push_back(std::shared_ptr<Shape>(new Shape(Shape::kind_t::vertical_line, {x})));
+  return *mShapes.back();
+}
+Plot::Pad::Shape& Plot::Pad::AddHorizontalLine(double_t y)
+{
+  mShapes.push_back(std::shared_ptr<Shape>(new Shape(Shape::kind_t::horizontal_line, {y})));
+  return *mShapes.back();
+}
+Plot::Pad::Shape& Plot::Pad::AddRegion(pair<double_t, double_t> pos1, pair<double_t, double_t> pos2)
+{
+  mShapes.push_back(std::shared_ptr<Shape>(new Shape(Shape::kind_t::region, {pos1.first, pos1.second, pos2.first, pos2.second})));
+  return *mShapes.back();
+}
+Plot::Pad::Shape& Plot::Pad::AddRegionX(double_t x1, double_t x2)
+{
+  mShapes.push_back(std::shared_ptr<Shape>(new Shape(Shape::kind_t::region_x, {x1, x2})));
+  return *mShapes.back();
+}
+Plot::Pad::Shape& Plot::Pad::AddRegionY(double_t y1, double_t y2)
+{
+  mShapes.push_back(std::shared_ptr<Shape>(new Shape(Shape::kind_t::region_y, {y1, y2})));
+  return *mShapes.back();
+}
+Plot::Pad::Shape& Plot::Pad::AddPolygon(const vector<pair<double_t, double_t>>& points)
+{
+  if (points.size() < 3) logger::warning("Polygon with {} points: it needs at least three, it will not be drawn.", points.size());
+  vector<double_t> coordinates;
+  for (const auto& [x, y] : points) {
+    coordinates.push_back(x);
+    coordinates.push_back(y);
+  }
+  mShapes.push_back(std::shared_ptr<Shape>(new Shape(Shape::kind_t::polygon, coordinates)));
+  return *mShapes.back();
+}
+Plot::Pad::Shape& Plot::Pad::AddEllipse(pair<double_t, double_t> center, double_t radiusX, double_t radiusY)
+{
+  if (radiusX <= 0. || radiusY <= 0.) logger::warning("Ellipse with radii {} and {}: radii must be positive, it will not be drawn.", radiusX, radiusY);
+  mShapes.push_back(std::shared_ptr<Shape>(new Shape(Shape::kind_t::ellipse, {center.first, center.second, radiusX, radiusY})));
+  return *mShapes.back();
 }
 
 //**************************************************************************************************
@@ -4313,6 +4381,147 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetAlpha(float_t alpha)
   return *this;
 }
 
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// IMPLEMENTATION class Shape
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+
+Plot::Pad::Shape::Shape(kind_t kind, const vector<double_t>& coordinates) : mKind(kind), mCoordinates(coordinates)
+{
+}
+
+const char* Plot::Pad::Shape::KindName(kind_t kind)
+{
+  switch (kind) {
+    case kind_t::line:
+      return "line";
+    case kind_t::arrow:
+      return "arrow";
+    case kind_t::vertical_line:
+      return "vertical_line";
+    case kind_t::horizontal_line:
+      return "horizontal_line";
+    case kind_t::region:
+      return "region";
+    case kind_t::region_x:
+      return "region_x";
+    case kind_t::region_y:
+      return "region_y";
+    case kind_t::ellipse:
+      return "ellipse";
+    case kind_t::polygon:
+      return "polygon";
+  }
+  return "";
+}
+
+string Plot::Pad::Shape::KindLabel(kind_t kind)
+{
+  if (kind == kind_t::region_x) return "region X";
+  if (kind == kind_t::region_y) return "region Y";
+  string label = KindName(kind);
+  std::replace(label.begin(), label.end(), '_', ' ');
+  return label;
+}
+
+uint32_t Plot::Pad::Shape::EncodeDrawnID(const drawn_id_t& id)
+{
+  // bit 24 marks a shape (other objects keep 0); kind in bits 16-23, pad fractions in bit 15, number in bits 0-14
+  return (1u << 24) | (static_cast<uint32_t>(id.kind) << 16) | ((id.isUserCoord) ? 0u : (1u << 15)) | (id.number & 0x7FFFu);
+}
+
+optional<Plot::Pad::Shape::drawn_id_t> Plot::Pad::Shape::DecodeDrawnID(uint32_t uniqueID)
+{
+  if ((uniqueID >> 24) != 1u || ((uniqueID >> 16) & 0xFFu) > static_cast<uint32_t>(kind_t::polygon)) return nullopt;
+  return drawn_id_t{static_cast<kind_t>((uniqueID >> 16) & 0xFFu), static_cast<uint16_t>(uniqueID & 0x7FFFu), ((uniqueID >> 15) & 1u) == 0u};
+}
+
+Plot::Pad::Shape::Shape(const ptree& shapeTree)
+{
+  const string kind = shapeTree.get<string>("kind", "line");
+  for (auto candidate : {kind_t::line, kind_t::arrow, kind_t::vertical_line, kind_t::horizontal_line, kind_t::region, kind_t::region_x, kind_t::region_y, kind_t::ellipse, kind_t::polygon}) {
+    if (kind == KindName(candidate)) mKind = candidate;
+  }
+  optional<vector<double_t>> coordinates;
+  read_from_tree(shapeTree, coordinates, "coordinates");
+  if (coordinates) mCoordinates = *coordinates;
+  read_from_tree(shapeTree, mIsUserCoord, "is_user_coordinates");
+  if (auto layer = shapeTree.get_optional<string>("layer")) {
+    if (*layer == "behind_data") mLayer = layer_t::behind_data;
+    if (*layer == "on_top") mLayer = layer_t::on_top;
+  }
+  read_from_tree(shapeTree, mArrowHead, "arrow_head");
+  read_from_tree(shapeTree, mArrowSize, "arrow_size");
+  optional<double_t> phiMin;
+  optional<double_t> phiMax;
+  read_from_tree(shapeTree, phiMin, "arc_min");
+  read_from_tree(shapeTree, phiMax, "arc_max");
+  if (phiMin && phiMax) mArc = {*phiMin, *phiMax};
+  read_from_tree(shapeTree, mRotation, "rotation");
+  ReadLine(shapeTree);
+  ReadFill(shapeTree);
+}
+
+ptree Plot::Pad::Shape::GetPropertyTree() const
+{
+  ptree shapeTree;
+  shapeTree.put("kind", KindName(mKind));
+  put_in_tree(shapeTree, optional<vector<double_t>>(mCoordinates), "coordinates");
+  put_in_tree(shapeTree, mIsUserCoord, "is_user_coordinates");
+  if (mLayer) shapeTree.put("layer", (*mLayer == layer_t::behind_data) ? "behind_data" : ((*mLayer == layer_t::on_top) ? "on_top" : "after_data"));
+  put_in_tree(shapeTree, mArrowHead, "arrow_head");
+  put_in_tree(shapeTree, mArrowSize, "arrow_size");
+  if (mArc) {
+    shapeTree.put("arc_min", mArc->first);
+    shapeTree.put("arc_max", mArc->second);
+  }
+  put_in_tree(shapeTree, mRotation, "rotation");
+  PutLine(shapeTree);
+  PutFill(shapeTree);
+  return shapeTree;
+}
+
+Plot::Pad::Shape& Plot::Pad::Shape::SetUserCoordinates(bool isUserCoord)
+{
+  mIsUserCoord = isUserCoord;
+  return *this;
+}
+Plot::Pad::Shape& Plot::Pad::Shape::SetBehindData()
+{
+  mLayer = layer_t::behind_data;
+  return *this;
+}
+Plot::Pad::Shape& Plot::Pad::Shape::SetOnTop()
+{
+  mLayer = layer_t::on_top;
+  return *this;
+}
+Plot::Pad::Shape& Plot::Pad::Shape::SetArrowHead(const string& style)
+{
+  if (mKind != kind_t::arrow) logger::warning("SetArrowHead has an effect only on arrows (Pad::AddArrow), not on a {}.", KindName(mKind));
+  mArrowHead = style;
+  return *this;
+}
+Plot::Pad::Shape& Plot::Pad::Shape::SetArrowSize(float_t size)
+{
+  if (mKind != kind_t::arrow) logger::warning("SetArrowSize has an effect only on arrows (Pad::AddArrow), not on a {}.", KindName(mKind));
+  mArrowSize = size;
+  return *this;
+}
+Plot::Pad::Shape& Plot::Pad::Shape::SetArc(double_t phiMin, double_t phiMax)
+{
+  if (mKind != kind_t::ellipse) logger::warning("SetArc has an effect only on ellipses (Pad::AddEllipse), not on a {}.", KindName(mKind));
+  mArc = {phiMin, phiMax};
+  return *this;
+}
+Plot::Pad::Shape& Plot::Pad::Shape::SetRotation(double_t theta)
+{
+  if (mKind != kind_t::ellipse) logger::warning("SetRotation has an effect only on ellipses (Pad::AddEllipse), not on a {}.", KindName(mKind));
+  mRotation = theta;
+  return *this;
+}
+
 //**************************************************************************************************
 // explicitly instantiate required box and setter-group templates
 template class Plot::Pad::Box<Plot::Pad::TextBox>;
@@ -4322,6 +4531,7 @@ template class MarkerSetters<Plot::Pad::Data>;
 template class MarkerSetters<Plot::Pad::LegendEntry>;
 template class LineSetters<Plot::Pad::Data>;
 template class LineSetters<Plot::Pad::LegendEntry>;
+template class LineSetters<Plot::Pad::Shape>;
 template class FillSetters<Plot>;
 template class FillSetters<Plot::Pad>;
 template class FillSetters<Plot::Pad::Data>;
@@ -4329,6 +4539,7 @@ template class FillSetters<Plot::Pad::LegendEntry>;
 template class FillSetters<Plot::Pad::TextBox>;
 template class FillSetters<Plot::Pad::StatsBox>;
 template class FillSetters<Plot::Pad::LegendBox>;
+template class FillSetters<Plot::Pad::Shape>;
 template class TextSetters<Plot::Pad::LegendEntry>;
 template class TextSetters<Plot::Pad::TextBox>;
 template class TextSetters<Plot::Pad::StatsBox>;

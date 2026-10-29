@@ -1875,7 +1875,7 @@
       - Double-clicking the right or left half of the window works too; `q` closes a window, `x` all.
     ]),
     ([Place text and legends by hand], [
-      - Double-click a text box or legend: the position of its upper left corner is printed to the terminal.
+      - Double-click a text, legend or shape: its name and position are printed to the terminal.
       - Drag the box to where you want it, double-click, and copy the printed coordinates into your #plot-def-file.
     ]),
     ([Compare plots side by side], [
@@ -2017,7 +2017,7 @@
         [`AddData(data, label = {})`], [Add a complete `Data` object, e.g. `Data(name, dataSource)` or `layout(name)`.],
         [`AddFunction(function, label = {})`], [Add a `TF1`-style function expression.],
         [`AddPoints(x, y, label = {})`], [Add points from separate X/Y arrays, or (x, y) pairs.],
-        [`AddLine(pos1, pos2, label = {})`], [Add a line between two points.],
+        [`AddLine`, `AddArrow`, `AddVerticalLine`, `AddRegionX`, ...], [Add a shape: drawn, but not data (no legend row, not in the ranges).],
         [`AddRatio(numerator, denominator, label = {})`], [Add a ratio of two `Data` objects (or `{name, source}`); it takes the appearance of the numerator.],
         [`AddRatio(ratio, label = {})`], [Add a predefined `Ratio(numerator, denominator)`.],
         [`AddRatio(numName, numSource, denomName, denomSource, label = {})`], [Shorthand for a ratio of two named data.],

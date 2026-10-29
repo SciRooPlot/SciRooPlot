@@ -21,10 +21,12 @@
 #include "SciRooPlot/Logger.h"
 
 #include <TApplication.h>
+#include <TArrow.h>
 #include <TAttMarker.h>
 #include <TBox.h>
 #include <TCanvas.h>
 #include <TEfficiency.h>
+#include <TEllipse.h>
 #include <TExec.h>
 #include <TF1.h>
 #include <TF2.h>
@@ -63,6 +65,7 @@
 #include <TPave.h>
 #include <TPaveStats.h>
 #include <TPaveText.h>
+#include <TPolyLine.h>
 #include <TProfile.h>
 #include <TProfile2D.h>
 #include <TProfile3D.h>
@@ -419,6 +422,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   if (plot.IsFixAspectRatio()) canvas_ptr->SetFixedAspectRatio(*plot.IsFixAspectRatio());
 
   auto& padDefaults = plot[0];
+  if (!padDefaults.GetShapes().empty()) logger::warning("The shapes of pad 0 are not drawn: pad 0 only holds the defaults of the pads.");
   for (const auto& [padID, dummy] : plot.GetPads()) {
     if (padID == 0) continue;  // pad 0 is used only to define the defaults
     auto& pad = plot[padID];   // needed because processData lambda cannot capture variable from structured binding ('dummy')
@@ -2170,6 +2174,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       axes->Draw("SAME AXIS");
     }
 
+    // shapes need the final frame: behind the data right after the frame histogram, the others after the data (and before the boxes, which avoid them)
+    const bool canDrawShapes = axisHist_ptr && !pad_ptr->GetView();
+    if (!pad.GetShapes().empty() && !canDrawShapes) {
+      logger::warning("The shapes of pad {} are not drawn: they need an axis frame without a 3D view.", padID);
+    } else if (!pad.GetShapes().empty()) {
+      DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::behind_data, axisHist_ptr, padID);
+      DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::after_data, nullptr, padID);
+    }
+
     // legends and texts: the ones with a given position before the statistics boxes, the automatically placed ones after them,
     // so that every automatic placement knows the boxes already there
     auto placeBoxes = [&](bool fixedPositions) {
@@ -2187,7 +2200,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         TPave* legend = GenerateBox(box, pad_ptr);
         if (legend) {
           legend->SetName(legendName.data());
-          legend->SetBit(kCanDelete);  // owned by the pad
+          legend->SetUniqueID((box->IsUserCoordinates()) ? 1u : 0u);  // a double-click in show mode reports the position as given
+          legend->SetBit(kCanDelete);                                 // owned by the pad
           legend->Draw("SAME");
           legend->ConvertNDCtoPad();  // ROOT sets the NDC coordinates of a box only when it is painted: the placement of the next boxes needs them
         } else {
@@ -2207,6 +2221,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         TPave* text = GenerateBox(box, pad_ptr);
         if (text) {
           text->SetName(textName.data());
+          text->SetUniqueID((box->IsUserCoordinates()) ? 1u : 0u);
           text->SetBit(kCanDelete);  // owned by the pad
           text->Draw("SAME");
           text->ConvertNDCtoPad();
@@ -2272,10 +2287,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       stats->SetX2NDC(upperLeftX + widthNDC);
       stats->SetY2NDC(upperLeftY);
       pad_ptr->cd();
+      stats->SetUniqueID((statsBox->IsUserCoordinates()) ? 1u : 0u);
       stats.release()->Draw();
     }
 
     placeBoxes(false);
+    if (canDrawShapes) DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::on_top, nullptr, padID);
 
     // viewing angles of 3D drawings: the pad's own, else those of pad 0
     if (auto theta = get_first(pad.GetViewTheta(), padDefaults.GetViewTheta())) {
@@ -3097,6 +3114,210 @@ string PlotPainter::LegendSymbolElements(TObject* obj, string option)
 
 //**************************************************************************************************
 /**
+ * Draw the shapes of a pad that belong to one layer, with the final frame (after the axis room): the kinds over the whole frame
+ * take its edges, regions in axis values are cut at it, lines and arrows between two points are not cut (as TLine).
+ * insertAfter: put the shapes behind this primitive (the frame histogram for the layer behind the data) instead of at the end.
+ */
+//**************************************************************************************************
+void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot::Pad& padDefaults, Plot::Pad::Shape::layer_t layer, TObject* insertAfter, uint8_t padID)
+{
+  using Shape = Plot::Pad::Shape;
+  using kind_t = Shape::kind_t;
+  // TLine, TArrow, TBox and TEllipse take axis values (they convert them to pad coordinates, log10 on a log axis, when painted)
+  auto toUser = [](double_t padCoord, bool isLog) { return (isLog) ? std::pow(10., padCoord) : padCoord; };
+  const double_t xMin = toUser(pad->GetUxmin(), pad->GetLogx()), xMax = toUser(pad->GetUxmax(), pad->GetLogx());
+  const double_t yMin = toUser(pad->GetUymin(), pad->GetLogy()), yMax = toUser(pad->GetUymax(), pad->GetLogy());
+  const double_t nan = std::numeric_limits<double_t>::quiet_NaN();
+  uint8_t shapeIndex{};
+  std::map<kind_t, uint16_t> numberOfKind;  // over all layers: the nth shape of a kind is the nth call that added one
+  for (const auto& shape : const_cast<Plot::Pad&>(padSettings).GetShapes()) {
+    ++shapeIndex;
+    const kind_t kind = shape->GetKind();
+    const uint16_t number = ++numberOfKind[kind];
+    if (shape->GetLayer() != layer) continue;
+    const auto& c = shape->GetCoordinates();
+    const bool isUser = shape->IsUserCoordinates();
+    const size_t nExpected = (kind == kind_t::vertical_line || kind == kind_t::horizontal_line) ? 1u : ((kind == kind_t::region_x || kind == kind_t::region_y) ? 2u : 4u);
+    if ((kind == kind_t::polygon) ? (c.size() < 6 || c.size() % 2) : (c.size() != nExpected)) continue;  // a polygon with too few points was reported when it was added
+    // positions as axis values: given so, or fractions of the pad converted; a log axis cannot show values that are not positive
+    auto valueX = [&](double_t x) { return (!isUser) ? toUser(pad->GetX1() + x * (pad->GetX2() - pad->GetX1()), pad->GetLogx()) : ((pad->GetLogx() && x <= 0.) ? nan : x); };
+    auto valueY = [&](double_t y) { return (!isUser) ? toUser(pad->GetY1() + y * (pad->GetY2() - pad->GetY1()), pad->GetLogy()) : ((pad->GetLogy() && y <= 0.) ? nan : y); };
+    auto skip = [&](const char* reason) { logger::warning("Shape {} ({}) of pad {} is not drawn: {}.", shapeIndex, Shape::KindName(kind), padID, reason); };
+
+    TObject* object{};
+    TObject* outline{};  // drawn after the fill: the outline of a polygon
+    bool isRegion{};
+    switch (kind) {
+      case kind_t::line:
+      case kind_t::arrow: {
+        const double_t x1 = valueX(c[0]), y1 = valueY(c[1]), x2 = valueX(c[2]), y2 = valueY(c[3]);
+        if (!std::isfinite(x1) || !std::isfinite(y1) || !std::isfinite(x2) || !std::isfinite(y2)) {
+          skip("a position is not positive on a log axis");
+          continue;
+        }
+        if (kind == kind_t::arrow) {
+          object = new TArrow(x1, y1, x2, y2, shape->GetArrowSize().value_or(0.03f), shape->GetArrowHead().value_or("|>").data());
+        } else {
+          object = new TLine(x1, y1, x2, y2);
+        }
+        break;
+      }
+      case kind_t::vertical_line:
+      case kind_t::horizontal_line: {
+        const bool isVertical = (kind == kind_t::vertical_line);
+        const double_t pos = (isVertical) ? valueX(c[0]) : valueY(c[0]);
+        if (!std::isfinite(pos) || pos < ((isVertical) ? xMin : yMin) || pos > ((isVertical) ? xMax : yMax)) {
+          skip("its position is outside of the frame");
+          continue;
+        }
+        object = (isVertical) ? new TLine(pos, yMin, pos, yMax) : new TLine(xMin, pos, xMax, pos);
+        break;
+      }
+      case kind_t::region:
+      case kind_t::region_x:
+      case kind_t::region_y: {
+        double_t x1 = xMin, x2 = xMax, y1 = yMin, y2 = yMax;
+        if (kind == kind_t::region) {
+          x1 = valueX(c[0]), y1 = valueY(c[1]), x2 = valueX(c[2]), y2 = valueY(c[3]);
+        } else if (kind == kind_t::region_x) {
+          x1 = valueX(c[0]), x2 = valueX(c[1]);
+        } else {
+          y1 = valueY(c[0]), y2 = valueY(c[1]);
+        }
+        // on a log axis a region reaching below 0 starts at the frame edge
+        if (!std::isfinite(x1)) x1 = xMin;
+        if (!std::isfinite(y1)) y1 = yMin;
+        if (x1 > x2) std::swap(x1, x2);
+        if (y1 > y2) std::swap(y1, y2);
+        if (isUser) {  // cut at the frame (a region in fractions of the pad may lie outside of it on purpose)
+          x1 = std::max(x1, xMin), x2 = std::min(x2, xMax), y1 = std::max(y1, yMin), y2 = std::min(y2, yMax);
+        }
+        if (!std::isfinite(x2) || !std::isfinite(y2) || x1 >= x2 || y1 >= y2) {
+          skip("it is outside of the frame");
+          continue;
+        }
+        object = new TBox(x1, y1, x2, y2);
+        isRegion = true;
+        break;
+      }
+      case kind_t::ellipse: {
+        if (c[2] <= 0. || c[3] <= 0.) continue;  // reported when it was added
+        const double_t x = valueX(c[0]), y = valueY(c[1]);
+        if (!std::isfinite(x) || !std::isfinite(y)) {
+          skip("its centre is not positive on a log axis");
+          continue;
+        }
+        if (isUser && (pad->GetLogx() || pad->GetLogy())) {
+          logger::warning("Shape {} (ellipse) of pad {} is drawn distorted: TEllipse does not convert its radii on a log axis.", shapeIndex, padID);
+        }
+        // the radii are in pad coordinates (TEllipse converts only the centre)
+        const double_t rx = (isUser) ? c[2] : c[2] * (pad->GetX2() - pad->GetX1());
+        const double_t ry = (isUser) ? c[3] : c[3] * (pad->GetY2() - pad->GetY1());
+        const auto arc = shape->GetArc().value_or(std::pair<double_t, double_t>{0., 360.});
+        object = new TEllipse(x, y, rx, ry, arc.first, arc.second, shape->GetRotation().value_or(0.));
+        break;
+      }
+      case kind_t::polygon: {
+        // cut at the frame (Sutherland-Hodgman, edge by edge) in pad coordinates, where the edges are straight also on log axes
+        auto padCoord = [](double_t value, bool isLog) { return (isLog) ? std::log10(value) : value; };
+        vector<std::pair<double_t, double_t>> points;
+        bool valid = true;
+        for (size_t i = 0; i + 1 < c.size(); i += 2) {
+          const double_t x = valueX(c[i]), y = valueY(c[i + 1]);
+          valid = valid && std::isfinite(x) && std::isfinite(y);
+          points.emplace_back(padCoord(x, pad->GetLogx()), padCoord(y, pad->GetLogy()));
+        }
+        if (!valid) {
+          skip("a point is not positive on a log axis");
+          continue;
+        }
+        if (isUser) {
+          // inside: of the four frame edges (axis, limit, sign: lower or upper limit)
+          for (auto [axis, limit, sign] : {std::tuple{0, pad->GetUxmin(), 1.}, std::tuple{0, pad->GetUxmax(), -1.}, std::tuple{1, pad->GetUymin(), 1.}, std::tuple{1, pad->GetUymax(), -1.}}) {
+            auto coord = [axis = axis](const std::pair<double_t, double_t>& p) { return (axis == 0) ? p.first : p.second; };
+            auto inside = [&, limit = limit, sign = sign](const std::pair<double_t, double_t>& p) { return sign * (coord(p) - limit) >= 0.; };
+            vector<std::pair<double_t, double_t>> cut;
+            for (size_t i = 0; i < points.size(); ++i) {
+              const auto& a = points[i];
+              const auto& b = points[(i + 1) % points.size()];
+              if (inside(a)) cut.push_back(a);
+              if (inside(a) != inside(b)) {
+                const double_t t = (limit - coord(a)) / (coord(b) - coord(a));
+                cut.emplace_back(a.first + t * (b.first - a.first), a.second + t * (b.second - a.second));
+              }
+            }
+            points = cut;
+            if (points.empty()) break;
+          }
+        }
+        if (points.size() < 3) {
+          skip("it is outside of the frame");
+          continue;
+        }
+        points.push_back(points.front());  // closed
+        vector<double_t> x, y;
+        for (const auto& [px, py] : points) {
+          x.push_back(toUser(px, pad->GetLogx()));
+          y.push_back(toUser(py, pad->GetLogy()));
+        }
+        object = new TPolyLine(static_cast<int32_t>(x.size()), x.data(), y.data(), "f");
+        if (shape->GetLineColor() || shape->GetLineStyle() || shape->GetLineWidth() || shape->GetLineAlpha()) {
+          outline = new TPolyLine(static_cast<int32_t>(x.size()), x.data(), y.data());
+        }
+        isRegion = true;  // filled like a region
+        break;
+      }
+    }
+    if (!object) continue;
+
+    // line: black, the default line width of the pad; fill: regions light grey and translucent, arrow heads in the line colour, ellipses open
+    auto* line = dynamic_cast<TAttLine*>(object);
+    auto* fill = dynamic_cast<TAttFill*>(object);
+    const color_t lineColor = shape->GetLineColor().value_or(color_t(kBlack));
+    line->SetLineColor(lineColor.ToIndex());
+    if (shape->GetLineAlpha()) line->SetLineColor(TColor::GetColorTransparent(line->GetLineColor(), *shape->GetLineAlpha()));
+    line->SetLineStyle(shape->GetLineStyle().value_or(kSolid));
+    if (auto width = get_first(shape->GetLineWidth(), padSettings.GetDefaultLineWidth(), padDefaults.GetDefaultLineWidth())) line->SetLineWidth(static_cast<Width_t>(*width));
+    if (fill) {
+      const bool hasFill = shape->GetFillColor() || shape->GetFillStyle();
+      if (isRegion && !hasFill) {
+        fill->SetFillColor(TColor::GetColorTransparent(kGray, 0.3f));
+        fill->SetFillStyle(1001);
+      } else if (kind == kind_t::arrow && !hasFill) {
+        fill->SetFillColor(line->GetLineColor());
+        fill->SetFillStyle(1001);
+      } else if (kind == kind_t::ellipse && !hasFill) {
+        fill->SetFillStyle(0);
+      } else {
+        fill->SetFillColor(shape->GetFillColor().value_or(color_t(kGray)).ToIndex());
+        fill->SetFillStyle(shape->GetFillStyle().value_or(1001));
+      }
+      if (shape->GetFillAlpha()) fill->SetFillColor(TColor::GetColorTransparent(fill->GetFillColor(), *shape->GetFillAlpha()));
+    }
+    // a region gets its outline only when a line is set for it (a box with option l, a polygon as second, open polyline)
+    const bool regionOutline = kind != kind_t::polygon && isRegion && (shape->GetLineColor() || shape->GetLineStyle() || shape->GetLineWidth() || shape->GetLineAlpha());
+    if (outline) line->Copy(*dynamic_cast<TAttLine*>(outline));
+    const uint32_t drawnID = Shape::EncodeDrawnID({kind, number, isUser});
+    for (TObject* drawn : {object, outline}) {
+      if (!drawn) continue;
+      drawn->SetUniqueID(drawnID);  // for the position reported by a double-click in show mode
+      drawn->SetBit(kCanDelete);    // owned by the pad
+      const char* option = (drawn == object && regionOutline) ? "l" : ((drawn == object && kind == kind_t::polygon) ? "f" : "");
+      if (insertAfter) {
+        pad->GetListOfPrimitives()->AddAfter(insertAfter, drawn);
+        insertAfter = drawn;
+        for (auto* link = pad->GetListOfPrimitives()->FirstLink(); link && *option; link = link->Next()) {  // AddAfter takes no option
+          if (link->GetObject() == drawn) link->SetOption(option);
+        }
+      } else {
+        pad->GetListOfPrimitives()->Add(drawn, option);
+      }
+    }
+  }
+}
+
+//**************************************************************************************************
+/**
  * Function to generate a legend or text box.
  */
 //**************************************************************************************************
@@ -3716,8 +3937,32 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     } else if (auto* pave = dynamic_cast<TPave*>(obj)) {
       // legends and texts placed before (coordinates in NDC)
       setRect(pave->GetX1NDC() * nx, pave->GetY1NDC() * ny, pave->GetX2NDC() * nx, pave->GetY2NDC() * ny, 1u);
-    } else if (auto* box = dynamic_cast<TBox*>(obj)) {
-      setRect(cellX(box->GetX1()), cellY(box->GetY1()), cellX(box->GetX2()), cellY(box->GetY2()), 1u);
+    } else if (auto* box = dynamic_cast<TBox*>(obj)) {  // regions (shapes), in axis values like lines and ellipses
+      setRect(cellX(padX(box->GetX1())), cellY(padY(box->GetY1())), cellX(padX(box->GetX2())), cellY(padY(box->GetY2())), 1u);
+    } else if (auto* line = dynamic_cast<TLine*>(obj)) {
+      if (!line->TestBit(TLine::kLineNDC)) markLine(padX(line->GetX1()), padY(line->GetY1()), padX(line->GetX2()), padY(line->GetY2()));  // lines and arrows
+    } else if (auto* polyline = dynamic_cast<TPolyLine*>(obj)) {                                                                          // polygons (shapes): the outline, and with a fill the inside
+      vector<std::pair<double_t, double_t>> points;
+      for (int32_t i = 0; i < polyline->GetN(); ++i) {
+        points.emplace_back(padX(polyline->GetX()[i]), padY(polyline->GetY()[i]));
+      }
+      for (size_t i = 0; i + 1 < points.size(); ++i) {
+        markLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second);
+      }
+      if (polyline->GetFillStyle() != 0 && TString(polyline->GetOption()).Contains("f")) markPolygon(points);
+    } else if (auto* ellipse = dynamic_cast<TEllipse*>(obj)) {
+      // the outline, and with a fill the inside (as a polygon of the drawn curve)
+      vector<std::pair<double_t, double_t>> points;
+      const double_t phiMin = ellipse->GetPhimin(), phiMax = ellipse->GetPhimax(), theta = ellipse->GetTheta() * TMath::DegToRad();
+      for (int32_t i = 0; i <= 72; ++i) {
+        const double_t phi = (phiMin + (phiMax - phiMin) * i / 72.) * TMath::DegToRad();
+        const double_t dx = ellipse->GetR1() * std::cos(phi), dy = ellipse->GetR2() * std::sin(phi);
+        points.emplace_back(padX(ellipse->GetX1()) + dx * std::cos(theta) - dy * std::sin(theta), padY(ellipse->GetY1()) + dx * std::sin(theta) + dy * std::cos(theta));
+      }
+      for (size_t i = 0; i + 1 < points.size(); ++i) {
+        markLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second);
+      }
+      if (ellipse->GetFillStyle() != 0) markPolygon(points);
     } else if (auto* hist = dynamic_cast<TH1*>(obj)) {
       if (!TString(hist->GetName()).BeginsWith("axis_hist") && !TString(hist->GetName()).Contains("hframe")) markHist(hist);
     } else if (auto* graph = dynamic_cast<TGraph*>(obj)) {

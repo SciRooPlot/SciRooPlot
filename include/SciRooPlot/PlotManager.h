@@ -39,6 +39,8 @@ class TCanvas;
 class TDirectory;
 class TChain;
 class TKey;
+class TObject;
+class TVirtualPad;
 namespace ROOT
 {
 class RDataFrame;
@@ -133,6 +135,7 @@ class PlotManager
   void ShowDetached();
   std::optional<size_t> NextBrowseIndex(size_t index, bool forward) const;
   bool HandleOpenWindows(bool& closeAll);
+  std::optional<std::string> PositionReport(TObject* selected, TVirtualPad* pad) const;
   void WaitForOpenWindows();
   static void SetTerminalKeys(bool on);
   static char TerminalKey();

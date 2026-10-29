@@ -25,6 +25,8 @@
 #include <ROOT/RDFHelpers.hxx>
 #include <ROOT/RDataFrame.hxx>
 #include <TApplication.h>
+#include <TArrow.h>
+#include <TBox.h>
 #include <TBranch.h>
 #include <TCanvas.h>
 #include <TChain.h>
@@ -32,6 +34,7 @@
 #include <TClonesArray.h>
 #include <TCollection.h>
 #include <TColor.h>
+#include <TEllipse.h>
 #include <TError.h>
 #include <TExec.h>
 #include <TF1.h>
@@ -47,10 +50,15 @@
 #include <THnBase.h>
 #include <TKey.h>
 #include <TLeaf.h>
+#include <TLegend.h>
+#include <TLegendEntry.h>
+#include <TLine.h>
 #include <TList.h>
 #include <TMap.h>
 #include <TNamed.h>
 #include <TPave.h>
+#include <TPaveText.h>
+#include <TPolyLine.h>
 #include <TROOT.h>
 #include <TRefArray.h>
 #include <TRootCanvas.h>
@@ -103,6 +111,7 @@
 
 using boost::property_tree::ptree;
 using std::map;
+using std::nullopt;
 using std::optional;
 using std::set;
 using std::shared_ptr;
@@ -1844,7 +1853,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
       bool isClick = newEvent && canvas->GetEvent() == kButton1Double;
       bool isValidKey = (key == 'a' || key == 's');
       bool isDetachKey = (key == 'd');
-      auto selectedBox = dynamic_cast<TPave*>(canvas->GetSelected());
       if (isDetachKey && *NextBrowseIndex(current, true) == current) {
         oldEvent = canvasEvent(canvas.get());  // the last plot left to browse stays in the browsing window
       } else if (isDetachKey) {
@@ -1865,8 +1873,8 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
         mBrowseHistory.pop_back();
         mBrowseForward = true;
         if (browseTo((mBrowseHistory.empty()) ? *NextBrowseIndex(current, true) : mBrowseHistory.back())) break;
-      } else if (isClick && selectedBox) {
-        if (!boxClicked) logger::info("Current position of {}: ({:.3g}, {:.3g}).", selectedBox->GetName(), selectedBox->GetX1NDC(), selectedBox->GetY2NDC());
+      } else if (auto report = (isClick) ? PositionReport(canvas->GetSelected(), canvas->GetSelectedPad()) : nullopt) {
+        if (!boxClicked) logger::info("{}", *report);
         boxClicked = true;
       } else if (isClick || isValidKey) {
         // browsing goes round: after the last plot comes the first one, before the first one the last one (plots in between are not made)
@@ -2144,9 +2152,113 @@ optional<size_t> PlotManager::NextBrowseIndex(size_t index, bool forward) const
 
 //**************************************************************************************************
 /**
- * One pass over the events of the windows kept open: reports the position of a double-clicked box, closes a window on the key 'q'
+ * One pass over the events of the windows kept open: reports the position of a double-clicked box or shape, closes a window on the key 'q'
  * and sets closeAll for the key 'x'. Returns whether any of the windows is still open.
  */
+//**************************************************************************************************
+/**
+ * The line a double-click in show mode prints for a legend, text, statistics box or shape: what was clicked, named as the user
+ * added it ("Pad 1, arrow 3": the nth of its kind in the pad), in yellow, and its
+ * position in green, written as the arguments of the call that sets it (AddText(x, y, ...), AddArrow(pos1, pos2), ...) in the
+ * language of the project's program and in the coordinates the user gave, so that it can be copied into the code.
+ * Nothing for other objects (a click there browses).
+ */
+//**************************************************************************************************
+optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad) const
+{
+  if (!selected || !pad) return nullopt;
+  const bool isPython = str_ends_with(Config::Get().Program(mProjectName), ".py");
+  // always with the pad, so that the line reads the same in every plot
+  const string padName = pad->GetName();
+  const string padLabel = (padName.rfind("Pad_", 0) == 0) ? "Pad " + padName.substr(4) + ", " : "";
+  // axis values from pad coordinates (log10 on a log axis), fractions of the pad from axis values
+  auto axisValue = [&](double_t fraction, bool isX) {
+    const double_t lo = (isX) ? pad->GetX1() : pad->GetY1(), hi = (isX) ? pad->GetX2() : pad->GetY2();
+    const double_t padCoord = lo + fraction * (hi - lo);
+    return ((isX) ? pad->GetLogx() : pad->GetLogy()) ? std::pow(10., padCoord) : padCoord;
+  };
+  auto fraction = [&](double_t value, bool isX) {
+    const double_t lo = (isX) ? pad->GetX1() : pad->GetY1(), hi = (isX) ? pad->GetX2() : pad->GetY2();
+    const double_t padCoord = ((isX) ? pad->GetLogx() : pad->GetLogy()) ? std::log10(value) : value;
+    return (padCoord - lo) / (hi - lo);
+  };
+  // fractions of the pad with 3 digits, axis values with 4
+  auto number = [](double_t value, bool isUserCoord) { return (isUserCoord) ? fmt::format("{:.4g}", value) : fmt::format("{:.3g}", value); };
+  // a hint at the content: the start of the first line or row
+  auto excerpt = [](string first, bool more) {
+    if (first.size() > 20) {
+      first = first.substr(0, 19);
+      more = true;
+    }
+    return fmt::format(" \"{}{}\"", first, (more) ? "…" : "");
+  };
+  auto line = [&](const string& what, const string& position) {
+    return fmt::format("{}{}{}{}: {}{}{}", logger::begin_color(logger::Color::Yellow), padLabel, what, logger::end_color(), logger::begin_color(logger::Color::Green), position, logger::end_color());
+  };
+
+  if (auto* box = dynamic_cast<TPave*>(selected)) {
+    const string name = box->GetName();
+    string what;
+    if (auto* legend = dynamic_cast<TLegend*>(box); legend && name.rfind("LegendBox_", 0) == 0) {
+      what = "legend " + name.substr(10);
+      TList* rows = legend->GetListOfPrimitives();
+      if (rows && rows->GetSize() > 0) what += excerpt(static_cast<TLegendEntry*>(rows->First())->GetLabel(), rows->GetSize() > 1);
+    } else if (auto* text = dynamic_cast<TPaveText*>(box); text && name.rfind("TextBox_", 0) == 0) {
+      what = "text " + name.substr(8);
+      if (text->GetSize() > 0) what += excerpt(text->GetLine(0)->GetTitle(), text->GetSize() > 1);
+    } else if (name.rfind("stats_", 0) == 0) {
+      what = "statistics box of data " + name.substr(6);
+    } else {
+      return nullopt;  // e.g. the colour scale
+    }
+    // the upper left corner, as AddText(x, y, ...), AddLegend(x, y) and SetPosition(x, y) take it
+    const bool isUserCoord = (box->GetUniqueID() == 1u);
+    const double_t x = (isUserCoord) ? axisValue(box->GetX1NDC(), true) : box->GetX1NDC();
+    const double_t y = (isUserCoord) ? axisValue(box->GetY2NDC(), false) : box->GetY2NDC();
+    return line(what, number(x, isUserCoord) + ", " + number(y, isUserCoord));
+  }
+
+  using Shape = Plot::Pad::Shape;
+  using kind_t = Shape::kind_t;
+  const auto id = Shape::DecodeDrawnID(selected->GetUniqueID());
+  if (!id) return nullopt;
+  // positions as given (axis values or fractions of the pad), points as the user's language writes a pair
+  auto nx = [&](double_t x) { return number((id->isUserCoord) ? x : fraction(x, true), id->isUserCoord); };
+  auto ny = [&](double_t y) { return number((id->isUserCoord) ? y : fraction(y, false), id->isUserCoord); };
+  auto point = [&](double_t x, double_t y) { return fmt::format((isPython) ? "({}, {})" : "{{{}, {}}}", nx(x), ny(y)); };
+  string position;
+  if (auto* drawnLine = dynamic_cast<TLine*>(selected)) {  // also arrows
+    if (id->kind == kind_t::vertical_line) {
+      position = nx(drawnLine->GetX1());
+    } else if (id->kind == kind_t::horizontal_line) {
+      position = ny(drawnLine->GetY1());
+    } else {
+      position = point(drawnLine->GetX1(), drawnLine->GetY1()) + ", " + point(drawnLine->GetX2(), drawnLine->GetY2());
+    }
+  } else if (auto* region = dynamic_cast<TBox*>(selected)) {
+    if (id->kind == kind_t::region_x) {
+      position = nx(region->GetX1()) + ", " + nx(region->GetX2());
+    } else if (id->kind == kind_t::region_y) {
+      position = ny(region->GetY1()) + ", " + ny(region->GetY2());
+    } else {
+      position = point(region->GetX1(), region->GetY1()) + ", " + point(region->GetX2(), region->GetY2());
+    }
+  } else if (auto* ellipse = dynamic_cast<TEllipse*>(selected)) {
+    // the radii are in pad coordinates: as fractions of the pad divided by its extent
+    const double_t rx = (id->isUserCoord) ? ellipse->GetR1() : ellipse->GetR1() / (pad->GetX2() - pad->GetX1());
+    const double_t ry = (id->isUserCoord) ? ellipse->GetR2() : ellipse->GetR2() / (pad->GetY2() - pad->GetY1());
+    position = point(ellipse->GetX1(), ellipse->GetY1()) + ", " + number(rx, id->isUserCoord) + ", " + number(ry, id->isUserCoord);
+  } else if (auto* polygon = dynamic_cast<TPolyLine*>(selected)) {
+    for (int32_t i = 0; i + 1 < polygon->GetN(); ++i) {  // the last point closes the polygon
+      position += ((i) ? ", " : "") + point(polygon->GetX()[i], polygon->GetY()[i]);
+    }
+    position = (isPython) ? "[" + position + "]" : "{" + position + "}";
+  } else {
+    return nullopt;
+  }
+  return line(Shape::KindLabel(id->kind) + " " + std::to_string(id->number), position);
+}
+
 //**************************************************************************************************
 bool PlotManager::HandleOpenWindows(bool& closeAll)
 {
@@ -2164,8 +2276,8 @@ bool PlotManager::HandleOpenWindows(bool& closeAll)
           continue;
         }
         if (key == 'x') closeAll = true;
-      } else if (auto selectedBox = (canvas->GetEvent() == kButton1Double) ? dynamic_cast<TPave*>(canvas->GetSelected()) : nullptr) {
-        logger::info("Current position of {}: ({:.3g}, {:.3g}).", selectedBox->GetName(), selectedBox->GetX1NDC(), selectedBox->GetY2NDC());
+      } else if (auto report = (canvas->GetEvent() == kButton1Double) ? PositionReport(canvas->GetSelected(), canvas->GetSelectedPad()) : nullopt) {
+        logger::info("{}", *report);
       }
     }
     anyOpen = true;

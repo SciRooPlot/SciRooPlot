@@ -58,7 +58,6 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& AddFunction(const std::string& function, const std::optional<std::string>& label = {})`
 - `Data& AddPoints(const std::vector<double_t>& x, const std::vector<double_t>& y, const std::optional<std::string>& label = {})`
 - `Data& AddPoints(const std::vector<std::pair<double_t, double_t>>& positions, const std::optional<std::string>& label = {})`
-- `Data& AddLine(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2, const std::optional<std::string>& label = {})`
 - `Ratio& AddRatio(const Data& numerator, const Data& denominator, const std::optional<std::string>& label = {})`
 - `Ratio& AddRatio(const Ratio& ratio, const std::optional<std::string>& label = {})`
 - `Ratio& AddRatio(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName, const std::string& denominatorDataSource, const std::optional<std::string>& label = {})`
@@ -71,6 +70,15 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `LegendBox& AddLegend(double_t xPos, double_t yPos, const std::optional<std::string>& title = {})`
 - `LegendBox& AddLegend(const std::optional<std::string>& title = {})`
 - `LegendBox& AddLegend(box_placement_t placement, const std::optional<std::string>& title = {})`
+- `Shape& AddLine(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2)` — not cut at the frame
+- `Shape& AddArrow(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2)` — from pos1 to pos2, not cut at the frame
+- `Shape& AddVerticalLine(double_t x)` — over the height of the frame
+- `Shape& AddHorizontalLine(double_t y)` — over the width of the frame
+- `Shape& AddRegion(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2)` — rectangle between two corners, cut at the frame
+- `Shape& AddRegionX(double_t x1, double_t x2)` — over the height of the frame
+- `Shape& AddRegionY(double_t y1, double_t y2)` — over the width of the frame
+- `Shape& AddEllipse(std::pair<double_t, double_t> center, double_t radiusX, double_t radiusY)`
+- `Shape& AddPolygon(const std::vector<std::pair<double_t, double_t>>& points)` — closed automatically, cut at the frame
 - `Axis& GetAxis(const char axis)`
 - `Data& GetData(uint8_t dataID)`
 - `LegendBox& GetLegend(uint8_t legendID)`
@@ -325,6 +333,17 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `LegendBox& SetSymbolColScale(float_t scale)`
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
 
+## Plot::Pad::Shape
+*a line, arrow, region, ellipse or polygon that is not data (Pad::AddLine, AddArrow, AddVerticalLine, AddRegionX, ...); also has the line and fill setters*
+
+- `Shape& SetUserCoordinates(bool isUserCoord = true)` — false: positions as fractions of the pad (0 to 1) instead of axis values
+- `Shape& SetBehindData()` — drawn after the frame and before the data (default: after the data)
+- `Shape& SetOnTop()` — drawn after the legends and texts (default: before them, so that they avoid it)
+- `Shape& SetArrowHead(const std::string& style)` — the option of TArrow: "|>" (default), ">", "<|>", "<>", "-|>-", ...
+- `Shape& SetArrowSize(float_t size)` — length of the arrow head as fraction of the pad height (default 0.03)
+- `Shape& SetArc(double_t phiMin, double_t phiMax)` — part of an ellipse, in degrees (default: 0 to 360)
+- `Shape& SetRotation(double_t theta)` — rotation of an ellipse, in degrees
+
 ## Plot::Pad::LegendEntry
 *a legend row: the appearance of the row of a data item (Data::SetLegendEntry) or a row added with LegendBox::AddEntry; also has the marker, line, fill and text setters*
 
@@ -350,7 +369,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
 
 ## line setters
-*Data, Ratio, LegendEntry*
+*Data, Ratio, LegendEntry, Shape*
 
 - `Derived& SetLine(int16_t style, float_t width, color_t color, float_t alpha = 1.f)`
 - `Derived& SetLineColor(color_t color)`
@@ -360,7 +379,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
 
 ## fill setters
-*Plot, Pad, Data, Ratio, LegendEntry, TextBox, LegendBox, StatsBox*
+*Plot, Pad, Data, Ratio, LegendEntry, TextBox, LegendBox, StatsBox, Shape*
 
 - `Derived& SetFill(int16_t style, color_t color, float_t alpha = 1.f)`
 - `Derived& SetFillColor(color_t color)`

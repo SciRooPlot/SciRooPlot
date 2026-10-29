@@ -72,6 +72,7 @@ using TextBox = Pad::TextBox;
 using StatsBox = Pad::StatsBox;
 using LegendBox = Pad::LegendBox;
 using LegendEntry = Pad::LegendEntry;
+using Shape = Pad::Shape;
 constexpr auto ref_int = py::return_value_policy::reference_internal;
 
 void exportLogging(py::module_& m);
@@ -89,6 +90,7 @@ void exportTextBox(py::module_& m);
 void exportStatsBox(py::module_& m);
 void exportLegendBox(py::module_& m);
 void exportLegendEntry(py::module_& m);
+void exportShape(py::module_& m);
 
 // custom caster for Data::data_dim_t: accepts "var", (var, nBins), (var, edges), (var, nBins, range)
 namespace pybind11::detail
@@ -208,6 +210,7 @@ PYBIND11_MODULE(SciRooPlot, m)
   exportLegendBox(m);
   exportTextBox(m);
   exportStatsBox(m);
+  exportShape(m);
   exportData(m);
   exportRatio(m);
   exportAxis(m);
@@ -433,7 +436,6 @@ void exportPad(py::module_& m)
     .def("AddFunction", &Pad::AddFunction, arg("function"), arg("label") = nullopt, ref_int)
     .def("AddPoints", overload_cast<const vector<double_t>&, const vector<double_t>&, const optional<string>&>(&Pad::AddPoints), arg("x"), arg("y"), arg("label") = nullopt, ref_int)
     .def("AddPoints", overload_cast<const vector<pair<double_t, double_t>>&, const optional<string>&>(&Pad::AddPoints), arg("positions"), arg("label") = nullopt, ref_int)
-    .def("AddLine", &Pad::AddLine, arg("pos1"), arg("pos2"), arg("label") = nullopt, ref_int)
     .def("SetPosition", &Pad::SetPosition, arg("xlow"), arg("ylow"), arg("xup"), arg("yup"), ref_int)
     .def("SetMargins", &Pad::SetMargins, arg("top"), arg("bottom"), arg("left"), arg("right"), ref_int)
     .def("SetLeftMargin", &Pad::SetLeftMargin, arg("left"), ref_int)
@@ -500,6 +502,16 @@ void exportPad(py::module_& m)
     .def("AddLegend", overload_cast<box_placement_t, const optional<string>&>(&Pad::AddLegend), arg("placement"), arg("title") = nullopt, ref_int)
     .def("AddLegend", overload_cast<const optional<string>&>(&Pad::AddLegend), arg("title") = nullopt, ref_int)
     .def("GetText", &Pad::GetText, arg("textID"), ref_int)
+    .def("GetShape", &Pad::GetShape, arg("shapeID"), ref_int)
+    .def("AddLine", &Pad::AddLine, arg("pos1"), arg("pos2"), ref_int)
+    .def("AddArrow", &Pad::AddArrow, arg("pos1"), arg("pos2"), ref_int)
+    .def("AddVerticalLine", &Pad::AddVerticalLine, arg("x"), ref_int)
+    .def("AddHorizontalLine", &Pad::AddHorizontalLine, arg("y"), ref_int)
+    .def("AddRegion", &Pad::AddRegion, arg("pos1"), arg("pos2"), ref_int)
+    .def("AddRegionX", &Pad::AddRegionX, arg("x1"), arg("x2"), ref_int)
+    .def("AddRegionY", &Pad::AddRegionY, arg("y1"), arg("y2"), ref_int)
+    .def("AddEllipse", &Pad::AddEllipse, arg("center"), arg("radiusX"), arg("radiusY"), ref_int)
+    .def("AddPolygon", &Pad::AddPolygon, arg("points"), ref_int)
     .def("GetLegend", &Pad::GetLegend, arg("legendID"), ref_int)
     .def("SetRefFunc", &Pad::SetRefFunc, arg("refFunc"), ref_int)
     .def("SetFrame", overload_cast<const string&, const string&>(&Pad::SetFrame), arg("name"), arg("dataSource"), ref_int)
@@ -816,6 +828,22 @@ void exportLegendEntry(py::module_& m)
   defLineSetters(legendEntry);
   defFillSetters(legendEntry);
   defTextSetters(legendEntry);
+}
+
+void exportShape(py::module_& m)
+{
+  py::class_<Shape> shape(m, "Shape", "A line, arrow, region, ellipse or polygon in a pad that is not data (Pad.AddLine, AddArrow, AddRegion, ...).");
+  shape
+    .def("Print", &Shape::Print)
+    .def("SetUserCoordinates", &Shape::SetUserCoordinates, arg("isUserCoord") = true, ref_int)
+    .def("SetBehindData", &Shape::SetBehindData, ref_int)
+    .def("SetOnTop", &Shape::SetOnTop, ref_int)
+    .def("SetArrowHead", &Shape::SetArrowHead, arg("style"), ref_int)
+    .def("SetArrowSize", &Shape::SetArrowSize, arg("size"), ref_int)
+    .def("SetArc", &Shape::SetArc, arg("phiMin"), arg("phiMax"), ref_int)
+    .def("SetRotation", &Shape::SetRotation, arg("theta"), ref_int);
+  defLineSetters(shape);
+  defFillSetters(shape);
 }
 
 void exportPythonDataInterfaces(py::module_& m)

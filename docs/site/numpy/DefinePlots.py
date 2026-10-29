@@ -67,7 +67,7 @@ def DefinePlots(pm: PlotManager):
     # ---- roc
     plot = Plot("roc", "ml", "1d")
     plot[1].AddData("roc", "ml", "classifier").SetLine(kSolid, 3.0, kRed + 1)
-    plot[1].AddLine((0.0, 0.0), (1.0, 1.0), "random guess").SetLine(kDashed, 2.0, kGray + 1)
+    plot[1].AddPoints([0.0, 1.0], [0.0, 1.0], "random guess").SetDrawOption(line).SetLine(kDashed, 2.0, kGray + 1)
     plot[1].AddLegend(bottom_right)
     plot[1]['X'].SetTitle("false positive rate").SetRange(0.0, 1.0)
     plot[1]['Y'].SetTitle("true positive rate").SetRange(0.0, 1.05)

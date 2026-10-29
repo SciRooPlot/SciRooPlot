@@ -652,7 +652,7 @@ figure.plot figcaption { color: #5b6b80 }
         <tr><td>open files, <code>Get&lt;TH1&gt;("dir/h")</code> and check for <code>nullptr</code></td><td>name inputs once: <code>pm.AddDataSource("data", "/path/run.root")</code>, then <code>AddData("h", "data")</code>. The name is searched through all folders and lists; several files form one source, trees are chained.</td></tr>
         <tr><td>size a <code>TCanvas</code>, divide <code>TPad</code>s, tune margins and text sizes per pad</td><td>pick a base plot: <code>"1d"</code>, <code>"1d_ratio"</code>, <code>"1d_2x2"</code>, <code>"2d"</code>… Text sizes, ticks and line widths are equal in every panel.</td></tr>
         <tr><td>call <code>Draw("E1 SAME")</code> in the right order, different strings for TH1 and TGraph</td><td>add data in drawing order with one alias for both types: <code>SetDrawOption(points_endcaps)</code>. Raw strings still work: <code>SetDrawOption("E1")</code>.</td></tr>
-        <tr><td>place a <code>TLegend</code> by trial and error, <code>AddEntry(h, "", "lp")</code></td><td><code>AddLegend()</code> finds a free corner; symbols follow what is drawn. Double-click a box in <code>show</code> mode to print its coordinates.</td></tr>
+        <tr><td>place a <code>TLegend</code> by trial and error, <code>AddEntry(h, "", "lp")</code></td><td><code>AddLegend()</code> finds a free corner; symbols follow what is drawn. Double-click a box or shape in <code>show</code> mode to print its name and coordinates.</td></tr>
         <tr><td><code>tree-&gt;Draw("pt&gt;&gt;h(100,0,10)", "abs(eta)&lt;0.8")</code></td><td><code>AddData("tracks", "src").Project1D({"pt", 100, {0.0, 10.0}}).Filter("abs(eta) &lt; 0.8")</code>, run with RDataFrame; CSV tables work the same way.</td></tr>
         <tr><td>one macro per figure, <code>SaveAs</code> for every format, re-run after each change</td><td><code>plot paper .+ pdf</code> makes them all; changed sources are rebuilt and re-run automatically.</td></tr>
       </tbody>
@@ -1285,7 +1285,7 @@ plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(k
 pm.AddPlot(plot);` },
   { title: "Legend and text", img: "img/tour/legend.png", alt: "The spectrum with a legend top right and experiment text bottom left",
     text: `<p>The third argument of <code>AddData</code> is the label. <code>AddLegend()</code> collects the labels into a box and finds a corner where it covers no data; <code>AddText</code> does the same for free text.</p>
-<p class="expert-only">Explicit positions: <code>AddLegend(0.6, 0.9)</code> is the upper left corner in pad coordinates, <code>AddLegend(top_right)</code> a preferred corner. In <code>show</code> mode, double-click a box to print its current coordinates.</p>`,
+<p class="expert-only">Explicit positions: <code>AddLegend(0.6, 0.9)</code> is the upper left corner in pad coordinates, <code>AddLegend(top_right)</code> a preferred corner. In <code>show</code> mode, double-click a box or shape to print its current coordinates.</p>`,
     py: `plot = Plot("legend", "tour", "1d")
 plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
 plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2)
@@ -1484,7 +1484,7 @@ const EX_TAGS = [
   ["2d", "2D", /"2d|Project2D|Profile2D|colz|lego|surf|cont_|candle|violin/, "appearance"], ["tree", "tree", /Project1D|Project2D|Profile1D|Profile2D|\.Project\(|Filter\(|Define\(/, "trees"],
   ["table", "table (CSV)", /Scatter\(/, "trees"], ["modifiers", "modifiers", /Normalize|Rebin|\.Scale\(|ScaleX|Cumulative|DivideBinWidth|Smooth/, "modifiers"],
   ["projection", "projection", /ProjectX|ProjectY|ProfileX/, "modifiers"], ["uncertainty", "uncertainties", /\bboxes\b|\bband\b|brackets|SetIsCorrelated/, "appearance"],
-  ["function", "functions and lines", /AddFunction|AddLine|SetRefFunc/, "adding"], ["numbers", "numbers in labels", /"[^"]*<(mean|entries|integral|name|title|rms|max|min)[^"]*"/, "labels"],
+  ["function", "functions, lines and shapes", /AddFunction|AddLine|AddArrow|AddVerticalLine|AddHorizontalLine|AddRegion|AddEllipse|SetRefFunc/, "adding"], ["numbers", "numbers in labels", /"[^"]*<(mean|entries|integral|name|title|rms|max|min)[^"]*"/, "labels"],
   ["log", "log scale", /SetLog\(/, "plots"], ["text", "texts", /AddText\(/, "legends"], ["loop", "plot families", /\bfor\b/, "templates"]];
 const exTags = k => EX_TAGS.filter(([, , re]) => re.test(EXAMPLES[k].py)).map(x => x[0]);
 let exTagSel = new Set();
@@ -1686,7 +1686,7 @@ const REF = [
   { id: "text", g: "layout", t: "Text sizes and insets", body: `<p>Three levels: for a class of plots, the <code>PanelLayout</code> of the base plot (the only way that keeps all panels equal); for one plot, the pad or the axis; for one box, the box itself. With the default font 42 a size is a fraction of the pad, so the same number is smaller in a smaller pad; font 43 takes pixels.</p>
 <div class="code"><pre data-snip="text"></pre></div>
 <p>An inset is an extra pad placed inside the frame; pads are drawn in the order of their numbers, so it covers what is below it.</p>` },
-  { id: "legends", g: "layout", t: "Legends and texts", body: `<div class="code"><pre data-snip="legends"></pre></div><p>Positions are the upper left corner in pad coordinates (0 to 1); <code>.SetUserCoordinates()</code> switches to axis units. Legend symbols follow what is drawn; override them with <code>SetSymbolElements</code> (L line, P marker, F fill, E error bar). In <code>show</code> mode, double-click a box to print its coordinates.</p>` },
+  { id: "legends", g: "layout", t: "Legends and texts", body: `<div class="code"><pre data-snip="legends"></pre></div><p>Positions are the upper left corner in pad coordinates (0 to 1); <code>.SetUserCoordinates()</code> switches to axis units. Legend symbols follow what is drawn; override them with <code>SetSymbolElements</code> (L line, P marker, F fill, E error bar). In <code>show</code> mode, double-click a box or shape to print its coordinates.</p>` },
   { id: "templates", g: "layout", t: "Templates: one look per kind of data", body: `<p>A thesis or paper shows the same few kinds of data again and again: measured points, a simulation, a model, systematic uncertainties. Each should look the same in every figure. A <b>template</b> says once how one kind of data looks; every plot then only names the data.</p>
 <div class="twocode"><div><h3>Without templates</h3><div class="code"><pre data-snip="tmpl_before"></pre></div><p class="small muted">The style is repeated in every plot. To make the simulation blue, you edit every line that has it, and the one you miss gives a figure that does not match.</p></div>
 <div><h3>With templates</h3><div class="code"><pre data-snip="tmpl_after"></pre></div><p class="small muted">The style lives in one line per kind of data, at the top of your file. Change it there and every figure follows.</p></div></div>
@@ -1774,7 +1774,10 @@ plot[1].AddData("folder/hist", "src")           # a path inside the input; no la
 plot[1].AddFunction("sin(x)/x", "formula")
 plot[1].AddFunction("[](double* x, double* p) { return x[0] < 1.0 ? 1.0 : 1.0 / x[0]; }", "C++ lambda").SetNpx(2000)
 plot[1].AddPoints([1.0, 2.0, 3.0], [0.5, 0.7, 0.6], "points")
-plot[1].AddLine((0.0, 1.0), (10.0, 1.0))
+plot[1].AddPoints([0.0, 10.0], [1.0, 1.0], "a line").SetDrawOption(line)  # a line as data: with legend row
+plot[1].AddVerticalLine(125.0)                  # shapes are not data: no legend row, not in the axis ranges
+plot[1].AddRegionX(120.0, 130.0).SetBehindData()
+plot[1].AddArrow((140.0, 900.0), (127.0, 650.0))
 plot[1].SetFrame("frameHist", "src")            # an input that only defines the frame
 plot[1].AddData("wide", "src").SetDefinesFrame()  # or: this data sets the frame
 plot[1](2).SetColor(kGreen + 2)                 # change data 2 of the pad later`, cpp: `plot[1].AddData("hist", "src", "label");        // histogram, graph, function, tree or table
@@ -1782,7 +1785,10 @@ plot[1].AddData("folder/hist", "src");          // a path inside the input; no l
 plot[1].AddFunction("sin(x)/x", "formula");
 plot[1].AddFunction("[](double* x, double* p) { return x[0] < 1.0 ? 1.0 : 1.0 / x[0]; }", "C++ lambda").SetNpx(2000);
 plot[1].AddPoints({1.0, 2.0, 3.0}, {0.5, 0.7, 0.6}, "points");
-plot[1].AddLine({0.0, 1.0}, {10.0, 1.0});
+plot[1].AddPoints({0.0, 10.0}, {1.0, 1.0}, "a line").SetDrawOption(line);  // a line as data: with legend row
+plot[1].AddVerticalLine(125.0);                 // shapes are not data: no legend row, not in the axis ranges
+plot[1].AddRegionX(120.0, 130.0).SetBehindData();
+plot[1].AddArrow({140.0, 900.0}, {127.0, 650.0});
 plot[1].SetFrame("frameHist", "src");           // an input that only defines the frame
 plot[1].AddData("wide", "src").SetDefinesFrame(); // or: this data sets the frame
 plot[1](2).SetColor(kGreen + 2);                // change data 2 of the pad later` },
@@ -2244,7 +2250,7 @@ for i, (low, high) in enumerate([(1.0, 1.5), (1.5, 2.0), (2.0, 3.0), (3.0, 4.0),
     pad.AddData("hInvMassGGVsPt", "CaloQA", "same event") \\
        .ProjectX(low, high, True).ScaleX(1000.0).Normalize(False, 190.0, 240.0) \\
        .SetMarker(kFullCircle, 1.0, kBlack).SetDefinesFrame()
-    pad.AddLine((190.0, 0.05), (240.0, 0.05), "norm. region").SetLine(kSolid, 5.0, kRed + 1)
+    pad.AddPoints([190.0, 240.0], [0.05, 0.05], "norm. region").SetDrawOption(line).SetLine(kSolid, 5.0, kRed + 1)
     pad.AddText(0.6, 0.9, f"{low:g} < #it{{p}}_{{T}} < {high:g} GeV/#it{{c}}")
 plot[1].AddLegend(0.6, 0.8)
 plot[0]['X'].SetRange(60.0, 240.0).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})")
@@ -2266,7 +2272,7 @@ for (size_t i = 0; i < ptBins.size(); ++i) {
   pad.AddData("hInvMassGGVsPt", "CaloQA", "same event")
      .ProjectX(low, high, true).ScaleX(1000.0).Normalize(false, 190.0, 240.0)
      .SetMarker(kFullCircle, 1.0, kBlack).SetDefinesFrame();
-  pad.AddLine({190.0, 0.05}, {240.0, 0.05}, "norm. region").SetLine(kSolid, 5.0, kRed + 1);
+  pad.AddPoints({190.0, 240.0}, {0.05, 0.05}, "norm. region").SetDrawOption(line).SetLine(kSolid, 5.0, kRed + 1);
   pad.AddText(0.6, 0.9, Form("%g < #it{p}_{T} < %g GeV/#it{c}", low, high));
 }
 plot[1].AddLegend(0.6, 0.8);
@@ -2454,7 +2460,7 @@ const ROOT_RULES = [
   ["axes", /TGaxis|style|Axis|Label|Title|Tick|RangeUser|Ndivisions|NoExponent|axis|SetMaximum|SetMinimum/], ["style", /SetMarker|SetLine|Draw\(/]];
 const SRP_RULES = [
   ["output", /AddPlot|SaveProject|PlotManager\(|PlotManager pm/], ["input", /AddDataSource/], ["pads", /AddBasePlot|Plot\(|Plot plot/],
-  ["ops", /AddRatio|AddLine/], ["legend", /AddLegend|AddText/], ["axes", /\['[XY]'\]/], ["style", /AddData|SetMarker|SetDrawOption|SetLine|Scatter/]];
+  ["ops", /AddRatio|AddLine|AddArrow|AddVerticalLine|AddHorizontalLine|AddRegion|AddEllipse/], ["legend", /AddLegend|AddText/], ["axes", /\['[XY]'\]/], ["style", /AddData|SetMarker|SetDrawOption|SetLine|Scatter/]];
 // a line of code: neither empty nor a comment nor the frame of the macro function (signature and outer braces),
 // which has no counterpart on the SciRooPlot side; counted the same way on the slides
 const isFrame = l => /^void /.test(l) || l === "{" || l === "}";
@@ -3083,7 +3089,7 @@ with uproot.recreate(results + "events.root") as f:  # instead of events.csv
     f["sig"] = np.histogram(df.score[df.label == 1], bins=25, range=(0.0, 1.0))` });
 const NP_FIGS = [
   ["scores", "Histograms", "Score distributions", "Two histograms made with <code>histo</code> like <code>np.histogram</code>, normalised like <code>density=True</code>. The error bars belong to the histograms and follow the normalisation."],
-  ["roc", "ROC curve", "A ROC curve", "<code>graph</code> turns two arrays into a curve; <code>AddLine</code> draws the diagonal of a random guess. The legend is placed explicitly, here in the lower right corner."],
+  ["roc", "ROC curve", "A ROC curve", "<code>graph</code> turns two arrays into a curve; two points drawn as a line (<code>AddPoints</code> with <code>SetDrawOption(line)</code>) are the diagonal of a random guess, with a legend row. The legend is placed explicitly, here in the lower right corner."],
   ["overtraining", "Train vs. test", "Overtraining check, selected from the DataFrame", "The DataFrame went in once with <code>table</code>. Each curve fills a histogram of one column with <code>Project1D</code> and picks its rows with <code>Filter</code>, a condition over the column names; four curves are one loop. Filled areas and points come from the drawing option and the fill."],
   ["features", "2D histogram", "Two features against each other", "<code>histo2d</code> like <code>np.histogram2d</code>. The <code>2d</code> base plot keeps room for the colour scale, and <code>['Z'].SetLog()</code> makes it logarithmic."],
   ["ptBins", "Grid of panels", "The same distributions in four ranges", "Like <code>plt.subplots(2, 2, sharex=True, sharey=True)</code>: the panels touch, share their axes and keep the text sizes of a single plot. Settings on <code>plot[0]</code> hold for all four."],

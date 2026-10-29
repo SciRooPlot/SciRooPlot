@@ -421,6 +421,7 @@ class Plot::Pad : public FillSetters<Pad>
   class LegendBox;
   class LegendEntry;
   class StatsBox;
+  class Shape;
 
   Pad() = default;
   explicit Pad(const boost::property_tree::ptree& padTree);
@@ -440,8 +441,6 @@ class Plot::Pad : public FillSetters<Pad>
 
   Data& AddPoints(const std::vector<double_t>& x, const std::vector<double_t>& y, const std::optional<std::string>& label = {});
   Data& AddPoints(const std::vector<std::pair<double_t, double_t>>& positions, const std::optional<std::string>& label = {});
-
-  Data& AddLine(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2, const std::optional<std::string>& label = {});
 
   Ratio& AddRatio(const Data& numerator, const Data& denominator, const std::optional<std::string>& label = {});
   Ratio& AddRatio(const Ratio& ratio, const std::optional<std::string>& label = {});
@@ -463,10 +462,22 @@ class Plot::Pad : public FillSetters<Pad>
   LegendBox& AddLegend(const std::optional<std::string>& title = {});
   LegendBox& AddLegend(box_placement_t placement, const std::optional<std::string>& title = {});
 
+  // shapes: drawn in the pad but not data (never in the axis ranges, not numbered with the data, no legend row); positions in axis values
+  Shape& AddLine(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2);    // not cut at the frame
+  Shape& AddArrow(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2);   // from pos1 to pos2, not cut at the frame
+  Shape& AddVerticalLine(double_t x);                                                        // over the height of the frame
+  Shape& AddHorizontalLine(double_t y);                                                      // over the width of the frame
+  Shape& AddRegion(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2);  // rectangle between two corners, cut at the frame
+  Shape& AddRegionX(double_t x1, double_t x2);                                               // over the height of the frame
+  Shape& AddRegionY(double_t y1, double_t y2);                                               // over the width of the frame
+  Shape& AddEllipse(std::pair<double_t, double_t> center, double_t radiusX, double_t radiusY);
+  Shape& AddPolygon(const std::vector<std::pair<double_t, double_t>>& points);  // closed automatically, cut at the frame
+
   Axis& GetAxis(const char axis);
   Data& GetData(uint8_t dataID);
   LegendBox& GetLegend(uint8_t legendID);
   TextBox& GetText(uint8_t textID);
+  Shape& GetShape(uint8_t shapeID);
 
   Data& SetRefFunc(const std::string& refFunc);                            // "": no reference function, also not the one of the base plot or of pad 0
   Data& SetFrame(const std::string& name, const std::string& dataSource);  // input that only defines the axis frame (not drawn, not numbered)
@@ -533,6 +544,7 @@ class Plot::Pad : public FillSetters<Pad>
   auto& GetData() { return mData; }
   auto& GetLegendBoxes() { return mLegendBoxes; }
   auto& GetTextBoxes() { return mTextBoxes; }
+  auto& GetShapes() { return mShapes; }
   static std::vector<std::tuple<float_t, float_t, float_t, float_t>> GradientEndpoints(const std::vector<std::pair<color_t, float_t>>& gradient);
   uint8_t GetDataCount() const { return mData.size(); }
 
@@ -641,6 +653,7 @@ class Plot::Pad : public FillSetters<Pad>
 
   std::vector<std::shared_ptr<LegendBox>> mLegendBoxes;
   std::vector<std::shared_ptr<TextBox>> mTextBoxes;
+  std::vector<std::shared_ptr<Shape>> mShapes;
 };
 
 //**************************************************************************************************
@@ -1401,6 +1414,77 @@ class Plot::Pad::StatsBox : public Plot::Pad::Box<StatsBox>
   friend class Data;
 
   boost::property_tree::ptree GetPropertyTree() const;
+};
+
+//**************************************************************************************************
+/**
+ * A shape drawn in a pad that is not data: a line, an arrow, a region, an ellipse or a polygon (Pad::AddLine, AddArrow, AddRegion, ...).
+ * It never enters the axis ranges, is not numbered with the data, takes no default colours and has no legend row.
+ */
+//**************************************************************************************************
+class Plot::Pad::Shape : public LineSetters<Shape>, public FillSetters<Shape>
+{
+ public:
+  explicit Shape(const boost::property_tree::ptree& shapeTree);
+  void Print() const { Plot::Print(GetPropertyTree(), "Shape"); }
+
+  Shape& SetUserCoordinates(bool isUserCoord = true);  // false: positions as fractions of the pad (0 to 1) instead of axis values
+  Shape& SetBehindData();                              // drawn after the frame and before the data (default: after the data)
+  Shape& SetOnTop();                                   // drawn after the legends and texts (default: before them, so that they avoid it)
+  Shape& SetArrowHead(const std::string& style);       // the option of TArrow: "|>" (default), ">", "<|>", "<>", "-|>-", ...
+  Shape& SetArrowSize(float_t size);                   // length of the arrow head as fraction of the pad height (default 0.03)
+  Shape& SetArc(double_t phiMin, double_t phiMax);     // part of an ellipse, in degrees (default: 0 to 360)
+  Shape& SetRotation(double_t theta);                  // rotation of an ellipse, in degrees
+
+ protected:
+  friend class PlotPainter;
+  friend class PlotManager;
+  friend class Pad;
+
+  enum class kind_t : uint8_t { line,
+                                arrow,
+                                vertical_line,
+                                horizontal_line,
+                                region,
+                                region_x,
+                                region_y,
+                                ellipse,
+                                polygon };
+  enum class layer_t : uint8_t { behind_data,
+                                 after_data,
+                                 on_top };
+  Shape(kind_t kind, const std::vector<double_t>& coordinates);
+  boost::property_tree::ptree GetPropertyTree() const;
+  static const char* KindName(kind_t kind);   // as stored: "vertical_line"
+  static std::string KindLabel(kind_t kind);  // for messages: "vertical line", "region X"
+  // the drawn object of a shape carries it as TObject::SetUniqueID, so that a double-click in show mode names it like the user added it:
+  // its kind, its number among the shapes of this kind in the pad (the nth AddArrow), and whether it is in fractions of the pad
+  struct drawn_id_t {
+    kind_t kind;
+    uint16_t number;
+    bool isUserCoord;
+  };
+  static uint32_t EncodeDrawnID(const drawn_id_t& id);
+  static std::optional<drawn_id_t> DecodeDrawnID(uint32_t uniqueID);
+
+  auto GetKind() const { return mKind; }
+  const auto& GetCoordinates() const { return mCoordinates; }
+  bool IsUserCoordinates() const { return mIsUserCoord.value_or(true); }
+  layer_t GetLayer() const { return mLayer.value_or(layer_t::after_data); }
+  const auto& GetArrowHead() const { return mArrowHead; }
+  const auto& GetArrowSize() const { return mArrowSize; }
+  const auto& GetArc() const { return mArc; }
+  const auto& GetRotation() const { return mRotation; }
+
+ private:
+  kind_t mKind{kind_t::line};
+  std::vector<double_t> mCoordinates;  // line, arrow, region: x1, y1, x2, y2; vertical or horizontal line: x or y; region in x or y: x1, x2 or y1, y2; ellipse: x, y, rx, ry; polygon: x1, y1, x2, y2, ...
+  std::optional<bool> mIsUserCoord;
+  std::optional<layer_t> mLayer;
+  std::optional<std::string> mArrowHead;
+  std::optional<float_t> mArrowSize;
+  std::optional<std::pair<double_t, double_t>> mArc;
+  std::optional<double_t> mRotation;
 };
 
 //**************************************************************************************************

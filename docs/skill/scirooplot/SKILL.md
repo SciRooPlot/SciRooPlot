@@ -43,7 +43,7 @@ plot myGroup .+                     # all plots of myGroup and its subgroups
 plot 'myGroup$' .+                  # without subgroups;  plot myGroup/QA ctrl.*  selects a subgroup
 plot thesis 'fig_(a|b)' pdf         # quote patterns with ( ) | in bash
 ```
-Modes: `show` (interactive, default: keys `s`/`a` next/previous (circular), `d` moves the current plot into a window of its own, `q` closes a window, `x` all; the keys also work in the terminal, where `q` closes all; double-click a legend to print its coordinates), `spread` (all matching plots at once, one window each), `list`, `print` (dump definition), `pdf`, `eps`, `ps`, `svg`, `png`, `jpg`, `gif` (`gif+<centiseconds>` animates all matching plots, played once; `gif+<centiseconds>++` loops endlessly, `gif+<centiseconds>++<repeats>` that many times; in the order they were defined: one plot per frame in a group of its own, e.g. a loop over `SetView` angles or multiplicity classes, see the example group `animations`), `html`, `json`, `xml`, `root`, `macro` (ROOT macro), `file` (canvases into a ROOT file), `data` (the drawn data into a ROOT file).
+Modes: `show` (interactive, default: keys `s`/`a` next/previous (circular), `d` moves the current plot into a window of its own, `q` closes a window, `x` all; the keys also work in the terminal, where `q` closes all; double-click a legend, text or shape to print its name and coordinates), `spread` (all matching plots at once, one window each), `list`, `print` (dump definition), `pdf`, `eps`, `ps`, `svg`, `png`, `jpg`, `gif` (`gif+<centiseconds>` animates all matching plots, played once; `gif+<centiseconds>++` loops endlessly, `gif+<centiseconds>++<repeats>` that many times; in the order they were defined: one plot per frame in a group of its own, e.g. a loop over `SetView` angles or multiplicity classes, see the example group `animations`), `html`, `json`, `xml`, `root`, `macro` (ROOT macro), `file` (canvases into a ROOT file), `data` (the drawn data into a ROOT file).
 
 ## Program skeleton
 
@@ -117,7 +117,11 @@ Base plots: `PlotManager::MakeBasePlot("<type>[_wide|_tall][_<cols>x<rows>][_rat
 
 ```cpp
 plot[1].AddData("hist", "src", "label");                    // histogram, graph, function, tree, csv — type is detected
-plot[1].AddFunction("sin(x)/x", "label");  plot[1].AddPoints({x...}, {y...});  plot[1].AddLine({x1,y1}, {x2,y2});
+plot[1].AddFunction("sin(x)/x", "label");  plot[1].AddPoints({x...}, {y...});  plot[1].AddPoints({x1, x2}, {y1, y2}, "label").SetDrawOption(line);  // a line as data
+// shapes are not data (never in the axis ranges, not numbered, no default colours, no legend row), drawn after the data unless SetBehindData()/SetOnTop():
+plot[1].AddVerticalLine(125.);  plot[1].AddHorizontalLine(1.);  plot[1].AddRegionX(120., 130.).SetBehindData();  plot[1].AddRegionY(y1, y2);
+plot[1].AddLine({x1, y1}, {x2, y2});  plot[1].AddArrow({x1, y1}, {x2, y2}).SetArrowHead("|>").SetArrowSize(0.03);  plot[1].AddRegion({x1, y1}, {x2, y2});
+plot[1].AddEllipse({x, y}, rx, ry).SetArc(0., 180.).SetRotation(30.);  plot[1].AddPolygon({{x1, y1}, {x2, y2}, {x3, y3}});  // line and fill setters as for data; SetUserCoordinates(false): fractions of the pad
 plot[1].AddFunction("[](double* x, double* p) { return std::exp(-x[0] * x[1]); }");  // C++ lambda as text: x[0..2] set the dimension, no parameters
 // any callable (with captures, also from python): TF1 f("f", callable, xmin, xmax, 0); f.SetNpx(n); pm.AddDataSource("src", &f); then AddData("f", "src")
 plot[1].AddData(myTemplate("hist"), "label");               // Data template: Data().SetDrawOption(curve).SetColor(kRed) then template("name"[, "src"])

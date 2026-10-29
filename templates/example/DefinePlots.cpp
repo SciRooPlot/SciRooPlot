@@ -178,6 +178,9 @@ void DefineHiggsPlots(PlotManager& pm)
     plot[1].AddLegend(0.45, 0.62);                                                       // upper left corner of the box in pad coordinates
     plot[2].AddRatio({"diphoton/mgg_data", "higgs"}, {"diphoton/mgg_bkgFit", "higgs"});  // histogram / function
     plot[2]['Y'].SetTitle("data / bkg.").SetRange(0.9, 1.15);
+    for (uint8_t pad : {1, 2}) {  // the signal window as a shape behind the data: not data, so no legend row and not in the axis ranges
+      plot[pad].AddRegionX(120.0, 130.0).SetBehindData();
+    }
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // normalised shape; <mean> etc. in a label are replaced by properties of the data -----
@@ -456,7 +459,7 @@ void DefineDetectorPlots(PlotManager& pm)
       const auto& [low, high] = ptBins[i];
       plot[i + 1].AddData("hInvMassGGVsPtMixed", "CaloQA", "mixed event").ProjectX(low, high, true).ScaleX(1000.0).Normalize(false, 190.0, 240.0).SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineColor(kAzure - 9);
       plot[i + 1].AddData("hInvMassGGVsPt", "CaloQA", "same event").ProjectX(low, high, true).ScaleX(1000.0).Normalize(false, 190.0, 240.0).SetMarker(kFullCircle, 1.0, kBlack).SetDefinesFrame();
-      plot[i + 1].AddLine({190.0, 0.05}, {240.0, 0.05}, "norm. region").SetLine(kSolid, 5.0, kRed + 1);  // 20 bins: 1/20 each
+      plot[i + 1].AddPoints({190.0, 240.0}, {0.05, 0.05}, "norm. region").SetDrawOption(line).SetLine(kSolid, 5.0, kRed + 1);  // 20 bins: 1/20 each
       plot[i + 1].AddText(0.6, 0.9, Form("%g < #it{p}_{T} < %g GeV/#it{c}", low, high));
     }
     plot[1].AddLegend(0.6, 0.8);  // upper left corner, in pad coordinates like the texts
@@ -489,10 +492,10 @@ void DefineDetectorPlots(PlotManager& pm)
   // --------------------------------------------------------------------------------------
   // run-by-run quality assurance
   // --------------------------------------------------------------------------------------
-  {  // wide custom base plot; AddLine draws a line between two points in axis coordinates
+  {  // wide custom base plot; a line with a legend row is data (points drawn as a line), one without would be a shape (AddHorizontalLine)
     Plot plot("meanMultiplicityVsRun", "detector/qa", "1d_wide");
     plot[1].AddData("runQA", "runQA", "run average").Scatter("run", "meanNch", "0.", "meanNch_err");
-    plot[1].AddLine({544000.0, 9.6}, {544500.0, 9.6}, "reference").SetLine(kDashed, 2.0, kRed + 1);
+    plot[1].AddPoints({544000.0, 544500.0}, {9.6, 9.6}, "reference").SetDrawOption(line).SetLine(kDashed, 2.0, kRed + 1);
     plot[1].AddLegend(0.718, 0.914);
     plot[1]['X'].SetTitle("run number").SetRange(544000.0, 544500.0).SetNumDivisions(505).SetTickOrientation("+");
     plot[1]['Y'].SetTitle("#LT#it{N}_{ch}#GT").SetRange(8.6, 10.2);
@@ -627,11 +630,11 @@ void DefineHeavyIonPlots(PlotManager& pm)
   const vector<string> centralities = {"0-10", "10-30", "30-50"};
   const std::map<string, double> ncoll = {{"0-10", 1500.0}, {"10-30", 750.0}, {"30-50", 260.0}};
 
-  {  // vertical lines marking the centrality classes -------------------------------------
+  {  // vertical lines marking the centrality classes (shapes: over the height of the frame, not data)
     Plot plot("centrality", "heavyion", "1d");
     plot[1].AddData("hV0M", "heavyion");
     for (const double boundary : {2700.0, 6800.0, 14000.0}) {
-      plot[1].AddLine({boundary, 1.0}, {boundary, 3.e4}).SetLine(kDashed, 2.0, kRed + 1);
+      plot[1].AddVerticalLine(boundary).SetLine(kDashed, 2.0, kRed + 1);
     }
     plot[1].AddText(0.64, 0.5, "0-10%");
     plot[1].AddText(0.4, 0.6, "10-30%");
@@ -953,8 +956,8 @@ void DefineAtomicPlots(PlotManager& pm)
   {  // above-threshold ionisation at high intensity: direct electrons up to 2 U_p, rescattered ones up to 10 U_p
     Plot plot("atiPlateau", "atomic", "1d");
     plot[1].AddData("strongField/argon_1e14", "atomic", "Ar, 800 nm, 10^{14} W/cm^{2}").SetDrawOption(hist).SetColor(kAzure + 2);
-    plot[1].AddLine({11.9, 1.0}, {11.9, 1.e6}, "2#it{U}_{p}").SetLine(kDashed, 2.0, kGray + 2);
-    plot[1].AddLine({59.7, 1.0}, {59.7, 1.e6}, "10#it{U}_{p}").SetLine(kDashed, 2.0, kRed + 1);
+    plot[1].AddPoints({11.9, 11.9}, {1.0, 1.e6}, "2#it{U}_{p}").SetDrawOption(line).SetLine(kDashed, 2.0, kGray + 2);
+    plot[1].AddPoints({59.7, 59.7}, {1.0, 1.e6}, "10#it{U}_{p}").SetDrawOption(line).SetLine(kDashed, 2.0, kRed + 1);
     plot[1].AddText(1.0, 1.e7, "direct").SetUserCoordinates();
     plot[1].AddText(28.0, 5.e3, "rescattered").SetUserCoordinates();
     plot[1].AddLegend(0.55, 0.9);
@@ -1013,7 +1016,7 @@ void DefineAtomicPlots(PlotManager& pm)
     Plot plot("millikan", "atomic", "1d");
     plot[1].AddData("photoeffect/stoppingVoltage", "atomic", "Hg lines, Cs cathode").SetColor(kBlack);
     plot[1].AddData("photoeffect/fitStopping", "atomic", "<title>").SetLine(kSolid, 2.0, kRed + 1);
-    plot[1].AddLine({4.0, 0.0}, {9.0, 0.0}).SetLine(kDashed, 1.0, kGray + 1);
+    plot[1].AddHorizontalLine(0.0).SetLine(kDashed, 1.0, kGray + 1);
     plot[1].AddLegend(0.2, 0.9);
     plot[1]['X'].SetRange(4.0, 9.0).SetTitle("frequency #nu (10^{14} Hz)");
     plot[1]['Y'].SetRange(-0.4, 2.0).SetTitle("stopping voltage (V)");
@@ -1126,7 +1129,7 @@ void DefineNuclearPlots(PlotManager& pm)
     Plot plot("reactorOscillation", "neutrino", "1d");
     plot[1].AddData("survival", "neutrino", "data #minus background").SetDrawOption(points_xerr).SetColor(kBlack);
     plot[1].AddData("expectation", "neutrino", "oscillation, best fit").SetDrawOption(line).SetLine(kSolid, 2.0, kRed + 1);
-    plot[1].AddLine({15.0, 1.0}, {105.0, 1.0}, "no oscillation").SetLine(kDashed, 2.0, kGray + 2);
+    plot[1].AddPoints({15.0, 105.0}, {1.0, 1.0}, "no oscillation").SetDrawOption(line).SetLine(kDashed, 2.0, kGray + 2);
     plot[1].AddLegend(0.45, 0.92);
     plot[1]['X'].SetRange(15.0, 105.0).SetTitle("#it{L}_{0} / #it{E}_{#bar{#nu}_{e}} (km/MeV)");
     plot[1]['Y'].SetRange(0.0, 1.4).SetTitle("survival probability");
@@ -1173,7 +1176,7 @@ void DefineSearchPlots(PlotManager& pm)
     for (const string variation : {"observed_theoryUp", "observed_theoryDown"}) {
       plot[1].AddData("stop/" + variation, "searches").SetDrawOption(line).SetLine(kSolid, 1.0, kBlack);
     }
-    plot[1].AddLine({200.0, 7.0}, {993.0, 800.0}, "#it{m}_{#tilde{t}} = #it{m}_{t} + #it{m}_{#tilde{#chi}^{0}_{1}}").SetLine(kDotted, 2.0, kGray + 2);
+    plot[1].AddPoints({200.0, 993.0}, {7.0, 800.0}, "#it{m}_{#tilde{t}} = #it{m}_{t} + #it{m}_{#tilde{#chi}^{0}_{1}}").SetDrawOption(line).SetLine(kDotted, 2.0, kGray + 2);
     plot[1].AddLegend(0.17, 0.92, "#tilde{t}#tilde{t}, #tilde{t} #rightarrow t #tilde{#chi}^{0}_{1}");
     plot[1]['Z'].SetTitle("95% CL upper limit on #sigma (pb)");
     pm.AddPlot(plot);
@@ -1260,7 +1263,7 @@ void DefineBiophysicsPlots(PlotManager& pm)
     Plot plot("dnaStretching", "biophysics", "1d");
     plot[1].AddData("forceExtension", "biophysics", "#lambda-DNA, optical tweezers").SetColor(kBlack);
     plot[1].AddData("wormLikeChain", "biophysics", "worm-like chain, #it{P} = 50 nm").SetDrawOption(line).SetLine(kSolid, 2.0, kRed + 1);
-    plot[1].AddLine({16.4, 0.0}, {16.4, 100.0}, "contour length").SetLine(kDashed, 2.0, kGray + 2);
+    plot[1].AddPoints({16.4, 16.4}, {0.0, 100.0}, "contour length").SetDrawOption(line).SetLine(kDashed, 2.0, kGray + 2);
     plot[1].AddLegend(0.2, 0.92);
     plot[1]['X'].SetRange(0.0, 32.0).SetTitle("extension (#mum)");
     plot[1]['Y'].SetRange(0.0, 120.0).SetTitle("force (pN)");
@@ -1338,7 +1341,7 @@ void DefineTheoryPlots(PlotManager& pm)
     for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"energy", "#varepsilon/#it{T}^{4}", kRed + 1}, {"entropy", "3#it{s}/4#it{T}^{3}", kAzure + 2}, {"3p", "3#it{p}/#it{T}^{4}", kGreen + 2}}) {
       plot[1].AddData("lattice_" + name, "theory", label).SetDrawOption(band).SetFill(1001, color, 0.6).SetLineColor(color).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
     }
-    plot[1].AddLine({130.0, 15.62}, {410.0, 15.62}, "Stefan-Boltzmann limit").SetLine(kDashed, 2.0, kBlack);
+    plot[1].AddPoints({130.0, 410.0}, {15.62, 15.62}, "Stefan-Boltzmann limit").SetDrawOption(line).SetLine(kDashed, 2.0, kBlack);
     plot[1].AddLegend(0.55, 0.45);
     plot[1]['X'].SetRange(130.0, 410.0).SetTitle("#it{T} (MeV)");
     plot[1]['Y'].SetRange(0.0, 17.0);
@@ -1365,7 +1368,7 @@ void DefineTheoryPlots(PlotManager& pm)
     for (const int size : sizes) {
       plot[1].AddData("binder_L" + std::to_string(size), "theory", "#it{L} = " + std::to_string(size)).SetDrawOption(points_line);
     }
-    plot[1].AddLine({2.269, 0.0}, {2.269, 0.7}, "#it{T}_{c} (Onsager)").SetLine(kDashed, 2.0, kGray + 2);
+    plot[1].AddPoints({2.269, 2.269}, {0.0, 0.7}, "#it{T}_{c} (Onsager)").SetDrawOption(line).SetLine(kDashed, 2.0, kGray + 2);
     plot[1].AddLegend(0.18, 0.5);
     plot[1]['X'].SetTitle("#it{T} (#it{J}/#it{k}_{B})");
     plot[1]['Y'].SetRange(0.0, 0.9).SetTitle("#it{U}_{4} = 1 #minus #LT#it{m}^{4}#GT / 3#LT#it{m}^{2}#GT^{2}");
