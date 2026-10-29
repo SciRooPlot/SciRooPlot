@@ -46,7 +46,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Plot& SetWidth(int32_t width)`
 - `Plot& SetHeight(int32_t height)`
 - `Plot& SetFixAspectRatio(bool fixAspectRatio = true)`
-- `Plot& SetFill(color_t color, std::optional<int16_t> style = {}, std::optional<float_t> alpha = {})`
+- `Plot& SetFill(int16_t style, color_t color, float_t alpha = 1.f)`
 - `Plot& SetFillColor(color_t color)`
 - `Plot& SetFillStyle(int16_t style)`
 - `Plot& SetFillAlpha(float_t alpha)`
@@ -120,16 +120,16 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles)`
 - `Pad& SetDefaultCandleBoxRange(float_t candleOption)`
 - `Pad& SetDefaultCandleWhiskerRange(float_t candleOption)`
-- `Pad& SetFill(color_t color, std::optional<int16_t> style = {}, std::optional<float_t> alpha = {})`
+- `Pad& SetFill(int16_t style, color_t color, float_t alpha = 1.f)`
 - `Pad& SetFillColor(color_t color)`
 - `Pad& SetFillStyle(int16_t style)`
 - `Pad& SetFillAlpha(float_t alpha)`
 - `Pad& SetTransparent()`
-- `Pad& SetFrameFill(color_t color, std::optional<int16_t> style = {}, std::optional<float_t> alpha = {})`
+- `Pad& SetFrameFill(int16_t style, color_t color, float_t alpha = 1.f)`
 - `Pad& SetFrameFillColor(color_t color)`
 - `Pad& SetFrameFillStyle(int16_t style)`
 - `Pad& SetFrameFillAlpha(float_t alpha)`
-- `Pad& SetFrameBorder(color_t color, std::optional<int16_t> style = {}, std::optional<float_t> width = {}, std::optional<float_t> alpha = {})`
+- `Pad& SetFrameBorder(int16_t style, float_t width, color_t color, float_t alpha = 1.f)`
 - `Pad& SetFrameBorderColor(color_t color)`
 - `Pad& SetFrameBorderAlpha(float_t alpha)`
 - `Pad& SetFrameBorderStyle(int16_t style)`
@@ -206,17 +206,17 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& SetStatsBox(const StatsBox& statsBox)`
 - `Data& SetColor(color_t color)`
 - `Data& SetAlpha(float_t alpha)`
-- `Data& SetMarker(color_t color, int16_t style, float_t size, std::optional<float_t> alpha = {})`
+- `Data& SetMarker(int16_t style, float_t size, color_t color, float_t alpha = 1.f)`
 - `Data& SetMarkerColor(color_t color)`
 - `Data& SetMarkerAlpha(float_t alpha)`
 - `Data& SetMarkerStyle(int16_t style)`
 - `Data& SetMarkerSize(float_t size)`
-- `Data& SetLine(color_t color, int16_t style, float_t width, std::optional<float_t> alpha = {})`
+- `Data& SetLine(int16_t style, float_t width, color_t color, float_t alpha = 1.f)`
 - `Data& SetLineColor(color_t color)`
 - `Data& SetLineAlpha(float_t alpha)`
 - `Data& SetLineStyle(int16_t style)`
 - `Data& SetLineWidth(float_t width)`
-- `Data& SetFill(color_t color, int16_t style, std::optional<float_t> alpha = {})`
+- `Data& SetFill(int16_t style, color_t color, float_t alpha = 1.f)`
 - `Data& SetFillColor(color_t color)`
 - `Data& SetFillStyle(int16_t style)`
 - `Data& SetFillAlpha(float_t alpha)`
@@ -304,17 +304,17 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `BoxType& SetSize(double_t width, double_t height)`
 - `BoxType& SetUserCoordinates(bool isUserCoord = true)`
 - `BoxType& SetAutoPlacement(box_placement_t placement = best_corner)`
-- `BoxType& SetBorder(color_t color, int16_t style, float_t width, std::optional<float_t> alpha = {})`
+- `BoxType& SetBorder(int16_t style, float_t width, color_t color, float_t alpha = 1.f)`
 - `BoxType& SetBorderColor(color_t color)`
 - `BoxType& SetBorderAlpha(float_t alpha)`
 - `BoxType& SetBorderStyle(int16_t style)`
 - `BoxType& SetBorderWidth(float_t width)`
-- `BoxType& SetText(color_t color, int16_t font, float_t size, std::optional<float_t> alpha = {})`
+- `BoxType& SetText(int16_t font, float_t size, color_t color, float_t alpha = 1.f)`
 - `BoxType& SetTextColor(color_t color)`
 - `BoxType& SetTextAlpha(float_t alpha)`
 - `BoxType& SetTextFont(int16_t font)`
 - `BoxType& SetTextSize(float_t size)`
-- `BoxType& SetFill(color_t color, int16_t style, std::optional<float_t> alpha = {})`
+- `BoxType& SetFill(int16_t style, color_t color, float_t alpha = 1.f)`
 - `BoxType& SetFillColor(color_t color)`
 - `BoxType& SetFillStyle(int16_t style)`
 - `BoxType& SetFillAlpha(float_t alpha)`
@@ -375,17 +375,17 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `LegendEntry& AfterData(uint16_t dataID)`
 - `LegendEntry& SetColor(color_t color)`
 - `LegendEntry& SetAlpha(float_t alpha)`
-- `LegendEntry& SetMarker(color_t color, int16_t style, float_t size, std::optional<float_t> alpha = {})`
+- `LegendEntry& SetMarker(int16_t style, float_t size, color_t color, float_t alpha = 1.f)`
 - `LegendEntry& SetMarkerColor(color_t color)`
 - `LegendEntry& SetMarkerAlpha(float_t alpha)`
 - `LegendEntry& SetMarkerStyle(int16_t style)`
 - `LegendEntry& SetMarkerSize(float_t size)`
-- `LegendEntry& SetLine(color_t color, int16_t style, float_t width, std::optional<float_t> alpha = {})`
+- `LegendEntry& SetLine(int16_t style, float_t width, color_t color, float_t alpha = 1.f)`
 - `LegendEntry& SetLineColor(color_t color)`
 - `LegendEntry& SetLineAlpha(float_t alpha)`
 - `LegendEntry& SetLineStyle(int16_t style)`
 - `LegendEntry& SetLineWidth(float_t width)`
-- `LegendEntry& SetFill(color_t color, int16_t style, std::optional<float_t> alpha = {})`
+- `LegendEntry& SetFill(int16_t style, color_t color, float_t alpha = 1.f)`
 - `LegendEntry& SetFillColor(color_t color)`
 - `LegendEntry& SetFillAlpha(float_t alpha)`
 - `LegendEntry& SetFillStyle(int16_t style)`

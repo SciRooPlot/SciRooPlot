@@ -66,8 +66,8 @@ def DefinePlots(pm: PlotManager):
     pm.AddPlot(plot)
     # ---- roc
     plot = Plot("roc", "ml", "1d")
-    plot[1].AddData("roc", "ml", "classifier").SetLine(kRed + 1, kSolid, 3.0)
-    plot[1].AddLine((0.0, 0.0), (1.0, 1.0), "random guess").SetLine(kGray + 1, kDashed, 2.0)
+    plot[1].AddData("roc", "ml", "classifier").SetLine(kSolid, 3.0, kRed + 1)
+    plot[1].AddLine((0.0, 0.0), (1.0, 1.0), "random guess").SetLine(kDashed, 2.0, kGray + 1)
     plot[1].AddLegend(bottom_right)
     plot[1]['X'].SetTitle("false positive rate").SetRange(0.0, 1.0)
     plot[1]['Y'].SetTitle("true positive rate").SetRange(0.0, 1.05)
@@ -79,7 +79,7 @@ def DefinePlots(pm: PlotManager):
             data = plot[1].AddData("events", "ml", f"{name}, {split}").Project1D(("score", 25, [0.0, 1.0]))
             data.Filter(f'label == {label} && split == "{split}"').Normalize(True).SetColor(color)
             if split == "train":
-                data.SetDrawOption(hist).SetFill(color, 1001).SetFillAlpha(0.25)
+                data.SetDrawOption(hist).SetFill(1001, color).SetFillAlpha(0.25)
     plot[1].AddLegend()
     plot[1]['X'].SetTitle("classifier score")
     plot[1]['Y'].SetTitle("probability density").SetRoomAboveMax(0.4)  # free space for the legend
@@ -117,7 +117,7 @@ def DefinePlots(pm: PlotManager):
     # ---- fit
     plot = Plot("fit", "ml", "1d_ratio")
     plot[1].AddData("measurement", "ml", "measurement").SetColor(kBlack)
-    plot[1].AddFunction(model, "exponential fit").SetLine(kRed + 1, kSolid, 2.0)
+    plot[1].AddFunction(model, "exponential fit").SetLine(kSolid, 2.0, kRed + 1)
     plot[1].AddLegend()
     plot[1]['Y'].SetTitle("counts").SetLog().SetRoomAboveMax(0.1)
     plot[2].AddRatio(["measurement", "ml"], [model, "USER_FUNCTIONS"]).SetColor(kBlack)  # residuals: data / fit
@@ -126,8 +126,8 @@ def DefinePlots(pm: PlotManager):
     pm.AddPlot(plot)
     # ---- learning
     plot = Plot("learning", "ml", "1d")
-    plot[1].AddData("trainLoss", "ml", "training").SetLine(kAzure + 2, kSolid, 3.0)
-    plot[1].AddData("validationLoss", "ml", "validation").SetLine(kOrange + 7, kSolid, 3.0)
+    plot[1].AddData("trainLoss", "ml", "training").SetLine(kSolid, 3.0, kAzure + 2)
+    plot[1].AddData("validationLoss", "ml", "validation").SetLine(kSolid, 3.0, kOrange + 7)
     plot[1].AddLegend()
     plot[1]['X'].SetTitle("epoch")
     plot[1]['Y'].SetTitle("loss")

@@ -716,7 +716,7 @@ figure.plot figcaption { color: #5b6b80 }
         <tr><td><code>density=True</code></td><td><code>.Normalize(True)</code>; <code>.Normalize()</code> scales the integral to 1</td></tr>
         <tr><td><code>plt.subplots(2, 2)</code>, a residual panel</td><td>the base plots <code>"1d_2x2"</code>, <code>"1d_ratio"</code>; pads are <code>plot[1]</code>, <code>plot[2]</code>…, <code>plot[0]</code> sets all of them</td></tr>
         <tr><td><code>ax.set_yscale("log")</code>, <code>ax.set_xlim(a, b)</code>, <code>ax.set_xlabel</code></td><td><code>plot[1]['Y'].SetLog()</code>, <code>['X'].SetRange(a, b)</code>, <code>['X'].SetTitle("…")</code></td></tr>
-        <tr><td><code>color="#d62728"</code>, <code>ls="--"</code>, <code>lw=2</code></td><td><code>.SetColor("#d62728")</code> or ROOT's <code>kRed + 1</code>; <code>.SetLine(kRed + 1, kDashed, 2.0)</code></td></tr>
+        <tr><td><code>color="#d62728"</code>, <code>ls="--"</code>, <code>lw=2</code></td><td><code>.SetColor("#d62728")</code> or ROOT's <code>kRed + 1</code>; <code>.SetLine(kDashed, 2.0, kRed + 1)</code></td></tr>
         <tr><td><code>ax.legend()</code></td><td><code>plot[1].AddLegend()</code>; the labels are the third argument of <code>AddData</code></td></tr>
         <tr><td><code>fig.savefig("roc.pdf")</code></td><td><code>plot ml roc pdf</code> in the terminal (or <code>png</code>, <code>svg</code>, <code>eps</code>…)</td></tr>
       </tbody>
@@ -873,9 +873,9 @@ figure.plot figcaption { color: #5b6b80 }
       <p><code>Density()</code> = DivideBinWidth + Normalize · <code data-py="Normalize(False, lo, hi)" data-cpp="Normalize(false, lo, hi)">Normalize(False, lo, hi)</code> in a range</p></section>
     <section><h4>Look</h4><table>
       <tr><td><code>.SetColor(kRed + 1)</code></td><td>marker, line and fill</td></tr>
-      <tr><td><code>.SetLine(c, kDashed, 3.0)</code></td><td>colour, style, width</td></tr>
-      <tr><td><code>.SetMarker(c, kFullCircle, 1.2)</code></td><td>colour, style, size</td></tr>
-      <tr><td><code>.SetFill(c, 1001)</code> <code>.SetFillAlpha(0.3)</code></td><td>solid 1001, hatch 3004, 3005</td></tr>
+      <tr><td><code>.SetLine(kDashed, 3.0, c)</code></td><td>style, width, colour</td></tr>
+      <tr><td><code>.SetMarker(kFullCircle, 1.2, c)</code></td><td>style, size, colour</td></tr>
+      <tr><td><code>.SetFill(1001, c)</code> <code>.SetFillAlpha(0.3)</code></td><td>solid 1001, hatch 3004, 3005</td></tr>
       <tr><td><code>.SetDrawOption(alias)</code></td><td id="csopts"></td></tr></table></section>
     <section><h4>Pads, axes, boxes</h4><table>
       <tr><td><code>plot[1]</code>, <code>plot[2]</code> …</td><td>pads from 1; <code>plot[0]</code> = all pads</td></tr>
@@ -1142,8 +1142,8 @@ pm.AddDataSource("mc", "/path/mc.root")
 pm.AddBasePlot(PlotManager.MakeBasePlot("1d_ratio"))
 
 plot = Plot("ptSpectrum", "spectra", "1d_ratio")
-plot[1].AddData("hPt", "data", "data").SetMarker(kBlack, kFullCircle, 1.0)
-plot[1].AddData("hPt", "mc", "simulation").SetLine(kRed + 1, kSolid, 3.0).SetDrawOption(hist_open)
+plot[1].AddData("hPt", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
+plot[1].AddData("hPt", "mc", "simulation").SetLine(kSolid, 3.0, kRed + 1).SetDrawOption(hist_open)
 plot[1].AddLegend(0.6, 0.9)
 plot[2].AddRatio(["hPt", "data"], ["hPt", "mc"])
 plot[0]['X'].SetRange(0.0, 10.0).SetTitle("#it{p}_{T} (GeV/#it{c})")
@@ -1157,8 +1157,8 @@ int main() {
   pm.AddDataSource("mc", "/path/mc.root");
   pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
   Plot plot("ptSpectrum", "spectra", "1d_ratio");
-  plot[1].AddData("hPt", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
-  plot[1].AddData("hPt", "mc", "simulation").SetLine(kRed + 1, kSolid, 3.0).SetDrawOption(hist_open);
+  plot[1].AddData("hPt", "data", "data").SetMarker(kFullCircle, 1.0, kBlack);
+  plot[1].AddData("hPt", "mc", "simulation").SetLine(kSolid, 3.0, kRed + 1).SetDrawOption(hist_open);
   plot[1].AddLegend(0.6, 0.9);
   plot[2].AddRatio({"hPt", "data"}, {"hPt", "mc"});
   plot[0]['X'].SetRange(0.0, 10.0).SetTitle("#it{p}_{T} (GeV/#it{c})");
@@ -1249,34 +1249,34 @@ pm.AddPlot(plot);` },
   { title: "Compare with simulation", img: "img/tour/style.png", alt: "Data points with a dotted magenta simulation line",
     text: `<p>Add the simulated spectrum from a second source and give both a look. Colours, line and marker styles are ROOT constants: hover or tap them in the code.</p>
 <p>Here both sources are folders of the same file. A source can just as well be another file, every file of a directory or a wildcard like <code>run_*.root</code>: the plot code stays the same (<a href="#ref-sources">data sources</a>).</p>
-<div class="basics"><b>Reading the style setters</b><code>SetLine(kMagenta + 2, kDotted, 3.0)</code> means colour, line style, line width. <code>kMagenta + 2</code> is a darker magenta, <code>kDotted</code> a dotted line. <code>SetMarker(kBlack, kFullCircle, 1.0)</code> is colour, marker shape, size. Try other values in <a href="#styles">Colours &amp; styles</a>.</div>
+<div class="basics"><b>Reading the style setters</b><code>SetLine(kDotted, 3.0, kMagenta + 2)</code> means colour, line style, line width. <code>kMagenta + 2</code> is a darker magenta, <code>kDotted</code> a dotted line. <code>SetMarker(kFullCircle, 1.0, kBlack)</code> is colour, marker shape, size. Try other values in <a href="#styles">Colours &amp; styles</a>.</div>
 <p><code>SetDrawOption(hist_open)</code> draws the simulation as steps instead of points, without vertical lines at its outer edges (<code>hist</code> closes them down to the axis). The <a href="#options">drawing options</a> page shows all of them.</p>`,
     py: `pm.AddDataSource("data", "\${SCIROOPLOT_DATA_DIR}/ExampleData/spectra.root:data")
 + pm.AddDataSource("mc", "\${SCIROOPLOT_DATA_DIR}/ExampleData/spectra.root:mc")
 
 plot = Plot("style", "tour", "1d")
-+ plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0)
-+ plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0)
++ plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
++ plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2)
 pm.AddPlot(plot)`,
     cpp: `pm.AddDataSource("data", "\${SCIROOPLOT_DATA_DIR}/ExampleData/spectra.root:data");
 + pm.AddDataSource("mc", "\${SCIROOPLOT_DATA_DIR}/ExampleData/spectra.root:mc");
 
 Plot plot("style", "tour", "1d");
-+ plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
-+ plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0);
++ plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack);
++ plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2);
 pm.AddPlot(plot);` },
   { title: "Logarithmic axes", img: "img/tour/axes.png", alt: "The same spectrum on logarithmic axes, data and simulation clearly visible",
     text: `<p>Axes are addressed with <code>['X']</code>, <code>['Y']</code> and <code>['Z']</code>. With <button class="term" data-term="log">logarithmic</button> axes the whole spectrum becomes visible, and the axis title tells the reader what is shown.</p>
 <p class="basics"><b>The error bars</b>The vertical lines on the points are <button class="term" data-term="errors">error bars</button>. They grow at high p<sub>T</sub>, where only few particles were counted.</p>`,
     py: `plot = Plot("axes", "tour", "1d")
-plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0)
-plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0)
+plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
+plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2)
 + plot[1]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})")
 + plot[1]['Y'].SetLog()
 pm.AddPlot(plot)`,
     cpp: `Plot plot("axes", "tour", "1d");
-plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
-plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0);
+plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack);
+plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2);
 + plot[1]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})");
 + plot[1]['Y'].SetLog();
 pm.AddPlot(plot);` },
@@ -1284,16 +1284,16 @@ pm.AddPlot(plot);` },
     text: `<p>The third argument of <code>AddData</code> is the label. <code>AddLegend()</code> collects the labels into a box and finds a corner where it covers no data; <code>AddText</code> does the same for free text.</p>
 <p class="expert-only">Explicit positions: <code>AddLegend(0.6, 0.9)</code> is the upper left corner in pad coordinates, <code>AddLegend(top_right)</code> a preferred corner. In <code>show</code> mode, double-click a box to print its current coordinates.</p>`,
     py: `plot = Plot("legend", "tour", "1d")
-plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0)
-plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0)
+plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
+plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2)
 plot[1]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})")
 plot[1]['Y'].SetLog()
 + plot[1].AddLegend()
 + plot[1].AddText(["My Experiment", "pp, #sqrt{#it{s}} = 13.6 TeV"])
 pm.AddPlot(plot)`,
     cpp: `Plot plot("legend", "tour", "1d");
-plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
-plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0);
+plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack);
+plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2);
 plot[1]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})");
 plot[1]['Y'].SetLog();
 + plot[1].AddLegend();
@@ -1304,8 +1304,8 @@ pm.AddPlot(plot);` },
 <p class="basics"><b>Why a ratio?</b>On a log scale a 20 % difference is barely visible. The <button class="term" data-term="ratio">ratio panel</button> shows it directly: the data rise above the simulation above 2 GeV/<i>c</i>.</p>
 <p class="expert-only">Different binnings are divided via spline interpolation; <code>.SetIsCorrelated()</code> gives binomial errors for sub-samples. Modifiers act on <code>Numer()</code>, <code>Denom()</code> or <code>Both()</code>.</p>`,
     py: `+ plot = Plot("ratio", "tour", "1d_ratio")
-plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0)
-plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0)
+plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
+plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2)
 plot[1]['Y'].SetLog()
 plot[1].AddLegend()
 plot[1].AddText(["My Experiment", "pp, #sqrt{#it{s}} = 13.6 TeV"])
@@ -1314,8 +1314,8 @@ plot[1].AddText(["My Experiment", "pp, #sqrt{#it{s}} = 13.6 TeV"])
 + plot[0]['X'].SetLog().SetRange(0.15, 15.0).SetTitle("#it{p}_{T} (GeV/#it{c})")
 pm.AddPlot(plot)`,
     cpp: `+ Plot plot("ratio", "tour", "1d_ratio");
-plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
-plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0);
+plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack);
+plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2);
 plot[1]['Y'].SetLog();
 plot[1].AddLegend();
 plot[1].AddText({"My Experiment", "pp, #sqrt{#it{s}} = 13.6 TeV"});
@@ -1404,9 +1404,9 @@ function labRender() {
   const cn = lc.root ? cname(lc.root) : lc.rgb ? (lang === "py" ? `(${lc.rgb.join(", ")})` : `{${lc.rgb.join(", ")}}`) : `"${lc.hex}"`;
   document.getElementById("cpick").value = col;
   fill(document.getElementById("labcode"), `plot[1].AddData("hist", "src", "label")
-    .SetLine(${cn}, ${Ln}, ${num(lw)})
-    .SetMarker(${cn}, ${M[1] || M[0]}, ${num(ms)})
-    .SetFill(${cn}, ${fillCode(lab.fill)})
+    .SetLine(${Ln}, ${num(lw)}, ${cn})
+    .SetMarker(${M[1] || M[0]}, ${num(ms)}, ${cn})
+    .SetFill(${fillCode(lab.fill)}, ${cn})
     .SetFillAlpha(${fa})${end}`, lang);
   const near = lc.root ? null : nearestRoot(col);
   document.getElementById("facts").innerHTML = `<span>${lc.root ? `<b>${cn}</b> = colour ${lc.root.index}, ${col}` : `<b>${col}</b>: an own colour, ROOT gets an index for it when the plot is drawn (closest on ROOT's wheel: <code>${cname(near)}</code>)`}</span><span><b>${Ln}</b> = line style ${L[0]}</span><span><b>${M[1] || M[0]}</b> = marker style ${M[0]}${[1, 6, 7].includes(M[0]) ? " (fixed size, ignores the marker size)" : ""}</span><span><b>${fillCode(lab.fill)}</b> = fill style ${lab.fill}${lab.fill > 3100 ? ` (hatches: spacing ${Math.floor(lab.fill / 100) % 10}, angles ${[HATCH_J[Math.floor(lab.fill / 10) % 10], HATCH_K[lab.fill % 10]].filter(a => a !== undefined).join("° and ") || "none"}${[HATCH_J[Math.floor(lab.fill / 10) % 10], HATCH_K[lab.fill % 10]].some(a => a !== undefined) ? "°" : ""})` : ""}</span>`;
@@ -1689,7 +1689,7 @@ const REF = [
 <div><h3>With templates</h3><div class="code"><pre data-snip="tmpl_after"></pre></div><p class="small muted">The style lives in one line per kind of data, at the top of your file. Change it there and every figure follows.</p></div></div>
 <h3>What a template can carry</h3>
 <div class="tablewrap"><table><tbody>
-<tr><td>Look</td><td>marker, line, fill, drawing option, text format</td><td><code>.SetMarker(kBlack, kFullCircle, 1.0)</code></td></tr>
+<tr><td>Look</td><td>marker, line, fill, drawing option, text format</td><td><code>.SetMarker(kFullCircle, 1.0, kBlack)</code></td></tr>
 <tr><td>Where the data is</td><td>the data source, so the plots only give the name</td><td><code>.SetDataSource("mc")</code></td></tr>
 <tr><td>What is done to it</td><td>modifiers, projections, tree queries</td><td><code>.Normalize()</code>, <code>.Project1D("pt")</code></td></tr>
 </tbody></table></div>
@@ -1787,8 +1787,8 @@ plot[1](2).SetColor(kGreen + 2);                // change data 2 of the pad late
 plot[1].AddData("h", "src").SetDrawOption("E1")               # or a raw ROOT option string
 plot[1].AddData("h", "src").SetColor(kRed + 1).SetAlpha(0.5)  # marker, line and fill at once
 plot[1].AddData("h", "src").SetColor("#1f77b4")               # any colour: "#rrggbb" or (r, g, b) from 0 to 1
-plot[1].AddData("g", "src").SetMarker(kBlue + 1, kFullSquare, 1.2).SetLine(kBlue + 1, kDashed, 2.0)
-plot[1].AddData("b", "src").SetDrawOption(band).SetFill(kAzure - 9, 1001)
+plot[1].AddData("g", "src").SetMarker(kFullSquare, 1.2, kBlue + 1).SetLine(kDashed, 2.0, kBlue + 1)
+plot[1].AddData("b", "src").SetDrawOption(band).SetFill(1001, kAzure - 9)
 plot[1].AddData("h", "src").SetKeepInputStyle()               # keep line, marker, fill of the input
 plot[1].AddData("h2", "src").SetDrawOption(cont_fillz).SetContours(12)
 plot[0].SetDefaultColors([kBlack, kRed + 1, kBlue + 1])      # colour sequence for all pads
@@ -1798,8 +1798,8 @@ pm.AddColorOverview("colors", "overview")                     # plot overview co
 plot[1].AddData("h", "src").SetDrawOption("E1");              // or a raw ROOT option string
 plot[1].AddData("h", "src").SetColor(kRed + 1).SetAlpha(0.5); // marker, line and fill at once
 plot[1].AddData("h", "src").SetColor("#1f77b4");              // any colour: "#rrggbb" or {r, g, b} from 0 to 1
-plot[1].AddData("g", "src").SetMarker(kBlue + 1, kFullSquare, 1.2).SetLine(kBlue + 1, kDashed, 2.0);
-plot[1].AddData("b", "src").SetDrawOption(band).SetFill(kAzure - 9, 1001);
+plot[1].AddData("g", "src").SetMarker(kFullSquare, 1.2, kBlue + 1).SetLine(kDashed, 2.0, kBlue + 1);
+plot[1].AddData("b", "src").SetDrawOption(band).SetFill(1001, kAzure - 9);
 plot[1].AddData("h", "src").SetKeepInputStyle();              // keep line, marker, fill of the input
 plot[1].AddData("h2", "src").SetDrawOption(cont_fillz).SetContours(12);
 plot[0].SetDefaultColors({kBlack, kRed + 1, kBlue + 1});     // colour sequence for all pads
@@ -1833,7 +1833,7 @@ plot[1].AddData("h2", "src").RebinXY(4, 2).ProjectX(0.0, 1.0, true);` },
   plots: { py: `plot = Plot("name", "group/sub", "1d_ratio")
 plot.SetDimensions(710, 710).SetTransparent().AppendGroup("QA")
 plot[0].SetDefaultMarkerColors([kBlack, kRed + 1])   # defaults for all pads, cycled over the data
-plot[1].SetMargins(0.07, 0.14, 0.12, 0.07).SetFrameFill(kGray, 1001, 0.2)
+plot[1].SetMargins(0.07, 0.14, 0.12, 0.07).SetFrameFill(1001, kGray, 0.2)
 plot[1].SetRefFunc("1")                               # reference line, e.g. in a ratio pad
 plot[1]['X'].SetTitle("#it{x}").SetRange(1.4, 2.8).SetLog().SetGrid().SetNumDivisions(505)
 plot[1]['Y'].SetMaxDigits(3).SetNoExponent().SetTitleOffset(1.1).SetTitleCenter()
@@ -1843,7 +1843,7 @@ plot[1].SetView(35.0, 225.0)                          # 3D drawings: theta above
 variant = Plot(plot, "name_variant", "group/other")   # a copy under a new name (and group), to add more to it`, cpp: `Plot plot("name", "group/sub", "1d_ratio");
 plot.SetDimensions(710, 710).SetTransparent().AppendGroup("QA");
 plot[0].SetDefaultMarkerColors({kBlack, kRed + 1});   // defaults for all pads, cycled over the data
-plot[1].SetMargins(0.07, 0.14, 0.12, 0.07).SetFrameFill(kGray, 1001, 0.2);
+plot[1].SetMargins(0.07, 0.14, 0.12, 0.07).SetFrameFill(1001, kGray, 0.2);
 plot[1].SetRefFunc("1");                              // reference line, e.g. in a ratio pad
 plot[1]['X'].SetTitle("#it{x}").SetRange(1.4, 2.8).SetLog().SetGrid().SetNumDivisions(505);
 plot[1]['Y'].SetMaxDigits(3).SetNoExponent().SetTitleOffset(1.1).SetTitleCenter();
@@ -1917,23 +1917,23 @@ plot[1].AddData("band", "src", "unc.").SetLegendEntry(LegendEntry().SetSymbolEle
 plot[1].AddText(top_left, "My Experiment");
 plot[1].AddText(0.2, 0.9, {"line one", "line two"}).SetTextSize(0.04);` },
   tmpl_before: { py: `spectrum = Plot("ptSpectrum", "spectra", "1d_ratio")
-spectrum[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0)
-spectrum[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0)
+spectrum[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
+spectrum[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1)
 
 eta = Plot("etaSpectrum", "spectra", "1d")
-eta[1].AddData("etaSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0)
-eta[1].AddData("etaSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0)
+eta[1].AddData("etaSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
+eta[1].AddData("etaSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1)
 # ... and so on in every plot`, cpp: `Plot spectrum("ptSpectrum", "spectra", "1d_ratio");
-spectrum[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
-spectrum[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0);
+spectrum[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack);
+spectrum[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1);
 
 Plot eta("etaSpectrum", "spectra", "1d");
-eta[1].AddData("etaSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0);
-eta[1].AddData("etaSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0);
+eta[1].AddData("etaSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack);
+eta[1].AddData("etaSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1);
 // ... and so on in every plot` },
   tmpl_after: { py: `# once, at the top of the file
-measured = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.0)
-simulated = Data().SetDataSource("mc").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0)
+measured = Data().SetDataSource("data").SetMarker(kFullCircle, 1.0, kBlack)
+simulated = Data().SetDataSource("mc").SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1)
 
 spectrum = Plot("ptSpectrum", "spectra", "1d_ratio")
 spectrum[1].AddData(measured("ptSpec"), "data")
@@ -1943,8 +1943,8 @@ spectrum[2].AddRatio(measured("ptSpec"), simulated("ptSpec"))
 eta = Plot("etaSpectrum", "spectra", "1d")
 eta[1].AddData(measured("etaSpec"), "data")
 eta[1].AddData(simulated("etaSpec"), "simulation")`, cpp: `// once, at the top of the file
-const Data measured = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.0);
-const Data simulated = Data().SetDataSource("mc").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0);
+const Data measured = Data().SetDataSource("data").SetMarker(kFullCircle, 1.0, kBlack);
+const Data simulated = Data().SetDataSource("mc").SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1);
 
 Plot spectrum("ptSpectrum", "spectra", "1d_ratio");
 spectrum[1].AddData(measured("ptSpec"), "data");
@@ -2128,9 +2128,9 @@ pm.AddBasePlot(PlotManager.MakeBasePlot("1d_ratio"))
 
 plot = Plot("ptSpectrumRatio", "spectra", "1d_ratio")
 plot[1].AddData("ptSpec", "data", "data") \\
-       .SetMarker(kBlack, kFullCircle, 1.0)
+       .SetMarker(kFullCircle, 1.0, kBlack)
 plot[1].AddData("ptSpec", "mc", "simulation") \\
-       .SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0)
+       .SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1)
 plot[1].AddLegend()
 plot[1].AddText(["Example Experiment",
                  "pp, #sqrt{#it{s}} = 13.6 TeV", "|#eta| < 0.8"])
@@ -2147,9 +2147,9 @@ pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
 
 Plot plot("ptSpectrumRatio", "spectra", "1d_ratio");
 plot[1].AddData("ptSpec", "data", "data")
-       .SetMarker(kBlack, kFullCircle, 1.0);
+       .SetMarker(kFullCircle, 1.0, kBlack);
 plot[1].AddData("ptSpec", "mc", "simulation")
-       .SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0);
+       .SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1);
 plot[1].AddLegend();
 plot[1].AddText({"Example Experiment",
                  "pp, #sqrt{#it{s}} = 13.6 TeV", "|#eta| < 0.8"});
@@ -2170,7 +2170,7 @@ pm.AddBasePlot(PlotManager.MakeBasePlot("1d_ratio"))
 plot = Plot("vertexZ", "detector/events", "1d_ratio")
 plot[1].AddData("hVtxZ", "EventQA", "data").Normalize()
 plot[1].AddData("hVtxZ", "EventQA_MC", "simulation").Normalize() \\
-       .SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.0)
+       .SetDrawOption(hist).SetLine(kSolid, 3.0, kRed + 1)
 plot[1].AddLegend(0.189, 0.898)
 plot[1]['Y'].SetTitle("normalised counts").SetMaxRange(0.036)
 plot[2].AddRatio(["hVtxZ", "EventQA"], ["hVtxZ", "EventQA_MC"]).Both().Normalize()
@@ -2185,7 +2185,7 @@ pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
 Plot plot("vertexZ", "detector/events", "1d_ratio");
 plot[1].AddData("hVtxZ", "EventQA", "data").Normalize();
 plot[1].AddData("hVtxZ", "EventQA_MC", "simulation").Normalize()
-       .SetDrawOption(hist).SetLine(kRed + 1, kSolid, 3.0);
+       .SetDrawOption(hist).SetLine(kSolid, 3.0, kRed + 1);
 plot[1].AddLegend(0.189, 0.898);
 plot[1]['Y'].SetTitle("normalised counts").SetMaxRange(0.036);
 plot[2].AddRatio({"hVtxZ", "EventQA"}, {"hVtxZ", "EventQA_MC"}).Both().Normalize();
@@ -2201,10 +2201,10 @@ pm.AddDataSource("published", "\${SCIROOPLOT_DATA_DIR}/ExampleData/ptSpec_publis
 pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
 
 plot = Plot("ptSpectrumPublished", "spectra", "1d")
-plot[1].AddData("ptSpec", "data", "this analysis").SetMarker(kBlack, kFullCircle, 1.0)
+plot[1].AddData("ptSpec", "data", "this analysis").SetMarker(kFullCircle, 1.0, kBlack)
 plot[1].AddData("ptSpec_published", "published", "published (stat. #oplus syst.)") \\
        .Scatter("pt", "value", "pt_err", "sqrt(stat*stat + syst*syst)") \\
-       .SetMarker(kAzure + 2, kOpenSquare, 1.6)
+       .SetMarker(kOpenSquare, 1.6, kAzure + 2)
 plot[1].AddLegend()
 plot[1]['X'].SetLog()
 plot[1]['Y'].SetLog()
@@ -2216,10 +2216,10 @@ pm.AddDataSource("published", "\${SCIROOPLOT_DATA_DIR}/ExampleData/ptSpec_publis
 pm.AddBasePlot(PlotManager::MakeBasePlot("1d"));
 
 Plot plot("ptSpectrumPublished", "spectra", "1d");
-plot[1].AddData("ptSpec", "data", "this analysis").SetMarker(kBlack, kFullCircle, 1.0);
+plot[1].AddData("ptSpec", "data", "this analysis").SetMarker(kFullCircle, 1.0, kBlack);
 plot[1].AddData("ptSpec_published", "published", "published (stat. #oplus syst.)")
        .Scatter("pt", "value", "pt_err", "sqrt(stat*stat + syst*syst)")
-       .SetMarker(kAzure + 2, kOpenSquare, 1.6);
+       .SetMarker(kOpenSquare, 1.6, kAzure + 2);
 plot[1].AddLegend();
 plot[1]['X'].SetLog();
 plot[1]['Y'].SetLog();
@@ -2237,11 +2237,11 @@ for i, (low, high) in enumerate([(1.0, 1.5), (1.5, 2.0), (2.0, 3.0), (3.0, 4.0),
     pad = plot[i + 1]
     pad.AddData("hInvMassGGVsPtMixed", "CaloQA", "mixed event") \\
        .ProjectX(low, high, True).ScaleX(1000.0).Normalize(False, 190.0, 240.0) \\
-       .SetDrawOption(hist).SetFill(kAzure - 9, 1001).SetLineColor(kAzure - 9)
+       .SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineColor(kAzure - 9)
     pad.AddData("hInvMassGGVsPt", "CaloQA", "same event") \\
        .ProjectX(low, high, True).ScaleX(1000.0).Normalize(False, 190.0, 240.0) \\
-       .SetMarker(kBlack, kFullCircle, 1.0).SetDefinesFrame()
-    pad.AddLine((190.0, 0.05), (240.0, 0.05), "norm. region").SetLine(kRed + 1, kSolid, 5.0)
+       .SetMarker(kFullCircle, 1.0, kBlack).SetDefinesFrame()
+    pad.AddLine((190.0, 0.05), (240.0, 0.05), "norm. region").SetLine(kSolid, 5.0, kRed + 1)
     pad.AddText(0.6, 0.9, f"{low:g} < #it{{p}}_{{T}} < {high:g} GeV/#it{{c}}")
 plot[1].AddLegend(0.6, 0.8)
 plot[0]['X'].SetRange(60.0, 240.0).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})")
@@ -2259,11 +2259,11 @@ for (size_t i = 0; i < ptBins.size(); ++i) {
   auto& pad = plot[i + 1];
   pad.AddData("hInvMassGGVsPtMixed", "CaloQA", "mixed event")
      .ProjectX(low, high, true).ScaleX(1000.0).Normalize(false, 190.0, 240.0)
-     .SetDrawOption(hist).SetFill(kAzure - 9, 1001).SetLineColor(kAzure - 9);
+     .SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineColor(kAzure - 9);
   pad.AddData("hInvMassGGVsPt", "CaloQA", "same event")
      .ProjectX(low, high, true).ScaleX(1000.0).Normalize(false, 190.0, 240.0)
-     .SetMarker(kBlack, kFullCircle, 1.0).SetDefinesFrame();
-  pad.AddLine({190.0, 0.05}, {240.0, 0.05}, "norm. region").SetLine(kRed + 1, kSolid, 5.0);
+     .SetMarker(kFullCircle, 1.0, kBlack).SetDefinesFrame();
+  pad.AddLine({190.0, 0.05}, {240.0, 0.05}, "norm. region").SetLine(kSolid, 5.0, kRed + 1);
   pad.AddText(0.6, 0.9, Form("%g < #it{p}_{T} < %g GeV/#it{c}", low, high));
 }
 plot[1].AddLegend(0.6, 0.8);
@@ -2369,14 +2369,14 @@ for i, cent in enumerate(centralities):
     pad = plot[i + 1]
     label = "Pb-Pb / pp" if i == 0 else None
     pad.AddRatio(["cent_" + cent + "/ptSpec", "heavyion"], ["ptSpec", "data"], label).Numer().Scale(1.0 / ncoll[cent])
-    pad.SetRefFunc("1").SetLine(kGray + 1, kDashed, 2.0)
+    pad.SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 1)
     pad.AddText(0.5, 0.9, cent + "%")
 plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high") \\
-       .SetDrawOption(boxes).SetFill(kOrange - 9, 1001).SetLineColor(kOrange + 1).SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"))
-plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetMarker(kOrange + 1, kOpenCircle, 1.2).SetLegend(2)
+       .SetDrawOption(boxes).SetFill(1001, kOrange - 9).SetLineColor(kOrange + 1).SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"))
+plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetMarker(kOpenCircle, 1.2, kOrange + 1).SetLegend(2)
 plot[1].AddLegend(0.2, 0.3)
 plot[1].AddLegend(0.2, 0.78)
-plot[3].AddLegend(0.1, 0.3).AddEntry("norm. unc. 5%").SetSymbolElements("F").SetFill(kGray, 1001)
+plot[3].AddLegend(0.1, 0.3).AddEntry("norm. unc. 5%").SetSymbolElements("F").SetFill(1001, kGray)
 plot[0]['X'].SetLog().SetRange(0.15, 10.0)
 plot[0]['Y'].SetRange(0.0, 1.4).SetTitle("#it{R}_{AA}").SetTitleCenter()
 pm.AddPlot(plot)
@@ -2394,15 +2394,15 @@ for (size_t i = 0; i < centralities.size(); ++i) {
   auto& pad = plot[i + 1];
   const std::optional<std::string> label = (i == 0) ? std::optional<std::string>("Pb-Pb / pp") : std::nullopt;
   pad.AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}, label).Numer().Scale(1.0 / ncoll[cent]);
-  pad.SetRefFunc("1").SetLine(kGray + 1, kDashed, 2.0);
+  pad.SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 1);
   pad.AddText(0.5, 0.9, cent + "%");
 }
 plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high")
-       .SetDrawOption(boxes).SetFill(kOrange - 9, 1001).SetLineColor(kOrange + 1).SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
-plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetMarker(kOrange + 1, kOpenCircle, 1.2).SetLegend(2);
+       .SetDrawOption(boxes).SetFill(1001, kOrange - 9).SetLineColor(kOrange + 1).SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetMarker(kOpenCircle, 1.2, kOrange + 1).SetLegend(2);
 plot[1].AddLegend(0.2, 0.3);
 plot[1].AddLegend(0.2, 0.78);
-plot[3].AddLegend(0.1, 0.3).AddEntry("norm. unc. 5%").SetSymbolElements("F").SetFill(kGray, 1001);
+plot[3].AddLegend(0.1, 0.3).AddEntry("norm. unc. 5%").SetSymbolElements("F").SetFill(1001, kGray);
 plot[0]['X'].SetLog().SetRange(0.15, 10.0);
 plot[0]['Y'].SetRange(0.0, 1.4).SetTitle("#it{R}_{AA}").SetTitleCenter();
 pm.AddPlot(plot);
@@ -2418,7 +2418,7 @@ plot = Plot("spectra", "collisions/jets", "1d")
 jetStyle = Data().SetMarkerStyle(kFullSquare).SetMarkerSize(1.2)
 for tag, label in [("R02", "#it{R} = 0.2"), ("R04", "#it{R} = 0.4"), ("R06", "#it{R} = 0.6")]:
     plot[1].AddData("hJetPt_" + tag, "jets", label).ApplyLayout(jetStyle).RebinX(2)
-plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kGray + 2, kDashed, 2.0)
+plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kDashed, 2.0, kGray + 2)
 plot[1].AddLegend(0.212, 0.454, "anti-#it{k}_{T} jets, |#eta| < 0.5")
 plot[1]['X'].SetLog()
 plot[1]['Y'].SetLog()
@@ -2433,7 +2433,7 @@ const Data jetStyle = Data().SetMarkerStyle(kFullSquare).SetMarkerSize(1.2);
 for (const auto& [tag, label] : std::vector<std::pair<std::string, std::string>>{{"R02", "#it{R} = 0.2"}, {"R04", "#it{R} = 0.4"}, {"R06", "#it{R} = 0.6"}}) {
   plot[1].AddData("hJetPt_" + tag, "jets", label).ApplyLayout(jetStyle).RebinX(2);
 }
-plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kGray + 2, kDashed, 2.0);
+plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kDashed, 2.0, kGray + 2);
 plot[1].AddLegend(0.212, 0.454, "anti-#it{k}_{T} jets, |#eta| < 0.5");
 plot[1]['X'].SetLog();
 plot[1]['Y'].SetLog();
@@ -2639,7 +2639,7 @@ function layoutCode(py) {
     else L.push(`const std::vector<std::vector<Panel>> rows = {${rows.map(r => `{${r}}`).join(",\n                                              ")}};`);
     if (setters.length) L.push(py ? `sizes = ${setters.length > 2 ? "(" + sizesExpr + ")" : sizesExpr}` : `const PanelLayout sizes = ${sizesExpr};`);
     L.push(py ? `layout = Plot("${name}", PanelLayout(${setters.length ? "sizes, " : ""}rows))` : `Plot layout("${name}", PanelLayout(${setters.length ? "sizes, " : ""}rows));`);
-    L.push(`${cm} the look of the shipped base plots`, `layout.SetTransparent()${end}`, `layout[0].SetTransparent().SetFrameFill(10, 1001).SetDefaultTextFont(42)${end}`,
+    L.push(`${cm} the look of the shipped base plots`, `layout.SetTransparent()${end}`, `layout[0].SetTransparent().SetFrameFill(1001, 10).SetDefaultTextFont(42)${end}`,
       `layout[0].SetDefaultColors(${colorList(27)})${end}`,
       `layout[0].SetDefaultMarkerStyles(${open}kFullCircle${close}).SetDefaultLineStyles(${open}kSolid${close}).SetDefaultFillStyles(${open}0${close})${end}`,
       `layout[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent().SetHideClippedLabels()${end}`,

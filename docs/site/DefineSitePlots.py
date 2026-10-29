@@ -38,20 +38,20 @@ def DefineTour(pm: PlotManager):
     pm.AddPlot(plot)
 
     plot = Plot("style", "tour", "1d")
-    plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0)
-    plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0)
+    plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
+    plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2)
     pm.AddPlot(plot)
 
     plot = Plot("axes", "tour", "1d")
-    plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0)
-    plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0)
+    plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
+    plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2)
     plot[1]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})")
     plot[1]['Y'].SetLog()
     pm.AddPlot(plot)
 
     plot = Plot("legend", "tour", "1d")
-    plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0)
-    plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0)
+    plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
+    plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2)
     plot[1]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})")
     plot[1]['Y'].SetLog()
     plot[1].AddLegend()
@@ -59,8 +59,8 @@ def DefineTour(pm: PlotManager):
     pm.AddPlot(plot)
 
     plot = Plot("ratio", "tour", "1d_ratio")
-    plot[1].AddData("ptSpec", "data", "data").SetMarker(kBlack, kFullCircle, 1.0)
-    plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kMagenta + 2, kDotted, 3.0)
+    plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
+    plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2)
     plot[1]['Y'].SetLog()
     plot[1].AddLegend()
     plot[1].AddText(["My Experiment", "pp, #sqrt{#it{s}} = 13.6 TeV"])
@@ -80,7 +80,7 @@ def DefineGallery(pm: PlotManager):
         for kind in ["hist", "graph"]:
             plot = Plot(alias, "gallery/" + kind, "1d")
             name = "h" if kind == "hist" else "g"
-            plot[1].AddData(name, kind).SetDrawOption(globals()[alias]).SetColor(kAzure + 2).SetFill(kAzure + 2, 1001).SetFillAlpha(0.35)
+            plot[1].AddData(name, kind).SetDrawOption(globals()[alias]).SetColor(kAzure + 2).SetFill(1001, kAzure + 2).SetFillAlpha(0.35)
             plot[1]['X'].SetTitle("")
             plot[1]['Y'].SetTitle("")
             if alias.startswith(("curve", "hist")):  # bins beyond the frame show what the clipped variants change
@@ -113,7 +113,7 @@ def DefineGallery(pm: PlotManager):
         pm.AddPlot(plot)
     for alias in ALIASES_FUNC:
         plot = Plot(alias, "gallery/func", "1d")
-        plot[1].AddFunction("sin(x)/x").SetRangeX(0.5, 15.0).SetDrawOption(globals()[alias]).SetColor(kAzure + 2).SetFill(kAzure + 2, 1001).SetFillAlpha(0.35)
+        plot[1].AddFunction("sin(x)/x").SetRangeX(0.5, 15.0).SetDrawOption(globals()[alias]).SetColor(kAzure + 2).SetFill(1001, kAzure + 2).SetFillAlpha(0.35)
         plot[1]['X'].SetRange(0.5, 15.0).SetTitle("")
         plot[1]['Y'].SetRange(-0.3, 1.1).SetTitle("")
         pm.AddPlot(plot)

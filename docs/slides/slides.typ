@@ -354,9 +354,9 @@
 
   Plot plot("ptSpectrumRatio", "spectra", "1d_ratio");
   plot[1].AddData("ptSpec", "data", "data")
-         .SetMarker(kBlack, kFullCircle, 1.0);
+         .SetMarker(kFullCircle, 1.0, kBlack);
   plot[1].AddData("ptSpec", "mc", "simulation")
-         .SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0);
+         .SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1);
   plot[1].AddLegend();
   plot[1].AddText({"Example Experiment",
                    "pp, #sqrt{#it{s}} = 13.6 TeV", "|#eta| < 0.8"});
@@ -375,9 +375,9 @@
 
   plot = Plot("ptSpectrumRatio", "spectra", "1d_ratio")
   plot[1].AddData("ptSpec", "data", "data") \
-         .SetMarker(kBlack, kFullCircle, 1.0)
+         .SetMarker(kFullCircle, 1.0, kBlack)
   plot[1].AddData("ptSpec", "mc", "simulation") \
-         .SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0)
+         .SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1)
   plot[1].AddLegend()
   plot[1].AddText(["Example Experiment",
                    "pp, #sqrt{#it{s}} = 13.6 TeV", "|#eta| < 0.8"])
@@ -1538,7 +1538,7 @@
 
           plot[1].GetLegend(2)
                  .AddEntry("Best fit")
-                 .SetSymbolElements("L").SetLine(kRed, kSolid, 2.0);
+                 .SetSymbolElements("L").SetLine(kSolid, 2.0, kRed);
 
           // auto-placed: best-fitting or given corner
           plot[1].AddLegend();
@@ -1559,7 +1559,7 @@
           # legend 2 ("Graph")
           plot[1].AddLegend(0.2, 0.2)
 
-          plot[1].GetLegend(2).AddEntry("Best fit").SetSymbolElements("L").SetLine(kRed, kSolid, 2.0)
+          plot[1].GetLegend(2).AddEntry("Best fit").SetSymbolElements("L").SetLine(kSolid, 2.0, kRed)
 
           # auto-placed: best-fitting or given corner
           plot[1].AddLegend()
@@ -1961,7 +1961,7 @@
         [#names("SetName(name)", "SetGroup(group)", "AppendGroup(subgroup)")], [Rename the plot, reassign its figure group, or append a subgroup path.],
         [`SetBasePlot(name)`], [Apply a base plot layout by name.],
         [#names("SetDimensions(width, height, fixAspectRatio = false)", "SetWidth(width)", "SetHeight(height)", "SetFixAspectRatio(fixAspectRatio = true)")], [Set canvas dimensions (in pixels), all at once or individually.],
-        [#names("SetFill(color, style = {}, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Configure plot background fill, all at once or individually.],
+        [#names("SetFill(style, color, alpha = 1)", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Configure plot background fill, all at once or individually.],
         [`SetTransparent()`], [Make the plot background transparent.],
       ), text-size: 12pt)
     ],
@@ -2044,10 +2044,10 @@
       #api-section("Palette & background", (
         [`SetPalette(palette)`], [Use a predefined ROOT palette (e.g. `kBird`).],
         [`SetPalette(rgbEndpoints, alpha = {}, nColors = {})`], [Define a custom colour-gradient palette.],
-        [#names("SetFill(color, style = {}, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Configure pad background fill.],
+        [#names("SetFill(style, color, alpha = 1)", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Configure pad background fill.],
         [`SetTransparent()` / `SetFrameTransparent()`], [Make the pad, or its frame, transparent.],
-        [#names("SetFrameFill(color, style = {}, alpha = {})", "SetFrameFillColor(color)", "SetFrameFillStyle(style)", "SetFrameFillAlpha(alpha)")], [Configure the frame's fill.],
-        [#names("SetFrameBorder(color, style = {}, width = {}, alpha = {})", "SetFrameBorderColor(color)", "SetFrameBorderStyle(style)", "SetFrameBorderWidth(width)", "SetFrameBorderAlpha(alpha)")], [Configure the frame's border.],
+        [#names("SetFrameFill(style, color, alpha = 1)", "SetFrameFillColor(color)", "SetFrameFillStyle(style)", "SetFrameFillAlpha(alpha)")], [Configure the frame's fill.],
+        [#names("SetFrameBorder(style, width, color, alpha = 1)", "SetFrameBorderColor(color)", "SetFrameBorderStyle(style)", "SetFrameBorderWidth(width)", "SetFrameBorderAlpha(alpha)")], [Configure the frame's border.],
       ))
     ],
   )
@@ -2150,9 +2150,9 @@
     [
       #api-section("Appearance & statistics box", (
         [`SetColor(color)` / `SetAlpha(alpha)`], [Set (or fade) marker, line and fill colour together.],
-        [#names("SetMarker(color, style, size, alpha = {})", "SetMarkerColor(color)", "SetMarkerStyle(style)", "SetMarkerSize(size)", "SetMarkerAlpha(alpha)")], [Marker appearance, all at once or individually.],
-        [#names("SetLine(color, style, width, alpha = {})", "SetLineColor(color)", "SetLineStyle(style)", "SetLineWidth(width)", "SetLineAlpha(alpha)")], [Line appearance, all at once or individually.],
-        [#names("SetFill(color, style, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Fill appearance, all at once or individually.],
+        [#names("SetMarker(style, size, color, alpha = 1)", "SetMarkerColor(color)", "SetMarkerStyle(style)", "SetMarkerSize(size)", "SetMarkerAlpha(alpha)")], [Marker appearance, all at once or individually.],
+        [#names("SetLine(style, width, color, alpha = 1)", "SetLineColor(color)", "SetLineStyle(style)", "SetLineWidth(width)", "SetLineAlpha(alpha)")], [Line appearance, all at once or individually.],
+        [#names("SetFill(style, color, alpha = 1)", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Fill appearance, all at once or individually.],
         [`SetKeepInputStyle()`], [Keep the input's line, marker and fill.],
         [`SetDefinesFrame()`], [Use this object to define the plot frame.],
         [`SetContours(contours)` / `SetContours(nContours)`], [Set explicit contour levels or their count.],
@@ -2214,9 +2214,9 @@
         [`SetPosition(x, y)` / `SetSize(w, h)`], [Position of the upper left corner, or dimensions of the box.],
         [`SetAutoPlacement(placement = best_corner)`], [Let SciRooPlot place the box: as close as possible to the corner of the frame where it fits best, or to a given one (`top_left`, `top_right`, `bottom_right`, `bottom_left`).],
         [`SetUserCoordinates(isUserCoord = true)`], [Interpret position/size as user (data) coordinates instead of relative pad coordinates.],
-        [#names("SetBorder(color, style, width, alpha = {})", "SetBorderColor(color)", "SetBorderStyle(style)", "SetBorderWidth(width)", "SetBorderAlpha(alpha)")], [Border, all at once or individually.],
-        [#names("SetText(color, font, size, alpha = {})", "SetTextColor(color)", "SetTextFont(font)", "SetTextSize(size)", "SetTextAlpha(alpha)")], [Text styling, all at once or individually.],
-        [#names("SetFill(color, style, alpha = {})", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Background fill, all at once or individually.],
+        [#names("SetBorder(style, width, color, alpha = 1)", "SetBorderColor(color)", "SetBorderStyle(style)", "SetBorderWidth(width)", "SetBorderAlpha(alpha)")], [Border, all at once or individually.],
+        [#names("SetText(font, size, color, alpha = 1)", "SetTextColor(color)", "SetTextFont(font)", "SetTextSize(size)", "SetTextAlpha(alpha)")], [Text styling, all at once or individually.],
+        [#names("SetFill(style, color, alpha = 1)", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Background fill, all at once or individually.],
         [`SetTransparent()` / `SetNoBox()`], [Transparent background, or remove border and fill.],
         [`SetMargin(m)` / `SetLineSpacing(s)`], [Internal margin, or spacing between lines/entries.],
       ), col-widths: (52%, 48%), text-size: 12pt)
@@ -2266,7 +2266,7 @@
     [
       #api-section("LegendEntry: appearance", (
         [`SetColor(color)` / `SetAlpha(alpha)`], [Marker, line and fill colour (or transparency) together.],
-        [#names("SetMarker(color, style, size)", "SetLine(color, style, width)", "SetFill(color, style)")], [Marker, line or fill at once (optional last argument: alpha).],
+        [#names("SetMarker(style, size, color)", "SetLine(style, width, color)", "SetFill(style, color)")], [Marker, line or fill at once (last argument alpha, default 1).],
         [#names("SetMarkerColor(color)", "SetMarkerAlpha(alpha)", "SetMarkerStyle(style)", "SetMarkerSize(size)")], [Marker appearance.],
         [#names("SetLineColor(color)", "SetLineAlpha(alpha)", "SetLineStyle(style)", "SetLineWidth(width)")], [Line appearance.],
         [#names("SetFillColor(color)", "SetFillAlpha(alpha)", "SetFillStyle(style)")], [Fill appearance.],

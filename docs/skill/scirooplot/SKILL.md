@@ -87,7 +87,7 @@ Python is the same API: `from SciRooPlot import *`, `PlotManager("myProject")`, 
 Plot plot("name", "group/sub", "basePlot");  Plot copy(plot, "name2", "group2");   // copy keeps everything
 plot.SetDimensions(710, 710[, fixAspect]).SetTransparent().AppendGroup("QA");
 plot[0]...        // defaults for all pads (text font/size, margins, colour lists, ref function)
-plot[1].SetPosition(x1,y1,x2,y2).SetMargins(t,b,l,r).SetFrameFill(10, 1001).SetPalette(kBird).SetView(theta, phi)   // 3D view in degrees (ROOT: 30, 30)
+plot[1].SetPosition(x1,y1,x2,y2).SetMargins(t,b,l,r).SetFrameFill(1001, 10).SetPalette(kBird).SetView(theta, phi)   // 3D view in degrees (ROOT: 30, 30)
 plot[1].SetDefaultMarkerColors({kBlack, kRed+1}).SetDefaultLineStyles({kSolid, kDashed})   // cycled over the data
 // every colour argument takes a ROOT colour (kRed + 1), "#rrggbb" or {r, g, b} from 0 to 1 (Python: a tuple); transparency only with the alpha setters
 plot[1].SetDefaultColors(gradient)   // {{"#000080", 0.0}, {kRed, 0.5}, {{1.0, 1.0, 0.0}, 1.0}}: (colour, position) or {r,g,b,position}, all in [0,1]; also SetPalette(gradient)
@@ -123,13 +123,13 @@ plot[1].AddFunction("[](double* x, double* p) { return std::exp(-x[0] * x[1]); }
 plot[1].AddData(myTemplate("hist"), "label");               // Data template: Data().SetDrawOption(curve).SetColor(kRed) then template("name"[, "src"])
 .SetDrawOption(points | "HIST C")     // alias (preferred) or raw ROOT option string
 .SetColor(c).SetAlpha(a)           // all of marker, line, fill at once
-.SetMarker(color, style, size).SetLine(color, style, width).SetFill(color, style)  (+ SetMarkerColor, SetLineStyle, ... SetFillAlpha)
+.SetMarker(style, size, color).SetLine(style, width, color).SetFill(style, color)  // optional alpha last, default 1 (+ SetMarkerColor, SetLineStyle, ... SetFillAlpha)
 .SetRangeX(a, b).SetMaxRangeX(b).SetRangeY(a, b)             // visible range of this data, independent of the axis
 .SetLegend(2).SetLegendLabel("l").SetDefinesFrame().SetShowOverflowBins().SetContours(n).SetTextFormat("4.2f")
 .SetKeepInputStyle()               // line, marker, fill stored with the input win over the pad defaults (what the data sets still wins)
 .SetNpx(n[, ny])                   // points a function is drawn with (AddFunction: 1000 in 1d; inputs keep their own)
 .SetShowStats("eMR", "title")   // statistics box of a histogram (letters of TStyle::SetOptStat; the optional title is its first line)
-.SetStatsBox(StatsBox().SetAutoPlacement(top_left).SetFill(kWhite, 1001))   // its placement and appearance: all setters of legend and text boxes
+.SetStatsBox(StatsBox().SetAutoPlacement(top_left).SetFill(1001, kWhite))   // its placement and appearance: all setters of legend and text boxes
 ```
 Labels may contain `<name> <title> <entries> <integral> <maximum> <minimum> <mean>` with printf formats: `"avg = <mean[.2f]>"` (graphs: `<entries>` points, `<maximum>`/`<minimum>` of y; `<integral>`, `<mean>`, `<maximum>`, `<minimum>` cover the drawn range, `<entries>` is the stored total), and from the definition `<source>`, `<projection>` (`x`, `y:x`, `prof. y:x`, weight in parentheses) and `<selection>` (filters joined with `&&`, entries range, projection ranges); histogram projections name the axes by the axis titles of the input (`x`, `y`, `z` where a title is empty), tree requests by the variables; an empty placeholder takes one separating space with it, so `"<name> <projection> <selection>"` never ends in a space. `"<name> <selection>"` tells apart requests differing only in the filter. ROOT TLatex syntax works in all texts (`#it{p}_{T}`, `#sqrt{s}`).
 
@@ -189,7 +189,7 @@ Column expressions and filters are C++ expressions over the column/leaf names (e
 plot[1].AddLegend();  AddLegend(top_right);  AddLegend(0.5, 0.8[, "title"]);   // corners: best_corner, top_left, top_right, bottom_right, bottom_left
 plot[1].GetLegend(2).SetNumColumns(2).SetDefaultLineWidth(5.0).SetNoBox().SetTransparent();
 plot[1].AddData("band", "src", "unc.").SetLegendEntry(LegendEntry().SetSymbolElements("F"));   // style of a data's row (label stays on the data); symbol element letters: L line, P marker, F fill, E error bar
-plot[1].GetLegend(1).AddEntry("custom").SetSymbolElements("L").SetLine(kRed, kSolid, 2.0);   // row of its own (AddEntry(): empty line); SetRefData(n): symbol of data n
+plot[1].GetLegend(1).AddEntry("custom").SetSymbolElements("L").SetLine(kSolid, 2.0, kRed);   // row of its own (AddEntry(): empty line); SetRefData(n): symbol of data n
 plot[1].GetLegend(1).AddEntry("#bf{group}").BeforeData(4);   // placed relative to data n of the pad (as in plot[1](n)): AtTop(), BeforeData(n), AfterData(n); default: at the end
 plot[1].AddText({"line one", "line two"});  AddText(top_left, "text");  AddText(0.2, 0.9, "text").SetTextFont(43).SetTextSize(20).SetTextAlign(13);   // font 43: size in pixels
 ```
@@ -199,8 +199,8 @@ Positions are pad coordinates (0–1) of the upper left corner, `.SetUserCoordin
 
 **Define appearance once, reuse it everywhere.** Each kind of data (measured points, simulation, model, systematics) should look the same in every figure. A `Data` without a name is a template for one kind; calling it with a name gives a data object with all its settings, so plots only name the data and a change of the template changes every figure:
 ```cpp
-const Data measured = Data().SetDataSource("data").SetMarker(kBlack, kFullCircle, 1.0);
-const Data simulated = Data().SetDataSource("mc").SetDrawOption(hist_open).SetLine(kRed + 1, kSolid, 3.0);
+const Data measured = Data().SetDataSource("data").SetMarker(kFullCircle, 1.0, kBlack);
+const Data simulated = Data().SetDataSource("mc").SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1);
 plot[1].AddData(measured("ptSpec"), "data");               // name from the template's data source
 plot[1].AddData(simulated("ptSpec", "otherMC"), "MC");     // or another data source
 plot[2].AddRatio(measured("ptSpec"), simulated("ptSpec"));
@@ -248,7 +248,7 @@ Identical names and chains. Differences:
 - Axis ranges live on the pad (`plot[1]['X'].SetRange`), data ranges on the data (`SetRangeX`); the first data (or `SetDefinesFrame`) decides the frame.
 - Ranges, minimum and maximum stored with an input histogram or graph are ignored: set them in the plot definition. Exception: data marked `.SetDefinesFrame()` and the frame set with `SetFrame` keep them for the frame they draw (e.g. an empty dummy histogram with the y range stored); an explicit `plot[i]['Y'].SetRange` still wins. A projection or profile never applies stored ranges and warns when one sits on an axis it integrates out. Functions from inputs are drawn where they are defined, functions from `AddFunction` span the frame; `SetRangeX` overrides both (a function written from C++ code only has values within its own range).
 - Fill colours are drawn for `hist`/`area`/`band`/`bars`; histograms drawn with `line`/`curve` are not filled even if a fill colour is set by the pad defaults.
-- Line widths are whole pixels: ROOT stores them as integers, so a fractional width (`SetLine(c, s, 3.5)`, `SetLineWidth(2.5)`, `SetBorder(c, s, 1.5)`, `SetDefaultLineWidth`, `PanelLayout::SetLineWidth`) is cut to the integer below without a warning. Write whole numbers (`3.`); marker sizes, text sizes and alpha may be fractional.
+- Line widths are whole pixels: ROOT stores them as integers, so a fractional width (`SetLine(s, 3.5, c)`, `SetLineWidth(2.5)`, `SetBorder(s, 1.5, c)`, `SetDefaultLineWidth`, `PanelLayout::SetLineWidth`) is cut to the integer below without a warning. Write whole numbers (`3.`); marker sizes, text sizes and alpha may be fractional.
 - Rebin/Scale/Normalize on a ratio act on the result — use `.Both().Normalize()` etc. to act on the inputs.
 - In C++ `AddData({"h", "src"}, "label")` is ambiguous (the brace list also converts to a `std::string`): write `AddData("h", "src", "label")` or `AddData(Data("h", "src"), "label")`. Without a label, `AddData({"h", "src"})` is fine.
 - In bash, quote patterns containing `(`, `)` or `|`.

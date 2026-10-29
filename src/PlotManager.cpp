@@ -841,7 +841,7 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, con
   Plot plot(name, PanelLayout(sizes, rows));
   plot.SetTransparent();
   plot[0].SetTransparent();
-  plot[0].SetFrameFill(10, 1001);
+  plot[0].SetFrameFill(1001, 10);
   plot[0].SetDefaultTextFont(42);
   plot[0].SetDefaultColors(vector<color_t>(kDefaultColors.begin(), kDefaultColors.end()));
   plot[0].SetDefaultMarkerStyles({kFullCircle});

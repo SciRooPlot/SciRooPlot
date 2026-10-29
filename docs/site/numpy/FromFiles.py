@@ -30,18 +30,18 @@ def main():
             data = plot[1].AddData("events", "ml", f"{name}, {split}").Project1D(("score", 25, [0.0, 1.0]))
             data.Filter(f'label == {label} && split == "{split}"').Normalize(True).SetColor(color)  # unchanged
             if split == "train":
-                data.SetDrawOption(hist).SetFill(color, 1001).SetFillAlpha(0.25)
+                data.SetDrawOption(hist).SetFill(1001, color).SetFillAlpha(0.25)
     plot[1].AddLegend()
     plot[1]['Y'].SetRoomAboveMax(0.4)
     pm.AddPlot(plot)
 
     plot = Plot("roc", "files", "1d")
-    plot[1].AddData("roc", "ml", "classifier").Scatter("fpr", "tpr").SetLine(kRed + 1, kSolid, 3.0)  # a curve from two columns
+    plot[1].AddData("roc", "ml", "classifier").Scatter("fpr", "tpr").SetLine(kSolid, 3.0, kRed + 1)  # a curve from two columns
     pm.AddPlot(plot)
 
     plot = Plot("learning", "files", "1d")
-    plot[1].AddData("history", "ml", "training").Scatter("epoch", "train").SetLine(kAzure + 2, kSolid, 3.0)
-    plot[1].AddData("history", "ml", "validation").Scatter("epoch", "validation").SetLine(kOrange + 7, kSolid, 3.0)
+    plot[1].AddData("history", "ml", "training").Scatter("epoch", "train").SetLine(kSolid, 3.0, kAzure + 2)
+    plot[1].AddData("history", "ml", "validation").Scatter("epoch", "validation").SetLine(kSolid, 3.0, kOrange + 7)
     plot[1].AddLegend()
     pm.AddPlot(plot)
     # ----

@@ -483,7 +483,7 @@ auto Plot::SetFixAspectRatio(bool fixAspectRatio) -> decltype(*this)
  * Set fill for this plot.
  */
 //**************************************************************************************************
-auto Plot::SetFill(color_t color, optional<int16_t> style, optional<float_t> alpha) -> decltype(*this)
+auto Plot::SetFill(int16_t style, color_t color, float_t alpha) -> decltype(*this)
 {
   mFill.color = color;
   mFill.style = style;
@@ -848,7 +848,7 @@ auto Plot::Pad::SetDefaultCandleWhiskerRange(float_t candleOption) -> decltype(*
  * Set fill for this pad.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetFill(color_t color, optional<int16_t> style, optional<float_t> alpha) -> decltype(*this)
+auto Plot::Pad::SetFill(int16_t style, color_t color, float_t alpha) -> decltype(*this)
 {
   mFill.color = color;
   mFill.style = style;
@@ -891,7 +891,7 @@ auto Plot::Pad::SetTransparent() -> decltype(*this)
  * Set frame fill properties.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetFrameFill(color_t color, optional<int16_t> style, optional<float_t> alpha) -> decltype(*this)
+auto Plot::Pad::SetFrameFill(int16_t style, color_t color, float_t alpha) -> decltype(*this)
 {
   mFrameFill.color = color;
   mFrameFill.style = style;
@@ -922,7 +922,7 @@ auto Plot::Pad::SetFrameFillAlpha(float_t alpha) -> decltype(*this)
  * Set frame line properties.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetFrameBorder(color_t color, optional<int16_t> style, optional<float_t> width, optional<float_t> alpha) -> decltype(*this)
+auto Plot::Pad::SetFrameBorder(int16_t style, float_t width, color_t color, float_t alpha) -> decltype(*this)
 {
   mFrameBorder.color = color;
   mFrameBorder.alpha = alpha;
@@ -2192,7 +2192,7 @@ auto Plot::Pad::Data::SetAlpha(float_t alpha) -> decltype(*this)
   mFill.alpha = alpha;
   return *this;
 }
-auto Plot::Pad::Data::SetMarker(color_t color, int16_t style, float_t size, optional<float_t> alpha) -> decltype(*this)
+auto Plot::Pad::Data::SetMarker(int16_t style, float_t size, color_t color, float_t alpha) -> decltype(*this)
 {
   mMarker.color = color;
   mMarker.alpha = alpha;
@@ -2220,7 +2220,7 @@ auto Plot::Pad::Data::SetMarkerSize(float_t size) -> decltype(*this)
   mMarker.scale = size;
   return *this;
 }
-auto Plot::Pad::Data::SetLine(color_t color, int16_t style, float_t width, optional<float_t> alpha) -> decltype(*this)
+auto Plot::Pad::Data::SetLine(int16_t style, float_t width, color_t color, float_t alpha) -> decltype(*this)
 {
   mLine.color = color;
   mLine.alpha = alpha;
@@ -2248,7 +2248,7 @@ auto Plot::Pad::Data::SetLineWidth(float_t width) -> decltype(*this)
   mLine.scale = RoundWidth(width, "line width");
   return *this;
 }
-auto Plot::Pad::Data::SetFill(color_t color, int16_t style, optional<float_t> alpha) -> decltype(*this)
+auto Plot::Pad::Data::SetFill(int16_t style, color_t color, float_t alpha) -> decltype(*this)
 {
   mFill.color = color;
   mFill.alpha = alpha;
@@ -3701,7 +3701,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetAutoPlacement(box_placement_t placement)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetBorder(color_t color, int16_t style, float_t width, optional<float_t> alpha)
+BoxType& Plot::Pad::Box<BoxType>::SetBorder(int16_t style, float_t width, color_t color, float_t alpha)
 {
   mBorder.color = color;
   mBorder.style = style;
@@ -3739,7 +3739,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetBorderWidth(float_t width)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetText(color_t color, int16_t font, float_t size, optional<float_t> alpha)
+BoxType& Plot::Pad::Box<BoxType>::SetText(int16_t font, float_t size, color_t color, float_t alpha)
 {
   mText.color = color;
   mText.alpha = alpha;
@@ -3777,7 +3777,7 @@ BoxType& Plot::Pad::Box<BoxType>::SetTextSize(float_t size)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetFill(color_t color, int16_t style, optional<float_t> alpha)
+BoxType& Plot::Pad::Box<BoxType>::SetFill(int16_t style, color_t color, float_t alpha)
 {
   mFill.color = color;
   mFill.style = style;
@@ -4420,7 +4420,7 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetAlpha(float_t alpha)
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarker(color_t color, int16_t style, float_t size, optional<float_t> alpha)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarker(int16_t style, float_t size, color_t color, float_t alpha)
 {
   mMarker.color = color;
   mMarker.alpha = alpha;
@@ -4453,7 +4453,7 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarkerSize(float_t size)
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLine(color_t color, int16_t style, float_t width, optional<float_t> alpha)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLine(int16_t style, float_t width, color_t color, float_t alpha)
 {
   mLine.color = color;
   mLine.alpha = alpha;
@@ -4486,7 +4486,7 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLineWidth(float_t width)
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFill(color_t color, int16_t style, optional<float_t> alpha)
+Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFill(int16_t style, color_t color, float_t alpha)
 {
   mFill.color = color;
   mFill.alpha = alpha;
