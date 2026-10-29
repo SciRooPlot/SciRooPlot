@@ -829,8 +829,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             paints3dGraph(drawOption, triangles, points);
             if (triangles || points) drawOption = (TString(drawOption).Contains("z", TString::kIgnoreCase)) ? "LEGOZ" : "LEGO";
           }
-          // the frame of a 2d histogram, and of a coloured 2d graph or function (drawn from its histogram), also draws the colour axis
-          const bool isColored2d = (is_graph_2d<data_type>() || is_func_2d<data_type>()) && str_contains(drawOption, "COL");
+          // the frame of a 2d histogram, and of a coloured 2d graph or function (drawn from its histogram), also draws the colour axis:
+          // also with options that ask for the colour scale without COL (CONT1Z, CONTZ), which with AXIS would paint none
+          const bool isColored2d = (is_graph_2d<data_type>() || is_func_2d<data_type>()) && str_contains(drawOption, std::vector<std::string>{"COL", "Z"});
           if (pad_ptr->GetView() || is_hist_2d<data_type>() || isColored2d) {
             drawOptAxis = "";
           }

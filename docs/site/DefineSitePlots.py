@@ -147,6 +147,8 @@ def DefineGallery(pm: PlotManager):
         if alias.startswith(is3d):
             plot[1].SetView(35.0, 225.0)
             data.SetLineWidth(1.0)
+        if alias == "triangles":  # painted in the fill colour with edges in the line colour: light, so that the edges show
+            data.SetFill(kFSolid, kAzure - 9).SetLineColor(kAzure + 3)
         plot[1]['X'].SetTitle("")
         plot[1]['Y'].SetTitle("")
         pm.AddPlot(plot)
