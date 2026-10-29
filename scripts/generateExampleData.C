@@ -92,6 +92,7 @@
 //   systematics.csv                   relative systematic uncertainties vs. pT per source
 
 #include <TEfficiency.h>
+#include <TError.h>
 #include <TF1.h>
 #include <TFile.h>
 #include <TFitResult.h>
@@ -106,10 +107,12 @@
 #include <THnSparse.h>
 #include <TList.h>
 #include <TMath.h>
+#include <TROOT.h>
 #include <TRandom3.h>
 #include <TSpline.h>
 #include <TSystem.h>
 #include <TTree.h>
+#include <TVector2.h>
 
 #include <algorithm>
 #include <array>
@@ -2522,6 +2525,66 @@ void WriteAstronomy()
   }
 }
 
+// the gamma-ray sky above 1 GeV in galactic coordinates (longitude l, latitude b in degrees, cells of 2 degrees): the diffuse
+// emission of cosmic rays hitting the interstellar gas (a thin disk, brightest towards the centre), the isotropic extragalactic
+// background, the two Fermi bubbles above and below the centre, pulsars along the plane and blazars all over the sky
+void WriteGammaRaySky()
+{
+  TFile file((kFolder + "astronomy.root").data(), "UPDATE");
+  TRandom3 random(34);
+  file.mkdir("sky")->cd();
+  TH2D sky("gammaRays", ";galactic longitude #it{l} (deg);galactic latitude #it{b} (deg);photons per cell", 180, -180., 180., 90, -90., 90.);
+  auto intensity = [](double l, double b) {  // photons per square degree of exposure
+    const double disk = 60. * std::exp(-std::fabs(b) / 3.5) * (0.25 + std::exp(-std::fabs(l) / 35.));
+    const double lobe = std::pow(l / 20., 2.) + std::pow((std::fabs(b) - 27.) / 24., 2.);  // two lobes of 40 x 50 degrees
+    const double bubbles = 1.2 / (1. + std::exp((lobe - 1.) / 0.08));  // with a soft edge
+    return disk + bubbles + 1.;
+  };
+  for (int i = 1; i <= sky.GetNbinsX(); ++i) {
+    for (int j = 1; j <= sky.GetNbinsY(); ++j) {
+      const double l = sky.GetXaxis()->GetBinCenter(i), b = sky.GetYaxis()->GetBinCenter(j);
+      const double area = 4. * std::cos(b * TMath::DegToRad());  // square degrees of the cell
+      sky.SetBinContent(i, j, random.Poisson(area * intensity(l, b)));
+    }
+  }
+  for (int source = 0; source < 70; ++source) {
+    const bool pulsar = source < 30;
+    const double l = pulsar ? random.Gaus(0., 60.) : random.Uniform(-180., 180.);
+    const double b = pulsar ? random.Gaus(0., 1.5) : TMath::RadToDeg() * std::asin(random.Uniform(-1., 1.));
+    const int photons = random.Poisson(150. * std::pow(random.Uniform(0.02, 1.), -1.4));  // many faint, few bright sources
+    for (int k = 0; k < photons; ++k) sky.Fill(TVector2::Phi_mpi_pi((l + random.Gaus(0., 1.)) * TMath::DegToRad()) * TMath::RadToDeg(), b + random.Gaus(0., 1.));
+  }
+  sky.Write();
+}
+
+// the surface warming of 2015-2024 against 1951-1980 on cells of 2 degrees, on the land of ROOT's earth.dat (one point per cell of
+// 1 degree with land; the fraction of land of each cell from its four points): land warms faster than the ocean, the Arctic three
+// to four times the global mean, the Southern Ocean little, and south of Greenland the North Atlantic even cooled (the warming hole)
+void WriteClimate()
+{
+  TFile file((kFolder + "climate.root").data(), "RECREATE");
+  TRandom3 random(35);
+  TH2D landFraction("landFraction", "", 180, -180., 180., 90, -90., 90.);
+  const std::string earth = std::string(gROOT->GetTutorialDir()) + "/visualisation/graphics/earth.dat";
+  std::ifstream in(earth);
+  if (!in) Error("WriteClimate", "%s (from the tutorials of ROOT) not found: the warming map has no continents", earth.data());
+  double lon{}, lat{};
+  while (in >> lon >> lat) landFraction.Fill(lon - 0.5, lat + 0.5, 0.25);
+  TH2D warming("warmingMap", ";longitude (deg);latitude (deg);anomaly to 1951-1980 (K)", 180, -180., 180., 90, -90., 90.);
+  for (int i = 1; i <= warming.GetNbinsX(); ++i) {
+    for (int j = 1; j <= warming.GetNbinsY(); ++j) {
+      const double x = warming.GetXaxis()->GetBinCenter(i), y = warming.GetYaxis()->GetBinCenter(j);
+      const double arctic = 1. + 2.1 * std::pow(std::max(0., (y - 45.) / 45.), 1.5);
+      const double southernOcean = 1. - 0.75 * std::exp(-std::pow((y + 57.) / 11., 2.));
+      const double hole = 1.3 * std::exp(-std::pow((x + 38.) / 13., 2.) - std::pow((y - 55.) / 6., 2.));
+      const double ocean = 0.75 * arctic * southernOcean - hole, land = 1.35 * arctic;
+      const double fraction = std::min(1., landFraction.GetBinContent(i, j));
+      warming.SetBinContent(i, j, ocean + fraction * (land - ocean) + random.Gaus(0., 0.08));
+    }
+  }
+  warming.Write();
+}
+
 // muon trigger efficiencies as TEfficiency objects: passing and total counts kept together, the errors from binomial intervals
 void WriteTriggerEfficiency()
 {
@@ -2815,6 +2878,8 @@ void generateExampleData()
   WriteBiophysics();
   WriteTheory();
   WriteAstronomy();
+  WriteGammaRaySky();
+  WriteClimate();
   WriteTriggerEfficiency();
   WriteTimeline();
   WriteClustering();

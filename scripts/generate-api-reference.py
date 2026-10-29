@@ -195,6 +195,11 @@ def drawing_options(aliases):
         "unless the data sets a line width; `lego_polar`, `lego_col_polar`, `surf_polar`, `surf_col_polar` are drawn on a disc in 3D (`SetView` turns it).",
         "A polar graph (TGraphPolar: x the angle in radians, y the radius) is drawn on a polar grid instead of a cartesian frame. The grid fills the pad (a square base plot keeps it round)",
         "and takes the label fonts, sizes and colours of the x (angle) and y (radius) axes and the ranges and divisions set on them; the points aliases draw its error bars; shapes are not drawn there.",
+        "Maps: a 2D histogram in degrees drawn with a raw projection option (`\"AITOFF\"`, `\"MOLLWEIDE\"`, `\"SINUSOIDAL\"`, `\"PARABOLIC\"`) is coloured over the z range of the pad;",
+        "add `Z` (`\"MOLLWEIDE Z\"`) for a colour scale, which ROOT itself does not draw for projections; not `COL`, which ROOT also paints unprojected below the map.",
+        "The map covers the range of the frame: restrict it on the pad (`plot[1]['Y'].SetRange(0, 90)`), a range on the data is ignored with a warning;",
+        "the x and y axes show the frame in degrees, correct only along the equator and the central meridian. `\"MERCATOR\"` gives the latitude in units of",
+        "ln tan(π/4 + b/2) instead of degrees and does not fit into the frame (a warning says so); it also needs latitudes strictly inside ±90.",
         "",
     ]
     return "\n".join(out)

@@ -55,6 +55,7 @@ def DefineDataSources(pm: PlotManager):
     pm.AddDataSource("timeline", inputFolder + "/timeline.root")
     pm.AddDataSource("temperature", inputFolder + "/temperature.csv")
     pm.AddDataSource("warming", inputFolder + "/warming.csv")
+    pm.AddDataSource("climate", inputFolder + "/climate.root")
     pm.AddDataSource("membrane", inputFolder + "/membrane.csv")
     pm.AddDataSource("tuning", inputFolder + "/tuning.csv")
     pm.AddDataSource("clustering", inputFolder + "/clustering.root")
@@ -90,6 +91,10 @@ def DefineBasePlots(pm: PlotManager):
     logz.SetName("2d_logz")
     logz[1]['Z'].SetLog()
     pm.AddBasePlot(logz)
+    # and other proportions: a frame twice as wide as high for maps of the whole sphere
+    worldMap = PlotManager.MakeBasePlot("2d_wide", PanelLayout(), BasePlotShape().SetAspectRatio(2.0))
+    worldMap.SetName("2d_map")
+    pm.AddBasePlot(worldMap)
 
 
 def DefineHiggsPlots(pm: PlotManager):
@@ -1336,6 +1341,17 @@ def DefineOtherSciencePlots(pm: PlotManager):
     plot[1]['Z'].SetRange(-3.0, 3.0).SetTitle("anomaly to 1960-1970 (K)")
     pm.AddPlot(plot)
 
+    # the warming of the last decade on a world map: a 2d histogram in degrees drawn with ROOT's Mollweide projection (equal area),
+    # Z adds the colour scale; the axes would show the frame in degrees, right only along the equator and the central meridian ----
+    plot = Plot("warmingMap", "climate", "2d_map")
+    plot[1].AddData("warmingMap", "climate").SetDrawOption("MOLLWEIDE Z")
+    plot[1].SetPalette(kTemperatureMap)
+    plot[1].AddText(0.03, 0.95, "2015-2024")
+    plot[1]['X'].SetTitle("").SetLabelSize(0.0).SetAxisAlpha(0.0)
+    plot[1]['Y'].SetTitle("").SetLabelSize(0.0).SetAxisAlpha(0.0)
+    plot[1]['Z'].SetRange(-3.0, 3.0)
+    pm.AddPlot(plot)
+
     # a Hertzsprung-Russell diagram: the density of 15000 stars of a catalogue -------------------------------------------
     plot = Plot("hertzsprungRussell", "astronomy", "2d_logz")
     plot[1].AddData("stars", "stars").Project2D(("bv", 100, [-0.4, 2.0]), ("logL", 100, [-4.0, 4.0]))
@@ -1366,6 +1382,16 @@ def DefineOtherSciencePlots(pm: PlotManager):
     plot[1].AddLegend(0.7, 0.9)
     plot[1]['X'].SetRange(0.0, 2500.0).SetTitle("multipole #it{l}")
     plot[1]['Y'].SetRange(0.0, 6900.0).SetNoExponent().SetTitle("#it{l}(#it{l}+1)#it{C}_{#it{l}} / 2#pi (#muK^{2})")
+    pm.AddPlot(plot)
+
+    # the gamma-ray sky in galactic coordinates as all-sky maps show it: an Aitoff projection with the centre of the Milky Way in
+    # the middle, the disk along the equator, the Fermi bubbles above and below the centre ---------------------------------------
+    plot = Plot("gammaRaySky", "astronomy", "2d_map")
+    plot[1].AddData("sky/gammaRays", "astronomy").SetDrawOption("AITOFF Z")
+    plot[1].AddText(0.03, 0.95, "#it{E} > 1 GeV")
+    plot[1]['X'].SetTitle("").SetLabelSize(0.0).SetAxisAlpha(0.0)
+    plot[1]['Y'].SetTitle("").SetLabelSize(0.0).SetAxisAlpha(0.0)
+    plot[1]['Z'].SetLog()
     pm.AddPlot(plot)
 
     # a spike raster of 40 trials and the firing rate below it: the neuron answers the stimulus at 0 ms ------------------

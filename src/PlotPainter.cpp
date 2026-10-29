@@ -598,6 +598,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     // the polar grid of a pad with polar graphs, drawn instead of a cartesian frame, and the axis settings of such a pad (not drawn)
     TGraphPolargram* polargram{nullptr};
     unique_ptr<TH1> polarAxisHist;
+    // the frame is a 2d histogram drawn as a map projection (AITOFF, MERCATOR, SINUSOIDAL, PARABOLIC, MOLLWEIDE)
+    bool projectedPad{};
     vector<std::pair<unique_ptr<TPaveStats>, std::shared_ptr<const Plot::Pad::StatsBox>>> statsBoxes;  // filled by ROOT while drawing the data, placed after all data are drawn
     string drawOption;
     uint16_t dataIndex{};
@@ -661,6 +663,16 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             alias = static_cast<draw_option_t>(255);
           }
         }
+
+        // a 2d histogram drawn as a map: ROOT's projection options select CONT4, which paints in projected coordinates, so data and frame
+        // fit together only when they cover the same range (data drawn SAME is projected over its own range into the frame of the first)
+        bool projected{};
+        if constexpr (is_hist_2d<data_type>()) {
+          TString upper(drawOption);
+          upper.ToUpper();
+          projected = upper.Contains("AITOFF") || upper.Contains("MERCATOR") || upper.Contains("SINUSOIDAL") || upper.Contains("PARABOLIC") || upper.Contains("MOLLWEIDE");
+        }
+        if (dataIndex == 0) projectedPad = projected;
 
         // appearances that ROOT has no drawing option for are prepared on the copy that is drawn
         if constexpr (is_graph_2d<data_type>()) {
@@ -1160,6 +1172,16 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             axisHist_ptr->SetMarkerSize(0);
             axisHist_ptr->SetLineWidth(0);
             axisHist_ptr->SetFillStyle(0);
+            if (projectedPad && TString(drawOption).Contains("Z", TString::kIgnoreCase) && !TString(drawOption).Contains("COL", TString::kIgnoreCase)) {  // with COL, ROOT makes one
+              // ROOT reads the Z of a projection but its CONT4 painting never paints the colour scale: a copy of the frame drawn as COLZ
+              // makes it, with the range and contours of the frame; its cells are moved beyond the pad, so it paints none (on a linear scale
+              // ROOT paints empty cells when the minimum is negative, on a log scale cells below the minimum)
+              auto* scale = static_cast<TH1*>(axisHist_ptr->Clone(fmt::format("color_scale_pad_{}", padID).data()));
+              scale->SetDirectory(nullptr);
+              scale->SetBit(kCanDelete);
+              scale->GetXaxis()->Set(scale->GetNbinsX(), 1e300, 2e300);
+              scale->Draw("COLZ SAME");
+            }
           }
           pad_ptr->Update();
         } else {
@@ -1322,8 +1344,16 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             const bool isClippedHist = (alias == hist_clipped || alias == hist_open_clipped || alias == curve_clipped) && mSourceHists.count(data_ptr);
             if (!pad_ptr->GetView() && !isClippedHist) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
           } else {
-            if (!pad_ptr->GetView()) {
-              if (hasRangeX) SetBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
+            if (projected) {
+              TString upper(drawOption);
+              upper.ToUpper();
+              if (hasRangeX || hasRangeY) logger::warning("The range of {} does not apply to a map projection, which must cover the range of the frame: set the range on the pad instead.", data->GetName());
+              // the other projections keep both coordinates in degrees, ROOT's Mercator gives the latitude as ln tan(pi / 4 + b / 2)
+              if (upper.Contains("MERCATOR")) logger::warning("{} is drawn with MERCATOR, whose latitude ROOT gives in units of ln tan(pi / 4 + b / 2) instead of degrees: it does not fit into the frame. Use AITOFF, MOLLWEIDE, SINUSOIDAL or PARABOLIC.", data->GetName());
+              if (upper.Contains("COL")) logger::warning("{}: ROOT paints COL with a map projection twice, unprojected below the projected map. For a colour scale add Z to the projection alone.", data->GetName());
+            }
+            if (!pad_ptr->GetView() || projected) {
+              if (hasRangeX && !projected) SetBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
               if (cutXAtFrame) LimitToFrame(data_ptr->GetXaxis(), axisHist_ptr->GetXaxis());
             }
             if constexpr (is_hist_1d<data_type>()) {
@@ -1341,9 +1371,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             logger::warning("SetNpx applies only to functions, not to {}.", data->GetName());
           }
           if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
-            if (!pad_ptr->GetView()) {
-              if (hasRangeY) SetBinRange(data_ptr->GetYaxis(), data->GetMinRangeY(), data->GetMaxRangeY());
+            if (!pad_ptr->GetView() || projected) {
+              if (hasRangeY && !projected) SetBinRange(data_ptr->GetYaxis(), data->GetMinRangeY(), data->GetMaxRangeY());
               if (cutYAtFrame) LimitToFrame(data_ptr->GetYaxis(), axisHist_ptr->GetYaxis());
+            }
+            if (projected) {
+              // ROOT takes the colours of COL drawn SAME from the frame, those of CONT4 from the histogram itself, and CONT4 also paints
+              // the x and y axes of the histogram itself when drawn SAME: they get the look and titles of the frame's axes
+              data_ptr->SetMinimum(axisHist_ptr->GetMinimum());
+              data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
+              for (auto [frameAxis, dataAxis] : {std::pair{axisHist_ptr->GetXaxis(), data_ptr->GetXaxis()}, std::pair{axisHist_ptr->GetYaxis(), data_ptr->GetYaxis()}}) {
+                frameAxis->TAttAxis::Copy(*dataAxis);
+                dataAxis->SetTitle(frameAxis->GetTitle());
+              }
             }
             if (const auto& contours = data->GetContours()) {
               data_ptr->SetContour(static_cast<int32_t>(contours->size()), contours->data());
@@ -2242,7 +2282,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       for (TObject* primitive : *pad_ptr->GetListOfPrimitives()) {
         auto* hist = dynamic_cast<TH1*>(primitive);
         TObject* found = (hist) ? hist->GetListOfFunctions()->FindObject("palette") : nullptr;
-        if (!found || !found->InheritsFrom("TPaletteAxis") || pad_ptr->GetView()) continue;
+        // the colour scale of a 3D view stays where ROOT put it; a map projection paints in a view too, but its scale sits beside a flat frame
+        if (!found || !found->InheritsFrom("TPaletteAxis") || (pad_ptr->GetView() && !projectedPad)) continue;
         auto* palette = static_cast<TPave*>(found);  // TPaletteAxis lives in libHistPainter, which is not linked: its TPave part is enough
         const double_t x1 = 1. - pad_ptr->GetRightMargin() + scaleOffset.value_or(0.005f);
         palette->SetX1NDC(x1);
@@ -2276,7 +2317,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       radial->SetName("radial_axis");
       radial->SetBit(kCanDelete);
       radial->Draw();
-    } else if (redrawAxes && axisHist_ptr && !pad_ptr->GetView() && !polargram) {
+    } else if (redrawAxes && axisHist_ptr && !pad_ptr->GetView() && !polargram && !projectedPad) {  // a map projection has no frame box (ROOT removes it)
       // re-draw frame
       TLine line;
       pad_ptr->GetFrame()->TAttLine::Copy(line);  // only the line attributes: TFrame::Copy would write a whole TWbox into the TLine
