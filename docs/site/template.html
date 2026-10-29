@@ -1463,6 +1463,7 @@ function labPick(key) { const c = colorOf(key); if (c) { lab.color = cname(c); d
 /* ---------------- drawing options */
 let optKind = "hist";
 const VIEW_ANGLES = [[30, 30], [35, 225], [60, 30], [10, 300]];  // the plots of docs/site/DefineSitePlots.py (VIEWS)
+const VIEW_DRAWING = { hist2d: "lego plot", graph2d: "triangles", func2d: "surface" };  // the 3D drawing shown for each kind of data
 function renderOptions() {
   const g = document.getElementById("optgrid");
   g.innerHTML = OPTIONS.filter(o => o[optKind] && o[optKind] !== "\u2013").map(o => {
@@ -1471,7 +1472,7 @@ function renderOptions() {
       <b>${o.alias}</b><span class="root">${conv ? `<i>${root}</i>` : `ROOT: "${esc(root)}"`}</span><small>${o.desc}</small></div>` }).join("");
   document.querySelectorAll("[data-kind]").forEach(b => b.setAttribute("aria-pressed", b.dataset.kind === optKind));
   const views = document.getElementById("optview"); views.hidden = !/2d$/.test(optKind);
-  document.getElementById("optviews").innerHTML = VIEW_ANGLES.map(([theta, phi]) => `<div class="card"><span class="plot"><img loading="lazy" src="img/gallery/view/view_${theta}_${phi}.png" alt="lego plot seen from theta ${theta}, phi ${phi}" width="380" height="380"></span>
+  document.getElementById("optviews").innerHTML = VIEW_ANGLES.map(([theta, phi]) => `<div class="card"><span class="plot"><img loading="lazy" src="img/gallery/view/${optKind}_${theta}_${phi}.png" alt="${VIEW_DRAWING[optKind]} seen from theta ${theta}, phi ${phi}" width="380" height="380"></span>
       <b>SetView(${theta}, ${phi})</b><small>${theta === 30 && phi === 30 ? "ROOT's default" : theta === 35 && phi === 225 ? "the gallery's angles" : theta > 45 ? "from high above" : "from low at the side"}</small></div>`).join("") }
 document.querySelectorAll("[data-kind]").forEach(b => b.onclick = () => { optKind = b.dataset.kind; renderOptions() });
 

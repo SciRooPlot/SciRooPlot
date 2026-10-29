@@ -100,14 +100,8 @@ def DefineGallery(pm: PlotManager):
             data.RebinXY(10, 6) if alias in ("text", "box") else data.RebinXY(4, 3)
         if alias.startswith(("lego", "surf")):
             plot[1].SetView(35.0, 225.0)
-        plot[1]['X'].SetTitle("")
-        plot[1]['Y'].SetTitle("")
-        pm.AddPlot(plot)
-    # the viewing angles of 3D drawings (Pad::SetView), shown below the 2D tabs of the gallery
-    for theta, phi in VIEWS:
-        plot = Plot(f"view_{theta}_{phi}", "gallery/view", "2d_logz")
-        plot[1].AddData("ptVsMult", "data").RebinXY(4, 3).SetDrawOption(lego_col)
-        plot[1].SetView(float(theta), float(phi))
+            data.SetLineWidth(1.0)  # thin edges: thick ones darken a 3D view
+            plot[1]['Z'].SetTitle("")  # a 3D z title runs out of the pad
         plot[1]['X'].SetTitle("")
         plot[1]['Y'].SetTitle("")
         pm.AddPlot(plot)
@@ -127,20 +121,38 @@ def DefineGallery(pm: PlotManager):
     is3d = ("lego", "surf", "triangles", "points", "line")
     for alias in ALIASES_2D_GRAPH:
         plot = Plot(alias, "gallery/graph2d", "2d")
-        plot[1].AddData("g2d", "graph2d").SetDrawOption(globals()[alias])
+        data = plot[1].AddData("g2d", "graph2d").SetDrawOption(globals()[alias])
         if alias.startswith(is3d):
             plot[1].SetView(35.0, 225.0)
+            data.SetLineWidth(1.0)
         plot[1]['X'].SetTitle("")
         plot[1]['Y'].SetTitle("")
         pm.AddPlot(plot)
     for alias in ALIASES_2D_FUNC:
         plot = Plot(alias, "gallery/func2d", "2d")
-        plot[1].AddFunction("exp(-(x*x+y*y)/2)").SetRangeX(-2.0, 2.0).SetRangeY(-2.0, 2.0).SetDrawOption(globals()[alias])
+        data = plot[1].AddFunction("exp(-(x*x+y*y)/2)").SetRangeX(-2.0, 2.0).SetRangeY(-2.0, 2.0).SetDrawOption(globals()[alias])
         if alias.startswith(is3d):
             plot[1].SetView(35.0, 225.0)
+            data.SetLineWidth(1.0)
         plot[1]['X'].SetTitle("")
         plot[1]['Y'].SetTitle("")
         pm.AddPlot(plot)
+    # the viewing angles of 3D drawings (Pad::SetView), shown below the 2D tabs of the gallery: one 3D drawing per kind of data
+    for theta, phi in VIEWS:
+        for kind in ["hist2d", "graph2d", "func2d"]:
+            plot = Plot(f"{kind}_{theta}_{phi}", "gallery/view", "2d_logz" if kind == "hist2d" else "2d")
+            if kind == "hist2d":
+                data = plot[1].AddData("ptVsMult", "data").RebinXY(4, 3).SetDrawOption(lego_col)
+            elif kind == "graph2d":
+                data = plot[1].AddData("g2d", "graph2d").SetDrawOption(triangles_col)
+            else:
+                data = plot[1].AddFunction("exp(-(x*x+y*y)/2)").SetRangeX(-2.0, 2.0).SetRangeY(-2.0, 2.0).SetDrawOption(surf_col)
+            data.SetLineWidth(1.0)
+            plot[1].SetView(float(theta), float(phi))
+            plot[1]['Z'].SetTitle("")
+            plot[1]['X'].SetTitle("")
+            plot[1]['Y'].SetTitle("")
+            pm.AddPlot(plot)
 
 
 def main():

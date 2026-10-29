@@ -50,6 +50,15 @@ def DefineDataSources(pm: PlotManager):
     pm.AddDataSource("neutronstars", inputFolder + "/neutronstars.root")
     pm.AddDataSource("biophysics", inputFolder + "/biophysics.root")
     pm.AddDataSource("theory", inputFolder + "/theory.root")
+    pm.AddDataSource("astronomy", inputFolder + "/astronomy.root")
+    pm.AddDataSource("trigger", inputFolder + "/trigger.root")
+    pm.AddDataSource("timeline", inputFolder + "/timeline.root")
+    pm.AddDataSource("temperature", inputFolder + "/temperature.csv")
+    pm.AddDataSource("warming", inputFolder + "/warming.csv")
+    pm.AddDataSource("membrane", inputFolder + "/membrane.csv")
+    pm.AddDataSource("tuning", inputFolder + "/tuning.csv")
+    pm.AddDataSource("clustering", inputFolder + "/clustering.root")
+    pm.AddDataSource("mdn", inputFolder + "/mdn.root")
     # a directory: all files in it (and its subdirectories) form one data source
     pm.AddDataSource("jets", inputFolder + "/jets/")
     # several files: they are searched in the given order, the first file containing an object wins
@@ -88,10 +97,10 @@ def DefineHiggsPlots(pm: PlotManager):
     # data with fit functions, and a ratio pad dividing the data by the background fit ------------
     plot = Plot("massSpectrum", "higgs/diphoton", "1d_ratio")
     plot[1].AddData("diphoton/mgg_data", "higgs", "data")
-    plot[1].AddData("diphoton/mgg_sigBkgFit", "higgs", "signal + background fit").SetLine(kSolid, 3.0, kRed + 1)
-    plot[1].AddData("diphoton/mgg_bkgFit", "higgs", "background fit").SetLine(kDashed, 3.0, kBlue + 1)
-    plot[1].AddText(0.45, 0.9, [EXPERIMENT, COLLISIONS + ", 140 fb^{-1}", "H #rightarrow #gamma#gamma"])
-    plot[1].AddLegend(0.45, 0.62)  # upper left corner of the box in pad coordinates
+    plot[1].AddData("diphoton/mgg_sigBkgFit", "higgs", "fit: signal + bkg.").SetLine(kSolid, 3.0, kRed + 1)
+    plot[1].AddData("diphoton/mgg_bkgFit", "higgs", "fit: bkg. only").SetLine(kDashed, 3.0, kBlue + 1)
+    plot[1].AddText(0.57, 0.9, [EXPERIMENT, COLLISIONS, "140 fb^{-1}, H #rightarrow #gamma#gamma"])  # clear of the signal window
+    plot[1].AddLegend(0.57, 0.62)  # upper left corner of the box in pad coordinates
     plot[2].AddRatio(["diphoton/mgg_data", "higgs"], ["diphoton/mgg_bkgFit", "higgs"])  # histogram / function
     plot[2]['Y'].SetTitle("data / bkg.").SetRange(0.9, 1.15)
     for pad in [1, 2]:  # the signal window as a shape behind the data: not data, so no legend row and not in the axis ranges
@@ -209,8 +218,11 @@ def DefineSpectraPlots(pm: PlotManager):
     pm.AddPlot(plot)
 
     # the same 2d histogram shown in 3d, as contours and as candles ------------------------------
-    plot3d = Plot("ptVsMultLego", "spectra/2dViews", "2d")
-    plot3d[1].AddData("ptVsMult", "data").RebinXY(4, 2).SetDrawOption(lego)
+    plot3d = Plot("ptVsMultLego", "spectra/2dViews", "1d_3dview")
+    plot3d[1].AddData("ptVsMult", "data").RebinXY(4, 2).Scale(1e-3).SetDrawOption(lego).SetLineWidth(1.0)
+    plot3d[1]['X'].SetTitleOffset(1.8)  # in 3D views the axis titles need more room from the labels
+    plot3d[1]['Y'].SetTitleOffset(1.8).SetNumDivisions(505)
+    plot3d[1]['Z'].SetTitle("tracks (10^{3})").SetTitleOffset(1.5)
     plot3d[1].SetView(35.0, 225.0)  # viewing angles theta and phi in degrees
     pm.AddPlot(plot3d)
 
@@ -240,7 +252,7 @@ def DefineDetectorPlots(pm: PlotManager):
     pm.AddPlot(plot)
 
     # labelled bins, with the bin contents printed on top
-    plot = Plot("eventSelection", "detector/events", "1d")
+    plot = Plot("eventSelection", "detector/events", "1d_wide")
     plot[1].AddData("hEventSelection", "EventQA").SetDrawOption("HIST TEXT0").SetTextFormat(".0f").SetFill(1001, kAzure - 9)
     plot[1]['Y'].SetRange(0.0, 1.2e6)
     pm.AddPlot(plot)
@@ -327,7 +339,7 @@ def DefineDetectorPlots(pm: PlotManager):
     plot[1].AddData("hInvMassGG", "CaloQA", "data").ScaleX(1000.0)
     plot[1].AddData("hInvMassGG", "CaloQA_MC", "simulation (smoothed)").ScaleX(1000.0).Smooth(2).SetDrawOption(hist).SetLine(kSolid, 2.0, kRed + 1)
     plot[1].AddLegend(0.494, 0.902)
-    plot[1].AddText(0.259, 0.916, "#pi^{0}")  # text at a fixed position (pad coordinates)
+    plot[1].AddText(0.28, 0.93, "#pi^{0}")  # text at a fixed position (pad coordinates)
     plot[1].AddText(0.72, 0.32, "#eta")
     plot[1]['X'].SetRange(20.0, 750.0).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})")
     plot[1]['Y'].SetRange(0.0, 15e3)
@@ -357,6 +369,22 @@ def DefineDetectorPlots(pm: PlotManager):
     plot[1]['Y'].SetTitle("trigger efficiency (%)").SetRange(0.0, 110.0)
     pm.AddPlot(plot)
 
+    # TEfficiency objects keep passed and total counts; drawn, their errors are binomial intervals (Clopper-Pearson) -------
+    plot = Plot("muonEfficiency", "detector/trigger", "1d")
+    plot[1].AddData("eta_2023", "trigger", "2023").SetMarkerStyle(kOpenCircle).SetMarkerSize(1.2).SetColor(kRed + 1)
+    plot[1].AddData("eta_2024", "trigger", "2024 (repaired)").SetMarkerStyle(kFullCircle).SetColor(kBlack)
+    plot[1].AddText(0.18, 0.38, ["muon trigger", "#it{p}_{T} > 25 GeV/#it{c}"])
+    plot[1].AddLegend(0.62, 0.38)
+    plot[1]['Y'].SetRange(0.0, 1.1)
+    pm.AddPlot(plot)
+
+    # a 2d TEfficiency is drawn as a map of the efficiency: holes where the detector stands on its feet ------------------
+    plot = Plot("muonEfficiencyMap", "detector/trigger", "2d")
+    plot[1].AddData("etaPhi_2023", "trigger").SetDrawOption(colz)
+    plot[1].SetPalette(kCividis)
+    plot[1]['Z'].SetRange(0.0, 1.0)
+    pm.AddPlot(plot)
+
     # shapes compared at their maxima; the overflow bin shows entries beyond the axis range
     plot = Plot("pileUp", "detector/events", "1d")
     plot[1].AddData("hNPV", "EventQA", "data").NormalizeToMaximum().SetShowOverflowBins()
@@ -369,10 +397,10 @@ def DefineDetectorPlots(pm: PlotManager):
     # wide custom base plot; a line with a legend row is data (points drawn as a line), one without would be a shape (AddHorizontalLine)
     plot = Plot("meanMultiplicityVsRun", "detector/qa", "1d_wide")
     plot[1].AddData("runQA", "runQA", "run average").Scatter("run", "meanNch", "0.", "meanNch_err")
-    plot[1].AddPoints([544000.0, 544500.0], [9.6, 9.6], "reference").SetDrawOption(line).SetLine(kDashed, 2.0, kRed + 1)
+    plot[1].AddPoints([544000.0, 544400.0], [9.6, 9.6], "reference").SetDrawOption(line).SetLine(kDashed, 2.0, kRed + 1)
     plot[1].AddLegend(0.718, 0.914)
-    plot[1]['X'].SetTitle("run number").SetRange(544000.0, 544500.0).SetNumDivisions(505).SetTickOrientation("+")
-    plot[1]['Y'].SetTitle("#LT#it{N}_{ch}#GT").SetRange(8.6, 10.2)
+    plot[1]['X'].SetTitle("run number").SetRange(544000.0, 544400.0).SetNumDivisions(504).SetTickOrientation("+")
+    plot[1]['Y'].SetTitle("#LT#it{N}_{ch}#GT").SetRange(8.7, 10.2)
     pm.AddPlot(plot)
 
     # ---- more from the track tree ---------------------------------------------------------------
@@ -442,8 +470,9 @@ def DefineCollisionPlots(pm: PlotManager):
         plot[1].AddData("hJetPt_" + tag, "jets", label).ApplyLayout(jetStyle).RebinX(2)
     plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kDashed, 2.0, kGray + 2)
     plot[1].AddLegend(0.212, 0.454, "anti-#it{k}_{T} jets, |#eta| < 0.5")  # legend with a title
-    plot[1]['X'].SetLog()
-    plot[1]['Y'].SetLog()
+    # the theory curve defining the frame has no axis titles
+    plot[1]['X'].SetLog().SetRange(10.0, 1000.0).SetTitle("#it{p}_{T}^{jet} (GeV/#it{c})")
+    plot[1]['Y'].SetLog().SetTitle("d#it{N}/d#it{p}_{T} (GeV/#it{c})^{-1}")
     pm.AddPlot(plot)
 
     # a 1d profile drawn on top of the 2d histogram it was made from ------------------------------
@@ -486,9 +515,9 @@ def DefineHeavyIonPlots(pm: PlotManager):
     plot[1].AddData("hV0M", "heavyion")
     for boundary in [2700.0, 6800.0, 14000.0]:
         plot[1].AddVerticalLine(boundary).SetLine(kDashed, 2.0, kRed + 1)
-    plot[1].AddText(0.64, 0.5, "0-10%")
-    plot[1].AddText(0.4, 0.6, "10-30%")
-    plot[1].AddText(0.24, 0.7, "30-50%")
+    plot[1].AddText(0.7, 0.5, "0-10%")
+    plot[1].AddText(0.43, 0.6, "10-30%")
+    plot[1].AddText(0.255, 0.7, "30-50%")
     plot[1]['Y'].SetLog()
     pm.AddPlot(plot)
 
@@ -546,6 +575,7 @@ def DefineHeavyIonPlots(pm: PlotManager):
         label = f"{int(low)}-{int(high)}%"
         plot[1].AddData("hPtEtaCent", "heavyion", label).Project([0], [(2, low, high)], True).Normalize()
     plot[1].AddLegend()
+    plot[1]['X'].SetRange(0.0, 5.5)
     plot[1]['Y'].SetLog().SetTitle("normalised counts")
     pm.AddPlot(plot)
 
@@ -609,23 +639,39 @@ def DefineHeavyIonPlots(pm: PlotManager):
     plot[1]['Y'].SetRange(0.0, 0.14).SetTitle("#it{v}_{#it{n}}")
     pm.AddPlot(plot)
 
-    # mean pT against multiplicity for collision systems and energies: one marker style per system ---------------------
-    plot = Plot("meanPtVsNch", "heavyion", "1d")
-    systems = [("pp_900GeV", "pp, 0.9 TeV", kAzure - 4, kFullCircle), ("pp_7TeV", "pp, 7 TeV", kAzure + 2, kFullCircle), ("pp_13TeV", "pp, 13 TeV", kBlue + 3, kFullCircle), ("pPb_5TeV", "p-Pb, 5.02 TeV", kGreen + 2, kFullSquare), ("PbPb_5TeV", "Pb-Pb, 5.02 TeV", kRed + 1, kFullTriangleUp)]
-    for name, label, color, marker in systems:
-        plot[1].AddData(f"meanPt/{name}", "heavyion", label).SetMarker(marker, 1.1, color).SetLineColor(color)
-    plot[1].AddLegend(0.18, 0.92)
-    plot[1]['X'].SetRange(0.0, 100.0).SetTitle("#it{N}_{ch}")
-    plot[1]['Y'].SetRange(0.4, 1.15).SetTitle("#LT#it{p}_{T}#GT (GeV/#it{c})")
-    pm.AddPlot(plot)
+    # mean pT against the multiplicity for ten collision systems: all start alike, pp rises steeply, p-Pb follows and flattens,
+    # A-A rises least; over the full multiplicity range on a logarithmic axis, and the low multiplicities on a linear one ----------
+    systems = [
+        ("PbPb_5TeV", "Pb-Pb, 5.02 TeV", "#2b7bab"),
+        ("PbPb_2.76TeV", "Pb-Pb, 2.76 TeV", "#4fb3f0"),
+        ("XeXe_5.44TeV", "Xe-Xe, 5.44 TeV", "#1a1f8c"),
+        ("pPb_8.16TeV", "p-Pb, 8.16 TeV", "#7e2fd0"),
+        ("pPb_5TeV", "p-Pb, 5.02 TeV", "#cc1f6a"),
+        ("pp_13TeV", "pp, 13 TeV", "#d81b1b"),
+        ("pp_8TeV", "pp, 8 TeV", "#ff7a00"),
+        ("pp_7TeV", "pp, 7 TeV", "#f5b400"),
+        ("pp_5TeV", "pp, 5.02 TeV", "#1f9e89"),
+        ("pp_2.76TeV", "pp, 2.76 TeV", "#1d6b1d"),
+    ]
+    for name, logX in [("meanPtVsNch", True), ("meanPtVsNchLow", False)]:
+        plot = Plot(name, "heavyion", "1d")
+        for system, label, color in systems:
+            plot[1].AddData(f"meanPt/{system}", "heavyion", label).SetMarkerStyle(kFullCircle).SetMarkerSize(0.9).SetColor(color)
+        plot[1].AddText(0.18, 0.93, ["charged particles", "|#eta| < 0.8, 0.15 < #it{p}_{T} < 10 GeV/#it{c}"])
+        plot[1].AddLegend(0.18, 0.8).SetNumColumns(2)
+        plot[1]['X'].SetLog(logX).SetRange(0.6 if logX else 0.0, 4000.0 if logX else 100.0).SetTitle("#it{N}_{ch}")
+        plot[1]['Y'].SetRange(0.35, 1.4).SetTitle("#LT#it{p}_{T}#GT (GeV/#it{c})")
+        pm.AddPlot(plot)
 
     # two-particle correlations in high-multiplicity events: the jet peak cut off by the z range to show the ridge ----
     plot = Plot("ridge", "heavyion/correlations", "1d_3dview")  # the base plot of the lego animation below
-    plot[1].AddData("correlations/ridge", "heavyion").SetDrawOption(surf_col)
+    plot[1].AddData("correlations/ridge", "heavyion").SetDrawOption(surf_col).SetLineWidth(1.0)
     plot[1].SetView(40.0, 135.0)
     plot[1].SetPalette(kViridis)
     plot[1]['Z'].SetRange(0.985, 1.03).SetTitle("")  # the jet peak reaches 1.15; a 3D z title runs into the labels
     plot[1].AddText(0.05, 0.95, "pairs per trigger (a.u.)")
+    plot[1]['X'].SetTitleOffset(1.8)  # in 3D views the axis titles need more room from the labels
+    plot[1]['Y'].SetTitleOffset(1.8)
     pm.AddPlot(plot)
 
     # the long-range part projected on Delta phi, with the Fourier fit stored with the data --------------------------
@@ -641,7 +687,7 @@ def DefineHeavyIonPlots(pm: PlotManager):
     for centrality, color in [("0-5", kRed + 1), ("20-30", kGreen + 2), ("50-60", kAzure + 2)]:
         plot[1].AddData(f"femtoscopy/cf_{centrality}", "heavyion", f"{centrality}%").SetColor(color)
         plot[1].AddData(f"femtoscopy/fit_{centrality}", "heavyion", "<title>").SetLine(kSolid, 2.0, color)
-    plot[1].AddLegend(0.4, 0.92, "#pi^{#pm}#pi^{#pm}, Pb-Pb").SetNumColumns(2)
+    plot[1].AddLegend(0.32, 0.92, "#pi^{#pm}#pi^{#pm}, Pb-Pb").SetNumColumns(2)
     plot[1]['X'].SetRange(0.0, 0.2).SetTitle("#it{q}_{inv} (GeV/#it{c})")
     plot[1]['Y'].SetRange(0.85, 1.65).SetTitle("#it{C}(#it{q}_{inv})")
     pm.AddPlot(plot)
@@ -681,6 +727,51 @@ def DefineMLPlots(pm: PlotManager):
     # feature importance as horizontal bars, the labels of the bins on the y axis ---------------------------------------
     plot = Plot("featureImportance", "ml", "1d")
     plot[1].AddData("hFeatureImportance", "ml").SetDrawOption(hbars).SetFill(1001, kAzure - 9).SetLineColor(kAzure + 2)
+    plot[1].SetLeftMargin(0.2)  # room for the bin labels
+    pm.AddPlot(plot)
+
+    # unsupervised learning: a Gaussian mixture separates three groups of points; the cluster map behind them in pale colours,
+    # its contours are the learned borders, the ellipses mark 2 sigma of each fitted component -----------------------------
+    plot = Plot("clustering", "ml", "1d")  # no colour scale: the colours are the clusters
+    clusterColors = [kAzure + 2, kOrange + 7, kGreen + 2]
+    plot[1].SetPalette([(color, i / 2.0) for i, color in enumerate(clusterColors)], 0.15, 3)  # one pale colour per cluster
+    plot[1].AddData("clusterMap", "clustering").SetDrawOption(col)
+    for k, color in enumerate(clusterColors, 1):
+        plot[1].AddData("points", "clustering", f"cluster {k}").Filter(f"cluster == {k}").Scatter("x", "y").SetMarker(kFullCircle, 0.7, color)
+        plot[1].AddData(f"ellipse_{k}", "clustering").SetDrawOption(line).SetLine(kDashed, 2.0, color)
+    plot[1].AddData("clusterMap", "clustering", "borders").SetDrawOption(cont).SetContours([1.5, 2.5]).SetLine(kSolid, 2.0, kBlack)
+    plot[1].AddData("centres", "clustering", "centres").SetMarker(kFullStar, 2.5, kBlack)
+    plot[1].AddLegend(0.18, 0.92).SetNumColumns(2)
+    plot[1]['X'].SetRange(-4.0, 4.0).SetTitle("feature 1")
+    plot[1]['Y'].SetRange(-4.0, 6.0).SetTitle("feature 2")
+    pm.AddPlot(plot)
+
+    # a mixture density network for the electron pT resolution: bremsstrahlung in the material gives a tail to negative values, the
+    # same at all pT; the core widens at high pT. The network predicts four Gaussians per pT_gen (the core and three for the tail):
+    # mean +- sigma, the weights below
+    plot = Plot("mixtureComponents", "ml", "1d_wide_1x2")
+    components = [("core", kAzure + 2), ("tail 1", kViolet + 1), ("tail 2", kOrange + 7), ("tail 3", kGreen + 2)]
+    for k, (label, color) in enumerate(components, 1):
+        plot[1].AddData(f"component_{k}", "mdn", f"{label} (#mu #pm #sigma)").SetDrawOption(band).SetFill(1001, color, 0.4).SetLineColor(color).SetLegendEntry(LegendEntry().SetSymbolElements("F"))
+        plot[1].AddData(f"component_{k}", "mdn").SetDrawOption(line).SetLine(kSolid, 2.0, color)  # the mean
+        plot[2].AddData(f"weight_{k}", "mdn").SetDrawOption(points_line).SetMarkerStyle(kFullCircle).SetMarkerSize(0.8).SetColor(color)
+    plot[1].AddRegionX(2.0, 2.5).SetFill(1001, kGray, 0.5).SetBehindData()  # the slice of the plot mixtureSlice
+    plot[1].AddLegend(0.12, 0.93).SetNumColumns(4)
+    plot[1]['Y'].SetRange(-0.7, 0.2).SetTitle("(#it{p}_{T}^{rec} #minus #it{p}_{T}^{gen}) / #it{p}_{T}^{gen}")
+    plot[2]['Y'].SetRange(0.0, 1.0).SetTitle("weight")
+    plot[0]['X'].SetLog().SetRange(0.5, 50.0).SetTitle("#it{p}_{T}^{gen} (GeV/#it{c})")
+    pm.AddPlot(plot)
+
+    # at 2 < pT_gen < 2.5 GeV/c: the predicted density, its weighted components and the simulated electrons -----------------------
+    plot = Plot("mixtureSlice", "ml", "1d")
+    plot[1].AddData("electrons", "mdn", "simulated electrons").Filter("ptGen > 2.0 && ptGen < 2.5").Project1D(("deltaPt", 115, [-1.0, 0.15])).Normalize(True).SetMarker(kFullCircle, 0.9, kBlack)
+    for k, (label, color) in enumerate(components, 1):
+        plot[1].AddData(f"slice_component_{k}", "mdn", f"{label}, weight <title>").SetDrawOption(area).SetFill(1001, color, 0.3).SetLineColor(color)
+    plot[1].AddData("slice_total", "mdn", "mixture").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1)
+    plot[1].AddText(0.2, 0.92, ["electrons, |#eta| < 0.9", "2 < #it{p}_{T}^{gen} < 2.5 GeV/#it{c}"])
+    plot[1].AddLegend(0.2, 0.78)
+    plot[1]['X'].SetRange(-1.0, 0.15).SetTitle("(#it{p}_{T}^{rec} #minus #it{p}_{T}^{gen}) / #it{p}_{T}^{gen}")
+    plot[1]['Y'].SetLog().SetRange(2.0e-3, 2000.0).SetTitle("probability density")
     pm.AddPlot(plot)
 
 
@@ -710,6 +801,7 @@ def DefineMedicalPlots(pm: PlotManager):
     plot[1].AddData("plan/doseMap", "medical").SetDrawOption(cont).SetContours([20.0, 50.0, 80.0, 95.0]).SetLine(kSolid, 2.0, kBlack)
     plot[1].SetPalette(kTemperatureMap)
     plot[1].AddText(0.15, 0.3, "isodose lines 20, 50, 80, 95%")
+    plot[1]['Y'].SetRange(-75.0, 100.0)
     pm.AddPlot(plot)
 
 
@@ -772,7 +864,7 @@ def DefineAtomicPlots(pm: PlotManager):
     plot[1].AddPoints([59.7, 59.7], [1.0, 1.0e6], "10#it{U}_{p}").SetDrawOption(line).SetLine(kDashed, 2.0, kRed + 1)
     plot[1].AddText(1.0, 1.0e7, "direct").SetUserCoordinates()
     plot[1].AddText(28.0, 5.0e3, "rescattered").SetUserCoordinates()
-    plot[1].AddLegend(0.55, 0.9)
+    plot[1].AddLegend(0.45, 0.9)
     plot[1]['Y'].SetLog().SetRange(1.0, 1.0e8)
     pm.AddPlot(plot)
 
@@ -810,10 +902,9 @@ def DefineAtomicPlots(pm: PlotManager):
     for n in [1, 2, 3]:
         for orbital in "spd"[:n]:
             plot[n].AddData(f"orbitals/radial_{n}{orbital}", "atomic", f"{n}{orbital}").SetLine(kSolid, 3.0, colors[orbital])
-        plot[n].AddLegend(0.6, 0.9)
+        plot[n].AddLegend(0.6, 0.9, "hydrogen" if n == 1 else None)
         plot[n]['X'].SetRange(0.0, 10.0 * n).SetTitle("#it{r} (#it{a}_{0})")
         plot[n]['Y'].SetTitle("#it{r}^{2}|#it{R}_{#it{nl}}|^{2} (#it{a}_{0}^{-1})").SetRange(0.0, 0.65 / n)
-    plot[1].AddText(0.6, 0.6, "hydrogen")
     pm.AddPlot(plot)
 
     # Millikan's measurement of Planck's constant: the slope of the stopping voltage against the frequency is h/e ------
@@ -871,12 +962,24 @@ def DefineAcceleratorPlots(pm: PlotManager):
 
     # the particles of a bunch in horizontal phase space, with the rms ellipse (the emittance in its title) ------------
     plot = Plot("phaseSpace", "accelerator", "2d_logz")
-    plot[1].AddData("beam", "accelerator").Project2D(("x", 80, [-8.0, 8.0]), ("xp", 80, [-2.0, 2.0]))
+    plot[1].AddData("beam", "accelerator").Project2D(("x", 80, [-8.0, 8.0]), ("xp", 88, [-2.2, 2.2]))
     plot[1].AddData("rmsEllipse", "accelerator", "rms ellipse, #varepsilon = <title> mm mrad").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1)
     plot[1].AddLegend(0.15, 0.92)
     plot[1]['X'].SetTitle("#it{x} (mm)")
     plot[1]['Y'].SetTitle("#it{x}' (mrad)")
     plot[1]['Z'].SetTitle("particles")
+    pm.AddPlot(plot)
+
+    # the beta functions along a FODO lattice: the beam is widest in x at the focusing, in y at the defocusing quadrupoles --
+    plot = Plot("betaFunctions", "accelerator", "1d_wide")
+    plot[1].AddData("lattice/betaX", "accelerator", "#beta_{#it{x}}").SetDrawOption(line).SetLine(kSolid, 3.0, kAzure + 2)
+    plot[1].AddData("lattice/betaY", "accelerator", "#beta_{#it{y}}").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1)
+    for s in [0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0]:  # the quadrupoles: shapes behind the data, no legend rows
+        plot[1].AddLine((s, 0.0), (s, 40.0)).SetLine(kSolid if s % 20.0 == 0.0 else kDashed, 1.0, kGray + 1).SetBehindData()
+    plot[1].AddText(0.13, 0.92, ["FODO lattice, 90#circ phase advance per cell", "quadrupoles focusing in #it{x} (solid) and #it{y} (dashed)"])
+    plot[1].AddLegend(0.75, 0.92).SetNumColumns(2)
+    plot[1]['X'].SetRange(0.0, 60.0).SetTitle("#it{s} (m)")
+    plot[1]['Y'].SetRange(0.0, 55.0).SetTitle("#beta (m)")
     pm.AddPlot(plot)
 
 
@@ -932,9 +1035,24 @@ def DefineNuclearPlots(pm: PlotManager):
     plot[1].AddData("deltaChi2", "neutrino").SetDrawOption(colz)
     plot[1].AddData("deltaChi2", "neutrino").SetDrawOption(cont).SetContours([2.30, 6.18, 11.83]).SetLine(kSolid, 2.0, kWhite)
     plot[1].AddData("bestFit", "neutrino").SetMarker(kFullStar, 2.5, kWhite)
-    plot[1].AddText(0.15, 0.92, "contours: 1#sigma, 2#sigma, 3#sigma").SetTextColor(kWhite)
-    plot[1].SetPalette(kViridis)
+    plot[1].AddText(0.15, 0.92, "contours: 1#sigma, 2#sigma, 3#sigma")
+    plot[1].SetPalette(kDarkBodyRadiator)  # dark at the minimum, fading to white where the parameters are excluded
+    plot[1]['X'].SetRange(0.6, 1.0)
+    plot[1]['Y'].SetRange(6.7, 8.5)
     plot[1]['Z'].SetRange(0.0, 30.0)
+    pm.AddPlot(plot)
+
+    # neutrino-nucleon cross-sections from quasi-elastic scattering to deep-inelastic scattering, with measurements ---------
+    plot = Plot("crossSections", "neutrino", "1d")
+    for name, label, color in [("qe", "quasi-elastic", kAzure + 2), ("res", "resonance production", kGreen + 2), ("dis", "deep-inelastic", kOrange + 7)]:
+        plot[1].AddData(f"crossSection/{name}", "neutrino", label).SetDrawOption(line).SetLine(kSolid, 2.0, color)
+    plot[1].AddData("crossSection/total", "neutrino", "total").SetDrawOption(line).SetLine(kSolid, 3.0, kBlack)
+    for name, label, marker, color in [("data_A", "experiment A", kFullCircle, kBlack), ("data_B", "experiment B", kOpenSquare, kViolet + 1), ("data_C", "experiment C", kFullTriangleUp, kGray + 2)]:
+        plot[1].AddData(f"crossSection/{name}", "neutrino", label).SetMarkerStyle(marker).SetMarkerSize(1.3).SetColor(color)
+    plot[1].AddText(0.2, 0.92, "#nu_{#mu} #it{N} #rightarrow #mu^{#minus} #it{X}")
+    plot[1].AddLegend(0.2, 0.86).SetNumColumns(2)
+    plot[1]['X'].SetLog().SetRange(0.1, 100.0).SetTitle("#it{E}_{#nu} (GeV)")
+    plot[1]['Y'].SetRange(0.0, 2.0).SetTitle("#sigma / #it{E}_{#nu} (10^{#minus38} cm^{2}/GeV)")
     pm.AddPlot(plot)
 
 
@@ -947,7 +1065,7 @@ def DefineSearchPlots(pm: PlotManager):
     plot[1].AddData("darkMatter/expected_A_1sigma", "searches", "expected A #pm 1#sigma").SetDrawOption(band).SetFill(1001, kGreen + 1).SetLineColor(kGreen + 1).SetLegendEntry(LegendEntry().SetSymbolElements("F"))
     for name, label, color in [("limit_A", "experiment A (2025)", kBlack), ("limit_B", "experiment B (2020)", kAzure + 2), ("limit_C", "experiment C, low threshold", kRed + 1)]:
         plot[1].AddData(f"darkMatter/{name}", "searches", label).SetDrawOption(line).SetLine(kSolid, 3.0, color)
-    plot[1].AddLegend(0.45, 0.92, "90% CL upper limits")
+    plot[1].AddLegend(0.38, 0.92, "90% CL upper limits")
     plot[1]['X'].SetLog().SetRange(1.0, 1.0e4).SetTitle("WIMP mass (GeV/#it{c}^{2})")
     plot[1]['Y'].SetLog().SetRange(1.0e-50, 1.0e-38).SetTitle("#sigma_{SI} (cm^{2})")
     pm.AddPlot(plot)
@@ -963,7 +1081,21 @@ def DefineSearchPlots(pm: PlotManager):
         plot[1].AddData(f"stop/{variation}", "searches").SetDrawOption(line).SetLine(kSolid, 1.0, kBlack)
     plot[1].AddPoints([200.0, 993.0], [7.0, 800.0], "#it{m}_{#tilde{t}} = #it{m}_{t} + #it{m}_{#tilde{#chi}^{0}_{1}}").SetDrawOption(line).SetLine(kDotted, 2.0, kGray + 2)
     plot[1].AddLegend(0.17, 0.92, "#tilde{t}#tilde{t}, #tilde{t} #rightarrow t #tilde{#chi}^{0}_{1}")
-    plot[1]['Z'].SetTitle("95% CL upper limit on #sigma (pb)")
+    plot[1]['Z'].SetTitle("95% CL upper limit on #sigma (pb)").SetRange(3.0e-3, 0.1)
+    pm.AddPlot(plot)
+
+    # a bump hunt: the dijet mass spectrum with a smooth fit, below it the significance of each bin's deviation ----------
+    plot = Plot("dijetMass", "searches/resonance", "1d_ratio")
+    plot[1].AddData("dijet/spectrum", "searches", "data").SetMarker(kFullCircle, 0.9, kBlack)
+    plot[1].AddData("dijet/fit", "searches", "<title>").SetLine(kSolid, 2.0, kRed + 1)
+    plot[1].AddData("dijet/excitedQuark", "searches", "excited quark, 5 TeV").SetRangeX(3.8, 6.2).SetLine(kSolid, 2.0, kAzure + 2)
+    plot[1].AddText(0.45, 0.9, [EXPERIMENT, COLLISIONS + ", 140 fb^{-1}", "|#it{y}*| < 0.6"])
+    plot[1].AddLegend(0.45, 0.68)
+    plot[1]['Y'].SetLog().SetRange(0.05, 1.0e7)
+    plot[2].AddData("dijet/significance", "searches").SetDrawOption(hist).SetFill(1001, kRed - 9).SetLineColor(kRed + 1)
+    plot[2].SetRefFunc("0")
+    plot[2]['Y'].SetRange(-3.5, 3.5).SetTitle("signif.")
+    plot[0]['X'].SetRange(1.5, 7.0)
     pm.AddPlot(plot)
 
 
@@ -1072,7 +1204,7 @@ def DefineBiophysicsPlots(pm: PlotManager):
     plot[1].AddText(0.15, 0.3, "open")
     plot[1].AddText(0.15, 0.85, "closed")
     plot[1]['X'].SetRange(0.0, 300.0).SetTitle("time (ms)")
-    plot[1]['Y'].SetRange(-8.0, 2.5).SetTitle("current (pA)")
+    plot[1]['Y'].SetRange(-7.5, 2.5).SetTitle("current (pA)")
     pm.AddPlot(plot)
 
     # its open times in logarithmic bins: one exponential is one peak at its time constant ----------------------------
@@ -1111,7 +1243,7 @@ def DefineTheoryPlots(pm: PlotManager):
     for name, label, color in [("energy", "#varepsilon/#it{T}^{4}", kRed + 1), ("entropy", "3#it{s}/4#it{T}^{3}", kAzure + 2), ("3p", "3#it{p}/#it{T}^{4}", kGreen + 2)]:
         plot[1].AddData(f"lattice_{name}", "theory", label).SetDrawOption(band).SetFill(1001, color, 0.6).SetLineColor(color).SetLegendEntry(LegendEntry().SetSymbolElements("F"))
     plot[1].AddPoints([130.0, 410.0], [15.62, 15.62], "Stefan-Boltzmann limit").SetDrawOption(line).SetLine(kDashed, 2.0, kBlack)
-    plot[1].AddLegend(0.55, 0.45)
+    plot[1].AddLegend(0.5, 0.45)
     plot[1]['X'].SetRange(130.0, 410.0).SetTitle("#it{T} (MeV)")
     plot[1]['Y'].SetRange(0.0, 17.0)
     pm.AddPlot(plot)
@@ -1165,6 +1297,26 @@ def DefineOtherSciencePlots(pm: PlotManager):
     plot[1]['Y'].SetTitle("CO_{2} (ppm)")
     pm.AddPlot(plot)
 
+    # yearly global temperature anomalies as bars, warm years red and cold years blue: Filter selects the rows of a table --
+    plot = Plot("temperatureAnomaly", "climate", "1d_wide")
+    years = ("year", 146, [1879.5, 2025.5])
+    plot[1].AddData("temperature", "temperature").Filter("anomaly >= 0").Project1D(years, "anomaly").SetDrawOption(bars).SetFill(1001, kRed - 4).SetLineColor(kRed - 4)
+    plot[1].AddData("temperature", "temperature").Filter("anomaly < 0").Project1D(years, "anomaly").SetDrawOption(bars).SetFill(1001, kAzure - 4).SetLineColor(kAzure - 4)
+    plot[1].AddData("temperature", "temperature", "11-year mean").Scatter("year", "smoothed").SetDrawOption(line).SetLine(kSolid, 3.0, kBlack)
+    plot[1].AddLegend(0.15, 0.85)
+    plot[1]['X'].SetRange(1879.5, 2025.5).SetTitle("year")
+    plot[1]['Y'].SetRange(-0.7, 1.6).SetTitle("anomaly to 1951-1980 (K)")
+    pm.AddPlot(plot)
+
+    # the anomaly by latitude and year from a table with one row per cell: the weight of Project2D puts it into the cell ---
+    plot = Plot("warmingByLatitude", "climate", "2d")
+    plot[1].AddData("warming", "warming").Project2D(("year", 76, [1949.5, 2025.5]), ("latitude", 36, [-90.0, 90.0]), "anomaly")
+    plot[1].SetPalette(kTemperatureMap)
+    plot[1]['X'].SetTitle("year")
+    plot[1]['Y'].SetTitle("latitude (deg)").SetNumDivisions(506)
+    plot[1]['Z'].SetRange(-3.0, 3.0).SetTitle("anomaly to 1960-1970 (K)")
+    pm.AddPlot(plot)
+
     # a Hertzsprung-Russell diagram: the density of 15000 stars of a catalogue -------------------------------------------
     plot = Plot("hertzsprungRussell", "astronomy", "2d_logz")
     plot[1].AddData("stars", "stars").Project2D(("bv", 100, [-0.4, 2.0]), ("logL", 100, [-4.0, 4.0]))
@@ -1177,6 +1329,26 @@ def DefineOtherSciencePlots(pm: PlotManager):
     plot[1]['Z'].SetTitle("stars")
     pm.AddPlot(plot)
 
+    # the rotation curve of a spiral galaxy: stars and gas alone cannot hold it flat, a dark matter halo does -------------
+    plot = Plot("rotationCurve", "astronomy", "1d")
+    plot[1].AddData("rotation/measured", "astronomy", "measured (H I, H#alpha)").SetMarker(kFullCircle, 1.1, kBlack)
+    plot[1].AddData("rotation/total", "astronomy", "total").SetDrawOption(line).SetLine(kSolid, 3.0, kBlack)
+    for name, label, color in [("bulge", "bulge", kOrange + 7), ("disk", "stellar disk", kAzure + 2), ("halo", "dark matter halo", kGray + 2)]:
+        plot[1].AddData(f"rotation/{name}", "astronomy", label).SetDrawOption(line).SetLine(kSolid, 2.0, color)
+    plot[1].AddLegend(0.2, 0.92).SetNumColumns(2)
+    plot[1]['X'].SetRange(0.0, 30.0).SetTitle("radius (kpc)")
+    plot[1]['Y'].SetRange(0.0, 300.0).SetTitle("rotation velocity (km/s)")
+    pm.AddPlot(plot)
+
+    # the temperature power spectrum of the cosmic microwave background: the acoustic peaks of the early universe ---------
+    plot = Plot("cmbPowerSpectrum", "astronomy", "1d_wide")
+    plot[1].AddData("cmb/measured", "astronomy", "measured").SetDrawOption(points_xerr).SetMarkerStyle(kFullCircle).SetMarkerSize(0.8).SetColor(kRed + 1)
+    plot[1].AddData("cmb/model", "astronomy", "#LambdaCDM best fit").SetDrawOption(line).SetLine(kSolid, 2.0, kBlack)
+    plot[1].AddLegend(0.7, 0.9)
+    plot[1]['X'].SetRange(0.0, 2500.0).SetTitle("multipole #it{l}")
+    plot[1]['Y'].SetRange(0.0, 6900.0).SetNoExponent().SetTitle("#it{l}(#it{l}+1)#it{C}_{#it{l}} / 2#pi (#muK^{2})")
+    pm.AddPlot(plot)
+
     # a spike raster of 40 trials and the firing rate below it: the neuron answers the stimulus at 0 ms ------------------
     plot = Plot("spikeRaster", "neuroscience", "1d_wide_1x2")
     plot[1].AddData("spikes", "spikes").Scatter("time", "trial").SetDrawOption(points).SetMarker(kFullDotLarge, 1.0, kBlack)
@@ -1185,6 +1357,24 @@ def DefineOtherSciencePlots(pm: PlotManager):
     plot[2].AddData("spikes", "spikes").Project1D(("time", 30, [-500.0, 1000.0])).Scale(0.5).SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineColor(kAzure + 2)
     plot[2]['Y'].SetTitle("rate (spikes/s)")
     plot[0]['X'].SetRange(-500.0, 1000.0).SetTitle("time after stimulus (ms)")
+    pm.AddPlot(plot)
+
+    # a train of action potentials in the Hodgkin-Huxley model while a current is injected, the current below ------------
+    plot = Plot("actionPotentials", "neuroscience", "1d_wide_1x2")
+    plot[1].AddData("membrane", "membrane").Scatter("time", "voltage").SetDrawOption(line).SetLine(kSolid, 2.0, kAzure + 2)
+    plot[1]['Y'].SetRange(-85.0, 55.0).SetTitle("membrane voltage (mV)")
+    plot[2].AddData("membrane", "membrane").Scatter("time", "current").SetDrawOption(line).SetLine(kSolid, 2.0, kRed + 1)
+    plot[2]['Y'].SetRange(-2.0, 13.0).SetTitle("#it{I} (#muA/cm^{2})")
+    plot[0]['X'].SetRange(0.0, 100.0).SetTitle("time (ms)")
+    pm.AddPlot(plot)
+
+    # the orientation tuning curve of a visual cortex neuron, with the von Mises function it was drawn from --------------
+    plot = Plot("orientationTuning", "neuroscience", "1d")
+    plot[1].AddData("tuning", "tuning", "20 trials per orientation").Scatter("orientation", "rate", "0", "rate_err").SetMarker(kFullCircle, 1.2, kBlack)
+    plot[1].AddFunction("2 + 38*exp(2.5*(cos(2*(x - 60)*TMath::DegToRad()) - 1))", "von Mises, peak at 60#circ").SetRangeX(0.0, 180.0).SetLine(kSolid, 2.0, kRed + 1)
+    plot[1].AddLegend(0.45, 0.9)
+    plot[1]['X'].SetRange(0.0, 180.0).SetNumDivisions(504).SetTitle("grating orientation (deg)")
+    plot[1]['Y'].SetRange(0.0, 55.0).SetTitle("firing rate (spikes/s)")
     pm.AddPlot(plot)
 
 
@@ -1198,9 +1388,11 @@ def DefineAnimations(pm: PlotManager):
     pm.AddBasePlot(view3d)
     for phi in range(5, 360, 10):  # never looking exactly along an axis, where its labels would pile up
         plot = Plot(f"phi{phi}", "animations/legoRotation", "1d_3dview")
-        plot[1].AddData("ptVsMult", "data").RebinXY(4, 2).SetDrawOption(lego_col)
+        plot[1].AddData("ptVsMult", "data").RebinXY(4, 2).SetDrawOption(lego_col).SetLineWidth(1.0)
         plot[1].SetView(35.0, phi)
-        plot[1]['Z'].SetLog()
+        plot[1]['X'].SetTitleOffset(1.8)
+        plot[1]['Y'].SetTitleOffset(1.8).SetNumDivisions(505)
+        plot[1]['Z'].SetLog().SetTitleOffset(1.5)
         pm.AddPlot(plot)
 
     # the spectrum class by class, against all classes together: it gets harder with the multiplicity ---------------
@@ -1216,6 +1408,20 @@ def DefineAnimations(pm: PlotManager):
         plot[2].AddRatio(["ptVsMult", "data"], ["ptVsMult", "data"]).Numer().ProjectY(low, high, True).Denom().ProjectY(1, 60, True).Both().Normalize().SetColor(kRed + 1)
         plot[2]['Y'].SetRange(0.0, 4.0).SetTitle("class / all")
         plot[0]['X'].SetRange(0.0, 4.0)  # fixed ranges: the frames differ only in the data
+        pm.AddPlot(plot)
+
+    # the Higgs peak growing out of the background while the data come in: each frame takes the events up to a luminosity -----
+    # plot animations/higgsDiscovery '.+' gif+40++ makes them one gif, 0.4 s per frame, looping endlessly
+    for lumi in range(10, 150, 10):
+        plot = Plot(f"lumi{lumi:03d}", "animations/higgsDiscovery", "1d")
+        plot[1].AddData("diphoton", "timeline", "data").Filter(f"lumi < {lumi}").Project1D(("mass", 60, [100.0, 160.0])).SetMarker(kFullCircle, 1.0, kBlack)
+        background = f"{lumi / 140.0 * 5350.0:g} * exp(-(x - 100) / 22)"  # the shape the background was drawn from, per GeV
+        plot[1].AddFunction(f"{background} + {lumi / 140.0 * 1400.0:g} * TMath::Gaus(x, 125, 1.7, true)", "signal + background").SetLine(kSolid, 3.0, kRed + 1)
+        plot[1].AddFunction(background, "background").SetLine(kDashed, 3.0, kAzure + 2)
+        plot[1].AddText(0.45, 0.9, [EXPERIMENT, f"#sqrt{{#it{{s}}}} = 13.6 TeV, {lumi} fb^{{-1}}", "H #rightarrow #gamma#gamma"])
+        plot[1].AddLegend(0.45, 0.68)
+        plot[1]['X'].SetTitle("#it{m}_{#gamma#gamma} (GeV)")
+        plot[1]['Y'].SetRange(0.0, 6500.0).SetTitle("events / GeV")
         pm.AddPlot(plot)
 
 

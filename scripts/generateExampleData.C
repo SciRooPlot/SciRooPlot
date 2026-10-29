@@ -25,7 +25,7 @@
 //     hV0M (centrality estimator), hPtEtaCent (THnSparse: pT, eta, centrality)
 //     cent_0-10/, cent_10-30/, cent_30-50/   ptSpec (per event), v2 (TGraphErrors)
 //     flow/        v2_{pi,K,p} (v2 vs. pT, 30-40%), v2ncq_{pi,K,p} (v2/n_q vs. KET/n_q), v2, v3, v4 (vs. centrality)
-//     meanPt/      pp_900GeV, pp_7TeV, pp_13TeV, pPb_5TeV, PbPb_5TeV (TGraphErrors: mean pT vs. N_ch)
+//     meanPt/      pp_{2.76,5,7,8,13}TeV, pPb_{5,8.16}TeV, XeXe_5.44TeV, PbPb_{2.76,5}TeV (TGraphErrors: mean pT vs. N_ch)
 //     correlations/ ridge (TH2: pair yield vs. Delta phi, Delta eta), fourier_longRange (TF1, V_2Delta in the title)
 //     femtoscopy/  cf_{0-5,20-30,50-60} (TGraphErrors: pion correlation functions), fit_... (TF1, the radius in the title)
 //   tracks.root                       TTree "tracks": pt, eta, phi, charge, nClustersTPC, dcaXY, isPrimary
@@ -46,13 +46,26 @@
 //     laser/       probeOnly, withPump (TGraph: saturated absorption of Rb), rabi_{0,1,2}MHz (TGraphErrors), theory_{0,1,2}MHz (TF1)
 //   accelerator.root                  a beam line: hBeamSpot (TH2: transverse beam profile at a screen),
 //                                     TTree "beam": x, xp (horizontal phase space), rmsEllipse (TGraph, the emittance in the title)
+//     lattice/     betaX, betaY (TGraph: beta functions along three FODO cells)
 //   nuclear.root                      betaDecay/: tritium (spectrum), kurie (TGraphErrors), kurieFit (TF1, Q in the title),
 //                                     endpoint_{0,05,1}eV (TF1: shape at the endpoint), cu64_betaMinus, cu64_betaPlus (TGraph)
 //   neutrino.root                     reactor antineutrinos: survival (TGraphErrors vs. L/E), expectation (TGraph),
 //                                     deltaChi2 (TH2: oscillation parameters), bestFit (TGraph, the values in the title)
+//     crossSection/ qe, res, dis, total (TGraph: CC cross-section / E), data_{A,B,C} (TGraphErrors)
 //   searches.root                     exclusion limits
 //     darkMatter/  limit_{A,B,C} (TGraph), expected_A_{1,2}sigma (TGraphAsymmErrors), neutrinoFog (TGraphAsymmErrors)
 //     stop/        upperLimit (TH2), observed, observed_theory{Up,Down}, expected, expected_{up,down} (TGraph contours)
+//     dijet/       spectrum (TH1, log bins), fit (TF1, chi2/ndf in the title), significance (TH1), excitedQuark (TF1)
+//   astronomy.root                    rotation/ measured (TGraphErrors), bulge, disk, halo, total (TGraph: galaxy rotation curve)
+//                                     cmb/      measured (TGraphErrors), model (TGraph: CMB temperature power spectrum)
+//   trigger.root                      muon trigger efficiencies: eta_2023, eta_2024 (TEfficiency), etaPhi_2023 (2D TEfficiency)
+//   timeline.root                     TTree "diphoton": mass, lumi (diphoton candidates with the luminosity at which they came)
+//   clustering.root                   TTree "points": x, y, cluster (from a Gaussian mixture fit), clusterMap (TH2: cluster per cell),
+//                                     ellipse_{1,2,3} (TGraph: 2 sigma of each fitted component), centres (TGraph)
+//   mdn.root                          a mixture density network for the electron pT resolution (bremsstrahlung tail):
+//                                     TTree "electrons": ptGen, deltaPt ((pT_rec - pT_gen) / pT_gen); component_{1,2,3,4}
+//                                     (TGraphAsymmErrors: mean +- sigma vs. pT_gen), weight_{1,2,3,4} (TGraph),
+//                                     slice_component_{1,2,3,4}, slice_total (TGraph: at 2 < pT_gen < 2.5 GeV/c)
 //   neutronstars.root                 neutron stars
 //     structure/   eos_{soft,medium,stiff}, massRadius_{soft,medium,stiff} (TGraph), pulsar_J0740 (TGraphAsymmErrors),
 //                  nicer_J0030, nicer_J0740 (TGraph ellipses)
@@ -67,6 +80,10 @@
 //   co2.csv                           monthly atmospheric CO2: year (decimal), co2, deseasonalized
 //   stars.csv                         a star catalogue for a Hertzsprung-Russell diagram: bv (colour index), logL
 //   spikes.csv                        spike times of a neuron in 40 trials around a stimulus: trial, time (ms)
+//   temperature.csv                   global temperature anomaly per year: year, anomaly, smoothed (11-year running mean)
+//   warming.csv                       temperature anomaly per year and 5-degree latitude band: year, latitude, anomaly
+//   membrane.csv                      Hodgkin-Huxley action potentials: time (ms), voltage (mV), current (uA/cm^2)
+//   tuning.csv                        orientation tuning of a visual cortex neuron: orientation (deg), rate, rate_err
 //   ptSpec_published.csv              "HEPData" table: pt, pt_err, value, stat, syst
 //   testbeam.csv                      calorimeter test beam: energy, resolution, resolution_err
 //   luminosity.csv                    integrated luminosity per week: time (unix), lumi
@@ -74,6 +91,7 @@
 //   runQA.csv                         run-by-run QA: run, meanNch, meanNch_err
 //   systematics.csv                   relative systematic uncertainties vs. pT per source
 
+#include <TEfficiency.h>
 #include <TF1.h>
 #include <TFile.h>
 #include <TFitResult.h>
@@ -88,6 +106,7 @@
 #include <TList.h>
 #include <TMath.h>
 #include <TRandom3.h>
+#include <TSpline.h>
 #include <TSystem.h>
 #include <TTree.h>
 
@@ -913,6 +932,8 @@ void WriteML()
     importance->SetBinContent(features.size() - i, features[i].second);
   }
   importance->GetYaxis()->SetTitle("relative importance");
+  importance->SetBarWidth(0.7);  // bars with gaps between them
+  importance->SetBarOffset(0.15);
   importance->Write();
   delete importance;
 }
@@ -1375,6 +1396,49 @@ void WriteAccelerator()
   }
   ellipse.SetTitle(Form("%.3f", measured));
   ellipse.Write("rmsEllipse");
+  // the beta functions along three cells of a FODO lattice (thin quadrupoles, 90 degrees phase advance per cell): the periodic
+  // Twiss parameters at the start of a cell, carried through drifts and lenses with the transfer matrices
+  file.mkdir("lattice")->cd();
+  {
+    constexpr double kCell = 20.;  // m
+    const double kFocal = kCell / (4. * std::sin(TMath::Pi() / 4.));  // sin(mu/2) = L / 4f
+    for (const auto& [name, sign] : {std::pair<const char*, double>{"betaX", 1.}, std::pair<const char*, double>{"betaY", -1.}}) {
+      // a cell: focusing lens (half), drift, defocusing lens, drift, focusing lens (half), for the plane given by the sign
+      auto lens = [](double f) { return std::array<double, 4>{1., 0., -1. / f, 1.}; };
+      auto drift = [](double l) { return std::array<double, 4>{1., l, 0., 1.}; };
+      auto times = [](const std::array<double, 4>& a, const std::array<double, 4>& b) {  // a * b
+        return std::array<double, 4>{a[0] * b[0] + a[1] * b[2], a[0] * b[1] + a[1] * b[3], a[2] * b[0] + a[3] * b[2], a[2] * b[1] + a[3] * b[3]};
+      };
+      const double fF = sign * 2. * kFocal, fD = -sign * kFocal;  // the half lens at each end of the cell has twice the focal length
+      const auto cell = times(lens(fF), times(drift(kCell / 2.), times(lens(fD), times(drift(kCell / 2.), lens(fF)))));
+      const double cosMu = 0.5 * (cell[0] + cell[3]), sinMu = std::sqrt(1. - cosMu * cosMu);
+      double beta = cell[1] / sinMu, alpha = (cell[0] - cell[3]) / (2. * sinMu);
+      TGraph graph;
+      constexpr double kStep = 0.1;
+      auto through = [&](const std::array<double, 4>& m) {  // Twiss parameters behind the element m
+        const double gamma = (1. + alpha * alpha) / beta;
+        const double b = m[0] * m[0] * beta - 2. * m[0] * m[1] * alpha + m[1] * m[1] * gamma;
+        const double a = -m[0] * m[2] * beta + (m[0] * m[3] + m[1] * m[2]) * alpha - m[1] * m[3] * gamma;
+        beta = b;
+        alpha = a;
+      };
+      double s = 0.;
+      for (int c = 0; c < 3; ++c) {
+        through(lens(fF));
+        for (const double f : {fD, fF}) {  // a drift of half a cell, then the next lens (the half lens closing the cell)
+          for (int i = 0; i < static_cast<int>(std::lround(kCell / 2. / kStep)); ++i) {
+            graph.AddPoint(s, beta);
+            through(drift(kStep));
+            s += kStep;
+          }
+          graph.AddPoint(s, beta);
+          if (f == fD) through(lens(fD));
+        }
+        through(lens(fF));
+      }
+      graph.Write(name);
+    }
+  }
 }
 
 // --------------------------------------------------------------------------------------------------
@@ -1424,24 +1488,31 @@ void WriteFlowAndMeanPt()
     }
   }
   file.mkdir("meanPt")->cd();
-  {  // mean pT against the charged-particle multiplicity for pp at three energies, p-Pb and Pb-Pb: strong rise in pp, weaker
-    // in p-Pb, weakest in Pb-Pb, where many independent nucleon-nucleon collisions add up
+  {  // mean pT against the charged-particle multiplicity for pp at five energies, p-Pb at two, Xe-Xe and Pb-Pb at two: all start
+    // alike; pp rises steeply, p-Pb follows pp and then flattens, and in A-A collisions, where many independent nucleon-nucleon
+    // collisions add up, the rise is weakest and grows slowly up to the most central collisions
+    auto pp = [](double slope) { return [slope](double n) { return 0.49 + slope * (std::pow(n, 0.4) - 1.); }; };
+    auto pPb = [](double slope, double bend) {
+      return [slope, bend](double n) { return 0.49 + slope * (std::pow(n, 0.4) - 1.) - bend * std::pow(std::pow(n, 0.4) - 1., 2.); };
+    };
+    auto aa = [](double scale) {
+      return [scale](double n) { return 0.49 + scale * (0.025 * (1. - std::exp(-std::log(n) / 1.2)) + 0.029 * std::log(n)); };
+    };
     struct System {
       const char* name;
-      int maxNch;
+      double maxNch;
       std::function<double(double)> meanPt;
     };
     const std::vector<System> systems = {
-      {"pp_900GeV", 30, [](double n) { return 0.43 + 0.013 * std::pow(n, 0.8); }},
-      {"pp_7TeV", 50, [](double n) { return 0.45 + 0.015 * std::pow(n, 0.8); }},
-      {"pp_13TeV", 60, [](double n) { return 0.47 + 0.016 * std::pow(n, 0.8); }},
-      {"pPb_5TeV", 100, [](double n) { return 0.45 + 0.31 * (1. - std::exp(-n / 25.)); }},
-      {"PbPb_5TeV", 100, [](double n) { return 0.45 + 0.23 * (1. - std::exp(-n / 40.)); }}};
+      {"PbPb_5TeV", 2800., aa(1.)},       {"PbPb_2.76TeV", 2000., aa(0.88)}, {"XeXe_5.44TeV", 1500., aa(1.07)},
+      {"pPb_8.16TeV", 140., pPb(0.081, 0.0034)}, {"pPb_5TeV", 120., pPb(0.08, 0.0044)}, {"pp_13TeV", 75., pp(0.082)},
+      {"pp_8TeV", 65., pp(0.08)},         {"pp_7TeV", 60., pp(0.079)},       {"pp_5TeV", 55., pp(0.077)},
+      {"pp_2.76TeV", 45., pp(0.074)}};
     for (const auto& system : systems) {
       TGraphErrors meanPt;
-      for (int n = 1; n <= system.maxNch; n += (n < 20 ? 1 : 2)) {
-        const double error = 0.002 + 0.0001 * n;
-        meanPt.AddPointError(n, system.meanPt(n) + random.Gaus(0., error), 0., error);
+      for (double n = 1.; n <= system.maxNch; n = (n < 20.) ? n + 1. : std::round(n * 1.06)) {
+        const double error = 0.002 + 0.0005 * std::log(n);  // fewer events at the highest multiplicities
+        meanPt.AddPointError(n, system.meanPt(n) + random.Gaus(0., 0.3 * error), 0., error);
       }
       meanPt.Write(system.name);
     }
@@ -1567,6 +1638,38 @@ void WriteNeutrino()
   TGraph expectation;
   for (double loe = 15.; loe <= 105.; loe += 0.25) expectation.AddPoint(loe, survival(loe, bestSin2, bestDm2));
   expectation.Write("expectation");
+  // charged-current muon-neutrino cross-section per nucleon (isoscalar target) divided by the energy: quasi-elastic scattering
+  // and resonance production dominate below a few GeV, deep-inelastic scattering above, where sigma / E becomes constant;
+  // measurements of three experiments in different energy ranges
+  file.mkdir("crossSection")->cd();
+  {
+    TRandom3 measure(25);  // an own generator keeps the data above unchanged
+    auto qe = [](double e) { return 0.45 * (1. - std::exp(-std::pow(e / 0.6, 2.))) / e; };  // 10^-38 cm^2 / GeV
+    auto res = [](double e) { return (e > 0.25) ? 0.6 * (1. - std::exp(-std::pow((e - 0.25) / 0.8, 2.))) / e : 0.; };
+    auto dis = [](double e) { return 0.677 * (1. - std::exp(-std::pow(e / 3., 1.5))); };
+    auto total = [&](double e) { return qe(e) + res(e) + dis(e); };
+    for (const auto& [name, process] : std::vector<std::pair<const char*, std::function<double(double)>>>{{"qe", qe}, {"res", res}, {"dis", dis}, {"total", total}}) {
+      TGraph graph;
+      for (int i = 0; i <= 300; ++i) {
+        const double e = 0.1 * std::pow(1000., i / 300.);
+        graph.AddPoint(e, process(e));
+      }
+      graph.Write(name);
+    }
+    struct Experiment {
+      const char* name;
+      double low, high, error;
+      int points;
+    };
+    for (const auto& [name, low, high, error, points] : {Experiment{"data_A", 0.3, 3., 0.12, 8}, Experiment{"data_B", 2.5, 40., 0.06, 10}, Experiment{"data_C", 20., 100., 0.03, 6}}) {
+      TGraphErrors data;
+      for (int i = 0; i < points; ++i) {
+        const double e = low * std::pow(high / low, (i + 0.5) / points);
+        data.AddPointError(e, total(e) * (1. + measure.Gaus(0., error)), 0., total(e) * error);
+      }
+      data.Write(name);
+    }
+  }
 }
 
 // exclusion limits: dark matter scattering off nuclei, and a search for top squarks in the mass plane
@@ -1677,6 +1780,44 @@ void WriteSearches()
     contour(expected, 1.).Write("expected");
     contour([&](double s, double l) { return 0.7 * expected(s, l); }, 1.).Write("expected_up");
     contour([&](double s, double l) { return 1.4 * expected(s, l); }, 1.).Write("expected_down");
+  }
+  file.mkdir("dijet")->cd();
+  {  // the dijet mass spectrum of a resonance search: the standard four-parameter fit to the falling spectrum, the significance of
+    // each bin's deviation from it (the bump hunt), and the shape an excited quark of 5 TeV would add (not in the data)
+    TRandom3 dijetRandom(26);  // an own generator keeps the data above unchanged
+    constexpr double kSqrtS = 13.6;  // TeV
+    TF1 fit("fit", "[0]*pow(1 - x/[4], [1]) / pow(x/[4], [2] + [3]*log(x/[4]))", 1.5, 8.);  // events / TeV, x in TeV
+    fit.SetParameters(30., 10., 5.5, 0.1, kSqrtS);
+    fit.FixParameter(4, kSqrtS);
+    // bins about as wide as the mass resolution (5%)
+    std::vector<double> edges{1.5};
+    while (edges.back() < 8.) edges.push_back(edges.back() * 1.05);
+    TH1D spectrum("spectrum", "", edges.size() - 1, edges.data());
+    spectrum.GetXaxis()->SetTitle("#it{m}_{jj} (TeV)");
+    spectrum.GetYaxis()->SetTitle("d#it{N}/d#it{m}_{jj} (TeV^{-1})");
+    for (int i = 1; i <= spectrum.GetNbinsX(); ++i) {
+      const double counts = dijetRandom.Poisson(fit.Integral(spectrum.GetBinLowEdge(i), spectrum.GetBinLowEdge(i + 1)));
+      spectrum.SetBinContent(i, counts / spectrum.GetBinWidth(i));
+      spectrum.SetBinError(i, std::sqrt(counts) / spectrum.GetBinWidth(i));
+    }
+    spectrum.Fit(&fit, "QN0", "", 1.5, edges.back());
+    fit.SetNpx(500);
+    fit.SetTitle(Form("fit, #chi^{2}/ndf = %.1f/%d", fit.GetChisquare(), fit.GetNDF()));
+    spectrum.Write();
+    fit.Write("fit");
+    TH1D significance("significance", "", edges.size() - 1, edges.data());
+    significance.GetXaxis()->SetTitle("#it{m}_{jj} (TeV)");
+    significance.GetYaxis()->SetTitle("significance");
+    for (int i = 1; i <= spectrum.GetNbinsX(); ++i) {
+      const double width = spectrum.GetBinWidth(i), counts = spectrum.GetBinContent(i) * width;
+      const double expected = fit.Integral(spectrum.GetBinLowEdge(i), spectrum.GetBinLowEdge(i + 1));
+      if (counts > 0.) significance.SetBinContent(i, (counts - expected) / std::sqrt(expected));
+    }
+    significance.Write();
+    TF1 excitedQuark("excitedQuark", "[0]*TMath::Gaus(x, [1], [2], true)", 1.5, 8.);  // 60 events, 7% resolution
+    excitedQuark.SetParameters(60., 5., 0.35);
+    excitedQuark.SetNpx(500);
+    excitedQuark.Write();
   }
 }
 
@@ -2187,7 +2328,403 @@ void WriteOtherFields()
       }
     }
   }
+  TRandom3 more(30);  // the tables below have their own generator: the ones above stay unchanged
+  // global mean surface temperature since 1880 relative to 1951-1980 (an interpolated trend with year-to-year noise that
+  // carries over, as from El Nino), with its 11-year running mean (narrower at the ends); and by latitude since 1950, warming
+  // fastest in the Arctic
+  auto trend = [](double year) {
+    const std::vector<std::pair<double, double>> points = {{1880., -0.2}, {1910., -0.38}, {1944., 0.05}, {1976., -0.05}, {2000., 0.42}, {2025., 1.25}};
+    for (size_t i = 1; i < points.size(); ++i) {
+      if (year <= points[i].first) {
+        const double t = (year - points[i - 1].first) / (points[i].first - points[i - 1].first);
+        return points[i - 1].second + (0.5 - 0.5 * std::cos(TMath::Pi() * t)) * (points[i].second - points[i - 1].second);
+      }
+    }
+    return points.back().second;
+  };
+  {
+    std::vector<double> anomaly;
+    double carried = 0.;
+    for (int year = 1880; year <= 2025; ++year) {
+      carried = 0.5 * carried + more.Gaus(0., 0.09);
+      anomaly.push_back(trend(year) + carried);
+    }
+    std::ofstream table(kFolder + "temperature.csv");
+    table << "year,anomaly,smoothed\n";
+    for (size_t i = 0; i < anomaly.size(); ++i) {
+      const size_t half = std::min({size_t{5}, i, anomaly.size() - 1 - i});
+      double sum = 0.;
+      for (size_t k = i - half; k <= i + half; ++k) sum += anomaly[k];
+      table << 1880 + i << "," << anomaly[i] << "," << sum / (2 * half + 1) << "\n";
+    }
+  }
+  {
+    std::ofstream table(kFolder + "warming.csv");
+    table << "year,latitude,anomaly\n";
+    for (int year = 1950; year <= 2025; ++year) {
+      for (double latitude = -87.5; latitude < 90.; latitude += 5.) {
+        const double amplification = 0.75 + 2.4 * std::pow(std::max(0., latitude) / 90., 3.) + 0.4 * (latitude < -65.);
+        const double noise = 0.1 + 0.35 * std::pow(std::fabs(latitude) / 90., 4.);
+        table << year << "," << latitude << "," << amplification * (trend(year) - trend(1965.)) + more.Gaus(0., noise) << "\n";
+      }
+    }
+  }
+  {  // an action potential train of the Hodgkin-Huxley model (squid giant axon, 6.3 degrees C) during a current step of 10 uA/cm^2
+    // from 10 to 70 ms: membrane voltage in mV, integrated with small Euler steps and written every 0.05 ms
+    std::ofstream table(kFolder + "membrane.csv");
+    table << "time,voltage,current\n";
+    auto rates = [](double v) {  // alpha and beta of m, h, n in 1/ms, v in mV
+      const double u = v + 65.;
+      return std::array<double, 6>{0.1 * (25. - u) / (std::exp((25. - u) / 10.) - 1.), 4. * std::exp(-u / 18.), 0.07 * std::exp(-u / 20.),
+                                   1. / (std::exp((30. - u) / 10.) + 1.), 0.01 * (10. - u) / (std::exp((10. - u) / 10.) - 1.), 0.125 * std::exp(-u / 80.)};
+    };
+    double v = -65., m = 0.053, h = 0.596, n = 0.318;
+    constexpr double kDt = 0.001;  // ms
+    for (int step = 0; step <= 100000; ++step) {
+      const double t = step * kDt, current = (t >= 10. && t < 70.) ? 10. : 0.;
+      if (step % 50 == 0) table << t << "," << v << "," << current << "\n";
+      const auto [am, bm, ah, bh, an, bn] = rates(v);
+      const double ionic = 120. * m * m * m * h * (v - 50.) + 36. * n * n * n * n * (v + 77.) + 0.3 * (v + 54.387);
+      v += kDt * (current - ionic);  // membrane capacitance 1 uF/cm^2
+      m += kDt * (am * (1. - m) - bm * m);
+      h += kDt * (ah * (1. - h) - bh * h);
+      n += kDt * (an * (1. - n) - bn * n);
+    }
+  }
+  {  // orientation tuning of a neuron in the primary visual cortex: spikes counted in 20 presentations of a grating per orientation;
+    // a von Mises function of twice the angle (orientations repeat after 180 degrees), preferred orientation 60 degrees
+    std::ofstream table(kFolder + "tuning.csv");
+    table << "orientation,rate,rate_err\n";
+    for (double orientation = 0.; orientation < 180.; orientation += 11.25) {
+      const double rate = 2. + 38. * std::exp(2.5 * (std::cos(2. * (orientation - 60.) * TMath::DegToRad()) - 1.));  // spikes/s
+      constexpr int kTrials = 20;
+      constexpr double kWindow = 0.5;  // s
+      const double counts = more.Poisson(rate * kTrials * kWindow);
+      table << orientation << "," << counts / (kTrials * kWindow) << "," << std::sqrt(counts) / (kTrials * kWindow) << "\n";
+    }
+  }
 }
+
+// --------------------------------------------------------------------------------------------------
+// astronomy.root, trigger.root, timeline.root
+// --------------------------------------------------------------------------------------------------
+
+// a spiral galaxy's rotation curve with the contributions of its mass components, and the angular power spectrum of the
+// cosmic microwave background
+void WriteAstronomy()
+{
+  TFile file((kFolder + "astronomy.root").data(), "RECREATE");
+  TRandom3 random(29);
+  file.mkdir("rotation")->cd();
+  {  // circular velocity v^2 = sum of the components: a Hernquist bulge, an exponential disk (Freeman), a pseudo-isothermal dark
+    // halo; without the halo the curve would fall beyond the disk, the measured one stays flat
+    auto bulge = [](double r) { return std::sqrt(4.3e-6 * 1.5e10 * r) / (r + 0.6); };  // G in kpc (km/s)^2 / M_sun, M = 1.5e10 M_sun
+    auto disk = [](double r) {
+      constexpr double kScale = 3.;  // kpc
+      const double y = r / (2. * kScale);
+      return 150. / 0.44 * y * std::sqrt(std::max(0., TMath::BesselI0(y) * TMath::BesselK0(y) - TMath::BesselI1(y) * TMath::BesselK1(y)));  // 150 km/s at most
+    };
+    auto halo = [](double r) { return 175. * std::sqrt(1. - 6. / r * std::atan(r / 6.)); };  // v_inf = 175 km/s, core 6 kpc
+    auto total = [&](double r) { return std::sqrt(std::pow(bulge(r), 2.) + std::pow(disk(r), 2.) + std::pow(halo(r), 2.)); };
+    for (const auto& [name, component] : std::vector<std::pair<const char*, std::function<double(double)>>>{{"bulge", bulge}, {"disk", disk}, {"halo", halo}, {"total", total}}) {
+      TGraph graph;
+      for (int i = 1; i <= 300; ++i) graph.AddPoint(0.1 * i, component(0.1 * i));
+      graph.Write(name);
+    }
+    TGraphErrors measured;
+    for (double r = 1.; r <= 29.; r += 1.25) {
+      const double error = 4. + 0.25 * r;  // km/s, growing with the faint outer gas
+      measured.AddPointError(r, total(r) + random.Gaus(0., error), 0., error);
+    }
+    measured.Write("measured");
+  }
+  file.mkdir("cmb")->cd();
+  {  // D_l = l (l + 1) C_l / 2 pi of the temperature anisotropies: the Sachs-Wolfe plateau, the acoustic peaks and the damping tail;
+    // the model is a spline through the peaks and troughs, the measurement scatters around it with cosmic variance and noise
+    const std::vector<std::pair<double, double>> anchors = {
+      {2., 1000.}, {10., 900.}, {30., 1050.}, {60., 1500.}, {100., 2550.}, {150., 4300.}, {190., 5450.}, {220., 5750.}, {250., 5400.},
+      {300., 4000.}, {350., 2550.}, {415., 1800.}, {470., 2150.}, {540., 2600.}, {610., 2250.}, {680., 1900.}, {750., 2300.},
+      {815., 2500.}, {900., 1900.}, {1000., 1150.}, {1070., 1200.}, {1130., 1300.}, {1200., 1050.}, {1270., 800.}, {1350., 780.},
+      {1420., 830.}, {1500., 700.}, {1580., 520.}, {1650., 500.}, {1730., 480.}, {1850., 350.}, {2000., 250.}, {2200., 170.}, {2500., 100.}};
+    std::vector<double> l, d;
+    for (const auto& [ell, value] : anchors) {
+      l.push_back(std::log(ell));
+      d.push_back(std::log(value));
+    }
+    TSpline3 spline("spline", l.data(), d.data(), l.size());
+    auto model = [&spline](double ell) { return std::exp(spline.Eval(std::log(ell))); };
+    TGraph theory;
+    for (int ell = 2; ell <= 2500; ell += (ell < 100) ? 1 : 5) theory.AddPoint(ell, model(ell));
+    theory.Write("model");
+    TGraphErrors measured;  // bins of 4 multipoles up to 29, of 30 above, 60% of the sky
+    for (int low = 2; low < 2500; low += (low < 30) ? 4 : 30) {
+      const int width = (low < 30) ? 4 : 30;
+      const double ell = low + 0.5 * (width - 1);
+      const double noise = 30. * std::pow(ell / 1000., 2.) * std::exp(std::pow(ell / 1800., 2.));
+      const double error = std::sqrt(2. / ((2. * ell + 1.) * width * 0.6)) * (model(ell) + noise);
+      measured.AddPointError(ell, model(ell) + random.Gaus(0., error), 0.5 * width, error);
+    }
+    measured.Write("measured");
+  }
+}
+
+// muon trigger efficiencies as TEfficiency objects: passing and total counts kept together, the errors from binomial intervals
+void WriteTriggerEfficiency()
+{
+  TFile file((kFolder + "trigger.root").data(), "RECREATE");
+  TRandom3 random(27);
+  // efficiency of a muon trigger with a gap of the chambers at eta = 0, the transition from barrel to end caps at |eta| = 1.05,
+  // and support structures (the feet of the detector) at two phi in the barrel; the second year has repaired chambers
+  auto efficiency = [](double eta, double phi, bool repaired) {
+    double eff = (std::fabs(eta) < 1.05) ? 0.80 : 0.90;
+    if (std::fabs(eta) < 0.1) eff *= 0.35;
+    if (std::fabs(std::fabs(eta) - 1.05) < 0.08) eff *= 0.7;
+    if (std::fabs(eta) < 1.05 && (std::fabs(phi + 1.2) < 0.15 || std::fabs(phi + 1.95) < 0.15)) eff *= 0.4;
+    if (!repaired && eta > 0.4 && eta < 0.7 && phi > 0.5 && phi < 1.2) eff *= 0.6;
+    return eff;
+  };
+  for (const auto& [name, repaired, muons] : {std::tuple<const char*, bool, int>{"eta_2023", false, 60000}, std::tuple<const char*, bool, int>{"eta_2024", true, 200000}}) {
+    TEfficiency eff(name, ";#eta;trigger efficiency", 50, -2.5, 2.5);
+    for (int i = 0; i < muons; ++i) {
+      const double eta = random.Uniform(-2.5, 2.5), phi = random.Uniform(-TMath::Pi(), TMath::Pi());
+      eff.Fill(random.Uniform() < efficiency(eta, phi, repaired), eta);
+    }
+    eff.Write();
+  }
+  TEfficiency map("etaPhi_2023", ";#eta;#varphi (rad);trigger efficiency", 50, -2.5, 2.5, 64, -TMath::Pi(), TMath::Pi());
+  for (int i = 0; i < 2000000; ++i) {
+    const double eta = random.Uniform(-2.5, 2.5), phi = random.Uniform(-TMath::Pi(), TMath::Pi());
+    map.Fill(random.Uniform() < efficiency(eta, phi, false), eta, phi);
+  }
+  map.Write();
+}
+
+// diphoton candidates with the integrated luminosity at which each was recorded: the Higgs peak grows out of the background
+void WriteTimeline()
+{
+  TFile file((kFolder + "timeline.root").data(), "RECREATE");
+  TRandom3 random(28);
+  TTree tree("diphoton", "diphoton candidates");
+  double mass{}, lumi{};
+  tree.Branch("mass", &mass);
+  tree.Branch("lumi", &lumi);
+  constexpr double kSlope = 22.;  // GeV
+  constexpr int kBackground = 110000, kSignal = 1400;  // in 140 fb^-1 between 100 and 160 GeV
+  for (int i = 0; i < kBackground + kSignal; ++i) {
+    if (i < kBackground) {
+      do {
+        mass = 100. + random.Exp(kSlope);
+      } while (mass >= 160.);
+    } else {
+      mass = random.Gaus(125., 1.7);
+    }
+    lumi = random.Uniform(140.);
+    tree.Fill();
+  }
+  tree.Write();
+}
+
+// unsupervised learning: three groups of points in two features, separated by a Gaussian mixture fitted with the EM algorithm
+// (the generator does the fit, as an analysis would): the points with the cluster each was assigned to, the cluster map
+// over the plane (its contours are the learned borders) and the 2 sigma ellipses of the fitted components
+void WriteClustering()
+{
+  TFile file((kFolder + "clustering.root").data(), "RECREATE");
+  TRandom3 random(31);
+  struct Component {
+    double weight, mx, my, sx, sy, rho;
+  };
+  const std::array<Component, 3> truth = {Component{0.4, -1.5, 0.5, 0.8, 0.5, 0.5}, Component{0.35, 1.6, 1.4, 0.6, 0.9, -0.3}, Component{0.25, 0.6, -1.6, 0.9, 0.45, 0.2}};
+  std::vector<std::array<double, 2>> points;
+  for (int i = 0; i < 1500; ++i) {
+    const double u = random.Uniform();
+    const auto& c = (u < truth[0].weight) ? truth[0] : (u < truth[0].weight + truth[1].weight) ? truth[1] : truth[2];
+    const double a = random.Gaus(), b = random.Gaus();
+    points.push_back({c.mx + c.sx * a, c.my + c.sy * (c.rho * a + std::sqrt(1. - c.rho * c.rho) * b)});
+  }
+  // EM for a mixture of three 2D Gaussians, started from three of the points
+  std::array<Component, 3> fit = {Component{1. / 3, points[0][0], points[0][1], 1., 1., 0.}, Component{1. / 3, points[1][0], points[1][1], 1., 1., 0.},
+                                  Component{1. / 3, points[2][0], points[2][1], 1., 1., 0.}};
+  auto density = [](const Component& c, double x, double y) {
+    const double u = (x - c.mx) / c.sx, v = (y - c.my) / c.sy, q = (u * u - 2. * c.rho * u * v + v * v) / (1. - c.rho * c.rho);
+    return c.weight * std::exp(-0.5 * q) / (2. * TMath::Pi() * c.sx * c.sy * std::sqrt(1. - c.rho * c.rho));
+  };
+  std::vector<std::array<double, 3>> resp(points.size());
+  for (int iteration = 0; iteration < 200; ++iteration) {
+    for (size_t i = 0; i < points.size(); ++i) {
+      double sum = 0.;
+      for (int k = 0; k < 3; ++k) sum += (resp[i][k] = density(fit[k], points[i][0], points[i][1]));
+      for (int k = 0; k < 3; ++k) resp[i][k] /= sum;
+    }
+    for (int k = 0; k < 3; ++k) {
+      double n = 0., mx = 0., my = 0.;
+      for (size_t i = 0; i < points.size(); ++i) {
+        n += resp[i][k];
+        mx += resp[i][k] * points[i][0];
+        my += resp[i][k] * points[i][1];
+      }
+      mx /= n;
+      my /= n;
+      double sxx = 0., syy = 0., sxy = 0.;
+      for (size_t i = 0; i < points.size(); ++i) {
+        sxx += resp[i][k] * std::pow(points[i][0] - mx, 2.);
+        syy += resp[i][k] * std::pow(points[i][1] - my, 2.);
+        sxy += resp[i][k] * (points[i][0] - mx) * (points[i][1] - my);
+      }
+      fit[k] = {n / points.size(), mx, my, std::sqrt(sxx / n), std::sqrt(syy / n), sxy / std::sqrt(sxx * syy)};
+    }
+  }
+  // the components ordered from left to right, so that the cluster numbers do not depend on the start
+  std::array<int, 3> order = {0, 1, 2};
+  std::sort(order.begin(), order.end(), [&fit](int a, int b) { return fit[a].mx < fit[b].mx; });
+  auto assign = [&](double x, double y) {
+    int best = 0;
+    for (int k = 1; k < 3; ++k) {
+      if (density(fit[order[k]], x, y) > density(fit[order[best]], x, y)) best = k;
+    }
+    return best + 1;
+  };
+  TTree tree("points", "points with the cluster found for them");
+  double x{}, y{};
+  int cluster{};
+  tree.Branch("x", &x);
+  tree.Branch("y", &y);
+  tree.Branch("cluster", &cluster);
+  for (const auto& point : points) {
+    x = point[0];
+    y = point[1];
+    cluster = assign(x, y);
+    tree.Fill();
+  }
+  tree.Write();
+  TH2D map("clusterMap", ";feature 1;feature 2;cluster", 300, -4., 4., 375, -4., 6.);
+  for (int ix = 1; ix <= map.GetNbinsX(); ++ix) {
+    for (int iy = 1; iy <= map.GetNbinsY(); ++iy) map.SetBinContent(ix, iy, assign(map.GetXaxis()->GetBinCenter(ix), map.GetYaxis()->GetBinCenter(iy)));
+  }
+  map.Write();
+  for (int k = 0; k < 3; ++k) {  // the 2 sigma ellipse of each component, from the eigenvectors of its covariance
+    const auto& c = fit[order[k]];
+    const double cxx = c.sx * c.sx, cyy = c.sy * c.sy, cxy = c.rho * c.sx * c.sy;
+    const double mean = 0.5 * (cxx + cyy), diff = std::sqrt(0.25 * std::pow(cxx - cyy, 2.) + cxy * cxy);
+    const double angle = 0.5 * std::atan2(2. * cxy, cxx - cyy), a = 2. * std::sqrt(mean + diff), b = 2. * std::sqrt(mean - diff);
+    TGraph ellipse;
+    for (int i = 0; i <= 100; ++i) {
+      const double t = 2. * TMath::Pi() * i / 100.;
+      ellipse.AddPoint(c.mx + a * std::cos(t) * std::cos(angle) - b * std::sin(t) * std::sin(angle), c.my + a * std::cos(t) * std::sin(angle) + b * std::sin(t) * std::cos(angle));
+    }
+    ellipse.Write(Form("ellipse_%d", k + 1));
+  }
+  TGraph centres;
+  for (int k = 0; k < 3; ++k) centres.AddPoint(fit[order[k]].mx, fit[order[k]].my);
+  centres.Write("centres");
+}
+
+// a mixture density network for the electron momentum resolution: electrons lose energy by bremsstrahlung in the material in front
+// of the tracker, so the resolution p((pT_rec - pT_gen) / pT_gen | pT_gen) has a Gaussian core and a long tail to negative values.
+// The fraction of the energy radiated does not depend on the energy (Bethe-Heitler), so the tail is the same at all pT; the core
+// widens at high pT, where the curvature of the straighter tracks is measured less precisely, and swallows the start of the tail.
+// A strongly radiating electron is often not reconstructed (its kinked track fails the fit), so the tail dies out towards -1.
+// The network describes the resolution as four Gaussians whose weights, means and widths depend on pT_gen; the components here are
+// what such a network converges to, obtained with an EM fit of four Gaussians in narrow pT_gen bins
+void WriteMixtureDensity()
+{
+  TFile file((kFolder + "mdn.root").data(), "RECREATE");
+  TRandom3 random(32);
+  constexpr double kMaterial = 0.1;  // effective radiation lengths for the momentum measurement (central barrel)
+  auto gamma = [&random](double shape) {  // Gamma(shape, 1) for shape < 1: Marsaglia-Tsang for shape + 1, times U^(1 / shape)
+    const double d = shape + 1. - 1. / 3., c = 1. / std::sqrt(9. * d);
+    double v = 0.;
+    while (true) {
+      const double n = random.Gaus();
+      v = std::pow(1. + c * n, 3.);
+      if (v > 0. && std::log(random.Uniform()) < 0.5 * n * n + d - d * v + d * std::log(v)) break;
+    }
+    return d * v * std::pow(random.Uniform(), 1. / shape);
+  };
+  TTree tree("electrons", "electrons: pT_gen and the relative pT deviation");
+  double ptGen{}, deltaPt{};
+  tree.Branch("ptGen", &ptGen);
+  tree.Branch("deltaPt", &deltaPt);
+  constexpr size_t kElectrons = 600000;
+  std::vector<std::pair<double, double>> sample;
+  while (sample.size() < kElectrons) {
+    ptGen = 0.5 * std::pow(100., random.Uniform());  // log-uniform from 0.5 to 50 GeV/c
+    // Bethe-Heitler: the fraction z of the energy kept after t radiation lengths has -ln z distributed as Gamma(t / ln 2, 1)
+    const double lnKept = gamma(kMaterial / std::log(2.));
+    if (random.Uniform() > std::exp(-lnKept / 0.3)) continue;  // lost in the reconstruction
+    // multiple scattering (constant) and the curvature measurement (proportional to pT)
+    const double resolution = std::sqrt(std::pow(0.01, 2.) + std::pow(0.0015 * ptGen, 2.));
+    deltaPt = std::exp(-lnKept) * (1. + random.Gaus(0., resolution)) - 1.;
+    tree.Fill();
+    sample.emplace_back(ptGen, deltaPt);
+  }
+  tree.Write();
+  // EM fit of four Gaussians in bins of pT_gen (the core and three for the tail)
+  const std::vector<double> edges = {0.5, 0.6, 0.8, 1., 1.2, 1.5, 2., 2.5, 3., 4., 5., 6., 8., 10., 12., 15., 20., 25., 30., 40., 50.};
+  std::array<TGraphAsymmErrors, 4> bands;
+  std::array<TGraph, 4> weights;
+  struct Gauss {
+    double weight, mean, sigma;
+  };
+  std::vector<std::array<Gauss, 4>> fits;
+  // each bin starts from the result of the previous one, so that the components change smoothly with pT, as a network's do
+  std::array<Gauss, 4> fit = {Gauss{0.5, 0., 0.01}, Gauss{0.2, -0.05, 0.04}, Gauss{0.15, -0.15, 0.08}, Gauss{0.15, -0.4, 0.2}};
+  for (size_t bin = 0; bin + 1 < edges.size(); ++bin) {
+    std::vector<double> values;
+    for (const auto& [pt, delta] : sample) {
+      if (pt >= edges[bin] && pt < edges[bin + 1]) values.push_back(delta);
+    }
+    std::vector<std::array<double, 4>> resp(values.size());
+    for (int iteration = 0; iteration < 150; ++iteration) {
+      for (size_t i = 0; i < values.size(); ++i) {
+        double sum = 0.;
+        for (int k = 0; k < 4; ++k) sum += (resp[i][k] = fit[k].weight * TMath::Gaus(values[i], fit[k].mean, fit[k].sigma, true));
+        for (int k = 0; k < 4; ++k) resp[i][k] /= std::max(sum, 1e-300);
+      }
+      for (int k = 0; k < 4; ++k) {
+        double n = 0., mean = 0., var = 0.;
+        for (size_t i = 0; i < values.size(); ++i) {
+          n += resp[i][k];
+          mean += resp[i][k] * values[i];
+        }
+        mean /= n;
+        for (size_t i = 0; i < values.size(); ++i) var += resp[i][k] * std::pow(values[i] - mean, 2.);
+        fit[k] = {n / values.size(), mean, std::max(std::sqrt(var / n), 0.003)};
+      }
+    }
+    std::sort(fit.begin(), fit.end(), [](const Gauss& a, const Gauss& b) { return a.mean > b.mean; });  // the core first
+    const double centre = std::sqrt(edges[bin] * edges[bin + 1]);
+    for (int k = 0; k < 4; ++k) {
+      bands[k].AddPointError(centre, fit[k].mean, 0., 0., fit[k].sigma, fit[k].sigma);
+      weights[k].AddPoint(centre, fit[k].weight);
+    }
+    fits.push_back(fit);
+  }
+  for (int k = 0; k < 4; ++k) {
+    bands[k].Write(Form("component_%d", k + 1));
+    weights[k].Write(Form("weight_%d", k + 1));
+  }
+  // the bin 2 < pT_gen < 2.5 GeV/c: the four weighted components and their sum as densities of the deviation
+  const auto& slice = fits[6];
+  TGraph total;
+  std::array<TGraph, 4> single;
+  for (int i = 0; i <= 600; ++i) {
+    const double r = -1. + 1.15 * i / 600.;
+    double sum = 0.;
+    for (int k = 0; k < 4; ++k) {
+      const double value = slice[k].weight * TMath::Gaus(r, slice[k].mean, slice[k].sigma, true);
+      single[k].AddPoint(r, value);
+      sum += value;
+    }
+    total.AddPoint(r, sum);
+  }
+  for (int k = 0; k < 4; ++k) {
+    single[k].SetTitle(Form("%.2f", slice[k].weight));  // the mixing weight, for the legend
+    single[k].Write(Form("slice_component_%d", k + 1));
+  }
+  total.Write("slice_total");
+}
+
 }  // namespace
 
 void generateExampleData()
@@ -2223,4 +2760,9 @@ void generateExampleData()
   WriteCorrelations();
   WriteBiophysics();
   WriteTheory();
+  WriteAstronomy();
+  WriteTriggerEfficiency();
+  WriteTimeline();
+  WriteClustering();
+  WriteMixtureDensity();
 }
