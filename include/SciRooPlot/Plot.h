@@ -212,21 +212,127 @@ color_t::color_t(const char (&hex)[N]) : color_t(std::string(hex))
 std::ostream& operator<<(std::ostream& stream, const color_t& color);
 std::istream& operator>>(std::istream& stream, color_t& color);
 
+// colour, transparency, style and size of one attribute of a drawn object
+struct layout_t {
+  std::optional<color_t> color;        // marker_color , line_color, fill_color, text_color
+  std::optional<float_t> alpha;        // marker_alpha , line_alpha, fill_alpha, text_alpha
+  std::optional<int16_t> style;        // marker_style , line_style, fill_style, text_font
+  std::optional<float_t> scale;        // marker_size , line_width, fill_?????, text_size
+  void Update(const layout_t& other);  // takes over the values set in other
+};
+
+//**************************************************************************************************
+/**
+ * Setters of the marker, line, fill, text and border attributes, shared by the classes that have them (Derived: the class returned for chaining).
+ */
+//**************************************************************************************************
+template <class Derived>
+class MarkerSetters
+{
+ public:
+  Derived& SetMarker(int16_t style, float_t size, color_t color, float_t alpha = 1.f);
+  Derived& SetMarkerColor(color_t color);
+  Derived& SetMarkerAlpha(float_t alpha);
+  Derived& SetMarkerStyle(int16_t style);
+  Derived& SetMarkerSize(float_t size);
+
+ protected:
+  const auto& GetMarkerColor() const { return mMarker.color; }
+  const auto& GetMarkerAlpha() const { return mMarker.alpha; }
+  const auto& GetMarkerStyle() const { return mMarker.style; }
+  const auto& GetMarkerSize() const { return mMarker.scale; }
+  void ReadMarker(const boost::property_tree::ptree& tree);
+  void PutMarker(boost::property_tree::ptree& tree) const;
+  layout_t mMarker;
+};
+
+template <class Derived>
+class LineSetters
+{
+ public:
+  Derived& SetLine(int16_t style, float_t width, color_t color, float_t alpha = 1.f);
+  Derived& SetLineColor(color_t color);
+  Derived& SetLineAlpha(float_t alpha);
+  Derived& SetLineStyle(int16_t style);
+  Derived& SetLineWidth(float_t width);
+
+ protected:
+  const auto& GetLineColor() const { return mLine.color; }
+  const auto& GetLineAlpha() const { return mLine.alpha; }
+  const auto& GetLineStyle() const { return mLine.style; }
+  const auto& GetLineWidth() const { return mLine.scale; }
+  void ReadLine(const boost::property_tree::ptree& tree);
+  void PutLine(boost::property_tree::ptree& tree) const;
+  layout_t mLine;
+};
+
+template <class Derived>
+class FillSetters
+{
+ public:
+  Derived& SetFill(int16_t style, color_t color, float_t alpha = 1.f);
+  Derived& SetFillColor(color_t color);
+  Derived& SetFillStyle(int16_t style);
+  Derived& SetFillAlpha(float_t alpha);
+
+ protected:
+  const auto& GetFillColor() const { return mFill.color; }
+  const auto& GetFillAlpha() const { return mFill.alpha; }
+  const auto& GetFillStyle() const { return mFill.style; }
+  void ReadFill(const boost::property_tree::ptree& tree);
+  void PutFill(boost::property_tree::ptree& tree) const;
+  layout_t mFill;
+};
+
+template <class Derived>
+class TextSetters
+{
+ public:
+  Derived& SetText(int16_t font, float_t size, color_t color, float_t alpha = 1.f);
+  Derived& SetTextColor(color_t color);
+  Derived& SetTextAlpha(float_t alpha);
+  Derived& SetTextFont(int16_t font);
+  Derived& SetTextSize(float_t size);
+
+ protected:
+  const auto& GetTextColor() const { return mText.color; }
+  const auto& GetTextAlpha() const { return mText.alpha; }
+  const auto& GetTextFont() const { return mText.style; }
+  const auto& GetTextSize() const { return mText.scale; }
+  void ReadText(const boost::property_tree::ptree& tree);
+  void PutText(boost::property_tree::ptree& tree) const;
+  layout_t mText;
+};
+
+template <class Derived>
+class BorderSetters
+{
+ public:
+  Derived& SetBorder(int16_t style, float_t width, color_t color, float_t alpha = 1.f);
+  Derived& SetBorderColor(color_t color);
+  Derived& SetBorderAlpha(float_t alpha);
+  Derived& SetBorderStyle(int16_t style);
+  Derived& SetBorderWidth(float_t width);
+
+ protected:
+  const auto& GetBorderColor() const { return mBorder.color; }
+  const auto& GetBorderAlpha() const { return mBorder.alpha; }
+  const auto& GetBorderStyle() const { return mBorder.style; }
+  const auto& GetBorderWidth() const { return mBorder.scale; }
+  void ReadBorder(const boost::property_tree::ptree& tree);
+  void PutBorder(boost::property_tree::ptree& tree) const;
+  layout_t mBorder;
+};
+
 //**************************************************************************************************
 /**
  * Class for internal representation of a plot.
  */
 //**************************************************************************************************
-class Plot
+class Plot : public FillSetters<Plot>
 {
  public:
   class Pad;
-  struct layout_t {
-    std::optional<color_t> color;  // marker_color , line_color, fill_color, text_color
-    std::optional<float_t> alpha;  // marker_alpha , line_alpha, fill_alpha, text_alpha
-    std::optional<int16_t> style;  // marker_style , line_style, fill_style, text_font
-    std::optional<float_t> scale;  // marker_size , line_width, fill_?????, text_size
-  };
 
   Plot() = default;
   explicit Plot(const boost::property_tree::ptree& plotTree);
@@ -248,10 +354,6 @@ class Plot
   Plot& SetWidth(int32_t width);
   Plot& SetHeight(int32_t height);
   Plot& SetFixAspectRatio(bool fixAspectRatio = true);
-  Plot& SetFill(int16_t style, color_t color, float_t alpha = 1.f);
-  Plot& SetFillColor(color_t color);
-  Plot& SetFillStyle(int16_t style);
-  Plot& SetFillAlpha(float_t alpha);
   Plot& SetTransparent();
 
  protected:
@@ -269,10 +371,6 @@ class Plot
   const auto& GetHeight() const { return mPlotDimensions.height; }
   const auto& GetWidth() const { return mPlotDimensions.width; }
   const auto& IsFixAspectRatio() const { return mPlotDimensions.fixAspectRatio; }
-  const auto& GetFillColor() const { return mFill.color; }
-  const auto& GetFillStyle() const { return mFill.style; }
-  const auto& GetFillAlpha() const { return mFill.alpha; }
-
   uint8_t GetDataCount() const;
 
   static void Print(const boost::property_tree::ptree& pt, const std::string& name);
@@ -285,7 +383,12 @@ class Plot
   };
   void UpdateUniqueName();
 
-  // helpers (also used by the nested classes)
+  template <class>
+  friend class LineSetters;
+  template <class>
+  friend class BorderSetters;
+
+  // helpers (also used by the nested classes and the setter groups)
   static std::string NormalizeGroup(const std::string& group);
   static float_t RoundWidth(float_t width, const char* what);
   static std::optional<float_t> RoundWidth(const std::optional<float_t>& width, const char* what);
@@ -298,7 +401,6 @@ class Plot
   std::string mUniqueName;
   std::optional<std::string> mBasePlot;
   dimension_t mPlotDimensions;
-  layout_t mFill;
   std::map<uint8_t, Pad> mPads;
 };
 
@@ -307,7 +409,7 @@ class Plot
  * Representation of a pad.
  */
 //**************************************************************************************************
-class Plot::Pad
+class Plot::Pad : public FillSetters<Pad>
 {
  public:
   class Data;
@@ -408,10 +510,6 @@ class Plot::Pad
   Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles);
   Pad& SetDefaultCandleBoxRange(float_t candleOption);
   Pad& SetDefaultCandleWhiskerRange(float_t candleOption);
-  Pad& SetFill(int16_t style, color_t color, float_t alpha = 1.f);
-  Pad& SetFillColor(color_t color);
-  Pad& SetFillStyle(int16_t style);
-  Pad& SetFillAlpha(float_t alpha);
   Pad& SetTransparent();
   Pad& SetFrameFill(int16_t style, color_t color, float_t alpha = 1.f);
   Pad& SetFrameFillColor(color_t color);
@@ -451,9 +549,6 @@ class Plot::Pad
   const auto& GetViewPhi() const { return mView.phi; }
   const auto& GetPalette() const { return mPalette.index; }
   const auto& GetPaletteGradient() const { return mPalette.colorGradient; }
-  const auto& GetFillColor() const { return mFill.color; }
-  const auto& GetFillStyle() const { return mFill.style; }
-  const auto& GetFillAlpha() const { return mFill.alpha; }
   const auto& GetFrameFillColor() const { return mFrameFill.color; }
   const auto& GetFrameFillStyle() const { return mFrameFill.style; }
   const auto& GetFrameFillAlpha() const { return mFrameFill.alpha; }
@@ -527,7 +622,6 @@ class Plot::Pad
   pad_position_t mPosition;
   pad_margin_t mMargins;
   pad_view_t mView;
-  layout_t mFill;
   layout_t mFrameFill;
   layout_t mFrameBorder;
   layout_t mText;
@@ -554,7 +648,7 @@ class Plot::Pad
  * Representation of a legend row: the row of a data item (styled with Data::SetLegendEntry) or a row added with LegendBox::AddEntry.
  */
 //**************************************************************************************************
-class Plot::Pad::LegendEntry
+class Plot::Pad::LegendEntry : public MarkerSetters<LegendEntry>, public LineSetters<LegendEntry>, public FillSetters<LegendEntry>, public TextSetters<LegendEntry>
 {
  public:
   explicit LegendEntry(const std::optional<std::string>& label = {}, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& symbolElements = {});
@@ -571,24 +665,6 @@ class Plot::Pad::LegendEntry
   LegendEntry& AfterData(uint16_t dataID);
   LegendEntry& SetColor(color_t color);
   LegendEntry& SetAlpha(float_t alpha);
-  LegendEntry& SetMarker(int16_t style, float_t size, color_t color, float_t alpha = 1.f);
-  LegendEntry& SetMarkerColor(color_t color);
-  LegendEntry& SetMarkerAlpha(float_t alpha);
-  LegendEntry& SetMarkerStyle(int16_t style);
-  LegendEntry& SetMarkerSize(float_t size);
-  LegendEntry& SetLine(int16_t style, float_t width, color_t color, float_t alpha = 1.f);
-  LegendEntry& SetLineColor(color_t color);
-  LegendEntry& SetLineAlpha(float_t alpha);
-  LegendEntry& SetLineStyle(int16_t style);
-  LegendEntry& SetLineWidth(float_t width);
-  LegendEntry& SetFill(int16_t style, color_t color, float_t alpha = 1.f);
-  LegendEntry& SetFillColor(color_t color);
-  LegendEntry& SetFillAlpha(float_t alpha);
-  LegendEntry& SetFillStyle(int16_t style);
-  LegendEntry& SetTextColor(color_t color);
-  LegendEntry& SetTextAlpha(float_t alpha);
-  LegendEntry& SetTextFont(int16_t font);
-  LegendEntry& SetTextSize(float_t size);
 
  protected:
   friend class PlotPainter;
@@ -604,35 +680,12 @@ class Plot::Pad::LegendEntry
   const auto& GetLabel() const { return mLabel; }
   const auto& GetSymbolElements() const { return mSymbolElements; }
 
-  const auto& GetMarkerColor() const { return mMarker.color; }
-  const auto& GetMarkerAlpha() const { return mMarker.alpha; }
-  const auto& GetMarkerStyle() const { return mMarker.style; }
-  const auto& GetMarkerSize() const { return mMarker.scale; }
-
-  const auto& GetLineColor() const { return mLine.color; }
-  const auto& GetLineAlpha() const { return mLine.alpha; }
-  const auto& GetLineStyle() const { return mLine.style; }
-  const auto& GetLineWidth() const { return mLine.scale; }
-
-  const auto& GetFillColor() const { return mFill.color; }
-  const auto& GetFillAlpha() const { return mFill.alpha; }
-  const auto& GetFillStyle() const { return mFill.style; }
-
-  const auto& GetTextColor() const { return mText.color; }
-  const auto& GetTextAlpha() const { return mText.alpha; }
-  const auto& GetTextFont() const { return mText.style; }
-  const auto& GetTextSize() const { return mText.scale; }
-
  private:
   std::optional<std::string> mLabel;
   std::optional<uint16_t> mRefDataID;
   std::optional<std::string> mSymbolElements;
   std::optional<position_t> mPosition;
   uint16_t mPositionDataID{};  // the data the position is relative to (for before and after)
-  layout_t mFill;
-  layout_t mMarker;
-  layout_t mLine;
-  layout_t mText;
 };
 
 //**************************************************************************************************
@@ -640,7 +693,7 @@ class Plot::Pad::LegendEntry
  * Representation of drawable data.
  */
 //**************************************************************************************************
-class Plot::Pad::Data
+class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, public FillSetters<Data>
 {
  public:
   Data() = default;
@@ -685,20 +738,6 @@ class Plot::Pad::Data
   Data& SetStatsBox(const StatsBox& statsBox);
   Data& SetColor(color_t color);
   Data& SetAlpha(float_t alpha);
-  Data& SetMarker(int16_t style, float_t size, color_t color, float_t alpha = 1.f);
-  Data& SetMarkerColor(color_t color);
-  Data& SetMarkerAlpha(float_t alpha);
-  Data& SetMarkerStyle(int16_t style);
-  Data& SetMarkerSize(float_t size);
-  Data& SetLine(int16_t style, float_t width, color_t color, float_t alpha = 1.f);
-  Data& SetLineColor(color_t color);
-  Data& SetLineAlpha(float_t alpha);
-  Data& SetLineStyle(int16_t style);
-  Data& SetLineWidth(float_t width);
-  Data& SetFill(int16_t style, color_t color, float_t alpha = 1.f);
-  Data& SetFillColor(color_t color);
-  Data& SetFillStyle(int16_t style);
-  Data& SetFillAlpha(float_t alpha);
   Data& SetDefinesFrame();                    // this data (drawn as usual) defines the axis frame; the last one in a pad wins
   Data& SetKeepInputStyle(bool keep = true);  // line, marker and fill stored with the input win over the defaults of the pad
   Data& SetContours(const std::vector<double>& contours);
@@ -797,17 +836,6 @@ class Plot::Pad::Data
   const auto& GetLegendLabel() const { return mLegend.label; }
   const auto& GetLegendID() const { return mLegend.id; }
   const auto& GetLegendEntry() const { return mLegend.entry; }
-  const auto& GetMarkerColor() const { return mMarker.color; }
-  const auto& GetMarkerAlpha() const { return mMarker.alpha; }
-  const auto& GetMarkerStyle() const { return mMarker.style; }
-  const auto& GetMarkerSize() const { return mMarker.scale; }
-  const auto& GetLineColor() const { return mLine.color; }
-  const auto& GetLineAlpha() const { return mLine.alpha; }
-  const auto& GetLineStyle() const { return mLine.style; }
-  const auto& GetLineWidth() const { return mLine.scale; }
-  const auto& GetFillColor() const { return mFill.color; }
-  const auto& GetFillAlpha() const { return mFill.alpha; }
-  const auto& GetFillStyle() const { return mFill.style; }
   const auto& GetDrawOption() const { return mDrawOption; }
   const auto& GetDrawOptionAlias() const { return mDrawOptionAlias; }
   const auto& GetTextFormat() const { return mTextFormat; }
@@ -952,9 +980,6 @@ class Plot::Pad::Data
   std::optional<proj_info_t> mProjInfo;
 
   legend_t mLegend;
-  layout_t mMarker;
-  layout_t mLine;
-  layout_t mFill;
   data_range_t mRangeX;
   data_range_t mRangeY;
   modify_t mModify;
@@ -1261,7 +1286,7 @@ class Plot::Pad::Axis
  */
 //**************************************************************************************************
 template <class BoxType>
-class Plot::Pad::Box
+class Plot::Pad::Box : public BorderSetters<BoxType>, public TextSetters<BoxType>, public FillSetters<BoxType>
 {
  public:
   virtual ~Box() = default;
@@ -1275,20 +1300,6 @@ class Plot::Pad::Box
   BoxType& SetSize(double_t width, double_t height);
   BoxType& SetUserCoordinates(bool isUserCoord = true);
   BoxType& SetAutoPlacement(box_placement_t placement = best_corner);
-  BoxType& SetBorder(int16_t style, float_t width, color_t color, float_t alpha = 1.f);
-  BoxType& SetBorderColor(color_t color);
-  BoxType& SetBorderAlpha(float_t alpha);
-  BoxType& SetBorderStyle(int16_t style);
-  BoxType& SetBorderWidth(float_t width);
-  BoxType& SetText(int16_t font, float_t size, color_t color, float_t alpha = 1.f);
-  BoxType& SetTextColor(color_t color);
-  BoxType& SetTextAlpha(float_t alpha);
-  BoxType& SetTextFont(int16_t font);
-  BoxType& SetTextSize(float_t size);
-  BoxType& SetFill(int16_t style, color_t color, float_t alpha = 1.f);
-  BoxType& SetFillColor(color_t color);
-  BoxType& SetFillStyle(int16_t style);
-  BoxType& SetFillAlpha(float_t alpha);
   BoxType& SetTransparent();
   BoxType& SetNoBox();
   BoxType& SetMargin(float_t margin);
@@ -1302,17 +1313,6 @@ class Plot::Pad::Box
   auto& GetWidth() const { return mPos.w; }
   auto& GetHeight() const { return mPos.h; }
   auto& GetPlacement() const { return mPos.placement; }
-  auto& GetBorderStyle() const { return mBorder.style; }
-  auto& GetBorderWidth() const { return mBorder.scale; }
-  auto& GetBorderColor() const { return mBorder.color; }
-  auto& GetBorderAlpha() const { return mBorder.alpha; }
-  auto& GetFillStyle() const { return mFill.style; }
-  auto& GetFillAlpha() const { return mFill.alpha; }
-  auto& GetFillColor() const { return mFill.color; }
-  auto& GetTextFont() const { return mText.style; }
-  auto& GetTextSize() const { return mText.scale; }
-  auto& GetTextColor() const { return mText.color; }
-  auto& GetTextAlpha() const { return mText.alpha; }
   auto& GetMargin() const { return mMargin; }
   auto& GetLineSpacing() const { return mLineSpacing; }
 
@@ -1340,9 +1340,6 @@ class Plot::Pad::Box
   std::optional<float_t> mMargin;
   std::optional<float_t> mLineSpacing;
   position_t mPos;
-  layout_t mText;
-  layout_t mBorder;
-  layout_t mFill;
 };
 
 //**************************************************************************************************
@@ -1366,7 +1363,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
   TextBox& operator=(TextBox&& other) = default;
   void Print() const { Plot::Print(GetPropertyTree(), "TextBox"); }
 
-  using Box<TextBox>::SetText;
+  using TextSetters<TextBox>::SetText;
   TextBox& SetText(const std::string& text);  // lines separated by newlines
   TextBox& SetText(const std::vector<std::string>& lines);
   TextBox& SetText(std::initializer_list<std::string> lines);

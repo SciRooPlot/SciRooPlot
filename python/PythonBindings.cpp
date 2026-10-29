@@ -345,9 +345,62 @@ void exportPanelLayout(py::module_& m)
     .def("SetRatioHeight", &BasePlotShape::SetRatioHeight, arg("height"), ref_int);
 }
 
+// the setter groups of Plot.h (MarkerSetters, LineSetters, ...) for the classes that have them; through a lambda per setter,
+// so that each class returns itself to Python (a Ratio its own type, not the Data the forwarded setters of Data would give)
+template <class Self, class... Options>
+void defMarkerSetters(py::class_<Self, Options...>& cls)
+{
+  cls
+    .def("SetMarker", [](Self& self, int16_t style, float_t size, color_t color, float_t alpha) -> Self& { return self.SetMarker(style, size, color, alpha); }, arg("style"), arg("size"), arg("color"), arg("alpha") = 1.f, ref_int)
+    .def("SetMarkerColor", [](Self& self, color_t color) -> Self& { return self.SetMarkerColor(color); }, arg("color"), ref_int)
+    .def("SetMarkerAlpha", [](Self& self, float_t alpha) -> Self& { return self.SetMarkerAlpha(alpha); }, arg("alpha"), ref_int)
+    .def("SetMarkerStyle", [](Self& self, int16_t style) -> Self& { return self.SetMarkerStyle(style); }, arg("style"), ref_int)
+    .def("SetMarkerSize", [](Self& self, float_t size) -> Self& { return self.SetMarkerSize(size); }, arg("size"), ref_int);
+}
+template <class Self, class... Options>
+void defLineSetters(py::class_<Self, Options...>& cls)
+{
+  cls
+    .def("SetLine", [](Self& self, int16_t style, float_t width, color_t color, float_t alpha) -> Self& { return self.SetLine(style, width, color, alpha); }, arg("style"), arg("width"), arg("color"), arg("alpha") = 1.f, ref_int)
+    .def("SetLineColor", [](Self& self, color_t color) -> Self& { return self.SetLineColor(color); }, arg("color"), ref_int)
+    .def("SetLineAlpha", [](Self& self, float_t alpha) -> Self& { return self.SetLineAlpha(alpha); }, arg("alpha"), ref_int)
+    .def("SetLineStyle", [](Self& self, int16_t style) -> Self& { return self.SetLineStyle(style); }, arg("style"), ref_int)
+    .def("SetLineWidth", [](Self& self, float_t width) -> Self& { return self.SetLineWidth(width); }, arg("width"), ref_int);
+}
+template <class Self, class... Options>
+void defFillSetters(py::class_<Self, Options...>& cls)
+{
+  cls
+    .def("SetFill", [](Self& self, int16_t style, color_t color, float_t alpha) -> Self& { return self.SetFill(style, color, alpha); }, arg("style"), arg("color"), arg("alpha") = 1.f, ref_int)
+    .def("SetFillColor", [](Self& self, color_t color) -> Self& { return self.SetFillColor(color); }, arg("color"), ref_int)
+    .def("SetFillStyle", [](Self& self, int16_t style) -> Self& { return self.SetFillStyle(style); }, arg("style"), ref_int)
+    .def("SetFillAlpha", [](Self& self, float_t alpha) -> Self& { return self.SetFillAlpha(alpha); }, arg("alpha"), ref_int);
+}
+template <class Self, class... Options>
+void defTextSetters(py::class_<Self, Options...>& cls)
+{
+  cls
+    .def("SetText", [](Self& self, int16_t font, float_t size, color_t color, float_t alpha) -> Self& { return self.SetText(font, size, color, alpha); }, arg("font"), arg("size"), arg("color"), arg("alpha") = 1.f, ref_int)
+    .def("SetTextColor", [](Self& self, color_t color) -> Self& { return self.SetTextColor(color); }, arg("color"), ref_int)
+    .def("SetTextAlpha", [](Self& self, float_t alpha) -> Self& { return self.SetTextAlpha(alpha); }, arg("alpha"), ref_int)
+    .def("SetTextFont", [](Self& self, int16_t font) -> Self& { return self.SetTextFont(font); }, arg("font"), ref_int)
+    .def("SetTextSize", [](Self& self, float_t size) -> Self& { return self.SetTextSize(size); }, arg("size"), ref_int);
+}
+template <class Self, class... Options>
+void defBorderSetters(py::class_<Self, Options...>& cls)
+{
+  cls
+    .def("SetBorder", [](Self& self, int16_t style, float_t width, color_t color, float_t alpha) -> Self& { return self.SetBorder(style, width, color, alpha); }, arg("style"), arg("width"), arg("color"), arg("alpha") = 1.f, ref_int)
+    .def("SetBorderColor", [](Self& self, color_t color) -> Self& { return self.SetBorderColor(color); }, arg("color"), ref_int)
+    .def("SetBorderAlpha", [](Self& self, float_t alpha) -> Self& { return self.SetBorderAlpha(alpha); }, arg("alpha"), ref_int)
+    .def("SetBorderStyle", [](Self& self, int16_t style) -> Self& { return self.SetBorderStyle(style); }, arg("style"), ref_int)
+    .def("SetBorderWidth", [](Self& self, float_t width) -> Self& { return self.SetBorderWidth(width); }, arg("width"), ref_int);
+}
+
 void exportPlot(py::module_& m)
 {
-  py::class_<Plot>(m, "Plot")
+  py::class_<Plot> plot(m, "Plot");
+  plot
     .def(py::init<const string&, const string&>(), arg("name"), arg("group"))
     .def(py::init<const string&, const string&, const optional<string>&>(), arg("name"), arg("group") = "", arg("basePlot") = nullopt)
     .def(py::init<const string&, const PanelLayout&>(), arg("name"), arg("layout"))
@@ -364,17 +417,16 @@ void exportPlot(py::module_& m)
     .def("SetDimensions", &Plot::SetDimensions, arg("width"), arg("height"), arg("fixAspectRatio") = false, ref_int)
     .def("SetWidth", &Plot::SetWidth, arg("width"), ref_int)
     .def("SetHeight", &Plot::SetHeight, arg("height"), ref_int)
-    .def("SetFixAspectRatio", &Plot::SetFixAspectRatio, arg("fixAspectRatio") = true, ref_int)
-    .def("SetFill", &Plot::SetFill, arg("style"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetFillColor", &Plot::SetFillColor, arg("color"), ref_int)
-    .def("SetFillStyle", &Plot::SetFillStyle, arg("style"), ref_int)
-    .def("SetFillAlpha", &Plot::SetFillAlpha, arg("alpha"), ref_int)
+    .def("SetFixAspectRatio", &Plot::SetFixAspectRatio, arg("fixAspectRatio") = true, ref_int);
+  defFillSetters(plot);
+  plot
     .def("SetTransparent", &Plot::SetTransparent, ref_int);
 }
 
 void exportPad(py::module_& m)
 {
-  py::class_<Pad>(m, "Pad")
+  py::class_<Pad> pad(m, "Pad");
+  pad
     .def("Print", &Pad::Print)
     .def("AddData", overload_cast<const string&, const string&, const optional<string>&>(&Pad::AddData), arg("name"), arg("dataSource"), arg("label") = nullopt, ref_int)
     .def("AddData", overload_cast<const Data&, const optional<string>&>(&Pad::AddData), arg("data"), arg("label") = nullopt, ref_int)
@@ -418,11 +470,9 @@ void exportPad(py::module_& m)
     .def("SetDefaultFillColors", overload_cast<const vector<pair<color_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetDefaultFillColors), arg("gradient"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
     .def("SetDefaultFillStyles", &Pad::SetDefaultFillStyles, arg("styles"), ref_int)
     .def("SetDefaultCandleBoxRange", &Pad::SetDefaultCandleBoxRange, arg("candleOption"), ref_int)
-    .def("SetDefaultCandleWhiskerRange", &Pad::SetDefaultCandleWhiskerRange, arg("candleOption"), ref_int)
-    .def("SetFill", &Pad::SetFill, arg("style"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetFillColor", &Pad::SetFillColor, arg("color"), ref_int)
-    .def("SetFillStyle", &Pad::SetFillStyle, arg("style"), ref_int)
-    .def("SetFillAlpha", &Pad::SetFillAlpha, arg("alpha"), ref_int)
+    .def("SetDefaultCandleWhiskerRange", &Pad::SetDefaultCandleWhiskerRange, arg("candleOption"), ref_int);
+  defFillSetters(pad);
+  pad
     .def("SetTransparent", &Pad::SetTransparent, ref_int)
     .def("SetFrameFill", &Pad::SetFrameFill, arg("style"), arg("color"), arg("alpha") = 1.f, ref_int)
     .def("SetFrameFillColor", &Pad::SetFrameFillColor, arg("color"), ref_int)
@@ -460,7 +510,8 @@ void exportPad(py::module_& m)
 
 void exportData(py::module_& m)
 {
-  py::class_<Data>(m, "Data")
+  py::class_<Data> data(m, "Data");
+  data
     .def(py::init<>())
     .def(py::init<const string&, const string&, const optional<string>&>(), arg("name"), arg("dataSource"), arg("label") = nullopt)
     .def(py::init([](const py::list& nameAndSource) {
@@ -495,21 +546,11 @@ void exportData(py::module_& m)
     .def("SetShowStats", &Data::SetShowStats, arg("format") = "emr", arg("title") = nullopt, ref_int)
     .def("SetStatsBox", &Data::SetStatsBox, arg("statsBox"), ref_int)
     .def("SetColor", &Data::SetColor, arg("color"), ref_int)
-    .def("SetAlpha", &Data::SetAlpha, arg("alpha"), ref_int)
-    .def("SetMarker", &Data::SetMarker, arg("style"), arg("size"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetMarkerColor", &Data::SetMarkerColor, arg("color"), ref_int)
-    .def("SetMarkerAlpha", &Data::SetMarkerAlpha, arg("alpha"), ref_int)
-    .def("SetMarkerStyle", &Data::SetMarkerStyle, arg("style"), ref_int)
-    .def("SetMarkerSize", &Data::SetMarkerSize, arg("size"), ref_int)
-    .def("SetLine", &Data::SetLine, arg("style"), arg("width"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetLineColor", &Data::SetLineColor, arg("color"), ref_int)
-    .def("SetLineAlpha", &Data::SetLineAlpha, arg("alpha"), ref_int)
-    .def("SetLineStyle", &Data::SetLineStyle, arg("style"), ref_int)
-    .def("SetLineWidth", &Data::SetLineWidth, arg("width"), ref_int)
-    .def("SetFill", &Data::SetFill, arg("style"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetFillColor", &Data::SetFillColor, arg("color"), ref_int)
-    .def("SetFillStyle", &Data::SetFillStyle, arg("style"), ref_int)
-    .def("SetFillAlpha", &Data::SetFillAlpha, arg("alpha"), ref_int)
+    .def("SetAlpha", &Data::SetAlpha, arg("alpha"), ref_int);
+  defMarkerSetters(data);
+  defLineSetters(data);
+  defFillSetters(data);
+  data
     .def("SetDefinesFrame", &Data::SetDefinesFrame, ref_int)
     .def("SetKeepInputStyle", &Data::SetKeepInputStyle, arg("keep") = true, ref_int)
     .def("SetContours", overload_cast<const vector<double>&>(&Data::SetContours), arg("contours"), ref_int)
@@ -557,7 +598,8 @@ void exportData(py::module_& m)
 
 void exportRatio(py::module_& m)
 {
-  py::class_<Ratio, Data>(m, "Ratio")
+  py::class_<Ratio, Data> ratio(m, "Ratio");
+  ratio
     .def(py::init<const Data&, const Data&>(), arg("numerator"), arg("denominator"))
     .def(py::init<const string&, const string&, const string&, const string&, const optional<string>&>(), arg("name"), arg("dataSource"), arg("denomName"), arg("denomDataSource"), arg("label"))
     .def("Print", &Ratio::Print)
@@ -585,21 +627,11 @@ void exportRatio(py::module_& m)
     .def("SetShowStats", [](Ratio& self, const string& f, const optional<string>& t) -> Ratio& { return self.SetShowStats(f, t); }, arg("format") = "emr", arg("title") = nullopt, ref_int)
     .def("SetStatsBox", [](Ratio& self, const StatsBox& box) -> Ratio& { return self.SetStatsBox(box); }, arg("statsBox"), ref_int)
     .def("SetColor", [](Ratio& self, color_t c) -> Ratio& { return self.SetColor(c); }, arg("color"), ref_int)
-    .def("SetAlpha", [](Ratio& self, float_t a) -> Ratio& { return self.SetAlpha(a); }, arg("alpha"), ref_int)
-    .def("SetMarker", [](Ratio& self, int16_t s, float_t sz, color_t c, float_t a) -> Ratio& { return self.SetMarker(s, sz, c, a); }, arg("style"), arg("size"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetMarkerColor", [](Ratio& self, color_t c) -> Ratio& { return self.SetMarkerColor(c); }, arg("color"), ref_int)
-    .def("SetMarkerAlpha", [](Ratio& self, float_t a) -> Ratio& { return self.SetMarkerAlpha(a); }, arg("alpha"), ref_int)
-    .def("SetMarkerStyle", [](Ratio& self, int16_t s) -> Ratio& { return self.SetMarkerStyle(s); }, arg("style"), ref_int)
-    .def("SetMarkerSize", [](Ratio& self, float_t s) -> Ratio& { return self.SetMarkerSize(s); }, arg("size"), ref_int)
-    .def("SetLine", [](Ratio& self, int16_t s, float_t w, color_t c, float_t a) -> Ratio& { return self.SetLine(s, w, c, a); }, arg("style"), arg("width"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetLineColor", [](Ratio& self, color_t c) -> Ratio& { return self.SetLineColor(c); }, arg("color"), ref_int)
-    .def("SetLineAlpha", [](Ratio& self, float_t a) -> Ratio& { return self.SetLineAlpha(a); }, arg("alpha"), ref_int)
-    .def("SetLineStyle", [](Ratio& self, int16_t s) -> Ratio& { return self.SetLineStyle(s); }, arg("style"), ref_int)
-    .def("SetLineWidth", [](Ratio& self, float_t w) -> Ratio& { return self.SetLineWidth(w); }, arg("width"), ref_int)
-    .def("SetFill", [](Ratio& self, int16_t s, color_t c, float_t a) -> Ratio& { return self.SetFill(s, c, a); }, arg("style"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetFillColor", [](Ratio& self, color_t c) -> Ratio& { return self.SetFillColor(c); }, arg("color"), ref_int)
-    .def("SetFillStyle", [](Ratio& self, int16_t s) -> Ratio& { return self.SetFillStyle(s); }, arg("style"), ref_int)
-    .def("SetFillAlpha", [](Ratio& self, float_t a) -> Ratio& { return self.SetFillAlpha(a); }, arg("alpha"), ref_int)
+    .def("SetAlpha", [](Ratio& self, float_t a) -> Ratio& { return self.SetAlpha(a); }, arg("alpha"), ref_int);
+  defMarkerSetters(ratio);
+  defLineSetters(ratio);
+  defFillSetters(ratio);
+  ratio
     .def("SetDefinesFrame", [](Ratio& self) -> Ratio& { return self.SetDefinesFrame(); }, ref_int)
     .def("SetKeepInputStyle", [](Ratio& self, bool v = true) -> Ratio& { return self.SetKeepInputStyle(v); }, arg("keep") = true, ref_int)
     .def("SetContours", [](Ratio& self, const vector<double>& v) -> Ratio& { return self.SetContours(v); }, arg("contours"), ref_int)
@@ -689,7 +721,8 @@ void exportAxis(py::module_& m)
 
 void exportTextBox(py::module_& m)
 {
-  py::class_<TextBox>(m, "TextBox")
+  py::class_<TextBox> textBox(m, "TextBox");
+  textBox
     .def("Print", &TextBox::Print)
     .def("SetText", py::overload_cast<const std::string&>(&TextBox::SetText), arg("text"), ref_int)
     .def("SetText", py::overload_cast<const vector<string>&>(&TextBox::SetText), arg("lines"), ref_int)
@@ -697,21 +730,11 @@ void exportTextBox(py::module_& m)
     .def("SetPosition", &TextBox::SetPosition, arg("x"), arg("y"), ref_int)
     .def("SetSize", &TextBox::SetSize, arg("width"), arg("height"), ref_int)
     .def("SetUserCoordinates", &TextBox::SetUserCoordinates, arg("isUserCoord") = true, ref_int)
-    .def("SetAutoPlacement", &TextBox::SetAutoPlacement, arg("placement") = best_corner, ref_int)
-    .def("SetBorder", &TextBox::SetBorder, arg("style"), arg("width"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetBorderColor", &TextBox::SetBorderColor, arg("color"), ref_int)
-    .def("SetBorderAlpha", &TextBox::SetBorderAlpha, arg("alpha"), ref_int)
-    .def("SetBorderStyle", &TextBox::SetBorderStyle, arg("style"), ref_int)
-    .def("SetBorderWidth", &TextBox::SetBorderWidth, arg("width"), ref_int)
-    .def("SetText", overload_cast<int16_t, float_t, color_t, float_t>(&TextBox::SetText), arg("font"), arg("size"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetTextColor", &TextBox::SetTextColor, arg("color"), ref_int)
-    .def("SetTextAlpha", &TextBox::SetTextAlpha, arg("alpha"), ref_int)
-    .def("SetTextFont", &TextBox::SetTextFont, arg("font"), ref_int)
-    .def("SetTextSize", &TextBox::SetTextSize, arg("size"), ref_int)
-    .def("SetFill", &TextBox::SetFill, arg("style"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetFillColor", &TextBox::SetFillColor, arg("color"), ref_int)
-    .def("SetFillStyle", &TextBox::SetFillStyle, arg("style"), ref_int)
-    .def("SetFillAlpha", &TextBox::SetFillAlpha, arg("alpha"), ref_int)
+    .def("SetAutoPlacement", &TextBox::SetAutoPlacement, arg("placement") = best_corner, ref_int);
+  defBorderSetters(textBox);
+  defTextSetters(textBox);
+  defFillSetters(textBox);
+  textBox
     .def("SetTransparent", &TextBox::SetTransparent, ref_int)
     .def("SetNoBox", &TextBox::SetNoBox, ref_int)
     .def("SetMargin", &TextBox::SetMargin, arg("margin"), ref_int)
@@ -720,27 +743,18 @@ void exportTextBox(py::module_& m)
 
 void exportStatsBox(py::module_& m)
 {
-  py::class_<StatsBox>(m, "StatsBox")
+  py::class_<StatsBox> statsBox(m, "StatsBox");
+  statsBox
     .def(py::init<>())
     .def("Print", &StatsBox::Print)
     .def("SetPosition", &StatsBox::SetPosition, arg("x"), arg("y"), ref_int)
     .def("SetSize", &StatsBox::SetSize, arg("width"), arg("height"), ref_int)
     .def("SetUserCoordinates", &StatsBox::SetUserCoordinates, arg("isUserCoord") = true, ref_int)
-    .def("SetAutoPlacement", &StatsBox::SetAutoPlacement, arg("placement") = best_corner, ref_int)
-    .def("SetBorder", &StatsBox::SetBorder, arg("style"), arg("width"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetBorderColor", &StatsBox::SetBorderColor, arg("color"), ref_int)
-    .def("SetBorderAlpha", &StatsBox::SetBorderAlpha, arg("alpha"), ref_int)
-    .def("SetBorderStyle", &StatsBox::SetBorderStyle, arg("style"), ref_int)
-    .def("SetBorderWidth", &StatsBox::SetBorderWidth, arg("width"), ref_int)
-    .def("SetText", &StatsBox::SetText, arg("font"), arg("size"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetTextColor", &StatsBox::SetTextColor, arg("color"), ref_int)
-    .def("SetTextAlpha", &StatsBox::SetTextAlpha, arg("alpha"), ref_int)
-    .def("SetTextFont", &StatsBox::SetTextFont, arg("font"), ref_int)
-    .def("SetTextSize", &StatsBox::SetTextSize, arg("size"), ref_int)
-    .def("SetFill", &StatsBox::SetFill, arg("style"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetFillColor", &StatsBox::SetFillColor, arg("color"), ref_int)
-    .def("SetFillStyle", &StatsBox::SetFillStyle, arg("style"), ref_int)
-    .def("SetFillAlpha", &StatsBox::SetFillAlpha, arg("alpha"), ref_int)
+    .def("SetAutoPlacement", &StatsBox::SetAutoPlacement, arg("placement") = best_corner, ref_int);
+  defBorderSetters(statsBox);
+  defTextSetters(statsBox);
+  defFillSetters(statsBox);
+  statsBox
     .def("SetTransparent", &StatsBox::SetTransparent, ref_int)
     .def("SetNoBox", &StatsBox::SetNoBox, ref_int)
     .def("SetMargin", &StatsBox::SetMargin, arg("margin"), ref_int)
@@ -749,7 +763,8 @@ void exportStatsBox(py::module_& m)
 
 void exportLegendBox(py::module_& m)
 {
-  py::class_<LegendBox>(m, "LegendBox")
+  py::class_<LegendBox> legendBox(m, "LegendBox");
+  legendBox
     .def("Print", &LegendBox::Print)
     .def("AddEntry", &LegendBox::AddEntry, arg("label") = "", ref_int)
     .def("SetTitle", &LegendBox::SetTitle, arg("title"), ref_int)
@@ -772,21 +787,11 @@ void exportLegendBox(py::module_& m)
     .def("SetPosition", &LegendBox::SetPosition, arg("x"), arg("y"), ref_int)
     .def("SetSize", &LegendBox::SetSize, arg("width"), arg("height"), ref_int)
     .def("SetUserCoordinates", &LegendBox::SetUserCoordinates, arg("isUserCoord") = true, ref_int)
-    .def("SetAutoPlacement", &LegendBox::SetAutoPlacement, arg("placement") = best_corner, ref_int)
-    .def("SetBorder", &LegendBox::SetBorder, arg("style"), arg("width"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetBorderColor", &LegendBox::SetBorderColor, arg("color"), ref_int)
-    .def("SetBorderAlpha", &LegendBox::SetBorderAlpha, arg("alpha"), ref_int)
-    .def("SetBorderStyle", &LegendBox::SetBorderStyle, arg("style"), ref_int)
-    .def("SetBorderWidth", &LegendBox::SetBorderWidth, arg("width"), ref_int)
-    .def("SetText", &LegendBox::SetText, arg("font"), arg("size"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetTextColor", &LegendBox::SetTextColor, arg("color"), ref_int)
-    .def("SetTextAlpha", &LegendBox::SetTextAlpha, arg("alpha"), ref_int)
-    .def("SetTextFont", &LegendBox::SetTextFont, arg("font"), ref_int)
-    .def("SetTextSize", &LegendBox::SetTextSize, arg("size"), ref_int)
-    .def("SetFill", &LegendBox::SetFill, arg("style"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetFillColor", &LegendBox::SetFillColor, arg("color"), ref_int)
-    .def("SetFillStyle", &LegendBox::SetFillStyle, arg("style"), ref_int)
-    .def("SetFillAlpha", &LegendBox::SetFillAlpha, arg("alpha"), ref_int)
+    .def("SetAutoPlacement", &LegendBox::SetAutoPlacement, arg("placement") = best_corner, ref_int);
+  defBorderSetters(legendBox);
+  defTextSetters(legendBox);
+  defFillSetters(legendBox);
+  legendBox
     .def("SetTransparent", &LegendBox::SetTransparent, ref_int)
     .def("SetNoBox", &LegendBox::SetNoBox, ref_int)
     .def("SetMargin", &LegendBox::SetMargin, arg("margin"), ref_int)
@@ -795,7 +800,8 @@ void exportLegendBox(py::module_& m)
 
 void exportLegendEntry(py::module_& m)
 {
-  py::class_<LegendEntry>(m, "LegendEntry")
+  py::class_<LegendEntry> legendEntry(m, "LegendEntry");
+  legendEntry
     .def(py::init<>())
     .def("Print", &LegendEntry::Print)
     .def("SetLabel", &LegendEntry::SetLabel, arg("label"), ref_int)
@@ -805,25 +811,11 @@ void exportLegendEntry(py::module_& m)
     .def("BeforeData", &LegendEntry::BeforeData, arg("dataID"), ref_int)
     .def("AfterData", &LegendEntry::AfterData, arg("dataID"), ref_int)
     .def("SetColor", &LegendEntry::SetColor, arg("color"), ref_int)
-    .def("SetAlpha", &LegendEntry::SetAlpha, arg("alpha"), ref_int)
-    .def("SetMarker", &LegendEntry::SetMarker, arg("style"), arg("size"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetMarkerColor", &LegendEntry::SetMarkerColor, arg("color"), ref_int)
-    .def("SetMarkerAlpha", &LegendEntry::SetMarkerAlpha, arg("alpha"), ref_int)
-    .def("SetMarkerStyle", &LegendEntry::SetMarkerStyle, arg("style"), ref_int)
-    .def("SetMarkerSize", &LegendEntry::SetMarkerSize, arg("size"), ref_int)
-    .def("SetLine", &LegendEntry::SetLine, arg("style"), arg("width"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetLineColor", &LegendEntry::SetLineColor, arg("color"), ref_int)
-    .def("SetLineAlpha", &LegendEntry::SetLineAlpha, arg("alpha"), ref_int)
-    .def("SetLineStyle", &LegendEntry::SetLineStyle, arg("style"), ref_int)
-    .def("SetLineWidth", &LegendEntry::SetLineWidth, arg("width"), ref_int)
-    .def("SetFill", &LegendEntry::SetFill, arg("style"), arg("color"), arg("alpha") = 1.f, ref_int)
-    .def("SetFillColor", &LegendEntry::SetFillColor, arg("color"), ref_int)
-    .def("SetFillAlpha", &LegendEntry::SetFillAlpha, arg("alpha"), ref_int)
-    .def("SetFillStyle", &LegendEntry::SetFillStyle, arg("style"), ref_int)
-    .def("SetTextColor", &LegendEntry::SetTextColor, arg("color"), ref_int)
-    .def("SetTextAlpha", &LegendEntry::SetTextAlpha, arg("alpha"), ref_int)
-    .def("SetTextFont", &LegendEntry::SetTextFont, arg("font"), ref_int)
-    .def("SetTextSize", &LegendEntry::SetTextSize, arg("size"), ref_int);
+    .def("SetAlpha", &LegendEntry::SetAlpha, arg("alpha"), ref_int);
+  defMarkerSetters(legendEntry);
+  defLineSetters(legendEntry);
+  defFillSetters(legendEntry);
+  defTextSetters(legendEntry);
 }
 
 void exportPythonDataInterfaces(py::module_& m)

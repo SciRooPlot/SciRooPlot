@@ -195,6 +195,252 @@ void Plot::ReadWidthFromTree(const ptree& tree, optional<float_t>& target, const
 
 //**************************************************************************************************
 /**
+ * Take over the values set in other.
+ */
+//**************************************************************************************************
+void layout_t::Update(const layout_t& other)
+{
+  util::set_if(other.color, color);
+  util::set_if(other.alpha, alpha);
+  util::set_if(other.style, style);
+  util::set_if(other.scale, scale);
+}
+
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// IMPLEMENTATION of the setter groups (marker, line, fill, text, border)
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+
+template <class Derived>
+Derived& MarkerSetters<Derived>::SetMarker(int16_t style, float_t size, color_t color, float_t alpha)
+{
+  mMarker = {color, alpha, style, size};
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& MarkerSetters<Derived>::SetMarkerColor(color_t color)
+{
+  mMarker.color = color;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& MarkerSetters<Derived>::SetMarkerAlpha(float_t alpha)
+{
+  mMarker.alpha = alpha;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& MarkerSetters<Derived>::SetMarkerStyle(int16_t style)
+{
+  mMarker.style = style;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& MarkerSetters<Derived>::SetMarkerSize(float_t size)
+{
+  mMarker.scale = size;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+void MarkerSetters<Derived>::ReadMarker(const ptree& tree)
+{
+  read_from_tree(tree, mMarker.color, "marker_color");
+  read_from_tree(tree, mMarker.alpha, "marker_alpha");
+  read_from_tree(tree, mMarker.style, "marker_style");
+  read_from_tree(tree, mMarker.scale, "marker_size");
+}
+template <class Derived>
+void MarkerSetters<Derived>::PutMarker(ptree& tree) const
+{
+  put_in_tree(tree, mMarker.color, "marker_color");
+  put_in_tree(tree, mMarker.alpha, "marker_alpha");
+  put_in_tree(tree, mMarker.style, "marker_style");
+  put_in_tree(tree, mMarker.scale, "marker_size");
+}
+
+template <class Derived>
+Derived& LineSetters<Derived>::SetLine(int16_t style, float_t width, color_t color, float_t alpha)
+{
+  mLine = {color, alpha, style, Plot::RoundWidth(width, "line width")};
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& LineSetters<Derived>::SetLineColor(color_t color)
+{
+  mLine.color = color;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& LineSetters<Derived>::SetLineAlpha(float_t alpha)
+{
+  mLine.alpha = alpha;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& LineSetters<Derived>::SetLineStyle(int16_t style)
+{
+  mLine.style = style;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& LineSetters<Derived>::SetLineWidth(float_t width)
+{
+  mLine.scale = Plot::RoundWidth(width, "line width");
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+void LineSetters<Derived>::ReadLine(const ptree& tree)
+{
+  read_from_tree(tree, mLine.color, "line_color");
+  read_from_tree(tree, mLine.alpha, "line_alpha");
+  read_from_tree(tree, mLine.style, "line_style");
+  Plot::ReadWidthFromTree(tree, mLine.scale, "line_width");
+}
+template <class Derived>
+void LineSetters<Derived>::PutLine(ptree& tree) const
+{
+  put_in_tree(tree, mLine.color, "line_color");
+  put_in_tree(tree, mLine.alpha, "line_alpha");
+  put_in_tree(tree, mLine.style, "line_style");
+  put_in_tree(tree, mLine.scale, "line_width");
+}
+
+template <class Derived>
+Derived& FillSetters<Derived>::SetFill(int16_t style, color_t color, float_t alpha)
+{
+  mFill = {color, alpha, style, {}};
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& FillSetters<Derived>::SetFillColor(color_t color)
+{
+  mFill.color = color;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& FillSetters<Derived>::SetFillStyle(int16_t style)
+{
+  mFill.style = style;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& FillSetters<Derived>::SetFillAlpha(float_t alpha)
+{
+  mFill.alpha = alpha;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+void FillSetters<Derived>::ReadFill(const ptree& tree)
+{
+  read_from_tree(tree, mFill.color, "fill_color");
+  read_from_tree(tree, mFill.alpha, "fill_alpha");
+  read_from_tree(tree, mFill.style, "fill_style");
+}
+template <class Derived>
+void FillSetters<Derived>::PutFill(ptree& tree) const
+{
+  put_in_tree(tree, mFill.color, "fill_color");
+  put_in_tree(tree, mFill.alpha, "fill_alpha");
+  put_in_tree(tree, mFill.style, "fill_style");
+}
+
+template <class Derived>
+Derived& TextSetters<Derived>::SetText(int16_t font, float_t size, color_t color, float_t alpha)
+{
+  mText = {color, alpha, font, size};
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& TextSetters<Derived>::SetTextColor(color_t color)
+{
+  mText.color = color;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& TextSetters<Derived>::SetTextAlpha(float_t alpha)
+{
+  mText.alpha = alpha;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& TextSetters<Derived>::SetTextFont(int16_t font)
+{
+  mText.style = font;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& TextSetters<Derived>::SetTextSize(float_t size)
+{
+  mText.scale = size;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+void TextSetters<Derived>::ReadText(const ptree& tree)
+{
+  read_from_tree(tree, mText.color, "text_color");
+  read_from_tree(tree, mText.alpha, "text_alpha");
+  read_from_tree(tree, mText.style, "text_font");
+  read_from_tree(tree, mText.scale, "text_size");
+}
+template <class Derived>
+void TextSetters<Derived>::PutText(ptree& tree) const
+{
+  put_in_tree(tree, mText.color, "text_color");
+  put_in_tree(tree, mText.alpha, "text_alpha");
+  put_in_tree(tree, mText.style, "text_font");
+  put_in_tree(tree, mText.scale, "text_size");
+}
+
+template <class Derived>
+Derived& BorderSetters<Derived>::SetBorder(int16_t style, float_t width, color_t color, float_t alpha)
+{
+  mBorder = {color, alpha, style, Plot::RoundWidth(width, "border width")};
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& BorderSetters<Derived>::SetBorderColor(color_t color)
+{
+  mBorder.color = color;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& BorderSetters<Derived>::SetBorderAlpha(float_t alpha)
+{
+  mBorder.alpha = alpha;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& BorderSetters<Derived>::SetBorderStyle(int16_t style)
+{
+  mBorder.style = style;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& BorderSetters<Derived>::SetBorderWidth(float_t width)
+{
+  mBorder.scale = Plot::RoundWidth(width, "border width");
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+void BorderSetters<Derived>::ReadBorder(const ptree& tree)
+{
+  read_from_tree(tree, mBorder.color, "border_color");
+  read_from_tree(tree, mBorder.alpha, "border_alpha");
+  read_from_tree(tree, mBorder.style, "border_style");
+  Plot::ReadWidthFromTree(tree, mBorder.scale, "border_width");
+}
+template <class Derived>
+void BorderSetters<Derived>::PutBorder(ptree& tree) const
+{
+  put_in_tree(tree, mBorder.color, "border_color");
+  put_in_tree(tree, mBorder.alpha, "border_alpha");
+  put_in_tree(tree, mBorder.style, "border_style");
+  put_in_tree(tree, mBorder.scale, "border_width");
+}
+
+//**************************************************************************************************
+/**
  * Helper to strip group of misplaced slashes.
  */
 //**************************************************************************************************
@@ -315,9 +561,7 @@ Plot::Plot(const ptree& plotTree)
   read_from_tree(plotTree, mPlotDimensions.width, "width");
   read_from_tree(plotTree, mPlotDimensions.height, "height");
   read_from_tree(plotTree, mPlotDimensions.fixAspectRatio, "fix_aspect_ratio");
-  read_from_tree(plotTree, mFill.color, "fill_color");
-  read_from_tree(plotTree, mFill.style, "fill_style");
-  read_from_tree(plotTree, mFill.alpha, "fill_alpha");
+  ReadFill(plotTree);
 
   // loop over all pads defined in property tree
   for (const auto& pad : plotTree) {
@@ -353,9 +597,7 @@ ptree Plot::GetPropertyTree() const
   put_in_tree(plotTree, mPlotDimensions.width, "width");
   put_in_tree(plotTree, mPlotDimensions.height, "height");
   put_in_tree(plotTree, mPlotDimensions.fixAspectRatio, "fix_aspect_ratio");
-  put_in_tree(plotTree, mFill.color, "fill_color");
-  put_in_tree(plotTree, mFill.style, "fill_style");
-  put_in_tree(plotTree, mFill.alpha, "fill_alpha");
+  PutFill(plotTree);
 
   for (const auto& [padID, pad] : mPads) {
     plotTree.put_child("PAD_" + std::to_string(padID), pad.GetPropertyTree());
@@ -480,37 +722,6 @@ auto Plot::SetFixAspectRatio(bool fixAspectRatio) -> decltype(*this)
 
 //**************************************************************************************************
 /**
- * Set fill for this plot.
- */
-//**************************************************************************************************
-auto Plot::SetFill(int16_t style, color_t color, float_t alpha) -> decltype(*this)
-{
-  mFill.color = color;
-  mFill.style = style;
-  mFill.alpha = alpha;
-  return *this;
-}
-
-auto Plot::SetFillColor(color_t color) -> decltype(*this)
-{
-  mFill.color = color;
-  return *this;
-}
-
-auto Plot::SetFillStyle(int16_t style) -> decltype(*this)
-{
-  mFill.style = style;
-  return *this;
-}
-
-auto Plot::SetFillAlpha(float_t alpha) -> decltype(*this)
-{
-  mFill.alpha = alpha;
-  return *this;
-}
-
-//**************************************************************************************************
-/**
  * Set this plot transparent.
  */
 //**************************************************************************************************
@@ -537,9 +748,7 @@ void Plot::operator+=(const Plot& plot)
   if (plot.mPlotDimensions.height) mPlotDimensions.height = plot.mPlotDimensions.height;
   if (plot.mPlotDimensions.fixAspectRatio) mPlotDimensions.fixAspectRatio = plot.mPlotDimensions.fixAspectRatio;
 
-  if (plot.mFill.color) mFill.color = plot.mFill.color;
-  if (plot.mFill.style) mFill.style = plot.mFill.style;
-  if (plot.mFill.alpha) mFill.alpha = plot.mFill.alpha;
+  mFill.Update(plot.mFill);
 
   for (const auto& [padID, pad] : plot.mPads) {
     mPads[padID];  // initializes the pad in case it was not yet defined in this plot
@@ -845,37 +1054,6 @@ auto Plot::Pad::SetDefaultCandleWhiskerRange(float_t candleOption) -> decltype(*
 
 //**************************************************************************************************
 /**
- * Set fill for this pad.
- */
-//**************************************************************************************************
-auto Plot::Pad::SetFill(int16_t style, color_t color, float_t alpha) -> decltype(*this)
-{
-  mFill.color = color;
-  mFill.style = style;
-  mFill.alpha = alpha;
-  return *this;
-}
-
-auto Plot::Pad::SetFillColor(color_t color) -> decltype(*this)
-{
-  mFill.color = color;
-  return *this;
-}
-
-auto Plot::Pad::SetFillStyle(int16_t style) -> decltype(*this)
-{
-  mFill.style = style;
-  return *this;
-}
-
-auto Plot::Pad::SetFillAlpha(float_t alpha) -> decltype(*this)
-{
-  mFill.alpha = alpha;
-  return *this;
-}
-
-//**************************************************************************************************
-/**
  * Make this pad transparent.
  */
 //**************************************************************************************************
@@ -1068,8 +1246,8 @@ auto Plot::Pad::SetView(double_t theta, double_t phi) -> decltype(*this)
  */
 //**************************************************************************************************
 Plot::Pad::Pad(const Pad& other)
-  : mPosition(other.mPosition), mMargins(other.mMargins), mView(other.mView),
-    mFill(other.mFill), mFrameFill(other.mFrameFill), mFrameBorder(other.mFrameBorder), mText(other.mText),
+  : FillSetters<Pad>(other), mPosition(other.mPosition), mMargins(other.mMargins), mView(other.mView),
+    mFrameFill(other.mFrameFill), mFrameBorder(other.mFrameBorder), mText(other.mText),
     mMarkerDefaults(other.mMarkerDefaults), mLineDefaults(other.mLineDefaults), mFillDefaults(other.mFillDefaults),
     mCandleOptionDefaults(other.mCandleOptionDefaults),
     mPalette(other.mPalette), mRedrawAxes(other.mRedrawAxes), mAxes(other.mAxes)
@@ -1126,9 +1304,7 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mPalette.colorGradient.rgbEndpoints, "palette_colors_gradient_endpoints");
   read_from_tree(padTree, mPalette.colorGradient.alpha, "palette_colors_gradient_alpha");
   read_from_tree(padTree, mPalette.colorGradient.nColors, "palette_colors_gradient_nColors");
-  read_from_tree(padTree, mFill.color, "fill_color");
-  read_from_tree(padTree, mFill.style, "fill_style");
-  read_from_tree(padTree, mFill.alpha, "fill_alpha");
+  ReadFill(padTree);
   read_from_tree(padTree, mFrameFill.color, "frame_fill_color");
   read_from_tree(padTree, mFrameFill.style, "frame_fill_style");
   read_from_tree(padTree, mFrameFill.alpha, "frame_fill_alpha");
@@ -1220,9 +1396,7 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mPalette.colorGradient.rgbEndpoints, "palette_colors_gradient_endpoints");
   put_in_tree(padTree, mPalette.colorGradient.alpha, "palette_colors_gradient_alpha");
   put_in_tree(padTree, mPalette.colorGradient.nColors, "palette_colors_gradient_nColors");
-  put_in_tree(padTree, mFill.color, "fill_color");
-  put_in_tree(padTree, mFill.style, "fill_style");
-  put_in_tree(padTree, mFill.alpha, "fill_alpha");
+  PutFill(padTree);
   put_in_tree(padTree, mFrameFill.color, "frame_fill_color");
   put_in_tree(padTree, mFrameFill.style, "frame_fill_style");
   put_in_tree(padTree, mFrameFill.alpha, "frame_fill_alpha");
@@ -1308,20 +1482,10 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mMargins.right) mMargins.right = pad.mMargins.right;
   if (pad.mView.theta) mView.theta = pad.mView.theta;
   if (pad.mView.phi) mView.phi = pad.mView.phi;
-  if (pad.mFill.color) mFill.color = pad.mFill.color;
-  if (pad.mFill.style) mFill.style = pad.mFill.style;
-  if (pad.mFill.alpha) mFill.alpha = pad.mFill.alpha;
-  if (pad.mFrameFill.color) mFrameFill.color = pad.mFrameFill.color;
-  if (pad.mFrameFill.style) mFrameFill.style = pad.mFrameFill.style;
-  if (pad.mFrameFill.alpha) mFrameFill.alpha = pad.mFrameFill.alpha;
-  if (pad.mFrameBorder.color) mFrameBorder.color = pad.mFrameBorder.color;
-  if (pad.mFrameBorder.alpha) mFrameBorder.alpha = pad.mFrameBorder.alpha;
-  if (pad.mFrameBorder.style) mFrameBorder.style = pad.mFrameBorder.style;
-  if (pad.mFrameBorder.scale) mFrameBorder.scale = pad.mFrameBorder.scale;
-  if (pad.mText.scale) mText.scale = pad.mText.scale;
-  if (pad.mText.style) mText.style = pad.mText.style;
-  if (pad.mText.color) mText.color = pad.mText.color;
-  if (pad.mText.alpha) mText.alpha = pad.mText.alpha;
+  mFill.Update(pad.mFill);
+  mFrameFill.Update(pad.mFrameFill);
+  mFrameBorder.Update(pad.mFrameBorder);
+  mText.Update(pad.mText);
   if (pad.mMarkerDefaults.alpha) mMarkerDefaults.alpha = pad.mMarkerDefaults.alpha;
   if (pad.mMarkerDefaults.scale) mMarkerDefaults.scale = pad.mMarkerDefaults.scale;
   if (pad.mMarkerDefaults.styles) mMarkerDefaults.styles = pad.mMarkerDefaults.styles;
@@ -1773,17 +1937,9 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mStats.format, "stats_format");
   read_from_tree(dataTree, mStats.title, "stats_title");
   if (const auto statsBoxTree = dataTree.get_child_optional("stats_box")) mStats.box = std::make_shared<const StatsBox>(*statsBoxTree);
-  read_from_tree(dataTree, mMarker.color, "marker_color");
-  read_from_tree(dataTree, mMarker.alpha, "marker_alpha");
-  read_from_tree(dataTree, mMarker.style, "marker_style");
-  read_from_tree(dataTree, mMarker.scale, "marker_size");
-  read_from_tree(dataTree, mLine.color, "line_color");
-  read_from_tree(dataTree, mLine.alpha, "line_alpha");
-  read_from_tree(dataTree, mLine.style, "line_style");
-  ReadWidthFromTree(dataTree, mLine.scale, "line_width");
-  read_from_tree(dataTree, mFill.color, "fill_color");
-  read_from_tree(dataTree, mFill.alpha, "fill_alpha");
-  read_from_tree(dataTree, mFill.style, "fill_style");
+  ReadMarker(dataTree);
+  ReadLine(dataTree);
+  ReadFill(dataTree);
   ReadModify(dataTree, mModify);
   read_from_tree(dataTree, mRangeX.min, "rangeX_min");
   read_from_tree(dataTree, mRangeX.max, "rangeX_max");
@@ -1927,17 +2083,9 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mStats.format, "stats_format");
   put_in_tree(dataTree, mStats.title, "stats_title");
   if (mStats.box) dataTree.put_child("stats_box", mStats.box->GetPropertyTree());
-  put_in_tree(dataTree, mMarker.color, "marker_color");
-  put_in_tree(dataTree, mMarker.alpha, "marker_alpha");
-  put_in_tree(dataTree, mMarker.style, "marker_style");
-  put_in_tree(dataTree, mMarker.scale, "marker_size");
-  put_in_tree(dataTree, mLine.color, "line_color");
-  put_in_tree(dataTree, mLine.alpha, "line_alpha");
-  put_in_tree(dataTree, mLine.style, "line_style");
-  put_in_tree(dataTree, mLine.scale, "line_width");
-  put_in_tree(dataTree, mFill.color, "fill_color");
-  put_in_tree(dataTree, mFill.alpha, "fill_alpha");
-  put_in_tree(dataTree, mFill.style, "fill_style");
+  PutMarker(dataTree);
+  PutLine(dataTree);
+  PutFill(dataTree);
   PutModify(dataTree, mModify);
   put_in_tree(dataTree, mRangeX.min, "rangeX_min");
   put_in_tree(dataTree, mRangeX.max, "rangeX_max");
@@ -2010,17 +2158,9 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
   mRangeX.max = dataLayout.mRangeX.max;
   mRangeY.min = dataLayout.mRangeY.min;
   mRangeY.max = dataLayout.mRangeY.max;
-  mMarker.color = dataLayout.mMarker.color;
-  mMarker.alpha = dataLayout.mMarker.alpha;
-  mMarker.style = dataLayout.mMarker.style;
-  mMarker.scale = dataLayout.mMarker.scale;
-  mLine.color = dataLayout.mLine.color;
-  mLine.alpha = dataLayout.mLine.alpha;
-  mLine.style = dataLayout.mLine.style;
-  mLine.scale = dataLayout.mLine.scale;
-  mFill.color = dataLayout.mFill.color;
-  mFill.alpha = dataLayout.mFill.alpha;
-  mFill.style = dataLayout.mFill.style;
+  mMarker = dataLayout.mMarker;
+  mLine = dataLayout.mLine;
+  mFill = dataLayout.mFill;
   mContours = dataLayout.mContours;
   mNContours = dataLayout.mNContours;
   mNpx = dataLayout.mNpx;
@@ -2041,17 +2181,9 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   set_if(dataLayout.mRangeX.max, mRangeX.max);
   set_if(dataLayout.mRangeY.min, mRangeY.min);
   set_if(dataLayout.mRangeY.max, mRangeY.max);
-  set_if(dataLayout.mMarker.color, mMarker.color);
-  set_if(dataLayout.mMarker.alpha, mMarker.alpha);
-  set_if(dataLayout.mMarker.style, mMarker.style);
-  set_if(dataLayout.mMarker.scale, mMarker.scale);
-  set_if(dataLayout.mLine.color, mLine.color);
-  set_if(dataLayout.mLine.alpha, mLine.alpha);
-  set_if(dataLayout.mLine.style, mLine.style);
-  set_if(dataLayout.mLine.scale, mLine.scale);
-  set_if(dataLayout.mFill.color, mFill.color);
-  set_if(dataLayout.mFill.alpha, mFill.alpha);
-  set_if(dataLayout.mFill.style, mFill.style);
+  mMarker.Update(dataLayout.mMarker);
+  mLine.Update(dataLayout.mLine);
+  mFill.Update(dataLayout.mFill);
   set_if(dataLayout.mContours, mContours);
   set_if(dataLayout.mNContours, mNContours);
   set_if(dataLayout.mNpx, mNpx);
@@ -2189,84 +2321,6 @@ auto Plot::Pad::Data::SetAlpha(float_t alpha) -> decltype(*this)
 {
   mMarker.alpha = alpha;
   mLine.alpha = alpha;
-  mFill.alpha = alpha;
-  return *this;
-}
-auto Plot::Pad::Data::SetMarker(int16_t style, float_t size, color_t color, float_t alpha) -> decltype(*this)
-{
-  mMarker.color = color;
-  mMarker.alpha = alpha;
-  mMarker.style = style;
-  mMarker.scale = size;
-  return *this;
-}
-auto Plot::Pad::Data::SetMarkerColor(color_t color) -> decltype(*this)
-{
-  mMarker.color = color;
-  return *this;
-}
-auto Plot::Pad::Data::SetMarkerAlpha(float_t alpha) -> decltype(*this)
-{
-  mMarker.alpha = alpha;
-  return *this;
-}
-auto Plot::Pad::Data::SetMarkerStyle(int16_t style) -> decltype(*this)
-{
-  mMarker.style = style;
-  return *this;
-}
-auto Plot::Pad::Data::SetMarkerSize(float_t size) -> decltype(*this)
-{
-  mMarker.scale = size;
-  return *this;
-}
-auto Plot::Pad::Data::SetLine(int16_t style, float_t width, color_t color, float_t alpha) -> decltype(*this)
-{
-  mLine.color = color;
-  mLine.alpha = alpha;
-  mLine.style = style;
-  mLine.scale = RoundWidth(width, "line width");
-  return *this;
-}
-auto Plot::Pad::Data::SetLineColor(color_t color) -> decltype(*this)
-{
-  mLine.color = color;
-  return *this;
-}
-auto Plot::Pad::Data::SetLineAlpha(float_t alpha) -> decltype(*this)
-{
-  mLine.alpha = alpha;
-  return *this;
-}
-auto Plot::Pad::Data::SetLineStyle(int16_t style) -> decltype(*this)
-{
-  mLine.style = style;
-  return *this;
-}
-auto Plot::Pad::Data::SetLineWidth(float_t width) -> decltype(*this)
-{
-  mLine.scale = RoundWidth(width, "line width");
-  return *this;
-}
-auto Plot::Pad::Data::SetFill(int16_t style, color_t color, float_t alpha) -> decltype(*this)
-{
-  mFill.color = color;
-  mFill.alpha = alpha;
-  mFill.style = style;
-  return *this;
-}
-auto Plot::Pad::Data::SetFillColor(color_t color) -> decltype(*this)
-{
-  mFill.color = color;
-  return *this;
-}
-auto Plot::Pad::Data::SetFillStyle(int16_t style) -> decltype(*this)
-{
-  mFill.style = style;
-  return *this;
-}
-auto Plot::Pad::Data::SetFillAlpha(float_t alpha) -> decltype(*this)
-{
   mFill.alpha = alpha;
   return *this;
 }
@@ -3382,16 +3436,10 @@ void Plot::Pad::Axis::operator+=(const Axis& axis)
   if (axis.mAxisFrame.hideClippedLabels) mAxisFrame.hideClippedLabels = axis.mAxisFrame.hideClippedLabels;
   if (axis.mAxisFrame.colorScaleOffset) mAxisFrame.colorScaleOffset = axis.mAxisFrame.colorScaleOffset;
   if (axis.mAxisFrame.colorScaleWidth) mAxisFrame.colorScaleWidth = axis.mAxisFrame.colorScaleWidth;
-  if (axis.mTitleLayout.style) mTitleLayout.style = axis.mTitleLayout.style;
-  if (axis.mTitleLayout.scale) mTitleLayout.scale = axis.mTitleLayout.scale;
-  if (axis.mTitleLayout.color) mTitleLayout.color = axis.mTitleLayout.color;
-  if (axis.mTitleLayout.alpha) mTitleLayout.alpha = axis.mTitleLayout.alpha;
+  mTitleLayout.Update(axis.mTitleLayout);
   if (axis.mTitleLayout.offset) mTitleLayout.offset = axis.mTitleLayout.offset;
   if (axis.mTitleLayout.center) mTitleLayout.center = axis.mTitleLayout.center;
-  if (axis.mLabelLayout.style) mLabelLayout.style = axis.mLabelLayout.style;
-  if (axis.mLabelLayout.scale) mLabelLayout.scale = axis.mLabelLayout.scale;
-  if (axis.mLabelLayout.color) mLabelLayout.color = axis.mLabelLayout.color;
-  if (axis.mLabelLayout.alpha) mLabelLayout.alpha = axis.mLabelLayout.alpha;
+  mLabelLayout.Update(axis.mLabelLayout);
   if (axis.mLabelLayout.offset) mLabelLayout.offset = axis.mLabelLayout.offset;
   if (axis.mLabelLayout.center) mLabelLayout.center = axis.mLabelLayout.center;
   if (axis.mAxisFrame.timeFormat) mAxisFrame.timeFormat = axis.mAxisFrame.timeFormat;
@@ -3615,17 +3663,9 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
     mPos.placement = box_placement_from_name(*name);
     if (!mPos.placement) logger::warning("Unknown box placement {} is ignored.", *name);
   }
-  read_from_tree(boxTree, mBorder.style, "border_style");
-  read_from_tree(boxTree, mBorder.color, "border_color");
-  read_from_tree(boxTree, mBorder.alpha, "border_alpha");
-  ReadWidthFromTree(boxTree, mBorder.scale, "border_width");
-  read_from_tree(boxTree, mFill.style, "fill_style");
-  read_from_tree(boxTree, mFill.color, "fill_color");
-  read_from_tree(boxTree, mFill.alpha, "fill_alpha");
-  read_from_tree(boxTree, mText.style, "text_font");
-  read_from_tree(boxTree, mText.color, "text_color");
-  read_from_tree(boxTree, mText.alpha, "text_alpha");
-  read_from_tree(boxTree, mText.scale, "text_size");
+  this->ReadBorder(boxTree);
+  this->ReadFill(boxTree);
+  this->ReadText(boxTree);
   read_from_tree(boxTree, mMargin, "margin");
   read_from_tree(boxTree, mLineSpacing, "line_spacing");
 }
@@ -3645,17 +3685,9 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
   put_in_tree(boxTree, mPos.h, "h");
   put_in_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
   if (mPos.placement) boxTree.put("placement", box_placement_name(*mPos.placement));
-  put_in_tree(boxTree, mBorder.style, "border_style");
-  put_in_tree(boxTree, mBorder.color, "border_color");
-  put_in_tree(boxTree, mBorder.alpha, "border_alpha");
-  put_in_tree(boxTree, mBorder.scale, "border_width");
-  put_in_tree(boxTree, mFill.style, "fill_style");
-  put_in_tree(boxTree, mFill.color, "fill_color");
-  put_in_tree(boxTree, mFill.alpha, "fill_alpha");
-  put_in_tree(boxTree, mText.style, "text_font");
-  put_in_tree(boxTree, mText.color, "text_color");
-  put_in_tree(boxTree, mText.alpha, "text_alpha");
-  put_in_tree(boxTree, mText.scale, "text_size");
+  this->PutBorder(boxTree);
+  this->PutFill(boxTree);
+  this->PutText(boxTree);
   put_in_tree(boxTree, mMargin, "margin");
   put_in_tree(boxTree, mLineSpacing, "line_spacing");
 
@@ -3701,123 +3733,17 @@ BoxType& Plot::Pad::Box<BoxType>::SetAutoPlacement(box_placement_t placement)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetBorder(int16_t style, float_t width, color_t color, float_t alpha)
-{
-  mBorder.color = color;
-  mBorder.style = style;
-  mBorder.scale = RoundWidth(width, "box border width");
-  mBorder.alpha = alpha;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetBorderColor(color_t color)
-{
-  mBorder.color = color;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetBorderAlpha(float_t alpha)
-{
-  mBorder.alpha = alpha;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetBorderStyle(int16_t style)
-{
-  mBorder.style = style;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetBorderWidth(float_t width)
-{
-  mBorder.scale = RoundWidth(width, "box border width");
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetText(int16_t font, float_t size, color_t color, float_t alpha)
-{
-  mText.color = color;
-  mText.alpha = alpha;
-  mText.style = font;
-  mText.scale = size;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetTextColor(color_t color)
-{
-  mText.color = color;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetTextAlpha(float_t alpha)
-{
-  mText.alpha = alpha;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetTextFont(int16_t font)
-{
-  mText.style = font;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetTextSize(float_t size)
-{
-  mText.scale = size;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetFill(int16_t style, color_t color, float_t alpha)
-{
-  mFill.color = color;
-  mFill.style = style;
-  mFill.alpha = alpha;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetFillColor(color_t color)
-{
-  mFill.color = color;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetFillStyle(int16_t style)
-{
-  mFill.style = style;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetFillAlpha(float_t alpha)
-{
-  mFill.alpha = alpha;
-  return *GetThis();
-}
-
-template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetTransparent()
 {
-  mFill.style = 0;
+  this->mFill.style = 0;
   return *GetThis();
 }
 
 template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetNoBox()
 {
-  mFill.style = 0;
-  mBorder.scale = 0.f;
+  this->mFill.style = 0;
+  this->mBorder.scale = 0.f;
   return *GetThis();
 }
 
@@ -4281,21 +4207,10 @@ Plot::Pad::LegendEntry::LegendEntry(const ptree& legendEntryTree)
       }
     }
   }
-  read_from_tree(legendEntryTree, mFill.color, "fill_color");
-  read_from_tree(legendEntryTree, mFill.alpha, "fill_alpha");
-  read_from_tree(legendEntryTree, mFill.style, "fill_style");
-  read_from_tree(legendEntryTree, mLine.color, "line_color");
-  read_from_tree(legendEntryTree, mLine.alpha, "line_alpha");
-  read_from_tree(legendEntryTree, mLine.style, "line_style");
-  ReadWidthFromTree(legendEntryTree, mLine.scale, "line_width");
-  read_from_tree(legendEntryTree, mMarker.color, "marker_color");
-  read_from_tree(legendEntryTree, mMarker.alpha, "marker_alpha");
-  read_from_tree(legendEntryTree, mMarker.style, "marker_style");
-  read_from_tree(legendEntryTree, mMarker.scale, "marker_size");
-  read_from_tree(legendEntryTree, mText.color, "text_color");
-  read_from_tree(legendEntryTree, mText.alpha, "text_alpha");
-  read_from_tree(legendEntryTree, mText.style, "text_font");
-  read_from_tree(legendEntryTree, mText.scale, "text_size");
+  ReadFill(legendEntryTree);
+  ReadLine(legendEntryTree);
+  ReadMarker(legendEntryTree);
+  ReadText(legendEntryTree);
 }
 
 //**************************************************************************************************
@@ -4313,21 +4228,10 @@ ptree Plot::Pad::LegendEntry::GetPropertyTree() const
     legendEntryTree.put("position", (mPosition == position_t::top) ? "top" : ((mPosition == position_t::before) ? "before" : "after"));
     if (mPosition != position_t::top) legendEntryTree.put("position_data", mPositionDataID);
   }
-  put_in_tree(legendEntryTree, mFill.color, "fill_color");
-  put_in_tree(legendEntryTree, mFill.style, "fill_style");
-  put_in_tree(legendEntryTree, mFill.alpha, "fill_alpha");
-  put_in_tree(legendEntryTree, mLine.color, "line_color");
-  put_in_tree(legendEntryTree, mLine.alpha, "line_alpha");
-  put_in_tree(legendEntryTree, mLine.style, "line_style");
-  put_in_tree(legendEntryTree, mLine.scale, "line_width");
-  put_in_tree(legendEntryTree, mMarker.color, "marker_color");
-  put_in_tree(legendEntryTree, mMarker.alpha, "marker_alpha");
-  put_in_tree(legendEntryTree, mMarker.style, "marker_style");
-  put_in_tree(legendEntryTree, mMarker.scale, "marker_size");
-  put_in_tree(legendEntryTree, mText.color, "text_color");
-  put_in_tree(legendEntryTree, mText.alpha, "text_alpha");
-  put_in_tree(legendEntryTree, mText.style, "text_font");
-  put_in_tree(legendEntryTree, mText.scale, "text_size");
+  PutFill(legendEntryTree);
+  PutLine(legendEntryTree);
+  PutMarker(legendEntryTree);
+  PutText(legendEntryTree);
   return legendEntryTree;
 }
 
@@ -4342,21 +4246,10 @@ void Plot::Pad::LegendEntry::operator+=(
   if (legendEntry.mSymbolElements) this->mSymbolElements = legendEntry.mSymbolElements;
   if (legendEntry.mLabel) this->mLabel = legendEntry.mLabel;
   if (legendEntry.mRefDataID) this->mRefDataID = legendEntry.mRefDataID;
-  if (legendEntry.mMarker.color) this->mMarker.color = legendEntry.mMarker.color;
-  if (legendEntry.mMarker.alpha) this->mMarker.alpha = legendEntry.mMarker.alpha;
-  if (legendEntry.mMarker.scale) this->mMarker.scale = legendEntry.mMarker.scale;
-  if (legendEntry.mMarker.style) this->mMarker.style = legendEntry.mMarker.style;
-  if (legendEntry.mLine.color) this->mLine.color = legendEntry.mLine.color;
-  if (legendEntry.mLine.alpha) this->mLine.alpha = legendEntry.mLine.alpha;
-  if (legendEntry.mLine.scale) this->mLine.scale = legendEntry.mLine.scale;
-  if (legendEntry.mLine.style) this->mLine.style = legendEntry.mLine.style;
-  if (legendEntry.mFill.color) this->mFill.color = legendEntry.mFill.color;
-  if (legendEntry.mFill.alpha) this->mFill.alpha = legendEntry.mFill.alpha;
-  if (legendEntry.mFill.style) this->mFill.style = legendEntry.mFill.style;
-  if (legendEntry.mText.color) this->mText.color = legendEntry.mText.color;
-  if (legendEntry.mText.alpha) this->mText.alpha = legendEntry.mText.alpha;
-  if (legendEntry.mText.scale) this->mText.scale = legendEntry.mText.scale;
-  if (legendEntry.mText.style) this->mText.style = legendEntry.mText.style;
+  mMarker.Update(legendEntry.mMarker);
+  mLine.Update(legendEntry.mLine);
+  mFill.Update(legendEntry.mFill);
+  mText.Update(legendEntry.mText);
 }
 
 //**************************************************************************************************
@@ -4420,126 +4313,28 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetAlpha(float_t alpha)
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarker(int16_t style, float_t size, color_t color, float_t alpha)
-{
-  mMarker.color = color;
-  mMarker.alpha = alpha;
-  mMarker.style = style;
-  mMarker.scale = size;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarkerColor(color_t color)
-{
-  mMarker.color = color;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarkerAlpha(float_t alpha)
-{
-  mMarker.alpha = alpha;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarkerStyle(int16_t style)
-{
-  mMarker.style = style;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetMarkerSize(float_t size)
-{
-  mMarker.scale = size;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLine(int16_t style, float_t width, color_t color, float_t alpha)
-{
-  mLine.color = color;
-  mLine.alpha = alpha;
-  mLine.style = style;
-  mLine.scale = RoundWidth(width, "legend entry line width");
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLineColor(color_t color)
-{
-  mLine.color = color;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLineAlpha(float_t alpha)
-{
-  mLine.alpha = alpha;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLineStyle(int16_t style)
-{
-  mLine.style = style;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLineWidth(float_t width)
-{
-  mLine.scale = RoundWidth(width, "legend entry line width");
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFill(int16_t style, color_t color, float_t alpha)
-{
-  mFill.color = color;
-  mFill.alpha = alpha;
-  mFill.style = style;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFillColor(color_t color)
-{
-  mFill.color = color;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFillAlpha(float_t alpha)
-{
-  mFill.alpha = alpha;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetFillStyle(int16_t style)
-{
-  mFill.style = style;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetTextColor(color_t color)
-{
-  mText.color = color;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetTextAlpha(float_t alpha)
-{
-  mText.alpha = alpha;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetTextFont(int16_t font)
-{
-  mText.style = font;
-  return *this;
-}
-
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetTextSize(float_t size)
-{
-  mText.scale = size;
-  return *this;
-}
-
 //**************************************************************************************************
-// explicitly instantiate required box templates
+// explicitly instantiate required box and setter-group templates
 template class Plot::Pad::Box<Plot::Pad::TextBox>;
 template class Plot::Pad::Box<Plot::Pad::StatsBox>;
 template class Plot::Pad::Box<Plot::Pad::LegendBox>;
+template class MarkerSetters<Plot::Pad::Data>;
+template class MarkerSetters<Plot::Pad::LegendEntry>;
+template class LineSetters<Plot::Pad::Data>;
+template class LineSetters<Plot::Pad::LegendEntry>;
+template class FillSetters<Plot>;
+template class FillSetters<Plot::Pad>;
+template class FillSetters<Plot::Pad::Data>;
+template class FillSetters<Plot::Pad::LegendEntry>;
+template class FillSetters<Plot::Pad::TextBox>;
+template class FillSetters<Plot::Pad::StatsBox>;
+template class FillSetters<Plot::Pad::LegendBox>;
+template class TextSetters<Plot::Pad::LegendEntry>;
+template class TextSetters<Plot::Pad::TextBox>;
+template class TextSetters<Plot::Pad::StatsBox>;
+template class TextSetters<Plot::Pad::LegendBox>;
+template class BorderSetters<Plot::Pad::TextBox>;
+template class BorderSetters<Plot::Pad::StatsBox>;
+template class BorderSetters<Plot::Pad::LegendBox>;
 //**************************************************************************************************
 }  // end namespace SciRooPlot

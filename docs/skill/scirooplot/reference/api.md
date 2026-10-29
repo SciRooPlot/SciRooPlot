@@ -31,7 +31,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `void SetDataRootFile(const std::string& fileName)`
 
 ## Plot
-*plot[padID] gives the Pad (padID 0: defaults for all pads)*
+*plot[padID] gives the Pad (padID 0: defaults for all pads); also has the fill setters*
 
 - `Plot()`
 - `Plot(const std::string& name, const std::string& group = "", const std::optional<std::string>& basePlot = {})`
@@ -46,15 +46,10 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Plot& SetWidth(int32_t width)`
 - `Plot& SetHeight(int32_t height)`
 - `Plot& SetFixAspectRatio(bool fixAspectRatio = true)`
-- `Plot& SetFill(int16_t style, color_t color, float_t alpha = 1.f)`
-- `Plot& SetFillColor(color_t color)`
-- `Plot& SetFillStyle(int16_t style)`
-- `Plot& SetFillAlpha(float_t alpha)`
 - `Plot& SetTransparent()`
-- `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
 
 ## Plot::Pad
-*pad[axis] gives the Axis ('X', 'Y', 'Z'); pad(dataID) the Data (counting from 1)*
+*pad[axis] gives the Axis ('X', 'Y', 'Z'); pad(dataID) the Data (counting from 1); also has the fill setters*
 
 - `Pad()`
 - `Data& operator()(uint8_t dataID)`
@@ -120,10 +115,6 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles)`
 - `Pad& SetDefaultCandleBoxRange(float_t candleOption)`
 - `Pad& SetDefaultCandleWhiskerRange(float_t candleOption)`
-- `Pad& SetFill(int16_t style, color_t color, float_t alpha = 1.f)`
-- `Pad& SetFillColor(color_t color)`
-- `Pad& SetFillStyle(int16_t style)`
-- `Pad& SetFillAlpha(float_t alpha)`
 - `Pad& SetTransparent()`
 - `Pad& SetFrameFill(int16_t style, color_t color, float_t alpha = 1.f)`
 - `Pad& SetFrameFillColor(color_t color)`
@@ -177,7 +168,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
 
 ## Plot::Pad::Data
-*every setter returns the Data, so calls can be chained*
+*every setter returns the Data, so calls can be chained; also has the marker, line and fill setters*
 
 - `Data()`
 - `Data(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = {})`
@@ -206,20 +197,6 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& SetStatsBox(const StatsBox& statsBox)`
 - `Data& SetColor(color_t color)`
 - `Data& SetAlpha(float_t alpha)`
-- `Data& SetMarker(int16_t style, float_t size, color_t color, float_t alpha = 1.f)`
-- `Data& SetMarkerColor(color_t color)`
-- `Data& SetMarkerAlpha(float_t alpha)`
-- `Data& SetMarkerStyle(int16_t style)`
-- `Data& SetMarkerSize(float_t size)`
-- `Data& SetLine(int16_t style, float_t width, color_t color, float_t alpha = 1.f)`
-- `Data& SetLineColor(color_t color)`
-- `Data& SetLineAlpha(float_t alpha)`
-- `Data& SetLineStyle(int16_t style)`
-- `Data& SetLineWidth(float_t width)`
-- `Data& SetFill(int16_t style, color_t color, float_t alpha = 1.f)`
-- `Data& SetFillColor(color_t color)`
-- `Data& SetFillStyle(int16_t style)`
-- `Data& SetFillAlpha(float_t alpha)`
 - `Data& SetDefinesFrame()` — this data (drawn as usual) defines the axis frame; the last one in a pad wins
 - `Data& SetKeepInputStyle(bool keep = true)` — line, marker and fill stored with the input win over the defaults of the pad
 - `Data& SetContours(const std::vector<double>& contours)`
@@ -298,31 +275,16 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `join_tree_t`: `"tree"` (same data source) or `{"tree", "dataSource"}` (Python: list)
 
 ## Plot::Pad::Box<BoxType>
-*common to TextBox, LegendBox and StatsBox*
+*common to TextBox, LegendBox and StatsBox, which also have the border, text and fill setters*
 
 - `BoxType& SetPosition(double_t x, double_t y)`
 - `BoxType& SetSize(double_t width, double_t height)`
 - `BoxType& SetUserCoordinates(bool isUserCoord = true)`
 - `BoxType& SetAutoPlacement(box_placement_t placement = best_corner)`
-- `BoxType& SetBorder(int16_t style, float_t width, color_t color, float_t alpha = 1.f)`
-- `BoxType& SetBorderColor(color_t color)`
-- `BoxType& SetBorderAlpha(float_t alpha)`
-- `BoxType& SetBorderStyle(int16_t style)`
-- `BoxType& SetBorderWidth(float_t width)`
-- `BoxType& SetText(int16_t font, float_t size, color_t color, float_t alpha = 1.f)`
-- `BoxType& SetTextColor(color_t color)`
-- `BoxType& SetTextAlpha(float_t alpha)`
-- `BoxType& SetTextFont(int16_t font)`
-- `BoxType& SetTextSize(float_t size)`
-- `BoxType& SetFill(int16_t style, color_t color, float_t alpha = 1.f)`
-- `BoxType& SetFillColor(color_t color)`
-- `BoxType& SetFillStyle(int16_t style)`
-- `BoxType& SetFillAlpha(float_t alpha)`
 - `BoxType& SetTransparent()`
 - `BoxType& SetNoBox()`
 - `BoxType& SetMargin(float_t margin)`
 - `BoxType& SetLineSpacing(float_t lineSpacing)`
-- `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
 
 ## Plot::Pad::TextBox
 
@@ -364,7 +326,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
 
 ## Plot::Pad::LegendEntry
-*a legend row: the appearance of the row of a data item (Data::SetLegendEntry) or a row added with LegendBox::AddEntry*
+*a legend row: the appearance of the row of a data item (Data::SetLegendEntry) or a row added with LegendBox::AddEntry; also has the marker, line, fill and text setters*
 
 - `LegendEntry(const std::optional<std::string>& label = {}, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& symbolElements = {})`
 - `LegendEntry& SetLabel(const std::string& label)`
@@ -375,24 +337,55 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `LegendEntry& AfterData(uint16_t dataID)`
 - `LegendEntry& SetColor(color_t color)`
 - `LegendEntry& SetAlpha(float_t alpha)`
-- `LegendEntry& SetMarker(int16_t style, float_t size, color_t color, float_t alpha = 1.f)`
-- `LegendEntry& SetMarkerColor(color_t color)`
-- `LegendEntry& SetMarkerAlpha(float_t alpha)`
-- `LegendEntry& SetMarkerStyle(int16_t style)`
-- `LegendEntry& SetMarkerSize(float_t size)`
-- `LegendEntry& SetLine(int16_t style, float_t width, color_t color, float_t alpha = 1.f)`
-- `LegendEntry& SetLineColor(color_t color)`
-- `LegendEntry& SetLineAlpha(float_t alpha)`
-- `LegendEntry& SetLineStyle(int16_t style)`
-- `LegendEntry& SetLineWidth(float_t width)`
-- `LegendEntry& SetFill(int16_t style, color_t color, float_t alpha = 1.f)`
-- `LegendEntry& SetFillColor(color_t color)`
-- `LegendEntry& SetFillAlpha(float_t alpha)`
-- `LegendEntry& SetFillStyle(int16_t style)`
-- `LegendEntry& SetTextColor(color_t color)`
-- `LegendEntry& SetTextAlpha(float_t alpha)`
-- `LegendEntry& SetTextFont(int16_t font)`
-- `LegendEntry& SetTextSize(float_t size)`
+- `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
+
+## marker setters
+*Data, Ratio, LegendEntry; Derived is the class itself, so calls can be chained*
+
+- `Derived& SetMarker(int16_t style, float_t size, color_t color, float_t alpha = 1.f)`
+- `Derived& SetMarkerColor(color_t color)`
+- `Derived& SetMarkerAlpha(float_t alpha)`
+- `Derived& SetMarkerStyle(int16_t style)`
+- `Derived& SetMarkerSize(float_t size)`
+- `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
+
+## line setters
+*Data, Ratio, LegendEntry*
+
+- `Derived& SetLine(int16_t style, float_t width, color_t color, float_t alpha = 1.f)`
+- `Derived& SetLineColor(color_t color)`
+- `Derived& SetLineAlpha(float_t alpha)`
+- `Derived& SetLineStyle(int16_t style)`
+- `Derived& SetLineWidth(float_t width)`
+- `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
+
+## fill setters
+*Plot, Pad, Data, Ratio, LegendEntry, TextBox, LegendBox, StatsBox*
+
+- `Derived& SetFill(int16_t style, color_t color, float_t alpha = 1.f)`
+- `Derived& SetFillColor(color_t color)`
+- `Derived& SetFillStyle(int16_t style)`
+- `Derived& SetFillAlpha(float_t alpha)`
+- `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
+
+## text setters
+*LegendEntry, TextBox, LegendBox, StatsBox*
+
+- `Derived& SetText(int16_t font, float_t size, color_t color, float_t alpha = 1.f)`
+- `Derived& SetTextColor(color_t color)`
+- `Derived& SetTextAlpha(float_t alpha)`
+- `Derived& SetTextFont(int16_t font)`
+- `Derived& SetTextSize(float_t size)`
+- `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
+
+## border setters
+*TextBox, LegendBox, StatsBox*
+
+- `Derived& SetBorder(int16_t style, float_t width, color_t color, float_t alpha = 1.f)`
+- `Derived& SetBorderColor(color_t color)`
+- `Derived& SetBorderAlpha(float_t alpha)`
+- `Derived& SetBorderStyle(int16_t style)`
+- `Derived& SetBorderWidth(float_t width)`
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
 
 ## Panel
