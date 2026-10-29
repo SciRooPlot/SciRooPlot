@@ -319,7 +319,7 @@ html, body { overflow-x: clip }
 .lb-cols button { font: inherit; font-size: 0.9rem; line-height: 1; padding: 2px 5px; border: none; border-radius: 4px; background: none; color: var(--muted); cursor: pointer }
 .lb-cols button:hover:not(:disabled) { color: #c0392b; background: var(--panel) }
 .lb-cols button:disabled { opacity: 0.3; cursor: default }
-input.lb-pick { width: 26px; height: 22px; padding: 0; border: 1px solid var(--hairline); border-radius: 4px; background: none; cursor: pointer; flex: none }
+.lb-pick { display: inline-block; box-sizing: border-box; width: 26px; height: 22px; padding: 0; border: 1px solid var(--hairline); border-radius: 4px; background: none; cursor: pointer; flex: none }
 .hatch { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 10px; font-size: 0.85rem }
 .hatch select { font: inherit; background: var(--panel); color: var(--text); border: 1px solid var(--hairline); border-radius: 6px; padding: 2px 4px }
 .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; font-size: 0.875rem }
@@ -2589,6 +2589,14 @@ const layName = () => LAY.name.trim() || (LAY.custom ? "myLayout" : presetName()
 const colorOk = c => /^#[0-9a-fA-F]{6}$/.test(c) || !!colorOf(c);
 const colorLit = c => c.startsWith("#") ? `"${c.toLowerCase()}"` : c;  // a ROOT colour as it is, rgb as a string
 const colorHex = c => c.startsWith("#") ? c.toLowerCase() : (colorOf(c) || { hex: "#000000" }).hex;
+const CVD = { p: [0.152286, 1.052583, -0.204868, 0.114503, 0.786281, 0.099216, -0.003882, -0.048116, 1.051998],  // the matrices of the #cvd-* filters
+  d: [0.367322, 0.860646, -0.227968, 0.280085, 0.672501, 0.047413, -0.011820, 0.042940, 0.968881],
+  t: [1.255528, -0.076749, -0.178779, -0.078411, 0.930809, 0.147602, 0.004733, 0.691367, 0.303900] };
+const seenAs = (hex, k) => { if (!k) return hex;  // the colour as seen with deficiency k, computed: SVG filters on HTML do not work in every browser
+  const lin = [1, 3, 5].map(i => { const v = parseInt(hex.slice(i, i + 2), 16) / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }), m = CVD[k];
+  return "#" + [0, 1, 2].map(r => { const v = Math.min(1, Math.max(0, m[3 * r] * lin[0] + m[3 * r + 1] * lin[1] + m[3 * r + 2] * lin[2]));
+    return Math.round(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055)).toString(16).padStart(2, "0") }).join("") };
+const shownHex = c => seenAs(colorHex(c), LAY.cvd);
 const LINE_STYLES = [[1, "kSolid", "solid", ""], [2, "kDashed", "dashed", "6 4"], [3, "kDotted", "dotted", "1.5 3"]];
 
 /* ---- the code for the current design */
@@ -2697,16 +2705,17 @@ function layoutSVG(g, S, maxW, maxH) {
       const ty = p.ratio ? (ft + fb) / 2 : ft;
       out.push(`<text transform="translate(${T(yx)} ${T(ty)}) rotate(-90)" font-size="${T(S.title)}" ${font} fill="#000" text-anchor="${p.ratio ? "middle" : "end"}" dominant-baseline="central">${p.ratio ? "ratio" : "y title"}</text>`) }
     if (p.ratio && LAY.ref.on) { const dash = LINE_STYLES.find(x => x[0] === LAY.ref.style)[3], w = Math.max(0.6, S.lw * s);
-      out.push(`<path d="M${T(fl)} ${T(fb - fh / 2)}H${T(fr)}" stroke="${colorOk(LAY.ref.color) ? colorHex(LAY.ref.color) : "#000"}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash.split(" ").map(d => +(d * w).toFixed(2)).join(" ")}"` : ""}/>`) }
+      out.push(`<path d="M${T(fl)} ${T(fb - fh / 2)}H${T(fr)}" stroke="${colorOk(LAY.ref.color) ? shownHex(LAY.ref.color) : "#000"}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash.split(" ").map(d => +(d * w).toFixed(2)).join(" ")}"` : ""}/>`) }
     // a curve with markers and a legend in the first panel: line width and marker size
-    if (p.id === g.pads.find(q => !q.empty && !q.ratio)?.id && !p.z) { // the first two data in the first two colours of the list
-      const c1 = colorHex(LAY.colors[0]), c2 = colorHex(LAY.colors[1] || LAY.colors[0]);
-      const pts = [...Array(7)].map((_, i) => [fl + fw * (0.12 + i * 0.13), fb - fh * (0.18 + 0.55 * Math.exp(-i / 2.2))]);
-      out.push(`<path d="${pts.map((q, i) => `${i ? "L" : "M"}${T(q[0])} ${T(q[1])}`).join("")}" stroke="${c2}" stroke-width="${Math.max(0.5, S.lw * s)}" fill="none"/>`);
-      pts.forEach(q => out.push(`<circle cx="${T(q[0])}" cy="${T(q[1] + fh * 0.06)}" r="${Math.max(0.6, 4 * S.ms * s)}" fill="${c1}"/>`));
+    if (p.id === g.pads.find(q => !q.empty && !q.ratio)?.id && !p.z) { // data and up to four models in the first colours of the list
+      const col = LAY.colors.slice(0, 5).map(shownHex), lw = Math.max(0.5, S.lw * s), r = Math.max(0.6, 4 * S.ms * s);
+      const curve = tau => [...Array(7)].map((_, i) => [fl + fw * (0.12 + i * 0.13), fb - fh * (0.12 + 0.6 * Math.exp(-i / tau))]);
+      col.slice(1).forEach((c, j) => out.push(`<path d="${curve(1.4 + 0.7 * j).map((q, i) => `${i ? "L" : "M"}${T(q[0])} ${T(q[1])}`).join("")}" stroke="${c}" stroke-width="${lw}" fill="none"/>`));
+      curve(2.45).forEach(q => out.push(`<circle cx="${T(q[0])}" cy="${T(q[1])}" r="${r}" fill="${col[0]}"/>`));
       const lx = p.x0 + 0.5 * padW, ly = p.y0 + 0.12 * (p.y1 - p.y0);
-      out.push(`<circle cx="${T(lx + 0.6 * S.text)}" cy="${T(ly)}" r="${Math.max(0.6, 4 * S.ms * s)}" fill="${c1}"/>`, txt(lx + 1.6 * S.text, ly + 0.36 * S.text, S.text, "data"),
-        `<path d="M${T(lx)} ${T(ly + 1.3 * S.text)}h${T(1.2 * S.text)}" stroke="${c2}" stroke-width="${Math.max(0.5, S.lw * s)}"/>`, txt(lx + 1.6 * S.text, ly + 1.66 * S.text, S.text, "model")) }
+      out.push(`<circle cx="${T(lx + 0.6 * S.text)}" cy="${T(ly)}" r="${r}" fill="${col[0]}"/>`, txt(lx + 1.6 * S.text, ly + 0.36 * S.text, S.text, "data"));
+      col.slice(1).forEach((c, j) => { const y = ly + 1.3 * (j + 1) * S.text;
+        out.push(`<path d="M${T(lx)} ${T(y)}h${T(1.2 * S.text)}" stroke="${c}" stroke-width="${lw}"/>`, txt(lx + 1.6 * S.text, y + 0.36 * S.text, S.text, col.length > 2 ? `model ${j + 1}` : "model")) }) }
     if (p.z) { // colour scale: distance and width in pixels as set in PanelLayout (ROOT alone scales them with the pad width)
       const bx = fr + S.zOff, bw = S.zWidth;
       out.push(`<rect x="${T(bx)}" y="${T(ft)}" width="${T(bw)}" height="${T(fh)}" fill="url(#zgrad)"/>`);
@@ -2744,7 +2753,8 @@ function renderLayout() {
   if (!LAY.G) LAY.G = presetGrid();
   const G = LAY.G, S = LAY.S, g = panelGeometry(G, S);
   const more = (k, changed) => `data-more="${k}" ${LAY.open[k] ?? changed ? "open" : ""}`;  // a section stays as the reader left it, else it is open when changed
-  const cvd = LAY.cvd ? `filter:url(#cvd-${LAY.cvd})` : "";
+  const pick = (attr, c, label) => LAY.cvd ? `<span class="lb-pick" style="background:${shownHex(c)};cursor:default" title="${label} as seen: pick colours with “normal”"></span>`  // a picker shows the real colour only
+    : `<input type="color" class="lb-pick" ${attr} value="${colorHex(c)}" aria-label="pick ${label}">`;
   const opt = (k, v, label) => `<button class="chip" data-lay="${k}" data-val="${v}" aria-pressed="${!LAY.custom && String(LAY[k]) === String(v)}">${label}</button>`;
   const num = (attr, v, step, min, label) => `<input type="number" ${attr} value="${fmt(v)}" step="${step}" min="${min}" aria-label="${label}">`;
   const chk = (attr, on, label) => `<label class="lb-chk"><input type="checkbox" ${attr} ${on ? "checked" : ""}> ${label}</label>`;
@@ -2772,7 +2782,7 @@ function renderLayout() {
       </details>
       <details class="lb-more" ${more("colors", colorsChanged())}><summary>Colours of the data</summary>
         <p class="small muted">The <i>n</i>-th data in a pad gets the <i>n</i>-th colour, unless it sets one. Type a ROOT colour (<code>kRed + 1</code>, <code>632</code>) or <code>#rrggbb</code>, or pick one.</p>
-        <div class="lb-cols" id="lbcols" style="${cvd}">${LAY.colors.slice(0, LAY.allColors ? undefined : 12).map((c, i) => `<label><b>${i + 1}</b><input type="color" class="lb-pick" data-colpick="${i}" value="${colorHex(c)}" aria-label="pick colour ${i + 1}"><input type="text" data-colname="${i}" value="${c}" spellcheck="false" aria-label="colour ${i + 1}" class="${colorOk(c) ? "" : "bad"}"><button data-coldel="${i}" ${LAY.colors.length < 2 ? "disabled" : ""} aria-label="remove colour ${i + 1}" title="remove this colour">×</button></label>`).join("")}</div>
+        <div class="lb-cols" id="lbcols">${LAY.colors.slice(0, LAY.allColors ? undefined : 12).map((c, i) => `<label><b>${i + 1}</b>${pick(`data-colpick="${i}"`, c, `colour ${i + 1}`)}<input type="text" data-colname="${i}" value="${c}" spellcheck="false" aria-label="colour ${i + 1}" class="${colorOk(c) ? "" : "bad"}"><button data-coldel="${i}" ${LAY.colors.length < 2 ? "disabled" : ""} aria-label="remove colour ${i + 1}" title="remove this colour">×</button></label>`).join("")}</div>
         <div class="lb-line">${LAY.colors.length > 12 ? `<button class="chip" data-colop="all">${LAY.allColors ? "only the first 12" : `all ${LAY.colors.length}`}</button>` : ""}<button class="chip" data-colop="add">+ colour</button><button class="chip" data-colop="reset" ${colorsChanged() ? "" : "disabled"}>Back to the defaults</button></div>
         <div class="lb-line"><span class="lb-l">Seen as</span><span class="seg" role="group" aria-label="Show the colours as seen with colour vision deficiency">${[["", "normal"], ["p", "red-blind"], ["d", "green-blind"], ["t", "blue-blind"]].map(([k, t]) => `<button data-lcvd="${k}" aria-pressed="${LAY.cvd === k}">${t}</button>`).join("")}</span></div>
         <p class="small muted">About 8 % of men have a red-green colour vision deficiency: check that neighbouring colours remain distinguishable.</p>
@@ -2787,7 +2797,7 @@ function renderLayout() {
     </div>
     <div class="lb-out">
       <div class="lb-name"><code>"${layName()}"</code>${info}</div>
-      ${g.error ? "" : `<div style="${cvd}">${layoutSVG(g, S, 460, 420)}</div>`}
+      ${g.error ? "" : layoutSVG(g, S, 460, 420)}
       ${cellTools(g)}
       ${g.warnings && g.warnings.length ? `<p class="lb-err">${g.warnings.join(" ")}</p>` : ""}
       ${LAY.custom ? "" : `<div class="filters"><button class="chip" data-full="false" aria-pressed="${!LAY.full}">Short</button><button class="chip" data-full="true" aria-pressed="${LAY.full}">Written out as PanelLayout</button></div>`}
