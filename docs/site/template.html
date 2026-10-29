@@ -1834,11 +1834,13 @@ pm.AddColorOverview("colors", "overview");                    // plot overview c
 plot[1].AddData("h", "src", "<name> <selection>")          # tells apart requests differing in the filter
 plot[1].AddData("h", "src").SetShowStats("eMR", "my histogram")   # letters as in TStyle::SetOptStat
 plot[1].AddData("h2", "src").SetShowStats("e").SetStatsBox(StatsBox().SetAutoPlacement(top_left))
-plot[1].AddData("h", "src").SetDrawOption(points_text).SetTextFormat("4.1f")   # values written above`, cpp: `plot[1].AddData("h", "src", "data, mean = <mean[.2f]> GeV");
+plot[1].AddData("h", "src").SetDrawOption(points_text).SetTextFormat("4.1f")   # values written above
+plot[1].AddData("h2", "src").SetDrawOption(text).SetTextAngle(45.0)            # tilted values, 0 to 90 degrees`, cpp: `plot[1].AddData("h", "src", "data, mean = <mean[.2f]> GeV");
 plot[1].AddData("h", "src", "<name> <selection>");         // tells apart requests differing in the filter
 plot[1].AddData("h", "src").SetShowStats("eMR", "my histogram");  // letters as in TStyle::SetOptStat
 plot[1].AddData("h2", "src").SetShowStats("e").SetStatsBox(StatsBox().SetAutoPlacement(top_left));
-plot[1].AddData("h", "src").SetDrawOption(points_text).SetTextFormat("4.1f");  // values written above` },
+plot[1].AddData("h", "src").SetDrawOption(points_text).SetTextFormat("4.1f");  // values written above
+plot[1].AddData("h2", "src").SetDrawOption(text).SetTextAngle(45.0);           // tilted values, 0 to 90 degrees` },
   modifiers: { py: `plot[1].AddData("h", "src").RebinX(2).Normalize()
 plot[1].AddData("h", "src").Density()                       # counts → probability density
 plot[1].AddData("h", "src").Normalize(False, 0.6, 0.9)      # integral taken only in that range
@@ -1863,6 +1865,7 @@ plot[1]['X'].SetTitle("#it{x}").SetRange(1.4, 2.8).SetLog().SetGrid().SetNumDivi
 plot[1]['Y'].SetMaxDigits(3).SetNoExponent().SetTitleOffset(1.1).SetTitleCenter()
 plot[1]['Z'].SetLog()
 plot[1]['X'].SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")
+plot[1]['X'].SetLabelAngle(45.0)                      # tilted bin labels (alphanumeric, x axis), degrees
 plot[1].SetView(35.0, 225.0)                          # 3D drawings: theta above the x-y plane, phi around z, degrees
 variant = Plot(plot, "name_variant", "group/other")   # a copy under a new name (and group), to add more to it`, cpp: `Plot plot("name", "group/sub", "1d_ratio");
 plot.SetDimensions(710, 710).SetTransparent().AppendGroup("QA");
@@ -1873,6 +1876,7 @@ plot[1]['X'].SetTitle("#it{x}").SetRange(1.4, 2.8).SetLog().SetGrid().SetNumDivi
 plot[1]['Y'].SetMaxDigits(3).SetNoExponent().SetTitleOffset(1.1).SetTitleCenter();
 plot[1]['Z'].SetLog();
 plot[1]['X'].SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M");
+plot[1]['X'].SetLabelAngle(45.0);                     // tilted bin labels (alphanumeric, x axis), degrees
 plot[1].SetView(35.0, 225.0);                         // 3D drawings: theta above the x-y plane, phi around z, degrees
 Plot variant(plot, "name_variant", "group/other");    // a copy under a new name (and group), to add more to it` },
   baseplots: { py: `# start from a shipped one; every plot on "2d_logz" gets a log colour scale

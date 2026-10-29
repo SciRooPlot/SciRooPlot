@@ -2107,6 +2107,7 @@
         [#names("SetTitleFont(font)", "SetLabelFont(font)", "SetTitleSize(size)", "SetLabelSize(size)")], [Title/label font and size.],
         [#names("SetTitleColor(color)", "SetLabelColor(color)", "SetTitleAlpha(alpha)", "SetLabelAlpha(alpha)")], [Title/label colour and transparency.],
         [#names("SetTitleOffset(offset)", "SetLabelOffset(offset)")], [Title/label offset from the axis.],
+        [`SetLabelAngle(angle)`], [Tilt the bin labels of an x axis (degrees).],
         [#names("SetTitleCenter(center = true)", "SetLabelCenter(center = true)")], [Center the title or labels.],
         [#names("SetOppositeTicks(isOppositeTicks = true)", "SetNoExponent(isNoExponent = true)", "SetTickOrientation(mode)")], [Ticks on both sides, disable exponent notation, or set tick orientation (e.g. `"+-"`).],
         [`SetTimeFormat(fmt)`], [ROOT time-axis format string.],
@@ -2145,6 +2146,7 @@
         [`SetLegendEntry(entry)`], [Appearance of the data's legend row, e.g. `LegendEntry().SetSymbolElements("F")`.],
         [#names("SetDrawOption(option) / SetDrawOption(alias)", "SetDrawOption()")], [Set a ROOT draw-option string or one of the #link(<appx-drawing-options>)[#text(fill: main-color)[predefined aliases]], or remove it.],
         [`SetTextFormat(fmt)`], [Number format of bin contents drawn with the `TEXT` option, e.g. `".0f"`.],
+        [`SetTextAngle(angle)`], [Angle of those values, 0 to 90 degrees.],
       ), text-size: 12pt)
     ],
     [

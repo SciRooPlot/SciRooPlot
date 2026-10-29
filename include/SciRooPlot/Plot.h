@@ -755,6 +755,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   Data& SetDrawOption(draw_option_t optionAlias);
   Data& SetDrawOption();
   Data& SetTextFormat(const std::string& textFormat);
+  Data& SetTextAngle(float_t angle);  // degrees, of the values written by text and points_text (ROOT: 0 to 90)
   // statistics box of a histogram: the letters of TStyle::SetOptStat (without 'n'), the title (if given) is its first line
   Data& SetShowStats(const std::string& format = "emr", const std::optional<std::string>& title = {});
   Data& SetStatsBox(const StatsBox& statsBox);
@@ -861,6 +862,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   const auto& GetDrawOption() const { return mDrawOption; }
   const auto& GetDrawOptionAlias() const { return mDrawOptionAlias; }
   const auto& GetTextFormat() const { return mTextFormat; }
+  const auto& GetTextAngle() const { return mTextAngle; }
   const auto& GetStatsFormat() const { return mStats.format; }
   const auto& GetStatsTitle() const { return mStats.title; }
   const auto& GetStatsBox() const { return mStats.box; }
@@ -979,6 +981,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   std::optional<std::string> mDrawOption;
   std::optional<draw_option_t> mDrawOptionAlias;
   std::optional<std::string> mTextFormat;
+  std::optional<float_t> mTextAngle;
 
   struct stats_t {
     std::optional<std::string> format;
@@ -1057,6 +1060,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(SetLegendEntry)
   FORWARD_TO_DATA(SetDrawOption)
   FORWARD_TO_DATA(SetTextFormat)
+  FORWARD_TO_DATA(SetTextAngle)
   FORWARD_TO_DATA(SetShowStats)
   FORWARD_TO_DATA(SetStatsBox)
   FORWARD_TO_DATA(SetColor)
@@ -1212,6 +1216,7 @@ class Plot::Pad::Axis
   Axis& SetLabelAlpha(float_t alpha);
   Axis& SetTitleOffset(float_t offset);
   Axis& SetLabelOffset(float_t offset);
+  Axis& SetLabelAngle(float_t angle);  // degrees, counter-clockwise: alphanumeric bin labels of an x axis (ROOT tilts no other labels)
   Axis& SetTitleCenter(bool center = true);
   Axis& SetLabelCenter(bool center = true);
   Axis& SetLog(bool isLog = true);
@@ -1255,6 +1260,7 @@ class Plot::Pad::Axis
   const auto& GetLabelAlpha() const { return mLabelLayout.alpha; }
   const auto& GetTitleOffset() const { return mTitleLayout.offset; }
   const auto& GetLabelOffset() const { return mLabelLayout.offset; }
+  const auto& GetLabelAngle() const { return mLabelLayout.angle; }
   const auto& GetTitleCenter() const { return mTitleLayout.center; }
   const auto& GetLabelCenter() const { return mLabelLayout.center; }
   const auto& GetLog() const { return mAxisFrame.isLog; }
@@ -1271,6 +1277,7 @@ class Plot::Pad::Axis
   struct axis_layout_t : layout_t {
     std::optional<float_t> offset;
     std::optional<bool> center;
+    std::optional<float_t> angle;
   };
   struct axis_range_t {
     std::optional<double_t> min;

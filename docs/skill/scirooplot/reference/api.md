@@ -162,6 +162,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Axis& SetLabelAlpha(float_t alpha)`
 - `Axis& SetTitleOffset(float_t offset)`
 - `Axis& SetLabelOffset(float_t offset)`
+- `Axis& SetLabelAngle(float_t angle)` — degrees, counter-clockwise: alphanumeric bin labels of an x axis (ROOT tilts no other labels)
 - `Axis& SetTitleCenter(bool center = true)`
 - `Axis& SetLabelCenter(bool center = true)`
 - `Axis& SetLog(bool isLog = true)`
@@ -201,6 +202,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& SetDrawOption(draw_option_t optionAlias)`
 - `Data& SetDrawOption()`
 - `Data& SetTextFormat(const std::string& textFormat)`
+- `Data& SetTextAngle(float_t angle)` — degrees, of the values written by text and points_text (ROOT: 0 to 90)
 - `Data& SetShowStats(const std::string& format = "emr", const std::optional<std::string>& title = {})`
 - `Data& SetStatsBox(const StatsBox& statsBox)`
 - `Data& SetColor(color_t color)`

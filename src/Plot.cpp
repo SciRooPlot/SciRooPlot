@@ -2005,6 +2005,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mDrawOption, "draw_option");
   ReadDrawOption(dataTree, mDrawOptionAlias, "draw_option_alias");
   read_from_tree(dataTree, mTextFormat, "text_format");
+  read_from_tree(dataTree, mTextAngle, "text_angle");
   read_from_tree(dataTree, mStats.format, "stats_format");
   read_from_tree(dataTree, mStats.title, "stats_title");
   if (const auto statsBoxTree = dataTree.get_child_optional("stats_box")) mStats.box = std::make_shared<const StatsBox>(*statsBoxTree);
@@ -2151,6 +2152,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mDrawOption, "draw_option");
   PutDrawOption(dataTree, mDrawOptionAlias, "draw_option_alias");
   put_in_tree(dataTree, mTextFormat, "text_format");
+  put_in_tree(dataTree, mTextAngle, "text_angle");
   put_in_tree(dataTree, mStats.format, "stats_format");
   put_in_tree(dataTree, mStats.title, "stats_title");
   if (mStats.box) dataTree.put_child("stats_box", mStats.box->GetPropertyTree());
@@ -2224,6 +2226,7 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
   mKeepInputStyle = dataLayout.mKeepInputStyle;
   mDrawOptionAlias = dataLayout.mDrawOptionAlias;
   mTextFormat = dataLayout.mTextFormat;
+  mTextAngle = dataLayout.mTextAngle;
   mLegend.entry = dataLayout.mLegend.entry;
   mRangeX.min = dataLayout.mRangeX.min;
   mRangeX.max = dataLayout.mRangeX.max;
@@ -2247,6 +2250,7 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   }
   if (dataLayout.mKeepInputStyle) mKeepInputStyle = true;
   set_if(dataLayout.mTextFormat, mTextFormat);
+  set_if(dataLayout.mTextAngle, mTextAngle);
   set_if(dataLayout.mLegend.entry, mLegend.entry);
   set_if(dataLayout.mRangeX.min, mRangeX.min);
   set_if(dataLayout.mRangeX.max, mRangeX.max);
@@ -2315,6 +2319,11 @@ auto Plot::Pad::Data::SetDrawOption() -> decltype(*this)
 auto Plot::Pad::Data::SetTextFormat(const string& textFormat) -> decltype(*this)
 {
   mTextFormat = textFormat;
+  return *this;
+}
+auto Plot::Pad::Data::SetTextAngle(float_t angle) -> decltype(*this)
+{
+  mTextAngle = angle;
   return *this;
 }
 auto Plot::Pad::Data::SetShowStats(const string& format, const optional<string>& title) -> decltype(*this)
@@ -3427,6 +3436,7 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
   read_from_tree(axisTree, mLabelLayout.alpha, "label_alpha");
   read_from_tree(axisTree, mLabelLayout.offset, "label_offset");
   read_from_tree(axisTree, mLabelLayout.center, "label_center");
+  read_from_tree(axisTree, mLabelLayout.angle, "label_angle");
   read_from_tree(axisTree, mAxisFrame.isLog, "is_log");
   read_from_tree(axisTree, mAxisFrame.isGrid, "is_grid");
   read_from_tree(axisTree, mAxisFrame.isOppositeTicks, "is_opposite_ticks");
@@ -3469,6 +3479,7 @@ ptree Plot::Pad::Axis::GetPropertyTree() const
   put_in_tree(axisTree, mLabelLayout.alpha, "label_alpha");
   put_in_tree(axisTree, mLabelLayout.offset, "label_offset");
   put_in_tree(axisTree, mLabelLayout.center, "label_center");
+  put_in_tree(axisTree, mLabelLayout.angle, "label_angle");
   put_in_tree(axisTree, mAxisFrame.isLog, "is_log");
   put_in_tree(axisTree, mAxisFrame.isGrid, "is_grid");
   put_in_tree(axisTree, mAxisFrame.isOppositeTicks, "is_opposite_ticks");
@@ -3513,6 +3524,7 @@ void Plot::Pad::Axis::operator+=(const Axis& axis)
   mLabelLayout.Update(axis.mLabelLayout);
   if (axis.mLabelLayout.offset) mLabelLayout.offset = axis.mLabelLayout.offset;
   if (axis.mLabelLayout.center) mLabelLayout.center = axis.mLabelLayout.center;
+  if (axis.mLabelLayout.angle) mLabelLayout.angle = axis.mLabelLayout.angle;
   if (axis.mAxisFrame.timeFormat) mAxisFrame.timeFormat = axis.mAxisFrame.timeFormat;
   if (axis.mAxisFrame.tickOrientation) mAxisFrame.tickOrientation = axis.mAxisFrame.tickOrientation;
 }
@@ -3641,6 +3653,11 @@ auto Plot::Pad::Axis::SetTitleOffset(float_t offset) -> decltype(*this)
 auto Plot::Pad::Axis::SetLabelOffset(float_t offset) -> decltype(*this)
 {
   mLabelLayout.offset = offset;
+  return *this;
+}
+auto Plot::Pad::Axis::SetLabelAngle(float_t angle) -> decltype(*this)
+{
+  mLabelLayout.angle = angle;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleCenter(bool center) -> decltype(*this)

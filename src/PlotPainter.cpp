@@ -664,6 +664,22 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }
 
+        // the angle of the values written by TEXT (Data::SetTextAngle) is part of ROOT's option: TEXTnn, whole degrees from 0 to 90
+        // (an angle given in the option string itself is kept); points_text writes its values itself, in the same range
+        if (const auto& textAngle = data->GetTextAngle()) {
+          if (dataIndex != 0 && (*textAngle < 0.f || *textAngle > 90.f)) logger::warning("The text angle {} of {} is outside of the 0 to 90 degrees ROOT writes values at: it is drawn at the nearest end.", *textAngle, data->GetName());
+          if (alias != points_text) {
+            TString upper(drawOption);
+            upper.ToUpper();
+            const Ssiz_t pos = upper.Index("TEXT");
+            if (pos == kNPOS) {
+              if (dataIndex != 0) logger::warning("The text angle of {} has no effect: it is drawn without values (drawing option text or points_text).", data->GetName());
+            } else if (pos + 4 == upper.Length() || !std::isdigit(static_cast<unsigned char>(upper[pos + 4]))) {
+              drawOption.insert(static_cast<size_t>(pos) + 4, std::to_string(std::lround(std::clamp(*textAngle, 0.f, 90.f))));
+            }
+          }
+        }
+
         // a 2d histogram drawn as a map: ROOT's projection options select CONT4, which paints in projected coordinates, so data and frame
         // fit together only when they cover the same range (data drawn SAME is projected over its own range into the frame of the first)
         bool projected{};
@@ -912,6 +928,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             auto textSizeLabel = textSize;
             auto textColorLabel = textColor;
             auto textAlphaLabel = textAlpha;
+            optional<float_t> labelAngle;
 
             optional<double_t> userRangeMin;
             optional<double_t> userRangeMax;
@@ -933,6 +950,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
                 if (axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
                 if (axisLayout.GetLabelSize()) textSizeLabel = axisLayout.GetLabelSize();
+                if (axisLayout.GetLabelAngle()) labelAngle = axisLayout.GetLabelAngle();
 
                 if (axisLayout.GetTitleCenter()) axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
                 if (axisLayout.GetLabelCenter()) axis_ptr->CenterLabels(*axisLayout.GetLabelCenter());
@@ -1096,6 +1114,31 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
             if (textColorLabel) axis_ptr->SetLabelColor(textColorLabel->ToIndex());
             if (textAlphaLabel) axis_ptr->SetLabelColor(TColor::GetColorTransparent(axis_ptr->GetLabelColor(), *textAlphaLabel));
+            if (labelAngle) {
+              // with horizontal bars the x axis is drawn vertically, and TGaxis paints its bin labels horizontally (angle 0, as on a y axis)
+              const bool horizontalBars = TString(drawOption).Contains("HBAR", TString::kIgnoreCase);
+              if (axisLabel == 'X' && axis_ptr->GetLabels() && !horizontalBars) {
+                // TGaxis::PaintAxis knows four orientations of the bin labels (the bits LabelsOption sets), each with the alignment that fits
+                // it; another angle is given to every label (ChangeLabel numbers them by bin, takes only angles >= 0) with the alignment
+                // ROOT uses for its tilted ones: a label rising to the right ends at its tick, a falling one starts there
+                const float_t angle = *labelAngle;
+                const std::array<std::pair<float_t, TAxis::EStatusBits>, 4> orientations{
+                  {{0.f, TAxis::kLabelsHori}, {90.f, TAxis::kLabelsVert}, {20.f, TAxis::kLabelsUp}, {-20.f, TAxis::kLabelsDown}}};
+                bool fixed{};
+                for (const auto& [fixedAngle, bit] : orientations) {
+                  axis_ptr->SetBit(bit, angle == fixedAngle);
+                  fixed = fixed || angle == fixedAngle;
+                }
+                if (!fixed) {
+                  const float_t positive = std::fmod(std::fmod(angle, 360.f) + 360.f, 360.f);
+                  for (int32_t bin = 1; bin <= axis_ptr->GetNbins(); ++bin) {
+                    axis_ptr->ChangeLabel(bin, positive, -1., (positive < 180.f) ? 32 : 12);
+                  }
+                }
+              } else {
+                logger::warning("The label angle of the {} axis of pad {} is not applied: ROOT tilts only the bin labels of an x axis drawn horizontally.", axisLabel, padID);
+              }
+            }
             // ROOT places a y title with offset 0 automatically next to the widest label, but the gap it leaves is the title size
             // read as a fraction of the pad width (see TGaxis::PaintAxis), i.e. it grows for pads that are wider than high.
             // With a pixel font the gap is the title height in every pad, so relative fonts are converted for the automatic placement.
@@ -1571,7 +1614,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (alias == points_text) {
             // the values are written above the error bars (ROOT draws the bin contents of a histogram only when its errors are not drawn)
             TLatex label;
-            label.SetTextAlign(21);
+            // tilted as the values ROOT writes with TEXTnn (THistPainter::PaintText): from the point upwards, centred above it when upright
+            const float_t textAngle = std::clamp(data->GetTextAngle().value_or(0.f), 0.f, 90.f);
+            label.SetTextAngle(textAngle);
+            label.SetTextAlign((textAngle == 0.f) ? 21 : ((textAngle == 90.f) ? 12 : 11));
             label.SetTextColor(data_ptr->GetMarkerColor());
             if (textFont) label.SetTextFont(*textFont);
             if (textSize) label.SetTextSize(*textSize);
