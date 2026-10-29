@@ -2225,7 +2225,7 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
   // positions as given (axis values or fractions of the pad), points as the user's language writes a pair
   auto nx = [&](double_t x) { return number((id->isUserCoord) ? x : fraction(x, true), id->isUserCoord); };
   auto ny = [&](double_t y) { return number((id->isUserCoord) ? y : fraction(y, false), id->isUserCoord); };
-  auto point = [&](double_t x, double_t y) { return fmt::format((isPython) ? "({}, {})" : "{{{}, {}}}", nx(x), ny(y)); };
+  auto point = [&](double_t x, double_t y) { return (isPython) ? "(" + nx(x) + ", " + ny(y) + ")" : "{" + nx(x) + ", " + ny(y) + "}"; };
   string position;
   if (auto* drawnLine = dynamic_cast<TLine*>(selected)) {  // also arrows
     if (id->kind == kind_t::vertical_line) {
