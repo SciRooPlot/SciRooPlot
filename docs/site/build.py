@@ -66,6 +66,11 @@ for line in open(f"{REPO}/docs/skill/scirooplot/reference/api.md"):
         n = re.search(r"(operator\(\)|operator\[\]|~?\b[A-Za-z_]\w*)\s*\(", sig)
         name = n.group(1) if n else sig.split(":")[0]
         cur["items"].append({"name": name, "sig": sig, "note": note})
+# a class without a label in CLASS_LABEL of the template stops the script of the page, and with it everything it renders
+labels = re.findall(r'"([^"]+)":', re.search(r"const CLASS_LABEL = \{(.*?)\};", s, re.S).group(1))
+missing = [c["cls"] for c in api if c["cls"] not in labels]
+if missing:
+    sys.exit(f"CLASS_LABEL in {SITE}/template.html has no label for: {', '.join(missing)}")
 s = s.replace("/*API*/", json.dumps(api))
 def inline(t):  # markdown inline → html: `code`, **bold**, *italic*
     t = _html.escape(t.replace("\\|", "|"), quote=False)

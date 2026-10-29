@@ -1995,7 +1995,9 @@ for (std::string cent : {"0-10", "10-30", "30-50"}) {  // a family: plot heavyio
 /* every method: API = [{cls, desc, items: [{name, sig, note}]}], generated from reference/api.md */
 const CLASS_LABEL = { "PlotManager": "PlotManager", "Plot": "Plot", "Plot::Pad": "Pad", "Plot::Pad::Axis": "Axis", "Plot::Pad::Data": "Data",
   "Plot::Pad::Ratio": "Ratio", "Plot::Pad::Box<BoxType>": "Boxes (legends, texts, stats)", "Plot::Pad::TextBox": "TextBox", "Plot::Pad::StatsBox": "StatsBox",
-  "Plot::Pad::LegendBox": "LegendBox", "Plot::Pad::LegendEntry": "LegendEntry", "Panel": "Panel", "PanelLayout": "PanelLayout", "BasePlotShape": "BasePlotShape", "Enumerations": "Enumerations" };
+  "Plot::Pad::LegendBox": "LegendBox", "Plot::Pad::Shape": "Shape", "Plot::Pad::LegendEntry": "LegendEntry",
+  "marker setters": "Marker setters", "line setters": "Line setters", "fill setters": "Fill setters", "text setters": "Text setters",
+  "border setters": "Border setters", "Panel": "Panel", "PanelLayout": "PanelLayout", "BasePlotShape": "BasePlotShape", "Enumerations": "Enumerations" };
 const clsId = c => "api-" + CLASS_LABEL[c].split(" ")[0].toLowerCase();
 const METHODS = {};   // name -> [{cls, sig, note}]
 API.forEach(c => c.items.forEach(m => (METHODS[m.name] = METHODS[m.name] || []).push({ cls: c.cls, sig: m.sig, note: m.note })));
