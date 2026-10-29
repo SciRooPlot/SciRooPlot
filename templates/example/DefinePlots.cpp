@@ -185,6 +185,10 @@ void DefineBasePlots(PlotManager& pm)
   Plot worldMap = PlotManager::MakeBasePlot("2d_wide", PanelLayout().SetMargins(32.0, 32.0, 32.0, 32.0), BasePlotShape().SetAspectRatio(2.0));
   worldMap.SetName("2d_map");
   pm.AddBasePlot(worldMap);
+  // the same proportions with the margins of the shipped base plots, for a map with longitude and latitude as its axes
+  Plot lonLatMap = PlotManager::MakeBasePlot("2d_wide", PanelLayout(), BasePlotShape().SetAspectRatio(2.0));
+  lonLatMap.SetName("2d_lonlat");
+  pm.AddBasePlot(lonLatMap);
 }
 
 //****************************************************************************************
@@ -1738,15 +1742,36 @@ void DefineOtherSciencePlots(PlotManager& pm)
     plot[1]['Z'].SetRange(-3.0, 3.0).SetTitle("anomaly to 1960-1970 (K)");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
+  // anomalies on a diverging scale: blue below, white at zero, red above (a gradient of rgb colours and positions on the scale)
+  const vector<std::pair<color_t, float_t>> anomalyColors = {{"#2166ac", 0.0}, {"#67a9cf", 0.3}, {"#f7f7f7", 0.5}, {"#ef8a62", 0.7}, {"#b2182b", 0.85}, {"#67001f", 1.0}};
   {  // the warming of the last decade on a world map: a 2d histogram in degrees drawn with ROOT's Mollweide projection (equal area),
-    // Z adds the colour scale; the axes would show the frame in degrees, right only along the equator and the central meridian
+    // Z adds the colour scale; the axes would show the projected coordinates, which are not longitude and latitude inside the map
     Plot plot("warmingMap", "climate", "2d_map");
     plot[1].AddData("warmingMap", "climate").SetDrawOption("MOLLWEIDE Z");
-    plot[1].SetPalette(kTemperatureMap);
+    plot[1].SetPalette(anomalyColors, {}, 60);
     plot[1].AddText(0.03, 0.95, "2015-2024");  // in the corner beside the map
     // no axes: without ticks and in white, as ROOT draws transparent lines opaque in png
     plot[1]['X'].SetTitle("").SetLabelSize(0.0).SetTickLength(0.0).SetAxisColor(kWhite);
     plot[1]['Y'].SetTitle("").SetLabelSize(0.0).SetTickLength(0.0).SetAxisColor(kWhite);
+    plot[1]['Z'].SetRange(-3.0, 3.0);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the same map unprojected: drawn as a plain colour map, longitude and latitude are the axes
+    Plot plot("warmingMapLonLat", "climate", "2d_lonlat");
+    plot[1].AddData("warmingMap", "climate").SetDrawOption(colz);
+    plot[1].SetPalette(anomalyColors, {}, 60);
+    plot[1]['X'].SetNumDivisions(-6);  // every 60 degrees (negative: exactly these divisions)
+    plot[1]['Y'].SetNumDivisions(-6);  // every 30 degrees
+    plot[1]['Z'].SetRange(-3.0, 3.0);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the Arctic, where the warming is strongest: a range on the pad cuts the projection to a part of the sphere
+    Plot plot("arcticWarming", "climate", "2d_map");
+    plot[1].AddData("warmingMap", "climate").SetDrawOption("MOLLWEIDE Z");
+    plot[1].SetPalette(anomalyColors, {}, 60);
+    plot[1].AddText(0.03, 0.95, "north of 45#circ, 2015-2024");
+    plot[1]['X'].SetTitle("").SetLabelSize(0.0).SetTickLength(0.0).SetAxisColor(kWhite);
+    plot[1]['Y'].SetTitle("").SetLabelSize(0.0).SetTickLength(0.0).SetAxisColor(kWhite).SetRange(45.0, 90.0);
     plot[1]['Z'].SetRange(-3.0, 3.0);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
