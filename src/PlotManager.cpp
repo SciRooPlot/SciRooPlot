@@ -2159,7 +2159,7 @@ optional<size_t> PlotManager::NextBrowseIndex(size_t index, bool forward) const
 /**
  * The line a double-click in show mode prints for a legend, text, statistics box or shape: what was clicked, named as the user
  * added it ("Pad 1, arrow 3": the nth of its kind in the pad), in yellow, and its
- * position in green, written as the arguments of the call that sets it (AddText(x, y, ...), AddArrow(pos1, pos2), ...) in the
+ * position in green, written in brackets as the arguments of the call that sets it (AddText(x, y, ...), AddArrow(pos1, pos2), ...) in the
  * language of the project's program and in the coordinates the user gave, so that it can be copied into the code.
  * Nothing for other objects (a click there browses).
  */
@@ -2193,7 +2193,7 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
     return fmt::format(" \"{}{}\"", first, (more) ? "…" : "");
   };
   auto line = [&](const string& what, const string& position) {
-    return fmt::format("{}{}{}{}: {}{}{}", logger::begin_color(logger::Color::Yellow), padLabel, what, logger::end_color(), logger::begin_color(logger::Color::Green), position, logger::end_color());
+    return fmt::format("{}{}{}{}: {}({}){}", logger::begin_color(logger::Color::Yellow), padLabel, what, logger::end_color(), logger::begin_color(logger::Color::Green), position, logger::end_color());
   };
 
   if (auto* box = dynamic_cast<TPave*>(selected)) {
