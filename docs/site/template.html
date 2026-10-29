@@ -311,11 +311,14 @@ html, body { overflow-x: clip }
 @media (max-width: 760px) { .palout { grid-template-columns: minmax(0, 1fr) } }
 #palmap { width: 100%; height: auto; background: #fff; border: 1px solid var(--hairline); border-radius: 8px }
 .cvd { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 0.85rem }
-.lb-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; margin: 8px 0 }
+.lb-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 4px 12px; margin: 8px 0 }
 .lb-cols label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem }
 .lb-cols b { color: var(--muted); min-width: 1.4em; text-align: right; font-weight: 700 }
 .lb-cols input[type=text], .lb-ref input[type=text] { font: inherit; font-family: var(--mono); font-size: 0.78rem; width: 8.5em; padding: 2px 6px; border: 1px solid var(--hairline); border-radius: 6px; background: var(--panel); color: var(--text) }
 .lb-cols input.bad, .lb-ref input.bad { border-color: #c0392b }
+.lb-cols button { font: inherit; font-size: 0.9rem; line-height: 1; padding: 2px 5px; border: none; border-radius: 4px; background: none; color: var(--muted); cursor: pointer }
+.lb-cols button:hover:not(:disabled) { color: #c0392b; background: var(--panel) }
+.lb-cols button:disabled { opacity: 0.3; cursor: default }
 input.lb-pick { width: 26px; height: 22px; padding: 0; border: 1px solid var(--hairline); border-radius: 4px; background: none; cursor: pointer; flex: none }
 .hatch { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 10px; font-size: 0.85rem }
 .hatch select { font: inherit; background: var(--panel); color: var(--text); border: 1px solid var(--hairline); border-radius: 6px; padding: 2px 4px }
@@ -2567,7 +2570,7 @@ const SIZE_FIELDS = [ // key, setter, label, step
 const SHAPE_DEFAULTS = { aspect: 1.618, ratioH: 0.37 };  // BasePlotShape: aspect ratio of wide and tall panels, height of ratio panels
 const REF_DEFAULTS = { on: true, f: "1", color: "kBlack", style: 1 };  // the line MakeBasePlot puts into ratio pads: SetRefFunc("1"), drawn black and solid
 const LAY = { type: "1d", shape: "", cols: 1, rows: 1, ratio: true, gap: false, full: false, name: "", custom: false, sel: null, S: { ...PL_DEFAULTS }, ...SHAPE_DEFAULTS, G: null,
-  colors: [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS }, cvd: "", allColors: false };
+  colors: [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS }, cvd: "", allColors: false, open: {} };  // open: the folded sections the reader opened or closed
 function presetName() {
   return LAY.type + (LAY.shape ? "_" + LAY.shape : "") + (LAY.cols > 1 || LAY.rows > 1 ? `_${LAY.cols}x${LAY.rows}` : "") + (LAY.ratio ? "_ratio" : "") + (LAY.gap ? "_gap" : "") }
 function presetGrid() { // the arrangement PlotManager::MakeBasePlot makes for the preset
@@ -2740,6 +2743,8 @@ function renderLayout() {
   const host = document.getElementById("laybuilder"); if (!host) return;
   if (!LAY.G) LAY.G = presetGrid();
   const G = LAY.G, S = LAY.S, g = panelGeometry(G, S);
+  const more = (k, changed) => `data-more="${k}" ${LAY.open[k] ?? changed ? "open" : ""}`;  // a section stays as the reader left it, else it is open when changed
+  const cvd = LAY.cvd ? `filter:url(#cvd-${LAY.cvd})` : "";
   const opt = (k, v, label) => `<button class="chip" data-lay="${k}" data-val="${v}" aria-pressed="${!LAY.custom && String(LAY[k]) === String(v)}">${label}</button>`;
   const num = (attr, v, step, min, label) => `<input type="number" ${attr} value="${fmt(v)}" step="${step}" min="${min}" aria-label="${label}">`;
   const chk = (attr, on, label) => `<label class="lb-chk"><input type="checkbox" ${attr} ${on ? "checked" : ""}> ${label}</label>`;
@@ -2756,23 +2761,23 @@ function renderLayout() {
       <div class="row"><span class="lb-l">Rows</span>${[1, 2, 3, 4].map(n => opt("rows", n, n)).join("")}</div>
       <div class="row"><span class="lb-l">Ratio panel</span>${opt("ratio", true, "below each")}${opt("ratio", false, "none")}${LAY.ratio && !LAY.custom ? `<label class="lb-chk">height ${num('data-shape="ratioH"', LAY.ratioH, 0.01, 0.05, "height of the ratio panels")}</label>` : ""}</div>
       <div class="row"><span class="lb-l">Panels</span>${opt("gap", false, "touching, shared axes")}${opt("gap", true, "apart, own axes")}</div>
-      <details class="lb-more" ${LAY.custom ? "open" : ""}><summary>Change the grid</summary>
+      <details class="lb-more" ${more("grid", LAY.custom)}><summary>Change the grid</summary>
         <p class="small muted">Sizes in units of the standard panel. Click a pad in the drawing to select it: make it an empty cell (for a long legend or a text) or let it span further columns or rows.</p>
         ${colsUI}<div class="lb-line"><button class="chip" data-grid="addcol">+ column</button><button class="chip" data-grid="delcol" ${G.cols.length < 2 ? "disabled" : ""}>− column</button></div>
         ${rowsUI}<div class="lb-line"><button class="chip" data-grid="addrow">+ row</button><button class="chip" data-grid="addratio">+ ratio row</button><button class="chip" data-grid="delrow" ${G.rows.length < 2 ? "disabled" : ""}>− row</button><button class="chip" data-grid="strip">+ legend strip on top</button></div>
       </details>
-      <details class="lb-more" ${sizesChanged().length ? "open" : ""}><summary>Change text sizes, margins, lines</summary>
+      <details class="lb-more" ${more("sizes", sizesChanged().length > 0)}><summary>Change text sizes, margins, lines</summary>
         <p class="small muted">Pixels of the canvas, the same in every panel. Changed values are marked.</p>
         ${sizesUI}<div class="lb-line"><button class="chip" data-grid="resetsizes" ${sizesChanged().length ? "" : "disabled"}>Back to the defaults</button></div>
       </details>
-      <details class="lb-more" ${colorsChanged() ? "open" : ""}><summary>Colours of the data</summary>
+      <details class="lb-more" ${more("colors", colorsChanged())}><summary>Colours of the data</summary>
         <p class="small muted">The <i>n</i>-th data in a pad gets the <i>n</i>-th colour, unless it sets one. Type a ROOT colour (<code>kRed + 1</code>, <code>632</code>) or <code>#rrggbb</code>, or pick one.</p>
-        <div class="lb-cols" id="lbcols" style="${LAY.cvd ? `filter:url(#cvd-${LAY.cvd})` : ""}">${LAY.colors.slice(0, LAY.allColors ? undefined : 12).map((c, i) => `<label><b>${i + 1}</b><input type="color" class="lb-pick" data-colpick="${i}" value="${colorHex(c)}" aria-label="pick colour ${i + 1}"><input type="text" data-colname="${i}" value="${c}" spellcheck="false" aria-label="colour ${i + 1}" class="${colorOk(c) ? "" : "bad"}"></label>`).join("")}</div>
-        <div class="lb-line">${LAY.colors.length > 12 ? `<button class="chip" data-colop="all">${LAY.allColors ? "only the first 12" : `all ${LAY.colors.length}`}</button>` : ""}<button class="chip" data-colop="add">+ colour</button><button class="chip" data-colop="del" ${LAY.colors.length < 2 ? "disabled" : ""}>− colour</button><button class="chip" data-colop="reset" ${colorsChanged() ? "" : "disabled"}>Back to the defaults</button></div>
+        <div class="lb-cols" id="lbcols" style="${cvd}">${LAY.colors.slice(0, LAY.allColors ? undefined : 12).map((c, i) => `<label><b>${i + 1}</b><input type="color" class="lb-pick" data-colpick="${i}" value="${colorHex(c)}" aria-label="pick colour ${i + 1}"><input type="text" data-colname="${i}" value="${c}" spellcheck="false" aria-label="colour ${i + 1}" class="${colorOk(c) ? "" : "bad"}"><button data-coldel="${i}" ${LAY.colors.length < 2 ? "disabled" : ""} aria-label="remove colour ${i + 1}" title="remove this colour">×</button></label>`).join("")}</div>
+        <div class="lb-line">${LAY.colors.length > 12 ? `<button class="chip" data-colop="all">${LAY.allColors ? "only the first 12" : `all ${LAY.colors.length}`}</button>` : ""}<button class="chip" data-colop="add">+ colour</button><button class="chip" data-colop="reset" ${colorsChanged() ? "" : "disabled"}>Back to the defaults</button></div>
         <div class="lb-line"><span class="lb-l">Seen as</span><span class="seg" role="group" aria-label="Show the colours as seen with colour vision deficiency">${[["", "normal"], ["p", "red-blind"], ["d", "green-blind"], ["t", "blue-blind"]].map(([k, t]) => `<button data-lcvd="${k}" aria-pressed="${LAY.cvd === k}">${t}</button>`).join("")}</span></div>
         <p class="small muted">About 8 % of men have a red-green colour vision deficiency: check that neighbouring colours remain distinguishable.</p>
       </details>
-      ${hasRatio() ? `<details class="lb-more lb-ref" ${refChanged() ? "open" : ""}><summary>Line in the ratio pads</summary>
+      ${hasRatio() ? `<details class="lb-more lb-ref" ${more("ref", refChanged())}><summary>Line in the ratio pads</summary>
         <p class="small muted">A function of <i>x</i> drawn behind the data: <code>1</code> for a ratio, <code>0</code> for a difference or a pull. A plot can change it in one pad with <code>SetRefFunc</code>, or remove it with <code>SetRefFunc("")</code>.</p>
         <div class="lb-line"><span class="lb-l">Line</span><button class="chip" data-refon="true" aria-pressed="${LAY.ref.on}">at</button><input type="text" data-reff value="${LAY.ref.f.replace(/"/g, "&quot;")}" spellcheck="false" aria-label="reference function" class="${LAY.ref.f.trim() ? "" : "bad"}"><button class="chip" data-refon="false" aria-pressed="${!LAY.ref.on}">none</button></div>
         ${LAY.ref.on ? `<div class="lb-line"><span class="lb-l">Style</span>${LINE_STYLES.map(([n, , t]) => `<button class="chip" data-refstyle="${n}" aria-pressed="${LAY.ref.style === n}">${t}</button>`).join("")}<input type="color" class="lb-pick" data-refpick value="${colorHex(LAY.ref.color)}" aria-label="pick the colour of the line"><input type="text" data-refcolor value="${LAY.ref.color}" spellcheck="false" aria-label="colour of the line" class="${colorOk(LAY.ref.color) ? "" : "bad"}"></div>` : ""}
@@ -2782,7 +2787,7 @@ function renderLayout() {
     </div>
     <div class="lb-out">
       <div class="lb-name"><code>"${layName()}"</code>${info}</div>
-      ${g.error ? "" : layoutSVG(g, S, 460, 420)}
+      ${g.error ? "" : `<div style="${cvd}">${layoutSVG(g, S, 460, 420)}</div>`}
       ${cellTools(g)}
       ${g.warnings && g.warnings.length ? `<p class="lb-err">${g.warnings.join(" ")}</p>` : ""}
       ${LAY.custom ? "" : `<div class="filters"><button class="chip" data-full="false" aria-pressed="${!LAY.full}">Short</button><button class="chip" data-full="true" aria-pressed="${LAY.full}">Written out as PanelLayout</button></div>`}
@@ -2832,9 +2837,10 @@ function renderLayout() {
   host.querySelectorAll("[data-colop]").forEach(b => b.onclick = () => { const op = b.dataset.colop;
     if (op === "all") LAY.allColors = !LAY.allColors;
     if (op === "add") { LAY.colors.push(DEFAULT_COLORS[LAY.colors.length % DEFAULT_COLORS.length]); if (LAY.colors.length > 12) LAY.allColors = true }
-    if (op === "del") LAY.colors.pop();
     if (op === "reset") LAY.colors = [...DEFAULT_COLORS];
     rerender() });
+  host.querySelectorAll("[data-coldel]").forEach(b => b.onclick = () => { LAY.colors.splice(+b.dataset.coldel, 1); rerender() });
+  host.querySelectorAll("details[data-more]").forEach(d => d.ontoggle = () => { LAY.open[d.dataset.more] = d.open });
   host.querySelectorAll("[data-lcvd]").forEach(b => b.onclick = () => { LAY.cvd = b.dataset.lcvd; rerender() });
   host.querySelectorAll("[data-refon]").forEach(b => b.onclick = () => { LAY.ref.on = b.dataset.refon === "true"; rerender() });
   host.querySelectorAll("[data-reff]").forEach(i => i.onchange = () => { const f = i.value.trim().replace(/"/g, ""); if (!f) { i.classList.add("bad"); return } LAY.ref.f = f; rerender() });
