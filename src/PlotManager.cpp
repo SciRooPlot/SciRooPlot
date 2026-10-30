@@ -793,34 +793,43 @@ BasePlotShape& BasePlotShape::SetRatioHeight(double_t height)
   return *this;
 }
 
+BasePlotShape& BasePlotShape::SetPullHeight(double_t height)
+{
+  mPullHeight = height;
+  return *this;
+}
+
 //**************************************************************************************************
 /**
  * Base plots with consistent layout among them (see PlotManager.h). The name describes the layout:
- * <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]. The geometry and the sizes come from the PanelLayout
+ * <type>[_wide|_tall][_<columns>x<rows>][_ratio][_pull][_gap]. The geometry and the sizes come from the PanelLayout
  * (its defaults are the proportions of the 788 x 788 pixel standard plot, or the lengths of sizes; the proportions of
- * wide, tall and ratio panels come from shape), the look is set with the ordinary plot setters, and the conventions
- * of the ratio pads are added afterwards.
+ * wide, tall, ratio and pull panels come from shape), the look is set with the ordinary plot setters, and the conventions
+ * of the ratio and pull pads are added afterwards.
  */
 //**************************************************************************************************
 Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, const BasePlotShape& shape)
 {
-  static const std::regex pattern(R"(^(1d|2d)(?:_(wide|tall))?(?:_([1-9]\d*)x([1-9]\d*))?(_ratio)?(_gap)?$)");
+  static const std::regex pattern(R"(^(1d|2d)(?:_(wide|tall))?(?:_([1-9]\d*)x([1-9]\d*))?(_ratio)?(_pull)?(_gap)?$)");
   std::smatch match;
   if (!std::regex_match(name, match, pattern)) {
-    logger::error("Unknown base plot {}: the name must follow <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap] with type 1d or 2d (e.g. 1d, 1d_ratio, 2d, 1d_wide, 1d_3x1, 1d_2x1_ratio).", name);
+    logger::error("Unknown base plot {}: the name must follow <type>[_wide|_tall][_<columns>x<rows>][_ratio][_pull][_gap] with type 1d or 2d (e.g. 1d, 1d_ratio, 1d_ratio_pull, 2d, 1d_wide, 1d_3x1, 1d_2x1_ratio).", name);
     return Plot();
   }
   const bool zAxis = (match[1] == "2d");
   const string form = match[2];
   const int32_t nCols = match[3].matched ? std::stoi(match[3]) : 1;
   const int32_t nRows = match[4].matched ? std::stoi(match[4]) : 1;
-  const bool ratio = match[5].matched;
-  const bool gap = match[6].matched;
-  if (zAxis && ratio) {
-    logger::error("Unknown base plot {}: ratio panels exist only for 1d base plots.", name);
+  const bool gap = match[7].matched;
+  // the panels below each main panel: their height and the function of their reference line
+  vector<std::pair<double_t, string>> below;
+  if (match[5].matched) below.emplace_back(shape.mRatioHeight, "1");
+  if (match[6].matched) below.emplace_back(shape.mPullHeight, "0");
+  if (zAxis && !below.empty()) {
+    logger::error("Unknown base plot {}: ratio and pull panels exist only for 1d base plots.", name);
     return Plot();
   }
-  if (nCols * nRows * (ratio ? 2 : 1) > 255) {
+  if (nCols * nRows * static_cast<int32_t>(1 + below.size()) > 255) {
     logger::error("Base plot {} would have more than 255 pads.", name);
     return Plot();
   }
@@ -831,20 +840,15 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, con
   const double_t height = (form == "tall") ? shape.mAspectRatio : 1.;
   const bool sharedScale = zAxis && nCols * nRows > 1 && !gap;
   vector<vector<Panel>> rows;
-  vector<uint8_t> ratioPads;
+  vector<std::pair<uint8_t, string>> refPads;  // the pads below the main panels and the functions of their reference lines
   vector<uint8_t> panelPads;
   uint8_t padID = 1;
   for (int32_t row = 0; row < nRows; ++row) {
     if (row > 0 && gap) rows.push_back({Gap()});
     vector<Panel> mainRow;
-    vector<Panel> ratioRow;
     for (int32_t col = 0; col < nCols; ++col) {
-      if (col > 0 && gap) {
-        mainRow.push_back(Gap());
-        ratioRow.push_back(Gap());
-      }
+      if (col > 0 && gap) mainRow.push_back(Gap());
       mainRow.push_back((zAxis && !sharedScale) ? Panel(width, height).ZAxis() : Panel(width, height));
-      ratioRow.push_back(Panel(width, shape.mRatioHeight));
       panelPads.push_back(padID++);
     }
     if (sharedScale && row == 0) {
@@ -852,10 +856,14 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, con
       ++padID;
     }
     rows.push_back(mainRow);
-    if (ratio) {
-      rows.push_back(ratioRow);
-      for (int32_t col = 0; col < nCols; ++col)
-        ratioPads.push_back(padID++);
+    for (const auto& [panelHeight, refFunc] : below) {
+      vector<Panel> belowRow;
+      for (int32_t col = 0; col < nCols; ++col) {
+        if (col > 0 && gap) belowRow.push_back(Gap());
+        belowRow.push_back(Panel(width, panelHeight));
+        refPads.emplace_back(padID++, refFunc);
+      }
+      rows.push_back(belowRow);
     }
   }
 
@@ -877,10 +885,10 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, con
   if (zAxis) plot[0].SetRedrawAxes();
   if (sharedScale) plot.mSharedAxes.push_back({'Z', panelPads, true});  // part of the layout, like the axes of touching panels
 
-  // conventions of the ratio pads
-  for (const uint8_t ratioPad : ratioPads) {
-    plot[ratioPad].SetRefFunc("1");
-    plot[ratioPad]['Y'].SetNumDivisions(305).SetTitleCenter();
+  // conventions of the ratio and pull pads: a line at 1 (0), few divisions, the title in the middle of the short axis
+  for (const auto& [refPad, refFunc] : refPads) {
+    plot[refPad].SetRefFunc(refFunc);
+    plot[refPad]['Y'].SetNumDivisions(305).SetTitleCenter();
   }
   return plot;
 }

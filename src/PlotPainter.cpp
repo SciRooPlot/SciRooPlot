@@ -435,13 +435,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   mFrameRanges.clear();
   mFrameHists.clear();
   mScaleHists.clear();
-  // the panels of a z group whose colour scale a ZAxis() cell shows draw none of their own
+  // the panels of a z group whose colour scale a ZAxis() cell shows draw none of their own (a panel in no z group: its own scale is shown)
   mScalesInCells.clear();
   for (const auto& [padID, pad] : plot.GetPads()) {
-    if (padID == 0 || !pad.GetColorScaleOf()) continue;
+    if (padID == 0 || !pad.GetColorScaleOf() || *pad.GetColorScaleOf() == 0) continue;
+    const uint8_t shown = *pad.GetColorScaleOf();
+    bool inGroup = false;
     for (const auto& group : mSharedAxes['Z']) {
-      if (std::find(group.begin(), group.end(), *pad.GetColorScaleOf()) != group.end()) mScalesInCells.insert(group.begin(), group.end());
+      if (std::find(group.begin(), group.end(), shown) == group.end()) continue;
+      mScalesInCells.insert(group.begin(), group.end());
+      inGroup = true;
     }
+    if (!inGroup) mScalesInCells.insert(shown);
   }
   // for the x divisions (see below): per width of the frame (rounded to pixels), the widest pad with such a frame
   mDivisionWidths.clear();
@@ -5360,14 +5365,14 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
 {
   Plot::Pad& cell = plot[padID];
   const uint8_t shown = *cell.GetColorScaleOf();
-  const vector<uint8_t>* group{nullptr};
+  if (shown == 0) {
+    logger::warning("The colour scale cell (pad {}) stays empty: no panel left of it, name one with ZAxis(padID).", padID);
+    return;
+  }
+  const vector<uint8_t> alone{shown};  // a panel in no z group: the cell shows its own scale
+  const vector<uint8_t>* group{&alone};
   for (const auto& members : mSharedAxes['Z']) {
     if (std::find(members.begin(), members.end(), shown) != members.end()) group = &members;
-  }
-  if (shown == 0 || !group) {
-    logger::warning("The colour scale cell (pad {}) stays empty: {}.", padID,
-                    (shown == 0) ? "no panel left of it, name one with ZAxis(padID)" : fmt::format("pad {} shares no z axis, add a group with ShareAxis('Z', pads)", shown));
-    return;
   }
   TPad* memberPad{nullptr};
   TH1* source{nullptr};

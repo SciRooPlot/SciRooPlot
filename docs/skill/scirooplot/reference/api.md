@@ -460,6 +460,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 
 - `BasePlotShape& SetAspectRatio(double_t ratio)` — 1.618: width / height of _wide panels, height / width of _tall ones
 - `BasePlotShape& SetRatioHeight(double_t height)` — 0.37: height of the ratio panels (the same under every kind of panel)
+- `BasePlotShape& SetPullHeight(double_t height)` — 0.37: height of the pull panels (the same under every kind of panel)
 
 ## Enumerations
 

@@ -351,7 +351,8 @@ void exportPanelLayout(py::module_& m)
   py::class_<BasePlotShape>(m, "BasePlotShape", "Proportions of the panels of PlotManager.MakeBasePlot, in units of the standard panel.")
     .def(py::init<>())
     .def("SetAspectRatio", &BasePlotShape::SetAspectRatio, arg("ratio"), ref_int)
-    .def("SetRatioHeight", &BasePlotShape::SetRatioHeight, arg("height"), ref_int);
+    .def("SetRatioHeight", &BasePlotShape::SetRatioHeight, arg("height"), ref_int)
+    .def("SetPullHeight", &BasePlotShape::SetPullHeight, arg("height"), ref_int);
 }
 
 // the setter groups of Plot.h (MarkerSetters, LineSetters, ...) for the classes that have them; through a lambda per setter,

@@ -433,7 +433,24 @@ table.cmd code { white-space: nowrap }
 .lay-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px }
 .lay-notes h3 { margin: 0 0 6px }
 .lay-notes > div { min-width: 0 }
-.lb-controls h4 { margin: 0; font-size: 0.9rem; color: var(--ink) }
+.lb-start { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-weight: 700; color: var(--ink) }
+.lb-start select { font-weight: 400; max-width: 100%; flex: 1 1 14em }
+.lb-group { display: grid; gap: 6px; border: 1px solid var(--hairline); border-radius: 8px; padding: 8px 12px 10px; background: var(--paper) }
+.lb-gh { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted) }
+.lb-gh .small { text-transform: none; letter-spacing: 0; font-weight: 400 }
+.lb-twrap { overflow-x: auto }
+.lb-table { border-collapse: collapse; font-size: 0.82rem; width: 100% }
+.lb-table th { text-align: left; font-weight: 600; font-size: 0.72rem; color: var(--muted); padding: 2px 6px 4px; white-space: nowrap; border-bottom: 1px solid var(--hairline) }
+.lb-table td { padding: 3px 4px; white-space: nowrap }
+.lb-table td.c, .lb-table th.c { text-align: center }
+.lb-table tr.att td:first-child { color: var(--muted) }
+.lb-table input[type=number] { width: 4.4em }
+.lb-table input.lb-reff { width: 5.5em }
+.lb-table select { width: auto }
+.lb-table .none { color: var(--hairline) }
+.lb-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
+.lb-tools .lb-chk { font-size: 0.85rem }
+.lb-tools input[type=number] { width: 4.4em }
 .lb-more { border-top: 1px solid var(--hairline); padding-top: 8px }
 .lb-more summary { cursor: pointer; font-weight: 700; color: var(--ink) }
 .lb-more p { margin: 6px 0 }
@@ -445,6 +462,7 @@ table.cmd code { white-space: nowrap }
 .lb-sizes label { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 0.82rem }
 .lb-sizes input { width: 5.2em }
 .lb-sizes label.lb-changed span { color: var(--teal); font-weight: 700 }
+.laybuilder select { font: inherit; font-size: 0.85rem; background: var(--paper); color: var(--text); border: 1px solid var(--hairline); border-radius: 6px; padding: 2px 4px }
 .laybuilder input[type=number], .laybuilder input[type=text] { font: inherit; font-size: 0.85rem; background: var(--paper); color: var(--text); border: 1px solid var(--hairline); border-radius: 6px; padding: 2px 6px }
 .lb-pad { cursor: pointer }
 .lb-controls .row .lb-chk input[type=number] { width: 4.8em }
@@ -894,7 +912,7 @@ figure.plot figcaption { color: #5b6b80 }
       <tr><td><code>AddImage(x, y, "logo.png")</code> <code>.SetWidth(0.3)</code></td><td>image; in pdf from ROOT 6.42</td></tr>
       <tr><td><code>"&lt;mean[.2f]&gt;"</code> <code>"&lt;entries&gt;"</code> <code>"&lt;integral&gt;"</code> <code>"&lt;title&gt;"</code></td><td>numbers in labels</td></tr>
       <tr><td><code>#it{p}_{T}</code> <code>#sqrt{s}</code> <code>#pi^{0}</code></td><td>ROOT's TLatex</td></tr></table></section>
-    <section><h4>Base plots</h4><p><code>1d|2d [_wide|_tall] [_CxR] [_ratio] [_gap]</code>, e.g. <code>1d_ratio</code>, <code>2d_2x1</code>, <code>1d_3x2_gap</code></p>
+    <section><h4>Base plots</h4><p><code>1d|2d [_wide|_tall] [_CxR] [_ratio] [_pull] [_gap]</code>, e.g. <code>1d_ratio</code>, <code>2d_2x1</code>, <code>1d_3x2_gap</code></p>
       <p><code>MakeBasePlot("1d", PanelLayout().SetTextSize(26))</code>: your lengths, pixels</p></section>
   </div>
 </section>
@@ -1080,11 +1098,14 @@ function colorOf(name) { // "kMagenta + 2" or "kRed-9" or "618"
   const s = String(name).replace(/\s+/g, "");
   const m = s.match(/^(k[A-Za-z]+)([+-]\d+)?$/);
   if (m && COLORS[m[1]]) { const off = String(parseInt(m[2] || "0", 10)); const hex = COLORS[m[1]].s[off]; if (hex) return { base: m[1], off: +off, hex, index: COLORS[m[1]].i + (+off) } }
-  if (/^\d+$/.test(s)) { for (const [b, c] of Object.entries(COLORS)) for (const [o, hex] of Object.entries(c.s)) if (c.i + +o === +s) return { base: b, off: +o, hex, index: +s } }
+  if (/^\d+$/.test(s)) { for (const [b, c] of Object.entries(COLORS)) for (const [o, hex] of Object.entries(c.s)) if (c.i + +o === +s) return { base: b, off: +o, hex, index: +s }
+    if (CLASSIC_COLORS[+s]) return { base: s, off: 0, hex: CLASSIC_COLORS[+s], index: +s, classic: true } }
   return null }
+// ROOT's first colours, which have no name of the colour wheel (TColor::InitializeColors, e.g. 8 green, 12 to 19 greys, 20 to 49 muted tones)
+const CLASSIC_COLORS = { 0: "#ffffff", 1: "#000000", 2: "#ff0000", 3: "#00ff00", 4: "#0000ff", 5: "#ffff00", 6: "#ff00ff", 7: "#00ffff", 8: "#59d454", 9: "#5954d9", 10: "#ffffff", 11: "#c0b6ac", 12: "#4c4c4c", 13: "#666666", 14: "#808080", 15: "#999999", 16: "#b2b2b2", 17: "#cccccc", 18: "#e6e6e6", 19: "#f2f2f2", 20: "#ccc7ab", 21: "#ccc7ab", 22: "#c2bfa8", 23: "#bab5a3", 24: "#b2a696", 25: "#b8a39c", 26: "#ad998c", 27: "#9c8f82", 28: "#876657", 29: "#b0cfc7", 30: "#85c2a3", 31: "#8aa8a1", 32: "#829e8c", 33: "#adbdc7", 34: "#7a8f99", 35: "#758a91", 36: "#698296", 37: "#6e7a85", 38: "#7d99d1", 39: "#80809c", 40: "#aba6bf", 41: "#d4cf87", 42: "#deba87", 43: "#bd9e82", 44: "#c7997d", 45: "#bf8278", 46: "#cf5e61", 47: "#ab8f94", 48: "#a6787a", 49: "#946970", 50: "#d45954" };
 function cname(c) { return c.off === 0 ? c.base : `${c.base} ${c.off > 0 ? "+" : "-"} ${Math.abs(c.off)}` }
 function explainK(word) {
-  const c = colorOf(word); if (c) return [cname(c), `Colour index ${c.index}, shown as <span class="sw" style="background:${c.hex}"></span><code>${c.hex}</code>. ${c.off ? `${c.off > 0 ? "Darker" : "Lighter"} variant of ${c.base}.` : "A base colour of ROOT's colour wheel; add or subtract up to 10 for darker or lighter shades."}`, true];
+  const c = colorOf(word); if (c) return [cname(c), `Colour index ${c.index}, shown as <span class="sw" style="background:${c.hex}"></span><code>${c.hex}</code>. ${c.classic ? "One of ROOT's first 50 colours, which have only a number." : c.off ? `${c.off > 0 ? "Darker" : "Lighter"} variant of ${c.base}.` : "A base colour of ROOT's colour wheel; add or subtract up to 10 for darker or lighter shades."}`, true];
   const mk = MARKERS.find(x => x[1] === word); if (mk) return [`${word} = ${mk[0]}`, `Marker style ${mk[0]}.`, true];
   const ln = LINES.find(x => x[1] === word); if (ln) return [`${word} = ${ln[0]}`, `Line style ${ln[0]}.`, true];
   const fl = FILLS.find(x => x[1] === word); if (fl) return [`${word} = ${fl[0]}`, fl[0] ? `Fill pattern ${fl[0]}.` : "Fill style 0: hollow.", true];
@@ -1682,7 +1703,7 @@ const REF = [
 <p>Axis ranges belong to the pad (<code>plot[1]['X'].SetRange</code>), visible data ranges to the data (<code>SetRangeX</code>). Ranges stored with input histograms are ignored, except for the data that defines the frame.</p>` },
   { id: "baseplots", g: "layout", t: "Base plots and own layouts", body: `<p>A base plot is the layout a plot is drawn on: canvas size, the arrangement of the pads, margins, fonts, text sizes and the colour sequence. You name it as the third argument of <code>Plot</code>; the plot itself then only holds data, titles and ranges. All shipped base plots share the same text sizes, tick lengths and line widths, so figures with different layouts look alike side by side in a paper or thesis.</p>
 <h3>Find or design a base plot</h3>
-<p>The name of a shipped one is built as <code>&lt;type&gt;[_wide|_tall][_&lt;columns&gt;x&lt;rows&gt;][_ratio][_gap]</code>, e.g. <code>1d_2x1_ratio</code>. The <a href="#layouts">layout designer</a> lets you pick the parts or design your own grid, text sizes and margins, drawn to scale with the pad numbers and the code.</p>
+<p>The name of a shipped one is built as <code>&lt;type&gt;[_wide|_tall][_&lt;columns&gt;x&lt;rows&gt;][_ratio][_pull][_gap]</code>, e.g. <code>1d_2x1_ratio</code>. The <a href="#layouts">layout designer</a> lets you pick the parts or design your own grid, text sizes and margins, drawn to scale with the pad numbers and the code.</p>
 <h3>Change a base plot</h3>
 <p>Take a shipped one, change what should hold for all plots built on it, and add it under a new name (or the same name, to replace it). Text sizes, line widths and margins go in as the lengths of a <code>PanelLayout</code>, in pixels; that keeps them equal in all panels, which setting <code>SetDefaultTextSize</code> on single pads would not.</p>
 <div class="code"><pre data-snip="baseplots"></pre></div>
@@ -2551,7 +2572,9 @@ function teaserShow(i) { // the figures of one comparison; wide multi-panel figu
 
 /* the geometry of PanelLayout::ApplyTo: canvas size, pads and axis frames in canvas pixels (x from the left, y from the top) */
 const PL_DEFAULTS = { panel: 638, top: 32, bottom: 118, left: 118, right: 32, z: 268, zOff: 5.12, zWidth: 46.08, spacing: 0, text: 31.52, title: 39.4, tick: 19.15, labelOff: 3.94, xTitleOff: 63.04, yTitleOff: 0, zTitleOff: 122.9, lw: 5, ms: 1.4 };
-// G: { cols: [{ w, z, gapAfter }], rows: [{ h, ratio, gapAfter }], empty: Set of "r,c", span: Map "r,c" -> [columns, rows] }
+// G: { cols: [{ w, kind, z, own, gapAfter }] (kind "short": attached panels; own: an x title of its own), rows: [{ h, kind, ref, compact, own, gapAfter }]
+// (kind "short": attached panels; ref: the function of a reference line,
+// compact: few y divisions and a centred title, own: another quantity, with a y title of its own), empty: Set of "r,c", span: Map "r,c" -> [columns, rows] }
 function gridCells(G) { // the cells in reading order (as listed in PanelLayout) and the cell covering every position
   const nC = G.cols.length, nR = G.rows.length, owner = [...Array(nR)].map(() => Array(nC).fill(-1)), cells = [];
   for (let r = 0; r < nR; r++) for (let c = 0; c < nC; c++) {
@@ -2572,7 +2595,7 @@ function panelGeometry(G, S) {
     if (k.scale && k.c1 > k.c) return { error: `The colour scale cell in row ${k.r + 1}, column ${k.c + 1} spans one column.` };
     if (!k.empty && colScale.slice(k.c, k.c1 + 1).some(Boolean)) return { error: "A column with a colour scale cell holds no panels." } }
   const colW = G.cols.map((c, i) => colScale[i] ? S.z : c.w * S.panel), rowH = G.rows.map(r => r.h * S.panel);
-  const colZ = G.cols.map((c, i) => !colScale[i] && c.z && cells.some(k => k.c1 === i && !k.empty && !G.rows[k.r].ratio));  // ZAxis() is written on the panels of rows that are not ratio rows
+  const colZ = G.cols.map((c, i) => !colScale[i] && c.z && cells.some(k => k.c1 === i && !k.empty && !G.rows[k.r].kind));  // ZAxis() is written on the panels of rows of normal height
   const colSep = G.cols.slice(0, -1).map((c, i) => c.gapAfter ? [S.right, S.left, false] : colScale[i + 1] ? [0, 0, false] : colScale[i] ? [0, S.left, false]
     : colZ[i] ? [S.z, S.left, false] : [S.spacing / 2, S.spacing / 2, true]);
   const rowSep = G.rows.slice(0, -1).map(r => r.gapAfter ? [S.bottom, S.top, false] : [S.spacing / 2, S.spacing / 2, true]);
@@ -2606,8 +2629,8 @@ function panelGeometry(G, S) {
     }
     [x0, x1, y0, y1] = [x0, x1, y0, y1].map(Math.round);
     if (empty && (x1 <= x0 || y1 <= y0)) { warnings.push(`The empty cell in row ${r + 1}, column ${c + 1} leaves no space for pad ${id}.`); return }
-    const pad = { id, key, r, c, r1, c1, x0, x1, y0, y1, empty, scale, ratio: G.rows[r].ratio };
-    if (!empty || scale) Object.assign(pad, { fl: X.low[c], fr: X.high[c1], ft: Y.low[r], fb: Y.high[r1], z: colZ[c1] && !G.rows[r].ratio,
+    const row = G.rows[r], pad = { id, key, r, c, r1, c1, x0, x1, y0, y1, empty, scale, subCol: c === c1 && !!G.cols[c].kind, ownX: c === c1 && !!G.cols[c].own, sub: !!row.kind, ref: row.ref || "", compact: !!row.compact, own: !!row.own };
+    if (!empty || scale) Object.assign(pad, { fl: X.low[c], fr: X.high[c1], ft: Y.low[r], fb: Y.high[r1], z: colZ[c1] && !row.kind,
       sharedLeft: L.p && colSep[c - 1][2], sharedBelow: B.p && rowSep[r1][2], sharedAbove: A.p && rowSep[r - 1][2] });
     pads.push(pad) });
   // the axes the layout shares between touching panels (x within a column, y within a row), the rows (columns) of touching panels whose
@@ -2618,10 +2641,10 @@ function panelGeometry(G, S) {
     const out = new Map(); pads.filter(panel).forEach(q => { const k = find(q.id); out.set(k, [...(out.get(k) || []), q.id]) });
     return [...out.values()].filter(ids => ids.length > 1).map(ids => ids.sort((a, b) => a - b)) };
   const below = (q, o) => o.r === q.r1 + 1 && o.c <= q.c1 && q.c <= o.c1 && rowSep[q.r1][2], right = (q, o) => o.c === q.c1 + 1 && o.r <= q.r1 && q.r <= o.r1 && colSep[q.c1][2];
-  const titleX = (q, o) => right(q, o) && !q.sharedBelow && !o.sharedBelow && q.r1 === o.r1, titleY = (q, o) => below(q, o) && !q.sharedLeft && !o.sharedLeft && q.c === o.c && q.ratio === o.ratio;  // a ratio pad has a title of its own
+  const titleX = (q, o) => right(q, o) && !q.sharedBelow && !o.sharedBelow && q.r1 === o.r1 && !q.ownX && !o.ownX, titleY = (q, o) => below(q, o) && !q.sharedLeft && !o.sharedLeft && q.c === o.c && !q.own && !o.own;  // a pad showing another quantity has a title of its own
   // only panels of the same width share x (the same height y)
   const shared = { X: groups((q, o) => below(q, o) && q.c === o.c && q.c1 === o.c1), Y: groups((q, o) => right(q, o) && q.r === o.r && q.r1 === o.r1), Z: pads.filter(q => q.scale).map(q => { const ids = new Set();
-    for (let r = q.r; r <= q.r1; r++) for (let c = q.c - 1; c >= 0 && !colScale[c]; c--) { const o = at(r, c); if (panel(o) && !o.ratio) ids.add(o.id) }
+    for (let r = q.r; r <= q.r1; r++) for (let c = q.c - 1; c >= 0 && !colScale[c]; c--) { const o = at(r, c); if (panel(o) && !o.sub && !o.subCol) ids.add(o.id) }
     return [...ids].sort((a, b) => a - b) }) };
   const titles = LAY.commonTitles === false ? { X: [], Y: [] } : { X: groups(titleX), Y: groups(titleY) };
   pads.filter(panel).forEach(q => pads.filter(panel).forEach(o => {  // touching panels of another length: labels hidden, axes not shared
@@ -2636,13 +2659,33 @@ const SIZE_FIELDS = [ // key, setter, label, step
   ["text", "Text", [["text", "SetTextSize", "Labels, legends, texts", 0.5], ["title", "SetTitleSize", "Axis titles", 0.5], ["labelOff", "SetLabelOffset", "Labels to axis", 0.5],
     ["xTitleOff", "SetXTitleOffset", "x title to axis", 0.5], ["yTitleOff", "SetYTitleOffset", "y title to axis (0: next to the labels)", 0.5], ["zTitleOff", "SetZTitleOffset", "z title to colour scale", 0.5]]],
   ["lines", "Ticks, lines, markers", [["tick", "SetTickLength", "Tick length", 0.5], ["lw", "SetLineWidth", "Line width", 1], ["ms", "SetMarkerSize", "Marker size (1 = 8 pixels)", 0.1]]]];
-const SHAPE_DEFAULTS = { aspect: 1.618, ratioH: 0.37 };  // BasePlotShape: aspect ratio of wide and tall panels, height of ratio panels
-const REF_DEFAULTS = { on: true, f: "1", color: "kBlack", style: 1 };  // the line MakeBasePlot puts into ratio pads: SetRefFunc("1"), drawn black and solid
-const LAY = { type: "1d", shape: "", cols: 1, rows: 1, ratio: true, gap: false, full: false, name: "", custom: false, sel: null, S: { ...PL_DEFAULTS }, ...SHAPE_DEFAULTS, G: null, commonTitles: true,
+const SHAPE_DEFAULTS = { aspect: 1.618, ratioH: 0.37, pullH: 0.37 };  // BasePlotShape: aspect ratio of wide and tall panels; heights of the ratio and pull panels of the names
+const ATTACHED = 0.37;  // the size of a newly attached panel, in units of the standard panel (as the ratio panels of the names)
+const REF_DEFAULTS = { color: "kBlack", style: 1 };  // the look of the reference lines (SetRefFunc): black and solid, as in the ratio pads of MakeBasePlot
+// the panel unit: a panel and the panels attached to it on each side, listed from the panel outwards: { size, ref, compact, own } (size: the
+// height of panels above and below, the width of panels left and right; ref: the function of a reference line, compact: few y divisions and
+// a centred title, own: a title of its own, y for panels above and below, x for panels left and right); repeated cols x rows times,
+// touching or apart (gap); strip: a legend strip on top
+const SIDES = ["above", "below", "left", "right"];
+const attached = (ref = "") => ({ size: ATTACHED, ref, compact: true, own: true, apart: false });  // apart: a gap to the panel inside it, both with their own labels
+// the base plots to start from (names MakeBasePlot knows): the panel unit and its repetition (the look, text sizes and colours, stays)
+const TEMPLATES = [["1d: one panel", "1d", 1, 1, () => emptyUnit()],
+  ["1d_ratio: a ratio below", "1d", 1, 1, () => ({ ...emptyUnit(), below: [attached("1")] })],
+  ["1d_pull: a pull below", "1d", 1, 1, () => ({ ...emptyUnit(), below: [attached("0")] })],
+  ["1d_ratio_pull: a ratio and a pull below", "1d", 1, 1, () => ({ ...emptyUnit(), below: [attached("1"), attached("0")] })],
+  ["1d_3x1: three panels in a row", "1d", 3, 1, () => emptyUnit()],
+  ["1d_2x2: four panels", "1d", 2, 2, () => emptyUnit()],
+  ["1d_2x1_ratio: two panels with ratios", "1d", 2, 1, () => ({ ...emptyUnit(), below: [attached("1")] })],
+  ["2d: a colour map", "2d", 1, 1, () => emptyUnit()],
+  ["2d_2x2: four maps, one colour scale", "2d", 2, 2, () => emptyUnit()]];
+const templateOf = ([, type, cols, rows, unit]) => ({ ...UNIT_DEFAULTS, type, cols, rows, unit: unit() });
+const emptyUnit = () => ({ above: [], below: [], left: [], right: [] });
+const UNIT_DEFAULTS = { type: "1d", shape: "", cols: 1, rows: 1, gap: false, strip: false };
+const LAY = { ...UNIT_DEFAULTS, unit: { ...emptyUnit(), below: [attached("1")] }, aspect: SHAPE_DEFAULTS.aspect, full: false, name: "", custom: false, sel: null, S: { ...PL_DEFAULTS }, G: null, commonTitles: true,
   colors: [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS }, cvd: "", allColors: false, open: {}, big: false, undo: null };  // open: the folded sections the reader opened or closed
 // the design as a short text: kept in this browser and put into a link; a change of the designer can make an old link invalid, it is then ignored
 function layState() {
-  const G = LAY.G, d = { t: LAY.type, s: LAY.shape, c: LAY.cols, r: LAY.rows, q: LAY.ratio, g: LAY.gap, f: LAY.full, n: LAY.name, a: LAY.aspect, h: LAY.ratioH };
+  const G = LAY.G, d = { t: LAY.type, s: LAY.shape, c: LAY.cols, r: LAY.rows, u: LAY.unit, g: LAY.gap, w: LAY.strip, f: LAY.full, n: LAY.name, a: LAY.aspect };
   const S = Object.fromEntries(Object.keys(PL_DEFAULTS).filter(k => +LAY.S[k] !== PL_DEFAULTS[k]).map(k => [k, +LAY.S[k]])); if (Object.keys(S).length) d.S = S;
   if (colorsChanged()) d.k = LAY.colors;
   if (refChanged()) d.e = LAY.ref;
@@ -2653,35 +2696,76 @@ function layApply(code) {
   try {
     const d = JSON.parse(decodeURIComponent(escape(atob(code.replace(/-/g, "+").replace(/_/g, "/"))))), n = v => Number.isInteger(v) && v >= 1 && v <= 16;
     if (!["1d", "2d"].includes(d.t) || !["", "wide", "tall"].includes(d.s) || !n(d.c) || !n(d.r)) return false;
+    const unit = Object.fromEntries(SIDES.map(k => [k, (Array.isArray(d.u && d.u[k]) ? d.u[k] : []).filter(a => a && +a.size > 0).map(a => ({ ...attached(), ...a, size: +a.size, ref: String(a.ref || "") }))]));
     const G = d.G && { cols: d.G.cols, rows: d.G.rows, empty: new Set(d.G.empty), span: new Map(d.G.span), scale: new Set(d.G.scale || []) };
     if (G) { if (!G.cols.length || !G.rows.length || !G.cols.every(c => +c.w > 0) || !G.rows.every(r => +r.h > 0)) return false; panelGeometry(G, PL_DEFAULTS) }  // throws if malformed
-    Object.assign(LAY, { type: d.t, shape: d.s, cols: d.c, rows: d.r, ratio: !!d.q && d.t === "1d", gap: !!d.g, full: !!d.f, name: String(d.n || ""), aspect: +d.a || SHAPE_DEFAULTS.aspect, ratioH: +d.h || SHAPE_DEFAULTS.ratioH,
+    Object.assign(LAY, { type: d.t, shape: d.s, cols: d.c, rows: d.r, unit, gap: !!d.g, strip: !!d.w, full: !!d.f, name: String(d.n || ""), aspect: +d.a || SHAPE_DEFAULTS.aspect,
       S: { ...PL_DEFAULTS, ...Object.fromEntries(Object.entries(d.S || {}).filter(([k, v]) => k in PL_DEFAULTS && isFinite(v))) },
-      colors: Array.isArray(d.k) && d.k.length && d.k.every(colorOk) ? d.k : [...DEFAULT_COLORS], ref: d.e ? { ...REF_DEFAULTS, ...d.e } : { ...REF_DEFAULTS }, custom: !!d.G, sel: null, undo: null, commonTitles: d.T !== false });
+      colors: Array.isArray(d.k) && d.k.length && d.k.every(colorOk) ? d.k : [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS, ...Object.fromEntries(Object.entries(d.e || {}).filter(([k]) => k in REF_DEFAULTS)) }, custom: !!d.G, sel: null, undo: null, commonTitles: d.T !== false });
     LAY.G = G || presetGrid();
     return true;
   } catch (e) { return false } }
-function layReset() { Object.assign(LAY, { type: "1d", shape: "", cols: 1, rows: 1, ratio: true, gap: false, full: false, name: "", custom: false, sel: null, S: { ...PL_DEFAULTS }, ...SHAPE_DEFAULTS,
+function layReset() { Object.assign(LAY, { ...UNIT_DEFAULTS, unit: { ...emptyUnit(), below: [attached("1")] }, aspect: SHAPE_DEFAULTS.aspect, full: false, name: "", custom: false, sel: null, S: { ...PL_DEFAULTS },
   colors: [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS }, undo: null, commonTitles: true }); LAY.G = presetGrid() }
-function presetName() {
-  return LAY.type + (LAY.shape ? "_" + LAY.shape : "") + (LAY.cols > 1 || LAY.rows > 1 ? `_${LAY.cols}x${LAY.rows}` : "") + (LAY.ratio ? "_ratio" : "") + (LAY.gap ? "_gap" : "") }
-function presetGrid() { // the arrangement PlotManager::MakeBasePlot makes for the preset
-  const w = LAY.shape === "wide" ? LAY.aspect : 1, h = LAY.shape === "tall" ? LAY.aspect : 1, rows = [];
-  for (let r = 0; r < LAY.rows; r++) { rows.push({ h, ratio: false, gapAfter: false }); if (LAY.ratio) rows.push({ h: LAY.ratioH, ratio: true, gapAfter: false });
-    rows[rows.length - 1].gapAfter = LAY.gap && r < LAY.rows - 1 }
-  // a grid of touching 2d panels shares one colour scale, in a cell right of the first row spanning all rows
-  const sharedScale = LAY.type === "2d" && LAY.cols * LAY.rows > 1 && !LAY.ratio && !LAY.gap;
-  const cols = Array.from({ length: LAY.cols }, (_, c) => ({ w, z: LAY.type === "2d" && !sharedScale, gapAfter: LAY.gap && c < LAY.cols - 1 })), G = { cols, rows, empty: new Set(), span: new Map(), scale: new Set() };
-  if (sharedScale) { cols.push({ w: 1, z: false, gapAfter: false }); G.scale.add(`0,${LAY.cols}`); if (LAY.rows > 1) G.span.set(`0,${LAY.cols}`, [1, LAY.rows]) }
+// the names describe 1d units with panels below only, each a ratio (line at 1) or a pull (line at 0), in this order, few divisions, own title
+const BELOW = ["", "ratio", "pull", "ratio_pull"];
+const belowName = (p = LAY) => p.unit.below.map(a => a.ref === "1" ? "ratio" : a.ref === "0" ? "pull" : "?").join("_");
+const named = (p = LAY) => !p.strip && !p.unit.above.length && !p.unit.left.length && !p.unit.right.length && (p.type === "1d" || !p.unit.below.length)
+  && BELOW.includes(belowName(p)) && p.unit.below.every(a => a.compact && a.own && !a.apart);
+function presetName(p = LAY) {
+  return p.type + (p.shape ? "_" + p.shape : "") + (p.cols > 1 || p.rows > 1 ? `_${p.cols}x${p.rows}` : "") + (belowName(p) ? "_" + belowName(p) : "") + (p.gap ? "_gap" : "") }
+const mainRow = h => ({ h, kind: "", ref: "", compact: false, own: false, gapAfter: false });
+const shortRow = (h = ATTACHED) => ({ h, kind: "short", ref: "", compact: false, own: true, gapAfter: false });  // a row of attached panels in the grid editor
+const mainCol = (w, z) => ({ w, kind: "", z, own: false, gapAfter: false });
+function presetGrid(p = LAY) { // the grid of the unit repeated cols x rows times (for a named one the arrangement PlotManager::MakeBasePlot makes)
+  const u = p.unit, w = p.shape === "wide" ? LAY.aspect : 1, h = p.shape === "tall" ? LAY.aspect : 1, maps = p.type === "2d", rows = [], cols = [], mainRows = [], scaleCols = [];
+  const attachedRow = a => ({ h: a.size, kind: "short", ref: a.ref, compact: a.compact, own: a.own, gapAfter: false });
+  if (p.strip) rows.push(mainRow(0.2));
+  const rowRuns = [], colRuns = [];  // the attached rows above and below each panel row, the attached columns left and right of each panel column: [first, count]
+  for (let r = 0; r < p.rows; r++) {
+    rowRuns.push([rows.length, u.above.length]); [...u.above].reverse().forEach(a => rows.push({ ...attachedRow(a), gapAfter: a.apart }));
+    mainRows.push(rows.length); rows.push(mainRow(h));
+    rowRuns.push([rows.length, u.below.length]); u.below.forEach(a => { if (a.apart) rows[rows.length - 1].gapAfter = true; rows.push(attachedRow(a)) });
+    rows[rows.length - 1].gapAfter = p.gap && r < p.rows - 1 }
+  // the colour scales of maps: one cell right of the grid for touching maps, else one per map (a cell right of its panels on the right, or the panel's own)
+  const sharedScale = maps && p.cols * p.rows > 1 && !p.gap && !u.right.length;
+  for (let c = 0; c < p.cols; c++) {
+    colRuns.push([cols.length, u.left.length]); [...u.left].reverse().forEach(a => cols.push({ ...mainCol(a.size, false), kind: "short", own: a.own, gapAfter: a.apart }));
+    cols.push(mainCol(w, maps && !sharedScale && !u.right.length));
+    colRuns.push([cols.length, u.right.length + (maps && u.right.length ? 1 : 0)]); u.right.forEach(a => { if (a.apart) cols[cols.length - 1].gapAfter = true; cols.push({ ...mainCol(a.size, false), kind: "short", own: a.own }) });
+    if (maps && u.right.length) { scaleCols.push(cols.length); cols.push(mainCol(1, false)) }
+    cols[cols.length - 1].gapAfter = p.gap && c < p.cols - 1 }
+  const G = { cols, rows, empty: new Set(), span: new Map(), scale: new Set() };
+  if (sharedScale) { scaleCols.push(cols.length); cols.push(mainCol(1, false)) }
+  scaleCols.forEach(c => { if (sharedScale) { G.scale.add(`${mainRows[0]},${c}`); if (mainRows.length > 1) G.span.set(`${mainRows[0]},${c}`, [1, mainRows[mainRows.length - 1] - mainRows[0] + 1]) }
+    else mainRows.forEach(r => G.scale.add(`${r},${c}`)) });
+  // a corner of a unit (attached rows beside attached columns) is one empty cell, e.g. a place for the legend next to a ratio panel
+  // (one cell per row and column where a gap runs through the corner)
+  const gapIn = (list, i0, n) => list.slice(i0, i0 + n - 1).some(x => x.gapAfter);
+  rowRuns.filter(([, n]) => n).forEach(([r0, nr]) => colRuns.filter(([, n]) => n).forEach(([c0, nc]) => {
+    if (gapIn(rows, r0, nr) || gapIn(cols, c0, nc)) { for (let r = r0; r < r0 + nr; r++) for (let c = c0; c < c0 + nc; c++) G.empty.add(`${r},${c}`); return }
+    G.empty.add(`${r0},${c0}`); if (nr > 1 || nc > 1) G.span.set(`${r0},${c0}`, [nc, nr]) }));
+  if (p.strip) { G.empty.add("0,0"); if (cols.length > 1) G.span.set("0,0", [cols.length, 1]) }
+  scaleColumns(G);
   return G }
+// the named unit a grid is, if any: a grid built by hand that a name describes gets that name (and the short code)
+function matchPreset(G) {
+  const key = g => JSON.stringify([g.cols.map(c => [+c.w, c.kind || "", !!c.z, !!c.own, !!c.gapAfter]), g.rows.map(r => [+r.h, r.kind || "", r.ref || "", !!r.compact, !!r.own, !!r.gapAfter]),
+    [...g.empty].sort(), [...g.span].sort(), [...g.scale].sort()]), want = key(G);
+  for (const type of ["1d", "2d"]) for (const shape of ["", "wide", "tall"]) for (const below of type === "1d" ? BELOW : [""]) for (const gap of [false, true]) {
+    const kinds = below.split("_").filter(Boolean), rows = G.rows.length / (1 + kinds.length);
+    if (!Number.isInteger(rows) || rows < 1 || rows > 6) continue;
+    const p = { ...UNIT_DEFAULTS, type, shape, rows, gap, unit: { ...emptyUnit(), below: kinds.map((k, i) => ({ ...attached(k === "ratio" ? "1" : "0"), size: +G.rows[1 + i].h })) } };  // the heights as in the grid
+    for (let cols = 1; cols <= 6; cols++) if (key(presetGrid({ ...p, cols })) === want) return { ...p, cols } }
+  return null }
 const sizesChanged = () => Object.keys(PL_DEFAULTS).filter(k => +LAY.S[k] !== PL_DEFAULTS[k]);
 const shapeSetters = () => [LAY.shape && LAY.aspect !== SHAPE_DEFAULTS.aspect ? `SetAspectRatio(${fmt(LAY.aspect)})` : "",  // only what the preset uses
-  LAY.ratio && LAY.ratioH !== SHAPE_DEFAULTS.ratioH ? `SetRatioHeight(${fmt(LAY.ratioH)})` : ""].filter(Boolean);
+  ...LAY.unit.below.map(a => a.ref === "1" ? ["Ratio", a.size, SHAPE_DEFAULTS.ratioH] : ["Pull", a.size, SHAPE_DEFAULTS.pullH]).filter(([, v, d]) => v !== d).map(([k, v]) => `Set${k}Height(${fmt(v)})`)].filter(Boolean);
 const colorsChanged = () => LAY.colors.join("|") !== DEFAULT_COLORS.join("|");
 const refChanged = () => Object.keys(REF_DEFAULTS).some(k => LAY.ref[k] !== REF_DEFAULTS[k]);
-const hasRatio = () => LAY.G.rows.some(r => r.ratio);
-const looksChanged = () => colorsChanged() || (hasRatio() && refChanged());
-const layName = () => LAY.name.trim() || (LAY.custom ? "myLayout" : presetName() + (sizesChanged().length || shapeSetters().length || looksChanged() || !LAY.commonTitles ? "_mine" : ""));
+const hasRef = () => LAY.G.rows.some(r => r.ref);
+const looksChanged = () => colorsChanged() || (hasRef() && refChanged());
+const layName = () => LAY.name.trim() || (LAY.custom || !named() ? "myLayout" : presetName() + (sizesChanged().length || shapeSetters().length || looksChanged() || !LAY.commonTitles ? "_mine" : ""));
 const colorOk = c => /^#[0-9a-fA-F]{6}$/.test(c) || !!colorOf(c);
 const colorLit = c => c.startsWith("#") ? `"${c.toLowerCase()}"` : c;  // a ROOT colour as it is, rgb as a string
 const colorHex = c => c.startsWith("#") ? c.toLowerCase() : (colorOf(c) || { hex: "#000000" }).hex;
@@ -2700,7 +2784,7 @@ function fmt(v) { return String(+(+v).toFixed(3)) }
 function layoutCode(py) {
   const G = LAY.G, S = LAY.S, end = py ? "" : ";", cm = py ? "#" : "//", name = layName(), changed = sizesChanged();
   const g = panelGeometry(G, S); if (g.error) return `${cm} ${g.error}`;
-  const panels = g.pads.filter(p => !p.empty && !p.ratio).map(p => p.id), ratios = g.pads.filter(p => p.ratio && !p.empty).map(p => p.id), empties = g.pads.filter(p => p.empty && !p.scale).map(p => p.id);
+  const panels = g.pads.filter(p => !p.empty && p.ref !== "1").map(p => p.id), ratios = g.pads.filter(p => !p.empty && p.ref === "1").map(p => p.id), empties = g.pads.filter(p => p.empty && !p.scale).map(p => p.id);
   const L = [];
   // the lengths
   const setters = [];
@@ -2713,11 +2797,11 @@ function layoutCode(py) {
   const colorList = indent => { const lines = []; for (let i = 0; i < LAY.colors.length; i += 6) lines.push(LAY.colors.slice(i, i + 6).map(colorLit).join(", "));
     return open + lines.join(",\n" + " ".repeat(indent + 1)) + close };
   const ref = LAY.ref, refStyle = (ref.color !== "kBlack" ? `.SetLineColor(${colorLit(ref.color)})` : "") + (ref.style !== 1 ? `.SetLineStyle(${LINE_STYLES.find(x => x[0] === ref.style)[1]})` : "");
-  const refCall = (pv) => ref.on ? `${pv}.SetRefFunc("${ref.f}")${refStyle}` : `${pv}.SetRefFunc("")`;
-  const forRatios = (pv, body) => ratios.length === 1 ? body.map(b => b.replace(/PAD/g, ratios[0]) + end) :
-    py ? [`for pad in [${ratios.join(", ")}]:`, ...body.map(b => "    " + b.replace(/PAD/g, "pad"))]
-      : [`for (const uint8_t pad : {${ratios.join(", ")}}) {`, ...body.map(b => "  " + b.replace(/PAD/g, "pad") + ";"), "}"];
-  if (!LAY.custom && !LAY.full) {
+  const refCall = (pv, f) => `${pv}.SetRefFunc("${f}")${refStyle}`;
+  const forIds = (ids, body) => ids.length === 1 ? body.map(b => b.replace(/PAD/g, ids[0]) + end) :
+    py ? [`for pad in [${ids.join(", ")}]:`, ...body.map(b => "    " + b.replace(/PAD/g, "pad"))]
+      : [`for (const uint8_t pad : {${ids.join(", ")}}) {`, ...body.map(b => "  " + b.replace(/PAD/g, "pad") + ";"), "}"];
+  if (!LAY.custom && named() && !LAY.full) {
     const shape = shapeSetters(), shapeExpr = "BasePlotShape()" + shape.map(x => "." + x).join("");
     if (!setters.length && !shape.length && !looksChanged() && !LAY.name.trim()) L.push(py ? `pm.AddBasePlot(PlotManager.MakeBasePlot("${name}"))` : `pm.AddBasePlot(PlotManager::MakeBasePlot("${name}"));`);
     else {
@@ -2726,7 +2810,7 @@ function layoutCode(py) {
         : setters.length || shape.length ? `, ${setters.length ? "sizes" : "PanelLayout()"}${shape.length ? ", " + shapeExpr : ""}` : "";
       L.push(`${v}base = PlotManager${py ? "." : "::"}MakeBasePlot("${presetName()}"${args})${end}`, `base.SetName("${name}")${end}`);
       if (colorsChanged()) L.push(`base[0].SetDefaultColors(${colorList(25)})${end}`);
-      if (ratios.length && refChanged()) L.push(...forRatios("base", [refCall("base[PAD]")]));
+      if (refChanged()) [...new Set(g.pads.filter(p => p.ref).map(p => p.ref))].forEach(f => L.push(...forIds(g.pads.filter(p => p.ref === f).map(p => p.id), [refCall("base[PAD]", f)])));
       L.push(py ? "pm.AddBasePlot(base)" : "pm.AddBasePlot(base);");
     }
   } else {
@@ -2737,9 +2821,11 @@ function layoutCode(py) {
     const cell = k => {
       const cs = k.c1 - k.c + 1, rs = k.r1 - k.r + 1, w = cs > 1 ? 1 : G.cols[k.c].w, h = rs > 1 ? 1 : G.rows[k.r].h;
       const span = cs > 1 || rs > 1 ? `.Span(${cs}${rs > 1 ? ", " + rs : ""})` : "";
-      if (k.scale) return "ZAxis()" + span;
+      if (k.scale) { // the cell shows the group of the panel to its left; a group further left (e.g. a map left of its projection) is named
+        const ids = g.shared.Z[g.pads.filter(q => q.scale).findIndex(q => q.key === k.key)] || [], left = g.pads.find(q => q.r <= k.r && k.r <= q.r1 && q.c <= k.c - 1 && k.c - 1 <= q.c1);
+        return `ZAxis(${ids.length && !(left && ids.includes(left.id)) ? ids[0] : ""})` + span }
       if (k.empty) return ((cs === 1 && !ownW(k.c)) || (rs === 1 && !ownH(k.r)) ? `Empty(${fmt(w)}, ${fmt(h)})` : "Empty()") + span;
-      return `Panel(${w === 1 && h === 1 ? "" : `${fmt(w)}, ${fmt(h)}`})` + span + (G.cols[k.c1].z && !G.rows[k.r].ratio ? ".ZAxis()" : "") };
+      return `Panel(${w === 1 && h === 1 ? "" : `${fmt(w)}, ${fmt(h)}`})` + span + (G.cols[k.c1].z && !G.rows[k.r].kind ? ".ZAxis()" : "") };
     const rows = [];
     G.rows.forEach((row, r) => {
       rows.push(cells.filter(k => k.r === r).map(k => cell(k) + (k.c1 < nC - 1 && G.cols[k.c1].gapAfter ? ", Gap()" : "")).join(", "));
@@ -2748,16 +2834,19 @@ function layoutCode(py) {
     else L.push(`const std::vector<std::vector<Panel>> rows = {${rows.map(r => `{${r}}`).join(",\n                                              ")}};`);
     if (setters.length) L.push(py ? `sizes = ${setters.length > 2 ? "(" + sizesExpr + ")" : sizesExpr}` : `const PanelLayout sizes = ${sizesExpr};`);
     L.push(py ? `layout = Plot("${name}", PanelLayout(${setters.length ? "sizes, " : ""}rows))` : `Plot layout("${name}", PanelLayout(${setters.length ? "sizes, " : ""}rows));`);
-    g.shared.Z.filter(ids => ids.length).forEach(ids => L.push(`layout.ShareAxis('Z', ${open}${ids.join(", ")}${close})${end}   ${cm} one colour scale for pads ${ids.join(", ")}`));
+    g.shared.Z.filter(ids => ids.length > 1).forEach(ids => L.push(`layout.ShareAxis('Z', ${open}${ids.join(", ")}${close})${end}   ${cm} one colour scale for pads ${ids.join(", ")}`));  // a single map needs no group
     L.push(`${cm} the look of the shipped base plots`, `layout.SetTransparent()${end}`, `layout[0].SetTransparent().SetFrameFill(1001, 10).SetDefaultTextFont(42)${end}`,
       `layout[0].SetDefaultColors(${colorList(27)})${end}`,
       `layout[0].SetDefaultMarkerStyles(${open}kFullCircle${close}).SetDefaultLineStyles(${open}kSolid${close}).SetDefaultFillStyles(${open}0${close})${end}`,
       `layout[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent().SetHideClippedLabels()${end}`,
       `layout[0]['Y'].SetOppositeTicks().SetMaxDigits(3).SetHideClippedLabels()${end}`, `layout[0]['Z'].SetMaxDigits(3)${end}`);
     if (G.cols.some(c => c.z) || g.shared.Z.length) L.push(`layout[0].SetRedrawAxes()${end}`);
-    if (ratios.length) {
-      L.push(`${cm} ratio pads: ${ref.on ? `a line at ${ref.f}, ` : ""}few divisions, centred title`);
-      L.push(...forRatios("layout", [...(ref.on ? [refCall("layout[PAD]")] : []), "layout[PAD]['Y'].SetNumDivisions(305).SetTitleCenter()"])) }
+    // the pads with a reference line or a compact y axis (e.g. ratio and pull pads), grouped by what they get
+    const conv = new Map();
+    g.pads.filter(p => !p.empty && (p.ref || p.compact)).forEach(p => { const k = JSON.stringify([p.ref, p.compact]); conv.set(k, [...(conv.get(k) || []), p.id]) });
+    conv.forEach((ids, k) => { const [f, compact] = JSON.parse(k);
+      L.push(`${cm} pad${ids.length > 1 ? "s" : ""} ${ids.join(", ")}: ${[f ? `a line at ${f}` : "", compact ? "few divisions, centred title" : ""].filter(Boolean).join(", ")}`);
+      L.push(...forIds(ids, [...(f ? [refCall("layout[PAD]", f)] : []), ...(compact ? ["layout[PAD]['Y'].SetNumDivisions(305).SetTitleCenter()"] : [])])) });
     L.push(py ? "pm.AddBasePlot(layout)" : "pm.AddBasePlot(layout);");
   }
   // a plot on it
@@ -2796,30 +2885,31 @@ function layoutSVG(g, S, maxW, maxH) {
         `<text x="${T((p.x0 + p.x1) / 2)}" y="${T((p.y0 + p.y1) / 2)}" text-anchor="middle" dominant-baseline="central" font-family="var(--sans)" font-size="12" fill="var(--teal)" font-weight="700">${p.id} (empty)</text>`, selected, "</g>");
       continue }
     const { fl, fr, ft, fb } = p, fw = fr - fl, fh = fb - ft, padW = p.x1 - p.x0, tick = S.tick;
-    out.push(`<g data-pad="${p.id}" data-cell="${p.key}" class="lb-pad" tabindex="0" role="button" aria-pressed="${LAY.sel === p.key}" aria-label="pad ${p.id}${p.ratio ? ", ratio pad" : ""}"><rect x="${T(p.x0)}" y="${T(p.y0)}" width="${T(padW)}" height="${T(p.y1 - p.y0)}" fill="transparent"/>`);
+    out.push(`<g data-pad="${p.id}" data-cell="${p.key}" class="lb-pad" tabindex="0" role="button" aria-pressed="${LAY.sel === p.key}" aria-label="pad ${p.id}${p.sub ? ", short pad" : ""}"><rect x="${T(p.x0)}" y="${T(p.y0)}" width="${T(padW)}" height="${T(p.y1 - p.y0)}" fill="transparent"/>`);
     out.push(`<rect x="${T(fl)}" y="${T(ft)}" width="${T(fw)}" height="${T(fh)}" fill="#fff" stroke="#000" stroke-width="${Math.max(0.6, 2 * s)}"/>`);
     // ticks (opposite ticks on, as in the shipped base plots) and labels
-    const nx = 5, ny = p.ratio ? 3 : 5, tk = [];
+    const nx = 5, ny = p.compact ? 3 : 5, tk = [];
     for (let i = 0; i <= nx * 2; i++) { const x = fl + fw * i / (nx * 2), l = i % 2 ? tick / 2 : tick; tk.push(`M${T(x)} ${T(fb)}v${-T(l)}M${T(x)} ${T(ft)}v${T(l)}`) }
     for (let i = 0; i <= ny * 2; i++) { const y = fb - fh * i / (ny * 2), l = i % 2 ? tick / 2 : tick; tk.push(`M${T(fl)} ${T(y)}h${T(l)}M${T(fr)} ${T(y)}h${-T(l)}`) }
     out.push(`<path d="${tk.join("")}" stroke="#000" stroke-width="${Math.max(0.5, 1.5 * s)}" fill="none"/>`);
     if (!p.sharedBelow) {
       for (let i = 0; i <= nx; i++) { const t = String(i * 2); if (i === nx && p.c1 < LAY.G.cols.length - 1 && !LAY.G.cols[p.c1].gapAfter && !LAY.G.cols[p.c1].z) continue;
         out.push(txt(fl + fw * i / nx, fb + S.labelOff + 0.86 * S.text, S.text, t, `text-anchor="middle"`)) }
-      if (!noTitleX.has(p.id)) out.push(txt(fr, fb + S.xTitleOff + 0.36 * S.title, S.title, "x title", `text-anchor="end"`)) }
-    const rc = isFinite(+LAY.ref.f) && LAY.ref.f.trim() !== "" ? +LAY.ref.f : 1, rl = v => String(+v.toFixed(2));  // the ratio axis centred on the line
-    const yl = p.ratio ? [rl(rc - 0.5), rl(rc), rl(rc + 0.5)] : ["0", "20", "40", "60", "80", "100"], ystep = p.ratio ? fh / 3 : fh / 5;
+      if (!noTitleX.has(p.id)) out.push(txt(fr, fb + S.xTitleOff + 0.36 * S.title, S.title, p.ownX ? "x title 2" : "x title", `text-anchor="end"`)) }
+    const rv = p.ref.trim() !== "" && isFinite(+p.ref) ? +p.ref : null, rc = rv ?? 1, rl = v => String(+v.toFixed(2));  // a compact axis centred on the line
+    const yl = p.compact ? (rv === null ? ["0", "50", "100"] : [rl(rc - 0.5), rl(rc), rl(rc + 0.5)]) : ["0", "20", "40", "60", "80", "100"], ystep = p.compact ? fh / 3 : fh / 5;
     let widest = 0;
     if (!p.sharedLeft) {
-      yl.forEach((t, i) => { const y = p.ratio ? fb - ystep * (i + 0.5) * 1 : fb - ystep * i; widest = Math.max(widest, textW(t, S.text));
-        if (!(i === 0 && !p.ratio && p.r1 < LAY.G.rows.length - 1 && !LAY.G.rows[p.r1].gapAfter)) out.push(txt(fl - S.labelOff - 0.2 * S.text, y + 0.36 * S.text, S.text, t, `text-anchor="end"`)) });
+      yl.forEach((t, i) => { const y = p.compact ? fb - ystep * (i + 0.5) : fb - ystep * i; widest = Math.max(widest, textW(t, S.text));
+        if (!(i === 0 && !p.compact && p.r1 < LAY.G.rows.length - 1 && !LAY.G.rows[p.r1].gapAfter)) out.push(txt(fl - S.labelOff - 0.2 * S.text, y + 0.36 * S.text, S.text, t, `text-anchor="end"`)) });
       const yx = S.yTitleOff > 0 ? fl - S.yTitleOff : fl - S.labelOff - 0.2 * S.text - widest - 0.62 * S.title;
-      const ty = p.ratio ? (ft + fb) / 2 : ft;
-      if (!noTitleY.has(p.id)) out.push(`<text transform="translate(${T(yx)} ${T(ty)}) rotate(-90)" font-size="${T(S.title)}" ${font} fill="#000" text-anchor="${p.ratio ? "middle" : "end"}" dominant-baseline="central">${p.ratio ? "ratio" : "y title"}</text>`) }
-    if (p.ratio && LAY.ref.on) { const dash = LINE_STYLES.find(x => x[0] === LAY.ref.style)[3], w = Math.max(0.6, S.lw * s);
-      out.push(`<path d="M${T(fl)} ${T(fb - fh / 2)}H${T(fr)}" stroke="${colorOk(LAY.ref.color) ? shownHex(LAY.ref.color) : "#000"}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash.split(" ").map(d => +(d * w).toFixed(2)).join(" ")}"` : ""}/>`) }
+      const ty = p.compact ? (ft + fb) / 2 : ft, yTitle = !p.own ? "y title" : rv === 1 ? "ratio" : rv === 0 ? "pull" : "y title 2";
+      if (!noTitleY.has(p.id)) out.push(`<text transform="translate(${T(yx)} ${T(ty)}) rotate(-90)" font-size="${T(S.title)}" ${font} fill="#000" text-anchor="${p.compact ? "middle" : "end"}" dominant-baseline="central">${yTitle}</text>`) }
+    if (p.ref) { const dash = LINE_STYLES.find(x => x[0] === LAY.ref.style)[3], w = Math.max(0.6, S.lw * s);
+      const ly = p.compact || rv === null || rv < 0 || rv > 100 ? fb - fh / 2 : fb - fh * rv / 100;  // on the drawn axis: centred on a compact one, else at its value (0 to 100)
+      out.push(`<path d="M${T(fl)} ${T(ly)}H${T(fr)}" stroke="${colorOk(LAY.ref.color) ? shownHex(LAY.ref.color) : "#000"}" stroke-width="${w}"${dash ? ` stroke-dasharray="${dash.split(" ").map(d => +(d * w).toFixed(2)).join(" ")}"` : ""}/>`) }
     // a curve with markers and a legend in the first panel: line width and marker size
-    if (p.id === g.pads.find(q => !q.empty && !q.ratio)?.id && !p.z && !g.shared.Z.some(ids => ids.includes(p.id))) { // data and up to four models in the first colours of the list
+    if (p.id === g.pads.find(q => !q.empty && !q.sub && !q.subCol)?.id && !p.z && !g.shared.Z.some(ids => ids.includes(p.id))) { // data and up to four models in the first colours of the list
       const col = LAY.colors.slice(0, 5).map(shownHex), lw = Math.max(0.5, S.lw * s), r = Math.max(0.6, 4 * S.ms * s);
       const curve = tau => [...Array(7)].map((_, i) => [fl + fw * (0.12 + i * 0.13), fb - fh * (0.12 + 0.6 * Math.exp(-i / tau))]);
       col.slice(1).forEach((c, j) => out.push(`<path d="${curve(1.4 + 0.7 * j).map((q, i) => `${i ? "L" : "M"}${T(q[0])} ${T(q[1])}`).join("")}" stroke="${c}" stroke-width="${lw}" fill="none"/>`));
@@ -2829,11 +2919,14 @@ function layoutSVG(g, S, maxW, maxH) {
       col.slice(1).forEach((c, j) => { const y = ly + 1.3 * (j + 1) * S.text;
         out.push(`<path d="M${T(lx)} ${T(y)}h${T(1.2 * S.text)}" stroke="${c}" stroke-width="${lw}"/>`, txt(lx + 1.6 * S.text, y + 0.36 * S.text, S.text, col.length > 2 ? `model ${j + 1}` : "model")) }) }
     if (p.z) out.push(zScale(fr + S.zOff, ft, fb));  // colour scale: distance and width in pixels as set in PanelLayout (ROOT alone scales them with the pad width)
-    out.push(`<text x="${T(fl + fw / 2)}" y="${T(ft + fh / 2)}" text-anchor="middle" dominant-baseline="central" font-family="var(--sans)" font-weight="700" font-size="${Math.min(22, Math.max(10, fh * s / 4))}" fill="${p.ratio ? "var(--muted)" : "var(--teal)"}" opacity="0.8">${p.id}</text>${selected}</g>`) }
+    out.push(`<text x="${T(fl + fw / 2)}" y="${T(ft + fh / 2)}" text-anchor="middle" dominant-baseline="central" font-family="var(--sans)" font-weight="700" font-size="${Math.min(22, Math.max(10, fh * s / 4))}" fill="${p.sub || p.subCol ? "var(--muted)" : "var(--teal)"}" opacity="0.8">${p.id}</text>${selected}</g>`) }
   return `<svg viewBox="-2 -2 ${T(g.width) + 4} ${T(g.height) + 4}" width="${T(g.width) + 4}" height="${T(g.height) + 4}" role="img" aria-label="Pads of ${layName()}" style="max-width:100%;height:auto">
     <defs><linearGradient id="zgrad" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#352a87"/><stop offset="0.5" stop-color="#26a69a"/><stop offset="1" stop-color="#f9fb0e"/></linearGradient></defs>${out.join("")}</svg>` }
 
 /* ---- the controls */
+function scaleColumns(G) { // a column with a colour scale cell holds no panels: its other cells become empty
+  const { cells } = gridCells(G), cols = new Set(cells.filter(k => k.scale).map(k => k.c));
+  cells.forEach(k => { if (!k.empty && k.c === k.c1 && cols.has(k.c)) G.empty.add(k.key) }) }
 function clipSpans(G) { // after removing a column or row: drop the cells that started there, shorten those that reached into it
   const nC = G.cols.length, nR = G.rows.length;
   for (const [key, [cs, rs]] of [...G.span]) { const [r, c] = key.split(",").map(Number);
@@ -2877,24 +2970,59 @@ function renderLayout() {
   const opt = (k, v, label) => `<button class="chip" data-lay="${k}" data-val="${v}" aria-pressed="${!LAY.custom && String(LAY[k]) === String(v)}">${label}</button>`;
   const num = (attr, v, step, min, label) => `<input type="number" ${attr} value="${fmt(v)}" step="${step}" min="${min}" aria-label="${label}">`;
   const chk = (attr, on, label) => `<label class="lb-chk"><input type="checkbox" ${attr} ${on ? "checked" : ""}> ${label}</label>`;
-  const colsUI = G.cols.map((c, i) => `<div class="lb-line"><span class="lb-l">Column ${i + 1}</span>width ${num(`data-colw="${i}"`, c.w, 0.05, 0.1, `width of column ${i + 1}`)}${chk(`data-colz="${i}"`, c.z, "colour scale")}${i < G.cols.length - 1 ? chk(`data-colgap="${i}"`, c.gapAfter, "gap after") : ""}</div>`).join("");
-  const rowsUI = G.rows.map((r, i) => `<div class="lb-line"><span class="lb-l">Row ${i + 1}</span>height ${num(`data-rowh="${i}"`, r.h, 0.05, 0.1, `height of row ${i + 1}`)}${chk(`data-rowratio="${i}"`, r.ratio, "ratio row")}${i < G.rows.length - 1 ? chk(`data-rowgap="${i}"`, r.gapAfter, "gap after") : ""}</div>`).join("");
+  const kindSel = (attr, v, kinds, label) => `<select ${attr} aria-label="${label}">${kinds.map(([k, t]) => `<option value="${k}" ${(v || "") === k ? "selected" : ""}>${t}</option>`).join("")}</select>`;
+  const box = (attr, on, label) => `<input type="checkbox" ${attr} ${on ? "checked" : ""} aria-label="${label}">`;
+  const none = `<span class="none">–</span>`;
+  // the reference line of a panel: none, the usual ones, or a function typed in (pre = "a" for attached panels, "row" for rows of the grid)
+  const refPick = (pre, at, ref, what) => { const other = !["", "1", "0"].includes(ref);
+    return `<select data-${pre}refsel="${at}" aria-label="reference line of ${what}">${[["", "none"], ["1", "at 1 (ratio)"], ["0", "at 0 (pull)"], ["other", "other…"]].map(([v, t]) =>
+      `<option value="${v}" ${(other ? "other" : ref) === v ? "selected" : ""}>${t}</option>`).join("")}</select>${other ? ` <input type="text" class="lb-reff" data-${pre === "a" ? "aref" : "rowref"}="${at}" value="${ref.replace(/"/g, "&quot;")}" spellcheck="false" aria-label="function of the reference line of ${what}">` : ""}` };
+  const colsUI = `<div class="lb-twrap"><table class="lb-table"><tr><th>column</th><th>kind</th><th>width</th><th class="c" title="room for a colour scale on its right">colour scale</th><th class="c">own x title</th><th class="c">gap after</th></tr>${G.cols.map((c, i) =>
+    `<tr class="${c.kind ? "att" : ""}"><td>${i + 1}</td><td>${kindSel(`data-colkind="${i}"`, c.kind, [["", "normal"], ["short", "attached"]], `kind of column ${i + 1}`)}</td><td>${num(`data-colw="${i}"`, c.w, c.kind ? 0.01 : 0.05, 0.05, `width of column ${i + 1}`)}</td>
+      <td class="c">${box(`data-colz="${i}"`, c.z, `colour scale right of column ${i + 1}`)}</td><td class="c">${box(`data-colown="${i}"`, c.own, `own x title in column ${i + 1}`)}</td><td class="c">${i < G.cols.length - 1 ? box(`data-colgap="${i}"`, c.gapAfter, `gap after column ${i + 1}`) : none}</td></tr>`).join("")}</table></div>`;
+  const rowsUI = `<div class="lb-twrap"><table class="lb-table"><tr><th>row</th><th>kind</th><th>height</th><th>line</th><th class="c" title="few y divisions and a centred y title">few div.</th><th class="c">own y title</th><th class="c">gap after</th></tr>${G.rows.map((r, i) =>
+    `<tr class="${r.kind ? "att" : ""}"><td>${i + 1}</td><td>${kindSel(`data-rowkind="${i}"`, r.kind, [["", "normal"], ["short", "attached"]], `kind of row ${i + 1}`)}</td><td>${num(`data-rowh="${i}"`, r.h, r.kind ? 0.01 : 0.05, 0.05, `height of row ${i + 1}`)}</td>
+      <td>${refPick("row", i, r.ref || "", `row ${i + 1}`)}</td>
+      <td class="c">${box(`data-rowcompact="${i}"`, r.compact, `few divisions in row ${i + 1}`)}</td><td class="c">${box(`data-rowown="${i}"`, r.own, `own y title in row ${i + 1}`)}</td><td class="c">${i < G.rows.length - 1 ? box(`data-rowgap="${i}"`, r.gapAfter, `gap after row ${i + 1}`) : none}</td></tr>`).join("")}</table></div>`;
+  // the attached panels of the unit, one table row each
+  const attUI = SIDES.flatMap(side => LAY.unit[side].map((a, i) => { const at = `${side},${i}`, vertical = side === "above" || side === "below", what = `${side} panel ${i + 1}`;
+    return `<tr><td>${side} ${i + 1}</td><td>${num(`data-asize="${at}"`, a.size, 0.01, 0.05, `${vertical ? "height" : "width"} of the ${what}`)}</td>
+      <td>${vertical ? refPick("a", at, a.ref, `the ${what}`) : none}</td>
+      <td class="c">${vertical ? box(`data-acompact="${at}"`, a.compact, `few divisions in the ${what}`) : none}</td><td class="c">${box(`data-aown="${at}"`, a.own, `own title of the ${what}`)}</td>
+      <td class="c">${box(`data-aapart="${at}"`, a.apart, `the ${what} apart`)}</td><td><button class="chip" data-adel="${at}" aria-label="remove the ${what}" title="remove this panel">×</button></td></tr>` }));
   const sizesUI = SIZE_FIELDS.map(([, title, fields]) => `<div class="lb-sizes"><span class="lb-h">${title}</span>${fields.map(([k, , label, step]) =>
     `<label class="${+S[k] !== PL_DEFAULTS[k] ? "lb-changed" : ""}"><span>${label}</span>${num(`data-size="${k}"`, S[k], step, 0, label)}</label>`).join("")}</div>`).join("");
   const info = g.error ? `<p class="lb-err">${g.error}</p>` : `<span class="small muted">${g.width} × ${g.height} pixels, ${g.pads.length} pad${g.pads.length > 1 ? "s" : ""}</span>`;
+  const now = JSON.stringify(["type", "shape", "cols", "rows", "gap", "strip", "unit"].map(k => LAY[k])), cur = LAY.custom ? -1 : TEMPLATES.findIndex(t => JSON.stringify(["type", "shape", "cols", "rows", "gap", "strip", "unit"].map(k => templateOf(t)[k])) === now);
   host.innerHTML = `<div class="lb-controls">
-      <div class="lb-name"><h4>Start from a shipped one</h4>${LAY.undo && !LAY.custom ? `<button class="chip" data-layop="undo">↶ back to your own grid</button>` : ""}</div>
-      <div class="row"><span class="lb-l">Type</span>${opt("type", "1d", "1d")}${opt("type", "2d", "2d, with colour scale")}</div>
-      <div class="row"><span class="lb-l">Shape</span>${opt("shape", "", "square")}${opt("shape", "wide", "wide")}${opt("shape", "tall", "tall")}${LAY.shape && !LAY.custom ? `<label class="lb-chk">aspect ${num('data-shape="aspect"', LAY.aspect, 0.05, 0.1, "aspect ratio of wide and tall panels")}</label>` : ""}</div>
-      <div class="row"><span class="lb-l">Columns</span>${[1, 2, 3, 4, 5, 6].map(n => opt("cols", n, n)).join("")}</div>
-      <div class="row"><span class="lb-l">Rows</span>${[1, 2, 3, 4, 5, 6].map(n => opt("rows", n, n)).join("")}</div>
-      ${LAY.type === "2d" ? "" : `<div class="row"><span class="lb-l">Ratio panel</span>${opt("ratio", true, "below each")}${opt("ratio", false, "none")}${LAY.ratio && !LAY.custom ? `<label class="lb-chk">height ${num('data-shape="ratioH"', LAY.ratioH, 0.01, 0.05, "height of the ratio panels")}</label>` : ""}</div>`}
-      <div class="row"><span class="lb-l">Panels</span>${opt("gap", false, "touching, shared axes")}${opt("gap", true, "apart, own axes")}</div>
-      <div class="row"><span class="lb-l">Titles</span>${chk("data-ctitles", LAY.commonTitles, "once for a row or column of touching panels")}</div>
-      <details class="lb-more" ${more("grid", LAY.custom)}><summary>Change the grid</summary>
-        <p class="small muted">Sizes in units of the standard panel. Click a pad in the drawing to select it: make it an empty cell (for a long legend or a text) or let it span further columns or rows.</p>
-        ${colsUI}<div class="lb-line"><button class="chip" data-grid="addcol">+ column</button><button class="chip" data-grid="delcol" ${G.cols.length < 2 ? "disabled" : ""}>− column</button></div>
-        ${rowsUI}<div class="lb-line"><button class="chip" data-grid="addrow">+ row</button><button class="chip" data-grid="addratio">+ ratio row</button><button class="chip" data-grid="delrow" ${G.rows.length < 2 ? "disabled" : ""}>− row</button><button class="chip" data-grid="strip">+ legend strip on top</button></div>
+      <div class="lb-start"><label for="lbpreset">Start from</label><select id="lbpreset" data-upreset title="replaces the whole layout; text sizes and colours stay">${(cur < 0 ? `<option value="" selected>your own layout</option>` : "")
+        + TEMPLATES.map(([label], i) => `<option value="${i}" ${i === cur ? "selected" : ""}>${label}</option>`).join("")}</select>
+        <button class="chip" data-layop="reset" title="everything back to the defaults, also text sizes and colours">↺ Start over</button>${LAY.undo && !LAY.custom ? `<button class="chip" data-layop="undo">↶ Undo</button>` : ""}</div>
+      ${LAY.custom ? `<div class="lb-line"><span class="small muted">Your own grid, started from ${named() ? `<code>"${presetName()}"</code>` : "the panels below"}; changing them replaces it.</span><button class="chip" data-layop="preset">↶ back to ${named() ? `"${presetName()}"` : "these panels"}</button></div>` : ""}
+      <div class="lb-group"><div class="lb-gh">1 · The panel</div>
+        <div class="row"><span class="lb-l">Type</span>${opt("type", "1d", "1d")}${opt("type", "2d", "2d, with colour scale")}</div>
+        <div class="row"><span class="lb-l">Shape</span>${opt("shape", "", "square")}${opt("shape", "wide", "wide")}${opt("shape", "tall", "tall")}${LAY.shape && !LAY.custom ? `<label class="lb-chk">aspect ${num('data-shape="aspect"', LAY.aspect, 0.05, 0.1, "aspect ratio of wide and tall panels")}</label>` : ""}</div>
+      </div>
+      <div class="lb-group"><div class="lb-gh">2 · Attached panels <span class="small">touching the panel (a shared axis), or apart (a gap, own labels)</span></div>
+        ${attUI.length ? `<div class="lb-twrap"><table class="lb-table"><tr><th>panel</th><th>size</th><th>line</th><th class="c" title="few y divisions and a centred y title">few div.</th><th class="c">own title</th><th class="c">apart</th><th></th></tr>${attUI.join("")}</table></div>` : `<span class="small muted">none: add one on any side</span>`}
+        <div class="lb-tools">${SIDES.map(side => `<button class="chip" data-aadd="${side}">+ ${side}</button>`).join("")}</div>
+        <div class="lb-tools"><label class="lb-chk">space between touching panels ${num('data-size="spacing"', S.spacing, 1, 0, "space between touching panels in pixels")} px</label><span class="small muted">for all touching panels, also between copies</span></div>
+      </div>
+      <div class="lb-group"><div class="lb-gh">3 · Repeat <span class="small">the panel with its attached panels</span></div>
+        <div class="row"><span class="lb-l">Columns</span>${[1, 2, 3, 4, 5, 6].map(n => opt("cols", n, n)).join("")}</div>
+        <div class="row"><span class="lb-l">Rows</span>${[1, 2, 3, 4, 5, 6].map(n => opt("rows", n, n)).join("")}</div>
+        <div class="row"><span class="lb-l">Copies</span>${opt("gap", false, "touching, shared axes")}${opt("gap", true, "apart, own axes")}</div>
+      </div>
+      <div class="lb-group"><div class="lb-gh">4 · Extras</div>
+        <div class="row"><span class="lb-l">Legend</span>${chk("data-strip", LAY.strip, "an empty strip above all panels, for one legend of all")}</div>
+        <div class="row"><span class="lb-l">Axis titles</span><button class="chip" data-ctitle="true" aria-pressed="${LAY.commonTitles}" title="touching panels with the same title show it once, e.g. one x title below a row">shared</button><button class="chip" data-ctitle="false" aria-pressed="${!LAY.commonTitles}">on every panel</button></div>
+      </div>
+      <details class="lb-more" ${more("grid", LAY.custom)}><summary>Change the grid, row by row</summary>
+        <p class="small muted">Every column and row on its own, sizes in units of the standard panel. Click a pad in the drawing to make it empty or let it span further cells.</p>
+        <div class="lb-group"><div class="lb-gh">Columns <span class="small">${G.cols.length}</span></div>${colsUI}
+          <div class="lb-tools"><button class="chip" data-grid="addcol">+ column</button><button class="chip" data-grid="addside">+ attached column</button><button class="chip" data-grid="delcol" ${G.cols.length < 2 ? "disabled" : ""}>− last column</button></div></div>
+        <div class="lb-group"><div class="lb-gh">Rows <span class="small">${G.rows.length}</span></div>${rowsUI}
+          <div class="lb-tools"><button class="chip" data-grid="addrow">+ row</button><button class="chip" data-grid="addshort">+ attached row</button><button class="chip" data-grid="delrow" ${G.rows.length < 2 ? "disabled" : ""}>− last row</button><span class="small muted">on top:</span><button class="chip" data-grid="topshort">+ attached row</button><button class="chip" data-grid="strip">+ legend strip</button></div></div>
       </details>
       <details class="lb-more" ${more("sizes", sizesChanged().length > 0)}><summary>Change text sizes, margins, lines</summary>
         <p class="small muted">Pixels of the canvas, the same in every panel. Changed values are marked.</p>
@@ -2907,10 +3035,9 @@ function renderLayout() {
         <div class="lb-line"><span class="lb-l">Seen as</span><span class="seg" role="group" aria-label="Show the colours as seen with colour vision deficiency">${[["", "normal"], ["p", "red-blind"], ["d", "green-blind"], ["t", "blue-blind"]].map(([k, t]) => `<button data-lcvd="${k}" aria-pressed="${LAY.cvd === k}">${t}</button>`).join("")}</span></div>
         <p class="small muted">About 8 % of men have a red-green colour vision deficiency: check that neighbouring colours remain distinguishable.</p>
       </details>
-      ${hasRatio() ? `<details class="lb-more lb-ref" ${more("ref", refChanged())}><summary>Line in the ratio pads</summary>
-        <p class="small muted">A function of <i>x</i> drawn behind the data: <code>1</code> for a ratio, <code>0</code> for a difference or a pull. A plot can change it in one pad with <code>SetRefFunc</code>, or remove it with <code>SetRefFunc("")</code>.</p>
-        <div class="lb-line"><span class="lb-l">Line</span><button class="chip" data-refon="true" aria-pressed="${LAY.ref.on}">at</button><input type="text" data-reff value="${LAY.ref.f.replace(/"/g, "&quot;")}" spellcheck="false" aria-label="reference function" class="${LAY.ref.f.trim() ? "" : "bad"}"><button class="chip" data-refon="false" aria-pressed="${!LAY.ref.on}">none</button></div>
-        ${LAY.ref.on ? `<div class="lb-line"><span class="lb-l">Style</span>${LINE_STYLES.map(([n, , t]) => `<button class="chip" data-refstyle="${n}" aria-pressed="${LAY.ref.style === n}">${t}</button>`).join("")}<input type="color" class="lb-pick" data-refpick value="${colorHex(LAY.ref.color)}" aria-label="pick the colour of the line"><input type="text" data-refcolor value="${LAY.ref.color}" spellcheck="false" aria-label="colour of the line" class="${colorOk(LAY.ref.color) ? "" : "bad"}"></div>` : ""}
+      ${hasRef() ? `<details class="lb-more lb-ref" ${more("ref", refChanged())}><summary>Reference lines</summary>
+        <p class="small muted">A function of <i>x</i> drawn behind the data, chosen per panel under “Attached panels” (or per row under “Change the grid”). A plot can change it in one pad with <code>SetRefFunc</code>, or remove it with <code>SetRefFunc("")</code>.</p>
+        <div class="lb-line"><span class="lb-l">Style</span>${LINE_STYLES.map(([n, , t]) => `<button class="chip" data-refstyle="${n}" aria-pressed="${LAY.ref.style === n}">${t}</button>`).join("")}<input type="color" class="lb-pick" data-refpick value="${colorHex(LAY.ref.color)}" aria-label="pick the colour of the line"><input type="text" data-refcolor value="${LAY.ref.color}" spellcheck="false" aria-label="colour of the line" class="${colorOk(LAY.ref.color) ? "" : "bad"}"></div>
         <div class="lb-line"><button class="chip" data-refop="reset" ${refChanged() ? "" : "disabled"}>Back to the default</button></div>
       </details>` : ""}
       <div class="row"><label for="lbname" class="lb-l">Name</label><input id="lbname" type="text" spellcheck="false" placeholder="${layName()}" value="${LAY.name.replace(/"/g, "&quot;")}"></div>
@@ -2918,7 +3045,7 @@ function renderLayout() {
     <div class="lb-out">
       <div class="lb-name"><code>"${layName()}"</code>${info}</div>
       ${g.error ? "" : layoutSVG(g, S, ...previewSize())}
-      <div class="lb-line"><button class="chip" data-layop="big" aria-pressed="${LAY.big}">${LAY.big ? "Smaller drawing" : "Larger drawing"}</button><button class="chip" data-layop="link">Copy a link to this design</button><button class="chip" data-layop="reset">Start over</button></div>
+      <div class="lb-line"><button class="chip" data-layop="big" aria-pressed="${LAY.big}">${LAY.big ? "Smaller drawing" : "Larger drawing"}</button><button class="chip" data-layop="link">Copy a link to this design</button></div>
       ${g.error ? "" : sharedInfo(g)}
       ${cellTools(g)}
       ${g.warnings && g.warnings.length ? `<p class="lb-err">${g.warnings.join(" ")}</p>` : ""}
@@ -2930,42 +3057,72 @@ function renderLayout() {
   store.set("srp-layout", layState());
   const rerender = () => { const a = document.activeElement, key = a && a.matches("input, [data-cell]") ? [...a.attributes].filter(x => x.name.startsWith("data-") || x.name === "id").map(x => `[${x.name}="${x.value}"]`).join("") : null;
     renderLayout(); if (key) { const n = host.querySelector(key); if (n) { n.focus(); if (n.type === "text") n.setSelectionRange(n.value.length, n.value.length) } } };
-  host.querySelectorAll("[data-lay]").forEach(b => b.onclick = () => {
-    const k = b.dataset.lay, v = b.dataset.val; if (LAY.custom) LAY.undo = layState();  // a click on a preset replaces the own grid: it can be brought back
-    LAY[k] = (k === "cols" || k === "rows") ? +v : (k === "ratio" || k === "gap") ? v === "true" : v;
-    if (LAY.type === "2d") LAY.ratio = false;  // ratio panels exist only for 1d base plots
-    LAY.custom = false; LAY.sel = null; LAY.G = presetGrid(); rerender() });
+  const unit = change => { // a change of the panel unit replaces the own grid: it can be brought back
+    if (LAY.custom) LAY.undo = layState();
+    change();
+    LAY.custom = false; LAY.sel = null; LAY.G = presetGrid(); rerender() };
+  host.querySelectorAll("[data-lay]").forEach(b => b.onclick = () => unit(() => { const k = b.dataset.lay, v = b.dataset.val; LAY[k] = (k === "cols" || k === "rows") ? +v : k === "gap" ? v === "true" : v }));
+  const att = el => { const [side, i] = Object.values(el.dataset)[0].split(","); return LAY.unit[side][+i] };  // the attached panel an element is for
+  host.querySelectorAll("[data-aadd]").forEach(b => b.onclick = () => unit(() => LAY.unit[b.dataset.aadd].push(attached())));
+  host.querySelectorAll("[data-adel]").forEach(b => b.onclick = () => unit(() => { const [side, i] = b.dataset.adel.split(","); LAY.unit[side].splice(+i, 1) }));
+  host.querySelectorAll("[data-asize]").forEach(i => i.onchange = () => unit(() => { if (+i.value > 0) att(i).size = +i.value }));
+  const refChoice = v => v === "other" ? "1 + 0.1*x" : v;  // "other": an example function to change
+  host.querySelectorAll("[data-arefsel]").forEach(i => i.onchange = () => unit(() => { att(i).ref = refChoice(i.value) }));
+  host.querySelectorAll("[data-rowrefsel]").forEach(i => i.onchange = () => { G.rows[+i.dataset.rowrefsel].ref = refChoice(i.value); custom(); rerender() });
+  host.querySelectorAll("[data-aref]").forEach(i => i.onchange = () => unit(() => { att(i).ref = i.value.trim().replace(/"/g, "") }));
+  host.querySelectorAll("[data-acompact]").forEach(i => i.onchange = () => unit(() => { att(i).compact = i.checked }));
+  host.querySelectorAll("[data-aapart]").forEach(i => i.onchange = () => unit(() => { att(i).apart = i.checked }));
+  host.querySelectorAll("[data-upreset]").forEach(i => i.onchange = () => { if (i.value === "") return;  // the whole layout from the template, the previous design can be brought back
+    LAY.undo = layState(); Object.assign(LAY, templateOf(TEMPLATES[+i.value]), { aspect: SHAPE_DEFAULTS.aspect, commonTitles: true, custom: false, full: false, sel: null }); LAY.G = presetGrid(); rerender() });
+  host.querySelectorAll("[data-aown]").forEach(i => i.onchange = () => unit(() => { att(i).own = i.checked }));
+  host.querySelectorAll("[data-strip]").forEach(i => i.onchange = () => unit(() => { LAY.strip = i.checked }));
   host.querySelectorAll("[data-layop]").forEach(b => b.onclick = () => { const op = b.dataset.layop;
     if (op === "undo") layApply(LAY.undo);
-    if (op === "reset") layReset();
+    if (op === "preset") { LAY.undo = layState(); LAY.custom = false; LAY.sel = null; LAY.G = presetGrid() }
+    if (op === "reset") { const before = layState(); layReset(); LAY.undo = before }
     if (op === "big") LAY.big = !LAY.big;
     if (op === "link") { const url = location.origin + location.pathname + "?layout=" + layState() + "#layouts", done = t => { b.textContent = t; setTimeout(() => { b.textContent = "Copy a link to this design" }, 1500) };
       (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => done("Link copied"), () => { prompt("Link to this design:", url) }); return }
     rerender() });
   host.querySelectorAll("[data-full]").forEach(b => b.onclick = () => { LAY.full = b.dataset.full === "true"; rerender() });
-  host.querySelectorAll("[data-ctitles]").forEach(i => i.onchange = () => { LAY.commonTitles = i.checked; rerender() });
-  const custom = () => { LAY.custom = true; LAY.undo = null };
-  host.querySelectorAll("[data-colw]").forEach(i => i.onchange = () => { if (+i.value > 0) { G.cols[+i.dataset.colw].w = +i.value; custom() } rerender() });
-  host.querySelectorAll("[data-rowh]").forEach(i => i.onchange = () => { if (+i.value > 0) { G.rows[+i.dataset.rowh].h = +i.value; custom() } rerender() });
+  host.querySelectorAll("[data-ctitle]").forEach(b => b.onclick = () => { LAY.commonTitles = b.dataset.ctitle === "true"; rerender() });
+  const custom = () => { // after a change of the grid: a grid that a name describes is that preset again
+    const m = matchPreset(G); LAY.undo = null;
+    if (m) { Object.assign(LAY, m, { custom: false }); LAY.G = presetGrid() } else LAY.custom = true };
+  host.querySelectorAll("[data-colw]").forEach(i => i.onchange = () => { const c = G.cols[+i.dataset.colw], v = +i.value;
+    if (v > 0) { c.w = v; custom() } rerender() });
+  host.querySelectorAll("[data-colown]").forEach(i => i.onchange = () => { G.cols[+i.dataset.colown].own = i.checked; custom(); rerender() });
+  host.querySelectorAll("[data-colkind]").forEach(i => i.onchange = () => { const c = G.cols[+i.dataset.colkind]; c.kind = i.value; c.w = c.kind ? ATTACHED : 1; c.own = !!c.kind; custom(); rerender() });
+  host.querySelectorAll("[data-rowh]").forEach(i => i.onchange = () => { const r = G.rows[+i.dataset.rowh], v = +i.value;
+    if (v > 0) { r.h = v; custom() } rerender() });
   host.querySelectorAll("[data-colz]").forEach(i => i.onchange = () => { G.cols[+i.dataset.colz].z = i.checked; custom(); rerender() });
   host.querySelectorAll("[data-colgap]").forEach(i => i.onchange = () => { G.cols[+i.dataset.colgap].gapAfter = i.checked; custom(); rerender() });
   host.querySelectorAll("[data-rowgap]").forEach(i => i.onchange = () => { G.rows[+i.dataset.rowgap].gapAfter = i.checked; custom(); rerender() });
-  host.querySelectorAll("[data-rowratio]").forEach(i => i.onchange = () => { const r = G.rows[+i.dataset.rowratio]; r.ratio = i.checked; r.h = i.checked ? LAY.ratioH : 1; custom(); rerender() });
+  host.querySelectorAll("[data-rowkind]").forEach(i => i.onchange = () => { const r = G.rows[+i.dataset.rowkind]; Object.assign(r, i.value ? shortRow() : mainRow(1), { gapAfter: r.gapAfter }); custom(); rerender() });
+  host.querySelectorAll("[data-rowref]").forEach(i => i.onchange = () => { G.rows[+i.dataset.rowref].ref = i.value.trim().replace(/"/g, ""); custom(); rerender() });
+  host.querySelectorAll("[data-rowcompact]").forEach(i => i.onchange = () => { G.rows[+i.dataset.rowcompact].compact = i.checked; custom(); rerender() });
+  host.querySelectorAll("[data-rowown]").forEach(i => i.onchange = () => { G.rows[+i.dataset.rowown].own = i.checked; custom(); rerender() });
   host.querySelectorAll("[data-size]").forEach(i => i.onchange = () => { if (i.value !== "" && +i.value >= 0) S[i.dataset.size] = +i.value; rerender() });
   host.querySelectorAll("[data-grid]").forEach(b => b.onclick = () => {
     const a = b.dataset.grid;
     if (a === "resetsizes") { LAY.S = { ...PL_DEFAULTS }; rerender(); return }
     const shift = (dr, dc, at) => { const moved = set => { const e = new Set(); set.forEach(k => { const [r, c] = k.split(",").map(Number); if (dr && r === at) return; if (dc && c === at) return; e.add(`${r - (dr && r > at ? 1 : 0)},${c - (dc && c > at ? 1 : 0)}`) }); return e };
       G.empty = moved(G.empty); G.scale = moved(G.scale) };
-    if (a === "strip") { // a row of one empty cell above the grid, for a legend or a text shared by all panels
+    if (a === "strip" || a === "topshort") { // a row above the grid: one empty cell for a legend or a text shared by all panels, or short panels (e.g. a projection above a map)
       const moved = k => { const [r, c] = k.split(",").map(Number); return `${r + 1},${c}` };
       G.empty = new Set([...G.empty].map(moved)); G.scale = new Set([...G.scale].map(moved)); G.span = new Map([...G.span].map(([k, v]) => [moved(k), v]));
-      G.rows.unshift({ h: 0.2, ratio: false, gapAfter: false }); G.empty.add("0,0"); if (G.cols.length > 1) G.span.set("0,0", [G.cols.length, 1]); LAY.sel = "0,0" }
-    if (a === "addcol") { const last = G.cols[G.cols.length - 1]; last.gapAfter = G.cols.length > 1 && G.cols[0].gapAfter; G.cols.push({ w: last.w, z: last.z, gapAfter: false }) }
+      if (a === "topshort") G.rows.unshift(shortRow());
+      else { G.rows.unshift(mainRow(0.2)); G.empty.add("0,0"); if (G.cols.length > 1) G.span.set("0,0", [G.cols.length, 1]); LAY.sel = "0,0" } }
+    if (a === "addcol") { const last = G.cols[G.cols.length - 1], like = [...G.cols].reverse().find(c => !c.kind) || last; last.gapAfter = G.cols.length > 1 && G.cols[0].gapAfter; G.cols.push(mainCol(like.w, like.z)) }
+    if (a === "addside") G.cols.push({ ...mainCol(ATTACHED, false), kind: "short", own: true });  // e.g. a projection beside a map: counts along x
     if (a === "delcol") { G.cols.pop(); shift(0, 1, G.cols.length); G.cols[G.cols.length - 1].gapAfter = false }
-    if (a === "addrow" || a === "addratio") G.rows.push({ h: a === "addratio" ? LAY.ratioH : 1, ratio: a === "addratio", gapAfter: false });
+    if (a === "addrow") G.rows.push(mainRow(1));
+    if (a === "addshort") G.rows.push(shortRow());
     if (a === "delrow") { G.rows.pop(); shift(1, 0, G.rows.length); G.rows[G.rows.length - 1].gapAfter = false }
-    clipSpans(G); custom(); rerender() });
+    if (a === "addrow" || a === "addshort") { // a colour scale reaching the old last row also spans a new row of maps
+      const r = G.rows.length - 1; if (!G.rows[r].kind) for (const [k, [cs, rs]] of [...G.span, ...[...G.scale].filter(k => !G.span.has(k)).map(k => [k, [1, 1]])]) {
+        const [r0] = k.split(",").map(Number); if (G.scale.has(k) && r0 + rs === r) G.span.set(k, [cs, rs + 1]) } }
+    clipSpans(G); scaleColumns(G); custom(); rerender() });
   host.querySelectorAll(".lb-pad").forEach(p => { p.onclick = () => { LAY.sel = LAY.sel === p.dataset.cell ? null : p.dataset.cell; rerender() };
     p.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); p.onclick() } } });
   host.querySelectorAll("svg text").forEach(t => t.style.pointerEvents = "none");
@@ -2976,10 +3133,10 @@ function renderLayout() {
   host.querySelectorAll("[data-cellop]").forEach(b => b.onclick = () => {
     const key = LAY.sel, [cs, rs] = G.span.get(key) || [1, 1], op = b.dataset.cellop;
     if (op === "empty") { if (G.empty.has(key) || G.scale.has(key)) { G.empty.delete(key); G.scale.delete(key) } else G.empty.add(key) }
-    else if (op === "scale") { G.empty.delete(key); G.scale.add(key) }
+    else if (op === "scale") { G.empty.delete(key); G.scale.add(key); scaleColumns(G) }
     else { const [dc, dr] = { right: [1, 0], left: [-1, 0], down: [0, 1], up: [0, -1] }[op]; setSpan(G, key, cs + dc, rs + dr) }
     custom(); rerender() });
-  // colours and the ratio line: a bad name is marked and kept out of the code until it is a colour
+  // colours and the reference lines: a bad name is marked and kept out of the code until it is a colour
   host.querySelectorAll("[data-colname]").forEach(i => i.onchange = () => { const c = i.value.trim(); if (!colorOk(c)) { i.classList.add("bad"); return }
     LAY.colors[+i.dataset.colname] = c.startsWith("#") ? c.toLowerCase() : c; rerender() });
   host.querySelectorAll("[data-colpick]").forEach(i => i.onchange = () => { LAY.colors[+i.dataset.colpick] = i.value.toLowerCase(); rerender() });
@@ -2991,8 +3148,6 @@ function renderLayout() {
   host.querySelectorAll("[data-coldel]").forEach(b => b.onclick = () => { LAY.colors.splice(+b.dataset.coldel, 1); rerender() });
   host.querySelectorAll("details[data-more]").forEach(d => d.ontoggle = () => { LAY.open[d.dataset.more] = d.open });
   host.querySelectorAll("[data-lcvd]").forEach(b => b.onclick = () => { LAY.cvd = b.dataset.lcvd; rerender() });
-  host.querySelectorAll("[data-refon]").forEach(b => b.onclick = () => { LAY.ref.on = b.dataset.refon === "true"; rerender() });
-  host.querySelectorAll("[data-reff]").forEach(i => i.onchange = () => { const f = i.value.trim().replace(/"/g, ""); if (!f) { i.classList.add("bad"); return } LAY.ref.f = f; rerender() });
   host.querySelectorAll("[data-refstyle]").forEach(b => b.onclick = () => { LAY.ref.style = +b.dataset.refstyle; rerender() });
   host.querySelectorAll("[data-refcolor]").forEach(i => i.onchange = () => { const c = i.value.trim(); if (!colorOk(c)) { i.classList.add("bad"); return } LAY.ref.color = c.startsWith("#") ? c.toLowerCase() : c; rerender() });
   host.querySelectorAll("[data-refpick]").forEach(i => i.onchange = () => { LAY.ref.color = i.value.toLowerCase(); rerender() });

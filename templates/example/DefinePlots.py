@@ -88,9 +88,9 @@ def DefineBasePlots(pm: PlotManager):
     """Base plots: layouts that the plots build upon (third argument of the Plot constructor).
     SciRooPlot provides base plots with consistent layout among them: text sizes, tick lengths, distances, line
     widths and marker sizes are the same in every panel, so that plots of different layouts look alike.
-    The name describes the layout: <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap], with type 1d (plain
-    panels) or 2d (panels with colour scale), wide or tall panels, a grid of panels sharing their axes, a ratio
-    panel below each panel, or gaps between independent panels. Pads are numbered row by row.
+    The name describes the layout: <type>[_wide|_tall][_<columns>x<rows>][_ratio][_pull][_gap], with type 1d (plain
+    panels) or 2d (panels with colour scale), wide or tall panels, a grid of panels sharing their axes, a ratio and/or
+    pull panel below each panel, or gaps between independent panels. Pads are numbered row by row.
     The code of PlotManager::MakeBasePlot shows how they are made with PanelLayout, as a start for your own."""
     for name in ["1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_2x1_gap", "1d_3x1_gap", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1", "2d_3x1", "2d_2x2"]:
         pm.AddBasePlot(PlotManager.MakeBasePlot(name))

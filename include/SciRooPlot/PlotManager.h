@@ -58,11 +58,13 @@ class BasePlotShape
  public:
   BasePlotShape& SetAspectRatio(double_t ratio);   // 1.618: width / height of _wide panels, height / width of _tall ones
   BasePlotShape& SetRatioHeight(double_t height);  // 0.37: height of the ratio panels (the same under every kind of panel)
+  BasePlotShape& SetPullHeight(double_t height);   // 0.37: height of the pull panels (the same under every kind of panel)
 
  private:
   friend class PlotManager;
   double_t mAspectRatio{1.618};
   double_t mRatioHeight{0.37};
+  double_t mPullHeight{0.37};
 };
 
 //**************************************************************************************************
@@ -99,11 +101,12 @@ class PlotManager
   void AddBasePlot(Plot basePlot);
   // Base plots with consistent layout among them: text sizes, tick lengths, distances, line widths and marker sizes are the
   // same in every panel (see PanelLayout.h), so that plots of different layouts look alike. The name describes the layout:
-  //   <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap]
+  //   <type>[_wide|_tall][_<columns>x<rows>][_ratio][_pull][_gap]
   // type 1d (plain panels) or 2d (panels with colour scale); wide/tall panels (golden ratio unless shape says otherwise); a grid of main panels
-  // (default 1x1) that share their axes; a ratio panel below each main panel; gaps between the panels (own axes).
-  // E.g. 1d, 1d_ratio, 2d, 1d_wide, 1d_2x1, 1d_3x1, 1d_2x1_ratio, 1d_2x2, 2d_2x1, 1d_2x1_gap. Pads are numbered row by row.
-  // Ratio panels exist only for 1d. A 2d grid without gaps shares one colour scale, in a ZAxis() cell after the panels of the first row (2d_2x2: panels 1, 2, 4, 5).
+  // (default 1x1) that share their axes; below each main panel a ratio panel (a line at 1) and/or a pull panel (a line at 0, below the ratio);
+  // gaps between the panels (own axes).
+  // E.g. 1d, 1d_ratio, 1d_pull, 1d_ratio_pull, 2d, 1d_wide, 1d_2x1, 1d_3x1, 1d_2x1_ratio, 1d_2x2, 2d_2x1, 1d_2x1_gap. Pads are numbered row by row.
+  // Ratio and pull panels exist only for 1d. A 2d grid without gaps shares one colour scale, in a ZAxis() cell after the panels of the first row (2d_2x2: panels 1, 2, 4, 5).
   // The code of this function is the reference for defining further layouts with PanelLayout.
   // Other lengths are taken from sizes (its panels are not used): text and title sizes, tick lengths, margins, line width and
   // marker size in pixels of the plot, e.g. MakeBasePlot("1d_ratio", PanelLayout().SetTextSize(24).SetTitleSize(30)).

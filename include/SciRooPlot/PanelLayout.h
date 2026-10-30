@@ -73,7 +73,8 @@ Panel Empty();
 Panel Empty(double_t width, double_t height);
 
 // A cell holding the colour scale of a group of panels sharing the z axis (Plot::ShareAxis('Z', ...)): the group of the panel to its
-// left, or of the panel with the given pad number. Its panels then lose their own colour scales. The cell is as wide as the room
+// left, or of the panel with the given pad number (a panel in no z group: its own scale, e.g. for a map beside its projection).
+// Its panels then lose their own colour scales. The cell is as wide as the room
 // of the colour scale of Panel().ZAxis() (SetZAxisMargin, its scale placed by SetZAxisOffset and SetZAxisWidth) and may span rows.
 Panel ZAxis();
 Panel ZAxis(uint8_t padID);

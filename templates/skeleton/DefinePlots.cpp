@@ -26,7 +26,7 @@ void DefineDataSources(PlotManager& pm)
 }
 
 // Base plots: layouts that the plots build upon (third argument of the Plot constructor).
-// The name describes the layout: <type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap] with type 1d or 2d
+// The name describes the layout: <type>[_wide|_tall][_<columns>x<rows>][_ratio][_pull][_gap] with type 1d or 2d
 // (see PlotManager::MakeBasePlot for the details and for how they are made with PanelLayout.h).
 void DefineBasePlots(PlotManager& pm)
 {
