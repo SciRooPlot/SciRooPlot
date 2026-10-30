@@ -448,7 +448,7 @@ def DefineDetectorPlots(pm: PlotManager):
     # a scale per layer would make them look alike; one module of the third layer is off -------------------------------------
     plot = Plot("hitDensity", "detector/tracking", "2d_2x2")  # pads 1, 2, 4, 5; pad 3 is the common scale
     for pad, radius in zip([1, 2, 4, 5], [30.0, 45.0, 60.0, 80.0]):
-        data = plot[pad].AddData("tracks", "tracks").Define("z", f"{radius} * sinh(eta)").Define("w", f"1.0 / ({radius} * 0.08727 * 2.5)")
+        data = plot[pad].AddData("tracks", "tracks").Define("z", f"{radius:g} * sinh(eta)").Define("w", f"1.0 / ({radius:g} * 0.08727 * 2.5)")
         if radius == 60.0:
             data.Filter("phi < 2.1 || phi > 2.6")
         data.Project2D(("z", 64, [-80.0, 80.0]), ("phi", 72, [0.0, 6.2832]), "w")
