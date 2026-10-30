@@ -708,9 +708,9 @@ std::map<char, vector<Plot::shared_group_t>> Plot::GetSharedAxes() const
  * Count number of inputs needed to create the plot.
  */
 //**************************************************************************************************
-uint8_t Plot::GetDataCount() const
+uint16_t Plot::GetDataCount() const
 {
-  uint8_t count{};
+  uint16_t count{};
   for (const auto& [padID, pad] : mPads) {
     count += pad.GetDataCount();
   }
@@ -1716,7 +1716,7 @@ Plot::Pad::Axis& Plot::Pad::operator[](const char axis)
  * Access operator for data in pad.
  */
 //**************************************************************************************************
-Plot::Pad::Data& Plot::Pad::operator()(uint8_t dataID)
+Plot::Pad::Data& Plot::Pad::operator()(uint16_t dataID)
 {
   return GetData(dataID);
 }
@@ -1742,7 +1742,7 @@ Plot::Pad::Axis& Plot::Pad::GetAxis(const char axis)
  * Access function for pad data.
  */
 //**************************************************************************************************
-Plot::Pad::Data& Plot::Pad::GetData(uint8_t dataID)
+Plot::Pad::Data& Plot::Pad::GetData(uint16_t dataID)
 {
   if (dataID < 1 || dataID > mData.size()) {
     logger::throw_out_of_range("Data with ID '{}' is not defined! You can access only data that was already added to the pad.", dataID);
@@ -4332,12 +4332,12 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
 //**************************************************************************************************
 Plot::Pad::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& label)
 {
-  return mLegendEntriesUser.emplace_back(label);
+  return mLegendEntriesUser.emplace_back(LegendEntry(label));
 }
 
 Plot::Pad::LegendEntry& Plot::Pad::LegendBox::AddDataEntry(uint8_t padID, uint16_t dataID)
 {
-  LegendEntry& entry = mLegendEntriesUser.emplace_back(nullopt, dataID);
+  LegendEntry& entry = mLegendEntriesUser.emplace_back(LegendEntry(nullopt, dataID));
   entry.mRefPadID = padID;
   return entry;
 }
@@ -4464,7 +4464,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetSymbolColScale(float_t scale)
 //**************************************************************************************************
 void Plot::Pad::LegendBox::AddDataRow(const string& label, uint16_t dataID, const optional<LegendEntry>& appearance)
 {
-  LegendEntry& entry = mLegendEntries.emplace_back(label, dataID);
+  LegendEntry& entry = mLegendEntries.emplace_back(LegendEntry(label, dataID));
   if (appearance) entry += *appearance;
 }
 

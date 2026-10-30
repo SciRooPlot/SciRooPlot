@@ -16,7 +16,7 @@
  ******************************************************************************************
  */
 
-#include "SciRooPlot/Config.h"
+#include "Config.h"
 
 #include "SciRooPlot/Logger.h"
 
@@ -666,6 +666,17 @@ void Config::SetBitmapScale(double bitmapScale)
 {
   mBitmapScale = bitmapScale;
   mModified = true;
+}
+
+// the settings the logger of the public headers needs, without exposing the configuration itself
+int logger::detail::verbosity()
+{
+  return Config::Get().Verbosity();
+}
+
+int logger::detail::color_scheme()
+{
+  return Config::Get().ColorScheme();
 }
 
 }  // namespace SciRooPlot

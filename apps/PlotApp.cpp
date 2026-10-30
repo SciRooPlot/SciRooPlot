@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 
+#include "Config.h"
 #include "util/Regex.h"
 
 using std::string;

@@ -48,7 +48,6 @@ tests:
       include:
         - SciRooPlot/Plot.h
         - SciRooPlot/PlotManager.h
-        - SciRooPlot/Config.h
         - SciRooPlot/Logger.h
       lib:
         - SciRooPlot

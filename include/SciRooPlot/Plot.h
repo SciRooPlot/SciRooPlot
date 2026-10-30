@@ -384,7 +384,7 @@ class Plot : public FillSetters<Plot>
   const auto& GetHeight() const { return mPlotDimensions.height; }
   const auto& GetWidth() const { return mPlotDimensions.width; }
   const auto& IsFixAspectRatio() const { return mPlotDimensions.fixAspectRatio; }
-  uint8_t GetDataCount() const;
+  uint16_t GetDataCount() const;
   // the groups of pads sharing an axis, as the layout and ShareAxis declared them (groups of at least two pads)
   struct shared_group_t {
     std::vector<uint8_t> pads;
@@ -460,7 +460,7 @@ class Plot::Pad : public FillSetters<Pad>
   Pad& operator=(Pad&&) = default;
   void operator+=(const Pad& pad);
   Axis& operator[](const char axis);
-  Data& operator()(uint8_t dataID);
+  Data& operator()(uint16_t dataID);
   void Print() const { Plot::Print(GetPropertyTree(), "Pad"); }
 
   // User accessors:
@@ -507,7 +507,7 @@ class Plot::Pad : public FillSetters<Pad>
   Shape& AddPolygon(const std::vector<std::pair<double_t, double_t>>& points);  // closed automatically, cut at the frame
 
   Axis& GetAxis(const char axis);
-  Data& GetData(uint8_t dataID);
+  Data& GetData(uint16_t dataID);
   LegendBox& GetLegend(uint8_t legendID);
   TextBox& GetText(uint8_t textID);
   Shape& GetShape(uint8_t shapeID);
@@ -582,7 +582,7 @@ class Plot::Pad : public FillSetters<Pad>
   auto& GetShapes() { return mShapes; }
   auto& GetImageBoxes() { return mImageBoxes; }
   static std::vector<std::tuple<float_t, float_t, float_t, float_t>> GradientEndpoints(const std::vector<std::pair<color_t, float_t>>& gradient);
-  uint8_t GetDataCount() const { return mData.size(); }
+  uint16_t GetDataCount() const { return mData.size(); }
 
   const auto& GetAxes() const { return mAxes; }
   const auto& GetXLow() const { return mPosition.xlow; }
@@ -705,7 +705,7 @@ class Plot::Pad : public FillSetters<Pad>
 class Plot::Pad::LegendEntry : public MarkerSetters<LegendEntry>, public LineSetters<LegendEntry>, public FillSetters<LegendEntry>, public TextSetters<LegendEntry>
 {
  public:
-  explicit LegendEntry(const std::optional<std::string>& label = {}, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& symbolElements = {});
+  LegendEntry() = default;
   explicit LegendEntry(const boost::property_tree::ptree& legendEntryTree);
   void Print() const { Plot::Print(GetPropertyTree(), "LegendEntry"); }
 
@@ -727,6 +727,8 @@ class Plot::Pad::LegendEntry : public MarkerSetters<LegendEntry>, public LineSet
   enum class position_t : uint8_t { top,
                                     before,
                                     after };
+  // the rows a LegendBox makes itself: an extra row with its label, the row of a data item
+  explicit LegendEntry(const std::optional<std::string>& label, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& symbolElements = {});
   void operator+=(const LegendEntry& legendEntry);
 
   boost::property_tree::ptree GetPropertyTree() const;

@@ -54,7 +54,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 *pad[axis] gives the Axis ('X', 'Y', 'Z'); pad(dataID) the Data (counting from 1); also has the fill setters*
 
 - `Pad()`
-- `Data& operator()(uint8_t dataID)`
+- `Data& operator()(uint16_t dataID)`
 - `Data& AddData(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = {})`
 - `Data& AddData(const Data& data, const std::optional<std::string>& label = {})`
 - `Data& AddFunction(const std::string& function, const std::optional<std::string>& label = {})`
@@ -85,7 +85,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Shape& AddEllipse(std::pair<double_t, double_t> center, double_t radiusX, double_t radiusY)`
 - `Shape& AddPolygon(const std::vector<std::pair<double_t, double_t>>& points)` — closed automatically, cut at the frame
 - `Axis& GetAxis(const char axis)`
-- `Data& GetData(uint8_t dataID)`
+- `Data& GetData(uint16_t dataID)`
 - `LegendBox& GetLegend(uint8_t legendID)`
 - `TextBox& GetText(uint8_t textID)`
 - `ImageBox& GetImage(uint8_t imageID)`
@@ -367,7 +367,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 ## Plot::Pad::LegendEntry
 *a legend row: the appearance of the row of a data item (Data::SetLegendEntry) or a row added with LegendBox::AddEntry; also has the marker, line, fill and text setters*
 
-- `LegendEntry(const std::optional<std::string>& label = {}, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& symbolElements = {})`
+- `LegendEntry()`
 - `LegendEntry& SetLabel(const std::string& label)`
 - `LegendEntry& SetRefData(uint16_t refDataID)`
 - `LegendEntry& SetSymbolElements(const std::string& symbolElements)`

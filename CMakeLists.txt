@@ -176,8 +176,8 @@ add_library(SciRooPlot SHARED
   include/SciRooPlot/Plot.h
   include/SciRooPlot/PlotManager.h
   include/SciRooPlot/PanelLayout.h
-  include/SciRooPlot/Config.h
   include/SciRooPlot/Logger.h
+  src/Config.h
   src/PlotPainter.h
   src/DataFrameRequest.h
   src/Validation.h

@@ -47,6 +47,7 @@
 #include <string>
 #include <vector>
 
+#include "Config.h"
 #include "Validation.h"
 
 using boost::property_tree::ptree;

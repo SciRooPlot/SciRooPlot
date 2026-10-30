@@ -19,8 +19,6 @@
 #ifndef INCLUDE_SCIROOPLOT_LOGGER_H_
 #define INCLUDE_SCIROOPLOT_LOGGER_H_
 
-#include "SciRooPlot/Config.h"
-
 #include <fmt/core.h>
 #include <fmt/format.h>
 
@@ -39,6 +37,26 @@ namespace SciRooPlot
 {
 namespace logger
 {
+namespace detail
+{
+// the levels of `srp verbosity` and the modes of `srp color`, read from the user settings by the library
+enum level : int {
+  silent,
+  error,
+  warning,
+  info,
+  log,
+  debug,
+};
+enum color_mode : int {
+  bright,
+  dark,
+  off,
+};
+int verbosity();
+int color_scheme();
+}  // namespace detail
+
 enum class Color {
   Black,
   Red,
@@ -52,10 +70,10 @@ enum class Color {
 
 inline std::string_view begin_color(Color c)
 {
-  if (Config::Get().ColorScheme() == Config::ColorMode::off) {
+  if (detail::color_scheme() == detail::color_mode::off) {
     return "";
   }
-  bool bright = Config::Get().ColorScheme() == Config::ColorMode::bright;
+  bool bright = detail::color_scheme() == detail::color_mode::bright;
   switch (c) {
     case Color::Black:
       return bright ? "\033[90m" : "\033[38;5;16m";
@@ -80,7 +98,7 @@ inline std::string_view begin_color(Color c)
 
 inline std::string_view end_color()
 {
-  if (Config::Get().ColorScheme() == Config::ColorMode::off) {
+  if (detail::color_scheme() == detail::color_mode::off) {
     return "";
   }
   return "\033[0m";
@@ -116,7 +134,7 @@ inline bool& muted()
 template <typename... Args>
 inline void info(std::string_view fmt_str, Args&&... args)
 {
-  if (!muted() && Config::Get().Verbosity() >= Config::LogLevel::info) {
+  if (!muted() && detail::verbosity() >= detail::level::info) {
     fmt::print("[ INFO ] ");
     fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
     fmt::print("\n");
@@ -126,7 +144,7 @@ inline void info(std::string_view fmt_str, Args&&... args)
 template <typename... Args>
 inline void log(std::string_view fmt_str, Args&&... args)
 {
-  if (Config::Get().Verbosity() >= Config::LogLevel::log) {
+  if (detail::verbosity() >= detail::level::log) {
     fmt::print("{}[ LOG  ]{} ", begin_color(Color::Green), end_color());
     fmt::print(fmt::runtime(fmt_str), std::forward<Args>(args)...);
     fmt::print("\n");
@@ -136,7 +154,7 @@ inline void log(std::string_view fmt_str, Args&&... args)
 template <typename... Args>
 inline void debug(std::string_view fmt_str, Args&&... args)
 {
-  if (Config::Get().Verbosity() >= Config::LogLevel::debug) {
+  if (detail::verbosity() >= detail::level::debug) {
     fmt::print(stderr, "{}[ DEBU ]{} ", begin_color(Color::Cyan), end_color());
     fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
     fmt::print(stderr, "\n");
@@ -146,7 +164,7 @@ inline void debug(std::string_view fmt_str, Args&&... args)
 template <typename... Args>
 inline void warning(std::string_view fmt_str, Args&&... args)
 {
-  if (!muted() && Config::Get().Verbosity() >= Config::LogLevel::warning) {
+  if (!muted() && detail::verbosity() >= detail::level::warning) {
     fmt::print(stderr, "{}[ WARN ]{} ", begin_color(Color::Yellow), end_color());
     fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
     fmt::print(stderr, "\n");
@@ -156,7 +174,7 @@ inline void warning(std::string_view fmt_str, Args&&... args)
 template <typename... Args>
 inline void error(std::string_view fmt_str, Args&&... args)
 {
-  if (Config::Get().Verbosity() >= Config::LogLevel::error) {
+  if (detail::verbosity() >= detail::level::error) {
     fmt::print(stderr, "{}[ ERR  ]{} ", begin_color(Color::Red), end_color());
     fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
     fmt::print(stderr, "\n");

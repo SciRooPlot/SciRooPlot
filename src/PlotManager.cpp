@@ -103,6 +103,7 @@
 #include <utility>
 #include <vector>
 
+#include "Config.h"
 #include "DataFrameRequest.h"
 #include "PlotPainter.h"
 #include "Validation.h"

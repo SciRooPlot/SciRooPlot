@@ -16,8 +16,10 @@
  ******************************************************************************************
  */
 
-#ifndef INCLUDE_SCIROOPLOT_CONFIG_H_
-#define INCLUDE_SCIROOPLOT_CONFIG_H_
+#ifndef SRC_CONFIG_H_
+#define SRC_CONFIG_H_
+
+#include "SciRooPlot/Logger.h"
 
 #include <boost/property_tree/info_parser.hpp>
 
@@ -35,22 +37,11 @@ class Config
   static Config& GetMutable();
   static const Config& Get();
 
-  enum LogLevel {
-    silent,
-    error,
-    warning,
-    info,
-    log,
-    debug,
-  };
+  using LogLevel = logger::detail::level;
   static std::string LogLevelName(int level);
   static std::optional<int> ParseLogLevel(const std::string& name);
 
-  enum ColorMode {
-    bright,
-    dark,
-    off,
-  };
+  using ColorMode = logger::detail::color_mode;
   static std::string ColorModeName(int mode);
   static std::optional<int> ParseColorMode(const std::string& name);
 
@@ -131,4 +122,4 @@ class Config
 
 }  // namespace SciRooPlot
 
-#endif  // INCLUDE_SCIROOPLOT_CONFIG_H_
+#endif  // SRC_CONFIG_H_

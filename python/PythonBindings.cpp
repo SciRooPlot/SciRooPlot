@@ -529,8 +529,8 @@ void exportPad(py::module_& m)
     .def("SetRefFunc", &Pad::SetRefFunc, arg("refFunc"), ref_int)
     .def("SetFrame", overload_cast<const string&, const string&>(&Pad::SetFrame), arg("name"), arg("dataSource"), ref_int)
     .def("SetFrame", overload_cast<const Data&>(&Pad::SetFrame), arg("data"), ref_int)
-    .def("__call__", [](Pad& self, uint8_t dataID) -> Data& { return self(dataID); }, ref_int)
-    .def("GetData", overload_cast<uint8_t>(&Pad::GetData), arg("dataID"), ref_int);
+    .def("__call__", [](Pad& self, uint16_t dataID) -> Data& { return self(dataID); }, ref_int)
+    .def("GetData", overload_cast<uint16_t>(&Pad::GetData), arg("dataID"), ref_int);
 }
 
 void exportData(py::module_& m)
