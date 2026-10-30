@@ -144,7 +144,7 @@ for plot_key, plot in read_info(f"{CFG}/plots.info"):
 files = []
 for fname in sorted(os.listdir(DATA)) + [f"jets/{f}" for f in sorted(os.listdir(f"{DATA}/jets"))]:
     full = f"{DATA}/{fname}"
-    if os.path.isdir(full):
+    if os.path.isdir(full) or not fname.endswith((".root", ".csv", ".dat", ".txt", ".tsv", ".tab")):  # e.g. the logo image
         continue
     entry = {"f": fname, "size": os.path.getsize(full)}
     if fname.endswith(".root"):
