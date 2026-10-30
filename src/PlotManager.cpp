@@ -1794,7 +1794,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     for (const auto& [axisLabel, axisGroups] : sharedAxes) {
       for (const auto& group : axisGroups) {
         groups[axisLabel].push_back(group.pads);
-        auto common = [&](const char* what, auto get, auto set) {
+        auto common = [&, axisLabel = axisLabel](const char* what, auto get, auto set) {
           std::optional<std::decay_t<decltype(*get(std::declval<const Plot::Pad::Axis&>()))>> value;
           for (uint8_t padID : group.pads) {
             const auto& axes = fullPlot[padID].GetAxes();

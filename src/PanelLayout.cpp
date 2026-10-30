@@ -506,7 +506,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
     if (left.panel && colSep[c0 - 1].shared) pad['Y'].SetTitleSize(0.).SetLabelSize(0.);
     if (below.panel && rowSep[r1].shared) pad['X'].SetTitleSize(0.).SetLabelSize(0.);
     // touching panels of another length share no axis (see below), but the labels between them are hidden all the same
-    auto otherLength = [&](size_t r, size_t c, bool sameRows) {
+    auto otherLength = [&, cell = cell, r0 = r0, c0 = c0](size_t r, size_t c, bool sameRows) {
       const auto& [other, rr, cc] = cells[owner[r][c]];
       return !other->mEmpty && !other->mScaleCell && (sameRows ? (rr != r0 || other->mRows != cell->mRows) : (cc != c0 || other->mColumns != cell->mColumns));
     };
