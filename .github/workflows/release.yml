@@ -17,6 +17,14 @@ jobs:
       - name: Checkout SciRooPlot
         uses: actions/checkout@v7
 
+      - name: Check that the tag matches the project version
+        run: |
+          VERSION=$(sed -n '/^project(/,/)/s/^ *VERSION *\([0-9.]*\).*/\1/p' CMakeLists.txt)
+          if [ "v${VERSION}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match the version ${VERSION} in CMakeLists.txt"
+            exit 1
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:

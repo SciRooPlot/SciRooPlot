@@ -120,6 +120,7 @@ class PanelLayout
  private:
   friend class Plot;
   void ApplyTo(Plot& plot) const;
+  static double_t CheckedLength(const char* setter, double_t pixel, bool zeroAllowed);  // throws for negative (or zero) lengths
 
   std::vector<std::vector<Panel>> mRows;
   double_t mPanelSize{638.};

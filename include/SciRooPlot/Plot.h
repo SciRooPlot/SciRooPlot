@@ -553,8 +553,8 @@ class Plot::Pad : public FillSetters<Pad>
   Pad& SetDefaultFillColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultFillColors(const std::vector<std::pair<color_t, float_t>>& gradient, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles);
-  Pad& SetDefaultCandleBoxRange(float_t candleOption);
-  Pad& SetDefaultCandleWhiskerRange(float_t candleOption);
+  Pad& SetDefaultCandleBoxRange(float_t range);
+  Pad& SetDefaultCandleWhiskerRange(float_t range);
   Pad& SetTransparent();
   Pad& SetFrameFill(int16_t style, color_t color, float_t alpha = 1.f);
   Pad& SetFrameFillColor(color_t color);
@@ -1058,8 +1058,8 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 {
  public:
   Ratio(const Data& numerator, const Data& denominator);  // inputs from numerator and denominator, appearance from numerator
-  Ratio(const std::string& name, const std::string& dataSource, const std::string& denomName,
-        const std::string& denomDataSource, const std::optional<std::string>& label);
+  Ratio(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName,
+        const std::string& denominatorDataSource, const std::optional<std::string>& label = {});
   explicit Ratio(const boost::property_tree::ptree& dataTree);
 
   virtual ~Ratio() = default;

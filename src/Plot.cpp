@@ -1135,9 +1135,9 @@ auto Plot::Pad::SetDefaultFillStyles(const vector<int16_t>& styles) -> decltype(
  * Set default box range option for 2d candle plot.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultCandleBoxRange(float_t candleOption) -> decltype(*this)
+auto Plot::Pad::SetDefaultCandleBoxRange(float_t range) -> decltype(*this)
 {
-  mCandleOptionDefaults.boxRange = candleOption;
+  mCandleOptionDefaults.boxRange = range;
   return *this;
 }
 
@@ -1146,9 +1146,9 @@ auto Plot::Pad::SetDefaultCandleBoxRange(float_t candleOption) -> decltype(*this
  * Set default whisker range option for 2d candle plot.
  */
 //**************************************************************************************************
-auto Plot::Pad::SetDefaultCandleWhiskerRange(float_t candleOption) -> decltype(*this)
+auto Plot::Pad::SetDefaultCandleWhiskerRange(float_t range) -> decltype(*this)
 {
-  mCandleOptionDefaults.whiskerRange = candleOption;
+  mCandleOptionDefaults.whiskerRange = range;
   return *this;
 }
 
@@ -1803,8 +1803,7 @@ Plot::Pad::ImageBox& Plot::Pad::GetImage(uint8_t imageID)
 //**************************************************************************************************
 Plot::Pad::Data& Plot::Pad::AddData(const string& name, const string& dataSource, const optional<string>& label)
 {
-  mData.push_back(std::make_shared<Data>(name, dataSource, label));
-  return *mData.back();
+  return AddData(Data(name, dataSource, nullopt), label);
 }
 
 Plot::Pad::Data& Plot::Pad::AddData(const Data& data, const optional<string>& label)
@@ -1929,9 +1928,7 @@ Plot::Pad::Shape& Plot::Pad::AddEllipse(pair<double_t, double_t> center, double_
 //**************************************************************************************************
 Plot::Pad::Ratio& Plot::Pad::AddRatio(const string& numeratorName, const string& numeratorDataSource, const string& denominatorName, const string& denominatorDataSource, const optional<string>& label)
 {
-  mData.push_back(std::make_shared<Ratio>(numeratorName, numeratorDataSource,
-                                          denominatorName, denominatorDataSource, label));
-  return *std::dynamic_pointer_cast<Ratio>(mData.back());
+  return AddRatio(Ratio(numeratorName, numeratorDataSource, denominatorName, denominatorDataSource, nullopt), label);
 }
 
 Plot::Pad::Ratio& Plot::Pad::AddRatio(const Data& numerator, const Data& denominator, const optional<string>& label)
@@ -1970,8 +1967,7 @@ Plot::Pad::Data& Plot::Pad::SetRefFunc(const string& refFunc)
 //**************************************************************************************************
 Plot::Pad::Data& Plot::Pad::SetFrame(const string& name, const string& dataSource)
 {
-  mFrame = std::make_shared<Data>(name, dataSource, nullopt);
-  return *mFrame;
+  return SetFrame(Data(name, dataSource, nullopt));
 }
 
 Plot::Pad::Data& Plot::Pad::SetFrame(const Data& data)

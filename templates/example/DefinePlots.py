@@ -587,11 +587,11 @@ def DefineHeavyIonPlots(pm: PlotManager):
     # R_AA in three panels: Numer().Scale() divides the Pb-Pb yield by <N_coll> -------------------
     plot = Plot("nuclearModification", "heavyion", "1d_3x1")
     for i, cent in enumerate(centralities):
-        pad = plot[i + 1]
+        panel = plot[i + 1]
         label = "Pb-Pb / pp" if i == 0 else None  # one legend entry is enough
-        pad.AddRatio(["cent_" + cent + "/ptSpec", "heavyion"], ["ptSpec", "data"], label).Numer().Scale(1.0 / ncoll[cent])
-        pad.SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 1)
-        pad.AddText(0.5, 0.9, cent + "%")
+        panel.AddRatio(["cent_" + cent + "/ptSpec", "heavyion"], ["ptSpec", "data"], label).Numer().Scale(1.0 / ncoll[cent])
+        panel.SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 1)
+        panel.AddText(0.5, 0.9, cent + "%")
     # the published values in the first panel: systematic uncertainties as boxes, statistical as bars,
     # both from the same table; they get their own (second) legend
     plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high").SetDrawOption(boxes).SetFill(1001, kOrange - 9).SetLineColor(kOrange + 1).SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"))
@@ -604,10 +604,10 @@ def DefineHeavyIonPlots(pm: PlotManager):
     plot[0]['Y'].SetRange(0.0, 1.4).SetTitle("#it{R}_{AA}").SetTitleCenter()
     pm.AddPlot(plot)
 
-    # the same, one plot per centrality in the subgroup heavyion/nuclearModification
+    # the same, one plot per centrality in the subgroup heavyion/raaPerCentrality
     for cent in centralities:
         single = Plot("raa_" + cent, "heavyion", "1d")
-        single.AppendGroup("nuclearModification")
+        single.AppendGroup("raaPerCentrality")
         single[1].AddRatio(["cent_" + cent + "/ptSpec", "heavyion"], ["ptSpec", "data"]).Numer().Scale(1.0 / ncoll[cent])
         single[1].SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 1)
         single[1].AddText(0.5, 0.9, "Pb-Pb " + cent + "%")
@@ -719,10 +719,10 @@ def DefineHeavyIonPlots(pm: PlotManager):
         ("pp_5TeV", "pp, 5.02 TeV", "#1f9e89"),
         ("pp_2.76TeV", "pp, 2.76 TeV", "#1d6b1d"),
     ]
-    for system, label, color in systems:
-        plot[1].AddData(f"meanPt/{system}_syst", "heavyion").SetDrawOption(band).SetFill(1001, color, 0.3).SetLine(kSolid, 0.0, color)
-    for system, label, color in systems:
-        plot[1].AddData(f"meanPt/{system}", "heavyion", label).SetMarker(kFullCircle, 0.6, color).SetLineColor(color).SetLegend(2 if system.startswith("pp") else 1)
+    for system, label, hexColor in systems:
+        plot[1].AddData(f"meanPt/{system}_syst", "heavyion").SetDrawOption(band).SetFill(1001, hexColor, 0.3).SetLine(kSolid, 0.0, hexColor)
+    for system, label, hexColor in systems:
+        plot[1].AddData(f"meanPt/{system}", "heavyion", label).SetMarker(kFullCircle, 0.6, hexColor).SetLineColor(hexColor).SetLegend(2 if system.startswith("pp") else 1)
     plot[1].AddText(0.18, 0.93, [f"{EXPERIMENT}, charged particles", "|#eta| < 0.8, 0.15 GeV/#it{c} < #it{p}_{T} < 10 GeV/#it{c}"])
     plot[1].AddLegend(0.18, 0.8).SetDefaultMarkerSize(1.2)
     plot[1].AddLegend(0.65, 0.45).SetDefaultMarkerSize(1.2)
@@ -1663,8 +1663,8 @@ def DefineAnimations(pm: PlotManager):
         for r in [84.85, 246.4]:  # the readout chambers: 18 sectors of 20 deg between these radii
             plot[1].AddEllipse((0.0, 0.0), r, r).SetLine(kSolid, 1.0, kGray + 1).SetFillStyle(0).SetBehindData()
         for sector in range(18):
-            phi = sector * 20.0 * math.pi / 180.0
-            plot[1].AddLine((84.85 * math.cos(phi), 84.85 * math.sin(phi)), (246.4 * math.cos(phi), 246.4 * math.sin(phi))).SetLine(kSolid, 1.0, kGray + 1).SetBehindData()
+            angle = sector * 20.0 * math.pi / 180.0
+            plot[1].AddLine((84.85 * math.cos(angle), 84.85 * math.sin(angle)), (246.4 * math.cos(angle), 246.4 * math.sin(angle))).SetLine(kSolid, 1.0, kGray + 1).SetBehindData()
         plot[2].AddVerticalLine(0.0).SetLine(kDashed, 1.0, kGray + 1).SetBehindData()  # the central electrode: the drift starts here
         plot[1].AddText(0.15, 0.92, "end view").SetTextColor(kWhite)
         plot[2].AddText(0.15, 0.92, ["side view", f"#it{{t}} = {time} #mus"]).SetTextColor(kWhite)

@@ -928,9 +928,9 @@ void PlotManager::AddBasePlot(Plot basePlot)
  * Add a plot showing the given colours, by default those the base plots give to their data, each with its name and index.
  */
 //**************************************************************************************************
-void PlotManager::AddColorOverview(const string& name, const string& group, const vector<int32_t>& colors)
+void PlotManager::AddColorOverview(const string& name, const string& group, const vector<color_t>& colors)
 {
-  const vector<int32_t> shown = colors.empty() ? vector<int32_t>(kDefaultColors.begin(), kDefaultColors.end()) : colors;
+  const vector<color_t> shown = colors.empty() ? vector<color_t>(kDefaultColors.begin(), kDefaultColors.end()) : colors;
   Plot plot(name, group);
   plot.SetDimensions(800, 800, true);
   plot[1].SetPosition(0., 0., 1., 1.);
@@ -958,12 +958,13 @@ void PlotManager::AddColorOverview(const string& name, const string& group, cons
     double_t w = 1.0 / bestCols;
     double_t h = 1.0 / bestRows;
     // ROOT names the colours of its wheel (kRed+1) and calls 0 and 1 white and black; the others are known by their index only
-    string label = std::to_string(shown[i]);
-    float_t red{}, green{}, blue{};
-    if (const TColor* color = gROOT->GetColor(shown[i])) {
-      string colorName = (shown[i] == kWhite) ? "kWhite" : ((shown[i] == kBlack) ? "kBlack" : color->GetName());
-      if (colorName.rfind('k', 0) == 0) label = fmt::format("#splitline{{{}}}{{{}}}", colorName, shown[i]);
-      color->GetRGB(red, green, blue);
+    string label = shown[i].ToString();  // the index, or #rrggbb
+    const auto [red, green, blue] = shown[i].ToFractions();
+    if (const auto index = shown[i].GetIndex()) {
+      if (const TColor* color = gROOT->GetColor(*index)) {
+        string colorName = (*index == kWhite) ? "kWhite" : ((*index == kBlack) ? "kBlack" : color->GetName());
+        if (colorName.rfind('k', 0) == 0) label = fmt::format("#splitline{{{}}}{{{}}}", colorName, *index);
+      }
     }
     const bool dark = 0.299 * red + 0.587 * green + 0.114 * blue < 0.5;
     plot[1]
@@ -2067,12 +2068,15 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   string frameSuffix = "+50";      // ROOT's syntax for a frame of an animated gif: +<centiseconds it is shown>
   string lastFrameSuffix = "+50";  // the last frame: +NN plays the animation once, ++NN++ loops endlessly, +NN++RR repeats it RR times
 
-  // names that become C++ identifiers in macros must not contain special characters
+  // names that become C++ identifiers in macros must not contain special characters and must not be keywords (a plot named "auto")
   auto sanitize = [](string s) {
     for (auto& c : s) {
       if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') c = '_';
     }
     if (!s.empty() && std::isdigit(static_cast<unsigned char>(s.front()))) s = "_" + s;
+    static const std::set<string> keywords = {
+      "alignas", "alignof", "and", "and_eq", "asm", "auto", "bitand", "bitor", "bool", "break", "case", "catch", "char", "char8_t", "char16_t", "char32_t", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue", "co_await", "co_return", "co_yield", "decltype", "default", "delete", "do", "double", "dynamic_cast", "else", "enum", "explicit", "export", "extern", "false", "float", "for", "friend", "goto", "if", "inline", "int", "long", "mutable", "namespace", "new", "noexcept", "not", "not_eq", "nullptr", "operator", "or", "or_eq", "private", "protected", "public", "register", "reinterpret_cast", "requires", "return", "short", "signed", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename", "union", "unsigned", "using", "virtual", "void", "volatile", "wchar_t", "while", "xor", "xor_eq"};
+    if (keywords.count(s)) s += "_";
     return s;
   };
 

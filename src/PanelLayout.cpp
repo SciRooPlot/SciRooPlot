@@ -103,24 +103,32 @@ PanelLayout::PanelLayout(const PanelLayout& sizes, vector<vector<Panel>> rows) :
   mRows = std::move(rows);
 }
 
+double_t PanelLayout::CheckedLength(const char* setter, double_t pixel, bool zeroAllowed)
+{
+  if (pixel < 0. || (!zeroAllowed && pixel == 0.)) {
+    logger::throw_invalid_argument("PanelLayout::{}: the length must be {} (got {}).", setter, zeroAllowed ? "zero or positive" : "positive", pixel);
+  }
+  return pixel;
+}
+
 PanelLayout& PanelLayout::SetPanelSize(double_t pixel)
 {
-  mPanelSize = pixel;
+  mPanelSize = CheckedLength("SetPanelSize", pixel, false);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetMargins(double_t top, double_t bottom, double_t left, double_t right)
 {
-  mMarginTop = top;
-  mMarginBottom = bottom;
-  mMarginLeft = left;
-  mMarginRight = right;
+  mMarginTop = CheckedLength("SetMargins", top, true);
+  mMarginBottom = CheckedLength("SetMargins", bottom, true);
+  mMarginLeft = CheckedLength("SetMargins", left, true);
+  mMarginRight = CheckedLength("SetMargins", right, true);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetZAxisMargin(double_t pixel)
 {
-  mZAxisMargin = pixel;
+  mZAxisMargin = CheckedLength("SetZAxisMargin", pixel, true);
   return *this;
 }
 
@@ -132,25 +140,25 @@ PanelLayout& PanelLayout::SetZAxisOffset(double_t pixel)
 
 PanelLayout& PanelLayout::SetZAxisWidth(double_t pixel)
 {
-  mZAxisWidth = pixel;
+  mZAxisWidth = CheckedLength("SetZAxisWidth", pixel, true);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetPanelSpacing(double_t pixel)
 {
-  mPanelSpacing = pixel;
+  mPanelSpacing = CheckedLength("SetPanelSpacing", pixel, true);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetTextSize(double_t pixel)
 {
-  mTextSize = pixel;
+  mTextSize = CheckedLength("SetTextSize", pixel, false);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetTitleSize(double_t pixel)
 {
-  mTitleSize = pixel;
+  mTitleSize = CheckedLength("SetTitleSize", pixel, false);
   return *this;
 }
 
@@ -186,13 +194,13 @@ PanelLayout& PanelLayout::SetZTitleOffset(double_t pixel)
 
 PanelLayout& PanelLayout::SetLineWidth(float_t width)
 {
-  mLineWidth = width;
+  mLineWidth = static_cast<float_t>(CheckedLength("SetLineWidth", width, true));
   return *this;
 }
 
 PanelLayout& PanelLayout::SetMarkerSize(float_t size)
 {
-  mMarkerSize = size;
+  mMarkerSize = static_cast<float_t>(CheckedLength("SetMarkerSize", size, true));
   return *this;
 }
 

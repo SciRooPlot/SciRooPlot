@@ -6,7 +6,7 @@ description: Define, organize and generate ROOT plots with SciRooPlot (C++ or Py
 # SciRooPlot
 
 SciRooPlot is a C++/Python library on top of ROOT that separates *defining* plots from *drawing* them.
-Describes SciRooPlot 3.3 (ROOT >= 6.36.04). Repository: https://github.com/SciRooPlot/SciRooPlot — docs: https://scirooplot.github.io/SciRooPlot/
+Describes SciRooPlot 4.0 (ROOT >= 6.36.04). Repository: https://github.com/SciRooPlot/SciRooPlot — docs: https://scirooplot.github.io/SciRooPlot/
 
 ## Mental model (read this first)
 
@@ -43,7 +43,7 @@ plot myGroup .+                     # all plots of myGroup and its subgroups
 plot 'myGroup$' .+                  # without subgroups;  plot myGroup/QA ctrl.*  selects a subgroup
 plot thesis 'fig_(a|b)' pdf         # quote patterns with ( ) | in bash
 ```
-Modes: `show` (interactive, default: keys `s`/`a` next/previous (circular), `d` moves the current plot into a window of its own, `q` closes a window, `x` all; the keys also work in the terminal, where `q` closes all; double-click a legend, text or shape to print its name and coordinates), `spread` (all matching plots at once, one window each), `list`, `print` (dump definition), `pdf`, `eps`, `ps`, `svg`, `png`, `jpg`, `gif` (`gif+<centiseconds>` animates all matching plots, played once; `gif+<centiseconds>++` loops endlessly, `gif+<centiseconds>++<repeats>` that many times; in the order they were defined: one plot per frame in a group of its own, e.g. a loop over `SetView` angles or multiplicity classes, see the example group `animations`), `html`, `json`, `xml`, `root`, `macro` (ROOT macro), `file` (canvases into a ROOT file), `data` (the drawn data into a ROOT file).
+Modes: `show` (interactive, the default unless `srp plotmode` sets another: keys `s`/`a` next/previous (circular), `d` moves the current plot into a window of its own, `q` closes a window, `x` all; the keys also work in the terminal, where `q` closes all; double-click a legend, text, image or shape to print its name and coordinates), `spread` (all matching plots at once, one window each), `list`, `print` (dump definition), `pdf`, `eps`, `ps`, `svg`, `png`, `jpg`, `gif` (all matching plots as one animation, 50 centiseconds per frame, played once; `gif+<centiseconds>` sets the frame time, `gif+<centiseconds>++` loops endlessly, `gif+<centiseconds>++<repeats>` that many times; in the order they were defined: one plot per frame in a group of its own, e.g. a loop over `SetView` angles or multiplicity classes, see the example group `animations`), `html`, `json`, `xml`, `root`, `macro` (ROOT macro), `file` (canvases into a ROOT file), `data` (the input objects of the plots, as read, into a ROOT file).
 
 ## Program skeleton
 
@@ -213,7 +213,7 @@ plot[2].AddRatio(measured("ptSpec"), simulated("ptSpec"));
 ```
 Templates carry everything a `Data` has (options, colours, ranges, modifiers, projections, tree queries) and can be kept in a `map` keyed by an enum. `.SetLayout(tmpl)` / `.ApplyLayout(tmpl)` take over only the appearance of a template (drawing options, text format, ranges, marker, line, fill, contours) on an existing data; `ApplyLayout` only what is set in it. Put them (and label constants like the experiment name) at file scope of `DefinePlots`.
 
-**Derive plots instead of repeating them.** `Plot variant(plot, "newName", "group")` copies a finished plot; add or change data and axes afterwards (`variant[1](2).SetColor(kRed)`). Generate plot families in loops — over centralities, cuts, runs, detector parts — with the loop variable in the name and group (`"raa_" + cent`, `AppendGroup("nuclearModification")`), so `plot heavyion/nuclearModification .+` makes the whole set.
+**Derive plots instead of repeating them.** `Plot variant(plot, "newName", "group")` copies a finished plot; add or change data and axes afterwards (`variant[1](2).SetColor(kRed)`). Generate plot families in loops — over centralities, cuts, runs, detector parts — with the loop variable in the name and group (`"raa_" + cent`, `AppendGroup("raaPerCentrality")`), so `plot heavyion/raaPerCentrality .+` makes the whole set.
 
 **Put layout into base plots, not into plots.** Everything that is the same for a class of plots — dimensions, margins, fonts, colour sequence, axis conventions, ratio reference line — belongs into a base plot; the plots then only contain data, titles and ranges (data in a base plot is ignored with a warning). Start from the shipped ones (`MakeBasePlot("1d")`, `"1d_ratio"`, `"2d"`, `"1d_2x1"`, …; modify and `AddBasePlot` under the same or a new name) and keep `plot[0]` for per-plot defaults (`plot[0]['X'].SetRange(...)` acts on all pads).
 
@@ -244,6 +244,8 @@ Identical names and chains. Differences:
 - Optional arguments may be left out as in C++; `std::optional` values are `None` when unset.
 - No `SRC_DIR` macro: use `Path(__file__).resolve().parent`. The program is plain Python; `plot` runs it with the interpreter from the environment script.
 - Python projects are created with `srp init-py` / `srp example-py` and otherwise behave identically.
+- numpy/pandas data in memory (Python only): `histo(name, values, bins=100, range=None, weights=None)`, `histo2d(name, x, y, bins=None, range=None, weights=None)`, `graph(name, x, y, xerr=None, yerr=None)` and `table(name, data, columns=None)` (dict of arrays, structured array, DataFrame) return ROOT objects for `pm.AddDataSource("src", [...])`; tables work with `Project1D`/`Filter`/`Define`.
+- Boxes are made only with `AddText`/`AddLegend`/`AddImage`; `LegendEntry()` takes no arguments in Python (use its setters).
 
 ## Pitfalls that cost time
 
@@ -254,7 +256,7 @@ Identical names and chains. Differences:
 - Axis ranges live on the pad (`plot[1]['X'].SetRange`), data ranges on the data (`SetRangeX`); the first data (or `SetDefinesFrame`) decides the frame.
 - Ranges, minimum and maximum stored with an input histogram or graph are ignored: set them in the plot definition. Exception: data marked `.SetDefinesFrame()` and the frame set with `SetFrame` keep them for the frame they draw (e.g. an empty dummy histogram with the y range stored); an explicit `plot[i]['Y'].SetRange` still wins. A projection or profile never applies stored ranges and warns when one sits on an axis it integrates out. Functions from inputs are drawn where they are defined, functions from `AddFunction` span the frame; `SetRangeX` overrides both (a function written from C++ code only has values within its own range).
 - Fill colours are drawn for `hist`/`area`/`band`/`bars`; histograms drawn with `line`/`curve` are not filled even if a fill colour is set by the pad defaults.
-- Line widths are whole pixels: ROOT stores them as integers, so a fractional width (`SetLine(s, 3.5, c)`, `SetLineWidth(2.5)`, `SetBorder(s, 1.5, c)`, `SetDefaultLineWidth`, `PanelLayout::SetLineWidth`) is cut to the integer below without a warning. Write whole numbers (`3.`); marker sizes, text sizes and alpha may be fractional.
+- Line widths are whole pixels: ROOT stores them as integers, so a fractional width (`SetLine(s, 3.5, c)`, `SetLineWidth(2.5)`, `SetBorder(s, 1.5, c)`, `SetDefaultLineWidth`, `PanelLayout::SetLineWidth`) is rounded to the nearest integer, with a warning. Write whole numbers (`3.`); marker sizes, text sizes and alpha may be fractional.
 - Rebin/Scale/Normalize on a ratio act on the result — use `.Both().Normalize()` etc. to act on the inputs.
 - In C++ `AddData({"h", "src"}, "label")` is ambiguous (the brace list also converts to a `std::string`): write `AddData("h", "src", "label")` or `AddData(Data("h", "src"), "label")`. Without a label, `AddData({"h", "src"})` is fine.
 - In bash, quote patterns containing `(`, `)` or `|`.

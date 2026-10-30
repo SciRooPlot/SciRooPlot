@@ -28,7 +28,7 @@ def main():
     for label, name, color in [(1, "signal", kRed + 1), (0, "background", kAzure + 2)]:
         for split in ["train", "test"]:
             data = plot[1].AddData("events", "ml", f"{name}, {split}").Project1D(("score", 25, [0.0, 1.0]))
-            data.Filter(f'label == {label} && split == "{split}"').Normalize(True).SetColor(color)  # unchanged
+            data.Filter(f'label == {label} && split == "{split}"').Density().SetColor(color)  # unchanged
             if split == "train":
                 data.SetDrawOption(hist).SetFill(1001, color).SetFillAlpha(0.25)
     plot[1].AddLegend()

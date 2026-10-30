@@ -20,6 +20,8 @@ ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "python/SciRooPlot-stubs"
 FIXED_SIZE = re.compile(r"typing\.Annotated\[(list\[[\w.]+\]), pybind11_stubgen\.typing_ext\.FixedSize\(\d+\)\]")
 DATA_ARGUMENT = re.compile(r"(\w+: )Data(?=[,)])")
+SIGNATURE = re.compile(r"^(\s*def \w+\()(.*)(\) -> .*)$", re.MULTILINE)
+LIST_PARAMETER = re.compile(r"\blist\[(?!str\])")
 
 
 def generate(target: Path) -> dict[str, str] | None:
@@ -33,6 +35,9 @@ def generate(target: Path) -> dict[str, str] | None:
         text = FIXED_SIZE.sub(r"\1", file.read_text()).replace("import pybind11_stubgen.typing_ext\n", "")
         # a Data argument also takes a [name, dataSource] list (py::implicitly_convertible), which the signatures do not show
         text = DATA_ARGUMENT.sub(r"\1Data | list[str]", text)
+        # std::vector arguments take any sequence; list is invariant, so a list variable of e.g. (str, float) stops would not match
+        # list[tuple[int | str | ..., float]]: annotate the parameters as Sequence (list[str] stays, a str is itself a sequence of str)
+        text = SIGNATURE.sub(lambda m: m[1] + LIST_PARAMETER.sub("typing.Sequence[", m[2]) + m[3], text)
         # trailing whitespace from docstrings would be stripped by the pre-commit hooks
         lines = [line.rstrip() for line in text.splitlines()]
         stubs[str(file.relative_to(target / "SciRooPlot-stubs"))] = "\n".join(lines).strip("\n") + "\n"

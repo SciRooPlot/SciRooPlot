@@ -18,7 +18,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `void AddPlot(Plot plot)`
 - `void AddBasePlot(Plot basePlot)`
 - `Plot MakeBasePlot(const std::string& name = "1d", const PanelLayout& sizes = PanelLayout(), const BasePlotShape& shape = BasePlotShape())`
-- `void AddColorOverview(const std::string& name, const std::string& group, const std::vector<int32_t>& colors = {})`
+- `void AddColorOverview(const std::string& name, const std::string& group, const std::vector<color_t>& colors = {})`
 - `void SavePlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {})`
 - `bool LoadPlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {})`
 - `bool GeneratePlots(const std::string& mode = "show", const std::string& name = ".+", const std::string& group = ".+")`
@@ -29,6 +29,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `void SetOutputDirectory(const std::string& path)`
 - `void SetPlotsRootFile(const std::string& fileName)`
 - `void SetDataRootFile(const std::string& fileName)`
+- `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
 
 ## Plot
 *plot[padID] gives the Pad (padID 0: defaults for all pads); also has the fill setters*
@@ -126,8 +127,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Pad& SetDefaultFillColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {})`
 - `Pad& SetDefaultFillColors(const std::vector<std::pair<color_t, float_t>>& gradient, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {})`
 - `Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles)`
-- `Pad& SetDefaultCandleBoxRange(float_t candleOption)`
-- `Pad& SetDefaultCandleWhiskerRange(float_t candleOption)`
+- `Pad& SetDefaultCandleBoxRange(float_t range)`
+- `Pad& SetDefaultCandleWhiskerRange(float_t range)`
 - `Pad& SetTransparent()`
 - `Pad& SetFrameFill(int16_t style, color_t color, float_t alpha = 1.f)`
 - `Pad& SetFrameFillColor(color_t color)`
@@ -260,7 +261,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 *has all setters, modifiers and selections of Data (returning the Ratio) plus the following*
 
 - `Ratio(const Data& numerator, const Data& denominator)` — inputs from numerator and denominator, appearance from numerator
-- `Ratio(const std::string& name, const std::string& dataSource, const std::string& denomName, const std::string& denomDataSource, const std::optional<std::string>& label)`
+- `Ratio(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName, const std::string& denominatorDataSource, const std::optional<std::string>& label = {})`
 - `Ratio& SetIsCorrelated(bool isCorrelated = true)`
 - `Ratio& Numer()` — following modifiers act on the numerator, before the division
 - `Ratio& Denom()` — following modifiers act on the denominator, before the division

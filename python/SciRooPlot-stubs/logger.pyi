@@ -2,7 +2,7 @@
 messages in the style of SciRooPlot, shown depending on the verbosity (print: always)
 """
 from __future__ import annotations
-__all__: list[str] = ['debug', 'error', 'info', 'log', 'print', 'warning']
+__all__: list[str] = ['debug', 'error', 'info', 'log', 'print', 'print_inline', 'print_separator', 'warning']
 def debug(message: str) -> None:
     ...
 def error(message: str) -> None:
@@ -12,6 +12,10 @@ def info(message: str) -> None:
 def log(message: str) -> None:
     ...
 def print(message: str) -> None:
+    ...
+def print_inline(message: str) -> None:
+    ...
+def print_separator() -> None:
     ...
 def warning(message: str) -> None:
     ...

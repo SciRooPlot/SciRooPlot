@@ -748,11 +748,11 @@ void DefineHeavyIonPlots(PlotManager& pm)
     Plot plot("nuclearModification", "heavyion", "1d_3x1");
     for (size_t i = 0; i < centralities.size(); ++i) {
       const auto& cent = centralities[i];
-      auto& pad = plot[i + 1];
+      auto& panel = plot[i + 1];
       const std::optional<string> label = (i == 0) ? std::optional<string>("Pb-Pb / pp") : std::nullopt;  // one legend entry is enough
-      pad.AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}, label).Numer().Scale(1.0 / ncoll.at(cent));
-      pad.SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 1);
-      pad.AddText(0.5, 0.9, cent + "%");
+      panel.AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}, label).Numer().Scale(1.0 / ncoll.at(cent));
+      panel.SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 1);
+      panel.AddText(0.5, 0.9, cent + "%");
     }
     // the published values in the first panel: systematic uncertainties as boxes, statistical as bars,
     // both from the same table; they get their own (second) legend
@@ -766,10 +766,10 @@ void DefineHeavyIonPlots(PlotManager& pm)
     plot[0]['Y'].SetRange(0.0, 1.4).SetTitle("#it{R}_{AA}").SetTitleCenter();
     pm.AddPlot(plot);
 
-    // the same, one plot per centrality in the subgroup heavyion/nuclearModification
+    // the same, one plot per centrality in the subgroup heavyion/raaPerCentrality
     for (const auto& cent : centralities) {
       Plot single("raa_" + cent, "heavyion", "1d");
-      single.AppendGroup("nuclearModification");
+      single.AppendGroup("raaPerCentrality");
       single[1].AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}).Numer().Scale(1.0 / ncoll.at(cent));
       single[1].SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 1);
       single[1].AddText(0.5, 0.9, "Pb-Pb " + cent + "%");
@@ -886,11 +886,11 @@ void DefineHeavyIonPlots(PlotManager& pm)
     Plot plot("meanPtVsNch", "heavyion", "1d");
     const vector<std::tuple<string, string, string>> systems = {
       {"PbPb_5TeV", "Pb-Pb, 5.02 TeV", "#2b7bab"}, {"PbPb_2.76TeV", "Pb-Pb, 2.76 TeV", "#4fb3f0"}, {"XeXe_5.44TeV", "Xe-Xe, 5.44 TeV", "#1a1f8c"}, {"pPb_8.16TeV", "p-Pb, 8.16 TeV", "#7e2fd0"}, {"pPb_5TeV", "p-Pb, 5.02 TeV", "#cc1f6a"}, {"pp_13TeV", "pp, 13 TeV", "#d81b1b"}, {"pp_8TeV", "pp, 8 TeV", "#ff7a00"}, {"pp_7TeV", "pp, 7 TeV", "#f5b400"}, {"pp_5TeV", "pp, 5.02 TeV", "#1f9e89"}, {"pp_2.76TeV", "pp, 2.76 TeV", "#1d6b1d"}};
-    for (const auto& [system, label, color] : systems) {
-      plot[1].AddData("meanPt/" + system + "_syst", "heavyion").SetDrawOption(band).SetFill(1001, color, 0.3).SetLine(kSolid, 0.0, color);
+    for (const auto& [system, label, hexColor] : systems) {
+      plot[1].AddData("meanPt/" + system + "_syst", "heavyion").SetDrawOption(band).SetFill(1001, hexColor, 0.3).SetLine(kSolid, 0.0, hexColor);
     }
-    for (const auto& [system, label, color] : systems) {
-      plot[1].AddData("meanPt/" + system, "heavyion", label).SetMarker(kFullCircle, 0.6, color).SetLineColor(color).SetLegend(system.rfind("pp", 0) == 0 ? 2 : 1);
+    for (const auto& [system, label, hexColor] : systems) {
+      plot[1].AddData("meanPt/" + system, "heavyion", label).SetMarker(kFullCircle, 0.6, hexColor).SetLineColor(hexColor).SetLegend(system.rfind("pp", 0) == 0 ? 2 : 1);
     }
     plot[1].AddText(0.18, 0.93, {string(kExperiment) + ", charged particles", "|#eta| < 0.8, 0.15 GeV/#it{c} < #it{p}_{T} < 10 GeV/#it{c}"});
     plot[1].AddLegend(0.18, 0.8).SetDefaultMarkerSize(1.2);
@@ -1939,8 +1939,8 @@ void DefineAnimations(PlotManager& pm)
         plot[1].AddEllipse({0.0, 0.0}, r, r).SetLine(kSolid, 1.0, kGray + 1).SetFillStyle(0).SetBehindData();
       }
       for (int sector = 0; sector < 18; ++sector) {
-        const double phi = sector * 20.0 * TMath::DegToRad();
-        plot[1].AddLine({84.85 * std::cos(phi), 84.85 * std::sin(phi)}, {246.4 * std::cos(phi), 246.4 * std::sin(phi)}).SetLine(kSolid, 1.0, kGray + 1).SetBehindData();
+        const double angle = sector * 20.0 * TMath::DegToRad();
+        plot[1].AddLine({84.85 * std::cos(angle), 84.85 * std::sin(angle)}, {246.4 * std::cos(angle), 246.4 * std::sin(angle)}).SetLine(kSolid, 1.0, kGray + 1).SetBehindData();
       }
       plot[2].AddVerticalLine(0.0).SetLine(kDashed, 1.0, kGray + 1).SetBehindData();  // the central electrode: the drift starts here
       plot[1].AddText(0.15, 0.92, "end view").SetTextColor(kWhite);

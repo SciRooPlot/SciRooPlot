@@ -22,15 +22,15 @@ build:
 
 requirements:
   build:
-    - cmake
+    - cmake >=3.27
     - make
     - ${{ compiler('cxx') }}
     - ${{ stdlib('c') }}
   host:
-    - root_base
-    - libboost-devel
-    - fmt
-    - pybind11
+    - root_base >=6.36.04
+    - libboost-devel >=1.74
+    - fmt >=8.0.0
+    - pybind11 >=2.9
     - python
   run:
     - python

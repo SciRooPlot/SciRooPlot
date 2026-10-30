@@ -58,8 +58,8 @@ def DefineDataSources(pm: PlotManager):
 def DefinePlots(pm: PlotManager):
     # ---- scores
     plot = Plot("scores", "ml", "1d")
-    plot[1].AddData("sig", "ml", "signal").Normalize(True).SetColor(kRed + 1)
-    plot[1].AddData("bkg", "ml", "background").Normalize(True).SetColor(kAzure + 2)
+    plot[1].AddData("sig", "ml", "signal").Density().SetColor(kRed + 1)
+    plot[1].AddData("bkg", "ml", "background").Density().SetColor(kAzure + 2)
     plot[1].AddLegend()
     plot[1]['X'].SetTitle("classifier score")
     plot[1]['Y'].SetTitle("probability density")
@@ -77,7 +77,7 @@ def DefinePlots(pm: PlotManager):
     for label, name, color in [(1, "signal", kRed + 1), (0, "background", kAzure + 2)]:
         for split in ["train", "test"]:
             data = plot[1].AddData("events", "ml", f"{name}, {split}").Project1D(("score", 25, [0.0, 1.0]))
-            data.Filter(f'label == {label} && split == "{split}"').Normalize(True).SetColor(color)
+            data.Filter(f'label == {label} && split == "{split}"').Density().SetColor(color)
             if split == "train":
                 data.SetDrawOption(hist).SetFill(1001, color).SetFillAlpha(0.25)
     plot[1].AddLegend()
@@ -98,7 +98,7 @@ def DefinePlots(pm: PlotManager):
     for pad, (low, high) in enumerate(ranges, start=1):
         for label, name, color in classes:
             data = plot[pad].AddData("events", "ml", name).Project1D(("score", 20, [0.0, 1.0]))
-            data.Filter(f"label == {label} && pt > {low} && pt < {high}").Normalize(True).SetColor(color)
+            data.Filter(f"label == {label} && pt > {low} && pt < {high}").Density().SetColor(color)
         plot[pad].AddText([f"{low:g} < #it{{p}}_{{T}} < {high:g} GeV/#it{{c}}"])
     plot[1].AddLegend()
     plot[0]['X'].SetTitle("classifier score")
@@ -106,11 +106,11 @@ def DefinePlots(pm: PlotManager):
     pm.AddPlot(plot)
     # ---- reweighted
     plot = Plot("reweighted", "ml", "1d_ratio")
-    plot[1].AddData("data", "reweighting", "data").Normalize(True).SetColor(kBlack)
-    plot[1].AddData("simulation", "reweighting", "simulation, weighted").Normalize(True).SetDrawOption(hist).SetColor(kAzure + 2)
+    plot[1].AddData("data", "reweighting", "data").Density().SetColor(kBlack)
+    plot[1].AddData("simulation", "reweighting", "simulation, weighted").Density().SetDrawOption(hist).SetColor(kAzure + 2)
     plot[1].AddLegend()
     plot[1]['Y'].SetTitle("probability density").SetLog()
-    plot[2].AddRatio(["data", "reweighting"], ["simulation", "reweighting"]).Both().Normalize(True).SetColor(kBlack)
+    plot[2].AddRatio(["data", "reweighting"], ["simulation", "reweighting"]).Both().Density().SetColor(kBlack)
     plot[2]['Y'].SetTitle("data / sim.").SetRange(0.7, 1.3)
     plot[0]['X'].SetTitle("#it{p}_{T} (GeV/#it{c})")
     pm.AddPlot(plot)

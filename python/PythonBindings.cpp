@@ -228,6 +228,8 @@ void exportLogging(py::module_& m)
   // the functions of the logger namespace of C++: SciRooPlot.logger.info("...")
   auto loggerModule = m.def_submodule("logger", "messages in the style of SciRooPlot, shown depending on the verbosity (print: always)");
   loggerModule.def("print", [](std::string_view s) { logger::print("{}", s); }, arg("message"));
+  loggerModule.def("print_inline", [](std::string_view s) { logger::print_inline("{}", s); }, arg("message"));
+  loggerModule.def("print_separator", []() { logger::print_separator(); });
   loggerModule.def("info", [](std::string_view s) { logger::info("{}", s); }, arg("message"));
   loggerModule.def("log", [](std::string_view s) { logger::log("{}", s); }, arg("message"));
   loggerModule.def("debug", [](std::string_view s) { logger::debug("{}", s); }, arg("message"));
@@ -303,7 +305,7 @@ void exportPlotManager(py::module_& m)
     .def("LoadDataSources", &PlotManager::LoadDataSources, arg("file") = py::none(), arg("replace") = false)
     .def("AddPlot", &PlotManager::AddPlot, arg("plot"))
     .def("AddBasePlot", &PlotManager::AddBasePlot, arg("basePlot"))
-    .def("AddColorOverview", &PlotManager::AddColorOverview, arg("name"), arg("group"), arg("colors") = vector<int32_t>{})
+    .def("AddColorOverview", &PlotManager::AddColorOverview, arg("name"), arg("group"), arg("colors") = vector<color_t>{})
     .def("ListPlots", &PlotManager::ListPlots)
     .def("ClearDataBuffer", &PlotManager::ClearDataBuffer)
     .def("ClearCanvasRegistry", &PlotManager::ClearCanvasRegistry)
@@ -411,7 +413,6 @@ void exportPlot(py::module_& m)
 {
   py::class_<Plot> plot(m, "Plot");
   plot
-    .def(py::init<const string&, const string&>(), arg("name"), arg("group"))
     .def(py::init<const string&, const string&, const optional<string>&>(), arg("name"), arg("group") = "", arg("basePlot") = nullopt)
     .def(py::init<const string&, const PanelLayout&>(), arg("name"), arg("layout"))
     .def(py::init<const Plot&, const std::string&, const optional<string>&>(), py::arg("other"), py::arg("name"), py::arg("group") = nullopt)
@@ -479,8 +480,8 @@ void exportPad(py::module_& m)
     .def("SetDefaultFillColors", overload_cast<const vector<tuple<float_t, float_t, float_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetDefaultFillColors), arg("rgbEndpoints"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
     .def("SetDefaultFillColors", overload_cast<const vector<pair<color_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetDefaultFillColors), arg("gradient"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
     .def("SetDefaultFillStyles", &Pad::SetDefaultFillStyles, arg("styles"), ref_int)
-    .def("SetDefaultCandleBoxRange", &Pad::SetDefaultCandleBoxRange, arg("candleOption"), ref_int)
-    .def("SetDefaultCandleWhiskerRange", &Pad::SetDefaultCandleWhiskerRange, arg("candleOption"), ref_int);
+    .def("SetDefaultCandleBoxRange", &Pad::SetDefaultCandleBoxRange, arg("range"), ref_int)
+    .def("SetDefaultCandleWhiskerRange", &Pad::SetDefaultCandleWhiskerRange, arg("range"), ref_int);
   defFillSetters(pad);
   pad
     .def("SetTransparent", &Pad::SetTransparent, ref_int)
@@ -626,7 +627,7 @@ void exportRatio(py::module_& m)
   py::class_<Ratio, Data> ratio(m, "Ratio");
   ratio
     .def(py::init<const Data&, const Data&>(), arg("numerator"), arg("denominator"))
-    .def(py::init<const string&, const string&, const string&, const string&, const optional<string>&>(), arg("name"), arg("dataSource"), arg("denomName"), arg("denomDataSource"), arg("label"))
+    .def(py::init<const string&, const string&, const string&, const string&, const optional<string>&>(), arg("numeratorName"), arg("numeratorDataSource"), arg("denominatorName"), arg("denominatorDataSource"), arg("label") = nullopt)
     .def("Print", &Ratio::Print)
     .def("SetIsCorrelated", &Ratio::SetIsCorrelated, arg("isCorrelated") = true, ref_int)
     .def("GetDataSource", [](const Ratio& self) -> const string& { return self.GetDataSource(); })
