@@ -26,7 +26,8 @@
 //     cent_0-10/, cent_10-30/, cent_30-50/   ptSpec (per event), v2 (TGraphErrors)
 //     flow/        v2_{pi,K,p} (v2 vs. pT, 30-40%), v2ncq_{pi,K,p} (v2/n_q vs. KET/n_q), v2, v3, v4 (vs. centrality)
 //     meanPt/      pp_{2.76,5,7,8,13}TeV, pPb_{5,8.16}TeV, XeXe_5.44TeV, PbPb_{2.76,5}TeV (TGraphErrors: mean pT vs. N_ch), <system>_syst
-//     correlations/ ridge (TH2: pair yield vs. Delta phi, Delta eta), fourier_longRange (TF1, V_2Delta in the title)
+//     correlations/ ridge (TH2: pair yield vs. Delta phi, Delta eta; high multiplicity), ridge_lowMult, ridge_midMult (the same in lower
+//                   multiplicity classes), fourier_longRange (TF1, V_2Delta in the title)
 //     femtoscopy/  cf_{0-5,20-30,50-60} (TGraphErrors: pion correlation functions), fit_... (TF1, the radius in the title),
 //                  photons_cf (TH1: photon pairs in central Pb-Pb), photons_fit (TF1, radius and lambda in the title)
 //   tracks.root                       TTree "tracks": pt, eta, phi, charge, nClustersTPC, dcaXY, isPrimary
@@ -135,6 +136,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <vector>
 
 namespace
@@ -2059,6 +2061,23 @@ void WriteCorrelations()
       }
     }
     ridge.Write();
+    // the same in lower multiplicity classes (own random numbers, so the data above stays as it is): the jet peak per trigger
+    // stays, the long-range near-side ridge (the flow harmonics) fades out towards low multiplicity
+    TRandom3 classRandom(26);
+    for (const auto& [name, v2, v3] : {std::make_tuple("ridge_lowMult", 0.0008, 0.0002), std::make_tuple("ridge_midMult", 0.0024, 0.0007)}) {
+      TH2D classRidge(ridge);
+      classRidge.SetName(name);
+      for (int ix = 1; ix <= classRidge.GetNbinsX(); ++ix) {
+        for (int iy = 1; iy <= classRidge.GetNbinsY(); ++iy) {
+          const double dphi = classRidge.GetXaxis()->GetBinCenter(ix), deta = classRidge.GetYaxis()->GetBinCenter(iy);
+          const double flow = 1. + 2. * v2 * std::cos(2. * dphi) + 2. * v3 * std::cos(3. * dphi);
+          const double jet = 0.15 * std::exp(-0.5 * (dphi * dphi / (0.25 * 0.25) + deta * deta / (0.35 * 0.35)));
+          const double awaySide = 0.012 * std::exp(-0.5 * std::pow((dphi - TMath::Pi()) / 0.7, 2.));
+          classRidge.SetBinContent(ix, iy, flow + jet + awaySide + classRandom.Gaus(0., 0.0008));
+        }
+      }
+      classRidge.Write();
+    }
     // the long-range part (2 < Delta eta < 4) projected on Delta phi, as ProjectX(2, 4) does, with a Fourier fit
     std::unique_ptr<TH1D> projection(ridge.ProjectionX("longRange", ridge.GetYaxis()->FindBin(2.001), ridge.GetYaxis()->FindBin(3.999)));
     projection->SetDirectory(nullptr);

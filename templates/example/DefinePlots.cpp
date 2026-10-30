@@ -173,7 +173,7 @@ void DefineDataSources(PlotManager& pm)
 //****************************************************************************************
 void DefineBasePlots(PlotManager& pm)
 {
-  for (const string& name : {"1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_2x1_gap", "1d_3x1_gap", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1", "2d_2x2"}) {
+  for (const string& name : {"1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_2x1_gap", "1d_3x1_gap", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1", "2d_3x1", "2d_2x2"}) {
     pm.AddBasePlot(PlotManager::MakeBasePlot(name));
   }
   // a base plot can be adapted before adding it, e.g. for all 2d plots with a logarithmic z axis
@@ -580,6 +580,25 @@ void DefineDetectorPlots(PlotManager& pm)
   // systematic uncertainties
   // --------------------------------------------------------------------------------------
   {  // several columns of one table; line styles cycle through the pad's default styles
+    // hit density on four barrel layers of a tracker (radii invented), from the tracks crossing them (z = r sinh(eta)), in hits per
+    // cm^2: the weight is one over the area of a bin; one colour scale for all layers shows how the density falls with the radius,
+    // a scale per layer would make them look alike; one module of the third layer is off
+    Plot plot("hitDensity", "detector/tracking", "2d_2x2");  // pads 1, 2, 4, 5; pad 3 is the common scale
+    const vector<std::pair<uint8_t, double>> layers = {{1, 30.0}, {2, 45.0}, {4, 60.0}, {5, 80.0}};
+    for (const auto& [pad, radius] : layers) {
+      auto& data = plot[pad].AddData("tracks", "tracks").Define("z", Form("%g * sinh(eta)", radius)).Define("w", Form("1.0 / (%g * 0.08727 * 2.5)", radius));
+      if (radius == 60.0) data.Filter("phi < 2.1 || phi > 2.6");
+      data.Project2D({"z", 64, {-80.0, 80.0}}, {"phi", 72, {0.0, 6.2832}}, "w");
+      plot[pad].AddText(top_left, Form("#it{r} = %g cm", radius)).SetTextColor(kWhite);
+    }
+    plot[0].SetPalette(kViridis);
+    plot[0].SetFrameFill(1001, kBlack);
+    plot[0]['X'].SetTitle("#it{z} (cm)");
+    plot[0]['Y'].SetTitle("#varphi (rad)");
+    plot[0]['Z'].SetTitle("hits per cm^{2}");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {
     Plot plot("systematicsBreakdown", "detector/systematics", "1d");
     plot[1].SetDefaultLineStyles({kDashed, kDotted, kDashDotted, 9});  // 9: long dashes
     for (const string& source : {"tracking", "pid", "material", "normalisation"}) {
@@ -589,6 +608,22 @@ void DefineDetectorPlots(PlotManager& pm)
     plot[1].AddLegend(0.25, 0.9).SetNumColumns(2);
     plot[1]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})");
     plot[1]['Y'].SetTitle("relative uncertainty (%)").SetRange(0.0, 12.0);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the same, one source per panel against the total: all four panels share one y range (the rows of a grid only share theirs),
+     // so the dominant source stands out instead of every panel being zoomed to its own range
+    Plot plot("systematicsPerSource", "detector/systematics", "1d_2x2");
+    plot.ShareAxis('Y', {1, 2, 3, 4});
+    uint8_t pad = 1;
+    for (const string& source : {"tracking", "pid", "material", "normalisation"}) {
+      plot[pad].AddData("systematics", "systematics", "this source").Scatter("pt", source).SetDrawOption(line).SetLine(kSolid, 4.0, kBlue + 1);
+      plot[pad].AddData("systematics", "systematics", "total").Scatter("pt", "total").SetDrawOption(line).SetLine(kDashed, 2.0, kGray + 2);
+      plot[pad].AddText(top_left, source);
+      ++pad;
+    }
+    plot[2].AddLegend(top_right);
+    plot[0]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})");
+    plot[0]['Y'].SetTitle("relative uncertainty (%)").SetRoomAboveMax(0.3);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
 
@@ -872,6 +907,19 @@ void DefineHeavyIonPlots(PlotManager& pm)
     plot[1].AddText(0.05, 0.95, "pairs per trigger (a.u.)");
     plot[1]['X'].SetTitleOffset(1.8);  // in 3D views the axis titles need more room from the labels
     plot[1]['Y'].SetTitleOffset(1.8);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {                                                                       // the ridge emerging with multiplicity: three classes on one colour scale, the jet peak cut off by the common z range, so the
+                                                                          // long-range structure at small Delta phi (and the away side at pi) can be compared between the classes
+    Plot plot("ridgeVsMultiplicity", "heavyion/correlations", "2d_3x1");  // pads 1-3, pad 4 is the common scale
+    uint8_t pad = 1;
+    for (const auto& [name, label] : vector<std::pair<string, string>>{{"ridge_lowMult", "low multiplicity"}, {"ridge_midMult", "intermediate"}, {"ridge", "high multiplicity"}}) {
+      plot[pad].AddData("correlations/" + name, "heavyion");
+      plot[pad].AddText(top_left, label).SetTextColor(kWhite);
+      ++pad;
+    }
+    plot[0].SetPalette(kViridis);
+    plot[0]['Z'].SetRange(0.985, 1.02);  // the jet peak reaches 1.15
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // the long-range part projected on Delta phi, with the Fourier fit stored with the data

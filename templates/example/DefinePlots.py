@@ -92,7 +92,7 @@ def DefineBasePlots(pm: PlotManager):
     panels) or 2d (panels with colour scale), wide or tall panels, a grid of panels sharing their axes, a ratio
     panel below each panel, or gaps between independent panels. Pads are numbered row by row.
     The code of PlotManager::MakeBasePlot shows how they are made with PanelLayout, as a start for your own."""
-    for name in ["1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_2x1_gap", "1d_3x1_gap", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1", "2d_2x2"]:
+    for name in ["1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_2x1_gap", "1d_3x1_gap", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1", "2d_3x1", "2d_2x2"]:
         pm.AddBasePlot(PlotManager.MakeBasePlot(name))
     # a base plot can be adapted before adding it, e.g. for all 2d plots with a logarithmic z axis
     logz = PlotManager.MakeBasePlot("2d")
@@ -443,6 +443,23 @@ def DefineDetectorPlots(pm: PlotManager):
     plot[1]['Y'].SetTitle("#Sigma #it{p}_{T} (GeV/#it{c})").SetRange(0.0, 2500.0)
     pm.AddPlot(plot)
 
+    # hit density on four barrel layers of a tracker (radii invented), from the tracks crossing them (z = r sinh(eta)), in hits per
+    # cm^2: the weight is one over the area of a bin; one colour scale for all layers shows how the density falls with the radius,
+    # a scale per layer would make them look alike; one module of the third layer is off -------------------------------------
+    plot = Plot("hitDensity", "detector/tracking", "2d_2x2")  # pads 1, 2, 4, 5; pad 3 is the common scale
+    for pad, radius in zip([1, 2, 4, 5], [30.0, 45.0, 60.0, 80.0]):
+        data = plot[pad].AddData("tracks", "tracks").Define("z", f"{radius} * sinh(eta)").Define("w", f"1.0 / ({radius} * 0.08727 * 2.5)")
+        if radius == 60.0:
+            data.Filter("phi < 2.1 || phi > 2.6")
+        data.Project2D(("z", 64, [-80.0, 80.0]), ("phi", 72, [0.0, 6.2832]), "w")
+        plot[pad].AddText(top_left, f"#it{{r}} = {radius:g} cm").SetTextColor(kWhite)
+    plot[0].SetPalette(kViridis)
+    plot[0].SetFrameFill(1001, kBlack)
+    plot[0]['X'].SetTitle("#it{z} (cm)")
+    plot[0]['Y'].SetTitle("#varphi (rad)")
+    plot[0]['Z'].SetTitle("hits per cm^{2}")
+    pm.AddPlot(plot)
+
     # ---- systematic uncertainties ---------------------------------------------------------------
     # several columns of one table; line styles cycle through the pad's default styles
     plot = Plot("systematicsBreakdown", "detector/systematics", "1d")
@@ -453,6 +470,19 @@ def DefineDetectorPlots(pm: PlotManager):
     plot[1].AddLegend(0.25, 0.9).SetNumColumns(2)
     plot[1]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})")
     plot[1]['Y'].SetTitle("relative uncertainty (%)").SetRange(0.0, 12.0)
+    pm.AddPlot(plot)
+
+    # the same, one source per panel against the total: all four panels share one y range (the rows of a grid only share theirs),
+    # so the dominant source stands out instead of every panel being zoomed to its own range ---------------------------------
+    plot = Plot("systematicsPerSource", "detector/systematics", "1d_2x2")
+    plot.ShareAxis('Y', [1, 2, 3, 4])
+    for pad, source in enumerate(["tracking", "pid", "material", "normalisation"], 1):
+        plot[pad].AddData("systematics", "systematics", "this source").Scatter("pt", source).SetDrawOption(line).SetLine(kSolid, 4.0, kBlue + 1)
+        plot[pad].AddData("systematics", "systematics", "total").Scatter("pt", "total").SetDrawOption(line).SetLine(kDashed, 2.0, kGray + 2)
+        plot[pad].AddText(top_left, source)
+    plot[2].AddLegend(top_right)
+    plot[0]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})")
+    plot[0]['Y'].SetTitle("relative uncertainty (%)").SetRoomAboveMax(0.3)
     pm.AddPlot(plot)
 
     # ---- operation ------------------------------------------------------------------------------
@@ -708,6 +738,16 @@ def DefineHeavyIonPlots(pm: PlotManager):
     plot[1].AddText(0.05, 0.95, "pairs per trigger (a.u.)")
     plot[1]['X'].SetTitleOffset(1.8)  # in 3D views the axis titles need more room from the labels
     plot[1]['Y'].SetTitleOffset(1.8)
+    pm.AddPlot(plot)
+
+    # the ridge emerging with multiplicity: three classes on one colour scale, the jet peak cut off by the common z range, so the
+    # long-range structure at small Delta phi (and the away side at pi) can be compared between the classes ----------------------
+    plot = Plot("ridgeVsMultiplicity", "heavyion/correlations", "2d_3x1")  # pads 1-3, pad 4 is the common scale
+    for pad, (name, label) in enumerate([("ridge_lowMult", "low multiplicity"), ("ridge_midMult", "intermediate"), ("ridge", "high multiplicity")], 1):
+        plot[pad].AddData(f"correlations/{name}", "heavyion")
+        plot[pad].AddText(top_left, label).SetTextColor(kWhite)
+    plot[0].SetPalette(kViridis)
+    plot[0]['Z'].SetRange(0.985, 1.02)  # the jet peak reaches 1.15
     pm.AddPlot(plot)
 
     # the long-range part projected on Delta phi, with the Fourier fit stored with the data --------------------------

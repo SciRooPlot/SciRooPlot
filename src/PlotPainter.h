@@ -318,9 +318,10 @@ class PlotPainter
   std::map<char, std::vector<std::vector<uint8_t>>> mSharedAxes;
   std::set<std::pair<uint8_t, char>> mCommonRanges;
   std::map<std::pair<uint8_t, char>, std::pair<double_t, double_t>> mFrameRanges;
-  std::map<uint8_t, TH1*> mFrameHists;  // the frame histograms of the flat frames (owned by their pads)
-  std::map<uint8_t, TH1*> mScaleHists;  // the frame histograms with a z axis, also in 3D views (owned by their pads)
-  std::set<uint8_t> mScalesInCells;     // pads whose colour scale a ZAxis() cell shows instead of the pad
+  std::map<uint8_t, TH1*> mFrameHists;          // the frame histograms of the flat frames (owned by their pads)
+  std::map<uint8_t, TH1*> mScaleHists;          // the frame histograms with a z axis, also in 3D views (owned by their pads)
+  std::map<uint8_t, double_t> mDivisionWidths;  // per pad: the widest pad (fraction of the canvas) with a frame as wide as its frame
+  std::set<uint8_t> mScalesInCells;             // pads whose colour scale a ZAxis() cell shows instead of the pad
   // on screen: the free user-defined line styles that stand in for styles 2-4 (their dash strings from gStyle), 0 if there is none
   std::array<Style_t, 3> mScreenDashStyles{};
   std::set<std::pair<const TObject*, size_t>> mReportedStoredRanges;  // input axes whose stored range a projection of this plot does not apply (reported once)
