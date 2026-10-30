@@ -24,6 +24,7 @@ CLASSES = [
     ("Plot.h", "class Plot::Pad::Ratio", "Plot::Pad::Ratio", "has all setters, modifiers and selections of Data (returning the Ratio) plus the following"),
     ("Plot.h", "class Plot::Pad::Box", "Plot::Pad::Box<BoxType>", "common to TextBox, LegendBox and StatsBox, which also have the border, text and fill setters"),
     ("Plot.h", "class Plot::Pad::TextBox", "Plot::Pad::TextBox", ""),
+    ("Plot.h", "class Plot::Pad::ImageBox", "Plot::Pad::ImageBox", "an image file (e.g. a logo); in pdf files only with ROOT 6.42 or newer"),
     ("Plot.h", "class Plot::Pad::StatsBox", "Plot::Pad::StatsBox", "placement and appearance of the statistics box of a data item (Data::SetStatsBox); has the setters of Box"),
     ("Plot.h", "class Plot::Pad::LegendBox", "Plot::Pad::LegendBox", ""),
     ("Plot.h", "class Plot::Pad::Shape", "Plot::Pad::Shape", "a line, arrow, region, ellipse or polygon that is not data (Pad::AddLine, AddArrow, AddVerticalLine, AddRegionX, ...); also has the line and fill setters"),
@@ -94,7 +95,7 @@ def methods(section: str, class_name: str):
         if not match:
             continue
         name = match["name"]
-        if name in SKIP_NAMES or name.startswith("Get") and name not in {"GetAxis", "GetData", "GetLegend", "GetText", "GetProjectProperty", "GetPad"}:
+        if name in SKIP_NAMES or name.startswith("Get") and name not in {"GetAxis", "GetData", "GetLegend", "GetText", "GetImage", "GetProjectProperty", "GetPad"}:
             continue  # plain getters are not part of the user interface
         ret = (match["ret"] or "").strip()
         args = re.sub(r"\s+", " ", match["args"].strip())

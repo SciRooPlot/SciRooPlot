@@ -450,6 +450,7 @@ class Plot::Pad : public FillSetters<Pad>
   class LegendEntry;
   class StatsBox;
   class Shape;
+  class ImageBox;
 
   Pad() = default;
   explicit Pad(const boost::property_tree::ptree& padTree);
@@ -489,6 +490,10 @@ class Plot::Pad : public FillSetters<Pad>
   LegendBox& AddLegend(double_t xPos, double_t yPos, const std::optional<std::string>& title = {});
   LegendBox& AddLegend(const std::optional<std::string>& title = {});
   LegendBox& AddLegend(box_placement_t placement, const std::optional<std::string>& title = {});
+  // image file (png, jpg, ...) drawn at the given upper left corner or placed automatically; by default 0.2 of the pad width wide
+  ImageBox& AddImage(double_t xPos, double_t yPos, const std::string& path);
+  ImageBox& AddImage(const std::string& path);
+  ImageBox& AddImage(box_placement_t placement, const std::string& path);
 
   // shapes: drawn in the pad but not data (never in the axis ranges, not numbered with the data, no legend row); positions in axis values
   Shape& AddLine(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2);    // not cut at the frame
@@ -506,6 +511,7 @@ class Plot::Pad : public FillSetters<Pad>
   LegendBox& GetLegend(uint8_t legendID);
   TextBox& GetText(uint8_t textID);
   Shape& GetShape(uint8_t shapeID);
+  ImageBox& GetImage(uint8_t imageID);
 
   Data& SetRefFunc(const std::string& refFunc);                            // "": no reference function, also not the one of the base plot or of pad 0
   Data& SetFrame(const std::string& name, const std::string& dataSource);  // input that only defines the axis frame (not drawn, not numbered)
@@ -574,6 +580,7 @@ class Plot::Pad : public FillSetters<Pad>
   auto& GetLegendBoxes() { return mLegendBoxes; }
   auto& GetTextBoxes() { return mTextBoxes; }
   auto& GetShapes() { return mShapes; }
+  auto& GetImageBoxes() { return mImageBoxes; }
   static std::vector<std::tuple<float_t, float_t, float_t, float_t>> GradientEndpoints(const std::vector<std::pair<color_t, float_t>>& gradient);
   uint8_t GetDataCount() const { return mData.size(); }
 
@@ -687,6 +694,7 @@ class Plot::Pad : public FillSetters<Pad>
   std::vector<std::shared_ptr<LegendBox>> mLegendBoxes;
   std::vector<std::shared_ptr<TextBox>> mTextBoxes;
   std::vector<std::shared_ptr<Shape>> mShapes;
+  std::vector<std::shared_ptr<ImageBox>> mImageBoxes;
 };
 
 //**************************************************************************************************
@@ -1437,6 +1445,50 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
  private:
   std::string mText;  // lines separated by newlines
   std::optional<int16_t> mTextAlign;
+};
+
+//**************************************************************************************************
+/**
+ * Representation of an image (e.g. a logo) drawn in a pad. Its position is the upper left corner (in pad or user coordinates),
+ * as for texts; a size not given follows from the other one and the aspect ratio of the image.
+ */
+//**************************************************************************************************
+class Plot::Pad::ImageBox
+{
+ public:
+  ImageBox(double_t xPos, double_t yPos, const std::string& path);
+  explicit ImageBox(const std::string& path);
+  explicit ImageBox(const boost::property_tree::ptree& imageBoxTree);
+  void Print() const { Plot::Print(GetPropertyTree(), "ImageBox"); }
+
+  ImageBox& SetPosition(double_t x, double_t y);
+  ImageBox& SetWidth(double_t width);    // fraction of the pad width
+  ImageBox& SetHeight(double_t height);  // fraction of the pad height
+  ImageBox& SetUserCoordinates(bool isUserCoord = true);
+  ImageBox& SetAutoPlacement(box_placement_t placement = best_corner);
+
+ protected:
+  friend class PlotPainter;
+  friend class Plot;
+
+  boost::property_tree::ptree GetPropertyTree() const;
+  const std::string& GetPath() const { return mPath; }
+  double_t GetXPosition() const { return mX.value_or(0.); }
+  double_t GetYPosition() const { return mY.value_or(0.); }
+  const auto& GetWidth() const { return mWidth; }
+  const auto& GetHeight() const { return mHeight; }
+  const auto& GetPlacement() const { return mPlacement; }
+  bool IsUserCoordinates() const { return mIsUserCoord.value_or(false); }
+  bool IsAutoPlacement() const { return mPlacement.has_value(); }
+
+ private:
+  std::string mPath;  // as given (environment variables are expanded when the plot is drawn), a relative path made absolute
+  std::optional<double_t> mX;
+  std::optional<double_t> mY;
+  std::optional<double_t> mWidth;
+  std::optional<double_t> mHeight;
+  std::optional<bool> mIsUserCoord;
+  std::optional<box_placement_t> mPlacement;
 };
 
 //**************************************************************************************************

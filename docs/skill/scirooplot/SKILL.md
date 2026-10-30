@@ -197,6 +197,7 @@ plot[1].AddData("band", "src", "unc.").SetLegendEntry(LegendEntry().SetSymbolEle
 plot[1].GetLegend(1).AddEntry("custom").SetSymbolElements("L").SetLine(kSolid, 2.0, kRed);   // row of its own (AddEntry(): empty line); SetRefData(n): symbol of data n
 plot[1].GetLegend(1).AddEntry("#bf{group}").BeforeData(4);   // placed relative to data n of the pad (as in plot[1](n)): AtTop(), BeforeData(n), AfterData(n); default: at the end
 plot[1].AddText({"line one", "line two"});  AddText(top_left, "text");  AddText(0.2, 0.9, "text").SetTextFont(43).SetTextSize(20).SetTextAlign(13);   // font 43: size in pixels
+plot[1].AddImage(0.2, 0.7, "/path/logo.png").SetWidth(0.3);  AddImage(top_right, "logo.png");   // default width 0.2 of the pad, height from the image; in pdf files only with ROOT >= 6.42
 ```
 Positions are pad coordinates (0–1) of the upper left corner, `.SetUserCoordinates()` switches to axis units. Legend symbols are derived from what is actually drawn; override with `SetSymbolElements`/`SetDefaultSymbolElements`.
 

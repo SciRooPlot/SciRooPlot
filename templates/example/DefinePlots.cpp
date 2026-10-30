@@ -634,6 +634,7 @@ void DefineDetectorPlots(PlotManager& pm)
     Plot plot("integratedLuminosity", "detector/operation", "1d");
     plot[1].AddData("luminosity", "luminosity").Scatter("time", "lumi").SetDrawOption(points_line);
     plot[1].AddText(0.2, 0.9, {kExperiment, kCollisions, "2023"});
+    plot[1].AddImage(0.21, 0.7, "${SCIROOPLOT_DATA_DIR}/ExampleData/logo.png").SetWidth(0.3);  // an image (e.g. a logo): upper left corner and width
     plot[1]['X'].SetTimeFormat("%b%F1970-01-01 00:00:00").SetNumDivisions(508).SetTitle("");
     plot[1]['Y'].SetTitle("delivered luminosity (fb^{-1})");
     pm.AddPlot(plot);

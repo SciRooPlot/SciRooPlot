@@ -24,6 +24,7 @@
 #include <ROOT/RCsvDS.hxx>
 #include <ROOT/RDFHelpers.hxx>
 #include <ROOT/RDataFrame.hxx>
+#include <RVersion.h>
 #include <TApplication.h>
 #include <TArrow.h>
 #include <TBox.h>
@@ -767,8 +768,8 @@ void PlotManager::AddPlot(Plot plot)
     return;
   }
   // pad 0 only holds the defaults for all pads, nothing added to it is drawn
-  if (auto pad0 = plot.GetPads().find(0); pad0 != plot.GetPads().end() && (!pad0->second.GetData().empty() || pad0->second.GetFrame() || !pad0->second.GetLegendBoxes().empty() || !pad0->second.GetTextBoxes().empty())) {
-    logger::warning("Plot {} in {}: data, frames, legends and texts added to pad 0 are not drawn (pad 0 holds the defaults for all pads, the pads are counted from 1).", plot.GetName(), plot.GetGroup());
+  if (auto pad0 = plot.GetPads().find(0); pad0 != plot.GetPads().end() && (!pad0->second.GetData().empty() || pad0->second.GetFrame() || !pad0->second.GetLegendBoxes().empty() || !pad0->second.GetTextBoxes().empty() || !pad0->second.GetImageBoxes().empty())) {
+    logger::warning("Plot {} in {}: data, frames, legends, texts and images added to pad 0 are not drawn (pad 0 holds the defaults for all pads, the pads are counted from 1).", plot.GetName(), plot.GetGroup());
   }
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [&plot](const Plot& curPlot) {
@@ -1875,6 +1876,20 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     }
   }
   if (!canvas) return false;
+  // ROOT writes images into PDF files only from version 6.42 on: before, they are missing there. Said once per run (a logo is usually
+  // on every plot), instead of ROOT's own warning for every image, which is silenced when the file is written
+  bool silenceNoPdfImages = false;
+  if constexpr (ROOT_VERSION_CODE < ROOT_VERSION(6, 42, 0)) {
+    static bool warnedNoPdfImages = false;
+    auto hasImages = [](auto& pad) {
+      return pad.first != 0 && !pad.second.GetImageBoxes().empty();  // pad 0 is not drawn
+    };
+    silenceNoPdfImages = mode == "pdf" && std::any_of(fullPlot.GetPads().begin(), fullPlot.GetPads().end(), hasImages);
+    if (silenceNoPdfImages && !warnedNoPdfImages) {
+      logger::warning("Images are missing in the pdf files: ROOT {} cannot write them there (from 6.42 on it can). Use eps or png for plots with images.", gROOT->GetVersion());
+      warnedNoPdfImages = true;
+    }
+  }
 
   if (TColor::GetFreeColorIndex() > std::numeric_limits<int16_t>::max()) {
     // there is a natural limit to the number of custom colors since ROOT color indices are of type short
@@ -2120,6 +2135,17 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     gStyle->SetLineScalePS(4. * pageWidthPt / canvasWidthPx);
   }
   if (mode == "root" || mode == "xml") ReserveColorIndices(canvas.get());
+  // only ROOT's "PDF not implemented yet" of TASImage::Paint is dropped (SciRooPlot warned above), every other message passes
+  static ErrorHandlerFunc_t rootErrorHandler = nullptr;
+  if (silenceNoPdfImages) {
+    rootErrorHandler = SetErrorHandler([](Int_t level, Bool_t abort, const char* location, const char* msg) {
+      if (TString(location) == "TASImage::Paint" && TString(msg).Contains("PDF")) return;
+      rootErrorHandler(level, abort, location, msg);
+    });
+  }
+  auto errorHandlerGuard = make_scope_guard([silenceNoPdfImages]() {
+    if (silenceNoPdfImages) SetErrorHandler(rootErrorHandler);
+  });
   canvas->SaveAs(fullName.data());
   if (!isGif && !std::filesystem::is_regular_file(fullName)) {
     logger::error("Could not write {}.", fullName);
@@ -2259,7 +2285,7 @@ optional<size_t> PlotManager::NextBrowseIndex(size_t index, bool forward) const
  */
 //**************************************************************************************************
 /**
- * The line a double-click in show mode prints for a legend, text, statistics box or shape: what was clicked, named as the user
+ * The line a double-click in show mode prints for a legend, text, statistics box, image or shape: what was clicked, named as the user
  * added it ("Pad 1, arrow 3": the nth of its kind in the pad), in yellow, and its
  * position in green, written in brackets as the arguments of the call that sets it (AddText(x, y, ...), AddArrow(pos1, pos2), ...) in the
  * language of the project's program and in the coordinates the user gave, so that it can be copied into the code.
@@ -2269,6 +2295,9 @@ optional<size_t> PlotManager::NextBrowseIndex(size_t index, bool forward) const
 optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad) const
 {
   if (!selected || !pad) return nullopt;
+  // an image is drawn in a sub-pad of the pad it belongs to
+  TVirtualPad* imagePad = (string(pad->GetName()).rfind("ImageBox_", 0) == 0 && pad->GetMother() != pad) ? pad : nullptr;
+  if (imagePad) pad = imagePad->GetMother();
   const bool isPython = str_ends_with(Config::Get().Program(mProjectName), ".py");
   // always with the pad, so that the line reads the same in every plot
   const string padName = pad->GetName();
@@ -2297,6 +2326,16 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
   auto line = [&](const string& what, const string& position) {
     return fmt::format("{}{}{}{}: {}({}){}", logger::begin_color(logger::Color::Yellow), padLabel, what, logger::end_color(), logger::begin_color(logger::Color::Green), position, logger::end_color());
   };
+
+  if (imagePad) {
+    // the upper left corner, as AddImage(x, y, ...) and SetPosition(x, y) take it, and the file name as hint
+    const bool isUserCoord = (imagePad->GetUniqueID() == 1u);
+    const double_t xNDC = imagePad->GetXlowNDC(), yNDC = imagePad->GetYlowNDC() + imagePad->GetHNDC();
+    const double_t x = (isUserCoord) ? axisValue(xNDC, true) : xNDC;
+    const double_t y = (isUserCoord) ? axisValue(yNDC, false) : yNDC;
+    const string what = "image " + string(imagePad->GetName()).substr(9) + excerpt(std::filesystem::path(imagePad->GetTitle()).filename().string(), false);
+    return line(what, number(x, isUserCoord) + ", " + number(y, isUserCoord));
+  }
 
   if (auto* box = dynamic_cast<TPave*>(selected)) {
     const string name = box->GetName();

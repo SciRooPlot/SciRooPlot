@@ -56,6 +56,7 @@
 #include <THashList.h>
 #include <THn.h>
 #include <THnSparse.h>
+#include <TImage.h>
 #include <TIterator.h>
 #include <TLatex.h>
 #include <TLegend.h>
@@ -66,6 +67,7 @@
 #include <TObjArray.h>
 #include <TObject.h>
 #include <TObjectTable.h>
+#include <TPad.h>
 #include <TPave.h>
 #include <TPaveStats.h>
 #include <TPaveText.h>
@@ -101,6 +103,7 @@
 #include <vector>
 
 #include "util/Optional.h"
+#include "util/Paths.h"
 #include "util/ScopeGuard.h"
 #include "util/Strings.h"
 #include "util/TypeTraits.h"
@@ -118,6 +121,8 @@ using std::vector;
 
 namespace SciRooPlot
 {
+using util::expand_path;
+using util::file_exists;
 using util::get_first;
 using util::get_first_or;
 using util::is_2d;
@@ -2470,7 +2475,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::after_data, nullptr, padID);
     }
 
-    // legends and texts: the ones with a given position before the statistics boxes, the automatically placed ones after them,
+    // legends, texts and images: the ones with a given position before the statistics boxes, the automatically placed ones after them,
     // so that every automatic placement knows the boxes already there
     auto placeBoxes = [&](bool fixedPositions) {
       uint8_t legendIndex{};
@@ -2515,6 +2520,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         } else {
           logger::warning("Text {} was not added since it is empty.", textIndex);
         }
+      }
+      uint8_t imageIndex{};
+      for (const auto& box : pad.GetImageBoxes()) {
+        ++imageIndex;
+        if (box->IsAutoPlacement() == fixedPositions) continue;
+        DrawImage(*box, pad_ptr, "ImageBox_" + std::to_string(imageIndex));
       }
     };
     placeBoxes(true);
@@ -3971,6 +3982,62 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
 //**************************************************************************************************
 /**
+ * Draws an image in a transparent sub-pad of the pad, at its position or placed automatically like the other boxes.
+ * The image itself is stored with the canvas (Plots.root then opens without the file); a size not given keeps its aspect ratio.
+ */
+//**************************************************************************************************
+void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const string& name)
+{
+  const string path = expand_path(box.GetPath());
+  if (path.empty()) return;  // unset environment variable, reported by expand_path
+  if (!file_exists(path)) {
+    logger::warning("Image {} does not exist.", path);
+    return;
+  }
+  TImage* image = TImage::Open(path.data());
+  if (!image || !image->IsValid()) {
+    delete image;
+    logger::warning("Image {} could not be read (ROOT needs to be built with asimage for images).", path);
+    return;
+  }
+  const double_t padWidthPixel = pad->GetWw() * pad->GetAbsWNDC();
+  const double_t padHeightPixel = pad->GetWh() * pad->GetAbsHNDC();
+  const double_t aspect = static_cast<double_t>(image->GetHeight()) / image->GetWidth() * padWidthPixel / padHeightPixel;  // height / width in NDC
+  double_t widthNDC = box.GetWidth().value_or(0.2);
+  double_t heightNDC = box.GetHeight().value_or(widthNDC * aspect);
+  if (box.GetHeight() && !box.GetWidth()) widthNDC = heightNDC / aspect;
+
+  const auto [upperLeftX, upperLeftY] = PlaceBox(box, pad, widthNDC, heightNDC, 0., 0., "image");
+  constexpr double_t tolerance = 1e-9;
+  if (widthNDC <= 0. || heightNDC <= 0. || upperLeftX < -tolerance || upperLeftY - heightNDC < -tolerance || upperLeftX + widthNDC > 1. + tolerance || upperLeftY > 1. + tolerance) {
+    logger::warning("Image {} is not drawn: it does not fit into its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}).", name.substr(name.find('_') + 1), upperLeftX, upperLeftY, widthNDC, heightNDC);
+    delete image;
+    return;
+  }
+  pad->cd();
+  auto* imagePad = new TPad(name.data(), path.data(), std::max(upperLeftX, 0.), std::max(upperLeftY - heightNDC, 0.), std::min(upperLeftX + widthNDC, 1.), std::min(upperLeftY, 1.));
+  imagePad->SetFillStyle(0);
+  imagePad->SetBorderMode(0);
+  imagePad->SetBorderSize(0);
+  imagePad->SetMargin(0., 0., 0., 0.);
+  imagePad->SetBit(kCanDelete);  // owned by the pad
+  // a double-click in show mode reports the position as given
+  imagePad->SetUniqueID((box.IsUserCoordinates()) ? 1u : 0u);
+  imagePad->Draw();
+  imagePad->cd();
+  image->SetEditable(true);  // events go to the pad (otherwise ROOT zooms into the image on a click)
+  image->SetBit(kCanDelete);
+  image->Draw("X");  // fills the sub-pad, whose aspect ratio is set above
+  // ROOT's bitmap output (TImageDump) draws all texts of the canvas wrongly (no minus signs, shifted indices) when an image is the last
+  // thing painted before a text: an empty text after it avoids that
+  auto* textAfterImage = new TText(0., 0., "");
+  textAfterImage->SetBit(kCanDelete);
+  textAfterImage->Draw();
+  pad->cd();
+}
+
+//**************************************************************************************************
+/**
  * Upper left corner (in NDC) of a box of the given size: at the position set for it (converted from user coordinates if requested)
  * or placed automatically within the frame of the pad (borderX, borderY: width of its border, half of which sticks out on each side).
  */
@@ -4326,6 +4393,9 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
         markLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second);
       }
       if (ellipse->GetFillStyle() != 0) markPolygon(points);
+    } else if (auto* subPad = dynamic_cast<TPad*>(obj); subPad && TString(subPad->GetName()).BeginsWith("ImageBox_")) {
+      // images placed before (position in NDC of this pad)
+      setRect(subPad->GetXlowNDC() * nx, subPad->GetYlowNDC() * ny, (subPad->GetXlowNDC() + subPad->GetWNDC()) * nx, (subPad->GetYlowNDC() + subPad->GetHNDC()) * ny, 1u);
     } else if (auto* hist = dynamic_cast<TH1*>(obj)) {
       if (!TString(hist->GetName()).BeginsWith("axis_hist") && !TString(hist->GetName()).Contains("hframe")) markHist(hist);
     } else if (auto* polar = dynamic_cast<TGraphPolar*>(obj)) {

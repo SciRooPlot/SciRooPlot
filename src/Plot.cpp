@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <filesystem>
 #include <initializer_list>
 #include <istream>
 #include <limits>
@@ -43,6 +44,7 @@
 
 #include "Validation.h"
 #include "util/Optional.h"
+#include "util/Paths.h"
 #include "util/PropertyTree.h"
 #include "util/Strings.h"
 
@@ -56,6 +58,7 @@ using std::vector;
 
 namespace SciRooPlot
 {
+using util::expand_path;
 using util::get_from_tree;
 using util::number_to_string;
 using util::put_in_tree;
@@ -1368,6 +1371,10 @@ Plot::Pad::Pad(const Pad& other)
   for (const auto& shape : other.mShapes) {
     mShapes.push_back(std::make_shared<Shape>(*shape));
   }
+  mImageBoxes.reserve(other.mImageBoxes.size());
+  for (const auto& imageBox : other.mImageBoxes) {
+    mImageBoxes.push_back(std::make_shared<ImageBox>(*imageBox));
+  }
 }
 
 //**************************************************************************************************
@@ -1471,6 +1478,9 @@ Plot::Pad::Pad(const ptree& padTree)
     if (str_contains(content.first, "SHAPE")) {
       mShapes.push_back(std::make_shared<Shape>(content.second));
     }
+    if (str_contains(content.first, "IMAGE")) {
+      mImageBoxes.push_back(std::make_shared<ImageBox>(content.second));
+    }
     // add axes
     if (str_contains(content.first, "AXIS")) {
       char axis = content.second.get<char>("name");
@@ -1566,6 +1576,11 @@ ptree Plot::Pad::GetPropertyTree() const
   for (const auto& shape : mShapes) {
     padTree.put_child("SHAPE_" + std::to_string(shapeID), shape->GetPropertyTree());
     ++shapeID;
+  }
+  int32_t imageBoxID = 1;
+  for (const auto& imageBox : mImageBoxes) {
+    padTree.put_child("IMAGE_" + std::to_string(imageBoxID), imageBox->GetPropertyTree());
+    ++imageBoxID;
   }
 
   for (const auto& axis : {'X', 'Y', 'Z'}) {
@@ -1671,6 +1686,9 @@ void Plot::Pad::operator+=(const Pad& pad)
   for (const auto& shape : pad.mShapes) {
     mShapes.push_back(std::make_shared<Shape>(*shape));
   }
+  for (const auto& imageBox : pad.mImageBoxes) {
+    mImageBoxes.push_back(std::make_shared<ImageBox>(*imageBox));
+  }
   for (const auto& data : pad.mData) {
     auto clonedData = data->Clone();
     if (clonedData && clonedData->GetLegendID()) {
@@ -1763,6 +1781,19 @@ Plot::Pad::Shape& Plot::Pad::GetShape(uint8_t shapeID)
     logger::throw_out_of_range("Shape with ID {} is not defined! You can access only shapes that have already been added to the pad.", shapeID);
   }
   return *mShapes[shapeID - 1];
+}
+
+//**************************************************************************************************
+/**
+ * Access function for images.
+ */
+//**************************************************************************************************
+Plot::Pad::ImageBox& Plot::Pad::GetImage(uint8_t imageID)
+{
+  if (imageID < 1 || imageID > mImageBoxes.size()) {
+    logger::throw_out_of_range("Image with ID {} is not defined! You can access only images that have already been added to the pad.", imageID);
+  }
+  return *mImageBoxes[imageID - 1];
 }
 
 //**************************************************************************************************
@@ -2013,6 +2044,26 @@ Plot::Pad::TextBox& Plot::Pad::AddText(box_placement_t placement, const vector<s
 Plot::Pad::TextBox& Plot::Pad::AddText(box_placement_t placement, std::initializer_list<string> lines)
 {
   return AddText(placement, vector<string>(lines));
+}
+
+//**************************************************************************************************
+/**
+ * Add an image (e.g. a logo) to this pad, at the given upper left corner or automatically placed (close to the given corner of the frame).
+ */
+//**************************************************************************************************
+Plot::Pad::ImageBox& Plot::Pad::AddImage(double_t xPos, double_t yPos, const string& path)
+{
+  mImageBoxes.push_back(std::make_shared<ImageBox>(xPos, yPos, path));
+  return *mImageBoxes.back();
+}
+Plot::Pad::ImageBox& Plot::Pad::AddImage(const string& path)
+{
+  mImageBoxes.push_back(std::make_shared<ImageBox>(path));
+  return *mImageBoxes.back();
+}
+Plot::Pad::ImageBox& Plot::Pad::AddImage(box_placement_t placement, const string& path)
+{
+  return AddImage(path).SetAutoPlacement(placement);
 }
 
 //**************************************************************************************************
@@ -3947,6 +3998,99 @@ BoxType& Plot::Pad::Box<BoxType>::SetLineSpacing(float_t lineSpacing)
 {
   mLineSpacing = lineSpacing;
   return *GetThis();
+}
+
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// IMPLEMENTATION class ImageBox
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+
+//**************************************************************************************************
+/**
+ * ImageBox constructors. A relative path is taken relative to the current directory, so that it can be stored with the project;
+ * a path with environment variables is kept as it is (they are expanded when the plot is drawn).
+ */
+//**************************************************************************************************
+Plot::Pad::ImageBox::ImageBox(double_t xPos, double_t yPos, const string& path) : ImageBox(path)
+{
+  SetPosition(xPos, yPos);
+}
+Plot::Pad::ImageBox::ImageBox(const string& path) : mPath(path), mPlacement(best_corner)
+{
+  const string expandedPath = expand_path(path);
+  if (expandedPath.empty() && !path.empty()) return;  // unset environment variable, reported by expand_path
+  if (std::filesystem::path(expandedPath).is_relative()) mPath = std::filesystem::absolute(expandedPath).lexically_normal().string();
+}
+Plot::Pad::ImageBox::ImageBox(const ptree& imageBoxTree)
+{
+  try {
+    mPath = imageBoxTree.get<string>("path");
+  } catch (const std::exception& e) {
+    logger::throw_invalid_argument("Could not construct image box from ptree: {}", e.what());
+  }
+  read_from_tree(imageBoxTree, mX, "x");
+  read_from_tree(imageBoxTree, mY, "y");
+  read_from_tree(imageBoxTree, mWidth, "w");
+  read_from_tree(imageBoxTree, mHeight, "h");
+  read_from_tree(imageBoxTree, mIsUserCoord, "is_user_coordinates");
+  if (auto name = imageBoxTree.get_optional<string>("placement")) {
+    mPlacement = box_placement_from_name(*name);
+    if (!mPlacement) logger::warning("Unknown box placement {} is ignored.", *name);
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Get property tree representation of ImageBox.
+ */
+//**************************************************************************************************
+ptree Plot::Pad::ImageBox::GetPropertyTree() const
+{
+  ptree boxTree;
+  boxTree.put("path", mPath);
+  put_in_tree(boxTree, mX, "x");
+  put_in_tree(boxTree, mY, "y");
+  put_in_tree(boxTree, mWidth, "w");
+  put_in_tree(boxTree, mHeight, "h");
+  put_in_tree(boxTree, mIsUserCoord, "is_user_coordinates");
+  if (mPlacement) boxTree.put("placement", box_placement_name(*mPlacement));
+  return boxTree;
+}
+
+//**************************************************************************************************
+/**
+ * User accessors to change the position and size of the image.
+ */
+//**************************************************************************************************
+Plot::Pad::ImageBox& Plot::Pad::ImageBox::SetPosition(double_t x, double_t y)
+{
+  mX = x;
+  mY = y;
+  mPlacement = nullopt;
+  return *this;
+}
+Plot::Pad::ImageBox& Plot::Pad::ImageBox::SetWidth(double_t width)
+{
+  mWidth = width;
+  return *this;
+}
+Plot::Pad::ImageBox& Plot::Pad::ImageBox::SetHeight(double_t height)
+{
+  mHeight = height;
+  return *this;
+}
+Plot::Pad::ImageBox& Plot::Pad::ImageBox::SetUserCoordinates(bool isUserCoord)
+{
+  mIsUserCoord = isUserCoord;
+  return *this;
+}
+Plot::Pad::ImageBox& Plot::Pad::ImageBox::SetAutoPlacement(box_placement_t placement)
+{
+  mX = nullopt;
+  mY = nullopt;
+  mPlacement = placement;
+  return *this;
 }
 
 //--------------------------------------------------------------------------------------------------

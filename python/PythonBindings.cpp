@@ -69,6 +69,7 @@ using Data = Pad::Data;
 using Ratio = Pad::Ratio;
 using Axis = Pad::Axis;
 using TextBox = Pad::TextBox;
+using ImageBox = Pad::ImageBox;
 using StatsBox = Pad::StatsBox;
 using LegendBox = Pad::LegendBox;
 using LegendEntry = Pad::LegendEntry;
@@ -87,6 +88,7 @@ void exportAxis(py::module_& m);
 void exportData(py::module_& m);
 void exportRatio(py::module_& m);
 void exportTextBox(py::module_& m);
+void exportImageBox(py::module_& m);
 void exportStatsBox(py::module_& m);
 void exportLegendBox(py::module_& m);
 void exportLegendEntry(py::module_& m);
@@ -209,6 +211,7 @@ PYBIND11_MODULE(SciRooPlot, m)
   exportLegendEntry(m);
   exportLegendBox(m);
   exportTextBox(m);
+  exportImageBox(m);
   exportStatsBox(m);
   exportShape(m);
   exportData(m);
@@ -505,6 +508,9 @@ void exportPad(py::module_& m)
     .def("AddLegend", overload_cast<double_t, double_t, const optional<string>&>(&Pad::AddLegend), arg("xPos"), arg("yPos"), arg("title") = nullopt, ref_int)
     .def("AddLegend", overload_cast<box_placement_t, const optional<string>&>(&Pad::AddLegend), arg("placement"), arg("title") = nullopt, ref_int)
     .def("AddLegend", overload_cast<const optional<string>&>(&Pad::AddLegend), arg("title") = nullopt, ref_int)
+    .def("AddImage", overload_cast<double_t, double_t, const string&>(&Pad::AddImage), arg("xPos"), arg("yPos"), arg("path"), ref_int)
+    .def("AddImage", overload_cast<box_placement_t, const string&>(&Pad::AddImage), arg("placement"), arg("path"), ref_int)
+    .def("AddImage", overload_cast<const string&>(&Pad::AddImage), arg("path"), ref_int)
     .def("GetText", &Pad::GetText, arg("textID"), ref_int)
     .def("GetShape", &Pad::GetShape, arg("shapeID"), ref_int)
     .def("AddLine", &Pad::AddLine, arg("pos1"), arg("pos2"), ref_int)
@@ -516,6 +522,7 @@ void exportPad(py::module_& m)
     .def("AddRegionY", &Pad::AddRegionY, arg("y1"), arg("y2"), ref_int)
     .def("AddEllipse", &Pad::AddEllipse, arg("center"), arg("radiusX"), arg("radiusY"), ref_int)
     .def("AddPolygon", &Pad::AddPolygon, arg("points"), ref_int)
+    .def("GetImage", &Pad::GetImage, arg("imageID"), ref_int)
     .def("GetLegend", &Pad::GetLegend, arg("legendID"), ref_int)
     .def("SetRefFunc", &Pad::SetRefFunc, arg("refFunc"), ref_int)
     .def("SetFrame", overload_cast<const string&, const string&>(&Pad::SetFrame), arg("name"), arg("dataSource"), ref_int)
@@ -736,6 +743,17 @@ void exportAxis(py::module_& m)
     .def("SetColorScaleWidth", &Axis::SetColorScaleWidth, arg("width"), ref_int)
     .def("SetTimeFormat", &Axis::SetTimeFormat, arg("timeFormat"), ref_int)
     .def("SetTickOrientation", &Axis::SetTickOrientation, arg("tickOrientation"), ref_int);
+}
+
+void exportImageBox(py::module_& m)
+{
+  py::class_<ImageBox>(m, "ImageBox")
+    .def("Print", &ImageBox::Print)
+    .def("SetPosition", &ImageBox::SetPosition, arg("x"), arg("y"), ref_int)
+    .def("SetWidth", &ImageBox::SetWidth, arg("width"), ref_int)
+    .def("SetHeight", &ImageBox::SetHeight, arg("height"), ref_int)
+    .def("SetUserCoordinates", &ImageBox::SetUserCoordinates, arg("isUserCoord") = true, ref_int)
+    .def("SetAutoPlacement", &ImageBox::SetAutoPlacement, arg("placement") = best_corner, ref_int);
 }
 
 void exportTextBox(py::module_& m)

@@ -102,9 +102,12 @@
 //   raa_published.csv                 nuclear modification factor 0-10%: pt, pt_err, raa, stat, syst_low, syst_high
 //   runQA.csv                         run-by-run QA: run, meanNch, meanNch_err
 //   systematics.csv                   relative systematic uncertainties vs. pT per source
+//   logo.png                          the logo of the invented example experiment (for Pad::AddImage)
 
 #include <Math/ProbFuncMathCore.h>
+#include <TCanvas.h>
 #include <TEfficiency.h>
+#include <TEllipse.h>
 #include <TError.h>
 #include <TF1.h>
 #include <TFile.h>
@@ -116,6 +119,7 @@
 #include <TGraphPolar.h>
 #include <TH1D.h>
 #include <TH2D.h>
+#include <TLatex.h>
 #include <TLorentzVector.h>
 #include <THnSparse.h>
 #include <TList.h>
@@ -3163,6 +3167,33 @@ void WriteElectronics()
   }
 }
 
+// --------------------------------------------------------------------------------------------------
+// logo.png
+// --------------------------------------------------------------------------------------------------
+void WriteLogo()
+{
+  TCanvas canvas("logo", "", 600, 200);
+  canvas.SetFillColor(kAzure + 3);
+  canvas.SetMargin(0., 0., 0., 0.);
+  canvas.Draw();
+  TEllipse ring(0.15, 0.5, 0.11, 0.33);
+  ring.SetFillStyle(0);
+  ring.SetLineColor(kOrange - 3);
+  ring.SetLineWidth(8);
+  ring.Draw();
+  TEllipse core(0.15, 0.5, 0.035, 0.105);
+  core.SetFillColor(kOrange - 3);
+  core.SetLineColor(kOrange - 3);
+  core.Draw();
+  TLatex name(0.3, 0.5, "#bf{EXAMPLE} EXPERIMENT");
+  name.SetNDC();
+  name.SetTextAlign(12);
+  name.SetTextColor(kWhite);
+  name.SetTextFont(42);
+  name.SetTextSize(0.2);
+  name.Draw();
+  canvas.SaveAs((kFolder + "logo.png").data());
+}
 }  // namespace
 
 void generateExampleData()
@@ -3207,4 +3238,5 @@ void generateExampleData()
   WriteClustering();
   WriteMixtureDensity();
   WriteElectronics();
+  WriteLogo();
 }

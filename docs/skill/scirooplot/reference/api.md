@@ -71,6 +71,9 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `LegendBox& AddLegend(double_t xPos, double_t yPos, const std::optional<std::string>& title = {})`
 - `LegendBox& AddLegend(const std::optional<std::string>& title = {})`
 - `LegendBox& AddLegend(box_placement_t placement, const std::optional<std::string>& title = {})`
+- `ImageBox& AddImage(double_t xPos, double_t yPos, const std::string& path)`
+- `ImageBox& AddImage(const std::string& path)`
+- `ImageBox& AddImage(box_placement_t placement, const std::string& path)`
 - `Shape& AddLine(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2)` — not cut at the frame
 - `Shape& AddArrow(std::pair<double_t, double_t> pos1, std::pair<double_t, double_t> pos2)` — from pos1 to pos2, not cut at the frame
 - `Shape& AddVerticalLine(double_t x)` — over the height of the frame
@@ -84,6 +87,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& GetData(uint8_t dataID)`
 - `LegendBox& GetLegend(uint8_t legendID)`
 - `TextBox& GetText(uint8_t textID)`
+- `ImageBox& GetImage(uint8_t imageID)`
 - `Data& SetRefFunc(const std::string& refFunc)` — "": no reference function, also not the one of the base plot or of pad 0
 - `Data& SetFrame(const std::string& name, const std::string& dataSource)` — input that only defines the axis frame (not drawn, not numbered)
 - `Data& SetFrame(const Data& data)`
@@ -306,6 +310,17 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `TextBox& SetText(const std::string& text)` — lines separated by newlines
 - `TextBox& SetText(const std::vector<std::string>& lines)`
 - `TextBox& SetTextAlign(int16_t align)`
+
+## Plot::Pad::ImageBox
+*an image file (e.g. a logo); in pdf files only with ROOT 6.42 or newer*
+
+- `ImageBox(double_t xPos, double_t yPos, const std::string& path)`
+- `ImageBox(const std::string& path)`
+- `ImageBox& SetPosition(double_t x, double_t y)`
+- `ImageBox& SetWidth(double_t width)` — fraction of the pad width
+- `ImageBox& SetHeight(double_t height)` — fraction of the pad height
+- `ImageBox& SetUserCoordinates(bool isUserCoord = true)`
+- `ImageBox& SetAutoPlacement(box_placement_t placement = best_corner)`
 
 ## Plot::Pad::StatsBox
 *placement and appearance of the statistics box of a data item (Data::SetStatsBox); has the setters of Box*
