@@ -1,6 +1,6 @@
 # SciRooPlot
 
-> SciRooPlot is a C++ and Python library on top of ROOT for defining, organizing and generating scientific plots: plots are declared in a small program, stored per project and drawn with the `plot` command line app.
+> SciRooPlot is a ROOT-based C++ and Python framework to define, organize and generate plots: plots are declared in a small program, stored per project and drawn with the `plot` command line app.
 
 Start with the agent skill: it is the condensed, agent-oriented description of the workflow, the API and the pitfalls. The web page is the documentation for humans: a guided tour, the reference and the example plots with their code.
 

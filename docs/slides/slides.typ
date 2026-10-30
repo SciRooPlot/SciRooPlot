@@ -257,7 +257,7 @@
       #v(0.4em)
       #box(width: 2.2in, height: 5pt, fill: accent-color, radius: 2.5pt)
       #v(0.6em)
-      #text(size: 26pt, fill: rgb("B8C2D0"))[Scientific plotting made simple: \ describe your figures, let ROOT draw them.]
+      #text(size: 26pt, fill: rgb("B8C2D0"))[ROOT-based C++ and Python framework \ to define, organize and generate plots.]
       #v(1.6em)
       #box(fill: main-color, radius: 6pt, inset: (x: 14pt, y: 9pt),
         text(size: 18pt, weight: "bold", fill: white)[#if lang == "py" { "Python Version" } else { "C++ Version" }])

@@ -54,7 +54,7 @@ tests:
         - SciRooPlot
 
 about:
-  summary: A command-line plotting app to manage and visualize scientific data.
+  summary: ROOT-based C++ and Python framework to define, organize and generate plots
   license: GPL-3.0-or-later
   license_file: LICENSE
   homepage: https://github.com/SciRooPlot/SciRooPlot

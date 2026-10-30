@@ -1,5 +1,5 @@
 # SciRooPlot
-SciRooPlot is a [ROOT](https://github.com/root-project/root)-based plotting framework available in both C++ and Python. It simplifies the creation and organization of plots for scientific data analysis.
+SciRooPlot is a [ROOT](https://github.com/root-project/root)-based C++ and Python framework to define, organize and generate plots.
 
 ## 🌟 Highlights
 

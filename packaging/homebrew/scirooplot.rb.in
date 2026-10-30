@@ -1,5 +1,5 @@
 class Scirooplot < Formula
-  desc "A command-line plotting app to manage and visualize scientific data."
+  desc "ROOT-based C++ and Python framework to define, organize and generate plots"
   license "GPL-3.0-or-later"
 
   version "@VERSION@"

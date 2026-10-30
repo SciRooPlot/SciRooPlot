@@ -1,5 +1,5 @@
 """
-    SciRooPlot - A command-line plotting app to manage and visualize scientific data
+    SciRooPlot - ROOT-based C++ and Python framework to define, organize and generate plots
 
     This module provides Python bindings for the SciRooPlot C++ library, allowing
     users to programmatically define and generate publication-ready plots from Python.
