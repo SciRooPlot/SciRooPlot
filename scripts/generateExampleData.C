@@ -67,9 +67,10 @@
 //   clustering.root                   TTree "points": x, y, cluster (from a Gaussian mixture fit), clusterMap (TH2: cluster per cell),
 //                                     ellipse_{1,2,3} (TGraph: 2 sigma of each fitted component), centres (TGraph)
 //   mdn.root                          a mixture density network for the electron pT resolution (bremsstrahlung tail):
-//                                     TTree "electrons": ptGen, deltaPt ((pT_rec - pT_gen) / pT_gen); component_{1,2,3,4}
-//                                     (TGraphAsymmErrors: mean +- sigma vs. pT_gen), weight_{1,2,3,4} (TGraph),
-//                                     slice_component_{1,2,3,4}, slice_total (TGraph: at 2 < pT_gen < 2.5 GeV/c)
+//                                     TTree "electrons": ptGen, deltaPt ((pT_rec - pT_gen) / pT_gen);
+//                                     slice_component_{1,2,3,4}, slice_total (TGraph: at 2 < pT_gen < 2.5 GeV/c);
+//                                     component_{1,2,3,4} (TGraphAsymmErrors: mean +- sigma vs. |eta|), weight_{1,2,3,4},
+//                                     material (TGraph: radiation lengths vs. |eta|)
 //   neutronstars.root                 neutron stars
 //     structure/   eos_{soft,medium,stiff}, massRadius_{soft,medium,stiff} (TGraph), pulsar_J0740 (TGraphAsymmErrors),
 //                  nicer_J0030, nicer_J0740 (TGraph ellipses)
@@ -2937,21 +2938,69 @@ void WriteClustering()
 // widens at high pT, where the curvature of the straighter tracks is measured less precisely, and swallows the start of the tail.
 // A strongly radiating electron is often not reconstructed (its kinked track fails the fit), so the tail dies out towards -1.
 // The network describes the resolution as four Gaussians whose weights, means and widths depend on pT_gen; the components here are
-// what such a network converges to, obtained with an EM fit of four Gaussians in narrow pT_gen bins
+// what such a network converges to, obtained with an EM fit of four Gaussians in narrow pT_gen bins (up to the slice shown).
+// Versus |eta| the tail changes: the material crossed grows as cosh(eta) and peaks where the services of the barrel leave the
+// detector, so the weights move from the core to the tail
 void WriteMixtureDensity()
 {
   TFile file((kFolder + "mdn.root").data(), "RECREATE");
   TRandom3 random(32);
   constexpr double kMaterial = 0.1;  // effective radiation lengths for the momentum measurement (central barrel)
-  auto gamma = [&random](double shape) {  // Gamma(shape, 1) for shape < 1: Marsaglia-Tsang for shape + 1, times U^(1 / shape)
+  auto gamma = [](TRandom3& rng, double shape) {  // Gamma(shape, 1) for shape < 1: Marsaglia-Tsang for shape + 1, times U^(1 / shape)
     const double d = shape + 1. - 1. / 3., c = 1. / std::sqrt(9. * d);
     double v = 0.;
     while (true) {
-      const double n = random.Gaus();
+      const double n = rng.Gaus();
       v = std::pow(1. + c * n, 3.);
-      if (v > 0. && std::log(random.Uniform()) < 0.5 * n * n + d - d * v + d * std::log(v)) break;
+      if (v > 0. && std::log(rng.Uniform()) < 0.5 * n * n + d - d * v + d * std::log(v)) break;
     }
-    return d * v * std::pow(random.Uniform(), 1. / shape);
+    return d * v * std::pow(rng.Uniform(), 1. / shape);
+  };
+  // the relative pT deviation of one electron after the given material, or false if it is lost in the reconstruction
+  auto electron = [&gamma](TRandom3& rng, double ptGen, double material, double& deltaPt) {
+    // Bethe-Heitler: the fraction z of the energy kept after t radiation lengths has -ln z distributed as Gamma(t / ln 2, 1)
+    const double lnKept = gamma(rng, material / std::log(2.));
+    if (rng.Uniform() > std::exp(-lnKept / 0.3)) return false;  // a kinked track fails the fit
+    // multiple scattering (growing with the material) and the curvature measurement (proportional to pT)
+    const double resolution = std::sqrt(std::pow(0.01, 2.) * (material / kMaterial) + std::pow(0.0015 * ptGen, 2.));
+    deltaPt = std::exp(-lnKept) * (1. + rng.Gaus(0., resolution)) - 1.;
+    return true;
+  };
+  struct Gauss {
+    double weight, mean, sigma;
+  };
+  // EM fit of four Gaussians (the core and three for the tail) in bins of the first value of the sample; each bin starts from the
+  // result of the previous one, so that the components change smoothly, as a network's do
+  auto fitBins = [](const std::vector<std::pair<double, double>>& sample, const std::vector<double>& edges) {
+    std::vector<std::array<Gauss, 4>> fits;
+    std::array<Gauss, 4> fit = {Gauss{0.5, 0., 0.01}, Gauss{0.2, -0.05, 0.04}, Gauss{0.15, -0.15, 0.08}, Gauss{0.15, -0.4, 0.2}};
+    for (size_t bin = 0; bin + 1 < edges.size(); ++bin) {
+      std::vector<double> values;
+      for (const auto& [x, delta] : sample) {
+        if (x >= edges[bin] && x < edges[bin + 1]) values.push_back(delta);
+      }
+      std::vector<std::array<double, 4>> resp(values.size());
+      for (int iteration = 0; iteration < 150; ++iteration) {
+        for (size_t i = 0; i < values.size(); ++i) {
+          double sum = 0.;
+          for (int k = 0; k < 4; ++k) sum += (resp[i][k] = fit[k].weight * TMath::Gaus(values[i], fit[k].mean, fit[k].sigma, true));
+          for (int k = 0; k < 4; ++k) resp[i][k] /= std::max(sum, 1e-300);
+        }
+        for (int k = 0; k < 4; ++k) {
+          double n = 0., mean = 0., var = 0.;
+          for (size_t i = 0; i < values.size(); ++i) {
+            n += resp[i][k];
+            mean += resp[i][k] * values[i];
+          }
+          mean /= n;
+          for (size_t i = 0; i < values.size(); ++i) var += resp[i][k] * std::pow(values[i] - mean, 2.);
+          fit[k] = {n / values.size(), mean, std::max(std::sqrt(var / n), 0.003)};
+        }
+      }
+      std::sort(fit.begin(), fit.end(), [](const Gauss& a, const Gauss& b) { return a.mean > b.mean; });  // the core first
+      fits.push_back(fit);
+    }
+    return fits;
   };
   TTree tree("electrons", "electrons: pT_gen and the relative pT deviation");  // every second electron of the fit, as floats
   float ptGenStored{}, deltaPtStored{};
@@ -2962,12 +3011,7 @@ void WriteMixtureDensity()
   std::vector<std::pair<double, double>> sample;
   while (sample.size() < kElectrons) {
     ptGen = 0.5 * std::pow(100., random.Uniform());  // log-uniform from 0.5 to 50 GeV/c
-    // Bethe-Heitler: the fraction z of the energy kept after t radiation lengths has -ln z distributed as Gamma(t / ln 2, 1)
-    const double lnKept = gamma(kMaterial / std::log(2.));
-    if (random.Uniform() > std::exp(-lnKept / 0.3)) continue;  // lost in the reconstruction
-    // multiple scattering (constant) and the curvature measurement (proportional to pT)
-    const double resolution = std::sqrt(std::pow(0.01, 2.) + std::pow(0.0015 * ptGen, 2.));
-    deltaPt = std::exp(-lnKept) * (1. + random.Gaus(0., resolution)) - 1.;
+    if (!electron(random, ptGen, kMaterial, deltaPt)) continue;
     if (sample.size() % 2 == 0) {
       ptGenStored = static_cast<float>(ptGen);
       deltaPtStored = static_cast<float>(deltaPt);
@@ -2976,53 +3020,8 @@ void WriteMixtureDensity()
     sample.emplace_back(ptGen, deltaPt);
   }
   tree.Write();
-  // EM fit of four Gaussians in bins of pT_gen (the core and three for the tail)
-  const std::vector<double> edges = {0.5, 0.6, 0.8, 1., 1.2, 1.5, 2., 2.5, 3., 4., 5., 6., 8., 10., 12., 15., 20., 25., 30., 40., 50.};
-  std::array<TGraphAsymmErrors, 4> bands;
-  std::array<TGraph, 4> weights;
-  struct Gauss {
-    double weight, mean, sigma;
-  };
-  std::vector<std::array<Gauss, 4>> fits;
-  // each bin starts from the result of the previous one, so that the components change smoothly with pT, as a network's do
-  std::array<Gauss, 4> fit = {Gauss{0.5, 0., 0.01}, Gauss{0.2, -0.05, 0.04}, Gauss{0.15, -0.15, 0.08}, Gauss{0.15, -0.4, 0.2}};
-  for (size_t bin = 0; bin + 1 < edges.size(); ++bin) {
-    std::vector<double> values;
-    for (const auto& [pt, delta] : sample) {
-      if (pt >= edges[bin] && pt < edges[bin + 1]) values.push_back(delta);
-    }
-    std::vector<std::array<double, 4>> resp(values.size());
-    for (int iteration = 0; iteration < 150; ++iteration) {
-      for (size_t i = 0; i < values.size(); ++i) {
-        double sum = 0.;
-        for (int k = 0; k < 4; ++k) sum += (resp[i][k] = fit[k].weight * TMath::Gaus(values[i], fit[k].mean, fit[k].sigma, true));
-        for (int k = 0; k < 4; ++k) resp[i][k] /= std::max(sum, 1e-300);
-      }
-      for (int k = 0; k < 4; ++k) {
-        double n = 0., mean = 0., var = 0.;
-        for (size_t i = 0; i < values.size(); ++i) {
-          n += resp[i][k];
-          mean += resp[i][k] * values[i];
-        }
-        mean /= n;
-        for (size_t i = 0; i < values.size(); ++i) var += resp[i][k] * std::pow(values[i] - mean, 2.);
-        fit[k] = {n / values.size(), mean, std::max(std::sqrt(var / n), 0.003)};
-      }
-    }
-    std::sort(fit.begin(), fit.end(), [](const Gauss& a, const Gauss& b) { return a.mean > b.mean; });  // the core first
-    const double centre = std::sqrt(edges[bin] * edges[bin + 1]);
-    for (int k = 0; k < 4; ++k) {
-      bands[k].AddPointError(centre, fit[k].mean, 0., 0., fit[k].sigma, fit[k].sigma);
-      weights[k].AddPoint(centre, fit[k].weight);
-    }
-    fits.push_back(fit);
-  }
-  for (int k = 0; k < 4; ++k) {
-    bands[k].Write(Form("component_%d", k + 1));
-    weights[k].Write(Form("weight_%d", k + 1));
-  }
   // the bin 2 < pT_gen < 2.5 GeV/c: the four weighted components and their sum as densities of the deviation
-  const auto& slice = fits[6];
+  const auto slice = fitBins(sample, {0.5, 0.6, 0.8, 1., 1.2, 1.5, 2., 2.5}).back();
   TGraph total;
   std::array<TGraph, 4> single;
   for (int i = 0; i <= 600; ++i) {
@@ -3040,6 +3039,33 @@ void WriteMixtureDensity()
     single[k].Write(Form("slice_component_%d", k + 1));
   }
   total.Write("slice_total");
+  // the components versus |eta| for 1 < pT_gen < 10 GeV/c: the material crossed by a straight track through the barrel layers grows
+  // as cosh(eta), plus the services (cables, cooling) that leave the barrel around |eta| = 1.4
+  TRandom3 randomEta(36);  // an own generator keeps the electrons above unchanged
+  auto material = [](double eta) { return kMaterial * std::cosh(eta) + 0.12 * std::exp(-0.5 * std::pow((eta - 1.4) / 0.25, 2.)); };
+  std::vector<std::pair<double, double>> sampleEta;
+  while (sampleEta.size() < kElectrons) {
+    const double eta = 2.5 * randomEta.Uniform();  // |eta| uniform up to 2.5
+    ptGen = std::pow(10., randomEta.Uniform());  // log-uniform from 1 to 10 GeV/c
+    if (electron(randomEta, ptGen, material(eta), deltaPt)) sampleEta.emplace_back(eta, deltaPt);
+  }
+  std::vector<double> edgesEta;
+  for (int bin = 0; bin <= 20; ++bin) edgesEta.push_back(0.125 * bin);
+  const auto fits = fitBins(sampleEta, edgesEta);
+  for (int k = 0; k < 4; ++k) {  // the components as bands (mean +- sigma) and their weights at the centres of the bins
+    TGraphAsymmErrors band;
+    TGraph weight;
+    for (size_t bin = 0; bin < fits.size(); ++bin) {
+      const double centre = 0.125 * (bin + 0.5);
+      band.AddPointError(centre, fits[bin][k].mean, 0., 0., fits[bin][k].sigma, fits[bin][k].sigma);
+      weight.AddPoint(centre, fits[bin][k].weight);
+    }
+    band.Write(Form("component_%d", k + 1));
+    weight.Write(Form("weight_%d", k + 1));
+  }
+  TGraph materialGraph;
+  for (int i = 0; i <= 250; ++i) materialGraph.AddPoint(0.01 * i, material(0.01 * i));
+  materialGraph.Write("material");
 }
 
 // electronics: the characterisation of a hybrid pixel chip (threshold scans and tuning), the pulse shapes and the frequency response

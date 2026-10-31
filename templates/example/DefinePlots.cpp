@@ -1039,8 +1039,9 @@ void DefineMLPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   // the components of the mixture density network below: name and colour
   const vector<std::pair<string, color_t>> components = {{"core", kAzure + 2}, {"tail 1", kViolet + 1}, {"tail 2", kOrange + 7}, {"tail 3", kGreen + 2}};
-  {  // a mixture density network for the electron pT resolution: bremsstrahlung in the material gives a tail to negative values, the
-    // same at all pT; the core widens at high pT. The network predicts four Gaussians per pT_gen (the core and three for the tail):
+  {  // a mixture density network for the electron pT resolution: bremsstrahlung in the material gives a tail to negative values. The
+    // material grows towards the forward region and peaks where the services leave the barrel (dashed line, in radiation lengths),
+    // so the tail takes weight from the core. The network predicts four Gaussians per |eta| (the core and three for the tail):
     // mean +- sigma, the weights below
     Plot plot("mixtureComponents", "ml", "1d_wide_1x2");
     for (size_t k = 1; k <= components.size(); ++k) {
@@ -1050,11 +1051,13 @@ void DefineMLPlots(PlotManager& pm)
       plot[1].AddData("component_" + component, "mdn").SetDrawOption(line).SetLine(kSolid, 2.0, color);  // the mean
       plot[2].AddData("weight_" + component, "mdn").SetDrawOption(points_line).SetMarkerStyle(kFullCircle).SetMarkerSize(0.8).SetColor(color);
     }
-    plot[1].AddRegionX(2.0, 2.5).SetFill(1001, kGray, 0.5).SetBehindData();  // the slice of the plot mixtureSlice
+    plot[2].AddData("material", "mdn", "material #it{x} / #it{X}_{0}").SetDrawOption(line).SetLine(kDashed, 2.0, kGray + 2);
     plot[1].AddLegend(0.12, 0.93).SetNumColumns(4);
+    plot[1].AddText(0.12, 0.2, "1 < #it{p}_{T}^{gen} < 10 GeV/#it{c}");
+    plot[2].AddLegend(0.12, 0.9);
     plot[1]['Y'].SetRange(-0.7, 0.2).SetTitle("(#it{p}_{T}^{rec} #minus #it{p}_{T}^{gen}) / #it{p}_{T}^{gen}");
     plot[2]['Y'].SetRange(0.0, 1.0).SetTitle("weight");
-    plot[0]['X'].SetLog().SetRange(0.5, 50.0).SetTitle("#it{p}_{T}^{gen} (GeV/#it{c})");
+    plot[0]['X'].SetRange(0.0, 2.5).SetTitle("|#eta|");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // at 2 < pT_gen < 2.5 GeV/c: the predicted density, its weighted components and the simulated electrons
