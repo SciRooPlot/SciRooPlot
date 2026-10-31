@@ -711,6 +711,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           upper.ToUpper();
           return upper.Contains("BOX2") || upper.Contains("COL");
         };
+        // the 3d views of 2d data (THistPainter::PaintLego, PaintSurface, TGraph2DPainter::PaintTriangles)
+        auto isView3d = [](const string& option) {
+          TString upper(option);
+          upper.ToUpper();
+          return upper.Contains("LEGO") || upper.Contains("SURF") || upper.Contains("TRI");
+        };
         if (optionAlias) {
           const std::map<draw_option_t, string>* options{};
           const char* typeName{};
@@ -1521,8 +1527,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             } else if (is_2d<data_type>() && !data->GetLineWidth() && !keep && TString(drawOption).Contains("ARR", TString::kIgnoreCase)) {
               // ROOT outlines every arrow of ARR (fixed head size) with the line width: the wide default lines of the pad make blobs that hide a map below
               data_ptr->SetLineWidth(1);
-            } else if (is_hist_3d<data_type>() && !data->GetLineWidth() && !keep && isColorBoxes3d(drawOption)) {
-              // with the line width of the pad the edges of the small colour boxes hide their colours: thin edges unless the data sets a width
+            } else if (!data->GetLineWidth() && !keep && (is_3d<data_type>() || (is_2d<data_type>() && isView3d(drawOption)))) {
+              // ROOT outlines every box, bar, surface cell and triangle of a 3d view with the line width: the wide default lines of the pad
+              // darken the view and hide the colours of small boxes, so the edges are thin unless the data sets a width (iso surfaces have no edges)
               data_ptr->SetLineWidth(1);
             } else if (auto lineWidth = get_first(data->GetLineWidth(),
                                                   fromPad(pad.GetDefaultLineWidth()),

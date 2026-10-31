@@ -340,7 +340,7 @@ void DefineSpectraPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // the same 2d histogram shown in 3d, as contours and as candles --------------------
     Plot plot3d("ptVsMultLego", "spectra/2dViews", "1d_3dview");
-    plot3d[1].AddData("ptVsMult", "data").RebinXY(4, 2).Scale(1e-3).SetDrawOption(lego).SetLineWidth(1.0);
+    plot3d[1].AddData("ptVsMult", "data").RebinXY(4, 2).Scale(1e-3).SetDrawOption(lego);
     plot3d[1].SetView(35.0, 240.0);      // viewing angles theta and phi in degrees
     plot3d[1]['X'].SetTitleOffset(1.8);  // in 3D views the axis titles need more room from the labels
     plot3d[1]['Y'].SetTitleOffset(1.8).SetNumDivisions(505);
@@ -919,7 +919,7 @@ void DefineHeavyIonPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {                                                            // two-particle correlations in high-multiplicity events: the jet peak cut off by the z range to show the ridge
     Plot plot("ridge", "heavyion/correlations", "1d_3dview");  // the base plot of the lego animation below
-    plot[1].AddData("correlations/ridge", "heavyion").SetDrawOption(surf_col).SetLineWidth(1.0);
+    plot[1].AddData("correlations/ridge", "heavyion").SetDrawOption(surf_col);
     plot[1].SetView(40.0, 135.0);
     plot[1].SetPalette(kViridis);
     plot[1]['Z'].SetRange(0.985, 1.03).SetTitleOffset(2.1);  // the jet peak reaches 1.15; the title needs room from the long labels
@@ -1944,7 +1944,7 @@ void DefineAnimations(PlotManager& pm)
     pm.AddBasePlot(view3d);
     for (int phi = 5; phi < 360; phi += 10) {  // never looking exactly along an axis, where its labels would pile up
       Plot plot("phi" + std::to_string(phi), "animations/legoRotation", "1d_3dview");
-      plot[1].AddData("ptVsMult", "data").RebinXY(4, 2).SetDrawOption(lego_col).SetLineWidth(1.0);
+      plot[1].AddData("ptVsMult", "data").RebinXY(4, 2).SetDrawOption(lego_col);
       plot[1].SetView(35.0, phi);
       plot[1]['X'].SetTitleOffset(1.8);
       plot[1]['Y'].SetTitleOffset(1.8).SetNumDivisions(505);

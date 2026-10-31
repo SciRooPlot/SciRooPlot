@@ -141,7 +141,6 @@ def DefineGallery(pm: PlotManager):
                 data.SetColor(kAzure + 3).SetFillColor(kAzure - 9)
         if alias.startswith(("lego", "surf")):
             plot[1].SetView(35.0, 225.0)
-            data.SetLineWidth(1.0)  # thin edges: thick ones darken a 3D view
             plot[1]['Z'].SetTitle("")  # a 3D z title runs out of the pad
             if polar:
                 plot[1]['Z'].SetRange(0.6, 1.4)  # the yields relative to their ring: the modulation, not bars from zero
@@ -177,6 +176,7 @@ def DefineGallery(pm: PlotManager):
         data.SetDrawOption(globals()[alias])
         if alias.startswith(is3d):
             plot[1].SetView(35.0, 225.0)
+        if alias == "line":  # the polyline through the points: thin, as the edges of the other 3D views
             data.SetLineWidth(1.0)
         if alias == "triangles":  # painted in the fill colour with edges in the line colour: light, so that the edges show
             data.SetFill(kFSolid, kAzure - 9).SetLineColor(kAzure + 3)
@@ -191,7 +191,6 @@ def DefineGallery(pm: PlotManager):
             data = plot[1].AddFunction("exp(-(x*x+y*y)/2)").SetRangeX(-2.0, 2.0).SetRangeY(-2.0, 2.0).SetDrawOption(globals()[alias])
         if alias.startswith(is3d):
             plot[1].SetView(35.0, 225.0)
-            data.SetLineWidth(1.0)
         plot[1]['X'].SetTitle("")
         plot[1]['Y'].SetTitle("")
         pm.AddPlot(plot)
@@ -202,7 +201,7 @@ def DefineGallery(pm: PlotManager):
     pm.AddDataSource("hist3d", hist3d)
     for alias in ALIASES_3D:
         plot = Plot(alias, "gallery/hist3d", "2d")
-        plot[1].AddData("h3d", "hist3d").SetDrawOption(globals()[alias]).SetLineWidth(1.0)
+        plot[1].AddData("h3d", "hist3d").SetDrawOption(globals()[alias])
         plot[1].SetView(35.0, 225.0)
         for axis in "XYZ":
             plot[1][axis].SetTitle("")
@@ -211,7 +210,7 @@ def DefineGallery(pm: PlotManager):
     torus = ROOT.TF3("torus", "pow(sqrt(x*x+y*y)-1.2,2)+z*z-0.16", -2.0, 2.0, -2.0, 2.0, -1.0, 1.0)
     pm.AddDataSource("func3d", torus)
     plot = Plot("iso", "gallery/func3d", "2d")
-    plot[1].AddData("torus", "func3d").SetDrawOption(iso).SetColor(kAzure + 3).SetFillColor(kAzure - 9).SetLineWidth(1.0)
+    plot[1].AddData("torus", "func3d").SetDrawOption(iso).SetColor(kAzure + 3).SetFillColor(kAzure - 9)
     plot[1].SetView(35.0, 225.0)
     for axis in "XYZ":
         plot[1][axis].SetTitle("")
@@ -221,12 +220,11 @@ def DefineGallery(pm: PlotManager):
         for kind in ["hist2d", "graph2d", "func2d"]:
             plot = Plot(f"{kind}_{theta}_{phi}", "gallery/view", "2d")
             if kind == "hist2d":
-                data = plot[1].AddData("ridge", "hist2d").RebinXY(2, 2).Scale(0.25).SetDrawOption(lego_col)
+                plot[1].AddData("ridge", "hist2d").RebinXY(2, 2).Scale(0.25).SetDrawOption(lego_col)
             elif kind == "graph2d":
-                data = plot[1].AddData("g2d", "graph2d").SetDrawOption(triangles_col)
+                plot[1].AddData("g2d", "graph2d").SetDrawOption(triangles_col)
             else:
-                data = plot[1].AddFunction("exp(-(x*x+y*y)/2)").SetRangeX(-2.0, 2.0).SetRangeY(-2.0, 2.0).SetDrawOption(surf_col)
-            data.SetLineWidth(1.0)
+                plot[1].AddFunction("exp(-(x*x+y*y)/2)").SetRangeX(-2.0, 2.0).SetRangeY(-2.0, 2.0).SetDrawOption(surf_col)
             plot[1].SetView(float(theta), float(phi))
             plot[1]['Z'].SetTitle("")
             plot[1]['X'].SetTitle("")
