@@ -1,4 +1,5 @@
 from SciRooPlot import *  # pyright: ignore[reportWildcardImportFromLibrary]
+import math
 import random
 
 import ROOT
@@ -96,21 +97,46 @@ def DefineGallery(pm: PlotManager):
                     plot[1]['Y'].SetRange(2.5, 6.0)
             pm.AddPlot(plot)
     pm.AddDataSource("heavyion", EXAMPLE + "/heavyion.root")
+    # a two-particle correlation for the 2D aliases, filled with its expectation (smooth, no empty cells): the jet peak at the
+    # origin, the away-side ridge at pi and the flow modulation over the pair acceptance, which falls off with the distance in eta
+    ridge = ROOT.TH2D("ridge", "", 32, -1.6, 1.6, 36, -0.5 * math.pi, 1.5 * math.pi)
+    ridge.GetZaxis().SetTitle("#it{C}(#Delta#eta, #Delta#varphi)")
+    for i in range(1, 33):
+        for j in range(1, 37):
+            eta, phi = ridge.GetXaxis().GetBinCenter(i), ridge.GetYaxis().GetBinCenter(j)
+            acceptance = 1.0 - abs(eta) / 5.0
+            flow = 1.0 + 0.12 * math.cos(2.0 * phi) + 0.04 * math.cos(3.0 * phi)
+            jet = 0.5 * math.exp(-0.5 * (eta * eta + phi * phi) / 0.4 ** 2)
+            away = 0.25 * math.exp(-0.5 * (phi - math.pi) ** 2 / 0.6 ** 2)
+            ridge.SetBinContent(i, j, acceptance * (flow + away) + jet)
+    # skewed distributions with a mean and width growing from bin to bin for the candle and violin aliases
+    spread = ROOT.TH2D("spread", "", 6, 0.5, 6.5, 70, 0.0, 3.5)
+    for i in range(1, 7):
+        for j in range(1, 71):
+            spread.SetBinContent(i, j, round(400.0 * ROOT.TMath.GammaDist(spread.GetYaxis().GetBinCenter(j), 4.0 + 1.2 * i, 0.0, 0.12)))  # whole counts: no endless tails
+    pm.AddDataSource("hist2d", [ridge, spread])
+    # aliases without a palette are drawn in the colours of the 1D gallery
+    plain = ("box", "cont", "lego", "lego_noborders", "surf", "surf_shaded", "lego_polar", "surf_polar", "candle", "violin")
     for alias in ALIASES_2D:
         candle = alias.startswith(("candle", "violin"))
         polar = alias.endswith("_polar")
-        plot = Plot(alias, "gallery/hist2d", "1d" if candle else "2d" if polar else "2d_logz")
+        plot = Plot(alias, "gallery/hist2d", "1d" if candle else "2d")
         if polar:  # the azimuthal map of the example project: angle phi - Psi2, radius pT
             data = plot[1].AddData("flow/azimuthalMap", "heavyion").SetDrawOption(globals()[alias])
         else:
-            data = plot[1].AddData("ptVsMult", "data").SetDrawOption(globals()[alias])
-        if candle:
-            data.RebinX(10)
-            plot[1]['Y'].SetRange(0.0, 3.0)
-        elif not polar:
-            data.RebinXY(10, 6) if alias in ("text", "colz_text", "box") else data.RebinXY(4, 3)
+            data = plot[1].AddData("spread" if candle else "ridge", "hist2d").SetDrawOption(globals()[alias])
+        if alias in ("text", "colz_text", "box"):  # few large cells, with the mean of the fine cells: readable numbers
+            data.RebinXY(4, 6).Scale(1.0 / 24.0)
+            data.SetTextFormat(".2f")
+        elif alias.startswith("lego") and not polar:
+            data.RebinXY(2, 2).Scale(0.25)  # fewer, wider columns with the mean of the fine cells
         if alias.endswith("_clamped"):  # a minimum above the lowest contents: they are drawn in the lowest colour instead of left out
-            plot[1]['Z'].SetMinRange(100.0)
+            plot[1]['Z'].SetMinRange(1.0)
+        if alias.startswith(plain):
+            if candle:
+                data.SetColor(kAzure + 2).SetFill(1001, kAzure + 2).SetFillAlpha(0.35)
+            else:
+                data.SetColor(kAzure + 3).SetFillColor(kAzure - 9)
         if alias.startswith(("lego", "surf")):
             plot[1].SetView(35.0, 225.0)
             data.SetLineWidth(1.0)  # thin edges: thick ones darken a 3D view
@@ -191,9 +217,9 @@ def DefineGallery(pm: PlotManager):
     # the viewing angles of 3D drawings (Pad::SetView), shown below the 2D tabs of the gallery: one 3D drawing per kind of data
     for theta, phi in VIEWS:
         for kind in ["hist2d", "graph2d", "func2d"]:
-            plot = Plot(f"{kind}_{theta}_{phi}", "gallery/view", "2d_logz" if kind == "hist2d" else "2d")
+            plot = Plot(f"{kind}_{theta}_{phi}", "gallery/view", "2d")
             if kind == "hist2d":
-                data = plot[1].AddData("ptVsMult", "data").RebinXY(4, 3).SetDrawOption(lego_col)
+                data = plot[1].AddData("ridge", "hist2d").RebinXY(2, 2).Scale(0.25).SetDrawOption(lego_col)
             elif kind == "graph2d":
                 data = plot[1].AddData("g2d", "graph2d").SetDrawOption(triangles_col)
             else:
@@ -212,10 +238,6 @@ def main():
     DefineGallery(pm)
     for name in ["1d", "1d_ratio", "2d"]:
         pm.AddBasePlot(PlotManager.MakeBasePlot(name))
-    logz = PlotManager.MakeBasePlot("2d")
-    logz.SetName("2d_logz")
-    logz[1]['Z'].SetLog()
-    pm.AddBasePlot(logz)
     pm.SaveProject()
 
 
