@@ -141,7 +141,7 @@ def DefineGallery(pm: PlotManager):
                 data.SetColor(kAzure + 3).SetFillColor(kAzure - 9)
         if alias.startswith(("lego", "surf")):
             plot[1].SetView(35.0, 225.0)
-            plot[1]['Z'].SetTitle("")  # a 3D z title runs out of the pad
+            plot[1]['Z'].SetTitle("")  # no axis titles in the gallery, as for x and y
             if polar:
                 plot[1]['Z'].SetRange(0.6, 1.4)  # the yields relative to their ring: the modulation, not bars from zero
         plot[1]['X'].SetTitle("")

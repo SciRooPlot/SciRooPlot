@@ -1101,6 +1101,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
             optional<double_t> userRangeMin;
             optional<double_t> userRangeMax;
+            bool userTitleOffset{};
 
             // first apply default pad values and then settings for this specific pad
             for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
@@ -1127,7 +1128,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 if (axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(axisLayout.GetAxisColor()->ToIndex());
                 if (axisLayout.GetAxisAlpha()) axis_ptr->SetAxisColor(TColor::GetColorTransparent(axis_ptr->GetAxisColor(), *axisLayout.GetAxisAlpha()));
 
-                if (axisLayout.GetTitleOffset()) axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
+                if (axisLayout.GetTitleOffset()) {
+                  axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
+                  userTitleOffset = true;
+                }
                 if (axisLayout.GetLabelOffset()) axis_ptr->SetLabelOffset(*axisLayout.GetLabelOffset());
 
                 if (axisLayout.GetTickLength()) axis_ptr->SetTickLength(*axisLayout.GetTickLength());
@@ -1173,6 +1177,17 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     pad_ptr->SetGridy(*axisLayout.GetGrid());
                   }
                 }
+              }
+            }
+
+            // the z title offset of a layout panel is meant for the colour scale beside a flat frame; the z axis of a 3D view (and its scale)
+            // get the title next to their labels instead (automatic placement of TGaxis), which a fixed distance would miss or overlap
+            if (axisLabel == 'Z' && !userTitleOffset) {
+              const Plot::Pad& padSettings = plot.GetPads()[padID];
+              if (IsViewFrame(pad_ptr, axisHist_ptr)) {
+                axis_ptr->SetTitleOffset(0.f);
+              } else if (auto offset = get_first(padSettings.mColorScaleTitleOffset, padDefaults.mColorScaleTitleOffset)) {
+                axis_ptr->SetTitleOffset(*offset);
               }
             }
 

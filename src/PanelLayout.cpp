@@ -568,9 +568,9 @@ void PanelLayout::ApplyTo(Plot& plot) const
       .SetLabelOffset(mLabelOffset / width)
       .SetTitleOffset((mYTitleOffset > 0.) ? mYTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: automatic placement (see PlotPainter)
     if (colZAxis[c1]) {
+      target.mColorScaleTitleOffset = static_cast<float_t>(mZTitleOffset * minSide / (1.6 * mTitleSize * width));
       target['Z']
         .SetTitleSize(mTitleSize / minSide)
-        .SetTitleOffset(mZTitleOffset * minSide / (1.6 * mTitleSize * width))
         .SetColorScaleOffset(static_cast<float_t>(mColorScaleOffset / width))
         .SetColorScaleWidth(static_cast<float_t>(mColorScaleWidth / width));
     }

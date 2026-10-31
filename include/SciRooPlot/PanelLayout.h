@@ -127,7 +127,7 @@ class PanelLayout
   PanelLayout& SetLabelOffset(double_t pixel);                                            // 3.94: distance of the labels from the axis
   PanelLayout& SetXTitleOffset(double_t pixel);                                           // 63.04: distance of the x title from the axis
   PanelLayout& SetYTitleOffset(double_t pixel);                                           // 0: automatic, next to the widest label (otherwise the distance from the axis)
-  PanelLayout& SetZTitleOffset(double_t pixel);                                           // 122.9: distance of the z title from the axis
+  PanelLayout& SetZTitleOffset(double_t pixel);                                           // 122.9: distance of the z title from the colour scale beside a flat frame (3D views: next to the labels)
   PanelLayout& SetLineWidth(float_t width);                                               // 5 (ROOT line width in pixel)
   PanelLayout& SetMarkerSize(float_t size);                                               // 1.4 (ROOT marker size, 1 = 8 pixel)
   PanelLayout& SetCommonTitles(bool common = true);                                       // true: one title for a row (column) of touching panels showing the same one
