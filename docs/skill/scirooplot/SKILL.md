@@ -213,7 +213,7 @@ plot[1].AddData(measured("ptSpec"), "data");               // name from the temp
 plot[1].AddData(simulated("ptSpec", "otherMC"), "MC");     // or another data source
 plot[2].AddRatio(measured("ptSpec"), simulated("ptSpec"));
 ```
-Templates carry everything a `Data` has (options, colours, ranges, modifiers, projections, tree queries) and can be kept in a `map` keyed by an enum. `.SetLayout(tmpl)` / `.ApplyLayout(tmpl)` take over only the appearance of a template (drawing options, text format, ranges, marker, line, fill, contours) on an existing data; `ApplyLayout` only what is set in it. Put them (and label constants like the experiment name) at file scope of `DefinePlots`.
+Templates carry everything a `Data` has (options, colours, ranges, modifiers, projections, tree queries) and can be kept in a `map` keyed by an enum. `.SetLayout(tmpl)` / `.ApplyLayout(tmpl)` take over only the appearance of a template (drawing options, text format, ranges, marker, line, fill, contours) on an existing data; `ApplyLayout` only what is set in it. A `Ratio` called with a name gives data with the ratio's appearance, without its denominator (use it with `AddData`, or as numerator or denominator of `AddRatio`). Put them (and label constants like the experiment name) at file scope of `DefinePlots`.
 
 **Derive plots instead of repeating them.** `Plot variant(plot, "newName", "group")` copies a finished plot; add or change data and axes afterwards (`variant[1](2).SetColor(kRed)`). Generate plot families in loops — over centralities, cuts, runs, detector parts — with the loop variable in the name and group (`"raa_" + cent`, `AppendGroup("raaPerCentrality")`), so `plot heavyion/raaPerCentrality .+` makes the whole set.
 

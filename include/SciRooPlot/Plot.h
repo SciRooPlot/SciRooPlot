@@ -770,7 +770,8 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   virtual std::shared_ptr<Data> Clone() const { return std::make_shared<Data>(*this); }
   void Print() const { Plot::Print(GetPropertyTree(), "Data"); }
 
-  // use this data as template: copy with the given name (and optionally another data source)
+  // use this data as template: copy with the given name (and optionally another data source); called on a Ratio, the copy is data
+  // with the ratio's appearance (no denominator: add it with AddData, or use it as numerator or denominator of AddRatio)
   Data operator()(const std::string& name, const std::optional<std::string>& dataSource = {}) const;
 
   Ratio& AsRatio();
