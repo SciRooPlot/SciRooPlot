@@ -740,13 +740,28 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         // TGraph::Draw clears the pad when the option contains an 'A' (new axes) outside of SAME, which would delete the frame
         // (and the frame drawn with it has no axes): the axes are SciRooPlot's; RX and RY mirror the points and let TGraphPainter draw
         // reversed axes in place of the frame's, so in SciRooPlot's frame the points would sit at wrong axis values
+        // (the polar grid takes N and O of a polar graph, see below)
+        string polarGridOption;
         if constexpr (is_graph_1d<data_type>()) {
           TString option(drawOption);
           option.ToLower();  // as TGraph::Draw reads it
           option.ReplaceAll("same", "");
-          const bool isPolar = data_ptr->InheritsFrom(TGraphPolar::Class());  // its own letters (R: radians)
+          const bool isPolar = data_ptr->InheritsFrom(TGraphPolar::Class());  // its own letters (R, D, G: unit of the angle)
           const bool hasAxes = option.Contains("a");
           const bool reversed = !isPolar && (option.Contains("rx") || option.Contains("ry"));
+          if (isPolar) {
+            // N (no angle labels) and O (angle labels along the radius) are options of the polar grid, which the first polar graph of
+            // the pad makes (TGraphPainter::PaintGraphPolar); without other letters ROOT draws the graph as line, as for an empty option
+            // (the SAME of SciRooPlot would leave a blank option, which draws nothing)
+            for (const char* letter : {"n", "o"}) {
+              if (option.Contains(letter)) polarGridOption += letter;
+            }
+            if (!polarGridOption.empty()) {
+              option.ReplaceAll("n", "").ReplaceAll("o", "");
+              if (option.Strip(TString::kBoth).IsNull()) option += "l";
+              if (!hasAxes) drawOption = ((dataIndex != 0) ? "SAME " : "") + string(option.Data());
+            }
+          }
           if (hasAxes || reversed) {
             if (dataIndex != 0 && hasAxes) logger::warning("Drawing option '{}' of {}: A (new axes) is removed, the axes of the pad are drawn by SciRooPlot.", *data->GetDrawOption(), data->GetName());
             if (dataIndex != 0 && reversed) logger::warning("Drawing option '{}' of {}: RX and RY (reversed axes) are removed, SciRooPlot cannot reverse the axes of the frame.", *data->GetDrawOption(), data->GetName());
@@ -898,10 +913,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           // a polar graph is drawn into a polar grid (TGraphPolargram) that ROOT makes from the points of the first polar graph painted
           // in a pad and that the later ones use (TGraphPainter::PaintGraphPolar): here it is made from the frame data instead of a
-          // cartesian frame, and takes the ranges and labels of the axes below; the histogram of the graph only holds those axis settings
+          // cartesian frame, and takes the ranges and labels of the axes below; the histogram of the graph only holds those axis settings.
+          // As in ROOT, the unit of the angle (R, D, G) and the labels (N, O) come from the option of that graph
           if constexpr (is_graph_1d<data_type>()) {
             if (data_ptr->InheritsFrom(TGraphPolar::Class())) {
-              polargram = static_cast<TGraphPolar*>(data_ptr)->CreatePolargram("");
+              polargram = static_cast<TGraphPolar*>(data_ptr)->CreatePolargram(drawOption.data());
               axisHist_ptr = static_cast<TH1*>(data_ptr->GetHistogram()->Clone());
               axisHist_ptr->SetDirectory(nullptr);
               polarAxisHist.reset(axisHist_ptr);
@@ -912,7 +928,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 return;
               }
               polargram->SetBit(kCanDelete);
-              polargram->Draw();
+              polargram->Draw(polarGridOption.data());
               padSetup += " gStyle->SetOptTitle(0);";  // otherwise each polar graph paints its title as a box at the top
             }
           }
@@ -4596,7 +4612,10 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       TLatex measure;
       measure.SetTextFont(grid->GetPolarLabelFont());
       measure.SetTextSize(grid->GetPolarLabelSize());
-      const int32_t nLabels = grid->GetNdivPolar() % 100;
+      TIter link(pad->GetListOfPrimitives());  // the option of the grid in the pad: N leaves out the labels
+      while (link() != grid) {
+      }
+      const int32_t nLabels = TString(link.GetOption()).Contains("n", TString::kIgnoreCase) ? 0 : grid->GetNdivPolar() % 100;
       for (int32_t i = 0; i < nLabels; ++i) {
         const double_t theta = i * 2 * TMath::Pi() / nLabels;  // as ROOT computes it: the alignment compares it with pi/2, pi and 3 pi/2
         string label;

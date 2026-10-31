@@ -105,6 +105,8 @@ in a square frame (the margins of the longer side grow) without the cartesian ax
 unless the data sets a line width; `lego_polar`, `lego_col_polar`, `surf_polar`, `surf_col_polar` are drawn on a disc in 3D (`SetView` turns it).
 A polar graph (TGraphPolar: x the angle in radians, y the radius) is drawn on a polar grid instead of a cartesian frame. The grid fills the pad (a square base plot keeps it round)
 and takes the label fonts, sizes and colours of the x (angle) and y (radius) axes and the ranges and divisions set on them; the points aliases draw its error bars; shapes are not drawn there;
+as in ROOT, the raw option of the first polar graph of the pad also sets the grid: `D` or `G` for an angle in degrees or grads (a full turn), `N` without angle labels,
+`O` with the angle labels along the radius (`"N"` or `"O"` alone draws the graph as a line, as ROOT's empty option);
 automatically placed legends and texts keep off the grid and its angle labels, so they go into the corners of the pad (a box that does not fit there gets a warning).
 Maps: a 2D histogram in degrees drawn with a raw projection option (`"AITOFF"`, `"MOLLWEIDE"`, `"SINUSOIDAL"`, `"PARABOLIC"`, `"MERCATOR"`) is coloured
 over the z range of the pad; add `Z` (`"MOLLWEIDE Z"`) for a colour scale, which ROOT itself does not draw for projections; not `COL`, which ROOT also
