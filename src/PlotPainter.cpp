@@ -3683,7 +3683,7 @@ bool PlotPainter::HasErrors(const TObject* obj)
 /**
  * Determines which of the legend symbols (P marker, L line, F fill, E error bar) show what ROOT actually draws for an object with the given drawing option.
  * (verified with ROOT 6.40: histograms with errors are drawn as markers with error bars unless HIST is given, the E2 boxes always have markers,
- * E3-E6 are fill areas, bars without a fill colour are drawn as lines, graphs draw nothing without P, L, C, B, F or 2-5)
+ * E3-E6 are fill areas, bars without a fill colour are drawn as lines, graphs draw nothing without P, L, C, B, F or 2-5, polar graphs draw error bars only with E)
  */
 //**************************************************************************************************
 string PlotPainter::LegendSymbolElements(TObject* obj, string option)
@@ -3708,7 +3708,8 @@ string PlotPainter::LegendSymbolElements(TObject* obj, string option)
     return (hasFill) ? "F" : "L";
   }
   if (auto graph = dynamic_cast<TGraph*>(obj)) {
-    const bool hasErrors = HasErrors(graph) && !has('X');
+    // a polar graph draws its error bars only with E (TGraphPainter::PaintGraphPolar)
+    const bool hasErrors = HasErrors(graph) && !has('X') && (has('E') || !graph->InheritsFrom(TGraphPolar::Class()));
     string style;
     if (has('2') || has('3') || has('4') || has('5')) {  // error boxes and bands
       style += "F";
