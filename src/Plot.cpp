@@ -3124,7 +3124,7 @@ Plot::Pad::Ratio::Ratio(const Data& numerator, const Data& denominator)
 Plot::Pad::Ratio::Ratio(const string& name, const string& dataSource, const string& denomName,
                         const string& denomDataSource, const optional<string>& label)
   : Data(name, dataSource, label), mDenomName(denomName),
-    mDenomDataSource(denomDataSource), mIsCorrelated(false)
+    mDenomDataSource(denomDataSource), mCorrelated(false)
 {
   SetType("ratio");
 }
@@ -3139,7 +3139,7 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   try {
     mDenomName = dataTree.get<string>("denomName");
     mDenomDataSource = dataTree.get<string>("denomDataSource");
-    mIsCorrelated = dataTree.get<bool>("isCorrelated");
+    mCorrelated = dataTree.get<bool>("isCorrelated");
   } catch (const std::exception& e) {
     logger::throw_invalid_argument("Could not construct ratio from ptree: {}", e.what());
   }
@@ -3223,7 +3223,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
   ptree dataTree = Data::GetPropertyTree();
   dataTree.put("denomName", mDenomName);
   dataTree.put("denomDataSource", mDenomDataSource);
-  dataTree.put("isCorrelated", mIsCorrelated);
+  dataTree.put("isCorrelated", mCorrelated);
   PutModify(dataTree, mNumModify, "numer_");
   PutModify(dataTree, mDenomModify, "denom_");
 
@@ -3263,9 +3263,9 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
  * Specify how the division should be done (spline, binomial, etc...).
  */
 //**************************************************************************************************
-auto Plot::Pad::Ratio::SetIsCorrelated(bool isCorrelated) -> decltype(*this)
+auto Plot::Pad::Ratio::SetCorrelated(bool correlated) -> decltype(*this)
 {
-  mIsCorrelated = isCorrelated;
+  mCorrelated = correlated;
   return *this;
 }
 //**************************************************************************************************

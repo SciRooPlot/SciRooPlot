@@ -1807,7 +1807,7 @@
 
       - Numerator and denominator are given as `{name, source}` (python: `[name, source]`) or as complete `Data` objects, e.g. from a template (`style("name")`); their projections and modifiers act on the inputs, the ratio takes the appearance of the numerator. A predefined `Ratio(numerator, denominator)` can be added as well.
 
-      - Use `SetIsCorrelated()` when the numerator is a sub-sample of the denominator (e.g. a selection vs. its parent sample) -- this applies binomial error propagation instead of treating the two as independent.
+      - Use `SetCorrelated()` when the numerator is a sub-sample of the denominator (e.g. a selection vs. its parent sample) -- this applies binomial error propagation instead of treating the two as independent.
 
       - Modifiers (`RebinX()`, `Scale()`, `Normalize()`, `Smooth()`, `Cumulative()`, ...) act on the ratio itself by default. `Numer()`, `Denom()` and `Both()` switch them to the inputs, applied before dividing; `Result()` switches back.
 
@@ -1818,7 +1818,7 @@
         [
           ```cpp
           plot[1].AddRatio({"h1", "sourceA"}, {"h2", "sourceB"})
-                 .SetIsCorrelated();
+                 .SetCorrelated();
 
           plot[1].AddRatio({"h1", "sourceA"}, {"h2", "sourceB"})
                  .Both().Normalize();
@@ -1832,7 +1832,7 @@
         [
           ```python
           plot[1].AddRatio(["h1", "sourceA"], ["h2", "sourceB"]) \
-                 .SetIsCorrelated()
+                 .SetCorrelated()
 
           plot[1].AddRatio(["h1", "sourceA"], ["h2", "sourceB"]) \
                  .Both().Normalize()
@@ -1985,7 +1985,7 @@
     ],
     [
       #api-section("PanelLayout lengths (pixels of the plot at scale 1)", (
-        [#names("SetPanelSize(px)", "SetMargins(top, bottom, left, right)", "SetZAxisMargin(px)", "SetPanelSpacing(px)")], [Standard panel (638), space around the panels (32, 118, 118, 32), for the colour scale (268), between touching panels (0).],
+        [#names("SetPanelSize(px)", "SetMargins(top, bottom, left, right)", "SetColorScaleMargin(px)", "SetPanelSpacing(px)")], [Standard panel (638), space around the panels (32, 118, 118, 32), for the colour scale (268), between touching panels (0).],
         [#names("SetTextSize(px)", "SetTitleSize(px)", "SetTickLength(px)", "SetLabelOffset(px)", "SetXTitleOffset(px)", "SetYTitleOffset(px)", "SetZTitleOffset(px)", "SetLineWidth(w)", "SetMarkerSize(s)")], [Text (31.52), axis titles (39.4), ticks (19.15), labels from the axis (3.94), titles from the axis (x 63.04, y automatic, z 122.9), ROOT line width (5) and marker size (1.4).],
       ), text-size: 12pt)
     ],
@@ -2122,10 +2122,10 @@
   - Every `Data` accessor from the next two slides is also available on `Ratio`. Styling and ranges always act on the ratio; data modifiers and data selection follow the active mode.
   #v(0.6em)
   #api-section("Ratio-specific", (
-    [`SetIsCorrelated(isCorrelated = true)`], [Treat numerator/denominator as correlated (e.g. one is a sub-sample of the other) -- applies binomial error propagation.],
+    [`SetCorrelated(correlated = true)`], [Treat numerator/denominator as correlated (e.g. one is a sub-sample of the other) -- applies binomial error propagation.],
     [`Numer()` / `Denom()` / `Both()`], [Following modifiers act on the numerator, the denominator, or both, before dividing. Data selection (`Project*`, `Define`, `Filter`, ...) follows the same mode.],
     [`Result()`], [Following modifiers act on the ratio itself (default). Data selection cannot act on the ratio: it is interpreted as `Numer()` with a warning.],
-    [`AsRatio()`], [Called on data obtained via `pad(n)` / `GetData(n)`: access it as `Ratio`, e.g. `pad(2).AsRatio().SetIsCorrelated()`.],
+    [`AsRatio()`], [Called on data obtained via `pad(n)` / `GetData(n)`: access it as `Ratio`, e.g. `pad(2).AsRatio().SetCorrelated()`.],
   ))
 ]
 

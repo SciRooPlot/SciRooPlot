@@ -2187,7 +2187,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
         if (data->GetType() == "ratio") {
           auto data_as_ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          bool binomialErrors = data_as_ratio->GetIsCorrelated();
+          bool binomialErrors = data_as_ratio->GetCorrelated();
           // modifiers requested via Numer() / Denom() act on the inputs before the division
           auto operandMods = [&](const auto& operandModify) {
             Plot::Pad::Data mods = *data;

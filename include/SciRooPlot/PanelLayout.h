@@ -75,7 +75,7 @@ Panel Empty(double_t width, double_t height);
 // A cell holding the colour scale of a group of panels sharing the z axis (Plot::ShareAxis('Z', ...)): the group of the panel to its
 // left, or of the panel with the given pad number (a panel in no z group: its own scale, e.g. for a map beside its projection).
 // Its panels then lose their own colour scales. The cell is as wide as the room
-// of the colour scale of Panel().ZAxis() (SetZAxisMargin, its scale placed by SetZAxisOffset and SetZAxisWidth) and may span rows.
+// of the colour scale of Panel().ZAxis() (SetColorScaleMargin, its scale placed by SetColorScaleOffset and SetColorScaleWidth) and may span rows.
 Panel ZAxis();
 Panel ZAxis(uint8_t padID);
 
@@ -102,9 +102,9 @@ class PanelLayout
 
   PanelLayout& SetPanelSize(double_t pixel);                                              // 638: axis frame of Panel(1, 1)
   PanelLayout& SetMargins(double_t top, double_t bottom, double_t left, double_t right);  // 32, 118, 118, 32: space around the panels (bottom and left hold the labels and titles)
-  PanelLayout& SetZAxisMargin(double_t pixel);                                            // 268: right margin of a panel with colour scale
-  PanelLayout& SetZAxisOffset(double_t pixel);                                            // 5.12: distance of the colour scale from the frame
-  PanelLayout& SetZAxisWidth(double_t pixel);                                             // 46.08: width of the colour scale
+  PanelLayout& SetColorScaleMargin(double_t pixel);                                       // 268: right margin of a panel with colour scale
+  PanelLayout& SetColorScaleOffset(double_t pixel);                                       // 5.12: distance of the colour scale from the frame
+  PanelLayout& SetColorScaleWidth(double_t pixel);                                        // 46.08: width of the colour scale
   PanelLayout& SetPanelSpacing(double_t pixel);                                           // 0: space between touching panels (their axes stay shared)
   PanelLayout& SetTextSize(double_t pixel);                                               // 31.52: axis labels, legends and texts
   PanelLayout& SetTitleSize(double_t pixel);                                              // 39.4: axis titles
@@ -128,9 +128,9 @@ class PanelLayout
   double_t mMarginBottom{118.};
   double_t mMarginLeft{118.};
   double_t mMarginRight{32.};
-  double_t mZAxisMargin{268.};
-  double_t mZAxisOffset{5.12};  // ROOT's colour scale of a 1024 pixel wide pad: 0.005 and 0.045 of the pad width
-  double_t mZAxisWidth{46.08};
+  double_t mColorScaleMargin{268.};
+  double_t mColorScaleOffset{5.12};  // ROOT's colour scale of a 1024 pixel wide pad: 0.005 and 0.045 of the pad width
+  double_t mColorScaleWidth{46.08};
   double_t mPanelSpacing{0.};
   double_t mTextSize{31.52};
   double_t mTitleSize{39.4};

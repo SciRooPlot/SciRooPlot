@@ -262,7 +262,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 
 - `Ratio(const Data& numerator, const Data& denominator)` — inputs from numerator and denominator, appearance from numerator
 - `Ratio(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName, const std::string& denominatorDataSource, const std::optional<std::string>& label = {})`
-- `Ratio& SetIsCorrelated(bool isCorrelated = true)`
+- `Ratio& SetCorrelated(bool correlated = true)`
 - `Ratio& Numer()` — following modifiers act on the numerator, before the division
 - `Ratio& Denom()` — following modifiers act on the denominator, before the division
 - `Ratio& Both()` — following modifiers act on numerator and denominator, before the division
@@ -441,9 +441,9 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `PanelLayout(const PanelLayout& sizes, std::vector<std::vector<Panel>> rows)` — same lengths, other panels
 - `PanelLayout& SetPanelSize(double_t pixel)` — 638: axis frame of Panel(1, 1)
 - `PanelLayout& SetMargins(double_t top, double_t bottom, double_t left, double_t right)` — 32, 118, 118, 32: space around the panels (bottom and left hold the labels and titles)
-- `PanelLayout& SetZAxisMargin(double_t pixel)` — 268: right margin of a panel with colour scale
-- `PanelLayout& SetZAxisOffset(double_t pixel)` — 5.12: distance of the colour scale from the frame
-- `PanelLayout& SetZAxisWidth(double_t pixel)` — 46.08: width of the colour scale
+- `PanelLayout& SetColorScaleMargin(double_t pixel)` — 268: right margin of a panel with colour scale
+- `PanelLayout& SetColorScaleOffset(double_t pixel)` — 5.12: distance of the colour scale from the frame
+- `PanelLayout& SetColorScaleWidth(double_t pixel)` — 46.08: width of the colour scale
 - `PanelLayout& SetPanelSpacing(double_t pixel)` — 0: space between touching panels (their axes stay shared)
 - `PanelLayout& SetTextSize(double_t pixel)` — 31.52: axis labels, legends and texts
 - `PanelLayout& SetTitleSize(double_t pixel)` — 39.4: axis titles

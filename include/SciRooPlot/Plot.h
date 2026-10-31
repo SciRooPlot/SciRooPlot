@@ -1072,7 +1072,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   std::shared_ptr<Data> Clone() const override { return std::make_shared<Ratio>(*this); }
   void Print() const { Plot::Print(GetPropertyTree(), "Ratio"); }
 
-  Ratio& SetIsCorrelated(bool isCorrelated = true);
+  Ratio& SetCorrelated(bool correlated = true);
 
 #define FORWARD_TO_DATA(METHOD)                \
   template <typename... Args>                  \
@@ -1197,7 +1197,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   boost::property_tree::ptree GetPropertyTree() const override;
   const auto& GetDenomDataSource() const { return mDenomDataSource; }
   const auto& GetDenomName() const { return mDenomName; }
-  const bool& GetIsCorrelated() const { return mIsCorrelated; }
+  const bool& GetCorrelated() const { return mCorrelated; }
   const auto& GetDenomDataInfo() const { return mDenomDataInfo; }
   const auto& GetDenomProjInfo() const { return mDenomProjInfo; }
   const auto& GetNumModify() const { return mNumModify; }
@@ -1214,7 +1214,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   modify_t mDenomModify;
   std::string mDenomName;
   std::string mDenomDataSource;
-  bool mIsCorrelated{};
+  bool mCorrelated{};
   data_info_t mDenomDataInfo;
   std::optional<proj_info_t> mDenomProjInfo;
 };

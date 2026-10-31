@@ -290,9 +290,9 @@ def DefineDetectorPlots(pm: PlotManager):
     plot[0].SetPalette(kViridis)
     pm.AddPlot(plot)
 
-    # efficiency = reconstructed / generated; SetIsCorrelated() gives binomial errors
+    # efficiency = reconstructed / generated; SetCorrelated() gives binomial errors
     plot = Plot("trackingEfficiency", "detector/tracking", "1d")
-    plot[1].AddRatio(["hPt", "TrackQA_MC"], ["hPtGen", "TrackQA_MC"]).SetIsCorrelated()
+    plot[1].AddRatio(["hPt", "TrackQA_MC"], ["hPtGen", "TrackQA_MC"]).SetCorrelated()
     plot[1]['X'].SetLog().SetRange(0.1, 10.0)
     plot[1]['Y'].SetTitle("tracking efficiency").SetRange(0.0, 1.0).SetGrid()
     pm.AddPlot(plot)
@@ -379,7 +379,7 @@ def DefineDetectorPlots(pm: PlotManager):
     # ---- trigger and pile-up --------------------------------------------------------------------
     # turn-on curve; Result() switches to settings acting on the ratio itself (here: in %)
     plot = Plot("turnOn", "detector/trigger", "1d")
-    plot[1].AddRatio(["hLeadingPtTriggered", "TriggerQA"], ["hLeadingPtAll", "TriggerQA"], "data").SetIsCorrelated().Result().Scale(100.0)
+    plot[1].AddRatio(["hLeadingPtTriggered", "TriggerQA"], ["hLeadingPtAll", "TriggerQA"], "data").SetCorrelated().Result().Scale(100.0)
     # SetRangeX limits the range in which a data item is drawn
     plot[1].AddFunction("98*0.5*(1+TMath::Erf((x-8)/(sqrt(2)*1.5)))", "erf, #it{p}_{T}^{thr} = 8 GeV/#it{c}").SetRangeX(0.0, 20.0).SetLine(kSolid, 2.0, kRed + 1)
     plot[1].AddLegend(0.553, 0.36)

@@ -126,21 +126,21 @@ PanelLayout& PanelLayout::SetMargins(double_t top, double_t bottom, double_t lef
   return *this;
 }
 
-PanelLayout& PanelLayout::SetZAxisMargin(double_t pixel)
+PanelLayout& PanelLayout::SetColorScaleMargin(double_t pixel)
 {
-  mZAxisMargin = CheckedLength("SetZAxisMargin", pixel, true);
+  mColorScaleMargin = CheckedLength("SetColorScaleMargin", pixel, true);
   return *this;
 }
 
-PanelLayout& PanelLayout::SetZAxisOffset(double_t pixel)
+PanelLayout& PanelLayout::SetColorScaleOffset(double_t pixel)
 {
-  mZAxisOffset = pixel;
+  mColorScaleOffset = pixel;
   return *this;
 }
 
-PanelLayout& PanelLayout::SetZAxisWidth(double_t pixel)
+PanelLayout& PanelLayout::SetColorScaleWidth(double_t pixel)
 {
-  mZAxisWidth = CheckedLength("SetZAxisWidth", pixel, true);
+  mColorScaleWidth = CheckedLength("SetColorScaleWidth", pixel, true);
   return *this;
 }
 
@@ -318,7 +318,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
     if (cell->mScaleCell) {
       if (cell->mColumns > 1) logger::throw_invalid_argument("Layout: a ZAxis() cell spans one column (row {}, column {}).", r + 1, c + 1);
       colScale[c] = true;
-      colWidth[c] = mZAxisMargin;
+      colWidth[c] = mColorScaleMargin;
     }
   }
   for (const auto& [cell, r, c] : cells) {
@@ -370,7 +370,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
     } else if (colScale[c]) {
       colSep[c] = Separation{0., mMarginLeft, false};
     } else if (colZAxis[c]) {
-      colSep[c] = Separation{mZAxisMargin, mMarginLeft, false};
+      colSep[c] = Separation{mColorScaleMargin, mMarginLeft, false};
     } else {
       colSep[c] = Separation{mPanelSpacing / 2., mPanelSpacing / 2., true};
     }
@@ -396,7 +396,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
   };
   vector<double_t> frameLeft, frameRight, boundaryX;
   vector<double_t> frameTop, frameBottom, boundaryY;
-  const double_t canvasWidth = edges(mMarginLeft, colWidth, colSep, colScale.back() ? 0. : (colZAxis.back() ? mZAxisMargin : mMarginRight), frameLeft, frameRight, boundaryX);
+  const double_t canvasWidth = edges(mMarginLeft, colWidth, colSep, colScale.back() ? 0. : (colZAxis.back() ? mColorScaleMargin : mMarginRight), frameLeft, frameRight, boundaryX);
   const double_t canvasHeight = edges(mMarginTop, rowHeight, rowSep, mMarginBottom, frameTop, frameBottom, boundaryY);
   plot.SetDimensions(static_cast<int32_t>(canvasWidth), static_cast<int32_t>(canvasHeight), true);
 
@@ -416,7 +416,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
     }
     return side;
   };
-  auto rightMargin = [&](size_t col) { return colZAxis[col] ? mZAxisMargin : mMarginRight; };  // room right of a frame for labels or the colour scale
+  auto rightMargin = [&](size_t col) { return colZAxis[col] ? mColorScaleMargin : mMarginRight; };  // room right of a frame for labels or the colour scale
   const bool singlePanel = (nRows == 1 && nCols == 1);
   for (size_t i = 0; i < cells.size(); ++i) {
     const auto& [cell, r0, c0] = cells[i];
@@ -473,9 +473,9 @@ void PanelLayout::ApplyTo(Plot& plot) const
       pad['Z']
         .SetTitleSize(mTitleSize / minSide)
         .SetTitleOffset(mZTitleOffset * minSide / (1.6 * mTitleSize * width))
-        .SetLabelOffset(0.005 * (mMarginLeft + mPanelSize + mZAxisMargin) / width)  // ROOT's 0.005 of the standard pad with a colour scale
-        .SetColorScaleOffset(static_cast<float_t>(mZAxisOffset / width))
-        .SetColorScaleWidth(static_cast<float_t>(mZAxisWidth / width));
+        .SetLabelOffset(0.005 * (mMarginLeft + mPanelSize + mColorScaleMargin) / width)  // ROOT's 0.005 of the standard pad with a colour scale
+        .SetColorScaleOffset(static_cast<float_t>(mColorScaleOffset / width))
+        .SetColorScaleWidth(static_cast<float_t>(mColorScaleWidth / width));
       continue;
     }
     if (cell->mEmpty) {
@@ -507,8 +507,8 @@ void PanelLayout::ApplyTo(Plot& plot) const
       target['Z']
         .SetTitleSize(mTitleSize / minSide)
         .SetTitleOffset(mZTitleOffset * minSide / (1.6 * mTitleSize * width))
-        .SetColorScaleOffset(static_cast<float_t>(mZAxisOffset / width))
-        .SetColorScaleWidth(static_cast<float_t>(mZAxisWidth / width));
+        .SetColorScaleOffset(static_cast<float_t>(mColorScaleOffset / width))
+        .SetColorScaleWidth(static_cast<float_t>(mColorScaleWidth / width));
     }
     // axes shared with a touching panel: labels and title are only shown once (a label next to a panel would run into its frame)
     if (left.panel && colSep[c0 - 1].shared) pad['Y'].SetTitleSize(0.).SetLabelSize(0.);

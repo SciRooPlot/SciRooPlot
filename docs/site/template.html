@@ -894,7 +894,7 @@ figure.plot figcaption { color: #5b6b80 }
       <tr><td><code>.Scatter("x", "y", "ex", "ey")</code></td><td>graph from a table</td></tr>
       <tr><td><code>.ProjectX(lo, hi)</code> <code>.ProjectY</code> <code>.ProfileX</code></td><td>from 2D histograms; <code>lo</code>, <code>hi</code> are bin numbers, axis values with a third argument <code data-py="True" data-cpp="true">True</code></td></tr>
       <tr><td><code>AddRatio(num, den)</code> + <code>Numer()</code> <code>Denom()</code> <code>Both()</code></td><td>modifiers for the inputs</td></tr>
-      <tr><td><code>.SetIsCorrelated()</code></td><td>binomial errors (efficiencies)</td></tr>
+      <tr><td><code>.SetCorrelated()</code></td><td>binomial errors (efficiencies)</td></tr>
       <tr><td><code>AddFunction("2*exp(-x)", "label")</code></td><td>formula</td></tr></table></section>
     <section><h4>Modifiers, in this order</h4><p class="chain">ScaleX/Y/Z › RebinX/Y/Z › DivideBinWidth › Smooth › Normalize › Cumulative › NormalizeToMaximum, Scale › SetRangeX/Y</p>
       <p><code>Density()</code> = DivideBinWidth + Normalize · <code data-py="Normalize(False, lo, hi)" data-cpp="Normalize(false, lo, hi)">Normalize(False, lo, hi)</code> in a range</p></section>
@@ -1340,7 +1340,7 @@ pm.AddPlot(plot);` },
   { title: "A ratio panel", img: "img/tour/ratio.png", alt: "Spectrum with a ratio panel of data over simulation below",
     text: `<p>Switch the base plot to <code>"1d_ratio"</code>: it has a second pad below the first. <code>AddRatio</code> divides data by simulation bin by bin, with error propagation. Settings on <code>plot[0]</code> apply to all pads, so both x axes stay identical.</p>
 <p class="basics"><b>Why a ratio?</b>On a log scale a 20 % difference is barely visible. The <button class="term" data-term="ratio">ratio panel</button> shows it directly: the data rise above the simulation above 2 GeV/<i>c</i>.</p>
-<p class="expert-only">Different binnings are divided via spline interpolation; <code>.SetIsCorrelated()</code> gives binomial errors for sub-samples. Modifiers act on <code>Numer()</code>, <code>Denom()</code> or <code>Both()</code>.</p>`,
+<p class="expert-only">Different binnings are divided via spline interpolation; <code>.SetCorrelated()</code> gives binomial errors for sub-samples. Modifiers act on <code>Numer()</code>, <code>Denom()</code> or <code>Both()</code>.</p>`,
     py: `+ plot = Plot("ratio", "tour", "1d_ratio")
 plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
 plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2)
@@ -1520,7 +1520,7 @@ const EX_TAGS = [
   ["2d", "2D", /"2d|Project2D|Profile2D|colz|lego|surf|cont_|candle|violin/, "appearance"], ["polar", "polar", /_polar\b|polar graph/, "appearance"],
   ["tree", "tree", /Project1D|Project2D|Profile1D|Profile2D|\.Project\(|Filter\(|Define\(/, "trees"],
   ["table", "table (CSV)", /Scatter\(/, "trees"], ["modifiers", "modifiers", /Normalize|Rebin|\.Scale\(|ScaleX|Cumulative|DivideBinWidth|Smooth/, "modifiers"],
-  ["projection", "projection", /ProjectX|ProjectY|ProfileX/, "modifiers"], ["uncertainty", "uncertainties", /\bboxes\b|\bband\b|brackets|SetIsCorrelated/, "appearance"],
+  ["projection", "projection", /ProjectX|ProjectY|ProfileX/, "modifiers"], ["uncertainty", "uncertainties", /\bboxes\b|\bband\b|brackets|SetCorrelated/, "appearance"],
   ["function", "functions, lines and shapes", /AddFunction|AddLine|AddArrow|AddVerticalLine|AddHorizontalLine|AddRegion|AddEllipse|SetRefFunc/, "adding"], ["numbers", "numbers in labels", /"[^"]*<(mean|entries|integral|name|title|rms|max|min)[^"]*"/, "labels"],
   ["log", "log scale", /SetLog\(/, "plots"], ["text", "texts", /AddText\(/, "legends"], ["loop", "plot families", /\bfor\b/, "templates"]];
 const exTags = k => EX_TAGS.filter(([, , re]) => re.test(EXAMPLES[k].py)).map(x => x[0]);
@@ -1692,7 +1692,7 @@ const REF = [
   <div class="ratio"><b class="lbl">a ratio</b>
     <div class="arm"><span class="in">numerator</span><i>›</i><span class="sel">Numer().…</span><i>›</i><span class="note">the same chain</span></div>
     <div class="arm"><span class="in">denominator</span><i>›</i><span class="sel">Denom().…</span><i>›</i><span class="note">the same chain</span></div>
-    <div class="join"><i>›</i><span class="div">divide (binomial errors with <code>SetIsCorrelated()</code>)</span><i>›</i><span class="note">the chain on the ratio itself</span><i>›</i><span class="out">drawn</span></div>
+    <div class="join"><i>›</i><span class="div">divide (binomial errors with <code>SetCorrelated()</code>)</span><i>›</i><span class="note">the chain on the ratio itself</span><i>›</i><span class="out">drawn</span></div>
     <p class="small muted"><code>Both().…</code> applies to numerator and denominator. Rebinning, cumulating or normalising the ratio itself is rarely what you want, and SciRooPlot warns.</p></div>
 </div>
 <div class="code"><pre data-snip="modifiers"></pre></div>
@@ -1943,9 +1943,9 @@ plot[1].AddText(top_left, "large").SetTextFont(43).SetTextSize(36);  // font 43:
 plot[2].SetPosition(0.5, 0.5, 0.88, 0.88).SetMargins(0.05, 0.22, 0.3, 0.05).SetDefaultTextSize(0.09);
 plot[2].AddData("diphoton/mgg_data", "higgs");
 plot[2]['X'].SetRange(120, 130).SetHideClippedLabels(false);` },
-  ratios: { py: `plot[2].AddRatio(["num", "src"], ["den", "src"], "label").SetIsCorrelated()   # binomial errors
+  ratios: { py: `plot[2].AddRatio(["num", "src"], ["den", "src"], "label").SetCorrelated()   # binomial errors
 plot[2].AddRatio(["num", "src"], ["den", "src"]).Both().Normalize().Result().SetColor(kRed + 1)
-plot[2].AddRatio(["h2", "src"], ["h2", "src"]).Numer().ProjectY(10, 20, True).Denom().ProjectY(1, 10, True)`, cpp: `plot[2].AddRatio({"num", "src"}, {"den", "src"}, "label").SetIsCorrelated();   // binomial errors
+plot[2].AddRatio(["h2", "src"], ["h2", "src"]).Numer().ProjectY(10, 20, True).Denom().ProjectY(1, 10, True)`, cpp: `plot[2].AddRatio({"num", "src"}, {"den", "src"}, "label").SetCorrelated();   // binomial errors
 plot[2].AddRatio({"num", "src"}, {"den", "src"}).Both().Normalize().Result().SetColor(kRed + 1);
 plot[2].AddRatio({"h2", "src"}, {"h2", "src"}).Numer().ProjectY(10, 20, true).Denom().ProjectY(1, 10, true);` },
   trees: { py: `plot[1].AddData("tracks", "src").Project1D(("pt", 100, [0.0, 10.0])).Filter("abs(eta) < 0.8")
@@ -2345,7 +2345,7 @@ pm.AddDataSource("TrackQA_MC", "\${SCIROOPLOT_DATA_DIR}/ExampleData/AnalysisResu
 pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
 
 plot = Plot("trackingEfficiency", "detector/tracking", "1d")
-plot[1].AddRatio(["hPt", "TrackQA_MC"], ["hPtGen", "TrackQA_MC"]).SetIsCorrelated()
+plot[1].AddRatio(["hPt", "TrackQA_MC"], ["hPtGen", "TrackQA_MC"]).SetCorrelated()
 plot[1]['X'].SetLog().SetRange(0.1, 10.0)
 plot[1]['Y'].SetTitle("tracking efficiency").SetRange(0.0, 1.0).SetGrid()
 pm.AddPlot(plot)
@@ -2355,7 +2355,7 @@ pm.AddDataSource("TrackQA_MC", "\${SCIROOPLOT_DATA_DIR}/ExampleData/AnalysisResu
 pm.AddBasePlot(PlotManager::MakeBasePlot("1d"));
 
 Plot plot("trackingEfficiency", "detector/tracking", "1d");
-plot[1].AddRatio({"hPt", "TrackQA_MC"}, {"hPtGen", "TrackQA_MC"}).SetIsCorrelated();
+plot[1].AddRatio({"hPt", "TrackQA_MC"}, {"hPtGen", "TrackQA_MC"}).SetCorrelated();
 plot[1]['X'].SetLog().SetRange(0.1, 10.0);
 plot[1]['Y'].SetTitle("tracking efficiency").SetRange(0.0, 1.0).SetGrid();
 pm.AddPlot(plot);
@@ -2654,7 +2654,7 @@ function panelGeometry(G, S) {
 /* ---------------- base plot designer: presets of MakeBasePlot, a grid of panels and the lengths of PanelLayout, drawn to scale */
 const SIZE_FIELDS = [ // key, setter, label, step
   ["canvas", "Canvas", [["panel", "SetPanelSize", "Panel size", 1], ["top", "", "Margin top", 1], ["bottom", "", "Margin bottom", 1], ["left", "", "Margin left", 1], ["right", "", "Margin right", 1],
-    ["z", "SetZAxisMargin", "Margin for a colour scale", 1], ["zOff", "SetZAxisOffset", "Colour scale to frame", 0.5], ["zWidth", "SetZAxisWidth", "Colour scale width", 0.5],
+    ["z", "SetColorScaleMargin", "Margin for a colour scale", 1], ["zOff", "SetColorScaleOffset", "Colour scale to frame", 0.5], ["zWidth", "SetColorScaleWidth", "Colour scale width", 0.5],
     ["spacing", "SetPanelSpacing", "Space between touching panels", 1]]],
   ["text", "Text", [["text", "SetTextSize", "Labels, legends, texts", 0.5], ["title", "SetTitleSize", "Axis titles", 0.5], ["labelOff", "SetLabelOffset", "Labels to axis", 0.5],
     ["xTitleOff", "SetXTitleOffset", "x title to axis", 0.5], ["yTitleOff", "SetYTitleOffset", "y title to axis (0: next to the labels)", 0.5], ["zTitleOff", "SetZTitleOffset", "z title to colour scale", 0.5]]],

@@ -60,7 +60,7 @@ int main() {
     Plot plot("spectrum", "paper/pt", "1d_ratio");              // name, group[/subgroup], base plot
     plot[1].AddData("hPt", "data", "data <mean[.2f]>").SetDrawOption(points).SetColor(kBlue + 1);
     plot[1].AddData("hPtMC", "mc", "simulation").SetDrawOption(curve);
-    plot[2].AddRatio({"hPt", "data"}, {"hPtMC", "mc"}).SetIsCorrelated();
+    plot[2].AddRatio({"hPt", "data"}, {"hPtMC", "mc"}).SetCorrelated();
     plot[1].AddLegend();                                        // auto-placed, or AddLegend(0.6, 0.9) / AddLegend(top_right)
     plot[0]['X'].SetRange(0.5, 20.0).SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})");
     plot[1]['Y'].SetLog();
@@ -168,7 +168,7 @@ Projections of histograms: `.ProjectX(yMin, yMax[, userCoords])`, `.ProjectY(...
 ## Ratios
 
 ```cpp
-plot[2].AddRatio({"num", "src"}, {"den", "src"}, "label").SetIsCorrelated();   // binomial errors for sub-samples
+plot[2].AddRatio({"num", "src"}, {"den", "src"}, "label").SetCorrelated();   // binomial errors for sub-samples
 plot[2].AddRatio(templ("num"), Data("den", "src"));                           // from Data objects (ratio keeps the numerator's look)
 plot[2].AddRatio(...).Both().Normalize().Result().SetColor(kRed);            // modifier scope: Numer() / Denom() / Both() / Result() (default)
 ```
