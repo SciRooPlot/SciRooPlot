@@ -667,6 +667,16 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }
         if (axesOnly && dataIndex != 0) logger::warning("Drawing option '{}' of {}: AXIS and AXIG are removed, the axes are drawn by SciRooPlot (a frame without data: Pad::SetFrame).", *data->GetDrawOption(), data->GetName());
+        // PLC, PMC, PFC: ROOT counts every object drawn with them (TPad::IncrementPaletteColor) and gives each a colour spread over the palette
+        // when it is painted; the frame, a copy of the first data drawn twice, would take colours of its own and shift those of the data
+        if (dataIndex == 0) {
+          for (const char* palette : {"PLC", "PMC", "PFC"}) {
+            for (size_t pos = upper.find(palette); pos != string::npos; pos = upper.find(palette, pos)) {
+              upper.erase(pos, 3);
+              option.erase(pos, 3);
+            }
+          }
+        }
         drawOption += option;
       }
       bool isSampledFunc{};  // a function given by C++ code is written as values sampled over its range: it has no values outside of it
@@ -2751,7 +2761,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   for (auto& [padID, pad] : plot.GetPads()) {
     if (padID == 0) continue;
     auto* pad_ptr = dynamic_cast<TPad*>(canvas_ptr->GetPrimitive(("Pad_" + std::to_string(padID)).data()));
-    auto applyTextDefaults = [&](auto& box) {
+    auto applyTextDefaults = [&, &pad = pad](auto& box) {  // a structured binding can be captured only by an init-capture in C++17
       if (!box->GetTextFont()) {
         if (auto font = get_first(pad.GetDefaultTextFont(), plot[0].GetDefaultTextFont())) box->SetTextFont(*font);
       }
