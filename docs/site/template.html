@@ -821,6 +821,7 @@ figure.plot figcaption { color: #5b6b80 }
         <legend>Line style</legend>
         <div class="chips" id="lines"></div>
         <div class="row"><label for="lw">Width <input id="lw" type="range" min="1" max="6" step="0.5" value="3"></label><output id="lwo" for="lw">3</output></div>
+        <p class="small muted">Dashed and dotted lines on curves of many points (a function or graph with hundreds of points) come out solid in png: ROOT starts the pattern anew on every segment. pdf is fine; otherwise use fewer points, or a solid line in another colour.</p>
       </fieldset>
       <fieldset>
         <legend>Marker style</legend>
@@ -1732,7 +1733,8 @@ const REF = [
   { id: "ratios", g: "data", t: "Ratios", body: `<div class="code"><pre data-snip="ratios"></pre></div><p class="small muted">Where the modifiers act on a ratio: <a href="#ref-modifiers">Modifiers and projections</a>.</p><p>Incompatible binnings are divided via spline interpolation. Settings on the ratio itself act on the result; write <code>Numer()</code>, <code>Denom()</code> or <code>Both()</code> before modifiers that belong to the inputs.</p>` },
   { id: "trees", g: "data", t: "Trees and tables", body: `<div class="code"><pre data-snip="trees"></pre></div><p>Expressions and filters are C++ over the column names, evaluated with RDataFrame when the plot is drawn. Without explicit bins, 100 bins over the observed range are used. CSV and other text tables work the same way, and so do RNTuples, ROOT's newer format for tables (written e.g. by uproot); RNTuples cannot be joined, and ROOT chains them only when they have the same path in every file.</p>` },
   { id: "plots", g: "layout", t: "Plots, pads and axes", body: `<div class="code"><pre data-snip="plots"></pre></div>
-<p>Axis ranges belong to the pad (<code>plot[1]['X'].SetRange</code>), visible data ranges to the data (<code>SetRangeX</code>). Ranges stored with input histograms are ignored, except for the data that defines the frame.</p>` },
+<p>Axis ranges belong to the pad (<code>plot[1]['X'].SetRange</code>), visible data ranges to the data (<code>SetRangeX</code>). Ranges stored with input histograms are ignored, except for the data that defines the frame.</p>
+<p>A time axis (<code>SetTimeFormat</code>) divides its range into a fixed number of seconds, so over many years its ticks do not fall on calendar years or decades (1969, 1979, …). For long ranges store decimal years and use a plain axis: its ticks land on 1960, 1970, ….</p>` },
   { id: "baseplots", g: "layout", t: "Base plots and own layouts", body: `<p>A base plot is the layout a plot is drawn on: canvas size, the arrangement of the pads, margins, fonts, text sizes and the colour sequence. You name it as the third argument of <code>Plot</code>; the plot itself then only holds data, titles and ranges. All shipped base plots share the same text sizes, tick lengths and line widths, so figures with different layouts look alike side by side in a paper or thesis.</p>
 <h3>Find or design a base plot</h3>
 <p>The name of a shipped one is built as <code>&lt;type&gt;[_wide|_tall][_&lt;columns&gt;x&lt;rows&gt;][_ratio][_pull][_gap]</code> (<code>_ratio</code> and <code>_pull</code> only for <code>1d</code>), e.g. <code>1d_2x1_ratio</code>. The <a href="#layouts">layout designer</a> lets you pick the parts or design your own grid, text sizes and margins, drawn to scale with the pad numbers and the code.</p>

@@ -89,12 +89,13 @@ plot.SetDimensions(710, 710[, fixAspect]).SetTransparent().AppendGroup("QA");
 plot[0]...        // defaults for all pads (text font/size, margins, colour lists, ref function)
 plot[1].SetPosition(x1,y1,x2,y2).SetMargins(t,b,l,r).SetFrameFill(1001, 10).SetPalette(kBird).SetView(theta, phi)   // 3D view in degrees (ROOT: 30, 30)
 plot[1].SetDefaultMarkerColors({kBlack, kRed+1}).SetDefaultLineStyles({kSolid, kDashed})   // cycled over the data
+// dashed/dotted lines on curves of hundreds of points come out solid in png (ROOT restarts the pattern per segment; pdf is fine): fewer points or a solid line in another colour
 // every colour argument takes a ROOT colour (kRed + 1), "#rrggbb" or {r, g, b} from 0 to 1 (Python: a tuple); transparency only with the alpha setters
 plot[1].SetDefaultColors(gradient)   // {{"#000080", 0.0}, {kRed, 0.5}, {{1.0, 1.0, 0.0}, 1.0}}: (colour, position) or {r,g,b,position}, all in [0,1], positions not decreasing (end colours beyond the first/last); also SetPalette(gradient)
 plot[1].SetRefFunc("1");              // reference line/function in a ratio pad (drawn first, black); SetRefFunc("") removes the one of the base plot
 plot[1]['X'].SetTitle("#it{x}").SetRange(a, b).SetLog().SetGrid().SetNumDivisions(305).SetMaxDigits(3).SetNoExponent()
             .SetTitleFont(43).SetTitleSize(28).SetTitleOffset(1.1).SetLabelFont(43).SetLabelSize(24)   // sizes in pixels only with font 43; with the default font 42 they are fractions of the pad
-            .SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")
+            .SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")   // ticks every fixed number of seconds: not on calendar years; for long ranges store decimal years on a plain axis
             .SetHideClippedLabels(false) // the base plots drop a label whose text would reach beyond the pad (top label of a ratio pad at the shared edge); false keeps it
 plot[1]['Y'].SetRoomAboveMax(0.3).SetRoomBelowMin(0.1)    // 30 % / 10 % of the frame free beyond everything drawn in the pad (any axis; error bars
                                                          // where ROOT counts them; log axes in decades); an explicit SetMinRange/SetMaxRange wins on its side
