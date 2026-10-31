@@ -38,7 +38,7 @@ CLASSES = [
         "PanelLayout.h",
         "class Panel",
         "Panel",
-        "a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes, `Empty(width, height)` one with a size of its own, `ZAxis()` (or `ZAxis(padID)`) a cell holding one colour scale for the panels sharing the z axis with the panel left of it (or with pad padID)",
+        "a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes, `Empty(width, height)` one with a size of its own, `Hole()` (or `Hole(width, height)`) an empty cell without pad (no pad number), `ZAxis()` (or `ZAxis(padID)`) a cell holding one colour scale for the panels sharing the z axis with the panel left of it (or with pad padID)",
     ),
     ("PanelLayout.h", "class PanelLayout", "PanelLayout", "arrangement of panels and the sizes shared by all base plots"),
     ("PlotManager.h", "class BasePlotShape", "BasePlotShape", "proportions of the panels of PlotManager::MakeBasePlot"),

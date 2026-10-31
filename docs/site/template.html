@@ -561,8 +561,8 @@ figure.plot figcaption { color: #5b6b80 }
   <div class="wrap">
     <a class="logo" href="#start"><img src="img/brand/logo-small.png" alt="" width="126" height="96"><span class="wordmark">Sci<span>Roo</span>Plot</span></a>
     <nav class="views" aria-label="Sections">
-      <a href="#tour">Tour</a><a href="#from-root">vs. ROOT</a><a href="#numpy">numpy</a><a href="#styles">Styles</a><a href="#layouts">Layouts</a>
-      <a href="#options">Draw options</a><a href="#examples">Examples</a><a href="#reference">Reference</a><a href="#install">Install</a><a href="#updating">Updating</a>
+      <a href="#tour">Tour</a><a href="#from-root">vs. ROOT</a><a href="#numpy">numpy</a><a href="#layouts">Layouts</a>
+      <a href="#options">Draw options</a><a href="#styles">Styles</a><a href="#examples">Examples</a><a href="#reference">Reference</a><a href="#install">Install</a><a href="#updating">Updating</a>
     </nav>
     <div class="search" role="search">
       <input id="sq" type="search" placeholder="Search  /" aria-label="Search the documentation" autocomplete="off" spellcheck="false">
@@ -1749,10 +1749,11 @@ const REF = [
 <tr><td><code>Gap()</code></td><td>between panels of a row, or as a row of its own: the neighbours get their own axes and labels instead of sharing them</td></tr>
 <tr><td><code>Empty()</code></td><td>a cell without axes, e.g. for a legend or text</td></tr>
 <tr><td><code>Empty(w, h)</code></td><td>an empty cell with a size of its own, for a row or column without panels</td></tr>
+<tr><td><code>Hole()</code>, <code>Hole(w, h)</code></td><td>an empty cell without pad: it takes no pad number and stays blank, e.g. the corner where a ratio row meets a panel on the right</td></tr>
 <tr><td><code>.Span(columns, rows)</code></td><td>the cell covers several columns and rows; it is listed once, in the row where it starts, and the rows below leave its place out: <code>[[Empty(1, 0.2).Span(3)], [Panel(), Panel(), Panel()]]</code> puts a legend strip above three panels</td></tr>
 </tbody></table></div>
 <p>The proportions of the shipped names can be changed too: <code>MakeBasePlot("1d_wide_ratio", PanelLayout(), BasePlotShape().SetAspectRatio(1.333).SetRatioHeight(0.25))</code> gives wide panels of 4 : 3 and thinner ratio panels (default 1.618 and 0.37).</p>
-<p class="small muted">Pads are numbered in reading order, row by row; <code>Empty()</code> and <code>ZAxis()</code> cells get a number too (a pad without a frame, e.g. for a legend), gaps get none. <code>PlotManager::MakeBasePlot</code> in the sources builds every shipped layout this way.</p>
+<p class="small muted">Pads are numbered in reading order, row by row; <code>Empty()</code> and <code>ZAxis()</code> cells get a number too (a pad without a frame, e.g. for a legend), gaps and holes get none. <code>PlotManager::MakeBasePlot</code> in the sources builds every shipped layout this way.</p>
 <h3>Panels that read as one figure</h3>
 <p>Touching panels share their axes: the panels of a column the x axis, the panels of a row the y axis (panels of the same width or height; a wide panel touching narrow ones shares nothing, and the layout warns: put a <code>Gap()</code> between them). Shared means the same scale: the same range, log scale and time format. A range, log scale or time format set in one of them, or in pad 0, holds for all of them; without a range they get the union of the ranges each would get on its own. The inner labels are hidden, and the outer title of a row (x) or column (y) is drawn once for all its panels, at the end of their common axis (centred with <code>SetTitleCenter()</code>), when they all show the same one; <code>PanelLayout().SetCommonTitles(false)</code> keeps a title per panel. A <code>Gap()</code> makes both sides independent.</p>
 <p>Any other pads can share an axis too, across a gap or not neighbours at all: <code>plot.ShareAxis('Y', {1, 2})</code>. A pad listed again leaves its earlier group (<code>ShareAxis('Y', {2})</code> takes pad 2 out), an empty list undoes all groups of the axis, also those of the layout. Shared z with a <code>ZAxis()</code> cell gives one colour scale for several maps; the grids <code>2d_&lt;columns&gt;x&lt;rows&gt;</code> are built that way (the cell is the pad after the panels of the first row), <code>2d_&lt;columns&gt;x&lt;rows&gt;_gap</code> keeps a scale per panel. Maps in 3D views (lego, surfaces) share the z axis too (range and colours), x and y only flat frames. A plot with shared automatic ranges is painted twice when the panels would get different ranges on their own.</p>
@@ -2606,14 +2607,15 @@ function teaserShow(i) { // the figures of one comparison; wide multi-panel figu
 const PL_DEFAULTS = { panel: 638, top: 32, bottom: 118, left: 118, right: 32, z: 268, zOff: 5.12, zWidth: 46.08, spacing: 0, text: 31.52, title: 39.4, tick: 19.15, labelOff: 3.94, xTitleOff: 63.04, yTitleOff: 0, zTitleOff: 122.9, lw: 5, ms: 1.4 };
 // G: { cols: [{ w, kind, z, own, gapAfter }] (kind "short": attached panels; own: an x title of its own), rows: [{ h, kind, ref, compact, own, gapAfter }]
 // (kind "short": attached panels; ref: the function of a reference line,
-// compact: few y divisions and a centred title, own: another quantity, with a y title of its own), empty: Set of "r,c", span: Map "r,c" -> [columns, rows] }
+// compact: few y divisions and a centred title, own: another quantity, with a y title of its own), empty: Set of "r,c", hole: Set of "r,c" (empty cells without pad,
+// also in empty), span: Map "r,c" -> [columns, rows] }
 function gridCells(G) { // the cells in reading order (as listed in PanelLayout) and the cell covering every position
   const nC = G.cols.length, nR = G.rows.length, owner = [...Array(nR)].map(() => Array(nC).fill(-1)), cells = [];
   for (let r = 0; r < nR; r++) for (let c = 0; c < nC; c++) {
     if (owner[r][c] >= 0) continue;
     const key = r + "," + c, [cs, rs] = G.span.get(key) || [1, 1], i = cells.length;
     const scale = !!(G.scale && G.scale.has(key));  // a ZAxis() cell: no panel (like an empty cell), with the colour scale of the panels left of it
-    cells.push({ key, r, c, r1: r + rs - 1, c1: c + cs - 1, empty: G.empty.has(key) || scale, scale });
+    cells.push({ key, r, c, r1: r + rs - 1, c1: c + cs - 1, empty: G.empty.has(key) || scale, scale, hole: !scale && !!(G.hole && G.hole.has(key)) });
     for (let rr = r; rr <= r + rs - 1; rr++) for (let cc = c; cc <= c + cs - 1; cc++) owner[rr][cc] = i }
   return { cells, owner } }
 function panelGeometry(G, S) {
@@ -2621,7 +2623,7 @@ function panelGeometry(G, S) {
   if (cells.every(k => k.empty)) return { error: "The grid has no panel." };
   for (let c = 0; c < nC; c++) if (!cells.some(k => k.c === c && k.c1 === c)) return { error: `Column ${c + 1} has no width: every cell in it spans further columns.` };
   for (let r = 0; r < nR; r++) if (!cells.some(k => k.r === r && k.r1 === r)) return { error: `Row ${r + 1} has no height: every cell in it spans further rows.` };
-  if (cells.length > 255) return { error: "More than 255 pads." };
+  if (cells.filter(k => !k.hole).length > 255) return { error: "More than 255 pads." };
   const colScale = G.cols.map((c, i) => cells.some(k => k.scale && k.c === i));
   for (const k of cells) {
     if (k.scale && k.c1 > k.c) return { error: `The colour scale cell in row ${k.r + 1}, column ${k.c + 1} spans one column.` };
@@ -2640,8 +2642,9 @@ function panelGeometry(G, S) {
   const width = X.total, height = Y.total, pads = [], warnings = [], rm = c => colZ[c] ? S.z : S.right;
   const none = { p: false, e: false, s: false }, side = (r0, r1, c0, c1) => { // which kinds of cells touch a side of a cell
     const t = { p: false, e: false, s: false }; for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { const k = cells[owner[r][c]]; t[k.scale ? "s" : k.empty ? "e" : "p"] = true } return t };
-  cells.forEach(({ key, r, c, r1, c1, empty, scale }, i) => {
-    const id = i + 1, L = c > 0 ? side(r, r1, c - 1, c - 1) : none, R = c1 + 1 < nC ? side(r, r1, c1 + 1, c1 + 1) : none,
+  let nPads = 0;  // a hole takes no pad number (id 0)
+  cells.forEach(({ key, r, c, r1, c1, empty, scale, hole }) => {
+    const id = hole ? 0 : ++nPads, L = c > 0 ? side(r, r1, c - 1, c - 1) : none, R = c1 + 1 < nC ? side(r, r1, c1 + 1, c1 + 1) : none,
       A = r > 0 ? side(r - 1, r - 1, c, c1) : none, B = r1 + 1 < nR ? side(r1 + 1, r1 + 1, c, c1) : none;
     let x0, x1, y0, y1;
     if (scale) {
@@ -2660,8 +2663,8 @@ function panelGeometry(G, S) {
       y1 = r1 + 1 === nR ? height : !B.p ? Y.high[r1] + S.bottom : Y.boundary[r1];
     }
     [x0, x1, y0, y1] = [x0, x1, y0, y1].map(Math.round);
-    if (empty && (x1 <= x0 || y1 <= y0)) { warnings.push(`The empty cell in row ${r + 1}, column ${c + 1} leaves no space for pad ${id}.`); return }
-    const row = G.rows[r], pad = { id, key, r, c, r1, c1, x0, x1, y0, y1, empty, scale, subCol: c === c1 && !!G.cols[c].kind, ownX: c === c1 && !!G.cols[c].own, sub: !!row.kind, ref: row.ref || "", compact: !!row.compact, own: !!row.own };
+    if (empty && (x1 <= x0 || y1 <= y0)) { if (!hole) warnings.push(`The empty cell in row ${r + 1}, column ${c + 1} leaves no space for pad ${id}.`); return }
+    const row = G.rows[r], pad = { id, key, r, c, r1, c1, x0, x1, y0, y1, empty, scale, hole, subCol: c === c1 && !!G.cols[c].kind, ownX: c === c1 && !!G.cols[c].own, sub: !!row.kind, ref: row.ref || "", compact: !!row.compact, own: !!row.own };
     if (!empty || scale) Object.assign(pad, { fl: X.low[c], fr: X.high[c1], ft: Y.low[r], fb: Y.high[r1], z: colZ[c1] && !row.kind,
       sharedLeft: L.p && colSep[c - 1][2], sharedBelow: B.p && rowSep[r1][2], sharedAbove: A.p && rowSep[r - 1][2] });
     pads.push(pad) });
@@ -2722,14 +2725,14 @@ function layState() {
   if (colorsChanged()) d.k = LAY.colors;
   if (refChanged()) d.e = LAY.ref;
   if (!LAY.commonTitles) d.T = false;
-  if (LAY.custom) d.G = { cols: G.cols, rows: G.rows, empty: [...G.empty], span: [...G.span], scale: [...G.scale] };
+  if (LAY.custom) d.G = { cols: G.cols, rows: G.rows, empty: [...G.empty], hole: [...G.hole], span: [...G.span], scale: [...G.scale] };
   return btoa(unescape(encodeURIComponent(JSON.stringify(d)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "") }
 function layApply(code) {
   try {
     const d = JSON.parse(decodeURIComponent(escape(atob(code.replace(/-/g, "+").replace(/_/g, "/"))))), n = v => Number.isInteger(v) && v >= 1 && v <= 16;
     if (!["1d", "2d"].includes(d.t) || !["", "wide", "tall"].includes(d.s) || !n(d.c) || !n(d.r)) return false;
     const unit = Object.fromEntries(SIDES.map(k => [k, (Array.isArray(d.u && d.u[k]) ? d.u[k] : []).filter(a => a && +a.size > 0).map(a => ({ ...attached(), ...a, size: +a.size, ref: String(a.ref || "") }))]));
-    const G = d.G && { cols: d.G.cols, rows: d.G.rows, empty: new Set(d.G.empty), span: new Map(d.G.span), scale: new Set(d.G.scale || []) };
+    const G = d.G && { cols: d.G.cols, rows: d.G.rows, empty: new Set(d.G.empty), hole: new Set((d.G.hole || []).filter(k => d.G.empty.includes(k))), span: new Map(d.G.span), scale: new Set(d.G.scale || []) };
     if (G) { if (!G.cols.length || !G.rows.length || !G.cols.every(c => +c.w > 0) || !G.rows.every(r => +r.h > 0)) return false; panelGeometry(G, PL_DEFAULTS) }  // throws if malformed
     Object.assign(LAY, { type: d.t, shape: d.s, cols: d.c, rows: d.r, unit, gap: !!d.g, strip: !!d.w, full: !!d.f, name: String(d.n || ""), aspect: +d.a || SHAPE_DEFAULTS.aspect,
       S: { ...PL_DEFAULTS, ...Object.fromEntries(Object.entries(d.S || {}).filter(([k, v]) => k in PL_DEFAULTS && isFinite(v))) },
@@ -2767,12 +2770,12 @@ function presetGrid(p = LAY) { // the grid of the unit repeated cols x rows time
     colRuns.push([cols.length, u.right.length + (maps && u.right.length ? 1 : 0)]); u.right.forEach(a => { if (a.apart) cols[cols.length - 1].gapAfter = true; cols.push({ ...mainCol(a.size, false), kind: "short", own: a.own }) });
     if (maps && u.right.length) { scaleCols.push(cols.length); cols.push(mainCol(1, false)) }
     cols[cols.length - 1].gapAfter = p.gap && c < p.cols - 1 }
-  const G = { cols, rows, empty: new Set(), span: new Map(), scale: new Set() };
+  const G = { cols, rows, empty: new Set(), hole: new Set(), span: new Map(), scale: new Set() };
   if (sharedScale) { scaleCols.push(cols.length); cols.push(mainCol(1, false)) }
   scaleCols.forEach(c => { if (sharedScale) { G.scale.add(`${mainRows[0]},${c}`); if (mainRows.length > 1) G.span.set(`${mainRows[0]},${c}`, [1, mainRows[mainRows.length - 1] - mainRows[0] + 1]) }
     else mainRows.forEach(r => G.scale.add(`${r},${c}`)) });
   // a corner of a unit (attached rows beside attached columns) is one empty cell, e.g. a place for the legend next to a ratio panel
-  // (one cell per row and column where a gap runs through the corner)
+  // (one cell per row and column where a gap runs through the corner); the cell tools can make it a hole (no pad)
   const gapIn = (list, i0, n) => list.slice(i0, i0 + n - 1).some(x => x.gapAfter);
   rowRuns.filter(([, n]) => n).forEach(([r0, nr]) => colRuns.filter(([, n]) => n).forEach(([c0, nc]) => {
     if (gapIn(rows, r0, nr) || gapIn(cols, c0, nc)) { for (let r = r0; r < r0 + nr; r++) for (let c = c0; c < c0 + nc; c++) G.empty.add(`${r},${c}`); return }
@@ -2783,7 +2786,7 @@ function presetGrid(p = LAY) { // the grid of the unit repeated cols x rows time
 // the named unit a grid is, if any: a grid built by hand that a name describes gets that name (and the short code)
 function matchPreset(G) {
   const key = g => JSON.stringify([g.cols.map(c => [+c.w, c.kind || "", !!c.z, !!c.own, !!c.gapAfter]), g.rows.map(r => [+r.h, r.kind || "", r.ref || "", !!r.compact, !!r.own, !!r.gapAfter]),
-    [...g.empty].sort(), [...g.span].sort(), [...g.scale].sort()]), want = key(G);
+    [...g.empty].sort(), [...(g.hole || [])].sort(), [...g.span].sort(), [...g.scale].sort()]), want = key(G);
   for (const type of ["1d", "2d"]) for (const shape of ["", "wide", "tall"]) for (const below of type === "1d" ? BELOW : [""]) for (const gap of [false, true]) {
     const kinds = below.split("_").filter(Boolean), rows = G.rows.length / (1 + kinds.length);
     if (!Number.isInteger(rows) || rows < 1 || rows > 6) continue;
@@ -2816,7 +2819,7 @@ function fmt(v) { return String(+(+v).toFixed(3)) }
 function layoutCode(py) {
   const G = LAY.G, S = LAY.S, end = py ? "" : ";", cm = py ? "#" : "//", name = layName(), changed = sizesChanged();
   const g = panelGeometry(G, S); if (g.error) return `${cm} ${g.error}`;
-  const panels = g.pads.filter(p => !p.empty && p.ref !== "1").map(p => p.id), ratios = g.pads.filter(p => !p.empty && p.ref === "1").map(p => p.id), empties = g.pads.filter(p => p.empty && !p.scale).map(p => p.id);
+  const panels = g.pads.filter(p => !p.empty && p.ref !== "1").map(p => p.id), ratios = g.pads.filter(p => !p.empty && p.ref === "1").map(p => p.id), empties = g.pads.filter(p => p.empty && !p.scale && !p.hole).map(p => p.id);
   const L = [];
   // the lengths
   const setters = [];
@@ -2856,7 +2859,7 @@ function layoutCode(py) {
       if (k.scale) { // the cell shows the group of the panel to its left; a group further left (e.g. a map left of its projection) is named
         const ids = g.shared.Z[g.pads.filter(q => q.scale).findIndex(q => q.key === k.key)] || [], left = g.pads.find(q => q.r <= k.r && k.r <= q.r1 && q.c <= k.c - 1 && k.c - 1 <= q.c1);
         return `ZAxis(${ids.length && !(left && ids.includes(left.id)) ? ids[0] : ""})` + span }
-      if (k.empty) return ((cs === 1 && !ownW(k.c)) || (rs === 1 && !ownH(k.r)) ? `Empty(${fmt(w)}, ${fmt(h)})` : "Empty()") + span;
+      if (k.empty) { const kind = k.hole ? "Hole" : "Empty"; return ((cs === 1 && !ownW(k.c)) || (rs === 1 && !ownH(k.r)) ? `${kind}(${fmt(w)}, ${fmt(h)})` : `${kind}()`) + span }
       return `Panel(${w === 1 && h === 1 ? "" : `${fmt(w)}, ${fmt(h)}`})` + span + (G.cols[k.c1].z && !G.rows[k.r].kind ? ".ZAxis()" : "") };
     const rows = [];
     G.rows.forEach((row, r) => {
@@ -2908,8 +2911,8 @@ function layoutSVG(g, S, maxW, maxH) {
         shows.length ? zScale(p.fl + S.zOff, p.ft, p.fb) : "", `<title>pad ${p.id}: ${shows.length ? "colour scale of pads " + shows.join(", ") : "colour scale of no panel (none left of it)"}</title><text x="${T(p.fl + S.zOff + S.zWidth / 2)}" y="${T(p.fb + S.bottom / 2)}" text-anchor="middle" dominant-baseline="central" font-family="var(--sans)" font-size="12" fill="var(--teal)" font-weight="700">${p.id}</text>`, selected, "</g>");
       continue }
     if (p.empty) {
-      out.push(`<g data-cell="${p.key}" class="lb-pad" tabindex="0" role="button" aria-pressed="${LAY.sel === p.key}" aria-label="pad ${p.id}, empty cell"><rect x="${T(p.x0)}" y="${T(p.y0)}" width="${T(p.x1 - p.x0)}" height="${T(p.y1 - p.y0)}" fill="transparent"/>`, `<rect x="${T(p.x0) + 3}" y="${T(p.y0) + 3}" width="${Math.max(0, T(p.x1 - p.x0) - 6)}" height="${Math.max(0, T(p.y1 - p.y0) - 6)}" fill="none" stroke="var(--teal)" stroke-dasharray="4 3" rx="4"/>`,
-        `<text x="${T((p.x0 + p.x1) / 2)}" y="${T((p.y0 + p.y1) / 2)}" text-anchor="middle" dominant-baseline="central" font-family="var(--sans)" font-size="12" fill="var(--teal)" font-weight="700">${p.id} (empty)</text>`, selected, "</g>");
+      out.push(`<g data-cell="${p.key}" class="lb-pad" tabindex="0" role="button" aria-pressed="${LAY.sel === p.key}" aria-label="${p.hole ? "hole, no pad" : `pad ${p.id}, empty cell`}"><rect x="${T(p.x0)}" y="${T(p.y0)}" width="${T(p.x1 - p.x0)}" height="${T(p.y1 - p.y0)}" fill="transparent"/>`, `<rect x="${T(p.x0) + 3}" y="${T(p.y0) + 3}" width="${Math.max(0, T(p.x1 - p.x0) - 6)}" height="${Math.max(0, T(p.y1 - p.y0) - 6)}" fill="none" stroke="${p.hole ? "var(--muted)" : "var(--teal)"}" stroke-dasharray="4 3" rx="4"/>`,
+        `<text x="${T((p.x0 + p.x1) / 2)}" y="${T((p.y0 + p.y1) / 2)}" text-anchor="middle" dominant-baseline="central" font-family="var(--sans)" font-size="12" fill="${p.hole ? "var(--muted)" : "var(--teal)"}" font-weight="700">${p.hole ? "no pad" : `${p.id} (empty)`}</text>`, selected, "</g>");
       continue }
     const { fl, fr, ft, fb } = p, fw = fr - fl, fh = fb - ft, padW = p.x1 - p.x0, tick = S.tick;
     out.push(`<g data-pad="${p.id}" data-cell="${p.key}" class="lb-pad" tabindex="0" role="button" aria-pressed="${LAY.sel === p.key}" aria-label="pad ${p.id}${p.sub ? ", short pad" : ""}"><rect x="${T(p.x0)}" y="${T(p.y0)}" width="${T(padW)}" height="${T(p.y1 - p.y0)}" fill="transparent"/>`);
@@ -2967,7 +2970,7 @@ function spanAllowed(G, key, cs, rs) { // the new block stays in the grid and sw
 function setSpan(G, key, cs, rs) {
   if (!spanAllowed(G, key, cs, rs)) return;
   const [r, c] = key.split(",").map(Number);
-  for (let rr = r; rr < r + rs; rr++) for (let cc = c; cc < c + cs; cc++) if (rr !== r || cc !== c) { G.empty.delete(rr + "," + cc); G.scale.delete(rr + "," + cc) }  // swallowed cells
+  for (let rr = r; rr < r + rs; rr++) for (let cc = c; cc < c + cs; cc++) if (rr !== r || cc !== c) { G.empty.delete(rr + "," + cc); G.hole.delete(rr + "," + cc); G.scale.delete(rr + "," + cc) }  // swallowed cells
   if (cs === 1 && rs === 1) G.span.delete(key); else G.span.set(key, [cs, rs]) }
 function sharedInfo(g) { // the axes shared by the layout and the titles drawn once, as the plot will have them
   const list = groups => groups.filter(ids => ids.length).map(ids => ids.join("+")).join(", ");
@@ -2977,9 +2980,9 @@ function sharedInfo(g) { // the axes shared by the layout and the titles drawn o
   return `<p class="small muted">${parts.length ? `Shared scales (range, log, time format): ${parts.join("; ")}.` : ""} ${titles.length ? `One title for ${titles.join("; ")} (when they show the same one).` : ""} Other pads can share an axis with <code>plot.ShareAxis('Y', ${lang === "py" ? "[1, 2]" : "{1, 2}"})</code>.</p>` }
 function cellTools(g) { // what can be done with the selected cell
   const G = LAY.G, p = LAY.sel && g.pads && g.pads.find(q => q.key === LAY.sel);
-  if (!p) return `<p class="small muted">Click a pad (or Tab to it and press Enter) to change it: empty cell, colour scale of the panels left of it, or spanning further columns and rows.</p>`;
+  if (!p) return `<p class="small muted">Click a pad (or Tab to it and press Enter) to change it: empty cell (with or without a pad), colour scale of the panels left of it, or spanning further columns and rows.</p>`;
   const cs = p.c1 - p.c + 1, rs = p.r1 - p.r + 1, b = (op, label, ok) => `<button class="chip" data-cellop="${op}" ${ok ? "" : "disabled"}>${label}</button>`;
-  return `<div class="lb-line"><span class="lb-l">Pad ${p.id}</span>${b("empty", p.empty ? "make it a panel" : "make it empty", true)}${p.scale ? "" : b("scale", "make it a colour scale", cs === 1)}
+  return `<div class="lb-line"><span class="lb-l">${p.hole ? "Hole" : `Pad ${p.id}`}</span>${b("empty", p.empty ? "make it a panel" : "make it empty", true)}${p.empty && !p.scale ? b("hole", p.hole ? "give it a pad" : "no pad (hole)", true) : ""}${p.scale ? "" : b("scale", "make it a colour scale", cs === 1)}
     ${b("right", "wider →", !p.scale && spanAllowed(G, p.key, cs + 1, rs))}${b("left", "← narrower", cs > 1)}${b("down", "taller ↓", spanAllowed(G, p.key, cs, rs + 1))}${b("up", "↑ shorter", rs > 1)}
     <span class="small muted">${cs > 1 || rs > 1 ? `spans ${cs} × ${rs} cells` : ""}</span></div>` }
 function renderLayout() {
@@ -3134,10 +3137,10 @@ function renderLayout() {
     const a = b.dataset.grid;
     if (a === "resetsizes") { LAY.S = { ...PL_DEFAULTS }; rerender(); return }
     const shift = (dr, dc, at) => { const moved = set => { const e = new Set(); set.forEach(k => { const [r, c] = k.split(",").map(Number); if (dr && r === at) return; if (dc && c === at) return; e.add(`${r - (dr && r > at ? 1 : 0)},${c - (dc && c > at ? 1 : 0)}`) }); return e };
-      G.empty = moved(G.empty); G.scale = moved(G.scale) };
+      G.empty = moved(G.empty); G.hole = moved(G.hole); G.scale = moved(G.scale) };
     if (a === "strip" || a === "topshort") { // a row above the grid: one empty cell for a legend or a text shared by all panels, or short panels (e.g. a projection above a map)
       const moved = k => { const [r, c] = k.split(",").map(Number); return `${r + 1},${c}` };
-      G.empty = new Set([...G.empty].map(moved)); G.scale = new Set([...G.scale].map(moved)); G.span = new Map([...G.span].map(([k, v]) => [moved(k), v]));
+      G.empty = new Set([...G.empty].map(moved)); G.hole = new Set([...G.hole].map(moved)); G.scale = new Set([...G.scale].map(moved)); G.span = new Map([...G.span].map(([k, v]) => [moved(k), v]));
       if (a === "topshort") G.rows.unshift(shortRow());
       else { G.rows.unshift(mainRow(0.2)); G.empty.add("0,0"); if (G.cols.length > 1) G.span.set("0,0", [G.cols.length, 1]); LAY.sel = "0,0" } }
     if (a === "addcol") { const last = G.cols[G.cols.length - 1], like = [...G.cols].reverse().find(c => !c.kind) || last; last.gapAfter = G.cols.length > 1 && G.cols[0].gapAfter; G.cols.push(mainCol(like.w, like.z)) }
@@ -3159,8 +3162,9 @@ function renderLayout() {
     LAY.G = presetGrid() } rerender() });
   host.querySelectorAll("[data-cellop]").forEach(b => b.onclick = () => {
     const key = LAY.sel, [cs, rs] = G.span.get(key) || [1, 1], op = b.dataset.cellop;
-    if (op === "empty") { if (G.empty.has(key) || G.scale.has(key)) { G.empty.delete(key); G.scale.delete(key) } else G.empty.add(key) }
-    else if (op === "scale") { G.empty.delete(key); G.scale.add(key); scaleColumns(G) }
+    if (op === "empty") { if (G.empty.has(key) || G.scale.has(key)) { G.empty.delete(key); G.hole.delete(key); G.scale.delete(key) } else G.empty.add(key) }
+    else if (op === "hole") { if (G.hole.has(key)) G.hole.delete(key); else G.hole.add(key) }
+    else if (op === "scale") { G.empty.delete(key); G.hole.delete(key); G.scale.add(key); scaleColumns(G) }
     else { const [dc, dr] = { right: [1, 0], left: [-1, 0], down: [0, 1], up: [0, -1] }[op]; setSpan(G, key, cs + dc, rs + dr) }
     custom(); rerender() });
   // colours and the reference lines: a bad name is marked and kept out of the code until it is a colour
@@ -3428,7 +3432,7 @@ function npInit() {
   npRender() }
 
 /* ---------------- views */
-const VIEWS = ["start", "tour", "from-root", "numpy", "styles", "layouts", "options", "cheatsheet", "examples", "data", "reference", "install", "updating"];
+const VIEWS = ["start", "tour", "from-root", "numpy", "layouts", "options", "styles", "cheatsheet", "examples", "data", "reference", "install", "updating"];
 function route() {
   const h = location.hash.slice(1);
   const sub = /^(ref|api)-/.test(h) ? h : null;                    // a topic or a class of the reference

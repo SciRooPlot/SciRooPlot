@@ -430,7 +430,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
 
 ## Panel
-*a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes, `Empty(width, height)` one with a size of its own, `ZAxis()` (or `ZAxis(padID)`) a cell holding one colour scale for the panels sharing the z axis with the panel left of it (or with pad padID)*
+*a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes, `Empty(width, height)` one with a size of its own, `Hole()` (or `Hole(width, height)`) an empty cell without pad (no pad number), `ZAxis()` (or `ZAxis(padID)`) a cell holding one colour scale for the panels sharing the z axis with the panel left of it (or with pad padID)*
 
 - `Panel(double_t width = 1., double_t height = 1.)`
 - `Panel& ZAxis()` — room for the colour scale of this panel to its right

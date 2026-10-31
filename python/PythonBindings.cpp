@@ -329,6 +329,8 @@ void exportPanelLayout(py::module_& m)
   m.def("Gap", &Gap, "Separates independent panels: both sides keep their axis labels and titles.");
   m.def("Empty", py::overload_cast<>(&Empty), "A cell of the grid without axis frame, its remaining space becomes a pad for texts.");
   m.def("Empty", py::overload_cast<double_t, double_t>(&Empty), arg("width"), arg("height"), "An empty cell with a size of its own, e.g. a strip for a common legend.");
+  m.def("Hole", py::overload_cast<>(&Hole), "An empty cell without pad: it takes no pad number and stays blank.");
+  m.def("Hole", py::overload_cast<double_t, double_t>(&Hole), arg("width"), arg("height"), "An empty cell without pad with a size of its own.");
   m.def("ZAxis", py::overload_cast<>(&ZAxis), "A cell holding the colour scale of the z group of the panel to its left.");
   m.def("ZAxis", py::overload_cast<uint8_t>(&ZAxis), arg("padID"), "A cell holding the colour scale of the z group of the given pad.");
   py::class_<PanelLayout>(m, "PanelLayout", "Arrangement of panels (rows from top to bottom) and the lengths of the standard plot in pixels.")

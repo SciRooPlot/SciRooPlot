@@ -84,6 +84,20 @@ Panel Empty(double_t width, double_t height)
   return empty;
 }
 
+Panel Hole()
+{
+  Panel hole = Empty();
+  hole.mHole = true;
+  return hole;
+}
+
+Panel Hole(double_t width, double_t height)
+{
+  Panel hole = Empty(width, height);
+  hole.mHole = true;
+  return hole;
+}
+
 Panel ZAxis()
 {
   Panel cell;
@@ -238,7 +252,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
     size_t row;  // first row and column of its block
     size_t col;
   };
-  vector<Cell> cells;             // in reading order: cell i is pad i + 1
+  vector<Cell> cells;             // in reading order: cell i is pad padOf[i] (see below)
   vector<vector<int32_t>> owner;  // [row][column]: the cell covering the position (-1: free)
   vector<int8_t> gapAfterColumn;  // gap between column c and c + 1: 1 or 0, -1 while only spanned over
   vector<bool> gapAfterRow;       // gap between row r and r + 1
@@ -308,8 +322,15 @@ void PanelLayout::ApplyTo(Plot& plot) const
   if (nRows == 0) logger::throw_invalid_argument("Layout: no panels.");
   if (pendingRowGap) logger::throw_invalid_argument("Layout: the last row must contain panels.");
   if (owner.size() > nRows) logger::throw_invalid_argument("Layout: a cell spans below the last row.");
-  if (cells.size() > std::numeric_limits<uint8_t>::max()) {
-    logger::throw_invalid_argument("Layout: {} cells would exceed the maximum of {} pads.", cells.size(), std::numeric_limits<uint8_t>::max());
+  // the pad numbers of the cells in reading order (0: a hole, no pad)
+  vector<uint8_t> padOf(cells.size(), 0);
+  size_t nPads = 0;
+  for (size_t i = 0; i < cells.size(); ++i) {
+    if (cells[i].panel->mHole) continue;
+    if (++nPads > std::numeric_limits<uint8_t>::max()) {
+      logger::throw_invalid_argument("Layout: more than {} pads.", std::numeric_limits<uint8_t>::max());
+    }
+    padOf[i] = static_cast<uint8_t>(nPads);
   }
 
   // sizes of the columns and rows in pixels, from the cells that cover a single one (and whether a column has a colour scale,
@@ -404,7 +425,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
   const double_t canvasHeight = edges(mMarginTop, rowHeight, rowSep, mMarginBottom, frameTop, frameBottom, boundaryY);
   plot.SetDimensions(static_cast<int32_t>(canvasWidth), static_cast<int32_t>(canvasHeight), true);
 
-  // one pad per cell, numbered in reading order
+  // one pad per cell except holes, numbered in reading order
   struct Neighbours {
     bool panel{};  // a panel touches this side
     bool empty{};  // an empty cell touches this side
@@ -424,7 +445,8 @@ void PanelLayout::ApplyTo(Plot& plot) const
   const bool singlePanel = (nRows == 1 && nCols == 1);
   for (size_t i = 0; i < cells.size(); ++i) {
     const auto& [cell, r0, c0] = cells[i];
-    const auto padID = static_cast<uint8_t>(i + 1);
+    if (cell->mHole) continue;
+    const uint8_t padID = padOf[i];
     const size_t r1 = r0 + cell->mRows - 1;
     const size_t c1 = c0 + cell->mColumns - 1;
     const Neighbours left = (c0 > 0) ? neighbours(r0, r1, c0 - 1, c0 - 1) : Neighbours{};
@@ -469,7 +491,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
       uint8_t scaleOf = cell->mScaleOf;
       if (scaleOf == 0 && c0 > 0) {
         const auto leftCell = static_cast<size_t>(owner[r0][c0 - 1]);
-        if (!cells[leftCell].panel->mEmpty && !cells[leftCell].panel->mScaleCell) scaleOf = static_cast<uint8_t>(leftCell + 1);
+        if (!cells[leftCell].panel->mEmpty && !cells[leftCell].panel->mScaleCell) scaleOf = padOf[leftCell];
       }
       pad.mColorScaleOf = scaleOf;  // 0: no panel to show (warned when drawn)
       pad.SetMargins((frameTop[r0] - y0) / height, (y1 - frameBottom[r1]) / height, 0.f, 0.f);
@@ -579,7 +601,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
     }
     std::map<size_t, vector<uint8_t>> groups;
     for (size_t i = 0; i < cells.size(); ++i) {
-      if (isPanel(static_cast<int32_t>(i))) groups[find(i)].push_back(static_cast<uint8_t>(i + 1));
+      if (isPanel(static_cast<int32_t>(i))) groups[find(i)].push_back(padOf[i]);
     }
     vector<vector<uint8_t>> result;
     for (auto& [first, pads] : groups) {

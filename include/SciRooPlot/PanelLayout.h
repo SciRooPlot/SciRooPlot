@@ -47,6 +47,8 @@ class Panel
   friend Panel Gap();
   friend Panel Empty();
   friend Panel Empty(double_t width, double_t height);
+  friend Panel Hole();
+  friend Panel Hole(double_t width, double_t height);
   friend Panel ZAxis();
   friend Panel ZAxis(uint8_t padID);
   double_t mWidth{1.};
@@ -57,6 +59,7 @@ class Panel
   bool mZAxis{false};
   bool mGap{false};
   bool mEmpty{false};
+  bool mHole{false};  // an empty cell without pad
   bool mScaleCell{false};
   uint8_t mScaleOf{};  // 0: the panel to the left
 };
@@ -71,6 +74,11 @@ Panel Empty();
 // An empty cell with a size of its own, for rows or columns without panels, e.g. a strip for a common legend:
 // {Empty(1, 0.25).Span(3)} above three panels.
 Panel Empty(double_t width, double_t height);
+
+// An empty cell without pad: it takes no pad number and stays blank, e.g. the corner where a ratio row meets a panel attached on the right.
+// The panels around it show their axes towards it as next to Empty().
+Panel Hole();
+Panel Hole(double_t width, double_t height);
 
 // A cell holding the colour scale of a group of panels sharing the z axis (Plot::ShareAxis('Z', ...)): the group of the panel to its
 // left, or of the panel with the given pad number (a panel in no z group: its own scale, e.g. for a map beside its projection).
@@ -87,7 +95,7 @@ Panel ZAxis(uint8_t padID);
  * Panels that touch share the axis between them (Plot::ShareAxis: x within a column, y within a row) and their inner labels and
  * titles are hidden; the outer title of a row (x) or column (y) of touching panels is drawn once for all of them (SetCommonTitles).
  * All panels of a column share the width, all panels of a row the height (cells spanning several columns or rows excepted).
- * The pads of the resulting plot are numbered in reading order, gaps have no pad.
+ * The pads of the resulting plot are numbered in reading order, gaps and holes have no pad.
  * Lengths are floating-point pixels of the canvas (the unit of ROOT's line widths and pixel fonts), the defaults are
  * the proportions of the standard 788 x 788 pixel plot: text 0.04 x 788 = 31.52 pixel, axis titles 0.05 x 788 = 39.4, ...
  * Note that ROOT renders text with whole-pixel font sizes (0.934 x size, rounded), so text sizes that differ by less
