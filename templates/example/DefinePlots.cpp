@@ -904,9 +904,8 @@ void DefineHeavyIonPlots(PlotManager& pm)
     plot[1].AddData("correlations/ridge", "heavyion").SetDrawOption(surf_col).SetLineWidth(1.0);
     plot[1].SetView(40.0, 135.0);
     plot[1].SetPalette(kViridis);
-    plot[1]['Z'].SetRange(0.985, 1.03).SetTitle("");  // the jet peak reaches 1.15; a 3D z title runs into the labels
-    plot[1].AddText(0.05, 0.95, "pairs per trigger (a.u.)");
-    plot[1]['X'].SetTitleOffset(1.8);  // in 3D views the axis titles need more room from the labels
+    plot[1]['Z'].SetRange(0.985, 1.03).SetTitleOffset(2.1);  // the jet peak reaches 1.15; the title needs room from the long labels
+    plot[1]['X'].SetTitleOffset(1.8);                        // in 3D views the axis titles need more room from the labels
     plot[1]['Y'].SetTitleOffset(1.8);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
