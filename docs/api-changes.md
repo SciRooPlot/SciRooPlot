@@ -131,6 +131,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| Gradients (`SetPalette`, `SetDefaultColors`, `SetDefaultMarkerColors`/`LineColors`/`FillColors`) took any stops: before the first and after the last position the colours were extrapolated (unrelated colours), decreasing positions gave colour jumps | Warning for positions outside 0–1, decreasing positions and colour components outside 0–1; before the first and after the last position the end colours | input validation | Check gradients that warn; a gradient whose first stop is above 0 now starts with its first colour. |
 | `Plot(name, …)` and `Plot(other, name, group)` accepted an empty name | Throw `std::invalid_argument` (Python `ValueError`) | input validation | Give every plot a name. |
 | Group names taken as given | Leading, trailing and doubled `/` removed, with a warning | input validation | Use clean group paths. |
 | `Project`/`Profile` without dimensions, tree projections with nBins ≤ 0 and no edges | Throw at definition | input validation | Fix these requests. |

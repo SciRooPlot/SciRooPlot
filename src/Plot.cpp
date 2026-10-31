@@ -1011,6 +1011,28 @@ vector<tuple<float_t, float_t, float_t, float_t>> Plot::Pad::GradientEndpoints(c
 
 //**************************************************************************************************
 /**
+ * Warn about gradient stops that cannot give the intended colours: positions outside [0, 1] or decreasing (equal neighbours are a hard
+ * step), colour components outside [0, 1]. Run once when the gradient is set; the painter clamps the interpolation to the end colours.
+ */
+//**************************************************************************************************
+void Plot::Pad::CheckGradient(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, const string& setter)
+{
+  auto inUnitRange = [](float_t value) { return value >= 0.f && value <= 1.f; };
+  for (size_t i = 0; i < rgbEndpoints.size(); ++i) {
+    const auto& [red, green, blue, position] = rgbEndpoints[i];
+    if (!inUnitRange(position)) {
+      logger::warning("{}: gradient stop {} is at position {}, outside of 0 to 1 (the colour scale only covers 0 to 1).", setter, i + 1, position);
+    } else if (i > 0 && position < std::get<3>(rgbEndpoints[i - 1])) {
+      logger::warning("{}: gradient stop {} is at position {}, before the previous one ({}): positions must not decrease.", setter, i + 1, position, std::get<3>(rgbEndpoints[i - 1]));
+    }
+    if (!inUnitRange(red) || !inUnitRange(green) || !inUnitRange(blue)) {
+      logger::warning("{}: gradient stop {} has the colour ({}, {}, {}), components must be between 0 and 1.", setter, i + 1, red, green, blue);
+    }
+  }
+}
+
+//**************************************************************************************************
+/**
  * Set default marker colors.
  */
 //**************************************************************************************************
@@ -1023,6 +1045,7 @@ auto Plot::Pad::SetDefaultMarkerColors(const vector<color_t>& colors) -> decltyp
 
 auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
+  CheckGradient(rgbEndpoints, "SetDefaultMarkerColors");
   mMarkerDefaults.colors = nullopt;
   mMarkerDefaults.alpha = nullopt;
   mMarkerDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
@@ -1047,6 +1070,7 @@ auto Plot::Pad::SetDefaultLineColors(const vector<color_t>& colors) -> decltype(
 
 auto Plot::Pad::SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
+  CheckGradient(rgbEndpoints, "SetDefaultLineColors");
   mLineDefaults.colors = nullopt;
   mLineDefaults.alpha = nullopt;
   mLineDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
@@ -1071,6 +1095,7 @@ auto Plot::Pad::SetDefaultFillColors(const vector<color_t>& colors) -> decltype(
 
 auto Plot::Pad::SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
+  CheckGradient(rgbEndpoints, "SetDefaultFillColors");
   mFillDefaults.colors = nullopt;
   mFillDefaults.alpha = nullopt;
   mFillDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
@@ -1099,6 +1124,7 @@ auto Plot::Pad::SetDefaultColors(const vector<color_t>& colors) -> decltype(*thi
 
 auto Plot::Pad::SetDefaultColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
+  CheckGradient(rgbEndpoints, "SetDefaultColors");
   mMarkerDefaults.colors = nullopt;
   mMarkerDefaults.alpha = nullopt;
   mMarkerDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
@@ -1288,6 +1314,7 @@ auto Plot::Pad::SetPalette(int32_t palette) -> decltype(*this)
 }
 auto Plot::Pad::SetPalette(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
+  CheckGradient(rgbEndpoints, "SetPalette");
   mPalette.index = {};
   mPalette.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;

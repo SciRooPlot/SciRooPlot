@@ -3207,7 +3207,8 @@ string PlotPainter::ColorDefinitionCommand(const std::set<int32_t>& colors)
 
 //**************************************************************************************************
 /**
- * Interpreter command that sets a colour palette interpolated linearly between the given rgb endpoints (with their stops).
+ * Interpreter command that sets a colour palette interpolated linearly between the given rgb endpoints (with their stops),
+ * with the end colours before the first and after the last stop.
  * The colours are looked up by value (TColor::GetColor), so repeated execution does not create new colours.
  */
 //**************************************************************************************************
@@ -3227,7 +3228,7 @@ string PlotPainter::GradientPaletteCommand(int32_t nColors, const vector<tuple<f
   return fmt::format(
     " {{ const Int_t n = {n}; const Double_t s[] = {{{s}}}; const Double_t r[] = {{{r}}}; const Double_t g[] = {{{g}}}; const Double_t b[] = {{{b}}}; Int_t pal[{n}];"
     " for (Int_t i = 0; i < n; ++i) {{ const Double_t x = (n > 1) ? Double_t(i) / (n - 1) : 0.; Int_t k = 0; while (k < {kmax} && x > s[k + 1]) ++k;"
-    " const Double_t t = (s[k + 1] > s[k]) ? (x - s[k]) / (s[k + 1] - s[k]) : 0.;"
+    " const Double_t t = (s[k + 1] > s[k]) ? std::min(1., std::max(0., (x - s[k]) / (s[k + 1] - s[k]))) : 0.;"
     " pal[i] = TColor::GetColor(Float_t(r[k] + t * (r[k + 1] - r[k])), Float_t(g[k] + t * (g[k + 1] - g[k])), Float_t(b[k] + t * (b[k + 1] - b[k])), Float_t({a})); }}"
     " gStyle->SetPalette(n, pal); }}",
     fmt::arg("n", nColors), fmt::arg("s", stops), fmt::arg("r", red), fmt::arg("g", green), fmt::arg("b", blue), fmt::arg("kmax", rgbEndpoints.size() - 2), fmt::arg("a", alpha));
@@ -5823,7 +5824,7 @@ vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vecto
       ++k;
     const auto& [r1, g1, b1, s1] = rgbEndpoints[k];
     const auto& [r2, g2, b2, s2] = rgbEndpoints[k + 1];
-    const double_t t = (s2 > s1) ? (x - s1) / (s2 - s1) : 0.;
+    const double_t t = (s2 > s1) ? std::clamp((x - s1) / (s2 - s1), 0., 1.) : 0.;  // the end colours beyond the first and last stop
     gradientColors.push_back(static_cast<int16_t>(TColor::GetColor(static_cast<float_t>(r1 + t * (r2 - r1)), static_cast<float_t>(g1 + t * (g2 - g1)), static_cast<float_t>(b1 + t * (b2 - b1)), alpha)));
   }
   return gradientColors;
