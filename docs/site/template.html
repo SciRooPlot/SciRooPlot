@@ -2004,6 +2004,7 @@ plot[1].GetLegend(1).AddEntry("#bf{2024 data}").AtTop()
 plot[1].GetLegend(1).AddEntry("#bf{simulation}").BeforeData(4)   # a heading for data 4 and below
 plot[1].GetLegend(1).AddEntry("same marker as data 2").SetRefData(2)
 plot[1].AddData("band", "src", "unc.").SetLegendEntry(LegendEntry().SetSymbolElements("F"))
+plot[1](1).SetLegendEntry(LegendEntry().AfterData(2))   # a model drawn first (under the data) listed after data 2
 plot[1].AddText(top_left, "My Experiment")
 plot[1].AddText(0.2, 0.9, ["line one", "line two"]).SetTextSize(0.04)`, cpp: `plot[1].AddLegend();                         // best free corner
 plot[1].AddLegend(top_right);                 // or a preferred corner, or AddLegend(0.5, 0.8)
@@ -2013,6 +2014,7 @@ plot[1].GetLegend(1).AddEntry("#bf{2024 data}").AtTop();
 plot[1].GetLegend(1).AddEntry("#bf{simulation}").BeforeData(4);  // a heading for data 4 and below
 plot[1].GetLegend(1).AddEntry("same marker as data 2").SetRefData(2);
 plot[1].AddData("band", "src", "unc.").SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+plot[1](1).SetLegendEntry(LegendEntry().AfterData(2));  // a model drawn first (under the data) listed after data 2
 plot[1].AddText(top_left, "My Experiment");
 plot[1].AddText(0.2, 0.9, {"line one", "line two"}).SetTextSize(0.04);` },
   tmpl_before: { py: `spectrum = Plot("ptSpectrum", "spectra", "1d_ratio")

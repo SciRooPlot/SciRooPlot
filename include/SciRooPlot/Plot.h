@@ -717,8 +717,10 @@ class Plot::Pad::LegendEntry : public MarkerSetters<LegendEntry>, public LineSet
   LegendEntry& SetLabel(const std::string& label);
   LegendEntry& SetRefData(uint16_t refDataID);
   LegendEntry& SetSymbolElements(const std::string& symbolElements);
-  // position of a row added with LegendBox::AddEntry (by default after all other rows), relative to the rows of the data of the pad,
-  // which are in the order of the data (dataID as in plot[padID](dataID)), whether or not that data has a row in this legend
+  // position of a row added with LegendBox::AddEntry (by default after all other rows) or of the row of a data item (Data::SetLegendEntry,
+  // by default at the place of the data), relative to the places of the data of the pad, which are in the order of the data
+  // (dataID as in plot[padID](dataID)), whether or not that data has a row in this legend; e.g. a model drawn before the data
+  // (under it) listed after it: plot[1](1).SetLegendEntry(LegendEntry().AfterData(2))
   LegendEntry& AtTop();
   LegendEntry& BeforeData(uint16_t dataID);
   LegendEntry& AfterData(uint16_t dataID);
@@ -729,12 +731,14 @@ class Plot::Pad::LegendEntry : public MarkerSetters<LegendEntry>, public LineSet
   friend class PlotPainter;
   friend class LegendBox;
   friend class Data;
+  friend class Pad;
   enum class position_t : uint8_t { top,
                                     before,
                                     after };
   // the rows a LegendBox makes itself: an extra row with its label, the row of a data item
   explicit LegendEntry(const std::optional<std::string>& label, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& symbolElements = {});
   void operator+=(const LegendEntry& legendEntry);
+  void ShiftPosition(uint16_t offset);  // the data numbers grow by offset (the pad is added to one whose data come first)
 
   boost::property_tree::ptree GetPropertyTree() const;
   const auto& GetRefDataID() const { return mRefDataID; }

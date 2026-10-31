@@ -1736,6 +1736,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   for (const auto& imageBox : pad.mImageBoxes) {
     mImageBoxes.push_back(std::make_shared<ImageBox>(*imageBox));
   }
+  const auto dataOffset = static_cast<uint16_t>(mData.size());  // the data of this pad come first
   for (const auto& data : pad.mData) {
     auto clonedData = data->Clone();
     if (clonedData && clonedData->GetLegendID()) {
@@ -1745,6 +1746,7 @@ void Plot::Pad::operator+=(const Pad& pad)
       }
       clonedData->SetLegend(static_cast<uint8_t>(shiftedLegendID));
     }
+    if (clonedData && clonedData->mLegend.entry) clonedData->mLegend.entry->ShiftPosition(dataOffset);
     mData.push_back(clonedData);
   }
 }
@@ -2485,10 +2487,6 @@ auto Plot::Pad::Data::SetLegendEntry(const LegendEntry& legendEntry) -> decltype
   if (mLegend.entry->mRefDataID) {
     logger::warning("The legend entry of {} cannot refer to other data.", mName);
     mLegend.entry->mRefDataID.reset();
-  }
-  if (mLegend.entry->mPosition) {
-    logger::warning("The legend entry of {} cannot be placed, it is at the place of the data.", mName);
-    mLegend.entry->mPosition.reset();
   }
   return *this;
 }
@@ -4552,7 +4550,11 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetSymbolColScale(float_t scale)
 void Plot::Pad::LegendBox::AddDataRow(const string& label, uint16_t dataID, const optional<LegendEntry>& appearance)
 {
   LegendEntry& entry = mLegendEntries.emplace_back(LegendEntry(label, dataID));
-  if (appearance) entry += *appearance;
+  if (appearance) {
+    entry += *appearance;
+    entry.mPosition = appearance->mPosition;  // a place of its own among the rows (by default the place of the data)
+    entry.mPositionDataID = appearance->mPositionDataID;
+  }
 }
 
 //**************************************************************************************************
@@ -4564,35 +4566,35 @@ void Plot::Pad::LegendBox::ShiftDataIDs(uint16_t offset)
 {
   for (auto& entry : mLegendEntriesUser) {
     if (entry.mRefDataID && !entry.mRefPadID) *entry.mRefDataID += offset;  // rows for the data of another pad keep their number
-    if (entry.mPosition && entry.mPosition != LegendEntry::position_t::top) entry.mPositionDataID += offset;
+    entry.ShiftPosition(offset);
   }
 }
 
 //**************************************************************************************************
 /**
  * Put the rows added with AddEntry between the rows of the data (nData: number of data in the pad).
- * The rows of the data are in the order of the data; a row added by the user is at the top, before or after the place of a data item
- * (whether or not it has a row in this legend) or, by default, at the end. Rows at the same place keep the order in which they were added.
+ * The rows of the data are in the order of the data unless placed with their legend entry; a row is at the top, before or after the place
+ * of a data item (whether or not it has a row in this legend), a row added by the user by default at the end. Rows at the same place:
+ * the rows of the data first (in the order of the data), then the rows added by the user in the order in which they were added.
  */
 //**************************************************************************************************
 void Plot::Pad::LegendBox::MergeLegendEntries(uint16_t nData)
 {
   constexpr int32_t atEnd = std::numeric_limits<int32_t>::max();
   vector<std::pair<std::pair<int32_t, int32_t>, LegendEntry>> rows;  // (data the row is at, before/at/after it), row
+  auto placeOf = [nData](const LegendEntry& entry, std::pair<int32_t, int32_t> unplaced) -> std::pair<int32_t, int32_t> {
+    if (!entry.mPosition) return unplaced;
+    if (entry.mPosition == LegendEntry::position_t::top) return {0, 0};
+    if (entry.mPositionDataID < 1 || entry.mPositionDataID > nData) {
+      logger::warning("Legend entry '{}' is placed relative to data {}, but the pad has {} data.", entry.mLabel.value_or(""), entry.mPositionDataID, nData);
+    }
+    return {entry.mPositionDataID, (entry.mPosition == LegendEntry::position_t::before) ? 0 : 2};
+  };
   for (const auto& entry : mLegendEntries) {
-    rows.push_back({{*entry.mRefDataID, 1}, entry});
+    rows.push_back({placeOf(entry, {*entry.mRefDataID, 1}), entry});
   }
   for (const auto& entry : mLegendEntriesUser) {
-    std::pair<int32_t, int32_t> place{atEnd, 0};
-    if (entry.mPosition == LegendEntry::position_t::top) {
-      place = {0, 0};
-    } else if (entry.mPosition) {
-      if (entry.mPositionDataID < 1 || entry.mPositionDataID > nData) {
-        logger::warning("Legend entry '{}' is placed relative to data {}, but the pad has {} data.", entry.mLabel.value_or(""), entry.mPositionDataID, nData);
-      }
-      place = {entry.mPositionDataID, (entry.mPosition == LegendEntry::position_t::before) ? 0 : 2};
-    }
-    rows.push_back({place, entry});
+    rows.push_back({placeOf(entry, {atEnd, 0}), entry});
   }
   std::stable_sort(rows.begin(), rows.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
   mLegendEntries.clear();
@@ -4680,6 +4682,16 @@ void Plot::Pad::LegendEntry::operator+=(
   mLine.Update(legendEntry.mLine);
   mFill.Update(legendEntry.mFill);
   mText.Update(legendEntry.mText);
+}
+
+//**************************************************************************************************
+/**
+ * Shift the data the position refers to.
+ */
+//**************************************************************************************************
+void Plot::Pad::LegendEntry::ShiftPosition(uint16_t offset)
+{
+  if (mPosition && mPosition != position_t::top) mPositionDataID += offset;
 }
 
 //**************************************************************************************************
