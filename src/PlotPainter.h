@@ -61,6 +61,9 @@ using data_ptr_t = std::variant<TH1*, TH2*, TH3*, TGraph*, TGraph2D*, TProfile*,
 inline const std::map<draw_option_t, std::string> defaultDrawOptions_Hist2d{
   {col, "COL"},
   {colz, "COLZ"},
+  {col_clamped, "COL0"},  // contents below the minimum of the colour scale in its lowest colour, not left out (as above the maximum)
+  {colz_clamped, "COLZ0"},
+  {colz_text, "COLZ TEXT"},  // the value written into each cell
   {box, "BOX"},
   {text, "TEXT"},
   {lego, "LEGO1 0"},
@@ -96,6 +99,15 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Hist2d{
   {candle_meanline, "CANDLEX(111101)"},  // box, mean as line (no median), whiskers up to the extreme values, outliers
   {violin, "VIOLINX2"},
   {violin_minmax, "VIOLINX1"},
+};
+
+// 3d histograms are drawn in 3d: a box per cell with a volume following the content (box), all cells as equal boxes coloured by the
+// content (col, colz), or the iso surface at the mean content of the cells (iso)
+inline const std::map<draw_option_t, std::string> defaultDrawOptions_Hist3d{
+  {box, "BOX"},
+  {col, "BOX2"},
+  {colz, "BOX2Z"},
+  {iso, "ISO"},
 };
 
 inline const std::map<draw_option_t, std::string> defaultDrawOptions_Hist{
@@ -158,6 +170,8 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Graph{
 inline const std::map<draw_option_t, std::string> defaultDrawOptions_Graph2d{
   {col, "COL"},
   {colz, "COLZ"},
+  {col_clamped, "COL0"},
+  {colz_clamped, "COLZ0"},
   {lego, "LEGO1 0"},
   {lego_col, "LEGO2 0"},
   {lego_colz, "LEGO2Z 0"},
@@ -197,6 +211,8 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Graph2d{
 inline const std::map<draw_option_t, std::string> defaultDrawOptions_Func2d{
   {col, "COL"},
   {colz, "COLZ"},
+  {col_clamped, "COL0"},
+  {colz_clamped, "COLZ0"},
   {lego, "LEGO1 0"},
   {lego_col, "LEGO2 0"},
   {lego_colz, "LEGO2Z 0"},

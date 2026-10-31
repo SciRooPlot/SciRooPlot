@@ -20,7 +20,7 @@
 from __future__ import annotations
 import typing
 from . import logger
-__all__: list[str] = ['Axis', 'BasePlotShape', 'Data', 'Empty', 'Gap', 'ImageBox', 'LegendBox', 'LegendEntry', 'Pad', 'Panel', 'PanelLayout', 'Plot', 'PlotManager', 'Ratio', 'Shape', 'StatsBox', 'TextBox', 'ZAxis', 'area', 'area_smooth', 'band', 'band_smooth', 'bars', 'best_corner', 'bottom_left', 'bottom_right', 'box', 'box_placement_t', 'boxes', 'boxes_nomarkers', 'brackets', 'candle', 'candle_mean', 'candle_meanline', 'candle_minmax', 'candle_notched', 'candle_points', 'candle_scatter', 'col', 'col_polar', 'colz', 'colz_polar', 'cont', 'cont_col', 'cont_colz', 'cont_fill', 'cont_fillz', 'cont_smooth', 'cont_smoothz', 'curve', 'curve_clipped', 'draw_option_t', 'graph', 'hbars', 'hist', 'hist_clipped', 'hist_open', 'hist_open_clipped', 'histo', 'histo2d', 'kAlpine', 'kAquamarine', 'kArmy', 'kAsh', 'kAtlantic', 'kAurora', 'kAvocado', 'kAzure', 'kBeach', 'kBird', 'kBlack', 'kBlackBody', 'kBlue', 'kBlueGreenYellow', 'kBlueRedYellow', 'kBlueYellow', 'kBrown', 'kBrownCyan', 'kCMYK', 'kCandy', 'kCherry', 'kCircle', 'kCividis', 'kCoffee', 'kColorPrintableOnGrey', 'kCool', 'kCopper', 'kCubehelix', 'kCyan', 'kDarkBodyRadiator', 'kDarkRainBow', 'kDarkRainbow', 'kDarkTerrain', 'kDashDotted', 'kDashed', 'kDeepSea', 'kDot', 'kDotted', 'kFAlhambra', 'kFBricks', 'kFCircles', 'kFDashed1', 'kFDashed2', 'kFDiamonds', 'kFDotted1', 'kFDotted2', 'kFDotted3', 'kFEmpty', 'kFFrieze', 'kFHatched1', 'kFHatched3', 'kFHatched4', 'kFMetopes', 'kFMondrian', 'kFPyramids', 'kFScales', 'kFSnowflakes', 'kFSolid', 'kFStars1', 'kFStars2', 'kFTiles', 'kFWaves1', 'kFWaves2', 'kFWicker', 'kFall', 'kFourSquaresPlus', 'kFourSquaresX', 'kFruitPunch', 'kFuchsia', 'kFullCircle', 'kFullCross', 'kFullCrossX', 'kFullDiamond', 'kFullDotLarge', 'kFullDotMedium', 'kFullDotSmall', 'kFullDoubleDiamond', 'kFullFourTrianglesPlus', 'kFullFourTrianglesX', 'kFullSquare', 'kFullStar', 'kFullThreeTriangles', 'kFullTriangleDown', 'kFullTriangleUp', 'kGistEarth', 'kGrape', 'kGray', 'kGreen', 'kGreenBrownTerrain', 'kGreenPink', 'kGreenRedViolet', 'kGreyScale', 'kGreyYellow', 'kHAlignCenter', 'kHAlignLeft', 'kHAlignRight', 'kHatched2', 'kInvertedDarkBodyRadiator', 'kIsland', 'kLake', 'kLightTemperature', 'kLightTerrain', 'kMagenta', 'kMint', 'kMultiply', 'kNeon', 'kOcean', 'kOctagonCross', 'kOpenCircle', 'kOpenCross', 'kOpenCrossX', 'kOpenDiamond', 'kOpenDiamondCross', 'kOpenDoubleDiamond', 'kOpenFourTrianglesPlus', 'kOpenFourTrianglesX', 'kOpenSquare', 'kOpenSquareDiagonal', 'kOpenStar', 'kOpenThreeTriangles', 'kOpenTriangleDown', 'kOpenTriangleUp', 'kOrange', 'kP10Ash', 'kP10Blue', 'kP10Brown', 'kP10Cyan', 'kP10Gray', 'kP10Green', 'kP10Orange', 'kP10Red', 'kP10Violet', 'kP10Yellow', 'kP6Blue', 'kP6Grape', 'kP6Gray', 'kP6Red', 'kP6Violet', 'kP6Yellow', 'kP8Azure', 'kP8Blue', 'kP8Cyan', 'kP8Gray', 'kP8Green', 'kP8Orange', 'kP8Pink', 'kP8Red', 'kPastel', 'kPearl', 'kPigeon', 'kPink', 'kPlum', 'kPlus', 'kRainBow', 'kRainbow', 'kRed', 'kRedBlue', 'kRose', 'kRust', 'kSandyTerrain', 'kSienna', 'kSolar', 'kSolid', 'kSouthWest', 'kSpring', 'kStar', 'kStarryNight', 'kSunset', 'kTeal', 'kTemperatureMap', 'kThermometer', 'kVAlignBottom', 'kVAlignCenter', 'kVAlignTop', 'kValentine', 'kViolet', 'kViridis', 'kVisibleSpectrum', 'kWaterMelon', 'kWhite', 'kYellow', 'lego', 'lego_col', 'lego_col_polar', 'lego_colz', 'lego_noborders', 'lego_polar', 'line', 'logger', 'points', 'points_arrows', 'points_col', 'points_colz', 'points_endcaps', 'points_line', 'points_text', 'points_xerr', 'points_xerr_endcaps', 'surf', 'surf_col', 'surf_col_polar', 'surf_colz', 'surf_contours', 'surf_fill', 'surf_fillz', 'surf_polar', 'surf_shaded', 'table', 'text', 'top_left', 'top_right', 'triangles', 'triangles_col', 'triangles_colz', 'triangles_fill', 'triangles_fillz', 'triangles_wire', 'violin', 'violin_minmax']
+__all__: list[str] = ['Axis', 'BasePlotShape', 'Data', 'Empty', 'Gap', 'ImageBox', 'LegendBox', 'LegendEntry', 'Pad', 'Panel', 'PanelLayout', 'Plot', 'PlotManager', 'Ratio', 'Shape', 'StatsBox', 'TextBox', 'ZAxis', 'area', 'area_smooth', 'band', 'band_smooth', 'bars', 'best_corner', 'bottom_left', 'bottom_right', 'box', 'box_placement_t', 'boxes', 'boxes_nomarkers', 'brackets', 'candle', 'candle_mean', 'candle_meanline', 'candle_minmax', 'candle_notched', 'candle_points', 'candle_scatter', 'col', 'col_clamped', 'col_polar', 'colz', 'colz_clamped', 'colz_polar', 'colz_text', 'cont', 'cont_col', 'cont_colz', 'cont_fill', 'cont_fillz', 'cont_smooth', 'cont_smoothz', 'curve', 'curve_clipped', 'draw_option_t', 'graph', 'hbars', 'hist', 'hist_clipped', 'hist_open', 'hist_open_clipped', 'histo', 'histo2d', 'iso', 'kAlpine', 'kAquamarine', 'kArmy', 'kAsh', 'kAtlantic', 'kAurora', 'kAvocado', 'kAzure', 'kBeach', 'kBird', 'kBlack', 'kBlackBody', 'kBlue', 'kBlueGreenYellow', 'kBlueRedYellow', 'kBlueYellow', 'kBrown', 'kBrownCyan', 'kCMYK', 'kCandy', 'kCherry', 'kCircle', 'kCividis', 'kCoffee', 'kColorPrintableOnGrey', 'kCool', 'kCopper', 'kCubehelix', 'kCyan', 'kDarkBodyRadiator', 'kDarkRainBow', 'kDarkRainbow', 'kDarkTerrain', 'kDashDotted', 'kDashed', 'kDeepSea', 'kDot', 'kDotted', 'kFAlhambra', 'kFBricks', 'kFCircles', 'kFDashed1', 'kFDashed2', 'kFDiamonds', 'kFDotted1', 'kFDotted2', 'kFDotted3', 'kFEmpty', 'kFFrieze', 'kFHatched1', 'kFHatched3', 'kFHatched4', 'kFMetopes', 'kFMondrian', 'kFPyramids', 'kFScales', 'kFSnowflakes', 'kFSolid', 'kFStars1', 'kFStars2', 'kFTiles', 'kFWaves1', 'kFWaves2', 'kFWicker', 'kFall', 'kFourSquaresPlus', 'kFourSquaresX', 'kFruitPunch', 'kFuchsia', 'kFullCircle', 'kFullCross', 'kFullCrossX', 'kFullDiamond', 'kFullDotLarge', 'kFullDotMedium', 'kFullDotSmall', 'kFullDoubleDiamond', 'kFullFourTrianglesPlus', 'kFullFourTrianglesX', 'kFullSquare', 'kFullStar', 'kFullThreeTriangles', 'kFullTriangleDown', 'kFullTriangleUp', 'kGistEarth', 'kGrape', 'kGray', 'kGreen', 'kGreenBrownTerrain', 'kGreenPink', 'kGreenRedViolet', 'kGreyScale', 'kGreyYellow', 'kHAlignCenter', 'kHAlignLeft', 'kHAlignRight', 'kHatched2', 'kInvertedDarkBodyRadiator', 'kIsland', 'kLake', 'kLightTemperature', 'kLightTerrain', 'kMagenta', 'kMint', 'kMultiply', 'kNeon', 'kOcean', 'kOctagonCross', 'kOpenCircle', 'kOpenCross', 'kOpenCrossX', 'kOpenDiamond', 'kOpenDiamondCross', 'kOpenDoubleDiamond', 'kOpenFourTrianglesPlus', 'kOpenFourTrianglesX', 'kOpenSquare', 'kOpenSquareDiagonal', 'kOpenStar', 'kOpenThreeTriangles', 'kOpenTriangleDown', 'kOpenTriangleUp', 'kOrange', 'kP10Ash', 'kP10Blue', 'kP10Brown', 'kP10Cyan', 'kP10Gray', 'kP10Green', 'kP10Orange', 'kP10Red', 'kP10Violet', 'kP10Yellow', 'kP6Blue', 'kP6Grape', 'kP6Gray', 'kP6Red', 'kP6Violet', 'kP6Yellow', 'kP8Azure', 'kP8Blue', 'kP8Cyan', 'kP8Gray', 'kP8Green', 'kP8Orange', 'kP8Pink', 'kP8Red', 'kPastel', 'kPearl', 'kPigeon', 'kPink', 'kPlum', 'kPlus', 'kRainBow', 'kRainbow', 'kRed', 'kRedBlue', 'kRose', 'kRust', 'kSandyTerrain', 'kSienna', 'kSolar', 'kSolid', 'kSouthWest', 'kSpring', 'kStar', 'kStarryNight', 'kSunset', 'kTeal', 'kTemperatureMap', 'kThermometer', 'kVAlignBottom', 'kVAlignCenter', 'kVAlignTop', 'kValentine', 'kViolet', 'kViridis', 'kVisibleSpectrum', 'kWaterMelon', 'kWhite', 'kYellow', 'lego', 'lego_col', 'lego_col_polar', 'lego_colz', 'lego_noborders', 'lego_polar', 'line', 'logger', 'points', 'points_arrows', 'points_col', 'points_colz', 'points_endcaps', 'points_line', 'points_text', 'points_xerr', 'points_xerr_endcaps', 'surf', 'surf_col', 'surf_col_polar', 'surf_colz', 'surf_contours', 'surf_fill', 'surf_fillz', 'surf_polar', 'surf_shaded', 'table', 'text', 'top_left', 'top_right', 'triangles', 'triangles_col', 'triangles_colz', 'triangles_fill', 'triangles_fillz', 'triangles_wire', 'violin', 'violin_minmax']
 class draw_option_t:
     """
     Members:
@@ -81,7 +81,15 @@ class draw_option_t:
 
       colz
 
+      colz_text
+
+      col_clamped
+
+      colz_clamped
+
       box
+
+      iso
 
       lego
 
@@ -179,9 +187,12 @@ class draw_option_t:
     candle_points: typing.ClassVar[draw_option_t]
     candle_scatter: typing.ClassVar[draw_option_t]
     col: typing.ClassVar[draw_option_t]
+    col_clamped: typing.ClassVar[draw_option_t]
     col_polar: typing.ClassVar[draw_option_t]
     colz: typing.ClassVar[draw_option_t]
+    colz_clamped: typing.ClassVar[draw_option_t]
     colz_polar: typing.ClassVar[draw_option_t]
+    colz_text: typing.ClassVar[draw_option_t]
     cont: typing.ClassVar[draw_option_t]
     cont_col: typing.ClassVar[draw_option_t]
     cont_colz: typing.ClassVar[draw_option_t]
@@ -196,6 +207,7 @@ class draw_option_t:
     hist_clipped: typing.ClassVar[draw_option_t]
     hist_open: typing.ClassVar[draw_option_t]
     hist_open_clipped: typing.ClassVar[draw_option_t]
+    iso: typing.ClassVar[draw_option_t]
     lego: typing.ClassVar[draw_option_t]
     lego_col: typing.ClassVar[draw_option_t]
     lego_col_polar: typing.ClassVar[draw_option_t]
@@ -1503,9 +1515,12 @@ candle_notched: draw_option_t
 candle_points: draw_option_t
 candle_scatter: draw_option_t
 col: draw_option_t
+col_clamped: draw_option_t
 col_polar: draw_option_t
 colz: draw_option_t
+colz_clamped: draw_option_t
 colz_polar: draw_option_t
+colz_text: draw_option_t
 cont: draw_option_t
 cont_col: draw_option_t
 cont_colz: draw_option_t
@@ -1520,6 +1535,7 @@ hist: draw_option_t
 hist_clipped: draw_option_t
 hist_open: draw_option_t
 hist_open_clipped: draw_option_t
+iso: draw_option_t
 kAlpine: int = 63
 kAquamarine: int = 64
 kArmy: int = 65

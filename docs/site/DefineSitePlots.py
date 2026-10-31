@@ -11,13 +11,14 @@ EXAMPLE = "${SCIROOPLOT_DATA_DIR}/ExampleData"
 ALIASES_1D = ["points", "points_xerr", "points_endcaps", "points_xerr_endcaps", "points_line", "points_text", "points_arrows",
               "line", "curve", "curve_clipped", "hist", "hist_open", "hist_clipped", "hist_open_clipped", "bars", "hbars",
               "area", "area_smooth", "band", "band_smooth", "boxes", "boxes_nomarkers", "brackets", "text"]
-ALIASES_2D = ["col", "colz", "box", "text", "lego", "lego_col", "lego_colz", "lego_noborders", "surf", "surf_col", "surf_colz",
+ALIASES_2D = ["col", "colz", "col_clamped", "colz_clamped", "colz_text", "box", "text", "lego", "lego_col", "lego_colz", "lego_noborders", "surf", "surf_col", "surf_colz",
               "surf_fill", "surf_fillz", "surf_contours", "surf_shaded", "col_polar", "colz_polar", "lego_polar", "lego_col_polar",
               "surf_polar", "surf_col_polar", "cont", "cont_col", "cont_colz", "cont_fill", "cont_fillz",
               "cont_smooth", "cont_smoothz", "candle", "candle_minmax", "candle_mean", "candle_notched", "candle_points",
               "candle_scatter", "candle_meanline", "violin", "violin_minmax"]
 ALIASES_FUNC = ["points", "line", "curve", "area", "area_smooth"]
-ALIASES_2D_FUNC = [a for a in ALIASES_2D if a not in ("box", "text") and not a.startswith(("candle", "violin"))]
+ALIASES_3D = ["box", "col", "colz", "iso"]
+ALIASES_2D_FUNC = [a for a in ALIASES_2D if a not in ("box", "text", "colz_text") and not a.startswith(("candle", "violin"))]
 ALIASES_2D_GRAPH = ALIASES_2D_FUNC + ["triangles", "triangles_wire", "triangles_col", "triangles_colz", "triangles_fill", "triangles_fillz",
                                       "points", "points_col", "points_colz", "line"]
 POLAR_FUNC = "(1+0.6*cos(2*x))*exp(-(y-1.5)*(y-1.5))"  # x the angle, y the radius: two lobes on a ring
@@ -107,7 +108,9 @@ def DefineGallery(pm: PlotManager):
             data.RebinX(10)
             plot[1]['Y'].SetRange(0.0, 3.0)
         elif not polar:
-            data.RebinXY(10, 6) if alias in ("text", "box") else data.RebinXY(4, 3)
+            data.RebinXY(10, 6) if alias in ("text", "colz_text", "box") else data.RebinXY(4, 3)
+        if alias.endswith("_clamped"):  # a minimum above the lowest contents: they are drawn in the lowest colour instead of left out
+            plot[1]['Z'].SetMinRange(100.0)
         if alias.startswith(("lego", "surf")):
             plot[1].SetView(35.0, 225.0)
             data.SetLineWidth(1.0)  # thin edges: thick ones darken a 3D view
@@ -163,6 +166,18 @@ def DefineGallery(pm: PlotManager):
             data.SetLineWidth(1.0)
         plot[1]['X'].SetTitle("")
         plot[1]['Y'].SetTitle("")
+        pm.AddPlot(plot)
+    # a 3d histogram: a blob of points around the centre
+    hist3d = ROOT.TH3D("h3d", "", 12, -3.0, 3.0, 12, -3.0, 3.0, 12, -3.0, 3.0)
+    for _ in range(20000):
+        hist3d.Fill(rng.gauss(0.0, 1.0), rng.gauss(0.0, 1.0), rng.gauss(0.0, 1.0))
+    pm.AddDataSource("hist3d", hist3d)
+    for alias in ALIASES_3D:
+        plot = Plot(alias, "gallery/hist3d", "2d")
+        plot[1].AddData("h3d", "hist3d").SetDrawOption(globals()[alias]).SetLineWidth(1.0)
+        plot[1].SetView(35.0, 225.0)
+        for axis in "XYZ":
+            plot[1][axis].SetTitle("")
         pm.AddPlot(plot)
     # the viewing angles of 3D drawings (Pad::SetView), shown below the 2D tabs of the gallery: one 3D drawing per kind of data
     for theta, phi in VIEWS:

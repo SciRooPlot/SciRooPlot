@@ -23,7 +23,9 @@ DESC = {
     "hist_clipped": "steps cut at the frame instead of running along it", "hist_open_clipped": "open steps cut at the frame", "bars": "bars with gaps",
     "hbars": "horizontal bars", "area": "filled down to zero", "area_smooth": "smooth curve filled to zero", "band": "filled error band",
     "band_smooth": "smoothed error band", "boxes": "error boxes with markers", "boxes_nomarkers": "error boxes only", "brackets": "brackets at the error ends",
-    "text": "the values written into the plot", "col": "colour map", "colz": "colour map with colour scale", "box": "boxes sized by content",
+    "text": "the values written into the plot", "col": "colour map", "colz": "colour map with colour scale", "col_clamped": "colour map, cells below the minimum in the lowest colour", "colz_clamped": "clamped colour map with colour scale",
+    "colz_text": "colour map with the values written into the cells", "box": "boxes sized by content",
+    "iso": "iso surface at the mean content of the cells",
     "lego": "3D bars", "lego_col": "3D bars coloured by content", "lego_colz": "coloured 3D bars with colour scale", "lego_noborders": "3D bars without borders",
     "surf": "wire-frame surface", "surf_col": "surface lines coloured by content", "surf_colz": "coloured surface lines with colour scale",
     "surf_fill": "filled surface", "surf_fillz": "filled surface with colour scale", "surf_contours": "surface with contours drawn on top",
@@ -40,10 +42,10 @@ DESC = {
 }
 opts = []
 for line in open(f"{REPO}/docs/skill/scirooplot/reference/drawing-options.md"):
-    m = re.match(r"^\| `(\w+)` \| (.*?) \| (.*?) \| (.*?) \| (.*?) \| (.*?) \| (.*?) \|$", line)
+    m = re.match(r"^\| `(\w+)` \| (.*?) \| (.*?) \| (.*?) \| (.*?) \| (.*?) \| (.*?) \| (.*?) \|$", line)
     if m:
         clean = lambda c: c.strip().strip("`").replace("*", "")
-        kinds = ["hist", "graph", "func", "hist2d", "graph2d", "func2d"]
+        kinds = ["hist", "graph", "func", "hist2d", "graph2d", "func2d", "hist3d"]
         opts.append({"alias": m.group(1), **{k: clean(m.group(i + 2)) for i, k in enumerate(kinds)}, "desc": DESC.get(m.group(1), "")})
 s = open(f"{SITE}/template.html").read()
 examples = open(f"{GEN}/examples.json").read()

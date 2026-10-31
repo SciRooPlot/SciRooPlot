@@ -683,6 +683,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if constexpr (is_hist_2d<data_type>()) {
             options = &defaultDrawOptions_Hist2d;
             typeName = "2d histogram";
+          } else if constexpr (is_hist_3d<data_type>()) {
+            options = &defaultDrawOptions_Hist3d;
+            typeName = "3d histogram";
           } else if constexpr (is_hist_1d<data_type>()) {
             options = &defaultDrawOptions_Hist;
             typeName = "1d histogram";
@@ -879,6 +882,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               polargram->Draw();
               padSetup += " gStyle->SetOptTitle(0);";  // otherwise each polar graph paints its title as a box at the top
             }
+          }
+          if constexpr (is_hist_3d<data_type>()) {
+            // the colour boxes of a TH3 (BOX2, which COL stands for) fill the pad behind the 3d box with the frame fill colour
+            // (TView3D::PadRange), but in the colour last used for the colour scale when that colour is not 0: the walls came out in the
+            // colour of the palette maximum
+            TString upper(drawOption);
+            upper.ToUpper();
+            if (upper.Contains("BOX2") || upper.Contains("COL")) pad_ptr->SetFrameFillColor(0);
           }
           if (!polargram) {
             data_ptr->Draw(drawOption.data());
@@ -1398,6 +1409,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
             if constexpr (is_hist_1d<data_type>() || is_func_1d<data_type>()) {
               if (alias == line || alias == curve) data_ptr->SetFillStyle(0);  // HIST L and HIST C would also fill the histogram, L and C the area below a function
+            }
+            if constexpr (is_func_3d<data_type>()) {
+              // ROOT paints the surface f = 0 of a 3d function with flat faces in the fill colour (whatever the fill style) and its mesh in the
+              // line colour: without a fill colour of its own, white faces with the mesh in the data's colour (as ROOT's default), not a silhouette
+              if (!data->GetFillColor() && !keep) data_ptr->SetFillColor(kWhite);
             }
           }
 
@@ -2305,7 +2321,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             } else {
               optionAlias = (isHist) ? hist : line;
             }
-          } else if constexpr (is_hist_2d<data_type>()) {
+          } else if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
             optionAlias = colz;
           }
         }

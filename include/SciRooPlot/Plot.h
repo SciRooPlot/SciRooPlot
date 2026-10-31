@@ -80,7 +80,11 @@ namespace SciRooPlot
   OPT(text)                \
   OPT(col)                 \
   OPT(colz)                \
+  OPT(colz_text)           \
+  OPT(col_clamped)         \
+  OPT(colz_clamped)        \
   OPT(box)                 \
+  OPT(iso)                 \
   OPT(lego)                \
   OPT(lego_col)            \
   OPT(lego_colz)           \
