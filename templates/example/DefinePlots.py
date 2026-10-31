@@ -1078,7 +1078,7 @@ def DefineAcceleratorPlots(pm: PlotManager):
     plot[4].AddData("hBeamSpot", "accelerator").ProjectY().NormalizeToMaximum().SetDrawOption(hbars).SetFill(1001, kAzure - 9)
     plot[2].AddText(0.05, 0.8, ["screen 3", "#sigma_{#it{x}} = <stddev[.1f]:1@1> mm", "#sigma_{#it{y}} = <stddev[.1f]:1@4> mm"])
     plot[1]['Y'].SetRange(0.0, 1.1).SetTitle("")
-    plot[4]['X'].SetTitle("")
+    plot[4]['Y'].SetTitle("")
     pm.AddPlot(plot)
 
     # the particles of a bunch in horizontal phase space, with the rms ellipse (the emittance in its title) ------------

@@ -1014,11 +1014,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           axisHist_ptr->SetBit(TH1::kNoTitle);
 
           // apply axis settings
+          const bool hbarFrame = IsHBarFrame(pad_ptr, axisHist_ptr);  // with HBAR the X and Y of the pad are the y and x axis of the histogram
           for (auto axisLabel : {'X', 'Y', 'Z'}) {
+            // axisLabel: the axis of the pad (X horizontal, Y vertical); histLabel: the axis of the frame histogram drawn there
+            const char histLabel = (hbarFrame && axisLabel != 'Z') ? ((axisLabel == 'X') ? 'Y' : 'X') : axisLabel;
             TAxis* axis_ptr = nullptr;
-            if (axisLabel == 'X')
+            if (histLabel == 'X')
               axis_ptr = axisHist_ptr->GetXaxis();
-            else if (axisLabel == 'Y')
+            else if (histLabel == 'Y')
               axis_ptr = axisHist_ptr->GetYaxis();
             else if (axisLabel == 'Z')
               axis_ptr = axisHist_ptr->GetZaxis();
@@ -1125,8 +1128,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // ranges are only touched if the user set one: ROOT's bin edges are not exactly reproducible (e.g. 4.000000000000001 instead of 4),
             // so feeding the drawn range back in through SetRangeUser would add the overflow bin
             if (userRangeMin || userRangeMax) {
-              const bool isBinnedAxis = (axisLabel == 'X') || (isTHN && axisLabel == 'Y') || (axisHist_ptr->InheritsFrom(TH3::Class()) && axisLabel == 'Z');
-              if (is_graph_1d<data_type>() && axisLabel == 'X') {
+              const bool isBinnedAxis = (histLabel == 'X') || (isTHN && histLabel == 'Y') || (axisHist_ptr->InheritsFrom(TH3::Class()) && histLabel == 'Z');
+              if (is_graph_1d<data_type>() && histLabel == 'X') {
                 // the frame of a graph is an empty histogram whose bins mean nothing: its x axis is set to the user values instead of
                 // the edges of the bins containing them (the y range is the minimum and maximum, as for every 1d frame)
                 const double_t min = userRangeMin.value_or(axis_ptr->GetBinLowEdge(std::max(axis_ptr->GetFirst(), 1)));
@@ -1159,7 +1162,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
             // a log scale needs a positive range: ROOT otherwise complains and draws nothing (or the data outside of the frame)
             if (!pad_ptr->GetView()) {
-              const bool isDependentAxis = (axisLabel == ((isTHN) ? 'Z' : 'Y'));
+              const bool isDependentAxis = (histLabel == ((isTHN) ? 'Z' : 'Y'));
               const bool isLog = (axisLabel == 'X') ? pad_ptr->GetLogx() : ((axisLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
               auto disableLog = [&]() {
                 if (axisLabel == 'X')
@@ -1230,9 +1233,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (textColorLabel) axis_ptr->SetLabelColor(textColorLabel->ToIndex());
             if (textAlphaLabel) axis_ptr->SetLabelColor(TColor::GetColorTransparent(axis_ptr->GetLabelColor(), *textAlphaLabel));
             if (labelAngle) {
-              // with horizontal bars the x axis is drawn vertically, and TGaxis paints its bin labels horizontally (angle 0, as on a y axis)
-              const bool horizontalBars = TString(drawOption).Contains("HBAR", TString::kIgnoreCase);
-              if (axisLabel == 'X' && axis_ptr->GetLabels() && !horizontalBars) {
+              // with horizontal bars the bin labels are on the vertical axis, where TGaxis paints them horizontally (angle 0, as on a y axis)
+              if (axisLabel == 'X' && !hbarFrame && axis_ptr->GetLabels()) {
                 // TGaxis::PaintAxis knows four orientations of the bin labels (the bits LabelsOption sets), each with the alignment that fits
                 // it; another angle is given to every label (ChangeLabel numbers them by bin, takes only angles >= 0) with the alignment
                 // ROOT uses for its tilted ones: a label rising to the right ends at its tick, a falling one starts there
@@ -1484,7 +1486,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           const bool hasRangeY = data->GetMinRangeY() || data->GetMaxRangeY();
           if constexpr (is_hist_1d<data_type>()) {
             // ROOT draws the bars and fill areas of a histogram from its own minimum, also in an existing frame: start them at the lower edge of the frame
-            if (!pad_ptr->GetView()) data_ptr->SetMinimum(ymin);
+            if (!pad_ptr->GetView()) data_ptr->SetMinimum((TString(drawOption).Contains("HBAR", TString::kIgnoreCase)) ? xmin : ymin);
           }
           bool cutXAtFrame = true;
           bool cutYAtFrame = (axisHist_ptr->GetDimension() > 1);  // the y axis of a 1d frame has no bins
@@ -2677,13 +2679,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       pad_ptr->SetPhi(*phi);
     }
 
+    const bool hbarFrame = axisHist_ptr && IsHBarFrame(pad_ptr, axisHist_ptr);
     for (auto axisLabel : {'X', 'Y'}) {
       bool hide{};
       for (const Plot::Pad& curPad : {std::cref(padDefaults), std::cref(plot.GetPads()[padID])}) {
         auto axis = curPad.GetAxes().find(axisLabel);
         if (axis != curPad.GetAxes().end() && axis->second.GetHideClippedLabels()) hide = *axis->second.GetHideClippedLabels();
       }
-      if (hide && axisHist_ptr && !polarFrame && !polargram) HideClippedLabels(pad_ptr, (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis(), axisLabel);
+      if (hide && axisHist_ptr && !polarFrame && !polargram) HideClippedLabels(pad_ptr, ((axisLabel == 'X') != hbarFrame) ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis(), axisLabel);
     }
 
     // the setup has to be the first primitive of the pad, so that it runs before anything of the pad is painted
@@ -2832,6 +2835,21 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
 //**************************************************************************************************
 /**
+ * Whether the frame histogram of a pad is drawn with HBAR: ROOT then draws its x axis vertically and its contents horizontally,
+ * so the axes of the pad (X horizontal, Y vertical) are the y and x axis of the histogram.
+ */
+//**************************************************************************************************
+bool PlotPainter::IsHBarFrame(TPad* pad, const TH1* frame)
+{
+  if (frame->GetDimension() != 1) return false;
+  for (TObjLink* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+    if (link->GetObject() == frame) return TString(link->GetOption()).Contains("HBAR", TString::kIgnoreCase);
+  }
+  return false;
+}
+
+//**************************************************************************************************
+/**
  * Room beyond the drawn data (Axis::SetRoomAboveMax/SetRoomBelowMin), applied once all data of a pad are drawn and before the pad is painted:
  * the frame gets the range in which the requested fraction of it stays free beyond the data (in decades on a log axis).
  * The room is free of all data of the pad: along a binned axis (x, y of 2d) everything the data would show without the frame (histograms
@@ -2846,6 +2864,10 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
 {
   const bool is2d = frame->GetDimension() > 1;
   const char valueAxis = (is2d) ? 'Z' : 'Y';
+  // a frame drawn with HBAR shows the histogram's x axis vertically: the room set for an axis of the pad (X horizontal, Y vertical)
+  // is applied to the axis of the histogram drawn there, and everything below works on the axes of the histogram
+  const bool hbar = IsHBarFrame(pad, frame);
+  auto histLabel = [hbar](char padLabel) { return (hbar && padLabel != 'Z') ? ((padLabel == 'X') ? 'Y' : 'X') : padLabel; };
   struct room_t {
     char axisLabel;
     optional<double_t> below;
@@ -2882,15 +2904,19 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
       logger::warning("Room on the {} axis of pad {} ignored: room below and above add up to {:g} of the frame.", axisLabel, padID, room.below.value_or(0.) + room.above.value_or(0.));
       continue;
     }
-    if (axisLabel != valueAxis && ((axisLabel == 'X') ? frame->GetXaxis() : frame->GetYaxis())->GetLabels()) {
+    if (histLabel(axisLabel) != valueAxis && ((histLabel(axisLabel) == 'X') ? frame->GetXaxis() : frame->GetYaxis())->GetLabels()) {
       logger::warning("Room on the {} axis of pad {} ignored: an axis with bin labels cannot be widened.", axisLabel, padID);
       continue;
     }
+    room.axisLabel = histLabel(axisLabel);
     rooms.push_back(room);
   }
   if (rooms.empty()) return;
 
-  auto isLogAxis = [pad](char axisLabel) { return (axisLabel == 'X') ? pad->GetLogx() : ((axisLabel == 'Y') ? pad->GetLogy() : pad->GetLogz()); };
+  auto isLogAxis = [pad, &histLabel](char axisLabel) {
+    const char padLabel = histLabel(axisLabel);  // the swap is its own inverse
+    return (padLabel == 'X') ? pad->GetLogx() : ((padLabel == 'Y') ? pad->GetLogy() : pad->GetLogz());
+  };
   // the ranges drawn so far: those of the frame, painted when it was set up (data drawn on top do not change them)
   double_t xMin{}, yMin{}, xMax{}, yMax{};
   pad->GetRangeAxis(xMin, yMin, xMax, yMax);
@@ -2901,6 +2927,10 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
   if (pad->GetLogy()) {
     yMin = TMath::Power(10., yMin);
     yMax = TMath::Power(10., yMax);
+  }
+  if (hbar) {
+    std::swap(xMin, yMin);
+    std::swap(xMax, yMax);
   }
   // functions given as formula in the plot definition span the frame along the axes without a range of their own
   auto spansFrame = [](const Plot::Pad::Data& data, char axisLabel) {
@@ -3116,7 +3146,7 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
       frameMin = (dataMin - *room.below * frameMax) / (1. - *room.below);
     }
     if (!(frameMin < frameMax)) {
-      logger::warning("Room on the {} axis of pad {} ignored: the drawn data leave no valid range.", axisLabel, padID);
+      logger::warning("Room on the {} axis of pad {} ignored: the drawn data leave no valid range.", histLabel(axisLabel), padID);
       continue;
     }
     const double_t newMin = fromFrame(frameMin);
@@ -5589,7 +5619,7 @@ void PlotPainter::DrawCommonTitle(TCanvas* canvas, char axisLabel, const vector<
     auto frame = mFrameHists.find(padID);
     auto* pad = dynamic_cast<TPad*>(canvas->GetPrimitive(("Pad_" + std::to_string(padID)).data()));
     if (frame == mFrameHists.end() || !pad) return;  // a panel without flat frame: every panel keeps its title
-    members.emplace_back(pad, isX ? frame->second->GetXaxis() : frame->second->GetYaxis());
+    members.emplace_back(pad, (isX != IsHBarFrame(pad, frame->second)) ? frame->second->GetXaxis() : frame->second->GetYaxis());
   }
   const string title = members.front().second->GetTitle();
   for (const auto& [pad, axis] : members) {
