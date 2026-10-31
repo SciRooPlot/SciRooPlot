@@ -2377,7 +2377,7 @@
 
 #slide[
   #slide-title("Appendix: Drawing Options – Polar Coordinates")
-  - 2D histograms, graphs and functions: x is the angle (its range is one full turn, 0 on the right, counter-clockwise), y the radius.
+  - 2D histograms, graphs and functions: x is the angle (its range is one full turn, oriented as by ROOT's `POL`), y the radius.
   - The colour maps fill a disc in a square frame, measured by a radial axis below it instead of the cartesian axes; their cells have no outline unless the data sets a line width.
   #v(0.4em)
   #api-table((
