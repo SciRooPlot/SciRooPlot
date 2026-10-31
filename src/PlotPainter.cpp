@@ -87,6 +87,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cmath>
 #include <limits>
 #include <map>
@@ -652,7 +653,27 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     auto errLevelGuard = make_scope_guard([userErrorLevel]() { gErrorIgnoreLevel = userErrorLevel; });
     for (const auto& data : drawData) {
       if (fail) break;
-      if (data->GetDrawOption()) drawOption += *data->GetDrawOption();
+      if (data->GetDrawOption()) {
+        // SAME (also SAMES, SAME0, SAMES0) is SciRooPlot's: the first data of a pad is also drawn as its frame, into the empty pad, where
+        // SAME made ROOT paint a title box (histograms), a garbled picture (SAME0) or an extra copy (graphs); the stats boxes get SAMES anyway.
+        // Removed silently, since all data of a pad is drawn into the same frame as asked; only the own colour range of SAME0 is lost
+        string option = *data->GetDrawOption();
+        string upper = option;
+        std::transform(upper.begin(), upper.end(), upper.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+        bool ownRange{};
+        for (size_t pos = upper.find("SAME"); pos != string::npos; pos = upper.find("SAME", pos)) {
+          size_t end = pos + 4;
+          if (end < upper.size() && upper[end] == 'S') ++end;
+          if (end < upper.size() && upper[end] == '0') {
+            ++end;
+            ownRange = true;
+          }
+          upper.erase(pos, end - pos);
+          option.erase(pos, end - pos);
+        }
+        if (ownRange && dataIndex != 0) logger::warning("Drawing option '{}' of {}: SAME0 is removed, all data of a pad share the colour range of its frame.", *data->GetDrawOption(), data->GetName());
+        drawOption += option;
+      }
       bool isSampledFunc{};  // a function given by C++ code is written as values sampled over its range: it has no values outside of it
       // obtain a copy of the current data
       // retrieve the actual pointer to the data
@@ -715,13 +736,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         }
 
         // TGraph::Draw clears the pad when the option contains an 'A' (new axes) outside of SAME, which would delete the frame
-        // (and the frame drawn with it has no axes): the axes are SciRooPlot's
+        // (and the frame drawn with it has no axes): the axes are SciRooPlot's; RX and RY mirror the points and let TGraphPainter draw
+        // reversed axes in place of the frame's, so in SciRooPlot's frame the points would sit at wrong axis values
         if constexpr (is_graph_1d<data_type>()) {
           TString option(drawOption);
           option.ToLower();  // as TGraph::Draw reads it
           option.ReplaceAll("same", "");
-          if (option.Contains("a")) {
-            if (dataIndex != 0) logger::warning("Drawing option '{}' of {}: A (new axes) is removed, the axes of the pad are drawn by SciRooPlot.", *data->GetDrawOption(), data->GetName());
+          const bool isPolar = data_ptr->InheritsFrom(TGraphPolar::Class());  // its own letters (R: radians)
+          const bool hasAxes = option.Contains("a");
+          const bool reversed = !isPolar && (option.Contains("rx") || option.Contains("ry"));
+          if (hasAxes || reversed) {
+            if (dataIndex != 0 && hasAxes) logger::warning("Drawing option '{}' of {}: A (new axes) is removed, the axes of the pad are drawn by SciRooPlot.", *data->GetDrawOption(), data->GetName());
+            if (dataIndex != 0 && reversed) logger::warning("Drawing option '{}' of {}: RX and RY (reversed axes) are removed, SciRooPlot cannot reverse the axes of the frame.", *data->GetDrawOption(), data->GetName());
+            if (reversed) option.ReplaceAll("rx", "").ReplaceAll("ry", "");
             option.ReplaceAll("a", "");
             drawOption = ((dataIndex != 0) ? "SAME " : "") + string(option.Data());
           }
