@@ -1452,6 +1452,9 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
   const std::string& GetText() const { return mText; }
   std::vector<std::string> GetLines() const;
   const auto& GetTextAlign() const { return mTextAlign; }
+  // placeholders naming the data of the pad (<mean:2>) or of another pad (<mean:1@4>)
+  bool RefersToOtherPads() const;  // the text is made once all pads are drawn
+  void ShiftDataIDs(uint16_t offset);
 
  private:
   std::string mText;  // lines separated by newlines

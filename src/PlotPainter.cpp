@@ -2580,7 +2580,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       uint8_t textIndex{};
       for (const auto& box : pad.GetTextBoxes()) {
         ++textIndex;
-        if (box->IsAutoPlacement() == fixedPositions) continue;
+        if (box->IsAutoPlacement() == fixedPositions || box->RefersToOtherPads()) continue;  // a text naming data of other pads comes once all are drawn
         string textName = "TextBox_" + std::to_string(textIndex);
         // apply default text properties of pad to the box
         if (!box->GetTextFont() && textFont) box->SetTextFont(*textFont);
@@ -2702,6 +2702,20 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   for (auto& [padID, pad] : plot.GetPads()) {
     if (padID == 0) continue;
     auto* pad_ptr = dynamic_cast<TPad*>(canvas_ptr->GetPrimitive(("Pad_" + std::to_string(padID)).data()));
+    auto applyTextDefaults = [&](auto& box) {
+      if (!box->GetTextFont()) {
+        if (auto font = get_first(pad.GetDefaultTextFont(), plot[0].GetDefaultTextFont())) box->SetTextFont(*font);
+      }
+      if (!box->GetTextSize()) {
+        if (auto size = get_first(pad.GetDefaultTextSize(), plot[0].GetDefaultTextSize())) box->SetTextSize(*size);
+      }
+      if (!box->GetTextColor()) {
+        if (auto color = get_first(pad.GetDefaultTextColor(), plot[0].GetDefaultTextColor())) box->SetTextColor(*color);
+      }
+      if (!box->GetTextAlpha()) {
+        if (auto alpha = get_first(pad.GetDefaultTextAlpha(), plot[0].GetDefaultTextAlpha())) box->SetTextAlpha(*alpha);
+      }
+    };
     uint8_t legendIndex{};
     for (const auto& box : pad.GetLegendBoxes()) {
       ++legendIndex;
@@ -2729,18 +2743,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         *row = merged;
         ++row;
       }
-      if (!box->GetTextFont()) {
-        if (auto font = get_first(pad.GetDefaultTextFont(), plot[0].GetDefaultTextFont())) box->SetTextFont(*font);
-      }
-      if (!box->GetTextSize()) {
-        if (auto size = get_first(pad.GetDefaultTextSize(), plot[0].GetDefaultTextSize())) box->SetTextSize(*size);
-      }
-      if (!box->GetTextColor()) {
-        if (auto color = get_first(pad.GetDefaultTextColor(), plot[0].GetDefaultTextColor())) box->SetTextColor(*color);
-      }
-      if (!box->GetTextAlpha()) {
-        if (auto alpha = get_first(pad.GetDefaultTextAlpha(), plot[0].GetDefaultTextAlpha())) box->SetTextAlpha(*alpha);
-      }
+      applyTextDefaults(box);
       pad_ptr->cd();
       if (TPave* legend = GenerateBox(box, pad_ptr)) {
         legend->SetName(("LegendBox_" + std::to_string(legendIndex)).data());
@@ -2750,6 +2753,22 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         legend->ConvertNDCtoPad();
       } else {
         logger::warning("Legend {} was not added since it is empty.", legendIndex);
+      }
+    }
+    uint8_t textIndex{};
+    for (const auto& box : pad.GetTextBoxes()) {
+      ++textIndex;
+      if (!box->RefersToOtherPads() || !pad_ptr) continue;
+      applyTextDefaults(box);
+      pad_ptr->cd();
+      if (TPave* text = GenerateBox(box, pad_ptr)) {
+        text->SetName(("TextBox_" + std::to_string(textIndex)).data());
+        text->SetUniqueID((box->IsUserCoordinates()) ? 1u : 0u);
+        text->SetBit(kCanDelete);
+        text->Draw("SAME");
+        text->ConvertNDCtoPad();
+      } else {
+        logger::warning("Text {} was not added since it is empty.", textIndex);
       }
     }
   }
@@ -3794,6 +3813,14 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       return {nullptr, ""};
     };
     auto findData = [&findDrawn](uint16_t dataID, const optional<uint8_t>& padID) { return findDrawn(dataID, padID).first; };
+    // the data a placeholder of a text names (a histogram drawn as graph: the histogram)
+    auto findTextData = [&](uint16_t dataID, const optional<uint8_t>& padID) -> TNamed* {
+      TObject* data_ptr = findData(dataID, padID);
+      if (auto source = mSourceHists.find(data_ptr); data_ptr && source != mSourceHists.end()) {
+        data_ptr = source->second.get();
+      }
+      return dynamic_cast<TNamed*>(data_ptr);
+    };
 
     vector<string> lines;
     if constexpr (isLegend) {
@@ -3845,6 +3872,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
             logger::warning("Legend entry '{}' refers to data {}, which is not drawn in {}.", line, *entry.GetRefDataID(), (entry.GetRefPadID()) ? "pad " + std::to_string(*entry.GetRefPadID()) : "this pad");
           }
         }
+      } else if (line.find('<') != string::npos) {
+        ReplacePlaceholders(line, nullptr, findTextData);
       }
 
       // determine width and height of line to find max width and height (per column)
@@ -5638,9 +5667,11 @@ float_t PlotPainter::GetTextSizePixel(float_t textSizeNDC)
  * Function to replace placeholders in labels.
  */
 //**************************************************************************************************
-void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
+void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::function<TNamed*(uint16_t, const optional<uint8_t>&)>& findData)
 {
-  static const std::regex wordsRegex("<(name|title|source|projection|selection|entries|integral|mean|maximum|minimum).*?>");
+  static const std::regex wordsRegex("<(name|title|source|projection|selection|entries|integral|mean|stddev|maximum|minimum).*?>");
+  static const std::regex formatRegex("\\[.*?\\]");
+  static const std::regex refRegex(":(\\d{1,5})(?:@(\\d{1,3}))?");  // after the format is removed
   auto wordsBegin = std::sregex_iterator(str.begin(), str.end(), wordsRegex);
   auto wordsEnd = std::sregex_iterator();
 
@@ -5654,8 +5685,29 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
     // copy the untouched text since the previous match, then compute the replacement
     result.append(str, lastEnd, matchPos - lastEnd);
 
+    // the data: that of the legend row, or in a text the one named by number (<mean:2>: data 2 of the pad, <mean:1@4>: data 1 of pad 4)
+    TNamed* data_ptr = rowData;
+    const string withoutFormat = std::regex_replace(matchStr, formatRegex, "");
+    if (std::smatch ref; std::regex_search(withoutFormat, ref, refRegex)) {
+      data_ptr = nullptr;
+      const auto dataID = std::stoul(ref[1].str());
+      const auto padNumber = (ref[2].matched) ? std::stoul(ref[2].str()) : 0ul;
+      if (!findData) {
+        logger::warning("Placeholder {}: the data can be named in texts only, a legend label shows the data of its row.", matchStr);
+      } else if (dataID <= std::numeric_limits<uint16_t>::max() && padNumber <= std::numeric_limits<uint8_t>::max()) {
+        data_ptr = findData(static_cast<uint16_t>(dataID), (ref[2].matched) ? optional<uint8_t>(static_cast<uint8_t>(padNumber)) : nullopt);
+      }
+      if (findData && !data_ptr) logger::warning("Placeholder {}: there is no data {} drawn in {}.", matchStr, dataID, (ref[2].matched) ? "pad " + ref[2].str() : "this pad");
+    } else if (!data_ptr) {
+      logger::warning("Placeholder {} in a text needs the number of its data, e.g. <mean:1> for data 1 of the pad or <mean:1@2> for data 1 of pad 2.", matchStr);
+    }
+    if (!data_ptr) {
+      result += matchStr;  // left as it is
+      lastEnd = matchPos + matchStr.size();
+      continue;
+    }
+
     string format{};
-    static const std::regex formatRegex("\\[.*?\\]");
     if (auto formatIt = std::sregex_iterator(matchStr.begin(), matchStr.end(), formatRegex); formatIt != std::sregex_iterator()) {
       format = formatIt->str();
       format = format.substr(1, format.size() - 2);
@@ -5752,6 +5804,8 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
           replaceStr = formatValue(static_cast<TH1*>(data_ptr)->Integral());
         } else if (str_contains(matchStr, "mean")) {
           replaceStr = formatValue(static_cast<TH1*>(data_ptr)->GetMean());
+        } else if (str_contains(matchStr, "stddev")) {
+          replaceStr = formatValue(static_cast<TH1*>(data_ptr)->GetStdDev());
         } else if (str_contains(matchStr, "maximum")) {
           // from the bins: GetMaximum()/GetMinimum() would return the frame limits stored on the drawn histogram
           auto* hist = static_cast<TH1*>(data_ptr);
@@ -5764,7 +5818,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
         logger::error("Incompatible format string in {}: {}.", matchStr, e.what());
         replaceStr = matchStr;
       }
-    } else if (auto* graph = dynamic_cast<TGraph*>(data_ptr); graph && (str_contains(matchStr, "entries") || (graph->GetN() > 0 && !str_contains(matchStr, "integral") && !str_contains(matchStr, "mean")))) {
+    } else if (auto* graph = dynamic_cast<TGraph*>(data_ptr); graph && (str_contains(matchStr, "entries") || (graph->GetN() > 0 && !str_contains(matchStr, "integral") && !str_contains(matchStr, "mean") && !str_contains(matchStr, "stddev")))) {
       // for graphs only the unambiguous ones: number of points and smallest / largest y value
       try {
         if (str_contains(matchStr, "entries")) {

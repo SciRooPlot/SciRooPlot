@@ -22,6 +22,7 @@
 #include "SciRooPlot/Plot.h"
 
 #include <array>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -312,7 +313,8 @@ class PlotPainter
   double_t MaxLabelWidth(TPad* pad, const TAxis* axis, char axisLabel);
   void DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID);
   void DrawCommonTitle(TCanvas* canvas, char axisLabel, const std::vector<uint8_t>& pads, size_t index);
-  void ReplacePlaceholders(std::string& str, TNamed* data_ptr);
+  // rowData: the data of a legend row; findData (for texts): the data a placeholder names (<mean:2>, <mean:1@4>), by number and pad
+  void ReplacePlaceholders(std::string& str, TNamed* rowData, const std::function<TNamed*(uint16_t, const std::optional<uint8_t>&)>& findData = {});
   static std::string LegendSymbolElements(TObject* obj, std::string option);
   static bool HasErrors(const TObject* obj);
   void DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const std::string& name);

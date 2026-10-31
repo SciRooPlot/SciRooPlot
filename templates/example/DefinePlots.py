@@ -1063,7 +1063,7 @@ def DefineAcceleratorPlots(pm: PlotManager):
     plot[3].SetPalette(kViridis)
     plot[1].AddData("hBeamSpot", "accelerator").ProjectX().NormalizeToMaximum().SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineColor(kAzure + 2)
     plot[4].AddData("hBeamSpot", "accelerator").ProjectY().NormalizeToMaximum().SetDrawOption(hbars).SetFill(1001, kAzure - 9).SetLineColor(kAzure + 2)
-    plot[2].AddText(0.05, 0.8, ["screen 3", "#sigma_{#it{x}} = 1.4 mm", "#sigma_{#it{y}} = 0.7 mm"])
+    plot[2].AddText(0.05, 0.8, ["screen 3", "#sigma_{#it{x}} = <stddev[.1f]:1@1> mm", "#sigma_{#it{y}} = <stddev[.1f]:1@4> mm"])
     plot[1]['Y'].SetRange(0.0, 1.1).SetTitle("")
     plot[4]['X'].SetTitle("")
     pm.AddPlot(plot)

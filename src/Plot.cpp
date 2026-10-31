@@ -35,6 +35,7 @@
 #include <map>
 #include <memory>
 #include <ostream>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -1727,6 +1728,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   }
   for (const auto& textBox : pad.mTextBoxes) {
     mTextBoxes.push_back(std::make_shared<TextBox>(*textBox));
+    mTextBoxes.back()->ShiftDataIDs(static_cast<uint16_t>(mData.size()));
   }
   for (const auto& shape : pad.mShapes) {
     mShapes.push_back(std::make_shared<Shape>(*shape));
@@ -4245,6 +4247,26 @@ vector<string> Plot::Pad::TextBox::GetLines() const
     lines.push_back(mText.substr(last, pos - last));
   lines.push_back(mText.substr(last));
   return lines;
+}
+bool Plot::Pad::TextBox::RefersToOtherPads() const
+{
+  static const std::regex otherPadRegex("<[a-z]+[^<>]*:\\d+@\\d+[^<>]*>");
+  return mText.find('@') != string::npos && std::regex_search(mText, otherPadRegex);
+}
+void Plot::Pad::TextBox::ShiftDataIDs(uint16_t offset)
+{
+  // the data of the pad this text is added to come first: <mean:1> becomes <mean:(1 + offset)>, references to other pads are kept
+  if (offset == 0 || mText.find('<') == string::npos) return;
+  static const std::regex refRegex("(<[a-z]+[^<>:]*:)(\\d{1,5})([^<>@\\d][^<>]*)?>");
+  string shifted;
+  auto last = mText.cbegin();
+  for (auto match = std::sregex_iterator(mText.begin(), mText.end(), refRegex); match != std::sregex_iterator(); ++match) {
+    shifted.append(last, (*match)[0].first);
+    shifted += (*match)[1].str() + std::to_string(std::stoul((*match)[2].str()) + offset) + (*match)[3].str() + ">";
+    last = (*match)[0].second;
+  }
+  shifted.append(last, mText.cend());
+  mText = std::move(shifted);
 }
 Plot::Pad::TextBox& Plot::Pad::TextBox::SetTextAlign(int16_t align)
 {
