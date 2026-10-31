@@ -1423,6 +1423,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (!data->GetLineWidth() && isFlatPolar(drawOption)) {
               data_ptr->SetLineWidth(0);
               data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), 0.f));  // pdf draws width 0 as a hairline
+            } else if (is_2d<data_type>() && !data->GetLineWidth() && !keep && TString(drawOption).Contains("ARR", TString::kIgnoreCase)) {
+              // ROOT outlines every arrow of ARR (fixed head size) with the line width: the wide default lines of the pad make blobs that hide a map below
+              data_ptr->SetLineWidth(1);
             } else if (auto lineWidth = get_first(data->GetLineWidth(),
                                                   fromPad(pad.GetDefaultLineWidth()),
                                                   fromPad(padDefaults.GetDefaultLineWidth()))) {
