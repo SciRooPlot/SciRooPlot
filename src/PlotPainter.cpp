@@ -1058,6 +1058,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
           // apply axis settings
           const bool hbarFrame = IsHBarFrame(pad_ptr, axisHist_ptr);  // with HBAR the X and Y of the pad are the y and x axis of the histogram
+          const bool isTH3 = axisHist_ptr->InheritsFrom(TH3::Class());
+          if (!isTH3 && plot.GetPads()[padID].GetAxes().count('C')) {
+            logger::warning("The C axis of pad {} is ignored: it is the content of a 3d histogram (for other data the Y or Z axis is the value axis).", padID);
+          }
           for (auto axisLabel : {'X', 'Y', 'Z'}) {
             // axisLabel: the axis of the pad (X horizontal, Y vertical); histLabel: the axis of the frame histogram drawn there
             const char histLabel = (hbarFrame && axisLabel != 'Z') ? ((axisLabel == 'X') ? 'Y' : 'X') : axisLabel;
@@ -1175,7 +1179,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // ranges are only touched if the user set one: ROOT's bin edges are not exactly reproducible (e.g. 4.000000000000001 instead of 4),
             // so feeding the drawn range back in through SetRangeUser would add the overflow bin
             if (userRangeMin || userRangeMax) {
-              const bool isBinnedAxis = (histLabel == 'X') || (isTHN && histLabel == 'Y') || (axisHist_ptr->InheritsFrom(TH3::Class()) && histLabel == 'Z');
+              const bool isBinnedAxis = (histLabel == 'X') || (isTHN && histLabel == 'Y') || (isTH3 && histLabel == 'Z');
               if (is_graph_1d<data_type>() && histLabel == 'X') {
                 // the frame of a graph is an empty histogram whose bins mean nothing: its x axis is set to the user values instead of
                 // the edges of the bins containing them (the y range is the minimum and maximum, as for every 1d frame)
@@ -1373,10 +1377,44 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (!userMinZ) min = std::min(min, graphRangeZ.first);
               if (!userMaxZ) max = std::max(max, graphRangeZ.second);
             }
+            bool contentRange{};
+            if (isTH3) {
+              // the content of a 3d histogram is the C axis: its range is the minimum and maximum, which give the colours (and the sizes) of the
+              // boxes, also of the data drawn later (it takes them from the frame); its title is the part of the z title after ';' (ROOT's place
+              // for the title of the colour scale of a 3d histogram)
+              optional<string> title;
+              bool isLog{};
+              for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
+                if (!curPad.GetAxes().count('C')) continue;
+                const auto& content = curPad['C'];
+                if (content.GetMinRange()) min = *content.GetMinRange();
+                if (content.GetMaxRange()) max = *content.GetMaxRange();
+                contentRange = contentRange || content.GetMinRange() || content.GetMaxRange();
+                if (content.GetTitle()) title = content.GetTitle();
+                if (content.GetLog()) isLog = *content.GetLog();
+              }
+              if (isLog) logger::warning("Log scale of the C axis in pad {} ignored: ROOT colours the boxes of a 3d histogram linearly.", padID);
+              if (title) {
+                TAxis* zAxis = axisHist_ptr->GetZaxis();
+                TString zTitle = zAxis->GetTitle();
+                if (zTitle.Index(";") >= 0) zTitle.Remove(zTitle.Index(";"));  // a title of the scale stored with the input is replaced
+                if (zTitle.IsNull()) zTitle = " ";                             // ROOT reads the part after ';' only behind a z title
+                zAxis->SetTitle((zTitle + ";" + title->data()).Data());
+              }
+              // ROOT makes the colour scale of a 3d histogram once, with the look of the z axis at that time (the axis settings above came
+              // later): it is made again at the next paint
+              TList* functions = axisHist_ptr->GetListOfFunctions();
+              if (TObject* palette = functions->FindObject("palette")) {
+                functions->Remove(palette);
+                delete palette;
+              }
+            }
             if (pad_ptr->GetLogz() && min <= 0. && max > 0.) min = std::min(1., 0.001 * max);
             axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
             axisHist_ptr->SetMinimum(min);
             axisHist_ptr->SetMaximum(max);
+            // the colour levels of the scale were computed for the range of the contents when the frame was drawn
+            if (contentRange && !axisHist_ptr->TestBit(TH1::kUserContour)) axisHist_ptr->SetContour(axisHist_ptr->GetContour());
             axisHist_ptr->SetMarkerSize(0);
             axisHist_ptr->SetLineWidth(0);
             axisHist_ptr->SetFillStyle(0);

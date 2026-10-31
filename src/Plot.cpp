@@ -1629,7 +1629,7 @@ ptree Plot::Pad::GetPropertyTree() const
     ++imageBoxID;
   }
 
-  for (const auto& axis : {'X', 'Y', 'Z'}) {
+  for (const auto& axis : {'X', 'Y', 'Z', 'C'}) {
     if (mAxes.find(axis) != mAxes.end()) {
       padTree.put_child(string("AXIS_") + axis, mAxes.at(axis).GetPropertyTree());
     }
@@ -1776,9 +1776,9 @@ Plot::Pad::Data& Plot::Pad::operator()(uint16_t dataID)
 //**************************************************************************************************
 Plot::Pad::Axis& Plot::Pad::GetAxis(const char axis)
 {
-  const vector<char> allowedAxes = {'X', 'Y', 'Z'};
+  const vector<char> allowedAxes = {'X', 'Y', 'Z', 'C'};
   if (std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end()) {
-    logger::throw_invalid_argument("Axis '{}' does not exist! Please use 'X', 'Y' or 'Z'.", axis);
+    logger::throw_invalid_argument("Axis '{}' does not exist! Please use 'X', 'Y', 'Z' or 'C' (the content of a 3d histogram).", axis);
   }
   if (mAxes.find(axis) == mAxes.end()) {
     mAxes[axis] = Axis(axis);

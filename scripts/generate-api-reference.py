@@ -18,7 +18,7 @@ OPTIONS_OUTPUT = ROOT / "docs/skill/scirooplot/reference/drawing-options.md"
 CLASSES = [
     ("PlotManager.h", "class PlotManager", "PlotManager", "central object: data sources, plots, base plots, project files"),
     ("Plot.h", "class Plot", "Plot", "plot[padID] gives the Pad (padID 0: defaults for all pads); also has the fill setters"),
-    ("Plot.h", "class Plot::Pad", "Plot::Pad", "pad[axis] gives the Axis ('X', 'Y', 'Z'); pad(dataID) the Data (counting from 1); also has the fill setters"),
+    ("Plot.h", "class Plot::Pad", "Plot::Pad", "pad[axis] gives the Axis ('X', 'Y', 'Z', and 'C' for the content of a 3d histogram: range and title of its colour scale); pad(dataID) the Data (counting from 1); also has the fill setters"),
     ("Plot.h", "class Plot::Pad::Axis", "Plot::Pad::Axis", ""),
     ("Plot.h", "class Plot::Pad::Data", "Plot::Pad::Data", "every setter returns the Data, so calls can be chained; also has the marker, line and fill setters"),
     ("Plot.h", "class Plot::Pad::Ratio", "Plot::Pad::Ratio", "has all setters, modifiers and selections of Data (returning the Ratio) plus the following"),

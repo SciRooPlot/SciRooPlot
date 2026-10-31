@@ -463,6 +463,8 @@ class Plot::Pad : public FillSetters<Pad>
   Pad& operator=(const Pad& other);
   Pad& operator=(Pad&&) = default;
   void operator+=(const Pad& pad);
+  // 'X', 'Y', 'Z', or 'C': the content of a 3d histogram, whose z axis is binned (range and title of its colour scale; the scale
+  // takes its look from the Z axis, as in ROOT, and ROOT colours the boxes linearly, so it has no log scale)
   Axis& operator[](const char axis);
   Data& operator()(uint16_t dataID);
   void Print() const { Plot::Print(GetPropertyTree(), "Pad"); }

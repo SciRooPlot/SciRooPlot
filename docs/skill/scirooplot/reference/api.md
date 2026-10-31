@@ -51,7 +51,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Plot& ShareAxis(char axis, const std::vector<uint8_t>& pads)`
 
 ## Plot::Pad
-*pad[axis] gives the Axis ('X', 'Y', 'Z'); pad(dataID) the Data (counting from 1); also has the fill setters*
+*pad[axis] gives the Axis ('X', 'Y', 'Z', and 'C' for the content of a 3d histogram: range and title of its colour scale); pad(dataID) the Data (counting from 1); also has the fill setters*
 
 - `Pad()`
 - `Data& operator()(uint16_t dataID)`
