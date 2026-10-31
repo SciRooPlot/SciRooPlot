@@ -1977,10 +1977,12 @@ plot[2].SetPosition(0.5, 0.5, 0.88, 0.88).SetMargins(0.05, 0.22, 0.3, 0.05).SetD
 plot[2].AddData("diphoton/mgg_data", "higgs");
 plot[2]['X'].SetRange(120, 130).SetHideClippedLabels(false);` },
   ratios: { py: `plot[2].AddRatio(["num", "src"], ["den", "src"], "label").SetCorrelated()   # binomial errors
+plot[2].AddRatio(["num", "src"], ["den"])   # a denominator without data source is taken from the numerator's
 plot[2].AddRatio(["num", "src"], ["den", "src"]).Both().Normalize().Result().SetColor(kRed + 1)
-plot[2].AddRatio(["h2", "src"], ["h2", "src"]).Numer().ProjectY(10, 20, True).Denom().ProjectY(1, 10, True)`, cpp: `plot[2].AddRatio({"num", "src"}, {"den", "src"}, "label").SetCorrelated();   // binomial errors
+plot[2].AddRatio(["h2", "src"], ["h2"]).Numer().ProjectY(10, 20, True).Denom().ProjectY(1, 10, True)`, cpp: `plot[2].AddRatio({"num", "src"}, {"den", "src"}, "label").SetCorrelated();   // binomial errors
+plot[2].AddRatio({"num", "src"}, {"den"});   // a denominator without data source is taken from the numerator's
 plot[2].AddRatio({"num", "src"}, {"den", "src"}).Both().Normalize().Result().SetColor(kRed + 1);
-plot[2].AddRatio({"h2", "src"}, {"h2", "src"}).Numer().ProjectY(10, 20, true).Denom().ProjectY(1, 10, true);` },
+plot[2].AddRatio({"h2", "src"}, {"h2"}).Numer().ProjectY(10, 20, true).Denom().ProjectY(1, 10, true);` },
   trees: { py: `plot[1].AddData("tracks", "src").Project1D(("pt", 100, [0.0, 10.0])).Filter("abs(eta) < 0.8")
 plot[1].AddData("tracks", "src").Project2D(("pt", 50), ("eta", 50))
 plot[1].AddData("tracks", "src").Profile1D(("eta", 70), "pt")          # <pt> vs eta

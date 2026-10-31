@@ -540,12 +540,14 @@ void exportData(py::module_& m)
   py::class_<Data> data(m, "Data");
   data
     .def(py::init<>())
-    .def(py::init<const string&, const string&, const optional<string>&>(), arg("name"), arg("dataSource"), arg("label") = nullopt)
+    .def(py::init<const string&, const string&, const optional<string>&>(), arg("name"), arg("dataSource") = "", arg("label") = nullopt)
     .def(py::init([](const py::list& nameAndSource) {
-           if (nameAndSource.size() != 2 || !py::isinstance<py::str>(nameAndSource[0]) || !py::isinstance<py::str>(nameAndSource[1])) {
-             throw py::type_error("Data can only be created from a list [name, dataSource].");
+           // [name] alone: denominator of a ratio, which takes the data source of the numerator
+           const bool allStrings = std::all_of(nameAndSource.begin(), nameAndSource.end(), [](const py::handle& item) { return py::isinstance<py::str>(item); });
+           if (nameAndSource.empty() || nameAndSource.size() > 2 || !allStrings) {
+             throw py::type_error("Data can only be created from a list [name, dataSource] (or [name] for the denominator of a ratio).");
            }
-           return Data(nameAndSource[0].cast<string>(), nameAndSource[1].cast<string>());
+           return Data(nameAndSource[0].cast<string>(), nameAndSource.size() == 2 ? nameAndSource[1].cast<string>() : string{});
          }),
          arg("nameAndSource"))
     .def("__call__", [](const Data& self, const string& name, const optional<string>& dataSource) { return self(name, dataSource); }, arg("name"), arg("dataSource") = nullopt)

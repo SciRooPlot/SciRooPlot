@@ -810,7 +810,7 @@ class Data:
     def __init__(self) -> None:
         ...
     @typing.overload
-    def __init__(self, name: str, dataSource: str, label: str | None = None) -> None:
+    def __init__(self, name: str, dataSource: str = '', label: str | None = None) -> None:
         ...
     @typing.overload
     def __init__(self, nameAndSource: list) -> None:

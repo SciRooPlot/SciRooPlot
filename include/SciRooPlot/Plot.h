@@ -760,7 +760,8 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
 {
  public:
   Data() = default;
-  Data(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = {});
+  // NOLINTNEXTLINE(runtime/explicit): {"name"} as denominator of a ratio
+  Data(const std::string& name, const std::string& dataSource = {}, const std::optional<std::string>& label = {});  // without data source only as denominator of a ratio (takes the numerator's)
   explicit Data(const boost::property_tree::ptree& dataTree);
 
   virtual ~Data() = default;
@@ -1067,7 +1068,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
 class Plot::Pad::Ratio : public Plot::Pad::Data
 {
  public:
-  Ratio(const Data& numerator, const Data& denominator);  // inputs from numerator and denominator, appearance from numerator
+  Ratio(const Data& numerator, const Data& denominator);  // inputs from numerator and denominator, appearance from numerator; a denominator without data source takes the numerator's
   Ratio(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName,
         const std::string& denominatorDataSource, const std::optional<std::string>& label = {});
   explicit Ratio(const boost::property_tree::ptree& dataTree);

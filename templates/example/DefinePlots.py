@@ -123,7 +123,7 @@ def DefineHiggsPlots(pm: PlotManager):
     plot[1].AddData("diphoton/mgg_bkgFit", "higgs", "fit: bkg. only").SetLine(kDashed, 3.0, kBlue + 1)
     plot[1].AddText(0.57, 0.9, [EXPERIMENT, COLLISIONS, "140 fb^{-1}, H #rightarrow #gamma#gamma"])  # clear of the signal window
     plot[1].AddLegend(0.57, 0.62)  # upper left corner of the box in pad coordinates
-    plot[2].AddRatio(["diphoton/mgg_data", "higgs"], ["diphoton/mgg_bkgFit", "higgs"])  # histogram / function
+    plot[2].AddRatio(["diphoton/mgg_data", "higgs"], ["diphoton/mgg_bkgFit"])  # histogram / function
     plot[2]['Y'].SetTitle("data / bkg.").SetRange(0.9, 1.15)
     for pad in [1, 2]:  # the signal window as a shape behind the data: not data, so no legend row and not in the axis ranges
         plot[pad].AddRegionX(120.0, 130.0).SetBehindData()
@@ -216,7 +216,7 @@ def DefineSpectraPlots(pm: PlotManager):
         plot[1].AddData("ptVsMult", "data", label).ProjectY(low, high, True).Normalize()
         if low > 1:
             # Numer() / Denom() / Both(): the following settings act on numerator, denominator or both
-            plot[2].AddRatio(["ptVsMult", "data"], ["ptVsMult", "data"]).Numer().ProjectY(low, high, True).Denom().ProjectY(1, 10, True).Both().Normalize()
+            plot[2].AddRatio(["ptVsMult", "data"], ["ptVsMult"]).Numer().ProjectY(low, high, True).Denom().ProjectY(1, 10, True).Both().Normalize()
     plot[1].AddLegend()
     plot[1]['Y'].SetLog().SetTitle("normalised counts")
     plot[2]['Y'].SetTitle("ratio to lowest").SetRange(0.0, 6.0)
@@ -297,7 +297,7 @@ def DefineDetectorPlots(pm: PlotManager):
 
     # efficiency = reconstructed / generated; SetCorrelated() gives binomial errors
     plot = Plot("trackingEfficiency", "detector/tracking", "1d")
-    plot[1].AddRatio(["hPt", "TrackQA_MC"], ["hPtGen", "TrackQA_MC"]).SetCorrelated()
+    plot[1].AddRatio(["hPt", "TrackQA_MC"], ["hPtGen"]).SetCorrelated()
     plot[1]['X'].SetLog().SetRange(0.1, 10.0)
     plot[1]['Y'].SetTitle("tracking efficiency").SetRange(0.0, 1.0).SetGrid()
     pm.AddPlot(plot)
@@ -384,7 +384,7 @@ def DefineDetectorPlots(pm: PlotManager):
     # ---- trigger and pile-up --------------------------------------------------------------------
     # turn-on curve; Result() switches to settings acting on the ratio itself (here: in %)
     plot = Plot("turnOn", "detector/trigger", "1d")
-    plot[1].AddRatio(["hLeadingPtTriggered", "TriggerQA"], ["hLeadingPtAll", "TriggerQA"], "data").SetCorrelated().Result().Scale(100.0)
+    plot[1].AddRatio(["hLeadingPtTriggered", "TriggerQA"], ["hLeadingPtAll"], "data").SetCorrelated().Result().Scale(100.0)
     # SetRangeX limits the range in which a data item is drawn
     plot[1].AddFunction("98*0.5*(1+TMath::Erf((x-8)/(sqrt(2)*1.5)))", "erf, #it{p}_{T}^{thr} = 8 GeV/#it{c}").SetRangeX(0.0, 20.0).SetLine(kSolid, 2.0, kRed + 1)
     plot[1].AddLegend(0.553, 0.36)
@@ -913,7 +913,7 @@ def DefineAtomicPlots(pm: PlotManager):
     plot[1].AddLegend(0.2, 0.85)
     plot[1].AddText(0.2, 0.7, ["laser spectroscopy", "hyperfine structure of ^{A}X"])
     plot[1]['Y'].SetRange(0.0, 850.0)  # room for the texts above the lines
-    plot[2].AddRatio(["hScan", "atomic"], ["fitScan", "atomic"])
+    plot[2].AddRatio(["hScan", "atomic"], ["fitScan"])
     plot[2]['Y'].SetTitle("data / fit").SetRange(0.5, 1.5)
     pm.AddPlot(plot)
 
@@ -923,7 +923,7 @@ def DefineAtomicPlots(pm: PlotManager):
     plot[1].AddData("laser/withPump", "atomic", "probe with pump").SetDrawOption(line).SetLine(kSolid, 2.0, kRed + 1)
     plot[1].AddLegend(0.2, 0.3, "^{87}Rb D_{2}, #it{F} = 2 #rightarrow #it{F}'")
     plot[1]['Y'].SetTitle("probe transmission")
-    plot[2].AddRatio(["laser/withPump", "atomic"], ["laser/probeOnly", "atomic"]).SetDrawOption(line).SetLine(kSolid, 2.0, kRed + 1)
+    plot[2].AddRatio(["laser/withPump", "atomic"], ["laser/probeOnly"]).SetDrawOption(line).SetLine(kSolid, 2.0, kRed + 1)
     # the lines (F') and the strongest crossover, halfway between F' = 2 and 3; a text box hangs from its upper left corner
     for x, label in [(-95.0, "1"), (-22.0, "2"), (115.0, "c"), (245.0, "3")]:
         plot[2].AddText(x, 1.43, label).SetUserCoordinates()
@@ -1715,7 +1715,7 @@ def DefineAnimations(pm: PlotManager):
         plot[1].AddLegend(0.5, 0.88)
         plot[1].AddText(0.2, 0.3, [EXPERIMENT, COLLISIONS])
         plot[1]['Y'].SetLog().SetRange(1e-5, 1.0).SetTitle("normalised counts")
-        plot[2].AddRatio(["ptVsMult", "data"], ["ptVsMult", "data"]).Numer().ProjectY(low, high, True).Denom().ProjectY(1, 60, True).Both().Normalize().SetColor(kRed + 1)
+        plot[2].AddRatio(["ptVsMult", "data"], ["ptVsMult"]).Numer().ProjectY(low, high, True).Denom().ProjectY(1, 60, True).Both().Normalize().SetColor(kRed + 1)
         plot[2]['Y'].SetRange(0.0, 4.0).SetTitle("class / all")
         plot[0]['X'].SetRange(0.0, 4.0)  # fixed ranges: the frames differ only in the data
         pm.AddPlot(plot)

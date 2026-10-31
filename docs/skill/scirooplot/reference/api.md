@@ -186,7 +186,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 *every setter returns the Data, so calls can be chained; also has the marker, line and fill setters*
 
 - `Data()`
-- `Data(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = {})`
+- `Data(const std::string& name, const std::string& dataSource = {}, const std::optional<std::string>& label = {})` — without data source only as denominator of a ratio (takes the numerator's)
 - `Data operator()(const std::string& name, const std::optional<std::string>& dataSource = {})`
 - `Ratio& AsRatio()`
 - `Data& SetDataSource(const std::string& dataSource)`
@@ -261,7 +261,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 ## Plot::Pad::Ratio
 *has all setters, modifiers and selections of Data (returning the Ratio) plus the following*
 
-- `Ratio(const Data& numerator, const Data& denominator)` — inputs from numerator and denominator, appearance from numerator
+- `Ratio(const Data& numerator, const Data& denominator)` — inputs from numerator and denominator, appearance from numerator; a denominator without data source takes the numerator's
 - `Ratio(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName, const std::string& denominatorDataSource, const std::optional<std::string>& label = {})`
 - `Ratio& SetCorrelated(bool correlated = true)`
 - `Ratio& Numer()` — following modifiers act on the numerator, before the division

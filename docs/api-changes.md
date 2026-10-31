@@ -60,6 +60,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Base plot name `"1d_3panels"` | `"1d_3x1"`; names follow `<1d\|2d>[_wide\|_tall][_<c>x<r>][_ratio][_pull][_gap]` | removed | Use `"1d_3x1"`. |
 | Python `AddDataSource(..., inputFiles=…)` / `inputFile=` / `inputData=` | One overload with keyword `inputs`; file names and ROOT objects can't be mixed in one list (`TypeError`) | signature | Python: rename the keyword to `inputs=`. |
 | Python `Ratio(name, dataSource, denomName, denomDataSource, label)` (label required); C++ `Ratio(…, label)` without default | `Ratio(numeratorName, numeratorDataSource, denominatorName, denominatorDataSource, label = {})`, the keywords of `AddRatio` | signature | Python: rename the keywords. |
+| `Data(name, dataSource, label)`; Python lists `[name, dataSource]` | `Data(name, dataSource = {}, label)`, Python also `[name]`: a ratio denominator without data source takes the numerator's, e.g. `AddRatio({"hPt", "src"}, {"hPtGen"})` | signature | none. |
 | Python keyword `candleOption` of `Pad::SetDefaultCandleBoxRange`, `Pad::SetDefaultCandleWhiskerRange` | keyword `range` | signature | Python: rename the keyword. |
 | `PlotManager::AddColorOverview(name, group, const std::vector<int32_t>& colors)` | `AddColorOverview(name, group, const std::vector<color_t>& colors)`: also `"#rrggbb"` and `{r, g, b}` | signature | none (indices work as before). |
 | `void PlotManager::LoadPlots(…)`, `void PlotManager::GeneratePlots(…)` | `bool LoadPlots(…)` (false if no plot was loaded), `bool GeneratePlots(…)` (false on errors, e.g. an invalid mode) | signature | none (check the result if needed). |
@@ -138,7 +139,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `Entries(0)`, `Entries(min, max)` with `max ≤ min` | Error, call ignored | input validation | Fix the entry ranges. |
 | `AddFunction` formulas with free parameters (`gaus`, `pol2`, `[0]`) were drawn with all parameters 0 | Rejected with an error | input validation | Write the parameter values into the formula. |
 | `plot += plot`, `pad += pad` | Throw | input validation | none |
-| `Pad::AddData(name, dataSource)`, `Pad::AddRatio(…)` and `Pad::SetFrame(name, dataSource)` with an empty name or data source were accepted (only the `Data` overloads checked) | Throw `std::invalid_argument` (Python `ValueError`) in every overload | input validation | Give names and data sources. |
+| `Pad::AddData(name, dataSource)`, `Pad::AddRatio(…)` and `Pad::SetFrame(name, dataSource)` with an empty name or data source were accepted (only the `Data` overloads checked) | Throw `std::invalid_argument` (Python `ValueError`) in every overload; only a ratio denominator may leave out its data source (it takes the numerator's) | input validation | Give names and data sources. |
 | `PanelLayout` lengths were taken as given (a negative panel size gave pad margins beyond 1) | `SetPanelSize`, `SetTextSize`, `SetTitleSize` throw for values ≤ 0; `SetMargins`, `SetColorScaleMargin`, `SetColorScaleWidth`, `SetPanelSpacing`, `SetLineWidth`, `SetMarkerSize` for values < 0 | input validation | Fix the lengths. |
 | Python `histo()`/`histo2d()` with a range whose lower end is not below the upper end | `ValueError` | input validation | Fix the range. |
 

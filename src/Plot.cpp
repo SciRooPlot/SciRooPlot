@@ -3153,9 +3153,12 @@ Plot::Pad::Ratio::Ratio(const Data& numerator, const Data& denominator)
     if (data->mType == "ratio") {
       logger::throw_invalid_argument("The {} of a ratio cannot be a ratio ({}).", part, data->mName);
     }
-    if (data->mName.empty() || data->mDataSource.empty()) {
-      logger::throw_invalid_argument("The {} of a ratio needs a name and a data source (name: '{}', data source: '{}').", part, data->mName, data->mDataSource);
+    if (data->mName.empty()) {
+      logger::throw_invalid_argument("The {} of a ratio needs a name (data source: '{}').", part, data->mDataSource);
     }
+  }
+  if (numerator.mDataSource.empty()) {
+    logger::throw_invalid_argument("The numerator of a ratio needs a data source ({}).", numerator.mName);
   }
   static_cast<Data&>(*this) = numerator;
   SetType("ratio");
@@ -3174,7 +3177,7 @@ Plot::Pad::Ratio::Ratio(const Data& numerator, const Data& denominator)
 Plot::Pad::Ratio::Ratio(const string& name, const string& dataSource, const string& denomName,
                         const string& denomDataSource, const optional<string>& label)
   : Data(name, dataSource, label), mDenomName(denomName),
-    mDenomDataSource(denomDataSource), mCorrelated(false)
+    mDenomDataSource(denomDataSource.empty() ? dataSource : denomDataSource), mCorrelated(false)
 {
   SetType("ratio");
 }

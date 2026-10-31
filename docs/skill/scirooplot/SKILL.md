@@ -171,6 +171,7 @@ Projections of histograms: `.ProjectX(yMin, yMax[, userCoords])`, `.ProjectY(...
 ```cpp
 plot[2].AddRatio({"num", "src"}, {"den", "src"}, "label").SetCorrelated();   // binomial errors for sub-samples
 plot[2].AddRatio(templ("num"), Data("den", "src"));                           // from Data objects (ratio keeps the numerator's look)
+plot[2].AddRatio({"num", "src"}, {"den"});                                   // denominator without data source: the numerator's
 plot[2].AddRatio(...).Both().Normalize().Result().SetColor(kRed);            // modifier scope: Numer() / Denom() / Both() / Result() (default)
 ```
 Incompatible binnings are divided via spline interpolation. Modifiers and data selections on the ratio itself (`Result()` mode) are usually meaningless for Rebin/Project etc. and warn — write them explicitly with `Numer()`, `Denom()` or `Both()`.
