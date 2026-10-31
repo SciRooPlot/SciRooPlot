@@ -29,7 +29,9 @@
 #include <TDataType.h>
 #include <TFile.h>
 #include <TFolder.h>
+#include <THStack.h>
 #include <TKey.h>
+#include <TMultiGraph.h>
 #include <TROOT.h>
 #include <TRootBrowser.h>
 #include <TRootCanvas.h>
@@ -173,6 +175,7 @@ int main(int argc, char* argv[])
   } else if (command == "open") {
     string fileName = project;
     gROOT->SetBatch(false);
+    gROOT->SetWebDisplay("off");  // the classic browser, as the plots are shown in classic canvases (closing it ends the program)
     TApplication app("SciRooPlot", nullptr, nullptr);
     TFile* file = TFile::Open(fileName.data());
     if (!file || file->IsZombie()) return 1;
@@ -426,7 +429,19 @@ bool PrintRootFileContents(const string& inputPath)
     return false;
   }
 
-  auto findObject = [](TObject* root, const string& path) -> TObject* {
+  // what SciRooPlot looks into: directories, folders, lists, stacks (their histograms) and multigraphs (their graphs)
+  auto isContainer = [](TObject* object) {
+    return object->InheritsFrom(TDirectory::Class()) || object->InheritsFrom(TFolder::Class()) || object->InheritsFrom(TCollection::Class()) ||
+           object->InheritsFrom(THStack::Class()) || object->InheritsFrom(TMultiGraph::Class());
+  };
+  auto itemsOf = [](TObject* object) -> TCollection* {
+    if (auto* folder = dynamic_cast<TFolder*>(object)) return folder->GetListOfFolders();
+    if (auto* stack = dynamic_cast<THStack*>(object)) return stack->GetHists();
+    if (auto* multiGraph = dynamic_cast<TMultiGraph*>(object)) return multiGraph->GetListOfGraphs();
+    return dynamic_cast<TCollection*>(object);
+  };
+
+  auto findObject = [&itemsOf](TObject* root, const string& path) -> TObject* {
     TObject* current = root;
     size_t pos = 0;
     while (current && pos < path.size()) {
@@ -435,10 +450,8 @@ bool PrintRootFileContents(const string& inputPath)
 
       if (current->InheritsFrom(TDirectory::Class())) {
         current = static_cast<TDirectory*>(current)->Get(part.data());
-      } else if (current->InheritsFrom(TFolder::Class())) {
-        current = static_cast<TFolder*>(current)->GetListOfFolders()->FindObject(part.data());
-      } else if (current->InheritsFrom(TCollection::Class())) {
-        current = static_cast<TCollection*>(current)->FindObject(part.data());
+      } else if (TCollection* items = itemsOf(current)) {
+        current = items->FindObject(part.data());
       } else {
         return nullptr;
       }
@@ -458,14 +471,7 @@ bool PrintRootFileContents(const string& inputPath)
 
   std::function<void(TObject*, const string&)> loopData =
     [&](TObject* object, const string& path) {
-      TCollection* itemList = nullptr;
-      if (object->InheritsFrom(TDirectory::Class())) {
-        itemList = static_cast<TDirectory*>(object)->GetListOfKeys();
-      } else if (object->InheritsFrom(TFolder::Class())) {
-        itemList = static_cast<TFolder*>(object)->GetListOfFolders();
-      } else if (object->InheritsFrom(TCollection::Class())) {
-        itemList = static_cast<TCollection*>(object);
-      }
+      TCollection* itemList = (object->InheritsFrom(TDirectory::Class())) ? static_cast<TDirectory*>(object)->GetListOfKeys() : itemsOf(object);
       if (!itemList) {
         // listed by the name under which it is stored, which is the one to access it with (the object's own name can differ)
         const auto slashPos = path.rfind('/');
@@ -489,7 +495,7 @@ bool PrintRootFileContents(const string& inputPath)
           }
           ownsObj = true;
         }
-        if (obj->InheritsFrom(TDirectory::Class()) || obj->InheritsFrom(TFolder::Class()) || obj->InheritsFrom(TCollection::Class())) {
+        if (isContainer(obj)) {
           loopData(obj, path.empty() ? name : path + "/" + name);
         } else {
           if (!printedPath) {

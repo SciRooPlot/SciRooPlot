@@ -1673,7 +1673,7 @@ const REF = [
 <tr><td>Functions</td><td><code>TF1</code>, <code>TF2</code>, <code>TF3</code>, or a formula written in the definition</td></tr>
 <tr><td>Efficiencies</td><td><code>TEfficiency</code></td></tr>
 <tr><td>Trees and tables</td><td><code>TTree</code> and <code>RNTuple</code> (chained over all inputs) and text tables <code>.csv</code> <code>.tsv</code> <code>.txt</code> <code>.dat</code> <code>.tab</code>: histograms, profiles and graphs are filled from their columns</td></tr>
-<tr><td>Where it can sit</td><td>ROOT files, in directories, <code>TList</code>s and folders at any depth; whole folders of files and wildcards; objects made in your own program (<a href="#ref-memory">Data made in your program</a>)</td></tr></tbody></table></div>
+<tr><td>Where it can sit</td><td>ROOT files, in directories, <code>TList</code>s and folders at any depth, also inside a stored <code>THStack</code> or <code>TMultiGraph</code> (<code>"myStack/hPion"</code>; <code>srp print file.root</code> lists the names); whole folders of files and wildcards; objects made in your own program (<a href="#ref-memory">Data made in your program</a>)</td></tr></tbody></table></div>
 <div class="dg find" role="img" aria-label="How a name is found: inputs in order, inside a file the current level first, then each folder completely">
   <div class="dg-src"><b>data source "data"</b><ol><li><code>a.root</code></li><li><code>b.root</code></li><li><code>more/*.root</code></li></ol><p>Inputs are tried in this order; the first one that has the name wins. A tree found in several inputs is chained over all of them.</p></div>
   <div class="dg-file"><b>inside <code>a.root</code>, looking for <code>"hMult"</code></b>

@@ -57,6 +57,7 @@
 #include <TList.h>
 #include <TMap.h>
 #include <TMath.h>
+#include <TMultiGraph.h>
 #include <TNamed.h>
 #include <TPave.h>
 #include <TPaveText.h>
@@ -2510,7 +2511,8 @@ void PlotManager::ClearCanvasRegistry()
 //**************************************************************************************************
 bool PlotManager::IsContainer(const TClass* cl)
 {
-  return cl && (cl->InheritsFrom(TDirectory::Class()) || cl->InheritsFrom(TFolder::Class()) || cl->InheritsFrom(TCollection::Class()));
+  return cl && (cl->InheritsFrom(TDirectory::Class()) || cl->InheritsFrom(TFolder::Class()) || cl->InheritsFrom(TCollection::Class()) ||
+                cl->InheritsFrom(THStack::Class()) || cl->InheritsFrom(TMultiGraph::Class()));
 }
 
 //**************************************************************************************************
@@ -2531,7 +2533,11 @@ TClass* PlotManager::ReadableClass(TKey* key)
 //**************************************************************************************************
 void PlotManager::ForEachItem(TObject* container, const std::function<bool(const string&, TObject*)>& func)
 {
-  TCollection* items = (dynamic_cast<TFolder*>(container)) ? static_cast<TFolder*>(container)->GetListOfFolders() : dynamic_cast<TCollection*>(container);
+  // the histograms of a stack and the graphs of a multigraph are its items, as the contents of a list
+  TCollection* items = dynamic_cast<TCollection*>(container);
+  if (auto* folder = dynamic_cast<TFolder*>(container)) items = folder->GetListOfFolders();
+  if (auto* stack = dynamic_cast<THStack*>(container)) items = stack->GetHists();
+  if (auto* multiGraph = dynamic_cast<TMultiGraph*>(container)) items = multiGraph->GetListOfGraphs();
   if (!items) return;
   for (TObject* item : *items) {
     if (!item) continue;
@@ -2560,6 +2566,15 @@ void PlotManager::container_deleter_t::operator()(TObject* container) const
       if (stack->GetHists()) {
         for (TObject* hist : *stack->GetHists())
           collect(hist);
+      }
+      return;
+    }
+    if (auto* multiGraph = dynamic_cast<TMultiGraph*>(obj)) {
+      // a multigraph deletes its graphs: they are taken out of it and deleted with the rest
+      if (auto* graphs = multiGraph->GetListOfGraphs()) {
+        for (TObject* graph : *graphs)
+          collect(graph);
+        graphs->Clear("nodelete");
       }
       return;
     }

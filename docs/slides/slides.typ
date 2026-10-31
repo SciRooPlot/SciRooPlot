@@ -1082,7 +1082,7 @@
       #v(0.3em)
       #card("Containers", main-color, title-size: 20pt, width: 100%)[
         #set text(size: 15pt)
-        Directories, `TList`, `THashList`, `TObjArray`, `TOrdCollection`, `TSortedList`, `THashTable`, `TMap`, `TClonesArray`, `TFolder` and classes derived from them -- nested in any combination.
+        Directories, `TList`, `THashList`, `TObjArray`, `TOrdCollection`, `TSortedList`, `THashTable`, `TMap`, `TClonesArray`, `TFolder`, `THStack`, `TMultiGraph` and classes derived from them -- nested in any combination.
       ]
       #v(0.3em)
       #card("Data", main-color, title-size: 20pt, width: 100%)[
@@ -1092,7 +1092,7 @@
       #v(0.3em)
       #card("Not readable", accent-color, title-size: 20pt, width: 100%)[
         #set text(size: 15pt)
-        Classes without a loaded dictionary (a warning tells you), objects without a name (e.g. `TObjString`), `THStack` and `TMultiGraph` as input.
+        Classes without a loaded dictionary (a warning tells you), objects without a name (e.g. `TObjString`).
       ]
     ],
   )
