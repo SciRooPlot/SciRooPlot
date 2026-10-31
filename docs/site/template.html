@@ -2607,7 +2607,8 @@ function teaserShow(i) { // the figures of one comparison; wide multi-panel figu
 
 /* the geometry of PanelLayout::ApplyTo: canvas size, pads and axis frames in canvas pixels (x from the left, y from the top) */
 const PL_DEFAULTS = { panel: 638, top: 32, bottom: 118, left: 118, right: 32, z: 268, zOff: 5.12, zWidth: 46.08, spacing: 0, text: 31.52, title: 39.4, tick: 19.15, labelOff: 3.94, xTitleOff: 63.04, yTitleOff: 0, zTitleOff: 122.9, lw: 5, ms: 1.4 };
-// G: { cols: [{ w, kind, z, own, gapAfter }] (kind "short": attached panels; own: an x title of its own), rows: [{ h, kind, ref, compact, own, gapAfter }]
+// G: { cols: [{ w, kind, z, own, gapAfter, spaceAfter }] (kind "short": attached panels; own: an x title of its own; spaceAfter: the space to the next
+// touching column, null: S.spacing), rows: [{ h, kind, ref, compact, own, gapAfter, spaceAfter }]
 // (kind "short": attached panels; ref: the function of a reference line,
 // compact: few y divisions and a centred title, own: another quantity, with a y title of its own), empty: Set of "r,c", hole: Set of "r,c" (empty cells without pad,
 // also in empty), span: Map "r,c" -> [columns, rows] }
@@ -2631,10 +2632,11 @@ function panelGeometry(G, S) {
     if (k.scale && k.c1 > k.c) return { error: `The colour scale cell in row ${k.r + 1}, column ${k.c + 1} spans one column.` };
     if (!k.empty && colScale.slice(k.c, k.c1 + 1).some(Boolean)) return { error: "A column with a colour scale cell holds no panels." } }
   const colW = G.cols.map((c, i) => colScale[i] ? S.z : c.w * S.panel), rowH = G.rows.map(r => r.h * S.panel);
+  const touching = space => { const half = (space ?? S.spacing) / 2; return [half, half, true] };  // Panel::SpacingLeft/SpacingAbove, else SetPanelSpacing
   const colZ = G.cols.map((c, i) => !colScale[i] && c.z && cells.some(k => k.c1 === i && !k.empty && !G.rows[k.r].kind));  // ZAxis() is written on the panels of rows of normal height
   const colSep = G.cols.slice(0, -1).map((c, i) => c.gapAfter ? [S.right, S.left, false] : colScale[i + 1] ? [0, 0, false] : colScale[i] ? [0, S.left, false]
-    : colZ[i] ? [S.z, S.left, false] : [S.spacing / 2, S.spacing / 2, true]);
-  const rowSep = G.rows.slice(0, -1).map(r => r.gapAfter ? [S.bottom, S.top, false] : [S.spacing / 2, S.spacing / 2, true]);
+    : colZ[i] ? [S.z, S.left, false] : touching(c.spaceAfter));
+  const rowSep = G.rows.slice(0, -1).map(r => r.gapAfter ? [S.bottom, S.top, false] : touching(r.spaceAfter));
   const edges = (lowMargin, sizes, seps, highMargin) => {
     const low = [], high = [], boundary = []; let pos = lowMargin;
     sizes.forEach((size, i) => { low.push(Math.round(pos)); pos += size; high.push(Math.round(pos));
@@ -2687,7 +2689,7 @@ function panelGeometry(G, S) {
   pads.filter(panel).forEach(q => pads.filter(panel).forEach(o => {  // touching panels of another length: labels hidden, axes not shared
     if (below(q, o) && (q.c !== o.c || q.c1 !== o.c1)) warnings.push(`Pad ${q.id} touches pad ${o.id} of another width below it: their x axes cannot be shared, yet the labels between them are hidden. Separate them with a gap.`);
     if (right(q, o) && (q.r !== o.r || q.r1 !== o.r1)) warnings.push(`Pad ${o.id} touches pad ${q.id} of another height left of it: their y axes cannot be shared, yet the labels between them are hidden. Separate them with a gap.`) }));
-  return { width, height, pads, warnings, shared, titles } }
+  return { width, height, pads, warnings, shared, titles, touchingCols: colSep.map(x => x[2]), touchingRows: rowSep.map(x => x[2]) } }
 /* ---------------- base plot designer: presets of MakeBasePlot, a grid of panels and the lengths of PanelLayout, drawn to scale */
 const SIZE_FIELDS = [ // key, setter, label, step
   ["canvas", "Canvas", [["panel", "SetPanelSize", "Panel size", 1], ["top", "", "Margin top", 1], ["bottom", "", "Margin bottom", 1], ["left", "", "Margin left", 1], ["right", "", "Margin right", 1],
@@ -2701,10 +2703,11 @@ const ATTACHED = 0.37;  // the size of a newly attached panel, in units of the s
 const REF_DEFAULTS = { color: "kBlack", style: 1 };  // the look of the reference lines (SetRefFunc): black and solid, as in the ratio pads of MakeBasePlot
 // the panel unit: a panel and the panels attached to it on each side, listed from the panel outwards: { size, ref, compact, own } (size: the
 // height of panels above and below, the width of panels left and right; ref: the function of a reference line, compact: few y divisions and
-// a centred title, own: a title of its own, y for panels above and below, x for panels left and right); repeated cols x rows times,
+// a centred title, own: a title of its own, y for panels above and below, x for panels left and right, space: pixels to the panel inside it,
+// null: the space of all touching panels); repeated cols x rows times,
 // touching or apart (gap); strip: a legend strip on top
 const SIDES = ["above", "below", "left", "right"];
-const attached = (ref = "") => ({ size: ATTACHED, ref, compact: true, own: true, apart: false });  // apart: a gap to the panel inside it, both with their own labels
+const attached = (ref = "") => ({ size: ATTACHED, ref, compact: true, own: true, apart: false, space: null });  // apart: a gap to the panel inside it, both with their own labels
 // the base plots to start from (names MakeBasePlot knows): the panel unit and its repetition (the look, text sizes and colours, stays)
 const TEMPLATES = [["1d: one panel", "1d", 1, 1, () => emptyUnit()],
   ["1d_ratio: a ratio below", "1d", 1, 1, () => ({ ...emptyUnit(), below: [attached("1")] })],
@@ -2732,10 +2735,12 @@ function layState() {
 function layApply(code) {
   try {
     const d = JSON.parse(decodeURIComponent(escape(atob(code.replace(/-/g, "+").replace(/_/g, "/"))))), n = v => Number.isInteger(v) && v >= 1 && v <= 16;
+    const space = v => v == null || !(+v >= 0) ? null : +v;  // a space of its own in pixels, null: the space of all touching panels
     if (!["1d", "2d"].includes(d.t) || !["", "wide", "tall"].includes(d.s) || !n(d.c) || !n(d.r)) return false;
-    const unit = Object.fromEntries(SIDES.map(k => [k, (Array.isArray(d.u && d.u[k]) ? d.u[k] : []).filter(a => a && +a.size > 0).map(a => ({ ...attached(), ...a, size: +a.size, ref: String(a.ref || "") }))]));
+    const unit = Object.fromEntries(SIDES.map(k => [k, (Array.isArray(d.u && d.u[k]) ? d.u[k] : []).filter(a => a && +a.size > 0).map(a => ({ ...attached(), ...a, size: +a.size, ref: String(a.ref || ""), space: space(a.space) }))]));
     const G = d.G && { cols: d.G.cols, rows: d.G.rows, empty: new Set(d.G.empty), hole: new Set((d.G.hole || []).filter(k => d.G.empty.includes(k))), span: new Map(d.G.span), scale: new Set(d.G.scale || []) };
-    if (G) { if (!G.cols.length || !G.rows.length || !G.cols.every(c => +c.w > 0) || !G.rows.every(r => +r.h > 0)) return false; panelGeometry(G, PL_DEFAULTS) }  // throws if malformed
+    if (G) { if (!G.cols.length || !G.rows.length || !G.cols.every(c => +c.w > 0) || !G.rows.every(r => +r.h > 0)) return false;
+      [...G.cols, ...G.rows].forEach(x => { x.spaceAfter = space(x.spaceAfter) }); panelGeometry(G, PL_DEFAULTS) }  // throws if malformed
     Object.assign(LAY, { type: d.t, shape: d.s, cols: d.c, rows: d.r, unit, gap: !!d.g, strip: !!d.w, full: !!d.f, name: String(d.n || ""), aspect: +d.a || SHAPE_DEFAULTS.aspect,
       S: { ...PL_DEFAULTS, ...Object.fromEntries(Object.entries(d.S || {}).filter(([k, v]) => k in PL_DEFAULTS && isFinite(v))) },
       colors: Array.isArray(d.k) && d.k.length && d.k.every(colorOk) ? d.k : [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS, ...Object.fromEntries(Object.entries(d.e || {}).filter(([k]) => k in REF_DEFAULTS)) }, custom: !!d.G, sel: null, undo: null, commonTitles: d.T !== false });
@@ -2748,28 +2753,30 @@ function layReset() { Object.assign(LAY, { ...UNIT_DEFAULTS, unit: { ...emptyUni
 const BELOW = ["", "ratio", "pull", "ratio_pull"];
 const belowName = (p = LAY) => p.unit.below.map(a => a.ref === "1" ? "ratio" : a.ref === "0" ? "pull" : "?").join("_");
 const named = (p = LAY) => !p.strip && !p.unit.above.length && !p.unit.left.length && !p.unit.right.length && (p.type === "1d" || !p.unit.below.length)
-  && BELOW.includes(belowName(p)) && p.unit.below.every(a => a.compact && a.own && !a.apart);
+  && BELOW.includes(belowName(p)) && p.unit.below.every(a => a.compact && a.own && !a.apart && a.space == null);
 function presetName(p = LAY) {
   return p.type + (p.shape ? "_" + p.shape : "") + (p.cols > 1 || p.rows > 1 ? `_${p.cols}x${p.rows}` : "") + (belowName(p) ? "_" + belowName(p) : "") + (p.gap ? "_gap" : "") }
-const mainRow = h => ({ h, kind: "", ref: "", compact: false, own: false, gapAfter: false });
-const shortRow = (h = ATTACHED) => ({ h, kind: "short", ref: "", compact: false, own: true, gapAfter: false });  // a row of attached panels in the grid editor
-const mainCol = (w, z) => ({ w, kind: "", z, own: false, gapAfter: false });
+const mainRow = h => ({ h, kind: "", ref: "", compact: false, own: false, gapAfter: false, spaceAfter: null });
+const shortRow = (h = ATTACHED) => ({ h, kind: "short", ref: "", compact: false, own: true, gapAfter: false, spaceAfter: null });  // a row of attached panels in the grid editor
+const mainCol = (w, z) => ({ w, kind: "", z, own: false, gapAfter: false, spaceAfter: null });
 function presetGrid(p = LAY) { // the grid of the unit repeated cols x rows times (for a named one the arrangement PlotManager::MakeBasePlot makes)
   const u = p.unit, w = p.shape === "wide" ? LAY.aspect : 1, h = p.shape === "tall" ? LAY.aspect : 1, maps = p.type === "2d", rows = [], cols = [], mainRows = [], scaleCols = [];
-  const attachedRow = a => ({ h: a.size, kind: "short", ref: a.ref, compact: a.compact, own: a.own, gapAfter: false });
+  const attachedRow = a => ({ h: a.size, kind: "short", ref: a.ref, compact: a.compact, own: a.own, gapAfter: false, spaceAfter: null });
+  const toInner = a => ({ gapAfter: a.apart, spaceAfter: a.apart ? null : a.space });  // the boundary to the panel inside an attached one (above it or left of it)
+  const toOuter = (list, a) => Object.assign(list[list.length - 1], a.apart ? { gapAfter: true } : { spaceAfter: a.space });  // ... below it or right of it
   if (p.strip) rows.push(mainRow(0.2));
   const rowRuns = [], colRuns = [];  // the attached rows above and below each panel row, the attached columns left and right of each panel column: [first, count]
   for (let r = 0; r < p.rows; r++) {
-    rowRuns.push([rows.length, u.above.length]); [...u.above].reverse().forEach(a => rows.push({ ...attachedRow(a), gapAfter: a.apart }));
+    rowRuns.push([rows.length, u.above.length]); [...u.above].reverse().forEach(a => rows.push({ ...attachedRow(a), ...toInner(a) }));
     mainRows.push(rows.length); rows.push(mainRow(h));
-    rowRuns.push([rows.length, u.below.length]); u.below.forEach(a => { if (a.apart) rows[rows.length - 1].gapAfter = true; rows.push(attachedRow(a)) });
+    rowRuns.push([rows.length, u.below.length]); u.below.forEach(a => { toOuter(rows, a); rows.push(attachedRow(a)) });
     rows[rows.length - 1].gapAfter = p.gap && r < p.rows - 1 }
   // the colour scales of maps: one cell right of the grid for touching maps, else one per map (a cell right of its panels on the right, or the panel's own)
   const sharedScale = maps && p.cols * p.rows > 1 && !p.gap && !u.right.length;
   for (let c = 0; c < p.cols; c++) {
-    colRuns.push([cols.length, u.left.length]); [...u.left].reverse().forEach(a => cols.push({ ...mainCol(a.size, false), kind: "short", own: a.own, gapAfter: a.apart }));
+    colRuns.push([cols.length, u.left.length]); [...u.left].reverse().forEach(a => cols.push({ ...mainCol(a.size, false), kind: "short", own: a.own, ...toInner(a) }));
     cols.push(mainCol(w, maps && !sharedScale && !u.right.length));
-    colRuns.push([cols.length, u.right.length + (maps && u.right.length ? 1 : 0)]); u.right.forEach(a => { if (a.apart) cols[cols.length - 1].gapAfter = true; cols.push({ ...mainCol(a.size, false), kind: "short", own: a.own }) });
+    colRuns.push([cols.length, u.right.length + (maps && u.right.length ? 1 : 0)]); u.right.forEach(a => { toOuter(cols, a); cols.push({ ...mainCol(a.size, false), kind: "short", own: a.own }) });
     if (maps && u.right.length) { scaleCols.push(cols.length); cols.push(mainCol(1, false)) }
     cols[cols.length - 1].gapAfter = p.gap && c < p.cols - 1 }
   const G = { cols, rows, empty: new Set(), hole: new Set(), span: new Map(), scale: new Set() };
@@ -2787,7 +2794,7 @@ function presetGrid(p = LAY) { // the grid of the unit repeated cols x rows time
   return G }
 // the named unit a grid is, if any: a grid built by hand that a name describes gets that name (and the short code)
 function matchPreset(G) {
-  const key = g => JSON.stringify([g.cols.map(c => [+c.w, c.kind || "", !!c.z, !!c.own, !!c.gapAfter]), g.rows.map(r => [+r.h, r.kind || "", r.ref || "", !!r.compact, !!r.own, !!r.gapAfter]),
+  const key = g => JSON.stringify([g.cols.map(c => [+c.w, c.kind || "", !!c.z, !!c.own, !!c.gapAfter, c.spaceAfter ?? null]), g.rows.map(r => [+r.h, r.kind || "", r.ref || "", !!r.compact, !!r.own, !!r.gapAfter, r.spaceAfter ?? null]),
     [...g.empty].sort(), [...(g.hole || [])].sort(), [...g.span].sort(), [...g.scale].sort()]), want = key(G);
   for (const type of ["1d", "2d"]) for (const shape of ["", "wide", "tall"]) for (const below of type === "1d" ? BELOW : [""]) for (const gap of [false, true]) {
     const kinds = below.split("_").filter(Boolean), rows = G.rows.length / (1 + kinds.length);
@@ -2855,7 +2862,11 @@ function layoutCode(py) {
     // in a direction it spans its size is not used (written as 1), an empty cell gets a size where its column or row needs one
     const { cells } = gridCells(G), nC = G.cols.length;
     const ownW = c => cells.some(k => k.c === c && k.c1 === c && (!k.empty || k.scale)), ownH = r => cells.some(k => k.r === r && k.r1 === r && !k.empty);
-    const cell = k => {
+    // a boundary between touching cells with a space of its own: given by every cell starting at it (C++ wants the same value from all)
+    const spacing = k => (k.r > 0 && g.touchingRows[k.r - 1] && G.rows[k.r - 1].spaceAfter != null ? `.SpacingAbove(${fmt(G.rows[k.r - 1].spaceAfter)})` : "")
+      + (k.c > 0 && g.touchingCols[k.c - 1] && G.cols[k.c - 1].spaceAfter != null ? `.SpacingLeft(${fmt(G.cols[k.c - 1].spaceAfter)})` : "");
+    const cell = k => cellCode(k) + spacing(k);
+    const cellCode = k => {
       const cs = k.c1 - k.c + 1, rs = k.r1 - k.r + 1, w = cs > 1 ? 1 : G.cols[k.c].w, h = rs > 1 ? 1 : G.rows[k.r].h;
       const span = cs > 1 || rs > 1 ? `.Span(${cs}${rs > 1 ? ", " + rs : ""})` : "";
       if (k.scale) { // the cell shows the group of the panel to its left; a group further left (e.g. a map left of its projection) is named
@@ -3005,23 +3016,27 @@ function renderLayout() {
   const kindSel = (attr, v, kinds, label) => `<select ${attr} aria-label="${label}">${kinds.map(([k, t]) => `<option value="${k}" ${(v || "") === k ? "selected" : ""}>${t}</option>`).join("")}</select>`;
   const box = (attr, on, label) => `<input type="checkbox" ${attr} ${on ? "checked" : ""} aria-label="${label}">`;
   const none = `<span class="none">–</span>`;
+  // a space of its own in pixels: empty for the space of all touching panels (shown as placeholder)
+  const spaceIn = (attr, v, label) => `<input type="number" ${attr} value="${v == null ? "" : fmt(v)}" step="1" min="0" placeholder="${fmt(S.spacing)}" aria-label="${label} in pixels (empty: the space of all touching panels)">`;
   // the reference line of a panel: none, the usual ones, or a function typed in (pre = "a" for attached panels, "row" for rows of the grid)
   const refPick = (pre, at, ref, what) => { const other = !["", "1", "0"].includes(ref);
     return `<select data-${pre}refsel="${at}" aria-label="reference line of ${what}">${[["", "none"], ["1", "at 1 (ratio)"], ["0", "at 0 (pull)"], ["other", "other…"]].map(([v, t]) =>
       `<option value="${v}" ${(other ? "other" : ref) === v ? "selected" : ""}>${t}</option>`).join("")}</select>${other ? ` <input type="text" class="lb-reff" data-${pre === "a" ? "aref" : "rowref"}="${at}" value="${ref.replace(/"/g, "&quot;")}" spellcheck="false" aria-label="function of the reference line of ${what}">` : ""}` };
-  const colsUI = `<div class="lb-twrap"><table class="lb-table"><tr><th>column</th><th>kind</th><th>width</th><th class="c" title="room for a colour scale on its right">colour scale</th><th class="c">own x title</th><th class="c">gap after</th></tr>${G.cols.map((c, i) =>
+  const colsUI = `<div class="lb-twrap"><table class="lb-table"><tr><th>column</th><th>kind</th><th>width</th><th class="c" title="room for a colour scale on its right">colour scale</th><th class="c">own x title</th><th class="c">gap after</th><th title="pixels to the touching column after it; empty: the space of all touching panels">space after</th></tr>${G.cols.map((c, i) =>
     `<tr class="${c.kind ? "att" : ""}"><td>${i + 1}</td><td>${kindSel(`data-colkind="${i}"`, c.kind, [["", "normal"], ["short", "attached"]], `kind of column ${i + 1}`)}</td><td>${num(`data-colw="${i}"`, c.w, c.kind ? 0.01 : 0.05, 0.05, `width of column ${i + 1}`)}</td>
-      <td class="c">${box(`data-colz="${i}"`, c.z, `colour scale right of column ${i + 1}`)}</td><td class="c">${box(`data-colown="${i}"`, c.own, `own x title in column ${i + 1}`)}</td><td class="c">${i < G.cols.length - 1 ? box(`data-colgap="${i}"`, c.gapAfter, `gap after column ${i + 1}`) : none}</td></tr>`).join("")}</table></div>`;
-  const rowsUI = `<div class="lb-twrap"><table class="lb-table"><tr><th>row</th><th>kind</th><th>height</th><th>line</th><th class="c" title="few y divisions and a centred y title">few div.</th><th class="c">own y title</th><th class="c">gap after</th></tr>${G.rows.map((r, i) =>
+      <td class="c">${box(`data-colz="${i}"`, c.z, `colour scale right of column ${i + 1}`)}</td><td class="c">${box(`data-colown="${i}"`, c.own, `own x title in column ${i + 1}`)}</td><td class="c">${i < G.cols.length - 1 ? box(`data-colgap="${i}"`, c.gapAfter, `gap after column ${i + 1}`) : none}</td>
+      <td>${i < G.cols.length - 1 && g.touchingCols && g.touchingCols[i] ? spaceIn(`data-colspace="${i}"`, c.spaceAfter, `space after column ${i + 1}`) : none}</td></tr>`).join("")}</table></div>`;
+  const rowsUI = `<div class="lb-twrap"><table class="lb-table"><tr><th>row</th><th>kind</th><th>height</th><th>line</th><th class="c" title="few y divisions and a centred y title">few div.</th><th class="c">own y title</th><th class="c">gap after</th><th title="pixels to the touching row after it; empty: the space of all touching panels">space after</th></tr>${G.rows.map((r, i) =>
     `<tr class="${r.kind ? "att" : ""}"><td>${i + 1}</td><td>${kindSel(`data-rowkind="${i}"`, r.kind, [["", "normal"], ["short", "attached"]], `kind of row ${i + 1}`)}</td><td>${num(`data-rowh="${i}"`, r.h, r.kind ? 0.01 : 0.05, 0.05, `height of row ${i + 1}`)}</td>
       <td>${refPick("row", i, r.ref || "", `row ${i + 1}`)}</td>
-      <td class="c">${box(`data-rowcompact="${i}"`, r.compact, `few divisions in row ${i + 1}`)}</td><td class="c">${box(`data-rowown="${i}"`, r.own, `own y title in row ${i + 1}`)}</td><td class="c">${i < G.rows.length - 1 ? box(`data-rowgap="${i}"`, r.gapAfter, `gap after row ${i + 1}`) : none}</td></tr>`).join("")}</table></div>`;
+      <td class="c">${box(`data-rowcompact="${i}"`, r.compact, `few divisions in row ${i + 1}`)}</td><td class="c">${box(`data-rowown="${i}"`, r.own, `own y title in row ${i + 1}`)}</td><td class="c">${i < G.rows.length - 1 ? box(`data-rowgap="${i}"`, r.gapAfter, `gap after row ${i + 1}`) : none}</td>
+      <td>${i < G.rows.length - 1 && g.touchingRows && g.touchingRows[i] ? spaceIn(`data-rowspace="${i}"`, r.spaceAfter, `space after row ${i + 1}`) : none}</td></tr>`).join("")}</table></div>`;
   // the attached panels of the unit, one table row each
   const attUI = SIDES.flatMap(side => LAY.unit[side].map((a, i) => { const at = `${side},${i}`, vertical = side === "above" || side === "below", what = `${side} panel ${i + 1}`;
     return `<tr><td>${side} ${i + 1}</td><td>${num(`data-asize="${at}"`, a.size, 0.01, 0.05, `${vertical ? "height" : "width"} of the ${what}`)}</td>
       <td>${vertical ? refPick("a", at, a.ref, `the ${what}`) : none}</td>
       <td class="c">${vertical ? box(`data-acompact="${at}"`, a.compact, `few divisions in the ${what}`) : none}</td><td class="c">${box(`data-aown="${at}"`, a.own, `own title of the ${what}`)}</td>
-      <td class="c">${box(`data-aapart="${at}"`, a.apart, `the ${what} apart`)}</td><td><button class="chip" data-adel="${at}" aria-label="remove the ${what}" title="remove this panel">×</button></td></tr>` }));
+      <td class="c">${box(`data-aapart="${at}"`, a.apart, `the ${what} apart`)}</td><td>${a.apart ? none : spaceIn(`data-aspace="${at}"`, a.space, `space between the ${what} and the panel inside it`)}</td><td><button class="chip" data-adel="${at}" aria-label="remove the ${what}" title="remove this panel">×</button></td></tr>` }));
   const sizesUI = SIZE_FIELDS.map(([, title, fields]) => `<div class="lb-sizes"><span class="lb-h">${title}</span>${fields.map(([k, , label, step]) =>
     `<label class="${+S[k] !== PL_DEFAULTS[k] ? "lb-changed" : ""}"><span>${label}</span>${num(`data-size="${k}"`, S[k], step, 0, label)}</label>`).join("")}</div>`).join("");
   const info = g.error ? `<p class="lb-err">${g.error}</p>` : `<span class="small muted">${g.width} × ${g.height} pixels, ${g.pads.length} pad${g.pads.length > 1 ? "s" : ""}</span>`;
@@ -3036,9 +3051,9 @@ function renderLayout() {
         <div class="row"><span class="lb-l">Shape</span>${opt("shape", "", "square")}${opt("shape", "wide", "wide")}${opt("shape", "tall", "tall")}${LAY.shape && !LAY.custom ? `<label class="lb-chk">aspect ${num('data-shape="aspect"', LAY.aspect, 0.05, 0.1, "aspect ratio of wide and tall panels")}</label>` : ""}</div>
       </div>
       <div class="lb-group"><div class="lb-gh">2 · Attached panels <span class="small">touching the panel (a shared axis), or apart (a gap, own labels)</span></div>
-        ${attUI.length ? `<div class="lb-twrap"><table class="lb-table"><tr><th>panel</th><th>size</th><th>line</th><th class="c" title="few y divisions and a centred y title">few div.</th><th class="c">own title</th><th class="c">apart</th><th></th></tr>${attUI.join("")}</table></div>` : `<span class="small muted">none: add one on any side</span>`}
+        ${attUI.length ? `<div class="lb-twrap"><table class="lb-table"><tr><th>panel</th><th>size</th><th>line</th><th class="c" title="few y divisions and a centred y title">few div.</th><th class="c">own title</th><th class="c">apart</th><th title="pixels to the panel inside it; empty: the space of all touching panels">space</th><th></th></tr>${attUI.join("")}</table></div>` : `<span class="small muted">none: add one on any side</span>`}
         <div class="lb-tools">${SIDES.map(side => `<button class="chip" data-aadd="${side}">+ ${side}</button>`).join("")}</div>
-        <div class="lb-tools"><label class="lb-chk">space between touching panels ${num('data-size="spacing"', S.spacing, 1, 0, "space between touching panels in pixels")} px</label><span class="small muted">for all touching panels, also between copies</span></div>
+        <div class="lb-tools"><label class="lb-chk">space between touching panels ${num('data-size="spacing"', S.spacing, 1, 0, "space between touching panels in pixels")} px</label><span class="small muted">for all touching panels, also between copies; an attached panel can have its own (column “space”)</span></div>
       </div>
       <div class="lb-group"><div class="lb-gh">3 · Repeat <span class="small">the panel with its attached panels</span></div>
         <div class="row"><span class="lb-l">Columns</span>${[1, 2, 3, 4, 5, 6].map(n => opt("cols", n, n)).join("")}</div>
@@ -3104,6 +3119,10 @@ function renderLayout() {
   host.querySelectorAll("[data-aref]").forEach(i => i.onchange = () => unit(() => { att(i).ref = i.value.trim().replace(/"/g, "") }));
   host.querySelectorAll("[data-acompact]").forEach(i => i.onchange = () => unit(() => { att(i).compact = i.checked }));
   host.querySelectorAll("[data-aapart]").forEach(i => i.onchange = () => unit(() => { att(i).apart = i.checked }));
+  const spaceOf = i => i.value.trim() === "" ? null : Math.max(0, +i.value);  // empty: the space of all touching panels
+  host.querySelectorAll("[data-aspace]").forEach(i => i.onchange = () => unit(() => { att(i).space = spaceOf(i) }));
+  host.querySelectorAll("[data-colspace]").forEach(i => i.onchange = () => { G.cols[+i.dataset.colspace].spaceAfter = spaceOf(i); custom(); rerender() });
+  host.querySelectorAll("[data-rowspace]").forEach(i => i.onchange = () => { G.rows[+i.dataset.rowspace].spaceAfter = spaceOf(i); custom(); rerender() });
   host.querySelectorAll("[data-upreset]").forEach(i => i.onchange = () => { if (i.value === "") return;  // the whole layout from the template, the previous design can be brought back
     LAY.undo = layState(); Object.assign(LAY, templateOf(TEMPLATES[+i.value]), { aspect: SHAPE_DEFAULTS.aspect, commonTitles: true, custom: false, full: false, sel: null }); LAY.G = presetGrid(); rerender() });
   host.querySelectorAll("[data-aown]").forEach(i => i.onchange = () => unit(() => { att(i).own = i.checked }));
@@ -3130,7 +3149,7 @@ function renderLayout() {
   host.querySelectorAll("[data-colz]").forEach(i => i.onchange = () => { G.cols[+i.dataset.colz].z = i.checked; custom(); rerender() });
   host.querySelectorAll("[data-colgap]").forEach(i => i.onchange = () => { G.cols[+i.dataset.colgap].gapAfter = i.checked; custom(); rerender() });
   host.querySelectorAll("[data-rowgap]").forEach(i => i.onchange = () => { G.rows[+i.dataset.rowgap].gapAfter = i.checked; custom(); rerender() });
-  host.querySelectorAll("[data-rowkind]").forEach(i => i.onchange = () => { const r = G.rows[+i.dataset.rowkind]; Object.assign(r, i.value ? shortRow() : mainRow(1), { gapAfter: r.gapAfter }); custom(); rerender() });
+  host.querySelectorAll("[data-rowkind]").forEach(i => i.onchange = () => { const r = G.rows[+i.dataset.rowkind]; Object.assign(r, i.value ? shortRow() : mainRow(1), { gapAfter: r.gapAfter, spaceAfter: r.spaceAfter }); custom(); rerender() });
   host.querySelectorAll("[data-rowref]").forEach(i => i.onchange = () => { G.rows[+i.dataset.rowref].ref = i.value.trim().replace(/"/g, ""); custom(); rerender() });
   host.querySelectorAll("[data-rowcompact]").forEach(i => i.onchange = () => { G.rows[+i.dataset.rowcompact].compact = i.checked; custom(); rerender() });
   host.querySelectorAll("[data-rowown]").forEach(i => i.onchange = () => { G.rows[+i.dataset.rowown].own = i.checked; custom(); rerender() });

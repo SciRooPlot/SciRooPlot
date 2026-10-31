@@ -325,7 +325,9 @@ void exportPanelLayout(py::module_& m)
   py::class_<Panel>(m, "Panel", "One axis frame of a layout, sizes in units of the standard panel.")
     .def(py::init<double_t, double_t>(), arg("width") = 1., arg("height") = 1.)
     .def("ZAxis", &Panel::ZAxis, ref_int)
-    .def("Span", &Panel::Span, arg("columns"), arg("rows") = 1, ref_int);
+    .def("Span", &Panel::Span, arg("columns"), arg("rows") = 1, ref_int)
+    .def("SpacingAbove", &Panel::SpacingAbove, arg("pixel"), ref_int)
+    .def("SpacingLeft", &Panel::SpacingLeft, arg("pixel"), ref_int);
   m.def("Gap", &Gap, "Separates independent panels: both sides keep their axis labels and titles.");
   m.def("Empty", py::overload_cast<>(&Empty), "A cell of the grid without axis frame, its remaining space becomes a pad for texts.");
   m.def("Empty", py::overload_cast<double_t, double_t>(&Empty), arg("width"), arg("height"), "An empty cell with a size of its own, e.g. a strip for a common legend.");

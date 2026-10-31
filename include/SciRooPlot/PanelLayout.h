@@ -41,6 +41,11 @@ class Panel
   // in the row where it starts, and the rows below leave out the positions it covers. In a direction it spans, its size
   // follows from the columns or rows it covers (including what lies between them) and the size given here is not used.
   Panel& Span(uint8_t columns, uint8_t rows = 1);
+  // Space in pixels between this cell and the touching cells above it (left of it), e.g. Panel(1, 0.37).SpacingAbove(12) for a ratio
+  // panel set off a little from its panel (the axes stay shared). Rows and columns are straight, so the space holds for the whole
+  // boundary: every cell along it gets it, and cells along one boundary that give a space must give the same.
+  Panel& SpacingAbove(double_t pixel);  // space to the touching cells above, instead of PanelLayout::SetPanelSpacing
+  Panel& SpacingLeft(double_t pixel);   // space to the touching cells on the left, instead of PanelLayout::SetPanelSpacing
 
  private:
   friend class PanelLayout;
@@ -53,6 +58,8 @@ class Panel
   friend Panel ZAxis(uint8_t padID);
   double_t mWidth{1.};
   double_t mHeight{1.};
+  double_t mSpacingAbove{-1.};  // negative: the spacing of the layout
+  double_t mSpacingLeft{-1.};
   uint8_t mColumns{1};
   uint8_t mRows{1};
   bool mSized{true};  // the size takes part in defining the widths of the columns and heights of the rows
@@ -113,7 +120,7 @@ class PanelLayout
   PanelLayout& SetColorScaleMargin(double_t pixel);                                       // 268: right margin of a panel with colour scale
   PanelLayout& SetColorScaleOffset(double_t pixel);                                       // 5.12: distance of the colour scale from the frame
   PanelLayout& SetColorScaleWidth(double_t pixel);                                        // 46.08: width of the colour scale
-  PanelLayout& SetPanelSpacing(double_t pixel);                                           // 0: space between touching panels (their axes stay shared)
+  PanelLayout& SetPanelSpacing(double_t pixel);                                           // 0: space between touching panels (their axes stay shared), per boundary: Panel::SpacingAbove/SpacingLeft
   PanelLayout& SetTextSize(double_t pixel);                                               // 31.52: axis labels, legends and texts
   PanelLayout& SetTitleSize(double_t pixel);                                              // 39.4: axis titles
   PanelLayout& SetTickLength(double_t pixel);                                             // 19.15

@@ -1312,6 +1312,10 @@ class Panel:
     """
     One axis frame of a layout, sizes in units of the standard panel.
     """
+    def SpacingAbove(self, pixel: float) -> Panel:
+        ...
+    def SpacingLeft(self, pixel: float) -> Panel:
+        ...
     def Span(self, columns: int, rows: int = 1) -> Panel:
         ...
     def ZAxis(self) -> Panel:

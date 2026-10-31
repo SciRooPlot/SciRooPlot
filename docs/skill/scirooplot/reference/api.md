@@ -435,6 +435,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Panel(double_t width = 1., double_t height = 1.)`
 - `Panel& ZAxis()` — room for the colour scale of this panel to its right
 - `Panel& Span(uint8_t columns, uint8_t rows = 1)`
+- `Panel& SpacingAbove(double_t pixel)` — space to the touching cells above, instead of PanelLayout::SetPanelSpacing
+- `Panel& SpacingLeft(double_t pixel)` — space to the touching cells on the left, instead of PanelLayout::SetPanelSpacing
 
 ## PanelLayout
 *arrangement of panels and the sizes shared by all base plots*
@@ -446,7 +448,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `PanelLayout& SetColorScaleMargin(double_t pixel)` — 268: right margin of a panel with colour scale
 - `PanelLayout& SetColorScaleOffset(double_t pixel)` — 5.12: distance of the colour scale from the frame
 - `PanelLayout& SetColorScaleWidth(double_t pixel)` — 46.08: width of the colour scale
-- `PanelLayout& SetPanelSpacing(double_t pixel)` — 0: space between touching panels (their axes stay shared)
+- `PanelLayout& SetPanelSpacing(double_t pixel)` — 0: space between touching panels (their axes stay shared), per boundary: Panel::SpacingAbove/SpacingLeft
 - `PanelLayout& SetTextSize(double_t pixel)` — 31.52: axis labels, legends and texts
 - `PanelLayout& SetTitleSize(double_t pixel)` — 39.4: axis titles
 - `PanelLayout& SetTickLength(double_t pixel)` — 19.15

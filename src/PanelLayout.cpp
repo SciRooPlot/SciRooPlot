@@ -61,6 +61,20 @@ Panel& Panel::Span(uint8_t columns, uint8_t rows)
   return *this;
 }
 
+Panel& Panel::SpacingAbove(double_t pixel)
+{
+  if (pixel < 0.) logger::throw_invalid_argument("Panel::SpacingAbove: the length must be zero or positive (got {}).", pixel);
+  mSpacingAbove = pixel;
+  return *this;
+}
+
+Panel& Panel::SpacingLeft(double_t pixel)
+{
+  if (pixel < 0.) logger::throw_invalid_argument("Panel::SpacingLeft: the length must be zero or positive (got {}).", pixel);
+  mSpacingLeft = pixel;
+  return *this;
+}
+
 Panel Gap()
 {
   Panel gap;
@@ -387,6 +401,26 @@ void PanelLayout::ApplyTo(Plot& plot) const
   };
   vector<Separation> colSep(nCols > 1 ? nCols - 1 : 0);
   vector<Separation> rowSep(nRows > 1 ? nRows - 1 : 0);
+  // the space between touching panels at each boundary: the one the cells along it give (Panel::SpacingLeft, SpacingAbove), else SetPanelSpacing
+  vector<double_t> colSpacing(colSep.size(), -1.);
+  vector<double_t> rowSpacing(rowSep.size(), -1.);
+  auto takeSpacing = [](vector<double_t>& spacings, double_t given, size_t index, const char* setter, size_t r, size_t c) {
+    if (given < 0.) return;
+    if (index == 0) logger::throw_invalid_argument("Layout: {} of the cell in row {}, column {}: there is no cell on that side.", setter, r + 1, c + 1);
+    double_t& spacing = spacings[index - 1];
+    if (spacing >= 0. && spacing != given) {
+      logger::throw_invalid_argument("Layout: {}({}) of the cell in row {}, column {}: another cell along the same boundary gives {}.", setter, given, r + 1, c + 1, spacing);
+    }
+    spacing = given;
+  };
+  for (const auto& [cell, r, c] : cells) {
+    takeSpacing(colSpacing, cell->mSpacingLeft, c, "SpacingLeft", r, c);
+    takeSpacing(rowSpacing, cell->mSpacingAbove, r, "SpacingAbove", r, c);
+  }
+  auto touching = [this](double_t spacing) {
+    const double_t half = (spacing < 0. ? mPanelSpacing : spacing) / 2.;
+    return Separation{half, half, true};
+  };
   for (size_t c = 0; c + 1 < nCols; ++c) {
     if (gapAfterColumn[c] == 1) {
       colSep[c] = Separation{mMarginRight, mMarginLeft, false};
@@ -397,11 +431,15 @@ void PanelLayout::ApplyTo(Plot& plot) const
     } else if (colZAxis[c]) {
       colSep[c] = Separation{mColorScaleMargin, mMarginLeft, false};
     } else {
-      colSep[c] = Separation{mPanelSpacing / 2., mPanelSpacing / 2., true};
+      colSep[c] = touching(colSpacing[c]);
+    }
+    if (!colSep[c].shared && colSpacing[c] >= 0.) {
+      logger::throw_invalid_argument("Layout: SpacingLeft in column {}: a gap or a colour scale lies left of it, the space is for touching panels.", c + 2);
     }
   }
   for (size_t r = 0; r + 1 < nRows; ++r) {
-    rowSep[r] = gapAfterRow[r] ? Separation{mMarginBottom, mMarginTop, false} : Separation{mPanelSpacing / 2., mPanelSpacing / 2., true};
+    rowSep[r] = gapAfterRow[r] ? Separation{mMarginBottom, mMarginTop, false} : touching(rowSpacing[r]);
+    if (gapAfterRow[r] && rowSpacing[r] >= 0.) logger::throw_invalid_argument("Layout: SpacingAbove in row {}: a gap lies above it, the space is for touching panels.", r + 2);
   }
 
   // edges of the axis frames and boundaries between the pads, rounded to pixels (x from the left, y from the top)
