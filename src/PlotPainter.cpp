@@ -707,6 +707,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }
 
+        // TGraph::Draw clears the pad when the option contains an 'A' (new axes) outside of SAME, which would delete the frame
+        // (and the frame drawn with it has no axes): the axes are SciRooPlot's
+        if constexpr (is_graph_1d<data_type>()) {
+          TString option(drawOption);
+          option.ToLower();  // as TGraph::Draw reads it
+          option.ReplaceAll("same", "");
+          if (option.Contains("a")) {
+            if (dataIndex != 0) logger::warning("Drawing option '{}' of {}: A (new axes) is removed, the axes of the pad are drawn by SciRooPlot.", *data->GetDrawOption(), data->GetName());
+            option.ReplaceAll("a", "");
+            drawOption = ((dataIndex != 0) ? "SAME " : "") + string(option.Data());
+          }
+        }
+
         // the angle of the values written by TEXT (Data::SetTextAngle) is part of ROOT's option: TEXTnn, whole degrees from 0 to 90
         // (an angle given in the option string itself is kept); points_text writes its values itself, in the same range
         if (const auto& textAngle = data->GetTextAngle()) {

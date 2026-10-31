@@ -74,6 +74,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Old | New | Kind | Action |
 |---|---|---|---|
 | Without `SetDrawOption`: 1d histograms used ROOT's default (error bars incl. x bars if they have errors), graphs were drawn as `points` (base-plot default), TGraph2D/TF2 with ROOT's default | One rule: a fill set → `hist` (graphs `area`); else a marker set or errors → `points`; else `hist` (graphs `line`); 2d → `colz` | default | Graphs without y errors and without a marker style are now lines: add `.SetDrawOption(points)`. Histograms with `SetFill…` are now filled. Use `points_xerr` for x error bars. |
+| A graph drawing option with `A` (new axes, e.g. `SetDrawOption("AP")`) cleared the pad and crashed | The `A` is removed with a warning: the axes are drawn by SciRooPlot | behaviour | Drop the `A` from graph options (`"AP"` → `"P"`). |
 | `points` and `points_line` of graphs and `points_endcaps` of histograms and graphs drew x errors | x errors only with `points_xerr` and `points_xerr_endcaps` | default | Use the `_xerr` aliases where x errors are wanted. |
 | The `Z` option letter was removed for all but the first item, so graphs got end caps | `Z` removed only for 2d/3d types; graph error bars have no end caps | default | Use `points_endcaps` for end caps. |
 | `band`, `band_smooth` on histograms also drew markers | No markers | default | Use `boxes` if you want markers. |
