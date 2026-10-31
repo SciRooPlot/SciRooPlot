@@ -133,15 +133,6 @@ using util::split_string;
 using util::str_contains;
 using util::str_ends_with;
 
-namespace
-{
-// the colour the n-th data item of a pad gets in the shipped base plots (also shown by AddColorOverview)
-const vector<int16_t> kDefaultColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1, kMagenta - 4, kGreen + 3, kOrange + 1,
-                                        kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7, kMagenta + 1, kPink + 8, kCyan - 6,
-                                        kMagenta, kRed + 2, kGreen + 2, kOrange + 2, kMagenta + 2, kYellow + 3,
-                                        kGray + 2, kBlue + 2, kYellow + 2, kRed, kBlue, kMagenta + 3, kGreen + 4, 28, 8, 15, 17, 12};
-}  // namespace
-
 //**************************************************************************************************
 /**
  * Constructor for PlotManager.
@@ -868,22 +859,7 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, con
     }
   }
 
-  // the look shared by all base plots (the lengths, in pixels of the canvas, come from sizes): fonts, colours, markers and axis conventions
-  Plot plot(name, PanelLayout(sizes, rows));
-  plot.SetTransparent();
-  plot[0].SetTransparent();
-  plot[0].SetFrameFill(1001, 10);
-  plot[0].SetDefaultTextFont(42);
-  plot[0].SetDefaultColors(vector<color_t>(kDefaultColors.begin(), kDefaultColors.end()));
-  plot[0].SetDefaultMarkerStyles({kFullCircle});
-  plot[0].SetDefaultLineStyles({kSolid});
-  plot[0].SetDefaultFillStyles({0});
-  // a label whose text would reach beyond its pad is dropped: at the edge shared by touching pads it would otherwise be cut in half
-  // (a "10" reads as "1"), at the canvas edge cut off (a plot can switch it off per axis with SetHideClippedLabels(false))
-  plot[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent().SetHideClippedLabels();
-  plot[0]['Y'].SetOppositeTicks().SetMaxDigits(3).SetHideClippedLabels();
-  plot[0]['Z'].SetMaxDigits(3);
-  if (zAxis) plot[0].SetRedrawAxes();
+  Plot plot(name, PanelLayout(sizes, rows));                            // with the look of the shipped plots (see PanelLayout::ApplyTo)
   if (sharedScale) plot.mSharedAxes.push_back({'Z', panelPads, true});  // part of the layout, like the axes of touching panels
 
   // conventions of the ratio and pull pads: a line at 1 (0), few divisions, the title in the middle of the short axis
@@ -931,7 +907,7 @@ void PlotManager::AddBasePlot(Plot basePlot)
 //**************************************************************************************************
 void PlotManager::AddColorOverview(const string& name, const string& group, const vector<color_t>& colors)
 {
-  const vector<color_t> shown = colors.empty() ? vector<color_t>(kDefaultColors.begin(), kDefaultColors.end()) : colors;
+  const vector<color_t> shown = colors.empty() ? Plot(name, PanelLayout())[0].GetDefaultMarkerColors().value_or(vector<color_t>{}) : colors;  // those of the shipped look
   Plot plot(name, group);
   plot.SetDimensions(800, 800, true);
   plot[1].SetPosition(0., 0., 1., 1.);
@@ -1230,11 +1206,28 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       }
     }
     mGifName.clear();
-    // the last frame of a gif is the last plot that can be made (its file name tells ROOT how the animation repeats)
+    // the frames of a gif are the plots that can be made, in the order they were defined; the last one closes it (its file name tells ROOT
+    // how the animation repeats). The gif is named after the deepest group all frames are in and lies next to the folder of that group
+    // (frames of animations/legoRotation: animations/legoRotation.gif); frames without a common group make animation.gif in the output directory
     mGifLastFrame = nullptr;
     if (str_contains(mode, "gif")) {
+      optional<vector<string>> commonGroup;
       for (auto plot : selectedPlots) {
-        if (GetMissingData(*plot).empty()) mGifLastFrame = plot;
+        if (!GetMissingData(*plot).empty()) continue;
+        mGifLastFrame = plot;
+        const vector<string> parts = split_string(plot->GetGroup(), '/');
+        if (!commonGroup) {
+          commonGroup = parts;
+          continue;
+        }
+        commonGroup->erase(std::mismatch(commonGroup->begin(), commonGroup->end(), parts.begin(), parts.end()).first, commonGroup->end());
+      }
+      if (commonGroup) {
+        string folder = mOutputDirectory;
+        for (size_t i = 0; i + 1 < commonGroup->size(); ++i)
+          folder += "/" + (*commonGroup)[i];
+        mGifName = folder + "/" + (commonGroup->empty() ? string("animation") : commonGroup->back()) + ".gif";
+        gSystem->Unlink(mGifName.data());  // the frames are appended to the file
       }
     }
     mExitInteractiveBrowsing = false;
@@ -2118,14 +2111,9 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   string folderName = mOutputDirectory + "/" + plot.GetGroup();
   string fullName = folderName + "/" + fileName + fileEnding;
 
-  if (isGif) {
-    if (mGifName.empty()) {
-      gSystem->Unlink(fullName.data());
-      mGifName = fullName;
-    } else {
-      fullName = mGifName;
-      folderName = std::filesystem::path(mGifName).parent_path().string();
-    }
+  if (isGif && !mGifName.empty()) {
+    fullName = mGifName;
+    folderName = std::filesystem::path(mGifName).parent_path().string();
     fullName += (&plot == mGifLastFrame) ? lastFrameSuffix : frameSuffix;
   }
   std::error_code ec;

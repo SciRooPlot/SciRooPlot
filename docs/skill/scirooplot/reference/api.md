@@ -36,7 +36,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 
 - `Plot()`
 - `Plot(const std::string& name, const std::string& group = "", const std::optional<std::string>& basePlot = {})`
-- `Plot(const std::string& name, const PanelLayout& layout)` — a base plot with the panels and lengths of the layout (see PanelLayout.h)
+- `Plot(const std::string& name, const PanelLayout& layout)` — a base plot with the panels and lengths of the layout and the look of the shipped plots (see PanelLayout.h)
 - `Pad& GetPad(uint8_t padID)`
 - `Plot(const Plot& otherPlot, const std::string& name, const std::optional<std::string>& group = {})`
 - `Plot& SetName(const std::string& name)`
@@ -311,7 +311,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `TextBox(double_t xPos, double_t yPos, const std::vector<std::string>& lines)`
 - `TextBox& SetText(const std::string& text)` — lines separated by newlines
 - `TextBox& SetText(const std::vector<std::string>& lines)`
-- `TextBox& SetTextAlign(int16_t align)`
+- `TextBox& SetTextAlign(int16_t align)` — 11 to 33 (default 12) for the lines in the box; a single line at (x, y) is aligned at that point (21: centred above it)
 
 ## Plot::Pad::ImageBox
 *an image file (e.g. a logo); in pdf files only with ROOT 6.42 or newer*
@@ -337,6 +337,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `LegendEntry& AddDataEntry(uint8_t padID, uint16_t dataID)`
 - `LegendBox& SetTitle(const std::string& title)`
 - `LegendBox& SetNumColumns(uint8_t numColumns)`
+- `LegendBox& SetColumnSpacing(float_t spacing)` — space after the widest label of a column, in units of the text height (default 1)
 - `LegendBox& SetDefaultSymbolElements(const std::string& symbolElements)`
 - `LegendBox& SetDefaultColor(color_t color)`
 - `LegendBox& SetDefaultAlpha(float_t alpha)`

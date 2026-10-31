@@ -43,7 +43,7 @@ plot myGroup .+                     # all plots of myGroup and its subgroups
 plot 'myGroup$' .+                  # without subgroups;  plot myGroup/QA ctrl.*  selects a subgroup
 plot thesis 'fig_(a|b)' pdf         # quote patterns with ( ) | in bash
 ```
-Modes: `show` (interactive, the default unless `srp plotmode` sets another: keys `s`/`a` next/previous (circular), `d` moves the current plot into a window of its own, `q` closes a window, `x` all; the keys also work in the terminal, where `q` closes all; double-click a legend, text, image or shape to print its name and coordinates), `spread` (all matching plots at once, one window each), `list`, `print` (dump definition), `pdf`, `eps`, `ps`, `svg`, `png`, `jpg`, `gif` (all matching plots as one animation, 50 centiseconds per frame, played once; `gif+<centiseconds>` sets the frame time, `gif+<centiseconds>++` loops endlessly, `gif+<centiseconds>++<repeats>` that many times; in the order they were defined: one plot per frame in a group of its own, e.g. a loop over `SetView` angles or multiplicity classes, see the example group `animations`), `html`, `json`, `xml`, `root`, `macro` (ROOT macro), `file` (canvases into a ROOT file), `data` (the input objects of the plots, as read, into a ROOT file).
+Modes: `show` (interactive, the default unless `srp plotmode` sets another: keys `s`/`a` next/previous (circular), `d` moves the current plot into a window of its own, `q` closes a window, `x` all; the keys also work in the terminal, where `q` closes all; double-click a legend, text, image or shape to print its name and coordinates), `spread` (all matching plots at once, one window each), `list`, `print` (dump definition), `pdf`, `eps`, `ps`, `svg`, `png`, `jpg`, `gif` (all matching plots as one animation, 50 centiseconds per frame, played once; `gif+<centiseconds>` sets the frame time, `gif+<centiseconds>++` loops endlessly, `gif+<centiseconds>++<repeats>` that many times; in the order they were defined: one plot per frame in a group of its own, e.g. a loop over `SetView` angles or multiplicity classes, see the example group `animations`; written as `<group>.gif` next to the folder of the deepest group all frames are in, e.g. `animations/legoRotation.gif`, or `animation.gif` without a common group), `html`, `json`, `xml`, `root`, `macro` (ROOT macro), `file` (canvases into a ROOT file), `data` (the input objects of the plots, as read, into a ROOT file).
 
 ## Program skeleton
 
@@ -224,10 +224,8 @@ Templates carry everything a `Data` has (options, colours, ranges, modifiers, pr
 PanelLayout sizes;                                            // the defaults; or sizes.SetTextSize(31.52).SetTitleSize(39.4).SetLineWidth(5)
 const vector<vector<Panel>> rows = {{Panel(), Panel()},       // two panels sharing their y axis
                                     {Panel(1, 0.37), Panel(1, 0.37)}};  // a ratio row below each
-Plot layout("1d_2x1_ratio_mine", PanelLayout(sizes, rows));   // pads numbered row by row: 1 2 / 3 4
-layout.SetTransparent();
-layout[0].SetDefaultTextFont(42).SetDefaultColors({kBlack, kBlue + 1, kRed + 1});
-layout[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent();
+Plot layout("1d_2x1_ratio_mine", PanelLayout(sizes, rows));   // pads numbered row by row: 1 2 / 3 4, with the look of the shipped base plots
+layout[0].SetDefaultColors({kBlack, kBlue + 1, kRed + 1});    // change any of the look with the ordinary setters
 for (uint8_t ratioPad : {3, 4}) layout[ratioPad].SetRefFunc("1");
 pm.AddBasePlot(layout);
 ```

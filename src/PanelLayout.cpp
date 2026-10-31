@@ -21,6 +21,10 @@
 #include "SciRooPlot/Logger.h"
 #include "SciRooPlot/Plot.h"
 
+#include <Rtypes.h>
+#include <TAttLine.h>
+#include <TAttMarker.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -530,6 +534,28 @@ void PanelLayout::ApplyTo(Plot& plot) const
   }
   plot[0].SetDefaultLineWidth(mLineWidth);
   plot[0].SetDefaultMarkerSize(mMarkerSize);
+
+  // the look of the shipped plots (a plot changes any of it with the ordinary setters): fonts, colours, markers and axis conventions
+  // (the colour the n-th data item of a pad gets is also shown by PlotManager::AddColorOverview)
+  static const vector<int16_t> defaultColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1, kMagenta - 4, kGreen + 3, kOrange + 1,
+                                                kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7, kMagenta + 1, kPink + 8, kCyan - 6,
+                                                kMagenta, kRed + 2, kGreen + 2, kOrange + 2, kMagenta + 2, kYellow + 3,
+                                                kGray + 2, kBlue + 2, kYellow + 2, kRed, kBlue, kMagenta + 3, kGreen + 4, 28, 8, 15, 17, 12};
+  plot.SetTransparent();
+  plot[0].SetTransparent();
+  plot[0].SetFrameFill(1001, 10);
+  plot[0].SetDefaultTextFont(42);
+  plot[0].SetDefaultColors(vector<color_t>(defaultColors.begin(), defaultColors.end()));
+  plot[0].SetDefaultMarkerStyles({kFullCircle});
+  plot[0].SetDefaultLineStyles({kSolid});
+  plot[0].SetDefaultFillStyles({0});
+  // a label whose text would reach beyond its pad is dropped: at the edge shared by touching pads it would otherwise be cut in half
+  // (a "10" reads as "1"), at the canvas edge cut off (a plot can switch it off per axis with SetHideClippedLabels(false))
+  plot[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent().SetHideClippedLabels();
+  plot[0]['Y'].SetOppositeTicks().SetMaxDigits(3).SetHideClippedLabels();
+  plot[0]['Z'].SetMaxDigits(3);
+  // the axes are drawn again on top of the data in layouts with colour scales (2d maps would cover the ticks)
+  if (std::find(colZAxis.begin(), colZAxis.end(), true) != colZAxis.end() || std::find(colScale.begin(), colScale.end(), true) != colScale.end()) plot[0].SetRedrawAxes();
 
   // touching panels share their axes: x within a column (panels touching above or below), y within a row (touching left or right);
   // and the outer title of a row (x) or column (y) of touching panels is drawn once: groups of the panels showing that title

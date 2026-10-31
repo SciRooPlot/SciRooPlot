@@ -347,7 +347,7 @@ class Plot : public FillSetters<Plot>
   Plot() = default;
   explicit Plot(const boost::property_tree::ptree& plotTree);
   explicit Plot(const std::string& name, const std::string& group = "", const std::optional<std::string>& basePlot = {});
-  Plot(const std::string& name, const PanelLayout& layout);  // a base plot with the panels and lengths of the layout (see PanelLayout.h)
+  Plot(const std::string& name, const PanelLayout& layout);  // a base plot with the panels and lengths of the layout and the look of the shipped plots (see PanelLayout.h)
   Pad& operator[](uint8_t padID) { return mPads[padID]; }
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
   void operator+=(const Plot& plot);
@@ -1438,7 +1438,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
   TextBox& SetText(const std::string& text);  // lines separated by newlines
   TextBox& SetText(const std::vector<std::string>& lines);
   TextBox& SetText(std::initializer_list<std::string> lines);
-  TextBox& SetTextAlign(int16_t align);
+  TextBox& SetTextAlign(int16_t align);  // 11 to 33 (default 12) for the lines in the box; a single line at (x, y) is aligned at that point (21: centred above it)
 
  protected:
   friend class PlotManager;
@@ -1613,6 +1613,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   LegendEntry& AddDataEntry(uint8_t padID, uint16_t dataID);
   LegendBox& SetTitle(const std::string& title);
   LegendBox& SetNumColumns(uint8_t numColumns);
+  LegendBox& SetColumnSpacing(float_t spacing);  // space after the widest label of a column, in units of the text height (default 1)
   LegendBox& SetDefaultSymbolElements(const std::string& symbolElements);
   LegendBox& SetDefaultColor(color_t color);
   LegendBox& SetDefaultAlpha(float_t alpha);
@@ -1636,6 +1637,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 
   boost::property_tree::ptree GetPropertyTree() const;
   const std::optional<uint8_t>& GetNumColumns() const { return mNumColumns; }
+  const std::optional<float_t>& GetColumnSpacing() const { return mColumnSpacing; }
   const std::optional<std::string>& GetTitle() const { return mTitle; }
 
   void AddDataRow(const std::string& label, uint16_t dataID, const std::optional<LegendEntry>& appearance);
@@ -1660,6 +1662,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
  private:
   std::optional<std::string> mTitle;
   std::optional<uint8_t> mNumColumns;
+  std::optional<float_t> mColumnSpacing;
   std::vector<LegendEntry> mLegendEntries;     // the rows as drawn, generated when the plot is drawn
   std::deque<LegendEntry> mLegendEntriesUser;  // the rows added with AddEntry, in the order of the calls (a deque keeps references valid)
 

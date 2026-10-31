@@ -1051,12 +1051,8 @@ def DefineAtomicPlots(pm: PlotManager):
 def DefineAcceleratorPlots(pm: PlotManager):
     """Accelerator physics: the profile of a beam and its phase space."""
     # a beam profile with its projections in panels of their own: an own layout, the projections sharing the axes ------
-    # of the map; PanelLayout arranges the panels, the look of the shipped base plots is set as in MakeBasePlot
+    # of the map; PanelLayout arranges the panels and gives them the look of the shipped base plots
     profileLayout = Plot("profileWithProjections", PanelLayout([[Panel(1.0, 0.4), Empty()], [Panel(), Panel(0.4, 1.0)]]))
-    profileLayout.SetTransparent()
-    profileLayout[0].SetTransparent().SetFrameFill(1001, 10).SetDefaultTextFont(42).SetDefaultMarkerStyles([kFullCircle])
-    profileLayout[0]['X'].SetOppositeTicks().SetMaxDigits(3).SetNoExponent().SetHideClippedLabels()
-    profileLayout[0]['Y'].SetOppositeTicks().SetMaxDigits(3).SetHideClippedLabels()
     pm.AddBasePlot(profileLayout)
     plot = Plot("beamProfile", "accelerator", "profileWithProjections")  # pads: 1 above, 2 the empty cell, 3 the map, 4 right
     plot[3].AddData("hBeamSpot", "accelerator").SetDrawOption(col)

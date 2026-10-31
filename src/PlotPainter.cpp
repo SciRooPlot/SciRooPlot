@@ -598,11 +598,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       }
     } else {
       // without data and frame input the frame is an empty histogram with one bin spanning the x range (and y range for 2d, if z has a range);
-      // the ranges of the pad are applied to it as to any frame
+      // the ranges of the pad are applied to it as to any frame (an Empty() cell of a layout, room for a legend or a text, takes no ranges from pad 0)
       auto range = [&](char axisLabel) {
         optional<double_t> min;
         optional<double_t> max;
         for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(pad)}) {
+          if (&curPad == &padDefaults && pad.GetIsEmptyCell()) continue;
           if (curPad.GetAxes().find(axisLabel) == curPad.GetAxes().end()) continue;
           if (curPad[axisLabel].GetMinRange()) min = curPad[axisLabel].GetMinRange();
           if (curPad[axisLabel].GetMaxRange()) max = curPad[axisLabel].GetMaxRange();
@@ -3790,6 +3791,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     // a pixel size (precision 3) is stored unscaled (ApplyScale multiplies it later), a size relative to the pad already scales with it
     double_t lineHeightPixel = (text_font % 10 <= 2) ? GetTextSizePixel(text_size) : mScale * text_size;
+    [[maybe_unused]] const double_t textHeightPixel = lineHeightPixel;  // of the text size set (lines with sub- or superscripts are higher)
 
     uint8_t lineID{};
     for (auto& line : lines) {
@@ -3879,23 +3881,38 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     }
 
     double_t relMarginWidth = totalMarginWidthNDC / totalWidthNDC;
-    if (isLegend && nColumns > 1 && !box->GetWidth()) {
-      // TLegend splits its width into equal columns and reserves the margin (symbol space) in each of them
-      const double_t maxContentWidthNDC = static_cast<double_t>(*std::max_element(contentWidthPixelPerColumn.begin(), contentWidthPixelPerColumn.end())) / padWidthPixel;
-      const double_t columnWidthNDC = totalMarginWidthNDC + maxContentWidthNDC + marginNDC;
-      totalWidthNDC = std::max(borderWidthNDC + nColumns * columnWidthNDC, totalWidthNDC);
-      relMarginWidth = totalMarginWidthNDC / (totalWidthNDC / nColumns);
+    double_t relColumnSeparation{};
+    if constexpr (isLegend) {
+      if (nColumns > 1) {
+        // TLegend gives every column the symbol space (its margin) and a share of the remaining width in proportion to the widest label
+        // of the column, and puts the column separation between the columns (TLegend::PaintPrimitives): with the width they need,
+        // the columns are as wide as their labels and the spacing is the same between all of them
+        const double_t columnSpacingNDC = box->GetColumnSpacing().value_or(1.f) * textHeightPixel / padWidthPixel;
+        const double_t neededWidthNDC = 0.5 * borderWidthNDC + nColumns * totalMarginWidthNDC + contentWidthNDC + (nColumns - 1) * columnSpacingNDC + marginNDC;
+        if (!box->GetWidth()) totalWidthNDC = std::max(neededWidthNDC, totalWidthNDC);
+        relMarginWidth = nColumns * totalMarginWidthNDC / totalWidthNDC;
+        relColumnSeparation = (nColumns - 1) * columnSpacingNDC / totalWidthNDC;
+      }
     }
 
     const double_t borderX = mScale * box->GetBorderWidth().value_or(0.) / padWidthPixel;
     const double_t borderY = mScale * box->GetBorderWidth().value_or(0.) / padHeightPixel;
-    const auto [upperLeftX, upperLeftY] = PlaceBox(*box, pad, totalWidthNDC, totalHeightNDC, borderX, borderY, (isLegend) ? "legend" : "text");
+    auto [upperLeftX, upperLeftY] = PlaceBox(*box, pad, totalWidthNDC, totalHeightNDC, borderX, borderY, (isLegend) ? "legend" : "text");
+    if constexpr (!isLegend) {
+      // a single line placed at a position is aligned at it as ROOT aligns a TLatex at its point (the tens 1, 2, 3: left, centre, right;
+      // the units 1, 2, 3: bottom, centre, top), otherwise the position is the upper left corner of the box
+      if (const auto& align = box->GetTextAlign(); align && nLines == 1 && !box->IsAutoPlacement()) {
+        upperLeftX -= 0.5 * (std::clamp(*align / 10, 1, 3) - 1) * totalWidthNDC;
+        upperLeftY += 0.5 * (3 - std::clamp(*align % 10, 1, 3)) * totalHeightNDC;
+      }
+    }
 
     if constexpr (isLegend) {
       TLegend* legend = new TLegend(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "", "NDC NB");
       legend->SetMargin(relMarginWidth);
       legend->SetTextAlign(kHAlignLeft + kVAlignCenter);
       legend->SetNColumns(nColumns);
+      legend->SetColumnSeparation(static_cast<float_t>(relColumnSeparation));
       legend->SetTextFont(text_font);
       legend->SetTextSize(text_size);
       if (textColor) legend->SetTextColor(textColor->ToIndex());

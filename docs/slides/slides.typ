@@ -1278,10 +1278,9 @@
           pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
           // create new plot on basis of this base plot:
           Plot plot("myPlot", "myGroup", "1d_ratio");
-          // an own layout in the same style (see MakeBasePlot):
+          // an own layout, in the same style:
           Plot two("2x2_3", PanelLayout({{Panel(), Panel()},
                                          {Panel(), Empty()}}));
-          two[0].SetDefaultTextFont(42);
           pm.AddBasePlot(two);
           ```
         ],
@@ -1290,10 +1289,9 @@
           pm.AddBasePlot(PlotManager.MakeBasePlot("1d_ratio"))
           # create a new plot based on this base plot
           plot = Plot("myPlot", "myGroup", "1d_ratio")
-          # an own layout in the same style (see MakeBasePlot)
+          # an own layout, in the same style
           two = Plot("2x2_3", PanelLayout([[Panel(), Panel()],
                                            [Panel(), Empty()]]))
-          two[0].SetDefaultTextFont(42)
           pm.AddBasePlot(two)
           ```
         ],

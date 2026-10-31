@@ -700,6 +700,25 @@ std::map<char, vector<Plot::shared_group_t>> Plot::GetSharedAxes() const
       if (members.size() > 1) result[axis].push_back({members, layoutGroup});
     }
   }
+  // the layout shows such an axis once (the labels between touching panels are hidden, one colour scale for all): a group taken
+  // apart by ShareAxis leaves panels whose ranges can differ unnoticed
+  for (const auto& [axis, pads, fromLayout] : mSharedAxes) {
+    if (!fromLayout || pads.empty()) continue;
+    auto groupOf = [&, axis = axis](uint8_t padID) -> const vector<uint8_t>* {
+      for (const auto& group : result[axis]) {
+        if (std::find(group.pads.begin(), group.pads.end(), padID) != group.pads.end()) return &group.pads;
+      }
+      return nullptr;
+    };
+    const auto* first = groupOf(pads.front());
+    const bool together = first && std::all_of(pads.begin(), pads.end(), [&](uint8_t padID) { return groupOf(padID) == first; });
+    if (together) continue;
+    vector<string> padNames;
+    for (uint8_t padID : pads)
+      padNames.push_back(std::to_string(padID));
+    logger::warning("Plot {}: the layout shows the {} axis of pads {} once, but ShareAxis no longer lets them share it: their ranges can differ unnoticed. Give them the same range, or use a layout with gaps.",
+                    mName, axis, join_strings(padNames, ", "));
+  }
   return result;
 }
 
@@ -4280,6 +4299,7 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
   if (const auto numColumns = get_from_tree<uint8_t>(legendBoxTree, "num_columns")) {
     SetNumColumns(*numColumns);
   }
+  read_from_tree(legendBoxTree, mColumnSpacing, "column_spacing");
   read_from_tree(legendBoxTree, mSymbolElementsDefault, "default_symbol_elements");
   read_from_tree(legendBoxTree, mMarkerDefault.color, "default_marker_color");
   read_from_tree(legendBoxTree, mMarkerDefault.alpha, "default_marker_alpha");
@@ -4309,6 +4329,7 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
   ptree legendBoxTree = Box::GetPropertyTree();
   put_in_tree(legendBoxTree, mTitle, "title");
   put_in_tree(legendBoxTree, mNumColumns, "num_columns");
+  put_in_tree(legendBoxTree, mColumnSpacing, "column_spacing");
   put_in_tree(legendBoxTree, mSymbolElementsDefault, "default_symbol_elements");
   put_in_tree(legendBoxTree, mMarkerDefault.color, "default_marker_color");
   put_in_tree(legendBoxTree, mMarkerDefault.alpha, "default_marker_alpha");
@@ -4364,6 +4385,16 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns)
     mNumColumns = numColumns;
   } else {
     logger::warning("Legend box cannot have 0 columns.");
+  }
+  return *this;
+}
+
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetColumnSpacing(float_t spacing)
+{
+  if (spacing >= 0.f) {
+    mColumnSpacing = spacing;
+  } else {
+    logger::warning("Legend box cannot have a negative column spacing ({}).", spacing);
   }
   return *this;
 }
