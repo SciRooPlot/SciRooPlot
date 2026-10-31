@@ -1511,14 +1511,17 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             ymax = TMath::Power(10, ymax);
           }
           if (auto view = pad_ptr->GetView()) {
-            // for 3d view ignore individual data ranges and always let it coincide with the axes
+            // for 3d view ignore individual data ranges and always let it coincide with the axes: the ranges of the frame's axes, since the
+            // view holds the coordinates it paints in (-1 to 1 in polar, cylindrical and spherical systems, logarithms on a log scale)
             double_t minArr[3];
             double_t maxArr[3];
             view->GetRange(minArr, maxArr);
-            xmin = minArr[0];
-            xmax = maxArr[0];
-            ymin = minArr[1];
-            ymax = maxArr[1];
+            const TAxis* frameX = axisHist_ptr->GetXaxis();
+            const TAxis* frameY = axisHist_ptr->GetYaxis();
+            xmin = frameX->GetBinLowEdge(frameX->GetFirst());
+            xmax = frameX->GetBinUpEdge(frameX->GetLast());
+            ymin = frameY->GetBinLowEdge(frameY->GetFirst());
+            ymax = frameY->GetBinUpEdge(frameY->GetLast());
             data_ptr->SetMinimum(axisHist_ptr->GetMinimum());
             data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
             if constexpr (is_hist_3d<data_type>()) {
