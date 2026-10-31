@@ -694,6 +694,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           upper.ToUpper();
           return upper.Contains("POL") && upper.Contains("COL") && !upper.Contains("LEGO") && !upper.Contains("SURF");
         };
+        // the colour boxes of a 3d histogram (BOX2, which COL stands for, see THistPainter::PaintH3): every face turned to the viewer
+        // is outlined with the line attributes of the data
+        auto isColorBoxes3d = [](const string& option) {
+          TString upper(option);
+          upper.ToUpper();
+          return upper.Contains("BOX2") || upper.Contains("COL");
+        };
         if (optionAlias) {
           const std::map<draw_option_t, string>* options{};
           const char* typeName{};
@@ -910,12 +917,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
           }
           if constexpr (is_hist_3d<data_type>()) {
-            // the colour boxes of a TH3 (BOX2, which COL stands for) fill the pad behind the 3d box with the frame fill colour
-            // (TView3D::PadRange), but in the colour last used for the colour scale when that colour is not 0: the walls came out in the
-            // colour of the palette maximum
-            TString upper(drawOption);
-            upper.ToUpper();
-            if (upper.Contains("BOX2") || upper.Contains("COL")) pad_ptr->SetFrameFillColor(0);
+            // the colour boxes of a TH3 fill the pad behind the 3d box with the frame fill colour (TView3D::PadRange), but in the colour
+            // last used for the colour scale when that colour is not 0: the walls came out in the colour of the palette maximum
+            if (isColorBoxes3d(drawOption)) pad_ptr->SetFrameFillColor(0);
           }
           if (!polargram) {
             data_ptr->Draw(drawOption.data());
@@ -1425,6 +1429,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), 0.f));  // pdf draws width 0 as a hairline
             } else if (is_2d<data_type>() && !data->GetLineWidth() && !keep && TString(drawOption).Contains("ARR", TString::kIgnoreCase)) {
               // ROOT outlines every arrow of ARR (fixed head size) with the line width: the wide default lines of the pad make blobs that hide a map below
+              data_ptr->SetLineWidth(1);
+            } else if (is_hist_3d<data_type>() && !data->GetLineWidth() && !keep && isColorBoxes3d(drawOption)) {
+              // with the line width of the pad the edges of the small colour boxes hide their colours: thin edges unless the data sets a width
               data_ptr->SetLineWidth(1);
             } else if (auto lineWidth = get_first(data->GetLineWidth(),
                                                   fromPad(pad.GetDefaultLineWidth()),
