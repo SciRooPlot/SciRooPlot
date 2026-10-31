@@ -18,7 +18,7 @@ GEN, OUT = sys.argv[1], sys.argv[2]
 DESC = {
     "points": "markers with y errors", "points_xerr": "markers with x and y errors", "points_endcaps": "markers, error bars with end caps",
     "points_xerr_endcaps": "x and y errors with end caps", "points_line": "markers joined by a line", "points_text": "markers with the values written above",
-    "points_arrows": "arrow ends on the error bars, e.g. for limits", "line": "straight segments, no markers", "curve": "smooth curve, no markers",
+    "points_arrows": "arrow ends on the error bars, e.g. for limits; the head size follows the marker size", "line": "straight segments, no markers", "curve": "smooth curve, no markers",
     "curve_clipped": "smooth curve cut at the frame", "hist": "steps", "hist_open": "steps without the vertical lines at the ends",
     "hist_clipped": "steps cut at the frame instead of running along it", "hist_open_clipped": "open steps cut at the frame", "bars": "bars with gaps",
     "hbars": "horizontal bars", "area": "filled down to zero", "area_smooth": "smooth curve filled to zero", "band": "filled error band",

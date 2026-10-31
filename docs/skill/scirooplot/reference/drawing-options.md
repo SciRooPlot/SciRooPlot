@@ -83,7 +83,8 @@ data with a marker style or size set or with non-zero errors as `points`, other 
 | `violin_minmax` | – | – | – | `VIOLINX1` | – | – | – | – |
 
 Appearance details beyond the ROOT string: `points`, `points_endcaps`, `points_line`, `points_text`, `points_arrows` hide the x errors of graphs (as X0 does for histograms);
-`points_text` writes the values above the error bars; `boxes_nomarkers` removes the markers; `line`/`curve` of histograms and functions are not filled;
+`points_text` writes the values above the error bars; `points_arrows` heads are sized by ROOT from the marker size only (not the line width)
+and filled with the fill colour (a transparent fill makes them pale); `boxes_nomarkers` removes the markers; `line`/`curve` of histograms and functions are not filled;
 a function is drawn from its values at `SetNpx` points: with a fill set, `area`/`area_smooth` (and ROOT's own options) fill the area between the curve and zero;
 2D graphs and 2D functions are drawn from a histogram interpolated (sampled) on a grid, so `box`, `text`, `colz_text`, candles and violins are left out;
 `colz`/`col` leave out cells below the minimum of the colour scale (a z range or the floor of a log z axis) and paint those above the maximum

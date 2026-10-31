@@ -84,7 +84,9 @@ def DefineGallery(pm: PlotManager):
         for kind in ["hist", "graph"]:
             plot = Plot(alias, "gallery/" + kind, "1d")
             name = "h" if kind == "hist" else "g"
-            data = plot[1].AddData(name, kind).SetDrawOption(globals()[alias]).SetColor(kAzure + 2).SetFill(1001, kAzure + 2).SetFillAlpha(0.35)
+            data = plot[1].AddData(name, kind).SetDrawOption(globals()[alias]).SetColor(kAzure + 2).SetFill(1001, kAzure + 2)
+            if alias != "points_arrows":  # the arrowheads are filled with the fill colour: transparent ones are hardly visible
+                data.SetFillAlpha(0.35)
             if alias in ("text", "points_text"):
                 data.SetTextFormat("g" if kind == "hist" else ".1f")  # "g" would show the graph's values with six digits
                 plot[1]['Y'].SetRoomAboveMax(0.12)  # the value of the highest bin stays inside the frame
