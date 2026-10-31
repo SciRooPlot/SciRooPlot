@@ -341,7 +341,7 @@ void DefineSpectraPlots(PlotManager& pm)
   {  // the same 2d histogram shown in 3d, as contours and as candles --------------------
     Plot plot3d("ptVsMultLego", "spectra/2dViews", "1d_3dview");
     plot3d[1].AddData("ptVsMult", "data").RebinXY(4, 2).Scale(1e-3).SetDrawOption(lego).SetLineWidth(1.0);
-    plot3d[1].SetView(35.0, 225.0);      // viewing angles theta and phi in degrees
+    plot3d[1].SetView(35.0, 240.0);      // viewing angles theta and phi in degrees
     plot3d[1]['X'].SetTitleOffset(1.8);  // in 3D views the axis titles need more room from the labels
     plot3d[1]['Y'].SetTitleOffset(1.8).SetNumDivisions(505);
     plot3d[1]['Z'].SetTitle("tracks (10^{3})").SetTitleOffset(1.5);
