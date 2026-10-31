@@ -449,22 +449,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     }
     if (!inGroup) mScalesInCells.insert(shown);
   }
-  // for the x divisions (see below): per width of the frame (rounded to pixels), the widest pad with such a frame
-  mDivisionWidths.clear();
-  {
-    std::map<int64_t, double_t> widest;
-    std::map<uint8_t, int64_t> frameOf;
-    for (const auto& [padID, pad] : plot.GetPads()) {
-      if (padID == 0 || !pad.GetXLow() || !pad.GetXUp()) continue;
-      const double_t width = *pad.GetXUp() - *pad.GetXLow();
-      const double_t margins = get_first_or(0.1f, pad.GetMarginLeft(), padDefaults.GetMarginLeft()) + get_first_or(0.1f, pad.GetMarginRight(), padDefaults.GetMarginRight());
-      frameOf[padID] = std::lround(width * (1. - margins) * canvasWidth);
-      widest[frameOf[padID]] = std::max(widest[frameOf[padID]], width);
-    }
-    for (const auto& [padID, frame] : frameOf) {
-      mDivisionWidths[padID] = widest[frame];
-    }
-  }
   for (const auto& [padID, dummy] : plot.GetPads()) {
     if (padID == 0) continue;  // pad 0 is used only to define the defaults
     auto& pad = plot[padID];   // needed because processData lambda cannot capture variable from structured binding ('dummy')
@@ -1114,15 +1098,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             }
 
-            // THistPainter scales the primary divisions of an x axis whose setting carries a max digits part with the width of the pad
-            // relative to the canvas: panels with frames of the same width get the divisions of the widest pad among them, so that a
-            // panel touching its neighbours (its pad only as wide as its frame) gets as many labels as the one with the margin for the labels
-            if (const int32_t nDiv = axis_ptr->GetNdivisions(); axisLabel == 'X' && nDiv > 1000 && mDivisionWidths.count(padID)) {
+            // THistPainter::PaintAxis scales the primary divisions of the horizontal axis with the width of the pad relative to the canvas
+            // when the setting carries a max digits part (ROOT bug: the same axis without max digits is not scaled), so a narrow pad
+            // would get fewer labels: the primary divisions are raised so that ROOT's scaling gives back the ones set
+            // (3D views paint their axes without that scaling)
+            if (const int32_t nDiv = axis_ptr->GetNdivisions(); axisLabel == 'X' && nDiv > 1000 && pad_ptr->GetAbsWNDC() > 0. && !IsViewFrame(pad_ptr, axisHist_ptr)) {
               const double_t padWidth = pad_ptr->GetAbsWNDC();
               const int32_t primary = std::max(1, nDiv % 100);
-              const auto wanted = static_cast<int32_t>(static_cast<float>(primary) * static_cast<float>(mDivisionWidths[padID]));
-              const auto compensated = std::min(99, static_cast<int32_t>(std::ceil(wanted / padWidth - 1e-6)));
-              if (wanted > 0 && compensated > primary) axis_ptr->SetNdivisions(nDiv - nDiv % 100 + compensated);
+              // ROOT: Int_t(Float_t(primary) * pad->GetAbsWNDC())
+              const auto scaled = [padWidth](int32_t divisions) { return static_cast<int32_t>(static_cast<float>(divisions) * padWidth); };
+              int32_t compensated = std::min(99, static_cast<int32_t>(std::ceil(primary / padWidth)));
+              while (compensated < 99 && scaled(compensated) < primary)
+                ++compensated;
+              if (compensated > primary) axis_ptr->SetNdivisions(nDiv - nDiv % 100 + compensated);
             }
 
             // ranges are only touched if the user set one: ROOT's bin edges are not exactly reproducible (e.g. 4.000000000000001 instead of 4),
@@ -2844,6 +2832,22 @@ bool PlotPainter::IsHBarFrame(TPad* pad, const TH1* frame)
   if (frame->GetDimension() != 1) return false;
   for (TObjLink* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
     if (link->GetObject() == frame) return TString(link->GetOption()).Contains("HBAR", TString::kIgnoreCase);
+  }
+  return false;
+}
+
+//**************************************************************************************************
+/**
+ * Whether ROOT paints the axes of a frame histogram in a 3D view (THistPainter::PaintLegoAxis: 3d histograms, LEGO, SURF, TRI).
+ */
+bool PlotPainter::IsViewFrame(TPad* pad, const TH1* frame)
+{
+  if (frame->GetDimension() == 3) return true;
+  for (TObjLink* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+    if (link->GetObject() != frame) continue;
+    TString option(link->GetOption());
+    option.ToUpper();
+    return option.Contains("LEGO") || option.Contains("SURF") || option.Contains("TRI");
   }
   return false;
 }

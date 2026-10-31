@@ -402,6 +402,7 @@ void DefineDetectorPlots(PlotManager& pm)
     plot[2].AddData("hEtaPhi", "TrackQA_MC");
     plot[2].AddText(0.15, 0.9, "simulation");
     plot[0].SetPalette(kViridis);
+    plot[0]['X'].SetNumDivisions(505);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // efficiency = reconstructed / generated; SetCorrelated() gives binomial errors -----
@@ -451,7 +452,7 @@ void DefineDetectorPlots(PlotManager& pm)
     plot[2].SetPalette(kCividis);
     plot[1]['Z'].SetTitle("tracks");
     plot[2]['Z'].SetTitle("#LT#it{N}_{cls}^{TPC}#GT");
-    plot[0]['X'].SetTitle("#eta");
+    plot[0]['X'].SetTitle("#eta").SetNumDivisions(505);
     plot[0]['Y'].SetTitle("#varphi (rad)");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
@@ -512,7 +513,7 @@ void DefineDetectorPlots(PlotManager& pm)
       plot[i + 1].AddText(0.6, 0.9, Form("%g < #it{p}_{T} < %g GeV/#it{c}", low, high));
     }
     plot[1].AddLegend(0.6, 0.8);  // upper left corner, in pad coordinates like the texts
-    plot[0]['X'].SetRange(60.0, 240.0).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})");
+    plot[0]['X'].SetRange(60.0, 240.0).SetNumDivisions(505).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})");
     plot[0]['Y'].SetTitle("pairs (norm. region = 1)").SetMinRange(0.0);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
@@ -610,7 +611,7 @@ void DefineDetectorPlots(PlotManager& pm)
     }
     plot[0].SetPalette(kViridis);
     plot[0].SetFrameFill(1001, kBlack);
-    plot[0]['X'].SetTitle("#it{z} (cm)");
+    plot[0]['X'].SetTitle("#it{z} (cm)").SetNumDivisions(505);
     plot[0]['Y'].SetTitle("#varphi (rad)");
     plot[0]['Z'].SetTitle("hits per cm^{2}");
     pm.AddPlot(plot);
@@ -973,7 +974,7 @@ void DefineHeavyIonPlots(PlotManager& pm)
     plot[2].AddLegend(0.2, 0.92);
     plot[2]['X'].SetRange(0.0, 0.08);
     plot[2]['Y'].SetRange(0.99, 1.025).SetNumDivisions(504);  // room for the legend; labels with few digits leave room for the title
-    plot[0]['X'].SetTitle("#it{q}_{inv} (GeV/#it{c})");
+    plot[0]['X'].SetTitle("#it{q}_{inv} (GeV/#it{c})").SetNumDivisions(505);
     plot[0]['Y'].SetTitle("#it{C}(#it{q}_{inv})").SetTitleCenter();  // at the end of the axis it would run off the top of the pad
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
@@ -1975,6 +1976,7 @@ void DefineAnimations(PlotManager& pm)
       plot[1].AddText(0.15, 0.92, "end view").SetTextColor(kWhite);
       plot[2].AddText(0.15, 0.92, {"side view", Form("#it{t} = %d #mus", time)}).SetTextColor(kWhite);
       plot[0].SetPalette(kRainBow);
+      plot[0]['X'].SetNumDivisions(505);
       plot[0]['Y'].SetTitle("#it{y} (cm)");
       plot[0]['Z'].SetRange(0.0, 97.0).SetTitle("time since the collision (#mus)");  // fixed: the frames differ only in the data
       pm.AddPlot(plot);
