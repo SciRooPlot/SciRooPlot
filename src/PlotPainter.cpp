@@ -656,6 +656,17 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           option.erase(pos, end - pos);
         }
         if (ownRange && dataIndex != 0) logger::warning("Drawing option '{}' of {}: SAME0 is removed, all data of a pad share the colour range of its frame.", *data->GetDrawOption(), data->GetName());
+        // AXIS and AXIG (axes or grid only) would draw no data and leave the frame drawn from it without labels: the axes are SciRooPlot's
+        // (warned once per data: the frame copy of the first data, index 0, is drawn from the same item again)
+        bool axesOnly{};
+        for (const char* token : {"AXIS", "AXIG"}) {
+          for (size_t pos = upper.find(token); pos != string::npos; pos = upper.find(token, pos)) {
+            upper.erase(pos, 4);
+            option.erase(pos, 4);
+            axesOnly = true;
+          }
+        }
+        if (axesOnly && dataIndex != 0) logger::warning("Drawing option '{}' of {}: AXIS and AXIG are removed, the axes are drawn by SciRooPlot (a frame without data: Pad::SetFrame).", *data->GetDrawOption(), data->GetName());
         drawOption += option;
       }
       bool isSampledFunc{};  // a function given by C++ code is written as values sampled over its range: it has no values outside of it
