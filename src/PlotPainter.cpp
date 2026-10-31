@@ -1742,9 +1742,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (textFont) label.SetTextFont(*textFont);
             if (textSize) label.SetTextSize(*textSize);
             const string format = "%" + data->GetTextFormat().value_or("g");
-            auto drawLabel = [&](double_t x, double_t y, double_t value) { label.DrawLatex(x, y, TString::Format(format.data(), value).Data()); };
-            // only drawn points get a value: the labels, unlike the markers, are not clipped at the frame
             auto toUser = [](double_t padValue, bool isLog) { return (isLog) ? std::pow(10., padValue) : padValue; };
+            // a small gap between the end of the error bar and the value, so the text does not sit on the bar
+            const double_t gapY = 0.015 * (pad_ptr->GetUymax() - pad_ptr->GetUymin());
+            auto drawLabel = [&](double_t x, double_t y, double_t value) {
+              const bool logY = pad_ptr->GetLogy();
+              if (!logY || y > 0.) y = toUser(((logY) ? std::log10(y) : y) + gapY, logY);
+              label.DrawLatex(x, y, TString::Format(format.data(), value).Data());
+            };
+            // only drawn points get a value: the labels, unlike the markers, are not clipped at the frame
             const double_t frameMinX = toUser(pad_ptr->GetUxmin(), pad_ptr->GetLogx());
             const double_t frameMaxX = toUser(pad_ptr->GetUxmax(), pad_ptr->GetLogx());
             const double_t frameMinY = toUser(pad_ptr->GetUymin(), pad_ptr->GetLogy());

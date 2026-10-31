@@ -84,9 +84,9 @@ def DefineGallery(pm: PlotManager):
             plot = Plot(alias, "gallery/" + kind, "1d")
             name = "h" if kind == "hist" else "g"
             data = plot[1].AddData(name, kind).SetDrawOption(globals()[alias]).SetColor(kAzure + 2).SetFill(1001, kAzure + 2).SetFillAlpha(0.35)
-            if alias == "text":
+            if alias in ("text", "points_text"):
                 data.SetTextFormat("g" if kind == "hist" else ".1f")  # "g" would show the graph's values with six digits
-                plot[1]['Y'].SetRoomAboveMax(0.1)  # the value of the highest bin stays inside the frame
+                plot[1]['Y'].SetRoomAboveMax(0.12)  # the value of the highest bin stays inside the frame
             plot[1]['X'].SetTitle("")
             plot[1]['Y'].SetTitle("")
             if alias.startswith(("curve", "hist")):  # bins beyond the frame show what the clipped variants change
