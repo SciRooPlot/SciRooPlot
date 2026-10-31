@@ -1658,37 +1658,6 @@ bool PlotManager::FillBuffer()
 
 //**************************************************************************************************
 /**
- * Show which data could and could not be found.
- */
-//**************************************************************************************************
-void PlotManager::PrintBufferStatus(bool onlyMissing) const
-{
-  if (onlyMissing) {
-    logger::debug("================= Missing Data ================");
-  } else {
-    logger::debug("================= Data Buffer =================");
-  }
-  uint32_t nNeededData{};
-  uint32_t nAvailableData{};
-  for (const auto& [dataSource, buffer] : mDataBuffer) {
-    bool printDataSource = true;
-    for (const auto& [dataName, dataPtr] : buffer) {
-      ++nNeededData;
-      bool show = onlyMissing ? (dataPtr == nullptr) : true;
-      if (dataPtr) ++nAvailableData;
-      if (show) {
-        if (printDataSource) logger::debug("{}{}", dataSource, (!IsDataSourceDefined(dataSource)) ? " (data source not defined)" : "");
-        printDataSource = false;
-        logger::debug(" - {}{}{}", (dataPtr) ? logger::begin_color(logger::Color::Green) : logger::begin_color(logger::Color::Red), dataName, logger::end_color());
-      }
-    }
-  }
-  logger::debug("Found {}/{} required input data.", nAvailableData, nNeededData);
-  logger::debug("===============================================");
-}
-
-//**************************************************************************************************
-/**
  * Reference function the painter draws in a pad of a plot, as merged with its base plot in GeneratePlot:
  * the pad's own, else the one of the base plot's pad, else the one of pad 0 of the plot, else of pad 0 of the base plot.
  * It is drawn only in pads with data. An empty one (SetRefFunc("")) means none and hides those further down the list.
