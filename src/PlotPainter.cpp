@@ -793,6 +793,24 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         if constexpr (is_hist_2d<data_type>()) {
           TString upper(drawOption);
           upper.ToUpper();
+          // ROOT paints a TH2Poly in 3d only with OpenGL (GLLEGO): LEGO and SURF paint the empty cell array of TH2 instead of the bins
+          // (a flat colour map in a 3d frame lands at the wrong place, so there it is not drawn at all)
+          if (data_ptr->InheritsFrom(TH2Poly::Class()) && !upper.Contains("GL")) {
+            if (dataIndex != 0 && pad_ptr->GetView()) {
+              logger::warning("TH2Poly {} cannot be drawn in the 3d frame of its pad (ROOT draws polygon bins in 3d only with OpenGL). It is not drawn.", data->GetName());
+              delete data_ptr;
+              ++dataIndex;  // the next data keeps its number
+              drawOption = "SAME ";
+              return;
+            }
+            if (upper.Contains("LEGO") || upper.Contains("SURF")) {
+              const char* scale = (upper.Contains("Z")) ? "Z" : "";
+              if (dataIndex != 0) logger::warning("Drawing option {} is not available for TH2Poly {} (ROOT draws polygon bins in 3d only with OpenGL), drawing it as col{}.", (optionAlias) ? draw_option_name(*optionAlias) : data->GetDrawOption().value_or(""), data->GetName(), (*scale) ? "z" : "");
+              drawOption = ((dataIndex != 0) ? "SAME COL" : "COL") + string(scale);
+              alias = (*scale) ? colz : col;
+              upper = drawOption;
+            }
+          }
           projected = upper.Contains("AITOFF") || upper.Contains("MERCATOR") || upper.Contains("SINUSOIDAL") || upper.Contains("PARABOLIC") || upper.Contains("MOLLWEIDE");
         }
         if (dataIndex == 0) projectedPad = projected;
