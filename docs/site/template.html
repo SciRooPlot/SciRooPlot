@@ -346,6 +346,15 @@ dialog::backdrop { background: rgba(8, 14, 26, 0.55) }
 .dlg { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 22px; padding: 20px }
 .dlg .head { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 12px; align-items: start }
 .dlg .body { display: grid; gap: 12px; align-content: start; min-width: 0 }
+#optdlg { width: min(680px, calc(100vw - 32px)) }
+#optdlg .card.big { border: 0; cursor: default; padding: 16px; gap: 8px }
+#optdlg .card.big .plot { display: block; width: min(100%, calc(100vh - 190px)); height: auto; aspect-ratio: auto; overflow: visible; margin: 0 auto }
+#optdlg .card.big .plot img { display: block; width: 100%; height: auto }
+#optdlg .card.big b { font-size: 1.05rem }
+#optdlg .card.big .root { font-size: 0.9rem }
+#optdlg .card.big small { font-size: 0.95rem }
+.optx { position: absolute; top: 6px; right: 8px; font: inherit; font-size: 1.3rem; line-height: 1; padding: 4px 8px; border: none; border-radius: 6px; background: none; color: var(--muted); cursor: pointer }
+.optx:hover { color: var(--ink); background: var(--grid) }
 
 /* reference */
 .ref { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 36px; align-items: start }
@@ -934,6 +943,7 @@ figure.plot figcaption { color: #5b6b80 }
     <p>The <code>lego</code>, <code>surf</code>, triangle and 3D point drawings are seen from the angles of the pad, <code>plot[1].SetView(theta, phi)</code> in degrees: <i>theta</i> is the height of the eye above the x-y plane, <i>phi</i> the rotation around the z axis. ROOT starts from 30° and 30°, the gallery above uses 35° and 225°. Set on <code>plot[0]</code>, the angles hold for all pads of the plot.</p>
     <div class="grid" id="optviews"></div>
   </div>
+  <dialog id="optdlg" aria-label="enlarged card"><button class="optx" id="optclose" aria-label="close">×</button><div class="card big" id="optbig"></div></dialog>
 </section>
 
 <!-- ======================================================== EXAMPLES -->
@@ -1503,12 +1513,24 @@ function renderOptions() {
   const g = document.getElementById("optgrid");
   g.innerHTML = OPTIONS.filter(o => o[optKind] && o[optKind] !== "\u2013").map(o => {
     const root = o[optKind], conv = /^as /.test(root);
-    return `<div class="card" tabindex="0" data-alias="${o.alias}"><span class="plot"><img loading="lazy" src="img/gallery/${optKind}/${o.alias}.png" alt="${o.alias} drawn for a ${optKind}" width="380" height="380"></span>
+    return `<div class="card" tabindex="0" role="button" aria-haspopup="dialog" data-alias="${o.alias}"><span class="plot"><img loading="lazy" src="img/gallery/${optKind}/${o.alias}.png" alt="${o.alias} drawn for a ${optKind}" width="380" height="380"></span>
       <b>${o.alias}</b><span class="root">${conv ? `<i>${root}</i>` : `ROOT: "${esc(root)}"`}</span><small>${o.desc}</small></div>` }).join("");
   document.querySelectorAll("[data-kind]").forEach(b => b.setAttribute("aria-pressed", b.dataset.kind === optKind));
   const views = document.getElementById("optview"); views.hidden = !/2d$/.test(optKind);
-  document.getElementById("optviews").innerHTML = VIEW_ANGLES.map(([theta, phi]) => `<div class="card"><span class="plot"><img loading="lazy" src="img/gallery/view/${optKind}_${theta}_${phi}.png" alt="${VIEW_DRAWING[optKind]} seen from theta ${theta}, phi ${phi}" width="380" height="380"></span>
-      <b>SetView(${theta}, ${phi})</b><small>${theta === 30 && phi === 30 ? "ROOT's default" : theta === 35 && phi === 225 ? "the gallery's angles" : theta > 45 ? "from high above" : "from low at the side"}</small></div>`).join("") }
+  document.getElementById("optviews").innerHTML = VIEW_ANGLES.map(([theta, phi], i) => `<div class="card" tabindex="0" role="button" aria-haspopup="dialog" data-view="${i}"><span class="plot"><img loading="lazy" src="img/gallery/view/${optKind}_${theta}_${phi}.png" alt="${VIEW_DRAWING[optKind]} seen from theta ${theta}, phi ${phi}" width="380" height="380"></span>
+      <b>SetView(${theta}, ${phi})</b><small>${theta === 30 && phi === 30 ? "ROOT's default" : theta === 35 && phi === 225 ? "the gallery's angles" : theta > 45 ? "from high above" : "from low at the side"}</small></div>`).join("");
+  document.querySelectorAll("#optgrid [data-alias], #optviews [data-view]").forEach(c => { c.onclick = () => openOption(c);
+    c.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openOption(c) } } }) }
+// a card of the gallery enlarged, to look at the details; the arrow keys go to the neighbouring cards
+let optCard = null;
+function openOption(card) {
+  optCard = card; const big = document.getElementById("optbig"); big.innerHTML = card.innerHTML;
+  big.querySelectorAll("img").forEach(i => i.loading = "eager");
+  const d = document.getElementById("optdlg"); if (!d.open) d.showModal() }
+document.getElementById("optclose").onclick = () => document.getElementById("optdlg").close();
+document.getElementById("optdlg").addEventListener("click", e => { if (e.target.id === "optdlg") e.target.close() });
+document.getElementById("optdlg").addEventListener("keydown", e => { if (!optCard || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
+  const next = e.key === "ArrowRight" ? optCard.nextElementSibling : optCard.previousElementSibling; if (next) { e.preventDefault(); openOption(next) } });
 document.querySelectorAll("[data-kind]").forEach(b => b.onclick = () => { optKind = b.dataset.kind; renderOptions() });
 
 /* ---------------- examples */
