@@ -1692,8 +1692,8 @@ void DefineElectronicsPlots(PlotManager& pm)
       plot[1].AddData("antenna/" + name + "_model", "electronics").SetDrawOption(line).SetLine(kSolid, 2.0, color);
       plot[1].AddData("antenna/" + name, "electronics", label).SetDrawOption(points).SetMarker(kFullCircle, 0.7, color).SetLineColor(color).SetDefinesFrame();
     }
-    plot[1].AddLegend(0.02, 0.985).SetDefaultMarkerSize(1.2);  // in the corner above the grid, which fills the pad
-    plot[1].AddText(bottom_left, {"4 patches, #lambda/2 apart", "relative field strength"});
+    plot[1].AddLegend(0.02, 0.985).SetDefaultMarkerSize(1.2);                                 // in the corner above the grid, which fills the pad
+    plot[1].AddText(0.02, 0.125, {"4 patches, #lambda/2 apart", "relative field strength"});  // in the corner below the grid
     plot[1]['Y'].SetRange(0.0, 1.1);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------

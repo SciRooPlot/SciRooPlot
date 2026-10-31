@@ -4242,10 +4242,12 @@ void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, bo
   // area available for the box: the frame without the ticks of the axes and a small gap (in NDC)
   constexpr double_t kDistanceToFrame{1.4};  // in units of the tick length
   TH1* axisHist{};
+  bool polarGrid{};  // the polar grid of polar graphs fills the pad, which has no frame and no ticks at its edges
   for (auto* obj : *pad->GetListOfPrimitives()) {
     if (obj->InheritsFrom(TH1::Class()) && TString(obj->GetName()).BeginsWith("axis_hist")) {
       axisHist = static_cast<TH1*>(obj);
-      break;
+    } else if (obj->InheritsFrom(TGraphPolargram::Class())) {
+      polarGrid = true;
     }
   }
   const double_t tickLengthX = (axisHist) ? axisHist->GetXaxis()->GetTickLength() : gStyle->GetTickLength("X");  // ticks on the x axis (vertical)
@@ -4254,8 +4256,9 @@ void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, bo
   const double_t frameX2 = (pad->GetUxmax() - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
   const double_t frameY1 = (pad->GetUymin() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
   const double_t frameY2 = (pad->GetUymax() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
-  const double_t distanceX = kDistanceToFrame * tickLengthY * (frameX2 - frameX1);
-  const double_t distanceY = kDistanceToFrame * tickLengthX * (frameY2 - frameY1);
+  constexpr double_t kDistanceToPadEdge{0.015};  // without ticks: a small gap to the edge of the pad
+  const double_t distanceX = (polarGrid) ? kDistanceToPadEdge : kDistanceToFrame * tickLengthY * (frameX2 - frameX1);
+  const double_t distanceY = (polarGrid) ? kDistanceToPadEdge : kDistanceToFrame * tickLengthX * (frameY2 - frameY1);
   const std::array<double_t, 4> freeArea{frameX1 + distanceX, frameY1 + distanceY, frameX2 - distanceX, frameY2 - distanceY};
 
   // find box position that does not collide with any of the drawn objects
@@ -4551,6 +4554,80 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       setRect(subPad->GetXlowNDC() * nx, subPad->GetYlowNDC() * ny, (subPad->GetXlowNDC() + subPad->GetWNDC()) * nx, (subPad->GetYlowNDC() + subPad->GetHNDC()) * ny, 1u);
     } else if (auto* hist = dynamic_cast<TH1*>(obj)) {
       if (!TString(hist->GetName()).BeginsWith("axis_hist") && !TString(hist->GetName()).Contains("hframe")) markHist(hist);
+    } else if (auto* grid = dynamic_cast<TGraphPolargram*>(obj)) {
+      // the polar grid (TGraphPolargram::PaintPolarDivisions): a disc of radius 1 around the origin of the pad, and the label of each major
+      // division of the angle at radius 1 + offset, aligned so that it reaches away from the disc (FindAlign); the labels are made and
+      // measured as ROOT writes them (fractions of pi in radian mode, else the angle with %5.3g, own labels set with SetPolarLabel unknown)
+      vector<std::pair<double_t, double_t>> disc;
+      for (int32_t i = 0; i < 72; ++i) {
+        const double_t phi = TMath::TwoPi() * i / 72.;
+        disc.emplace_back(std::cos(phi), std::sin(phi));
+      }
+      markPolygon(disc);
+      const double_t userPerPixelX = (pad->GetX2() - pad->GetX1()) / padWidthPixel;
+      const double_t userPerPixelY = (pad->GetY2() - pad->GetY1()) / padHeightPixel;
+      const bool ortho = grid->TestBit(TGraphPolargram::kLabelOrtho);
+      auto markLabel = [&](double_t x1, double_t y1, double_t x2, double_t y2) { setRect(cellX(padX(x1)), cellY(padY(y1)), cellX(padX(x2)), cellY(padY(y2)), 1u); };
+      TLatex measure;
+      measure.SetTextFont(grid->GetPolarLabelFont());
+      measure.SetTextSize(grid->GetPolarLabelSize());
+      const int32_t nLabels = grid->GetNdivPolar() % 100;
+      for (int32_t i = 0; i < nLabels; ++i) {
+        const double_t theta = i * 2 * TMath::Pi() / nLabels;  // as ROOT computes it: the alignment compares it with pi/2, pi and 3 pi/2
+        string label;
+        if (grid->IsRadian()) {
+          const int32_t divisor = std::gcd(2 * i, nLabels);
+          const int32_t num = 2 * i / divisor, den = nLabels / divisor;
+          if (num == 0) {
+            label = "0";
+          } else if (den == 1) {
+            label = (num == 1) ? "#pi" : std::to_string(num) + "#pi";
+          } else {
+            label = "#frac{" + ((num == 1) ? string{} : std::to_string(num)) + "#pi}{" + std::to_string(den) + "}";
+          }
+        } else {
+          label = fmt::format("{:.3g}", grid->GetTMin() + i * (grid->GetTMax() - grid->GetTMin()) / nLabels);
+        }
+        measure.SetTitle(label.data());
+        UInt_t wPixel{}, hPixel{};
+        measure.GetBoundingBox(wPixel, hPixel);
+        const double_t w = wPixel * userPerPixelX, h = hPixel * userPerPixelY;
+        double_t x = (1. + grid->GetPolarOffset()) * std::cos(theta);
+        double_t y = (1. + grid->GetPolarOffset()) * std::sin(theta);
+        double_t x1{}, y1{};
+        if (ortho) {
+          // turned along the radius: a square of the label length around its middle
+          const double_t length = std::max(wPixel, hPixel);
+          x += 0.5 * length * userPerPixelX * std::cos(theta);
+          y += 0.5 * length * userPerPixelY * std::sin(theta);
+          x1 = x - 0.5 * length * userPerPixelX;
+          y1 = y - 0.5 * length * userPerPixelY;
+          markLabel(x1, y1, x1 + length * userPerPixelX, y1 + length * userPerPixelY);
+          continue;
+        }
+        y += (theta >= 3 * TMath::Pi() / 12. && theta < 2 * TMath::Pi() / 3.) ? 0.04 : 0.01;  // ROOT lifts the labels a bit
+        // TGraphPolargram::FindAlign (private): horizontal 1 left, 2 centred, 3 right; vertical 1 bottom, 2 centred, 3 top
+        const double_t pi = TMath::Pi();
+        int32_t align = 12;
+        if (theta > 0. && theta < pi / 2) {
+          align = 11;
+        } else if (theta == pi / 2) {
+          align = 21;
+        } else if (theta > pi / 2 && theta < pi) {
+          align = 31;
+        } else if (theta == pi) {
+          align = 32;
+        } else if (theta > pi && theta < 3 * pi / 2) {
+          align = 33;
+        } else if (theta == 3 * pi / 2) {
+          align = 23;
+        } else if (theta > 3 * pi / 2) {
+          align = 13;
+        }
+        x1 = x - 0.5 * (align / 10 - 1) * w;
+        y1 = y - 0.5 * (align % 10 - 1) * h;
+        markLabel(x1, y1, x1 + w, y1 + h);
+      }
     } else if (auto* polar = dynamic_cast<TGraphPolar*>(obj)) {
       // its points in the coordinates of the pad, as painting placed them on the polar grid
       TGraph painted(polar->GetN(), polar->GetXpol(), polar->GetYpol());
