@@ -189,6 +189,11 @@ void DefineBasePlots(PlotManager& pm)
   Plot lonLatMap = PlotManager::MakeBasePlot("2d_wide", PanelLayout(), BasePlotShape().SetAspectRatio(2.0));
   lonLatMap.SetName("2d_lonlat");
   pm.AddBasePlot(lonLatMap);
+  // a map of a region in longitude and latitude, true to scale at 52 degrees north: a degree of longitude is cos(52 deg) = 0.62 of
+  // a degree of latitude, so 45 x 38 degrees of Europe need a frame 1.37 times as high as wide
+  Plot regionMap = PlotManager::MakeBasePlot("2d_tall", PanelLayout(), BasePlotShape().SetAspectRatio(1.37));
+  regionMap.SetName("2d_europe");
+  pm.AddBasePlot(regionMap);
 }
 
 //****************************************************************************************
@@ -1820,6 +1825,12 @@ void DefineOtherSciencePlots(PlotManager& pm)
     plot[1]['X'].SetTitle("").SetLabelSize(0.0).SetTickLength(0.0).SetAxisColor(kWhite);
     plot[1]['Y'].SetTitle("").SetLabelSize(0.0).SetTickLength(0.0).SetAxisColor(kWhite).SetRange(45.0, 90.0);
     plot[1]['Z'].SetRange(-3.0, 3.0);
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // regions with their own shapes (countries, districts, detector cells) are a TH2Poly: here lightning over Europe on hexagonal cells of land
+    Plot plot("lightningEurope", "climate", "2d_europe");
+    plot[1].AddData("lightningEurope", "climate").SetDrawOption(colz);
+    plot[1]['Z'].SetLog().SetRange(0.05, 10.0);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // a Hertzsprung-Russell diagram: the density of 15000 stars of a catalogue

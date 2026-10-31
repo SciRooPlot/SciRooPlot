@@ -119,6 +119,7 @@
 #include <TGraphPolar.h>
 #include <TH1D.h>
 #include <TH2D.h>
+#include <TH2Poly.h>
 #include <TLatex.h>
 #include <TLorentzVector.h>
 #include <THnSparse.h>
@@ -138,6 +139,7 @@
 #include <functional>
 #include <fstream>
 #include <map>
+#include <set>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -2661,6 +2663,47 @@ void WriteClimate()
     }
   }
   warming.Write();
+
+  // a TH2Poly map with own polygons: lightning flashes per km^2 and year over Europe on hexagonal cells, one where at least two of
+  // the four cells of earth.dat around its centre are land. The hexagons are regular on a map whose degree of longitude is
+  // cos(52 deg) of a degree of latitude (an equirectangular map true at 52 deg, as the example draws it). The flash density falls
+  // from the Mediterranean to the north, with the maximum south of the Alps and more over the Balkans and the Pyrenees, little
+  // over the desert
+  std::set<std::pair<int, int>> landCells;  // the cells of 1 degree with land, by the lower left corner
+  in.clear();
+  in.seekg(0);
+  while (in >> lon >> lat) landCells.insert({static_cast<int>(std::lround(lon)) - 1, static_cast<int>(std::lround(lat))});
+  const double stretch = std::cos(52. * TMath::DegToRad()), radius = 0.6;  // radius of a hexagon in degrees of latitude
+  const double lonMin = -12., lonMax = 33., latMin = 34., latMax = 72.;
+  TH2Poly lightning("lightningEurope", ";longitude (deg);latitude (deg);lightning flashes per km^{2} and year", lonMin, lonMax, latMin, latMax);
+  const double width = std::sqrt(3.) * radius;  // between neighbouring centres of a row, in stretched degrees of longitude
+  const double cellArea = 1.5 * std::sqrt(3.) * radius * radius / stretch;  // in square degrees of longitude and latitude
+  for (int row = 0; latMin + radius * (1. + 1.5 * row) <= latMax; ++row) {
+    const double y = latMin + radius * (1. + 1.5 * row);
+    for (int column = 0; lonMin + (width * (1. + column + 0.5 * (row % 2))) / stretch <= lonMax; ++column) {
+      const double x = lonMin + (width * (0.5 + column + 0.5 * (row % 2))) / stretch;
+      int land{};  // of the four cells of 1 degree around the centre (a single cell would leave holes where earth.dat has gaps)
+      for (double dx : {-0.5, 0.5}) {
+        for (double dy : {-0.5, 0.5}) land += landCells.count({static_cast<int>(std::floor(x + dx)), static_cast<int>(std::floor(y + dy))});
+      }
+      if (land < 2) continue;
+      std::array<double, 6> lons{}, lats{};
+      for (int k = 0; k < 6; ++k) {
+        const double angle = (30. + 60. * k) * TMath::DegToRad();
+        lons[k] = x + radius * std::cos(angle) / stretch;
+        lats[k] = y + radius * std::sin(angle);
+      }
+      const int bin = lightning.AddBin(6, lons.data(), lats.data());
+      const double hotspots = 4. * std::exp(-0.5 * (std::pow((x - 10.) / 2.5, 2.) + std::pow((y - 45.5) / 1.5, 2.)))  // south of the Alps
+                              + 2. * std::exp(-0.5 * (std::pow((x - 18.) / 3., 2.) + std::pow((y - 43.) / 2., 2.)))    // Balkans, Adriatic
+                              + 1.5 * std::exp(-0.5 * (std::pow(x / 2., 2.) + std::pow((y - 42.5) / 1., 2.)));        // Pyrenees
+      const double desert = (y < 37. && x < 12.) ? 0.3 : 1.;
+      const double density = desert * 2.5 * std::exp(-(y - 36.) / 7.) + hotspots;
+      const double km2 = cellArea * 111.2 * 111.2 * std::cos(y * TMath::DegToRad());
+      lightning.SetBinContent(bin, random.Poisson(density * km2) / km2);
+    }
+  }
+  lightning.Write();
 }
 
 // muon trigger efficiencies as TEfficiency objects: passing and total counts kept together, the errors from binomial intervals

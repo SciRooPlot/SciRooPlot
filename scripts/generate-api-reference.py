@@ -215,6 +215,8 @@ def drawing_options(aliases):
         "at its edges, on a part of the sphere not (hide them with `SetLabelSize(0)`, `SetTickLength(0)` and `SetAxisColor(kWhite)`: ROOT draws transparent",
         "lines opaque in png); `\"MERCATOR\"` gives the latitude in units of",
         "ln tan(π/4 + b/2) and needs latitudes strictly inside ±90 (otherwise ROOT draws the map unprojected).",
+        "ROOT paints a projected map as contours between the bin centres, so it ends half a bin inside the frame: use bins that are small against the range",
+        "(on a section with coarse bins the half bin shows as a blank strip). Regions such as countries are a TH2Poly with own polygons, drawn as a plain colour map.",
         "",
     ]
     return "\n".join(out)
