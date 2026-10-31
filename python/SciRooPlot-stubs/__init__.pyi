@@ -704,6 +704,9 @@ class Data:
     @typing.overload
     def Scatter(self, x: str, y: str, xErrLow: str, xErrHigh: str, yErrLow: str, yErrHigh: str) -> Data:
         ...
+    @typing.overload
+    def Scatter(self, x: str, y: str, z: str) -> Data:
+        ...
     def SetAlpha(self, alpha: float) -> Data:
         ...
     def SetColor(self, color: int | str | tuple[float, float, float]) -> Data:

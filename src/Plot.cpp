@@ -2766,6 +2766,11 @@ auto Plot::Pad::Data::Scatter(const string& x, const string& y, const string& xE
   mDataInfo.set({{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, {}, false});
   return *this;
 }
+auto Plot::Pad::Data::Scatter(const string& x, const string& y, const string& z) -> decltype(*this)
+{
+  mDataInfo.set({{{x}, {y}, {z}}, {}, false});
+  return *this;
+}
 auto Plot::Pad::Data::Profile(const vector<data_dim_t>& dataDims, const string& profile, optional<string> weight) -> decltype(*this)
 {
   mDataInfo.set({dataDims, weight, true});

@@ -25,6 +25,7 @@
 #include <ROOT/RDataFrame.hxx>
 #include <ROOT/RResultHandle.hxx>
 #include <TGraph.h>
+#include <TGraph2D.h>
 #include <TH1.h>
 
 #include <fmt/format.h>
@@ -425,6 +426,25 @@ bool DataFrameRequest<DataInfo>::Book()
   if (mIsScatter) {
     if (dataDims.size() == 2) {
       SetResult((typed) ? node.Graph<D, D>("SRP_AXIS_1", "SRP_AXIS_2") : node.Graph("SRP_AXIS_1", "SRP_AXIS_2"));
+    } else if (dataDims.size() == 3) {
+      // points in 3d: RDataFrame has no action for a TGraph2D, the values are collected and the graph made from them
+      if (!typed) {
+        logger::error("A scatter plot in 3d needs scalar values: {} ({}).", mContext, mInfo->GetDescription());
+        return false;
+      }
+      auto x = node.Take<D>("SRP_AXIS_1");
+      auto y = node.Take<D>("SRP_AXIS_2");
+      auto z = node.Take<D>("SRP_AXIS_3");
+      mHandles.emplace_back(x);
+      mHandles.emplace_back(y);
+      mHandles.emplace_back(z);
+      mGetResult = [x, y, z, name = mObjName, title = mHistTitle]() mutable -> TObject* {
+        auto* graph = new TGraph2D(static_cast<int32_t>(x->size()), x->data(), y->data(), z->data());
+        graph->SetName(name.data());
+        graph->SetTitle(title.data());
+        graph->SetDirectory(nullptr);
+        return graph;
+      };
     } else if (dataDims.size() == 4) {
       SetResult((typed) ? node.GraphAsymmErrors<D, D, D, D, D, D>("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_4")
                         : node.GraphAsymmErrors("SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_3", "SRP_AXIS_4", "SRP_AXIS_4"));

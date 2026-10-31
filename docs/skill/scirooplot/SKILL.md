@@ -182,6 +182,7 @@ Incompatible binnings are divided via spline interpolation. Modifiers and data s
 .Project2D({"pt", 50}, {"eta", 50})  .Project({dims...}[, "weight"])   // up to 3D
 .Profile1D({"eta", 70}, "pt")  .Profile2D(x, y, "pt")                   // <pt> vs eta
 .Scatter("x", "y"[, "ex", "ey"])  .Scatter(x, y, exl, exh, eyl, eyh)    // graph from columns
+.Scatter("x", "y", "z")                                                  // points in 3D: a 2D graph (TGraph2D; scalar columns), e.g. points_colz or triangles
 .Filter("abs(eta) < 0.8").Filter("z == 8")  .Define("r", "sqrt(x*x+y*y)")  .Entries(100) / .Entries(800, 1200)
 .Join("scores")                                  // row by row, columns as 'scores.col' or 'col' if unique
 .Join("truth/events", {}, "truth")               // tree in another folder, with alias

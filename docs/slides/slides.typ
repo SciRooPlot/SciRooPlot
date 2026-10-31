@@ -2198,6 +2198,7 @@
         [`Scatter(x, y)`], [Scatter plot from two columns; expressions like `"sqrt(x*x+y*y)"` are valid.],
         [`Scatter(x, y, xErr, yErr)`], [Scatter plot with symmetric errors.],
         [`Scatter(x, y, xLo, xHi, yLo, yHi)`], [Scatter plot with asymmetric errors.],
+        [`Scatter(x, y, z)`], [Points in 3D (2D graph), e.g. drawn as `points_colz` or `triangles`.],
         [`Define(key, value)`], [Define a derived variable for use in expressions.],
         [`Filter(filter)`], [Apply a row-selection expression, e.g. `"eta > 0"`. Chainable.],
         [`Join(tree, keys, alias)`], [Add the columns of another tree, e.g. `Join("scores")` row by row or #if lang == "py" [`Join(["events", "src"], ["run", "event"])`] else [`Join({"events", "src"}, {"run", "event"})`] by key (rows without a match are skipped); columns as `"scores.col"`. Chainable.],

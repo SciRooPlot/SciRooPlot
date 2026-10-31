@@ -245,6 +245,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& Scatter(const std::string& x, const std::string& y)`
 - `Data& Scatter(const std::string& x, const std::string& y, const std::string& xErr, const std::string& yErr)`
 - `Data& Scatter(const std::string& x, const std::string& y, const std::string& xErrLow, const std::string& xErrHigh, const std::string& yErrLow, const std::string& yErrHigh)`
+- `Data& Scatter(const std::string& x, const std::string& y, const std::string& z)`
 - `Data& Profile(const std::vector<data_dim_t>& dataDims, const std::string& profile, std::optional<std::string> weight = {})`
 - `Data& Profile1D(data_dim_t x, const std::string& profile, std::optional<std::string> weight = {})`
 - `Data& Profile2D(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> weight = {})`

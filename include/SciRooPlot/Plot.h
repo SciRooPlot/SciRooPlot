@@ -860,6 +860,8 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   virtual Data& Scatter(const std::string& x, const std::string& y);
   virtual Data& Scatter(const std::string& x, const std::string& y, const std::string& xErr, const std::string& yErr);
   virtual Data& Scatter(const std::string& x, const std::string& y, const std::string& xErrLow, const std::string& xErrHigh, const std::string& yErrLow, const std::string& yErrHigh);
+  // points in 3d (x, y, z): a 2d graph (TGraph2D), e.g. drawn as points_colz or triangles; scalar columns only
+  Data& Scatter(const std::string& x, const std::string& y, const std::string& z);
 
   virtual Data& Profile(const std::vector<data_dim_t>& dataDims, const std::string& profile, std::optional<std::string> weight = {});
   virtual Data& Profile1D(data_dim_t x, const std::string& profile, std::optional<std::string> weight = {});

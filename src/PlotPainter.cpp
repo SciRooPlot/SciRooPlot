@@ -5656,7 +5656,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* data_ptr)
           } else if (!dataInfo.dataDims.empty()) {
             if (dataInfo.isProfileNoScatter && *dataInfo.isProfileNoScatter) replaceStr = "prof. ";
             const bool isScatter = dataInfo.isProfileNoScatter && !*dataInfo.isProfileNoScatter;
-            const size_t nDims = (isScatter) ? 2 : dataInfo.dataDims.size();  // a scatter: x and y, not their errors
+            const size_t nDims = (isScatter && dataInfo.dataDims.size() != 3) ? 2 : dataInfo.dataDims.size();  // a scatter: x and y (and z), not their errors
             for (size_t dim = nDims; dim-- > 0;) {
               replaceStr += ((dim == nDims - 1) ? "" : ":") + dataInfo.dataDims[dim].var;
             }
