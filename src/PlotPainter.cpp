@@ -701,6 +701,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           } else if constexpr (is_func_2d<data_type>()) {
             options = &defaultDrawOptions_Func2d;
             typeName = "2d function";
+          } else if constexpr (is_func_3d<data_type>()) {
+            options = &defaultDrawOptions_Func3d;
+            typeName = "3d function";
           }
           if (auto it = (options) ? options->find(*optionAlias) : decltype(options->end()){}; options && it != options->end()) {
             drawOption += it->second;
@@ -911,6 +914,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             bool triangles{}, points{};
             paints3dGraph(drawOption, triangles, points);
             if (triangles || points) drawOption = (TString(drawOption).Contains("z", TString::kIgnoreCase)) ? "LEGOZ" : "LEGO";
+          }
+          if constexpr (is_func_3d<data_type>()) {
+            // TF3 (the option of the surface of a 3d function) would make the histogram that draws the frame paint a surface without function
+            TString option(drawOption);
+            option.ReplaceAll("TF3", "").ReplaceAll("tf3", "");
+            drawOption = option.Data();
           }
           // the frame of a 2d histogram, and of a coloured 2d graph or function (drawn from its histogram), also draws the colour axis:
           // also with options that ask for the colour scale without COL (CONT1Z, CONTZ), which with AXIS would paint none

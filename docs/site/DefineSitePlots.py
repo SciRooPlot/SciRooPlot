@@ -179,6 +179,15 @@ def DefineGallery(pm: PlotManager):
         for axis in "XYZ":
             plot[1][axis].SetTitle("")
         pm.AddPlot(plot)
+    # a 3d function: a torus, the surface f = 0 (faces in a light fill colour, the mesh in the data colour)
+    torus = ROOT.TF3("torus", "pow(sqrt(x*x+y*y)-1.2,2)+z*z-0.16", -2.0, 2.0, -2.0, 2.0, -1.0, 1.0)
+    pm.AddDataSource("func3d", torus)
+    plot = Plot("iso", "gallery/func3d", "2d")
+    plot[1].AddData("torus", "func3d").SetDrawOption(iso).SetColor(kAzure + 3).SetFillColor(kAzure - 9).SetLineWidth(1.0)
+    plot[1].SetView(35.0, 225.0)
+    for axis in "XYZ":
+        plot[1][axis].SetTitle("")
+    pm.AddPlot(plot)
     # the viewing angles of 3D drawings (Pad::SetView), shown below the 2D tabs of the gallery: one 3D drawing per kind of data
     for theta, phi in VIEWS:
         for kind in ["hist2d", "graph2d", "func2d"]:

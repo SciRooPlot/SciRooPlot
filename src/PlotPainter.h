@@ -239,6 +239,11 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Func2d{
   {cont_smoothz, "CONT4Z"},
 };
 
+// 3d functions are drawn as the surface f(x, y, z) = 0, ROOT's only drawing of them (TF3::Paint), as the iso surface of 3d histograms
+inline const std::map<draw_option_t, std::string> defaultDrawOptions_Func3d{
+  {iso, "TF3"},
+};
+
 //**************************************************************************************************
 /**
  * Class that contains functionality to generate plots using the ROOT framework.

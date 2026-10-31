@@ -2364,7 +2364,7 @@
   - Functions (`TF1`) are drawn from their values at `SetNpx` points: `points` (`P`), `line` (`L`), `curve` (`C`), `area` (`L`), `area_smooth` (`C`). With a fill set, the area between the curve and zero is filled (`line` and `curve` drop the fill).
   - 2D graphs and 2D functions take the colour map, lego, surface and contour aliases of 2D histograms (drawn from an interpolated grid, so no `box`, `text`, candles or violins).
   - Only 2D graphs have their points and Delaunay triangles, drawn in 3D: as the first data of a pad they get an empty lego frame, later data needs such a 3D frame.
-  - 3D histograms: `box` (`BOX`), `col` / `colz` (`BOX2` / `BOX2Z`, the default), `iso` (`ISO`). 3D functions (`TF3`): the surface f = 0.
+  - 3D histograms: `box` (`BOX`), `col` / `colz` (`BOX2` / `BOX2Z`, the default), `iso` (`ISO`). 3D functions (`TF3`): `iso`, the surface f = 0.
   #v(0.4em)
   #api-table((
     [`triangles` / `triangles_wire`], [`TRI` #text(size: 10pt, fill: gray)[(filled with the fill colour)] / `TRIW`],
