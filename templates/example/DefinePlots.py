@@ -1055,14 +1055,15 @@ def DefineAtomicPlots(pm: PlotManager):
 def DefineAcceleratorPlots(pm: PlotManager):
     """Accelerator physics: the profile of a beam and its phase space."""
     # a beam profile with its projections in panels of their own: an own layout, the projections sharing the axes ------
-    # of the map; PanelLayout arranges the panels and gives them the look of the shipped base plots
-    profileLayout = Plot("profileWithProjections", PanelLayout([[Panel(1.0, 0.4), Empty()], [Panel(), Panel(0.4, 1.0)]]))
+    # of the map, and the colour scale of the map (pad 3) in a cell of its own beyond the projection on the right;
+    # PanelLayout arranges the panels and gives them the look of the shipped base plots
+    profileLayout = Plot("profileWithProjections", PanelLayout([[Panel(1.0, 0.4), Empty().Span(2)], [Panel(), Panel(0.4, 1.0), ZAxis(3)]]))
     pm.AddBasePlot(profileLayout)
-    plot = Plot("beamProfile", "accelerator", "profileWithProjections")  # pads: 1 above, 2 the empty cell, 3 the map, 4 right
-    plot[3].AddData("hBeamSpot", "accelerator").SetDrawOption(col)
-    plot[3].SetPalette(kViridis)
-    plot[1].AddData("hBeamSpot", "accelerator").ProjectX().NormalizeToMaximum().SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineColor(kAzure + 2)
-    plot[4].AddData("hBeamSpot", "accelerator").ProjectY().NormalizeToMaximum().SetDrawOption(hbars).SetFill(1001, kAzure - 9).SetLineColor(kAzure + 2)
+    plot = Plot("beamProfile", "accelerator", "profileWithProjections")  # pads: 1 above, 2 the empty cell, 3 the map, 4 right, 5 its colour scale
+    plot[3].AddData("hBeamSpot", "accelerator").SetDrawOption(colz)
+    plot[3].SetPalette([("#e8f2ff", 0.0), (kAzure - 9, 0.35), (kAzure + 2, 0.7), (kAzure + 3, 1.0)])  # pale to dark azure, as the projections
+    plot[1].AddData("hBeamSpot", "accelerator").ProjectX().NormalizeToMaximum().SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineWidth(0.0)
+    plot[4].AddData("hBeamSpot", "accelerator").ProjectY().NormalizeToMaximum().SetDrawOption(hbars).SetFill(1001, kAzure - 9)
     plot[2].AddText(0.05, 0.8, ["screen 3", "#sigma_{#it{x}} = <stddev[.1f]:1@1> mm", "#sigma_{#it{y}} = <stddev[.1f]:1@4> mm"])
     plot[1]['Y'].SetRange(0.0, 1.1).SetTitle("")
     plot[4]['X'].SetTitle("")

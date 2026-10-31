@@ -5522,10 +5522,11 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
   cellPad->SetLogz(memberPad->GetLogz());
   cellPad->Draw();
   cellPad->cd();
+  // the setup of the panel (its palette): put in front of the scale once it is drawn, since drawing it without SAME clears the pad
+  TExec* cellSetup{nullptr};
   if (auto* setup = dynamic_cast<TExec*>(memberPad->GetListOfPrimitives()->FindObject(("setup_pad_" + std::to_string(memberPad->GetNumber())).data()))) {
-    auto* cellSetup = new TExec(("setup_pad_" + std::to_string(padID)).data(), setup->GetTitle());
+    cellSetup = new TExec(("setup_pad_" + std::to_string(padID)).data(), setup->GetTitle());
     cellSetup->SetBit(kCanDelete);
-    cellSetup->Draw();
     cellSetup->Exec();
   }
   // the histogram of the scale has no cells to paint: its x axis lies beyond the frame (only its z axis is shown)
@@ -5563,6 +5564,7 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
     if (labelOffset) zAxis->SetLabelOffset(*labelOffset);
   }
   scale->Draw("COLZ");
+  if (cellSetup) cellPad->GetListOfPrimitives()->AddFirst(cellSetup);
   cellPad->Update();
   if (auto* palette = dynamic_cast<TPave*>(scale->GetListOfFunctions()->FindObject("palette"))) {
     palette->SetX1NDC(scaleOffset.value_or(0.005f));
