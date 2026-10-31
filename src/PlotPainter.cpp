@@ -992,6 +992,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             option.ReplaceAll("TF3", "").ReplaceAll("tf3", "");
             drawOption = option.Data();
           }
+          if constexpr (is_2d<data_type>()) {
+            // the frame is emptied below (contents 0) and still painted with its option: a surface would put a plane at 0, or at the floor
+            // of the box if the minimum is above 0; as a lego plot without its empty bins (0) it gives the same box and axes and paints nothing
+            if (pad_ptr->GetView()) {
+              static const std::regex surface("SURF[0-9]?", std::regex::icase);
+              drawOption = std::regex_replace(drawOption, surface, "LEGO");
+              if (TString(drawOption).Contains("LEGO", TString::kIgnoreCase) && drawOption.find('0') == string::npos) drawOption += " 0";
+            }
+          }
           // the frame of a 2d histogram, and of a coloured 2d graph or function (drawn from its histogram), also draws the colour axis:
           // also with options that ask for the colour scale without COL (CONT1Z, CONTZ), which with AXIS would paint none
           const bool isColored2d = (is_graph_2d<data_type>() || is_func_2d<data_type>()) && str_contains(drawOption, std::vector<std::string>{"COL", "Z"});
