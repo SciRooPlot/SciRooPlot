@@ -649,7 +649,6 @@ ptree Plot::GetPropertyTree() const
 //**************************************************************************************************
 auto Plot::ShareAxis(char axis, const vector<uint8_t>& pads) -> decltype(*this)
 {
-  axis = static_cast<char>(std::toupper(static_cast<unsigned char>(axis)));
   if (axis != 'X' && axis != 'Y' && axis != 'Z') {
     logger::warning("Plot {}: ShareAxis needs the axis 'X', 'Y' or 'Z' (got '{}').", mName, axis);
     return *this;
