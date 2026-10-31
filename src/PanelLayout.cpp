@@ -423,7 +423,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
   };
   for (size_t c = 0; c + 1 < nCols; ++c) {
     if (gapAfterColumn[c] == 1) {
-      colSep[c] = Separation{mMarginRight, mMarginLeft, false};
+      colSep[c] = Separation{colZAxis[c] ? mColorScaleMargin : mMarginRight, mMarginLeft, false};
     } else if (colScale[c + 1]) {
       colSep[c] = Separation{0., 0., false};  // the cell of a colour scale holds its room: it starts at the frames on its left
     } else if (colScale[c]) {

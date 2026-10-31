@@ -2417,6 +2417,25 @@ void WriteTheory()
     onsager.SetNpx(1000);
     onsager.Write();
   }
+  {  // the Mandelbrot set: points c whose orbit z -> z^2 + c stays bounded; outside, the (smoothed) number of iterations until |z| > 2
+    constexpr int kMaxIterations = 500;
+    TH2F mandelbrot("mandelbrot", ";Re(#it{c});Im(#it{c});iterations until |#it{z}| > 2", 600, -2.2, 0.8, 600, -1.5, 1.5);
+    for (int bx = 1; bx <= mandelbrot.GetNbinsX(); ++bx) {
+      for (int by = 1; by <= mandelbrot.GetNbinsY(); ++by) {
+        const double cr = mandelbrot.GetXaxis()->GetBinCenter(bx), ci = mandelbrot.GetYaxis()->GetBinCenter(by);
+        double zr = 0., zi = 0.;
+        int n = 0;
+        while (n < kMaxIterations && zr * zr + zi * zi < 256.) {  // escape radius 16 for a smooth count
+          const double next = zr * zr - zi * zi + cr;
+          zi = 2. * zr * zi + ci;
+          zr = next;
+          ++n;
+        }
+        if (n < kMaxIterations) mandelbrot.SetBinContent(bx, by, n + 1. - std::log2(0.5 * std::log(zr * zr + zi * zi)));  // inside: empty
+      }
+    }
+    mandelbrot.Write();
+  }
 }
 
 void WriteOtherFields()

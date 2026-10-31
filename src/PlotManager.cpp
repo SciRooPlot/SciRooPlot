@@ -1792,6 +1792,28 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
         common("time formats", [](const Plot::Pad::Axis& axis) { return axis.GetTimeFormat(); }, [](Plot::Pad::Axis& axis, const string& format) { axis.SetTimeFormat(format); });
         common("minima", [](const Plot::Pad::Axis& axis) { return axis.GetMinRange(); }, [](Plot::Pad::Axis& axis, double_t min) { axis.SetMinRange(min); });
         common("maxima", [](const Plot::Pad::Axis& axis) { return axis.GetMaxRange(); }, [](Plot::Pad::Axis& axis, double_t max) { axis.SetMaxRange(max); });
+        if (axisLabel == 'Z') {
+          // one colour scale for the group, but each pad is painted with its own palette: the scale fits only some of them
+          const auto& pads = fullPlot.GetPads();
+          auto ownPalette = [](const Plot::Pad& p) { return p.GetPalette() || p.GetPaletteGradient().rgbEndpoints; };
+          auto palette = [](const Plot::Pad& p) {
+            const auto& gradient = p.GetPaletteGradient();
+            return std::tie(p.GetPalette(), gradient.rgbEndpoints, gradient.alpha, gradient.nColors);
+          };
+          const Plot::Pad* first{nullptr};
+          for (uint8_t padID : group.pads) {
+            auto pad = pads.find(padID);
+            if (pad == pads.end()) continue;
+            const Plot::Pad* used = &pad->second;  // the palette a pad is painted with: its own, else the one of pad 0
+            if (!ownPalette(*used) && pads.count(0)) used = &pads.at(0);
+            if (!first) {
+              first = used;
+            } else if (palette(*first) != palette(*used)) {
+              logger::warning("Plot {}: pad {} sets another palette than the pads it shares one colour scale with; separate the panels with a gap for own scales.", fullPlot.GetName(), padID);
+              break;
+            }
+          }
+        }
       }
     }
     painter.SetSharedAxes(groups);

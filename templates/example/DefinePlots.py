@@ -92,7 +92,7 @@ def DefineBasePlots(pm: PlotManager):
     panels) or 2d (panels with colour scale), wide or tall panels, a grid of panels sharing their axes, a ratio and/or
     pull panel below each panel, or gaps between independent panels. Pads are numbered row by row.
     The code of PlotManager::MakeBasePlot shows how they are made with PanelLayout, as a start for your own."""
-    for name in ["1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_2x1_gap", "1d_3x1_gap", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1", "2d_3x1", "2d_2x2"]:
+    for name in ["1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_2x1_gap", "1d_3x1_gap", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1", "2d_2x1_gap", "2d_3x1", "2d_2x2"]:
         pm.AddBasePlot(PlotManager.MakeBasePlot(name))
     # a base plot can be adapted before adding it, e.g. for all 2d plots with a logarithmic z axis
     logz = PlotManager.MakeBasePlot("2d")
@@ -331,6 +331,18 @@ def DefineDetectorPlots(pm: PlotManager):
     plot[1].AddData("tracks", "tracks").Profile1D(("eta", 18, [-0.9, 0.9]), "nClustersTPC")
     plot[1]['X'].SetTitle("#eta")
     plot[1]['Y'].SetTitle("#LT#it{N}_{cls}^{TPC}#GT").SetRange(100.0, 160.0)
+    pm.AddPlot(plot)
+
+    # two different quantities side by side, each with its own palette and colour scale (_gap: the panels share no axis)
+    plot = Plot("trackingQAMaps", "detector/tracking", "2d_2x1_gap")
+    plot[1].AddData("tracks", "tracks").Project2D(("eta", 18, [-0.9, 0.9]), ("phi", 36, [0.0, 2.0 * math.pi]))
+    plot[2].AddData("tracks", "tracks").Profile2D(("eta", 18, [-0.9, 0.9]), ("phi", 36, [0.0, 2.0 * math.pi]), "nClustersTPC")
+    plot[1].SetPalette(kViridis)
+    plot[2].SetPalette(kCividis)
+    plot[1]['Z'].SetTitle("tracks")
+    plot[2]['Z'].SetTitle("#LT#it{N}_{cls}^{TPC}#GT")
+    plot[0]['X'].SetTitle("#eta")
+    plot[0]['Y'].SetTitle("#varphi (rad)")
     pm.AddPlot(plot)
 
     # ---- particle identification ----------------------------------------------------------------
@@ -1185,7 +1197,7 @@ def DefineSearchPlots(pm: PlotManager):
     plot[1].AddData("stop/expected", "searches", "expected #pm 1#sigma_{exp}").SetDrawOption(line).SetLine(kDashed, 3.0, kRed + 1)
     for variation in ["expected_up", "expected_down"]:
         plot[1].AddData(f"stop/{variation}", "searches").SetDrawOption(line).SetLine(kDashed, 1.0, kRed + 1)
-    plot[1].AddData("stop/observed", "searches", "observed #pm 1#sigma_{theory}").SetDrawOption(line).SetLine(kSolid, 3.0, kBlack)
+    plot[1].AddData("stop/observed", "searches", "observed #pm 1#sigma_{theory}").SetDrawOption(line).SetLine(kSolid, 803.0, kBlack).SetFill(3354, kBlack)  # 803: hatches of width 8 on the excluded side
     for variation in ["observed_theoryUp", "observed_theoryDown"]:
         plot[1].AddData(f"stop/{variation}", "searches").SetDrawOption(line).SetLine(kSolid, 1.0, kBlack)
     plot[1].AddPoints([200.0, 993.0], [7.0, 800.0], "#it{m}(#tilde{t}) = #it{m}(t) + #it{m}(#tilde{#chi}^{0}_{1})").SetDrawOption(line).SetLine(kDotted, 2.0, kGray + 2)
@@ -1471,6 +1483,13 @@ def DefineTheoryPlots(pm: PlotManager):
     plot[1].SetRefFunc("0").SetLine(kDashed, 2.0, kGray + 1)
     plot[1]['X'].SetRange(2.8, 4.0).SetTitle("#it{r}")
     plot[1]['Y'].SetRange(-2.5, 1.0).SetTitle("Lyapunov exponent #lambda")
+    pm.AddPlot(plot)
+
+    # the Mandelbrot set, black inside: around it the number of iterations until the orbit escapes, on a log scale --------
+    plot = Plot("mandelbrot", "theory", "2d_logz")
+    plot[1].AddData("mandelbrot", "theory").SetContours(99)
+    plot[1].SetFrameFill(1001, kBlack)  # the empty cells (the set itself) show the frame's fill
+    plot[1].SetPalette(kSunset)
     pm.AddPlot(plot)
 
     # the 2D Ising model: Binder cumulants of all lattice sizes cross at the critical temperature ----------------------
