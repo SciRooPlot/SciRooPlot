@@ -43,6 +43,7 @@
 #include <TF3.h>
 #include <TFile.h>
 #include <TFolder.h>
+#include <TFriendElement.h>
 #include <TGClient.h>
 #include <TGraph2D.h>
 #include <TGraphErrors.h>
@@ -51,6 +52,7 @@
 #include <THnBase.h>
 #include <TKey.h>
 #include <TLeaf.h>
+#include <TLeafC.h>
 #include <TLegend.h>
 #include <TLegendEntry.h>
 #include <TLine.h>
@@ -81,6 +83,7 @@
 #include <csignal>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fnmatch.h>
 #include <fstream>
@@ -1617,7 +1620,7 @@ bool PlotManager::FillBuffer()
               logger::error("Cannot join {} to RNTuple {}: ROOT cannot join RNTuples.", joins.front().GetDescription(), DataLocation(dataSource, treeName));
               continue;
             }
-            ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [ntuplePath, files]() { return std::make_unique<ROOT::RDataFrame>(ntuplePath, files); }, describeInputs(treeInputs), joins);
+            ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [ntuplePath, files]() { return std::make_unique<ROOT::RDataFrame>(ntuplePath, files); }, nullptr, describeInputs(treeInputs), joins);
           }
           continue;
         }
@@ -1640,7 +1643,7 @@ bool PlotManager::FillBuffer()
             if (!isJoined) break;
           }
           if (!isJoined) continue;
-          ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [chain, joinedChains]() { return std::make_unique<ROOT::RDataFrame>(*chain); /* joinedChains: keeps the joined trees alive */ }, describeInputs(treeInputs), joins);
+          ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [chain, joinedChains]() { return std::make_unique<ROOT::RDataFrame>(*chain); /* joinedChains: keeps the joined trees alive */ }, chain.get(), describeInputs(treeInputs), joins);
         }
       }
     }
@@ -2627,7 +2630,7 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
         const UInt_t nThreads = ROOT::GetThreadPoolSize();
         ROOT::DisableImplicitMT();
         auto mtGuard = make_scope_guard([wasMTEnabled, nThreads]() { if (wasMTEnabled) ROOT::EnableImplicitMT(nThreads); });
-        ProcessDataRequests("tree", dataSource, fullName, suffix, [tree]() { return std::make_unique<ROOT::RDataFrame>(*tree); });
+        ProcessDataRequests("tree", dataSource, fullName, suffix, [tree]() { return std::make_unique<ROOT::RDataFrame>(*tree); }, tree);
       }
       if (isOwned) delete tree;
       return;
@@ -2964,7 +2967,7 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
   options.fRightTrim = true;
   if (hasComments) options.fComment = '#';
   options.fLinesChunkSize = 50000;
-  ProcessDataRequests("table", dataSource, name, ":" + dataSource, [&]() { return std::make_unique<ROOT::RDataFrame>(ROOT::RDF::FromCSV(inputFileName, options)); });
+  ProcessDataRequests("table", dataSource, name, ":" + dataSource, [&]() { return std::make_unique<ROOT::RDataFrame>(ROOT::RDF::FromCSV(inputFileName, options)); }, nullptr);
 }
 
 //**************************************************************************************************
@@ -3171,7 +3174,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
  */
 //**************************************************************************************************
 void PlotManager::ProcessDataRequests(const string& type, const string& dataSource, const string& name, const string& objNameSuffix,
-                                      const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, const string& inputsDescription,
+                                      const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, TTree* tree, const string& inputsDescription,
                                       const optional<vector<Plot::Pad::Data::data_info_t::join_t>>& joins)
 {
   using data_info_t = Plot::Pad::Data::data_info_t;
@@ -3215,6 +3218,30 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
     (dataInfo.singleProc() ? sequentialInfos : parallelInfos).push_back(&dataInfo);
   }
   if (parallelInfos.empty() && sequentialInfos.empty()) return;
+
+  // C strings (leaves of type C, e.g. Branch("name", buffer, "name/C") or uproot's mktree) are read by RDataFrame as RVec<Char_t>
+  // padded with null characters, which cannot be compared with a string: they are given to the requests as std::string
+  // (a redefined column is only evaluated where a request reads it)
+  vector<string> cStringColumns;
+  if (tree) {
+    tree->LoadTree(0);  // a chain has no leaves before its first tree is loaded
+    auto collect = [&cStringColumns](TTree* leavesTree, const string& prefix) {
+      if (!leavesTree || !leavesTree->GetListOfLeaves()) return;
+      for (auto* obj : *leavesTree->GetListOfLeaves()) {
+        auto* leaf = static_cast<TLeaf*>(obj);
+        if (leaf->IsA() != TLeafC::Class()) continue;
+        auto* branch = leaf->GetBranch();
+        cStringColumns.push_back(prefix + ((branch->GetNleaves() == 1) ? branch->GetFullName() : leaf->GetFullName()).Data());
+      }
+    };
+    collect(tree->GetTree(), "");
+    if (auto* friends = tree->GetListOfFriends()) {
+      for (auto* obj : *friends) {
+        auto* friendElement = static_cast<TFriendElement*>(obj);
+        collect(friendElement->GetTree(), string(friendElement->GetName()) + ".");
+      }
+    }
+  }
 
   // errors that only show up while reading may come from inputs of a chained tree with a different structure
   const string chainHint = (inputsDescription.empty()) ? "" : fmt::format(" (the tree is chained from {}: do all inputs of the data source have the same columns?)", inputsDescription);
@@ -3278,7 +3305,12 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           if (!join.keys.empty()) joinKeyColumns.push_back(join.GetAlias() + "." + join.keys[0]);
         }
       }
-      ROOT::RDF::RNode matched = *df;
+      ROOT::RDF::RNode base = *df;
+      for (const auto& column : cStringColumns) {
+        if (!df->HasColumn(column) || df->GetColumnType(column) != "ROOT::VecOps::RVec<Char_t>") continue;
+        base = base.Redefine(column, [](const ROOT::RVec<Char_t>& chars) { return string(chars.data(), strnlen(chars.data(), chars.size())); }, {column});
+      }
+      ROOT::RDF::RNode matched = base;
       optional<ROOT::RDF::RResultPtr<ULong64_t>> nMatched;
       if (!joinKeyColumns.empty()) {
         for (const auto& column : joinKeyColumns) {
@@ -3294,7 +3326,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           // the requests share the filter on the matching rows (evaluated once per row), except those with an entry range:
           // their range refers to all rows of the tree, so they apply the filter after it
           const bool hasEntryRange = info->entries.max.has_value();
-          if (request.Prepare((hasEntryRange) ? ROOT::RDF::RNode(*df) : matched, (hasEntryRange) ? joinKeyColumns : vector<string>{})) requests.push_back(std::move(request));
+          if (request.Prepare((hasEntryRange) ? base : matched, (hasEntryRange) ? joinKeyColumns : vector<string>{})) requests.push_back(std::move(request));
         } catch (const std::invalid_argument&) {
           throw;
         } catch (const std::exception& e) {

@@ -40,6 +40,7 @@ class TDirectory;
 class TChain;
 class TKey;
 class TObject;
+class TTree;
 class TVirtualPad;
 namespace ROOT
 {
@@ -212,7 +213,7 @@ class PlotManager
   static bool PrepareInput(TObject* obj, const std::string& location);
   void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataSource);
   void ProcessDataRequests(const std::string& type, const std::string& dataSource, const std::string& name, const std::string& objNameSuffix,
-                           const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, const std::string& inputsDescription = "",
+                           const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, TTree* tree, const std::string& inputsDescription = "",
                            const std::optional<std::vector<Plot::Pad::Data::data_info_t::join_t>>& joins = std::nullopt);
   std::vector<tree_input_t> FindTreeInputs(const std::string& dataSource, const std::string& treeName);
   std::optional<std::string> AttachJoin(TChain& chain, const std::string& treeName, const std::vector<tree_input_t>& treeInputs,
