@@ -409,15 +409,25 @@ class Plot : public FillSetters<Plot>
   void UpdateUniqueName();
 
   template <class>
+  friend class MarkerSetters;
+  template <class>
   friend class LineSetters;
+  template <class>
+  friend class FillSetters;
+  template <class>
+  friend class TextSetters;
   template <class>
   friend class BorderSetters;
 
   // helpers (also used by the nested classes and the setter groups)
+  static std::optional<std::string> NameError(const std::string& name, bool isGroup = false);
   static std::string NormalizeGroup(const std::string& group);
   static float_t RoundWidth(float_t width, const char* what);
   static std::optional<float_t> RoundWidth(const std::optional<float_t>& width, const char* what);
   static void ReadWidthFromTree(const boost::property_tree::ptree& tree, std::optional<float_t>& target, const char* key);
+  // keys <prefix>color, <prefix>alpha, <prefix><style> and <prefix><scale> (none without scale key, a width is rounded)
+  static void ReadLayout(const boost::property_tree::ptree& tree, layout_t& layout, const std::string& prefix, const char* style, const char* scale = nullptr);
+  static void PutLayout(boost::property_tree::ptree& tree, const layout_t& layout, const std::string& prefix, const char* style, const char* scale = nullptr);
   static void ReadDrawOption(const boost::property_tree::ptree& tree, std::optional<draw_option_t>& option, const char* key);
   static void PutDrawOption(boost::property_tree::ptree& tree, const std::optional<draw_option_t>& option, const char* key);
 
@@ -658,6 +668,8 @@ class Plot::Pad : public FillSetters<Pad>
     std::optional<std::vector<std::tuple<float_t, float_t, float_t, float_t>>> rgbEndpoints;
     std::optional<float_t> alpha;
     std::optional<int32_t> nColors;
+    void Read(const boost::property_tree::ptree& tree, const std::string& prefix);  // <prefix>endpoints, <prefix>alpha, <prefix>num_colors
+    void Put(boost::property_tree::ptree& tree, const std::string& prefix) const;
   };
   struct view_defaults_t {
     std::optional<float_t> scale;
@@ -665,6 +677,11 @@ class Plot::Pad : public FillSetters<Pad>
     std::optional<std::vector<int16_t>> styles;
     std::optional<std::vector<color_t>> colors;
     gradient_color_t colorGradient;
+    void SetColors(const std::vector<color_t>& colorList);                             // replaces a gradient
+    void SetGradient(const gradient_color_t& gradient);                                // replaces the colour list and its alpha
+    void Update(const view_defaults_t& other);                                         // takes over the values set in other
+    void ReadColors(const boost::property_tree::ptree& tree, const std::string& key);  // <key> and <key>_gradient_*
+    void PutColors(boost::property_tree::ptree& tree, const std::string& key) const;
   };
   struct palette_defaults_t {
     std::optional<int32_t> index;

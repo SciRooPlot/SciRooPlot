@@ -25,14 +25,6 @@
 
 namespace SciRooPlot::util
 {
-template <typename T>
-void set_if(const std::optional<T>& origin, std::optional<T>& target)
-{
-  if (origin) {
-    target = origin;
-  }
-}
-
 // element i of the vector (cyclic)
 template <typename T>
 std::optional<T> pick(uint16_t i, const std::optional<std::vector<T>>& vec)

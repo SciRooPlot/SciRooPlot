@@ -66,7 +66,6 @@ using util::join_strings;
 using util::number_to_string;
 using util::put_in_tree;
 using util::read_from_tree;
-using util::set_if;
 using util::str_contains;
 
 //--------------------------------------------------------------------------------------------------
@@ -191,15 +190,41 @@ void Plot::ReadWidthFromTree(const ptree& tree, optional<float_t>& target, const
 
 //**************************************************************************************************
 /**
+ * Read and write the keys of a layout.
+ */
+//**************************************************************************************************
+void Plot::ReadLayout(const ptree& tree, layout_t& layout, const string& prefix, const char* style, const char* scale)
+{
+  read_from_tree(tree, layout.color, prefix + "color");
+  read_from_tree(tree, layout.alpha, prefix + "alpha");
+  read_from_tree(tree, layout.style, prefix + style);
+  if (!scale) return;
+  const string scaleKey = prefix + scale;
+  if (std::string_view(scale) == "width") {
+    ReadWidthFromTree(tree, layout.scale, scaleKey.c_str());
+  } else {
+    read_from_tree(tree, layout.scale, scaleKey);
+  }
+}
+void Plot::PutLayout(ptree& tree, const layout_t& layout, const string& prefix, const char* style, const char* scale)
+{
+  put_in_tree(tree, layout.color, prefix + "color");
+  put_in_tree(tree, layout.alpha, prefix + "alpha");
+  put_in_tree(tree, layout.style, prefix + style);
+  if (scale) put_in_tree(tree, layout.scale, prefix + scale);
+}
+
+//**************************************************************************************************
+/**
  * Take over the values set in other.
  */
 //**************************************************************************************************
 void layout_t::Update(const layout_t& other)
 {
-  util::set_if(other.color, color);
-  util::set_if(other.alpha, alpha);
-  util::set_if(other.style, style);
-  util::set_if(other.scale, scale);
+  if (other.color) color = other.color;
+  if (other.alpha) alpha = other.alpha;
+  if (other.style) style = other.style;
+  if (other.scale) scale = other.scale;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -241,18 +266,12 @@ Derived& MarkerSetters<Derived>::SetMarkerSize(float_t size)
 template <class Derived>
 void MarkerSetters<Derived>::ReadMarker(const ptree& tree)
 {
-  read_from_tree(tree, mMarker.color, "marker_color");
-  read_from_tree(tree, mMarker.alpha, "marker_alpha");
-  read_from_tree(tree, mMarker.style, "marker_style");
-  read_from_tree(tree, mMarker.scale, "marker_size");
+  Plot::ReadLayout(tree, mMarker, "marker_", "style", "size");
 }
 template <class Derived>
 void MarkerSetters<Derived>::PutMarker(ptree& tree) const
 {
-  put_in_tree(tree, mMarker.color, "marker_color");
-  put_in_tree(tree, mMarker.alpha, "marker_alpha");
-  put_in_tree(tree, mMarker.style, "marker_style");
-  put_in_tree(tree, mMarker.scale, "marker_size");
+  Plot::PutLayout(tree, mMarker, "marker_", "style", "size");
 }
 
 template <class Derived>
@@ -288,18 +307,12 @@ Derived& LineSetters<Derived>::SetLineWidth(float_t width)
 template <class Derived>
 void LineSetters<Derived>::ReadLine(const ptree& tree)
 {
-  read_from_tree(tree, mLine.color, "line_color");
-  read_from_tree(tree, mLine.alpha, "line_alpha");
-  read_from_tree(tree, mLine.style, "line_style");
-  Plot::ReadWidthFromTree(tree, mLine.scale, "line_width");
+  Plot::ReadLayout(tree, mLine, "line_", "style", "width");
 }
 template <class Derived>
 void LineSetters<Derived>::PutLine(ptree& tree) const
 {
-  put_in_tree(tree, mLine.color, "line_color");
-  put_in_tree(tree, mLine.alpha, "line_alpha");
-  put_in_tree(tree, mLine.style, "line_style");
-  put_in_tree(tree, mLine.scale, "line_width");
+  Plot::PutLayout(tree, mLine, "line_", "style", "width");
 }
 
 template <class Derived>
@@ -329,16 +342,12 @@ Derived& FillSetters<Derived>::SetFillAlpha(float_t alpha)
 template <class Derived>
 void FillSetters<Derived>::ReadFill(const ptree& tree)
 {
-  read_from_tree(tree, mFill.color, "fill_color");
-  read_from_tree(tree, mFill.alpha, "fill_alpha");
-  read_from_tree(tree, mFill.style, "fill_style");
+  Plot::ReadLayout(tree, mFill, "fill_", "style");
 }
 template <class Derived>
 void FillSetters<Derived>::PutFill(ptree& tree) const
 {
-  put_in_tree(tree, mFill.color, "fill_color");
-  put_in_tree(tree, mFill.alpha, "fill_alpha");
-  put_in_tree(tree, mFill.style, "fill_style");
+  Plot::PutLayout(tree, mFill, "fill_", "style");
 }
 
 template <class Derived>
@@ -374,18 +383,12 @@ Derived& TextSetters<Derived>::SetTextSize(float_t size)
 template <class Derived>
 void TextSetters<Derived>::ReadText(const ptree& tree)
 {
-  read_from_tree(tree, mText.color, "text_color");
-  read_from_tree(tree, mText.alpha, "text_alpha");
-  read_from_tree(tree, mText.style, "text_font");
-  read_from_tree(tree, mText.scale, "text_size");
+  Plot::ReadLayout(tree, mText, "text_", "font", "size");
 }
 template <class Derived>
 void TextSetters<Derived>::PutText(ptree& tree) const
 {
-  put_in_tree(tree, mText.color, "text_color");
-  put_in_tree(tree, mText.alpha, "text_alpha");
-  put_in_tree(tree, mText.style, "text_font");
-  put_in_tree(tree, mText.scale, "text_size");
+  Plot::PutLayout(tree, mText, "text_", "font", "size");
 }
 
 template <class Derived>
@@ -421,18 +424,26 @@ Derived& BorderSetters<Derived>::SetBorderWidth(float_t width)
 template <class Derived>
 void BorderSetters<Derived>::ReadBorder(const ptree& tree)
 {
-  read_from_tree(tree, mBorder.color, "border_color");
-  read_from_tree(tree, mBorder.alpha, "border_alpha");
-  read_from_tree(tree, mBorder.style, "border_style");
-  Plot::ReadWidthFromTree(tree, mBorder.scale, "border_width");
+  Plot::ReadLayout(tree, mBorder, "border_", "style", "width");
 }
 template <class Derived>
 void BorderSetters<Derived>::PutBorder(ptree& tree) const
 {
-  put_in_tree(tree, mBorder.color, "border_color");
-  put_in_tree(tree, mBorder.alpha, "border_alpha");
-  put_in_tree(tree, mBorder.style, "border_style");
-  put_in_tree(tree, mBorder.scale, "border_width");
+  Plot::PutLayout(tree, mBorder, "border_", "style", "width");
+}
+
+//**************************************************************************************************
+/**
+ * Why a plot name or group cannot be used (nullopt: it can).
+ */
+//**************************************************************************************************
+optional<string> Plot::NameError(const string& name, bool isGroup)
+{
+  if (!isGroup && name.empty()) return "Plot name must not be empty.";
+  if (auto illegal = find_illegal_name_char(name, isGroup)) {
+    return fmt::format("{} '{}' contains illegal character '{}'.", (isGroup) ? "Group" : "Plot name", name, *illegal);
+  }
+  return nullopt;
 }
 
 //**************************************************************************************************
@@ -481,15 +492,8 @@ void Plot::PutDrawOption(ptree& tree, const optional<draw_option_t>& option, con
 //**************************************************************************************************
 Plot::Plot(const string& name, const string& group, const optional<string>& basePlot) : Plot()
 {
-  if (name.empty()) {
-    logger::throw_invalid_argument("Plot name must not be empty.");
-  }
-  if (auto illegal = find_illegal_name_char(name)) {
-    logger::throw_invalid_argument("Plot name '{}' contains illegal character '{}'.", name, *illegal);
-  }
-  if (auto illegal = find_illegal_name_char(group, true)) {
-    logger::throw_invalid_argument("Group '{}' contains illegal character '{}'.", group, *illegal);
-  }
+  if (auto error = NameError(name)) logger::throw_invalid_argument("{}", *error);
+  if (auto error = NameError(group, true)) logger::throw_invalid_argument("{}", *error);
   mName = name;
   mGroup = NormalizeGroup(group);
   mBasePlot = basePlot;
@@ -514,16 +518,9 @@ Plot::Plot(const string& name, const PanelLayout& layout) : Plot(name)
 Plot::Plot(const Plot& otherPlot, const string& name, const optional<string>& group)
   : Plot(otherPlot)
 {
-  if (name.empty()) {
-    logger::throw_invalid_argument("Plot name must not be empty.");
-  }
-  if (auto illegal = find_illegal_name_char(name)) {
-    logger::throw_invalid_argument("Plot name '{}' contains illegal character '{}'.", name, *illegal);
-  }
+  if (auto error = NameError(name)) logger::throw_invalid_argument("{}", *error);
   if (group) {
-    if (auto illegal = find_illegal_name_char(*group, true)) {
-      logger::throw_invalid_argument("Group '{}' contains illegal character '{}'.", *group, *illegal);
-    }
+    if (auto error = NameError(*group, true)) logger::throw_invalid_argument("{}", *error);
     mGroup = NormalizeGroup(*group);
   }
   mName = name;
@@ -543,15 +540,8 @@ Plot::Plot(const ptree& plotTree)
   } catch (const std::exception& e) {
     logger::throw_invalid_argument("Could not construct plot from ptree: {}", e.what());
   }
-  if (mName.empty()) {
-    logger::throw_invalid_argument("Plot name must not be empty.");
-  }
-  if (auto illegal = find_illegal_name_char(mName)) {
-    logger::throw_invalid_argument("Plot name '{}' contains illegal character '{}'.", mName, *illegal);
-  }
-  if (auto illegal = find_illegal_name_char(mGroup, true)) {
-    logger::throw_invalid_argument("Group '{}' contains illegal character '{}'.", mGroup, *illegal);
-  }
+  if (auto error = NameError(mName)) logger::throw_invalid_argument("{}", *error);
+  if (auto error = NameError(mGroup, true)) logger::throw_invalid_argument("{}", *error);
   mGroup = NormalizeGroup(mGroup);
   read_from_tree(plotTree, mBasePlot, "base_plot");
   read_from_tree(plotTree, mPlotDimensions.width, "width");
@@ -748,12 +738,8 @@ void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
 
 auto Plot::SetName(const string& name) -> decltype(*this)
 {
-  if (name.empty()) {
-    logger::error("Cannot set empty name.");
-    return *this;
-  }
-  if (auto illegal = find_illegal_name_char(name, false)) {
-    logger::error("Plot name '{}' contains illegal character '{}'.", name, *illegal);
+  if (auto error = NameError(name)) {
+    logger::error("{}", *error);
     return *this;
   }
   mName = name;
@@ -763,8 +749,8 @@ auto Plot::SetName(const string& name) -> decltype(*this)
 
 auto Plot::SetGroup(const string& group) -> decltype(*this)
 {
-  if (auto illegal = find_illegal_name_char(group, true)) {
-    logger::error("Group '{}' contains illegal character '{}'.", group, *illegal);
+  if (auto error = NameError(group, true)) {
+    logger::error("{}", *error);
     return *this;
   }
   const string normalized = NormalizeGroup(group);
@@ -783,8 +769,8 @@ auto Plot::AppendGroup(const string& subgroup) -> decltype(*this)
     logger::error("Cannot append empty subgroup.");
     return *this;
   }
-  if (auto illegal = find_illegal_name_char(subgroup, true)) {
-    logger::error("Subgroup '{}' contains illegal character '{}'.", subgroup, *illegal);
+  if (auto error = NameError(subgroup, true)) {
+    logger::error("{}", *error);
     return *this;
   }
   const string normalizedSubgroup = NormalizeGroup(subgroup);
@@ -1024,107 +1010,116 @@ void Plot::Pad::CheckGradient(const vector<tuple<float_t, float_t, float_t, floa
 
 //**************************************************************************************************
 /**
- * Set default marker colours.
+ * Default colours of the pad: a colour list or a gradient, one replaces the other.
+ */
+//**************************************************************************************************
+void Plot::Pad::view_defaults_t::SetColors(const vector<color_t>& colorList)
+{
+  colorGradient = {};
+  colors = colorList;
+}
+void Plot::Pad::view_defaults_t::SetGradient(const gradient_color_t& gradient)
+{
+  colors = nullopt;
+  alpha = nullopt;
+  colorGradient = gradient;
+}
+void Plot::Pad::view_defaults_t::Update(const view_defaults_t& other)
+{
+  if (other.scale) scale = other.scale;
+  if (other.alpha) alpha = other.alpha;
+  if (other.styles) styles = other.styles;
+  if (other.colors) SetColors(*other.colors);
+  if (other.colorGradient.rgbEndpoints) {
+    // a gradient comes with its own alpha and number of colours; an alpha set on the pad after its gradient is kept
+    SetGradient(other.colorGradient);
+    alpha = other.alpha;
+  }
+}
+void Plot::Pad::view_defaults_t::ReadColors(const ptree& tree, const string& key)
+{
+  read_from_tree(tree, colors, key);
+  colorGradient.Read(tree, key + "_gradient_");
+}
+void Plot::Pad::view_defaults_t::PutColors(ptree& tree, const string& key) const
+{
+  put_in_tree(tree, colors, key);
+  colorGradient.Put(tree, key + "_gradient_");
+}
+void Plot::Pad::gradient_color_t::Read(const ptree& tree, const string& prefix)
+{
+  read_from_tree(tree, rgbEndpoints, prefix + "endpoints");
+  read_from_tree(tree, alpha, prefix + "alpha");
+  read_from_tree(tree, nColors, prefix + "num_colors");
+}
+void Plot::Pad::gradient_color_t::Put(ptree& tree, const string& prefix) const
+{
+  put_in_tree(tree, rgbEndpoints, prefix + "endpoints");
+  put_in_tree(tree, alpha, prefix + "alpha");
+  put_in_tree(tree, nColors, prefix + "num_colors");
+}
+
+//**************************************************************************************************
+/**
+ * Set default marker, line, fill or all colours.
  */
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultMarkerColors(const vector<color_t>& colors) -> decltype(*this)
 {
-  mMarkerDefaults.colorGradient = {};
-  mMarkerDefaults.colors = colors;
+  mMarkerDefaults.SetColors(colors);
   return *this;
 }
-
 auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   CheckGradient(rgbEndpoints, "SetDefaultMarkerColors");
-  mMarkerDefaults.colors = nullopt;
-  mMarkerDefaults.alpha = nullopt;
-  mMarkerDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
+  mMarkerDefaults.SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
 }
 auto Plot::Pad::SetDefaultMarkerColors(const vector<pair<color_t, float_t>>& gradient, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   return SetDefaultMarkerColors(GradientEndpoints(gradient), alpha, nColors);
 }
-
-//**************************************************************************************************
-/**
- * Set default line colors.
- */
-//**************************************************************************************************
 auto Plot::Pad::SetDefaultLineColors(const vector<color_t>& colors) -> decltype(*this)
 {
-  mLineDefaults.colorGradient = {};
-  mLineDefaults.colors = colors;
+  mLineDefaults.SetColors(colors);
   return *this;
 }
-
 auto Plot::Pad::SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   CheckGradient(rgbEndpoints, "SetDefaultLineColors");
-  mLineDefaults.colors = nullopt;
-  mLineDefaults.alpha = nullopt;
-  mLineDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
+  mLineDefaults.SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
 }
 auto Plot::Pad::SetDefaultLineColors(const vector<pair<color_t, float_t>>& gradient, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   return SetDefaultLineColors(GradientEndpoints(gradient), alpha, nColors);
 }
-
-//**************************************************************************************************
-/**
- * Set default fill colors.
- */
-//**************************************************************************************************
 auto Plot::Pad::SetDefaultFillColors(const vector<color_t>& colors) -> decltype(*this)
 {
-  mFillDefaults.colorGradient = {};
-  mFillDefaults.colors = colors;
+  mFillDefaults.SetColors(colors);
   return *this;
 }
-
 auto Plot::Pad::SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   CheckGradient(rgbEndpoints, "SetDefaultFillColors");
-  mFillDefaults.colors = nullopt;
-  mFillDefaults.alpha = nullopt;
-  mFillDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
+  mFillDefaults.SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
 }
 auto Plot::Pad::SetDefaultFillColors(const vector<pair<color_t, float_t>>& gradient, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   return SetDefaultFillColors(GradientEndpoints(gradient), alpha, nColors);
 }
-
-//**************************************************************************************************
-/**
- * Set default colors.
- */
-//**************************************************************************************************
 auto Plot::Pad::SetDefaultColors(const vector<color_t>& colors) -> decltype(*this)
 {
-  mMarkerDefaults.colorGradient = {};
-  mMarkerDefaults.colors = colors;
-  mLineDefaults.colorGradient = {};
-  mLineDefaults.colors = colors;
-  mFillDefaults.colorGradient = {};
-  mFillDefaults.colors = colors;
+  for (auto* defaults : {&mMarkerDefaults, &mLineDefaults, &mFillDefaults})
+    defaults->SetColors(colors);
   return *this;
 }
-
 auto Plot::Pad::SetDefaultColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   CheckGradient(rgbEndpoints, "SetDefaultColors");
-  mMarkerDefaults.colors = nullopt;
-  mMarkerDefaults.alpha = nullopt;
-  mMarkerDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
-  mLineDefaults.colors = nullopt;
-  mLineDefaults.alpha = nullopt;
-  mLineDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
-  mFillDefaults.colors = nullopt;
-  mFillDefaults.alpha = nullopt;
-  mFillDefaults.colorGradient = {rgbEndpoints, alpha, nColors};
+  for (auto* defaults : {&mMarkerDefaults, &mLineDefaults, &mFillDefaults})
+    defaults->SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
 }
 auto Plot::Pad::SetDefaultColors(const vector<pair<color_t, float_t>>& gradient, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
@@ -1446,41 +1441,22 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mView.theta, "view_theta");
   read_from_tree(padTree, mView.phi, "view_phi");
   read_from_tree(padTree, mPalette.index, "palette_index");
-  read_from_tree(padTree, mPalette.colorGradient.rgbEndpoints, "palette_colors_gradient_endpoints");
-  read_from_tree(padTree, mPalette.colorGradient.alpha, "palette_colors_gradient_alpha");
-  read_from_tree(padTree, mPalette.colorGradient.nColors, "palette_colors_gradient_num_colors");
+  mPalette.colorGradient.Read(padTree, "palette_colors_gradient_");
   ReadFill(padTree);
-  read_from_tree(padTree, mFrameFill.color, "frame_fill_color");
-  read_from_tree(padTree, mFrameFill.style, "frame_fill_style");
-  read_from_tree(padTree, mFrameFill.alpha, "frame_fill_alpha");
-  read_from_tree(padTree, mFrameBorder.color, "frame_border_color");
-  read_from_tree(padTree, mFrameBorder.alpha, "frame_border_alpha");
-  read_from_tree(padTree, mFrameBorder.style, "frame_border_style");
-  ReadWidthFromTree(padTree, mFrameBorder.scale, "frame_border_width");
-  read_from_tree(padTree, mText.style, "text_font");
-  read_from_tree(padTree, mText.color, "text_color");
-  read_from_tree(padTree, mText.alpha, "text_alpha");
-  read_from_tree(padTree, mText.scale, "text_size");
+  ReadLayout(padTree, mFrameFill, "frame_fill_", "style");
+  ReadLayout(padTree, mFrameBorder, "frame_border_", "style", "width");
+  ReadLayout(padTree, mText, "text_", "font", "size");
   read_from_tree(padTree, mMarkerDefaults.alpha, "default_marker_alpha");
   read_from_tree(padTree, mMarkerDefaults.scale, "default_marker_size");
   read_from_tree(padTree, mMarkerDefaults.styles, "default_marker_styles");
-  read_from_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
-  read_from_tree(padTree, mMarkerDefaults.colorGradient.rgbEndpoints, "default_marker_colors_gradient_endpoints");
-  read_from_tree(padTree, mMarkerDefaults.colorGradient.alpha, "default_marker_colors_gradient_alpha");
-  read_from_tree(padTree, mMarkerDefaults.colorGradient.nColors, "default_marker_colors_gradient_num_colors");
+  mMarkerDefaults.ReadColors(padTree, "default_marker_colors");
   read_from_tree(padTree, mLineDefaults.alpha, "default_line_alpha");
   ReadWidthFromTree(padTree, mLineDefaults.scale, "default_line_width");
   read_from_tree(padTree, mLineDefaults.styles, "default_line_styles");
-  read_from_tree(padTree, mLineDefaults.colors, "default_line_colors");
-  read_from_tree(padTree, mLineDefaults.colorGradient.rgbEndpoints, "default_line_colors_gradient_endpoints");
-  read_from_tree(padTree, mLineDefaults.colorGradient.alpha, "default_line_colors_gradient_alpha");
-  read_from_tree(padTree, mLineDefaults.colorGradient.nColors, "default_line_colors_gradient_num_colors");
+  mLineDefaults.ReadColors(padTree, "default_line_colors");
   read_from_tree(padTree, mFillDefaults.alpha, "default_fill_alpha");
   read_from_tree(padTree, mFillDefaults.styles, "default_fill_styles");
-  read_from_tree(padTree, mFillDefaults.colors, "default_fill_colors");
-  read_from_tree(padTree, mFillDefaults.colorGradient.rgbEndpoints, "default_fill_colors_gradient_endpoints");
-  read_from_tree(padTree, mFillDefaults.colorGradient.alpha, "default_fill_colors_gradient_alpha");
-  read_from_tree(padTree, mFillDefaults.colorGradient.nColors, "default_fill_colors_gradient_num_colors");
+  mFillDefaults.ReadColors(padTree, "default_fill_colors");
   read_from_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_box_range");
   read_from_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whisker_range");
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
@@ -1551,41 +1527,22 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mView.theta, "view_theta");
   put_in_tree(padTree, mView.phi, "view_phi");
   put_in_tree(padTree, mPalette.index, "palette_index");
-  put_in_tree(padTree, mPalette.colorGradient.rgbEndpoints, "palette_colors_gradient_endpoints");
-  put_in_tree(padTree, mPalette.colorGradient.alpha, "palette_colors_gradient_alpha");
-  put_in_tree(padTree, mPalette.colorGradient.nColors, "palette_colors_gradient_num_colors");
+  mPalette.colorGradient.Put(padTree, "palette_colors_gradient_");
   PutFill(padTree);
-  put_in_tree(padTree, mFrameFill.color, "frame_fill_color");
-  put_in_tree(padTree, mFrameFill.style, "frame_fill_style");
-  put_in_tree(padTree, mFrameFill.alpha, "frame_fill_alpha");
-  put_in_tree(padTree, mFrameBorder.color, "frame_border_color");
-  put_in_tree(padTree, mFrameBorder.alpha, "frame_border_alpha");
-  put_in_tree(padTree, mFrameBorder.style, "frame_border_style");
-  put_in_tree(padTree, mFrameBorder.scale, "frame_border_width");
-  put_in_tree(padTree, mText.style, "text_font");
-  put_in_tree(padTree, mText.color, "text_color");
-  put_in_tree(padTree, mText.alpha, "text_alpha");
-  put_in_tree(padTree, mText.scale, "text_size");
+  PutLayout(padTree, mFrameFill, "frame_fill_", "style");
+  PutLayout(padTree, mFrameBorder, "frame_border_", "style", "width");
+  PutLayout(padTree, mText, "text_", "font", "size");
   put_in_tree(padTree, mMarkerDefaults.alpha, "default_marker_alpha");
   put_in_tree(padTree, mMarkerDefaults.scale, "default_marker_size");
   put_in_tree(padTree, mMarkerDefaults.styles, "default_marker_styles");
-  put_in_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
-  put_in_tree(padTree, mMarkerDefaults.colorGradient.rgbEndpoints, "default_marker_colors_gradient_endpoints");
-  put_in_tree(padTree, mMarkerDefaults.colorGradient.alpha, "default_marker_colors_gradient_alpha");
-  put_in_tree(padTree, mMarkerDefaults.colorGradient.nColors, "default_marker_colors_gradient_num_colors");
+  mMarkerDefaults.PutColors(padTree, "default_marker_colors");
   put_in_tree(padTree, mLineDefaults.alpha, "default_line_alpha");
   put_in_tree(padTree, mLineDefaults.scale, "default_line_width");
   put_in_tree(padTree, mLineDefaults.styles, "default_line_styles");
-  put_in_tree(padTree, mLineDefaults.colors, "default_line_colors");
-  put_in_tree(padTree, mLineDefaults.colorGradient.rgbEndpoints, "default_line_colors_gradient_endpoints");
-  put_in_tree(padTree, mLineDefaults.colorGradient.alpha, "default_line_colors_gradient_alpha");
-  put_in_tree(padTree, mLineDefaults.colorGradient.nColors, "default_line_colors_gradient_num_colors");
+  mLineDefaults.PutColors(padTree, "default_line_colors");
   put_in_tree(padTree, mFillDefaults.alpha, "default_fill_alpha");
   put_in_tree(padTree, mFillDefaults.styles, "default_fill_styles");
-  put_in_tree(padTree, mFillDefaults.colors, "default_fill_colors");
-  put_in_tree(padTree, mFillDefaults.colorGradient.rgbEndpoints, "default_fill_colors_gradient_endpoints");
-  put_in_tree(padTree, mFillDefaults.colorGradient.alpha, "default_fill_colors_gradient_alpha");
-  put_in_tree(padTree, mFillDefaults.colorGradient.nColors, "default_fill_colors_gradient_num_colors");
+  mFillDefaults.PutColors(padTree, "default_fill_colors");
   put_in_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_box_range");
   put_in_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whisker_range");
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
@@ -1659,44 +1616,9 @@ void Plot::Pad::operator+=(const Pad& pad)
   mFrameFill.Update(pad.mFrameFill);
   mFrameBorder.Update(pad.mFrameBorder);
   mText.Update(pad.mText);
-  if (pad.mMarkerDefaults.alpha) mMarkerDefaults.alpha = pad.mMarkerDefaults.alpha;
-  if (pad.mMarkerDefaults.scale) mMarkerDefaults.scale = pad.mMarkerDefaults.scale;
-  if (pad.mMarkerDefaults.styles) mMarkerDefaults.styles = pad.mMarkerDefaults.styles;
-  if (pad.mMarkerDefaults.colors) {
-    mMarkerDefaults.colors = pad.mMarkerDefaults.colors;
-    mMarkerDefaults.colorGradient = {};
-  }
-  if (pad.mMarkerDefaults.colorGradient.rgbEndpoints) {
-    // a gradient replaces the colour list and comes with its own alpha and number of colours; an alpha set on the pad after its gradient is kept
-    mMarkerDefaults.colorGradient = pad.mMarkerDefaults.colorGradient;
-    mMarkerDefaults.colors = nullopt;
-    mMarkerDefaults.alpha = pad.mMarkerDefaults.alpha;
-  }
-  if (pad.mLineDefaults.alpha) mLineDefaults.alpha = pad.mLineDefaults.alpha;
-  if (pad.mLineDefaults.scale) mLineDefaults.scale = pad.mLineDefaults.scale;
-  if (pad.mLineDefaults.styles) mLineDefaults.styles = pad.mLineDefaults.styles;
-  if (pad.mLineDefaults.colors) {
-    mLineDefaults.colors = pad.mLineDefaults.colors;
-    mLineDefaults.colorGradient = {};
-  }
-  if (pad.mLineDefaults.colorGradient.rgbEndpoints) {
-    // a gradient replaces the colour list and comes with its own alpha and number of colours; an alpha set on the pad after its gradient is kept
-    mLineDefaults.colorGradient = pad.mLineDefaults.colorGradient;
-    mLineDefaults.colors = nullopt;
-    mLineDefaults.alpha = pad.mLineDefaults.alpha;
-  }
-  if (pad.mFillDefaults.alpha) mFillDefaults.alpha = pad.mFillDefaults.alpha;
-  if (pad.mFillDefaults.styles) mFillDefaults.styles = pad.mFillDefaults.styles;
-  if (pad.mFillDefaults.colors) {
-    mFillDefaults.colors = pad.mFillDefaults.colors;
-    mFillDefaults.colorGradient = {};
-  }
-  if (pad.mFillDefaults.colorGradient.rgbEndpoints) {
-    // a gradient replaces the colour list and comes with its own alpha and number of colours; an alpha set on the pad after its gradient is kept
-    mFillDefaults.colorGradient = pad.mFillDefaults.colorGradient;
-    mFillDefaults.colors = nullopt;
-    mFillDefaults.alpha = pad.mFillDefaults.alpha;
-  }
+  mMarkerDefaults.Update(pad.mMarkerDefaults);
+  mLineDefaults.Update(pad.mLineDefaults);
+  mFillDefaults.Update(pad.mFillDefaults);
   if (pad.mCandleOptionDefaults.boxRange) mCandleOptionDefaults.boxRange = pad.mCandleOptionDefaults.boxRange;
   if (pad.mCandleOptionDefaults.whiskerRange) mCandleOptionDefaults.whiskerRange = pad.mCandleOptionDefaults.whiskerRange;
 
@@ -2455,20 +2377,20 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
     mDrawOptionAlias = dataLayout.mDrawOptionAlias;
   }
   if (dataLayout.mKeepInputStyle) mKeepInputStyle = true;
-  set_if(dataLayout.mTextFormat, mTextFormat);
-  set_if(dataLayout.mTextAngle, mTextAngle);
-  set_if(dataLayout.mLegend.entry, mLegend.entry);
-  set_if(dataLayout.mRangeX.min, mRangeX.min);
-  set_if(dataLayout.mRangeX.max, mRangeX.max);
-  set_if(dataLayout.mRangeY.min, mRangeY.min);
-  set_if(dataLayout.mRangeY.max, mRangeY.max);
+  if (dataLayout.mTextFormat) mTextFormat = dataLayout.mTextFormat;
+  if (dataLayout.mTextAngle) mTextAngle = dataLayout.mTextAngle;
+  if (dataLayout.mLegend.entry) mLegend.entry = dataLayout.mLegend.entry;
+  if (dataLayout.mRangeX.min) mRangeX.min = dataLayout.mRangeX.min;
+  if (dataLayout.mRangeX.max) mRangeX.max = dataLayout.mRangeX.max;
+  if (dataLayout.mRangeY.min) mRangeY.min = dataLayout.mRangeY.min;
+  if (dataLayout.mRangeY.max) mRangeY.max = dataLayout.mRangeY.max;
   mMarker.Update(dataLayout.mMarker);
   mLine.Update(dataLayout.mLine);
   mFill.Update(dataLayout.mFill);
-  set_if(dataLayout.mContours, mContours);
-  set_if(dataLayout.mNContours, mNContours);
-  set_if(dataLayout.mNpx, mNpx);
-  set_if(dataLayout.mNpy, mNpy);
+  if (dataLayout.mContours) mContours = dataLayout.mContours;
+  if (dataLayout.mNContours) mNContours = dataLayout.mNContours;
+  if (dataLayout.mNpx) mNpx = dataLayout.mNpx;
+  if (dataLayout.mNpy) mNpy = dataLayout.mNpy;
   return *this;
 }
 auto Plot::Pad::Data::SetDataSource(const string& dataSource) -> decltype(*this)
@@ -3428,16 +3350,10 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
   read_from_tree(axisTree, mAxisFrame.scale, "tick_length");
   read_from_tree(axisTree, mAxisFrame.color, "axis_color");
   read_from_tree(axisTree, mAxisFrame.alpha, "axis_alpha");
-  read_from_tree(axisTree, mTitleLayout.style, "title_font");
-  read_from_tree(axisTree, mTitleLayout.scale, "title_size");
-  read_from_tree(axisTree, mTitleLayout.color, "title_color");
-  read_from_tree(axisTree, mTitleLayout.alpha, "title_alpha");
+  ReadLayout(axisTree, mTitleLayout, "title_", "font", "size");
   read_from_tree(axisTree, mTitleLayout.offset, "title_offset");
   read_from_tree(axisTree, mTitleLayout.center, "title_center");
-  read_from_tree(axisTree, mLabelLayout.style, "label_font");
-  read_from_tree(axisTree, mLabelLayout.scale, "label_size");
-  read_from_tree(axisTree, mLabelLayout.color, "label_color");
-  read_from_tree(axisTree, mLabelLayout.alpha, "label_alpha");
+  ReadLayout(axisTree, mLabelLayout, "label_", "font", "size");
   read_from_tree(axisTree, mLabelLayout.offset, "label_offset");
   read_from_tree(axisTree, mLabelLayout.center, "label_center");
   read_from_tree(axisTree, mLabelLayout.angle, "label_angle");
@@ -3471,16 +3387,10 @@ ptree Plot::Pad::Axis::GetPropertyTree() const
   put_in_tree(axisTree, mAxisFrame.scale, "tick_length");
   put_in_tree(axisTree, mAxisFrame.color, "axis_color");
   put_in_tree(axisTree, mAxisFrame.alpha, "axis_alpha");
-  put_in_tree(axisTree, mTitleLayout.style, "title_font");
-  put_in_tree(axisTree, mTitleLayout.scale, "title_size");
-  put_in_tree(axisTree, mTitleLayout.color, "title_color");
-  put_in_tree(axisTree, mTitleLayout.alpha, "title_alpha");
+  PutLayout(axisTree, mTitleLayout, "title_", "font", "size");
   put_in_tree(axisTree, mTitleLayout.offset, "title_offset");
   put_in_tree(axisTree, mTitleLayout.center, "title_center");
-  put_in_tree(axisTree, mLabelLayout.style, "label_font");
-  put_in_tree(axisTree, mLabelLayout.scale, "label_size");
-  put_in_tree(axisTree, mLabelLayout.color, "label_color");
-  put_in_tree(axisTree, mLabelLayout.alpha, "label_alpha");
+  PutLayout(axisTree, mLabelLayout, "label_", "font", "size");
   put_in_tree(axisTree, mLabelLayout.offset, "label_offset");
   put_in_tree(axisTree, mLabelLayout.center, "label_center");
   put_in_tree(axisTree, mLabelLayout.angle, "label_angle");
@@ -4155,17 +4065,9 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
   read_from_tree(legendBoxTree, mColumnSpacing, "column_spacing");
   read_from_tree(legendBoxTree, mOrderTopDown, "order_top_down");
   read_from_tree(legendBoxTree, mSymbolElementsDefault, "default_symbol_elements");
-  read_from_tree(legendBoxTree, mMarkerDefault.color, "default_marker_color");
-  read_from_tree(legendBoxTree, mMarkerDefault.alpha, "default_marker_alpha");
-  read_from_tree(legendBoxTree, mMarkerDefault.style, "default_marker_style");
-  read_from_tree(legendBoxTree, mMarkerDefault.scale, "default_marker_size");
-  read_from_tree(legendBoxTree, mLineDefault.color, "default_line_color");
-  read_from_tree(legendBoxTree, mLineDefault.alpha, "default_line_alpha");
-  read_from_tree(legendBoxTree, mLineDefault.style, "default_line_style");
-  ReadWidthFromTree(legendBoxTree, mLineDefault.scale, "default_line_width");
-  read_from_tree(legendBoxTree, mFillDefault.color, "default_fill_color");
-  read_from_tree(legendBoxTree, mFillDefault.alpha, "default_fill_alpha");
-  read_from_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
+  ReadLayout(legendBoxTree, mMarkerDefault, "default_marker_", "style", "size");
+  ReadLayout(legendBoxTree, mLineDefault, "default_line_", "style", "width");
+  ReadLayout(legendBoxTree, mFillDefault, "default_fill_", "style");
   read_from_tree(legendBoxTree, mSymbolColScale, "symbol_col_scale");
 
   for (const auto& content : legendBoxTree) {
@@ -4186,17 +4088,9 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
   put_in_tree(legendBoxTree, mColumnSpacing, "column_spacing");
   put_in_tree(legendBoxTree, mOrderTopDown, "order_top_down");
   put_in_tree(legendBoxTree, mSymbolElementsDefault, "default_symbol_elements");
-  put_in_tree(legendBoxTree, mMarkerDefault.color, "default_marker_color");
-  put_in_tree(legendBoxTree, mMarkerDefault.alpha, "default_marker_alpha");
-  put_in_tree(legendBoxTree, mMarkerDefault.style, "default_marker_style");
-  put_in_tree(legendBoxTree, mMarkerDefault.scale, "default_marker_size");
-  put_in_tree(legendBoxTree, mLineDefault.color, "default_line_color");
-  put_in_tree(legendBoxTree, mLineDefault.alpha, "default_line_alpha");
-  put_in_tree(legendBoxTree, mLineDefault.style, "default_line_style");
-  put_in_tree(legendBoxTree, mLineDefault.scale, "default_line_width");
-  put_in_tree(legendBoxTree, mFillDefault.color, "default_fill_color");
-  put_in_tree(legendBoxTree, mFillDefault.alpha, "default_fill_alpha");
-  put_in_tree(legendBoxTree, mFillDefault.style, "default_fill_style");
+  PutLayout(legendBoxTree, mMarkerDefault, "default_marker_", "style", "size");
+  PutLayout(legendBoxTree, mLineDefault, "default_line_", "style", "width");
+  PutLayout(legendBoxTree, mFillDefault, "default_fill_", "style");
   put_in_tree(legendBoxTree, mSymbolColScale, "symbol_col_scale");
 
   for (const auto& legendEntry : mLegendEntriesUser) {
