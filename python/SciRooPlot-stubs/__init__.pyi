@@ -1282,7 +1282,7 @@ class Pad:
     def SetMargins(self, top: float, bottom: float, left: float, right: float) -> Pad:
         ...
     @typing.overload
-    def SetPalette(self, palette: int) -> Pad:
+    def SetPalette(self, palette: int, alpha: float | None = None) -> Pad:
         ...
     @typing.overload
     def SetPalette(self, rgbEndpoints: typing.Sequence[tuple[float, float, float, float]], alpha: float | None = None, nColors: int | None = None) -> Pad:

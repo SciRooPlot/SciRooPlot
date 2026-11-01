@@ -312,7 +312,9 @@ h3.sub { font-size: 0.95rem; margin: 6px 0 0 }
 .pal-wrap h3 { margin: 0 }
 .palgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px }
 .palsw { display: grid; gap: 3px; font: inherit; background: var(--panel); border: 1px solid var(--hairline); border-radius: 7px; padding: 5px; cursor: pointer; text-align: left; color: var(--text) }
-.palsw span { display: block; height: 14px; border-radius: 3px }
+.palsw span { display: block; height: 14px; border-radius: 3px; position: relative }
+.pal-wrap { --pveil: 0 }
+.palsw span::after, .gbar::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: rgba(255, 255, 255, var(--pveil)); pointer-events: none }
 .palsw small { font-family: var(--mono); font-size: 0.72rem }
 .palsw[aria-pressed="true"] { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal) }
 .stops { display: grid; gap: 6px }
@@ -322,7 +324,7 @@ h3.sub { font-size: 0.95rem; margin: 6px 0 0 }
 .stop b { min-width: 1.2em; color: var(--muted); font-size: 0.8rem; text-align: right }
 .stop output { font-family: var(--mono); font-size: 0.8rem; min-width: 3em }
 .gbar { position: relative; height: 26px; max-width: 420px; margin: 14px 8px 26px; border-radius: 6px; border: 1px solid var(--hairline); touch-action: none }
-.gbar button { position: absolute; top: -6px; width: 14px; height: 36px; margin-left: -7px; padding: 0; border-radius: 5px; border: 2px solid #fff; box-shadow: 0 0 0 1px #16233a, 0 1px 3px rgba(0, 0, 0, 0.3); cursor: ew-resize }
+.gbar button { z-index: 1; position: absolute; top: -6px; width: 14px; height: 36px; margin-left: -7px; padding: 0; border-radius: 5px; border: 2px solid #fff; box-shadow: 0 0 0 1px #16233a, 0 1px 3px rgba(0, 0, 0, 0.3); cursor: ew-resize }
 .gbar button[data-fixed] { cursor: default }
 .gbar button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px }
 .gbar button span { position: absolute; top: 38px; left: 50%; transform: translateX(-50%); font: 700 0.7rem var(--sans, inherit); color: var(--muted) }
@@ -871,6 +873,7 @@ figure.plot figcaption { color: #5b6b80 }
     <h2 class="title">Colour scales and gradients</h2>
     <p class="basics"><b>What a palette is</b>A 2D histogram shows its values as colours, read off the colour scale next to the frame. The colours come from a <i>palette</i>: ROOT ships about sixty, SciRooPlot's base plots use <code>kBird</code>. You can also make your own gradient, as a palette or as the colours of several curves.</p>
     <div class="filters" role="tablist" aria-label="Palette or own gradient"><button class="chip" data-paltab="root" aria-pressed="true">ROOT's palettes</button><button class="chip" data-paltab="own" aria-pressed="false">Your own gradient</button></div>
+    <div class="row"><label for="pa">Transparency (alpha) <input id="pa" type="range" min="0.05" max="1" step="0.05" value="1"></label><output id="pao" for="pa">1</output><span class="small muted">for ROOT's palettes and your own gradient alike; the colours are shown with it, on white</span></div>
     <div id="palroot" class="palgrid"></div>
     <div id="palown" hidden>
       <div class="gbar" id="gbar" aria-label="Positions of the colours along the scale"></div>
@@ -3371,6 +3374,8 @@ function palColors() { // 17 colours of the current choice
   return [...Array(17)].map((_, i) => gradAt(PAL.stops, i / 16)) }
 function palRender() {
   const cols = palColors(), py = lang === "py", end = py ? "" : ";", f = v => (+v).toFixed(2).replace(/0$/, "");
+  const pa = +document.getElementById("pa").value, alpha = pa < 1 ? `, ${pa}` : "";  // alpha argument of the code, only when transparent
+  document.getElementById("pao").textContent = pa; document.querySelector(".pal-wrap").style.setProperty("--pveil", 1 - pa);
   // a 2D map with a peak, coloured like a 2D histogram, and the colour scale next to it
   let cells = ""; const nx = 24, ny = 16;
   for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
@@ -3383,22 +3388,22 @@ function palRender() {
   let curves = "";
   if (PAL.tab === "own") { // the curves of a pad that takes its colours from the gradient
     curves = [...Array(PAL.n)].map((_, k) => { const c = gradAt(PAL.stops, PAL.n > 1 ? k / (PAL.n - 1) : 0);
-      return `<path d="${[...Array(30)].map((_, i) => `${i ? "L" : "M"}${(20 + i * 9).toFixed(1)} ${(435 - 170 * Math.exp(-i / (4 + 2.2 * k))).toFixed(1)}`).join("")}" stroke="${c}" stroke-width="2.4" fill="none"/>` }).join("") }
-  const map = `<rect x="20" y="10" width="264" height="200" fill="#fff" stroke="#000"/>${cells}<rect x="20" y="10" width="264" height="200" fill="none" stroke="#000"/>${bar}<rect x="292" y="10" width="20" height="200" fill="none" stroke="#000"/>`;
+      return `<path d="${[...Array(30)].map((_, i) => `${i ? "L" : "M"}${(20 + i * 9).toFixed(1)} ${(435 - 170 * Math.exp(-i / (4 + 2.2 * k))).toFixed(1)}`).join("")}" stroke="${c}" stroke-opacity="${pa}" stroke-width="2.4" fill="none"/>` }).join("") }
+  const map = `<rect x="20" y="10" width="264" height="200" fill="#fff" stroke="#000"/><g opacity="${pa}">${cells}</g><rect x="20" y="10" width="264" height="200" fill="none" stroke="#000"/><g opacity="${pa}">${bar}</g><rect x="292" y="10" width="20" height="200" fill="none" stroke="#000"/>`;
   const svg = document.getElementById("palmap");
   svg.setAttribute("viewBox", PAL.tab === "own" ? "0 0 360 460" : "0 0 360 230");
   svg.innerHTML = PAL.tab === "root" ? map : map + `<rect x="20" y="240" width="264" height="200" fill="#fff" stroke="#000"/>${curves}<rect x="20" y="240" width="264" height="200" fill="none" stroke="#000"/>`;
   if (PAL.tab === "root") {
     const p = PALETTES.find(x => x[0] === PAL.name);
     document.getElementById("palfacts").innerHTML = `<span><b>${p[0]}</b> = palette ${p[1]}${p[0] === "kBird" ? ", the default of the base plots" : ""}${["kViridis", "kCividis"].includes(p[0]) ? ", made to stay readable for colour-blind viewers and in grey print" : ""}</span>`;
-    fill(document.getElementById("palcode"), `plot[0].SetPalette(${p[0]})${end}   ${py ? "#" : "//"} all pads; plot[1].SetPalette(…) for one`, lang) }
+    fill(document.getElementById("palcode"), `plot[0].SetPalette(${p[0]}${alpha})${end}   ${py ? "#" : "//"} all pads; plot[1].SetPalette(…) for one`, lang) }
   else {
     const g = PAL.stops.slice().sort((a, b) => a[1] - b[1]).map(([h, p]) => `${py ? "(" : "{"}"${h}", ${f(p)}${py ? ")" : "}"}`).join(", ");
     const grad = py ? `[${g}]` : `{${g}}`;
     document.getElementById("palfacts").innerHTML = `<span>Each stop is <b>(colour, position)</b>, the position from 0 to 1; a colour can also be a ROOT colour (<code>kRed + 1</code>) or (red, green, blue) from 0 to 1. The same gradient can colour a 2D plot (top) or give each curve in a pad its own colour (bottom, ${PAL.n} curves).</span>`;
     fill(document.getElementById("palcode"), `${py ? "gradient = " : "const std::vector<std::pair<color_t, float_t>> gradient = "}${grad}${end}
-plot[1].SetPalette(gradient)${end}         ${py ? "#" : "//"} as the colour scale of a 2D plot
-plot[1].SetDefaultColors(gradient)${end}   ${py ? "#" : "//"} one colour per curve, spread over the gradient`, lang) }
+plot[1].SetPalette(gradient${alpha})${end}         ${py ? "#" : "//"} as the colour scale of a 2D plot
+plot[1].SetDefaultColors(gradient${alpha})${end}   ${py ? "#" : "//"} one colour per curve, spread over the gradient`, lang) }
   document.querySelectorAll("#palroot .palsw").forEach(b => b.setAttribute("aria-pressed", b.dataset.pal === PAL.name)) }
 function palInit() {
   const root = document.getElementById("palroot"); if (!root) return;
@@ -3430,6 +3435,7 @@ function palInit() {
     const pos = +((PAL.stops[k][1] + PAL.stops[k + 1][1]) / 2).toFixed(2);
     if (PAL.stops[k + 1][1] - PAL.stops[k][1] < 0.02) return;   // no room left
     PAL.stops.splice(k + 1, 0, [gradAt(PAL.stops, pos), pos]); stopsUI(); palRender() };
+  document.getElementById("pa").oninput = palRender;
   document.getElementById("ncurves").oninput = e => { PAL.n = +e.target.value; document.getElementById("ncurveso").textContent = PAL.n; palRender() };
   document.querySelectorAll("[data-paltab]").forEach(b => b.onclick = () => { PAL.tab = b.dataset.paltab;
     document.querySelectorAll("[data-paltab]").forEach(x => x.setAttribute("aria-pressed", x === b));

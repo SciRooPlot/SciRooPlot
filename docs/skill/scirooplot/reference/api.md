@@ -99,7 +99,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Pad& SetRightMargin(float_t right)`
 - `Pad& SetLeftMargin(float_t left)`
 - `Pad& SetView(double_t theta, double_t phi)` — 3D drawings (lego, surf, triangles, 3D points), degrees: theta above the x-y plane, phi around the z axis (ROOT: 30, 30)
-- `Pad& SetPalette(int32_t palette)`
+- `Pad& SetPalette(int32_t palette, std::optional<float_t> alpha = {})`
 - `Pad& SetPalette(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {})`
 - `Pad& SetPalette(const std::vector<std::pair<color_t, float_t>>& gradient, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {})`
 - `Pad& SetDefaultTextSize(float_t size)`

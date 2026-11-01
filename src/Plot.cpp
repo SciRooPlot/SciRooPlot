@@ -1307,10 +1307,10 @@ auto Plot::Pad::SetFrameTransparent() -> decltype(*this)
  * kVisibleSpectrum
  */
 //**************************************************************************************************
-auto Plot::Pad::SetPalette(int32_t palette) -> decltype(*this)
+auto Plot::Pad::SetPalette(int32_t palette, optional<float_t> alpha) -> decltype(*this)
 {
   mPalette.index = palette;
-  mPalette.colorGradient = {};
+  mPalette.colorGradient = {{}, alpha, {}};  // a ROOT palette keeps only the alpha of the gradient settings
   return *this;
 }
 auto Plot::Pad::SetPalette(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
@@ -1716,7 +1716,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   }
   if (pad.mPalette.index) {
     mPalette.index = pad.mPalette.index;
-    mPalette.colorGradient = {};
+    mPalette.colorGradient = {{}, pad.mPalette.colorGradient.alpha, {}};
   }
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if (pad.mIsEmptyCell) mIsEmptyCell = true;

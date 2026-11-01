@@ -552,7 +552,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       const auto& gradient = padDefaults.GetPaletteGradient();
       padSetup += GradientPaletteCommand(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
     } else {
-      padSetup += fmt::format(" gStyle->SetPalette({});", get_first_or(static_cast<int32_t>(kBird), pad.GetPalette(), padDefaults.GetPalette()));
+      // a ROOT palette with the alpha set together with it (the pad's own palette or else that of pad 0)
+      const auto& alpha = (pad.GetPalette()) ? pad.GetPaletteGradient().alpha : padDefaults.GetPaletteGradient().alpha;
+      padSetup += fmt::format(" gStyle->SetPalette({}, nullptr, {});", get_first_or(static_cast<int32_t>(kBird), pad.GetPalette(), padDefaults.GetPalette()), get_first_or(1.f, alpha));
     }
     pad_ptr->SetNumber(padID);
     pad_ptr->Draw();
