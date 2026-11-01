@@ -2364,6 +2364,21 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           bool binomialErrors = data_as_ratio->GetCorrelated();
           auto processDenominator = [&](auto&& denom_data_ptr) {
             using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
+            if constexpr (is_func<denom_data_type>()) {
+              // a formula of the plot definition has no range of its own (only ROOT's default [0, 1]): it divides the whole numerator
+              if (data_as_ratio->GetDenomDataSource() == "USER_FUNCTIONS") {
+                if constexpr (is_hist<data_type>()) {
+                  const TAxis* x = data_ptr->GetXaxis();
+                  const TAxis* y = data_ptr->GetYaxis();
+                  const TAxis* z = data_ptr->GetZaxis();
+                  denom_data_ptr->SetRange(x->GetXmin(), y->GetXmin(), z->GetXmin(), x->GetXmax(), y->GetXmax(), z->GetXmax());
+                } else if constexpr (is_graph_1d<data_type>()) {
+                  if (data_ptr->GetN() > 0) {
+                    denom_data_ptr->SetRange(TMath::MinElement(data_ptr->GetN(), data_ptr->GetX()), TMath::MaxElement(data_ptr->GetN(), data_ptr->GetX()));
+                  }
+                }
+              }
+            }
             auto unsupported = [&]() {
               logger::error("Unsupported division of {} and {}.", data_ptr->ClassName(), denom_data_ptr->ClassName());
               fail = true;
@@ -5419,7 +5434,27 @@ bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors, 
     logger::error("Cannot divide histogram by higher dimensional function.");
     return false;
   }
-  numerator->Divide(denominator);
+  // the bins outside the range of the function are left out (TH1::Divide would leave them as they are)
+  if (!numerator->GetSumw2N()) numerator->Sumw2();
+  const double_t entries = numerator->GetEntries();
+  int32_t nOutside{};
+  for (int32_t bin = 0; bin < numerator->GetNcells(); ++bin) {
+    int32_t binX{}, binY{}, binZ{};
+    numerator->GetBinXYZ(bin, binX, binY, binZ);
+    double_t xyz[3] = {numerator->GetXaxis()->GetBinCenter(binX), numerator->GetYaxis()->GetBinCenter(binY), numerator->GetZaxis()->GetBinCenter(binZ)};
+    const double_t content = numerator->GetBinContent(bin);
+    const double_t error = numerator->GetBinError(bin);
+    const bool inside = denominator->IsInside(xyz);
+    const double_t denom = (inside) ? denominator->EvalPar(xyz) : 0.;
+    if (!inside && !numerator->IsBinUnderflow(bin) && !numerator->IsBinOverflow(bin) && content != 0.) ++nOutside;
+    numerator->SetBinContent(bin, (denom) ? content / denom : 0.);
+    numerator->SetBinError(bin, (denom) ? error / std::abs(denom) : 0.);
+  }
+  numerator->ResetStats();
+  numerator->SetEntries(entries);
+  if (nOutside && verbose) {
+    logger::warning("{} bins of {} lie outside the range of function {} and are left out of the ratio.", nOutside, numerator->GetName(), denominator->GetName());
+  }
   if (binomialErrors && verbose) {
     logger::warning("Binomial errors not supported for division by function.");
   }
@@ -5430,6 +5465,12 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
   if (denominator->GetNdim() > 1) {
     logger::error("Cannot divide 1D graph by higher dimensional function.");
     return false;
+  }
+  // the points outside the range of the function are left out
+  const int32_t nPoints = numerator->GetN();
+  RemoveGraphPointsOutside(numerator, denominator->GetXmin(), denominator->GetXmax(), nullopt, nullopt);
+  if (numerator->GetN() < nPoints && verbose) {
+    logger::warning("{} points of {} lie outside the range of function {} and are left out of the ratio.", nPoints - numerator->GetN(), numerator->GetName(), denominator->GetName());
   }
   double_t* x = numerator->GetX();
   double_t* y = numerator->GetY();
