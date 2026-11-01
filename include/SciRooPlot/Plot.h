@@ -1022,6 +1022,10 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   static std::optional<std::vector<data_info_t::join_t>> ReadJoins(const boost::property_tree::ptree& tree, const std::string& label);
   static void PutJoins(boost::property_tree::ptree& tree, const std::optional<std::vector<data_info_t::join_t>>& joins, const std::string& label);
   static void AddJoin(data_info_t& dataInfo, const std::string& name, const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias);
+  static void ReadDataInfo(const boost::property_tree::ptree& tree, data_info_t& dataInfo, const std::string& prefix);
+  static void PutDataInfo(boost::property_tree::ptree& tree, const data_info_t& dataInfo, const std::string& prefix);
+  static void ReadProjInfo(const boost::property_tree::ptree& tree, std::optional<proj_info_t>& projInfo, const std::string& prefix);
+  static void PutProjInfo(boost::property_tree::ptree& tree, const std::optional<proj_info_t>& projInfo, const std::string& prefix);
 
  private:
   bool mDefinesFrame{};
@@ -1227,7 +1231,8 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
                     Den,
                     Both };
   Mode mModMode = Mode::Res;
-  void ResolveSelectionMode(const char* call);
+  template <typename Select>
+  Ratio& SelectInput(const char* call, Select select);  // a selection of input data on numerator and/or denominator (Numer(), Denom(), Both())
   modify_t mNumModify;
   modify_t mDenomModify;
   std::string mDenomName;

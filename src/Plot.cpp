@@ -47,6 +47,7 @@
 #include "util/Optional.h"
 #include "util/Paths.h"
 #include "util/PropertyTree.h"
+#include "util/ScopeGuard.h"
 #include "util/Strings.h"
 
 using boost::property_tree::ptree;
@@ -2219,69 +2220,103 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mNpx, "npx");
   read_from_tree(dataTree, mNpy, "npy");
 
-  // extract data info
-  {
-    optional<vector<string>> vars;
-    read_from_tree(dataTree, vars, "data_vars");
-    if (vars) {
-      mDataInfo = data_info_t();
-      vector<data_dim_t> dataDims{};
+  ReadDataInfo(dataTree, mDataInfo, "data_");
+  ReadProjInfo(dataTree, mProjInfo, "proj_");
+}
 
-      optional<vector<double_t>> binning;
-      optional<vector<int32_t>> sizes;
-      read_from_tree(dataTree, binning, "data_binning");
-      read_from_tree(dataTree, sizes, "data_binning_sizes");
-
-      if (binning && sizes) {
-        if (sizes->size() != vars->size()) {
-          logger::throw_invalid_argument("data_binning_sizes has {} entries, expected {} (one per data_vars entry).", sizes->size(), vars->size());
-        }
-        auto lastPos = binning->begin();
-        for (size_t i = 0; i < vars->size(); ++i) {
-          if ((*sizes)[i] < 1) {
-            logger::throw_invalid_argument("data_binning_sizes entry {} must be at least 1.", i);
-          }
-          if (std::distance(lastPos, binning->end()) < static_cast<std::ptrdiff_t>((*sizes)[i])) {
-            logger::throw_invalid_argument("data_binning does not contain enough entries for data_binning_sizes.");
-          }
-          auto nextPos = lastPos + (*sizes)[i];
-          vector<double_t> edges(lastPos, nextPos);
-          lastPos = nextPos;
-          int32_t nBins = static_cast<int32_t>(edges.back());
-          edges.pop_back();
-          dataDims.push_back({vars->at(i), nBins, edges});
-        }
+//**************************************************************************************************
+/**
+ * Read / write the selection of tree or table data and the projection of histograms (key prefixes: data_ and proj_, for the denominator
+ * of a ratio denomData_ and denomProj_).
+ */
+//**************************************************************************************************
+void Plot::Pad::Data::ReadDataInfo(const ptree& tree, data_info_t& dataInfo, const string& prefix)
+{
+  optional<vector<string>> vars;
+  read_from_tree(tree, vars, prefix + "vars");
+  if (!vars) return;
+  dataInfo = data_info_t();
+  optional<vector<double_t>> binning;
+  optional<vector<int32_t>> sizes;
+  read_from_tree(tree, binning, prefix + "binning");
+  read_from_tree(tree, sizes, prefix + "binning_sizes");
+  if (binning && sizes) {
+    if (sizes->size() != vars->size()) {
+      logger::throw_invalid_argument("{}binning_sizes has {} entries, expected {} (one per {}vars entry).", prefix, sizes->size(), vars->size(), prefix);
+    }
+    auto lastPos = binning->begin();
+    for (size_t i = 0; i < vars->size(); ++i) {
+      if ((*sizes)[i] < 1) {
+        logger::throw_invalid_argument("{}binning_sizes entry {} must be at least 1.", prefix, i);
       }
-      mDataInfo.dataDims = dataDims;
-      read_from_tree(dataTree, mDataInfo.filters, "data_filters");
-      mDataInfo.joins = ReadJoins(dataTree, "data_joins");
-      read_from_tree(dataTree, mDataInfo.weight, "data_weight");
-      const auto entryMin = get_from_tree<uint32_t>(dataTree, "data_entryMin");
-      if (const auto entryMax = get_from_tree<uint32_t>(dataTree, "data_entryMax")) {
-        (entryMin) ? Entries(*entryMin, *entryMax) : Entries(*entryMax);
+      if (std::distance(lastPos, binning->end()) < static_cast<std::ptrdiff_t>((*sizes)[i])) {
+        logger::throw_invalid_argument("{}binning does not contain enough entries for {}binning_sizes.", prefix, prefix);
       }
-      read_from_tree(dataTree, mDataInfo.isProfileNoScatter, "data_isProfileNoScatter");
-      read_from_tree(dataTree, mDataInfo.definitions.keys, "data_definitions_keys");
-      read_from_tree(dataTree, mDataInfo.definitions.values, "data_definitions_values");
+      auto nextPos = lastPos + (*sizes)[i];
+      vector<double_t> edges(lastPos, nextPos);
+      lastPos = nextPos;
+      int32_t nBins = static_cast<int32_t>(edges.back());
+      edges.pop_back();
+      dataInfo.dataDims.push_back({vars->at(i), nBins, edges});
     }
   }
-  // extract proj info
-  {
-    optional<vector<uint8_t>> dims;
-    optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
-    optional<bool> isUserCoord;
-    optional<bool> isProfile;
-    read_from_tree(dataTree, dims, "proj_dims");
-    read_from_tree(dataTree, ranges, "proj_ranges");
-    read_from_tree(dataTree, isUserCoord, "proj_isUserCoord");
-    read_from_tree(dataTree, isProfile, "proj_isProfile");
-    if (dims) {
-      if (!ranges) {
-        logger::throw_invalid_argument("proj_dims is set but proj_ranges is missing.");
-      }
-      mProjInfo = {*dims, *ranges, isUserCoord, isProfile};
-    }
+  read_from_tree(tree, dataInfo.filters, prefix + "filters");
+  dataInfo.joins = ReadJoins(tree, prefix + "joins");
+  read_from_tree(tree, dataInfo.weight, prefix + "weight");
+  if (const auto entryMax = get_from_tree<uint32_t>(tree, prefix + "entryMax")) {
+    dataInfo.entries.Set(get_from_tree<uint32_t>(tree, prefix + "entryMin"), *entryMax);
   }
+  read_from_tree(tree, dataInfo.isProfileNoScatter, prefix + "isProfileNoScatter");
+  read_from_tree(tree, dataInfo.definitions.keys, prefix + "definitions_keys");
+  read_from_tree(tree, dataInfo.definitions.values, prefix + "definitions_values");
+}
+void Plot::Pad::Data::PutDataInfo(ptree& tree, const data_info_t& dataInfo, const string& prefix)
+{
+  if (dataInfo.dataDims.empty()) return;
+  vector<string> vars;
+  vector<double_t> binning;
+  vector<int32_t> sizes;
+  for (const auto& dataDim : dataInfo.dataDims) {
+    vars.push_back(dataDim.var);
+    binning.insert(binning.end(), dataDim.edges.begin(), dataDim.edges.end());
+    binning.push_back(static_cast<double_t>(dataDim.nBins));
+    sizes.push_back(static_cast<int32_t>(dataDim.edges.size()) + 1);
+  }
+  put_in_tree(tree, optional<vector<string>>{vars}, prefix + "vars");
+  put_in_tree(tree, optional<vector<double_t>>{binning}, prefix + "binning");
+  put_in_tree(tree, optional<vector<int32_t>>{sizes}, prefix + "binning_sizes");
+  put_in_tree(tree, dataInfo.filters, prefix + "filters");
+  PutJoins(tree, dataInfo.joins, prefix + "joins");
+  put_in_tree(tree, dataInfo.weight, prefix + "weight");
+  put_in_tree(tree, dataInfo.entries.min, prefix + "entryMin");
+  put_in_tree(tree, dataInfo.entries.max, prefix + "entryMax");
+  put_in_tree(tree, dataInfo.isProfileNoScatter, prefix + "isProfileNoScatter");
+  put_in_tree(tree, dataInfo.definitions.keys, prefix + "definitions_keys");
+  put_in_tree(tree, dataInfo.definitions.values, prefix + "definitions_values");
+}
+void Plot::Pad::Data::ReadProjInfo(const ptree& tree, optional<proj_info_t>& projInfo, const string& prefix)
+{
+  optional<vector<uint8_t>> dims;
+  optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
+  optional<bool> isUserCoord;
+  optional<bool> isProfile;
+  read_from_tree(tree, dims, prefix + "dims");
+  read_from_tree(tree, ranges, prefix + "ranges");
+  read_from_tree(tree, isUserCoord, prefix + "isUserCoord");
+  read_from_tree(tree, isProfile, prefix + "isProfile");
+  if (!dims) return;
+  if (!ranges) {
+    logger::throw_invalid_argument("{}dims is set but {}ranges is missing.", prefix, prefix);
+  }
+  projInfo = {*dims, *ranges, isUserCoord, isProfile};
+}
+void Plot::Pad::Data::PutProjInfo(ptree& tree, const optional<proj_info_t>& projInfo, const string& prefix)
+{
+  if (!projInfo) return;
+  put_in_tree(tree, optional<vector<uint8_t>>{projInfo->dims}, prefix + "dims");
+  put_in_tree(tree, optional<vector<tuple<uint8_t, double_t, double_t>>>{projInfo->ranges}, prefix + "ranges");
+  put_in_tree(tree, projInfo->isUserCoord, prefix + "isUserCoord");
+  put_in_tree(tree, projInfo->isProfile, prefix + "isProfile");
 }
 
 //**************************************************************************************************
@@ -2366,34 +2401,8 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mNpx, "npx");
   put_in_tree(dataTree, mNpy, "npy");
 
-  if (mDataInfo.dataDims.size()) {
-    vector<string> vars;
-    vector<double_t> binning;
-    vector<int32_t> sizes;
-    for (const auto& dataDim : mDataInfo.dataDims) {
-      vars.push_back(dataDim.var);
-      binning.insert(binning.end(), dataDim.edges.begin(), dataDim.edges.end());
-      binning.push_back(static_cast<double_t>(dataDim.nBins));
-      sizes.push_back(static_cast<int32_t>(dataDim.edges.size()) + 1);
-    }
-    put_in_tree(dataTree, optional<vector<string>>{vars}, "data_vars");
-    put_in_tree(dataTree, optional<vector<double_t>>{binning}, "data_binning");
-    put_in_tree(dataTree, optional<vector<int32_t>>{sizes}, "data_binning_sizes");
-    put_in_tree(dataTree, mDataInfo.filters, "data_filters");
-    PutJoins(dataTree, mDataInfo.joins, "data_joins");
-    put_in_tree(dataTree, mDataInfo.weight, "data_weight");
-    put_in_tree(dataTree, mDataInfo.entries.min, "data_entryMin");
-    put_in_tree(dataTree, mDataInfo.entries.max, "data_entryMax");
-    put_in_tree(dataTree, mDataInfo.isProfileNoScatter, "data_isProfileNoScatter");
-    put_in_tree(dataTree, mDataInfo.definitions.keys, "data_definitions_keys");
-    put_in_tree(dataTree, mDataInfo.definitions.values, "data_definitions_values");
-  }
-  if (mProjInfo) {
-    put_in_tree(dataTree, optional<vector<uint8_t>>{mProjInfo->dims}, "proj_dims");
-    put_in_tree(dataTree, optional<vector<tuple<uint8_t, double_t, double_t>>>{mProjInfo->ranges}, "proj_ranges");
-    put_in_tree(dataTree, mProjInfo->isUserCoord, "proj_isUserCoord");
-    put_in_tree(dataTree, mProjInfo->isProfile, "proj_isProfile");
-  }
+  PutDataInfo(dataTree, mDataInfo, "data_");
+  PutProjInfo(dataTree, mProjInfo, "proj_");
   return dataTree;
 }
 
@@ -3201,70 +3210,8 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   ReadModify(dataTree, mNumModify, "numer_");
   ReadModify(dataTree, mDenomModify, "denom_");
 
-  // extract data info
-  {
-    optional<vector<string>> vars;
-    read_from_tree(dataTree, vars, "denomData_vars");
-    if (vars) {
-      mDenomDataInfo = data_info_t();
-      vector<data_dim_t> dataDims{};
-
-      optional<vector<double_t>> binning;
-      optional<vector<int32_t>> sizes;
-      read_from_tree(dataTree, binning, "denomData_binning");
-      read_from_tree(dataTree, sizes, "denomData_binning_sizes");
-
-      if (binning && sizes) {
-        if (sizes->size() != vars->size()) {
-          logger::throw_invalid_argument("denomData_binning_sizes has {} entries, expected {} (one per denomData_vars entry).", sizes->size(), vars->size());
-        }
-        auto lastPos = binning->begin();
-        for (size_t i = 0; i < vars->size(); ++i) {
-          if ((*sizes)[i] < 1) {
-            logger::throw_invalid_argument("denomData_binning_sizes entry {} must be at least 1.", i);
-          }
-          if (std::distance(lastPos, binning->end()) < static_cast<std::ptrdiff_t>((*sizes)[i])) {
-            logger::throw_invalid_argument("denomData_binning does not contain enough entries for denomData_binning_sizes.");
-          }
-          auto nextPos = lastPos + (*sizes)[i];
-          vector<double_t> edges(lastPos, nextPos);
-          lastPos = nextPos;
-          int32_t nBins = static_cast<int32_t>(edges.back());
-          edges.pop_back();
-          dataDims.push_back({vars->at(i), nBins, edges});
-        }
-      }
-      mDenomDataInfo.dataDims = dataDims;
-      read_from_tree(dataTree, mDenomDataInfo.filters, "denomData_filters");
-      mDenomDataInfo.joins = ReadJoins(dataTree, "denomData_joins");
-      read_from_tree(dataTree, mDenomDataInfo.weight, "denomData_weight");
-      const auto entryMin = get_from_tree<uint32_t>(dataTree, "denomData_entryMin");
-      if (const auto entryMax = get_from_tree<uint32_t>(dataTree, "denomData_entryMax")) {
-        (entryMin) ? Denom().Entries(*entryMin, *entryMax) : Denom().Entries(*entryMax);
-        Numer();
-      }
-      read_from_tree(dataTree, mDenomDataInfo.isProfileNoScatter, "denomData_isProfileNoScatter");
-      read_from_tree(dataTree, mDenomDataInfo.definitions.keys, "denomData_definitions_keys");
-      read_from_tree(dataTree, mDenomDataInfo.definitions.values, "denomData_definitions_values");
-    }
-  }
-  // extract proj info
-  {
-    optional<vector<uint8_t>> dims;
-    optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
-    optional<bool> isUserCoord;
-    optional<bool> isProfile;
-    read_from_tree(dataTree, dims, "denomProj_dims");
-    read_from_tree(dataTree, ranges, "denomProj_ranges");
-    read_from_tree(dataTree, isUserCoord, "denomProj_isUserCoord");
-    read_from_tree(dataTree, isProfile, "denomProj_isProfile");
-    if (dims) {
-      if (!ranges) {
-        logger::throw_invalid_argument("denomProj_dims is set but denomProj_ranges is missing.");
-      }
-      mDenomProjInfo = {*dims, *ranges, isUserCoord, isProfile};
-    }
-  }
+  ReadDataInfo(dataTree, mDenomDataInfo, "denomData_");
+  ReadProjInfo(dataTree, mDenomProjInfo, "denomProj_");
 }
 
 //**************************************************************************************************
@@ -3281,34 +3228,8 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
   PutModify(dataTree, mNumModify, "numer_");
   PutModify(dataTree, mDenomModify, "denom_");
 
-  if (mDenomDataInfo.dataDims.size()) {
-    vector<string> vars;
-    vector<double_t> binning;
-    vector<int32_t> sizes;
-    for (const auto& dataDim : mDenomDataInfo.dataDims) {
-      vars.push_back(dataDim.var);
-      binning.insert(binning.end(), dataDim.edges.begin(), dataDim.edges.end());
-      binning.push_back(static_cast<double_t>(dataDim.nBins));
-      sizes.push_back(static_cast<int32_t>(dataDim.edges.size()) + 1);
-    }
-    put_in_tree(dataTree, optional<vector<string>>{vars}, "denomData_vars");
-    put_in_tree(dataTree, optional<vector<double_t>>{binning}, "denomData_binning");
-    put_in_tree(dataTree, optional<vector<int32_t>>{sizes}, "denomData_binning_sizes");
-    put_in_tree(dataTree, mDenomDataInfo.filters, "denomData_filters");
-    PutJoins(dataTree, mDenomDataInfo.joins, "denomData_joins");
-    put_in_tree(dataTree, mDenomDataInfo.weight, "denomData_weight");
-    put_in_tree(dataTree, mDenomDataInfo.entries.min, "denomData_entryMin");
-    put_in_tree(dataTree, mDenomDataInfo.entries.max, "denomData_entryMax");
-    put_in_tree(dataTree, mDenomDataInfo.isProfileNoScatter, "denomData_isProfileNoScatter");
-    put_in_tree(dataTree, mDenomDataInfo.definitions.keys, "denomData_definitions_keys");
-    put_in_tree(dataTree, mDenomDataInfo.definitions.values, "denomData_definitions_values");
-  }
-  if (mDenomProjInfo) {
-    put_in_tree(dataTree, optional<vector<uint8_t>>{mDenomProjInfo->dims}, "denomProj_dims");
-    put_in_tree(dataTree, optional<vector<tuple<uint8_t, double_t, double_t>>>{mDenomProjInfo->ranges}, "denomProj_ranges");
-    put_in_tree(dataTree, mDenomProjInfo->isUserCoord, "denomProj_isUserCoord");
-    put_in_tree(dataTree, mDenomProjInfo->isProfile, "denomProj_isProfile");
-  }
+  PutDataInfo(dataTree, mDenomDataInfo, "denomData_");
+  PutProjInfo(dataTree, mDenomProjInfo, "denomProj_");
   return dataTree;
 }
 
@@ -3343,12 +3264,27 @@ auto Plot::Pad::Ratio::Denom() -> decltype(*this)
  * In Result mode it is interpreted as Numer() with a warning, and the mode is switched accordingly.
  */
 //**************************************************************************************************
-void Plot::Pad::Ratio::ResolveSelectionMode(const char* call)
+template <typename Select>
+auto Plot::Pad::Ratio::SelectInput(const char* call, Select select) -> decltype(*this)
 {
-  if (mModMode != Mode::Res) return;
-  logger::warning("Ratio {}: {}() selects input data, it cannot act on the ratio itself; interpreted as Numer().{}(). Write Numer(), Denom() or Both() explicitly.",
-                  GetName(), call, call);
-  mModMode = Mode::Num;
+  if (mModMode == Mode::Res) {
+    logger::warning("Ratio {}: {}() selects input data, it cannot act on the ratio itself; interpreted as Numer().{}(). Write Numer(), Denom() or Both() explicitly.",
+                    GetName(), call, call);
+    mModMode = Mode::Num;
+  }
+  if (mModMode != Mode::Den) select();
+  if (mModMode == Mode::Den || mModMode == Mode::Both) {
+    // the selection of the denominator is made by Data on the swapped in denominator, as the modifiers (FORWARD_MODIFIER)
+    auto swapDenom = [this]() {
+      std::swap(mName, mDenomName);
+      std::swap(mDataInfo, mDenomDataInfo);
+      std::swap(mProjInfo, mDenomProjInfo);
+    };
+    swapDenom();
+    auto swapBack = util::make_scope_guard(swapDenom);
+    select();
+  }
+  return *this;
 }
 auto Plot::Pad::Ratio::Both() -> decltype(*this)
 {
@@ -3362,65 +3298,27 @@ auto Plot::Pad::Ratio::Result() -> decltype(*this)
 }
 auto Plot::Pad::Ratio::Project(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
-  if (dims.empty()) logger::throw_invalid_argument("Project needs at least one axis to project onto.");
-  ResolveSelectionMode("Project");
-  if (mModMode != Mode::Den) {
-    Data::Project(dims, ranges, isUserCoord);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomProjInfo = {dims, ranges, isUserCoord};
-  return *this;
+  return SelectInput("Project", [&]() { Data::Project(dims, ranges, isUserCoord); });
 }
 auto Plot::Pad::Ratio::ProjectX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
-  ResolveSelectionMode("ProjectX");
-  if (mModMode != Mode::Den) {
-    Data::ProjectX(startY, endY, isUserCoord);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomProjInfo = {{0}, {{1, startY, endY}}, isUserCoord};
-  return *this;
+  return SelectInput("ProjectX", [&]() { Data::ProjectX(startY, endY, isUserCoord); });
 }
 auto Plot::Pad::Ratio::ProjectY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
-  ResolveSelectionMode("ProjectY");
-  if (mModMode != Mode::Den) {
-    Data::ProjectY(startX, endX, isUserCoord);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
-  return *this;
+  return SelectInput("ProjectY", [&]() { Data::ProjectY(startX, endX, isUserCoord); });
 }
 auto Plot::Pad::Ratio::Profile(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
-  if (dims.empty()) logger::throw_invalid_argument("Profile needs at least one axis to profile along.");
-  ResolveSelectionMode("Profile");
-  if (mModMode != Mode::Den) {
-    Data::Profile(dims, ranges, isUserCoord);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomProjInfo = {dims, ranges, isUserCoord, true};
-  return *this;
+  return SelectInput("Profile", [&]() { Data::Profile(dims, ranges, isUserCoord); });
 }
 auto Plot::Pad::Ratio::ProfileX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
-  ResolveSelectionMode("ProfileX");
-  if (mModMode != Mode::Den) {
-    Data::ProfileX(startY, endY, isUserCoord);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomProjInfo = {{0}, {{1, startY, endY}}, isUserCoord, true};
-  return *this;
+  return SelectInput("ProfileX", [&]() { Data::ProfileX(startY, endY, isUserCoord); });
 }
 auto Plot::Pad::Ratio::ProfileY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
-  ResolveSelectionMode("ProfileY");
-  if (mModMode != Mode::Den) {
-    Data::ProfileY(startX, endX, isUserCoord);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
-  return *this;
+  return SelectInput("ProfileY", [&]() { Data::ProfileY(startX, endX, isUserCoord); });
 }
 auto Plot::Pad::Ratio::Project(std::initializer_list<uint8_t> dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
@@ -3436,154 +3334,59 @@ auto Plot::Pad::Ratio::Project(std::initializer_list<data_dim_t> dataDims, optio
 }
 auto Plot::Pad::Ratio::Project(const vector<data_dim_t>& dataDims, optional<string> weight) -> decltype(*this)
 {
-  ResolveSelectionMode("Project");
-  if (mModMode != Mode::Den) {
-    Data::Project(dataDims, weight);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomDataInfo.set({dataDims, weight});
-  return *this;
+  return SelectInput("Project", [&]() { Data::Project(dataDims, weight); });
 }
 auto Plot::Pad::Ratio::Project1D(data_dim_t x, optional<string> weight) -> decltype(*this)
 {
-  ResolveSelectionMode("Project1D");
-  if (mModMode != Mode::Den) {
-    Data::Project1D(x, weight);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomDataInfo.set({{x}, weight});
-  return *this;
+  return SelectInput("Project1D", [&]() { Data::Project1D(x, weight); });
 }
 auto Plot::Pad::Ratio::Project2D(data_dim_t x, data_dim_t y, optional<string> weight) -> decltype(*this)
 {
-  ResolveSelectionMode("Project2D");
-  if (mModMode != Mode::Den) {
-    Data::Project2D(x, y, weight);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomDataInfo.set({{x, y}, weight});
-  return *this;
+  return SelectInput("Project2D", [&]() { Data::Project2D(x, y, weight); });
 }
 auto Plot::Pad::Ratio::Scatter(const string& x, const string& y) -> decltype(*this)
 {
-  ResolveSelectionMode("Scatter");
-  if (mModMode != Mode::Den) {
-    Data::Scatter(x, y);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomDataInfo.set({{{x}, {y}}, {}, false});
-  return *this;
+  return SelectInput("Scatter", [&]() { Data::Scatter(x, y); });
 }
 auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& xErr, const string& yErr) -> decltype(*this)
 {
-  ResolveSelectionMode("Scatter");
-  if (mModMode != Mode::Den) {
-    Data::Scatter(x, y, xErr, yErr);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomDataInfo.set({{{x}, {y}, {xErr}, {yErr}}, {}, false});
-  return *this;
+  return SelectInput("Scatter", [&]() { Data::Scatter(x, y, xErr, yErr); });
 }
 auto Plot::Pad::Ratio::Scatter(const string& x, const string& y, const string& xErrLow, const string& xErrHigh, const string& yErrLow, const string& yErrHigh) -> decltype(*this)
 {
-  ResolveSelectionMode("Scatter");
-  if (mModMode != Mode::Den) {
-    Data::Scatter(x, y, xErrLow, xErrHigh, yErrLow, yErrHigh);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomDataInfo.set({{{x}, {y}, {xErrLow}, {xErrHigh}, {yErrLow}, {yErrHigh}}, {}, false});
-  return *this;
+  return SelectInput("Scatter", [&]() { Data::Scatter(x, y, xErrLow, xErrHigh, yErrLow, yErrHigh); });
 }
 auto Plot::Pad::Ratio::Profile(const vector<data_dim_t>& dataDims, const string& profile, optional<string> weight) -> decltype(*this)
 {
-  ResolveSelectionMode("Profile");
-  if (mModMode != Mode::Den) {
-    Data::Profile(dataDims, profile, weight);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomDataInfo.set({dataDims, weight, true});
-  mDenomDataInfo.dataDims.push_back({profile, {}});
-  return *this;
+  return SelectInput("Profile", [&]() { Data::Profile(dataDims, profile, weight); });
 }
 auto Plot::Pad::Ratio::Profile1D(data_dim_t x, const string& profile, optional<string> weight) -> decltype(*this)
 {
-  ResolveSelectionMode("Profile1D");
-  if (mModMode != Mode::Den) {
-    Data::Profile1D(x, profile, weight);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomDataInfo.set({{x, {profile, {}}}, weight, true});
-  return *this;
+  return SelectInput("Profile1D", [&]() { Data::Profile1D(x, profile, weight); });
 }
 auto Plot::Pad::Ratio::Profile2D(data_dim_t x, data_dim_t y, const string& profile, optional<string> weight) -> decltype(*this)
 {
-  ResolveSelectionMode("Profile2D");
-  if (mModMode != Mode::Den) {
-    Data::Profile2D(x, y, profile, weight);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomDataInfo.set({{x, y, {profile, {}}}, weight, true});
-  return *this;
+  return SelectInput("Profile2D", [&]() { Data::Profile2D(x, y, profile, weight); });
 }
 auto Plot::Pad::Ratio::Define(const std::string& key, const std::string& value) -> decltype(*this)
 {
-  ResolveSelectionMode("Define");
-  if (mModMode != Mode::Den) {
-    Data::Define(key, value);
-    if (mModMode != Mode::Both) return *this;
-  }
-  if (mDenomDataInfo.definitions.keys && mDenomDataInfo.definitions.values) {
-    mDenomDataInfo.definitions.keys->push_back(key);
-    mDenomDataInfo.definitions.values->push_back(value);
-  } else {
-    mDenomDataInfo.definitions.keys = {key};
-    mDenomDataInfo.definitions.values = {value};
-  }
-  return *this;
+  return SelectInput("Define", [&]() { Data::Define(key, value); });
 }
 auto Plot::Pad::Ratio::Filter(const std::string& filter) -> decltype(*this)
 {
-  ResolveSelectionMode("Filter");
-  if (mModMode != Mode::Den) {
-    Data::Filter(filter);
-    if (mModMode != Mode::Both) return *this;
-  }
-  if (mDenomDataInfo.filters) {
-    mDenomDataInfo.filters->push_back(filter);
-  } else {
-    mDenomDataInfo.filters = {filter};
-  }
-  return *this;
+  return SelectInput("Filter", [&]() { Data::Filter(filter); });
 }
 auto Plot::Pad::Ratio::Join(const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias) -> decltype(*this)
 {
-  ResolveSelectionMode("Join");
-  if (mModMode != Mode::Den) {
-    Data::Join(tree, keys, alias);
-    if (mModMode != Mode::Both) return *this;
-  }
-  AddJoin(mDenomDataInfo, mDenomName, tree, keys, alias);
-  return *this;
+  return SelectInput("Join", [&]() { Data::Join(tree, keys, alias); });
 }
 auto Plot::Pad::Ratio::Entries(uint32_t nEntries) -> decltype(*this)
 {
-  ResolveSelectionMode("Entries");
-  if (mModMode != Mode::Den) {
-    Data::Entries(nEntries);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomDataInfo.entries.Set(nullopt, nEntries);
-  return *this;
+  return SelectInput("Entries", [&]() { Data::Entries(nEntries); });
 }
 auto Plot::Pad::Ratio::Entries(uint32_t entryMin, uint32_t entryMax) -> decltype(*this)
 {
-  ResolveSelectionMode("Entries");
-  if (mModMode != Mode::Den) {
-    Data::Entries(entryMin, entryMax);
-    if (mModMode != Mode::Both) return *this;
-  }
-  mDenomDataInfo.entries.Set(entryMin, entryMax);
-  return *this;
+  return SelectInput("Entries", [&]() { Data::Entries(entryMin, entryMax); });
 }
 
 //--------------------------------------------------------------------------------------------------
