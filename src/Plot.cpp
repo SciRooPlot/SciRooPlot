@@ -4711,7 +4711,6 @@ void Plot::Pad::LegendEntry::ShiftPosition(uint16_t offset)
  * User accessors to change legend entry properties.
  */
 //**************************************************************************************************
-
 Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLabel(const string& label)
 {
   mLabel = label;
@@ -4909,7 +4908,10 @@ Plot::Pad::Shape& Plot::Pad::Shape::SetRotation(double_t theta)
 }
 
 //**************************************************************************************************
-// explicitly instantiate required box and setter-group templates
+/**
+ * Explicitly instantiate required box and setter-group templates.
+ */
+//**************************************************************************************************
 template class Plot::Pad::Box<Plot::Pad::TextBox>;
 template class Plot::Pad::Box<Plot::Pad::StatsBox>;
 template class Plot::Pad::Box<Plot::Pad::LegendBox>;
@@ -4933,5 +4935,5 @@ template class TextSetters<Plot::Pad::LegendBox>;
 template class BorderSetters<Plot::Pad::TextBox>;
 template class BorderSetters<Plot::Pad::StatsBox>;
 template class BorderSetters<Plot::Pad::LegendBox>;
-//**************************************************************************************************
+
 }  // end namespace SciRooPlot

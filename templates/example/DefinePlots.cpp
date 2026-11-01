@@ -83,11 +83,11 @@ int main(int argc, char* argv[])
 const char kExperiment[] = "Example Experiment";
 const char kCollisions[] = "pp, #sqrt{#it{s}} = 13.6 TeV";
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Data sources: a short name for one or more input files, used when adding data to a plot.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void DefineDataSources(PlotManager& pm)
 {
   // pseudo-data shipped with SciRooPlot; replace these with your own files
@@ -160,7 +160,7 @@ void DefineDataSources(PlotManager& pm)
   // pm.AddDataSource("local", SRC_DIR + "../rel/path/to/file.root");      // relative to this file
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Base plots: layouts that the plots build upon (third argument of the Plot constructor).
  * SciRooPlot provides base plots with consistent layout among them: text sizes, tick lengths, distances, line
@@ -170,7 +170,7 @@ void DefineDataSources(PlotManager& pm)
  * pull panel below each panel, or gaps between independent panels. Pads are numbered row by row.
  * The code of PlotManager::MakeBasePlot shows how they are made with PanelLayout.h, as a start for your own.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void DefineBasePlots(PlotManager& pm)
 {
   for (const string& name : {"1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_2x1_gap", "1d_3x1_gap", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1", "2d_2x1_gap", "2d_3x1", "2d_2x2"}) {
@@ -196,11 +196,11 @@ void DefineBasePlots(PlotManager& pm)
   pm.AddBasePlot(regionMap);
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Higgs boson: invariant-mass spectra, fits, expected vs. observed, exclusion limits.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void DefineHiggsPlots(PlotManager& pm)
 {
   {  // data with fit functions, and a ratio pad dividing the data by the background fit ----
@@ -248,11 +248,11 @@ void DefineHiggsPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Charged-particle spectra: data vs. simulation, a published reference, 2d data and projections.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void DefineSpectraPlots(PlotManager& pm)
 {
   // templates: how each kind of data looks, said once; measured("ptSpec") is the data "ptSpec" of the source "data" in this look,
@@ -358,11 +358,11 @@ void DefineSpectraPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Detector performance: event selection, tracking, particle identification, calorimetry.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void DefineDetectorPlots(PlotManager& pm)
 {
   // --------------------------------------------------------------------------------------
@@ -658,11 +658,11 @@ void DefineDetectorPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Collider physics: the dimuon spectrum and jets.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void DefineCollisionPlots(PlotManager& pm)
 {
   {  // DivideBinWidth() turns counts in logarithmic bins into a density ---------------------
@@ -722,11 +722,11 @@ void DefineCollisionPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Heavy-ion collisions: centrality, nuclear modification factor, flow.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void DefineHeavyIonPlots(PlotManager& pm)
 {
   const vector<string> centralities = {"0-10", "10-30", "30-50"};
@@ -978,7 +978,9 @@ void DefineHeavyIonPlots(PlotManager& pm)
 }
 
 //**************************************************************************************************
-// Machine learning: classifier scores, cut efficiencies, ROC curves, feature importance
+/**
+ * Machine learning: classifier scores, cut efficiencies, ROC curves, feature importance.
+ */
 //**************************************************************************************************
 void DefineMLPlots(PlotManager& pm)
 {
@@ -1075,7 +1077,9 @@ void DefineMLPlots(PlotManager& pm)
 }
 
 //**************************************************************************************************
-// Medical physics: depth-dose curves of ion beams in water and the dose of a treatment plan
+/**
+ * Medical physics: depth-dose curves of ion beams in water and the dose of a treatment plan.
+ */
 //**************************************************************************************************
 void DefineMedicalPlots(PlotManager& pm)
 {
@@ -1110,7 +1114,9 @@ void DefineMedicalPlots(PlotManager& pm)
 }
 
 //**************************************************************************************************
-// Atomic physics: laser spectroscopy, strong-field ionisation, hydrogen orbitals and the photoelectric effect
+/**
+ * Atomic physics: laser spectroscopy, strong-field ionisation, hydrogen orbitals and the photoelectric effect.
+ */
 //**************************************************************************************************
 void DefineAtomicPlots(PlotManager& pm)
 {
@@ -1279,7 +1285,9 @@ void DefineAtomicPlots(PlotManager& pm)
 }
 
 //**************************************************************************************************
-// Accelerator physics: the profile of a beam and its phase space
+/**
+ * Accelerator physics: the profile of a beam and its phase space.
+ */
 //**************************************************************************************************
 void DefineAcceleratorPlots(PlotManager& pm)
 {
@@ -1325,7 +1333,9 @@ void DefineAcceleratorPlots(PlotManager& pm)
 }
 
 //**************************************************************************************************
-// Nuclear and neutrino physics: beta decay spectra, the neutrino mass at the tritium endpoint, reactor neutrino oscillations
+/**
+ * Nuclear and neutrino physics: beta decay spectra, the neutrino mass at the tritium endpoint, reactor neutrino oscillations.
+ */
 //**************************************************************************************************
 void DefineNuclearPlots(PlotManager& pm)
 {
@@ -1406,7 +1416,9 @@ void DefineNuclearPlots(PlotManager& pm)
 }
 
 //**************************************************************************************************
-// Searches: exclusion limits on dark matter and on top squarks
+/**
+ * Searches: exclusion limits on dark matter and on top squarks.
+ */
 //**************************************************************************************************
 void DefineSearchPlots(PlotManager& pm)
 {
@@ -1462,7 +1474,9 @@ void DefineSearchPlots(PlotManager& pm)
 }
 
 //**************************************************************************************************
-// Neutron stars: equations of state, masses and radii, and a merger seen in gravitational waves and light
+/**
+ * Neutron stars: equations of state, masses and radii, and a merger seen in gravitational waves and light.
+ */
 //**************************************************************************************************
 void DefineNeutronStarPlots(PlotManager& pm)
 {
@@ -1521,7 +1535,9 @@ void DefineNeutronStarPlots(PlotManager& pm)
 }
 
 //**************************************************************************************************
-// Biophysics: protein structure, single-molecule mechanics and spectroscopy, enzyme kinetics, ion channels
+/**
+ * Biophysics: protein structure, single-molecule mechanics and spectroscopy, enzyme kinetics, ion channels.
+ */
 //**************************************************************************************************
 void DefineBiophysicsPlots(PlotManager& pm)
 {
@@ -1590,7 +1606,9 @@ void DefineBiophysicsPlots(PlotManager& pm)
 }
 
 //**************************************************************************************************
-// Electronics: threshold scans and tuning of a pixel chip, pulse shapes and frequency response of its front end, eye diagrams of its data link
+/**
+ * Electronics: threshold scans and tuning of a pixel chip, pulse shapes and frequency response of its front end, eye diagrams of its data link.
+ */
 //**************************************************************************************************
 void DefineElectronicsPlots(PlotManager& pm)
 {
@@ -1698,7 +1716,9 @@ void DefineElectronicsPlots(PlotManager& pm)
 }
 
 //**************************************************************************************************
-// Theory: QCD (running coupling, parton distributions, lattice thermodynamics), chaos, critical phenomena
+/**
+ * Theory: QCD (running coupling, parton distributions, lattice thermodynamics), chaos, critical phenomena.
+ */
 //**************************************************************************************************
 void DefineTheoryPlots(PlotManager& pm)
 {
@@ -1782,7 +1802,9 @@ void DefineTheoryPlots(PlotManager& pm)
 }
 
 //**************************************************************************************************
-// Beyond physics: tables (CSV) from climate science, astronomy and neuroscience
+/**
+ * Beyond physics: tables (CSV) from climate science, astronomy and neuroscience.
+ */
 //**************************************************************************************************
 void DefineOtherSciencePlots(PlotManager& pm)
 {
@@ -1929,7 +1951,9 @@ void DefineOtherSciencePlots(PlotManager& pm)
 }
 
 //**************************************************************************************************
-// Animations: one plot per frame, in a group of its own; mode gif writes all plots it is given as one animated gif
+/**
+ * Animations: one plot per frame, in a group of its own; mode gif writes all plots it is given as one animated gif.
+ */
 //**************************************************************************************************
 void DefineAnimations(PlotManager& pm)
 {

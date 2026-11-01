@@ -3072,6 +3072,7 @@ bool PlotPainter::IsHBarFrame(TPad* pad, const TH1* frame)
 /**
  * Whether ROOT paints the axes of a frame histogram in a 3D view (THistPainter::PaintLegoAxis: 3d histograms, LEGO, SURF, TRI).
  */
+//**************************************************************************************************
 bool PlotPainter::IsViewFrame(TPad* pad, const TH1* frame)
 {
   if (frame->GetDimension() == 3) return true;

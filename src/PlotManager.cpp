@@ -2397,6 +2397,10 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
 }
 
 //**************************************************************************************************
+/**
+ * Handles the pending events of the windows kept open ('q' closes one, 'x' all of them, a double-click reports a position); returns whether any is still open.
+ */
+//**************************************************************************************************
 bool PlotManager::HandleOpenWindows(bool& closeAll)
 {
   bool anyOpen = false;
@@ -3441,11 +3445,11 @@ string PlotManager::GetProjectProperty(const string& property) const
   return Config::Get().Property(mProjectName, property);
 }
 
-//****************************************************************************************
+//**************************************************************************************************
 /**
  * Saves all required plot definitions and input file locations of the project.
  */
-//****************************************************************************************
+//**************************************************************************************************
 void PlotManager::SaveProject() const
 {
   if (mProjectName.empty()) {
