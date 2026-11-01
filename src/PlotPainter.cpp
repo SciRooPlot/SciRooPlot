@@ -6268,10 +6268,10 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
 
 //**************************************************************************************************
 /**
- * Helper to generate nColors between specified rgb endpoints.
+ * The red, green and blue of nColors spread evenly over a gradient (the same interpolation as in GradientPaletteCommand).
  */
 //**************************************************************************************************
-vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha)
+vector<tuple<double_t, double_t, double_t>> PlotPainter::GradientRGB(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints)
 {
   if (rgbEndpoints.size() < 2) {
     logger::error("A colour gradient needs at least two endpoints, got {}.", rgbEndpoints.size());
@@ -6281,9 +6281,8 @@ vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vecto
     logger::error("Number of gradient colours must be positive, got {}.", nColors);
     return {};
   }
-  // the same interpolation as in GradientPaletteCommand; colours are looked up by value, so identical gradients share them
-  vector<int16_t> gradientColors;
-  gradientColors.reserve(nColors);
+  vector<tuple<double_t, double_t, double_t>> rgb;
+  rgb.reserve(nColors);
   for (int32_t i = 0; i < nColors; ++i) {
     const double_t x = (nColors > 1) ? static_cast<double_t>(i) / (nColors - 1) : 0.;
     size_t k = 0;
@@ -6292,7 +6291,22 @@ vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vecto
     const auto& [r1, g1, b1, s1] = rgbEndpoints[k];
     const auto& [r2, g2, b2, s2] = rgbEndpoints[k + 1];
     const double_t t = (s2 > s1) ? std::clamp((x - s1) / (s2 - s1), 0., 1.) : 0.;  // the end colours beyond the first and last stop
-    gradientColors.push_back(static_cast<int16_t>(TColor::GetColor(static_cast<float_t>(r1 + t * (r2 - r1)), static_cast<float_t>(g1 + t * (g2 - g1)), static_cast<float_t>(b1 + t * (b2 - b1)), alpha)));
+    rgb.emplace_back(r1 + t * (r2 - r1), g1 + t * (g2 - g1), b1 + t * (b2 - b1));
+  }
+  return rgb;
+}
+
+//**************************************************************************************************
+/**
+ * Helper to generate nColors between specified rgb endpoints.
+ */
+//**************************************************************************************************
+vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha)
+{
+  // colours are looked up by value, so identical gradients share them
+  vector<int16_t> gradientColors;
+  for (const auto& [r, g, b] : GradientRGB(nColors, rgbEndpoints)) {
+    gradientColors.push_back(static_cast<int16_t>(TColor::GetColor(static_cast<float_t>(r), static_cast<float_t>(g), static_cast<float_t>(b), alpha)));
   }
   return gradientColors;
 }

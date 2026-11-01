@@ -239,7 +239,7 @@ pm.AddBasePlot(layout);
 
 **Keep inputs out of the code.** Machine-specific paths go into project variables (`srp set <project> inputDir /path`, `pm.GetProjectProperty("inputDir")`) or environment variables in the data source strings (`${HOME}/...`); the data source names stay stable across machines. In-memory objects (a graph computed in the program) are registered with `pm.AddDataSource("glauber", &graph)` and used like file data.
 
-**Let the plot show numbers.** Label placeholders (`"<mean[.2f]>"`, `"<entries>"`, `"<integral[.2e]>"`) and `points_text` save hand-copied values; `AddColorOverview("colors", "overview")` renders SciRooPlot's default colour sequence with names and indices (`plot overview colors`), `srp colorwheel` shows all of ROOT's named colours.
+**Let the plot show numbers.** Label placeholders (`"<mean[.2f]>"`, `"<entries>"`, `"<integral[.2e]>"`) and `points_text` save hand-copied values; `AddColorOverview("colors", "overview")` renders SciRooPlot's default colour sequence with names and indices (`AddColorOverview("colors", "overview", "1d_mine", padID = 1)`: the colours that pad of a base plot gives its data) (`plot overview colors`), `srp colorwheel` shows all of ROOT's named colours.
 
 ## C++ vs Python
 

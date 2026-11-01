@@ -115,6 +115,7 @@ class PlotManager
   // Other proportions are taken from shape, e.g. MakeBasePlot("1d_wide_ratio", PanelLayout(), BasePlotShape().SetAspectRatio(4. / 3.).SetRatioHeight(0.3)).
   static Plot MakeBasePlot(const std::string& name = "1d", const PanelLayout& sizes = PanelLayout(), const BasePlotShape& shape = BasePlotShape());
   void AddColorOverview(const std::string& name, const std::string& group, const std::vector<color_t>& colors = {});
+  void AddColorOverview(const std::string& name, const std::string& group, const std::string& basePlot, uint8_t padID = 1);
 
   void SavePlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {}) const;
   bool LoadPlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {});

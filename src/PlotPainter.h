@@ -260,6 +260,8 @@ class PlotPainter
   std::unique_ptr<TCanvas> GeneratePlot(Plot& plot, const std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>>& dataBuffer);
   // the colours the n-th data item of a pad takes when neither the data nor its pad nor pad 0 sets one
   static const std::vector<color_t>& DefaultColors();
+  // the red, green and blue of nColors spread evenly over a gradient
+  static std::vector<std::tuple<double_t, double_t, double_t>> GradientRGB(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints);
 
   // axes shared between pads (Plot::ShareAxis): the groups, and the axes of pads whose range is the common one of their group
   // (set explicitly in the plot by the caller: they get no further room, which the common range includes already)

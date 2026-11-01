@@ -19,6 +19,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `void AddBasePlot(Plot basePlot)`
 - `Plot MakeBasePlot(const std::string& name = "1d", const PanelLayout& sizes = PanelLayout(), const BasePlotShape& shape = BasePlotShape())`
 - `void AddColorOverview(const std::string& name, const std::string& group, const std::vector<color_t>& colors = {})`
+- `void AddColorOverview(const std::string& name, const std::string& group, const std::string& basePlot, uint8_t padID = 1)`
 - `void SavePlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {})`
 - `bool LoadPlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {})`
 - `bool GeneratePlots(const std::string& mode = "show", const std::string& name = ".+", const std::string& group = ".+")`

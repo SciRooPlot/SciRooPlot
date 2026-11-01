@@ -1925,7 +1925,8 @@ plot[1].AddData("h2", "src").SetDrawOption(cont_fillz).SetContours(12)
 plot[0].SetDefaultColors([kBlack, kRed + 1, kBlue + 1])      # colour sequence for all pads
 plot[1].SetPalette(kViridis)                                  # colour scale of 2D data
 plot[1].AddData("h", "src").SetShowOverflowBins()             # under- and overflow as extra bins
-pm.AddColorOverview("colors", "overview")                     # plot overview colors: the colour sequence`, cpp: `plot[1].AddData("h", "src").SetDrawOption(points);            // alias, see Draw options
+pm.AddColorOverview("colors", "overview")                     # plot overview colors: the colour sequence
+pm.AddColorOverview("mine", "overview", "1d_mine")            # the colours pad 1 of base plot 1d_mine gives its data`, cpp: `plot[1].AddData("h", "src").SetDrawOption(points);            // alias, see Draw options
 plot[1].AddData("h", "src").SetDrawOption("E1");              // or a raw ROOT option string
 plot[1].AddData("h", "src").SetColor(kRed + 1).SetAlpha(0.5); // marker, line and fill at once
 plot[1].AddData("h", "src").SetColor("#1f77b4");              // any colour: "#rrggbb" or {r, g, b} from 0 to 1
@@ -1936,7 +1937,8 @@ plot[1].AddData("h2", "src").SetDrawOption(cont_fillz).SetContours(12);
 plot[0].SetDefaultColors({kBlack, kRed + 1, kBlue + 1});     // colour sequence for all pads
 plot[1].SetPalette(kViridis);                                 // colour scale of 2D data
 plot[1].AddData("h", "src").SetShowOverflowBins();            // under- and overflow as extra bins
-pm.AddColorOverview("colors", "overview");                    // plot overview colors: the colour sequence` },
+pm.AddColorOverview("colors", "overview");                    // plot overview colors: the colour sequence
+pm.AddColorOverview("mine", "overview", "1d_mine");           // the colours pad 1 of base plot 1d_mine gives its data` },
   labels: { py: `plot[1].AddData("h", "src", "data, mean = <mean[.2f]> GeV")
 plot[1].AddData("h", "src", "<name> <selection>")          # tells apart requests differing in the filter
 plot[1].AddData("h", "src").SetShowStats("eMR", "my histogram")   # letters as in TStyle::SetOptStat
@@ -3122,7 +3124,7 @@ function renderLayout() {
         ${sizesUI}<div class="lb-line"><button class="chip" data-grid="resetsizes" ${sizesChanged().length ? "" : "disabled"}>Back to the defaults</button></div>
       </details>
       <details class="lb-more" ${more("colors", colorsChanged())}><summary>Colours of the data</summary>
-        <p class="small muted">The <i>n</i>-th data in a pad gets the <i>n</i>-th colour, unless it sets one; after the last they start over. These are SciRooPlot's colours for every plot: change them only to use your own, and the code sets them with <code>SetDefaultColors</code>. Type a ROOT colour (<code>kRed + 1</code>, <code>632</code>) or <code>#rrggbb</code>, pick one, or take one from ROOT's colours: click a number first to replace that colour, otherwise it is added.</p>
+        <p class="small muted">The <i>n</i>-th data in a pad gets the <i>n</i>-th colour, unless it sets one; after the last they start over. These are SciRooPlot's colours for every plot: change them only to use your own, and the code sets them with <code>SetDefaultColors</code>. Type a ROOT colour (<code>kRed + 1</code>, <code>632</code>) or <code>#rrggbb</code>, pick one, or take one from ROOT's colours: click a number first to replace that colour, otherwise it is added. <code>pm.AddColorOverview("colors", "overview", "<i>name</i>")</code> draws the colours of your base plot with their names.</p>
         <div class="lb-cols" id="lbcols">${LAY.colors.slice(0, LAY.allColors ? undefined : 12).map((c, i) => `<label><button class="lb-colnum" data-colsel="${i}" aria-pressed="${LAY.colSel === i}" title="replace this colour from ROOT's colours">${i + 1}</button>${pick(`data-colpick="${i}"`, c, `colour ${i + 1}`)}<input type="text" data-colname="${i}" value="${c}" spellcheck="false" aria-label="colour ${i + 1}" class="${colorOk(c) ? "" : "bad"}"><button data-coldel="${i}" ${LAY.colors.length < 2 ? "disabled" : ""} aria-label="remove colour ${i + 1}" title="remove this colour">×</button></label>`).join("")}</div>
         <div class="lb-line">${LAY.colors.length > 12 ? `<button class="chip" data-colop="all">${LAY.allColors ? "only the first 12" : `all ${LAY.colors.length}`}</button>` : ""}<button class="chip" data-colop="add">+ colour</button><button class="chip" data-colop="table" aria-pressed="${!!LAY.colTable}">ROOT's colours</button><button class="chip" data-colop="reset" ${colorsChanged() ? "" : "disabled"}>Back to the defaults</button></div>
         ${LAY.colTable ? `<div class="lb-coltable"><p class="small muted">${LAY.colSel === null ? "Click a colour to add it to the list." : `Click a colour to put it in place of colour ${LAY.colSel + 1}.`}</p>

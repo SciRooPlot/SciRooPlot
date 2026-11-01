@@ -906,6 +906,40 @@ void PlotManager::AddBasePlot(Plot basePlot)
 
 //**************************************************************************************************
 /**
+ * Add a plot showing the colours the data of a pad of a base plot gets when it sets none, in this order: the pad's own colour list
+ * or gradient, else that of pad 0, else SciRooPlot's (as the painter takes them; the marker colours, which SetDefaultColors sets too).
+ * A gradient is shown with its number of colours, or with 8 when that depends on the data.
+ */
+//**************************************************************************************************
+void PlotManager::AddColorOverview(const string& name, const string& group, const string& basePlot, uint8_t padID)
+{
+  auto base = std::find_if(mBasePlots.begin(), mBasePlots.end(), [&](const auto& plot) { return plot.GetName() == basePlot; });
+  if (base == mBasePlots.end()) {
+    logger::error("Colour overview {}: there is no base plot {} (add it with AddBasePlot before).", name, basePlot);
+    return;
+  }
+  auto& pads = base->GetPads();
+  if (padID == 0 || pads.find(padID) == pads.end()) {
+    logger::error("Colour overview {}: base plot {} has no pad {}.", name, basePlot, padID);
+    return;
+  }
+  auto colorsOf = [](const Plot::Pad& pad) -> optional<vector<color_t>> {
+    if (pad.GetDefaultMarkerColors()) return pad.GetDefaultMarkerColors();
+    const auto& gradient = pad.GetDefaultMarkerColorsGradient();
+    if (!gradient.rgbEndpoints) return {};
+    vector<color_t> colors;
+    for (const auto& [r, g, b] : PlotPainter::GradientRGB(gradient.nColors.value_or(8), *gradient.rgbEndpoints))
+      colors.emplace_back(r, g, b);
+    return colors;
+  };
+  const auto padZero = pads.find(0);
+  optional<vector<color_t>> colors = colorsOf(pads[padID]);
+  if (!colors && padZero != pads.end()) colors = colorsOf(padZero->second);
+  AddColorOverview(name, group, colors.value_or(PlotPainter::DefaultColors()));
+}
+
+//**************************************************************************************************
+/**
  * Add a plot showing the given colours, by default those SciRooPlot gives to data without a colour of its own, each with its name and index.
  */
 //**************************************************************************************************
