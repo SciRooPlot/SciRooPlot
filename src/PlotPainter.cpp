@@ -657,7 +657,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     string drawOption;
     uint16_t dataIndex{};
     bool mapDrawn{};  // a 2d or 3d histogram of the pad is drawn (the first one gives the frame its colour levels)
-    array<uint16_t, 6> defaultSettingIndices = {0};
+    struct {
+      uint16_t markerColor, markerStyle, lineColor, lineStyle, fillColor, fillStyle;
+    } usedDefaults{};  // entries of the pad's default lists taken so far
     const int userErrorLevel = gErrorIgnoreLevel;
     auto errLevelGuard = make_scope_guard([userErrorLevel]() { gErrorIgnoreLevel = userErrorLevel; });
     for (const auto& data : drawData) {
@@ -991,7 +993,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           if constexpr (is_hist_3d<data_type>()) {
             // the colour boxes of a TH3 fill the pad behind the 3d box with the frame fill colour (TView3D::PadRange), but in the colour
-            // last used for the colour scale when that colour is not 0: the walls came out in the colour of the palette maximum
+            // last used for the colour scale when that colour is not 0 (walls in the colour of the palette maximum)
             if (isColorBoxes3d(drawOption)) pad_ptr->SetFrameFillColor(0);
           }
           if (!polargram) {
@@ -1042,13 +1044,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             axisHist_ptr->Draw((drawOption + drawOptAxis).data());
             axisHist_ptr->Draw((drawOption + "SAME AXIG").data());
           }
-          bool isTHN = axisHist_ptr->InheritsFrom(TH2::Class()) || axisHist_ptr->InheritsFrom(TH3::Class());
+          const int32_t frameDim = axisHist_ptr->GetDimension();
 
           // a user range beyond the axes of the frame histogram needs a wider frame, since ROOT shows at most the axis of a histogram:
           // the frame is replaced by a histogram with extended axes (changing the axis alone would break the bin storage of the histogram)
           if (!pad_ptr->GetView() && !polargram) {
             for (auto axisLabel : {'X', 'Y'}) {
-              if (axisLabel == 'Y' && !isTHN) continue;
+              if (axisLabel == 'Y' && frameDim == 1) continue;
               optional<double_t> userMin;
               optional<double_t> userMax;
               optional<bool> logY;
@@ -1066,7 +1068,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (!userMin && !userMax) continue;
               // the y range of a 1d frame is taken from the pad below, and ROOT computes it differently for a log scale (margins in decades):
               // the scale is applied first, so the extended frame keeps the log range (one extra paint, only for extended frames with log y)
-              if (!isTHN && logY.value_or(false) && !pad_ptr->GetLogy() && axisHist_ptr->GetMaximum() > 0.) {
+              if (frameDim == 1 && logY.value_or(false) && !pad_ptr->GetLogy() && axisHist_ptr->GetMaximum() > 0.) {
                 pad_ptr->SetLogy(true);
                 pad_ptr->Update();
               }
@@ -1074,7 +1076,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               // the added empty bins must not change the automatic range of the dependent axis: keep the one of the original frame
               // (for 1d the range ROOT determined when drawing it, for 2d the extremes of the contents, which define the colour scale below)
               if (axisHist_ptr->GetMinimumStored() == -1111 && axisHist_ptr->GetMaximumStored() == -1111) {
-                if (isTHN) {
+                if (frameDim > 1) {
                   extended->SetMinimum(axisHist_ptr->GetMinimum());
                   extended->SetMaximum(axisHist_ptr->GetMaximum());
                 } else {
@@ -1099,8 +1101,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
           // apply axis settings
           const bool hbarFrame = IsHBarFrame(pad_ptr, axisHist_ptr);  // with HBAR the X and Y of the pad are the y and x axis of the histogram
-          const bool isTH3 = axisHist_ptr->InheritsFrom(TH3::Class());
-          if (!isTH3 && pad.GetAxes().count('C')) {
+          if (frameDim != 3 && pad.GetAxes().count('C')) {
             logger::warning("The C axis of pad {} is ignored: it is the content of a 3d histogram (for other data the Y or Z axis is the value axis).", padID);
           }
           for (auto axisLabel : {'X', 'Y', 'Z'}) {
@@ -1239,7 +1240,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // ranges are only touched if the user set one: ROOT's bin edges are not exactly reproducible (e.g. 4.000000000000001 instead of 4),
             // so feeding the drawn range back in through SetRangeUser would add the overflow bin
             if (userRangeMin || userRangeMax) {
-              const bool isBinnedAxis = (histLabel == 'X') || (isTHN && histLabel == 'Y') || (isTH3 && histLabel == 'Z');
+              const bool isBinnedAxis = (histLabel == 'X') || (frameDim > 1 && histLabel == 'Y') || (frameDim == 3 && histLabel == 'Z');
               if (is_graph_1d<data_type>() && histLabel == 'X') {
                 // the frame of a graph is an empty histogram whose bins mean nothing: its x axis is set to the user values instead of
                 // the edges of the bins containing them (the y range is the minimum and maximum, as for every 1d frame)
@@ -1264,7 +1265,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
             // a log scale needs a positive range: ROOT otherwise complains and draws nothing (or the data outside of the frame)
             if (!pad_ptr->GetView()) {
-              const bool isDependentAxis = (histLabel == ((isTHN) ? 'Z' : 'Y'));
+              const bool isDependentAxis = (histLabel == (frameDim > 1 ? 'Z' : 'Y'));
               const bool isLog = (axisLabel == 'X') ? pad_ptr->GetLogx() : ((axisLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
               auto disableLog = [&]() {
                 if (axisLabel == 'X')
@@ -1289,7 +1290,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     logger::warning("Log scale of {} axis in pad {} ignored: the data has no positive values.", axisLabel, padID);
                     disableLog();
                   }
-                } else if (!isTHN && ((axisHist_ptr->GetMinimumStored() != -1111) ? (axisHist_ptr->GetMinimumStored() <= 0.) : (axisHist_ptr->GetMinimum() < 0.))) {
+                } else if (frameDim == 1 && ((axisHist_ptr->GetMinimumStored() != -1111) ? (axisHist_ptr->GetMinimumStored() <= 0.) : (axisHist_ptr->GetMinimum() < 0.))) {
                   // ROOT cannot draw a log axis from a stored minimum at or below zero or from negative contents (zero contents it skips itself);
                   // a 2d frame gets ROOT's floor for log z below, whether its minimum is stored or not
                   axisHist_ptr->SetMinimum(0.5 * positiveMinimum);
@@ -1407,7 +1408,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             polargram->SetLineColor(radius->GetAxisColor());
           }
 
-          if (isTHN) {
+          if (frameDim > 1) {
             // reset the axis histogram which owns the z axis, while keeping default range defined by the data
             double_t min = axisHist_ptr->GetMinimum();
             double_t max = axisHist_ptr->GetMaximum();
@@ -1427,7 +1428,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (!userMaxZ) max = std::max(max, graphRangeZ.second);
             }
             bool contentRange{};
-            if (isTH3) {
+            if (frameDim == 3) {
               // the content of a 3d histogram is the C axis: its range is the minimum and maximum, which give the colours (and the sizes) of the
               // boxes, also of the data drawn later (it takes them from the frame); its title is the part of the z title after ';' (ROOT's place
               // for the title of the colour scale of a 3d histogram)
@@ -1512,9 +1513,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             const bool keep = data->GetKeepInputStyle();
             auto fromPad = [keep](auto value) { return (keep) ? decltype(value){} : value; };
             if (auto markerColor = get_first(data->GetMarkerColor(),
-                                             fromPad(pick(defaultSettingIndices[0], pad.GetDefaultMarkerColors())),
-                                             fromPad(pick(defaultSettingIndices[0], padDefaults.GetDefaultMarkerColors())))) {
-              if (!data->GetMarkerColor()) defaultSettingIndices[0]++;
+                                             fromPad(pick(usedDefaults.markerColor, pad.GetDefaultMarkerColors())),
+                                             fromPad(pick(usedDefaults.markerColor, padDefaults.GetDefaultMarkerColors())))) {
+              if (!data->GetMarkerColor()) usedDefaults.markerColor++;
               data_ptr->SetMarkerColor(markerColor->ToIndex());
             }
             if (auto markerAlpha = get_first(data->GetMarkerAlpha(),
@@ -1523,9 +1524,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               data_ptr->SetMarkerColor(TColor::GetColorTransparent(data_ptr->GetMarkerColor(), *markerAlpha));
             }
             if (auto markerStyle = get_first(data->GetMarkerStyle(),
-                                             fromPad(pick(defaultSettingIndices[1], pad.GetDefaultMarkerStyles())),
-                                             fromPad(pick(defaultSettingIndices[1], padDefaults.GetDefaultMarkerStyles())))) {
-              if (!data->GetMarkerStyle()) defaultSettingIndices[1]++;
+                                             fromPad(pick(usedDefaults.markerStyle, pad.GetDefaultMarkerStyles())),
+                                             fromPad(pick(usedDefaults.markerStyle, padDefaults.GetDefaultMarkerStyles())))) {
+              if (!data->GetMarkerStyle()) usedDefaults.markerStyle++;
               data_ptr->SetMarkerStyle(*markerStyle);
             }
             if (auto markerSize = get_first(data->GetMarkerSize(),
@@ -1537,9 +1538,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (alias == boxes_nomarkers || alias == band || alias == band_smooth) data_ptr->SetMarkerSize(0.);  // E2, E5 and E6 always draw the markers
             }
             if (auto lineColor = get_first(data->GetLineColor(),
-                                           fromPad(pick(defaultSettingIndices[2], pad.GetDefaultLineColors())),
-                                           fromPad(pick(defaultSettingIndices[2], padDefaults.GetDefaultLineColors())))) {
-              if (!data->GetLineColor()) defaultSettingIndices[2]++;
+                                           fromPad(pick(usedDefaults.lineColor, pad.GetDefaultLineColors())),
+                                           fromPad(pick(usedDefaults.lineColor, padDefaults.GetDefaultLineColors())))) {
+              if (!data->GetLineColor()) usedDefaults.lineColor++;
               data_ptr->SetLineColor(lineColor->ToIndex());
             }
             if (auto lineAlpha = get_first(data->GetLineAlpha(),
@@ -1548,9 +1549,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), *lineAlpha));
             }
             if (auto lineStyle = get_first(data->GetLineStyle(),
-                                           fromPad(pick(defaultSettingIndices[3], pad.GetDefaultLineStyles())),
-                                           fromPad(pick(defaultSettingIndices[3], padDefaults.GetDefaultLineStyles())))) {
-              if (!data->GetLineStyle()) defaultSettingIndices[3]++;
+                                           fromPad(pick(usedDefaults.lineStyle, pad.GetDefaultLineStyles())),
+                                           fromPad(pick(usedDefaults.lineStyle, padDefaults.GetDefaultLineStyles())))) {
+              if (!data->GetLineStyle()) usedDefaults.lineStyle++;
               data_ptr->SetLineStyle(*lineStyle);
             }
             // the cells of a flat polar drawing are outlined with the line width: only a width the data sets itself outlines them (colz has no outlines)
@@ -1570,9 +1571,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               data_ptr->SetLineWidth(*lineWidth);
             }
             if (auto fillColor = get_first(data->GetFillColor(),
-                                           fromPad(pick(defaultSettingIndices[4], pad.GetDefaultFillColors())),
-                                           fromPad(pick(defaultSettingIndices[4], fillDefaults(pad, *data))))) {
-              if (!data->GetFillColor()) defaultSettingIndices[4]++;
+                                           fromPad(pick(usedDefaults.fillColor, pad.GetDefaultFillColors())),
+                                           fromPad(pick(usedDefaults.fillColor, fillDefaults(pad, *data))))) {
+              if (!data->GetFillColor()) usedDefaults.fillColor++;
               data_ptr->SetFillColor(fillColor->ToIndex());
             }
             if (auto fillAlpha = get_first(data->GetFillAlpha(),
@@ -1581,9 +1582,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               data_ptr->SetFillColor(TColor::GetColorTransparent(data_ptr->GetFillColor(), *fillAlpha));
             }
             if (auto fillStyle = get_first(data->GetFillStyle(),
-                                           fromPad(pick(defaultSettingIndices[5], pad.GetDefaultFillStyles())),
-                                           fromPad(pick(defaultSettingIndices[5], padDefaults.GetDefaultFillStyles())))) {
-              if (!data->GetFillStyle()) defaultSettingIndices[5]++;
+                                           fromPad(pick(usedDefaults.fillStyle, pad.GetDefaultFillStyles())),
+                                           fromPad(pick(usedDefaults.fillStyle, padDefaults.GetDefaultFillStyles())))) {
+              if (!data->GetFillStyle()) usedDefaults.fillStyle++;
               data_ptr->SetFillStyle(*fillStyle);
             }
             if constexpr (is_hist_1d<data_type>() || is_func_1d<data_type>()) {
@@ -1596,7 +1597,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
           }
 
-          // now define data ranges
+          // data ranges
           double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0;
           pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
           if (pad_ptr->GetLogx()) {
@@ -1694,7 +1695,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
             // colour levels: the frame, whose colour scale is drawn (and from which COL drawn SAME takes its colours), takes those of the first
             // 2d or 3d histogram of the pad, the one it is made from, also fewer than ROOT's 20, so that the scale shows the levels of the map; levels of later data
-            // (e.g. contour lines over a map) are their own, the frame only gets more levels from them as before
+            // (e.g. contour lines over a map) are their own, the frame takes them only if they are more
             const bool firstMap = !mapDrawn;
             mapDrawn = true;
             const auto& contours = data->GetContours();
@@ -2482,8 +2483,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
               return inputValue;
             };
-            const int16_t fillStyle = drawnFill(data->GetFillStyle(), defaultSettingIndices[5], pad.GetDefaultFillStyles(), padDefaults.GetDefaultFillStyles(), data_ptr->GetFillStyle());
-            const color_t fillColor = drawnFill(data->GetFillColor(), defaultSettingIndices[4], pad.GetDefaultFillColors(), fillDefaults(pad, *data), data_ptr->GetFillColor());
+            const int16_t fillStyle = drawnFill(data->GetFillStyle(), usedDefaults.fillStyle, pad.GetDefaultFillStyles(), padDefaults.GetDefaultFillStyles(), data_ptr->GetFillStyle());
+            const color_t fillColor = drawnFill(data->GetFillColor(), usedDefaults.fillColor, pad.GetDefaultFillColors(), fillDefaults(pad, *data), data_ptr->GetFillColor());
             if (fillStyle != 0 && fillColor != 0) {
               optionAlias = (isHist) ? hist : area;
             } else if (data->GetMarkerStyle() || data->GetMarkerSize() || HasErrors(data_ptr)) {
@@ -2686,9 +2687,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       }
     }
 
-    bool redrawAxes = (pad.GetRedrawAxes())
-                        ? *pad.GetRedrawAxes()
-                        : ((padDefaults.GetRedrawAxes()) ? *padDefaults.GetRedrawAxes() : false);
+    const bool redrawAxes = get_first_or(false, pad.GetRedrawAxes(), padDefaults.GetRedrawAxes());
     if (polarFrame) {
       // the radial axis of a flat polar drawing: below the disc, from the centre to the right edge (the radius is measured from the centre),
       // with the attributes and the title of the y axis
@@ -3626,59 +3625,40 @@ TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<dou
  * Function to warn user if incompatible text font and size were used.
  */
 //**************************************************************************************************
-bool PlotPainter::CheckFontSizes(TList* list)
+void PlotPainter::CheckFontSizes(TList* list)
 {
-  auto checkCompat = [](int16_t textFont, float_t textSize, TObject* obj) {
-    if (textSize) {
-      if (textFont % 10 <= 2) {
-        if (textSize >= 1.f) {
-          logger::warning("Though text font {} implies a relative text size it is set to {} for {}.", textFont, textSize, obj->GetName());
-          return false;
-        }
-      } else {
-        if (textSize <= 1.f) {
-          logger::warning("Though text font {} implies a text size in pixel it is set to {} for {}.", textFont, textSize, obj->GetName());
-          return false;
+  auto compatible = [](int16_t textFont, float_t textSize, TObject* obj) {
+    if (!textSize) return true;
+    if (textFont % 10 <= 2 && textSize >= 1.f) {
+      logger::warning("Though text font {} implies a relative text size it is set to {} for {}.", textFont, textSize, obj->GetName());
+      return false;
+    }
+    if (textFont % 10 > 2 && textSize <= 1.f) {
+      logger::warning("Though text font {} implies a text size in pixel it is set to {} for {}.", textFont, textSize, obj->GetName());
+      return false;
+    }
+    return true;
+  };
+  // stops at the first incompatible setting (one wrong default would otherwise warn for every text)
+  std::function<bool(TList*)> check = [&](TList* primitives) {
+    if (!primitives) return true;
+    for (TObject* obj : *primitives) {
+      auto* pad = dynamic_cast<TPad*>(obj);
+      auto* leg = dynamic_cast<TLegend*>(obj);
+      auto* txt = dynamic_cast<TAttText*>(obj);
+      auto* h = dynamic_cast<TH1*>(obj);
+      if (pad && !check(pad->GetListOfPrimitives())) return false;
+      if (leg && !check(leg->GetListOfPrimitives())) return false;
+      if (txt && !compatible(txt->GetTextFont(), txt->GetTextSize(), obj)) return false;
+      if (h && TString(h->GetName()).BeginsWith("axis_hist")) {
+        for (TAxis* ax : {h->GetXaxis(), h->GetYaxis(), h->GetZaxis()}) {
+          if (!compatible(ax->GetLabelFont(), ax->GetLabelSize(), ax) || !compatible(ax->GetTitleFont(), ax->GetTitleSize(), ax)) return false;
         }
       }
     }
     return true;
   };
-
-  if (!list) return false;
-  TIter next(list);
-  TObject* obj = nullptr;
-  bool valid = true;
-  while ((obj = next())) {
-    if (auto pad = dynamic_cast<TPad*>(obj)) {
-      valid = valid && CheckFontSizes(pad->GetListOfPrimitives());
-    }
-    if (auto leg = dynamic_cast<TLegend*>(obj)) {
-      valid = valid && CheckFontSizes(leg->GetListOfPrimitives());
-    }
-    if (auto txt = dynamic_cast<TAttText*>(obj)) {
-      valid = valid && checkCompat(txt->GetTextFont(), txt->GetTextSize(), obj);
-    }
-    if (auto h = dynamic_cast<TH1*>(obj)) {
-      TString name = h->GetName();
-      if (name.BeginsWith("axis_hist")) {
-        if (auto ax = h->GetXaxis()) {
-          valid = valid && checkCompat(ax->GetLabelFont(), ax->GetLabelSize(), ax);
-          valid = valid && checkCompat(ax->GetTitleFont(), ax->GetTitleSize(), ax);
-        }
-        if (auto ax = h->GetYaxis()) {
-          valid = valid && checkCompat(ax->GetLabelFont(), ax->GetLabelSize(), ax);
-          valid = valid && checkCompat(ax->GetTitleFont(), ax->GetTitleSize(), ax);
-        }
-        if (auto ax = h->GetZaxis()) {
-          valid = valid && checkCompat(ax->GetLabelFont(), ax->GetLabelSize(), ax);
-          valid = valid && checkCompat(ax->GetTitleFont(), ax->GetTitleSize(), ax);
-        }
-      }
-    }
-    if (!valid) break;
-  }
-  return valid;
+  check(list);
 }
 
 //**************************************************************************************************
@@ -4012,10 +3992,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     using BoxType = std::decay_t<decltype(*box)>;
     constexpr bool isLegend = std::is_same_v<BoxType, Plot::Pad::LegendBox>;
 
-    auto textColor{box->GetTextColor()};
-    auto textAlpha{box->GetTextAlpha()};
-    auto textFont{box->GetTextFont()};
-    auto textSize{box->GetTextSize()};
+    const float_t textSize = box->GetTextSize().value_or(24.f);
+    const int16_t textFont = box->GetTextFont().value_or(43);
 
     // the drawn data a legend row refers to (named "<number of the data in the pad>:<name>" when drawn), in this pad or in another one
     // (with the option it is drawn with, which TObject::GetDrawOption finds only in the current pad)
@@ -4040,16 +4018,13 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     vector<string> lines;
     if constexpr (isLegend) {
-      std::for_each(box->GetEntries().begin(), box->GetEntries().end(),
-                    [&lines](const auto& entry) {
-                      (entry.GetLabel()) ? lines.push_back(*entry.GetLabel()) : lines.push_back("");
-                    });
+      for (const auto& entry : box->GetEntries()) {
+        lines.push_back(entry.GetLabel().value_or(""));
+      }
     } else {
       lines = box->GetLines();
     }
 
-    float_t text_size = textSize.value_or(24.f);
-    int16_t text_font = textFont.value_or(43);
     uint8_t nColumns{1u};
     bool orderTopDown{false};
     if constexpr (isLegend) {
@@ -4064,8 +4039,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     if (orderTopDown) nColumns = (nLines + nRows - 1) / nRows;
     auto columnOf = [&](uint16_t lineID) { return (orderTopDown) ? lineID / nRows : lineID % nColumns; };
 
-    int32_t padWidthPixel = pad->XtoPixel(pad->GetX2());
-    int32_t padHeightPixel = pad->YtoPixel(pad->GetY1());
+    const double_t padWidthPixel = pad->XtoPixel(pad->GetX2());
+    const double_t padHeightPixel = pad->YtoPixel(pad->GetY1());
 
     // determine max width and height of legend entries
     double_t contentWidthPixel{};
@@ -4073,17 +4048,17 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     vector<uint32_t> contentWidthPixelPerColumn(nColumns, 1);
 
     // a pixel size (precision 3) is stored unscaled (ApplyScale multiplies it later), a size relative to the pad already scales with it
-    double_t lineHeightPixel = (text_font % 10 <= 2) ? GetTextSizePixel(text_size) : mScale * text_size;
-    [[maybe_unused]] const double_t textHeightPixel = lineHeightPixel;  // of the text size set (lines with sub- or superscripts are higher)
+    const double_t textHeightPixel = (textFont % 10 <= 2) ? GetTextSizePixel(textSize) : mScale * textSize;  // lines with sub- or superscripts are higher
+    double_t lineHeightPixel = textHeightPixel;
 
-    uint8_t lineID{};
+    uint16_t lineID{};
     for (auto& line : lines) {
-      auto line_text_font = text_font;
-      auto line_text_size = text_size;
+      auto lineTextFont = textFont;
+      auto lineTextSize = textSize;
       if constexpr (isLegend) {
         const auto& entry = box->GetEntries()[lineID];
-        if (entry.GetTextFont()) line_text_font = *entry.GetTextFont();
-        if (entry.GetTextSize()) line_text_size = *entry.GetTextSize();
+        if (entry.GetTextFont()) lineTextFont = *entry.GetTextFont();
+        if (entry.GetTextSize()) lineTextSize = *entry.GetTextSize();
         if (entry.GetRefDataID()) {
           if (TObject* data_ptr = findData(*entry.GetRefDataID(), entry.GetRefPadID())) {
             if (auto source = mSourceHists.find(data_ptr); source != mSourceHists.end()) {
@@ -4100,8 +4075,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
       // determine width and height of line to find max width and height (per column)
       TLatex textLine(0, 0, line.data());
-      textLine.SetTextFont(line_text_font);
-      textLine.SetTextSize(line_text_size);
+      textLine.SetTextFont(lineTextFont);
+      textLine.SetTextSize(lineTextSize);
       auto [width, height] = GetTextDimensions(textLine, pad);
       if (height > lineHeightPixel) lineHeightPixel = height;
       if (auto& columnWidth = contentWidthPixelPerColumn[columnOf(lineID)]; width > columnWidth) {
@@ -4114,27 +4089,26 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     }
     uint32_t symbolColWidthPixel{0};
     if constexpr (isLegend) {
-      string markerDummyString = "-+-";  // defines width of marker
-      TLatex markerDummy(0, 0, markerDummyString.data());
-      markerDummy.SetTextFont(text_font);
-      markerDummy.SetTextSize(text_size);
+      TLatex markerDummy(0, 0, "-+-");  // defines width of marker
+      markerDummy.SetTextFont(textFont);
+      markerDummy.SetTextSize(textSize);
       auto [w, h] = GetTextDimensions(markerDummy, pad);
       symbolColWidthPixel = box->GetSymbolColScale().value_or(1.) * w;
 
       if (const auto& title = box->GetTitle()) {
         TLatex textLine(0, 0, (*title).data());
-        textLine.SetTextFont(text_font);
-        textLine.SetTextSize(text_size);
+        textLine.SetTextFont(textFont);
+        textLine.SetTextSize(textSize);
         auto [width, height] = GetTextDimensions(textLine, pad);
         titleWidthPixel = width;
         if (height > lineHeightPixel) lineHeightPixel = height;
       }
     }
 
-    double_t contentWidthNDC = (double_t)contentWidthPixel / padWidthPixel;
-    double_t lineHeightNDC = (double_t)lineHeightPixel / padHeightPixel;
-    double_t symbolColWidthNDC = (double_t)symbolColWidthPixel / padWidthPixel;
-    double_t titleWidthNDC = (double_t)titleWidthPixel / padWidthPixel;
+    double_t contentWidthNDC = contentWidthPixel / padWidthPixel;
+    double_t lineHeightNDC = lineHeightPixel / padHeightPixel;
+    double_t symbolColWidthNDC = symbolColWidthPixel / padWidthPixel;
+    double_t titleWidthNDC = titleWidthPixel / padWidthPixel;
     double_t borderWidthNDC = mScale * box->GetBorderWidth().value_or(0.) / padWidthPixel;
 
     double_t totalWidthNDC{};
@@ -4197,12 +4171,10 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       legend->SetTextAlign(kHAlignLeft + kVAlignCenter);
       legend->SetNColumns(nColumns);
       legend->SetColumnSeparation(static_cast<float_t>(relColumnSeparation));
-      legend->SetTextFont(text_font);
-      legend->SetTextSize(text_size);
-      if (textColor) legend->SetTextColor(textColor->ToIndex());
-      if (textAlpha) legend->SetTextColor(TColor::GetColorTransparent(legend->GetTextColor(), *textAlpha));
-      if (textSize) legend->SetTextSize(*textSize);
-      if (textFont) legend->SetTextFont(*textFont);
+      legend->SetTextFont(textFont);
+      legend->SetTextSize(textSize);
+      if (const auto& textColor = box->GetTextColor()) legend->SetTextColor(textColor->ToIndex());
+      if (const auto& textAlpha = box->GetTextAlpha()) legend->SetTextColor(TColor::GetColorTransparent(legend->GetTextColor(), *textAlpha));
 
       if (auto title = box->GetTitle()) {
         string center = (nColumns > 1) ? "c" : "";
@@ -4239,48 +4211,29 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), symbolElements.data());
         }
 
-        // override data attributes with default values if requested
+        // the attributes of the data, overridden by the defaults of the box and by those of the entry
         curEntry->SetMarkerColor(markerAttr.GetMarkerColor());
-        if (box->GetDefaultMarkerColor()) {
-          curEntry->SetMarkerColor(box->GetDefaultMarkerColor()->ToIndex());
-        }
-        if (box->GetDefaultMarkerAlpha()) {
-          curEntry->SetMarkerColor(TColor::GetColorTransparent(curEntry->GetMarkerColor(), *box->GetDefaultMarkerAlpha()));
-        }
         curEntry->SetMarkerStyle(markerAttr.GetMarkerStyle());
-        if (box->GetDefaultMarkerStyle()) {
-          curEntry->SetMarkerStyle(*box->GetDefaultMarkerStyle());
-        }
         curEntry->SetMarkerSize(markerAttr.GetMarkerSize());
-        if (box->GetDefaultMarkerSize()) {
-          curEntry->SetMarkerSize(*box->GetDefaultMarkerSize());
-        }
         curEntry->SetLineColor(lineAttr.GetLineColor());
-        if (box->GetDefaultLineColor()) {
-          curEntry->SetLineColor(box->GetDefaultLineColor()->ToIndex());
-        }
-        if (box->GetDefaultLineAlpha()) {
-          curEntry->SetLineColor(TColor::GetColorTransparent(curEntry->GetLineColor(), *box->GetDefaultLineAlpha()));
-        }
         curEntry->SetLineStyle(lineAttr.GetLineStyle());
-        if (box->GetDefaultLineStyle()) {
-          curEntry->SetLineStyle(*box->GetDefaultLineStyle());
-        }
         curEntry->SetLineWidth(lineAttr.GetLineWidth());
-        if (box->GetDefaultLineWidth()) {
-          curEntry->SetLineWidth(*box->GetDefaultLineWidth());
-        }
         curEntry->SetFillColor(fillAttr.GetFillColor());
-        if (box->GetDefaultFillColor()) {
-          curEntry->SetFillColor(box->GetDefaultFillColor()->ToIndex());
-        }
-        if (box->GetDefaultFillAlpha()) {
-          curEntry->SetFillColor(TColor::GetColorTransparent(curEntry->GetFillColor(), *box->GetDefaultFillAlpha()));
-        }
         curEntry->SetFillStyle(fillAttr.GetFillStyle());
-        if (box->GetDefaultFillStyle()) {
-          curEntry->SetFillStyle(*box->GetDefaultFillStyle());
-        }
+
+        if (box->GetDefaultMarkerColor()) curEntry->SetMarkerColor(box->GetDefaultMarkerColor()->ToIndex());
+        if (box->GetDefaultMarkerAlpha()) curEntry->SetMarkerColor(TColor::GetColorTransparent(curEntry->GetMarkerColor(), *box->GetDefaultMarkerAlpha()));
+        if (box->GetDefaultMarkerStyle()) curEntry->SetMarkerStyle(*box->GetDefaultMarkerStyle());
+        if (box->GetDefaultMarkerSize()) curEntry->SetMarkerSize(*box->GetDefaultMarkerSize());
+
+        if (box->GetDefaultLineColor()) curEntry->SetLineColor(box->GetDefaultLineColor()->ToIndex());
+        if (box->GetDefaultLineAlpha()) curEntry->SetLineColor(TColor::GetColorTransparent(curEntry->GetLineColor(), *box->GetDefaultLineAlpha()));
+        if (box->GetDefaultLineStyle()) curEntry->SetLineStyle(*box->GetDefaultLineStyle());
+        if (box->GetDefaultLineWidth()) curEntry->SetLineWidth(*box->GetDefaultLineWidth());
+
+        if (box->GetDefaultFillColor()) curEntry->SetFillColor(box->GetDefaultFillColor()->ToIndex());
+        if (box->GetDefaultFillAlpha()) curEntry->SetFillColor(TColor::GetColorTransparent(curEntry->GetFillColor(), *box->GetDefaultFillAlpha()));
+        if (box->GetDefaultFillStyle()) curEntry->SetFillStyle(*box->GetDefaultFillStyle());
 
         if (entry.GetMarkerColor()) curEntry->SetMarkerColor(entry.GetMarkerColor()->ToIndex());
         if (entry.GetMarkerAlpha()) curEntry->SetMarkerColor(TColor::GetColorTransparent(curEntry->GetMarkerColor(), *entry.GetMarkerAlpha()));
@@ -4307,15 +4260,15 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       paveText->SetMargin(relMarginWidth);
       paveText->SetTextAlign(box->GetTextAlign().value_or(kHAlignLeft + kVAlignCenter));
       paveText->SetBorderSize(1);
-      paveText->SetTextFont(text_font);
-      paveText->SetTextSize(text_size);
-      if (textColor) paveText->SetTextColor(textColor->ToIndex());
-      if (textAlpha) paveText->SetTextColor(TColor::GetColorTransparent(paveText->GetTextColor(), *textAlpha));
+      paveText->SetTextFont(textFont);
+      paveText->SetTextSize(textSize);
+      if (const auto& textColor = box->GetTextColor()) paveText->SetTextColor(textColor->ToIndex());
+      if (const auto& textAlpha = box->GetTextAlpha()) paveText->SetTextColor(TColor::GetColorTransparent(paveText->GetTextColor(), *textAlpha));
 
       for (const auto& line : lines) {
         TText* text = paveText->AddText(line.data());
-        text->SetTextFont(text_font);
-        text->SetTextSize(text_size);
+        text->SetTextFont(textFont);
+        text->SetTextSize(textSize);
       }
       returnBox = paveText;
     }
