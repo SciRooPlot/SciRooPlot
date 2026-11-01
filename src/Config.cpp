@@ -25,6 +25,7 @@
 #include <boost/property_tree/info_parser.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -97,6 +98,16 @@ std::optional<int> Config::ParseColorMode(const string& name)
   if (name == "off") return ColorMode::off;
   return std::nullopt;
 }
+std::optional<double> Config::ParseScale(const string& value)
+{
+  try {
+    size_t parsed{};
+    const double scale = std::stod(value, &parsed);
+    if (parsed == value.size() && std::isfinite(scale) && scale > 0.) return scale;
+  } catch (const std::exception&) {
+  }
+  return std::nullopt;
+}
 
 Config::Config()
 {
@@ -138,55 +149,56 @@ void Config::LoadConfig()
   mProjectsFile = mPath / "projects.info";
   mSettingsFile = mPath / "settings.info";
 
-  // read global settings
+  // read global settings: the keys and values are those of the srp commands; a bad value is ignored on its own
   if (std::filesystem::exists(mSettingsFile)) {
+    ptree settingsTree;
     try {
-      ptree settingsTree;
       read_info(mSettingsFile, settingsTree);
-      for (auto& setting : settingsTree) {
-
-        if (setting.first == "verbosity") {
-          const int level = std::stoi(setting.second.data());
-          if (level < LogLevel::silent || level > LogLevel::debug) {
-            std::cerr << "Ignoring out-of-range verbosity " << level << " in " << mSettingsFile << "." << std::endl;
-          } else {
-            mLogLevel = level;
-          }
-          continue;
-        }
-        if (setting.first == "color") {
-          const int mode = std::stoi(setting.second.data());
-          if (mode < ColorMode::bright || mode > ColorMode::off) {
-            std::cerr << "Ignoring out-of-range color " << mode << " in " << mSettingsFile << "." << std::endl;
-          } else {
-            mColorMode = mode;
-          }
-          continue;
-        }
-        if (setting.first == "plot_mode") {
-          mPlotMode = setting.second.data();
-          continue;
-        }
-        if (setting.first == "match_case_insensitive") {
-          mMatchCaseInsensitive = setting.second.get_value<bool>();
-          continue;
-        }
-        if (setting.first == "match_contains") {
-          mMatchContains = setting.second.get_value<bool>();
-          continue;
-        }
-        if (setting.first == "screen_scale" || setting.first == "bitmap_scale") {
-          const double scale = setting.second.get_value<double>();
-          if (!(scale > 0.)) {
-            std::cerr << "Ignoring invalid " << setting.first << " " << scale << " in " << mSettingsFile << "." << std::endl;
-          } else {
-            (setting.first == "screen_scale" ? mScreenScale : mBitmapScale) = scale;
-          }
-          continue;
-        }
-      }
     } catch (const std::exception& e) {
       std::cerr << "Cannot load settings file " << mSettingsFile << ": " << e.what() << ". Using default settings." << std::endl;
+    }
+    for (const auto& [key, node] : settingsTree) {
+      const string value = node.data();
+      bool valid = true;
+      if (key == "verbosity") {
+        if (auto level = ParseLogLevel(value))
+          mLogLevel = *level;
+        else
+          valid = false;
+      } else if (key == "color") {
+        if (auto mode = ParseColorMode(value))
+          mColorMode = *mode;
+        else
+          valid = false;
+      } else if (key == "plotmode") {
+        if (value == "list" || is_valid_plot_mode(value))
+          mPlotMode = value;
+        else
+          valid = false;
+      } else if (key == "matchmode") {
+        if (value == "exact" || value == "contains")
+          mMatchContains = (value == "contains");
+        else
+          valid = false;
+      } else if (key == "matchcase") {
+        if (value == "sensitive" || value == "insensitive")
+          mMatchCaseInsensitive = (value == "insensitive");
+        else
+          valid = false;
+      } else if (key == "screenscale" || key == "bitmapscale") {
+        if (auto scale = ParseScale(value))
+          (key == "screenscale" ? mScreenScale : mBitmapScale) = *scale;
+        else
+          valid = false;
+      } else {
+        std::cerr << "Ignoring unknown setting " << key << " in " << mSettingsFile << "." << std::endl;
+        mModified = true;  // the file is written again without it
+        continue;
+      }
+      if (!valid) {
+        std::cerr << "Ignoring invalid " << key << " '" << value << "' in " << mSettingsFile << " (srp " << key << " sets it)." << std::endl;
+        mModified = true;  // the file is written again with the default
+      }
     }
   }
 
@@ -234,13 +246,13 @@ bool Config::Save()
 
   // save settings tree
   ptree settingsTree;
-  settingsTree.add("verbosity", mLogLevel);
-  settingsTree.add("color", mColorMode);
-  settingsTree.add("plot_mode", mPlotMode);
-  settingsTree.add("match_case_insensitive", mMatchCaseInsensitive);
-  settingsTree.add("match_contains", mMatchContains);
-  settingsTree.add("screen_scale", mScreenScale);
-  settingsTree.add("bitmap_scale", mBitmapScale);
+  settingsTree.add("verbosity", LogLevelName(mLogLevel));
+  settingsTree.add("color", ColorModeName(mColorMode));
+  settingsTree.add("plotmode", mPlotMode);
+  settingsTree.add("matchmode", mMatchContains ? "contains" : "exact");
+  settingsTree.add("matchcase", mMatchCaseInsensitive ? "insensitive" : "sensitive");
+  settingsTree.add("screenscale", mScreenScale);
+  settingsTree.add("bitmapscale", mBitmapScale);
   const bool savedSettings = write(SettingsFile(), settingsTree);
 
   // save projects tree

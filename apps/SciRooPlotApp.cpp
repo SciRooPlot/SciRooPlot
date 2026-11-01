@@ -45,12 +45,14 @@
 #include <filesystem>
 #include <functional>
 #include <iostream>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "Config.h"
 #include "Validation.h"
+#include "util/ScopeGuard.h"
 
 using boost::property_tree::ptree;
 using std::string;
@@ -98,6 +100,10 @@ int main(int argc, char* argv[])
     }
     if (vm.count("project")) {
       project = vm["project"].as<string>();
+      if (project == "@current" && command == "add") {
+        logger::error("A project cannot be called @current.");
+        return 1;
+      }
       if (project == "@current") {
         project = Config::Get().CurrentProject();
         if (project.empty()) {
@@ -198,7 +204,14 @@ int main(int argc, char* argv[])
     canvas->Update();
     if (!fileName.empty()) {
       canvas->SetCanvasSize(800, 800);  // the drawing area, without the window frame
+      std::error_code removeError;
+      std::filesystem::remove(fileName, removeError);  // ROOT reports a failed write but returns nothing: the file must be new
       canvas->SaveAs(fileName.data());
+      std::error_code existsError;
+      if (!std::filesystem::is_regular_file(fileName, existsError)) {
+        logger::error("Could not write the colour wheel to {}.", fileName);
+        return 1;
+      }
       return 0;
     }
     canvas->ToggleEventStatus();  // the status bar names the colour under the mouse
@@ -256,22 +269,15 @@ int main(int argc, char* argv[])
       return 1;
     }
   } else if (command == "screenscale" || command == "bitmapscale") {
-    double scale{};
-    try {
-      size_t parsed{};
-      scale = std::stod(project, &parsed);
-      if (parsed != project.size()) scale = 0.;
-    } catch (const std::exception&) {
-      scale = 0.;
-    }
-    if (!(scale > 0.)) {
+    const auto scale = Config::ParseScale(project);
+    if (!scale) {
       logger::error("Invalid {} '{}' (positive number, e.g. 1.5).", command, project);
       return 1;
     }
     if (command == "screenscale") {
-      Config::GetMutable().SetScreenScale(scale);
+      Config::GetMutable().SetScreenScale(*scale);
     } else {
-      Config::GetMutable().SetBitmapScale(scale);
+      Config::GetMutable().SetBitmapScale(*scale);
     }
   } else if (command == "info") {
     auto getenv = [](const char* name) {
@@ -332,10 +338,14 @@ int main(int argc, char* argv[])
       logger::error("Cannot find project {}.", project);
       return 1;
     }
-    if (property == "program") {
-      std::cout << Config::Get().Program(project) << std::endl;
-    } else if (property == "outdir") {
-      std::cout << Config::Get().OutputDir(project) << std::endl;
+    if (property.empty()) {
+      logger::error("Specify a property of {}.", project);
+      return 1;
+    }
+    if (property == "program" || property == "outdir") {
+      const string path = (property == "program") ? Config::Get().Program(project) : Config::Get().OutputDir(project);
+      if (path.empty() && !Config::Get().Property(project, property).empty()) return 1;  // the path could not be expanded (reported)
+      std::cout << path << std::endl;
     } else {
       std::cout << Config::Get().Property(project, property) << std::endl;
     }
@@ -367,9 +377,24 @@ bool PrintRootFileContents(const string& inputPath)
     fileName = inputPath.substr(0, pos);
     startPath = inputPath.substr(pos + 1);
   }
-  TFile inputFile(fileName.data(), "READ");
-  if (inputFile.IsZombie()) {
+  while (!startPath.empty() && startPath.back() == '/')
+    startPath.pop_back();
+  if (fileName.empty()) {
+    logger::error("Specify a file: srp print <file>[:<path>].");
+    return false;
+  }
+  std::error_code existsError;
+  if (!std::filesystem::exists(fileName, existsError)) {
     logger::error("Could not find file {}.", fileName);
+    return false;
+  }
+  std::unique_ptr<TFile> inputFile;
+  {
+    auto quiet = util::ignore_root_messages_below(kFatal);  // a file that is not a ROOT file is reported below
+    inputFile.reset(TFile::Open(fileName.data(), "READ"));
+  }
+  if (!inputFile || inputFile->IsZombie()) {
+    logger::error("Cannot read {}: srp print lists the contents of ROOT files.", fileName);
     return false;
   }
 
@@ -404,7 +429,7 @@ bool PrintRootFileContents(const string& inputPath)
     return current;
   };
 
-  TObject* root = &inputFile;
+  TObject* root = inputFile.get();
   if (!startPath.empty()) {
     root = findObject(root, startPath);
     if (!root) {
@@ -412,6 +437,18 @@ bool PrintRootFileContents(const string& inputPath)
       return false;
     }
   }
+
+  auto printBranches = [](TObject* object) {
+    auto* tree = dynamic_cast<TTree*>(object);
+    if (!tree) return;
+    TIter next(tree->GetListOfBranches());
+    while (auto* branch = static_cast<TBranch*>(next())) {
+      TClass* branchClass = nullptr;
+      EDataType branchType = kOther_t;
+      branch->GetExpectedType(branchClass, branchType);
+      logger::print("  -> {} ({})", branch->GetName(), branchClass ? branchClass->GetName() : TDataType::GetTypeName(branchType));
+    }
+  };
 
   std::function<void(TObject*, const string&)> loopData =
     [&](TObject* object, const string& path) {
@@ -421,6 +458,7 @@ bool PrintRootFileContents(const string& inputPath)
         const auto slashPos = path.rfind('/');
         if (slashPos != string::npos) logger::print("{}/", path.substr(0, slashPos));
         logger::print("- [{}] {}", object->ClassName(), path.substr((slashPos == string::npos) ? 0 : slashPos + 1));
+        printBranches(object);
         return;
       }
       bool printedPath = false;
@@ -448,18 +486,7 @@ bool PrintRootFileContents(const string& inputPath)
           }
           logger::print("- [{}] {}", obj->ClassName(), name);
         }
-        if (auto* tree = dynamic_cast<TTree*>(obj)) {
-          TObjArray* branches = tree->GetListOfBranches();
-          TIter bnext(branches);
-          TBranch* br = nullptr;
-          while ((br = static_cast<TBranch*>(bnext()))) {
-            TClass* branchClass = nullptr;
-            EDataType branchType = kOther_t;
-            br->GetExpectedType(branchClass, branchType);
-            string typeName = branchClass ? branchClass->GetName() : TDataType::GetTypeName(branchType);
-            logger::print("  -> {} ({})", br->GetName(), typeName);
-          }
-        }
+        printBranches(obj);
         if (ownsObj) delete obj;
       }
     };

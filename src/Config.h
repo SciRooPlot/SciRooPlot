@@ -45,6 +45,9 @@ class Config
   static std::string ColorModeName(int mode);
   static std::optional<int> ParseColorMode(const std::string& name);
 
+  // a screen or bitmap scale: a finite positive number
+  static std::optional<double> ParseScale(const std::string& value);
+
   int Verbosity() const { return mLogLevel; }
   int Color() const { return mColorMode; }
   const std::string& PlotMode() const { return mPlotMode; }

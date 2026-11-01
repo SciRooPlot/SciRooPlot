@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "Config.h"
+#include "Validation.h"
 #include "util/Regex.h"
 
 using std::string;
@@ -76,6 +77,10 @@ int main(int argc, char* argv[])
     }
 
     if (mode.empty()) mode = Config::Get().PlotMode();
+    if (mode != "list" && !is_valid_plot_mode(mode)) {  // before the plots are looked up: also when none match
+      logger::error("Invalid plot mode '{}' ({} | list).", mode, plot_modes_description());
+      return 1;
+    }
 
     if (group.empty() || name.empty()) {
       logger::error("Specify the group and the name of the plots: plot <group> <name> [<mode>] (e.g. plot myGroup .+ pdf).");

@@ -322,7 +322,8 @@ class PlotPainter
   bool PlaceZTitle(TPad* pad, TAxis* zAxis, const std::vector<label_range_t>& ranges);
   static std::optional<float_t> LayoutValue(const Plot::Pad& pad, const Plot::Pad& padDefaults, const std::string& key);
   static std::vector<const Plot::Pad::Axis*> AxisSettings(const Plot::Pad& pad, const Plot::Pad& padDefaults, char axisLabel);
-  static bool ProfileMeans(data_ptr_t& data);
+  bool ProfileMeans(data_ptr_t& data);
+  void MoveProjectionTitles(const TObject* from, const TObject* to);
   void DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID);
   static bool IsHBarFrame(TPad* pad, const TH1* frame);
   static bool IsViewFrame(TPad* pad, const TH1* frame);

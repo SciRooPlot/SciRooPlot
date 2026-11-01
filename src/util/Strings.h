@@ -50,6 +50,11 @@ inline std::string plural(size_t n, const std::string& word, const std::string& 
   return fmt::format("{} {}{}", n, word, (n == 1) ? "" : suffix);
 }
 
+// empty or only whitespace
+inline bool is_blank(std::string_view str)
+{
+  return str.find_first_not_of(" \t\n\r") == std::string_view::npos;
+}
 inline bool str_contains(const std::string& str, const std::string& substr)
 {
   return (str.find(substr) != std::string::npos);

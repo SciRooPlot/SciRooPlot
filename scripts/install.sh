@@ -71,18 +71,18 @@ if [[ -f "${CACHE_FILE}" ]]; then
 
   CACHED_ENV_SCRIPT="${CACHED_PREFIX}/share/scirooplot/env.sh"
 
-  if [[ -f "${CACHED_ENV_SCRIPT}" ]]; then
-    # the CMake build has previously been installed.
-    if [[ "${PREFIX_SET}" -eq 1 && "${CACHED_PREFIX}" != "${INSTALL_PREFIX}" ]]; then
-      echo "Error: Existing installation uses a different install prefix:"
-      echo
-      echo "  Current:   ${CACHED_PREFIX}"
-      echo "  Requested: ${INSTALL_PREFIX}"
-      echo
-      echo "Run with --reinstall to configure with the new prefix."
-      exit 1
-    fi
+  if [[ "${PREFIX_SET}" -eq 1 && "${CACHED_PREFIX}" != "${INSTALL_PREFIX}" ]]; then
+    echo "Error: The build directory is configured for another install prefix:"
+    echo
+    echo "  Configured: ${CACHED_PREFIX}"
+    echo "  Requested:  ${INSTALL_PREFIX}"
+    echo
+    echo "Run with --reinstall to configure with the requested prefix."
+    exit 1
+  fi
 
+  if [[ -f "${CACHED_ENV_SCRIPT}" || "${PREFIX_SET}" -eq 1 ]]; then
+    # the CMake build has previously been installed (or the prefix to update was given)
     INSTALL_PREFIX="${CACHED_PREFIX}"
 
     echo "Existing SciRooPlot installation detected."

@@ -62,6 +62,7 @@ namespace SciRooPlot
 {
 using util::expand_path;
 using util::get_from_tree;
+using util::is_blank;
 using util::join_strings;
 using util::number_to_string;
 using util::put_in_tree;
@@ -1627,9 +1628,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mCandleOptionDefaults.whiskerRange) mCandleOptionDefaults.whiskerRange = pad.mCandleOptionDefaults.whiskerRange;
 
   if (pad.mPalette.colorGradient.rgbEndpoints) {
-    mPalette.colorGradient.rgbEndpoints = pad.mPalette.colorGradient.rgbEndpoints;
-    if (pad.mPalette.colorGradient.alpha) mPalette.colorGradient.alpha = pad.mPalette.colorGradient.alpha;
-    if (pad.mPalette.colorGradient.nColors) mPalette.colorGradient.nColors = pad.mPalette.colorGradient.nColors;
+    mPalette.colorGradient = pad.mPalette.colorGradient;  // a gradient comes with its own alpha and number of colours
     mPalette.index = nullopt;
   }
   if (pad.mPalette.index) {
@@ -2701,6 +2700,10 @@ void Plot::Pad::Data::data_info_t::set(const data_info_t& other)
       logger::throw_invalid_argument("Project needs at least one dimension.");
     }
   }
+  for (const auto& dim : other.dataDims) {
+    if (is_blank(dim.var)) logger::throw_invalid_argument("Empty expression for an axis of a projection, profile or scatter.");
+  }
+  if (other.weight && is_blank(*other.weight)) logger::throw_invalid_argument("Empty weight expression (leave the weight out instead).");
   // binned axes (all of a projection, all but the profiled one of a profile) need a positive number of bins or explicit edges
   const size_t nBinned = other.isProfileNoScatter.value_or(true) ? other.dataDims.size() - other.isProfileNoScatter.value_or(false) : 0;
   for (size_t i = 0; i < nBinned; ++i) {
@@ -2770,6 +2773,7 @@ auto Plot::Pad::Data::Profile2D(data_dim_t x, data_dim_t y, const string& profil
 }
 auto Plot::Pad::Data::Define(const string& key, const string& value) -> decltype(*this)
 {
+  if (is_blank(key) || is_blank(value)) logger::throw_invalid_argument("Define needs a column name and an expression.");
   if (mDataInfo.definitions.keys && mDataInfo.definitions.values) {
     mDataInfo.definitions.keys->push_back(key);
     mDataInfo.definitions.values->push_back(value);
@@ -2781,6 +2785,7 @@ auto Plot::Pad::Data::Define(const string& key, const string& value) -> decltype
 }
 auto Plot::Pad::Data::Filter(const std::string& filter) -> decltype(*this)
 {
+  if (is_blank(filter)) logger::throw_invalid_argument("Empty filter expression.");
   if (mDataInfo.filters) {
     mDataInfo.filters->push_back(filter);
   } else {

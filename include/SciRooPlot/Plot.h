@@ -1157,8 +1157,20 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_TO_DATA(SetKeepInputStyle)
   FORWARD_TO_DATA(SetContours)
   FORWARD_TO_DATA(SetNpx)
-
 #undef FORWARD_TO_DATA
+  // a template cannot take a braced list ({r, g, b}, {...}, {}): the setters with such parameters also exist with their types
+  Ratio& SetLegendEntry(const LegendEntry& legendEntry) { return SetLegendEntry<const LegendEntry&>(legendEntry); }
+  Ratio& SetShowStats(const std::string& format, const std::optional<std::string>& title) { return SetShowStats<const std::string&, const std::optional<std::string>&>(format, title); }
+  Ratio& SetStatsBox(const StatsBox& statsBox) { return SetStatsBox<const StatsBox&>(statsBox); }
+  Ratio& SetColor(color_t color) { return SetColor<color_t&>(color); }
+  Ratio& SetMarker(int16_t style, float_t size, color_t color, float_t alpha = 1.f) { return SetMarker<int16_t&, float_t&, color_t&, float_t&>(style, size, color, alpha); }
+  Ratio& SetMarkerColor(color_t color) { return SetMarkerColor<color_t&>(color); }
+  Ratio& SetLine(int16_t style, float_t width, color_t color, float_t alpha = 1.f) { return SetLine<int16_t&, float_t&, color_t&, float_t&>(style, width, color, alpha); }
+  Ratio& SetLineColor(color_t color) { return SetLineColor<color_t&>(color); }
+  Ratio& SetFill(int16_t style, color_t color, float_t alpha = 1.f) { return SetFill<int16_t&, color_t&, float_t&>(style, color, alpha); }
+  Ratio& SetFillColor(color_t color) { return SetFillColor<color_t&>(color); }
+  Ratio& SetContours(const std::vector<double>& contours) { return SetContours<const std::vector<double>&>(contours); }
+  Ratio& SetNpx(int32_t nx, std::optional<int32_t> ny) { return SetNpx<int32_t&, std::optional<int32_t>&>(nx, ny); }
 
   // data modifiers: act on the ratio itself (default), or on numerator and/or denominator before the division
 #define FORWARD_MODIFIER(METHOD)                                                \
@@ -1191,6 +1203,8 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_MODIFIER(Smooth)
   FORWARD_MODIFIER(Cumulative)
 #undef FORWARD_MODIFIER
+  Ratio& Normalize(bool isDensity, std::optional<double_t> min, std::optional<double_t> max) { return Normalize<bool, std::optional<double_t>, std::optional<double_t>>(isDensity, min, max); }
+  Ratio& NormalizeToMaximum(std::optional<double_t> min, std::optional<double_t> max) { return NormalizeToMaximum<std::optional<double_t>, std::optional<double_t>>(min, max); }
 
   Ratio& Numer();   // following modifiers act on the numerator, before the division
   Ratio& Denom();   // following modifiers act on the denominator, before the division

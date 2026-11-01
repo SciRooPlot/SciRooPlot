@@ -2009,6 +2009,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
             ScaleAxis(ptr, axisIndex, *factor);
           } else if constexpr (is_hist_2d<ptr_type>()) {
+            if (dynamic_cast<TH2Poly*>(ptr)) {
+              warnUnsupported(true, (axisIndex == 0) ? "ScaleX" : "ScaleY");  // the polygons would stay where they are
+              return;
+            }
             ScaleAxis(ptr, axisIndex, *factor);
           } else if constexpr (is_hist_3d<ptr_type>()) {
             ScaleAxis(ptr, axisIndex, *factor);
@@ -2028,6 +2032,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
         if constexpr (is_hist<ptr_type>()) {
           if (!ptr->GetSumw2N()) ptr->Sumw2();
+          // a TProfile3D is held as a TH3, a TH2Poly as a TH2
+          [[maybe_unused]] TH2Poly* poly = (is_hist_2d<ptr_type>()) ? dynamic_cast<TH2Poly*>(ptr) : nullptr;
+          constexpr bool isProfileType = is_one_of_v<ptr_type, TProfile*, TProfile2D*>();
+          const bool isProfile = isProfileType || dynamic_cast<TProfile3D*>(ptr);
           // ROOT merges the bins of a labelled axis but keeps the first labels, so the drawn categories are wrong
           auto warnLabelled = [&](const TAxis* axis, const optional<uint16_t>& group, const char* what) {
             if (group && axis->GetLabels()) warn("{} on the labelled {} axis of {} mixes up the labels.", what, axis->GetName(), ptr->GetName());
@@ -2036,7 +2044,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           warnLabelled(ptr->GetYaxis(), mods.GetRebinGroupY(), "RebinY");
           warnLabelled(ptr->GetZaxis(), mods.GetRebinGroupZ(), "RebinZ");
           if constexpr (is_hist_2d<ptr_type>()) {
-            if (mods.GetRebinGroupX() && mods.GetRebinGroupY()) {
+            if (poly) {
+              // a TH2Poly has no bins along its axes (ROOT aborts)
+              warnUnsupported(mods.GetRebinGroupX().has_value(), "RebinX");
+              warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
+            } else if (mods.GetRebinGroupX() && mods.GetRebinGroupY()) {
               ptr->Rebin2D(*mods.GetRebinGroupX(), *mods.GetRebinGroupY());
             } else if (mods.GetRebinGroupX()) {
               ptr->RebinX(*mods.GetRebinGroupX());
@@ -2062,15 +2074,35 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
           }
           bool isDensity = mods.GetScaleBinWidthNorm() && *mods.GetScaleBinWidthNorm();
-          if constexpr (is_one_of_v<ptr_type, TProfile*, TProfile2D*>()) {
+          if (isProfile) {
             // ROOT does not divide the mean values of a profile by the bin widths
             warnUnsupported(mods.GetDivideBinWidth() && *mods.GetDivideBinWidth(), "DivideBinWidth");
           } else if (mods.GetDivideBinWidth() && *mods.GetDivideBinWidth()) {
-            ptr->Scale(1., "width");
+            if constexpr (is_hist_2d<ptr_type>()) {
+              if (poly) {
+                // TH1::Scale(1, "width") leaves a TH2Poly as it is: each polygon is divided by its area
+                for (TObject* obj : *poly->GetBins()) {
+                  auto* polyBin = static_cast<TH2PolyBin*>(obj);
+                  const int32_t bin = polyBin->GetBinNumber();
+                  const double_t area = polyBin->GetArea();
+                  poly->SetBinContent(bin, (area > 0.) ? poly->GetBinContent(bin) / area : 0.);
+                  poly->SetBinError(bin, (area > 0.) ? poly->GetBinError(bin) / area : 0.);
+                }
+              } else {
+                ptr->Scale(1., "width");
+              }
+            } else {
+              ptr->Scale(1., "width");
+            }
             isDensity = true;
           }
-          if (mods.GetNiterSmooth()) {
-            if constexpr (is_one_of_v<ptr_type, TProfile*, TProfile2D*>()) {
+          bool smoothable = true;
+          if constexpr (is_hist_3d<ptr_type>()) smoothable = false;  // ROOT smooths 1d and 2d histograms only
+          if constexpr (is_hist_2d<ptr_type>()) smoothable = !poly;
+          if (mods.GetNiterSmooth() && !smoothable) {
+            warnUnsupported(true, "Smooth");
+          } else if (mods.GetNiterSmooth()) {
+            if constexpr (isProfileType) {
               // ROOT's Smooth would treat the sums stored in a profile as its contents: the mean values are smoothed instead,
               // over the filled bins only (an empty bin has no mean), keeping the entries and the spread (i.e. the error) of each bin
               const int32_t nTimes = *mods.GetNiterSmooth();
@@ -2172,6 +2204,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 TH1* cumulativeHist = ptr->GetCumulative(*mods.GetCumulative());
                 cumulativeHist->SetDirectory(nullptr);
                 cumulativeHist->SetBit(kCanDelete);
+                MoveProjectionTitles(ptr, cumulativeHist);
                 delete ptr;
                 ptr = cumulativeHist;
               }
@@ -5260,6 +5293,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
         }
       }
       numY[i] = numY[i] / denomY[i];
+      if (denomY[i] < 0. && numEyLow && numEyHigh) std::swap(numEyLow[i], numEyHigh[i]);  // a negative denominator turns the ratio upside down
     }
   }
   if (doInterpol) {
@@ -5318,13 +5352,32 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, 
     }
     return true;
   };
+  if (numerator->GetDimension() != denominator->GetDimension()) {
+    logger::error("Cannot divide {} ({}d) by {} ({}d): the dimensions differ.", numerator->GetName(), numerator->GetDimension(), denominator->GetName(), denominator->GetDimension());
+    return false;
+  }
+  auto* numeratorPoly = dynamic_cast<TH2Poly*>(numerator);
+  auto* denominatorPoly = dynamic_cast<TH2Poly*>(denominator);
+  if (numeratorPoly || denominatorPoly) {
+    // TH1::Divide pairs the cells by number: they must be the same polygons (compared by bounding box and area)
+    bool samePolygons = numeratorPoly && denominatorPoly && numeratorPoly->GetNumberOfBins() == denominatorPoly->GetNumberOfBins();
+    for (int32_t bin = 1; samePolygons && bin <= numeratorPoly->GetNumberOfBins(); ++bin) {
+      auto* a = static_cast<TH2PolyBin*>(numeratorPoly->GetBins()->At(bin - 1));
+      auto* b = static_cast<TH2PolyBin*>(denominatorPoly->GetBins()->At(bin - 1));
+      const double_t tolerance = 1e-10 * std::max(a->GetXMax() - a->GetXMin(), a->GetYMax() - a->GetYMin());
+      samePolygons = TMath::AreEqualAbs(a->GetXMin(), b->GetXMin(), tolerance) && TMath::AreEqualAbs(a->GetXMax(), b->GetXMax(), tolerance) &&
+                     TMath::AreEqualAbs(a->GetYMin(), b->GetYMin(), tolerance) && TMath::AreEqualAbs(a->GetYMax(), b->GetYMax(), tolerance) &&
+                     TMath::AreEqualRel(a->GetArea(), b->GetArea(), 1e-10);
+    }
+    if (!samePolygons) {
+      logger::error("Cannot divide {} by {}: a TH2Poly can only be divided by a TH2Poly with the same polygons in the same order.", numerator->GetName(), denominator->GetName());
+      return false;
+    }
+    return numerator->Divide(numerator, denominator, 1., 1., (binomialErrors) ? "B" : "");
+  }
   bool sameBinning = sameAxisBinning(numerator->GetXaxis(), denominator->GetXaxis());
-  if (numerator->GetDimension() >= 2 && denominator->GetDimension() >= 2) {
-    sameBinning = sameBinning && sameAxisBinning(numerator->GetYaxis(), denominator->GetYaxis());
-  }
-  if (numerator->GetDimension() >= 3 && denominator->GetDimension() >= 3) {
-    sameBinning = sameBinning && sameAxisBinning(numerator->GetZaxis(), denominator->GetZaxis());
-  }
+  if (numerator->GetDimension() >= 2) sameBinning = sameBinning && sameAxisBinning(numerator->GetYaxis(), denominator->GetYaxis());
+  if (numerator->GetDimension() >= 3) sameBinning = sameBinning && sameAxisBinning(numerator->GetZaxis(), denominator->GetZaxis());
   if (sameBinning) {
     return numerator->Divide(numerator, denominator, 1., 1., (binomialErrors) ? "B" : "");
   }
@@ -5338,11 +5391,8 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, 
     TGraphErrors denominatorGraph(denominator);
     denominatorGraph.SetName(denominator->GetName());  // used in messages
     return Divide(numerator, &denominatorGraph, binomialErrors, verbose);
-  } else if (numerator->GetDimension() == denominator->GetDimension()) {
-    logger::error("Cannot divide {} by {}: their binnings differ (interpolated division of {}d histograms is not supported).", numerator->GetName(), denominator->GetName(), numerator->GetDimension());
-  } else {
-    logger::error("Cannot divide {} ({}d) by {} ({}d): the dimensions differ.", numerator->GetName(), numerator->GetDimension(), denominator->GetName(), denominator->GetDimension());
   }
+  logger::error("Cannot divide {} by {}: their binnings differ (interpolated division of {}d histograms is not supported).", numerator->GetName(), denominator->GetName(), numerator->GetDimension());
   return false;
 }
 bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors, bool verbose)
@@ -5431,6 +5481,7 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
     } else if (eyLow && eyHigh) {
       eyLow[i] = (denom) ? eyLow[i] / absDenom : 0.;
       eyHigh[i] = (denom) ? eyHigh[i] / absDenom : 0.;
+      if (denom < 0.) std::swap(eyLow[i], eyHigh[i]);  // a negative denominator turns the ratio upside down
     }
   }
   if (binomialErrors && verbose) {
@@ -5783,6 +5834,19 @@ optional<float_t> PlotPainter::LayoutValue(const Plot::Pad& pad, const Plot::Pad
 
 //**************************************************************************************************
 /**
+ * The axis titles of the input of a projection (for <projection>) go with the object that replaces it.
+ */
+//**************************************************************************************************
+void PlotPainter::MoveProjectionTitles(const TObject* from, const TObject* to)
+{
+  if (auto node = mProjectionAxisTitles.extract(from)) {
+    node.key() = to;
+    mProjectionAxisTitles.insert(std::move(node));
+  }
+}
+
+//**************************************************************************************************
+/**
  * Replaces a profile by the histogram of its means (errors as set by its error option); returns whether data was a profile.
  */
 //**************************************************************************************************
@@ -5792,6 +5856,7 @@ bool PlotPainter::ProfileMeans(data_ptr_t& data)
     means->SetDirectory(nullptr);
     means->SetName(profile->GetName());
     CopyStyle(*profile, *means);  // the projections take labels and titles, not the style
+    MoveProjectionTitles(profile, means);
     delete profile;
     data = means;
     return true;
