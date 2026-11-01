@@ -829,7 +829,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   Data& SetStatsBox(const StatsBox& statsBox);
   Data& SetColor(color_t color);
   Data& SetAlpha(float_t alpha);
-  Data& SetDefinesFrame();                                 // this data (drawn as usual) defines the axis frame; the last one in a pad wins
+  Data& SetDefinesFrame(bool define = true);               // this data (drawn as usual) defines the axis frame; the last one in a pad wins
   Data& SetKeepInputStyle(bool keep = true);               // line, marker and fill stored with the input win over the defaults of the pad
   Data& SetContours(const std::vector<double>& contours);  // colour levels (also of the colour scale, if this is the first map of the pad)
   Data& SetContours(int32_t nContours);                    // n equal colour levels (a 3d histogram: its boxes too)
@@ -1507,7 +1507,7 @@ class Plot::Pad::ImageBox
   void Print() const { Plot::Print(GetPropertyTree(), "ImageBox"); }
 
   ImageBox& SetPosition(double_t x, double_t y);
-  ImageBox& SetWidth(double_t width);    // fraction of the pad width
+  ImageBox& SetWidth(double_t width);    // fraction of the pad width (no SetSize: one side may follow from the aspect ratio)
   ImageBox& SetHeight(double_t height);  // fraction of the pad height
   ImageBox& SetUserCoordinates(bool isUserCoord = true);
   ImageBox& SetAutoPlacement(box_placement_t placement = best_corner);
@@ -1594,7 +1594,8 @@ class Plot::Pad::Shape : public LineSetters<Shape>, public FillSetters<Shape>
                                  on_top };
   Shape(kind_t kind, const std::vector<double_t>& coordinates);
   boost::property_tree::ptree GetPropertyTree() const;
-  static const char* KindName(kind_t kind);   // as stored: "vertical_line"
+  static const char* KindName(kind_t kind);  // as stored: "vertical_line"
+  static std::optional<kind_t> KindFromName(const std::string& name);
   static std::string KindLabel(kind_t kind);  // for messages: "vertical line", "region X"
   // the drawn object of a shape carries it as TObject::SetUniqueID, so that a double-click in show mode names it like the user added it:
   // its kind, its number among the shapes of this kind in the pad (the nth AddArrow), and whether it is in fractions of the pad

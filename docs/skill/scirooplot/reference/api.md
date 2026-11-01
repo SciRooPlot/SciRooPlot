@@ -214,7 +214,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& SetStatsBox(const StatsBox& statsBox)`
 - `Data& SetColor(color_t color)`
 - `Data& SetAlpha(float_t alpha)`
-- `Data& SetDefinesFrame()` — this data (drawn as usual) defines the axis frame; the last one in a pad wins
+- `Data& SetDefinesFrame(bool define = true)` — this data (drawn as usual) defines the axis frame; the last one in a pad wins
 - `Data& SetKeepInputStyle(bool keep = true)` — line, marker and fill stored with the input win over the defaults of the pad
 - `Data& SetContours(const std::vector<double>& contours)` — colour levels (also of the colour scale, if this is the first map of the pad)
 - `Data& SetContours(int32_t nContours)` — n equal colour levels (a 3d histogram: its boxes too)
@@ -320,7 +320,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `ImageBox(double_t xPos, double_t yPos, const std::string& path)`
 - `ImageBox(const std::string& path)`
 - `ImageBox& SetPosition(double_t x, double_t y)`
-- `ImageBox& SetWidth(double_t width)` — fraction of the pad width
+- `ImageBox& SetWidth(double_t width)` — fraction of the pad width (no SetSize: one side may follow from the aspect ratio)
 - `ImageBox& SetHeight(double_t height)` — fraction of the pad height
 - `ImageBox& SetUserCoordinates(bool isUserCoord = true)`
 - `ImageBox& SetAutoPlacement(box_placement_t placement = best_corner)`

@@ -822,7 +822,6 @@ auto Plot::SetFixAspectRatio(bool fixAspectRatio) -> decltype(*this)
 auto Plot::SetTransparent() -> decltype(*this)
 {
   mFill.style = 0;
-  mFill.color = 0;
   return *this;
 }
 
@@ -1191,7 +1190,6 @@ auto Plot::Pad::SetDefaultCandleWhiskerRange(float_t range) -> decltype(*this)
 auto Plot::Pad::SetTransparent() -> decltype(*this)
 {
   mFill.style = 0;
-  mFill.color = 0;
   return *this;
 }
 
@@ -1495,7 +1493,11 @@ Plot::Pad::Pad(const ptree& padTree)
       mTextBoxes.push_back(std::make_shared<TextBox>(content.second));
     }
     if (str_contains(content.first, "SHAPE")) {
-      mShapes.push_back(std::make_shared<Shape>(content.second));
+      if (const string kind = content.second.get<string>("kind", ""); Shape::KindFromName(kind)) {
+        mShapes.push_back(std::make_shared<Shape>(content.second));
+      } else {
+        logger::warning("Unknown shape kind {} is ignored.", kind);
+      }
     }
     if (str_contains(content.first, "IMAGE")) {
       mImageBoxes.push_back(std::make_shared<ImageBox>(content.second));
@@ -2529,9 +2531,9 @@ auto Plot::Pad::Data::SetAlpha(float_t alpha) -> decltype(*this)
   mFill.alpha = alpha;
   return *this;
 }
-auto Plot::Pad::Data::SetDefinesFrame() -> decltype(*this)
+auto Plot::Pad::Data::SetDefinesFrame(bool define) -> decltype(*this)
 {
-  mDefinesFrame = true;
+  mDefinesFrame = define;
   return *this;
 }
 auto Plot::Pad::Data::SetKeepInputStyle(bool keep) -> decltype(*this)
@@ -4495,6 +4497,14 @@ const char* Plot::Pad::Shape::KindName(kind_t kind)
   return "";
 }
 
+optional<Plot::Pad::Shape::kind_t> Plot::Pad::Shape::KindFromName(const string& name)
+{
+  for (auto kind : {kind_t::line, kind_t::arrow, kind_t::vertical_line, kind_t::horizontal_line, kind_t::region, kind_t::region_x, kind_t::region_y, kind_t::ellipse, kind_t::polygon}) {
+    if (name == KindName(kind)) return kind;
+  }
+  return nullopt;
+}
+
 string Plot::Pad::Shape::KindLabel(kind_t kind)
 {
   if (kind == kind_t::region_x) return "region X";
@@ -4518,17 +4528,19 @@ optional<Plot::Pad::Shape::drawn_id_t> Plot::Pad::Shape::DecodeDrawnID(uint32_t 
 
 Plot::Pad::Shape::Shape(const ptree& shapeTree)
 {
-  const string kind = shapeTree.get<string>("kind", "line");
-  for (auto candidate : {kind_t::line, kind_t::arrow, kind_t::vertical_line, kind_t::horizontal_line, kind_t::region, kind_t::region_x, kind_t::region_y, kind_t::ellipse, kind_t::polygon}) {
-    if (kind == KindName(candidate)) mKind = candidate;
-  }
+  if (auto kind = KindFromName(shapeTree.get<string>("kind", ""))) mKind = *kind;
   optional<vector<double_t>> coordinates;
   read_from_tree(shapeTree, coordinates, "coordinates");
   if (coordinates) mCoordinates = *coordinates;
   read_from_tree(shapeTree, mIsUserCoord, "is_user_coordinates");
   if (auto layer = shapeTree.get_optional<string>("layer")) {
-    if (*layer == "behind_data") mLayer = layer_t::behind_data;
-    if (*layer == "on_top") mLayer = layer_t::on_top;
+    if (*layer == "behind_data") {
+      mLayer = layer_t::behind_data;
+    } else if (*layer == "on_top") {
+      mLayer = layer_t::on_top;
+    } else if (*layer != "after_data") {
+      logger::warning("Unknown shape layer {} is ignored.", *layer);
+    }
   }
   read_from_tree(shapeTree, mArrowHead, "arrow_head");
   read_from_tree(shapeTree, mArrowSize, "arrow_size");

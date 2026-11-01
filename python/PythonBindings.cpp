@@ -575,7 +575,7 @@ void defDataSetters(py::class_<Self, Options...>& cls)
   defLineSetters(cls);
   defFillSetters(cls);
   cls
-    .def("SetDefinesFrame", [](Self& self) -> Self& { return self.SetDefinesFrame(); }, ref_int)
+    .def("SetDefinesFrame", [](Self& self, bool define) -> Self& { return self.SetDefinesFrame(define); }, arg("define") = true, ref_int)
     .def("SetKeepInputStyle", [](Self& self, bool keep) -> Self& { return self.SetKeepInputStyle(keep); }, arg("keep") = true, ref_int)
     .def("SetContours", [](Self& self, const vector<double>& contours) -> Self& { return self.SetContours(contours); }, arg("contours"), ref_int)
     .def("SetContours", [](Self& self, int32_t nContours) -> Self& { return self.SetContours(nContours); }, arg("nContours"), ref_int)
