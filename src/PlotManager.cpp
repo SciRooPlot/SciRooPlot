@@ -129,10 +129,14 @@ using std::vector;
 
 namespace SciRooPlot
 {
+using util::disable_implicit_mt;
 using util::expand_path;
 using util::file_exists;
+using util::ignore_root_messages_below;
 using util::make_scope_guard;
+using util::plural;
 using util::RegexMatcher;
+using util::split_path;
 using util::split_string;
 using util::str_contains;
 using util::str_ends_with;
@@ -142,7 +146,7 @@ using util::str_ends_with;
  * Constructor for PlotManager.
  */
 //**************************************************************************************************
-PlotManager::PlotManager(const std::string& projectName)
+PlotManager::PlotManager(const string& projectName)
   : mProjectName(projectName), mUserDataFile(((mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName)) / (mProjectName.empty() ? "UserData_" + std::to_string(gSystem->GetPid()) + "_" + std::to_string(reinterpret_cast<std::uintptr_t>(this)) + ".root" : string{"UserData.root"}))
 {
   if (!gApplication) {
@@ -185,8 +189,8 @@ bool PlotManager::SavePlotsToRootFile() const
     // ROOT's own colour list is saved with the first canvas as usual
     auto joinPath = [](const string& folder, const string& name) { return (folder.empty()) ? name : folder + "/" + name; };
     // a ROOT directory cannot hold an object and a subdirectory of the same name: a plot named like a subgroup of its group gets a suffix
-    std::set<string> directories;
-    std::set<string> plotPaths;
+    set<string> directories;
+    set<string> plotPaths;
     for (const auto& [uniqueName, canvas] : mCanvasRegistry) {
       const size_t delimiterPos = uniqueName.find(":");
       const string subfolder = uniqueName.substr(delimiterPos + 1);
@@ -263,7 +267,7 @@ bool PlotManager::SaveDataToRootFile() const
   }
   // written in a fixed order (by name), so the same data always gives the same file
   auto sorted = [](const auto& unorderedMap) {
-    std::map<string, const typename std::decay_t<decltype(unorderedMap)>::mapped_type*> view;
+    map<string, const typename std::decay_t<decltype(unorderedMap)>::mapped_type*> view;
     for (const auto& [key, value] : unorderedMap)
       view.emplace(key, &value);
     return view;
@@ -277,7 +281,7 @@ bool PlotManager::SaveDataToRootFile() const
       logger::error("Could not create directory {} in {}.", sourcePath, mDataRootFile);
       continue;
     }
-    const bool isUserDefined = (dataSource == "USER_FUNCTIONS" || dataSource == "USER_GRAPHS");
+    const bool isUserDefined = is_user_defined(dataSource);
     for (const auto& [dataName, dataPtr] : sorted(*buffer)) {
       if (!*dataPtr) continue;
       // the name is the path of the data within its source, for tree projections followed by the request {...};
@@ -367,16 +371,21 @@ void PlotManager::SetDataRootFile(const string& fileName)
  * Define the inputs of a data source: files, folders within files (file.root:folder), directories or wildcard patterns.
  */
 //**************************************************************************************************
-void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputs, bool replace)
+bool PlotManager::IsValidDataSourceName(const string& dataSource)
 {
   if (dataSource.empty()) {
     logger::error("Specify a name for the data source.");
-    return;
+    return false;
   }
   if (auto illegal = find_illegal_name_char(dataSource)) {
-    logger::error("DataSource '{}' contains illegal character '{}'.", dataSource, *illegal);
-    return;
+    logger::error("Data source '{}' contains illegal character '{}'.", dataSource, *illegal);
+    return false;
   }
+  return true;
+}
+void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputs, bool replace)
+{
+  if (!IsValidDataSourceName(dataSource)) return;
   if (replace) {
     mInputs.erase(dataSource);
   }
@@ -393,9 +402,9 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<string>& 
     }
   }
 }
-void PlotManager::AddDataSource(const std::string& dataSource, std::initializer_list<string> inputs, bool replace)
+void PlotManager::AddDataSource(const string& dataSource, std::initializer_list<string> inputs, bool replace)
 {
-  AddDataSource(dataSource, std::vector<std::string>(inputs), replace);
+  AddDataSource(dataSource, vector<string>(inputs), replace);
 }
 void PlotManager::AddDataSource(const string& dataSource, const string& input, bool replace)
 {
@@ -409,14 +418,7 @@ void PlotManager::AddDataSource(const string& dataSource, const string& input, b
 //**************************************************************************************************
 void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>& inputs, bool replace)
 {
-  if (dataSource.empty()) {
-    logger::error("Specify a name for the data source.");
-    return;
-  }
-  if (auto illegal = find_illegal_name_char(dataSource)) {
-    logger::error("DataSource '{}' contains illegal character '{}'.", dataSource, *illegal);
-    return;
-  }
+  if (!IsValidDataSourceName(dataSource)) return;
   string mode = mUserDataFileInitialized ? "UPDATE" : "RECREATE";
   if (!mProjectName.empty()) {
     std::filesystem::create_directories(Config::Get().ProjectPath(mProjectName));
@@ -478,7 +480,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
       }
       for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {
         if (!key || directory->FindKey(key->GetName()) != key || !added.insert(key->GetName()).second) continue;
-        if (TClass* keyClass = TClass::GetClass(key->GetClassName()); keyClass && keyClass->InheritsFrom(TDirectory::Class())) {
+        if (KeyInherits(key, TDirectory::Class())) {
           if (auto* keyDir = directory->GetDirectory(key->GetName())) add(keyDir, subDir, subFolder);  // owned by the file
         } else if (!ReadableClass(key)) {
           // ReadObj would return an object that is no TObject (e.g. an RNTuple, whose data stays in its file anyway)
@@ -532,16 +534,25 @@ void PlotManager::SaveDataSources(const optional<string>& file) const
     }
     dataSourcesTree.put_child(dataSource, inputsOfDataSource);
   }
-  std::filesystem::path filePath = expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName));
+  WriteInfoFile(dataSourcesTree, (file) ? *file : Config::Get().DataSourcesFile(mProjectName), "data sources");
+}
+
+//**************************************************************************************************
+/**
+ * Write the definitions of plots or data sources to a file (creating its folder if needed).
+ */
+//**************************************************************************************************
+void PlotManager::WriteInfoFile(const ptree& tree, const string& path, const string& content)
+{
+  const std::filesystem::path filePath = expand_path(path);
   if (filePath.empty()) {
-    logger::error("No file path or project specified. Cannot save data sources.");
+    logger::error("No file path or project specified. Cannot save {}.", content);
     return;
   }
   if (filePath.has_parent_path() && std::filesystem::create_directories(filePath.parent_path())) {
     logger::info("Created config folder: {}.", filePath.parent_path().string());
   }
-  using boost::property_tree::write_info;
-  write_info(filePath.string(), dataSourcesTree);
+  boost::property_tree::write_info(filePath.string(), tree);
 }
 
 //**************************************************************************************************
@@ -586,7 +597,7 @@ vector<string> PlotManager::MatchFolders(TDirectory* topDir, const string& patte
     for (auto* key : TRangeDynCast<TKey>(dir->GetListOfKeys())) {
       if (!key || !visited.insert(key->GetName()).second) continue;
       if (fnmatch(levels[level].data(), key->GetName(), 0) != 0) continue;
-      if (!TClass::GetClass(key->GetClassName()) || !TClass::GetClass(key->GetClassName())->InheritsFrom(TDirectory::Class())) continue;
+      if (!KeyInherits(key, TDirectory::Class())) continue;
       if (auto* subDir = dir->GetDirectory(key->GetName())) {
         match(subDir, levels, level + 1, path.empty() ? key->GetName() : path + "/" + key->GetName());
       }
@@ -735,7 +746,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
 //**************************************************************************************************
 bool PlotManager::IsDataSourceDefined(const string& dataSource) const
 {
-  if (dataSource == "USER_FUNCTIONS" || dataSource == "USER_GRAPHS") return true;
+  if (is_user_defined(dataSource)) return true;
   return mInputs.find(dataSource.substr(0, dataSource.find(':'))) != mInputs.end();
 }
 
@@ -994,38 +1005,38 @@ void PlotManager::AddColorOverview(const string& name, const string& group, cons
 
 //**************************************************************************************************
 /**
+ * Whether a plot of the group and name matches the requested name and group regex (empty for an invalid expression, which is reported).
+ */
+//**************************************************************************************************
+std::function<bool(const string&, const string&)> PlotManager::PlotMatcher(const string& name, const string& group)
+{
+  RegexMatcher groupRegex = RegexMatcher::WithSubpaths(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
+  RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
+  if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
+    logger::error("Invalid regular expression.");
+    return {};
+  }
+  return [groupRegex, nameRegex](const string& plotGroup, const string& plotName) { return groupRegex.Matches(plotGroup) && nameRegex.Matches(plotName); };
+}
+
+//**************************************************************************************************
+/**
  * Save plots matching name and group regex to file.
  */
 //**************************************************************************************************
 void PlotManager::SavePlots(const string& name, const string& group, const optional<string>& file) const
 {
   ptree plotTree;
-  RegexMatcher groupRegex = RegexMatcher::WithSubpaths(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
-  RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
-  if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
-    logger::error("Invalid regular expression.");
-    return;
-  }
+  const auto matches = PlotMatcher(name, group);
+  if (!matches) return;
 
   for (const vector<Plot>& plots : {std::ref(mBasePlots), std::ref(mPlots)}) {
     for (const Plot& plot : plots) {
-      if (plot.GetGroup() != "BASE_PLOTS") {
-        if (!groupRegex.Matches(plot.GetGroup())) continue;
-        if (!nameRegex.Matches(plot.GetName())) continue;
-      }
+      if (plot.GetGroup() != "BASE_PLOTS" && !matches(plot.GetGroup(), plot.GetName())) continue;
       plotTree.put_child(plot.GetUniqueName(), plot.GetPropertyTree());
     }
   }
-  std::filesystem::path filePath = expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName));
-  if (filePath.empty()) {
-    logger::error("No file path or project specified. Cannot save plots.");
-    return;
-  }
-  if (filePath.has_parent_path() && std::filesystem::create_directories(filePath.parent_path())) {
-    logger::info("Created config folder: {}.", filePath.parent_path().string());
-  }
-  using boost::property_tree::write_info;
-  write_info(filePath.string(), plotTree);
+  WriteInfoFile(plotTree, (file) ? *file : Config::Get().PlotsFile(mProjectName), "plots");
 }
 
 //**************************************************************************************************
@@ -1038,12 +1049,8 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
   uint32_t nMatched{};
   uint32_t nLoaded{};
 
-  RegexMatcher groupRegex = RegexMatcher::WithSubpaths(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
-  RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
-  if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
-    logger::error("Invalid regular expression.");
-    return false;
-  }
+  const auto matches = PlotMatcher(name, group);
+  if (!matches) return false;
 
   ptree fileTree;
   try {
@@ -1069,8 +1076,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
       continue;
     }
     ++nPlotsInFile;
-    if (!groupRegex.Matches(curGroup)) continue;
-    if (!nameRegex.Matches(plotTree.second.get<string>("name"))) continue;
+    if (!matches(curGroup, plotTree.second.get<string>("name"))) continue;
 
     ++nMatched;
     try {
@@ -1083,7 +1089,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
   }
   if (nPlotsInFile == 0 && nBasePlotsLoaded > 0) {
     // file containing only base plots
-    logger::info("Loaded {} base plot{}.", nBasePlotsLoaded, (nBasePlotsLoaded == 1) ? "" : "s");
+    logger::info("Loaded {}.", plural(nBasePlotsLoaded, "base plot"));
     return true;
   }
   if (nMatched == 0) {
@@ -1113,15 +1119,14 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
   const bool wasWebDisplay = gROOT->IsWebDisplay();
   const TString webDisplay = gROOT->GetWebDisplay();
-  auto globalsGuard = make_scope_guard([wasMTEnabled, wasWebDisplay, webDisplay, errorLevel = gErrorIgnoreLevel, wasBatch = gROOT->IsBatch()]() {
+  auto globalsGuard = make_scope_guard([wasMTEnabled, wasWebDisplay, webDisplay, wasBatch = gROOT->IsBatch()]() {
     gROOT->SetBatch(wasBatch);
-    gErrorIgnoreLevel = errorLevel;
     if (wasWebDisplay) gROOT->SetWebDisplay(webDisplay.Data());
     if (!wasMTEnabled) ROOT::DisableImplicitMT();
   });
   if (!wasMTEnabled) ROOT::EnableImplicitMT();
   gROOT->SetWebDisplay("off");
-  gErrorIgnoreLevel = std::max<Int_t>(gErrorIgnoreLevel, kWarning);
+  auto quiet = ignore_root_messages_below(kWarning);
 
   if (!mHasDisplay) {
     // determine OS dependent offset between window and frame
@@ -1149,16 +1154,11 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   vector<Plot*> selectedPlots;
   map<int32_t, set<int32_t>> requiredData;
 
-  RegexMatcher groupRegex = RegexMatcher::WithSubpaths(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
-  RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
-  if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
-    logger::error("Invalid regular expression.");
-    return false;
-  }
+  const auto matches = PlotMatcher(name, group);
+  if (!matches) return false;
 
   for (auto& plot : mPlots) {
-    if (!groupRegex.Matches(plot.GetGroup())) continue;
-    if (!nameRegex.Matches(plot.GetName())) continue;
+    if (!matches(plot.GetGroup(), plot.GetName())) continue;
     selectedPlots.push_back(&plot);
     if (mode == "print") continue;  // printing the definitions needs no data
 
@@ -1205,7 +1205,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   size_t nItemsToRead{};
   set<string> sourcesToRead;
   for (const auto& [dataSource, buffer] : mDataBuffer) {
-    if (dataSource == "USER_FUNCTIONS" || dataSource == "USER_GRAPHS") continue;  // defined in the plots, nothing to read
+    if (is_user_defined(dataSource)) continue;  // defined in the plots, nothing to read
     for (const auto& [dataName, dataPtr] : buffer) {
       if (IsBuffered(dataSource, dataName)) continue;
       ++nItemsToRead;
@@ -1220,7 +1220,6 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     if (mExpandedInputs.find(baseSource) == mExpandedInputs.end()) nInputs += (mExpandedInputs[baseSource] = ExpandInputs(baseSource)).size();
   }
   if (nItemsToRead) {
-    auto plural = [](size_t n, const string& word) { return fmt::format("{} {}{}", n, word, (n == 1) ? "" : "s"); };
     logger::info("Reading {} from {}{}.", plural(nItemsToRead, "data item"), (nInputs) ? plural(nInputs, "input") + " in " : "", plural(sourcesToRead.size(), "data source"));
   }
   try {
@@ -1239,7 +1238,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
         }
       }
       if (nAffectedPlots > 0) {
-        logger::error("{} of {} plots cannot be created due to {} missing data item{}.", nAffectedPlots, selectedPlots.size(), missingItems.size(), (missingItems.size() == 1) ? "" : "s");
+        logger::error("{} of {} plots cannot be created due to {}.", nAffectedPlots, selectedPlots.size(), plural(missingItems.size(), "missing data item"));
       }
     }
     mGifName.clear();
@@ -1319,7 +1318,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       // the browsing window is hidden once browsing has ended, windows kept open stay until the user closes them
       for (const auto& browsed : mBrowseCanvases) {
         if (!browsed) continue;
-        if (auto rc = dynamic_cast<TRootCanvas*>(browsed->GetCanvasImp())) rc->UnmapWindow();
+        Hide(browsed.get());
       }
       WaitForOpenWindows();
     }
@@ -1383,7 +1382,7 @@ bool PlotManager::FillBuffer()
         if (IsBuffered(dataSource, dataName)) continue;
 
         // generate user-defined functions on-the-fly
-        if (dataSource == "USER_FUNCTIONS") {
+        if (dataSource == kUserFunctions) {
           // a function is given as formula ("[0] * sin(x)") or as C++ lambda ("[](double* x, double* p) { return std::sin(x[0]); }"):
           // a lambda has no parameters that could be set, its dimension is that of the variables it uses (x[0], x[1], x[2])
           static const std::regex lambdaStart(R"(^\s*\[[^\]]*\]\s*\()");
@@ -1417,8 +1416,7 @@ bool PlotManager::FillBuffer()
           bool isValid{};
           int32_t nParameters{};
           {
-            auto errGuard = make_scope_guard([lvl = gErrorIgnoreLevel]() { gErrorIgnoreLevel = lvl; });
-            gErrorIgnoreLevel = kFatal;
+            auto quiet = ignore_root_messages_below(kFatal);
             if (isLambda) {
               isValid = TFormula("tmp", dataName.data(), dim, 0, false).IsValid();
             } else {
@@ -1451,7 +1449,7 @@ bool PlotManager::FillBuffer()
             logger::error("Cannot create function {}.", dataName);
           }
           continue;
-        } else if (dataSource == "USER_GRAPHS") {
+        } else if (dataSource == kUserGraphs) {
           auto strs = split_string(dataName, ';');
           if (strs.size() == 2) {
             auto xStrs = split_string(strs[0], ',');
@@ -1472,13 +1470,7 @@ bool PlotManager::FillBuffer()
           continue;
         }
 
-        auto pathPos = dataName.find_last_of("/");
-        string path;
-        string name = dataName;
-        if (pathPos != string::npos) {
-          path = name.substr(0, pathPos);
-          name.erase(0, pathPos + 1);
-        }
+        auto [path, name] = split_path(dataName);
         requiredData[dataSource][std::move(path)].insert(std::move(name));
       }
     }
@@ -1511,7 +1503,7 @@ bool PlotManager::FillBuffer()
         if (auto it = requiredData.find(baseSource); it != requiredData.end()) {
           if (auto wantedIt = it->second.find(""); wantedIt != it->second.end()) {
             set<string>& wantedNames = wantedIt->second;
-            const string name = input.substr(input.rfind('/') + 1, input.rfind('.') - input.rfind('/') - 1);
+            const string name = std::filesystem::path(input).stem().string();
             if (wantedNames.erase(name)) {
               ReadTableData(input, name, baseSource);
               if (wantedNames.empty()) it->second.erase(wantedIt);
@@ -1584,10 +1576,8 @@ bool PlotManager::FillBuffer()
           }
           // trees can also be in further inputs: keep looking for them
           for (const auto& [treeName, treeInputs] : mTreeInputs[dataSource]) {
-            const auto pathPos = treeName.find_last_of('/');
-            auto& names = required[(pathPos == string::npos) ? "" : treeName.substr(0, pathPos)];
-            const string name = treeName.substr(pathPos + 1);
-            names.insert(name);
+            auto [path, name] = split_path(treeName);
+            required[path].insert(std::move(name));
           }
         }
       }
@@ -1595,7 +1585,6 @@ bool PlotManager::FillBuffer()
     // what a chained tree is made of in words, e.g. "3 files" or "412 folders in 3 files" (empty if it has only one input)
     auto describeInputs = [](const vector<tree_input_t>& treeInputs) -> string {
       if (treeInputs.size() < 2) return "";
-      auto plural = [](size_t n, const string& word) { return fmt::format("{} {}{}", n, word, (n == 1) ? "" : "s"); };
       set<string> wholeFiles;
       set<string> filesWithFolders;
       size_t nFolders{};
@@ -1616,11 +1605,10 @@ bool PlotManager::FillBuffer()
     for (const auto& [dataSource, treesInputs] : mTreeInputs) {
       auto& required = requiredData[dataSource];
       for (const auto& [treeName, treeInputs] : treesInputs) {
-        const auto pathPos = treeName.find_last_of('/');
-        const string pathStr = (pathPos == string::npos) ? "" : treeName.substr(0, pathPos);
-        if (auto it = required.find(pathStr); it != required.end()) {
+        const auto [path, name] = split_path(treeName);
+        if (auto it = required.find(path); it != required.end()) {
           auto& names = it->second;
-          names.erase(treeName.substr(pathPos + 1));
+          names.erase(name);
           if (names.empty()) required.erase(it);
         }
         // requests that join the same trees share one chain
@@ -1726,9 +1714,9 @@ shared_ptr<Plot::Pad::Data> PlotManager::RefFuncDrawnIn(Plot& plot, uint8_t padI
  * Determine which of a plot's required data entries are missing from the buffer.
  */
 //**************************************************************************************************
-vector<std::tuple<string, string, Plot::Pad::Data::data_info_t>> PlotManager::GetMissingData(Plot& plot)
+vector<tuple<string, string, Plot::Pad::Data::data_info_t>> PlotManager::GetMissingData(Plot& plot)
 {
-  vector<std::tuple<string, string, Plot::Pad::Data::data_info_t>> missing;
+  vector<tuple<string, string, Plot::Pad::Data::data_info_t>> missing;
   auto checkKey = [&](const string& dataSource, const string& name, const Plot::Pad::Data::data_info_t& dataInfo) {
     auto sourceIt = mDataBuffer.find(dataSource);
     if (sourceIt != mDataBuffer.end()) {
@@ -1801,12 +1789,12 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     canvas.reset(painter.GeneratePlot(fullPlot, mDataBuffer).release());
   } else {
     // pads sharing an axis: a log scale, time format or range set in one of them (else in pad 0) holds for all of them
-    std::map<char, vector<vector<uint8_t>>> groups;
+    map<char, vector<vector<uint8_t>>> groups;
     for (const auto& [axisLabel, axisGroups] : sharedAxes) {
       for (const auto& group : axisGroups) {
         groups[axisLabel].push_back(group.pads);
         auto common = [&, axisLabel = axisLabel](const char* what, auto get, auto set) {
-          std::optional<std::decay_t<decltype(*get(std::declval<const Plot::Pad::Axis&>()))>> value;
+          optional<std::decay_t<decltype(*get(std::declval<const Plot::Pad::Axis&>()))>> value;
           for (uint8_t padID : group.pads) {
             const auto& axes = fullPlot[padID].GetAxes();
             auto axis = axes.find(axisLabel);
@@ -1857,7 +1845,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     std::unique_ptr<TCanvas> firstCanvas = painter.GeneratePlot(firstPlot, mDataBuffer);
     if (!firstCanvas) return false;
     const auto ranges = painter.GetFrameRanges();
-    std::set<std::pair<uint8_t, char>> commonRanges;
+    set<std::pair<uint8_t, char>> commonRanges;
     bool paintAgain{};
     for (const auto& [axisLabel, axisGroups] : sharedAxes) {
       for (const auto& group : axisGroups) {
@@ -1897,13 +1885,9 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
       // the messages of the first paint are not repeated
       firstCanvas.reset();
       painter.SetSharedAxes(groups, commonRanges);
-      const int32_t errorLevel = gErrorIgnoreLevel;
-      gErrorIgnoreLevel = std::max(errorLevel, static_cast<int32_t>(kError));
+      auto quiet = ignore_root_messages_below(kError);
       logger::muted() = true;
-      auto unmute = make_scope_guard([errorLevel]() {
-        logger::muted() = false;
-        gErrorIgnoreLevel = errorLevel;
-      });
+      auto unmute = make_scope_guard([]() { logger::muted() = false; });
       canvas.reset(painter.GeneratePlot(fullPlot, mDataBuffer).release());
     }
   }
@@ -1924,8 +1908,8 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   }
 
   if (TColor::GetFreeColorIndex() > std::numeric_limits<int16_t>::max()) {
-    // there is a natural limit to the number of custom colors since ROOT color indices are of type short
-    logger::throw_out_of_range("Too many custom colors in one session. Aborting...");
+    // ROOT colour indices are of type short, which limits the number of custom colours
+    logger::throw_out_of_range("Too many custom colours in one session.");
   }
   auto logCreated = [&]() {
     logger::log("Created plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetGroup(), logger::end_color());
@@ -1938,9 +1922,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
       OpenWindow(canvas);
       gSystem->ProcessEvents();  // draws the window, and the windows already open react while the next plot is made
       if (const char terminalKey = TerminalKey(); terminalKey == 'q' || terminalKey == 'x') {
-        for (auto& window : mOpenWindows) {
-          if (!IsClosed(window.canvas.get())) Close(window.canvas.get());
-        }
+        CloseOpenWindows();
         mExitInteractiveBrowsing = true;  // no further plots
       }
       return true;
@@ -1954,7 +1936,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     } else {
       canvas->Show();
     }
-    if (mShownIndex && mBrowseCanvases[*mShownIndex]) static_cast<TRootCanvas*>(mBrowseCanvases[*mShownIndex]->GetCanvasImp())->UnmapWindow();
+    if (mShownIndex && mBrowseCanvases[*mShownIndex]) Hide(mBrowseCanvases[*mShownIndex].get());
     mShownIndex = current;
     // the plots under the one shown, as on a stack: detaching the plot uncovers the one shown before it
     auto putOnTop = [this](size_t index) {
@@ -1965,19 +1947,18 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     ShowDetached();
     bool boxClicked = false;
     // an event stays the canvas' current one until the next: the one a canvas has when it is shown again is old (e.g. the key that left it)
-    auto canvasEvent = [](TCanvas* c) { return std::make_tuple(c->GetEvent(), c->GetEventX(), c->GetEventY()); };
-    auto oldEvent = canvasEvent(canvas.get());
+    auto oldEvent = CanvasEvent(canvas.get());
     // browsing moves on to plot target, at mBrowsePosition: shown at once if it was made already, otherwise GeneratePlots makes it (returns true)
     auto browseTo = [&](size_t target) {
       mBrowseIndex = target;
       if (!mBrowseCanvases[target]) return true;
-      if (mShownIndex) static_cast<TRootCanvas*>(canvas->GetCanvasImp())->UnmapWindow();
+      if (mShownIndex) Hide(canvas.get());
       current = target;
       canvas = mBrowseCanvases[current];
       ShowAt(canvas.get(), mBrowsePosition->first, mBrowsePosition->second);
       mShownIndex = current;
       putOnTop(current);
-      oldEvent = canvasEvent(canvas.get());
+      oldEvent = CanvasEvent(canvas.get());
       ShowDetached();
       return false;
     };
@@ -1985,13 +1966,11 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
       bool closeAll = false;
       HandleOpenWindows(closeAll);
       const char terminalKey = TerminalKey();
-      const bool newEvent = (canvasEvent(canvas.get()) != oldEvent);
+      const bool newEvent = (CanvasEvent(canvas.get()) != oldEvent);
       const char windowKey = (newEvent && canvas->GetEvent() == kKeyPress) ? static_cast<char>(canvas->GetEventX()) : 0;
       const char key = (terminalKey) ? terminalKey : windowKey;
       if (closeAll || key == 'x' || terminalKey == 'q') {
-        for (auto& window : mOpenWindows) {
-          if (!IsClosed(window.canvas.get())) Close(window.canvas.get());
-        }
+        CloseOpenWindows();
         mExitInteractiveBrowsing = true;
         break;
       }
@@ -2003,14 +1982,14 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
       bool isValidKey = (key == 'a' || key == 's');
       bool isDetachKey = (key == 'd');
       if (isDetachKey && *NextBrowseIndex(current, true) == current) {
-        oldEvent = canvasEvent(canvas.get());  // the last plot left to browse stays in the browsing window
+        oldEvent = CanvasEvent(canvas.get());  // the last plot left to browse stays in the browsing window
       } else if (isDetachKey) {
         // the plot moves into a window of its own, one step right and down from the browsing window, and is in front;
         // the browsing window shows the plot shown before it (the next one if there was none). Window managers put the window mapped last in front:
         // the plot is hidden and shown in its window only after the browsing window shows the other plot (ShowDetached)
         const int32_t browseX = canvas->GetWindowTopX();
         const int32_t browseY = canvas->GetWindowTopY();
-        static_cast<TRootCanvas*>(canvas->GetCanvasImp())->UnmapWindow();
+        Hide(canvas.get());
         mDetached = {canvas, {browseX, browseY}};
         mBrowsePosition = std::make_pair(browseX, browseY);
         const string uniqueName = canvas->GetTitle();  // <name>:<group>
@@ -2033,7 +2012,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
           mBrowsePosition = std::make_pair(canvas->GetWindowTopX(), canvas->GetWindowTopY());
           if (browseTo(*target)) break;
         } else {
-          oldEvent = canvasEvent(canvas.get());  // a single plot: nothing to change to
+          oldEvent = CanvasEvent(canvas.get());  // a single plot: nothing to change to
         }
       } else {
         boxClicked = false;
@@ -2043,15 +2022,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     return true;
   }
 
-  if (mOutputDirectory.empty()) {
-    logger::error("No output directory was specified. Cannot save plot.");
-    return false;
-  }
-  auto parentDir = (mOutputDirectory.back() == '/') ? std::filesystem::path(mOutputDirectory).parent_path().parent_path() : std::filesystem::path(mOutputDirectory).parent_path();
-  if (!std::filesystem::exists(parentDir)) {
-    logger::error("Parent path {} of output directory does not exist.", parentDir.string());
-    return false;
-  }
+  if (!CreateOutputDirectory()) return false;
 
   // a histogram drawn more than once in a pad (the axis histogram for the axes and again for the grid) is one object with several
   // entries in the pad: where the canvas itself is stored, each entry gets its own copy, since a macro would declare the object twice
@@ -2059,7 +2030,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   if (mode == "file" || mode == "macro" || mode == "root" || mode == "xml") {
     std::function<void(TPad*)> cloneRedrawnHistograms;
     cloneRedrawnHistograms = [&](TPad* pad) {
-      std::set<TObject*> drawnObjects;
+      set<TObject*> drawnObjects;
       int32_t nClones{};
       for (auto link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
         TObject* object = link->GetObject();
@@ -2096,7 +2067,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
       if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') c = '_';
     }
     if (!s.empty() && std::isdigit(static_cast<unsigned char>(s.front()))) s = "_" + s;
-    static const std::set<string> keywords = {
+    static const set<string> keywords = {
       "alignas", "alignof", "and", "and_eq", "asm", "auto", "bitand", "bitor", "bool", "break", "case", "catch", "char", "char8_t", "char16_t", "char32_t", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue", "co_await", "co_return", "co_yield", "decltype", "default", "delete", "do", "double", "dynamic_cast", "else", "enum", "explicit", "export", "extern", "false", "float", "for", "friend", "goto", "if", "inline", "int", "long", "mutable", "namespace", "new", "noexcept", "not", "not_eq", "nullptr", "operator", "or", "or_eq", "private", "protected", "public", "register", "reinterpret_cast", "requires", "return", "short", "signed", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename", "union", "unsigned", "using", "virtual", "void", "volatile", "wchar_t", "while", "xor", "xor_eq"};
     if (keywords.count(s)) s += "_";
     return s;
@@ -2205,7 +2176,22 @@ bool PlotManager::IsClosed(const TCanvas* canvas)
 void PlotManager::Close(TCanvas* canvas)
 {
   canvas->SetUniqueID(1);
+  Hide(canvas);
+}
+void PlotManager::Hide(TCanvas* canvas)
+{
   if (auto rc = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) rc->UnmapWindow();
+}
+void PlotManager::CloseOpenWindows()
+{
+  for (auto& window : mOpenWindows) {
+    if (!IsClosed(window.canvas.get())) Close(window.canvas.get());
+  }
+}
+// an event stays the canvas' current one until the next: comparing with the one handled tells whether there is a new one
+PlotManager::canvas_event_t PlotManager::CanvasEvent(const TCanvas* canvas)
+{
+  return {canvas->GetEvent(), canvas->GetEventX(), canvas->GetEventY()};
 }
 
 //**************************************************************************************************
@@ -2221,8 +2207,8 @@ void PlotManager::ShowAt(TCanvas* canvas, int32_t topX, int32_t topY) const
   int32_t y = topY - mWindowOffsetY;  // first guess, SetWindowPosition places the window frame
   canvas->SetWindowPosition(x, y);
   canvas->Show();
-  auto canvasImp = static_cast<TRootCanvas*>(canvas->GetCanvasImp());
-  for (int32_t i = 0; i < 25 && !canvasImp->IsMapped(); ++i) {
+  auto canvasImp = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp());
+  for (int32_t i = 0; i < 25 && canvasImp && !canvasImp->IsMapped(); ++i) {
     gSystem->ProcessEvents();
     gSystem->Sleep(20);
   }
@@ -2262,7 +2248,7 @@ void PlotManager::OpenWindow(shared_ptr<TCanvas> canvas, optional<std::pair<int3
     // the first window goes to the top left corner, where the window manager allows it (e.g. below a panel)
     canvas->SetWindowPosition(0, 0);
     canvas->Show();
-    auto event = std::make_tuple(canvas->GetEvent(), canvas->GetEventX(), canvas->GetEventY());
+    const auto event = CanvasEvent(canvas.get());
     mOpenWindows.push_back({std::move(canvas), event});
     return;
   }
@@ -2274,7 +2260,7 @@ void PlotManager::OpenWindow(shared_ptr<TCanvas> canvas, optional<std::pair<int3
     if (topX + static_cast<int32_t>(canvas->GetWindowWidth()) > static_cast<int32_t>(gClient->GetDisplayWidth())) topX = first->canvas->GetWindowTopX();
   }
   ShowAt(canvas.get(), topX, topY);
-  auto event = std::make_tuple(canvas->GetEvent(), canvas->GetEventX(), canvas->GetEventY());  // e.g. the key that detached it
+  const auto event = CanvasEvent(canvas.get());  // e.g. the key that detached it
   mOpenWindows.push_back({std::move(canvas), event});
 }
 
@@ -2303,7 +2289,7 @@ optional<size_t> PlotManager::NextBrowseIndex(size_t index, bool forward) const
     const size_t candidate = (forward) ? (index + step) % nPlots : (index + nPlots - step) % nPlots;
     if (!mBrowseSkip[candidate]) return candidate;
   }
-  return std::nullopt;
+  return nullopt;
 }
 
 //**************************************************************************************************
@@ -2434,8 +2420,7 @@ bool PlotManager::HandleOpenWindows(bool& closeAll)
   for (auto& window : mOpenWindows) {
     TCanvas* canvas = window.canvas.get();
     if (IsClosed(canvas)) continue;
-    // an event stays the canvas' current one until the next: each is handled once
-    if (auto event = std::make_tuple(canvas->GetEvent(), canvas->GetEventX(), canvas->GetEventY()); event != window.handledEvent) {
+    if (auto event = CanvasEvent(canvas); event != window.handledEvent) {  // each event is handled once
       window.handledEvent = event;
       if (canvas->GetEvent() == kKeyPress) {
         const char key = static_cast<char>(canvas->GetEventX());
@@ -2584,6 +2569,17 @@ TClass* PlotManager::ReadableClass(TKey* key)
 
 //**************************************************************************************************
 /**
+ * Whether the object behind a key is of the given class (e.g. a directory or a tree), without reading it.
+ */
+//**************************************************************************************************
+bool PlotManager::KeyInherits(TKey* key, const TClass* base)
+{
+  const TClass* cl = TClass::GetClass(key->GetClassName());
+  return cl && cl->InheritsFrom(base);
+}
+
+//**************************************************************************************************
+/**
  * Call func(name, item) for the items of an in-memory folder or collection (values of maps under the name of their key) until it returns true.
  */
 //**************************************************************************************************
@@ -2612,7 +2608,7 @@ void PlotManager::ForEachItem(TObject* container, const std::function<bool(const
 void PlotManager::container_deleter_t::operator()(TObject* container) const
 {
   vector<TObject*> objects;
-  std::set<TObject*> found;
+  set<TObject*> found;
   std::function<void(TObject*)> collect = [&](TObject* obj) {
     if (!found.insert(obj).second) return;
     objects.push_back(obj);
@@ -2679,10 +2675,7 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
         logger::warning("Ignoring tree {} (data source {}) in a list: a tree stored in a list cannot be chained with the same tree in other inputs.", fullName, dataSource);
       } else {
         // trees in lists live in memory only, which RDataFrame can process only single-threaded
-        const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
-        const UInt_t nThreads = ROOT::GetThreadPoolSize();
-        ROOT::DisableImplicitMT();
-        auto mtGuard = make_scope_guard([wasMTEnabled, nThreads]() { if (wasMTEnabled) ROOT::EnableImplicitMT(nThreads); });
+        auto mtGuard = disable_implicit_mt();
         ProcessDataRequests("tree", dataSource, fullName, suffix, [tree]() { return std::make_unique<ROOT::RDataFrame>(*tree); }, tree);
       }
       if (isOwned) delete tree;
@@ -2785,8 +2778,7 @@ bool PlotManager::PrepareInput(TObject* obj, const string& location)
     const TString expression = func->GetFormula()->GetExpFormula();
     bool isValid{};
     {
-      auto errGuard = make_scope_guard([lvl = gErrorIgnoreLevel]() { gErrorIgnoreLevel = lvl; });
-      gErrorIgnoreLevel = kFatal;
+      auto quiet = ignore_root_messages_below(kFatal);
       // a C++ lambda given as text (TF1 f("f", "[](double* x, double* p) {...}", xmin, xmax, npar)) is compiled as such
       isValid = (func->GetFormula()->TestBit(TFormula::kLambda)) ? TFormula("probe", expression, func->GetNdim(), func->GetNpar(), false).IsValid()
                                                                  : TFormula("probe", expression, false).IsValid();
@@ -3067,29 +3059,25 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, const vector<string>& su
 vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& dataSource, const string& treeName)
 {
   vector<tree_input_t> treeInputs;
-  const auto pathPos = treeName.find_last_of('/');
-  const string path = (pathPos == string::npos) ? "" : treeName.substr(0, pathPos);
-  const string name = treeName.substr(pathPos + 1);
+  string path;
+  string name;
+  std::tie(path, name) = split_path(treeName);  // not a structured binding: the lambda below captures them
   // first match should be the one in the current folder; traverse deeper only if not found
   std::function<optional<string>(TDirectory*)> find;
   find = [&](TDirectory* dir) -> optional<string> {
-    auto isA = [](TKey* key, TClass* cl) {
-      auto* keyClass = TClass::GetClass(key->GetClassName());
-      return keyClass && keyClass->InheritsFrom(cl);
-    };
-    if (auto* key = dir->GetKey(name.data()); key && isA(key, TTree::Class())) {
+    if (auto* key = dir->GetKey(name.data()); key && KeyInherits(key, TTree::Class())) {
       string dirPath = dir->GetPath();  // file.root:/some/folder
       dirPath.erase(0, dirPath.find(":/") + 2);
       return (dirPath.empty() ? "" : dirPath + "/") + name;
     }
     set<string> visited;  // keys can appear in several cycles
     for (auto* key : TRangeDynCast<TKey>(dir->GetListOfKeys())) {
-      if (!key || !visited.insert(key->GetName()).second || !isA(key, TDirectory::Class())) continue;
+      if (!key || !visited.insert(key->GetName()).second || !KeyInherits(key, TDirectory::Class())) continue;
       if (auto* subDir = dir->GetDirectory(key->GetName())) {
         if (auto treePath = find(subDir)) return treePath;
       }
     }
-    return std::nullopt;
+    return nullopt;
   };
   auto expandedIt = mExpandedInputs.find(dataSource);
   for (const auto& inputRaw : (expandedIt != mExpandedInputs.end()) ? expandedIt->second : ExpandInputs(dataSource)) {
@@ -3116,13 +3104,13 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
 optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, const vector<tree_input_t>& treeInputs,
                                          const Plot::Pad::Data::data_info_t::join_t& join, vector<shared_ptr<TChain>>& joinedChains)
 {
-  if (const string treeAlias = treeName.substr(treeName.find_last_of('/') + 1); join.GetAlias() == treeAlias) {
+  if (const string treeAlias = split_path(treeName).second; join.GetAlias() == treeAlias) {
     return fmt::format("the columns of both would be called {}.column, please specify an alias", treeAlias);
   }
-  std::map<string, std::unique_ptr<TFile>> openFiles;  // each file is opened only once for the following checks
+  map<string, std::unique_ptr<TFile>> openFiles;  // each file is opened only once for the following checks
   auto getTree = [&](const string& fileName, const string& treePath) -> TTree* {
     auto& file = openFiles[fileName];
-    if (!file) file.reset(TFile::Open(fileName.data(), "READ"));
+    if (!file) file = std::make_unique<TFile>(fileName.data(), "READ");
     if (!file || file->IsZombie()) return nullptr;
     return file->Get<TTree>(treePath.data());
   };
@@ -3133,7 +3121,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
   }
   // the entries of a tree written in parallel (multi-threaded Snapshot) are not in their original order: ROOT refuses to match them row by row
   auto reshuffled = [&](const TTree* tree, const string& description) -> optional<string> {
-    if (!join.keys.empty() || !tree || !tree->TestBit(TTree::kEntriesReshuffled)) return std::nullopt;
+    if (!join.keys.empty() || !tree || !tree->TestBit(TTree::kEntriesReshuffled)) return nullopt;
     return fmt::format("the entries of {} were reshuffled when it was written (multi-threaded Snapshot), it can only be joined by key", description);
   };
   if (auto error = reshuffled(firstTree, treeName)) return error;
@@ -3145,8 +3133,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     for (const auto& treeInput : treeInputs) {
       string basePath = treeInput.treePath;
       for (int64_t level = 0; level < nLevels; ++level) {
-        const auto pos = basePath.find_last_of('/');
-        basePath = (pos == string::npos) ? "" : basePath.substr(0, pos);
+        basePath = split_path(basePath).first;
       }
       const string path = (basePath.empty()) ? join.tree : basePath + "/" + join.tree;
       auto* joinedTree = getTree(treeInput.file, path);
@@ -3192,8 +3179,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       }
     }
     auto index = [&]() {
-      auto errorLevelGuard = make_scope_guard([level = gErrorIgnoreLevel]() { gErrorIgnoreLevel = level; });
-      gErrorIgnoreLevel = kFatal;  // duplicates and keys that are too large are reported below
+      auto quiet = ignore_root_messages_below(kFatal);  // duplicates and keys that are too large are reported below
       return std::make_unique<TTreeIndex>(joinedChain.get(), join.keys[0].data(), (join.keys.size() > 1) ? join.keys[1].data() : "0");
     }();
     if (index->IsZombie()) return "cannot build an index of its keys";
@@ -3216,7 +3202,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
   }
   chain.AddFriend(joinedChain.get(), join.GetAlias().data());
   joinedChains.push_back(joinedChain);
-  return std::nullopt;
+  return nullopt;
 }
 
 //**************************************************************************************************
@@ -3273,7 +3259,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   if (parallelInfos.empty() && sequentialInfos.empty()) return;
 
   // C strings (leaves of type C, e.g. Branch("name", buffer, "name/C") or uproot's mktree) are read by RDataFrame as RVec<Char_t>
-  // padded with null characters, which cannot be compared with a string: they are given to the requests as std::string
+  // padded with null characters, which cannot be compared with a string: they are given to the requests as string
   // (a redefined column is only evaluated where a request reads it)
   vector<string> cStringColumns;
   if (tree) {
@@ -3343,10 +3329,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
     try {
       auto* cerrBuffer = std::cerr.rdbuf(&rootOutput);  // capture ROOT output, only shown if something goes wrong
       auto cerrGuard = make_scope_guard([cerrBuffer]() { std::cerr.rdbuf(cerrBuffer); });
-      const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
-      const UInt_t nThreads = ROOT::GetThreadPoolSize();
-      if (sequential) ROOT::DisableImplicitMT();
-      auto mtGuard = make_scope_guard([sequential, wasMTEnabled, nThreads]() { if (sequential && wasMTEnabled) ROOT::EnableImplicitMT(nThreads); });
+      auto mtGuard = disable_implicit_mt(sequential);
       auto df = makeDataFrame();
       auto nEntriesTotal = df->Count();
       auto passGuard = make_scope_guard([&]() { nPasses += df->GetNRuns(); });
@@ -3443,8 +3426,8 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       joinsDescription += ((joinsDescription.empty()) ? ", joined " : ", ") + join.GetDescription();
     }
   }
-  if (nUnmatched && *nUnmatched) joinsDescription += fmt::format(", {} row{} without a match skipped", *nUnmatched, (*nUnmatched == 1) ? "" : "s");
-  string message = fmt::format(" - {} {} entries{}{}, {} request{}, {} pass{}, {:.1f} s", DataLocation(dataSource, name), nEntries.value_or(0), (inputsDescription.empty()) ? "" : " from " + inputsDescription, joinsDescription, nRequests, (nRequests == 1) ? "" : "s", nPasses, (nPasses == 1) ? "" : "es", seconds);
+  if (nUnmatched && *nUnmatched) joinsDescription += fmt::format(", {} without a match skipped", plural(*nUnmatched, "row"));
+  string message = fmt::format(" - {} {} entries{}{}, {}, {}, {:.1f} s", DataLocation(dataSource, name), nEntries.value_or(0), (inputsDescription.empty()) ? "" : " from " + inputsDescription, joinsDescription, plural(nRequests, "request"), plural(nPasses, "pass", "es"), seconds);
   logger::info("{}", message);
   for (const auto& [info, counts] : entryCounts) {
     if (!counts.second) logger::warning("No entries selected in {} {} ({}).", type, DataLocation(dataSource, name), info->GetDescription());

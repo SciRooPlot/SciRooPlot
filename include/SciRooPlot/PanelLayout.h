@@ -56,6 +56,7 @@ class Panel
   friend Panel Hole(double_t width, double_t height);
   friend Panel ColorScale();
   friend Panel ColorScale(uint8_t padID);
+  bool IsPanel() const { return !mEmpty && !mScaleCell; }  // a panel with axes (no empty cell, no colour scale)
   double_t mWidth{1.};
   double_t mHeight{1.};
   double_t mSpacingAbove{-1.};  // negative: the spacing of the layout
@@ -133,6 +134,7 @@ class PanelLayout
   PanelLayout& SetCommonTitles(bool common = true);                                       // true: one title for a row (column) of touching panels showing the same one
 
  private:
+  friend class Panel;
   friend class Plot;
   void ApplyTo(Plot& plot) const;
   static double_t CheckedLength(const char* setter, double_t pixel, bool zeroAllowed);  // throws for negative (or zero) lengths

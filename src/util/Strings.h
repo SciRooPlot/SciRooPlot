@@ -42,6 +42,12 @@ namespace SciRooPlot::util
 std::vector<std::string> split_string(const std::string& argString, char delimiter, bool onlyFirst = false);
 std::string join_strings(const std::vector<std::string>& items, const std::string& separator);
 
+// a count with its noun: 1 file, 2 files (2 passes with suffix "es")
+inline std::string plural(size_t n, const std::string& word, const std::string& suffix = "s")
+{
+  return fmt::format("{} {}{}", n, word, (n == 1) ? "" : suffix);
+}
+
 inline bool str_contains(const std::string& str, const std::string& substr)
 {
   return (str.find(substr) != std::string::npos);

@@ -63,15 +63,13 @@ Panel& Panel::Span(uint8_t columns, uint8_t rows)
 
 Panel& Panel::SpacingAbove(double_t pixel)
 {
-  if (pixel < 0.) logger::throw_invalid_argument("Panel::SpacingAbove: the length must be zero or positive (got {}).", pixel);
-  mSpacingAbove = pixel;
+  mSpacingAbove = PanelLayout::CheckedLength("Panel::SpacingAbove", pixel, true);
   return *this;
 }
 
 Panel& Panel::SpacingLeft(double_t pixel)
 {
-  if (pixel < 0.) logger::throw_invalid_argument("Panel::SpacingLeft: the length must be zero or positive (got {}).", pixel);
-  mSpacingLeft = pixel;
+  mSpacingLeft = PanelLayout::CheckedLength("Panel::SpacingLeft", pixel, true);
   return *this;
 }
 
@@ -138,29 +136,29 @@ PanelLayout::PanelLayout(const PanelLayout& sizes, vector<vector<Panel>> rows) :
 double_t PanelLayout::CheckedLength(const char* setter, double_t pixel, bool zeroAllowed)
 {
   if (pixel < 0. || (!zeroAllowed && pixel == 0.)) {
-    logger::throw_invalid_argument("PanelLayout::{}: the length must be {} (got {}).", setter, zeroAllowed ? "zero or positive" : "positive", pixel);
+    logger::throw_invalid_argument("{}: the length must be {} (got {}).", setter, zeroAllowed ? "zero or positive" : "positive", pixel);
   }
   return pixel;
 }
 
 PanelLayout& PanelLayout::SetPanelSize(double_t pixel)
 {
-  mPanelSize = CheckedLength("SetPanelSize", pixel, false);
+  mPanelSize = CheckedLength("PanelLayout::SetPanelSize", pixel, false);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetMargins(double_t top, double_t bottom, double_t left, double_t right)
 {
-  mMarginTop = CheckedLength("SetMargins", top, true);
-  mMarginBottom = CheckedLength("SetMargins", bottom, true);
-  mMarginLeft = CheckedLength("SetMargins", left, true);
-  mMarginRight = CheckedLength("SetMargins", right, true);
+  mMarginTop = CheckedLength("PanelLayout::SetMargins", top, true);
+  mMarginBottom = CheckedLength("PanelLayout::SetMargins", bottom, true);
+  mMarginLeft = CheckedLength("PanelLayout::SetMargins", left, true);
+  mMarginRight = CheckedLength("PanelLayout::SetMargins", right, true);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetColorScaleMargin(double_t pixel)
 {
-  mColorScaleMargin = CheckedLength("SetColorScaleMargin", pixel, true);
+  mColorScaleMargin = CheckedLength("PanelLayout::SetColorScaleMargin", pixel, true);
   return *this;
 }
 
@@ -172,25 +170,25 @@ PanelLayout& PanelLayout::SetColorScaleOffset(double_t pixel)
 
 PanelLayout& PanelLayout::SetColorScaleWidth(double_t pixel)
 {
-  mColorScaleWidth = CheckedLength("SetColorScaleWidth", pixel, true);
+  mColorScaleWidth = CheckedLength("PanelLayout::SetColorScaleWidth", pixel, true);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetPanelSpacing(double_t pixel)
 {
-  mPanelSpacing = CheckedLength("SetPanelSpacing", pixel, true);
+  mPanelSpacing = CheckedLength("PanelLayout::SetPanelSpacing", pixel, true);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetTextSize(double_t pixel)
 {
-  mTextSize = CheckedLength("SetTextSize", pixel, false);
+  mTextSize = CheckedLength("PanelLayout::SetTextSize", pixel, false);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetTitleSize(double_t pixel)
 {
-  mTitleSize = CheckedLength("SetTitleSize", pixel, false);
+  mTitleSize = CheckedLength("PanelLayout::SetTitleSize", pixel, false);
   return *this;
 }
 
@@ -226,13 +224,13 @@ PanelLayout& PanelLayout::SetZTitleOffset(double_t pixel)
 
 PanelLayout& PanelLayout::SetLineWidth(float_t width)
 {
-  mLineWidth = static_cast<float_t>(CheckedLength("SetLineWidth", width, true));
+  mLineWidth = static_cast<float_t>(CheckedLength("PanelLayout::SetLineWidth", width, true));
   return *this;
 }
 
 PanelLayout& PanelLayout::SetMarkerSize(float_t size)
 {
-  mMarkerSize = static_cast<float_t>(CheckedLength("SetMarkerSize", size, true));
+  mMarkerSize = static_cast<float_t>(CheckedLength("PanelLayout::SetMarkerSize", size, true));
   return *this;
 }
 
@@ -362,7 +360,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
   }
   for (const auto& [cell, r, c] : cells) {
     if (cell->mColorScale) colOwnScale[c + cell->mColumns - 1] = true;
-    if (!cell->mEmpty && !cell->mScaleCell) {
+    if (cell->IsPanel()) {
       for (size_t cc = c; cc < c + cell->mColumns; ++cc) {
         if (colScale[cc]) logger::throw_invalid_argument("Layout: column {} holds a ColorScale() cell and a panel.", cc + 1);
       }
@@ -529,7 +527,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
       uint8_t scaleOf = cell->mScaleOf;
       if (scaleOf == 0 && c0 > 0) {
         const auto leftCell = static_cast<size_t>(owner[r0][c0 - 1]);
-        if (!cells[leftCell].panel->mEmpty && !cells[leftCell].panel->mScaleCell) scaleOf = padOf[leftCell];
+        if (cells[leftCell].panel->IsPanel()) scaleOf = padOf[leftCell];
       }
       pad.mColorScaleOf = scaleOf;  // 0: no panel to show (warned when drawn)
       pad.SetMargins((frameTop[r0] - y0) / height, (y1 - frameBottom[r1]) / height, 0.f, 0.f);
@@ -582,7 +580,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
     // touching panels of another length share no axis (see below), but the labels between them are hidden all the same
     auto otherLength = [&, cell = cell, r0 = r0, c0 = c0](size_t r, size_t c, bool sameRows) {
       const auto& [other, rr, cc] = cells[owner[r][c]];
-      return !other->mEmpty && !other->mScaleCell && (sameRows ? (rr != r0 || other->mRows != cell->mRows) : (cc != c0 || other->mColumns != cell->mColumns));
+      return other->IsPanel() && (sameRows ? (rr != r0 || other->mRows != cell->mRows) : (cc != c0 || other->mColumns != cell->mColumns));
     };
     bool unsharedLeft{}, unsharedBelow{};
     for (size_t r = r0; left.panel && colSep[c0 - 1].shared && r <= r1; ++r)
@@ -617,7 +615,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
   // touching panels share their axes: x within a column (panels touching above or below), y within a row (touching left or right);
   // and the outer title of a row (x) or column (y) of touching panels is drawn once: groups of the panels showing that title
   // (the x title of a panel without a touching panel below, the y title of one without a touching panel on its left)
-  auto isPanel = [&](int32_t index) { return !cells[index].panel->mEmpty && !cells[index].panel->mScaleCell; };
+  auto isPanel = [&](int32_t index) { return cells[index].panel->IsPanel(); };
   auto groupsOf = [&](auto&& joined) {  // the connected panels, joined(a, b) for neighbouring cells a and b
     vector<size_t> root(cells.size());
     for (size_t i = 0; i < root.size(); ++i)

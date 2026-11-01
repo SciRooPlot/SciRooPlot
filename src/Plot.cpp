@@ -1801,7 +1801,7 @@ Plot::Pad::Data& Plot::Pad::AddData(const Data& data, const optional<string>& la
 //**************************************************************************************************
 Plot::Pad::Data& Plot::Pad::AddFunction(const string& function, const optional<string>& label)
 {
-  mData.push_back(std::make_shared<Data>(function, "USER_FUNCTIONS", label));
+  mData.push_back(std::make_shared<Data>(function, kUserFunctions, label));
   return *mData.back();
 }
 
@@ -1822,7 +1822,7 @@ Plot::Pad::Data& Plot::Pad::AddPoints(const vector<double_t>& x, const vector<do
     xStr += number_to_string(x[i]) + ((i == nPoints - 1) ? "" : ",");
     yStr += number_to_string(y[i]) + ((i == nPoints - 1) ? "" : ",");
   }
-  mData.push_back(std::make_shared<Data>(xStr + ";" + yStr, "USER_GRAPHS", label));
+  mData.push_back(std::make_shared<Data>(xStr + ";" + yStr, kUserGraphs, label));
   return *mData.back();
 }
 Plot::Pad::Data& Plot::Pad::AddPoints(const vector<pair<double_t, double_t>>& positions, const optional<string>& label)
@@ -1929,7 +1929,7 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const Ratio& ratio, const optional<string>
 //**************************************************************************************************
 Plot::Pad::Data& Plot::Pad::SetRefFunc(const string& refFunc)
 {
-  mRefFunc = std::make_shared<Data>(refFunc, "USER_FUNCTIONS", nullopt);
+  mRefFunc = std::make_shared<Data>(refFunc, kUserFunctions, nullopt);
   return *mRefFunc;
 }
 

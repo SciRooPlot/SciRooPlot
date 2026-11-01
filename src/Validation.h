@@ -52,6 +52,14 @@ inline std::string plot_modes_description()
   return description;
 }
 
+// data sources of data defined in the plots: functions (also reference functions) and graphs given by their points
+inline const std::string kUserFunctions{"USER_FUNCTIONS"};
+inline const std::string kUserGraphs{"USER_GRAPHS"};
+inline bool is_user_defined(const std::string& dataSource)
+{
+  return dataSource == kUserFunctions || dataSource == kUserGraphs;
+}
+
 // returns the first illegal character (for non-ASCII characters the complete UTF-8 sequence, so it can be printed)
 inline std::optional<std::string> find_illegal_name_char(const std::string& name, bool allowSlash = false)
 {

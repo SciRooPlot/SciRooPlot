@@ -103,6 +103,7 @@
 #include <utility>
 #include <vector>
 
+#include "Validation.h"
 #include "util/Optional.h"
 #include "util/Paths.h"
 #include "util/ScopeGuard.h"
@@ -894,7 +895,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         auto funcRange = [&](char axisLabel, double_t frameMin, double_t frameMax, double_t funcMin, double_t funcMax, const optional<double_t>& userMin, const optional<double_t>& userMax) {
           double_t min = frameMin;
           double_t max = frameMax;
-          if (data->GetDataSource() != "USER_FUNCTIONS" && funcMin < frameMax && funcMax > frameMin) {
+          if (data->GetDataSource() != kUserFunctions && funcMin < frameMax && funcMax > frameMin) {
             min = std::max(min, funcMin);
             max = std::min(max, funcMax);
           }
@@ -2367,7 +2368,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
             if constexpr (is_func<denom_data_type>()) {
               // a formula of the plot definition has no range of its own (only ROOT's default [0, 1]): it divides the whole numerator
-              if (data_as_ratio->GetDenomDataSource() == "USER_FUNCTIONS") {
+              if (data_as_ratio->GetDenomDataSource() == kUserFunctions) {
                 if constexpr (is_hist<data_type>()) {
                   const TAxis* x = data_ptr->GetXaxis();
                   const TAxis* y = data_ptr->GetYaxis();
@@ -3084,7 +3085,7 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
   }
   // functions given as formula in the plot definition span the frame along the axes without a range of their own
   auto spansFrame = [](const Plot::Pad::Data& data, char axisLabel) {
-    if (data.GetDataSource() != "USER_FUNCTIONS") return false;
+    if (data.GetDataSource() != kUserFunctions) return false;
     return (axisLabel == 'X') ? !data.GetMinRangeX() && !data.GetMaxRangeX() : !data.GetMinRangeY() && !data.GetMaxRangeY();
   };
 
@@ -6119,7 +6120,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
       } else if (const auto& data = *definition->second; str_contains(matchStr, "name")) {
         replaceStr = data.GetName();
       } else if (str_contains(matchStr, "source")) {
-        if (data.GetDataSource() != "USER_FUNCTIONS" && data.GetDataSource() != "USER_GRAPHS") replaceStr = data.GetDataSource();
+        if (!is_user_defined(data.GetDataSource())) replaceStr = data.GetDataSource();
       } else {
         const auto& dataInfo = data.GetDataInfo();
         const auto& projInfo = data.GetProjInfo();

@@ -137,6 +137,10 @@ class PlotManager
   static bool IsClosed(const TCanvas* canvas);
   void ShowAt(TCanvas* canvas, int32_t topX, int32_t topY) const;
   static void Close(TCanvas* canvas);
+  static void Hide(TCanvas* canvas);
+  void CloseOpenWindows();
+  using canvas_event_t = std::tuple<int32_t, int32_t, int32_t>;  // event, x, y
+  static canvas_event_t CanvasEvent(const TCanvas* canvas);
   void OpenWindow(std::shared_ptr<TCanvas> canvas, std::optional<std::pair<int32_t, int32_t>> followTop = std::nullopt, bool cascade = true);
   void ShowDetached();
   std::optional<size_t> NextBrowseIndex(size_t index, bool forward) const;
@@ -147,6 +151,9 @@ class PlotManager
   static char TerminalKey();
   bool SavePlotsToRootFile() const;
   bool CreateOutputDirectory() const;
+  static void WriteInfoFile(const boost::property_tree::ptree& tree, const std::string& path, const std::string& content);
+  static std::function<bool(const std::string&, const std::string&)> PlotMatcher(const std::string& name, const std::string& group);
+  static bool IsValidDataSourceName(const std::string& dataSource);
   bool SaveDataToRootFile() const;
 
   std::string mProjectName;
@@ -162,7 +169,7 @@ class PlotManager
   std::map<std::string, std::set<std::string>> mNotFoundData;  // data source -> names not found in any of its inputs (last reading)
   struct open_window_t {
     std::shared_ptr<TCanvas> canvas;
-    std::tuple<int32_t, int32_t, int32_t> handledEvent;  // event, x, y: the last event handled (it stays the canvas' current one until the next)
+    canvas_event_t handledEvent;  // the last event handled (it stays the canvas' current one until the next)
   };
   std::vector<open_window_t> mOpenWindows;  // windows open until the user closes them: all plots in mode "spread", plots detached in mode "show"
   std::string mGifName;
@@ -200,6 +207,7 @@ class PlotManager
   static TObject* FindSubDirectory(TObject* folder, const std::vector<std::string>& subDirs, read_cache_t& readCache);
   static bool IsContainer(const TClass* cl);
   static TClass* ReadableClass(TKey* key);
+  static bool KeyInherits(TKey* key, const TClass* base);
   static void ForEachItem(TObject* container, const std::function<bool(const std::string&, TObject*)>& func);
   std::shared_ptr<Plot::Pad::Data> RefFuncDrawnIn(Plot& plot, uint8_t padID);
   std::vector<std::tuple<std::string, std::string, Plot::Pad::Data::data_info_t>> GetMissingData(Plot& plot);
