@@ -1397,7 +1397,7 @@ Plot::Pad::Pad(const Pad& other)
     mMarkerDefaults(other.mMarkerDefaults), mLineDefaults(other.mLineDefaults), mFillDefaults(other.mFillDefaults),
     mCandleOptionDefaults(other.mCandleOptionDefaults),
     mPalette(other.mPalette), mRedrawAxes(other.mRedrawAxes), mIsEmptyCell(other.mIsEmptyCell), mColorScaleOf(other.mColorScaleOf),
-    mColorScaleTitleOffset(other.mColorScaleTitleOffset), mAxes(other.mAxes)
+    mLayoutTitleOffsets(other.mLayoutTitleOffsets), mAxes(other.mAxes)
 {
   mData.reserve(other.mData.size());
   for (const auto& data : other.mData) {
@@ -1496,7 +1496,9 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
   mIsEmptyCell = padTree.get<bool>("empty_cell", false);
   read_from_tree(padTree, mColorScaleOf, "color_scale_of");
-  read_from_tree(padTree, mColorScaleTitleOffset, "color_scale_title_offset");
+  for (char axisLabel : {'X', 'Y', 'Z'}) {
+    if (auto offset = padTree.get_optional<float_t>(string("layout_title_offset_") + axisLabel)) mLayoutTitleOffsets[axisLabel] = *offset;
+  }
 
   for (const auto& content : padTree) {
     // add data
@@ -1597,7 +1599,9 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
   if (mIsEmptyCell) padTree.put("empty_cell", true);
   put_in_tree(padTree, mColorScaleOf, "color_scale_of");
-  put_in_tree(padTree, mColorScaleTitleOffset, "color_scale_title_offset");
+  for (const auto& [axisLabel, offset] : mLayoutTitleOffsets) {
+    padTree.put(string("layout_title_offset_") + axisLabel, offset);
+  }
 
   int32_t dataID = 1;
   for (const auto& data : mData) {
@@ -1717,7 +1721,9 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if (pad.mIsEmptyCell) mIsEmptyCell = true;
   if (pad.mColorScaleOf) mColorScaleOf = pad.mColorScaleOf;
-  if (pad.mColorScaleTitleOffset) mColorScaleTitleOffset = pad.mColorScaleTitleOffset;
+  for (const auto& [axisLabel, offset] : pad.mLayoutTitleOffsets) {
+    mLayoutTitleOffsets[axisLabel] = offset;
+  }
   if (pad.mRefFunc) mRefFunc = pad.mRefFunc->Clone();
   if (pad.mFrame) mFrame = pad.mFrame->Clone();
   for (auto& [axisLabel, axis] : pad.mAxes) {

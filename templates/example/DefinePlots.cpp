@@ -341,10 +341,9 @@ void DefineSpectraPlots(PlotManager& pm)
   {  // the same 2d histogram shown in 3d, as contours and as candles --------------------
     Plot plot3d("ptVsMultLego", "spectra/2dViews", "1d_3dview");
     plot3d[1].AddData("ptVsMult", "data").RebinXY(4, 2).Scale(1e-3).SetDrawOption(lego);
-    plot3d[1].SetView(35.0, 240.0);      // viewing angles theta and phi in degrees
-    plot3d[1]['X'].SetTitleOffset(1.8);  // in 3D views the axis titles need more room from the labels
-    plot3d[1]['Y'].SetTitleOffset(1.8).SetNumDivisions(505);
-    plot3d[1]['Z'].SetTitle("tracks (10^{3})").SetTitleOffset(1.5);
+    plot3d[1].SetView(35.0, 240.0);  // viewing angles theta and phi in degrees
+    plot3d[1]['Y'].SetNumDivisions(505);
+    plot3d[1]['Z'].SetTitle("tracks (10^{3})");
     pm.AddPlot(plot3d);
 
     Plot plotContours("ptVsMultContours", "spectra/2dViews", "2d_logz");
@@ -922,9 +921,7 @@ void DefineHeavyIonPlots(PlotManager& pm)
     plot[1].AddData("correlations/ridge", "heavyion").SetDrawOption(surf_col);
     plot[1].SetView(40.0, 135.0);
     plot[1].SetPalette(kViridis);
-    plot[1]['Z'].SetRange(0.985, 1.03).SetTitleOffset(2.1);  // the jet peak reaches 1.15; the title needs room from the long labels
-    plot[1]['X'].SetTitleOffset(1.8);                        // in 3D views the axis titles need more room from the labels
-    plot[1]['Y'].SetTitleOffset(1.8);
+    plot[1]['Z'].SetRange(0.985, 1.03);  // the jet peak reaches 1.15
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {                                                                       // the ridge emerging with multiplicity: three classes on one colour scale, the jet peak cut off by the common z range, so the
@@ -1946,9 +1943,8 @@ void DefineAnimations(PlotManager& pm)
       Plot plot("phi" + std::to_string(phi), "animations/legoRotation", "1d_3dview");
       plot[1].AddData("ptVsMult", "data").RebinXY(4, 2).SetDrawOption(lego_col);
       plot[1].SetView(35.0, phi);
-      plot[1]['X'].SetTitleOffset(1.8);
-      plot[1]['Y'].SetTitleOffset(1.8).SetNumDivisions(505);
-      plot[1]['Z'].SetLog().SetTitleOffset(1.5);
+      plot[1]['Y'].SetNumDivisions(505);
+      plot[1]['Z'].SetLog();
       pm.AddPlot(plot);
     }
   }  // -----------------------------------------------------------------------------------

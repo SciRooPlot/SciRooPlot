@@ -2610,7 +2610,7 @@ function teaserShow(i) { // the figures of one comparison; wide multi-panel figu
   a.src = `img/compare/${id}_root.png`; b.src = srpImage(CMP.find(c => c.id === id)) }
 
 /* the geometry of PanelLayout::ApplyTo: canvas size, pads and axis frames in canvas pixels (x from the left, y from the top) */
-const PL_DEFAULTS = { panel: 638, top: 32, bottom: 118, left: 118, right: 32, z: 268, zOff: 5.12, zWidth: 46.08, spacing: 0, text: 31.52, title: 39.4, tick: 19.15, labelOff: 3.94, xTitleOff: 63.04, yTitleOff: 0, zTitleOff: 122.9, lw: 5, ms: 1.4 };
+const PL_DEFAULTS = { panel: 638, top: 32, bottom: 118, left: 118, right: 32, z: 268, zOff: 5.12, zWidth: 46.08, spacing: 0, text: 31.52, title: 39.4, tick: 19.15, labelOff: 3.94, xTitleOff: 63.04, yTitleOff: 0, zTitleOff: 0, lw: 5, ms: 1.4 };
 // G: { cols: [{ w, kind, z, own, gapAfter, spaceAfter }] (kind "short": attached panels; own: an x title of its own; spaceAfter: the space to the next
 // touching column, null: S.spacing), rows: [{ h, kind, ref, compact, own, gapAfter, spaceAfter }]
 // (kind "short": attached panels; ref: the function of a reference line,
@@ -2700,7 +2700,7 @@ const SIZE_FIELDS = [ // key, setter, label, step
     ["z", "SetColorScaleMargin", "Margin for a colour scale", 1], ["zOff", "SetColorScaleOffset", "Colour scale to frame", 0.5], ["zWidth", "SetColorScaleWidth", "Colour scale width", 0.5],
     ["spacing", "SetPanelSpacing", "Space between touching panels", 1]]],
   ["text", "Text", [["text", "SetTextSize", "Labels, legends, texts", 0.5], ["title", "SetTitleSize", "Axis titles", 0.5], ["labelOff", "SetLabelOffset", "Labels to axis", 0.5],
-    ["xTitleOff", "SetXTitleOffset", "x title to axis", 0.5], ["yTitleOff", "SetYTitleOffset", "y title to axis (0: next to the labels)", 0.5], ["zTitleOff", "SetZTitleOffset", "z title to colour scale", 0.5]]],
+    ["xTitleOff", "SetXTitleOffset", "x title to axis", 0.5], ["yTitleOff", "SetYTitleOffset", "y title to axis (0: next to the labels)", 0.5], ["zTitleOff", "SetZTitleOffset", "z title to colour scale (0: next to the labels)", 0.5]]],
   ["lines", "Ticks, lines, markers", [["tick", "SetTickLength", "Tick length", 0.5], ["lw", "SetLineWidth", "Line width", 1], ["ms", "SetMarkerSize", "Marker size (1 = 8 pixels)", 0.1]]]];
 const SHAPE_DEFAULTS = { aspect: 1.618, ratioH: 0.37, pullH: 0.37 };  // BasePlotShape: aspect ratio of wide and tall panels; heights of the ratio and pull panels of the names
 const ATTACHED = 0.37;  // the size of a newly attached panel, in units of the standard panel (as the ratio panels of the names)
@@ -2918,8 +2918,9 @@ function layoutSVG(g, S, maxW, maxH) {
   const byId = id => g.pads.find(q => q.id === id), once = (groups, end) => new Set(groups.flatMap(ids => { const last = ids.reduce((a, b) => end(byId(b)) > end(byId(a)) ? b : a); return ids.filter(id => id !== last) }));
   const noTitleX = once(g.titles.X, q => q.fr), noTitleY = once(g.titles.Y, q => -q.ft);
   const zScale = (bx, ft, fb) => { const bw = S.zWidth, fh = fb - ft, o = [`<rect x="${T(bx)}" y="${T(ft)}" width="${T(bw)}" height="${T(fh)}" fill="url(#zgrad)"/>`];
-    ["0", "1", "2", "3", "4"].forEach((t, i) => o.push(txt(bx + bw + S.labelOff + 0.2 * S.text, fb - fh * i / 4 + 0.36 * S.text, S.text, t)));
-    o.push(`<text transform="translate(${T(bx + bw + S.zTitleOff)} ${T(ft)}) rotate(-90)" font-size="${T(S.title)}" ${font} fill="#000" text-anchor="end" dominant-baseline="central">z title</text>`); return o.join("") };
+    const zl = ["0", "1", "2", "3", "4"], zx = S.zTitleOff > 0 ? bx + bw + S.zTitleOff : bx + bw + S.labelOff + 0.2 * S.text + Math.max(...zl.map(t => textW(t, S.text))) + 0.62 * S.title;
+    zl.forEach((t, i) => o.push(txt(bx + bw + S.labelOff + 0.2 * S.text, fb - fh * i / 4 + 0.36 * S.text, S.text, t)));
+    o.push(`<text transform="translate(${T(zx)} ${T(ft)}) rotate(-90)" font-size="${T(S.title)}" ${font} fill="#000" text-anchor="end" dominant-baseline="central">z title</text>`); return o.join("") };
   for (const p of g.pads) {
     const selected = LAY.sel === p.key ? `<rect x="${T(p.x0) + 1}" y="${T(p.y0) + 1}" width="${Math.max(0, T(p.x1 - p.x0) - 2)}" height="${Math.max(0, T(p.y1 - p.y0) - 2)}" fill="none" stroke="var(--amber)" stroke-width="3" rx="3"/>` : "";
     if (p.scale) { // a ZAxis() cell: the colour scale along the frames of its rows, at the distance from them that a panel's own scale has

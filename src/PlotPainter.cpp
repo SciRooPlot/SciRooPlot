@@ -1102,6 +1102,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             optional<double_t> userRangeMin;
             optional<double_t> userRangeMax;
             bool userTitleOffset{};
+            bool userTitleCenter{};
 
             // first apply default pad values and then settings for this specific pad
             for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
@@ -1122,7 +1123,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 if (axisLayout.GetLabelSize()) textSizeLabel = axisLayout.GetLabelSize();
                 if (axisLayout.GetLabelAngle()) labelAngle = axisLayout.GetLabelAngle();
 
-                if (axisLayout.GetTitleCenter()) axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
+                if (axisLayout.GetTitleCenter()) {
+                  axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
+                  userTitleCenter = true;
+                }
                 if (axisLayout.GetLabelCenter()) axis_ptr->CenterLabels(*axisLayout.GetLabelCenter());
 
                 if (axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(axisLayout.GetAxisColor()->ToIndex());
@@ -1180,14 +1184,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             }
 
-            // the z title offset of a layout panel is meant for the colour scale beside a flat frame; the z axis of a 3D view (and its scale)
-            // get the title next to their labels instead (automatic placement of TGaxis), which a fixed distance would miss or overlap
-            if (axisLabel == 'Z' && !userTitleOffset) {
+            // the title offsets of a layout panel are those of a flat frame; a 3D view draws its axes in perspective (THistPainter::PaintLegoAxis):
+            // x and y titles 1.5 title heights from the axis (ROOT's own value for y) and centred (at the end of the axis they run into the next
+            // pad or the colour scale), the z title next to its labels (offset 0, see PlaceZTitle)
+            const bool viewFrame = IsViewFrame(pad_ptr, axisHist_ptr);
+            if (viewFrame && axisLabel != 'Z' && !userTitleCenter) axis_ptr->CenterTitle();
+            if (!userTitleOffset) {
               const Plot::Pad& padSettings = plot.GetPads()[padID];
-              if (IsViewFrame(pad_ptr, axisHist_ptr)) {
-                axis_ptr->SetTitleOffset(0.f);
-              } else if (auto offset = get_first(padSettings.mColorScaleTitleOffset, padDefaults.mColorScaleTitleOffset)) {
-                axis_ptr->SetTitleOffset(*offset);
+              if (viewFrame) {
+                axis_ptr->SetTitleOffset((axisLabel == 'Z') ? 0.f : 1.5f);
+              } else if (auto layoutOffset = padSettings.mLayoutTitleOffsets.find(axisLabel); layoutOffset != padSettings.mLayoutTitleOffsets.end()) {
+                axis_ptr->SetTitleOffset(layoutOffset->second);
+              } else if (layoutOffset = padDefaults.mLayoutTitleOffsets.find(axisLabel); layoutOffset != padDefaults.mLayoutTitleOffsets.end()) {
+                axis_ptr->SetTitleOffset(layoutOffset->second);
               }
             }
 
@@ -2584,6 +2593,41 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     // the placement of the boxes below relies on the painted data (painting creates e.g. the palette of a colour plot):
     // the pad is updated once for all data, since every update repaints everything drawn so far
     pad_ptr->Update();
+    // z titles with offset 0 next to their labels: the z axis of a 3D view and the colour scales (the range of the frame is final now)
+    if (axisHist_ptr && axisHist_ptr->GetDimension() == 3) {
+      // the binned z axis (linear) and the contents on the scale; ROOT makes the scale of a 3d histogram once, with the look of the z axis
+      // at that time: it is made again, and painted now, since the boxes are placed around it
+      TAxis* zAxis = axisHist_ptr->GetZaxis();
+      const vector<label_range_t> ranges{{zAxis->GetBinLowEdge(zAxis->GetFirst()), zAxis->GetBinUpEdge(zAxis->GetLast()), false},
+                                         {axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), false}};
+      if (PlaceZTitle(pad_ptr, zAxis, ranges)) {
+        TList* functions = axisHist_ptr->GetListOfFunctions();
+        if (TObject* palette = functions->FindObject("palette")) {
+          functions->Remove(palette);
+          delete palette;
+          pad_ptr->Modified();
+          pad_ptr->Update();
+        }
+      }
+    } else if (axisHist_ptr && axisHist_ptr->GetDimension() == 2) {
+      const vector<label_range_t> ranges{{axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), static_cast<bool>(pad_ptr->GetLogz())}};
+      const bool viewFrame = IsViewFrame(pad_ptr, axisHist_ptr);
+      if (viewFrame) PlaceZTitle(pad_ptr, axisHist_ptr->GetZaxis(), ranges);
+      for (TObject* primitive : *pad_ptr->GetListOfPrimitives()) {
+        auto* hist = dynamic_cast<TH1*>(primitive);
+        if (!hist || hist->GetDimension() != 2) continue;
+        if (viewFrame && hist != axisHist_ptr) {
+          // with log z ROOT paints the axes of a view with the data drawn over the emptied frame: they get the look of the frame's axes
+          for (auto [axis, frameAxis] : {std::pair{hist->GetXaxis(), axisHist_ptr->GetXaxis()}, std::pair{hist->GetYaxis(), axisHist_ptr->GetYaxis()},
+                                         std::pair{hist->GetZaxis(), axisHist_ptr->GetZaxis()}}) {
+            axis->ImportAttributes(frameAxis);
+            axis->SetTitle(frameAxis->GetTitle());
+          }
+        }
+        if (hist->GetListOfFunctions()->FindObject("palette")) PlaceZTitle(pad_ptr, hist->GetZaxis(), ranges);
+      }
+      pad_ptr->Modified();
+    }
     if (flatFrame) {
       // the ranges as drawn, for the axes shared with other pads (pad coordinates of a log axis are decades)
       auto value = [](double_t padCoord, bool isLog) { return (isLog) ? TMath::Power(10., padCoord) : padCoord; };
@@ -5640,9 +5684,20 @@ void PlotPainter::HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel)
 vector<double_t> PlotPainter::LabelValues(TPad* pad, const TAxis* axis, char axisLabel)
 {
   const bool isX = (axisLabel == 'X');
-  const bool isLog = isX ? pad->GetLogx() : pad->GetLogy();
-  const double_t padMin = isX ? pad->GetUxmin() : pad->GetUymin();  // pad coordinates (log10 for a log axis)
-  const double_t padMax = isX ? pad->GetUxmax() : pad->GetUymax();
+  // THistPainter::PaintAxis scales the primary divisions of an x axis whose setting carries a max digits part (> 1000) with
+  // the width of the pad relative to the canvas, so that a narrow pad gets fewer labels
+  return LabelValues(axis, isX ? pad->GetUxmin() : pad->GetUymin(), isX ? pad->GetUxmax() : pad->GetUymax(), isX ? pad->GetLogx() : pad->GetLogy(),
+                     (isX && axis->GetNdivisions() > 1000) ? pad->GetAbsWNDC() : 1.);
+}
+
+//**************************************************************************************************
+/**
+ * The values TGaxis writes labels at along an axis from padMin to padMax (pad coordinates: log10 for a log axis), the primary divisions
+ * multiplied by divisionScale.
+ */
+//**************************************************************************************************
+vector<double_t> PlotPainter::LabelValues(const TAxis* axis, double_t padMin, double_t padMax, bool isLog, double_t divisionScale)
+{
   const double_t wmin = isLog ? TMath::Power(10., padMin) : padMin;
   const double_t wmax = isLog ? TMath::Power(10., padMax) : padMax;
   vector<double_t> labelValues;
@@ -5655,9 +5710,7 @@ vector<double_t> PlotPainter::LabelValues(TPad* pad, const TAxis* axis, char axi
   }
   const int32_t nDiv = axis->GetNdivisions();
   int32_t nPrimary = std::abs(nDiv) % 100;
-  // THistPainter::PaintAxis scales the primary divisions of an x axis whose setting carries a max digits part (> 1000) with
-  // the width of the pad relative to the canvas, so that a narrow pad gets fewer labels
-  if (isX && nDiv > 1000) nPrimary = static_cast<int32_t>(static_cast<float>(std::max(1, nPrimary)) * pad->GetAbsWNDC());
+  if (divisionScale != 1.) nPrimary = static_cast<int32_t>(static_cast<float>(std::max(1, nPrimary)) * divisionScale);
   if (nPrimary == 0) return labelValues;
   double_t binLow{wmin}, binHigh{wmax}, binWidth{(wmax - wmin) / nPrimary};
   int32_t nBins{nPrimary};
@@ -5696,10 +5749,18 @@ vector<double_t> PlotPainter::LabelValues(TPad* pad, const TAxis* axis, char axi
 //**************************************************************************************************
 double_t PlotPainter::MaxLabelWidth(TPad* pad, const TAxis* axis, char axisLabel)
 {
+  return MaxLabelWidth(pad, axis, LabelValues(pad, axis, axisLabel), (axisLabel == 'X') ? pad->GetLogx() : pad->GetLogy());
+}
+
+//**************************************************************************************************
+/**
+ * Width in pixels of the widest of the labels at the given values (as TGaxis writes them, see above).
+ */
+//**************************************************************************************************
+double_t PlotPainter::MaxLabelWidth(TPad* pad, const TAxis* axis, const vector<double_t>& values, bool isLog)
+{
   if (axis->GetLabelSize() <= 0.f) return 0.;
   pad->cd();  // texts are measured in the current pad
-  const bool isLog = (axisLabel == 'X') ? pad->GetLogx() : pad->GetLogy();
-  vector<double_t> values = LabelValues(pad, axis, axisLabel);
   double_t largest{};
   for (double_t value : values) {
     largest = std::max(largest, std::abs(value));
@@ -5723,6 +5784,36 @@ double_t PlotPainter::MaxLabelWidth(TPad* pad, const TAxis* axis, char axisLabel
     width = std::max(width, static_cast<double_t>(std::get<0>(GetTextDimensions(label, pad))));
   }
   return width;
+}
+
+//**************************************************************************************************
+/**
+ * Places a z title with offset 0 next to the widest label of its axis, one title height beyond it: the vertical z axis of a 3D view
+ * (labels left of it) and a colour scale (labels right of it). TGaxis places such titles itself only on the side of an ordinary y axis
+ * (TGaxis::PaintAxis adds the label width without the side, so the title of a colour scale lands on its labels), so the offset is set
+ * from the widest label of the given ranges (minimum, maximum, log: a 3d histogram has its binned z axis and its contents on the scale,
+ * which share the title offset). Called once the pad is painted, when the ranges are final. Returns whether the offset was set.
+ */
+//**************************************************************************************************
+bool PlotPainter::PlaceZTitle(TPad* pad, TAxis* zAxis, const vector<label_range_t>& ranges)
+{
+  if (zAxis->GetTitleOffset() != 0.f || TString(zAxis->GetTitle()).IsWhitespace() || zAxis->GetTitleSize() <= 0.f) return false;
+  const double_t padWidthPixel = pad->GetWw() * pad->GetAbsWNDC();
+  const double_t padHeightPixel = pad->GetWh() * pad->GetAbsHNDC();
+  if (padWidthPixel <= 0. || padHeightPixel <= 0.) return false;
+  const bool pixelFont = zAxis->GetTitleFont() % 10 == 3;
+  // TGaxis puts the title of a vertical axis at 1.6 * offset * title size from it, the size read as a fraction of the pad width
+  const double_t unit = 1.6 * (pixelFont ? zAxis->GetTitleSize() * mScale : zAxis->GetTitleSize() * padWidthPixel);
+  const double_t titleHeight = pixelFont ? zAxis->GetTitleSize() * mScale : zAxis->GetTitleSize() * std::min(padWidthPixel, padHeightPixel);
+  double_t labels{};
+  for (const auto& [min, max, isLog] : ranges) {
+    if (isLog && !(min > 0.)) continue;
+    const double_t padMin = isLog ? std::log10(min) : min;
+    const double_t padMax = isLog ? std::log10(max) : max;
+    if (padMax > padMin) labels = std::max(labels, MaxLabelWidth(pad, zAxis, LabelValues(zAxis, padMin, padMax, isLog), isLog));
+  }
+  zAxis->SetTitleOffset(static_cast<float_t>((labels + titleHeight) / unit));
+  return true;
 }
 
 //**************************************************************************************************
@@ -5818,6 +5909,7 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
   scale->Draw("COLZ");
   if (cellSetup) cellPad->GetListOfPrimitives()->AddFirst(cellSetup);
   cellPad->Update();
+  PlaceZTitle(cellPad, zAxis, {{scale->GetMinimum(), scale->GetMaximum(), static_cast<bool>(cellPad->GetLogz())}});
   if (auto* palette = dynamic_cast<TPave*>(scale->GetListOfFunctions()->FindObject("palette"))) {
     palette->SetX1NDC(scaleOffset.value_or(0.005f));
     palette->SetX2NDC(scaleOffset.value_or(0.005f) + scaleWidth.value_or(0.045f));

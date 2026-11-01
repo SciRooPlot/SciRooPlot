@@ -310,7 +310,11 @@ class PlotPainter
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
   void HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel);
   static std::vector<double_t> LabelValues(TPad* pad, const TAxis* axis, char axisLabel);
+  static std::vector<double_t> LabelValues(const TAxis* axis, double_t padMin, double_t padMax, bool isLog, double_t divisionScale = 1.);
   double_t MaxLabelWidth(TPad* pad, const TAxis* axis, char axisLabel);
+  double_t MaxLabelWidth(TPad* pad, const TAxis* axis, const std::vector<double_t>& values, bool isLog);
+  using label_range_t = std::tuple<double_t, double_t, bool>;  // minimum, maximum, log
+  bool PlaceZTitle(TPad* pad, TAxis* zAxis, const std::vector<label_range_t>& ranges);
   void DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID);
   static bool IsHBarFrame(TPad* pad, const TH1* frame);
   static bool IsViewFrame(TPad* pad, const TH1* frame);

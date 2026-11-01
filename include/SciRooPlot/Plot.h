@@ -690,9 +690,9 @@ class Plot::Pad : public FillSetters<Pad>
   candle_defaults_t mCandleOptionDefaults;
   palette_defaults_t mPalette;
   std::optional<bool> mRedrawAxes;
-  bool mIsEmptyCell{};                            // an Empty() cell of a PanelLayout: room for a legend or a text, nothing to warn about when left blank
-  std::optional<uint8_t> mColorScaleOf;           // a ZAxis() cell of a PanelLayout: shows the colour scale of the z group of this pad
-  std::optional<float_t> mColorScaleTitleOffset;  // z title offset of a PanelLayout panel, for the colour scale beside a flat frame (a 3D view places it itself)
+  bool mIsEmptyCell{};                          // an Empty() cell of a PanelLayout: room for a legend or a text, nothing to warn about when left blank
+  std::optional<uint8_t> mColorScaleOf;         // a ZAxis() cell of a PanelLayout: shows the colour scale of the z group of this pad
+  std::map<char, float_t> mLayoutTitleOffsets;  // title offsets of a PanelLayout panel (X, Y, Z), for a flat frame (a 3D view has its own)
 
   std::map<char, Axis> mAxes;
   std::vector<std::shared_ptr<Data>> mData;

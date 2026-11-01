@@ -560,17 +560,18 @@ void PanelLayout::ApplyTo(Plot& plot) const
     target['X']
       .SetTitleSize(mTitleSize / minSide)
       .SetTickLength(mTickLength * width / (frameWidth * height))
-      .SetLabelOffset(mLabelOffset / height)
-      .SetTitleOffset(mXTitleOffset * minSide / (1.6 * mTitleSize * height));
+      .SetLabelOffset(mLabelOffset / height);
     target['Y']
       .SetTitleSize(mTitleSize / minSide)
       .SetTickLength(mTickLength * height / (frameHeight * width))
-      .SetLabelOffset(mLabelOffset / width)
-      .SetTitleOffset((mYTitleOffset > 0.) ? mYTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: automatic placement (see PlotPainter)
+      .SetLabelOffset(mLabelOffset / width);
+    target['Z'].SetTitleSize(mTitleSize / minSide);  // also for the z axis of 3D views in panels without a colour scale
+    // the title offsets are those of a flat frame: kept apart from the axis settings, since a 3D view places its titles itself (see PlotPainter)
+    target.mLayoutTitleOffsets['X'] = static_cast<float_t>(mXTitleOffset * minSide / (1.6 * mTitleSize * height));
+    target.mLayoutTitleOffsets['Y'] = static_cast<float_t>((mYTitleOffset > 0.) ? mYTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: automatic placement
     if (colZAxis[c1]) {
-      target.mColorScaleTitleOffset = static_cast<float_t>(mZTitleOffset * minSide / (1.6 * mTitleSize * width));
+      target.mLayoutTitleOffsets['Z'] = static_cast<float_t>((mZTitleOffset > 0.) ? mZTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: next to the labels
       target['Z']
-        .SetTitleSize(mTitleSize / minSide)
         .SetColorScaleOffset(static_cast<float_t>(mColorScaleOffset / width))
         .SetColorScaleWidth(static_cast<float_t>(mColorScaleWidth / width));
     }
