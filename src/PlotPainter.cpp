@@ -4132,17 +4132,23 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     float_t text_size = textSize.value_or(24.f);
     int16_t text_font = textFont.value_or(43);
     uint8_t nColumns{1u};
+    bool orderTopDown{false};
     if constexpr (isLegend) {
       if (box->GetNumColumns()) nColumns = *box->GetNumColumns();
+      orderTopDown = box->GetOrderTopDown().value_or(false);
     }
     uint16_t nLines = lines.size();
     if (nLines < 1) return;
+    // TLegend fills its columns row by row: for the order top down the entries are rearranged when they are added, and columns that
+    // would stay empty are dropped (5 entries in 4 columns: 2 rows, so 3 columns)
+    const uint16_t nRows = (nLines + nColumns - 1) / nColumns;
+    if (orderTopDown) nColumns = (nLines + nRows - 1) / nRows;
+    auto columnOf = [&](uint16_t lineID) { return (orderTopDown) ? lineID / nRows : lineID % nColumns; };
 
     int32_t padWidthPixel = pad->XtoPixel(pad->GetX2());
     int32_t padHeightPixel = pad->YtoPixel(pad->GetY1());
 
     // determine max width and height of legend entries
-    uint8_t iColumn{};
     double_t contentWidthPixel{};
     double_t titleWidthPixel{};
     vector<uint32_t> contentWidthPixelPerColumn(nColumns, 1);
@@ -4179,9 +4185,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       textLine.SetTextSize(line_text_size);
       auto [width, height] = GetTextDimensions(textLine, pad);
       if (height > lineHeightPixel) lineHeightPixel = height;
-      if (width > contentWidthPixelPerColumn[iColumn]) contentWidthPixelPerColumn[iColumn] = width;
-      ++iColumn;
-      iColumn %= nColumns;
+      if (auto& columnWidth = contentWidthPixelPerColumn[columnOf(lineID)]; width > columnWidth) {
+        columnWidth = width;
+      }
       ++lineID;
     }
     for (const auto& length : contentWidthPixelPerColumn) {
@@ -4285,8 +4291,15 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         legend->SetHeader((*title).data(), center.data());
       }
 
-      int32_t i = 0;
-      for (const auto& entry : box->GetEntries()) {
+      const uint16_t nPlaces = (orderTopDown) ? nRows * nColumns : nLines;
+      for (uint16_t place = 0; place < nPlaces; ++place) {
+        // the entry at this place of TLegend's row-by-row filling
+        const uint16_t i = (orderTopDown) ? (place % nColumns) * nRows + place / nColumns : place;
+        if (i >= nLines) {
+          legend->AddEntry(static_cast<TObject*>(nullptr), "", "");  // a free place at the bottom of the last column
+          continue;
+        }
+        const auto& entry = box->GetEntries()[i];
         string label = lines[i];
 
         // user-defined symbol elements for single entry or all entries
@@ -4369,7 +4382,6 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         if (entry.GetTextAlpha()) curEntry->SetTextColor(TColor::GetColorTransparent(curEntry->GetTextColor(), *entry.GetTextAlpha()));
         if (entry.GetTextFont()) curEntry->SetTextFont(*entry.GetTextFont());
         if (entry.GetTextSize()) curEntry->SetTextSize(*entry.GetTextSize());
-        ++i;
       }
       returnBox = legend;
     } else {

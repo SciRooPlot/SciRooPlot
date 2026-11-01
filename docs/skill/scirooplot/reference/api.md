@@ -339,6 +339,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `LegendBox& SetTitle(const std::string& title)`
 - `LegendBox& SetNumColumns(uint8_t numColumns)`
 - `LegendBox& SetColumnSpacing(float_t spacing)` — space after the widest label of a column, in units of the text height (default 1)
+- `LegendBox& SetOrderTopDown(bool topDown = true)` — entries top to bottom, then the next column (default: left to right, then the next row)
 - `LegendBox& SetDefaultSymbolElements(const std::string& symbolElements)`
 - `LegendBox& SetDefaultColor(color_t color)`
 - `LegendBox& SetDefaultAlpha(float_t alpha)`

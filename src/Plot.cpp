@@ -4361,6 +4361,7 @@ Plot::Pad::LegendBox::LegendBox(const ptree& legendBoxTree) : Box(legendBoxTree)
     SetNumColumns(*numColumns);
   }
   read_from_tree(legendBoxTree, mColumnSpacing, "column_spacing");
+  read_from_tree(legendBoxTree, mOrderTopDown, "order_top_down");
   read_from_tree(legendBoxTree, mSymbolElementsDefault, "default_symbol_elements");
   read_from_tree(legendBoxTree, mMarkerDefault.color, "default_marker_color");
   read_from_tree(legendBoxTree, mMarkerDefault.alpha, "default_marker_alpha");
@@ -4391,6 +4392,7 @@ ptree Plot::Pad::LegendBox::GetPropertyTree() const
   put_in_tree(legendBoxTree, mTitle, "title");
   put_in_tree(legendBoxTree, mNumColumns, "num_columns");
   put_in_tree(legendBoxTree, mColumnSpacing, "column_spacing");
+  put_in_tree(legendBoxTree, mOrderTopDown, "order_top_down");
   put_in_tree(legendBoxTree, mSymbolElementsDefault, "default_symbol_elements");
   put_in_tree(legendBoxTree, mMarkerDefault.color, "default_marker_color");
   put_in_tree(legendBoxTree, mMarkerDefault.alpha, "default_marker_alpha");
@@ -4457,6 +4459,12 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetColumnSpacing(float_t spacing)
   } else {
     logger::warning("Legend box cannot have a negative column spacing ({}).", spacing);
   }
+  return *this;
+}
+
+Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetOrderTopDown(bool topDown)
+{
+  mOrderTopDown = topDown;
   return *this;
 }
 
