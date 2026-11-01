@@ -844,11 +844,11 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, con
     vector<Panel> mainRow;
     for (int32_t col = 0; col < nCols; ++col) {
       if (col > 0 && gap) mainRow.push_back(Gap());
-      mainRow.push_back((zAxis && !sharedScale) ? Panel(width, height).ZAxis() : Panel(width, height));
+      mainRow.push_back((zAxis && !sharedScale) ? Panel(width, height).ColorScale() : Panel(width, height));
       panelPads.push_back(padID++);
     }
     if (sharedScale && row == 0) {
-      mainRow.push_back(ZAxis().Span(1, static_cast<uint8_t>(nRows)));
+      mainRow.push_back(ColorScale().Span(1, static_cast<uint8_t>(nRows)));
       ++padID;
     }
     rows.push_back(mainRow);

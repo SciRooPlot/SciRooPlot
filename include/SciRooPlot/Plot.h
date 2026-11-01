@@ -463,8 +463,8 @@ class Plot::Pad : public FillSetters<Pad>
   Pad& operator=(const Pad& other);
   Pad& operator=(Pad&&) = default;
   void operator+=(const Pad& pad);
-  // 'X', 'Y', 'Z', or 'C': the content of a 3d histogram, whose z axis is binned (range and title of its colour scale; the scale
-  // takes its look from the Z axis, as in ROOT, and ROOT colours the boxes linearly, so it has no log scale)
+  // 'X', 'Y', 'Z', or 'C': the content of a 3d histogram, whose z axis is binned: its colour scale (range, title, title and label look,
+  // SetColorScaleOffset/SetColorScaleWidth; the settings of Z are those of the binned axis only; ROOT colours the boxes linearly, so no log scale)
   Axis& operator[](const char axis);
   Data& operator()(uint16_t dataID);
   void Print() const { Plot::Print(GetPropertyTree(), "Pad"); }
@@ -690,9 +690,10 @@ class Plot::Pad : public FillSetters<Pad>
   candle_defaults_t mCandleOptionDefaults;
   palette_defaults_t mPalette;
   std::optional<bool> mRedrawAxes;
-  bool mIsEmptyCell{};                          // an Empty() cell of a PanelLayout: room for a legend or a text, nothing to warn about when left blank
-  std::optional<uint8_t> mColorScaleOf;         // a ZAxis() cell of a PanelLayout: shows the colour scale of the z group of this pad
-  std::map<char, float_t> mLayoutTitleOffsets;  // title offsets of a PanelLayout panel (X, Y, Z), for a flat frame (a 3D view has its own)
+  bool mIsEmptyCell{};                           // an Empty() cell of a PanelLayout: room for a legend or a text, nothing to warn about when left blank
+  std::optional<uint8_t> mColorScaleOf;          // a ColorScale() cell of a PanelLayout: shows the colour scale of the z group of this pad
+  std::map<std::string, float_t> mLayoutValues;  // set by a PanelLayout, kept apart from the axis settings: title offsets for a flat frame (a 3D view
+                                                 // has its own) and the defaults of the colour scale (also of a 3d histogram, whose scale is the C axis)
 
   std::map<char, Axis> mAxes;
   std::vector<std::shared_ptr<Data>> mData;
@@ -1276,8 +1277,8 @@ class Plot::Pad::Axis
   Axis& SetOppositeTicks(bool isOppositeTicks = true);
   Axis& SetNoExponent(bool isNoExponent = true);
   Axis& SetHideClippedLabels(bool hide = true);  // drop a label whose text would reach beyond the pad (e.g. at the edge shared with a touching pad); on by default in the base plots, false keeps the labels
-  Axis& SetColorScaleOffset(float_t offset);     // Z axis: distance of the colour scale from the frame, fraction of the pad width (ROOT: 0.005)
-  Axis& SetColorScaleWidth(float_t width);       // Z axis: width of the colour scale, fraction of the pad width (ROOT: 0.045)
+  Axis& SetColorScaleOffset(float_t offset);     // Z axis (C for a 3d histogram): distance of the colour scale from the frame, fraction of the pad width (ROOT: 0.005)
+  Axis& SetColorScaleWidth(float_t width);       // Z axis (C for a 3d histogram): width of the colour scale, fraction of the pad width (ROOT: 0.045)
   Axis& SetTimeFormat(const std::string& timeFormat);
   Axis& SetTickOrientation(const std::string& tickOrientation);
 

@@ -1070,7 +1070,7 @@ def DefineAcceleratorPlots(pm: PlotManager):
     # a beam profile with its projections in panels of their own: an own layout, the projections sharing the axes ------
     # of the map, and the colour scale of the map (pad 3) in a cell of its own beyond the projection on the right;
     # PanelLayout arranges the panels and gives them the look of the shipped base plots
-    profileLayout = Plot("profileWithProjections", PanelLayout([[Panel(1.0, 0.4), Empty().Span(2)], [Panel(), Panel(0.4, 1.0), ZAxis(3)]]))
+    profileLayout = Plot("profileWithProjections", PanelLayout([[Panel(1.0, 0.4), Empty().Span(2)], [Panel(), Panel(0.4, 1.0), ColorScale(3)]]))
     pm.AddBasePlot(profileLayout)
     plot = Plot("beamProfile", "accelerator", "profileWithProjections")  # pads: 1 above, 2 the empty cell, 3 the map, 4 right, 5 its colour scale
     plot[3].AddData("hBeamSpot", "accelerator").SetDrawOption(colz)

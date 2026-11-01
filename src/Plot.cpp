@@ -1397,7 +1397,7 @@ Plot::Pad::Pad(const Pad& other)
     mMarkerDefaults(other.mMarkerDefaults), mLineDefaults(other.mLineDefaults), mFillDefaults(other.mFillDefaults),
     mCandleOptionDefaults(other.mCandleOptionDefaults),
     mPalette(other.mPalette), mRedrawAxes(other.mRedrawAxes), mIsEmptyCell(other.mIsEmptyCell), mColorScaleOf(other.mColorScaleOf),
-    mLayoutTitleOffsets(other.mLayoutTitleOffsets), mAxes(other.mAxes)
+    mLayoutValues(other.mLayoutValues), mAxes(other.mAxes)
 {
   mData.reserve(other.mData.size());
   for (const auto& data : other.mData) {
@@ -1496,8 +1496,10 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
   mIsEmptyCell = padTree.get<bool>("empty_cell", false);
   read_from_tree(padTree, mColorScaleOf, "color_scale_of");
-  for (char axisLabel : {'X', 'Y', 'Z'}) {
-    if (auto offset = padTree.get_optional<float_t>(string("layout_title_offset_") + axisLabel)) mLayoutTitleOffsets[axisLabel] = *offset;
+  if (auto layoutTree = padTree.get_child_optional("layout_values")) {
+    for (const auto& [key, value] : *layoutTree) {
+      mLayoutValues[key] = value.get_value<float_t>();
+    }
   }
 
   for (const auto& content : padTree) {
@@ -1599,8 +1601,8 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
   if (mIsEmptyCell) padTree.put("empty_cell", true);
   put_in_tree(padTree, mColorScaleOf, "color_scale_of");
-  for (const auto& [axisLabel, offset] : mLayoutTitleOffsets) {
-    padTree.put(string("layout_title_offset_") + axisLabel, offset);
+  for (const auto& [key, value] : mLayoutValues) {
+    padTree.put("layout_values." + key, value);
   }
 
   int32_t dataID = 1;
@@ -1721,8 +1723,8 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if (pad.mIsEmptyCell) mIsEmptyCell = true;
   if (pad.mColorScaleOf) mColorScaleOf = pad.mColorScaleOf;
-  for (const auto& [axisLabel, offset] : pad.mLayoutTitleOffsets) {
-    mLayoutTitleOffsets[axisLabel] = offset;
+  for (const auto& [key, value] : pad.mLayoutValues) {
+    mLayoutValues[key] = value;
   }
   if (pad.mRefFunc) mRefFunc = pad.mRefFunc->Clone();
   if (pad.mFrame) mFrame = pad.mFrame->Clone();

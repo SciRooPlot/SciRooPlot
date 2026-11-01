@@ -324,7 +324,7 @@ void exportPanelLayout(py::module_& m)
 {
   py::class_<Panel>(m, "Panel", "One axis frame of a layout, sizes in units of the standard panel.")
     .def(py::init<double_t, double_t>(), arg("width") = 1., arg("height") = 1.)
-    .def("ZAxis", &Panel::ZAxis, ref_int)
+    .def("ColorScale", &Panel::ColorScale, ref_int)
     .def("Span", &Panel::Span, arg("columns"), arg("rows") = 1, ref_int)
     .def("SpacingAbove", &Panel::SpacingAbove, arg("pixel"), ref_int)
     .def("SpacingLeft", &Panel::SpacingLeft, arg("pixel"), ref_int);
@@ -333,8 +333,8 @@ void exportPanelLayout(py::module_& m)
   m.def("Empty", py::overload_cast<double_t, double_t>(&Empty), arg("width"), arg("height"), "An empty cell with a size of its own, e.g. a strip for a common legend.");
   m.def("Hole", py::overload_cast<>(&Hole), "An empty cell without pad: it takes no pad number and stays blank.");
   m.def("Hole", py::overload_cast<double_t, double_t>(&Hole), arg("width"), arg("height"), "An empty cell without pad with a size of its own.");
-  m.def("ZAxis", py::overload_cast<>(&ZAxis), "A cell holding the colour scale of the z group of the panel to its left.");
-  m.def("ZAxis", py::overload_cast<uint8_t>(&ZAxis), arg("padID"), "A cell holding the colour scale of the z group of the given pad.");
+  m.def("ColorScale", py::overload_cast<>(&ColorScale), "A cell holding the colour scale of the z group of the panel to its left.");
+  m.def("ColorScale", py::overload_cast<uint8_t>(&ColorScale), arg("padID"), "A cell holding the colour scale of the z group of the given pad.");
   py::class_<PanelLayout>(m, "PanelLayout", "Arrangement of panels (rows from top to bottom) and the lengths of the standard plot in pixels.")
     .def(py::init<vector<vector<Panel>>>(), py::arg_v("rows", vector<vector<Panel>>{{Panel()}}, "[[Panel()]]"))
     .def(py::init<const PanelLayout&, vector<vector<Panel>>>(), arg("sizes"), arg("rows"))

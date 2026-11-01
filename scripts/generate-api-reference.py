@@ -18,7 +18,7 @@ OPTIONS_OUTPUT = ROOT / "docs/skill/scirooplot/reference/drawing-options.md"
 CLASSES = [
     ("PlotManager.h", "class PlotManager", "PlotManager", "central object: data sources, plots, base plots, project files"),
     ("Plot.h", "class Plot", "Plot", "plot[padID] gives the Pad (padID 0: defaults for all pads); also has the fill setters"),
-    ("Plot.h", "class Plot::Pad", "Plot::Pad", "pad[axis] gives the Axis ('X', 'Y', 'Z', and 'C' for the content of a 3d histogram: range and title of its colour scale); pad(dataID) the Data (counting from 1); also has the fill setters"),
+    ("Plot.h", "class Plot::Pad", "Plot::Pad", "pad[axis] gives the Axis ('X', 'Y', 'Z', and 'C' for the content of a 3d histogram: its colour scale); pad(dataID) the Data (counting from 1); also has the fill setters"),
     ("Plot.h", "class Plot::Pad::Axis", "Plot::Pad::Axis", ""),
     ("Plot.h", "class Plot::Pad::Data", "Plot::Pad::Data", "every setter returns the Data, so calls can be chained; also has the marker, line and fill setters"),
     ("Plot.h", "class Plot::Pad::Ratio", "Plot::Pad::Ratio", "has all setters, modifiers and selections of Data (returning the Ratio) plus the following"),
@@ -38,7 +38,7 @@ CLASSES = [
         "PanelLayout.h",
         "class Panel",
         "Panel",
-        "a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes, `Empty(width, height)` one with a size of its own, `Hole()` (or `Hole(width, height)`) an empty cell without pad (no pad number), `ZAxis()` (or `ZAxis(padID)`) a cell holding one colour scale for the panels sharing the z axis with the panel left of it (or with pad padID)",
+        "a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes, `Empty(width, height)` one with a size of its own, `Hole()` (or `Hole(width, height)`) an empty cell without pad (no pad number), `ColorScale()` (or `ColorScale(padID)`) a cell holding one colour scale for the panels sharing the z axis with the panel left of it (or with pad padID)",
     ),
     ("PanelLayout.h", "class PanelLayout", "PanelLayout", "arrangement of panels and the sizes shared by all base plots"),
     ("PlotManager.h", "class BasePlotShape", "BasePlotShape", "proportions of the panels of PlotManager::MakeBasePlot"),

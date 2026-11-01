@@ -45,9 +45,9 @@ Panel::Panel(double_t width, double_t height) : mWidth(width), mHeight(height)
   }
 }
 
-Panel& Panel::ZAxis()
+Panel& Panel::ColorScale()
 {
-  mZAxis = true;
+  mColorScale = true;
   return *this;
 }
 
@@ -112,7 +112,7 @@ Panel Hole(double_t width, double_t height)
   return hole;
 }
 
-Panel ZAxis()
+Panel ColorScale()
 {
   Panel cell;
   cell.mScaleCell = true;
@@ -120,10 +120,10 @@ Panel ZAxis()
   return cell;
 }
 
-Panel ZAxis(uint8_t padID)
+Panel ColorScale(uint8_t padID)
 {
-  if (padID == 0) logger::throw_invalid_argument("ZAxis(padID): the pads are counted from 1.");
-  Panel cell = ZAxis();
+  if (padID == 0) logger::throw_invalid_argument("ColorScale(padID): the pads are counted from 1.");
+  Panel cell = ColorScale();
   cell.mScaleOf = padID;
   return cell;
 }
@@ -348,23 +348,23 @@ void PanelLayout::ApplyTo(Plot& plot) const
   }
 
   // sizes of the columns and rows in pixels, from the cells that cover a single one (and whether a column has a colour scale,
-  // of its panels or as ZAxis() cells: these have the width of the room of a colour scale)
+  // of its panels or as ColorScale() cells: these have the width of the room of a colour scale)
   vector<double_t> colWidth(nCols, 0.);
   vector<double_t> rowHeight(nRows, 0.);
-  vector<bool> colZAxis(nCols, false);
+  vector<bool> colOwnScale(nCols, false);
   vector<bool> colScale(nCols, false);
   for (const auto& [cell, r, c] : cells) {
     if (cell->mScaleCell) {
-      if (cell->mColumns > 1) logger::throw_invalid_argument("Layout: a ZAxis() cell spans one column (row {}, column {}).", r + 1, c + 1);
+      if (cell->mColumns > 1) logger::throw_invalid_argument("Layout: a ColorScale() cell spans one column (row {}, column {}).", r + 1, c + 1);
       colScale[c] = true;
       colWidth[c] = mColorScaleMargin;
     }
   }
   for (const auto& [cell, r, c] : cells) {
-    if (cell->mZAxis) colZAxis[c + cell->mColumns - 1] = true;
+    if (cell->mColorScale) colOwnScale[c + cell->mColumns - 1] = true;
     if (!cell->mEmpty && !cell->mScaleCell) {
       for (size_t cc = c; cc < c + cell->mColumns; ++cc) {
-        if (colScale[cc]) logger::throw_invalid_argument("Layout: column {} holds a ZAxis() cell and a panel.", cc + 1);
+        if (colScale[cc]) logger::throw_invalid_argument("Layout: column {} holds a ColorScale() cell and a panel.", cc + 1);
       }
     }
     if (!cell->mSized) continue;
@@ -423,12 +423,12 @@ void PanelLayout::ApplyTo(Plot& plot) const
   };
   for (size_t c = 0; c + 1 < nCols; ++c) {
     if (gapAfterColumn[c] == 1) {
-      colSep[c] = Separation{colZAxis[c] ? mColorScaleMargin : mMarginRight, mMarginLeft, false};
+      colSep[c] = Separation{colOwnScale[c] ? mColorScaleMargin : mMarginRight, mMarginLeft, false};
     } else if (colScale[c + 1]) {
       colSep[c] = Separation{0., 0., false};  // the cell of a colour scale holds its room: it starts at the frames on its left
     } else if (colScale[c]) {
       colSep[c] = Separation{0., mMarginLeft, false};
-    } else if (colZAxis[c]) {
+    } else if (colOwnScale[c]) {
       colSep[c] = Separation{mColorScaleMargin, mMarginLeft, false};
     } else {
       colSep[c] = touching(colSpacing[c]);
@@ -459,7 +459,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
   };
   vector<double_t> frameLeft, frameRight, boundaryX;
   vector<double_t> frameTop, frameBottom, boundaryY;
-  const double_t canvasWidth = edges(mMarginLeft, colWidth, colSep, colScale.back() ? 0. : (colZAxis.back() ? mColorScaleMargin : mMarginRight), frameLeft, frameRight, boundaryX);
+  const double_t canvasWidth = edges(mMarginLeft, colWidth, colSep, colScale.back() ? 0. : (colOwnScale.back() ? mColorScaleMargin : mMarginRight), frameLeft, frameRight, boundaryX);
   const double_t canvasHeight = edges(mMarginTop, rowHeight, rowSep, mMarginBottom, frameTop, frameBottom, boundaryY);
   plot.SetDimensions(static_cast<int32_t>(canvasWidth), static_cast<int32_t>(canvasHeight), true);
 
@@ -467,7 +467,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
   struct Neighbours {
     bool panel{};  // a panel touches this side
     bool empty{};  // an empty cell touches this side
-    bool scale{};  // a ZAxis() cell touches this side
+    bool scale{};  // a ColorScale() cell touches this side
   };
   auto neighbours = [&](size_t r0, size_t r1, size_t c0, size_t c1) {  // the cells covering the given block of positions
     Neighbours side;
@@ -479,7 +479,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
     }
     return side;
   };
-  auto rightMargin = [&](size_t col) { return colZAxis[col] ? mColorScaleMargin : mMarginRight; };  // room right of a frame for labels or the colour scale
+  auto rightMargin = [&](size_t col) { return colOwnScale[col] ? mColorScaleMargin : mMarginRight; };  // room right of a frame for labels or the colour scale
   const bool singlePanel = (nRows == 1 && nCols == 1);
   for (size_t i = 0; i < cells.size(); ++i) {
     const auto& [cell, r0, c0] = cells[i];
@@ -566,14 +566,15 @@ void PanelLayout::ApplyTo(Plot& plot) const
       .SetTickLength(mTickLength * height / (frameHeight * width))
       .SetLabelOffset(mLabelOffset / width);
     target['Z'].SetTitleSize(mTitleSize / minSide);  // also for the z axis of 3D views in panels without a colour scale
-    // the title offsets are those of a flat frame: kept apart from the axis settings, since a 3D view places its titles itself (see PlotPainter)
-    target.mLayoutTitleOffsets['X'] = static_cast<float_t>(mXTitleOffset * minSide / (1.6 * mTitleSize * height));
-    target.mLayoutTitleOffsets['Y'] = static_cast<float_t>((mYTitleOffset > 0.) ? mYTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: automatic placement
-    if (colZAxis[c1]) {
-      target.mLayoutTitleOffsets['Z'] = static_cast<float_t>((mZTitleOffset > 0.) ? mZTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: next to the labels
-      target['Z']
-        .SetColorScaleOffset(static_cast<float_t>(mColorScaleOffset / width))
-        .SetColorScaleWidth(static_cast<float_t>(mColorScaleWidth / width));
+    // kept apart from the axis settings (see PlotPainter): the title offsets of a flat frame (a 3D view places its titles itself), and the look
+    // of the colour scale, which for a 3d histogram is the C axis
+    target.mLayoutValues["title_size"] = static_cast<float_t>(mTitleSize / minSide);
+    target.mLayoutValues["title_offset_X"] = static_cast<float_t>(mXTitleOffset * minSide / (1.6 * mTitleSize * height));
+    target.mLayoutValues["title_offset_Y"] = static_cast<float_t>((mYTitleOffset > 0.) ? mYTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: automatic
+    if (colOwnScale[c1]) {
+      target.mLayoutValues["title_offset_Z"] = static_cast<float_t>((mZTitleOffset > 0.) ? mZTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: next to the labels
+      target.mLayoutValues["color_scale_offset"] = static_cast<float_t>(mColorScaleOffset / width);
+      target.mLayoutValues["color_scale_width"] = static_cast<float_t>(mColorScaleWidth / width);
     }
     // axes shared with a touching panel: labels and title are only shown once (a label next to a panel would run into its frame)
     if (left.panel && colSep[c0 - 1].shared) pad['Y'].SetTitleSize(0.).SetLabelSize(0.);
@@ -616,7 +617,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
   plot[0]['Y'].SetOppositeTicks().SetMaxDigits(3).SetHideClippedLabels();
   plot[0]['Z'].SetMaxDigits(3);
   // the axes are drawn again on top of the data in layouts with colour scales (2d maps would cover the ticks)
-  if (std::find(colZAxis.begin(), colZAxis.end(), true) != colZAxis.end() || std::find(colScale.begin(), colScale.end(), true) != colScale.end()) plot[0].SetRedrawAxes();
+  if (std::find(colOwnScale.begin(), colOwnScale.end(), true) != colOwnScale.end() || std::find(colScale.begin(), colScale.end(), true) != colScale.end()) plot[0].SetRedrawAxes();
 
   // touching panels share their axes: x within a column (panels touching above or below), y within a row (touching left or right);
   // and the outer title of a row (x) or column (y) of touching panels is drawn once: groups of the panels showing that title

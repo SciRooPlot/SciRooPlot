@@ -51,7 +51,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Plot& ShareAxis(char axis, const std::vector<uint8_t>& pads)`
 
 ## Plot::Pad
-*pad[axis] gives the Axis ('X', 'Y', 'Z', and 'C' for the content of a 3d histogram: range and title of its colour scale); pad(dataID) the Data (counting from 1); also has the fill setters*
+*pad[axis] gives the Axis ('X', 'Y', 'Z', and 'C' for the content of a 3d histogram: its colour scale); pad(dataID) the Data (counting from 1); also has the fill setters*
 
 - `Pad()`
 - `Data& operator()(uint16_t dataID)`
@@ -176,8 +176,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Axis& SetOppositeTicks(bool isOppositeTicks = true)`
 - `Axis& SetNoExponent(bool isNoExponent = true)`
 - `Axis& SetHideClippedLabels(bool hide = true)` — drop a label whose text would reach beyond the pad (e.g. at the edge shared with a touching pad); on by default in the base plots, false keeps the labels
-- `Axis& SetColorScaleOffset(float_t offset)` — Z axis: distance of the colour scale from the frame, fraction of the pad width (ROOT: 0.005)
-- `Axis& SetColorScaleWidth(float_t width)` — Z axis: width of the colour scale, fraction of the pad width (ROOT: 0.045)
+- `Axis& SetColorScaleOffset(float_t offset)` — Z axis (C for a 3d histogram): distance of the colour scale from the frame, fraction of the pad width (ROOT: 0.005)
+- `Axis& SetColorScaleWidth(float_t width)` — Z axis (C for a 3d histogram): width of the colour scale, fraction of the pad width (ROOT: 0.045)
 - `Axis& SetTimeFormat(const std::string& timeFormat)`
 - `Axis& SetTickOrientation(const std::string& tickOrientation)`
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
@@ -430,10 +430,10 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
 
 ## Panel
-*a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes, `Empty(width, height)` one with a size of its own, `Hole()` (or `Hole(width, height)`) an empty cell without pad (no pad number), `ZAxis()` (or `ZAxis(padID)`) a cell holding one colour scale for the panels sharing the z axis with the panel left of it (or with pad padID)*
+*a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes, `Empty(width, height)` one with a size of its own, `Hole()` (or `Hole(width, height)`) an empty cell without pad (no pad number), `ColorScale()` (or `ColorScale(padID)`) a cell holding one colour scale for the panels sharing the z axis with the panel left of it (or with pad padID)*
 
 - `Panel(double_t width = 1., double_t height = 1.)`
-- `Panel& ZAxis()` — room for the colour scale of this panel to its right
+- `Panel& ColorScale()` — room for the colour scale of this panel to its right
 - `Panel& Span(uint8_t columns, uint8_t rows = 1)`
 - `Panel& SpacingAbove(double_t pixel)` — space to the touching cells above, instead of PanelLayout::SetPanelSpacing
 - `Panel& SpacingLeft(double_t pixel)` — space to the touching cells on the left, instead of PanelLayout::SetPanelSpacing

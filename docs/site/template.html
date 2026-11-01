@@ -1781,8 +1781,8 @@ const REF = [
 <div class="tablewrap"><table><thead><tr><th>Piece</th><th>Meaning</th></tr></thead><tbody>
 <tr><td><code>Panel()</code></td><td>a panel of the standard size (638 × 638 pixels of frame)</td></tr>
 <tr><td><code>Panel(w, h)</code></td><td>scaled: <code>Panel(1.618, 1)</code> is wide, <code>Panel(1, 0.37)</code> the height of a ratio panel; all panels of a column share the width, all panels of a row the height</td></tr>
-<tr><td><code>Panel().ZAxis()</code></td><td>leaves room for the colour scale of this panel on its right</td></tr>
-<tr><td><code>ZAxis()</code></td><td>a cell of its own holding one colour scale for a group of panels sharing the z axis: the group of the panel to its left, or of pad <code>n</code> with <code>ZAxis(n)</code>; as wide as the room of <code>Panel().ZAxis()</code>, it may span rows, and the panels of the group then draw no scale of their own</td></tr>
+<tr><td><code>Panel().ColorScale()</code></td><td>leaves room for the colour scale of this panel on its right</td></tr>
+<tr><td><code>ColorScale()</code></td><td>a cell of its own holding one colour scale for a group of panels sharing the z axis: the group of the panel to its left, or of pad <code>n</code> with <code>ColorScale(n)</code>; as wide as the room of <code>Panel().ColorScale()</code>, it may span rows, and the panels of the group then draw no scale of their own</td></tr>
 <tr><td><code>Gap()</code></td><td>between panels of a row, or as a row of its own: the neighbours get their own axes and labels instead of sharing them</td></tr>
 <tr><td><code>Empty()</code></td><td>a cell without axes, e.g. for a legend or text</td></tr>
 <tr><td><code>Empty(w, h)</code></td><td>an empty cell with a size of its own, for a row or column without panels</td></tr>
@@ -1790,13 +1790,13 @@ const REF = [
 <tr><td><code>.Span(columns, rows)</code></td><td>the cell covers several columns and rows; it is listed once, in the row where it starts, and the rows below leave its place out: <code>[[Empty(1, 0.2).Span(3)], [Panel(), Panel(), Panel()]]</code> puts a legend strip above three panels</td></tr>
 </tbody></table></div>
 <p>The proportions of the shipped names can be changed too: <code>MakeBasePlot("1d_wide_ratio", PanelLayout(), BasePlotShape().SetAspectRatio(1.333).SetRatioHeight(0.25))</code> gives wide panels of 4 : 3 and thinner ratio panels (default 1.618 and 0.37).</p>
-<p class="small muted">Pads are numbered in reading order, row by row; <code>Empty()</code> and <code>ZAxis()</code> cells get a number too (a pad without a frame, e.g. for a legend), gaps and holes get none. <code>PlotManager::MakeBasePlot</code> in the sources builds every shipped layout this way.</p>
+<p class="small muted">Pads are numbered in reading order, row by row; <code>Empty()</code> and <code>ColorScale()</code> cells get a number too (a pad without a frame, e.g. for a legend), gaps and holes get none. <code>PlotManager::MakeBasePlot</code> in the sources builds every shipped layout this way.</p>
 <h3>Panels that read as one figure</h3>
 <p>Touching panels share their axes: the panels of a column the x axis, the panels of a row the y axis (panels of the same width or height; a wide panel touching narrow ones shares nothing, and the layout warns: put a <code>Gap()</code> between them). Shared means the same scale: the same range, log scale and time format. A range, log scale or time format set in one of them, or in pad 0, holds for all of them; without a range they get the union of the ranges each would get on its own. The inner labels are hidden, and the outer title of a row (x) or column (y) is drawn once for all its panels, at the end of their common axis (centred with <code>SetTitleCenter()</code>), when they all show the same one; <code>PanelLayout().SetCommonTitles(false)</code> keeps a title per panel. A <code>Gap()</code> makes both sides independent.</p>
-<p>Any other pads can share an axis too, across a gap or not neighbours at all: <code>plot.ShareAxis('Y', {1, 2})</code>. A pad listed again leaves its earlier group (<code>ShareAxis('Y', {2})</code> takes pad 2 out), an empty list undoes all groups of the axis, also those of the layout. Shared z with a <code>ZAxis()</code> cell gives one colour scale for several maps; the grids <code>2d_&lt;columns&gt;x&lt;rows&gt;</code> are built that way (the cell is the pad after the panels of the first row), <code>2d_&lt;columns&gt;x&lt;rows&gt;_gap</code> keeps a scale per panel. Maps in 3D views (lego, surfaces) share the z axis too (range and colours), x and y only flat frames. A plot with shared automatic ranges is painted twice when the panels would get different ranges on their own.</p>
+<p>Any other pads can share an axis too, across a gap or not neighbours at all: <code>plot.ShareAxis('Y', {1, 2})</code>. A pad listed again leaves its earlier group (<code>ShareAxis('Y', {2})</code> takes pad 2 out), an empty list undoes all groups of the axis, also those of the layout. Shared z with a <code>ColorScale()</code> cell gives one colour scale for several maps; the grids <code>2d_&lt;columns&gt;x&lt;rows&gt;</code> are built that way (the cell is the pad after the panels of the first row), <code>2d_&lt;columns&gt;x&lt;rows&gt;_gap</code> keeps a scale per panel. Maps in 3D views (lego, surfaces) share the z axis too (range and colours), x and y only flat frames. A plot with shared automatic ranges is painted twice when the panels would get different ranges on their own.</p>
 <div class="code"><pre>// one colour scale for each row of maps
-PanelLayout layout({{Panel(), Panel(), ZAxis()},
-                    {Panel(), Panel(), ZAxis()}});
+PanelLayout layout({{Panel(), Panel(), ColorScale()},
+                    {Panel(), Panel(), ColorScale()}});
 Plot plot("perRow", layout);     // pads 1, 2, 3 (scale), 4, 5, 6 (scale)
 plot.ShareAxis('Z', {1, 2});
 plot.ShareAxis('Z', {4, 5});</pre></div>` },
@@ -2657,7 +2657,7 @@ function gridCells(G) { // the cells in reading order (as listed in PanelLayout)
   for (let r = 0; r < nR; r++) for (let c = 0; c < nC; c++) {
     if (owner[r][c] >= 0) continue;
     const key = r + "," + c, [cs, rs] = G.span.get(key) || [1, 1], i = cells.length;
-    const scale = !!(G.scale && G.scale.has(key));  // a ZAxis() cell: no panel (like an empty cell), with the colour scale of the panels left of it
+    const scale = !!(G.scale && G.scale.has(key));  // a ColorScale() cell: no panel (like an empty cell), with the colour scale of the panels left of it
     cells.push({ key, r, c, r1: r + rs - 1, c1: c + cs - 1, empty: G.empty.has(key) || scale, scale, hole: !scale && !!(G.hole && G.hole.has(key)) });
     for (let rr = r; rr <= r + rs - 1; rr++) for (let cc = c; cc <= c + cs - 1; cc++) owner[rr][cc] = i }
   return { cells, owner } }
@@ -2673,7 +2673,7 @@ function panelGeometry(G, S) {
     if (!k.empty && colScale.slice(k.c, k.c1 + 1).some(Boolean)) return { error: "A column with a colour scale cell holds no panels." } }
   const colW = G.cols.map((c, i) => colScale[i] ? S.z : c.w * S.panel), rowH = G.rows.map(r => r.h * S.panel);
   const touching = space => { const half = (space ?? S.spacing) / 2; return [half, half, true] };  // Panel::SpacingLeft/SpacingAbove, else SetPanelSpacing
-  const colZ = G.cols.map((c, i) => !colScale[i] && c.z && cells.some(k => k.c1 === i && !k.empty && !G.rows[k.r].kind));  // ZAxis() is written on the panels of rows of normal height
+  const colZ = G.cols.map((c, i) => !colScale[i] && c.z && cells.some(k => k.c1 === i && !k.empty && !G.rows[k.r].kind));  // ColorScale() is written on the panels of rows of normal height
   const colSep = G.cols.slice(0, -1).map((c, i) => c.gapAfter ? [S.right, S.left, false] : colScale[i + 1] ? [0, 0, false] : colScale[i] ? [0, S.left, false]
     : colZ[i] ? [S.z, S.left, false] : touching(c.spaceAfter));
   const rowSep = G.rows.slice(0, -1).map(r => r.gapAfter ? [S.bottom, S.top, false] : touching(r.spaceAfter));
@@ -2911,9 +2911,9 @@ function layoutCode(py) {
       const span = cs > 1 || rs > 1 ? `.Span(${cs}${rs > 1 ? ", " + rs : ""})` : "";
       if (k.scale) { // the cell shows the group of the panel to its left; a group further left (e.g. a map left of its projection) is named
         const ids = g.shared.Z[g.pads.filter(q => q.scale).findIndex(q => q.key === k.key)] || [], left = g.pads.find(q => q.r <= k.r && k.r <= q.r1 && q.c <= k.c - 1 && k.c - 1 <= q.c1);
-        return `ZAxis(${ids.length && !(left && ids.includes(left.id)) ? ids[0] : ""})` + span }
+        return `ColorScale(${ids.length && !(left && ids.includes(left.id)) ? ids[0] : ""})` + span }
       if (k.empty) { const kind = k.hole ? "Hole" : "Empty"; return ((cs === 1 && !ownW(k.c)) || (rs === 1 && !ownH(k.r)) ? `${kind}(${fmt(w)}, ${fmt(h)})` : `${kind}()`) + span }
-      return `Panel(${w === 1 && h === 1 ? "" : `${fmt(w)}, ${fmt(h)}`})` + span + (G.cols[k.c1].z && !G.rows[k.r].kind ? ".ZAxis()" : "") };
+      return `Panel(${w === 1 && h === 1 ? "" : `${fmt(w)}, ${fmt(h)}`})` + span + (G.cols[k.c1].z && !G.rows[k.r].kind ? ".ColorScale()" : "") };
     const rows = [];
     G.rows.forEach((row, r) => {
       rows.push(cells.filter(k => k.r === r).map(k => cell(k) + (k.c1 < nC - 1 && G.cols[k.c1].gapAfter ? ", Gap()" : "")).join(", "));
@@ -2959,7 +2959,7 @@ function layoutSVG(g, S, maxW, maxH) {
     o.push(`<text transform="translate(${T(zx)} ${T(ft)}) rotate(-90)" font-size="${T(S.title)}" ${font} fill="#000" text-anchor="end" dominant-baseline="central">z title</text>`); return o.join("") };
   for (const p of g.pads) {
     const selected = LAY.sel === p.key ? `<rect x="${T(p.x0) + 1}" y="${T(p.y0) + 1}" width="${Math.max(0, T(p.x1 - p.x0) - 2)}" height="${Math.max(0, T(p.y1 - p.y0) - 2)}" fill="none" stroke="var(--amber)" stroke-width="3" rx="3"/>` : "";
-    if (p.scale) { // a ZAxis() cell: the colour scale along the frames of its rows, at the distance from them that a panel's own scale has
+    if (p.scale) { // a ColorScale() cell: the colour scale along the frames of its rows, at the distance from them that a panel's own scale has
       const shows = g.shared.Z[g.pads.filter(q => q.scale).indexOf(p)] || [];
       out.push(`<g data-cell="${p.key}" class="lb-pad" tabindex="0" role="button" aria-pressed="${LAY.sel === p.key}" aria-label="pad ${p.id}, colour scale"><rect x="${T(p.x0)}" y="${T(p.y0)}" width="${T(p.x1 - p.x0)}" height="${T(p.y1 - p.y0)}" fill="transparent"/>`,
         shows.length ? zScale(p.fl + S.zOff, p.ft, p.fb) : "", `<title>pad ${p.id}: ${shows.length ? "colour scale of pads " + shows.join(", ") : "colour scale of no panel (none left of it)"}</title><text x="${T(p.fl + S.zOff + S.zWidth / 2)}" y="${T(p.fb + S.bottom / 2)}" text-anchor="middle" dominant-baseline="central" font-family="var(--sans)" font-size="12" fill="var(--teal)" font-weight="700">${p.id}</text>`, selected, "</g>");

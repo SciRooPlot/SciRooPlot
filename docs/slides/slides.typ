@@ -1978,7 +1978,7 @@
         [`PlotManager::MakeBasePlot(name, sizes)`], [The same with the lengths of the `PanelLayout` `sizes` (text sizes, line width, margins, ...), equal in all panels.],
         [`Plot(name, layout)`], [Base plot from a `PanelLayout`, its lengths kept equal in every panel.],
         [#names(if lang == "py" { "PanelLayout(rows = [[Panel()]])" } else { "PanelLayout(rows = {{Panel()}})" }, "PanelLayout(sizes, rows)")], [Panels in rows (top to bottom), or the same lengths with other panels.],
-        [#names("Panel(width = 1, height = 1)", "Panel().ZAxis()", "ZAxis()", "Gap()", "Empty()")], [A panel (in units of the standard panel), with room for a colour scale; a cell with one colour scale for the panels sharing z; a gap between independent panels; a cell without axes (a pad for texts).],
+        [#names("Panel(width = 1, height = 1)", "Panel().ColorScale()", "ColorScale()", "Gap()", "Empty()")], [A panel (in units of the standard panel), with room for a colour scale; a cell with one colour scale for the panels sharing z; a gap between independent panels; a cell without axes (a pad for texts).],
       ), text-size: 12pt)
     ],
     [

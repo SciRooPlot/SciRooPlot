@@ -107,7 +107,7 @@ class PlotManager
   // (default 1x1) that share their axes; below each main panel a ratio panel (a line at 1) and/or a pull panel (a line at 0, below the ratio);
   // gaps between the panels (own axes).
   // E.g. 1d, 1d_ratio, 1d_pull, 1d_ratio_pull, 2d, 1d_wide, 1d_2x1, 1d_3x1, 1d_2x1_ratio, 1d_2x2, 2d_2x1, 1d_2x1_gap. Pads are numbered row by row.
-  // Ratio and pull panels exist only for 1d. A 2d grid without gaps shares one colour scale, in a ZAxis() cell after the panels of the first row (2d_2x2: panels 1, 2, 4, 5).
+  // Ratio and pull panels exist only for 1d. A 2d grid without gaps shares one colour scale, in a ColorScale() cell after the panels of the first row (2d_2x2: panels 1, 2, 4, 5).
   // The code of this function is the reference for defining further layouts with PanelLayout.
   // Other lengths are taken from sizes (its panels are not used): text and title sizes, tick lengths, margins, line width and
   // marker size in pixels of the plot, e.g. MakeBasePlot("1d_ratio", PanelLayout().SetTextSize(24).SetTitleSize(30)).

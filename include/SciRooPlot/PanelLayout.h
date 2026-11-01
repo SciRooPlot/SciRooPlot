@@ -36,7 +36,7 @@ class Panel
 {
  public:
   explicit Panel(double_t width = 1., double_t height = 1.);
-  Panel& ZAxis();  // room for the colour scale of this panel to its right
+  Panel& ColorScale();  // room for the colour scale of this panel to its right
   // The cell covers several columns and/or rows of the grid (as colspan and rowspan in an HTML table): it is listed once,
   // in the row where it starts, and the rows below leave out the positions it covers. In a direction it spans, its size
   // follows from the columns or rows it covers (including what lies between them) and the size given here is not used.
@@ -54,8 +54,8 @@ class Panel
   friend Panel Empty(double_t width, double_t height);
   friend Panel Hole();
   friend Panel Hole(double_t width, double_t height);
-  friend Panel ZAxis();
-  friend Panel ZAxis(uint8_t padID);
+  friend Panel ColorScale();
+  friend Panel ColorScale(uint8_t padID);
   double_t mWidth{1.};
   double_t mHeight{1.};
   double_t mSpacingAbove{-1.};  // negative: the spacing of the layout
@@ -63,7 +63,7 @@ class Panel
   uint8_t mColumns{1};
   uint8_t mRows{1};
   bool mSized{true};  // the size takes part in defining the widths of the columns and heights of the rows
-  bool mZAxis{false};
+  bool mColorScale{false};
   bool mGap{false};
   bool mEmpty{false};
   bool mHole{false};  // an empty cell without pad
@@ -90,9 +90,9 @@ Panel Hole(double_t width, double_t height);
 // A cell holding the colour scale of a group of panels sharing the z axis (Plot::ShareAxis('Z', ...)): the group of the panel to its
 // left, or of the panel with the given pad number (a panel in no z group: its own scale, e.g. for a map beside its projection).
 // Its panels then lose their own colour scales. The cell is as wide as the room
-// of the colour scale of Panel().ZAxis() (SetColorScaleMargin, its scale placed by SetColorScaleOffset and SetColorScaleWidth) and may span rows.
-Panel ZAxis();
-Panel ZAxis(uint8_t padID);
+// of the colour scale of Panel().ColorScale() (SetColorScaleMargin, its scale placed by SetColorScaleOffset and SetColorScaleWidth) and may span rows.
+Panel ColorScale();
+Panel ColorScale(uint8_t padID);
 
 //**************************************************************************************************
 /**

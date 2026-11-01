@@ -315,6 +315,7 @@ class PlotPainter
   double_t MaxLabelWidth(TPad* pad, const TAxis* axis, const std::vector<double_t>& values, bool isLog);
   using label_range_t = std::tuple<double_t, double_t, bool>;  // minimum, maximum, log
   bool PlaceZTitle(TPad* pad, TAxis* zAxis, const std::vector<label_range_t>& ranges);
+  static std::optional<float_t> LayoutValue(const Plot::Pad& pad, const Plot::Pad& padDefaults, const std::string& key);
   void DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID);
   static bool IsHBarFrame(TPad* pad, const TH1* frame);
   static bool IsViewFrame(TPad* pad, const TH1* frame);
@@ -350,7 +351,7 @@ class PlotPainter
   std::map<std::pair<uint8_t, char>, std::pair<double_t, double_t>> mFrameRanges;
   std::map<uint8_t, TH1*> mFrameHists;  // the frame histograms of the flat frames (owned by their pads)
   std::map<uint8_t, TH1*> mScaleHists;  // the frame histograms with a z axis, also in 3D views (owned by their pads)
-  std::set<uint8_t> mScalesInCells;     // pads whose colour scale a ZAxis() cell shows instead of the pad
+  std::set<uint8_t> mScalesInCells;     // pads whose colour scale a ColorScale() cell shows instead of the pad
   // on screen: the free user-defined line styles that stand in for styles 2-4 (their dash strings from gStyle), 0 if there is none
   std::array<Style_t, 3> mScreenDashStyles{};
   std::set<std::pair<const TObject*, size_t>> mReportedStoredRanges;  // input axes whose stored range a projection of this plot does not apply (reported once)
