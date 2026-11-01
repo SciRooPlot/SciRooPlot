@@ -127,6 +127,7 @@ namespace SciRooPlot
 using util::expand_path;
 using util::get_first;
 using util::get_first_or;
+using util::ignore_root_messages_below;
 using util::is_2d;
 using util::is_3d;
 using util::is_func;
@@ -663,10 +664,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     struct {
       uint16_t markerColor, markerStyle, lineColor, lineStyle, fillColor, fillStyle;
     } usedDefaults{};  // entries of the pad's default lists taken so far
-    const int userErrorLevel = gErrorIgnoreLevel;
-    auto errLevelGuard = make_scope_guard([userErrorLevel]() { gErrorIgnoreLevel = userErrorLevel; });
     for (const auto& data : drawData) {
       if (fail) break;
+      // data 0 is the copy of the first data that gives the frame: ROOT's messages about it come again with the data itself
+      auto quiet = ignore_root_messages_below(dataIndex ? kUnset : kFatal);
       if (data->GetDrawOption()) {
         // SAME (also SAMES, SAME0, SAMES0) is SciRooPlot's: the first data of a pad is also drawn as its frame, into the empty pad, where
         // SAME made ROOT paint a title box (histograms), a garbled picture (SAME0) or an extra copy (graphs); the stats boxes get SAMES anyway.
@@ -2343,7 +2344,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       auto processData = [&](auto&& data_ptr) {
         using data_type = std::decay_t<decltype(data_ptr)>;
         if constexpr (is_func<data_type>()) isSampledFunc = !data_ptr->GetFormula();
-        gErrorIgnoreLevel = dataIndex ? userErrorLevel : kFatal;
         // the drawing option alias of the data (without one, the rule below decides once the data is final)
         optional<draw_option_t> optionAlias = data->GetDrawOptionAlias();
 
@@ -2551,7 +2551,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       }
 
       if (rawData) {
-        gErrorIgnoreLevel = dataIndex ? userErrorLevel : kFatal;
         if (data->GetType() == "ratio") {
           numeratorMeans = prepareOperand(*rawData, std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetNumModify());
         }
@@ -4262,7 +4261,8 @@ void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const str
 {
   const auto path = expand_path(box.GetPath());
   if (!path) return;
-  if (!std::filesystem::exists(*path)) {
+  std::error_code existsError;
+  if (!std::filesystem::exists(*path, existsError)) {
     logger::warning("Image {} does not exist.", *path);
     return;
   }
@@ -5351,21 +5351,49 @@ bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors, 
     logger::error("Cannot divide {} by the higher dimensional function {}.", numerator->GetName(), denominator->GetName());
     return false;
   }
-  // the bins outside the range of the function are left out (TH1::Divide would leave them as they are)
+  // bins outside the range of the function are left out of the ratio, as points of graphs are: set to 0 and, along the axes, cut off the drawn range
+  // (TH1::Divide would leave them as they are); the position of a bin is its centre; underflow and overflow are always left out
   if (!numerator->GetSumw2N()) numerator->Sumw2();
   const double_t entries = numerator->GetEntries();
   int32_t nOutside{};
-  for (int32_t bin = 0; bin < numerator->GetNcells(); ++bin) {
-    int32_t binX{}, binY{}, binZ{};
-    numerator->GetBinXYZ(bin, binX, binY, binZ);
-    double_t xyz[3] = {numerator->GetXaxis()->GetBinCenter(binX), numerator->GetYaxis()->GetBinCenter(binY), numerator->GetZaxis()->GetBinCenter(binZ)};
+  auto divideBin = [&](int32_t bin, double_t* xyz, bool underOrOverflow) {
     const double_t content = numerator->GetBinContent(bin);
     const double_t error = numerator->GetBinError(bin);
-    const bool inside = denominator->IsInside(xyz);
+    const bool inside = !underOrOverflow && denominator->IsInside(xyz);
     const double_t denom = (inside) ? denominator->EvalPar(xyz) : 0.;
-    if (!inside && !numerator->IsBinUnderflow(bin) && !numerator->IsBinOverflow(bin) && content != 0.) ++nOutside;
+    if (!inside && !underOrOverflow && content != 0.) ++nOutside;
     numerator->SetBinContent(bin, (denom) ? content / denom : 0.);
     numerator->SetBinError(bin, (denom) ? error / std::abs(denom) : 0.);
+    return inside;
+  };
+  if (auto* poly = dynamic_cast<TH2Poly*>(numerator)) {
+    // the cells of a TH2Poly are its polygons (the centre of their bounding box); its sea bins (negative numbers) have no position
+    for (TObject* obj : *poly->GetBins()) {
+      auto* polyBin = static_cast<TH2PolyBin*>(obj);
+      double_t xyz[3] = {0.5 * (polyBin->GetXMin() + polyBin->GetXMax()), 0.5 * (polyBin->GetYMin() + polyBin->GetYMax()), 0.};
+      divideBin(polyBin->GetBinNumber(), xyz, false);
+    }
+  } else {
+    std::array<TAxis*, 3> axes{numerator->GetXaxis(), numerator->GetYaxis(), numerator->GetZaxis()};
+    std::array<int32_t, 3> firstInside{INT32_MAX, INT32_MAX, INT32_MAX}, lastInside{INT32_MIN, INT32_MIN, INT32_MIN};
+    for (int32_t bin = 0; bin < numerator->GetNcells(); ++bin) {
+      std::array<int32_t, 3> binXYZ{};
+      numerator->GetBinXYZ(bin, binXYZ[0], binXYZ[1], binXYZ[2]);
+      double_t xyz[3] = {axes[0]->GetBinCenter(binXYZ[0]), axes[1]->GetBinCenter(binXYZ[1]), axes[2]->GetBinCenter(binXYZ[2])};
+      const bool underOrOverflow = numerator->IsBinUnderflow(bin) || numerator->IsBinOverflow(bin);
+      if (divideBin(bin, xyz, underOrOverflow)) {
+        for (size_t i = 0; i < 3; ++i) {
+          firstInside[i] = std::min(firstInside[i], binXYZ[i]);
+          lastInside[i] = std::max(lastInside[i], binXYZ[i]);
+        }
+      }
+    }
+    // the bins along an axis outside the range of the function are not drawn (a range of the axis set already is kept where it is narrower)
+    for (int32_t i = 0; i < numerator->GetDimension() && firstInside[i] <= lastInside[i]; ++i) {
+      const int32_t first = std::max(firstInside[i], axes[i]->GetFirst());
+      const int32_t last = std::min(lastInside[i], axes[i]->GetLast());
+      if (first != axes[i]->GetFirst() || last != axes[i]->GetLast()) axes[i]->SetRange(first, last);
+    }
   }
   numerator->ResetStats();
   numerator->SetEntries(entries);
@@ -5763,12 +5791,16 @@ bool PlotPainter::ProfileMeans(data_ptr_t& data)
   auto replace = [&](auto* profile, auto* means) {
     means->SetDirectory(nullptr);
     means->SetName(profile->GetName());
+    CopyStyle(*profile, *means);  // the projections take labels and titles, not the style
     delete profile;
     data = means;
     return true;
   };
   if (auto* profile = std::get_if<TProfile*>(&data)) return replace(*profile, static_cast<TH1*>((*profile)->ProjectionX("means")));
   if (auto* profile = std::get_if<TProfile2D*>(&data)) return replace(*profile, static_cast<TH2*>((*profile)->ProjectionXY("means")));
+  if (auto* hist = std::get_if<TH3*>(&data)) {
+    if (auto* profile = dynamic_cast<TProfile3D*>(*hist)) return replace(profile, static_cast<TH3*>(profile->ProjectionXYZ("means")));
+  }
   return false;
 }
 

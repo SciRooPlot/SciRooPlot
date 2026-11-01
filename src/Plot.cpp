@@ -66,6 +66,7 @@ using util::join_strings;
 using util::number_to_string;
 using util::put_in_tree;
 using util::read_from_tree;
+using util::split_path;
 using util::str_contains;
 using util::str_starts_with;
 
@@ -2923,7 +2924,7 @@ string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
 //**************************************************************************************************
 string Plot::Pad::Data::data_info_t::join_t::GetAlias() const
 {
-  return (alias.empty()) ? tree.substr(tree.find_last_of('/') + 1) : alias;
+  return (alias.empty()) ? split_path(tree).second : alias;
 }
 string Plot::Pad::Data::data_info_t::join_t::ToString() const
 {
