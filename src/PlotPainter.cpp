@@ -656,6 +656,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     vector<std::pair<unique_ptr<TPaveStats>, std::shared_ptr<const Plot::Pad::StatsBox>>> statsBoxes;  // filled by ROOT while drawing the data, placed after all data are drawn
     string drawOption;
     uint16_t dataIndex{};
+    bool mapDrawn{};  // a 2d or 3d histogram of the pad is drawn (the first one gives the frame its colour levels)
     array<uint16_t, 6> defaultSettingIndices = {0};
     const int userErrorLevel = gErrorIgnoreLevel;
     auto errLevelGuard = make_scope_guard([userErrorLevel]() { gErrorIgnoreLevel = userErrorLevel; });
@@ -1705,12 +1706,40 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 dataAxis->SetTitle(frameAxis->GetTitle());
               }
             }
-            if (const auto& contours = data->GetContours()) {
-              data_ptr->SetContour(static_cast<int32_t>(contours->size()), contours->data());
-              if (axisHist_ptr->GetContour() < static_cast<int32_t>(contours->size())) axisHist_ptr->SetContour(static_cast<int32_t>(contours->size()), contours->data());
-            } else if (const auto& nContours = data->GetNContours()) {
-              data_ptr->SetContour(*nContours);
-              if (axisHist_ptr->GetContour() < nContours) axisHist_ptr->SetContour(*nContours);
+            // colour levels: the frame, whose colour scale is drawn (and from which COL drawn SAME takes its colours), takes those of the first
+            // 2d or 3d histogram of the pad, the one it is made from, also fewer than ROOT's 20, so that the scale shows the levels of the map; levels of later data
+            // (e.g. contour lines over a map) are their own, the frame only gets more levels from them as before
+            const bool firstMap = !mapDrawn;
+            mapDrawn = true;
+            const auto& contours = data->GetContours();
+            const int32_t nLevels = contours ? static_cast<int32_t>(contours->size()) : data->GetNContours().value_or(0);
+            if (nLevels > 0) {
+              if (contours) {
+                data_ptr->SetContour(nLevels, contours->data());
+              } else {
+                data_ptr->SetContour(nLevels);
+              }
+              if (firstMap || axisHist_ptr->GetContour() < nLevels) {
+                if (contours) {
+                  axisHist_ptr->SetContour(nLevels, contours->data());
+                } else {
+                  axisHist_ptr->SetContour(nLevels);
+                }
+              }
+              if constexpr (is_hist_3d<data_type>()) {
+                if (firstMap) {
+                  // ROOT colours the boxes of a 3d histogram from the whole palette, linearly in the content (THistPainter::PaintH3Box), and only
+                  // the colour scale from the levels: the pad gets a palette with one colour per level, the one the scale shows for it (TPaletteAxis:
+                  // level j has colour (j + 0.99) * nColors / nLevels), each repeated 200 times, since a box takes colour nColors * fraction - 1
+                  // (with fewer copies the boxes would be one level off)
+                  if (contours) logger::warning("Colour levels of {}: the boxes of a 3d histogram are coloured in {} equal steps, not at the levels given.", data->GetName(), nLevels);
+                  padSetup += fmt::format(
+                    " {{ const Int_t n0 = TColor::GetNumberOfColors(), nb = {}, k = 200; std::vector<Int_t> c(nb * k);"
+                    " for (Int_t i = 0; i < nb * k; ++i) c[i] = TColor::GetColorPalette(Int_t((std::min(nb - 1, (i + 1) / k) + 0.99) * n0 / nb));"
+                    " gStyle->SetPalette(nb * k, c.data()); }}",
+                    nLevels);
+                }
+              }
             }
           }
           auto drawExec = [&](const string& name, const string& command) {

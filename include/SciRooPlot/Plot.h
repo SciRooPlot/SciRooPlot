@@ -812,10 +812,10 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   Data& SetStatsBox(const StatsBox& statsBox);
   Data& SetColor(color_t color);
   Data& SetAlpha(float_t alpha);
-  Data& SetDefinesFrame();                    // this data (drawn as usual) defines the axis frame; the last one in a pad wins
-  Data& SetKeepInputStyle(bool keep = true);  // line, marker and fill stored with the input win over the defaults of the pad
-  Data& SetContours(const std::vector<double>& contours);
-  Data& SetContours(int32_t nContours);
+  Data& SetDefinesFrame();                                 // this data (drawn as usual) defines the axis frame; the last one in a pad wins
+  Data& SetKeepInputStyle(bool keep = true);               // line, marker and fill stored with the input win over the defaults of the pad
+  Data& SetContours(const std::vector<double>& contours);  // colour levels (also of the colour scale, if this is the first map of the pad)
+  Data& SetContours(int32_t nContours);                    // n equal colour levels (a 3d histogram: its boxes too)
   Data& SetNpx(int32_t nx, std::optional<int32_t> ny = {});
 
   // data modifiers
