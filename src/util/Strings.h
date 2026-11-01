@@ -24,6 +24,7 @@
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -57,6 +58,12 @@ inline bool str_contains(const std::string& str, const std::vector<std::string>&
 {
   return std::any_of(substrs.begin(), substrs.end(),
                      [&](const std::string& substr) { return str_contains(str, substr); });
+}
+
+inline std::string str_upper(std::string str)
+{
+  std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+  return str;
 }
 
 inline bool str_starts_with(const std::string& str, const std::string& prefix)

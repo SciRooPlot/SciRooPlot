@@ -142,19 +142,26 @@ using util::is_hist_3d;
 using util::is_one_of_v;
 using util::make_scope_guard;
 using util::pick;
+using util::plural;
 using util::str_contains;
+using util::str_upper;
 
 //**************************************************************************************************
 /**
- * Helper to copy the attributes of a function.
+ * Copy the line, fill and marker attributes of an object; for functions also title and number of points (CopyFuncAttributes).
  */
 //**************************************************************************************************
-template <typename FuncT>
-void CopyFuncAttributes(FuncT* from, FuncT* to)
+template <typename From, typename To>
+void PlotPainter::CopyStyle(const From& from, To& to)
 {
-  from->TAttLine::Copy(*to);
-  from->TAttFill::Copy(*to);
-  from->TAttMarker::Copy(*to);
+  from.TAttLine::Copy(to);
+  from.TAttFill::Copy(to);
+  from.TAttMarker::Copy(to);
+}
+template <typename FuncT>
+void PlotPainter::CopyFuncAttributes(FuncT* from, FuncT* to)
+{
+  CopyStyle(*from, *to);
   to->SetTitle(from->GetTitle());
   to->SetNpx(from->GetNpx());
   to->SetBit(kCanDelete);
@@ -223,9 +230,7 @@ TGraph* PlotPainter::ToGraph(const TH1* hist)
   }
   graph->SetName(hist->GetName());
   graph->SetTitle(hist->GetTitle());
-  hist->TAttLine::Copy(*graph);
-  hist->TAttFill::Copy(*graph);
-  hist->TAttMarker::Copy(*graph);
+  CopyStyle(*hist, *graph);
   // the axis frame of the graph is the one the histogram would have had (same x range and bin labels),
   // with the y range ROOT determined for the points
   const TAxis* xAxis = hist->GetXaxis();
@@ -270,9 +275,7 @@ TGraph* PlotPainter::ToClippedGraph(const TH1* hist, draw_option_t alias, bool l
   }
   graph->SetName(hist->GetName());
   graph->SetTitle(hist->GetTitle());
-  hist->TAttLine::Copy(*graph);
-  hist->TAttFill::Copy(*graph);
-  hist->TAttMarker::Copy(*graph);
+  CopyStyle(*hist, *graph);
   graph->SetBit(kCanDelete);
   return graph;
 }
@@ -365,9 +368,7 @@ TH1* PlotPainter::ToHist(TGraph* graph, bool warn)
     asymmetricErrors |= (graph->GetErrorYlow(i) != graph->GetErrorYhigh(i));
   }
   if (asymmetricErrors && warn) logger::warning("Graph {} has asymmetric y errors: it is drawn with their mean, since histograms have symmetric errors.", graph->GetName());
-  graph->TAttLine::Copy(*hist);
-  graph->TAttFill::Copy(*hist);
-  graph->TAttMarker::Copy(*hist);
+  CopyStyle(*graph, *hist);
   hist->SetBit(kCanDelete);
   delete graph;
   return hist;
@@ -548,7 +549,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     const int32_t nLineColors = nDefaultColors([](const auto& data) { return data.GetLineColor().has_value(); });
     const int32_t nFillColors = nDefaultColors([](const auto& data) { return data.GetFillColor().has_value(); });
     // a gradient is generated only if a data item takes colours from it, or if its number of colours is given explicitly
-    auto applyGradient = [this](const auto& gradient, int32_t nTaking, auto&& setColors) {
+    auto applyGradient = [](const auto& gradient, int32_t nTaking, auto&& setColors) {
       if (nTaking == 0 && !gradient.nColors) return;
       const vector<int16_t> indices = GenerateGradientColors(get_first_or(nTaking, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
       setColors(vector<color_t>(indices.begin(), indices.end()));
@@ -670,8 +671,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         // SAME made ROOT paint a title box (histograms), a garbled picture (SAME0) or an extra copy (graphs); the stats boxes get SAMES anyway.
         // Removed silently, since all data of a pad is drawn into the same frame as asked; only the own colour range of SAME0 is lost
         string option = *data->GetDrawOption();
-        string upper = option;
-        std::transform(upper.begin(), upper.end(), upper.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+        string upper = str_upper(option);
         bool ownRange{};
         for (size_t pos = upper.find("SAME"); pos != string::npos; pos = upper.find("SAME", pos)) {
           size_t end = pos + 4;
@@ -876,9 +876,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             auto* polygon = new TGraph(data_ptr->GetN() + 2);
             polygon->SetName(data_ptr->GetName());
             polygon->SetTitle(data_ptr->GetTitle());
-            data_ptr->TAttLine::Copy(*polygon);
-            data_ptr->TAttFill::Copy(*polygon);
-            data_ptr->TAttMarker::Copy(*polygon);
+            CopyStyle(*data_ptr, *polygon);
             data_ptr->Sort();
             polygon->SetPoint(0, data_ptr->GetPointX(0), 0.);
             for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
@@ -953,8 +951,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if constexpr (is_2d<data_type>()) polarFrame = isFlatPolar(drawOption);
           if (polarFrame) {
             // the disc is round only in a square frame: the margins of the longer side grow, both by the same amount
-            const double_t padWidth = pad_ptr->GetWw() * pad_ptr->GetAbsWNDC();
-            const double_t padHeight = pad_ptr->GetWh() * pad_ptr->GetAbsHNDC();
+            const auto [padWidth, padHeight] = PadSizePixel(pad_ptr);
             const double_t frameWidth = padWidth * (1. - pad_ptr->GetLeftMargin() - pad_ptr->GetRightMargin());
             const double_t frameHeight = padHeight * (1. - pad_ptr->GetTopMargin() - pad_ptr->GetBottomMargin());
             if (frameWidth > frameHeight) {
@@ -1081,8 +1078,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   extended->SetMinimum(axisHist_ptr->GetMinimum());
                   extended->SetMaximum(axisHist_ptr->GetMaximum());
                 } else {
-                  extended->SetMinimum(pad_ptr->GetLogy() ? TMath::Power(10., pad_ptr->GetUymin()) : pad_ptr->GetUymin());
-                  extended->SetMaximum(pad_ptr->GetLogy() ? TMath::Power(10., pad_ptr->GetUymax()) : pad_ptr->GetUymax());
+                  extended->SetMinimum(FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()));
+                  extended->SetMaximum(FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy()));
                 }
               }
               TList* primitives = pad_ptr->GetListOfPrimitives();
@@ -1365,8 +1362,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // With a pixel font the gap is the title height in every pad, so relative fonts are converted for the automatic placement.
             // Pixel sizes are stored unscaled (ApplyScale multiplies them by mScale), while the canvas already has its scaled size.
             if (axisLabel == 'Y' && axis_ptr->GetTitleOffset() == 0.f && axis_ptr->GetTitleFont() % 10 <= 2 && axis_ptr->GetTitleSize() > 0.f && axis_ptr->GetTitleSize() < 1.f) {
-              const double_t padWidthPixel = pad_ptr->GetWw() * pad_ptr->GetAbsWNDC();
-              const double_t padHeightPixel = pad_ptr->GetWh() * pad_ptr->GetAbsHNDC();
+              const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad_ptr);
               axis_ptr->SetTitleFont(axis_ptr->GetTitleFont() / 10 * 10 + 3);
               axis_ptr->SetTitleSize(static_cast<float_t>(axis_ptr->GetTitleSize() * std::min(padWidthPixel, padHeightPixel) / mScale));
             }
@@ -1601,14 +1597,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // data ranges
           double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0;
           pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
-          if (pad_ptr->GetLogx()) {
-            xmin = TMath::Power(10, xmin);
-            xmax = TMath::Power(10, xmax);
-          }
-          if (pad_ptr->GetLogy()) {
-            ymin = TMath::Power(10, ymin);
-            ymax = TMath::Power(10, ymax);
-          }
+          xmin = FromPad(xmin, pad_ptr->GetLogx());
+          xmax = FromPad(xmax, pad_ptr->GetLogx());
+          ymin = FromPad(ymin, pad_ptr->GetLogy());
+          ymax = FromPad(ymax, pad_ptr->GetLogy());
           if (auto view = pad_ptr->GetView()) {
             // for 3d view ignore individual data ranges and always let it coincide with the axes: the ranges of the frame's axes, since the
             // view holds the coordinates it paints in (-1 to 1 in polar, cylindrical and spherical systems, logarithms on a log scale)
@@ -1793,13 +1785,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (data->GetMinRangeY()) keepRange += fmt::format(" h->SetMinimum({});", *data->GetMinRangeY());
               if (data->GetMaxRangeY()) keepRange += fmt::format(" h->SetMaximum({});", *data->GetMaxRangeY());
             }
-            if (!keepRange.empty()) {
-              string name = data_ptr->GetName();
-              for (size_t pos = name.find_first_of("\\\""); pos != string::npos; pos = name.find_first_of("\\\"", pos + 2)) {
-                name.insert(pos, 1, '\\');
-              }
-              padSetup += fmt::format(" if (auto* h = dynamic_cast<TH1*>(gPad->GetPrimitive(\"{}\"))) {{{} }}", name, keepRange);
-            }
+            if (!keepRange.empty()) padSetup += HistCommand(data_ptr->GetName(), keepRange);
           }
           bool hasFilledSteps{false};  // a histogram drawn with hist_clipped or hist_open_clipped and a fill: the steps are the outline of the filled areas
           if constexpr (is_graph_1d<data_type>()) {
@@ -1917,19 +1903,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (textFont) label.SetTextFont(*textFont);
             if (textSize) label.SetTextSize(*textSize);
             const string format = "%" + data->GetTextFormat().value_or("g");
-            auto toUser = [](double_t padValue, bool isLog) { return (isLog) ? std::pow(10., padValue) : padValue; };
             // a small gap between the end of the error bar and the value, so the text does not sit on the bar
             const double_t gapY = 0.015 * (pad_ptr->GetUymax() - pad_ptr->GetUymin());
             auto drawLabel = [&](double_t x, double_t y, double_t value) {
               const bool logY = pad_ptr->GetLogy();
-              if (!logY || y > 0.) y = toUser(((logY) ? std::log10(y) : y) + gapY, logY);
+              if (!logY || y > 0.) y = FromPad(((logY) ? std::log10(y) : y) + gapY, logY);
               label.DrawLatex(x, y, TString::Format(format.data(), value).Data());
             };
             // only drawn points get a value: the labels, unlike the markers, are not clipped at the frame
-            const double_t frameMinX = toUser(pad_ptr->GetUxmin(), pad_ptr->GetLogx());
-            const double_t frameMaxX = toUser(pad_ptr->GetUxmax(), pad_ptr->GetLogx());
-            const double_t frameMinY = toUser(pad_ptr->GetUymin(), pad_ptr->GetLogy());
-            const double_t frameMaxY = toUser(pad_ptr->GetUymax(), pad_ptr->GetLogy());
+            const double_t frameMinX = FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx());
+            const double_t frameMaxX = FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx());
+            const double_t frameMinY = FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy());
+            const double_t frameMaxY = FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy());
             auto inFrame = [&](double_t x, double_t y) { return x >= frameMinX && x <= frameMaxX && y >= frameMinY && y <= frameMaxY; };
             if constexpr (is_hist_1d<data_type>()) {
               // the drawn bins (data range, cut at the frame) and the y range of the data (its minimum and maximum)
@@ -2456,7 +2441,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               ++nInvalid;
             }
           }
-          if (nInvalid) warn("{} has {} bin{} with NaN or infinite values, which are drawn as zero.", data_ptr->GetName(), nInvalid, (nInvalid == 1) ? "" : "s");
+          if (nInvalid) warn("{} has {} with NaN or infinite values, which are drawn as zero.", data_ptr->GetName(), plural(nInvalid, "bin"));
         } else if constexpr (is_graph_1d<data_type>()) {
           int32_t nInvalid{};
           for (int32_t i = data_ptr->GetN() - 1; i >= 0; --i) {
@@ -2465,7 +2450,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               ++nInvalid;
             }
           }
-          if (nInvalid) warn("{} has {} point{} with NaN or infinite values, which are not drawn.", data_ptr->GetName(), nInvalid, (nInvalid == 1) ? "" : "s");
+          if (nInvalid) warn("{} has {} with NaN or infinite values, which are not drawn.", data_ptr->GetName(), plural(nInvalid, "point"));
           // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
           data_ptr->SetBit(TGraph::kResetHisto);
         }
@@ -2649,9 +2634,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     }
     if (flatFrame) {
       // the ranges as drawn, for the axes shared with other pads (pad coordinates of a log axis are decades)
-      auto value = [](double_t padCoord, bool isLog) { return (isLog) ? TMath::Power(10., padCoord) : padCoord; };
-      mFrameRanges[{padID, 'X'}] = {value(pad_ptr->GetUxmin(), pad_ptr->GetLogx()), value(pad_ptr->GetUxmax(), pad_ptr->GetLogx())};
-      mFrameRanges[{padID, 'Y'}] = {value(pad_ptr->GetUymin(), pad_ptr->GetLogy()), value(pad_ptr->GetUymax(), pad_ptr->GetLogy())};
+      mFrameRanges[{padID, 'X'}] = {FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx()), FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx())};
+      mFrameRanges[{padID, 'Y'}] = {FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()), FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy())};
       mFrameHists[padID] = axisHist_ptr;
     }
     // the z range of a 2d frame is its minimum and maximum, also in a 3D view (x and y of a view are projected, not shared)
@@ -2694,14 +2678,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       // with the attributes and the title of the y axis
       TAxis* yAxis = axisHist_ptr->GetYaxis();
       const bool logRadius = pad_ptr->GetLogy();
-      auto value = [logRadius](double_t u) { return (logRadius) ? std::pow(10., u) : u; };
       // half of ROOT's divisions of an axis spanning the frame, unless the user set them: the radius runs over half of it
       optional<int16_t> divisions;
       for (const auto* axis : AxisSettings(pad, padDefaults, 'Y')) {
         if (axis->GetNumDivisions()) divisions = axis->GetNumDivisions();
       }
       auto* radial = new TGaxis(0.5 * (pad_ptr->GetUxmin() + pad_ptr->GetUxmax()), pad_ptr->GetUymin(), pad_ptr->GetUxmax(), pad_ptr->GetUymin(),
-                                value(pad_ptr->GetUymin()), value(pad_ptr->GetUymax()), divisions.value_or(505), (logRadius) ? "G" : "");
+                                FromPad(pad_ptr->GetUymin(), logRadius), FromPad(pad_ptr->GetUymax(), logRadius), divisions.value_or(505), (logRadius) ? "G" : "");
       radial->ImportAxisAttributes(yAxis);
       // the title font is the text font of the TGaxis, which ImportAxisAttributes leaves at its default (its text size is unused: set
       // to the title size, so that font and size agree)
@@ -2776,8 +2759,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
     // statistics boxes, placed after the boxes with a given position and before the automatically placed ones
     for (auto& [stats, statsBox] : statsBoxes) {
-      const double_t padWidthPixel = pad_ptr->GetWw() * pad_ptr->GetAbsWNDC();
-      const double_t padHeightPixel = pad_ptr->GetWh() * pad_ptr->GetAbsHNDC();
+      const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad_ptr);
       auto textWidth = [&, textFont = stats->GetTextFont(), textSize = stats->GetTextSize()](const TString& text) {
         TLatex latex(0, 0, text.Data());
         latex.SetTextFont(textFont);
@@ -2809,8 +2791,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }
       }
-      // a pixel size (precision 3) is stored unscaled (ApplyScale multiplies it later), a size relative to the pad already scales with it
-      const double_t lineHeightPixel = (stats->GetTextFont() % 10 <= 2) ? GetTextSizePixel(stats->GetTextSize()) : mScale * stats->GetTextSize();
+      const double_t lineHeightPixel = TextHeightPixel(stats->GetTextFont(), stats->GetTextSize(), pad_ptr);
       const double_t lineSpacing = statsBox->GetLineSpacing().value_or(0.3);  // as for legends and texts
       const double_t contentWidthPixel = std::max({labelWidth + lineHeightPixel + valueWidth, titleWidth, 3. * cellWidth});
       // the margin of TPaveStats is a fraction of the box width, the one set for a box is in NDC (as for legends and texts)
@@ -3071,14 +3052,10 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
   // the ranges drawn so far: those of the frame, painted when it was set up (data drawn on top do not change them)
   double_t xMin{}, yMin{}, xMax{}, yMax{};
   pad->GetRangeAxis(xMin, yMin, xMax, yMax);
-  if (pad->GetLogx()) {
-    xMin = TMath::Power(10., xMin);
-    xMax = TMath::Power(10., xMax);
-  }
-  if (pad->GetLogy()) {
-    yMin = TMath::Power(10., yMin);
-    yMax = TMath::Power(10., yMax);
-  }
+  xMin = FromPad(xMin, pad->GetLogx());
+  xMax = FromPad(xMax, pad->GetLogx());
+  yMin = FromPad(yMin, pad->GetLogy());
+  yMax = FromPad(yMax, pad->GetLogy());
   if (hbar) {
     std::swap(xMin, yMin);
     std::swap(xMax, yMax);
@@ -3265,18 +3242,13 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
         // the setup of the pad restores the range of data with a range of its own after an interactive zoom: with the range cut at this frame
         const bool hasRange = (axisLabel == 'X') ? (data->GetMinRangeX() || data->GetMaxRangeX()) : (data->GetMinRangeY() || data->GetMaxRangeY());
         if (!hasRange) continue;
-        string name = hist->GetName();
-        for (size_t pos = name.find_first_of("\\\""); pos != string::npos; pos = name.find_first_of("\\\"", pos + 2)) {
-          name.insert(pos, 1, '\\');
-        }
-        padSetup += fmt::format(" if (auto* h = dynamic_cast<TH1*>(gPad->GetPrimitive(\"{}\"))) {{ h->Get{}axis()->SetRange({}, {}); }}", name, axisLabel, histAxis->GetFirst(), histAxis->GetLast());
+        padSetup += HistCommand(hist->GetName(), fmt::format(" h->Get{}axis()->SetRange({}, {});", axisLabel, histAxis->GetFirst(), histAxis->GetLast()));
       }
     });
     const auto extent = dataExtent(axisLabel);
     if (!extent) continue;  // nothing drawn to leave room around
     const bool isLog = isLogAxis(axisLabel);
     auto toFrame = [isLog](double_t value) { return (isLog) ? std::log10(value) : value; };
-    auto fromFrame = [isLog](double_t value) { return (isLog) ? TMath::Power(10., value) : value; };
     const double_t curMin = (axisLabel == 'X') ? xMin : ((axisLabel == 'Y') ? yMin : frame->GetMinimum());
     const double_t curMax = (axisLabel == 'X') ? xMax : ((axisLabel == 'Y') ? yMax : frame->GetMaximum());
     if (isLog && !(curMin > 0. && curMax > 0.)) continue;
@@ -3300,8 +3272,8 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
       logger::warning("Room on the {} axis of pad {} ignored: the drawn data leave no valid range.", histLabel(axisLabel), padID);
       continue;
     }
-    const double_t newMin = fromFrame(frameMin);
-    const double_t newMax = fromFrame(frameMax);
+    const double_t newMin = FromPad(frameMin, isLog);
+    const double_t newMax = FromPad(frameMax, isLog);
 
     if (axisLabel == valueAxis) {
       if (!is2d) {
@@ -3596,9 +3568,7 @@ TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<dou
   extended->SetEntries(frame->GetEntries());
   extended->SetMinimum(frame->GetMinimumStored());
   extended->SetMaximum(frame->GetMaximumStored());
-  frame->TAttLine::Copy(*extended);
-  frame->TAttFill::Copy(*extended);
-  frame->TAttMarker::Copy(*extended);
+  CopyStyle(*frame, *extended);
   // the axes are copied completely (attributes, labels, time format, bits, a selected range) and the extended one gets its new binning
   const array<TAxis*, 3> newAxes = {extended->GetXaxis(), extended->GetYaxis(), extended->GetZaxis()};
   for (int32_t i = 0; i < 3; ++i) {
@@ -3694,15 +3664,15 @@ bool PlotPainter::HasErrors(const TObject* obj)
 //**************************************************************************************************
 string PlotPainter::LegendSymbolElements(TObject* obj, string option)
 {
-  std::transform(option.begin(), option.end(), option.begin(), ::toupper);
+  option = str_upper(option);
   auto takeToken = [&option](const string& token) {
     const size_t pos = option.find(token);
     if (pos == string::npos) return false;
     option.erase(pos, token.size());
     return true;
   };
-  for (const char* ignored : {"SAME", "TEXT", "PFC", "PLC", "PMC", "X0", "]["})
-    takeToken(ignored);  // contain the letters checked below but draw nothing of that kind
+  for (const char* ignored : kNonSymbolTokens)
+    takeToken(ignored);
   auto fill = dynamic_cast<TAttFill*>(obj);
   const bool hasFill = fill && fill->GetFillStyle() != 0 && fill->GetFillColor() != 0;
   auto has = [&option](char c) { return option.find(c) != string::npos; };
@@ -3754,9 +3724,8 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
   using Shape = Plot::Pad::Shape;
   using kind_t = Shape::kind_t;
   // TLine, TArrow, TBox and TEllipse take axis values (they convert them to pad coordinates, log10 on a log axis, when painted)
-  auto toUser = [](double_t padCoord, bool isLog) { return (isLog) ? std::pow(10., padCoord) : padCoord; };
-  const double_t xMin = toUser(pad->GetUxmin(), pad->GetLogx()), xMax = toUser(pad->GetUxmax(), pad->GetLogx());
-  const double_t yMin = toUser(pad->GetUymin(), pad->GetLogy()), yMax = toUser(pad->GetUymax(), pad->GetLogy());
+  const double_t xMin = FromPad(pad->GetUxmin(), pad->GetLogx()), xMax = FromPad(pad->GetUxmax(), pad->GetLogx());
+  const double_t yMin = FromPad(pad->GetUymin(), pad->GetLogy()), yMax = FromPad(pad->GetUymax(), pad->GetLogy());
   const double_t nan = std::numeric_limits<double_t>::quiet_NaN();
   uint8_t shapeIndex{};
   std::map<kind_t, uint16_t> numberOfKind;  // over all layers: the nth shape of a kind is the nth call that added one
@@ -3770,8 +3739,8 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
     const size_t nExpected = (kind == kind_t::vertical_line || kind == kind_t::horizontal_line) ? 1u : ((kind == kind_t::region_x || kind == kind_t::region_y) ? 2u : 4u);
     if ((kind == kind_t::polygon) ? (c.size() < 6 || c.size() % 2) : (c.size() != nExpected)) continue;  // a polygon with too few points was reported when it was added
     // positions as axis values: given so, or fractions of the pad converted; a log axis cannot show values that are not positive
-    auto valueX = [&](double_t x) { return (!isUser) ? toUser(pad->GetX1() + x * (pad->GetX2() - pad->GetX1()), pad->GetLogx()) : ((pad->GetLogx() && x <= 0.) ? nan : x); };
-    auto valueY = [&](double_t y) { return (!isUser) ? toUser(pad->GetY1() + y * (pad->GetY2() - pad->GetY1()), pad->GetLogy()) : ((pad->GetLogy() && y <= 0.) ? nan : y); };
+    auto valueX = [&](double_t x) { return (!isUser) ? FromPad(pad->GetX1() + x * (pad->GetX2() - pad->GetX1()), pad->GetLogx()) : ((pad->GetLogx() && x <= 0.) ? nan : x); };
+    auto valueY = [&](double_t y) { return (!isUser) ? FromPad(pad->GetY1() + y * (pad->GetY2() - pad->GetY1()), pad->GetLogy()) : ((pad->GetLogy() && y <= 0.) ? nan : y); };
     auto skip = [&](const char* reason) { logger::warning("Shape {} ({}) of pad {} is not drawn: {}.", shapeIndex, Shape::KindName(kind), padID, reason); };
 
     TObject* object{};
@@ -3887,8 +3856,8 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
         points.push_back(points.front());  // closed
         vector<double_t> x, y;
         for (const auto& [px, py] : points) {
-          x.push_back(toUser(px, pad->GetLogx()));
-          y.push_back(toUser(py, pad->GetLogy()));
+          x.push_back(FromPad(px, pad->GetLogx()));
+          y.push_back(FromPad(py, pad->GetLogy()));
         }
         object = new TPolyLine(static_cast<int32_t>(x.size()), x.data(), y.data(), "f");
         if (shape->GetLineColor() || shape->GetLineStyle() || shape->GetLineWidth() || shape->GetLineAlpha()) {
@@ -4040,16 +4009,14 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     if (orderTopDown) nColumns = (nLines + nRows - 1) / nRows;
     auto columnOf = [&](uint16_t lineID) { return (orderTopDown) ? lineID / nRows : lineID % nColumns; };
 
-    const double_t padWidthPixel = pad->XtoPixel(pad->GetX2());
-    const double_t padHeightPixel = pad->YtoPixel(pad->GetY1());
+    const auto [padWidthPixel, padHeightPixel] = TextPadSizePixel(pad);
 
     // determine max width and height of legend entries
     double_t contentWidthPixel{};
     double_t titleWidthPixel{};
     vector<uint32_t> contentWidthPixelPerColumn(nColumns, 1);
 
-    // a pixel size (precision 3) is stored unscaled (ApplyScale multiplies it later), a size relative to the pad already scales with it
-    const double_t textHeightPixel = (textFont % 10 <= 2) ? GetTextSizePixel(textSize) : mScale * textSize;  // lines with sub- or superscripts are higher
+    const double_t textHeightPixel = TextHeightPixel(textFont, textSize, pad);  // lines with sub- or superscripts are higher
     double_t lineHeightPixel = textHeightPixel;
 
     uint16_t lineID{};
@@ -4304,8 +4271,7 @@ void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const str
     logger::warning("Image {} could not be read (ROOT needs to be built with asimage for images).", path);
     return;
   }
-  const double_t padWidthPixel = pad->GetWw() * pad->GetAbsWNDC();
-  const double_t padHeightPixel = pad->GetWh() * pad->GetAbsHNDC();
+  const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad);
   const double_t aspect = static_cast<double_t>(image->GetHeight()) / image->GetWidth() * padWidthPixel / padHeightPixel;  // height / width in NDC
   double_t widthNDC = box.GetWidth().value_or(0.2);
   double_t heightNDC = box.GetHeight().value_or(widthNDC * aspect);
@@ -4443,8 +4409,8 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
 {
   const double_t cellSize = 10. * mScale;  // grid cell size in pixels (as in TPad::PlaceBox), scaled so that boxes are placed the same way at any scale
   // size of the pad in pixels (GetWw and GetWh alone are the size of the whole canvas)
-  const double_t padWidthPixel = pad->GetWw() * pad->GetAbsWNDC();
-  const double_t padHeightPixel = pad->GetWh() * pad->GetAbsHNDC();
+  const double_t padWidthPixel = PadSizePixel(pad).first;  // no structured binding: captured below
+  const double_t padHeightPixel = PadSizePixel(pad).second;
   const int32_t nx = static_cast<int32_t>(padWidthPixel / cellSize);
   const int32_t ny = static_cast<int32_t>(padHeightPixel / cellSize);
   if (nx <= 0 || ny <= 0) return false;
@@ -4537,7 +4503,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     // unless HIST is given; SAME, TEXT etc. contain an E but are no error option
     TString option = hist->GetDrawOption();
     option.ToUpper();
-    for (const char* ignored : {"SAME", "TEXT", "PFC", "PLC", "PMC", "X0", "]["})
+    for (const char* ignored : kNonSymbolTokens)
       option.ReplaceAll(ignored, "");
     TAxis* axis = hist->GetXaxis();
     // bar charts (THistPainter::PaintBar and PaintBarH): boxes from the frame edge to the content, also without fill style
@@ -4785,9 +4751,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     } else if (auto* polar = dynamic_cast<TGraphPolar*>(obj)) {
       // its points in the coordinates of the pad, as painting placed them on the polar grid
       TGraph painted(polar->GetN(), polar->GetXpol(), polar->GetYpol());
-      polar->TAttLine::Copy(painted);
-      polar->TAttFill::Copy(painted);
-      polar->TAttMarker::Copy(painted);
+      CopyStyle(*polar, painted);
       markGraph(&painted, polar);
     } else if (auto* graph = dynamic_cast<TGraph*>(obj)) {
       markGraph(graph);
@@ -4986,7 +4950,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
   }
   for (auto dim : projInfo.dims) {
     if (dim >= nDims) {
-      logger::error("Cannot project {} onto dimension {}: it only has {} dimension{}.", obj->GetName(), dim, nDims, (nDims == 1) ? "" : "s");
+      logger::error("Cannot project {} onto dimension {}: it only has {}.", obj->GetName(), dim, plural(nDims, "dimension"));
       return nullopt;
     }
   }
@@ -5194,7 +5158,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   bool deleteDenom = false;
   if (doInterpol) {
     if (denomN < 2) {
-      logger::error("Cannot interpolate {} for the division: it has {} point{}, at least 2 are needed.", denominator->GetName(), denomN, (denomN == 1) ? "" : "s");
+      logger::error("Cannot interpolate {} for the division: it has {}, at least 2 are needed.", denominator->GetName(), plural(denomN, "point"));
       return false;
     }
     // spline interpolation requires sorted values
@@ -5610,8 +5574,7 @@ tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad* pad
     // the pad's width and height (as GetTextSizePixel), so the pixel size is divided by that one
     TLatex textBox{text};
     textBox.SetTextFont(font - 1);
-    const double_t padWidthPixel = pad->XtoPixel(pad->GetX2());
-    const double_t padHeightPixel = pad->YtoPixel(pad->GetY1());
+    const auto [padWidthPixel, padHeightPixel] = TextPadSizePixel(pad);
     textBox.SetTextSize(text.GetTextSize() * mScale / std::min(padWidthPixel, padHeightPixel));
     textBox.GetBoundingBox(width, height);
   }
@@ -5631,13 +5594,12 @@ void PlotPainter::HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel)
   if (axis->GetLabelSize() <= 0.f || axis->GetTimeDisplay() || axis->GetLabels()) return;
   const bool isX = (axisLabel == 'X');
   const bool isLog = isX ? pad->GetLogx() : pad->GetLogy();
-  const double_t wmin = isLog ? TMath::Power(10., isX ? pad->GetUxmin() : pad->GetUymin()) : (isX ? pad->GetUxmin() : pad->GetUymin());
-  const double_t wmax = isLog ? TMath::Power(10., isX ? pad->GetUxmax() : pad->GetUymax()) : (isX ? pad->GetUxmax() : pad->GetUymax());
+  const double_t wmin = FromPad(isX ? pad->GetUxmin() : pad->GetUymin(), isLog);
+  const double_t wmax = FromPad(isX ? pad->GetUxmax() : pad->GetUymax(), isLog);
   const vector<double_t> labelValues = LabelValues(pad, axis, axisLabel);
 
   // extent of a label around its tick: half its height (y axis) or half its width (x axis), in absolute pixels
-  const double_t padWidthPixel = pad->GetWw() * pad->GetAbsWNDC();
-  const double_t padHeightPixel = pad->GetWh() * pad->GetAbsHNDC();
+  const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad);
   const double_t labelSizePixel = (axis->GetLabelFont() % 10 == 3) ? axis->GetLabelSize() * mScale : axis->GetLabelSize() * std::min(padWidthPixel, padHeightPixel);
   const double_t padLow = isX ? pad->XtoAbsPixel(pad->GetX1()) : pad->YtoAbsPixel(pad->GetY2());  // pixel rows grow downwards
   const double_t padHigh = isX ? pad->XtoAbsPixel(pad->GetX2()) : pad->YtoAbsPixel(pad->GetY1());
@@ -5689,8 +5651,8 @@ vector<double_t> PlotPainter::LabelValues(TPad* pad, const TAxis* axis, char axi
 //**************************************************************************************************
 vector<double_t> PlotPainter::LabelValues(const TAxis* axis, double_t padMin, double_t padMax, bool isLog, double_t divisionScale)
 {
-  const double_t wmin = isLog ? TMath::Power(10., padMin) : padMin;
-  const double_t wmax = isLog ? TMath::Power(10., padMax) : padMax;
+  const double_t wmin = FromPad(padMin, isLog);
+  const double_t wmax = FromPad(padMax, isLog);
   vector<double_t> labelValues;
   if (!(wmax > wmin)) return labelValues;
   if (isLog) {
@@ -5839,8 +5801,7 @@ vector<const Plot::Pad::Axis*> PlotPainter::AxisSettings(const Plot::Pad& pad, c
 bool PlotPainter::PlaceZTitle(TPad* pad, TAxis* zAxis, const vector<label_range_t>& ranges)
 {
   if (zAxis->GetTitleOffset() != 0.f || TString(zAxis->GetTitle()).IsWhitespace() || zAxis->GetTitleSize() <= 0.f) return false;
-  const double_t padWidthPixel = pad->GetWw() * pad->GetAbsWNDC();
-  const double_t padHeightPixel = pad->GetWh() * pad->GetAbsHNDC();
+  const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad);
   if (padWidthPixel <= 0. || padHeightPixel <= 0.) return false;
   const bool pixelFont = zAxis->GetTitleFont() % 10 == 3;
   // TGaxis puts the title of a vertical axis at 1.6 * offset * title size from it, the size read as a fraction of the pad width
@@ -5900,7 +5861,7 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
   cellPad->SetTopMargin(get_first_or(0.1f, cell.GetMarginTop(), defaults.GetMarginTop()));
   cellPad->SetBottomMargin(get_first_or(0.1f, cell.GetMarginBottom(), defaults.GetMarginBottom()));
   // a frame of one pixel at the left edge (ROOT needs one to draw the histogram the scale belongs to)
-  const double_t cellWidthPixel = canvas->GetWw() * cellPad->GetAbsWNDC();
+  const double_t cellWidthPixel = PadSizePixel(cellPad).first;
   cellPad->SetLeftMargin(0.);
   cellPad->SetRightMargin(1. - 1. / std::max(cellWidthPixel, 2.));
   cellPad->SetLogz(memberPad->GetLogz());
@@ -5989,8 +5950,7 @@ void PlotPainter::DrawCommonTitle(TCanvas* canvas, char axisLabel, const vector<
     low = std::min(low, isX ? x0 : y0);
     high = std::max(high, isX ? x1 : y1);
     axisPosition = std::min(axisPosition, isX ? y0 : x0);
-    const double_t padWidthPixel = canvas->GetWw() * pad->GetAbsWNDC();
-    const double_t padHeightPixel = canvas->GetWh() * pad->GetAbsHNDC();
+    const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad);
     const bool pixelFont = axis->GetTitleFont() % 10 == 3;
     const double_t charHeight = pixelFont ? axis->GetTitleSize() * mScale : axis->GetTitleSize() * (isX ? padHeightPixel : padWidthPixel);
     double_t offset = axis->GetTitleOffset();
@@ -6014,7 +5974,7 @@ void PlotPainter::DrawCommonTitle(TCanvas* canvas, char axisLabel, const vector<
   text->SetName(fmt::format("common_title_{}_{}", axisLabel, index).data());
   text->SetNDC();
   // as a pixel font (unscaled, see ApplyScale), so that the size does not depend on the canvas
-  const double_t sizePixel = (first->GetTitleFont() % 10 == 3) ? first->GetTitleSize() : first->GetTitleSize() * std::min(canvas->GetWw() * firstPad->GetAbsWNDC(), canvas->GetWh() * firstPad->GetAbsHNDC()) / mScale;
+  const double_t sizePixel = (first->GetTitleFont() % 10 == 3) ? first->GetTitleSize() : first->GetTitleSize() * std::min(PadSizePixel(firstPad).first, PadSizePixel(firstPad).second) / mScale;
   text->SetTextFont(first->GetTitleFont() / 10 * 10 + 3);
   text->SetTextSize(static_cast<float_t>(sizePixel));
   text->SetTextColor(first->GetTitleColor());
@@ -6036,15 +5996,49 @@ void PlotPainter::DrawCommonTitle(TCanvas* canvas, char axisLabel, const vector<
 
 //**************************************************************************************************
 /**
- * Converts NDC text size to pixel.
+ * Interpreter command for the setup of a pad (run at every paint): the commands on the histogram of that name in the pad, named h.
  */
 //**************************************************************************************************
-float_t PlotPainter::GetTextSizePixel(float_t textSizeNDC)
+string PlotPainter::HistCommand(const string& histName, const string& commands)
 {
-  int32_t pad_width{gPad->XtoPixel(gPad->GetX2())};
-  int32_t pad_height{gPad->YtoPixel(gPad->GetY1())};
-  float_t textSizePixel{(pad_width < pad_height) ? textSizeNDC * pad_width : textSizeNDC * pad_height};
-  return textSizePixel;
+  string name = histName;
+  for (size_t pos = name.find_first_of("\\\""); pos != string::npos; pos = name.find_first_of("\\\"", pos + 2)) {
+    name.insert(pos, 1, '\\');
+  }
+  return fmt::format(" if (auto* h = dynamic_cast<TH1*>(gPad->GetPrimitive(\"{}\"))) {{{} }}", name, commands);
+}
+
+//**************************************************************************************************
+/**
+ * Width and height of a pad in pixels.
+ */
+//**************************************************************************************************
+std::pair<double_t, double_t> PlotPainter::PadSizePixel(const TVirtualPad* pad)
+{
+  return {pad->GetWw() * pad->GetAbsWNDC(), pad->GetWh() * pad->GetAbsHNDC()};
+}
+
+//**************************************************************************************************
+/**
+ * Width and height of a pad in whole pixels, as ROOT takes them to convert a text size relative to the pad (by the smaller of both).
+ */
+//**************************************************************************************************
+std::pair<double_t, double_t> PlotPainter::TextPadSizePixel(const TVirtualPad* pad)
+{
+  return {pad->XtoPixel(pad->GetX2()), pad->YtoPixel(pad->GetY1())};
+}
+
+//**************************************************************************************************
+/**
+ * Height in pixels of a text in the pad: a pixel size (precision 3) is stored unscaled (ApplyScale multiplies it later),
+ * a size relative to the pad already scales with it.
+ */
+//**************************************************************************************************
+double_t PlotPainter::TextHeightPixel(int16_t textFont, float_t textSize, const TVirtualPad* pad) const
+{
+  if (textFont % 10 > 2) return mScale * textSize;
+  const auto [width, height] = TextPadSizePixel(pad);
+  return static_cast<float_t>(textSize * std::min(width, height));
 }
 
 //**************************************************************************************************

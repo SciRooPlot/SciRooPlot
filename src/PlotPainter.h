@@ -22,6 +22,7 @@
 #include "SciRooPlot/Plot.h"
 
 #include <array>
+#include <cmath>
 #include <functional>
 #include <map>
 #include <memory>
@@ -288,20 +289,20 @@ class PlotPainter
   std::optional<data_ptr_t> GetProjection(TObject* obj, Plot::Pad::Data::proj_info_t projInfo);
 
   static void RemoveGraphPointsOutside(TGraph* graph, std::optional<double_t> minX, std::optional<double_t> maxX, std::optional<double_t> minY, std::optional<double_t> maxY);
-  void ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFactor);
-  void ScaleGraphAxis(TGraph2D* graph, int16_t axis, double_t scaleFactor);
+  static void ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFactor);
+  static void ScaleGraphAxis(TGraph2D* graph, int16_t axis, double_t scaleFactor);
   void ScaleAxis(TH1* hist, int16_t axisIndex, double_t scaleFactor);
-  TF1* ScaleFunc(TF1* func, double_t domainFactorX, double_t contentFactor);
-  TF2* ScaleFunc(TF2* func, double_t domainFactorX, double_t domainFactorY, double_t contentFactor);
-  TF3* ScaleFunc(TF3* func, double_t domainFactorX, double_t domainFactorY, double_t domainFactorZ, double_t contentFactor);
+  static TF1* ScaleFunc(TF1* func, double_t domainFactorX, double_t contentFactor);
+  static TF2* ScaleFunc(TF2* func, double_t domainFactorX, double_t domainFactorY, double_t contentFactor);
+  static TF3* ScaleFunc(TF3* func, double_t domainFactorX, double_t domainFactorY, double_t domainFactorZ, double_t contentFactor);
 
   // warnings about the division are given only with verbose (the frame of a ratio pad is a second copy of the same division)
-  bool Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors = false, bool verbose = true);
-  bool Divide(TH1* numerator, TH1* denominator, bool binomialErrors = false, bool verbose = true);
-  bool Divide(TH1* numerator, TGraph* denominator, bool binomialErrors = false, bool verbose = true);
-  bool Divide(TGraph* numerator, TH1* denominator, bool binomialErrors = false, bool verbose = true);
-  bool Divide(TH1* numerator, TF1* denominator, bool binomialErrors = false, bool verbose = true);
-  bool Divide(TGraph* numerator, TF1* denominator, bool binomialErrors = false, bool verbose = true);
+  static bool Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors = false, bool verbose = true);
+  static bool Divide(TH1* numerator, TH1* denominator, bool binomialErrors = false, bool verbose = true);
+  static bool Divide(TH1* numerator, TGraph* denominator, bool binomialErrors = false, bool verbose = true);
+  static bool Divide(TGraph* numerator, TH1* denominator, bool binomialErrors = false, bool verbose = true);
+  static bool Divide(TH1* numerator, TF1* denominator, bool binomialErrors = false, bool verbose = true);
+  static bool Divide(TGraph* numerator, TF1* denominator, bool binomialErrors = false, bool verbose = true);
 
   static TGraph* ToGraph(const TH1* hist);
   static TH1* ToHist(TGraph* graph, bool warn = true);
@@ -310,7 +311,7 @@ class PlotPainter
   static void SetBinRange(TAxis* axis, const std::optional<double_t>& min, const std::optional<double_t>& max);
   static std::pair<int32_t, int32_t> BinRange(const TAxis* axis, const std::optional<double_t>& min, const std::optional<double_t>& max);
   static void LimitToFrame(TAxis* axis, const TAxis* frameAxis);
-  void CheckFontSizes(TList* list);
+  static void CheckFontSizes(TList* list);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
   void HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel);
   static std::vector<double_t> LabelValues(TPad* pad, const TAxis* axis, char axisLabel);
@@ -329,25 +330,35 @@ class PlotPainter
   // rowData: the data of a legend row; findData (for texts): the data a placeholder names (<mean:2>, <mean:1@4>), by number and pad
   void ReplacePlaceholders(std::string& str, TNamed* rowData, const std::function<TNamed*(uint16_t, const std::optional<uint8_t>&)>& findData = {});
   static std::string LegendSymbolElements(TObject* obj, std::string option);
+  // parts of a drawing option that contain the letters of markers, lines, fills and error bars but draw nothing of that kind
+  static constexpr std::array<const char*, 7> kNonSymbolTokens{"SAME", "TEXT", "PFC", "PLC", "PMC", "X0", "]["};
   static bool HasErrors(const TObject* obj);
   void DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const std::string& name);
   bool DrawBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, const Plot::Pad& pad, const Plot::Pad& padDefaults, TPad* pad_ptr,
                const std::string& name);
   TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, TPad* pad);
-  void DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot::Pad& padDefaults, Plot::Pad::Shape::layer_t layer, TObject* insertAfter, uint8_t padID);
+  static void DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot::Pad& padDefaults, Plot::Pad::Shape::layer_t layer, TObject* insertAfter, uint8_t padID);
   bool FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY);
   void FindBoxPosition(TPad* pad, double_t width, double_t height, box_placement_t placement, const std::string& boxType, double_t& lowerLeftX, double_t& lowerLeftY);
   template <typename BoxType>
   std::pair<double_t, double_t> PlaceBox(const BoxType& box, TPad* pad, double_t widthNDC, double_t heightNDC, double_t borderX, double_t borderY, const std::string& boxType);
   template <typename BoxType>
   static void ApplyBoxStyle(const BoxType& box, TPave* pave);
-  float_t GetTextSizePixel(float_t textSizeNDC);
+  static std::string HistCommand(const std::string& histName, const std::string& commands);
+  template <typename From, typename To>
+  static void CopyStyle(const From& from, To& to);
+  template <typename FuncT>
+  static void CopyFuncAttributes(FuncT* from, FuncT* to);
+  static std::pair<double_t, double_t> PadSizePixel(const TVirtualPad* pad);
+  static double_t FromPad(double_t padValue, bool isLog) { return (isLog) ? std::pow(10., padValue) : padValue; }  // pad coordinates of a log axis are decades
+  static std::pair<double_t, double_t> TextPadSizePixel(const TVirtualPad* pad);
+  double_t TextHeightPixel(int16_t textFont, float_t textSize, const TVirtualPad* pad) const;
 
   template <typename T>
-  TAxis* GetAxis(T* histPtr, int16_t i);
-  std::string GetAxisStr(int16_t i);
+  static TAxis* GetAxis(T* histPtr, int16_t i);
+  static std::string GetAxisStr(int16_t i);
 
-  std::vector<int16_t> GenerateGradientColors(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1.);
+  static std::vector<int16_t> GenerateGradientColors(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1.);
   static void CollectCustomColors(TObject* obj, std::set<int32_t>& colors);
   static std::string ColorDefinitionCommand(const std::set<int32_t>& colors);
   static std::string GradientPaletteCommand(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha);
