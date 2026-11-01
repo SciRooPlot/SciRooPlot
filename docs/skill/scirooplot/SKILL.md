@@ -89,6 +89,7 @@ plot.SetDimensions(710, 710[, fixAspect]).SetTransparent().AppendGroup("QA");
 plot[0]...        // defaults for all pads (text font/size, margins, colour lists, ref function)
 plot[1].SetPosition(x1,y1,x2,y2).SetMargins(t,b,l,r).SetFrameFill(1001, 10).SetPalette(kBird).SetView(theta, phi)   // 3D view in degrees (ROOT: 30, 30)
 plot[1].SetDefaultMarkerColors({kBlack, kRed+1}).SetDefaultLineStyles({kSolid, kDashed})   // cycled over the data
+// without a colour list data takes kBlack, kP10Blue, kP10Red, kP10Violet, kP8Orange, kP10Ash, kP10Brown, kTeal + 3 (every plot; fills only with a fill style set)
 // dashed/dotted lines on curves of hundreds of points come out solid in png (ROOT restarts the pattern per segment; pdf is fine): fewer points or a solid line in another colour
 // every colour argument takes a ROOT colour (kRed + 1), "#rrggbb" or {r, g, b} from 0 to 1 (Python: a tuple); transparency only with the alpha setters
 plot[1].SetDefaultColors(gradient)   // {{"#000080", 0.0}, {kRed, 0.5}, {{1.0, 1.0, 0.0}, 1.0}}: (colour, position) or {r,g,b,position}, all in [0,1], positions not decreasing (end colours beyond the first/last); also SetPalette(gradient)
@@ -238,7 +239,7 @@ pm.AddBasePlot(layout);
 
 **Keep inputs out of the code.** Machine-specific paths go into project variables (`srp set <project> inputDir /path`, `pm.GetProjectProperty("inputDir")`) or environment variables in the data source strings (`${HOME}/...`); the data source names stay stable across machines. In-memory objects (a graph computed in the program) are registered with `pm.AddDataSource("glauber", &graph)` and used like file data.
 
-**Let the plot show numbers.** Label placeholders (`"<mean[.2f]>"`, `"<entries>"`, `"<integral[.2e]>"`) and `points_text` save hand-copied values; `AddColorOverview("colors", "overview")` renders the colour sequence of the base plots with names and indices (`plot overview colors`), `srp colorwheel` shows all of ROOT's named colours.
+**Let the plot show numbers.** Label placeholders (`"<mean[.2f]>"`, `"<entries>"`, `"<integral[.2e]>"`) and `points_text` save hand-copied values; `AddColorOverview("colors", "overview")` renders SciRooPlot's default colour sequence with names and indices (`plot overview colors`), `srp colorwheel` shows all of ROOT's named colours.
 
 ## C++ vs Python
 

@@ -906,12 +906,12 @@ void PlotManager::AddBasePlot(Plot basePlot)
 
 //**************************************************************************************************
 /**
- * Add a plot showing the given colours, by default those the base plots give to their data, each with its name and index.
+ * Add a plot showing the given colours, by default those SciRooPlot gives to data without a colour of its own, each with its name and index.
  */
 //**************************************************************************************************
 void PlotManager::AddColorOverview(const string& name, const string& group, const vector<color_t>& colors)
 {
-  const vector<color_t> shown = colors.empty() ? Plot(name, PanelLayout())[0].GetDefaultMarkerColors().value_or(vector<color_t>{}) : colors;  // those of the shipped look
+  const vector<color_t>& shown = colors.empty() ? PlotPainter::DefaultColors() : colors;
   Plot plot(name, group);
   plot.SetDimensions(800, 800, true);
   plot[1].SetPosition(0., 0., 1., 1.);

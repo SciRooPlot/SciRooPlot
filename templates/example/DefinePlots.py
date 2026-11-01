@@ -1793,7 +1793,7 @@ def main():
     DefineTheoryPlots(pm)
     DefineOtherSciencePlots(pm)
     DefineAnimations(pm)
-    # the default colours of the base plots with their names and indices (`plot overview colors`; `srp colorwheel` shows all)
+    # the default colours of the data with their names and indices (`plot overview colors`; `srp colorwheel` shows all)
     pm.AddColorOverview("colors", "overview")
     pm.SaveProject()
 

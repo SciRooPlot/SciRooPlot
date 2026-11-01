@@ -374,6 +374,19 @@ TH1* PlotPainter::ToHist(TGraph* graph, bool warn)
 
 //**************************************************************************************************
 /**
+ * The colours the n-th data item of a pad takes when neither the data nor its pad nor pad 0 sets one; after the last they start over.
+ * ROOT colours that stay readable on white paper and projectors (contrast against white at least 3:1) and stay apart from each other,
+ * the first ones most, also for colour-blind viewers (mostly from M. Petroff's accessible colour sets).
+ */
+//**************************************************************************************************
+const vector<color_t>& PlotPainter::DefaultColors()
+{
+  static const vector<color_t> colors = {kBlack, kP10Blue, kP10Red, kP10Violet, kP8Orange, kP10Ash, kP10Brown, kTeal + 3};
+  return colors;
+}
+
+//**************************************************************************************************
+/**
  * Function to generate the plot.
  */
 //**************************************************************************************************
@@ -432,6 +445,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   if (plot.IsFixAspectRatio()) canvas_ptr->SetFixedAspectRatio(*plot.IsFixAspectRatio());
 
   auto& padDefaults = plot[0];
+  // data without a colour of its own takes the next of SciRooPlot's default colours, unless its pad or pad 0 sets a list or a gradient;
+  // fills only where SciRooPlot sets the fill style (see fillDefaults): the style stored with a ROOT histogram (1001) would otherwise fill it
+  if (!padDefaults.GetDefaultMarkerColors() && !padDefaults.GetDefaultMarkerColorsGradient().rgbEndpoints) padDefaults.SetDefaultMarkerColors(DefaultColors());
+  if (!padDefaults.GetDefaultLineColors() && !padDefaults.GetDefaultLineColorsGradient().rgbEndpoints) padDefaults.SetDefaultLineColors(DefaultColors());
+  static const optional<vector<color_t>> defaultColors = DefaultColors();
+  auto fillDefaults = [&padDefaults](const Plot::Pad& pad, const Plot::Pad::Data& data) -> const optional<vector<color_t>>& {
+    const bool styleSet = data.GetFillStyle() || pad.GetDefaultFillStyles() || padDefaults.GetDefaultFillStyles();
+    return (padDefaults.GetDefaultFillColors() || !styleSet) ? padDefaults.GetDefaultFillColors() : defaultColors;
+  };
   if (!padDefaults.GetShapes().empty()) logger::warning("The shapes of pad 0 are not drawn: pad 0 only holds the defaults of the pads.");
   mFrameRanges.clear();
   mFrameHists.clear();
@@ -1562,7 +1584,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
             if (auto fillColor = get_first(data->GetFillColor(),
                                            fromPad(pick(defaultSettingIndices[4], pad.GetDefaultFillColors())),
-                                           fromPad(pick(defaultSettingIndices[4], padDefaults.GetDefaultFillColors())))) {
+                                           fromPad(pick(defaultSettingIndices[4], fillDefaults(pad, *data))))) {
               if (!data->GetFillColor()) defaultSettingIndices[4]++;
               data_ptr->SetFillColor(fillColor->ToIndex());
             }
@@ -2492,7 +2514,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               return inputValue;
             };
             const int16_t fillStyle = drawnFill(data->GetFillStyle(), defaultSettingIndices[5], pad.GetDefaultFillStyles(), padDefaults.GetDefaultFillStyles(), data_ptr->GetFillStyle());
-            const color_t fillColor = drawnFill(data->GetFillColor(), defaultSettingIndices[4], pad.GetDefaultFillColors(), padDefaults.GetDefaultFillColors(), data_ptr->GetFillColor());
+            const color_t fillColor = drawnFill(data->GetFillColor(), defaultSettingIndices[4], pad.GetDefaultFillColors(), fillDefaults(pad, *data), data_ptr->GetFillColor());
             if (fillStyle != 0 && fillColor != 0) {
               optionAlias = (isHist) ? hist : area;
             } else if (data->GetMarkerStyle() || data->GetMarkerSize() || HasErrors(data_ptr)) {

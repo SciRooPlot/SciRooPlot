@@ -597,17 +597,12 @@ void PanelLayout::ApplyTo(Plot& plot) const
   plot[0].SetDefaultLineWidth(mLineWidth);
   plot[0].SetDefaultMarkerSize(mMarkerSize);
 
-  // the look of the shipped plots (a plot changes any of it with the ordinary setters): fonts, colours, markers and axis conventions
-  // (the colour the n-th data item of a pad gets is also shown by PlotManager::AddColorOverview)
-  static const vector<int16_t> defaultColors = {kBlack, kBlue + 1, kRed + 1, kYellow + 1, kMagenta - 4, kGreen + 3, kOrange + 1,
-                                                kViolet - 3, kCyan + 2, kPink + 3, kTeal - 7, kMagenta + 1, kPink + 8, kCyan - 6,
-                                                kMagenta, kRed + 2, kGreen + 2, kOrange + 2, kMagenta + 2, kYellow + 3,
-                                                kGray + 2, kBlue + 2, kYellow + 2, kRed, kBlue, kMagenta + 3, kGreen + 4, 28, 8, 15, 17, 12};
+  // the look of the shipped plots (a plot changes any of it with the ordinary setters): fonts, markers and axis conventions
+  // (the colours of the data are those of every plot, PlotPainter::DefaultColors)
   plot.SetTransparent();
   plot[0].SetTransparent();
   plot[0].SetFrameFill(1001, 10);
   plot[0].SetDefaultTextFont(42);
-  plot[0].SetDefaultColors(vector<color_t>(defaultColors.begin(), defaultColors.end()));
   plot[0].SetDefaultMarkerStyles({kFullCircle});
   plot[0].SetDefaultLineStyles({kSolid});
   plot[0].SetDefaultFillStyles({0});

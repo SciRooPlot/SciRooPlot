@@ -258,6 +258,8 @@ class PlotPainter
   // onScreen: the canvas is shown in a window, whose X11 backend has fixed dash patterns for line styles 2-4
   explicit PlotPainter(double_t scale = 1., bool onScreen = false) : mScale(scale), mOnScreen(onScreen) {}
   std::unique_ptr<TCanvas> GeneratePlot(Plot& plot, const std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>>& dataBuffer);
+  // the colours the n-th data item of a pad takes when neither the data nor its pad nor pad 0 sets one
+  static const std::vector<color_t>& DefaultColors();
 
   // axes shared between pads (Plot::ShareAxis): the groups, and the axes of pads whose range is the common one of their group
   // (set explicitly in the plot by the caller: they get no further room, which the common range includes already)

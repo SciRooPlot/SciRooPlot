@@ -334,7 +334,9 @@ h3.sub { font-size: 0.95rem; margin: 6px 0 0 }
 .cvd { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 0.85rem }
 .lb-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 4px 12px; margin: 8px 0 }
 .lb-cols label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem }
-.lb-cols b { color: var(--muted); min-width: 1.4em; text-align: right; font-weight: 700 }
+.lb-cols .lb-colnum { color: var(--muted); min-width: 1.8em; text-align: right; font: inherit; font-weight: 700; background: none; border: 1px solid transparent; border-radius: 5px; padding: 0 3px; cursor: pointer }
+.lb-cols .lb-colnum[aria-pressed="true"] { color: var(--ink); border-color: var(--teal) }
+.lb-coltable { display: grid; gap: 10px; margin: 6px 0 10px; --veil: 0 }
 .lb-cols input[type=text], .lb-ref input[type=text] { font: inherit; font-family: var(--mono); font-size: 0.78rem; width: 8.5em; padding: 2px 6px; border: 1px solid var(--hairline); border-radius: 6px; background: var(--panel); color: var(--text) }
 .lb-cols input.bad, .lb-ref input.bad { border-color: #c0392b }
 .lb-cols button { font: inherit; font-size: 0.9rem; line-height: 1; padding: 2px 5px; border: none; border-radius: 4px; background: none; color: var(--muted); cursor: pointer }
@@ -868,7 +870,7 @@ figure.plot figcaption { color: #5b6b80 }
       <p class="muted" style="font-size:var(--step--1)"><code>SetColor(c)</code> sets marker, line and fill colour at once. The preview shows all three; a plot draws only what the drawing option of the data uses (see <a href="#ref-appearance">Appearance and drawing options</a>).</p>
     </div>
   </div>
-  <p class="small muted">Data without a colour of its own takes the next one of the base plot's colour list: see and change that list in <a href="#layouts">Layouts</a>.</p>
+  <p class="small muted">Data without a colour of its own takes the next of SciRooPlot's colours, <code>kBlack</code>, <code>kP10Blue</code>, <code>kP10Red</code>, <code>kP10Violet</code>, <code>kP8Orange</code>, <code>kP10Ash</code>, <code>kP10Brown</code> and <code>kTeal + 3</code>, in every plot: readable on white paper and projectors, and apart from each other also for colour-blind readers. Choose your own list with <code>SetDefaultColors</code>, e.g. in <a href="#layouts">Layouts</a>; data drawn with the style stored in its input (<code>SetKeepInputStyle</code>) keeps its colours.</p>
   <div class="pal-wrap">
     <h2 class="title">Colour scales and gradients</h2>
     <p class="basics"><b>What a palette is</b>A 2D histogram shows its values as colours, read off the colour scale next to the frame. The colours come from a <i>palette</i>: ROOT ships about sixty, SciRooPlot's base plots use <code>kBird</code>. You can also make your own gradient, as a palette or as the colours of several curves.</p>
@@ -1505,17 +1507,22 @@ function labRender() {
   document.querySelectorAll("#markers .tile").forEach(b => b.setAttribute("aria-pressed", +b.dataset.v === lab.marker));
   document.querySelectorAll("#fills .tile").forEach(b => b.setAttribute("aria-pressed", +b.dataset.v === lab.fill));
   document.getElementById("huse").setAttribute("aria-pressed", lab.fill > 3100) }
-function labInit() {
-  const w = document.getElementById("wheel"); let h = `<span></span>`;
+// ROOT's colours as buttons with the colour name in data-c: the colour wheel, the colour sets and the numbered colours (Styles page and layout designer)
+function wheelHTML() {
+  let h = `<span></span>`;
   for (let o = -10; o <= 10; o++) h += `<span class="hd">${o > 0 ? "+" + o : o}</span>`;
   for (const [b, c] of Object.entries(COLORS)) { h += `<span class="nm">${b}</span>`;
     for (let o = -10; o <= 10; o++) { const hex = c.s[String(o)]; if (!hex) { h += "<span></span>"; continue }
       const n = o === 0 ? b : `${b} ${o > 0 ? "+" : "-"} ${Math.abs(o)}`;
       h += `<button style="background-color:${hex}${hex === "#ffffff" ? ";box-shadow:inset 0 0 0 1px var(--rule)" : ""}" data-c="${n}" title="${n} = colour ${c.i + o}, ${hex}" aria-label="${n}"></button>` } }
-  w.innerHTML = h;
-  const swatch = (n, hex, label) => `<button data-c="${n}" title="${n} = colour ${colorOf(n).index}, ${hex}" aria-label="${n}"><i style="background-color:${hex}"></i>${label}</button>`;
-  document.getElementById("csets").innerHTML = PETROFF.map(([set, first, cols]) => `<span class="nm">${set} (${first})</span>` + cols.map(([n, hex]) => swatch(set + n, hex, n)).join("") + "<span></span>".repeat(10 - cols.length)).join("");
-  document.getElementById("cnums").innerHTML = Array.from({ length: 51 }, (_, i) => { const c = colorOf(String(i)); return swatch(cname(c), c.hex, i) }).join("");
+  return h }
+const swatchHTML = (n, hex, label) => `<button data-c="${n}" title="${n} = colour ${colorOf(n).index}, ${hex}" aria-label="${n}"><i style="background-color:${hex}"></i>${label}</button>`;
+const setsHTML = () => PETROFF.map(([set, first, cols]) => `<span class="nm">${set} (${first})</span>` + cols.map(([n, hex]) => swatchHTML(set + n, hex, n)).join("") + "<span></span>".repeat(10 - cols.length)).join("");
+const numsHTML = () => Array.from({ length: 51 }, (_, i) => { const c = colorOf(String(i)); return swatchHTML(cname(c), c.hex, i) }).join("");
+function labInit() {
+  const w = document.getElementById("wheel"); w.innerHTML = wheelHTML();
+  document.getElementById("csets").innerHTML = setsHTML();
+  document.getElementById("cnums").innerHTML = numsHTML();
   const pickSwatch = e => { const b = e.target.closest("button"); if (b) { lab.color = b.dataset.c; document.getElementById("cname").value = b.dataset.c; document.getElementById("cmsg").textContent = ""; labRender() } };
   [w, document.getElementById("csets"), document.getElementById("cnums")].forEach(el => el.onclick = pickSwatch);
   document.getElementById("cname").oninput = e => { const c = labColorOf(e.target.value); document.getElementById("cmsg").textContent = c ? "" : "Not a colour. Try kAzure - 9, 857, #1f77b4 or (0.12, 0.47, 0.71)."; if (c) { lab.color = c.root ? cname(c.root) : e.target.value.trim(); labRender() } };
@@ -1543,9 +1550,7 @@ function labInit() {
     document.querySelectorAll("[data-cvd]").forEach(x => x.setAttribute("aria-pressed", x === b));
     ["pv", "wheel", "csets", "cnums", "palmap", "palroot", "gbar", "stops"].forEach(id => document.getElementById(id).style.filter = b.dataset.cvd ? `url(#cvd-${b.dataset.cvd})` : "") });
   labRender(); palInit() }
-const DEFAULT_COLORS = ["kBlack", "kBlue + 1", "kRed + 1", "kYellow + 1", "kMagenta - 4", "kGreen + 3", "kOrange + 1", "kViolet - 3", "kCyan + 2", "kPink + 3", "kTeal - 7",
-  "kMagenta + 1", "kPink + 8", "kCyan - 6", "kMagenta", "kRed + 2", "kGreen + 2", "kOrange + 2", "kMagenta + 2", "kYellow + 3",
-  "kGray + 2", "kBlue + 2", "kYellow + 2", "kRed", "kBlue", "kMagenta + 3", "kGreen + 4", "28", "8", "15", "17", "12"]; // kDefaultColors of PlotManager::MakeBasePlot
+const DEFAULT_COLORS = ["kBlack", "kP10Blue", "kP10Red", "kP10Violet", "kP8Orange", "kP10Ash", "kP10Brown", "kTeal + 3"];  // PlotPainter::DefaultColors
 function labPick(key) { const c = colorOf(key); if (c) { lab.color = cname(c); document.getElementById("cname").value = lab.color }
   const m = MARKERS.find(x => x[1] === key); if (m) lab.marker = m[0];
   const l = LINES.find(x => x[1] === key); if (l) lab.line = l[0];
@@ -1699,7 +1704,7 @@ const REF = [
 <tr><td><code>srp verbosity warning</code></td><td>how many messages <code>plot</code> prints: <code>warning</code> shows only problems, <code>debug</code> everything including the files opened</td><td><code>debug</code> <code>log</code> <code>info</code> <code>warning</code> <code>error</code> <code>silent</code></td></tr>
 <tr><td><code>srp color dark</code></td><td>the colours of the <b>messages in your terminal</b>, not of the plots: <code>bright</code> suits a dark terminal, <code>dark</code> a light one, <code>off</code> plain text</td><td><code>bright</code> <code>dark</code> <code>off</code></td></tr>
 </tbody></table></div>
-<p class="small muted">The colours of the data come from your code: set them per data (<a href="#styles">Styles</a>), once per kind of data (<a href="#ref-templates">templates</a>), or as the default sequence of a base plot (<code>SetDefaultColors</code>). <code>srp clean</code> forgets projects whose program folder no longer exists; <code>srp reset</code> forgets all projects (your programs and plots stay where they are).</p>` },
+<p class="small muted">The colours of the data come from your code: set them per data (<a href="#styles">Styles</a>), once per kind of data (<a href="#ref-templates">templates</a>), or as the colour sequence of a plot or pad (<code>SetDefaultColors</code>; without it SciRooPlot's own). <code>srp clean</code> forgets projects whose program folder no longer exists; <code>srp reset</code> forgets all projects (your programs and plots stay where they are).</p>` },
   { id: "project", g: "basics", t: "Projects across machines and files", body: `<p>Keep machine-specific paths out of the code: store them as project variables or use environment variables in the input paths, so data source names stay the same everywhere.</p>
 <div class="code"><pre data-plain-code="sh">srp set myProject inputDir /data/2024     # then in the code: pm.GetProjectProperty("inputDir")</pre></div>
 <div class="code"><pre data-snip="project"></pre></div>
@@ -2762,7 +2767,7 @@ const templateOf = ([, type, cols, rows, unit]) => ({ ...UNIT_DEFAULTS, type, co
 const emptyUnit = () => ({ above: [], below: [], left: [], right: [] });
 const UNIT_DEFAULTS = { type: "1d", shape: "", cols: 1, rows: 1, gap: false, strip: false };
 const LAY = { ...UNIT_DEFAULTS, unit: { ...emptyUnit(), below: [attached("1")] }, aspect: SHAPE_DEFAULTS.aspect, full: false, name: "", custom: false, sel: null, S: { ...PL_DEFAULTS }, G: null, commonTitles: true,
-  colors: [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS }, cvd: "", allColors: false, open: {}, big: false, undo: null };  // open: the folded sections the reader opened or closed
+  colors: [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS }, cvd: "", allColors: false, colSel: null, colTable: false, open: {}, big: false, undo: null };  // open: the folded sections the reader opened or closed
 // the design as a short text: kept in this browser and put into a link; a change of the designer can make an old link invalid, it is then ignored
 function layState() {
   const G = LAY.G, d = { t: LAY.type, s: LAY.shape, c: LAY.cols, r: LAY.rows, u: LAY.unit, g: LAY.gap, w: LAY.strip, f: LAY.full, n: LAY.name, a: LAY.aspect };
@@ -2783,12 +2788,12 @@ function layApply(code) {
       [...G.cols, ...G.rows].forEach(x => { x.spaceAfter = space(x.spaceAfter) }); panelGeometry(G, PL_DEFAULTS) }  // throws if malformed
     Object.assign(LAY, { type: d.t, shape: d.s, cols: d.c, rows: d.r, unit, gap: !!d.g, strip: !!d.w, full: !!d.f, name: String(d.n || ""), aspect: +d.a || SHAPE_DEFAULTS.aspect,
       S: { ...PL_DEFAULTS, ...Object.fromEntries(Object.entries(d.S || {}).filter(([k, v]) => k in PL_DEFAULTS && isFinite(v))) },
-      colors: Array.isArray(d.k) && d.k.length && d.k.every(colorOk) ? d.k : [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS, ...Object.fromEntries(Object.entries(d.e || {}).filter(([k]) => k in REF_DEFAULTS)) }, custom: !!d.G, sel: null, undo: null, commonTitles: d.T !== false });
+      colors: Array.isArray(d.k) && d.k.length && d.k.every(colorOk) ? d.k : [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS, ...Object.fromEntries(Object.entries(d.e || {}).filter(([k]) => k in REF_DEFAULTS)) }, custom: !!d.G, sel: null, undo: null, colSel: null, commonTitles: d.T !== false });
     LAY.G = G || presetGrid();
     return true;
   } catch (e) { return false } }
 function layReset() { Object.assign(LAY, { ...UNIT_DEFAULTS, unit: { ...emptyUnit(), below: [attached("1")] }, aspect: SHAPE_DEFAULTS.aspect, full: false, name: "", custom: false, sel: null, S: { ...PL_DEFAULTS },
-  colors: [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS }, undo: null, commonTitles: true }); LAY.G = presetGrid() }
+  colors: [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS }, undo: null, colSel: null, commonTitles: true }); LAY.G = presetGrid() }
 // the names describe 1d units with panels below only, each a ratio (line at 1) or a pull (line at 0), in this order, few divisions, own title
 const BELOW = ["", "ratio", "pull", "ratio_pull"];
 const belowName = (p = LAY) => p.unit.below.map(a => a.ref === "1" ? "ratio" : a.ref === "0" ? "pull" : "?").join("_");
@@ -3117,9 +3122,11 @@ function renderLayout() {
         ${sizesUI}<div class="lb-line"><button class="chip" data-grid="resetsizes" ${sizesChanged().length ? "" : "disabled"}>Back to the defaults</button></div>
       </details>
       <details class="lb-more" ${more("colors", colorsChanged())}><summary>Colours of the data</summary>
-        <p class="small muted">The <i>n</i>-th data in a pad gets the <i>n</i>-th colour, unless it sets one. Type a ROOT colour (<code>kRed + 1</code>, <code>632</code>) or <code>#rrggbb</code>, or pick one.</p>
-        <div class="lb-cols" id="lbcols">${LAY.colors.slice(0, LAY.allColors ? undefined : 12).map((c, i) => `<label><b>${i + 1}</b>${pick(`data-colpick="${i}"`, c, `colour ${i + 1}`)}<input type="text" data-colname="${i}" value="${c}" spellcheck="false" aria-label="colour ${i + 1}" class="${colorOk(c) ? "" : "bad"}"><button data-coldel="${i}" ${LAY.colors.length < 2 ? "disabled" : ""} aria-label="remove colour ${i + 1}" title="remove this colour">×</button></label>`).join("")}</div>
-        <div class="lb-line">${LAY.colors.length > 12 ? `<button class="chip" data-colop="all">${LAY.allColors ? "only the first 12" : `all ${LAY.colors.length}`}</button>` : ""}<button class="chip" data-colop="add">+ colour</button><button class="chip" data-colop="reset" ${colorsChanged() ? "" : "disabled"}>Back to the defaults</button></div>
+        <p class="small muted">The <i>n</i>-th data in a pad gets the <i>n</i>-th colour, unless it sets one; after the last they start over. These are SciRooPlot's colours for every plot: change them only to use your own, and the code sets them with <code>SetDefaultColors</code>. Type a ROOT colour (<code>kRed + 1</code>, <code>632</code>) or <code>#rrggbb</code>, pick one, or take one from ROOT's colours: click a number first to replace that colour, otherwise it is added.</p>
+        <div class="lb-cols" id="lbcols">${LAY.colors.slice(0, LAY.allColors ? undefined : 12).map((c, i) => `<label><button class="lb-colnum" data-colsel="${i}" aria-pressed="${LAY.colSel === i}" title="replace this colour from ROOT's colours">${i + 1}</button>${pick(`data-colpick="${i}"`, c, `colour ${i + 1}`)}<input type="text" data-colname="${i}" value="${c}" spellcheck="false" aria-label="colour ${i + 1}" class="${colorOk(c) ? "" : "bad"}"><button data-coldel="${i}" ${LAY.colors.length < 2 ? "disabled" : ""} aria-label="remove colour ${i + 1}" title="remove this colour">×</button></label>`).join("")}</div>
+        <div class="lb-line">${LAY.colors.length > 12 ? `<button class="chip" data-colop="all">${LAY.allColors ? "only the first 12" : `all ${LAY.colors.length}`}</button>` : ""}<button class="chip" data-colop="add">+ colour</button><button class="chip" data-colop="table" aria-pressed="${!!LAY.colTable}">ROOT's colours</button><button class="chip" data-colop="reset" ${colorsChanged() ? "" : "disabled"}>Back to the defaults</button></div>
+        ${LAY.colTable ? `<div class="lb-coltable"><p class="small muted">${LAY.colSel === null ? "Click a colour to add it to the list." : `Click a colour to put it in place of colour ${LAY.colSel + 1}.`}</p>
+          <div class="wheel">${wheelHTML()}</div><div class="csets">${setsHTML()}</div><div class="csets cnums">${numsHTML()}</div></div>` : ""}
         <div class="lb-line"><span class="lb-l">Seen as</span><span class="seg" role="group" aria-label="Show the colours as seen with colour vision deficiency">${[["", "normal"], ["p", "red-blind"], ["d", "green-blind"], ["t", "blue-blind"]].map(([k, t]) => `<button data-lcvd="${k}" aria-pressed="${LAY.cvd === k}">${t}</button>`).join("")}</span></div>
         <p class="small muted">About 8 % of men have a red-green colour vision deficiency: check that neighbouring colours remain distinguishable.</p>
       </details>
@@ -3236,9 +3243,16 @@ function renderLayout() {
   host.querySelectorAll("[data-colop]").forEach(b => b.onclick = () => { const op = b.dataset.colop;
     if (op === "all") LAY.allColors = !LAY.allColors;
     if (op === "add") { LAY.colors.push(DEFAULT_COLORS[LAY.colors.length % DEFAULT_COLORS.length]); if (LAY.colors.length > 12) LAY.allColors = true }
-    if (op === "reset") LAY.colors = [...DEFAULT_COLORS];
+    if (op === "table") LAY.colTable = !LAY.colTable;
+    if (op === "reset") { LAY.colors = [...DEFAULT_COLORS]; LAY.colSel = null }
     rerender() });
-  host.querySelectorAll("[data-coldel]").forEach(b => b.onclick = () => { LAY.colors.splice(+b.dataset.coldel, 1); rerender() });
+  host.querySelectorAll("[data-colsel]").forEach(b => b.onclick = e => { e.preventDefault(); const i = +b.dataset.colsel;  // the colour that ROOT's colours replace
+    LAY.colSel = LAY.colSel === i ? null : i; LAY.colTable = true; rerender() });
+  const table = host.querySelector(".lb-coltable");
+  if (table) table.onclick = e => { const b = e.target.closest("button[data-c]"); if (!b) return;
+    if (LAY.colSel === null) { LAY.colors.push(b.dataset.c); if (LAY.colors.length > 12) LAY.allColors = true } else LAY.colors[LAY.colSel] = b.dataset.c;
+    rerender() };
+  host.querySelectorAll("[data-coldel]").forEach(b => b.onclick = () => { LAY.colors.splice(+b.dataset.coldel, 1); LAY.colSel = null; rerender() });
   host.querySelectorAll("details[data-more]").forEach(d => d.ontoggle = () => { LAY.open[d.dataset.more] = d.open });
   host.querySelectorAll("[data-lcvd]").forEach(b => b.onclick = () => { LAY.cvd = b.dataset.lcvd; rerender() });
   host.querySelectorAll("[data-refstyle]").forEach(b => b.onclick = () => { LAY.ref.style = +b.dataset.refstyle; rerender() });
