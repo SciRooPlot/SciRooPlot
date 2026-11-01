@@ -210,6 +210,8 @@ html, body { overflow-x: clip }
 .wheel { display: grid; grid-template-columns: 76px repeat(21, minmax(0, 1fr)); gap: 2px; align-items: center; overflow-x: auto }
 .wheel .nm { font-family: var(--mono); font-size: 0.7rem; color: var(--muted) }
 .wheel .hd { font-family: var(--mono); font-size: 0.6rem; color: var(--muted); text-align: center }
+#v-styles .lab { --veil: 0 }
+.wheel button, .csets button i { background-image: linear-gradient(rgba(255, 255, 255, var(--veil)), rgba(255, 255, 255, var(--veil))) }
 .wheel button { aspect-ratio: 1; min-width: 12px; border: 0; border-radius: 3px; cursor: pointer; padding: 0; outline-offset: 1px }
 .wheel button[aria-pressed="true"] { outline: 2px solid var(--ink); z-index: 1 }
 h3.sub { font-size: 0.95rem; margin: 6px 0 0 }
@@ -822,6 +824,7 @@ figure.plot figcaption { color: #5b6b80 }
       <fieldset>
         <legend>Colour</legend>
         <div class="row"><label for="cname">Look up</label><input id="cname" type="text" value="kMagenta + 2" spellcheck="false" aria-describedby="cmsg"><label>or pick any colour <input id="cpick" type="color" value="#cc00cc" aria-label="pick any colour"></label><span id="cmsg" class="muted"></span></div>
+        <div class="row"><label for="ca">Transparency (alpha) <input id="ca" type="range" min="0.05" max="1" step="0.05" value="1"></label><output id="cao" for="ca">1</output><span class="small muted">applies to line, markers and fill alike; the swatches show the colours with it, on white</span></div>
         <div class="wheel" id="wheel"></div>
         <p class="small muted">This is ROOT's whole colour wheel. Its uneven shape is ROOT's own: the six primary colours go from −10 to +4, the six mixed ones (<code>kOrange</code> … <code>kPink</code>) from −9 to +10, and there are four greys.</p>
         <h3 class="sub">Colour sets for several curves</h3>
@@ -853,7 +856,6 @@ figure.plot figcaption { color: #5b6b80 }
           <button class="chip" id="huse">Use <code id="hnum">3345</code></button>
         </div>
         <p class="small muted" id="fillnote"></p>
-        <div class="row"><label for="fa">Transparency (alpha) <input id="fa" type="range" min="0.1" max="1" step="0.05" value="0.35"></label><output id="fao" for="fa">0.35</output></div>
       </fieldset>
     </div>
     <div class="preview">
@@ -1429,7 +1431,7 @@ function renderSteps() {
   glueTerms() }
 
 /* ---------------- style lab */
-const lab = { color: "kMagenta + 2", line: 3, marker: 20, fill: 1001 };
+const lab = { color: "kMagenta + 2", line: 3, marker: 20, fill: 0 };
 // a colour of the lab: a ROOT colour (name or index), "#rrggbb" or (r, g, b) / {r, g, b} from 0 to 1
 function labColorOf(text) {
   const c = colorOf(text); if (c) return { hex: c.hex, root: c };
@@ -1467,19 +1469,21 @@ function fillDefs(id, n, col, alpha, bit = 1.5, unit = 1) {
 const fillName = n => { const f = FILLS.find(x => x[0] === n); return f ? (f[1] || "") : "" };
 const fillCode = n => fillName(n) || String(n);
 function labRender() {
-  const lc = labColorOf(lab.color) || labColorOf("kMagenta + 2"), col = lc.hex, lw = +document.getElementById("lw").value, ms = +document.getElementById("ms").value, fa = +document.getElementById("fa").value;
-  document.getElementById("lwo").textContent = lw; document.getElementById("mso").textContent = ms; document.getElementById("fao").textContent = fa;
+  const lc = labColorOf(lab.color) || labColorOf("kMagenta + 2"), col = lc.hex, lw = +document.getElementById("lw").value, ms = +document.getElementById("ms").value, ca = +document.getElementById("ca").value;
+  document.getElementById("lwo").textContent = lw; document.getElementById("mso").textContent = ms; document.getElementById("cao").textContent = ca;
+  document.querySelector("#v-styles .lab").style.setProperty("--veil", 1 - ca);
   const L = LINES.find(l => l[0] === lab.line), dash = L[2] ? L[2].split(" ").map(v => v * Math.max(0.5, lw / 2.5)).join(" ") : "";
-  // a falling spectrum with a band, on a little ROOT-like frame
-  const xs = [...Array(9)].map((_, i) => 46 + i * 33), ys = xs.map((_, i) => 40 + 150 * (1 - Math.exp(-i / 3.2)) + (i % 2 ? 4 : -3));
-  const path = xs.map((x, i) => `${i ? "L" : "M"}${x},${ys[i]}`).join(" "), band = path + " " + xs.slice().reverse().map((x, i) => `L${x},${ys[ys.length - 1 - i] + 16}`).join(" ") + "Z";
+  // a falling spectrum, with a band of its own below it, on a little ROOT-like frame: band and points do not overlap, so each style stays readable
+  const xs = [...Array(9)].map((_, i) => 46 + i * 33), ys = xs.map((_, i) => 40 + 130 * (1 - Math.exp(-i / 3.2)) + (i % 2 ? 4 : -3));
+  const path = xs.map((x, i) => `${i ? "L" : "M"}${x},${ys[i]}`).join(" "), edge = d => xs.map((x, i) => `L${x},${ys[i] + d}`);
+  const band = "M" + edge(22).join(" ").slice(1) + " " + edge(40).reverse().join(" ") + "Z";
   const ticks = [...Array(9)].map((_, i) => `<path d="M${46 + i * 33} 220v-6M${46 + i * 33} 20v6" stroke="#000" stroke-width="1"/>`).join("") + [...Array(6)].map((_, i) => `<path d="M30 ${30 + i * 36}h6M320 ${30 + i * 36}h-6" stroke="#000" stroke-width="1"/>`).join("");
-  const [fdefs, fids] = fillDefs("fp", lab.fill, col, fa, 1.2, 1.0);
+  const [fdefs, fids] = fillDefs("fp", lab.fill, col, 1, 1.2, 1.0);
   document.getElementById("pv").innerHTML = `<defs>${fdefs}</defs><rect x="0" y="0" width="340" height="250" fill="#ffffff"/>
     <rect x="30" y="20" width="290" height="200" fill="none" stroke="#000" stroke-width="1"/>${ticks}
-    ${fids.map(id => `<path d="${band}" fill="url(#${id})" stroke="none"/>`).join("")}
-    <path d="${path}" fill="none" stroke="${col}" stroke-width="${lw}" stroke-dasharray="${dash}" stroke-linecap="butt"/>
-    ${xs.map((x, i) => `<path d="M${x} ${ys[i] - 9}V${ys[i] + 9}" stroke="${col}" stroke-width="1.2"/>` + markerSVG(lab.marker, x, ys[i], 3.6 * ms, col, 1)).join("")}
+    <g opacity="${ca}">${fids.map(id => `<path d="${band}" fill="url(#${id})" stroke="none"/>`).join("")}</g>
+    <g opacity="${ca}"><path d="${path}" fill="none" stroke="${col}" stroke-width="${lw}" stroke-dasharray="${dash}" stroke-linecap="butt"/>
+    ${xs.map((x, i) => `<path d="M${x} ${ys[i] - 9}V${ys[i] + 9}" stroke="${col}" stroke-width="1.2"/>` + markerSVG(lab.marker, x, ys[i], 3.6 * ms, col, 1)).join("")}</g>
     <text x="318" y="242" text-anchor="end" font-family="Arial, sans-serif" font-size="13" fill="#000">x</text>`;
   const M = MARKERS.find(m => m[0] === lab.marker), Ln = L[1] || String(L[0]);
   const num = v => Number.isInteger(v) ? v.toFixed(1) : String(v), end = lang === "py" ? "" : ";";
@@ -1489,10 +1493,10 @@ function labRender() {
   fill(document.getElementById("labcode"), `plot[1].AddData("hist", "src", "label")
     .SetLine(${Ln}, ${num(lw)}, ${cn})
     .SetMarker(${M[1] || M[0]}, ${num(ms)}, ${cn})
-    .SetFill(${fillCode(lab.fill)}, ${cn})
-    .SetFillAlpha(${fa})${end}`, lang);
+    .SetFill(${fillCode(lab.fill)}, ${cn})${ca < 1 ? `
+    .SetAlpha(${ca})` : ""}${end}`, lang);
   const near = lc.root ? null : nearestRoot(col);
-  document.getElementById("facts").innerHTML = `<span>${lc.root ? `<b>${cn}</b> = colour ${lc.root.index}, ${col}` : `<b>${col}</b>: an own colour, ROOT gets an index for it when the plot is drawn (closest on ROOT's wheel: <code>${cname(near)}</code>)`}</span><span><b>${Ln}</b> = line style ${L[0]}</span><span><b>${M[1] || M[0]}</b> = marker style ${M[0]}${[1, 6, 7].includes(M[0]) ? " (fixed size, ignores the marker size)" : ""}</span><span><b>${fillCode(lab.fill)}</b> = fill style ${lab.fill}${lab.fill > 3100 ? ` (hatches: spacing ${Math.floor(lab.fill / 100) % 10}, angles ${[HATCH_J[Math.floor(lab.fill / 10) % 10], HATCH_K[lab.fill % 10]].filter(a => a !== undefined).join("° and ") || "none"}${[HATCH_J[Math.floor(lab.fill / 10) % 10], HATCH_K[lab.fill % 10]].some(a => a !== undefined) ? "°" : ""})` : ""}</span>`;
+  document.getElementById("facts").innerHTML = `<span>${lc.root ? `<b>${cn}</b> = colour ${lc.root.index}, ${col}` : `<b>${col}</b>: an own colour, ROOT gets an index for it when the plot is drawn (closest on ROOT's wheel: <code>${cname(near)}</code>)`}${ca < 1 ? `, alpha ${ca}` : ""}</span><span><b>${Ln}</b> = line style ${L[0]}</span><span><b>${M[1] || M[0]}</b> = marker style ${M[0]}${[1, 6, 7].includes(M[0]) ? " (fixed size, ignores the marker size)" : ""}</span><span><b>${fillCode(lab.fill)}</b> = fill style ${lab.fill}${lab.fill > 3100 ? ` (hatches: spacing ${Math.floor(lab.fill / 100) % 10}, angles ${[HATCH_J[Math.floor(lab.fill / 10) % 10], HATCH_K[lab.fill % 10]].filter(a => a !== undefined).join("° and ") || "none"}${[HATCH_J[Math.floor(lab.fill / 10) % 10], HATCH_K[lab.fill % 10]].some(a => a !== undefined) ? "°" : ""})` : ""}</span>`;
   document.querySelectorAll("#wheel button, #csets button, #cnums button").forEach(b => b.setAttribute("aria-pressed", b.dataset.c === cn));
   document.querySelectorAll("#lines .chip").forEach(b => b.setAttribute("aria-pressed", +b.dataset.v === lab.line));
   document.querySelectorAll("#markers .tile").forEach(b => b.setAttribute("aria-pressed", +b.dataset.v === lab.marker));
@@ -1504,9 +1508,9 @@ function labInit() {
   for (const [b, c] of Object.entries(COLORS)) { h += `<span class="nm">${b}</span>`;
     for (let o = -10; o <= 10; o++) { const hex = c.s[String(o)]; if (!hex) { h += "<span></span>"; continue }
       const n = o === 0 ? b : `${b} ${o > 0 ? "+" : "-"} ${Math.abs(o)}`;
-      h += `<button style="background:${hex}${hex === "#ffffff" ? ";box-shadow:inset 0 0 0 1px var(--rule)" : ""}" data-c="${n}" title="${n}" aria-label="${n}"></button>` } }
+      h += `<button style="background-color:${hex}${hex === "#ffffff" ? ";box-shadow:inset 0 0 0 1px var(--rule)" : ""}" data-c="${n}" title="${n} = colour ${c.i + o}, ${hex}" aria-label="${n}"></button>` } }
   w.innerHTML = h;
-  const swatch = (n, hex, label) => `<button data-c="${n}" title="${n} = colour ${colorOf(n).index}, ${hex}" aria-label="${n}"><i style="background:${hex}"></i>${label}</button>`;
+  const swatch = (n, hex, label) => `<button data-c="${n}" title="${n} = colour ${colorOf(n).index}, ${hex}" aria-label="${n}"><i style="background-color:${hex}"></i>${label}</button>`;
   document.getElementById("csets").innerHTML = PETROFF.map(([set, first, cols]) => `<span class="nm">${set} (${first})</span>` + cols.map(([n, hex]) => swatch(set + n, hex, n)).join("") + "<span></span>".repeat(10 - cols.length)).join("");
   document.getElementById("cnums").innerHTML = Array.from({ length: 51 }, (_, i) => { const c = colorOf(String(i)); return swatch(cname(c), c.hex, i) }).join("");
   const pickSwatch = e => { const b = e.target.closest("button"); if (b) { lab.color = b.dataset.c; document.getElementById("cname").value = b.dataset.c; document.getElementById("cmsg").textContent = ""; labRender() } };
@@ -1527,11 +1531,11 @@ function labInit() {
   const hatchNum = () => 3000 + 100 * +document.getElementById("hi").value + 10 * +document.getElementById("hj").value + +document.getElementById("hk").value;
   ["hi", "hj", "hk"].forEach(id => document.getElementById(id).onchange = () => { document.getElementById("hnum").textContent = hatchNum(); lab.fill = hatchNum(); labRender() });
   document.getElementById("huse").onclick = () => { lab.fill = hatchNum(); labRender() };
-  document.getElementById("fillnote").innerHTML = `<code>kFSolid</code> is 1, which ROOT draws hollow: solid is <code>1001</code>. The patterns are bitmaps (one bit per pixel in PNG, shown enlarged here), so they look finer the larger the canvas. Hatch spacing <i>i</i> is 0.3% of the longer canvas side per step; <i>j</i> and <i>k</i> pick the angles of two sets of lines (5: none). <code>SetFillAlpha</code> makes any of them transparent.`;
+  document.getElementById("fillnote").innerHTML = `<code>kFSolid</code> is 1, which ROOT draws hollow: solid is <code>1001</code>. The patterns are bitmaps (one bit per pixel in PNG, shown enlarged here), so they look finer the larger the canvas. Hatch spacing <i>i</i> is 0.3% of the longer canvas side per step; <i>j</i> and <i>k</i> pick the angles of two sets of lines (5: none). <code>SetFillAlpha</code> makes only the fill transparent; the transparency under <i>Colour</i> is <code>SetAlpha</code>, for line, markers and fill together.`;
   document.getElementById("lines").onclick = e => { const b = e.target.closest(".chip"); if (b) { lab.line = +b.dataset.v; labRender() } };
   document.getElementById("markers").onclick = e => { const b = e.target.closest(".tile"); if (b) { lab.marker = +b.dataset.v; labRender() } };
   document.getElementById("fills").onclick = e => { const b = e.target.closest(".tile"); if (b) { lab.fill = +b.dataset.v; labRender() } };
-  ["lw", "ms", "fa"].forEach(id => document.getElementById(id).oninput = labRender);
+  ["lw", "ms", "ca"].forEach(id => document.getElementById(id).oninput = labRender);
   document.querySelectorAll("[data-cvd]").forEach(b => b.onclick = () => {
     document.querySelectorAll("[data-cvd]").forEach(x => x.setAttribute("aria-pressed", x === b));
     ["pv", "wheel", "palmap", "palroot"].forEach(id => document.getElementById(id).style.filter = b.dataset.cvd ? `url(#cvd-${b.dataset.cvd})` : "") });
