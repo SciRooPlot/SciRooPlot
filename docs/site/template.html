@@ -818,6 +818,7 @@ figure.plot figcaption { color: #5b6b80 }
     <h2 class="title">Colours, lines and markers</h2>
     <p class="lede">ROOT names its colours, line styles and markers with constants like <code>kMagenta + 2</code>, <code>kDotted</code> and <code>kFullCircle</code>. Pick one here to see what it looks like and get the line of code for it.</p>
     <p class="basics"><b>Why plus and minus?</b>ROOT's colour wheel has a few base colours, such as <code>kRed</code> and <code>kAzure</code>. Numbers added or subtracted step through shades of it: for the six primaries (<code>kRed</code>, <code>kGreen</code>, <code>kBlue</code>, <code>kYellow</code>, <code>kMagenta</code>, <code>kCyan</code>) plus means darker and minus lighter, so <code>kRed + 1</code> is a slightly deeper red; for the others the steps move towards the neighbouring hues. Pick by the swatch, not by the sign. Underneath they are plain numbers, <code>kMagenta</code> is 616, so the code also accepts the index.</p>
+    <div class="cvd"><span class="lb-l">Seen as</span><span class="seg" role="group" aria-label="Show the colours as seen with colour vision deficiency"><button data-cvd="" aria-pressed="true">normal</button><button data-cvd="p" aria-pressed="false">red-blind</button><button data-cvd="d" aria-pressed="false">green-blind</button><button data-cvd="t" aria-pressed="false">blue-blind</button></span><span class="small muted">shows every colour on this page as a reader with that colour vision deficiency sees it</span></div>
   </div>
   <div class="lab">
     <div style="display:grid;gap:16px;min-width:0">
@@ -863,7 +864,6 @@ figure.plot figcaption { color: #5b6b80 }
       <div class="facts" id="facts"></div>
       <div class="code"><pre id="labcode"></pre></div>
       <p class="muted" style="font-size:var(--step--1)"><code>SetColor(c)</code> sets marker, line and fill colour at once. The preview shows all three; a plot draws only what the drawing option of the data uses (see <a href="#ref-appearance">Appearance and drawing options</a>).</p>
-      <div class="cvd"><span class="lb-l">Seen as</span><span class="seg" role="group" aria-label="Show the colours as seen with colour vision deficiency"><button data-cvd="" aria-pressed="true">normal</button><button data-cvd="p" aria-pressed="false">red-blind</button><button data-cvd="d" aria-pressed="false">green-blind</button><button data-cvd="t" aria-pressed="false">blue-blind</button></span></div>
     </div>
   </div>
   <p class="small muted">Data without a colour of its own takes the next one of the base plot's colour list: see and change that list in <a href="#layouts">Layouts</a>.</p>
@@ -1538,7 +1538,7 @@ function labInit() {
   ["lw", "ms", "ca"].forEach(id => document.getElementById(id).oninput = labRender);
   document.querySelectorAll("[data-cvd]").forEach(b => b.onclick = () => {
     document.querySelectorAll("[data-cvd]").forEach(x => x.setAttribute("aria-pressed", x === b));
-    ["pv", "wheel", "palmap", "palroot"].forEach(id => document.getElementById(id).style.filter = b.dataset.cvd ? `url(#cvd-${b.dataset.cvd})` : "") });
+    ["pv", "wheel", "csets", "cnums", "palmap", "palroot", "gbar", "stops"].forEach(id => document.getElementById(id).style.filter = b.dataset.cvd ? `url(#cvd-${b.dataset.cvd})` : "") });
   labRender(); palInit() }
 const DEFAULT_COLORS = ["kBlack", "kBlue + 1", "kRed + 1", "kYellow + 1", "kMagenta - 4", "kGreen + 3", "kOrange + 1", "kViolet - 3", "kCyan + 2", "kPink + 3", "kTeal - 7",
   "kMagenta + 1", "kPink + 8", "kCyan - 6", "kMagenta", "kRed + 2", "kGreen + 2", "kOrange + 2", "kMagenta + 2", "kYellow + 3",
