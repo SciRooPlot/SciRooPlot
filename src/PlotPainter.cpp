@@ -705,8 +705,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         drawOption += option;
       }
       bool isSampledFunc{};  // a function given by C++ code is written as values sampled over its range: it has no values outside of it
-      // obtain a copy of the current data
-      // retrieve the actual pointer to the data
       // draw the data (its appearance is already final) with the given drawing option alias
       auto drawItem = [&, padID = padID](auto data_ptr, optional<draw_option_t> optionAlias) {
         using data_type = std::decay_t<decltype(data_ptr)>;
@@ -4219,7 +4217,6 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     double_t symbolColWidthNDC = (double_t)symbolColWidthPixel / padWidthPixel;
     double_t titleWidthNDC = (double_t)titleWidthPixel / padWidthPixel;
     double_t borderWidthNDC = mScale * box->GetBorderWidth().value_or(0.) / padWidthPixel;
-    // double_t borderHeightNDC = box->GetBorderWidth().value_or(0.) / padHeightPixel;
 
     double_t totalWidthNDC{};
     double_t totalHeightNDC{};

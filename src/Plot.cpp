@@ -475,7 +475,7 @@ void Plot::PutDrawOption(ptree& tree, const optional<draw_option_t>& option, con
 
 //**************************************************************************************************
 /**
- * Default constructor.
+ * Constructor of a plot with name, group and optional base plot.
  */
 //**************************************************************************************************
 Plot::Plot(const string& name, const string& group, const optional<string>& basePlot) : Plot()
@@ -1023,7 +1023,7 @@ void Plot::Pad::CheckGradient(const vector<tuple<float_t, float_t, float_t, floa
 
 //**************************************************************************************************
 /**
- * Set default marker colors.
+ * Set default marker colours.
  */
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultMarkerColors(const vector<color_t>& colors) -> decltype(*this)
@@ -1269,7 +1269,7 @@ auto Plot::Pad::SetFrameBorderWidth(float_t width) -> decltype(*this)
 
 //**************************************************************************************************
 /**
- * Set this pad transparent.
+ * Set the frame of this pad transparent.
  */
 //**************************************************************************************************
 auto Plot::Pad::SetFrameTransparent() -> decltype(*this)
@@ -1281,7 +1281,7 @@ auto Plot::Pad::SetFrameTransparent() -> decltype(*this)
 
 //**************************************************************************************************
 /**
- * Set color palette for 2D plots.
+ * Set colour palette for 2D plots.
  * This is a selection of available palettes:
  * - Standard: kBird, 1 (ROOT5 default), kDarkRainBow, kTemperatureMap, kLightTemperature, kRainBow
  * - Gray: kGreyScale, kGreyYellow, kPearl, kPigeon
@@ -1815,7 +1815,7 @@ Plot::Pad::LegendBox& Plot::Pad::GetLegend(uint8_t legendID)
 
 //**************************************************************************************************
 /**
- * Access function for pad axis.
+ * Access function for text boxes.
  */
 //**************************************************************************************************
 Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
@@ -2399,7 +2399,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
 
 //**************************************************************************************************
 /**
- * Reinterprete Data as Ratio.
+ * Reinterpret Data as Ratio.
  */
 //**************************************************************************************************
 Plot::Pad::Ratio& Plot::Pad::Data::AsRatio()
@@ -3314,7 +3314,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
 
 //**************************************************************************************************
 /**
- * Specify how the division should be done (spline, binomial, etc...).
+ * Numerator is a subset of the denominator: binomial errors.
  */
 //**************************************************************************************************
 auto Plot::Pad::Ratio::SetCorrelated(bool correlated) -> decltype(*this)
@@ -3594,7 +3594,7 @@ auto Plot::Pad::Ratio::Entries(uint32_t entryMin, uint32_t entryMax) -> decltype
 
 //**************************************************************************************************
 /**
- * Constructor setting axis name (X,Y,Z).
+ * Constructor setting axis name (X, Y, Z, C).
  */
 //**************************************************************************************************
 Plot::Pad::Axis::Axis(const char axisName) : Axis()

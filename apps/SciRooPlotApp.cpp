@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
     logger::print("  srp settings");
     logger::print("  srp color       (bright | dark | off)");
     logger::print("  srp verbosity   (debug | log | info | warning | error | silent)");
-    logger::print("  srp plotmode    (show | spread | pdf | eps | svg | png | gif | jpg)");
+    logger::print("  srp plotmode    ({} | list)", plot_modes_description());
     logger::print("  srp matchmode   (exact | contains)");
     logger::print("  srp matchcase   (sensitive | insensitive)");
     logger::print("  srp screenscale <factor>  (size of plots shown on screen, default 1)");
@@ -231,10 +231,7 @@ int main(int argc, char* argv[])
       return 1;
     }
     if (project != "list" && !is_valid_plot_mode(project)) {
-      string modeList;
-      for (const auto& mode : plot_modes())
-        modeList += mode + ", ";
-      logger::error("Invalid plot mode '{}' (valid modes: {}gif+<centiseconds>[++[<repeats>]], list).", project, modeList);
+      logger::error("Invalid plot mode '{}' ({} | list).", project, plot_modes_description());
       return 1;
     }
     Config::GetMutable().SetPlotMode(project);

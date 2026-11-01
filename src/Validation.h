@@ -43,6 +43,15 @@ inline bool is_valid_plot_mode(const std::string& mode)
   return std::regex_match(mode, gifMode);
 }
 
+// the valid modes for messages and help texts: show | spread | ... | gif[+<centiseconds>[++[<repeats>]]] | ...
+inline std::string plot_modes_description()
+{
+  std::string description;
+  for (const auto& mode : plot_modes())
+    description += ((description.empty()) ? "" : " | ") + mode + ((mode == "gif") ? "[+<centiseconds>[++[<repeats>]]]" : "");
+  return description;
+}
+
 // returns the first illegal character (for non-ASCII characters the complete UTF-8 sequence, so it can be printed)
 inline std::optional<std::string> find_illegal_name_char(const std::string& name, bool allowSlash = false)
 {

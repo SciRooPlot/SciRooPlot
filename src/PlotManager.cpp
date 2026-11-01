@@ -1048,7 +1048,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
   ptree fileTree;
   try {
     using boost::property_tree::read_info;
-    read_info(expand_path(expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName))), fileTree);
+    read_info(expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName)), fileTree);
   } catch (const std::exception& e) {
     logger::error("Cannot open plots file: {}.", e.what());
     return false;
@@ -1104,12 +1104,11 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
 bool PlotManager::GeneratePlots(const string& mode, const string& name, const string& group)
 {
   if (!is_valid_plot_mode(mode)) {
-    string modeList;
-    for (const auto& validMode : plot_modes())
-      modeList += validMode + ", ";
-    logger::error("Invalid mode '{}' (valid modes: {}gif+<centiseconds>[++[<repeats>]]).", mode, modeList);
+    logger::error("Invalid plot mode '{}' ({}).", mode, plot_modes_description());
     return false;
   }
+  const bool isInteractiveMode = (mode == "show" || mode == "spread");
+  const bool needsDisplay = isInteractiveMode || mode == "macro";
   // plotting uses multi-threading, the classic canvas and fewer ROOT messages; the settings of the calling program are restored afterwards
   const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
   const bool wasWebDisplay = gROOT->IsWebDisplay();
@@ -1137,14 +1136,14 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       mWindowOffsetY = dummyCanvas.GetWindowTopY() - canvasImp->GetY();
     }
   }
-  if ((mode == "show" || mode == "spread" || mode == "macro") && !*mHasDisplay) {
+  if (needsDisplay && !*mHasDisplay) {
     logger::error("Mode '{}' needs a graphical display (is DISPLAY set?).", mode);
     return false;
   }
   // all other modes draw in batch mode, which needs ROOT's batch graphics: once a window was opened (e.g. by the display check above),
   // gVirtualX is the interface to the display, and since ROOT 6.40 painting a batch canvas through it crashes
   TVirtualX* const displayGraphics = gVirtualX;
-  if (mode != "show" && mode != "spread" && mode != "macro") gVirtualX = gGXBatch;
+  if (!needsDisplay) gVirtualX = gGXBatch;
   auto graphicsGuard = make_scope_guard([displayGraphics]() { gVirtualX = displayGraphics; });
   // first determine which data needs to be loaded
   vector<Plot*> selectedPlots;
@@ -1248,7 +1247,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     // how the animation repeats). The gif is named after the deepest group all frames are in and lies next to the folder of that group
     // (frames of animations/legoRotation: animations/legoRotation.gif); frames without a common group make animation.gif in the output directory
     mGifLastFrame = nullptr;
-    if (str_contains(mode, "gif")) {
+    if (mode.rfind("gif", 0) == 0) {
       optional<vector<string>> commonGroup;
       for (auto plot : selectedPlots) {
         if (!GetMissingData(*plot).empty()) continue;
@@ -1271,7 +1270,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     mExitInteractiveBrowsing = false;
     mDetached.reset();
     mBrowseCanvases.clear();
-    if (mode == "show" || mode == "spread") SetTerminalKeys(true);
+    if (isInteractiveMode) SetTerminalKeys(true);
     auto terminalKeysGuard = make_scope_guard([]() { SetTerminalKeys(false); });
 
     // generate plots
@@ -1315,7 +1314,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
         if (mExitInteractiveBrowsing) break;
       }
     }
-    if (mode == "show" || mode == "spread") {
+    if (isInteractiveMode) {
       ShowDetached();
       // the browsing window is hidden once browsing has ended, windows kept open stay until the user closes them
       for (const auto& browsed : mBrowseCanvases) {
@@ -1762,8 +1761,9 @@ vector<std::tuple<string, string, Plot::Pad::Data::data_info_t>> PlotManager::Ge
 //**************************************************************************************************
 bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 {
-  bool isInteractiveMode = (mode == "show" || mode == "spread");
-  bool isMacroMode = (mode == "macro");
+  const bool isInteractiveMode = (mode == "show" || mode == "spread");
+  const bool isMacroMode = (mode == "macro");
+  const bool isGifMode = (mode.rfind("gif", 0) == 0);
 
   if (plot.GetGroup().empty()) {
     logger::error("No group was specified for plot {}.", plot.GetName());
@@ -1792,7 +1792,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   }
 
   // the personal scale settings only change the number of pixels of plots on screen and of bitmap files, vector files do not depend on them
-  const bool isBitmapMode = (mode == "png") || (mode == "jpg") || str_contains(mode, "gif");
+  const bool isBitmapMode = (mode == "png") || (mode == "jpg") || isGifMode;
   PlotPainter painter(isInteractiveMode ? Config::Get().ScreenScale() : (isBitmapMode ? Config::Get().BitmapScale() : 1.), isInteractiveMode);
   gROOT->SetBatch(!isInteractiveMode && !isMacroMode);
   shared_ptr<TCanvas> canvas;
@@ -2087,7 +2087,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     return true;
   }
 
-  bool isGif = false;
   string frameSuffix = "+50";      // ROOT's syntax for a frame of an animated gif: +<centiseconds it is shown>
   string lastFrameSuffix = "+50";  // the last frame: +NN plays the animation once, ++NN++ loops endlessly, +NN++RR repeats it RR times
 
@@ -2110,9 +2109,8 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     canvas->SetName(sanitize(canvas->GetName()).data());
   } else if ((mode == "pdf") || (mode == "png") || (mode == "eps") || (mode == "svg") || (mode == "ps") || (mode == "html") || (mode == "json") || (mode == "xml") || (mode == "jpg") || (mode == "root")) {
     fileEnding = "." + mode;
-  } else if (str_contains(mode, "gif")) {
+  } else if (isGifMode) {
     fileEnding = ".gif";
-    isGif = true;
     if (mode.size() > 4) {  // gif+<centiseconds>[++[<repeats>]], checked by is_valid_plot_mode
       const size_t loopPos = mode.find("++");
       const string delay = mode.substr(4, (loopPos == string::npos) ? string::npos : loopPos - 4);
@@ -2140,7 +2138,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   string folderName = mOutputDirectory + "/" + plot.GetGroup();
   string fullName = folderName + "/" + fileName + fileEnding;
 
-  if (isGif && !mGifName.empty()) {
+  if (isGifMode && !mGifName.empty()) {
     fullName = mGifName;
     folderName = std::filesystem::path(mGifName).parent_path().string();
     fullName += (&plot == mGifLastFrame) ? lastFrameSuffix : frameSuffix;
@@ -2177,7 +2175,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     if (silenceNoPdfImages) SetErrorHandler(rootErrorHandler);
   });
   canvas->SaveAs(fullName.data());
-  if (!isGif && !std::filesystem::is_regular_file(fullName)) {
+  if (!isGifMode && !std::filesystem::is_regular_file(fullName)) {
     logger::error("Could not write {}.", fullName);
     return false;
   }
@@ -2308,11 +2306,6 @@ optional<size_t> PlotManager::NextBrowseIndex(size_t index, bool forward) const
   return std::nullopt;
 }
 
-//**************************************************************************************************
-/**
- * One pass over the events of the windows kept open: reports the position of a double-clicked box or shape, closes a window on the key 'q'
- * and sets closeAll for the key 'x'. Returns whether any of the windows is still open.
- */
 //**************************************************************************************************
 /**
  * The line a double-click in show mode prints for a legend, text, statistics box, image or shape: what was clicked, named as the user
@@ -3452,13 +3445,6 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   }
   if (nUnmatched && *nUnmatched) joinsDescription += fmt::format(", {} row{} without a match skipped", *nUnmatched, (*nUnmatched == 1) ? "" : "s");
   string message = fmt::format(" - {} {} entries{}{}, {} request{}, {} pass{}, {:.1f} s", DataLocation(dataSource, name), nEntries.value_or(0), (inputsDescription.empty()) ? "" : " from " + inputsDescription, joinsDescription, nRequests, (nRequests == 1) ? "" : "s", nPasses, (nPasses == 1) ? "" : "es", seconds);
-  /*
-  for (const auto& [info, counts] : entryCounts) {
-    const auto& [nPreFilter, nPostFilter] = counts;
-    message += fmt::format("\n           · {}: {} entries", info->GetDescription(), nPostFilter);
-    if (nPreFilter && *nPreFilter) message += fmt::format(" ({:.1f}%)", 100. * nPostFilter / *nPreFilter);
-  }
-  */
   logger::info("{}", message);
   for (const auto& [info, counts] : entryCounts) {
     if (!counts.second) logger::warning("No entries selected in {} {} ({}).", type, DataLocation(dataSource, name), info->GetDescription());
