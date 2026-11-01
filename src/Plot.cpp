@@ -4113,29 +4113,29 @@ ptree Plot::Pad::ImageBox::GetPropertyTree() const
  * User accessors to change the position and size of the image.
  */
 //**************************************************************************************************
-Plot::Pad::ImageBox& Plot::Pad::ImageBox::SetPosition(double_t x, double_t y)
+auto Plot::Pad::ImageBox::SetPosition(double_t x, double_t y) -> decltype(*this)
 {
   mX = x;
   mY = y;
   mPlacement = nullopt;
   return *this;
 }
-Plot::Pad::ImageBox& Plot::Pad::ImageBox::SetWidth(double_t width)
+auto Plot::Pad::ImageBox::SetWidth(double_t width) -> decltype(*this)
 {
   mWidth = width;
   return *this;
 }
-Plot::Pad::ImageBox& Plot::Pad::ImageBox::SetHeight(double_t height)
+auto Plot::Pad::ImageBox::SetHeight(double_t height) -> decltype(*this)
 {
   mHeight = height;
   return *this;
 }
-Plot::Pad::ImageBox& Plot::Pad::ImageBox::SetUserCoordinates(bool isUserCoord)
+auto Plot::Pad::ImageBox::SetUserCoordinates(bool isUserCoord) -> decltype(*this)
 {
   mIsUserCoord = isUserCoord;
   return *this;
 }
-Plot::Pad::ImageBox& Plot::Pad::ImageBox::SetAutoPlacement(box_placement_t placement)
+auto Plot::Pad::ImageBox::SetAutoPlacement(box_placement_t placement) -> decltype(*this)
 {
   mX = nullopt;
   mY = nullopt;
@@ -4214,12 +4214,12 @@ ptree Plot::Pad::TextBox::GetPropertyTree() const
  * Set text displayed in TextBox.
  */
 //**************************************************************************************************
-Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const string& text)
+auto Plot::Pad::TextBox::SetText(const string& text) -> decltype(*this)
 {
   mText = text;
   return *this;
 }
-Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const vector<string>& lines)
+auto Plot::Pad::TextBox::SetText(const vector<string>& lines) -> decltype(*this)
 {
   mText.clear();
   for (size_t i = 0; i < lines.size(); ++i) {
@@ -4228,7 +4228,7 @@ Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(const vector<string>& lines)
   }
   return *this;
 }
-Plot::Pad::TextBox& Plot::Pad::TextBox::SetText(std::initializer_list<string> lines)
+auto Plot::Pad::TextBox::SetText(std::initializer_list<string> lines) -> decltype(*this)
 {
   return SetText(vector<string>(lines));
 }
@@ -4267,7 +4267,7 @@ void Plot::Pad::TextBox::ShiftDataIDs(uint16_t offset)
   shifted.append(last, mText.cend());
   mText = std::move(shifted);
 }
-Plot::Pad::TextBox& Plot::Pad::TextBox::SetTextAlign(int16_t align)
+auto Plot::Pad::TextBox::SetTextAlign(int16_t align) -> decltype(*this)
 {
   int16_t hAlign = (align / 10) * 10;
   int16_t vAlign = align % 10;
@@ -4425,13 +4425,13 @@ bool Plot::Pad::LegendBox::HasForeignRows() const
   return std::any_of(mLegendEntriesUser.begin(), mLegendEntriesUser.end(), [](const LegendEntry& entry) { return entry.mRefPadID.has_value(); });
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetTitle(const string& title)
+auto Plot::Pad::LegendBox::SetTitle(const string& title) -> decltype(*this)
 {
   mTitle = title;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns)
+auto Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns) -> decltype(*this)
 {
   if (numColumns) {
     mNumColumns = numColumns;
@@ -4441,7 +4441,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns)
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetColumnSpacing(float_t spacing)
+auto Plot::Pad::LegendBox::SetColumnSpacing(float_t spacing) -> decltype(*this)
 {
   if (spacing >= 0.f) {
     mColumnSpacing = spacing;
@@ -4451,19 +4451,19 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetColumnSpacing(float_t spacing)
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetOrderTopDown(bool topDown)
+auto Plot::Pad::LegendBox::SetOrderTopDown(bool topDown) -> decltype(*this)
 {
   mOrderTopDown = topDown;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultSymbolElements(const string& symbolElements)
+auto Plot::Pad::LegendBox::SetDefaultSymbolElements(const string& symbolElements) -> decltype(*this)
 {
   mSymbolElementsDefault = symbolElements;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultColor(color_t color)
+auto Plot::Pad::LegendBox::SetDefaultColor(color_t color) -> decltype(*this)
 {
   mLineDefault.color = color;
   mMarkerDefault.color = color;
@@ -4471,7 +4471,7 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultColor(color_t color)
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultAlpha(float_t alpha)
+auto Plot::Pad::LegendBox::SetDefaultAlpha(float_t alpha) -> decltype(*this)
 {
   mLineDefault.alpha = alpha;
   mMarkerDefault.alpha = alpha;
@@ -4479,73 +4479,73 @@ Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultAlpha(float_t alpha)
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineColor(color_t color)
+auto Plot::Pad::LegendBox::SetDefaultLineColor(color_t color) -> decltype(*this)
 {
   mLineDefault.color = color;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineAlpha(float_t alpha)
+auto Plot::Pad::LegendBox::SetDefaultLineAlpha(float_t alpha) -> decltype(*this)
 {
   mLineDefault.alpha = alpha;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineStyle(int16_t style)
+auto Plot::Pad::LegendBox::SetDefaultLineStyle(int16_t style) -> decltype(*this)
 {
   mLineDefault.style = style;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultLineWidth(float_t width)
+auto Plot::Pad::LegendBox::SetDefaultLineWidth(float_t width) -> decltype(*this)
 {
   mLineDefault.scale = RoundWidth(width, "legend default line width");
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultMarkerColor(color_t color)
+auto Plot::Pad::LegendBox::SetDefaultMarkerColor(color_t color) -> decltype(*this)
 {
   mMarkerDefault.color = color;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultMarkerAlpha(float_t alpha)
+auto Plot::Pad::LegendBox::SetDefaultMarkerAlpha(float_t alpha) -> decltype(*this)
 {
   mMarkerDefault.alpha = alpha;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultMarkerStyle(int16_t style)
+auto Plot::Pad::LegendBox::SetDefaultMarkerStyle(int16_t style) -> decltype(*this)
 {
   mMarkerDefault.style = style;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultMarkerSize(float_t size)
+auto Plot::Pad::LegendBox::SetDefaultMarkerSize(float_t size) -> decltype(*this)
 {
   mMarkerDefault.scale = size;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillColor(color_t color)
+auto Plot::Pad::LegendBox::SetDefaultFillColor(color_t color) -> decltype(*this)
 {
   mFillDefault.color = color;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillAlpha(float_t alpha)
+auto Plot::Pad::LegendBox::SetDefaultFillAlpha(float_t alpha) -> decltype(*this)
 {
   mFillDefault.alpha = alpha;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetDefaultFillStyle(int16_t style)
+auto Plot::Pad::LegendBox::SetDefaultFillStyle(int16_t style) -> decltype(*this)
 {
   mFillDefault.style = style;
   return *this;
 }
 
-Plot::Pad::LegendBox& Plot::Pad::LegendBox::SetSymbolColScale(float_t scale)
+auto Plot::Pad::LegendBox::SetSymbolColScale(float_t scale) -> decltype(*this)
 {
   mSymbolColScale = scale;
   return *this;
@@ -4708,46 +4708,46 @@ void Plot::Pad::LegendEntry::ShiftPosition(uint16_t offset)
  * User accessors to change legend entry properties.
  */
 //**************************************************************************************************
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetLabel(const string& label)
+auto Plot::Pad::LegendEntry::SetLabel(const string& label) -> decltype(*this)
 {
   mLabel = label;
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetRefData(uint16_t refDataID)
+auto Plot::Pad::LegendEntry::SetRefData(uint16_t refDataID) -> decltype(*this)
 {
   mRefDataID = refDataID;
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetSymbolElements(const string& symbolElements)
+auto Plot::Pad::LegendEntry::SetSymbolElements(const string& symbolElements) -> decltype(*this)
 {
   mSymbolElements = symbolElements;
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::AtTop()
+auto Plot::Pad::LegendEntry::AtTop() -> decltype(*this)
 {
   mPosition = position_t::top;
   mPositionDataID = 0;
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::BeforeData(uint16_t dataID)
+auto Plot::Pad::LegendEntry::BeforeData(uint16_t dataID) -> decltype(*this)
 {
   mPosition = position_t::before;
   mPositionDataID = dataID;
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::AfterData(uint16_t dataID)
+auto Plot::Pad::LegendEntry::AfterData(uint16_t dataID) -> decltype(*this)
 {
   mPosition = position_t::after;
   mPositionDataID = dataID;
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetColor(color_t color)
+auto Plot::Pad::LegendEntry::SetColor(color_t color) -> decltype(*this)
 {
   mMarker.color = color;
   mLine.color = color;
@@ -4755,7 +4755,7 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetColor(color_t color)
   return *this;
 }
 
-Plot::Pad::LegendEntry& Plot::Pad::LegendEntry::SetAlpha(float_t alpha)
+auto Plot::Pad::LegendEntry::SetAlpha(float_t alpha) -> decltype(*this)
 {
   mMarker.alpha = alpha;
   mLine.alpha = alpha;
@@ -4864,40 +4864,40 @@ ptree Plot::Pad::Shape::GetPropertyTree() const
   return shapeTree;
 }
 
-Plot::Pad::Shape& Plot::Pad::Shape::SetUserCoordinates(bool isUserCoord)
+auto Plot::Pad::Shape::SetUserCoordinates(bool isUserCoord) -> decltype(*this)
 {
   mIsUserCoord = isUserCoord;
   return *this;
 }
-Plot::Pad::Shape& Plot::Pad::Shape::SetBehindData()
+auto Plot::Pad::Shape::SetBehindData() -> decltype(*this)
 {
   mLayer = layer_t::behind_data;
   return *this;
 }
-Plot::Pad::Shape& Plot::Pad::Shape::SetOnTop()
+auto Plot::Pad::Shape::SetOnTop() -> decltype(*this)
 {
   mLayer = layer_t::on_top;
   return *this;
 }
-Plot::Pad::Shape& Plot::Pad::Shape::SetArrowHead(const string& style)
+auto Plot::Pad::Shape::SetArrowHead(const string& style) -> decltype(*this)
 {
   if (mKind != kind_t::arrow) logger::warning("SetArrowHead has an effect only on arrows (Pad::AddArrow), not on a {}.", KindName(mKind));
   mArrowHead = style;
   return *this;
 }
-Plot::Pad::Shape& Plot::Pad::Shape::SetArrowSize(float_t size)
+auto Plot::Pad::Shape::SetArrowSize(float_t size) -> decltype(*this)
 {
   if (mKind != kind_t::arrow) logger::warning("SetArrowSize has an effect only on arrows (Pad::AddArrow), not on a {}.", KindName(mKind));
   mArrowSize = size;
   return *this;
 }
-Plot::Pad::Shape& Plot::Pad::Shape::SetArc(double_t phiMin, double_t phiMax)
+auto Plot::Pad::Shape::SetArc(double_t phiMin, double_t phiMax) -> decltype(*this)
 {
   if (mKind != kind_t::ellipse) logger::warning("SetArc has an effect only on ellipses (Pad::AddEllipse), not on a {}.", KindName(mKind));
   mArc = {phiMin, phiMax};
   return *this;
 }
-Plot::Pad::Shape& Plot::Pad::Shape::SetRotation(double_t theta)
+auto Plot::Pad::Shape::SetRotation(double_t theta) -> decltype(*this)
 {
   if (mKind != kind_t::ellipse) logger::warning("SetRotation has an effect only on ellipses (Pad::AddEllipse), not on a {}.", KindName(mKind));
   mRotation = theta;

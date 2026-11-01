@@ -1052,11 +1052,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               optional<double_t> userMin;
               optional<double_t> userMax;
               optional<bool> logY;
-              for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
-                if (curPad.GetAxes().count('Y') && curPad['Y'].GetLog()) logY = curPad['Y'].GetLog();
-                if (curPad.GetAxes().find(axisLabel) == curPad.GetAxes().end()) continue;
-                if (curPad[axisLabel].GetMinRange()) userMin = curPad[axisLabel].GetMinRange();
-                if (curPad[axisLabel].GetMaxRange()) userMax = curPad[axisLabel].GetMaxRange();
+              for (const auto* axis : AxisSettings(pad, padDefaults, 'Y')) {
+                if (axis->GetLog()) logY = axis->GetLog();
+              }
+              for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
+                if (axis->GetMinRange()) userMin = axis->GetMinRange();
+                if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
               }
               const TAxis* axis = (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis();
               constexpr double_t relTol = 1e-12;
@@ -1099,7 +1100,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // apply axis settings
           const bool hbarFrame = IsHBarFrame(pad_ptr, axisHist_ptr);  // with HBAR the X and Y of the pad are the y and x axis of the histogram
           const bool isTH3 = axisHist_ptr->InheritsFrom(TH3::Class());
-          if (!isTH3 && plot.GetPads()[padID].GetAxes().count('C')) {
+          if (!isTH3 && pad.GetAxes().count('C')) {
             logger::warning("The C axis of pad {} is ignored: it is the content of a 3d histogram (for other data the Y or Z axis is the value axis).", padID);
           }
           for (auto axisLabel : {'X', 'Y', 'Z'}) {
@@ -1130,81 +1131,79 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             bool userTitleCenter{};
 
             // first apply default pad values and then settings for this specific pad
-            for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
-              if (curPad.GetAxes().find(axisLabel) != curPad.GetAxes().end()) {
-                const auto& axisLayout = curPad[axisLabel];
-                if (axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).data());
+            for (const auto* axisSettings : AxisSettings(pad, padDefaults, axisLabel)) {
+              const auto& axisLayout = *axisSettings;
+              if (axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).data());
 
-                if (axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
-                if (axisLayout.GetLabelFont()) textFontLabel = axisLayout.GetLabelFont();
+              if (axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
+              if (axisLayout.GetLabelFont()) textFontLabel = axisLayout.GetLabelFont();
 
-                if (axisLayout.GetTitleColor()) textColorTitle = axisLayout.GetTitleColor();
-                if (axisLayout.GetLabelColor()) textColorLabel = axisLayout.GetLabelColor();
+              if (axisLayout.GetTitleColor()) textColorTitle = axisLayout.GetTitleColor();
+              if (axisLayout.GetLabelColor()) textColorLabel = axisLayout.GetLabelColor();
 
-                if (axisLayout.GetTitleAlpha()) textAlphaTitle = axisLayout.GetTitleAlpha();
-                if (axisLayout.GetLabelAlpha()) textAlphaLabel = axisLayout.GetLabelAlpha();
+              if (axisLayout.GetTitleAlpha()) textAlphaTitle = axisLayout.GetTitleAlpha();
+              if (axisLayout.GetLabelAlpha()) textAlphaLabel = axisLayout.GetLabelAlpha();
 
-                if (axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
-                if (axisLayout.GetLabelSize()) textSizeLabel = axisLayout.GetLabelSize();
-                if (axisLayout.GetLabelAngle()) labelAngle = axisLayout.GetLabelAngle();
+              if (axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
+              if (axisLayout.GetLabelSize()) textSizeLabel = axisLayout.GetLabelSize();
+              if (axisLayout.GetLabelAngle()) labelAngle = axisLayout.GetLabelAngle();
 
-                if (axisLayout.GetTitleCenter()) {
-                  axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
-                  userTitleCenter = true;
+              if (axisLayout.GetTitleCenter()) {
+                axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
+                userTitleCenter = true;
+              }
+              if (axisLayout.GetLabelCenter()) axis_ptr->CenterLabels(*axisLayout.GetLabelCenter());
+
+              if (axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(axisLayout.GetAxisColor()->ToIndex());
+              if (axisLayout.GetAxisAlpha()) axis_ptr->SetAxisColor(TColor::GetColorTransparent(axis_ptr->GetAxisColor(), *axisLayout.GetAxisAlpha()));
+
+              if (axisLayout.GetTitleOffset()) {
+                axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
+                userTitleOffset = true;
+              }
+              if (axisLayout.GetLabelOffset()) axis_ptr->SetLabelOffset(*axisLayout.GetLabelOffset());
+
+              if (axisLayout.GetTickLength()) axis_ptr->SetTickLength(*axisLayout.GetTickLength());
+              if (axisLayout.GetMaxDigits()) axis_ptr->SetMaxDigits(*axisLayout.GetMaxDigits());
+
+              if (axisLayout.GetNumDivisions()) axis_ptr->SetNdivisions(*axisLayout.GetNumDivisions());
+
+              if (axisLayout.GetOppositeTicks()) {
+                if (axisLabel == 'X') {
+                  pad_ptr->SetTickx(*axisLayout.GetOppositeTicks());
+                } else if (axisLabel == 'Y') {
+                  pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
                 }
-                if (axisLayout.GetLabelCenter()) axis_ptr->CenterLabels(*axisLayout.GetLabelCenter());
+              }
+              if (axisLayout.GetNoExponent()) {
+                axis_ptr->SetNoExponent(*axisLayout.GetNoExponent());
+              }
+              if (axisLayout.GetTimeFormat()) {
+                axis_ptr->SetTimeDisplay(1);
+                axis_ptr->SetTimeFormat((*axisLayout.GetTimeFormat()).data());
+              }
+              if (axisLayout.GetTickOrientation()) {
+                axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).data());
+              }
 
-                if (axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(axisLayout.GetAxisColor()->ToIndex());
-                if (axisLayout.GetAxisAlpha()) axis_ptr->SetAxisColor(TColor::GetColorTransparent(axis_ptr->GetAxisColor(), *axisLayout.GetAxisAlpha()));
+              // the ranges are applied below, once the default and pad-specific settings are merged
+              if (axisLayout.GetMinRange()) userRangeMin = axisLayout.GetMinRange();
+              if (axisLayout.GetMaxRange()) userRangeMax = axisLayout.GetMaxRange();
 
-                if (axisLayout.GetTitleOffset()) {
-                  axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
-                  userTitleOffset = true;
+              if (axisLayout.GetLog()) {
+                if (axisLabel == 'X') {
+                  pad_ptr->SetLogx(*axisLayout.GetLog());
+                } else if (axisLabel == 'Y') {
+                  pad_ptr->SetLogy(*axisLayout.GetLog());
+                } else if (axisLabel == 'Z') {
+                  pad_ptr->SetLogz(*axisLayout.GetLog());
                 }
-                if (axisLayout.GetLabelOffset()) axis_ptr->SetLabelOffset(*axisLayout.GetLabelOffset());
-
-                if (axisLayout.GetTickLength()) axis_ptr->SetTickLength(*axisLayout.GetTickLength());
-                if (axisLayout.GetMaxDigits()) axis_ptr->SetMaxDigits(*axisLayout.GetMaxDigits());
-
-                if (axisLayout.GetNumDivisions()) axis_ptr->SetNdivisions(*axisLayout.GetNumDivisions());
-
-                if (axisLayout.GetOppositeTicks()) {
-                  if (axisLabel == 'X') {
-                    pad_ptr->SetTickx(*axisLayout.GetOppositeTicks());
-                  } else if (axisLabel == 'Y') {
-                    pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
-                  }
-                }
-                if (axisLayout.GetNoExponent()) {
-                  axis_ptr->SetNoExponent(*axisLayout.GetNoExponent());
-                }
-                if (axisLayout.GetTimeFormat()) {
-                  axis_ptr->SetTimeDisplay(1);
-                  axis_ptr->SetTimeFormat((*axisLayout.GetTimeFormat()).data());
-                }
-                if (axisLayout.GetTickOrientation()) {
-                  axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).data());
-                }
-
-                // the ranges are applied below, once the default and pad-specific settings are merged
-                if (axisLayout.GetMinRange()) userRangeMin = axisLayout.GetMinRange();
-                if (axisLayout.GetMaxRange()) userRangeMax = axisLayout.GetMaxRange();
-
-                if (axisLayout.GetLog()) {
-                  if (axisLabel == 'X') {
-                    pad_ptr->SetLogx(*axisLayout.GetLog());
-                  } else if (axisLabel == 'Y') {
-                    pad_ptr->SetLogy(*axisLayout.GetLog());
-                  } else if (axisLabel == 'Z') {
-                    pad_ptr->SetLogz(*axisLayout.GetLog());
-                  }
-                }
-                if (axisLayout.GetGrid()) {
-                  if (axisLabel == 'X') {
-                    pad_ptr->SetGridx(*axisLayout.GetGrid());
-                  } else if (axisLabel == 'Y') {
-                    pad_ptr->SetGridy(*axisLayout.GetGrid());
-                  }
+              }
+              if (axisLayout.GetGrid()) {
+                if (axisLabel == 'X') {
+                  pad_ptr->SetGridx(*axisLayout.GetGrid());
+                } else if (axisLabel == 'Y') {
+                  pad_ptr->SetGridy(*axisLayout.GetGrid());
                 }
               }
             }
@@ -1215,10 +1214,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             const bool viewFrame = IsViewFrame(pad_ptr, axisHist_ptr);
             if (viewFrame && axisLabel != 'Z' && !userTitleCenter) axis_ptr->CenterTitle();
             if (!userTitleOffset) {
-              const Plot::Pad& padSettings = plot.GetPads()[padID];
               if (viewFrame) {
                 axis_ptr->SetTitleOffset((axisLabel == 'Z') ? 0.f : 1.5f);
-              } else if (auto layoutOffset = LayoutValue(padSettings, padDefaults, string("title_offset_") + axisLabel)) {
+              } else if (auto layoutOffset = LayoutValue(pad, padDefaults, string("title_offset_") + axisLabel)) {
                 axis_ptr->SetTitleOffset(*layoutOffset);
               }
             }
@@ -1253,16 +1251,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 }
               } else if (isBinnedAxis) {
                 // bin selection as in TAxis::SetRangeUser, but a side the user did not set keeps its current bin
-                int32_t first = axis_ptr->GetFirst();
-                int32_t last = axis_ptr->GetLast();
-                if (userRangeMin) {
-                  first = axis_ptr->FindFixBin(*userRangeMin);
-                  if (axis_ptr->GetBinUpEdge(first) <= *userRangeMin) ++first;
-                }
-                if (userRangeMax) {
-                  last = axis_ptr->FindFixBin(*userRangeMax);
-                  if (axis_ptr->GetBinLowEdge(last) >= *userRangeMax) --last;
-                }
+                const auto [first, last] = BinRange(axis_ptr, userRangeMin, userRangeMax);
                 // never the underflow or overflow bin: a range ending at the edge of the axis (e.g. one extended above) gives the overflow bin,
                 // whose low edge ROOT computes as for equal bins, which for variable bins can lie just below the edge (14.999999999999998 for 15)
                 axis_ptr->SetRange(std::max(first, 1), std::min(last, axis_ptr->GetNbins()));
@@ -1386,12 +1375,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // (otherwise ROOT's from the points), labels as those of the axes
             optional<double_t> minAngle, maxAngle, minRadius, maxRadius;
             optional<int16_t> divAngle, divRadius;
-            for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
-              for (auto [axisLabel, min, max, div] : {std::make_tuple('X', &minAngle, &maxAngle, &divAngle), std::make_tuple('Y', &minRadius, &maxRadius, &divRadius)}) {
-                if (!curPad.GetAxes().count(axisLabel)) continue;
-                if (curPad[axisLabel].GetMinRange()) *min = curPad[axisLabel].GetMinRange();
-                if (curPad[axisLabel].GetMaxRange()) *max = curPad[axisLabel].GetMaxRange();
-                if (curPad[axisLabel].GetNumDivisions()) *div = curPad[axisLabel].GetNumDivisions();
+            for (auto [axisLabel, min, max, div] : {std::make_tuple('X', &minAngle, &maxAngle, &divAngle), std::make_tuple('Y', &minRadius, &maxRadius, &divRadius)}) {
+              for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
+                if (axis->GetMinRange()) *min = axis->GetMinRange();
+                if (axis->GetMaxRange()) *max = axis->GetMaxRange();
+                if (axis->GetNumDivisions()) *div = axis->GetNumDivisions();
               }
             }
             if (minAngle || maxAngle) {
@@ -1431,10 +1419,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               // the interpolated histogram of a graph can stay below its highest point (and above its lowest one): the z range includes the
               // points (with their errors), as ROOT's own range of the graph (TGraph2D::GetHistogram), unless the user set that end
               optional<double_t> userMinZ, userMaxZ;
-              for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
-                if (!curPad.GetAxes().count('Z')) continue;
-                if (curPad['Z'].GetMinRange()) userMinZ = curPad['Z'].GetMinRange();
-                if (curPad['Z'].GetMaxRange()) userMaxZ = curPad['Z'].GetMaxRange();
+              for (const auto* axis : AxisSettings(pad, padDefaults, 'Z')) {
+                if (axis->GetMinRange()) userMinZ = axis->GetMinRange();
+                if (axis->GetMaxRange()) userMaxZ = axis->GetMaxRange();
               }
               if (!userMinZ) min = std::min(min, graphRangeZ.first);
               if (!userMaxZ) max = std::max(max, graphRangeZ.second);
@@ -1446,9 +1433,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               // for the title of the colour scale of a 3d histogram)
               optional<string> title;
               bool isLog{};
-              for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(plot.GetPads()[padID])}) {
-                if (!curPad.GetAxes().count('C')) continue;
-                const auto& content = curPad['C'];
+              for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
+                const auto& content = *contentSettings;
                 if (content.GetMinRange()) min = *content.GetMinRange();
                 if (content.GetMaxRange()) max = *content.GetMaxRange();
                 contentRange = contentRange || content.GetMinRange() || content.GetMaxRange();
@@ -1840,8 +1826,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // without a z range set by the user, that range covers all 2d data of the pad (not only the data the frame is made of)
           if constexpr (is_hist_2d<data_type>() || is_graph_2d<data_type>()) {
             bool hasUserRangeZ = false;
-            for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(pad)}) {
-              if (curPad.GetAxes().count('Z') && (curPad['Z'].GetMinRange() || curPad['Z'].GetMaxRange())) hasUserRangeZ = true;
+            for (const auto* axis : AxisSettings(pad, padDefaults, 'Z')) {
+              if (axis->GetMinRange() || axis->GetMaxRange()) hasUserRangeZ = true;
             }
             if (!hasUserRangeZ && axisHist_ptr->GetDimension() == 2 && !pad_ptr->GetView()) {
               double_t minimum{}, maximum{};
@@ -2001,6 +1987,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           using ptr_type = std::decay_t<decltype(ptr)>;
           auto warnUnsupported = [&](bool requested, const char* what) {
             if (requested) warn("{} is not supported for {} ({}), ignoring.", what, ptr->GetName(), ptr->ClassName());
+          };
+          // multiplies a factor of Scale (axis 0) or ScaleX/Y/Z into product; a factor that is not positive is ignored
+          auto multiplyFactor = [&](optional<double_t>& product, const optional<double_t>& factor, char axis = 0) {
+            if (!factor) return;
+            if (*factor <= 0.) {
+              if (axis) {
+                warn("Scale factor for {} axis of {} must be positive, ignoring.", axis, ptr->GetName());
+              } else {
+                warn("Scale factor for {} must be positive, ignoring.", ptr->GetName());
+              }
+              return;
+            }
+            product = product.value_or(1.) * *factor;
           };
 
           auto scaleAxis = [&](int16_t axisIndex, const optional<double_t>& factor) {
@@ -2210,29 +2209,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 }
               }
             }
-            if (auto factor = mods.GetScaleFactor()) {
-              if (*factor <= 0.) {
-                warn("Scale factor for {} must be positive, ignoring.", ptr->GetName());
-              } else {
-                scaleFactor = (scaleFactor) ? (*scaleFactor) * (*factor) : (*factor);
-              }
-            }
+            multiplyFactor(scaleFactor, mods.GetScaleFactor());
             if constexpr (is_hist_1d<ptr_type>()) {
-              if (auto axisScale = mods.GetScaleAxisY()) {
-                if (*axisScale <= 0.) {
-                  warn("Scale factor for y axis of {} must be positive, ignoring.", ptr->GetName());
-                } else {
-                  scaleFactor = (scaleFactor) ? (*scaleFactor) * (*axisScale) : (*axisScale);
-                }
-              }
+              multiplyFactor(scaleFactor, mods.GetScaleAxisY(), 'y');
             } else if constexpr (is_hist_2d<ptr_type>()) {
-              if (auto axisScale = mods.GetScaleAxisZ()) {
-                if (*axisScale <= 0.) {
-                  warn("Scale factor for z axis of {} must be positive, ignoring.", ptr->GetName());
-                } else {
-                  scaleFactor = (scaleFactor) ? (*scaleFactor) * (*axisScale) : (*axisScale);
-                }
-              }
+              multiplyFactor(scaleFactor, mods.GetScaleAxisZ(), 'z');
             }
             if (scaleFactor) ptr->Scale(*scaleFactor);
           } else if constexpr (is_graph_1d<ptr_type>()) {
@@ -2294,20 +2275,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 scaleFactor = 1. / maxY;
               }
             }
-            if (auto factor = mods.GetScaleFactor()) {
-              if (*factor <= 0.) {
-                warn("Scale factor for {} must be positive, ignoring.", ptr->GetName());
-              } else {
-                scaleFactor = (scaleFactor) ? (*scaleFactor) * (*factor) : (*factor);
-              }
-            }
-            if (auto axisScale = mods.GetScaleAxisY()) {
-              if (*axisScale <= 0.) {
-                warn("Scale factor for y axis of {} must be positive, ignoring.", ptr->GetName());
-              } else {
-                scaleFactor = (scaleFactor) ? (*scaleFactor) * (*axisScale) : (*axisScale);
-              }
-            }
+            multiplyFactor(scaleFactor, mods.GetScaleFactor());
+            multiplyFactor(scaleFactor, mods.GetScaleAxisY(), 'y');
             if (scaleFactor) ScaleGraphAxis(ptr, 1, *scaleFactor);
           } else if constexpr (is_graph_2d<ptr_type>()) {
             warnUnsupported(mods.GetRebinGroupX().has_value(), "RebinX");
@@ -2338,20 +2307,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 scaleFactor = 1. / *maxZ;
               }
             }
-            if (auto factor = mods.GetScaleFactor()) {
-              if (*factor <= 0.) {
-                warn("Scale factor for {} must be positive, ignoring.", ptr->GetName());
-              } else {
-                scaleFactor = (scaleFactor) ? (*scaleFactor) * (*factor) : (*factor);
-              }
-            }
-            if (auto axisScale = mods.GetScaleAxisZ()) {
-              if (*axisScale <= 0.) {
-                warn("Scale factor for z axis of {} must be positive, ignoring.", ptr->GetName());
-              } else {
-                scaleFactor = (scaleFactor) ? (*scaleFactor) * (*axisScale) : (*axisScale);
-              }
-            }
+            multiplyFactor(scaleFactor, mods.GetScaleFactor());
+            multiplyFactor(scaleFactor, mods.GetScaleAxisZ(), 'z');
             if (scaleFactor) ScaleGraphAxis(ptr, 2, *scaleFactor);
           } else if constexpr (is_func<ptr_type>()) {
             warnUnsupported(mods.GetRebinGroupX().has_value(), "RebinX");
@@ -2366,59 +2323,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if constexpr (is_func_1d<ptr_type>()) {
               warnUnsupported(mods.GetScaleAxisZ().has_value(), "ScaleZ");
             }
-            double_t domainFactorX = 1.;
-            if (auto axisScale = mods.GetScaleAxisX()) {
-              if (*axisScale <= 0.) {
-                warn("Scale factor for x axis of {} must be positive, ignoring.", ptr->GetName());
-              } else {
-                domainFactorX = *axisScale;
-              }
-            }
-            double_t domainFactorY = 1.;
-            if constexpr (is_func_2d<ptr_type>() || is_func_3d<ptr_type>()) {
-              if (auto axisScale = mods.GetScaleAxisY()) {
-                if (*axisScale <= 0.) {
-                  warn("Scale factor for y axis of {} must be positive, ignoring.", ptr->GetName());
-                } else {
-                  domainFactorY = *axisScale;
-                }
-              }
-            }
-            double_t domainFactorZ = 1.;
-            if constexpr (is_func_3d<ptr_type>()) {
-              if (auto axisScale = mods.GetScaleAxisZ()) {
-                if (*axisScale <= 0.) {
-                  warn("Scale factor for z axis of {} must be positive, ignoring.", ptr->GetName());
-                } else {
-                  domainFactorZ = *axisScale;
-                }
-              }
-            }
-            optional<double_t> contentFactor;
-            if (auto factor = mods.GetScaleFactor()) {
-              if (*factor <= 0.) {
-                warn("Scale factor for {} must be positive, ignoring.", ptr->GetName());
-              } else {
-                contentFactor = *factor;
-              }
-            }
+            optional<double_t> domainX, domainY, domainZ, contentFactor;
+            multiplyFactor(domainX, mods.GetScaleAxisX(), 'x');
+            if constexpr (is_func_2d<ptr_type>() || is_func_3d<ptr_type>()) multiplyFactor(domainY, mods.GetScaleAxisY(), 'y');
+            if constexpr (is_func_3d<ptr_type>()) multiplyFactor(domainZ, mods.GetScaleAxisZ(), 'z');
+            multiplyFactor(contentFactor, mods.GetScaleFactor());
             if constexpr (is_func_1d<ptr_type>()) {
-              if (auto axisScale = mods.GetScaleAxisY()) {
-                if (*axisScale <= 0.) {
-                  warn("Scale factor for y axis of {} must be positive, ignoring.", ptr->GetName());
-                } else {
-                  contentFactor = (contentFactor) ? (*contentFactor) * (*axisScale) : (*axisScale);
-                }
-              }
+              multiplyFactor(contentFactor, mods.GetScaleAxisY(), 'y');
             } else if constexpr (is_func_2d<ptr_type>()) {
-              if (auto axisScale = mods.GetScaleAxisZ()) {
-                if (*axisScale <= 0.) {
-                  warn("Scale factor for z axis of {} must be positive, ignoring.", ptr->GetName());
-                } else {
-                  contentFactor = (contentFactor) ? (*contentFactor) * (*axisScale) : (*axisScale);
-                }
-              }
+              multiplyFactor(contentFactor, mods.GetScaleAxisZ(), 'z');
             }
+            const double_t domainFactorX = domainX.value_or(1.);
+            const double_t domainFactorY = domainY.value_or(1.);
+            const double_t domainFactorZ = domainZ.value_or(1.);
             if (domainFactorX != 1. || domainFactorY != 1. || domainFactorZ != 1. || contentFactor) {
               if constexpr (is_func_1d<ptr_type>()) {
                 ptr = ScaleFunc(ptr, domainFactorX, contentFactor.value_or(1.));
@@ -2670,9 +2587,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         if (auto titleSize = LayoutValue(pad, padDefaults, "title_size")) zAxis->SetTitleSize(*titleSize);
         if (auto titleOffset = LayoutValue(pad, padDefaults, "title_offset_Z")) zAxis->SetTitleOffset(*titleOffset);
         bool ownTitleOffset = zAxis->GetTitleOffset() != 0.f;  // a fixed distance from the layout
-        for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(pad)}) {
-          if (!curPad.GetAxes().count('C')) continue;
-          const auto& content = curPad['C'];
+        for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
+          const auto& content = *contentSettings;
           if (content.GetTitleFont()) zAxis->SetTitleFont(*content.GetTitleFont());
           if (content.GetTitleSize()) zAxis->SetTitleSize(*content.GetTitleSize());
           if (content.GetTitleColor()) zAxis->SetTitleColor(content.GetTitleColor()->ToIndex());
@@ -2722,10 +2638,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     // (the scale of a 3d histogram shows its contents: it is set on the C axis; the defaults of a layout are kept apart from the axes)
     const bool th3Frame = axisHist_ptr && axisHist_ptr->GetDimension() == 3;
     const char scaleAxis = th3Frame ? 'C' : 'Z';
-    for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(pad)}) {
-      if (curPad.GetAxes().find(scaleAxis) == curPad.GetAxes().end()) continue;
-      if (curPad[scaleAxis].GetColorScaleOffset()) scaleOffset = curPad[scaleAxis].GetColorScaleOffset();
-      if (curPad[scaleAxis].GetColorScaleWidth()) scaleWidth = curPad[scaleAxis].GetColorScaleWidth();
+    for (const auto* axis : AxisSettings(pad, padDefaults, scaleAxis)) {
+      if (axis->GetColorScaleOffset()) scaleOffset = axis->GetColorScaleOffset();
+      if (axis->GetColorScaleWidth()) scaleWidth = axis->GetColorScaleWidth();
     }
     if (!scaleOffset) scaleOffset = LayoutValue(pad, padDefaults, "color_scale_offset");
     if (!scaleWidth) scaleWidth = LayoutValue(pad, padDefaults, "color_scale_width");
@@ -2755,8 +2670,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       auto value = [logRadius](double_t u) { return (logRadius) ? std::pow(10., u) : u; };
       // half of ROOT's divisions of an axis spanning the frame, unless the user set them: the radius runs over half of it
       optional<int16_t> divisions;
-      for (const Plot::Pad& curPad : {std::cref(padDefaults), std::cref(pad)}) {
-        if (curPad.GetAxes().count('Y') && curPad.GetAxes().at('Y').GetNumDivisions()) divisions = curPad.GetAxes().at('Y').GetNumDivisions();
+      for (const auto* axis : AxisSettings(pad, padDefaults, 'Y')) {
+        if (axis->GetNumDivisions()) divisions = axis->GetNumDivisions();
       }
       auto* radial = new TGaxis(0.5 * (pad_ptr->GetUxmin() + pad_ptr->GetUxmax()), pad_ptr->GetUymin(), pad_ptr->GetUxmax(), pad_ptr->GetUymin(),
                                 value(pad_ptr->GetUymin()), value(pad_ptr->GetUymax()), divisions.value_or(505), (logRadius) ? "G" : "");
@@ -2810,21 +2725,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       for (const auto& box : pad.GetLegendBoxes()) {
         ++legendIndex;
         if (box->IsAutoPlacement() == fixedPositions || box->HasForeignRows()) continue;  // a legend with rows of other pads comes once all are drawn
-        string legendName = "LegendBox_" + std::to_string(legendIndex);
-        box->MergeLegendEntries(static_cast<uint16_t>(pad.GetData().size()));  // put the rows added by the user between those of the data
-        // apply default text properties of pad to the box
-        if (!box->GetTextFont() && textFont) box->SetTextFont(*textFont);
-        if (!box->GetTextSize() && textSize) box->SetTextSize(*textSize);
-        if (!box->GetTextColor() && textColor) box->SetTextColor(*textColor);
-        if (!box->GetTextAlpha() && textAlpha) box->SetTextAlpha(*textAlpha);
-        TPave* legend = GenerateBox(box, pad_ptr);
-        if (legend) {
-          legend->SetName(legendName.data());
-          legend->SetUniqueID((box->IsUserCoordinates()) ? 1u : 0u);  // a double-click in show mode reports the position as given
-          legend->SetBit(kCanDelete);                                 // owned by the pad
-          legend->Draw("SAME");
-          legend->ConvertNDCtoPad();  // ROOT sets the NDC coordinates of a box only when it is painted: the placement of the next boxes needs them
-        } else {
+        box->MergeLegendEntries(static_cast<uint16_t>(pad.GetData().size()));             // put the rows added by the user between those of the data
+        if (!DrawBox(box, pad, padDefaults, pad_ptr, "LegendBox_" + std::to_string(legendIndex))) {
           logger::warning("Legend {} was not added since it is empty.", legendIndex);
         }
       }
@@ -2832,20 +2734,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       for (const auto& box : pad.GetTextBoxes()) {
         ++textIndex;
         if (box->IsAutoPlacement() == fixedPositions || box->RefersToOtherPads()) continue;  // a text naming data of other pads comes once all are drawn
-        string textName = "TextBox_" + std::to_string(textIndex);
-        // apply default text properties of pad to the box
-        if (!box->GetTextFont() && textFont) box->SetTextFont(*textFont);
-        if (!box->GetTextSize() && textSize) box->SetTextSize(*textSize);
-        if (!box->GetTextColor() && textColor) box->SetTextColor(*textColor);
-        if (!box->GetTextAlpha() && textAlpha) box->SetTextAlpha(*textAlpha);
-        TPave* text = GenerateBox(box, pad_ptr);
-        if (text) {
-          text->SetName(textName.data());
-          text->SetUniqueID((box->IsUserCoordinates()) ? 1u : 0u);
-          text->SetBit(kCanDelete);  // owned by the pad
-          text->Draw("SAME");
-          text->ConvertNDCtoPad();
-        } else {
+        if (!DrawBox(box, pad, padDefaults, pad_ptr, "TextBox_" + std::to_string(textIndex))) {
           logger::warning("Text {} was not added since it is empty.", textIndex);
         }
       }
@@ -2931,9 +2820,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     const bool hbarFrame = axisHist_ptr && IsHBarFrame(pad_ptr, axisHist_ptr);
     for (auto axisLabel : {'X', 'Y'}) {
       bool hide{};
-      for (const Plot::Pad& curPad : {std::cref(padDefaults), std::cref(plot.GetPads()[padID])}) {
-        auto axis = curPad.GetAxes().find(axisLabel);
-        if (axis != curPad.GetAxes().end() && axis->second.GetHideClippedLabels()) hide = *axis->second.GetHideClippedLabels();
+      for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
+        if (axis->GetHideClippedLabels()) hide = *axis->GetHideClippedLabels();
       }
       if (hide && axisHist_ptr && !polarFrame && !polargram) HideClippedLabels(pad_ptr, ((axisLabel == 'X') != hbarFrame) ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis(), axisLabel);
     }
@@ -2954,20 +2842,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   for (auto& [padID, pad] : plot.GetPads()) {
     if (padID == 0) continue;
     auto* pad_ptr = dynamic_cast<TPad*>(canvas_ptr->GetPrimitive(("Pad_" + std::to_string(padID)).data()));
-    auto applyTextDefaults = [&, &pad = pad](auto& box) {  // a structured binding can be captured only by an init-capture in C++17
-      if (!box->GetTextFont()) {
-        if (auto font = get_first(pad.GetDefaultTextFont(), plot[0].GetDefaultTextFont())) box->SetTextFont(*font);
-      }
-      if (!box->GetTextSize()) {
-        if (auto size = get_first(pad.GetDefaultTextSize(), plot[0].GetDefaultTextSize())) box->SetTextSize(*size);
-      }
-      if (!box->GetTextColor()) {
-        if (auto color = get_first(pad.GetDefaultTextColor(), plot[0].GetDefaultTextColor())) box->SetTextColor(*color);
-      }
-      if (!box->GetTextAlpha()) {
-        if (auto alpha = get_first(pad.GetDefaultTextAlpha(), plot[0].GetDefaultTextAlpha())) box->SetTextAlpha(*alpha);
-      }
-    };
     uint8_t legendIndex{};
     for (const auto& box : pad.GetLegendBoxes()) {
       ++legendIndex;
@@ -2995,15 +2869,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         *row = merged;
         ++row;
       }
-      applyTextDefaults(box);
       pad_ptr->cd();
-      if (TPave* legend = GenerateBox(box, pad_ptr)) {
-        legend->SetName(("LegendBox_" + std::to_string(legendIndex)).data());
-        legend->SetUniqueID((box->IsUserCoordinates()) ? 1u : 0u);
-        legend->SetBit(kCanDelete);
-        legend->Draw("SAME");
-        legend->ConvertNDCtoPad();
-      } else {
+      if (!DrawBox(box, pad, padDefaults, pad_ptr, "LegendBox_" + std::to_string(legendIndex))) {
         logger::warning("Legend {} was not added since it is empty.", legendIndex);
       }
     }
@@ -3011,15 +2878,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     for (const auto& box : pad.GetTextBoxes()) {
       ++textIndex;
       if (!box->RefersToOtherPads() || !pad_ptr) continue;
-      applyTextDefaults(box);
       pad_ptr->cd();
-      if (TPave* text = GenerateBox(box, pad_ptr)) {
-        text->SetName(("TextBox_" + std::to_string(textIndex)).data());
-        text->SetUniqueID((box->IsUserCoordinates()) ? 1u : 0u);
-        text->SetBit(kCanDelete);
-        text->Draw("SAME");
-        text->ConvertNDCtoPad();
-      } else {
+      if (!DrawBox(box, pad, padDefaults, pad_ptr, "TextBox_" + std::to_string(textIndex))) {
         logger::warning("Text {} was not added since it is empty.", textIndex);
       }
     }
@@ -3144,13 +3004,11 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
     if (mCommonRanges.count({padID, axisLabel})) continue;  // the common range of a shared axis includes the room of its pads
     room_t room{axisLabel, {}, {}};
     optional<double_t> userMin, userMax;
-    for (const Plot::Pad& curPad : {std::cref(padDefaults), std::cref(padSettings)}) {  // settings of the pad override those of pad 0
-      auto axis = curPad.GetAxes().find(axisLabel);
-      if (axis == curPad.GetAxes().end()) continue;
-      if (axis->second.GetRoomBelowMin()) room.below = axis->second.GetRoomBelowMin();
-      if (axis->second.GetRoomAboveMax()) room.above = axis->second.GetRoomAboveMax();
-      if (axis->second.GetMinRange()) userMin = axis->second.GetMinRange();
-      if (axis->second.GetMaxRange()) userMax = axis->second.GetMaxRange();
+    for (const auto* axis : AxisSettings(padSettings, padDefaults, axisLabel)) {
+      if (axis->GetRoomBelowMin()) room.below = axis->GetRoomBelowMin();
+      if (axis->GetRoomAboveMax()) room.above = axis->GetRoomAboveMax();
+      if (axis->GetMinRange()) userMin = axis->GetMinRange();
+      if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
     }
     if (!room.below && !room.above) continue;
     if (axisLabel == 'Z' && !is2d) {
@@ -4078,6 +3936,40 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
       }
     }
   }
+}
+
+//**************************************************************************************************
+/**
+ * Draws a legend or text box into the pad, with the text defaults of the pad where the box sets none; returns false for an empty box.
+ */
+//**************************************************************************************************
+bool PlotPainter::DrawBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> boxVariant, const Plot::Pad& pad,
+                          const Plot::Pad& padDefaults, TPad* pad_ptr, const string& name)
+{
+  auto generate = [&](auto& box) -> TPave* {
+    if (!box->GetTextFont()) {
+      if (auto font = get_first(pad.GetDefaultTextFont(), padDefaults.GetDefaultTextFont())) box->SetTextFont(*font);
+    }
+    if (!box->GetTextSize()) {
+      if (auto size = get_first(pad.GetDefaultTextSize(), padDefaults.GetDefaultTextSize())) box->SetTextSize(*size);
+    }
+    if (!box->GetTextColor()) {
+      if (auto color = get_first(pad.GetDefaultTextColor(), padDefaults.GetDefaultTextColor())) box->SetTextColor(*color);
+    }
+    if (!box->GetTextAlpha()) {
+      if (auto alpha = get_first(pad.GetDefaultTextAlpha(), padDefaults.GetDefaultTextAlpha())) box->SetTextAlpha(*alpha);
+    }
+    TPave* generated = GenerateBox(box, pad_ptr);
+    if (generated) generated->SetUniqueID((box->IsUserCoordinates()) ? 1u : 0u);  // a double-click in show mode reports the position as given
+    return generated;
+  };
+  TPave* pave = std::visit(generate, boxVariant);
+  if (!pave) return false;
+  pave->SetName(name.data());
+  pave->SetBit(kCanDelete);  // owned by the pad
+  pave->Draw("SAME");
+  pave->ConvertNDCtoPad();  // ROOT sets the NDC coordinates of a box only when it is painted: the placement of the next boxes needs them
+  return true;
 }
 
 //**************************************************************************************************
@@ -5895,6 +5787,22 @@ optional<float_t> PlotPainter::LayoutValue(const Plot::Pad& pad, const Plot::Pad
 
 //**************************************************************************************************
 /**
+ * The settings of an axis in pad 0 and in the pad, in this order (those of the pad override): only the ones that exist.
+ */
+//**************************************************************************************************
+vector<const Plot::Pad::Axis*> PlotPainter::AxisSettings(const Plot::Pad& pad, const Plot::Pad& padDefaults, char axisLabel)
+{
+  vector<const Plot::Pad::Axis*> settings;
+  for (const Plot::Pad* curPad : {&padDefaults, &pad}) {
+    if (auto axis = curPad->GetAxes().find(axisLabel); axis != curPad->GetAxes().end()) {
+      settings.push_back(&axis->second);
+    }
+  }
+  return settings;
+}
+
+//**************************************************************************************************
+/**
  * Places a z title with offset 0 next to the widest label of its axis, one title height beyond it: the vertical z axis of a 3D view
  * (labels left of it) and a colour scale (labels right of it). TGaxis places such titles itself only on the side of an ordinary y axis
  * (TGaxis::PaintAxis adds the label width without the side, so the title of a colour scale lands on its labels), so the offset is set
@@ -5994,15 +5902,13 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
   // the sizes of the scale are those of the cell (relative to its pad), unless the panel has pixel fonts
   TAxis* zAxis = scale->GetZaxis();
   optional<float_t> titleSize, labelSize, titleOffset, labelOffset, scaleOffset, scaleWidth;
-  for (const Plot::Pad& curPad : {std::cref(defaults), std::cref(cell)}) {
-    auto axis = curPad.GetAxes().find('Z');
-    if (axis == curPad.GetAxes().end()) continue;
-    if (axis->second.GetTitleSize()) titleSize = axis->second.GetTitleSize();
-    if (axis->second.GetLabelSize()) labelSize = axis->second.GetLabelSize();
-    if (axis->second.GetTitleOffset()) titleOffset = axis->second.GetTitleOffset();
-    if (axis->second.GetLabelOffset()) labelOffset = axis->second.GetLabelOffset();
-    if (axis->second.GetColorScaleOffset()) scaleOffset = axis->second.GetColorScaleOffset();
-    if (axis->second.GetColorScaleWidth()) scaleWidth = axis->second.GetColorScaleWidth();
+  for (const auto* axis : AxisSettings(cell, defaults, 'Z')) {
+    if (axis->GetTitleSize()) titleSize = axis->GetTitleSize();
+    if (axis->GetLabelSize()) labelSize = axis->GetLabelSize();
+    if (axis->GetTitleOffset()) titleOffset = axis->GetTitleOffset();
+    if (axis->GetLabelOffset()) labelOffset = axis->GetLabelOffset();
+    if (axis->GetColorScaleOffset()) scaleOffset = axis->GetColorScaleOffset();
+    if (axis->GetColorScaleWidth()) scaleWidth = axis->GetColorScaleWidth();
   }
   if (!labelSize) labelSize = get_first(cell.GetDefaultTextSize(), defaults.GetDefaultTextSize());
   if (zAxis->GetTitleFont() % 10 != 3) {

@@ -320,6 +320,7 @@ class PlotPainter
   using label_range_t = std::tuple<double_t, double_t, bool>;  // minimum, maximum, log
   bool PlaceZTitle(TPad* pad, TAxis* zAxis, const std::vector<label_range_t>& ranges);
   static std::optional<float_t> LayoutValue(const Plot::Pad& pad, const Plot::Pad& padDefaults, const std::string& key);
+  static std::vector<const Plot::Pad::Axis*> AxisSettings(const Plot::Pad& pad, const Plot::Pad& padDefaults, char axisLabel);
   void DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID);
   static bool IsHBarFrame(TPad* pad, const TH1* frame);
   static bool IsViewFrame(TPad* pad, const TH1* frame);
@@ -329,6 +330,8 @@ class PlotPainter
   static std::string LegendSymbolElements(TObject* obj, std::string option);
   static bool HasErrors(const TObject* obj);
   void DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const std::string& name);
+  bool DrawBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, const Plot::Pad& pad, const Plot::Pad& padDefaults, TPad* pad_ptr,
+               const std::string& name);
   TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, TPad* pad);
   void DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot::Pad& padDefaults, Plot::Pad::Shape::layer_t layer, TObject* insertAfter, uint8_t padID);
   bool FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY);
