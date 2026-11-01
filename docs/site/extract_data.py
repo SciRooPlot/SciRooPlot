@@ -24,7 +24,7 @@ def info(obj):
         axes = [obj.GetXaxis(), obj.GetYaxis(), obj.GetZaxis()][:dims]
         bins = " × ".join(str(a.GetNbins()) for a in axes)
         labelled = " (labelled bins)" if obj.GetXaxis().GetLabels() else ""
-        kind = "profile" if obj.InheritsFrom("TProfile") or obj.InheritsFrom("TProfile2D") else f"{dims}D histogram"
+        kind = "profile" if obj.InheritsFrom("TProfile") or obj.InheritsFrom("TProfile2D") or obj.InheritsFrom("TProfile3D") else f"{dims}D histogram"
         return f"{kind}, {bins} bins{labelled}, {obj.GetEntries():.0f} entries", "colz" if dims == 2 else ("" if dims == 1 else "box")
     if obj.InheritsFrom("TGraph2D"):
         return f"2D graph, {obj.GetN()} points", "colz"

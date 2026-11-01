@@ -1325,7 +1325,7 @@
         main-color,
         [
           - Histograms (`TH1`, `TH2`, `TH3`, `THn`, `THnSparse`)
-          - Profiles (`TProfile`, `TProfile2D`)
+          - Profiles (`TProfile`, `TProfile2D`, `TProfile3D`)
           - Graphs (`TGraph`, `TGraph2D`)
           - Functions (`TF1`, `TF2`, `TF3`)
           - Efficiencies (`TEfficiency`)

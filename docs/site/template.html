@@ -639,7 +639,7 @@ figure.plot figcaption { color: #5b6b80 }
       <div class="box"><h3>Organize</h3><p>Manage projects and settings with <code>srp</code>.</p></div>
     </div>
     <div class="reads"><h3>Reads what your analysis writes</h3>
-      <div class="chips-static"><span>TH1</span><span>TH2</span><span>TH3</span><span>TProfile</span><span>TProfile2D</span><span>THn</span><span>THnSparse</span><span>TH2Poly</span><span>TGraph</span><span>TGraphErrors</span><span>TGraphAsymmErrors</span><span>TGraphBentErrors</span><span>TGraph2D</span><span>TEfficiency</span><span>TF1</span><span>TF2</span><span>TF3</span><span>TTree</span><span>RNTuple</span><span>CSV and text tables</span></div>
+      <div class="chips-static"><span>TH1</span><span>TH2</span><span>TH3</span><span>TProfile</span><span>TProfile2D</span><span>TProfile3D</span><span>THn</span><span>THnSparse</span><span>TH2Poly</span><span>TGraph</span><span>TGraphErrors</span><span>TGraphAsymmErrors</span><span>TGraphBentErrors</span><span>TGraph2D</span><span>TEfficiency</span><span>TF1</span><span>TF2</span><span>TF3</span><span>TTree</span><span>RNTuple</span><span>CSV and text tables</span></div>
       <p class="small muted">Wherever they are stored: directories, <code>TList</code>s and folders at any depth, many files at once, or objects your program makes. <a href="#ref-sources">Data sources and finding data</a></p></div>
     <p class="key"><b>Key idea</b>You describe <i>what</i> a figure shows, once. SciRooPlot finds the data by name, in one file or in hundreds, draws it with ROOT, and keeps every plot of your project in one place.</p>
   </div>
@@ -1719,7 +1719,7 @@ const REF = [
   { id: "sources", g: "data", t: "Data sources and finding data", body: `<p>A data source is one data set made of its inputs. Within it, the first input containing a requested name wins; trees and RNTuples found in several inputs are chained. Train and test samples therefore belong in separate sources.</p>
 <div class="code"><pre data-snip="sources"></pre></div>
 <h3>What it reads</h3>
-<div class="tablewrap"><table><tbody><tr><td>Histograms</td><td><code>TH1</code>, <code>TH2</code>, <code>TH3</code>, <code>TProfile</code>, <code>TProfile2D</code>, <code>TH2Poly</code>; <code>THn</code> and <code>THnSparse</code> through projections</td></tr>
+<div class="tablewrap"><table><tbody><tr><td>Histograms</td><td><code>TH1</code>, <code>TH2</code>, <code>TH3</code>, <code>TProfile</code>, <code>TProfile2D</code>, <code>TProfile3D</code>, <code>TH2Poly</code>; <code>THn</code> and <code>THnSparse</code> through projections</td></tr>
 <tr><td>Graphs</td><td><code>TGraph</code>, <code>TGraphErrors</code>, <code>TGraphAsymmErrors</code>, <code>TGraphBentErrors</code>, <code>TGraph2D</code> (with errors)</td></tr>
 <tr><td>Functions</td><td><code>TF1</code>, <code>TF2</code>, <code>TF3</code>, or a formula written in the definition</td></tr>
 <tr><td>Efficiencies</td><td><code>TEfficiency</code></td></tr>

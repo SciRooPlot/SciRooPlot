@@ -5073,6 +5073,15 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       }
       setRange(GetAxis(histPtr, rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple));
     }
+    if (auto* profile = dynamic_cast<TProfile3D*>(histPtr)) {
+      // a projection of a profile is the profile of the merged bins (TH3::Project3D would add up their means); Profile alike
+      const string target = GetAxisStr(projInfo.dims[0]);
+      if (projInfo.dims.size() == 2) return profile->Project3DProfile((GetAxisStr(projInfo.dims[1]) + target).data());
+      const string other = (projInfo.dims[0] == 0) ? "y" : "x";
+      std::unique_ptr<TProfile2D> merged(profile->Project3DProfile((other + target).data()));  // target horizontal
+      merged->SetDirectory(nullptr);
+      return merged->ProfileX((string(profile->GetName()) + "_p" + target).data());
+    }
     if (projInfo.dims.size() == 2) {
       // get string if it is "xy" or "yx" or "zx"...
       if (isProfile) {
@@ -5096,6 +5105,11 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
         return nullopt;
       }
       setRange(GetAxis(histPtr, rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple));
+    }
+    if (auto* profile = dynamic_cast<TProfile2D*>(histPtr)) {
+      // a projection of a profile is the profile of the merged bins (TH2::ProjectionX would add up their means); Profile alike
+      if (projInfo.dims[0] == 0) return profile->ProfileX("_px");
+      if (projInfo.dims[0] == 1) return profile->ProfileY("_py");
     }
     if (projInfo.dims[0] == 0) {
       if (isProfile) {
