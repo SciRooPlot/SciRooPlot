@@ -61,23 +61,12 @@ namespace SciRooPlot
 {
 using util::expand_path;
 using util::get_from_tree;
+using util::join_strings;
 using util::number_to_string;
 using util::put_in_tree;
 using util::read_from_tree;
 using util::set_if;
 using util::str_contains;
-
-namespace
-{
-string join_strings(const vector<string>& items, const string& separator)
-{
-  string joined;
-  for (size_t i = 0; i < items.size(); ++i) {
-    joined += ((i) ? separator : "") + items[i];
-  }
-  return joined;
-}
-}  // namespace
 
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------

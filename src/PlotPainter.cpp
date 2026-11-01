@@ -1034,7 +1034,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           // the frame of a 2d histogram, and of a coloured 2d graph or function (drawn from its histogram), also draws the colour axis:
           // also with options that ask for the colour scale without COL (CONT1Z, CONTZ), which with AXIS would paint none
-          const bool isColored2d = (is_graph_2d<data_type>() || is_func_2d<data_type>()) && str_contains(drawOption, std::vector<std::string>{"COL", "Z"});
+          const TString option2d(drawOption);  // raw user options may be lower case
+          const bool isColored2d = (is_graph_2d<data_type>() || is_func_2d<data_type>()) &&
+                                   (option2d.Contains("COL", TString::kIgnoreCase) || option2d.Contains("Z", TString::kIgnoreCase));
           if (pad_ptr->GetView() || is_hist_2d<data_type>() || isColored2d) {
             drawOptAxis = "";
           }

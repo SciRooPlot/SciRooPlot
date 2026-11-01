@@ -1194,6 +1194,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& Scatter(const std::string& x, const std::string& y) override;
   Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErr, const std::string& yErr) override;
   Ratio& Scatter(const std::string& x, const std::string& y, const std::string& xErrLow, const std::string& xErrHigh, const std::string& yErrLow, const std::string& yErrHigh) override;
+  // no Scatter(x, y, z): 2d graphs cannot be divided
 
   Ratio& Profile(const std::vector<data_dim_t>& dataDims, const std::string& profile, std::optional<std::string> weight = {}) override;
   Ratio& Profile1D(data_dim_t x, const std::string& profile, std::optional<std::string> weight = {}) override;

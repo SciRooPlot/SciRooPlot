@@ -40,6 +40,7 @@
 namespace SciRooPlot::util
 {
 std::vector<std::string> split_string(const std::string& argString, char delimiter, bool onlyFirst = false);
+std::string join_strings(const std::vector<std::string>& items, const std::string& separator);
 
 inline bool str_contains(const std::string& str, const std::string& substr)
 {

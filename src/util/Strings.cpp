@@ -46,4 +46,13 @@ vector<string> split_string(const string& argString, char delimiter, bool onlyFi
 
   return arguments;
 }
+
+string join_strings(const vector<string>& items, const string& separator)
+{
+  string joined;
+  for (size_t i = 0; i < items.size(); ++i) {
+    joined += ((i) ? separator : "") + items[i];
+  }
+  return joined;
+}
 }  // end namespace SciRooPlot::util

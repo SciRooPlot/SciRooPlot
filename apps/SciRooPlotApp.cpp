@@ -245,7 +245,7 @@ int main(int argc, char* argv[])
     } else if (matchMode == "contains") {
       Config::GetMutable().SetMatchContains(true);
     } else {
-      logger::error("Invalid match mode  (exact | contains).");
+      logger::error("Invalid match mode (exact | contains).");
       return 1;
     }
   } else if (command == "matchcase") {
@@ -255,7 +255,7 @@ int main(int argc, char* argv[])
     } else if (matchCase == "insensitive") {
       Config::GetMutable().SetMatchCaseInsensitive(true);
     } else {
-      logger::error("Invalid case sensistivity option for matching (sensitive | insensitive).");
+      logger::error("Invalid case sensitivity option for matching (sensitive | insensitive).");
       return 1;
     }
   } else if (command == "screenscale" || command == "bitmapscale") {
@@ -287,7 +287,7 @@ int main(int argc, char* argv[])
     std::cout << "Installation\n";
     std::cout << "  Prefix: " << getenv("SCIROOPLOT_ROOT") << "\n";
     std::cout << "  Binary: " << getenv("SCIROOPLOT_BIN") << "\n";
-    std::cout << "  Library:" << getenv("SCIROOPLOT_LIB") << "\n";
+    std::cout << "  Library: " << getenv("SCIROOPLOT_LIB") << "\n";
     auto sourceDir = getenv("SCIROOPLOT_SOURCE_DIR");
     std::filesystem::path path(sourceDir);
     if (std::filesystem::exists(path)) {
