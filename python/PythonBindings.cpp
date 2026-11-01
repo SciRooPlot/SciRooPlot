@@ -58,6 +58,7 @@ using namespace SciRooPlot;
 
 using py::arg;
 using py::overload_cast;
+using std::array;
 using std::nullopt;
 using std::optional;
 using std::pair;
@@ -266,7 +267,7 @@ void exportPlotManager(py::module_& m)
     .def(py::init<const string&>(), arg("projectName") = "")
     // one entry point for file names and ROOT objects: separate overloads let pybind11 try to convert a
     // ROOT object into a list of strings first, which fails with a TypeError for objects like TGraph
-    .def("AddDataSource", [](PlotManager& self, const std::string& dataSource, py::object input, bool replace) {
+    .def("AddDataSource", [](PlotManager& self, const string& dataSource, py::object input, bool replace) {
       // py::handle, not py::object/py::module_: a static py::object gets decref'd at program exit, possibly after Python has already shut down, which crashes. release() leaks it on purpose instead -- fine since it's a permanent singleton.
       static py::handle ROOT = py::module_::import("ROOT").release();
       static py::handle TObjectClass = py::object(ROOT.attr("TObject")).release();
@@ -275,15 +276,15 @@ void exportPlotManager(py::module_& m)
         return reinterpret_cast<TObject*>(addressof(obj).cast<std::uintptr_t>());
       };
       if (py::isinstance<py::str>(input)) {
-        self.AddDataSource(dataSource, input.cast<std::string>(), replace);
+        self.AddDataSource(dataSource, input.cast<string>(), replace);
       } else if (py::isinstance(input, TObjectClass)) {
         self.AddDataSource(dataSource, toTObject(input), replace);
       } else if (py::isinstance<py::list>(input) || py::isinstance<py::tuple>(input)) {
-        std::vector<std::string> files;
-        std::vector<TObject*> objects;
+        vector<string> files;
+        vector<TObject*> objects;
         for (auto item : input) {
           if (py::isinstance<py::str>(item)) {
-            files.push_back(item.cast<std::string>());
+            files.push_back(item.cast<string>());
           } else if (py::isinstance(item, TObjectClass)) {
             objects.push_back(toTObject(item));
           } else {
@@ -300,7 +301,7 @@ void exportPlotManager(py::module_& m)
         }
       } else {
         throw py::type_error("Inputs must be a file name, a ROOT TObject, or a list of either.");
-      } }, py::arg("dataSource"), py::arg("inputs"), py::arg("replace") = false)
+      } }, arg("dataSource"), arg("inputs"), arg("replace") = false)
     .def("SaveDataSources", &PlotManager::SaveDataSources, arg("file") = py::none())
     .def("LoadDataSources", &PlotManager::LoadDataSources, arg("file") = py::none(), arg("replace") = false)
     .def("AddPlot", &PlotManager::AddPlot, arg("plot"))
@@ -330,12 +331,12 @@ void exportPanelLayout(py::module_& m)
     .def("SpacingAbove", &Panel::SpacingAbove, arg("pixel"), ref_int)
     .def("SpacingLeft", &Panel::SpacingLeft, arg("pixel"), ref_int);
   m.def("Gap", &Gap, "Separates independent panels: both sides keep their axis labels and titles.");
-  m.def("Empty", py::overload_cast<>(&Empty), "A cell of the grid without axis frame, its remaining space becomes a pad for texts.");
-  m.def("Empty", py::overload_cast<double_t, double_t>(&Empty), arg("width"), arg("height"), "An empty cell with a size of its own, e.g. a strip for a common legend.");
-  m.def("Hole", py::overload_cast<>(&Hole), "An empty cell without pad: it takes no pad number and stays blank.");
-  m.def("Hole", py::overload_cast<double_t, double_t>(&Hole), arg("width"), arg("height"), "An empty cell without pad with a size of its own.");
-  m.def("ColorScale", py::overload_cast<>(&ColorScale), "A cell holding the colour scale of the z group of the panel to its left.");
-  m.def("ColorScale", py::overload_cast<uint8_t>(&ColorScale), arg("padID"), "A cell holding the colour scale of the z group of the given pad.");
+  m.def("Empty", overload_cast<>(&Empty), "A cell of the grid without axis frame, its remaining space becomes a pad for texts.");
+  m.def("Empty", overload_cast<double_t, double_t>(&Empty), arg("width"), arg("height"), "An empty cell with a size of its own, e.g. a strip for a common legend.");
+  m.def("Hole", overload_cast<>(&Hole), "An empty cell without pad: it takes no pad number and stays blank.");
+  m.def("Hole", overload_cast<double_t, double_t>(&Hole), arg("width"), arg("height"), "An empty cell without pad with a size of its own.");
+  m.def("ColorScale", overload_cast<>(&ColorScale), "A cell holding the colour scale of the z group of the panel to its left.");
+  m.def("ColorScale", overload_cast<uint8_t>(&ColorScale), arg("padID"), "A cell holding the colour scale of the z group of the given pad.");
   py::class_<PanelLayout>(m, "PanelLayout", "Arrangement of panels (rows from top to bottom) and the lengths of the standard plot in pixels.")
     .def(py::init<vector<vector<Panel>>>(), py::arg_v("rows", vector<vector<Panel>>{{Panel()}}, "[[Panel()]]"))
     .def(py::init<const PanelLayout&, vector<vector<Panel>>>(), arg("sizes"), arg("rows"))
@@ -420,8 +421,8 @@ void exportPlot(py::module_& m)
   plot
     .def(py::init<const string&, const string&, const optional<string>&>(), arg("name"), arg("group") = "", arg("basePlot") = nullopt)
     .def(py::init<const string&, const PanelLayout&>(), arg("name"), arg("layout"))
-    .def(py::init<const Plot&, const std::string&, const optional<string>&>(), py::arg("other"), py::arg("name"), py::arg("group") = nullopt)
-    .def("Print", py::overload_cast<>(&Plot::Print, py::const_))
+    .def(py::init<const Plot&, const string&, const optional<string>&>(), arg("other"), arg("name"), arg("group") = nullopt)
+    .def("Print", overload_cast<>(&Plot::Print, py::const_))
     .def("__getitem__", [](Plot& self, uint8_t padID) -> Pad& { return self[padID]; }, ref_int)
     .def("__iadd__", [](Plot& self, const Plot& other) -> Plot& { self += other; return self; }, py::is_operator())
     .def("__add__", [](const Plot& a, const Plot& b) -> Plot { return a + b; }, py::is_operator())
@@ -538,6 +539,85 @@ void exportPad(py::module_& m)
     .def("GetData", overload_cast<uint16_t>(&Pad::GetData), arg("dataID"), ref_int);
 }
 
+// the setters of Data, which Ratio forwards: through a lambda per setter, so that each class returns itself to Python (and a setter
+// Ratio does not forward, which would return the Data part, does not compile); the modifiers of a Ratio act on numerator, denominator or result
+template <class Self, class... Options>
+void defDataSetters(py::class_<Self, Options...>& cls)
+{
+  using data_dims_t = vector<Data::data_dim_t>;
+  using ranges_t = vector<tuple<uint8_t, double_t, double_t>>;
+  cls
+    .def("SetDataSource", [](Self& self, const string& dataSource) -> Self& { return self.SetDataSource(dataSource); }, arg("dataSource"), ref_int)
+    .def("SetLayout", [](Self& self, const Data& dataLayout) -> Self& { return self.SetLayout(dataLayout); }, arg("dataLayout"), ref_int)
+    .def("ApplyLayout", [](Self& self, const Data& dataLayout) -> Self& { return self.ApplyLayout(dataLayout); }, arg("dataLayout"), ref_int)
+    .def("SetRangeX", [](Self& self, double_t min, double_t max) -> Self& { return self.SetRangeX(min, max); }, arg("min"), arg("max"), ref_int)
+    .def("SetRangeX", [](Self& self) -> Self& { return self.SetRangeX(); }, ref_int)
+    .def("SetMinRangeX", [](Self& self, double_t min) -> Self& { return self.SetMinRangeX(min); }, arg("min"), ref_int)
+    .def("SetMaxRangeX", [](Self& self, double_t max) -> Self& { return self.SetMaxRangeX(max); }, arg("max"), ref_int)
+    .def("SetRangeY", [](Self& self, double_t min, double_t max) -> Self& { return self.SetRangeY(min, max); }, arg("min"), arg("max"), ref_int)
+    .def("SetRangeY", [](Self& self) -> Self& { return self.SetRangeY(); }, ref_int)
+    .def("SetMinRangeY", [](Self& self, double_t min) -> Self& { return self.SetMinRangeY(min); }, arg("min"), ref_int)
+    .def("SetMaxRangeY", [](Self& self, double_t max) -> Self& { return self.SetMaxRangeY(max); }, arg("max"), ref_int)
+    .def("SetShowOverflowBins", [](Self& self, bool showOverflowBins) -> Self& { return self.SetShowOverflowBins(showOverflowBins); }, arg("showOverflowBins") = true, ref_int)
+    .def("SetLegendLabel", [](Self& self, const string& legendLabel) -> Self& { return self.SetLegendLabel(legendLabel); }, arg("legendLabel"), ref_int)
+    .def("SetLegend", [](Self& self, uint8_t legendID) -> Self& { return self.SetLegend(legendID); }, arg("legendID"), ref_int)
+    .def("SetLegendEntry", [](Self& self, const LegendEntry& legendEntry) -> Self& { return self.SetLegendEntry(legendEntry); }, arg("legendEntry"), ref_int)
+    .def("SetDrawOption", [](Self& self, const string& drawOption) -> Self& { return self.SetDrawOption(drawOption); }, arg("drawOption"), ref_int)
+    .def("SetDrawOption", [](Self& self, draw_option_t optionAlias) -> Self& { return self.SetDrawOption(optionAlias); }, arg("optionAlias"), ref_int)
+    .def("SetDrawOption", [](Self& self) -> Self& { return self.SetDrawOption(); }, ref_int)
+    .def("SetTextFormat", [](Self& self, const string& textFormat) -> Self& { return self.SetTextFormat(textFormat); }, arg("textFormat"), ref_int)
+    .def("SetTextAngle", [](Self& self, float_t angle) -> Self& { return self.SetTextAngle(angle); }, arg("angle"), ref_int)
+    .def("SetShowStats", [](Self& self, const string& format, const optional<string>& title) -> Self& { return self.SetShowStats(format, title); }, arg("format") = "emr", arg("title") = nullopt, ref_int)
+    .def("SetStatsBox", [](Self& self, const StatsBox& statsBox) -> Self& { return self.SetStatsBox(statsBox); }, arg("statsBox"), ref_int)
+    .def("SetColor", [](Self& self, color_t color) -> Self& { return self.SetColor(color); }, arg("color"), ref_int)
+    .def("SetAlpha", [](Self& self, float_t alpha) -> Self& { return self.SetAlpha(alpha); }, arg("alpha"), ref_int);
+  defMarkerSetters(cls);
+  defLineSetters(cls);
+  defFillSetters(cls);
+  cls
+    .def("SetDefinesFrame", [](Self& self) -> Self& { return self.SetDefinesFrame(); }, ref_int)
+    .def("SetKeepInputStyle", [](Self& self, bool keep) -> Self& { return self.SetKeepInputStyle(keep); }, arg("keep") = true, ref_int)
+    .def("SetContours", [](Self& self, const vector<double>& contours) -> Self& { return self.SetContours(contours); }, arg("contours"), ref_int)
+    .def("SetContours", [](Self& self, int32_t nContours) -> Self& { return self.SetContours(nContours); }, arg("nContours"), ref_int)
+    .def("SetNpx", [](Self& self, int32_t nx, optional<int32_t> ny) -> Self& { return self.SetNpx(nx, ny); }, arg("nx"), arg("ny") = nullopt, ref_int)
+    .def("Normalize", [](Self& self, bool isDensity, optional<double_t> min, optional<double_t> max) -> Self& { return self.Normalize(isDensity, min, max); }, arg("isDensity") = false, arg("min") = nullopt, arg("max") = nullopt, ref_int)
+    .def("NormalizeToMaximum", [](Self& self, optional<double_t> min, optional<double_t> max) -> Self& { return self.NormalizeToMaximum(min, max); }, arg("min") = nullopt, arg("max") = nullopt, ref_int)
+    .def("Scale", [](Self& self, double_t scaleFactor) -> Self& { return self.Scale(scaleFactor); }, arg("scaleFactor"), ref_int)
+    .def("DivideBinWidth", [](Self& self, bool divideBinWidth) -> Self& { return self.DivideBinWidth(divideBinWidth); }, arg("divideBinWidth") = true, ref_int)
+    .def("Density", [](Self& self) -> Self& { return self.Density(); }, ref_int)
+    .def("RebinX", [](Self& self, uint16_t nGroup) -> Self& { return self.RebinX(nGroup); }, arg("nGroup"), ref_int)
+    .def("RebinY", [](Self& self, uint16_t nGroup) -> Self& { return self.RebinY(nGroup); }, arg("nGroup"), ref_int)
+    .def("RebinZ", [](Self& self, uint16_t nGroup) -> Self& { return self.RebinZ(nGroup); }, arg("nGroup"), ref_int)
+    .def("RebinXY", [](Self& self, uint16_t nGroupX, uint16_t nGroupY) -> Self& { return self.RebinXY(nGroupX, nGroupY); }, arg("nGroupX"), arg("nGroupY"), ref_int)
+    .def("RebinXYZ", [](Self& self, uint16_t nGroupX, uint16_t nGroupY, uint16_t nGroupZ) -> Self& { return self.RebinXYZ(nGroupX, nGroupY, nGroupZ); }, arg("nGroupX"), arg("nGroupY"), arg("nGroupZ"), ref_int)
+    .def("ScaleX", [](Self& self, double_t scaleFactor) -> Self& { return self.ScaleX(scaleFactor); }, arg("scaleFactor"), ref_int)
+    .def("ScaleY", [](Self& self, double_t scaleFactor) -> Self& { return self.ScaleY(scaleFactor); }, arg("scaleFactor"), ref_int)
+    .def("ScaleZ", [](Self& self, double_t scaleFactor) -> Self& { return self.ScaleZ(scaleFactor); }, arg("scaleFactor"), ref_int)
+    .def("Smooth", [](Self& self, uint16_t nIterSmooth) -> Self& { return self.Smooth(nIterSmooth); }, arg("nIterSmooth") = 1, ref_int)
+    .def("Cumulative", [](Self& self, bool forward) -> Self& { return self.Cumulative(forward); }, arg("forward") = true, ref_int)
+    .def("Project", overload_cast<const vector<uint8_t>&, const ranges_t&, optional<bool>>(&Self::Project), arg("dims"), arg("ranges") = ranges_t{}, arg("isUserCoord") = nullopt, ref_int)
+    .def("ProjectX", &Self::ProjectX, arg("startY") = 0, arg("endY") = -1, arg("isUserCoord") = nullopt, ref_int)
+    .def("ProjectY", &Self::ProjectY, arg("startX") = 0, arg("endX") = -1, arg("isUserCoord") = nullopt, ref_int)
+    .def("Profile", overload_cast<const vector<uint8_t>&, const ranges_t&, optional<bool>>(&Self::Profile), arg("dims"), arg("ranges") = ranges_t{}, arg("isUserCoord") = nullopt, ref_int)
+    .def("ProfileX", &Self::ProfileX, arg("startY") = 0, arg("endY") = -1, arg("isUserCoord") = nullopt, ref_int)
+    .def("ProfileY", &Self::ProfileY, arg("startX") = 0, arg("endX") = -1, arg("isUserCoord") = nullopt, ref_int)
+    .def("Project", overload_cast<const data_dims_t&, optional<string>>(&Self::Project), arg("dataDims"), arg("weight") = nullopt, ref_int)
+    .def("Project1D", &Self::Project1D, arg("x"), arg("weight") = nullopt, ref_int)
+    .def("Project2D", &Self::Project2D, arg("x"), arg("y"), arg("weight") = nullopt, ref_int)
+    .def("Profile", overload_cast<const data_dims_t&, const string&, optional<string>>(&Self::Profile), arg("dataDims"), arg("profile"), arg("weight") = nullopt, ref_int)
+    .def("Profile1D", &Self::Profile1D, arg("x"), arg("profile"), arg("weight") = nullopt, ref_int)
+    .def("Profile2D", &Self::Profile2D, arg("x"), arg("y"), arg("profile"), arg("weight") = nullopt, ref_int)
+    .def("Scatter", overload_cast<const string&, const string&>(&Self::Scatter), arg("x"), arg("y"), ref_int)
+    .def("Scatter", overload_cast<const string&, const string&, const string&, const string&>(&Self::Scatter), arg("x"), arg("y"), arg("xErr"), arg("yErr"), ref_int)
+    .def("Scatter", overload_cast<const string&, const string&, const string&, const string&, const string&, const string&>(&Self::Scatter), arg("x"), arg("y"), arg("xErrLow"), arg("xErrHigh"), arg("yErrLow"), arg("yErrHigh"), ref_int)
+    .def("Define", &Self::Define, arg("key"), arg("value"), ref_int)
+    .def("Filter", &Self::Filter, arg("filter"), ref_int)
+    .def("Join", [](Self& self, const string& tree, const vector<string>& keys, const string& alias) -> Self& { return self.Join(tree, keys, alias); }, arg("tree"), arg("keys") = vector<string>{}, arg("alias") = "", ref_int)
+    .def("Join", [](Self& self, const array<string, 2>& tree, const vector<string>& keys, const string& alias) -> Self& { return self.Join({tree[0], tree[1]}, keys, alias); }, arg("tree"), arg("keys") = vector<string>{}, arg("alias") = "", ref_int)
+    .def("Entries", overload_cast<uint32_t>(&Self::Entries), arg("nEntries"), ref_int)
+    .def("Entries", overload_cast<uint32_t, uint32_t>(&Self::Entries), arg("entryMin"), arg("entryMax"), ref_int);
+}
+
 void exportData(py::module_& m)
 {
   py::class_<Data> data(m, "Data");
@@ -555,77 +635,9 @@ void exportData(py::module_& m)
          arg("nameAndSource"))
     .def("__call__", [](const Data& self, const string& name, const optional<string>& dataSource) { return self(name, dataSource); }, arg("name"), arg("dataSource") = nullopt)
     .def("Print", &Data::Print)
-    .def("GetDataSource", &Data::GetDataSource)
-    .def("SetDataSource", &Data::SetDataSource, arg("dataSource"), ref_int)
-    .def("SetLayout", &Data::SetLayout, arg("dataLayout"), ref_int)
-    .def("ApplyLayout", &Data::ApplyLayout, arg("dataLayout"), ref_int)
-    .def("SetRangeX", overload_cast<double_t, double_t>(&Data::SetRangeX), arg("min"), arg("max"), ref_int)
-    .def("SetRangeX", overload_cast<>(&Data::SetRangeX), ref_int)
-    .def("SetMinRangeX", &Data::SetMinRangeX, arg("min"), ref_int)
-    .def("SetMaxRangeX", &Data::SetMaxRangeX, arg("max"), ref_int)
-    .def("SetRangeY", overload_cast<double_t, double_t>(&Data::SetRangeY), arg("min"), arg("max"), ref_int)
-    .def("SetRangeY", overload_cast<>(&Data::SetRangeY), ref_int)
-    .def("SetMinRangeY", &Data::SetMinRangeY, arg("min"), ref_int)
-    .def("SetMaxRangeY", &Data::SetMaxRangeY, arg("max"), ref_int)
-    .def("SetShowOverflowBins", &Data::SetShowOverflowBins, arg("showOverflowBins") = true, ref_int)
-    .def("SetLegendLabel", &Data::SetLegendLabel, arg("legendLabel"), ref_int)
-    .def("SetLegend", &Data::SetLegend, arg("legendID"), ref_int)
-    .def("SetLegendEntry", &Data::SetLegendEntry, arg("legendEntry"), ref_int)
-    .def("SetDrawOption", overload_cast<const string&>(&Data::SetDrawOption), arg("drawOption"), ref_int)
-    .def("SetDrawOption", overload_cast<draw_option_t>(&Data::SetDrawOption), arg("optionAlias"), ref_int)
-    .def("SetDrawOption", overload_cast<>(&Data::SetDrawOption), ref_int)
-    .def("SetTextFormat", &Data::SetTextFormat, arg("textFormat"), ref_int)
-    .def("SetTextAngle", &Data::SetTextAngle, arg("angle"), ref_int)
-    .def("SetShowStats", &Data::SetShowStats, arg("format") = "emr", arg("title") = nullopt, ref_int)
-    .def("SetStatsBox", &Data::SetStatsBox, arg("statsBox"), ref_int)
-    .def("SetColor", &Data::SetColor, arg("color"), ref_int)
-    .def("SetAlpha", &Data::SetAlpha, arg("alpha"), ref_int);
-  defMarkerSetters(data);
-  defLineSetters(data);
-  defFillSetters(data);
-  data
-    .def("SetDefinesFrame", &Data::SetDefinesFrame, ref_int)
-    .def("SetKeepInputStyle", &Data::SetKeepInputStyle, arg("keep") = true, ref_int)
-    .def("SetContours", overload_cast<const vector<double>&>(&Data::SetContours), arg("contours"), ref_int)
-    .def("SetContours", overload_cast<int32_t>(&Data::SetContours), arg("nContours"), ref_int)
-    .def("SetNpx", &Data::SetNpx, arg("nx"), arg("ny") = nullopt, ref_int)
-    .def("Normalize", &Data::Normalize, arg("isDensity") = false, arg("min") = nullopt, arg("max") = nullopt, ref_int)
-    .def("NormalizeToMaximum", &Data::NormalizeToMaximum, arg("min") = nullopt, arg("max") = nullopt, ref_int)
-    .def("Scale", &Data::Scale, arg("scaleFactor"), ref_int)
-    .def("DivideBinWidth", &Data::DivideBinWidth, arg("divideBinWidth") = true, ref_int)
-    .def("Density", &Data::Density, ref_int)
-    .def("RebinX", &Data::RebinX, arg("nGroup"), ref_int)
-    .def("RebinY", &Data::RebinY, arg("nGroup"), ref_int)
-    .def("RebinZ", &Data::RebinZ, arg("nGroup"), ref_int)
-    .def("RebinXY", &Data::RebinXY, arg("nGroupX"), arg("nGroupY"), ref_int)
-    .def("RebinXYZ", &Data::RebinXYZ, arg("nGroupX"), arg("nGroupY"), arg("nGroupZ"), ref_int)
-    .def("ScaleX", &Data::ScaleX, arg("scaleFactor"), ref_int)
-    .def("ScaleY", &Data::ScaleY, arg("scaleFactor"), ref_int)
-    .def("ScaleZ", &Data::ScaleZ, arg("scaleFactor"), ref_int)
-    .def("Smooth", &Data::Smooth, arg("nIterSmooth") = 1, ref_int)
-    .def("Cumulative", &Data::Cumulative, arg("forward") = true, ref_int)
-    .def("Project", overload_cast<const vector<uint8_t>&, const vector<tuple<uint8_t, double_t, double_t>>&, optional<bool>>(&Data::Project), arg("dims"), arg("ranges") = vector<tuple<uint8_t, double_t, double_t>>{}, arg("isUserCoord") = nullopt, ref_int)
-    .def("ProjectX", &Data::ProjectX, arg("startY") = 0, arg("endY") = -1, arg("isUserCoord") = nullopt, ref_int)
-    .def("ProjectY", &Data::ProjectY, arg("startX") = 0, arg("endX") = -1, arg("isUserCoord") = nullopt, ref_int)
-    .def("Profile", overload_cast<const vector<uint8_t>&, const vector<tuple<uint8_t, double_t, double_t>>&, optional<bool>>(&Data::Profile), arg("dims"), arg("ranges") = vector<tuple<uint8_t, double_t, double_t>>{}, arg("isUserCoord") = nullopt, ref_int)
-    .def("ProfileX", &Data::ProfileX, arg("startY") = 0, arg("endY") = -1, arg("isUserCoord") = nullopt, ref_int)
-    .def("ProfileY", &Data::ProfileY, arg("startX") = 0, arg("endX") = -1, arg("isUserCoord") = nullopt, ref_int)
-    .def("Project", overload_cast<const vector<Data::data_dim_t>&, optional<string>>(&Data::Project), arg("dataDims"), arg("weight") = nullopt, ref_int)
-    .def("Project1D", &Data::Project1D, arg("x"), arg("weight") = nullopt, ref_int)
-    .def("Project2D", &Data::Project2D, arg("x"), arg("y"), arg("weight") = nullopt, ref_int)
-    .def("Profile", overload_cast<const vector<Data::data_dim_t>&, const string&, optional<string>>(&Data::Profile), arg("dataDims"), arg("profile"), arg("weight") = nullopt, ref_int)
-    .def("Profile1D", &Data::Profile1D, arg("x"), arg("profile"), arg("weight") = nullopt, ref_int)
-    .def("Profile2D", &Data::Profile2D, arg("x"), arg("y"), arg("profile"), arg("weight") = nullopt, ref_int)
-    .def("Scatter", overload_cast<const string&, const string&>(&Data::Scatter), arg("x"), arg("y"), ref_int)
-    .def("Scatter", overload_cast<const string&, const string&, const string&, const string&>(&Data::Scatter), arg("x"), arg("y"), arg("xErr"), arg("yErr"), ref_int)
-    .def("Scatter", overload_cast<const string&, const string&, const string&, const string&, const string&, const string&>(&Data::Scatter), arg("x"), arg("y"), arg("xErrLow"), arg("xErrHigh"), arg("yErrLow"), arg("yErrHigh"), ref_int)
-    .def("Scatter", overload_cast<const string&, const string&, const string&>(&Data::Scatter), arg("x"), arg("y"), arg("z"), ref_int)
-    .def("Define", &Data::Define, arg("key"), arg("value"), ref_int)
-    .def("Filter", &Data::Filter, arg("filter"), ref_int)
-    .def("Join", [](Data& self, const string& tree, const vector<string>& keys, const string& alias) -> Data& { return self.Join(tree, keys, alias); }, arg("tree"), arg("keys") = vector<string>{}, arg("alias") = "", ref_int)
-    .def("Join", [](Data& self, const std::array<string, 2>& tree, const vector<string>& keys, const string& alias) -> Data& { return self.Join({tree[0], tree[1]}, keys, alias); }, arg("tree"), arg("keys") = vector<string>{}, arg("alias") = "", ref_int)
-    .def("Entries", overload_cast<uint32_t>(&Data::Entries), arg("nEntries"), ref_int)
-    .def("Entries", overload_cast<uint32_t, uint32_t>(&Data::Entries), arg("entryMin"), arg("entryMax"), ref_int);
+    .def("GetDataSource", &Data::GetDataSource);
+  defDataSetters(data);
+  data.def("Scatter", overload_cast<const string&, const string&, const string&>(&Data::Scatter), arg("x"), arg("y"), arg("z"), ref_int);  // a 2d graph (cannot be divided)
   // [name, dataSource] lists can be passed wherever data is expected, e.g. AddRatio(["h", "data"], ["h", "mc"])
   py::implicitly_convertible<py::list, Data>();
 }
@@ -638,80 +650,11 @@ void exportRatio(py::module_& m)
     .def(py::init<const string&, const string&, const string&, const string&, const optional<string>&>(), arg("numeratorName"), arg("numeratorDataSource"), arg("denominatorName"), arg("denominatorDataSource"), arg("label") = nullopt)
     .def("Print", &Ratio::Print)
     .def("SetCorrelated", &Ratio::SetCorrelated, arg("correlated") = true, ref_int)
-    .def("GetDataSource", [](const Ratio& self) -> const string& { return self.GetDataSource(); })
-    .def("SetDataSource", [](Ratio& self, const string& dataSource) -> Ratio& { return self.SetDataSource(dataSource); }, arg("dataSource"), ref_int)
-    .def("SetLayout", [](Ratio& self, const Data& d) -> Ratio& { return self.SetLayout(d); }, arg("dataLayout"), ref_int)
-    .def("ApplyLayout", [](Ratio& self, const Data& d) -> Ratio& { return self.ApplyLayout(d); }, arg("dataLayout"), ref_int)
-    .def("SetRangeX", [](Ratio& self, double_t min, double_t max) -> Ratio& { return self.SetRangeX(min, max); }, arg("min"), arg("max"), ref_int)
-    .def("SetRangeX", [](Ratio& self) -> Ratio& { return self.SetRangeX(); }, ref_int)
-    .def("SetMaxRangeX", [](Ratio& self, double_t max) -> Ratio& { return self.SetMaxRangeX(max); }, arg("max"), ref_int)
-    .def("SetMinRangeX", [](Ratio& self, double_t min) -> Ratio& { return self.SetMinRangeX(min); }, arg("min"), ref_int)
-    .def("SetRangeY", [](Ratio& self, double_t min, double_t max) -> Ratio& { return self.SetRangeY(min, max); }, arg("min"), arg("max"), ref_int)
-    .def("SetRangeY", [](Ratio& self) -> Ratio& { return self.SetRangeY(); }, ref_int)
-    .def("SetMaxRangeY", [](Ratio& self, double_t max) -> Ratio& { return self.SetMaxRangeY(max); }, arg("max"), ref_int)
-    .def("SetMinRangeY", [](Ratio& self, double_t min) -> Ratio& { return self.SetMinRangeY(min); }, arg("min"), ref_int)
-    .def("SetShowOverflowBins", [](Ratio& self, bool v = true) -> Ratio& { return self.SetShowOverflowBins(v); }, arg("showOverflowBins") = true, ref_int)
-    .def("SetLegendLabel", [](Ratio& self, const string& s) -> Ratio& { return self.SetLegendLabel(s); }, arg("legendLabel"), ref_int)
-    .def("SetLegend", [](Ratio& self, uint8_t id) -> Ratio& { return self.SetLegend(id); }, arg("legendID"), ref_int)
-    .def("SetLegendEntry", [](Ratio& self, const LegendEntry& entry) -> Ratio& { return self.SetLegendEntry(entry); }, arg("legendEntry"), ref_int)
-    .def("SetDrawOption", [](Ratio& self, const string& s) -> Ratio& { return self.SetDrawOption(s); }, arg("drawOption"), ref_int)
-    .def("SetDrawOption", [](Ratio& self, draw_option_t o) -> Ratio& { return self.SetDrawOption(o); }, arg("optionAlias"), ref_int)
-    .def("SetDrawOption", [](Ratio& self) -> Ratio& { return self.SetDrawOption(); }, ref_int)
-    .def("SetTextFormat", [](Ratio& self, const string& s) -> Ratio& { return self.SetTextFormat(s); }, arg("textFormat"), ref_int)
-    .def("SetTextAngle", [](Ratio& self, float_t angle) -> Ratio& { return self.SetTextAngle(angle); }, arg("angle"), ref_int)
-    .def("SetShowStats", [](Ratio& self, const string& f, const optional<string>& t) -> Ratio& { return self.SetShowStats(f, t); }, arg("format") = "emr", arg("title") = nullopt, ref_int)
-    .def("SetStatsBox", [](Ratio& self, const StatsBox& box) -> Ratio& { return self.SetStatsBox(box); }, arg("statsBox"), ref_int)
-    .def("SetColor", [](Ratio& self, color_t c) -> Ratio& { return self.SetColor(c); }, arg("color"), ref_int)
-    .def("SetAlpha", [](Ratio& self, float_t a) -> Ratio& { return self.SetAlpha(a); }, arg("alpha"), ref_int);
-  defMarkerSetters(ratio);
-  defLineSetters(ratio);
-  defFillSetters(ratio);
-  ratio
-    .def("SetDefinesFrame", [](Ratio& self) -> Ratio& { return self.SetDefinesFrame(); }, ref_int)
-    .def("SetKeepInputStyle", [](Ratio& self, bool v = true) -> Ratio& { return self.SetKeepInputStyle(v); }, arg("keep") = true, ref_int)
-    .def("SetContours", [](Ratio& self, const vector<double>& v) -> Ratio& { return self.SetContours(v); }, arg("contours"), ref_int)
-    .def("SetContours", [](Ratio& self, int32_t n) -> Ratio& { return self.SetContours(n); }, arg("nContours"), ref_int)
-    .def("SetNpx", [](Ratio& self, int32_t nx, optional<int32_t> ny) -> Ratio& { return self.SetNpx(nx, ny); }, arg("nx"), arg("ny") = nullopt, ref_int)
-    .def("Normalize", [](Ratio& self, bool b, optional<double_t> min, optional<double_t> max) -> Ratio& { return self.Normalize(b, min, max); }, arg("isDensity") = false, arg("min") = nullopt, arg("max") = nullopt, ref_int)
-    .def("NormalizeToMaximum", [](Ratio& self, optional<double_t> min, optional<double_t> max) -> Ratio& { return self.NormalizeToMaximum(min, max); }, arg("min") = nullopt, arg("max") = nullopt, ref_int)
-    .def("Scale", [](Ratio& self, double_t v) -> Ratio& { return self.Scale(v); }, arg("scaleFactor"), ref_int)
-    .def("DivideBinWidth", [](Ratio& self, bool b) -> Ratio& { return self.DivideBinWidth(b); }, arg("divideBinWidth") = true, ref_int)
-    .def("Density", [](Ratio& self) -> Ratio& { return self.Density(); }, ref_int)
-    .def("RebinX", [](Ratio& self, uint16_t n) -> Ratio& { return self.RebinX(n); }, arg("nGroup"), ref_int)
-    .def("RebinY", [](Ratio& self, uint16_t n) -> Ratio& { return self.RebinY(n); }, arg("nGroup"), ref_int)
-    .def("RebinZ", [](Ratio& self, uint16_t n) -> Ratio& { return self.RebinZ(n); }, arg("nGroup"), ref_int)
-    .def("RebinXY", [](Ratio& self, uint16_t x, uint16_t y) -> Ratio& { return self.RebinXY(x, y); }, arg("nGroupX"), arg("nGroupY"), ref_int)
-    .def("RebinXYZ", [](Ratio& self, uint16_t x, uint16_t y, uint16_t z) -> Ratio& { return self.RebinXYZ(x, y, z); }, arg("nGroupX"), arg("nGroupY"), arg("nGroupZ"), ref_int)
-    .def("ScaleX", [](Ratio& self, double_t v) -> Ratio& { return self.ScaleX(v); }, arg("scaleFactor"), ref_int)
-    .def("ScaleY", [](Ratio& self, double_t v) -> Ratio& { return self.ScaleY(v); }, arg("scaleFactor"), ref_int)
-    .def("ScaleZ", [](Ratio& self, double_t v) -> Ratio& { return self.ScaleZ(v); }, arg("scaleFactor"), ref_int)
-    .def("Smooth", [](Ratio& self, uint16_t n = 1) -> Ratio& { return self.Smooth(n); }, arg("nIterSmooth") = 1, ref_int)
-    .def("Cumulative", [](Ratio& self, bool b = true) -> Ratio& { return self.Cumulative(b); }, arg("forward") = true, ref_int)
     .def("Numer", &Ratio::Numer, ref_int)
     .def("Denom", &Ratio::Denom, ref_int)
     .def("Both", &Ratio::Both, ref_int)
-    .def("Result", &Ratio::Result, ref_int)
-    .def("Project", overload_cast<const vector<uint8_t>&, const vector<tuple<uint8_t, double_t, double_t>>&, optional<bool>>(&Ratio::Project), arg("dims"), arg("ranges") = vector<tuple<uint8_t, double_t, double_t>>{}, arg("isUserCoord") = nullopt, ref_int)
-    .def("ProjectX", &Ratio::ProjectX, arg("startY") = 0, arg("endY") = -1, arg("isUserCoord") = nullopt, ref_int)
-    .def("ProjectY", &Ratio::ProjectY, arg("startX") = 0, arg("endX") = -1, arg("isUserCoord") = nullopt, ref_int)
-    .def("Profile", overload_cast<const vector<uint8_t>&, const vector<tuple<uint8_t, double_t, double_t>>&, optional<bool>>(&Ratio::Profile), arg("dims"), arg("ranges") = vector<tuple<uint8_t, double_t, double_t>>{}, arg("isUserCoord") = nullopt, ref_int)
-    .def("ProfileX", &Ratio::ProfileX, arg("startY") = 0, arg("endY") = -1, arg("isUserCoord") = nullopt, ref_int)
-    .def("ProfileY", &Ratio::ProfileY, arg("startX") = 0, arg("endX") = -1, arg("isUserCoord") = nullopt, ref_int)
-    .def("Project", overload_cast<const vector<Data::data_dim_t>&, optional<string>>(&Ratio::Project), arg("dataDims"), arg("weight") = nullopt, ref_int)
-    .def("Project1D", &Ratio::Project1D, arg("x"), arg("weight") = nullopt, ref_int)
-    .def("Project2D", &Ratio::Project2D, arg("x"), arg("y"), arg("weight") = nullopt, ref_int)
-    .def("Profile", overload_cast<const vector<Data::data_dim_t>&, const string&, optional<string>>(&Ratio::Profile), arg("dataDims"), arg("profile"), arg("weight") = nullopt, ref_int)
-    .def("Profile1D", &Ratio::Profile1D, arg("x"), arg("profile"), arg("weight") = nullopt, ref_int)
-    .def("Profile2D", &Ratio::Profile2D, arg("x"), arg("y"), arg("profile"), arg("weight") = nullopt, ref_int)
-    .def("Scatter", overload_cast<const string&, const string&>(&Ratio::Scatter), arg("x"), arg("y"), ref_int)
-    .def("Scatter", overload_cast<const string&, const string&, const string&, const string&>(&Ratio::Scatter), arg("x"), arg("y"), arg("xErr"), arg("yErr"), ref_int)
-    .def("Scatter", overload_cast<const string&, const string&, const string&, const string&, const string&, const string&>(&Ratio::Scatter), arg("x"), arg("y"), arg("xErrLow"), arg("xErrHigh"), arg("yErrLow"), arg("yErrHigh"), ref_int)
-    .def("Define", &Ratio::Define, arg("key"), arg("value"), ref_int)
-    .def("Filter", &Ratio::Filter, arg("filter"), ref_int)
-    .def("Join", [](Ratio& self, const string& tree, const vector<string>& keys, const string& alias) -> Ratio& { return self.Join(tree, keys, alias); }, arg("tree"), arg("keys") = vector<string>{}, arg("alias") = "", ref_int)
-    .def("Join", [](Ratio& self, const std::array<string, 2>& tree, const vector<string>& keys, const string& alias) -> Ratio& { return self.Join({tree[0], tree[1]}, keys, alias); }, arg("tree"), arg("keys") = vector<string>{}, arg("alias") = "", ref_int)
-    .def("Entries", overload_cast<uint32_t>(&Ratio::Entries), arg("nEntries"), ref_int)
-    .def("Entries", overload_cast<uint32_t, uint32_t>(&Ratio::Entries), arg("entryMin"), arg("entryMax"), ref_int);
+    .def("Result", &Ratio::Result, ref_int);
+  defDataSetters(ratio);
   // only here, after Ratio is registered
   py::class_<Data>(m.attr("Data")).def("AsRatio", &Data::AsRatio, ref_int);
 }
@@ -772,8 +715,8 @@ void exportTextBox(py::module_& m)
   py::class_<TextBox> textBox(m, "TextBox");
   textBox
     .def("Print", &TextBox::Print)
-    .def("SetText", py::overload_cast<const std::string&>(&TextBox::SetText), arg("text"), ref_int)
-    .def("SetText", py::overload_cast<const vector<string>&>(&TextBox::SetText), arg("lines"), ref_int)
+    .def("SetText", overload_cast<const string&>(&TextBox::SetText), arg("text"), ref_int)
+    .def("SetText", overload_cast<const vector<string>&>(&TextBox::SetText), arg("lines"), ref_int)
     .def("SetTextAlign", &TextBox::SetTextAlign, arg("align"), ref_int)
     .def("SetPosition", &TextBox::SetPosition, arg("x"), arg("y"), ref_int)
     .def("SetSize", &TextBox::SetSize, arg("width"), arg("height"), ref_int)
@@ -1067,7 +1010,7 @@ void exportPythonDataInterfaces(py::module_& m)
 
   // a table as a tree, from a dict of arrays, a numpy structured array or a pandas DataFrame (anything with columns and item access),
   // or from a 2D array (rows x columns, as pandas reads it) with the names given in columns:
-  // numbers and bools keep their type, strings become std::string branches, other columns are skipped with a warning
+  // numbers and bools keep their type, strings become string branches, other columns are skipped with a warning
   auto table = [bind_owned](const string& name, py::object data, py::object columnNames) {
     py::module_ np;
     try {
@@ -1206,18 +1149,18 @@ void exportPythonDataInterfaces(py::module_& m)
   };
 
   m.def("graph", graph, "A TGraphErrors through the points (x, y), with optional errors, like matplotlib's errorbar.",
-        py::arg("name"), py::arg("x"), py::arg("y"), py::arg("xerr") = py::none(), py::arg("yerr") = py::none());
+        arg("name"), arg("x"), arg("y"), arg("xerr") = py::none(), arg("yerr") = py::none());
   m.def("histo", histo,
         "A TH1D filled with the values, like numpy.histogram: bins is a number (with the range taken from the values if not given) or the bin edges; "
         "with weights the errors come from the sum of the squared weights.",
-        py::arg("name"), py::arg("values"), py::arg("bins") = 100, py::arg("range") = py::none(), py::arg("weights") = py::none());
+        arg("name"), arg("values"), arg("bins") = 100, arg("range") = py::none(), arg("weights") = py::none());
   m.def("histo2d", histo2d,
         "A TH2D filled with the pairs (x, y), like numpy.histogram2d: bins is one number for both axes, (nx, ny) or (x edges, y edges), "
         "where a number and edges can be mixed; range is ((x0, x1), (y0, y1)); optional weights.",
-        py::arg("name"), py::arg("x"), py::arg("y"), py::arg("bins") = py::none(), py::arg("range") = py::none(), py::arg("weights") = py::none());
+        arg("name"), arg("x"), arg("y"), arg("bins") = py::none(), arg("range") = py::none(), arg("weights") = py::none());
   m.def("table", table,
         "A tree with one branch per column of a dict of arrays, a numpy structured array or a pandas DataFrame, or of a 2D array (rows x columns) "
         "with the names in columns, to be used with Project1D, Filter, Define: "
         "numbers and bools keep their type, strings become std::string, other columns are skipped with a warning.",
-        py::arg("name"), py::arg("data"), py::arg("columns") = py::none());
+        arg("name"), arg("data"), arg("columns") = py::none());
 }
