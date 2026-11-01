@@ -113,11 +113,6 @@ constexpr bool is_func()
   return is_func_1d<T>() || is_func_2d<T>() || is_func_3d<T>();
 }
 template <typename T>
-constexpr bool is_1d()
-{
-  return is_hist_1d<T>() || is_graph_1d<T>() || is_func_1d<T>();
-}
-template <typename T>
 constexpr bool is_2d()
 {
   return is_hist_2d<T>() || is_graph_2d<T>() || is_func_2d<T>();

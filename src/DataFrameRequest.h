@@ -45,6 +45,7 @@
 #include <vector>
 
 #include "util/Binning.h"
+#include "util/Strings.h"
 
 namespace SciRooPlot
 {
@@ -111,7 +112,7 @@ std::string DataFrameRequest<DataInfo>::AvailableColumns(ROOT::RDF::RNode& node)
   constexpr size_t kMaxColumns = 30;
   std::vector<std::string> columns;
   for (const auto& column : node.GetColumnNames()) {
-    if (column.rfind("SRP_", 0) != 0) columns.push_back(column);
+    if (!util::str_starts_with(column, "SRP_")) columns.push_back(column);
   }
   std::sort(columns.begin(), columns.end());
   std::string list;
@@ -459,6 +460,17 @@ bool DataFrameRequest<DataInfo>::Book()
   }
 
   const bool hasWeights = mHasWeights;
+  // fixed bins as bin edges, for the models that take only one kind of binning for all axes
+  auto toVariableBins = [](auto& dataDim) {
+    if (!dataDim.nBins) return;
+    const double_t binWidth = (dataDim.edges[1] - dataDim.edges[0]) / dataDim.nBins;
+    std::vector<double_t> edges = {dataDim.edges[0]};
+    for (int32_t i = 1; i <= dataDim.nBins; ++i) {
+      edges.push_back(dataDim.edges[0] + i * binWidth);
+    }
+    dataDim.edges = std::move(edges);
+    dataDim.nBins = 0;
+  };
   if (dataDims.size() == 1) {
     auto histModel = ROOT::RDF::TH1DModel();
     auto& dataDim1 = dataDims.at(0);
@@ -531,17 +543,8 @@ bool DataFrameRequest<DataInfo>::Book()
       if (dataDim1.nBins && dataDim2.nBins && dataDim3.nBins) {
         histModel = ROOT::RDF::TH3DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1], dataDim3.nBins, dataDim3.edges[0], dataDim3.edges[1]);
       } else {
-        // first convert all fixed size bins to variable size bining
         for (auto& dataDim : dataDims) {
-          if (dataDim.nBins) {
-            double_t binWidth = (dataDim.edges[1] - dataDim.edges[0]) / dataDim.nBins;
-            std::vector<double_t> edges = {dataDim.edges[0]};
-            for (int32_t i = 1; i <= dataDim.nBins; ++i) {
-              edges.push_back(dataDim.edges[0] + i * binWidth);
-            }
-            dataDim.edges = edges;
-            dataDim.nBins = 0;
-          }
+          toVariableBins(dataDim);
         }
         histModel = ROOT::RDF::TH3DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data(), static_cast<int32_t>(dataDim3.edges.size()) - 1, dataDim3.edges.data());
       }
@@ -552,10 +555,6 @@ bool DataFrameRequest<DataInfo>::Book()
       }
     }
   } else {
-    if (mIsProfile) {
-      logger::error("Too many dimensions for a profile of {}.", mContext);
-      return false;
-    }
     auto histModel = ROOT::RDF::THnDModel();
     bool allFixed = true;
     std::vector<int32_t> nBinsVec;
@@ -577,15 +576,7 @@ bool DataFrameRequest<DataInfo>::Book()
     } else {
       std::vector<std::vector<double_t>> xBins;
       for (auto& dataDim : dataDims) {
-        if (dataDim.nBins) {
-          double_t binWidth = (dataDim.edges[1] - dataDim.edges[0]) / dataDim.nBins;
-          std::vector<double_t> edges = {dataDim.edges[0]};
-          for (int32_t i = 1; i <= dataDim.nBins; ++i) {
-            edges.push_back(dataDim.edges[0] + i * binWidth);
-          }
-          dataDim.edges = edges;
-          dataDim.nBins = 0;
-        }
+        toVariableBins(dataDim);
         xBins.push_back(dataDim.edges);
       }
       histModel = ROOT::RDF::THnDModel("tmp", title, static_cast<int32_t>(dataDims.size()), nBinsVec, xBins);

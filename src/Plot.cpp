@@ -67,6 +67,7 @@ using util::number_to_string;
 using util::put_in_tree;
 using util::read_from_tree;
 using util::str_contains;
+using util::str_starts_with;
 
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -477,7 +478,7 @@ void Plot::ReadDrawOption(const ptree& tree, optional<draw_option_t>& option, co
 {
   if (auto name = tree.get_optional<string>(key)) {
     option = draw_option_from_name(*name);
-    if (!option) logger::warning("Unknown drawing option {} is ignored.", *name);
+    if (!option) logger::warning("Unknown drawing option '{}' is ignored.", *name);
   }
 }
 void Plot::PutDrawOption(ptree& tree, const optional<draw_option_t>& option, const char* key)
@@ -559,12 +560,12 @@ Plot::Plot(const ptree& plotTree)
     return pads;
   };
   for (const auto& [key, child] : plotTree) {
-    if (key.rfind("PAD_", 0) == 0) {
+    if (str_starts_with(key, "PAD_")) {
       uint8_t padID = std::stoi(key.substr(4));
       mPads[padID] = Pad(child);
-    } else if (key.rfind("SHARED_AXIS_", 0) == 0) {
+    } else if (str_starts_with(key, "SHARED_AXIS_")) {
       mSharedAxes.push_back({child.get<char>("axis"), readPads(child.get<string>("pads", "")), child.get<bool>("layout", false)});
-    } else if (key.rfind("COMMON_TITLE_", 0) == 0) {
+    } else if (str_starts_with(key, "COMMON_TITLE_")) {
       mCommonTitles.emplace_back(child.get<char>("axis"), readPads(child.get<string>("pads", "")));
     }
   }
@@ -739,7 +740,7 @@ void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
 auto Plot::SetName(const string& name) -> decltype(*this)
 {
   if (auto error = NameError(name)) {
-    logger::error("{}", *error);
+    logger::warning("{} SetName is ignored.", *error);
     return *this;
   }
   mName = name;
@@ -750,12 +751,12 @@ auto Plot::SetName(const string& name) -> decltype(*this)
 auto Plot::SetGroup(const string& group) -> decltype(*this)
 {
   if (auto error = NameError(group, true)) {
-    logger::error("{}", *error);
+    logger::warning("{} SetGroup is ignored.", *error);
     return *this;
   }
   const string normalized = NormalizeGroup(group);
   if (normalized.empty()) {
-    logger::error("Cannot set empty group.");
+    logger::warning("SetGroup with an empty group is ignored.");
     return *this;
   }
   mGroup = normalized;
@@ -766,16 +767,16 @@ auto Plot::SetGroup(const string& group) -> decltype(*this)
 auto Plot::AppendGroup(const string& subgroup) -> decltype(*this)
 {
   if (subgroup.empty()) {
-    logger::error("Cannot append empty subgroup.");
+    logger::warning("AppendGroup with an empty subgroup is ignored.");
     return *this;
   }
   if (auto error = NameError(subgroup, true)) {
-    logger::error("{}", *error);
+    logger::warning("{} AppendGroup is ignored.", *error);
     return *this;
   }
   const string normalizedSubgroup = NormalizeGroup(subgroup);
   if (normalizedSubgroup.empty()) {
-    logger::error("Cannot append empty subgroup.");
+    logger::warning("AppendGroup with an empty subgroup is ignored.");
     return *this;
   }
   mGroup = mGroup.empty() ? normalizedSubgroup : mGroup + "/" + normalizedSubgroup;
@@ -1702,7 +1703,7 @@ Plot::Pad::Axis& Plot::Pad::GetAxis(const char axis)
 {
   const vector<char> allowedAxes = {'X', 'Y', 'Z', 'C'};
   if (std::find(allowedAxes.begin(), allowedAxes.end(), axis) == allowedAxes.end()) {
-    logger::throw_invalid_argument("Axis '{}' does not exist! Please use 'X', 'Y', 'Z' or 'C' (the content of a 3d histogram).", axis);
+    logger::throw_invalid_argument("Axis '{}' does not exist: use 'X', 'Y', 'Z' or 'C' (the content of a 3d histogram).", axis);
   }
   if (mAxes.find(axis) == mAxes.end()) {
     mAxes[axis] = Axis(axis);
@@ -1718,7 +1719,7 @@ Plot::Pad::Axis& Plot::Pad::GetAxis(const char axis)
 Plot::Pad::Data& Plot::Pad::GetData(uint16_t dataID)
 {
   if (dataID < 1 || dataID > mData.size()) {
-    logger::throw_out_of_range("Data with ID '{}' is not defined! You can access only data that was already added to the pad.", dataID);
+    logger::throw_out_of_range("Data with ID {} is not defined: only data already added to the pad can be accessed.", dataID);
   }
   return *mData[dataID - 1];
 }
@@ -1731,7 +1732,7 @@ Plot::Pad::Data& Plot::Pad::GetData(uint16_t dataID)
 Plot::Pad::LegendBox& Plot::Pad::GetLegend(uint8_t legendID)
 {
   if (legendID < 1 || legendID > mLegendBoxes.size()) {
-    logger::throw_out_of_range("Legend with ID {} is not defined! You can access only legends that have already been added to the pad.", legendID);
+    logger::throw_out_of_range("Legend with ID {} is not defined: only legends already added to the pad can be accessed.", legendID);
   }
   return *mLegendBoxes[legendID - 1];
 }
@@ -1744,14 +1745,14 @@ Plot::Pad::LegendBox& Plot::Pad::GetLegend(uint8_t legendID)
 Plot::Pad::TextBox& Plot::Pad::GetText(uint8_t textID)
 {
   if (textID < 1 || textID > mTextBoxes.size()) {
-    logger::throw_out_of_range("Text with ID {} is not defined! You can access only texts that have already been added to the pad.", textID);
+    logger::throw_out_of_range("Text with ID {} is not defined: only texts already added to the pad can be accessed.", textID);
   }
   return *mTextBoxes[textID - 1];
 }
 Plot::Pad::Shape& Plot::Pad::GetShape(uint8_t shapeID)
 {
   if (shapeID < 1 || shapeID > mShapes.size()) {
-    logger::throw_out_of_range("Shape with ID {} is not defined! You can access only shapes that have already been added to the pad.", shapeID);
+    logger::throw_out_of_range("Shape with ID {} is not defined: only shapes already added to the pad can be accessed.", shapeID);
   }
   return *mShapes[shapeID - 1];
 }
@@ -1764,7 +1765,7 @@ Plot::Pad::Shape& Plot::Pad::GetShape(uint8_t shapeID)
 Plot::Pad::ImageBox& Plot::Pad::GetImage(uint8_t imageID)
 {
   if (imageID < 1 || imageID > mImageBoxes.size()) {
-    logger::throw_out_of_range("Image with ID {} is not defined! You can access only images that have already been added to the pad.", imageID);
+    logger::throw_out_of_range("Image with ID {} is not defined: only images already added to the pad can be accessed.", imageID);
   }
   return *mImageBoxes[imageID - 1];
 }
@@ -2861,11 +2862,11 @@ void Plot::Pad::Data::data_info_t::entry_range_t::Set(optional<uint32_t> entryMi
 {
   if (entryMin) {
     if (entryMax <= *entryMin) {
-      logger::error("Entry range [{}, {}) is empty; ignoring.", *entryMin, entryMax);
+      logger::warning("Entry range [{}, {}) is empty, ignoring.", *entryMin, entryMax);
       return;
     }
   } else if (!entryMax) {
-    logger::error("Entries(0) would select no entries at all; ignoring.");
+    logger::warning("Entries(0) would select no entries at all, ignoring.");
     return;
   }
   min = entryMin;
@@ -3663,7 +3664,7 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
   read_from_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
   if (auto name = boxTree.get_optional<string>("placement")) {
     mPos.placement = box_placement_from_name(*name);
-    if (!mPos.placement) logger::warning("Unknown box placement {} is ignored.", *name);
+    if (!mPos.placement) logger::warning("Unknown box placement '{}' is ignored.", *name);
   }
   this->ReadBorder(boxTree);
   this->ReadFill(boxTree);
@@ -3781,9 +3782,8 @@ Plot::Pad::ImageBox::ImageBox(double_t xPos, double_t yPos, const string& path) 
 }
 Plot::Pad::ImageBox::ImageBox(const string& path) : mPath(path), mPlacement(best_corner)
 {
-  const string expandedPath = expand_path(path);
-  if (expandedPath.empty() && !path.empty()) return;  // unset environment variable, reported by expand_path
-  if (std::filesystem::path(expandedPath).is_relative()) mPath = std::filesystem::absolute(expandedPath).lexically_normal().string();
+  const auto expandedPath = expand_path(path);
+  if (expandedPath && std::filesystem::path(*expandedPath).is_relative()) mPath = std::filesystem::absolute(*expandedPath).lexically_normal().string();
 }
 Plot::Pad::ImageBox::ImageBox(const ptree& imageBoxTree)
 {
@@ -3799,7 +3799,7 @@ Plot::Pad::ImageBox::ImageBox(const ptree& imageBoxTree)
   read_from_tree(imageBoxTree, mIsUserCoord, "is_user_coordinates");
   if (auto name = imageBoxTree.get_optional<string>("placement")) {
     mPlacement = box_placement_from_name(*name);
-    if (!mPlacement) logger::warning("Unknown box placement {} is ignored.", *name);
+    if (!mPlacement) logger::warning("Unknown box placement '{}' is ignored.", *name);
   }
 }
 

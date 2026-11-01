@@ -89,6 +89,7 @@
 #include <array>
 #include <cctype>
 #include <cmath>
+#include <filesystem>
 #include <limits>
 #include <map>
 #include <memory>
@@ -124,7 +125,6 @@ using std::vector;
 namespace SciRooPlot
 {
 using util::expand_path;
-using util::file_exists;
 using util::get_first;
 using util::get_first_or;
 using util::is_2d;
@@ -144,6 +144,7 @@ using util::make_scope_guard;
 using util::pick;
 using util::plural;
 using util::str_contains;
+using util::str_starts_with;
 using util::str_upper;
 
 //**************************************************************************************************
@@ -503,7 +504,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       // a plot with only one pad and no position for it is drawn over the whole plot by design
       const bool isSinglePad = std::count_if(plot.GetPads().begin(), plot.GetPads().end(), [](const auto& p) { return p.first != 0; }) == 1;
       if (!isSinglePad || xLow || yLow || xUp || yUp) {
-        logger::warning("Position of pad {} was not defined properly! Drawing it over whole plot.", padID);
+        logger::warning("Position of pad {} is not defined properly, drawing it over the whole plot.", padID);
       }
     } else {
       padPos = {*xLow, *yLow, *xUp, *yUp};
@@ -1749,7 +1750,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             statsHist->SetStats(false);  // also removes a stats box stored with the input, which shows the numbers of the input instead of the drawn histogram
             showStats = data->GetStatsFormat() && (!data->GetStatsFormat()->empty() || data->GetStatsTitle());
             if constexpr (is_hist<data_type>()) {
-              if (showStats && drawOption.rfind("SAME", 0) == 0) drawOption.insert(4, "S");  // ROOT fills a stats box only with SAMES, not with SAME
+              if (showStats && str_starts_with(drawOption, "SAME")) drawOption.insert(4, "S");  // ROOT fills a stats box only with SAMES, not with SAME
             }
             if (!(data->GetShowOverflowBins() && *data->GetShowOverflowBins())) {
               // TH2Poly keeps its bins outside the cell array of TH1, whose loop over the global cells would zero the real bins;
@@ -2147,7 +2148,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             const optional<double_t> integral = inRangeX(mods.GetNormMin(), mods.GetNormMax(), "Normalize", [&]() { return ptr->Integral(scaleMode.data()); });
             if (integral) {
               if (*integral == 0.) {
-                warn("Cannot normalize histogram because integral is zero.");
+                warn("Cannot normalize {} because its integral is zero.", ptr->GetName());
               } else {
                 ptr->Scale(1. / *integral);
               }
@@ -2235,12 +2236,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (values.empty() && ptr->GetN() > 0) {
               warn("The range of Normalize for {} contains no points, ignoring.", ptr->GetName());
             } else if (integral == 0.) {
-              warn("Cannot normalize graph because the sum of its values is zero.");
+              warn("Cannot normalize graph {} because the sum of its values is zero.", ptr->GetName());
             } else {
               scaleFactor = 1. / integral;
             }
             if (*mods.GetScaleBinWidthNorm()) {
-              warn("Cannot normalize graph by width.");
+              warn("Cannot normalize graph {} by width.", ptr->GetName());
             }
           }
           if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
@@ -2722,7 +2723,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     // shapes need the final frame: behind the data right after the frame histogram, the others after the data (and before the boxes, which avoid them)
     const bool canDrawShapes = axisHist_ptr && !pad_ptr->GetView() && !polargram;
     if (!pad.GetShapes().empty() && !canDrawShapes) {
-      logger::warning("The shapes of pad {} are not drawn: they need a cartesian axis frame (no 3D view, no polar graphs).", padID);
+      logger::warning("The shapes of pad {} are not drawn: they need a cartesian axis frame (no 3d view, no polar graphs).", padID);
     } else if (!pad.GetShapes().empty()) {
       DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::behind_data, axisHist_ptr, padID);
       DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::after_data, nullptr, padID);
@@ -3972,7 +3973,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       if (!source) return {nullptr, ""};
       const string prefix = std::to_string(dataID) + ":";
       for (TObjLink* link = source->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
-        if (string(link->GetObject()->GetName()).rfind(prefix, 0) == 0) return {link->GetObject(), link->GetOption()};
+        if (str_starts_with(link->GetObject()->GetName(), prefix)) return {link->GetObject(), link->GetOption()};
       }
       return {nullptr, ""};
     };
@@ -4259,16 +4260,16 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 //**************************************************************************************************
 void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const string& name)
 {
-  const string path = expand_path(box.GetPath());
-  if (path.empty()) return;  // unset environment variable, reported by expand_path
-  if (!file_exists(path)) {
-    logger::warning("Image {} does not exist.", path);
+  const auto path = expand_path(box.GetPath());
+  if (!path) return;
+  if (!std::filesystem::exists(*path)) {
+    logger::warning("Image {} does not exist.", *path);
     return;
   }
-  TImage* image = TImage::Open(path.data());
+  TImage* image = TImage::Open(path->data());
   if (!image || !image->IsValid()) {
     delete image;
-    logger::warning("Image {} could not be read (ROOT needs to be built with asimage for images).", path);
+    logger::warning("Image {} could not be read (ROOT needs to be built with asimage for images).", *path);
     return;
   }
   const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad);
@@ -4285,7 +4286,7 @@ void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const str
     return;
   }
   pad->cd();
-  auto* imagePad = new TPad(name.data(), path.data(), std::max(upperLeftX, 0.), std::max(upperLeftY - heightNDC, 0.), std::min(upperLeftX + widthNDC, 1.), std::min(upperLeftY, 1.));
+  auto* imagePad = new TPad(name.data(), path->data(), std::max(upperLeftX, 0.), std::max(upperLeftY - heightNDC, 0.), std::min(upperLeftX + widthNDC, 1.), std::min(upperLeftY, 1.));
   imagePad->SetFillStyle(0);
   imagePad->SetBorderMode(0);
   imagePad->SetBorderSize(0);
@@ -5275,11 +5276,11 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
 bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialErrors, bool verbose)
 {
   if (numerator->GetDimension() != 1) {
-    logger::error("Cannot divide higher dimensional histogram by 1D graph.");
+    logger::error("Cannot divide {} by graph {}: only a 1d histogram can be divided by a graph.", numerator->GetName(), denominator->GetName());
     return false;
   }
   if (numerator->GetXaxis()->IsAlphanumeric()) {
-    logger::error("Cannot divide alphanumeric histogram by 1D graph.");
+    logger::error("Cannot divide {} by graph {}: its x axis is alphanumeric.", numerator->GetName(), denominator->GetName());
     return false;
   }
   TGraphErrors numeratorGraph(numerator);
@@ -5295,11 +5296,11 @@ bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialError
 bool PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialErrors, bool verbose)
 {
   if (denominator->GetDimension() != 1) {
-    logger::error("Cannot divide 1D graph by higher dimensional histogram.");
+    logger::error("Cannot divide graph {} by {}: only a 1d histogram can divide a graph.", numerator->GetName(), denominator->GetName());
     return false;
   }
   if (denominator->GetXaxis()->IsAlphanumeric()) {
-    logger::error("Cannot divide 1D graph by alphanumeric histogram.");
+    logger::error("Cannot divide graph {} by {}: the x axis of {} is alphanumeric.", numerator->GetName(), denominator->GetName(), denominator->GetName());
     return false;
   }
   TGraphErrors denominatorGraph(denominator);
@@ -5329,7 +5330,7 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, 
   }
   for (TAxis* axis : {numerator->GetXaxis(), numerator->GetYaxis(), numerator->GetZaxis(), denominator->GetXaxis(), denominator->GetYaxis(), denominator->GetZaxis()}) {
     if (axis && axis->IsAlphanumeric()) {
-      logger::error("Cannot do interpolated division for alphanumeric histograms.");
+      logger::error("Cannot divide {} by {}: their binnings differ and interpolation needs numeric axes.", numerator->GetName(), denominator->GetName());
       return false;
     }
   }
@@ -5337,19 +5338,17 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, 
     TGraphErrors denominatorGraph(denominator);
     denominatorGraph.SetName(denominator->GetName());  // used in messages
     return Divide(numerator, &denominatorGraph, binomialErrors, verbose);
-  } else if (numerator->GetDimension() == 2 && denominator->GetDimension() == 2) {
-    logger::error("Interpolated division of 2D histograms not yet supported.");
-  } else if (numerator->GetDimension() == 3 && denominator->GetDimension() == 3) {
-    logger::error("Interpolated division of 3D histograms not yet supported.");
+  } else if (numerator->GetDimension() == denominator->GetDimension()) {
+    logger::error("Cannot divide {} by {}: their binnings differ (interpolated division of {}d histograms is not supported).", numerator->GetName(), denominator->GetName(), numerator->GetDimension());
   } else {
-    logger::error("Dividing histograms of incompatible dimensions.");
+    logger::error("Cannot divide {} ({}d) by {} ({}d): the dimensions differ.", numerator->GetName(), numerator->GetDimension(), denominator->GetName(), denominator->GetDimension());
   }
   return false;
 }
 bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors, bool verbose)
 {
   if (denominator->GetNdim() > numerator->GetDimension()) {
-    logger::error("Cannot divide histogram by higher dimensional function.");
+    logger::error("Cannot divide {} by the higher dimensional function {}.", numerator->GetName(), denominator->GetName());
     return false;
   }
   // the bins outside the range of the function are left out (TH1::Divide would leave them as they are)
@@ -5374,14 +5373,14 @@ bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors, 
     logger::warning("{} bins of {} lie outside the range of function {} and are left out of the ratio.", nOutside, numerator->GetName(), denominator->GetName());
   }
   if (binomialErrors && verbose) {
-    logger::warning("Binomial errors not supported for division by function.");
+    logger::warning("Binomial errors are not supported for the division of {} by function {}.", numerator->GetName(), denominator->GetName());
   }
   return true;
 }
 bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialErrors, bool verbose)
 {
   if (denominator->GetNdim() > 1) {
-    logger::error("Cannot divide 1D graph by higher dimensional function.");
+    logger::error("Cannot divide graph {} by the higher dimensional function {}.", numerator->GetName(), denominator->GetName());
     return false;
   }
   // the points outside the range of the function are left out
@@ -5407,7 +5406,7 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
     }
   }
   if (binomialErrors && verbose) {
-    logger::warning("Binomial errors not supported for division by function.");
+    logger::warning("Binomial errors are not supported for the division of {} by function {}.", numerator->GetName(), denominator->GetName());
   }
   return true;
 }

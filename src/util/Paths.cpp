@@ -22,20 +22,22 @@
 
 #include <cctype>
 #include <cstdlib>
+#include <optional>
 #include <string>
-#include <sys/stat.h>
+
+#include "util/Strings.h"
 
 using std::string;
 
 namespace SciRooPlot::util
 {
 // expands a leading ~ and environment variables ($VAR, ${VAR}) like bash; wildcards are matched where the paths are used
-// returns an empty string if a variable is not set
-string expand_path(const string& path)
+// nullopt if a variable is not set (reported here)
+std::optional<string> expand_path(const string& path)
 {
   string expandedPath;
   size_t pos = 0;
-  if (path == "~" || path.rfind("~/", 0) == 0) {
+  if (path == "~" || str_starts_with(path, "~/")) {
     if (const char* home = std::getenv("HOME")) {
       expandedPath = home;
       pos = 1;
@@ -67,17 +69,11 @@ string expand_path(const string& path)
     const char* value = std::getenv(name.data());
     if (!value) {
       logger::error("Environment variable {} used in path {} is not set.", name, path);
-      return "";
+      return std::nullopt;
     }
     expandedPath += value;
     pos = next;
   }
   return expandedPath;
-}
-
-bool file_exists(const string& name)
-{
-  struct stat buffer;
-  return (stat(name.c_str(), &buffer) == 0);
 }
 }  // end namespace SciRooPlot::util

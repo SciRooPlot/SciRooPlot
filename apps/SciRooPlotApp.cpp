@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
         project = Config::Get().CurrentProject();
         if (project.empty()) {
           if ((command != "get") && (command != "confdir")) {
-            logger::error("No project selected. Please run srp select <project>.");
+            logger::error("No project selected (srp select <project> selects one).");
           }
           return 1;
         }
@@ -115,10 +115,10 @@ int main(int argc, char* argv[])
       setting = vm["setting"].as<string>();
     }
   } catch (std::exception& e) {
-    logger::error(R"(Exception "{}"! Exiting.)", e.what());
+    logger::error(R"(Exception "{}", exiting.)", e.what());
     return 1;
   } catch (...) {
-    logger::error("Exception of unknown type! Exiting.");
+    logger::error("Exception of unknown type, exiting.");
     return 1;
   }
 

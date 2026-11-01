@@ -24,14 +24,15 @@
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 #include <locale>
 #include <sstream>
-#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <vector>
@@ -66,7 +67,7 @@ inline std::string str_upper(std::string str)
   return str;
 }
 
-inline bool str_starts_with(const std::string& str, const std::string& prefix)
+inline bool str_starts_with(std::string_view str, std::string_view prefix)
 {
   return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
 }
@@ -77,7 +78,7 @@ inline bool str_starts_with(const std::string& str, const std::vector<std::strin
                      [&](const std::string& prefix) { return str_starts_with(str, prefix); });
 }
 
-inline bool str_ends_with(const std::string& str, const std::string& suffix)
+inline bool str_ends_with(std::string_view str, std::string_view suffix)
 {
   return str.size() >= suffix.size() && str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
@@ -144,14 +145,14 @@ T string_to_type(const std::string& str)
     stream.imbue(std::locale::classic());
     T value{};
     if (!(stream >> value)) {
-      throw std::invalid_argument("Cannot parse '" + str + "' as a number.");
+      logger::throw_invalid_argument("Cannot parse '{}' as a number.", str);
     }
     return value;
   } else if constexpr (!std::is_arithmetic_v<T>) {  // a class with a stream operator (e.g. color_t)
     std::istringstream stream(str);
     T value{};
     if (!(stream >> value)) {
-      throw std::invalid_argument("Cannot parse '" + str + "'.");
+      logger::throw_invalid_argument("Cannot parse '{}'.", str);
     }
     return value;
   } else {
@@ -159,34 +160,30 @@ T string_to_type(const std::string& str)
     const int64_t parsed = std::stoll(str);
     if (parsed < static_cast<int64_t>(std::numeric_limits<T>::min()) ||
         parsed > static_cast<int64_t>(std::numeric_limits<T>::max())) {
-      throw std::out_of_range("Value " + str + " is out of range for this field.");
+      logger::throw_out_of_range("Value {} is out of range for this field.", str);
     }
     return static_cast<T>(parsed);
   }
 }
 
-template <typename... Ts>
-std::tuple<Ts...> string_to_tuple(const std::string& itemString)
+template <typename Tuple>
+Tuple string_to_tuple(const std::string& itemString)
 {
-  // split string
+  std::array<std::string, std::tuple_size_v<Tuple>> numbers;
   std::string curItemStr;
   std::istringstream stream(itemString);
-  std::string numbers[sizeof...(Ts)];
-  uint8_t i = 0;
-  while (i < sizeof...(Ts) && std::getline(stream, curItemStr, ',')) {
+  size_t i = 0;
+  while (i < numbers.size() && std::getline(stream, curItemStr, ',')) {
     numbers[i] = curItemStr;
     ++i;
   }
-  if (i != sizeof...(Ts)) {
-    logger::throw_invalid_argument("Expected {} comma-separated values but found {} in '{}'.", sizeof...(Ts), i, itemString);
+  if (i != numbers.size()) {
+    logger::throw_invalid_argument("Expected {} comma-separated values but found {} in '{}'.", numbers.size(), i, itemString);
   }
-
-  // ugly hack...
-  if constexpr (sizeof...(Ts) == 3) {
-    return {string_to_type<uint8_t>(numbers[0]), string_to_type<double_t>(numbers[1]), string_to_type<double_t>(numbers[2])};
-  } else {
-    return {string_to_type<float_t>(numbers[0]), string_to_type<float_t>(numbers[1]), string_to_type<float_t>(numbers[2]), string_to_type<float_t>(numbers[3])};
-  }
+  Tuple items;
+  i = 0;
+  std::apply([&](auto&... item) { ((item = string_to_type<std::decay_t<decltype(item)>>(numbers[i++])), ...); }, items);
+  return items;
 }
 
 template <typename T>
@@ -223,12 +220,7 @@ std::vector<T> string_to_vector(std::string itemString)
     }
   } else if constexpr (is_tuple<T>::value) {
     while (std::getline(stream, curItemStr, ';')) {
-      // ugly hack...
-      if constexpr (std::is_same_v<T, std::tuple<uint8_t, double_t, double_t>>) {
-        items.push_back(string_to_tuple<uint8_t, double_t, double_t>(curItemStr));
-      } else {
-        items.push_back(string_to_tuple<float_t, float_t, float_t, float_t>(curItemStr));
-      }
+      items.push_back(string_to_tuple<T>(curItemStr));
     }
   } else {
     while (std::getline(stream, curItemStr, ',')) {

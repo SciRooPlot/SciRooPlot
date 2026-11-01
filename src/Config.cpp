@@ -44,7 +44,6 @@ using std::vector;
 namespace SciRooPlot
 {
 using util::expand_path;
-using util::file_exists;
 
 string Config::LogLevelName(int level)
 {
@@ -122,7 +121,7 @@ const Config& Config::Get()
 void Config::LoadConfig()
 {
   const char* envPath = gSystem->Getenv("SCIROOPLOT_CONFIG_PATH");
-  std::string configPath = expand_path(envPath ? "${SCIROOPLOT_CONFIG_PATH}" : "~/.SciRooPlot");
+  std::string configPath = expand_path(envPath ? "${SCIROOPLOT_CONFIG_PATH}" : "~/.SciRooPlot").value_or("");
   if (configPath.empty()) {
     std::cerr << "SCIROOPLOT_CONFIG_PATH must not be empty." << std::endl;
     return;
@@ -140,7 +139,7 @@ void Config::LoadConfig()
   mSettingsFile = mPath / "settings.info";
 
   // read global settings
-  if (file_exists(mSettingsFile)) {
+  if (std::filesystem::exists(mSettingsFile)) {
     try {
       ptree settingsTree;
       read_info(mSettingsFile, settingsTree);
@@ -192,7 +191,7 @@ void Config::LoadConfig()
   }
 
   // read project settings
-  if (file_exists(mProjectsFile)) {
+  if (std::filesystem::exists(mProjectsFile)) {
     try {
       ptree projectsTree;
       read_info(mProjectsFile, projectsTree);
@@ -358,11 +357,11 @@ void Config::Clean()
     if (rawProgram.empty()) {
       isStale = true;
     } else {
-      const string program = expand_path(rawProgram);
-      if (program.empty()) {
+      const auto program = expand_path(rawProgram);
+      if (!program) {
         logger::warning("Cannot expand program path '{}' of project {}; keeping it.", rawProgram, projectName);
       } else {
-        isStale = !std::filesystem::exists(std::filesystem::path(program).parent_path());
+        isStale = !std::filesystem::exists(std::filesystem::path(*program).parent_path());
       }
     }
     if (isStale) {
@@ -495,9 +494,9 @@ bool Config::SetProgram(const string& projectName, const string& program)
     logger::error("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
     return false;
   }
-  const string expandedPath = expand_path(program);
-  if (expandedPath.empty() && !program.empty()) return false;  // unset environment variable, reported by expand_path
-  if (std::filesystem::path(expandedPath).is_relative()) {
+  const auto expandedPath = expand_path(program);
+  if (!expandedPath) return false;
+  if (std::filesystem::path(*expandedPath).is_relative()) {
     logger::error("The path must not be relative.");
     return false;
   }
@@ -511,7 +510,7 @@ string Config::Program(const string& projectName) const
   auto it = mProjects.find(projectName);
   if (it != mProjects.end()) {
     const auto& project = it->second;
-    return expand_path(project.Property("program"));
+    return expand_path(project.Property("program")).value_or("");
   }
   return {};
 }
@@ -526,9 +525,9 @@ bool Config::SetOutputDir(const string& projectName, const string& outputDir)
     logger::error("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
     return false;
   }
-  const string expandedPath = expand_path(outputDir);
-  if (expandedPath.empty() && !outputDir.empty()) return false;  // unset environment variable, reported by expand_path
-  if (std::filesystem::path(expandedPath).is_relative()) {
+  const auto expandedPath = expand_path(outputDir);
+  if (!expandedPath) return false;
+  if (std::filesystem::path(*expandedPath).is_relative()) {
     logger::error("The path must not be relative.");
     return false;
   }
@@ -590,7 +589,7 @@ string Config::OutputDir(const string& projectName) const
   auto it = mProjects.find(projectName);
   if (it != mProjects.end()) {
     const auto& project = it->second;
-    return expand_path(project.Property("outdir"));
+    return expand_path(project.Property("outdir")).value_or("");
   }
   return {};
 }

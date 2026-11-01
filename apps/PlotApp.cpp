@@ -96,10 +96,10 @@ int main(int argc, char* argv[])
       if (!pm.GeneratePlots(mode)) return 1;
     }
   } catch (std::exception& e) {
-    logger::error(R"(Exception "{}"! Exiting.)", e.what());
+    logger::error(R"(Exception "{}", exiting.)", e.what());
     return 1;
   } catch (...) {
-    logger::error("Exception of unknown type! Exiting.");
+    logger::error("Exception of unknown type, exiting.");
     return 1;
   }
   return 0;

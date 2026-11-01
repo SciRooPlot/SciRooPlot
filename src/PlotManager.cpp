@@ -131,7 +131,6 @@ namespace SciRooPlot
 {
 using util::disable_implicit_mt;
 using util::expand_path;
-using util::file_exists;
 using util::ignore_root_messages_below;
 using util::make_scope_guard;
 using util::plural;
@@ -140,6 +139,7 @@ using util::split_path;
 using util::split_string;
 using util::str_contains;
 using util::str_ends_with;
+using util::str_starts_with;
 
 //**************************************************************************************************
 /**
@@ -245,7 +245,7 @@ void PlotManager::ReserveColorIndices(TCanvas* canvas)
     canvas->GetListOfPrimitives()->AddFirst(colorExec);
   }
   const string action = colorExec->GetTitle();
-  if (action.rfind("if (!gROOT->GetColor(", 0) == 0) {
+  if (str_starts_with(action, "if (!gROOT->GetColor(")) {
     colorExec->SetAction((reservation + action.substr(action.find(';') + 1)).data());  // written before: replace the reservation
   } else {
     colorExec->SetAction((reservation + action).data());
@@ -346,10 +346,10 @@ bool PlotManager::CreateOutputDirectory() const
 //**************************************************************************************************
 void PlotManager::SetOutputDirectory(const string& path)
 {
-  const string expandedPath = expand_path(path);
-  if (expandedPath.empty() && !path.empty()) return;  // unset environment variable, reported by expand_path
+  const auto expandedPath = expand_path(path);
+  if (!expandedPath) return;
   // a relative path is taken relative to the current directory, so that it can be stored with the project
-  mOutputDirectory = (expandedPath.empty()) ? expandedPath : std::filesystem::absolute(expandedPath).lexically_normal().string();
+  mOutputDirectory = (expandedPath->empty()) ? "" : std::filesystem::absolute(*expandedPath).lexically_normal().string();
 }
 
 //**************************************************************************************************
@@ -390,9 +390,9 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<string>& 
     mInputs.erase(dataSource);
   }
   for (const auto& input : inputs) {
-    const string expandedInput = expand_path(input);
-    if (expandedInput.empty() && !input.empty()) continue;  // unset environment variable, reported by expand_path
-    if (std::filesystem::path(expandedInput).is_relative()) {
+    const auto expandedInput = expand_path(input);
+    if (!expandedInput) continue;
+    if (std::filesystem::path(*expandedInput).is_relative()) {
       logger::warning("The path of an input must not be relative. Skipping {}.", input);
       continue;
     }
@@ -544,7 +544,7 @@ void PlotManager::SaveDataSources(const optional<string>& file) const
 //**************************************************************************************************
 void PlotManager::WriteInfoFile(const ptree& tree, const string& path, const string& content)
 {
-  const std::filesystem::path filePath = expand_path(path);
+  const std::filesystem::path filePath = expand_path(path).value_or("");
   if (filePath.empty()) {
     logger::error("No file path or project specified. Cannot save {}.", content);
     return;
@@ -565,7 +565,7 @@ void PlotManager::LoadDataSources(const optional<string>& file, bool replace)
   ptree dataSourcesTree;
   try {
     using boost::property_tree::read_info;
-    read_info(expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName)), dataSourcesTree);
+    read_info(expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName)).value_or(""), dataSourcesTree);
   } catch (const std::exception& e) {
     logger::error("Cannot load dataSources file: {}.", e.what());
     return;
@@ -634,7 +634,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
   map<InputID, string> seen;  // first spelling of each input
   auto fileID = [](const string& filePart) {
     struct stat info{};
-    const string path = expand_path(filePart);
+    const string path = expand_path(filePart).value_or("");
     return (stat(path.data(), &info) == 0) ? InputID{info.st_dev, info.st_ino, ""} : InputID{0, 0, path};
   };
   auto addInput = [&](const InputID& file, const string& filePart, const string& folder) {
@@ -662,7 +662,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
     const string folderPath = (subFolder.empty() || folderPart.empty()) ? folderPart + subFolder : folderPart + "/" + subFolder;
     const InputID file = fileID(filePart);
     if (hasWildcard(folderPath)) {
-      const auto folders = expandFolders(expand_path(filePart), folderPath);
+      const auto folders = expandFolders(expand_path(filePart).value_or(""), folderPath);
       // inputs that do not contain the folder of a restricted data source are simply not part of it
       if (folders.empty() && subFolder.empty()) logger::warning("No folders match {} in {} (data source {}).", folderPath, filePart, dataSource);
       for (const auto& folder : folders) {
@@ -681,7 +681,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
 
     if (hasWildcard(filePart)) {
       glob_t matches{};
-      const bool found = (glob(expand_path(filePart).data(), 0, nullptr, &matches) == 0);
+      const bool found = (glob(expand_path(filePart).value_or("").data(), 0, nullptr, &matches) == 0);
       if (!found) logger::warning("No files match {} (data source {}).", filePart, dataSource);
       for (size_t i = 0; found && i < matches.gl_pathc; ++i) {
         addEntry(string(matches.gl_pathv[i]) + ((fileAndFolder.size() > 1) ? ":" + folderPart : ""));
@@ -693,7 +693,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
       addFile(filePart, folderPart);
       return;
     }
-    string path = expand_path(entry);
+    string path = expand_path(entry).value_or("");
     if (!std::filesystem::is_directory(path)) {
       logger::warning("Data source entry {} (data source {}) is neither a recognized file type nor an existing directory. Skipping.", entry, dataSource);
       return;
@@ -989,7 +989,7 @@ void PlotManager::AddColorOverview(const string& name, const string& group, cons
     if (const auto index = shown[i].GetIndex()) {
       if (const TColor* color = gROOT->GetColor(*index)) {
         string colorName = (*index == kWhite) ? "kWhite" : ((*index == kBlack) ? "kBlack" : color->GetName());
-        if (colorName.rfind('k', 0) == 0) label = fmt::format("#splitline{{{}}}{{{}}}", colorName, *index);
+        if (str_starts_with(colorName, "k")) label = fmt::format("#splitline{{{}}}{{{}}}", colorName, *index);
       }
     }
     const bool dark = 0.299 * red + 0.587 * green + 0.114 * blue < 0.5;
@@ -1055,7 +1055,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
   ptree fileTree;
   try {
     using boost::property_tree::read_info;
-    read_info(expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName)), fileTree);
+    read_info(expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName)).value_or(""), fileTree);
   } catch (const std::exception& e) {
     logger::error("Cannot open plots file: {}.", e.what());
     return false;
@@ -1246,7 +1246,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     // how the animation repeats). The gif is named after the deepest group all frames are in and lies next to the folder of that group
     // (frames of animations/legoRotation: animations/legoRotation.gif); frames without a common group make animation.gif in the output directory
     mGifLastFrame = nullptr;
-    if (mode.rfind("gif", 0) == 0) {
+    if (str_starts_with(mode, "gif")) {
       optional<vector<string>> commonGroup;
       for (auto plot : selectedPlots) {
         if (!GetMissingData(*plot).empty()) continue;
@@ -1496,7 +1496,7 @@ bool PlotManager::FillBuffer()
     } openFile;
     for (const auto& inputRaw : mExpandedInputs[baseSource]) {
       if (allFound()) break;
-      string input = expand_path(inputRaw);
+      string input = expand_path(inputRaw).value_or("");
       if (str_ends_with(input, mTableFileEndings)) {
         // tables have no folders: only part of the data source itself, and only read if requested
         // (a directory source also contains tables nobody asked for, or text files that are no tables at all)
@@ -1751,7 +1751,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 {
   const bool isInteractiveMode = (mode == "show" || mode == "spread");
   const bool isMacroMode = (mode == "macro");
-  const bool isGifMode = (mode.rfind("gif", 0) == 0);
+  const bool isGifMode = str_starts_with(mode, "gif");
 
   if (plot.GetGroup().empty()) {
     logger::error("No group was specified for plot {}.", plot.GetName());
@@ -1857,7 +1857,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
           if (range == ranges.end()) {
             if (!group.fromLayout && fullPlot.GetPads().count(padID)) {
               logger::warning("Plot {}: pad {} is left out of the pads sharing the {} axis: {}.", fullPlot.GetName(), padID, axisLabel,
-                              (axisLabel == 'Z') ? "it draws no 2d histogram, graph or function (or a polar one)" : "it has no flat axis frame (a 3D view or a polar drawing)");
+                              (axisLabel == 'Z') ? "it draws no 2d histogram, graph or function (or a polar one)" : "it has no flat axis frame (a 3d view or a polar drawing)");
             }
             continue;
           }
@@ -2305,12 +2305,12 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
 {
   if (!selected || !pad) return nullopt;
   // an image is drawn in a sub-pad of the pad it belongs to
-  TVirtualPad* imagePad = (string(pad->GetName()).rfind("ImageBox_", 0) == 0 && pad->GetMother() != pad) ? pad : nullptr;
+  TVirtualPad* imagePad = (str_starts_with(pad->GetName(), "ImageBox_") && pad->GetMother() != pad) ? pad : nullptr;
   if (imagePad) pad = imagePad->GetMother();
   const bool isPython = str_ends_with(Config::Get().Program(mProjectName), ".py");
   // always with the pad, so that the line reads the same in every plot
   const string padName = pad->GetName();
-  const string padLabel = (padName.rfind("Pad_", 0) == 0) ? "Pad " + padName.substr(4) + ", " : "";
+  const string padLabel = (str_starts_with(padName, "Pad_")) ? "Pad " + padName.substr(4) + ", " : "";
   // axis values from pad coordinates (log10 on a log axis), fractions of the pad from axis values
   auto axisValue = [&](double_t fraction, bool isX) {
     const double_t lo = (isX) ? pad->GetX1() : pad->GetY1(), hi = (isX) ? pad->GetX2() : pad->GetY2();
@@ -2349,14 +2349,14 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
   if (auto* box = dynamic_cast<TPave*>(selected)) {
     const string name = box->GetName();
     string what;
-    if (auto* legend = dynamic_cast<TLegend*>(box); legend && name.rfind("LegendBox_", 0) == 0) {
+    if (auto* legend = dynamic_cast<TLegend*>(box); legend && str_starts_with(name, "LegendBox_")) {
       what = "legend " + name.substr(10);
       TList* rows = legend->GetListOfPrimitives();
       if (rows && rows->GetSize() > 0) what += excerpt(static_cast<TLegendEntry*>(rows->First())->GetLabel(), rows->GetSize() > 1);
-    } else if (auto* text = dynamic_cast<TPaveText*>(box); text && name.rfind("TextBox_", 0) == 0) {
+    } else if (auto* text = dynamic_cast<TPaveText*>(box); text && str_starts_with(name, "TextBox_")) {
       what = "text " + name.substr(8);
       if (text->GetSize() > 0) what += excerpt(text->GetLine(0)->GetTitle(), text->GetSize() > 1);
-    } else if (name.rfind("stats_", 0) == 0) {
+    } else if (str_starts_with(name, "stats_")) {
       what = "statistics box of data " + name.substr(6);
     } else {
       return nullopt;  // e.g. the colour scale
@@ -2803,7 +2803,7 @@ bool PlotManager::PrepareInput(TObject* obj, const string& location)
 //**************************************************************************************************
 void PlotManager::ReadTableData(const string& inputFileName, const string& name, const string& dataSource)
 {
-  if (!file_exists(inputFileName)) {
+  if (!std::filesystem::exists(inputFileName)) {
     logger::error("File {} does not exist.", inputFileName);
     return;
   }
@@ -3081,7 +3081,7 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
   };
   auto expandedIt = mExpandedInputs.find(dataSource);
   for (const auto& inputRaw : (expandedIt != mExpandedInputs.end()) ? expandedIt->second : ExpandInputs(dataSource)) {
-    const auto fileNamePath = split_string(expand_path(inputRaw), ':', true);
+    const auto fileNamePath = split_string(expand_path(inputRaw).value_or(""), ':', true);
     const string& fileName = fileNamePath[0];
     if (!str_ends_with(fileName, ".root") || !std::filesystem::exists(fileName)) continue;
     TFile file(fileName.data(), "READ");

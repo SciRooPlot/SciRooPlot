@@ -19,13 +19,13 @@
 #ifndef SRC_UTIL_PATHS_H_
 #define SRC_UTIL_PATHS_H_
 
+#include <optional>
 #include <string>
 #include <utility>
 
 namespace SciRooPlot::util
 {
-std::string expand_path(const std::string& path);
-bool file_exists(const std::string& name);
+std::optional<std::string> expand_path(const std::string& path);
 
 // folder ("" if none) and name of a path within a file or data source (a/b/c: a/b and c)
 inline std::pair<std::string, std::string> split_path(const std::string& path)
