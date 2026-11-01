@@ -135,7 +135,7 @@ for plot_key, plot in read_info(f"{CFG}/plots.info"):
         for key, value in items:
             if isinstance(value, list):
                 d = dict((k, v) for k, v in value if not isinstance(v, list))
-                for nk, sk in (("name", "dataSource"), ("denomName", "denomDataSource")):
+                for nk, sk in (("name", "data_source"), ("denom_name", "denom_data_source")):
                     if d.get(nk) and d.get(sk):
                         uses.setdefault((d[sk], d[nk]), set()).add(plot_ref)
                 scan(value)

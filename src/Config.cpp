@@ -146,42 +146,42 @@ void Config::LoadConfig()
       read_info(mSettingsFile, settingsTree);
       for (auto& setting : settingsTree) {
 
-        if (setting.first == "logLevel") {
+        if (setting.first == "log_level") {
           const int level = std::stoi(setting.second.data());
           if (level < LogLevel::silent || level > LogLevel::debug) {
-            std::cerr << "Ignoring out-of-range logLevel " << level << " in " << mSettingsFile << "." << std::endl;
+            std::cerr << "Ignoring out-of-range log_level " << level << " in " << mSettingsFile << "." << std::endl;
           } else {
             mLogLevel = level;
           }
           continue;
         }
-        if (setting.first == "colorMode") {
+        if (setting.first == "color_mode") {
           const int mode = std::stoi(setting.second.data());
           if (mode < ColorMode::bright || mode > ColorMode::off) {
-            std::cerr << "Ignoring out-of-range colorMode " << mode << " in " << mSettingsFile << "." << std::endl;
+            std::cerr << "Ignoring out-of-range color_mode " << mode << " in " << mSettingsFile << "." << std::endl;
           } else {
             mColorMode = mode;
           }
           continue;
         }
-        if (setting.first == "plotMode") {
+        if (setting.first == "plot_mode") {
           mPlotMode = setting.second.data();
           continue;
         }
-        if (setting.first == "matchCaseInsensitive") {
+        if (setting.first == "match_case_insensitive") {
           mMatchCaseInsensitive = setting.second.get_value<bool>();
           continue;
         }
-        if (setting.first == "matchContains") {
+        if (setting.first == "match_contains") {
           mMatchContains = setting.second.get_value<bool>();
           continue;
         }
-        if (setting.first == "screenScale" || setting.first == "bitmapScale") {
+        if (setting.first == "screen_scale" || setting.first == "bitmap_scale") {
           const double scale = setting.second.get_value<double>();
           if (!(scale > 0.)) {
             std::cerr << "Ignoring invalid " << setting.first << " " << scale << " in " << mSettingsFile << "." << std::endl;
           } else {
-            (setting.first == "screenScale" ? mScreenScale : mBitmapScale) = scale;
+            (setting.first == "screen_scale" ? mScreenScale : mBitmapScale) = scale;
           }
           continue;
         }
@@ -235,13 +235,13 @@ bool Config::Save()
 
   // save settings tree
   ptree settingsTree;
-  settingsTree.add("logLevel", mLogLevel);
-  settingsTree.add("colorMode", mColorMode);
-  settingsTree.add("plotMode", mPlotMode);
-  settingsTree.add("matchCaseInsensitive", mMatchCaseInsensitive);
-  settingsTree.add("matchContains", mMatchContains);
-  settingsTree.add("screenScale", mScreenScale);
-  settingsTree.add("bitmapScale", mBitmapScale);
+  settingsTree.add("log_level", mLogLevel);
+  settingsTree.add("color_mode", mColorMode);
+  settingsTree.add("plot_mode", mPlotMode);
+  settingsTree.add("match_case_insensitive", mMatchCaseInsensitive);
+  settingsTree.add("match_contains", mMatchContains);
+  settingsTree.add("screen_scale", mScreenScale);
+  settingsTree.add("bitmap_scale", mBitmapScale);
   const bool savedSettings = write(SettingsFile(), settingsTree);
 
   // save projects tree

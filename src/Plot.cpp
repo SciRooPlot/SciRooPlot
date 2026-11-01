@@ -1448,7 +1448,7 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mPalette.index, "palette_index");
   read_from_tree(padTree, mPalette.colorGradient.rgbEndpoints, "palette_colors_gradient_endpoints");
   read_from_tree(padTree, mPalette.colorGradient.alpha, "palette_colors_gradient_alpha");
-  read_from_tree(padTree, mPalette.colorGradient.nColors, "palette_colors_gradient_nColors");
+  read_from_tree(padTree, mPalette.colorGradient.nColors, "palette_colors_gradient_num_colors");
   ReadFill(padTree);
   read_from_tree(padTree, mFrameFill.color, "frame_fill_color");
   read_from_tree(padTree, mFrameFill.style, "frame_fill_style");
@@ -1467,22 +1467,22 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
   read_from_tree(padTree, mMarkerDefaults.colorGradient.rgbEndpoints, "default_marker_colors_gradient_endpoints");
   read_from_tree(padTree, mMarkerDefaults.colorGradient.alpha, "default_marker_colors_gradient_alpha");
-  read_from_tree(padTree, mMarkerDefaults.colorGradient.nColors, "default_marker_colors_gradient_nColors");
+  read_from_tree(padTree, mMarkerDefaults.colorGradient.nColors, "default_marker_colors_gradient_num_colors");
   read_from_tree(padTree, mLineDefaults.alpha, "default_line_alpha");
   ReadWidthFromTree(padTree, mLineDefaults.scale, "default_line_width");
   read_from_tree(padTree, mLineDefaults.styles, "default_line_styles");
   read_from_tree(padTree, mLineDefaults.colors, "default_line_colors");
   read_from_tree(padTree, mLineDefaults.colorGradient.rgbEndpoints, "default_line_colors_gradient_endpoints");
   read_from_tree(padTree, mLineDefaults.colorGradient.alpha, "default_line_colors_gradient_alpha");
-  read_from_tree(padTree, mLineDefaults.colorGradient.nColors, "default_line_colors_gradient_nColors");
+  read_from_tree(padTree, mLineDefaults.colorGradient.nColors, "default_line_colors_gradient_num_colors");
   read_from_tree(padTree, mFillDefaults.alpha, "default_fill_alpha");
   read_from_tree(padTree, mFillDefaults.styles, "default_fill_styles");
   read_from_tree(padTree, mFillDefaults.colors, "default_fill_colors");
   read_from_tree(padTree, mFillDefaults.colorGradient.rgbEndpoints, "default_fill_colors_gradient_endpoints");
   read_from_tree(padTree, mFillDefaults.colorGradient.alpha, "default_fill_colors_gradient_alpha");
-  read_from_tree(padTree, mFillDefaults.colorGradient.nColors, "default_fill_colors_gradient_nColors");
-  read_from_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_boxrange");
-  read_from_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
+  read_from_tree(padTree, mFillDefaults.colorGradient.nColors, "default_fill_colors_gradient_num_colors");
+  read_from_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_box_range");
+  read_from_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whisker_range");
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
   mIsEmptyCell = padTree.get<bool>("empty_cell", false);
   read_from_tree(padTree, mColorScaleOf, "color_scale_of");
@@ -1553,7 +1553,7 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mPalette.index, "palette_index");
   put_in_tree(padTree, mPalette.colorGradient.rgbEndpoints, "palette_colors_gradient_endpoints");
   put_in_tree(padTree, mPalette.colorGradient.alpha, "palette_colors_gradient_alpha");
-  put_in_tree(padTree, mPalette.colorGradient.nColors, "palette_colors_gradient_nColors");
+  put_in_tree(padTree, mPalette.colorGradient.nColors, "palette_colors_gradient_num_colors");
   PutFill(padTree);
   put_in_tree(padTree, mFrameFill.color, "frame_fill_color");
   put_in_tree(padTree, mFrameFill.style, "frame_fill_style");
@@ -1572,22 +1572,22 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mMarkerDefaults.colors, "default_marker_colors");
   put_in_tree(padTree, mMarkerDefaults.colorGradient.rgbEndpoints, "default_marker_colors_gradient_endpoints");
   put_in_tree(padTree, mMarkerDefaults.colorGradient.alpha, "default_marker_colors_gradient_alpha");
-  put_in_tree(padTree, mMarkerDefaults.colorGradient.nColors, "default_marker_colors_gradient_nColors");
+  put_in_tree(padTree, mMarkerDefaults.colorGradient.nColors, "default_marker_colors_gradient_num_colors");
   put_in_tree(padTree, mLineDefaults.alpha, "default_line_alpha");
   put_in_tree(padTree, mLineDefaults.scale, "default_line_width");
   put_in_tree(padTree, mLineDefaults.styles, "default_line_styles");
   put_in_tree(padTree, mLineDefaults.colors, "default_line_colors");
   put_in_tree(padTree, mLineDefaults.colorGradient.rgbEndpoints, "default_line_colors_gradient_endpoints");
   put_in_tree(padTree, mLineDefaults.colorGradient.alpha, "default_line_colors_gradient_alpha");
-  put_in_tree(padTree, mLineDefaults.colorGradient.nColors, "default_line_colors_gradient_nColors");
+  put_in_tree(padTree, mLineDefaults.colorGradient.nColors, "default_line_colors_gradient_num_colors");
   put_in_tree(padTree, mFillDefaults.alpha, "default_fill_alpha");
   put_in_tree(padTree, mFillDefaults.styles, "default_fill_styles");
   put_in_tree(padTree, mFillDefaults.colors, "default_fill_colors");
   put_in_tree(padTree, mFillDefaults.colorGradient.rgbEndpoints, "default_fill_colors_gradient_endpoints");
   put_in_tree(padTree, mFillDefaults.colorGradient.alpha, "default_fill_colors_gradient_alpha");
-  put_in_tree(padTree, mFillDefaults.colorGradient.nColors, "default_fill_colors_gradient_nColors");
-  put_in_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_boxrange");
-  put_in_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whiskerrange");
+  put_in_tree(padTree, mFillDefaults.colorGradient.nColors, "default_fill_colors_gradient_num_colors");
+  put_in_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_box_range");
+  put_in_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whisker_range");
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
   if (mIsEmptyCell) padTree.put("empty_cell", true);
   put_in_tree(padTree, mColorScaleOf, "color_scale_of");
@@ -2190,7 +2190,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   try {
     mType = dataTree.get<string>("type");
     mName = dataTree.get<string>("name");
-    mDataSource = dataTree.get<string>("dataSource");
+    mDataSource = dataTree.get<string>("data_source");
   } catch (const std::exception& e) {
     logger::throw_invalid_argument("Could not construct data from ptree: {}", e.what());
   }
@@ -2211,12 +2211,12 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   ReadLine(dataTree);
   ReadFill(dataTree);
   ReadModify(dataTree, mModify);
-  read_from_tree(dataTree, mRangeX.min, "rangeX_min");
-  read_from_tree(dataTree, mRangeX.max, "rangeX_max");
-  read_from_tree(dataTree, mRangeY.min, "rangeY_min");
-  read_from_tree(dataTree, mRangeY.max, "rangeY_max");
+  read_from_tree(dataTree, mRangeX.min, "range_x_min");
+  read_from_tree(dataTree, mRangeX.max, "range_x_max");
+  read_from_tree(dataTree, mRangeY.min, "range_y_min");
+  read_from_tree(dataTree, mRangeY.max, "range_y_max");
   read_from_tree(dataTree, mContours, "contours");
-  read_from_tree(dataTree, mNContours, "number_of_contours");
+  read_from_tree(dataTree, mNContours, "num_contours");
   read_from_tree(dataTree, mNpx, "npx");
   read_from_tree(dataTree, mNpy, "npy");
 
@@ -2263,10 +2263,10 @@ void Plot::Pad::Data::ReadDataInfo(const ptree& tree, data_info_t& dataInfo, con
   read_from_tree(tree, dataInfo.filters, prefix + "filters");
   dataInfo.joins = ReadJoins(tree, prefix + "joins");
   read_from_tree(tree, dataInfo.weight, prefix + "weight");
-  if (const auto entryMax = get_from_tree<uint32_t>(tree, prefix + "entryMax")) {
-    dataInfo.entries.Set(get_from_tree<uint32_t>(tree, prefix + "entryMin"), *entryMax);
+  if (const auto entryMax = get_from_tree<uint32_t>(tree, prefix + "entry_max")) {
+    dataInfo.entries.Set(get_from_tree<uint32_t>(tree, prefix + "entry_min"), *entryMax);
   }
-  read_from_tree(tree, dataInfo.isProfileNoScatter, prefix + "isProfileNoScatter");
+  read_from_tree(tree, dataInfo.isProfileNoScatter, prefix + "is_profile_no_scatter");
   read_from_tree(tree, dataInfo.definitions.keys, prefix + "definitions_keys");
   read_from_tree(tree, dataInfo.definitions.values, prefix + "definitions_values");
 }
@@ -2288,9 +2288,9 @@ void Plot::Pad::Data::PutDataInfo(ptree& tree, const data_info_t& dataInfo, cons
   put_in_tree(tree, dataInfo.filters, prefix + "filters");
   PutJoins(tree, dataInfo.joins, prefix + "joins");
   put_in_tree(tree, dataInfo.weight, prefix + "weight");
-  put_in_tree(tree, dataInfo.entries.min, prefix + "entryMin");
-  put_in_tree(tree, dataInfo.entries.max, prefix + "entryMax");
-  put_in_tree(tree, dataInfo.isProfileNoScatter, prefix + "isProfileNoScatter");
+  put_in_tree(tree, dataInfo.entries.min, prefix + "entry_min");
+  put_in_tree(tree, dataInfo.entries.max, prefix + "entry_max");
+  put_in_tree(tree, dataInfo.isProfileNoScatter, prefix + "is_profile_no_scatter");
   put_in_tree(tree, dataInfo.definitions.keys, prefix + "definitions_keys");
   put_in_tree(tree, dataInfo.definitions.values, prefix + "definitions_values");
 }
@@ -2302,8 +2302,8 @@ void Plot::Pad::Data::ReadProjInfo(const ptree& tree, optional<proj_info_t>& pro
   optional<bool> isProfile;
   read_from_tree(tree, dims, prefix + "dims");
   read_from_tree(tree, ranges, prefix + "ranges");
-  read_from_tree(tree, isUserCoord, prefix + "isUserCoord");
-  read_from_tree(tree, isProfile, prefix + "isProfile");
+  read_from_tree(tree, isUserCoord, prefix + "is_user_coordinates");
+  read_from_tree(tree, isProfile, prefix + "is_profile");
   if (!dims) return;
   if (!ranges) {
     logger::throw_invalid_argument("{}dims is set but {}ranges is missing.", prefix, prefix);
@@ -2315,8 +2315,8 @@ void Plot::Pad::Data::PutProjInfo(ptree& tree, const optional<proj_info_t>& proj
   if (!projInfo) return;
   put_in_tree(tree, optional<vector<uint8_t>>{projInfo->dims}, prefix + "dims");
   put_in_tree(tree, optional<vector<tuple<uint8_t, double_t, double_t>>>{projInfo->ranges}, prefix + "ranges");
-  put_in_tree(tree, projInfo->isUserCoord, prefix + "isUserCoord");
-  put_in_tree(tree, projInfo->isProfile, prefix + "isProfile");
+  put_in_tree(tree, projInfo->isUserCoord, prefix + "is_user_coordinates");
+  put_in_tree(tree, projInfo->isProfile, prefix + "is_profile");
 }
 
 //**************************************************************************************************
@@ -2335,14 +2335,14 @@ void Plot::Pad::Data::ReadModify(const ptree& tree, modify_t& modify, const stri
   read_from_tree(tree, modify.normMaximumMin, prefix + "norm_to_maximum_min");
   read_from_tree(tree, modify.normMaximumMax, prefix + "norm_to_maximum_max");
   read_from_tree(tree, modify.divideBinWidth, prefix + "divide_bin_width");
-  read_from_tree(tree, modify.rebinGroupX, prefix + "rebinX");
-  read_from_tree(tree, modify.rebinGroupY, prefix + "rebinY");
-  read_from_tree(tree, modify.rebinGroupZ, prefix + "rebinZ");
+  read_from_tree(tree, modify.rebinGroupX, prefix + "rebin_x");
+  read_from_tree(tree, modify.rebinGroupY, prefix + "rebin_y");
+  read_from_tree(tree, modify.rebinGroupZ, prefix + "rebin_z");
   read_from_tree(tree, modify.scaleAxisX, prefix + "scale_axis_x");
   read_from_tree(tree, modify.scaleAxisY, prefix + "scale_axis_y");
   read_from_tree(tree, modify.scaleAxisZ, prefix + "scale_axis_z");
   read_from_tree(tree, modify.cumulative, prefix + "cumulative");
-  read_from_tree(tree, modify.nIterSmooth, prefix + "nIter_smooth");
+  read_from_tree(tree, modify.nIterSmooth, prefix + "num_smooth_iterations");
 }
 void Plot::Pad::Data::PutModify(ptree& tree, const modify_t& modify, const string& prefix)
 {
@@ -2355,14 +2355,14 @@ void Plot::Pad::Data::PutModify(ptree& tree, const modify_t& modify, const strin
   put_in_tree(tree, modify.normMaximumMin, prefix + "norm_to_maximum_min");
   put_in_tree(tree, modify.normMaximumMax, prefix + "norm_to_maximum_max");
   put_in_tree(tree, modify.divideBinWidth, prefix + "divide_bin_width");
-  put_in_tree(tree, modify.rebinGroupX, prefix + "rebinX");
-  put_in_tree(tree, modify.rebinGroupY, prefix + "rebinY");
-  put_in_tree(tree, modify.rebinGroupZ, prefix + "rebinZ");
+  put_in_tree(tree, modify.rebinGroupX, prefix + "rebin_x");
+  put_in_tree(tree, modify.rebinGroupY, prefix + "rebin_y");
+  put_in_tree(tree, modify.rebinGroupZ, prefix + "rebin_z");
   put_in_tree(tree, modify.scaleAxisX, prefix + "scale_axis_x");
   put_in_tree(tree, modify.scaleAxisY, prefix + "scale_axis_y");
   put_in_tree(tree, modify.scaleAxisZ, prefix + "scale_axis_z");
   put_in_tree(tree, modify.cumulative, prefix + "cumulative");
-  put_in_tree(tree, modify.nIterSmooth, prefix + "nIter_smooth");
+  put_in_tree(tree, modify.nIterSmooth, prefix + "num_smooth_iterations");
 }
 
 //**************************************************************************************************
@@ -2375,7 +2375,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   ptree dataTree;
   dataTree.put("type", mType);
   dataTree.put("name", mName);
-  dataTree.put("dataSource", mDataSource);
+  dataTree.put("data_source", mDataSource);
   if (mDefinesFrame) dataTree.put("defines_frame", mDefinesFrame);
   if (mKeepInputStyle) dataTree.put("keep_input_style", mKeepInputStyle);
   put_in_tree(dataTree, mLegend.label, "legend_label");
@@ -2392,12 +2392,12 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   PutLine(dataTree);
   PutFill(dataTree);
   PutModify(dataTree, mModify);
-  put_in_tree(dataTree, mRangeX.min, "rangeX_min");
-  put_in_tree(dataTree, mRangeX.max, "rangeX_max");
-  put_in_tree(dataTree, mRangeY.min, "rangeY_min");
-  put_in_tree(dataTree, mRangeY.max, "rangeY_max");
+  put_in_tree(dataTree, mRangeX.min, "range_x_min");
+  put_in_tree(dataTree, mRangeX.max, "range_x_max");
+  put_in_tree(dataTree, mRangeY.min, "range_y_min");
+  put_in_tree(dataTree, mRangeY.max, "range_y_max");
   put_in_tree(dataTree, mContours, "contours");
-  put_in_tree(dataTree, mNContours, "number_of_contours");
+  put_in_tree(dataTree, mNContours, "num_contours");
   put_in_tree(dataTree, mNpx, "npx");
   put_in_tree(dataTree, mNpy, "npy");
 
@@ -3200,9 +3200,9 @@ Plot::Pad::Ratio::Ratio(const string& name, const string& dataSource, const stri
 Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
 {
   try {
-    mDenomName = dataTree.get<string>("denomName");
-    mDenomDataSource = dataTree.get<string>("denomDataSource");
-    mCorrelated = dataTree.get<bool>("isCorrelated");
+    mDenomName = dataTree.get<string>("denom_name");
+    mDenomDataSource = dataTree.get<string>("denom_data_source");
+    mCorrelated = dataTree.get<bool>("is_correlated");
   } catch (const std::exception& e) {
     logger::throw_invalid_argument("Could not construct ratio from ptree: {}", e.what());
   }
@@ -3210,8 +3210,8 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   ReadModify(dataTree, mNumModify, "numer_");
   ReadModify(dataTree, mDenomModify, "denom_");
 
-  ReadDataInfo(dataTree, mDenomDataInfo, "denomData_");
-  ReadProjInfo(dataTree, mDenomProjInfo, "denomProj_");
+  ReadDataInfo(dataTree, mDenomDataInfo, "denom_data_");
+  ReadProjInfo(dataTree, mDenomProjInfo, "denom_proj_");
 }
 
 //**************************************************************************************************
@@ -3222,14 +3222,14 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
 ptree Plot::Pad::Ratio::GetPropertyTree() const
 {
   ptree dataTree = Data::GetPropertyTree();
-  dataTree.put("denomName", mDenomName);
-  dataTree.put("denomDataSource", mDenomDataSource);
-  dataTree.put("isCorrelated", mCorrelated);
+  dataTree.put("denom_name", mDenomName);
+  dataTree.put("denom_data_source", mDenomDataSource);
+  dataTree.put("is_correlated", mCorrelated);
   PutModify(dataTree, mNumModify, "numer_");
   PutModify(dataTree, mDenomModify, "denom_");
 
-  PutDataInfo(dataTree, mDenomDataInfo, "denomData_");
-  PutProjInfo(dataTree, mDenomProjInfo, "denomProj_");
+  PutDataInfo(dataTree, mDenomDataInfo, "denom_data_");
+  PutProjInfo(dataTree, mDenomProjInfo, "denom_proj_");
   return dataTree;
 }
 

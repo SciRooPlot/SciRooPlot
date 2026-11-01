@@ -1216,7 +1216,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (!userTitleOffset) {
               if (viewFrame) {
                 axis_ptr->SetTitleOffset((axisLabel == 'Z') ? 0.f : 1.5f);
-              } else if (auto layoutOffset = LayoutValue(pad, padDefaults, string("title_offset_") + axisLabel)) {
+              } else if (auto layoutOffset = LayoutValue(pad, padDefaults, string("title_offset_") + static_cast<char>(std::tolower(axisLabel)))) {
                 axis_ptr->SetTitleOffset(*layoutOffset);
               }
             }
@@ -2612,7 +2612,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         }
         if (textSize) zAxis->SetLabelSize(*textSize);
         if (auto titleSize = LayoutValue(pad, padDefaults, "title_size")) zAxis->SetTitleSize(*titleSize);
-        if (auto titleOffset = LayoutValue(pad, padDefaults, "title_offset_Z")) zAxis->SetTitleOffset(*titleOffset);
+        if (auto titleOffset = LayoutValue(pad, padDefaults, "title_offset_z")) zAxis->SetTitleOffset(*titleOffset);
         bool ownTitleOffset = zAxis->GetTitleOffset() != 0.f;  // a fixed distance from the layout
         for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
           const auto& content = *contentSettings;
